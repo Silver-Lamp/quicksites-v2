@@ -26,6 +26,8 @@ nav:
   - Home: index.md
   - Features: features.md
   - API Reference: api.md
+  - Sitemap Diffs: reports/sitemap-index.diff.md
+  - Sitemap Reports: reports/sitemap-hreflang.diff.md
   - Admin Guide: admin-guide.md
   - Viewer Guide: viewer-guide.md
   - Affiliate Guide: affiliate-guide.md

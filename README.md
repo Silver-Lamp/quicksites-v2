@@ -124,3 +124,40 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=your-key
 ## 🚀 Deploy
 
 [![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/import/project?template=https://github.com/Silver-Lamp/quicksites-core)
+
+
+## 📦 Nightly Sitemap Snapshots
+Your latest sitemap snapshots are generated automatically every night and uploaded to Supabase Storage for transparency, debugging, and SEO tooling.
+
+🧭 Public Snapshot Links:
+📄 sitemap-index-latest.xml
+
+🌍 sitemap-hreflang-latest.xml
+Replace YOUR_PROJECT with your actual Supabase project ref or custom domain.
+
+
+
+## 🧾 Sitemap Diffs (Nightly)
+Compare changes between yesterday’s and today’s sitemaps:
+
+🔄 sitemap-index.diff
+
+🌍 sitemap-hreflang.diff
+
+These files update every night. Use them to track when new domains, languages, or pages are published.
+
+Replace YOUR_PROJECT with your Supabase project ref or custom domain.
+
+
+
+## 📘 Sitemap Diff Reports (Markdown)
+Compare changes between yesterday and today in a human-friendly format:
+
+🔄 sitemap-index.diff.md
+
+🌍 sitemap-hreflang.diff.md
+
+
+These files auto-update nightly via GitHub Actions.
+
+Just replace YOUR_PROJECT with your actual Supabase project ID or custom domain.

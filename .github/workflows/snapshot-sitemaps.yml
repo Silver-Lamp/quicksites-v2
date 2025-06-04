@@ -12,6 +12,19 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v3
 
+      - name: Setup Node
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+
+      - name: Install dependencies
+        run: |
+          npm install
+          npm install -D tsx
+
+      - name: Create snapshot folder
+        run: mkdir -p snapshots
+
       - name: Fetch sitemap index
         run: curl -sSL https://quicksites.ai/api/sitemap-index.xml -o snapshots/sitemap-index.xml
 
@@ -25,3 +38,46 @@ jobs:
           git add snapshots/*.xml
           git commit -m "📦 nightly sitemap snapshot [skip ci]" || echo "No changes to commit"
           git push
+
+      - name: Upload to Supabase Storage
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: |
+          echo "SUPABASE_URL=${SUPABASE_URL}" > .env
+          echo "SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY}" >> .env
+          npx tsx scripts/upload-sitemaps.ts
+      - name: Cleanup old sitemaps and update 'latest'
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: |
+          echo "SUPABASE_URL=${SUPABASE_URL}" > .env
+          echo "SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY}" >> .env
+          npx tsx scripts/cleanup-sitemaps.ts
+      - name: Upload XML diffs
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: |
+          echo "SUPABASE_URL=${SUPABASE_URL}" > .env
+          echo "SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY}" >> .env
+          npx tsx scripts/upload-diffs.ts
+      - name: Upload Markdown sitemap diffs
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: |
+          npx tsx scripts/upload-diffs-markdown.ts
+      - name: Commit markdown diffs to repo
+        run: |
+          mkdir -p reports
+          curl -sSL https://kcwruliugwidsdgsrthy.supabase.co/storage/v1/object/public/sitemaps/sitemap-index.diff.md -o reports/sitemap-index.diff.md
+          curl -sSL https://kcwruliugwidsdgsrthy.supabase.co/storage/v1/object/public/sitemaps/sitemap-hreflang.diff.md -o reports/sitemap-hreflang.diff.md
+
+          git config --global user.name "quicksites-bot"
+          git config --global user.email "bot@quicksites.ai"
+          git add reports/*.diff.md
+          git commit -m "📝 nightly sitemap markdown diffs [skip ci]" || echo "No changes to commit"
+          git push
+  

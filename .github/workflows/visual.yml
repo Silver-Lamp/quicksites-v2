@@ -1,0 +1,53 @@
+name: Visual QA with Deployable Screenshots
+
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  visual-regression:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+      with:
+        persist-credentials: false
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: 18
+
+    - name: Install dependencies
+      run: npm install
+
+    - name: Install Playwright browsers
+      run: npx playwright install --with-deps
+
+    - name: Start dev server
+      run: npm run dev &
+      env:
+        NODE_ENV: development
+
+    - name: Wait for server
+      run: npx wait-on http://localhost:3000
+
+    - name: Run visual tests
+      run: npm run test:visual
+
+    - name: Copy screenshots to public dir
+      run: |
+        BRANCH=$(echo "${{ github.head_ref }}" | sed 's/\//-/g')
+        mkdir -p public/__screenshots__/$BRANCH
+        cp tests/__screenshots__/$BRANCH/*.png public/__screenshots__/$BRANCH/ || true
+
+    - name: Commit and push screenshot previews
+      uses: EndBug/add-and-commit@v9
+      with:
+        author_name: github-actions
+        author_email: github-actions@github.com
+        message: "📸 deploy preview screenshots for ${{ github.head_ref }}"
+        add: 'public/__screenshots__/**/*'
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

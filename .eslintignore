@@ -1,0 +1,9 @@
+node_modules/
+.next/
+test-results/
+public/sites/
+out/
+dist/
+coverage/
+public/
+scripts/check-links.js

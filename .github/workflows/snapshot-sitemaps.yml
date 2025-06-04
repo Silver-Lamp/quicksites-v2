@@ -1,0 +1,27 @@
+name: 🕓 Nightly Sitemap Snapshot
+
+on:
+  schedule:
+    - cron: '0 3 * * *'  # 3:00 AM UTC daily
+  workflow_dispatch:
+
+jobs:
+  snapshot:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v3
+
+      - name: Fetch sitemap index
+        run: curl -sSL https://quicksites.ai/api/sitemap-index.xml -o snapshots/sitemap-index.xml
+
+      - name: Fetch hreflang sitemap
+        run: curl -sSL https://quicksites.ai/api/sitemap.hreflang.xml -o snapshots/sitemap-hreflang.xml
+
+      - name: Commit snapshots
+        run: |
+          git config --global user.name "quicksites-bot"
+          git config --global user.email "bot@quicksites.ai"
+          git add snapshots/*.xml
+          git commit -m "📦 nightly sitemap snapshot [skip ci]" || echo "No changes to commit"
+          git push

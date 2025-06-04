@@ -1,0 +1,25 @@
+name: Generate Changelog
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  changelog:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Generate changelog
+        uses: heinrichreimer/github-changelog-generator-action@v2.2
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Commit changelog
+        run: |
+          git config user.name "changelog-bot"
+          git config user.email "bot@quicksites.ai"
+          git add CHANGELOG.md
+          git commit -m "📄 Update changelog [skip ci]" || echo "No changes"
+          git push

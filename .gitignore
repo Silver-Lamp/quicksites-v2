@@ -1,0 +1,49 @@
+# ⛅ Environment files
+.env*
+!.env.example
+
+# 📦 Dependencies
+node_modules/
+.venv/
+.pnpm-debug.log
+npm-debug.log*
+
+# 🏗️ Build outputs
+.next/
+out/
+dist/
+.cache/
+admin/.next/
+admin/.cache/
+outputs/
+archive/
+
+# 🧪 Test + screenshot results
+test-results/
+playwright-report/
+*.spec.ts.snap
+
+# 🧾 Generated reports and previews
+public/previews/
+public/sites/
+reports/*.csv
+reports/*.pdf
+reports/security/
+reports/security-hashes.json
+reports/security.log
+
+# 🔐 Local secrets or tokens
+scripts/*.local.*
+scripts/*-secret.ts
+
+# ⚙️ Deployment + system files
+.DS_Store
+Thumbs.db
+.vercel/
+.vscode/
+*.swp
+*.swo
+
+# 📄 Optional logs
+logs/
+*.log

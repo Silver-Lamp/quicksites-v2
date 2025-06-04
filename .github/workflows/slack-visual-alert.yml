@@ -1,0 +1,21 @@
+name: Slack Visual QA Alert
+
+on:
+  pull_request:
+    types: [closed]
+
+jobs:
+  notify:
+    if: github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Send Slack notification
+      uses: slackapi/slack-github-action@v1.24.0
+      with:
+        payload: |
+          {
+            "text": "✅ *Visual QA Passed for:* `${{ github.head_ref }}`\n<https://vercel.com/your-org/quicksites/deployments|View Deployment>\n<https://quicksites.ai/__screenshots__/${{ github.head_ref }}|View Screenshots>"
+          }
+      env:
+        SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}

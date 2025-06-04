@@ -1,0 +1,24 @@
+name: PR Visual Diff Comment
+
+on:
+  pull_request:
+    types: [opened, synchronize]
+
+jobs:
+  comment:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Comment visual test info
+        uses: marocchino/sticky-pull-request-comment@v2
+        with:
+          message: |
+            🖼 **Visual QA Activated**
+            This PR triggers visual regression tests using Playwright.
+
+            - Screenshots will be saved to `tests/__screenshots__/${{ github.head_ref }}`
+            - Updated screenshots (if any) will be committed automatically
+            - View visual test status in the badge above ☝️

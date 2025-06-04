@@ -1,0 +1,3 @@
+-- Supabase stores custom fields in raw_user_meta_data
+-- No explicit schema update needed, but here's a note:
+-- This referrer_id will be stored as user_metadata.referrer_id during sign-up via frontend logic

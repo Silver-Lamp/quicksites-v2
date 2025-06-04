@@ -1,0 +1,106 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<coverage generated="1748132726372" clover="3.2.0">
+  <project timestamp="1748132726372" name="All files">
+    <metrics statements="55" coveredstatements="50" conditionals="24" coveredconditionals="18" methods="25" coveredmethods="19" elements="104" coveredelements="87" complexity="0" loc="55" ncloc="55" packages="4" files="11" classes="11"/>
+    <package name="components">
+      <metrics statements="24" coveredstatements="22" conditionals="8" coveredconditionals="6" methods="9" coveredmethods="6"/>
+      <file name="TemplateEditor.tsx" path="/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-core/admin/components/TemplateEditor.tsx">
+        <metrics statements="24" coveredstatements="22" conditionals="8" coveredconditionals="6" methods="9" coveredmethods="6"/>
+        <line num="14" count="5" type="stmt"/>
+        <line num="15" count="5" type="stmt"/>
+        <line num="16" count="5" type="stmt"/>
+        <line num="17" count="5" type="stmt"/>
+        <line num="18" count="5" type="stmt"/>
+        <line num="20" count="5" type="stmt"/>
+        <line num="21" count="1" type="stmt"/>
+        <line num="22" count="1" type="stmt"/>
+        <line num="24" count="1" type="stmt"/>
+        <line num="25" count="1" type="stmt"/>
+        <line num="29" count="5" type="stmt"/>
+        <line num="30" count="1" type="cond" truecount="1" falsecount="1"/>
+        <line num="34" count="1" type="stmt"/>
+        <line num="44" count="1" type="cond" truecount="1" falsecount="1"/>
+        <line num="45" count="1" type="stmt"/>
+        <line num="46" count="1" type="stmt"/>
+        <line num="47" count="1" type="stmt"/>
+        <line num="49" count="0" type="stmt"/>
+        <line num="53" count="5" type="stmt"/>
+        <line num="54" count="2" type="cond" truecount="2" falsecount="0"/>
+        <line num="55" count="1" type="stmt"/>
+        <line num="58" count="5" type="cond" truecount="2" falsecount="0"/>
+        <line num="60" count="4" type="stmt"/>
+        <line num="87" count="0" type="stmt"/>
+      </file>
+    </package>
+    <package name="components.templates">
+      <metrics statements="9" coveredstatements="6" conditionals="8" coveredconditionals="6" methods="9" coveredmethods="6"/>
+      <file name="TemplateFields.tsx" path="/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-core/admin/components/templates/TemplateFields.tsx">
+        <metrics statements="5" coveredstatements="3" conditionals="0" coveredconditionals="0" methods="5" coveredmethods="3"/>
+        <line num="19" count="5" type="stmt"/>
+        <line num="26" count="1" type="stmt"/>
+        <line num="33" count="0" type="stmt"/>
+        <line num="40" count="0" type="stmt"/>
+        <line num="50" count="1" type="stmt"/>
+      </file>
+      <file name="TemplateHeader.tsx" path="/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-core/admin/components/templates/TemplateHeader.tsx">
+        <metrics statements="1" coveredstatements="1" conditionals="2" coveredconditionals="2" methods="1" coveredmethods="1"/>
+        <line num="10" count="5" type="stmt"/>
+      </file>
+      <file name="TemplateJsonEditor.tsx" path="/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-core/admin/components/templates/TemplateJsonEditor.tsx">
+        <metrics statements="2" coveredstatements="1" conditionals="0" coveredconditionals="0" methods="2" coveredmethods="1"/>
+        <line num="10" count="5" type="stmt"/>
+        <line num="16" count="0" type="stmt"/>
+      </file>
+      <file name="TemplateSaveBar.tsx" path="/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-core/admin/components/templates/TemplateSaveBar.tsx">
+        <metrics statements="1" coveredstatements="1" conditionals="6" coveredconditionals="4" methods="1" coveredmethods="1"/>
+        <line num="16" count="5" type="stmt"/>
+      </file>
+    </package>
+    <package name="components.ui">
+      <metrics statements="21" coveredstatements="21" conditionals="8" coveredconditionals="6" methods="6" coveredmethods="6"/>
+      <file name="button.tsx" path="/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-core/admin/components/ui/button.tsx">
+        <metrics statements="5" coveredstatements="5" conditionals="3" coveredconditionals="2" methods="1" coveredmethods="1"/>
+        <line num="7" count="2" type="stmt"/>
+        <line num="43" count="2" type="stmt"/>
+        <line num="45" count="10" type="cond" truecount="1" falsecount="1"/>
+        <line num="46" count="10" type="stmt"/>
+        <line num="55" count="2" type="stmt"/>
+      </file>
+      <file name="input.tsx" path="/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-core/admin/components/ui/input.tsx">
+        <metrics statements="3" coveredstatements="3" conditionals="0" coveredconditionals="0" methods="1" coveredmethods="1"/>
+        <line num="5" count="2" type="stmt"/>
+        <line num="7" count="24" type="stmt"/>
+        <line num="20" count="2" type="stmt"/>
+      </file>
+      <file name="label.tsx" path="/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-core/admin/components/ui/label.tsx">
+        <metrics statements="4" coveredstatements="4" conditionals="0" coveredconditionals="0" methods="1" coveredmethods="1"/>
+        <line num="7" count="3" type="stmt"/>
+        <line num="11" count="3" type="stmt"/>
+        <line num="16" count="29" type="stmt"/>
+        <line num="22" count="3" type="stmt"/>
+      </file>
+      <file name="scroll-area.tsx" path="/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-core/admin/components/ui/scroll-area.tsx">
+        <metrics statements="6" coveredstatements="6" conditionals="5" coveredconditionals="4" methods="2" coveredmethods="2"/>
+        <line num="6" count="1" type="stmt"/>
+        <line num="10" count="4" type="stmt"/>
+        <line num="22" count="1" type="stmt"/>
+        <line num="24" count="1" type="stmt"/>
+        <line num="28" count="4" type="stmt"/>
+        <line num="44" count="1" type="stmt"/>
+      </file>
+      <file name="textarea.tsx" path="/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-core/admin/components/ui/textarea.tsx">
+        <metrics statements="3" coveredstatements="3" conditionals="0" coveredconditionals="0" methods="1" coveredmethods="1"/>
+        <line num="5" count="2" type="stmt"/>
+        <line num="9" count="5" type="stmt"/>
+        <line num="20" count="2" type="stmt"/>
+      </file>
+    </package>
+    <package name="lib">
+      <metrics statements="1" coveredstatements="1" conditionals="0" coveredconditionals="0" methods="1" coveredmethods="1"/>
+      <file name="utils.ts" path="/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-core/admin/lib/utils.ts">
+        <metrics statements="1" coveredstatements="1" conditionals="0" coveredconditionals="0" methods="1" coveredmethods="1"/>
+        <line num="5" count="76" type="stmt"/>
+      </file>
+    </package>
+  </project>
+</coverage>

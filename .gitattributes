@@ -1,0 +1,33 @@
+# Ensure consistent line endings
+* text=auto eol=lf
+
+# Markdown and code files use LF endings
+*.md text
+*.ts text
+*.tsx text
+*.js text
+*.json text
+*.yml text
+*.yaml text
+*.css text
+*.html text
+
+# Treat PDFs and images as binary
+*.pdf binary
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.webp binary
+*.ico binary
+*.svg text
+
+# Ignore diffs for screenshots
+/public/previews/* binary
+/tests/visual-regression/*.png binary
+
+# Lock shell and SQL scripts to LF
+*.sh text eol=lf
+*.sql text eol=lf
+
+# Prevent re-normalizing already normalized files
+.gitattributes export-ignore

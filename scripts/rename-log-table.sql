@@ -1,0 +1,1 @@
+alter table lead_action_logs rename to user_action_logs;

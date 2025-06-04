@@ -1,0 +1,45 @@
+name: Bug Report
+description: Report a problem or broken behavior
+labels: [bug, needs-triage]
+title: "🐞 [BUG] - "
+body:
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: Describe the issue in as much detail as possible.
+      placeholder: "When I clicked Save, nothing happened..."
+      required: true
+
+  - type: input
+    id: url-or-context
+    attributes:
+      label: Affected page or template
+      placeholder: e.g. `/admin/templates/new` or `cullmantow.com`
+
+  - type: dropdown
+    id: urgency
+    attributes:
+      label: Urgency level
+      options:
+        - Low (visual bug or minor UI)
+        - Medium (core feature but not blocking)
+        - High (blocking workflow or launch)
+        - Critical (breaking live client site)
+
+  - type: textarea
+    id: steps-to-reproduce
+    attributes:
+      label: Steps to reproduce
+      description: Optional, but helpful if the issue can be replicated.
+      placeholder: |
+        1. Go to...
+        2. Click on...
+        3. See error...
+
+  - type: textarea
+    id: screenshots
+    attributes:
+      label: Screenshots or logs
+      description: Drag/drop screenshots or copy error messages.
+  

@@ -1,0 +1,22 @@
+name: Close Stale Discussions
+
+on:
+  schedule:
+    - cron: '0 6 * * 1'  # Every Monday at 6:00 UTC
+  workflow_dispatch:
+
+jobs:
+  stale:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/stale@v8
+        with:
+          stale-issue-message: 'Closing due to inactivity. Feel free to reopen.'
+          stale-pr-message: 'Closing stale PR. Comment to reactivate.'
+          stale-discussion-message: 'Auto-closing this discussion due to inactivity.'
+          stale-discussion-label: 'inactive'
+          days-before-stale: 30
+          days-before-close: 5
+          only-issues: false
+          only-prs: false
+          only-discussions: true

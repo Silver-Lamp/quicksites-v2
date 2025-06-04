@@ -1,0 +1,37 @@
+site_name: QuickSites Docs
+site_url: https://silver-lamp.github.io/quicksites-core
+repo_url: https://github.com/Silver-Lamp/quicksites-core
+repo_name: Silver-Lamp/quicksites-core
+
+theme:
+  name: material
+  features:
+    - navigation.instant
+    - navigation.tabs
+    - search.suggest
+    - content.code.copy
+  palette:
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: blue
+      accent: lime
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: blue
+      accent: lime
+  favicon: assets/favicon.ico
+  logo: assets/logo.png
+
+nav:
+  - Home: index.md
+  - Features: features.md
+  - API Reference: api.md
+  - Admin Guide: admin-guide.md
+  - Viewer Guide: viewer-guide.md
+  - Affiliate Guide: affiliate-guide.md
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/Silver-Lamp/quicksites-core
+  og:image: /assets/opengraph-image.dark.safe.png      

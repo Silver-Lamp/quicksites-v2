@@ -1,0 +1,32 @@
+{
+  "version": 2,
+  "builds": [
+    {
+      "src": "next.config.js",
+      "use": "@vercel/next"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/(.*)",
+      "dest": "/$1"
+    }
+  ],
+  "github": {
+    "enabled": true,
+    "deployments": true,
+    "productionBranch": "main"
+  },
+  "redirects": [
+    {
+      "source": "/storybook",
+      "destination": "https://storybook.quicksites.ai",
+      "permanent": false
+    },
+    {
+      "source": "/old-dashboard",
+      "destination": "/admin/dashboard",
+      "permanent": true
+    }
+  ]
+}

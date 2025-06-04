@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Feature ideas and voting
+    url: https://github.com/Silver-Lamp/quicksites-core/discussions/categories/feature-requests
+    about: Vote on new ideas or suggest improvements. This link also appears in PR templates, the admin dashboard, and your README.
+  - name: Need help with deployment or hosting?
+    url: https://cal.com/sandon/30min
+    about: Book a time with Sandon to resolve technical blockers or go live support.

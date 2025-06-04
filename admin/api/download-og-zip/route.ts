@@ -1,0 +1,58 @@
+/* app/api/upload-og-zip/route.ts */
+
+import { supabase } from '@/admin/lib/supabaseClient';
+import { createClient } from '@supabase/supabase-js';
+import { NextRequest, NextResponse } from 'next/server';
+import archiver from 'archiver';
+
+export const runtime = 'edge';
+
+export async function POST(req: NextRequest) {
+  const { slugs } = await req.json();
+  if (!Array.isArray(slugs) || slugs.length === 0) {
+    return NextResponse.json({ error: 'No slugs provided' }, { status: 400 });
+  }
+
+  const supabase = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  );
+
+  const files = await Promise.all(
+    slugs.map(async (slug: string) => {
+      const res = await fetch(`https://quicksites.ai/og/compare/${slug}`);
+      const buffer = await res.arrayBuffer();
+      return { name: `${slug}.png`, buffer: Buffer.from(buffer) };
+    })
+  );
+
+  const archive = archiver('zip', { zlib: { level: 9 } });
+  const chunks: Uint8Array[] = [];
+
+  archive.on('data', (chunk: any) => chunks.push(chunk));
+
+  for (const file of files) {
+    archive.append(file.buffer, { name: file.name });
+  }
+
+  await archive.finalize();
+  const zipBuffer = Buffer.concat(chunks);
+
+  const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+  const fileName = `campaign-og-${timestamp}.zip`;
+
+  const { data, error } = await supabase.storage
+    .from('campaign-ogs')
+    .upload(fileName, zipBuffer, {
+      contentType: 'application/zip',
+      upsert: true,
+    });
+
+  if (error) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+
+  const { data: pubUrl } = supabase.storage.from('campaign-ogs').getPublicUrl(fileName);
+
+  return NextResponse.json({ url: pubUrl.publicUrl });
+}

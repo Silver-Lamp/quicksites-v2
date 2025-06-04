@@ -1,0 +1,11 @@
+# Enable merge queue for the `main` branch
+# This is not a workflow file but a .github/merge-queue.yml setting
+# See: https://docs.github.com/en/repositories/configuring-branches-and-merges/managing-a-merge-queue
+
+merge_queue:
+  name: main
+  required_checks:
+    - build
+    - lint
+    - test
+  batch_size: 1

@@ -1,0 +1,21 @@
+pages:
+  - 'pages/**'
+
+scripts:
+  - 'scripts/**'
+
+tests:
+  - 'tests/**'
+  - '**/*.spec.ts'
+
+ui:
+  - 'components/**'
+  - 'styles/**'
+
+docs:
+  - '*.md'
+  - 'README.md'
+
+security:
+  - 'pages/admin/security/**'
+  - 'scripts/*security*'

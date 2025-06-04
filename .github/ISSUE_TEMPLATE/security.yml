@@ -1,0 +1,22 @@
+---
+name: Security vulnerability
+about: Report a security issue privately
+title: "[SECURITY] "
+labels: ["security", "private"]
+assignees: []
+
+---
+
+**Issue summary**
+Brief explanation of the vulnerability.
+
+**Steps to reproduce**
+Outline how it can be triggered.
+
+**Impact**
+Who or what is affected.
+
+**Suggested fix**
+(Optional)
+
+Please mark this as private or email us at security@quicksites.ai.

@@ -1,0 +1,18 @@
+template:
+  - "pages/demo/**"
+  - "components/templates/**"
+
+admin:
+  - "pages/admin/**"
+  - "pages/api/**"
+
+style:
+  - "**/*.css"
+  - "**/*.tailwind.ts"
+  - "components/ui/**"
+
+playwright:
+  - "tests/**"
+
+hotfix:
+  - "fixes/**"

@@ -1,0 +1,41 @@
+name: Nightly Analytics Export
+
+on:
+  schedule:
+    - cron: '0 6 * * *' # Every day at 6:00 UTC
+  workflow_dispatch: # manual trigger
+
+jobs:
+  export:
+    runs-on: ubuntu-latest
+    env:
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Set up Node
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18
+
+      - name: Install deps
+        run: npm ci
+
+      - name: Run export script
+        run: npx tsx scripts/export-analytics.ts
+
+      - name: Generate index.json
+        run: |
+          mkdir -p reports/analytics
+          ls reports/analytics/*.csv | jq -R -s -c 'split("\n") | map(select(length > 0) | split("/") | .[-1])' > reports/analytics/index.json
+
+      - name: Commit updated reports
+        run: |
+          git config user.name "quicksites-bot"
+          git config user.email "bot@quicksites.ai"
+          git add reports/analytics
+          git commit -m "📊 Nightly analytics snapshot [skip ci]" || echo "Nothing to commit"
+          git push

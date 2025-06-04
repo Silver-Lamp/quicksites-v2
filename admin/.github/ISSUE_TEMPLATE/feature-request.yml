@@ -1,0 +1,39 @@
+name: Feature Request
+description: Suggest a new feature or improvement
+labels: [enhancement, proposal]
+title: "✨ [FEATURE] - "
+body:
+  - type: textarea
+    id: what-feature
+    attributes:
+      label: What do you want to add or improve?
+      description: Describe the feature as clearly as possible.
+      placeholder: "I’d like to support importing multi-page JSON into the editor."
+      required: true
+
+  - type: dropdown
+    id: importance
+    attributes:
+      label: Importance level
+      options:
+        - Nice to have
+        - Important
+        - Critical
+
+  - type: textarea
+    id: use-case
+    attributes:
+      label: What problem would this solve?
+      placeholder: "This would allow me to onboard clients faster."
+
+  - type: textarea
+    id: suggested-approach
+    attributes:
+      label: Optional: How might this be implemented?
+      placeholder: "We could extend the JSON schema to support..."
+
+  - type: textarea
+    id: related
+    attributes:
+      label: Related issues, designs, or links
+      placeholder: "#234 or https://figma.com/file/..."

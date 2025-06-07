@@ -1,0 +1,8 @@
+// After generating each badge inside /api/badge/top.ts
+await fetch(\`https://yourdomain.com/api/notify-creator?slug=\${c.slug}\`, {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+    Authorization: 'Bearer ' + process.env.BADGE_NOTIFY_KEY
+  }
+});

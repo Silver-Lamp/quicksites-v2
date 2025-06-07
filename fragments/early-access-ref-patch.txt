@@ -1,0 +1,13 @@
+const refData = JSON.parse(localStorage.getItem('referrer_info') || '{}');
+
+await fetch('/api/early-access', {
+  method: 'POST',
+  body: JSON.stringify({
+    email,
+    name,
+    invite_code: code,
+    ...refData
+  }),
+});
+
+router.push('/thank-you');

@@ -1,0 +1,17 @@
+// Near the top of /world/[handle].tsx
+<div className="mb-4 space-x-4 text-sm">
+  <a
+    href={`/hub/${slug}/print`}
+    className="text-blue-400 hover:underline"
+  >
+    🖨️ Print Labels
+  </a>
+  <a
+    href={`/api/print-labels-pdf?handle=${slug}`}
+    className="text-blue-400 hover:underline"
+    target="_blank"
+    rel="noopener noreferrer"
+  >
+    🧾 PDF Export
+  </a>
+</div>

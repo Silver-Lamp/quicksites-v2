@@ -1,0 +1,4 @@
+// On template detail view or template-market card
+<Link href={`/forks/${template.id}`} className="text-xs text-blue-400 hover:underline">
+  View Remix Tree
+</Link>

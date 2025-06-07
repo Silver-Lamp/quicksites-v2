@@ -1,0 +1,8 @@
+// In template-market or template detail page:
+{template.forked_from && (
+  <p className="text-sm text-zinc-500 mt-2">
+    Forked from <Link href={`/@/${template.forked_from}`} className="text-blue-400 hover:underline">
+      @{template.forked_from}
+    </Link>
+  </p>
+)}

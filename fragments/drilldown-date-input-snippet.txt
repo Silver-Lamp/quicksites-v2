@@ -1,0 +1,25 @@
+import { useRouter } from 'next/router';
+const router = useRouter();
+const { date } = router.query;
+
+return (
+  <div className="mb-4 flex gap-2 items-center text-sm">
+    <input
+      type="date"
+      value={date ?? ''}
+      onChange={(e) => {
+        const newDate = e.target.value;
+        router.push(`?date=${newDate}`);
+      }}
+      className="bg-zinc-900 text-white border border-zinc-700 px-2 py-1 rounded"
+    />
+    {date && (
+      <button
+        onClick={() => router.push('/admin/logs/feedback')}
+        className="text-xs text-blue-400 hover:underline"
+      >
+        Clear Filter
+      </button>
+    )}
+  </div>
+);

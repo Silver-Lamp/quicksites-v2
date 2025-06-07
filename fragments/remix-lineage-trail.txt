@@ -1,0 +1,6 @@
+// Above your remix tree in /forks/[template_id].tsx
+{forks.length > 0 && (
+  <p className="text-sm text-zinc-400 mb-6">
+    Lineage: {forks.map(f => '@' + f.handle).join(' → ')}
+  </p>
+)}

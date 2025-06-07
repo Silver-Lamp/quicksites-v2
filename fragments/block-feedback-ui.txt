@@ -1,0 +1,53 @@
+// Under each block card in /world/[handle]/share.tsx
+<div className="mt-3 flex gap-2 text-sm">
+  <button
+    className="bg-green-700 hover:bg-green-800 text-white px-3 py-1 rounded"
+    onClick={async () => {
+      await fetch('/api/cheer', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${user?.access_token}`
+        },
+        body: JSON.stringify({ block_id: b.id })
+      });
+      alert('🎉 Sent cheer!');
+    }}
+  >
+    🎉 Cheer
+  </button>
+  <button
+    className="bg-blue-700 hover:bg-blue-800 text-white px-3 py-1 rounded"
+    onClick={async () => {
+      await fetch('/api/echo', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${user?.access_token}`
+        },
+        body: JSON.stringify({ block_id: b.id })
+      });
+      alert('🔁 Echoed!');
+    }}
+  >
+    🔁 Echo
+  </button>
+  <button
+    className="bg-purple-700 hover:bg-purple-800 text-white px-3 py-1 rounded"
+    onClick={async () => {
+      const message = prompt('What reflection would you like to send?');
+      if (!message) return;
+      await fetch('/api/reflect', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${user?.access_token}`
+        },
+        body: JSON.stringify({ block_id: b.id, message })
+      });
+      alert('🪞 Reflection sent');
+    }}
+  >
+    🪞 Reflect
+  </button>
+</div>

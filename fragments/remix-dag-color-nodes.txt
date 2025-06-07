@@ -1,0 +1,14 @@
+// Apply style based on badge tier
+const color = {
+  'Beacon Leader': '#FFD700',
+  'Signal Steward': '#7FDBFF',
+  'Early Referrer': '#B10DC9'
+}[node.data.badge?.title] || '#AAAAAA';
+
+const styledNode = {
+  ...node,
+  style: {
+    border: '2px solid ' + color,
+    backgroundColor: '#111'
+  }
+};

@@ -1,0 +1,21 @@
+// Inside campaign card in /@/me/campaigns/index.tsx
+<div className="flex gap-2 mt-2 text-sm">
+  <Link href={`/support/${c.slug}/edit`} className="text-blue-300 hover:underline">✏️ Edit</Link>
+  <button
+    onClick={async () => {
+      if (!confirm('Delete this campaign?')) return;
+      const res = await fetch('/api/delete-campaign', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ slug: c.slug })
+      });
+      if (res.ok) location.reload();
+      else alert('Failed to delete');
+    }}
+    className="text-red-400 hover:underline"
+  >
+    🗑 Delete
+  </button>
+</div>

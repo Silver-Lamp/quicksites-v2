@@ -1,0 +1,18 @@
+// Inside any component that handles poster generation or download
+import { useState } from 'react';
+import { CelebrationModal } from '@/components/embed/CelebrationModal';
+
+// In component:
+const [showPosterCelebration, setShowPosterCelebration] = useState(false);
+
+// After successful download or poster trigger:
+setShowPosterCelebration(true);
+
+// JSX render:
+{showPosterCelebration && (
+  <CelebrationModal
+    type="poster"
+    slug={slug}
+    onClose={() => setShowPosterCelebration(false)}
+  />
+)}

@@ -1,0 +1,5 @@
+// At the top of pages/admin/logs/feedback.tsx or checkins.tsx
+import { CSVDateRangeExport } from '@/components/admin/CSVDateRangeExport';
+
+// Then inside JSX, above the table:
+<CSVDateRangeExport type="feedback" /> // or type="checkins"

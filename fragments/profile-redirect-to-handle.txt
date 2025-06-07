@@ -1,0 +1,8 @@
+// In /profile.tsx
+import { useEffect } from 'react';
+import { useRouter } from 'next/router';
+
+useEffect(() => {
+  const handle = user?.user_metadata?.handle;
+  if (handle) router.push(`/@/${handle}`);
+}, []);

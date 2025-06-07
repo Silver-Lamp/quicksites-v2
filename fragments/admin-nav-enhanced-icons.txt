@@ -1,0 +1,43 @@
+// Example for GroupedNav or dynamic sidebar config
+
+{
+  label: 'Tools',
+  links: [
+    {
+      label: 'Posters',
+      href: '/admin/tools/print-all',
+      icon: '🖼️'
+    },
+    {
+      label: 'Chart',
+      href: '/admin/tools/chart',
+      icon: '📊'
+    },
+    {
+      label: 'Campaigns CSV',
+      href: '/api/campaign-analytics',
+      icon: '📁'
+    },
+    {
+      label: 'Top Badges (ZIP)',
+      href: '/api/badge/top',
+      icon: '🏅'
+    },
+    {
+      label: 'Leaderboard',
+      href: '/leaderboard',
+      icon: '🏆'
+    }
+  ]
+},
+{
+  label: 'Logs',
+  links: [
+    {
+      label: 'Notifications',
+      href: '/admin/logs/notifications',
+      icon: '📨',
+      badge: 'NEW' // or dynamically fetched number
+    }
+  ]
+}

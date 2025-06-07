@@ -1,0 +1,16 @@
+// Inside top 3 loop in /leaderboard
+{ i < 3 && (
+  <div className="flex flex-col items-center relative group">
+    <img src={`/api/badge/${c.slug}`} alt="badge" className="w-12 h-12 rounded border border-zinc-700" />
+    <button
+      onClick={async () => {
+        const embed = await fetch(\`/api/embed/\${c.slug}\`).then(res => res.text());
+        await navigator.clipboard.writeText(embed);
+        alert('✅ Embed HTML copied!');
+      }}
+      className="text-[10px] mt-1 text-blue-400 underline"
+    >
+      Copy Embed
+    </button>
+  </div>
+)}

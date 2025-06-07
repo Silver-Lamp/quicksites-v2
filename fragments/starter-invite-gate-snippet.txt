@@ -1,0 +1,4 @@
+// import and call this hook near the top of /pages/starter.tsx
+
+import { useInviteGate } from '@/lib/useInviteGate';
+useInviteGate();

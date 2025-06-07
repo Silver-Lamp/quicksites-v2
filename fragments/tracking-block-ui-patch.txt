@@ -1,0 +1,24 @@
+// In /world/[slug].tsx block renderer
+{b.type === 'tracking' && (
+  <div className="mt-4 space-y-2">
+    <button
+      onClick={async () => {
+        const res = await fetch('/api/checkin', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${user?.access_token}`
+          },
+          body: JSON.stringify({ blockId: b.id, slug: b.slug })
+        });
+        if (res.ok) alert('✅ Check-in logged!');
+      }}
+      className="bg-green-600 hover:bg-green-700 px-4 py-1 text-sm rounded"
+    >
+      ✅ Check In
+    </button>
+    <div className="mt-2">
+      <MACDTrend slug={b.slug} />
+    </div>
+  </div>
+)}

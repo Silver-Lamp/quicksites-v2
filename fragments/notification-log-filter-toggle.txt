@@ -1,0 +1,38 @@
+// Inside NotificationLog component
+const [filter, setFilter] = useState<'all' | 'fail' | 'success'>('all');
+
+useEffect(() => {
+  fetch('/api/notification-logs')
+    .then(res => res.json())
+    .then(logs => {
+      if (filter === 'fail') {
+        setLogs(logs.filter((l: any) => l.event === 'badge_notify_failed'));
+      } else if (filter === 'success') {
+        setLogs(logs.filter((l: any) => l.event === 'badge_notify_sent'));
+      } else {
+        setLogs(logs);
+      }
+    });
+}, [filter]);
+
+// JSX above the table
+<div className="flex gap-2 pb-4 text-sm">
+  <button
+    onClick={() => setFilter('all')}
+    className={\`px-3 py-1 rounded \${filter === 'all' ? 'bg-blue-600' : 'bg-zinc-700'}\`}
+  >
+    All
+  </button>
+  <button
+    onClick={() => setFilter('fail')}
+    className={\`px-3 py-1 rounded \${filter === 'fail' ? 'bg-red-700' : 'bg-zinc-700'}\`}
+  >
+    Failures
+  </button>
+  <button
+    onClick={() => setFilter('success')}
+    className={\`px-3 py-1 rounded \${filter === 'success' ? 'bg-green-700' : 'bg-zinc-700'}\`}
+  >
+    Sent
+  </button>
+</div>

@@ -1,0 +1,6 @@
+// In /remix-map.tsx inside <ReactFlow>:
+onNodeClick={(_, node) => {
+  if (node?.data?.slug) {
+    window.open(`/template/${node.data.slug}`, '_blank');
+  }
+}}

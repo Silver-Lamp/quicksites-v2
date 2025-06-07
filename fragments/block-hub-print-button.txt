@@ -1,0 +1,7 @@
+// Place near the top of /hub/[handle].tsx
+<Link
+  href={`/hub/${handle}/print`}
+  className="inline-block mb-6 text-blue-400 hover:underline text-sm"
+>
+  🖨️ Print All Block Labels
+</Link>

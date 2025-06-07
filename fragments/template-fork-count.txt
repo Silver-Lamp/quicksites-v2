@@ -1,0 +1,2 @@
+// In /template-market grid
+<span className="text-xs text-zinc-400 ml-1">({template.remix_count} forks)</span>

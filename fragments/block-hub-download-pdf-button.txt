@@ -1,0 +1,9 @@
+// Add to /hub/[handle].tsx or /hub/[handle]/print.tsx
+<a
+  href={`/api/print-labels-pdf?handle=${handle}`}
+  target="_blank"
+  rel="noopener noreferrer"
+  className="inline-block text-blue-500 hover:underline text-sm mt-2"
+>
+  🧾 Download as PDF
+</a>

@@ -1,0 +1,19 @@
+// Append to admin nav config alongside Logs or Tools group
+
+{
+  label: 'Insights',
+  links: [
+    {
+      label: 'Feedback',
+      href: '/admin/logs/feedback',
+      icon: '🗣️',
+      badge: navBadges.new_feedback > 0 ? navBadges.new_feedback : undefined
+    },
+    {
+      label: 'Check-ins',
+      href: '/admin/logs/checkins',
+      icon: '📍',
+      badge: navBadges.checkins > 0 ? navBadges.checkins : undefined
+    }
+  ]
+}

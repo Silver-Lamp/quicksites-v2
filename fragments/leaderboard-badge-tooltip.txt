@@ -1,0 +1,9 @@
+// Inside leaderboard page, replace badge <img>
+{ i < 3 && (
+  <div className="relative group">
+    <img src={`/api/badge/${c.slug}`} alt="badge" className="w-12 h-12 rounded border border-zinc-700" />
+    <div className="absolute top-full left-0 mt-1 w-max bg-black text-white text-xs p-2 rounded opacity-0 group-hover:opacity-100 transition">
+      Top Campaign Badge!
+    </div>
+  </div>
+)}

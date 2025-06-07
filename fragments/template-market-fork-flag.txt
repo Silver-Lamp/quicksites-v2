@@ -1,0 +1,4 @@
+// In template-market grid/card
+{template.forked_from && (
+  <span className="text-yellow-400 text-xs ml-2">Fork</span>
+)}

@@ -1,0 +1,15 @@
+import { useRouter } from 'next/router';
+const router = useRouter();
+const { date } = router.query;
+
+useEffect(() => {
+  fetch('/api/logs/feedback')
+    .then(res => res.json())
+    .then(rows => {
+      if (date) {
+        setRows(rows.filter((r: any) => r.created_at.startsWith(date)));
+      } else {
+        setRows(rows);
+      }
+    });
+}, [date]);

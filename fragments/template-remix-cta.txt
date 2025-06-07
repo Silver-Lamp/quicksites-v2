@@ -1,0 +1,4 @@
+// On template page or template-market card
+<Link href={`/template/remix?id=${template.id}`} className="text-xs text-blue-400 hover:underline">
+  🔁 Remix this template
+</Link>

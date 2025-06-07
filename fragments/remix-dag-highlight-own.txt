@@ -1,0 +1,8 @@
+// In remix DAG logic
+if (node.data.owner_id === currentUserId) {
+  node.style = {
+    ...node.style,
+    border: '2px dashed #00FFAA',
+    boxShadow: '0 0 10px #00FFAA'
+  };
+}

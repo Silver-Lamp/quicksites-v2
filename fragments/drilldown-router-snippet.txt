@@ -1,0 +1,9 @@
+import { useRouter } from 'next/router';
+
+// Inside your chart component:
+const router = useRouter();
+
+const handleDrilldown = (clickedDate: string) => {
+  const target = `/admin/logs/feedback?date=${clickedDate}`;
+  router.push(target);
+};

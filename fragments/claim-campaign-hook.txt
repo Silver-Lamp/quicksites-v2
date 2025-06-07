@@ -1,0 +1,12 @@
+// Add to _app.tsx or post-login flow
+const token = localStorage.getItem('campaign_preclaim');
+if (token && user) {
+  fetch('/api/claim-campaign', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${user.access_token}`
+    },
+    body: JSON.stringify({ preclaim_token: token })
+  }).then(() => localStorage.removeItem('campaign_preclaim'));
+}

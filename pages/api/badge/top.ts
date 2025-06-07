@@ -1,0 +1,67 @@
+import { createClient } from '@supabase/supabase-js';
+import archiver from 'archiver';
+import { createCanvas, loadImage } from 'canvas';
+
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+);
+
+export default async function handler(_req, res) {
+  const { data: campaigns } = await supabase
+    .from('support_campaigns')
+    .select('*');
+
+  const oneWeekAgo = new Date();
+  oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+
+  const scored = [];
+  for (const c of campaigns) {
+    const { count } = await supabase
+      .from('block_feedback')
+      .select('id', { count: 'exact', head: true })
+      .eq('block_id', c.block_id)
+      .eq('action', c.target_action)
+      .gt('created_at', oneWeekAgo.toISOString());
+
+    scored.push({ ...c, count });
+  }
+
+  const top = scored.sort((a, b) => b.count - a.count).slice(0, 3);
+
+  res.setHeader('Content-Type', 'application/zip');
+  res.setHeader('Content-Disposition', 'attachment; filename="weekly-top-campaigns.zip"');
+
+  const archive = archiver('zip');
+  archive.pipe(res);
+
+  for (const c of top) {
+    const canvas = createCanvas(600, 320);
+    const ctx = canvas.getContext('2d');
+
+    ctx.fillStyle = '#000';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = '#0f0';
+    ctx.font = 'bold 28px sans-serif';
+    ctx.fillText('🏆 Weekly Top Campaign', 30, 50);
+
+    ctx.fillStyle = '#fff';
+    ctx.font = 'bold 24px sans-serif';
+    ctx.fillText(c.headline.slice(0, 40), 30, 100);
+    ctx.fillStyle = '#ccc';
+    ctx.font = '18px sans-serif';
+    ctx.fillText(`Action: ${c.target_action}`, 30, 140);
+    ctx.fillText(`Slug: ${c.slug}`, 30, 170);
+
+    if (c.logo_url) {
+      try {
+        const img = await loadImage(c.logo_url);
+        ctx.drawImage(img, 440, 20, 140, 70);
+      } catch {}
+    }
+
+    archive.append(canvas.toBuffer('image/png'), { name: `${c.slug}-badge.png` });
+  }
+
+  await archive.finalize();
+}

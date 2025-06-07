@@ -1,0 +1,13 @@
+// In /profile.tsx
+const [refStats, setRefStats] = useState<any>(null);
+useEffect(() => {
+  fetch('/api/user-referrals?email=' + user.email)
+    .then(res => res.json())
+    .then(setRefStats);
+}, []);
+// Then render:
+{refStats?.badge && (
+  <p className="text-yellow-400 text-sm mt-2">
+    {refStats.badge.icon} {refStats.badge.title}
+  </p>
+)}

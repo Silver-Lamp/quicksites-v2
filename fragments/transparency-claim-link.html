@@ -1,0 +1,9 @@
+{/* Add to transparency card */}
+{!site.is_claimed && (
+  <a
+    href={`/claim/${site.domain}`}
+    className="text-xs text-blue-400 hover:underline mt-2 block"
+  >
+    Claim this site →
+  </a>
+)}

@@ -1,0 +1,31 @@
+// Example in pages/admin/_layout.tsx or pages/admin/dashboard.tsx
+
+export async function getServerSideProps() {
+  const res = await fetch('https://yourdomain.com/api/nav-badges');
+  const badgeData = await res.json();
+
+  return {
+    props: {
+      navBadges: badgeData
+    }
+  };
+}
+
+// In component:
+export default function AdminDashboard({ navBadges }) {
+  const navItems = [
+    {
+      label: 'Logs',
+      links: [
+        {
+          label: 'Notifications',
+          href: '/admin/logs/notifications',
+          icon: '📨',
+          badge: navBadges.failed > 0 ? navBadges.failed : undefined
+        }
+      ]
+    }
+  ];
+
+  return <GroupedNav groups={navItems} />;
+}

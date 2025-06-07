@@ -1,0 +1,2 @@
+// In /hall-of-fame.tsx row rendering
+<Link href={`/@/${row.handle}`} className="text-blue-400 hover:underline">@{row.handle}</Link>

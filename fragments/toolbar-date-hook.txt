@@ -1,0 +1,12 @@
+import { useDateRange } from '@/hooks/useDateRange';
+
+export function AdminLogToolbar({ ... }) {
+  const { start, end } = useDateRange();
+
+  return (
+    <>
+      <CSVDateRangeExport type={type} start={start} end={end} />
+      ...
+    </>
+  );
+}

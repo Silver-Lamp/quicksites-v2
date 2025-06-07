@@ -1,0 +1,5 @@
+// Enhance edge definitions with label + arrow
+const edges = [
+  { id: 'e1', source: 'root', target: 'b1', label: '2025-06-01', markerEnd: { type: 'arrowclosed' } },
+  { id: 'e2', source: 'b1', target: 'c1', label: '2025-06-03', markerEnd: { type: 'arrowclosed' } }
+];

@@ -1,0 +1,23 @@
+// At the top of pages/support/[slug].tsx
+import { useRouter } from 'next/router';
+import { useEffect, useState } from 'react';
+import { CelebrationModal } from '@/components/embed/CelebrationModal';
+
+// Inside component:
+const router = useRouter();
+const [showCelebration, setShowCelebration] = useState(false);
+
+useEffect(() => {
+  if (router.query.checkin === 'done') {
+    setShowCelebration(true);
+  }
+}, [router.query]);
+
+// Inside JSX return:
+{showCelebration && (
+  <CelebrationModal
+    type="checkin"
+    slug={router.query.slug as string}
+    onClose={() => setShowCelebration(false)}
+  />
+)}

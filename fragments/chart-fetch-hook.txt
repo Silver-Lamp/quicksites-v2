@@ -1,0 +1,9 @@
+import { useDateRange } from '@/hooks/useDateRange';
+const { start, end } = useDateRange();
+
+useEffect(() => {
+  if (!start || !end) return;
+  fetch(`/api/analytics/signals?start=${start}&end=${end}`)
+    .then(res => res.json())
+    .then(setData);
+}, [start, end]);

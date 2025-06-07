@@ -1,0 +1,39 @@
+// Inside admin layout or sidebar component
+import { useEffect, useState } from 'react';
+
+export default function AdminSidebar() {
+  const [navBadges, setNavBadges] = useState<{ failed: number }>({ failed: 0 });
+
+  useEffect(() => {
+    fetch('/api/nav-badges')
+      .then(res => res.json())
+      .then(setNavBadges)
+      .catch(() => {});
+  }, []);
+
+  const navItems = [
+    {
+      label: 'Tools',
+      links: [
+        { label: 'Posters', href: '/admin/tools/print-all', icon: '🖼' },
+        { label: 'Chart', href: '/admin/tools/chart', icon: '📊' },
+        { label: 'Campaigns CSV', href: '/api/campaign-analytics', icon: '📁' },
+        { label: 'Top Badges (ZIP)', href: '/api/badge/top', icon: '🏅' },
+        { label: 'Leaderboard', href: '/leaderboard', icon: '🏆' }
+      ]
+    },
+    {
+      label: 'Logs',
+      links: [
+        {
+          label: 'Notifications',
+          href: '/admin/logs/notifications',
+          icon: '📨',
+          badge: navBadges.failed > 0 ? navBadges.failed : undefined
+        }
+      ]
+    }
+  ];
+
+  return <GroupedNav groups={navItems} />;
+}

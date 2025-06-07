@@ -1,0 +1,7 @@
+// In /api/metrics.ts
+const [refCount] = await Promise.all([
+  supabase.from('referral_logs').select('*', { count: 'exact', head: true })
+]);
+
+// Then add to response:
+referrals: refCount?.count ?? 0

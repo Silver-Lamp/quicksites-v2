@@ -80,4 +80,24 @@ jobs:
           git add reports/*.diff.md
           git commit -m "📝 nightly sitemap markdown diffs [skip ci]" || echo "No changes to commit"
           git push
+      - name: Notify via Slack
+        if: ${{ failure() }}
+        uses: rtCamp/action-slack-notify@v2
+        env:
+          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+          SLACK_COLOR: '#FF0000'
+          SLACK_TITLE: '🚨 Nightly Analytics Export Failed'
+          SLACK_MESSAGE: 'Check logs and Supabase connection.'
+      - name: Send Email (optional)
+        if: ${{ failure() }}
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.mailgun.org
+          server_port: 587
+          username: ${{ secrets.EMAIL_USER }}
+          password: ${{ secrets.EMAIL_PASS }}
+          subject: "❌ Analytics Export Failed"
+          to: your@email.com
+          from: "QuickSites Bot <bot@quicksites.ai>"
+          body: "The nightly analytics export failed. View logs at: ${{ github.run_url }}"
   

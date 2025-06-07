@@ -1,0 +1,14 @@
+// At top of /@/me/summary.tsx
+const [digest, setDigest] = useState<string | null>(null);
+
+// Inside useEffect (after user is confirmed)
+fetch('/api/weekly-digest-live?user_id=' + user.id)
+  .then(res => res.json())
+  .then(data => setDigest(data.digest));
+
+// Inside render return, above feedback and check-in sections:
+{digest && (
+  <div className="bg-zinc-900 p-4 rounded border border-green-700 text-green-300 text-sm whitespace-pre-wrap">
+    {digest}
+  </div>
+)}

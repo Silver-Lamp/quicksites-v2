@@ -1,0 +1,25 @@
+// After poster generation (e.g. download triggered):
+router.push(`/support/${slug}?poster=done`);
+
+// Then in /support/[slug].tsx:
+import { useRouter } from 'next/router';
+import { useEffect, useState } from 'react';
+import { CelebrationModal } from '@/components/embed/CelebrationModal';
+
+const router = useRouter();
+const [showPosterCelebration, setShowPosterCelebration] = useState(false);
+
+useEffect(() => {
+  if (router.query.poster === 'done') {
+    setShowPosterCelebration(true);
+  }
+}, [router.query]);
+
+// Inside JSX:
+{showPosterCelebration && (
+  <CelebrationModal
+    type="poster"
+    slug={router.query.slug as string}
+    onClose={() => setShowPosterCelebration(false)}
+  />
+)}

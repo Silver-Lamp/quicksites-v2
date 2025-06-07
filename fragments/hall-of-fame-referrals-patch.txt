@@ -1,0 +1,11 @@
+// In /pages/hall-of-fame.tsx
+const res = await fetch('/api/top-referrers');
+const data = await res.json();
+// Render:
+<ul className="space-y-2">
+  {data.map((r, i) => (
+    <li key={i} className="text-sm">
+      <strong>{r.ref}</strong> – {r.total} signups
+    </li>
+  ))}
+</ul>

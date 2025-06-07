@@ -1,0 +1,7 @@
+// To use this, add to /early-access.tsx or /starter.tsx:
+
+import { useRefTracker } from '@/lib/useRefTracker';
+useRefTracker();
+
+// Then when submitting form, include:
+const refData = JSON.parse(localStorage.getItem('referrer_info') || '{}');

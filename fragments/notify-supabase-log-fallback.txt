@@ -1,0 +1,7 @@
+// After console.error in notifyWithRetry:
+
+await supabase.from('notification_logs').insert({
+  slug,
+  event: 'badge_notify_failed',
+  timestamp: new Date().toISOString()
+});

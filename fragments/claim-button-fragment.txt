@@ -1,0 +1,24 @@
+// Add near banner or page controls
+{!campaign.created_by && user && (
+  <button
+    className="bg-green-600 hover:bg-green-700 px-3 py-1 rounded text-white text-sm"
+    onClick={async () => {
+      const res = await fetch('/api/claim-campaign', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${user.access_token}`
+        },
+        body: JSON.stringify({ preclaim_token: campaign.preclaim_token })
+      });
+      if (res.ok) {
+        alert('✅ Claimed!');
+        location.reload();
+      } else {
+        alert('Failed to claim.');
+      }
+    }}
+  >
+    🎯 Claim This Campaign
+  </button>
+)}

@@ -28,5 +28,11 @@
       "destination": "/admin/dashboard",
       "permanent": true
     }
+  ],
+  "crons": [
+    {
+      "path": "/api/send-weekly-digest",
+      "schedule": "0 9 * * 1"
+    }
   ]
 }

@@ -1,0 +1,25 @@
+// After awarding a badge (e.g. on leaderboard logic or backend trigger):
+router.push(`/support/${slug}?badge=done`);
+
+// Then in /support/[slug].tsx:
+import { useRouter } from 'next/router';
+import { useEffect, useState } from 'react';
+import { CelebrationModal } from '@/components/embed/CelebrationModal';
+
+const router = useRouter();
+const [showBadgeCelebration, setShowBadgeCelebration] = useState(false);
+
+useEffect(() => {
+  if (router.query.badge === 'done') {
+    setShowBadgeCelebration(true);
+  }
+}, [router.query]);
+
+// JSX:
+{showBadgeCelebration && (
+  <CelebrationModal
+    type="badge"
+    slug={router.query.slug as string}
+    onClose={() => setShowBadgeCelebration(false)}
+  />
+)}

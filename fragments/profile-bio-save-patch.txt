@@ -1,0 +1,14 @@
+// In /profile.tsx, update the bio input to be editable and savable
+const [bio, setBio] = useState(user?.user_metadata?.bio || '');
+
+const handleSave = async () => {
+  const { error } = await supabase.auth.updateUser({
+    data: {
+      name: displayName,
+      bio,
+      avatar_url: avatarUrl
+    }
+  });
+  if (error) toast.error('Failed to update profile');
+  else toast.success('Profile updated!');
+};

@@ -1,0 +1,17 @@
+// Optional: recursively highlight all downstream forks from a steward
+function highlightInfluence(startId, edges, influenceMap = new Set()) {
+  influenceMap.add(startId);
+  edges.forEach(e => {
+    if (e.source === startId && !influenceMap.has(e.target)) {
+      highlightInfluence(e.target, edges, influenceMap);
+    }
+  });
+  return influenceMap;
+}
+
+// Then mark nodes:
+const myTree = highlightInfluence(myNodeId, edges);
+nodes = nodes.map(n => myTree.has(n.id) ? {
+  ...n,
+  style: { border: '2px solid #66FF66', backgroundColor: '#112' }
+} : n);

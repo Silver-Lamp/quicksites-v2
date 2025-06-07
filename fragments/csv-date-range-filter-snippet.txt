@@ -1,0 +1,21 @@
+// Add to the top of /api/logs/feedback.csv.ts or checkins.csv.ts
+const { start, end } = req.query;
+const from = start ? new Date(start as string) : null;
+const to = end ? new Date(end as string) : null;
+
+// Apply filters to Supabase query
+let query = supabase.from('block_feedback') // or published_site_views
+  .select('block_id, action, comment, created_at') // or appropriate fields
+  .order('created_at', { ascending: false })
+  .limit(500);
+
+if (from) query = query.gte('created_at', from.toISOString());
+if (to) query = query.lte('created_at', to.toISOString());
+
+const { data, error } = await query;
+
+// Add suffix to filename
+const suffix = from || to
+  ? `_range-${from?.toISOString()?.slice(0,10) ?? 'start'}-to-${to?.toISOString()?.slice(0,10) ?? 'end'}`
+  : '';
+res.setHeader('Content-Disposition', \`attachment; filename="feedback\${suffix}.csv"\`);

@@ -1,0 +1,8 @@
+// In /pages/profile.tsx
+useEffect(() => {
+  fetch('/api/user-referrals')
+    .then(res => res.json())
+    .then(data => setReferralCount(data.count));
+}, []);
+// Then display:
+<p className="text-sm text-zinc-300 mt-4">📡 Referrals Made: {referralCount}</p>

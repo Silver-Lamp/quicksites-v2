@@ -1,0 +1,18 @@
+<thead>
+  <tr>
+    <th className="text-left p-2">User</th>
+    <th className="text-right p-2">Referrals</th>
+    <th className="text-right p-2">Points</th>
+    <th className="text-right p-2">Total</th>
+  </tr>
+</thead>
+<tbody>
+  {entries.map((entry, i) => (
+    <tr key={i}>
+      <td className="p-2">{entry.alias || '🕶 Anonymous'}</td>
+      <td className="p-2 text-right">{entry.referrals || 0}</td>
+      <td className="p-2 text-right">{entry.points || 0}</td>
+      <td className="p-2 text-right font-bold">{(entry.referrals || 0) + (entry.points || 0)}</td>
+    </tr>
+  ))}
+</tbody>

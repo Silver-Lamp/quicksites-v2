@@ -1,0 +1,5 @@
+// In /template-market.tsx
+// Assume each template has `created_by` or `owner` or `user_metadata` with handle
+<Link href={`/@/${template.owner_handle}`} className="text-blue-400 text-xs hover:underline">
+  @{template.owner_handle}
+</Link>

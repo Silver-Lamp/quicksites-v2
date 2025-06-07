@@ -1,0 +1,9 @@
+const refId = typeof window !== 'undefined' ? localStorage.getItem('referrer_id') : null;
+
+if (refId && !anon) {
+  await supabase.from('referrals').insert({
+    referrer_id: refId,
+    referred_email: email,
+    reward_points: 5
+  });
+}

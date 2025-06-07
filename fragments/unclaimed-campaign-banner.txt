@@ -1,0 +1,7 @@
+// Inside /support/[slug].tsx render logic
+{!campaign.created_by && (
+  <div className="bg-yellow-800 text-yellow-100 p-3 rounded text-sm mb-4">
+    ⚠️ This campaign is unclaimed. <br />
+    <strong>Note:</strong> You can claim it by logging in.
+  </div>
+)}

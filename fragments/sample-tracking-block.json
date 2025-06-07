@@ -1,0 +1,17 @@
+{
+  "id": "uuid-generated",
+  "type": "tracking",
+  "emoji": "\ud83e\uddb7",
+  "title": "Flossing",
+  "message": "Keep those teeth healthy!",
+  "lat": 47.6062,
+  "lon": -122.3321,
+  "slug": "floss",
+  "actions": [
+    {
+      "label": "Check In",
+      "type": "check-in",
+      "target": "floss"
+    }
+  ]
+}

@@ -1,0 +1,14 @@
+// Add this button to each row in /admin/logs/notifications.tsx table
+
+<td className="py-1">
+  <button
+    onClick={async () => {
+      const r = await fetch('/api/notify-creator?slug=' + log.slug, { method: 'POST' });
+      const msg = await r.json();
+      alert('Resend: ' + msg.status);
+    }}
+    className="text-xs text-blue-400 underline"
+  >
+    Resend
+  </button>
+</td>

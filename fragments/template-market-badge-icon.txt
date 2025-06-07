@@ -1,0 +1,4 @@
+// In /template-market.tsx (after showing @handle):
+{template.badge && (
+  <span className="ml-1 text-yellow-400">{template.badge.icon}</span>
+)}

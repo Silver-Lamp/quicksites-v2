@@ -1,0 +1,28 @@
+// Place this inside /world/[handle]/share.tsx if viewing another user
+{profile.visible && user?.user_metadata?.handle !== handle && (
+  <div className="mt-4">
+    <button
+      onClick={async () => {
+        const message = prompt("Optional message to send with your request:");
+        if (!message) return;
+        const res = await fetch('/api/request-support', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${user?.access_token}`
+          },
+          body: JSON.stringify({
+            receiver_handle: handle,
+            slug: 'support',
+            message
+          })
+        });
+        if (res.ok) alert('✅ Support request sent!');
+        else alert('⚠️ Failed to send.');
+      }}
+      className="px-4 py-1 text-sm bg-green-600 hover:bg-green-700 rounded"
+    >
+      💬 Request Support
+    </button>
+  </div>
+)}

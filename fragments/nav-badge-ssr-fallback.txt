@@ -1,0 +1,31 @@
+// In your page or layout component
+import { useEffect, useState } from 'react';
+
+export default function AdminDashboard({ navBadges: initialBadges = { failed: 0 } }) {
+  const [navBadges, setNavBadges] = useState(initialBadges);
+
+  useEffect(() => {
+    if (!initialBadges || typeof initialBadges.failed === 'undefined') {
+      fetch('/api/nav-badges')
+        .then(res => res.json())
+        .then(setNavBadges)
+        .catch(() => {});
+    }
+  }, [initialBadges]);
+
+  const navItems = [
+    {
+      label: 'Logs',
+      links: [
+        {
+          label: 'Notifications',
+          href: '/admin/logs/notifications',
+          icon: '📨',
+          badge: navBadges.failed > 0 ? navBadges.failed : undefined
+        }
+      ]
+    }
+  ];
+
+  return <GroupedNav groups={navItems} />;
+}

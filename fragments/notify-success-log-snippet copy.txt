@@ -1,0 +1,7 @@
+// After successful resend.emails.send(...):
+
+await supabase.from('notification_logs').insert({
+  slug,
+  event: 'badge_notify_sent',
+  timestamp: new Date().toISOString()
+});

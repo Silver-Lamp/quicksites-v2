@@ -1,6 +1,0 @@
-// Add this inside the <li> block rendering in /hub/[handle].tsx
-<img
-  src={`/api/block-qr?handle=${handle}&blockId=${b.id}`}
-  alt="QR code"
-  className="mt-3 w-24 h-24 rounded bg-white p-1"
-/>

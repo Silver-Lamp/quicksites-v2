@@ -1,10 +1,13 @@
 'use client';
+
 import { useRouter } from 'next/router';
 import { useEffect, useState } from 'react';
+import { CelebrationModal } from '@/components/embed/CelebrationModal';
 
 export default function SupportCampaign() {
   const { query } = useRouter();
   const [campaign, setCampaign] = useState<any>(null);
+  const [showBadgeCelebration, setShowBadgeCelebration] = useState(false);
 
   useEffect(() => {
     if (!query.slug) return;
@@ -12,6 +15,12 @@ export default function SupportCampaign() {
       .then(res => res.json())
       .then(setCampaign);
   }, [query.slug]);
+
+  useEffect(() => {
+    if (query.badge === 'done') {
+      setShowBadgeCelebration(true);
+    }
+  }, [query.badge]);
 
   if (!campaign) return <div className="p-6 text-white">Loading...</div>;
 
@@ -25,6 +34,14 @@ export default function SupportCampaign() {
         <div className="bg-green-500 h-full" style={{ width: pct + '%' }}></div>
       </div>
       <p className="text-sm text-green-300">{campaign.count} {campaign.target_action}s received</p>
+
+      {showBadgeCelebration && (
+        <CelebrationModal
+          type="badge"
+          slug={query.slug as string}
+          onClose={() => setShowBadgeCelebration(false)}
+        />
+      )}
     </div>
   );
 }

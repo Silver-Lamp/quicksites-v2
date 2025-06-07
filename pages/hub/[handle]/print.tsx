@@ -26,6 +26,15 @@ export default function PrintLabels() {
             className="w-32 h-32 mx-auto my-2"
           />
           <p className="text-xs text-zinc-500">quicksites.ai/world/{handle}#block-{b.id}</p>
+          <div className="flex justify-center">
+            <a
+              href={`/api/print-labels-pdf?handle=${handle}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-block text-blue-500 hover:underline text-sm mt-2" style={{ border: '1px solid #222' }}>
+              🧾 Download as PDF
+            </a>
+          </div>
         </div>
       ))}
     </div>

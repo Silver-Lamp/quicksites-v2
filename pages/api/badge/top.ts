@@ -36,6 +36,23 @@ export default async function handler(_req, res) {
   archive.pipe(res);
 
   for (const c of top) {
+    // Notify creator of their badge with celebration link
+    async function notifyWithRetry(slug, retries = 3, delay = 1000) {
+      for (let i = 0; i < retries; i++) {
+        const res = await fetch(`https://quicksites.ai/api/notify-creator?slug=${slug}`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: 'Bearer ' + process.env.BADGE_NOTIFY_KEY
+          }
+        });
+        if (res.ok) return;
+        await new Promise((r) => setTimeout(r, delay * (i + 1)));
+      }
+      console.error('❌ Failed to notify creator for:', slug);
+    }
+    await notifyWithRetry(c.slug);
+
     const canvas = createCanvas(600, 320);
     const ctx = canvas.getContext('2d');
 

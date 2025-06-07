@@ -11,6 +11,12 @@ export default async function handler(req, res) {
   const { title, message, lat, lon, emoji } = JSON.parse(req.body || '{}');
   if (!lat || !lon || !title) return res.status(400).json({ error: 'Missing fields' });
 
+  const {
+    data: { user },
+  } = await supabase.auth.getUser(req.headers.authorization?.replace('Bearer ', ''));
+  
+  if (!user) return res.status(401).json({ error: 'Unauthorized' });
+  
   const { data, error } = await supabase
     .from('blocks')
     .insert({

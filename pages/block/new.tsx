@@ -1,5 +1,6 @@
 'use client';
 import { useState, useEffect } from 'react';
+import { useUser } from '@supabase/auth-helpers-react';
 
 export default function NewBlockPage() {
   const [lat, setLat] = useState<number | null>(null);
@@ -9,6 +10,7 @@ export default function NewBlockPage() {
   const [emoji, setEmoji] = useState('🧠');
   const [saving, setSaving] = useState(false);
   const [done, setDone] = useState(false);
+  const user = useUser();
 
   useEffect(() => {
     navigator.geolocation.getCurrentPosition((pos) => {
@@ -22,8 +24,12 @@ export default function NewBlockPage() {
     setSaving(true);
     const res = await fetch('/api/create-block', {
       method: 'POST',
+      headers: {
+        Authorization: `Bearer ${user?.access_token}`,
+      },    
       body: JSON.stringify({
-        lat, lon, title, message, emoji
+        lat, lon, title, message, emoji,
+        owner_id: user?.id || '00000000-0000-0000-0000-000000000000'
       })
     });
     setSaving(false);

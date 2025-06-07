@@ -10,17 +10,25 @@ import {
   ResponsiveContainer,
   CartesianGrid
 } from 'recharts';
+import { useDateRange } from '@/hooks/useDateRange';
 
 export default function AnalyticsChartView() {
   const [view, setView] = useState<'daily' | 'weekly' | 'monthly'>('daily');
   const [stats, setStats] = useState([]);
   const [data, setData] = useState<any[]>([]);
-
+  const { start, end } = useDateRange();
   const fetchData = async () => {
     const today = new Date();
     const from = new Date();
     from.setDate(today.getDate() - (view === 'weekly' ? 7 : view === 'monthly' ? 30 : 1));
 
+    useEffect(() => {
+      if (!start || !end) return;
+      fetch(`/api/analytics/signals?start=${start}&end=${end}`)
+        .then(res => res.json())
+        .then(setData);
+    }, [start, end]);
+    
     const res = await fetch(
       \`/api/analytics/signals?start=\${from.toISOString().slice(0, 10)}&end=\${today.toISOString().slice(0, 10)}\`
     );

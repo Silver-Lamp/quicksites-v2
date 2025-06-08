@@ -1,38 +1,15 @@
-// ✅ FILE: /pages/login.tsx
+// ✅ FILE: pages/login.tsx
 
 'use client';
 
-import { NextSeo } from 'next-seo';
-import { usePageSeo } from '@/lib/usePageSeo';
+import { useSetSessionFromHash } from '@/hooks/useSetSessionFromHash';
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useRouter } from 'next/router';
 
-function redirectIfFragmentSession() {
-  const hash = typeof window !== 'undefined' ? window.location.hash : '';
-  if (hash.includes('access_token')) {
-    const redirectTo = '/admin/dashboard';
-    const toast = document.createElement('div');
-    toast.textContent = 'Redirecting...';
-    toast.className =
-      'fixed top-4 left-1/2 transform -translate-x-1/2 z-50 bg-amber-500 text-white px-4 py-2 rounded shadow transition-opacity opacity-100';
-    document.body.appendChild(toast);
-
-    setTimeout(() => {
-      toast.style.opacity = '0';
-    }, 1200);
-    setTimeout(() => {
-      toast.remove();
-      window.location.replace(redirectTo);
-    location.replace(redirectTo);
-    }, 1800);
-
-    return true;
-  }
-  return false;
-}
-
 export default function LoginPage() {
+  useSetSessionFromHash();
+
   const [email, setEmail] = useState('');
   const [message, setMessage] = useState<string | null>(null);
   const [flash, setFlash] = useState<string | null>(null);
@@ -42,9 +19,6 @@ export default function LoginPage() {
   const router = useRouter();
 
   useEffect(() => {
-    const redirected = redirectIfFragmentSession();
-    if (redirected) return;
-
     supabase.auth.getSession().then(async ({ data: sessionData }) => {
       let session = sessionData.session;
 
@@ -111,8 +85,6 @@ export default function LoginPage() {
   };
 
   return (
-    <>
-      <NextSeo {...usePageSeo({ description: 'Login page.' })} />
     <div className="min-h-screen flex items-center justify-center bg-black text-white p-4 relative">
       {loading && (
         <div className="fixed inset-0 z-50 bg-black bg-opacity-90 flex flex-col items-center justify-center">
@@ -191,6 +163,5 @@ export default function LoginPage() {
         )}
       </div>
     </div>
-    </>
   );
 }

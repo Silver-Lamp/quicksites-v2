@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react';
 import { createClient } from '@supabase/supabase-js';
+import Page from '@/components/layout/Page';
+import AdminLayout from '@/components/admin/AdminLayout';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -11,7 +13,7 @@ export default function SiteDirectory() {
 
   useEffect(() => {
     supabase
-      .from('published_sites')
+      .from('public_sites') // ⚠️ was 'published_sites' before — confirm table name
       .select('*, branding_profiles(name, logo_url)')
       .eq('status', 'published')
       .eq('is_public', true)
@@ -27,12 +29,12 @@ export default function SiteDirectory() {
           <li key={site.id} className="border p-4 rounded flex items-center justify-between">
             <div>
               <div className="text-sm font-semibold">{site.branding_profiles?.name}</div>
-              <a className="text-blue-600 text-sm" href={`/sites/${site.slug}`} target="_blank">
+              <a className="text-blue-600 text-sm" href={`/sites/${site.slug}`} target="_blank" rel="noopener noreferrer">
                 {site.slug}.quicksites.ai
               </a>
             </div>
             {site.branding_profiles?.logo_url && (
-              <img src={site.branding_profiles.logo_url} className="w-10 h-10 rounded-full" />
+              <img src={site.branding_profiles.logo_url} alt="Logo" className="w-10 h-10 rounded-full object-cover" />
             )}
           </li>
         ))}
@@ -40,3 +42,9 @@ export default function SiteDirectory() {
     </div>
   );
 }
+
+// 👇 Integrate with sidebar layout
+// SiteDirectory.getLayout = (page: React.ReactNode) => (
+//   <AdminSidebarLayout>{page}</AdminSidebarLayout>
+// );
+SiteDirectory.getLayout = (page: any) => <AdminLayout>{page}</AdminLayout>;

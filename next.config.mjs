@@ -1,4 +1,5 @@
-// next.config.mjs
+// ✅ FILE: next.config.mjs
+
 import path from 'path';
 import { fileURLToPath } from 'url';
 
@@ -11,13 +12,12 @@ const nextConfig = {
     config.resolve.alias['@'] = path.resolve(__dirname);
     return config;
   },
-
   async rewrites() {
     return [
-      { source: '/@/:handle', destination: '/creator/:handle'},
+      { source: '/@/:handle', destination: '/creator/:handle' },
       { source: '/admin/dashboard', destination: '/admin/sites/dashboard' },
       { source: '/admin/sites/:slug', destination: '/sites/:slug' },
-      { source: '/admin/sites', destination: '/sites' }
+      { source: '/admin/sites', destination: '/sites' },
     ];
   }
 };

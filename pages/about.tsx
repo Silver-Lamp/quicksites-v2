@@ -1,14 +1,23 @@
+// ✅ FILE: pages/about.tsx (uses usePageSeo)
+
+import { NextSeo } from 'next-seo';
+import { usePageSeo } from '@/lib/usePageSeo';
+
 export default function AboutPage() {
+  const seo = usePageSeo({
+    description: 'Learn more about the QuickSites team and mission.',
+  });
+
   return (
-    <div className="text-white p-6 max-w-2xl mx-auto">
-      <h1 className="text-3xl font-bold mb-4">📚 About QuickSites</h1>
-      <p className="text-zinc-300 mb-4">
-        QuickSites is a movement for transparent, user-owned websites.
-        It started as a network of unclaimed sites built for small businesses,
-        and grew into a system for human-centered publishing, stewardship,
-        and sharing.
-      </p>
-      <p className="text-sm text-zinc-500">Built with . : . and aligned intent.</p>
-    </div>
+    <>
+      <NextSeo {...seo} />
+
+      <main className="p-6">
+        <h1 className="text-3xl font-bold mb-4">About Us</h1>
+        <p className="text-gray-300">
+          QuickSites is an AI-powered platform helping local businesses get online fast with beautiful, optimized sites.
+        </p>
+      </main>
+    </>
   );
 }

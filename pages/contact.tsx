@@ -1,4 +1,11 @@
 'use client';
+import { NextSeo } from 'next-seo';
+  const seo = usePageSeo({
+    description: 'Contact page.',
+    
+  });
+
+import { usePageSeo } from '@/lib/usePageSeo';
 import { useState } from 'react';
 
 export default function ContactPage() {
@@ -14,7 +21,8 @@ export default function ContactPage() {
     setSent(true);
   };
 
-  return (
+  return (<>
+      <NextSeo {...seo} />
     <div className="text-white p-6 max-w-lg mx-auto text-center">
       <h1 className="text-2xl font-bold mb-4">📞 Contact Us</h1>
       {!sent ? (

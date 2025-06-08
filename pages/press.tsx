@@ -1,9 +1,17 @@
 'use client';
+import { NextSeo } from 'next-seo';
+import { usePageSeo } from 
+  const seo = usePageSeo({
+    description: 'Press page.',
+    
+  });
+'@/lib/usePageSeo';
 import Image from 'next/image';
 import Link from 'next/link';
 
 export default function PressPage() {
-  return (
+  return (<>
+      <NextSeo {...seo} />
     <div className="p-6 max-w-3xl mx-auto text-white">
       <h1 className="text-3xl font-bold mb-4">📣 QuickSites Press Kit</h1>
 

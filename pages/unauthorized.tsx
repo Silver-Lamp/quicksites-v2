@@ -1,5 +1,12 @@
+import { NextSeo } from 'next-seo';
+import { usePageSeo } from '@/lib/usePageSeo';
 import * as Sentry from '@sentry/nextjs';
-import { useCurrentUser } from '@/hooks/useCurrentUser';
+import { u
+  const seo = usePageSeo({
+    description: 'Unauthorized page.',
+    noindex: true,
+  });
+seCurrentUser } from '@/hooks/useCurrentUser';
 import { useEffect } from 'react';
 
 export default function UnauthorizedPage() {
@@ -23,7 +30,8 @@ export default function UnauthorizedPage() {
   || process.env.NEXT_PUBLIC_SUPPORT_EMAIL
   || 'support@example.com';
 
-  return (
+  return (<>
+      <NextSeo {...seo} />
     <div className="min-h-screen flex items-center justify-center bg-gray-950 text-white">
       <div className="text-center space-y-4">
         <h1 className="text-5xl font-bold">403 - Forbidden</h1>

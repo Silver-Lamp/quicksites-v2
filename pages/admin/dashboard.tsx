@@ -1,40 +1,107 @@
+// ✅ FILE: /pages/admin/dashboard.tsx
+
+'use client';
 
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useRouter } from 'next/router';
 import Link from 'next/link';
-import type { DomainEntry } from '@/types/domain.types';
-import AdminTabs from '@/components/admin/AdminTabs';
+import { useUser } from '@supabase/auth-helpers-react';
 
-export default function Dashboard() {
+import Page from '@/components/layout/Page';
+import AdminTabs from '@/components/admin/AdminTabs';
+import { DashboardSelector } from '@/components/admin/DashboardSelector';
+import { useDashboardLayout } from '@/hooks/useDashboardLayout';
+import DashboardGridDraggable from '@/components/admin/DashboardGridDraggable';
+import BlockSettingsModal from '@/components/admin/BlockSettingsModal';
+import type { DomainEntry } from '@/types/domain.types';
+
+import ActivityWidget from '@/components/admin/admin/blocks/ActivityWidget';
+import EngagementWidget from '@/components/admin/admin/blocks/EngagementWidget';
+import RetentionWidget from '@/components/admin/admin/blocks/RetentionWidget';
+import TrafficWidget from '@/components/admin/admin/blocks/TrafficWidget';
+
+function Dashboard() {
+  const router = useRouter();
+  const user = useUser();
+
   const [domains, setDomains] = useState<DomainEntry[]>([]);
   const [previewing, setPreviewing] = useState<string | null>(null);
-  const router = useRouter();
+
+  const dashboardFromURL = router.query.dashboard as string | undefined;
+
+  const {
+    dashboards,
+    activeDashboardId,
+    setActiveDashboardId,
+    createDashboard,
+    order,
+    hidden,
+    save,
+    loaded,
+    settings,
+    updateBlockSetting,
+  } = useDashboardLayout(user?.id || null, dashboardFromURL);
+
+  useEffect(() => {
+    if (activeDashboardId && router.query.dashboard !== activeDashboardId) {
+      router.replace({
+        pathname: router.pathname,
+        query: { ...router.query, dashboard: activeDashboardId },
+      });
+    }
+  }, [activeDashboardId]);
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
       const role = data?.user?.user_metadata?.role;
-      if (role === 'viewer') {
-        router.push('/viewer');
-      } else if (role !== 'admin' && role !== 'reseller') {
-        router.push('/login?error=unauthorized');
-      }
+      if (role === 'viewer') router.push('/viewer');
+      else if (role !== 'admin' && role !== 'reseller') router.push('/login?error=unauthorized');
     });
 
     supabase
       .from('domains')
       .select('*')
       .order('date_created', { ascending: false })
-      .then(({ data }) => {
-        setDomains(data || []);
-      });
+      .then(({ data }) => setDomains(data || []));
   }, []);
+
+  if (!loaded && user?.id) {
+    return <p className="text-gray-500 text-sm p-6">Loading dashboard layout…</p>;
+  }
 
   return (
     <>
       <AdminTabs />
       <div className="p-6">
-        <h1 className="text-2xl font-bold mb-4 text-white">Claimed Sites</h1>
+        <h1 className="text-2xl font-bold mb-4 text-white">My Dashboard</h1>
+        <DashboardSelector
+          dashboards={dashboards}
+          activeDashboardId={activeDashboardId}
+          setActiveDashboardId={setActiveDashboardId}
+          onCreateNew={createDashboard}
+        />
+        <DashboardGridDraggable
+          renderers={{
+            activity: <ActivityWidget />,
+            engagement: <EngagementWidget />,
+            retention: <RetentionWidget />,
+            traffic: <TrafficWidget />,
+          }}
+          order={order}
+          hidden={hidden}
+          onSave={(o, h) => save(o, h)}
+          onAddBlock={(b) => {
+            if (!order.find((x) => x.id === b.id)) {
+              save([...order, b], hidden);
+            }
+          }}
+          settings={settings}
+          updateBlockSetting={updateBlockSetting}
+        />
+      </div>
+      <div className="p-6">
+        <h2 className="text-xl font-bold mb-4 text-white">Claimed Sites</h2>
         <table className="w-full text-sm text-left text-gray-300 bg-gray-800 rounded overflow-hidden">
           <thead className="bg-gray-700 text-gray-100 uppercase text-xs tracking-wide">
             <tr>
@@ -48,7 +115,7 @@ export default function Dashboard() {
             </tr>
           </thead>
           <tbody>
-            {domains.map((d: any, i) => (
+            {domains.map((d, i) => (
               <>
                 <tr key={d.id} className={i % 2 === 0 ? 'bg-gray-800' : 'bg-gray-900'}>
                   <td className="px-4 py-2">{d.domain}</td>
@@ -103,3 +170,7 @@ export default function Dashboard() {
     </>
   );
 }
+
+Dashboard.getLayout = (page) => <Page>{page}</Page>;
+
+export default Dashboard;

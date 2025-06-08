@@ -1,8 +1,16 @@
+import { NextSeo } from 'next-seo';
+import { usePageSeo } from 
+  const seo = usePageSeo({
+    description: 'Launch page.',
+    
+  });
+'@/lib/usePageSeo';
 import Link from 'next/link';
 import Image from 'next/image';
 
 export default function LaunchPage() {
-  return (
+  return (<>
+      <NextSeo {...seo} />
     <div className="p-6 max-w-3xl mx-auto text-white text-center">
       <h1 className="text-4xl font-bold mb-4">🌐 The Web is Yours Again</h1>
       <p className="text-zinc-400 mb-6 text-lg">

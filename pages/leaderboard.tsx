@@ -1,4 +1,11 @@
 'use client';
+import { NextSeo } from 'next-seo';
+import { usePageSeo } from '@/lib/usePag
+  const seo = usePageSeo({
+    description: 'Leaderboard page.',
+    
+  });
+eSeo';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 
@@ -11,7 +18,8 @@ export default function WeeklyLeaderboard() {
       .then(setCampaigns);
   }, []);
 
-  return (
+  return (<>
+      <NextSeo {...seo} />
     <div className="max-w-3xl mx-auto p-6 text-white">
       <h1 className="text-3xl font-bold mb-6">🏆 Weekly Leaderboard</h1>
       <p className="text-zinc-400 mb-4">Top 10 campaigns this week by cheers, check-ins, echoes, or reflections.</p>

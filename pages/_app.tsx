@@ -1,23 +1,41 @@
+// ✅ FILE: pages/_app.tsx
+
 'use client';
 
-import { DefaultSeo } from 'next-seo';
-import SEO from '../next-seo.config';
+import '@/styles/globals.css';
 import type { AppProps } from 'next/app';
-import dynamic from 'next/dynamic';
+import { DefaultSeo } from 'next-seo';
+import SEO from '@/next-seo.config';
 import { ThemeProvider } from 'next-themes';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useRouter } from 'next/router';
+import dynamic from 'next/dynamic';
 import ResponsiveAdminLayout from '@/components/admin/ResponsiveAdminLayout';
-import '@/styles/globals.css';
+import DefaultPublicLayout from '@/components/layout/DefaultPublicLayout';
+import { useSessionReady } from '@/hooks/useSessionReady';
+import Loader from '@/components/ui/Loader';
+import { useEffect } from 'react';
 
 const SupabaseProvider = dynamic(() => import('@/components/admin/SafeSupabaseProvider'), {
   ssr: false,
-  loading: () => <div>Loading app...</div>,
+  loading: () => <Loader message="Loading app..." />,
 });
 
 export default function App({ Component, pageProps }: AppProps) {
   const router = useRouter();
   const isAdminRoute = router.pathname.startsWith('/admin');
+  const sessionReady = useSessionReady();
+
+  // Debug log to inspect session object
+  useEffect(() => {
+    import('@/lib/supabase').then(({ supabase }) => {
+      supabase.auth.getSession().then(({ data }) => {
+        console.log('👤 Supabase Session:', data?.session);
+      });
+    });
+  }, []);
+
+  if (!sessionReady) return <Loader message="Authenticating..." />;
 
   const page = (
     <AnimatePresence mode="wait" initial={false}>
@@ -38,7 +56,11 @@ export default function App({ Component, pageProps }: AppProps) {
       <DefaultSeo {...SEO} />
       <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
         <SupabaseProvider>
-          {isAdminRoute ? <ResponsiveAdminLayout>{page}</ResponsiveAdminLayout> : page}
+          {isAdminRoute ? (
+            <ResponsiveAdminLayout>{page}</ResponsiveAdminLayout>
+          ) : (
+            <DefaultPublicLayout>{page}</DefaultPublicLayout>
+          )}
         </SupabaseProvider>
       </ThemeProvider>
     </>

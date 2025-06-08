@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
-import { supabase } from '../lib/supabase';
+import { supabase } from '@/admin/lib/supabaseClient';
 
 export default function UsersPage() {
   const router = useRouter();

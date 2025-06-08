@@ -1,43 +1,138 @@
+// hooks/useDashboardLayout.ts
+
 import { useEffect, useState } from 'react';
-import { supabase } from '@/lib/supabase';
+import { supabase } from '@/admin/lib/supabaseClient';
 
-const DEFAULT_LAYOUT = [
-  { id: 'activity', title: 'Activity' },
-  { id: 'engagement', title: 'Engagement' },
-  { id: 'retention', title: 'Retention' }
-];
+type Block = { id: string; title: string };
+type Settings = Record<string, Record<string, any>>;
 
-export function useDashboardLayout(role = 'user') {
-  const [order, setOrder] = useState(DEFAULT_LAYOUT);
+export function useDashboardLayout(userId: string | null, dashboardId?: string) {
+  const [order, setOrder] = useState<Block[]>([]);
   const [hidden, setHidden] = useState<string[]>([]);
+  const [settings, setSettings] = useState<Settings>({});
+  const [dashboards, setDashboards] = useState<any[]>([]);
+  const [activeDashboardId, setActiveDashboardId] = useState<string | null>(dashboardId || null);
   const [loaded, setLoaded] = useState(false);
 
+  // Fetch dashboards for the user
   useEffect(() => {
-    const localOrder = localStorage.getItem('dashboard-order');
-    const localHidden = localStorage.getItem('dashboard-hidden');
+    if (!userId) return;
 
-    if (localOrder) setOrder(JSON.parse(localOrder));
-    if (localHidden) setHidden(JSON.parse(localHidden));
+    supabase
+      .from('dashboard_user_layouts')
+      .select('*')
+      .eq('user_id', userId)
+      .then(({ data }) => {
+        setDashboards(data || []);
+        if (!activeDashboardId && data?.[0]) {
+          setActiveDashboardId(data[0].dashboard_id);
+        }
+      });
+  }, [userId]);
 
-    (async () => {
-      const { data } = await supabase
-        .from('dashboard_layouts')
-        .select('layout, hidden')
-        .eq('role', role)
-        .single();
+  // Load selected layout
+  useEffect(() => {
+    if (!userId || !activeDashboardId) return;
 
-      if (data?.layout) {
-        setOrder(data.layout);
-        localStorage.setItem('dashboard-order', JSON.stringify(data.layout));
-      }
-      if (data?.hidden) {
-        setHidden(data.hidden);
-        localStorage.setItem('dashboard-hidden', JSON.stringify(data.hidden));
-      }
+    supabase
+      .from('dashboard_user_layouts')
+      .select('layout, hidden, settings')
+      .eq('user_id', userId)
+      .eq('dashboard_id', activeDashboardId)
+      .single()
+      .then(({ data }) => {
+        if (data?.layout) setOrder(data.layout);
+        if (data?.hidden) setHidden(data.hidden);
+        if (data?.settings) setSettings(data.settings);
+        setLoaded(true);
+      });
 
-      setLoaded(true);
-    })();
-  }, [role]);
+    const channel = supabase
+      .channel('dashboard_sync')
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'dashboard_user_layouts',
+          filter: `user_id=eq.${userId}`,
+        },
+        payload => {
+          const updated = payload.new;
+          if (updated.dashboard_id === activeDashboardId) {
+            if (updated.layout) setOrder(updated.layout);
+            if (updated.hidden) setHidden(updated.hidden);
+            if (updated.settings) setSettings(updated.settings);
+          }
+        }
+      )
+      .subscribe();
 
-  return { order, hidden, loaded };
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [userId, activeDashboardId]);
+
+  const save = async (layout: Block[], hiddenList: string[], newSettings = settings) => {
+    if (!userId || !activeDashboardId) return;
+    await supabase
+      .from('dashboard_user_layouts')
+      .upsert({
+        user_id: userId,
+        dashboard_id: activeDashboardId,
+        layout,
+        hidden: hiddenList,
+        settings: newSettings,
+        updated_at: new Date().toISOString(),
+      });
+    setOrder(layout);
+    setHidden(hiddenList);
+    setSettings(newSettings);
+  };
+
+  const updateBlockSetting = (blockId: string, key: string, value: any) => {
+    const newSettings = {
+      ...settings,
+      [blockId]: {
+        ...(settings[blockId] || {}),
+        [key]: value,
+      },
+    };
+    save(order, hidden, newSettings);
+  };
+  const createDashboard = async (name: string) => {
+    if (!userId) return;
+    const { data } = await supabase
+      .from('dashboard_user_layouts')
+      .insert({
+        user_id: userId,
+        name,
+        layout: DEFAULT_LAYOUT,
+        hidden: [],
+        settings: {},
+      })
+      .select()
+      .single();
+  
+    if (data) {
+      setDashboards((prev) => [...prev, data]);
+      setActiveDashboardId(data.dashboard_id);
+      setOrder(data.layout);
+      setHidden([]);
+      setSettings({});
+    }
+  };
+  
+  return {
+    order,
+    hidden,
+    settings,
+    dashboards,
+    activeDashboardId,
+    setActiveDashboardId,
+    loaded,
+    save,
+    updateBlockSetting,
+    createDashboard,
+  };
 }

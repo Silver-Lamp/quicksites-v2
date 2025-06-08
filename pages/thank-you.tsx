@@ -1,4 +1,11 @@
 'use client';
+import { NextSeo } from 'next-seo';
+import { u
+  const seo = usePageSeo({
+    description: 'Thank you page.',
+    
+  });
+sePageSeo } from '@/lib/usePageSeo';
 import { useEffect, useState } from 'react';
 
 export default function ThankYouPage() {
@@ -9,7 +16,8 @@ export default function ThankYouPage() {
     if (data) setRef(JSON.parse(data));
   }, []);
 
-  return (
+  return (<>
+      <NextSeo {...seo} />
     <div className="p-6 max-w-xl mx-auto text-white text-center">
       <h1 className="text-3xl font-bold mb-4">✅ Thank You for Joining!</h1>
       <p className="text-zinc-400 mb-4">

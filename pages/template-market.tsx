@@ -1,4 +1,11 @@
 'use client';
+import { NextSeo } from 'next-seo';
+import { usePageSeo } from '@/lib/usePag
+  const seo = usePageSeo({
+    description: 'Template market page.',
+    
+  });
+eSeo';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 
@@ -11,7 +18,8 @@ export default function TemplateMarket() {
       .then(setTemplates);
   }, []);
 
-  return (
+  return (<>
+      <NextSeo {...seo} />
     <div className="p-6 max-w-5xl mx-auto text-white">
       <h1 className="text-3xl font-bold mb-6">🎨 Template Market</h1>
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">

@@ -1,5 +1,11 @@
+
+  const seo = usePageSeo({
+    description: 'Manifesto page.',
+    
+  });
 export default function ManifestoPage() {
-  return (
+  return (<>
+      <NextSeo {...seo} />
     <div className="max-w-3xl mx-auto p-6 text-white">
       <h1 className="text-3xl font-bold mb-6">📜 QuickSites Manifesto</h1>
       <p className="text-zinc-300 mb-4">

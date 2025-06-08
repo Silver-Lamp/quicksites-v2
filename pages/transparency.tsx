@@ -1,4 +1,11 @@
 'use client';
+import { NextSeo } from 'next-seo';
+import { u
+  const seo = usePageSeo({
+    description: 'Transparency page.',
+    
+  });
+sePageSeo } from '@/lib/usePageSeo';
 import { useEffect, useState } from 'react';
 
 export default function TransparencyViewer() {
@@ -10,7 +17,8 @@ export default function TransparencyViewer() {
       .then(setSites);
   }, []);
 
-  return (
+  return (<>
+      <NextSeo {...seo} />
     <div className="p-6 max-w-5xl mx-auto text-white">
       <h1 className="text-3xl font-bold mb-6">🧿 Transparency Viewer</h1>
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">

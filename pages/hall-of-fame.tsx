@@ -1,4 +1,11 @@
 'use client';
+import { NextSeo } from 'next-seo';
+import { u
+  const seo = usePageSeo({
+    description: 'Hall of fame page.',
+    
+  });
+sePageSeo } from '@/lib/usePageSeo';
 import { useEffect, useState } from 'react';
 
 export default function HallOfFame() {
@@ -10,7 +17,8 @@ export default function HallOfFame() {
       .then(setEntries);
   }, []);
 
-  return (
+  return (<>
+      <NextSeo {...seo} />
     <div className="max-w-4xl mx-auto p-6 text-white">
       <h1 className="text-3xl font-bold mb-6 text-center">🏅 Hall of Fame</h1>
       <p className="text-center text-zinc-400 mb-8 text-sm">

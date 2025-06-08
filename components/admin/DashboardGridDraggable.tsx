@@ -1,58 +1,73 @@
+// ✅ FILE: /components/admin/DashboardGridDraggable.tsx
+
 'use client';
 
-import { useEffect, useState } from 'react';
-import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
+import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
+import { AddBlockMenu } from './AddBlockMenu';
+import { useState } from 'react';
+import { BlockSettingsModal } from '@/components/admin/BlockSettingsModal';
 
-const DEFAULT_BLOCKS = [
+const ALL_BLOCKS = [
   { id: 'activity', title: 'Activity' },
   { id: 'engagement', title: 'Engagement' },
   { id: 'retention', title: 'Retention' },
+  { id: 'traffic', title: 'Traffic' },
 ];
 
-export default function DashboardGrid({
-  renderers
+export default function DashboardGridDraggable({
+  renderers,
+  order,
+  hidden,
+  onSave,
+  onAddBlock,
+  settings,
+  updateBlockSetting,
 }: {
   renderers: { [key: string]: React.ReactNode };
+  order: { id: string; title: string }[];
+  hidden: string[];
+  onSave: (order: any[], hidden: string[]) => void;
+  onAddBlock?: (block: { id: string; title: string }) => void;
+  settings: Record<string, any>;
+  updateBlockSetting: (blockId: string, key: string, value: any) => void;
 }) {
-  const [order, setOrder] = useState(DEFAULT_BLOCKS);
-  const [hidden, setHidden] = useState<string[]>([]);
+  const [editingBlockId, setEditingBlockId] = useState<string | null>(null);
 
-  useEffect(() => {
-    const saved = localStorage.getItem('dashboard-order');
-    const vis = localStorage.getItem('dashboard-hidden');
-    if (saved) setOrder(JSON.parse(saved));
-    if (vis) setHidden(JSON.parse(vis));
-  }, []);
-
-  const handleDragEnd = (result) => {
+  const handleDragEnd = (result: DropResult) => {
     if (!result.destination) return;
-    const updated = Array.from(order);
+    const updated = [...order];
     const [moved] = updated.splice(result.source.index, 1);
     updated.splice(result.destination.index, 0, moved);
-    setOrder(updated);
-    localStorage.setItem('dashboard-order', JSON.stringify(updated));
+    onSave(updated, hidden);
   };
 
   const toggleVisibility = (id: string) => {
     const updated = hidden.includes(id)
       ? hidden.filter((h) => h !== id)
       : [...hidden, id];
-    setHidden(updated);
-    localStorage.setItem('dashboard-hidden', JSON.stringify(updated));
+    onSave(order, updated);
   };
+
+  const availableToAdd = ALL_BLOCKS.filter(
+    (b) => !order.some((o) => o.id === b.id)
+  );
 
   return (
     <>
+      {onAddBlock && availableToAdd.length > 0 && (
+        <AddBlockMenu available={availableToAdd} onAdd={onAddBlock} />
+      )}
+
       <div className="mb-4 flex flex-wrap gap-3">
-        {order.map((b) => (
-          <label key={b.id} className="text-sm">
+        {order.map((block) => (
+          <label key={block.id} className="text-sm">
             <input
               type="checkbox"
-              checked={!hidden.includes(b.id)}
-              onChange={() => toggleVisibility(b.id)}
+              checked={!hidden.includes(block.id)}
+              onChange={() => toggleVisibility(block.id)}
               className="mr-1"
             />
-            {b.title}
+            {block.title}
           </label>
         ))}
       </div>
@@ -61,9 +76,9 @@ export default function DashboardGrid({
         <Droppable droppableId="dashboard">
           {(provided) => (
             <div
-              className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"
               ref={provided.innerRef}
               {...provided.droppableProps}
+              className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"
             >
               {order.map((block, index) =>
                 hidden.includes(block.id) ? null : (
@@ -73,10 +88,23 @@ export default function DashboardGrid({
                         ref={draggable.innerRef}
                         {...draggable.draggableProps}
                         {...draggable.dragHandleProps}
-                        className="bg-white border rounded shadow p-4"
+                        className="bg-white dark:bg-zinc-900 border rounded shadow p-4"
                       >
-                        <div className="font-semibold mb-2">{block.title}</div>
-                        {renderers[block.id]}
+                        <div className="flex justify-between items-center mb-2">
+                          <span className="font-semibold">{block.title}</span>
+                          <button
+                            onClick={() => setEditingBlockId(block.id)}
+                            title="Edit settings"
+                            className="text-xs text-gray-400 hover:text-white"
+                          >
+                            ⚙️
+                          </button>
+                        </div>
+                        {renderers?.[block.id] ?? (
+                          <div className="text-red-500 text-sm">
+                            ⚠️ Missing renderer for <code>{block.id}</code>
+                          </div>
+                        )}
                       </div>
                     )}
                   </Draggable>
@@ -87,6 +115,19 @@ export default function DashboardGrid({
           )}
         </Droppable>
       </DragDropContext>
+
+      {editingBlockId && (
+        <BlockSettingsModal
+          blockId={editingBlockId}
+          settings={settings[editingBlockId] || {}}
+          onClose={() => setEditingBlockId(null)}
+          onSave={(updated) => {
+            Object.entries(updated).forEach(([key, value]) => {
+              updateBlockSetting(editingBlockId, key, value);
+            });
+          }}
+        />
+      )}
     </>
   );
 }

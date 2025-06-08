@@ -1,4 +1,11 @@
 'use client';
+import { NextSeo } from 'next-seo';
+  const seo = usePageSeo({
+    description: 'Early access page.',
+    
+  });
+
+import { usePageSeo } from '@/lib/usePageSeo';
 import { useState } from 'react';
 
 export default function EarlyAccessPage() {
@@ -15,7 +22,8 @@ export default function EarlyAccessPage() {
     setSubmitted(true);
   };
 
-  return (
+  return (<>
+      <NextSeo {...seo} />
     <div className="p-6 text-white max-w-md mx-auto text-center">
       <h1 className="text-3xl font-bold mb-4">🚀 Early Access</h1>
       <p className="text-zinc-400 mb-4">Get notified when QuickSites opens. Trusted testers may receive access early.</p>

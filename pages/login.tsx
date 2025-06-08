@@ -6,9 +6,11 @@ import { useSetSessionFromHash } from '@/hooks/useSetSessionFromHash';
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useRouter } from 'next/router';
+import { useCurrentUser } from '@/hooks/useCurrentUser';
 
 export default function LoginPage() {
   useSetSessionFromHash();
+  const { allowAdminPromotion } = useCurrentUser();
 
   const [email, setEmail] = useState('');
   const [message, setMessage] = useState<string | null>(null);
@@ -29,15 +31,23 @@ export default function LoginPage() {
         }
       }
 
-      const role = session?.user?.user_metadata?.role;
       const id = session?.user?.id;
+      const email = session?.user?.email ?? null;
 
-      if (session && id) {
+      if (session && id && email) {
         const now = new Date().toISOString();
         await supabase.from('user_profiles').upsert({
           user_id: id,
           last_seen_at: now,
         });
+
+        const { data: roleRow } = await supabase
+          .from('user_roles')
+          .select('role')
+          .eq('user_email', email)
+          .maybeSingle();
+
+        const role = roleRow?.role ?? null;
 
         if (role) {
           if (['admin', 'owner', 'reseller'].includes(role)) {
@@ -82,6 +92,7 @@ export default function LoginPage() {
     setToast(`✅ Role set to "${selected}"`);
     setTimeout(() => setToast(null), 3000);
     router.replace(`/?message=role-assigned-${selected}`);
+    setTimeout(() => window.location.reload(), 1000);
   };
 
   return (
@@ -122,7 +133,7 @@ export default function LoginPage() {
                 </button>
               ))}
             </div>
-            {process.env.NODE_ENV === 'development' && (
+            {allowAdminPromotion && (
               <div className="mt-4">
                 <button
                   onClick={() => assignRole('admin')}

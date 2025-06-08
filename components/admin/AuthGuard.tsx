@@ -1,51 +1,36 @@
-import { useRouter } from 'next/router';
-import { useEffect } from 'react';
-import * as Sentry from '@sentry/nextjs';
-import { useCurrentUser } from '@/admin/hooks/useCurrentUser';
+// ✅ FILE: components/admin/AuthGuard.tsx
 
-export default function AuthGuard({
-  children,
-  roles: allowedRoles,
-  redirect = '/unauthorized'
-}: {
-  children: React.ReactNode;
-  roles?: string[];
-  redirect?: string;
-}) {
-  const { session, role } = useCurrentUser();
+'use client';
+
+import { useRouter } from 'next/router';
+import { useEffect, useState } from 'react';
+import { useCurrentUser } from '@/hooks/useCurrentUser';
+
+export default function AuthGuard({ children, roles }: { children: React.ReactNode; roles?: string[] }) {
   const router = useRouter();
+  const { user, role, loading } = useCurrentUser();
+  const [hydrated, setHydrated] = useState(false);
 
   useEffect(() => {
-    if (!session || (allowedRoles && !allowedRoles.includes(role))) {
-      console.warn('Access denied for user role:', role, 'Route:', router.pathname);
-      const alertThrottleKey = `denied:${session?.user?.id || 'anon'}:${router.pathname}`;
-      const lastAlert = sessionStorage.getItem(alertThrottleKey);
-      const now = Date.now();
-      if (!lastAlert || now - parseInt(lastAlert) > 30000) {
-        sessionStorage.setItem(alertThrottleKey, now.toString());
+    setHydrated(true);
+  }, []);
 
-        Sentry.captureEvent({
-        level: 'error',
-        message: 'Access denied',
-        tags: {
-          role: role || 'unknown',
-          route: router.pathname
-        },
-        extra: {
-          user_agent: typeof window !== 'undefined' ? navigator.userAgent : 'unknown',
-          email: session?.user?.email || 'unknown',
-          user_id: session?.user?.id || 'n/a',
-          timestamp: new Date().toISOString()
-        }
-      });
+  useEffect(() => {
+    if (!loading && hydrated) {
+      if (!user || (roles && !roles.includes(role))) {
+        router.replace(`/login?error=unauthorized`);
+      }
     }
-    if (!session || (allowedRoles && !allowedRoles.includes(role))) {
-      router.push(redirect); // or '/login' if preferred
-    }
-  }, [session, router, allowedRoles, role]);
+  }, [user, role, roles, router, loading, hydrated]);
 
-  if (!session || (allowedRoles && !allowedRoles.includes(role))) {
-    return null;
+  if (!hydrated || loading || !user || (roles && !roles.includes(role))) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-black text-white">
+        <div className="text-center">
+          <div className="text-sm text-gray-400">Checking permissions…</div>
+        </div>
+      </div>
+    );
   }
 
   return <>{children}</>;

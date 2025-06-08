@@ -1,48 +1,49 @@
-import { useSession } from '@supabase/auth-helpers-react';
-import { Role, isOrgAdmin, isViewerOnly, hasRole as hasRoleUtil, getRoleLabel } from '@/admin/utils/roles';
-import RoleBadge from '@/components/admin/RoleBadge';
-import type { ReactNode } from 'react';
-import type { CurrentUserContext } from '@/admin/types/UserContextTypes';
+// ✅ FILE: hooks/useCurrentUser.tsx
 
-export function useCurrentUser(): CurrentUserContext {
-  const session = useSession();
-  const user = session?.user ?? null;
-  const email = user?.email || null;
-  const role = user?.user_metadata?.role as Role || null;
-  const org = user?.user_metadata?.org || null;
-  const team = user?.user_metadata?.team || null;
-  const permissions = user?.user_metadata?.permissions || [];
+import { useEffect, useState } from 'react';
+import { useUser, useSessionContext } from '@supabase/auth-helpers-react';
+import { supabase } from '@/lib/supabase';
 
-  function hasPermission(code: string) {
-    return permissions.includes(code);
-  }
+export function useCurrentUser() {
+  const supaUser = useUser();
+  const { isLoading } = useSessionContext();
+  const [role, setRole] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
 
-  function isInTeam(name: string) {
-    return team === name;
-  }
+  useEffect(() => {
+    if (supaUser?.email) {
+      supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_email', supaUser.email)
+        .maybeSingle()
+        .then(({ data, error }) => {
+          if (data?.role) setRole(data.role);
+          setLoading(false);
+        });
+    } else {
+      setLoading(false);
+    }
+  }, [supaUser?.email]);
+
+  const showOnboarding = !!supaUser?.email && !role;
+
+  const allowAdminPromotion = ['sandon@quicksites.ai', 'jurowski@gmail.com', 'sandonjurowski@gmail.com'].includes(supaUser?.email || '');
 
   return {
-    session,
-    user,
-    email,
+    email: supaUser?.email ?? null,
+    user: supaUser,
     role,
-    org,
-    team,
-    permissions,
-    hasPermission,
-    isInTeam,
-    isOrgAdmin: isOrgAdmin(role),
-    isViewerOnly: isViewerOnly(role, permissions),
-    hasRole: (target) => hasRoleUtil(role, target),
-    roleLabel: getRoleLabel(role),
-    roleIcon: role === Role.Admin ? '🛡️' :
-              role === Role.Owner ? '⭐' :
-              role === Role.Editor ? '✏️' :
-              role === Role.Viewer ? '👁️' : '❓',
-    roleColor: role === Role.Admin ? 'red' :
-               role === Role.Owner ? 'yellow' :
-               role === Role.Editor ? 'blue' :
-               role === Role.Viewer ? 'gray' : 'zinc',
-    roleBadge: (): ReactNode => (<RoleBadge role={role} />)
+    loading: isLoading || loading,
+    hasRole: (roles: string[]) => role ? roles.includes(role) : false,
+    showOnboarding,
+    allowAdminPromotion,
+    roleBadge: () => role ? (
+      <span className="bg-zinc-800 border border-white px-2 py-1 text-xs rounded-full">
+        {role.charAt(0).toUpperCase() + role.slice(1)}
+      </span>
+    ) : (
+      <span className="text-red-400 text-xs">? Unknown</span>
+    ),
   };
 }

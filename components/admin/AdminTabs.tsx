@@ -10,7 +10,7 @@ const allTabs = [
   { label: 'Dashboard', href: '/admin/sites/dashboard', icon: FiGrid },
   { label: 'Logs', href: '/admin/logs/dashboard', icon: FiFileText, roles: ['admin'] },
   { label: 'Sites', href: '/admin/sites', icon: FiGlobe },
-  { label: 'Users', href: '/admin/users', icon: FiUsers, roles: ['admin'] }
+  { label: 'Users', href: '/admin/users', icon: FiUsers, roles: ['admin'] },
 ];
 
 export default function AdminTabs() {
@@ -28,7 +28,7 @@ export default function AdminTabs() {
   const isActive = (href: string) =>
     pathname === href || pathname.startsWith(href + '/');
 
-  const tabs = allTabs.filter((tab) => !tab.roles || tab.roles.includes(role));
+  const tabs = allTabs.filter(tab => !tab.roles || tab.roles.includes(role));
 
   return (
     <div className="border-b border-gray-300 mb-4 px-4">
@@ -44,17 +44,17 @@ export default function AdminTabs() {
         }`}
       >
         {tabs.map(({ label, href, icon: Icon }) => (
-          <Link key={href} href={href} passHref>
-            <a
-              className={`flex items-center gap-1 pb-1 border-b-2 ${
-                isActive(href)
-                  ? 'text-blue-600 border-blue-600 font-medium'
-                  : 'text-gray-600 border-transparent hover:text-blue-500'
-              }`}
-            >
-              <Icon className="w-4 h-4" />
-              {label}
-            </a>
+          <Link
+            key={href}
+            href={href}
+            className={`flex items-center gap-1 pb-1 border-b-2 ${
+              isActive(href)
+                ? 'text-blue-600 border-blue-600 font-medium'
+                : 'text-gray-600 border-transparent hover:text-blue-500'
+            }`}
+          >
+            <Icon className="w-4 h-4" />
+            {label}
           </Link>
         ))}
       </nav>

@@ -2,7 +2,7 @@ import { useRouter } from 'next/router';
 import md5 from 'blueimp-md5';
 import Image from 'next/image';
 import SafeLink from './ui/SafeLink';
-import { useCurrentUser } from '@/admin/hooks/useCurrentUser';
+import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { Role } from '@/admin/utils/roles';
 
 export default function AppHeader() {

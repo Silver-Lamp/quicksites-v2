@@ -3,15 +3,16 @@ import { useRouter } from 'next/router';
 import { useEffect, useState } from 'react';
 
 export default function SupportersPage() {
-  const { query } = useRouter();
+  const router = useRouter();
+  const { slug } = router.query;
   const [supporters, setSupporters] = useState<any[]>([]);
 
   useEffect(() => {
-    if (!query.handle) return;
-    fetch('/api/supporters?handle=' + query.handle)
+    if (!slug) return;
+    fetch('/api/supporters?handle=' + slug)
       .then(res => res.json())
       .then(setSupporters);
-  }, [query.handle]);
+  }, [slug]);
 
   return (
     <div className="max-w-xl mx-auto p-6 text-white space-y-6">

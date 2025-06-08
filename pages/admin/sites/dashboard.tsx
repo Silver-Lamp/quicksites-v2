@@ -2,7 +2,7 @@
 
 import { useEffect } from 'react';
 import Page from '@/components/layout/Page';
-import Dashboard from '@/components/admin/Dashboard';
+import Dashboard from '@/components/admin/DashboardGridDraggable';
 import { supabase } from '@/lib/supabase';
 import Link from 'next/link';
 

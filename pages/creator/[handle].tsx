@@ -2,29 +2,28 @@
 import { useRouter } from 'next/router';
 import { useEffect, useState } from 'react';
 
-export default function CreatorTemplatesPage() {
+export default function PublicHandlePage() {
   const router = useRouter();
   const { handle } = router.query;
-  const [templates, setTemplates] = useState([]);
+  const [data, setData] = useState(null);
 
   useEffect(() => {
     if (!handle) return;
-    fetch('/api/templates-by-creator?handle=' + handle)
+    fetch('/api/handle-profile?handle=' + handle)
       .then(res => res.json())
-      .then(setTemplates);
+      .then(setData);
   }, [handle]);
 
+  if (!data) return <div className="text-white p-6">Loading...</div>;
+
   return (
-    <div className="text-white p-6 max-w-3xl mx-auto">
-      <h1 className="text-2xl font-bold mb-6">🎨 Templates by @{handle}</h1>
-      <ul className="space-y-4">
-        {templates.map((t, i) => (
-          <li key={i} className="bg-zinc-800 rounded p-4">
-            <div className="font-semibold">{t.name}</div>
-            <div className="text-zinc-400 text-sm">{t.description}</div>
-          </li>
-        ))}
-      </ul>
+    <div className="text-white p-6 text-center max-w-2xl mx-auto">
+      <img src={data.avatar} alt="avatar" className="w-20 h-20 rounded-full mx-auto mb-4" />
+      <h1 className="text-2xl font-bold">@{handle}</h1>
+      {data.badge && (
+        <p className="text-yellow-400">{data.badge.icon} {data.badge.title}</p>
+      )}
+      <p className="text-zinc-400 mt-2">{data.bio}</p>
     </div>
   );
 }

@@ -1,4 +1,4 @@
-// In /creator/[handle].tsx — optionally embed DAG for user's templates
+// In /portfolio/[handle].tsx — optionally embed DAG for user's templates
 <Link href={`/remix-map?filter=${handle}`} className="text-sm text-blue-400 hover:underline">
   🔁 View Remix Map
 </Link>

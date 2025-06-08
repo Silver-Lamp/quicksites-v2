@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { GroupedNav } from '@/components/nav/GroupedNav'; // adjust if needed
+import GroupedNav from '@/components/admin/GroupedNav';
 
 export default function AdminSidebarLayout() {
   const [navBadges, setNavBadges] = useState<{ failed: number }>({ failed: 0 });

@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { useUser } from '@supabase/auth-helpers-react';
 import { ReactNode } from 'react';
-import { useCurrentUser } from '../hooks/useCurrentUser';
+import { useCurrentUser } from '@/hooks/useCurrentUser';
 
 export default function AdminLayout({ children }: { children: ReactNode }) {
   const { user, isLoading } = useCurrentUser();

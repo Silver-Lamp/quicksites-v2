@@ -1,5 +1,5 @@
 import * as Sentry from '@sentry/nextjs';
-import { useCurrentUser } from '@/admin/hooks/useCurrentUser';
+import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { useEffect } from 'react';
 
 export default function UnauthorizedPage() {

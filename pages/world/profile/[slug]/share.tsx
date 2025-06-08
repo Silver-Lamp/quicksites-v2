@@ -1,13 +1,15 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
+import { useUser } from '@supabase/auth-helpers-react';
 
 export default function PublicWorldShare() {
   const router = useRouter();
-  const { handle } = router.query;
+  const { slug } = router.query;
   const [profile, setProfile] = useState<any>(null);
   const [blocks, setBlocks] = useState([]);
-
+  const handle = slug as string;
+  const user = useUser(); 
   useEffect(() => {
     if (!handle) return;
     fetch('/api/public-profile?handle=' + handle)

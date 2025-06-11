@@ -5,6 +5,7 @@ import Page from '@/components/layout/Page';
 import Dashboard from '@/components/admin/DashboardGridDraggable';
 import { supabase } from '@/lib/supabase';
 import Link from 'next/link';
+import AuthGuard from '@/components/admin/AuthGuard';
 
 export default function DashboardPage() {
   useEffect(() => {
@@ -12,12 +13,12 @@ export default function DashboardPage() {
       const { data: { user } } = await supabase.auth.getUser();
 
       if (user) {
-        let geo = {};
+        let geo: any = {};
         try {
           const res = await fetch('https://ipapi.co/json/');
           geo = await res.json();
         } catch (e) {
-          console.warn('Geo lookup failed');
+          console.warn('🌍❌ [Sites] [Dashboard] [useEffect] Geo lookup failed', { e });
         }
 
         await supabase.from('dashboard_access_log').insert({
@@ -25,10 +26,10 @@ export default function DashboardPage() {
           email: user.email,
           timestamp: new Date().toISOString(),
           user_agent: navigator.userAgent,
-          ip_address: geo.ip || null,
-          city: geo.city || null,
-          region: geo.region || null,
-          country: geo.country_name || null
+          ip_address: geo?.ip || null,
+          city: geo?.city || null,
+          region: geo?.region || null,
+          country: geo?.country_name || null
         });
       }
     })();
@@ -42,7 +43,17 @@ export default function DashboardPage() {
           View Access Logs
         </Link>
       </div>
-      <Dashboard />
+      <AuthGuard roles={['admin']}>
+        <Dashboard
+          renderers={{}}
+          order={[]}
+          hidden={[]}
+          onSave={() => { return; }}
+          onAddBlock={() => { return; }}
+          settings={{}}
+          updateBlockSetting={() => { return; }}
+        />
+      </AuthGuard>
     </Page>
   );
 }

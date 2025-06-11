@@ -67,6 +67,7 @@
     "eslint": "^9.28.0",
     "framer-motion": "^12.16.0",
     "fs-extra": "^11.2.0",
+    "leaflet": "^1.9.4",
     "lucide-react": "^0.513.0",
     "next": "^15.3.2",
     "next-seo": "^6.8.0",
@@ -77,6 +78,7 @@
     "react-dom": "^18.2.0",
     "react-hot-toast": "^2.5.2",
     "react-icons": "^5.5.0",
+    "react-leaflet": "^4.2.1",
     "react-qr-code": "^2.0.15",
     "recharts": "^2.15.3"
   },
@@ -87,6 +89,7 @@
     "@commitlint/config-conventional": "^19.8.1",
     "@playwright/test": "^1.52.0",
     "@tailwindcss/postcss": "^4.1.8",
+    "@types/leaflet": "^1.9.18",
     "@types/qrcode": "^1.5.5",
     "@types/react": "^19.1.6",
     "@types/react-csv": "^1.1.10",

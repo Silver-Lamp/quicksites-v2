@@ -46,6 +46,8 @@ function Dashboard() {
 
   useEffect(() => {
     if (activeDashboardId && router.query.dashboard !== activeDashboardId) {
+      console.log('🔄 [Dashboard] [useEffect] Redirecting to dashboard', { activeDashboardId });
+
       router.replace({
         pathname: router.pathname,
         query: { ...router.query, dashboard: activeDashboardId },
@@ -54,10 +56,16 @@ function Dashboard() {
   }, [activeDashboardId]);
 
   useEffect(() => {
+    console.log('🔄 [Dashboard] [useEffect] Checking role', { user });
     supabase.auth.getUser().then(({ data }) => {
       const role = data?.user?.user_metadata?.role;
-      if (role === 'viewer') router.push('/viewer');
-      else if (role !== 'admin' && role !== 'reseller') router.push('/login?error=unauthorized');
+      if (role === 'viewer') {
+        console.log('🔄 [Dashboard] [useEffect] Redirecting to viewer', { role });
+        router.push('/viewer');
+      } else if (role !== 'admin' && role !== 'reseller') {
+        console.log('🔄 [Dashboard] [useEffect] Redirecting to login', { role });
+        router.push('/login?error=unauthorized');
+      }
     });
 
     supabase
@@ -172,6 +180,6 @@ function Dashboard() {
   );
 }
 
-Dashboard.getLayout = (page) => <Page>{page}</Page>;
+Dashboard.getLayout = (page: React.ReactNode) => <Page>{page}</Page>;
 
 export default Dashboard;

@@ -2,25 +2,30 @@
 
 import { createPagesServerClient } from '@supabase/auth-helpers-nextjs';
 
-export async function getServerSideProps(context) {
+export async function getServerSideProps(context: any) {
   const supabase = createPagesServerClient(context);
   const {
     data: { session },
   } = await supabase.auth.getSession();
 
-  const role = session?.user?.user_metadata?.role;
+  const roleMetadata = session?.user?.user_metadata?.role;
 
-  console.log('🔒 [Index] Role', { role });
+  console.log('🔒 [Index] Role (metadata)', { roleMetadata });
   console.log('🔒 [Index] Session', { session });
   console.log('🔒 [Index] User', { user: session?.user });
   console.log('🔒 [Index] User Metadata', { userMetadata: session?.user?.user_metadata });
-  console.log('🔒 [Index] User Role', { userRole: session?.user?.user_metadata?.role });
-  console.log('🔒 [Index] User Roles', { userRoles: session?.user?.user_metadata?.roles });
-  console.log('🔒 [Index] User Role', { userRole: session?.user?.user_metadata?.role });
+  console.log('🔒 [Index] User Role (metadata)', { userRole: session?.user?.user_metadata?.role });
+  console.log('🔒 [Index] User Roles (metadata)', { userRoles: session?.user?.user_metadata?.roles });
 
-  const skipRoleCheck = true;
-  if (skipRoleCheck) {
-    console.log('🔒 [Index] Skipping role check', { skipRoleCheck });
+  if (roleMetadata && ['admin', 'owner', 'reseller'].includes(roleMetadata)) {
+    const skipRedirect = true;
+    if (skipRedirect) {
+      console.log('🔒 [Index] Skipping redirect to admin dashboard', { skipRedirect });
+      return {
+        props: {},
+      };
+    }
+    console.log('🔄 [Index] Redirecting to admin dashboard', { roleMetadata });
     return {
       redirect: {
         destination: '/admin/dashboard',
@@ -29,19 +34,19 @@ export async function getServerSideProps(context) {
     };
   }
 
-  if (role && ['admin', 'owner', 'reseller'].includes(role)) {
-    console.log('🔒 [Index] Redirecting to admin dashboard', { role });
+  const skipRedirect = true;
+  if (skipRedirect) {
+    console.log('🔒 [Index] Skipping redirect to login', { skipRedirect });
     return {
-      redirect: {
-        destination: '/admin/dashboard',
-        permanent: false,
-      },
+      props: {},
     };
   }
-
-  console.log('🔒 [Index] Redirecting to login', { role });
-    return {
-    props: {},
+  console.log('🔄 [Index] Redirecting to login', { roleMetadata });
+  return {
+    redirect: {
+      destination: '/login',
+      permanent: false,
+    },
   };
 }
 
@@ -50,8 +55,6 @@ export default function Home() {
     <div className="min-h-screen flex items-center justify-center text-white bg-black">
       <div className="text-center space-y-4">
         <h1 className="text-3xl font-bold">Welcome to QuickSites</h1>
-        <p className="text-gray-400">You are signed in but do not have an elevated role yet.</p>
-        <a href="/login" className="text-blue-500 underline">Return to login</a>
       </div>
     </div>
   );

@@ -1,15 +1,17 @@
 import L from 'leaflet';
 import { useRef, useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
-import { supabase } from '../lib/supabase';
+import { supabase } from '@/lib/supabase';
 import { MapContainer, TileLayer, CircleMarker, Popup } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
+import { resolveGeo } from '@/lib/resolveGeo';
 
 export default function GridMap() {
   const [industry, setIndustry] = useState('');
   const [points, setPoints] = useState<any[]>([]);
   const [zoom, setZoom] = useState(4);
   const router = useRouter();
+  const mapRef = useRef<L.Map>(null);
 
   useEffect(() => {
     const load = async () => {
@@ -17,18 +19,18 @@ export default function GridMap() {
       const { data: domains } = await supabase.from('domains').select('city, state, domain');
 
       const geo: Record<string, {
-        city: string,
-        state: string,
-        leads: number,
-        domains: number,
-        leadNames: string[],
-        domainNames: string[],
-        leadIds: string[],
-        industryCounts: Record<string, number>
+        city: string;
+        state: string;
+        leads: number;
+        domains: number;
+        leadNames: string[];
+        domainNames: string[];
+        leadIds: string[];
+        industryCounts: Record<string, number>;
       }> = {};
 
       for (const l of leads || []) {
-        const key = l.address_city + ', ' + l.address_state;
+        const key = `${l.address_city}, ${l.address_state}`;
         geo[key] = geo[key] || {
           city: l.address_city,
           state: l.address_state,
@@ -42,12 +44,12 @@ export default function GridMap() {
         geo[key].leads += 1;
         if (l.business_name) geo[key].leadNames.push(l.business_name);
         geo[key].leadIds.push(l.id);
-        const industryKey = (l.industry || '').trim().toLowerCase();
-        geo[key].industryCounts[industryKey] = (geo[key].industryCounts[industryKey] || 0) + 1;
+        const indKey = (l.industry || '').trim().toLowerCase();
+        geo[key].industryCounts[indKey] = (geo[key].industryCounts[indKey] || 0) + 1;
       }
 
       for (const d of domains || []) {
-        const key = d.city + ', ' + d.state;
+        const key = `${d.city}, ${d.state}`;
         geo[key] = geo[key] || {
           city: d.city,
           state: d.state,
@@ -63,17 +65,14 @@ export default function GridMap() {
       }
 
       const enriched = await Promise.all(Object.values(geo).map(async (entry) => {
-        const res = await fetch(`/api/geocode?city=${entry.city}&state=${entry.state}`);
-        const geoData = await res.json();
-        const lat = geoData.lat || 0;
-        const lon = geoData.lon || 0;
+        const { lat, lon } = await resolveGeo(entry.city, entry.state);
 
-        const industry = Object.entries(entry.industryCounts || {}).reduce(
+        const primaryIndustry = Object.entries(entry.industryCounts || {}).reduce(
           (acc, [ind, count]) => (count > (acc[1] || 0) ? [ind, count] : acc),
           ['', 0]
         )[0];
 
-        return { ...entry, lat, lon, industry };
+        return { ...entry, lat, lon, industry: primaryIndustry };
       }));
 
       setPoints(enriched);
@@ -97,7 +96,6 @@ export default function GridMap() {
   };
 
   const filteredPoints = points.filter(filterByIndustry);
-  const mapRef = useRef<L.Map>(null);
 
   return (
     <div className="p-6 text-white">
@@ -153,20 +151,19 @@ export default function GridMap() {
         </div>
 
         <div className="lg:w-1/2 h-[600px] border border-gray-700 rounded overflow-hidden">
-        <MapContainer
-          center={[39.5, -98.35]}
-          zoom={4}
-          scrollWheelZoom={true}
-          style={{ height: '100%', width: '100%' }}
-          whenReady={() => {
-            const map = mapRef.current;
-            if (map) {
-              map.on('zoomend', () => setZoom(map.getZoom()));
-            }
-          }}
-          ref={mapRef}
-        >
-
+          <MapContainer
+            center={[39.5, -98.35]}
+            zoom={4}
+            scrollWheelZoom={true}
+            style={{ height: '100%', width: '100%' }}
+            whenReady={() => {
+              const map = mapRef.current;
+              if (map) {
+                map.on('zoomend', () => setZoom(map.getZoom()));
+              }
+            }}
+            ref={mapRef}
+          >
             <TileLayer
               url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
               attribution="© OpenStreetMap contributors"

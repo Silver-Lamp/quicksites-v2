@@ -86,7 +86,7 @@ export default function LoginPage() {
     await supabase.from('user_roles').insert({
       user_email: email,
       new_role: selected,
-      changed_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
     });
     setShowOnboarding(false);
     setToast(`✅ Role set to "${selected}"`);

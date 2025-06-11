@@ -13,11 +13,12 @@ export function useDashboardLayout(userId: string | null, dashboardId?: string) 
   const [dashboards, setDashboards] = useState<any[]>([]);
   const [activeDashboardId, setActiveDashboardId] = useState<string | null>(dashboardId || null);
   const [loaded, setLoaded] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   // Fetch dashboards for the user
   useEffect(() => {
     if (!userId) return;
-
+    setLoading(true);
     supabase
       .from('dashboard_user_layouts')
       .select('*')
@@ -27,13 +28,14 @@ export function useDashboardLayout(userId: string | null, dashboardId?: string) 
         if (!activeDashboardId && data?.[0]) {
           setActiveDashboardId(data[0].dashboard_id);
         }
+        setLoading(false);
       });
   }, [userId]);
 
   // Load selected layout
   useEffect(() => {
     if (!userId || !activeDashboardId) return;
-
+    setLoading(true);
     supabase
       .from('dashboard_user_layouts')
       .select('layout, hidden, settings')
@@ -45,6 +47,7 @@ export function useDashboardLayout(userId: string | null, dashboardId?: string) 
         if (data?.hidden) setHidden(data.hidden);
         if (data?.settings) setSettings(data.settings);
         setLoaded(true);
+        setLoading(false);
       });
 
     const channel = supabase
@@ -75,6 +78,7 @@ export function useDashboardLayout(userId: string | null, dashboardId?: string) 
 
   const save = async (layout: Block[], hiddenList: string[], newSettings = settings) => {
     if (!userId || !activeDashboardId) return;
+    setLoading(true);
     await supabase
       .from('dashboard_user_layouts')
       .upsert({
@@ -88,6 +92,7 @@ export function useDashboardLayout(userId: string | null, dashboardId?: string) 
     setOrder(layout);
     setHidden(hiddenList);
     setSettings(newSettings);
+    setLoading(false);
   };
 
   const updateBlockSetting = (blockId: string, key: string, value: any) => {
@@ -102,12 +107,13 @@ export function useDashboardLayout(userId: string | null, dashboardId?: string) 
   };
   const createDashboard = async (name: string) => {
     if (!userId) return;
+    setLoading(true);
     const { data } = await supabase
       .from('dashboard_user_layouts')
       .insert({
         user_id: userId,
         name,
-        layout: DEFAULT_LAYOUT,
+        layout: "DEFAULT_LAYOUT",
         hidden: [],
         settings: {},
       })
@@ -120,6 +126,7 @@ export function useDashboardLayout(userId: string | null, dashboardId?: string) 
       setOrder(data.layout);
       setHidden([]);
       setSettings({});
+      setLoading(false);
     }
   };
   
@@ -134,5 +141,6 @@ export function useDashboardLayout(userId: string | null, dashboardId?: string) 
     save,
     updateBlockSetting,
     createDashboard,
+    loading,
   };
 }

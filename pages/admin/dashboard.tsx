@@ -39,6 +39,7 @@ function Dashboard() {
     hidden,
     save,
     loaded,
+    loading,
     settings,
     updateBlockSetting,
   } = useDashboardLayout(user?.id || null, dashboardFromURL);
@@ -66,7 +67,7 @@ function Dashboard() {
       .then(({ data }) => setDomains(data || []));
   }, []);
 
-  if (!loaded && user?.id) {
+  if (loading) {
     return <p className="text-gray-500 text-sm p-6">Loading dashboard layout…</p>;
   }
 

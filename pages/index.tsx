@@ -10,7 +10,17 @@ export async function getServerSideProps(context) {
 
   const role = session?.user?.user_metadata?.role;
 
-  if (role && ['admin', 'owner', 'reseller'].includes(role)) {
+  console.log('🔒 [Index] Role', { role });
+  console.log('🔒 [Index] Session', { session });
+  console.log('🔒 [Index] User', { user: session?.user });
+  console.log('🔒 [Index] User Metadata', { userMetadata: session?.user?.user_metadata });
+  console.log('🔒 [Index] User Role', { userRole: session?.user?.user_metadata?.role });
+  console.log('🔒 [Index] User Roles', { userRoles: session?.user?.user_metadata?.roles });
+  console.log('🔒 [Index] User Role', { userRole: session?.user?.user_metadata?.role });
+
+  const skipRoleCheck = true;
+  if (skipRoleCheck) {
+    console.log('🔒 [Index] Skipping role check', { skipRoleCheck });
     return {
       redirect: {
         destination: '/admin/dashboard',
@@ -19,7 +29,18 @@ export async function getServerSideProps(context) {
     };
   }
 
-  return {
+  if (role && ['admin', 'owner', 'reseller'].includes(role)) {
+    console.log('🔒 [Index] Redirecting to admin dashboard', { role });
+    return {
+      redirect: {
+        destination: '/admin/dashboard',
+        permanent: false,
+      },
+    };
+  }
+
+  console.log('🔒 [Index] Redirecting to login', { role });
+    return {
     props: {},
   };
 }

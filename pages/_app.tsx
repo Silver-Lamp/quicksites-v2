@@ -12,6 +12,7 @@ import { useRouter } from 'next/router';
 import dynamic from 'next/dynamic';
 import ResponsiveAdminLayout from '@/components/admin/ResponsiveAdminLayout';
 import DefaultPublicLayout from '@/components/layout/DefaultPublicLayout';
+import { CurrentUserProvider } from '@/components/admin/context/CurrentUserProvider';
 import { useSessionReady } from '@/hooks/useSessionReady';
 import Loader from '@/components/ui/Loader';
 import { useEffect } from 'react';
@@ -26,16 +27,33 @@ export default function App({ Component, pageProps }: AppProps) {
   const isAdminRoute = router.pathname.startsWith('/admin');
   const sessionReady = useSessionReady();
 
-  // Debug log to inspect session object
   useEffect(() => {
     import('@/lib/supabase').then(({ supabase }) => {
       supabase.auth.getSession().then(({ data }) => {
-        console.log('👤 Supabase Session:', data?.session);
+        const token = data?.session?.access_token;
+        const metaRole = data?.session?.user?.user_metadata?.role;
+        const builtInRole = data?.session?.user?.role;
+      
+        console.debug('🧠 [App Hydration]', {
+          path: router.pathname,
+          user: data?.session?.user?.email,
+          role: {
+            metadata: metaRole,
+            builtin: builtInRole,
+          },
+          token: token ? `${token.slice(0, 4)}...${token.slice(-4)}` : 'none',
+        });
+        console.log('✅ [Role loaded]', { role: builtInRole, email: data?.session?.user?.email });
+      }).catch((err) => {
+        console.error('❌ Failed to fetch session in _app.tsx:', err);
       });
     });
-  }, []);
+  }, [router.pathname]);
 
-  if (!sessionReady) return <Loader message="Authenticating..." />;
+  if (!sessionReady) {
+    console.log('[🔐 Waiting for session...]');
+    return <Loader message="Authenticating..." />;
+  }
 
   const page = (
     <AnimatePresence mode="wait" initial={false}>
@@ -56,11 +74,13 @@ export default function App({ Component, pageProps }: AppProps) {
       <DefaultSeo {...SEO} />
       <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
         <SupabaseProvider>
-          {isAdminRoute ? (
-            <ResponsiveAdminLayout>{page}</ResponsiveAdminLayout>
-          ) : (
-            <DefaultPublicLayout>{page}</DefaultPublicLayout>
-          )}
+          <CurrentUserProvider>
+            {isAdminRoute ? (
+              <ResponsiveAdminLayout>{page}</ResponsiveAdminLayout>
+            ) : (
+              <DefaultPublicLayout>{page}</DefaultPublicLayout>
+            )}
+          </CurrentUserProvider>
         </SupabaseProvider>
       </ThemeProvider>
     </>

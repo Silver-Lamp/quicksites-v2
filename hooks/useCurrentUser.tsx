@@ -1,49 +1,61 @@
 // ✅ FILE: hooks/useCurrentUser.tsx
 
-import { useEffect, useState } from 'react';
-import { useUser, useSessionContext } from '@supabase/auth-helpers-react';
+import { useContext, useEffect, useState } from 'react';
+import { CurrentUserContextType } from '@/components/admin/context/CurrentUserProvider';
+import { CurrentUserContext } from '@/components/admin/context/CurrentUserProvider';
 import { supabase } from '@/lib/supabase';
 
-export function useCurrentUser() {
-  const supaUser = useUser();
-  const { isLoading } = useSessionContext();
-  const [role, setRole] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
+export function useCurrentUser(): CurrentUserContextType & { roleSource: string } {
+  const context = useContext(CurrentUserContext);
+
+  const [fetchedRole, setFetchedRole] = useState<string | null>(null);
+  const [loadingRole, setLoadingRole] = useState(true);
+  const [roleSource, setRoleSource] = useState<'session' | 'db' | 'cache'>('session');
 
   useEffect(() => {
-    if (supaUser?.email) {
-      supabase
+    const fetchRole = async () => {
+      if (!context.email) return;
+
+      const cacheKey = `cached-role-${context.email}`;
+
+      // Check localStorage first
+      const cached = localStorage.getItem(cacheKey);
+      if (cached) {
+        console.debug('📦 Using cached fallback role:', cached);
+        setFetchedRole(cached);
+        setRoleSource('cache');
+        setLoadingRole(false);
+        return;
+      }
+
+      // Otherwise query Supabase
+      const { data, error } = await supabase
         .from('user_roles')
-        .select('role')
-        .eq('user_email', supaUser.email)
-        .maybeSingle()
-        .then(({ data, error }) => {
-          if (data?.role) setRole(data.role);
-          setLoading(false);
-        });
-    } else {
-      setLoading(false);
-    }
-  }, [supaUser?.email]);
+        .select('new_role')
+        .eq('user_email', context.email)
+        .order('updated_at', { ascending: false })
+        .limit(1)
+        .single();
 
-  const showOnboarding = !!supaUser?.email && !role;
+      if (error) {
+        console.warn('🔍 Role fetch error', error.message);
+      } else if (data?.new_role?.trim()) {
+        console.debug('✅ Fallback role from DB:', data.new_role);
+        setFetchedRole(data.new_role);
+        setRoleSource('db');
+        localStorage.setItem(cacheKey, data.new_role);
+      }
 
-  const allowAdminPromotion = ['sandon@quicksites.ai', 'jurowski@gmail.com', 'sandonjurowski@gmail.com'].includes(supaUser?.email || '');
+      setLoadingRole(false);
+    };
+
+    fetchRole();
+  }, [context.email]);
 
   return {
-    email: supaUser?.email ?? null,
-    user: supaUser,
-    role,
-    loading: isLoading || loading,
-    hasRole: (roles: string[]) => role ? roles.includes(role) : false,
-    showOnboarding,
-    allowAdminPromotion,
-    roleBadge: () => role ? (
-      <span className="bg-zinc-800 border border-white px-2 py-1 text-xs rounded-full">
-        {role.charAt(0).toUpperCase() + role.slice(1)}
-      </span>
-    ) : (
-      <span className="text-red-400 text-xs">? Unknown</span>
-    ),
+    ...context,
+    role: fetchedRole || context.role,
+    loading: context.loading || loadingRole,
+    roleSource,
   };
 }

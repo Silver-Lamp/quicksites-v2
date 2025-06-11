@@ -41,6 +41,12 @@ export default function AdminSidebarLayout({ children }: { children: ReactNode }
           badge: navBadges.failed > 0 ? navBadges.failed : 'NEW',
           roles: ['admin']
         },
+        {
+          label: 'Session Logs',
+          path: '/admin/logs/sessions',
+          icon: '🪵',
+          roles: ['admin']
+        },
       ],
     },
   ];

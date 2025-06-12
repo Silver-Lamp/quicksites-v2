@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import dayjs from 'dayjs';
+import AdminLayout from '@/components/layout/AdminLayout';
 
 export default function CampaignsPage() {
   const [campaigns, setCampaigns] = useState<any[]>([]);
@@ -40,7 +41,7 @@ export default function CampaignsPage() {
   }, []);
 
   return (
-    <div className="p-6 text-white">
+    <div className="p-6">
       <h1 className="text-2xl font-bold mb-4">Campaigns</h1>
       {campaigns.map((c, i) => {
         const start = dayjs(c.starts_at);
@@ -114,3 +115,7 @@ export default function CampaignsPage() {
     </div>
   );
 }
+
+CampaignsPage.getLayout = function getLayout(page: React.ReactNode) {
+  return <AdminLayout>{page}</AdminLayout>;
+};

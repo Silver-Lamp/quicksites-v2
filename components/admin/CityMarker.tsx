@@ -42,7 +42,7 @@ export default function CityMarker({ point, zoom, getColor, router }: CityMarker
                   state: point.state,
                   leadIds: point.leadIds.join(',')
                 });
-                router.push(`/start-campaign?${query}`);
+                router.push(`/admin/start-campaign?${query}`);
               }}
               className="mt-3 px-3 py-2 bg-blue-600 text-white rounded-md text-sm hover:bg-blue-700 w-full"
             >

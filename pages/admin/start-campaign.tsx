@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import { supabase } from '@/lib/supabase';
 import dayjs from 'dayjs';
+import AdminLayout from '@/components/layout/AdminLayout';
 
 export default function StartCampaign() {
   const router = useRouter();
@@ -16,6 +17,7 @@ export default function StartCampaign() {
   const [startsAt, setStartsAt] = useState(dayjs().toISOString().slice(0, 16));
   const [endsAt, setEndsAt] = useState(dayjs().add(3, 'day').toISOString().slice(0, 16));
   const [email, setEmail] = useState('');
+  const [silentMode, setSilentMode] = useState(false);
 
   useEffect(() => {
     supabase
@@ -24,15 +26,15 @@ export default function StartCampaign() {
       .then(({ data }) => {
         if (!city) setLeads(data || []);
         else if (!city) {
-        setLeads(data || []);
-      } else {
-        const filtered = (data || []).filter(l => l.address_city?.toLowerCase() === city.toLowerCase());
-        setLeads(filtered);
-        if (filtered.length >= 2) {
-          setLead1(filtered[0].id);
-          setLead2(filtered[1].id);
+          setLeads(data || []);
+        } else {
+          const filtered = (data || []).filter(l => l.address_city?.toLowerCase() === city.toLowerCase());
+          setLeads(filtered);
+          if (filtered.length >= 2) {
+            setLead1(filtered[0].id);
+            setLead2(filtered[1].id);
+          }
         }
-      }
       });
 
     supabase.auth.getUser().then(({ data }) => {
@@ -42,6 +44,12 @@ export default function StartCampaign() {
 
   const start = async (e: any) => {
     e.preventDefault();
+
+    if (lead1 === lead2) {
+      alert('Lead 1 and Lead 2 must be different businesses.');
+      return;
+    }
+
     const { data, error } = await supabase.from('campaigns').insert([
       {
         name,
@@ -65,6 +73,7 @@ export default function StartCampaign() {
       .update({ campaign_id: data.id })
       .in('id', [lead1, lead2]);
 
+    if (!silentMode) {
     await supabase.from('user_action_logs').insert([
       {
         action_type: 'campaign_created',
@@ -72,14 +81,19 @@ export default function StartCampaign() {
         notes: `Created campaign: ${name}`
       }
     ]);
+  }
 
     router.push('/campaigns');
   };
 
   return (
-    <div className="p-6 text-white">
+    <div className="p-6 text-white max-w-3xl mx-auto space-y-6">
       <h1 className="text-2xl font-bold mb-4">Start New Campaign</h1>
-      <form onSubmit={start} className="space-y-4 max-w-lg">
+      <form onSubmit={start} className="space-y-4">
+        <label className="flex items-center space-x-2">
+          <input type="checkbox" checked={silentMode} onChange={(e) => setSilentMode(e.target.checked)} />
+          <span className="text-sm">Silent Mode (don't notify contestants)</span>
+        </label>
         <input
           placeholder="Campaign Name"
           value={name}
@@ -87,49 +101,51 @@ export default function StartCampaign() {
           className="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2"
           required
         />
-        <input
-          placeholder="City"
-          value={city}
-          onChange={(e) => setCity(e.target.value)}
-          className="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2"
-          required
-        />
-        <input
-          placeholder="State"
-          value={state}
-          onChange={(e) => setState(e.target.value)}
-          className="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2"
-          required
-        />
-        <div className="flex gap-4">
-          <div className="flex flex-col flex-1">
+        <div className="flex flex-col sm:flex-row gap-4">
+          <input
+            placeholder="City"
+            value={city}
+            onChange={(e) => setCity(e.target.value)}
+            className="flex-1 bg-gray-700 border border-gray-600 rounded px-3 py-2"
+            required
+          />
+          <input
+            placeholder="State"
+            value={state}
+            onChange={(e) => setState(e.target.value)}
+            className="flex-1 bg-gray-700 border border-gray-600 rounded px-3 py-2"
+            required
+          />
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="flex flex-col">
             <select value={lead1} onChange={(e) => setLead1(e.target.value)} required className="bg-gray-700 text-white border border-gray-600 rounded px-2 py-1 mb-1">
               <option value="">Select Lead 1</option>
-              {leads.map((l) => <option key={l.id} value={l.id}>{l.business_name}</option>)}
+              {leads.map((l) => <option key={l.id} value={l.id} title={`City: ${l.address_city || '—'} | Phone: ${l.phone || '—'}`}>{l.business_name}</option>)}
             </select>
             <input
               placeholder="Alt Domain 1"
               value={alt1}
               onChange={(e) => setAlt1(e.target.value)}
-              className="w-full bg-gray-700 border border-gray-600 rounded px-2 py-1"
+              className="bg-gray-700 border border-gray-600 rounded px-2 py-1"
               required
             />
           </div>
-          <div className="flex flex-col flex-1">
+          <div className="flex flex-col">
             <select value={lead2} onChange={(e) => setLead2(e.target.value)} required className="bg-gray-700 text-white border border-gray-600 rounded px-2 py-1 mb-1">
               <option value="">Select Lead 2</option>
-              {leads.map((l) => <option key={l.id} value={l.id}>{l.business_name}</option>)}
+              {leads.map((l) => <option key={l.id} value={l.id} title={`City: ${l.address_city || '—'} | Phone: ${l.phone || '—'}`}>{l.business_name}</option>)}
             </select>
             <input
               placeholder="Alt Domain 2"
               value={alt2}
               onChange={(e) => setAlt2(e.target.value)}
-              className="w-full bg-gray-700 border border-gray-600 rounded px-2 py-1"
+              className="bg-gray-700 border border-gray-600 rounded px-2 py-1"
               required
             />
           </div>
         </div>
-        <div className="flex gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <input
             type="datetime-local"
             value={startsAt}
@@ -147,6 +163,20 @@ export default function StartCampaign() {
           Launch Campaign
         </button>
       </form>
+
+      <div className="mt-6 p-4 bg-gray-800 border border-gray-600 rounded">
+        <h2 className="text-lg font-semibold mb-2">🧾 Preview</h2>
+        <p><strong>Campaign Name:</strong> {name || '—'}</p>
+        <p><strong>City:</strong> {city || '—'} <strong>State:</strong> {state || '—'}</p>
+        <p><strong>Lead 1:</strong> {leads.find(l => l.id === lead1)?.business_name || '—'} <strong>Alt Domain 1:</strong> {alt1 || '—'}</p>
+        <p><strong>Lead 2:</strong> {leads.find(l => l.id === lead2)?.business_name || '—'} <strong>Alt Domain 2:</strong> {alt2 || '—'}</p>
+        <p><strong>Starts:</strong> {dayjs(startsAt).format('MMM D, YYYY h:mm A')}</p>
+        <p><strong>Ends:</strong> {dayjs(endsAt).format('MMM D, YYYY h:mm A')}</p>
+      </div>
     </div>
   );
 }
+
+StartCampaign.getLayout = function getLayout(page: React.ReactNode) {
+  return <AdminLayout>{page}</AdminLayout>;
+};

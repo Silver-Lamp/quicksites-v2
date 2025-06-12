@@ -12,7 +12,8 @@ export default function LeadsPage() {
   const [summary, setSummary] = useState({ total: 0, matchedDomains: 0, matchedCampaigns: 0, duplicates: 0 });
   const [nextAction, setNextAction] = useState(false);
   const [error, setError] = useState('');
-  
+  const [sortField, setSortField] = useState<'created_at' | 'address_city'>('created_at');
+
   const fileInputRef = useRef<HTMLInputElement>(null);
   const dropRef = useRef<HTMLDivElement>(null);
   const loaderRef = useRef<HTMLDivElement>(null);
@@ -44,19 +45,19 @@ export default function LeadsPage() {
 
   const fetchLeads = async (reset = false) => {
     setLoading(true);
-    let query = supabase.from('leads').select('*').order('created_at', { ascending: false });
+    let query = supabase.from('leads').select('*').order(sortField, { ascending: sortField === 'address_city' });
     if (filterSource !== 'all') query = query.eq('source', filterSource);
     if (filterStatus !== 'all') query = query.eq('status', filterStatus);
-
+  
     const from = reset ? 0 : page * LEADS_PER_PAGE;
     const to = from + LEADS_PER_PAGE - 1;
     const { data } = await query.range(from, to);
-
+  
     setLeads(prev => reset ? (data || []) : [...prev, ...(data || [])]);
     setPage(prev => reset ? 1 : prev + 1);
     setLoading(false);
   };
-
+  
   const toggleSelectLead = (id: number) => {
     setSelectedIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
   };
@@ -294,6 +295,10 @@ export default function LeadsPage() {
           <button onClick={() => fileInputRef.current?.click()}>
             📸 Upload Lead Photo
           </button>
+          <select value={sortField} onChange={(e) => setSortField(e.target.value as 'created_at' | 'address_city')}>
+            <option value="created_at">Newest</option>
+            <option value="address_city">City (A-Z)</option>
+          </select>
           <select value={filterSource} onChange={(e) => setFilterSource(e.target.value)}>
             <option value="all">All Sources</option>
             <option value="photo">Photo Only</option>
@@ -378,20 +383,31 @@ export default function LeadsPage() {
             {leads.map((lead) => (
               <li key={lead.id} className={`border-b py-2 ${!lead.phone ? 'bg-red-50' : ''}`}>
                 <input type="checkbox" checked={selectedIds.includes(lead.id)} onChange={() => toggleSelectLead(lead.id)} className="mr-2" />
-                <div><strong>{lead.phone || '❌ Missing Phone'}</strong> ({lead.industry || 'unknown'})</div>
-                <div>{lead.city}, {lead.state}</div>
-                <div>{lead.source}</div>
+                <div className="font-bold text-sm">{lead.business_name || '—'}</div>
+                <div>{lead.phone || '❌ Missing Phone'} — {lead.industry || 'unknown'}</div>
+                <div>{lead.address_city || lead.city || '—'}, {lead.address_state || lead.state || '—'}</div>
+                <div>Domain: {lead.domain_id || '—'} | Campaign: {lead.campaign_id || '—'}</div>
+                <div className="text-xs text-gray-400 whitespace-pre-line">{lead.notes || '—'}</div>
                 <div>Status: {lead.status}</div>
-                <button onClick={() => sendLeadEmail(lead)} className="text-sm text-green-700 underline mr-2">📤 Send</button>
-                {lead.status === 'needs_review' && (
-                  <button onClick={() => markAsReviewed(lead.id)} className="text-sm text-blue-600 underline">Mark as Reviewed</button>
-                )}
-                <button onClick={() => { setEditingLeadId(lead.id); setEditingLead(lead); }} className="text-sm text-indigo-600 underline ml-2">Edit</button>
+                <div className="flex space-x-2 mt-2">
+                  <button onClick={() => sendLeadEmail(lead)} className="text-sm text-green-700 underline">📤 Send</button>
+                  {lead.status === 'needs_review' && (
+                    <button onClick={() => markAsReviewed(lead.id)} className="text-sm text-blue-600 underline">Mark as Reviewed</button>
+                  )}
+                  <button onClick={() => { setEditingLeadId(lead.id); setEditingLead(lead); }} className="text-sm text-indigo-600 underline">Edit</button>
+                </div>
                 {lead.photo_url && <img src={lead.photo_url} alt="Lead" className="max-w-xs mt-2" />}
+                {lead.lat && lead.lon && (
+                  <iframe
+                    title="map"
+                    src={`https://maps.google.com/maps?q=${lead.lat},${lead.lon}&z=15&output=embed`}
+                    className="w-full max-w-xs h-48 mt-2 border rounded"
+                    loading="lazy"
+                  />
+                )}
               </li>
             ))}
           </ul>
-
           <div ref={loaderRef} className="text-center py-4 text-gray-400">{loading && 'Loading more leads...'}</div>
           <div className="mt-4 space-x-2">
             <button onClick={() => bulkUpdateStatus('reviewed')} className="bg-green-100 px-2 py-1 text-sm rounded">Mark Reviewed</button>

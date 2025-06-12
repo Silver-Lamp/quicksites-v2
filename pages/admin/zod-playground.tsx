@@ -11,10 +11,10 @@ import { jsonSchemaToZod } from '@/admin/utils/jsonSchemaToZod';
 import { zodToJsonSchema } from '@/admin/utils/zodToJsonSchema';
 import VisualSchema from '@/components/admin/VisualSchema';
 import { createClient } from '@supabase/supabase-js';
-import { useCurrentUser } from '@/admin/hooks/useCurrentUser';
+import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { logEmbedView } from '@/admin/lib/logEmbedView';
 
-const SitePreview = dynamic(() => import('@/admin/components/SitePreview'), { ssr: false });
+const SitePreview = dynamic(() => import('@/components/admin/SitePreview'), { ssr: false });
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!

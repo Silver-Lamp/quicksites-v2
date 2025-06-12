@@ -1,6 +1,6 @@
 // ✅ FILE: components/layout/DefaultPublicLayout.tsx
 
-import AppHeader from '@/components/admin/AppHeader';
+import AppHeader from '@/components/admin/AppHeader/AppHeader';
 
 export default function DefaultPublicLayout({ children }: { children: React.ReactNode }) {
   return (  

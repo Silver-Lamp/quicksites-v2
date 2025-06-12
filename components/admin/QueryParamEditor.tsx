@@ -4,7 +4,7 @@ import { Input } from '@/components/admin/ui/input';
 import { Label } from '@/components/admin/ui/label';
 import { Switch } from '@/components/admin/ui/switch';
 import { Select, SelectTrigger, SelectContent, SelectItem } from '@/components/admin/ui/select';
-import { useTypedQueryParam } from '@/admin/hooks/useTypedQueryParam';
+import { useTypedQueryParam } from '@/hooks/useTypedQueryParam';
 
 function FieldRenderer({
   keyPrefix,

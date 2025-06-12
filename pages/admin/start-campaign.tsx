@@ -97,7 +97,7 @@ export default function StartCampaign() {
     ]);
   }
 
-    router.push('/campaigns');
+    router.push('/admin/campaigns');
   };
 
   return (

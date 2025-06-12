@@ -80,19 +80,19 @@ export default function AppHeader() {
                     <SafeLink href="/admin/branding/og-editor/xyz" className="hover:underline text-green-300" title="Open Graph image editor">OG Editor</SafeLink><span className="text-gray-500">|</span>
                   </>
                 )}
-                <SafeLink href="/sites" className="hover:underline text-green-300">Public Sites</SafeLink>
-                <SafeLink href="/register" className="hover:underline">Register</SafeLink><span className="text-gray-500">|</span>
+                <SafeLink href="/admin/sites" className="hover:underline text-green-300">Public Sites</SafeLink>
+                <SafeLink href="/admin/register" className="hover:underline">Register</SafeLink><span className="text-gray-500">|</span>
                 {hasRole?.(['reseller', 'admin', 'owner'] as Role[]) && (
                   <>
-                    <SafeLink href="/leads" className="hover:underline" title="Lead tracker & CRM">Leads</SafeLink>
-                    <SafeLink href="/campaigns" className="hover:underline" title="Active domain offers">Campaigns</SafeLink>
-                    <SafeLink href="/queue" className="hover:underline">Queue</SafeLink>
-                    <SafeLink href="/logs" className="hover:underline">Logs</SafeLink>
+                    <SafeLink href="/admin/leads" className="hover:underline" title="Lead tracker & CRM">Leads</SafeLink>
+                    <SafeLink href="/admin/campaigns" className="hover:underline" title="Active domain offers">Campaigns</SafeLink>
+                    <SafeLink href="/admin/queue" className="hover:underline">Queue</SafeLink>
+                    <SafeLink href="/admin/logs" className="hover:underline">Logs</SafeLink>
                     <SafeLink href="/admin/logs/sessions" className="hover:underline" title="Track login and device activity">Session Logs</SafeLink>
-                    <SafeLink href="/analytics" className="hover:underline">Analytics</SafeLink>
-                    <SafeLink href="/heatmap" className="hover:underline">Heatmap</SafeLink>
+                    <SafeLink href="/admin/analytics" className="hover:underline">Analytics</SafeLink>
+                    <SafeLink href="/admin/heatmap" className="hover:underline">Heatmap</SafeLink>
                     <SafeLink href="/admin/the-grid" className="hover:underline">The Grid</SafeLink>
-                    <SafeLink href="/users" className="hover:underline">Users</SafeLink><span className="text-gray-500">|</span>
+                    <SafeLink href="/admin/users" className="hover:underline">Users</SafeLink><span className="text-gray-500">|</span>
                   </>
                 )}
                 {hasRole?.(['admin', 'owner'] as Role[]) && (

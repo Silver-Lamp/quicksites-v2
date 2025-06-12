@@ -8,6 +8,10 @@ export default function StartCampaign() {
   const router = useRouter();
   const [leads, setLeads] = useState<any[]>([]);
   const [name, setName] = useState('');
+  const [nameWasManuallySet, setNameWasManuallySet] = useState(false);
+
+  
+
   const [city, setCity] = useState((router.query.city as string) || '');
   const [state, setState] = useState((router.query.state as string) || '');
   const [lead1, setLead1] = useState('');
@@ -18,6 +22,16 @@ export default function StartCampaign() {
   const [endsAt, setEndsAt] = useState(dayjs().add(3, 'day').toISOString().slice(0, 16));
   const [email, setEmail] = useState('');
   const [silentMode, setSilentMode] = useState(false);
+
+  useEffect(() => {
+    if (!nameWasManuallySet && city && leads.length > 1 && lead1 && lead2 && startsAt) {
+      const a = leads.find((l) => l.id === lead1)?.business_name?.split(' ')[0] || 'A';
+      const b = leads.find((l) => l.id === lead2)?.business_name?.split(' ')[0] || 'B';
+      const category = 'Towing';
+      const date = dayjs(startsAt).format('YYYY-MM-DD');
+      setName(`${city} ${category}: ${a} vs ${b} ${date}`);
+    }
+  }, [city, lead1, lead2, leads, nameWasManuallySet, startsAt]);
 
   useEffect(() => {
     supabase
@@ -94,13 +108,33 @@ export default function StartCampaign() {
           <input type="checkbox" checked={silentMode} onChange={(e) => setSilentMode(e.target.checked)} />
           <span className="text-sm">Silent Mode (don't notify contestants)</span>
         </label>
-        <input
-          placeholder="Campaign Name"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          className="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2"
-          required
-        />
+        <div className="flex items-center gap-2">
+          <input
+            placeholder="Campaign Name"
+            value={name}
+            onChange={(e) => {
+              setName(e.target.value);
+              setNameWasManuallySet(true);
+            }}
+            className="flex-1 bg-gray-700 border border-gray-600 rounded px-3 py-2"
+            required
+          />
+          <button
+            type="button"
+            className="text-xs px-2 py-1 border rounded text-gray-300 hover:text-white hover:border-white"
+            onClick={() => {
+              const a = leads.find((l) => l.id === lead1)?.business_name?.split(' ')[0] || 'A';
+              const b = leads.find((l) => l.id === lead2)?.business_name?.split(' ')[0] || 'B';
+              const category = 'Towing';
+              const date = dayjs(startsAt).format('YYYY-MM-DD');
+              setName(`${city} ${category}: ${a} vs ${b} ${date}`);
+              setNameWasManuallySet(false);
+            }}
+          >
+            🔄 Regenerate
+          </button>
+        </div>
+        
         <div className="flex flex-col sm:flex-row gap-4">
           <input
             placeholder="City"

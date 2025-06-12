@@ -11,15 +11,22 @@ async function exportGeoCache() {
   if (error) throw error;
 
   const geoMap: Record<string, { lat: number; lon: number }> = {};
+
   for (const row of data || []) {
     if (!row.city || !row.state) continue;
-    const key = `${row.city.trim()},${row.state.trim()}`.toLowerCase();
-    geoMap[key] = { lat: Number(row.lat), lon: Number(row.lon) };
+    const key = `${row.city.trim().toLowerCase()},${row.state.trim().toLowerCase()}`;
+    geoMap[key] = {
+      lat: Number(row.lat),
+      lon: Number(row.lon),
+    };
   }
 
-  const filePath = path.resolve(__dirname, '../public/staticGeo.json');
-  fs.writeFileSync(filePath, JSON.stringify(geoMap, null, 2));
-  console.log(`✅ Exported ${Object.keys(geoMap).length} locations to staticGeo.json`);
+  const outputPath = path.resolve(__dirname, '../public/staticGeo.json');
+  fs.writeFileSync(outputPath, JSON.stringify(geoMap, null, 2));
+
+  console.log(`✅ Exported ${Object.keys(geoMap).length} entries to staticGeo.json`);
 }
 
-exportGeoCache().catch(console.error);
+exportGeoCache().catch((err) => {
+  console.error('❌ Failed to export geo cache:', err);
+});

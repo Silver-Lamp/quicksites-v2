@@ -6,7 +6,8 @@ import { supabase } from '@/lib/supabase';
 import { MapContainer, TileLayer } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import { resolveGeo } from '@/lib/resolveGeo';
-import CityMarker from './CityMarker';
+import CityMarker from '@/components/admin/CityMarker';
+import GridSidebar from '@/components/admin/GridSidebar';
 
 export default function GridMap() {
   const [industry, setIndustry] = useState('');
@@ -92,21 +93,16 @@ export default function GridMap() {
     <div className="p-6 text-white">
       <h1 className="text-3xl font-bold mb-6">🌍 The Grid</h1>
 
-      <div className="flex flex-col lg:flex-row gap-6">
-        <div className="lg:w-1/2 space-y-4">
-          <label className="text-lg text-gray-300">Filter by Industry:</label>
-          <select
-            value={industry}
-            onChange={(e) => setIndustry(e.target.value)}
-            className="bg-gray-700 border border-gray-600 text-white px-3 py-2 text-lg rounded w-full"
-          >
-            <option value="">All</option>
-            <option value="towing">Towing</option>
-            <option value="concrete">Concrete</option>
-          </select>
+      <div className="flex flex-col md:flex-row gap-6">
+        <div className="md:w-2/5 w-full">
+          <GridSidebar
+            industry={industry}
+            setIndustry={setIndustry}
+            filteredPoints={filteredPoints}
+          />
         </div>
 
-        <div className="lg:w-1/2 h-[600px] border border-gray-700 rounded overflow-hidden">
+        <div className="md:w-3/5 w-full h-[600px] border border-gray-700 rounded overflow-hidden">
           <MapContainer
             center={[39.5, -98.35]}
             zoom={4}

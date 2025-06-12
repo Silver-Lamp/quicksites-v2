@@ -1,13 +1,167 @@
-import { useEffect, useState } from 'react';
-import { supabase } from '../lib/supabase';
+import { useEffect, useState, useRef } from 'react';
+import { supabase } from '@/lib/supabase';
 import Papa from 'papaparse';
-import type { CSVLeadRow, Lead } from '../types/lead.types';
+import type { CSVLeadRow, Lead } from '@/types/lead.types';
+import { createLeadFromPhoto } from '@/lib/leads/photoProcessor';
+
+const CONFIDENCE_THRESHOLD = 0.85;
+const LEADS_PER_PAGE = 20;
 
 export default function LeadsPage() {
   const [leads, setLeads] = useState<Lead[]>([]);
   const [summary, setSummary] = useState({ total: 0, matchedDomains: 0, matchedCampaigns: 0, duplicates: 0 });
   const [nextAction, setNextAction] = useState(false);
   const [error, setError] = useState('');
+  
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const dropRef = useRef<HTMLDivElement>(null);
+  const loaderRef = useRef<HTMLDivElement>(null);
+
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [filterSource, setFilterSource] = useState<string>('all');
+  const [filterStatus, setFilterStatus] = useState<string>('all');
+  const [reviewLead, setReviewLead] = useState<any | null>(null);
+  const [reviewImage, setReviewImage] = useState<string | null>(null);
+  const [editingLeadId, setEditingLeadId] = useState<number | null>(null);
+  const [editingLead, setEditingLead] = useState<any | null>(null);
+  const [page, setPage] = useState(0);
+  const [loading, setLoading] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<number[]>([]);
+
+  useEffect(() => {
+    fetchLeads(true);
+  }, [filterSource, filterStatus]);
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(([entry]) => {
+      if (entry.isIntersecting && !loading) {
+        fetchLeads();
+      }
+    });
+    if (loaderRef.current) observer.observe(loaderRef.current);
+    return () => observer.disconnect();
+  }, [loaderRef.current, loading]);
+
+  const fetchLeads = async (reset = false) => {
+    setLoading(true);
+    let query = supabase.from('leads').select('*').order('created_at', { ascending: false });
+    if (filterSource !== 'all') query = query.eq('source', filterSource);
+    if (filterStatus !== 'all') query = query.eq('status', filterStatus);
+
+    const from = reset ? 0 : page * LEADS_PER_PAGE;
+    const to = from + LEADS_PER_PAGE - 1;
+    const { data } = await query.range(from, to);
+
+    setLeads(prev => reset ? (data || []) : [...prev, ...(data || [])]);
+    setPage(prev => reset ? 1 : prev + 1);
+    setLoading(false);
+  };
+
+  const toggleSelectLead = (id: number) => {
+    setSelectedIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+  };
+
+  const bulkUpdateStatus = async (status: string) => {
+    if (selectedIds.length === 0) return;
+    await supabase.from('leads').update({ status }).in('id', selectedIds);
+    setSelectedIds([]);
+    fetchLeads(true);
+  };
+
+  const sendLeadEmail = async (lead: any) => {
+    const res = await fetch('/api/send-lead-email', {
+      method: 'POST',
+      body: JSON.stringify({
+        to: 'your-team@example.com',
+        subject: `New Lead: ${lead.phone || 'No phone'}`,
+        text: `Lead Details:\n\n${JSON.stringify(lead, null, 2)}`
+      }),
+      headers: { 'Content-Type': 'application/json' }
+    });
+    alert(res.ok ? 'Email sent!' : 'Failed to send');
+  };
+
+  useEffect(() => {
+    fetchLeads();
+  }, [filterSource, filterStatus]);
+
+  const markAsReviewed = async (id: number) => {
+    await supabase.from('leads').update({ status: 'reviewed' }).eq('id', id);
+    fetchLeads();
+  };
+
+  const updateLead = async () => {
+    if (!editingLeadId || !editingLead) return;
+    await supabase.from('leads').update(editingLead).eq('id', editingLeadId);
+    setEditingLeadId(null);
+    setEditingLead(null);
+    fetchLeads();
+  };
+
+  const processFile = async (file: File) => {
+    const preview = URL.createObjectURL(file);
+    setReviewImage(preview);
+
+    const photoPath = `leads/photos/${Date.now()}-${file.name}`;
+    const { data: uploadData, error: uploadError } = await supabase.storage.from('leads').upload(photoPath, file);
+
+    if (uploadError) {
+      console.error('Upload error:', uploadError);
+      alert('Failed to upload photo');
+      return;
+    }
+
+    const photoUrl = supabase.storage.from('leads').getPublicUrl(photoPath).data.publicUrl;
+
+    const { leadData, confidence } = await createLeadFromPhoto(file);
+    leadData.photo_url = photoUrl;
+
+    if (confidence >= CONFIDENCE_THRESHOLD) {
+      leadData.status = 'reviewed';
+      await supabase.from('leads').insert([leadData]);
+      fetchLeads();
+    } else {
+      setReviewLead({ ...leadData, confidence });
+    }
+  };
+
+  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+    await processFile(files[0]);
+  };
+
+  const handleDrop = async (e: React.DragEvent) => {
+    e.preventDefault();
+    if (e.dataTransfer.files.length > 0) {
+      await processFile(e.dataTransfer.files[0]);
+    }
+  };
+
+  const saveReviewedLead = async () => {
+    if (!reviewLead) return;
+    const reviewedCopy = { ...reviewLead };
+    if (!reviewedCopy.status) reviewedCopy.status = 'needs_review';
+    await supabase.from('leads').insert([reviewedCopy]);
+    setReviewLead(null);
+    setReviewImage(null);
+    fetchLeads();
+  };
+
+  const exportCsv = () => {
+    const headers = ['phone', 'industry', 'city', 'state', 'source', 'status'];
+    const csv = [headers.join(',')];
+    for (const lead of leads) {
+      const row = headers.map((h) => JSON.stringify(lead[h] ?? '')).join(',');
+      csv.push(row);
+    }
+    const blob = new Blob([csv.join('\n')], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'leads.csv';
+    a.click();
+  };
 
   const load = async () => {
     const { data, error } = await supabase.from('leads').select('*').order('created_at', { ascending: false });
@@ -135,6 +289,116 @@ export default function LeadsPage() {
         Imported: {summary.total} total — ✅ Domains: {summary.matchedDomains} — 🎯 Campaigns: {summary.matchedCampaigns} — ❌ Duplicates: {summary.duplicates}
       </div>
 
+      <div>
+        <div className="mb-4 space-x-4">
+          <button onClick={() => fileInputRef.current?.click()}>
+            📸 Upload Lead Photo
+          </button>
+          <select value={filterSource} onChange={(e) => setFilterSource(e.target.value)}>
+            <option value="all">All Sources</option>
+            <option value="photo">Photo Only</option>
+          </select>
+          <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)}>
+            <option value="all">All Statuses</option>
+            <option value="reviewed">Reviewed</option>
+            <option value="needs_review">Needs Review</option>
+          </select>
+          <button onClick={exportCsv} className="ml-2 px-2 py-1 text-sm bg-gray-200 rounded">⬇️ Export CSV</button>
+        </div>
+
+        <input
+          type="file"
+          accept="image/*"
+          capture="environment"
+          hidden
+          ref={fileInputRef}
+          onChange={handlePhotoUpload}
+        />
+
+        <div
+          ref={dropRef}
+          onDragOver={(e) => e.preventDefault()}
+          onDrop={handleDrop}
+          className="border-2 border-dashed p-6 text-center text-gray-500 rounded mb-4"
+        >
+          Drag & drop image here
+        </div>
+
+        {reviewLead && (
+          <div className="p-4 border rounded bg-white shadow">
+            <h3 className="text-lg font-bold mb-2">📝 Review Lead Before Saving</h3>
+            {reviewImage && <img src={reviewImage} alt="Preview" className="max-w-xs mb-2" />}
+            <label className="block mb-2">
+              <span>📞 Phone</span>
+              <input value={reviewLead.phone || ''} onChange={(e) => setReviewLead({ ...reviewLead, phone: e.target.value })} className="border p-1 w-full" />
+            </label>
+            <label className="block mb-2">
+              <span>🏷 Industry</span>
+              <input value={reviewLead.industry || ''} onChange={(e) => setReviewLead({ ...reviewLead, industry: e.target.value })} className="border p-1 w-full" />
+            </label>
+            <label className="block mb-2">
+              <span>📍 City</span>
+              <input value={reviewLead.city || ''} onChange={(e) => setReviewLead({ ...reviewLead, city: e.target.value })} className="border p-1 w-full" />
+            </label>
+            <label className="block mb-2">
+              <span>🌎 State</span>
+              <input value={reviewLead.state || ''} onChange={(e) => setReviewLead({ ...reviewLead, state: e.target.value })} className="border p-1 w-full" />
+            </label>
+            <p><strong>Confidence:</strong> {Math.round(reviewLead.confidence * 100)}%</p>
+            <button onClick={saveReviewedLead} className="mt-2 px-4 py-2 bg-green-600 text-white rounded">Save Lead</button>
+          </div>
+        )}
+
+        {editingLeadId && editingLead && (
+          <div className="p-4 border rounded bg-white shadow mt-4">
+            <h3 className="text-lg font-bold mb-2">✏️ Edit Lead</h3>
+            <label className="block mb-2">
+              <span>📞 Phone</span>
+              <input value={editingLead.phone || ''} onChange={(e) => setEditingLead({ ...editingLead, phone: e.target.value })} className="border p-1 w-full" />
+            </label>
+            <label className="block mb-2">
+              <span>🏷 Industry</span>
+              <input value={editingLead.industry || ''} onChange={(e) => setEditingLead({ ...editingLead, industry: e.target.value })} className="border p-1 w-full" />
+            </label>
+            <label className="block mb-2">
+              <span>📍 City</span>
+              <input value={editingLead.city || ''} onChange={(e) => setEditingLead({ ...editingLead, city: e.target.value })} className="border p-1 w-full" />
+            </label>
+            <label className="block mb-2">
+              <span>🌎 State</span>
+              <input value={editingLead.state || ''} onChange={(e) => setEditingLead({ ...editingLead, state: e.target.value })} className="border p-1 w-full" />
+            </label>
+            <button onClick={updateLead} className="mt-2 px-4 py-2 bg-blue-600 text-white rounded">Save Changes</button>
+          </div>
+        )}
+
+        <div className="mt-8">
+          <h2 className="text-lg font-bold mb-2">Leads</h2>
+          <ul>
+            {leads.map((lead) => (
+              <li key={lead.id} className={`border-b py-2 ${!lead.phone ? 'bg-red-50' : ''}`}>
+                <input type="checkbox" checked={selectedIds.includes(lead.id)} onChange={() => toggleSelectLead(lead.id)} className="mr-2" />
+                <div><strong>{lead.phone || '❌ Missing Phone'}</strong> ({lead.industry || 'unknown'})</div>
+                <div>{lead.city}, {lead.state}</div>
+                <div>{lead.source}</div>
+                <div>Status: {lead.status}</div>
+                <button onClick={() => sendLeadEmail(lead)} className="text-sm text-green-700 underline mr-2">📤 Send</button>
+                {lead.status === 'needs_review' && (
+                  <button onClick={() => markAsReviewed(lead.id)} className="text-sm text-blue-600 underline">Mark as Reviewed</button>
+                )}
+                <button onClick={() => { setEditingLeadId(lead.id); setEditingLead(lead); }} className="text-sm text-indigo-600 underline ml-2">Edit</button>
+                {lead.photo_url && <img src={lead.photo_url} alt="Lead" className="max-w-xs mt-2" />}
+              </li>
+            ))}
+          </ul>
+
+          <div ref={loaderRef} className="text-center py-4 text-gray-400">{loading && 'Loading more leads...'}</div>
+          <div className="mt-4 space-x-2">
+            <button onClick={() => bulkUpdateStatus('reviewed')} className="bg-green-100 px-2 py-1 text-sm rounded">Mark Reviewed</button>
+            <button onClick={() => bulkUpdateStatus('archived')} className="bg-yellow-100 px-2 py-1 text-sm rounded">Archive</button>
+          </div>
+        </div>
+      </div>
       {nextAction && (
         <div className="bg-gray-900 p-4 border border-gray-700 rounded mb-4 text-sm">
           <h2 className="font-bold text-lg mb-2">What's next?</h2>

@@ -1,6 +1,6 @@
 // lib/resolveGeo.ts
-import { getCachedGeo, setCachedGeo } from '@/lib/geoCache';
 import staticGeo from '@/public/staticGeo.json';
+import { getCachedGeo, setCachedGeo } from './geoCache';
 
 function getStaticFallback(city: string, state: string) {
   const key = `${city.trim().toLowerCase()},${state.trim().toLowerCase()}`;
@@ -19,6 +19,7 @@ export async function resolveGeo(city: string, state: string): Promise<{ lat: nu
 
   const res = await fetch(`/api/geocode?city=${encodeURIComponent(city)}&state=${encodeURIComponent(state)}`);
   if (!res.ok) return { lat: 0, lon: 0 };
+
   const data = await res.json();
   setCachedGeo(city, state, data.lat, data.lon);
   return { lat: data.lat, lon: data.lon };

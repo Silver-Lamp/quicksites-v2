@@ -8,6 +8,8 @@ const supabase = createClient(
 );
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+  console.log(">>> RUNNING (/pages/admin/api/template-api/index.ts) in:", __filename);
+
   const { data, error } = await supabase
     .from('templates')
     .select('template_name, industry, layout, color_scheme');

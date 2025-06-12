@@ -25,6 +25,7 @@ export function NavSections() {
       <details className="group">
         <summary className="cursor-pointer font-semibold text-yellow-300 group-open:underline">Templates</summary>
         <div className="flex flex-wrap gap-2 ml-2">
+          <SafeLink href="/template-market">Template Market</SafeLink>
           <SafeLink href="/admin/templates">All Templates</SafeLink>
           <SafeLink href="/admin/templates-new">+ New Template</SafeLink>
         </div>

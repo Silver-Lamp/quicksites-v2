@@ -1,10 +1,10 @@
 // BlockSidebar.tsx
 import { useState } from "react";
 import { X } from "lucide-react";
-import { Input } from '@/components/admin/ui/input";
-import { Textarea } from '@/components/admin/ui/textarea";
-import { Label } from '@/components/admin/ui/label";
-import { Button } from '@/components/admin/ui/button";
+import { Input } from '@/components/admin/ui/input';
+import { Textarea } from '@/components/admin/ui/textarea';
+import { Label } from '@/components/admin/ui/label';
+import { Button } from '@/components/admin/ui/button';
 import {
   Block,
   HeroBlockContent,
@@ -14,7 +14,7 @@ import {
   CtaBlockContent,
   QuoteBlockContent,
   BlockSidebarProps,
-} from "@/admin/types/blocks";
+} from "@/types/blocks";
 
 type Props = {
   block: Block;

@@ -1,4 +1,4 @@
-// /admin/api/templates/history?name=towing-basic
+// /api/templates/history?name=towing-basic
 import { createClient } from '@supabase/supabase-js';
 import { NextApiRequest, NextApiResponse } from 'next';
 

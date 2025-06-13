@@ -1,57 +1,245 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/router';
-import { BlocksEditor } from '@/components/editor/BlocksEditor';
-import { SuggestBlockButton } from '@/components/SuggestBlockButton';
+import { createClient } from '@supabase/supabase-js';
+import { GripVertical } from 'lucide-react';
+import RenderBlock from '@/components/admin/templates/RenderBlock';
+import BlockSidebar from '@/components/admin/templates/BlockSidebar';
+import { SortableBlockList } from '@/components/admin/templates/SortableBlockList';
+import { DndContext, closestCenter } from '@dnd-kit/core';
+import { SortableContext, arrayMove, verticalListSortingStrategy } from '@dnd-kit/sortable';
+
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+);
 
 export default function EditPage() {
   const router = useRouter();
   const { slug } = router.query;
-  const [templateData, setTemplateData] = useState(null);
+  const [siteData, setSiteData] = useState<any>(null);
+  const [currentPageIndex, setCurrentPageIndex] = useState(0);
+  const [selectedBlockIndex, setSelectedBlockIndex] = useState<number | null>(null);
+  const [showBlockPicker, setShowBlockPicker] = useState(false);
+  const [previewMode, setPreviewMode] = useState(false);
+  const [saved, setSaved] = useState(false);
+
+  const saveTimeout = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     if (!slug) return;
-    fetch(`/api/template?domain=${slug}`)
+    fetch(`/api/sites/${slug}`)
       .then(res => res.json())
-      .then((d) => setTemplateData(d?.data));
+      .then(data => setSiteData(data))
+      .catch(err => {
+        console.error('Site load failed:', err);
+        alert('Failed to load site');
+      });
   }, [slug]);
 
-  const save = async () => {
-    await fetch('/api/save-template', {
-      method: 'POST',
-      body: JSON.stringify({ domain: slug, data: templateData }),
-    });
-    alert('Saved!');
+  useEffect(() => {
+    if (!siteData) return;
+
+    if (saveTimeout.current) clearTimeout(saveTimeout.current);
+    saveTimeout.current = setTimeout(async () => {
+      const isUUID = /^[0-9a-fA-F-]{36}$/.test(slug as string);
+      const endpoint = '/api/sites/save';
+
+      await fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: slug, data: siteData }),
+      });
+
+      setSaved(true);
+      setTimeout(() => setSaved(false), 1500);
+    }, 800);
+  }, [siteData]);
+
+  const handleSlugChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const nextSlug = e.target.value.toLowerCase().replace(/[^a-z0-9-]+/g, '-');
+    setSiteData({ ...siteData, slug: nextSlug });
   };
 
-  if (!templateData) return <div className="text-white p-6">Loading...</div>;
+  const handleTogglePublish = () => {
+    setSiteData({ ...siteData, is_published: !siteData.is_published });
+  };
+
+  const currentPage = siteData?.pages?.[currentPageIndex];
+  const blocksWithId = currentPage?.content_blocks?.map((b: any, i: number) => ({
+    _id: b._id || `block-${i}-${Date.now()}`,
+    ...b,
+  })) || [];
+
+  const handleBlockSave = (updatedBlock: any) => {
+    const pages = [...siteData.pages];
+    pages[currentPageIndex].content_blocks[selectedBlockIndex!] = updatedBlock;
+    setSiteData({ ...siteData, pages });
+    setSelectedBlockIndex(null);
+  };
+
+  const handleAddBlock = (type: string) => {
+    const newBlock = {
+      _id: `block-${Date.now()}`,
+      type,
+      content: { headline: 'New Block', subheadline: '', cta_text: '', cta_link: '' },
+    };
+    const pages = [...siteData.pages];
+    pages[currentPageIndex].content_blocks.push(newBlock);
+    setSiteData({ ...siteData, pages });
+    setShowBlockPicker(false);
+  };
 
   return (
-    <div className="text-white p-6 max-w-3xl mx-auto">
-      <h1 className="text-2xl font-bold mb-4">✏️ Editing: {slug}</h1>
-      <BlocksEditor data={templateData} onChange={setTemplateData}>
-        {(block) => (
-          <>
-            {block.type === 'hero' || block.type === 'services' ? (
-              <SuggestBlockButton
-                type={block.type}
-                onSuggest={(s) => {
-                  const updated = templateData.blocks.map((b) =>
-                    b.id === block.id ? { ...b, content: s } : b
+    <div className="text-white p-6 max-w-screen-xl mx-auto relative">
+      <div className="flex justify-between items-center mb-4">
+        <div>
+          <input
+            type="text"
+            value={siteData?.slug || ''}
+            onChange={handleSlugChange}
+            className="text-2xl font-bold bg-transparent border-b border-zinc-600 focus:outline-none px-2 py-1"
+            placeholder="custom-slug"
+          />
+          <span className="ml-2 text-sm text-zinc-400">
+            {siteData?.is_published ? '🌐 Live' : '📝 Draft'}
+          </span>
+        </div>
+
+        <div className="flex items-center gap-4">
+          <label className="flex items-center gap-2 text-sm cursor-pointer">
+            <input
+              type="checkbox"
+              checked={!!siteData?.is_published}
+              onChange={handleTogglePublish}
+              className="accent-blue-500"
+            />
+            Publish
+          </label>
+
+          {siteData?.slug && (
+            <a
+              href={`https://${siteData.slug}.quicksites.ai`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-blue-400 text-sm hover:underline"
+            >
+              🔗 View Site
+            </a>
+          )}
+        </div>
+      </div>
+
+      {saved && (
+        <div className="absolute top-4 right-6 text-green-400 text-sm bg-zinc-800 px-3 py-1 rounded shadow">
+          ✅ Saved
+        </div>
+      )}
+
+      {!siteData ? (
+        <p>Loading...</p>
+      ) : (
+        <>
+          <div className="flex justify-between mb-4">
+            <label className="text-sm text-zinc-400">Page:</label>
+            <select
+              value={currentPageIndex}
+              onChange={e => setCurrentPageIndex(Number(e.target.value))}
+              className="bg-zinc-800 p-2 rounded ml-2"
+            >
+              {siteData.pages.map((p: any, i: number) => (
+                <option key={p.id} value={i}>
+                  {p.slug || `Page ${i + 1}`}
+                </option>
+              ))}
+            </select>
+            <button
+              onClick={() => setPreviewMode(!previewMode)}
+              className="text-sm text-blue-400 hover:underline"
+            >
+              {previewMode ? '🔧 Edit Mode' : '👁️ Preview Mode'}
+            </button>
+          </div>
+
+          {previewMode ? (
+            <DndContext collisionDetection={closestCenter}>
+              <SortableContext
+                items={siteData.pages.map((p: any) => p.id)}
+                strategy={verticalListSortingStrategy}
+              >
+                <div className="space-y-4">
+                  {siteData.pages.map((page: any, pageIndex: number) => (
+                    <div key={page.id} className="mb-8 bg-zinc-800 rounded p-4 shadow">
+                      <div className="flex items-center gap-2 text-zinc-300 mb-4">
+                        <GripVertical className="w-4 h-4 opacity-60" />
+                        <h2 className="text-lg font-semibold">📄 {page.slug || `Page ${pageIndex + 1}`}</h2>
+                      </div>
+                      {page.content_blocks.map((block: any, i: number) => (
+                        <div key={i} className="mb-4">
+                          <RenderBlock block={block} />
+                        </div>
+                      ))}
+                    </div>
+                  ))}
+                </div>
+              </SortableContext>
+            </DndContext>
+          ) : (
+            <>
+              <SortableBlockList
+                blocks={blocksWithId}
+                onChange={(next) => {
+                  const pages = [...siteData.pages];
+                  pages[currentPageIndex].content_blocks = next;
+                  setSiteData({ ...siteData, pages });
+                }}
+                onDelete={(blockId) => {
+                  const pages = [...siteData.pages];
+                  pages[currentPageIndex].content_blocks = pages[currentPageIndex].content_blocks.filter(
+                    (b) => b._id !== blockId
                   );
-                  setTemplateData({ ...templateData, blocks: updated });
+                  setSiteData({ ...siteData, pages });
+                }}
+                onEdit={(blockId) => {
+                  const index = blocksWithId.findIndex((b) => b._id === blockId);
+                  if (index !== -1) setSelectedBlockIndex(index);
                 }}
               />
-            ) : null}
-          </>
-        )}
-      </BlocksEditor>
-      <button
-        className="mt-6 px-4 py-2 rounded bg-green-600 hover:bg-green-700"
-        onClick={save}
-      >
-        Save Changes
-      </button>
+              <button
+                className="mt-4 px-3 py-2 text-sm bg-blue-700 rounded hover:bg-blue-800"
+                onClick={() => setShowBlockPicker(true)}
+              >
+                ➕ Add Block
+              </button>
+
+              {showBlockPicker && (
+                <div className="mt-4 p-4 border border-zinc-700 rounded bg-zinc-800">
+                  <h3 className="text-sm font-semibold mb-2">Choose a block type</h3>
+                  <div className="grid grid-cols-2 gap-3">
+                    {["hero", "services", "testimonial", "text", "cta", "quote"].map((type) => (
+                      <button
+                        key={type}
+                        onClick={() => handleAddBlock(type)}
+                        className="text-left p-2 rounded bg-zinc-700 hover:bg-zinc-600"
+                      >
+                        <span className="block font-medium capitalize">{type}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+
+          {selectedBlockIndex !== null && (
+            <BlockSidebar
+              block={siteData.pages[currentPageIndex].content_blocks[selectedBlockIndex]}
+              onChange={(updated) => handleBlockSave(updated)}
+              onClose={() => setSelectedBlockIndex(null)}
+            />
+          )}
+        </>
+      )}
     </div>
   );
 }

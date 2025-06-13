@@ -14,6 +14,7 @@ import {
 import { CSS } from '@dnd-kit/utilities';
 
 import { GripVertical } from 'lucide-react';
+import RenderBlock from './RenderBlock';
 
 export function SortableBlockList({
   blocks,
@@ -75,7 +76,10 @@ function SortableItem({ block }: { block: any }) {
       <div {...attributes} {...listeners} className="cursor-grab mr-2">
         <GripVertical size={16} />
       </div>
-      <pre className="text-xs flex-1">{JSON.stringify(block, null, 2)}</pre>
+      {/* <pre className="text-xs flex-1">{JSON.stringify(block, null, 2)}</pre> */}
+      <div className="flex-1">
+        <RenderBlock block={block} />
+      </div>
     </div>
   );
 }

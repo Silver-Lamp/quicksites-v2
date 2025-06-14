@@ -6,17 +6,6 @@
       "use": "@vercel/next"
     }
   ],
-  "routes": [
-    {
-      "src": "/(.*)",
-      "dest": "/$1"
-    }
-  ],
-  "github": {
-    "enabled": true,
-    "deployments": true,
-    "productionBranch": "main"
-  },
   "redirects": [
     {
       "source": "/storybook",
@@ -34,5 +23,10 @@
       "path": "/api/send-weekly-digest",
       "schedule": "0 9 * * 1"
     }
-  ]
+  ],
+  "github": {
+    "enabled": true,
+    "deployments": true,
+    "productionBranch": "main"
+  }
 }

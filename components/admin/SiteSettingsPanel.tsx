@@ -3,7 +3,13 @@
 import { useEffect, useState } from 'react';
 import { createClient } from '@supabase/supabase-js';
 import { useRouter } from 'next/router';
-
+import {
+    Tooltip,
+    TooltipTrigger,
+    TooltipContent,
+  } from '@/components/ui/tooltip';
+  import { ClipboardCopy } from 'lucide-react';
+  
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
@@ -157,6 +163,51 @@ export default function SiteSettingsPanel({ siteId }: { siteId: string }) {
             <p className={`text-sm mt-1 ${slugAvailable ? 'text-green-400' : 'text-red-400'}`}>
             {slugAvailable ? '✅ Available' : '🚫 Taken'}
             </p>
+        )}
+        {isPublished && (customDomain || slug) && (
+        <div>
+            <label className="block text-sm font-medium text-zinc-300 mb-1">Live URL</label>
+            <div className="flex items-center gap-3">
+            <Tooltip>
+                <TooltipTrigger asChild>
+                <a
+                    href={`https://${customDomain || `${slug}.quicksites.ai`}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={() => {
+                    console.log('🔍 Tracking: live site clicked');
+                    // TODO: Supabase.track("click_live_link", { siteId })
+                    }}
+                    className="inline-flex items-center text-sm text-white bg-blue-600 hover:bg-blue-700 px-3 py-1.5 rounded transition"
+                >
+                    🔗 View Site
+                </a>
+                </TooltipTrigger>
+                <TooltipContent>
+                {customDomain
+                    ? `Your domain should point to a CNAME record: ${slug}.quicksites.ai`
+                    : `Visit your published site`}
+                </TooltipContent>
+            </Tooltip>
+
+            {/* Copy button */}
+            <button
+                onClick={async () => {
+                const url = `https://${customDomain || `${slug}.quicksites.ai`}`;
+                await navigator.clipboard.writeText(url);
+                console.log('✅ Copied to clipboard:', url);
+                }}
+                className="p-1 rounded bg-zinc-800 hover:bg-zinc-700 text-white"
+                title="Copy to clipboard"
+            >
+                <ClipboardCopy className="w-4 h-4" />
+            </button>
+
+            {customDomain && (
+                <span className="text-xs text-zinc-400">(custom domain)</span>
+            )}
+            </div>
+        </div>
         )}
         </div>
 

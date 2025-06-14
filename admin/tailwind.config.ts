@@ -51,8 +51,22 @@ const config: Config = {
   				'4': 'hsl(var(--chart-4))',
   				'5': 'hsl(var(--chart-5))'
   			}
-  		}
-  	}
+  		},
+		animation: {
+		'in': 'fadeIn 0.2s ease-out',
+		'out': 'fadeOut 0.2s ease-in',
+		},
+		keyframes: {
+		fadeIn: {
+			from: { opacity: 0 },
+			to: { opacity: 1 },
+		},
+		fadeOut: {
+			from: { opacity: 1 },
+			to: { opacity: 0 },
+		},
+	  },
+	},
   },
   plugins: [require("tailwindcss-animate")],
 };

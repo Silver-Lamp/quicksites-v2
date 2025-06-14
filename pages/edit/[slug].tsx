@@ -28,9 +28,14 @@ export default function EditPage() {
   const [previewMode, setPreviewMode] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [isHydrated, setIsHydrated] = useState(false);
 
   const saveTimeout = useRef<NodeJS.Timeout | null>(null);
 
+  useEffect(() => {
+    setIsHydrated(true);
+  }, []);
+  
   useEffect(() => {
     if (!slug) return;
     fetch(`/api/sites/${slug}`) // TODO: add error handling for 404 and 500 errors
@@ -153,22 +158,12 @@ export default function EditPage() {
           ✅ Saved
         </div>
       )}
-      {/* {showSettings && (
-        <div className="fixed inset-0 bg-red-600 bg-opacity-90 z-[9999] flex items-center justify-center">
-          <div className="text-white text-3xl font-bold">🔥 Modal is rendering!</div>
-          <SiteSettingsPanel siteId={siteData.id} />
-          </div>
-      )} */}
-        {/* <SiteSettingsPanel siteId={siteData?._meta?.id || ''} /> */}
-        {/* <ModalWrapper onClose={() => setShowSettings(false)}> */}
-        {/* </ModalWrapper> */}
+      {isHydrated && showSettings && siteData?._meta?.id && (
+        <ModalWrapper open={showSettings} onClose={() => setShowSettings(false)}>
+          <SiteSettingsPanel siteId={siteData._meta.id} />
+        </ModalWrapper>
+      )}
 
-      {showSettings && (siteData?._meta?.id) ? (
-            <SiteSettingsPanel siteId={siteData._meta.id} />
-          ) : (
-            <div className="text-white text-center py-10">⏳ Loading site data...</div>
-          )}
-      {/* )} */}
 
       {!siteData ? (
         <p>Loading...</p>

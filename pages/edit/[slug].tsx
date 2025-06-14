@@ -160,7 +160,7 @@ export default function EditPage() {
       )}
 
       {isHydrated && showSettings && siteData?._meta?.id && (
-        <ModalWrapper open={showSettings} onClose={() => setShowSettings(false)} title="Site Settings">
+        <ModalWrapper open={showSettings} onClose={() => setShowSettings(false)}>
           <div className="h-full p-6">
             <SiteSettingsPanel siteId={siteData._meta.id} />
           </div>

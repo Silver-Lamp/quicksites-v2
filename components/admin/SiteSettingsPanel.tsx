@@ -134,51 +134,77 @@ export default function SiteSettingsPanel({ siteId }: { siteId: string }) {
 //   );
   
   return (
-    <div className="flex flex-col h-full space-y-4 bg-zinc-900 overflow-y-auto rounded border border-zinc-700 p-4">
-      {/* <h2 className="text-xl font-bold">Site Settings</h2> */}
-      <input value={bizName} onChange={e => setBizName(e.target.value)} placeholder="Business Name" className="w-full p-2 bg-zinc-900 rounded" />
-      <input value={location} onChange={e => setLocation(e.target.value)} placeholder="Location" className="w-full p-2 bg-zinc-900 rounded" />
-      <input value={slug} onChange={e => setSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]+/g, '-'))} placeholder="Slug" className="w-full p-2 bg-zinc-900 rounded" />
-      {slug && slugAvailable !== null && (
-        <p className={`text-sm ${slugAvailable ? 'text-green-400' : 'text-red-400'}`}>
-          {slugAvailable ? '✅ Available' : '🚫 Taken'}
-        </p>
-      )}
+    <div className="flex flex-col h-full space-y-6 bg-zinc-900 overflow-y-auto rounded border border-zinc-700 p-6">
+    <h2 className="text-xl font-semibold text-white">Site Settings</h2>
 
-      <input value={customDomain} onChange={e => setCustomDomain(e.target.value)} placeholder="Custom Domain (e.g. mysite.com)" className="w-full p-2 bg-zinc-900 rounded" />
+    <fieldset className="space-y-4">
+        <legend className="text-sm font-medium text-zinc-400 mb-2">Basic Info</legend>
 
-      <select value={colorScheme} onChange={e => setColorScheme(e.target.value)} className="w-full p-2 bg-zinc-900 rounded">
-        <option value="">Choose Color Scheme</option>
-        <option value="blue">Blue</option>
-        <option value="red">Red</option>
-        <option value="green">Green</option>
-        <option value="dark">Dark</option>
-      </select>
+        <div>
+        <label className="block text-sm font-medium text-zinc-300 mb-1">Business Name</label>
+        <input value={bizName} onChange={e => setBizName(e.target.value)} className="w-full p-2 bg-zinc-900 border border-zinc-700 rounded" />
+        </div>
 
-      <label className="flex items-center gap-2">
+        <div>
+        <label className="block text-sm font-medium text-zinc-300 mb-1">Location</label>
+        <input value={location} onChange={e => setLocation(e.target.value)} className="w-full p-2 bg-zinc-900 border border-zinc-700 rounded" />
+        </div>
+
+        <div>
+        <label className="block text-sm font-medium text-zinc-300 mb-1">Slug</label>
+        <input value={slug} onChange={e => setSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]+/g, '-'))} className="w-full p-2 bg-zinc-900 border border-zinc-700 rounded" />
+        {slug && slugAvailable !== null && (
+            <p className={`text-sm mt-1 ${slugAvailable ? 'text-green-400' : 'text-red-400'}`}>
+            {slugAvailable ? '✅ Available' : '🚫 Taken'}
+            </p>
+        )}
+        </div>
+
+        <div>
+        <label className="block text-sm font-medium text-zinc-300 mb-1">Custom Domain</label>
+        <input value={customDomain} onChange={e => setCustomDomain(e.target.value)} className="w-full p-2 bg-zinc-900 border border-zinc-700 rounded" />
+        </div>
+
+        <div>
+        <label className="block text-sm font-medium text-zinc-300 mb-1">Color Scheme</label>
+        <select value={colorScheme} onChange={e => setColorScheme(e.target.value)} className="w-full p-2 bg-zinc-900 border border-zinc-700 rounded">
+            <option value="">Choose Color Scheme</option>
+            <option value="blue">Blue</option>
+            <option value="red">Red</option>
+            <option value="green">Green</option>
+            <option value="dark">Dark</option>
+        </select>
+        </div>
+
+        <div className="flex items-center gap-2">
         <input type="checkbox" checked={isPublished} onChange={() => setIsPublished(!isPublished)} />
-        {isPublished ? '✅ Published' : '🚧 Draft'}
-      </label>
+        <label className="text-sm font-medium text-zinc-300">Published</label>
+        </div>
+    </fieldset>
 
-      <div>
-        <label className="text-sm text-zinc-400">Favicon Upload</label>
+    <fieldset className="space-y-4">
+        <legend className="text-sm font-medium text-zinc-400 mb-2">Assets</legend>
+
+        <div>
+        <label className="block text-sm font-medium text-zinc-300 mb-1">Favicon Upload</label>
         <input type="file" onChange={e => e.target.files?.[0] && handleUpload(e.target.files[0], 'favicon.png')} />
-      </div>
+        </div>
 
-      <div>
-        <label className="text-sm text-zinc-400">Logo Upload</label>
+        <div>
+        <label className="block text-sm font-medium text-zinc-300 mb-1">Logo Upload</label>
         <input type="file" onChange={e => e.target.files?.[0] && handleUpload(e.target.files[0], 'logo.png')} />
-      </div>
+        </div>
+    </fieldset>
 
-      {analytics && (
+    {analytics && (
         <div className="text-sm text-zinc-400">📊 {analytics.visits} visits recorded</div>
-      )}
+    )}  
 
-      <div className="flex justify-between pt-2">
+    <div className="flex justify-between pt-4 border-t border-zinc-700 mt-4">
         <button onClick={duplicateSite} disabled={loading} className="bg-yellow-600 px-3 py-2 rounded text-white">📦 Duplicate</button>
         <button onClick={deleteSite} disabled={loading} className="bg-red-600 px-3 py-2 rounded text-white">🗑 Delete</button>
         <button onClick={saveSettings} disabled={loading} className="bg-blue-600 px-3 py-2 rounded text-white">💾 Save</button>
-      </div>
+    </div>
     </div>
   );
 }

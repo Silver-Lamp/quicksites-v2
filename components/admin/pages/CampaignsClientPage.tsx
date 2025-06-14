@@ -1,4 +1,4 @@
-/* components/pages/CampaignsClientPage.tsx */
+/* components/admin/pages/CampaignsClientPage.tsx */
 
 'use client';
 
@@ -15,9 +15,11 @@ import { CampaignFunnelTable } from '@/admin/guest-tokens/CampaignFunnelTable';
 
 interface Props {
   defaultRange?: DateRange;
+  events?: any[] | null;
+  logs?: any[] | null;
 }
 
-export function CampaignsClientPage({ defaultRange }: Props) {
+export function CampaignsClientPage({ defaultRange, events: initialEvents, logs: initialLogs }: Props) {
   const [range, setRange] = useState<DateRange | undefined>(
     defaultRange || {
       from: subDays(new Date(), 7),
@@ -40,8 +42,12 @@ export function CampaignsClientPage({ defaultRange }: Props) {
 
   const { data, size, setSize, isValidating } = useSWRInfinite(getKey, fetcher);
 
-  const events = data?.flatMap((d) => d.events || []) || [];
-  const logs = data?.flatMap((d) => d.logs || []) || [];
+  const fetchedEvents = data?.flatMap((d) => d.events || []) || [];
+  const fetchedLogs = data?.flatMap((d) => d.logs || []) || [];
+
+  const events = initialEvents || fetchedEvents;
+  const logs = initialLogs || fetchedLogs;
+
   const hasMore = data?.[data.length - 1]?.nextPage !== null;
 
   useEffect(() => {

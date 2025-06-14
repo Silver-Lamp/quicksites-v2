@@ -48,23 +48,38 @@ export const ButtonBlockSchema = z.object({
   }),
 });
 
-// Note: this uses lazy for recursion
-export const GridBlockSchema: z.ZodType<any> = z.lazy(() =>
-  z.object({
-    type: z.literal('grid'),
-    value: z.object({
-      columns: z.number().min(1).max(12),
-      items: z.array(BlockSchema),
-    }),
-  })
+// Lazy declaration to support recursion
+export const BlockSchema: z.ZodType<any> = z.lazy(() =>
+  z.discriminatedUnion('type', [
+    TextBlockSchema,
+    ImageBlockSchema,
+    VideoBlockSchema,
+    AudioBlockSchema,
+    QuoteBlockSchema,
+    ButtonBlockSchema,
+    GridBlockSchema, // ← now safe to include recursively
+  ])
 );
 
-export const BlockSchema = z.discriminatedUnion('type', [
-  TextBlockSchema,
-  ImageBlockSchema,
-  VideoBlockSchema,
-  AudioBlockSchema,
-  QuoteBlockSchema,
-  ButtonBlockSchema,
-  GridBlockSchema,
-]);
+export const GridBlockSchema = z.object({
+  type: z.literal('grid'),
+  value: z.object({
+    columns: z.number().min(1).max(12),
+    items: z.array(BlockSchema).max(4, 'Limit 4 blocks inside a grid'),
+  }),
+});
+export type Block = z.infer<typeof BlockSchema>;
+export type GridBlock = z.infer<typeof GridBlockSchema>;
+export function isValidBlock(data: unknown): data is Block {
+  const result = BlockSchema.safeParse(data);
+  return result.success;
+}
+export const blockPreviewFallback: Record<Block['type'], string> = {
+  text: '📝 Text Block',
+  image: '🖼️ Image',
+  video: '📹 Video',
+  audio: '🎧 Audio',
+  quote: '❝ Quote',
+  button: '🔘 Button',
+  grid: '📐 Grid Layout',
+};

@@ -1,6 +1,12 @@
 import Link from 'next/link';
 import { useUrlBuilder } from './useUrlBuilder';
 import { buildSafeLink } from '@/admin/lib/links/buildSafeLink';
+import { linkThemeMap } from '@/admin/lib/links';
+import type { ReactNode } from 'react';
+
+type LinkProps = React.ComponentProps<typeof Link> & {
+  theme?: keyof typeof linkThemeMap;
+};
 
 export function useLinkBuilder() {
   const { getTemplateUrl, getSnapshotUrl } = useUrlBuilder();
@@ -8,27 +14,46 @@ export function useLinkBuilder() {
   const templateLink = (
     id: string,
     query?: Record<string, string | number | boolean>,
-    children?: React.ReactNode,
-    linkProps?: React.ComponentProps<typeof Link> & { theme?: keyof typeof linkThemeMap }
+    children?: ReactNode,
+    linkProps?: LinkProps
   ) => {
     const href = getTemplateUrl(id, query);
-    import { linkThemeMap } from '@/admin/lib/theme';
-    const resolved = linkProps?.theme && linkThemeMap[linkProps.theme] || linkThemeMap.primary;
-    const { theme: _t, ...rest } = linkProps || {};
-    return buildSafeLink(id, href, 'templateLink', children, { className: resolved, ...rest });
+    if (!href) return null;
+
+    const resolved = linkProps?.theme
+      ? linkThemeMap[linkProps.theme]
+      : linkThemeMap.primary;
+
+    const { theme: _t, href: _h, prefetch: _p, target: _tg, ...rest } = linkProps || {};
+    const target = _tg as '_blank' | '_self' | '_parent' | '_top' | undefined;
+    return buildSafeLink(id, href.toString(), 'templateLink', children, {
+      className: resolved,
+      prefetch: _p ?? undefined,
+      target,
+      ...rest,
+    });
   };
 
   const snapshotLink = (
     id: string,
     query?: Record<string, string | number | boolean>,
-    children?: React.ReactNode,
-    linkProps?: React.ComponentProps<typeof Link> & { theme?: keyof typeof linkThemeMap }
+    children?: ReactNode,
+    linkProps?: LinkProps
   ) => {
     const href = getSnapshotUrl(id, query);
-    
-    const resolved = linkProps?.theme && linkThemeMap[linkProps.theme] || linkThemeMap.primary;
-    const { theme: _t, ...rest } = linkProps || {};
-    return buildSafeLink(id, href, 'snapshotLink', children, { className: resolved, ...rest });
+    if (!href) return null;
+
+    const resolved = linkProps?.theme
+      ? linkThemeMap[linkProps.theme]
+      : linkThemeMap.primary;
+
+    const { theme: _t, href: _h, prefetch: _p, ...rest } = linkProps || {};
+    return buildSafeLink(id, href.toString(), 'snapshotLink', children, {
+      className: resolved,
+      prefetch: _p ?? undefined,
+      target: undefined as any,
+      ...rest,
+    });
   };
 
   return {
@@ -36,4 +61,3 @@ export function useLinkBuilder() {
     snapshotLink,
   };
 }
-

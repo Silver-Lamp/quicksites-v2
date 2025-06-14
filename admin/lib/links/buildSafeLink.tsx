@@ -1,16 +1,30 @@
 import Link from 'next/link';
+import type { ReactNode } from 'react';
+
+export type BuildSafeLinkOptions = React.AnchorHTMLAttributes<HTMLAnchorElement> & {
+  className?: string;
+  prefetch?: boolean;
+  target?: '_blank' | '_self' | '_parent' | '_top';
+};
 
 export function buildSafeLink(
-  id: string | undefined,
-  href: string,
-  fallback: string,
-  children?: React.ReactNode,
-  linkProps?: React.ComponentProps<typeof Link>
-) {
-  if (!id) {
-    console.warn(`${fallback} called with missing ID`);
-    return <span className="text-red-500 italic">Missing {fallback.replace('Link', 'link')}</span>;
-  }
-  return <Link href={href} {...linkProps}>{children || href}</Link>;
-}
+  id: string,
+  href: string | URL,
+  type: string,
+  children: ReactNode,
+  props: BuildSafeLinkOptions = {}
+): React.ReactNode | string {
+  const safeHref = typeof href === 'string' ? href : href.toString();
 
+  return (
+    <Link
+      href={safeHref}
+      {...props}
+      data-id={id}
+      data-type={type}
+      prefetch={props.prefetch ?? false}
+    >
+      {children}
+    </Link>
+  );
+}

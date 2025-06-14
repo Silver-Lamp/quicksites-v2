@@ -14,11 +14,7 @@ const nextConfig = {
   },
   async rewrites() {
     return [
-      {
-        source: '/:path*',
-        has: [{ type: 'host', value: ':subdomain.quicksites.ai' }],
-        destination: '/site/:subdomain/:path*', // TODO: change to /:slug.quicksites.ai (or /:slug) or /:slug.quicksites.ai/... 
-      },
+      // Removed invalid subdomain rewrite
       { source: '/@/:handle', destination: '/creator/:handle' },
       { source: '/admin/dashboard', destination: '/admin/sites/dashboard' },
       { source: '/admin/sites/:slug', destination: '/sites/:slug' },

@@ -61,7 +61,8 @@ export default function GridMap() {
       const enriched = await Promise.all(Object.values(geo).map(async (entry) => {
         const { lat, lon } = await resolveGeo(entry.city, entry.state);
         const primaryIndustry = Object.entries(entry.industryCounts || {}).reduce(
-          (acc, [ind, count]) => (count > (acc[1] || 0) ? [ind, count] : acc),
+          (acc: [string, number], [ind, count]) => 
+            (typeof count === 'number' && count > acc[1] ? [ind, count] : acc),
           ['', 0]
         )[0];
         return { ...entry, lat, lon, industry: primaryIndustry };

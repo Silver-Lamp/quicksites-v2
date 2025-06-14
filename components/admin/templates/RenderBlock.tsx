@@ -1,5 +1,5 @@
-// components/templates/RenderBlock.tsx
-import type { Block } from '@/admin/types/block';
+// components/admin/templates/RenderBlock.tsx
+import type { Block } from '@/types/block';
 
 export default function RenderBlock({ block }: { block: Block }) {
   switch (block.type) {

@@ -1,5 +1,6 @@
-// Block types
+// ✅ types/site.ts
 
+// Block Types
 export type HeroBlock = {
     _id: string;
     type: 'hero';
@@ -28,8 +29,7 @@ export type HeroBlock = {
     };
   };
   
-  // Add more types as needed...
-  
+  // TODO: Add more blocks like text, cta, quote
   export type ContentBlock = HeroBlock | ServicesBlock | TestimonialBlock;
   
   export type Page = {
@@ -44,7 +44,10 @@ export type HeroBlock = {
     domain: string;
   };
   
+  // ✅ Full shape used in EditPage
   export type SiteData = {
+    slug: string; // used for viewing and editing
+    is_published: boolean;
     pages: Page[];
     _meta: SiteMeta;
   };

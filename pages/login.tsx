@@ -10,7 +10,7 @@ import { useCurrentUser } from '@/hooks/useCurrentUser';
 
 export default function LoginPage() {
   useSetSessionFromHash();
-  const { allowAdminPromotion } = useCurrentUser();
+  // const { isLoading, roleSource, role, allowAdminPromotion } = useCurrentUser();
 
   const [email, setEmail] = useState('');
   const [message, setMessage] = useState<string | null>(null);
@@ -133,7 +133,7 @@ export default function LoginPage() {
                 </button>
               ))}
             </div>
-            {allowAdminPromotion && (
+            {/* {allowAdminPromotion && (
               <div className="mt-4">
                 <button
                   onClick={() => assignRole('admin')}
@@ -142,7 +142,7 @@ export default function LoginPage() {
                   🔧 Promote me to admin
                 </button>
               </div>
-            )}
+            )} */}
           </div>
         ) : (
           <>

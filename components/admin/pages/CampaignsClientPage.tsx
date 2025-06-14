@@ -6,11 +6,11 @@ import { useEffect, useState } from 'react';
 import useSWRInfinite from 'swr/infinite';
 import { subDays } from 'date-fns';
 import { DateRange } from 'react-day-picker';
-import { Calendar } from '@/components/admin/ui/calendar';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/admin/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Button } from '@/components/admin/ui/button';
 import { CalendarIcon } from 'lucide-react';
-import { cn } from '@/admin/lib/utils';
+import { cn } from '@/lib/utils';
 import { CampaignFunnelTable } from '@/admin/guest-tokens/CampaignFunnelTable';
 
 interface Props {

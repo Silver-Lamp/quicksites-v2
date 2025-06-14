@@ -5,11 +5,14 @@ import { CurrentUserContextType } from '@/components/admin/context/CurrentUserPr
 import { CurrentUserContext } from '@/components/admin/context/CurrentUserProvider';
 import { supabase } from '@/lib/supabase';
 
-export function useCurrentUser(): CurrentUserContextType & { roleSource: string } {
+export function useCurrentUser(): CurrentUserContextType & {
+  roleSource: string;
+  isLoading: boolean;
+} {
   const context = useContext(CurrentUserContext);
 
   const [fetchedRole, setFetchedRole] = useState<string | null>(null);
-  const [loadingRole, setLoadingRole] = useState(true);
+  const [isLoading, setIsLoading] = useState(true);
   const [roleSource, setRoleSource] = useState<'session' | 'db' | 'cache'>('session');
 
   useEffect(() => {
@@ -24,7 +27,7 @@ export function useCurrentUser(): CurrentUserContextType & { roleSource: string 
         console.debug('📦 Using cached fallback role:', cached);
         setFetchedRole(cached);
         setRoleSource('cache');
-        setLoadingRole(false);
+        setIsLoading(false);
         return;
       }
 
@@ -46,7 +49,7 @@ export function useCurrentUser(): CurrentUserContextType & { roleSource: string 
         localStorage.setItem(cacheKey, data.new_role);
       }
 
-      setLoadingRole(false);
+        setIsLoading(false);
     };
 
     fetchRole();
@@ -55,7 +58,7 @@ export function useCurrentUser(): CurrentUserContextType & { roleSource: string 
   return {
     ...context,
     role: fetchedRole || context.role,
-    loading: context.loading || loadingRole,
+    isLoading,
     roleSource,
   };
 }

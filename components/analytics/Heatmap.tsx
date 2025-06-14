@@ -26,7 +26,7 @@ export default function Heatmap({ daysBack = 180 }: { daysBack?: number }) {
         .select('last_seen_at, last_seen_ip')
         .not('last_seen_at', 'is', null);
 
-      const grouped = {};
+      const grouped: Record<string, { user: number; ips: Set<string> }> = {};
       data?.forEach((entry) => {
         const day = new Date(entry.last_seen_at).toISOString().split('T')[0];
         if (!grouped[day]) grouped[day] = { user: 0, ips: new Set() };
@@ -34,7 +34,7 @@ export default function Heatmap({ daysBack = 180 }: { daysBack?: number }) {
         if (entry.last_seen_ip) grouped[day].ips.add(entry.last_seen_ip);
       });
 
-      const finalized = {};
+      const finalized: Record<string, { user: number; ip: number }> = {};
       Object.entries(grouped).forEach(([date, stats]) => {
         finalized[date] = {
           user: stats.user,
@@ -86,7 +86,7 @@ export default function Heatmap({ daysBack = 180 }: { daysBack?: number }) {
         </div>
         <div className="grid grid-cols-27 gap-1 text-xs">
           {dates.map((date) => {
-            const count = activity[date]?.[mode] || 0;
+            const count = (activity as Record<string, { user: number; ip: number }>)[date]?.[mode] || 0;
             const title = `${date}: ${count} ${mode === 'ip' ? 'unique IPs' : 'user(s)'}`;
             return (
               <div

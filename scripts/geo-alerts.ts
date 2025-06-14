@@ -9,7 +9,7 @@ if (error) {
   process.exit(1);
 }
 
-const byToken = {};
+const byToken: Record<string, Set<string>> = {};
 for (const log of data) {
   if (!log.token_hash || !log.ip_location) continue;
   if (!byToken[log.token_hash]) byToken[log.token_hash] = new Set();

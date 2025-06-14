@@ -114,11 +114,16 @@ export default function LeadsPage() {
 
     const photoUrl = supabase.storage.from('leads').getPublicUrl(photoPath).data.publicUrl;
 
-    const { leadData, confidence } = await createLeadFromPhoto(file);
-    leadData.photo_url = photoUrl;
+    const { leadData, confidence }: { leadData: any, confidence: number } = await createLeadFromPhoto(file);
+    leadData.id = crypto.randomUUID();
+    leadData.confidence = confidence || 0;
+    leadData.photo_url = photoUrl || null;
+    leadData.status = 'reviewed';
+    leadData.address_street = null;
+    leadData.address_zip = null;
+    leadData.address_country = null;
 
     if (confidence >= CONFIDENCE_THRESHOLD) {
-      leadData.status = 'reviewed';
       await supabase.from('leads').insert([leadData]);
       fetchLeads();
     } else {
@@ -153,7 +158,7 @@ export default function LeadsPage() {
     const headers = ['phone', 'industry', 'city', 'state', 'source', 'status'];
     const csv = [headers.join(',')];
     for (const lead of leads) {
-      const row = headers.map((h) => JSON.stringify(lead[h] ?? '')).join(',');
+      const row = headers.map((h) => JSON.stringify(lead[h as keyof Lead] ?? '')).join(',');
       csv.push(row);
     }
     const blob = new Blob([csv.join('\n')], { type: 'text/csv' });
@@ -252,7 +257,16 @@ export default function LeadsPage() {
             outreach_status: phoneMissing ? 'research_needed' : 'not_contacted',
             date_created: new Date().toISOString(),
             created_at: new Date().toISOString(),
-            owner_id: null
+            owner_id: null,
+            photo_url: null,
+            confidence: null,
+            status: null,
+            address_street: null,
+            address_zip: null,
+            address_country: null,
+            address_lat: null,
+            address_lon: null,
+            address_full: null,
           });
         }
 
@@ -382,25 +396,25 @@ export default function LeadsPage() {
           <ul>
             {leads.map((lead) => (
               <li key={lead.id} className={`border-b py-2 ${!lead.phone ? 'bg-red-50' : ''}`}>
-                <input type="checkbox" checked={selectedIds.includes(lead.id)} onChange={() => toggleSelectLead(lead.id)} className="mr-2" />
+                <input type="checkbox" checked={selectedIds.includes(Number(lead.id))} onChange={() => toggleSelectLead(Number(lead.id))} className="mr-2" />
                 <div className="font-bold text-sm">{lead.business_name || '—'}</div>
                 <div>{lead.phone || '❌ Missing Phone'} — {lead.industry || 'unknown'}</div>
-                <div>{lead.address_city || lead.city || '—'}, {lead.address_state || lead.state || '—'}</div>
+                <div>{lead.address_city || '—'}, {lead.address_state || '—'}</div>
                 <div>Domain: {lead.domain_id || '—'} | Campaign: {lead.campaign_id || '—'}</div>
                 <div className="text-xs text-gray-400 whitespace-pre-line">{lead.notes || '—'}</div>
                 <div>Status: {lead.status}</div>
                 <div className="flex space-x-2 mt-2">
                   <button onClick={() => sendLeadEmail(lead)} className="text-sm text-green-700 underline">📤 Send</button>
                   {lead.status === 'needs_review' && (
-                    <button onClick={() => markAsReviewed(lead.id)} className="text-sm text-blue-600 underline">Mark as Reviewed</button>
+                    <button onClick={() => markAsReviewed(Number(lead.id))} className="text-sm text-blue-600 underline">Mark as Reviewed</button>
                   )}
-                  <button onClick={() => { setEditingLeadId(lead.id); setEditingLead(lead); }} className="text-sm text-indigo-600 underline">Edit</button>
+                  <button onClick={() => { setEditingLeadId(Number(lead.id)); setEditingLead(lead); }} className="text-sm text-indigo-600 underline">Edit</button>
                 </div>
                 {lead.photo_url && <img src={lead.photo_url} alt="Lead" className="max-w-xs mt-2" />}
-                {lead.lat && lead.lon && (
+                {lead.address_lat && lead.address_lon && (
                   <iframe
                     title="map"
-                    src={`https://maps.google.com/maps?q=${lead.lat},${lead.lon}&z=15&output=embed`}
+                    src={`https://maps.google.com/maps?q=${lead.address_lat},${lead.address_lon}&z=15&output=embed`}
                     className="w-full max-w-xs h-48 mt-2 border rounded"
                     loading="lazy"
                   />

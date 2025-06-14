@@ -13,6 +13,7 @@ export function NavSections() {
           <SafeLink href="/admin/start-campaign">Start Campaign</SafeLink>
         </div>
       </details>
+
       <details className="group">
         <summary className="cursor-pointer font-semibold text-green-300 group-open:underline">Logs</summary>
         <div className="flex flex-wrap gap-2 ml-2">
@@ -20,8 +21,10 @@ export function NavSections() {
           <SafeLink href="/admin/logs/sessions">Session Logs</SafeLink>
           <SafeLink href="/admin/analytics">Analytics</SafeLink>
           <SafeLink href="/admin/heatmap">Heatmap</SafeLink>
+          <SafeLink href="/admin/not-found">404s</SafeLink> {/* ✅ New link */}
         </div>
       </details>
+
       <details className="group">
         <summary className="cursor-pointer font-semibold text-yellow-300 group-open:underline">Templates</summary>
         <div className="flex flex-wrap gap-2 ml-2">
@@ -30,6 +33,7 @@ export function NavSections() {
           <SafeLink href="/admin/templates-new">+ New Template</SafeLink>
         </div>
       </details>
+
       <details className="group">
         <summary className="cursor-pointer font-semibold text-purple-300 group-open:underline">Dev</summary>
         <div className="flex flex-wrap gap-2 ml-2">
@@ -38,6 +42,7 @@ export function NavSections() {
           <SafeLink href="/admin/branding/og-editor/xyz">OG Editor</SafeLink>
         </div>
       </details>
+
       <details className="group">
         <summary className="cursor-pointer font-semibold text-red-300 group-open:underline">Admin</summary>
         <div className="flex flex-wrap gap-2 ml-2">

@@ -1,5 +1,3 @@
-// ✅ FILE: components/admin/SessionLogViewer.tsx
-
 'use client';
 
 import { useEffect, useState } from 'react';
@@ -12,12 +10,16 @@ export default function SessionLogViewer({ mobileOnly = false }: { mobileOnly?: 
   useEffect(() => {
     let query = supabase.from('session_logs').select('*');
     if (mobileOnly) query = query.eq('is_mobile', true);
-    query = query.order('timestamp', { ascending: false }).limit(100)
-      .then(({ data }) => {
+
+    query
+      .order('timestamp', { ascending: false })
+      .limit(100)
+      .then(({ data, error }) => {
+        if (error) console.error('Failed to fetch session logs:', error);
         setLogs(data || []);
         setLoading(false);
       });
-  }, []);
+  }, [mobileOnly]);
 
   if (loading) {
     return <p className="text-gray-400 text-sm p-4">Loading session logs…</p>;

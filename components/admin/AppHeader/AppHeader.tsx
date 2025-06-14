@@ -42,7 +42,7 @@ export default function AppHeader() {
                 <AvatarMenu
                   email={email}
                   avatarUrl={user?.user_metadata?.avatar_url}
-                  role={role}
+                  role={role || ''}
                   source={roleSource}
                   onLogout={logout}
                 />

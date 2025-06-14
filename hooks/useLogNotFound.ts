@@ -1,5 +1,3 @@
-// ✅ FILE: hooks/useLogNotFound.ts
-
 import { useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 
@@ -21,8 +19,12 @@ export function useLogNotFound(context: 'public' | 'admin') {
             ip,
             timestamp: new Date().toISOString(),
           })
-          .catch(console.error);
+          .then(({ error }) => {
+            if (error) console.error('Error logging not found:', error);
+          });
       })
-      .catch(console.error);
+      .catch((error: any) => {
+        console.error('Error fetching IP:', error);
+      });
   }, [context]);
 }

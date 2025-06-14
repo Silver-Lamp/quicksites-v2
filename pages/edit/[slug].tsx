@@ -72,15 +72,18 @@ export default function EditPage() {
   }, [siteData]);
 
   const handleSlugChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!siteData) return;
     const nextSlug = e.target.value.toLowerCase().replace(/[^a-z0-9-]+/g, '-');
     setSiteData({ ...siteData, slug: nextSlug });
   };
 
   const handleTogglePublish = () => {
+    if (!siteData) return;
     setSiteData({ ...siteData, is_published: !siteData.is_published });
   };
 
   const currentPage = siteData?.pages?.[currentPageIndex];
+  if (!currentPage) return;
   const blocksWithId = currentPage?.content_blocks?.map((b: any, i: number) => ({
     _id: b._id || `block-${i}-${Date.now()}`,
     ...b,
@@ -100,7 +103,7 @@ export default function EditPage() {
       content: { headline: 'New Block', subheadline: '', cta_text: '', cta_link: '' },
     };
     const pages = [...siteData.pages];
-    pages[currentPageIndex].content_blocks.push(newBlock);
+    pages[currentPageIndex].content_blocks.push(newBlock as any);
     setSiteData({ ...siteData, pages });
     setShowBlockPicker(false);
   };
@@ -224,6 +227,7 @@ export default function EditPage() {
                   pages[currentPageIndex].content_blocks = next;
                   setSiteData({ ...siteData, pages });
                 }}
+                /*
                 onDelete={(blockId: string) => {
                   const pages = [...siteData.pages];
                   pages[currentPageIndex].content_blocks = pages[currentPageIndex].content_blocks.filter(
@@ -235,6 +239,7 @@ export default function EditPage() {
                   const index = blocksWithId.findIndex((b: { _id: string }) => b._id === blockId);
                   if (index !== -1) setSelectedBlockIndex(index);
                 }}
+                */
               />
               <button
                 className="mt-4 px-3 py-2 text-sm bg-blue-700 rounded hover:bg-blue-800"

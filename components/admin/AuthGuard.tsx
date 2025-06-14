@@ -12,10 +12,10 @@ export default function AuthGuard({
   roles?: string[];
 }) {
   const router = useRouter();
-  const { user, role, loading, roleSource } = useCurrentUser();
+  const { user, role, isLoading, roleSource } = useCurrentUser();
   const [hydrated, setHydrated] = useState(false);
   const [readyToCheck, setReadyToCheck] = useState(false);
-  console.log('🔒 [AuthGuard] Loading', { user, role, loading, roles, roleSource, readyToCheck, hydrated });
+  console.log('🔒 [AuthGuard] Loading', { user, role, isLoading, roles, roleSource, readyToCheck, hydrated });
 
   const skipRoleCheck = true;
   if (skipRoleCheck) {
@@ -28,15 +28,15 @@ export default function AuthGuard({
   }, []);
 
   useEffect(() => {
-    if (hydrated && !loading && user && role) {
+    if (hydrated && !isLoading && user && role) {
       setReadyToCheck(true);
     }
-  }, [hydrated, loading, user, role]);
+  }, [hydrated, isLoading, user, role]);
 
   useEffect(() => {
     if (!readyToCheck) return;
 
-    const normalizedRole = role?.toLowerCase().trim();
+    const normalizedRole = role ? role.toLowerCase().trim() : '';
     const allowed =
       roles?.map((r) => r.toLowerCase()).includes(normalizedRole) ?? true;
 
@@ -50,7 +50,7 @@ export default function AuthGuard({
       normalizedRole,
       roles,
       allowed,
-      loading,
+      isLoading,
       roleSource,
       readyToCheck,
       token: maskedToken,
@@ -65,7 +65,7 @@ export default function AuthGuard({
       });
       router.replace(`/login?error=unauthorized`);
     }
-  }, [readyToCheck, user, role, roles, router, roleSource]);
+  }, [readyToCheck, user, role, roles, router, roleSource, isLoading]);
 
   if (!readyToCheck || !role) {
     return (

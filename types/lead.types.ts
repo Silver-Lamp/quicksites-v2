@@ -14,6 +14,15 @@ export type Lead = {
     address_state: string;
     notes: string | null;
     industry: string;
+    photo_url: string | null;
+    confidence: number | null;
+    status: string | null;
+    address_street: string | null;
+    address_zip: string | null;
+    address_country: string | null;
+    address_lat: number | null;
+    address_lon: number | null;
+    address_full: string | null;
   };
   export type CSVLeadRow = {
     Tags?: string;

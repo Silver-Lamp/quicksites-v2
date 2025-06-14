@@ -1,4 +1,6 @@
-export default {
+// .eslintrc.cjs
+
+module.exports = {
   root: true,
   parser: '@typescript-eslint/parser',
   extends: [

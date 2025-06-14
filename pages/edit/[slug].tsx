@@ -158,12 +158,14 @@ export default function EditPage() {
           ✅ Saved
         </div>
       )}
+
       {isHydrated && showSettings && siteData?._meta?.id && (
-        <ModalWrapper open={showSettings} onClose={() => setShowSettings(false)}>
-          <SiteSettingsPanel siteId={siteData._meta.id} />
+        <ModalWrapper open={showSettings} onClose={() => setShowSettings(false)} title="Site Settings">
+          <div className="h-full p-6">
+            <SiteSettingsPanel siteId={siteData._meta.id} />
+          </div>
         </ModalWrapper>
       )}
-
 
       {!siteData ? (
         <p>Loading...</p>

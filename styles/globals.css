@@ -7,6 +7,15 @@
 @tailwind components;
 @tailwind utilities;
 
+[data-state='open'],
+[data-state='closed'] {
+  opacity: 1 !important;
+  transform: none !important;
+  transition: none !important;
+}
+.radix-dialog-content {
+  background-color: #18181b !important; /* bg-zinc-900 fallback */
+}
 :root {
   --color-brand: #4F46E5;
   --color-surface: #18181b;

@@ -1,7 +1,7 @@
 import type { Config } from 'tailwindcss';
 
 const config: Config = {
-  darkMode: ['class', 'class'],
+  darkMode: ['class'],
   content: ['./pages/**/*.{js,ts,jsx,tsx}', './components/**/*.{js,ts,jsx,tsx}'],
   theme: {
   	extend: {
@@ -52,20 +52,20 @@ const config: Config = {
   				'5': 'hsl(var(--chart-5))'
   			}
   		},
-		animation: {
-		'in': 'fadeIn 0.2s ease-out',
-		'out': 'fadeOut 0.2s ease-in',
-		},
-		keyframes: {
-		fadeIn: {
-			from: { opacity: 0 },
-			to: { opacity: 1 },
-		},
-		fadeOut: {
-			from: { opacity: 1 },
-			to: { opacity: 0 },
-		},
-	  },
+	// 	animation: {
+	// 	'in': 'fadeIn 0.2s ease-out',
+	// 	'out': 'fadeOut 0.2s ease-in',
+	// 	},
+	// 	keyframes: {
+	// 	fadeIn: {
+	// 		from: { opacity: 0 },
+	// 		to: { opacity: 1 },
+	// 	},
+	// 	fadeOut: {
+	// 		from: { opacity: 1 },
+	// 		to: { opacity: 0 },
+	// 	},
+	//   },
 	},
   },
   plugins: [require("tailwindcss-animate")],

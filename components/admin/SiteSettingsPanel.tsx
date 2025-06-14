@@ -134,9 +134,8 @@ export default function SiteSettingsPanel({ siteId }: { siteId: string }) {
 //   );
   
   return (
-    <div className="space-y-4 bg-zinc-800 p-4 rounded border border-zinc-600">
-      <h2 className="text-xl font-bold">Site Settings</h2>
-
+    <div className="flex flex-col h-full space-y-4 bg-zinc-900 overflow-y-auto rounded border border-zinc-700 p-4">
+      {/* <h2 className="text-xl font-bold">Site Settings</h2> */}
       <input value={bizName} onChange={e => setBizName(e.target.value)} placeholder="Business Name" className="w-full p-2 bg-zinc-900 rounded" />
       <input value={location} onChange={e => setLocation(e.target.value)} placeholder="Location" className="w-full p-2 bg-zinc-900 rounded" />
       <input value={slug} onChange={e => setSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]+/g, '-'))} placeholder="Slug" className="w-full p-2 bg-zinc-900 rounded" />

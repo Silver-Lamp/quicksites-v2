@@ -1,6 +1,4 @@
-import type { Config } from 'tailwindcss';
-
-const config: Config = {
+const config = {
   darkMode: ['class'],
   content: [
     './pages/**/*.{js,ts,jsx,tsx}',
@@ -57,20 +55,30 @@ const config: Config = {
           '5': 'hsl(var(--chart-5))',
         },
       },
-      animation: {
-        'fade-in-0': 'fade-in-0 0.2s ease-out',
-        'fade-out-0': 'fade-out-0 0.2s ease-in',
-      },
-      keyframes: {
-        'fade-in-0': {
-          from: { opacity: '0' },
-          to: { opacity: '1' },
-        },
-        'fade-out-0': {
-          from: { opacity: '1' },
-          to: { opacity: '0' },
-        },
-      },
+    //   animation: {
+    //     'fade-in-0': 'fade-in-0 0.2s ease-out',
+    //     'fade-out-0': 'fade-out-0 0.2s ease-in',
+    //     'slide-in': 'slide-in 0.3s ease-out',
+    //     'slide-out': 'slide-out 0.3s ease-in',
+    //   },
+    //   keyframes: {
+    //     'fade-in-0': {
+    //       from: { opacity: '0' },
+    //       to: { opacity: '1' },
+    //     },
+    //     'fade-out-0': {
+    //       from: { opacity: '1' },
+    //       to: { opacity: '0' },
+    //     },
+    //     'slide-in': {
+    //       from: { transform: 'translateX(100%)' },
+    //       to: { transform: 'translateX(0)' },
+    //     },
+    //     'slide-out': {
+    //       from: { transform: 'translateX(0)' },
+    //       to: { transform: 'translateX(100%)' },
+    //     },
+    //   },
     },
   },
   plugins: [require('tailwindcss-animate')],

@@ -30,6 +30,7 @@ export function renderOgImage({
   return new ImageResponse(
     {
       type: 'div',
+      key: 'root',
       props: {
         style: {
           background: t.background,

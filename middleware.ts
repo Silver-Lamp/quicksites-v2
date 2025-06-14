@@ -4,6 +4,13 @@ import type { NextRequest } from 'next/server';
 export async function middleware(req: NextRequest) {
   const hostname = req.headers.get('host') || '';
   const pathname = req.nextUrl.pathname;
+
+  // Detect known root domains (including localhost, www, etc.)
+  const isRootDomain =
+    hostname === 'localhost:3000' ||
+    hostname === 'quicksites.ai' ||
+    hostname === 'www.quicksites.ai';
+
   const subdomain = hostname
     .replace('.localhost:3000', '')
     .replace('.quicksites.ai', '')
@@ -11,21 +18,26 @@ export async function middleware(req: NextRequest) {
 
   const skipRoleCheck = true;
 
+  // Public subdomain (like brutow-renton.quicksites.ai)
   const isPublicSite =
+    !isRootDomain &&
     hostname.endsWith('.quicksites.ai') &&
-    !['www', 'quicksites'].includes(subdomain) &&
     !pathname.startsWith('/admin') &&
     !pathname.startsWith('/api') &&
     !pathname.startsWith('/_next');
 
-  // ⛳️ Rewrite subdomain to /_sites/[slug]
   if (isPublicSite) {
     const url = req.nextUrl.clone();
     url.pathname = `/_sites/${subdomain}${pathname}`;
     return NextResponse.rewrite(url);
   }
 
-  // 🔒 Admin auth logic (Supabase) only runs if accessing /admin
+  // Allow home page to render for quicksites.ai (no rewrite)
+  if (isRootDomain) {
+    return NextResponse.next();
+  }
+
+  // 🔒 Admin route auth
   if (!skipRoleCheck && pathname.startsWith('/admin')) {
     const { supabase } = await import('@/admin/lib/supabaseClient');
     const res = NextResponse.next();

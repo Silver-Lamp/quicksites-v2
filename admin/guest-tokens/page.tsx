@@ -3,7 +3,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { supabase } from '@/admin/lib/supabaseClient';
+import { createClient } from '@supabase/supabase-js';
 import {
   formatDistanceToNow,
   isAfter,
@@ -11,8 +11,8 @@ import {
   parseISO,
   subDays,
 } from 'date-fns';
-import { Card, CardContent } from '@/components/admin/ui/card';
-import { Button } from '@/components/admin/ui/button';
+// import { Card, CardContent } from '@/components/ui/card';
+// import { Button } from '@/components/ui/button';
 import { CalendarIcon, DownloadIcon, FilterIcon, TagIcon } from 'lucide-react';
 import {
   ResponsiveContainer,
@@ -23,9 +23,10 @@ import {
   Tooltip,
 } from 'recharts';
 import { DateRange } from 'react-day-picker';
-import { Calendar } from '@/components/admin/ui/calendar';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/admin/ui/popover';
-import { cn } from '@/admin/lib/utils';
+import { Calendar } from '@/components/ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Button } from '@/components/admin/ui/button';
+import { cn } from '@/lib/utils';
 
 interface UpgradeEvent {
   id: string;
@@ -47,7 +48,10 @@ export default function GuestUpgradeDashboard() {
   });
   const [openStep, setOpenStep] = useState<string | null>(null);
 
-  const supabase = createClient();
+  const supabase = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  );
 
   const toggleStep = (key: string) =>
     setOpenStep((prev) => (prev === key ? null : key));

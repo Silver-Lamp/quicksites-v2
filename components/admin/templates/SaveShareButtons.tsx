@@ -1,7 +1,7 @@
 import { useRouter } from 'next/router';
-import { Button } from '@/components/ui/button';
-import { saveAsTemplate } from '@/lib/saveAsTemplate';
-import { createSharedPreview } from '@/lib/createSharedPreview';
+import { Button } from '@/components/admin/ui/button';
+import { saveAsTemplate } from '@/admin/lib/saveAsTemplate';
+import { createSharedPreview } from '@/admin/lib/createSharedPreview';
 import toast from 'react-hot-toast';
 
 export default function SaveShareButtons({ template }: { template: any }) {
@@ -18,7 +18,7 @@ export default function SaveShareButtons({ template }: { template: any }) {
   };
 
   const handleShare = async () => {
-    const id = await createSharedPreview(template.id, template.data);
+    const id = await createSharedPreview(template.id);
     if (id) {
       toast.success('Preview shared!');
       router.push(`/shared/${id}`);

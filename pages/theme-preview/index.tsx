@@ -1,5 +1,5 @@
 import { ThemeToggleButton } from '@/components/ui/ThemeToggleButton';
-import { PrimaryButton } from '@/components/ui/Button';
+import { Button } from '@/components/admin/ui/button';
 import Card from '@/components/ui/Card';
 
 export default function ThemePreviewPage() {
@@ -9,7 +9,7 @@ export default function ThemePreviewPage() {
       <ThemeToggleButton />
       <Card>
         <p>This card uses shared token styles.</p>
-        <PrimaryButton>Click Me</PrimaryButton>
+        <Button>Click Me</Button>
       </Card>
     </div>
   );

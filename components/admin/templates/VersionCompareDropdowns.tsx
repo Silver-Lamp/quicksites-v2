@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
-import { Button } from '@/components/ui/button';
+import { Button } from '@/components/admin/ui/button';
 import { supabase } from '@/admin/lib/supabaseClient';
-import { VersionCompareDropdowns } from '@/components/VersionCompareDropdowns';
-import { renderVersionDiff } from '@/utils/renderVersionDiff';
+import VersionCompareDropdowns from '@/components/admin/templates/VersionCompareDropdowns';
+import { renderVersionDiff } from '@/admin/utils/renderVersionDiff';
 
 export default function VersionHistoryPanel({ slug, onRestore }: {
   slug: string;
@@ -43,16 +43,8 @@ export default function VersionHistoryPanel({ slug, onRestore }: {
     <div className="mt-4 space-y-2">
       <h3 className="font-semibold text-base">Version History</h3>
       <VersionCompareDropdowns
-        versions={versions}
-        currentVersion={currentVersion!}
-        onCompare={(base, compare) => {
-          const html = renderVersionDiff(base, compare);
-          const w = window.open('', '_blank');
-          if (w) {
-            w.document.write(html);
-            w.document.close();
-          }
-        }}
+        slug={slug}
+        onRestore={onRestore}
       />
       <ul className="space-y-2">
         {versions.map(v => {

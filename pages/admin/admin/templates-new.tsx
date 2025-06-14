@@ -1,10 +1,10 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
-import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
+import { Input } from '@/components/admin/ui/input';
+import { Button } from '@/components/admin/ui/button';
+import { Label } from '@/components/admin/ui/label';
+import { Textarea } from '@/components/admin/ui/textarea';
 
 export default function NewTemplatePage() {
   const router = useRouter();

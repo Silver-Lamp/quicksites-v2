@@ -1,9 +1,9 @@
 import { useState } from 'react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import { Button } from '@/components/admin/ui/button';
+import { Input } from '@/components/admin/ui/input';
 import { supabase } from '@/admin/lib/supabaseClient';
 import { toast } from 'react-hot-toast';
-import { uploadSnapshotToSupabase } from '@/lib/uploadSnapshotToSupabase';
+import { uploadSnapshotToSupabase } from '@/admin/lib/uploadSnapshotToSupabase';
 
 export default function TemplateVersionSaveBar({
   template,

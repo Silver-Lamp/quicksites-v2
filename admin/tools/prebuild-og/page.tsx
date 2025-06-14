@@ -3,7 +3,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Button } from '@/components/ui/button';
+import { Button } from '@/components/admin/ui/button';
 
 export default function PrebuildOGPage() {
   const [slugs, setSlugs] = useState<string[]>([]);

@@ -1,6 +1,7 @@
 'use client';
 import { useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/router';
+import dynamic from 'next/dynamic';
 import { createClient } from '@supabase/supabase-js';
 import { GripVertical } from 'lucide-react';
 import RenderBlock from '@/components/admin/templates/RenderBlock';
@@ -8,6 +9,9 @@ import BlockSidebar from '@/components/admin/templates/BlockSidebar';
 import { SortableBlockList } from '@/components/admin/templates/SortableBlockList';
 import { DndContext, closestCenter } from '@dnd-kit/core';
 import { SortableContext, arrayMove, verticalListSortingStrategy } from '@dnd-kit/sortable';
+const SiteSettingsPanel = dynamic(() => import('@/components/admin/SiteSettingsPanel'), { ssr: false });
+import ModalWrapper from '@/components/ui/ModalWrapper'; 
+import type { SiteData } from '@/types/site';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -17,20 +21,24 @@ const supabase = createClient(
 export default function EditPage() {
   const router = useRouter();
   const { slug } = router.query;
-  const [siteData, setSiteData] = useState<any>(null);
+  const [siteData, setSiteData] = useState<SiteData | null>(null);
   const [currentPageIndex, setCurrentPageIndex] = useState(0);
   const [selectedBlockIndex, setSelectedBlockIndex] = useState<number | null>(null);
   const [showBlockPicker, setShowBlockPicker] = useState(false);
   const [previewMode, setPreviewMode] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
   const [saved, setSaved] = useState(false);
 
   const saveTimeout = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     if (!slug) return;
-    fetch(`/api/sites/${slug}`)
+    fetch(`/api/sites/${slug}`) // TODO: add error handling for 404 and 500 errors
       .then(res => res.json())
-      .then(data => setSiteData(data))
+      .then(data => {
+        console.debug('[EditPage] useEffect triggered', data);
+        setSiteData(data);
+      })
       .catch(err => {
         console.error('Site load failed:', err);
         alert('Failed to load site');
@@ -38,18 +46,20 @@ export default function EditPage() {
   }, [slug]);
 
   useEffect(() => {
-    if (!siteData) return;
-
+    console.debug('[EditPage] useEffect triggered', siteData, slug);
+    if (!siteData) {
+      console.debug('[EditPage] siteData is null', siteData, slug);
+      return;
+    }
     if (saveTimeout.current) clearTimeout(saveTimeout.current);
     saveTimeout.current = setTimeout(async () => {
-      const isUUID = /^[0-9a-fA-F-]{36}$/.test(slug as string);
-      const endpoint = '/api/sites/save';
-
-      await fetch(endpoint, {
+      if (!siteData?._meta?.id) return;
+      await fetch('/api/sites/save', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: slug, data: siteData }),
+        body: JSON.stringify({ id: siteData._meta.id, data: siteData }),
       });
+      console.log('Saving site to UUID:', siteData?._meta?.id);
 
       setSaved(true);
       setTimeout(() => setSaved(false), 1500);
@@ -90,6 +100,7 @@ export default function EditPage() {
     setShowBlockPicker(false);
   };
 
+  console.debug('[EditPage] siteData:', JSON.stringify(siteData));
   return (
     <div className="text-white p-6 max-w-screen-xl mx-auto relative">
       <div className="flex justify-between items-center mb-4">
@@ -127,6 +138,13 @@ export default function EditPage() {
               🔗 View Site
             </a>
           )}
+
+          <button
+            onClick={() => setShowSettings(true)}
+            className="text-sm text-blue-400 hover:underline"
+          >
+            🛠 Site Settings
+          </button>
         </div>
       </div>
 
@@ -135,6 +153,22 @@ export default function EditPage() {
           ✅ Saved
         </div>
       )}
+      {/* {showSettings && (
+        <div className="fixed inset-0 bg-red-600 bg-opacity-90 z-[9999] flex items-center justify-center">
+          <div className="text-white text-3xl font-bold">🔥 Modal is rendering!</div>
+          <SiteSettingsPanel siteId={siteData.id} />
+          </div>
+      )} */}
+        {/* <SiteSettingsPanel siteId={siteData?._meta?.id || ''} /> */}
+        {/* <ModalWrapper onClose={() => setShowSettings(false)}> */}
+        {/* </ModalWrapper> */}
+
+      {showSettings && (siteData?._meta?.id) ? (
+            <SiteSettingsPanel siteId={siteData._meta.id} />
+          ) : (
+            <div className="text-white text-center py-10">⏳ Loading site data...</div>
+          )}
+      {/* )} */}
 
       {!siteData ? (
         <p>Loading...</p>
@@ -193,15 +227,15 @@ export default function EditPage() {
                   pages[currentPageIndex].content_blocks = next;
                   setSiteData({ ...siteData, pages });
                 }}
-                onDelete={(blockId) => {
+                onDelete={(blockId: string) => {
                   const pages = [...siteData.pages];
                   pages[currentPageIndex].content_blocks = pages[currentPageIndex].content_blocks.filter(
-                    (b) => b._id !== blockId
+                      (b: { _id: string }) => b._id !== blockId
                   );
                   setSiteData({ ...siteData, pages });
                 }}
-                onEdit={(blockId) => {
-                  const index = blocksWithId.findIndex((b) => b._id === blockId);
+                onEdit={(blockId: string) => {
+                  const index = blocksWithId.findIndex((b: { _id: string }) => b._id === blockId);
                   if (index !== -1) setSelectedBlockIndex(index);
                 }}
               />

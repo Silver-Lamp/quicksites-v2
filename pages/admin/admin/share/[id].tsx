@@ -29,12 +29,15 @@ export default function SharePage() {
     const html2pdf = (await import('html2pdf.js')).default;
     const el = document.getElementById('pdf-container');
     if (el) {
-      html2pdf().set({
-        filename: `${profile.name}-preview.pdf`,
-        margin: 10,
-        html2canvas: { scale: 2 },
-        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
-      }).from(el).save();
+      html2pdf()
+        .set({
+          filename: `${profile.name}-preview.pdf`,
+          margin: 10,
+          html2canvas: { scale: 2 },
+          jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+        })
+        .from(el)
+        .save();
     }
   };
 
@@ -46,12 +49,20 @@ export default function SharePage() {
         <h1 className="text-xl font-bold">{profile.name}</h1>
 
         <div className="flex items-center gap-4">
-          <p className="text-sm">Theme: <strong>{profile.theme}</strong></p>
-          <p className="text-sm">Brand: <strong>{profile.brand}</strong></p>
+          <p className="text-sm">
+            Theme: <strong>{profile.theme}</strong>
+          </p>
+          <p className="text-sm">
+            Brand: <strong>{profile.brand}</strong>
+          </p>
         </div>
 
         {profile.logo_url && (
-          <img src={profile.logo_url} alt="Logo" className="h-10 w-10 rounded-full border" />
+          <img
+            src={profile.logo_url}
+            alt="Logo"
+            className="h-10 w-10 rounded-full border"
+          />
         )}
 
         <p className="text-xs text-gray-400 text-right">

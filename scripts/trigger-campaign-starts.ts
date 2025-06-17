@@ -30,7 +30,7 @@ async function run() {
       await fetch(`${process.env.NEXT_PUBLIC_SITE_URL}/api/leads/send-claim`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ lead })
+        body: JSON.stringify({ lead }),
       });
 
       await supabase.from('user_action_logs').insert([
@@ -38,8 +38,8 @@ async function run() {
           lead_id: lead.id,
           domain_id: lead.domain_id,
           action_type: 'campaign_kickoff',
-          triggered_by: 'campaign_bot'
-        }
+          triggered_by: 'campaign_bot',
+        },
       ]);
     }
   }

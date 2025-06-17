@@ -1,5 +1,5 @@
-import { NextResponse } from 'next/server';
-import type { NextRequest } from 'next/server';
+import { NextResponse } from 'next/server.js';
+import type { NextRequest } from 'next/server.js';
 
 export async function middleware(req: NextRequest) {
   const hostname = req.headers.get('host') || '';
@@ -41,12 +41,16 @@ export async function middleware(req: NextRequest) {
   if (!skipRoleCheck && pathname.startsWith('/admin')) {
     const { supabase } = await import('@/admin/lib/supabaseClient');
     const res = NextResponse.next();
-    const { data: { user } } = await supabase.auth.getUser(req.url.toString());
+    const {
+      data: { user },
+    } = await supabase.auth.getUser(req.url.toString());
 
     console.log('🔒 [Middleware] Checking admin auth:', { pathname, user });
 
     if (!user) {
-      return NextResponse.redirect(new URL('/login?error=unauthorized', req.url));
+      return NextResponse.redirect(
+        new URL('/login?error=unauthorized', req.url)
+      );
     }
 
     const role = user.user_metadata?.role;

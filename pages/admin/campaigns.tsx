@@ -5,7 +5,9 @@ import AdminLayout from '@/components/layout/AdminLayout';
 
 export default function CampaignsPage() {
   const [campaigns, setCampaigns] = useState<any[]>([]);
-  const [leadsByCampaign, setLeadsByCampaign] = useState<Record<string, any[]>>({});
+  const [leadsByCampaign, setLeadsByCampaign] = useState<Record<string, any[]>>(
+    {}
+  );
   const [now, setNow] = useState(dayjs());
   const [userEmail, setUserEmail] = useState<string | null>(null);
 
@@ -22,7 +24,9 @@ export default function CampaignsPage() {
 
     supabase
       .from('leads')
-      .select('*, draft_sites:domain_id(domain, is_claimed), users:owner_id(email)')
+      .select(
+        '*, draft_sites:domain_id(domain, is_claimed), users:owner_id(email)'
+      )
       .then(({ data }) => {
         const grouped: Record<string, any[]> = {};
         for (const lead of data || []) {
@@ -57,10 +61,16 @@ export default function CampaignsPage() {
 
         return (
           <div key={c.id} className="mb-6 bg-gray-800 p-4 rounded shadow">
-            <h2 className="text-xl font-bold mb-2">{c.name} – {c.city}</h2>
+            <h2 className="text-xl font-bold mb-2">
+              {c.name} – {c.city}
+            </h2>
             <p className="text-sm mb-1">
               {active ? '🟢 Active' : expired ? '🔴 Ended' : '🕓 Upcoming'} –
-              {active ? ` ${remaining} min left` : expired ? 'Ended' : `Starts in ${start.diff(now, 'minute')} min`}
+              {active
+                ? ` ${remaining} min left`
+                : expired
+                  ? 'Ended'
+                  : `Starts in ${start.diff(now, 'minute')} min`}
             </p>
             {active && (
               <div className="w-full h-2 bg-gray-700 rounded overflow-hidden mb-3">
@@ -79,8 +89,8 @@ export default function CampaignsPage() {
                       l.draft_sites?.is_claimed
                         ? 'border-green-500'
                         : userEmail && l.users?.email === userEmail
-                        ? 'border-yellow-400'
-                        : 'border-gray-600'
+                          ? 'border-yellow-400'
+                          : 'border-gray-600'
                     }`}
                   >
                     <h3 className="font-semibold text-lg">{l.business_name}</h3>
@@ -92,15 +102,15 @@ export default function CampaignsPage() {
                         l.draft_sites?.is_claimed
                           ? 'text-green-400'
                           : userEmail && l.users?.email === userEmail
-                          ? 'text-yellow-300'
-                          : 'text-gray-400'
+                            ? 'text-yellow-300'
+                            : 'text-gray-400'
                       }`}
                     >
                       {l.draft_sites?.is_claimed
                         ? '🏁 Claimed'
                         : userEmail && l.users?.email === userEmail
-                        ? '🔒 Yours'
-                        : 'Unclaimed'}
+                          ? '🔒 Yours'
+                          : 'Unclaimed'}
                     </p>
                   </div>
                 ))}
@@ -108,7 +118,11 @@ export default function CampaignsPage() {
             ) : (
               <p className="text-sm text-gray-400 mt-2">No leads linked.</p>
             )}
-            {winner && <p className="mt-3 text-green-400 font-bold">🎉 Winner: {winner}</p>}
+            {winner && (
+              <p className="mt-3 text-green-400 font-bold">
+                🎉 Winner: {winner}
+              </p>
+            )}
           </div>
         );
       })}

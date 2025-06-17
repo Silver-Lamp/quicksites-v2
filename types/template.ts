@@ -1,6 +1,4 @@
-// types/template.ts
-
-import type { Block } from './block';
+import type { Block } from './blocks.js';
 
 export type Page = {
   id: string;
@@ -9,33 +7,37 @@ export type Page = {
   content_blocks: Block[];
 };
 
+export type TemplateData = {
+  pages: Page[];
+};
+
 export type Template = {
-  // Core fields
   id?: string;
   site_id?: string;
-  name: string; // unified from template_name
+  name: string;
   layout: string;
   color_scheme: string;
   commit: string;
   industry: string;
   theme: string;
   brand: string;
-
-  // Optional URL fields for assets
+  headline?: string;
+  description?: string;
   hero_url?: string;
   banner_url?: string;
   logo_url?: string;
   team_url?: string;
 
-  // Content
-  data: {
-    pages: Page[];
-  };
+  data: TemplateData;
 
-  // Optional database metadata
-  created_at?: string; // or Date
-  updated_at?: string; // or Date
+  created_at?: string;
+  updated_at?: string;
   domain?: string | null;
   published?: boolean;
   custom_domain?: string | null;
 };
+
+// types/template.ts
+
+export type Theme = 'light' | 'dark';
+export type Brand = 'green' | 'blue' | 'purple' | 'red' | 'orange'; // Add whatever variants you support

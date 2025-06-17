@@ -7,7 +7,11 @@ import useSWRInfinite from 'swr/infinite';
 import { subDays } from 'date-fns';
 import { DateRange } from 'react-day-picker';
 import { Calendar } from '@/components/ui/calendar';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
 import { Button } from '@/components/admin/ui/button';
 import { CalendarIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -19,7 +23,11 @@ interface Props {
   logs?: any[] | null;
 }
 
-export function CampaignsClientPage({ defaultRange, events: initialEvents, logs: initialLogs }: Props) {
+export function CampaignsClientPage({
+  defaultRange,
+  events: initialEvents,
+  logs: initialLogs,
+}: Props) {
   const [range, setRange] = useState<DateRange | undefined>(
     defaultRange || {
       from: subDays(new Date(), 7),
@@ -38,7 +46,7 @@ export function CampaignsClientPage({ defaultRange, events: initialEvents, logs:
     return `/api/admin/campaign-data?${params.toString()}`;
   };
 
-  const fetcher = (url: string) => fetch(url).then(res => res.json());
+  const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
   const { data, size, setSize, isValidating } = useSWRInfinite(getKey, fetcher);
 
@@ -79,7 +87,8 @@ export function CampaignsClientPage({ defaultRange, events: initialEvents, logs:
               {range?.from ? (
                 range.to ? (
                   <>
-                    {range.from.toLocaleDateString()} - {range.to.toLocaleDateString()}
+                    {range.from.toLocaleDateString()} -{' '}
+                    {range.to.toLocaleDateString()}
                   </>
                 ) : (
                   range.from.toLocaleDateString()
@@ -100,7 +109,11 @@ export function CampaignsClientPage({ defaultRange, events: initialEvents, logs:
         </Popover>
       </div>
 
-      <CampaignFunnelTable events={events} logs={logs} dateRange={range || {}} />
+      <CampaignFunnelTable
+        events={events}
+        logs={logs}
+        dateRange={range || {}}
+      />
     </div>
   );
 }

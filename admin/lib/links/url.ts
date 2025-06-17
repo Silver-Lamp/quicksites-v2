@@ -1,4 +1,7 @@
-export function getTemplateUrl(id: string, query?: Record<string, string | number | boolean>): string {
+export function getTemplateUrl(
+  id: string,
+  query?: Record<string, string | number | boolean>
+): string {
   const base = `/templates/${id}`;
   if (!query) return base;
   const qs = new URLSearchParams();
@@ -8,7 +11,10 @@ export function getTemplateUrl(id: string, query?: Record<string, string | numbe
   return `${base}?${qs.toString()}`;
 }
 
-export function getSnapshotUrl(id: string, query?: Record<string, string | number | boolean>): string {
+export function getSnapshotUrl(
+  id: string,
+  query?: Record<string, string | number | boolean>
+): string {
   const base = `/shared/${id}`;
   if (!query) return base;
   const qs = new URLSearchParams();
@@ -17,4 +23,3 @@ export function getSnapshotUrl(id: string, query?: Record<string, string | numbe
   }
   return `${base}?${qs.toString()}`;
 }
-

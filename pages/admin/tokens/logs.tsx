@@ -7,7 +7,7 @@ import {
   CategoryScale,
   LinearScale,
   BarElement,
-  Tooltip
+  Tooltip,
 } from 'chart.js';
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Tooltip);
@@ -52,21 +52,26 @@ export default function TokenLogsDashboard() {
       {
         label: 'Downloads',
         data: Object.values(dateCounts),
-        backgroundColor: 'var(--color-accent)'
-      }
-    ]
+        backgroundColor: 'var(--color-accent)',
+      },
+    ],
   };
 
   const exportCSV = () => {
-    const rows = filtered.map(log => ({
+    const rows = filtered.map((log) => ({
       file: log.file_name,
       time: log.downloaded_at,
       token: log.token_hash,
       user_agent: log.user_agent,
-      suspicious: isSuspicious(log.token_hash)
+      suspicious: isSuspicious(log.token_hash),
     }));
     const csv = ['file,time,token,user_agent,suspicious']
-      .concat(rows.map(r => `${r.file},${r.time},${r.token},"${r.user_agent}",${r.suspicious}`))
+      .concat(
+        rows.map(
+          (r) =>
+            `${r.file},${r.time},${r.token},"${r.user_agent}",${r.suspicious}`
+        )
+      )
       .join('\n');
     const blob = new Blob([csv], { type: 'text/csv' });
     const url = URL.createObjectURL(blob);
@@ -113,9 +118,13 @@ export default function TokenLogsDashboard() {
           {filtered.map((log, i) => (
             <tr key={i} className="border-b border-zinc-800">
               <td className="p-2">{log.file_name}</td>
-              <td className="p-2">{new Date(log.downloaded_at).toLocaleString()}</td>
+              <td className="p-2">
+                {new Date(log.downloaded_at).toLocaleString()}
+              </td>
               <td className="p-2 text-xs truncate">
-                {isSuspicious(log.token_hash) && <span className="text-yellow-400">⚠️ </span>}
+                {isSuspicious(log.token_hash) && (
+                  <span className="text-yellow-400">⚠️ </span>
+                )}
                 {log.token_hash}
               </td>
               <td className="p-2 text-xs truncate">{log.user_agent}</td>

@@ -9,21 +9,26 @@ import {
 } from '@/components/admin/ui/dialog';
 import { Button } from '@/components/admin/ui/button';
 import { format, formatDistance } from 'date-fns';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/admin/ui/tooltip';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/admin/ui/tooltip';
 
 interface TimelineEvent {
-    type: string;
-    source: 'guest' | 'log';
-    created_at: string;
-    trigger_reason?: string;
-    referrer?: string;
-    page_url?: string;
-    platform?: string | null;
-    device_type?: string | null;
-    ip_address?: string | null;
-    user_agent?: string | null;
-    [key: string]: any; // optional fallback for dynamic props
-  }
+  type: string;
+  source: 'guest' | 'log';
+  created_at: string;
+  trigger_reason?: string;
+  referrer?: string;
+  page_url?: string;
+  platform?: string | null;
+  device_type?: string | null;
+  ip_address?: string | null;
+  user_agent?: string | null;
+  [key: string]: any; // optional fallback for dynamic props
+}
 
 interface Props {
   open: boolean;
@@ -71,68 +76,82 @@ export function UserTimelineDialog({
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="max-w-lg">
         <DialogHeader>
-          <DialogTitle className="text-lg font-bold">Timeline for {userLabel}</DialogTitle>
-          {guestEvents.length > 0 && (() => {
-  const firstView = guestEvents.find(e => e.type === 'view');
-  if (!firstView) return null;
+          <DialogTitle className="text-lg font-bold">
+            Timeline for {userLabel}
+          </DialogTitle>
+          {guestEvents.length > 0 &&
+            (() => {
+              const firstView = guestEvents.find((e) => e.type === 'view');
+              if (!firstView) return null;
 
-  const ref = (firstView as any).referrer || '';
-  const host = typeof window !== 'undefined' ? window.location.origin : '';
-  const isInternal = ref.startsWith(host) || ref === '';
+              const ref = (firstView as any).referrer || '';
+              const host =
+                typeof window !== 'undefined' ? window.location.origin : '';
+              const isInternal = ref.startsWith(host) || ref === '';
 
-  const refColor = ref
-    ? isInternal ? 'text-green-600' : 'text-red-600'
-    : 'text-muted-foreground';
+              const refColor = ref
+                ? isInternal
+                  ? 'text-green-600'
+                  : 'text-red-600'
+                : 'text-muted-foreground';
 
-  const utmFields = ['utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content'];
-  
-  return (
-    <div className="text-sm text-muted-foreground space-y-1 border p-2 rounded bg-muted">
-      {firstView.trigger_reason && (
-        <div>
-          <strong>Trigger:</strong> {firstView.trigger_reason}
-        </div>
-      )}
-      <div>
-        <strong>Referrer:</strong>{' '}
-        <span className={refColor}>{ref || 'none'}</span>
-      </div>
-      {(firstView as any).page_url && (
-        <div>
-          <strong>Page:</strong>{' '}
-          <a
-            href={(firstView as any).page_url}
-            target="_blank"
-            rel="noreferrer"
-            className="underline"
-          >
-            {(firstView as any).page_url}
-          </a>
-        </div>
-      )}
-      {utmFields
-        .filter((key) => (firstView as any)[key])
-        .map((key) => (
-          <div key={key}>
-            <strong>{key.replace('utm_', '').toUpperCase()}:</strong>{' '}
-            {(firstView as any)[key]}
-          </div>
-        ))}
-      {(firstView as any).page_url && (
-        <Button
-          size="sm"
-          variant="secondary"
-          className="mt-2"
-          onClick={() =>
-            window.open((firstView as any).page_url, '_blank')
-          }
-        >
-                Open Page Context ↗
-                </Button>
-            )}
-            </div>
-        );
-        })()}
+              const utmFields = [
+                'utm_source',
+                'utm_medium',
+                'utm_campaign',
+                'utm_term',
+                'utm_content',
+              ];
+
+              return (
+                <div className="text-sm text-muted-foreground space-y-1 border p-2 rounded bg-muted">
+                  {firstView.trigger_reason && (
+                    <div>
+                      <strong>Trigger:</strong> {firstView.trigger_reason}
+                    </div>
+                  )}
+                  <div>
+                    <strong>Referrer:</strong>{' '}
+                    <span className={refColor}>{ref || 'none'}</span>
+                  </div>
+                  {(firstView as any).page_url && (
+                    <div>
+                      <strong>Page:</strong>{' '}
+                      <a
+                        href={(firstView as any).page_url}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="underline"
+                      >
+                        {(firstView as any).page_url}
+                      </a>
+                    </div>
+                  )}
+                  {utmFields
+                    .filter((key) => (firstView as any)[key])
+                    .map((key) => (
+                      <div key={key}>
+                        <strong>
+                          {key.replace('utm_', '').toUpperCase()}:
+                        </strong>{' '}
+                        {(firstView as any)[key]}
+                      </div>
+                    ))}
+                  {(firstView as any).page_url && (
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      className="mt-2"
+                      onClick={() =>
+                        window.open((firstView as any).page_url, '_blank')
+                      }
+                    >
+                      Open Page Context ↗
+                    </Button>
+                  )}
+                </div>
+              );
+            })()}
         </DialogHeader>
 
         <div className="mb-2">
@@ -155,7 +174,8 @@ export function UserTimelineDialog({
                   : null;
 
               const deviceInfo =
-                e.source === 'guest' && (e.user_agent || e.platform || e.device_type)
+                e.source === 'guest' &&
+                (e.user_agent || e.platform || e.device_type)
                   ? [e.platform, e.device_type].filter(Boolean).join(' • ') +
                     (e.user_agent ? `\n${e.user_agent}` : '')
                   : null;
@@ -178,7 +198,9 @@ export function UserTimelineDialog({
                     <span className="text-muted-foreground text-xs">
                       {showAbsolute
                         ? format(e.timestamp, 'MMM d, yyyy HH:mm:ss')
-                        : formatDistance(e.timestamp, origin, { addSuffix: true })}
+                        : formatDistance(e.timestamp, origin, {
+                            addSuffix: true,
+                          })}
                     </span>
                   </div>
 
@@ -199,7 +221,9 @@ export function UserTimelineDialog({
           </TooltipProvider>
 
           {allEvents.length === 0 && (
-            <div className="text-muted-foreground italic">No events found for this user.</div>
+            <div className="text-muted-foreground italic">
+              No events found for this user.
+            </div>
           )}
         </div>
       </DialogContent>

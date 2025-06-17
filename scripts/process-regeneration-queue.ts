@@ -36,19 +36,17 @@ async function run() {
       .update({
         status: 'done',
         finished_at: new Date().toISOString(),
-        log: output
+        log: output,
       })
       .eq('id', job.id);
 
-    await supabase
-      .from('user_action_logs')
-      .insert([
-        {
-          domain_id: job.domain_id,
-          action_type: 'regeneration_complete',
-          triggered_by: job.triggered_by || 'queue_bot'
-        }
-      ]);
+    await supabase.from('user_action_logs').insert([
+      {
+        domain_id: job.domain_id,
+        action_type: 'regeneration_complete',
+        triggered_by: job.triggered_by || 'queue_bot',
+      },
+    ]);
 
     console.log('✅ Job complete.');
   } catch (err: any) {
@@ -59,7 +57,7 @@ async function run() {
       .update({
         status: 'error',
         finished_at: new Date().toISOString(),
-        log: err.message
+        log: err.message,
       })
       .eq('id', job.id);
   }

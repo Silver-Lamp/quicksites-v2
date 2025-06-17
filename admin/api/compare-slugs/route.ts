@@ -1,9 +1,23 @@
 /* app/api/compare-slugs/route.ts */
 
-import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
-import { cookies } from 'next/headers';
+import { z, ZodSchema } from 'zod';
+import {
+  badRequest,
+  internalError,
+  withValidation,
+} from '../../../lib/api/json.js';
 
+const SlugsSchema = z.object({
+  slugs: z.array(z.string()),
+});
+
+async function getSlugs(): Promise<{ slugs: string[] }> {
+  // Simulated payload — or real fetch logic here
+  const slugs = ['alpha-vs-beta', 'gamma-vs-delta'];
+  return { slugs };
+}
+
+export const GET = withValidation(getSlugs, SlugsSchema);
 export const runtime = 'edge';
 
 function getPermutations(values: string[]): string[] {
@@ -15,22 +29,20 @@ function getPermutations(values: string[]): string[] {
   }
   return pairs;
 }
-
-export async function GET(req: NextRequest) {
-  const cookieStore = cookies();
-  const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  );
-  const { data, error } = await supabase
-    .from('guest_upgrade_events')
-    .select('utm_campaign');
-
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-
-  const raw = data.map(row => row.utm_campaign || '(none)');
-  const unique = Array.from(new Set(raw)).filter(Boolean);
-  const slugs = getPermutations(unique);
-
-  return NextResponse.json({ slugs });
+export function withInput<T>(
+  schema: ZodSchema<T>,
+  handler: (input: T, req: Request) => Promise<Response>
+): (req: Request) => Promise<Response> {
+  return async (req: Request): Promise<Response> => {
+    try {
+      const body = await req.json();
+      const result = schema.safeParse(body);
+      if (!result.success) {
+        return badRequest('Invalid input', result.error.format());
+      }
+      return handler(result.data, req);
+    } catch (err: any) {
+      return internalError(err.message || 'Failed to parse request body');
+    }
+  };
 }

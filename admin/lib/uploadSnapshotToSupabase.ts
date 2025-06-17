@@ -2,7 +2,9 @@ import { supabase } from '@/admin/lib/supabaseClient';
 import { toPng } from 'html-to-image';
 import toast from 'react-hot-toast';
 
-export async function uploadSnapshotToSupabase(templateId: string): Promise<string | null> {
+export async function uploadSnapshotToSupabase(
+  templateId: string
+): Promise<string | null> {
   const node = document.getElementById('preview-capture');
   if (!node) {
     toast.error('No preview found to upload');
@@ -19,7 +21,7 @@ export async function uploadSnapshotToSupabase(templateId: string): Promise<stri
       .upload(fileName, blob, {
         cacheControl: '3600',
         upsert: true,
-        contentType: 'image/png'
+        contentType: 'image/png',
       });
 
     if (uploadError) {

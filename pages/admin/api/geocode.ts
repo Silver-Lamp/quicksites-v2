@@ -1,4 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
+import { json } from '@/lib/api/json';
 import { createClient } from '@supabase/supabase-js';
 
 const supabase = createClient(
@@ -6,11 +7,15 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
-const MAPBOX_TOKEN = 'pk.eyJ1Ijoic2FuZG9uanVyb3dza2kiLCJhIjoiY21iMWZ1cTl6MDd1cTJrb2kwbzBtNDA0MiJ9.4sm5hCpIOLmDKXwwccXbAw';
+const MAPBOX_TOKEN =
+  'pk.eyJ1Ijoic2FuZG9uanVyb3dza2kiLCJhIjoiY21iMWZ1cTl6MDd1cTJrb2kwbzBtNDA0MiJ9.4sm5hCpIOLmDKXwwccXbAw';
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+export default async function handler(
+  req: NextApiRequest,
+  res: NextApiResponse
+) {
   const { city, state } = req.query;
-  if (!city || !state) return res.status(400).json({ error: 'Missing city or state' });
+  if (!city || !state) return json({ error: 'Missing city or state' });
 
   try {
     const { data: cached } = await supabase
@@ -20,7 +25,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       .eq('state', state)
       .single();
 
-    if (cached) return res.status(200).json({ lat: cached.lat, lon: cached.lon });
+    if (cached) return json({ lat: cached.lat, lon: cached.lon });
 
     const query = encodeURIComponent(`${city}, ${state}, USA`);
     const url = `https://api.mapbox.com/geocoding/v5/mapbox.places/${query}.json?access_token=${MAPBOX_TOKEN}`;
@@ -32,12 +37,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     const [lon, lat] = feature.center;
 
-    await supabase.from('geo_cache').insert([{
-      city, state, lat, lon
-    }]);
+    await supabase.from('geo_cache').insert([
+      {
+        city,
+        state,
+        lat,
+        lon,
+      },
+    ]);
 
-    res.status(200).json({ lat, lon });
+    json({ lat, lon });
   } catch (err: any) {
-    res.status(500).json({ error: 'Geocoding failed', message: err.message });
+    json({ error: 'Geocoding failed', message: err.message });
   }
 }

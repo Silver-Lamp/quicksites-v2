@@ -1,20 +1,25 @@
 // hooks/useGeoLocation.ts
 import { useEffect, useState } from 'react';
-import { getCachedGeo, setCachedGeo } from '@/lib/geoCache';
-import staticGeo from '@/public/staticGeo.json';
+import { getCachedGeo, setCachedGeo } from '../lib/geoCache.js';
+import staticGeo from '../public/staticGeo.json';
 
 // USAGE:
-    // const { lat, lon, loading, error } = useGeoLocation('Franklin', 'WI');
-    // if (loading) return <p>Loading map...</p>;
-    // if (error) return <p>Error: {error}</p>;
+// const { lat, lon, loading, error } = useGeoLocation('Franklin', 'WI');
+// if (loading) return <p>Loading map...</p>;
+// if (error) return <p>Error: {error}</p>;
 
-function getStaticFallback(city: string, state: string): { lat: number; lon: number } | undefined {
+function getStaticFallback(
+  city: string,
+  state: string
+): { lat: number; lon: number } | undefined {
   const key = `${city.trim().toLowerCase()},${state.trim().toLowerCase()}`;
   return staticGeo[key as keyof typeof staticGeo];
 }
 
 export function useGeoLocation(city: string, state: string) {
-  const [coords, setCoords] = useState<{ lat: number; lon: number } | null>(null);
+  const [coords, setCoords] = useState<{ lat: number; lon: number } | null>(
+    null
+  );
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -44,7 +49,9 @@ export function useGeoLocation(city: string, state: string) {
 
       // 3. Remote API
       try {
-        const res = await fetch(`/api/geocode?city=${encodeURIComponent(city)}&state=${encodeURIComponent(state)}`);
+        const res = await fetch(
+          `/api/geocode?city=${encodeURIComponent(city)}&state=${encodeURIComponent(state)}`
+        );
         if (!res.ok) throw new Error(`API failed: ${res.status}`);
         const data = await res.json();
         const lat = Number(data.lat || 0);

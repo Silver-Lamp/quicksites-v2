@@ -21,7 +21,9 @@ export function AvatarMenu({
   onLogout: () => void;
 }) {
   const [open, setOpen] = useState(false);
-  const avatar = avatarUrl || `https://gravatar.com/avatar/${email ? md5(email.trim().toLowerCase()) : 'unknown'}?d=identicon`;
+  const avatar =
+    avatarUrl ||
+    `https://gravatar.com/avatar/${email ? md5(email.trim().toLowerCase()) : 'unknown'}?d=identicon`;
   const menuRef = useRef<HTMLDivElement>(null);
 
   // Close on outside click
@@ -45,7 +47,11 @@ export function AvatarMenu({
         aria-label="Avatar menu"
       >
         <div className="w-6 h-6 sm:w-5 sm:h-5 rounded-full overflow-hidden border border-white">
-          <img src={avatar} alt="avatar" className="w-full h-full object-cover" />
+          <img
+            src={avatar}
+            alt="avatar"
+            className="w-full h-full object-cover"
+          />
         </div>
       </button>
 

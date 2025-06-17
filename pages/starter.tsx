@@ -1,5 +1,6 @@
 'use client';
 import { useEffect, useState } from 'react';
+import { json } from '@/lib/api/json';
 import { useRouter } from 'next/router';
 import { createClient } from '@supabase/supabase-js';
 import { generateBaseSlug } from '@/lib/slugHelpers';
@@ -23,7 +24,9 @@ export default function StarterPage() {
   const [slug, setSlug] = useState('');
   const [domain, setDomain] = useState('');
   const [template, setTemplate] = useState<any>(null);
-  const [templateVersionId, setTemplateVersionId] = useState<string | null>(null);
+  const [templateVersionId, setTemplateVersionId] = useState<string | null>(
+    null
+  );
   const [loading, setLoading] = useState(false);
   const [slugAvailable, setSlugAvailable] = useState<boolean | null>(null);
   const [generatingSlug, setGeneratingSlug] = useState(false);
@@ -46,7 +49,7 @@ export default function StarterPage() {
       .limit(1)
       .then(({ data, error }) => {
         if (error || !data?.length) {
-          console.error("Template version load error:", error);
+          console.error('Template version load error:', error);
           setTemplate(null);
           setTemplateVersionId(null);
         } else {
@@ -74,15 +77,15 @@ export default function StarterPage() {
   // Debounced auto-slug/domain generation
   useEffect(() => {
     if (!bizName.trim()) return;
-  
+
     setGeneratingSlug(true);
     const baseSlug = generateBaseSlug(bizName, location);
     const fullDomain = `${baseSlug}.com`;
-  
+
     const delay = setTimeout(() => {
       setSlug(baseSlug);
       setDomain(fullDomain);
-  
+
       // Typewriter effect
       let i = 0;
       const typeInterval = setInterval(() => {
@@ -94,18 +97,20 @@ export default function StarterPage() {
         }
       }, 50); // typing speed in ms
     }, 300);
-  
+
     return () => clearTimeout(delay);
   }, [bizName, location]);
-    
+
   const claimIt = async () => {
     if (!templateVersionId) {
-      alert("Template failed to load. Please choose a different template or try again.");
+      alert(
+        'Template failed to load. Please choose a different template or try again.'
+      );
       return;
     }
 
     if (slugAvailable === false) {
-      alert("That slug is already taken. Please choose another.");
+      alert('That slug is already taken. Please choose another.');
       return;
     }
 
@@ -126,31 +131,39 @@ export default function StarterPage() {
 
       if (!res.ok) {
         const errorText = await res.text();
-        console.error("Create site error:", errorText);
-        alert("Error creating site. Check console for details.");
+        console.error('Create site error:', errorText);
+        alert('Error creating site. Check console for details.');
         setLoading(false);
         return;
       }
 
-      const site = await res.json();
+      const site = await json();
       const slugToUse = site.slug ?? site.site_id;
       router.push(`/edit/${slugToUse}`);
     } catch (err) {
-      console.error("Unexpected error in claimIt:", err);
-      alert("Unexpected error. Please try again.");
+      console.error('Unexpected error in claimIt:', err);
+      alert('Unexpected error. Please try again.');
       setLoading(false);
     }
   };
 
   return (
     <div className="max-w-xl mx-auto text-white p-6 space-y-6">
-      <h1 className="text-3xl font-bold text-center">✨ Create Your QuickSite</h1>
+      <h1 className="text-3xl font-bold text-center">
+        ✨ Create Your QuickSite
+      </h1>
 
       {template ? (
         <div className="bg-zinc-800 p-4 rounded shadow">
-          <h2 className="text-xl font-semibold mb-1">{template.template_name}</h2>
+          <h2 className="text-xl font-semibold mb-1">
+            {template.template_name}
+          </h2>
           {template.thumbnail_url && (
-            <img src={template.thumbnail_url} alt="Preview" className="rounded mb-3" />
+            <img
+              src={template.thumbnail_url}
+              alt="Preview"
+              className="rounded mb-3"
+            />
           )}
           <p className="text-sm text-zinc-400 mb-2">{template.description}</p>
         </div>
@@ -164,7 +177,7 @@ export default function StarterPage() {
           <input
             ref={bizNameRef}
             value={bizName}
-            onChange={e => setBizName(e.target.value)}
+            onChange={(e) => setBizName(e.target.value)}
             className="w-full mb-3 p-2 rounded bg-zinc-800 text-white"
             placeholder="e.g. Towmanz"
           />
@@ -174,29 +187,35 @@ export default function StarterPage() {
           <label className="text-sm text-zinc-400">Location (optional)</label>
           <input
             value={location}
-            onChange={e => setLocation(e.target.value)}
+            onChange={(e) => setLocation(e.target.value)}
             className="w-full mb-3 p-2 rounded bg-zinc-800 text-white"
             placeholder="e.g. Auburn, WA"
           />
         </div>
 
         <div>
-          <label className="text-sm text-zinc-400">Custom Slug (optional)</label>
+          <label className="text-sm text-zinc-400">
+            Custom Slug (optional)
+          </label>
           <input
             value={slug}
-            onChange={e => setSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]+/g, '-'))}
+            onChange={(e) =>
+              setSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]+/g, '-'))
+            }
             className="w-full mb-1 p-2 rounded bg-zinc-800 text-white"
             placeholder="e.g. mytow-auburn"
           />
           {slug && slugAvailable !== null && (
-            <p className={`text-sm ${slugAvailable ? 'text-green-400' : 'text-red-400'}`}>
+            <p
+              className={`text-sm ${slugAvailable ? 'text-green-400' : 'text-red-400'}`}
+            >
               {slugAvailable ? '✅ Available' : '🚫 Already taken'}
             </p>
           )}
         </div>
         {/* {generatingSlug && ( */}
-          {/* <div className="flex justify-center items-center gap-2 text-sm text-zinc-400"> */}
-            {/* <svg className="animate-spin h-4 w-4 text-zinc-400" viewBox="0 0 24 24">
+        {/* <div className="flex justify-center items-center gap-2 text-sm text-zinc-400"> */}
+        {/* <svg className="animate-spin h-4 w-4 text-zinc-400" viewBox="0 0 24 24">
               <circle
                 className="opacity-25"
                 cx="12"
@@ -212,8 +231,8 @@ export default function StarterPage() {
                 d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
               />
             </svg> */}
-            {/* Generating domain... */}
-          {/* </div> */}
+        {/* Generating domain... */}
+        {/* </div> */}
         {/* )} */}
 
         <div className="text-center space-y-2">
@@ -231,7 +250,11 @@ export default function StarterPage() {
                       /edit/{slug}
                     </code>
                     <button
-                      onClick={() => copyToClipboard(`${window.location.origin}/edit/${slug}`)}
+                      onClick={() =>
+                        copyToClipboard(
+                          `${window.location.origin}/edit/${slug}`
+                        )
+                      }
                       className="text-blue-400 hover:underline text-xs"
                     >
                       Copy
@@ -244,7 +267,9 @@ export default function StarterPage() {
                       https://{slug}.quicksites.ai
                     </code>
                     <button
-                      onClick={() => copyToClipboard(`https://${slug}.quicksites.ai`)}
+                      onClick={() =>
+                        copyToClipboard(`https://${slug}.quicksites.ai`)
+                      }
                       className="text-blue-400 hover:underline text-xs"
                     >
                       Copy Public Link
@@ -264,7 +289,8 @@ export default function StarterPage() {
           ) : (
             bizName.trim() !== '' && (
               <p className="text-sm text-red-400">
-                ⚠️ Please complete the business name and location to generate a domain.
+                ⚠️ Please complete the business name and location to generate a
+                domain.
               </p>
             )
           )}

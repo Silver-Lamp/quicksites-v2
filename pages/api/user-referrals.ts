@@ -1,13 +1,18 @@
 import { createClient } from '@supabase/supabase-js';
+import { json } from '@/lib/api/json';
 import { getBadgeForReferrals } from '@/lib/getBadgeForReferrer';
+import { NextApiRequest, NextApiResponse } from 'next';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
-export default async function handler(req, res) {
-  const { email } = req.query;
+export default async function handler(
+  _req: NextApiRequest,
+  res: NextApiResponse
+) {
+  const { email } = _req.query;
 
   const { data: logs, count } = await supabase
     .from('referral_logs')
@@ -22,10 +27,10 @@ export default async function handler(req, res) {
 
   const badge = getBadgeForReferrals(count ?? 0);
 
-  res.status(200).json({
+  json({
     count: count ?? 0,
     avatar: user?.user_metadata?.avatar_url || '',
     bio: user?.user_metadata?.bio || '',
-    badge
+    badge,
   });
 }

@@ -9,7 +9,7 @@ export async function createSharedPreview({
   templateData,
   theme,
   brand,
-  colorScheme
+  colorScheme,
 }: {
   templateId: string;
   templateName: string;
@@ -36,7 +36,7 @@ export async function createSharedPreview({
       .upload(filePath, blob, {
         cacheControl: '3600',
         upsert: true,
-        contentType: 'image/png'
+        contentType: 'image/png',
       });
 
     if (uploadError) {
@@ -48,7 +48,9 @@ export async function createSharedPreview({
       return null;
     }
 
-    const { data: urlData } = supabase.storage.from('previews').getPublicUrl(filePath);
+    const { data: urlData } = supabase.storage
+      .from('previews')
+      .getPublicUrl(filePath);
     const public_url = urlData?.publicUrl;
 
     const { error: insertError } = await supabase.from('snapshots').insert([
@@ -62,8 +64,8 @@ export async function createSharedPreview({
         brand,
         color_scheme: colorScheme,
         thumbnail_url: public_url,
-        shared_at: new Date().toISOString()
-      }
+        shared_at: new Date().toISOString(),
+      },
     ]);
 
     if (insertError) {

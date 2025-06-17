@@ -2,7 +2,7 @@ name: Close Stale Discussions
 
 on:
   schedule:
-    - cron: '0 6 * * 1'  # Every Monday at 6:00 UTC
+    - cron: '0 6 * * 1' # Every Monday at 6:00 UTC
   workflow_dispatch:
 
 jobs:

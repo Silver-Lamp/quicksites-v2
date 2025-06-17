@@ -1,13 +1,18 @@
 import { createClient } from '@supabase/supabase-js';
+import { json } from '@/lib/api/json';
+import { NextApiRequest, NextApiResponse } from 'next';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
-export default async function handler(req, res) {
+export default async function handler(
+  req: NextApiRequest,
+  res: NextApiResponse
+) {
   const { user_id, type } = req.query;
-  if (!user_id || !type) return res.status(400).json({ error: 'Missing parameters' });
+  if (!user_id || !type) return json({ error: 'Missing parameters' });
 
   const column = type === 'sent' ? 'user_id' : 'receiver_id';
   const matchColumn = type === 'sent' ? 'user_id' : 'block_id';
@@ -19,7 +24,7 @@ export default async function handler(req, res) {
     .order('created_at', { ascending: false })
     .limit(50);
 
-  if (error) return res.status(500).json({ error });
+  if (error) return json({ error });
 
-  res.status(200).json(data);
+  json(data);
 }

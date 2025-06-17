@@ -8,7 +8,8 @@ const supabase = createClient(
 export async function getSnapshotWithBranding(snapshotId: string) {
   const { data, error } = await supabase
     .from('snapshots')
-    .select(`
+    .select(
+      `
       id,
       template_name,
       data,
@@ -18,7 +19,8 @@ export async function getSnapshotWithBranding(snapshotId: string) {
         accent_color,
         logo_url
       )
-    `)
+    `
+    )
     .eq('id', snapshotId)
     .single();
 
@@ -29,6 +31,6 @@ export async function getSnapshotWithBranding(snapshotId: string) {
 
   return {
     ...data,
-    branding: data.branding_profiles || {}
+    branding: data.branding_profiles || {},
   };
 }

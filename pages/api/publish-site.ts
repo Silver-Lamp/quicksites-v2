@@ -1,11 +1,16 @@
 import { createClient } from '@supabase/supabase-js';
+import { json } from '@/lib/api/json';
+import { NextApiRequest, NextApiResponse } from 'next';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
-export default async function handler(req, res) {
+export default async function handler(
+  req: NextApiRequest,
+  res: NextApiResponse
+) {
   const { domain } = JSON.parse(req.body);
 
   const { data: site } = await supabase
@@ -14,7 +19,7 @@ export default async function handler(req, res) {
     .eq('domain', domain)
     .maybeSingle();
 
-  if (!site) return res.status(404).json({ error: 'Domain not found' });
+  if (!site) return json({ error: 'Domain not found' });
 
   await supabase.from('public_sites').upsert({
     id: site.id,
@@ -25,5 +30,5 @@ export default async function handler(req, res) {
     updated_at: new Date().toISOString(),
   });
 
-  return res.status(200).json({ success: true });
+  return json({ success: true });
 }

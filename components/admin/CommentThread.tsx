@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
-import { Input } from '../components/ui/input';
-import { Button } from '../components/ui/button';
-import { Textarea } from '../components/ui/textarea';
+import { Input } from '@/components/admin/ui/input';
+import { Button } from '@/components/admin/ui/button';
+import { Textarea } from '@/components/admin/ui/textarea';
 
 type Comment = {
   id: string;
@@ -33,8 +33,8 @@ export default function CommentThread({ snapshotId }: { snapshotId: string }) {
       body: JSON.stringify({
         snapshot_id: snapshotId,
         author_email: author || 'anonymous',
-        message: newComment
-      })
+        message: newComment,
+      }),
     });
     if (res.ok) {
       setNewComment('');
@@ -72,7 +72,9 @@ export default function CommentThread({ snapshotId }: { snapshotId: string }) {
           value={newComment}
           onChange={(e) => setNewComment(e.target.value)}
         />
-        <Button onClick={submitComment} size="sm">Post Comment</Button>
+        <Button onClick={submitComment} size="sm">
+          Post Comment
+        </Button>
       </div>
     </div>
   );

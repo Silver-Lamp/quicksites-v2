@@ -1,12 +1,13 @@
 'use client';
 import { useEffect, useState } from 'react';
+import { json } from '@/lib/api/json';
 
 export default function HabitLibrary() {
   const [templates, setTemplates] = useState([]);
 
   useEffect(() => {
     fetch('/api/habit-templates')
-      .then(res => res.json())
+      .then((res) => json())
       .then(setTemplates);
   }, []);
 
@@ -18,7 +19,9 @@ export default function HabitLibrary() {
           <li key={t.slug} className="bg-zinc-800 rounded p-4">
             <div className="flex justify-between items-center">
               <div>
-                <div className="text-lg font-semibold">{t.emoji} {t.title}</div>
+                <div className="text-lg font-semibold">
+                  {t.emoji} {t.title}
+                </div>
                 <div className="text-sm text-zinc-400">{t.message}</div>
               </div>
               <a

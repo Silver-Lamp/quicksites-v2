@@ -1,4 +1,5 @@
 import { RewardTally } from '@/components/RewardTally';
+import { json } from '@/lib/api/json';
 import { useUser } from '@supabase/auth-helpers-react';
 import { useEffect, useState } from 'react';
 
@@ -10,7 +11,7 @@ export default function Profile() {
   useEffect(() => {
     if (user) {
       fetch(`/api/reward-points?user_id=${user.id}`)
-        .then(res => res.json())
+        .then((res) => json())
         .then((d) => setPoints(d.total || 0));
       setRefLink(`${window.location.origin}/?ref=${user.id}`);
     }

@@ -1,13 +1,16 @@
 // lib/resolveGeo.ts
-import staticGeo from '@/public/staticGeo.json';
-import { getCachedGeo, setCachedGeo } from './geoCache';
+import staticGeo from '../public/staticGeo.json' with { type: 'module' };
+import { getCachedGeo, setCachedGeo } from './geoCache.js';
 
 function getStaticFallback(city: string, state: string) {
   const key = `${city.trim().toLowerCase()},${state.trim().toLowerCase()}`;
   return staticGeo[key as keyof typeof staticGeo];
 }
 
-export async function resolveGeo(city: string, state: string): Promise<{ lat: number; lon: number }> {
+export async function resolveGeo(
+  city: string,
+  state: string
+): Promise<{ lat: number; lon: number }> {
   const mem = getCachedGeo(city, state);
   if (mem) return mem;
 
@@ -17,7 +20,9 @@ export async function resolveGeo(city: string, state: string): Promise<{ lat: nu
     return fallback;
   }
 
-  const res = await fetch(`/api/geocode?city=${encodeURIComponent(city)}&state=${encodeURIComponent(state)}`);
+  const res = await fetch(
+    `/api/geocode?city=${encodeURIComponent(city)}&state=${encodeURIComponent(state)}`
+  );
   if (!res.ok) return { lat: 0, lon: 0 };
 
   const data = await res.json();

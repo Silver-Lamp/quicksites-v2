@@ -12,7 +12,9 @@ async function run() {
 
   const { data: clicks } = await supabase
     .from('user_action_logs')
-    .select('*, leads(id, domain_id, email, business_name), domains(is_claimed)')
+    .select(
+      '*, leads(id, domain_id, email, business_name), domains(is_claimed)'
+    )
     .eq('action_type', 'click_second_chance')
     .gte('timestamp', since);
 
@@ -41,7 +43,9 @@ async function run() {
     console.log('📧 FOLLOW-UP EMAIL');
     console.log('To:', log.triggered_by);
     console.log('Subject: Still Interested?');
-    console.log(`Body: You clicked on your reserved site but haven’t claimed it yet. Still interested? https://${alt}`);
+    console.log(
+      `Body: You clicked on your reserved site but haven’t claimed it yet. Still interested? https://${alt}`
+    );
 
     await supabase.from('user_action_logs').insert([
       {
@@ -49,8 +53,8 @@ async function run() {
         domain_id,
         action_type: 'second_chance_followup',
         triggered_by: 'campaign_bot',
-        notes: `Follow-up for ${alt}`
-      }
+        notes: `Follow-up for ${alt}`,
+      },
     ]);
   }
 }

@@ -1,11 +1,11 @@
 import { createClient } from '@supabase/supabase-js';
 
 const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  );
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+);
 
-  export async function generateUniqueSlug(base: string): Promise<string> {
+export async function generateUniqueSlug(base: string): Promise<string> {
   let slug = base;
   let attempt = 1;
 
@@ -25,16 +25,18 @@ const supabase = createClient(
 }
 
 export function toSlug(input: string): string {
-    return input
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, '-')   // replace non-alphanumerics with dashes
-      .replace(/^-+|-+$/g, '')       // trim leading/trailing dashes
-      .replace(/--+/g, '-');         // collapse multiple dashes
-  }
-  
-  export function generateBaseSlug(businessName: string, location?: string): string {
-    const name = toSlug(businessName);
-    const loc = location ? toSlug(location.split(',')[0]) : '';
-    return loc ? `${name}-${loc}` : name;
-  }
-  
+  return input
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-') // replace non-alphanumerics with dashes
+    .replace(/^-+|-+$/g, '') // trim leading/trailing dashes
+    .replace(/--+/g, '-'); // collapse multiple dashes
+}
+
+export function generateBaseSlug(
+  businessName: string,
+  location?: string
+): string {
+  const name = toSlug(businessName);
+  const loc = location ? toSlug(location.split(',')[0]) : '';
+  return loc ? `${name}-${loc}` : name;
+}

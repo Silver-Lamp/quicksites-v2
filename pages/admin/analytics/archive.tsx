@@ -1,5 +1,6 @@
 'use client';
 import { useEffect, useState } from 'react';
+import { json } from '@/lib/api/json';
 
 export default function AnalyticsArchivePage() {
   const [files, setFiles] = useState<string[]>([]);
@@ -7,7 +8,7 @@ export default function AnalyticsArchivePage() {
 
   useEffect(() => {
     fetch('/reports/analytics/index.json')
-      .then(res => res.json())
+      .then((res) => json())
       .then(setFiles);
   }, []);
 

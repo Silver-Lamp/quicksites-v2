@@ -3,17 +3,23 @@
 
 import { useEffect, useState } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
-import { publishSite } from '@/admin/lib/publishSite';
-import { logEvent } from '@/admin/lib/logEvent';
+import { publishSite } from '@/admin/utils/publishSite';
+import { logEvent } from '@/admin/utils/logEvent';
 import dynamic from 'next/dynamic';
 
-const SitePreview = dynamic(() => import('@/admin/components/SitePreview'), { ssr: false });
+const SitePreview = dynamic(() => import('@/components/admin/SitePreview'), {
+  ssr: false,
+});
 
 export default function LaunchPage() {
   const params = useSearchParams();
   const router = useRouter();
-  const [status, setStatus] = useState<'idle' | 'confirm' | 'publishing' | 'done' | 'error'>('idle');
-  const [siteParams, setSiteParams] = useState<Record<string, any> | null>(null);
+  const [status, setStatus] = useState<
+    'idle' | 'confirm' | 'publishing' | 'done' | 'error'
+  >('idle');
+  const [siteParams, setSiteParams] = useState<Record<string, any> | null>(
+    null
+  );
   const [resultUrl, setResultUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -34,7 +40,7 @@ export default function LaunchPage() {
     if (!siteParams) return;
     setStatus('publishing');
     try {
-      const url = await publishSite(siteParams);
+      const url = await publishSite(siteParams as any);
       await logEvent('deploy_site', {
         params: siteParams,
         resultUrl: url,
@@ -53,7 +59,9 @@ export default function LaunchPage() {
 
       {status === 'confirm' && siteParams && (
         <div className="space-y-6">
-          <p className="text-gray-700">Please confirm the following parameters:</p>
+          <p className="text-gray-700">
+            Please confirm the following parameters:
+          </p>
           <pre className="text-left text-sm bg-gray-100 p-4 rounded border overflow-auto max-h-96">
             {JSON.stringify(siteParams, null, 2)}
           </pre>
@@ -61,7 +69,11 @@ export default function LaunchPage() {
           <div className="border rounded bg-white p-4 shadow">
             <p className="text-left text-sm font-medium mb-2">Preview:</p>
             <div className="border rounded overflow-hidden">
-              <SitePreview params={siteParams} />
+              {/* <SitePreview params={siteParams} /> */}
+              <iframe
+                src={`/admin/preview?params=${encodeURIComponent(JSON.stringify(siteParams))}`}
+                className="w-full h-full"
+              />
             </div>
           </div>
 
@@ -78,7 +90,9 @@ export default function LaunchPage() {
 
       {status === 'done' && resultUrl && (
         <div className="space-y-4">
-          <p className="text-green-600 font-semibold">Site published successfully!</p>
+          <p className="text-green-600 font-semibold">
+            Site published successfully!
+          </p>
           <a
             href={resultUrl}
             target="_blank"

@@ -16,11 +16,12 @@ export function MissingLink({
       {...rest}
       onClick={(e) => {
         e.preventDefault();
-        console.warn(`SmartLink: attempted to render ${type} link with missing ID`);
+        console.warn(
+          `SmartLink: attempted to render ${type} link with missing ID`
+        );
       }}
     >
       Invalid {type}
     </div>
   );
 }
-

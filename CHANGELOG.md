@@ -1,7 +1,9 @@
 # Changelog
 
 ## [1.0.0] – 2025-05-22
+
 ### Added
+
 - Admin dashboard scaffold with modular structure
 - Viewer role redirection to read-only dashboard
 - Domain queue system with claim toggle + template edit

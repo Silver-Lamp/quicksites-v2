@@ -20,7 +20,7 @@ const nextConfig = {
       { source: '/admin/sites/:slug', destination: '/sites/:slug' },
       { source: '/admin/sites', destination: '/sites' },
     ];
-  }
+  },
 };
 
 export default nextConfig;

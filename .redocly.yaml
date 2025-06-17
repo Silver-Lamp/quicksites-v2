@@ -1,0 +1,7 @@
+apiDefinitions:
+  main: openapi.json
+
+rules:
+  info-contact: off
+  tag-description: off
+  no-unused-components: warn

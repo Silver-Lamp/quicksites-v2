@@ -25,7 +25,9 @@ export default function SupabaseSchemaDashboard() {
 
   return (
     <>
-      <Head><title>Synced Schemas</title></Head>
+      <Head>
+        <title>Synced Schemas</title>
+      </Head>
       <div className="max-w-3xl mx-auto p-6">
         <h1 className="text-xl font-bold mb-4">📂 Supabase Synced Schemas</h1>
         <input
@@ -50,7 +52,9 @@ export default function SupabaseSchemaDashboard() {
             <li key={s.id} className="bg-white rounded shadow p-4">
               <p className="text-sm text-gray-600">
                 <strong>{s.name}</strong>
-                <span className="ml-2 text-xs text-gray-400">({new Date(s.created_at).toLocaleString()})</span>
+                <span className="ml-2 text-xs text-gray-400">
+                  ({new Date(s.created_at).toLocaleString()})
+                </span>
               </p>
               <pre className="bg-gray-100 mt-2 p-2 text-xs overflow-auto rounded h-40">
                 {JSON.stringify(JSON.parse(s.json), null, 2)}

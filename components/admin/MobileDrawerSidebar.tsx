@@ -12,7 +12,7 @@ export default function MobileDrawerSidebar() {
     { label: 'Dashboard', href: '/admin/dashboard' },
     { label: 'Sites', href: '/admin/sites' },
     { label: 'Logs', href: '/admin/logs' },
-    { label: 'Sitemap Diffs', href: '/docs/diffs', badge: '🆕' }
+    { label: 'Sitemap Diffs', href: '/docs/diffs', badge: '🆕' },
   ];
 
   const handleTouchStart = (e: React.TouchEvent) => {
@@ -48,7 +48,10 @@ export default function MobileDrawerSidebar() {
             transition={{ duration: 0.2 }}
             className="fixed inset-y-0 left-0 w-64 bg-zinc-900 text-white shadow-lg z-40 p-4 space-y-4"
           >
-            <button className="absolute top-4 right-4 text-zinc-400" onClick={() => setOpen(false)}>
+            <button
+              className="absolute top-4 right-4 text-zinc-400"
+              onClick={() => setOpen(false)}
+            >
               <X className="w-5 h-5" />
             </button>
 
@@ -61,7 +64,11 @@ export default function MobileDrawerSidebar() {
                   onClick={() => setOpen(false)}
                 >
                   <span>{label}</span>
-                  {badge && <span className="ml-2 text-yellow-400 text-xs">{badge}</span>}
+                  {badge && (
+                    <span className="ml-2 text-yellow-400 text-xs">
+                      {badge}
+                    </span>
+                  )}
                 </Link>
               ))}
             </nav>

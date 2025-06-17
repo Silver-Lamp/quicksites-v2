@@ -1,0 +1,26 @@
+name: Lint OpenAPI
+
+on:
+  push:
+    paths:
+      - 'scripts/gen-openapi.ts'
+      - 'openapi.json'
+      - 'lib/api/**'
+  pull_request:
+    paths:
+      - 'scripts/gen-openapi.ts'
+      - 'openapi.json'
+      - 'lib/api/**'
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+      - run: npm ci
+      - run: npx tsx scripts/gen-openapi.ts
+      - run: npx openapi lint openapi.json

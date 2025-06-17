@@ -6,7 +6,7 @@ type Mode = 'mobile' | 'tablet' | 'desktop';
 type Orientation = 'portrait' | 'landscape';
 
 export default function DevicePreviewWrapper({
-  children
+  children,
 }: {
   children: React.ReactNode;
 }) {
@@ -23,17 +23,19 @@ export default function DevicePreviewWrapper({
     const sizes = {
       mobile: {
         portrait: 'w-[375px] h-[667px]',
-        landscape: 'w-[667px] h-[375px]'
+        landscape: 'w-[667px] h-[375px]',
       },
       tablet: {
         portrait: 'w-[768px] h-[1024px]',
-        landscape: 'w-[1024px] h-[768px]'
+        landscape: 'w-[1024px] h-[768px]',
       },
       desktop: {
-        default: 'w-[1024px] h-auto'
-      }
+        default: 'w-[1024px] h-auto',
+      },
     };
-    return mode === 'desktop' ? sizes.desktop.default : sizes[mode][orientation];
+    return mode === 'desktop'
+      ? sizes.desktop.default
+      : sizes[mode][orientation];
   };
 
   const bezelFrame = (content: React.ReactNode) => {
@@ -48,13 +50,26 @@ export default function DevicePreviewWrapper({
           viewBox="0 0 400 800"
           preserveAspectRatio="xMidYMid meet"
         >
-          <rect x="10" y="10" width="380" height="780" rx="40" ry="40" fill="none" stroke="#999" strokeWidth="20" />
+          <rect
+            x="10"
+            y="10"
+            width="380"
+            height="780"
+            rx="40"
+            ry="40"
+            fill="none"
+            stroke="#999"
+            strokeWidth="20"
+          />
         </svg>
         <div
           className={`z-0 relative rounded-md overflow-hidden ${getSizeClass(mode, orientation)}`}
           id="preview-target"
         >
-          <div id="preview-capture" className="bg-white dark:bg-gray-900 w-full h-full overflow-y-auto p-4">
+          <div
+            id="preview-capture"
+            className="bg-white dark:bg-gray-900 w-full h-full overflow-y-auto p-4"
+          >
             {content}
           </div>
         </div>
@@ -80,13 +95,16 @@ export default function DevicePreviewWrapper({
         {(mode === 'mobile' || mode === 'tablet') && (
           <Button
             onClick={() =>
-              setOrientation((prev) => (prev === 'portrait' ? 'landscape' : 'portrait'))
+              setOrientation((prev) =>
+                prev === 'portrait' ? 'landscape' : 'portrait'
+              )
             }
             size="sm"
             variant="secondary"
             className="flex items-center gap-2"
           >
-            <RotateCw size={14} /> {orientation === 'portrait' ? 'Portrait' : 'Landscape'}
+            <RotateCw size={14} />{' '}
+            {orientation === 'portrait' ? 'Portrait' : 'Landscape'}
           </Button>
         )}
       </div>

@@ -1,9 +1,14 @@
 // pages/api/slack/embed-alert.ts
+import { createClient } from '@supabase/supabase-js';
+import { json } from '@/lib/api/json';
 import type { NextApiRequest, NextApiResponse } from 'next';
 
 const webhookUrl = process.env.SLACK_WEBHOOK_URL;
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+export default async function handler(
+  req: NextApiRequest,
+  res: NextApiResponse
+) {
   if (req.method !== 'POST') return res.status(405).end();
   const { schema_id, count } = req.body;
 
@@ -36,9 +41,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     });
 
     if (!response.ok) throw new Error('Slack webhook failed');
-    res.status(200).json({ ok: true });
+    json({ ok: true });
   } catch (err) {
     console.error('Slack alert failed', err);
-    res.status(500).json({ error: 'Slack alert failed' });
+    json({ error: 'Slack alert failed' });
   }
 }

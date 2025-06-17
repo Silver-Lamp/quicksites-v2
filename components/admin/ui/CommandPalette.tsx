@@ -7,7 +7,7 @@ const routes = [
   { label: 'Themes', path: '/admin/branding' },
   { label: 'Templates', path: '/admin/templates' },
   { label: 'Docs', path: '/admin/docs' },
-  { label: 'Gallery', path: '/gallery' }
+  { label: 'Gallery', path: '/gallery' },
 ];
 
 export default function CommandPalette() {
@@ -19,14 +19,16 @@ export default function CommandPalette() {
     const handler = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
         e.preventDefault();
-        setOpen(o => !o);
+        setOpen((o) => !o);
       }
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
   }, []);
 
-  const filtered = routes.filter(r => r.label.toLowerCase().includes(query.toLowerCase()));
+  const filtered = routes.filter((r) =>
+    r.label.toLowerCase().includes(query.toLowerCase())
+  );
 
   return (
     open && (
@@ -35,12 +37,12 @@ export default function CommandPalette() {
           <input
             autoFocus
             value={query}
-            onChange={e => setQuery(e.target.value)}
+            onChange={(e) => setQuery(e.target.value)}
             className="w-full border p-2 rounded text-sm"
             placeholder="Jump to..."
           />
           <ul className="space-y-1 text-sm">
-            {filtered.map(r => (
+            {filtered.map((r) => (
               <li key={r.path}>
                 <button
                   onClick={() => {

@@ -19,16 +19,24 @@ export default function TagInput({ tags, onChange }: TagInputProps) {
   };
 
   const removeTag = (tag: string) => {
-    onChange(tags.filter(t => t !== tag));
+    onChange(tags.filter((t) => t !== tag));
   };
 
   return (
     <div>
       <div className="flex flex-wrap gap-2 mb-2">
-        {tags.map(tag => (
-          <span key={tag} className="inline-flex items-center bg-muted text-sm px-2 py-1 rounded">
+        {tags.map((tag) => (
+          <span
+            key={tag}
+            className="inline-flex items-center bg-muted text-sm px-2 py-1 rounded"
+          >
             {tag}
-            <button onClick={() => removeTag(tag)} className="ml-1 text-red-500 hover:text-red-700">×</button>
+            <button
+              onClick={() => removeTag(tag)}
+              className="ml-1 text-red-500 hover:text-red-700"
+            >
+              ×
+            </button>
           </span>
         ))}
       </div>
@@ -39,7 +47,9 @@ export default function TagInput({ tags, onChange }: TagInputProps) {
           onKeyDown={(e) => e.key === 'Enter' && addTag()}
           placeholder="Add tag and press Enter"
         />
-        <Button size="sm" onClick={addTag}>Add</Button>
+        <Button size="sm" onClick={addTag}>
+          Add
+        </Button>
       </div>
     </div>
   );

@@ -6,7 +6,7 @@ const routes = [
   { label: 'Dashboard', href: '/admin/dashboard' },
   { label: 'Sites', href: '/admin/sites' },
   { label: 'Logs', href: '/admin/logs' },
-  { label: 'Sitemap Diffs', href: '/docs/diffs', badge: '🆕' }
+  { label: 'Sitemap Diffs', href: '/docs/diffs', badge: '🆕' },
 ];
 
 export default function NavBarWithBadges() {

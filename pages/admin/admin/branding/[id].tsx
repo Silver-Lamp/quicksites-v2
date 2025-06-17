@@ -27,7 +27,9 @@ export default function BrandingProfilePage() {
       .single()
       .then(({ data }) => {
         if (data) {
-          const accessParam = new URLSearchParams(window.location.search).get('access');
+          const accessParam = new URLSearchParams(window.location.search).get(
+            'access'
+          );
           if (!data.access_token && !data.password) {
             setAccessOk(true);
           } else if (data.access_token && accessParam === data.access_token) {
@@ -42,7 +44,10 @@ export default function BrandingProfilePage() {
       });
   }, [id]);
 
-  if (!profile) return <p className="p-6 text-sm text-muted-foreground">Loading profile...</p>;
+  if (!profile)
+    return (
+      <p className="p-6 text-sm text-muted-foreground">Loading profile...</p>
+    );
 
   if (!accessOk && profile?.password) {
     return (
@@ -52,7 +57,7 @@ export default function BrandingProfilePage() {
           className="border px-2 py-1 rounded mr-2"
           placeholder="Enter password"
           value={passwordAttempt}
-          onChange={e => setPasswordAttempt(e.target.value)}
+          onChange={(e) => setPasswordAttempt(e.target.value)}
         />
         <button
           className="bg-black text-white px-3 py-1 rounded"
@@ -72,12 +77,15 @@ export default function BrandingProfilePage() {
   function downloadPDF() {
     const element = document.getElementById('branding-preview-pdf');
     if (element) {
-      html2pdf().set({
-        filename: `${profile.name}-preview.pdf`,
-        margin: 10,
-        html2canvas: { scale: 2 },
-        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
-      }).from(element).save();
+      html2pdf()
+        .set({
+          filename: `${profile.name}-preview.pdf`,
+          margin: 10,
+          html2canvas: { scale: 2 },
+          jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+        })
+        .from(element)
+        .save();
     }
   }
 
@@ -94,11 +102,18 @@ export default function BrandingProfilePage() {
           <span className="px-2 py-1 rounded bg-gray-200">{profile.brand}</span>
 
           {profile.accent_color && (
-            <span className="w-5 h-5 rounded-full border" style={{ backgroundColor: profile.accent_color }} />
+            <span
+              className="w-5 h-5 rounded-full border"
+              style={{ backgroundColor: profile.accent_color }}
+            />
           )}
 
           {profile.logo_url && (
-            <img src={profile.logo_url} alt="Logo" className="w-8 h-8 rounded-full" />
+            <img
+              src={profile.logo_url}
+              alt="Logo"
+              className="w-8 h-8 rounded-full"
+            />
           )}
         </div>
 
@@ -120,7 +135,9 @@ export default function BrandingProfilePage() {
 
         <div>
           <p className="text-sm">Link:</p>
-          <code className="text-xs bg-gray-100 p-2 rounded block">{previewUrl}</code>
+          <code className="text-xs bg-gray-100 p-2 rounded block">
+            {previewUrl}
+          </code>
         </div>
       </div>
 

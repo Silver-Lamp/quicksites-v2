@@ -1,7 +1,10 @@
 import { supabase } from '@/admin/lib/supabaseClient';
 import QRCodeLib from 'qrcode';
 
-export async function uploadQRCodeImage(slug: string, url: string): Promise<string> {
+export async function uploadQRCodeImage(
+  slug: string,
+  url: string
+): Promise<string> {
   const canvas = document.createElement('canvas');
   await QRCodeLib.toCanvas(canvas, url, { width: 512 });
 

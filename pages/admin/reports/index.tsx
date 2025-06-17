@@ -1,25 +1,31 @@
 'use client';
 import { useEffect, useState } from 'react';
+import { json } from '@/lib/api/json';
 
 export default function ReportsDashboardExtended() {
   const [log, setLog] = useState('');
   const [storage, setStorage] = useState<{ [key: string]: number }>({});
-  const [dates, setDates] = useState<{ oldest: string; newest: string }>({ oldest: '', newest: '' });
+  const [dates, setDates] = useState<{ oldest: string; newest: string }>({
+    oldest: '',
+    newest: '',
+  });
   const [email, setEmail] = useState('analytics@quicksites.ai');
   const [nightly, setNightly] = useState(true);
   const [weekly, setWeekly] = useState(true);
 
   useEffect(() => {
     fetch('/reports/activity.log')
-      .then(res => res.text())
+      .then((res) => res.text())
       .then(setLog);
 
     fetch('/reports/analytics/index.json')
-      .then(res => res.json())
-      .then(files => {
+      .then((res) => json())
+      .then((files) => {
         const csvs = files.filter((f: string) => f.endsWith('.csv')).length;
         const pdfs = files.filter((f: string) => f.endsWith('.pdf')).length;
-        const sorted = files.filter((f: string) => f.match(/_(\d{4}-\d{2}-\d{2})/)).sort();
+        const sorted = files
+          .filter((f: string) => f.match(/_(\d{4}-\d{2}-\d{2})/))
+          .sort();
         const oldest = sorted[0]?.match(/_(\d{4}-\d{2}-\d{2})/)?.[1] || '';
         const newest = sorted.at(-1)?.match(/_(\d{4}-\d{2}-\d{2})/)?.[1] || '';
         setStorage({ csvs, pdfs });
@@ -28,7 +34,11 @@ export default function ReportsDashboardExtended() {
   }, []);
 
   const confirmDelete = () => {
-    if (window.confirm('Are you sure? This will delete all CSVs, PDFs, and previews.')) {
+    if (
+      window.confirm(
+        'Are you sure? This will delete all CSVs, PDFs, and previews.'
+      )
+    ) {
       // You would replace this with a server call to delete files
       console.log('🧹 Deleting all archive files...');
     }

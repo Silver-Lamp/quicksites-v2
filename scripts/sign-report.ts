@@ -3,7 +3,7 @@ import path from 'path';
 import crypto from 'crypto';
 
 const dir = './reports/security';
-const files = fs.readdirSync(dir).filter(f => f.endsWith('.pdf'));
+const files = fs.readdirSync(dir).filter((f) => f.endsWith('.pdf'));
 const output = [];
 
 for (const file of files) {
@@ -12,5 +12,8 @@ for (const file of files) {
   output.push(`${file}  ${hash}`);
 }
 
-fs.writeFileSync('./public/reports/security-hashes.json', JSON.stringify(output, null, 2));
+fs.writeFileSync(
+  './public/reports/security-hashes.json',
+  JSON.stringify(output, null, 2)
+);
 console.log('✅ security-hashes.json updated');

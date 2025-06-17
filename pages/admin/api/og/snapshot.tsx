@@ -1,15 +1,13 @@
-import { renderOgImage } from '../../../lib/og/renderOgImage';
-import { createClient } from '@supabase/supabase-js';
+import { renderOgImage } from '@/admin/lib/og/renderOgImage';
+import { supabase } from '@/lib/supabase';
+import { Theme, Brand } from '@/types/template';
+import { NextApiRequest, NextApiResponse } from 'next';
 
-export const config = { runtime: 'edge' };
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
-
-export default async function handler(req: Request) {
-  const { searchParams } = new URL(req.url);
+export default async function handler(
+  req: NextApiRequest,
+  res: NextApiResponse
+) {
+  const { searchParams } = new URL(req.url || '');
   const snapshotId = searchParams.get('snapshotId');
   const theme = searchParams.get('theme') || 'dark';
   const brand = searchParams.get('brand') || 'green';
@@ -26,10 +24,17 @@ export default async function handler(req: Request) {
 
     if (data && !error) {
       title = data.template_name || title;
-      const hero = data.data?.pages?.[0]?.content_blocks?.find((b: any) => b.type === 'hero');
+      const hero = data.data?.pages?.[0]?.content_blocks?.find(
+        (b: any) => b.type === 'hero'
+      );
       if (hero?.content) content = hero.content;
     }
   }
 
-  return renderOgImage({ title, content, theme, brand });
+  return renderOgImage({
+    title,
+    content,
+    theme: theme as Theme,
+    brand: brand as Brand,
+  });
 }

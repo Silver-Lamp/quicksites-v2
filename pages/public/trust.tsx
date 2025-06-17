@@ -1,12 +1,13 @@
 'use client';
 import { useEffect, useState } from 'react';
+import { json } from '@/lib/api/json';
 
 export default function TrustPage() {
   const [hashes, setHashes] = useState<string[]>([]);
 
   useEffect(() => {
     fetch('/reports/security-hashes.json')
-      .then(res => res.json())
+      .then(res => json())
       .then(setHashes);
   }, []);
 

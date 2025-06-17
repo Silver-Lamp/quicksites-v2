@@ -1,5 +1,6 @@
 'use client';
 import ReactFlow, { Background, Controls } from 'reactflow';
+import { json } from '@/lib/api/json';
 import 'reactflow/dist/style.css';
 import { useEffect, useState } from 'react';
 
@@ -9,7 +10,7 @@ export default function RemixMap() {
 
   useEffect(() => {
     fetch('/api/remix-dag')
-      .then(res => res.json())
+      .then((res) => json())
       .then(({ nodes, edges }) => {
         setNodes(nodes);
         setEdges(edges);

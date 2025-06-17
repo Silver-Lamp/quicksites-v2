@@ -1,15 +1,21 @@
 import { createClient } from '@supabase/supabase-js';
+import { json } from '@/lib/api/json';
+import { NextApiRequest, NextApiResponse } from 'next';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
-export default async function handler(req, res) {
+export default async function handler(
+  req: NextApiRequest,
+  res: NextApiResponse
+) {
   const { tags } = req.query;
-  if (!tags) return res.status(400).json({ error: 'Missing tags' });
+  if (!tags || typeof tags !== 'string')
+    return json({ error: 'Missing or invalid tags' });
 
-  const tagArray = tags.split(',').map(t => t.trim());
+  const tagArray = tags.split(',').map((t: string) => t.trim());
 
   const { data, error } = await supabase
     .from('public_profiles')
@@ -18,7 +24,7 @@ export default async function handler(req, res) {
     .eq('visible', true)
     .limit(50);
 
-  if (error) return res.status(500).json({ error });
+  if (error) return json({ error });
 
-  res.status(200).json(data);
+  json(data);
 }

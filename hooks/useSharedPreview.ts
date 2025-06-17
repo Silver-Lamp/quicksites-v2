@@ -10,7 +10,7 @@ export function useSharedPreview() {
       commitMessage = '',
       theme,
       brand,
-      colorScheme
+      colorScheme,
     }: {
       templateId: string;
       templateName: string;

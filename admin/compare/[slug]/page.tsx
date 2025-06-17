@@ -1,12 +1,19 @@
-/* app/compare/[slug]/page.tsx */
-
 'use client';
 
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
-import { CampaignComparison } from '@/components/admin/admin/CampaignComparison';
+import dynamic from 'next/dynamic';
 import { toast } from 'react-hot-toast';
 import { supabase } from '@/admin/lib/supabaseClient';
+
+// 🧠 Dynamic import fixes ESM/CommonJS mismatch
+const CampaignComparison = dynamic(
+  () =>
+    import('../../../components/admin/admin/CampaignComparison.jsx').then(
+      (mod) => mod.CampaignComparison
+    ),
+  { ssr: false }
+);
 
 export default function CompareSlugPage() {
   const { slug } = useParams();
@@ -42,7 +49,9 @@ export default function CompareSlugPage() {
     } else {
       await supabase
         .from('user_pinned_slugs')
-        .insert([{ user_id: userId, slug, pinned_at: new Date().toISOString() }]);
+        .insert([
+          { user_id: userId, slug, pinned_at: new Date().toISOString() },
+        ]);
       toast('Pinned to sidebar', { duration: 2000 });
     }
     setPinned(!pinned);
@@ -53,7 +62,9 @@ export default function CompareSlugPage() {
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-bold flex items-center gap-2">
           Campaign Comparison: {slug}
-          {pinned && <span className="text-yellow-400 text-sm animate-pulse">📌</span>}
+          {pinned && (
+            <span className="text-yellow-400 text-sm animate-pulse">📌</span>
+          )}
         </h1>
         <button
           onClick={togglePin}
@@ -62,6 +73,7 @@ export default function CompareSlugPage() {
           {pinned ? 'Unpin from sidebar' : '⭐ Pin to sidebar'}
         </button>
       </div>
+
       <CampaignComparison slug={typeof slug === 'string' ? slug : ''} />
     </div>
   );

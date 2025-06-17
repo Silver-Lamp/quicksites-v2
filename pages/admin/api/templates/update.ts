@@ -1,4 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
+import { json } from '@/lib/api/json';
 import { createClient } from '@supabase/supabase-js';
 import { create } from 'jsondiffpatch';
 
@@ -7,7 +8,10 @@ const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 );
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+export default async function handler(
+  req: NextApiRequest,
+  res: NextApiResponse
+) {
   if (req.method !== 'POST') return res.status(405).end();
 
   const { template_name, newData, editor_id, commit_message } = req.body;
@@ -31,10 +35,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     full_data: newData,
     diff,
     editor_id,
-    commit_message: commit_message || 'Update from editor'
+    commit_message: commit_message || 'Update from editor',
   });
 
-  if (updateErr) return res.status(500).json({ error: updateErr.message });
+  if (updateErr) return json({ error: updateErr.message });
 
-  res.status(200).json({ success: true });
+  json({ success: true });
 }

@@ -11,25 +11,25 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v3
+      - name: Checkout repository
+        uses: actions/checkout@v3
 
-    - name: Setup Node.js
-      uses: actions/setup-node@v3
-      with:
-        node-version: 18
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18
 
-    - name: Install dependencies
-      run: npm install
+      - name: Install dependencies
+        run: npm install
 
-    - name: Lint
-      run: npm run lint || echo "Lint errors ignored for now"
+      - name: Lint
+        run: npm run lint || echo "Lint errors ignored for now"
 
-    - name: Generate Sitemap
-      run: npm run generate:sitemap
+      - name: Generate Sitemap
+        run: npm run generate:sitemap
 
-    - name: Build
-      run: npm run build
+      - name: Build
+        run: npm run build
 
-    - name: Run Tests
-      run: npm run test || echo "Tests failed or are not configured"
+      - name: Run Tests
+        run: npm run test || echo "Tests failed or are not configured"

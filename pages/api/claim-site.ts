@@ -1,11 +1,16 @@
 import { createClient } from '@supabase/supabase-js';
+import { json } from '@/lib/api/json';
+import { NextApiRequest, NextApiResponse } from 'next';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
-export default async function handler(req, res) {
+export default async function handler(
+  req: NextApiRequest,
+  res: NextApiResponse
+) {
   const { slug, email, anon } = JSON.parse(req.body);
 
   const { data: domain } = await supabase
@@ -15,7 +20,7 @@ export default async function handler(req, res) {
     .maybeSingle();
 
   if (!domain || domain.is_claimed) {
-    return res.status(400).json({ error: 'Already claimed' });
+    return json({ error: 'Already claimed' });
   }
 
   const updates = {
@@ -36,5 +41,5 @@ export default async function handler(req, res) {
     });
   }
 
-  return res.status(200).json({ success: true });
+  return json({ success: true });
 }

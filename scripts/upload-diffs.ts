@@ -2,10 +2,14 @@ import { readFile } from 'fs/promises';
 import * as Diff from 'diff';
 import { supabase } from '@/lib/supabase';
 
-async function generateAndUploadDiff(fileA: string, fileB: string, uploadKey: string) {
+async function generateAndUploadDiff(
+  fileA: string,
+  fileB: string,
+  uploadKey: string
+) {
   const [xmlA, xmlB] = await Promise.all([
     readFile(fileA, 'utf8'),
-    readFile(fileB, 'utf8')
+    readFile(fileB, 'utf8'),
   ]);
 
   const patch = Diff.createPatch(uploadKey, xmlA, xmlB, 'Previous', 'Current');
@@ -14,7 +18,7 @@ async function generateAndUploadDiff(fileA: string, fileB: string, uploadKey: st
     .from('sitemaps')
     .upload(uploadKey, patch, {
       contentType: 'text/plain',
-      upsert: true
+      upsert: true,
     });
 
   if (error) {

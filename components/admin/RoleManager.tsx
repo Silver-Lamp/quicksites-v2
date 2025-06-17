@@ -41,7 +41,11 @@ export default function RoleManager() {
 
     if (!error) {
       setRoles((prev) => [
-        { user_email: email, role: newRole, updated_at: new Date().toISOString() },
+        {
+          user_email: email,
+          role: newRole,
+          updated_at: new Date().toISOString(),
+        },
         ...prev.filter((r) => r.user_email !== email),
       ]);
     }
@@ -63,13 +67,18 @@ export default function RoleManager() {
         </thead>
         <tbody>
           {roles.map((r, idx) => (
-            <tr key={`${r.user_email}-${idx}`} className="border-t border-zinc-800">
+            <tr
+              key={`${r.user_email}-${idx}`}
+              className="border-t border-zinc-800"
+            >
               <td className="p-2">{r.user_email}</td>
               <td className="p-2">{r.role}</td>
               <td className="p-2">
                 <select
                   value={r.role}
-                  onChange={(e) => handleChangeRole(r.user_email, e.target.value)}
+                  onChange={(e) =>
+                    handleChangeRole(r.user_email, e.target.value)
+                  }
                   className="bg-zinc-800 text-white p-1 rounded"
                 >
                   {AVAILABLE_ROLES.map((role) => (

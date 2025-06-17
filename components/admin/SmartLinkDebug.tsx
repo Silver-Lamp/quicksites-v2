@@ -1,5 +1,5 @@
 import { useSmartLinkPersisted } from './useSmartLinkPersisted';
-
+import type { LinkTheme } from '@/admin/lib/links/theme';
 import { useEffect, useState } from 'react';
 
 export default function SmartLinkDebug() {
@@ -7,7 +7,7 @@ export default function SmartLinkDebug() {
 
   useEffect(() => {
     const toggle = (e: KeyboardEvent) => {
-      if (e.shiftKey && e.key.toLowerCase() === 'd') setVisible(v => !v);
+      if (e.shiftKey && e.key.toLowerCase() === 'd') setVisible((v) => !v);
     };
     window.addEventListener('keydown', toggle);
     return () => window.removeEventListener('keydown', toggle);
@@ -41,7 +41,7 @@ export default function SmartLinkDebug() {
         <label className="block text-xs text-zinc-400 mb-1">Theme</label>
         <select
           value={theme}
-          onChange={(e) => setTheme(e.target.value)}
+          onChange={(e) => setTheme(e.target.value as LinkTheme)}
           className="bg-zinc-800 border border-zinc-600 rounded px-2 py-1 w-full"
         >
           <option value="primary">Primary</option>

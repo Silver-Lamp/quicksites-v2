@@ -1,11 +1,14 @@
 'use client';
 import { useEffect, useState } from 'react';
+import { json } from '@/lib/api/json';
 
 export default function ScreenshotQueuePage() {
   const [items, setItems] = useState([]);
 
   useEffect(() => {
-    fetch('/api/screenshot/queue').then((res) => res.json()).then(setItems);
+    fetch('/api/screenshot/queue')
+      .then((res) => json())
+      .then(setItems);
   }, []);
 
   return (
@@ -25,8 +28,14 @@ export default function ScreenshotQueuePage() {
             <tr key={item.id}>
               <td className="p-2">{item.domain}</td>
               <td className="p-2">{item.status}</td>
-              <td className="p-2">{new Date(item.requested_at).toLocaleString()}</td>
-              <td className="p-2">{item.completed_at ? new Date(item.completed_at).toLocaleString() : '-'}</td>
+              <td className="p-2">
+                {new Date(item.requested_at).toLocaleString()}
+              </td>
+              <td className="p-2">
+                {item.completed_at
+                  ? new Date(item.completed_at).toLocaleString()
+                  : '-'}
+              </td>
             </tr>
           ))}
         </tbody>

@@ -13,12 +13,15 @@ export function SettingsSchema({
   values: Record<string, any>;
   onChange: (key: string, value: any) => void;
 }) {
-  const grouped = Object.entries(schema).reduce((acc, [key, config]) => {
-    const group = config.group || 'Default';
-    acc[group] = acc[group] || [];
-    acc[group].push([key, config]);
-    return acc;
-  }, {} as Record<string, [string, any][]>);
+  const grouped = Object.entries(schema).reduce(
+    (acc, [key, config]) => {
+      const group = config.group || 'Default';
+      acc[group] = acc[group] || [];
+      acc[group].push([key, config]);
+      return acc;
+    },
+    {} as Record<string, [string, any][]>
+  );
 
   const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>(
     Object.fromEntries(Object.keys(grouped).map((g) => [g, true]))
@@ -30,7 +33,9 @@ export function SettingsSchema({
         <div key={group} className="border rounded-md overflow-hidden">
           <button
             type="button"
-            onClick={() => setExpandedGroups((prev) => ({ ...prev, [group]: !prev[group] }))}
+            onClick={() =>
+              setExpandedGroups((prev) => ({ ...prev, [group]: !prev[group] }))
+            }
             className="w-full px-4 py-2 bg-zinc-100 dark:bg-zinc-800 text-left font-semibold text-sm hover:bg-zinc-200 dark:hover:bg-zinc-700"
           >
             {expandedGroups[group] ? '▾' : '▸'} {group}
@@ -73,11 +78,14 @@ export function SettingsSchema({
                             min={config.min}
                             max={config.max}
                             step={config.step || 1}
-                            onChange={(e) => onChange(key, Number(e.target.value))}
+                            onChange={(e) =>
+                              onChange(key, Number(e.target.value))
+                            }
                           />
                           {isOutOfBounds && (
                             <div className="text-xs text-red-500 mt-1">
-                              Value should be between {config.min} and {config.max}
+                              Value should be between {config.min} and{' '}
+                              {config.max}
                             </div>
                           )}
                         </>

@@ -1,18 +1,25 @@
 // --- File: pages/api/clone-template.ts ---
-import { supabase } from '@/admin/lib/supabaseClientClient';
+import { NextApiRequest, NextApiResponse } from 'next';
+import { json } from '@/lib/api/json';
+import { supabase } from '@/lib/supabase';
+import router from 'next/router';
+import toast from 'react-hot-toast';
 
-export default async function handler(req, res) {
+export default async function handler(
+  req: NextApiRequest,
+  res: NextApiResponse
+) {
   if (req.method !== 'POST') return res.status(405).end();
 
   const { slug, templateId, brandingProfileId } = req.body;
 
   if (!slug || !templateId) {
-    return res.status(400).json({ error: 'Missing slug or templateId' });
+    return json({ error: 'Missing slug or templateId' });
   }
 
   const slugPattern = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
   if (!slugPattern.test(slug)) {
-    return res.status(400).json({ error: 'Invalid slug format' });
+    return json({ error: 'Invalid slug format' });
   }
 
   const { data: existing, error: checkError } = await supabase
@@ -22,7 +29,7 @@ export default async function handler(req, res) {
     .single();
 
   if (existing) {
-    return res.status(409).json({ error: 'Slug already exists.' });
+    return json({ error: 'Slug already exists.' });
   }
 
   const { data: templateData, error: templateError } = await supabase
@@ -32,7 +39,7 @@ export default async function handler(req, res) {
     .single();
 
   if (templateError || !templateData) {
-    return res.status(404).json({ error: 'Template not found.' });
+    return json({ error: 'Template not found.' });
   }
 
   const { error: insertError } = await supabase.from('sites').insert({
@@ -44,12 +51,11 @@ export default async function handler(req, res) {
   });
 
   if (insertError) {
-    return res.status(500).json({ error: insertError.message });
+    return json({ error: insertError.message });
   }
 
-  return res.status(200).json({ success: true });
+  return json({ success: true });
 }
-
 
 // --- Frontend Submit Logic Example (React component) ---
 
@@ -59,18 +65,18 @@ const handlePublish = async () => {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        slug,
-        templateId: currentTemplate.id,
-        brandingProfileId: selectedBrandingId,
+        slug: 'test',
+        templateId: 'test',
+        brandingProfileId: 'test',
       }),
     });
 
-    const result = await res.json();
+    const result = await json();
     if (!res.ok) throw new Error(result.error);
 
     toast.success('Site published!');
-    router.push(`/sites/${slug}`);
-  } catch (err) {
+    router.push(`/sites/test`);
+  } catch (err: any) {
     toast.error(err.message);
   }
 };

@@ -81,12 +81,17 @@ export default function Heatmap({ daysBack = 180 }: { daysBack?: number }) {
       <div className="flex space-x-2">
         <div className="flex flex-col space-y-1 mt-5">
           {['Sun', 'Tue', 'Thu', 'Sat'].map((day) => (
-            <div key={day} className="text-xs text-gray-400">{day}</div>
+            <div key={day} className="text-xs text-gray-400">
+              {day}
+            </div>
           ))}
         </div>
         <div className="grid grid-cols-27 gap-1 text-xs">
           {dates.map((date) => {
-            const count = (activity as Record<string, { user: number; ip: number }>)[date]?.[mode] || 0;
+            const count =
+              (activity as Record<string, { user: number; ip: number }>)[
+                date
+              ]?.[mode] || 0;
             const title = `${date}: ${count} ${mode === 'ip' ? 'unique IPs' : 'user(s)'}`;
             return (
               <div

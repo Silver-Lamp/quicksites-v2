@@ -3,46 +3,61 @@ import {
   closestCenter,
   useSensor,
   useSensors,
-  PointerSensor
+  PointerSensor,
 } from '@dnd-kit/core';
 import {
   SortableContext,
   useSortable,
   arrayMove,
-  verticalListSortingStrategy
+  verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { Input } from '../ui/input';
 import { Button } from '../ui/button';
 import TemplatePreview from './TemplatePreview';
+import type { Page } from '@/types/template';
+import { Block } from '@/types/blocks';
 
 type ReorderablePageListProps = {
   template: any;
-  pages: any[];
+  pages: Page[];
   colorScheme: string;
-  onBlockClick?: (block: any) => void;
-  onReorder: (pages: any[]) => void;
+  onReorder: (pages: Page[]) => void;
+  onBlockClick?: (block: Block) => void;
 };
 
 function SortablePage({
   id,
-  children
+  children,
 }: {
   id: string;
   children: React.ReactNode;
 }) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
-    useSortable({ id });
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({
+    id,
+  });
 
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
     opacity: isDragging ? 0.6 : 1,
-    zIndex: isDragging ? 10 : 1
+    zIndex: isDragging ? 10 : 1,
   };
 
   return (
-    <div ref={setNodeRef} style={style} {...attributes} className="group relative border rounded mb-6">
+    <div
+      ref={setNodeRef}
+      style={style}
+      {...attributes}
+      className="group relative border rounded mb-6"
+    >
       <div
         {...listeners}
         className="absolute -left-6 top-2 text-gray-300 group-hover:text-gray-600 cursor-grab"
@@ -58,7 +73,7 @@ export default function ReorderablePageList({
   pages,
   colorScheme,
   onBlockClick,
-  onReorder
+  onReorder,
 }: ReorderablePageListProps) {
   const sensors = useSensors(useSensor(PointerSensor));
 
@@ -80,7 +95,11 @@ export default function ReorderablePageList({
 
   const handleDuplicate = (index: number) => {
     const clone = { ...pages[index], slug: pages[index].slug + '-copy' };
-    const updated = [...pages.slice(0, index + 1), clone, ...pages.slice(index + 1)];
+    const updated = [
+      ...pages.slice(0, index + 1),
+      clone,
+      ...pages.slice(index + 1),
+    ];
     onReorder(updated);
   };
 
@@ -128,7 +147,7 @@ export default function ReorderablePageList({
             <TemplatePreview
               data={{ pages: [page] }}
               colorScheme={colorScheme}
-              onBlockClick={onBlockClick}
+              onBlockClick={onBlockClick as any}
             />
           </SortablePage>
         ))}

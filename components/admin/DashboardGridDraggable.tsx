@@ -2,10 +2,15 @@
 
 'use client';
 
-import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
+import {
+  DragDropContext,
+  Droppable,
+  Draggable,
+  DropResult,
+} from '@hello-pangea/dnd';
 import { AddBlockMenu } from './AddBlockMenu';
 import { useState } from 'react';
-import { BlockSettingsModal } from '@/components/admin/BlockSettingsModal';
+import BlockSettingsModal from '@/components/admin/BlockSettingsModal';
 
 const ALL_BLOCKS = [
   { id: 'activity', title: 'Activity' },
@@ -82,7 +87,11 @@ export default function DashboardGridDraggable({
             >
               {order.map((block, index) =>
                 hidden.includes(block.id) ? null : (
-                  <Draggable key={block.id} draggableId={block.id} index={index}>
+                  <Draggable
+                    key={block.id}
+                    draggableId={block.id}
+                    index={index}
+                  >
                     {(draggable) => (
                       <div
                         ref={draggable.innerRef}

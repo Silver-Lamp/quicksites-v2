@@ -1,22 +1,26 @@
 import { createClient } from '@supabase/supabase-js';
+import { NextApiRequest, NextApiResponse } from 'next';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
-export default async function handler(_req, res) {
+export default async function handler(
+  _req: NextApiRequest,
+  res: NextApiResponse
+) {
   const { data: campaigns } = await supabase
     .from('support_campaigns')
     .select('id, slug, headline, target_action, created_by, created_at');
 
   const results = [];
 
-  for (const c of campaigns) {
+  for (const c of campaigns || []) {
     const { count } = await supabase
       .from('block_feedback')
       .select('id', { count: 'exact', head: true })
-      .eq('block_id', c.block_id)
+      .eq('block_id', c.id)
       .eq('action', c.target_action);
 
     results.push({
@@ -25,18 +29,22 @@ export default async function handler(_req, res) {
       action: c.target_action,
       created_by: c.created_by,
       created_at: c.created_at,
-      count
+      count,
     });
   }
 
   res.setHeader('Content-Type', 'text/csv');
-  res.setHeader('Content-Disposition', 'attachment; filename="campaign-analytics.csv"');
-
-  const header = 'slug,headline,action,created_by,created_at,count';
-  const rows = results.map(r =>
-    [r.slug, r.headline, r.action, r.created_by, r.created_at, r.count].join(',')
+  res.setHeader(
+    'Content-Disposition',
+    'attachment; filename="campaign-analytics.csv"'
   );
 
-  res.send([header, ...rows].join('
-'));
+  const header = 'slug,headline,action,created_by,created_at,count';
+  const rows = results.map((r) =>
+    [r.slug, r.headline, r.action, r.created_by, r.created_at, r.count].join(
+      ','
+    )
+  );
+
+  res.send([header, ...rows].join('\n'));
 }

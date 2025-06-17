@@ -17,7 +17,10 @@ export default function ThemeToggle() {
   };
 
   return (
-    <button onClick={toggle} className="text-xs bg-gray-200 dark:bg-gray-700 text-black dark:text-white px-2 py-1 rounded">
+    <button
+      onClick={toggle}
+      className="text-xs bg-gray-200 dark:bg-gray-700 text-black dark:text-white px-2 py-1 rounded"
+    >
       {theme === 'dark' ? '☀️ Light' : '🌙 Dark'}
     </button>
   );

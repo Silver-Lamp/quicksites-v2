@@ -8,11 +8,11 @@
 </thead>
 <tbody>
   {entries.map((entry, i) => (
-    <tr key={i}>
-      <td className="p-2">{entry.alias || '🕶 Anonymous'}</td>
-      <td className="p-2 text-right">{entry.referrals || 0}</td>
-      <td className="p-2 text-right">{entry.points || 0}</td>
-      <td className="p-2 text-right font-bold">{(entry.referrals || 0) + (entry.points || 0)}</td>
-    </tr>
+  <tr key="{i}">
+    <td className="p-2">{entry.alias || '🕶 Anonymous'}</td>
+    <td className="p-2 text-right">{entry.referrals || 0}</td>
+    <td className="p-2 text-right">{entry.points || 0}</td>
+    <td className="p-2 text-right font-bold">{(entry.referrals || 0) + (entry.points || 0)}</td>
+  </tr>
   ))}
 </tbody>

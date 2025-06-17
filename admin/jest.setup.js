@@ -6,8 +6,8 @@ global.TextDecoder = TextDecoder;
 
 // Polyfill global.fetch for testing API calls in Node
 if (!global.fetch) {
-    global.fetch = require('node-fetch');
-  }
+  global.fetch = require('node-fetch');
+}
 // Inject missing globals for MSW + fetch support
 const fetch = require('node-fetch');
 

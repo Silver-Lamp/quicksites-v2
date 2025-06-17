@@ -3,7 +3,7 @@ import { toPng } from 'html-to-image';
 export async function generateSocialCard({
   targetId = 'preview-capture',
   filename = 'social-preview.png',
-  withWatermark = true
+  withWatermark = true,
 }: {
   targetId?: string;
   filename?: string;

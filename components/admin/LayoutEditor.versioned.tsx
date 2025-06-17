@@ -6,17 +6,28 @@ import DashboardBlock from '@/components/admin/DashboardBlock';
 import Heatmap from '@/components/analytics/Heatmap';
 import { Button } from '@/components/admin/ui/button';
 
+type LayoutBlock = {
+  id: keyof typeof BLOCK_LIBRARY;
+};
+
+type LayoutVersion = {
+  id: string;
+  created_at: string;
+  layout: LayoutBlock[];
+  hidden?: string[];
+};
+
 const BLOCK_LIBRARY = {
   activity: { title: 'Activity', render: <Heatmap daysBack={90} /> },
   engagement: { title: 'Engagement', render: <div>Engagement metrics...</div> },
   retention: { title: 'Retention', render: <div>Retention chart here</div> },
-  revenue: { title: 'Revenue', render: <div>Revenue trends...</div> }
+  revenue: { title: 'Revenue', render: <div>Revenue trends...</div> },
 };
 
 export default function LayoutEditor({ role = 'user' }) {
-  const [layout, setLayout] = useState([]);
+  const [layout, setLayout] = useState<LayoutBlock[]>([]);
   const [hidden, setHidden] = useState<string[]>([]);
-  const [versions, setVersions] = useState([]);
+  const [versions, setVersions] = useState<LayoutVersion[]>([]);
 
   useEffect(() => {
     (async () => {
@@ -25,6 +36,7 @@ export default function LayoutEditor({ role = 'user' }) {
         .select('layout, hidden')
         .eq('role', role)
         .single();
+
       if (current?.layout) setLayout(current.layout);
       if (current?.hidden) setHidden(current.hidden);
 
@@ -34,6 +46,7 @@ export default function LayoutEditor({ role = 'user' }) {
         .eq('role', role)
         .order('created_at', { ascending: false })
         .limit(5);
+
       setVersions(versionData || []);
     })();
   }, [role]);
@@ -43,7 +56,9 @@ export default function LayoutEditor({ role = 'user' }) {
       .from('dashboard_layouts')
       .upsert({ role, layout, hidden }, { onConflict: 'role' });
 
-    await supabase.from('dashboard_layout_versions').insert({ role, layout, hidden });
+    await supabase
+      .from('dashboard_layout_versions')
+      .insert({ role, layout, hidden });
 
     localStorage.setItem('dashboard-order', JSON.stringify(layout));
     localStorage.setItem('dashboard-hidden', JSON.stringify(hidden));
@@ -75,7 +90,10 @@ export default function LayoutEditor({ role = 'user' }) {
         <p className="text-sm font-medium mb-1">Recent Versions:</p>
         <ul className="space-y-2 mb-4">
           {versions.map((v) => (
-            <li key={v.id} className="flex justify-between items-center text-sm text-gray-600">
+            <li
+              key={v.id}
+              className="flex justify-between items-center text-sm text-gray-600"
+            >
               <span>{new Date(v.created_at).toLocaleString()}</span>
               <Button size="sm" onClick={() => restore(v.id)}>
                 Restore

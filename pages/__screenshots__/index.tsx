@@ -8,16 +8,27 @@ export async function getStaticProps() {
     : [];
 
   return {
-    props: { branches }
+    props: { branches },
   };
 }
 
-export default function ScreenshotDashboard({ branches }: { branches: string[] }) {
+export default function ScreenshotDashboard({
+  branches,
+}: {
+  branches: string[];
+}) {
   return (
-    <div style={{ fontFamily: 'sans-serif', padding: '2rem', background: '#111', color: '#eee' }}>
+    <div
+      style={{
+        fontFamily: 'sans-serif',
+        padding: '2rem',
+        background: '#111',
+        color: '#eee',
+      }}
+    >
       <h1>📸 QuickSites Visual QA Dashboard</h1>
       <ul>
-        {branches.map(branch => (
+        {branches.map((branch) => (
           <li key={branch}>
             <a
               href={`/__screenshots__/${branch}`}

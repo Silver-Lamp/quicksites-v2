@@ -1,11 +1,16 @@
 import { createClient } from '@supabase/supabase-js';
+import { json } from '@/lib/api/json';
+import { NextApiRequest, NextApiResponse } from 'next';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
-export default async function handler(_req, res) {
+export default async function handler(
+  _req: NextApiRequest,
+  res: NextApiResponse
+) {
   const oneDayAgo = new Date();
   oneDayAgo.setDate(oneDayAgo.getDate() - 1);
 
@@ -21,16 +26,16 @@ export default async function handler(_req, res) {
     supabase
       .from('published_site_views')
       .select('id', { count: 'exact', head: true })
-      .gt('viewed_at', oneDayAgo.toISOString())
+      .gt('viewed_at', oneDayAgo.toISOString()),
   ]);
 
   if (failed.error || feedback.error || checkins.error) {
-    return res.status(500).json({ error: 'Failed to fetch badge metrics.' });
+    return json({ error: 'Failed to fetch badge metrics.' });
   }
 
-  res.status(200).json({
+  json({
     failed: failed.count,
     new_feedback: feedback.count,
-    checkins: checkins.count
+    checkins: checkins.count,
   });
 }

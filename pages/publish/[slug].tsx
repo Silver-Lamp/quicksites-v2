@@ -1,17 +1,19 @@
 'use client';
 import { useEffect, useState } from 'react';
+import { json } from '@/lib/api/json';
 import { useRouter } from 'next/router';
+import { Template } from '@/types/template';
 
 export default function PublishPage() {
   const router = useRouter();
   const { slug } = router.query;
-  const [template, setTemplate] = useState(null);
+  const [template, setTemplate] = useState<Template | null>(null);
   const [status, setStatus] = useState<'idle' | 'publishing' | 'done'>('idle');
 
   useEffect(() => {
     if (!slug) return;
     fetch(`/api/template?domain=${slug}`)
-      .then((res) => res.json())
+      .then((res) => json())
       .then((d) => setTemplate(d?.data));
   }, [slug]);
 
@@ -29,7 +31,7 @@ export default function PublishPage() {
       <h1 className="text-2xl font-bold mb-4">🚀 Publish: {slug}</h1>
       {template && (
         <>
-          <p className="mb-2 text-sm text-zinc-400">Template: {template.template_id}</p>
+          <p className="mb-2 text-sm text-zinc-400">Template: {template.id}</p>
           <img
             src={`/screenshots/${slug}.thumb.png`}
             alt={`${slug} preview`}
@@ -38,7 +40,9 @@ export default function PublishPage() {
         </>
       )}
       {status === 'done' ? (
-        <p className="text-green-400 font-medium">🎉 Published! Visit: https://{slug}</p>
+        <p className="text-green-400 font-medium">
+          🎉 Published! Visit: https://{slug}
+        </p>
       ) : (
         <button
           onClick={handlePublish}

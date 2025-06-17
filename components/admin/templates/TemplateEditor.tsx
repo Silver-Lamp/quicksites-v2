@@ -1,7 +1,12 @@
 // TemplateEditor.tsx (with logging + fallback JSON)
 import { useEffect, useState } from 'react';
 import { ScrollArea } from '@/components/admin/ui/scroll-area';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/admin/ui/tabs';
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from '@/components/admin/ui/tabs';
 import TemplateSettingsPanel from './TemplateSettingsPanel';
 import TemplatePageEditor from './TemplatePageEditor';
 import TemplateJsonEditor from './TemplateJsonEditor';
@@ -10,16 +15,21 @@ import TemplatePreview from './TemplatePreview';
 import TemplateActionToolbar from './TemplateActionToolbar';
 import TemplatePublishModal from './TemplatePublishModal';
 import DevicePreviewWrapper from './DevicePreviewWrapper';
-import { useAutosaveTemplate } from '@/admin/hooks/useAutosaveTemplate';
+import { useAutosaveTemplate } from '@/hooks/useAutosaveTemplate';
 import { Button } from '@/components/admin/ui/button';
 import { toast } from 'react-hot-toast';
 import ImageUploader from '../admin/ImageUploader';
 import TemplateImageGallery from '../admin/TemplateImageGallery';
-import type { Template } from '@/admin/types/template';
-import type { Block } from '@/admin/types/block';
+import type { Template } from '@/types/template';
+import type { Block } from '@/types/blocks';
 import { normalizeTemplate } from '@/admin/utils/normalizeTemplate';
+import type { TemplateData } from '@/types/template';
 
-export default function TemplateEditor({ templateName }: { templateName: string }) {
+export default function TemplateEditor({
+  templateName,
+}: {
+  templateName: string;
+}) {
   const [template, setTemplate] = useState<Template>({
     name: templateName,
     layout: 'default',
@@ -28,7 +38,7 @@ export default function TemplateEditor({ templateName }: { templateName: string 
     industry: '',
     theme: '',
     brand: '',
-    data: { pages: [] }
+    data: { pages: [] },
   });
 
   const [rawJson, setRawJson] = useState('');
@@ -39,25 +49,27 @@ export default function TemplateEditor({ templateName }: { templateName: string 
   const sampleBlocks: Block[] = [
     {
       type: 'text',
-      value: 'Welcome to the playground! This is a simple text block.',
+      content: {
+        text: 'Welcome to the playground! This is a simple text block.',
+      },
     },
     {
       type: 'image',
-      value: {
+      content: {
         url: 'https://placekitten.com/800/400',
         alt: 'A cute kitten',
       },
     },
     {
       type: 'video',
-      value: {
+      content: {
         url: 'https://www.w3schools.com/html/mov_bbb.mp4',
         caption: 'Example video',
       },
     },
     {
       type: 'audio',
-      value: {
+      content: {
         provider: 'soundcloud',
         url: 'https://w.soundcloud.com/player/?url=https%3A//api.soundcloud.com/tracks/293',
         title: 'Sound demo',
@@ -65,14 +77,14 @@ export default function TemplateEditor({ templateName }: { templateName: string 
     },
     {
       type: 'quote',
-      value: {
+      content: {
         text: 'The best way to predict the future is to invent it.',
         author: 'Alan Kay',
       },
     },
     {
       type: 'button',
-      value: {
+      content: {
         label: 'Click Me',
         href: 'https://example.com',
         style: 'primary',
@@ -80,10 +92,10 @@ export default function TemplateEditor({ templateName }: { templateName: string 
     },
     {
       type: 'grid',
-      value: {
+      content: {
         columns: 2,
         items: [
-          { type: 'text', value: 'Left column text block' },
+          { type: 'text', content: { text: 'Left column text block' } },
           {
             type: 'image',
             value: { url: 'https://placebear.com/400/200', alt: 'A bear' },
@@ -92,26 +104,31 @@ export default function TemplateEditor({ templateName }: { templateName: string 
       },
     },
   ];
-  
+
   useEffect(() => {
-    fetch(`/api/templates/${templateName}`).then(res => res.json()).then(data => {
-      console.log("Fetched template data:", data);
-      const fallback = {
-        pages: [
-          {
-            id: 'index',
-            slug: 'index',
-            title: 'Sample Page',
-            content_blocks: sampleBlocks,
-          },
-        ],
-      };    
-      const finalData = data?.data && Object.keys(data.data).length > 0 ? data.data : fallback;
-      const normalized = normalizeTemplate({ ...data, data: finalData });
-      setTemplate(normalized);
-      setRawJson(JSON.stringify(finalData, null, 2));
-      setLivePreviewData(finalData);
-    });
+    fetch(`/api/templates/${templateName}`)
+      .then((res) => res.json())
+      .then((data) => {
+        console.log('Fetched template data:', data);
+        const fallback = {
+          pages: [
+            {
+              id: 'index',
+              slug: 'index',
+              title: 'Sample Page',
+              content_blocks: sampleBlocks,
+            },
+          ],
+        };
+        const finalData =
+          data?.data && Object.keys(data.data).length > 0
+            ? data.data
+            : fallback;
+        const normalized = normalizeTemplate({ ...data, data: finalData });
+        setTemplate(normalized);
+        setRawJson(JSON.stringify(finalData, null, 2));
+        setLivePreviewData(finalData);
+      });
   }, [templateName]);
 
   useEffect(() => {
@@ -122,7 +139,7 @@ export default function TemplateEditor({ templateName }: { templateName: string 
     try {
       const parsed = JSON.parse(rawJson);
       setLivePreviewData(parsed);
-      setTemplate(prev => ({ ...prev, data: parsed }));
+      setTemplate((prev) => ({ ...prev, data: parsed }));
     } catch {
       // Ignore
     }
@@ -138,7 +155,9 @@ export default function TemplateEditor({ templateName }: { templateName: string 
       <div className="p-6 space-y-6 pb-40">
         <div className="flex justify-between items-center">
           <h1 className="text-xl font-bold">{template?.name}</h1>
-          <Button onClick={() => setShowPublishModal(true)}>Publish Site</Button>
+          <Button onClick={() => setShowPublishModal(true)}>
+            Publish Site
+          </Button>
         </div>
 
         <Tabs defaultValue="edit">
@@ -151,30 +170,34 @@ export default function TemplateEditor({ templateName }: { templateName: string 
           <TabsContent value="edit">
             <div className="grid md:grid-cols-2 gap-6 pt-4">
               <div className="space-y-4">
-                <TemplateSettingsPanel template={template} onChange={setTemplate} />
+                <TemplateSettingsPanel
+                  template={template}
+                  onChange={setTemplate}
+                />
                 <TemplatePageEditor
                   template={template}
                   onChange={setTemplate}
-                  onLivePreviewUpdate={(data) => setLivePreviewData(data)}
+                  onLivePreviewUpdate={(data: any) => setLivePreviewData(data)}
                 />
                 <div className="mt-6 p-4 rounded text-sm bg-gray-800 text-white">
-                  <p className="font-bold">{template?.template_name}</p>
-                  <p className="text-white/80 text-xs">Layout: {template?.layout}</p>
-                  <p className="text-white/80 text-xs">Industry: {template?.industry}</p>
+                  <p className="font-bold">{template?.name}</p>
+                  <p className="text-white/80 text-xs">
+                    Layout: {template?.layout}
+                  </p>
+                  <p className="text-white/80 text-xs">
+                    Industry: {template?.industry}
+                  </p>
                 </div>
-
                 <ImageUploader
-                  siteId={template.site_id}
+                  siteId={template.site_id || ''}
                   templateId={template.id || ''}
                   folder="hero"
                   dbField="hero_url"
                   label="Hero Image"
-                  initialUrl={template.hero_url}
-                  onUpload={(url) => console.log('Hero uploaded:', url)}
                 />
 
                 <ImageUploader
-                  siteId={template.site_id}
+                  siteId={template.site_id || ''}
                   templateId={template.id || ''}
                   folder="banners"
                   dbField="banner_url"
@@ -184,7 +207,7 @@ export default function TemplateEditor({ templateName }: { templateName: string 
                 />
 
                 <ImageUploader
-                  siteId={template.site_id}
+                  siteId={template.site_id || ''}
                   templateId={template.id || ''}
                   folder="logos"
                   dbField="logo_url"
@@ -194,7 +217,7 @@ export default function TemplateEditor({ templateName }: { templateName: string 
                 />
 
                 <ImageUploader
-                  siteId={template.site_id}
+                  siteId={template.site_id || ''}
                   templateId={template.id || ''}
                   folder="team"
                   dbField="team_url"
@@ -203,8 +226,7 @@ export default function TemplateEditor({ templateName }: { templateName: string 
                   onUpload={(url) => console.log('Team updated:', url)}
                 />
 
-                <TemplateImageGallery templateId={template.id} />
-
+                <TemplateImageGallery templateId={template.id || ''} />
               </div>
               <TemplateJsonEditor rawJson={rawJson} setRawJson={setRawJson} />
             </div>
@@ -213,7 +235,7 @@ export default function TemplateEditor({ templateName }: { templateName: string 
           <TabsContent value="preview">
             <DevicePreviewWrapper>
               <TemplatePreview
-                data={livePreviewData}
+                data={livePreviewData as TemplateData}
                 colorScheme={template.color_scheme}
                 theme={template.theme}
                 brand={template.brand}
@@ -222,7 +244,10 @@ export default function TemplateEditor({ templateName }: { templateName: string 
           </TabsContent>
 
           <TabsContent value="history">
-            <TemplateHistory template={template} onRevert={(t) => setTemplate(t)} />
+            <TemplateHistory
+              template={template}
+              onRevert={(t) => setTemplate(t)}
+            />
           </TabsContent>
         </Tabs>
 

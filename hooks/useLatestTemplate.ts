@@ -11,12 +11,12 @@ export function useLatestTemplate(templateName: string) {
 
     setLoading(true);
     fetch(`/api/templates/history?name=${templateName}`)
-      .then(res => res.json())
-      .then(data => {
+      .then((res) => res.json())
+      .then((data) => {
         setTemplate(data?.[0] || null); // use most recent version
         setLoading(false);
       })
-      .catch(err => {
+      .catch((err) => {
         setError(err.message || 'Error fetching template');
         setLoading(false);
       });

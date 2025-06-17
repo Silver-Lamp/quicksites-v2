@@ -9,7 +9,7 @@ export function useSaveTemplate() {
       commitMessage = '',
       theme,
       brand,
-      colorScheme
+      colorScheme,
     }: {
       templateId: string;
       templateName: string;
@@ -26,11 +26,10 @@ export function useSaveTemplate() {
         commitMessage,
         theme,
         brand,
-        colorScheme
+        colorScheme,
       });
       return templateId;
     },
     []
   );
 }
-

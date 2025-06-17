@@ -1,7 +1,15 @@
 node_modules
+dist
+build
 .next
 out
-dist
 coverage
 public
-*.snap
+.snapshots
+*.log
+*.lock
+*.zip
+*.png
+*.jpg
+*.jpeg
+*.svg

@@ -1,10 +1,14 @@
 // In /pages/api/send-lead-email.ts
 import type { NextApiRequest, NextApiResponse } from 'next';
+import { json } from '@/lib/api/json';
 import nodemailer from 'nodemailer';
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+export default async function handler(
+  req: NextApiRequest,
+  res: NextApiResponse
+) {
   if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' });
+    return json({ error: 'Method not allowed' });
   }
 
   const { to, subject, text } = req.body;
@@ -25,10 +29,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       text,
     });
 
-    res.status(200).json({ success: true });
+    json({ success: true });
   } catch (error) {
     console.error('Email send failed:', error);
-    res.status(500).json({ error: 'Failed to send email' });
+    json({ error: 'Failed to send email' });
   }
 }
 

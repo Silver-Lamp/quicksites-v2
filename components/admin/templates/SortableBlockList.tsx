@@ -3,13 +3,13 @@ import {
   closestCenter,
   PointerSensor,
   useSensor,
-  useSensors
+  useSensors,
 } from '@dnd-kit/core';
 import {
   arrayMove,
   SortableContext,
   verticalListSortingStrategy,
-  useSortable
+  useSortable,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 
@@ -18,7 +18,7 @@ import RenderBlock from './RenderBlock';
 
 export function SortableBlockList({
   blocks,
-  onChange
+  onChange,
 }: {
   blocks: any[];
   onChange: (next: any[]) => void;
@@ -38,8 +38,15 @@ export function SortableBlockList({
   };
 
   return (
-    <DndContext collisionDetection={closestCenter} sensors={sensors} onDragEnd={handleDragEnd}>
-      <SortableContext items={blocks.map((b) => b._id)} strategy={verticalListSortingStrategy}>
+    <DndContext
+      collisionDetection={closestCenter}
+      sensors={sensors}
+      onDragEnd={handleDragEnd}
+    >
+      <SortableContext
+        items={blocks.map((b) => b._id)}
+        strategy={verticalListSortingStrategy}
+      >
         <div className="space-y-2">
           {blocks.map((block) => (
             <SortableItem key={block._id} block={block} />
@@ -57,12 +64,14 @@ function SortableItem({ block }: { block: any }) {
     setNodeRef,
     transform,
     transition,
-    isDragging
-  } = useSortable({ id: block._id });
+    isDragging,
+  } = useSortable({
+    id: block._id,
+  });
 
   const style = {
     transform: CSS.Transform.toString(transform),
-    transition
+    transition,
   };
 
   return (

@@ -1,11 +1,7 @@
-/* app/admin/campaigns/page.tsx */
-
 import { supabase } from '@/admin/lib/supabaseClient';
 import { startOfDay, endOfDay, subDays } from 'date-fns';
-import { CampaignsClientPage } from '@/components/admin/pages/CampaignsClientPage';
 
 export default async function CampaignsPage() {
-
   const today = new Date();
   const range = {
     from: startOfDay(subDays(today, 7)),
@@ -24,13 +20,13 @@ export default async function CampaignsPage() {
     .order('created_at', { ascending: false })
     .limit(1000);
 
+  const { CampaignsClientPage } = await import(
+    '../../components/admin/pages/CampaignsClientPage.jsx'
+  );
+
   return (
     <main className="max-w-6xl mx-auto p-6">
-      <CampaignsClientPage
-        events={events}
-        logs={logs}
-        defaultRange={range}
-      />
+      <CampaignsClientPage events={events} logs={logs} defaultRange={range} />
     </main>
   );
 }

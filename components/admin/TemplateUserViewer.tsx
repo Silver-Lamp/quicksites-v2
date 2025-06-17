@@ -4,9 +4,20 @@ import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { Button } from '@/components/admin/ui/button';
 
+type Assignment = {
+  user_id: string;
+  email: string;
+  template: string;
+};
+
+type TemplateOption = {
+  id: string;
+  name: string;
+};
+
 export default function TemplateUserViewer() {
-  const [assignments, setAssignments] = useState([]);
-  const [templates, setTemplates] = useState([]);
+  const [assignments, setAssignments] = useState<Assignment[]>([]);
+  const [templates, setTemplates] = useState<TemplateOption[]>([]);
   const [selected, setSelected] = useState('');
 
   useEffect(() => {
@@ -22,25 +33,28 @@ export default function TemplateUserViewer() {
       .from('auth.users')
       .select('id, email');
 
-    const { data: templates } = await supabase
+    const { data: templateRows } = await supabase
       .from('dashboard_layout_templates')
       .select('id, name');
 
-    const joined = map?.map((row) => ({
-      user_id: row.user_id,
-      email: users.find((u) => u.id === row.user_id)?.email || '—',
-      template: templates.find((t) => t.id === row.template_id)?.name || '(deleted)'
-    })) || [];
+    const joined: Assignment[] =
+      map?.map((row) => ({
+        user_id: row.user_id,
+        email: users?.find((u) => u.id === row.user_id)?.email || '—',
+        template:
+          templateRows?.find((t) => t.id === row.template_id)?.name ||
+          '(deleted)',
+      })) || [];
 
     setAssignments(joined);
-    setTemplates(templates || []);
+    setTemplates(templateRows || []);
   };
 
   const bulkAssign = async () => {
     const { data: users } = await supabase.from('auth.users').select('id');
     const inserts = users?.map((u) => ({
       user_id: u.id,
-      template_id: selected
+      template_id: selected,
     }));
     await supabase.from('dashboard_user_layouts').upsert(inserts || []);
     loadData();
@@ -49,7 +63,9 @@ export default function TemplateUserViewer() {
 
   return (
     <div className="p-4 border rounded bg-white shadow max-w-3xl mt-8">
-      <h2 className="text-lg font-semibold mb-3">User → Template Assignments</h2>
+      <h2 className="text-lg font-semibold mb-3">
+        User → Template Assignments
+      </h2>
 
       <div className="flex items-center gap-3 mb-4">
         <select
@@ -59,7 +75,9 @@ export default function TemplateUserViewer() {
         >
           <option value="">Select template to assign all users</option>
           {templates.map((tpl) => (
-            <option key={tpl.id} value={tpl.id}>{tpl.name}</option>
+            <option key={tpl.id} value={tpl.id}>
+              {tpl.name}
+            </option>
           ))}
         </select>
         <Button onClick={bulkAssign}>Assign to All Users</Button>

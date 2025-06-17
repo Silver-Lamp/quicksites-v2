@@ -1,11 +1,17 @@
-import QRCode from 'qrcode.react';
+import QRCode from 'react-qr-code';
 import { useEffect, useState } from 'react';
 
-export function ShareTools({ domain, userId }: { domain: string, userId: string }) {
+export function ShareTools({
+  domain,
+  userId,
+}: {
+  domain: string;
+  userId: string;
+}) {
   const [url, setUrl] = useState('');
 
   useEffect(() => {
-    const full = \`https://\${domain}?ref=\${userId}\`;
+    const full = `https://${domain}?ref=${userId}`;
     setUrl(full);
   }, [domain, userId]);
 
@@ -13,7 +19,7 @@ export function ShareTools({ domain, userId }: { domain: string, userId: string 
 
   return (
     <div className="mt-6 text-white text-center">
-      <QRCode value={url} size={128} className="mx-auto mb-2" />
+      <QRCode value={url} className="mx-auto mb-2" />
       <p className="text-sm mb-1">{url}</p>
       <button
         onClick={share}

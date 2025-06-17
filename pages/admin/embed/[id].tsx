@@ -2,9 +2,10 @@
 import { GetServerSideProps } from 'next';
 import Head from 'next/head';
 import dynamic from 'next/dynamic';
+import { supabase } from '@/lib/supabase';
 import { createClient } from '@supabase/supabase-js';
 
-const PlaygroundFrame = dynamic(() => import('@/admin/components/PlaygroundFrame'), { ssr: false });
+// const PlaygroundFrame = dynamic(() => import('@/components/admin/zod-playground/PlaygroundFrame'), { ssr: false });
 
 export const getServerSideProps: GetServerSideProps = async (ctx) => {
   const id = ctx.params?.id as string;

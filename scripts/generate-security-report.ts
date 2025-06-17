@@ -22,29 +22,29 @@ const html = `
 
 const outDir = './reports/security';
 fs.mkdirSync(outDir, { recursive: true });
-
+const filePath = path.join(outDir, `security-report-${date}.pdf`);
 (async () => {
-  const browser = await puppeteer.launch({ headless: 'new' });
+  const browser = await puppeteer.launch({ headless: true });
   const page = await browser.newPage();
   await page.setContent(html, { waitUntil: 'networkidle0' });
   const filePath = path.join(outDir, `security-report-${date}.pdf`);
-  await page.pdf({ path: filePath, format: 'A4' });
+  await page.pdf({ path: filePath, format: 'a4' });
   await browser.close();
   console.log('✅ Saved', filePath);
 })();
 
-
 import { createClient } from '@supabase/supabase-js';
 
-const supabase = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
+const supabase = createClient(
+  process.env.SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+);
 const buffer = fs.readFileSync(filePath);
 const uploadPath = `security-reports/security-report-${date}.pdf`;
 
-await supabase.storage
-  .from('security-reports')
-  .upload(uploadPath, buffer, {
-    upsert: true,
-    contentType: 'application/pdf'
-  });
+await supabase.storage.from('security-reports').upload(uploadPath, buffer, {
+  upsert: true,
+  contentType: 'application/pdf',
+});
 
 console.log('📤 Uploaded to Supabase:', uploadPath);

@@ -6,6 +6,6 @@ function SitesPage() {
 
 SitesPage.getLayout = (page: React.ReactNode) => (
   <AdminSidebarLayout>{page}</AdminSidebarLayout>
-);  
+);
 
 export default SitesPage;

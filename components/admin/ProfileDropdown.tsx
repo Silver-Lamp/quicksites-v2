@@ -1,6 +1,6 @@
 'use client';
 import { Menu } from '@headlessui/react';
-import { useRouter } from 'next/router';
+import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 
 export default function ProfileDropdown() {

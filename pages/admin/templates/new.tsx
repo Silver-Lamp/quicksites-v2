@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import { createClient } from '@supabase/supabase-js';
-import TemplateEditor from '@/components/templates/TemplateEditor';
+import TemplateEditor from '@/components/admin/templates/TemplateEditor';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -36,8 +36,8 @@ export default function NewTemplatePage() {
         await supabase.from('remix_events').insert([
           {
             original_snapshot_id: from,
-            user_id: userId
-          }
+            user_id: userId,
+          },
         ]);
       }
 
@@ -47,7 +47,7 @@ export default function NewTemplatePage() {
         color_scheme: snapshot.color_scheme,
         theme: snapshot.theme,
         brand: snapshot.brand,
-        data: snapshot.data
+        data: snapshot.data,
       });
     };
 
@@ -57,7 +57,7 @@ export default function NewTemplatePage() {
   return (
     <div className="p-4">
       <h1 className="text-xl font-bold mb-4">New Template</h1>
-      <TemplateEditor templateName="new-template" initialTemplate={initialData} />
+      <TemplateEditor templateName="new-template" />
     </div>
   );
 }

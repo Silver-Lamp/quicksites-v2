@@ -1,20 +1,49 @@
 'use client';
 
-import { useState } from 'react';
-import { useLiveTable } from '@/hooks/useLiveTable';
-import Link from 'next/link';
+import { useEffect, useState } from 'react';
+import Link from 'next/link.js';
+
+type DomainRow = {
+  id: string;
+  domain: string;
+  city: string;
+  state: string;
+  template: string;
+  claimed: boolean;
+};
 
 export default function Dashboard() {
-  const [filterClaimed, setFilterClaimed] = useState<'all' | 'claimed' | 'unclaimed'>('all');
+  const [filterClaimed, setFilterClaimed] = useState<
+    'all' | 'claimed' | 'unclaimed'
+  >('all');
+  const [sites, setSites] = useState<DomainRow[]>([]);
 
   const filter =
     filterClaimed === 'claimed'
       ? { column: 'claimed', operator: 'eq', value: true }
       : filterClaimed === 'unclaimed'
-      ? { column: 'claimed', operator: 'eq', value: false }
-      : undefined;
+        ? { column: 'claimed', operator: 'eq', value: false }
+        : undefined;
 
-  const sites = useLiveTable('domains', filter, { column: 'city' });
+  useEffect(() => {
+    let mounted = true;
+    const loadData = async () => {
+      const mod = await import('../hooks/useLiveTableWrapper.jsx');
+      const result = await mod.useLiveTableWrapper<DomainRow>(
+        'domains',
+        filter,
+        {
+          column: 'city',
+        }
+      );
+      if (mounted) setSites(result);
+    };
+    loadData();
+
+    return () => {
+      mounted = false;
+    };
+  }, [filterClaimed]);
 
   return (
     <div style={{ padding: '2rem' }}>
@@ -25,7 +54,9 @@ export default function Dashboard() {
         <select
           id="filter"
           value={filterClaimed}
-          onChange={(e) => setFilterClaimed(e.target.value as any)}
+          onChange={(e) =>
+            setFilterClaimed(e.target.value as 'all' | 'claimed' | 'unclaimed')
+          }
         >
           <option value="all">All</option>
           <option value="claimed">Claimed</option>

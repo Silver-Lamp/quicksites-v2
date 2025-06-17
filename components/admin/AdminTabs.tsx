@@ -8,7 +8,12 @@ import { supabase } from '@/lib/supabase';
 
 const allTabs = [
   { label: 'Dashboard', href: '/admin/sites/dashboard', icon: FiGrid },
-  { label: 'Logs', href: '/admin/logs/dashboard', icon: FiFileText, roles: ['admin'] },
+  {
+    label: 'Logs',
+    href: '/admin/logs/dashboard',
+    icon: FiFileText,
+    roles: ['admin'],
+  },
   { label: 'Sites', href: '/admin/sites', icon: FiGlobe },
   { label: 'Users', href: '/admin/users', icon: FiUsers, roles: ['admin'] },
 ];
@@ -28,7 +33,7 @@ export default function AdminTabs() {
   const isActive = (href: string) =>
     pathname === href || pathname.startsWith(href + '/');
 
-  const tabs = allTabs.filter(tab => !tab.roles || tab.roles.includes(role));
+  const tabs = allTabs.filter((tab) => !tab.roles || tab.roles.includes(role));
 
   return (
     <div className="border-b border-gray-300 mb-4 px-4">

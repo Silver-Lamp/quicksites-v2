@@ -3,7 +3,10 @@ import puppeteer from 'puppeteer';
 import fs from 'fs';
 import path from 'path';
 
-const supabase = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
+const supabase = createClient(
+  process.env.SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+);
 
 const { data: queue } = await supabase
   .from('screenshot_queue')

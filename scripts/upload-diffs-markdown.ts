@@ -16,10 +16,15 @@ ${diffText}
 `;
 }
 
-async function createAndUploadMarkdownReport(fileA: string, fileB: string, mdKey: string, title: string) {
+async function createAndUploadMarkdownReport(
+  fileA: string,
+  fileB: string,
+  mdKey: string,
+  title: string
+) {
   const [xmlA, xmlB] = await Promise.all([
     readFile(fileA, 'utf8'),
-    readFile(fileB, 'utf8')
+    readFile(fileB, 'utf8'),
   ]);
 
   const patch = Diff.createPatch(title, xmlA, xmlB, 'Previous', 'Current');
@@ -29,7 +34,7 @@ async function createAndUploadMarkdownReport(fileA: string, fileB: string, mdKey
     .from('sitemaps')
     .upload(mdKey, markdown, {
       contentType: 'text/markdown',
-      upsert: true
+      upsert: true,
     });
 
   if (error) {

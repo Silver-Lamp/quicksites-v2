@@ -13,7 +13,10 @@ type TagFilterDropdownProps = {
   onChange: (tags: string[]) => void;
 };
 
-export default function TagFilterDropdown({ selected, onChange }: TagFilterDropdownProps) {
+export default function TagFilterDropdown({
+  selected,
+  onChange,
+}: TagFilterDropdownProps) {
   const [available, setAvailable] = useState<string[]>([]);
 
   useEffect(() => {
@@ -31,7 +34,7 @@ export default function TagFilterDropdown({ selected, onChange }: TagFilterDropd
 
   const toggle = (tag: string) => {
     if (selected.includes(tag)) {
-      onChange(selected.filter(t => t !== tag));
+      onChange(selected.filter((t) => t !== tag));
     } else {
       onChange([...selected, tag]);
     }

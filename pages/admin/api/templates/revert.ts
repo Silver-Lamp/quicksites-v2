@@ -1,5 +1,6 @@
 // POST /api/templates/revert
 import { NextApiRequest, NextApiResponse } from 'next';
+import { json } from '@/lib/api/json';
 import { createClient } from '@supabase/supabase-js';
 
 const supabase = createClient(
@@ -9,7 +10,10 @@ const supabase = createClient(
 
 const SAFETY_MINUTES = 10;
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+export default async function handler(
+  req: NextApiRequest,
+  res: NextApiResponse
+) {
   if (req.method !== 'POST') return res.status(405).end();
 
   const { template_name, data, editor_id, force = false } = req.body;
@@ -21,33 +25,35 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     .eq('template_name', template_name)
     .single();
 
-  if (currentErr) return res.status(500).json({ error: currentErr.message });
+  if (currentErr) return json({ error: currentErr.message });
 
   // Enforce safety buffer
   if (!force) {
     const updatedAt = new Date(current.updated_at);
     const now = new Date();
     const diffInMinutes = (now.getTime() - updatedAt.getTime()) / (1000 * 60);
-  
+
     if (diffInMinutes < SAFETY_MINUTES) {
-      return res.status(403).json({
+      return json({
         error: `Template was updated ${diffInMinutes.toFixed(1)} minutes ago. Reverts are blocked for ${SAFETY_MINUTES} minutes unless forced.`,
-        recent: true
+        recent: true,
       });
     }
   }
 
   // Save version backup
-  await supabase.from('template_versions').insert([{
-    template_name,
-    full_data: current.data,
-    diff: null,
-    commit_message: force
-      ? '⚠️ Forced Revert triggered from admin history UI'
-      : 'Revert triggered from admin history UI',
-    editor_id,
-    forced_revert: !!force
-  }]);
+  await supabase.from('template_versions').insert([
+    {
+      template_name,
+      full_data: current.data,
+      diff: null,
+      commit_message: force
+        ? '⚠️ Forced Revert triggered from admin history UI'
+        : 'Revert triggered from admin history UI',
+      editor_id,
+      forced_revert: !!force,
+    },
+  ]);
 
   // Overwrite with selected version
   const { error } = await supabase
@@ -55,7 +61,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     .update({ data })
     .eq('template_name', template_name);
 
-  if (error) return res.status(500).json({ error: error.message });
+  if (error) return json({ error: error.message });
 
-  res.status(200).json({ success: true });
+  json({ success: true });
 }

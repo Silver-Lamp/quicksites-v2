@@ -5,7 +5,9 @@
 import dynamic from 'next/dynamic';
 import AuthGuard from '@/components/admin/AuthGuard';
 
-const DynamicMap = dynamic(() => import('@/components/admin/GridMap'), { ssr: false });
+const DynamicMap = dynamic(() => import('@/components/admin/GridMap'), {
+  ssr: false,
+});
 
 export default function TheGridPage() {
   return (

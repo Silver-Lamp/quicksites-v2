@@ -1,4 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
+import { json } from '@/lib/api/json';
 import { createClient } from '@supabase/supabase-js';
 
 const supabase = createClient(
@@ -12,6 +13,6 @@ export default async function handler(_: NextApiRequest, res: NextApiResponse) {
     .update({ retry_enabled: true })
     .eq('status', 'error');
 
-  if (error) return res.status(500).json({ error: error.message });
-  res.status(200).json({ message: 'All failed jobs marked for retry' });
+  if (error) return json({ error: error.message });
+  json({ message: 'All failed jobs marked for retry' });
 }

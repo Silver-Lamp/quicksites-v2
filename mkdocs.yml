@@ -11,11 +11,11 @@ theme:
     - search.suggest
     - content.code.copy
   palette:
-    - media: "(prefers-color-scheme: dark)"
+    - media: '(prefers-color-scheme: dark)'
       scheme: slate
       primary: blue
       accent: lime
-    - media: "(prefers-color-scheme: light)"
+    - media: '(prefers-color-scheme: light)'
       scheme: default
       primary: blue
       accent: lime
@@ -36,4 +36,4 @@ extra:
   social:
     - icon: fontawesome/brands/github
       link: https://github.com/Silver-Lamp/quicksites-core
-  og:image: /assets/opengraph-image.dark.safe.png      
+  og:image: /assets/opengraph-image.dark.safe.png

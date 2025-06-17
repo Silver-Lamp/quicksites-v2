@@ -1,9 +1,15 @@
-export default async function handler(req, res) {
+import { NextApiRequest, NextApiResponse } from 'next';
+import { json } from '@/lib/api/json';
+
+export default async function handler(
+  req: NextApiRequest,
+  res: NextApiResponse
+) {
   const { domain } = JSON.parse(req.body);
 
   const webhook = process.env.VERCEL_DEPLOY_WEBHOOK;
   if (!webhook || !domain) {
-    return res.status(400).json({ error: 'Missing info' });
+    return json({ error: 'Missing info' });
   }
 
   await fetch(webhook, {
@@ -12,5 +18,5 @@ export default async function handler(req, res) {
     body: JSON.stringify({ domain }),
   });
 
-  return res.status(200).json({ triggered: true });
+  return json({ triggered: true });
 }

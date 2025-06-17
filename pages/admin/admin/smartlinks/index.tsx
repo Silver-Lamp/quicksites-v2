@@ -1,14 +1,23 @@
 import SmartLinkGallery from '@/components/admin/SmartLinkGallery';
 import { SmartLinkProvider } from '@/components/admin/SmartLinkProvider';
-import type { SmartLinkItem } from '@/admin/types/SmartLinkItem';
+import type { SmartLinkItem } from '@/types/SmartLinkItem';
 
 export default function SmartLinkHomePage() {
-
-
   const items: SmartLinkItem[] = [
-    { id: 'abc123', type: 'template', label: 'Home Template', theme: 'primary' },
-    { id: 'xyz789', type: 'snapshot', label: 'Shared Snapshot', query: { shared: true }, theme: 'muted' },
-    { id: '', type: 'template', label: 'Missing Template', theme: 'danger' }
+    {
+      id: 'abc123',
+      type: 'template',
+      label: 'Home Template',
+      theme: 'primary',
+    },
+    {
+      id: 'xyz789',
+      type: 'snapshot',
+      label: 'Shared Snapshot',
+      query: { shared: true },
+      theme: 'muted',
+    },
+    { id: '', type: 'template', label: 'Missing Template', theme: 'danger' },
   ];
 
   return (

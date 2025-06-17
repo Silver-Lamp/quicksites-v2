@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { createClient } from '@supabase/supabase-js';
-import { cn } from '@/lib/utils'; // Optional helper for conditional classNames
+import { cn } from '../lib/utils.js'; // Optional helper for conditional classNames
 
 type LogEntry = {
   id: string;
@@ -98,7 +98,8 @@ export default function NotFoundLogsPage() {
       </div>
 
       <p className="text-sm text-zinc-500 mb-2">
-        Showing {visibleLogs.length} {filter === 'all' ? '' : `${filter} `}log(s)
+        Showing {visibleLogs.length} {filter === 'all' ? '' : `${filter} `}
+        log(s)
       </p>
 
       {loading ? (
@@ -122,7 +123,8 @@ export default function NotFoundLogsPage() {
                 key={log.id}
                 className={cn(
                   'border-t border-zinc-700 transition-colors',
-                  log.isNew && 'border-l-4 border-green-500 bg-green-950 animate-pulse'
+                  log.isNew &&
+                    'border-l-4 border-green-500 bg-green-950 animate-pulse'
                 )}
               >
                 <td className="p-2 whitespace-nowrap text-zinc-400">

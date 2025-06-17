@@ -1,12 +1,19 @@
 'use client';
 import { useEffect, useState } from 'react';
+import { json } from '@/lib/api/json';
+
+type ForkRecord = {
+  name: string;
+  base?: string;
+  count: number;
+};
 
 export default function ForksPage() {
-  const [data, setData] = useState([]);
+  const [data, setData] = useState<ForkRecord[]>([]);
 
   useEffect(() => {
     fetch('/api/forks')
-      .then(res => res.json())
+      .then((res) => json())
       .then(setData);
   }, []);
 

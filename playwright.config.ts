@@ -8,8 +8,11 @@ export default defineConfig({
   testDir: './tests',
   use: {
     baseURL: 'http://localhost:3000',
-    screenshot: 'only-on-failure',
+    screenshot: 'only-on-failure', // ✅ valid
     trace: 'on-first-retry',
-    screenshotDir
-  }
+    extraHTTPHeaders: {
+      'Content-Type': 'application/json',
+    },
+  },
+  outputDir: screenshotDir, // ✅ this sets where Playwright saves screenshots/traces/etc.
 });

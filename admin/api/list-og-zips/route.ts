@@ -1,8 +1,8 @@
 /* app/api/list-og-zips/route.ts */
 
 import { supabase } from '@/admin/lib/supabaseClient';
+import { json } from '@/lib/api/json';
 import { createClient } from '@supabase/supabase-js';
-import { NextRequest, NextResponse } from 'next/server';
 
 export const runtime = 'edge';
 
@@ -17,12 +17,17 @@ export async function GET(req: NextRequest) {
   });
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return json({ error: error.message }, { status: 500 });
   }
 
   const files = (data || []).map((file) => {
-    const publicUrl = supabase.storage.from('campaign-ogs').getPublicUrl(file.name).data.publicUrl;
-    const size = typeof file.metadata?.size === 'number' ? file.metadata.size : file.metadata?.size_bytes || 0;
+    const publicUrl = supabase.storage
+      .from('campaign-ogs')
+      .getPublicUrl(file.name).data.publicUrl;
+    const size =
+      typeof file.metadata?.size === 'number'
+        ? file.metadata.size
+        : file.metadata?.size_bytes || 0;
     return {
       name: file.name,
       url: publicUrl,
@@ -32,9 +37,9 @@ export async function GET(req: NextRequest) {
 
   const totalSize = files.reduce((sum, f) => sum + f.size, 0);
 
-  return NextResponse.json({
+  return json({
     files,
     totalBytes: totalSize,
-    totalMB: (totalSize / 1024 / 1024).toFixed(1)
+    totalMB: (totalSize / 1024 / 1024).toFixed(1),
   });
 }

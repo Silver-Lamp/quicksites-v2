@@ -1,5 +1,6 @@
 'use client';
 import { useEffect, useState } from 'react';
+import { json } from '@/lib/api/json';
 import { AdminAnalyticsToolbar } from '@/components/admin/analytics/AdminAnalyticsToolbar';
 import {
   LineChart,
@@ -8,31 +9,27 @@ import {
   YAxis,
   Tooltip,
   ResponsiveContainer,
-  CartesianGrid
+  CartesianGrid,
 } from 'recharts';
 import { useDateRange } from '@/hooks/useDateRange';
 
+type SignalDataPoint = {
+  date: string;
+  views: number;
+  feedback: number;
+};
+
 export default function AnalyticsChartView() {
   const [view, setView] = useState<'daily' | 'weekly' | 'monthly'>('daily');
-  const [stats, setStats] = useState([]);
-  const [data, setData] = useState<any[]>([]);
+  const [stats, setStats] = useState<{ label: string; value: number }[]>([]);
+  const [data, setData] = useState<SignalDataPoint[]>([]);
   const { start, end } = useDateRange();
-  const fetchData = async () => {
-    const today = new Date();
-    const from = new Date();
-    from.setDate(today.getDate() - (view === 'weekly' ? 7 : view === 'monthly' ? 30 : 1));
 
-    useEffect(() => {
-      if (!start || !end) return;
-      fetch(`/api/analytics/signals?start=${start}&end=${end}`)
-        .then(res => res.json())
-        .then(setData);
-    }, [start, end]);
-    
-    const res = await fetch(
-      \`/api/analytics/signals?start=\${from.toISOString().slice(0, 10)}&end=\${today.toISOString().slice(0, 10)}\`
-    );
-    const rows = await res.json();
+  const fetchData = async () => {
+    if (!start || !end) return;
+
+    const res = await fetch(`/api/analytics/signals?start=${start}&end=${end}`);
+    const rows: SignalDataPoint[] = await json();
     setData(rows);
 
     const totals = rows.reduce(
@@ -43,14 +40,18 @@ export default function AnalyticsChartView() {
       },
       { views: 0, feedback: 0 }
     );
+
     setStats([
       { label: 'Views', value: totals.views },
-      { label: 'Feedback', value: totals.feedback }
+      { label: 'Feedback', value: totals.feedback },
     ]);
   };
 
   const downloadCSV = () => {
-    const rows = ['Date,Views,Feedback', ...data.map((r) => \`\${r.date},\${r.views},\${r.feedback}\`)];
+    const rows = [
+      'Date,Views,Feedback',
+      ...data.map((r) => `${r.date},${r.views},${r.feedback}`),
+    ];
     const blob = new Blob([rows.join('\n')], { type: 'text/csv' });
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -62,7 +63,7 @@ export default function AnalyticsChartView() {
 
   useEffect(() => {
     fetchData();
-  }, [view]);
+  }, [view, start, end]);
 
   return (
     <div className="p-6 max-w-6xl mx-auto text-white">
@@ -87,7 +88,7 @@ export default function AnalyticsChartView() {
             data={data}
             onClick={(e) => {
               const clicked = e?.activeLabel;
-              if (clicked) alert(\`Drilldown for \${clicked}\`);
+              if (clicked) alert(`Drilldown for ${clicked}`);
             }}
           >
             <CartesianGrid strokeDasharray="3 3" stroke="#444" />
@@ -96,10 +97,23 @@ export default function AnalyticsChartView() {
             <Tooltip
               contentStyle={{ backgroundColor: '#222', borderColor: '#555' }}
               labelStyle={{ color: '#fff' }}
-              formatter={(val, key) => [val, key === 'views' ? 'Views' : 'Feedback']}
+              formatter={(val, key) => [
+                val,
+                key === 'views' ? 'Views' : 'Feedback',
+              ]}
             />
-            <Line type="monotone" dataKey="views" stroke="#8884d8" strokeWidth={2} />
-            <Line type="monotone" dataKey="feedback" stroke="#82ca9d" strokeWidth={2} />
+            <Line
+              type="monotone"
+              dataKey="views"
+              stroke="#8884d8"
+              strokeWidth={2}
+            />
+            <Line
+              type="monotone"
+              dataKey="feedback"
+              stroke="#82ca9d"
+              strokeWidth={2}
+            />
           </LineChart>
         </ResponsiveContainer>
       </div>

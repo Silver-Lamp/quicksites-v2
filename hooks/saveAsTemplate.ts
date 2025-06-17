@@ -8,7 +8,7 @@ export async function saveAsTemplate({
   commitMessage = '',
   theme,
   brand,
-  colorScheme
+  colorScheme,
 }: {
   templateId: string;
   templateName: string;
@@ -44,7 +44,7 @@ export function useSharedPreview() {
       commitMessage = '',
       theme,
       brand,
-      colorScheme
+      colorScheme,
     }: {
       templateId: string;
       templateName: string;

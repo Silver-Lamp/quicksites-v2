@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
-import { supabase } from '../lib/supabase';
+import { supabase } from '@/lib/supabase';
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -26,9 +26,9 @@ export default function RegisterPage() {
       options: {
         data: {
           role: 'reseller',
-          referrer_id: localStorage.getItem('referrer_id') || null
-        }
-      }
+          referrer_id: localStorage.getItem('referrer_id') || null,
+        },
+      },
     });
 
     if (error) {
@@ -61,7 +61,9 @@ export default function RegisterPage() {
           required
         />
         {referrerId && (
-          <p className="text-xs text-gray-400">Signing up via referral: {referrerId}</p>
+          <p className="text-xs text-gray-400">
+            Signing up via referral: {referrerId}
+          </p>
         )}
         <button
           type="submit"

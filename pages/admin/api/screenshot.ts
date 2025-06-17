@@ -1,14 +1,18 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
+import { json } from '@/lib/api/json';
 import { chromium } from 'playwright';
 import path from 'path';
 import fs from 'fs/promises';
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+export default async function handler(
+  req: NextApiRequest,
+  res: NextApiResponse
+) {
   if (req.method !== 'POST') return res.status(405).end('Method Not Allowed');
 
   const { domain } = req.body;
 
-  if (!domain) return res.status(400).json({ error: 'Missing domain' });
+  if (!domain) return json({ error: 'Missing domain' });
 
   try {
     const browser = await chromium.launch();
@@ -20,8 +24,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     await page.screenshot({ path: screenshotPath, fullPage: true });
     await browser.close();
 
-    return res.status(200).json({ screenshot: `/screenshots/${domain}.png` });
+    return json({ screenshot: `/screenshots/${domain}.png` });
   } catch (err: any) {
-    return res.status(500).json({ error: err.message });
+    return json({ error: err.message });
   }
 }

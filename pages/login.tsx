@@ -105,7 +105,14 @@ export default function LoginPage() {
             fill="none"
             viewBox="0 0 24 24"
           >
-            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+            <circle
+              className="opacity-25"
+              cx="12"
+              cy="12"
+              r="10"
+              stroke="currentColor"
+              strokeWidth="4"
+            ></circle>
             <path
               className="opacity-75"
               fill="currentColor"
@@ -146,8 +153,14 @@ export default function LoginPage() {
           </div>
         ) : (
           <>
-            {flash && <p className="text-center mb-4 text-green-400 text-sm">{flash}</p>}
-            {toast && <p className="text-center mb-4 text-yellow-400 text-sm">{toast}</p>}
+            {flash && (
+              <p className="text-center mb-4 text-green-400 text-sm">{flash}</p>
+            )}
+            {toast && (
+              <p className="text-center mb-4 text-yellow-400 text-sm">
+                {toast}
+              </p>
+            )}
             <input
               type="email"
               value={email}

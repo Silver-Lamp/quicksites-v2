@@ -1,5 +1,6 @@
 'use client';
 import { useState } from 'react';
+import { json } from '@/lib/api/json';
 
 export default function ClaimHandlePage() {
   const [handle, setHandle] = useState('');
@@ -10,7 +11,7 @@ export default function ClaimHandlePage() {
       method: 'POST',
       body: JSON.stringify({ handle }),
     });
-    const result = await res.json();
+    const result = await json();
     setMessage(result.message || 'Saved');
   };
 
@@ -23,7 +24,10 @@ export default function ClaimHandlePage() {
         onChange={(e) => setHandle(e.target.value.toLowerCase())}
         placeholder="@yourname"
       />
-      <button onClick={submit} className="bg-blue-600 px-4 py-2 rounded hover:bg-blue-700">
+      <button
+        onClick={submit}
+        className="bg-blue-600 px-4 py-2 rounded hover:bg-blue-700"
+      >
         Claim
       </button>
       {message && <p className="mt-4 text-sm text-zinc-400">{message}</p>}

@@ -1,5 +1,6 @@
 'use client';
 import { useEffect, useState } from 'react';
+import { json } from '@/lib/api/json';
 import { useUser } from '@supabase/auth-helpers-react';
 
 export default function PosterBatchView() {
@@ -9,7 +10,7 @@ export default function PosterBatchView() {
   useEffect(() => {
     if (!user) return;
     fetch('/api/my-campaigns?user_id=' + user.id)
-      .then(res => res.json())
+      .then((res) => json())
       .then(setCampaigns);
   }, [user]);
 
@@ -24,7 +25,9 @@ export default function PosterBatchView() {
               alt={c.headline}
               className="w-full rounded shadow border border-zinc-700"
             />
-            <div className="mt-2 text-sm text-zinc-300 truncate">{c.headline}</div>
+            <div className="mt-2 text-sm text-zinc-300 truncate">
+              {c.headline}
+            </div>
             <a
               href={`/posters/${c.slug}`}
               download={`${c.slug}-poster.png`}

@@ -1,4 +1,6 @@
 import { writeFile } from 'fs/promises';
+import { json } from '@/lib/api/json';
+import { NextApiRequest, NextApiResponse } from 'next';
 import { join } from 'path';
 
 export const config = {
@@ -7,7 +9,10 @@ export const config = {
   },
 };
 
-export default async function handler(req, res) {
+export default async function handler(
+  req: NextApiRequest,
+  res: NextApiResponse
+) {
   const buffers = [];
   for await (const chunk of req) buffers.push(chunk);
   const boundary = Buffer.concat(buffers);
@@ -17,5 +22,5 @@ export default async function handler(req, res) {
 
   await writeFile(path, boundary);
 
-  return res.status(200).json({ success: true });
+  return json({ success: true });
 }

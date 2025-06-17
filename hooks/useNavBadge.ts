@@ -6,7 +6,7 @@ export function useNavBadge(initial = { failed: 0 }) {
   useEffect(() => {
     if (!initial || typeof initial.failed === 'undefined') {
       fetch('/api/nav-badges')
-        .then(res => res.json())
+        .then((res) => res.json())
         .then(setNavBadges)
         .catch(() => {});
     }

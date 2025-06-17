@@ -1,12 +1,13 @@
 'use client';
 import { useEffect, useState } from 'react';
+import { json } from '@/lib/api/json';
 
 export default function AuditLog() {
   const [logs, setLogs] = useState([]);
 
   useEffect(() => {
     fetch('/api/audit-logs')
-      .then((res) => res.json())
+      .then((res) => json())
       .then(setLogs);
   }, []);
 
@@ -25,8 +26,12 @@ export default function AuditLog() {
           {logs.map((log: any, i) => (
             <tr key={i}>
               <td className="p-2">{log.type}</td>
-              <td className="p-2 text-zinc-300">{JSON.stringify(log.payload)}</td>
-              <td className="p-2 text-zinc-500">{new Date(log.created_at).toLocaleString()}</td>
+              <td className="p-2 text-zinc-300">
+                {JSON.stringify(log.payload)}
+              </td>
+              <td className="p-2 text-zinc-500">
+                {new Date(log.created_at).toLocaleString()}
+              </td>
             </tr>
           ))}
         </tbody>

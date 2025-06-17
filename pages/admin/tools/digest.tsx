@@ -1,5 +1,6 @@
 'use client';
 import { useEffect, useState } from 'react';
+import { json } from '@/lib/api/json';
 
 export default function AdminDigestPage() {
   const [logs, setLogs] = useState<any[]>([]);
@@ -7,7 +8,7 @@ export default function AdminDigestPage() {
 
   const fetchLogs = async () => {
     const res = await fetch('/api/digest-log');
-    const json = await res.json();
+    const json = await json();
     setLogs(json || []);
   };
 
@@ -39,7 +40,9 @@ export default function AdminDigestPage() {
           {logs.map((l: any) => (
             <li key={l.id} className="bg-zinc-800 p-4 rounded text-sm">
               <div className="text-xs text-zinc-400">{l.sent_at}</div>
-              <pre className="whitespace-pre-wrap mt-2 text-green-300">{l.summary}</pre>
+              <pre className="whitespace-pre-wrap mt-2 text-green-300">
+                {l.summary}
+              </pre>
             </li>
           ))}
         </ul>

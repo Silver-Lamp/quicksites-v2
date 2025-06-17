@@ -1,4 +1,4 @@
-import { useDomainPreview } from './useDomainPreview';
+import { useDomainPreview } from '../hooks/useDomainPreview.jsx';
 
 export default function DomainPreviewCard({ domain }: { domain: string }) {
   const { imageUrl, loading } = useDomainPreview(domain);

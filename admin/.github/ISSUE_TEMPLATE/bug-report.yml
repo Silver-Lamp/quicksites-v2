@@ -1,14 +1,14 @@
 name: Bug Report
 description: Report a problem or broken behavior
 labels: [bug, needs-triage]
-title: "🐞 [BUG] - "
+title: '🐞 [BUG] - '
 body:
   - type: textarea
     id: what-happened
     attributes:
       label: What happened?
       description: Describe the issue in as much detail as possible.
-      placeholder: "When I clicked Save, nothing happened..."
+      placeholder: 'When I clicked Save, nothing happened...'
       required: true
 
   - type: input
@@ -42,4 +42,3 @@ body:
     attributes:
       label: Screenshots or logs
       description: Drag/drop screenshots or copy error messages.
-  

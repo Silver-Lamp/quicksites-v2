@@ -1,13 +1,18 @@
 import { createClient } from '@supabase/supabase-js';
+import { json } from '@/lib/api/json';
+import { NextApiRequest, NextApiResponse } from 'next';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
-export default async function handler(req, res) {
+export default async function handler(
+  req: NextApiRequest,
+  res: NextApiResponse
+) {
   const { handle } = req.query;
-  if (!handle) return res.status(400).json({ error: 'Missing handle' });
+  if (!handle) return json({ error: 'Missing handle' });
 
   const { data: user } = await supabase
     .from('users')
@@ -15,7 +20,7 @@ export default async function handler(req, res) {
     .eq('user_metadata->>handle', handle)
     .single();
 
-  if (!user) return res.status(404).json({ error: 'User not found' });
+  if (!user) return json({ error: 'User not found' });
 
   const { data, error } = await supabase
     .from('blocks')
@@ -23,7 +28,7 @@ export default async function handler(req, res) {
     .eq('owner_id', user.id)
     .order('created_at', { ascending: false });
 
-  if (error) return res.status(500).json({ error });
+  if (error) return json({ error });
 
-  res.status(200).json(data);
+  json(data);
 }

@@ -1,15 +1,20 @@
 import { createCanvas, loadImage } from 'canvas';
+import { json } from '@/lib/api/json';
 import QRCode from 'qrcode';
 import { createClient } from '@supabase/supabase-js';
+import { NextApiRequest, NextApiResponse } from 'next';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
-export default async function handler(req, res) {
+export default async function handler(
+  req: NextApiRequest,
+  res: NextApiResponse
+) {
   const { slug } = req.query;
-  if (!slug) return res.status(400).json({ error: 'Missing slug' });
+  if (!slug) return json({ error: 'Missing slug' });
 
   const { data: campaign, error } = await supabase
     .from('support_campaigns')
@@ -17,10 +22,13 @@ export default async function handler(req, res) {
     .eq('slug', slug)
     .single();
 
-  if (error || !campaign) return res.status(404).json({ error: 'Campaign not found' });
+  if (error || !campaign) return json({ error: 'Campaign not found' });
 
-  const campaignUrl = \`https://yourdomain.com/support/\${slug}\`;
-  const qrCanvas = await QRCode.toCanvas(campaignUrl, { margin: 1, width: 300 });
+  const campaignUrl = `https://quicksites.ai/support/${slug}`;
+  const qrCanvas = await QRCode.toCanvas(campaignUrl, {
+    margin: 1,
+    width: 300,
+  });
 
   const canvas = createCanvas(800, 1000);
   const ctx = canvas.getContext('2d');
@@ -37,7 +45,8 @@ export default async function handler(req, res) {
   ctx.font = 'bold 26px sans-serif';
   ctx.fillText(campaign.headline, 40, 110);
 
-  ctx.drawImage(qrCanvas, 250, 160);
+  const qrImage = await loadImage(qrCanvas.toDataURL());
+  ctx.drawImage(qrImage, 250, 160);
 
   ctx.fillStyle = '#aaa';
   ctx.font = '16px sans-serif';

@@ -18,7 +18,7 @@ export async function sendDigestEmails() {
     .gte('viewed_at', since.toISOString());
 
   const viewsByDomain: Record<string, any[]> = {};
-  views?.forEach(v => {
+  views?.forEach((v) => {
     if (!viewsByDomain[v.domain]) viewsByDomain[v.domain] = [];
     viewsByDomain[v.domain].push(v);
   });
@@ -36,7 +36,7 @@ export async function sendDigestEmails() {
       from: 'updates@yourdomain.com',
       to: sub.email,
       subject: `Daily Digest for ${sub.domain}`,
-      text: body
+      text: body,
     });
   }
 

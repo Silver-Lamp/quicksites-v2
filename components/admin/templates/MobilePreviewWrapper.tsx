@@ -4,7 +4,7 @@ import { Monitor, Smartphone } from 'lucide-react';
 
 export default function MobilePreviewWrapper({
   children,
-  loopScroll = false
+  loopScroll = false,
 }: {
   children: React.ReactNode;
   loopScroll?: boolean;
@@ -25,7 +25,10 @@ export default function MobilePreviewWrapper({
       if (!el) return;
       el.scrollTop += scrollStep * direction;
 
-      if (el.scrollTop >= el.scrollHeight - el.clientHeight || el.scrollTop <= 0) {
+      if (
+        el.scrollTop >= el.scrollHeight - el.clientHeight ||
+        el.scrollTop <= 0
+      ) {
         direction *= -1;
       }
 
@@ -50,14 +53,21 @@ export default function MobilePreviewWrapper({
       </div>
 
       <div className="flex justify-center">
-        <div className={`transition-all ${mobile ? 'p-6 bg-black rounded-3xl border-4 border-gray-800' : ''}`}>
+        <div
+          className={`transition-all ${mobile ? 'p-6 bg-black rounded-3xl border-4 border-gray-800' : ''}`}
+        >
           <div
             className={`rounded shadow bg-white dark:bg-gray-900 ${
-              mobile ? 'w-[375px] h-[667px] overflow-y-auto rounded-[28px]' : 'w-full'
+              mobile
+                ? 'w-[375px] h-[667px] overflow-y-auto rounded-[28px]'
+                : 'w-full'
             }`}
             ref={scrollRef}
           >
-            <div id="preview-capture" className="p-4 rounded-md shadow bg-white dark:bg-gray-900">
+            <div
+              id="preview-capture"
+              className="p-4 rounded-md shadow bg-white dark:bg-gray-900"
+            >
               {children}
             </div>
           </div>

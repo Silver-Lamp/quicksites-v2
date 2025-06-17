@@ -1,16 +1,28 @@
 import { createClient } from '@supabase/supabase-js';
+import { json } from '@/lib/api/json';
 import { NextApiRequest, NextApiResponse } from 'next';
 import crypto from 'crypto';
 import fs from 'fs';
 import path from 'path';
 
-const supabase = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
+const supabase = createClient(
+  process.env.SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+);
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+export default async function handler(
+  req: NextApiRequest,
+  res: NextApiResponse
+) {
   const { file, token } = req.query;
 
-  if (!file || !token || typeof file !== 'string' || typeof token !== 'string') {
-    return res.status(400).json({ error: 'Missing file or token' });
+  if (
+    !file ||
+    !token ||
+    typeof file !== 'string' ||
+    typeof token !== 'string'
+  ) {
+    return json({ error: 'Missing file or token' });
   }
 
   const hash = crypto.createHash('sha256').update(token).digest('hex');
@@ -25,12 +37,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     .single();
 
   if (error || !data) {
-    return res.status(403).json({ error: 'Invalid or expired token' });
+    return json({ error: 'Invalid or expired token' });
   }
 
   const filePath = path.resolve(`./reports/analytics/${file}`);
   if (!fs.existsSync(filePath)) {
-    return res.status(404).json({ error: 'File not found' });
+    return json({ error: 'File not found' });
   }
 
   res.setHeader('Content-Disposition', `attachment; filename="${file}"`);

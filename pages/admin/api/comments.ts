@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
+import { json } from '@/lib/api/json';
 import type { NextApiRequest, NextApiResponse } from 'next';
 
 const supabase = createClient(
@@ -6,7 +7,10 @@ const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 );
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+export default async function handler(
+  req: NextApiRequest,
+  res: NextApiResponse
+) {
   if (req.method === 'GET') {
     const { snapshot_id } = req.query;
     const { data, error } = await supabase
@@ -15,8 +19,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       .eq('snapshot_id', snapshot_id)
       .order('created_at', { ascending: false });
 
-    if (error) return res.status(500).json({ error: error.message });
-    return res.status(200).json(data);
+    if (error) return json({ error: error.message });
+    return json(data);
   }
 
   if (req.method === 'POST') {
@@ -28,8 +32,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       .select()
       .single();
 
-    if (error) return res.status(500).json({ error: error.message });
-    return res.status(200).json(data);
+    if (error) return json({ error: error.message });
+    return json(data);
   }
 
   res.status(405).end();

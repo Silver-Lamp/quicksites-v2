@@ -5,7 +5,7 @@ import toast from 'react-hot-toast';
 
 export default function PreviewExportButton({
   targetId = 'preview-target',
-  filename = 'template-preview.png'
+  filename = 'template-preview.png',
 }: {
   targetId?: string;
   filename?: string;

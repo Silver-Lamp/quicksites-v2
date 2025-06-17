@@ -34,6 +34,7 @@ npx create-next-app -e https://github.com/QuickSitesAI/zod-playground-template y
 ```
 
 This creates a stub with:
+
 - Static pitch
 - Default schema
 - Option to link out to hosted playground
@@ -41,6 +42,7 @@ This creates a stub with:
 ---
 
 ## 🔒 License
+
 MIT for this template only.  
 Hosted editor, deploy pipeline, and database structure © QuickSites.ai.
 

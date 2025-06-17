@@ -14,7 +14,9 @@ async function run() {
   const { data: campaigns } = await supabase
     .from('campaigns')
     .select('*')
-    .or(`and(status.eq.active,ends_at.lte.${soon}),and(status.eq.active,ends_at.lte.${now.toISOString()})`);
+    .or(
+      `and(status.eq.active,ends_at.lte.${soon}),and(status.eq.active,ends_at.lte.${now.toISOString()})`
+    );
 
   for (const c of campaigns || []) {
     const { data: leads } = await supabase
@@ -26,17 +28,21 @@ async function run() {
     const isExpired = now.isAfter(c.ends_at);
 
     if (!claimed) {
-      const status = isExpired ? '❌ Ended – no claim' : '⏰ 1h warning – no claim';
+      const status = isExpired
+        ? '❌ Ended – no claim'
+        : '⏰ 1h warning – no claim';
 
       await supabase.from('user_action_logs').insert([
         {
           action_type: 'campaign_alert',
           triggered_by: 'campaign_bot',
-          notes: `${status}: ${c.name}`
-        }
+          notes: `${status}: ${c.name}`,
+        },
       ]);
 
-      const to = [c.created_by || '', 'sandonjurowski@gmail.com'].filter(Boolean);
+      const to = [c.created_by || '', 'sandonjurowski@gmail.com'].filter(
+        Boolean
+      );
       const subject = `Campaign Alert: ${c.name} (${c.city})`;
       const body = `Campaign "${c.name}" is ${status}.
 City: ${c.city}
@@ -44,9 +50,9 @@ Start: ${c.starts_at}
 End: ${c.ends_at}
 
 No claims detected from:
-${(leads || []).map(l => '- ' + l.business_name).join('\n')}`;
+${(leads || []).map((l) => '- ' + l.business_name).join('\n')}`;
 
-      to.forEach(email => {
+      to.forEach((email) => {
         console.log('📧 MOCK EMAIL');
         console.log('To:', email);
         console.log('Subject:', subject);

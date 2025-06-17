@@ -1,7 +1,0 @@
-node_modules/
-.next/
-out/
-dist/
-coverage/
-public/
-scripts/check-links.js

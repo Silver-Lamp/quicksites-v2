@@ -1,13 +1,18 @@
 import { createClient } from '@supabase/supabase-js';
+import { json } from '@/lib/api/json';
+import { NextApiRequest, NextApiResponse } from 'next';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
-export default async function handler(req, res) {
+export default async function handler(
+  req: NextApiRequest,
+  res: NextApiResponse
+) {
   const { slug } = req.query;
-  if (!slug) return res.status(400).json({ error: 'Missing slug' });
+  if (!slug) return json({ error: 'Missing slug' });
 
   const { data: campaign, error } = await supabase
     .from('support_campaigns')
@@ -15,7 +20,7 @@ export default async function handler(req, res) {
     .eq('slug', slug)
     .single();
 
-  if (error || !campaign) return res.status(404).json({ error: 'Campaign not found' });
+  if (error || !campaign) return json({ error: 'Campaign not found' });
 
   const { data: countData } = await supabase
     .from('block_feedback')
@@ -23,5 +28,5 @@ export default async function handler(req, res) {
     .eq('block_id', campaign.block_id)
     .eq('action', campaign.target_action);
 
-  res.status(200).json({ ...campaign, count: countData?.length || 0 });
+  json({ ...campaign, count: countData?.length || 0 });
 }

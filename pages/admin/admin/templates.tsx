@@ -8,7 +8,7 @@ import {
   SelectTrigger,
   SelectContent,
   SelectItem,
-  SelectValue
+  SelectValue,
 } from '@/components/admin/ui/select';
 import { Button } from '@/components/admin/ui/button';
 import TemplateEditor from '@/components/admin/templates/TemplateEditor';
@@ -63,7 +63,13 @@ export default function TemplatesPage() {
               <Button variant="secondary">Duplicate</Button>
             </Link>
           ) : (
-            <Button variant="secondary" disabled title="Waiting for hydration...">Duplicate</Button>
+            <Button
+              variant="secondary"
+              disabled
+              title="Waiting for hydration..."
+            >
+              Duplicate
+            </Button>
           )}
           <Link href="/admin/templates-new">
             <Button>Create New</Button>

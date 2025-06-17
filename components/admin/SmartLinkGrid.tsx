@@ -1,8 +1,7 @@
-import SmartLink from './SmartLink';
-import SmartLinkMeta from './SmartLinkMeta';
-import Tooltip from './Tooltip';
-import type { SmartLinkItem } from '@/admin/types/SmartLinkItem';
-
+import SmartLink from '@/components/admin/SmartLink';
+import SmartLinkMeta from '@/components/admin/SmartLinkMeta';
+import Tooltip from '@/components/admin/Tooltip';
+import type { SmartLinkItem } from '@/types/SmartLinkItem';
 export default function SmartLinkGrid({ items }: { items: SmartLinkItem[] }) {
   return (
     <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
@@ -13,6 +12,7 @@ export default function SmartLinkGrid({ items }: { items: SmartLinkItem[] }) {
             type={item.type}
             query={item.query}
             theme={item.theme}
+            href={''}
           >
             <div className="font-medium text-white mb-1">
               {item.label || `${item.type} link`}

@@ -1,16 +1,23 @@
 'use client';
 import { useRouter } from 'next/router';
+import { json } from '@/lib/api/json';
 import { useEffect, useState } from 'react';
+
+type ForkRecord = {
+  handle: string;
+  name: string;
+  created_at: string;
+};
 
 export default function ForksPage() {
   const router = useRouter();
   const { template_id } = router.query;
-  const [forks, setForks] = useState([]);
+  const [forks, setForks] = useState<ForkRecord[]>([]);
 
   useEffect(() => {
     if (!template_id) return;
     fetch('/api/forks-tree?template_id=' + template_id)
-      .then(res => res.json())
+      .then((res) => json())
       .then(setForks);
   }, [template_id]);
 

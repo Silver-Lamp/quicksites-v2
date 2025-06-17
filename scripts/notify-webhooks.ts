@@ -3,7 +3,10 @@ import path from 'path';
 import fetch from 'node-fetch';
 import { createClient } from '@supabase/supabase-js';
 
-const supabase = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
+const supabase = createClient(
+  process.env.SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+);
 
 const logPath = './reports/activity.log';
 const contents = fs.readFileSync(logPath, 'utf-8').trim().split('\n');
@@ -30,7 +33,9 @@ for (const hook of data) {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        ...(hook.secret_token && { Authorization: `Bearer ${hook.secret_token}` }),
+        ...(hook.secret_token && {
+          Authorization: `Bearer ${hook.secret_token}`,
+        }),
       },
       body: JSON.stringify({
         event: 'export.success',
@@ -39,7 +44,10 @@ for (const hook of data) {
       }),
     });
     console.log(`📤 Notified ${hook.url}`);
-  } catch (e) {
-    console.error(`❌ Failed to notify ${hook.url}:`, e.message);
+  } catch (e: any) {
+    console.error(
+      `❌ Failed to notify ${hook.url}:`,
+      e instanceof Error ? e.message : String(e)
+    );
   }
 }

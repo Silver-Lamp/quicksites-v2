@@ -1,6 +1,6 @@
 // hooks/useBrandingProfiles.ts
 import { useEffect, useState } from 'react';
-import { supabase } from '@/admin/lib/supabaseClientClient';
+import { supabase } from '../lib/supabaseClient.js';
 
 export function useBrandingProfiles() {
   const [profiles, setProfiles] = useState([]);
@@ -13,7 +13,7 @@ export function useBrandingProfiles() {
         .select('*')
         .order('created_at', { ascending: false });
 
-      if (!error) setProfiles(data);
+      if (!error) setProfiles(data as any);
       setLoading(false);
     };
 

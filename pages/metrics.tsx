@@ -1,12 +1,13 @@
 'use client';
 import { useEffect, useState } from 'react';
+import { json } from '@/lib/api/json';
 
 export default function MetricsPage() {
   const [stats, setStats] = useState<any>(null);
 
   useEffect(() => {
     fetch('/api/metrics')
-      .then(res => res.json())
+      .then((res) => json())
       .then(setStats);
   }, []);
 
@@ -37,7 +38,11 @@ export default function MetricsPage() {
             </div>
           </div>
           <p className="text-sm text-zinc-500 text-center">
-            Data auto-refreshes daily. For transparency, visit <a href="/announce" className="underline">/announce</a>.
+            Data auto-refreshes daily. For transparency, visit{' '}
+            <a href="/announce" className="underline">
+              /announce
+            </a>
+            .
           </p>
         </>
       )}

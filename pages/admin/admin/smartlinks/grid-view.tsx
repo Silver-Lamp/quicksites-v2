@@ -1,16 +1,31 @@
-import SmartLinkGrid from '@/components/admin/SmartLinkGrid';
-import SmartLinkGallery from '@/components/admin/SmartLinkGallery';
+'use client';
+
+import { useRouter } from 'next/navigation.js';
+import { useMemo, useState } from 'react';
+import { parseISO, isAfter, isBefore } from 'date-fns';
 import { motion, AnimatePresence } from 'framer-motion';
-import { SmartLinkProvider } from '@/components/admin/SmartLinkProvider';
-import { mockSmartLinks } from '@/admin/mocks/mockSmartLinks';
-import type { SmartLinkItem } from '@/admin/types/SmartLinkItem';
-import { useRouter } from 'next/router';
+import SmartLinkGrid from '../../../../components/admin/SmartLinkGrid.jsx';
+import SmartLinkGallery from '../../../../components/admin/SmartLinkGallery.jsx';
+import { SmartLinkProvider } from '../../../../components/admin/SmartLinkProvider.jsx';
+import { mockSmartLinks } from '../../../../tests/mocks/mocks/mockSmartLinks.jsx';
+import type { SmartLinkItem } from '../../../../types/SmartLinkItem.jsx';
 
 export default function SmartLinkGridPage() {
   const items: SmartLinkItem[] = mockSmartLinks;
   const router = useRouter();
-  const sort = router.query.sort as string;
-  const view = (router.query.view as string) || 'grid';
+
+  const searchParams = new URLSearchParams(
+    typeof window !== 'undefined' ? window.location.search : ''
+  );
+  const sort = searchParams.get('sort') || '';
+  const view = searchParams.get('view') || 'grid';
+  const tag = searchParams.get('tag') || '';
+
+  const updateSearchParam = (key: string, value: string) => {
+    const params = new URLSearchParams(window.location.search);
+    params.set(key, value);
+    return `?${params.toString()}`;
+  };
 
   const sorted = [...items].sort((a, b) => {
     if (sort === 'type') return a.type.localeCompare(b.type);
@@ -22,40 +37,55 @@ export default function SmartLinkGridPage() {
     <SmartLinkProvider>
       <main className="p-6">
         <div className="flex items-center justify-between flex-wrap gap-4 mb-4">
-          <h1 className="text-xl font-bold text-white">🧱 SmartLink Grid View</h1>
+          <h1 className="text-xl font-bold text-white">
+            🧱 SmartLink Grid View
+          </h1>
           <div className="flex flex-wrap gap-2 items-center">
             <button
               className="text-xs px-3 py-1 rounded bg-zinc-800 hover:bg-zinc-700 border border-zinc-700"
-              onClick={() => router.push({ query: { ...router.query, sort: 'type' } })}
+              onClick={() => router.push(updateSearchParam('sort', 'type'))}
             >
               Sort by Type
             </button>
             <button
               className="text-xs px-3 py-1 rounded bg-zinc-800 hover:bg-zinc-700 border border-zinc-700"
-              onClick={() => router.push({ query: { ...router.query, sort: 'theme' } })}
+              onClick={() => router.push(updateSearchParam('sort', 'theme'))}
             >
               Sort by Theme
             </button>
           </div>
-        <div className="flex gap-2 flex-wrap">
-            {['template', 'snapshot'].map(tag => (
+
+          <div className="flex gap-2 flex-wrap">
+            {['template', 'snapshot'].map((t) => (
               <button
-                key={tag}
-                className={`text-xs px-3 py-1 rounded border border-zinc-600 hover:bg-zinc-700 ${router.query.tag === tag ? 'bg-blue-600 text-white' : 'bg-zinc-800 text-zinc-300'}`}
-                onClick={() => router.push({ query: { ...router.query, tag } })}
+                key={t}
+                className={`text-xs px-3 py-1 rounded border border-zinc-600 hover:bg-zinc-700 ${
+                  tag === t
+                    ? 'bg-blue-600 text-white'
+                    : 'bg-zinc-800 text-zinc-300'
+                }`}
+                onClick={() => router.push(updateSearchParam('tag', t))}
               >
-                {tag}
+                {t}
               </button>
             ))}
-          <button
-              className={`text-xs px-3 py-1 rounded border ${view === 'grid' ? 'bg-blue-700 text-white' : 'bg-zinc-800 text-zinc-300'} border-zinc-600`}
-              onClick={() => router.push({ query: { ...router.query, view: 'grid' } })}
+            <button
+              className={`text-xs px-3 py-1 rounded border ${
+                view === 'grid'
+                  ? 'bg-blue-700 text-white'
+                  : 'bg-zinc-800 text-zinc-300'
+              } border-zinc-600`}
+              onClick={() => router.push(updateSearchParam('view', 'grid'))}
             >
               Grid
             </button>
             <button
-              className={`text-xs px-3 py-1 rounded border ${view === 'gallery' ? 'bg-blue-700 text-white' : 'bg-zinc-800 text-zinc-300'} border-zinc-600`}
-              onClick={() => router.push({ query: { ...router.query, view: 'gallery' } })}
+              className={`text-xs px-3 py-1 rounded border ${
+                view === 'gallery'
+                  ? 'bg-blue-700 text-white'
+                  : 'bg-zinc-800 text-zinc-300'
+              } border-zinc-600`}
+              onClick={() => router.push(updateSearchParam('view', 'gallery'))}
             >
               Gallery
             </button>
@@ -63,32 +93,29 @@ export default function SmartLinkGridPage() {
         </div>
 
         <AnimatePresence mode="wait">
-        {view === 'gallery' ? (
-          <motion.div
-            key="gallery"
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            transition={{ duration: 0.2 }}
-          >
-          $1
-          </motion.div>
-        </motion.div>
-        ) : (
-          <motion.div
-            key="grid"
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            transition={{ duration: 0.2 }}
-          >
-          $1
-          </motion.div>
-        )}
-      </AnimatePresence>
-        )}
+          {view === 'gallery' ? (
+            <motion.div
+              key="gallery"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              transition={{ duration: 0.2 }}
+            >
+              <SmartLinkGallery items={sorted} />
+            </motion.div>
+          ) : (
+            <motion.div
+              key="grid"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              transition={{ duration: 0.2 }}
+            >
+              <SmartLinkGrid items={sorted} />
+            </motion.div>
+          )}
+        </AnimatePresence>
       </main>
     </SmartLinkProvider>
   );
 }
-

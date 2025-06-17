@@ -1,7 +1,10 @@
 import Link from 'next/link';
-import { buildSafeLink } from '@/admin/lib/buildSafeLink';
-import { getTemplateUrl, getSnapshotUrl } from '@/admin/lib/url';
-import { linkThemeMap } from '@/admin/lib/theme';
+import {
+  buildSafeLink,
+  BuildSafeLinkOptions,
+} from '@/admin/lib/links/buildSafeLink';
+import { getTemplateUrl, getSnapshotUrl } from '@/admin/lib/links/url';
+import { linkThemeMap } from '@/admin/lib/links/theme';
 import { MissingLink } from '@/components/admin/MissingLink';
 
 export type SmartLinkProps = {
@@ -12,13 +15,25 @@ export type SmartLinkProps = {
   theme?: keyof typeof linkThemeMap;
 } & React.ComponentProps<typeof Link>;
 
-export default function SmartLink({ id, type, query, children, theme = 'primary', ...rest }: SmartLinkProps) {
-  const href = type === 'template' ? getTemplateUrl(id || '', query) : getSnapshotUrl(id || '', query);
+export default function SmartLink({
+  id,
+  type,
+  query,
+  children,
+  theme = 'primary',
+  ...rest
+}: SmartLinkProps) {
+  const href =
+    type === 'template'
+      ? getTemplateUrl(id || '', query)
+      : getSnapshotUrl(id || '', query);
   const className = linkThemeMap[theme] || linkThemeMap.primary;
   if (!id) {
-    return <MissingLink type={type} className={className} {...rest} />;
+    return <MissingLink type={type} className={className} {...(rest as any)} />;
   }
 
-return buildSafeLink(id, href, `${type}Link`, children, { className, ...rest });
-
+  return buildSafeLink(id, href.toString(), `${type}Link`, children, {
+    className,
+    ...(rest as BuildSafeLinkOptions),
+  });
 }

@@ -6,7 +6,11 @@ import { useEffect, useState } from 'react';
 import { SessionContextProvider } from '@supabase/auth-helpers-react';
 import { supabase } from '@/lib/supabase';
 
-export default function SafeSupabaseProvider({ children }: { children: React.ReactNode }) {
+export default function SafeSupabaseProvider({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
@@ -36,7 +40,9 @@ export default function SafeSupabaseProvider({ children }: { children: React.Rea
 
     supabase.auth.getSession().then(async ({ data }) => {
       const token = data?.session?.access_token;
-      const masked = token ? `${token.slice(0, 4)}...${token.slice(-4)}` : 'none';
+      const masked = token
+        ? `${token.slice(0, 4)}...${token.slice(-4)}`
+        : 'none';
       await supabase.from('session_logs').insert({
         type: 'initial_session',
         device: navigator.userAgent,
@@ -53,7 +59,15 @@ export default function SafeSupabaseProvider({ children }: { children: React.Rea
   }, []);
 
   if (!ready)
-    return <p className="text-center text-sm text-gray-400 p-6">Initializing session…</p>;
+    return (
+      <p className="text-center text-sm text-gray-400 p-6">
+        Initializing session…
+      </p>
+    );
 
-  return <SessionContextProvider supabaseClient={supabase}>{children}</SessionContextProvider>;
+  return (
+    <SessionContextProvider supabaseClient={supabase}>
+      {children}
+    </SessionContextProvider>
+  );
 }

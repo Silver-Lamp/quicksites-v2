@@ -17,7 +17,9 @@ export default function PublicSite() {
 
     supabase
       .from('published_sites')
-      .select('*, snapshots(data), branding_profiles(name, theme, brand, accent_color, logo_url)')
+      .select(
+        '*, snapshots(data), branding_profiles(name, theme, brand, accent_color, logo_url)'
+      )
       .eq('slug', slug)
       .eq('status', 'published')
       .single()
@@ -28,8 +30,8 @@ export default function PublicSite() {
             {
               site_id: data.id,
               referrer: document.referrer,
-              user_agent: navigator.userAgent
-            }
+              user_agent: navigator.userAgent,
+            },
           ]);
         }
       });
@@ -40,12 +42,18 @@ export default function PublicSite() {
   const themeColor = site.branding_profiles?.accent_color || '#111';
 
   return (
-    <div className="min-h-screen p-6" style={{ backgroundColor: themeColor + '15' }}>
+    <div
+      className="min-h-screen p-6"
+      style={{ backgroundColor: themeColor + '15' }}
+    >
       <div className="max-w-3xl mx-auto bg-white p-6 rounded shadow">
         <div className="flex justify-between items-center mb-4">
           <h1 className="text-xl font-bold">{site.branding_profiles?.name}</h1>
           {site.branding_profiles?.logo_url && (
-            <img src={site.branding_profiles.logo_url} className="w-10 h-10 rounded-full" />
+            <img
+              src={site.branding_profiles.logo_url}
+              className="w-10 h-10 rounded-full"
+            />
           )}
         </div>
 

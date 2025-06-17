@@ -29,8 +29,12 @@ export default function SaveShareButtons({ template }: { template: any }) {
 
   return (
     <div className="flex gap-2 mt-4">
-      <Button variant="secondary" onClick={handleSaveAs}>Save As Template</Button>
-      <Button variant="secondary" onClick={handleShare}>Share Snapshot</Button>
+      <Button variant="secondary" onClick={handleSaveAs}>
+        Save As Template
+      </Button>
+      <Button variant="secondary" onClick={handleShare}>
+        Share Snapshot
+      </Button>
     </div>
   );
 }

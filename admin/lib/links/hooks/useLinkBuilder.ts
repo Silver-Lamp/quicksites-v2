@@ -24,7 +24,13 @@ export function useLinkBuilder() {
       ? linkThemeMap[linkProps.theme]
       : linkThemeMap.primary;
 
-    const { theme: _t, href: _h, prefetch: _p, target: _tg, ...rest } = linkProps || {};
+    const {
+      theme: _t,
+      href: _h,
+      prefetch: _p,
+      target: _tg,
+      ...rest
+    } = linkProps || {};
     const target = _tg as '_blank' | '_self' | '_parent' | '_top' | undefined;
     return buildSafeLink(id, href.toString(), 'templateLink', children, {
       className: resolved,

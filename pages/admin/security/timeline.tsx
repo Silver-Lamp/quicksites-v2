@@ -6,7 +6,7 @@ export default function SecurityTimelinePage() {
 
   useEffect(() => {
     fetch('/reports/security.log')
-      .then(res => res.text())
+      .then((res) => res.text())
       .then(setLog);
   }, []);
 
@@ -17,7 +17,10 @@ export default function SecurityTimelinePage() {
       <h1 className="text-xl font-bold mb-4">📆 Security Audit Timeline</h1>
       <ul className="space-y-2 text-sm font-mono">
         {lines.reverse().map((line, i) => (
-          <li key={i} className="bg-zinc-900 p-2 rounded border border-zinc-800">
+          <li
+            key={i}
+            className="bg-zinc-900 p-2 rounded border border-zinc-800"
+          >
             {line}
           </li>
         ))}

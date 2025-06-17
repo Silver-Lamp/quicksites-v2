@@ -1,5 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
+import { json } from '@/lib/api/json';
 import { createCanvas, loadImage } from 'canvas';
+import { NextApiRequest, NextApiResponse } from 'next';
 import QRCode from 'qrcode';
 
 const supabase = createClient(
@@ -7,9 +9,12 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
-export default async function handler(req, res) {
+export default async function handler(
+  req: NextApiRequest,
+  res: NextApiResponse
+) {
   const { slug } = req.query;
-  if (!slug) return res.status(400).json({ error: 'Missing slug' });
+  if (!slug) return json({ error: 'Missing slug' });
 
   const { data: campaign } = await supabase
     .from('support_campaigns')
@@ -17,10 +22,13 @@ export default async function handler(req, res) {
     .eq('slug', slug)
     .single();
 
-  if (!campaign) return res.status(404).json({ error: 'Not found' });
+  if (!campaign) return json({ error: 'Not found' });
 
-  const campaignUrl = \`https://yourdomain.com/support/\${slug}\`;
-  const qrCanvas = await QRCode.toCanvas(campaignUrl, { margin: 1, width: 300 });
+  const campaignUrl = `https://yourdomain.com/support/${slug}`;
+  const qrCanvas = await QRCode.toCanvas(campaignUrl, {
+    margin: 1,
+    width: 300,
+  });
 
   const canvas = createCanvas(800, 1000);
   const ctx = canvas.getContext('2d');
@@ -35,7 +43,7 @@ export default async function handler(req, res) {
   ctx.font = 'bold 26px sans-serif';
   ctx.fillText(campaign.headline, 40, 110);
 
-  ctx.drawImage(qrCanvas, 250, 160);
+  ctx.drawImage(qrCanvas as any, 250, 160);
 
   ctx.fillStyle = '#aaa';
   ctx.font = '16px sans-serif';
@@ -47,7 +55,7 @@ export default async function handler(req, res) {
   }
 
   const buffer = canvas.toBuffer('image/png');
-  res.setHeader('Content-Disposition', \`inline; filename="\${slug}-poster.png"\`);
+  res.setHeader('Content-Disposition', `inline; filename="${slug}-poster.png"`);
   res.setHeader('Content-Type', 'image/png');
   res.send(buffer);
 }

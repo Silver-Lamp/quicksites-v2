@@ -1,22 +1,21 @@
 import { useEffect, useState } from 'react';
 import { Dialog, DialogContent } from '@/components/admin/ui/dialog';
-import Editor from 'react-simple-code-editor';
-import 'prismjs/themes/prism-tomorrow.css';
+import { BlocksEditor } from '@/components/admin/templates/BlocksEditor';
 import toast from 'react-hot-toast';
 import { Button } from '@/components/admin/ui/button';
-import { BlockEditorModalProps } from '@/admin/types/blocks';
+import { BlockEditorModalProps } from '@/types/blocks';
 
 const schemaHints: Record<string, string> = {
-  "type": "Block type (e.g. hero, services)",
-  "content": "Main content object (text, image, etc.)",
-  "style": "Optional custom style or class"
+  type: 'Block type (e.g. hero, services)',
+  content: 'Main content object (text, image, etc.)',
+  style: 'Optional custom style or class',
 };
 
 export default function BlockEditorModal({
   open,
   onClose,
   block,
-  onSave
+  onSave,
 }: {
   open: boolean;
   onClose: () => void;
@@ -46,23 +45,25 @@ export default function BlockEditorModal({
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="bg-gray-900 text-white max-w-2xl max-h-screen overflow-y-auto">
         <h2 className="text-lg font-bold mb-2">Edit Block JSON</h2>
-        <Editor
-          value={value}
-          onValueChange={setValue}
-          highlight={(code) => code}
-          padding={12}
-          style={{
-            minHeight: 300,
-            backgroundColor: '#111827',
-            fontFamily: 'monospace',
-            fontSize: 13,
-            color: 'white'
-          }}
+        <BlocksEditor
+          blocks={[
+            {
+              id: crypto.randomUUID(),
+              type: 'hero',
+              content: {
+                title: 'Hello',
+                description: 'World',
+              },
+            },
+          ]}
+          onChange={() => {}}
         />
         {error && <p className="text-sm text-red-400 mt-2">{error}</p>}
 
         <div className="mt-4">
-          <p className="text-xs font-semibold text-gray-400">Block Schema Tips:</p>
+          <p className="text-xs font-semibold text-gray-400">
+            Block Schema Tips:
+          </p>
           <ul className="text-xs mt-1 space-y-1 pl-4 list-disc text-gray-400">
             {Object.entries(schemaHints).map(([key, hint]) => (
               <li key={key}>
@@ -73,7 +74,9 @@ export default function BlockEditorModal({
         </div>
 
         <div className="flex justify-end mt-6 gap-2">
-          <Button variant="secondary" onClick={onClose}>Cancel</Button>
+          <Button variant="secondary" onClick={onClose}>
+            Cancel
+          </Button>
           <Button onClick={handleSave}>Save</Button>
         </div>
       </DialogContent>

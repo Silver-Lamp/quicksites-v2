@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
-import { supabase } from '../../lib/supabase';
+import { supabase } from '@/admin/lib/supabaseClient';
 
 export default function DomainDetail() {
   const router = useRouter();
@@ -26,19 +26,17 @@ export default function DomainDetail() {
   const toggleClaim = async () => {
     if (!domain) return;
     await supabase
-  .from('domains')
-  .update({ is_claimed: !domain.is_claimed })
-  .eq('id', domain.id);
+      .from('domains')
+      .update({ is_claimed: !domain.is_claimed })
+      .eq('id', domain.id);
 
-await supabase
-  .from('user_action_logs')
-  .insert([
-    {
-      domain_id: domain.id,
-      action_type: 'site_claimed',
-      triggered_by: role
-    }
-  ]);
+    await supabase.from('user_action_logs').insert([
+      {
+        domain_id: domain.id,
+        action_type: 'site_claimed',
+        triggered_by: role,
+      },
+    ]);
 
     setDomain({ ...domain, is_claimed: !domain.is_claimed });
   };
@@ -49,10 +47,15 @@ await supabase
       <p>City: {domain.city}</p>
       <p>Claimed: {domain.is_claimed ? 'Yes' : 'No'}</p>
       {role === 'admin' && (
-        <button onClick={toggleClaim} className="mt-4 bg-blue-600 px-4 py-2 rounded">
+        <button
+          onClick={toggleClaim}
+          className="mt-4 bg-blue-600 px-4 py-2 rounded"
+        >
           Toggle Claim
         </button>
       )}
     </div>
-  ) : <p className="p-6 text-white">Loading...</p>;
+  ) : (
+    <p className="p-6 text-white">Loading...</p>
+  );
 }

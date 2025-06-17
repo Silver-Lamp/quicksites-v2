@@ -1,5 +1,6 @@
 'use client';
 import { useState } from 'react';
+import { json } from '@/lib/api/json';
 
 export default function MatchPage() {
   const [tags, setTags] = useState('');
@@ -7,7 +8,7 @@ export default function MatchPage() {
 
   const search = async () => {
     const res = await fetch('/api/match?tags=' + encodeURIComponent(tags));
-    const json = await res.json();
+    const json = await json();
     setResults(json);
   };
 
@@ -31,7 +32,10 @@ export default function MatchPage() {
         {results.map((r: any) => (
           <li key={r.user_id} className="bg-zinc-800 p-4 rounded">
             <div className="text-lg">
-              <a href={`/world/${r.handle}/share`} className="text-blue-400 hover:underline">
+              <a
+                href={`/world/${r.handle}/share`}
+                className="text-blue-400 hover:underline"
+              >
                 {r.emoji} @{r.handle}
               </a>
             </div>

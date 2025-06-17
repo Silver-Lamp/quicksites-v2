@@ -25,9 +25,11 @@ if (!fs.existsSync(screenshotsDir)) {
   process.exit(0);
 }
 
-const folders = fs.readdirSync(screenshotsDir).filter(name => !name.startsWith('.') && name !== 'pinned.json');
+const folders = fs
+  .readdirSync(screenshotsDir)
+  .filter((name) => !name.startsWith('.') && name !== 'pinned.json');
 
-folders.forEach(folder => {
+folders.forEach((folder) => {
   if (pinned.includes(folder)) return;
 
   const folderPath = path.join(screenshotsDir, folder);

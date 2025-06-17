@@ -15,7 +15,7 @@ export async function createSnapshot({
   brand,
   colorScheme,
   editorEmail,
-  thumbnailUrl
+  thumbnailUrl,
 }: {
   templateId: string;
   templateName: string;
@@ -27,20 +27,24 @@ export async function createSnapshot({
   editorEmail?: string;
   thumbnailUrl?: string;
 }) {
-  const { data: result, error } = await supabase.from('snapshots').insert([
-    {
-      template_id: templateId,
-      template_name: templateName,
-      commit_message: commitMessage,
-      data,
-      theme,
-      brand,
-      color_scheme: colorScheme,
-      editor_email: editorEmail,
-      thumbnail_url: thumbnailUrl,
-      shared_at: new Date().toISOString()
-    }
-  ]).select('*').single();
+  const { data: result, error } = await supabase
+    .from('snapshots')
+    .insert([
+      {
+        template_id: templateId,
+        template_name: templateName,
+        commit_message: commitMessage,
+        data,
+        theme,
+        brand,
+        color_scheme: colorScheme,
+        editor_email: editorEmail,
+        thumbnail_url: thumbnailUrl,
+        shared_at: new Date().toISOString(),
+      },
+    ])
+    .select('*')
+    .single();
 
   if (error) {
     toast.error('Snapshot creation failed');

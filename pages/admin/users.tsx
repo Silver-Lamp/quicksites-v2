@@ -22,7 +22,7 @@ export default function UsersPage() {
 
   const updateRole = async (userId: string, role: string) => {
     await supabase.auth.admin.updateUserById(userId, {
-      user_metadata: { role }
+      user_metadata: { role },
     });
     const refreshed = await supabase.auth.admin.listUsers();
     setUsers(refreshed.data?.users || []);
@@ -43,7 +43,10 @@ export default function UsersPage() {
         </thead>
         <tbody>
           {users.map((u, i) => (
-            <tr key={u.id} className={i % 2 === 0 ? 'bg-gray-800' : 'bg-gray-900'}>
+            <tr
+              key={u.id}
+              className={i % 2 === 0 ? 'bg-gray-800' : 'bg-gray-900'}
+            >
               <td className="px-4 py-2">{u.email}</td>
               <td className="px-4 py-2">
                 <select
@@ -57,8 +60,12 @@ export default function UsersPage() {
                   <option value="viewer">viewer</option>
                 </select>
               </td>
-              <td className="px-4 py-2 text-xs">{u.user_metadata?.referrer_id || '—'}</td>
-              <td className="px-4 py-2 text-xs">{new Date(u.created_at).toLocaleString()}</td>
+              <td className="px-4 py-2 text-xs">
+                {u.user_metadata?.referrer_id || '—'}
+              </td>
+              <td className="px-4 py-2 text-xs">
+                {new Date(u.created_at).toLocaleString()}
+              </td>
             </tr>
           ))}
         </tbody>

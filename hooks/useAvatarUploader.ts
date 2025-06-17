@@ -10,7 +10,8 @@ export function useAvatarUploader(userId: string) {
   useEffect(() => {
     if (!userId) return;
     const path = `avatars/${userId}.png`;
-    const publicUrl = supabase.storage.from('avatars').getPublicUrl(path).data?.publicUrl;
+    const publicUrl = supabase.storage.from('avatars').getPublicUrl(path)
+      .data?.publicUrl;
     setAvatarUrl(publicUrl ?? null);
   }, [userId]);
 
@@ -21,7 +22,7 @@ export function useAvatarUploader(userId: string) {
 
     await supabase.storage.from('avatars').upload(path, file, {
       cacheControl: '3600',
-      upsert: true
+      upsert: true,
     });
 
     const { data } = supabase.storage.from('avatars').getPublicUrl(path);

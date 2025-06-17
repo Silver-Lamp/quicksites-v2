@@ -1,7 +1,14 @@
 import { useEffect, useState } from 'react';
 import { createClient } from '@supabase/supabase-js';
-import { Input } from '../../components/ui/input';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../components/ui/table';
+import { Input } from '@/components/admin/ui/input';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/admin/ui/table';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -51,7 +58,9 @@ export default function ViewsDashboard() {
               <TableRow key={v.id}>
                 <TableCell>{v.template_name}</TableCell>
                 <TableCell>{v.ip_address}</TableCell>
-                <TableCell className="text-xs max-w-sm truncate">{v.user_agent}</TableCell>
+                <TableCell className="text-xs max-w-sm truncate">
+                  {v.user_agent}
+                </TableCell>
                 <TableCell className="text-xs">
                   {new Date(v.viewed_at).toLocaleString()}
                 </TableCell>

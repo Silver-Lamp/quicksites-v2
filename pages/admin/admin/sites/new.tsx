@@ -11,11 +11,21 @@ export default function NewSitePage() {
   const router = useRouter();
   const [profiles, setProfiles] = useState<any[]>([]);
   const [snapshots, setSnapshots] = useState<any[]>([]);
-  const [form, setForm] = useState({ snapshot_id: '', branding_profile_id: '', slug: '' });
+  const [form, setForm] = useState({
+    snapshot_id: '',
+    branding_profile_id: '',
+    slug: '',
+  });
 
   useEffect(() => {
-    supabase.from('branding_profiles').select('id, name').then(({ data }) => setProfiles(data || []));
-    supabase.from('snapshots').select('id, template_name').then(({ data }) => setSnapshots(data || []));
+    supabase
+      .from('branding_profiles')
+      .select('id, name')
+      .then(({ data }) => setProfiles(data || []));
+    supabase
+      .from('snapshots')
+      .select('id, template_name')
+      .then(({ data }) => setSnapshots(data || []));
   }, []);
 
   const publish = async () => {
@@ -23,8 +33,8 @@ export default function NewSitePage() {
       {
         ...form,
         status: 'published',
-        published_at: new Date().toISOString()
-      }
+        published_at: new Date().toISOString(),
+      },
     ]);
     if (!error) router.push('/admin/sites');
   };
@@ -34,28 +44,49 @@ export default function NewSitePage() {
       <h1 className="text-xl font-bold">Publish New Site</h1>
 
       <label className="block text-sm font-medium">Slug</label>
-      <input className="border px-2 py-1 w-full rounded" placeholder="e.g. towing-pro" value={form.slug}
-        onChange={e => setForm(f => ({ ...f, slug: e.target.value }))} />
+      <input
+        className="border px-2 py-1 w-full rounded"
+        placeholder="e.g. towing-pro"
+        value={form.slug}
+        onChange={(e) => setForm((f) => ({ ...f, slug: e.target.value }))}
+      />
 
       <label className="block text-sm font-medium">Snapshot</label>
-      <select className="w-full border rounded px-2 py-1"
-        onChange={e => setForm(f => ({ ...f, snapshot_id: e.target.value }))}>
+      <select
+        className="w-full border rounded px-2 py-1"
+        onChange={(e) =>
+          setForm((f) => ({ ...f, snapshot_id: e.target.value }))
+        }
+      >
         <option value="">Select snapshot</option>
-        {snapshots.map(s => (
-          <option key={s.id} value={s.id}>{s.template_name}</option>
+        {snapshots.map((s) => (
+          <option key={s.id} value={s.id}>
+            {s.template_name}
+          </option>
         ))}
       </select>
 
       <label className="block text-sm font-medium">Branding Profile</label>
-      <select className="w-full border rounded px-2 py-1"
-        onChange={e => setForm(f => ({ ...f, branding_profile_id: e.target.value }))}>
+      <select
+        className="w-full border rounded px-2 py-1"
+        onChange={(e) =>
+          setForm((f) => ({ ...f, branding_profile_id: e.target.value }))
+        }
+      >
         <option value="">Select profile</option>
-        {profiles.map(p => (
-          <option key={p.id} value={p.id}>{p.name}</option>
+        {profiles.map((p) => (
+          <option key={p.id} value={p.id}>
+            {p.name}
+          </option>
         ))}
       </select>
 
-      <button onClick={publish} className="bg-black text-white px-4 py-2 rounded mt-4">Publish</button>
+      <button
+        onClick={publish}
+        className="bg-black text-white px-4 py-2 rounded mt-4"
+      >
+        Publish
+      </button>
     </div>
   );
 }

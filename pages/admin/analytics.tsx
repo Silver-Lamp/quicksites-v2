@@ -16,11 +16,19 @@ export default function AnalyticsPage() {
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
           <Label>Date From</Label>
-          <Input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} />
+          <Input
+            type="date"
+            value={dateFrom}
+            onChange={(e) => setDateFrom(e.target.value)}
+          />
         </div>
         <div>
           <Label>Date To</Label>
-          <Input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} />
+          <Input
+            type="date"
+            value={dateTo}
+            onChange={(e) => setDateTo(e.target.value)}
+          />
         </div>
       </div>
 
@@ -39,7 +47,9 @@ export default function AnalyticsPage() {
 
       <Modal show={showModal} onClose={() => setShowModal(false)}>
         <h2 className="text-lg font-semibold mb-2">🔗 Share this report</h2>
-        <p className="text-sm text-zinc-300">Coming soon: PDF export, link share, and team insights.</p>
+        <p className="text-sm text-zinc-300">
+          Coming soon: PDF export, link share, and team insights.
+        </p>
       </Modal>
     </div>
   );

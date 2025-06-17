@@ -1,36 +1,62 @@
-import { useRouter } from 'next/router';
+import { useRouter } from 'next/navigation.js';
 import { z } from 'zod';
-import { parseTypedQueryValue } from '@/admin/lib/query/parseTypedQueryValue';
+import { parseTypedQueryValue } from '../lib/query/parseTypedQueryValue.js';
 
 type ParamReturn<T> = [
-  T extends 'string[]' ? string[] :
-  T extends 'number[]' ? number[] :
-  T extends 'string' ? string :
-  T extends 'number' ? number :
-  T extends 'date' ? Date :
-  T extends 'date[]' ? Date[] :
-  T extends 'json' ? Record<string, any> :
-  T extends 'json[]' ? Record<string, any>[] :
-  T extends 'boolean' ? boolean : never,
-  (value: any) => void
+  T extends 'string[]'
+    ? string[]
+    : T extends 'number[]'
+      ? number[]
+      : T extends 'string'
+        ? string
+        : T extends 'number'
+          ? number
+          : T extends 'date'
+            ? Date
+            : T extends 'date[]'
+              ? Date[]
+              : T extends 'json'
+                ? Record<string, any>
+                : T extends 'json[]'
+                  ? Record<string, any>[]
+                  : T extends 'boolean'
+                    ? boolean
+                    : never,
+  (value: any) => void,
 ];
 
-export function useTypedQueryParam<T extends 'string' | 'number' | 'boolean' | 'string[]' | 'number[]' | 'date' | 'date[]' | 'json' | 'json[]'> (
+export function useTypedQueryParam<
+  T extends
+    | 'string'
+    | 'number'
+    | 'boolean'
+    | 'string[]'
+    | 'number[]'
+    | 'date'
+    | 'date[]'
+    | 'json'
+    | 'json[]',
+>(
   key: string,
   fallback: any,
   type: T,
   schema?: z.ZodType<any, any, any>
 ): ParamReturn<T> {
   const router = useRouter();
-  const searchParams = new URLSearchParams(typeof window !== 'undefined' ? window.location.search : '');
+  const searchParams = new URLSearchParams(
+    typeof window !== 'undefined' ? window.location.search : ''
+  );
 
   const setParam = (value: any) => {
     const newParams = new URLSearchParams(window.location.search);
 
     if (Array.isArray(value)) {
       newParams.delete(key);
-      value.forEach(v => {
-        const serialized = typeof v === 'object' ? encodeURIComponent(JSON.stringify(v)) : String(v);
+      value.forEach((v) => {
+        const serialized =
+          typeof v === 'object'
+            ? encodeURIComponent(JSON.stringify(v))
+            : String(v);
         newParams.append(key, serialized);
       });
     } else if (value instanceof Date) {
@@ -52,8 +78,17 @@ export function useTypedQueryParam<T extends 'string' | 'number' | 'boolean' | '
   }
 
   const values = searchParams.getAll(key);
-  const value = ['string[]', 'number[]', 'date[]', 'json[]'].includes(type) ? values : searchParams.get(key);
+  const value = ['string[]', 'number[]', 'date[]', 'json[]'].includes(type)
+    ? values
+    : searchParams.get(key);
 
-  const parsed = parseTypedQueryValue(key, value, fallback, type, schema, router);
+  const parsed = parseTypedQueryValue(
+    key,
+    value,
+    fallback,
+    type,
+    schema,
+    router
+  );
   return [parsed, setParam];
 }

@@ -12,13 +12,18 @@ export default function AnalyticsPage() {
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
   const [mode, setMode] = useState<'views' | 'events'>('views');
-    const [siteId, setSiteId] = useState('');
-  const [siteOptions, setSiteOptions] = useState<{ id: string; domain?: string; name?: string }[]>([]);
+  const [siteId, setSiteId] = useState('');
+  const [siteOptions, setSiteOptions] = useState<
+    { id: string; domain?: string; name?: string }[]
+  >([]);
 
   useEffect(() => {
-    supabase.from('public_sites').select('id, domain, name').then(({ data }) => {
-      if (data) setSiteOptions(data);
-    });
+    supabase
+      .from('public_sites')
+      .select('id, domain, name')
+      .then(({ data }) => {
+        if (data) setSiteOptions(data);
+      });
   }, [supabase]);
 
   const [dataByDay, setDataByDay] = useState<Record<string, number>>({});
@@ -32,31 +37,28 @@ export default function AnalyticsPage() {
 
       const { data, error } = await supabase
         .from(table)
-        .select(column)
-        .gte(column, dateFrom)
-        .lte(column, dateTo)
-        .then(({ data, error }) => {
-          if (error) return console.error(error);
-
-          const filtered = siteId && mode === 'views'
-            ? data.filter((row: any) => row.site_id === siteId)
-            : data;
-
-          const counts: Record<string, number> = {};
-          for (const row of filtered || []) {
-            const key = row[column]?.slice(0, 10); // yyyy-mm-dd
-            counts[key] = (counts[key] || 0) + 1;
-          }
-          setDataByDay(counts);
-        });
+        .select(`${column},site_id`);
 
       if (error) return console.error(error);
 
+      // filter by site ID if necessary
+      const filtered = (data || []).filter((row) => {
+        if (mode === 'views' && siteId) {
+          return row.site_id === siteId;
+        }
+        return true;
+      });
+
+      // count by day
       const counts: Record<string, number> = {};
-      for (const row of data || []) {
-        const key = row[column]?.slice(0, 10); // yyyy-mm-dd
-        counts[key] = (counts[key] || 0) + 1;
+      for (const row of filtered) {
+        const value = row[column as keyof typeof row];
+        if (typeof value === 'string') {
+          const dayKey = value.slice(0, 10); // "YYYY-MM-DD"
+          counts[dayKey] = (counts[dayKey] || 0) + 1;
+        }
       }
+
       setDataByDay(counts);
     };
 
@@ -87,7 +89,7 @@ export default function AnalyticsPage() {
             className="bg-zinc-800 text-white border border-zinc-600 rounded px-2 py-1"
           >
             <option value="">All</option>
-            {siteOptions.map(site => (
+            {siteOptions.map((site) => (
               <option key={site.id} value={site.id}>
                 {site.domain || site.name || site.id.slice(0, 6)}
               </option>
@@ -96,11 +98,19 @@ export default function AnalyticsPage() {
         </div>
         <div>
           <Label>Date From</Label>
-          <Input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} />
+          <Input
+            type="date"
+            value={dateFrom}
+            onChange={(e) => setDateFrom(e.target.value)}
+          />
         </div>
         <div>
           <Label>Date To</Label>
-          <Input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} />
+          <Input
+            type="date"
+            value={dateTo}
+            onChange={(e) => setDateTo(e.target.value)}
+          />
         </div>
         <div>
           <Label>Mode</Label>
@@ -126,11 +136,16 @@ export default function AnalyticsPage() {
         Share / Export
       </button>
 
-      
       <button
         onClick={() => {
-          const rows = Object.entries(dataByDay).map(([date, value]) => ({ date, count: value }));
-          const csv = ['Date,Count', ...rows.map(row => `${row.date},${row.count}`)].join('\n');
+          const rows = Object.entries(dataByDay).map(([date, value]) => ({
+            date,
+            count: value,
+          }));
+          const csv = [
+            'Date,Count',
+            ...rows.map((row) => `${row.date},${row.count}`),
+          ].join('\n');
           const blob = new Blob([csv], { type: 'text/csv' });
           const url = URL.createObjectURL(blob);
           const link = document.createElement('a');
@@ -146,7 +161,9 @@ export default function AnalyticsPage() {
 
       <Modal show={showModal} onClose={() => setShowModal(false)}>
         <h2 className="text-lg font-semibold mb-2">🔗 Share this report</h2>
-        <p className="text-sm text-zinc-300">Coming soon: PDF export, link share, and filters by domain.</p>
+        <p className="text-sm text-zinc-300">
+          Coming soon: PDF export, link share, and filters by domain.
+        </p>
       </Modal>
     </div>
   );

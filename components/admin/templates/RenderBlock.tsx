@@ -21,7 +21,9 @@ export default function RenderBlock({ block }: { block: Block }) {
           <video controls className="max-w-full rounded">
             <source src={block.value.url} />
           </video>
-          {block.value.caption && <p className="text-sm text-gray-500 mt-1">{block.value.caption}</p>}
+          {block.value.caption && (
+            <p className="text-sm text-gray-500 mt-1">{block.value.caption}</p>
+          )}
         </div>
       );
 
@@ -43,7 +45,11 @@ export default function RenderBlock({ block }: { block: Block }) {
       return (
         <blockquote className="border-l-4 pl-4 italic text-gray-600 mb-4">
           “{block.value.text}”
-          {block.value.author && <footer className="mt-1 text-sm text-right">— {block.value.author}</footer>}
+          {block.value.author && (
+            <footer className="mt-1 text-sm text-right">
+              — {block.value.author}
+            </footer>
+          )}
         </blockquote>
       );
 

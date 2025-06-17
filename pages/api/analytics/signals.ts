@@ -1,4 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
+import { json } from '@/lib/api/json';
+import { NextApiRequest, NextApiResponse } from 'next';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -14,12 +16,15 @@ function groupByDate(data: any[], field: string) {
   return Object.entries(groups).map(([date, count]) => ({ date, count }));
 }
 
-export default async function handler(req, res) {
+export default async function handler(
+  req: NextApiRequest,
+  res: NextApiResponse
+) {
   const { start, end } = req.query;
 
   const viewRange = {
     from: start ? new Date(start as string).toISOString() : undefined,
-    to: end ? new Date(end as string).toISOString() : undefined
+    to: end ? new Date(end as string).toISOString() : undefined,
   };
 
   const [views, feedback] = await Promise.all([
@@ -32,11 +37,11 @@ export default async function handler(req, res) {
       .from('block_feedback')
       .select('created_at')
       .gte('created_at', viewRange.from || '')
-      .lte('created_at', viewRange.to || '')
+      .lte('created_at', viewRange.to || ''),
   ]);
 
   if (views.error || feedback.error) {
-    return res.status(500).json({ error: 'Error loading analytics' });
+    return json({ error: 'Error loading analytics' });
   }
 
   const byViews = groupByDate(views.data, 'viewed_at');
@@ -50,6 +55,8 @@ export default async function handler(req, res) {
     merged[date] = { ...(merged[date] || { date, views: 0 }), feedback: count };
   });
 
-  const result = Object.values(merged).sort((a, b) => a.date.localeCompare(b.date));
-  res.status(200).json(result);
+  const result = Object.values(merged).sort((a, b) =>
+    a.date.localeCompare(b.date)
+  );
+  json(result);
 }

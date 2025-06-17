@@ -1,25 +1,24 @@
 // ✅ FILE: lib/seo.ts
 
 export function getPageSeo({
-    title,
+  title,
+  description,
+  slug,
+}: {
+  title: string;
+  description: string;
+  slug: string;
+}) {
+  return {
+    title: `${title} | QuickSites`,
     description,
-    slug
-  }: {
-    title: string;
-    description: string;
-    slug: string;
-  }) {
-    return {
-      title: `${title} | QuickSites`,
+    openGraph: {
+      title,
       description,
-      openGraph: {
-        title,
-        description,
-        url: `https://quicksites.ai${slug}`,
-      },
-      twitter: {
-        cardType: 'summary_large_image',
-      },
-    };
-  }
-  
+      url: `https://quicksites.ai${slug}`,
+    },
+    twitter: {
+      cardType: 'summary_large_image',
+    },
+  };
+}

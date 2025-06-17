@@ -16,12 +16,19 @@ export default function TemplateSaveBar({
   rawJson,
   commitMessage,
   setSaveStatus,
-  setHighlightErrors
+  setHighlightErrors,
 }: TemplateSaveBarProps) {
-  const [saveStatus, setLocalSaveStatus] = useState<'idle' | 'saved' | 'error'>('idle');
+  const [saveStatus, setLocalSaveStatus] = useState<'idle' | 'saved' | 'error'>(
+    'idle'
+  );
 
   const handleSave = async () => {
-    if (!template?.template_name || !template?.industry || !template?.layout || !template?.data?.pages?.length) {
+    if (
+      !template?.template_name ||
+      !template?.industry ||
+      !template?.layout ||
+      !template?.data?.pages?.length
+    ) {
       setHighlightErrors(true);
       return;
     }
@@ -37,8 +44,8 @@ export default function TemplateSaveBar({
         body: JSON.stringify({
           ...payload,
           commit_message: commitMessage,
-          editor_id
-        })
+          editor_id,
+        }),
       });
 
       if (res.ok) {

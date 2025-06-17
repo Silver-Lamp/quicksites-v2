@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { supabase } from '@/lib/supabase';
+import { supabase } from '../lib/supabaseClient.js';
 
 export function useLogNotFound(context: 'public' | 'admin') {
   useEffect(() => {
@@ -10,7 +10,8 @@ export function useLogNotFound(context: 'public' | 'admin') {
     fetch('/api/ip')
       .then((res) => res.json())
       .then(({ ip }) => {
-        supabase.from('not_found_logs')
+        supabase
+          .from('not_found_logs')
           .insert({
             path,
             context,

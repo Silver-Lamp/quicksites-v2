@@ -1,7 +1,9 @@
+export const runtime = 'edge';
+
 // pages/api/admin/campaign-data/route.ts
 
-import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/admin/lib/supabaseClient';
+import { json } from '@/lib/api/json';
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
@@ -40,9 +42,9 @@ export async function GET(req: NextRequest) {
 
   const [eventsRes, logsRes] = await Promise.all([eventQuery, logQuery]);
 
-  return NextResponse.json({
+  return json({
     events: eventsRes.data || [],
     logs: logsRes.data || [],
-    nextPage: (eventsRes.data?.length === limit) ? page + 1 : null,
+    nextPage: eventsRes.data?.length === limit ? page + 1 : null,
   });
 }

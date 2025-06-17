@@ -4,7 +4,7 @@ export default function MetaTags({
   title = 'QuickSites',
   description = 'AI-powered local site generator and dashboard',
   image = '/assets/opengraph-image.dark.safe.png',
-  url = 'https://quicksites.ai'
+  url = 'https://quicksites.ai',
 }) {
   return (
     <NextSeo

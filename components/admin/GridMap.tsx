@@ -18,8 +18,12 @@ export default function GridMap() {
 
   useEffect(() => {
     const load = async () => {
-      const { data: leads } = await supabase.from('leads').select('id, business_name, address_city, address_state, industry');
-      const { data: domains } = await supabase.from('domains').select('city, state, domain');
+      const { data: leads } = await supabase
+        .from('leads')
+        .select('id, business_name, address_city, address_state, industry');
+      const { data: domains } = await supabase
+        .from('domains')
+        .select('city, state, domain');
 
       const geo: Record<string, any> = {};
 
@@ -33,13 +37,14 @@ export default function GridMap() {
           leadNames: [],
           domainNames: [],
           leadIds: [],
-          industryCounts: {}
+          industryCounts: {},
         };
         geo[key].leads += 1;
         if (l.business_name) geo[key].leadNames.push(l.business_name);
         geo[key].leadIds.push(l.id);
         const indKey = (l.industry || '').trim().toLowerCase();
-        geo[key].industryCounts[indKey] = (geo[key].industryCounts[indKey] || 0) + 1;
+        geo[key].industryCounts[indKey] =
+          (geo[key].industryCounts[indKey] || 0) + 1;
       }
 
       for (const d of domains || []) {
@@ -52,21 +57,25 @@ export default function GridMap() {
           leadNames: [],
           domainNames: [],
           leadIds: [],
-          industryCounts: {}
+          industryCounts: {},
         };
         geo[key].domains += 1;
         if (d.domain) geo[key].domainNames.push(d.domain);
       }
 
-      const enriched = await Promise.all(Object.values(geo).map(async (entry) => {
-        const { lat, lon } = await resolveGeo(entry.city, entry.state);
-        const primaryIndustry = Object.entries(entry.industryCounts || {}).reduce(
-          (acc: [string, number], [ind, count]) => 
-            (typeof count === 'number' && count > acc[1] ? [ind, count] : acc),
-          ['', 0]
-        )[0];
-        return { ...entry, lat, lon, industry: primaryIndustry };
-      }));
+      const enriched = await Promise.all(
+        Object.values(geo).map(async (entry) => {
+          const { lat, lon } = await resolveGeo(entry.city, entry.state);
+          const primaryIndustry = Object.entries(
+            entry.industryCounts || {}
+          ).reduce(
+            (acc: [string, number], [ind, count]) =>
+              typeof count === 'number' && count > acc[1] ? [ind, count] : acc,
+            ['', 0]
+          )[0];
+          return { ...entry, lat, lon, industry: primaryIndustry };
+        })
+      );
 
       setPoints(enriched);
     };
@@ -122,7 +131,13 @@ export default function GridMap() {
               attribution="© OpenStreetMap contributors"
             />
             {filteredPoints.map((p, i) => (
-              <CityMarker key={i} point={p} zoom={zoom} router={router} getColor={getColor} />
+              <CityMarker
+                key={i}
+                point={p}
+                zoom={zoom}
+                router={router}
+                getColor={getColor}
+              />
             ))}
           </MapContainer>
         </div>

@@ -28,7 +28,10 @@ export default function EarlyAccess() {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
           />
-          <button onClick={submit} className="bg-blue-500 hover:bg-blue-600 px-4 py-2 rounded text-white">
+          <button
+            onClick={submit}
+            className="bg-blue-500 hover:bg-blue-600 px-4 py-2 rounded text-white"
+          >
             Join Waitlist
           </button>
         </>

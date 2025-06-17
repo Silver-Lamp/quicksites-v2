@@ -3,24 +3,29 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { json } from '@/lib/api/json';
 import { Button } from '@/components/admin/ui/button';
 
 export default function PrebuildOGPage() {
   const [slugs, setSlugs] = useState<string[]>([]);
-  const [results, setResults] = useState<Record<string, 'pending' | 'success' | 'error'>>({});
+  const [results, setResults] = useState<
+    Record<string, 'pending' | 'success' | 'error'>
+  >({});
   const [loading, setLoading] = useState(false);
   const [totalMB, setTotalMB] = useState<string>('0.0');
 
   const fetchSlugs = async () => {
     const res = await fetch('/api/compare-slugs');
-    const json = await res.json();
+    const json = await json();
     setSlugs(json.slugs);
-    setResults(Object.fromEntries(json.slugs.map((slug: string) => [slug, 'pending'])));
+    setResults(
+      Object.fromEntries(json.slugs.map((slug: string) => [slug, 'pending']))
+    );
   };
 
   const fetchStorageInfo = async () => {
     const res = await fetch('/api/list-og-zips');
-    const json = await res.json();
+    const json = await json();
     setTotalMB(json.totalMB || '0.0');
   };
 
@@ -30,12 +35,12 @@ export default function PrebuildOGPage() {
       try {
         const res = await fetch(`/og/compare/${slug}`);
         if (res.ok) {
-          setResults(prev => ({ ...prev, [slug]: 'success' }));
+          setResults((prev) => ({ ...prev, [slug]: 'success' }));
         } else {
-          setResults(prev => ({ ...prev, [slug]: 'error' }));
+          setResults((prev) => ({ ...prev, [slug]: 'error' }));
         }
       } catch {
-        setResults(prev => ({ ...prev, [slug]: 'error' }));
+        setResults((prev) => ({ ...prev, [slug]: 'error' }));
       }
     }
     setLoading(false);
@@ -52,42 +57,51 @@ export default function PrebuildOGPage() {
     <main className="max-w-4xl mx-auto p-6 space-y-6">
       <div className="flex justify-between items-center">
         <div className="flex flex-col gap-2">
-        <h1 className="text-2xl font-bold">
-          Prebuild OG Images {parseFloat(totalMB) > 100 ? (
-            <span className="text-sm text-red-500 ml-2">({totalMB} MB used – over quota)</span>
-          ) : (
-            <span className="text-sm text-muted-foreground ml-2">({totalMB} MB used)</span>
-          )}
-        </h1>
-        <div className="w-full h-3 bg-gray-200 rounded overflow-hidden">
-          <div
-            className={`h-full ${overQuota ? 'bg-red-500' : 'bg-blue-500'}`}
-            style={{ width: `${Math.min(100, parseFloat(totalMB))}%` }}
-          />
+          <h1 className="text-2xl font-bold">
+            Prebuild OG Images{' '}
+            {parseFloat(totalMB) > 100 ? (
+              <span className="text-sm text-red-500 ml-2">
+                ({totalMB} MB used – over quota)
+              </span>
+            ) : (
+              <span className="text-sm text-muted-foreground ml-2">
+                ({totalMB} MB used)
+              </span>
+            )}
+          </h1>
+          <div className="w-full h-3 bg-gray-200 rounded overflow-hidden">
+            <div
+              className={`h-full ${overQuota ? 'bg-red-500' : 'bg-blue-500'}`}
+              style={{ width: `${Math.min(100, parseFloat(totalMB))}%` }}
+            />
+          </div>
         </div>
-      </div>
         <Button
           variant="outline"
           onClick={() => {
-            const zipUrl = `/api/download-og-zip?slugs=${encodeURIComponent(slugs.filter(s => results[s] === 'success').join(','))}`;
+            const zipUrl = `/api/download-og-zip?slugs=${encodeURIComponent(slugs.filter((s) => results[s] === 'success').join(','))}`;
             window.open(zipUrl, '_blank');
           }}
-          disabled={!slugs.some(s => results[s] === 'success')}
+          disabled={!slugs.some((s) => results[s] === 'success')}
         >
           Download All as ZIP
         </Button>
       </div>
       {overQuota && (
         <div className="text-sm text-yellow-600 bg-yellow-100 border border-yellow-300 rounded px-4 py-2">
-          Storage limit exceeded. Please delete old exports before generating new ones.
+          Storage limit exceeded. Please delete old exports before generating
+          new ones.
         </div>
       )}
 
-      <Button onClick={triggerBuilds} disabled={loading || slugs.length === 0 || overQuota}>
+      <Button
+        onClick={triggerBuilds}
+        disabled={loading || slugs.length === 0 || overQuota}
+      >
         {loading ? 'Generating...' : 'Start Prebuild'}
       </Button>
       <ul className="text-sm space-y-4">
-        {slugs.map(slug => (
+        {slugs.map((slug) => (
           <li key={slug} className="border p-4 rounded shadow-sm">
             <div className="flex justify-between mb-2">
               <span className="font-mono text-sm">{slug}</span>
@@ -96,8 +110,8 @@ export default function PrebuildOGPage() {
                   results[slug] === 'success'
                     ? 'text-green-500'
                     : results[slug] === 'error'
-                    ? 'text-red-500'
-                    : 'text-muted-foreground'
+                      ? 'text-red-500'
+                      : 'text-muted-foreground'
                 }
               >
                 {results[slug]}

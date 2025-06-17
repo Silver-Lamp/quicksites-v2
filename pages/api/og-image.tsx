@@ -1,11 +1,12 @@
 import { ImageResponse } from '@vercel/og';
+import { NextApiRequest, NextApiResponse } from 'next';
 
 export const config = {
   runtime: 'edge',
 };
 
-export default function handler(req) {
-  const { searchParams } = new URL(req.url);
+export default function handler(req: NextApiRequest, _res: NextApiResponse) {
+  const { searchParams } = new URL(req.url || 'https://quicksites.ai');
   const feature = searchParams.get('feature') || 'QuickSites';
 
   return new ImageResponse(

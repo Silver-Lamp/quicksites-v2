@@ -1,8 +1,12 @@
 'use client';
-import { useState, useEffect } from 'react';
-import { useUser } from '@supabase/auth-helpers-react';
+
+import { useEffect, useState } from 'react';
+import { useSession } from '@supabase/auth-helpers-react';
 
 export default function NewBlockPage() {
+  const session = useSession();
+  const user = session?.user;
+
   const [lat, setLat] = useState<number | null>(null);
   const [lon, setLon] = useState<number | null>(null);
   const [title, setTitle] = useState('');
@@ -10,7 +14,6 @@ export default function NewBlockPage() {
   const [emoji, setEmoji] = useState('🧠');
   const [saving, setSaving] = useState(false);
   const [done, setDone] = useState(false);
-  const user = useUser();
 
   useEffect(() => {
     navigator.geolocation.getCurrentPosition((pos) => {
@@ -25,12 +28,17 @@ export default function NewBlockPage() {
     const res = await fetch('/api/create-block', {
       method: 'POST',
       headers: {
-        Authorization: `Bearer ${user?.access_token}`,
-      },    
+        Authorization: `Bearer ${session?.access_token || ''}`,
+        'Content-Type': 'application/json',
+      },
       body: JSON.stringify({
-        lat, lon, title, message, emoji,
-        owner_id: user?.id || '00000000-0000-0000-0000-000000000000'
-      })
+        lat,
+        lon,
+        title,
+        message,
+        emoji,
+        owner_id: user?.id || '00000000-0000-0000-0000-000000000000',
+      }),
     });
     setSaving(false);
     if (res.ok) setDone(true);
@@ -40,25 +48,27 @@ export default function NewBlockPage() {
     <div className="max-w-md mx-auto p-6 text-white">
       <h1 className="text-2xl font-bold mb-4">📍 Create New Block</h1>
       {done ? (
-        <p className="text-green-400">✅ Block saved! Visit /world/[you] to see it in action.</p>
+        <p className="text-green-400">
+          ✅ Block saved! Visit /world/[you] to see it in action.
+        </p>
       ) : (
         <>
           <input
             value={title}
-            onChange={e => setTitle(e.target.value)}
+            onChange={(e) => setTitle(e.target.value)}
             placeholder="Title"
             className="w-full p-2 mb-3 rounded bg-zinc-800"
           />
           <textarea
             value={message}
-            onChange={e => setMessage(e.target.value)}
+            onChange={(e) => setMessage(e.target.value)}
             placeholder="Your message"
             rows={3}
             className="w-full p-2 mb-3 rounded bg-zinc-800"
           />
           <input
             value={emoji}
-            onChange={e => setEmoji(e.target.value)}
+            onChange={(e) => setEmoji(e.target.value)}
             className="w-full p-2 mb-4 rounded bg-zinc-800"
             placeholder="Emoji"
           />

@@ -34,10 +34,12 @@ export default function TokenManager() {
     await supabase.from('report_tokens').insert({
       file_name: fileName,
       token_hash: tokenHash,
-      expires_at: expiresAt
+      expires_at: expiresAt,
     });
 
-    alert(`✅ Token created! Link: /api/reports/download?file=${fileName}&token=${raw}`);
+    alert(
+      `✅ Token created! Link: /api/reports/download?file=${fileName}&token=${raw}`
+    );
     setFileName('');
     setExpiresAt('');
     loadTokens();
@@ -48,7 +50,9 @@ export default function TokenManager() {
       <h1 className="text-2xl font-bold">🔐 Report Access Tokens</h1>
 
       <div className="space-y-2">
-        <label className="block text-sm">File Name (e.g. summary_2025-06-05.pdf)</label>
+        <label className="block text-sm">
+          File Name (e.g. summary_2025-06-05.pdf)
+        </label>
         <input
           type="text"
           value={fileName}
@@ -78,7 +82,9 @@ export default function TokenManager() {
           {tokens.map((t, i) => (
             <li key={i} className="flex justify-between">
               <span>{t.file_name}</span>
-              <span className="text-zinc-400">{new Date(t.expires_at).toLocaleString()}</span>
+              <span className="text-zinc-400">
+                {new Date(t.expires_at).toLocaleString()}
+              </span>
             </li>
           ))}
         </ul>

@@ -9,7 +9,7 @@ export default function ThemeBrandSwitcherAdvanced({
   profileId,
   initialTheme = 'dark',
   initialBrand = 'green',
-  ownerId
+  ownerId,
 }: {
   profileId: string;
   initialTheme?: string;
@@ -44,7 +44,8 @@ export default function ThemeBrandSwitcherAdvanced({
 
   const saveDefaults = async () => {
     setSaving(true);
-    await supabase.from('branding_profiles')
+    await supabase
+      .from('branding_profiles')
       .update({ theme, brand })
       .eq('id', profileId);
     setSaving(false);
@@ -57,7 +58,7 @@ export default function ThemeBrandSwitcherAdvanced({
     <div className="p-4 border rounded space-y-3 bg-white transition-all">
       <div className="flex gap-4">
         <label className="text-sm font-semibold">Theme:</label>
-        {themes.map(t => (
+        {themes.map((t) => (
           <button
             key={t}
             className={`text-sm px-2 py-1 border rounded transition-all ${t === theme ? 'bg-black text-white' : 'bg-gray-100'}`}
@@ -70,7 +71,7 @@ export default function ThemeBrandSwitcherAdvanced({
 
       <div className="flex gap-4">
         <label className="text-sm font-semibold">Brand:</label>
-        {brands.map(b => (
+        {brands.map((b) => (
           <button
             key={b}
             className={`text-sm px-2 py-1 border rounded transition-all ${b === brand ? 'bg-black text-white' : 'bg-gray-100'}`}

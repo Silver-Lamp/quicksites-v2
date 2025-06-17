@@ -1,14 +1,13 @@
 import fs from 'fs';
 import path from 'path';
 import { useEffect, useState } from 'react';
-import { marked } from 'marked';
 
 export default function DocsPage() {
   const [html, setHtml] = useState('');
 
   useEffect(() => {
     fetch('/api/readme')
-      .then(res => res.text())
+      .then((res) => res.text())
       .then(setHtml);
   }, []);
 

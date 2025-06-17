@@ -1,5 +1,6 @@
 'use client';
 import { useEffect, useState } from 'react';
+import { json } from '@/lib/api/json';
 import Link from 'next/link';
 import { useUser } from '@supabase/auth-helpers-react';
 
@@ -10,7 +11,7 @@ export default function MyCampaigns() {
   useEffect(() => {
     if (!user) return;
     fetch('/api/my-campaigns?user_id=' + user.id)
-      .then(res => res.json())
+      .then((res) => json())
       .then(setCampaigns);
   }, [user]);
 
@@ -20,11 +21,15 @@ export default function MyCampaigns() {
       <ul className="space-y-4">
         {campaigns.map((c: any) => (
           <li key={c.slug} className="bg-zinc-800 p-4 rounded">
-            <Link href={`/support/${c.slug}`} className="text-blue-400 text-lg font-semibold hover:underline">
+            <Link
+              href={`/support/${c.slug}`}
+              className="text-blue-400 text-lg font-semibold hover:underline"
+            >
               {c.headline}
             </Link>
             <p className="text-sm text-zinc-400">
-              {c.goal_count} {c.target_action}s goal • Created {new Date(c.created_at).toLocaleDateString()}
+              {c.goal_count} {c.target_action}s goal • Created{' '}
+              {new Date(c.created_at).toLocaleDateString()}
             </p>
           </li>
         ))}

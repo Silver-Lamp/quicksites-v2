@@ -9,7 +9,7 @@ import toast from 'react-hot-toast';
 export default function TemplateActionToolbar({
   template,
   autosaveStatus,
-  onSaveDraft
+  onSaveDraft,
 }: {
   template: any;
   autosaveStatus?: string;
@@ -64,7 +64,7 @@ export default function TemplateActionToolbar({
   };
 
   const handleShare = async () => {
-    const id = await createSharedPreview(template.id, template.data);
+    const id = await createSharedPreview(template.id);
     if (id) {
       toast.success('Preview shared!');
       router.push(`/shared/${id}`);
@@ -77,13 +77,17 @@ export default function TemplateActionToolbar({
     <div className="fixed bottom-0 left-0 w-full z-40 border-t border-gray-700 bg-gray-900 px-6 py-3 flex justify-between items-center text-white">
       <div className="text-sm font-medium flex gap-4 items-center">
         <span>📄 {template.template_name}</span>
-        <span className={`text-xs px-2 py-1 rounded ${
-          status === 'Published' ? 'bg-green-600' : 'bg-yellow-600'
-        }`}>
+        <span
+          className={`text-xs px-2 py-1 rounded ${
+            status === 'Published' ? 'bg-green-600' : 'bg-yellow-600'
+          }`}
+        >
           {status}
         </span>
         {autosaveStatus && (
-          <span className="text-xs text-gray-400 italic">💾 {autosaveStatus}</span>
+          <span className="text-xs text-gray-400 italic">
+            💾 {autosaveStatus}
+          </span>
         )}
       </div>
 
@@ -93,16 +97,23 @@ export default function TemplateActionToolbar({
           onChange={(e) => toast(`Selected version: ${e.target.value}`)}
         >
           <option>View Version</option>
-          {versions.map(v => (
+          {versions.map((v) => (
             <option key={v.id}>
-              {v.commit_message || 'Untitled'} — {new Date(v.created_at).toLocaleDateString()}
+              {v.commit_message || 'Untitled'} —{' '}
+              {new Date(v.created_at).toLocaleDateString()}
             </option>
           ))}
         </select>
 
-        <Button size="sm" variant="secondary" onClick={onSaveDraft}>Save Draft</Button>
-        <Button size="sm" variant="secondary" onClick={handleSaveAs}>Save As Template</Button>
-        <Button size="sm" variant="secondary" onClick={handleShare}>Share Snapshot</Button>
+        <Button size="sm" variant="secondary" onClick={onSaveDraft}>
+          Save Draft
+        </Button>
+        <Button size="sm" variant="secondary" onClick={handleSaveAs}>
+          Save As Template
+        </Button>
+        <Button size="sm" variant="secondary" onClick={handleShare}>
+          Share Snapshot
+        </Button>
       </div>
     </div>
   );

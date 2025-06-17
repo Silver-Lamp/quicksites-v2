@@ -7,11 +7,18 @@ import {
   BarElement,
   Title,
   Tooltip,
-  Legend
+  Legend,
 } from 'chart.js';
 import { Bar } from 'react-chartjs-2';
 
-ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
+ChartJS.register(
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  Title,
+  Tooltip,
+  Legend
+);
 
 export default function HeatmapPage() {
   const [logs, setLogs] = useState<any[]>([]);
@@ -20,7 +27,9 @@ export default function HeatmapPage() {
   const [domainOptions, setDomainOptions] = useState<string[]>([]);
   const [actionOptions, setActionOptions] = useState<string[]>([]);
   const [autoRefresh, setAutoRefresh] = useState(true);
-  const [presets, setPresets] = useState<{ name: string; domain?: string; action?: string }[]>([]);
+  const [presets, setPresets] = useState<
+    { name: string; domain?: string; action?: string }[]
+  >([]);
   const [presetName, setPresetName] = useState('');
 
   useEffect(() => {
@@ -29,7 +38,11 @@ export default function HeatmapPage() {
   }, []);
 
   const savePreset = () => {
-    const newPreset = { name: presetName, domain: domainFilter, action: actionFilter };
+    const newPreset = {
+      name: presetName,
+      domain: domainFilter,
+      action: actionFilter,
+    };
     const all = [...presets, newPreset];
     localStorage.setItem('analytics-presets', JSON.stringify(all));
     setPresets(all);
@@ -46,8 +59,8 @@ export default function HeatmapPage() {
       const { data } = await supabase.from('user_action_logs').select('*');
       setLogs(data || []);
 
-      const domains = [...new Set((data || []).map(d => d.domain_id || '—'))];
-      const types = [...new Set((data || []).map(d => d.action_type || ''))];
+      const domains = [...new Set((data || []).map((d) => d.domain_id || '—'))];
+      const types = [...new Set((data || []).map((d) => d.action_type || ''))];
       setDomainOptions(domains);
       setActionOptions(types);
     };
@@ -59,16 +72,20 @@ export default function HeatmapPage() {
     }
   }, [autoRefresh]);
 
-  const filteredLogs = logs.filter(l =>
-    (!domainFilter || l.domain_id === domainFilter) &&
-    (!actionFilter || l.action_type === actionFilter)
+  const filteredLogs = logs.filter(
+    (l) =>
+      (!domainFilter || l.domain_id === domainFilter) &&
+      (!actionFilter || l.action_type === actionFilter)
   );
 
-  const dailyCounts = filteredLogs.reduce((acc, log) => {
-    const date = new Date(log.timestamp).toISOString().split('T')[0];
-    acc[date] = (acc[date] || 0) + 1;
-    return acc;
-  }, {} as Record<string, number>);
+  const dailyCounts = filteredLogs.reduce(
+    (acc, log) => {
+      const date = new Date(log.timestamp).toISOString().split('T')[0];
+      acc[date] = (acc[date] || 0) + 1;
+      return acc;
+    },
+    {} as Record<string, number>
+  );
 
   const sortedDates = Object.keys(dailyCounts).sort();
   const chartData = {
@@ -77,9 +94,9 @@ export default function HeatmapPage() {
       {
         label: 'Action Count',
         data: sortedDates.map((d) => dailyCounts[d]),
-        backgroundColor: '#3b82f6'
-      }
-    ]
+        backgroundColor: '#3b82f6',
+      },
+    ],
   };
 
   return (
@@ -93,7 +110,9 @@ export default function HeatmapPage() {
           className="bg-gray-700 text-white border border-gray-600 rounded px-2 py-1"
         >
           <option value="">All Domains</option>
-          {domainOptions.map((d) => <option key={d}>{d}</option>)}
+          {domainOptions.map((d) => (
+            <option key={d}>{d}</option>
+          ))}
         </select>
 
         <select
@@ -102,7 +121,9 @@ export default function HeatmapPage() {
           className="bg-gray-700 text-white border border-gray-600 rounded px-2 py-1"
         >
           <option value="">All Actions</option>
-          {actionOptions.map((t) => <option key={t}>{t}</option>)}
+          {actionOptions.map((t) => (
+            <option key={t}>{t}</option>
+          ))}
         </select>
 
         <input
@@ -112,31 +133,50 @@ export default function HeatmapPage() {
           className="bg-gray-700 px-2 py-1 text-white rounded border border-gray-600"
         />
 
-        <button onClick={savePreset} className="bg-blue-600 px-3 py-1 rounded text-white">Save</button>
+        <button
+          onClick={savePreset}
+          className="bg-blue-600 px-3 py-1 rounded text-white"
+        >
+          Save
+        </button>
 
-        <select onChange={(e) => applyPreset(presets[+e.target.value])} className="bg-gray-700 text-white px-2 py-1 border border-gray-600 rounded">
+        <select
+          onChange={(e) => applyPreset(presets[+e.target.value])}
+          className="bg-gray-700 text-white px-2 py-1 border border-gray-600 rounded"
+        >
           <option value="">Presets</option>
-          {presets.map((p, i) => <option key={i} value={i}>{p.name}</option>)}
+          {presets.map((p, i) => (
+            <option key={i} value={i}>
+              {p.name}
+            </option>
+          ))}
         </select>
 
         <label className="flex items-center gap-1 text-xs text-gray-300 ml-auto">
-          <input type="checkbox" checked={autoRefresh} onChange={() => setAutoRefresh(!autoRefresh)} />
+          <input
+            type="checkbox"
+            checked={autoRefresh}
+            onChange={() => setAutoRefresh(!autoRefresh)}
+          />
           Auto-Refresh
         </label>
       </div>
 
       {sortedDates.length ? (
-        <Bar data={chartData} options={{
-          responsive: true,
-          plugins: {
-            legend: { display: false },
-            title: { display: true, text: 'Actions per Day' }
-          },
-          scales: {
-            x: { ticks: { color: '#ccc' }, grid: { color: '#444' } },
-            y: { ticks: { color: '#ccc' }, grid: { color: '#444' } }
-          }
-        }} />
+        <Bar
+          data={chartData}
+          options={{
+            responsive: true,
+            plugins: {
+              legend: { display: false },
+              title: { display: true, text: 'Actions per Day' },
+            },
+            scales: {
+              x: { ticks: { color: '#ccc' }, grid: { color: '#444' } },
+              y: { ticks: { color: '#ccc' }, grid: { color: '#444' } },
+            },
+          }}
+        />
       ) : (
         <p className="text-gray-400">No data available</p>
       )}

@@ -1,0 +1,44 @@
+/* app/api/compare-slugs/route.ts */
+
+import { createClient } from '@supabase/supabase-js';
+import { cookies } from 'next/headers';
+
+export const runtime = 'edge';
+
+function getPermutations(values: string[]): string[] {
+  const pairs: string[] = [];
+  for (let i = 0; i < values.length; i++) {
+    for (let j = i + 1; j < values.length; j++) {
+      pairs.push(`${values[i]}-vs-${values[j]}`);
+    }
+  }
+  return pairs;
+}
+
+export async function GET(req: Request): Promise<Response> {
+  const cookieStore = cookies(); // you can keep this if needed
+  const supabase = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  );
+
+  const { data, error } = await supabase
+    .from('guest_upgrade_events')
+    .select('utm_campaign');
+
+  if (error) {
+    return new Response(JSON.stringify({ error: error.message }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' }
+    });
+  }
+
+  const raw = data.map(row => row.utm_campaign || '(none)');
+  const unique = Array.from(new Set(raw)).filter(Boolean);
+  const slugs = getPermutations(unique);
+
+  return new Response(JSON.stringify({ slugs }), {
+    status: 200,
+    headers: { 'Content-Type': 'application/json' }
+  });
+}

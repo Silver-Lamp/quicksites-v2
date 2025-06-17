@@ -7,7 +7,7 @@ import { uploadSnapshotToSupabase } from '@/admin/lib/uploadSnapshotToSupabase';
 
 export default function TemplateVersionSaveBar({
   template,
-  onSave
+  onSave,
 }: {
   template: any;
   onSave?: () => void;
@@ -22,7 +22,7 @@ export default function TemplateVersionSaveBar({
     }
 
     setSaving(true);
-    
+
     const thumbnailUrl = await uploadSnapshotToSupabase(template.id);
     await supabase.from('template_versions').insert([
       {
@@ -30,8 +30,8 @@ export default function TemplateVersionSaveBar({
         template_name: template.template_name,
         data: template.data,
         commit: message,
-        thumbnail_url: thumbnailUrl
-      }
+        thumbnail_url: thumbnailUrl,
+      },
     ]);
 
     const { error } = await supabase.from('template_versions').insert([
@@ -39,8 +39,8 @@ export default function TemplateVersionSaveBar({
         template_id: template.id,
         template_name: template.template_name,
         data: template.data,
-        commit: message
-      }
+        commit: message,
+      },
     ]);
 
     setSaving(false);

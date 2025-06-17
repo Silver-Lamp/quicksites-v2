@@ -2,8 +2,8 @@
 import { useEffect, useState } from 'react';
 import { Label } from '@/components/admin/ui/label';
 import { Input } from '@/components/admin/ui/input';
-import { supabase } from '@/admin/lib/supabaseClient';
-import type { Template } from '@/admin/types/template';
+import { supabase } from '@/lib/supabase';
+import type { Template } from '@/types/template';
 
 type TemplateSettingsPanelProps = {
   template: Template;
@@ -14,21 +14,23 @@ export default function TemplateSettingsPanel({
   template,
   onChange,
 }: TemplateSettingsPanelProps) {
-
   const [industries, setIndustries] = useState<string[]>([]);
   const colorSchemes: { name: string; hex: string }[] = [
     { name: 'blue', hex: '#3b82f6' },
     { name: 'green', hex: '#22c55e' },
     { name: 'yellow', hex: '#eab308' },
-    { name: 'red', hex: '#ef4444' }
+    { name: 'red', hex: '#ef4444' },
   ];
   const themes = ['dark', 'light'];
   const brands = ['blue', 'green', 'red'];
 
   useEffect(() => {
-    supabase.from('industries').select('name').then(({ data }) => {
-      if (data) setIndustries(data.map(i => i.name));
-    });
+    supabase
+      .from('industries')
+      .select('name')
+      .then(({ data }) => {
+        if (data) setIndustries(data.map((i) => i.name));
+      });
   }, []);
 
   return (
@@ -42,7 +44,9 @@ export default function TemplateSettingsPanel({
         >
           <option value="">Select Industry</option>
           {industries.map((name) => (
-            <option key={name} value={name}>{name}</option>
+            <option key={name} value={name}>
+              {name}
+            </option>
           ))}
         </select>
       </div>
@@ -64,7 +68,9 @@ export default function TemplateSettingsPanel({
               key={name}
               onClick={() => onChange({ ...template, color_scheme: name })}
               className={`w-6 h-6 rounded-full border-2 ${
-                template.color_scheme === name ? 'border-white' : 'border-transparent'
+                template.color_scheme === name
+                  ? 'border-white'
+                  : 'border-transparent'
               }`}
               style={{ backgroundColor: hex }}
               title={name}
@@ -82,7 +88,9 @@ export default function TemplateSettingsPanel({
         >
           <option value="">Select Theme</option>
           {themes.map((t) => (
-            <option key={t} value={t}>{t === 'dark' ? '🌙 Dark' : '☀️ Light'}</option>
+            <option key={t} value={t}>
+              {t === 'dark' ? '🌙 Dark' : '☀️ Light'}
+            </option>
           ))}
         </select>
       </div>
@@ -96,7 +104,9 @@ export default function TemplateSettingsPanel({
         >
           <option value="">Select Brand</option>
           {brands.map((b) => (
-            <option key={b} value={b}>{b}</option>
+            <option key={b} value={b}>
+              {b}
+            </option>
           ))}
         </select>
       </div>

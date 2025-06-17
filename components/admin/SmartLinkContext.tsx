@@ -1,5 +1,5 @@
 import { createContext, useContext } from 'react';
-import type { LinkTheme } from '@/admin/lib/theme';
+import type { LinkTheme } from '@/admin/lib/links/theme';
 
 export const SmartLinkContext = createContext<{
   defaultTheme?: LinkTheme;

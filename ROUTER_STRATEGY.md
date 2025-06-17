@@ -5,6 +5,7 @@
 QuickSites is currently built using **Next.js Pages Router** (`/pages` directory), which is fully functional and ideal for your current stack.
 
 ### Why it’s OK to stay here for now:
+
 - ✅ Simple routing, fast iteration
 - ✅ Proven compatibility with Firebase/Supabase
 - ✅ Works great for dashboards, admin tools, and API routes
@@ -30,6 +31,7 @@ You can consider upgrading in the future if you want:
 Stick with **Pages Router** through version 1.0.
 
 You can re-evaluate after:
+
 - Scaling to many user types (e.g. resellers, admin, editors)
 - Needing shared layout state (multi-tab editors)
 - Prioritizing edge streaming or SSR perf boosts

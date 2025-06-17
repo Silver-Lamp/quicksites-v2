@@ -7,12 +7,16 @@ import GroupedNav from '@/components/admin/GroupedNav';
 import { SidebarNavProvider } from '@/components/admin/context/SidebarNavContext';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 
-export default function AdminSidebarLayout({ children }: { children: ReactNode }) {
+export default function AdminSidebarLayout({
+  children,
+}: {
+  children: ReactNode;
+}) {
   const [navBadges, setNavBadges] = useState<{ failed: number }>({ failed: 0 });
 
   useEffect(() => {
     fetch('/api/nav-badges')
-      .then(res => res.json())
+      .then((res) => res.json())
       .then(setNavBadges)
       .catch(() => {});
   }, []);
@@ -24,11 +28,36 @@ export default function AdminSidebarLayout({ children }: { children: ReactNode }
     {
       label: 'Tools',
       routes: [
-        { label: 'Posters', path: '/admin/tools/print-all', icon: '🖼️', roles: ['admin'] },
-        { label: 'Chart', path: '/admin/tools/chart', icon: '📊', roles: ['admin'] },
-        { label: 'Campaigns CSV', path: '/api/campaign-analytics', icon: '📁', roles: ['admin'] },
-        { label: 'Top Badges (ZIP)', path: '/api/badge/top', icon: '🏅', roles: ['admin'] },
-        { label: 'Leaderboard', path: '/leaderboard', icon: '🏆', roles: ['admin', 'viewer'] },
+        {
+          label: 'Posters',
+          path: '/admin/tools/print-all',
+          icon: '🖼️',
+          roles: ['admin'],
+        },
+        {
+          label: 'Chart',
+          path: '/admin/tools/chart',
+          icon: '📊',
+          roles: ['admin'],
+        },
+        {
+          label: 'Campaigns CSV',
+          path: '/api/campaign-analytics',
+          icon: '📁',
+          roles: ['admin'],
+        },
+        {
+          label: 'Top Badges (ZIP)',
+          path: '/api/badge/top',
+          icon: '🏅',
+          roles: ['admin'],
+        },
+        {
+          label: 'Leaderboard',
+          path: '/leaderboard',
+          icon: '🏆',
+          roles: ['admin', 'viewer'],
+        },
       ],
     },
     {
@@ -39,13 +68,13 @@ export default function AdminSidebarLayout({ children }: { children: ReactNode }
           path: '/admin/logs/notifications',
           icon: '📨',
           badge: navBadges.failed > 0 ? navBadges.failed : 'NEW',
-          roles: ['admin']
+          roles: ['admin'],
         },
         {
           label: 'Session Logs',
           path: '/admin/logs/sessions',
           icon: '🪵',
-          roles: ['admin']
+          roles: ['admin'],
         },
       ],
     },
@@ -62,9 +91,7 @@ export default function AdminSidebarLayout({ children }: { children: ReactNode }
           <GroupedNav />
         </aside>
 
-        <main className="flex-1 p-6 overflow-auto">
-          {children}
-        </main>
+        <main className="flex-1 p-6 overflow-auto">{children}</main>
       </div>
     </SidebarNavProvider>
   );

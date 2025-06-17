@@ -3,7 +3,7 @@ import React from 'react';
 export default function DashboardBlock({
   title,
   children,
-  actions
+  actions,
 }: {
   title: string;
   children: React.ReactNode;

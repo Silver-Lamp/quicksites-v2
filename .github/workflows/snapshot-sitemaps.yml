@@ -2,7 +2,7 @@ name: 🕓 Nightly Sitemap Snapshot
 
 on:
   schedule:
-    - cron: '0 3 * * *'  # 3:00 AM UTC daily
+    - cron: '0 3 * * *' # 3:00 AM UTC daily
   workflow_dispatch:
 
 jobs:
@@ -96,8 +96,7 @@ jobs:
           server_port: 587
           username: ${{ secrets.EMAIL_USER }}
           password: ${{ secrets.EMAIL_PASS }}
-          subject: "❌ Analytics Export Failed"
+          subject: '❌ Analytics Export Failed'
           to: your@email.com
-          from: "QuickSites Bot <bot@quicksites.ai>"
-          body: "The nightly analytics export failed. View logs at: ${{ github.run_url }}"
-  
+          from: 'QuickSites Bot <bot@quicksites.ai>'
+          body: 'The nightly analytics export failed. View logs at: ${{ github.run_url }}'

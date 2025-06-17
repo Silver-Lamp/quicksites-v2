@@ -24,7 +24,7 @@ const routeGroups = [
   {
     label: 'Smart Links',
     collapsible: true,
-    routes: smartLinkRoutes.map(route => ({
+    routes: smartLinkRoutes.map((route) => ({
       ...route,
       icon: getIconForLabel(route.label),
       roles: ['admin'], // adjust as needed per your role system
@@ -34,8 +34,8 @@ const routeGroups = [
 
 function getIconForLabel(label: string) {
   const iconMap: Record<string, string> = {
-    'Overview': '🧠',
-    'Gallery': '🖼️',
+    Overview: '🧠',
+    Gallery: '🖼️',
     'Debug Panel': '🐞',
     'Grid (WIP)': '🗺️',
   };

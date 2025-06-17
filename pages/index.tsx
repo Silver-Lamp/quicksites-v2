@@ -13,14 +13,22 @@ export async function getServerSideProps(context: any) {
   console.log('🔒 [Index] Role (metadata)', { roleMetadata });
   console.log('🔒 [Index] Session', { session });
   console.log('🔒 [Index] User', { user: session?.user });
-  console.log('🔒 [Index] User Metadata', { userMetadata: session?.user?.user_metadata });
-  console.log('🔒 [Index] User Role (metadata)', { userRole: session?.user?.user_metadata?.role });
-  console.log('🔒 [Index] User Roles (metadata)', { userRoles: session?.user?.user_metadata?.roles });
+  console.log('🔒 [Index] User Metadata', {
+    userMetadata: session?.user?.user_metadata,
+  });
+  console.log('🔒 [Index] User Role (metadata)', {
+    userRole: session?.user?.user_metadata?.role,
+  });
+  console.log('🔒 [Index] User Roles (metadata)', {
+    userRoles: session?.user?.user_metadata?.roles,
+  });
 
   if (roleMetadata && ['admin', 'owner', 'reseller'].includes(roleMetadata)) {
     const skipRedirect = true;
     if (skipRedirect) {
-      console.log('🔒 [Index] Skipping redirect to admin dashboard', { skipRedirect });
+      console.log('🔒 [Index] Skipping redirect to admin dashboard', {
+        skipRedirect,
+      });
       return {
         props: {},
       };

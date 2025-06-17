@@ -1,4 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
+import { json } from '@/lib/api/json';
 import { createClient } from '@supabase/supabase-js';
 
 const supabase = createClient(
@@ -12,8 +13,11 @@ export default async function handler(_: NextApiRequest, res: NextApiResponse) {
     .select('*')
     .order('created_at', { ascending: false });
 
-  if (error) return res.status(500).json({ error: error.message });
-  res.setHeader('Content-Disposition', 'attachment; filename="regeneration_logs.json"');
+  if (error) return json({ error: error.message });
+  res.setHeader(
+    'Content-Disposition',
+    'attachment; filename="regeneration_logs.json"'
+  );
   res.setHeader('Content-Type', 'application/json');
-  return res.status(200).json(data);
+  return json(data);
 }

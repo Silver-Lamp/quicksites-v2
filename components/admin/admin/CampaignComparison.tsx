@@ -3,10 +3,24 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/admin/ui/select';
+import {
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectItem,
+} from '@/components/admin/ui/select';
 import { Card } from '@/components/admin/ui/card';
 import { parseISO, isAfter, isBefore } from 'date-fns';
-import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Legend } from 'recharts';
+import {
+  ResponsiveContainer,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  Tooltip,
+  Legend,
+} from 'recharts';
 import { Input } from '@/components/admin/ui/input';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/admin/ui/button';
@@ -44,7 +58,7 @@ export function CampaignComparison({ events, logs, dateRange }: Props) {
   const router = useRouter();
 
   const campaigns = useMemo(() => {
-    const set = new Set(events?.map(e => e.utm_campaign || '(none)') || []);
+    const set = new Set(events?.map((e) => e.utm_campaign || '(none)') || []);
     return Array.from(set).sort();
   }, [events]);
 
@@ -87,10 +101,26 @@ export function CampaignComparison({ events, logs, dateRange }: Props) {
   const chartData = useMemo(() => {
     if (!leftStats || !rightStats) return [];
     return [
-      { metric: '👁️ Views', [left]: leftStats.views, [right]: rightStats.views },
-      { metric: '🚀 Clicks', [left]: leftStats.clicks, [right]: rightStats.clicks },
-      { metric: '✅ Signups', [left]: leftStats.signups, [right]: rightStats.signups },
-      { metric: '📤 Publishes', [left]: leftStats.publishes, [right]: rightStats.publishes },
+      {
+        metric: '👁️ Views',
+        [left]: leftStats.views,
+        [right]: rightStats.views,
+      },
+      {
+        metric: '🚀 Clicks',
+        [left]: leftStats.clicks,
+        [right]: rightStats.clicks,
+      },
+      {
+        metric: '✅ Signups',
+        [left]: leftStats.signups,
+        [right]: rightStats.signups,
+      },
+      {
+        metric: '📤 Publishes',
+        [left]: leftStats.publishes,
+        [right]: rightStats.publishes,
+      },
     ];
   }, [left, right, leftStats, rightStats]);
 
@@ -100,7 +130,9 @@ export function CampaignComparison({ events, logs, dateRange }: Props) {
   const delta = useMemo(() => {
     if (!leftStats || !rightStats) return null;
     const leftCR = leftStats.views ? leftStats.signups / leftStats.views : 0;
-    const rightCR = rightStats.views ? rightStats.signups / rightStats.views : 0;
+    const rightCR = rightStats.views
+      ? rightStats.signups / rightStats.views
+      : 0;
     const diff = ((rightCR - leftCR) * 100).toFixed(1);
     return `${Number(diff) > 0 ? '+' : ''}${diff}%`; // e.g. +12.5%
   }, [leftStats, rightStats]);
@@ -115,27 +147,49 @@ export function CampaignComparison({ events, logs, dateRange }: Props) {
     <Card className="p-4 space-y-6">
       <div className="flex justify-between items-center">
         <h2 className="text-lg font-semibold">Compare Campaigns</h2>
-        <Button onClick={handleShare} variant="outline" size="sm">Share View</Button>
+        <Button onClick={handleShare} variant="outline" size="sm">
+          Share View
+        </Button>
       </div>
 
       <div className="flex gap-4">
         <div className="w-1/2 space-y-2">
           <Select value={left} onValueChange={setLeft}>
-            <SelectTrigger><SelectValue placeholder="Select campaign A" /></SelectTrigger>
+            <SelectTrigger>
+              <SelectValue placeholder="Select campaign A" />
+            </SelectTrigger>
             <SelectContent>
-              {campaigns.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+              {campaigns.map((c) => (
+                <SelectItem key={c} value={c}>
+                  {c}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
-          <Input placeholder="Annotation or label" value={leftNote} onChange={e => setLeftNote(e.target.value)} />
+          <Input
+            placeholder="Annotation or label"
+            value={leftNote}
+            onChange={(e) => setLeftNote(e.target.value)}
+          />
         </div>
         <div className="w-1/2 space-y-2">
           <Select value={right} onValueChange={setRight}>
-            <SelectTrigger><SelectValue placeholder="Select campaign B" /></SelectTrigger>
+            <SelectTrigger>
+              <SelectValue placeholder="Select campaign B" />
+            </SelectTrigger>
             <SelectContent>
-              {campaigns.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+              {campaigns.map((c) => (
+                <SelectItem key={c} value={c}>
+                  {c}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
-          <Input placeholder="Annotation or label" value={rightNote} onChange={e => setRightNote(e.target.value)} />
+          <Input
+            placeholder="Annotation or label"
+            value={rightNote}
+            onChange={(e) => setRightNote(e.target.value)}
+          />
         </div>
       </div>
 
@@ -161,8 +215,14 @@ export function CampaignComparison({ events, logs, dateRange }: Props) {
         <div>{rightStats?.publishes ?? '-'}</div>
 
         <div className="text-muted-foreground">💡 Conversion Rate</div>
-        <div>{leftStats ? conversionRate(leftStats.views, leftStats.signups) : '-'}</div>
-        <div>{rightStats ? conversionRate(rightStats.views, rightStats.signups) : '-'}</div>
+        <div>
+          {leftStats ? conversionRate(leftStats.views, leftStats.signups) : '-'}
+        </div>
+        <div>
+          {rightStats
+            ? conversionRate(rightStats.views, rightStats.signups)
+            : '-'}
+        </div>
         <div className="text-muted-foreground">🔁 Delta</div>
         <div className="col-span-2">{delta || '-'}</div>
       </div>

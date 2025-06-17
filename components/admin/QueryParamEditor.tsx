@@ -3,7 +3,12 @@ import { z, ZodObject, ZodFirstPartyTypeKind } from 'zod';
 import { Input } from '@/components/admin/ui/input';
 import { Label } from '@/components/admin/ui/label';
 import { Switch } from '@/components/admin/ui/switch';
-import { Select, SelectTrigger, SelectContent, SelectItem } from '@/components/admin/ui/select';
+import {
+  Select,
+  SelectTrigger,
+  SelectContent,
+  SelectItem,
+} from '@/components/admin/ui/select';
 import { useTypedQueryParam } from '@/hooks/useTypedQueryParam';
 
 function FieldRenderer({
@@ -23,20 +28,32 @@ function FieldRenderer({
   const innerType = isArray ? validator._def.type._def.typeName : null;
 
   let queryType: any = 'string';
-  if (type === ZodFirstPartyTypeKind.ZodNumber || innerType === ZodFirstPartyTypeKind.ZodNumber)
+  if (
+    type === ZodFirstPartyTypeKind.ZodNumber ||
+    innerType === ZodFirstPartyTypeKind.ZodNumber
+  )
     queryType = isArray ? 'number[]' : 'number';
-  if (type === ZodFirstPartyTypeKind.ZodBoolean || innerType === ZodFirstPartyTypeKind.ZodBoolean)
+  if (
+    type === ZodFirstPartyTypeKind.ZodBoolean ||
+    innerType === ZodFirstPartyTypeKind.ZodBoolean
+  )
     queryType = isArray ? 'boolean[]' : 'boolean';
   if (isArray) queryType = 'json[]';
   if (type === ZodFirstPartyTypeKind.ZodObject) queryType = 'json';
 
-  const [value, setValue] = useTypedQueryParam(fullKey, isArray ? [] : {}, queryType);
+  const [value, setValue] = useTypedQueryParam(
+    fullKey,
+    isArray ? [] : {},
+    queryType
+  );
 
   if (type === ZodFirstPartyTypeKind.ZodObject) {
     const nestedFields = Object.entries(validator.shape);
     return (
       <div className="border rounded p-4 space-y-2 bg-gray-50 dark:bg-gray-900">
-        <Label className="text-xs uppercase tracking-wide text-muted-foreground">{fieldKey}</Label>
+        <Label className="text-xs uppercase tracking-wide text-muted-foreground">
+          {fieldKey}
+        </Label>
         {nestedFields.map(([nestedKey, nestedValidator]) => (
           <FieldRenderer
             key={nestedKey}
@@ -90,7 +107,10 @@ function FieldRenderer({
           value={asString}
           onChange={(e) => {
             const raw = e.target.value;
-            const parsed = raw.split(',').map((s) => s.trim()).filter(Boolean);
+            const parsed = raw
+              .split(',')
+              .map((s) => s.trim())
+              .filter(Boolean);
             setValue(parsed);
           }}
         />

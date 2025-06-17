@@ -1,27 +1,24 @@
 {
   "extends": "./tsconfig.base.json",
-  "include": [
-    "**/*"
-  ],
-  "exclude": [
-    "node_modules"
-  ],
+  "include": ["**/*"],
+  "exclude": ["node_modules"],
   "compilerOptions": {
     "baseUrl": ".",
     "paths": {
-      "@/*": [
-        "./*"
-      ],
-      "@/components/*": [
-        "components/*"
-      ],
-      "@/pages/*": [
-        "pages/*"
-      ],
-      "@/lib/*": [
-        "lib/*"
-      ]
+      "@/*": ["./*"],
+      "@/admin/*": ["admin/*"],
+      "@/components/*": ["components/*"],
+      "@/pages/*": ["pages/*"],
+      "@/lib/*": ["lib/*"]
     },
-    "jsx": "preserve"
+    "jsx": "preserve",
+    "module": "node16",
+    "moduleResolution": "node16",
+    "esModuleInterop": true,
+    "resolveJsonModule": true,
+    "allowSyntheticDefaultImports": true,
+    "maxNodeModuleJsDepth": 2,
+    "tsBuildInfoFile": "./.tsbuildinfo",
+    "skipLibCheck": true
   }
 }

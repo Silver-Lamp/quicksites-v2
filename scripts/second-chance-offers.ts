@@ -19,9 +19,9 @@ async function run() {
       .in('id', c.lead_ids || []);
 
     const claimed = leads?.find((l) => l.domains?.is_claimed);
-    const unclaimed = leads?.filter((l) => !l.domains?.is_claimed);
+    const unclaimed = leads?.filter((l) => !l.domains?.is_claimed) || [];
 
-    if (!claimed || !unclaimed.length) continue;
+    if (!claimed || unclaimed.length === 0) continue;
 
     // Notify unclaimed leads
     unclaimed.forEach((lead, i) => {
@@ -44,8 +44,8 @@ You can still claim it this week. Let us know!`;
           domain_id: lead.domain_id,
           action_type: 'second_chance_offered',
           triggered_by: 'campaign_bot',
-          notes: `Sent alt domain: ${altDomain}`
-        }
+          notes: `Sent alt domain: ${altDomain}`,
+        },
       ]);
     });
   }

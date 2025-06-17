@@ -16,7 +16,11 @@ export default function AppHeader() {
   const [drawerOpen, setDrawerOpen] = useState(false);
 
   useEffect(() => {
-    console.debug('[🧭 AppHeader Role Info]', { email, role, source: roleSource });
+    console.debug('[🧭 AppHeader Role Info]', {
+      email,
+      role,
+      source: roleSource,
+    });
   }, [email, role, roleSource]);
 
   const logout = async () => {
@@ -49,7 +53,12 @@ export default function AppHeader() {
               </div>
             ) : (
               <div className="ml-4 text-xs text-gray-500">
-                <SafeLink href="/login" className="text-blue-400 hover:underline">Sign In</SafeLink>
+                <SafeLink
+                  href="/login"
+                  className="text-blue-400 hover:underline"
+                >
+                  Sign In
+                </SafeLink>
               </div>
             )}
           </div>
@@ -64,7 +73,10 @@ export default function AppHeader() {
         {drawerOpen ? '✕' : '☰'}
       </button>
 
-      <MobileDrawer drawerOpen={drawerOpen} onClose={() => setDrawerOpen(false)} />
+      <MobileDrawer
+        drawerOpen={drawerOpen}
+        onClose={() => setDrawerOpen(false)}
+      />
     </>
   );
 }

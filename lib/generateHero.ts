@@ -17,5 +17,5 @@ export function generateHero(bizName: string, vibe: string) {
     },
   };
 
-  return base[vibe] || base.clean;
+  return base[vibe as keyof typeof base] || base.clean;
 }

@@ -12,7 +12,10 @@ export default function OwnerToggle({ profileId }: { profileId: string }) {
 
   const assignToMe = async () => {
     if (!userId) return;
-    await supabase.from('branding_profiles').update({ owner_id: userId }).eq('id', profileId);
+    await supabase
+      .from('branding_profiles')
+      .update({ owner_id: userId })
+      .eq('id', profileId);
     location.reload();
   };
 

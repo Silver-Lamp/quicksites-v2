@@ -1,10 +1,6 @@
 import fetch from 'node-fetch';
 
-const routes = [
-  '/',
-  '/admin/dashboard',
-  '/unauthorized'
-];
+const routes = ['/', '/admin/dashboard', '/unauthorized'];
 
 async function testRoutes() {
   console.log('🔍 Testing routes...');
@@ -14,7 +10,11 @@ async function testRoutes() {
       const status = res.status;
       console.log(`• ${route} -> ${status}`);
     } catch (err) {
-      console.error(`× ${route} failed:`, err.message);
+      if (err instanceof Error) {
+        console.error(`× ${route} failed:`, err.message);
+      } else {
+        console.error(`× ${route} failed:`, String(err));
+      }
     }
   }
 }

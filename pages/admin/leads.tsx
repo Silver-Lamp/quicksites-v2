@@ -9,10 +9,17 @@ const LEADS_PER_PAGE = 20;
 
 export default function LeadsPage() {
   const [leads, setLeads] = useState<Lead[]>([]);
-  const [summary, setSummary] = useState({ total: 0, matchedDomains: 0, matchedCampaigns: 0, duplicates: 0 });
+  const [summary, setSummary] = useState({
+    total: 0,
+    matchedDomains: 0,
+    matchedCampaigns: 0,
+    duplicates: 0,
+  });
   const [nextAction, setNextAction] = useState(false);
   const [error, setError] = useState('');
-  const [sortField, setSortField] = useState<'created_at' | 'address_city'>('created_at');
+  const [sortField, setSortField] = useState<'created_at' | 'address_city'>(
+    'created_at'
+  );
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const dropRef = useRef<HTMLDivElement>(null);
@@ -45,21 +52,26 @@ export default function LeadsPage() {
 
   const fetchLeads = async (reset = false) => {
     setLoading(true);
-    let query = supabase.from('leads').select('*').order(sortField, { ascending: sortField === 'address_city' });
+    let query = supabase
+      .from('leads')
+      .select('*')
+      .order(sortField, { ascending: sortField === 'address_city' });
     if (filterSource !== 'all') query = query.eq('source', filterSource);
     if (filterStatus !== 'all') query = query.eq('status', filterStatus);
-  
+
     const from = reset ? 0 : page * LEADS_PER_PAGE;
     const to = from + LEADS_PER_PAGE - 1;
     const { data } = await query.range(from, to);
-  
-    setLeads(prev => reset ? (data || []) : [...prev, ...(data || [])]);
-    setPage(prev => reset ? 1 : prev + 1);
+
+    setLeads((prev) => (reset ? data || [] : [...prev, ...(data || [])]));
+    setPage((prev) => (reset ? 1 : prev + 1));
     setLoading(false);
   };
-  
+
   const toggleSelectLead = (id: number) => {
-    setSelectedIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+    setSelectedIds((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
+    );
   };
 
   const bulkUpdateStatus = async (status: string) => {
@@ -75,9 +87,9 @@ export default function LeadsPage() {
       body: JSON.stringify({
         to: 'your-team@example.com',
         subject: `New Lead: ${lead.phone || 'No phone'}`,
-        text: `Lead Details:\n\n${JSON.stringify(lead, null, 2)}`
+        text: `Lead Details:\n\n${JSON.stringify(lead, null, 2)}`,
       }),
-      headers: { 'Content-Type': 'application/json' }
+      headers: { 'Content-Type': 'application/json' },
     });
     alert(res.ok ? 'Email sent!' : 'Failed to send');
   };
@@ -104,7 +116,9 @@ export default function LeadsPage() {
     setReviewImage(preview);
 
     const photoPath = `leads/photos/${Date.now()}-${file.name}`;
-    const { data: uploadData, error: uploadError } = await supabase.storage.from('leads').upload(photoPath, file);
+    const { data: uploadData, error: uploadError } = await supabase.storage
+      .from('leads')
+      .upload(photoPath, file);
 
     if (uploadError) {
       console.error('Upload error:', uploadError);
@@ -112,9 +126,11 @@ export default function LeadsPage() {
       return;
     }
 
-    const photoUrl = supabase.storage.from('leads').getPublicUrl(photoPath).data.publicUrl;
+    const photoUrl = supabase.storage.from('leads').getPublicUrl(photoPath)
+      .data.publicUrl;
 
-    const { leadData, confidence }: { leadData: any, confidence: number } = await createLeadFromPhoto(file);
+    const { leadData, confidence }: { leadData: any; confidence: number } =
+      await createLeadFromPhoto(file);
     leadData.id = crypto.randomUUID();
     leadData.confidence = confidence || 0;
     leadData.photo_url = photoUrl || null;
@@ -158,7 +174,9 @@ export default function LeadsPage() {
     const headers = ['phone', 'industry', 'city', 'state', 'source', 'status'];
     const csv = [headers.join(',')];
     for (const lead of leads) {
-      const row = headers.map((h) => JSON.stringify(lead[h as keyof Lead] ?? '')).join(',');
+      const row = headers
+        .map((h) => JSON.stringify(lead[h as keyof Lead] ?? ''))
+        .join(',');
       csv.push(row);
     }
     const blob = new Blob([csv.join('\n')], { type: 'text/csv' });
@@ -170,12 +188,17 @@ export default function LeadsPage() {
   };
 
   const load = async () => {
-    const { data, error } = await supabase.from('leads').select('*').order('created_at', { ascending: false });
+    const { data, error } = await supabase
+      .from('leads')
+      .select('*')
+      .order('created_at', { ascending: false });
     if (error) setError(error.message);
     else setLeads(data || []);
   };
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => {
+    load();
+  }, []);
 
   const handleCSV = async (e: any) => {
     const file = e.target.files?.[0];
@@ -194,15 +217,15 @@ export default function LeadsPage() {
       skipEmptyLines: true,
       complete: async (results) => {
         const rows: Lead[] = [];
-    
+
         for (const row of results.data) {
           const tags = row.Tags || '';
-          const parts = tags.split(',').map(s => s.trim());
-    
+          const parts = tags.split(',').map((s) => s.trim());
+
           let city = row.City || '';
           let state = row.State || '';
           let industry = row.Industry || '';
-        
+
           for (const part of parts) {
             const lower = part.toLowerCase();
             if (lower.includes('towing') || lower.includes('concrete')) {
@@ -211,44 +234,52 @@ export default function LeadsPage() {
               city = words.slice(1).join(' ');
             }
           }
-        
+
           if (parts.length >= 2) {
             state = parts[parts.length - 1];
             if (!city) city = parts[parts.length - 2];
           }
-        
-          const matchedDomain = domains?.find((d) =>
-            d.domain?.toLowerCase().includes(city?.toLowerCase()) ||
-            d.city?.toLowerCase() === city?.toLowerCase()
-          ) || null;
-          const matchedCampaign = campaigns?.find((c) =>
-            c.city?.toLowerCase() === city?.toLowerCase() && c.status !== 'ended'
-          ) || null;
-        
-          const isDuplicate = existingLeads?.some(l =>
-            l.business_name === row.BusinessName?.trim() &&
-            (l.phone === row.Phone?.trim() || l.address_city === city)
+
+          const matchedDomain =
+            domains?.find(
+              (d) =>
+                d.domain?.toLowerCase().includes(city?.toLowerCase()) ||
+                d.city?.toLowerCase() === city?.toLowerCase()
+            ) || null;
+          const matchedCampaign =
+            campaigns?.find(
+              (c) =>
+                c.city?.toLowerCase() === city?.toLowerCase() &&
+                c.status !== 'ended'
+            ) || null;
+
+          const isDuplicate = existingLeads?.some(
+            (l) =>
+              l.business_name === row.BusinessName?.trim() &&
+              (l.phone === row.Phone?.trim() || l.address_city === city)
           );
-        
+
           if (isDuplicate) {
             duplicates++;
             continue;
           }
-        
+
           if (matchedDomain) matchedDomains++;
           if (matchedCampaign) matchedCampaigns++;
-        
+
           const phoneMissing = !row.Phone;
           const rawName = row.BusinessName?.trim() || '';
           const cleanName = rawName.replace(/&amp;/g, '&');
-          
+
           rows.push({
             id: crypto.randomUUID(),
             business_name: cleanName,
             contact_name: row.ContactName || '',
-            phone: phoneMissing ? '' : (row.Phone?.trim() || ''),
+            phone: phoneMissing ? '' : row.Phone?.trim() || '',
             email: row.Email || '',
-            notes: phoneMissing ? 'Needs contact info – phone missing' : `Imported on ${new Date().toISOString()}`,
+            notes: phoneMissing
+              ? 'Needs contact info – phone missing'
+              : `Imported on ${new Date().toISOString()}`,
             address_city: city,
             address_state: state,
             industry,
@@ -281,27 +312,41 @@ export default function LeadsPage() {
           total: rows.length + duplicates,
           matchedDomains,
           matchedCampaigns,
-          duplicates
+          duplicates,
         });
         setNextAction(true);
         load();
-      }
+      },
     });
   };
 
   return (
     <div className="p-6 text-white">
       <h1 className="text-2xl font-bold mb-4">Lead Tracker</h1>
-      <button onClick={() => document.getElementById('manual-form')?.scrollIntoView({ behavior: 'smooth' })} className="mb-4 bg-blue-600 text-white px-4 py-1 rounded">
+      <button
+        onClick={() =>
+          document
+            .getElementById('manual-form')
+            ?.scrollIntoView({ behavior: 'smooth' })
+        }
+        className="mb-4 bg-blue-600 text-white px-4 py-1 rounded"
+      >
         + Create New Lead
       </button>
 
       <form id="manual-form" className="mb-4">
-        <input type="file" accept=".csv" onChange={handleCSV} className="bg-white text-black px-2 py-1 rounded" />
+        <input
+          type="file"
+          accept=".csv"
+          onChange={handleCSV}
+          className="bg-white text-black px-2 py-1 rounded"
+        />
       </form>
 
       <div className="text-xs text-gray-400 mb-2">
-        Imported: {summary.total} total — ✅ Domains: {summary.matchedDomains} — 🎯 Campaigns: {summary.matchedCampaigns} — ❌ Duplicates: {summary.duplicates}
+        Imported: {summary.total} total — ✅ Domains: {summary.matchedDomains} —
+        🎯 Campaigns: {summary.matchedCampaigns} — ❌ Duplicates:{' '}
+        {summary.duplicates}
       </div>
 
       <div>
@@ -309,20 +354,36 @@ export default function LeadsPage() {
           <button onClick={() => fileInputRef.current?.click()}>
             📸 Upload Lead Photo
           </button>
-          <select value={sortField} onChange={(e) => setSortField(e.target.value as 'created_at' | 'address_city')}>
+          <select
+            value={sortField}
+            onChange={(e) =>
+              setSortField(e.target.value as 'created_at' | 'address_city')
+            }
+          >
             <option value="created_at">Newest</option>
             <option value="address_city">City (A-Z)</option>
           </select>
-          <select value={filterSource} onChange={(e) => setFilterSource(e.target.value)}>
+          <select
+            value={filterSource}
+            onChange={(e) => setFilterSource(e.target.value)}
+          >
             <option value="all">All Sources</option>
             <option value="photo">Photo Only</option>
           </select>
-          <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)}>
+          <select
+            value={filterStatus}
+            onChange={(e) => setFilterStatus(e.target.value)}
+          >
             <option value="all">All Statuses</option>
             <option value="reviewed">Reviewed</option>
             <option value="needs_review">Needs Review</option>
           </select>
-          <button onClick={exportCsv} className="ml-2 px-2 py-1 text-sm bg-gray-200 rounded">⬇️ Export CSV</button>
+          <button
+            onClick={exportCsv}
+            className="ml-2 px-2 py-1 text-sm bg-gray-200 rounded"
+          >
+            ⬇️ Export CSV
+          </button>
         </div>
 
         <input
@@ -345,26 +406,62 @@ export default function LeadsPage() {
 
         {reviewLead && (
           <div className="p-4 border rounded bg-white shadow">
-            <h3 className="text-lg font-bold mb-2">📝 Review Lead Before Saving</h3>
-            {reviewImage && <img src={reviewImage} alt="Preview" className="max-w-xs mb-2" />}
+            <h3 className="text-lg font-bold mb-2">
+              📝 Review Lead Before Saving
+            </h3>
+            {reviewImage && (
+              <img src={reviewImage} alt="Preview" className="max-w-xs mb-2" />
+            )}
             <label className="block mb-2">
               <span>📞 Phone</span>
-              <input value={reviewLead.phone || ''} onChange={(e) => setReviewLead({ ...reviewLead, phone: e.target.value })} className="border p-1 w-full" />
+              <input
+                value={reviewLead.phone || ''}
+                onChange={(e) =>
+                  setReviewLead({ ...reviewLead, phone: e.target.value })
+                }
+                className="border p-1 w-full"
+              />
             </label>
             <label className="block mb-2">
               <span>🏷 Industry</span>
-              <input value={reviewLead.industry || ''} onChange={(e) => setReviewLead({ ...reviewLead, industry: e.target.value })} className="border p-1 w-full" />
+              <input
+                value={reviewLead.industry || ''}
+                onChange={(e) =>
+                  setReviewLead({ ...reviewLead, industry: e.target.value })
+                }
+                className="border p-1 w-full"
+              />
             </label>
             <label className="block mb-2">
               <span>📍 City</span>
-              <input value={reviewLead.city || ''} onChange={(e) => setReviewLead({ ...reviewLead, city: e.target.value })} className="border p-1 w-full" />
+              <input
+                value={reviewLead.city || ''}
+                onChange={(e) =>
+                  setReviewLead({ ...reviewLead, city: e.target.value })
+                }
+                className="border p-1 w-full"
+              />
             </label>
             <label className="block mb-2">
               <span>🌎 State</span>
-              <input value={reviewLead.state || ''} onChange={(e) => setReviewLead({ ...reviewLead, state: e.target.value })} className="border p-1 w-full" />
+              <input
+                value={reviewLead.state || ''}
+                onChange={(e) =>
+                  setReviewLead({ ...reviewLead, state: e.target.value })
+                }
+                className="border p-1 w-full"
+              />
             </label>
-            <p><strong>Confidence:</strong> {Math.round(reviewLead.confidence * 100)}%</p>
-            <button onClick={saveReviewedLead} className="mt-2 px-4 py-2 bg-green-600 text-white rounded">Save Lead</button>
+            <p>
+              <strong>Confidence:</strong>{' '}
+              {Math.round(reviewLead.confidence * 100)}%
+            </p>
+            <button
+              onClick={saveReviewedLead}
+              className="mt-2 px-4 py-2 bg-green-600 text-white rounded"
+            >
+              Save Lead
+            </button>
           </div>
         )}
 
@@ -373,21 +470,50 @@ export default function LeadsPage() {
             <h3 className="text-lg font-bold mb-2">✏️ Edit Lead</h3>
             <label className="block mb-2">
               <span>📞 Phone</span>
-              <input value={editingLead.phone || ''} onChange={(e) => setEditingLead({ ...editingLead, phone: e.target.value })} className="border p-1 w-full" />
+              <input
+                value={editingLead.phone || ''}
+                onChange={(e) =>
+                  setEditingLead({ ...editingLead, phone: e.target.value })
+                }
+                className="border p-1 w-full"
+              />
             </label>
             <label className="block mb-2">
               <span>🏷 Industry</span>
-              <input value={editingLead.industry || ''} onChange={(e) => setEditingLead({ ...editingLead, industry: e.target.value })} className="border p-1 w-full" />
+              <input
+                value={editingLead.industry || ''}
+                onChange={(e) =>
+                  setEditingLead({ ...editingLead, industry: e.target.value })
+                }
+                className="border p-1 w-full"
+              />
             </label>
             <label className="block mb-2">
               <span>📍 City</span>
-              <input value={editingLead.city || ''} onChange={(e) => setEditingLead({ ...editingLead, city: e.target.value })} className="border p-1 w-full" />
+              <input
+                value={editingLead.city || ''}
+                onChange={(e) =>
+                  setEditingLead({ ...editingLead, city: e.target.value })
+                }
+                className="border p-1 w-full"
+              />
             </label>
             <label className="block mb-2">
               <span>🌎 State</span>
-              <input value={editingLead.state || ''} onChange={(e) => setEditingLead({ ...editingLead, state: e.target.value })} className="border p-1 w-full" />
+              <input
+                value={editingLead.state || ''}
+                onChange={(e) =>
+                  setEditingLead({ ...editingLead, state: e.target.value })
+                }
+                className="border p-1 w-full"
+              />
             </label>
-            <button onClick={updateLead} className="mt-2 px-4 py-2 bg-blue-600 text-white rounded">Save Changes</button>
+            <button
+              onClick={updateLead}
+              className="mt-2 px-4 py-2 bg-blue-600 text-white rounded"
+            >
+              Save Changes
+            </button>
           </div>
         )}
 
@@ -395,22 +521,66 @@ export default function LeadsPage() {
           <h2 className="text-lg font-bold mb-2">Leads</h2>
           <ul>
             {leads.map((lead) => (
-              <li key={lead.id} className={`border-b py-2 ${!lead.phone ? 'bg-red-50' : ''}`}>
-                <input type="checkbox" checked={selectedIds.includes(Number(lead.id))} onChange={() => toggleSelectLead(Number(lead.id))} className="mr-2" />
-                <div className="font-bold text-sm">{lead.business_name || '—'}</div>
-                <div>{lead.phone || '❌ Missing Phone'} — {lead.industry || 'unknown'}</div>
-                <div>{lead.address_city || '—'}, {lead.address_state || '—'}</div>
-                <div>Domain: {lead.domain_id || '—'} | Campaign: {lead.campaign_id || '—'}</div>
-                <div className="text-xs text-gray-400 whitespace-pre-line">{lead.notes || '—'}</div>
+              <li
+                key={lead.id}
+                className={`border-b py-2 ${!lead.phone ? 'bg-red-50' : ''}`}
+              >
+                <input
+                  type="checkbox"
+                  checked={selectedIds.includes(Number(lead.id))}
+                  onChange={() => toggleSelectLead(Number(lead.id))}
+                  className="mr-2"
+                />
+                <div className="font-bold text-sm">
+                  {lead.business_name || '—'}
+                </div>
+                <div>
+                  {lead.phone || '❌ Missing Phone'} —{' '}
+                  {lead.industry || 'unknown'}
+                </div>
+                <div>
+                  {lead.address_city || '—'}, {lead.address_state || '—'}
+                </div>
+                <div>
+                  Domain: {lead.domain_id || '—'} | Campaign:{' '}
+                  {lead.campaign_id || '—'}
+                </div>
+                <div className="text-xs text-gray-400 whitespace-pre-line">
+                  {lead.notes || '—'}
+                </div>
                 <div>Status: {lead.status}</div>
                 <div className="flex space-x-2 mt-2">
-                  <button onClick={() => sendLeadEmail(lead)} className="text-sm text-green-700 underline">📤 Send</button>
+                  <button
+                    onClick={() => sendLeadEmail(lead)}
+                    className="text-sm text-green-700 underline"
+                  >
+                    📤 Send
+                  </button>
                   {lead.status === 'needs_review' && (
-                    <button onClick={() => markAsReviewed(Number(lead.id))} className="text-sm text-blue-600 underline">Mark as Reviewed</button>
+                    <button
+                      onClick={() => markAsReviewed(Number(lead.id))}
+                      className="text-sm text-blue-600 underline"
+                    >
+                      Mark as Reviewed
+                    </button>
                   )}
-                  <button onClick={() => { setEditingLeadId(Number(lead.id)); setEditingLead(lead); }} className="text-sm text-indigo-600 underline">Edit</button>
+                  <button
+                    onClick={() => {
+                      setEditingLeadId(Number(lead.id));
+                      setEditingLead(lead);
+                    }}
+                    className="text-sm text-indigo-600 underline"
+                  >
+                    Edit
+                  </button>
                 </div>
-                {lead.photo_url && <img src={lead.photo_url} alt="Lead" className="max-w-xs mt-2" />}
+                {lead.photo_url && (
+                  <img
+                    src={lead.photo_url}
+                    alt="Lead"
+                    className="max-w-xs mt-2"
+                  />
+                )}
                 {lead.address_lat && lead.address_lon && (
                   <iframe
                     title="map"
@@ -422,10 +592,22 @@ export default function LeadsPage() {
               </li>
             ))}
           </ul>
-          <div ref={loaderRef} className="text-center py-4 text-gray-400">{loading && 'Loading more leads...'}</div>
+          <div ref={loaderRef} className="text-center py-4 text-gray-400">
+            {loading && 'Loading more leads...'}
+          </div>
           <div className="mt-4 space-x-2">
-            <button onClick={() => bulkUpdateStatus('reviewed')} className="bg-green-100 px-2 py-1 text-sm rounded">Mark Reviewed</button>
-            <button onClick={() => bulkUpdateStatus('archived')} className="bg-yellow-100 px-2 py-1 text-sm rounded">Archive</button>
+            <button
+              onClick={() => bulkUpdateStatus('reviewed')}
+              className="bg-green-100 px-2 py-1 text-sm rounded"
+            >
+              Mark Reviewed
+            </button>
+            <button
+              onClick={() => bulkUpdateStatus('archived')}
+              className="bg-yellow-100 px-2 py-1 text-sm rounded"
+            >
+              Archive
+            </button>
           </div>
         </div>
       </div>
@@ -433,9 +615,21 @@ export default function LeadsPage() {
         <div className="bg-gray-900 p-4 border border-gray-700 rounded mb-4 text-sm">
           <h2 className="font-bold text-lg mb-2">What's next?</h2>
           <ul className="list-disc pl-6 space-y-1">
-            <li><a href="/start-campaign" className="text-blue-400 underline">Start a new Campaign</a></li>
-            <li><a href="/print" className="text-blue-400 underline">Print Postcards</a></li>
-            <li><a href="/leads" className="text-blue-400 underline">View Leads Needing Research</a></li>
+            <li>
+              <a href="/start-campaign" className="text-blue-400 underline">
+                Start a new Campaign
+              </a>
+            </li>
+            <li>
+              <a href="/print" className="text-blue-400 underline">
+                Print Postcards
+              </a>
+            </li>
+            <li>
+              <a href="/leads" className="text-blue-400 underline">
+                View Leads Needing Research
+              </a>
+            </li>
           </ul>
         </div>
       )}
@@ -457,7 +651,10 @@ export default function LeadsPage() {
         </thead>
         <tbody>
           {leads.map((l, i) => (
-            <tr key={l.id} className={i % 2 === 0 ? 'bg-gray-800' : 'bg-gray-900'}>
+            <tr
+              key={l.id}
+              className={i % 2 === 0 ? 'bg-gray-800' : 'bg-gray-900'}
+            >
               <td className="px-4 py-2">{l.industry || '—'}</td>
               <td className="px-4 py-2">{l.address_city || '—'}</td>
               <td className="px-4 py-2">{l.address_state || '—'}</td>

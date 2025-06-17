@@ -12,8 +12,8 @@ export default function SeedButton() {
       const res = await fetch('/api/admin/seed-template', {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('sb-access-token')}`
-        }
+          Authorization: `Bearer ${localStorage.getItem('sb-access-token')}`,
+        },
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error?.message || 'Seed failed');

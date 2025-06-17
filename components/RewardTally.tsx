@@ -1,5 +1,10 @@
 export function RewardTally({ points }: { points: number }) {
-  const tier = points >= 50 ? '🌟 Steward Elite' : points >= 20 ? '⭐ Steward' : '🎁 Contributor';
+  const tier =
+    points >= 50
+      ? '🌟 Steward Elite'
+      : points >= 20
+        ? '⭐ Steward'
+        : '🎁 Contributor';
 
   return (
     <div className="bg-zinc-800 rounded px-4 py-3 text-white text-sm inline-block">

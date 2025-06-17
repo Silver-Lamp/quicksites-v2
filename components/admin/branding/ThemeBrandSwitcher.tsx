@@ -7,7 +7,7 @@ const brands = ['green', 'blue', 'red'];
 export default function ThemeBrandSwitcher({
   initialTheme = 'dark',
   initialBrand = 'green',
-  onUpdate
+  onUpdate,
 }: {
   initialTheme?: string;
   initialBrand?: string;
@@ -31,7 +31,7 @@ export default function ThemeBrandSwitcher({
     <div className="p-4 border rounded space-y-2 bg-white">
       <div className="flex gap-4">
         <label className="text-sm font-semibold">Theme:</label>
-        {themes.map(t => (
+        {themes.map((t) => (
           <button
             key={t}
             className={`text-sm px-2 py-1 border rounded ${t === theme ? 'bg-black text-white' : 'bg-gray-100'}`}
@@ -44,7 +44,7 @@ export default function ThemeBrandSwitcher({
 
       <div className="flex gap-4">
         <label className="text-sm font-semibold">Brand:</label>
-        {brands.map(b => (
+        {brands.map((b) => (
           <button
             key={b}
             className={`text-sm px-2 py-1 border rounded ${b === brand ? 'bg-black text-white' : 'bg-gray-100'}`}

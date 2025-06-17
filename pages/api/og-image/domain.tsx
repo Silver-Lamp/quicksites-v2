@@ -1,4 +1,5 @@
 import { ImageResponse } from '@vercel/og';
+import { NextApiRequest, NextApiResponse } from 'next';
 
 export const config = {
   runtime: 'edge',
@@ -6,12 +7,15 @@ export const config = {
 
 const fallbackImage = 'https://quicksites.ai/assets/fallback.png';
 
-export default function handler(req) {
-  const { searchParams } = new URL(req.url);
+export default function handler(req: NextApiRequest, _res: NextApiResponse) {
+  const { searchParams } = new URL(req.url || 'https://quicksites.ai');
   const slug = searchParams.get('slug') || 'example.com';
   const template = searchParams.get('template') || 'default';
 
-  const formattedSlug = slug.replace('.com', '').replace(/[-_]/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+  const formattedSlug = slug
+    .replace('.com', '')
+    .replace(/[-_]/g, ' ')
+    .replace(/\b\w/g, (l) => l.toUpperCase());
   const screenshotUrl = `https://quicksites.ai/public/screenshots/${slug}.png`;
 
   return new ImageResponse(
@@ -32,14 +36,20 @@ export default function handler(req) {
           fontFamily: 'sans-serif',
         }}
       >
-        <div style={{ fontSize: 64, fontWeight: 'bold', marginTop: '1em' }}>{formattedSlug}</div>
-        <div style={{
-          fontSize: 24,
-          background: 'rgba(0,0,0,0.6)',
-          padding: '0.5em 1em',
-          borderRadius: '6px',
-        }}>
-          {template === 'default' ? 'Powered by QuickSites' : `Template: ${template}`}
+        <div style={{ fontSize: 64, fontWeight: 'bold', marginTop: '1em' }}>
+          {formattedSlug}
+        </div>
+        <div
+          style={{
+            fontSize: 24,
+            background: 'rgba(0,0,0,0.6)',
+            padding: '0.5em 1em',
+            borderRadius: '6px',
+          }}
+        >
+          {template === 'default'
+            ? 'Powered by QuickSites'
+            : `Template: ${template}`}
         </div>
         <img
           src={fallbackImage}

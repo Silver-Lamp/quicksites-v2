@@ -1,18 +1,18 @@
 template:
-  - "pages/demo/**"
-  - "components/templates/**"
+  - 'pages/demo/**'
+  - 'components/templates/**'
 
 admin:
-  - "pages/admin/**"
-  - "pages/api/**"
+  - 'pages/admin/**'
+  - 'pages/api/**'
 
 style:
-  - "**/*.css"
-  - "**/*.tailwind.ts"
-  - "components/ui/**"
+  - '**/*.css'
+  - '**/*.tailwind.ts'
+  - 'components/ui/**'
 
 playwright:
-  - "tests/**"
+  - 'tests/**'
 
 hotfix:
-  - "fixes/**"
+  - 'fixes/**'

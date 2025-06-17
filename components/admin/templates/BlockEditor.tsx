@@ -1,9 +1,9 @@
 // BlockEditor.tsx
-import { Input } from '@/components/admin/ui/input";
-import { Textarea } from '@/components/admin/ui/textarea";
-import { Label } from '@/components/admin/ui/label";
-import { Button } from '@/components/admin/ui/button";
-import { Plus, Trash2 } from "lucide-react";
+import { Input } from '@/components/admin/ui/input';
+import { Textarea } from '@/components/admin/ui/textarea';
+import { Label } from '@/components/admin/ui/label';
+import { Button } from '@/components/admin/ui/button';
+import { Plus, Trash2 } from 'lucide-react';
 
 type Block = {
   id: string;
@@ -24,44 +24,44 @@ export default function BlockEditor({ block, onChange }: Props) {
   const updateListItem = (index: number, value: string) => {
     const items = [...(block.items || [])];
     items[index] = value;
-    updateField("items", items);
+    updateField('items', items);
   };
 
   const addListItem = () => {
-    const items = [...(block.items || []), ""];
-    updateField("items", items);
+    const items = [...(block.items || []), ''];
+    updateField('items', items);
   };
 
   const deleteListItem = (index: number) => {
     const items = [...(block.items || [])];
     items.splice(index, 1);
-    updateField("items", items);
+    updateField('items', items);
   };
 
   switch (block.type) {
-    case "text":
+    case 'text':
       return (
         <div>
           <Label>Text</Label>
           <Textarea
-            value={block.value || ""}
-            onChange={(e) => updateField("value", e.target.value)}
+            value={block.value || ''}
+            onChange={(e) => updateField('value', e.target.value)}
           />
         </div>
       );
 
-    case "image":
+    case 'image':
       return (
         <div className="space-y-2">
           <Label>Image URL</Label>
           <Input
-            value={block.url || ""}
-            onChange={(e) => updateField("url", e.target.value)}
+            value={block.url || ''}
+            onChange={(e) => updateField('url', e.target.value)}
           />
           <Label>Alt Text</Label>
           <Input
-            value={block.alt || ""}
-            onChange={(e) => updateField("alt", e.target.value)}
+            value={block.alt || ''}
+            onChange={(e) => updateField('alt', e.target.value)}
           />
           {block.url && (
             <img src={block.url} alt={block.alt} className="w-full rounded" />
@@ -69,50 +69,50 @@ export default function BlockEditor({ block, onChange }: Props) {
         </div>
       );
 
-    case "cta":
+    case 'cta':
       return (
         <div className="space-y-2">
           <Label>CTA Label</Label>
           <Input
-            value={block.label || ""}
-            onChange={(e) => updateField("label", e.target.value)}
+            value={block.label || ''}
+            onChange={(e) => updateField('label', e.target.value)}
           />
           <Label>Link</Label>
           <Input
-            value={block.link || ""}
-            onChange={(e) => updateField("link", e.target.value)}
+            value={block.link || ''}
+            onChange={(e) => updateField('link', e.target.value)}
           />
         </div>
       );
 
-    case "quote":
+    case 'quote':
       return (
         <div className="space-y-2">
           <Label>Quote</Label>
           <Textarea
-            value={block.text || ""}
-            onChange={(e) => updateField("text", e.target.value)}
+            value={block.text || ''}
+            onChange={(e) => updateField('text', e.target.value)}
           />
           <Label>Attribution</Label>
           <Input
-            value={block.attribution || ""}
-            onChange={(e) => updateField("attribution", e.target.value)}
+            value={block.attribution || ''}
+            onChange={(e) => updateField('attribution', e.target.value)}
           />
         </div>
       );
 
-    case "video":
+    case 'video':
       return (
         <div className="space-y-2">
           <Label>Embed URL (YouTube, Vimeo...)</Label>
           <Input
-            value={block.embed_url || ""}
-            onChange={(e) => updateField("embed_url", e.target.value)}
+            value={block.embed_url || ''}
+            onChange={(e) => updateField('embed_url', e.target.value)}
           />
           <Label>Caption</Label>
           <Input
-            value={block.caption || ""}
-            onChange={(e) => updateField("caption", e.target.value)}
+            value={block.caption || ''}
+            onChange={(e) => updateField('caption', e.target.value)}
           />
           {block.embed_url && (
             <iframe
@@ -124,12 +124,10 @@ export default function BlockEditor({ block, onChange }: Props) {
         </div>
       );
 
-    case "divider":
-      return (
-        <div className="my-4 border-t border-muted" />
-      );
+    case 'divider':
+      return <div className="my-4 border-t border-muted" />;
 
-    case "list":
+    case 'list':
       return (
         <div className="space-y-2">
           <Label>List Items</Label>
@@ -139,7 +137,11 @@ export default function BlockEditor({ block, onChange }: Props) {
                 value={item}
                 onChange={(e) => updateListItem(i, e.target.value)}
               />
-              <Button variant="ghost" size="sm" onClick={() => deleteListItem(i)}>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => deleteListItem(i)}
+              >
                 <Trash2 className="w-4 h-4" />
               </Button>
             </div>

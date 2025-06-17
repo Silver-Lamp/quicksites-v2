@@ -1,5 +1,6 @@
 'use client';
 import { useEffect, useState } from 'react';
+import { json } from '@/lib/api/json';
 import { useRouter } from 'next/router';
 
 export default function HabitLeaderboard() {
@@ -10,7 +11,7 @@ export default function HabitLeaderboard() {
   useEffect(() => {
     if (!slug) return;
     fetch('/api/habit-leaderboard?slug=' + slug)
-      .then(res => res.json())
+      .then((res) => json())
       .then(setEntries);
   }, [slug]);
 

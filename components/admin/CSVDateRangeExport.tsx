@@ -1,10 +1,14 @@
 import { useState } from 'react';
 
-export function CSVDateRangeExport({ type }: { type: 'feedback' | 'checkins' }) {
+export default function CSVDateRangeExport({
+  type,
+}: {
+  type: 'feedback' | 'checkins';
+}) {
   const [start, setStart] = useState('');
   const [end, setEnd] = useState('');
 
-  const url = \`/api/logs/\${type}.csv?start=\${start}&end=\${end}\`;
+  const url = `/api/logs/${type}.csv?start=${start}&end=${end}`;
 
   return (
     <div className="mb-4 flex flex-wrap gap-2 items-center text-sm">

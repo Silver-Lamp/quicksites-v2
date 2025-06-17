@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { supabase } from '../lib/supabase';
+import { supabase } from '@/lib/supabase';
 import { useRouter } from 'next/router';
 import dayjs from 'dayjs';
 
@@ -12,7 +12,10 @@ export default function ViewerDashboard() {
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
       const user = data?.user;
-      if (user?.user_metadata?.role !== 'viewer' && user?.email !== 'sandonjurowski@gmail.com') {
+      if (
+        user?.user_metadata?.role !== 'viewer' &&
+        user?.email !== 'sandonjurowski@gmail.com'
+      ) {
         router.push('/dashboard');
       }
       setEmail(user?.email || '');
@@ -35,8 +38,8 @@ export default function ViewerDashboard() {
       {
         domain_id,
         action_type,
-        triggered_by: email
-      }
+        triggered_by: email,
+      },
     ]);
   };
 
@@ -63,7 +66,10 @@ export default function ViewerDashboard() {
         </thead>
         <tbody>
           {domains.map((d, i) => (
-            <tr key={d.id} className={i % 2 === 0 ? 'bg-gray-800' : 'bg-gray-900'}>
+            <tr
+              key={d.id}
+              className={i % 2 === 0 ? 'bg-gray-800' : 'bg-gray-900'}
+            >
               <td className="px-4 py-2">{d.domain}</td>
               <td className="px-4 py-2">{d.city}</td>
               <td className="px-4 py-2 text-xs">
@@ -71,7 +77,9 @@ export default function ViewerDashboard() {
                   <span className="bg-yellow-600 text-black px-2 py-1 rounded">
                     {renderTimer(d.campaigns)}
                   </span>
-                ) : '—'}
+                ) : (
+                  '—'
+                )}
               </td>
               <td className="px-4 py-2">
                 <img
@@ -92,36 +100,42 @@ export default function ViewerDashboard() {
               </td>
             </tr>
           ))}
-        {domains.map((d, i) => {
-    const alt = d.campaigns?.alt_domains?.[d.campaigns.lead_ids?.indexOf(d.lead_id)];
-    const hasClaimed = d.domains?.is_claimed;
+          {domains.map((d, i) => {
+            const alt =
+              d.campaigns?.alt_domains?.[
+                d.campaigns.lead_ids?.indexOf(d.lead_id)
+              ];
+            const hasClaimed = d.domains?.is_claimed;
 
-    return !hasClaimed && alt ? (
-      <tr key={d.id + '-alt'} className="bg-black text-yellow-400 text-xs">
-        <td colSpan={5} className="px-4 py-2 space-y-2">
-          🛠️ Second Chance Site available:
-          <a
-            href={`https://${alt}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="ml-2 text-blue-400 underline"
-            onClick={() => logClick(d.id, 'click_second_chance')}
-          >
-            {alt}
-          </a>
-          <br />
-          <a
-            href={`mailto:support@quicksites.ai?subject=Interested in second site&body=I'm interested in claiming ${alt}`}
-            className="inline-block bg-yellow-500 text-black px-3 py-1 mt-1 rounded text-xs"
-            onClick={() => logClick(d.id, 'second_chance_interest')}
-          >
-            I'm Interested
-          </a>
-        </td>
-      </tr>
-    ) : null;
-  })}
-</tbody>
+            return !hasClaimed && alt ? (
+              <tr
+                key={d.id + '-alt'}
+                className="bg-black text-yellow-400 text-xs"
+              >
+                <td colSpan={5} className="px-4 py-2 space-y-2">
+                  🛠️ Second Chance Site available:
+                  <a
+                    href={`https://${alt}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="ml-2 text-blue-400 underline"
+                    onClick={() => logClick(d.id, 'click_second_chance')}
+                  >
+                    {alt}
+                  </a>
+                  <br />
+                  <a
+                    href={`mailto:support@quicksites.ai?subject=Interested in second site&body=I'm interested in claiming ${alt}`}
+                    className="inline-block bg-yellow-500 text-black px-3 py-1 mt-1 rounded text-xs"
+                    onClick={() => logClick(d.id, 'second_chance_interest')}
+                  >
+                    I'm Interested
+                  </a>
+                </td>
+              </tr>
+            ) : null;
+          })}
+        </tbody>
       </table>
     </div>
   );

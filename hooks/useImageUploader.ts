@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { supabase } from '@/admin/lib/supabaseClient';
+import { supabase } from '../lib/supabaseClient.js';
 
 interface UseImageUploaderOptions {
   siteId: string;
@@ -30,32 +30,32 @@ export function useImageUploader({
     const timestamp = Date.now(); // or use dayjs() for formatted date
     return `${base}-${timestamp}.${ext}`.toLowerCase();
   }
-  
+
   const uploadImage = async (file: File) => {
     if (!file) return;
-  
+
     const cleanName = sanitizeFilename(file.name);
     const filePath = `${folder}/${siteId}/${cleanName}`;
     setUploading(true);
     setPreview(URL.createObjectURL(file));
-  
+
     const { error: uploadError } = await supabase.storage
       .from('site-images')
       .upload(filePath, file, { upsert: true });
-  
+
     if (uploadError) {
       console.error('Upload error:', uploadError.message);
       setUploading(false);
       return;
     }
-  
+
     const { data: publicData } = supabase.storage
       .from('site-images')
       .getPublicUrl(filePath);
-  
+
     const publicUrl = publicData?.publicUrl;
     if (!publicUrl) return;
-  
+
     const { error: updateError } = await supabase
       .from('templates')
       .update({
@@ -67,21 +67,23 @@ export function useImageUploader({
         },
       })
       .eq('id', templateId);
-  
+
     if (updateError) {
       console.error('DB update error:', updateError.message);
     } else {
       setPreview(publicUrl);
       onChange?.(publicUrl);
     }
-  
+
     setUploading(false);
   };
-  
+
   const removeImage = async () => {
     if (!preview) return;
 
-    const { data: bucketInfo } = supabase.storage.from('site-images').getPublicUrl('');
+    const { data: bucketInfo } = supabase.storage
+      .from('site-images')
+      .getPublicUrl('');
     const bucketUrl = bucketInfo?.publicUrl;
     const path = preview.replace(`${bucketUrl}/`, '');
 

@@ -1,13 +1,19 @@
 import { createClient } from '@supabase/supabase-js';
+import { json } from '@/lib/api/json';
+import { NextApiRequest, NextApiResponse } from 'next';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
-export default async function handler(req, res) {
-  const { block_id, action } = req.query;
-  if (!block_id || !action) return res.status(400).json({ error: 'Missing block_id or action' });
+export default async function handler(
+  _req: NextApiRequest,
+  res: NextApiResponse
+) {
+  const { block_id, action } = _req.query;
+  if (!block_id || !action)
+    return json({ error: 'Missing block_id or action' });
 
   const oneWeekAgo = new Date();
   oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
@@ -19,7 +25,7 @@ export default async function handler(req, res) {
     .eq('action', action)
     .gt('created_at', oneWeekAgo.toISOString());
 
-  if (error) return res.status(500).json({ error: error.message });
+  if (error) return json({ error: error.message });
 
-  res.status(200).json({ count });
+  json({ count });
 }

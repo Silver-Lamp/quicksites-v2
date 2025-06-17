@@ -22,7 +22,9 @@ export default function SharedSnapshotPage() {
   useEffect(() => {
     if (!id) return;
 
-    QRCode.toDataURL(`${window.location.origin}/shared/${id}`).then(setQrDataUrl);
+    QRCode.toDataURL(`${window.location.origin}/shared/${id}`).then(
+      setQrDataUrl
+    );
 
     const loadData = async () => {
       let res;
@@ -35,7 +37,9 @@ export default function SharedSnapshotPage() {
       } else {
         res = await supabase
           .from('snapshots')
-          .select('data, template_name, editor_email, shared_at, thumbnail_url, theme, brand, color_scheme')
+          .select(
+            'data, template_name, editor_email, shared_at, thumbnail_url, theme, brand, color_scheme'
+          )
           .eq('id', id)
           .single();
       }
@@ -52,16 +56,20 @@ export default function SharedSnapshotPage() {
     ? 'bg-gray-900 text-white'
     : 'bg-white text-gray-900';
 
-  const brandClass = brand === 'green'
-    ? 'text-green-400'
-    : brand === 'red'
-    ? 'text-red-400'
-    : 'text-blue-400';
+  const brandClass =
+    brand === 'green'
+      ? 'text-green-400'
+      : brand === 'red'
+        ? 'text-red-400'
+        : 'text-blue-400';
 
-  if (!template) return <div className="text-white p-10">Loading shared preview...</div>;
+  if (!template)
+    return <div className="text-white p-10">Loading shared preview...</div>;
 
   return (
-    <div className={`min-h-screen px-4 sm:px-6 py-10 max-w-screen-lg mx-auto space-y-6 ${themeClasses}`}>
+    <div
+      className={`min-h-screen px-4 sm:px-6 py-10 max-w-screen-lg mx-auto space-y-6 ${themeClasses}`}
+    >
       <h1 className={`text-2xl font-bold ${brandClass}`}>Shared Snapshot</h1>
 
       <div className="flex flex-wrap items-center gap-6">
@@ -81,7 +89,10 @@ export default function SharedSnapshotPage() {
         )}
       </div>
 
-      <div className="border rounded bg-white dark:bg-gray-800 shadow-md overflow-x-auto p-4" id="preview-capture">
+      <div
+        className="border rounded bg-white dark:bg-gray-800 shadow-md overflow-x-auto p-4"
+        id="preview-capture"
+      >
         <TemplatePreview
           data={template.data}
           theme={template.theme}
@@ -97,10 +108,7 @@ export default function SharedSnapshotPage() {
         >
           Remix This
         </Button>
-        <Button
-          onClick={() => generateSocialCard({})}
-          variant="secondary"
-        >
+        <Button onClick={() => generateSocialCard({})} variant="secondary">
           Download PNG
         </Button>
       </div>

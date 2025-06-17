@@ -1,24 +1,22 @@
 import { ImageResponse } from '@vercel/og';
-
-type Theme = 'light' | 'dark';
-type Brand = 'green' | 'blue' | 'red';
+import { Theme, Brand } from '@/types/template';
 
 const THEMES = {
   dark: {
     background: '#0f172a',
-    foreground: 'white'
+    foreground: 'white',
   },
   light: {
     background: '#f1f5f9',
-    foreground: '#0f172a'
-  }
+    foreground: '#0f172a',
+  },
 };
 
 export function renderOgImage({
   title,
   content,
   theme = 'dark',
-  brand = 'green'
+  brand = 'green',
 }: {
   title: string;
   content: string;
@@ -41,7 +39,7 @@ export function renderOgImage({
           display: 'flex',
           flexDirection: 'column',
           justifyContent: 'center',
-          fontFamily: 'Inter, sans-serif'
+          fontFamily: 'Inter, sans-serif',
         },
         children: [
           {
@@ -50,27 +48,27 @@ export function renderOgImage({
               style: {
                 fontSize: 52,
                 fontWeight: 'bold',
-                marginBottom: '20px'
+                marginBottom: '20px',
               },
-              children: content
-            }
+              children: content,
+            },
           },
           {
             type: 'div',
             props: {
               style: {
                 fontSize: 24,
-                opacity: 0.7
+                opacity: 0.7,
               },
-              children: title
-            }
-          }
-        ]
-      }
+              children: title,
+            },
+          },
+        ],
+      },
     },
     {
       width: 1200,
-      height: 630
+      height: 630,
     }
   );
 }

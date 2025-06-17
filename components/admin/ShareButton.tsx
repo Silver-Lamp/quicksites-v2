@@ -2,7 +2,7 @@ import { useRouter } from 'next/router';
 import { useState } from 'react';
 import { Button } from '@/components/admin/ui/button';
 import { toast } from 'react-hot-toast';
-import { useSharedPreview } from '@/admin/hooks/useSharedPreview';
+import { useSharedPreview } from '@/hooks/useSharedPreview';
 
 export default function ShareButton({
   templateId,
@@ -11,7 +11,7 @@ export default function ShareButton({
   theme,
   brand,
   colorScheme,
-  commitMessage = ''
+  commitMessage = '',
 }: {
   templateId: string;
   templateName: string;
@@ -35,7 +35,7 @@ export default function ShareButton({
       commitMessage,
       theme,
       brand,
-      colorScheme
+      colorScheme,
     });
     setLoading(false);
 
@@ -50,6 +50,9 @@ export default function ShareButton({
   return (
     <Button onClick={handleShare} disabled={loading} variant="outline">
       {loading ? 'Sharing…' : 'Share Preview'}
-    <span className="sr-only" aria-live="polite">{loading ? 'Sharing preview in progress' : ''}</span></Button>
+      <span className="sr-only" aria-live="polite">
+        {loading ? 'Sharing preview in progress' : ''}
+      </span>
+    </Button>
   );
 }

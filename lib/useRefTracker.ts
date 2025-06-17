@@ -7,7 +7,7 @@ export function useRefTracker() {
     const params = new URLSearchParams(window.location.search);
     const refData: Record<string, string> = {};
 
-    ['ref', 'source', 'campaign'].forEach(key => {
+    ['ref', 'source', 'campaign'].forEach((key) => {
       const value = params.get(key);
       if (value) refData[key] = value;
     });

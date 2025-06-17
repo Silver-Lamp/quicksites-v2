@@ -10,18 +10,19 @@ const files = glob.sync('**/*.tsx', {
 });
 
 function fileToRoute(file: string) {
-  let route = file
+  const route = file
     .replace(/\/index\.tsx$/, '/')
     .replace(/\.tsx$/, '')
     .replace(/^index$/, '')
-    .replace(/\/g, '/');
+    .replace(/\/g/, '/');
   return '/' + route;
+  console.log('='.repeat(40));
+  files
+    .map(fileToRoute)
+    .sort()
+    .forEach((route) => {
+      const indent = '  '.repeat(route.split('/').length - 2);
+      console.log(indent + '• ' + route);
+    });
+  console.log('='.repeat(40));
 }
-
-console.log('\n🧭 Route Tree');
-console.log('='.repeat(40));
-files.map(fileToRoute).sort().forEach((route) => {
-  const indent = '  '.repeat(route.split('/').length - 2);
-  console.log(indent + '• ' + route);
-});
-console.log('='.repeat(40));

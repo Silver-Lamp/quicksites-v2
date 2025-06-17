@@ -4,41 +4,57 @@ import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { Button } from '@/components/admin/ui/button';
 
+type Template = {
+  id: string;
+  name: string;
+  description?: string;
+  layout: { id: string }[];
+  hidden: string[];
+  created_at: string;
+};
+
 export default function LayoutTemplateManager({
   currentLayout,
   currentHidden,
-  onApply
+  onApply,
 }: {
-  currentLayout: any[];
+  currentLayout: { id: string }[];
   currentHidden: string[];
-  onApply: (layout: any[], hidden: string[]) => void;
+  onApply: (layout: { id: string }[], hidden: string[]) => void;
 }) {
-  const [templates, setTemplates] = useState([]);
+  const [templates, setTemplates] = useState<Template[]>([]);
   const [name, setName] = useState('');
   const [desc, setDesc] = useState('');
 
   useEffect(() => {
-    supabase
-      .from('dashboard_layout_templates')
-      .select('*')
-      .order('created_at', { ascending: false })
-      .then(({ data }) => setTemplates(data || []));
+    (async () => {
+      const { data } = await supabase
+        .from('dashboard_layout_templates')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      setTemplates(data || []);
+    })();
   }, []);
 
   const saveTemplate = async () => {
-    if (!name) return;
+    if (!name.trim()) return;
+
     await supabase.from('dashboard_layout_templates').insert({
       name,
       description: desc,
       layout: currentLayout,
-      hidden: currentHidden
+      hidden: currentHidden,
     });
+
     setName('');
     setDesc('');
+
     const { data } = await supabase
       .from('dashboard_layout_templates')
       .select('*')
       .order('created_at', { ascending: false });
+
     setTemplates(data || []);
   };
 

@@ -1,4 +1,4 @@
-import { tokens } from '@/styles/tokens';
+import { tokens } from '../../styles/tokens.js';
 
 export default function Card({ children }: { children: React.ReactNode }) {
   return (

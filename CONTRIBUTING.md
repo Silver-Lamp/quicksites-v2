@@ -34,6 +34,7 @@ This project uses Husky + custom linting rules to enforce:
 - Git pre-commit hook
 
 Run all:
+
 ```bash
 npm run lint:fix
 ```

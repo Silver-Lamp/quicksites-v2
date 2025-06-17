@@ -1,8 +1,8 @@
 import { useEffect } from 'react';
-import { useRouter } from 'next/router';
-import { useCurrentUser } from '@/admin/hooks/useCurrentUser';
+import { useRouter } from 'next/navigation.js';
+import { useCurrentUser } from './useCurrentUser.jsx';
 
-import { useQueryParam } from '@/admin/hooks/useQueryParam';
+import { useQueryParam } from './useQueryParam.jsx';
 
 export function useRedirectAfterLogin() {
   const router = useRouter();
@@ -10,7 +10,6 @@ export function useRedirectAfterLogin() {
   const redirectTo = useQueryParam('redirectTo', '/admin/dashboard');
 
   useEffect(() => {
-
     if (user && redirectTo) {
       const toast = require('react-hot-toast');
       toast.success('Logged in! Redirecting...');

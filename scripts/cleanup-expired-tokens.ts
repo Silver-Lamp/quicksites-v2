@@ -1,10 +1,19 @@
 import { createClient } from '@supabase/supabase-js';
 
-const supabase = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
+type ReportToken = {
+  id: string;
+  user_id: string;
+  expires_at: string;
+};
+
+const supabase = createClient(
+  process.env.SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+);
 
 const { data, error } = await supabase
   .from('report_tokens')
-  .delete()
+  .select('*')
   .lt('expires_at', new Date().toISOString());
 
 if (error) {

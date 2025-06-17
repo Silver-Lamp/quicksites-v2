@@ -1,7 +1,15 @@
 'use client';
 import { motion } from 'framer-motion';
 
-export function Modal({ show, onClose, children }: { show: boolean, onClose: () => void, children: React.ReactNode }) {
+export function Modal({
+  show,
+  onClose,
+  children,
+}: {
+  show: boolean;
+  onClose: () => void;
+  children: React.ReactNode;
+}) {
   if (!show) return null;
 
   return (
@@ -13,7 +21,12 @@ export function Modal({ show, onClose, children }: { show: boolean, onClose: () 
         className="bg-surface text-text rounded-md p-6 max-w-md w-full shadow-lg"
       >
         {children}
-        <button onClick={onClose} className="mt-4 text-sm text-accent hover:underline">Close</button>
+        <button
+          onClick={onClose}
+          className="mt-4 text-sm text-accent hover:underline"
+        >
+          Close
+        </button>
       </motion.div>
     </div>
   );

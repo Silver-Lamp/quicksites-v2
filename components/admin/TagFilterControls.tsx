@@ -6,7 +6,7 @@ export default function TagFilterControls({
   setTagFilter,
   tagMatchMode,
   setTagMatchMode,
-  allTags
+  allTags,
 }: {
   tagFilter: string[];
   setTagFilter: (tags: string[]) => void;
@@ -43,7 +43,7 @@ export default function TagFilterControls({
   };
 
   const removeTag = (tag: string) => {
-    const next = tagFilter.filter(t => t !== tag);
+    const next = tagFilter.filter((t) => t !== tag);
     setTagFilter(next);
     updateTagURL(next);
   };
@@ -63,7 +63,10 @@ export default function TagFilterControls({
         type="text"
         value={tagFilter.join(', ')}
         onChange={(e) => {
-          const next = e.target.value.split(',').map(t => t.trim().toLowerCase()).filter(Boolean);
+          const next = e.target.value
+            .split(',')
+            .map((t) => t.trim().toLowerCase())
+            .filter(Boolean);
           setTagFilter(next);
           updateTagURL(next);
         }}
@@ -103,7 +106,12 @@ export default function TagFilterControls({
           onClick={toggleMode}
           className="text-xs font-semibold text-gray-700 cursor-pointer"
         >
-          Mode: <span className={`ml-1 font-bold ${tagMatchMode === 'any' ? 'text-indigo-500' : 'text-green-600'}`}>{tagMatchMode}</span>
+          Mode:{' '}
+          <span
+            className={`ml-1 font-bold ${tagMatchMode === 'any' ? 'text-indigo-500' : 'text-green-600'}`}
+          >
+            {tagMatchMode}
+          </span>
         </label>
         <select
           value={tagMatchMode}
@@ -123,7 +131,9 @@ export default function TagFilterControls({
 
       {allTags.length > 0 && (
         <div className="space-y-1 mt-4">
-          <span className="text-xs text-gray-500">Suggestions (by frequency):</span>
+          <span className="text-xs text-gray-500">
+            Suggestions (by frequency):
+          </span>
           <div className="flex flex-wrap gap-2">
             {allTags.map(([tag, count], i) => (
               <button

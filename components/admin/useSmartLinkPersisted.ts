@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react';
-import type { LinkTheme } from '@/admin/lib/theme';
+import type { LinkTheme } from '@/admin/lib/links/theme';
 
 export function useSmartLinkPersisted() {
   const [theme, setTheme] = useState<LinkTheme>('primary');
-  const [query, setQuery] = useState<Record<string, string | number | boolean>>({});
+  const [query, setQuery] = useState<Record<string, string | number | boolean>>(
+    {}
+  );
 
   useEffect(() => {
     const stored = localStorage.getItem('smartlink.ctx');
@@ -24,6 +26,6 @@ export function useSmartLinkPersisted() {
     theme,
     query,
     setTheme,
-    setQuery
+    setQuery,
   };
 }

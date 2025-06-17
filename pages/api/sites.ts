@@ -1,6 +1,7 @@
 // pages/api/sites.ts
 
 import { createClient } from '@supabase/supabase-js';
+import { json } from '@/lib/api/json';
 import type { NextApiRequest, NextApiResponse } from 'next';
 
 const supabase = createClient(
@@ -8,14 +9,15 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY! // or anon key if secure enough
 );
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  const { data, error } = await supabase
-    .from('public_sites')
-    .select('*');
+export default async function handler(
+  req: NextApiRequest,
+  res: NextApiResponse
+) {
+  const { data, error } = await supabase.from('public_sites').select('*');
 
   if (error) {
-    return res.status(500).json({ error: error.message });
+    return json({ error: error.message });
   }
 
-  res.status(200).json(data);
+  json(data);
 }

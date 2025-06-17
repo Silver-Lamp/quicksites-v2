@@ -10,12 +10,12 @@ import { ThemeProvider } from 'next-themes';
 export default function Providers({ children }: { children: ReactNode }) {
   return (
     <SessionContextProvider supabaseClient={supabase}>
-    <ThemeProvider attribute="class" defaultTheme="dark" enableSystem>
-      <SmartLinkProvider>
-        <Toaster />
-        {children}
-      </SmartLinkProvider>
-    </ThemeProvider>
+      <ThemeProvider attribute="class" defaultTheme="dark" enableSystem>
+        <SmartLinkProvider>
+          <Toaster />
+          {children}
+        </SmartLinkProvider>
+      </ThemeProvider>
     </SessionContextProvider>
   );
 }

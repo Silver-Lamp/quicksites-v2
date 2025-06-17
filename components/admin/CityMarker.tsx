@@ -10,9 +10,14 @@ interface CityMarkerProps {
   router: ReturnType<typeof useRouter>;
 }
 
-export default function CityMarker({ point, zoom, getColor, router }: CityMarkerProps) {
+export default function CityMarker({
+  point,
+  zoom,
+  getColor,
+  router,
+}: CityMarkerProps) {
   const shouldRender = useMemo(() => {
-    return !(zoom < 4 && (point.leads + point.domains) < 3);
+    return !(zoom < 4 && point.leads + point.domains < 3);
   }, [zoom, point]);
 
   if (!shouldRender) return null;
@@ -21,18 +26,28 @@ export default function CityMarker({ point, zoom, getColor, router }: CityMarker
     <CircleMarker
       center={[point.lat, point.lon]}
       radius={6 + (point.leads + point.domains) * 0.5}
-      pathOptions={{ color: getColor(point), fillColor: getColor(point), fillOpacity: 0.7 }}
+      pathOptions={{
+        color: getColor(point),
+        fillColor: getColor(point),
+        fillOpacity: 0.7,
+      }}
     >
       <Popup className="w-64 p-4 bg-gray-800 text-white rounded-lg shadow-lg">
         <div className="space-y-2">
-          <div className="text-lg font-bold">{point.city}, {point.state}</div>
+          <div className="text-lg font-bold">
+            {point.city}, {point.state}
+          </div>
           <div className="text-sm">Leads: {point.leads}</div>
           {point.leadNames.length > 0 && (
-            <div className="text-xs text-gray-300">{point.leadNames.join(', ')}</div>
+            <div className="text-xs text-gray-300">
+              {point.leadNames.join(', ')}
+            </div>
           )}
           <div className="text-sm mt-1">Domains: {point.domains}</div>
           {point.domainNames.length > 0 && (
-            <div className="text-xs text-gray-300">{point.domainNames.join(', ')}</div>
+            <div className="text-xs text-gray-300">
+              {point.domainNames.join(', ')}
+            </div>
           )}
           {point.leads >= 2 && (
             <button
@@ -40,7 +55,7 @@ export default function CityMarker({ point, zoom, getColor, router }: CityMarker
                 const query = new URLSearchParams({
                   city: point.city,
                   state: point.state,
-                  leadIds: point.leadIds.join(',')
+                  leadIds: point.leadIds.join(','),
                 });
                 router.push(`/admin/start-campaign?${query}`);
               }}

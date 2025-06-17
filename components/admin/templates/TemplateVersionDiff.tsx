@@ -1,10 +1,12 @@
-import { Diff } from 'jsondiffpatch';
 import { useEffect, useState } from 'react';
-import jsondiffpatch from 'jsondiffpatch';
+import { diff } from 'jsondiffpatch';
+
+// @ts-ignore
+import * as htmlFormatter from 'jsondiffpatch/formatters/html';
 
 export default function TemplateVersionDiff({
   current,
-  previous
+  previous,
 }: {
   current: any;
   previous: any;
@@ -12,9 +14,12 @@ export default function TemplateVersionDiff({
   const [html, setHtml] = useState<string | null>(null);
 
   useEffect(() => {
-    const delta = jsondiffpatch.diff(previous, current);
-    const formatter = jsondiffpatch.formatters.html;
-    const result = formatter.format(delta, previous);
+    const delta = diff(previous, current);
+    if (!delta) {
+      setHtml(null);
+      return;
+    }
+    const result = htmlFormatter.format(delta, previous);
     setHtml(result);
   }, [current, previous]);
 

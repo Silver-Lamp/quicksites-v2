@@ -4,33 +4,55 @@ import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { Button } from '@/components/admin/ui/button';
 
+type Template = { id: string; name: string };
+
 export default function TemplateAssigner() {
-  const [templates, setTemplates] = useState([]);
+  const [templates, setTemplates] = useState<Template[]>([]);
   const [email, setEmail] = useState('');
   const [selected, setSelected] = useState('');
+  const [userId, setUserId] = useState<string | null>(null);
 
   useEffect(() => {
-    supabase
-      .from('dashboard_layout_templates')
-      .select('id, name')
-      .order('created_at', { ascending: false })
-      .then(({ data }) => setTemplates(data || []));
+    (async () => {
+      const { data, error } = await supabase
+        .from('dashboard_layout_templates')
+        .select('id, name')
+        .order('created_at', { ascending: false });
+
+      if (error) console.error('Error fetching templates:', error);
+      setTemplates(data || []);
+    })();
   }, []);
 
-  const assignTemplate = async () => {
-    const { data: user } = await supabase
-      .from('users') // or auth.users if querying directly from Supabase auth
+  const fetchUserId = async () => {
+    const { data: user, error } = await supabase
+      .from('users')
       .select('id')
       .eq('email', email)
       .single();
 
-    if (!user) return alert('User not found');
+    if (error || !user) {
+      alert('User not found');
+      return null;
+    }
+
+    return user.id as string;
+  };
+
+  const assignTemplate = async () => {
+    if (!selected || !email) {
+      alert('Please provide both an email and a template');
+      return;
+    }
+
+    const id = await fetchUserId();
+    if (!id) return;
 
     await supabase
       .from('dashboard_user_layouts')
-      .upsert({ user_id: user.id, template_id: selected });
+      .upsert({ user_id: id, template_id: selected });
 
-    alert('Template assigned!');
+    alert('✅ Template assigned!');
   };
 
   return (

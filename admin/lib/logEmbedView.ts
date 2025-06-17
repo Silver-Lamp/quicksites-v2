@@ -16,7 +16,10 @@ export async function logEmbedView(schema_id: string) {
     const geoRes = await fetch(`https://ipapi.co/${ip}/json/`);
     const geo = await geoRes.json();
 
-    const location = geo.city && geo.country_name ? `${geo.city}, ${geo.country_name}` : geo.country_name || 'Unknown';
+    const location =
+      geo.city && geo.country_name
+        ? `${geo.city}, ${geo.country_name}`
+        : geo.country_name || 'Unknown';
 
     await supabase.from('embed_views').insert({
       schema_id,

@@ -11,13 +11,14 @@ export async function createLeadFromPhoto(file: File) {
   const phone = phoneMatch?.[0] || null;
 
   const keywords = ['window', 'roof', 'lawn', 'gutter', 'tree'];
-  const industry = keywords.find(k => text.toLowerCase().includes(k)) || null;
+  const industry = keywords.find((k) => text.toLowerCase().includes(k)) || null;
 
   const gps = await exifr.gps(file);
   const lat = gps?.latitude ?? null;
   const lon = gps?.longitude ?? null;
 
-  let city = null, state = null;
+  let city = null,
+    state = null;
   if (lat && lon) {
     const res = await fetch(`/api/reverse-geocode?lat=${lat}&lon=${lon}`);
     ({ city, state } = await res.json());
@@ -42,6 +43,6 @@ export async function createLeadFromPhoto(file: File) {
       source: 'photo',
       created_at: new Date().toISOString(),
     },
-    confidence
+    confidence,
   };
 }

@@ -1,5 +1,6 @@
 'use client';
 import { useEffect, useState } from 'react';
+import { json } from '@/lib/api/json';
 import { useRouter } from 'next/router';
 import { Input } from '@/components/admin/ui/input';
 import { Button } from '@/components/admin/ui/button';
@@ -23,7 +24,7 @@ export default function NewTemplatePage() {
       "content_blocks": []
     }
   ]
-}`
+}`,
   });
 
   // Load existing template if ?copy=template_name
@@ -31,14 +32,14 @@ export default function NewTemplatePage() {
     const { copy } = router.query;
     if (copy && typeof copy === 'string') {
       fetch(`/api/templates/${copy}`)
-        .then((res) => res.json())
+        .then((res) => json())
         .then((data) => {
           setTemplate({
             template_name: `${data.template_name}-copy`,
             industry: data.industry,
             layout: data.layout,
             color_scheme: data.color_scheme,
-            data: JSON.stringify(data.data, null, 2)
+            data: JSON.stringify(data.data, null, 2),
           });
         })
         .finally(() => setLoading(false));
@@ -55,19 +56,19 @@ export default function NewTemplatePage() {
     try {
       const payload = {
         ...template,
-        data: JSON.parse(template.data)
+        data: JSON.parse(template.data),
       };
 
       const res = await fetch('/api/templates/create', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
+        body: JSON.stringify(payload),
       });
 
       if (res.ok) {
         router.push('/admin/templates');
       } else {
-        const err = await res.json();
+        const err = await json();
         alert('Error: ' + err.error);
       }
     } catch (e: any) {

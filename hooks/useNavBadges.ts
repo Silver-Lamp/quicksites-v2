@@ -13,7 +13,7 @@ export function useNavBadges(initial: NavBadgeData = {}) {
     const keys = Object.keys(initial || {});
     if (!keys.length || typeof initial.failed === 'undefined') {
       fetch('/api/nav-badges')
-        .then(res => res.json())
+        .then((res) => res.json())
         .then(setBadges)
         .catch(() => {});
     }

@@ -1,4 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
+import { json } from '@/lib/api/json';
 import { exec } from 'child_process';
 import path from 'path';
 import { createClient } from '@supabase/supabase-js';
@@ -8,7 +9,10 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+export default async function handler(
+  req: NextApiRequest,
+  res: NextApiResponse
+) {
   const { data, error } = await supabase
     .from('regeneration_queue')
     .select('*')
@@ -17,7 +21,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     .limit(1)
     .maybeSingle();
 
-  if (error || !data) return res.status(404).json({ message: 'No queued jobs' });
+  if (error || !data) return json({ message: 'No queued jobs' });
 
   const job = data;
   const startTime = new Date().toISOString();
@@ -34,10 +38,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const update = {
       finished_at: finishTime,
       status: err ? 'error' : 'done',
-      log: err ? stderr : stdout
+      log: err ? stderr : stdout,
     };
     await supabase.from('regeneration_queue').update(update).eq('id', job.id);
   });
 
-  return res.status(200).json({ message: 'Job started', job: job.domain });
+  return json({ message: 'Job started', job: job.domain });
 }

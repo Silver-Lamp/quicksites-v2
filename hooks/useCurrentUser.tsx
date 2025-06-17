@@ -1,8 +1,8 @@
 // ✅ FILE: hooks/useCurrentUser.tsx
 
 import { useContext, useEffect, useState } from 'react';
-import { CurrentUserContextType } from '@/components/admin/context/CurrentUserProvider';
-import { CurrentUserContext } from '@/components/admin/context/CurrentUserProvider';
+import { CurrentUserContextType } from '../components/admin/context/CurrentUserProvider.jsx';
+import { CurrentUserContext } from '../components/admin/context/CurrentUserProvider.jsx';
 import { supabase } from '@/lib/supabase';
 
 export function useCurrentUser(): CurrentUserContextType & {
@@ -13,7 +13,9 @@ export function useCurrentUser(): CurrentUserContextType & {
 
   const [fetchedRole, setFetchedRole] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [roleSource, setRoleSource] = useState<'session' | 'db' | 'cache'>('session');
+  const [roleSource, setRoleSource] = useState<'session' | 'db' | 'cache'>(
+    'session'
+  );
 
   useEffect(() => {
     const fetchRole = async () => {
@@ -49,7 +51,7 @@ export function useCurrentUser(): CurrentUserContextType & {
         localStorage.setItem(cacheKey, data.new_role);
       }
 
-        setIsLoading(false);
+      setIsLoading(false);
     };
 
     fetchRole();

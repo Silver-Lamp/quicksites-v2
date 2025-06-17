@@ -1,7 +1,10 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { supabase } from '@/lib/supabase';
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+export default async function handler(
+  req: NextApiRequest,
+  res: NextApiResponse
+) {
   const baseUrl = 'https://quicksites.ai';
 
   const { data: domains } = await supabase
@@ -9,7 +12,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     .select('domain, lang')
     .eq('is_claimed', true);
 
-  const langGroups = (domains || []).reduce((acc, d) => {
+  const langGroups = (domains || []).reduce<
+    Record<string, Array<{ domain: string; lang: string }>>
+  >((acc, d) => {
     const base = d.domain.replace(/\.[a-z]+$/, '');
     if (!acc[base]) acc[base] = [];
     acc[base].push({ ...d, lang: d.lang || 'en' });
@@ -23,10 +28,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 >
 ${Object.entries(langGroups)
   .map(([base, versions]) => {
-    const defaultLang = versions.find(v => v.lang === 'en') || versions[0];
+    const defaultLang = versions.find((v) => v.lang === 'en') || versions[0];
     const loc = `${baseUrl}/${defaultLang.lang}/site/${defaultLang.domain}`;
     const links = versions
-      .map(v => `<xhtml:link rel="alternate" hreflang="${v.lang}" href="${baseUrl}/${v.lang}/site/${v.domain}" />`)
+      .map(
+        (v) =>
+          `<xhtml:link rel="alternate" hreflang="${v.lang}" href="${baseUrl}/${v.lang}/site/${v.domain}" />`
+      )
       .join('\n    ');
     return `<url>
   <loc>${loc}</loc>

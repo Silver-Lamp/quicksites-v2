@@ -11,7 +11,7 @@ describe('OG Image Snapshot Rendering', () => {
     features: 'snapshot-id-features',
     testimonials: 'snapshot-id-testimonials',
     cta: 'snapshot-id-cta',
-    invalid: 'invalid-id'
+    invalid: 'invalid-id',
   };
 
   const BASE_URL = 'http://localhost:3000/api/og/snapshot';

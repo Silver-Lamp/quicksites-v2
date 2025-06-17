@@ -15,7 +15,15 @@ export default function AuthGuard({
   const { user, role, isLoading, roleSource } = useCurrentUser();
   const [hydrated, setHydrated] = useState(false);
   const [readyToCheck, setReadyToCheck] = useState(false);
-  console.log('🔒 [AuthGuard] Loading', { user, role, isLoading, roles, roleSource, readyToCheck, hydrated });
+  console.log('🔒 [AuthGuard] Loading', {
+    user,
+    role,
+    isLoading,
+    roles,
+    roleSource,
+    readyToCheck,
+    hydrated,
+  });
 
   const skipRoleCheck = true;
   if (skipRoleCheck) {

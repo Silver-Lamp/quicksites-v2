@@ -14,7 +14,7 @@ export async function getServerSideProps() {
   return { props: { profiles: data || [] } };
 }
 
-export default function PeoplePage({ profiles }) {
+export default function PeoplePage({ profiles }: { profiles: any[] }) {
   return (
     <div className="p-6 max-w-4xl mx-auto">
       <h1 className="text-xl font-bold mb-4">People Directory</h1>
@@ -32,9 +32,13 @@ export default function PeoplePage({ profiles }) {
           {profiles.map((p) => (
             <tr key={p.user_id} className="border-b">
               <td className="p-2 text-xs text-gray-600">{p.user_id}</td>
-              <td className="p-2">{new Date(p.last_seen_at).toLocaleString()}</td>
+              <td className="p-2">
+                {new Date(p.last_seen_at).toLocaleString()}
+              </td>
               <td className="p-2 text-xs">{p.last_seen_ip ?? '-'}</td>
-              <td className="p-2 text-xs truncate">{p.last_seen_agent?.slice(0, 40) ?? '-'}</td>
+              <td className="p-2 text-xs truncate">
+                {p.last_seen_agent?.slice(0, 40) ?? '-'}
+              </td>
               <td className="p-2">
                 {p.avatar_url ? (
                   <img src={p.avatar_url} className="w-8 h-8 rounded-full" />

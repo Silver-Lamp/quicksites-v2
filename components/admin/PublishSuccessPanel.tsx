@@ -2,7 +2,13 @@ import { Button } from '@/components/admin/ui/button';
 import QRCode from 'react-qr-code';
 import QRCodeLib from 'qrcode';
 
-export function PublishSuccessPanel({ slug, url }: { slug: string; url: string }) {
+export function PublishSuccessPanel({
+  slug,
+  url,
+}: {
+  slug: string;
+  url: string;
+}) {
   return (
     <div className="mt-4 space-y-2 text-center">
       <p className="text-sm text-green-400">Site Published 🎉</p>

@@ -1,9 +1,9 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useCurrentUser } from '@/admin/hooks/useCurrentUser';
+import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { useSearchParams } from 'next/navigation';
-import { supabase } from '@/admin/lib/supabaseClient';
+import { supabase } from '@/lib/supabase';
 import {
   Dialog,
   DialogContent,
@@ -102,8 +102,8 @@ export default function UpgradeModal({
         </DialogHeader>
         <div className="space-y-4">
           <p className="text-muted-foreground">
-            You’ve reached a feature that requires a free account. Sign up to unlock saving,
-            publishing, and full access.
+            You’ve reached a feature that requires a free account. Sign up to
+            unlock saving, publishing, and full access.
           </p>
           <Button onClick={handleUpgrade} disabled={loading} className="w-full">
             {loading ? 'Redirecting...' : 'Sign up for free'}

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { supabase } from '../lib/supabase';
+import { supabase } from '@/lib/supabase';
 
 export default function ReferralLink() {
   const [email, setEmail] = useState('');
@@ -24,7 +24,9 @@ export default function ReferralLink() {
         className="w-full bg-gray-700 px-3 py-1 border border-gray-600 rounded text-xs"
         onClick={(e) => (e.target as HTMLInputElement).select()}
       />
-      <p className="text-xs text-gray-400 mt-1">Share this to invite resellers and earn 10% recurring.</p>
+      <p className="text-xs text-gray-400 mt-1">
+        Share this to invite resellers and earn 10% recurring.
+      </p>
     </div>
   );
 }

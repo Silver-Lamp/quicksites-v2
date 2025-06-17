@@ -1,5 +1,6 @@
 'use client';
 import { useEffect, useState } from 'react';
+import { json } from '@/lib/api/json';
 
 export default function PublicSecurityReports() {
   const [files, setFiles] = useState<string[]>([]);
@@ -10,7 +11,7 @@ export default function PublicSecurityReports() {
         apikey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
       },
     })
-      .then((res) => res.json())
+      .then((res) => json())
       .then((data) => {
         const names = (data || []).map((f: any) => f.name).filter((f: string) => f.endsWith('.pdf'));
         setFiles(names);

@@ -22,9 +22,19 @@ type SidebarNavContextType = {
   toggle: (label: string) => void;
 };
 
-const SidebarNavContext = createContext<SidebarNavContextType | undefined>(undefined);
+const SidebarNavContext = createContext<SidebarNavContextType | undefined>(
+  undefined
+);
 
-export function SidebarNavProvider({ role, groups, children }: { role: string; groups: NavGroup[]; children: React.ReactNode }) {
+export function SidebarNavProvider({
+  role,
+  groups,
+  children,
+}: {
+  role: string;
+  groups: NavGroup[];
+  children: React.ReactNode;
+}) {
   const [open, setOpen] = useState<Record<string, boolean>>(() => {
     if (typeof window !== 'undefined') {
       const stored = localStorage.getItem('nav.groups');
@@ -34,7 +44,7 @@ export function SidebarNavProvider({ role, groups, children }: { role: string; g
   });
 
   const toggle = (label: string) => {
-    setOpen(prev => {
+    setOpen((prev) => {
       const next = { ...prev, [label]: !prev[label] };
       localStorage.setItem('nav.groups', JSON.stringify(next));
       return next;
@@ -60,6 +70,7 @@ export function SidebarNavProvider({ role, groups, children }: { role: string; g
 
 export function useSidebarNav() {
   const ctx = useContext(SidebarNavContext);
-  if (!ctx) throw new Error('useSidebarNav must be used within SidebarNavProvider');
+  if (!ctx)
+    throw new Error('useSidebarNav must be used within SidebarNavProvider');
   return ctx;
 }

@@ -1,44 +1,50 @@
-import RenderBlock from '@/components/admin/templates/RenderBlock';
+import type { TemplateData } from '@/types/template';
+import type { Block } from '@/types/blocks';
+
+type TemplatePreviewProps = {
+  data: TemplateData;
+  colorScheme?: string;
+  theme?: string;
+  brand?: string;
+  onBlockClick?: (block: Block) => void;
+};
 
 export default function TemplatePreview({
   data,
-  colorScheme = 'blue',
-  theme = 'dark',
-  brand = 'blue'
-}: {
-  data: any;
-  colorScheme?: string;
-  theme?: 'dark' | 'light';
-  brand?: string;
-}) {
-  const themeClasses = theme === 'dark'
-    ? 'bg-gray-900 text-white'
-    : 'bg-white text-black';
-
-  const brandClass = brand === 'green'
-    ? 'text-green-400'
-    : brand === 'red'
-    ? 'text-red-400'
-    : 'text-blue-400';
-
-  const accentBg = colorScheme === 'red'
-    ? 'bg-red-600'
-    : colorScheme === 'green'
-    ? 'bg-green-600'
-    : colorScheme === 'yellow'
-    ? 'bg-yellow-500'
-    : 'bg-blue-600';
-
+  colorScheme,
+  theme,
+  brand,
+  onBlockClick,
+}: TemplatePreviewProps) {
   return (
-    <div className={`rounded-md p-6 ${themeClasses}`}>
-      {data?.pages?.map((page: any, i: number) => (
-        <div key={i} className="mb-6">
-          <h2 className={`text-lg font-bold mb-2 ${brandClass}`}>Page: {page.slug}</h2>
-          <div className="space-y-4">
-            {page.content_blocks?.map((block: any, j: number) => (
-              <RenderBlock key={j} block={block} />
-            ))}
-          </div>
+    <div className={`preview-block bg-${colorScheme || 'gray'}-100 p-4`}>
+      <div className="mb-4 text-sm text-gray-500">
+        {theme && (
+          <>
+            Theme: <strong>{theme}</strong> ·{' '}
+          </>
+        )}
+        {brand && (
+          <>
+            Brand: <strong>{brand}</strong>
+          </>
+        )}
+      </div>
+      {data.pages.map((page, pageIndex) => (
+        <div key={page.slug || `page-${pageIndex}`} className="mb-6">
+          <h2 className="text-lg font-semibold mb-2">Page: {page.slug}</h2>
+          {page.content_blocks.map((block) => (
+            <div
+              key={block.id}
+              className="border p-2 mb-2 bg-white shadow-sm"
+              onClick={() => onBlockClick?.(block)}
+            >
+              <strong>{block.type}</strong>
+              <pre className="text-xs mt-1 text-gray-600">
+                {JSON.stringify(block.content, null, 2)}
+              </pre>
+            </div>
+          ))}
         </div>
       ))}
     </div>

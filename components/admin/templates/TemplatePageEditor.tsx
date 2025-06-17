@@ -1,14 +1,26 @@
 // TemplatePageEditor.tsx (fixed keys)
-import { Page } from "@/types/template";
-import { BlocksEditor } from "./BlocksEditor";
-import { SortablePage } from "./SortablePage";
-import { TemplatePageEditorProps } from "@/admin/types/blocks";
+import { Page, TemplateData } from '@/types/template';
+import { BlocksEditor } from './BlocksEditor';
+import { SortablePage } from './SortablePage';
+import { Template } from '@/types/template';
+import { Block } from '@/types/blocks';
 
-export default function TemplatePageEditor({ template, onChange, onLivePreviewUpdate }) {
-  const handleBlockChange = (pageIndex: number, blocks: any[]) => {
+export default function TemplatePageEditor({
+  template,
+  onChange,
+  onLivePreviewUpdate,
+}: {
+  template: Template;
+  onChange: (template: Template) => void;
+  onLivePreviewUpdate: (data: TemplateData) => void;
+}) {
+  const handleBlockChange = (pageIndex: number, blocks: Block[]) => {
     const updatedPages = [...template.data.pages];
     updatedPages[pageIndex].content_blocks = blocks;
-    const updated = { ...template, data: { ...template.data, pages: updatedPages } };
+    const updated = {
+      ...template,
+      data: { ...template.data, pages: updatedPages },
+    };
     onChange(updated);
     if (onLivePreviewUpdate) onLivePreviewUpdate(updated.data);
   };
@@ -23,7 +35,7 @@ export default function TemplatePageEditor({ template, onChange, onLivePreviewUp
         >
           <SortablePage page={page} />
           <BlocksEditor
-            blocks={page.content_blocks || page.blocks || []}
+            blocks={page.content_blocks ?? []}
             onChange={(blocks) => handleBlockChange(index, blocks)}
           />
         </div>

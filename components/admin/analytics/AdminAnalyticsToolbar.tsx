@@ -1,5 +1,5 @@
 import { ReactNode } from 'react';
-import { DateRangeToolbar } from './logs/DateRangeToolbar';
+// import DateRangeToolbar from '@/components/admin/analytics/logs/DateRangeToolbar';
 
 export function AdminAnalyticsToolbar({
   title,
@@ -7,7 +7,7 @@ export function AdminAnalyticsToolbar({
   view,
   setView,
   stats,
-  children
+  children,
 }: {
   title?: string;
   onRefresh?: () => void;
@@ -20,7 +20,7 @@ export function AdminAnalyticsToolbar({
     <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
       <div>
         {title && <h2 className="text-xl font-bold text-white">{title}</h2>}
-        <DateRangeToolbar basePath="/admin/tools/chart" />
+        {/* <DateRangeToolbar basePath="/admin/tools/chart" /> */}
       </div>
       <div className="flex flex-wrap items-center gap-3 text-sm">
         {stats?.map((s, i) => (

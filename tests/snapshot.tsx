@@ -16,20 +16,20 @@ const THEMES = {
     background: '#0f172a',
     foreground: 'white',
     cardBg: '#1e293b',
-    secondary: '#94a3b8'
+    secondary: '#94a3b8',
   },
   light: {
     background: '#f1f5f9',
     foreground: '#0f172a',
     cardBg: '#e2e8f0',
-    secondary: '#475569'
-  }
+    secondary: '#475569',
+  },
 };
 
 const BRANDS = {
   green: '#22c55e',
   blue: '#3b82f6',
-  red: '#ef4444'
+  red: '#ef4444',
 };
 
 const Logo = ({ brandColor }: { brandColor: string }) => (
@@ -45,7 +45,7 @@ const Logo = ({ brandColor }: { brandColor: string }) => (
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
-      fontFamily: 'sans-serif'
+      fontFamily: 'sans-serif',
     }}
   >
     GR
@@ -73,7 +73,9 @@ export default async function handler(req: Request) {
 
     if (data && !error) {
       snapshotTitle = data.template_name || snapshotTitle;
-      const heroBlock = data.data?.pages?.[0]?.content_blocks?.find((b: any) => b.type === 'hero');
+      const heroBlock = data.data?.pages?.[0]?.content_blocks?.find(
+        (b: any) => b.type === 'hero'
+      );
       if (heroBlock?.content) {
         heroText = heroBlock.content;
       }
@@ -93,11 +95,13 @@ export default async function handler(req: Request) {
           padding: '40px',
           fontFamily: 'Inter, sans-serif',
           justifyContent: 'space-between',
-          position: 'relative'
+          position: 'relative',
         }}
       >
         {/* Logo */}
-        <div style={{ display: 'flex', position: 'absolute', top: 40, left: 40 }}>
+        <div
+          style={{ display: 'flex', position: 'absolute', top: 40, left: 40 }}
+        >
           <Logo brandColor={brandColor} />
         </div>
 
@@ -116,9 +120,17 @@ export default async function handler(req: Request) {
             lineHeight: 1.2,
           }}
         >
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+          <div
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+            }}
+          >
             <div style={{ fontSize: 48, fontWeight: 'bold' }}>{heroText}</div>
-            <div style={{ fontSize: 20, color: theme.secondary, marginTop: 10 }}>
+            <div
+              style={{ fontSize: 20, color: theme.secondary, marginTop: 10 }}
+            >
               {snapshotId ? snapshotTitle : 'Missing snapshot ID'}
             </div>
           </div>
@@ -133,7 +145,7 @@ export default async function handler(req: Request) {
             fontSize: 24,
             color: theme.secondary,
             borderTop: `1px solid ${theme.secondary}`,
-            paddingTop: 20
+            paddingTop: 20,
           }}
         >
           snapshot.quicksites.ai

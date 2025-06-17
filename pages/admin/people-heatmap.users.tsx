@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 
-function getDayKey(date) {
+function getDayKey(date: Date) {
   return new Date(date).toISOString().split('T')[0];
 }
 
@@ -29,8 +29,11 @@ export default function MiniHeatmapsByUser() {
         .select('user_id, avatar_url, last_seen_at')
         .not('last_seen_at', 'is', null);
 
-      const userMap = {};
-      data.forEach((entry) => {
+      const userMap: Record<
+        string,
+        { avatar_url: string | null; days: Set<string> }
+      > = {};
+      data?.forEach((entry: any) => {
         const id = entry.user_id;
         const day = getDayKey(entry.last_seen_at);
         if (!userMap[id]) {
@@ -39,25 +42,31 @@ export default function MiniHeatmapsByUser() {
         userMap[id].days.add(day);
       });
 
-      const formatted = Object.entries(userMap).map(([id, info]) => {
-        const weekMap = {};
-        Array.from(info.days).forEach((day) => {
-          const week = day.slice(0, 7); // YYYY-MM
-          weekMap[week] = (weekMap[week] || 0) + 1;
-        });
-        const avgPerWeek = (
-          Object.values(weekMap).reduce((a, b) => a + b, 0) / Object.keys(weekMap).length
-        ).toFixed(1);
+      const formatted = Object.entries(userMap).map(
+        ([id, info]: [
+          string,
+          { avatar_url: string | null; days: Set<string> },
+        ]) => {
+          const weekMap: Record<string, number> = {};
+          Array.from(info.days).forEach((day) => {
+            const week = day.slice(0, 7); // YYYY-MM
+            weekMap[week] = (weekMap[week] || 0) + 1;
+          });
+          const avgPerWeek = (
+            Object.values(weekMap).reduce((a: number, b: number) => a + b, 0) /
+            Object.keys(weekMap).length
+          ).toFixed(1);
 
-        return {
-          user_id: id,
-          avatar_url: info.avatar_url,
-          active_days: info.days,
-          avg: avgPerWeek
-        };
-      });
+          return {
+            user_id: id,
+            avatar_url: info.avatar_url,
+            active_days: info.days,
+            avg: avgPerWeek,
+          };
+        }
+      );
 
-      setUsers(formatted);
+      setUsers(formatted as any);
     })();
   }, []);
 
@@ -68,14 +77,19 @@ export default function MiniHeatmapsByUser() {
         Past 90 days · Weekly average activity shown next to avatar
       </p>
       <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 md:grid-cols-3">
-        {users.map((user) => (
-          <div key={user.user_id} className="bg-white border rounded p-4 shadow">
+        {users.map((user: any) => (
+          <div
+            key={user.user_id}
+            className="bg-white border rounded p-4 shadow"
+          >
             <div className="flex items-center gap-3 mb-3">
               <img
                 src={user.avatar_url || '/default-avatar.png'}
                 className="w-10 h-10 rounded-full border"
               />
-              <span className="text-xs text-gray-500">Avg: {user.avg}/week</span>
+              <span className="text-xs text-gray-500">
+                Avg: {user.avg}/week
+              </span>
             </div>
             <div className="grid grid-cols-27 gap-[2px] text-xs">
               {days.map((date) => (
@@ -85,8 +99,10 @@ export default function MiniHeatmapsByUser() {
                   style={{
                     width: '10px',
                     height: '10px',
-                    backgroundColor: user.active_days.has(date) ? '#2563eb' : '#e5e7eb',
-                    borderRadius: '2px'
+                    backgroundColor: user.active_days.has(date)
+                      ? '#2563eb'
+                      : '#e5e7eb',
+                    borderRadius: '2px',
                   }}
                 />
               ))}

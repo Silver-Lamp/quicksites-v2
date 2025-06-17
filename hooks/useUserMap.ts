@@ -8,14 +8,16 @@ export function useUserMap() {
 
   useEffect(() => {
     async function fetchUsers() {
-      const { data, error } = await supabase.from('profiles').select('id, name');
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('id, name');
       if (error) {
         console.warn('Failed to load user profiles:', error.message);
         return;
       }
 
       const map = Object.fromEntries(
-        (data || []).map(user => [user.id, { name: user.name }])
+        (data || []).map((user) => [user.id, { name: user.name }])
       );
       setUserMap(map);
     }

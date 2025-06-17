@@ -2,7 +2,14 @@
 
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  Tooltip,
+  ResponsiveContainer,
+} from 'recharts';
 
 export default function PeopleChartPage() {
   const [data, setData] = useState([]);
@@ -14,8 +21,8 @@ export default function PeopleChartPage() {
         .select('user_id, last_seen_at')
         .not('last_seen_at', 'is', null);
 
-      const counts = {};
-      raw?.forEach(entry => {
+      const counts: Record<string, number> = {};
+      raw?.forEach((entry: any) => {
         const day = new Date(entry.last_seen_at).toISOString().split('T')[0];
         counts[day] = (counts[day] || 0) + 1;
       });
@@ -24,7 +31,7 @@ export default function PeopleChartPage() {
         .map(([date, count]) => ({ date, count }))
         .sort((a, b) => a.date.localeCompare(b.date));
 
-      setData(chartData);
+      setData(chartData as any);
     })();
   }, []);
 

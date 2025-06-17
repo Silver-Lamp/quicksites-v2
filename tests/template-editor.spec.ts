@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-// import fetch from 'node-fetch'; 
+// import fetch from 'node-fetch';
 
 const TEST_TEMPLATE_NAME = 'towing-basic';
 
@@ -14,18 +14,18 @@ test.beforeEach(async () => {
       layout: 'default',
       color_scheme: 'blue',
       data: {
-        pages: [
-          { slug: 'index', content_blocks: [] }
-        ]
+        pages: [{ slug: 'index', content_blocks: [] }],
       },
       editor_id: 'playwright@test.local',
-      commit_message: 'Created from test'
-    })
+      commit_message: 'Created from test',
+    }),
   });
 });
 
 test('edit and save an existing template', async ({ page }) => {
-  await page.goto(`http://localhost:3000/admin/templates/${TEST_TEMPLATE_NAME}`);
+  await page.goto(
+    `http://localhost:3000/admin/templates/${TEST_TEMPLATE_NAME}`
+  );
 
   // Wait for the editor to appear
   await page.waitForSelector('[data-testid="template-json"]');
@@ -43,11 +43,15 @@ test('edit and save an existing template', async ({ page }) => {
   }`);
 
   // Fill in commit message
-  await page.getByTestId('commit-message').fill('Automated update from Playwright');
+  await page
+    .getByTestId('commit-message')
+    .fill('Automated update from Playwright');
 
   // Trigger save
   await page.getByTestId('save-template').click();
 
   // Confirm success
-  await expect(page.locator('text=Template saved successfully.')).toBeVisible({ timeout: 5000 });
+  await expect(page.locator('text=Template saved successfully.')).toBeVisible({
+    timeout: 5000,
+  });
 });

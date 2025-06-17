@@ -1,17 +1,22 @@
 // hooks/useDashboardLayout.ts
 
 import { useEffect, useState } from 'react';
-import { supabase } from '@/admin/lib/supabaseClient';
+import { supabase } from '../lib/supabaseClient.js';
 
 type Block = { id: string; title: string };
 type Settings = Record<string, Record<string, any>>;
 
-export function useDashboardLayout(userId: string | null, dashboardId?: string) {
+export function useDashboardLayout(
+  userId: string | null,
+  dashboardId?: string
+) {
   const [order, setOrder] = useState<Block[]>([]);
   const [hidden, setHidden] = useState<string[]>([]);
   const [settings, setSettings] = useState<Settings>({});
   const [dashboards, setDashboards] = useState<any[]>([]);
-  const [activeDashboardId, setActiveDashboardId] = useState<string | null>(dashboardId || null);
+  const [activeDashboardId, setActiveDashboardId] = useState<string | null>(
+    dashboardId || null
+  );
   const [loaded, setLoaded] = useState(false);
   const [loading, setLoading] = useState(false);
 
@@ -60,7 +65,7 @@ export function useDashboardLayout(userId: string | null, dashboardId?: string) 
           table: 'dashboard_user_layouts',
           filter: `user_id=eq.${userId}`,
         },
-        payload => {
+        (payload) => {
           const updated = payload.new;
           if (updated.dashboard_id === activeDashboardId) {
             if (updated.layout) setOrder(updated.layout);
@@ -76,19 +81,21 @@ export function useDashboardLayout(userId: string | null, dashboardId?: string) 
     };
   }, [userId, activeDashboardId]);
 
-  const save = async (layout: Block[], hiddenList: string[], newSettings = settings) => {
+  const save = async (
+    layout: Block[],
+    hiddenList: string[],
+    newSettings = settings
+  ) => {
     if (!userId || !activeDashboardId) return;
     setLoading(true);
-    await supabase
-      .from('dashboard_user_layouts')
-      .upsert({
-        user_id: userId,
-        dashboard_id: activeDashboardId,
-        layout,
-        hidden: hiddenList,
-        settings: newSettings,
-        updated_at: new Date().toISOString(),
-      });
+    await supabase.from('dashboard_user_layouts').upsert({
+      user_id: userId,
+      dashboard_id: activeDashboardId,
+      layout,
+      hidden: hiddenList,
+      settings: newSettings,
+      updated_at: new Date().toISOString(),
+    });
     setOrder(layout);
     setHidden(hiddenList);
     setSettings(newSettings);
@@ -113,13 +120,13 @@ export function useDashboardLayout(userId: string | null, dashboardId?: string) 
       .insert({
         user_id: userId,
         name,
-        layout: "DEFAULT_LAYOUT",
+        layout: 'DEFAULT_LAYOUT',
         hidden: [],
         settings: {},
       })
       .select()
       .single();
-  
+
     if (data) {
       setDashboards((prev) => [...prev, data]);
       setActiveDashboardId(data.dashboard_id);
@@ -129,7 +136,7 @@ export function useDashboardLayout(userId: string | null, dashboardId?: string) 
       setLoading(false);
     }
   };
-  
+
   return {
     order,
     hidden,

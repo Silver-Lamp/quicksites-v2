@@ -1,7 +1,7 @@
 // ✅ FILE: hooks/useSetSessionFromHash.ts
 
 import { useEffect } from 'react';
-import { supabase } from '@/lib/supabase';
+import { supabase } from '../lib/supabaseClient.js';
 
 export function useSetSessionFromHash() {
   useEffect(() => {

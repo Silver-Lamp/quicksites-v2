@@ -7,7 +7,7 @@ import {
   LinearScale,
   BarElement,
   Tooltip,
-  Legend
+  Legend,
 } from 'chart.js';
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Tooltip, Legend);
@@ -23,8 +23,8 @@ export default function ThemedBarChart() {
         label: 'Votes',
         data: [12, 19, 3],
         backgroundColor: isDark ? 'var(--color-accent)' : 'var(--color-brand)',
-      }
-    ]
+      },
+    ],
   };
 
   const options = {
@@ -32,14 +32,14 @@ export default function ThemedBarChart() {
     plugins: {
       legend: {
         labels: {
-          color: isDark ? 'white' : 'black'
-        }
-      }
+          color: isDark ? 'white' : 'black',
+        },
+      },
     },
     scales: {
       x: { ticks: { color: isDark ? 'white' : 'black' } },
-      y: { ticks: { color: isDark ? 'white' : 'black' } }
-    }
+      y: { ticks: { color: isDark ? 'white' : 'black' } },
+    },
   };
 
   return <Bar data={data} options={options} />;

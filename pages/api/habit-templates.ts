@@ -1,4 +1,10 @@
-export default async function handler(_req, res) {
+import { NextApiRequest, NextApiResponse } from 'next';
+import { json } from '@/lib/api/json';
+
+export default async function handler(
+  _req: NextApiRequest,
+  res: NextApiResponse
+) {
   const templates = [
     {
       emoji: '🦷',
@@ -6,7 +12,7 @@ export default async function handler(_req, res) {
       slug: 'floss',
       message: 'Daily dental check-in.',
       example_lat: 0,
-      example_lon: 0
+      example_lon: 0,
     },
     {
       emoji: '💧',
@@ -14,7 +20,7 @@ export default async function handler(_req, res) {
       slug: 'water',
       message: 'Hydration matters!',
       example_lat: 0,
-      example_lon: 0
+      example_lon: 0,
     },
     {
       emoji: '🧘',
@@ -22,9 +28,9 @@ export default async function handler(_req, res) {
       slug: 'meditate',
       message: 'Log your daily calm.',
       example_lat: 0,
-      example_lon: 0
-    }
+      example_lon: 0,
+    },
   ];
 
-  res.status(200).json(templates);
+  json(templates);
 }

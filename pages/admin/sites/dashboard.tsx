@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
+import { json } from '@/lib/api/json';
 import Page from '@/components/layout/Page';
 import Dashboard from '@/components/admin/DashboardGridDraggable';
 import { supabase } from '@/lib/supabase';
@@ -10,15 +11,20 @@ import AuthGuard from '@/components/admin/AuthGuard';
 export default function DashboardPage() {
   useEffect(() => {
     (async () => {
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
 
       if (user) {
         let geo: any = {};
         try {
           const res = await fetch('https://ipapi.co/json/');
-          geo = await res.json();
+          geo = await json();
         } catch (e) {
-          console.warn('🌍❌ [Sites] [Dashboard] [useEffect] Geo lookup failed', { e });
+          console.warn(
+            '🌍❌ [Sites] [Dashboard] [useEffect] Geo lookup failed',
+            { e }
+          );
         }
 
         await supabase.from('dashboard_access_log').insert({
@@ -29,7 +35,7 @@ export default function DashboardPage() {
           ip_address: geo?.ip || null,
           city: geo?.city || null,
           region: geo?.region || null,
-          country: geo?.country_name || null
+          country: geo?.country_name || null,
         });
       }
     })();
@@ -39,7 +45,10 @@ export default function DashboardPage() {
     <Page>
       <div className="flex justify-between items-center mb-4">
         <h1 className="text-xl font-bold">Admin Dashboard</h1>
-        <Link href="/admin/logs/dashboard" className="text-sm text-blue-600 hover:underline">
+        <Link
+          href="/admin/logs/dashboard"
+          className="text-sm text-blue-600 hover:underline"
+        >
           View Access Logs
         </Link>
       </div>
@@ -48,10 +57,16 @@ export default function DashboardPage() {
           renderers={{}}
           order={[]}
           hidden={[]}
-          onSave={() => { return; }}
-          onAddBlock={() => { return; }}
+          onSave={() => {
+            return;
+          }}
+          onAddBlock={() => {
+            return;
+          }}
           settings={{}}
-          updateBlockSetting={() => { return; }}
+          updateBlockSetting={() => {
+            return;
+          }}
         />
       </AuthGuard>
     </Page>

@@ -1,10 +1,14 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
+import { json } from '@/lib/api/json';
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+export default async function handler(
+  req: NextApiRequest,
+  res: NextApiResponse
+) {
   const { to, subject, message } = req.body;
 
   if (!to || !subject || !message) {
-    return res.status(400).json({ error: 'Missing required fields' });
+    return json({ error: 'Missing required fields' });
   }
 
   console.log('📧 MOCK EMAIL');
@@ -13,5 +17,5 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   console.log('Message:', message);
   console.log('---');
 
-  return res.status(200).json({ message: 'Email sent (mock)' });
+  return json({ message: 'Email sent (mock)' });
 }

@@ -1,4 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
+import { json } from '@/lib/api/json';
 import { createClient } from '@supabase/supabase-js';
 
 const supabase = createClient(
@@ -6,7 +7,10 @@ const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 );
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+export default async function handler(
+  req: NextApiRequest,
+  res: NextApiResponse
+) {
   if (req.method !== 'POST') return res.status(405).end();
 
   const { template_name } = req.body;
@@ -17,10 +21,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     {
       template_name,
       ip_address: String(ip),
-      user_agent: userAgent
-    }
+      user_agent: userAgent,
+    },
   ]);
 
-  if (error) return res.status(500).json({ error: error.message });
-  res.status(200).json({ success: true });
+  if (error) return json({ error: error.message });
+  json({ success: true });
 }

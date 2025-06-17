@@ -14,7 +14,9 @@ import { createClient } from '@supabase/supabase-js';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { logEmbedView } from '@/admin/lib/logEmbedView';
 
-const SitePreview = dynamic(() => import('@/components/admin/SitePreview'), { ssr: false });
+const SitePreview = dynamic(() => import('@/components/admin/SitePreview'), {
+  ssr: false,
+});
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
@@ -30,7 +32,9 @@ export default function ZodPlaygroundPage() {
   const [shortLink, setShortLink] = useState<string | null>(null);
   const [slackUsername, setSlackUsername] = useState('');
 
-  const isEmbed = typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('embed') === '1';
+  const isEmbed =
+    typeof window !== 'undefined' &&
+    new URLSearchParams(window.location.search).get('embed') === '1';
 
   const loadSchemaFromQueryParam = () => {
     const encoded = params.get('schema');
@@ -46,7 +50,7 @@ export default function ZodPlaygroundPage() {
     }
   };
 
-useEffect(() => {
+  useEffect(() => {
     const schemaId = params.get('schema_id');
     if (schemaId) {
       supabase
@@ -95,14 +99,20 @@ useEffect(() => {
 
   const handleCreateShortLink = async () => {
     if (!user || !jsonExport) return;
-    const { data, error } = await supabase.from('schema_links').insert({
-      user_id: user.id,
-      json: jsonExport,
-      slack_username: slackUsername,
-    }).select().single();
+    const { data, error } = await supabase
+      .from('schema_links')
+      .insert({
+        user_id: user.id,
+        json: jsonExport,
+        slack_username: slackUsername,
+      })
+      .select()
+      .single();
 
     if (error) return alert('Failed to create short link');
-    setShortLink(`${window.location.origin}/admin/zod-playground?schema_id=${data.id}`);
+    setShortLink(
+      `${window.location.origin}/admin/zod-playground?schema_id=${data.id}`
+    );
   };
 
   const handleDeploy = (payload: Record<string, any>) => {
@@ -120,7 +130,10 @@ useEffect(() => {
 
       {!isEmbed && (
         <div className="space-y-2">
-          <button onClick={exportJsonSchema} className="bg-green-600 text-white px-4 py-2 rounded">
+          <button
+            onClick={exportJsonSchema}
+            className="bg-green-600 text-white px-4 py-2 rounded"
+          >
             Export JSON Schema
           </button>
           {jsonExport && (
@@ -159,14 +172,18 @@ useEffect(() => {
           <label className="font-semibold">🔗 Shareable Playground Link</label>
           <div className="flex gap-2">
             <input
-              value={shortLink || `${window.location.origin}/admin/zod-playground?schema=${encodeURIComponent(jsonExport || '')}`}
+              value={
+                shortLink ||
+                `${window.location.origin}/admin/zod-playground?schema=${encodeURIComponent(jsonExport || '')}`
+              }
               readOnly
               className="w-full text-sm border px-2 py-1 rounded"
             />
             <button
               onClick={() => {
                 navigator.clipboard.writeText(
-                  shortLink || `${window.location.origin}/admin/zod-playground?schema=${encodeURIComponent(jsonExport || '')}`
+                  shortLink ||
+                    `${window.location.origin}/admin/zod-playground?schema=${encodeURIComponent(jsonExport || '')}`
                 );
                 alert('Link copied to clipboard!');
               }}
@@ -175,12 +192,14 @@ useEffect(() => {
               Copy Link
             </button>
 
-            <label className="text-sm text-gray-400">Slack Username (optional)</label>
+            <label className="text-sm text-gray-400">
+              Slack Username (optional)
+            </label>
             <input
-            value={slackUsername}
-            onChange={(e) => setSlackUsername(e.target.value)}
-            placeholder="e.g. jon.doe"
-            className="text-sm border px-2 py-1 rounded w-full mb-2"
+              value={slackUsername}
+              onChange={(e) => setSlackUsername(e.target.value)}
+              placeholder="e.g. jon.doe"
+              className="text-sm border px-2 py-1 rounded w-full mb-2"
             />
 
             <button

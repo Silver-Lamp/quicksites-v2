@@ -1,5 +1,9 @@
 import { useEffect, useState } from 'react';
-import { Dialog, DialogTrigger, DialogContent } from '@/components/admin/ui/dialog';
+import {
+  Dialog,
+  DialogTrigger,
+  DialogContent,
+} from '@/components/admin/ui/dialog';
 import { Card, CardContent } from '@/components/admin/ui/card';
 import { Button } from '@/components/admin/ui/button';
 import { ScrollArea } from '@/components/admin/ui/scroll-area';
@@ -23,8 +27,8 @@ export default function TemplateBrowser({ onSelect }: Props) {
 
   useEffect(() => {
     fetch('/api/templates/full') // load full data for preview
-      .then(res => res.json())
-      .then(data => setTemplates(data))
+      .then((res) => res.json())
+      .then((data) => setTemplates(data))
       .catch(console.error);
   }, []);
 
@@ -37,41 +41,53 @@ export default function TemplateBrowser({ onSelect }: Props) {
               <CardContent className="space-y-2">
                 <h3 className="text-lg font-bold">{t.template_name}</h3>
                 <p className="text-sm text-muted-foreground">
-                  Industry: {t.industry}<br />
-                  Layout: {t.layout}<br />
+                  Industry: {t.industry}
+                  <br />
+                  Layout: {t.layout}
+                  <br />
                   Colors: {t.color_scheme}
                 </p>
                 <div className="flex gap-2">
-                  <Button size="sm" onClick={() => onSelect(t.template_name)}>Use</Button>
+                  <Button size="sm" onClick={() => onSelect(t.template_name)}>
+                    Use
+                  </Button>
                   <Dialog>
                     <DialogTrigger asChild>
-                      <Button size="sm" variant="secondary" onClick={() => setSelected(t)}>
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        onClick={() => setSelected(t)}
+                      >
                         Preview
                       </Button>
                     </DialogTrigger>
                     <DialogContent className="max-w-xl">
-                    <h4 className="text-xl font-semibold">{t.template_name}</h4>
-                    <p className="text-sm text-muted-foreground mb-2">
+                      <h4 className="text-xl font-semibold">
+                        {t.template_name}
+                      </h4>
+                      <p className="text-sm text-muted-foreground mb-2">
                         Layout: {t.layout}, Colors: {t.color_scheme}
-                    </p>
-                    <ul className="text-sm space-y-1">
+                      </p>
+                      <ul className="text-sm space-y-1">
                         {t.data?.pages.map((page: any) => (
-                        <li key={page.slug}>
+                          <li key={page.slug}>
                             <strong>{page.slug}</strong>: {page.title}
-                        </li>
+                          </li>
                         ))}
-                    </ul>
-                    <hr className="my-2" />
-                    <p className="italic text-xs">
+                      </ul>
+                      <hr className="my-2" />
+                      <p className="italic text-xs">
                         Hero: {t.data?.pages[0]?.content_blocks?.[0]?.headline}
-                    </p>
-                    <div className="flex justify-end gap-2 mt-4">
-                        <SafeLink href={`/admin/templates-new?copy=${t.template_name}`}>
-                        <Button variant="secondary" size="sm">
+                      </p>
+                      <div className="flex justify-end gap-2 mt-4">
+                        <SafeLink
+                          href={`/admin/templates-new?copy=${t.template_name}`}
+                        >
+                          <Button variant="secondary" size="sm">
                             Duplicate This
-                        </Button>
+                          </Button>
                         </SafeLink>
-                    </div>
+                      </div>
                     </DialogContent>
                   </Dialog>
                 </div>

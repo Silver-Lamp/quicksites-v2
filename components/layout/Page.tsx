@@ -17,7 +17,8 @@ export default function Page({ children }: { children: React.ReactNode }) {
       {/* Debug banner */}
       <div className="text-xs text-gray-400 bg-zinc-900 px-4 py-2 border-b border-zinc-700">
         <code>
-          Session: {user?.email ?? 'not signed in'} | Role: {user?.user_metadata?.role ?? 'unknown'}
+          Session: {user?.email ?? 'not signed in'} | Role:{' '}
+          {user?.user_metadata?.role ?? 'unknown'}
         </code>
       </div>
 

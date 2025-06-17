@@ -3,7 +3,11 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 
-export default function SessionLogViewer({ mobileOnly = false }: { mobileOnly?: boolean }) {
+export default function SessionLogViewer({
+  mobileOnly = false,
+}: {
+  mobileOnly?: boolean;
+}) {
   const [logs, setLogs] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -46,10 +50,16 @@ export default function SessionLogViewer({ mobileOnly = false }: { mobileOnly?: 
               <td className="p-2">{log.type}</td>
               <td className="p-2">{log.event || '-'}</td>
               <td className="p-2 text-blue-300">{log.email}</td>
-              <td className="p-2 text-xs">{log.token_start}...{log.token_end}</td>
-              <td className="p-2 truncate text-xs text-gray-400">{log.device?.slice(0, 40)}…</td>
+              <td className="p-2 text-xs">
+                {log.token_start}...{log.token_end}
+              </td>
+              <td className="p-2 truncate text-xs text-gray-400">
+                {log.device?.slice(0, 40)}…
+              </td>
               <td className="p-2">{log.is_mobile ? '✅' : '—'}</td>
-              <td className="p-2 text-xs text-gray-400">{new Date(log.timestamp).toLocaleString()}</td>
+              <td className="p-2 text-xs text-gray-400">
+                {new Date(log.timestamp).toLocaleString()}
+              </td>
             </tr>
           ))}
         </tbody>

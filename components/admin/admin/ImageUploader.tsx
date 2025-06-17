@@ -1,7 +1,7 @@
 'use client';
 
 import { useDropzone } from 'react-dropzone';
-import { useImageUploader } from '@/admin/hooks/useImageUploader';
+import { useImageUploader } from '@/hooks/useImageUploader';
 
 interface ImageUploaderProps {
   siteId: string;
@@ -14,12 +14,7 @@ interface ImageUploaderProps {
 }
 
 export default function ImageUploader(props: ImageUploaderProps) {
-  const {
-    preview,
-    uploading,
-    uploadImage,
-    removeImage,
-  } = useImageUploader({
+  const { preview, uploading, uploadImage, removeImage } = useImageUploader({
     siteId: props.siteId,
     templateId: props.templateId,
     dbField: props.dbField,
@@ -39,21 +34,22 @@ export default function ImageUploader(props: ImageUploaderProps) {
 
   const getDropzoneSizeClass = (label?: string) => {
     if (!label) return 'h-40 w-full';
-  
+
     const lower = label.toLowerCase();
-  
+
     if (lower.includes('banner')) return 'h-32 w-full aspect-[4/1]';
     if (lower.includes('hero')) return 'h-64 w-full aspect-[2.5/1]';
     if (lower.includes('logo')) return 'h-32 w-32 aspect-square';
     if (lower.includes('team')) return 'h-48 w-full aspect-[3/2]';
-  
+
     return 'h-40 w-full';
   };
-  
 
   return (
     <div className="space-y-2">
-      {props.label && <p className="text-xs text-white/70 font-medium">{props.label}</p>}
+      {props.label && (
+        <p className="text-xs text-white/70 font-medium">{props.label}</p>
+      )}
 
       <div
         {...getRootProps()}
@@ -64,7 +60,9 @@ export default function ImageUploader(props: ImageUploaderProps) {
       >
         <input {...getInputProps()} />
         <p className="text-sm text-gray-400">
-          {isDragActive ? 'Drop the image here…' : 'Drag & drop an image, or click to select one'}
+          {isDragActive
+            ? 'Drop the image here…'
+            : 'Drag & drop an image, or click to select one'}
         </p>
       </div>
 
@@ -72,7 +70,11 @@ export default function ImageUploader(props: ImageUploaderProps) {
 
       {preview && (
         <div className="relative max-w-xs">
-          <img src={preview} alt="Uploaded" className="rounded border max-h-48" />
+          <img
+            src={preview}
+            alt="Uploaded"
+            className="rounded border max-h-48"
+          />
           <button
             type="button"
             onClick={removeImage}

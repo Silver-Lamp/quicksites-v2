@@ -1,12 +1,12 @@
 import { useState } from 'react';
-import { CSVDateRangeExport } from './CSVDateRangeExport';
+import CSVDateRangeExport from '@/components/admin/CSVDateRangeExport';
 
 export function LogToolbar({
   type,
   onSearch,
   onPage,
   page = 1,
-  children
+  children,
 }: {
   type: 'feedback' | 'checkins';
   onSearch?: (term: string) => void;

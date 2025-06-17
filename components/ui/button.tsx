@@ -1,6 +1,12 @@
 import { tokens } from '@/styles/tokens';
 
-export function PrimaryButton({ children, onClick }: { children: React.ReactNode; onClick?: () => void }) {
+export function PrimaryButton({
+  children,
+  onClick,
+}: {
+  children: React.ReactNode;
+  onClick?: () => void;
+}) {
   return (
     <button
       onClick={onClick}

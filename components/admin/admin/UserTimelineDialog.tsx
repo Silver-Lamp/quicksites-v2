@@ -6,15 +6,15 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-} from '@/components/admin/ui/dialog';
-import { Button } from '@/components/admin/ui/button';
+} from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
 import { format, formatDistance } from 'date-fns';
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
-} from '@/components/admin/ui/tooltip';
+} from '@/components/ui/tooltip';
 
 interface TimelineEvent {
   type: string;

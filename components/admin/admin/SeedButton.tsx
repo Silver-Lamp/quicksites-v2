@@ -1,6 +1,6 @@
 // components/admin/SeedButton.tsx
 import { useState } from 'react';
-import { Button } from '@/components/admin/ui/button';
+import { Button } from '@/components/ui/button';
 import toast from 'react-hot-toast';
 
 export default function SeedButton() {

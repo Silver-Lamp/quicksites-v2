@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { supabase } from '@/lib/supabase';
+import { supabase } from '@/lib/supabaseClient.js';
 import AdminTabs from '@/components/admin/AdminTabs';
 
 export default function LogsPage() {

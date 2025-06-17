@@ -1,0 +1,4702 @@
+[
+  {
+    "file": "/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/admin/__tests__/useCurrentUser.test.ts",
+    "folder": "admin",
+    "errors": 0,
+    "warnings": 1,
+    "total": 1,
+    "messages": [
+      {
+        "line": 5,
+        "column": 10,
+        "message": "'jest' is defined but never used.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      }
+    ]
+  },
+  {
+    "file": "/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/admin/api/compare-slugs/route.ts",
+    "folder": "admin",
+    "errors": 0,
+    "warnings": 1,
+    "total": 1,
+    "messages": [
+      {
+        "line": 23,
+        "column": 10,
+        "message": "'getPermutations' is defined but never used.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      }
+    ]
+  },
+  {
+    "file": "/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/admin/api/delete-og-zip/route.ts",
+    "folder": "admin",
+    "errors": 0,
+    "warnings": 1,
+    "total": 1,
+    "messages": [
+      {
+        "line": 3,
+        "column": 10,
+        "message": "'supabase' is defined but never used.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      }
+    ]
+  },
+  {
+    "file": "/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/admin/api/list-og-zips/route.ts",
+    "folder": "admin",
+    "errors": 0,
+    "warnings": 2,
+    "total": 2,
+    "messages": [
+      {
+        "line": 3,
+        "column": 10,
+        "message": "'supabase' is defined but never used.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      },
+      {
+        "line": 9,
+        "column": 27,
+        "message": "'req' is defined but never used. Allowed unused args must match /^_/u.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      }
+    ]
+  },
+  {
+    "file": "/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/admin/guest-tokens/CampaignFunnelTable.tsx",
+    "folder": "admin",
+    "errors": 0,
+    "warnings": 1,
+    "total": 1,
+    "messages": [
+      {
+        "line": 94,
+        "column": 19,
+        "message": "'campaign' is assigned a value but never used.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      }
+    ]
+  },
+  {
+    "file": "/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/admin/guest-tokens/page.tsx",
+    "folder": "admin",
+    "errors": 0,
+    "warnings": 11,
+    "total": 11,
+    "messages": [
+      {
+        "line": 8,
+        "column": 3,
+        "message": "'formatDistanceToNow' is defined but never used.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      },
+      {
+        "line": 16,
+        "column": 38,
+        "message": "'FilterIcon' is defined but never used.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      },
+      {
+        "line": 16,
+        "column": 50,
+        "message": "'TagIcon' is defined but never used.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      },
+      {
+        "line": 18,
+        "column": 3,
+        "message": "'ResponsiveContainer' is defined but never used.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      },
+      {
+        "line": 19,
+        "column": 3,
+        "message": "'BarChart' is defined but never used.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      },
+      {
+        "line": 20,
+        "column": 3,
+        "message": "'Bar' is defined but never used.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      },
+      {
+        "line": 21,
+        "column": 3,
+        "message": "'XAxis' is defined but never used.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      },
+      {
+        "line": 22,
+        "column": 3,
+        "message": "'YAxis' is defined but never used.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      },
+      {
+        "line": 23,
+        "column": 3,
+        "message": "'Tooltip' is defined but never used.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      },
+      {
+        "line": 33,
+        "column": 10,
+        "message": "'cn' is defined but never used.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      },
+      {
+        "line": 48,
+        "column": 25,
+        "message": "'setContextFilter' is assigned a value but never used.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      }
+    ]
+  },
+  {
+    "file": "/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/admin/jest.setup.js",
+    "folder": "admin",
+    "errors": 16,
+    "warnings": 0,
+    "total": 16,
+    "messages": [
+      {
+        "line": 1,
+        "column": 1,
+        "message": "A `require()` style import is forbidden.",
+        "ruleId": "@typescript-eslint/no-require-imports",
+        "severity": "error"
+      },
+      {
+        "line": 3,
+        "column": 38,
+        "message": "A `require()` style import is forbidden.",
+        "ruleId": "@typescript-eslint/no-require-imports",
+        "severity": "error"
+      },
+      {
+        "line": 4,
+        "column": 1,
+        "message": "'global' is not defined.",
+        "ruleId": "no-undef",
+        "severity": "error"
+      },
+      {
+        "line": 5,
+        "column": 1,
+        "message": "'global' is not defined.",
+        "ruleId": "no-undef",
+        "severity": "error"
+      },
+      {
+        "line": 8,
+        "column": 6,
+        "message": "'global' is not defined.",
+        "ruleId": "no-undef",
+        "severity": "error"
+      },
+      {
+        "line": 9,
+        "column": 3,
+        "message": "'global' is not defined.",
+        "ruleId": "no-undef",
+        "severity": "error"
+      },
+      {
+        "line": 9,
+        "column": 18,
+        "message": "A `require()` style import is forbidden.",
+        "ruleId": "@typescript-eslint/no-require-imports",
+        "severity": "error"
+      },
+      {
+        "line": 12,
+        "column": 15,
+        "message": "A `require()` style import is forbidden.",
+        "ruleId": "@typescript-eslint/no-require-imports",
+        "severity": "error"
+      },
+      {
+        "line": 14,
+        "column": 6,
+        "message": "'global' is not defined.",
+        "ruleId": "no-undef",
+        "severity": "error"
+      },
+      {
+        "line": 14,
+        "column": 20,
+        "message": "'global' is not defined.",
+        "ruleId": "no-undef",
+        "severity": "error"
+      },
+      {
+        "line": 15,
+        "column": 6,
+        "message": "'global' is not defined.",
+        "ruleId": "no-undef",
+        "severity": "error"
+      },
+      {
+        "line": 15,
+        "column": 22,
+        "message": "'global' is not defined.",
+        "ruleId": "no-undef",
+        "severity": "error"
+      },
+      {
+        "line": 16,
+        "column": 6,
+        "message": "'global' is not defined.",
+        "ruleId": "no-undef",
+        "severity": "error"
+      },
+      {
+        "line": 16,
+        "column": 23,
+        "message": "'global' is not defined.",
+        "ruleId": "no-undef",
+        "severity": "error"
+      },
+      {
+        "line": 17,
+        "column": 6,
+        "message": "'global' is not defined.",
+        "ruleId": "no-undef",
+        "severity": "error"
+      },
+      {
+        "line": 17,
+        "column": 22,
+        "message": "'global' is not defined.",
+        "ruleId": "no-undef",
+        "severity": "error"
+      }
+    ]
+  },
+  {
+    "file": "/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/admin/lib/links/hooks/useLinkBuilder.ts",
+    "folder": "admin",
+    "errors": 0,
+    "warnings": 4,
+    "total": 4,
+    "messages": [
+      {
+        "line": 28,
+        "column": 14,
+        "message": "'_t' is assigned a value but never used.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      },
+      {
+        "line": 29,
+        "column": 13,
+        "message": "'_h' is assigned a value but never used.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      },
+      {
+        "line": 56,
+        "column": 20,
+        "message": "'_t' is assigned a value but never used.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      },
+      {
+        "line": 56,
+        "column": 30,
+        "message": "'_h' is assigned a value but never used.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      }
+    ]
+  },
+  {
+    "file": "/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/admin/lib/og/renderOgImage.ts",
+    "folder": "admin",
+    "errors": 0,
+    "warnings": 1,
+    "total": 1,
+    "messages": [
+      {
+        "line": 19,
+        "column": 3,
+        "message": "'brand' is assigned a value but never used. Allowed unused args must match /^_/u.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      }
+    ]
+  },
+  {
+    "file": "/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/admin/lib/useLocale.ts",
+    "folder": "admin",
+    "errors": 0,
+    "warnings": 1,
+    "total": 1,
+    "messages": [
+      {
+        "line": 1,
+        "column": 10,
+        "message": "'useRouter' is defined but never used.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      }
+    ]
+  },
+  {
+    "file": "/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/admin/lib/withAuth.tsx",
+    "folder": "admin",
+    "errors": 0,
+    "warnings": 2,
+    "total": 2,
+    "messages": [
+      {
+        "line": 8,
+        "column": 9,
+        "message": "'displayName' is assigned a value but never used.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      },
+      {
+        "line": 10,
+        "column": 9,
+        "message": "'ProtectedComponent' is assigned a value but never used.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      }
+    ]
+  },
+  {
+    "file": "/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/admin/tools/prebuild-og/page.tsx",
+    "folder": "admin",
+    "errors": 0,
+    "warnings": 3,
+    "total": 3,
+    "messages": [
+      {
+        "line": 6,
+        "column": 10,
+        "message": "'json' is defined but never used.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      },
+      {
+        "line": 18,
+        "column": 11,
+        "message": "'res' is assigned a value but never used.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      },
+      {
+        "line": 27,
+        "column": 11,
+        "message": "'res' is assigned a value but never used.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      }
+    ]
+  },
+  {
+    "file": "/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/components/admin/ActivityFeed.tsx",
+    "folder": "components",
+    "errors": 0,
+    "warnings": 1,
+    "total": 1,
+    "messages": [
+      {
+        "line": 32,
+        "column": 25,
+        "message": "'i' is defined but never used. Allowed unused args must match /^_/u.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      }
+    ]
+  },
+  {
+    "file": "/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/components/admin/AdminLayout.tsx",
+    "folder": "components",
+    "errors": 0,
+    "warnings": 1,
+    "total": 1,
+    "messages": [
+      {
+        "line": 5,
+        "column": 10,
+        "message": "'useUser' is defined but never used.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      }
+    ]
+  },
+  {
+    "file": "/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/components/admin/AppHeader/MobileDrawer.tsx",
+    "folder": "components",
+    "errors": 0,
+    "warnings": 1,
+    "total": 1,
+    "messages": [
+      {
+        "line": 6,
+        "column": 3,
+        "message": "'onClose' is defined but never used. Allowed unused args must match /^_/u.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      }
+    ]
+  },
+  {
+    "file": "/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/components/admin/AppHeader/NavSections.tsx",
+    "folder": "components",
+    "errors": 0,
+    "warnings": 1,
+    "total": 1,
+    "messages": [
+      {
+        "line": 10,
+        "column": 9,
+        "message": "'isActive' is assigned a value but never used.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      }
+    ]
+  },
+  {
+    "file": "/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/components/admin/QueryParamEditor.tsx",
+    "folder": "components",
+    "errors": 0,
+    "warnings": 1,
+    "total": 1,
+    "messages": [
+      {
+        "line": 136,
+        "column": 3,
+        "message": "'slug' is defined but never used. Allowed unused args must match /^_/u.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      }
+    ]
+  },
+  {
+    "file": "/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/components/admin/ReferralLink.tsx",
+    "folder": "components",
+    "errors": 0,
+    "warnings": 1,
+    "total": 1,
+    "messages": [
+      {
+        "line": 5,
+        "column": 10,
+        "message": "'email' is assigned a value but never used.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      }
+    ]
+  },
+  {
+    "file": "/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/components/admin/SafeSupabaseProvider.tsx",
+    "folder": "components",
+    "errors": 0,
+    "warnings": 2,
+    "total": 2,
+    "messages": [
+      {
+        "line": 20,
+        "column": 13,
+        "message": "'shortToken' is assigned a value but never used.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      },
+      {
+        "line": 43,
+        "column": 13,
+        "message": "'masked' is assigned a value but never used.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      }
+    ]
+  },
+  {
+    "file": "/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/components/admin/SmartLinkDebug.tsx",
+    "folder": "components",
+    "errors": 1,
+    "warnings": 0,
+    "total": 1,
+    "messages": [
+      {
+        "line": 62,
+        "column": 21,
+        "message": "Empty block statement.",
+        "ruleId": "no-empty",
+        "severity": "error"
+      }
+    ]
+  },
+  {
+    "file": "/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/components/admin/TagFilterControls.tsx",
+    "folder": "components",
+    "errors": 0,
+    "warnings": 1,
+    "total": 1,
+    "messages": [
+      {
+        "line": 2,
+        "column": 10,
+        "message": "'useEffect' is defined but never used.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      }
+    ]
+  },
+  {
+    "file": "/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/components/admin/TemplateAssigner.tsx",
+    "folder": "components",
+    "errors": 0,
+    "warnings": 2,
+    "total": 2,
+    "messages": [
+      {
+        "line": 13,
+        "column": 10,
+        "message": "'userId' is assigned a value but never used.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      },
+      {
+        "line": 13,
+        "column": 18,
+        "message": "'setUserId' is assigned a value but never used.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      }
+    ]
+  },
+  {
+    "file": "/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/components/admin/TemplateBrowser.tsx",
+    "folder": "components",
+    "errors": 0,
+    "warnings": 1,
+    "total": 1,
+    "messages": [
+      {
+        "line": 22,
+        "column": 10,
+        "message": "'selected' is assigned a value but never used.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      }
+    ]
+  },
+  {
+    "file": "/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/components/admin/TemplateUserViewer.filtered.tsx",
+    "folder": "components",
+    "errors": 0,
+    "warnings": 3,
+    "total": 3,
+    "messages": [
+      {
+        "line": 6,
+        "column": 10,
+        "message": "'Template' is defined but never used.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      },
+      {
+        "line": 17,
+        "column": 10,
+        "message": "'selectedTemplate' is assigned a value but never used.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      },
+      {
+        "line": 17,
+        "column": 28,
+        "message": "'setSelectedTemplate' is assigned a value but never used.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      }
+    ]
+  },
+  {
+    "file": "/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/components/admin/Tooltip.tsx",
+    "folder": "components",
+    "errors": 0,
+    "warnings": 1,
+    "total": 1,
+    "messages": [
+      {
+        "line": 24,
+        "column": 10,
+        "message": "'prevPlacement' is assigned a value but never used.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      }
+    ]
+  },
+  {
+    "file": "/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/components/admin/admin/UserTimelineDialog.tsx",
+    "folder": "components",
+    "errors": 0,
+    "warnings": 1,
+    "total": 1,
+    "messages": [
+      {
+        "line": 45,
+        "column": 3,
+        "message": "'userId' is defined but never used. Allowed unused args must match /^_/u.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      }
+    ]
+  },
+  {
+    "file": "/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/components/admin/branding/LayoutExportButtons.tsx",
+    "folder": "components",
+    "errors": 1,
+    "warnings": 0,
+    "total": 1,
+    "messages": [
+      {
+        "line": 2,
+        "column": 18,
+        "message": "A `require()` style import is forbidden.",
+        "ruleId": "@typescript-eslint/no-require-imports",
+        "severity": "error"
+      }
+    ]
+  },
+  {
+    "file": "/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/components/admin/context/CurrentUserProvider.tsx",
+    "folder": "components",
+    "errors": 0,
+    "warnings": 2,
+    "total": 2,
+    "messages": [
+      {
+        "line": 5,
+        "column": 25,
+        "message": "'useContext' is defined but never used.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      },
+      {
+        "line": 47,
+        "column": 31,
+        "message": "'error' is assigned a value but never used.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      }
+    ]
+  },
+  {
+    "file": "/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/components/admin/logs/AdminLogToolbar.tsx",
+    "folder": "components",
+    "errors": 0,
+    "warnings": 2,
+    "total": 2,
+    "messages": [
+      {
+        "line": 21,
+        "column": 11,
+        "message": "'start' is assigned a value but never used.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      },
+      {
+        "line": 21,
+        "column": 18,
+        "message": "'end' is assigned a value but never used.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      }
+    ]
+  },
+  {
+    "file": "/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/components/admin/templates/BlockEditorModal.tsx",
+    "folder": "components",
+    "errors": 0,
+    "warnings": 1,
+    "total": 1,
+    "messages": [
+      {
+        "line": 6,
+        "column": 10,
+        "message": "'BlockEditorModalProps' is defined but never used.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      }
+    ]
+  },
+  {
+    "file": "/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/components/admin/templates/BlockSidebar.tsx",
+    "folder": "components",
+    "errors": 0,
+    "warnings": 2,
+    "total": 2,
+    "messages": [
+      {
+        "line": 2,
+        "column": 10,
+        "message": "'useState' is defined but never used.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      },
+      {
+        "line": 16,
+        "column": 3,
+        "message": "'BlockSidebarProps' is defined but never used.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      }
+    ]
+  },
+  {
+    "file": "/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/components/admin/templates/BrandingPreview.tsx",
+    "folder": "components",
+    "errors": 0,
+    "warnings": 2,
+    "total": 2,
+    "messages": [
+      {
+        "line": 1,
+        "column": 10,
+        "message": "'useEffect' is defined but never used.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      },
+      {
+        "line": 1,
+        "column": 21,
+        "message": "'useState' is defined but never used.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      }
+    ]
+  },
+  {
+    "file": "/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/components/admin/templates/PreviewExportButton.tsx",
+    "folder": "components",
+    "errors": 0,
+    "warnings": 1,
+    "total": 1,
+    "messages": [
+      {
+        "line": 1,
+        "column": 10,
+        "message": "'useRef' is defined but never used.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      }
+    ]
+  },
+  {
+    "file": "/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/components/admin/templates/ReorderableBlockList.tsx",
+    "folder": "components",
+    "errors": 0,
+    "warnings": 4,
+    "total": 4,
+    "messages": [
+      {
+        "line": 12,
+        "column": 3,
+        "message": "'useSortable' is defined but never used.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      },
+      {
+        "line": 15,
+        "column": 10,
+        "message": "'CSS' is defined but never used.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      },
+      {
+        "line": 18,
+        "column": 10,
+        "message": "'ReorderableBlockListProps' is defined but never used.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      },
+      {
+        "line": 30,
+        "column": 3,
+        "message": "'onBlockClick' is defined but never used. Allowed unused args must match /^_/u.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      }
+    ]
+  },
+  {
+    "file": "/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/components/admin/templates/TemplateEditor.loader.tsx",
+    "folder": "components",
+    "errors": 0,
+    "warnings": 1,
+    "total": 1,
+    "messages": [
+      {
+        "line": 50,
+        "column": 18,
+        "message": "'err' is defined but never used.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      }
+    ]
+  },
+  {
+    "file": "/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/components/admin/templates/TemplateHeader.tsx",
+    "folder": "components",
+    "errors": 0,
+    "warnings": 1,
+    "total": 1,
+    "messages": [
+      {
+        "line": 1,
+        "column": 8,
+        "message": "'Link' is defined but never used.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      }
+    ]
+  },
+  {
+    "file": "/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/components/admin/templates/TemplateSaveBar.tsx",
+    "folder": "components",
+    "errors": 0,
+    "warnings": 1,
+    "total": 1,
+    "messages": [
+      {
+        "line": 64,
+        "column": 14,
+        "message": "'err' is defined but never used.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      }
+    ]
+  },
+  {
+    "file": "/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/components/admin/templates/TemplateVersionDiff.tsx",
+    "folder": "components",
+    "errors": 1,
+    "warnings": 0,
+    "total": 1,
+    "messages": [
+      {
+        "line": 4,
+        "column": 1,
+        "message": "Use \"@ts-expect-error\" instead of \"@ts-ignore\", as \"@ts-ignore\" will do nothing if the following line is error-free.",
+        "ruleId": "@typescript-eslint/ban-ts-comment",
+        "severity": "error"
+      }
+    ]
+  },
+  {
+    "file": "/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/components/admin/templates/VersionCompareDropdowns.tsx",
+    "folder": "components",
+    "errors": 0,
+    "warnings": 1,
+    "total": 1,
+    "messages": [
+      {
+        "line": 5,
+        "column": 10,
+        "message": "'renderVersionDiff' is defined but never used.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      }
+    ]
+  },
+  {
+    "file": "/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/components/admin/useSmartLinkPersisted.ts",
+    "folder": "components",
+    "errors": 1,
+    "warnings": 0,
+    "total": 1,
+    "messages": [
+      {
+        "line": 17,
+        "column": 15,
+        "message": "Empty block statement.",
+        "ruleId": "no-empty",
+        "severity": "error"
+      }
+    ]
+  },
+  {
+    "file": "/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/hooks/useGeoLocation.ts",
+    "folder": "hooks",
+    "errors": 0,
+    "warnings": 1,
+    "total": 1,
+    "messages": [
+      {
+        "line": 31,
+        "column": 13,
+        "message": "'key' is assigned a value but never used.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      }
+    ]
+  },
+  {
+    "file": "/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/hooks/useImageUploader.ts",
+    "folder": "hooks",
+    "errors": 0,
+    "warnings": 1,
+    "total": 1,
+    "messages": [
+      {
+        "line": 19,
+        "column": 3,
+        "message": "'label' is defined but never used. Allowed unused args must match /^_/u.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      }
+    ]
+  },
+  {
+    "file": "/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/hooks/useRedirectAfterLogin.ts",
+    "folder": "hooks",
+    "errors": 1,
+    "warnings": 0,
+    "total": 1,
+    "messages": [
+      {
+        "line": 14,
+        "column": 21,
+        "message": "A `require()` style import is forbidden.",
+        "ruleId": "@typescript-eslint/no-require-imports",
+        "severity": "error"
+      }
+    ]
+  },
+  {
+    "file": "/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/init.js",
+    "folder": "",
+    "errors": 3,
+    "warnings": 0,
+    "total": 3,
+    "messages": [
+      {
+        "line": 19,
+        "column": 5,
+        "message": "'console' is not defined.",
+        "ruleId": "no-undef",
+        "severity": "error"
+      },
+      {
+        "line": 29,
+        "column": 5,
+        "message": "'console' is not defined.",
+        "ruleId": "no-undef",
+        "severity": "error"
+      },
+      {
+        "line": 31,
+        "column": 5,
+        "message": "'console' is not defined.",
+        "ruleId": "no-undef",
+        "severity": "error"
+      }
+    ]
+  },
+  {
+    "file": "/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/lib/api/json.ts",
+    "folder": "lib",
+    "errors": 0,
+    "warnings": 1,
+    "total": 1,
+    "messages": [
+      {
+        "line": 1,
+        "column": 10,
+        "message": "'z' is defined but never used.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      }
+    ]
+  },
+  {
+    "file": "/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/pages/admin/admin/analytics.tsx",
+    "folder": "pages",
+    "errors": 0,
+    "warnings": 3,
+    "total": 3,
+    "messages": [
+      {
+        "line": 10,
+        "column": 3,
+        "message": "'PieChart' is defined but never used.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      },
+      {
+        "line": 11,
+        "column": 3,
+        "message": "'Pie' is defined but never used.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      },
+      {
+        "line": 12,
+        "column": 3,
+        "message": "'Cell' is defined but never used.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      }
+    ]
+  },
+  {
+    "file": "/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/pages/admin/admin/branding/import.tsx",
+    "folder": "pages",
+    "errors": 0,
+    "warnings": 1,
+    "total": 1,
+    "messages": [
+      {
+        "line": 21,
+        "column": 14,
+        "message": "'e' is defined but never used.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      }
+    ]
+  },
+  {
+    "file": "/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/pages/admin/admin/docs.tsx",
+    "folder": "pages",
+    "errors": 0,
+    "warnings": 2,
+    "total": 2,
+    "messages": [
+      {
+        "line": 1,
+        "column": 8,
+        "message": "'fs' is defined but never used.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      },
+      {
+        "line": 2,
+        "column": 8,
+        "message": "'path' is defined but never used.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      }
+    ]
+  },
+  {
+    "file": "/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/pages/admin/admin/logs.tsx",
+    "folder": "pages",
+    "errors": 0,
+    "warnings": 6,
+    "total": 6,
+    "messages": [
+      {
+        "line": 6,
+        "column": 10,
+        "message": "'json' is defined but never used.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      },
+      {
+        "line": 34,
+        "column": 22,
+        "message": "'setFilterType' is assigned a value but never used.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      },
+      {
+        "line": 35,
+        "column": 22,
+        "message": "'setFilterUser' is assigned a value but never used.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      },
+      {
+        "line": 36,
+        "column": 21,
+        "message": "'setStartDate' is assigned a value but never used.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      },
+      {
+        "line": 37,
+        "column": 19,
+        "message": "'setEndDate' is assigned a value but never used.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      },
+      {
+        "line": 145,
+        "column": 11,
+        "message": "'res' is assigned a value but never used.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      }
+    ]
+  },
+  {
+    "file": "/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/pages/admin/admin/param-lab.tsx",
+    "folder": "pages",
+    "errors": 0,
+    "warnings": 5,
+    "total": 5,
+    "messages": [
+      {
+        "line": 8,
+        "column": 23,
+        "message": "'summarizeQuery' is defined but never used.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      },
+      {
+        "line": 117,
+        "column": 9,
+        "message": "'deletePreset' is assigned a value but never used.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      },
+      {
+        "line": 129,
+        "column": 9,
+        "message": "'handleApply' is assigned a value but never used.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      },
+      {
+        "line": 135,
+        "column": 9,
+        "message": "'handleShare' is assigned a value but never used.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      },
+      {
+        "line": 205,
+        "column": 24,
+        "message": "'query' is defined but never used. Allowed unused args must match /^_/u.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      }
+    ]
+  },
+  {
+    "file": "/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/pages/admin/admin/screenshots.tsx",
+    "folder": "pages",
+    "errors": 0,
+    "warnings": 1,
+    "total": 1,
+    "messages": [
+      {
+        "line": 10,
+        "column": 14,
+        "message": "'res' is defined but never used. Allowed unused args must match /^_/u.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      }
+    ]
+  },
+  {
+    "file": "/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/pages/admin/admin/smartlinks/grid-view.tsx",
+    "folder": "pages",
+    "errors": 0,
+    "warnings": 5,
+    "total": 5,
+    "messages": [
+      {
+        "line": 4,
+        "column": 10,
+        "message": "'useMemo' is defined but never used.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      },
+      {
+        "line": 4,
+        "column": 19,
+        "message": "'useState' is defined but never used.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      },
+      {
+        "line": 5,
+        "column": 10,
+        "message": "'parseISO' is defined but never used.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      },
+      {
+        "line": 5,
+        "column": 20,
+        "message": "'isAfter' is defined but never used.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      },
+      {
+        "line": 5,
+        "column": 29,
+        "message": "'isBefore' is defined but never used.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      }
+    ]
+  },
+  {
+    "file": "/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/pages/admin/admin/templates-new.tsx",
+    "folder": "pages",
+    "errors": 0,
+    "warnings": 1,
+    "total": 1,
+    "messages": [
+      {
+        "line": 35,
+        "column": 16,
+        "message": "'res' is defined but never used. Allowed unused args must match /^_/u.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      }
+    ]
+  },
+  {
+    "file": "/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/pages/admin/admin/templates.tsx",
+    "folder": "pages",
+    "errors": 0,
+    "warnings": 1,
+    "total": 1,
+    "messages": [
+      {
+        "line": 2,
+        "column": 10,
+        "message": "'useRouter' is defined but never used.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      }
+    ]
+  },
+  {
+    "file": "/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/pages/admin/admin/templates/[name]/activity.tsx",
+    "folder": "pages",
+    "errors": 0,
+    "warnings": 1,
+    "total": 1,
+    "messages": [
+      {
+        "line": 37,
+        "column": 17,
+        "message": "'error' is assigned a value but never used.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      }
+    ]
+  },
+  {
+    "file": "/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/pages/admin/admin/trash.tsx",
+    "folder": "pages",
+    "errors": 0,
+    "warnings": 1,
+    "total": 1,
+    "messages": [
+      {
+        "line": 56,
+        "column": 17,
+        "message": "'error' is assigned a value but never used.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      }
+    ]
+  },
+  {
+    "file": "/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/pages/admin/analytics.exportable.tsx",
+    "folder": "pages",
+    "errors": 0,
+    "warnings": 1,
+    "total": 1,
+    "messages": [
+      {
+        "line": 4,
+        "column": 8,
+        "message": "'ThemedBarChart' is defined but never used.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      }
+    ]
+  },
+  {
+    "file": "/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/pages/admin/analytics.supabase.tsx",
+    "folder": "pages",
+    "errors": 0,
+    "warnings": 1,
+    "total": 1,
+    "messages": [
+      {
+        "line": 4,
+        "column": 8,
+        "message": "'ThemedBarChart' is defined but never used.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      }
+    ]
+  },
+  {
+    "file": "/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/pages/admin/analytics/[slug].tsx",
+    "folder": "pages",
+    "errors": 0,
+    "warnings": 3,
+    "total": 3,
+    "messages": [
+      {
+        "line": 10,
+        "column": 3,
+        "message": "'PieChart' is defined but never used.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      },
+      {
+        "line": 11,
+        "column": 3,
+        "message": "'Pie' is defined but never used.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      },
+      {
+        "line": 12,
+        "column": 3,
+        "message": "'Cell' is defined but never used.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      }
+    ]
+  },
+  {
+    "file": "/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/pages/admin/analytics/archive.tsx",
+    "folder": "pages",
+    "errors": 0,
+    "warnings": 1,
+    "total": 1,
+    "messages": [
+      {
+        "line": 11,
+        "column": 14,
+        "message": "'res' is defined but never used. Allowed unused args must match /^_/u.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      }
+    ]
+  },
+  {
+    "file": "/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/pages/admin/api/admin-users.ts",
+    "folder": "pages",
+    "errors": 0,
+    "warnings": 2,
+    "total": 2,
+    "messages": [
+      {
+        "line": 6,
+        "column": 3,
+        "message": "'req' is defined but never used. Allowed unused args must match /^_/u.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      },
+      {
+        "line": 7,
+        "column": 3,
+        "message": "'res' is defined but never used. Allowed unused args must match /^_/u.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      }
+    ]
+  },
+  {
+    "file": "/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/pages/admin/api/campaigns/detect-winner.ts",
+    "folder": "pages",
+    "errors": 0,
+    "warnings": 1,
+    "total": 1,
+    "messages": [
+      {
+        "line": 10,
+        "column": 58,
+        "message": "'res' is defined but never used. Allowed unused args must match /^_/u.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      }
+    ]
+  },
+  {
+    "file": "/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/pages/admin/api/clone-template.ts",
+    "folder": "pages",
+    "errors": 0,
+    "warnings": 2,
+    "total": 2,
+    "messages": [
+      {
+        "line": 25,
+        "column": 34,
+        "message": "'checkError' is assigned a value but never used.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      },
+      {
+        "line": 62,
+        "column": 7,
+        "message": "'handlePublish' is assigned a value but never used.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      }
+    ]
+  },
+  {
+    "file": "/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/pages/admin/api/email-weekly-summary.ts",
+    "folder": "pages",
+    "errors": 0,
+    "warnings": 2,
+    "total": 2,
+    "messages": [
+      {
+        "line": 5,
+        "column": 10,
+        "message": "'Transport' is defined but never used.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      },
+      {
+        "line": 9,
+        "column": 3,
+        "message": "'res' is defined but never used. Allowed unused args must match /^_/u.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      }
+    ]
+  },
+  {
+    "file": "/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/pages/admin/api/geocode.ts",
+    "folder": "pages",
+    "errors": 0,
+    "warnings": 1,
+    "total": 1,
+    "messages": [
+      {
+        "line": 15,
+        "column": 3,
+        "message": "'res' is defined but never used. Allowed unused args must match /^_/u.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      }
+    ]
+  },
+  {
+    "file": "/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/pages/admin/api/leads/print-log.ts",
+    "folder": "pages",
+    "errors": 0,
+    "warnings": 1,
+    "total": 1,
+    "messages": [
+      {
+        "line": 12,
+        "column": 3,
+        "message": "'res' is defined but never used. Allowed unused args must match /^_/u.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      }
+    ]
+  },
+  {
+    "file": "/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/pages/admin/api/leads/reminder.ts",
+    "folder": "pages",
+    "errors": 0,
+    "warnings": 1,
+    "total": 1,
+    "messages": [
+      {
+        "line": 12,
+        "column": 3,
+        "message": "'res' is defined but never used. Allowed unused args must match /^_/u.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      }
+    ]
+  },
+  {
+    "file": "/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/pages/admin/api/leads/send-claim.ts",
+    "folder": "pages",
+    "errors": 0,
+    "warnings": 1,
+    "total": 1,
+    "messages": [
+      {
+        "line": 12,
+        "column": 3,
+        "message": "'res' is defined but never used. Allowed unused args must match /^_/u.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      }
+    ]
+  },
+  {
+    "file": "/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/pages/admin/api/notify.ts",
+    "folder": "pages",
+    "errors": 0,
+    "warnings": 1,
+    "total": 1,
+    "messages": [
+      {
+        "line": 6,
+        "column": 3,
+        "message": "'res' is defined but never used. Allowed unused args must match /^_/u.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      }
+    ]
+  },
+  {
+    "file": "/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/pages/admin/api/og/snapshot.tsx",
+    "folder": "pages",
+    "errors": 0,
+    "warnings": 1,
+    "total": 1,
+    "messages": [
+      {
+        "line": 8,
+        "column": 3,
+        "message": "'res' is defined but never used. Allowed unused args must match /^_/u.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      }
+    ]
+  },
+  {
+    "file": "/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/pages/admin/api/queue/cancel.ts",
+    "folder": "pages",
+    "errors": 0,
+    "warnings": 1,
+    "total": 1,
+    "messages": [
+      {
+        "line": 12,
+        "column": 3,
+        "message": "'res' is defined but never used. Allowed unused args must match /^_/u.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      }
+    ]
+  },
+  {
+    "file": "/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/pages/admin/api/queue/retry-all.ts",
+    "folder": "pages",
+    "errors": 0,
+    "warnings": 1,
+    "total": 1,
+    "messages": [
+      {
+        "line": 10,
+        "column": 58,
+        "message": "'res' is defined but never used. Allowed unused args must match /^_/u.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      }
+    ]
+  },
+  {
+    "file": "/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/pages/admin/api/queue/retry.ts",
+    "folder": "pages",
+    "errors": 0,
+    "warnings": 1,
+    "total": 1,
+    "messages": [
+      {
+        "line": 12,
+        "column": 3,
+        "message": "'res' is defined but never used. Allowed unused args must match /^_/u.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      }
+    ]
+  },
+  {
+    "file": "/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/pages/admin/api/regenerate-site.ts",
+    "folder": "pages",
+    "errors": 0,
+    "warnings": 1,
+    "total": 1,
+    "messages": [
+      {
+        "line": 5,
+        "column": 7,
+        "message": "'supabase' is assigned a value but never used.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      }
+    ]
+  },
+  {
+    "file": "/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/pages/admin/api/run-next-job.ts",
+    "folder": "pages",
+    "errors": 0,
+    "warnings": 2,
+    "total": 2,
+    "messages": [
+      {
+        "line": 13,
+        "column": 3,
+        "message": "'req' is defined but never used. Allowed unused args must match /^_/u.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      },
+      {
+        "line": 14,
+        "column": 3,
+        "message": "'res' is defined but never used. Allowed unused args must match /^_/u.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      }
+    ]
+  },
+  {
+    "file": "/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/pages/admin/api/share.ts",
+    "folder": "pages",
+    "errors": 0,
+    "warnings": 1,
+    "total": 1,
+    "messages": [
+      {
+        "line": 14,
+        "column": 3,
+        "message": "'res' is defined but never used. Allowed unused args must match /^_/u.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      }
+    ]
+  },
+  {
+    "file": "/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/pages/admin/api/slack/embed-alert.ts",
+    "folder": "pages",
+    "errors": 0,
+    "warnings": 1,
+    "total": 1,
+    "messages": [
+      {
+        "line": 20,
+        "column": 32,
+        "message": "'schemaError' is assigned a value but never used.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      }
+    ]
+  },
+  {
+    "file": "/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/pages/admin/api/templates/[templateName].ts",
+    "folder": "pages",
+    "errors": 0,
+    "warnings": 1,
+    "total": 1,
+    "messages": [
+      {
+        "line": 13,
+        "column": 3,
+        "message": "'res' is defined but never used. Allowed unused args must match /^_/u.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      }
+    ]
+  },
+  {
+    "file": "/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/pages/admin/api/templates/create.ts",
+    "folder": "pages",
+    "errors": 0,
+    "warnings": 1,
+    "total": 1,
+    "messages": [
+      {
+        "line": 13,
+        "column": 3,
+        "message": "'res' is defined but never used. Allowed unused args must match /^_/u.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      }
+    ]
+  },
+  {
+    "file": "/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/pages/admin/api/templates/delete.ts",
+    "folder": "pages",
+    "errors": 0,
+    "warnings": 1,
+    "total": 1,
+    "messages": [
+      {
+        "line": 12,
+        "column": 3,
+        "message": "'res' is defined but never used. Allowed unused args must match /^_/u.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      }
+    ]
+  },
+  {
+    "file": "/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/pages/admin/api/templates/full.ts",
+    "folder": "pages",
+    "errors": 0,
+    "warnings": 2,
+    "total": 2,
+    "messages": [
+      {
+        "line": 12,
+        "column": 3,
+        "message": "'req' is defined but never used. Allowed unused args must match /^_/u.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      },
+      {
+        "line": 13,
+        "column": 3,
+        "message": "'res' is defined but never used. Allowed unused args must match /^_/u.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      }
+    ]
+  },
+  {
+    "file": "/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/pages/admin/api/templates/history.ts",
+    "folder": "pages",
+    "errors": 0,
+    "warnings": 1,
+    "total": 1,
+    "messages": [
+      {
+        "line": 13,
+        "column": 3,
+        "message": "'res' is defined but never used. Allowed unused args must match /^_/u.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      }
+    ]
+  },
+  {
+    "file": "/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/pages/admin/api/templates/index.ts",
+    "folder": "pages",
+    "errors": 0,
+    "warnings": 2,
+    "total": 2,
+    "messages": [
+      {
+        "line": 12,
+        "column": 3,
+        "message": "'req' is defined but never used. Allowed unused args must match /^_/u.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      },
+      {
+        "line": 13,
+        "column": 3,
+        "message": "'res' is defined but never used. Allowed unused args must match /^_/u.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      }
+    ]
+  },
+  {
+    "file": "/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/pages/admin/api/templates/publish.ts",
+    "folder": "pages",
+    "errors": 0,
+    "warnings": 1,
+    "total": 1,
+    "messages": [
+      {
+        "line": 12,
+        "column": 3,
+        "message": "'res' is defined but never used. Allowed unused args must match /^_/u.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      }
+    ]
+  },
+  {
+    "file": "/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/pages/admin/api/templates/restore.ts",
+    "folder": "pages",
+    "errors": 0,
+    "warnings": 1,
+    "total": 1,
+    "messages": [
+      {
+        "line": 12,
+        "column": 3,
+        "message": "'res' is defined but never used. Allowed unused args must match /^_/u.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      }
+    ]
+  },
+  {
+    "file": "/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/pages/admin/api/unsubscribe.ts",
+    "folder": "pages",
+    "errors": 0,
+    "warnings": 1,
+    "total": 1,
+    "messages": [
+      {
+        "line": 12,
+        "column": 3,
+        "message": "'res' is defined but never used. Allowed unused args must match /^_/u.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      }
+    ]
+  },
+  {
+    "file": "/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/pages/admin/audit.tsx",
+    "folder": "pages",
+    "errors": 0,
+    "warnings": 1,
+    "total": 1,
+    "messages": [
+      {
+        "line": 10,
+        "column": 14,
+        "message": "'res' is defined but never used. Allowed unused args must match /^_/u.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      }
+    ]
+  },
+  {
+    "file": "/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/pages/admin/campaigns.tsx",
+    "folder": "pages",
+    "errors": 0,
+    "warnings": 1,
+    "total": 1,
+    "messages": [
+      {
+        "line": 50,
+        "column": 26,
+        "message": "'i' is defined but never used. Allowed unused args must match /^_/u.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      }
+    ]
+  },
+  {
+    "file": "/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/pages/admin/dashboard.tsx",
+    "folder": "pages",
+    "errors": 0,
+    "warnings": 2,
+    "total": 2,
+    "messages": [
+      {
+        "line": 16,
+        "column": 8,
+        "message": "'BlockSettingsModal' is defined but never used.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      },
+      {
+        "line": 41,
+        "column": 5,
+        "message": "'loaded' is assigned a value but never used.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      }
+    ]
+  },
+  {
+    "file": "/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/pages/admin/demo/[slug].tsx",
+    "folder": "pages",
+    "errors": 0,
+    "warnings": 1,
+    "total": 1,
+    "messages": [
+      {
+        "line": 30,
+        "column": 17,
+        "message": "'error' is assigned a value but never used.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      }
+    ]
+  },
+  {
+    "file": "/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/pages/admin/demo/list.tsx",
+    "folder": "pages",
+    "errors": 0,
+    "warnings": 2,
+    "total": 2,
+    "messages": [
+      {
+        "line": 1,
+        "column": 10,
+        "message": "'createClient' is defined but never used.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      },
+      {
+        "line": 44,
+        "column": 17,
+        "message": "'error' is assigned a value but never used.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      }
+    ]
+  },
+  {
+    "file": "/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/pages/admin/embed/[id].tsx",
+    "folder": "pages",
+    "errors": 0,
+    "warnings": 2,
+    "total": 2,
+    "messages": [
+      {
+        "line": 4,
+        "column": 8,
+        "message": "'dynamic' is defined but never used.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      },
+      {
+        "line": 5,
+        "column": 10,
+        "message": "'supabase' is defined but never used.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      }
+    ]
+  },
+  {
+    "file": "/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/pages/admin/launch.tsx",
+    "folder": "pages",
+    "errors": 0,
+    "warnings": 3,
+    "total": 3,
+    "messages": [
+      {
+        "line": 10,
+        "column": 7,
+        "message": "'SitePreview' is assigned a value but never used.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      },
+      {
+        "line": 16,
+        "column": 9,
+        "message": "'router' is assigned a value but never used.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      },
+      {
+        "line": 33,
+        "column": 14,
+        "message": "'err' is defined but never used.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      }
+    ]
+  },
+  {
+    "file": "/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/pages/admin/leads.tsx",
+    "folder": "pages",
+    "errors": 0,
+    "warnings": 3,
+    "total": 3,
+    "messages": [
+      {
+        "line": 28,
+        "column": 10,
+        "message": "'previewUrl' is assigned a value but never used.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      },
+      {
+        "line": 28,
+        "column": 22,
+        "message": "'setPreviewUrl' is assigned a value but never used.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      },
+      {
+        "line": 119,
+        "column": 19,
+        "message": "'uploadData' is assigned a value but never used.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      }
+    ]
+  },
+  {
+    "file": "/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/pages/admin/logs.tsx",
+    "folder": "pages",
+    "errors": 0,
+    "warnings": 1,
+    "total": 1,
+    "messages": [
+      {
+        "line": 8,
+        "column": 10,
+        "message": "'error' is assigned a value but never used.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      }
+    ]
+  },
+  {
+    "file": "/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/pages/admin/logs/checkins.tsx",
+    "folder": "pages",
+    "errors": 0,
+    "warnings": 1,
+    "total": 1,
+    "messages": [
+      {
+        "line": 13,
+        "column": 14,
+        "message": "'res' is defined but never used. Allowed unused args must match /^_/u.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      }
+    ]
+  },
+  {
+    "file": "/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/pages/admin/logs/feedback.tsx",
+    "folder": "pages",
+    "errors": 0,
+    "warnings": 1,
+    "total": 1,
+    "messages": [
+      {
+        "line": 13,
+        "column": 14,
+        "message": "'res' is defined but never used. Allowed unused args must match /^_/u.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      }
+    ]
+  },
+  {
+    "file": "/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/pages/admin/logs/notifications.tsx",
+    "folder": "pages",
+    "errors": 0,
+    "warnings": 1,
+    "total": 1,
+    "messages": [
+      {
+        "line": 10,
+        "column": 14,
+        "message": "'res' is defined but never used. Allowed unused args must match /^_/u.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      }
+    ]
+  },
+  {
+    "file": "/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/pages/admin/profile.tsx",
+    "folder": "pages",
+    "errors": 2,
+    "warnings": 0,
+    "total": 2,
+    "messages": [
+      {
+        "line": 116,
+        "column": 17,
+        "message": "Expected an assignment or function call and instead saw an expression.",
+        "ruleId": "@typescript-eslint/no-unused-expressions",
+        "severity": "error"
+      },
+      {
+        "line": 133,
+        "column": 17,
+        "message": "Expected an assignment or function call and instead saw an expression.",
+        "ruleId": "@typescript-eslint/no-unused-expressions",
+        "severity": "error"
+      }
+    ]
+  },
+  {
+    "file": "/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/pages/admin/referrals.tsx",
+    "folder": "pages",
+    "errors": 0,
+    "warnings": 2,
+    "total": 2,
+    "messages": [
+      {
+        "line": 16,
+        "column": 9,
+        "message": "'referredMap' is assigned a value but never used.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      },
+      {
+        "line": 20,
+        "column": 9,
+        "message": "'downstreamCount' is assigned a value but never used.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      }
+    ]
+  },
+  {
+    "file": "/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/pages/admin/register.tsx",
+    "folder": "pages",
+    "errors": 0,
+    "warnings": 1,
+    "total": 1,
+    "messages": [
+      {
+        "line": 6,
+        "column": 9,
+        "message": "'router' is assigned a value but never used.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      }
+    ]
+  },
+  {
+    "file": "/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/pages/admin/reports/index.tsx",
+    "folder": "pages",
+    "errors": 0,
+    "warnings": 1,
+    "total": 1,
+    "messages": [
+      {
+        "line": 22,
+        "column": 14,
+        "message": "'res' is defined but never used. Allowed unused args must match /^_/u.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      }
+    ]
+  },
+  {
+    "file": "/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/pages/admin/reset.tsx",
+    "folder": "pages",
+    "errors": 0,
+    "warnings": 1,
+    "total": 1,
+    "messages": [
+      {
+        "line": 13,
+        "column": 51,
+        "message": "'session' is defined but never used. Allowed unused args must match /^_/u.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      }
+    ]
+  },
+  {
+    "file": "/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/pages/admin/sites/dashboard.tsx",
+    "folder": "pages",
+    "errors": 0,
+    "warnings": 1,
+    "total": 1,
+    "messages": [
+      {
+        "line": 21,
+        "column": 17,
+        "message": "'res' is assigned a value but never used.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      }
+    ]
+  },
+  {
+    "file": "/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/pages/admin/sites/index.tsx",
+    "folder": "pages",
+    "errors": 0,
+    "warnings": 1,
+    "total": 1,
+    "messages": [
+      {
+        "line": 3,
+        "column": 8,
+        "message": "'Page' is defined but never used.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      }
+    ]
+  },
+  {
+    "file": "/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/pages/admin/start-campaign.tsx",
+    "folder": "pages",
+    "errors": 1,
+    "warnings": 0,
+    "total": 1,
+    "messages": [
+      {
+        "line": 51,
+        "column": 18,
+        "message": "This branch can never execute. Its condition is a duplicate or covered by previous conditions in the if-else-if chain.",
+        "ruleId": "no-dupe-else-if",
+        "severity": "error"
+      }
+    ]
+  },
+  {
+    "file": "/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/pages/admin/templates/new.tsx",
+    "folder": "pages",
+    "errors": 0,
+    "warnings": 1,
+    "total": 1,
+    "messages": [
+      {
+        "line": 14,
+        "column": 10,
+        "message": "'initialData' is assigned a value but never used.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      }
+    ]
+  },
+  {
+    "file": "/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/pages/admin/tools/chart.tsx",
+    "folder": "pages",
+    "errors": 0,
+    "warnings": 1,
+    "total": 1,
+    "messages": [
+      {
+        "line": 31,
+        "column": 11,
+        "message": "'res' is assigned a value but never used.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      }
+    ]
+  },
+  {
+    "file": "/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/pages/admin/tools/digest.tsx",
+    "folder": "pages",
+    "errors": 0,
+    "warnings": 2,
+    "total": 2,
+    "messages": [
+      {
+        "line": 3,
+        "column": 10,
+        "message": "'json' is defined but never used.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      },
+      {
+        "line": 10,
+        "column": 11,
+        "message": "'res' is assigned a value but never used.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      }
+    ]
+  },
+  {
+    "file": "/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/pages/admin/tools/print-all.tsx",
+    "folder": "pages",
+    "errors": 0,
+    "warnings": 1,
+    "total": 1,
+    "messages": [
+      {
+        "line": 12,
+        "column": 14,
+        "message": "'res' is defined but never used. Allowed unused args must match /^_/u.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      }
+    ]
+  },
+  {
+    "file": "/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/pages/admin/viewer.tsx",
+    "folder": "pages",
+    "errors": 0,
+    "warnings": 2,
+    "total": 2,
+    "messages": [
+      {
+        "line": 8,
+        "column": 10,
+        "message": "'campaigns' is assigned a value but never used.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      },
+      {
+        "line": 103,
+        "column": 28,
+        "message": "'i' is defined but never used. Allowed unused args must match /^_/u.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      }
+    ]
+  },
+  {
+    "file": "/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/pages/admin/zod-playground.tsx",
+    "folder": "pages",
+    "errors": 0,
+    "warnings": 1,
+    "total": 1,
+    "messages": [
+      {
+        "line": 5,
+        "column": 10,
+        "message": "'z' is defined but never used.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      }
+    ]
+  },
+  {
+    "file": "/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/pages/announce.tsx",
+    "folder": "pages",
+    "errors": 0,
+    "warnings": 1,
+    "total": 1,
+    "messages": [
+      {
+        "line": 10,
+        "column": 14,
+        "message": "'res' is defined but never used. Allowed unused args must match /^_/u.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      }
+    ]
+  },
+  {
+    "file": "/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/pages/api/admin/seed-template.ts",
+    "folder": "pages",
+    "errors": 0,
+    "warnings": 1,
+    "total": 1,
+    "messages": [
+      {
+        "line": 12,
+        "column": 3,
+        "message": "'res' is defined but never used. Allowed unused args must match /^_/u.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      }
+    ]
+  },
+  {
+    "file": "/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/pages/api/admin/upload-template-image.ts",
+    "folder": "pages",
+    "errors": 0,
+    "warnings": 1,
+    "total": 1,
+    "messages": [
+      {
+        "line": 14,
+        "column": 3,
+        "message": "'res' is defined but never used. Allowed unused args must match /^_/u.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      }
+    ]
+  },
+  {
+    "file": "/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/pages/api/analytics/signals.ts",
+    "folder": "pages",
+    "errors": 0,
+    "warnings": 1,
+    "total": 1,
+    "messages": [
+      {
+        "line": 21,
+        "column": 3,
+        "message": "'res' is defined but never used. Allowed unused args must match /^_/u.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      }
+    ]
+  },
+  {
+    "file": "/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/pages/api/block-qr.ts",
+    "folder": "pages",
+    "errors": 0,
+    "warnings": 1,
+    "total": 1,
+    "messages": [
+      {
+        "line": 20,
+        "column": 12,
+        "message": "'err' is defined but never used.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      }
+    ]
+  },
+  {
+    "file": "/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/pages/api/blocks-by-handle.ts",
+    "folder": "pages",
+    "errors": 0,
+    "warnings": 1,
+    "total": 1,
+    "messages": [
+      {
+        "line": 12,
+        "column": 3,
+        "message": "'res' is defined but never used. Allowed unused args must match /^_/u.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      }
+    ]
+  },
+  {
+    "file": "/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/pages/api/campaign.ts",
+    "folder": "pages",
+    "errors": 0,
+    "warnings": 1,
+    "total": 1,
+    "messages": [
+      {
+        "line": 12,
+        "column": 3,
+        "message": "'res' is defined but never used. Allowed unused args must match /^_/u.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      }
+    ]
+  },
+  {
+    "file": "/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/pages/api/campaigns.ts",
+    "folder": "pages",
+    "errors": 0,
+    "warnings": 1,
+    "total": 1,
+    "messages": [
+      {
+        "line": 12,
+        "column": 3,
+        "message": "'res' is defined but never used. Allowed unused args must match /^_/u.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      }
+    ]
+  },
+  {
+    "file": "/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/pages/api/checkin-map.ts",
+    "folder": "pages",
+    "errors": 0,
+    "warnings": 1,
+    "total": 1,
+    "messages": [
+      {
+        "line": 12,
+        "column": 3,
+        "message": "'res' is defined but never used. Allowed unused args must match /^_/u.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      }
+    ]
+  },
+  {
+    "file": "/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/pages/api/checkins-trend.ts",
+    "folder": "pages",
+    "errors": 0,
+    "warnings": 1,
+    "total": 1,
+    "messages": [
+      {
+        "line": 12,
+        "column": 3,
+        "message": "'res' is defined but never used. Allowed unused args must match /^_/u.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      }
+    ]
+  },
+  {
+    "file": "/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/pages/api/cheer.ts",
+    "folder": "pages",
+    "errors": 0,
+    "warnings": 1,
+    "total": 1,
+    "messages": [
+      {
+        "line": 11,
+        "column": 3,
+        "message": "'res' is defined but never used. Allowed unused args must match /^_/u.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      }
+    ]
+  },
+  {
+    "file": "/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/pages/api/claim-campaign.ts",
+    "folder": "pages",
+    "errors": 0,
+    "warnings": 2,
+    "total": 2,
+    "messages": [
+      {
+        "line": 4,
+        "column": 16,
+        "message": "'uuidv4' is defined but never used.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      },
+      {
+        "line": 13,
+        "column": 3,
+        "message": "'res' is defined but never used. Allowed unused args must match /^_/u.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      }
+    ]
+  },
+  {
+    "file": "/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/pages/api/claim-site.ts",
+    "folder": "pages",
+    "errors": 0,
+    "warnings": 1,
+    "total": 1,
+    "messages": [
+      {
+        "line": 12,
+        "column": 3,
+        "message": "'res' is defined but never used. Allowed unused args must match /^_/u.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      }
+    ]
+  },
+  {
+    "file": "/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/pages/api/create-campaign.ts",
+    "folder": "pages",
+    "errors": 0,
+    "warnings": 1,
+    "total": 1,
+    "messages": [
+      {
+        "line": 11,
+        "column": 3,
+        "message": "'res' is defined but never used. Allowed unused args must match /^_/u.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      }
+    ]
+  },
+  {
+    "file": "/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/pages/api/delete-campaign.ts",
+    "folder": "pages",
+    "errors": 0,
+    "warnings": 1,
+    "total": 1,
+    "messages": [
+      {
+        "line": 11,
+        "column": 3,
+        "message": "'res' is defined but never used. Allowed unused args must match /^_/u.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      }
+    ]
+  },
+  {
+    "file": "/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/pages/api/deploy-webhook.ts",
+    "folder": "pages",
+    "errors": 0,
+    "warnings": 1,
+    "total": 1,
+    "messages": [
+      {
+        "line": 6,
+        "column": 3,
+        "message": "'res' is defined but never used. Allowed unused args must match /^_/u.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      }
+    ]
+  },
+  {
+    "file": "/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/pages/api/digest-log.ts",
+    "folder": "pages",
+    "errors": 0,
+    "warnings": 1,
+    "total": 1,
+    "messages": [
+      {
+        "line": 11,
+        "column": 3,
+        "message": "'res' is defined but never used. Allowed unused args must match /^_/u.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      }
+    ]
+  },
+  {
+    "file": "/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/pages/api/discover.ts",
+    "folder": "pages",
+    "errors": 0,
+    "warnings": 1,
+    "total": 1,
+    "messages": [
+      {
+        "line": 12,
+        "column": 3,
+        "message": "'res' is defined but never used. Allowed unused args must match /^_/u.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      }
+    ]
+  },
+  {
+    "file": "/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/pages/api/echo.ts",
+    "folder": "pages",
+    "errors": 0,
+    "warnings": 1,
+    "total": 1,
+    "messages": [
+      {
+        "line": 2,
+        "column": 10,
+        "message": "'json' is defined but never used.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      }
+    ]
+  },
+  {
+    "file": "/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/pages/api/feedback-history.ts",
+    "folder": "pages",
+    "errors": 0,
+    "warnings": 3,
+    "total": 3,
+    "messages": [
+      {
+        "line": 12,
+        "column": 3,
+        "message": "'res' is defined but never used. Allowed unused args must match /^_/u.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      },
+      {
+        "line": 17,
+        "column": 9,
+        "message": "'column' is assigned a value but never used.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      },
+      {
+        "line": 18,
+        "column": 9,
+        "message": "'matchColumn' is assigned a value but never used.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      }
+    ]
+  },
+  {
+    "file": "/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/pages/api/feedback-summary.ts",
+    "folder": "pages",
+    "errors": 0,
+    "warnings": 1,
+    "total": 1,
+    "messages": [
+      {
+        "line": 11,
+        "column": 3,
+        "message": "'res' is defined but never used. Allowed unused args must match /^_/u.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      }
+    ]
+  },
+  {
+    "file": "/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/pages/api/geocode.ts",
+    "folder": "pages",
+    "errors": 0,
+    "warnings": 2,
+    "total": 2,
+    "messages": [
+      {
+        "line": 8,
+        "column": 3,
+        "message": "'res' is defined but never used. Allowed unused args must match /^_/u.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      },
+      {
+        "line": 25,
+        "column": 32,
+        "message": "'fetchError' is assigned a value but never used.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      }
+    ]
+  },
+  {
+    "file": "/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/pages/api/habit-leaderboard.ts",
+    "folder": "pages",
+    "errors": 0,
+    "warnings": 1,
+    "total": 1,
+    "messages": [
+      {
+        "line": 12,
+        "column": 3,
+        "message": "'res' is defined but never used. Allowed unused args must match /^_/u.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      }
+    ]
+  },
+  {
+    "file": "/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/pages/api/habit-templates.ts",
+    "folder": "pages",
+    "errors": 0,
+    "warnings": 1,
+    "total": 1,
+    "messages": [
+      {
+        "line": 6,
+        "column": 3,
+        "message": "'res' is defined but never used. Allowed unused args must match /^_/u.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      }
+    ]
+  },
+  {
+    "file": "/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/pages/api/ip.ts",
+    "folder": "pages",
+    "errors": 0,
+    "warnings": 1,
+    "total": 1,
+    "messages": [
+      {
+        "line": 6,
+        "column": 54,
+        "message": "'res' is defined but never used. Allowed unused args must match /^_/u.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      }
+    ]
+  },
+  {
+    "file": "/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/pages/api/logs/checkins.ts",
+    "folder": "pages",
+    "errors": 0,
+    "warnings": 1,
+    "total": 1,
+    "messages": [
+      {
+        "line": 12,
+        "column": 3,
+        "message": "'res' is defined but never used. Allowed unused args must match /^_/u.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      }
+    ]
+  },
+  {
+    "file": "/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/pages/api/logs/feedback.ts",
+    "folder": "pages",
+    "errors": 0,
+    "warnings": 1,
+    "total": 1,
+    "messages": [
+      {
+        "line": 12,
+        "column": 3,
+        "message": "'res' is defined but never used. Allowed unused args must match /^_/u.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      }
+    ]
+  },
+  {
+    "file": "/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/pages/api/match.ts",
+    "folder": "pages",
+    "errors": 0,
+    "warnings": 1,
+    "total": 1,
+    "messages": [
+      {
+        "line": 12,
+        "column": 3,
+        "message": "'res' is defined but never used. Allowed unused args must match /^_/u.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      }
+    ]
+  },
+  {
+    "file": "/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/pages/api/metrics.ts",
+    "folder": "pages",
+    "errors": 0,
+    "warnings": 1,
+    "total": 1,
+    "messages": [
+      {
+        "line": 12,
+        "column": 3,
+        "message": "'res' is defined but never used. Allowed unused args must match /^_/u.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      }
+    ]
+  },
+  {
+    "file": "/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/pages/api/my-campaigns.ts",
+    "folder": "pages",
+    "errors": 0,
+    "warnings": 1,
+    "total": 1,
+    "messages": [
+      {
+        "line": 11,
+        "column": 3,
+        "message": "'res' is defined but never used. Allowed unused args must match /^_/u.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      }
+    ]
+  },
+  {
+    "file": "/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/pages/api/nav-badges.ts",
+    "folder": "pages",
+    "errors": 0,
+    "warnings": 1,
+    "total": 1,
+    "messages": [
+      {
+        "line": 12,
+        "column": 3,
+        "message": "'res' is defined but never used. Allowed unused args must match /^_/u.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      }
+    ]
+  },
+  {
+    "file": "/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/pages/api/nearby-blocks.ts",
+    "folder": "pages",
+    "errors": 0,
+    "warnings": 1,
+    "total": 1,
+    "messages": [
+      {
+        "line": 12,
+        "column": 3,
+        "message": "'res' is defined but never used. Allowed unused args must match /^_/u.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      }
+    ]
+  },
+  {
+    "file": "/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/pages/api/notifications.ts",
+    "folder": "pages",
+    "errors": 0,
+    "warnings": 1,
+    "total": 1,
+    "messages": [
+      {
+        "line": 11,
+        "column": 3,
+        "message": "'res' is defined but never used. Allowed unused args must match /^_/u.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      }
+    ]
+  },
+  {
+    "file": "/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/pages/api/notify-creator.ts",
+    "folder": "pages",
+    "errors": 0,
+    "warnings": 1,
+    "total": 1,
+    "messages": [
+      {
+        "line": 15,
+        "column": 3,
+        "message": "'res' is defined but never used. Allowed unused args must match /^_/u.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      }
+    ]
+  },
+  {
+    "file": "/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/pages/api/public-profile.ts",
+    "folder": "pages",
+    "errors": 0,
+    "warnings": 1,
+    "total": 1,
+    "messages": [
+      {
+        "line": 12,
+        "column": 3,
+        "message": "'res' is defined but never used. Allowed unused args must match /^_/u.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      }
+    ]
+  },
+  {
+    "file": "/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/pages/api/publish-site.ts",
+    "folder": "pages",
+    "errors": 0,
+    "warnings": 1,
+    "total": 1,
+    "messages": [
+      {
+        "line": 12,
+        "column": 3,
+        "message": "'res' is defined but never used. Allowed unused args must match /^_/u.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      }
+    ]
+  },
+  {
+    "file": "/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/pages/api/recent-feedback.ts",
+    "folder": "pages",
+    "errors": 0,
+    "warnings": 1,
+    "total": 1,
+    "messages": [
+      {
+        "line": 12,
+        "column": 3,
+        "message": "'res' is defined but never used. Allowed unused args must match /^_/u.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      }
+    ]
+  },
+  {
+    "file": "/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/pages/api/reflect.ts",
+    "folder": "pages",
+    "errors": 0,
+    "warnings": 1,
+    "total": 1,
+    "messages": [
+      {
+        "line": 11,
+        "column": 3,
+        "message": "'res' is defined but never used. Allowed unused args must match /^_/u.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      }
+    ]
+  },
+  {
+    "file": "/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/pages/api/remix-dag.ts",
+    "folder": "pages",
+    "errors": 0,
+    "warnings": 1,
+    "total": 1,
+    "messages": [
+      {
+        "line": 6,
+        "column": 3,
+        "message": "'res' is defined but never used. Allowed unused args must match /^_/u.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      }
+    ]
+  },
+  {
+    "file": "/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/pages/api/request-support.ts",
+    "folder": "pages",
+    "errors": 0,
+    "warnings": 1,
+    "total": 1,
+    "messages": [
+      {
+        "line": 11,
+        "column": 3,
+        "message": "'res' is defined but never used. Allowed unused args must match /^_/u.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      }
+    ]
+  },
+  {
+    "file": "/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/pages/api/resend-welcome-email.ts",
+    "folder": "pages",
+    "errors": 0,
+    "warnings": 1,
+    "total": 1,
+    "messages": [
+      {
+        "line": 9,
+        "column": 3,
+        "message": "'res' is defined but never used. Allowed unused args must match /^_/u.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      }
+    ]
+  },
+  {
+    "file": "/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/pages/api/reverse-geocode.ts",
+    "folder": "pages",
+    "errors": 0,
+    "warnings": 1,
+    "total": 1,
+    "messages": [
+      {
+        "line": 6,
+        "column": 3,
+        "message": "'res' is defined but never used. Allowed unused args must match /^_/u.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      }
+    ]
+  },
+  {
+    "file": "/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/pages/api/send-lead-email.ts",
+    "folder": "pages",
+    "errors": 0,
+    "warnings": 1,
+    "total": 1,
+    "messages": [
+      {
+        "line": 8,
+        "column": 3,
+        "message": "'res' is defined but never used. Allowed unused args must match /^_/u.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      }
+    ]
+  },
+  {
+    "file": "/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/pages/api/send-thanks.ts",
+    "folder": "pages",
+    "errors": 0,
+    "warnings": 1,
+    "total": 1,
+    "messages": [
+      {
+        "line": 12,
+        "column": 3,
+        "message": "'res' is defined but never used. Allowed unused args must match /^_/u.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      }
+    ]
+  },
+  {
+    "file": "/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/pages/api/send-weekly-digest.ts",
+    "folder": "pages",
+    "errors": 0,
+    "warnings": 2,
+    "total": 2,
+    "messages": [
+      {
+        "line": 16,
+        "column": 9,
+        "message": "'res' is assigned a value but never used.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      },
+      {
+        "line": 47,
+        "column": 3,
+        "message": "'res' is defined but never used. Allowed unused args must match /^_/u.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      }
+    ]
+  },
+  {
+    "file": "/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/pages/api/sitemap.hreflang.xml.ts",
+    "folder": "pages",
+    "errors": 0,
+    "warnings": 1,
+    "total": 1,
+    "messages": [
+      {
+        "line": 30,
+        "column": 10,
+        "message": "'base' is defined but never used. Allowed unused args must match /^_/u.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      }
+    ]
+  },
+  {
+    "file": "/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/pages/api/sites.ts",
+    "folder": "pages",
+    "errors": 0,
+    "warnings": 2,
+    "total": 2,
+    "messages": [
+      {
+        "line": 13,
+        "column": 3,
+        "message": "'req' is defined but never used. Allowed unused args must match /^_/u.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      },
+      {
+        "line": 14,
+        "column": 3,
+        "message": "'res' is defined but never used. Allowed unused args must match /^_/u.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      }
+    ]
+  },
+  {
+    "file": "/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/pages/api/sites/[id].ts",
+    "folder": "pages",
+    "errors": 0,
+    "warnings": 1,
+    "total": 1,
+    "messages": [
+      {
+        "line": 12,
+        "column": 3,
+        "message": "'res' is defined but never used. Allowed unused args must match /^_/u.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      }
+    ]
+  },
+  {
+    "file": "/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/pages/api/sites/create.ts",
+    "folder": "pages",
+    "errors": 0,
+    "warnings": 4,
+    "total": 4,
+    "messages": [
+      {
+        "line": 11,
+        "column": 10,
+        "message": "'generateSlug' is defined but never used.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      },
+      {
+        "line": 27,
+        "column": 19,
+        "message": "'error' is assigned a value but never used.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      },
+      {
+        "line": 41,
+        "column": 10,
+        "message": "'baseSlug' is defined but never used.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      },
+      {
+        "line": 53,
+        "column": 3,
+        "message": "'res' is defined but never used. Allowed unused args must match /^_/u.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      }
+    ]
+  },
+  {
+    "file": "/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/pages/api/sites/save.ts",
+    "folder": "pages",
+    "errors": 0,
+    "warnings": 1,
+    "total": 1,
+    "messages": [
+      {
+        "line": 12,
+        "column": 3,
+        "message": "'res' is defined but never used. Allowed unused args must match /^_/u.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      }
+    ]
+  },
+  {
+    "file": "/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/pages/api/supporters.ts",
+    "folder": "pages",
+    "errors": 0,
+    "warnings": 1,
+    "total": 1,
+    "messages": [
+      {
+        "line": 12,
+        "column": 3,
+        "message": "'res' is defined but never used. Allowed unused args must match /^_/u.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      }
+    ]
+  },
+  {
+    "file": "/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/pages/api/template-api/index.ts",
+    "folder": "pages",
+    "errors": 0,
+    "warnings": 1,
+    "total": 1,
+    "messages": [
+      {
+        "line": 13,
+        "column": 3,
+        "message": "'res' is defined but never used. Allowed unused args must match /^_/u.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      }
+    ]
+  },
+  {
+    "file": "/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/pages/api/templates/history.ts",
+    "folder": "pages",
+    "errors": 0,
+    "warnings": 1,
+    "total": 1,
+    "messages": [
+      {
+        "line": 13,
+        "column": 3,
+        "message": "'res' is defined but never used. Allowed unused args must match /^_/u.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      }
+    ]
+  },
+  {
+    "file": "/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/pages/api/update-campaign.ts",
+    "folder": "pages",
+    "errors": 0,
+    "warnings": 1,
+    "total": 1,
+    "messages": [
+      {
+        "line": 11,
+        "column": 3,
+        "message": "'res' is defined but never used. Allowed unused args must match /^_/u.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      }
+    ]
+  },
+  {
+    "file": "/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/pages/api/update-profile.ts",
+    "folder": "pages",
+    "errors": 0,
+    "warnings": 1,
+    "total": 1,
+    "messages": [
+      {
+        "line": 12,
+        "column": 3,
+        "message": "'res' is defined but never used. Allowed unused args must match /^_/u.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      }
+    ]
+  },
+  {
+    "file": "/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/pages/api/user-referrals.ts",
+    "folder": "pages",
+    "errors": 0,
+    "warnings": 2,
+    "total": 2,
+    "messages": [
+      {
+        "line": 13,
+        "column": 3,
+        "message": "'res' is defined but never used. Allowed unused args must match /^_/u.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      },
+      {
+        "line": 17,
+        "column": 17,
+        "message": "'logs' is assigned a value but never used.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      }
+    ]
+  },
+  {
+    "file": "/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/pages/api/weekly-digest-live.ts",
+    "folder": "pages",
+    "errors": 0,
+    "warnings": 7,
+    "total": 7,
+    "messages": [
+      {
+        "line": 3,
+        "column": 10,
+        "message": "'progress' is defined but never used.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      },
+      {
+        "line": 4,
+        "column": 10,
+        "message": "'a' is defined but never used.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      },
+      {
+        "line": 7,
+        "column": 8,
+        "message": "'digest' is defined but never used.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      },
+      {
+        "line": 8,
+        "column": 8,
+        "message": "'summary' is defined but never used.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      },
+      {
+        "line": 9,
+        "column": 8,
+        "message": "'feedback' is defined but never used.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      },
+      {
+        "line": 11,
+        "column": 7,
+        "message": "'supabase' is assigned a value but never used.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      },
+      {
+        "line": 22,
+        "column": 3,
+        "message": "'res' is defined but never used. Allowed unused args must match /^_/u.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      }
+    ]
+  },
+  {
+    "file": "/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/pages/api/weekly-digest.ts",
+    "folder": "pages",
+    "errors": 0,
+    "warnings": 2,
+    "total": 2,
+    "messages": [
+      {
+        "line": 5,
+        "column": 7,
+        "message": "'supabase' is assigned a value but never used.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      },
+      {
+        "line": 21,
+        "column": 3,
+        "message": "'res' is defined but never used. Allowed unused args must match /^_/u.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      }
+    ]
+  },
+  {
+    "file": "/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/pages/block/[id].tsx",
+    "folder": "pages",
+    "errors": 0,
+    "warnings": 1,
+    "total": 1,
+    "messages": [
+      {
+        "line": 14,
+        "column": 14,
+        "message": "'res' is defined but never used. Allowed unused args must match /^_/u.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      }
+    ]
+  },
+  {
+    "file": "/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/pages/claim-handle.tsx",
+    "folder": "pages",
+    "errors": 0,
+    "warnings": 1,
+    "total": 1,
+    "messages": [
+      {
+        "line": 10,
+        "column": 11,
+        "message": "'res' is assigned a value but never used.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      }
+    ]
+  },
+  {
+    "file": "/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/pages/claim/[slug].tsx",
+    "folder": "pages",
+    "errors": 0,
+    "warnings": 1,
+    "total": 1,
+    "messages": [
+      {
+        "line": 19,
+        "column": 16,
+        "message": "'res' is defined but never used. Allowed unused args must match /^_/u.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      }
+    ]
+  },
+  {
+    "file": "/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/pages/creator/[handle].tsx",
+    "folder": "pages",
+    "errors": 0,
+    "warnings": 1,
+    "total": 1,
+    "messages": [
+      {
+        "line": 25,
+        "column": 14,
+        "message": "'res' is defined but never used. Allowed unused args must match /^_/u.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      }
+    ]
+  },
+  {
+    "file": "/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/pages/creator/me/campaigns/index.tsx",
+    "folder": "pages",
+    "errors": 0,
+    "warnings": 1,
+    "total": 1,
+    "messages": [
+      {
+        "line": 14,
+        "column": 14,
+        "message": "'res' is defined but never used. Allowed unused args must match /^_/u.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      }
+    ]
+  },
+  {
+    "file": "/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/pages/creator/me/campaigns/new.tsx",
+    "folder": "pages",
+    "errors": 0,
+    "warnings": 2,
+    "total": 2,
+    "messages": [
+      {
+        "line": 3,
+        "column": 10,
+        "message": "'json' is defined but never used.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      },
+      {
+        "line": 14,
+        "column": 11,
+        "message": "'res' is assigned a value but never used.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      }
+    ]
+  },
+  {
+    "file": "/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/pages/creator/me/campaigns/posters.tsx",
+    "folder": "pages",
+    "errors": 0,
+    "warnings": 1,
+    "total": 1,
+    "messages": [
+      {
+        "line": 13,
+        "column": 14,
+        "message": "'res' is defined but never used. Allowed unused args must match /^_/u.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      }
+    ]
+  },
+  {
+    "file": "/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/pages/creator/me/feedback.tsx",
+    "folder": "pages",
+    "errors": 0,
+    "warnings": 2,
+    "total": 2,
+    "messages": [
+      {
+        "line": 14,
+        "column": 14,
+        "message": "'res' is defined but never used. Allowed unused args must match /^_/u.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      },
+      {
+        "line": 18,
+        "column": 14,
+        "message": "'res' is defined but never used. Allowed unused args must match /^_/u.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      }
+    ]
+  },
+  {
+    "file": "/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/pages/creator/me/notifications.tsx",
+    "folder": "pages",
+    "errors": 0,
+    "warnings": 1,
+    "total": 1,
+    "messages": [
+      {
+        "line": 13,
+        "column": 14,
+        "message": "'res' is defined but never used. Allowed unused args must match /^_/u.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      }
+    ]
+  },
+  {
+    "file": "/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/pages/creator/me/summary.tsx",
+    "folder": "pages",
+    "errors": 0,
+    "warnings": 1,
+    "total": 1,
+    "messages": [
+      {
+        "line": 13,
+        "column": 14,
+        "message": "'res' is defined but never used. Allowed unused args must match /^_/u.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      }
+    ]
+  },
+  {
+    "file": "/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/pages/creator/me/thank.tsx",
+    "folder": "pages",
+    "errors": 0,
+    "warnings": 1,
+    "total": 1,
+    "messages": [
+      {
+        "line": 15,
+        "column": 14,
+        "message": "'res' is defined but never used. Allowed unused args must match /^_/u.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      }
+    ]
+  },
+  {
+    "file": "/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/pages/discover.tsx",
+    "folder": "pages",
+    "errors": 0,
+    "warnings": 1,
+    "total": 1,
+    "messages": [
+      {
+        "line": 11,
+        "column": 14,
+        "message": "'res' is defined but never used. Allowed unused args must match /^_/u.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      }
+    ]
+  },
+  {
+    "file": "/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/pages/edit/[slug].tsx",
+    "folder": "pages",
+    "errors": 0,
+    "warnings": 3,
+    "total": 3,
+    "messages": [
+      {
+        "line": 16,
+        "column": 3,
+        "message": "'arrayMove' is defined but never used.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      },
+      {
+        "line": 28,
+        "column": 7,
+        "message": "'supabase' is assigned a value but never used.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      },
+      {
+        "line": 56,
+        "column": 14,
+        "message": "'res' is defined but never used. Allowed unused args must match /^_/u.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      }
+    ]
+  },
+  {
+    "file": "/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/pages/edit/remix/[slug].tsx",
+    "folder": "pages",
+    "errors": 0,
+    "warnings": 1,
+    "total": 1,
+    "messages": [
+      {
+        "line": 17,
+        "column": 16,
+        "message": "'res' is defined but never used. Allowed unused args must match /^_/u.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      }
+    ]
+  },
+  {
+    "file": "/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/pages/forks.tsx",
+    "folder": "pages",
+    "errors": 0,
+    "warnings": 1,
+    "total": 1,
+    "messages": [
+      {
+        "line": 16,
+        "column": 14,
+        "message": "'res' is defined but never used. Allowed unused args must match /^_/u.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      }
+    ]
+  },
+  {
+    "file": "/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/pages/forks/[template_id].tsx",
+    "folder": "pages",
+    "errors": 0,
+    "warnings": 1,
+    "total": 1,
+    "messages": [
+      {
+        "line": 20,
+        "column": 14,
+        "message": "'res' is defined but never used. Allowed unused args must match /^_/u.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      }
+    ]
+  },
+  {
+    "file": "/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/pages/habits/[slug]/leaderboard.tsx",
+    "folder": "pages",
+    "errors": 0,
+    "warnings": 1,
+    "total": 1,
+    "messages": [
+      {
+        "line": 14,
+        "column": 14,
+        "message": "'res' is defined but never used. Allowed unused args must match /^_/u.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      }
+    ]
+  },
+  {
+    "file": "/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/pages/habits/add.tsx",
+    "folder": "pages",
+    "errors": 0,
+    "warnings": 1,
+    "total": 1,
+    "messages": [
+      {
+        "line": 4,
+        "column": 10,
+        "message": "'useUser' is defined but never used.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      }
+    ]
+  },
+  {
+    "file": "/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/pages/habits/index.tsx",
+    "folder": "pages",
+    "errors": 0,
+    "warnings": 1,
+    "total": 1,
+    "messages": [
+      {
+        "line": 10,
+        "column": 14,
+        "message": "'res' is defined but never used. Allowed unused args must match /^_/u.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      }
+    ]
+  },
+  {
+    "file": "/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/pages/hall-of-fame.tsx",
+    "folder": "pages",
+    "errors": 0,
+    "warnings": 1,
+    "total": 1,
+    "messages": [
+      {
+        "line": 16,
+        "column": 14,
+        "message": "'res' is defined but never used. Allowed unused args must match /^_/u.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      }
+    ]
+  },
+  {
+    "file": "/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/pages/hub/[handle].tsx",
+    "folder": "pages",
+    "errors": 0,
+    "warnings": 1,
+    "total": 1,
+    "messages": [
+      {
+        "line": 15,
+        "column": 14,
+        "message": "'res' is defined but never used. Allowed unused args must match /^_/u.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      }
+    ]
+  },
+  {
+    "file": "/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/pages/hub/[handle]/print.tsx",
+    "folder": "pages",
+    "errors": 0,
+    "warnings": 1,
+    "total": 1,
+    "messages": [
+      {
+        "line": 14,
+        "column": 14,
+        "message": "'res' is defined but never used. Allowed unused args must match /^_/u.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      }
+    ]
+  },
+  {
+    "file": "/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/pages/leaderboard.tsx",
+    "folder": "pages",
+    "errors": 0,
+    "warnings": 1,
+    "total": 1,
+    "messages": [
+      {
+        "line": 13,
+        "column": 14,
+        "message": "'res' is defined but never used. Allowed unused args must match /^_/u.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      }
+    ]
+  },
+  {
+    "file": "/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/pages/login.tsx",
+    "folder": "pages",
+    "errors": 0,
+    "warnings": 2,
+    "total": 2,
+    "messages": [
+      {
+        "line": 9,
+        "column": 10,
+        "message": "'useCurrentUser' is defined but never used.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      },
+      {
+        "line": 17,
+        "column": 17,
+        "message": "'setFlash' is assigned a value but never used.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      }
+    ]
+  },
+  {
+    "file": "/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/pages/map.tsx",
+    "folder": "pages",
+    "errors": 0,
+    "warnings": 1,
+    "total": 1,
+    "messages": [
+      {
+        "line": 12,
+        "column": 14,
+        "message": "'res' is defined but never used. Allowed unused args must match /^_/u.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      }
+    ]
+  },
+  {
+    "file": "/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/pages/match.tsx",
+    "folder": "pages",
+    "errors": 0,
+    "warnings": 2,
+    "total": 2,
+    "messages": [
+      {
+        "line": 3,
+        "column": 10,
+        "message": "'json' is defined but never used.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      },
+      {
+        "line": 10,
+        "column": 11,
+        "message": "'res' is assigned a value but never used.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      }
+    ]
+  },
+  {
+    "file": "/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/pages/metrics.tsx",
+    "folder": "pages",
+    "errors": 0,
+    "warnings": 1,
+    "total": 1,
+    "messages": [
+      {
+        "line": 10,
+        "column": 14,
+        "message": "'res' is defined but never used. Allowed unused args must match /^_/u.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      }
+    ]
+  },
+  {
+    "file": "/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/pages/portfolio/[handle].tsx",
+    "folder": "pages",
+    "errors": 0,
+    "warnings": 5,
+    "total": 5,
+    "messages": [
+      {
+        "line": 5,
+        "column": 10,
+        "message": "'usePageSeo' is defined but never used.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      },
+      {
+        "line": 6,
+        "column": 10,
+        "message": "'NextSeo' is defined but never used.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      },
+      {
+        "line": 7,
+        "column": 10,
+        "message": "'useSession' is defined but never used.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      },
+      {
+        "line": 8,
+        "column": 10,
+        "message": "'useUser' is defined but never used.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      },
+      {
+        "line": 19,
+        "column": 14,
+        "message": "'res' is defined but never used. Allowed unused args must match /^_/u.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      }
+    ]
+  },
+  {
+    "file": "/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/pages/press.tsx",
+    "folder": "pages",
+    "errors": 0,
+    "warnings": 1,
+    "total": 1,
+    "messages": [
+      {
+        "line": 5,
+        "column": 8,
+        "message": "'Link' is defined but never used.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      }
+    ]
+  },
+  {
+    "file": "/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/pages/profile.tsx",
+    "folder": "pages",
+    "errors": 0,
+    "warnings": 1,
+    "total": 1,
+    "messages": [
+      {
+        "line": 14,
+        "column": 16,
+        "message": "'res' is defined but never used. Allowed unused args must match /^_/u.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      }
+    ]
+  },
+  {
+    "file": "/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/pages/public/security.tsx",
+    "folder": "pages",
+    "errors": 2,
+    "warnings": 0,
+    "total": 2,
+    "messages": [
+      {
+        "line": 14,
+        "column": 14,
+        "message": "'res' is defined but never used.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "error"
+      },
+      {
+        "line": 16,
+        "column": 44,
+        "message": "Unexpected any. Specify a different type.",
+        "ruleId": "@typescript-eslint/no-explicit-any",
+        "severity": "error"
+      }
+    ]
+  },
+  {
+    "file": "/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/pages/public/trust.tsx",
+    "folder": "pages",
+    "errors": 1,
+    "warnings": 0,
+    "total": 1,
+    "messages": [
+      {
+        "line": 10,
+        "column": 13,
+        "message": "'res' is defined but never used.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "error"
+      }
+    ]
+  },
+  {
+    "file": "/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/pages/publish/[slug].tsx",
+    "folder": "pages",
+    "errors": 0,
+    "warnings": 1,
+    "total": 1,
+    "messages": [
+      {
+        "line": 16,
+        "column": 14,
+        "message": "'res' is defined but never used. Allowed unused args must match /^_/u.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      }
+    ]
+  },
+  {
+    "file": "/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/pages/remix-map.tsx",
+    "folder": "pages",
+    "errors": 0,
+    "warnings": 1,
+    "total": 1,
+    "messages": [
+      {
+        "line": 13,
+        "column": 14,
+        "message": "'res' is defined but never used. Allowed unused args must match /^_/u.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      }
+    ]
+  },
+  {
+    "file": "/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/pages/settings/share.tsx",
+    "folder": "pages",
+    "errors": 0,
+    "warnings": 2,
+    "total": 2,
+    "messages": [
+      {
+        "line": 11,
+        "column": 10,
+        "message": "'profile' is assigned a value but never used.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      },
+      {
+        "line": 23,
+        "column": 14,
+        "message": "'res' is defined but never used. Allowed unused args must match /^_/u.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      }
+    ]
+  },
+  {
+    "file": "/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/pages/start.tsx",
+    "folder": "pages",
+    "errors": 0,
+    "warnings": 1,
+    "total": 1,
+    "messages": [
+      {
+        "line": 25,
+        "column": 14,
+        "message": "'res' is defined but never used. Allowed unused args must match /^_/u.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      }
+    ]
+  },
+  {
+    "file": "/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/pages/support/[slug].tsx",
+    "folder": "pages",
+    "errors": 0,
+    "warnings": 1,
+    "total": 1,
+    "messages": [
+      {
+        "line": 16,
+        "column": 14,
+        "message": "'res' is defined but never used. Allowed unused args must match /^_/u.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      }
+    ]
+  },
+  {
+    "file": "/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/pages/support/[slug]/edit.tsx",
+    "folder": "pages",
+    "errors": 0,
+    "warnings": 2,
+    "total": 2,
+    "messages": [
+      {
+        "line": 14,
+        "column": 14,
+        "message": "'res' is defined but never used. Allowed unused args must match /^_/u.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      },
+      {
+        "line": 19,
+        "column": 11,
+        "message": "'res' is assigned a value but never used.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      }
+    ]
+  },
+  {
+    "file": "/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/pages/support/create.tsx",
+    "folder": "pages",
+    "errors": 0,
+    "warnings": 2,
+    "total": 2,
+    "messages": [
+      {
+        "line": 3,
+        "column": 10,
+        "message": "'json' is defined but never used.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      },
+      {
+        "line": 14,
+        "column": 11,
+        "message": "'res' is assigned a value but never used.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      }
+    ]
+  },
+  {
+    "file": "/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/pages/support/index.tsx",
+    "folder": "pages",
+    "errors": 0,
+    "warnings": 1,
+    "total": 1,
+    "messages": [
+      {
+        "line": 12,
+        "column": 14,
+        "message": "'res' is defined but never used. Allowed unused args must match /^_/u.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      }
+    ]
+  },
+  {
+    "file": "/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/pages/template-market.tsx",
+    "folder": "pages",
+    "errors": 0,
+    "warnings": 1,
+    "total": 1,
+    "messages": [
+      {
+        "line": 12,
+        "column": 14,
+        "message": "'res' is defined but never used. Allowed unused args must match /^_/u.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      }
+    ]
+  },
+  {
+    "file": "/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/pages/timeline.tsx",
+    "folder": "pages",
+    "errors": 0,
+    "warnings": 1,
+    "total": 1,
+    "messages": [
+      {
+        "line": 15,
+        "column": 14,
+        "message": "'res' is defined but never used. Allowed unused args must match /^_/u.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      }
+    ]
+  },
+  {
+    "file": "/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/pages/transparency.tsx",
+    "folder": "pages",
+    "errors": 0,
+    "warnings": 1,
+    "total": 1,
+    "messages": [
+      {
+        "line": 15,
+        "column": 14,
+        "message": "'res' is defined but never used. Allowed unused args must match /^_/u.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      }
+    ]
+  },
+  {
+    "file": "/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/pages/world/[slug].tsx",
+    "folder": "pages",
+    "errors": 0,
+    "warnings": 3,
+    "total": 3,
+    "messages": [
+      {
+        "line": 10,
+        "column": 10,
+        "message": "'position' is assigned a value but never used.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      },
+      {
+        "line": 19,
+        "column": 18,
+        "message": "'res' is defined but never used. Allowed unused args must match /^_/u.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      },
+      {
+        "line": 35,
+        "column": 30,
+        "message": "'i' is defined but never used. Allowed unused args must match /^_/u.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      }
+    ]
+  },
+  {
+    "file": "/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/pages/world/profile/[slug]/share.tsx",
+    "folder": "pages",
+    "errors": 0,
+    "warnings": 3,
+    "total": 3,
+    "messages": [
+      {
+        "line": 11,
+        "column": 9,
+        "message": "'user' is assigned a value but never used.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      },
+      {
+        "line": 20,
+        "column": 14,
+        "message": "'res' is defined but never used. Allowed unused args must match /^_/u.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      },
+      {
+        "line": 24,
+        "column": 14,
+        "message": "'res' is defined but never used. Allowed unused args must match /^_/u.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      }
+    ]
+  },
+  {
+    "file": "/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/pages/world/profile/[slug]/supporters.tsx",
+    "folder": "pages",
+    "errors": 0,
+    "warnings": 1,
+    "total": 1,
+    "messages": [
+      {
+        "line": 14,
+        "column": 14,
+        "message": "'res' is defined but never used. Allowed unused args must match /^_/u.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      }
+    ]
+  },
+  {
+    "file": "/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/postcss.config.cjs",
+    "folder": "",
+    "errors": 1,
+    "warnings": 0,
+    "total": 1,
+    "messages": [
+      {
+        "line": 1,
+        "column": 1,
+        "message": "'module' is not defined.",
+        "ruleId": "no-undef",
+        "severity": "error"
+      }
+    ]
+  },
+  {
+    "file": "/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/scripts/check-links.js",
+    "folder": "scripts",
+    "errors": 6,
+    "warnings": 0,
+    "total": 6,
+    "messages": [
+      {
+        "line": 1,
+        "column": 12,
+        "message": "A `require()` style import is forbidden.",
+        "ruleId": "@typescript-eslint/no-require-imports",
+        "severity": "error"
+      },
+      {
+        "line": 1,
+        "column": 12,
+        "message": "'require' is not defined.",
+        "ruleId": "no-undef",
+        "severity": "error"
+      },
+      {
+        "line": 2,
+        "column": 14,
+        "message": "A `require()` style import is forbidden.",
+        "ruleId": "@typescript-eslint/no-require-imports",
+        "severity": "error"
+      },
+      {
+        "line": 2,
+        "column": 14,
+        "message": "'require' is not defined.",
+        "ruleId": "no-undef",
+        "severity": "error"
+      },
+      {
+        "line": 19,
+        "column": 9,
+        "message": "'console' is not defined.",
+        "ruleId": "no-undef",
+        "severity": "error"
+      },
+      {
+        "line": 20,
+        "column": 9,
+        "message": "'process' is not defined.",
+        "ruleId": "no-undef",
+        "severity": "error"
+      }
+    ]
+  },
+  {
+    "file": "/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/scripts/cleanup-expired-tokens.ts",
+    "folder": "scripts",
+    "errors": 0,
+    "warnings": 1,
+    "total": 1,
+    "messages": [
+      {
+        "line": 3,
+        "column": 6,
+        "message": "'ReportToken' is defined but never used.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      }
+    ]
+  },
+  {
+    "file": "/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/scripts/cleanup-sitemaps.ts",
+    "folder": "scripts",
+    "errors": 0,
+    "warnings": 1,
+    "total": 1,
+    "messages": [
+      {
+        "line": 29,
+        "column": 15,
+        "message": "'base' is assigned a value but never used.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      }
+    ]
+  },
+  {
+    "file": "/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/scripts/detect-campaign-winners.ts",
+    "folder": "scripts",
+    "errors": 0,
+    "warnings": 1,
+    "total": 1,
+    "messages": [
+      {
+        "line": 9,
+        "column": 16,
+        "message": "'run' is defined but never used.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      }
+    ]
+  },
+  {
+    "file": "/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/scripts/filter-lint-report.ts",
+    "folder": "scripts",
+    "errors": 0,
+    "warnings": 5,
+    "total": 5,
+    "messages": [
+      {
+        "line": 8,
+        "column": 11,
+        "message": "Insert `⏎····`",
+        "ruleId": "prettier/prettier",
+        "severity": "warning"
+      },
+      {
+        "line": 9,
+        "column": 1,
+        "message": "Replace `····` with `······`",
+        "ruleId": "prettier/prettier",
+        "severity": "warning"
+      },
+      {
+        "line": 10,
+        "column": 5,
+        "message": "Insert `··`",
+        "ruleId": "prettier/prettier",
+        "severity": "warning"
+      },
+      {
+        "line": 11,
+        "column": 1,
+        "message": "Insert `··`",
+        "ruleId": "prettier/prettier",
+        "severity": "warning"
+      },
+      {
+        "line": 27,
+        "column": 13,
+        "message": "Replace ``✅·Wrote·${filtered.length}·files·with·issues·to·filtered-lint-report.json`` with `⏎··`✅·Wrote·${filtered.length}·files·with·issues·to·filtered-lint-report.json`⏎`",
+        "ruleId": "prettier/prettier",
+        "severity": "warning"
+      }
+    ]
+  },
+  {
+    "file": "/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/scripts/gen-openapi.ts",
+    "folder": "scripts",
+    "errors": 0,
+    "warnings": 1,
+    "total": 1,
+    "messages": [
+      {
+        "line": 3,
+        "column": 8,
+        "message": "'fs' is defined but never used.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      }
+    ]
+  },
+  {
+    "file": "/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/scripts/geo-alerts.ts",
+    "folder": "scripts",
+    "errors": 0,
+    "warnings": 1,
+    "total": 1,
+    "messages": [
+      {
+        "line": 2,
+        "column": 8,
+        "message": "'fetch' is defined but never used.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      }
+    ]
+  },
+  {
+    "file": "/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/scripts/lint-digest.ts",
+    "folder": "scripts",
+    "errors": 0,
+    "warnings": 3,
+    "total": 3,
+    "messages": [
+      {
+        "line": 16,
+        "column": 12,
+        "message": "Insert `⏎·····`",
+        "ruleId": "prettier/prettier",
+        "severity": "warning"
+      },
+      {
+        "line": 34,
+        "column": 23,
+        "message": "Replace `string,·{·total:·number;·errors:·number;·warnings:·number;·files:·any[]·}` with `⏎··string,⏎··{·total:·number;·errors:·number;·warnings:·number;·files:·any[]·}⏎`",
+        "ruleId": "prettier/prettier",
+        "severity": "warning"
+      },
+      {
+        "line": 54,
+        "column": 15,
+        "message": "Insert `⏎·········`",
+        "ruleId": "prettier/prettier",
+        "severity": "warning"
+      }
+    ]
+  },
+  {
+    "file": "/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/scripts/lint-summary.ts",
+    "folder": "scripts",
+    "errors": 0,
+    "warnings": 6,
+    "total": 6,
+    "messages": [
+      {
+        "line": 8,
+        "column": 11,
+        "message": "Insert `⏎····`",
+        "ruleId": "prettier/prettier",
+        "severity": "warning"
+      },
+      {
+        "line": 9,
+        "column": 1,
+        "message": "Replace `····` with `······`",
+        "ruleId": "prettier/prettier",
+        "severity": "warning"
+      },
+      {
+        "line": 10,
+        "column": 5,
+        "message": "Insert `··`",
+        "ruleId": "prettier/prettier",
+        "severity": "warning"
+      },
+      {
+        "line": 11,
+        "column": 1,
+        "message": "Insert `··`",
+        "ruleId": "prettier/prettier",
+        "severity": "warning"
+      },
+      {
+        "line": 23,
+        "column": 9,
+        "message": "Insert `⏎···`",
+        "ruleId": "prettier/prettier",
+        "severity": "warning"
+      },
+      {
+        "line": 26,
+        "column": 17,
+        "message": "Replace `⏎··`Found·${filtered.length}·files·with·issues:\\n`,⏎··...lines,⏎].join('\\n'` with ``Found·${filtered.length}·files·with·issues:\\n`,·...lines].join(⏎··'\\n'⏎`",
+        "ruleId": "prettier/prettier",
+        "severity": "warning"
+      }
+    ]
+  },
+  {
+    "file": "/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/scripts/modernize-api-files.ts",
+    "folder": "scripts",
+    "errors": 0,
+    "warnings": 2,
+    "total": 2,
+    "messages": [
+      {
+        "line": 25,
+        "column": 9,
+        "message": "'isMiddleware' is assigned a value but never used.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      },
+      {
+        "line": 26,
+        "column": 9,
+        "message": "'isRoute' is assigned a value but never used.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      }
+    ]
+  },
+  {
+    "file": "/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/scripts/modernize-api-json.ts",
+    "folder": "scripts",
+    "errors": 0,
+    "warnings": 1,
+    "total": 1,
+    "messages": [
+      {
+        "line": 43,
+        "column": 10,
+        "message": "'code' is defined but never used. Allowed unused args must match /^_/u.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      }
+    ]
+  },
+  {
+    "file": "/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/scripts/notify-webhooks.ts",
+    "folder": "scripts",
+    "errors": 0,
+    "warnings": 1,
+    "total": 1,
+    "messages": [
+      {
+        "line": 2,
+        "column": 8,
+        "message": "'path' is defined but never used.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      }
+    ]
+  },
+  {
+    "file": "/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/scripts/process-regeneration-queue.ts",
+    "folder": "scripts",
+    "errors": 0,
+    "warnings": 1,
+    "total": 1,
+    "messages": [
+      {
+        "line": 11,
+        "column": 22,
+        "message": "'error' is assigned a value but never used.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      }
+    ]
+  },
+  {
+    "file": "/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/scripts/screenshot-worker.ts",
+    "folder": "scripts",
+    "errors": 0,
+    "warnings": 1,
+    "total": 1,
+    "messages": [
+      {
+        "line": 42,
+        "column": 12,
+        "message": "'err' is defined but never used.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      }
+    ]
+  },
+  {
+    "file": "/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/scripts/trigger-campaign-starts.ts",
+    "folder": "scripts",
+    "errors": 0,
+    "warnings": 1,
+    "total": 1,
+    "messages": [
+      {
+        "line": 10,
+        "column": 28,
+        "message": "'error' is assigned a value but never used.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      }
+    ]
+  },
+  {
+    "file": "/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/scripts/visualize-routes.ts",
+    "folder": "scripts",
+    "errors": 0,
+    "warnings": 1,
+    "total": 1,
+    "messages": [
+      {
+        "line": 12,
+        "column": 10,
+        "message": "'fileToRoute' is defined but never used.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      }
+    ]
+  },
+  {
+    "file": "/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/tailwind.config.ts",
+    "folder": "",
+    "errors": 1,
+    "warnings": 0,
+    "total": 1,
+    "messages": [
+      {
+        "line": 42,
+        "column": 13,
+        "message": "A `require()` style import is forbidden.",
+        "ruleId": "@typescript-eslint/no-require-imports",
+        "severity": "error"
+      }
+    ]
+  },
+  {
+    "file": "/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/tests/redirects.spec.ts",
+    "folder": "tests",
+    "errors": 0,
+    "warnings": 1,
+    "total": 1,
+    "messages": [
+      {
+        "line": 4,
+        "column": 9,
+        "message": "'response' is assigned a value but never used.",
+        "ruleId": "@typescript-eslint/no-unused-vars",
+        "severity": "warning"
+      }
+    ]
+  },
+  {
+    "file": "/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/tools/cli/generate-site.js",
+    "folder": "tools",
+    "errors": 1,
+    "warnings": 0,
+    "total": 1,
+    "messages": [
+      {
+        "line": 19,
+        "column": 3,
+        "message": "'console' is not defined.",
+        "ruleId": "no-undef",
+        "severity": "error"
+      }
+    ]
+  }
+]

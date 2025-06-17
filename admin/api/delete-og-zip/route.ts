@@ -1,6 +1,6 @@
 /* app/api/delete-og-zip/route.ts */
 
-import { supabase } from '../../lib/supabaseClient.js';
+import { supabase } from '@/lib/supabaseClient.js';
 import { json } from '../../../lib/api/json.js';
 import { createClient } from '@supabase/supabase-js';
 import { NextRequest } from 'next/server';

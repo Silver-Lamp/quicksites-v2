@@ -1,8 +1,8 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { supabase } from '@/lib/supabase';
-import { Button } from '@/components/admin/ui/button';
+import { supabase } from '@/lib/supabaseClient.js';
+import { Button } from '@/components/ui/button';
 import { Template } from '@/types/template';
 
 export default function TemplateUserViewer() {

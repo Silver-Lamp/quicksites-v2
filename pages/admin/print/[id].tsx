@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
-import { supabase } from '@/lib/supabase';
+import { supabase } from '@/lib/supabaseClient.js';
 import QRCode from 'react-qr-code';
 
 export default function PrintCard() {

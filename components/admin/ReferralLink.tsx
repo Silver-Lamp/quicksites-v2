@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { supabase } from '@/lib/supabase';
+import { supabase } from '@/lib/supabaseClient.js';
 
 export default function ReferralLink() {
   const [email, setEmail] = useState('');

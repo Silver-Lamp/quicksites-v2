@@ -1,5 +1,5 @@
 import { renderOgImage } from '@/admin/lib/og/renderOgImage';
-import { supabase } from '@/lib/supabase';
+import { supabase } from '@/lib/supabaseClient.js';
 import { Theme, Brand } from '@/types/template';
 import { NextApiRequest, NextApiResponse } from 'next';
 

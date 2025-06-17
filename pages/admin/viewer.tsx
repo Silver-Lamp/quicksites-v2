@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { supabase } from '@/lib/supabase';
+import { supabase } from '@/lib/supabaseClient.js';
 import { useRouter } from 'next/router';
 import dayjs from 'dayjs';
 

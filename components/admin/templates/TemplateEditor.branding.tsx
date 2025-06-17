@@ -1,8 +1,8 @@
 // Inside TemplateEditor component
 
 import { useEffect, useState } from 'react';
-import { supabase } from '@/lib/supabase';
-import { Label } from '@/components/admin/ui/label';
+import { supabase } from '@/lib/supabaseClient.js';
+import { Label } from '@/components/ui/label';
 
 const [brandingProfiles, setBrandingProfiles] = useState<any[]>([]);
 const [selectedProfileId, setSelectedProfileId] = useState<string | null>(null);

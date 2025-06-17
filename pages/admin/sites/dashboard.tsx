@@ -4,7 +4,7 @@ import { useEffect } from 'react';
 import { json } from '@/lib/api/json';
 import Page from '@/components/layout/Page';
 import Dashboard from '@/components/admin/DashboardGridDraggable';
-import { supabase } from '@/lib/supabase';
+import { supabase } from '@/lib/supabaseClient.js';
 import Link from 'next/link';
 import AuthGuard from '@/components/admin/AuthGuard';
 

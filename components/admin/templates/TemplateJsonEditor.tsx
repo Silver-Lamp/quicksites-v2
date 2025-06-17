@@ -1,6 +1,6 @@
 // TemplateJsonEditor.tsx (collapsible + editable toggle)
 import { useState, useEffect } from 'react';
-import { Button } from '@/components/admin/ui/button';
+import { Button } from '@/components/ui/button';
 import { ChevronRight, ChevronDown } from 'lucide-react';
 import type { JsonValue } from '@/types/json';
 

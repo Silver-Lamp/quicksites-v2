@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from 'react';
-import { supabase } from '@/lib/supabase';
+import { supabase } from '@/lib/supabaseClient.js';
 import Papa from 'papaparse';
 import type { CSVLeadRow, Lead } from '@/types/lead.types';
 import { createLeadFromPhoto } from '@/lib/leads/photoProcessor';

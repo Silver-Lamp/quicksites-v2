@@ -4,7 +4,7 @@ import { createClient } from '@supabase/supabase-js';
 import QRCode from 'qrcode';
 import Image from 'next/image';
 import TemplatePreview from '@/components/admin/templates/TemplatePreview';
-import { Button } from '@/components/admin/ui/button';
+import { Button } from '@/components/ui/button';
 import { generateSocialCard } from '@/admin/lib/generateSocialCard';
 
 const supabase = createClient(

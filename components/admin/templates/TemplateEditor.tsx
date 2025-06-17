@@ -1,12 +1,7 @@
 // TemplateEditor.tsx (with logging + fallback JSON)
 import { useEffect, useState } from 'react';
-import { ScrollArea } from '@/components/admin/ui/scroll-area';
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from '@/components/admin/ui/tabs';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import TemplateSettingsPanel from './TemplateSettingsPanel';
 import TemplatePageEditor from './TemplatePageEditor';
 import TemplateJsonEditor from './TemplateJsonEditor';
@@ -16,7 +11,7 @@ import TemplateActionToolbar from './TemplateActionToolbar';
 import TemplatePublishModal from './TemplatePublishModal';
 import DevicePreviewWrapper from './DevicePreviewWrapper';
 import { useAutosaveTemplate } from '@/hooks/useAutosaveTemplate';
-import { Button } from '@/components/admin/ui/button';
+import { Button } from '@/components/ui/button';
 import { toast } from 'react-hot-toast';
 import ImageUploader from '../admin/ImageUploader';
 import TemplateImageGallery from '../admin/TemplateImageGallery';

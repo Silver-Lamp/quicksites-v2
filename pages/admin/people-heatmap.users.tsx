@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { supabase } from '@/lib/supabase';
+import { supabase } from '@/lib/supabaseClient.js';
 
 function getDayKey(date: Date) {
   return new Date(date).toISOString().split('T')[0];

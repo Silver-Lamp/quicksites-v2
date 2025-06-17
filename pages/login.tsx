@@ -4,7 +4,7 @@
 
 import { useSetSessionFromHash } from '@/hooks/useSetSessionFromHash';
 import { useState, useEffect } from 'react';
-import { supabase } from '@/lib/supabase';
+import { supabase } from '@/lib/supabaseClient.js';
 import { useRouter } from 'next/router';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 

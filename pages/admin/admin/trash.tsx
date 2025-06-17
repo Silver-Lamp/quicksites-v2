@@ -1,6 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 import { GetServerSideProps } from 'next';
-import { Button } from '@/components/admin/ui/button';
+import { Button } from '@/components/ui/button';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,

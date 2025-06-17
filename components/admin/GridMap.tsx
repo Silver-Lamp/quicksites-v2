@@ -2,7 +2,7 @@
 import L from 'leaflet';
 import { useRef, useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
-import { supabase } from '@/lib/supabase';
+import { supabase } from '@/lib/supabaseClient.js';
 import { MapContainer, TileLayer } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import { resolveGeo } from '@/lib/resolveGeo';

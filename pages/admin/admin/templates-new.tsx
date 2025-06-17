@@ -2,10 +2,10 @@
 import { useEffect, useState } from 'react';
 import { json } from '@/lib/api/json';
 import { useRouter } from 'next/router';
-import { Input } from '@/components/admin/ui/input';
-import { Button } from '@/components/admin/ui/button';
-import { Label } from '@/components/admin/ui/label';
-import { Textarea } from '@/components/admin/ui/textarea';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 
 export default function NewTemplatePage() {
   const router = useRouter();

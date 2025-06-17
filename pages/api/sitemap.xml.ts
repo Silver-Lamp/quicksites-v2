@@ -1,5 +1,5 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { supabase } from '@/lib/supabase';
+import { supabase } from '@/lib/supabaseClient.js';
 
 const BASE_URL = 'https://quicksites.ai';
 const MAX_URLS_PER_SITEMAP = 1000;

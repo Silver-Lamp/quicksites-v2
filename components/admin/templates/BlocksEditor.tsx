@@ -9,7 +9,7 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { GripVertical, Pencil } from 'lucide-react';
-import { Button } from '@/components/admin/ui/button';
+import { Button } from '@/components/ui/button';
 import BlockSidebar from './BlockSidebar';
 import type { Block } from '@/types/blocks';
 import type { BlocksEditorProps } from '@/types/blocks';

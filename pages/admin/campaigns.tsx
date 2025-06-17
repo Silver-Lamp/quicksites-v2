@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { supabase } from '@/lib/supabase';
+import { supabase } from '@/lib/supabaseClient.js';
 import dayjs from 'dayjs';
 import AdminLayout from '@/components/layout/AdminLayout';
 

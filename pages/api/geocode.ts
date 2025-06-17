@@ -1,5 +1,5 @@
 // pages/api/geocode.ts
-import { supabase } from '@/lib/supabase';
+import { supabase } from '@/lib/supabaseClient.js';
 import { json } from '@/lib/api/json';
 import type { NextApiRequest, NextApiResponse } from 'next';
 

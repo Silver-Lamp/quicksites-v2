@@ -3,14 +3,14 @@
 import { useEffect, useState } from 'react';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { useSearchParams } from 'next/navigation';
-import { supabase } from '@/lib/supabase';
+import { supabase } from '@/lib/supabaseClient.js';
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
-} from '@/components/admin/ui/dialog';
-import { Button } from '@/components/admin/ui/button';
+} from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
 
 interface UpgradeModalProps {
   open: boolean;

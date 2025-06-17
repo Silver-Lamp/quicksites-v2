@@ -2,7 +2,7 @@
 import Head from 'next/head';
 import { useState } from 'react';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
-import { supabase } from '@/lib/supabase';
+import { supabase } from '@/lib/supabaseClient.js';
 import toast from 'react-hot-toast';
 
 export default function RequestAccessPage() {

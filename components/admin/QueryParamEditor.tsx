@@ -1,14 +1,14 @@
 import { Fragment } from 'react';
 import { z, ZodObject, ZodFirstPartyTypeKind } from 'zod';
-import { Input } from '@/components/admin/ui/input';
-import { Label } from '@/components/admin/ui/label';
-import { Switch } from '@/components/admin/ui/switch';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Switch } from '@/components/ui/switch';
 import {
   Select,
   SelectTrigger,
   SelectContent,
   SelectItem,
-} from '@/components/admin/ui/select';
+} from '@/components/ui/select';
 import { useTypedQueryParam } from '@/hooks/useTypedQueryParam';
 
 function FieldRenderer({

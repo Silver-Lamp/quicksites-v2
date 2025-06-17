@@ -3,9 +3,9 @@ import Head from 'next/head';
 import { json } from '@/lib/api/json';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import SeedButton from '@/components/admin/admin/SeedButton';
-import { Card, CardContent, CardHeader } from '@/components/admin/ui/card';
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { useEffect, useState } from 'react';
-import { supabase } from '@/lib/supabase';
+import { supabase } from '@/lib/supabaseClient.js';
 
 export default function AdminDashboard() {
   const { hasRole } = useCurrentUser();

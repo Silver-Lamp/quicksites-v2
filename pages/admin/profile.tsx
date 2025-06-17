@@ -1,13 +1,13 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { format } from 'date-fns-tz';
-import { formatDistanceToNow } from 'date-fns';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
-import { supabase } from '@/lib/supabase';
-import { Input } from '@/components/admin/ui/input';
-import { Button } from '@/components/admin/ui/button';
-import { Label } from '@/components/admin/ui/label';
+import { supabase } from '@/lib/supabaseClient.js';
+import { formatDistanceToNow } from 'date-fns';
+import { format } from 'date-fns-tz';
+import { useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
 
 export default function ProfilePage() {
@@ -22,11 +22,11 @@ export default function ProfilePage() {
       .select('id, email, deleted_at, user_id, admin_actor, reason')
       .order('deleted_at', { ascending: false })
       .limit(1)
-      .then(({ data }) => {
+      .then(({ data }: { data: any }) => {
         if (data?.length) setLatestLog(data[0]);
       });
 
-    supabase.auth.getUser().then(({ data }) => {
+    supabase.auth.getUser().then(({ data }: { data: any }) => {
       setUserMetadata(data.user ?? null);
     });
   }, []);

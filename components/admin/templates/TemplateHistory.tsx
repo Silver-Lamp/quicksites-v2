@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/admin/lib/supabaseClient';
 import TemplateVersionDiff from './TemplateVersionDiff';
-import { Button } from '@/components/admin/ui/button';
+import { Button } from '@/components/ui/button';
 import toast from 'react-hot-toast';
 
 export default function TemplateHistory({

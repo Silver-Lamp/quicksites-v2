@@ -9,8 +9,8 @@ import {
   SelectValue,
   SelectContent,
   SelectItem,
-} from '@/components/admin/ui/select';
-import { Card } from '@/components/admin/ui/card';
+} from '@/components/ui/select';
+import { Card } from '@/components/ui/card';
 import { parseISO, isAfter, isBefore } from 'date-fns';
 import {
   ResponsiveContainer,
@@ -21,9 +21,9 @@ import {
   Tooltip,
   Legend,
 } from 'recharts';
-import { Input } from '@/components/admin/ui/input';
+import { Input } from '@/components/ui/input';
 import { useRouter } from 'next/navigation';
-import { Button } from '@/components/admin/ui/button';
+import { Button } from '@/components/ui/button';
 
 interface UpgradeEvent {
   id: string;

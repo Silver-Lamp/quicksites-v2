@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
-import { Button } from '@/components/admin/ui/button';
+import { Button } from '@/components/ui/button';
 import { saveAsTemplate } from '@/admin/lib/saveAsTemplate';
 import { createSharedPreview } from '@/admin/lib/createSharedPreview';
 import { supabase } from '@/admin/lib/supabaseClient';

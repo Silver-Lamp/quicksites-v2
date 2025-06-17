@@ -1,7 +1,7 @@
 import { GetServerSideProps } from 'next';
 import { createClient } from '@supabase/supabase-js';
-import { Input } from '@/components/admin/ui/input';
-import { Button } from '@/components/admin/ui/button';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
 import { useState } from 'react';
 import QRCode from 'react-qr-code';
 

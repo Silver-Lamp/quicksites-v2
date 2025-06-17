@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
-import { Input } from '@/components/admin/ui/input';
-import { Button } from '@/components/admin/ui/button';
-import { Textarea } from '@/components/admin/ui/textarea';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { Textarea } from '@/components/ui/textarea';
 
 type Comment = {
   id: string;

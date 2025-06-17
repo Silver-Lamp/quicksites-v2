@@ -2,15 +2,15 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import { createClient } from '@supabase/supabase-js';
 import Link from 'next/link';
-import { Label } from '@/components/admin/ui/label';
+import { Label } from '@/components/ui/label';
 import {
   Select,
   SelectTrigger,
   SelectContent,
   SelectItem,
   SelectValue,
-} from '@/components/admin/ui/select';
-import { Button } from '@/components/admin/ui/button';
+} from '@/components/ui/select';
+import { Button } from '@/components/ui/button';
 import TemplateEditor from '@/components/admin/templates/TemplateEditor';
 
 const supabase = createClient(

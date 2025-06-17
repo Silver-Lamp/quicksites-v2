@@ -15,7 +15,7 @@ import {
   Tooltip,
   Legend,
 } from 'chart.js';
-import { supabase } from '@/lib/supabase';
+import { supabase } from '@/lib/supabaseClient.js';
 import html2pdf from 'html2pdf.js';
 
 ChartJS.register(

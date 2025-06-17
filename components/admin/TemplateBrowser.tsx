@@ -1,12 +1,8 @@
 import { useEffect, useState } from 'react';
-import {
-  Dialog,
-  DialogTrigger,
-  DialogContent,
-} from '@/components/admin/ui/dialog';
-import { Card, CardContent } from '@/components/admin/ui/card';
-import { Button } from '@/components/admin/ui/button';
-import { ScrollArea } from '@/components/admin/ui/scroll-area';
+import { Dialog, DialogTrigger, DialogContent } from '@/components/ui/dialog';
+import { Card, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import SafeLink from './ui/SafeLink';
 
 type Template = {

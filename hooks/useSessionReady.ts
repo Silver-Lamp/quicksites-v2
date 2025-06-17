@@ -1,7 +1,7 @@
 // ✅ FILE: /hooks/useSessionReady.ts
 
 import { useEffect, useState } from 'react';
-import { supabase } from '@/lib/supabase';
+import { supabase } from '@/lib/supabaseClient.js';
 
 export function useSessionReady(): boolean {
   const [ready, setReady] = useState(false);

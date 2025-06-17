@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
-import { Dialog, DialogContent } from '@/components/admin/ui/dialog';
+import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { BlocksEditor } from '@/components/admin/templates/BlocksEditor';
 import toast from 'react-hot-toast';
-import { Button } from '@/components/admin/ui/button';
+import { Button } from '@/components/ui/button';
 import { BlockEditorModalProps } from '@/types/blocks';
 
 const schemaHints: Record<string, string> = {

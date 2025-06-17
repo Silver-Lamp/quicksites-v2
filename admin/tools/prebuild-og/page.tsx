@@ -4,7 +4,7 @@
 
 import { useEffect, useState } from 'react';
 import { json } from '@/lib/api/json';
-import { Button } from '@/components/admin/ui/button';
+import { Button } from '@/components/ui/button';
 
 export default function PrebuildOGPage() {
   const [slugs, setSlugs] = useState<string[]>([]);

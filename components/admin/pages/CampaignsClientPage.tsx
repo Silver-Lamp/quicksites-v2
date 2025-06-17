@@ -12,7 +12,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover';
-import { Button } from '@/components/admin/ui/button';
+import { Button } from '@/components/ui/button';
 import { CalendarIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { CampaignFunnelTable } from '@/admin/guest-tokens/CampaignFunnelTable';

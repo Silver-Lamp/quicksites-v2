@@ -1,5 +1,5 @@
 // scripts/exportGeoCache.ts
-import { supabase } from '@/lib/supabase';
+import { supabase } from '@/lib/supabaseClient.js';
 import fs from 'fs';
 import path from 'path';
 

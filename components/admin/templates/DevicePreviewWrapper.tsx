@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Button } from '@/components/admin/ui/button';
+import { Button } from '@/components/ui/button';
 import { Monitor, Smartphone, Tablet, RotateCw } from 'lucide-react';
 
 type Mode = 'mobile' | 'tablet' | 'desktop';

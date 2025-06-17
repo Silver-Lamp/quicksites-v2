@@ -3,7 +3,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { supabase } from '@/lib/supabase';
+import { supabase } from '@/lib/supabaseClient.js';
 import { useRouter } from 'next/router';
 import Link from 'next/link';
 import { useUser } from '@supabase/auth-helpers-react';

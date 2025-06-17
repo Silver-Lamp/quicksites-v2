@@ -4,7 +4,7 @@
 
 import { useEffect, useState } from 'react';
 import { SessionContextProvider } from '@supabase/auth-helpers-react';
-import { supabase } from '@/lib/supabase';
+import { supabase } from '@/lib/supabaseClient.js';
 
 export default function SafeSupabaseProvider({
   children,

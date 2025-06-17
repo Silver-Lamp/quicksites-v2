@@ -1,7 +1,7 @@
 // --- File: pages/api/clone-template.ts ---
 import { NextApiRequest, NextApiResponse } from 'next';
 import { json } from '@/lib/api/json';
-import { supabase } from '@/lib/supabase';
+import { supabase } from '@/lib/supabaseClient.js';
 import router from 'next/router';
 import toast from 'react-hot-toast';
 

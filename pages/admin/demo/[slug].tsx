@@ -1,7 +1,7 @@
 import { GetServerSideProps } from 'next';
 import TemplatePreview from '@/components/admin/templates/TemplatePreview';
-import { ScrollArea } from '@/components/admin/ui/scroll-area';
-import { supabase } from '@/lib/supabase';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { supabase } from '@/lib/supabaseClient.js';
 
 export default function DemoTemplate({
   data,

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Button } from '@/components/admin/ui/button';
+import { Button } from '@/components/ui/button';
 import { supabase } from '@/admin/lib/supabaseClient';
 
 export default function VersionHistoryPanel({

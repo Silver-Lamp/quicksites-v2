@@ -1,10 +1,10 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { supabase } from '@/lib/supabase';
+import { supabase } from '@/lib/supabaseClient.js';
 import DashboardBlock from '@/components/admin/DashboardBlock';
 import Heatmap from '@/components/analytics/Heatmap';
-import { Button } from '@/components/admin/ui/button';
+import { Button } from '@/components/ui/button';
 
 type LayoutBlock = {
   id: keyof typeof BLOCK_LIBRARY;

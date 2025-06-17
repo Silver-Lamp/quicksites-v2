@@ -4,8 +4,8 @@
 
 import { useMemo, useState } from 'react';
 import { parseISO, isAfter, isBefore } from 'date-fns';
-import { Button } from '@/components/admin/ui/button';
-import { Card } from '@/components/admin/ui/card';
+import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
 import {
   ResponsiveContainer,
   PieChart,

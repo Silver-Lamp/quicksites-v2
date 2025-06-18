@@ -74,7 +74,9 @@ export default async function handler(_req, res) {
       try {
         const img = await loadImage(c.logo_url);
         ctx.drawImage(img, 440, 20, 140, 70);
-      } catch {}
+      } catch {
+        console.debug('error loading logo image');
+      }
     }
 
     archive.append(canvas.toBuffer('image/png'), { name: `${c.slug}-badge.png` });

@@ -1,7 +1,5 @@
 import { useEffect, useState } from 'react';
 import { diff } from 'jsondiffpatch';
-
-// @ts-ignore
 import * as htmlFormatter from 'jsondiffpatch/formatters/html';
 
 export default function TemplateVersionDiff({

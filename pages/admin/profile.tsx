@@ -1,14 +1,14 @@
 'use client';
 
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { useCurrentUser } from '@/hooks/useCurrentUser';
-import { supabase } from '@/lib/supabaseClient.js';
+import { Button } from '@/components/ui/Button.js';
+import { Input } from '@/components/ui/input.js';
+import { Label } from '@/components/ui/label.js';
+import { useCurrentUser } from '@/hooks/useCurrentUser.js';
+import { supabase } from '@/admin/lib/supabaseClient.js';
 import { formatDistanceToNow } from 'date-fns';
 import { format } from 'date-fns-tz';
 import { useEffect, useState } from 'react';
-import toast from 'react-hot-toast';
+import { toast } from 'react-hot-toast';
 
 export default function ProfilePage() {
   const [latestLog, setLatestLog] = useState<any | null>(null);
@@ -45,9 +45,17 @@ export default function ProfilePage() {
       data: { avatar_url: avatarUrl, name: displayName, bio },
     });
     if (error) {
-      toast.error('Failed to update profile');
+      if (typeof toast.error === 'function') {
+        toast.error('Failed to update profile');
+      } else {
+        console.error('Toast error function is not available.');
+      }
     } else {
-      toast.success('Profile updated!');
+      if (typeof toast.success === 'function') {
+        toast.success('Profile updated!');
+      } else {
+        console.error('Toast success function is not available.');
+      }
     }
   };
 
@@ -113,9 +121,19 @@ export default function ProfilePage() {
                     redirectTo: `${window.location.origin}/reset`,
                   }
                 );
-                error
-                  ? toast.error('Failed to send reset email')
-                  : toast.success('Reset email sent!');
+                if (error) {
+                  if (typeof toast.error === 'function') {
+                    toast.error('Failed to send reset email');
+                  } else {
+                    console.error('Toast error function is not available.');
+                  }
+                } else {
+                  if (typeof toast.success === 'function') {
+                    toast.success('Reset email sent!');
+                  } else {
+                    console.error('Toast success function is not available.');
+                  }
+                }
               }}
             >
               Send Password Reset Email
@@ -130,9 +148,19 @@ export default function ProfilePage() {
                     sent_from: 'profile_page',
                   }
                 );
-                error
-                  ? toast.error('Failed to send verification')
-                  : toast.success('Verification email sent!');
+                if (error) {
+                  if (typeof toast.error === 'function') {
+                    toast.error('Failed to send verification');
+                  } else {
+                    console.error('Toast error function is not available.');
+                  }
+                } else {
+                  if (typeof toast.success === 'function') {
+                    toast.success('Verification email sent!');
+                  } else {
+                    console.error('Toast success function is not available.');
+                  }
+                }
               }}
             >
               Resend Verification Email
@@ -161,9 +189,17 @@ export default function ProfilePage() {
                 );
 
                 if (error) {
-                  toast.error('Failed to delete account');
+                  if (typeof toast.error === 'function') {
+                    toast.error('Failed to delete account');
+                  } else {
+                    console.error('Toast error function is not available.');
+                  }
                 } else {
-                  toast.success('Account deleted');
+                  if (typeof toast.success === 'function') {
+                    toast.success('Account deleted');
+                  } else {
+                    console.error('Toast success function is not available.');
+                  }
                   setTimeout(() => {
                     window.location.href = '/goodbye';
                   }, 1500);

@@ -1,5 +1,5 @@
-import { useSmartLinkPersisted } from './useSmartLinkPersisted';
-import type { LinkTheme } from '@/admin/lib/links/theme';
+import { useSmartLinkPersisted } from './useSmartLinkPersisted.js';
+import type { LinkTheme } from '@/admin/lib/links/theme.js';
 import { useEffect, useState } from 'react';
 
 export default function SmartLinkDebug() {
@@ -59,7 +59,9 @@ export default function SmartLinkDebug() {
           onChange={(e) => {
             try {
               setQuery(JSON.parse(e.target.value));
-            } catch {}
+            } catch {
+              console.error('Invalid JSON');
+            }
           }}
         />
       </div>

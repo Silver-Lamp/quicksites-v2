@@ -1,7 +1,8 @@
-module.exports = {
+// jest.config.mjs
+export default {
   testEnvironment: 'jsdom',
-  testMatch: ['<rootDir>/__tests__/**/*.test.ts?(x)'],
-  setupFilesAfterEnv: ['<rootDir>/jest.setup.js'],
+  testMatch: ['**/__tests__/**/*.test.ts?(x)'],
+  setupFilesAfterEnv: ['<rootDir>/test/jest.setup.ts'],
   transform: {
     '^.+\\.(ts|tsx)$': ['babel-jest', { presets: ['next/babel'] }],
   },

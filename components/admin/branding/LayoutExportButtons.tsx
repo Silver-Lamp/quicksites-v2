@@ -1,5 +1,5 @@
 // import html2pdf from 'html2pdf.js';
-const html2pdf = require('html2pdf.js');
+// const html2pdf = require('html2pdf.js');
 
 export default function LayoutExportButtons({ layout }: { layout: any[] }) {
   const exportJson = () => {
@@ -14,9 +14,10 @@ export default function LayoutExportButtons({ layout }: { layout: any[] }) {
     URL.revokeObjectURL(url);
   };
 
-  const exportPdf = () => {
+  const exportPdf = async () => {
     const el = document.getElementById('wysiwyg-preview');
     if (el) {
+      const html2pdf = (await import('html2pdf.js')).default;
       html2pdf()
         .set({
           filename: 'branding-preview.pdf',
@@ -27,7 +28,7 @@ export default function LayoutExportButtons({ layout }: { layout: any[] }) {
         .save();
     }
   };
-
+  
   return (
     <div className="flex gap-4 mt-4">
       <button onClick={exportJson} className="text-sm underline text-blue-600">

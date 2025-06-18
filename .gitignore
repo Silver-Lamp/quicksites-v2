@@ -47,3 +47,6 @@ Thumbs.db
 # 📄 Optional logs
 logs/
 *.log
+
+# 🔧 Linting
+.lint-tmp/

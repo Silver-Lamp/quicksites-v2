@@ -1,4 +1,4 @@
-// quicksites-core/init.js
+/* eslint-env node */
 
 import { generateSite } from './cli/generate-site.js';
 import { logDomainGeneration } from './lib/domainTracker.js';

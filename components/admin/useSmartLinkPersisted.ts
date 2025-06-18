@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import type { LinkTheme } from '@/admin/lib/links/theme';
+import type { LinkTheme } from '@/admin/lib/links/theme.js';
 
 export function useSmartLinkPersisted() {
   const [theme, setTheme] = useState<LinkTheme>('primary');
@@ -14,7 +14,9 @@ export function useSmartLinkPersisted() {
         const parsed = JSON.parse(stored);
         if (parsed.theme) setTheme(parsed.theme);
         if (parsed.query) setQuery(parsed.query);
-      } catch {}
+      } catch {
+        console.error('Invalid JSON');
+      }
     }
   }, []);
 

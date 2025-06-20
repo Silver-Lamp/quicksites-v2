@@ -3,7 +3,7 @@
 import { useRouter } from 'next/router';
 import { json } from '@/lib/api/json';
 import { useEffect, useState } from 'react';
-import { CelebrationModal } from '@/components/embed/CelebrationModal';
+import { CelebrationModal } from '@/components/embed/celebration-modal';
 
 export default function SupportCampaign() {
   const { query } = useRouter();

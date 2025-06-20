@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 import { createClient } from '@supabase/supabase-js';
 import QRCode from 'qrcode';
 import Image from 'next/image';
-import TemplatePreview from '@/components/admin/templates/TemplatePreview';
+import TemplatePreview from '@/components/admin/templates/template-preview';
 import { Button } from '@/components/ui/button';
 import { generateSocialCard } from '@/admin/lib/generateSocialCard';
 

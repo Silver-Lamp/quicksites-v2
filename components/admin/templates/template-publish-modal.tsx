@@ -4,10 +4,10 @@ import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import toast from 'react-hot-toast';
 import { supabase } from '@/admin/lib/supabaseClient';
-// import VersionHistoryPanel from '@/components/templates/VersionHistoryPanel';
-import VersionHistoryPanel from '@/components/admin/VersionHistoryPanel';
-import PublishForm from '@/components/admin/PublishForm';
-import { PublishSuccessPanel } from '@/components/admin/PublishSuccessPanel';
+// import VersionHistoryPanel from '@/components/templates/version-history-panel';
+import VersionHistoryPanel from '@/components/admin/version-history-panel';
+import PublishForm from '@/components/admin/publish-form';
+import { PublishSuccessPanel } from '@/components/admin/publish-success-panel';
 import { publishSite } from '@/admin/utils/publishSite';
 
 export default function TemplatePublishModal({

@@ -5,7 +5,7 @@
 import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
 import { AddBlockMenu } from './AddBlockMenu';
 import { useState } from 'react';
-import BlockSettingsModal from '@/components/admin/BlockSettingsModal';
+import BlockSettingsModal from '@/components/admin/block-settings-modal';
 
 const ALL_BLOCKS = [
   { id: 'activity', title: 'Activity' },

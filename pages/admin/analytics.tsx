@@ -1,8 +1,8 @@
 'use client';
 import { useState } from 'react';
-import ThemedBarChart from '@/components/ui/ThemedBarChart';
-import { Modal } from '@/components/ui/Modal';
-import { Input, Label } from '@/components/ui/Form';
+import ThemedBarChart from '@/components/ui/themed-bar-chart';
+import { Modal } from '@/components/ui/modal';
+import { Input, Label } from '@/components/ui/form';
 
 export default function AnalyticsPage() {
   const [showModal, setShowModal] = useState(false);

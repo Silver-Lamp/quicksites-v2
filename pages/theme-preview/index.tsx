@@ -1,6 +1,6 @@
-import { ThemeToggleButton } from '@/components/ui/ThemeToggleButton';
+import { ThemeToggleButton } from '@/components/ui/theme-toggle-button';
 import { Button } from '@/components/ui/button';
-import Card from '@/components/ui/Card';
+import Card from '@/components/ui/card';
 
 export default function ThemePreviewPage() {
   return (

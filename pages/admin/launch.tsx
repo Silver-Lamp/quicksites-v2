@@ -7,7 +7,7 @@ import { publishSite } from '@/admin/utils/publishSite';
 import { logEvent } from '@/admin/utils/logEvent';
 import dynamic from 'next/dynamic';
 
-const SitePreview = dynamic(() => import('@/components/admin/SitePreview'), {
+const SitePreview = dynamic(() => import('@/components/admin/site-preview'), {
   ssr: false,
 });
 

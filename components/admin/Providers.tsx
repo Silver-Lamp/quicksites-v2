@@ -3,7 +3,7 @@
 import { ReactNode } from 'react';
 import { SessionContextProvider } from '@supabase/auth-helpers-react';
 import { supabase } from '@/admin/lib/supabaseClient';
-import { SmartLinkProvider } from '@/components/admin/SmartLinkProvider';
+import { SmartLinkProvider } from '@/components/admin/smart-link-provider';
 import { Toaster } from 'react-hot-toast';
 import { ThemeProvider } from 'next-themes';
 

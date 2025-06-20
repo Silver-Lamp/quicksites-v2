@@ -1,8 +1,8 @@
 'use client';
 import { useEffect, useState } from 'react';
-import MobileDrawerSidebar from '@/components/admin/MobileDrawerSidebar';
-import NavBarWithBadges from '@/components/admin/NavBarWithBadges';
-import AdminSidebarLayout from '@/components/admin/layout/AdminSidebarLayout';
+import MobileDrawerSidebar from '@/components/admin/mobile-drawer-sidebar';
+import NavBarWithBadges from '@/components/admin/nav-bar-with-badges';
+import AdminSidebarLayout from '@/components/admin/layout/admin-sidebar-layout';
 
 export default function ResponsiveAdminLayout({ children }: { children: React.ReactNode }) {
   const [isMobile, setIsMobile] = useState(false);

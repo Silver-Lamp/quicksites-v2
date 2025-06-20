@@ -2,8 +2,8 @@
 
 'use client';
 
-import AuthGuard from '@/components/admin/AuthGuard';
-import RoleManager from '@/components/admin/RoleManager';
+import AuthGuard from '@/components/admin/auth-guard';
+import RoleManager from '@/components/admin/role-manager';
 
 export default function AdminRolesPage() {
   return (

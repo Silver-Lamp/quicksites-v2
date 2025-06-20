@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabaseClient.js';
 import dayjs from 'dayjs';
-import AdminLayout from '@/components/layout/AdminLayout';
+import AdminLayout from '@/components/layout/admin-layout';
 
 export default function CampaignsPage() {
   const [campaigns, setCampaigns] = useState<any[]>([]);

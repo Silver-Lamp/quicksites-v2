@@ -1,5 +1,5 @@
 import { GetServerSideProps } from 'next';
-import TemplatePreview from '@/components/admin/templates/TemplatePreview';
+import TemplatePreview from '@/components/admin/templates/template-preview';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { supabase } from '@/lib/supabaseClient.js';
 

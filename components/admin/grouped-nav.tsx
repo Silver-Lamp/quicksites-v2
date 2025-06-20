@@ -1,6 +1,6 @@
 // ✅ FILE: components/admin/GroupedNav.tsx (now using SidebarNavContext)
 
-import { useSidebarNav } from '@/components/admin/context/SidebarNavContext';
+import { useSidebarNav } from '@/components/admin/context/sidebar-nav-context';
 import SafeLink from './ui/SafeLink';
 
 export default function GroupedNav() {

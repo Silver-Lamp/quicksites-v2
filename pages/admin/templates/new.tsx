@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import { createClient } from '@supabase/supabase-js';
-import TemplateEditor from '@/components/admin/templates/TemplateEditor';
+import TemplateEditor from '@/components/admin/templates/template-editor';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,

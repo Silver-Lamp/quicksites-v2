@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react';
 import { json } from '@/lib/api/json';
 import { useRouter } from 'next/router';
-import { BlocksEditor } from '@/components/admin/templates/BlocksEditor';
+import { BlocksEditor } from '@/components/admin/templates/blocks-editor';
 import type { Block } from '@/types/blocks';
 
 export default function PublicEditPage() {

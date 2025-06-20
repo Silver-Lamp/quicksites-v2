@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import CSVDateRangeExport from '@/components/admin/CSVDateRangeExport';
+import CSVDateRangeExport from '@/components/admin/csv-date-range-export';
 
 export function LogToolbar({
   type,

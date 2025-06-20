@@ -1,5 +1,5 @@
-import SmartLinkDebug from '@/components/admin/SmartLinkDebug';
-import { SmartLinkProvider } from '@/components/admin/SmartLinkProvider';
+import SmartLinkDebug from '@/components/admin/smart-link-debug';
+import { SmartLinkProvider } from '@/components/admin/smart-link-provider';
 
 export default function SmartLinkDebugPage() {
   return (

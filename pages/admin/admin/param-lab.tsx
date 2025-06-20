@@ -6,10 +6,10 @@ import { createClient } from '@supabase/supabase-js';
 
 import { queryParamSchemas } from '@/admin/lib/queryParamSchemas';
 import { extractTags, summarizeQuery } from '@/admin/lib/queryUtils';
-import QueryParamEditor from '@/components/admin/QueryParamEditor';
-import TagFilterControls from '@/components/admin/TagFilterControls';
+import QueryParamEditor from '@/components/admin/query-param-editor';
+import TagFilterControls from '@/components/admin/tag-filter-controls';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
-// import PresetCard from '@/components/admin/PresetCard';
+// import PresetCard from '@/components/admin/preset-card';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,

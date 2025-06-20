@@ -5,16 +5,16 @@ import { useState, useEffect } from 'react';
 import { z, ZodSchema } from 'zod';
 import { useSearchParams, useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
-import QueryParamEditor from '@/components/admin/QueryParamEditor';
+import QueryParamEditor from '@/components/admin/query-param-editor';
 import { defaultSchema } from '@/admin/lib/defaultSchema';
 import { jsonSchemaToZod } from '@/admin/utils/jsonSchemaToZod';
 import { zodToJsonSchema } from '@/admin/utils/zodToJsonSchema';
-import VisualSchema from '@/components/admin/VisualSchema';
+import VisualSchema from '@/components/admin/visual-schema';
 import { createClient } from '@supabase/supabase-js';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { logEmbedView } from '@/admin/lib/logEmbedView';
 
-const SitePreview = dynamic(() => import('@/components/admin/SitePreview'), {
+const SitePreview = dynamic(() => import('@/components/admin/site-preview'), {
   ssr: false,
 });
 const supabase = createClient(

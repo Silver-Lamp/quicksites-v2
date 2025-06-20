@@ -2,11 +2,11 @@
 
 import { useEffect } from 'react';
 import { json } from '@/lib/api/json';
-import Page from '@/components/layout/Page';
-import Dashboard from '@/components/admin/DashboardGridDraggable';
+import Page from '@/components/layout/page';
+import Dashboard from '@/components/admin/dashboard-grid-draggable';
 import { supabase } from '@/lib/supabaseClient.js';
 import Link from 'next/link';
-import AuthGuard from '@/components/admin/AuthGuard';
+import AuthGuard from '@/components/admin/auth-guard';
 
 export default function DashboardPage() {
   useEffect(() => {

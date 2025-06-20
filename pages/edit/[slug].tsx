@@ -7,15 +7,15 @@ import { useRouter } from 'next/router';
 import dynamic from 'next/dynamic';
 import { createClient } from '@supabase/supabase-js';
 import { GripVertical } from 'lucide-react';
-import RenderBlock from '@/components/admin/templates/RenderBlock';
-import BlockSidebar from '@/components/admin/templates/BlockSidebar';
-import { SortableBlockList } from '@/components/admin/templates/SortableBlockList';
+import RenderBlock from '@/components/admin/templates/render-block';
+import BlockSidebar from '@/components/admin/templates/block-sidebar';
+import { SortableBlockList } from '@/components/admin/templates/sortable-block-list';
 import { DndContext, closestCenter } from '@dnd-kit/core';
 import { SortableContext, arrayMove, verticalListSortingStrategy } from '@dnd-kit/sortable';
-const SiteSettingsPanel = dynamic(() => import('@/components/admin/SiteSettingsPanel'), {
+const SiteSettingsPanel = dynamic(() => import('@/components/admin/site-settings-panel'), {
   ssr: false,
 });
-import ModalWrapper from '@/components/ui/ModalWrapper';
+import ModalWrapper from '@/components/ui/modal-wrapper';
 import type { SiteData } from '@/types/site';
 
 const supabase = createClient(

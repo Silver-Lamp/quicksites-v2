@@ -3,9 +3,9 @@
 'use client';
 
 import dynamic from 'next/dynamic';
-import AuthGuard from '@/components/admin/AuthGuard';
+import AuthGuard from '@/components/admin/auth-guard';
 
-const DynamicMap = dynamic(() => import('@/components/admin/GridMap'), {
+const DynamicMap = dynamic(() => import('@/components/admin/grid-map'), {
   ssr: false,
 });
 

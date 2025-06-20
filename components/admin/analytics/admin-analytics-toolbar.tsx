@@ -1,5 +1,5 @@
 import { ReactNode } from 'react';
-// import DateRangeToolbar from '@/components/admin/analytics/logs/DateRangeToolbar';
+// import DateRangeToolbar from '@/components/admin/analytics/logs/date-range-toolbar';
 
 export function AdminAnalyticsToolbar({
   title,

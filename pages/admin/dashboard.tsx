@@ -8,18 +8,18 @@ import { useRouter } from 'next/router';
 import Link from 'next/link';
 import { useUser } from '@supabase/auth-helpers-react';
 
-import Page from '@/components/layout/Page';
-import AdminTabs from '@/components/admin/AdminTabs';
-import { DashboardSelector } from '@/components/admin/DashboardSelector';
+import Page from '@/components/layout/page';
+import AdminTabs from '@/components/admin/admin-tabs';
+import { DashboardSelector } from '@/components/admin/dashboard-selector';
 import { useDashboardLayout } from '@/hooks/useDashboardLayout';
-import DashboardGridDraggable from '@/components/admin/DashboardGridDraggable';
-import BlockSettingsModal from '@/components/admin/BlockSettingsModal';
+import DashboardGridDraggable from '@/components/admin/dashboard-grid-draggable';
+import BlockSettingsModal from '@/components/admin/block-settings-modal';
 import type { DomainEntry } from '@/types/domain.types';
 
-import ActivityWidget from '@/components/admin/admin/blocks/ActivityWidget';
-import EngagementWidget from '@/components/admin/admin/blocks/EngagementWidget';
-import RetentionWidget from '@/components/admin/admin/blocks/RetentionWidget';
-import TrafficWidget from '@/components/admin/admin/blocks/TrafficWidget';
+import ActivityWidget from '@/components/admin/admin/blocks/activity-widget';
+import EngagementWidget from '@/components/admin/admin/blocks/engagement-widget';
+import RetentionWidget from '@/components/admin/admin/blocks/retention-widget';
+import TrafficWidget from '@/components/admin/admin/blocks/traffic-widget';
 
 function Dashboard() {
   const router = useRouter();

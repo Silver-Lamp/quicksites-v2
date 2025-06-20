@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabaseClient.js';
-import AdminTabs from '@/components/admin/AdminTabs';
+import AdminTabs from '@/components/admin/admin-tabs';
 
 export default function LogsPage() {
   const [logs, setLogs] = useState<any[]>([]);

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { createClient } from '@supabase/supabase-js';
-import Page from '@/components/layout/Page';
-import AdminLayout from '@/components/admin/AdminLayout';
+import Page from '@/components/layout/page';
+import AdminLayout from '@/components/admin/admin-layout';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,

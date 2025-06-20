@@ -1,4 +1,4 @@
-import AdminSidebarLayout from '@/components/admin/layout/AdminSidebarLayout';
+import AdminSidebarLayout from '@/components/admin/layout/admin-sidebar-layout';
 
 function BrandingPage() {
   return <h1 className="text-xl font-bold">Branding Themes</h1>;

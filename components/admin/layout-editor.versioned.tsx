@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabaseClient.js';
-import DashboardBlock from '@/components/admin/DashboardBlock';
-import Heatmap from '@/components/analytics/Heatmap';
+import DashboardBlock from '@/components/admin/dashboard-block';
+import Heatmap from '@/components/analytics/heatmap';
 import { Button } from '@/components/ui/button';
 
 type LayoutBlock = {

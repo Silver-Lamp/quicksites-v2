@@ -1,5 +1,5 @@
-import SmartLinkGallery from '@/components/admin/SmartLinkGallery';
-import { SmartLinkProvider } from '@/components/admin/SmartLinkProvider';
+import SmartLinkGallery from '@/components/admin/smart-link-gallery';
+import { SmartLinkProvider } from '@/components/admin/smart-link-provider';
 import type { SmartLinkItem } from '@/types/SmartLinkItem';
 
 export default function SmartLinkGalleryPage() {

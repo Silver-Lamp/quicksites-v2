@@ -1,9 +1,9 @@
 // 'use client';
 // import { useState, useEffect } from 'react';
 // import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
-// import ThemedBarChart from '@/components/ui/ThemedBarChart';
-// import { Modal } from '@/components/ui/Modal';
-// import { Input, Label } from '@/components/ui/Form';
+// import ThemedBarChart from '@/components/ui/themed-bar-chart';
+// import { Modal } from '@/components/ui/modal';
+// import { Input, Label } from '@/components/ui/form';
 // import { Bar } from 'react-chartjs-2';
 
 // export default function AnalyticsPage() {

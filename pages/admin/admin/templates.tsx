@@ -11,7 +11,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
-import TemplateEditor from '@/components/admin/templates/TemplateEditor';
+import TemplateEditor from '@/components/admin/templates/template-editor';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,

@@ -3,8 +3,8 @@
 'use client';
 
 import React from 'react';
-import AppHeader from '@/components/admin/AppHeader/AppHeader';
-import AdminLayout from '@/components/admin/AdminLayout';
+import AppHeader from '@/components/admin/AppHeader/app-header';
+import AdminLayout from '@/components/admin/admin-layout';
 import { useUser } from '@supabase/auth-helpers-react';
 
 export default function Page({ children }: { children: React.ReactNode }) {

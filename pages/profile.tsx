@@ -1,4 +1,4 @@
-import { RewardTally } from '@/components/RewardTally';
+import { RewardTally } from '@/components/reward-tally';
 import { json } from '@/lib/api/json';
 import { useUser } from '@supabase/auth-helpers-react';
 import { useEffect, useState } from 'react';

@@ -1,6 +1,6 @@
-import SmartLink from '@/components/admin/SmartLink';
-import SmartLinkMeta from '@/components/admin/SmartLinkMeta';
-import Tooltip from '@/components/admin/Tooltip';
+import SmartLink from '@/components/admin/smart-link';
+import SmartLinkMeta from '@/components/admin/smart-link-meta';
+import Tooltip from '@/components/admin/tooltip';
 import type { SmartLinkItem } from '@/types/SmartLinkItem';
 export default function SmartLinkGrid({ items }: { items: SmartLinkItem[] }) {
   return (

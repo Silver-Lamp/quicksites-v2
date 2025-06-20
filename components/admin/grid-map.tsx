@@ -6,8 +6,8 @@ import { supabase } from '@/lib/supabaseClient.js';
 import { MapContainer, TileLayer } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import { resolveGeo } from '@/lib/resolveGeo';
-import CityMarker from '@/components/admin/CityMarker';
-import GridSidebar from '@/components/admin/GridSidebar';
+import CityMarker from '@/components/admin/city-marker';
+import GridSidebar from '@/components/admin/grid-sidebar';
 
 export default function GridMap() {
   const [industry, setIndustry] = useState('');

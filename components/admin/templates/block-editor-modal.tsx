@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
-import { BlocksEditor } from '@/components/admin/templates/BlocksEditor';
+import { BlocksEditor } from '@/components/admin/templates/blocks-editor';
 import toast from 'react-hot-toast';
 import { Button } from '@/components/ui/button';
 import { BlockEditorModalProps } from '@/types/blocks';

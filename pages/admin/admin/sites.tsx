@@ -1,4 +1,4 @@
-import AdminSidebarLayout from '@/components/admin/layout/AdminSidebarLayout';
+import AdminSidebarLayout from '@/components/admin/layout/admin-sidebar-layout';
 
 function SitesPage() {
   return <h1 className="text-xl font-bold">Sites Index</h1>;

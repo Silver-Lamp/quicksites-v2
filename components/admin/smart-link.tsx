@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { buildSafeLink, BuildSafeLinkOptions } from '@/admin/lib/links/buildSafeLink';
 import { getTemplateUrl, getSnapshotUrl } from '@/admin/lib/links/url';
 import { linkThemeMap } from '@/admin/lib/links/theme';
-import { MissingLink } from '@/components/admin/MissingLink';
+import { MissingLink } from '@/components/admin/missing-link';
 
 export type SmartLinkProps = {
   id?: string;

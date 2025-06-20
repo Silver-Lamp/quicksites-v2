@@ -3,8 +3,8 @@
 'use client';
 
 import { useEffect, useState, ReactNode } from 'react';
-import GroupedNav from '@/components/admin/GroupedNav';
-import { SidebarNavProvider } from '@/components/admin/context/SidebarNavContext';
+import GroupedNav from '@/components/admin/grouped-nav';
+import { SidebarNavProvider } from '@/components/admin/context/sidebar-nav-context';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 
 export default function AdminSidebarLayout({ children }: { children: ReactNode }) {

@@ -10,14 +10,14 @@ import { ThemeProvider } from 'next-themes';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useRouter } from 'next/router';
 import dynamic from 'next/dynamic';
-import ResponsiveAdminLayout from '@/components/admin/ResponsiveAdminLayout';
-import DefaultPublicLayout from '@/components/layout/DefaultPublicLayout';
-import { CurrentUserProvider } from '@/components/admin/context/CurrentUserProvider';
+import ResponsiveAdminLayout from '@/components/admin/responsive-admin-layout';
+import DefaultPublicLayout from '@/components/layout/default-public-layout';
+import { CurrentUserProvider } from '@/components/admin/context/current-user-provider';
 import { useSessionReady } from '@/hooks/useSessionReady';
-import Loader from '@/components/ui/Loader';
+import Loader from '@/components/ui/loader';
 import { useEffect } from 'react';
 
-const SupabaseProvider = dynamic(() => import('@/components/admin/SafeSupabaseProvider'), {
+const SupabaseProvider = dynamic(() => import('@/components/admin/safe-supabase-provider'), {
   ssr: false,
   loading: () => <Loader message="Loading app..." />,
 });

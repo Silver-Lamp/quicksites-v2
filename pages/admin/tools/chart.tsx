@@ -1,7 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { json } from '@/lib/api/json';
-import { AdminAnalyticsToolbar } from '@/components/admin/analytics/AdminAnalyticsToolbar';
+import { AdminAnalyticsToolbar } from '@/components/admin/analytics/admin-analytics-toolbar';
 import {
   LineChart,
   Line,

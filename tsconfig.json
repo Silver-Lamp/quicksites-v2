@@ -1,6 +1,6 @@
 {
   "extends": "./tsconfig.base.json",
-  "include": ["**/*"],
+  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx"],
   "exclude": ["node_modules"],
   "compilerOptions": {
     "baseUrl": ".",
@@ -14,13 +14,14 @@
     "jsx": "preserve",
     "outDir": ".lint-tmp",
     "target": "ES2020",
-    "module": "Node16",
-    "moduleResolution": "Node16",
+    "module": "ESNext",
+    "moduleResolution": "bundler", // for better interop in Next 13+
     "esModuleInterop": true,
     "resolveJsonModule": true,
     "allowSyntheticDefaultImports": true,
     "maxNodeModuleJsDepth": 2,
     "tsBuildInfoFile": "./.tsbuildinfo",
-    "skipLibCheck": true
+    "skipLibCheck": true,
+    "types": ["next", "next/image-types/global", "node"]
   }
 }

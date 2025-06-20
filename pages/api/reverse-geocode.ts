@@ -1,10 +1,7 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { json } from '@/lib/api/json';
 
-export default async function handler(
-  req: NextApiRequest,
-  res: NextApiResponse
-) {
+export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   const { lat, lon } = (req.query as { lat: string; lon: string }) || {
     lat: '',
     lon: '',

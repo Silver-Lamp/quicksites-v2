@@ -38,9 +38,7 @@ export default function EditCampaign() {
       <input
         type="number"
         value={data.goal_count}
-        onChange={(e) =>
-          setData({ ...data, goal_count: parseInt(e.target.value) })
-        }
+        onChange={(e) => setData({ ...data, goal_count: parseInt(e.target.value) })}
         className="w-full p-2 text-black rounded"
       />
       <select
@@ -58,10 +56,7 @@ export default function EditCampaign() {
         onChange={(e) => setData({ ...data, block_id: e.target.value })}
         className="w-full p-2 text-black rounded"
       />
-      <button
-        onClick={submit}
-        className="bg-green-600 hover:bg-green-700 px-4 py-2 rounded"
-      >
+      <button onClick={submit} className="bg-green-600 hover:bg-green-700 px-4 py-2 rounded">
         Save
       </button>
       {message && <p className="text-green-300 text-sm">{message}</p>}

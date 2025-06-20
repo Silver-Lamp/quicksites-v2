@@ -17,11 +17,7 @@ export default function PresetManager({
 }) {
   const router = useRouter();
   const groupedTags = [
-    ...new Set(
-      Object.values(presets).flatMap((q) =>
-        extractTags(q).map((t) => t.toLowerCase())
-      )
-    ),
+    ...new Set(Object.values(presets).flatMap((q) => extractTags(q).map((t) => t.toLowerCase()))),
   ];
 
   return (
@@ -44,20 +40,13 @@ export default function PresetManager({
 
         return (
           <div key={groupTag} className="mb-4">
-            <h4 className="text-sm font-semibold text-gray-700 mb-1">
-              #{groupTag}
-            </h4>
+            <h4 className="text-sm font-semibold text-gray-700 mb-1">#{groupTag}</h4>
             <ul className="space-y-1">
               {groupPresets.map(([name, query]) => (
-                <li
-                  key={name}
-                  className="flex justify-between items-start gap-2"
-                >
+                <li key={name} className="flex justify-between items-start gap-2">
                   <div>
                     <button
-                      onClick={() =>
-                        router.push(`/admin/param-lab?slug=${slug}&${query}`)
-                      }
+                      onClick={() => router.push(`/admin/param-lab?slug=${slug}&${query}`)}
                       className="text-blue-600 underline text-sm"
                     >
                       {name}
@@ -77,10 +66,7 @@ export default function PresetManager({
                     >
                       🔗
                     </button>
-                    <button
-                      onClick={() => onDelete(name)}
-                      className="text-xs text-red-500"
-                    >
+                    <button onClick={() => onDelete(name)} className="text-xs text-red-500">
                       ✕
                     </button>
                   </div>

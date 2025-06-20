@@ -54,9 +54,7 @@ export default function NewSitePage() {
       <label className="block text-sm font-medium">Snapshot</label>
       <select
         className="w-full border rounded px-2 py-1"
-        onChange={(e) =>
-          setForm((f) => ({ ...f, snapshot_id: e.target.value }))
-        }
+        onChange={(e) => setForm((f) => ({ ...f, snapshot_id: e.target.value }))}
       >
         <option value="">Select snapshot</option>
         {snapshots.map((s) => (
@@ -69,9 +67,7 @@ export default function NewSitePage() {
       <label className="block text-sm font-medium">Branding Profile</label>
       <select
         className="w-full border rounded px-2 py-1"
-        onChange={(e) =>
-          setForm((f) => ({ ...f, branding_profile_id: e.target.value }))
-        }
+        onChange={(e) => setForm((f) => ({ ...f, branding_profile_id: e.target.value }))}
       >
         <option value="">Select profile</option>
         {profiles.map((p) => (
@@ -81,10 +77,7 @@ export default function NewSitePage() {
         ))}
       </select>
 
-      <button
-        onClick={publish}
-        className="bg-black text-white px-4 py-2 rounded mt-4"
-      >
+      <button onClick={publish} className="bg-black text-white px-4 py-2 rounded mt-4">
         Publish
       </button>
     </div>

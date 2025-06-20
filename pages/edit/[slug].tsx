@@ -11,17 +11,10 @@ import RenderBlock from '@/components/admin/templates/RenderBlock';
 import BlockSidebar from '@/components/admin/templates/BlockSidebar';
 import { SortableBlockList } from '@/components/admin/templates/SortableBlockList';
 import { DndContext, closestCenter } from '@dnd-kit/core';
-import {
-  SortableContext,
-  arrayMove,
-  verticalListSortingStrategy,
-} from '@dnd-kit/sortable';
-const SiteSettingsPanel = dynamic(
-  () => import('@/components/admin/SiteSettingsPanel'),
-  {
-    ssr: false,
-  }
-);
+import { SortableContext, arrayMove, verticalListSortingStrategy } from '@dnd-kit/sortable';
+const SiteSettingsPanel = dynamic(() => import('@/components/admin/SiteSettingsPanel'), {
+  ssr: false,
+});
 import ModalWrapper from '@/components/ui/ModalWrapper';
 import type { SiteData } from '@/types/site';
 
@@ -35,9 +28,7 @@ export default function EditPage() {
   const { slug } = router.query;
   const [siteData, setSiteData] = useState<SiteData | null>(null);
   const [currentPageIndex, setCurrentPageIndex] = useState(0);
-  const [selectedBlockIndex, setSelectedBlockIndex] = useState<number | null>(
-    null
-  );
+  const [selectedBlockIndex, setSelectedBlockIndex] = useState<number | null>(null);
   const [showBlockPicker, setShowBlockPicker] = useState(false);
   const [previewMode, setPreviewMode] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
@@ -132,15 +123,10 @@ export default function EditPage() {
   return (
     <>
       <Head>
-        <title>
-          {siteData?.seo_title || siteData?.business_name || 'Editing Site'}
-        </title>
+        <title>{siteData?.seo_title || siteData?.business_name || 'Editing Site'}</title>
         <meta
           name="description"
-          content={
-            siteData?.seo_description ||
-            'Edit this site’s content, SEO, and design.'
-          }
+          content={siteData?.seo_description || 'Edit this site’s content, SEO, and design.'}
         />
         {siteData?.slug && (
           <link
@@ -148,9 +134,7 @@ export default function EditPage() {
             href={`https://${siteData.custom_domain || `${siteData.slug}.quicksites.ai`}`}
           />
         )}
-        {siteData?.twitter_handle && (
-          <meta name="twitter:site" content={siteData.twitter_handle} />
-        )}
+        {siteData?.twitter_handle && <meta name="twitter:site" content={siteData.twitter_handle} />}
       </Head>
 
       <div className="text-white p-6 max-w-screen-xl mx-auto relative">
@@ -206,10 +190,7 @@ export default function EditPage() {
         )}
 
         {isHydrated && showSettings && siteData?._meta?.id && (
-          <ModalWrapper
-            open={showSettings}
-            onClose={() => setShowSettings(false)}
-          >
+          <ModalWrapper open={showSettings} onClose={() => setShowSettings(false)}>
             <div className="h-full p-6">
               <SiteSettingsPanel siteId={siteData._meta.id} />
             </div>
@@ -249,10 +230,7 @@ export default function EditPage() {
                 >
                   <div className="space-y-4">
                     {siteData.pages.map((page: any, pageIndex: number) => (
-                      <div
-                        key={page.id}
-                        className="mb-8 bg-zinc-800 rounded p-4 shadow"
-                      >
+                      <div key={page.id} className="mb-8 bg-zinc-800 rounded p-4 shadow">
                         <div className="flex items-center gap-2 text-zinc-300 mb-4">
                           <GripVertical className="w-4 h-4 opacity-60" />
                           <h2 className="text-lg font-semibold">
@@ -301,26 +279,15 @@ export default function EditPage() {
 
                 {showBlockPicker && (
                   <div className="mt-4 p-4 border border-zinc-700 rounded bg-zinc-800">
-                    <h3 className="text-sm font-semibold mb-2">
-                      Choose a block type
-                    </h3>
+                    <h3 className="text-sm font-semibold mb-2">Choose a block type</h3>
                     <div className="grid grid-cols-2 gap-3">
-                      {[
-                        'hero',
-                        'services',
-                        'testimonial',
-                        'text',
-                        'cta',
-                        'quote',
-                      ].map((type) => (
+                      {['hero', 'services', 'testimonial', 'text', 'cta', 'quote'].map((type) => (
                         <button
                           key={type}
                           onClick={() => handleAddBlock(type)}
                           className="text-left p-2 rounded bg-zinc-700 hover:bg-zinc-600"
                         >
-                          <span className="block font-medium capitalize">
-                            {type}
-                          </span>
+                          <span className="block font-medium capitalize">{type}</span>
                         </button>
                       ))}
                     </div>
@@ -331,11 +298,7 @@ export default function EditPage() {
 
             {selectedBlockIndex !== null && (
               <BlockSidebar
-                block={
-                  siteData.pages[currentPageIndex].content_blocks[
-                    selectedBlockIndex
-                  ]
-                }
+                block={siteData.pages[currentPageIndex].content_blocks[selectedBlockIndex]}
                 onChange={(updated) => handleBlockSave(updated)}
                 onClose={() => setSelectedBlockIndex(null)}
               />

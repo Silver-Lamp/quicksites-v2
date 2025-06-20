@@ -7,13 +7,8 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
-export default async function handler(
-  req: NextApiRequest,
-  res: NextApiResponse
-) {
-  const { id, name, description, template_id, preview, data } = JSON.parse(
-    req.body
-  );
+export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+  const { id, name, description, template_id, preview, data } = JSON.parse(req.body);
 
   const { error } = await supabase.from('starter_templates').upsert({
     id,

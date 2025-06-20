@@ -3,10 +3,7 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { json } from '@/lib/api/json';
 import nodemailer from 'nodemailer';
 
-export default async function handler(
-  req: NextApiRequest,
-  res: NextApiResponse
-) {
+export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
     return json({ error: 'Method not allowed' });
   }

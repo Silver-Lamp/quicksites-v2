@@ -36,9 +36,7 @@ export default function handler(req: NextApiRequest, _res: NextApiResponse) {
           fontFamily: 'sans-serif',
         }}
       >
-        <div style={{ fontSize: 64, fontWeight: 'bold', marginTop: '1em' }}>
-          {formattedSlug}
-        </div>
+        <div style={{ fontSize: 64, fontWeight: 'bold', marginTop: '1em' }}>{formattedSlug}</div>
         <div
           style={{
             fontSize: 24,
@@ -47,9 +45,7 @@ export default function handler(req: NextApiRequest, _res: NextApiResponse) {
             borderRadius: '6px',
           }}
         >
-          {template === 'default'
-            ? 'Powered by QuickSites'
-            : `Template: ${template}`}
+          {template === 'default' ? 'Powered by QuickSites' : `Template: ${template}`}
         </div>
         <img
           src={fallbackImage}

@@ -25,17 +25,12 @@ export default function MyFeedback() {
 
       <div>
         <h2 className="text-xl font-semibold mb-2">🎯 Received</h2>
-        {received.length === 0 && (
-          <p className="text-zinc-400 text-sm">Nothing yet.</p>
-        )}
+        {received.length === 0 && <p className="text-zinc-400 text-sm">Nothing yet.</p>}
         <ul className="space-y-2">
           {received.map((f: any) => (
             <li key={f.id} className="bg-zinc-800 p-3 rounded text-sm">
-              <span className="font-bold">{f.action}</span> on{' '}
-              <code>{f.block_id.slice(0, 8)}</code>
-              {f.message && (
-                <p className="text-zinc-300 mt-1 italic">“{f.message}”</p>
-              )}
+              <span className="font-bold">{f.action}</span> on <code>{f.block_id.slice(0, 8)}</code>
+              {f.message && <p className="text-zinc-300 mt-1 italic">“{f.message}”</p>}
             </li>
           ))}
         </ul>
@@ -43,17 +38,13 @@ export default function MyFeedback() {
 
       <div>
         <h2 className="text-xl font-semibold mt-6 mb-2">📤 Sent</h2>
-        {sent.length === 0 && (
-          <p className="text-zinc-400 text-sm">No outgoing feedback yet.</p>
-        )}
+        {sent.length === 0 && <p className="text-zinc-400 text-sm">No outgoing feedback yet.</p>}
         <ul className="space-y-2">
           {sent.map((f: any) => (
             <li key={f.id} className="bg-zinc-800 p-3 rounded text-sm">
               <span className="font-bold">{f.action}</span> to block{' '}
               <code>{f.block_id.slice(0, 8)}</code>
-              {f.message && (
-                <p className="text-zinc-300 mt-1 italic">“{f.message}”</p>
-              )}
+              {f.message && <p className="text-zinc-300 mt-1 italic">“{f.message}”</p>}
             </li>
           ))}
         </ul>

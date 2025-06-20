@@ -23,9 +23,7 @@ test.beforeEach(async () => {
 });
 
 test('edit and save an existing template', async ({ page }) => {
-  await page.goto(
-    `http://localhost:3000/admin/templates/${TEST_TEMPLATE_NAME}`
-  );
+  await page.goto(`http://localhost:3000/admin/templates/${TEST_TEMPLATE_NAME}`);
 
   // Wait for the editor to appear
   await page.waitForSelector('[data-testid="template-json"]');
@@ -43,9 +41,7 @@ test('edit and save an existing template', async ({ page }) => {
   }`);
 
   // Fill in commit message
-  await page
-    .getByTestId('commit-message')
-    .fill('Automated update from Playwright');
+  await page.getByTestId('commit-message').fill('Automated update from Playwright');
 
   // Trigger save
   await page.getByTestId('save-template').click();

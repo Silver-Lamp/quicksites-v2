@@ -38,10 +38,7 @@ export default function RequestAccessPage() {
         >
           <h1 className="text-xl font-semibold">Request Admin Access</h1>
           <p className="text-sm text-gray-400">
-            Email:{' '}
-            <span className="text-white font-medium">
-              {email || 'Not signed in'}
-            </span>
+            Email: <span className="text-white font-medium">{email || 'Not signed in'}</span>
           </p>
           <textarea
             className="w-full p-2 rounded bg-gray-700 text-sm text-white"

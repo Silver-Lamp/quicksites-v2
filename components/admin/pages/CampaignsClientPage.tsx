@@ -7,11 +7,7 @@ import useSWRInfinite from 'swr/infinite';
 import { subDays } from 'date-fns';
 import { DateRange } from 'react-day-picker';
 import { Calendar } from '@/components/ui/calendar';
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@/components/ui/popover';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Button } from '@/components/ui/button';
 import { CalendarIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -87,8 +83,7 @@ export function CampaignsClientPage({
               {range?.from ? (
                 range.to ? (
                   <>
-                    {range.from.toLocaleDateString()} -{' '}
-                    {range.to.toLocaleDateString()}
+                    {range.from.toLocaleDateString()} - {range.to.toLocaleDateString()}
                   </>
                 ) : (
                   range.from.toLocaleDateString()
@@ -99,21 +94,12 @@ export function CampaignsClientPage({
             </Button>
           </PopoverTrigger>
           <PopoverContent className="w-auto p-0">
-            <Calendar
-              mode="range"
-              selected={range}
-              onSelect={setRange}
-              numberOfMonths={2}
-            />
+            <Calendar mode="range" selected={range} onSelect={setRange} numberOfMonths={2} />
           </PopoverContent>
         </Popover>
       </div>
 
-      <CampaignFunnelTable
-        events={events}
-        logs={logs}
-        dateRange={range || {}}
-      />
+      <CampaignFunnelTable events={events} logs={logs} dateRange={range || {}} />
     </div>
   );
 }

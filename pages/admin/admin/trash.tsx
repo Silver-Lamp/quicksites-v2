@@ -35,15 +35,9 @@ export default function Trash({ templates }: { templates: any[] }) {
         >
           <div>
             <h2 className="text-lg font-semibold">{t.template_name}</h2>
-            <p className="text-sm text-muted-foreground">
-              Industry: {t.industry}
-            </p>
+            <p className="text-sm text-muted-foreground">Industry: {t.industry}</p>
           </div>
-          <Button
-            size="sm"
-            variant="secondary"
-            onClick={() => restoreTemplate(t.template_name)}
-          >
+          <Button size="sm" variant="secondary" onClick={() => restoreTemplate(t.template_name)}>
             Restore
           </Button>
         </div>

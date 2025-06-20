@@ -7,11 +7,7 @@ import GroupedNav from '@/components/admin/GroupedNav';
 import { SidebarNavProvider } from '@/components/admin/context/SidebarNavContext';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 
-export default function AdminSidebarLayout({
-  children,
-}: {
-  children: ReactNode;
-}) {
+export default function AdminSidebarLayout({ children }: { children: ReactNode }) {
   const [navBadges, setNavBadges] = useState<{ failed: number }>({ failed: 0 });
 
   useEffect(() => {

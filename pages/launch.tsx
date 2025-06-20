@@ -14,8 +14,7 @@ export default function LaunchPage() {
       <div className="p-6 max-w-3xl mx-auto text-white text-center">
         <h1 className="text-4xl font-bold mb-4">🌐 The Web is Yours Again</h1>
         <p className="text-zinc-400 mb-6 text-lg">
-          Launch a transparent site in minutes. Remix templates. Steward your
-          signal.
+          Launch a transparent site in minutes. Remix templates. Steward your signal.
         </p>
 
         <div className="flex justify-center mb-6">

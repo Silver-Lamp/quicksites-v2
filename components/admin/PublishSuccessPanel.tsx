@@ -2,22 +2,11 @@ import { Button } from '@/components/ui/button';
 import QRCode from 'react-qr-code';
 import QRCodeLib from 'qrcode';
 
-export function PublishSuccessPanel({
-  slug,
-  url,
-}: {
-  slug: string;
-  url: string;
-}) {
+export function PublishSuccessPanel({ slug, url }: { slug: string; url: string }) {
   return (
     <div className="mt-4 space-y-2 text-center">
       <p className="text-sm text-green-400">Site Published 🎉</p>
-      <a
-        href={url}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="text-blue-500 underline"
-      >
+      <a href={url} target="_blank" rel="noopener noreferrer" className="text-blue-500 underline">
         View Live Site
       </a>
       <div className="flex justify-center mt-2">

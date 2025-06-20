@@ -8,9 +8,5 @@ export function Input(props: React.InputHTMLAttributes<HTMLInputElement>) {
 }
 
 export function Label({ children }: { children: React.ReactNode }) {
-  return (
-    <label className="block text-sm font-medium text-text mb-1">
-      {children}
-    </label>
-  );
+  return <label className="block text-sm font-medium text-text mb-1">{children}</label>;
 }

@@ -8,10 +8,7 @@ const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 );
 
-export default async function handler(
-  req: NextApiRequest,
-  res: NextApiResponse
-) {
+export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') return res.status(405).end();
 
   const token = req.headers.authorization?.split('Bearer ')[1];
@@ -98,10 +95,7 @@ export default async function handler(
     },
   };
 
-  const { data, error } = await supabase
-    .from('templates')
-    .insert([sample])
-    .select();
+  const { data, error } = await supabase.from('templates').insert([sample]).select();
   if (error) return json({ error });
   json({ inserted: data });
 }

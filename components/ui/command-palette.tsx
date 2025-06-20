@@ -26,9 +26,7 @@ export default function CommandPalette() {
     return () => window.removeEventListener('keydown', handler);
   }, []);
 
-  const filtered = routes.filter((r) =>
-    r.label.toLowerCase().includes(query.toLowerCase())
-  );
+  const filtered = routes.filter((r) => r.label.toLowerCase().includes(query.toLowerCase()));
 
   return (
     open && (

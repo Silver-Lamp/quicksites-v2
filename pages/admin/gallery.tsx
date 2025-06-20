@@ -33,18 +33,11 @@ export default function GalleryPage() {
             <div className="flex justify-between items-center mb-2">
               <strong>{site.branding_profiles?.name}</strong>
               {site.branding_profiles?.logo_url && (
-                <img
-                  src={site.branding_profiles.logo_url}
-                  className="w-8 h-8 rounded-full"
-                />
+                <img src={site.branding_profiles.logo_url} className="w-8 h-8 rounded-full" />
               )}
             </div>
-            <p className="text-xs text-muted-foreground mb-1">
-              {site.slug}.quicksites.ai
-            </p>
-            <p className="text-xs italic text-gray-400">
-              Language: {site.language || 'en'}
-            </p>
+            <p className="text-xs text-muted-foreground mb-1">{site.slug}.quicksites.ai</p>
+            <p className="text-xs italic text-gray-400">Language: {site.language || 'en'}</p>
           </Link>
         ))}
       </div>

@@ -22,20 +22,15 @@ async function createAndUploadMarkdownReport(
   mdKey: string,
   title: string
 ) {
-  const [xmlA, xmlB] = await Promise.all([
-    readFile(fileA, 'utf8'),
-    readFile(fileB, 'utf8'),
-  ]);
+  const [xmlA, xmlB] = await Promise.all([readFile(fileA, 'utf8'), readFile(fileB, 'utf8')]);
 
   const patch = Diff.createPatch(title, xmlA, xmlB, 'Previous', 'Current');
   const markdown = formatMarkdownDiff(patch, title);
 
-  const { error } = await supabase.storage
-    .from('sitemaps')
-    .upload(mdKey, markdown, {
-      contentType: 'text/markdown',
-      upsert: true,
-    });
+  const { error } = await supabase.storage.from('sitemaps').upload(mdKey, markdown, {
+    contentType: 'text/markdown',
+    upsert: true,
+  });
 
   if (error) {
     console.error(`❌ Markdown upload failed: ${error.message}`);

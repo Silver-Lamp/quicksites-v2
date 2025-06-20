@@ -23,14 +23,10 @@ export default function SecurityDashboard() {
       <h1 className="text-2xl font-bold mb-4">🛡 Security Overview</h1>
       <div className="space-y-3">
         <p>
-          Last Slack Alert:{' '}
-          <span className="text-yellow-400">
-            {lastAlert || 'None recorded'}
-          </span>
+          Last Slack Alert: <span className="text-yellow-400">{lastAlert || 'None recorded'}</span>
         </p>
         <p>
-          Expired tokens cleaned:{' '}
-          <span className="text-green-400">{cleanupCount}</span>
+          Expired tokens cleaned: <span className="text-green-400">{cleanupCount}</span>
         </p>
       </div>
       <div className="mt-6 bg-zinc-900 p-4 rounded text-sm">

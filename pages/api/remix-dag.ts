@@ -1,10 +1,7 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { json } from '@/lib/api/json';
 
-export default async function handler(
-  _req: NextApiRequest,
-  res: NextApiResponse
-) {
+export default async function handler(_req: NextApiRequest, res: NextApiResponse) {
   // Example static data, replace with dynamic Supabase pull later
   const nodes = [
     { id: 'root', data: { label: '@alice' }, position: { x: 100, y: 100 } },

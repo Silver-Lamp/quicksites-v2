@@ -48,9 +48,7 @@ export default function NewBlockPage() {
     <div className="max-w-md mx-auto p-6 text-white">
       <h1 className="text-2xl font-bold mb-4">📍 Create New Block</h1>
       {done ? (
-        <p className="text-green-400">
-          ✅ Block saved! Visit /world/[you] to see it in action.
-        </p>
+        <p className="text-green-400">✅ Block saved! Visit /world/[you] to see it in action.</p>
       ) : (
         <>
           <input

@@ -4,16 +4,9 @@
 
 import { useMemo, useState } from 'react';
 import { parseISO, isAfter, isBefore } from 'date-fns';
-import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
-import {
-  ResponsiveContainer,
-  PieChart,
-  Pie,
-  Cell,
-  Tooltip,
-  Legend,
-} from 'recharts';
+import { Button } from '../../components/ui/Button';
+import { Card } from '../../components/ui/Card';
+import { ResponsiveContainer, PieChart, Pie, Cell, Tooltip, Legend } from 'recharts';
 
 interface UpgradeEvent {
   id: string;
@@ -39,15 +32,7 @@ interface Props {
   dateRange: { from?: Date; to?: Date };
 }
 
-const COLORS = [
-  '#6366f1',
-  '#10b981',
-  '#f59e0b',
-  '#ef4444',
-  '#3b82f6',
-  '#a855f7',
-  '#14b8a6',
-];
+const COLORS = ['#6366f1', '#10b981', '#f59e0b', '#ef4444', '#3b82f6', '#a855f7', '#14b8a6'];
 
 export function CampaignFunnelTable({ events, logs, dateRange }: Props) {
   const [showAllTime, setShowAllTime] = useState(false);
@@ -81,10 +66,7 @@ export function CampaignFunnelTable({ events, logs, dateRange }: Props) {
       if (e.event_type === 'click') bucket.click.add(key);
       if (e.utm_source) bucket.sources.add(e.utm_source);
       bucket.users.add(key);
-      (bucket.userList as Map<string, string>).set(
-        key,
-        e.email || e.user_id || key
-      );
+      (bucket.userList as Map<string, string>).set(key, e.email || e.user_id || key);
       campaignMap.set(campaign, bucket as Record<string, Set<string>>);
     }
 
@@ -93,10 +75,8 @@ export function CampaignFunnelTable({ events, logs, dateRange }: Props) {
       if (!isInRange(date)) continue;
       for (const [campaign, bucket] of campaignMap.entries()) {
         if (log.user_id && bucket.users.has(log.user_id)) {
-          if (log.event_type === 'signup_complete')
-            bucket.signup.add(log.user_id);
-          if (log.event_type === 'site_published')
-            bucket.publish.add(log.user_id);
+          if (log.event_type === 'signup_complete') bucket.signup.add(log.user_id);
+          if (log.event_type === 'site_published') bucket.publish.add(log.user_id);
         }
       }
     }
@@ -107,8 +87,7 @@ export function CampaignFunnelTable({ events, logs, dateRange }: Props) {
         const clicks = bucket.click.size;
         const signups = bucket.signup.size;
         const publishes = bucket.publish.size;
-        const conversion =
-          views > 0 ? ((signups / views) * 100).toFixed(1) + '%' : '—';
+        const conversion = views > 0 ? ((signups / views) * 100).toFixed(1) + '%' : '—';
         return {
           campaign,
           views,
@@ -118,9 +97,7 @@ export function CampaignFunnelTable({ events, logs, dateRange }: Props) {
           conversion,
           sources: Array.from(bucket.sources),
           users: Array.from(bucket.users),
-          userList: Array.from(
-            (bucket.userList as unknown as Map<string, string>).entries()
-          ),
+          userList: Array.from((bucket.userList as unknown as Map<string, string>).entries()),
         };
       })
       .filter((row) => row.views >= minViews)
@@ -143,23 +120,9 @@ export function CampaignFunnelTable({ events, logs, dateRange }: Props) {
   }, [events, dateRange, showAllTime]);
 
   const exportCampaignCSV = () => {
-    const headers = [
-      'Campaign',
-      'Views',
-      'Clicks',
-      'Signups',
-      'Publishes',
-      'Conversion',
-    ];
+    const headers = ['Campaign', 'Views', 'Clicks', 'Signups', 'Publishes', 'Conversion'];
     const rows = campaignStats.map((r) =>
-      [
-        r.campaign,
-        r.views,
-        r.clicks,
-        r.signups,
-        r.publishes,
-        r.conversion,
-      ].join(',')
+      [r.campaign, r.views, r.clicks, r.signups, r.publishes, r.conversion].join(',')
     );
     const blob = new Blob([headers.join(',') + '\n' + rows.join('\n')], {
       type: 'text/csv',
@@ -200,11 +163,7 @@ export function CampaignFunnelTable({ events, logs, dateRange }: Props) {
           <Button variant="outline" size="sm" onClick={exportCampaignCSV}>
             Export CSV
           </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setShowAllTime(!showAllTime)}
-          >
+          <Button variant="outline" size="sm" onClick={() => setShowAllTime(!showAllTime)}>
             {showAllTime ? 'Show Date Range' : 'Show All Time'}
           </Button>
         </div>
@@ -212,18 +171,9 @@ export function CampaignFunnelTable({ events, logs, dateRange }: Props) {
 
       <ResponsiveContainer width="100%" height={250}>
         <PieChart>
-          <Pie
-            data={sourcePieData}
-            dataKey="value"
-            nameKey="name"
-            outerRadius={100}
-            label
-          >
+          <Pie data={sourcePieData} dataKey="value" nameKey="name" outerRadius={100} label>
             {sourcePieData.map((entry, index) => (
-              <Cell
-                key={`cell-${index}`}
-                fill={COLORS[index % COLORS.length]}
-              />
+              <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
             ))}
           </Pie>
           <Tooltip />
@@ -250,9 +200,7 @@ export function CampaignFunnelTable({ events, logs, dateRange }: Props) {
                   key={row.campaign}
                   className="border-t cursor-pointer hover:bg-muted"
                   onClick={() =>
-                    setExpandedCampaign(
-                      row.campaign === expandedCampaign ? null : row.campaign
-                    )
+                    setExpandedCampaign(row.campaign === expandedCampaign ? null : row.campaign)
                   }
                 >
                   <td className="py-1 font-medium">{row.campaign}</td>
@@ -270,15 +218,12 @@ export function CampaignFunnelTable({ events, logs, dateRange }: Props) {
                           <strong>Users:</strong> {row.users.length}
                         </div>
                         <div>
-                          <strong>Sources:</strong>{' '}
-                          {row.sources.join(', ') || '—'}
+                          <strong>Sources:</strong> {row.sources.join(', ') || '—'}
                         </div>
                         <Button
                           size="sm"
                           variant="outline"
-                          onClick={() =>
-                            exportUserList(row.campaign, row.userList)
-                          }
+                          onClick={() => exportUserList(row.campaign, row.userList)}
                         >
                           Download Users CSV
                         </Button>

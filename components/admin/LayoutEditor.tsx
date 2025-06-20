@@ -54,9 +54,7 @@ export default function LayoutEditor({ role = 'user' }) {
       .from('dashboard_layouts')
       .upsert({ role, layout, hidden }, { onConflict: 'role' });
 
-    await supabase
-      .from('dashboard_layout_versions')
-      .insert({ role, layout, hidden });
+    await supabase.from('dashboard_layout_versions').insert({ role, layout, hidden });
 
     localStorage.setItem('dashboard-order', JSON.stringify(layout));
     localStorage.setItem('dashboard-hidden', JSON.stringify(hidden));
@@ -88,10 +86,7 @@ export default function LayoutEditor({ role = 'user' }) {
         <p className="text-sm font-medium mb-1">Recent Versions:</p>
         <ul className="space-y-2 mb-4">
           {versions.map((v) => (
-            <li
-              key={v.id}
-              className="flex justify-between items-center text-sm text-gray-600"
-            >
+            <li key={v.id} className="flex justify-between items-center text-sm text-gray-600">
               <span>{new Date(v.created_at).toLocaleString()}</span>
               <Button size="sm" onClick={() => restore(v.id)}>
                 Restore
@@ -108,11 +103,7 @@ export default function LayoutEditor({ role = 'user' }) {
               key={block.id}
               title={BLOCK_LIBRARY[block.id]?.title || block.id}
               actions={
-                <Button
-                  size="sm"
-                  variant="destructive"
-                  onClick={() => removeBlock(block.id)}
-                >
+                <Button size="sm" variant="destructive" onClick={() => removeBlock(block.id)}>
                   Remove
                 </Button>
               }

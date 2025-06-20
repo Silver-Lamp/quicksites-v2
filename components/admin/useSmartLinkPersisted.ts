@@ -3,9 +3,7 @@ import type { LinkTheme } from '@/admin/lib/links/theme.js';
 
 export function useSmartLinkPersisted() {
   const [theme, setTheme] = useState<LinkTheme>('primary');
-  const [query, setQuery] = useState<Record<string, string | number | boolean>>(
-    {}
-  );
+  const [query, setQuery] = useState<Record<string, string | number | boolean>>({});
 
   useEffect(() => {
     const stored = localStorage.getItem('smartlink.ctx');

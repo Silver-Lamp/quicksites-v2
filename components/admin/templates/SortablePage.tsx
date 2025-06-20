@@ -4,8 +4,7 @@ import { CSS } from '@dnd-kit/utilities';
 import { GripVertical } from 'lucide-react';
 
 export const SortablePage = ({ page }: { page: any }) => {
-  const { attributes, listeners, setNodeRef, transform, transition } =
-    useSortable({ id: page.id });
+  const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id: page.id });
 
   const style = {
     transform: CSS.Transform.toString(transform),

@@ -4,31 +4,14 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { createClient } from '@supabase/supabase-js';
-import {
-  formatDistanceToNow,
-  isAfter,
-  isBefore,
-  parseISO,
-  subDays,
-} from 'date-fns';
+import { formatDistanceToNow, isAfter, isBefore, parseISO, subDays } from 'date-fns';
 // import { Card, CardContent } from '@/components/ui/card';
 // import { Button } from '@/components/ui/button';
 import { CalendarIcon, DownloadIcon, FilterIcon, TagIcon } from 'lucide-react';
-import {
-  ResponsiveContainer,
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  Tooltip,
-} from 'recharts';
+import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip } from 'recharts';
 import { DateRange } from 'react-day-picker';
 import { Calendar } from '@/components/ui/calendar';
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@/components/ui/popover';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
@@ -57,8 +40,7 @@ export default function GuestUpgradeDashboard() {
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
   );
 
-  const toggleStep = (key: string) =>
-    setOpenStep((prev) => (prev === key ? null : key));
+  const toggleStep = (key: string) => setOpenStep((prev) => (prev === key ? null : key));
 
   useEffect(() => {
     const loadEvents = async () => {
@@ -92,11 +74,8 @@ export default function GuestUpgradeDashboard() {
     });
   }, [events, contextFilter, dateRange]);
 
-  const getKey = (e: {
-    user_id: string | null;
-    email?: string | null;
-    id: string;
-  }) => e.user_id || e.email || `anon-${e.id}`;
+  const getKey = (e: { user_id: string | null; email?: string | null; id: string }) =>
+    e.user_id || e.email || `anon-${e.id}`;
   const getLabel = (e: { user_id: string | null; email?: string | null }) =>
     e.email || e.user_id || 'anonymous';
 
@@ -149,10 +128,8 @@ export default function GuestUpgradeDashboard() {
         (!dateRange?.from || isAfter(logDate, dateRange.from)) &&
         (!dateRange?.to || isBefore(logDate, dateRange.to));
       if (!log.user_id || !inRange) continue;
-      if (log.event_type === 'signup_complete')
-        signups.set(log.user_id, log.user_id);
-      if (log.event_type === 'site_published')
-        publishes.set(log.user_id, log.user_id);
+      if (log.event_type === 'signup_complete') signups.set(log.user_id, log.user_id);
+      if (log.event_type === 'site_published') publishes.set(log.user_id, log.user_id);
     }
 
     return {
@@ -187,16 +164,12 @@ export default function GuestUpgradeDashboard() {
         <h1 className="text-2xl font-bold">Guest Upgrade Funnel</h1>
         <Popover>
           <PopoverTrigger asChild>
-            <Button
-              variant="outline"
-              className="w-[280px] justify-start text-left font-normal"
-            >
+            <Button variant="outline" className="w-[280px] justify-start text-left font-normal">
               <CalendarIcon className="mr-2 h-4 w-4" />
               {dateRange?.from ? (
                 dateRange.to ? (
                   <>
-                    {dateRange.from.toLocaleDateString()} -{' '}
-                    {dateRange.to.toLocaleDateString()}
+                    {dateRange.from.toLocaleDateString()} - {dateRange.to.toLocaleDateString()}
                   </>
                 ) : (
                   dateRange.from.toLocaleDateString()
@@ -262,13 +235,11 @@ export default function GuestUpgradeDashboard() {
             </div>
             {openStep === step.key && (
               <div className="mt-2 pl-2 text-sm text-muted-foreground space-y-1 max-h-40 overflow-y-auto">
-                {(funnelDetails as any)[step.key]?.map(
-                  ([id, label]: [string, string]) => (
-                    <div key={id} className="truncate">
-                      • {label}
-                    </div>
-                  )
-                )}
+                {(funnelDetails as any)[step.key]?.map(([id, label]: [string, string]) => (
+                  <div key={id} className="truncate">
+                    • {label}
+                  </div>
+                ))}
               </div>
             )}
           </div>

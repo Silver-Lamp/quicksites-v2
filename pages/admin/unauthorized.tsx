@@ -46,10 +46,7 @@ export default function UnauthorizedPage() {
           {role === 'viewer' && (
             <p className="text-sm text-yellow-400 mt-2">
               Looking for more access? Contact an admin or
-              <Link
-                href="/request-access"
-                className="underline hover:text-yellow-300"
-              >
+              <Link href="/request-access" className="underline hover:text-yellow-300">
                 {' '}
                 request an upgrade
               </Link>
@@ -64,10 +61,7 @@ export default function UnauthorizedPage() {
           </Link>
           <p className="text-sm text-gray-500">
             Need help?{' '}
-            <a
-              href={`mailto:${supportEmail}`}
-              className="underline text-blue-400"
-            >
+            <a href={`mailto:${supportEmail}`} className="underline text-blue-400">
               Contact Support
             </a>
           </p>

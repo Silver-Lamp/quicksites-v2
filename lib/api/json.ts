@@ -1,13 +1,10 @@
 import { z, ZodSchema, ZodError } from 'zod';
-import { json, internalError } from './json';
+// import { json, internalError } from './json.js';
 //
 // 🔁 Response Builders
 //
 
-export function json(
-  data: unknown,
-  statusOrOptions?: number | ResponseInit
-): Response {
+export function json(data: unknown, statusOrOptions?: number | ResponseInit): Response {
   if (typeof statusOrOptions === 'number') {
     return new Response(JSON.stringify(data), {
       status: statusOrOptions,
@@ -22,10 +19,7 @@ export function json(
   });
 }
 
-export function typedJson<T>(
-  data: T,
-  statusOrOptions?: number | ResponseInit
-): Response {
+export function typedJson<T>(data: T, statusOrOptions?: number | ResponseInit): Response {
   return json(data, statusOrOptions);
 }
 
@@ -62,9 +56,7 @@ export function validationError(details: unknown): Response {
 }
 
 export function flattenIssues(error: ZodError): string[] {
-  return error.issues.map(
-    (issue) => `${issue.path.join('.')}: ${issue.message}`
-  );
+  return error.issues.map((issue) => `${issue.path.join('.')}: ${issue.message}`);
 }
 
 //
@@ -102,10 +94,7 @@ export function withValidation<T>(
       const result = await handler();
       const parsed = schema.safeParse(result);
       if (!parsed.success) {
-        return json(
-          { error: 'Output validation failed', details: parsed.error.format() },
-          500
-        );
+        return json({ error: 'Output validation failed', details: parsed.error.format() }, 500);
       }
       return json(parsed.data);
     } catch (err: any) {

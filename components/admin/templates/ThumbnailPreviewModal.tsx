@@ -24,9 +24,7 @@ export default function ThumbnailPreviewModal({
         />
         {message && <p className="text-sm text-gray-400">📝 {message}</p>}
         {timestamp && (
-          <p className="text-xs text-gray-500">
-            📅 {new Date(timestamp).toLocaleString()}
-          </p>
+          <p className="text-xs text-gray-500">📅 {new Date(timestamp).toLocaleString()}</p>
         )}
       </DialogContent>
     </Dialog>

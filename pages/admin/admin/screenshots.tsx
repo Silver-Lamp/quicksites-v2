@@ -28,13 +28,9 @@ export default function ScreenshotQueuePage() {
             <tr key={item.id}>
               <td className="p-2">{item.domain}</td>
               <td className="p-2">{item.status}</td>
+              <td className="p-2">{new Date(item.requested_at).toLocaleString()}</td>
               <td className="p-2">
-                {new Date(item.requested_at).toLocaleString()}
-              </td>
-              <td className="p-2">
-                {item.completed_at
-                  ? new Date(item.completed_at).toLocaleString()
-                  : '-'}
+                {item.completed_at ? new Date(item.completed_at).toLocaleString() : '-'}
               </td>
             </tr>
           ))}

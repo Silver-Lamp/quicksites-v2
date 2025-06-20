@@ -2,14 +2,7 @@
 import { useEffect, useState } from 'react';
 import { createClient } from '@supabase/supabase-js';
 import Head from 'next/head';
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  Tooltip,
-  ResponsiveContainer,
-} from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -25,9 +18,7 @@ function getFlagEmoji(countryCode: string) {
 
 export default function EmbedViewsDashboard() {
   const [views, setViews] = useState<any[]>([]);
-  const [locationTotals, setLocationTotals] = useState<Record<string, number>>(
-    {}
-  );
+  const [locationTotals, setLocationTotals] = useState<Record<string, number>>({});
   const [startDate, setStartDate] = useState<string>('');
   const [endDate, setEndDate] = useState<string>('');
   const [loading, setLoading] = useState(true);
@@ -101,10 +92,7 @@ export default function EmbedViewsDashboard() {
                   (v) =>
                     v.schema_id.toLowerCase().includes(val) ||
                     (v.referrer || '').toLowerCase().includes(val) ||
-                    new Date(v.created_at)
-                      .toLocaleString()
-                      .toLowerCase()
-                      .includes(val)
+                    new Date(v.created_at).toLocaleString().toLowerCase().includes(val)
                 )
               );
             }}
@@ -114,11 +102,7 @@ export default function EmbedViewsDashboard() {
             onClick={() => {
               const csv = [
                 ['schema_id', 'referrer', 'created_at'],
-                ...views.map((v) => [
-                  v.schema_id,
-                  v.referrer || '',
-                  v.created_at,
-                ]),
+                ...views.map((v) => [v.schema_id, v.referrer || '', v.created_at]),
               ]
                 .map((r) => r.join(','))
                 .join('\n');
@@ -144,9 +128,7 @@ export default function EmbedViewsDashboard() {
                   const day = new Date(v.created_at).toISOString().slice(0, 10);
                   const ref = v.referrer || 'Other';
                   const key = `${day}|${ref}`;
-                  const existing = acc.find(
-                    (d: { key: string }) => d.key === key
-                  );
+                  const existing = acc.find((d: { key: string }) => d.key === key);
                   if (existing) existing.count++;
                   else acc.push({ date: day, referrer: ref, count: 1, key });
                   return acc;
@@ -162,19 +144,15 @@ export default function EmbedViewsDashboard() {
               <XAxis dataKey="date" interval="preserveStartEnd" fontSize={12} />
               <YAxis allowDecimals={false} fontSize={12} />
               <Tooltip />
-              {[...new Set(views.map((v) => v.referrer || 'Other'))].map(
-                (ref, i) => (
-                  <Bar
-                    key={ref}
-                    dataKey={(entry) =>
-                      entry.referrer === ref ? entry.count : 0
-                    }
-                    name={ref}
-                    stackId="a"
-                    fill={`hsl(${(i * 70) % 360}, 60%, 60%)`}
-                  />
-                )
-              )}
+              {[...new Set(views.map((v) => v.referrer || 'Other'))].map((ref, i) => (
+                <Bar
+                  key={ref}
+                  dataKey={(entry) => (entry.referrer === ref ? entry.count : 0)}
+                  name={ref}
+                  stackId="a"
+                  fill={`hsl(${(i * 70) % 360}, 60%, 60%)`}
+                />
+              ))}
             </BarChart>
           </ResponsiveContainer>
         </div>
@@ -189,13 +167,11 @@ export default function EmbedViewsDashboard() {
             className="border px-2 py-1 text-sm rounded w-full md:max-w-sm"
           >
             <option value="">-- All Countries --</option>
-            {[...new Set(views.map((v) => v.country_code).filter(Boolean))].map(
-              (code) => (
-                <option key={code} value={code}>
-                  {code}
-                </option>
-              )
-            )}
+            {[...new Set(views.map((v) => v.country_code).filter(Boolean))].map((code) => (
+              <option key={code} value={code}>
+                {code}
+              </option>
+            ))}
           </select>
         </div>
         <div className="mb-4">
@@ -226,10 +202,7 @@ export default function EmbedViewsDashboard() {
                 (v) =>
                   v.schema_id.toLowerCase().includes(val) ||
                   (v.referrer || '').toLowerCase().includes(val) ||
-                  new Date(v.created_at)
-                    .toLocaleString()
-                    .toLowerCase()
-                    .includes(val)
+                  new Date(v.created_at).toLocaleString().toLowerCase().includes(val)
               )
             );
           }}
@@ -269,9 +242,7 @@ export default function EmbedViewsDashboard() {
                   <td className="p-2 text-gray-600">{v.country_code || '—'}</td>
                   <td className="p-2 text-gray-600">{v.region || '—'}</td>
                   <td className="p-2 text-gray-600">{v.referrer || '—'}</td>
-                  <td className="p-2 text-gray-500">
-                    {new Date(v.created_at).toLocaleString()}
-                  </td>
+                  <td className="p-2 text-gray-500">{new Date(v.created_at).toLocaleString()}</td>
                 </tr>
               ))}
           </tbody>
@@ -305,11 +276,7 @@ export default function EmbedViewsDashboard() {
           onClick={() => {
             const csv = [
               ['schema_id', 'referrer', 'created_at'],
-              ...views.map((v) => [
-                v.schema_id,
-                v.referrer || '',
-                v.created_at,
-              ]),
+              ...views.map((v) => [v.schema_id, v.referrer || '', v.created_at]),
             ]
               .map((r) => r.join(','))
               .join('\n');

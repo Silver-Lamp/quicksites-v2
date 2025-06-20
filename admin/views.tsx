@@ -20,9 +20,7 @@ export default function ViewsDashboard() {
   const [views, setViews] = useState<any[]>([]);
   const [filter, setFilter] = useState('');
   const [tags, setTags] = useState<string[]>([]);
-  const [templateTags, setTemplateTags] = useState<Record<string, string[]>>(
-    {}
-  );
+  const [templateTags, setTemplateTags] = useState<Record<string, string[]>>({});
 
   useEffect(() => {
     supabase
@@ -49,12 +47,9 @@ export default function ViewsDashboard() {
   }, []);
 
   const filtered = views.filter((v) => {
-    const matchesSearch = v.template_name
-      ?.toLowerCase()
-      .includes(filter.toLowerCase());
+    const matchesSearch = v.template_name?.toLowerCase().includes(filter.toLowerCase());
     const matchesTags =
-      tags.length === 0 ||
-      (templateTags[v.template_name] || []).some((t) => tags.includes(t));
+      tags.length === 0 || (templateTags[v.template_name] || []).some((t) => tags.includes(t));
     return matchesSearch && matchesTags;
   });
 
@@ -90,12 +85,8 @@ export default function ViewsDashboard() {
                   {(templateTags[v.template_name] || []).join(', ')}
                 </TableCell>
                 <TableCell>{v.ip_address}</TableCell>
-                <TableCell className="text-xs max-w-sm truncate">
-                  {v.user_agent}
-                </TableCell>
-                <TableCell className="text-xs">
-                  {new Date(v.viewed_at).toLocaleString()}
-                </TableCell>
+                <TableCell className="text-xs max-w-sm truncate">{v.user_agent}</TableCell>
+                <TableCell className="text-xs">{new Date(v.viewed_at).toLocaleString()}</TableCell>
               </TableRow>
             ))}
           </TableBody>

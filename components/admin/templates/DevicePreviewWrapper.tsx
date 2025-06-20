@@ -5,11 +5,7 @@ import { Monitor, Smartphone, Tablet, RotateCw } from 'lucide-react';
 type Mode = 'mobile' | 'tablet' | 'desktop';
 type Orientation = 'portrait' | 'landscape';
 
-export default function DevicePreviewWrapper({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function DevicePreviewWrapper({ children }: { children: React.ReactNode }) {
   const [mode, setMode] = useState<Mode>('mobile');
   const [orientation, setOrientation] = useState<Orientation>('portrait');
 
@@ -33,9 +29,7 @@ export default function DevicePreviewWrapper({
         default: 'w-[1024px] h-auto',
       },
     };
-    return mode === 'desktop'
-      ? sizes.desktop.default
-      : sizes[mode][orientation];
+    return mode === 'desktop' ? sizes.desktop.default : sizes[mode][orientation];
   };
 
   const bezelFrame = (content: React.ReactNode) => {
@@ -95,23 +89,18 @@ export default function DevicePreviewWrapper({
         {(mode === 'mobile' || mode === 'tablet') && (
           <Button
             onClick={() =>
-              setOrientation((prev) =>
-                prev === 'portrait' ? 'landscape' : 'portrait'
-              )
+              setOrientation((prev) => (prev === 'portrait' ? 'landscape' : 'portrait'))
             }
             size="sm"
             variant="secondary"
             className="flex items-center gap-2"
           >
-            <RotateCw size={14} />{' '}
-            {orientation === 'portrait' ? 'Portrait' : 'Landscape'}
+            <RotateCw size={14} /> {orientation === 'portrait' ? 'Portrait' : 'Landscape'}
           </Button>
         )}
       </div>
 
-      <div className="flex justify-center mt-4">
-        {bezelFrame(<>{children}</>)}
-      </div>
+      <div className="flex justify-center mt-4">{bezelFrame(<>{children}</>)}</div>
     </div>
   );
 }

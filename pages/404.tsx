@@ -9,10 +9,7 @@ export default function NotFound() {
       <p className="text-lg text-gray-400 mb-6 text-center">
         This page could not be found. It may have been removed or moved.
       </p>
-      <Link
-        href="/"
-        className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded"
-      >
+      <Link href="/" className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded">
         ← Return to Home
       </Link>
     </div>

@@ -8,9 +8,7 @@ import { Button } from '@/components/ui/button';
 
 export default function PrebuildOGPage() {
   const [slugs, setSlugs] = useState<string[]>([]);
-  const [results, setResults] = useState<
-    Record<string, 'pending' | 'success' | 'error'>
-  >({});
+  const [results, setResults] = useState<Record<string, 'pending' | 'success' | 'error'>>({});
   const [loading, setLoading] = useState(false);
   const [totalMB, setTotalMB] = useState<string>('0.0');
 
@@ -18,9 +16,7 @@ export default function PrebuildOGPage() {
     const res = await fetch('/api/compare-slugs');
     const json = await json();
     setSlugs(json.slugs);
-    setResults(
-      Object.fromEntries(json.slugs.map((slug: string) => [slug, 'pending']))
-    );
+    setResults(Object.fromEntries(json.slugs.map((slug: string) => [slug, 'pending'])));
   };
 
   const fetchStorageInfo = async () => {
@@ -60,13 +56,9 @@ export default function PrebuildOGPage() {
           <h1 className="text-2xl font-bold">
             Prebuild OG Images{' '}
             {parseFloat(totalMB) > 100 ? (
-              <span className="text-sm text-red-500 ml-2">
-                ({totalMB} MB used – over quota)
-              </span>
+              <span className="text-sm text-red-500 ml-2">({totalMB} MB used – over quota)</span>
             ) : (
-              <span className="text-sm text-muted-foreground ml-2">
-                ({totalMB} MB used)
-              </span>
+              <span className="text-sm text-muted-foreground ml-2">({totalMB} MB used)</span>
             )}
           </h1>
           <div className="w-full h-3 bg-gray-200 rounded overflow-hidden">
@@ -89,15 +81,11 @@ export default function PrebuildOGPage() {
       </div>
       {overQuota && (
         <div className="text-sm text-yellow-600 bg-yellow-100 border border-yellow-300 rounded px-4 py-2">
-          Storage limit exceeded. Please delete old exports before generating
-          new ones.
+          Storage limit exceeded. Please delete old exports before generating new ones.
         </div>
       )}
 
-      <Button
-        onClick={triggerBuilds}
-        disabled={loading || slugs.length === 0 || overQuota}
-      >
+      <Button onClick={triggerBuilds} disabled={loading || slugs.length === 0 || overQuota}>
         {loading ? 'Generating...' : 'Start Prebuild'}
       </Button>
       <ul className="text-sm space-y-4">

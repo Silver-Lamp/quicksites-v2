@@ -1,10 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
 import fetch from 'node-fetch';
 
-const supabase = createClient(
-  process.env.SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+const supabase = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
 const { data, error } = await supabase.from('token_logs').select('*');
 
 if (error) {
@@ -21,8 +18,6 @@ for (const log of data) {
 
 for (const [hash, locations] of Object.entries(byToken)) {
   if (locations.size > 1) {
-    console.log(
-      `⚠️ Geo anomaly: Token ${hash} used from ${Array.from(locations).join(', ')}`
-    );
+    console.log(`⚠️ Geo anomaly: Token ${hash} used from ${Array.from(locations).join(', ')}`);
   }
 }

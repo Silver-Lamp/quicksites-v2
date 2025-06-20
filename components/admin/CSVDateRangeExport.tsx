@@ -1,10 +1,6 @@
 import { useState } from 'react';
 
-export default function CSVDateRangeExport({
-  type,
-}: {
-  type: 'feedback' | 'checkins';
-}) {
+export default function CSVDateRangeExport({ type }: { type: 'feedback' | 'checkins' }) {
   const [start, setStart] = useState('');
   const [end, setEnd] = useState('');
 

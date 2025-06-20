@@ -7,27 +7,15 @@ export default function Document() {
         {/* OpenGraph */}
         <meta property="og:type" content="website" />
         <meta property="og:title" content="QuickSites" />
-        <meta
-          property="og:description"
-          content="AI-powered local site generator and dashboard"
-        />
-        <meta
-          property="og:image"
-          content="/assets/opengraph-image.dark.safe.png"
-        />
+        <meta property="og:description" content="AI-powered local site generator and dashboard" />
+        <meta property="og:image" content="/assets/opengraph-image.dark.safe.png" />
         <meta property="og:url" content="https://quicksites.ai" />
 
         {/* Twitter Card */}
         <meta name="twitter:card" content="summary_large_image" />
         <meta name="twitter:title" content="QuickSites" />
-        <meta
-          name="twitter:description"
-          content="AI-powered local site generator and dashboard"
-        />
-        <meta
-          name="twitter:image"
-          content="/assets/opengraph-image.dark.safe.png"
-        />
+        <meta name="twitter:description" content="AI-powered local site generator and dashboard" />
+        <meta name="twitter:image" content="/assets/opengraph-image.dark.safe.png" />
         <meta name="twitter:site" content="@quicksites_ai" />
 
         <link rel="icon" href="/assets/favicon.ico" />

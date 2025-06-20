@@ -6,10 +6,7 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
-export default async function handler(
-  req: NextApiRequest,
-  res: NextApiResponse
-) {
+export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   const { user_id } = req.query;
   if (!user_id) return json({ error: 'Missing user_id' });
 
@@ -19,8 +16,7 @@ export default async function handler(
       .select('block_id, action, created_at, message')
       .in(
         'block_id',
-        (await supabase.from('blocks').select('id').eq('owner_id', user_id))
-          .data || []
+        (await supabase.from('blocks').select('id').eq('owner_id', user_id)).data || []
       )
       .order('created_at', { ascending: false })
       .limit(100),

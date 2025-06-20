@@ -27,9 +27,7 @@ export default function CreatorTemplatesPage() {
         {templates.map((t: Template, i) => (
           <li key={i} className="bg-zinc-800 rounded p-4">
             <div className="font-semibold">{t.name}</div>
-            <div className="text-zinc-400 text-sm">
-              {t.headline || t.description}
-            </div>
+            <div className="text-zinc-400 text-sm">{t.headline || t.description}</div>
           </li>
         ))}
       </ul>

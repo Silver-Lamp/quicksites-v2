@@ -10,10 +10,7 @@ const supabase = createClient(
 const MAPBOX_TOKEN =
   'pk.eyJ1Ijoic2FuZG9uanVyb3dza2kiLCJhIjoiY21iMWZ1cTl6MDd1cTJrb2kwbzBtNDA0MiJ9.4sm5hCpIOLmDKXwwccXbAw';
 
-export default async function handler(
-  req: NextApiRequest,
-  res: NextApiResponse
-) {
+export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   const { city, state } = req.query;
   if (!city || !state) return json({ error: 'Missing city or state' });
 

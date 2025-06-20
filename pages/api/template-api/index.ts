@@ -8,10 +8,7 @@ const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 );
 
-export default async function handler(
-  _req: NextApiRequest,
-  res: NextApiResponse
-) {
+export default async function handler(_req: NextApiRequest, res: NextApiResponse) {
   console.log('[API] /api/template-api hit');
 
   const { data, error } = await supabase.rpc('get_latest_template_versions');

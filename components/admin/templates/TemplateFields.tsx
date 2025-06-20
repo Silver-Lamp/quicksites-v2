@@ -65,9 +65,7 @@ export default function TemplateFields({
               key={name}
               onClick={() => onChange({ ...template, color_scheme: name })}
               className={`w-6 h-6 rounded-full border-2 ${
-                template.color_scheme === name
-                  ? 'border-white'
-                  : 'border-transparent'
+                template.color_scheme === name ? 'border-white' : 'border-transparent'
               }`}
               style={{ backgroundColor: hex }}
               title={name}

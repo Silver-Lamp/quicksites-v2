@@ -3,8 +3,7 @@ export default function TrustPage() {
     <div className="max-w-3xl mx-auto p-6 text-white">
       <h1 className="text-3xl font-bold mb-4">🛡 Our Commitment to Trust</h1>
       <p className="mb-4">
-        QuickSites is designed to be transparent, secure, and user-owned. Here’s
-        how we honor that:
+        QuickSites is designed to be transparent, secure, and user-owned. Here’s how we honor that:
       </p>
       <ul className="list-disc pl-6 mb-6 space-y-2 text-zinc-300">
         <li>

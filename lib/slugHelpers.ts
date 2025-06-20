@@ -10,11 +10,7 @@ export async function generateUniqueSlug(base: string): Promise<string> {
   let attempt = 1;
 
   while (true) {
-    const { data } = await supabase
-      .from('sites')
-      .select('id')
-      .eq('slug', slug)
-      .maybeSingle();
+    const { data } = await supabase.from('sites').select('id').eq('slug', slug).maybeSingle();
 
     if (!data) break;
     attempt += 1;
@@ -32,10 +28,7 @@ export function toSlug(input: string): string {
     .replace(/--+/g, '-'); // collapse multiple dashes
 }
 
-export function generateBaseSlug(
-  businessName: string,
-  location?: string
-): string {
+export function generateBaseSlug(businessName: string, location?: string): string {
   const name = toSlug(businessName);
   const loc = location ? toSlug(location.split(',')[0]) : '';
   return loc ? `${name}-${loc}` : name;

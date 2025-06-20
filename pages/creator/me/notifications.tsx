@@ -21,8 +21,7 @@ export default function NotificationsPage() {
       {items.map((r: any) => (
         <div key={r.id} className="bg-zinc-800 p-4 rounded">
           <div className="text-sm">
-            <span className="text-green-400">@{r.receiver_handle}</span>{' '}
-            received a support request
+            <span className="text-green-400">@{r.receiver_handle}</span> received a support request
           </div>
           <div className="text-zinc-400 text-xs mt-1">
             {r.slug} • {r.message}

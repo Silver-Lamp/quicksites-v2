@@ -14,11 +14,7 @@ type CelebrationToastProps = {
   duration?: number;
 };
 
-export function CelebrationToast({
-  message,
-  subtext,
-  duration = 4000,
-}: CelebrationToastProps) {
+export function CelebrationToast({ message, subtext, duration = 4000 }: CelebrationToastProps) {
   useEffect(() => {
     confetti({ particleCount: 100, spread: 80, origin: { y: 0.6 } });
     const audio = new Audio('/sounds/celebration.mp3');

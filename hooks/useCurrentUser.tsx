@@ -13,9 +13,7 @@ export function useCurrentUser(): CurrentUserContextType & {
 
   const [fetchedRole, setFetchedRole] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [roleSource, setRoleSource] = useState<'session' | 'db' | 'cache'>(
-    'session'
-  );
+  const [roleSource, setRoleSource] = useState<'session' | 'db' | 'cache'>('session');
 
   useEffect(() => {
     const fetchRole = async () => {

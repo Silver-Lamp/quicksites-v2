@@ -21,25 +21,16 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
       <aside className="w-60 bg-white shadow-lg p-4 space-y-2">
         <h2 className="text-lg font-semibold mb-4">Admin</h2>
         <nav className="flex flex-col gap-2 text-sm">
-          <Link
-            href="/admin/dashboard"
-            className="hover:underline text-blue-700"
-          >
+          <Link href="/admin/dashboard" className="hover:underline text-blue-700">
             Dashboard
           </Link>
           <Link href="/admin/sites" className="hover:underline text-blue-700">
             Sites
           </Link>
-          <Link
-            href="/admin/param-lab"
-            className="hover:underline text-blue-700"
-          >
+          <Link href="/admin/param-lab" className="hover:underline text-blue-700">
             Param Lab
           </Link>
-          <Link
-            href="/admin/zod-playground"
-            className="hover:underline text-blue-700"
-          >
+          <Link href="/admin/zod-playground" className="hover:underline text-blue-700">
             Zod Playground
           </Link>
           <Link href="/admin/logs" className="hover:underline text-blue-700">

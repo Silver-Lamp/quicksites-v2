@@ -40,9 +40,7 @@ export default function AdminDigestPage() {
           {logs.map((l: any) => (
             <li key={l.id} className="bg-zinc-800 p-4 rounded text-sm">
               <div className="text-xs text-zinc-400">{l.sent_at}</div>
-              <pre className="whitespace-pre-wrap mt-2 text-green-300">
-                {l.summary}
-              </pre>
+              <pre className="whitespace-pre-wrap mt-2 text-green-300">{l.summary}</pre>
             </li>
           ))}
         </ul>

@@ -10,8 +10,7 @@ export function parseTypedQueryValue<T>(
   router: NextRouter
 ): any {
   const isJson = type === 'json' || type === 'json[]';
-  if (value === null || (Array.isArray(value) && value.length === 0))
-    return fallback;
+  if (value === null || (Array.isArray(value) && value.length === 0)) return fallback;
 
   try {
     if (type === 'number') {
@@ -21,8 +20,7 @@ export function parseTypedQueryValue<T>(
 
     if (type === 'date') return new Date(value as string);
 
-    if (type === 'number[]')
-      return (value as string[]).map(Number).filter((v) => !isNaN(v));
+    if (type === 'number[]') return (value as string[]).map(Number).filter((v) => !isNaN(v));
 
     if (type === 'date[]') return (value as string[]).map((v) => new Date(v));
 

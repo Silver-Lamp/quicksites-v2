@@ -26,9 +26,7 @@ export default function BlockSettingsModal({
         <SettingsSchema
           schema={schema}
           values={form}
-          onChange={(key, value) =>
-            setForm((prev) => ({ ...prev, [key]: value }))
-          }
+          onChange={(key, value) => setForm((prev) => ({ ...prev, [key]: value }))}
         />
 
         <div className="flex justify-between items-center mt-6">
@@ -47,10 +45,7 @@ export default function BlockSettingsModal({
           )}
 
           <div className="flex gap-3 ml-auto">
-            <button
-              onClick={onClose}
-              className="text-sm text-gray-500 hover:underline"
-            >
+            <button onClick={onClose} className="text-sm text-gray-500 hover:underline">
               Cancel
             </button>
             <button

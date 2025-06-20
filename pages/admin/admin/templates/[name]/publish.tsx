@@ -35,9 +35,7 @@ export default function PublishTemplate({
 
   return (
     <div className="max-w-xl mx-auto p-6">
-      <h1 className="text-xl font-bold mb-4">
-        Publish Template: {template_name}
-      </h1>
+      <h1 className="text-xl font-bold mb-4">Publish Template: {template_name}</h1>
       <Input
         placeholder="e.g. demo.quicksite.io/my-tow"
         value={domain}
@@ -59,14 +57,10 @@ export default function PublishTemplate({
         </div>
       )}
       {status === 'success' && (
-        <p className="text-green-600 text-sm mt-2">
-          ✅ Template published to {domain}
-        </p>
+        <p className="text-green-600 text-sm mt-2">✅ Template published to {domain}</p>
       )}
       {status === 'error' && (
-        <p className="text-red-600 text-sm mt-2">
-          ❌ Failed to publish template
-        </p>
+        <p className="text-red-600 text-sm mt-2">❌ Failed to publish template</p>
       )}
     </div>
   );

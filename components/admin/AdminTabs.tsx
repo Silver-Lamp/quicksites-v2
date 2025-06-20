@@ -30,8 +30,7 @@ export default function AdminTabs() {
     });
   }, []);
 
-  const isActive = (href: string) =>
-    pathname === href || pathname.startsWith(href + '/');
+  const isActive = (href: string) => pathname === href || pathname.startsWith(href + '/');
 
   const tabs = allTabs.filter((tab) => !tab.roles || tab.roles.includes(role));
 

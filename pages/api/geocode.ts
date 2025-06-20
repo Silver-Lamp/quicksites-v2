@@ -3,18 +3,10 @@ import { supabase } from '@/lib/supabaseClient.js';
 import { json } from '@/lib/api/json';
 import type { NextApiRequest, NextApiResponse } from 'next';
 
-export default async function handler(
-  req: NextApiRequest,
-  res: NextApiResponse
-) {
+export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   const { city, state } = req.query;
 
-  if (
-    !city ||
-    !state ||
-    typeof city !== 'string' ||
-    typeof state !== 'string'
-  ) {
+  if (!city || !state || typeof city !== 'string' || typeof state !== 'string') {
     return json({ error: 'Missing city or state' });
   }
 
@@ -65,9 +57,7 @@ export default async function handler(
       },
     ]);
 
-    console.log(
-      `🌍 Cached ${cleanCity}, ${cleanState} -> ${parsedLat}, ${parsedLon}`
-    );
+    console.log(`🌍 Cached ${cleanCity}, ${cleanState} -> ${parsedLat}, ${parsedLon}`);
     return json({ lat: parsedLat, lon: parsedLon });
   } catch (err) {
     console.error('🌍 Geocode error:', err);

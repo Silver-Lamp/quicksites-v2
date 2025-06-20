@@ -45,8 +45,7 @@ export default function AuthGuard({
     if (!readyToCheck) return;
 
     const normalizedRole = role ? role.toLowerCase().trim() : '';
-    const allowed =
-      roles?.map((r) => r.toLowerCase()).includes(normalizedRole) ?? true;
+    const allowed = roles?.map((r) => r.toLowerCase()).includes(normalizedRole) ?? true;
 
     const maskedToken = user?.access_token
       ? `${user.access_token.slice(0, 4)}...${user.access_token.slice(-4)}`

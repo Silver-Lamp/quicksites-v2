@@ -54,18 +54,10 @@ export default function BlockEditor({ block, onChange }: Props) {
       return (
         <div className="space-y-2">
           <Label>Image URL</Label>
-          <Input
-            value={block.url || ''}
-            onChange={(e) => updateField('url', e.target.value)}
-          />
+          <Input value={block.url || ''} onChange={(e) => updateField('url', e.target.value)} />
           <Label>Alt Text</Label>
-          <Input
-            value={block.alt || ''}
-            onChange={(e) => updateField('alt', e.target.value)}
-          />
-          {block.url && (
-            <img src={block.url} alt={block.alt} className="w-full rounded" />
-          )}
+          <Input value={block.alt || ''} onChange={(e) => updateField('alt', e.target.value)} />
+          {block.url && <img src={block.url} alt={block.alt} className="w-full rounded" />}
         </div>
       );
 
@@ -73,15 +65,9 @@ export default function BlockEditor({ block, onChange }: Props) {
       return (
         <div className="space-y-2">
           <Label>CTA Label</Label>
-          <Input
-            value={block.label || ''}
-            onChange={(e) => updateField('label', e.target.value)}
-          />
+          <Input value={block.label || ''} onChange={(e) => updateField('label', e.target.value)} />
           <Label>Link</Label>
-          <Input
-            value={block.link || ''}
-            onChange={(e) => updateField('link', e.target.value)}
-          />
+          <Input value={block.link || ''} onChange={(e) => updateField('link', e.target.value)} />
         </div>
       );
 
@@ -115,11 +101,7 @@ export default function BlockEditor({ block, onChange }: Props) {
             onChange={(e) => updateField('caption', e.target.value)}
           />
           {block.embed_url && (
-            <iframe
-              src={block.embed_url}
-              className="w-full aspect-video rounded"
-              allowFullScreen
-            />
+            <iframe src={block.embed_url} className="w-full aspect-video rounded" allowFullScreen />
           )}
         </div>
       );
@@ -133,15 +115,8 @@ export default function BlockEditor({ block, onChange }: Props) {
           <Label>List Items</Label>
           {(block.items || []).map((item: string, i: number) => (
             <div key={i} className="flex gap-2 items-center">
-              <Input
-                value={item}
-                onChange={(e) => updateListItem(i, e.target.value)}
-              />
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => deleteListItem(i)}
-              >
+              <Input value={item} onChange={(e) => updateListItem(i, e.target.value)} />
+              <Button variant="ghost" size="sm" onClick={() => deleteListItem(i)}>
                 <Trash2 className="w-4 h-4" />
               </Button>
             </div>
@@ -154,9 +129,7 @@ export default function BlockEditor({ block, onChange }: Props) {
 
     default:
       return (
-        <div className="text-sm text-muted-foreground">
-          Unsupported block type: {block.type}
-        </div>
+        <div className="text-sm text-muted-foreground">Unsupported block type: {block.type}</div>
       );
   }
 }

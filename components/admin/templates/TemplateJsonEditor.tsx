@@ -9,10 +9,7 @@ type TemplateJsonEditorProps = {
   setRawJson: (value: string) => void;
 };
 
-export default function TemplateJsonEditor({
-  rawJson,
-  setRawJson,
-}: TemplateJsonEditorProps) {
+export default function TemplateJsonEditor({ rawJson, setRawJson }: TemplateJsonEditorProps) {
   const [isReadOnly, setIsReadOnly] = useState(true);
   const [parsedJson, setParsedJson] = useState(null);
   const [collapsed, setCollapsed] = useState(new Set<string>());
@@ -44,15 +41,8 @@ export default function TemplateJsonEditor({
       const isCollapsed = collapsed.has(path);
       return (
         <div>
-          <span
-            className="cursor-pointer select-none"
-            onClick={() => toggleCollapse(path)}
-          >
-            {isCollapsed ? (
-              <ChevronRight size={12} />
-            ) : (
-              <ChevronDown size={12} />
-            )}
+          <span className="cursor-pointer select-none" onClick={() => toggleCollapse(path)}>
+            {isCollapsed ? <ChevronRight size={12} /> : <ChevronDown size={12} />}
             <span className="text-yellow-400"> [Array]</span>
           </span>
           {!isCollapsed && (
@@ -70,23 +60,15 @@ export default function TemplateJsonEditor({
       const isCollapsed = collapsed.has(path);
       return (
         <div>
-          <span
-            className="cursor-pointer select-none"
-            onClick={() => toggleCollapse(path)}
-          >
-            {isCollapsed ? (
-              <ChevronRight size={12} />
-            ) : (
-              <ChevronDown size={12} />
-            )}
+          <span className="cursor-pointer select-none" onClick={() => toggleCollapse(path)}>
+            {isCollapsed ? <ChevronRight size={12} /> : <ChevronDown size={12} />}
             <span className="text-blue-400"> {'{Object}'} </span>
           </span>
           {!isCollapsed && (
             <div className="ml-4">
               {Object.entries(value).map(([k, v]) => (
                 <div key={k}>
-                  <span className="text-green-400">"{k}"</span>:{' '}
-                  {renderValue(v, `${path}.${k}`)}
+                  <span className="text-green-400">"{k}"</span>: {renderValue(v, `${path}.${k}`)}
                 </div>
               ))}
             </div>
@@ -95,14 +77,10 @@ export default function TemplateJsonEditor({
       );
     }
 
-    if (type === 'string')
-      return <span className="text-emerald-400">"{value as string}"</span>;
-    if (type === 'number')
-      return <span className="text-cyan-400">{value as number}</span>;
+    if (type === 'string') return <span className="text-emerald-400">"{value as string}"</span>;
+    if (type === 'number') return <span className="text-cyan-400">{value as number}</span>;
     if (type === 'boolean')
-      return (
-        <span className="text-orange-400">{(value as boolean).toString()}</span>
-      );
+      return <span className="text-orange-400">{(value as boolean).toString()}</span>;
     return <span className="text-white">{value as string}</span>;
   };
 
@@ -123,11 +101,7 @@ export default function TemplateJsonEditor({
           <Button variant="secondary" size="sm" onClick={handlePrettify}>
             Prettify
           </Button>
-          <Button
-            variant="secondary"
-            size="sm"
-            onClick={() => setIsReadOnly(!isReadOnly)}
-          >
+          <Button variant="secondary" size="sm" onClick={() => setIsReadOnly(!isReadOnly)}>
             {isReadOnly ? 'Unlock' : 'Read-Only'}
           </Button>
         </div>

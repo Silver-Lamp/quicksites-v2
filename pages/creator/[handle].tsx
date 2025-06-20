@@ -37,11 +37,7 @@ export default function PublicHandlePage() {
   return (
     <div className="text-white p-6 text-center max-w-2xl mx-auto">
       {data.avatar && (
-        <img
-          src={data.avatar}
-          alt="avatar"
-          className="w-20 h-20 rounded-full mx-auto mb-4"
-        />
+        <img src={data.avatar} alt="avatar" className="w-20 h-20 rounded-full mx-auto mb-4" />
       )}
       <h1 className="text-2xl font-bold">@{handle}</h1>
       {data.badge && (

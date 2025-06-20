@@ -6,10 +6,7 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
-export default async function handler(
-  _req: NextApiRequest,
-  res: NextApiResponse
-) {
+export default async function handler(_req: NextApiRequest, res: NextApiResponse) {
   const { data: campaigns } = await supabase
     .from('support_campaigns')
     .select('id, slug, headline, target_action, created_by, created_at');
@@ -34,16 +31,11 @@ export default async function handler(
   }
 
   res.setHeader('Content-Type', 'text/csv');
-  res.setHeader(
-    'Content-Disposition',
-    'attachment; filename="campaign-analytics.csv"'
-  );
+  res.setHeader('Content-Disposition', 'attachment; filename="campaign-analytics.csv"');
 
   const header = 'slug,headline,action,created_by,created_at,count';
   const rows = results.map((r) =>
-    [r.slug, r.headline, r.action, r.created_by, r.created_at, r.count].join(
-      ','
-    )
+    [r.slug, r.headline, r.action, r.created_by, r.created_at, r.count].join(',')
   );
 
   res.send([header, ...rows].join('\n'));

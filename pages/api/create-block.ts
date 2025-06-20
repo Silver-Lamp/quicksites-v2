@@ -7,10 +7,7 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
-export default async function handler(
-  req: NextApiRequest,
-  res: NextApiResponse
-) {
+export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') return res.status(405).end();
 
   const { title, message, lat, lon, emoji } = JSON.parse(req.body || '{}');
@@ -18,15 +15,12 @@ export default async function handler(
 
   const {
     data: { user },
-  } = await supabase.auth.getUser(
-    req.headers.authorization?.replace('Bearer ', '')
-  );
+  } = await supabase.auth.getUser(req.headers.authorization?.replace('Bearer ', ''));
 
   if (!user) return json({ error: 'Unauthorized' });
 
   const { data, error } = await supabase.from('blocks').insert({
-    owner_id:
-      req.headers['x-user-id'] || '00000000-0000-0000-0000-000000000000',
+    owner_id: req.headers['x-user-id'] || '00000000-0000-0000-0000-000000000000',
     title,
     message,
     lat,

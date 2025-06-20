@@ -4,10 +4,7 @@ import { json } from '@/lib/api/json';
 
 const webhookUrl = process.env.SLACK_WEBHOOK_URL;
 
-export default async function handler(
-  req: NextApiRequest,
-  res: NextApiResponse
-) {
+export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') return res.status(405).end();
 
   const { email, org, role, status, message, id } = req.body;

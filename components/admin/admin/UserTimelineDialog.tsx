@@ -1,20 +1,10 @@
 'use client';
 
 import { useState } from 'react';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { format, formatDistance } from 'date-fns';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from '@/components/ui/tooltip';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 interface TimelineEvent {
   type: string;
@@ -76,17 +66,14 @@ export function UserTimelineDialog({
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="max-w-lg">
         <DialogHeader>
-          <DialogTitle className="text-lg font-bold">
-            Timeline for {userLabel}
-          </DialogTitle>
+          <DialogTitle className="text-lg font-bold">Timeline for {userLabel}</DialogTitle>
           {guestEvents.length > 0 &&
             (() => {
               const firstView = guestEvents.find((e) => e.type === 'view');
               if (!firstView) return null;
 
               const ref = (firstView as any).referrer || '';
-              const host =
-                typeof window !== 'undefined' ? window.location.origin : '';
+              const host = typeof window !== 'undefined' ? window.location.origin : '';
               const isInternal = ref.startsWith(host) || ref === '';
 
               const refColor = ref
@@ -111,8 +98,7 @@ export function UserTimelineDialog({
                     </div>
                   )}
                   <div>
-                    <strong>Referrer:</strong>{' '}
-                    <span className={refColor}>{ref || 'none'}</span>
+                    <strong>Referrer:</strong> <span className={refColor}>{ref || 'none'}</span>
                   </div>
                   {(firstView as any).page_url && (
                     <div>
@@ -131,9 +117,7 @@ export function UserTimelineDialog({
                     .filter((key) => (firstView as any)[key])
                     .map((key) => (
                       <div key={key}>
-                        <strong>
-                          {key.replace('utm_', '').toUpperCase()}:
-                        </strong>{' '}
+                        <strong>{key.replace('utm_', '').toUpperCase()}:</strong>{' '}
                         {(firstView as any)[key]}
                       </div>
                     ))}
@@ -142,9 +126,7 @@ export function UserTimelineDialog({
                       size="sm"
                       variant="secondary"
                       className="mt-2"
-                      onClick={() =>
-                        window.open((firstView as any).page_url, '_blank')
-                      }
+                      onClick={() => window.open((firstView as any).page_url, '_blank')}
                     >
                       Open Page Context ↗
                     </Button>
@@ -155,11 +137,7 @@ export function UserTimelineDialog({
         </DialogHeader>
 
         <div className="mb-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setShowAbsolute(!showAbsolute)}
-          >
+          <Button variant="outline" size="sm" onClick={() => setShowAbsolute(!showAbsolute)}>
             Toggle {showAbsolute ? 'Relative' : 'Absolute'} Timestamps
           </Button>
         </div>
@@ -174,8 +152,7 @@ export function UserTimelineDialog({
                   : null;
 
               const deviceInfo =
-                e.source === 'guest' &&
-                (e.user_agent || e.platform || e.device_type)
+                e.source === 'guest' && (e.user_agent || e.platform || e.device_type)
                   ? [e.platform, e.device_type].filter(Boolean).join(' • ') +
                     (e.user_agent ? `\n${e.user_agent}` : '')
                   : null;
@@ -186,8 +163,7 @@ export function UserTimelineDialog({
                     <Tooltip>
                       <TooltipTrigger asChild>
                         <span>
-                          {emojiMap[e.type] || '🔹'}{' '}
-                          {descriptions[e.type] || e.type}
+                          {emojiMap[e.type] || '🔹'} {descriptions[e.type] || e.type}
                         </span>
                       </TooltipTrigger>
                       <TooltipContent>
@@ -221,9 +197,7 @@ export function UserTimelineDialog({
           </TooltipProvider>
 
           {allEvents.length === 0 && (
-            <div className="text-muted-foreground italic">
-              No events found for this user.
-            </div>
+            <div className="text-muted-foreground italic">No events found for this user.</div>
           )}
         </div>
       </DialogContent>

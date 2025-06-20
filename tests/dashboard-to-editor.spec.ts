@@ -25,9 +25,7 @@ test('edit template via dashboard UI flow', async ({ page }) => {
   }`);
 
   // Fill in commit message
-  await page
-    .getByTestId('commit-message')
-    .fill('Updated via dashboard flow test');
+  await page.getByTestId('commit-message').fill('Updated via dashboard flow test');
 
   // Save template
   await page.getByTestId('save-template').click();

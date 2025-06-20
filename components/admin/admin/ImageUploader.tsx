@@ -47,9 +47,7 @@ export default function ImageUploader(props: ImageUploaderProps) {
 
   return (
     <div className="space-y-2">
-      {props.label && (
-        <p className="text-xs text-white/70 font-medium">{props.label}</p>
-      )}
+      {props.label && <p className="text-xs text-white/70 font-medium">{props.label}</p>}
 
       <div
         {...getRootProps()}
@@ -60,9 +58,7 @@ export default function ImageUploader(props: ImageUploaderProps) {
       >
         <input {...getInputProps()} />
         <p className="text-sm text-gray-400">
-          {isDragActive
-            ? 'Drop the image here…'
-            : 'Drag & drop an image, or click to select one'}
+          {isDragActive ? 'Drop the image here…' : 'Drag & drop an image, or click to select one'}
         </p>
       </div>
 
@@ -70,11 +66,7 @@ export default function ImageUploader(props: ImageUploaderProps) {
 
       {preview && (
         <div className="relative max-w-xs">
-          <img
-            src={preview}
-            alt="Uploaded"
-            className="rounded border max-h-48"
-          />
+          <img src={preview} alt="Uploaded" className="rounded border max-h-48" />
           <button
             type="button"
             onClick={removeImage}

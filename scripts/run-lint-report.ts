@@ -8,4 +8,4 @@ if (!existsSync('.lint-tmp/scripts/lint-digest.js')) {
 
 console.log('🚀 Running lint digest...');
 execSync('node .lint-tmp/scripts/lint-digest.js', { stdio: 'inherit' });
-s
+console.log('✅ Done!');

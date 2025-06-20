@@ -16,10 +16,7 @@ async function run() {
   for (const campaign of campaigns || []) {
     console.log(`🚦 Starting campaign: ${campaign.name}`);
 
-    await supabase
-      .from('campaigns')
-      .update({ status: 'active' })
-      .eq('id', campaign.id);
+    await supabase.from('campaigns').update({ status: 'active' }).eq('id', campaign.id);
 
     const { data: leads } = await supabase
       .from('leads')

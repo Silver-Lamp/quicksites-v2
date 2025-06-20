@@ -35,14 +35,11 @@ function cleanFile(filePath: string) {
   );
 
   // Fix req.json() to await req.json()
-  content = content.replace(
-    /([^a-zA-Z0-9_])req\.json\s*\(\s*\)/g,
-    (match, prefix) => {
-      if (match.includes('await')) return match;
-      changed = true;
-      return `${prefix}await req.json()`;
-    }
-  );
+  content = content.replace(/([^a-zA-Z0-9_])req\.json\s*\(\s*\)/g, (match, prefix) => {
+    if (match.includes('await')) return match;
+    changed = true;
+    return `${prefix}await req.json()`;
+  });
 
   // Fix route signatures (GET, POST, etc.)
   content = content.replace(
@@ -54,13 +51,10 @@ function cleanFile(filePath: string) {
   );
 
   // Fix middleware signature
-  content = content.replace(
-    /export\s+function\s+middleware\s*\(\s*req\s*\)/g,
-    () => {
-      changed = true;
-      return `export function middleware(req: Request): Response`;
-    }
-  );
+  content = content.replace(/export\s+function\s+middleware\s*\(\s*req\s*\)/g, () => {
+    changed = true;
+    return `export function middleware(req: Request): Response`;
+  });
 
   // Fix NextResponse.json
   content = content.replace(/NextResponse\.json\s*\(/g, () => {

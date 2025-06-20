@@ -12,8 +12,5 @@ for (const file of files) {
   output.push(`${file}  ${hash}`);
 }
 
-fs.writeFileSync(
-  './public/reports/security-hashes.json',
-  JSON.stringify(output, null, 2)
-);
+fs.writeFileSync('./public/reports/security-hashes.json', JSON.stringify(output, null, 2));
 console.log('✅ security-hashes.json updated');

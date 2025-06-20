@@ -69,13 +69,8 @@ export default function LogsPage() {
           </thead>
           <tbody>
             {filtered.map((log, i) => (
-              <tr
-                key={log.id}
-                className={i % 2 === 0 ? 'bg-gray-800' : 'bg-gray-900'}
-              >
-                <td className="px-4 py-2">
-                  {new Date(log.timestamp).toLocaleString()}
-                </td>
+              <tr key={log.id} className={i % 2 === 0 ? 'bg-gray-800' : 'bg-gray-900'}>
+                <td className="px-4 py-2">{new Date(log.timestamp).toLocaleString()}</td>
                 <td className="px-4 py-2">{log.action_type}</td>
                 <td className="px-4 py-2">{log.triggered_by || '—'}</td>
                 <td className="px-4 py-2 text-xs">{log.lead_id}</td>

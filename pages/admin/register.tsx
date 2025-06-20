@@ -61,9 +61,7 @@ export default function RegisterPage() {
           required
         />
         {referrerId && (
-          <p className="text-xs text-gray-400">
-            Signing up via referral: {referrerId}
-          </p>
+          <p className="text-xs text-gray-400">Signing up via referral: {referrerId}</p>
         )}
         <button
           type="submit"

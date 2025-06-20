@@ -16,12 +16,7 @@ type ModalWrapperProps = {
   title?: string;
 };
 
-export default function ModalWrapper({
-  children,
-  onClose,
-  open,
-  title,
-}: ModalWrapperProps) {
+export default function ModalWrapper({ children, onClose, open, title }: ModalWrapperProps) {
   return (
     <Dialog open={open} onOpenChange={(val) => !val && onClose()}>
       {/* <DialogOverlay className="fixed inset-0 z-[9998] bg-background/80 backdrop-blur-none" /> */}
@@ -31,9 +26,7 @@ export default function ModalWrapper({
         // className=""
       >
         {title && (
-          <DialogTitle className="text-lg font-semibold text-white mb-4">
-            {title}
-          </DialogTitle>
+          <DialogTitle className="text-lg font-semibold text-white mb-4">{title}</DialogTitle>
         )}
         <DialogClose
           className="absolute top-3 right-4 text-white text-2xl hover:text-red-400"

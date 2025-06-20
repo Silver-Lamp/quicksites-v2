@@ -5,9 +5,7 @@ import AdminLayout from '@/components/layout/AdminLayout';
 
 export default function CampaignsPage() {
   const [campaigns, setCampaigns] = useState<any[]>([]);
-  const [leadsByCampaign, setLeadsByCampaign] = useState<Record<string, any[]>>(
-    {}
-  );
+  const [leadsByCampaign, setLeadsByCampaign] = useState<Record<string, any[]>>({});
   const [now, setNow] = useState(dayjs());
   const [userEmail, setUserEmail] = useState<string | null>(null);
 
@@ -24,9 +22,7 @@ export default function CampaignsPage() {
 
     supabase
       .from('leads')
-      .select(
-        '*, draft_sites:domain_id(domain, is_claimed), users:owner_id(email)'
-      )
+      .select('*, draft_sites:domain_id(domain, is_claimed), users:owner_id(email)')
       .then(({ data }) => {
         const grouped: Record<string, any[]> = {};
         for (const lead of data || []) {
@@ -118,11 +114,7 @@ export default function CampaignsPage() {
             ) : (
               <p className="text-sm text-gray-400 mt-2">No leads linked.</p>
             )}
-            {winner && (
-              <p className="mt-3 text-green-400 font-bold">
-                🎉 Winner: {winner}
-              </p>
-            )}
+            {winner && <p className="mt-3 text-green-400 font-bold">🎉 Winner: {winner}</p>}
           </div>
         );
       })}

@@ -50,12 +50,8 @@ export default function ParamLabPage() {
 
   const updateShareInfo = () => {
     const url = new URL(window.location.href);
-    const paramEntries = Array.from(url.searchParams.entries()).filter(
-      ([k]) => k !== 'slug'
-    );
-    const query = paramEntries
-      .map(([k, v]) => `${k}=${encodeURIComponent(v)}`)
-      .join('&');
+    const paramEntries = Array.from(url.searchParams.entries()).filter(([k]) => k !== 'slug');
+    const query = paramEntries.map(([k, v]) => `${k}=${encodeURIComponent(v)}`).join('&');
     setParamsString(query);
     setShareUrl(window.location.href);
   };
@@ -138,8 +134,7 @@ export default function ParamLabPage() {
     alert(`Copied shareable link for "${name}"!`);
   };
 
-  if (!schema)
-    return <div className="p-4 text-red-600">Unknown schema: {slug}</div>;
+  if (!schema) return <div className="p-4 text-red-600">Unknown schema: {slug}</div>;
 
   return (
     <div className="max-w-3xl mx-auto p-6 space-y-6">
@@ -148,9 +143,7 @@ export default function ParamLabPage() {
         <select
           className="border px-2 py-1 rounded"
           value={slug}
-          onChange={(e) =>
-            router.push(`/admin/param-lab?slug=${e.target.value}`)
-          }
+          onChange={(e) => router.push(`/admin/param-lab?slug=${e.target.value}`)}
         >
           {Object.keys(queryParamSchemas).map((key) => (
             <option key={key} value={key}>
@@ -184,10 +177,7 @@ export default function ParamLabPage() {
           placeholder="Preset name"
           className="border px-2 py-1 rounded w-full"
         />
-        <button
-          onClick={savePreset}
-          className="text-sm bg-green-600 text-white px-4 py-1 rounded"
-        >
+        <button onClick={savePreset} className="text-sm bg-green-600 text-white px-4 py-1 rounded">
           Save Preset
         </button>
       </div>
@@ -199,8 +189,7 @@ export default function ParamLabPage() {
             const tags = extractTags(query).map((t) => t.toLowerCase());
             return tagMatchMode === 'all'
               ? tagFilter.every((f) => tags.includes(f))
-              : tagFilter.length === 0 ||
-                  tagFilter.some((f) => tags.includes(f));
+              : tagFilter.length === 0 || tagFilter.some((f) => tags.includes(f));
           })
           .map(([name, query]) => (
             // <PresetCard

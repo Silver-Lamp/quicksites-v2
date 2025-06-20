@@ -2,11 +2,7 @@
 
 import { useEffect, useState } from 'react';
 
-export function useLiveTableWrapper<T>(
-  table: string,
-  filter: any,
-  sort: any
-): T[] {
+export function useLiveTableWrapper<T>(table: string, filter: any, sort: any): T[] {
   const [data, setData] = useState<T[]>([]);
 
   useEffect(() => {
@@ -14,11 +10,7 @@ export function useLiveTableWrapper<T>(
 
     const fetchData = async () => {
       const mod = await import('./useLiveTable.jsx');
-      const result = mod.useLiveTable<{ id: string | number } & T>(
-        table,
-        filter,
-        sort
-      );
+      const result = mod.useLiveTable<{ id: string | number } & T>(table, filter, sort);
       if (mounted) setData(result);
     };
 

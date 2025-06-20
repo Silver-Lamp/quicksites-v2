@@ -20,11 +20,7 @@ import type { Block } from '@/types/blocks';
 import { normalizeTemplate } from '@/admin/utils/normalizeTemplate';
 import type { TemplateData } from '@/types/template';
 
-export default function TemplateEditor({
-  templateName,
-}: {
-  templateName: string;
-}) {
+export default function TemplateEditor({ templateName }: { templateName: string }) {
   const [template, setTemplate] = useState<Template>({
     name: templateName,
     layout: 'default',
@@ -115,10 +111,7 @@ export default function TemplateEditor({
             },
           ],
         };
-        const finalData =
-          data?.data && Object.keys(data.data).length > 0
-            ? data.data
-            : fallback;
+        const finalData = data?.data && Object.keys(data.data).length > 0 ? data.data : fallback;
         const normalized = normalizeTemplate({ ...data, data: finalData });
         setTemplate(normalized);
         setRawJson(JSON.stringify(finalData, null, 2));
@@ -150,9 +143,7 @@ export default function TemplateEditor({
       <div className="p-6 space-y-6 pb-40">
         <div className="flex justify-between items-center">
           <h1 className="text-xl font-bold">{template?.name}</h1>
-          <Button onClick={() => setShowPublishModal(true)}>
-            Publish Site
-          </Button>
+          <Button onClick={() => setShowPublishModal(true)}>Publish Site</Button>
         </div>
 
         <Tabs defaultValue="edit">
@@ -165,10 +156,7 @@ export default function TemplateEditor({
           <TabsContent value="edit">
             <div className="grid md:grid-cols-2 gap-6 pt-4">
               <div className="space-y-4">
-                <TemplateSettingsPanel
-                  template={template}
-                  onChange={setTemplate}
-                />
+                <TemplateSettingsPanel template={template} onChange={setTemplate} />
                 <TemplatePageEditor
                   template={template}
                   onChange={setTemplate}
@@ -176,12 +164,8 @@ export default function TemplateEditor({
                 />
                 <div className="mt-6 p-4 rounded text-sm bg-gray-800 text-white">
                   <p className="font-bold">{template?.name}</p>
-                  <p className="text-white/80 text-xs">
-                    Layout: {template?.layout}
-                  </p>
-                  <p className="text-white/80 text-xs">
-                    Industry: {template?.industry}
-                  </p>
+                  <p className="text-white/80 text-xs">Layout: {template?.layout}</p>
+                  <p className="text-white/80 text-xs">Industry: {template?.industry}</p>
                 </div>
                 <ImageUploader
                   siteId={template.site_id || ''}
@@ -239,10 +223,7 @@ export default function TemplateEditor({
           </TabsContent>
 
           <TabsContent value="history">
-            <TemplateHistory
-              template={template}
-              onRevert={(t) => setTemplate(t)}
-            />
+            <TemplateHistory template={template} onRevert={(t) => setTemplate(t)} />
           </TabsContent>
         </Tabs>
 

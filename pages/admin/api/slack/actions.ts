@@ -8,10 +8,7 @@ const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 );
 
-export default async function handler(
-  req: NextApiRequest,
-  res: NextApiResponse
-) {
+export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') return res.status(405).end();
 
   try {
@@ -24,12 +21,7 @@ export default async function handler(
     }
 
     const [command, id] = value.split(':');
-    const status =
-      command === 'approve'
-        ? 'approved'
-        : command === 'reject'
-          ? 'rejected'
-          : null;
+    const status = command === 'approve' ? 'approved' : command === 'reject' ? 'rejected' : null;
 
     if (!status) return json({ error: 'Invalid action' });
 

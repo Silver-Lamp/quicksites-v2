@@ -7,10 +7,7 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
-export default async function handler(
-  req: NextApiRequest,
-  res: NextApiResponse
-) {
+export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   const { lead } = req.body;
   if (!lead?.email || !lead?.business_name) {
     return json({ error: 'Missing lead data' });
@@ -21,9 +18,7 @@ export default async function handler(
 
   console.log(`📧 MOCK CLAIM EMAIL TO: ${lead.email}`);
   console.log(`Subject: Your Website Is Ready`);
-  console.log(
-    `Body: Hey ${lead.business_name}, you can preview your new site at ${claimUrl}`
-  );
+  console.log(`Body: Hey ${lead.business_name}, you can preview your new site at ${claimUrl}`);
 
   await supabase.from('user_action_logs').insert([
     {

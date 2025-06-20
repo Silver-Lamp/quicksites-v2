@@ -47,9 +47,7 @@ export default function ThankSupporters() {
       <h1 className="text-2xl font-bold">🙏 Send Thanks</h1>
       {supporters.map((s) => (
         <div key={s.user_id} className="bg-zinc-800 p-3 rounded">
-          <div className="text-green-400 text-sm mb-2">
-            User: {s.user_id.slice(0, 8)}
-          </div>
+          <div className="text-green-400 text-sm mb-2">User: {s.user_id.slice(0, 8)}</div>
           <button
             disabled={sent[s.user_id]}
             onClick={() => handleSendThanks(s.user_id)}

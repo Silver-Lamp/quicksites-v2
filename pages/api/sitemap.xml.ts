@@ -4,9 +4,7 @@ import { supabase } from '@/lib/supabaseClient.js';
 const BASE_URL = 'https://quicksites.ai';
 const MAX_URLS_PER_SITEMAP = 1000;
 
-function generateXml(
-  pages: { loc: string; changefreq: string; priority: number }[]
-) {
+function generateXml(pages: { loc: string; changefreq: string; priority: number }[]) {
   return `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
 ${pages
@@ -18,10 +16,7 @@ ${pages
 </urlset>`;
 }
 
-export default async function handler(
-  req: NextApiRequest,
-  res: NextApiResponse
-) {
+export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   const page = parseInt((req.query.page as string) || '1', 10);
   const offset = (page - 1) * MAX_URLS_PER_SITEMAP;
 

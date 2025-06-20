@@ -17,11 +17,7 @@ export function NavSections() {
     <nav className="flex flex-wrap gap-4 items-center text-sm">
       <details
         className="group"
-        open={
-          matches('/dashboard') ||
-          matches('/admin/leads') ||
-          matches('/admin/start-campaign')
-        }
+        open={matches('/dashboard') || matches('/admin/leads') || matches('/admin/start-campaign')}
       >
         <summary className="cursor-pointer font-semibold text-blue-300 group-open:underline">
           Core
@@ -31,9 +27,7 @@ export function NavSections() {
           <SafeLink href="/admin/leads">
             Leads{' '}
             {unclaimed !== null && unclaimed > 0 && (
-              <span className="ml-1 text-xs text-yellow-400">
-                ({unclaimed})
-              </span>
+              <span className="ml-1 text-xs text-yellow-400">({unclaimed})</span>
             )}
           </SafeLink>
           <SafeLink href="/admin/campaigns">Campaigns</SafeLink>
@@ -43,11 +37,7 @@ export function NavSections() {
 
       <details
         className="group"
-        open={
-          matches('/admin/logs') ||
-          matches('/admin/analytics') ||
-          matches('/admin/heatmap')
-        }
+        open={matches('/admin/logs') || matches('/admin/analytics') || matches('/admin/heatmap')}
       >
         <summary className="cursor-pointer font-semibold text-green-300 group-open:underline">
           Logs{' '}
@@ -64,10 +54,7 @@ export function NavSections() {
         </div>
       </details>
 
-      <details
-        className="group"
-        open={matches('/template-market') || matches('/admin/templates')}
-      >
+      <details className="group" open={matches('/template-market') || matches('/admin/templates')}>
         <summary className="cursor-pointer font-semibold text-yellow-300 group-open:underline">
           Templates
         </summary>
@@ -80,11 +67,7 @@ export function NavSections() {
 
       <details
         className="group"
-        open={
-          matches('/docs') ||
-          matches('/admin/docs') ||
-          matches('/admin/query-usecases')
-        }
+        open={matches('/docs') || matches('/admin/docs') || matches('/admin/query-usecases')}
       >
         <summary className="cursor-pointer font-semibold text-purple-300 group-open:underline">
           Docs & Dev
@@ -102,10 +85,7 @@ export function NavSections() {
         </div>
       </details>
 
-      <details
-        className="group"
-        open={matches('/admin/users') || matches('/admin/roles')}
-      >
+      <details className="group" open={matches('/admin/users') || matches('/admin/roles')}>
         <summary className="cursor-pointer font-semibold text-red-300 group-open:underline">
           Admin
         </summary>

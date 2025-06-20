@@ -6,13 +6,7 @@ const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 );
 
-export default function TemplateActivity({
-  logs,
-  name,
-}: {
-  logs: any[];
-  name: string;
-}) {
+export default function TemplateActivity({ logs, name }: { logs: any[]; name: string }) {
   return (
     <div className="max-w-4xl mx-auto p-6">
       <h1 className="text-2xl font-bold mb-4">Activity for: {name}</h1>

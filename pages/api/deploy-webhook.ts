@@ -1,10 +1,7 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { json } from '@/lib/api/json';
 
-export default async function handler(
-  req: NextApiRequest,
-  res: NextApiResponse
-) {
+export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   const { domain } = JSON.parse(req.body);
 
   const webhook = process.env.VERCEL_DEPLOY_WEBHOOK;

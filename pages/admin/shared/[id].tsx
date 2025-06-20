@@ -22,9 +22,7 @@ export default function SharedSnapshotPage() {
   useEffect(() => {
     if (!id) return;
 
-    QRCode.toDataURL(`${window.location.origin}/shared/${id}`).then(
-      setQrDataUrl
-    );
+    QRCode.toDataURL(`${window.location.origin}/shared/${id}`).then(setQrDataUrl);
 
     const loadData = async () => {
       let res;
@@ -52,19 +50,12 @@ export default function SharedSnapshotPage() {
   const isDark = template?.theme === 'dark';
   const brand = template?.brand || 'blue';
 
-  const themeClasses = isDark
-    ? 'bg-gray-900 text-white'
-    : 'bg-white text-gray-900';
+  const themeClasses = isDark ? 'bg-gray-900 text-white' : 'bg-white text-gray-900';
 
   const brandClass =
-    brand === 'green'
-      ? 'text-green-400'
-      : brand === 'red'
-        ? 'text-red-400'
-        : 'text-blue-400';
+    brand === 'green' ? 'text-green-400' : brand === 'red' ? 'text-red-400' : 'text-blue-400';
 
-  if (!template)
-    return <div className="text-white p-10">Loading shared preview...</div>;
+  if (!template) return <div className="text-white p-10">Loading shared preview...</div>;
 
   return (
     <div
@@ -102,10 +93,7 @@ export default function SharedSnapshotPage() {
       </div>
 
       <div className="flex flex-wrap gap-3 mt-6 justify-between">
-        <Button
-          variant="outline"
-          onClick={() => router.push(`/templates/new?from=${id}`)}
-        >
+        <Button variant="outline" onClick={() => router.push(`/templates/new?from=${id}`)}>
           Remix This
         </Button>
         <Button onClick={() => generateSocialCard({})} variant="secondary">

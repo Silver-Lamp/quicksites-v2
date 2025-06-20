@@ -18,9 +18,7 @@ export default function TemplateSaveBar({
   setSaveStatus,
   setHighlightErrors,
 }: TemplateSaveBarProps) {
-  const [saveStatus, setLocalSaveStatus] = useState<'idle' | 'saved' | 'error'>(
-    'idle'
-  );
+  const [saveStatus, setLocalSaveStatus] = useState<'idle' | 'saved' | 'error'>('idle');
 
   const handleSave = async () => {
     if (
@@ -75,9 +73,7 @@ export default function TemplateSaveBar({
         {saveStatus === 'saved' && (
           <span className="text-green-500 text-xs animate-pulse">✓ Saved</span>
         )}
-        {saveStatus === 'error' && (
-          <span className="text-red-500 text-xs">⚠️ Error</span>
-        )}
+        {saveStatus === 'error' && <span className="text-red-500 text-xs">⚠️ Error</span>}
       </div>
     </div>
   );

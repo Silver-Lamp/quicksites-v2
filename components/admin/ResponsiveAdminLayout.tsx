@@ -4,11 +4,7 @@ import MobileDrawerSidebar from '@/components/admin/MobileDrawerSidebar';
 import NavBarWithBadges from '@/components/admin/NavBarWithBadges';
 import AdminSidebarLayout from '@/components/admin/layout/AdminSidebarLayout';
 
-export default function ResponsiveAdminLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function ResponsiveAdminLayout({ children }: { children: React.ReactNode }) {
   const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {

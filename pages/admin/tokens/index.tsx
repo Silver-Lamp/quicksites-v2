@@ -23,10 +23,7 @@ export default function TokenManager() {
 
   const createToken = async () => {
     const raw = Math.random().toString(36).slice(2) + Date.now().toString(36);
-    const hash = await crypto.subtle.digest(
-      'SHA-256',
-      new TextEncoder().encode(raw)
-    );
+    const hash = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(raw));
     const tokenHash = Array.from(new Uint8Array(hash))
       .map((b) => b.toString(16).padStart(2, '0'))
       .join('');
@@ -37,9 +34,7 @@ export default function TokenManager() {
       expires_at: expiresAt,
     });
 
-    alert(
-      `✅ Token created! Link: /api/reports/download?file=${fileName}&token=${raw}`
-    );
+    alert(`✅ Token created! Link: /api/reports/download?file=${fileName}&token=${raw}`);
     setFileName('');
     setExpiresAt('');
     loadTokens();
@@ -50,9 +45,7 @@ export default function TokenManager() {
       <h1 className="text-2xl font-bold">🔐 Report Access Tokens</h1>
 
       <div className="space-y-2">
-        <label className="block text-sm">
-          File Name (e.g. summary_2025-06-05.pdf)
-        </label>
+        <label className="block text-sm">File Name (e.g. summary_2025-06-05.pdf)</label>
         <input
           type="text"
           value={fileName}
@@ -82,9 +75,7 @@ export default function TokenManager() {
           {tokens.map((t, i) => (
             <li key={i} className="flex justify-between">
               <span>{t.file_name}</span>
-              <span className="text-zinc-400">
-                {new Date(t.expires_at).toLocaleString()}
-              </span>
+              <span className="text-zinc-400">{new Date(t.expires_at).toLocaleString()}</span>
             </li>
           ))}
         </ul>

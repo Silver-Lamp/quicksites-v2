@@ -11,14 +11,7 @@ import {
 } from 'chart.js';
 import { Bar } from 'react-chartjs-2';
 
-ChartJS.register(
-  CategoryScale,
-  LinearScale,
-  BarElement,
-  Title,
-  Tooltip,
-  Legend
-);
+ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
 
 export default function HeatmapPage() {
   const [logs, setLogs] = useState<any[]>([]);
@@ -27,9 +20,7 @@ export default function HeatmapPage() {
   const [domainOptions, setDomainOptions] = useState<string[]>([]);
   const [actionOptions, setActionOptions] = useState<string[]>([]);
   const [autoRefresh, setAutoRefresh] = useState(true);
-  const [presets, setPresets] = useState<
-    { name: string; domain?: string; action?: string }[]
-  >([]);
+  const [presets, setPresets] = useState<{ name: string; domain?: string; action?: string }[]>([]);
   const [presetName, setPresetName] = useState('');
 
   useEffect(() => {
@@ -133,10 +124,7 @@ export default function HeatmapPage() {
           className="bg-gray-700 px-2 py-1 text-white rounded border border-gray-600"
         />
 
-        <button
-          onClick={savePreset}
-          className="bg-blue-600 px-3 py-1 rounded text-white"
-        >
+        <button onClick={savePreset} className="bg-blue-600 px-3 py-1 rounded text-white">
           Save
         </button>
 

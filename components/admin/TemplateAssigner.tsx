@@ -48,9 +48,7 @@ export default function TemplateAssigner() {
     const id = await fetchUserId();
     if (!id) return;
 
-    await supabase
-      .from('dashboard_user_layouts')
-      .upsert({ user_id: id, template_id: selected });
+    await supabase.from('dashboard_user_layouts').upsert({ user_id: id, template_id: selected });
 
     alert('✅ Template assigned!');
   };

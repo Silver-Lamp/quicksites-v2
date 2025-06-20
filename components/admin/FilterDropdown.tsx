@@ -5,10 +5,7 @@ interface FilterDropdownProps {
   setIndustry: (value: string) => void;
 }
 
-export default function FilterDropdown({
-  industry,
-  setIndustry,
-}: FilterDropdownProps) {
+export default function FilterDropdown({ industry, setIndustry }: FilterDropdownProps) {
   return (
     <div className="space-y-2">
       <label className="text-lg text-gray-300">Filter by Industry:</label>

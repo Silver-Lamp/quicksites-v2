@@ -18,14 +18,7 @@ import {
 import { supabase } from '@/lib/supabaseClient.js';
 import html2pdf from 'html2pdf.js';
 
-ChartJS.register(
-  CategoryScale,
-  LinearScale,
-  BarElement,
-  Title,
-  Tooltip,
-  Legend
-);
+ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
 
 export default function AdminLogsPage() {
   const { user } = useCurrentUser();
@@ -46,8 +39,7 @@ export default function AdminLogsPage() {
         .select('*')
         .order('created_at', { ascending: false });
       if (filterType) query = query.eq('type', filterType);
-      if (filterUser)
-        query = query.ilike('payload->>user_email', `%${filterUser}%`);
+      if (filterUser) query = query.ilike('payload->>user_email', `%${filterUser}%`);
       if (startDate) query = query.gte('created_at', startDate);
       if (endDate) query = query.lte('created_at', endDate + 'T23:59:59Z');
       const { data, error } = await query;
@@ -68,10 +60,7 @@ export default function AdminLogsPage() {
     const csv =
       'created_at,type,user_email,payload\n' +
       rows
-        .map(
-          (r) =>
-            `${r.created_at},${r.type},${r.user_email},"${r.payload.replace(/"/g, '""')}"`
-        )
+        .map((r) => `${r.created_at},${r.type},${r.user_email},"${r.payload.replace(/"/g, '""')}"`)
         .join('\n');
     const blob = new Blob([csv], { type: 'text/csv' });
     const url = URL.createObjectURL(blob);
@@ -142,78 +131,51 @@ export default function AdminLogsPage() {
     const accessToken = session.data.session?.access_token;
     const userEmail = session.data.session?.user?.user_metadata?.email;
 
-    const res = await fetch(
-      'https://<your-project>.functions.supabase.co/email-weekly-summary',
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${accessToken}`,
-        },
-        body: JSON.stringify({ summary: chartData, userEmail }),
-      }
-    );
+    const res = await fetch('https://<your-project>.functions.supabase.co/email-weekly-summary', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${accessToken}`,
+      },
+      body: JSON.stringify({ summary: chartData, userEmail }),
+    });
 
     const json = await json();
     alert(json.message || 'Email request sent');
   };
 
-  if (!user?.id)
-    return (
-      <p className="p-6 text-center">🔒 You must be signed in to view logs.</p>
-    );
+  if (!user?.id) return <p className="p-6 text-center">🔒 You must be signed in to view logs.</p>;
   if (!isAdmin)
-    return (
-      <p className="p-6 text-center text-red-600">
-        ⛔ Access denied. Admins only.
-      </p>
-    );
+    return <p className="p-6 text-center text-red-600">⛔ Access denied. Admins only.</p>;
 
   return (
     <div className="max-w-6xl mx-auto p-6 space-y-6">
       <div className="flex justify-between items-center">
         <h1 className="text-3xl font-bold">📜 Deployment Logs</h1>
-        <button
-          onClick={exportCSV}
-          className="bg-gray-800 text-white px-4 py-2 rounded text-sm"
-        >
+        <button onClick={exportCSV} className="bg-gray-800 text-white px-4 py-2 rounded text-sm">
           Export CSV
         </button>
       </div>
 
       <div className="flex gap-4">
-        <button
-          onClick={exportCSV}
-          className="text-sm text-green-700 underline"
-        >
+        <button onClick={exportCSV} className="text-sm text-green-700 underline">
           Export CSV
         </button>
         <button
-          onClick={() =>
-            exportChartImage('weekly-summary-canvas', 'weekly-summary.png')
-          }
+          onClick={() => exportChartImage('weekly-summary-canvas', 'weekly-summary.png')}
           className="text-sm text-blue-600 underline"
         >
           Export Chart as Image
         </button>
-        <button
-          onClick={exportWeeklySummaryPDF}
-          className="text-sm text-purple-700 underline"
-        >
+        <button onClick={exportWeeklySummaryPDF} className="text-sm text-purple-700 underline">
           Download Weekly PDF
         </button>
-        <button
-          onClick={emailWeeklySummary}
-          className="text-sm text-amber-700 underline"
-        >
+        <button onClick={emailWeeklySummary} className="text-sm text-amber-700 underline">
           Email Summary
         </button>
       </div>
 
-      <div
-        id="weekly-summary-container"
-        className="bg-white p-4 border rounded shadow space-y-4"
-      >
+      <div id="weekly-summary-container" className="bg-white p-4 border rounded shadow space-y-4">
         <h2 className="text-lg font-semibold">📊 Log Breakdown</h2>
         <Bar
           id="weekly-summary-canvas"
@@ -237,17 +199,10 @@ export default function AdminLogsPage() {
       {!loading && logs.length === 0 && <p>No logs found.</p>}
       <div className="space-y-4">
         {logs.map((log) => (
-          <div
-            key={log.id}
-            className="bg-white p-4 border rounded shadow text-sm"
-          >
-            <p className="text-gray-500">
-              🕒 {new Date(log.created_at).toLocaleString()}
-            </p>
+          <div key={log.id} className="bg-white p-4 border rounded shadow text-sm">
+            <p className="text-gray-500">🕒 {new Date(log.created_at).toLocaleString()}</p>
             <p className="font-semibold text-blue-700">{log.type}</p>
-            <p className="text-xs text-gray-600">
-              👤 {log.payload?.user_email || 'N/A'}
-            </p>
+            <p className="text-xs text-gray-600">👤 {log.payload?.user_email || 'N/A'}</p>
             <pre className="overflow-auto max-h-64 bg-gray-100 mt-2 p-2 rounded">
               {JSON.stringify(log.payload, null, 2)}
             </pre>

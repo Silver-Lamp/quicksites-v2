@@ -13,10 +13,7 @@ type TagFilterDropdownProps = {
   onChange: (tags: string[]) => void;
 };
 
-export default function TagFilterDropdown({
-  selected,
-  onChange,
-}: TagFilterDropdownProps) {
+export default function TagFilterDropdown({ selected, onChange }: TagFilterDropdownProps) {
   const [available, setAvailable] = useState<string[]>([]);
 
   useEffect(() => {

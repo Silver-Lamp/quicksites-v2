@@ -12,9 +12,7 @@ async function run() {
 
   const { data: clicks } = await supabase
     .from('user_action_logs')
-    .select(
-      '*, leads(id, domain_id, email, business_name), domains(is_claimed)'
-    )
+    .select('*, leads(id, domain_id, email, business_name), domains(is_claimed)')
     .eq('action_type', 'click_second_chance')
     .gte('timestamp', since);
 

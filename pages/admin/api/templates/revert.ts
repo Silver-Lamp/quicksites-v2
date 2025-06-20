@@ -10,10 +10,7 @@ const supabase = createClient(
 
 const SAFETY_MINUTES = 10;
 
-export default async function handler(
-  req: NextApiRequest,
-  res: NextApiResponse
-) {
+export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') return res.status(405).end();
 
   const { template_name, data, editor_id, force = false } = req.body;

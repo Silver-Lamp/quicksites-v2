@@ -5,10 +5,7 @@ import { supabase } from '@/lib/supabaseClient.js';
 import router from 'next/router';
 import toast from 'react-hot-toast';
 
-export default async function handler(
-  req: NextApiRequest,
-  res: NextApiResponse
-) {
+export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') return res.status(405).end();
 
   const { slug, templateId, brandingProfileId } = req.body;

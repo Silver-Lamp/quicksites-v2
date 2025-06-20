@@ -27,10 +27,11 @@ function getTopFolder(filePath: string) {
 }
 
 const filtered: LintEntry[] = results
-  .filter((entry: any) =>
-    entry.filePath.includes('/quicksites-v2/') &&
-    !entry.filePath.includes('/.venv/') &&
-    !entry.filePath.includes('/node_modules/')
+  .filter(
+    (entry: any) =>
+      entry.filePath.includes('/quicksites-v2/') &&
+      !entry.filePath.includes('/.venv/') &&
+      !entry.filePath.includes('/node_modules/')
   )
   .map((entry: any) => ({
     file: entry.filePath,

@@ -48,10 +48,7 @@ function baseSlug(businessName: string, location?: string): string {
   const raw = `${name}-${loc}`.replace(/^-+|-+$/g, '');
   return raw.replace(/--+/g, '-');
 }
-export default async function handler(
-  req: NextApiRequest,
-  res: NextApiResponse
-) {
+export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   console.log('Incoming request payload:', req.body);
   const { template_version_id, business_name, location, domain } = req.body;
   const base = generateBaseSlug(business_name, location);

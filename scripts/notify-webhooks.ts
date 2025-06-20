@@ -3,10 +3,7 @@ import path from 'path';
 import fetch from 'node-fetch';
 import { createClient } from '@supabase/supabase-js';
 
-const supabase = createClient(
-  process.env.SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+const supabase = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
 
 const logPath = './reports/activity.log';
 const contents = fs.readFileSync(logPath, 'utf-8').trim().split('\n');
@@ -17,10 +14,7 @@ if (!lastLine.includes('Exported')) {
   process.exit(0);
 }
 
-const { data, error } = await supabase
-  .from('report_webhooks')
-  .select('*')
-  .eq('enabled', true);
+const { data, error } = await supabase.from('report_webhooks').select('*').eq('enabled', true);
 
 if (error) {
   console.error('Error fetching webhooks', error);
@@ -45,9 +39,6 @@ for (const hook of data) {
     });
     console.log(`📤 Notified ${hook.url}`);
   } catch (e: any) {
-    console.error(
-      `❌ Failed to notify ${hook.url}:`,
-      e instanceof Error ? e.message : String(e)
-    );
+    console.error(`❌ Failed to notify ${hook.url}:`, e instanceof Error ? e.message : String(e));
   }
 }

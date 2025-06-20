@@ -14,12 +14,10 @@ const SitePreview = dynamic(() => import('@/components/admin/SitePreview'), {
 export default function LaunchPage() {
   const params = useSearchParams();
   const router = useRouter();
-  const [status, setStatus] = useState<
-    'idle' | 'confirm' | 'publishing' | 'done' | 'error'
-  >('idle');
-  const [siteParams, setSiteParams] = useState<Record<string, any> | null>(
-    null
+  const [status, setStatus] = useState<'idle' | 'confirm' | 'publishing' | 'done' | 'error'>(
+    'idle'
   );
+  const [siteParams, setSiteParams] = useState<Record<string, any> | null>(null);
   const [resultUrl, setResultUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -59,9 +57,7 @@ export default function LaunchPage() {
 
       {status === 'confirm' && siteParams && (
         <div className="space-y-6">
-          <p className="text-gray-700">
-            Please confirm the following parameters:
-          </p>
+          <p className="text-gray-700">Please confirm the following parameters:</p>
           <pre className="text-left text-sm bg-gray-100 p-4 rounded border overflow-auto max-h-96">
             {JSON.stringify(siteParams, null, 2)}
           </pre>
@@ -90,9 +86,7 @@ export default function LaunchPage() {
 
       {status === 'done' && resultUrl && (
         <div className="space-y-4">
-          <p className="text-green-600 font-semibold">
-            Site published successfully!
-          </p>
+          <p className="text-green-600 font-semibold">Site published successfully!</p>
           <a
             href={resultUrl}
             target="_blank"

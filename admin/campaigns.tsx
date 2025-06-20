@@ -1,9 +1,8 @@
 'use client';
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/router';
-import { useFlashToast } from '@/hooks/useFlashToast';
-import { useQueryFlash } from '@/hooks/useQueryFlash';
-import { supabase } from '@/lib/supabaseClient';
+import { useFlashToast } from '../hooks/useFlashToast.js';
+import { useQueryFlash } from '../hooks/useQueryFlash.js';
+import { supabase } from './lib/supabaseClient.js';
 
 export default function AdminCampaignsPage() {
   const [campaigns, setCampaigns] = useState<any[]>([]);

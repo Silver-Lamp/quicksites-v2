@@ -25,10 +25,7 @@ export default function DomainDetail() {
 
   const toggleClaim = async () => {
     if (!domain) return;
-    await supabase
-      .from('domains')
-      .update({ is_claimed: !domain.is_claimed })
-      .eq('id', domain.id);
+    await supabase.from('domains').update({ is_claimed: !domain.is_claimed }).eq('id', domain.id);
 
     await supabase.from('user_action_logs').insert([
       {
@@ -47,10 +44,7 @@ export default function DomainDetail() {
       <p>City: {domain.city}</p>
       <p>Claimed: {domain.is_claimed ? 'Yes' : 'No'}</p>
       {role === 'admin' && (
-        <button
-          onClick={toggleClaim}
-          className="mt-4 bg-blue-600 px-4 py-2 rounded"
-        >
+        <button onClick={toggleClaim} className="mt-4 bg-blue-600 px-4 py-2 rounded">
           Toggle Claim
         </button>
       )}

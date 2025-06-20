@@ -17,15 +17,9 @@ export default function BrandingBadge({ branding }: { branding: any }) {
       className={`text-xs inline-flex items-center gap-2 px-2 py-1 rounded border ${themeColors[branding.theme] || ''}`}
     >
       <span>{branding.name}</span>
-      <div
-        className={`w-3 h-3 rounded-full ${brandColors[branding.brand] || ''}`}
-      />
+      <div className={`w-3 h-3 rounded-full ${brandColors[branding.brand] || ''}`} />
       {branding.logo_url && (
-        <img
-          src={branding.logo_url}
-          alt="Logo"
-          className="h-4 w-4 rounded-full"
-        />
+        <img src={branding.logo_url} alt="Logo" className="h-4 w-4 rounded-full" />
       )}
     </div>
   );

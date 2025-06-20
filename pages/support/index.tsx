@@ -22,34 +22,19 @@ export default function SupportDirectory() {
       <h1 className="text-2xl font-bold">📣 Support Directory</h1>
 
       <div className="space-x-2 text-sm">
-        <button
-          onClick={() => setActionFilter('')}
-          className="underline text-blue-400"
-        >
+        <button onClick={() => setActionFilter('')} className="underline text-blue-400">
           All
         </button>
-        <button
-          onClick={() => setActionFilter('cheer')}
-          className="underline text-green-400"
-        >
+        <button onClick={() => setActionFilter('cheer')} className="underline text-green-400">
           🎉 Cheer
         </button>
-        <button
-          onClick={() => setActionFilter('echo')}
-          className="underline text-blue-300"
-        >
+        <button onClick={() => setActionFilter('echo')} className="underline text-blue-300">
           🔁 Echo
         </button>
-        <button
-          onClick={() => setActionFilter('reflect')}
-          className="underline text-purple-300"
-        >
+        <button onClick={() => setActionFilter('reflect')} className="underline text-purple-300">
           🪞 Reflect
         </button>
-        <button
-          onClick={() => setActionFilter('checkin')}
-          className="underline text-yellow-300"
-        >
+        <button onClick={() => setActionFilter('checkin')} className="underline text-yellow-300">
           ✅ Check-in
         </button>
       </div>

@@ -21,10 +21,9 @@ type SortableBlockProps = {
   onEdit: (index: number) => void;
 };
 function SortableBlock({ block, index, onEdit }: SortableBlockProps) {
-  const { attributes, listeners, setNodeRef, transform, transition } =
-    useSortable({
-      id: block.id || `block-${index}`, // Ensure id is never undefined
-    });
+  const { attributes, listeners, setNodeRef, transform, transition } = useSortable({
+    id: block.id || `block-${index}`, // Ensure id is never undefined
+  });
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -109,11 +108,7 @@ const industryPresets: PresetMap = {
   },
 };
 
-export const BlocksEditor = ({
-  blocks,
-  onChange,
-  industry = 'default',
-}: BlocksEditorProps) => {
+export const BlocksEditor = ({ blocks, onChange, industry = 'default' }: BlocksEditorProps) => {
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
 
   const ensureIds = (blocks: Block[]) =>
@@ -128,8 +123,7 @@ export const BlocksEditor = ({
   };
 
   const handleAddPreset = (type: string) => {
-    const preset = (industryPresets[industry.toLowerCase()] ||
-      industryPresets.default)[type];
+    const preset = (industryPresets[industry.toLowerCase()] || industryPresets.default)[type];
     const newBlock = normalizeBlock({ ...preset, type: type as Block['type'] });
     onChange([...safeBlocks, newBlock]);
   };
@@ -143,16 +137,12 @@ export const BlocksEditor = ({
     }
   };
 
-  const availablePresets =
-    industryPresets[industry.toLowerCase()] || industryPresets.default;
+  const availablePresets = industryPresets[industry.toLowerCase()] || industryPresets.default;
 
   return (
     <div className="space-y-4">
       <DndContext collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-        <SortableContext
-          items={safeBlocks.map((b) => b.id)}
-          strategy={verticalListSortingStrategy}
-        >
+        <SortableContext items={safeBlocks.map((b) => b.id)} strategy={verticalListSortingStrategy}>
           {safeBlocks.map((block, index) => (
             <SortableBlock
               key={block.id || `${block.type}-${index}`}
@@ -166,12 +156,7 @@ export const BlocksEditor = ({
 
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
         {Object.keys(availablePresets).map((type) => (
-          <Button
-            key={type}
-            variant="outline"
-            size="sm"
-            onClick={() => handleAddPreset(type)}
-          >
+          <Button key={type} variant="outline" size="sm" onClick={() => handleAddPreset(type)}>
             + {type.charAt(0).toUpperCase() + type.slice(1)}
           </Button>
         ))}

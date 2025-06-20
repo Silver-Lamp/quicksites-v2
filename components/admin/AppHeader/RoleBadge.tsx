@@ -1,11 +1,5 @@
 // components/admin/AppHeader/RoleBadge.tsx
-export function RoleBadge({
-  role,
-  source,
-}: {
-  role?: string;
-  source?: string;
-}) {
+export function RoleBadge({ role, source }: { role?: string; source?: string }) {
   if (!role) return null;
   const color =
     role === 'admin'

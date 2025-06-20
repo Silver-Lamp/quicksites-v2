@@ -34,12 +34,9 @@ export default function TemplatesAdminPage() {
   }, []);
 
   const filtered = templates.filter((t) => {
-    const matchesSearch = t.template_name
-      ?.toLowerCase()
-      .includes(filter.toLowerCase());
+    const matchesSearch = t.template_name?.toLowerCase().includes(filter.toLowerCase());
     const matchesTags =
-      tags.length === 0 ||
-      (t.tags || []).some((tag: string) => tags.includes(tag));
+      tags.length === 0 || (t.tags || []).some((tag: string) => tags.includes(tag));
     return matchesSearch && matchesTags;
   });
 
@@ -73,18 +70,13 @@ export default function TemplatesAdminPage() {
                   {(t.tags || []).join(', ')}
                 </TableCell>
                 <TableCell>
-                  <SafeLink
-                    href={`/admin/templates/${encodeURIComponent(t.template_name)}`}
-                  >
+                  <SafeLink href={`/admin/templates/${encodeURIComponent(t.template_name)}`}>
                     <Button size="sm" variant="outline">
                       Edit
                     </Button>
                   </SafeLink>
                   {t.domain && (
-                    <SafeLink
-                      href={`/sites/${t.domain}`}
-                      className="text-blue-500 underline"
-                    >
+                    <SafeLink href={`/sites/${t.domain}`} className="text-blue-500 underline">
                       <Button size="sm" variant="ghost">
                         🌐 View Live
                       </Button>

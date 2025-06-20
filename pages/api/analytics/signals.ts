@@ -16,10 +16,7 @@ function groupByDate(data: any[], field: string) {
   return Object.entries(groups).map(([date, count]) => ({ date, count }));
 }
 
-export default async function handler(
-  req: NextApiRequest,
-  res: NextApiResponse
-) {
+export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   const { start, end } = req.query;
 
   const viewRange = {
@@ -55,8 +52,6 @@ export default async function handler(
     merged[date] = { ...(merged[date] || { date, views: 0 }), feedback: count };
   });
 
-  const result = Object.values(merged).sort((a, b) =>
-    a.date.localeCompare(b.date)
-  );
+  const result = Object.values(merged).sort((a, b) => a.date.localeCompare(b.date));
   json(result);
 }

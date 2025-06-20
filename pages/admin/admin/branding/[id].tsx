@@ -27,9 +27,7 @@ export default function BrandingProfilePage() {
       .single()
       .then(({ data }) => {
         if (data) {
-          const accessParam = new URLSearchParams(window.location.search).get(
-            'access'
-          );
+          const accessParam = new URLSearchParams(window.location.search).get('access');
           if (!data.access_token && !data.password) {
             setAccessOk(true);
           } else if (data.access_token && accessParam === data.access_token) {
@@ -44,10 +42,7 @@ export default function BrandingProfilePage() {
       });
   }, [id]);
 
-  if (!profile)
-    return (
-      <p className="p-6 text-sm text-muted-foreground">Loading profile...</p>
-    );
+  if (!profile) return <p className="p-6 text-sm text-muted-foreground">Loading profile...</p>;
 
   if (!accessOk && profile?.password) {
     return (
@@ -109,11 +104,7 @@ export default function BrandingProfilePage() {
           )}
 
           {profile.logo_url && (
-            <img
-              src={profile.logo_url}
-              alt="Logo"
-              className="w-8 h-8 rounded-full"
-            />
+            <img src={profile.logo_url} alt="Logo" className="w-8 h-8 rounded-full" />
           )}
         </div>
 
@@ -135,16 +126,11 @@ export default function BrandingProfilePage() {
 
         <div>
           <p className="text-sm">Link:</p>
-          <code className="text-xs bg-gray-100 p-2 rounded block">
-            {previewUrl}
-          </code>
+          <code className="text-xs bg-gray-100 p-2 rounded block">{previewUrl}</code>
         </div>
       </div>
 
-      <button
-        className="bg-blue-600 text-white px-4 py-2 rounded mt-4"
-        onClick={downloadPDF}
-      >
+      <button className="bg-blue-600 text-white px-4 py-2 rounded mt-4" onClick={downloadPDF}>
         Download PDF Preview
       </button>
     </div>

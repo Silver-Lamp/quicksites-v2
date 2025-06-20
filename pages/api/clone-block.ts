@@ -7,10 +7,7 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
-export default async function handler(
-  req: NextApiRequest,
-  res: NextApiResponse
-) {
+export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') return res.status(405).end();
 
   const { blockId } = JSON.parse(req.body || '{}');
@@ -21,11 +18,7 @@ export default async function handler(
 
   if (!user) return json({ error: 'Unauthorized' });
 
-  const { data: block } = await supabase
-    .from('blocks')
-    .select('*')
-    .eq('id', blockId)
-    .single();
+  const { data: block } = await supabase.from('blocks').select('*').eq('id', blockId).single();
 
   if (!block) return json({ error: 'Block not found' });
 

@@ -8,18 +8,13 @@ import staticGeo from '../public/staticGeo.json';
 // if (loading) return <p>Loading map...</p>;
 // if (error) return <p>Error: {error}</p>;
 
-function getStaticFallback(
-  city: string,
-  state: string
-): { lat: number; lon: number } | undefined {
+function getStaticFallback(city: string, state: string): { lat: number; lon: number } | undefined {
   const key = `${city.trim().toLowerCase()},${state.trim().toLowerCase()}`;
   return staticGeo[key as keyof typeof staticGeo];
 }
 
 export function useGeoLocation(city: string, state: string) {
-  const [coords, setCoords] = useState<{ lat: number; lon: number } | null>(
-    null
-  );
+  const [coords, setCoords] = useState<{ lat: number; lon: number } | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 

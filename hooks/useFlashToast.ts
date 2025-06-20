@@ -14,13 +14,7 @@ type UseFlashToastOptions = {
 
 export function useFlashToast(
   key: string,
-  {
-    type = 'success',
-    prefix = '',
-    duration = 3000,
-    icon,
-    className,
-  }: UseFlashToastOptions = {}
+  { type = 'success', prefix = '', duration = 3000, icon, className }: UseFlashToastOptions = {}
 ) {
   const router = useRouter();
   const value = router.query[key];
@@ -51,11 +45,7 @@ export function useFlashToast(
 
       // Remove the flash param from the URL
       const { [key]: _, ...rest } = router.query;
-      router.replace(
-        { pathname: router.pathname, query: rest },
-        undefined,
-        { shallow: true }
-      );
+      router.replace({ pathname: router.pathname, query: rest }, undefined, { shallow: true });
     }
   }, [value]);
 }

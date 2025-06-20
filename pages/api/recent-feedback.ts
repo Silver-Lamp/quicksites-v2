@@ -7,13 +7,9 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
-export default async function handler(
-  _req: NextApiRequest,
-  res: NextApiResponse
-) {
+export default async function handler(_req: NextApiRequest, res: NextApiResponse) {
   const { block_id, action } = _req.query;
-  if (!block_id || !action)
-    return json({ error: 'Missing block_id or action' });
+  if (!block_id || !action) return json({ error: 'Missing block_id or action' });
 
   const oneWeekAgo = new Date();
   oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);

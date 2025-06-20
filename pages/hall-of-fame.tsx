@@ -37,16 +37,11 @@ export default function HallOfFame() {
           </thead>
           <tbody>
             {entries.map((entry, i) => (
-              <tr
-                key={i}
-                className={i % 2 === 0 ? 'bg-zinc-900' : 'bg-zinc-800'}
-              >
+              <tr key={i} className={i % 2 === 0 ? 'bg-zinc-900' : 'bg-zinc-800'}>
                 <td className="p-2">{entry.alias || '🕶 Anonymous'}</td>
                 <td className="p-2 text-right">{entry.claims}</td>
                 <td className="p-2 text-right">{entry.referrals}</td>
-                <td className="p-2 text-right font-bold">
-                  {entry.claims + entry.referrals}
-                </td>
+                <td className="p-2 text-right font-bold">{entry.claims + entry.referrals}</td>
               </tr>
             ))}
           </tbody>

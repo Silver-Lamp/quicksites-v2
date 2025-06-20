@@ -38,9 +38,7 @@ async function run() {
         .update({ winner_lead_id: leadMatch.id })
         .eq('id', campaign.id);
 
-      console.log(
-        `🎉 ${leadMatch.business_name} won campaign ${campaign.name} (${campaign.city})`
-      );
+      console.log(`🎉 ${leadMatch.business_name} won campaign ${campaign.name} (${campaign.city})`);
 
       const subject = campaign ? `🏁 You Won: ${campaign.name}` : '🏁 You Won!';
       const body = campaign

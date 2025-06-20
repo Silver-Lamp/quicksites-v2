@@ -2,10 +2,7 @@ import { useCallback } from 'react';
 
 export function useUrlBuilder() {
   const build = useCallback(
-    (
-      base: string,
-      query?: Record<string, string | number | boolean>
-    ): string => {
+    (base: string, query?: Record<string, string | number | boolean>): string => {
       if (!query) return base;
       const qs = new URLSearchParams();
       for (const key in query) {

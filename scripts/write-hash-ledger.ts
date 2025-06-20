@@ -12,15 +12,9 @@ export type AuditLog = {
   metadata?: Record<string, any>;
 };
 
-export function writeAuditHashes(
-  logs: AuditLog[],
-  filename = 'security-hashes.json'
-) {
+export function writeAuditHashes(logs: AuditLog[], filename = 'security-hashes.json') {
   const result = logs.map((entry) => {
-    const hash = crypto
-      .createHash('sha256')
-      .update(JSON.stringify(entry))
-      .digest('hex');
+    const hash = crypto.createHash('sha256').update(JSON.stringify(entry)).digest('hex');
     return { ...entry, hash };
   });
 

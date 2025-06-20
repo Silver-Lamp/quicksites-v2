@@ -49,9 +49,7 @@ export function useImageUploader({
       return;
     }
 
-    const { data: publicData } = supabase.storage
-      .from('site-images')
-      .getPublicUrl(filePath);
+    const { data: publicData } = supabase.storage.from('site-images').getPublicUrl(filePath);
 
     const publicUrl = publicData?.publicUrl;
     if (!publicUrl) return;
@@ -81,15 +79,11 @@ export function useImageUploader({
   const removeImage = async () => {
     if (!preview) return;
 
-    const { data: bucketInfo } = supabase.storage
-      .from('site-images')
-      .getPublicUrl('');
+    const { data: bucketInfo } = supabase.storage.from('site-images').getPublicUrl('');
     const bucketUrl = bucketInfo?.publicUrl;
     const path = preview.replace(`${bucketUrl}/`, '');
 
-    const { error: deleteError } = await supabase.storage
-      .from('site-images')
-      .remove([path]);
+    const { error: deleteError } = await supabase.storage.from('site-images').remove([path]);
 
     if (deleteError) {
       console.error('Storage delete error:', deleteError.message);

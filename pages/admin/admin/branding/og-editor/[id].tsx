@@ -35,9 +35,7 @@ export default function OGLayoutEditor() {
   }, [id]);
 
   const toggleBlock = (type: string) => {
-    setLayout(
-      layout.map((b) => (b.type === type ? { ...b, active: !b.active } : b))
-    );
+    setLayout(layout.map((b) => (b.type === type ? { ...b, active: !b.active } : b)));
   };
 
   const saveLayout = async () => {
@@ -50,9 +48,7 @@ export default function OGLayoutEditor() {
   return (
     <div className="min-h-screen bg-gray-900 text-white px-6 py-10">
       <div className="max-w-xl mx-auto bg-gray-800 p-6 rounded-lg shadow space-y-6">
-        <h1 className="text-xl font-bold mb-4">
-          OG Layout Editor: {profile?.name}
-        </h1>
+        <h1 className="text-xl font-bold mb-4">OG Layout Editor: {profile?.name}</h1>
 
         {layout.map((block, index) => (
           <label key={index} className="flex items-center gap-2 mb-2">
@@ -75,11 +71,7 @@ export default function OGLayoutEditor() {
 
         <div className="pt-6">
           <p className="text-sm text-muted-foreground mb-1">OG Preview:</p>
-          <img
-            src={previewURL}
-            alt="Preview"
-            className="rounded border border-gray-700"
-          />
+          <img src={previewURL} alt="Preview" className="rounded border border-gray-700" />
         </div>
       </div>
     </div>

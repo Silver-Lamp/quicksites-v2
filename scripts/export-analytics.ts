@@ -3,10 +3,7 @@ import fs from 'fs';
 import path from 'path';
 import { formatISO, subDays } from 'date-fns';
 
-const supabase = createClient(
-  process.env.SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+const supabase = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
 
 const start = subDays(new Date(), 1);
 const end = new Date();
@@ -18,11 +15,7 @@ const log = (msg: string) => {
   console.log(line.trim());
 };
 
-async function exportAnalytics(
-  table: string,
-  dateColumn: string,
-  filename: string
-): Promise<void> {
+async function exportAnalytics(table: string, dateColumn: string, filename: string): Promise<void> {
   const { data, error } = await supabase
     .from<any, { [key: string]: string }>(table) // ← generic fallback, or use a named type
     .select(`${dateColumn}, site_id`)

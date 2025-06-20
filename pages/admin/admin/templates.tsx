@@ -63,11 +63,7 @@ export default function TemplatesPage() {
               <Button variant="secondary">Duplicate</Button>
             </Link>
           ) : (
-            <Button
-              variant="secondary"
-              disabled
-              title="Waiting for hydration..."
-            >
+            <Button variant="secondary" disabled title="Waiting for hydration...">
               Duplicate
             </Button>
           )}

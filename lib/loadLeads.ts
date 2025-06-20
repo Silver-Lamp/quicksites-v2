@@ -39,21 +39,15 @@ export async function loadLeads(options: LoadLeadsOptions = {}): Promise<LeadSum
   let leads = data || [];
 
   if (options.city) {
-    leads = leads.filter(
-      (l) => l.address_city?.toLowerCase() === options.city!.toLowerCase()
-    );
+    leads = leads.filter((l) => l.address_city?.toLowerCase() === options.city!.toLowerCase());
   }
 
   if (options.state) {
-    leads = leads.filter(
-      (l) => l.address_state?.toLowerCase() === options.state!.toLowerCase()
-    );
+    leads = leads.filter((l) => l.address_state?.toLowerCase() === options.state!.toLowerCase());
   }
 
   if (options.industry) {
-    leads = leads.filter(
-      (l) => l.industry?.toLowerCase() === options.industry!.toLowerCase()
-    );
+    leads = leads.filter((l) => l.industry?.toLowerCase() === options.industry!.toLowerCase());
   }
 
   if (options.sortBy) {
@@ -70,7 +64,9 @@ export async function loadLeads(options: LoadLeadsOptions = {}): Promise<LeadSum
   return leads;
 }
 
-export async function getTopTwoLeads(options: LoadLeadsOptions): Promise<[LeadSummary, LeadSummary] | null> {
+export async function getTopTwoLeads(
+  options: LoadLeadsOptions
+): Promise<[LeadSummary, LeadSummary] | null> {
   const leads = await loadLeads(options);
   if (leads.length >= 2) {
     return [leads[0], leads[1]];

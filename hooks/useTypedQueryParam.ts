@@ -36,12 +36,7 @@ export function useTypedQueryParam<
     | 'date[]'
     | 'json'
     | 'json[]',
->(
-  key: string,
-  fallback: any,
-  type: T,
-  schema?: z.ZodType<any, any, any>
-): ParamReturn<T> {
+>(key: string, fallback: any, type: T, schema?: z.ZodType<any, any, any>): ParamReturn<T> {
   const router = useRouter();
   const searchParams = new URLSearchParams(
     typeof window !== 'undefined' ? window.location.search : ''
@@ -54,9 +49,7 @@ export function useTypedQueryParam<
       newParams.delete(key);
       value.forEach((v) => {
         const serialized =
-          typeof v === 'object'
-            ? encodeURIComponent(JSON.stringify(v))
-            : String(v);
+          typeof v === 'object' ? encodeURIComponent(JSON.stringify(v)) : String(v);
         newParams.append(key, serialized);
       });
     } else if (value instanceof Date) {
@@ -82,13 +75,6 @@ export function useTypedQueryParam<
     ? values
     : searchParams.get(key);
 
-  const parsed = parseTypedQueryValue(
-    key,
-    value,
-    fallback,
-    type,
-    schema,
-    router
-  );
+  const parsed = parseTypedQueryValue(key, value, fallback, type, schema, router);
   return [parsed, setParam];
 }

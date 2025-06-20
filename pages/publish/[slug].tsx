@@ -40,9 +40,7 @@ export default function PublishPage() {
         </>
       )}
       {status === 'done' ? (
-        <p className="text-green-400 font-medium">
-          🎉 Published! Visit: https://{slug}
-        </p>
+        <p className="text-green-400 font-medium">🎉 Published! Visit: https://{slug}</p>
       ) : (
         <button
           onClick={handlePublish}

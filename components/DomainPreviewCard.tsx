@@ -14,10 +14,7 @@ export default function DomainPreviewCard({ domain }: { domain: string }) {
         <div className="text-sm text-yellow-400">
           No screenshot found.
           <br />
-          <a
-            href={`/api/screenshot?domain=${domain}`}
-            className="text-blue-400 underline text-xs"
-          >
+          <a href={`/api/screenshot?domain=${domain}`} className="text-blue-400 underline text-xs">
             Generate now
           </a>
         </div>

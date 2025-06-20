@@ -1,10 +1,4 @@
-import {
-  DndContext,
-  closestCenter,
-  useSensor,
-  useSensors,
-  PointerSensor,
-} from '@dnd-kit/core';
+import { DndContext, closestCenter, useSensor, useSensors, PointerSensor } from '@dnd-kit/core';
 import {
   SortableContext,
   useSortable,
@@ -26,21 +20,8 @@ type ReorderablePageListProps = {
   onBlockClick?: (block: Block) => void;
 };
 
-function SortablePage({
-  id,
-  children,
-}: {
-  id: string;
-  children: React.ReactNode;
-}) {
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-    isDragging,
-  } = useSortable({
+function SortablePage({ id, children }: { id: string; children: React.ReactNode }) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id,
   });
 
@@ -77,8 +58,7 @@ export default function ReorderablePageList({
 }: ReorderablePageListProps) {
   const sensors = useSensors(useSensor(PointerSensor));
 
-  const getId = (page: any, index: number) =>
-    page.slug || page._id || `page-${index}`;
+  const getId = (page: any, index: number) => page.slug || page._id || `page-${index}`;
 
   const handleSlugChange = (index: number, newSlug: string) => {
     const updated = [...pages];
@@ -95,11 +75,7 @@ export default function ReorderablePageList({
 
   const handleDuplicate = (index: number) => {
     const clone = { ...pages[index], slug: pages[index].slug + '-copy' };
-    const updated = [
-      ...pages.slice(0, index + 1),
-      clone,
-      ...pages.slice(index + 1),
-    ];
+    const updated = [...pages.slice(0, index + 1), clone, ...pages.slice(index + 1)];
     onReorder(updated);
   };
 
@@ -115,10 +91,7 @@ export default function ReorderablePageList({
         onReorder(updated);
       }}
     >
-      <SortableContext
-        items={pages.map(getId)}
-        strategy={verticalListSortingStrategy}
-      >
+      <SortableContext items={pages.map(getId)} strategy={verticalListSortingStrategy}>
         {pages.map((page, index) => (
           <SortablePage key={getId(page, index)} id={getId(page, index)}>
             <div className="px-4 py-3 bg-muted/50 border-b flex items-center justify-between gap-3">
@@ -128,18 +101,10 @@ export default function ReorderablePageList({
                 className="w-full max-w-sm text-sm"
               />
               <div className="flex gap-2">
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  onClick={() => handleDuplicate(index)}
-                >
+                <Button size="sm" variant="ghost" onClick={() => handleDuplicate(index)}>
                   📄
                 </Button>
-                <Button
-                  size="sm"
-                  variant="destructive"
-                  onClick={() => handleDelete(index)}
-                >
+                <Button size="sm" variant="destructive" onClick={() => handleDelete(index)}>
                   🗑️
                 </Button>
               </div>

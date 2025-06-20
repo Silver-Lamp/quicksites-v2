@@ -14,10 +14,8 @@ export async function publishSite({
   versionLabel: string;
   isUpdateMode: boolean;
 }) {
-  if (!slug || !profileId)
-    throw new Error('Slug and branding profile are required.');
-  if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug))
-    throw new Error('Invalid slug format.');
+  if (!slug || !profileId) throw new Error('Slug and branding profile are required.');
+  if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug)) throw new Error('Invalid slug format.');
 
   if (!isUpdateMode) {
     const { data: existing } = await supabase
@@ -53,10 +51,7 @@ export async function publishSite({
 
   const url = `${window.location.origin}/sites/${slug}`;
   const qrUrl = await uploadQRCodeImage(slug, url);
-  await supabase
-    .from('published_sites')
-    .update({ qr_url: qrUrl })
-    .eq('slug', slug);
+  await supabase.from('published_sites').update({ qr_url: qrUrl }).eq('slug', slug);
 
   return url;
 }

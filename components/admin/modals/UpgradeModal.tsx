@@ -4,12 +4,7 @@ import { useEffect, useState } from 'react';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabaseClient.js';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 
 interface UpgradeModalProps {
@@ -19,12 +14,7 @@ interface UpgradeModalProps {
   triggerReason?: string;
 }
 
-export default function UpgradeModal({
-  open,
-  onClose,
-  context,
-  triggerReason,
-}: UpgradeModalProps) {
+export default function UpgradeModal({ open, onClose, context, triggerReason }: UpgradeModalProps) {
   const { user } = useCurrentUser();
   const searchParams = useSearchParams();
 
@@ -90,8 +80,7 @@ export default function UpgradeModal({
         ...metadata,
       },
     ]);
-    window.location.href =
-      '/sign-up?redirect_url=' + encodeURIComponent(window.location.href);
+    window.location.href = '/sign-up?redirect_url=' + encodeURIComponent(window.location.href);
   };
 
   return (
@@ -102,8 +91,8 @@ export default function UpgradeModal({
         </DialogHeader>
         <div className="space-y-4">
           <p className="text-muted-foreground">
-            You’ve reached a feature that requires a free account. Sign up to
-            unlock saving, publishing, and full access.
+            You’ve reached a feature that requires a free account. Sign up to unlock saving,
+            publishing, and full access.
           </p>
           <Button onClick={handleUpgrade} disabled={loading} className="w-full">
             {loading ? 'Redirecting...' : 'Sign up for free'}

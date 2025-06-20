@@ -8,11 +8,7 @@ type TemplateHeaderProps = {
   template: any;
 };
 
-export default function TemplateHeader({
-  name,
-  updatedAt,
-  duplicateUrl,
-}: TemplateHeaderProps) {
+export default function TemplateHeader({ name, updatedAt, duplicateUrl }: TemplateHeaderProps) {
   return (
     <div className="flex justify-between items-center mb-4">
       <div>
@@ -24,9 +20,7 @@ export default function TemplateHeader({
         )}
       </div>
       <SafeLink href={duplicateUrl}>
-        <button className="text-sm text-blue-500 hover:underline">
-          Duplicate Template
-        </button>
+        <button className="text-sm text-blue-500 hover:underline">Duplicate Template</button>
       </SafeLink>
     </div>
   );

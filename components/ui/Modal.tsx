@@ -21,10 +21,7 @@ export function Modal({
         className="bg-surface text-text rounded-md p-6 max-w-md w-full shadow-lg"
       >
         {children}
-        <button
-          onClick={onClose}
-          className="mt-4 text-sm text-accent hover:underline"
-        >
+        <button onClick={onClose} className="mt-4 text-sm text-accent hover:underline">
           Close
         </button>
       </motion.div>

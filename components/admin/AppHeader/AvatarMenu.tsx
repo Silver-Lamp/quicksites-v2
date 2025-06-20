@@ -47,11 +47,7 @@ export function AvatarMenu({
         aria-label="Avatar menu"
       >
         <div className="w-6 h-6 sm:w-5 sm:h-5 rounded-full overflow-hidden border border-white">
-          <img
-            src={avatar}
-            alt="avatar"
-            className="w-full h-full object-cover"
-          />
+          <img src={avatar} alt="avatar" className="w-full h-full object-cover" />
         </div>
       </button>
 

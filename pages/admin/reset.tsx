@@ -30,10 +30,7 @@ export default function ResetPassword() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
-      <form
-        onSubmit={updatePassword}
-        className="bg-white p-6 rounded shadow-md w-full max-w-sm"
-      >
+      <form onSubmit={updatePassword} className="bg-white p-6 rounded shadow-md w-full max-w-sm">
         <h2 className="text-xl font-bold mb-4">Reset Password</h2>
         <p className="text-sm mb-4 text-gray-600">{status}</p>
         <input
@@ -44,10 +41,7 @@ export default function ResetPassword() {
           onChange={(e) => setPassword(e.target.value)}
           required
         />
-        <button
-          type="submit"
-          className="w-full bg-blue-600 text-white py-2 rounded"
-        >
+        <button type="submit" className="w-full bg-blue-600 text-white py-2 rounded">
           Update Password
         </button>
       </form>

@@ -28,7 +28,7 @@ export default function LayoutExportButtons({ layout }: { layout: any[] }) {
         .save();
     }
   };
-  
+
   return (
     <div className="flex gap-4 mt-4">
       <button onClick={exportJson} className="text-sm underline text-blue-600">

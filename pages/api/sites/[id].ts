@@ -7,10 +7,7 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
-export default async function handler(
-  req: NextApiRequest,
-  res: NextApiResponse
-) {
+export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   const raw = req.query.id;
 
   if (typeof raw !== 'string') {
@@ -25,9 +22,7 @@ export default async function handler(
   const isSlugLike = /^[a-z0-9-]+$/.test(id);
 
   // If it looks like a slug, try also converting to domain
-  const possibleDomains = isSlugLike
-    ? [id, id.replace(/-/g, '.') + '.com']
-    : [];
+  const possibleDomains = isSlugLike ? [id, id.replace(/-/g, '.') + '.com'] : [];
 
   const tryFields: { field: string; value: string }[] = [];
 
@@ -69,9 +64,7 @@ export default async function handler(
     ...data.content,
     _meta: {
       id: data.id,
-      slug:
-        data.slug ||
-        (data.domain?.replace('.com', '').replace(/\./g, '-') ?? null),
+      slug: data.slug || (data.domain?.replace('.com', '').replace(/\./g, '-') ?? null),
       domain: data.domain ?? null,
     },
   });

@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import Link from 'next/link.js';
+import Link from 'next/link';
 
 type DomainRow = {
   id: string;
@@ -13,9 +13,7 @@ type DomainRow = {
 };
 
 export default function Dashboard() {
-  const [filterClaimed, setFilterClaimed] = useState<
-    'all' | 'claimed' | 'unclaimed'
-  >('all');
+  const [filterClaimed, setFilterClaimed] = useState<'all' | 'claimed' | 'unclaimed'>('all');
   const [sites, setSites] = useState<DomainRow[]>([]);
 
   const filter =
@@ -29,13 +27,9 @@ export default function Dashboard() {
     let mounted = true;
     const loadData = async () => {
       const mod = await import('../hooks/useLiveTableWrapper.jsx');
-      const result = await mod.useLiveTableWrapper<DomainRow>(
-        'domains',
-        filter,
-        {
-          column: 'city',
-        }
-      );
+      const result = await mod.useLiveTableWrapper<DomainRow>('domains', filter, {
+        column: 'city',
+      });
       if (mounted) setSites(result);
     };
     loadData();
@@ -54,9 +48,7 @@ export default function Dashboard() {
         <select
           id="filter"
           value={filterClaimed}
-          onChange={(e) =>
-            setFilterClaimed(e.target.value as 'all' | 'claimed' | 'unclaimed')
-          }
+          onChange={(e) => setFilterClaimed(e.target.value as 'all' | 'claimed' | 'unclaimed')}
         >
           <option value="all">All</option>
           <option value="claimed">Claimed</option>

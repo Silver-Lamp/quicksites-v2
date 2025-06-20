@@ -14,10 +14,7 @@ export default async function handler(_: NextApiRequest, res: NextApiResponse) {
     .order('created_at', { ascending: false });
 
   if (error) return json({ error: error.message });
-  res.setHeader(
-    'Content-Disposition',
-    'attachment; filename="regeneration_logs.json"'
-  );
+  res.setHeader('Content-Disposition', 'attachment; filename="regeneration_logs.json"');
   res.setHeader('Content-Type', 'application/json');
   return json(data);
 }

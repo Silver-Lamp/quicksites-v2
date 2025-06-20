@@ -22,9 +22,7 @@ type SidebarNavContextType = {
   toggle: (label: string) => void;
 };
 
-const SidebarNavContext = createContext<SidebarNavContextType | undefined>(
-  undefined
-);
+const SidebarNavContext = createContext<SidebarNavContextType | undefined>(undefined);
 
 export function SidebarNavProvider({
   role,
@@ -70,7 +68,6 @@ export function SidebarNavProvider({
 
 export function useSidebarNav() {
   const ctx = useContext(SidebarNavContext);
-  if (!ctx)
-    throw new Error('useSidebarNav must be used within SidebarNavProvider');
+  if (!ctx) throw new Error('useSidebarNav must be used within SidebarNavProvider');
   return ctx;
 }

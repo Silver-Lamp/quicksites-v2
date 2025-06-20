@@ -46,9 +46,7 @@ export default function RenderBlock({ block }: { block: Block }) {
         <blockquote className="border-l-4 pl-4 italic text-gray-600 mb-4">
           “{block.value.text}”
           {block.value.author && (
-            <footer className="mt-1 text-sm text-right">
-              — {block.value.author}
-            </footer>
+            <footer className="mt-1 text-sm text-right">— {block.value.author}</footer>
           )}
         </blockquote>
       );

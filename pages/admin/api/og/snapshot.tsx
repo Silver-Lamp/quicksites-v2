@@ -3,10 +3,7 @@ import { supabase } from '@/lib/supabaseClient.js';
 import { Theme, Brand } from '@/types/template';
 import { NextApiRequest, NextApiResponse } from 'next';
 
-export default async function handler(
-  req: NextApiRequest,
-  res: NextApiResponse
-) {
+export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   const { searchParams } = new URL(req.url || '');
   const snapshotId = searchParams.get('snapshotId');
   const theme = searchParams.get('theme') || 'dark';
@@ -24,9 +21,7 @@ export default async function handler(
 
     if (data && !error) {
       title = data.template_name || title;
-      const hero = data.data?.pages?.[0]?.content_blocks?.find(
-        (b: any) => b.type === 'hero'
-      );
+      const hero = data.data?.pages?.[0]?.content_blocks?.find((b: any) => b.type === 'hero');
       if (hero?.content) content = hero.content;
     }
   }

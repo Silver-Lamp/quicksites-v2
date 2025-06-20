@@ -48,10 +48,7 @@ export default function AnalyticsChartView() {
   };
 
   const downloadCSV = () => {
-    const rows = [
-      'Date,Views,Feedback',
-      ...data.map((r) => `${r.date},${r.views},${r.feedback}`),
-    ];
+    const rows = ['Date,Views,Feedback', ...data.map((r) => `${r.date},${r.views},${r.feedback}`)];
     const blob = new Blob([rows.join('\n')], { type: 'text/csv' });
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -97,23 +94,10 @@ export default function AnalyticsChartView() {
             <Tooltip
               contentStyle={{ backgroundColor: '#222', borderColor: '#555' }}
               labelStyle={{ color: '#fff' }}
-              formatter={(val, key) => [
-                val,
-                key === 'views' ? 'Views' : 'Feedback',
-              ]}
+              formatter={(val, key) => [val, key === 'views' ? 'Views' : 'Feedback']}
             />
-            <Line
-              type="monotone"
-              dataKey="views"
-              stroke="#8884d8"
-              strokeWidth={2}
-            />
-            <Line
-              type="monotone"
-              dataKey="feedback"
-              stroke="#82ca9d"
-              strokeWidth={2}
-            />
+            <Line type="monotone" dataKey="views" stroke="#8884d8" strokeWidth={2} />
+            <Line type="monotone" dataKey="feedback" stroke="#82ca9d" strokeWidth={2} />
           </LineChart>
         </ResponsiveContainer>
       </div>

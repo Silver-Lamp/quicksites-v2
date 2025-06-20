@@ -3,11 +3,7 @@
 import { useEffect, useState } from 'react';
 import { createClient } from '@supabase/supabase-js';
 import { useRouter } from 'next/router';
-import {
-  Tooltip,
-  TooltipTrigger,
-  TooltipContent,
-} from '@/components/ui/tooltip';
+import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
 import { ClipboardCopy } from 'lucide-react';
 
 const supabase = createClient(
@@ -132,12 +128,10 @@ export default function SiteSettingsPanel({ siteId }: { siteId: string }) {
   };
 
   const handleUpload = async (file: File, key: string) => {
-    const { error } = await supabase.storage
-      .from('site-assets')
-      .upload(`${siteId}/${key}`, file, {
-        cacheControl: '3600',
-        upsert: true,
-      });
+    const { error } = await supabase.storage.from('site-assets').upload(`${siteId}/${key}`, file, {
+      cacheControl: '3600',
+      upsert: true,
+    });
     if (error) alert('❌ Upload failed');
     else alert(`${key} uploaded!`);
   };
@@ -154,14 +148,10 @@ export default function SiteSettingsPanel({ siteId }: { siteId: string }) {
       <h2 className="text-xl font-semibold text-white">Site Settings</h2>
 
       <fieldset className="space-y-4">
-        <legend className="text-sm font-medium text-zinc-400 mb-2">
-          Basic Info
-        </legend>
+        <legend className="text-sm font-medium text-zinc-400 mb-2">Basic Info</legend>
 
         <div>
-          <label className="block text-sm font-medium text-zinc-300 mb-1">
-            Business Name
-          </label>
+          <label className="block text-sm font-medium text-zinc-300 mb-1">Business Name</label>
           <input
             value={bizName}
             onChange={(e) => setBizName(e.target.value)}
@@ -170,9 +160,7 @@ export default function SiteSettingsPanel({ siteId }: { siteId: string }) {
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-zinc-300 mb-1">
-            Location
-          </label>
+          <label className="block text-sm font-medium text-zinc-300 mb-1">Location</label>
           <input
             value={location}
             onChange={(e) => setLocation(e.target.value)}
@@ -181,28 +169,20 @@ export default function SiteSettingsPanel({ siteId }: { siteId: string }) {
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-zinc-300 mb-1">
-            Slug
-          </label>
+          <label className="block text-sm font-medium text-zinc-300 mb-1">Slug</label>
           <input
             value={slug}
-            onChange={(e) =>
-              setSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]+/g, '-'))
-            }
+            onChange={(e) => setSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]+/g, '-'))}
             className="w-full p-2 bg-zinc-900 border border-zinc-700 rounded"
           />
           {slug && slugAvailable !== null && (
-            <p
-              className={`text-sm mt-1 ${slugAvailable ? 'text-green-400' : 'text-red-400'}`}
-            >
+            <p className={`text-sm mt-1 ${slugAvailable ? 'text-green-400' : 'text-red-400'}`}>
               {slugAvailable ? '✅ Available' : '🚫 Taken'}
             </p>
           )}
           {isPublished && (customDomain || slug) && (
             <div>
-              <label className="block text-sm font-medium text-zinc-300 mb-1">
-                Live URL
-              </label>
+              <label className="block text-sm font-medium text-zinc-300 mb-1">Live URL</label>
               <div className="flex items-center gap-3">
                 <Tooltip>
                   <TooltipTrigger asChild>
@@ -239,18 +219,14 @@ export default function SiteSettingsPanel({ siteId }: { siteId: string }) {
                   <ClipboardCopy className="w-4 h-4" />
                 </button>
 
-                {customDomain && (
-                  <span className="text-xs text-zinc-400">(custom domain)</span>
-                )}
+                {customDomain && <span className="text-xs text-zinc-400">(custom domain)</span>}
               </div>
             </div>
           )}
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-zinc-300 mb-1">
-            Custom Domain
-          </label>
+          <label className="block text-sm font-medium text-zinc-300 mb-1">Custom Domain</label>
           <input
             value={customDomain}
             onChange={(e) => setCustomDomain(e.target.value)}
@@ -259,9 +235,7 @@ export default function SiteSettingsPanel({ siteId }: { siteId: string }) {
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-zinc-300 mb-1">
-            Color Scheme
-          </label>
+          <label className="block text-sm font-medium text-zinc-300 mb-1">Color Scheme</label>
           <select
             value={colorScheme}
             onChange={(e) => setColorScheme(e.target.value)}
@@ -285,14 +259,10 @@ export default function SiteSettingsPanel({ siteId }: { siteId: string }) {
         </div>
       </fieldset>
       <fieldset className="space-y-4">
-        <legend className="text-sm font-medium text-zinc-400 mb-2">
-          🔍 SEO Settings
-        </legend>
+        <legend className="text-sm font-medium text-zinc-400 mb-2">🔍 SEO Settings</legend>
 
         <div>
-          <label className="block text-sm font-medium text-zinc-300 mb-1">
-            SEO Title
-          </label>
+          <label className="block text-sm font-medium text-zinc-300 mb-1">SEO Title</label>
           <input
             value={seoTitle}
             onChange={(e) => setSeoTitle(e.target.value)}
@@ -301,9 +271,7 @@ export default function SiteSettingsPanel({ siteId }: { siteId: string }) {
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-zinc-300 mb-1">
-            SEO Description
-          </label>
+          <label className="block text-sm font-medium text-zinc-300 mb-1">SEO Description</label>
           <textarea
             value={seoDescription}
             onChange={(e) => setSeoDescription(e.target.value)}
@@ -312,9 +280,7 @@ export default function SiteSettingsPanel({ siteId }: { siteId: string }) {
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-zinc-300 mb-1">
-            Twitter Handle
-          </label>
+          <label className="block text-sm font-medium text-zinc-300 mb-1">Twitter Handle</label>
           <input
             value={twitterHandle}
             onChange={(e) => setTwitterHandle(e.target.value)}
@@ -336,40 +302,27 @@ export default function SiteSettingsPanel({ siteId }: { siteId: string }) {
       </fieldset>
 
       <fieldset className="space-y-4">
-        <legend className="text-sm font-medium text-zinc-400 mb-2">
-          Assets
-        </legend>
+        <legend className="text-sm font-medium text-zinc-400 mb-2">Assets</legend>
 
         <div>
-          <label className="block text-sm font-medium text-zinc-300 mb-1">
-            Favicon Upload
-          </label>
+          <label className="block text-sm font-medium text-zinc-300 mb-1">Favicon Upload</label>
           <input
             type="file"
-            onChange={(e) =>
-              e.target.files?.[0] &&
-              handleUpload(e.target.files[0], 'favicon.png')
-            }
+            onChange={(e) => e.target.files?.[0] && handleUpload(e.target.files[0], 'favicon.png')}
           />
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-zinc-300 mb-1">
-            Logo Upload
-          </label>
+          <label className="block text-sm font-medium text-zinc-300 mb-1">Logo Upload</label>
           <input
             type="file"
-            onChange={(e) =>
-              e.target.files?.[0] && handleUpload(e.target.files[0], 'logo.png')
-            }
+            onChange={(e) => e.target.files?.[0] && handleUpload(e.target.files[0], 'logo.png')}
           />
         </div>
       </fieldset>
 
       {analytics && (
-        <div className="text-sm text-zinc-400">
-          📊 {analytics.visits} visits recorded
-        </div>
+        <div className="text-sm text-zinc-400">📊 {analytics.visits} visits recorded</div>
       )}
 
       <div className="flex justify-between pt-4 border-t border-zinc-700 mt-4">

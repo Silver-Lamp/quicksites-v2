@@ -53,9 +53,7 @@ export default function StartCampaign() {
           }}
           className="w-full px-3 py-2 rounded bg-zinc-800 border border-zinc-600"
         />
-        {validationErrors.name && (
-          <p className="text-sm text-red-400">{validationErrors.name}</p>
-        )}
+        {validationErrors.name && <p className="text-sm text-red-400">{validationErrors.name}</p>}
 
         <div className="flex gap-4">
           <input
@@ -118,9 +116,7 @@ export default function StartCampaign() {
             className="w-full px-3 py-2 rounded bg-zinc-800 border border-zinc-600"
           />
         </div>
-        {validationErrors.dates && (
-          <p className="text-sm text-red-400">{validationErrors.dates}</p>
-        )}
+        {validationErrors.dates && <p className="text-sm text-red-400">{validationErrors.dates}</p>}
 
         <label className="flex items-center gap-2 text-sm">
           <input
@@ -132,9 +128,7 @@ export default function StartCampaign() {
         </label>
 
         {error && (
-          <div className="text-red-400 text-sm border border-red-600 p-2 rounded">
-            ⚠️ {error}
-          </div>
+          <div className="text-red-400 text-sm border border-red-600 p-2 rounded">⚠️ {error}</div>
         )}
 
         <button

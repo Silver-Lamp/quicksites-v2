@@ -7,11 +7,7 @@ export function computeSlug(site: any): string | null {
   const fromSlug = site.slug?.trim().toLowerCase();
   if (fromSlug) return sanitizeSlug(fromSlug);
 
-  const fromDomain = site.domain
-    ?.trim()
-    .toLowerCase()
-    .replace('.com', '')
-    .replace(/\./g, '-');
+  const fromDomain = site.domain?.trim().toLowerCase().replace('.com', '').replace(/\./g, '-');
   if (fromDomain) return sanitizeSlug(fromDomain);
 
   const fromBiz = site.business_name

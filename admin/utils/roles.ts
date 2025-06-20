@@ -9,10 +9,7 @@ export function isOrgAdmin(role: Role | null): boolean {
   return role === Role.Admin || role === Role.Owner;
 }
 
-export function isViewerOnly(
-  role: Role | null,
-  permissions: string[]
-): boolean {
+export function isViewerOnly(role: Role | null, permissions: string[]): boolean {
   return role === Role.Viewer || permissions.length === 0;
 }
 

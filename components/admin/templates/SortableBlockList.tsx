@@ -1,10 +1,4 @@
-import {
-  DndContext,
-  closestCenter,
-  PointerSensor,
-  useSensor,
-  useSensors,
-} from '@dnd-kit/core';
+import { DndContext, closestCenter, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
 import {
   arrayMove,
   SortableContext,
@@ -38,15 +32,8 @@ export function SortableBlockList({
   };
 
   return (
-    <DndContext
-      collisionDetection={closestCenter}
-      sensors={sensors}
-      onDragEnd={handleDragEnd}
-    >
-      <SortableContext
-        items={blocks.map((b) => b._id)}
-        strategy={verticalListSortingStrategy}
-      >
+    <DndContext collisionDetection={closestCenter} sensors={sensors} onDragEnd={handleDragEnd}>
+      <SortableContext items={blocks.map((b) => b._id)} strategy={verticalListSortingStrategy}>
         <div className="space-y-2">
           {blocks.map((block) => (
             <SortableItem key={block._id} block={block} />
@@ -58,14 +45,7 @@ export function SortableBlockList({
 }
 
 function SortableItem({ block }: { block: any }) {
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-    isDragging,
-  } = useSortable({
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: block._id,
   });
 

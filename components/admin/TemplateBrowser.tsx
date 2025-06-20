@@ -49,18 +49,12 @@ export default function TemplateBrowser({ onSelect }: Props) {
                   </Button>
                   <Dialog>
                     <DialogTrigger asChild>
-                      <Button
-                        size="sm"
-                        variant="secondary"
-                        onClick={() => setSelected(t)}
-                      >
+                      <Button size="sm" variant="secondary" onClick={() => setSelected(t)}>
                         Preview
                       </Button>
                     </DialogTrigger>
                     <DialogContent className="max-w-xl">
-                      <h4 className="text-xl font-semibold">
-                        {t.template_name}
-                      </h4>
+                      <h4 className="text-xl font-semibold">{t.template_name}</h4>
                       <p className="text-sm text-muted-foreground mb-2">
                         Layout: {t.layout}, Colors: {t.color_scheme}
                       </p>
@@ -76,9 +70,7 @@ export default function TemplateBrowser({ onSelect }: Props) {
                         Hero: {t.data?.pages[0]?.content_blocks?.[0]?.headline}
                       </p>
                       <div className="flex justify-end gap-2 mt-4">
-                        <SafeLink
-                          href={`/admin/templates-new?copy=${t.template_name}`}
-                        >
+                        <SafeLink href={`/admin/templates-new?copy=${t.template_name}`}>
                           <Button variant="secondary" size="sm">
                             Duplicate This
                           </Button>

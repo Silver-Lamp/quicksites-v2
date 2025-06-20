@@ -16,24 +16,16 @@ export default function PressPage() {
         <h1 className="text-3xl font-bold mb-4">📣 QuickSites Press Kit</h1>
 
         <p className="text-zinc-400 mb-6">
-          QuickSites is a transparent publishing layer for human-centered
-          presence. Open-source, steward-led, and remixable.
+          QuickSites is a transparent publishing layer for human-centered presence. Open-source,
+          steward-led, and remixable.
         </p>
 
         <h2 className="text-xl font-semibold mb-2">🎨 Logos & Media</h2>
         <div className="mb-4 space-x-4">
-          <a
-            href="/press/quicksites-logo.svg"
-            className="underline text-blue-400"
-            download
-          >
+          <a href="/press/quicksites-logo.svg" className="underline text-blue-400" download>
             Download SVG
           </a>
-          <a
-            href="/press/quicksites-logo.png"
-            className="underline text-blue-400"
-            download
-          >
+          <a href="/press/quicksites-logo.png" className="underline text-blue-400" download>
             Download PNG
           </a>
         </div>
@@ -58,10 +50,9 @@ export default function PressPage() {
 
         <h2 className="text-xl font-semibold mb-2">📰 Description</h2>
         <p className="text-zinc-300 mb-6 text-sm">
-          QuickSites lets anyone launch a fully transparent site in minutes,
-          remix existing templates, and track civic impact via referral chains
-          and remix trees. Built with simplicity, shared stewardship, and
-          sunlight.
+          QuickSites lets anyone launch a fully transparent site in minutes, remix existing
+          templates, and track civic impact via referral chains and remix trees. Built with
+          simplicity, shared stewardship, and sunlight.
         </p>
 
         <h2 className="text-xl font-semibold mb-2">📬 Contact</h2>

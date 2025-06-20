@@ -6,18 +6,14 @@ describe('TemplateEditor validation', () => {
     render(<TemplateEditor templateName="test-auto-page" />);
     await waitFor(() => screen.getByText(/Template Name/i));
     fireEvent.click(screen.getByText(/Save All Changes/i));
-    expect(
-      await screen.findByText(/A blank page was added automatically/i)
-    ).toBeInTheDocument();
+    expect(await screen.findByText(/A blank page was added automatically/i)).toBeInTheDocument();
   });
 
   it('blocks save if required fields are missing', async () => {
     render(<TemplateEditor templateName="test-validation" />);
     await waitFor(() => screen.getByText(/Template Name/i));
     fireEvent.click(screen.getByText(/Save All Changes/i));
-    expect(
-      await screen.findByText(/Template must have a name/i)
-    ).toBeInTheDocument();
+    expect(await screen.findByText(/Template must have a name/i)).toBeInTheDocument();
   });
 
   it('exports valid JSON when triggered', () => {

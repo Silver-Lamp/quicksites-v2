@@ -4,10 +4,7 @@ import { json } from '@/lib/api/json';
 import nodemailer from 'nodemailer';
 import { Transport } from 'nodemailer';
 
-export default async function handler(
-  req: NextApiRequest,
-  res: NextApiResponse
-) {
+export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
     return json({ message: 'Method not allowed' });
   }
@@ -20,9 +17,7 @@ export default async function handler(
 
     const csv =
       'week,count\n' +
-      summary
-        .map(([week, count]: [string, number]) => `${week},${count}`)
-        .join('\n');
+      summary.map(([week, count]: [string, number]) => `${week},${count}`).join('\n');
 
     const transporter = nodemailer.createTransport({
       host: process.env.EMAIL_SERVER_HOST,

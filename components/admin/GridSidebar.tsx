@@ -10,11 +10,7 @@ interface GridSidebarProps {
   filteredPoints: any[];
 }
 
-export default function GridSidebar({
-  industry,
-  setIndustry,
-  filteredPoints,
-}: GridSidebarProps) {
+export default function GridSidebar({ industry, setIndustry, filteredPoints }: GridSidebarProps) {
   return (
     <div className="space-y-4">
       <FilterDropdown industry={industry} setIndustry={setIndustry} />

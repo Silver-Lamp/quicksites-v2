@@ -25,10 +25,7 @@ export default function SupportCampaign() {
 
   if (!campaign) return <div className="p-6 text-white">Loading...</div>;
 
-  const pct = Math.min(
-    100,
-    Math.round((campaign.count / campaign.goal_count) * 100)
-  );
+  const pct = Math.min(100, Math.round((campaign.count / campaign.goal_count) * 100));
 
   return (
     <div className="max-w-xl mx-auto p-6 text-white space-y-6">

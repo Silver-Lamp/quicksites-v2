@@ -3,11 +3,7 @@ import { sendToSlack } from './sendToSlack';
 
 const SLACK_WEBHOOK_URL = process.env.NEXT_PUBLIC_SLACK_WEBHOOK_URL;
 
-export async function logWithSlack(
-  profileId: string,
-  event: string,
-  details: string = ''
-) {
+export async function logWithSlack(profileId: string, event: string, details: string = '') {
   const { data: user } = await supabase.auth.getUser();
   const userId = user?.user?.id || null;
   const email = user?.user?.email || 'unknown';

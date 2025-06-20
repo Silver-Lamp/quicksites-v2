@@ -21,11 +21,7 @@ export const CurrentUserContext = createContext<CurrentUserContextType>({
   hasRole: () => false,
 });
 
-export function CurrentUserProvider({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export function CurrentUserProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<any | null>(null);
   const [role, setRole] = useState<string | null>(null);
   const [ready, setReady] = useState<boolean>(false);
@@ -72,9 +68,7 @@ export function CurrentUserProvider({
   };
 
   return (
-    <CurrentUserContext.Provider
-      value={{ user, email: user?.email || null, role, ready, hasRole }}
-    >
+    <CurrentUserContext.Provider value={{ user, email: user?.email || null, role, ready, hasRole }}>
       {children}
     </CurrentUserContext.Provider>
   );

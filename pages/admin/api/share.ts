@@ -9,16 +9,12 @@ type SnapshotPayload = {
   branding_profile_id?: string;
 };
 
-export default async function handler(
-  req: NextApiRequest,
-  res: NextApiResponse
-) {
+export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
     return json({ error: 'Method Not Allowed' });
   }
 
-  const { template_name, data, editor_email, branding_profile_id } =
-    req.body as SnapshotPayload;
+  const { template_name, data, editor_email, branding_profile_id } = req.body as SnapshotPayload;
 
   const { data: result, error } = await supabase
     .from('snapshots')

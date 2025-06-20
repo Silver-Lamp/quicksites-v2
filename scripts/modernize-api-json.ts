@@ -38,13 +38,10 @@ function replaceInFile(filePath: string) {
   });
 
   // Replace res.status(###).json(...) → json(..., ###)
-  content = content.replace(
-    /res\.status\s*\(\s*(\d{3})\s*\)\.json\s*\(/g,
-    (_m, code) => {
-      changed = true;
-      return `json(`; // Could inline status later
-    }
-  );
+  content = content.replace(/res\.status\s*\(\s*(\d{3})\s*\)\.json\s*\(/g, (_m, code) => {
+    changed = true;
+    return `json(`; // Could inline status later
+  });
 
   // Replace res.json(...) → json(...)
   content = content.replace(/res\.json\s*\(/g, () => {
@@ -53,14 +50,11 @@ function replaceInFile(filePath: string) {
   });
 
   // Ensure req.json() → await req.json()
-  content = content.replace(
-    /([^a-zA-Z0-9_])req\.json\s*\(\s*\)/g,
-    (match, prefix) => {
-      if (match.includes('await')) return match;
-      changed = true;
-      return `${prefix}await req.json()`;
-    }
-  );
+  content = content.replace(/([^a-zA-Z0-9_])req\.json\s*\(\s*\)/g, (match, prefix) => {
+    if (match.includes('await')) return match;
+    changed = true;
+    return `${prefix}await req.json()`;
+  });
 
   // Add json import if needed
   if (changed && !content.includes("from '@/lib/api/json'")) {
@@ -88,9 +82,7 @@ for (const dir of SEARCH_DIRS) {
   const fullDir = path.join(PROJECT_ROOT, dir);
   if (!fs.existsSync(fullDir)) continue;
 
-  const files = walk(fullDir).filter((f) =>
-    TARGET_EXT.includes(path.extname(f))
-  );
+  const files = walk(fullDir).filter((f) => TARGET_EXT.includes(path.extname(f)));
 
   for (const file of files) {
     const before = fs.readFileSync(file, 'utf-8');
@@ -100,6 +92,4 @@ for (const dir of SEARCH_DIRS) {
   }
 }
 
-console.log(
-  `\n🏁 Done. ${isPreview ? 'Would update' : 'Updated'} ${updatedCount} file(s).`
-);
+console.log(`\n🏁 Done. ${isPreview ? 'Would update' : 'Updated'} ${updatedCount} file(s).`);

@@ -22,11 +22,7 @@ const THEMES = {
   },
 };
 
-export default function BrandingPreview({
-  profile,
-}: {
-  profile: BrandingProfile | null;
-}) {
+export default function BrandingPreview({ profile }: { profile: BrandingProfile | null }) {
   if (!profile) return null;
 
   const theme = THEMES[profile.theme] || THEMES.dark;
@@ -43,11 +39,7 @@ export default function BrandingPreview({
       <div className="flex items-center justify-between">
         <h3 className="font-semibold text-lg">{profile.name}</h3>
         {profile.logo_url && (
-          <img
-            src={profile.logo_url}
-            alt="Logo"
-            className="h-8 w-8 rounded-full"
-          />
+          <img src={profile.logo_url} alt="Logo" className="h-8 w-8 rounded-full" />
         )}
       </div>
       <p className="text-sm mt-1">

@@ -101,10 +101,7 @@ export default function NewTemplatePage() {
 
         <div>
           <Label>Layout</Label>
-          <Input
-            value={template.layout}
-            onChange={(e) => handleChange('layout', e.target.value)}
-          />
+          <Input value={template.layout} onChange={(e) => handleChange('layout', e.target.value)} />
         </div>
 
         <div>

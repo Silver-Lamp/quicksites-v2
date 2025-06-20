@@ -28,9 +28,7 @@ async function run() {
     const isExpired = now.isAfter(c.ends_at);
 
     if (!claimed) {
-      const status = isExpired
-        ? '❌ Ended – no claim'
-        : '⏰ 1h warning – no claim';
+      const status = isExpired ? '❌ Ended – no claim' : '⏰ 1h warning – no claim';
 
       await supabase.from('user_action_logs').insert([
         {
@@ -40,9 +38,7 @@ async function run() {
         },
       ]);
 
-      const to = [c.created_by || '', 'sandonjurowski@gmail.com'].filter(
-        Boolean
-      );
+      const to = [c.created_by || '', 'sandonjurowski@gmail.com'].filter(Boolean);
       const subject = `Campaign Alert: ${c.name} (${c.city})`;
       const body = `Campaign "${c.name}" is ${status}.
 City: ${c.city}

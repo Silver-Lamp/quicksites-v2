@@ -58,10 +58,7 @@ export default function QueuePage() {
   };
 
   const toggleRetryEnabled = async (id: string, current: boolean) => {
-    await supabase
-      .from('regeneration_queue')
-      .update({ retry_enabled: !current })
-      .eq('id', id);
+    await supabase.from('regeneration_queue').update({ retry_enabled: !current }).eq('id', id);
     load();
   };
 
@@ -71,9 +68,7 @@ export default function QueuePage() {
         <h1 className="text-xl font-bold">Regeneration Queue</h1>
         <button
           onClick={() =>
-            fetch('/api/queue/retry-all', { method: 'POST' }).then(() =>
-              window.location.reload()
-            )
+            fetch('/api/queue/retry-all', { method: 'POST' }).then(() => window.location.reload())
           }
           className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded text-sm"
         >
@@ -97,10 +92,7 @@ export default function QueuePage() {
         <tbody>
           {queue.map((q, i) => (
             <>
-              <tr
-                key={q.id}
-                className={i % 2 === 0 ? 'bg-gray-800' : 'bg-gray-900'}
-              >
+              <tr key={q.id} className={i % 2 === 0 ? 'bg-gray-800' : 'bg-gray-900'}>
                 <td className="px-4 py-2">{q.domain}</td>
                 <td className="px-4 py-2">
                   <span className={statusStyle(q.status)}>{q.status}</span>
@@ -119,9 +111,7 @@ export default function QueuePage() {
                   {q.started_at ? new Date(q.started_at).toLocaleString() : ''}
                 </td>
                 <td className="px-4 py-2">
-                  {q.finished_at
-                    ? new Date(q.finished_at).toLocaleString()
-                    : ''}
+                  {q.finished_at ? new Date(q.finished_at).toLocaleString() : ''}
                 </td>
                 <td className="px-4 py-2">{q.triggered_by || '—'}</td>
                 <td className="px-4 py-2 space-x-2">
@@ -144,9 +134,7 @@ export default function QueuePage() {
                   {q.log && (
                     <button
                       className="text-gray-300 hover:underline"
-                      onClick={() =>
-                        setExpanded(expanded === q.id ? null : q.id)
-                      }
+                      onClick={() => setExpanded(expanded === q.id ? null : q.id)}
                     >
                       {expanded === q.id ? 'Hide Log' : 'View Log'}
                     </button>
@@ -155,10 +143,7 @@ export default function QueuePage() {
               </tr>
               {expanded === q.id && q.log && (
                 <tr className="bg-black">
-                  <td
-                    colSpan={7}
-                    className="p-4 text-green-200 font-mono whitespace-pre-wrap"
-                  >
+                  <td colSpan={7} className="p-4 text-green-200 font-mono whitespace-pre-wrap">
                     {q.log}
                   </td>
                 </tr>

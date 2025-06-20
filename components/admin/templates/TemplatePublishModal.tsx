@@ -67,9 +67,7 @@ export default function TemplatePublishModal({
   return (
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="bg-white dark:bg-gray-900 text-black dark:text-white space-y-4">
-        <h2 className="text-lg font-bold">
-          {isUpdateMode ? 'Update Site' : 'Publish Site'}
-        </h2>
+        <h2 className="text-lg font-bold">{isUpdateMode ? 'Update Site' : 'Publish Site'}</h2>
 
         <PublishForm
           slug={slug}
@@ -93,10 +91,7 @@ export default function TemplatePublishModal({
               : 'Publish Site'}
         </Button>
 
-        <Button
-          variant="ghost"
-          onClick={() => setVersionDrawerOpen(!versionDrawerOpen)}
-        >
+        <Button variant="ghost" onClick={() => setVersionDrawerOpen(!versionDrawerOpen)}>
           {versionDrawerOpen ? 'Hide Versions' : 'Show Version History'}
         </Button>
 
@@ -107,9 +102,7 @@ export default function TemplatePublishModal({
               setSlug(slug); // unchanged
               setProfileId(brandingProfileId);
               setIsUpdateMode(true);
-              toast.success(
-                'Restored values from version. Click Publish to apply.'
-              );
+              toast.success('Restored values from version. Click Publish to apply.');
             }}
           />
         )}

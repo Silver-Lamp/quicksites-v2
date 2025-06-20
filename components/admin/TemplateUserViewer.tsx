@@ -29,9 +29,7 @@ export default function TemplateUserViewer() {
       .from('dashboard_user_layouts')
       .select('user_id, template_id');
 
-    const { data: users } = await supabase
-      .from('auth.users')
-      .select('id, email');
+    const { data: users } = await supabase.from('auth.users').select('id, email');
 
     const { data: templateRows } = await supabase
       .from('dashboard_layout_templates')
@@ -41,9 +39,7 @@ export default function TemplateUserViewer() {
       map?.map((row) => ({
         user_id: row.user_id,
         email: users?.find((u) => u.id === row.user_id)?.email || '—',
-        template:
-          templateRows?.find((t) => t.id === row.template_id)?.name ||
-          '(deleted)',
+        template: templateRows?.find((t) => t.id === row.template_id)?.name || '(deleted)',
       })) || [];
 
     setAssignments(joined);
@@ -63,9 +59,7 @@ export default function TemplateUserViewer() {
 
   return (
     <div className="p-4 border rounded bg-white shadow max-w-3xl mt-8">
-      <h2 className="text-lg font-semibold mb-3">
-        User → Template Assignments
-      </h2>
+      <h2 className="text-lg font-semibold mb-3">User → Template Assignments</h2>
 
       <div className="flex items-center gap-3 mb-4">
         <select

@@ -58,12 +58,8 @@ export default function ViewsDashboard() {
               <TableRow key={v.id}>
                 <TableCell>{v.template_name}</TableCell>
                 <TableCell>{v.ip_address}</TableCell>
-                <TableCell className="text-xs max-w-sm truncate">
-                  {v.user_agent}
-                </TableCell>
-                <TableCell className="text-xs">
-                  {new Date(v.viewed_at).toLocaleString()}
-                </TableCell>
+                <TableCell className="text-xs max-w-sm truncate">{v.user_agent}</TableCell>
+                <TableCell className="text-xs">{new Date(v.viewed_at).toLocaleString()}</TableCell>
               </TableRow>
             ))}
           </TableBody>

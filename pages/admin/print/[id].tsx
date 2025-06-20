@@ -36,9 +36,7 @@ export default function PrintCard() {
       <p className="mb-2">
         Hey <strong>{lead.business_name}</strong>,
       </p>
-      <p className="mb-2">
-        We built you a website and it's ready to preview or claim at:
-      </p>
+      <p className="mb-2">We built you a website and it's ready to preview or claim at:</p>
       <p className="mb-2 text-blue-600">{claimUrl}</p>
 
       <img
@@ -63,8 +61,8 @@ export default function PrintCard() {
           <ul className="text-gray-700">
             {logs.map((log, idx) => (
               <li key={idx}>
-                [{new Date(log.timestamp).toLocaleString()}] {log.action_type}{' '}
-                by {log.triggered_by || '—'}
+                [{new Date(log.timestamp).toLocaleString()}] {log.action_type} by{' '}
+                {log.triggered_by || '—'}
               </li>
             ))}
           </ul>

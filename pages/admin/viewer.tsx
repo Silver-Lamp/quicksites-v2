@@ -12,10 +12,7 @@ export default function ViewerDashboard() {
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
       const user = data?.user;
-      if (
-        user?.user_metadata?.role !== 'viewer' &&
-        user?.email !== 'sandonjurowski@gmail.com'
-      ) {
+      if (user?.user_metadata?.role !== 'viewer' && user?.email !== 'sandonjurowski@gmail.com') {
         router.push('/dashboard');
       }
       setEmail(user?.email || '');
@@ -66,10 +63,7 @@ export default function ViewerDashboard() {
         </thead>
         <tbody>
           {domains.map((d, i) => (
-            <tr
-              key={d.id}
-              className={i % 2 === 0 ? 'bg-gray-800' : 'bg-gray-900'}
-            >
+            <tr key={d.id} className={i % 2 === 0 ? 'bg-gray-800' : 'bg-gray-900'}>
               <td className="px-4 py-2">{d.domain}</td>
               <td className="px-4 py-2">{d.city}</td>
               <td className="px-4 py-2 text-xs">
@@ -101,17 +95,11 @@ export default function ViewerDashboard() {
             </tr>
           ))}
           {domains.map((d, i) => {
-            const alt =
-              d.campaigns?.alt_domains?.[
-                d.campaigns.lead_ids?.indexOf(d.lead_id)
-              ];
+            const alt = d.campaigns?.alt_domains?.[d.campaigns.lead_ids?.indexOf(d.lead_id)];
             const hasClaimed = d.domains?.is_claimed;
 
             return !hasClaimed && alt ? (
-              <tr
-                key={d.id + '-alt'}
-                className="bg-black text-yellow-400 text-xs"
-              >
+              <tr key={d.id + '-alt'} className="bg-black text-yellow-400 text-xs">
                 <td colSpan={5} className="px-4 py-2 space-y-2">
                   🛠️ Second Chance Site available:
                   <a

@@ -58,22 +58,13 @@ export default function SharePage() {
         </div>
 
         {profile.logo_url && (
-          <img
-            src={profile.logo_url}
-            alt="Logo"
-            className="h-10 w-10 rounded-full border"
-          />
+          <img src={profile.logo_url} alt="Logo" className="h-10 w-10 rounded-full border" />
         )}
 
-        <p className="text-xs text-gray-400 text-right">
-          Powered by QuickSites Studio
-        </p>
+        <p className="text-xs text-gray-400 text-right">Powered by QuickSites Studio</p>
       </div>
 
-      <button
-        className="bg-blue-600 text-white px-4 py-2 rounded"
-        onClick={handleExport}
-      >
+      <button className="bg-blue-600 text-white px-4 py-2 rounded" onClick={handleExport}>
         Download PDF
       </button>
     </div>

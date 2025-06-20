@@ -8,10 +8,7 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
-export default async function handler(
-  req: NextApiRequest,
-  res: NextApiResponse
-) {
+export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   const { handle } = req.query;
   if (!handle || typeof handle !== 'string') {
     return res.status(400).send('Missing or invalid handle');
@@ -25,10 +22,7 @@ export default async function handler(
 
   if (!user) return json({ error: 'User not found' });
 
-  const { data: blocks } = await supabase
-    .from('blocks')
-    .select('*')
-    .eq('owner_id', user.id);
+  const { data: blocks } = await supabase.from('blocks').select('*').eq('owner_id', user.id);
 
   const html = `
     <html>
@@ -62,9 +56,6 @@ export default async function handler(
 
   const buffer = await generatePdf({ content: html });
   res.setHeader('Content-Type', 'application/pdf');
-  res.setHeader(
-    'Content-Disposition',
-    `inline; filename="${handle}-qr-labels.pdf"`
-  );
+  res.setHeader('Content-Disposition', `inline; filename="${handle}-qr-labels.pdf"`);
   res.end(buffer);
 }

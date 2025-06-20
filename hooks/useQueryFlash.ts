@@ -12,11 +12,7 @@ export function useQueryFlash(key: string): string | null {
 
       // Strip it from the URL without full reload
       const { [key]: _, ...rest } = router.query;
-      router.replace(
-        { pathname: router.pathname, query: rest },
-        undefined,
-        { shallow: true }
-      );
+      router.replace({ pathname: router.pathname, query: rest }, undefined, { shallow: true });
     }
   }, [router.query[key]]); // re-run if query changes
 

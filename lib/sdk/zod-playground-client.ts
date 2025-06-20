@@ -9,10 +9,7 @@ export function encodeSchema(schema: Record<string, any>): string {
   }
 }
 
-export function buildPlaygroundUrl(
-  schema: Record<string, any>,
-  base = 'https://quicksites.ai'
-) {
+export function buildPlaygroundUrl(schema: Record<string, any>, base = 'https://quicksites.ai') {
   const encoded = encodeSchema(schema);
   return `${base}/admin/zod-playground?schema=${encoded}`;
 }

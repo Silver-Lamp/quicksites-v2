@@ -19,9 +19,7 @@ export default function AdminPrintAll() {
       (!filterCreator || c.created_by === filterCreator)
   );
 
-  const creators = Array.from(
-    new Set(campaigns.map((c: any) => c.created_by))
-  ).sort();
+  const creators = Array.from(new Set(campaigns.map((c: any) => c.created_by))).sort();
 
   return (
     <div className="p-6 text-white max-w-6xl mx-auto space-y-6">
@@ -67,12 +65,8 @@ export default function AdminPrintAll() {
               alt={c.headline}
               className="w-full rounded shadow border border-zinc-700"
             />
-            <div className="mt-2 text-sm text-zinc-300 truncate">
-              {c.headline}
-            </div>
-            <p className="text-xs text-zinc-500">
-              By {c.created_by?.slice(0, 8) || 'anon'}
-            </p>
+            <div className="mt-2 text-sm text-zinc-300 truncate">{c.headline}</div>
+            <p className="text-xs text-zinc-500">By {c.created_by?.slice(0, 8) || 'anon'}</p>
             <a
               href={`/posters/${c.slug}`}
               download={`${c.slug}-poster.png`}

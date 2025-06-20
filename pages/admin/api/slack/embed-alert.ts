@@ -5,10 +5,7 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 
 const webhookUrl = process.env.SLACK_WEBHOOK_URL;
 
-export default async function handler(
-  req: NextApiRequest,
-  res: NextApiResponse
-) {
+export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') return res.status(405).end();
   const { schema_id, count } = req.body;
 

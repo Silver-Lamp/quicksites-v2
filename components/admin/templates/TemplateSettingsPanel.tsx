@@ -10,10 +10,7 @@ type TemplateSettingsPanelProps = {
   onChange: (updated: Template) => void;
 };
 
-export default function TemplateSettingsPanel({
-  template,
-  onChange,
-}: TemplateSettingsPanelProps) {
+export default function TemplateSettingsPanel({ template, onChange }: TemplateSettingsPanelProps) {
   const [industries, setIndustries] = useState<string[]>([]);
   const colorSchemes: { name: string; hex: string }[] = [
     { name: 'blue', hex: '#3b82f6' },
@@ -68,9 +65,7 @@ export default function TemplateSettingsPanel({
               key={name}
               onClick={() => onChange({ ...template, color_scheme: name })}
               className={`w-6 h-6 rounded-full border-2 ${
-                template.color_scheme === name
-                  ? 'border-white'
-                  : 'border-transparent'
+                template.color_scheme === name ? 'border-white' : 'border-transparent'
               }`}
               style={{ backgroundColor: hex }}
               title={name}

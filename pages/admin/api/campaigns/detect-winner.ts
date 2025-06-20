@@ -34,10 +34,7 @@ export default async function handler(_: NextApiRequest, res: NextApiResponse) {
       return json({ error: 'Campaign not found' });
     }
 
-    await supabase
-      .from('campaigns')
-      .update({ winner_lead_id: leadMatch.id })
-      .eq('id', campaign.id);
+    await supabase.from('campaigns').update({ winner_lead_id: leadMatch.id }).eq('id', campaign.id);
 
     const subject = `🏁 You Won: ${campaign.name}`;
     const body = `Hey ${leadMatch.business_name}, you were the first to claim your site in ${campaign.name} (${campaign.city}). Congrats!

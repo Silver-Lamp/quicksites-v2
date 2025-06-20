@@ -6,10 +6,7 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
-export default async function handler(
-  _req: NextApiRequest,
-  _res: NextApiResponse
-) {
+export default async function handler(_req: NextApiRequest, _res: NextApiResponse) {
   const token = _req.headers.authorization?.replace('Bearer ', '');
   const { block_id, message } = _req.body;
 

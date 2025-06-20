@@ -5,10 +5,11 @@ const raw = readFileSync('lint-report.json', 'utf-8');
 const results = JSON.parse(raw);
 
 const filtered = results
-  .filter((entry: any) =>
-    entry.filePath.includes('/quicksites-v2/') &&
-    !entry.filePath.includes('/.venv/') &&
-    !entry.filePath.includes('/node_modules/')
+  .filter(
+    (entry: any) =>
+      entry.filePath.includes('/quicksites-v2/') &&
+      !entry.filePath.includes('/.venv/') &&
+      !entry.filePath.includes('/node_modules/')
   )
   .map((entry: any) => ({
     file: entry.filePath,

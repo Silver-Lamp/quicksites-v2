@@ -37,9 +37,7 @@ export default function SupabaseSchemaDashboard() {
             const val = e.target.value.toLowerCase();
             setSchemas((prev) =>
               prev.filter(
-                (s) =>
-                  s.name.toLowerCase().includes(val) ||
-                  s.json.toLowerCase().includes(val)
+                (s) => s.name.toLowerCase().includes(val) || s.json.toLowerCase().includes(val)
               )
             );
           }}

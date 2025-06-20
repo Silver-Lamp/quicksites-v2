@@ -61,9 +61,7 @@ export default function BlockEditorModal({
         {error && <p className="text-sm text-red-400 mt-2">{error}</p>}
 
         <div className="mt-4">
-          <p className="text-xs font-semibold text-gray-400">
-            Block Schema Tips:
-          </p>
+          <p className="text-xs font-semibold text-gray-400">Block Schema Tips:</p>
           <ul className="text-xs mt-1 space-y-1 pl-4 list-disc text-gray-400">
             {Object.entries(schemaHints).map(([key, hint]) => (
               <li key={key}>

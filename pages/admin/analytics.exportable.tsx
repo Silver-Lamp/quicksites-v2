@@ -13,9 +13,9 @@ export default function AnalyticsPage() {
   const [dateTo, setDateTo] = useState('');
   const [mode, setMode] = useState<'views' | 'events'>('views');
   const [siteId, setSiteId] = useState('');
-  const [siteOptions, setSiteOptions] = useState<
-    { id: string; domain?: string; name?: string }[]
-  >([]);
+  const [siteOptions, setSiteOptions] = useState<{ id: string; domain?: string; name?: string }[]>(
+    []
+  );
 
   useEffect(() => {
     supabase
@@ -35,9 +35,7 @@ export default function AnalyticsPage() {
       const table = mode === 'views' ? 'published_site_views' : 'site_events';
       const column = mode === 'views' ? 'viewed_at' : 'created_at';
 
-      const { data, error } = await supabase
-        .from(table)
-        .select(`${column},site_id`);
+      const { data, error } = await supabase.from(table).select(`${column},site_id`);
 
       if (error) return console.error(error);
 
@@ -98,19 +96,11 @@ export default function AnalyticsPage() {
         </div>
         <div>
           <Label>Date From</Label>
-          <Input
-            type="date"
-            value={dateFrom}
-            onChange={(e) => setDateFrom(e.target.value)}
-          />
+          <Input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} />
         </div>
         <div>
           <Label>Date To</Label>
-          <Input
-            type="date"
-            value={dateTo}
-            onChange={(e) => setDateTo(e.target.value)}
-          />
+          <Input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} />
         </div>
         <div>
           <Label>Mode</Label>
@@ -142,10 +132,7 @@ export default function AnalyticsPage() {
             date,
             count: value,
           }));
-          const csv = [
-            'Date,Count',
-            ...rows.map((row) => `${row.date},${row.count}`),
-          ].join('\n');
+          const csv = ['Date,Count', ...rows.map((row) => `${row.date},${row.count}`)].join('\n');
           const blob = new Blob([csv], { type: 'text/csv' });
           const url = URL.createObjectURL(blob);
           const link = document.createElement('a');

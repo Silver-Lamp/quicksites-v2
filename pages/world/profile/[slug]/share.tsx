@@ -34,8 +34,7 @@ export default function PublicWorldShare() {
   };
 
   if (!profile) return <div className="p-6 text-white">Loading...</div>;
-  if (!profile.visible)
-    return <div className="p-6 text-white">🌒 This page is private.</div>;
+  if (!profile.visible) return <div className="p-6 text-white">🌒 This page is private.</div>;
 
   return (
     <div className="p-6 max-w-2xl mx-auto text-white space-y-6">
@@ -51,11 +50,7 @@ export default function PublicWorldShare() {
 
       <div className="mt-6 space-y-3" style={{ border: '1px solid #222' }}>
         {blocks.map((b: any) => (
-          <div
-            key={b.id}
-            className="flex flex-col gap-3"
-            style={{ border: '1px solid #222' }}
-          >
+          <div key={b.id} className="flex flex-col gap-3" style={{ border: '1px solid #222' }}>
             <div className="bg-zinc-800 p-4 rounded">
               <div className="text-lg">
                 {b.emoji} {b.title}
@@ -107,9 +102,7 @@ export default function PublicWorldShare() {
                 <button
                   className="bg-purple-700 hover:bg-purple-800 text-white px-3 py-1 rounded"
                   onClick={async () => {
-                    const message = prompt(
-                      'What reflection would you like to send?'
-                    );
+                    const message = prompt('What reflection would you like to send?');
                     if (!message) return;
                     await logClick(b.id, 'reflect');
                     await fetch('/api/reflect', {

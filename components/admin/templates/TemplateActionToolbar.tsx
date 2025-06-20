@@ -85,9 +85,7 @@ export default function TemplateActionToolbar({
           {status}
         </span>
         {autosaveStatus && (
-          <span className="text-xs text-gray-400 italic">
-            💾 {autosaveStatus}
-          </span>
+          <span className="text-xs text-gray-400 italic">💾 {autosaveStatus}</span>
         )}
       </div>
 
@@ -99,8 +97,7 @@ export default function TemplateActionToolbar({
           <option>View Version</option>
           {versions.map((v) => (
             <option key={v.id}>
-              {v.commit_message || 'Untitled'} —{' '}
-              {new Date(v.created_at).toLocaleDateString()}
+              {v.commit_message || 'Untitled'} — {new Date(v.created_at).toLocaleDateString()}
             </option>
           ))}
         </select>

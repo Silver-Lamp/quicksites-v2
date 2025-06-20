@@ -13,9 +13,7 @@ export default function BrandingImportPage() {
   const handleImport = async () => {
     try {
       const parsed = JSON.parse(importData);
-      const { error } = await supabase
-        .from('branding_profiles')
-        .insert([parsed]);
+      const { error } = await supabase.from('branding_profiles').insert([parsed]);
       if (error) throw error;
       setFeedback('✅ Imported successfully');
     } catch (e) {
@@ -24,10 +22,7 @@ export default function BrandingImportPage() {
   };
 
   const handleExport = async () => {
-    const { data } = await supabase
-      .from('branding_profiles')
-      .select('*')
-      .limit(1);
+    const { data } = await supabase.from('branding_profiles').select('*').limit(1);
     if (data && data.length > 0) {
       const blob = new Blob([JSON.stringify(data[0], null, 2)], {
         type: 'application/json',
@@ -45,10 +40,7 @@ export default function BrandingImportPage() {
     <div className="max-w-xl mx-auto p-6 space-y-4">
       <h1 className="text-xl font-bold">Import / Export Branding Profile</h1>
 
-      <button
-        onClick={handleExport}
-        className="bg-blue-600 text-white px-4 py-2 rounded"
-      >
+      <button onClick={handleExport} className="bg-blue-600 text-white px-4 py-2 rounded">
         Export Sample
       </button>
 
@@ -59,10 +51,7 @@ export default function BrandingImportPage() {
         onChange={(e) => setImportData(e.target.value)}
       />
 
-      <button
-        onClick={handleImport}
-        className="bg-green-600 text-white px-4 py-2 rounded"
-      >
+      <button onClick={handleImport} className="bg-green-600 text-white px-4 py-2 rounded">
         Import
       </button>
 

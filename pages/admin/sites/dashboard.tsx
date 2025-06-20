@@ -21,10 +21,7 @@ export default function DashboardPage() {
           const res = await fetch('https://ipapi.co/json/');
           geo = await json();
         } catch (e) {
-          console.warn(
-            '🌍❌ [Sites] [Dashboard] [useEffect] Geo lookup failed',
-            { e }
-          );
+          console.warn('🌍❌ [Sites] [Dashboard] [useEffect] Geo lookup failed', { e });
         }
 
         await supabase.from('dashboard_access_log').insert({
@@ -45,10 +42,7 @@ export default function DashboardPage() {
     <Page>
       <div className="flex justify-between items-center mb-4">
         <h1 className="text-xl font-bold">Admin Dashboard</h1>
-        <Link
-          href="/admin/logs/dashboard"
-          className="text-sm text-blue-600 hover:underline"
-        >
+        <Link href="/admin/logs/dashboard" className="text-sm text-blue-600 hover:underline">
           View Access Logs
         </Link>
       </div>

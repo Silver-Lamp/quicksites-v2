@@ -2,14 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabaseClient.js';
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  Tooltip,
-  ResponsiveContainer,
-} from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 
 export default function PeopleAnalyticsPage() {
   const [data, setData] = useState([]);
@@ -24,19 +17,14 @@ export default function PeopleAnalyticsPage() {
         .select('user_id, last_seen_at, last_seen_ip, last_seen_agent')
         .not('last_seen_at', 'is', null);
 
-      const grouped: Record<
-        string,
-        { count: number; ips: Set<string>; agents: Set<string> }
-      > = {};
+      const grouped: Record<string, { count: number; ips: Set<string>; agents: Set<string> }> = {};
 
       raw?.forEach((entry: any) => {
         const day = new Date(entry.last_seen_at).toISOString().split('T')[0];
-        if (!grouped[day])
-          grouped[day] = { count: 0, ips: new Set(), agents: new Set() };
+        if (!grouped[day]) grouped[day] = { count: 0, ips: new Set(), agents: new Set() };
         grouped[day].count += 1;
         if (entry.last_seen_ip) grouped[day].ips.add(entry.last_seen_ip);
-        if (entry.last_seen_agent)
-          grouped[day].agents.add(entry.last_seen_agent);
+        if (entry.last_seen_agent) grouped[day].agents.add(entry.last_seen_agent);
       });
 
       const chartData = Object.entries(grouped)
@@ -66,11 +54,7 @@ export default function PeopleAnalyticsPage() {
       <div className="flex flex-wrap items-center gap-4 mb-4">
         <label>
           Days:
-          <select
-            value={range}
-            onChange={(e) => setRange(Number(e.target.value))}
-            className="ml-2"
-          >
+          <select value={range} onChange={(e) => setRange(Number(e.target.value))} className="ml-2">
             <option value={7}>Last 7</option>
             <option value={14}>Last 14</option>
             <option value={30}>Last 30</option>
@@ -78,19 +62,11 @@ export default function PeopleAnalyticsPage() {
           </select>
         </label>
         <label className="flex items-center gap-1">
-          <input
-            type="checkbox"
-            checked={showIP}
-            onChange={() => setShowIP((v) => !v)}
-          />
+          <input type="checkbox" checked={showIP} onChange={() => setShowIP((v) => !v)} />
           Show IPs
         </label>
         <label className="flex items-center gap-1">
-          <input
-            type="checkbox"
-            checked={showAgent}
-            onChange={() => setShowAgent((v) => !v)}
-          />
+          <input type="checkbox" checked={showAgent} onChange={() => setShowAgent((v) => !v)} />
           Show Devices
         </label>
       </div>

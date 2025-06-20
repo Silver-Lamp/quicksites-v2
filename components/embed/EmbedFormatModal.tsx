@@ -6,9 +6,7 @@ export function EmbedFormatModal({ slug }: { slug: string }) {
 
   const fetchEmbed = async (f: string) => {
     setFormat(f);
-    const text = await fetch(`/api/embed/${slug}?format=${f}`).then((res) =>
-      res.text()
-    );
+    const text = await fetch(`/api/embed/${slug}?format=${f}`).then((res) => res.text());
     setEmbedCode(text);
   };
 

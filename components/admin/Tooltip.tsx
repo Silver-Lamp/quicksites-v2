@@ -18,12 +18,12 @@ export default function Tooltip({
   labelledById = `tooltip-${Math.random().toString(36).slice(2, 10)}`,
 }: TooltipProps) {
   const ref = useRef<HTMLDivElement>(null);
-  const [autoPlacement, setAutoPlacement] = useState<
-    'top' | 'bottom' | 'left' | 'right'
-  >(placement);
-  const [prevPlacement, setPrevPlacement] = useState<
-    'top' | 'bottom' | 'left' | 'right'
-  >(placement);
+  const [autoPlacement, setAutoPlacement] = useState<'top' | 'bottom' | 'left' | 'right'>(
+    placement
+  );
+  const [prevPlacement, setPrevPlacement] = useState<'top' | 'bottom' | 'left' | 'right'>(
+    placement
+  );
 
   useEffect(() => {
     if (!ref.current) return;
@@ -31,13 +31,9 @@ export default function Tooltip({
     const rect = ref.current.getBoundingClientRect();
     const buffer = 20;
     if (placement === 'top' && rect.top < buffer) setAutoPlacement('bottom');
-    else if (
-      placement === 'bottom' &&
-      rect.bottom > window.innerHeight - buffer
-    )
+    else if (placement === 'bottom' && rect.bottom > window.innerHeight - buffer)
       setAutoPlacement('top');
-    else if (placement === 'left' && rect.left < buffer)
-      setAutoPlacement('right');
+    else if (placement === 'left' && rect.left < buffer) setAutoPlacement('right');
     else if (placement === 'right' && rect.right > window.innerWidth - buffer)
       setAutoPlacement('left');
   }, [placement]);
@@ -66,9 +62,7 @@ export default function Tooltip({
       className="group relative inline-block touch-none"
       aria-describedby={labelledById}
       onTouchStart={() =>
-        ref.current
-          ?.querySelector('[role=tooltip]')
-          ?.classList.add('opacity-100')
+        ref.current?.querySelector('[role=tooltip]')?.classList.add('opacity-100')
       }
     >
       <span

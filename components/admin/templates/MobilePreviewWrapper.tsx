@@ -25,10 +25,7 @@ export default function MobilePreviewWrapper({
       if (!el) return;
       el.scrollTop += scrollStep * direction;
 
-      if (
-        el.scrollTop >= el.scrollHeight - el.clientHeight ||
-        el.scrollTop <= 0
-      ) {
+      if (el.scrollTop >= el.scrollHeight - el.clientHeight || el.scrollTop <= 0) {
         direction *= -1;
       }
 
@@ -58,16 +55,11 @@ export default function MobilePreviewWrapper({
         >
           <div
             className={`rounded shadow bg-white dark:bg-gray-900 ${
-              mobile
-                ? 'w-[375px] h-[667px] overflow-y-auto rounded-[28px]'
-                : 'w-full'
+              mobile ? 'w-[375px] h-[667px] overflow-y-auto rounded-[28px]' : 'w-full'
             }`}
             ref={scrollRef}
           >
-            <div
-              id="preview-capture"
-              className="p-4 rounded-md shadow bg-white dark:bg-gray-900"
-            >
+            <div id="preview-capture" className="p-4 rounded-md shadow bg-white dark:bg-gray-900">
               {children}
             </div>
           </div>

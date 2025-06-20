@@ -30,20 +30,11 @@ export default function PublicEditPage() {
   return (
     <div className="p-6 text-white max-w-4xl mx-auto">
       <h1 className="text-xl font-bold mb-4">Remix: {slug}</h1>
-      {data && (
-        <BlocksEditor blocks={data} onChange={(updated) => setData(updated)} />
-      )}
-      <button
-        onClick={saveFork}
-        className="mt-4 bg-green-700 px-4 py-2 rounded"
-      >
+      {data && <BlocksEditor blocks={data} onChange={(updated) => setData(updated)} />}
+      <button onClick={saveFork} className="mt-4 bg-green-700 px-4 py-2 rounded">
         Save a Copy
       </button>
-      {forked && (
-        <p className="text-green-400 mt-2">
-          Forked! Check /starter to claim it.
-        </p>
-      )}
+      {forked && <p className="text-green-400 mt-2">Forked! Check /starter to claim it.</p>}
     </div>
   );
 }

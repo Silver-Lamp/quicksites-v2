@@ -90,14 +90,9 @@ export function CelebrationModal({
 
   const title = localizedMessages[lang][type];
   const description = localizedDescriptions[lang][type];
-  const containerStyle = dark
-    ? 'bg-zinc-900 text-white'
-    : 'bg-white text-black';
-  const borderStyle = dark
-    ? 'hover:text-white text-gray-300'
-    : 'hover:text-gray-700 text-gray-500';
-  const progress =
-    goal && current ? Math.min(100, Math.round((current / goal) * 100)) : null;
+  const containerStyle = dark ? 'bg-zinc-900 text-white' : 'bg-white text-black';
+  const borderStyle = dark ? 'hover:text-white text-gray-300' : 'hover:text-gray-700 text-gray-500';
+  const progress = goal && current ? Math.min(100, Math.round((current / goal) * 100)) : null;
 
   return (
     <div
@@ -106,10 +101,7 @@ export function CelebrationModal({
       <div
         className={`relative ${containerStyle} rounded-lg shadow-xl p-6 w-full max-w-md text-center`}
       >
-        <button
-          className={`absolute top-2 right-2 ${borderStyle}`}
-          onClick={onClose}
-        >
+        <button className={`absolute top-2 right-2 ${borderStyle}`} onClick={onClose}>
           <X className="w-5 h-5" />
         </button>
 

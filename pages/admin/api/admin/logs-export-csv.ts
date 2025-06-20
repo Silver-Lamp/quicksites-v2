@@ -8,10 +8,7 @@ const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 );
 
-export default async function handler(
-  req: NextApiRequest,
-  res: NextApiResponse
-) {
+export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') return res.status(405).end();
 
   const token = req.headers.authorization?.split('Bearer ')[1];
@@ -39,9 +36,6 @@ export default async function handler(
   const csv = `${headers}\n${rows}`;
 
   res.setHeader('Content-Type', 'text/csv');
-  res.setHeader(
-    'Content-Disposition',
-    'attachment; filename=`${table}-export.csv`'
-  );
+  res.setHeader('Content-Disposition', 'attachment; filename=`${table}-export.csv`');
   res.status(200).send(csv);
 }

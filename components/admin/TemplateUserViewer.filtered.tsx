@@ -40,9 +40,7 @@ export default function TemplateUserViewer() {
       .from('dashboard_user_layouts')
       .select('user_id, template_id');
 
-    const { data: users } = await supabase
-      .from('auth.users')
-      .select('id, email');
+    const { data: users } = await supabase.from('auth.users').select('id, email');
 
     const { data: templates } = await supabase
       .from('dashboard_layout_templates')
@@ -53,8 +51,7 @@ export default function TemplateUserViewer() {
         user_id: row.user_id,
         email: users?.find((u) => u.id === row.user_id)?.email || '—',
         template_id: row.template_id,
-        template:
-          templates?.find((t) => t.id === row.template_id)?.name || '(deleted)',
+        template: templates?.find((t) => t.id === row.template_id)?.name || '(deleted)',
       })) || [];
 
     setAssignments(joined);
@@ -74,18 +71,13 @@ export default function TemplateUserViewer() {
   };
 
   const revertUser = async (user_id: string) => {
-    await supabase
-      .from('dashboard_user_layouts')
-      .delete()
-      .eq('user_id', user_id);
+    await supabase.from('dashboard_user_layouts').delete().eq('user_id', user_id);
     loadData();
   };
 
   return (
     <div className="p-4 border rounded bg-white shadow max-w-3xl mt-8">
-      <h2 className="text-lg font-semibold mb-3">
-        User → Template Assignments
-      </h2>
+      <h2 className="text-lg font-semibold mb-3">User → Template Assignments</h2>
 
       <div className="flex flex-wrap gap-3 items-center mb-4">
         <input
@@ -136,11 +128,7 @@ export default function TemplateUserViewer() {
               <td className="p-2">{a.email}</td>
               <td className="p-2">{a.template}</td>
               <td className="p-2">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => revertUser(a.user_id)}
-                >
+                <Button variant="ghost" size="sm" onClick={() => revertUser(a.user_id)}>
                   Revert
                 </Button>
               </td>

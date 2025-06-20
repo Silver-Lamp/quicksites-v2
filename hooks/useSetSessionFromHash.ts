@@ -13,14 +13,12 @@ export function useSetSessionFromHash() {
 
     if (access_token && refresh_token) {
       console.log('🔑 Attempting to set session from URL fragment...');
-      supabase.auth
-        .setSession({ access_token, refresh_token })
-        .then(({ data, error }) => {
-          console.log('[🔐 setSession result]', { data, error });
-          if (!error) {
-            window.location.replace('/');
-          }
-        });
+      supabase.auth.setSession({ access_token, refresh_token }).then(({ data, error }) => {
+        console.log('[🔐 setSession result]', { data, error });
+        if (!error) {
+          window.location.replace('/');
+        }
+      });
     }
   }, []);
 }

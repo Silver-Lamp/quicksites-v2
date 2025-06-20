@@ -48,9 +48,7 @@ export async function middleware(req: NextRequest) {
     console.log('🔒 [Middleware] Checking admin auth:', { pathname, user });
 
     if (!user) {
-      return NextResponse.redirect(
-        new URL('/login?error=unauthorized', req.url)
-      );
+      return NextResponse.redirect(new URL('/login?error=unauthorized', req.url));
     }
 
     const role = user.user_metadata?.role;

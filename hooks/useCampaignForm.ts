@@ -24,26 +24,16 @@ export function useCampaignForm(city: string, state: string) {
   const [error, setError] = useState<string | null>(null);
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
 
-  const {
-    leads,
-    loading: leadsLoading,
-  } = useLeads({ city, state, industry: 'towing' });
+  const { leads, loading: leadsLoading } = useLeads({ city, state, industry: 'towing' });
 
   const [selectedLeads, setSelectedLeads] = useState<string[]>([]);
 
   function toggleLead(id: string) {
-    setSelectedLeads((prev) =>
-      prev.includes(id) ? prev.filter((l) => l !== id) : [...prev, id]
-    );
+    setSelectedLeads((prev) => (prev.includes(id) ? prev.filter((l) => l !== id) : [...prev, id]));
   }
 
   useEffect(() => {
-    if (
-      !nameWasManuallySet &&
-      city &&
-      selectedLeads.length >= 2 &&
-      startsAt
-    ) {
+    if (!nameWasManuallySet && city && selectedLeads.length >= 2 && startsAt) {
       const a = leads.find((l) => l.id === selectedLeads[0])?.business_name?.split(' ')[0] || 'A';
       const b = leads.find((l) => l.id === selectedLeads[1])?.business_name?.split(' ')[0] || 'B';
       const category = 'Towing';
@@ -73,7 +63,8 @@ export function useCampaignForm(city: string, state: string) {
 
     if (!name.trim()) errors.name = 'Campaign name is required.';
     if (selectedLeads.length < 2) errors.leads = 'Select at least 2 leads.';
-    if (dayjs(startsAt).isAfter(dayjs(endsAt))) errors.dates = 'Start date must be before end date.';
+    if (dayjs(startsAt).isAfter(dayjs(endsAt)))
+      errors.dates = 'Start date must be before end date.';
 
     setValidationErrors(errors);
     return Object.keys(errors).length === 0;
@@ -87,17 +78,19 @@ export function useCampaignForm(city: string, state: string) {
 
     const { data, error: insertError } = await supabase
       .from('campaigns')
-      .insert([{
-        name,
-        city,
-        state,
-        starts_at: startsAt,
-        ends_at: endsAt,
-        lead_ids: selectedLeads,
-        alt_domains: [alt1, alt2],
-        created_by: email,
-        status,
-      }])
+      .insert([
+        {
+          name,
+          city,
+          state,
+          starts_at: startsAt,
+          ends_at: endsAt,
+          lead_ids: selectedLeads,
+          alt_domains: [alt1, alt2],
+          created_by: email,
+          status,
+        },
+      ])
       .select()
       .single();
 
@@ -107,17 +100,16 @@ export function useCampaignForm(city: string, state: string) {
     }
 
     if (mode === 'submit') {
-      await supabase
-        .from('leads')
-        .update({ campaign_id: data.id })
-        .in('id', selectedLeads);
+      await supabase.from('leads').update({ campaign_id: data.id }).in('id', selectedLeads);
 
       if (!silentMode) {
-        await supabase.from('user_action_logs').insert([{
-          action_type: 'campaign_created',
-          triggered_by: email,
-          notes: `Created campaign: ${name}`,
-        }]);
+        await supabase.from('user_action_logs').insert([
+          {
+            action_type: 'campaign_created',
+            triggered_by: email,
+            notes: `Created campaign: ${name}`,
+          },
+        ]);
       }
 
       router.push(`/admin/campaigns?new=${data.id}`);

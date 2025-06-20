@@ -10,8 +10,7 @@ export function useAvatarUploader(userId: string) {
   useEffect(() => {
     if (!userId) return;
     const path = `avatars/${userId}.png`;
-    const publicUrl = supabase.storage.from('avatars').getPublicUrl(path)
-      .data?.publicUrl;
+    const publicUrl = supabase.storage.from('avatars').getPublicUrl(path).data?.publicUrl;
     setAvatarUrl(publicUrl ?? null);
   }, [userId]);
 

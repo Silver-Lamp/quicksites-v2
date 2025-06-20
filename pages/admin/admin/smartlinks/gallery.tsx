@@ -23,9 +23,7 @@ export default function SmartLinkGalleryPage() {
   return (
     <SmartLinkProvider>
       <main className="p-6">
-        <h1 className="text-xl font-semibold text-white mb-4">
-          📂 SmartLink Gallery
-        </h1>
+        <h1 className="text-xl font-semibold text-white mb-4">📂 SmartLink Gallery</h1>
         <SmartLinkGallery items={items} />
       </main>
     </SmartLinkProvider>

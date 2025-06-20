@@ -8,9 +8,7 @@ const pagesDir = path.join(process.cwd(), 'pages');
 function getRoutes() {
   const files = glob.sync('**/*.tsx', { cwd: pagesDir, nodir: true });
   const routes = files
-    .filter(
-      (f) => !f.startsWith('_') && !f.includes('404') && !f.includes('api/')
-    )
+    .filter((f) => !f.startsWith('_') && !f.includes('404') && !f.includes('api/'))
     .map((f) => {
       const route = f
         .replace(/\/index\.tsx$/, '/')
@@ -38,6 +36,4 @@ xml.push('</urlset>');
 
 const outputPath = path.join(process.cwd(), 'public', 'sitemap.xml');
 fs.writeFileSync(outputPath, xml.join('\n'));
-console.log(
-  `✅ Sitemap with ${routes.length} routes written to public/sitemap.xml`
-);
+console.log(`✅ Sitemap with ${routes.length} routes written to public/sitemap.xml`);

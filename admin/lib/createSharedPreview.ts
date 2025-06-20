@@ -31,13 +31,11 @@ export async function createSharedPreview({
     const blob = await (await fetch(dataUrl)).blob();
     const filePath = `previews/${templateId}/shared.png`;
 
-    const { error: uploadError } = await supabase.storage
-      .from('previews')
-      .upload(filePath, blob, {
-        cacheControl: '3600',
-        upsert: true,
-        contentType: 'image/png',
-      });
+    const { error: uploadError } = await supabase.storage.from('previews').upload(filePath, blob, {
+      cacheControl: '3600',
+      upsert: true,
+      contentType: 'image/png',
+    });
 
     if (uploadError) {
       if (uploadError.message.includes('Bucket not found')) {
@@ -48,9 +46,7 @@ export async function createSharedPreview({
       return null;
     }
 
-    const { data: urlData } = supabase.storage
-      .from('previews')
-      .getPublicUrl(filePath);
+    const { data: urlData } = supabase.storage.from('previews').getPublicUrl(filePath);
     const public_url = urlData?.publicUrl;
 
     const { error: insertError } = await supabase.from('snapshots').insert([

@@ -32,19 +32,11 @@ export default function PeoplePage({ profiles }: { profiles: any[] }) {
           {profiles.map((p) => (
             <tr key={p.user_id} className="border-b">
               <td className="p-2 text-xs text-gray-600">{p.user_id}</td>
-              <td className="p-2">
-                {new Date(p.last_seen_at).toLocaleString()}
-              </td>
+              <td className="p-2">{new Date(p.last_seen_at).toLocaleString()}</td>
               <td className="p-2 text-xs">{p.last_seen_ip ?? '-'}</td>
-              <td className="p-2 text-xs truncate">
-                {p.last_seen_agent?.slice(0, 40) ?? '-'}
-              </td>
+              <td className="p-2 text-xs truncate">{p.last_seen_agent?.slice(0, 40) ?? '-'}</td>
               <td className="p-2">
-                {p.avatar_url ? (
-                  <img src={p.avatar_url} className="w-8 h-8 rounded-full" />
-                ) : (
-                  '—'
-                )}
+                {p.avatar_url ? <img src={p.avatar_url} className="w-8 h-8 rounded-full" /> : '—'}
               </td>
             </tr>
           ))}

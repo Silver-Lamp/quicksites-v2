@@ -26,15 +26,9 @@ export default function TagInput({ tags, onChange }: TagInputProps) {
     <div>
       <div className="flex flex-wrap gap-2 mb-2">
         {tags.map((tag) => (
-          <span
-            key={tag}
-            className="inline-flex items-center bg-muted text-sm px-2 py-1 rounded"
-          >
+          <span key={tag} className="inline-flex items-center bg-muted text-sm px-2 py-1 rounded">
             {tag}
-            <button
-              onClick={() => removeTag(tag)}
-              className="ml-1 text-red-500 hover:text-red-700"
-            >
+            <button onClick={() => removeTag(tag)} className="ml-1 text-red-500 hover:text-red-700">
               ×
             </button>
           </span>

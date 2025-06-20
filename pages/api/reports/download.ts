@@ -5,23 +5,12 @@ import crypto from 'crypto';
 import fs from 'fs';
 import path from 'path';
 
-const supabase = createClient(
-  process.env.SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+const supabase = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
 
-export default async function handler(
-  req: NextApiRequest,
-  res: NextApiResponse
-) {
+export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   const { file, token } = req.query;
 
-  if (
-    !file ||
-    !token ||
-    typeof file !== 'string' ||
-    typeof token !== 'string'
-  ) {
+  if (!file || !token || typeof file !== 'string' || typeof token !== 'string') {
     return json({ error: 'Missing file or token' });
   }
 

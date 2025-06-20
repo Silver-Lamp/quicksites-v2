@@ -18,13 +18,7 @@ const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 );
 
-export default function SharedAnalytics({
-  domain,
-  views,
-}: {
-  domain: string;
-  views: any[];
-}) {
+export default function SharedAnalytics({ domain, views }: { domain: string; views: any[] }) {
   const byDay: Record<string, number> = {};
   views.forEach((v) => {
     const day = new Date(v.viewed_at).toISOString().slice(0, 10);
@@ -38,9 +32,7 @@ export default function SharedAnalytics({
       <section>
         <h2 className="text-lg font-semibold mb-2">Views per Day</h2>
         <ResponsiveContainer width="100%" height={300}>
-          <BarChart
-            data={Object.entries(byDay).map(([day, count]) => ({ day, count }))}
-          >
+          <BarChart data={Object.entries(byDay).map(([day, count]) => ({ day, count }))}>
             <XAxis dataKey="day" />
             <YAxis />
             <Tooltip />
@@ -50,19 +42,14 @@ export default function SharedAnalytics({
         </ResponsiveContainer>
       </section>
 
-      <p className="text-sm text-muted-foreground">
-        Total views: {views.length}
-      </p>
+      <p className="text-sm text-muted-foreground">Total views: {views.length}</p>
     </div>
   );
 }
 
 export const getServerSideProps: GetServerSideProps = async (context) => {
   const slug = context.params?.slug as string;
-  const { data } = await supabase
-    .from('template_views')
-    .select('*')
-    .eq('domain', slug);
+  const { data } = await supabase.from('template_views').select('*').eq('domain', slug);
 
   return {
     props: {

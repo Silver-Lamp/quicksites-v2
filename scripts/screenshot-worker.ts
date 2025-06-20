@@ -3,10 +3,7 @@ import puppeteer from 'puppeteer';
 import fs from 'fs';
 import path from 'path';
 
-const supabase = createClient(
-  process.env.SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+const supabase = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
 
 const { data: queue } = await supabase
   .from('screenshot_queue')
@@ -19,10 +16,7 @@ for (const item of queue || []) {
   const domain = item.domain;
   console.log(`📸 Processing screenshot for ${domain}`);
 
-  await supabase
-    .from('screenshot_queue')
-    .update({ status: 'processing' })
-    .eq('id', item.id);
+  await supabase.from('screenshot_queue').update({ status: 'processing' }).eq('id', item.id);
 
   try {
     const browser = await puppeteer.launch();
@@ -41,9 +35,6 @@ for (const item of queue || []) {
       .eq('id', item.id);
   } catch (err) {
     console.error('Failed to screenshot', domain);
-    await supabase
-      .from('screenshot_queue')
-      .update({ status: 'failed' })
-      .eq('id', item.id);
+    await supabase.from('screenshot_queue').update({ status: 'failed' }).eq('id', item.id);
   }
 }

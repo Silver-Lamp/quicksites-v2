@@ -41,17 +41,11 @@ export default function AccessRequestDashboard() {
       }),
     });
     await supabase.from('access_requests').update({ status }).eq('id', id);
-    setRequests((prev) =>
-      prev.map((r) => (r.id === id ? { ...r, status } : r))
-    );
+    setRequests((prev) => prev.map((r) => (r.id === id ? { ...r, status } : r)));
   };
 
   if (role !== 'admin' && role !== 'owner') {
-    return (
-      <div className="p-6 text-red-600">
-        You are not authorized to view this page.
-      </div>
-    );
+    return <div className="p-6 text-red-600">You are not authorized to view this page.</div>;
   }
 
   return (
@@ -76,12 +70,9 @@ export default function AccessRequestDashboard() {
                 <strong>Role:</strong> {r.role || '—'}
               </p>
               <p>
-                <strong>Status:</strong>{' '}
-                <span className="font-semibold">{r.status}</span>
+                <strong>Status:</strong> <span className="font-semibold">{r.status}</span>
               </p>
-              <p className="text-sm text-gray-500 whitespace-pre-wrap mt-2">
-                {r.message}
-              </p>
+              <p className="text-sm text-gray-500 whitespace-pre-wrap mt-2">{r.message}</p>
               <div className="mt-2 flex gap-2">
                 <button
                   onClick={() => updateStatus(r.id, 'approved')}

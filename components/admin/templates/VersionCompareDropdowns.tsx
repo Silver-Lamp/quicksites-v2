@@ -26,28 +26,20 @@ export default function VersionHistoryPanel({
           )
           .eq('slug', slug)
           .order('created_at', { ascending: false }),
-        supabase
-          .from('published_sites')
-          .select('snapshot_id')
-          .eq('slug', slug)
-          .maybeSingle(),
+        supabase.from('published_sites').select('snapshot_id').eq('slug', slug).maybeSingle(),
       ]);
 
       if (!versionRes.error) setVersions(versionRes.data || []);
-      if (!currentRes.error && currentRes.data)
-        setCurrentVersion(currentRes.data.snapshot_id);
+      if (!currentRes.error && currentRes.data) setCurrentVersion(currentRes.data.snapshot_id);
       setLoading(false);
     };
 
     fetchVersions();
   }, [slug]);
 
-  if (loading)
-    return <p className="text-sm text-gray-500">Loading versions...</p>;
+  if (loading) return <p className="text-sm text-gray-500">Loading versions...</p>;
   if (versions.length === 0)
-    return (
-      <p className="text-sm text-gray-500">No version history available.</p>
-    );
+    return <p className="text-sm text-gray-500">No version history available.</p>;
 
   return (
     <div className="mt-4 space-y-2">
@@ -65,31 +57,22 @@ export default function VersionHistoryPanel({
                 <div className="text-sm text-gray-100">
                   Snapshot: <code>{v.snapshot_id}</code>
                 </div>
-                <div className="text-xs text-gray-400">
-                  Label: {v.label || 'No label'}
-                </div>
+                <div className="text-xs text-gray-400">Label: {v.label || 'No label'}</div>
                 <div className="text-xs text-gray-500">
                   Published: {new Date(v.created_at).toLocaleString()}
                 </div>
                 <div
                   className="text-xs mt-1"
                   style={{
-                    fontFamily:
-                      v.branding_profiles?.font_family || 'sans-serif',
+                    fontFamily: v.branding_profiles?.font_family || 'sans-serif',
                   }}
                 >
-                  Heading Preview in{' '}
-                  {v.branding_profiles?.font_family || 'Default'}
+                  Heading Preview in {v.branding_profiles?.font_family || 'Default'}
                 </div>
               </div>
               <div className="flex gap-2">
                 {!isCurrent && (
-                  <Button
-                    size="sm"
-                    onClick={() =>
-                      onRestore(v.snapshot_id, v.branding_profile_id)
-                    }
-                  >
+                  <Button size="sm" onClick={() => onRestore(v.snapshot_id, v.branding_profile_id)}>
                     Restore
                   </Button>
                 )}
@@ -102,19 +85,14 @@ export default function VersionHistoryPanel({
                         .from('published_versions')
                         .delete()
                         .eq('id', v.id);
-                      if (!error)
-                        setVersions(versions.filter((ver) => ver.id !== v.id));
+                      if (!error) setVersions(versions.filter((ver) => ver.id !== v.id));
                       setConfirmingDelete(null);
                     }}
                   >
                     Confirm Delete
                   </Button>
                 ) : (
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => setConfirmingDelete(v.id)}
-                  >
+                  <Button size="sm" variant="outline" onClick={() => setConfirmingDelete(v.id)}>
                     Delete
                   </Button>
                 )}

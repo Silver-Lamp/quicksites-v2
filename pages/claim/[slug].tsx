@@ -6,9 +6,7 @@ import { useRouter } from 'next/router';
 export default function ClaimPage() {
   const router = useRouter();
   const { slug } = router.query;
-  const [status, setStatus] = useState<'loading' | 'claimed' | 'unclaimed'>(
-    'loading'
-  );
+  const [status, setStatus] = useState<'loading' | 'claimed' | 'unclaimed'>('loading');
   const [email, setEmail] = useState('');
   const [anon, setAnon] = useState(false);
   const [submitted, setSubmitted] = useState(false);
@@ -41,9 +39,7 @@ export default function ClaimPage() {
       />
 
       {status === 'claimed' && (
-        <p className="text-red-400 text-sm mb-4">
-          This site has already been claimed.
-        </p>
+        <p className="text-red-400 text-sm mb-4">This site has already been claimed.</p>
       )}
 
       {status === 'unclaimed' && !submitted && (
@@ -56,11 +52,7 @@ export default function ClaimPage() {
             className="w-full p-2 rounded bg-zinc-800 mb-3 text-white"
           />
           <label className="flex items-center gap-2 mb-4 justify-center">
-            <input
-              type="checkbox"
-              checked={anon}
-              onChange={(e) => setAnon(e.target.checked)}
-            />
+            <input type="checkbox" checked={anon} onChange={(e) => setAnon(e.target.checked)} />
             <span className="text-sm text-zinc-300">Claim anonymously</span>
           </label>
           <button
@@ -73,9 +65,7 @@ export default function ClaimPage() {
       )}
 
       {submitted && (
-        <p className="text-green-400 mt-4">
-          🎉 You’ve claimed this site successfully.
-        </p>
+        <p className="text-green-400 mt-4">🎉 You’ve claimed this site successfully.</p>
       )}
     </div>
   );

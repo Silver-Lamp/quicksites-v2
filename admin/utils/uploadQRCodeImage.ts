@@ -1,10 +1,7 @@
 import { supabase } from '@/admin/lib/supabaseClient';
 import QRCodeLib from 'qrcode';
 
-export async function uploadQRCodeImage(
-  slug: string,
-  url: string
-): Promise<string> {
+export async function uploadQRCodeImage(slug: string, url: string): Promise<string> {
   const canvas = document.createElement('canvas');
   await QRCodeLib.toCanvas(canvas, url, { width: 512 });
 
@@ -12,12 +9,10 @@ export async function uploadQRCodeImage(
     canvas.toBlob(async (blob) => {
       if (!blob) return reject(new Error('Could not create QR blob'));
 
-      const { error } = await supabase.storage
-        .from('qr-codes')
-        .upload(`sites/${slug}.png`, blob, {
-          upsert: true,
-          contentType: 'image/png',
-        });
+      const { error } = await supabase.storage.from('qr-codes').upload(`sites/${slug}.png`, blob, {
+        upsert: true,
+        contentType: 'image/png',
+      });
 
       if (error) return reject(error);
 

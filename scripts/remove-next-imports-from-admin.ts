@@ -58,9 +58,7 @@ function cleanFile(filePath: string) {
 
 console.log(`🔧 Removing 'next/server' and 'next/headers' from /admin...`);
 
-const allFiles = walk(TARGET_DIR).filter((file) =>
-  EXTENSIONS.includes(path.extname(file))
-);
+const allFiles = walk(TARGET_DIR).filter((file) => EXTENSIONS.includes(path.extname(file)));
 
 for (const file of allFiles) {
   cleanFile(file);

@@ -29,10 +29,7 @@ export default function UpgradePrompt({
         <h2 className="text-lg font-semibold">Upgrade Required</h2>
         <p className="text-sm text-gray-600 dark:text-gray-300">{message}</p>
         <div className="flex justify-center gap-4 pt-2">
-          <button
-            onClick={handleUpgrade}
-            className="px-4 py-2 bg-blue-600 text-white rounded"
-          >
+          <button onClick={handleUpgrade} className="px-4 py-2 bg-blue-600 text-white rounded">
             Create Account
           </button>
           <button

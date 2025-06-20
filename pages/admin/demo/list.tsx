@@ -15,19 +15,13 @@ export default function DemoList({ templates }: { templates: any[] }) {
         >
           <div>
             <h2 className="text-lg font-semibold">{t.template_name}</h2>
-            <p className="text-sm text-muted-foreground">
-              Industry: {t.industry}
-            </p>
+            <p className="text-sm text-muted-foreground">Industry: {t.industry}</p>
             {t.tags?.length && (
               <div className="text-xs text-muted-foreground mt-1 italic">
                 Tags: {t.tags.join(', ')}
               </div>
             )}
-            {t.featured && (
-              <span className="text-xs text-yellow-600 font-bold">
-                ★ Featured
-              </span>
-            )}
+            {t.featured && <span className="text-xs text-yellow-600 font-bold">★ Featured</span>}
           </div>
           <Link href={`/demo/${t.template_name}`} target="_blank">
             <Button size="sm" variant="outline">

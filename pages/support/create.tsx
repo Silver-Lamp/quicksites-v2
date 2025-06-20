@@ -69,10 +69,7 @@ export default function PublicCampaignCreate() {
         placeholder="Block ID (optional)"
         className="p-2 text-black w-full rounded"
       />
-      <button
-        onClick={submit}
-        className="bg-green-600 hover:bg-green-700 px-4 py-2 rounded"
-      >
+      <button onClick={submit} className="bg-green-600 hover:bg-green-700 px-4 py-2 rounded">
         Create Campaign
       </button>
       {submitted && <p className="text-green-300 text-sm">{submitted}</p>}

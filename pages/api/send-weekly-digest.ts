@@ -13,9 +13,7 @@ const openai = new OpenAI({
 });
 
 async function generateDigest(user_id: string) {
-  const res = await fetch(
-    `http://localhost:3000/api/feedback-summary?user_id=${user_id}`
-  );
+  const res = await fetch(`http://localhost:3000/api/feedback-summary?user_id=${user_id}`);
   const summary = await json();
 
   const prompt = `
@@ -42,10 +40,7 @@ ${summary.received_feedback.map((f: any) => `• ${f.action} on ${f.block_id.sli
   return chat.choices[0].message.content;
 }
 
-export default async function handler(
-  _req: NextApiRequest,
-  res: NextApiResponse
-) {
+export default async function handler(_req: NextApiRequest, res: NextApiResponse) {
   const { data: users, error } = await supabase.auth.admin.listUsers();
   if (error) return json({ error });
 

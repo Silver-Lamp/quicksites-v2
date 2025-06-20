@@ -15,13 +15,8 @@ export function GroupedPreview({
         Snapshot: <code>{snapshotId}</code>
       </div>
       <div className="text-xs text-gray-400">Label: {label || 'No label'}</div>
-      <div className="text-xs text-gray-500">
-        Published: {new Date(createdAt).toLocaleString()}
-      </div>
-      <div
-        className="text-xs mt-1"
-        style={{ fontFamily: branding?.font_family || 'sans-serif' }}
-      >
+      <div className="text-xs text-gray-500">Published: {new Date(createdAt).toLocaleString()}</div>
+      <div className="text-xs mt-1" style={{ fontFamily: branding?.font_family || 'sans-serif' }}>
         Heading Preview in {branding?.font_family || 'Default'}
       </div>
       <div className="flex gap-2 mt-1 items-center">
@@ -40,11 +35,7 @@ export function GroupedPreview({
           ></span>
         )}
         {branding?.id && (
-          <a
-            href={`/branding/${branding.id}`}
-            target="_blank"
-            rel="noopener noreferrer"
-          >
+          <a href={`/branding/${branding.id}`} target="_blank" rel="noopener noreferrer">
             <img
               src={`https://your-project-id.supabase.co/storage/v1/object/public/branding-logos/${branding.id}.png`}
               alt="Logo preview"

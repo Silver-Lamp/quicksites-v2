@@ -16,10 +16,7 @@ function generateDigestMock(summary: any) {
   return `This week, you checked in ${checkinCount} times, with a focus on "${topHabit}". You've received ${feedbackCount} supportive gestures. Keep up the great momentum — you're building a powerful rhythm. 🌱`;
 }
 
-export default async function handler(
-  _req: NextApiRequest,
-  res: NextApiResponse
-) {
+export default async function handler(_req: NextApiRequest, res: NextApiResponse) {
   const { user_id } = _req.query;
   if (!user_id) return json({ error: 'Missing user_id' });
 

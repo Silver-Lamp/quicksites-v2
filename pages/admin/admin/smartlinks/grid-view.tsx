@@ -37,9 +37,7 @@ export default function SmartLinkGridPage() {
     <SmartLinkProvider>
       <main className="p-6">
         <div className="flex items-center justify-between flex-wrap gap-4 mb-4">
-          <h1 className="text-xl font-bold text-white">
-            🧱 SmartLink Grid View
-          </h1>
+          <h1 className="text-xl font-bold text-white">🧱 SmartLink Grid View</h1>
           <div className="flex flex-wrap gap-2 items-center">
             <button
               className="text-xs px-3 py-1 rounded bg-zinc-800 hover:bg-zinc-700 border border-zinc-700"
@@ -60,9 +58,7 @@ export default function SmartLinkGridPage() {
               <button
                 key={t}
                 className={`text-xs px-3 py-1 rounded border border-zinc-600 hover:bg-zinc-700 ${
-                  tag === t
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-zinc-800 text-zinc-300'
+                  tag === t ? 'bg-blue-600 text-white' : 'bg-zinc-800 text-zinc-300'
                 }`}
                 onClick={() => router.push(updateSearchParam('tag', t))}
               >
@@ -71,9 +67,7 @@ export default function SmartLinkGridPage() {
             ))}
             <button
               className={`text-xs px-3 py-1 rounded border ${
-                view === 'grid'
-                  ? 'bg-blue-700 text-white'
-                  : 'bg-zinc-800 text-zinc-300'
+                view === 'grid' ? 'bg-blue-700 text-white' : 'bg-zinc-800 text-zinc-300'
               } border-zinc-600`}
               onClick={() => router.push(updateSearchParam('view', 'grid'))}
             >
@@ -81,9 +75,7 @@ export default function SmartLinkGridPage() {
             </button>
             <button
               className={`text-xs px-3 py-1 rounded border ${
-                view === 'gallery'
-                  ? 'bg-blue-700 text-white'
-                  : 'bg-zinc-800 text-zinc-300'
+                view === 'gallery' ? 'bg-blue-700 text-white' : 'bg-zinc-800 text-zinc-300'
               } border-zinc-600`}
               onClick={() => router.push(updateSearchParam('view', 'gallery'))}
             >

@@ -26,14 +26,9 @@ export default function SiteDirectory() {
       <h1 className="text-2xl font-bold mb-4">Live Public Sites</h1>
       <ul className="space-y-4">
         {sites.map((site) => (
-          <li
-            key={site.id}
-            className="border p-4 rounded flex items-center justify-between"
-          >
+          <li key={site.id} className="border p-4 rounded flex items-center justify-between">
             <div>
-              <div className="text-sm font-semibold">
-                {site.branding_profiles?.name}
-              </div>
+              <div className="text-sm font-semibold">{site.branding_profiles?.name}</div>
               <a
                 className="text-blue-600 text-sm"
                 href={`/sites/${site.slug}`}

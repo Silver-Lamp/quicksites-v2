@@ -18,10 +18,7 @@ export default function PrintLabels() {
   return (
     <div className="p-4 print:p-0 bg-white text-black grid grid-cols-2 sm:grid-cols-3 gap-4">
       {blocks.map((b: any) => (
-        <div
-          key={b.id}
-          className="border p-3 rounded text-center text-sm break-words"
-        >
+        <div key={b.id} className="border p-3 rounded text-center text-sm break-words">
           <div className="text-xl">
             {b.emoji} {b.title}
           </div>

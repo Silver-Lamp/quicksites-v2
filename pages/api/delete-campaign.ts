@@ -6,17 +6,11 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
-export default async function handler(
-  req: NextApiRequest,
-  res: NextApiResponse
-) {
+export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   const { slug } = req.body;
   if (!slug) return json({ error: 'Missing slug' });
 
-  const { error } = await supabase
-    .from('support_campaigns')
-    .delete()
-    .eq('slug', slug);
+  const { error } = await supabase.from('support_campaigns').delete().eq('slug', slug);
 
   if (error) return json({ error: error.message });
 

@@ -35,10 +35,7 @@ export default function ReorderableBlockList({
   onBlockClick?: (block: any) => void;
   onReorder: (updatedData: any) => void;
 }) {
-  const sensors = useSensors(
-    useSensor(PointerSensor),
-    useSensor(KeyboardSensor)
-  );
+  const sensors = useSensors(useSensor(PointerSensor), useSensor(KeyboardSensor));
 
   const [activePageIdx] = useState(0); // assuming only 1 page for now
   const blocks = data?.pages?.[activePageIdx]?.content_blocks || [];
@@ -61,10 +58,7 @@ export default function ReorderableBlockList({
         onReorder(updatedData);
       }}
     >
-      <SortableContext
-        items={blocks.map((b: any) => b._id)}
-        strategy={verticalListSortingStrategy}
-      >
+      <SortableContext items={blocks.map((b: any) => b._id)} strategy={verticalListSortingStrategy}>
         <TemplatePreview
           data={data}
           colorScheme={colorScheme}

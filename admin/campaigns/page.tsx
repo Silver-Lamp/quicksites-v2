@@ -1,4 +1,4 @@
-import { supabase } from '@/lib/supabaseClient.js';
+import { supabase } from '../lib/supabaseClient.js';
 import { startOfDay, endOfDay, subDays } from 'date-fns';
 
 export default async function CampaignsPage() {

@@ -2,11 +2,7 @@
 
 'use client';
 
-export default function ActivityWidget({
-  settings = {},
-}: {
-  settings?: Record<string, any>;
-}) {
+export default function ActivityWidget({ settings = {} }: { settings?: Record<string, any> }) {
   const grouping = settings.grouping ?? 'daily';
   const colorize = settings.colorize ?? true;
   const sampleSize = settings.dataSampleSize ?? 50;

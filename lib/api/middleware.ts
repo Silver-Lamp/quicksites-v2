@@ -1,9 +1,6 @@
 const rateLimitMap = new Map<string, { count: number; last: number }>();
 
-export async function requireHeader(
-  req: Request,
-  key: string
-): Promise<Response | void> {
+export async function requireHeader(req: Request, key: string): Promise<Response | void> {
   const value = req.headers.get(key);
   if (!value) {
     return new Response(`Missing header: ${key}`, { status: 401 });

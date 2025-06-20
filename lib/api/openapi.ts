@@ -11,11 +11,7 @@ type RouteSpec = {
   output?: z.ZodTypeAny;
 };
 
-export function generateOpenApi(
-  routes: RouteSpec[],
-  title = 'API',
-  version = '1.0.0'
-) {
+export function generateOpenApi(routes: RouteSpec[], title = 'API', version = '1.0.0') {
   const generator = new OpenAPIGenerator(
     {
       openapi: '3.0.0',

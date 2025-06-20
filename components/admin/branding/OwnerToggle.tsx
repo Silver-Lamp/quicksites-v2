@@ -12,18 +12,12 @@ export default function OwnerToggle({ profileId }: { profileId: string }) {
 
   const assignToMe = async () => {
     if (!userId) return;
-    await supabase
-      .from('branding_profiles')
-      .update({ owner_id: userId })
-      .eq('id', profileId);
+    await supabase.from('branding_profiles').update({ owner_id: userId }).eq('id', profileId);
     location.reload();
   };
 
   return (
-    <button
-      className="mt-2 text-xs underline text-blue-600"
-      onClick={assignToMe}
-    >
+    <button className="mt-2 text-xs underline text-blue-600" onClick={assignToMe}>
       Assign to Me
     </button>
   );

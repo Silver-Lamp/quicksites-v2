@@ -32,12 +32,8 @@ export default function ProfilePage() {
   }, []);
 
   const { user } = useCurrentUser();
-  const [avatarUrl, setAvatarUrl] = useState(
-    user?.user_metadata?.avatar_url || ''
-  );
-  const [displayName, setDisplayName] = useState(
-    user?.user_metadata?.name || ''
-  );
+  const [avatarUrl, setAvatarUrl] = useState(user?.user_metadata?.avatar_url || '');
+  const [displayName, setDisplayName] = useState(user?.user_metadata?.name || '');
   const [bio, setBio] = useState(user?.user_metadata?.bio || '');
 
   const handleSave = async () => {
@@ -66,9 +62,7 @@ export default function ProfilePage() {
       {userMetadata && (
         <div className="bg-zinc-900 border border-zinc-700 p-4 rounded mb-6 text-sm">
           <h2 className="font-semibold mb-2">User Metadata</h2>
-          <pre className="text-xs whitespace-pre-wrap">
-            {JSON.stringify(userMetadata, null, 2)}
-          </pre>
+          <pre className="text-xs whitespace-pre-wrap">{JSON.stringify(userMetadata, null, 2)}</pre>
         </div>
       )}
 
@@ -115,12 +109,9 @@ export default function ProfilePage() {
             <Button
               variant="secondary"
               onClick={async () => {
-                const { error } = await supabase.auth.resetPasswordForEmail(
-                  user?.email || '',
-                  {
-                    redirectTo: `${window.location.origin}/reset`,
-                  }
-                );
+                const { error } = await supabase.auth.resetPasswordForEmail(user?.email || '', {
+                  redirectTo: `${window.location.origin}/reset`,
+                });
                 if (error) {
                   if (typeof toast.error === 'function') {
                     toast.error('Failed to send reset email');
@@ -141,13 +132,10 @@ export default function ProfilePage() {
             <Button
               variant="outline"
               onClick={async () => {
-                const { error } = await supabase.rpc(
-                  'send_email_verification_with_log',
-                  {
-                    user_agent: navigator.userAgent,
-                    sent_from: 'profile_page',
-                  }
-                );
+                const { error } = await supabase.rpc('send_email_verification_with_log', {
+                  user_agent: navigator.userAgent,
+                  sent_from: 'profile_page',
+                });
                 if (error) {
                   if (typeof toast.error === 'function') {
                     toast.error('Failed to send verification');
@@ -181,12 +169,9 @@ export default function ProfilePage() {
                 );
                 if (!confirmed) return;
 
-                const { error } = await supabase.rpc(
-                  'delete_current_user_with_log',
-                  {
-                    password_input: password,
-                  }
-                );
+                const { error } = await supabase.rpc('delete_current_user_with_log', {
+                  password_input: password,
+                });
 
                 if (error) {
                   if (typeof toast.error === 'function') {
@@ -224,26 +209,19 @@ export default function ProfilePage() {
                 {latestLog
                   ? `${latestLog.email} • ${format(new Date(latestLog.deleted_at), showUtc ? "MMM d, yyyy HH:mm 'UTC'" : 'MMM d, yyyy HH:mm zzz')}
  (${formatDistanceToNow(new Date(latestLog.deleted_at), { addSuffix: true })})` +
-                    (latestLog.admin_actor
-                      ? ` (by ${latestLog.admin_actor})`
-                      : '')
+                    (latestLog.admin_actor ? ` (by ${latestLog.admin_actor})` : '')
                   : 'Loading...'}
               </code>
             </p>
             <p className="text-sm text-zinc-400">
               Account deletions are recorded in{' '}
-              <code className="bg-zinc-800 px-1 rounded">
-                user_deletion_logs
-              </code>
-              . This table stores the user ID, email, and timestamp. Admins can
-              view and audit this log from the Supabase dashboard or the audit
-              UI. Local timezone is:{' '}
-              <code className="bg-zinc-800 px-1 rounded">{timeZone}</code>. A
-              similar log is recorded for verification emails via the{' '}
-              <code className="bg-zinc-800 px-1 rounded">
-                verification_logs
-              </code>{' '}
-              table, including user agent and origin info.
+              <code className="bg-zinc-800 px-1 rounded">user_deletion_logs</code>. This table
+              stores the user ID, email, and timestamp. Admins can view and audit this log from the
+              Supabase dashboard or the audit UI. Local timezone is:{' '}
+              <code className="bg-zinc-800 px-1 rounded">{timeZone}</code>. A similar log is
+              recorded for verification emails via the{' '}
+              <code className="bg-zinc-800 px-1 rounded">verification_logs</code> table, including
+              user agent and origin info.
             </p>
           </div>
         </div>

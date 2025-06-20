@@ -29,9 +29,7 @@ export default function TemplateMarket() {
                 />
               )}
               <h2 className="font-semibold text-lg">{tpl.template_name}</h2>
-              <p className="text-sm text-zinc-400 mb-2">
-                {tpl.description || 'No description'}
-              </p>
+              <p className="text-sm text-zinc-400 mb-2">{tpl.description || 'No description'}</p>
               <Link
                 href={`/starter?template=${tpl.template_name}`}
                 className="text-blue-400 text-xs underline"

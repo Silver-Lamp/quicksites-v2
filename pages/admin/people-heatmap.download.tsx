@@ -65,14 +65,12 @@ export default function UserHeatmapDownloadable() {
         userMap[id].days.add(day);
       });
 
-      const formatted: HeatmapUser[] = Object.entries(userMap).map(
-        ([id, info]) => ({
-          user_id: id,
-          avatar_url: info.avatar_url,
-          role: info.role,
-          active_days: info.days,
-        })
-      );
+      const formatted: HeatmapUser[] = Object.entries(userMap).map(([id, info]) => ({
+        user_id: id,
+        avatar_url: info.avatar_url,
+        role: info.role,
+        active_days: info.days,
+      }));
 
       setUsers(formatted);
     })();
@@ -116,11 +114,7 @@ export default function UserHeatmapDownloadable() {
 
       <div className="mb-4 flex gap-3 items-center">
         <label className="text-sm">Filter by Role:</label>
-        <select
-          className="text-sm"
-          value={role}
-          onChange={(e) => setRole(e.target.value)}
-        >
+        <select className="text-sm" value={role} onChange={(e) => setRole(e.target.value)}>
           <option value="">All</option>
           <option value="admin">Admin</option>
           <option value="user">User</option>
@@ -129,18 +123,13 @@ export default function UserHeatmapDownloadable() {
 
       <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 md:grid-cols-3">
         {filteredUsers.map((user) => (
-          <div
-            key={user.user_id}
-            className="bg-white border rounded p-4 shadow"
-          >
+          <div key={user.user_id} className="bg-white border rounded p-4 shadow">
             <div className="flex items-center gap-3 mb-3">
               <img
                 src={user.avatar_url || '/default-avatar.png'}
                 className="w-10 h-10 rounded-full border"
               />
-              <span className="text-xs text-gray-500">
-                {user.role || 'user'}
-              </span>
+              <span className="text-xs text-gray-500">{user.role || 'user'}</span>
             </div>
             <div className="grid grid-cols-27 gap-[2px] text-xs">
               {days.map((date) => (
@@ -150,9 +139,7 @@ export default function UserHeatmapDownloadable() {
                   style={{
                     width: '10px',
                     height: '10px',
-                    backgroundColor: user.active_days.has(date)
-                      ? '#2563eb'
-                      : '#e5e7eb',
+                    backgroundColor: user.active_days.has(date) ? '#2563eb' : '#e5e7eb',
                     borderRadius: '2px',
                   }}
                 />

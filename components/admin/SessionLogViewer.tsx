@@ -3,11 +3,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabaseClient.js';
 
-export default function SessionLogViewer({
-  mobileOnly = false,
-}: {
-  mobileOnly?: boolean;
-}) {
+export default function SessionLogViewer({ mobileOnly = false }: { mobileOnly?: boolean }) {
   const [logs, setLogs] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -53,9 +49,7 @@ export default function SessionLogViewer({
               <td className="p-2 text-xs">
                 {log.token_start}...{log.token_end}
               </td>
-              <td className="p-2 truncate text-xs text-gray-400">
-                {log.device?.slice(0, 40)}…
-              </td>
+              <td className="p-2 truncate text-xs text-gray-400">{log.device?.slice(0, 40)}…</td>
               <td className="p-2">{log.is_mobile ? '✅' : '—'}</td>
               <td className="p-2 text-xs text-gray-400">
                 {new Date(log.timestamp).toLocaleString()}

@@ -153,14 +153,8 @@ export default function LoginPage() {
           </div>
         ) : (
           <>
-            {flash && (
-              <p className="text-center mb-4 text-green-400 text-sm">{flash}</p>
-            )}
-            {toast && (
-              <p className="text-center mb-4 text-yellow-400 text-sm">
-                {toast}
-              </p>
-            )}
+            {flash && <p className="text-center mb-4 text-green-400 text-sm">{flash}</p>}
+            {toast && <p className="text-center mb-4 text-yellow-400 text-sm">{toast}</p>}
             <input
               type="email"
               value={email}

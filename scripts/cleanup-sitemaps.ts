@@ -15,17 +15,14 @@ async function cleanupOldSnapshots() {
   const files = (data || []).filter(
     (f: any) => f.name.endsWith('.xml') && !f.name.startsWith('latest')
   );
-  const grouped = files.reduce<Record<string, typeof files>>(
-    (acc: any, file: any) => {
-      const base = file.name.split('-')[0]; // sitemap-index, sitemap-hreflang
-      if (!acc[base]) {
-        acc[base] = [];
-      }
-      acc[base].push(file);
-      return acc;
-    },
-    {}
-  );
+  const grouped = files.reduce<Record<string, typeof files>>((acc: any, file: any) => {
+    const base = file.name.split('-')[0]; // sitemap-index, sitemap-hreflang
+    if (!acc[base]) {
+      acc[base] = [];
+    }
+    acc[base].push(file);
+    return acc;
+  }, {});
   for (const [base, items] of Object.entries(grouped)) {
     const toDelete = (items as typeof files).slice(MAX_ENTRIES);
     for (const file of toDelete) {
@@ -39,9 +36,7 @@ async function cleanupOldSnapshots() {
     if (items.length > 0) {
       const latest = items[0];
       const latestName = `${base}-latest.xml`;
-      const { data: downloadUrl } = supabase.storage
-        .from(BUCKET)
-        .getPublicUrl(latest.name);
+      const { data: downloadUrl } = supabase.storage.from(BUCKET).getPublicUrl(latest.name);
 
       if (downloadUrl) {
         const res = await fetch(downloadUrl.publicUrl);

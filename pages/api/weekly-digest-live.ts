@@ -17,16 +17,11 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY!,
 });
 
-export default async function handler(
-  _req: NextApiRequest,
-  res: NextApiResponse
-) {
+export default async function handler(_req: NextApiRequest, res: NextApiResponse) {
   const { user_id } = _req.query;
   if (!user_id) return json({ error: 'Missing user_id' });
 
-  const feedbackRes = await fetch(
-    `http://localhost:3000/api/feedback-summary?user_id=${user_id}`
-  );
+  const feedbackRes = await fetch(`http://localhost:3000/api/feedback-summary?user_id=${user_id}`);
   const summary = await feedbackRes.json();
 
   const prompt = `

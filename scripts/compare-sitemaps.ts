@@ -2,18 +2,9 @@ import { readFile } from 'fs/promises';
 import * as Diff from 'diff';
 
 async function compareSnapshots(a: string, b: string) {
-  const [xmlA, xmlB] = await Promise.all([
-    readFile(a, 'utf8'),
-    readFile(b, 'utf8'),
-  ]);
+  const [xmlA, xmlB] = await Promise.all([readFile(a, 'utf8'), readFile(b, 'utf8')]);
 
-  const diff = Diff.createPatch(
-    'sitemap-diff',
-    xmlA,
-    xmlB,
-    'Previous',
-    'Current'
-  );
+  const diff = Diff.createPatch('sitemap-diff', xmlA, xmlB, 'Previous', 'Current');
 
   console.log(diff);
 }

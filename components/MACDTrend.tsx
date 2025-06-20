@@ -1,13 +1,6 @@
 'use client';
 import { useEffect, useState } from 'react';
-import {
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  Tooltip,
-  ResponsiveContainer,
-} from 'recharts';
+import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 
 function calculateEMA(data: { date: string; value: number }[], period: number) {
   const k = 2 / (period + 1);
@@ -52,20 +45,8 @@ export default function MACDTrend({ slug }: { slug: string }) {
           <XAxis dataKey="date" tick={{ fill: '#888' }} />
           <YAxis tick={{ fill: '#888' }} />
           <Tooltip />
-          <Line
-            type="monotone"
-            dataKey="ema7"
-            stroke="#22c55e"
-            strokeWidth={2}
-            dot={false}
-          />
-          <Line
-            type="monotone"
-            dataKey="ema30"
-            stroke="#3b82f6"
-            strokeWidth={1}
-            dot={false}
-          />
+          <Line type="monotone" dataKey="ema7" stroke="#22c55e" strokeWidth={2} dot={false} />
+          <Line type="monotone" dataKey="ema30" stroke="#3b82f6" strokeWidth={1} dot={false} />
         </LineChart>
       </ResponsiveContainer>
     </div>

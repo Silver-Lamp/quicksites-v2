@@ -24,15 +24,9 @@ export default function AdminDashboard() {
         { count: emailsCount },
         { count: logsCount },
       ] = await Promise.all([
-        supabase
-          .from('embed_views')
-          .select('*', { count: 'exact', head: true }),
-        supabase
-          .from('schema_links')
-          .select('*', { count: 'exact', head: true }),
-        supabase
-          .from('email_summaries')
-          .select('*', { count: 'exact', head: true }),
+        supabase.from('embed_views').select('*', { count: 'exact', head: true }),
+        supabase.from('schema_links').select('*', { count: 'exact', head: true }),
+        supabase.from('email_summaries').select('*', { count: 'exact', head: true }),
         supabase.from('log_events').select('*', { count: 'exact', head: true }),
       ]);
 
@@ -63,9 +57,7 @@ export default function AdminDashboard() {
 
         {hasRole(['admin', 'owner']) && (
           <Card>
-            <CardHeader className="text-lg font-semibold">
-              Seed Tools
-            </CardHeader>
+            <CardHeader className="text-lg font-semibold">Seed Tools</CardHeader>
             <CardContent>
               <p className="text-sm text-gray-500 mb-2">
                 Quickly add an example template to test the builder.
@@ -88,25 +80,17 @@ export default function AdminDashboard() {
                 📊 Embed Views
               </CardHeader>
               <CardContent>
-                <p className="text-sm text-gray-500 mb-2">
-                  Track views by location and volume.
-                </p>
-                <a
-                  href="/admin/embed-views"
-                  className="text-blue-600 text-sm underline"
-                >
+                <p className="text-sm text-gray-500 mb-2">Track views by location and volume.</p>
+                <a href="/admin/embed-views" className="text-blue-600 text-sm underline">
                   View Logs →
                 </a>
                 <button
                   onClick={async () => {
                     const token = localStorage.getItem('sb-access-token');
-                    const res = await fetch(
-                      '/api/admin/logs-export-csv?table=embed_views',
-                      {
-                        method: 'POST',
-                        headers: { Authorization: `Bearer ${token}` },
-                      }
-                    );
+                    const res = await fetch('/api/admin/logs-export-csv?table=embed_views', {
+                      method: 'POST',
+                      headers: { Authorization: `Bearer ${token}` },
+                    });
                     const blob = await res.blob();
                     const url = URL.createObjectURL(blob);
                     const a = document.createElement('a');
@@ -131,25 +115,17 @@ export default function AdminDashboard() {
                 🔗 Shortlink Manager
               </CardHeader>
               <CardContent>
-                <p className="text-sm text-gray-500 mb-2">
-                  Create and manage short schema links.
-                </p>
-                <a
-                  href="/admin/links"
-                  className="text-blue-600 text-sm underline"
-                >
+                <p className="text-sm text-gray-500 mb-2">Create and manage short schema links.</p>
+                <a href="/admin/links" className="text-blue-600 text-sm underline">
                   Open Shortlinks →
                 </a>
                 <button
                   onClick={async () => {
                     const token = localStorage.getItem('sb-access-token');
-                    const res = await fetch(
-                      '/api/admin/logs-export-csv?table=schema_links',
-                      {
-                        method: 'POST',
-                        headers: { Authorization: `Bearer ${token}` },
-                      }
-                    );
+                    const res = await fetch('/api/admin/logs-export-csv?table=schema_links', {
+                      method: 'POST',
+                      headers: { Authorization: `Bearer ${token}` },
+                    });
                     const blob = await res.blob();
                     const url = URL.createObjectURL(blob);
                     const a = document.createElement('a');
@@ -177,10 +153,7 @@ export default function AdminDashboard() {
                 <p className="text-sm text-gray-500 mb-2">
                   Review auto-generated summaries or drafts.
                 </p>
-                <a
-                  href="/admin/email-summary"
-                  className="text-blue-600 text-sm underline"
-                >
+                <a href="/admin/email-summary" className="text-blue-600 text-sm underline">
                   Check Inbox →
                 </a>
               </CardContent>
@@ -201,13 +174,10 @@ export default function AdminDashboard() {
                 <button
                   onClick={async () => {
                     const token = localStorage.getItem('sb-access-token');
-                    const res = await fetch(
-                      '/api/admin/logs-export-csv?table=log_events',
-                      {
-                        method: 'POST',
-                        headers: { Authorization: `Bearer ${token}` },
-                      }
-                    );
+                    const res = await fetch('/api/admin/logs-export-csv?table=log_events', {
+                      method: 'POST',
+                      headers: { Authorization: `Bearer ${token}` },
+                    });
                     const blob = await res.blob();
                     const url = URL.createObjectURL(blob);
                     const a = document.createElement('a');
@@ -222,8 +192,7 @@ export default function AdminDashboard() {
                 </button>
                 <button
                   onClick={async () => {
-                    if (!confirm('Are you sure you want to clear all logs?'))
-                      return;
+                    if (!confirm('Are you sure you want to clear all logs?')) return;
                     const token = localStorage.getItem('sb-access-token');
                     const res = await fetch('/api/admin/clear-logs', {
                       method: 'POST',

@@ -3,16 +3,12 @@ export default function SourcePage() {
     <div className="max-w-2xl mx-auto p-6 text-white">
       <h1 className="text-3xl font-bold mb-4">🧩 Source & Licensing</h1>
       <p className="text-zinc-300 mb-4">
-        QuickSites is open infrastructure. You can fork it, remix it, improve
-        it, or run it locally.
+        QuickSites is open infrastructure. You can fork it, remix it, improve it, or run it locally.
       </p>
       <ul className="space-y-3 text-sm text-zinc-400">
         <li>
           🔗{' '}
-          <a
-            href="https://github.com/Silver-Lamp/quicksites-v2"
-            className="underline"
-          >
+          <a href="https://github.com/Silver-Lamp/quicksites-v2" className="underline">
             View Source on GitHub
           </a>
         </li>

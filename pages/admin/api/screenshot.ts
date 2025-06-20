@@ -4,10 +4,7 @@ import { chromium } from 'playwright';
 import path from 'path';
 import fs from 'fs/promises';
 
-export default async function handler(
-  req: NextApiRequest,
-  res: NextApiResponse
-) {
+export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') return res.status(405).end('Method Not Allowed');
 
   const { domain } = req.body;

@@ -53,10 +53,7 @@ export default function AppHeader() {
               </div>
             ) : (
               <div className="ml-4 text-xs text-gray-500">
-                <SafeLink
-                  href="/login"
-                  className="text-blue-400 hover:underline"
-                >
+                <SafeLink href="/login" className="text-blue-400 hover:underline">
                   Sign In
                 </SafeLink>
               </div>
@@ -73,10 +70,7 @@ export default function AppHeader() {
         {drawerOpen ? '✕' : '☰'}
       </button>
 
-      <MobileDrawer
-        drawerOpen={drawerOpen}
-        onClose={() => setDrawerOpen(false)}
-      />
+      <MobileDrawer drawerOpen={drawerOpen} onClose={() => setDrawerOpen(false)} />
     </>
   );
 }

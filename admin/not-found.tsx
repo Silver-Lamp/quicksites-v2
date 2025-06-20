@@ -56,9 +56,7 @@ export default function NotFoundLogsPage() {
           // Remove isNew after 3s
           setTimeout(() => {
             setLogs((current) =>
-              current.map((log) =>
-                log.id === newLog.id ? { ...log, isNew: false } : log
-              )
+              current.map((log) => (log.id === newLog.id ? { ...log, isNew: false } : log))
             );
           }, 3000);
         }
@@ -71,9 +69,7 @@ export default function NotFoundLogsPage() {
     };
   }, []);
 
-  const visibleLogs = logs.filter((log) =>
-    filter === 'all' ? true : log.context === filter
-  );
+  const visibleLogs = logs.filter((log) => (filter === 'all' ? true : log.context === filter));
 
   return (
     <main className="p-6 bg-zinc-900 min-h-screen text-white">
@@ -123,8 +119,7 @@ export default function NotFoundLogsPage() {
                 key={log.id}
                 className={cn(
                   'border-t border-zinc-700 transition-colors',
-                  log.isNew &&
-                    'border-l-4 border-green-500 bg-green-950 animate-pulse'
+                  log.isNew && 'border-l-4 border-green-500 bg-green-950 animate-pulse'
                 )}
               >
                 <td className="p-2 whitespace-nowrap text-zinc-400">

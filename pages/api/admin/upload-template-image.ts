@@ -9,10 +9,7 @@ export const config = {
   },
 };
 
-export default async function handler(
-  req: NextApiRequest,
-  res: NextApiResponse
-) {
+export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   const buffers = [];
   for await (const chunk of req) buffers.push(chunk);
   const boundary = Buffer.concat(buffers);

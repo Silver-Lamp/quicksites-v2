@@ -6,9 +6,7 @@ const inputDir = './public/screenshots';
 
 async function generateThumbnails() {
   const files = await fs.readdir(inputDir);
-  const pngs = files.filter(
-    (f) => f.endsWith('.png') && !f.endsWith('.thumb.png')
-  );
+  const pngs = files.filter((f) => f.endsWith('.png') && !f.endsWith('.thumb.png'));
 
   for (const file of pngs) {
     const inputPath = path.join(inputDir, file);

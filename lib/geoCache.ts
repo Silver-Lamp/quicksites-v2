@@ -11,21 +11,13 @@ function makeKey(city: string, state: string): string {
 /**
  * Retrieve from local memory cache
  */
-export function getCachedGeo(
-  city: string,
-  state: string
-): GeoEntry | undefined {
+export function getCachedGeo(city: string, state: string): GeoEntry | undefined {
   return localGeoCache[makeKey(city, state)];
 }
 
 /**
  * Store in local memory cache
  */
-export function setCachedGeo(
-  city: string,
-  state: string,
-  lat: number,
-  lon: number
-): void {
+export function setCachedGeo(city: string, state: string, lat: number, lon: number): void {
   localGeoCache[makeKey(city, state)] = { lat, lon };
 }

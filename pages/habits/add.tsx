@@ -49,9 +49,7 @@ export default function AddHabitBlock() {
     <div className="text-white p-6 text-center">
       {status === 'saving' && <p>📍 Pinning to your current location...</p>}
       {status === 'done' && <p>✅ Added! Redirecting...</p>}
-      {status === 'error' && (
-        <p className="text-red-500">⚠️ Error adding block.</p>
-      )}
+      {status === 'error' && <p className="text-red-500">⚠️ Error adding block.</p>}
     </div>
   );
 }

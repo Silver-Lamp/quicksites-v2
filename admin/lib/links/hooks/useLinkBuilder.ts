@@ -20,17 +20,9 @@ export function useLinkBuilder() {
     const href = getTemplateUrl(id, query);
     if (!href) return null;
 
-    const resolved = linkProps?.theme
-      ? linkThemeMap[linkProps.theme]
-      : linkThemeMap.primary;
+    const resolved = linkProps?.theme ? linkThemeMap[linkProps.theme] : linkThemeMap.primary;
 
-    const {
-      theme: _t,
-      href: _h,
-      prefetch: _p,
-      target: _tg,
-      ...rest
-    } = linkProps || {};
+    const { theme: _t, href: _h, prefetch: _p, target: _tg, ...rest } = linkProps || {};
     const target = _tg as '_blank' | '_self' | '_parent' | '_top' | undefined;
     return buildSafeLink(id, href.toString(), 'templateLink', children, {
       className: resolved,
@@ -49,9 +41,7 @@ export function useLinkBuilder() {
     const href = getSnapshotUrl(id, query);
     if (!href) return null;
 
-    const resolved = linkProps?.theme
-      ? linkThemeMap[linkProps.theme]
-      : linkThemeMap.primary;
+    const resolved = linkProps?.theme ? linkThemeMap[linkProps.theme] : linkThemeMap.primary;
 
     const { theme: _t, href: _h, prefetch: _p, ...rest } = linkProps || {};
     return buildSafeLink(id, href.toString(), 'snapshotLink', children, {

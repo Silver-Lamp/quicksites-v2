@@ -1,8 +1,9 @@
 /* app/api/list-og-zips/route.ts */
 
-import { supabase } from '@/admin/lib/supabaseClient';
-import { json } from '@/lib/api/json';
+// import { supabase } from '@/admin/lib/supabaseClient';
+import { json } from '../../../lib/api/json';
 import { createClient } from '@supabase/supabase-js';
+import { NextRequest } from 'next/server';
 
 export const runtime = 'edge';
 

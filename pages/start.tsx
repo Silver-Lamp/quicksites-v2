@@ -12,9 +12,7 @@ export default function StartPage() {
   const [templates, setTemplates] = useState([]);
   const [loc, setLoc] = useState<GeolocationCoordinates | null>(null);
   const [selected, setSelected] = useState('');
-  const [status, setStatus] = useState<'idle' | 'saving' | 'done' | 'error'>(
-    'idle'
-  );
+  const [status, setStatus] = useState<'idle' | 'saving' | 'done' | 'error'>('idle');
 
   useEffect(() => {
     navigator.geolocation.getCurrentPosition(
@@ -60,9 +58,7 @@ export default function StartPage() {
 
   return (
     <div className="text-white p-6 max-w-xl mx-auto">
-      <h1 className="text-2xl font-bold mb-4">
-        👋 Welcome to Your AR Habit Tracker
-      </h1>
+      <h1 className="text-2xl font-bold mb-4">👋 Welcome to Your AR Habit Tracker</h1>
       <p className="text-zinc-400 mb-4">
         Choose a habit to start tracking, and we'll place it in your world:
       </p>
@@ -93,9 +89,7 @@ export default function StartPage() {
         {status === 'saving' ? 'Creating...' : '➕ Add to My World'}
       </button>
       {status === 'error' && (
-        <p className="text-red-500 mt-4">
-          Something went wrong. Please try again.
-        </p>
+        <p className="text-red-500 mt-4">Something went wrong. Please try again.</p>
       )}
     </div>
   );

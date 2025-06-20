@@ -40,17 +40,12 @@ export default function ContactPage() {
               value={msg}
               onChange={(e) => setMsg(e.target.value)}
             />
-            <button
-              onClick={submit}
-              className="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded"
-            >
+            <button onClick={submit} className="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded">
               Send Message
             </button>
           </>
         ) : (
-          <p className="text-green-400 font-medium mt-6">
-            ✅ Message sent. Thank you!
-          </p>
+          <p className="text-green-400 font-medium mt-6">✅ Message sent. Thank you!</p>
         )}
       </div>
     </>

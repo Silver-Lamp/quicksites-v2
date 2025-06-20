@@ -12,11 +12,7 @@ export async function getStaticProps() {
   };
 }
 
-export default function ScreenshotDashboard({
-  branches,
-}: {
-  branches: string[];
-}) {
+export default function ScreenshotDashboard({ branches }: { branches: string[] }) {
   return (
     <div
       style={{

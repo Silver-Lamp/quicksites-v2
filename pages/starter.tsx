@@ -24,9 +24,7 @@ export default function StarterPage() {
   const [slug, setSlug] = useState('');
   const [domain, setDomain] = useState('');
   const [template, setTemplate] = useState<any>(null);
-  const [templateVersionId, setTemplateVersionId] = useState<string | null>(
-    null
-  );
+  const [templateVersionId, setTemplateVersionId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [slugAvailable, setSlugAvailable] = useState<boolean | null>(null);
   const [generatingSlug, setGeneratingSlug] = useState(false);
@@ -62,11 +60,7 @@ export default function StarterPage() {
   useEffect(() => {
     if (!slug) return setSlugAvailable(null);
     const delay = setTimeout(async () => {
-      const { data } = await supabase
-        .from('sites')
-        .select('id')
-        .eq('slug', slug)
-        .maybeSingle();
+      const { data } = await supabase.from('sites').select('id').eq('slug', slug).maybeSingle();
 
       setSlugAvailable(!data);
     }, 400);
@@ -103,9 +97,7 @@ export default function StarterPage() {
 
   const claimIt = async () => {
     if (!templateVersionId) {
-      alert(
-        'Template failed to load. Please choose a different template or try again.'
-      );
+      alert('Template failed to load. Please choose a different template or try again.');
       return;
     }
 
@@ -149,21 +141,13 @@ export default function StarterPage() {
 
   return (
     <div className="max-w-xl mx-auto text-white p-6 space-y-6">
-      <h1 className="text-3xl font-bold text-center">
-        ✨ Create Your QuickSite
-      </h1>
+      <h1 className="text-3xl font-bold text-center">✨ Create Your QuickSite</h1>
 
       {template ? (
         <div className="bg-zinc-800 p-4 rounded shadow">
-          <h2 className="text-xl font-semibold mb-1">
-            {template.template_name}
-          </h2>
+          <h2 className="text-xl font-semibold mb-1">{template.template_name}</h2>
           {template.thumbnail_url && (
-            <img
-              src={template.thumbnail_url}
-              alt="Preview"
-              className="rounded mb-3"
-            />
+            <img src={template.thumbnail_url} alt="Preview" className="rounded mb-3" />
           )}
           <p className="text-sm text-zinc-400 mb-2">{template.description}</p>
         </div>
@@ -194,21 +178,15 @@ export default function StarterPage() {
         </div>
 
         <div>
-          <label className="text-sm text-zinc-400">
-            Custom Slug (optional)
-          </label>
+          <label className="text-sm text-zinc-400">Custom Slug (optional)</label>
           <input
             value={slug}
-            onChange={(e) =>
-              setSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]+/g, '-'))
-            }
+            onChange={(e) => setSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]+/g, '-'))}
             className="w-full mb-1 p-2 rounded bg-zinc-800 text-white"
             placeholder="e.g. mytow-auburn"
           />
           {slug && slugAvailable !== null && (
-            <p
-              className={`text-sm ${slugAvailable ? 'text-green-400' : 'text-red-400'}`}
-            >
+            <p className={`text-sm ${slugAvailable ? 'text-green-400' : 'text-red-400'}`}>
               {slugAvailable ? '✅ Available' : '🚫 Already taken'}
             </p>
           )}
@@ -250,11 +228,7 @@ export default function StarterPage() {
                       /edit/{slug}
                     </code>
                     <button
-                      onClick={() =>
-                        copyToClipboard(
-                          `${window.location.origin}/edit/${slug}`
-                        )
-                      }
+                      onClick={() => copyToClipboard(`${window.location.origin}/edit/${slug}`)}
                       className="text-blue-400 hover:underline text-xs"
                     >
                       Copy
@@ -267,9 +241,7 @@ export default function StarterPage() {
                       https://{slug}.quicksites.ai
                     </code>
                     <button
-                      onClick={() =>
-                        copyToClipboard(`https://${slug}.quicksites.ai`)
-                      }
+                      onClick={() => copyToClipboard(`https://${slug}.quicksites.ai`)}
                       className="text-blue-400 hover:underline text-xs"
                     >
                       Copy Public Link
@@ -289,8 +261,7 @@ export default function StarterPage() {
           ) : (
             bizName.trim() !== '' && (
               <p className="text-sm text-red-400">
-                ⚠️ Please complete the business name and location to generate a
-                domain.
+                ⚠️ Please complete the business name and location to generate a domain.
               </p>
             )
           )}

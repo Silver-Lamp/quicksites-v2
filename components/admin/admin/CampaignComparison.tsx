@@ -12,15 +12,7 @@ import {
 } from '@/components/ui/select';
 import { Card } from '@/components/ui/card';
 import { parseISO, isAfter, isBefore } from 'date-fns';
-import {
-  ResponsiveContainer,
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  Tooltip,
-  Legend,
-} from 'recharts';
+import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Legend } from 'recharts';
 import { Input } from '@/components/ui/input';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
@@ -130,9 +122,7 @@ export function CampaignComparison({ events, logs, dateRange }: Props) {
   const delta = useMemo(() => {
     if (!leftStats || !rightStats) return null;
     const leftCR = leftStats.views ? leftStats.signups / leftStats.views : 0;
-    const rightCR = rightStats.views
-      ? rightStats.signups / rightStats.views
-      : 0;
+    const rightCR = rightStats.views ? rightStats.signups / rightStats.views : 0;
     const diff = ((rightCR - leftCR) * 100).toFixed(1);
     return `${Number(diff) > 0 ? '+' : ''}${diff}%`; // e.g. +12.5%
   }, [leftStats, rightStats]);
@@ -215,14 +205,8 @@ export function CampaignComparison({ events, logs, dateRange }: Props) {
         <div>{rightStats?.publishes ?? '-'}</div>
 
         <div className="text-muted-foreground">💡 Conversion Rate</div>
-        <div>
-          {leftStats ? conversionRate(leftStats.views, leftStats.signups) : '-'}
-        </div>
-        <div>
-          {rightStats
-            ? conversionRate(rightStats.views, rightStats.signups)
-            : '-'}
-        </div>
+        <div>{leftStats ? conversionRate(leftStats.views, leftStats.signups) : '-'}</div>
+        <div>{rightStats ? conversionRate(rightStats.views, rightStats.signups) : '-'}</div>
         <div className="text-muted-foreground">🔁 Delta</div>
         <div className="col-span-2">{delta || '-'}</div>
       </div>

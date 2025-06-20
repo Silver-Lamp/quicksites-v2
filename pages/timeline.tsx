@@ -18,9 +18,7 @@ export default function Timeline() {
 
   return (
     <div className="max-w-3xl mx-auto p-6 text-white">
-      <h1 className="text-3xl font-bold mb-6 text-center">
-        📈 Network Timeline
-      </h1>
+      <h1 className="text-3xl font-bold mb-6 text-center">📈 Network Timeline</h1>
       <ul className="space-y-3 text-sm">
         {history.map((event, i) => (
           <li key={i} className="border-l-2 border-blue-500 pl-3">

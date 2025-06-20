@@ -2,13 +2,7 @@
 import { useEffect, useState } from 'react';
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 import { Bar } from 'react-chartjs-2';
-import {
-  Chart as ChartJS,
-  CategoryScale,
-  LinearScale,
-  BarElement,
-  Tooltip,
-} from 'chart.js';
+import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, Tooltip } from 'chart.js';
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Tooltip);
 
@@ -66,12 +60,7 @@ export default function TokenLogsDashboard() {
       suspicious: isSuspicious(log.token_hash),
     }));
     const csv = ['file,time,token,user_agent,suspicious']
-      .concat(
-        rows.map(
-          (r) =>
-            `${r.file},${r.time},${r.token},"${r.user_agent}",${r.suspicious}`
-        )
-      )
+      .concat(rows.map((r) => `${r.file},${r.time},${r.token},"${r.user_agent}",${r.suspicious}`))
       .join('\n');
     const blob = new Blob([csv], { type: 'text/csv' });
     const url = URL.createObjectURL(blob);
@@ -118,13 +107,9 @@ export default function TokenLogsDashboard() {
           {filtered.map((log, i) => (
             <tr key={i} className="border-b border-zinc-800">
               <td className="p-2">{log.file_name}</td>
-              <td className="p-2">
-                {new Date(log.downloaded_at).toLocaleString()}
-              </td>
+              <td className="p-2">{new Date(log.downloaded_at).toLocaleString()}</td>
               <td className="p-2 text-xs truncate">
-                {isSuspicious(log.token_hash) && (
-                  <span className="text-yellow-400">⚠️ </span>
-                )}
+                {isSuspicious(log.token_hash) && <span className="text-yellow-400">⚠️ </span>}
                 {log.token_hash}
               </td>
               <td className="p-2 text-xs truncate">{log.user_agent}</td>

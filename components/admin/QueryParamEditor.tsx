@@ -3,12 +3,7 @@ import { z, ZodObject, ZodFirstPartyTypeKind } from 'zod';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
-import {
-  Select,
-  SelectTrigger,
-  SelectContent,
-  SelectItem,
-} from '@/components/ui/select';
+import { Select, SelectTrigger, SelectContent, SelectItem } from '@/components/ui/select';
 import { useTypedQueryParam } from '@/hooks/useTypedQueryParam';
 
 function FieldRenderer({
@@ -28,32 +23,20 @@ function FieldRenderer({
   const innerType = isArray ? validator._def.type._def.typeName : null;
 
   let queryType: any = 'string';
-  if (
-    type === ZodFirstPartyTypeKind.ZodNumber ||
-    innerType === ZodFirstPartyTypeKind.ZodNumber
-  )
+  if (type === ZodFirstPartyTypeKind.ZodNumber || innerType === ZodFirstPartyTypeKind.ZodNumber)
     queryType = isArray ? 'number[]' : 'number';
-  if (
-    type === ZodFirstPartyTypeKind.ZodBoolean ||
-    innerType === ZodFirstPartyTypeKind.ZodBoolean
-  )
+  if (type === ZodFirstPartyTypeKind.ZodBoolean || innerType === ZodFirstPartyTypeKind.ZodBoolean)
     queryType = isArray ? 'boolean[]' : 'boolean';
   if (isArray) queryType = 'json[]';
   if (type === ZodFirstPartyTypeKind.ZodObject) queryType = 'json';
 
-  const [value, setValue] = useTypedQueryParam(
-    fullKey,
-    isArray ? [] : {},
-    queryType
-  );
+  const [value, setValue] = useTypedQueryParam(fullKey, isArray ? [] : {}, queryType);
 
   if (type === ZodFirstPartyTypeKind.ZodObject) {
     const nestedFields = Object.entries(validator.shape);
     return (
       <div className="border rounded p-4 space-y-2 bg-gray-50 dark:bg-gray-900">
-        <Label className="text-xs uppercase tracking-wide text-muted-foreground">
-          {fieldKey}
-        </Label>
+        <Label className="text-xs uppercase tracking-wide text-muted-foreground">{fieldKey}</Label>
         {nestedFields.map(([nestedKey, nestedValidator]) => (
           <FieldRenderer
             key={nestedKey}
@@ -131,13 +114,7 @@ function FieldRenderer({
   );
 }
 
-export default function QueryParamEditor({
-  schema,
-  slug,
-}: {
-  schema: z.ZodSchema;
-  slug: string;
-}) {
+export default function QueryParamEditor({ schema, slug }: { schema: z.ZodSchema; slug: string }) {
   const shape = (schema as ZodObject<any>).shape;
   const fields = Object.entries(shape);
 

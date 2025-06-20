@@ -10,9 +10,7 @@ export default function BreadcrumbNav() {
   const crumbs = segments.map((seg, i) => {
     pathAcc.push(seg);
     const href = '/' + pathAcc.join('/');
-    const label = seg
-      .replace(/-/g, ' ')
-      .replace(/\b\w/g, (l) => l.toUpperCase());
+    const label = seg.replace(/-/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase());
     return (
       <span key={i} className="text-sm text-gray-500">
         {i > 0 && ' / '}

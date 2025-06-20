@@ -37,9 +37,7 @@ export default function PeopleStats({ stats }: Props) {
   const days = Object.keys(stats).sort();
   return (
     <div className="p-6 max-w-4xl mx-auto">
-      <h1 className="text-xl font-bold mb-4">
-        Activity Heatmap (Last Seen by Day)
-      </h1>
+      <h1 className="text-xl font-bold mb-4">Activity Heatmap (Last Seen by Day)</h1>
       <div className="grid grid-cols-5 gap-2">
         {days.map((day) => (
           <div

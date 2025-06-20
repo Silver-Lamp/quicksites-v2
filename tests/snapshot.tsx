@@ -73,9 +73,7 @@ export default async function handler(req: Request) {
 
     if (data && !error) {
       snapshotTitle = data.template_name || snapshotTitle;
-      const heroBlock = data.data?.pages?.[0]?.content_blocks?.find(
-        (b: any) => b.type === 'hero'
-      );
+      const heroBlock = data.data?.pages?.[0]?.content_blocks?.find((b: any) => b.type === 'hero');
       if (heroBlock?.content) {
         heroText = heroBlock.content;
       }
@@ -99,9 +97,7 @@ export default async function handler(req: Request) {
         }}
       >
         {/* Logo */}
-        <div
-          style={{ display: 'flex', position: 'absolute', top: 40, left: 40 }}
-        >
+        <div style={{ display: 'flex', position: 'absolute', top: 40, left: 40 }}>
           <Logo brandColor={brandColor} />
         </div>
 
@@ -128,9 +124,7 @@ export default async function handler(req: Request) {
             }}
           >
             <div style={{ fontSize: 48, fontWeight: 'bold' }}>{heroText}</div>
-            <div
-              style={{ fontSize: 20, color: theme.secondary, marginTop: 10 }}
-            >
+            <div style={{ fontSize: 20, color: theme.secondary, marginTop: 10 }}>
               {snapshotId ? snapshotTitle : 'Missing snapshot ID'}
             </div>
           </div>

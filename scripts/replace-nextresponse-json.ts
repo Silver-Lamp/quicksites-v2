@@ -44,9 +44,7 @@ for (const dir of SEARCH_DIRS) {
   const fullDir = path.join(PROJECT_ROOT, dir);
   if (!fs.existsSync(fullDir)) continue;
 
-  const files = walk(fullDir).filter((f) =>
-    TARGET_EXT.includes(path.extname(f))
-  );
+  const files = walk(fullDir).filter((f) => TARGET_EXT.includes(path.extname(f)));
 
   for (const file of files) {
     replaceInFile(file);

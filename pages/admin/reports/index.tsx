@@ -23,9 +23,7 @@ export default function ReportsDashboardExtended() {
       .then((files) => {
         const csvs = files.filter((f: string) => f.endsWith('.csv')).length;
         const pdfs = files.filter((f: string) => f.endsWith('.pdf')).length;
-        const sorted = files
-          .filter((f: string) => f.match(/_(\d{4}-\d{2}-\d{2})/))
-          .sort();
+        const sorted = files.filter((f: string) => f.match(/_(\d{4}-\d{2}-\d{2})/)).sort();
         const oldest = sorted[0]?.match(/_(\d{4}-\d{2}-\d{2})/)?.[1] || '';
         const newest = sorted.at(-1)?.match(/_(\d{4}-\d{2}-\d{2})/)?.[1] || '';
         setStorage({ csvs, pdfs });
@@ -34,11 +32,7 @@ export default function ReportsDashboardExtended() {
   }, []);
 
   const confirmDelete = () => {
-    if (
-      window.confirm(
-        'Are you sure? This will delete all CSVs, PDFs, and previews.'
-      )
-    ) {
+    if (window.confirm('Are you sure? This will delete all CSVs, PDFs, and previews.')) {
       // You would replace this with a server call to delete files
       console.log('🧹 Deleting all archive files...');
     }
@@ -68,19 +62,11 @@ export default function ReportsDashboardExtended() {
           <h3 className="pt-4 font-semibold">⚙️ Automation Settings</h3>
           <div className="space-y-2">
             <label className="flex items-center gap-2">
-              <input
-                type="checkbox"
-                checked={nightly}
-                onChange={() => setNightly(!nightly)}
-              />
+              <input type="checkbox" checked={nightly} onChange={() => setNightly(!nightly)} />
               Enable Nightly Exports
             </label>
             <label className="flex items-center gap-2">
-              <input
-                type="checkbox"
-                checked={weekly}
-                onChange={() => setWeekly(!weekly)}
-              />
+              <input type="checkbox" checked={weekly} onChange={() => setWeekly(!weekly)} />
               Enable Weekly Summary
             </label>
             <label className="block text-sm mt-2">Recipient Email</label>

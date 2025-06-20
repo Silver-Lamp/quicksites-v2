@@ -27,8 +27,7 @@ export default function EarlyAccessPage() {
       <div className="p-6 text-white max-w-md mx-auto text-center">
         <h1 className="text-3xl font-bold mb-4">🚀 Early Access</h1>
         <p className="text-zinc-400 mb-4">
-          Get notified when QuickSites opens. Trusted testers may receive access
-          early.
+          Get notified when QuickSites opens. Trusted testers may receive access early.
         </p>
 
         {!submitted ? (
@@ -51,10 +50,7 @@ export default function EarlyAccessPage() {
               value={code}
               onChange={(e) => setCode(e.target.value)}
             />
-            <button
-              className="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded"
-              onClick={submit}
-            >
+            <button className="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded" onClick={submit}>
               Submit
             </button>
           </>

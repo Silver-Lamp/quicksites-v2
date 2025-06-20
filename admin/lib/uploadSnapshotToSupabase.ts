@@ -2,9 +2,7 @@ import { supabase } from '@/admin/lib/supabaseClient';
 import { toPng } from 'html-to-image';
 import toast from 'react-hot-toast';
 
-export async function uploadSnapshotToSupabase(
-  templateId: string
-): Promise<string | null> {
+export async function uploadSnapshotToSupabase(templateId: string): Promise<string | null> {
   const node = document.getElementById('preview-capture');
   if (!node) {
     toast.error('No preview found to upload');
@@ -16,13 +14,11 @@ export async function uploadSnapshotToSupabase(
     const blob = await (await fetch(dataUrl)).blob();
     const fileName = `snapshots/${templateId}/preview.png`;
 
-    const { error: uploadError } = await supabase.storage
-      .from('snapshots')
-      .upload(fileName, blob, {
-        cacheControl: '3600',
-        upsert: true,
-        contentType: 'image/png',
-      });
+    const { error: uploadError } = await supabase.storage.from('snapshots').upload(fileName, blob, {
+      cacheControl: '3600',
+      upsert: true,
+      contentType: 'image/png',
+    });
 
     if (uploadError) {
       if (uploadError.message.includes('Bucket not found')) {
@@ -33,9 +29,7 @@ export async function uploadSnapshotToSupabase(
       return null;
     }
 
-    const { data: urlData } = supabase.storage
-      .from('snapshots')
-      .getPublicUrl(fileName);
+    const { data: urlData } = supabase.storage.from('snapshots').getPublicUrl(fileName);
 
     return urlData?.publicUrl || null;
   } catch (err) {

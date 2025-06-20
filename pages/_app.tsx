@@ -17,13 +17,10 @@ import { useSessionReady } from '@/hooks/useSessionReady';
 import Loader from '@/components/ui/Loader';
 import { useEffect } from 'react';
 
-const SupabaseProvider = dynamic(
-  () => import('@/components/admin/SafeSupabaseProvider'),
-  {
-    ssr: false,
-    loading: () => <Loader message="Loading app..." />,
-  }
-);
+const SupabaseProvider = dynamic(() => import('@/components/admin/SafeSupabaseProvider'), {
+  ssr: false,
+  loading: () => <Loader message="Loading app..." />,
+});
 
 export default function App({ Component, pageProps }: AppProps) {
   const router = useRouter();

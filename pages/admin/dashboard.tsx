@@ -82,9 +82,7 @@ function Dashboard() {
   }, []);
 
   if (loading) {
-    return (
-      <p className="text-gray-500 text-sm p-6">Loading dashboard layout…</p>
-    );
+    return <p className="text-gray-500 text-sm p-6">Loading dashboard layout…</p>;
   }
 
   return (
@@ -134,10 +132,7 @@ function Dashboard() {
           <tbody>
             {domains.map((d, i) => (
               <>
-                <tr
-                  key={d.id}
-                  className={i % 2 === 0 ? 'bg-gray-800' : 'bg-gray-900'}
-                >
+                <tr key={d.id} className={i % 2 === 0 ? 'bg-gray-800' : 'bg-gray-900'}>
                   <td className="px-4 py-2">{d.domain}</td>
                   <td className="px-4 py-2">{d.city}</td>
                   <td className="px-4 py-2">{d.state}</td>
@@ -146,9 +141,7 @@ function Dashboard() {
                   <td className="px-4 py-2">
                     <button
                       className="text-blue-400 hover:underline text-xs"
-                      onClick={() =>
-                        setPreviewing(previewing === d.domain ? null : d.domain)
-                      }
+                      onClick={() => setPreviewing(previewing === d.domain ? null : d.domain)}
                     >
                       {previewing === d.domain ? 'Hide' : 'Show'}
                     </button>
@@ -163,9 +156,7 @@ function Dashboard() {
                   </td>
                   <td className="px-4 py-2">
                     <Link href={`/domain/${d.domain}`}>
-                      <span className="text-blue-400 hover:underline">
-                        View
-                      </span>
+                      <span className="text-blue-400 hover:underline">View</span>
                     </Link>
                   </td>
                 </tr>

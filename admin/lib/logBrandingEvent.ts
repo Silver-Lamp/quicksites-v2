@@ -1,10 +1,6 @@
 import { supabase } from '@/admin/lib/supabaseClient';
 
-export async function logBrandingEvent(
-  profileId: string,
-  event: string,
-  details: string = ''
-) {
+export async function logBrandingEvent(profileId: string, event: string, details: string = '') {
   const { data: user } = await supabase.auth.getUser();
   const userId = user?.user?.id || null;
 

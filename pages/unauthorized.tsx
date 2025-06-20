@@ -44,10 +44,7 @@ export default function UnauthorizedPage() {
           </a>
           <p className="text-sm text-gray-500">
             Need help?{' '}
-            <a
-              href={`mailto:${supportEmail}`}
-              className="underline text-blue-400"
-            >
+            <a href={`mailto:${supportEmail}`} className="underline text-blue-400">
               Contact Support
             </a>
           </p>

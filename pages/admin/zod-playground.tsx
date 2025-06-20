@@ -110,9 +110,7 @@ export default function ZodPlaygroundPage() {
       .single();
 
     if (error) return alert('Failed to create short link');
-    setShortLink(
-      `${window.location.origin}/admin/zod-playground?schema_id=${data.id}`
-    );
+    setShortLink(`${window.location.origin}/admin/zod-playground?schema_id=${data.id}`);
   };
 
   const handleDeploy = (payload: Record<string, any>) => {
@@ -130,10 +128,7 @@ export default function ZodPlaygroundPage() {
 
       {!isEmbed && (
         <div className="space-y-2">
-          <button
-            onClick={exportJsonSchema}
-            className="bg-green-600 text-white px-4 py-2 rounded"
-          >
+          <button onClick={exportJsonSchema} className="bg-green-600 text-white px-4 py-2 rounded">
             Export JSON Schema
           </button>
           {jsonExport && (
@@ -192,9 +187,7 @@ export default function ZodPlaygroundPage() {
               Copy Link
             </button>
 
-            <label className="text-sm text-gray-400">
-              Slack Username (optional)
-            </label>
+            <label className="text-sm text-gray-400">Slack Username (optional)</label>
             <input
               value={slackUsername}
               onChange={(e) => setSlackUsername(e.target.value)}

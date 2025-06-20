@@ -19,17 +19,13 @@ interface VisualSchemaProps {
 }
 
 function renderType(schema: ZodTypeAny): string {
-  if (schema instanceof ZodDefault)
-    return `${renderType(schema._def.innerType)} (default)`;
+  if (schema instanceof ZodDefault) return `${renderType(schema._def.innerType)} (default)`;
   if (schema instanceof ZodString) return 'string';
   if (schema instanceof ZodNumber) return 'number';
   if (schema instanceof ZodBoolean) return 'boolean';
-  if (schema instanceof ZodEnum)
-    return `enum [${schema._def.values.join(', ')}]`;
-  if (schema instanceof ZodLiteral)
-    return `literal (${JSON.stringify(schema._def.value)})`;
-  if (schema instanceof ZodArray)
-    return `array of ${renderType(schema._def.type)}`;
+  if (schema instanceof ZodEnum) return `enum [${schema._def.values.join(', ')}]`;
+  if (schema instanceof ZodLiteral) return `literal (${JSON.stringify(schema._def.value)})`;
+  if (schema instanceof ZodArray) return `array of ${renderType(schema._def.type)}`;
   if (schema instanceof ZodObject) return 'object';
   return 'unknown';
 }
@@ -55,16 +51,10 @@ function ExampleValue(schema: ZodTypeAny): any {
 function SchemaField({ name, schema }: { name: string; schema: ZodTypeAny }) {
   const [expanded, setExpanded] = useState(true);
   const isObject = schema instanceof ZodObject;
-  const isArrayOfObject =
-    schema instanceof ZodArray && schema._def.type instanceof ZodObject;
-  const nestedSchema = isObject
-    ? schema
-    : isArrayOfObject
-      ? schema._def.type
-      : null;
+  const isArrayOfObject = schema instanceof ZodArray && schema._def.type instanceof ZodObject;
+  const nestedSchema = isObject ? schema : isArrayOfObject ? schema._def.type : null;
   const description = schema.description || '';
-  const defaultValue =
-    schema instanceof ZodDefault ? schema._def.defaultValue() : undefined;
+  const defaultValue = schema instanceof ZodDefault ? schema._def.defaultValue() : undefined;
 
   return (
     <div className="ml-4 border-l pl-4 my-1">
@@ -73,18 +63,12 @@ function SchemaField({ name, schema }: { name: string; schema: ZodTypeAny }) {
         onClick={() => nestedSchema && setExpanded(!expanded)}
       >
         <strong>{name}</strong>: {renderType(schema)}
-        <span className="ml-2 text-gray-500">
-          // e.g., {JSON.stringify(ExampleValue(schema))}
-        </span>
+        <span className="ml-2 text-gray-500">// e.g., {JSON.stringify(ExampleValue(schema))}</span>
         {defaultValue !== undefined && (
-          <span className="ml-2 text-blue-500">
-            (default: {JSON.stringify(defaultValue)})
-          </span>
+          <span className="ml-2 text-blue-500">(default: {JSON.stringify(defaultValue)})</span>
         )}
       </div>
-      {description && (
-        <div className="text-xs text-gray-600 italic ml-2">{description}</div>
-      )}
+      {description && <div className="text-xs text-gray-600 italic ml-2">{description}</div>}
       {nestedSchema && expanded && <div>{renderObject(nestedSchema)}</div>}
     </div>
   );
@@ -97,10 +81,7 @@ function renderObject(schema: ZodObject<any>): React.ReactNode[] {
   ));
 }
 
-export default function VisualSchema({
-  schema,
-  onDeployClick,
-}: VisualSchemaProps) {
+export default function VisualSchema({ schema, onDeployClick }: VisualSchemaProps) {
   if (!(schema instanceof z.ZodObject))
     return <p className="text-sm text-gray-600">Not an object schema.</p>;
   const example = ExampleValue(schema);

@@ -2,12 +2,7 @@
 
 'use client';
 
-import {
-  DragDropContext,
-  Droppable,
-  Draggable,
-  DropResult,
-} from '@hello-pangea/dnd';
+import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
 import { AddBlockMenu } from './AddBlockMenu';
 import { useState } from 'react';
 import BlockSettingsModal from '@/components/admin/BlockSettingsModal';
@@ -47,15 +42,11 @@ export default function DashboardGridDraggable({
   };
 
   const toggleVisibility = (id: string) => {
-    const updated = hidden.includes(id)
-      ? hidden.filter((h) => h !== id)
-      : [...hidden, id];
+    const updated = hidden.includes(id) ? hidden.filter((h) => h !== id) : [...hidden, id];
     onSave(order, updated);
   };
 
-  const availableToAdd = ALL_BLOCKS.filter(
-    (b) => !order.some((o) => o.id === b.id)
-  );
+  const availableToAdd = ALL_BLOCKS.filter((b) => !order.some((o) => o.id === b.id));
 
   return (
     <>
@@ -87,11 +78,7 @@ export default function DashboardGridDraggable({
             >
               {order.map((block, index) =>
                 hidden.includes(block.id) ? null : (
-                  <Draggable
-                    key={block.id}
-                    draggableId={block.id}
-                    index={index}
-                  >
+                  <Draggable key={block.id} draggableId={block.id} index={index}>
                     {(draggable) => (
                       <div
                         ref={draggable.innerRef}

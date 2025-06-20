@@ -95,10 +95,7 @@ export default function TagFilterControls({
           placeholder="Add tag..."
           className="border px-2 py-1 text-sm rounded"
         />
-        <button
-          onClick={addManualTag}
-          className="text-sm bg-blue-700 text-white px-3 py-1 rounded"
-        >
+        <button onClick={addManualTag} className="text-sm bg-blue-700 text-white px-3 py-1 rounded">
           + Add
         </button>
         <label
@@ -131,9 +128,7 @@ export default function TagFilterControls({
 
       {allTags.length > 0 && (
         <div className="space-y-1 mt-4">
-          <span className="text-xs text-gray-500">
-            Suggestions (by frequency):
-          </span>
+          <span className="text-xs text-gray-500">Suggestions (by frequency):</span>
           <div className="flex flex-wrap gap-2">
             {allTags.map(([tag, count], i) => (
               <button

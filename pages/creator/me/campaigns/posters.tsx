@@ -25,9 +25,7 @@ export default function PosterBatchView() {
               alt={c.headline}
               className="w-full rounded shadow border border-zinc-700"
             />
-            <div className="mt-2 text-sm text-zinc-300 truncate">
-              {c.headline}
-            </div>
+            <div className="mt-2 text-sm text-zinc-300 truncate">{c.headline}</div>
             <a
               href={`/posters/${c.slug}`}
               download={`${c.slug}-poster.png`}

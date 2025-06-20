@@ -29,9 +29,7 @@ export default function AdminAuditPage() {
     query.order('deleted_at', { ascending: false }).then(({ data }) => {
       if (data) {
         const filtered = search
-          ? data.filter((d) =>
-              d.email?.toLowerCase().includes(search.toLowerCase())
-            )
+          ? data.filter((d) => d.email?.toLowerCase().includes(search.toLowerCase()))
           : data;
         setLogs(filtered);
       }
@@ -39,26 +37,19 @@ export default function AdminAuditPage() {
   }, [since, search]);
 
   if (role !== 'admin' && role !== 'owner')
-    return (
-      <div className="text-center py-20 text-zinc-400">Access restricted</div>
-    );
+    return <div className="text-center py-20 text-zinc-400">Access restricted</div>;
 
   return (
     <div className="max-w-5xl mx-auto py-12 px-4">
       <h1 className="text-2xl font-bold mb-6">User Deletion Logs</h1>
       <p className="text-sm text-zinc-400 mb-6">
-        This page shows all users who have deleted their accounts. Logs are
-        generated automatically by the{' '}
-        <code className="bg-zinc-800 px-1 rounded">
-          delete_current_user_with_log
-        </code>{' '}
+        This page shows all users who have deleted their accounts. Logs are generated automatically
+        by the <code className="bg-zinc-800 px-1 rounded">delete_current_user_with_log</code>{' '}
         function.
       </p>
       <div className="mb-6 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
         <div>
-          <label className="block text-xs mb-1 text-zinc-400">
-            Filter since:
-          </label>
+          <label className="block text-xs mb-1 text-zinc-400">Filter since:</label>
           <input
             type="date"
             className="bg-zinc-800 border border-zinc-600 text-white rounded px-2 py-1 text-sm"
@@ -67,9 +58,7 @@ export default function AdminAuditPage() {
           />
         </div>
         <div>
-          <label className="block text-xs mb-1 text-zinc-400">
-            Search email:
-          </label>
+          <label className="block text-xs mb-1 text-zinc-400">Search email:</label>
           <input
             type="text"
             className="bg-zinc-800 border border-zinc-600 text-white rounded px-2 py-1 text-sm"
@@ -113,16 +102,11 @@ export default function AdminAuditPage() {
           </thead>
           <tbody>
             {logs.slice((page - 1) * pageSize, page * pageSize).map((log) => (
-              <tr
-                key={log.id}
-                className="border-t border-zinc-700 hover:bg-zinc-800/50"
-              >
+              <tr key={log.id} className="border-t border-zinc-700 hover:bg-zinc-800/50">
                 <td className="px-4 py-2 font-mono text-xs">{log.user_id}</td>
                 <td className="px-4 py-2">{log.email}</td>
                 <td className="px-4 py-2">
-                  <div>
-                    {format(new Date(log.deleted_at), 'yyyy-MM-dd HH:mm zzz')}
-                  </div>
+                  <div>{format(new Date(log.deleted_at), 'yyyy-MM-dd HH:mm zzz')}</div>
                   <div className="text-xs text-zinc-500">
                     {formatDistanceToNow(new Date(log.deleted_at), {
                       addSuffix: true,
@@ -130,8 +114,7 @@ export default function AdminAuditPage() {
                   </div>
                   {showUtc && (
                     <div className="text-xs text-yellow-400">
-                      UTC:{' '}
-                      {format(new Date(log.deleted_at), 'yyyy-MM-dd HH:mm')} UTC
+                      UTC: {format(new Date(log.deleted_at), 'yyyy-MM-dd HH:mm')} UTC
                     </div>
                   )}
                 </td>

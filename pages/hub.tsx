@@ -4,9 +4,7 @@ export default function HubPage() {
   return (
     <div className="text-white p-6 max-w-2xl mx-auto text-center">
       <h1 className="text-4xl font-bold mb-4">🌐 Welcome to QuickSites</h1>
-      <p className="text-zinc-400 mb-8">
-        Launch your transparent site. Fast. Free. Yours.
-      </p>
+      <p className="text-zinc-400 mb-8">Launch your transparent site. Fast. Free. Yours.</p>
       <div className="grid grid-cols-2 gap-4 text-sm">
         <Link href="/starter" className="bg-blue-700 px-4 py-3 rounded">
           🚀 Get Started

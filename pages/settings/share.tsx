@@ -13,9 +13,7 @@ export default function ShareSettings() {
   const [emoji, setEmoji] = useState('🌱');
   const [tags, setTags] = useState('');
   const [visible, setVisible] = useState(false);
-  const [status, setStatus] = useState<'idle' | 'saving' | 'done' | 'error'>(
-    'idle'
-  );
+  const [status, setStatus] = useState<'idle' | 'saving' | 'done' | 'error'>('idle');
 
   useEffect(() => {
     if (!user) return;
@@ -77,9 +75,7 @@ export default function ShareSettings() {
       </div>
 
       <div>
-        <label className="block text-sm mb-1">
-          Goal Tags (comma separated)
-        </label>
+        <label className="block text-sm mb-1">Goal Tags (comma separated)</label>
         <input
           value={tags}
           onChange={(e) => setTags(e.target.value)}
@@ -88,26 +84,15 @@ export default function ShareSettings() {
       </div>
 
       <div className="flex items-center space-x-2">
-        <input
-          type="checkbox"
-          checked={visible}
-          onChange={() => setVisible(!visible)}
-        />
+        <input type="checkbox" checked={visible} onChange={() => setVisible(!visible)} />
         <label>Make my page public</label>
       </div>
 
-      <button
-        onClick={handleSave}
-        className="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded"
-      >
+      <button onClick={handleSave} className="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded">
         {status === 'saving' ? 'Saving...' : 'Save Changes'}
       </button>
-      {status === 'done' && (
-        <p className="text-green-400 text-sm">✅ Updated</p>
-      )}
-      {status === 'error' && (
-        <p className="text-red-500 text-sm">⚠️ Something went wrong</p>
-      )}
+      {status === 'done' && <p className="text-green-400 text-sm">✅ Updated</p>}
+      {status === 'error' && <p className="text-red-500 text-sm">⚠️ Something went wrong</p>}
     </div>
   );
 }

@@ -95,12 +95,8 @@ export function CelebrationModal({
   const title = messages[lang][type];
   const description = descriptions[lang][type];
 
-  const containerStyle = dark
-    ? 'bg-zinc-900 text-white'
-    : 'bg-white text-black';
-  const borderStyle = dark
-    ? 'hover:text-white text-gray-300'
-    : 'hover:text-gray-700 text-gray-500';
+  const containerStyle = dark ? 'bg-zinc-900 text-white' : 'bg-white text-black';
+  const borderStyle = dark ? 'hover:text-white text-gray-300' : 'hover:text-gray-700 text-gray-500';
 
   const progressBar =
     typeof goal === 'number' && typeof current === 'number' ? (
@@ -124,10 +120,7 @@ export function CelebrationModal({
       <div
         className={`relative ${containerStyle} rounded-lg shadow-xl p-6 w-full max-w-md text-center`}
       >
-        <button
-          className={`absolute top-2 right-2 ${borderStyle}`}
-          onClick={onClose}
-        >
+        <button className={`absolute top-2 right-2 ${borderStyle}`} onClick={onClose}>
           <X className="w-5 h-5" />
         </button>
 

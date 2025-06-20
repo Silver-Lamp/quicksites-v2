@@ -7,10 +7,7 @@ const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 );
 
-export default async function handler(
-  req: NextApiRequest,
-  res: NextApiResponse
-) {
+export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'DELETE') {
     return json({ error: 'Method not allowed' });
   }
@@ -21,10 +18,7 @@ export default async function handler(
     return json({ error: 'template_name is required' });
   }
 
-  const { error } = await supabase
-    .from('templates')
-    .delete()
-    .eq('template_name', template_name);
+  const { error } = await supabase.from('templates').delete().eq('template_name', template_name);
 
   if (error) {
     return json({ error: error.message });

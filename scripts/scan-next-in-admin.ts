@@ -13,9 +13,7 @@ function walk(dir: string): string[] {
   });
 }
 
-const allFiles = walk(TARGET_DIR).filter((file) =>
-  TARGET_EXT.includes(path.extname(file))
-);
+const allFiles = walk(TARGET_DIR).filter((file) => TARGET_EXT.includes(path.extname(file)));
 
 let count = 0;
 

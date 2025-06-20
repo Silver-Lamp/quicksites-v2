@@ -44,10 +44,7 @@ export default function ThemeBrandSwitcherAdvanced({
 
   const saveDefaults = async () => {
     setSaving(true);
-    await supabase
-      .from('branding_profiles')
-      .update({ theme, brand })
-      .eq('id', profileId);
+    await supabase.from('branding_profiles').update({ theme, brand }).eq('id', profileId);
     setSaving(false);
     alert('Saved as default.');
   };

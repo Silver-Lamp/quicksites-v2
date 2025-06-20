@@ -32,17 +32,14 @@ export default function BlockSidebar({ block, onChange, onClose }: Props) {
     onChange({ ...block, content: updatedContent });
   };
 
-  const inputClass =
-    'bg-zinc-800 border-zinc-700 text-white placeholder-zinc-400';
+  const inputClass = 'bg-zinc-800 border-zinc-700 text-white placeholder-zinc-400';
 
   const content = block.content || {};
 
   return (
     <div className="fixed right-0 top-0 h-full w-[340px] bg-zinc-900 text-white shadow-lg border-l border-zinc-800 z-50 p-4 space-y-4 overflow-y-auto">
       <div className="flex justify-between items-center">
-        <h2 className="text-lg font-semibold capitalize">
-          {block.type || 'Block'} Block
-        </h2>
+        <h2 className="text-lg font-semibold capitalize">{block.type || 'Block'} Block</h2>
         <Button variant="ghost" onClick={onClose}>
           <X className="w-4 h-4 text-white" />
         </Button>

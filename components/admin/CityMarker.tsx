@@ -10,12 +10,7 @@ interface CityMarkerProps {
   router: ReturnType<typeof useRouter>;
 }
 
-export default function CityMarker({
-  point,
-  zoom,
-  getColor,
-  router,
-}: CityMarkerProps) {
+export default function CityMarker({ point, zoom, getColor, router }: CityMarkerProps) {
   const shouldRender = useMemo(() => {
     return !(zoom < 4 && point.leads + point.domains < 3);
   }, [zoom, point]);
@@ -39,15 +34,11 @@ export default function CityMarker({
           </div>
           <div className="text-sm">Leads: {point.leads}</div>
           {point.leadNames.length > 0 && (
-            <div className="text-xs text-gray-300">
-              {point.leadNames.join(', ')}
-            </div>
+            <div className="text-xs text-gray-300">{point.leadNames.join(', ')}</div>
           )}
           <div className="text-sm mt-1">Domains: {point.domains}</div>
           {point.domainNames.length > 0 && (
-            <div className="text-xs text-gray-300">
-              {point.domainNames.join(', ')}
-            </div>
+            <div className="text-xs text-gray-300">{point.domainNames.join(', ')}</div>
           )}
           {point.leads >= 2 && (
             <button

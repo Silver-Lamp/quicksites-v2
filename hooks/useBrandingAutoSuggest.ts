@@ -17,20 +17,13 @@ export function useBrandingAutoSuggest({
 
     const match = brandingProfiles.find(
       (p) =>
-        (template?.industry &&
-          p.name.toLowerCase().includes(template?.industry.toLowerCase())) ||
-        (template.layout &&
-          p.name.toLowerCase().includes(template.layout.toLowerCase()))
+        (template?.industry && p.name.toLowerCase().includes(template?.industry.toLowerCase())) ||
+        (template.layout && p.name.toLowerCase().includes(template.layout.toLowerCase()))
     );
 
     if (match) {
       setSelectedProfileId(match.id);
       toast.success(`Auto-selected branding profile: ${match.name}`);
     }
-  }, [
-    template?.industry,
-    template?.layout,
-    brandingProfiles,
-    selectedProfileId,
-  ]);
+  }, [template?.industry, template?.layout, brandingProfiles, selectedProfileId]);
 }

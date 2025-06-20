@@ -3,11 +3,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/admin/lib/supabaseClient';
 
-export default function TemplateImageGallery({
-  templateId,
-}: {
-  templateId: string;
-}) {
+export default function TemplateImageGallery({ templateId }: { templateId: string }) {
   const [images, setImages] = useState<any[]>([]);
 
   useEffect(() => {

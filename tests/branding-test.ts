@@ -29,18 +29,14 @@ test('branding snapshot end-to-end flow (with cleanup)', async () => {
 
   try {
     // Create branding profile
-    const brandingRes = await fetch(
-      'http://localhost:3000/api/admin/create-branding',
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(brandingProfileInput),
-      }
-    );
+    const brandingRes = await fetch('http://localhost:3000/api/admin/create-branding', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(brandingProfileInput),
+    });
 
     expect(brandingRes.status).toBe(200);
-    const profile: BrandingProfile =
-      (await brandingRes.json()) as BrandingProfile;
+    const profile: BrandingProfile = (await brandingRes.json()) as BrandingProfile;
     expect(profile?.id).toBeDefined();
     brandingProfileId = profile.id;
 
@@ -48,9 +44,7 @@ test('branding snapshot end-to-end flow (with cleanup)', async () => {
     const snapshotInput = {
       template_name: 'Test Snapshot',
       data: {
-        pages: [
-          { content_blocks: [{ type: 'hero', content: 'Hello OG World' }] },
-        ],
+        pages: [{ content_blocks: [{ type: 'hero', content: 'Hello OG World' }] }],
       },
       editor_email: 'dev@quicksites.ai',
       branding_profile_id: profile.id,
@@ -68,28 +62,20 @@ test('branding snapshot end-to-end flow (with cleanup)', async () => {
     snapshotId = snap.url.split('/').pop();
 
     // Verify OG image route
-    const ogRes = await fetch(
-      `http://localhost:3000/api/og/snapshot?snapshotId=${snapshotId}`
-    );
+    const ogRes = await fetch(`http://localhost:3000/api/og/snapshot?snapshotId=${snapshotId}`);
     expect(ogRes.status).toBe(200);
   } finally {
     // Cleanup: delete snapshot + branding profile if created
     if (snapshotId) {
-      await fetch(
-        `http://localhost:3000/api/admin/delete-snapshot?snapshotId=${snapshotId}`,
-        {
-          method: 'DELETE',
-        }
-      );
+      await fetch(`http://localhost:3000/api/admin/delete-snapshot?snapshotId=${snapshotId}`, {
+        method: 'DELETE',
+      });
     }
 
     if (brandingProfileId) {
-      await fetch(
-        `http://localhost:3000/api/admin/delete-branding?id=${brandingProfileId}`,
-        {
-          method: 'DELETE',
-        }
-      );
+      await fetch(`http://localhost:3000/api/admin/delete-branding?id=${brandingProfileId}`, {
+        method: 'DELETE',
+      });
     }
   }
 });

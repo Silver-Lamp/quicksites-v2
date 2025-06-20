@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useState } from 'react';
-import { supabase } from '@/lib/supabaseClient';
+import { supabase } from '../admin/lib/supabaseClient';
 import { useRouter } from 'next/router';
 
 export default function DraftsPage() {
@@ -34,10 +34,7 @@ export default function DraftsPage() {
       ) : (
         <ul className="space-y-4">
           {drafts.map((d) => (
-            <li
-              key={d.id}
-              className="border border-zinc-700 rounded p-4 bg-zinc-900"
-            >
+            <li key={d.id} className="border border-zinc-700 rounded p-4 bg-zinc-900">
               <div className="flex justify-between items-center">
                 <div>
                   <p className="text-lg font-semibold">{d.name}</p>
@@ -47,9 +44,7 @@ export default function DraftsPage() {
                 </div>
                 <div className="flex gap-3">
                   <button
-                    onClick={() =>
-                      router.push(`/admin/start-campaign?draftId=${d.id}`)
-                    }
+                    onClick={() => router.push(`/admin/start-campaign?draftId=${d.id}`)}
                     className="text-sm text-blue-400 hover:underline"
                   >
                     ✏️ Edit

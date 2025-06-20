@@ -4,9 +4,7 @@ import fs from 'fs';
 import path from 'path';
 
 async function exportGeoCache() {
-  const { data, error } = await supabase
-    .from('geo_cache')
-    .select('city, state, lat, lon');
+  const { data, error } = await supabase.from('geo_cache').select('city, state, lat, lon');
 
   if (error) throw error;
 
@@ -24,9 +22,7 @@ async function exportGeoCache() {
   const outputPath = path.resolve(__dirname, '../public/staticGeo.json');
   fs.writeFileSync(outputPath, JSON.stringify(geoMap, null, 2));
 
-  console.log(
-    `✅ Exported ${Object.keys(geoMap).length} entries to staticGeo.json`
-  );
+  console.log(`✅ Exported ${Object.keys(geoMap).length} entries to staticGeo.json`);
 }
 
 exportGeoCache().catch((err) => {

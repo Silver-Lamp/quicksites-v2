@@ -24,10 +24,7 @@ export default function ClaimHandlePage() {
         onChange={(e) => setHandle(e.target.value.toLowerCase())}
         placeholder="@yourname"
       />
-      <button
-        onClick={submit}
-        className="bg-blue-600 px-4 py-2 rounded hover:bg-blue-700"
-      >
+      <button onClick={submit} className="bg-blue-600 px-4 py-2 rounded hover:bg-blue-700">
         Claim
       </button>
       {message && <p className="mt-4 text-sm text-zinc-400">{message}</p>}

@@ -16,7 +16,7 @@ export default function CreatorTemplatesPage() {
   useEffect(() => {
     if (!handle) return;
     fetch('/api/templates-by-creator?handle=' + handle)
-      .then((res) => json())
+      .then((res) => res.json())
       .then(setTemplates);
   }, [handle]);
 

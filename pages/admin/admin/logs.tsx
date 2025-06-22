@@ -15,7 +15,7 @@ import {
   Tooltip,
   Legend,
 } from 'chart.js';
-import { supabase } from '@/lib/supabaseClient.js';
+import { supabase } from '@/admin/lib/supabaseClient';
 import html2pdf from 'html2pdf.js';
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
@@ -29,7 +29,7 @@ export default function AdminLogsPage() {
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
 
-  const isAdmin = user?.user_metadata?.role === 'admin';
+  const isAdmin = user?.role === 'admin';
 
   useEffect(() => {
     if (!isAdmin) return;
@@ -140,8 +140,8 @@ export default function AdminLogsPage() {
       body: JSON.stringify({ summary: chartData, userEmail }),
     });
 
-    const json = await json();
-    alert(json.message || 'Email request sent');
+    const result = await res.json();
+    alert(result.message || 'Email request sent');
   };
 
   if (!user?.id) return <p className="p-6 text-center">🔒 You must be signed in to view logs.</p>;

@@ -50,4 +50,4 @@ const handleGet = withQueryValidation(querySchema as any, async (query: any) => 
 
 export const GET = handleGet;
 export const POST = handlePost;
-export const runtime = 'edge';
+export const runtime = 'experimental-edge';

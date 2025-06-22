@@ -11,7 +11,7 @@ export default function BlockDetail() {
   useEffect(() => {
     if (!id) return;
     fetch('/api/block?id=' + id)
-      .then((res) => json())
+      .then((res) => res.json())
       .then(setBlock);
   }, [id]);
 

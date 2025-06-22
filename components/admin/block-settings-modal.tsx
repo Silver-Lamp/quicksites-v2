@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { SettingsSchema } from './SettingsSchema';
+import { SettingsSchema } from './settings-schema';
 import { BLOCK_SETTING_SCHEMAS } from '@/constants/blockSchemas';
 
 export default function BlockSettingsModal({

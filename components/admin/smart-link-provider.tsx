@@ -1,5 +1,5 @@
-import { SmartLinkContext } from './SmartLinkContext';
-import { useSmartLinkPersisted } from './useSmartLinkPersisted';
+import { SmartLinkContext } from './smart-link-context';
+import { useSmartLinkPersisted } from './use-smart-link-persisted';
 import { ReactNode } from 'react';
 
 export function SmartLinkProvider({ children }: { children: ReactNode }) {

@@ -1,6 +1,6 @@
 import { readFile } from 'fs/promises';
 import * as Diff from 'diff';
-import { supabase } from '@/lib/supabaseClient.js';
+import { supabase } from '@/admin/lib/supabaseClient';
 
 function formatMarkdownDiff(diffText: string, title: string) {
   return `## 📄 ${title}

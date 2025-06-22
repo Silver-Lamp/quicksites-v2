@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { supabase } from '@/lib/supabaseClient.js';
+import { supabase } from '@/admin/lib/supabaseClient';
 
 type UserEntry = {
   user_id: string;

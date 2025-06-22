@@ -17,11 +17,11 @@ export default function PublicWorldShare() {
   useEffect(() => {
     if (!handle) return;
     fetch('/api/public-profile?handle=' + handle)
-      .then((res) => json())
+      .then((res) => res.json())
       .then(setProfile);
 
     fetch('/api/blocks-by-handle?handle=' + handle)
-      .then((res) => json())
+      .then((res) => res.json())
       .then(setBlocks);
   }, [handle]);
 

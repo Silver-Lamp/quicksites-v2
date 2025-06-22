@@ -26,7 +26,7 @@ export default function NewCampaign() {
       }),
     });
 
-    const json = await json();
+    const json = await res.json();
     setMessage(json.error ? 'Error: ' + json.error : '✅ Campaign created!');
   };
 

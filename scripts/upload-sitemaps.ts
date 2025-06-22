@@ -1,4 +1,4 @@
-import { supabase } from '@/lib/supabaseClient.js';
+import { supabase } from '@/admin/lib/supabaseClient';
 import fs from 'fs/promises';
 
 async function uploadToStorage(filePath: string, bucket: string, targetKey: string) {

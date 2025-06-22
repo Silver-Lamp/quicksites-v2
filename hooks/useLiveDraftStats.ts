@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { supabase } from '@/admin/lib/supabaseClient.js';
+import { supabase } from '@/admin/lib/supabaseClient';
 
 export function useLiveDraftStats() {
   const [draftCount, setDraftCount] = useState<number | null>(null);

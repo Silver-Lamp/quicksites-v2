@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import dayjs from 'dayjs';
-import { supabase } from '@/admin/lib/supabaseClient.js';
-import { useLeads } from '@/hooks/useLeads.js';
+import { supabase } from '../admin/lib/supabaseClient';
+import { useLeads } from './useLeads';
 
 function slugify(name: string): string {
   return name

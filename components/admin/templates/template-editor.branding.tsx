@@ -1,35 +1,45 @@
-// Inside TemplateEditor component
+'use client';
 
 import { useEffect, useState } from 'react';
-import { supabase } from '@/lib/supabaseClient.js';
+import { supabase } from '@/admin/lib/supabaseClient';
 import { Label } from '@/components/ui/label';
 
-const [brandingProfiles, setBrandingProfiles] = useState<any[]>([]);
-const [selectedProfileId, setSelectedProfileId] = useState<string | null>(null);
+interface TemplateEditorBrandingProps {
+  selectedProfileId: string | null;
+  onSelectProfileId: (id: string | null) => void;
+}
 
-useEffect(() => {
-  supabase
-    .from('branding_profiles')
-    .select('id, name')
-    .order('created_at', { ascending: false })
-    .then(({ data }) => {
-      if (data) setBrandingProfiles(data);
-    });
-}, []);
+export function TemplateEditorBranding({
+  selectedProfileId,
+  onSelectProfileId,
+}: TemplateEditorBrandingProps) {
+  const [brandingProfiles, setBrandingProfiles] = useState<any[]>([]);
 
-// Add this inside your JSX (e.g. below the "Tags" input or Commit Message)
-<div>
-  <Label>Branding Profile</Label>
-  <select
-    className="border rounded px-2 py-1 w-full"
-    value={selectedProfileId || ''}
-    onChange={(e) => setSelectedProfileId(e.target.value || null)}
-  >
-    <option value="">None</option>
-    {brandingProfiles.map((p) => (
-      <option key={p.id} value={p.id}>
-        {p.name}
-      </option>
-    ))}
-  </select>
-</div>;
+  useEffect(() => {
+    supabase
+      .from('branding_profiles')
+      .select('id, name')
+      .order('created_at', { ascending: false })
+      .then(({ data }) => {
+        if (data) setBrandingProfiles(data);
+      });
+  }, []);
+
+  return (
+    <div>
+      <Label>Branding Profile</Label>
+      <select
+        className="border rounded px-2 py-1 w-full"
+        value={selectedProfileId || ''}
+        onChange={(e) => onSelectProfileId(e.target.value || null)}
+      >
+        <option value="">None</option>
+        {brandingProfiles.map((p) => (
+          <option key={p.id} value={p.id}>
+            {p.name}
+          </option>
+        ))}
+      </select>
+    </div>
+  );
+}

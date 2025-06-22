@@ -1,7 +1,7 @@
 // --- File: pages/api/clone-template.ts ---
 import { NextApiRequest, NextApiResponse } from 'next';
 import { json } from '@/lib/api/json';
-import { supabase } from '@/lib/supabaseClient.js';
+import { supabase } from '@/admin/lib/supabaseClient';
 import router from 'next/router';
 import toast from 'react-hot-toast';
 
@@ -68,7 +68,7 @@ const handlePublish = async () => {
       }),
     });
 
-    const result = await json();
+    const result = await res.json();
     if (!res.ok) throw new Error(result.error);
 
     toast.success('Site published!');

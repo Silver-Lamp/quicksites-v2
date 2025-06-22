@@ -1,7 +1,7 @@
 // hooks/useDashboardLayout.ts
 
 import { useEffect, useState } from 'react';
-import { supabase } from '../lib/supabaseClient.js';
+import { supabase } from '../admin/lib/supabaseClient';
 
 type Block = { id: string; title: string };
 type Settings = Record<string, Record<string, any>>;

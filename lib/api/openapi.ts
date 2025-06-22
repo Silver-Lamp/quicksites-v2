@@ -1,41 +1,37 @@
-import { OpenAPIGenerator } from 'zod-to-openapi';
-import { z } from 'zod';
+import {
+  OpenAPIRegistry,
+  OpenApiGeneratorV3,
+} from '@asteasolutions/zod-to-openapi';
+import { z, ZodTypeAny } from 'zod';
 
-type RouteSpec = {
+type RouteConfig = {
   method: 'GET' | 'POST' | 'PUT' | 'DELETE';
   path: string;
   summary?: string;
   description?: string;
   tags?: string[];
-  input?: z.ZodTypeAny;
-  output?: z.ZodTypeAny;
+  request?: ZodTypeAny;
+  responses?: ZodTypeAny;
 };
 
-export function generateOpenApi(routes: RouteSpec[], title = 'API', version = '1.0.0') {
-  const generator = new OpenAPIGenerator(
-    {
-      openapi: '3.0.0',
-      info: {
-        title,
-        version,
-      },
-      paths: {},
-    },
-    'json'
-  );
+export function generateOpenApi(routes: RouteConfig[], title = 'API', version = '1.0.0') {
+  const registry = new OpenAPIRegistry();
 
   for (const route of routes) {
-    const { method, path, summary, description, tags, input, output } = route;
+    const { method, path, summary, description, tags, request, responses } = route;
 
-    generator.registerPath({
+    registry.registerPath({
       method: method.toLowerCase() as any,
       path,
-      request: input
+      summary,
+      description,
+      tags,
+      request: request
         ? {
             body: {
               content: {
                 'application/json': {
-                  schema: input,
+                  schema: request,
                 },
               },
             },
@@ -46,16 +42,20 @@ export function generateOpenApi(routes: RouteSpec[], title = 'API', version = '1
           description: 'Success',
           content: {
             'application/json': {
-              schema: output || z.any(),
+              schema: responses || z.any(),
             },
           },
         },
       },
-      summary,
-      description,
-      tags,
     });
   }
 
-  return generator.generateDocument();
+  const generator = new OpenApiGeneratorV3(registry.definitions);
+  return generator.generateDocument({
+    openapi: '3.0.0',
+    info: {
+      title,
+      version,
+    },
+  });
 }

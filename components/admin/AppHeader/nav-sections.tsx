@@ -1,100 +1,96 @@
 'use client';
 
 import { usePathname } from 'next/navigation';
-import SafeLink from '../ui/SafeLink';
-import { useLiveAdminStats } from '@/hooks/useLiveAdminStats';
+import { useSmartNav } from '../../../hooks/useSmartNav';
+import SafeLink from '../../ui/safe-link';
+import { NavBadge } from '../../ui/nav-badge';
+import { useLiveAdminStats } from '../../../hooks/useLiveAdminStats';
 
 export function NavSections() {
   const pathname = usePathname();
-
-  const isActive = (href: string) => pathname === href;
-  const matches = (prefix: string) => pathname.startsWith(prefix);
-
-  // Placeholder counts — replace with actual state/hooks as needed
+  const { nav, loading } = useSmartNav();
   const { unclaimed, errors } = useLiveAdminStats();
 
+  const matches = (prefix: string) => pathname?.startsWith(prefix);
+
+  if (loading) return null;
+
   return (
-    <nav className="flex flex-wrap gap-4 items-center text-sm">
-      <details
-        className="group"
-        open={matches('/dashboard') || matches('/admin/leads') || matches('/admin/start-campaign')}
-      >
-        <summary className="cursor-pointer font-semibold text-blue-300 group-open:underline">
-          Core
-        </summary>
-        <div className="flex flex-wrap gap-2 ml-2">
-          <SafeLink href="/dashboard">Dashboard</SafeLink>
-          <SafeLink href="/admin/leads">
-            Leads{' '}
-            {unclaimed !== null && unclaimed > 0 && (
-              <span className="ml-1 text-xs text-yellow-400">({unclaimed})</span>
-            )}
-          </SafeLink>
-          <SafeLink href="/admin/campaigns">Campaigns</SafeLink>
-          <SafeLink href="/admin/start-campaign">Start Campaign</SafeLink>
-        </div>
-      </details>
+    <nav className="flex flex-col gap-6 text-sm">
+      {/* 🖥 Desktop */}
+      <div className="hidden md:flex flex-wrap gap-4 items-center">
+        {nav.map((section) => (
+          <details
+            key={section.label}
+            className="group"
+            open={section.routes.some((r) => matches(r.href))}
+          >
+            <summary className={`cursor-pointer font-semibold ${section.color} group-open:underline`}>
+              {section.label}
+            </summary>
+            <div className="ml-2 flex flex-wrap gap-2 mt-1">
+              {section.routes.map((r) => {
+                const isDynamic = r.href.includes('[slug]') || r.href.includes(':');
+                const labelWithCount =
+                  r.href === '/admin/leads' && unclaimed && unclaimed > 0
+                    ? `${r.label} (${unclaimed})`
+                    : r.href === '/admin/drafts' && unclaimed && unclaimed > 0
+                      ? `${r.label} (${unclaimed})`
+                      : r.label;
 
-      <details
-        className="group"
-        open={matches('/admin/logs') || matches('/admin/analytics') || matches('/admin/heatmap')}
-      >
-        <summary className="cursor-pointer font-semibold text-green-300 group-open:underline">
-          Logs{' '}
-          {errors !== null && errors > 0 && (
-            <span className="ml-2 text-xs text-red-400">({errors})</span>
-          )}
-        </summary>
-        <div className="flex flex-wrap gap-2 ml-2">
-          <SafeLink href="/admin/logs">Logs</SafeLink>
-          <SafeLink href="/admin/logs/sessions">Session Logs</SafeLink>
-          <SafeLink href="/admin/analytics">Analytics</SafeLink>
-          <SafeLink href="/admin/heatmap">Heatmap</SafeLink>
-          <SafeLink href="/admin/not-found">404s</SafeLink>
-        </div>
-      </details>
+                return (
+                  <SafeLink
+                    key={r.href}
+                    href={r.href}
+                    target={r.external ? '_blank' : undefined}
+                    title={r.title}
+                    onClick={() => {
+                      fetch('/api/log-event', {
+                        method: 'POST',
+                        body: JSON.stringify({ href: r.href, type: 'nav_click' }),
+                      });
+                    }}
+                  >
+                    {labelWithCount}
+                    <NavBadge flag={r.flags?.[0]} />
+                  </SafeLink>
+                );
+              })}
+            </div>
+          </details>
+        ))}
+      </div>
 
-      <details className="group" open={matches('/template-market') || matches('/admin/templates')}>
-        <summary className="cursor-pointer font-semibold text-yellow-300 group-open:underline">
-          Templates
-        </summary>
-        <div className="flex flex-wrap gap-2 ml-2">
-          <SafeLink href="/template-market">Template Market</SafeLink>
-          <SafeLink href="/admin/templates">All Templates</SafeLink>
-          <SafeLink href="/admin/templates-new">+ New Template</SafeLink>
-        </div>
-      </details>
-
-      <details
-        className="group"
-        open={matches('/docs') || matches('/admin/docs') || matches('/admin/query-usecases')}
-      >
-        <summary className="cursor-pointer font-semibold text-purple-300 group-open:underline">
-          Docs & Dev
-        </summary>
-        <div className="flex flex-wrap gap-2 ml-2">
-          <SafeLink href="/docs" target="_blank">
-            📘 API Docs
-          </SafeLink>
-          <SafeLink href="/docs.yaml" target="_blank">
-            🧾 /docs.yaml
-          </SafeLink>
-          <SafeLink href="/admin/docs">Internal Docs</SafeLink>
-          <SafeLink href="/admin/query-usecases">Params</SafeLink>
-          <SafeLink href="/admin/branding/og-editor/xyz">OG Editor</SafeLink>
-        </div>
-      </details>
-
-      <details className="group" open={matches('/admin/users') || matches('/admin/roles')}>
-        <summary className="cursor-pointer font-semibold text-red-300 group-open:underline">
-          Admin
-        </summary>
-        <div className="flex flex-wrap gap-2 ml-2">
-          <SafeLink href="/admin/users">Users</SafeLink>
-          <SafeLink href="/admin/roles">Roles</SafeLink>
-          <SafeLink href="/docs/diffs">📝 Sitemap Diffs</SafeLink>
-        </div>
-      </details>
+      {/* 📱 Mobile */}
+      <div className="md:hidden">
+        <label htmlFor="mobile-nav" className="block mb-1 font-medium text-muted-foreground">
+          Navigate:
+        </label>
+        <select
+          id="mobile-nav"
+          className="w-full p-2 border rounded text-sm"
+          onChange={(e) => {
+            if (e.target.value) {
+              fetch('/api/log-event', {
+                method: 'POST',
+                body: JSON.stringify({ href: e.target.value, type: 'nav_click' }),
+              });
+              window.location.href = e.target.value;
+            }
+          }}
+        >
+          <option value="">Select a page</option>
+          {nav.flatMap((section) => [
+            <optgroup key={section.label} label={section.label}>
+              {section.routes.map((r) => (
+                <option key={r.href} value={r.href}>
+                  {r.label.replace(/^[^\w\s]+ /, '')}
+                </option>
+              ))}
+            </optgroup>,
+          ])}
+        </select>
+      </div>
     </nav>
   );
 }

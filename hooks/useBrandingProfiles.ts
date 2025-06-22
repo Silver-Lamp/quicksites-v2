@@ -1,6 +1,6 @@
 // hooks/useBrandingProfiles.ts
 import { useEffect, useState } from 'react';
-import { supabase } from '../lib/supabaseClient.js';
+import { supabase } from '../admin/lib/supabaseClient';
 
 export function useBrandingProfiles() {
   const [profiles, setProfiles] = useState([]);

@@ -1,6 +1,7 @@
 import fetch from 'node-fetch';
 import fs from 'fs';
 import path from 'path';
+import { describe, expect, it } from 'vitest';
 import { toMatchImageSnapshot } from 'jest-image-snapshot';
 
 expect.extend({ toMatchImageSnapshot });
@@ -27,10 +28,7 @@ describe('OG Image Snapshot Rendering', () => {
       fs.mkdirSync(path.dirname(outPath), { recursive: true });
       fs.writeFileSync(outPath, buffer);
 
-      expect(buffer).toMatchImageSnapshot({
-        failureThresholdType: 'percent',
-        failureThreshold: 0.02, // 2% pixel difference allowed
-      });
+      expect(buffer).toMatchSnapshot();
     });
   }
 });

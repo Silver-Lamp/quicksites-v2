@@ -6,9 +6,9 @@ import {
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { Input } from '../ui/input';
-import { Button } from '../ui/button';
-import TemplatePreview from './TemplatePreview';
+import { Input } from '../../ui/input';
+import { Button } from '../../ui/button';
+import TemplatePreview from './template-preview';
 import type { Page } from '@/types/template';
 import { Block } from '@/types/blocks';
 

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { LeadSummary, loadLeads, getTopTwoLeads } from '@/lib/loadLeads.js';
+import { LeadSummary, loadLeads, getTopTwoLeads } from '../lib/loadLeads';
 
 type UseLeadsOptions = {
   city?: string;

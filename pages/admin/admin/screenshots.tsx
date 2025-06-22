@@ -7,7 +7,7 @@ export default function ScreenshotQueuePage() {
 
   useEffect(() => {
     fetch('/api/screenshot/queue')
-      .then((res) => json())
+      .then((res) => res.json())
       .then(setItems);
   }, []);
 

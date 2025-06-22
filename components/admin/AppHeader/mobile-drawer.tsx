@@ -1,5 +1,5 @@
-// components/admin/AppHeader/MobileDrawer.tsx
-import SafeLink from '../ui/SafeLink';
+// components/admin/AppHeader/mobile-drawer.tsx
+import SafeLink from '../../ui/safe-link';
 
 export function MobileDrawer({
   drawerOpen,

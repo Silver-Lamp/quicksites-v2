@@ -22,7 +22,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       .eq('state', state)
       .single();
 
-    if (cached) return json({ lat: cached.lat, lon: cached.lon });
+    if (cached) return res.json({ lat: cached.lat, lon: cached.lon });
 
     const query = encodeURIComponent(`${city}, ${state}, USA`);
     const url = `https://api.mapbox.com/geocoding/v5/mapbox.places/${query}.json?access_token=${MAPBOX_TOKEN}`;

@@ -5,7 +5,7 @@ import { useCurrentUser } from '@/hooks/useCurrentUser';
 import SeedButton from '@/components/admin/admin/seed-button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { useEffect, useState } from 'react';
-import { supabase } from '@/lib/supabaseClient.js';
+import { supabase } from '@/admin/lib/supabaseClient';
 
 export default function AdminDashboard() {
   const { hasRole } = useCurrentUser();
@@ -198,7 +198,8 @@ export default function AdminDashboard() {
                       method: 'POST',
                       headers: { Authorization: `Bearer ${token}` },
                     });
-                    const result = await json();
+                    const result = await res.json();
+
                     if (res.ok) {
                       alert('Logs cleared successfully');
                       setLogs(0);

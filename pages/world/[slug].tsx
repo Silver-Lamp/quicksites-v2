@@ -14,7 +14,7 @@ export default function WorldViewer() {
       (pos) => {
         setPosition(pos.coords);
         fetch(`/api/nearby-blocks?lat=${pos.coords.latitude}&lon=${pos.coords.longitude}`)
-          .then((res) => json())
+          .then((res) => res.json())
           .then(setBlocks);
       },
       () => console.warn('Geolocation denied')

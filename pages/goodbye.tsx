@@ -1,3 +1,7 @@
+'use client';
+
+import Link from 'next/link';
+
 export default function GoodbyePage() {
   return (
     <div className="max-w-lg mx-auto p-6 text-white text-center">
@@ -6,9 +10,9 @@ export default function GoodbyePage() {
       <p className="text-zinc-400 text-sm mb-6">
         If you helped steward any sites, your legacy will live on in the public ledger.
       </p>
-      <a href="/transparency" className="text-blue-400 underline text-sm">
+      <Link href="/transparency" className="text-blue-400 underline text-sm">
         View public log →
-      </a>
+      </Link>
     </div>
   );
 }

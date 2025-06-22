@@ -3,7 +3,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { supabase } from '@/lib/supabaseClient.js';
+import { supabase } from '@/admin/lib/supabaseClient';
 import { useRouter } from 'next/router';
 import Link from 'next/link';
 import { useUser } from '@supabase/auth-helpers-react';
@@ -66,7 +66,7 @@ function Dashboard() {
           role,
         });
         router.push('/viewer');
-      } else if (role !== 'admin' && role !== 'reseller') {
+      } else if (role !== 'admin' && role !== 'reseller' && role !== 'owner') {
         console.log('🔄 [Dashboard] [useEffect] Redirecting to login', {
           role,
         });

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { createClient } from '@supabase/supabase-js';
-import { Checkbox } from '../ui/checkbox';
-import { Label } from '../ui/label';
+import { Checkbox } from '../../ui/checkbox';
+import { Label } from '../../ui/label';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,

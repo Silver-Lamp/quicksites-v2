@@ -11,7 +11,7 @@ export default function MyCampaigns() {
   useEffect(() => {
     if (!user) return;
     fetch('/api/my-campaigns?user_id=' + user.id)
-      .then((res) => json())
+      .then((res) => res.json())
       .then(setCampaigns);
   }, [user]);
 

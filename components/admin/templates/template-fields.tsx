@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
-import { supabase } from '@/lib/supabaseClient.js';
+import { supabase } from '@/admin/lib/supabaseClient';
 import { Template } from '@/types/template';
 
 export default function TemplateFields({

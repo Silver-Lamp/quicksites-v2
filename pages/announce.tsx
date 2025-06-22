@@ -7,7 +7,7 @@ export default function AnnouncePage() {
 
   useEffect(() => {
     fetch('/announcements.json')
-      .then((res) => json())
+      .then((res) => res.json())
       .then(setEntries);
   }, []);
 

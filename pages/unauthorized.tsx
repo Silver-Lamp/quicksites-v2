@@ -1,11 +1,14 @@
+'use client';
+import { useEffect } from 'react';
+import Link from 'next/link';
 import { NextSeo } from 'next-seo';
-import { usePageSeo } from '@/lib/usePageSeo';
 import * as Sentry from '@sentry/nextjs';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
-import { useEffect } from 'react';
+import { usePageSeo } from '@/lib/usePageSeo';
 
 export default function UnauthorizedPage() {
   const { session, email, role } = useCurrentUser() as any;
+
   const seo = usePageSeo({
     description: 'Unauthorized page.',
     noindex: true,
@@ -22,7 +25,7 @@ export default function UnauthorizedPage() {
         timestamp: new Date().toISOString(),
       },
     });
-  }, []);
+  }, [email, role]); // ✅ added dependencies
 
   const supportEmail =
     session?.user?.app_metadata?.org_support_email ||
@@ -36,12 +39,12 @@ export default function UnauthorizedPage() {
         <div className="text-center space-y-4">
           <h1 className="text-5xl font-bold">403 - Forbidden</h1>
           <p className="text-gray-400">You do not have access to this page.</p>
-          <a
+          <Link
             href="/"
             className="inline-block mt-4 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
           >
             Return to Dashboard
-          </a>
+          </Link>
           <p className="text-sm text-gray-500">
             Need help?{' '}
             <a href={`mailto:${supportEmail}`} className="underline text-blue-400">

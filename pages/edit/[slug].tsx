@@ -44,7 +44,7 @@ export default function EditPage() {
   useEffect(() => {
     if (!slug) return;
     fetch(`/api/sites/${slug}`) // TODO: add error handling for 404 and 500 errors
-      .then((res) => json())
+      .then((res) => res.json())
       .then((data) => {
         console.debug('[EditPage] useEffect triggered', data);
         setSiteData(data);

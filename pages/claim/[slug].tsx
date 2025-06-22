@@ -14,7 +14,7 @@ export default function ClaimPage() {
   useEffect(() => {
     if (slug) {
       fetch(`/api/check-claim?slug=${slug}`)
-        .then((res) => json())
+        .then((res) => res.json())
         .then((d) => setStatus(d.claimed ? 'claimed' : 'unclaimed'));
     }
   }, [slug]);

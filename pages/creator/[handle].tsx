@@ -22,7 +22,7 @@ export default function PublicHandlePage() {
   useEffect(() => {
     if (!handle) return;
     fetch(`/api/handle-profile?handle=${handle}`)
-      .then((res) => json())
+      .then((res) => res.json())
       .then(setData)
       .catch((err) => {
         console.error('Failed to fetch handle profile:', err);

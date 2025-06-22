@@ -1,4 +1,4 @@
-import { supabase } from '@/lib/supabaseClient.js';
+import { supabase } from '@/admin/lib/supabaseClient';
 import { json } from '@/lib/api/json';
 import type { NextApiRequest, NextApiResponse } from 'next';
 

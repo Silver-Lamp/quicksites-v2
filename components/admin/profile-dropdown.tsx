@@ -1,7 +1,8 @@
 'use client';
+
 import { Menu } from '@headlessui/react';
 import { useRouter } from 'next/navigation';
-import { supabase } from '@/lib/supabaseClient.js';
+import { supabase } from '@/admin/lib/supabaseClient';import Link from 'next/link';
 
 export default function ProfileDropdown() {
   const router = useRouter();
@@ -20,19 +21,23 @@ export default function ProfileDropdown() {
         <div className="py-1">
           <Menu.Item>
             {({ active }) => (
-              <a
+              <Link
                 href="/admin/profile"
-                className={`block px-4 py-2 text-sm ${active ? 'bg-zinc-700 text-white' : 'text-zinc-300'}`}
+                className={`block px-4 py-2 text-sm ${
+                  active ? 'bg-zinc-700 text-white' : 'text-zinc-300'
+                }`}
               >
                 My Profile
-              </a>
+              </Link>
             )}
           </Menu.Item>
           <Menu.Item>
             {({ active }) => (
               <button
                 onClick={handleLogout}
-                className={`w-full text-left px-4 py-2 text-sm ${active ? 'bg-red-700 text-white' : 'text-red-400'}`}
+                className={`w-full text-left px-4 py-2 text-sm ${
+                  active ? 'bg-red-700 text-white' : 'text-red-400'
+                }`}
               >
                 Log Out
               </button>

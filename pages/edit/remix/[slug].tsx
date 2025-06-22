@@ -14,7 +14,7 @@ export default function PublicEditPage() {
   useEffect(() => {
     if (slug) {
       fetch(`/api/template?domain=${slug}`)
-        .then((res) => json())
+        .then((res) => res.json())
         .then((d) => setData(d.data));
     }
   }, [slug]);

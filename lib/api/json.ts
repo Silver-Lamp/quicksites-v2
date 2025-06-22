@@ -1,4 +1,4 @@
-import { z, ZodSchema, ZodError } from 'zod';
+import { z, ZodError } from 'zod';
 // import { json, internalError } from './json.js';
 //
 // 🔁 Response Builders
@@ -25,9 +25,10 @@ export function typedJson<T>(data: T, statusOrOptions?: number | ResponseInit): 
 
 export function safeTypedJson<T>(
   data: unknown,
-  schema: ZodSchema<T>,
+  schema: z.ZodType<T, any, any>,
   statusOrOptions?: number | ResponseInit
 ): Response {
+
   const result = schema.safeParse(data);
   if (!result.success) {
     return internalError('Invalid server response', result.error.format());
@@ -64,7 +65,7 @@ export function flattenIssues(error: ZodError): string[] {
 //
 
 export function withInput<T>(
-  schema: ZodSchema<T>,
+  schema: z.ZodType<T, any, any>,
   handler: (input: T, req: Request) => Promise<Response>
 ): (req: Request) => Promise<Response> {
   return async (req: Request): Promise<Response> => {
@@ -87,7 +88,7 @@ export function withInput<T>(
 
 export function withValidation<T>(
   handler: () => Promise<T>,
-  schema: ZodSchema<T>
+  schema: z.ZodType<T, any, any>
 ): (req: Request) => Promise<Response> {
   return async () => {
     try {

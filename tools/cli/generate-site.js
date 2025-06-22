@@ -1,6 +1,6 @@
 // cli/generate-site.js
 
-import path from 'path';
+import path from 'node:path';
 import fs from 'fs-extra';
 
 export async function generateSite({ city, state, template }) {

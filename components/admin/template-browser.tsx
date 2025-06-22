@@ -3,7 +3,7 @@ import { Dialog, DialogTrigger, DialogContent } from '@/components/ui/dialog';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import SafeLink from './ui/SafeLink';
+import SafeLink from '@/components/ui/safe-link';
 
 type Template = {
   template_name: string;

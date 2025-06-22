@@ -1,5 +1,5 @@
 // components/AdminLayout.tsx
-import BreadcrumbNav from './BreadcrumbNav';
+import BreadcrumbNav from './breadcrumb-nav';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { useUser } from '@supabase/auth-helpers-react';

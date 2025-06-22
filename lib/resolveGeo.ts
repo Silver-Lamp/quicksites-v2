@@ -1,6 +1,6 @@
 // lib/resolveGeo.ts
 import staticGeo from '../public/staticGeo.json' with { type: 'module' };
-import { getCachedGeo, setCachedGeo } from './geoCache.js';
+import { getCachedGeo, setCachedGeo } from './geoCache';
 
 function getStaticFallback(city: string, state: string) {
   const key = `${city.trim().toLowerCase()},${state.trim().toLowerCase()}`;

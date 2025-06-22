@@ -12,7 +12,7 @@ export default function Timeline() {
 
   useEffect(() => {
     fetch('/api/timeline')
-      .then((res) => json())
+      .then((res) => res.json())
       .then((data: TimelineEvent[]) => setHistory(data));
   }, []);
 

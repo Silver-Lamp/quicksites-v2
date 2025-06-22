@@ -1,7 +1,7 @@
 // TemplatePageEditor.tsx (fixed keys)
 import { Page, TemplateData } from '@/types/template';
-import { BlocksEditor } from './BlocksEditor';
-import { SortablePage } from './SortablePage';
+import { BlocksEditor } from './blocks-editor';
+import { SortablePage } from './sortable-page';
 import { Template } from '@/types/template';
 import { Block } from '@/types/blocks';
 

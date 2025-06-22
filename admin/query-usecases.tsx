@@ -1,18 +1,24 @@
-import fs from 'fs';
-import path from 'path';
-import ReactMarkdown from 'react-markdown';
+'use client';
 
-export async function getStaticProps() {
-  const filePath = path.join(process.cwd(), 'docs/query-usecases.md');
-  const content = fs.readFileSync(filePath, 'utf8');
-  return { props: { content } };
-}
+import { useEffect, useState } from 'react';
 
-export default function QueryUsecases({ content }: { content: string }) {
+export default function QueryUsecasesPage() {
+  const [usecases, setUsecases] = useState<string[]>([]);
+
+  useEffect(() => {
+    fetch('/api/query-usecases')
+      .then((res) => res.json())
+      .then((data) => setUsecases(data.files || []));
+  }, []);
+
   return (
-    <div className="p-8 max-w-4xl mx-auto text-white">
-      <h1 className="text-2xl font-bold mb-4">Query Param Use Cases</h1>
-      <ReactMarkdown>{content}</ReactMarkdown>
+    <div className="p-6">
+      <h1 className="text-2xl font-bold mb-4">📚 Query Usecases</h1>
+      <ul className="list-disc ml-6">
+        {usecases.map((file) => (
+          <li key={file}>{file}</li>
+        ))}
+      </ul>
     </div>
   );
 }

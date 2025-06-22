@@ -9,7 +9,7 @@ export default function TemplateMarket() {
 
   useEffect(() => {
     fetch('/api/template-api')
-      .then((res) => json())
+      .then((res) => res.json())
       .then(setTemplates);
   }, []);
 

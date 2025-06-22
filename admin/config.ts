@@ -1,7 +1,7 @@
 export const config = {
   appName: 'QuickSites Admin',
   logo: '/logo.png',
-  roles: ['admin', 'reseller', 'viewer'],
+  roles: ['admin', 'reseller', 'viewer', 'owner'],
   routes: [
     {
       path: '/admin/dashboard',

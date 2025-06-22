@@ -1,5 +1,5 @@
 import glob from 'glob';
-import path from 'path';
+import path from 'node:path';
 
 const pagesDir = path.join(process.cwd(), 'pages');
 

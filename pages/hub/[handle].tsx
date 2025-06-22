@@ -12,7 +12,7 @@ export default function BlockHub() {
   useEffect(() => {
     if (!handle) return;
     fetch('/api/blocks-by-handle?handle=' + handle)
-      .then((res) => json())
+      .then((res) => res.json())
       .then(setBlocks);
   }, [handle]);
 

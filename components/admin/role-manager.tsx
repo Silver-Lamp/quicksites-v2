@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { supabase } from '@/lib/supabaseClient.js';
+import { supabase } from '@/admin/lib/supabaseClient';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 
 type RoleEntry = {
@@ -10,7 +10,7 @@ type RoleEntry = {
   updated_at: string;
 };
 
-const AVAILABLE_ROLES = ['admin', 'reseller', 'viewer'];
+const AVAILABLE_ROLES = ['admin', 'reseller', 'viewer', 'owner'];
 
 export default function RoleManager() {
   const { role } = useCurrentUser();

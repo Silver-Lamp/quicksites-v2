@@ -13,7 +13,7 @@ export default function HallOfFame() {
 
   useEffect(() => {
     fetch('/api/hall-of-fame')
-      .then((res) => json())
+      .then((res) => res.json())
       .then(setEntries);
   }, []);
 

@@ -1,123 +1,132 @@
-// ✅ FILE: pages/login.tsx
-
 'use client';
 
 import { useSetSessionFromHash } from '@/hooks/useSetSessionFromHash';
-import { useState, useEffect } from 'react';
-import { supabase } from '@/lib/supabaseClient.js';
+import { useState, useEffect, useRef } from 'react';
+import { supabase } from '@/admin/lib/supabaseClient';
 import { useRouter } from 'next/router';
-import { useCurrentUser } from '@/hooks/useCurrentUser';
+import ReCAPTCHA from 'react-google-recaptcha';
 
 export default function LoginPage() {
   useSetSessionFromHash();
-  // const { isLoading, roleSource, role, allowAdminPromotion } = useCurrentUser();
+  const recaptchaRef = useRef<any>(null);
 
   const [email, setEmail] = useState('');
   const [message, setMessage] = useState<string | null>(null);
-  const [flash, setFlash] = useState<string | null>(null);
-  const [showOnboarding, setShowOnboarding] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
+  const [showOnboarding, setShowOnboarding] = useState(false);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
 
   useEffect(() => {
     supabase.auth.getSession().then(async ({ data: sessionData }) => {
-      let session = sessionData.session;
-
-      if (!session) {
-        const { data: userData } = await supabase.auth.getUser();
-        if (userData?.user) {
-          session = { user: userData.user } as any;
-        }
-      }
-
+      const session = sessionData.session;
       const id = session?.user?.id;
       const email = session?.user?.email ?? null;
 
       if (session && id && email) {
         const now = new Date().toISOString();
+
         await supabase.from('user_profiles').upsert({
           user_id: id,
+          email,
           last_seen_at: now,
         });
 
-        const { data: roleRow } = await supabase
-          .from('user_roles')
-          .select('role')
-          .eq('user_email', email)
+        const { data: profile } = await supabase
+          .from('user_profiles')
+          .select('role, plan')
+          .eq('user_id', id)
           .maybeSingle();
 
-        const role = roleRow?.role ?? null;
+        const role = profile?.role ?? null;
+        const plan = profile?.plan ?? 'free';
 
         if (role) {
-          if (['admin', 'owner', 'reseller'].includes(role)) {
-            router.replace('/admin/dashboard?message=welcome');
-          } else {
-            router.replace('/?message=welcome');
-          }
+          const redirect =
+            plan === 'enterprise'
+              ? '/enterprise/dashboard'
+              : ['admin', 'owner', 'reseller'].includes(role)
+                ? '/admin/dashboard?message=welcome'
+                : '/?message=welcome';
+
+          router.replace(redirect);
         } else {
-          await supabase.from('user_profiles').upsert({
-            user_id: id,
-            first_seen_at: now,
-          });
           setShowOnboarding(true);
         }
       }
+
       setLoading(false);
     });
   }, []);
 
   const handleLogin = async () => {
-    const { error } = await supabase.auth.signInWithOtp({
-      email,
-      options: {
-        emailRedirectTo: 'http://localhost:3000/',
-      },
+    const token = await recaptchaRef.current.executeAsync();
+    recaptchaRef.current.reset();
+
+    if (!token) {
+      setMessage('❌ reCAPTCHA failed. Try again.');
+      return;
+    }
+
+    const res = await fetch('/api/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, recaptchaToken: token }),
     });
-    if (error) {
-      setMessage(`❌ ${error.message}`);
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      setMessage(`❌ ${data.error || 'Login failed.'}`);
     } else {
       setMessage('✅ Check your email for the magic link.');
     }
   };
 
   const assignRole = async (selected: string) => {
-    await supabase.auth.updateUser({ data: { role: selected } });
-    await supabase.from('user_roles').insert({
-      user_email: email,
-      new_role: selected,
-      updated_at: new Date().toISOString(),
+    const { data: { session } } = await supabase.auth.getSession();
+    const id = session?.user?.id;
+    const email = session?.user?.email ?? '';
+
+    if (!id || !email) return;
+
+    const now = new Date().toISOString();
+
+    await supabase.from('user_profiles').upsert({
+      user_id: id,
+      email,
+      role: selected,
+      last_seen_at: now,
     });
+
+    await supabase.from('session_logs').insert({
+      type: 'assign_role',
+      user_id: id,
+      email,
+      role: selected,
+      timestamp: now,
+    });
+
     setShowOnboarding(false);
     setToast(`✅ Role set to "${selected}"`);
     setTimeout(() => setToast(null), 3000);
-    router.replace(`/?message=role-assigned-${selected}`);
+
+    const redirect =
+      selected === 'admin'
+        ? '/admin/dashboard'
+        : '/?message=role-assigned';
+
+    router.replace(redirect);
     setTimeout(() => window.location.reload(), 1000);
   };
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-black text-white p-4 relative">
       {loading && (
-        <div className="fixed inset-0 z-50 bg-black bg-opacity-90 flex flex-col items-center justify-center">
-          <svg
-            className="animate-spin h-8 w-8 text-white mb-3"
-            xmlns="http://www.w3.org/2000/svg"
-            fill="none"
-            viewBox="0 0 24 24"
-          >
-            <circle
-              className="opacity-25"
-              cx="12"
-              cy="12"
-              r="10"
-              stroke="currentColor"
-              strokeWidth="4"
-            ></circle>
-            <path
-              className="opacity-75"
-              fill="currentColor"
-              d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
-            ></path>
+        <div className="fixed inset-0 z-50 bg-black/90 flex flex-col items-center justify-center">
+          <svg className="animate-spin h-8 w-8 text-white mb-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
           </svg>
           <p className="text-sm text-gray-300">Checking session…</p>
         </div>
@@ -140,20 +149,9 @@ export default function LoginPage() {
                 </button>
               ))}
             </div>
-            {/* {allowAdminPromotion && (
-              <div className="mt-4">
-                <button
-                  onClick={() => assignRole('admin')}
-                  className="text-xs text-yellow-400 hover:underline"
-                >
-                  🔧 Promote me to admin
-                </button>
-              </div>
-            )} */}
           </div>
         ) : (
           <>
-            {flash && <p className="text-center mb-4 text-green-400 text-sm">{flash}</p>}
             {toast && <p className="text-center mb-4 text-yellow-400 text-sm">{toast}</p>}
             <input
               type="email"
@@ -169,14 +167,15 @@ export default function LoginPage() {
               Send Magic Link
             </button>
             {message && (
-              <p
-                className={`mt-4 text-sm text-center ${
-                  message.startsWith('✅') ? 'text-green-400' : 'text-red-400'
-                }`}
-              >
+              <p className={`mt-4 text-sm text-center ${message.startsWith('✅') ? 'text-green-400' : 'text-red-400'}`}>
                 {message}
               </p>
             )}
+            <ReCAPTCHA
+              sitekey={process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY!}
+              size="invisible"
+              ref={recaptchaRef}
+            />
           </>
         )}
       </div>

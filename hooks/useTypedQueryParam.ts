@@ -1,6 +1,6 @@
 import { useRouter } from 'next/navigation.js';
-import { z } from 'zod';
-import { parseTypedQueryValue } from '../lib/query/parseTypedQueryValue.js';
+import { z, ZodTypeAny } from 'zod';
+import { parseTypedQueryValue } from '../admin/lib/query/parseTypedQueryValue';
 
 type ParamReturn<T> = [
   T extends 'string[]'
@@ -36,7 +36,12 @@ export function useTypedQueryParam<
     | 'date[]'
     | 'json'
     | 'json[]',
->(key: string, fallback: any, type: T, schema?: z.ZodType<any, any, any>): ParamReturn<T> {
+>(
+  key: string,
+  fallback: any,
+  type: T,
+  schema?: ZodTypeAny // Fix: constrain to base zod type to avoid deep recursion
+): ParamReturn<T> {
   const router = useRouter();
   const searchParams = new URLSearchParams(
     typeof window !== 'undefined' ? window.location.search : ''
@@ -61,13 +66,13 @@ export function useTypedQueryParam<
     }
 
     const newUrl = `${window.location.pathname}?${newParams.toString()}`;
-    router.replace(newUrl, undefined, { shallow: true });
+    router.replace(newUrl); // ✅ Only 1 argument allowed
   };
 
   if (!searchParams.has(key) && fallback !== undefined && type !== 'json') {
     searchParams.set(key, String(fallback));
     const newUrl = `${window.location.pathname}?${searchParams.toString()}`;
-    router.replace(newUrl, undefined, { shallow: true });
+    router.replace(newUrl); // ✅ Only 1 argument allowed
   }
 
   const values = searchParams.getAll(key);
@@ -75,6 +80,15 @@ export function useTypedQueryParam<
     ? values
     : searchParams.get(key);
 
-  const parsed = parseTypedQueryValue(key, value, fallback, type, schema, router);
+    // @ts-ignore
+    const parsed: ParamReturn<T>[0] = parseTypedQueryValue(
+      key,
+      value,
+      fallback,
+      type,
+      schema as z.ZodSchema<any>, // @ts-ignore
+      router as any
+    );
+
   return [parsed, setParam];
 }

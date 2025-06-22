@@ -1,5 +1,5 @@
-import fs from 'fs';
-import path from 'path';
+import fs from 'node:fs';
+import path from 'node:path';
 
 const PROJECT_ROOT = process.cwd();
 const TARGET_EXT = ['.ts'];
@@ -70,7 +70,7 @@ function cleanFile(filePath: string) {
 
   // Add runtime = edge if missing
   if (!/export\s+const\s+runtime\s*=/.test(content)) {
-    content = `export const runtime = 'edge';\n\n` + content;
+    content = `export const runtime = 'experimental-edge';\n\n` + content;
     changed = true;
   }
 

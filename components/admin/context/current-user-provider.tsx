@@ -1,74 +1,98 @@
-// ✅ FILE: components/admin/context/CurrentUserProvider.tsx
-
 'use client';
 
-import { createContext, useContext, useEffect, useState } from 'react';
-import { supabase } from '@/lib/supabaseClient.js';
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+  ReactNode,
+} from 'react';
+import { supabase } from '@/lib/supabase/client';
+
+type CurrentUser = {
+  id: string;
+  email: string;
+  name?: string;
+  avatar_url?: string;
+  role: string;
+  bio?: string;
+  plan?: string;
+};
 
 export type CurrentUserContextType = {
-  user: any | null;
-  email: string | null;
-  role: string | null;
+  user: CurrentUser | null;
   ready: boolean;
-  hasRole: (r: string[]) => boolean;
+  role: 'admin' | 'editor' | 'viewer' | 'owner';
+  hasRole: (roles: string[]) => boolean;
+  refetch: () => void;
 };
 
 export const CurrentUserContext = createContext<CurrentUserContextType>({
   user: null,
-  email: null,
-  role: null,
   ready: false,
+  role: 'viewer',
   hasRole: () => false,
+  refetch: () => {},
 });
 
-export function CurrentUserProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<any | null>(null);
-  const [role, setRole] = useState<string | null>(null);
+export function CurrentUserProvider({ children }: { children: ReactNode }) {
+  const [user, setUser] = useState<CurrentUser | null>(null);
   const [ready, setReady] = useState<boolean>(false);
 
-  useEffect(() => {
-    const load = async () => {
-      const { data: sessionData } = await supabase.auth.getSession();
-      const session = sessionData?.session;
-      const u = session?.user;
+  const load = async () => {
+    const { data: sessionData } = await supabase.auth.getSession();
+    const u = sessionData?.session?.user;
 
-      if (!u?.email) {
-        setUser(null);
-        setReady(true);
-        return;
-      }
-
-      setUser(u);
-
-      const { data: roleData, error } = await supabase
-        .from('user_roles')
-        .select('role')
-        .eq('user_email', u.email)
-        .order('updated_at', { ascending: false })
-        .limit(1)
-        .single();
-
-      const resolvedRole = roleData?.role || null;
-      setRole(resolvedRole);
+    if (!u?.id) {
+      setUser(null);
       setReady(true);
+      return;
+    }
 
-      console.log('✅ [Role loaded]', {
-        source: 'CurrentUserProvider',
-        role: resolvedRole,
-        email: u.email,
-      });
+    const { data: profile, error } = await supabase
+      .from('user_profiles')
+      .select('*')
+      .eq('user_id', u.id)
+      .single();
+
+    if (error) {
+      console.error('❌ Failed to fetch user_profiles:', error.message);
+      setUser(null);
+      setReady(true);
+      return;
+    }
+
+    const normalizedRole = (profile.role || 'viewer').toLowerCase() as CurrentUser['role'];
+
+    const user: CurrentUser = {
+      id: u.id,
+      email: u.email ?? profile.email,
+      name: profile.name ?? '',
+      avatar_url: profile.avatar_url ?? '',
+      role: normalizedRole,
+      bio: profile.bio ?? '',
+      plan: profile.plan ?? 'free',
     };
 
+    console.log('✅ [User loaded]', {
+      email: user.email,
+      role: user.role,
+      plan: user.plan,
+    });
+
+    setUser(user);
+    setReady(true);
+  };
+
+  useEffect(() => {
     load();
   }, []);
 
-  const hasRole = (roles: string[]) => {
-    if (!role) return false;
-    return roles.map((r) => r.toLowerCase()).includes(role.toLowerCase());
-  };
+  const hasRole = (roles: string[]) =>
+    user?.role ? roles.map((r) => r.toLowerCase()).includes(user.role.toLowerCase()) : false;
 
   return (
-    <CurrentUserContext.Provider value={{ user, email: user?.email || null, role, ready, hasRole }}>
+    <CurrentUserContext.Provider value={{ user, ready, role: user?.role as 'admin' | 'editor' | 'viewer' | 'owner' || 'viewer', hasRole, refetch: load }}>
       {children}
     </CurrentUserContext.Provider>
   );

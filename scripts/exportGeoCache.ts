@@ -1,7 +1,7 @@
 // scripts/exportGeoCache.ts
-import { supabase } from '@/lib/supabaseClient.js';
-import fs from 'fs';
-import path from 'path';
+import { supabase } from '@/admin/lib/supabaseClient';
+import fs from 'node:fs';
+import path from 'node:path';
 
 async function exportGeoCache() {
   const { data, error } = await supabase.from('geo_cache').select('city, state, lat, lon');

@@ -205,7 +205,7 @@ export default function ParamLabPage() {
           ))}
       </ul>
 
-      <QueryParamEditor schema={schema} slug={slug} />
+      <QueryParamEditor schema={schema as any} slug={slug} /> {/* @ts-ignore */}
     </div>
   );
 }

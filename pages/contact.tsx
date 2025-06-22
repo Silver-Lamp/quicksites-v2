@@ -1,16 +1,16 @@
 'use client';
-import { NextSeo } from 'next-seo';
-const seo = usePageSeo({
-  description: 'Contact page.',
-});
-
-import { usePageSeo } from '@/lib/usePageSeo';
 import { useState } from 'react';
+import { NextSeo } from 'next-seo';
+import { usePageSeo } from '@/lib/usePageSeo';
 
 export default function ContactPage() {
   const [email, setEmail] = useState('');
   const [msg, setMsg] = useState('');
   const [sent, setSent] = useState(false);
+
+  const seo = usePageSeo({
+    description: 'Contact page.',
+  });
 
   const submit = async () => {
     await fetch('/api/contact', {

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { createClient } from '@supabase/supabase-js';
-import { Input } from '../components/admin/ui/input.jsx';
-import TagFilterDropdown from '../components/admin/templates/TagFilterDropdown.jsx';
+import { Input } from '../components/ui/input';
+import TagFilterDropdown from '../components/admin/templates/tag-filter-dropdown.jsx';
 import {
   Table,
   TableBody,
@@ -9,7 +9,7 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from '../components/admin/ui/table.jsx';
+} from '../components/ui/table';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,

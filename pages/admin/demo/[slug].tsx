@@ -1,7 +1,7 @@
 import { GetServerSideProps } from 'next';
 import TemplatePreview from '@/components/admin/templates/template-preview';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { supabase } from '@/lib/supabaseClient.js';
+import { supabase } from '@/admin/lib/supabaseClient';
 
 export default function DemoTemplate({ data, slug }: { data: any; slug: string }) {
   if (!data) return <p className="p-6">No template found for: {slug}</p>;

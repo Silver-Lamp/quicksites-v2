@@ -3,7 +3,7 @@ import { useCurrentUser } from './useCurrentUser.js';
 import { useQueryParam } from './useQueryParam.js';
 import { useEffect, useState } from 'react';
 
-export async function useRedirectAfterLogin() {
+export function useRedirectAfterLogin() {
   const router = useRouter();
   const { user } = useCurrentUser();
   const redirectTo = useQueryParam('redirectTo', '/admin/dashboard');
@@ -24,7 +24,6 @@ export async function useRedirectAfterLogin() {
         }
 
         setIsRedirecting(true);
-
         setTimeout(() => {
           router.replace(redirectTo);
         }, 1000);
@@ -36,3 +35,4 @@ export async function useRedirectAfterLogin() {
 
   return { redirectTo, isRedirecting };
 }
+

@@ -3,7 +3,7 @@
 import { useEffect } from 'react';
 import { X } from 'lucide-react';
 import confetti from 'canvas-confetti';
-import { logEvent } from '../../utils/logEvent.js';
+import { logEvent } from 'admin/utils/logEvent.js';
 
 export type CelebrationModalProps = {
   type: 'badge' | 'checkin' | 'poster';

@@ -21,6 +21,6 @@
       "@/lib/*": ["lib/*"]
     }
   },
-  "include": ["**/*"],
+  "include": ["**/*", "../lib/og/renderOgImage.ts"],
   "exclude": ["node_modules"]
 }

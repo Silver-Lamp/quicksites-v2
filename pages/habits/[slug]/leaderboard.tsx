@@ -11,7 +11,7 @@ export default function HabitLeaderboard() {
   useEffect(() => {
     if (!slug) return;
     fetch('/api/habit-leaderboard?slug=' + slug)
-      .then((res) => json())
+      .then((res) => res.json())
       .then(setEntries);
   }, [slug]);
 

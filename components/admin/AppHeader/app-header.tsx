@@ -4,10 +4,10 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
-import SafeLink from '../ui/SafeLink';
-import { AvatarMenu } from './AvatarMenu';
-import { MobileDrawer } from './MobileDrawer';
-import { NavSections } from './NavSections';
+import SafeLink from '../../ui/safe-link';
+import { AvatarMenu } from './avatar-menu';
+import { MobileDrawer } from './mobile-drawer';
+import { NavSections } from './nav-sections';
 
 export default function AppHeader() {
   const { user, role, roleSource, ready } = useCurrentUser();
@@ -45,7 +45,7 @@ export default function AppHeader() {
               <div className="flex items-center space-x-4 ml-4">
                 <AvatarMenu
                   email={email}
-                  avatarUrl={user?.user_metadata?.avatar_url}
+                  avatarUrl={user?.avatar_url || ''}
                   role={role || ''}
                   source={roleSource}
                   onLogout={logout}

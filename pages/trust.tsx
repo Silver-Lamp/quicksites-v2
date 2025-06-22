@@ -1,3 +1,6 @@
+'use client';
+import Link from 'next/link';
+
 export default function TrustPage() {
   return (
     <div className="max-w-3xl mx-auto p-6 text-white">
@@ -8,22 +11,22 @@ export default function TrustPage() {
       <ul className="list-disc pl-6 mb-6 space-y-2 text-zinc-300">
         <li>
           📦 All published site previews are visible via{' '}
-          <a href="/transparency" className="underline">
+          <Link href="/transparency" className="underline">
             /transparency
-          </a>
+          </Link>
         </li>
         <li>🔐 Screenshots and claims are logged, hashed, and RLS-protected</li>
         <li>
           🧾 Anyone can export audit logs from{' '}
-          <a href="/admin/audit" className="underline">
+          <Link href="/admin/audit" className="underline">
             /admin/audit
-          </a>
+          </Link>
         </li>
         <li>
           📜 Read our{' '}
-          <a href="/security" className="underline">
+          <Link href="/security" className="underline">
             security practices
-          </a>
+          </Link>
         </li>
       </ul>
       <p className="text-sm text-zinc-500">

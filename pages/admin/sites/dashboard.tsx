@@ -4,7 +4,7 @@ import { useEffect } from 'react';
 import { json } from '@/lib/api/json';
 import Page from '@/components/layout/page';
 import Dashboard from '@/components/admin/dashboard-grid-draggable';
-import { supabase } from '@/lib/supabaseClient.js';
+import { supabase } from '@/admin/lib/supabaseClient';
 import Link from 'next/link';
 import AuthGuard from '@/components/admin/auth-guard';
 
@@ -19,7 +19,7 @@ export default function DashboardPage() {
         let geo: any = {};
         try {
           const res = await fetch('https://ipapi.co/json/');
-          geo = await json();
+          geo = await res.json();
         } catch (e) {
           console.warn('🌍❌ [Sites] [Dashboard] [useEffect] Geo lookup failed', { e });
         }

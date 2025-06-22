@@ -1,4 +1,4 @@
-// TemplateJsonEditor.tsx (collapsible + editable toggle)
+// ✅ FILE: components/admin/templates/template-json-editor.tsx (fixed quotes)
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { ChevronRight, ChevronDown } from 'lucide-react';
@@ -68,7 +68,7 @@ export default function TemplateJsonEditor({ rawJson, setRawJson }: TemplateJson
             <div className="ml-4">
               {Object.entries(value).map(([k, v]) => (
                 <div key={k}>
-                  <span className="text-green-400">"{k}"</span>: {renderValue(v, `${path}.${k}`)}
+                  <span className="text-green-400">&quot;{k}&quot;</span>: {renderValue(v, `${path}.${k}`)}
                 </div>
               ))}
             </div>
@@ -77,7 +77,8 @@ export default function TemplateJsonEditor({ rawJson, setRawJson }: TemplateJson
       );
     }
 
-    if (type === 'string') return <span className="text-emerald-400">"{value as string}"</span>;
+    if (type === 'string')
+      return <span className="text-emerald-400">&quot;{value as string}&quot;</span>;
     if (type === 'number') return <span className="text-cyan-400">{value as number}</span>;
     if (type === 'boolean')
       return <span className="text-orange-400">{(value as boolean).toString()}</span>;

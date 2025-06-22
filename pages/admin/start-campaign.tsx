@@ -2,8 +2,8 @@
 import { useState } from 'react';
 import { useRouter } from 'next/router';
 import dayjs from 'dayjs';
-import AdminLayout from '@/components/layout/AdminLayout.js';
-import { useCampaignForm } from '@/hooks/useCampaignForm.js';
+import AdminLayout from '@/components/layout/admin-layout';
+import { useCampaignForm } from '@/hooks/useCampaignForm';
 
 export default function StartCampaign() {
   const router = useRouter();

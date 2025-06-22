@@ -1,16 +1,17 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { json } from '@/lib/api/json';
+import Link from 'next/link';
 
 export default function MetricsPage() {
   const [stats, setStats] = useState<any>(null);
 
   useEffect(() => {
     fetch('/api/metrics')
-      .then((res) => json())
+      .then((res) => json(res))
       .then(setStats);
   }, []);
-
+  
   return (
     <div className="p-6 text-white max-w-4xl mx-auto">
       <h1 className="text-3xl font-bold mb-6">📊 QuickSites Metrics</h1>
@@ -39,9 +40,9 @@ export default function MetricsPage() {
           </div>
           <p className="text-sm text-zinc-500 text-center">
             Data auto-refreshes daily. For transparency, visit{' '}
-            <a href="/announce" className="underline">
+            <Link href="/announce" className="underline">
               /announce
-            </a>
+            </Link>
             .
           </p>
         </>

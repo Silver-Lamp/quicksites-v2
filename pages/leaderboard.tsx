@@ -10,7 +10,7 @@ export default function WeeklyLeaderboard() {
 
   useEffect(() => {
     fetch('/api/weekly-leaderboard')
-      .then((res) => json())
+      .then((res) => res.json())
       .then(setCampaigns);
   }, []);
 

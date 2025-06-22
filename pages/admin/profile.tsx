@@ -1,10 +1,10 @@
 'use client';
 
-import { Button } from '@/components/ui/Button.js';
-import { Input } from '@/components/ui/input.js';
-import { Label } from '@/components/ui/label.js';
-import { useCurrentUser } from '@/hooks/useCurrentUser.js';
-import { supabase } from '@/admin/lib/supabaseClient.js';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { useCurrentUser } from '@/hooks/useCurrentUser';
+import { supabase } from '@/admin/lib/supabaseClient';
 import { formatDistanceToNow } from 'date-fns';
 import { format } from 'date-fns-tz';
 import { useEffect, useState } from 'react';
@@ -32,9 +32,9 @@ export default function ProfilePage() {
   }, []);
 
   const { user } = useCurrentUser();
-  const [avatarUrl, setAvatarUrl] = useState(user?.user_metadata?.avatar_url || '');
-  const [displayName, setDisplayName] = useState(user?.user_metadata?.name || '');
-  const [bio, setBio] = useState(user?.user_metadata?.bio || '');
+  const [avatarUrl, setAvatarUrl] = useState(user?.avatar_url || '');
+  const [displayName, setDisplayName] = useState(user?.name || '');
+  const [bio, setBio] = useState(user?.bio || '');
 
   const handleSave = async () => {
     const { error } = await supabase.auth.updateUser({

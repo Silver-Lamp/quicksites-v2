@@ -1,17 +1,17 @@
 'use client';
-import { NextSeo } from 'next-seo';
-const seo = usePageSeo({
-  description: 'Early access page.',
-});
-
-import { usePageSeo } from '@/lib/usePageSeo';
 import { useState } from 'react';
+import { NextSeo } from 'next-seo';
+import { usePageSeo } from '@/lib/usePageSeo';
 
 export default function EarlyAccessPage() {
   const [email, setEmail] = useState('');
   const [name, setName] = useState('');
   const [code, setCode] = useState('');
   const [submitted, setSubmitted] = useState(false);
+
+  const seo = usePageSeo({
+    description: 'Early access page.',
+  });
 
   const submit = async () => {
     await fetch('/api/early-access', {
@@ -56,7 +56,7 @@ export default function EarlyAccessPage() {
           </>
         ) : (
           <p className="text-green-400 font-medium mt-6">
-            ✅ Request received. We'll be in touch soon!
+            ✅ Request received. We&apos;ll be in touch soon!
           </p>
         )}
       </div>

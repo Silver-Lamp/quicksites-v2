@@ -1,5 +1,5 @@
-import fs from 'fs';
-import path from 'path';
+import fs from 'node:fs';
+import path from 'node:path';
 import puppeteer from 'puppeteer';
 
 const log = fs.readFileSync('./reports/security.log', 'utf-8');

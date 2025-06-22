@@ -1,7 +1,10 @@
+'use client';
+
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
-import { supabase } from '@/lib/supabaseClient.js';
+import { supabase } from '@/admin/lib/supabaseClient';
 import QRCode from 'react-qr-code';
+import Image from 'next/image';
 
 export default function PrintCard() {
   const router = useRouter();
@@ -11,6 +14,7 @@ export default function PrintCard() {
 
   useEffect(() => {
     if (!id) return;
+
     supabase
       .from('leads')
       .select('*, domains(domain)')
@@ -32,18 +36,25 @@ export default function PrintCard() {
 
   return lead ? (
     <div className="p-6 max-w-lg mx-auto text-black bg-white print:bg-white print:text-black">
-      <h1 className="text-2xl font-bold mb-4">You've Got a Site!</h1>
+      <h1 className="text-2xl font-bold mb-4">You&apos;ve Got a Site!</h1>
       <p className="mb-2">
         Hey <strong>{lead.business_name}</strong>,
       </p>
-      <p className="mb-2">We built you a website and it's ready to preview or claim at:</p>
+      <p className="mb-2">
+        We built you a website and it&apos;s ready to preview or claim at:
+      </p>
       <p className="mb-2 text-blue-600">{claimUrl}</p>
 
-      <img
-        src={`/screenshots/${lead.domains?.domain || 'default'}.png`}
-        alt="Site preview"
-        className="mt-4 w-full border rounded"
-      />
+      <div className="mt-4 w-full border rounded overflow-hidden">
+        <Image
+          src={`/screenshots/${lead.domains?.domain || 'default'}.png`}
+          alt="Site preview"
+          width={800}
+          height={450}
+          className="w-full h-auto"
+          priority
+        />
+      </div>
 
       <div className="mt-6 text-center">
         <p className="text-sm mb-1">Scan this to preview or claim:</p>

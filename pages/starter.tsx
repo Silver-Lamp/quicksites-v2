@@ -129,7 +129,7 @@ export default function StarterPage() {
         return;
       }
 
-      const site = await json();
+      const site = await res.json();
       const slugToUse = site.slug ?? site.site_id;
       router.push(`/edit/${slugToUse}`);
     } catch (err) {

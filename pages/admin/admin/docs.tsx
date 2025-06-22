@@ -1,5 +1,6 @@
 import fs from 'fs';
 import path from 'path';
+import React from 'react';
 import { useEffect, useState } from 'react';
 
 export default function DocsPage() {

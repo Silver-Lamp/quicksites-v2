@@ -12,7 +12,7 @@ export default function TransparencyViewer() {
 
   useEffect(() => {
     fetch('/api/public-sites')
-      .then((res) => json())
+      .then((res) => res.json())
       .then(setSites);
   }, []);
 

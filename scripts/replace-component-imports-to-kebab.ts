@@ -1,5 +1,5 @@
-import fs from 'fs';
-import path from 'path';
+import fs from 'node:fs';
+import path from 'node:path';
 
 const PROJECT_ROOT = path.resolve('.');
 const FILE_EXTS = ['.ts', '.tsx', '.js', '.jsx'];

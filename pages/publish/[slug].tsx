@@ -13,7 +13,7 @@ export default function PublishPage() {
   useEffect(() => {
     if (!slug) return;
     fetch(`/api/template?domain=${slug}`)
-      .then((res) => json())
+      .then((res) => res.json())
       .then((d) => setTemplate(d?.data));
   }, [slug]);
 

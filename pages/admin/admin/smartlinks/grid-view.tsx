@@ -4,11 +4,11 @@ import { useRouter } from 'next/navigation.js';
 import { useMemo, useState } from 'react';
 import { parseISO, isAfter, isBefore } from 'date-fns';
 import { motion, AnimatePresence } from 'framer-motion';
-import SmartLinkGrid from '../../../../components/admin/SmartLinkGrid.jsx';
-import SmartLinkGallery from '../../../../components/admin/SmartLinkGallery.jsx';
-import { SmartLinkProvider } from '../../../../components/admin/SmartLinkProvider.jsx';
-import { mockSmartLinks } from '../../../../tests/mocks/mocks/mockSmartLinks.jsx';
-import type { SmartLinkItem } from '../../../../types/SmartLinkItem.jsx';
+import SmartLinkGrid from '@/components/admin/smart-link-grid';
+import SmartLinkGallery from '@/components/admin/smart-link-gallery';
+import { SmartLinkProvider } from '@/components/admin/smart-link-provider';
+import { mockSmartLinks } from '@/tests/mocks/mocks/mockSmartLinks';
+import type { SmartLinkItem } from '@/types/SmartLinkItem';
 
 export default function SmartLinkGridPage() {
   const items: SmartLinkItem[] = mockSmartLinks;

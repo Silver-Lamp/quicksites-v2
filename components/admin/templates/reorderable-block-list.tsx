@@ -14,7 +14,7 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { useState } from 'react';
-import TemplatePreview from './TemplatePreview';
+import TemplatePreview from './template-preview';
 import { ReorderableBlockListProps } from '@/types/blocks';
 
 // type ReorderableBlockListProps = {

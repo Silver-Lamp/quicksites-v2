@@ -7,7 +7,7 @@ export default function AuditLog() {
 
   useEffect(() => {
     fetch('/api/audit-logs')
-      .then((res) => json())
+      .then((res) => res.json())
       .then(setLogs);
   }, []);
 

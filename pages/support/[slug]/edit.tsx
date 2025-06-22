@@ -11,7 +11,7 @@ export default function EditCampaign() {
   useEffect(() => {
     if (!query.slug) return;
     fetch('/api/campaign?slug=' + query.slug)
-      .then((res) => json())
+      .then((res) => res.json())
       .then(setData);
   }, [query.slug]);
 
@@ -21,7 +21,7 @@ export default function EditCampaign() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data),
     });
-    const json = await json();
+    const json = await res.json();
     setMessage(json.error ? 'Error: ' + json.error : '✅ Updated!');
   };
 

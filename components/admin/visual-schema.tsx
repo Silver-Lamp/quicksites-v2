@@ -63,7 +63,7 @@ function SchemaField({ name, schema }: { name: string; schema: ZodTypeAny }) {
         onClick={() => nestedSchema && setExpanded(!expanded)}
       >
         <strong>{name}</strong>: {renderType(schema)}
-        <span className="ml-2 text-gray-500">// e.g., {JSON.stringify(ExampleValue(schema))}</span>
+        <span className="ml-2 text-gray-500">e.g., {JSON.stringify(ExampleValue(schema))}</span>
         {defaultValue !== undefined && (
           <span className="ml-2 text-blue-500">(default: {JSON.stringify(defaultValue)})</span>
         )}

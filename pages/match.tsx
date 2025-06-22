@@ -8,7 +8,7 @@ export default function MatchPage() {
 
   const search = async () => {
     const res = await fetch('/api/match?tags=' + encodeURIComponent(tags));
-    const json = await json();
+    const json = await res.json();
     setResults(json);
   };
 

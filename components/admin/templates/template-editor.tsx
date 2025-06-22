@@ -2,19 +2,20 @@
 import { useEffect, useState } from 'react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import TemplateSettingsPanel from './TemplateSettingsPanel';
-import TemplatePageEditor from './TemplatePageEditor';
-import TemplateJsonEditor from './TemplateJsonEditor';
-import TemplateHistory from './TemplateHistory';
-import TemplatePreview from './TemplatePreview';
-import TemplateActionToolbar from './TemplateActionToolbar';
-import TemplatePublishModal from './TemplatePublishModal';
-import DevicePreviewWrapper from './DevicePreviewWrapper';
+import { TemplateEditorBranding } from './template-editor.branding';
+import TemplateSettingsPanel from './template-settings-panel';
+import TemplatePageEditor from './template-page-editor';
+import TemplateJsonEditor from './template-json-editor';
+import TemplateHistory from './template-history';
+import TemplatePreview from './template-preview';
+import TemplateActionToolbar from './template-action-toolbar';
+import TemplatePublishModal from './template-publish-modal';
+import DevicePreviewWrapper from './device-preview-wrapper';
 import { useAutosaveTemplate } from '@/hooks/useAutosaveTemplate';
 import { Button } from '@/components/ui/button';
 import { toast } from 'react-hot-toast';
-import ImageUploader from '../admin/ImageUploader';
-import TemplateImageGallery from '../admin/TemplateImageGallery';
+import ImageUploader from '../admin/image-uploader';
+import TemplateImageGallery from '../admin/template-image-gallery';
 import type { Template } from '@/types/template';
 import type { Block } from '@/types/blocks';
 import { normalizeTemplate } from '@/admin/utils/normalizeTemplate';
@@ -157,6 +158,12 @@ export default function TemplateEditor({ templateName }: { templateName: string 
             <div className="grid md:grid-cols-2 gap-6 pt-4">
               <div className="space-y-4">
                 <TemplateSettingsPanel template={template} onChange={setTemplate} />
+                <TemplateEditorBranding
+                  selectedProfileId={template.brand || ''}
+                  onSelectProfileId={(selectedId) =>
+                    setTemplate((prev) => ({ ...prev, brand: selectedId || '' }))
+                  }
+                />
                 <TemplatePageEditor
                   template={template}
                   onChange={setTemplate}

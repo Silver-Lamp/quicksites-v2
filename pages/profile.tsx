@@ -11,7 +11,7 @@ export default function Profile() {
   useEffect(() => {
     if (user) {
       fetch(`/api/reward-points?user_id=${user.id}`)
-        .then((res) => json())
+        .then((res) => res.json())
         .then((d) => setPoints(d.total || 0));
       setRefLink(`${window.location.origin}/?ref=${user.id}`);
     }

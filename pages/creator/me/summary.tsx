@@ -10,7 +10,7 @@ export default function SummaryPage() {
   useEffect(() => {
     if (!user) return;
     fetch('/api/feedback-summary?user_id=' + user.id)
-      .then((res) => json())
+      .then((res) => res.json())
       .then(setSummary);
   }, [user]);
 

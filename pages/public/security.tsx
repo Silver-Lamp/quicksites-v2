@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useState } from 'react';
-import { supabase } from '@/lib/supabaseClient'; // adjust path if needed
+import { supabase } from '@/admin/lib/supabaseClient';
 
 export default function PublicSecurityReports() {
   const [files, setFiles] = useState<string[]>([]);

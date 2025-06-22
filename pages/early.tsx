@@ -36,7 +36,7 @@ export default function EarlyAccess() {
           </button>
         </>
       ) : (
-        <p className="text-green-400 font-medium">You're on the list!</p>
+        <p className="text-green-400 font-medium">You&apos;re on the list!</p>
       )}
     </div>
   );

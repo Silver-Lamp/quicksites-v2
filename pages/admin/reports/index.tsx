@@ -19,7 +19,7 @@ export default function ReportsDashboardExtended() {
       .then(setLog);
 
     fetch('/reports/analytics/index.json')
-      .then((res) => json())
+      .then((res) => res.json())
       .then((files) => {
         const csvs = files.filter((f: string) => f.endsWith('.csv')).length;
         const pdfs = files.filter((f: string) => f.endsWith('.pdf')).length;

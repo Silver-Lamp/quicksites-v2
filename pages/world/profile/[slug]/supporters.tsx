@@ -11,7 +11,7 @@ export default function SupportersPage() {
   useEffect(() => {
     if (!slug) return;
     fetch('/api/supporters?handle=' + slug)
-      .then((res) => json())
+      .then((res) => res.json())
       .then(setSupporters);
   }, [slug]);
 

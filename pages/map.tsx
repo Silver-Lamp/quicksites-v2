@@ -9,7 +9,7 @@ export default function CheckinMapPage() {
 
   useEffect(() => {
     fetch('/api/checkin-map')
-      .then((res) => json())
+      .then((res) => res.json())
       .then(setPoints);
   }, []);
 

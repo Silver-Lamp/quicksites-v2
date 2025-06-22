@@ -1,9 +1,10 @@
-import { useSmartLinkPersisted } from './useSmartLinkPersisted.js';
+import { useSmartLinkPersisted } from './use-smart-link-persisted';
 import type { LinkTheme } from '@/admin/lib/links/theme.js';
 import { useEffect, useState } from 'react';
 
 export default function SmartLinkDebug() {
   const [visible, setVisible] = useState(false);
+  const { theme, query, setTheme, setQuery } = useSmartLinkPersisted(); // ← moved up
 
   useEffect(() => {
     const toggle = (e: KeyboardEvent) => {
@@ -32,7 +33,6 @@ export default function SmartLinkDebug() {
   }, [visible]);
 
   if (!visible) return null;
-  const { theme, query, setTheme, setQuery } = useSmartLinkPersisted();
 
   return (
     <div className="fixed bottom-4 right-4 bg-zinc-900 text-white p-4 rounded shadow-lg text-sm space-y-2">
@@ -77,3 +77,4 @@ export default function SmartLinkDebug() {
     </div>
   );
 }
+

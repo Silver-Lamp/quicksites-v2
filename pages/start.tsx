@@ -20,7 +20,7 @@ export default function StartPage() {
       () => setLoc(null)
     );
     fetch('/api/habit-templates')
-      .then((res) => json())
+      .then((_res) => _res.json())
       .then(setTemplates);
   }, []);
 
@@ -60,7 +60,7 @@ export default function StartPage() {
     <div className="text-white p-6 max-w-xl mx-auto">
       <h1 className="text-2xl font-bold mb-4">👋 Welcome to Your AR Habit Tracker</h1>
       <p className="text-zinc-400 mb-4">
-        Choose a habit to start tracking, and we'll place it in your world:
+        Choose a habit to start tracking, and we&apos;ll place it in your world:
       </p>
       <ul className="space-y-3">
         {templates.map((t: any) => (

@@ -1,11 +1,14 @@
 // ✅ FILE: hooks/useCurrentUser.tsx
 
 import { useContext, useEffect, useState } from 'react';
-import { CurrentUserContextType } from '../components/admin/context/CurrentUserProvider.jsx';
-import { CurrentUserContext } from '../components/admin/context/CurrentUserProvider.jsx';
-import { supabase } from '@/lib/supabaseClient.js';
+import {
+  CurrentUserContext,
+  CurrentUserContextType,
+} from '@/components/admin/context/current-user-provider';
+import { supabase } from '@/admin/lib/supabaseClient';
 
 export function useCurrentUser(): CurrentUserContextType & {
+  role: string;
   roleSource: string;
   isLoading: boolean;
 } {
@@ -17,9 +20,9 @@ export function useCurrentUser(): CurrentUserContextType & {
 
   useEffect(() => {
     const fetchRole = async () => {
-      if (!context.email) return;
+      if (!context.user?.email) return;
 
-      const cacheKey = `cached-role-${context.email}`;
+      const cacheKey = `cached-role-${context.user.email}`;
 
       // Check localStorage first
       const cached = localStorage.getItem(cacheKey);
@@ -35,7 +38,7 @@ export function useCurrentUser(): CurrentUserContextType & {
       const { data, error } = await supabase
         .from('user_roles')
         .select('new_role')
-        .eq('user_email', context.email)
+        .eq('user_email', context.user.email)
         .order('updated_at', { ascending: false })
         .limit(1)
         .single();
@@ -53,11 +56,11 @@ export function useCurrentUser(): CurrentUserContextType & {
     };
 
     fetchRole();
-  }, [context.email]);
+  }, [context.user?.email]);
 
   return {
     ...context,
-    role: fetchedRole || context.role,
+    role: (fetchedRole as 'viewer' | 'admin' | 'editor' | 'owner') || context.user?.role || 'viewer',
     isLoading,
     roleSource,
   };

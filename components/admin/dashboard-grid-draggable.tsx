@@ -3,9 +3,9 @@
 'use client';
 
 import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
-import { AddBlockMenu } from './AddBlockMenu';
+import { AddBlockMenu } from './add-block-menu';
 import { useState } from 'react';
-import BlockSettingsModal from '@/components/admin/block-settings-modal';
+import BlockSettingsModal from './block-settings-modal';
 
 const ALL_BLOCKS = [
   { id: 'activity', title: 'Activity' },

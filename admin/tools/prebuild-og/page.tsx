@@ -1,9 +1,6 @@
-/* app/admin/tools/prebuild-og/page.tsx */
-
 'use client';
 
 import { useEffect, useState } from 'react';
-import { json } from '@/lib/api/json';
 import { Button } from '@/components/ui/button';
 
 export default function PrebuildOGPage() {
@@ -14,15 +11,15 @@ export default function PrebuildOGPage() {
 
   const fetchSlugs = async () => {
     const res = await fetch('/api/compare-slugs');
-    const json = await json();
-    setSlugs(json.slugs);
-    setResults(Object.fromEntries(json.slugs.map((slug: string) => [slug, 'pending'])));
+    const data = await res.json();
+    setSlugs(data.slugs);
+    setResults(Object.fromEntries(data.slugs.map((slug: string) => [slug, 'pending'])));
   };
 
   const fetchStorageInfo = async () => {
     const res = await fetch('/api/list-og-zips');
-    const json = await json();
-    setTotalMB(json.totalMB || '0.0');
+    const data = await res.json();
+    setTotalMB(data.totalMB || '0.0');
   };
 
   const triggerBuilds = async () => {
@@ -55,7 +52,7 @@ export default function PrebuildOGPage() {
         <div className="flex flex-col gap-2">
           <h1 className="text-2xl font-bold">
             Prebuild OG Images{' '}
-            {parseFloat(totalMB) > 100 ? (
+            {overQuota ? (
               <span className="text-sm text-red-500 ml-2">({totalMB} MB used – over quota)</span>
             ) : (
               <span className="text-sm text-muted-foreground ml-2">({totalMB} MB used)</span>
@@ -71,7 +68,9 @@ export default function PrebuildOGPage() {
         <Button
           variant="outline"
           onClick={() => {
-            const zipUrl = `/api/download-og-zip?slugs=${encodeURIComponent(slugs.filter((s) => results[s] === 'success').join(','))}`;
+            const zipUrl = `/api/download-og-zip?slugs=${encodeURIComponent(
+              slugs.filter((s) => results[s] === 'success').join(',')
+            )}`;
             window.open(zipUrl, '_blank');
           }}
           disabled={!slugs.some((s) => results[s] === 'success')}
@@ -79,6 +78,7 @@ export default function PrebuildOGPage() {
           Download All as ZIP
         </Button>
       </div>
+
       {overQuota && (
         <div className="text-sm text-yellow-600 bg-yellow-100 border border-yellow-300 rounded px-4 py-2">
           Storage limit exceeded. Please delete old exports before generating new ones.
@@ -88,6 +88,7 @@ export default function PrebuildOGPage() {
       <Button onClick={triggerBuilds} disabled={loading || slugs.length === 0 || overQuota}>
         {loading ? 'Generating...' : 'Start Prebuild'}
       </Button>
+
       <ul className="text-sm space-y-4">
         {slugs.map((slug) => (
           <li key={slug} className="border p-4 rounded shadow-sm">

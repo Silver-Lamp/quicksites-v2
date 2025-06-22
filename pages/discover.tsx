@@ -8,7 +8,7 @@ export default function DiscoverPage() {
 
   useEffect(() => {
     fetch('/api/discover')
-      .then((res) => json())
+      .then((res) => res.json())
       .then(setProfiles);
   }, []);
 

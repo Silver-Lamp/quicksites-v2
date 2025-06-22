@@ -5,7 +5,7 @@ import { json } from '@/lib/api/json';
 import { createClient } from '@supabase/supabase-js';
 
 
-export const runtime = 'edge';
+export const runtime = 'experimental-edge';
 
 export async function POST(req: NextRequest) {
   const { name } = await await req.json();

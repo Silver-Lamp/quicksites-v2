@@ -2,7 +2,7 @@
 import { GetServerSideProps } from 'next';
 import Head from 'next/head';
 import dynamic from 'next/dynamic';
-import { supabase } from '@/lib/supabaseClient.js';
+import { supabase } from '@/admin/lib/supabaseClient';
 import { createClient } from '@supabase/supabase-js';
 
 // const PlaygroundFrame = dynamic(() => import('@/components/admin/zod-playground/PlaygroundFrame'), { ssr: false });

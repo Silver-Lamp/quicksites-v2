@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { FiGrid, FiFileText, FiGlobe, FiUsers, FiMenu } from 'react-icons/fi';
 import { useState, useEffect } from 'react';
-import { supabase } from '@/lib/supabaseClient.js';
+import { supabase } from '@/admin/lib/supabaseClient';
 
 const allTabs = [
   { label: 'Dashboard', href: '/admin/sites/dashboard', icon: FiGrid },

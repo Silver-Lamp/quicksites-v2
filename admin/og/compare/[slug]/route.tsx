@@ -1,7 +1,8 @@
 /* app/og/compare/[slug]/route.tsx */
 
 import { ImageResponse } from 'next/og';
-export const runtime = 'edge';
+import { NextRequest } from 'next/server';
+export const runtime = 'experimental-edge';
 
 export async function GET(req: NextRequest, { params }: { params: { slug: string } }) {
   const [left, right] = decodeURIComponent(params.slug).split('-vs-');

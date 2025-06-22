@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { supabase } from '../lib/supabaseClient.js';
+import { supabase } from '../admin/lib/supabaseClient';
 
 type Filter = { column: keyof any; operator: 'eq' | 'neq'; value: any };
 type Sort = { column: keyof any; ascending?: boolean };

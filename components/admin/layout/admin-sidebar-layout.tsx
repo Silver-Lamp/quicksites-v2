@@ -52,7 +52,7 @@ export default function AdminSidebarLayout({ children }: { children: ReactNode }
           label: 'Leaderboard',
           path: '/leaderboard',
           icon: '🏆',
-          roles: ['admin', 'viewer'],
+          roles: ['admin', 'viewer', 'owner'],
         },
       ],
     },

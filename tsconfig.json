@@ -1,15 +1,92 @@
 {
   "extends": "./tsconfig.base.json",
-  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx"],
-  "exclude": ["node_modules"],
+  "include": [
+    "**/*.ts",
+    "**/*.tsx",
+    "next-env.d.ts",
+    "types/**/*.d.ts",
+    ".next/types/**/*.ts", 
+    "app/api/print-labels-pdf",
+    "app/api/blocks-by-handle",
+    "app/api/campaign",
+    "app/api/campaign-analytics",
+    "app/api/campaigns",
+    "app/api/checkin-map",
+    "app/api/checkins-trend",
+    "app/api/cheer",
+    "app/api/claim-campaign",
+    "app/api/claim-site",
+    "app/api/clone-block",
+    "app/api/create-block",
+    "app/api/create-campaign",
+    "app/api/delete-campaign",
+    "app/api/deploy-webhook",
+    "app/api/digest-log",
+    "app/api/discover",
+    "app/api/feedback-history",
+    "app/api/geocode",
+    "app/api/feedback-summary",
+    "app/api/habit-leaderboard",
+    "app/api/habit-templates",
+    "app/api/log-click",
+    "app/api/ip",
+    "app/api/login",
+    "app/api/metrics",
+    "app/api/match",
+    "app/api/nav-badges",
+    "app/api/my-campaigns",
+    "app/api/nav",
+    "app/api/nearby-blocks",
+    "app/api/notifications",
+    "app/api/notify-creator",
+    "app/api/public-profile",
+    "app/api/publish-site",
+    "app/api/qr-poster",
+    "app/api/recent-feedback",
+    "app/api/remix-dag",
+    "app/api/reflect",
+    "app/api/request-support",
+    "app/api/reverse-geocode",
+    "app/api/resend-welcome-email",
+    "app/api/send-lead-email",
+    "app/api/sitemap-index.xml",
+    "app/api/send-thanks",
+    "app/api/sitemap.hreflang.xml",
+    "app/api/sitemap.xml.ts",
+    "app/api/og/snapshot",
+    "app/api/og/snapshot/preview",
+    "app/api/og/snapshot/preview/route",
+    "app/api/og/snapshot/route", "app/api/embed/[slug]", "app/api/logs/checkins.csv", "app/api/logs/checkins", "app/api/logs/feedback.csv", "app/api/logs/feedback", "app/api/og-image/[slug]", "app/api/og-image/domain", "app/api/reports/download", "app/api/template-api/index", "app/api/templates/history.ts",
+  ],
+  "types": [
+    "next",
+    "node"
+  ],
+  "typeRoots": [
+    "./types",
+    "./node_modules/@types"
+  ],
+  "exclude": [
+    "node_modules"
+  ],
   "compilerOptions": {
     "baseUrl": ".",
     "paths": {
-      "@/*": ["./*"],
-      "@/admin/*": ["admin/*"],
-      "@/components/*": ["components/*"],
-      "@/pages/*": ["pages/*"],
-      "@/lib/*": ["lib/*"]
+      "@/*": [
+        "./*"
+      ],
+      "@/admin/*": [
+        "admin/*"
+      ],
+      "@/components/*": [
+        "components/*"
+      ],
+      "@/pages/*": [
+        "pages/*"
+      ],
+      "@/lib/*": [
+        "lib/*"
+      ]
     },
     "jsx": "preserve",
     "outDir": ".lint-tmp",
@@ -22,6 +99,15 @@
     "maxNodeModuleJsDepth": 2,
     "tsBuildInfoFile": "./.tsbuildinfo",
     "skipLibCheck": true,
-    "types": ["next", "next/image-types/global", "node"]
+    "types": [
+      "next",
+      "next/image-types/global",
+      "node"
+    ],
+    "plugins": [
+      {
+        "name": "next"
+      }
+    ]
   }
 }

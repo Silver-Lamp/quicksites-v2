@@ -9,7 +9,7 @@ export default function SupportDirectory() {
 
   useEffect(() => {
     fetch('/api/campaigns')
-      .then((res) => json())
+      .then((res) => res.json())
       .then(setCampaigns);
   }, []);
 

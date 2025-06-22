@@ -32,7 +32,7 @@ export default function NewTemplatePage() {
     const { copy } = router.query;
     if (copy && typeof copy === 'string') {
       fetch(`/api/templates/${copy}`)
-        .then((res) => json())
+        .then((res) => res.json())
         .then((data) => {
           setTemplate({
             template_name: `${data.template_name}-copy`,
@@ -68,7 +68,7 @@ export default function NewTemplatePage() {
       if (res.ok) {
         router.push('/admin/templates');
       } else {
-        const err = await json();
+        const err = await res.json();
         alert('Error: ' + err.error);
       }
     } catch (e: any) {

@@ -1,11 +1,13 @@
+'use client';
+
 import { useEffect, useState } from 'react';
-import { supabase } from '@/lib/supabaseClient.js';
+import { supabase } from '@/admin/lib/supabaseClient';
 import { useRouter } from 'next/router';
 import dayjs from 'dayjs';
+import Image from 'next/image';
 
 export default function ViewerDashboard() {
   const [domains, setDomains] = useState<any[]>([]);
-  const [campaigns, setCampaigns] = useState<any[]>([]);
   const [email, setEmail] = useState('');
   const router = useRouter();
 
@@ -23,12 +25,7 @@ export default function ViewerDashboard() {
       .select('*, campaigns(*)')
       .order('date_created', { ascending: false })
       .then(({ data }) => setDomains(data || []));
-
-    supabase
-      .from('campaigns')
-      .select('*')
-      .then(({ data }) => setCampaigns(data || []));
-  }, []);
+  }, [router]);
 
   const logClick = async (domain_id: string, action_type: string) => {
     await supabase.from('user_action_logs').insert([
@@ -76,9 +73,11 @@ export default function ViewerDashboard() {
                 )}
               </td>
               <td className="px-4 py-2">
-                <img
+                <Image
                   src={d.screenshot_url}
                   alt="screenshot"
+                  width={128}
+                  height={72}
                   className="w-32 border rounded cursor-pointer"
                   onClick={() => logClick(d.id, 'click_preview')}
                 />
@@ -94,7 +93,7 @@ export default function ViewerDashboard() {
               </td>
             </tr>
           ))}
-          {domains.map((d, i) => {
+          {domains.map((d, _i) => {
             const alt = d.campaigns?.alt_domains?.[d.campaigns.lead_ids?.indexOf(d.lead_id)];
             const hasClaimed = d.domains?.is_claimed;
 
@@ -113,11 +112,11 @@ export default function ViewerDashboard() {
                   </a>
                   <br />
                   <a
-                    href={`mailto:support@quicksites.ai?subject=Interested in second site&body=I'm interested in claiming ${alt}`}
+                    href={`mailto:support@quicksites.ai?subject=Interested in second site&body=I&apos;m interested in claiming ${alt}`}
                     className="inline-block bg-yellow-500 text-black px-3 py-1 mt-1 rounded text-xs"
                     onClick={() => logClick(d.id, 'second_chance_interest')}
                   >
-                    I'm Interested
+                    I&apos;m Interested
                   </a>
                 </td>
               </tr>

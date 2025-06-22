@@ -11,7 +11,7 @@ export default function ClaimHandlePage() {
       method: 'POST',
       body: JSON.stringify({ handle }),
     });
-    const result = await json();
+    const result = await res.json();
     setMessage(result.message || 'Saved');
   };
 

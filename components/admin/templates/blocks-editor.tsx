@@ -10,7 +10,7 @@ import {
 import { CSS } from '@dnd-kit/utilities';
 import { GripVertical, Pencil } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import BlockSidebar from './BlockSidebar';
+import BlockSidebar from './block-sidebar';
 import type { Block } from '@/types/blocks';
 import type { BlocksEditorProps } from '@/types/blocks';
 import { normalizeBlock } from '@/types/blocks';

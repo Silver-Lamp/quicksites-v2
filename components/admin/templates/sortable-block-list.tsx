@@ -8,7 +8,7 @@ import {
 import { CSS } from '@dnd-kit/utilities';
 
 import { GripVertical } from 'lucide-react';
-import RenderBlock from './RenderBlock';
+import RenderBlock from './render-block';
 
 export function SortableBlockList({
   blocks,

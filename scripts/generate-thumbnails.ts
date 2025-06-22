@@ -1,6 +1,6 @@
 import sharp from 'sharp';
 import fs from 'fs/promises';
-import path from 'path';
+import path from 'node:path';
 
 const inputDir = './public/screenshots';
 

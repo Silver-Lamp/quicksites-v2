@@ -25,7 +25,7 @@ export default function PublicCampaignCreate() {
       }),
     });
 
-    const json = await json();
+    const json = await res.json();
     setSubmitted(json.error ? 'Error: ' + json.error : '✅ Campaign created!');
   };
 

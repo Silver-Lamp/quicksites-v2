@@ -50,4 +50,4 @@ const handlePost = withInputOutputValidation(
 
 export const GET = handleGet;
 export const POST = handlePost;
-export const runtime = 'edge';
+export const runtime = 'experimental-edge';

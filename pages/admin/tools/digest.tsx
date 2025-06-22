@@ -8,7 +8,7 @@ export default function AdminDigestPage() {
 
   const fetchLogs = async () => {
     const res = await fetch('/api/digest-log');
-    const json = await json();
+    const json = await res.json();
     setLogs(json || []);
   };
 

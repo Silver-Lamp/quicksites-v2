@@ -1,5 +1,5 @@
-import fs from 'fs';
-import path from 'path';
+import fs from 'node:fs';
+import path from 'node:path';
 
 const screenshotsDir = path.join(process.cwd(), 'public/__screenshots__');
 const pinnedPath = path.join(screenshotsDir, 'pinned.json');

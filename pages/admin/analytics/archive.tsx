@@ -8,7 +8,7 @@ export default function AnalyticsArchivePage() {
 
   useEffect(() => {
     fetch('/reports/analytics/index.json')
-      .then((res) => json())
+      .then((res) => res.json())
       .then(setFiles);
   }, []);
 

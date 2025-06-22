@@ -5,7 +5,7 @@ import { useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { LogOut, UserCircle } from 'lucide-react';
 import md5 from 'blueimp-md5';
-import { RoleBadge } from './RoleBadge';
+import { RoleBadge } from './role-badge';
 
 export function AvatarMenu({
   email,

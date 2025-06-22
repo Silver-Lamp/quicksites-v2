@@ -3,7 +3,7 @@
 import { createClient } from '@supabase/supabase-js';
 import { cookies } from 'next/headers';
 
-export const runtime = 'edge';
+export const runtime = 'experimental-edge';
 
 function getPermutations(values: string[]): string[] {
   const pairs: string[] = [];

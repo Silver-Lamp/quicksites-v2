@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/admin/lib/supabaseClient';
-import TemplateVersionDiff from './TemplateVersionDiff';
+import TemplateVersionDiff from './template-version-diff';
 import { Button } from '@/components/ui/button';
 import toast from 'react-hot-toast';
 

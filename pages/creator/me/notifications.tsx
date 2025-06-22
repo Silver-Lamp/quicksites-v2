@@ -10,7 +10,7 @@ export default function NotificationsPage() {
   useEffect(() => {
     if (!user) return;
     fetch('/api/notifications?handle=' + user.user_metadata?.handle)
-      .then((res) => json())
+      .then((res) => res.json())
       .then(setItems);
   }, [user]);
 

@@ -18,7 +18,7 @@ export default function ShareSettings() {
   useEffect(() => {
     if (!user) return;
     fetch('/api/public-profile?handle=' + user.user_metadata.handle)
-      .then((res) => json())
+      .then((res) => res.json())
       .then((data) => {
         setProfile(data);
         setBio(data.bio || '');

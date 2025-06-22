@@ -1,5 +1,5 @@
 import { readFileSync, writeFileSync } from 'fs';
-import path from 'path';
+import path from 'node:path';
 
 const raw = readFileSync('lint-report.json', 'utf-8');
 const results = JSON.parse(raw);
@@ -30,7 +30,7 @@ const filtered: LintEntry[] = results
     warnings: entry.warningCount,
     total: entry.errorCount + entry.warningCount,
   }))
-  .filter((entry) => entry.total > 0);
+  .filter((entry: LintEntry) => entry.total > 0);
 
 const grouped = new Map<string, LintEntry[]>();
 

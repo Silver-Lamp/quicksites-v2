@@ -17,7 +17,7 @@ export default function ForksPage() {
   useEffect(() => {
     if (!template_id) return;
     fetch('/api/forks-tree?template_id=' + template_id)
-      .then((res) => json())
+      .then((res) => res.json())
       .then(setForks);
   }, [template_id]);
 

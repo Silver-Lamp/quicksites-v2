@@ -12,7 +12,7 @@ export default function ThankSupporters() {
 
   useEffect(() => {
     fetch('/api/supporters?handle=me') // TODO: replace 'me' with dynamic handle
-      .then((res) => json())
+      .then((res) => res.json())
       .then(setSupporters)
       .catch((err) => console.error('Failed to load supporters:', err));
   }, []);

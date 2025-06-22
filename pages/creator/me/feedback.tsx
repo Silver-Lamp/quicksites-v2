@@ -11,11 +11,11 @@ export default function MyFeedback() {
   useEffect(() => {
     if (!user) return;
     fetch('/api/feedback-history?type=received&user_id=' + user.id)
-      .then((res) => json())
+      .then((res) => res.json())
       .then(setReceived);
 
     fetch('/api/feedback-history?type=sent&user_id=' + user.id)
-      .then((res) => json())
+      .then((res) => res.json())
       .then(setSent);
   }, [user]);
 

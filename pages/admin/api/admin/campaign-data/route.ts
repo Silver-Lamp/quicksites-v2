@@ -1,9 +1,10 @@
-export const runtime = 'edge';
+export const runtime = 'experimental-edge';
 
 // pages/api/admin/campaign-data/route.ts
 
 import { supabase } from '@/admin/lib/supabaseClient';
 import { json } from '@/lib/api/json';
+import { NextRequest } from 'next/server';
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);

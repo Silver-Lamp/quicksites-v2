@@ -13,7 +13,7 @@ export default function ForksPage() {
 
   useEffect(() => {
     fetch('/api/forks')
-      .then((res) => json())
+      .then((res) => res.json())
       .then(setData);
   }, []);
 

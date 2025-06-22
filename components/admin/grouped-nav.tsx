@@ -1,7 +1,7 @@
 // ✅ FILE: components/admin/GroupedNav.tsx (now using SidebarNavContext)
 
 import { useSidebarNav } from '@/components/admin/context/sidebar-nav-context';
-import SafeLink from './ui/SafeLink';
+import SafeLink from '@/components/ui/safe-link';
 
 export default function GroupedNav() {
   const { role, groups, open, toggle } = useSidebarNav();

@@ -29,7 +29,7 @@ export default function AnalyticsChartView() {
     if (!start || !end) return;
 
     const res = await fetch(`/api/analytics/signals?start=${start}&end=${end}`);
-    const rows: SignalDataPoint[] = await json();
+    const rows: SignalDataPoint[] = await res.json();
     setData(rows);
 
     const totals = rows.reduce(

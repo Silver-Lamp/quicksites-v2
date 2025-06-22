@@ -1,4 +1,4 @@
-import { supabase } from '@/admin/lib/supabaseClient.js';
+import { supabase } from '@/admin/lib/supabaseClient';
 
 export type LeadSummary = {
   id: string;

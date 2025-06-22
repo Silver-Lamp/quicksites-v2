@@ -1,5 +1,5 @@
-import fs from 'fs';
-import path from 'path';
+import fs from 'node:fs';
+import path from 'node:path';
 
 const TARGET_DIR = path.resolve('admin');
 const MATCHES = ['next/server', 'next/headers'];

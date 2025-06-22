@@ -10,7 +10,7 @@ export default function RemixMap() {
 
   useEffect(() => {
     fetch('/api/remix-dag')
-      .then((res) => json())
+      .then((res) => res.json())
       .then(({ nodes, edges }) => {
         setNodes(nodes);
         setEdges(edges);

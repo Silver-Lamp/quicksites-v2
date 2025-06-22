@@ -1,0 +1,42 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "Example API",
+    "version": "1.0.0"
+  },
+  "components": {
+    "schemas": {
+      "User": {
+        "_def": {
+          "unknownKeys": "strip",
+          "catchall": {
+            "_def": {
+              "typeName": "ZodNever"
+            }
+          },
+          "typeName": "ZodObject"
+        },
+        "_cached": null
+      }
+    },
+    "parameters": {}
+  },
+  "paths": {
+    "/users": {
+      "get": {
+        "responses": {
+          "200": {
+            "description": "Returns all users",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/User"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

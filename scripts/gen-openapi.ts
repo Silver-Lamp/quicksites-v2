@@ -1,6 +1,7 @@
-import { OpenAPIGenerator } from 'zod-to-openapi';
+import { OpenAPIGenerator } from '@asteasolutions/zod-to-openapi';
+
 import { z } from 'zod';
-import fs from 'fs';
+import fs from 'node:fs';
 
 type RouteSpec = {
   method: 'GET' | 'POST' | 'PUT' | 'DELETE';

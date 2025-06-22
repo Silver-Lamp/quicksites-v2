@@ -6,7 +6,7 @@ import {
   DialogOverlay,
   DialogClose,
   DialogTitle,
-} from '../admin/ui/dialog.jsx';
+} from '@/components/ui/dialog';
 import { ReactNode } from 'react';
 
 type ModalWrapperProps = {

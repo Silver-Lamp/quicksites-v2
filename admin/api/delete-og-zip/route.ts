@@ -3,7 +3,7 @@ import { createClient } from '@supabase/supabase-js';
 import { withInputValidation } from '../../../lib/api/validation.js';
 import { json } from '../../../lib/api/json.js';
 
-export const runtime = 'edge';
+export const runtime = 'experimental-edge';
 
 const DeleteInputSchema = z.object({
   name: z.string().min(1, 'Missing file name'),

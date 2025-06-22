@@ -13,7 +13,7 @@ export default function SupportCampaign() {
   useEffect(() => {
     if (!query.slug) return;
     fetch('/api/campaign?slug=' + query.slug)
-      .then((res) => json())
+      .then((res) => res.json())
       .then(setCampaign);
   }, [query.slug]);
 

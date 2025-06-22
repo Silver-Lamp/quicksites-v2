@@ -7,7 +7,7 @@ export default function HabitLibrary() {
 
   useEffect(() => {
     fetch('/api/habit-templates')
-      .then((res) => json())
+      .then((res) => res.json())
       .then(setTemplates);
   }, []);
 

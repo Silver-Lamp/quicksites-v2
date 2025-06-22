@@ -1,8 +1,8 @@
 // components/admin/GridSidebar.tsx
-import RevenueEstimator from './RevenueEstimator';
-import MarkerStats from './MarkerStats';
-import MapLegend from './MapLegend';
-import FilterDropdown from './FilterDropdown';
+import RevenueEstimator from './revenue-estimator';
+import MarkerStats from './marker-stats';
+import MapLegend from './map-legend';
+import FilterDropdown from './filter-dropdown';
 
 interface GridSidebarProps {
   industry: string;

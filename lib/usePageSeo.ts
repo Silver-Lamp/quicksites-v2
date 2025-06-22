@@ -1,7 +1,7 @@
-import { useRouter } from 'next/navigation.js';
+import { useRouter } from 'next/router';
 import { useEffect, useState } from 'react';
 import { createClient } from '@supabase/supabase-js';
-import { getPageSeo } from './seo.js';
+import { getPageSeo } from './seo';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,

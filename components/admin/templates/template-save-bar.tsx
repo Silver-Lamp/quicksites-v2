@@ -1,4 +1,4 @@
-import { Button } from '../ui/button';
+import { Button } from '@/components/ui/button';
 import { Dispatch, SetStateAction, useState } from 'react';
 import { supabase } from '@/admin/lib/supabaseClient';
 import toast from 'react-hot-toast';

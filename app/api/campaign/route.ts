@@ -1,12 +1,7 @@
 export const runtime = 'nodejs';
 
-import { createClient } from '@supabase/supabase-js';
 import { NextRequest } from 'next/server';
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_SERVICE_ROLE_KEY!
-);
+import { serviceClient as supabase } from '@/lib/supabase/service';
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);

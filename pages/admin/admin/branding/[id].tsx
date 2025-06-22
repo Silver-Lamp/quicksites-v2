@@ -1,8 +1,9 @@
+'use client';
+
 import { useRouter } from 'next/router';
 import { useEffect, useState } from 'react';
 import { createClient } from '@supabase/supabase-js';
 import QRCode from 'qrcode';
-import html2pdf from 'html2pdf.js';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -69,7 +70,8 @@ export default function BrandingProfilePage() {
 
   const previewUrl = `/api/og/snapshot?theme=${profile.theme}&brand=${profile.brand}`;
 
-  function downloadPDF() {
+  async function downloadPDF() {
+    const html2pdf = (await import('html2pdf.js')).default;
     const element = document.getElementById('branding-preview-pdf');
     if (element) {
       html2pdf()

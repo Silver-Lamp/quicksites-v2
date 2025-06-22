@@ -1,9 +1,9 @@
+// app/api/update-profile/route.ts
 export const runtime = 'nodejs';
 
-import { createClient } from '@supabase/supabase-js';
-import { createServerClient } from '@supabase/ssr';
-import { cookies } from 'next/headers';
 import { json } from '@/lib/api/json';
+import { createAppSupabaseClient } from '@/lib/supabase/server';
+import { createClient } from '@supabase/supabase-js';
 
 // Emoji and tag policies
 const ALLOWED_EMOJIS = ['🌱', '💪', '🚀', '🧘', '📚', '🎨', '🧠', '❤️'];
@@ -20,6 +20,7 @@ const ALLOWED_TAGS = [
   'custom',
 ];
 
+// Service-role client for privileged DB writes
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
@@ -40,16 +41,12 @@ export async function POST(req: Request) {
   if (!Array.isArray(goal_tags) || goal_tags.some((tag) => !ALLOWED_TAGS.includes(tag))) {
     return json({ error: 'Invalid goal tags' }, { status: 400 });
   }
-  
-  const serverSupabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    { cookies: () => cookies() } // @ts-ignore
-  );
-  
+
+  const userSupabase = await createAppSupabaseClient(); // ✅ Auth-safe call
+
   const {
     data: { user },
-  } = await serverSupabase.auth.getUser();
+  } = await userSupabase.auth.getUser();
 
   if (!user) return json({ error: 'Unauthorized' }, { status: 401 });
 

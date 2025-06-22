@@ -1,10 +1,8 @@
-// ✅ FILE: app/api/admin/delete-snapshot/route.ts
-
 import { createClient } from '@supabase/supabase-js';
 import { NextRequest } from 'next/server';
 
 const supabase = createClient(
-  process.env.SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_URL!, // ✅ Fix here
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 

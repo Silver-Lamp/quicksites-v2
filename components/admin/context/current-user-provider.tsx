@@ -9,6 +9,8 @@ import {
 } from 'react';
 import { supabase } from '@/lib/supabase/client';
 
+import { createAppSupabaseClient } from '@/lib/supabase/server';
+
 type CurrentUser = {
   id: string;
   email: string;

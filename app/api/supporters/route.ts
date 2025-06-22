@@ -63,7 +63,7 @@ export async function GET(req: Request) {
     if (!supportMap[uid]) {
       supportMap[uid] = { cheer: 0, reflect: 0, echo: 0, latest: fb.created_at };
     }
-    supportMap[uid][fb.action]++;
+    supportMap[uid][fb.action as keyof typeof supportMap[typeof uid]]++;
     if (new Date(fb.created_at) > new Date(supportMap[uid].latest)) {
       supportMap[uid].latest = fb.created_at;
     }

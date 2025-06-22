@@ -1,12 +1,5 @@
-// ✅ FILE: app/api/admin/delete-branding/route.ts
-
-import { createClient } from '@supabase/supabase-js';
 import { NextRequest } from 'next/server';
-
-const supabase = createClient(
-  process.env.SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+import { serviceClient as supabase } from '@/lib/supabase/service';
 
 export async function DELETE(req: NextRequest) {
   const { searchParams } = new URL(req.url);

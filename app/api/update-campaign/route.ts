@@ -1,10 +1,11 @@
+// app/api/update-campaign/route.ts
 export const runtime = 'nodejs';
 
-import { createClient } from '@supabase/supabase-js';
 import { json } from '@/lib/api/json';
-import { cookies } from 'next/headers';
-import { createServerClient } from '@supabase/ssr';
+import { createAppSupabaseClient } from '@/lib/supabase/server';
+import { createClient } from '@supabase/supabase-js';
 
+// Service client for updates (bypasses RLS)
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
@@ -16,7 +17,7 @@ export async function POST(req: Request) {
     headline,
     goal_count,
     target_action,
-    block_id
+    block_id,
   } = await req.json();
 
   if (!slug || typeof slug !== 'string') {
@@ -27,15 +28,11 @@ export async function POST(req: Request) {
     return json({ error: 'Invalid goal_count (must be a number)' }, { status: 400 });
   }
 
-  const serverSupabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    { cookies: () => cookies() } // @ts-ignore
-  );
+  const userSupabase = await createAppSupabaseClient(); // ✅ Auth-bound client
 
   const {
     data: { user },
-  } = await userClient.auth.getUser();
+  } = await userSupabase.auth.getUser();
 
   if (!user) {
     return json({ error: 'Unauthorized' }, { status: 401 });
@@ -52,7 +49,7 @@ export async function POST(req: Request) {
   }
 
   const isOwner = campaign.created_by === user.id;
-  const isAdmin = user.role === 'admin'; // You can adjust this depending on your user schema
+  const isAdmin = user.role === 'admin'; // Adjust based on your user schema
 
   if (!isOwner && !isAdmin) {
     return json({ error: 'Forbidden: not owner or admin' }, { status: 403 });

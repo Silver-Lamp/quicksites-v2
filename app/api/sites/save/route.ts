@@ -1,10 +1,11 @@
+// app/api/sites/save/route.ts
 export const runtime = 'nodejs';
 
-import { createClient } from '@supabase/supabase-js';
-import { createServerClient } from '@supabase/ssr';
-import { cookies } from 'next/headers';
 import { json } from '@/lib/api/json';
+import { createAppSupabaseClient } from '@/lib/supabase/server';
+import { createClient } from '@supabase/supabase-js';
 
+// Used for privileged database writes (skip RLS)
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
@@ -18,15 +19,11 @@ export async function POST(req: Request) {
     return json({ error: 'Missing site ID or data' }, { status: 400 });
   }
 
-  const serverSupabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    { cookies: () => cookies() } // @ts-ignore
-  );
+  const userSupabase = await createAppSupabaseClient(); // ✅ App Router-safe auth client
 
   const {
     data: { user },
-  } = await serverSupabase.auth.getUser();
+  } = await userSupabase.auth.getUser();
 
   if (!user) {
     return json({ error: 'Unauthorized' }, { status: 401 });

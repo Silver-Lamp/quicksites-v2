@@ -1,5 +1,3 @@
-// ✅ FIXED: pages/admin/logs.tsx
-
 'use client';
 
 import { useEffect, useState } from 'react';
@@ -16,7 +14,6 @@ import {
   Legend,
 } from 'chart.js';
 import { supabase } from '@/admin/lib/supabaseClient';
-import html2pdf from 'html2pdf.js';
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
 
@@ -112,7 +109,8 @@ export default function AdminLogsPage() {
     a.click();
   };
 
-  const exportWeeklySummaryPDF = () => {
+  const exportWeeklySummaryPDF = async () => {
+    const html2pdf = (await import('html2pdf.js')).default;
     const element = document.getElementById('weekly-summary-container');
     if (!element) return;
     html2pdf()

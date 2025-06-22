@@ -37,7 +37,7 @@ export default function ZodPlaygroundPage() {
     new URLSearchParams(window.location.search).get('embed') === '1';
 
   const loadSchemaFromQueryParam = () => {
-    const encoded = params.get('schema');
+    const encoded = params?.get('schema');
     if (!encoded) return;
     try {
       const decoded = decodeURIComponent(encoded);
@@ -51,7 +51,7 @@ export default function ZodPlaygroundPage() {
   };
 
   useEffect(() => {
-    const schemaId = params.get('schema_id');
+    const schemaId = params?.get('schema_id');
     if (schemaId) {
       supabase
         .from('schema_links')

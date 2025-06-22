@@ -1,16 +1,9 @@
 // app/api/sites/create/route.ts
 export const runtime = 'nodejs';
 
-import { createClient } from '@supabase/supabase-js';
 import { json } from '@/lib/api/json';
 import { generateBaseSlug } from '@/lib/slugHelpers';
-import { cookies } from 'next/headers';
-import { createServerClient } from '@supabase/ssr';
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
+import { createAppSupabaseClient } from '@/lib/supabase/server'; // ✅ Use unified helper
 
 function baseSlug(businessName: string, location?: string): string {
   const name = businessName.toLowerCase().replace(/[^a-z0-9]+/g, '-');
@@ -19,38 +12,18 @@ function baseSlug(businessName: string, location?: string): string {
   return raw.replace(/--+/g, '-');
 }
 
-async function generateUniqueSlug(base: string): Promise<string> {
-  let slug = base;
-  let attempt = 1;
-  while (true) {
-    const { data } = await supabase
-      .from('sites')
-      .select('id')
-      .eq('slug', slug)
-      .maybeSingle();
-    if (!data) break;
-    attempt += 1;
-    slug = `${base}-${attempt}`;
-  }
-  return slug;
-}
-
 export async function POST(req: Request) {
   const body = await req.json();
   const { template_version_id, business_name, location, domain, slug: clientSlug, email } = body;
 
-  const base = generateBaseSlug(business_name, location);
-  const slug = clientSlug || (await generateUniqueSlug(base));
+  const supabase = await createAppSupabaseClient(); // ✅ One supabase instance
 
-  const serverSupabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    { cookies: () => cookies() } // @ts-ignore
-  );
+  const base = generateBaseSlug(business_name, location);
+  const slug = clientSlug || (await generateUniqueSlug(base, supabase as unknown as ReturnType<typeof createAppSupabaseClient>));
 
   const {
     data: { user },
-  } = await serverSupabase.auth.getUser();
+  } = await supabase.auth.getUser();
 
   if (!user) {
     return json({ error: 'Unauthorized' }, { status: 401 });
@@ -153,4 +126,21 @@ export async function POST(req: Request) {
 
 export async function GET() {
   return json({ message: '👋 POST to this endpoint to create a site.' });
+}
+
+// Helper updated to take Supabase client as a parameter
+async function generateUniqueSlug(base: string, supabase: ReturnType<typeof createAppSupabaseClient>): Promise<string> {
+  let slug = base;
+  let attempt = 1;
+  while (true) {
+    const { data } = await (await supabase)
+      .from('sites')
+      .select('id')
+      .eq('slug', slug)
+      .maybeSingle();
+    if (!data) break;
+    attempt += 1;
+    slug = `${base}-${attempt}`;
+  }
+  return slug;
 }

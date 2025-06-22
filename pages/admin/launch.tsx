@@ -22,7 +22,7 @@ export default function LaunchPage() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const raw = params.get('params');
+    const raw = params?.get('params');
     if (!raw) return;
     try {
       const parsed = JSON.parse(decodeURIComponent(raw));

@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { formatISO, subDays } from 'date-fns';
 
-const supabase = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
+const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
 
 const start = subDays(new Date(), 1);
 const end = new Date();

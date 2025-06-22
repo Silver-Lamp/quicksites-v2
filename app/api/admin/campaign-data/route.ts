@@ -1,6 +1,5 @@
-export const runtime = 'experimental-edge';
-
 // pages/api/admin/campaign-data/route.ts
+export const runtime = 'edge';
 
 import { supabase } from '@/admin/lib/supabaseClient';
 import { json } from '@/lib/api/json';

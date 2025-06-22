@@ -11,7 +11,7 @@ export const runtime = 'nodejs';
 
 try {
   registerFont(path.resolve('./public/fonts/Inter.ttf'), { family: 'Inter' });
-  registerFont(path.resolve('./public/fonts/JetBrainsMono.ttf'), { family: 'JetBrains Mono' });
+  registerFont(path.resolve('./public/fonts/Arial.ttf'), { family: 'Arial' });
 } catch (err) {
   console.warn('⚠️ Font registration failed:', err);
 }

@@ -1,5 +1,3 @@
-// ✅ FILE: hooks/useCurrentUser.tsx
-
 import { useContext, useEffect, useState } from 'react';
 import {
   CurrentUserContext,
@@ -11,6 +9,7 @@ export function useCurrentUser(): CurrentUserContextType & {
   role: string;
   roleSource: string;
   isLoading: boolean;
+  ready: boolean;
 } {
   const context = useContext(CurrentUserContext);
 
@@ -20,7 +19,10 @@ export function useCurrentUser(): CurrentUserContextType & {
 
   useEffect(() => {
     const fetchRole = async () => {
-      if (!context.user?.email) return;
+      if (!context.user?.email) {
+        setIsLoading(false);
+        return;
+      }
 
       const cacheKey = `cached-role-${context.user.email}`;
 
@@ -58,11 +60,16 @@ export function useCurrentUser(): CurrentUserContextType & {
     fetchRole();
   }, [context.user?.email]);
 
+  const role: string =
+    (fetchedRole as 'viewer' | 'admin' | 'editor' | 'owner') ||
+    context.user?.role ||
+    'viewer';
+
   return {
     ...context,
-    role:
-      (fetchedRole as 'viewer' | 'admin' | 'editor' | 'owner') || context.user?.role || 'viewer',
-    isLoading,
+    role: role as 'viewer' | 'admin' | 'editor' | 'owner',
     roleSource,
+    isLoading,
+    ready: !isLoading,
   };
 }

@@ -18,45 +18,39 @@ export default function LoginPage() {
   const router = useRouter();
 
   useEffect(() => {
-    supabase.auth.getSession().then(async ({ data: sessionData }) => {
-      const session = sessionData.session;
-      const id = session?.user?.id;
-      const email = session?.user?.email ?? null;
+    const checkUser = async () => {
+      const { data: { user }, error } = await supabase.auth.getUser();
+      if (!user || error) {
+        setLoading(false);
+        return;
+      }
 
-      if (session && id && email) {
-        const now = new Date().toISOString();
+      const { data: profile } = await supabase
+        .from('user_profiles')
+        .select('role, plan')
+        .eq('user_id', user.id)
+        .maybeSingle();
 
-        await supabase.from('user_profiles').upsert({
-          user_id: id,
-          email,
-          last_seen_at: now,
-        });
+      const role = profile?.role ?? null;
+      const plan = profile?.plan ?? 'free';
 
-        const { data: profile } = await supabase
-          .from('user_profiles')
-          .select('role, plan')
-          .eq('user_id', id)
-          .maybeSingle();
+      if (role && role !== 'viewer') {
+        const redirect =
+          plan === 'enterprise'
+            ? '/enterprise/dashboard'
+            : ['admin', 'owner', 'reseller'].includes(role)
+              ? '/admin/dashboard?message=welcome'
+              : '/?message=welcome';
 
-        const role = profile?.role ?? null;
-        const plan = profile?.plan ?? 'free';
-
-        if (role) {
-          const redirect =
-            plan === 'enterprise'
-              ? '/enterprise/dashboard'
-              : ['admin', 'owner', 'reseller'].includes(role)
-                ? '/admin/dashboard?message=welcome'
-                : '/?message=welcome';
-
-          router.replace(redirect);
-        } else {
-          setShowOnboarding(true);
-        }
+        router.replace(redirect);
+      } else {
+        setShowOnboarding(true);
       }
 
       setLoading(false);
-    });
+    };
+
+    checkUser();
   }, []);
 
   const handleLogin = async () => {
@@ -85,10 +79,11 @@ export default function LoginPage() {
 
   const assignRole = async (selected: string) => {
     const {
-      data: { session },
-    } = await supabase.auth.getSession();
-    const id = session?.user?.id;
-    const email = session?.user?.email ?? '';
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    const id = user?.id;
+    const email = user?.email ?? '';
 
     if (!id || !email) return;
 
@@ -114,7 +109,6 @@ export default function LoginPage() {
     setTimeout(() => setToast(null), 3000);
 
     const redirect = selected === 'admin' ? '/admin/dashboard' : '/?message=role-assigned';
-
     router.replace(redirect);
     setTimeout(() => window.location.reload(), 1000);
   };

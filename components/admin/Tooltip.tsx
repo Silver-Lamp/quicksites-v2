@@ -1,4 +1,5 @@
-import { ReactNode } from 'react';
+'use client';
+import { ReactNode, useEffect, useRef, useState } from 'react';
 
 interface TooltipProps {
   placement?: 'top' | 'bottom' | 'left' | 'right';
@@ -7,8 +8,6 @@ interface TooltipProps {
   labelledById?: string;
   clickable?: boolean;
 }
-
-import { useEffect, useRef, useState } from 'react';
 
 export default function Tooltip({
   content,

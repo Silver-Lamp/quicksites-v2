@@ -1,19 +1,19 @@
 'use client';
-import { useRouter } from 'next/router';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useMemo } from 'react';
 
 export function useDateRange() {
-  const { query } = useRouter();
+  const searchParams = useSearchParams();
 
   const start = useMemo(() => {
-    if (typeof query.start === 'string') return query.start;
+    if (typeof searchParams?.get('start') === 'string') return searchParams.get('start');
     return '';
-  }, [query.start]);
+  }, [searchParams?.get('start')]);
 
   const end = useMemo(() => {
-    if (typeof query.end === 'string') return query.end;
+    if (typeof searchParams?.get('end') === 'string') return searchParams.get('end');
     return '';
-  }, [query.end]);
+  }, [searchParams?.get('end')]);
 
   return { start, end };
 }

@@ -60,7 +60,8 @@ export function useCurrentUser(): CurrentUserContextType & {
 
   return {
     ...context,
-    role: (fetchedRole as 'viewer' | 'admin' | 'editor' | 'owner') || context.user?.role || 'viewer',
+    role:
+      (fetchedRole as 'viewer' | 'admin' | 'editor' | 'owner') || context.user?.role || 'viewer',
     isLoading,
     roleSource,
   };

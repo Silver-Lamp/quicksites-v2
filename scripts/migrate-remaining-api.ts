@@ -21,7 +21,11 @@ async function* walk(dir: string): AsyncGenerator<string> {
 
 function toRoutePath(file: string): { from: string; to: string } {
   const relativePath = path.relative(PAGES_API, file);
-  const routePath = path.join(APP_API, relativePath.replace(/\\.tsx?$/, ''), 'route' + path.extname(file));
+  const routePath = path.join(
+    APP_API,
+    relativePath.replace(/\\.tsx?$/, ''),
+    'route' + path.extname(file)
+  );
   return { from: file, to: routePath };
 }
 

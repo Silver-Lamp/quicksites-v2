@@ -13,9 +13,7 @@ export async function POST(req: NextRequest) {
   const { block_id, action, handle } = await req.json();
 
   const ip =
-    req.headers.get('x-forwarded-for')?.split(',')[0] ??
-    req.headers.get('x-real-ip') ??
-    'unknown';
+    req.headers.get('x-forwarded-for')?.split(',')[0] ?? req.headers.get('x-real-ip') ?? 'unknown';
 
   const userAgent = req.headers.get('user-agent') || '';
   const referrer = req.headers.get('referer') || '';
@@ -32,17 +30,21 @@ export async function POST(req: NextRequest) {
 
   const isDuplicate = (recent || 0) > 0;
 
-  const { error, data } = await supabase.from('click_events').insert({
-    block_id,
-    action,
-    handle,
-    ip,
-    is_duplicate: isDuplicate,
-    metadata: {
-      ua: userAgent,
-      referrer,
-    },
-  }).select().single();
+  const { error, data } = await supabase
+    .from('click_events')
+    .insert({
+      block_id,
+      action,
+      handle,
+      ip,
+      is_duplicate: isDuplicate,
+      metadata: {
+        ua: userAgent,
+        referrer,
+      },
+    })
+    .select()
+    .single();
 
   if (error) return json({ error: error.message }, { status: 500 });
 

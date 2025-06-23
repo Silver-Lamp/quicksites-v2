@@ -1,16 +1,16 @@
 'use client';
 import { useEffect } from 'react';
-import { useRouter } from 'next/router';
+import { useRouter, useSearchParams } from 'next/navigation';
 
 export default function ConfirmPage() {
-  const router = useRouter();
-  const { code } = router.query;
+  const searchParams = useSearchParams();
+  const code = searchParams?.get('code') as string;
 
   useEffect(() => {
     if (!code) return;
     // for now: assume any code is valid
     localStorage.setItem('invite_verified', 'true');
-    setTimeout(() => router.push('/starter'), 1000);
+    setTimeout(() => (window.location.href = '/starter'), 1000);
   }, [code]);
 
   return (

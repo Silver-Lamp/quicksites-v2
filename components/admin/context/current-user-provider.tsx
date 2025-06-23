@@ -1,15 +1,9 @@
 'use client';
 
-import {
-  createContext,
-  useContext,
-  useEffect,
-  useState,
-  ReactNode,
-} from 'react';
+import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { supabase } from '@/lib/supabase/client';
 
-import { createAppSupabaseClient } from '@/lib/supabase/server';
+import { getSupabase } from '@/lib/supabase/universal';
 
 type CurrentUser = {
   id: string;
@@ -94,7 +88,15 @@ export function CurrentUserProvider({ children }: { children: ReactNode }) {
     user?.role ? roles.map((r) => r.toLowerCase()).includes(user.role.toLowerCase()) : false;
 
   return (
-    <CurrentUserContext.Provider value={{ user, ready, role: user?.role as 'admin' | 'editor' | 'viewer' | 'owner' || 'viewer', hasRole, refetch: load }}>
+    <CurrentUserContext.Provider
+      value={{
+        user,
+        ready,
+        role: (user?.role as 'admin' | 'editor' | 'viewer' | 'owner') || 'viewer',
+        hasRole,
+        refetch: load,
+      }}
+    >
       {children}
     </CurrentUserContext.Provider>
   );

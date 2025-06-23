@@ -1,12 +1,12 @@
 import { useMemo } from 'react';
-import { useRouter } from 'next/router';
+import { useSearchParams } from 'next/navigation';
 
 export function useQueryParam(key: string, fallback = ''): string {
-  const router = useRouter();
+  const searchParams = useSearchParams();
 
   return useMemo(() => {
     if (typeof window === 'undefined') return fallback;
-    const value = new URLSearchParams(window.location.search).get(key);
+    const value = searchParams?.get(key);
     return value || fallback;
-  }, [router.query, key, fallback]);
+  }, [searchParams, key, fallback]);
 }

@@ -22,9 +22,7 @@ export async function GET(req: NextRequest) {
 
   const possibleDomains = isSlugLike ? [id, id.replace(/-/g, '.') + '.com'] : [];
 
-  const tryFields: { field: string; value: string }[] = [
-    { field: 'vanity_url', value: id },
-  ];
+  const tryFields: { field: string; value: string }[] = [{ field: 'vanity_url', value: id }];
 
   if (isUUID) {
     tryFields.push({ field: 'id', value: id });

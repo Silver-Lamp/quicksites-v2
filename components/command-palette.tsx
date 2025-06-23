@@ -7,7 +7,7 @@ import { useState, useEffect } from 'react';
 export function CommandPalette() {
   const { user } = useSession();
   const [query, setQuery] = useState('');
-  const [results, setResults] = useState(NAV_SECTIONS.flatMap(s => s.routes));
+  const [results, setResults] = useState(NAV_SECTIONS.flatMap((s) => s.routes));
   const [open, setOpen] = useState(false);
 
   useEffect(() => {
@@ -23,10 +23,11 @@ export function CommandPalette() {
 
   useEffect(() => {
     const lower = query.toLowerCase();
-    const filtered = NAV_SECTIONS.flatMap(section =>
+    const filtered = NAV_SECTIONS.flatMap((section) =>
       !section.role || user?.role === section.role
-        ? section.routes.filter(item =>
-            item.label.toLowerCase().includes(lower) || item.href.toLowerCase().includes(lower)
+        ? section.routes.filter(
+            (item) =>
+              item.label.toLowerCase().includes(lower) || item.href.toLowerCase().includes(lower)
           )
         : []
     );

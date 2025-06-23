@@ -3,11 +3,16 @@ export const runtime = 'nodejs';
 
 import { json } from '@/lib/api/json';
 import { generateBaseSlug } from '@/lib/slugHelpers';
-import { createAppSupabaseClient } from '@/lib/supabase/server'; // ✅ Use unified helper
+import { getSupabase } from '@/lib/supabase/universal'; // ✅ Use unified helper
+import { createServerSupabaseClient, SupabaseClient } from '@supabase/auth-helpers-nextjs';
 
 function baseSlug(businessName: string, location?: string): string {
   const name = businessName.toLowerCase().replace(/[^a-z0-9]+/g, '-');
-  const loc = location?.toLowerCase().split(',')[0].replace(/[^a-z0-9]+/g, '-') || '';
+  const loc =
+    location
+      ?.toLowerCase()
+      .split(',')[0]
+      .replace(/[^a-z0-9]+/g, '-') || '';
   const raw = `${name}-${loc}`.replace(/^-+|-+$/g, '');
   return raw.replace(/--+/g, '-');
 }
@@ -16,11 +21,13 @@ export async function POST(req: Request) {
   const body = await req.json();
   const { template_version_id, business_name, location, domain, slug: clientSlug, email } = body;
 
-  const supabase = await createAppSupabaseClient(); // ✅ One supabase instance
+  const supabase = await getSupabase(); // ✅ One supabase instance
 
   const base = generateBaseSlug(business_name, location);
-  const slug = clientSlug || (await generateUniqueSlug(base, supabase as unknown as ReturnType<typeof createAppSupabaseClient>));
-
+  const slug =
+    clientSlug ||
+    (await generateUniqueSlug(base, supabase));
+    
   const {
     data: { user },
   } = await supabase.auth.getUser();
@@ -38,10 +45,7 @@ export async function POST(req: Request) {
     .limit(1)
     .maybeSingle();
 
-  if (
-    recent?.data &&
-    Date.now() - new Date(recent.data.created_at).getTime() < 10 * 60 * 1000
-  ) {
+  if (recent?.data && Date.now() - new Date(recent.data.created_at).getTime() < 10 * 60 * 1000) {
     return json({ error: 'Too soon — please wait 10 minutes before creating another site.' });
   }
 
@@ -84,16 +88,19 @@ export async function POST(req: Request) {
 
     if (email) {
       try {
-        const response = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/api/resend-welcome-email`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            email,
-            name: business_name,
-            slug: newSite.slug,
-            templateName: versions[0].template_name || 'a QuickSites template',
-          }),
-        });
+        const response = await fetch(
+          `${process.env.NEXT_PUBLIC_BASE_URL}/api/resend-welcome-email`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              email,
+              name: business_name,
+              slug: newSite.slug,
+              templateName: versions[0].template_name || 'a QuickSites template',
+            }),
+          }
+        );
 
         if (!response.ok) {
           console.warn('⚠️ Failed to send welcome email:', await response.text());
@@ -129,7 +136,10 @@ export async function GET() {
 }
 
 // Helper updated to take Supabase client as a parameter
-async function generateUniqueSlug(base: string, supabase: ReturnType<typeof createAppSupabaseClient>): Promise<string> {
+async function generateUniqueSlug(
+  base: string,
+  supabase: SupabaseClient
+): Promise<string> {
   let slug = base;
   let attempt = 1;
   while (true) {

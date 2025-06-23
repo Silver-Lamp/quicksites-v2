@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { useRouter } from 'next/router';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { toast, ToastOptions } from 'react-hot-toast';
 
 type ToastType = 'success' | 'error' | 'loading' | 'custom';
@@ -16,8 +16,8 @@ export function useFlashToast(
   key: string,
   { type = 'success', prefix = '', duration = 3000, icon, className }: UseFlashToastOptions = {}
 ) {
-  const router = useRouter();
-  const value = router.query[key];
+  const searchParams = useSearchParams();
+  const value = searchParams?.get(key);
 
   useEffect(() => {
     if (value && typeof value === 'string') {
@@ -44,8 +44,9 @@ export function useFlashToast(
       }
 
       // Remove the flash param from the URL
-      const { [key]: _, ...rest } = router.query;
-      router.replace({ pathname: router.pathname, query: rest }, undefined, { shallow: true });
+      const rest = new URLSearchParams(searchParams.toString());
+      rest.delete(key);
+      window.location.href = `${window.location.pathname}?${rest.toString()}`;
     }
   }, [value]);
 }

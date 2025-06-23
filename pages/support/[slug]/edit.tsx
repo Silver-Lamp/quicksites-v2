@@ -1,19 +1,19 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { json } from '@/lib/api/json';
-import { useRouter } from 'next/router';
+import { useRouter, useSearchParams } from 'next/navigation';
 
 export default function EditCampaign() {
-  const { query } = useRouter();
+  const searchParams = useSearchParams();
   const [data, setData] = useState<any>(null);
   const [message, setMessage] = useState('');
 
   useEffect(() => {
-    if (!query.slug) return;
-    fetch('/api/campaign?slug=' + query.slug)
+    if (!searchParams?.get('slug')) return;
+    fetch('/api/campaign?slug=' + searchParams.get('slug'))
       .then((res) => res.json())
       .then(setData);
-  }, [query.slug]);
+  }, [searchParams?.get('slug')]);
 
   const submit = async () => {
     const res = await fetch('/api/update-campaign', {

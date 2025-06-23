@@ -1,8 +1,8 @@
-// components/admin/AppHeader/AppHeader.tsx
+// components/admin/AppHeader/app-header.tsx
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/router';
+import { useRouter } from 'next/navigation';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import SafeLink from '../../ui/safe-link';
 import { AvatarMenu } from './avatar-menu';

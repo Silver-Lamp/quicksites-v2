@@ -1,5 +1,5 @@
 // components/PresetManager.tsx
-import { useRouter } from 'next/router';
+import { useRouter } from 'next/navigation';
 import { extractTags, summarizeQuery } from '@/admin/lib/queryUtils';
 
 export default function PresetManager({

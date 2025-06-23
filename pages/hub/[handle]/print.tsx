@@ -1,11 +1,11 @@
 'use client';
-import { useRouter } from 'next/router';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { json } from '@/lib/api/json';
 import { useEffect, useState } from 'react';
 
 export default function PrintLabels() {
-  const router = useRouter();
-  const { handle } = router.query;
+  const searchParams = useSearchParams();
+  const handle = searchParams?.get('handle') as string;
   const [blocks, setBlocks] = useState([]);
 
   useEffect(() => {

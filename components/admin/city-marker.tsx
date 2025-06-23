@@ -1,7 +1,7 @@
 // components/admin/CityMarker.tsx
 import { CircleMarker, Popup } from 'react-leaflet';
 import { useMemo } from 'react';
-import { useRouter } from 'next/router';
+import { useRouter } from 'next/navigation';
 
 interface CityMarkerProps {
   point: any;

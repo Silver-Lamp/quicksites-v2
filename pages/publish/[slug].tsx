@@ -1,12 +1,12 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { json } from '@/lib/api/json';
-import { useRouter } from 'next/router';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Template } from '@/types/template';
 
 export default function PublishPage() {
-  const router = useRouter();
-  const { slug } = router.query;
+  const searchParams = useSearchParams();
+  const slug = searchParams?.get('slug') as string;
   const [template, setTemplate] = useState<Template | null>(null);
   const [status, setStatus] = useState<'idle' | 'publishing' | 'done'>('idle');
 

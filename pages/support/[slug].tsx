@@ -1,27 +1,27 @@
 'use client';
 
-import { useRouter } from 'next/router';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { json } from '@/lib/api/json';
 import { useEffect, useState } from 'react';
 import { CelebrationModal } from '@/components/embed/celebration-modal';
 
 export default function SupportCampaign() {
-  const { query } = useRouter();
+  const searchParams = useSearchParams();
   const [campaign, setCampaign] = useState<any>(null);
   const [showBadgeCelebration, setShowBadgeCelebration] = useState(false);
 
   useEffect(() => {
-    if (!query.slug) return;
-    fetch('/api/campaign?slug=' + query.slug)
+    if (!searchParams?.get('slug')) return;
+    fetch('/api/campaign?slug=' + searchParams.get('slug'))
       .then((res) => res.json())
       .then(setCampaign);
-  }, [query.slug]);
+  }, [searchParams?.get('slug')]);
 
   useEffect(() => {
-    if (query.badge === 'done') {
+    if (searchParams?.get('badge') === 'done') {
       setShowBadgeCelebration(true);
     }
-  }, [query.badge]);
+  }, [searchParams?.get('badge')]);
 
   if (!campaign) return <div className="p-6 text-white">Loading...</div>;
 
@@ -43,7 +43,7 @@ export default function SupportCampaign() {
       {showBadgeCelebration && (
         <CelebrationModal
           type="badge"
-          slug={query.slug as string}
+          slug={searchParams?.get('slug') as string}
           onClose={() => setShowBadgeCelebration(false)}
         />
       )}

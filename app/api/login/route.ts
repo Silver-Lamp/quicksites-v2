@@ -41,7 +41,9 @@ export async function POST(req: NextRequest) {
 
     if (diffMinutes < RATE_LIMIT_MINUTES) {
       return Response.json(
-        { error: `Please wait ${Math.ceil(RATE_LIMIT_MINUTES - diffMinutes)} min before retrying.` },
+        {
+          error: `Please wait ${Math.ceil(RATE_LIMIT_MINUTES - diffMinutes)} min before retrying.`,
+        },
         { status: 429 }
       );
     }

@@ -17,7 +17,6 @@ export default function SafeSupabaseProvider({
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }: { data: { session: Session | null } }) => {
-
       setSession(data.session);
       setReady(true);
 
@@ -60,9 +59,7 @@ export default function SafeSupabaseProvider({
   }, []);
 
   if (ready === false) {
-    return (
-      <p className="text-center text-sm text-gray-400 p-6">Initializing session…</p>
-    );
+    return <p className="text-center text-sm text-gray-400 p-6">Initializing session…</p>;
   }
 
   return (

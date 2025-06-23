@@ -14,9 +14,6 @@ export async function GET() {
       },
     });
   } catch (err) {
-    return new Response(
-      JSON.stringify({ error: 'Failed to load openapi.json' }),
-      { status: 500 }
-    );
+    return new Response(JSON.stringify({ error: 'Failed to load openapi.json' }), { status: 500 });
   }
 }

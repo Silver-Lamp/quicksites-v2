@@ -1,4 +1,4 @@
-import { useRouter } from 'next/router';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { createClient } from '@supabase/supabase-js';
 import { getPageSeo } from './seo';
@@ -25,11 +25,12 @@ export function usePageSeo({
   description: string;
   noindex?: boolean;
 }) {
-  const { pathname, asPath } = useRouter();
+  const pathname = usePathname();
+  const asPath = useSearchParams()?.get('asPath');
   const [site, setSite] = useState<SiteSeoFields>({});
 
   useEffect(() => {
-    const slug = pathname.split('/')[1]; // assumes /edit/[slug] or /view/[slug]
+    const slug = pathname?.split('/')[1]; // assumes /edit/[slug] or /view/[slug]
 
     if (!slug) return;
 
@@ -47,7 +48,7 @@ export function usePageSeo({
     title ||
     site.seo_title ||
     pathname
-      .replace(/^\//, '')
+      ?.replace(/^\//, '')
       .replace(/-/g, ' ')
       .replace(/\b\w/g, (c) => c.toUpperCase()) ||
     'Home';
@@ -62,7 +63,7 @@ export function usePageSeo({
     ...getPageSeo({
       title: derivedTitle,
       description: description || site.seo_description || '',
-      slug: pathname,
+      slug: pathname || 'home',
     }),
     ...(noindex && { robots: 'noindex,nofollow' }),
     canonical: fullUrl,

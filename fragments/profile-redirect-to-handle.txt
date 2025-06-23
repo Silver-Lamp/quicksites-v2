@@ -1,6 +1,6 @@
 // In /profile.tsx
 import { useEffect } from 'react';
-import { useRouter } from 'next/router';
+import { useRouter } from 'next/navigation';
 
 useEffect(() => {
   const handle = user?.user_metadata?.handle;

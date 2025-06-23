@@ -1,7 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { json } from '@/lib/api/json';
-import { useRouter } from 'next/router';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { createClient } from '@supabase/supabase-js';
 import { generateBaseSlug } from '@/lib/slugHelpers';
 import { useRef } from 'react';
@@ -36,7 +36,8 @@ export default function StarterPage() {
   }, []);
 
   useEffect(() => {
-    const name = router.query.template as string;
+    const searchParams = useSearchParams();
+    const name = searchParams?.get('template') as string;
     if (!name) return;
 
     supabase
@@ -55,7 +56,7 @@ export default function StarterPage() {
           setTemplateVersionId(data[0].id);
         }
       });
-  }, [router.query.template]);
+  }, [useSearchParams()?.get('template')]);
 
   useEffect(() => {
     if (!slug) return setSlugAvailable(null);

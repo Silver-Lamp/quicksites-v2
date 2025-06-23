@@ -1,3 +1,4 @@
+'use client';
 import { useEffect, useState } from 'react';
 import type { LinkTheme } from '@/admin/lib/links/theme.js';
 

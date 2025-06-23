@@ -2,7 +2,8 @@
 
 import { Menu } from '@headlessui/react';
 import { useRouter } from 'next/navigation';
-import { supabase } from '@/admin/lib/supabaseClient';import Link from 'next/link';
+import { supabase } from '@/admin/lib/supabaseClient';
+import Link from 'next/link';
 
 export default function ProfileDropdown() {
   const router = useRouter();

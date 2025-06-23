@@ -4,14 +4,16 @@ import dynamic from 'next/dynamic';
 import { useState, type ComponentType } from 'react';
 
 // Safely cast to unknown, then to expected component type
-const SwaggerUI = dynamic(() => import('swagger-ui-react') as unknown as Promise<ComponentType<{ url: string }>>, {
+const SwaggerUI = dynamic(
+  () => import('swagger-ui-react') as unknown as Promise<ComponentType<{ url: string }>>,
+  {
+    ssr: false,
+  }
+);
+
+const RedocStandalone = dynamic(() => import('redoc').then((mod) => mod.RedocStandalone), {
   ssr: false,
 });
-
-const RedocStandalone = dynamic(
-  () => import('redoc').then((mod) => mod.RedocStandalone),
-  { ssr: false }
-);
 
 export default function DocsPage() {
   const [view, setView] = useState<'swagger' | 'redoc'>('swagger');
@@ -28,11 +30,7 @@ export default function DocsPage() {
         </button>
       </div>
 
-      {view === 'swagger' ? (
-        <SwaggerUI url="/api/docs" />
-      ) : (
-        <RedocStandalone specUrl="/api/docs" />
-      )}
+      {view === 'swagger' ? <SwaggerUI url="/api/docs" /> : <RedocStandalone specUrl="/api/docs" />}
     </main>
   );
 }

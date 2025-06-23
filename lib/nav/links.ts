@@ -36,8 +36,6 @@ export const NAV_SECTIONS: NavSection[] = [
     label: '🛠 Tools',
     color: 'text-cyan-300',
     role: 'admin',
-    routes: [
-      { href: '/admin/tools/prebuild-og', label: '🖼 OG Prebuilds', flags: ['internal'] },
-    ],
+    routes: [{ href: '/admin/tools/prebuild-og', label: '🖼 OG Prebuilds', flags: ['internal'] }],
   },
 ];

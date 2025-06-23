@@ -1,13 +1,13 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { json } from '@/lib/api/json';
-import { useRouter } from 'next/router';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { BlocksEditor } from '@/components/admin/templates/blocks-editor';
 import type { Block } from '@/types/blocks';
 
 export default function PublicEditPage() {
-  const router = useRouter();
-  const { slug } = router.query;
+  const searchParams = useSearchParams();
+  const slug = searchParams?.get('slug') as string;
   const [data, setData] = useState<Block[] | null>(null);
   const [forked, setForked] = useState(false);
 

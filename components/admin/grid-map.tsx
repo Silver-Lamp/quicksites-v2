@@ -1,7 +1,7 @@
 // components/admin/GridMap.tsx
 import L from 'leaflet';
 import { useRef, useEffect, useState } from 'react';
-import { useRouter } from 'next/router';
+import { useRouter } from 'next/navigation';
 import { supabase } from '@/admin/lib/supabaseClient';
 import { MapContainer, TileLayer } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';

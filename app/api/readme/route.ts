@@ -18,6 +18,8 @@ export async function GET(_req: NextRequest) {
       status: 200,
     });
   } catch (err: unknown) {
-    return new Response(`Error: ${err instanceof Error ? err.message : 'Unknown error'}`, { status: 500 });
+    return new Response(`Error: ${err instanceof Error ? err.message : 'Unknown error'}`, {
+      status: 500,
+    });
   }
 }

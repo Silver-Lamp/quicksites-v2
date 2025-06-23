@@ -1,4 +1,4 @@
-import { serviceClient as supabase } from "@/lib/supabase/service";
+import { serviceClient as supabase } from '@/lib/supabase/service';
 export const runtime = 'nodejs';
 
 import { createClient } from '@supabase/supabase-js';
@@ -7,7 +7,6 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { Readable } from 'node:stream';
 import { NextRequest } from 'next/server';
-
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);

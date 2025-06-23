@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/router';
+import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { saveAsTemplate } from '@/admin/lib/saveAsTemplate';
 import { createSharedPreview } from '@/admin/lib/createSharedPreview';

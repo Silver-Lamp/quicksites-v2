@@ -1,11 +1,11 @@
 'use client';
-import { useRouter } from 'next/router';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { json } from '@/lib/api/json';
 import { useEffect, useState } from 'react';
 
 export default function BlockDetail() {
-  const router = useRouter();
-  const { id } = router.query;
+  const searchParams = useSearchParams();
+  const id = searchParams?.get('id') as string;
   const [block, setBlock] = useState<any>(null);
 
   useEffect(() => {

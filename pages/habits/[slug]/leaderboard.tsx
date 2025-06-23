@@ -1,11 +1,11 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { json } from '@/lib/api/json';
-import { useRouter } from 'next/router';
+import { useRouter, useSearchParams } from 'next/navigation';
 
 export default function HabitLeaderboard() {
-  const router = useRouter();
-  const { slug } = router.query;
+  const searchParams = useSearchParams();
+  const slug = searchParams?.get('slug') as string;
   const [entries, setEntries] = useState([]);
 
   useEffect(() => {

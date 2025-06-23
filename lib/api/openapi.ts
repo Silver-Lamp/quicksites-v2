@@ -1,7 +1,4 @@
-import {
-  OpenAPIRegistry,
-  OpenApiGeneratorV3,
-} from '@asteasolutions/zod-to-openapi';
+import { OpenAPIRegistry, OpenApiGeneratorV3 } from '@asteasolutions/zod-to-openapi';
 import { z, ZodTypeAny } from 'zod';
 
 type RouteConfig = {

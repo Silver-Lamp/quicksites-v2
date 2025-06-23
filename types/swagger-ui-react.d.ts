@@ -1,5 +1,4 @@
 declare module 'swagger-ui-react' {
-    const SwaggerUI: any;
-    export default SwaggerUI;
-  }
-  
+  const SwaggerUI: any;
+  export default SwaggerUI;
+}

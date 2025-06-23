@@ -10,10 +10,7 @@ const supabase = createClient(
 
 export async function POST(req: Request) {
   const token = req.headers.get('authorization')?.replace('Bearer ', '');
-  const ip =
-    req.headers.get('x-forwarded-for') ||
-    req.headers.get('x-real-ip') ||
-    'unknown';
+  const ip = req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || 'unknown';
 
   const { block_id, message } = await req.json();
 

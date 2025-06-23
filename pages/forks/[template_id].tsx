@@ -1,5 +1,5 @@
 'use client';
-import { useRouter } from 'next/router';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { json } from '@/lib/api/json';
 import { useEffect, useState } from 'react';
 
@@ -10,8 +10,8 @@ type ForkRecord = {
 };
 
 export default function ForksPage() {
-  const router = useRouter();
-  const { template_id } = router.query;
+  const searchParams = useSearchParams();
+  const template_id = searchParams?.get('template_id') as string;
   const [forks, setForks] = useState<ForkRecord[]>([]);
 
   useEffect(() => {

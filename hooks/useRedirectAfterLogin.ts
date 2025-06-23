@@ -35,4 +35,3 @@ export function useRedirectAfterLogin() {
 
   return { redirectTo, isRedirecting };
 }
-

@@ -80,15 +80,15 @@ export function useTypedQueryParam<
     ? values
     : searchParams.get(key);
 
-    // @ts-ignore
-    const parsed: ParamReturn<T>[0] = parseTypedQueryValue(
-      key,
-      value,
-      fallback,
-      type,
-      schema as z.ZodSchema<any>, // @ts-ignore
-      router as any
-    );
+  // @ts-ignore
+  const parsed: ParamReturn<T>[0] = parseTypedQueryValue(
+    key,
+    value,
+    fallback,
+    type,
+    schema as z.ZodSchema<any>, // @ts-ignore
+    router as any
+  );
 
   return [parsed, setParam];
 }

@@ -1,3 +1,4 @@
+'use client';
 import { createContext, useContext } from 'react';
 import type { LinkTheme } from '@/admin/lib/links/theme';
 

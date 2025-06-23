@@ -16,4 +16,4 @@ async function run() {
   await fs.writeFile(`./output/${handle}-${blockId}.png`, buffer);
   parentPort?.postMessage({ ok: true });
 }
-run().catch(err => parentPort?.postMessage({ error: err.message }));
+run().catch((err) => parentPort?.postMessage({ error: err.message }));

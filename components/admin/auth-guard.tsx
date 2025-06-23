@@ -1,6 +1,6 @@
 'use client';
 
-import { useRouter } from 'next/router';
+import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { useSession } from '@supabase/auth-helpers-react'; // ✅ Import session hook
@@ -41,7 +41,6 @@ export default function AuthGuard({
     // : 'none';
     const maskedToken = 'session-derived'; // or just omit this for now
 
-
     console.debug('[🔒 AuthGuard check]', {
       user: user?.email ?? null,
       role,
@@ -65,7 +64,7 @@ export default function AuthGuard({
     }
   }, [readyToCheck, user, role, roles, router, roleSource, isLoading, session, skipRoleCheck]);
 
-  if (skipRoleCheck || (!readyToCheck || !role)) {
+  if (skipRoleCheck || !readyToCheck || !role) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-black text-white">
         <div className="text-center">

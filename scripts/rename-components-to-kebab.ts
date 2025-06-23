@@ -21,7 +21,10 @@ function walk(dir: string, found: string[] = []) {
     const stat = fs.statSync(fullPath);
     if (stat.isDirectory()) {
       walk(fullPath, found);
-    } else if (EXTS.includes(path.extname(fullPath)) && isPascalCase(path.basename(fullPath, path.extname(fullPath)))) {
+    } else if (
+      EXTS.includes(path.extname(fullPath)) &&
+      isPascalCase(path.basename(fullPath, path.extname(fullPath)))
+    ) {
       found.push(fullPath);
     }
   }

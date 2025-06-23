@@ -1,12 +1,12 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { json } from '@/lib/api/json';
-import { useRouter } from 'next/router';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useUser, useSession } from '@supabase/auth-helpers-react';
 
 export default function PublicWorldShare() {
-  const router = useRouter();
-  const { slug } = router.query;
+  const searchParams = useSearchParams();
+  const slug = searchParams?.get('slug') as string;
   const handle = slug as string;
   const user = useUser();
   const session = useSession();

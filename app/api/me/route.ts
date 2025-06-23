@@ -1,10 +1,10 @@
 // app/api/me/nav/route.ts
 
 import { NAV_SECTIONS } from '@/lib/nav/links';
-import { createAppSupabaseClient } from '@/lib/supabase/server';
+import { getSupabase } from '@/lib/supabase/universal';
 
 export async function GET() {
-  const supabase = await createAppSupabaseClient(); // ✅ centralized helper
+  const supabase = await getSupabase(); // ✅ centralized helper
 
   const {
     data: { user },

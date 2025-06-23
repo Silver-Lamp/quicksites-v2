@@ -29,10 +29,7 @@ export async function POST(req: NextRequest) {
     return Response.json({ error: 'User not found' }, { status: 404 });
   }
 
-  const { data: blocks } = await supabase
-    .from('blocks')
-    .select('*')
-    .eq('owner_id', user.id);
+  const { data: blocks } = await supabase.from('blocks').select('*').eq('owner_id', user.id);
 
   const html = `
     <html>

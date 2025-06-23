@@ -63,12 +63,11 @@ export async function POST(req: NextRequest) {
   ctx.fillText(label, canvas.width / 2, canvas.height - 10);
 
   const buffer =
-  format === 'png'
-    ? canvas.toBuffer()
-    : (() => {
-        throw new Error(`Unsupported format: ${format}`);
-      })();
-
+    format === 'png'
+      ? canvas.toBuffer()
+      : (() => {
+          throw new Error(`Unsupported format: ${format}`);
+        })();
 
   // 🔒 Save to disk
   const dir = path.resolve('public', 'generated-qr', handle);

@@ -1,12 +1,12 @@
 'use client';
 import Link from 'next/link';
 import { json } from '@/lib/api/json';
-import { useRouter } from 'next/router';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 
 export default function BlockHub() {
-  const router = useRouter();
-  const { handle } = router.query;
+  const searchParams = useSearchParams();
+  const handle = searchParams?.get('handle') as string;
   const [blocks, setBlocks] = useState([]);
 
   useEffect(() => {

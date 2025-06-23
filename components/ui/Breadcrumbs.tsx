@@ -1,8 +1,8 @@
-import { useRouter } from 'next/router';
+import { useRouter, usePathname } from 'next/navigation';
 
 export default function Breadcrumbs() {
-  const router = useRouter();
-  const parts = router.pathname.split('/').filter(Boolean);
+  const pathname = usePathname();
+  const parts = pathname?.split('/').filter(Boolean) || [];
 
   return (
     <div className="text-sm text-gray-500 mb-4">

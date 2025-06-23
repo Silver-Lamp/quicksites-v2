@@ -1,5 +1,5 @@
 'use client';
-import { useRouter } from 'next/router';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { json } from '@/lib/api/json';
 import { useEffect, useState } from 'react';
 import { usePageSeo } from '@/lib/usePageSeo';
@@ -9,8 +9,8 @@ import { useUser } from '@supabase/auth-helpers-react';
 import { Template } from '@/types/template';
 
 export default function CreatorTemplatesPage() {
-  const router = useRouter();
-  const { handle } = router.query;
+  const searchParams = useSearchParams();
+  const handle = searchParams?.get('handle') as string;
   const [templates, setTemplates] = useState([]);
 
   useEffect(() => {

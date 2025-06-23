@@ -37,13 +37,14 @@ function checkCasing() {
 
       if (
         importPath.startsWith('.') || // relative
-        importPath.startsWith('@/')    // alias
+        importPath.startsWith('@/') // alias
       ) {
         const resolved = path.resolve(path.dirname(file), importPath.replace(/^@\//, ''));
-        const withExtension = EXTS.map(ext => resolved + ext).find(f => fs.existsSync(f));
+        const withExtension = EXTS.map((ext) => resolved + ext).find((f) => fs.existsSync(f));
         if (withExtension) {
           const actual = fs.realpathSync(withExtension);
-          const requested = path.resolve(path.dirname(file), importPath.replace(/^@\//, '')) + path.extname(actual);
+          const requested =
+            path.resolve(path.dirname(file), importPath.replace(/^@\//, '')) + path.extname(actual);
 
           if (actual !== requested) {
             problems++;

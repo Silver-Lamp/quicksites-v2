@@ -1,10 +1,10 @@
 // components/BreadcrumbNav.tsx
 import Link from 'next/link';
-import { useRouter } from 'next/router';
+import { useRouter, useSearchParams } from 'next/navigation';
 
 export default function BreadcrumbNav() {
-  const router = useRouter();
-  const segments = router.asPath.split('?')[0].split('/').filter(Boolean);
+  const searchParams = useSearchParams();
+  const segments = searchParams?.get('asPath')?.split('?')[0].split('/').filter(Boolean) || [];
 
   const pathAcc: string[] = [];
   const crumbs = segments.map((seg, i) => {

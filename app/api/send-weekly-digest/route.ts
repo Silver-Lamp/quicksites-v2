@@ -42,7 +42,7 @@ ${summary.received_feedback.map((f: any) => `• ${f.action} on ${f.block_id.sli
 export async function GET() {
   const { data: users, error } = await supabase.auth.admin.listUsers();
   if (error) return json({ error: error.message });
-  
+
   const summaries: any[] = [];
 
   for (const user of users.users) {

@@ -2,7 +2,7 @@
 export const runtime = 'nodejs';
 
 import { json } from '@/lib/api/json';
-import { createAppSupabaseClient } from '@/lib/supabase/server';
+import { getSupabase } from '@/lib/supabase/universal';
 import { createClient } from '@supabase/supabase-js';
 
 // Service client for updates (bypasses RLS)
@@ -12,13 +12,7 @@ const supabase = createClient(
 );
 
 export async function POST(req: Request) {
-  const {
-    slug,
-    headline,
-    goal_count,
-    target_action,
-    block_id,
-  } = await req.json();
+  const { slug, headline, goal_count, target_action, block_id } = await req.json();
 
   if (!slug || typeof slug !== 'string') {
     return json({ error: 'Missing or invalid slug' }, { status: 400 });
@@ -28,7 +22,7 @@ export async function POST(req: Request) {
     return json({ error: 'Invalid goal_count (must be a number)' }, { status: 400 });
   }
 
-  const userSupabase = await createAppSupabaseClient(); // ✅ Auth-bound client
+  const userSupabase = await getSupabase({ req: req as Request }); // ✅ Auth-bound client
 
   const {
     data: { user },

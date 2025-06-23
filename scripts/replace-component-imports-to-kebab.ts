@@ -34,9 +34,12 @@ function updateImportsToKebabCase() {
     const original = code;
 
     // Replace '@/components/some-component' → '@/components/some-component'
-    code = code.replace(/(['"])@\/components\/((?:[A-Za-z0-9]+\/)*)([A-Z][A-Za-z0-9]*)\1/g, (_, quote, pathPart, filePart) => {
-      return `${quote}@/components/${pathPart}${toKebabCase(filePart)}${quote}`;
-    });
+    code = code.replace(
+      /(['"])@\/components\/((?:[A-Za-z0-9]+\/)*)([A-Z][A-Za-z0-9]*)\1/g,
+      (_, quote, pathPart, filePart) => {
+        return `${quote}@/components/${pathPart}${toKebabCase(filePart)}${quote}`;
+      }
+    );
 
     if (code !== original) {
       fs.writeFileSync(file, code, 'utf-8');

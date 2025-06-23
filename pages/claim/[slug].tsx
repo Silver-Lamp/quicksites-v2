@@ -1,11 +1,11 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { json } from '@/lib/api/json';
-import { useRouter } from 'next/router';
+import { useRouter, useSearchParams } from 'next/navigation';
 
 export default function ClaimPage() {
-  const router = useRouter();
-  const { slug } = router.query;
+  const searchParams = useSearchParams();
+  const slug = searchParams?.get('slug') as string;
   const [status, setStatus] = useState<'loading' | 'claimed' | 'unclaimed'>('loading');
   const [email, setEmail] = useState('');
   const [anon, setAnon] = useState(false);

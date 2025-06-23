@@ -2,7 +2,7 @@
 export const runtime = 'nodejs';
 
 import { json } from '@/lib/api/json';
-import { createAppSupabaseClient } from '@/lib/supabase/server';
+import { getSupabase } from '@/lib/supabase/universal';
 import { createClient } from '@supabase/supabase-js';
 
 // Emoji and tag policies
@@ -42,7 +42,7 @@ export async function POST(req: Request) {
     return json({ error: 'Invalid goal tags' }, { status: 400 });
   }
 
-  const userSupabase = await createAppSupabaseClient(); // ✅ Auth-safe call
+  const userSupabase = await getSupabase({ req: req as Request }); // ✅ Auth-safe call
 
   const {
     data: { user },

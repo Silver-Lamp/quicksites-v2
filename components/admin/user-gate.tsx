@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
-import { useRouter } from 'next/router';
+import { useRouter } from 'next/navigation';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 
 type UserGateProps = {
@@ -20,7 +20,8 @@ export default function UserGate({
   const { user, ready } = useCurrentUser();
   const router = useRouter();
 
-  const isAuthorized = user && requireRole.includes(user.role as 'admin' | 'editor' | 'viewer' | 'owner');
+  const isAuthorized =
+    user && requireRole.includes(user.role as 'admin' | 'editor' | 'viewer' | 'owner');
 
   useEffect(() => {
     if (ready && !isAuthorized) {

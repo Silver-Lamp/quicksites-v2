@@ -63,7 +63,7 @@ export async function GET(req: Request) {
     if (!supportMap[uid]) {
       supportMap[uid] = { cheer: 0, reflect: 0, echo: 0, latest: fb.created_at };
     }
-    supportMap[uid][fb.action as keyof typeof supportMap[typeof uid]]++;
+    supportMap[uid][fb.action as keyof (typeof supportMap)[typeof uid]]++;
     if (new Date(fb.created_at) > new Date(supportMap[uid].latest)) {
       supportMap[uid].latest = fb.created_at;
     }
@@ -77,10 +77,13 @@ export async function GET(req: Request) {
     .select('id, user_metadata')
     .in('id', userIds);
 
-  const profileMap = (profiles || []).reduce((acc, u) => {
-    acc[u.id] = u.user_metadata || {};
-    return acc;
-  }, {} as Record<string, any>);
+  const profileMap = (profiles || []).reduce(
+    (acc, u) => {
+      acc[u.id] = u.user_metadata || {};
+      return acc;
+    },
+    {} as Record<string, any>
+  );
 
   // ✅ 7. Final output
   const result = userIds.map((uid) => ({

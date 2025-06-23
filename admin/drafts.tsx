@@ -1,7 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { supabase } from '../admin/lib/supabaseClient';
-import { useRouter } from 'next/router';
+import { useRouter } from 'next/navigation';
 
 export default function DraftsPage() {
   const [drafts, setDrafts] = useState<any[]>([]);

@@ -1,20 +1,21 @@
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/router';
+import { useRouter, useSearchParams } from 'next/navigation';
 
 export function useQueryFlash(key: string): string | null {
-  const router = useRouter();
+  const searchParams = useSearchParams();
   const [value, setValue] = useState<string | null>(null);
 
   useEffect(() => {
-    const param = router.query[key];
+    const param = searchParams?.get(key);
     if (param && typeof param === 'string') {
       setValue(param);
 
       // Strip it from the URL without full reload
-      const { [key]: _, ...rest } = router.query;
-      router.replace({ pathname: router.pathname, query: rest }, undefined, { shallow: true });
+      const rest = new URLSearchParams(searchParams.toString());
+      rest.delete(key);
+      window.location.href = `${window.location.pathname}?${rest.toString()}`;
     }
-  }, [router.query[key]]); // re-run if query changes
+  }, [searchParams?.get(key)]); // re-run if query changes
 
   return value;
 }

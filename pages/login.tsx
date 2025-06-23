@@ -3,7 +3,7 @@
 import { useSetSessionFromHash } from '@/hooks/useSetSessionFromHash';
 import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/admin/lib/supabaseClient';
-import { useRouter } from 'next/router';
+import { useRouter } from 'next/navigation';
 import ReCAPTCHA from 'react-google-recaptcha';
 
 export default function LoginPage() {
@@ -84,7 +84,9 @@ export default function LoginPage() {
   };
 
   const assignRole = async (selected: string) => {
-    const { data: { session } } = await supabase.auth.getSession();
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
     const id = session?.user?.id;
     const email = session?.user?.email ?? '';
 
@@ -111,10 +113,7 @@ export default function LoginPage() {
     setToast(`✅ Role set to "${selected}"`);
     setTimeout(() => setToast(null), 3000);
 
-    const redirect =
-      selected === 'admin'
-        ? '/admin/dashboard'
-        : '/?message=role-assigned';
+    const redirect = selected === 'admin' ? '/admin/dashboard' : '/?message=role-assigned';
 
     router.replace(redirect);
     setTimeout(() => window.location.reload(), 1000);
@@ -124,9 +123,25 @@ export default function LoginPage() {
     <div className="min-h-screen flex items-center justify-center bg-black text-white p-4 relative">
       {loading && (
         <div className="fixed inset-0 z-50 bg-black/90 flex flex-col items-center justify-center">
-          <svg className="animate-spin h-8 w-8 text-white mb-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
+          <svg
+            className="animate-spin h-8 w-8 text-white mb-3"
+            xmlns="http://www.w3.org/2000/svg"
+            fill="none"
+            viewBox="0 0 24 24"
+          >
+            <circle
+              className="opacity-25"
+              cx="12"
+              cy="12"
+              r="10"
+              stroke="currentColor"
+              strokeWidth="4"
+            />
+            <path
+              className="opacity-75"
+              fill="currentColor"
+              d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
+            />
           </svg>
           <p className="text-sm text-gray-300">Checking session…</p>
         </div>
@@ -167,7 +182,9 @@ export default function LoginPage() {
               Send Magic Link
             </button>
             {message && (
-              <p className={`mt-4 text-sm text-center ${message.startsWith('✅') ? 'text-green-400' : 'text-red-400'}`}>
+              <p
+                className={`mt-4 text-sm text-center ${message.startsWith('✅') ? 'text-green-400' : 'text-red-400'}`}
+              >
                 {message}
               </p>
             )}

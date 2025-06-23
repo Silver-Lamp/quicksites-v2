@@ -1,6 +1,6 @@
 'use client';
 
-import { useRouter } from 'next/router';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { createClient } from '@supabase/supabase-js';
 import QRCode from 'qrcode';
@@ -11,8 +11,8 @@ const supabase = createClient(
 );
 
 export default function BrandingProfilePage() {
-  const router = useRouter();
-  const { id } = router.query;
+  const searchParams = useSearchParams();
+  const id = searchParams?.get('id') as string;
   const [profile, setProfile] = useState<any>(null);
   const [qr, setQr] = useState<string | null>(null);
   const [accessOk, setAccessOk] = useState(false);

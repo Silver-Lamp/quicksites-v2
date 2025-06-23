@@ -3,7 +3,7 @@ import Head from 'next/head';
 import { json } from '@/lib/api/json';
 
 import { useEffect, useState, useRef } from 'react';
-import { useRouter } from 'next/router';
+import { useRouter, useSearchParams } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import { createClient } from '@supabase/supabase-js';
 import { GripVertical } from 'lucide-react';
@@ -24,8 +24,8 @@ const supabase = createClient(
 );
 
 export default function EditPage() {
-  const router = useRouter();
-  const { slug } = router.query;
+  const searchParams = useSearchParams();
+  const slug = searchParams?.get('slug') as string;
   const [siteData, setSiteData] = useState<SiteData | null>(null);
   const [currentPageIndex, setCurrentPageIndex] = useState(0);
   const [selectedBlockIndex, setSelectedBlockIndex] = useState<number | null>(null);

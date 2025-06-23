@@ -51,7 +51,7 @@ export async function POST(req: NextRequest) {
     format = 'png',
     mode = 'inline',
     zip = false,
-    signed = false
+    signed = false,
   } = await req.json();
 
   if (!blockId || !handle) {

@@ -1,4 +1,3 @@
-
 import { createCanvas, registerFont } from 'canvas';
 import QRCode from 'qrcode';
 import crypto from 'node:crypto';
@@ -63,7 +62,7 @@ export async function POST(req: NextRequest) {
     format = 'png',
     mode = 'inline',
     zip = false,
-    signed = false
+    signed = false,
   } = await req.json();
 
   if (!blockId || !handle) {
@@ -81,7 +80,7 @@ export async function POST(req: NextRequest) {
   await QRCode.toCanvas(qrCanvas, url, {
     margin: 1,
     width: size,
-    color: { dark: color, light: background }
+    color: { dark: color, light: background },
   });
 
   const canvas = createCanvas(size, size + fontSize + 20);
@@ -95,11 +94,11 @@ export async function POST(req: NextRequest) {
   ctx.fillText(label, canvas.width / 2, canvas.height - 10);
 
   const buffer =
-  format === 'png'
-    ? canvas.toBuffer()
-    : (() => {
-        throw new Error(`Unsupported format: ${format}`);
-      })();
+    format === 'png'
+      ? canvas.toBuffer()
+      : (() => {
+          throw new Error(`Unsupported format: ${format}`);
+        })();
 
   const filename = `${blockId}.${format}`;
   const relativePath = `/generated-qr/${handle}/${filename}`;
@@ -118,7 +117,7 @@ export async function POST(req: NextRequest) {
       ok: true,
       path: relativePath,
       zip: zipPath,
-      signed: signed ? `${relativePath}?sig=fake-signature&expires=9999999999` : undefined
+      signed: signed ? `${relativePath}?sig=fake-signature&expires=9999999999` : undefined,
     });
   }
 
@@ -129,6 +128,6 @@ export async function POST(req: NextRequest) {
       'Content-Length': buffer.length.toString(),
       'Cache-Control': 'public, max-age=604800',
       ETag: etag,
-    }
+    },
   });
 }

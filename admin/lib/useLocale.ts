@@ -1,4 +1,4 @@
-import { useRouter } from 'next/router';
+import { useRouter } from 'next/navigation';
 
 const translations: Record<string, Record<string, string>> = {
   en: {

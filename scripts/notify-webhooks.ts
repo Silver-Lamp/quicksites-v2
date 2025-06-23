@@ -3,7 +3,10 @@ import path from 'node:path';
 import fetch from 'node-fetch';
 import { createClient } from '@supabase/supabase-js';
 
-const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+);
 
 const logPath = './reports/activity.log';
 const contents = fs.readFileSync(logPath, 'utf-8').trim().split('\n');

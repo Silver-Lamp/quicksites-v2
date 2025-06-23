@@ -11,7 +11,7 @@ export default function MetricsPage() {
       .then((res) => json(res))
       .then(setStats);
   }, []);
-  
+
   return (
     <div className="p-6 text-white max-w-4xl mx-auto">
       <h1 className="text-3xl font-bold mb-6">📊 QuickSites Metrics</h1>

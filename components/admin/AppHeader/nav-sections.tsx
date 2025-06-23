@@ -25,7 +25,9 @@ export function NavSections() {
             className="group"
             open={section.routes.some((r) => matches(r.href))}
           >
-            <summary className={`cursor-pointer font-semibold ${section.color} group-open:underline`}>
+            <summary
+              className={`cursor-pointer font-semibold ${section.color} group-open:underline`}
+            >
               {section.label}
             </summary>
             <div className="ml-2 flex flex-wrap gap-2 mt-1">

@@ -68,7 +68,8 @@ export default function TemplateJsonEditor({ rawJson, setRawJson }: TemplateJson
             <div className="ml-4">
               {Object.entries(value).map(([k, v]) => (
                 <div key={k}>
-                  <span className="text-green-400">&quot;{k}&quot;</span>: {renderValue(v, `${path}.${k}`)}
+                  <span className="text-green-400">&quot;{k}&quot;</span>:{' '}
+                  {renderValue(v, `${path}.${k}`)}
                 </div>
               ))}
             </div>

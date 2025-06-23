@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useRouter } from 'next/router';
+import { usePathname, useRouter } from 'next/navigation';
 import { FiGrid, FiFileText, FiGlobe, FiUsers, FiMenu } from 'react-icons/fi';
 import { useState, useEffect } from 'react';
 import { supabase } from '@/admin/lib/supabaseClient';
@@ -19,7 +19,7 @@ const allTabs = [
 ];
 
 export default function AdminTabs() {
-  const { pathname } = useRouter();
+  const pathname = usePathname();
   const [role, setRole] = useState<string>('user');
   const [open, setOpen] = useState(false);
 
@@ -30,7 +30,7 @@ export default function AdminTabs() {
     });
   }, []);
 
-  const isActive = (href: string) => pathname === href || pathname.startsWith(href + '/');
+  const isActive = (href: string) => pathname === href || (pathname && pathname.startsWith(href + '/'));
 
   const tabs = allTabs.filter((tab) => !tab.roles || tab.roles.includes(role));
 

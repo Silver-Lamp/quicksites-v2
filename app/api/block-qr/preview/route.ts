@@ -64,11 +64,11 @@ export async function GET(req: NextRequest) {
   ctx.fillText(label, canvas.width / 2, canvas.height - 10);
 
   const buffer =
-  format === 'png'
-    ? canvas.toBuffer()
-    : (() => {
-        throw new Error(`Unsupported format: ${format}`);
-      })();
+    format === 'png'
+      ? canvas.toBuffer()
+      : (() => {
+          throw new Error(`Unsupported format: ${format}`);
+        })();
 
   return new Response(buffer, {
     status: 200,

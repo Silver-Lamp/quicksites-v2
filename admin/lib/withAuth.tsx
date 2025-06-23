@@ -1,5 +1,5 @@
 import { useSession } from '@supabase/auth-helpers-react';
-import { useRouter } from 'next/router';
+import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 
 export function withAuth<P extends object>(WrappedComponent: React.ComponentType<P>) {

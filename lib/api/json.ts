@@ -28,7 +28,6 @@ export function safeTypedJson<T>(
   schema: z.ZodType<T, any, any>,
   statusOrOptions?: number | ResponseInit
 ): Response {
-
   const result = schema.safeParse(data);
   if (!result.success) {
     return internalError('Invalid server response', result.error.format());

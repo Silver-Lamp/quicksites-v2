@@ -1,35 +1,38 @@
 import { useEffect, useState } from 'react';
+import { useCurrentUser } from './useCurrentUser';
 import { supabase } from '@/admin/lib/supabaseClient';
 
 export function useCanonicalRole() {
+  const { user, ready } = useCurrentUser();
   const [role, setRole] = useState<string | null>(null);
-  const [user, setUser] = useState<any>(null);
-  const [ready, setReady] = useState(false);
 
   useEffect(() => {
-    const fetch = async () => {
-      const { data } = await supabase.auth.getUser();
-      const currentUser = data?.user;
-      setUser(currentUser);
+    if (!ready) {
+      console.log('[🔁 useCanonicalRole] Waiting for auth context to be ready...');
+      return;
+    }
 
-      if (!currentUser) {
-        setRole(null);
-        setReady(true);
-        return;
-      }
+    if (!user?.id) {
+      console.warn('[❌ useCanonicalRole] No user found');
+      return;
+    }
 
-      const { data: profile } = await supabase
-        .from('user_profiles')
-        .select('role')
-        .eq('user_id', currentUser.id)
-        .maybeSingle();
+    console.log('[🧠 useCanonicalRole] Fetching role for user:', user.email);
 
-      setRole(profile?.role ?? 'viewer');
-      setReady(true);
-    };
+    supabase
+      .from('user_profiles')
+      .select('role')
+      .eq('user_id', user.id)
+      .maybeSingle()
+      .then(({ data, error }) => {
+        if (error) {
+          console.error('[❌ useCanonicalRole] Failed to fetch profile:', error.message);
+        } else {
+          console.log('[✅ useCanonicalRole] Fetched profile:', data);
+          setRole(data?.role ?? 'viewer');
+        }
+      });
+  }, [user, ready]);
 
-    fetch();
-  }, []);
-
-  return { role, user, ready };
+  return { role, ready };
 }

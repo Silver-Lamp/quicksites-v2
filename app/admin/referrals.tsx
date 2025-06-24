@@ -5,6 +5,8 @@ import { useCanonicalRole } from '@/hooks/useCanonicalRole';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/admin/lib/supabaseClient';
 
+const DEBUG = process.env.NEXT_PUBLIC_DEBUG_AUTH === 'true';
+
 export default function ReferralsPage() {
   const [users, setUsers] = useState<any[]>([]);
   const [profiles, setProfiles] = useState<Record<string, any>>({});
@@ -21,6 +23,8 @@ export default function ReferralsPage() {
     }
 
     const fetchData = async () => {
+      DEBUG && console.log('[👥 Fetching Users + Profiles]');
+
       const { data: userData, error: userError } = await supabase.auth.admin.listUsers();
       if (userError) {
         setError(userError.message);
@@ -37,6 +41,8 @@ export default function ReferralsPage() {
         profileMap[p.user_id] = { role: p.role, referrer_id: p.referrer_id };
       });
       setProfiles(profileMap);
+
+      DEBUG && console.log('[✅ Profiles Loaded]', profileMap);
     };
 
     fetchData();

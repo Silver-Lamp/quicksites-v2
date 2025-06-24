@@ -42,7 +42,7 @@ export async function POST(req: Request) {
     return json({ error: 'Invalid goal tags' }, { status: 400 });
   }
 
-  const userSupabase = await getSupabase({ req: req as Request }); // ✅ Auth-safe call
+  const userSupabase = await getSupabase(); // ✅ Auth-safe call
 
   const {
     data: { user },

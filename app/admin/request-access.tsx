@@ -3,11 +3,13 @@
 import Head from 'next/head';
 import { useState, useEffect } from 'react';
 import { useCanonicalRole } from '@/hooks/useCanonicalRole';
+import { useCurrentUser } from '@/hooks/useCurrentUser'; // ✅ NEW
 import { supabase } from '@/admin/lib/supabaseClient';
 import toast from 'react-hot-toast';
 
 export default function RequestAccessPage() {
-  const { role, user } = useCanonicalRole();
+  const { role } = useCanonicalRole();
+  const { user } = useCurrentUser(); // ✅ FIXED
   const [message, setMessage] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [email, setEmail] = useState('');

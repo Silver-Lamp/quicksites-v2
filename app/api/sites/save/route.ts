@@ -19,7 +19,7 @@ export async function POST(req: Request) {
     return json({ error: 'Missing site ID or data' }, { status: 400 });
   }
 
-  const userSupabase = await getSupabase({ req: req as Request }); // ✅ App Router-safe auth client
+  const userSupabase = await getSupabase(); // ✅ App Router-safe auth client
 
   const {
     data: { user },

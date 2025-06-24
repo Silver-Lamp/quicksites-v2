@@ -1,45 +1,32 @@
-// lib/supabase/universal.ts
-import { createServerClient } from '@supabase/ssr';
-import { cookies as nextCookies } from 'next/headers';
-import type { SupabaseClient } from '@supabase/supabase-js';
+import { createServerComponentClient } from '@supabase/auth-helpers-nextjs';
+import { cookies, headers } from 'next/headers';
+import type { ReadonlyRequestCookies } from 'next/dist/server/web/spec-extension/adapters/request-cookies';
+import type { ReadonlyHeaders } from 'next/dist/server/web/spec-extension/adapters/headers';
 
-export async function getSupabase(context?: { req?: Request }): Promise<SupabaseClient> {
-  const isApiRoute = context?.req instanceof Request;
+export async function getSupabase() {
+  const cookieStore = cookies() as unknown as ReadonlyRequestCookies;
+  const headerStore = headers() as unknown as ReadonlyHeaders;
 
-  if (isApiRoute) {
-    const req = context.req!;
-    const cookieHeader = req.headers.get('cookie') || '';
-    return createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      {
-        cookies: {
-          get(name: string) {
-            const match = cookieHeader
-              .split(';')
-              .map((c) => c.trim())
-              .find((c) => c.startsWith(`${name}=`));
-            return match?.split('=')[1] ?? undefined;
-          },
-          set() {},
-          remove() {},
-        },
-      }
-    );
+  try {
+    const allCookies = Array.from(cookieStore.getAll?.() || []);
+    const allHeaders = Array.from(headerStore.entries?.() || []);
+
+    console.log('[🔐 getSupabase] 🍪 Cookies:', allCookies);
+    console.log('[🔐 getSupabase] 🧠 Headers:', allHeaders);
+  } catch (err) {
+    console.warn('[⚠️ getSupabase] Skipped cookie/header logging due to env mismatch:', err);
   }
 
-  const cookieStore = await nextCookies();
-  return createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        get(name: string) {
-          return cookieStore.get(name)?.value;
-        },
-        set() {},
-        remove() {},
-      },
-    }
-  );
+  const supabase = createServerComponentClient({
+    cookies: async () => cookieStore,
+  });
+
+  try {
+    const session = await supabase.auth.getSession();
+    console.log('[🔐 getSupabase] Session:', session);
+  } catch (err) {
+    console.error('[❌ getSupabase] Failed to get session:', err);
+  }
+
+  return supabase;
 }

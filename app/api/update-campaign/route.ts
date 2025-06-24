@@ -22,7 +22,7 @@ export async function POST(req: Request) {
     return json({ error: 'Invalid goal_count (must be a number)' }, { status: 400 });
   }
 
-  const userSupabase = await getSupabase({ req: req as Request }); // ✅ Auth-bound client
+  const userSupabase = await getSupabase(); // ✅ Auth-bound client
 
   const {
     data: { user },

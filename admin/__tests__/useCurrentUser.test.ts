@@ -8,7 +8,7 @@ vi.mock('@supabase/auth-helpers-react', () => ({
   useSession: () => ({
     user: {
       email: 'admin@example.com',
-      user_metadata: {
+      user_profiles: {
         role: 'admin',
         permissions: ['view_logs', 'export_data'],
         team: 'alpha',
@@ -24,7 +24,7 @@ describe('useCurrentUser', () => {
 
     expect(result.current.user?.email).toBe('admin@example.com');
     expect(result.current.role).toBe(Role.Admin);
-    expect(result.current.roleSource).toBe('user_metadata');
+    expect(result.current.roleSource).toBe('user_profiles');
     expect(result.current.isLoading).toBe(false);
     expect(result.current.ready).toBe(true);
     expect(result.current.hasRole([Role.Admin])).toBe(true);

@@ -114,6 +114,7 @@
     "html2pdf.js": "^0.10.3",
     "jest-image-snapshot": "^6.5.1",
     "jsondiffpatch": "^0.7.3",
+    "jsonwebtoken": "^9.0.2",
     "leaflet": "^1.9.4",
     "lucide-react": "^0.513.0",
     "marked": "^15.0.12",

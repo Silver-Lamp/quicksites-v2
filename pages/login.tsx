@@ -58,7 +58,7 @@ export default function LoginPage() {
               ? '/admin/dashboard?message=welcome'
               : '/?message=welcome';
 
-        router.replace(redirect);
+        // router.replace(redirect);
       } else {
         setShowOnboarding(true);
       }

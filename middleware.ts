@@ -1,11 +1,12 @@
-import { NextResponse } from 'next/server.js';
-import type { NextRequest } from 'next/server.js';
+// ---- middleware.ts ----
+import { NextResponse } from 'next/server';
+import type { NextRequest } from 'next/server';
+import { getServerUserProfile } from './lib/supabase/getServerUserProfile';
 
 export async function middleware(req: NextRequest) {
   const hostname = req.headers.get('host') || '';
   const pathname = req.nextUrl.pathname;
 
-  // Detect known root domains (including localhost, www, etc.)
   const isRootDomain =
     hostname === 'localhost:3000' ||
     hostname === 'quicksites.ai' ||
@@ -16,9 +17,6 @@ export async function middleware(req: NextRequest) {
     .replace('.quicksites.ai', '')
     .replace('.vercel.app', '');
 
-  const skipRoleCheck = true;
-
-  // Public subdomain (like brutow-renton.quicksites.ai)
   const isPublicSite =
     !isRootDomain &&
     hostname.endsWith('.quicksites.ai') &&
@@ -32,31 +30,16 @@ export async function middleware(req: NextRequest) {
     return NextResponse.rewrite(url);
   }
 
-  // Allow home page to render for quicksites.ai (no rewrite)
   if (isRootDomain) {
     return NextResponse.next();
   }
 
-  // 🔒 Admin route auth
-  if (!skipRoleCheck && pathname.startsWith('/admin')) {
-    const { supabase } = await import('@/admin/lib/supabaseClient');
-    const res = NextResponse.next();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser(req.url.toString());
+  if (pathname.startsWith('/admin')) {
+    const profile = await getServerUserProfile();
 
-    console.log('🔒 [Middleware] Checking admin auth:', { pathname, user });
-
-    if (!user) {
-      return NextResponse.redirect(new URL('/login?error=unauthorized', req.url));
-    }
-
-    const role = user.user_metadata?.role;
-    if (!['admin', 'owner', 'reseller'].includes(role)) {
+    if (!profile || !['admin', 'owner', 'reseller'].includes(profile.role)) {
       return NextResponse.redirect(new URL('/login?error=forbidden', req.url));
     }
-
-    return res;
   }
 
   return NextResponse.next();

@@ -1,24 +1,34 @@
-// ✅ FILE: hooks/useSetSessionFromHash.ts
+// hooks/useSetSessionFromHash.ts
+'use client';
 
 import { useEffect } from 'react';
-import { supabase } from '../admin/lib/supabaseClient';
+import { supabase } from '@/admin/lib/supabaseClient';
+import { useRouter } from 'next/navigation';
 
 export function useSetSessionFromHash() {
+  const router = useRouter();
+
   useEffect(() => {
-    const hash = window.location.hash.slice(1);
-    const params = new URLSearchParams(hash);
+    const hash = window.location.hash;
 
-    const access_token = params.get('access_token');
-    const refresh_token = params.get('refresh_token');
+    if (!hash) return;
 
-    if (access_token && refresh_token) {
-      console.log('🔑 Attempting to set session from URL fragment...');
-      supabase.auth.setSession({ access_token, refresh_token }).then(({ data, error }) => {
-        console.log('[🔐 setSession result]', { data, error });
-        if (!error) {
-          window.location.replace('/');
+    const params = new URLSearchParams(hash.substring(1));
+    const accessToken = params.get('access_token');
+    const refreshToken = params.get('refresh_token');
+
+    if (!accessToken || !refreshToken) return;
+
+    console.log('[🔐 Extracted tokens from hash]', { accessToken, refreshToken });
+
+    supabase.auth.setSession({ access_token: accessToken, refresh_token: refreshToken })
+      .then(({ error }) => {
+        if (error) {
+          console.error('[❌ Failed to set session]', error);
+        } else {
+          console.log('[✅ Supabase session restored]');
+          router.replace('/'); // 🔄 Clean up the hash from URL
         }
       });
-    }
   }, []);
 }

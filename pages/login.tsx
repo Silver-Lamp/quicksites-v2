@@ -1,13 +1,13 @@
 'use client';
 
-import { useSetSessionFromHash } from '@/hooks/useSetSessionFromHash';
-import { useState, useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { supabase } from '@/admin/lib/supabaseClient';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import ReCAPTCHA from 'react-google-recaptcha';
 
 export default function LoginPage() {
-  useSetSessionFromHash();
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const recaptchaRef = useRef<any>(null);
 
   const [email, setEmail] = useState('');
@@ -15,12 +15,26 @@ export default function LoginPage() {
   const [toast, setToast] = useState<string | null>(null);
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [loading, setLoading] = useState(true);
-  const router = useRouter();
+  const [debug, setDebug] = useState<any>(null);
 
+  const assignRoleOnLogin = false;
+  const showSpinner = false;
+
+  // ✅ Check for session token in URL hash
   useEffect(() => {
+    const hasSessionToken =
+      typeof window !== 'undefined' && window.location.hash.includes('access_token');
+
+    if (hasSessionToken) {
+      supabase.auth.getSession().then(({ data }) => {
+        console.log('[🔁 Refreshed session from hash]', data);
+      });
+    }
+
     const checkUser = async () => {
       const { data: { user }, error } = await supabase.auth.getUser();
       if (!user || error) {
+        setDebug({ error, user });
         setLoading(false);
         return;
       }
@@ -31,10 +45,12 @@ export default function LoginPage() {
         .eq('user_id', user.id)
         .maybeSingle();
 
-      const role = profile?.role ?? null;
+      const role = profile?.role ?? 'viewer';
       const plan = profile?.plan ?? 'free';
 
-      if (role && role !== 'viewer') {
+      setDebug({ user, profile, role, plan });
+
+      if (role !== 'viewer') {
         const redirect =
           plan === 'enterprise'
             ? '/enterprise/dashboard'
@@ -53,9 +69,53 @@ export default function LoginPage() {
     checkUser();
   }, []);
 
+  // ✅ Dev AutoLogin Trigger
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const devEmail = params.get('dev-login');
+  
+    if (
+      process.env.NODE_ENV === 'development' &&
+      devEmail &&
+      devEmail.includes('@')
+    ) {
+      console.log(`[⚙️ Dev AutoLogin Trigger] ${devEmail}`);
+  
+      supabase.auth
+        .signInWithOtp({
+          email: devEmail,
+          options: {
+            emailRedirectTo: `${window.location.origin}/login`,
+          },
+        })
+        .then(({ error }) => {
+          if (error) {
+            console.error('[❌ Dev AutoLogin Error]', error.message);
+          } else {
+            console.log('[✅ Dev Magic Link Sent]');
+          }
+        });
+    }
+  }, []);
+  
+  // ✅ Handle magic link sign-in
+  useEffect(() => {
+    const { data: listener } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'SIGNED_IN' && session?.user) {
+        console.log('[✅ SIGNED_IN from magic link]', session.user);
+        router.replace('/login'); // Forces refresh of current logic
+      }
+    });
+  
+    return () => {
+      listener.subscription.unsubscribe();
+    };
+  }, []);
+  
+  // ✅ Handle manual login
   const handleLogin = async () => {
-    const token = await recaptchaRef.current.executeAsync();
-    recaptchaRef.current.reset();
+    const token = await recaptchaRef.current?.executeAsync();
+    recaptchaRef.current?.reset();
 
     if (!token) {
       setMessage('❌ reCAPTCHA failed. Try again.');
@@ -77,14 +137,11 @@ export default function LoginPage() {
     }
   };
 
+  // ✅ Handle role assignment
   const assignRole = async (selected: string) => {
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-
+    const { data: { user } } = await supabase.auth.getUser();
     const id = user?.id;
     const email = user?.email ?? '';
-
     if (!id || !email) return;
 
     const now = new Date().toISOString();
@@ -113,30 +170,33 @@ export default function LoginPage() {
     setTimeout(() => window.location.reload(), 1000);
   };
 
+  // ✅ Render the login page
   return (
     <div className="min-h-screen flex items-center justify-center bg-black text-white p-4 relative">
       {loading && (
         <div className="fixed inset-0 z-50 bg-black/90 flex flex-col items-center justify-center">
-          <svg
-            className="animate-spin h-8 w-8 text-white mb-3"
-            xmlns="http://www.w3.org/2000/svg"
-            fill="none"
-            viewBox="0 0 24 24"
-          >
-            <circle
-              className="opacity-25"
-              cx="12"
-              cy="12"
-              r="10"
-              stroke="currentColor"
-              strokeWidth="4"
-            />
-            <path
-              className="opacity-75"
-              fill="currentColor"
-              d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
-            />
-          </svg>
+          {showSpinner && (
+            <svg
+              className="animate-spin h-8 w-8 text-white mb-3"
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+            >
+              <circle
+                className="opacity-25"
+                cx="12"
+                cy="12"
+                r="10"
+                stroke="currentColor"
+                strokeWidth="4"
+              />
+              <path
+                className="opacity-75"
+                fill="currentColor"
+                d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
+              />
+            </svg>
+          )}
           <p className="text-sm text-gray-300">Checking session…</p>
         </div>
       )}
@@ -188,6 +248,12 @@ export default function LoginPage() {
               ref={recaptchaRef}
             />
           </>
+        )}
+
+        {debug && (
+          <pre className="text-xs text-left text-gray-400 bg-zinc-900 p-2 mt-4 rounded max-w-lg overflow-auto">
+            {JSON.stringify(debug, null, 2)}
+          </pre>
         )}
       </div>
     </div>

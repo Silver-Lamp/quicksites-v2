@@ -10,7 +10,7 @@ export function withAuth<P extends object>(WrappedComponent: React.ComponentType
 
     useEffect(() => {
       if (session === null) {
-        router.push(`/login?redirectTo=${encodeURIComponent(router.asPath)}`);
+        router.push(`/login?redirectTo=${encodeURIComponent(window.location.pathname)}`);
       }
     }, [session]);
 

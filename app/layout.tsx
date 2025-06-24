@@ -1,4 +1,5 @@
 // app/layout.tsx
+import '@/styles/globals.css';
 import WithAuth from '@/lib/auth/AuthProvider';
 import AppHeader from '@/components/admin/AppHeader/app-header';
 

@@ -44,7 +44,7 @@ export function useFlashToast(
       }
 
       // Remove the flash param from the URL
-      const rest = new URLSearchParams(searchParams.toString());
+      const rest = new URLSearchParams(searchParams?.toString() || '');
       rest.delete(key);
       window.location.href = `${window.location.pathname}?${rest.toString()}`;
     }

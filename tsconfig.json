@@ -7,6 +7,7 @@
     "next-env.d.ts",
     "pages",
     "types",
+    "admin",                    // ← Add this line
     ".next/types/**/*.ts"
   ],
   "exclude": [
@@ -16,21 +17,11 @@
   "compilerOptions": {
     "baseUrl": ".",
     "paths": {
-      "@/*": [
-        "./*"
-      ],
-      "@/admin/*": [
-        "admin/*"
-      ],
-      "@/components/*": [
-        "components/*"
-      ],
-      "@/pages/*": [
-        "pages/*"
-      ],
-      "@/lib/*": [
-        "lib/*"
-      ]
+      "@/*": ["./*"],
+      "@/admin/*": ["admin/*"],
+      "@/components/*": ["components/*"],
+      "@/pages/*": ["pages/*"],
+      "@/lib/*": ["lib/*"]
     },
     "jsx": "preserve",
     "target": "ES2020",

@@ -11,7 +11,7 @@ export function useQueryFlash(key: string): string | null {
       setValue(param);
 
       // Strip it from the URL without full reload
-      const rest = new URLSearchParams(searchParams.toString());
+      const rest = new URLSearchParams(searchParams?.toString() || '');
       rest.delete(key);
       window.location.href = `${window.location.pathname}?${rest.toString()}`;
     }

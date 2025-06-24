@@ -1,26 +1,53 @@
+'use client';
+
 import { useEffect, useState } from 'react';
+import { useCanonicalRole } from '@/hooks/useCanonicalRole';
+import { useRouter } from 'next/navigation';
 import { supabase } from '@/admin/lib/supabaseClient';
 
 export default function ReferralsPage() {
   const [users, setUsers] = useState<any[]>([]);
+  const [profiles, setProfiles] = useState<Record<string, any>>({});
+  const [error, setError] = useState('');
+  const { role } = useCanonicalRole();
+  const router = useRouter();
 
   useEffect(() => {
-    supabase.auth.admin.listUsers().then(({ data }) => {
-      setUsers(data?.users || []);
-    });
-  }, []);
+    if (role === null) return;
 
-  const referrers = users.filter((u) => u.user_metadata?.role === 'affiliate_referrer');
-  const referredMap = Object.fromEntries(
-    users.map((u) => [u.id, u.user_metadata?.referrer_id || null])
-  );
+    if (role !== 'admin') {
+      router.push('/login?error=unauthorized');
+      return;
+    }
 
-  const downstreamCount = (refId: string) =>
-    users.filter((u) => u.user_metadata?.referrer_id === refId).length;
+    const fetchData = async () => {
+      const { data: userData, error: userError } = await supabase.auth.admin.listUsers();
+      if (userError) {
+        setError(userError.message);
+        return;
+      }
+      setUsers(userData?.users || []);
+
+      const { data: profileData } = await supabase
+        .from('user_profiles')
+        .select('user_id, role, referrer_id');
+
+      const profileMap: Record<string, any> = {};
+      profileData?.forEach((p) => {
+        profileMap[p.user_id] = { role: p.role, referrer_id: p.referrer_id };
+      });
+      setProfiles(profileMap);
+    };
+
+    fetchData();
+  }, [role]);
+
+  const referrers = users.filter((u) => profiles[u.id]?.role === 'affiliate_referrer');
 
   return (
     <div className="p-6 text-white">
       <h1 className="text-2xl font-bold mb-4">Referral Dashboard</h1>
+      {error && <p className="text-red-500 text-sm mb-4">{error}</p>}
       <table className="w-full text-sm text-left text-gray-300 bg-gray-800 rounded overflow-hidden">
         <thead className="bg-gray-700 text-gray-100 uppercase text-xs tracking-wide">
           <tr>
@@ -32,7 +59,10 @@ export default function ReferralsPage() {
         </thead>
         <tbody>
           {referrers.map((r, i) => {
-            const resellers = users.filter((u) => u.user_metadata?.referrer_id === r.id);
+            const refId = r.id;
+            const resellers = users.filter(
+              (u) => profiles[u.id]?.referrer_id === refId && profiles[u.id]?.role === 'reseller'
+            );
             const estimatedSites = resellers.length * 10;
             const estimatedEarnings = estimatedSites * 49 * 0.1;
 

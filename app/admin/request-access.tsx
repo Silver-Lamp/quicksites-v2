@@ -1,27 +1,46 @@
-// pages/request-access.tsx
+'use client';
+
 import Head from 'next/head';
-import { useState } from 'react';
-import { useCurrentUser } from '@/hooks/useCurrentUser';
+import { useState, useEffect } from 'react';
+import { useCanonicalRole } from '@/hooks/useCanonicalRole';
 import { supabase } from '@/admin/lib/supabaseClient';
 import toast from 'react-hot-toast';
 
 export default function RequestAccessPage() {
-  const { email, session } = useCurrentUser() as any;
+  const { role, user } = useCanonicalRole();
   const [message, setMessage] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [email, setEmail] = useState('');
+  const [profile, setProfile] = useState<any>(null);
+
+  useEffect(() => {
+    if (!user?.id) return;
+
+    setEmail(user.email || '');
+
+    supabase
+      .from('user_profiles')
+      .select('*')
+      .eq('user_id', user.id)
+      .maybeSingle()
+      .then(({ data }) => setProfile(data));
+  }, [user]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitting(true);
+
     const { error } = await supabase.from('access_requests').insert({
-      org: session?.user?.user_metadata?.org || null,
-      role: session?.user?.user_metadata?.role || null,
+      org: profile?.org || null,
+      role: role || null,
       email,
       message,
       status: 'pending',
     });
+
     if (error) toast.error('Request failed');
     else toast.success('Request submitted');
+
     setSubmitting(false);
     setMessage('');
   };

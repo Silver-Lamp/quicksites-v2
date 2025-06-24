@@ -3,13 +3,15 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
+import { useCanonicalRole } from '@/hooks/useCanonicalRole';
 import SafeLink from '../../ui/safe-link';
 import { AvatarMenu } from './avatar-menu';
 import { MobileDrawer } from './mobile-drawer';
 import { NavSections } from './nav-sections';
 
 export default function AppHeader() {
-  const { user, role, roleSource, ready } = useCurrentUser();
+  const { user, ready } = useCurrentUser();
+  const { role, ready: roleReady } = useCanonicalRole();
   const router = useRouter();
   const email = user?.email;
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -18,9 +20,9 @@ export default function AppHeader() {
     console.debug('[🧭 AppHeader Role Info]', {
       email,
       role,
-      source: roleSource,
+      ready: roleReady,
     });
-  }, [email, role, roleSource]);
+  }, [email, role, roleReady]);
 
   const logout = async () => {
     try {
@@ -60,7 +62,6 @@ export default function AppHeader() {
                   email={email}
                   avatarUrl={user?.avatar_url || ''}
                   role={role || ''}
-                  source={roleSource}
                   onLogout={logout}
                 />
               </div>

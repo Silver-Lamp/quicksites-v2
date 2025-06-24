@@ -1,8 +1,9 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { supabase } from '@/admin/lib/supabaseClient';
 import { useRouter } from 'next/navigation';
+import { useCanonicalRole } from '@/hooks/useCanonicalRole';
+import { supabase } from '@/admin/lib/supabaseClient';
 import dayjs from 'dayjs';
 import Image from 'next/image';
 
@@ -10,22 +11,28 @@ export default function ViewerDashboard() {
   const [domains, setDomains] = useState<any[]>([]);
   const [email, setEmail] = useState('');
   const router = useRouter();
+  const { role } = useCanonicalRole();
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
       const user = data?.user;
-      if (user?.user_metadata?.role !== 'viewer' && user?.email !== 'sandonjurowski@gmail.com') {
-        router.push('/dashboard');
-      }
       setEmail(user?.email || '');
     });
+  }, []);
 
+  useEffect(() => {
+    if (role && role !== 'viewer') {
+      router.push('/dashboard');
+    }
+  }, [role]);
+
+  useEffect(() => {
     supabase
       .from('domains')
       .select('*, campaigns(*)')
       .order('date_created', { ascending: false })
       .then(({ data }) => setDomains(data || []));
-  }, [router]);
+  }, []);
 
   const logClick = async (domain_id: string, action_type: string) => {
     await supabase.from('user_action_logs').insert([
@@ -112,7 +119,7 @@ export default function ViewerDashboard() {
                   </a>
                   <br />
                   <a
-                    href={`mailto:support@quicksites.ai?subject=Interested in second site&body=I&apos;m interested in claiming ${alt}`}
+                    href={`mailto:support@quicksites.ai?subject=Interested in second site&body=I'm interested in claiming ${alt}`}
                     className="inline-block bg-yellow-500 text-black px-3 py-1 mt-1 rounded text-xs"
                     onClick={() => logClick(d.id, 'second_chance_interest')}
                   >

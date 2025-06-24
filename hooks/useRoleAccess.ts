@@ -1,24 +1,47 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { supabase } from '../lib/supabase';
+import { supabase } from '@/lib/supabase/client';
 
 export function useRoleAccess(allowedRoles: string[]) {
   const [role, setRole] = useState<string | null>(null);
   const router = useRouter();
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => {
-      const user = data?.user;
-      const userRole = user?.user_metadata?.role || 'viewer';
-      setRole(userRole);
+    const checkAccess = async () => {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const user = sessionData.session?.user;
 
-      const isOwner = user?.email === 'sandonjurowski@gmail.com';
+      if (!user) {
+        router.push('/unauthorized');
+        return;
+      }
 
-      if (!allowedRoles.includes(userRole) && !isOwner) {
+      const email = user.email ?? '';
+      const cacheKey = `cached-role-${email}`;
+      let resolvedRole = localStorage.getItem(cacheKey) || 'viewer';
+
+      const { data: profile } = await supabase
+        .from('user_profiles')
+        .select('role')
+        .eq('user_id', user.id)
+        .maybeSingle();
+
+      if (profile?.role) {
+        resolvedRole = profile.role;
+        localStorage.setItem(cacheKey, resolvedRole);
+      }
+
+      setRole(resolvedRole);
+
+      const isOwner = email === 'sandonjurowski@gmail.com';
+
+      if (!allowedRoles.includes(resolvedRole) && !isOwner) {
         router.push('/unauthorized');
       }
-    });
-  }, [allowedRoles]);
+    };
+
+    checkAccess();
+  }, [allowedRoles, router]);
 
   return role;
 }

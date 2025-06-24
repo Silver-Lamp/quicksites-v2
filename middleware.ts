@@ -1,9 +1,10 @@
-// ---- middleware.ts ----
+// middleware.ts
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
-import { getServerUserProfile } from './lib/supabase/getServerUserProfile';
+import { fetchUserByAccessToken } from '@/lib/supabase/server';
 
 export async function middleware(req: NextRequest) {
+  const url = req.nextUrl.clone();
   const hostname = req.headers.get('host') || '';
   const pathname = req.nextUrl.pathname;
 
@@ -25,7 +26,6 @@ export async function middleware(req: NextRequest) {
     !pathname.startsWith('/_next');
 
   if (isPublicSite) {
-    const url = req.nextUrl.clone();
     url.pathname = `/_sites/${subdomain}${pathname}`;
     return NextResponse.rewrite(url);
   }
@@ -34,12 +34,21 @@ export async function middleware(req: NextRequest) {
     return NextResponse.next();
   }
 
+  // 🔒 Admin route protection with role validation
   if (pathname.startsWith('/admin')) {
-    const profile = await getServerUserProfile();
+    const token = req.cookies.get('sb-access-token')?.value;
+    if (!token) {
+      console.warn('[🔒 Middleware] No Supabase access token found.');
+      return NextResponse.redirect(new URL('/login?error=unauthorized', req.url));
+    }
 
-    if (!profile || !['admin', 'owner', 'reseller'].includes(profile.role)) {
+    const role = await fetchUserByAccessToken(token);
+    if (!role || !['admin', 'owner', 'reseller'].includes(role)) {
+      console.warn('[🔒 Middleware] Access denied due to role:', role);
       return NextResponse.redirect(new URL('/login?error=forbidden', req.url));
     }
+
+    return NextResponse.next();
   }
 
   return NextResponse.next();

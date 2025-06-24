@@ -18,10 +18,21 @@ export async function DELETE(req: NextRequest) {
 
   const {
     data: { user },
+    error: userError,
   } = await supabase.auth.getUser(token);
 
-  if (!user) {
+  if (userError || !user) {
     return Response.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  const { data: profile, error: profileError } = await supabase
+    .from('user_profiles')
+    .select('role')
+    .eq('user_id', user.id)
+    .single();
+
+  if (profileError || !profile?.role) {
+    return Response.json({ error: 'Unable to fetch user role' }, { status: 403 });
   }
 
   const { data: campaign, error: fetchError } = await supabase
@@ -35,7 +46,7 @@ export async function DELETE(req: NextRequest) {
   }
 
   const isOwner = campaign.created_by === user.id;
-  const isAdmin = user.user_metadata?.role === 'admin';
+  const isAdmin = profile.role === 'admin';
 
   if (!isOwner && !isAdmin) {
     return Response.json({ error: 'Forbidden' }, { status: 403 });

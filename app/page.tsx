@@ -1,21 +1,27 @@
-// ---- app/page.tsx ----
-import { redirect } from 'next/navigation';
-import { getServerUserProfile } from '@/lib/supabase/getServerUserProfile';
+'use client';
 
-export const runtime = 'nodejs';
+import React from 'react';
+import AppHeader from '@/components/admin/AppHeader/app-header';
+import AdminLayout from '@/components/admin/admin-layout';
+import { useCanonicalRole } from '@/hooks/useCanonicalRole';
+import { useCurrentUser } from '@/hooks/useCurrentUser';
 
-export default async function Home() {
-  const profile = await getServerUserProfile();
-
-  if (profile?.role && ['admin', 'owner', 'reseller'].includes(profile.role)) {
-    redirect('/admin/dashboard');
-  }
+export default function Page({ children }: { children: React.ReactNode }) {
+  const { user } = useCurrentUser();
+  const { role } = useCanonicalRole();
 
   return (
-    <div className="min-h-screen flex items-center justify-center text-white bg-black">
-      <div className="text-center space-y-4">
-        <h1 className="text-3xl font-bold">Welcome to QuickSites</h1>
+    <AdminLayout>
+      <AppHeader />
+
+      {/* Debug banner */}
+      <div className="text-xs text-gray-400 bg-zinc-900 px-4 py-2 border-b border-zinc-700">
+        <code>
+          Session: {user?.email ?? 'not signed in'} | Role: {role ?? 'unknown'}
+        </code>
       </div>
-    </div>
+
+      <div className="p-4">{children}</div>
+    </AdminLayout>
   );
 }

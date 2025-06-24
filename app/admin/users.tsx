@@ -1,31 +1,55 @@
+'use client';
+
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { useCanonicalRole } from '@/hooks/useCanonicalRole';
 import { supabase } from '@/admin/lib/supabaseClient';
 
 export default function UsersPage() {
   const router = useRouter();
   const [users, setUsers] = useState<any[]>([]);
+  const [profiles, setProfiles] = useState<Record<string, string>>({});
   const [error, setError] = useState('');
+  const { role } = useCanonicalRole();
 
   useEffect(() => {
-    supabase.auth.getUser().then(async ({ data }) => {
-      const role = data?.user?.user_metadata?.role;
-      if (role !== 'admin') {
-        router.push('/login?error=unauthorized');
+    if (role === null) return;
+
+    if (role !== 'admin') {
+      router.push('/login?error=unauthorized');
+      return;
+    }
+
+    const loadUsersAndRoles = async () => {
+      try {
+        const { data: userList, error: userError } = await supabase.auth.admin.listUsers();
+        if (userError) {
+          setError(userError.message);
+          return;
+        }
+        setUsers(userList.users || []);
+
+        const { data: profileList } = await supabase.from('user_profiles').select('user_id, role');
+        const profileMap: Record<string, string> = {};
+        profileList?.forEach((p) => {
+          profileMap[p.user_id] = p.role;
+        });
+        setProfiles(profileMap);
+      } catch (err) {
+        console.error('❌ Failed to load users or profiles', err);
+        setError('Failed to load users');
       }
+    };
 
-      const { data: list, error } = await supabase.auth.admin.listUsers();
-      if (error) setError(error.message);
-      else setUsers(list.users || []);
-    });
-  }, []);
+    loadUsersAndRoles();
+  }, [role]);
 
-  const updateRole = async (userId: string, role: string) => {
-    await supabase.auth.admin.updateUserById(userId, {
-      user_metadata: { role },
-    });
-    const refreshed = await supabase.auth.admin.listUsers();
-    setUsers(refreshed.data?.users || []);
+  const updateRole = async (userId: string, newRole: string) => {
+    await supabase
+      .from('user_profiles')
+      .upsert({ user_id: userId, role: newRole }, { onConflict: 'user_id' });
+
+    setProfiles((prev) => ({ ...prev, [userId]: newRole }));
   };
 
   return (
@@ -37,7 +61,6 @@ export default function UsersPage() {
           <tr>
             <th className="px-4 py-2">Email</th>
             <th className="px-4 py-2">Role</th>
-            <th className="px-4 py-2">Referred By</th>
             <th className="px-4 py-2">Created</th>
           </tr>
         </thead>
@@ -47,7 +70,7 @@ export default function UsersPage() {
               <td className="px-4 py-2">{u.email}</td>
               <td className="px-4 py-2">
                 <select
-                  value={u.user_metadata?.role || 'viewer'}
+                  value={profiles[u.id] || 'viewer'}
                   onChange={(e) => updateRole(u.id, e.target.value)}
                   className="bg-gray-700 border border-gray-600 rounded px-2 py-1 text-xs"
                 >
@@ -57,7 +80,6 @@ export default function UsersPage() {
                   <option value="viewer">viewer</option>
                 </select>
               </td>
-              <td className="px-4 py-2 text-xs">{u.user_metadata?.referrer_id || '—'}</td>
               <td className="px-4 py-2 text-xs">{new Date(u.created_at).toLocaleString()}</td>
             </tr>
           ))}

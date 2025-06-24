@@ -1,10 +1,10 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname } from 'next/navigation';
 import { FiGrid, FiFileText, FiGlobe, FiUsers, FiMenu } from 'react-icons/fi';
-import { useState, useEffect } from 'react';
-import { supabase } from '@/admin/lib/supabaseClient';
+import { useState } from 'react';
+import { useCanonicalRole } from '@/hooks/useCanonicalRole';
 
 const allTabs = [
   { label: 'Dashboard', href: '/admin/sites/dashboard', icon: FiGrid },
@@ -20,19 +20,12 @@ const allTabs = [
 
 export default function AdminTabs() {
   const pathname = usePathname();
-  const [role, setRole] = useState<string>('user');
+  const { role } = useCanonicalRole();
   const [open, setOpen] = useState(false);
-
-  useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => {
-      const userRole = data.user?.user_metadata?.role || 'user';
-      setRole(userRole);
-    });
-  }, []);
 
   const isActive = (href: string) => pathname === href || (pathname && pathname.startsWith(href + '/'));
 
-  const tabs = allTabs.filter((tab) => !tab.roles || tab.roles.includes(role));
+  const tabs = allTabs.filter((tab) => !tab.roles || tab.roles.includes(role || ''));
 
   return (
     <div className="border-b border-gray-300 mb-4 px-4">

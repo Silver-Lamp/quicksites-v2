@@ -1,13 +1,10 @@
-// ✅ FILE: /pages/admin/dashboard.tsx
-
 'use client';
 
 import { useEffect, useState } from 'react';
-import { supabase } from '@/admin/lib/supabaseClient';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { useUser } from '@supabase/auth-helpers-react';
-
+import { useCurrentUser } from '@/hooks/useCurrentUser';
+import { useCanonicalRole } from '@/hooks/useCanonicalRole';
 import Page from '@/components/layout/page';
 import AdminTabs from '@/components/admin/admin-tabs';
 import { DashboardSelector } from '@/components/admin/dashboard-selector';
@@ -15,7 +12,6 @@ import { useDashboardLayout } from '@/hooks/useDashboardLayout';
 import DashboardGridDraggable from '@/components/admin/dashboard-grid-draggable';
 import BlockSettingsModal from '@/components/admin/block-settings-modal';
 import type { DomainEntry } from '@/types/domain.types';
-
 import ActivityWidget from '@/components/admin/admin/blocks/activity-widget';
 import EngagementWidget from '@/components/admin/admin/blocks/engagement-widget';
 import RetentionWidget from '@/components/admin/admin/blocks/retention-widget';
@@ -23,13 +19,14 @@ import TrafficWidget from '@/components/admin/admin/blocks/traffic-widget';
 
 function Dashboard() {
   const router = useRouter();
-  const user = useUser();
+  const searchParams = useSearchParams();
+  const dashboardFromURL = searchParams?.get('dashboard') as string | undefined;
+
+  const { user } = useCurrentUser();
+  const { role } = useCanonicalRole();
 
   const [domains, setDomains] = useState<DomainEntry[]>([]);
   const [previewing, setPreviewing] = useState<string | null>(null);
-
-  const searchParams = useSearchParams();
-  const dashboardFromURL = searchParams?.get('dashboard') as string | undefined;
 
   const {
     dashboards,
@@ -47,37 +44,26 @@ function Dashboard() {
 
   useEffect(() => {
     if (activeDashboardId && searchParams?.get('dashboard') !== activeDashboardId) {
-      console.log('🔄 [Dashboard] [useEffect] Redirecting to dashboard', {
-        activeDashboardId,
-      });
-
       router.replace(`?dashboard=${activeDashboardId}`);
     }
   }, [activeDashboardId]);
 
   useEffect(() => {
-    console.log('🔄 [Dashboard] [useEffect] Checking role', { user });
-    supabase.auth.getUser().then(({ data }) => {
-      const role = data?.user?.user_metadata?.role;
-      if (role === 'viewer') {
-        console.log('🔄 [Dashboard] [useEffect] Redirecting to viewer', {
-          role,
-        });
-        router.push('/viewer');
-      } else if (role !== 'admin' && role !== 'reseller' && role !== 'owner') {
-        console.log('🔄 [Dashboard] [useEffect] Redirecting to login', {
-          role,
-        });
-        router.push('/login?error=unauthorized');
-      }
-    });
+    if (!role) return;
+    if (role === 'viewer') {
+      router.push('/viewer');
+    } else if (!['admin', 'reseller', 'owner'].includes(role)) {
+      router.push('/login?error=unauthorized');
+    }
 
-    supabase
-      .from('domains')
-      .select('*')
-      .order('date_created', { ascending: false })
-      .then(({ data }) => setDomains(data || []));
-  }, []);
+    import('@/admin/lib/supabaseClient').then(({ supabase }) => {
+      supabase
+        .from('domains')
+        .select('*')
+        .order('date_created', { ascending: false })
+        .then(({ data }) => setDomains(data || []));
+    });
+  }, [role]);
 
   if (loading) {
     return <p className="text-gray-500 text-sm p-6">Loading dashboard layout…</p>;
@@ -96,9 +82,9 @@ function Dashboard() {
         />
         <DashboardGridDraggable
           renderers={{
-            activity: <ActivityWidget />,
-            engagement: <EngagementWidget />,
-            retention: <RetentionWidget />,
+            activity: <ActivityWidget />, 
+            engagement: <EngagementWidget />, 
+            retention: <RetentionWidget />, 
             traffic: <TrafficWidget />,
           }}
           order={order}

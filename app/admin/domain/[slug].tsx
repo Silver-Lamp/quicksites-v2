@@ -1,20 +1,19 @@
+'use client';
+
 import { useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { useCanonicalRole } from '@/hooks/useCanonicalRole';
 import { supabase } from '@/admin/lib/supabaseClient';
 
 export default function DomainDetail() {
   const searchParams = useSearchParams();
   const slug = searchParams?.get('slug') as string;
   const [domain, setDomain] = useState<any>(null);
-  const [role, setRole] = useState('');
+  const { role } = useCanonicalRole();
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => {
-      const userRole = data?.user?.user_metadata?.role || '';
-      setRole(userRole);
-    });
-
     if (!slug) return;
+
     supabase
       .from('domains')
       .select('*')

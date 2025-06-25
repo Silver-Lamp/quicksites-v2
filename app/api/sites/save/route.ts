@@ -1,15 +1,8 @@
-// app/api/sites/save/route.ts
 export const runtime = 'nodejs';
 
 import { json } from '@/lib/api/json';
-import { getSupabase } from '@/lib/supabase/universal';
-import { createClient } from '@supabase/supabase-js';
-
-// Used for privileged database writes (skip RLS)
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+import { getSupabase } from '@/lib/supabase/server';
+import { supabaseAdmin } from '@/lib/supabase/admin';
 
 export async function POST(req: Request) {
   const body = await req.json();
@@ -19,7 +12,7 @@ export async function POST(req: Request) {
     return json({ error: 'Missing site ID or data' }, { status: 400 });
   }
 
-  const userSupabase = await getSupabase(); // ✅ App Router-safe auth client
+  const userSupabase = await getSupabase();
 
   const {
     data: { user },
@@ -29,8 +22,8 @@ export async function POST(req: Request) {
     return json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  // Confirm ownership
-  const { data: site, error: fetchError } = await supabase
+  // Confirm ownership of site before writing
+  const { data: site, error: fetchError } = await supabaseAdmin
     .from('sites')
     .select('id, created_by')
     .eq('id', id)
@@ -44,7 +37,7 @@ export async function POST(req: Request) {
     return json({ error: 'Forbidden' }, { status: 403 });
   }
 
-  const { error: updateError } = await supabase
+  const { error: updateError } = await supabaseAdmin
     .from('sites')
     .update({
       content: data,

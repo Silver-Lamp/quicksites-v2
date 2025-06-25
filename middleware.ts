@@ -1,4 +1,3 @@
-// middleware.ts
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { createMiddlewareSupabaseClient } from '@supabase/auth-helpers-nextjs';
@@ -11,6 +10,7 @@ export async function middleware(req: NextRequest) {
 
   const { pathname } = req.nextUrl;
   const hostname = req.headers.get('host') || '';
+
   const isRoot = ['localhost:3000', 'quicksites.ai', 'www.quicksites.ai'].includes(hostname);
 
   const subdomain = hostname
@@ -18,9 +18,23 @@ export async function middleware(req: NextRequest) {
     .replace('.quicksites.ai', '')
     .replace('.vercel.app', '');
 
-  const isPublicSite =
+  const apexSlug = hostname
+    .replace(/^www\./, '')  // remove www if present
+    .replace('.com', '')    // basic match for apex domain
+    .replace('.net', '')    // add other TLDs as needed
+    .replace('.org', '');
+
+  const isSubdomainPublicSite =
     !isRoot &&
     hostname.endsWith('.quicksites.ai') &&
+    !pathname.startsWith('/admin') &&
+    !pathname.startsWith('/api') &&
+    !pathname.startsWith('/_next');
+
+  const isApexDomain =
+    !isRoot &&
+    !hostname.includes('.quicksites.ai') &&
+    !hostname.includes('.vercel.app') &&
     !pathname.startsWith('/admin') &&
     !pathname.startsWith('/api') &&
     !pathname.startsWith('/_next');
@@ -31,15 +45,23 @@ export async function middleware(req: NextRequest) {
     console.log('Path:', pathname);
   }
 
-  // 🔀 Public site rewrite
-  if (isPublicSite) {
+  // 🔀 Rewrite for subdomain public sites
+  if (isSubdomainPublicSite) {
     const url = req.nextUrl.clone();
     url.pathname = `/_sites/${subdomain}${pathname}`;
-    DEBUG && console.log('[🧭 Rewrite → Public Site]', url.pathname);
+    DEBUG && console.log('[🧭 Rewrite → Subdomain Site]', url.pathname);
     return NextResponse.rewrite(url);
   }
 
-  // 🏠 Allow root site
+  // 🔀 Rewrite for apex domain sites (e.g. florencetow.com)
+  if (isApexDomain) {
+    const url = req.nextUrl.clone();
+    url.pathname = `/_sites/${apexSlug}${pathname}`;
+    DEBUG && console.log('[🧭 Rewrite → Apex Domain Site]', url.pathname);
+    return NextResponse.rewrite(url);
+  }
+
+  // 🏠 Allow root site access
   if (isRoot) {
     DEBUG && console.log('[🏠 Root Access Allowed]', pathname);
     return res;
@@ -56,7 +78,6 @@ export async function middleware(req: NextRequest) {
     } = await supabase.auth.getSession();
 
     const authTime = Date.now();
-
     const user = session?.user;
 
     if (DEBUG) {
@@ -76,7 +97,6 @@ export async function middleware(req: NextRequest) {
       .maybeSingle();
 
     const dbTime = Date.now();
-
     const role = profile?.role;
 
     if (DEBUG) {

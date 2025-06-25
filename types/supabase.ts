@@ -822,6 +822,29 @@ export type Database = {
           },
         ];
       };
+      nav_preferences: {
+        Row: {
+          id: string;
+          user_id: string;
+          disabled_flags: string[];   // assuming Postgres array
+          enabled_links: string[];    // assuming Postgres array
+          created_at: string | null;  // optional, if your table includes timestamps
+          updated_at: string | null;  // optional
+        };
+        Insert: {
+          user_id: string;
+          disabled_flags?: string[];
+          enabled_links?: string[];
+          created_at?: string | null;
+          updated_at?: string | null;
+        };
+        Update: {
+          disabled_flags?: string[];
+          enabled_links?: string[];
+          created_at?: string | null;
+          updated_at?: string | null;
+        };
+      };                 
       not_found_logs: {
         Row: {
           context: string;

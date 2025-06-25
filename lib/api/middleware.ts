@@ -1,3 +1,4 @@
+// lib/api/middleware.ts
 const rateLimitMap = new Map<string, { count: number; last: number }>();
 
 export async function requireHeader(req: Request, key: string): Promise<Response | void> {

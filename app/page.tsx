@@ -1,22 +1,10 @@
-import { redirect } from 'next/navigation';
-import { getSupabase } from '@/lib/supabase/universal';
+export const runtime = 'nodejs';         // optional, for SSR-safe access
+export const dynamic = 'force-dynamic';  // ✅ key fix
 
-export const runtime = 'nodejs';
+import { getUserFromRequest } from '@/lib/supabase/server';
 
 export default async function Home() {
-  const supabase = await getSupabase();
-
-  const {
-    data: { session },
-    error,
-  } = await supabase.auth.getSession();
-
-  if (error) {
-    console.warn('⚠️ [Home] Supabase session error:', error);
-  }
-
-  const user = session?.user;
-  console.log('🔒 [Home] Supabase session user:', user);
+  const { user, supabase } = await getUserFromRequest();
 
   if (!user) {
     console.log('🔓 [Home] No session — rendering public home');
@@ -42,16 +30,16 @@ export default async function Home() {
   const role = profile?.role ?? 'viewer';
   console.log('🔐 [Home] User role:', role);
 
-  if (['admin', 'owner', 'reseller'].includes(role)) {
-    console.log('➡️ [Home] Redirecting to /admin/dashboard');
-    redirect('/admin/dashboard');
-  }
+//   if (['admin', 'owner', 'reseller'].includes(role)) {
+//     console.log('➡️ [Home] Redirecting to /admin/dashboard');
+//     redirect('/admin/dashboard');
+//   }
 
-  if (role === 'viewer') {
-    console.log('➡️ [Home] Redirecting to /viewer');
-    redirect('/viewer');
-  }
+//   if (role === 'viewer') {
+//     console.log('➡️ [Home] Redirecting to /viewer');
+//     redirect('/viewer');
+//   }
 
-  console.log('🚫 [Home] Unknown role — redirecting to /unauthorized');
-  redirect('/unauthorized');
+//   console.log('🚫 [Home] Unknown role — redirecting to /unauthorized');
+//   redirect('/unauthorized');
 }

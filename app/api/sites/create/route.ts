@@ -1,10 +1,9 @@
-// app/api/sites/create/route.ts
 export const runtime = 'nodejs';
 
 import { json } from '@/lib/api/json';
 import { generateBaseSlug } from '@/lib/slugHelpers';
-import { getSupabase } from '@/lib/supabase/universal'; // ✅ Use unified helper
-import { createServerSupabaseClient, SupabaseClient } from '@supabase/auth-helpers-nextjs';
+import { getSupabase } from '@/lib/supabase/server';
+import type { SupabaseClient } from '@supabase/supabase-js';
 
 function baseSlug(businessName: string, location?: string): string {
   const name = businessName.toLowerCase().replace(/[^a-z0-9]+/g, '-');
@@ -21,13 +20,11 @@ export async function POST(req: Request) {
   const body = await req.json();
   const { template_version_id, business_name, location, domain, slug: clientSlug, email } = body;
 
-  const supabase = await getSupabase(); // ✅ One supabase instance
+  const supabase = await getSupabase();
 
   const base = generateBaseSlug(business_name, location);
-  const slug =
-    clientSlug ||
-    (await generateUniqueSlug(base, supabase));
-    
+  const slug = clientSlug || (await generateUniqueSlug(base, supabase));
+
   const {
     data: { user },
   } = await supabase.auth.getUser();
@@ -36,7 +33,6 @@ export async function POST(req: Request) {
     return json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  // Throttle site creation: limit 1 every 10 minutes
   const recent = await supabase
     .from('sites')
     .select('created_at')
@@ -143,7 +139,7 @@ async function generateUniqueSlug(
   let slug = base;
   let attempt = 1;
   while (true) {
-    const { data } = await (await supabase)
+    const { data } = await supabase
       .from('sites')
       .select('id')
       .eq('slug', slug)

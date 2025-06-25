@@ -2,7 +2,7 @@
 export const runtime = 'nodejs';
 
 import { json } from '@/lib/api/json';
-import { getSupabase } from '@/lib/supabase/universal';
+import { getSupabase } from '@/lib/supabase/server';
 import { createClient } from '@supabase/supabase-js';
 
 // Service client for updates (bypasses RLS)

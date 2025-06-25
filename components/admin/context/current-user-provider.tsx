@@ -3,7 +3,7 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { supabase } from '@/lib/supabase/client';
 
-import { getSupabase } from '@/lib/supabase/universal';
+import { getSupabase } from '@/lib/supabase/server';
 
 type CurrentUser = {
   id: string;

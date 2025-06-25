@@ -1,3 +1,4 @@
+// next-seo.config.js
 const title = 'QuickSites';
 const description = 'AI-powered local site generator and dashboard';
 

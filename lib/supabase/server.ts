@@ -1,37 +1,34 @@
-// lib/supabase/server.ts
-import { createClient } from '@supabase/supabase-js';
+'use server';
 
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+import { createServerComponentClient } from '@supabase/auth-helpers-nextjs';
+import { cookies } from 'next/headers';
+import type { SupabaseClient } from '@supabase/supabase-js';
+import type { Database } from '@/types/supabase';
 
-/**
- * Fetch a user's canonical role from the user_profiles table using an access token.
- */
-export async function fetchUserByAccessToken(token: string): Promise<string | null> {
-  try {
-    const { data: { user }, error } = await supabaseAdmin.auth.getUser(token);
-
-    if (error || !user) {
-      console.error('[🔒 fetchUserByAccessToken] Failed to get user from token:', error?.message);
-      return null;
-    }
-
-    const { data: profile, error: profileError } = await supabaseAdmin
-      .from('user_profiles')
-      .select('role')
-      .eq('user_id', user.id)
-      .maybeSingle();
-
-    if (profileError) {
-      console.error('[🔒 fetchUserByAccessToken] Failed to get profile:', profileError.message);
-      return null;
-    }
-
-    return profile?.role ?? null;
-  } catch (err) {
-    console.error('[🔒 fetchUserByAccessToken] Unexpected error:', err);
-    return null;
+export async function getSupabase(): Promise<SupabaseClient<Database>> {
+  if (typeof window !== 'undefined') {
+    throw new Error('[getSupabase] ❌ This function must not be called on the client.');
   }
+
+  return createServerComponentClient<Database>({
+    cookies: async () => cookies(),
+  });
+}
+
+export async function getUserFromRequest(): Promise<{
+  user: Awaited<ReturnType<SupabaseClient<Database>['auth']['getUser']>>['data']['user'];
+  supabase: SupabaseClient<Database>;
+}> {
+  const supabase = await getSupabase();
+  const {
+    data: { user },
+    error,
+  } = await supabase.auth.getUser();
+
+  if (error || !user) {
+    console.warn('[⚠️ getUserFromRequest] No valid session:', error?.message);
+    return { user: null, supabase };
+  }
+
+  return { user, supabase };
 }

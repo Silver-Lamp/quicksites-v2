@@ -1,32 +1,22 @@
 import { createServerComponentClient } from '@supabase/auth-helpers-nextjs';
 import { cookies, headers } from 'next/headers';
-import type { ReadonlyRequestCookies } from 'next/dist/server/web/spec-extension/adapters/request-cookies';
-import type { ReadonlyHeaders } from 'next/dist/server/web/spec-extension/adapters/headers';
 
 export async function getSupabase() {
-  const cookieStore = cookies() as unknown as ReadonlyRequestCookies;
-  const headerStore = headers() as unknown as ReadonlyHeaders;
+  const cookieStore = await cookies();
+  const headerStore = await headers();
 
   try {
-    const allCookies = Array.from(cookieStore.getAll?.() || []);
-    const allHeaders = Array.from(headerStore.entries?.() || []);
-
+    const allCookies = cookieStore.getAll();
+    const allHeaders = Array.from(headerStore.entries());
     console.log('[🔐 getSupabase] 🍪 Cookies:', allCookies);
     console.log('[🔐 getSupabase] 🧠 Headers:', allHeaders);
   } catch (err) {
-    console.warn('[⚠️ getSupabase] Skipped cookie/header logging due to env mismatch:', err);
+    console.warn('[⚠️ getSupabase] Error reading cookies/headers', err);
   }
 
   const supabase = createServerComponentClient({
-    cookies: async () => cookieStore,
+    cookies: async () => cookies(),
   });
-
-  try {
-    const session = await supabase.auth.getSession();
-    console.log('[🔐 getSupabase] Session:', session);
-  } catch (err) {
-    console.error('[❌ getSupabase] Failed to get session:', err);
-  }
 
   return supabase;
 }

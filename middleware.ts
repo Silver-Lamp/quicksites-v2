@@ -1,3 +1,4 @@
+// middleware.ts
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { createMiddlewareSupabaseClient } from '@supabase/auth-helpers-nextjs';
@@ -6,14 +7,11 @@ const DEBUG = process.env.DEBUG_AUTH === 'true';
 
 export async function middleware(req: NextRequest) {
   const start = Date.now();
-  const hostname = req.headers.get('host') || '';
-  const pathname = req.nextUrl.pathname;
-  const url = req.nextUrl.clone();
+  const res = NextResponse.next();
 
-  const isRootDomain =
-    hostname === 'localhost:3000' ||
-    hostname === 'quicksites.ai' ||
-    hostname === 'www.quicksites.ai';
+  const { pathname } = req.nextUrl;
+  const hostname = req.headers.get('host') || '';
+  const isRoot = ['localhost:3000', 'quicksites.ai', 'www.quicksites.ai'].includes(hostname);
 
   const subdomain = hostname
     .replace('.localhost:3000', '')
@@ -21,56 +19,53 @@ export async function middleware(req: NextRequest) {
     .replace('.vercel.app', '');
 
   const isPublicSite =
-    !isRootDomain &&
+    !isRoot &&
     hostname.endsWith('.quicksites.ai') &&
     !pathname.startsWith('/admin') &&
     !pathname.startsWith('/api') &&
     !pathname.startsWith('/_next');
 
   if (DEBUG) {
-    console.log('\n🌐 [Request Context]');
+    console.log('\n🌐 [Middleware Triggered]');
     console.log('Host:', hostname);
     console.log('Path:', pathname);
-    console.log('Cookies:', Object.fromEntries(req.cookies.entries()));
-    console.log('Headers:', {
-      'x-forwarded-for': req.headers.get('x-forwarded-for'),
-      'user-agent': req.headers.get('user-agent'),
-      cookie: req.headers.get('cookie')?.slice(0, 100) + '...',
-    });
   }
 
+  // 🔀 Public site rewrite
   if (isPublicSite) {
+    const url = req.nextUrl.clone();
     url.pathname = `/_sites/${subdomain}${pathname}`;
-    DEBUG && console.log('[🧭 Public Site Rewrite]', url.pathname);
+    DEBUG && console.log('[🧭 Rewrite → Public Site]', url.pathname);
     return NextResponse.rewrite(url);
   }
 
-  if (isRootDomain) {
-    DEBUG && console.log('[🏠 Root Domain Pass-through]', pathname);
-    return NextResponse.next();
+  // 🏠 Allow root site
+  if (isRoot) {
+    DEBUG && console.log('[🏠 Root Access Allowed]', pathname);
+    return res;
   }
 
+  // 🔒 Protect admin routes
   if (pathname.startsWith('/admin')) {
     const setupTime = Date.now();
-    const supabase = createMiddlewareSupabaseClient({ req });
-    const res = NextResponse.next();
 
+    const supabase = createMiddlewareSupabaseClient({ req, res });
     const {
-      data: { user, session },
-      error,
+      data: { session },
+      error: sessionError,
     } = await supabase.auth.getSession();
 
     const authTime = Date.now();
 
+    const user = session?.user;
+
     if (DEBUG) {
-      console.log('\n🔐 [Session Retrieved]');
-      console.log('User:', user);
-      console.log('Session JWT:', session?.access_token?.slice(0, 16) + '…');
-      console.log('Auth error:', error);
+      console.log('🔐 Session User:', user?.email || 'null');
+      sessionError && console.warn('⚠️ Session error:', sessionError.message);
     }
 
     if (!user) {
-      DEBUG && console.warn('[⛔️ Not signed in → /login]');
+      DEBUG && console.warn('[⛔️ Unauthenticated → /login]');
       return NextResponse.redirect(new URL('/login?error=unauthorized', req.url));
     }
 
@@ -82,34 +77,33 @@ export async function middleware(req: NextRequest) {
 
     const dbTime = Date.now();
 
-    if (DEBUG) {
-      console.log('📄 [Profile Role Lookup]', profile);
-      if (profileError) {
-        console.error('[❌ Role Fetch Error]', profileError.message);
-      }
-    }
-
     const role = profile?.role;
 
+    if (DEBUG) {
+      console.log('📄 Profile Role:', role);
+      profileError && console.warn('❌ Profile Error:', profileError.message);
+    }
+
     if (!['admin', 'owner', 'reseller'].includes(role)) {
-      DEBUG && console.warn('[🚫 Unauthorized Role → /login?forbidden]');
+      DEBUG && console.warn('[🚫 Role Forbidden → /login]');
       return NextResponse.redirect(new URL('/login?error=forbidden', req.url));
     }
 
-    const end = Date.now();
-
     if (DEBUG) {
-      console.log('\n⏱️ [Timing Breakdown]');
-      console.log(`• Setup:      ${setupTime - start}ms`);
-      console.log(`• Auth fetch: ${authTime - setupTime}ms`);
-      console.log(`• Role fetch: ${dbTime - authTime}ms`);
-      console.log(`• Total:      ${end - start}ms\n`);
+      const total = Date.now() - start;
+      console.log('⏱️ Timing:', {
+        setup: `${setupTime - start}ms`,
+        auth: `${authTime - setupTime}ms`,
+        profile: `${dbTime - authTime}ms`,
+        total: `${total}ms`,
+      });
     }
 
     return res;
   }
 
-  return NextResponse.next();
+  // ✅ Default pass-through
+  return res;
 }
 
 export const config = {

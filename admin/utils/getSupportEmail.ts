@@ -1,4 +1,4 @@
-import { User } from '@supabase/auth-helpers-nextjs';
+import type { User } from '@supabase/supabase-js';
 
 export function getSupportEmail(user?: User | null): string {
   return (

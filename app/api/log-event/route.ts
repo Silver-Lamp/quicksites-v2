@@ -1,17 +1,21 @@
-import { createServerClient } from '@supabase/ssr';
 import { cookies, headers } from 'next/headers';
+import { createServerClient } from '@supabase/ssr';
+import { Database } from '@/types/supabase';
 
 export async function POST(req: Request) {
-  const cookieStore = await cookies();
-  const headerStore = await headers();
+  const cookieStore = cookies() as unknown as {
+    get(name: string): { value: string } | undefined;
+  };
 
-  const supabase = createServerClient(
+  const headerStore = headers() as unknown as Headers;
+
+  const supabase = createServerClient<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookies: {
-        get(name: string): string | undefined {
-          return cookieStore.get(name)?.value;
+        get(name: string) {
+          return cookieStore.get(name)?.value ?? undefined;
         },
       },
     }
@@ -20,7 +24,11 @@ export async function POST(req: Request) {
   const { href, type = 'nav_click', meta = {} } = await req.json();
   const { data: user } = await supabase.auth.getUser();
 
-  const ip = headerStore.get('x-forwarded-for') || headerStore.get('x-real-ip') || 'unknown';
+  const ip =
+    headerStore.get('x-forwarded-for') ||
+    headerStore.get('x-real-ip') ||
+    'unknown';
+
   const userAgent = headerStore.get('user-agent') || 'unknown';
 
   const { data: inserted, error } = await supabase

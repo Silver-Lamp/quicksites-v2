@@ -1,3 +1,4 @@
+// /hooks/useCanonicalRole.ts
 import { useEffect, useState } from 'react';
 import { useCurrentUser } from './useCurrentUser';
 import { supabase } from '@/admin/lib/supabaseClient';

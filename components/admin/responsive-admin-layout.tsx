@@ -5,9 +5,13 @@ import MobileDrawerSidebar from '@/components/admin/mobile-drawer-sidebar';
 import NavBarWithBadges from '@/components/admin/nav-bar-with-badges';
 import AdminSidebarLayout from '@/components/admin/layout/admin-sidebar-layout';
 import AppHeader from '@/components/admin/AppHeader/app-header';
+import { useCurrentUser } from '@/hooks/useCurrentUser';
+import { useCanonicalRole } from '@/hooks/useCanonicalRole';
 
 export default function ResponsiveAdminLayout({ children }: { children: React.ReactNode }) {
   const [isMobile, setIsMobile] = useState(false);
+  const { user, ready } = useCurrentUser();
+  const { role } = useCanonicalRole();
 
   useEffect(() => {
     const checkSize = () => setIsMobile(window.innerWidth < 768);
@@ -16,9 +20,13 @@ export default function ResponsiveAdminLayout({ children }: { children: React.Re
     return () => window.removeEventListener('resize', checkSize);
   }, []);
 
+  if (!ready || !user) {
+    return <div className="p-6 text-white">Loading user session...</div>;
+  }
+
   return (
     <>
-      <AppHeader /> {/* ✅ Consistent header above all layouts */}
+      <AppHeader user={user} role={role || ''} />
       {isMobile ? (
         <>
           <MobileDrawerSidebar />
@@ -28,8 +36,6 @@ export default function ResponsiveAdminLayout({ children }: { children: React.Re
         <div className="flex">
           <AdminSidebarLayout>
             <div className="w-full">
-              {/* You can keep or remove this if AppHeader fully replaces it */}
-              {/* <NavBarWithBadges /> */}
               <main className="p-6">{children}</main>
             </div>
           </AdminSidebarLayout>

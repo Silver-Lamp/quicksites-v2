@@ -1,9 +1,12 @@
 'use client';
 import { useEffect, useState } from 'react';
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
+import { createBrowserClient } from '@supabase/ssr';
 
 export default function TokenManager() {
-  const supabase = createClientComponentClient();
+  const supabase = createBrowserClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  );
   const [tokens, setTokens] = useState<any[]>([]);
   const [fileName, setFileName] = useState('');
   const [expiresAt, setExpiresAt] = useState('');

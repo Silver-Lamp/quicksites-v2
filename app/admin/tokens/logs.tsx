@@ -1,13 +1,16 @@
 'use client';
 import { useEffect, useState } from 'react';
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
+import { createBrowserClient } from '@supabase/ssr';
 import { Bar } from 'react-chartjs-2';
 import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, Tooltip } from 'chart.js';
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Tooltip);
 
 export default function TokenLogsDashboard() {
-  const supabase = createClientComponentClient();
+  const supabase = createBrowserClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  );
   const [logs, setLogs] = useState<any[]>([]);
   const [filter, setFilter] = useState('');
 

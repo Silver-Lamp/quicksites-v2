@@ -1,7 +1,7 @@
 'use client';
+
 import { useEffect, useState } from 'react';
-import { json } from '@/lib/api/json';
-import { useRouter, useSearchParams, usePathname } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
@@ -9,6 +9,8 @@ import { Textarea } from '@/components/ui/textarea';
 
 export default function NewTemplatePage() {
   const router = useRouter();
+  const searchParams = useSearchParams(); // ✅ must be at top-level
+
   const [loading, setLoading] = useState(true);
   const [template, setTemplate] = useState({
     template_name: '',
@@ -29,7 +31,7 @@ export default function NewTemplatePage() {
 
   // Load existing template if ?copy=template_name
   useEffect(() => {
-    const copy = useSearchParams()?.get('copy');
+    const copy = searchParams?.get('copy');
     if (copy && typeof copy === 'string') {
       fetch(`/api/templates/${copy}`)
         .then((res) => res.json())
@@ -46,7 +48,7 @@ export default function NewTemplatePage() {
     } else {
       setLoading(false);
     }
-  }, [useSearchParams()?.get('copy')]);
+  }, [searchParams]);
 
   const handleChange = (field: string, value: string) => {
     setTemplate((prev) => ({ ...prev, [field]: value }));
@@ -94,14 +96,17 @@ export default function NewTemplatePage() {
         <div>
           <Label>Industry</Label>
           <Input
-            value={template?.industry || ''}
+            value={template.industry}
             onChange={(e) => handleChange('industry', e.target.value)}
           />
         </div>
 
         <div>
           <Label>Layout</Label>
-          <Input value={template.layout} onChange={(e) => handleChange('layout', e.target.value)} />
+          <Input
+            value={template.layout}
+            onChange={(e) => handleChange('layout', e.target.value)}
+          />
         </div>
 
         <div>

@@ -1,9 +1,13 @@
-import { createServerComponentClient } from '@supabase/auth-helpers-nextjs';
+import { createServerClient } from '@supabase/ssr';
 import { cookies, headers } from 'next/headers';
 
-export async function getSupabase() {
-  const cookieStore = await cookies();
-  const headerStore = await headers();
+export function getSupabase() {
+  const cookieStore = cookies() as unknown as {
+    get(name: string): { value: string } | undefined;
+    getAll(): { name: string; value: string }[];
+  };
+
+  const headerStore = headers() as unknown as Headers;
 
   try {
     const allCookies = cookieStore.getAll();
@@ -14,9 +18,17 @@ export async function getSupabase() {
     console.warn('[⚠️ getSupabase] Error reading cookies/headers', err);
   }
 
-  const supabase = createServerComponentClient({
-    cookies: async () => cookies(),
-  });
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        get(name) {
+          return cookieStore.get(name)?.value;
+        },
+      },
+    }
+  );
 
   return supabase;
 }

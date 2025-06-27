@@ -1,12 +1,27 @@
-// app/api/me/route.ts
-import { createServerComponentClient } from '@supabase/auth-helpers-nextjs';
+import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 import { NextRequest } from 'next/server';
+
+import { Database } from '@/types/supabase';
 
 export const runtime = 'nodejs';
 
 export async function GET(req: NextRequest) {
-  const supabase = createServerComponentClient({ cookies });
+  const cookieStore = cookies() as unknown as {
+    get(name: string): { value: string } | undefined;
+  };
+
+  const supabase = createServerClient<Database>(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        get(name: string) {
+          return cookieStore.get(name)?.value;
+        },
+      },
+    }
+  );
 
   const {
     data: { user },

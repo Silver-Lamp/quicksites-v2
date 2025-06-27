@@ -1,6 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 import { NextApiRequest, NextApiResponse } from 'next';
-import { createServerSupabaseClient } from '@supabase/auth-helpers-nextjs';
+import { createServerClient } from '@supabase/ssr';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -8,7 +8,18 @@ const supabase = createClient(
 );
 
 export default async function Page({ req, res }: { req: NextApiRequest; res: NextApiResponse }) {
-  const supa = createServerSupabaseClient({ req, res });
+  const supa = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        get(name: string) {
+          return req.cookies?.[name] ?? undefined;
+        },
+      },
+    }
+  );
+  
   const {
     data: { session },
   } = await supa.auth.getSession();

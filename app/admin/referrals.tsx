@@ -23,7 +23,7 @@ export default function ReferralsPage() {
     }
 
     const fetchData = async () => {
-      DEBUG && console.log('[👥 Fetching Users + Profiles]');
+      if (DEBUG) console.log('[👥 Fetching Users + Profiles]');
 
       const { data: userData, error: userError } = await supabase.auth.admin.listUsers();
       if (userError) {
@@ -42,7 +42,7 @@ export default function ReferralsPage() {
       });
       setProfiles(profileMap);
 
-      DEBUG && console.log('[✅ Profiles Loaded]', profileMap);
+      if (DEBUG) console.log('[✅ Profiles Loaded]', profileMap);
     };
 
     fetchData();

@@ -1,26 +1,54 @@
-// lib/supabase/getServerUserProfile.ts
-import { cookies } from 'next/headers';
-import { createClient } from '@supabase/supabase-js';
+'use server';
 
-export async function getServerUserProfile() {
-  const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    { global: { headers: { Authorization: (await cookies()).get('sb-access-token')?.value || '' } } }
-  );
+import { getServerContext } from './getServerContext';
+
+/**
+ * Fetches the current user's session, role, and email.
+ * Includes scoped cookies + headers for context-aware logging or analytics.
+ */
+export async function getServerUserProfile(): Promise<{
+  user: {
+    id: string;
+    email: string | null;
+  } | null;
+  role: string;
+  headers: Headers;
+  cookies: ReturnType<Awaited<typeof import('next/headers')>['cookies']>;
+}> {
+  const { supabase, cookies, headers } = await getServerContext();
 
   const {
-    data: { session },
-  } = await supabase.auth.getSession();
+    data: { user },
+    error,
+  } = await supabase.auth.getUser();
 
-  const userId = session?.user?.id;
-  if (!userId) return null;
+  if (error || !user) {
+    console.warn('[getServerUserProfile] No valid session found.');
+    return {
+      user: null,
+      role: 'viewer',
+      headers,
+      cookies,
+    };
+  }
 
-  const { data: profile } = await supabase
+  const { data: profile, error: profileError } = await supabase
     .from('user_profiles')
-    .select('role, email')
-    .eq('user_id', userId)
+    .select('role')
+    .eq('user_id', user.id)
     .maybeSingle();
 
-  return profile;
+  if (profileError) {
+    console.warn('[getServerUserProfile] Profile lookup failed:', profileError.message);
+  }
+
+  return {
+    user: {
+      id: user.id,
+      email: user.email,
+    },
+    role: profile?.role ?? 'viewer',
+    headers,
+    cookies,
+  };
 }

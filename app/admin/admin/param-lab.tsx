@@ -200,7 +200,7 @@ export default function ParamLabPage() {
             <div key={name}>{name}</div>
           ))}
       </ul>
-      <QueryParamEditor schema={schema as any} slug={slug} /> {/* @ts-ignore */}
+      <QueryParamEditor schema={schema as any} slug={slug} />
     </div>
   );
 }

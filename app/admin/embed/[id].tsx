@@ -1,11 +1,13 @@
-// pages/embed/[id].tsx
+'use client';
+
 import { useSearchParams } from 'next/navigation';
 import Head from 'next/head';
 
-export default async function Page() {
+export default function Page() {
   const searchParams = useSearchParams();
-  const id = searchParams?.get('id') as string;
+  const id = searchParams?.get('id') || '';
   const url = `/admin/zod-playground?schema_id=${id}&embed=1`;
+
   return (
     <>
       <Head>

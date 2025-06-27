@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
-import { createMiddlewareSupabaseClient } from '@supabase/auth-helpers-nextjs';
+import { createServerClient } from '@supabase/ssr';
+import { getSlugContext } from './lib/supabase/getSlugContext';
 
 const DEBUG = process.env.DEBUG_AUTH === 'true';
 
@@ -12,32 +13,9 @@ export async function middleware(req: NextRequest) {
   const hostname = req.headers.get('host') || '';
 
   const isRoot = ['localhost:3000', 'quicksites.ai', 'www.quicksites.ai'].includes(hostname);
-
-  const subdomain = hostname
-    .replace('.localhost:3000', '')
-    .replace('.quicksites.ai', '')
-    .replace('.vercel.app', '');
-
-  const apexSlug = hostname
-    .replace(/^www\./, '')  // remove www if present
-    .replace('.com', '')    // basic match for apex domain
-    .replace('.net', '')    // add other TLDs as needed
-    .replace('.org', '');
-
-  const isSubdomainPublicSite =
-    !isRoot &&
-    hostname.endsWith('.quicksites.ai') &&
-    !pathname.startsWith('/admin') &&
-    !pathname.startsWith('/api') &&
-    !pathname.startsWith('/_next');
-
-  const isApexDomain =
-    !isRoot &&
-    !hostname.includes('.quicksites.ai') &&
-    !hostname.includes('.vercel.app') &&
-    !pathname.startsWith('/admin') &&
-    !pathname.startsWith('/api') &&
-    !pathname.startsWith('/_next');
+  const isAdminRoute = pathname.startsWith('/admin');
+  const isApiOrStatic =
+    pathname.startsWith('/api') || pathname.startsWith('/_next') || pathname.startsWith('/static');
 
   if (DEBUG) {
     console.log('\n🌐 [Middleware Triggered]');
@@ -45,33 +23,41 @@ export async function middleware(req: NextRequest) {
     console.log('Path:', pathname);
   }
 
-  // 🔀 Rewrite for subdomain public sites
-  if (isSubdomainPublicSite) {
-    const url = req.nextUrl.clone();
-    url.pathname = `/_sites/${subdomain}${pathname}`;
-    DEBUG && console.log('[🧭 Rewrite → Subdomain Site]', url.pathname);
-    return NextResponse.rewrite(url);
+  // 🔁 Rewrite for multi-tenant sites
+  if (!isRoot && !isAdminRoute && !isApiOrStatic) {
+    const { slug, source } = await getSlugContext();
+    if (slug && slug !== 'default') {
+      const url = req.nextUrl.clone();
+      url.pathname = `/_sites/${slug}${pathname}`;
+      if (DEBUG) {
+        console.log(`[🧭 Rewrite → Tenant] via ${source}: ${hostname} → ${url.pathname}`);
+      }
+      return NextResponse.rewrite(url);
+    }
   }
 
-  // 🔀 Rewrite for apex domain sites (e.g. florencetow.com)
-  if (isApexDomain) {
-    const url = req.nextUrl.clone();
-    url.pathname = `/_sites/${apexSlug}${pathname}`;
-    DEBUG && console.log('[🧭 Rewrite → Apex Domain Site]', url.pathname);
-    return NextResponse.rewrite(url);
-  }
-
-  // 🏠 Allow root site access
+  // 🏠 Allow root access
   if (isRoot) {
-    DEBUG && console.log('[🏠 Root Access Allowed]', pathname);
+    if (DEBUG) console.log('[🏠 Root Access Allowed]', pathname);
     return res;
   }
 
-  // 🔒 Protect admin routes
-  if (pathname.startsWith('/admin')) {
+  // 🔐 Admin route protection
+  if (isAdminRoute) {
     const setupTime = Date.now();
 
-    const supabase = createMiddlewareSupabaseClient({ req, res });
+    const supabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        cookies: {
+          get(name: string) {
+            return req.cookies.get(name)?.value;
+          },
+        },
+      }
+    );
+
     const {
       data: { session },
       error: sessionError,
@@ -82,11 +68,11 @@ export async function middleware(req: NextRequest) {
 
     if (DEBUG) {
       console.log('🔐 Session User:', user?.email || 'null');
-      sessionError && console.warn('⚠️ Session error:', sessionError.message);
+      if (sessionError) console.warn('⚠️ Session error:', sessionError.message);
     }
 
     if (!user) {
-      DEBUG && console.warn('[⛔️ Unauthenticated → /login]');
+      if (DEBUG) console.warn('[⛔️ Unauthenticated → /login]');
       return NextResponse.redirect(new URL('/login?error=unauthorized', req.url));
     }
 
@@ -101,11 +87,11 @@ export async function middleware(req: NextRequest) {
 
     if (DEBUG) {
       console.log('📄 Profile Role:', role);
-      profileError && console.warn('❌ Profile Error:', profileError.message);
+      if (profileError) console.warn('❌ Profile Error:', profileError.message);
     }
 
     if (!['admin', 'owner', 'reseller'].includes(role)) {
-      DEBUG && console.warn('[🚫 Role Forbidden → /login]');
+      if (DEBUG) console.warn('[🚫 Role Forbidden → /login]');
       return NextResponse.redirect(new URL('/login?error=forbidden', req.url));
     }
 
@@ -122,7 +108,7 @@ export async function middleware(req: NextRequest) {
     return res;
   }
 
-  // ✅ Default pass-through
+  // ✅ Default passthrough
   return res;
 }
 

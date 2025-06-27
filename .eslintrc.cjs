@@ -1,4 +1,4 @@
-// ✅ FILE: .eslintrc.js
+// ✅ FILE: .eslintrc.cjs
 require('@rushstack/eslint-patch/modern-module-resolution');
 
 module.exports = {
@@ -45,6 +45,17 @@ module.exports = {
   ],
   rules: {
     'prettier/prettier': 'warn',
+    'no-restricted-syntax': [
+      'error',
+      {
+        selector: "AwaitExpression > CallExpression[callee.name='headers']",
+        message: "❌ Do not use `await headers()`. This function is synchronous in App Router.",
+      },
+      {
+        selector: "AwaitExpression > CallExpression[callee.name='cookies']",
+        message: "❌ Do not use `await cookies()`. This function is synchronous in App Router.",
+      },
+    ],
     '@typescript-eslint/no-unused-vars': ['warn', { argsIgnorePattern: '^_' }],
     '@typescript-eslint/no-explicit-any': 'off',
     '@typescript-eslint/no-empty-interface': 'off',

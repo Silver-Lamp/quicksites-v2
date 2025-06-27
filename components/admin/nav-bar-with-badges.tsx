@@ -1,6 +1,7 @@
 'use client';
+
 import Link from 'next/link';
-import { useRouter, usePathname } from 'next/navigation';
+import { usePathname } from 'next/navigation';
 
 const routes = [
   { label: 'Dashboard', href: '/admin/dashboard' },
@@ -10,12 +11,12 @@ const routes = [
 ];
 
 export default function NavBarWithBadges() {
-  const router = useRouter();
+  const pathname = usePathname(); // ✅ moved outside map
 
   return (
     <nav className="hidden md:flex items-center space-x-6 px-6 py-3 bg-zinc-900 text-white border-b border-zinc-800">
       {routes.map(({ label, href, badge }) => {
-        const isActive = usePathname() === href;
+        const isActive = pathname === href;
         return (
           <Link
             key={href}

@@ -1,10 +1,12 @@
+'use client';
+
 import { Fragment } from 'react';
 import { z, ZodObject, ZodFirstPartyTypeKind } from 'zod';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Select, SelectTrigger, SelectContent, SelectItem } from '@/components/ui/select';
-import { useTypedQueryParam } from '@/hooks/useTypedQueryParam';
+import useTypedQueryParam from '@/hooks/useTypedQueryParam';
 
 function FieldRenderer({
   keyPrefix,

@@ -1,6 +1,7 @@
 // /app/_sites/[slug]/page.tsx
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
+export const preferredRegion = 'iad1';
 
 import { getSupabase } from '@/lib/supabase/server';
 import { notFound } from 'next/navigation';

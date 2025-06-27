@@ -1,10 +1,10 @@
 'use client';
-import { useEffect, useState } from 'react';
-import { json } from '@/lib/api/json';
+
+import { useEffect, useState, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import Image from 'next/image';
 import { createClient } from '@supabase/supabase-js';
 import { generateBaseSlug } from '@/lib/slugHelpers';
-import { useRef } from 'react';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -19,6 +19,8 @@ const copyToClipboard = (text: string) => {
 
 export default function StarterPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+
   const [bizName, setBizName] = useState('');
   const [location, setLocation] = useState('');
   const [slug, setSlug] = useState('');
@@ -36,8 +38,7 @@ export default function StarterPage() {
   }, []);
 
   useEffect(() => {
-    const searchParams = useSearchParams();
-    const name = searchParams?.get('template') as string;
+    const name = searchParams?.get('template') || '';
     if (!name) return;
 
     supabase
@@ -56,20 +57,19 @@ export default function StarterPage() {
           setTemplateVersionId(data[0].id);
         }
       });
-  }, [useSearchParams()?.get('template')]);
+  }, [searchParams]);
 
   useEffect(() => {
     if (!slug) return setSlugAvailable(null);
+
     const delay = setTimeout(async () => {
       const { data } = await supabase.from('sites').select('id').eq('slug', slug).maybeSingle();
-
       setSlugAvailable(!data);
     }, 400);
 
     return () => clearTimeout(delay);
   }, [slug]);
 
-  // Debounced auto-slug/domain generation
   useEffect(() => {
     if (!bizName.trim()) return;
 
@@ -81,7 +81,6 @@ export default function StarterPage() {
       setSlug(baseSlug);
       setDomain(fullDomain);
 
-      // Typewriter effect
       let i = 0;
       const typeInterval = setInterval(() => {
         setTypedDomain(fullDomain.slice(0, i + 1));
@@ -90,7 +89,7 @@ export default function StarterPage() {
           clearInterval(typeInterval);
           setGeneratingSlug(false);
         }
-      }, 50); // typing speed in ms
+      }, 50);
     }, 300);
 
     return () => clearTimeout(delay);
@@ -148,7 +147,13 @@ export default function StarterPage() {
         <div className="bg-zinc-800 p-4 rounded shadow">
           <h2 className="text-xl font-semibold mb-1">{template.template_name}</h2>
           {template.thumbnail_url && (
-            <img src={template.thumbnail_url} alt="Preview" className="rounded mb-3" />
+            <Image
+              src={template.thumbnail_url}
+              alt="Preview"
+              width={800}
+              height={450}
+              className="rounded mb-3"
+            />
           )}
           <p className="text-sm text-zinc-400 mb-2">{template.description}</p>
         </div>
@@ -182,7 +187,9 @@ export default function StarterPage() {
           <label className="text-sm text-zinc-400">Custom Slug (optional)</label>
           <input
             value={slug}
-            onChange={(e) => setSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]+/g, '-'))}
+            onChange={(e) =>
+              setSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]+/g, '-'))
+            }
             className="w-full mb-1 p-2 rounded bg-zinc-800 text-white"
             placeholder="e.g. mytow-auburn"
           />
@@ -192,27 +199,6 @@ export default function StarterPage() {
             </p>
           )}
         </div>
-        {/* {generatingSlug && ( */}
-        {/* <div className="flex justify-center items-center gap-2 text-sm text-zinc-400"> */}
-        {/* <svg className="animate-spin h-4 w-4 text-zinc-400" viewBox="0 0 24 24">
-              <circle
-                className="opacity-25"
-                cx="12"
-                cy="12"
-                r="10"
-                stroke="currentColor"
-                strokeWidth="4"
-                fill="none"
-              />
-              <path
-                className="opacity-75"
-                fill="currentColor"
-                d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
-              />
-            </svg> */}
-        {/* Generating domain... */}
-        {/* </div> */}
-        {/* )} */}
 
         <div className="text-center space-y-2">
           {domain ? (
@@ -221,6 +207,7 @@ export default function StarterPage() {
               <div className="text-lg font-mono font-bold tracking-wide">
                 {typedDomain || (generatingSlug ? '...' : domain)}
               </div>
+
               {slug && (
                 <>
                   <div className="text-sm text-zinc-400 flex items-center justify-center gap-2">

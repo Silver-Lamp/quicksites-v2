@@ -1,13 +1,16 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
+import { createBrowserClient } from '@supabase/ssr';
 import ThemedBarChart from '@/components/ui/themed-bar-chart';
 import { Modal } from '@/components/ui/modal';
 import { Input, Label } from '@/components/ui/form';
 import { Bar } from 'react-chartjs-2';
 
 export default function AnalyticsPage() {
-  const [supabase] = useState(() => createClientComponentClient());
+  const [supabase] = useState(() => createBrowserClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  ));
   const [showModal, setShowModal] = useState(false);
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
@@ -21,7 +24,7 @@ export default function AnalyticsPage() {
     supabase
       .from('public_sites')
       .select('id, domain, name')
-      .then(({ data }) => {
+      .then(({ data }: { data: { id: string; domain?: string; name?: string }[] | null }) => {
         if (data) setSiteOptions(data);
       });
   }, [supabase]);
@@ -40,7 +43,7 @@ export default function AnalyticsPage() {
       if (error) return console.error(error);
 
       // filter by site ID if necessary
-      const filtered = (data || []).filter((row) => {
+      const filtered = (data || []).filter((row: any) => {
         if (mode === 'views' && siteId) {
           return row.site_id === siteId;
         }

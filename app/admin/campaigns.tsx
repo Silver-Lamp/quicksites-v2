@@ -1,30 +1,58 @@
+'use client';
+
 import { useEffect, useState } from 'react';
 import { supabase } from '@/admin/lib/supabaseClient';
 import dayjs from 'dayjs';
 import AdminLayout from '@/components/layout/admin-layout';
 
+type Campaign = {
+  id: string;
+  name: string;
+  city: string;
+  starts_at: string;
+  ends_at: string;
+};
+
+type Lead = {
+  id: string;
+  campaign_id: string;
+  business_name: string;
+  email?: string;
+  phone?: string;
+  users?: {
+    email?: string;
+  };
+  draft_sites?: {
+    domain?: string;
+    is_claimed?: boolean;
+  };
+};
+
 export default function CampaignsPage() {
-  const [campaigns, setCampaigns] = useState<any[]>([]);
-  const [leadsByCampaign, setLeadsByCampaign] = useState<Record<string, any[]>>({});
+  const [campaigns, setCampaigns] = useState<Campaign[]>([]);
+  const [leadsByCampaign, setLeadsByCampaign] = useState<Record<string, Lead[]>>({});
   const [now, setNow] = useState(dayjs());
   const [userEmail, setUserEmail] = useState<string | null>(null);
 
   useEffect(() => {
+    // Fetch user info
     supabase.auth.getUser().then(({ data }) => {
       setUserEmail(data?.user?.email ?? null);
     });
 
+    // Fetch campaigns
     supabase
       .from('campaigns')
       .select('*')
       .order('starts_at', { ascending: false })
       .then(({ data }) => setCampaigns(data || []));
 
+    // Fetch leads
     supabase
       .from('leads')
       .select('*, draft_sites:domain_id(domain, is_claimed), users:owner_id(email)')
       .then(({ data }) => {
-        const grouped: Record<string, any[]> = {};
+        const grouped: Record<string, Lead[]> = {};
         for (const lead of data || []) {
           if (lead.campaign_id) {
             if (!grouped[lead.campaign_id]) grouped[lead.campaign_id] = [];
@@ -43,7 +71,7 @@ export default function CampaignsPage() {
   return (
     <div className="p-6">
       <h1 className="text-2xl font-bold mb-4">Campaigns</h1>
-      {campaigns.map((c, i) => {
+      {campaigns.map((c) => {
         const start = dayjs(c.starts_at);
         const end = dayjs(c.ends_at);
         const active = now.isAfter(start) && now.isBefore(end);
@@ -65,9 +93,10 @@ export default function CampaignsPage() {
               {active
                 ? ` ${remaining} min left`
                 : expired
-                  ? 'Ended'
-                  : `Starts in ${start.diff(now, 'minute')} min`}
+                ? 'Ended'
+                : `Starts in ${start.diff(now, 'minute')} min`}
             </p>
+
             {active && (
               <div className="w-full h-2 bg-gray-700 rounded overflow-hidden mb-3">
                 <div
@@ -76,44 +105,43 @@ export default function CampaignsPage() {
                 />
               </div>
             )}
+
             {leads.length > 0 ? (
               <div className="grid grid-cols-2 gap-4 mt-4">
-                {leads.map((l) => (
-                  <div
-                    key={l.id}
-                    className={`border p-3 rounded ${
-                      l.draft_sites?.is_claimed
-                        ? 'border-green-500'
-                        : userEmail && l.users?.email === userEmail
-                          ? 'border-yellow-400'
-                          : 'border-gray-600'
-                    }`}
-                  >
-                    <h3 className="font-semibold text-lg">{l.business_name}</h3>
-                    <p className="text-xs">{l.email || 'No email'}</p>
-                    <p className="text-xs">{l.phone || 'No phone'}</p>
-                    <p className="text-xs">Owner: {l.users?.email || '—'}</p>
-                    <p
-                      className={`text-xs mt-2 ${
-                        l.draft_sites?.is_claimed
-                          ? 'text-green-400'
-                          : userEmail && l.users?.email === userEmail
-                            ? 'text-yellow-300'
-                            : 'text-gray-400'
-                      }`}
-                    >
-                      {l.draft_sites?.is_claimed
-                        ? '🏁 Claimed'
-                        : userEmail && l.users?.email === userEmail
-                          ? '🔒 Yours'
-                          : 'Unclaimed'}
-                    </p>
-                  </div>
-                ))}
+                {leads.map((l) => {
+                  const isClaimed = l.draft_sites?.is_claimed;
+                  const isOwned = userEmail && l.users?.email === userEmail;
+                  const borderColor = isClaimed
+                    ? 'border-green-500'
+                    : isOwned
+                    ? 'border-yellow-400'
+                    : 'border-gray-600';
+                  const label = isClaimed
+                    ? '🏁 Claimed'
+                    : isOwned
+                    ? '🔒 Yours'
+                    : 'Unclaimed';
+                  const labelColor = isClaimed
+                    ? 'text-green-400'
+                    : isOwned
+                    ? 'text-yellow-300'
+                    : 'text-gray-400';
+
+                  return (
+                    <div key={l.id} className={`border p-3 rounded ${borderColor}`}>
+                      <h3 className="font-semibold text-lg">{l.business_name}</h3>
+                      <p className="text-xs">{l.email || 'No email'}</p>
+                      <p className="text-xs">{l.phone || 'No phone'}</p>
+                      <p className="text-xs">Owner: {l.users?.email || '—'}</p>
+                      <p className={`text-xs mt-2 ${labelColor}`}>{label}</p>
+                    </div>
+                  );
+                })}
               </div>
             ) : (
               <p className="text-sm text-gray-400 mt-2">No leads linked.</p>
             )}
+
             {winner && <p className="mt-3 text-green-400 font-bold">🎉 Winner: {winner}</p>}
           </div>
         );

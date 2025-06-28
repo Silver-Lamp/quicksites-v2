@@ -1,18 +1,24 @@
+// app/api/me/route.ts
+// Use me() when you need to get the user context
+// Use getUserFromRequest() when you need the user context
+
+export const runtime = 'nodejs';
+
 import { cookies } from 'next/headers';
 import { createServerClient } from '@supabase/ssr';
 import type { Database } from '@/types/supabase';
 
-export const runtime = 'nodejs';
-
 export async function GET() {
-  const cookieStore = cookies(); // App Router-compatible, no type cast needed
+  const cookieStore = await cookies(); // ✅ synchronous in App Router
 
   const supabase = createServerClient<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookies: {
-        get: async (name: string) => (await cookieStore).get(name)?.value,
+        get(name: string) {
+          return cookieStore.get(name)?.value;
+        },
       },
     }
   );
@@ -22,9 +28,9 @@ export async function GET() {
     error,
   } = await supabase.auth.getUser();
 
-  if (error) {
-    console.error('[❌ Supabase getUser error]', error.message);
-    return new Response(JSON.stringify({ error: error.message }), {
+  if (error || !user) {
+    console.warn('[🔐 /api/me] No user found or error retrieving session:', error?.message);
+    return new Response(JSON.stringify({ error: error?.message || 'Unauthorized' }), {
       status: 401,
       headers: { 'Content-Type': 'application/json' },
     });

@@ -37,7 +37,16 @@ export type Template = {
   custom_domain?: string | null;
 };
 
-// types/template.ts
+export type Snapshot = {
+  template_name: string;
+  layout: string;
+  color_scheme: string;
+  theme: string;
+  brand: string;
+  data: TemplateData;
+};
+
+export type TemplateSnapshot = Snapshot;
 
 export type Theme = 'light' | 'dark';
 export type Brand = 'green' | 'blue' | 'purple' | 'red' | 'orange'; // Add whatever variants you support

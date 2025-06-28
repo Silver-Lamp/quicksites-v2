@@ -1,7 +1,9 @@
 'use client';
 
+// Use DashboardPage() when you need to display the dashboard page
+// Use getUserFromRequest() when you need the user context
+
 import { useEffect } from 'react';
-import { json } from '@/lib/api/json';
 import Page from '@/components/layout/page';
 import Dashboard from '@/components/admin/dashboard-grid-draggable';
 import { supabase } from '@/admin/lib/supabaseClient';
@@ -10,32 +12,35 @@ import AuthGuard from '@/components/admin/auth-guard';
 
 export default function DashboardPage() {
   useEffect(() => {
-    (async () => {
+    async function logAccess() {
       const {
         data: { user },
+        error,
       } = await supabase.auth.getUser();
 
-      if (user) {
-        let geo: any = {};
-        try {
-          const res = await fetch('https://ipapi.co/json/');
-          geo = await res.json();
-        } catch (e) {
-          console.warn('🌍❌ [Sites] [Dashboard] [useEffect] Geo lookup failed', { e });
-        }
+      if (error || !user) return;
 
-        await supabase.from('dashboard_access_log').insert({
-          user_id: user.id,
-          email: user.email,
-          timestamp: new Date().toISOString(),
-          user_agent: navigator.userAgent,
-          ip_address: geo?.ip || null,
-          city: geo?.city || null,
-          region: geo?.region || null,
-          country: geo?.country_name || null,
-        });
+      let geo: any = {};
+      try {
+        const res = await fetch('https://ipapi.co/json/');
+        geo = await res.json();
+      } catch (e) {
+        console.warn('🌍❌ [Geo Lookup Failed]', e);
       }
-    })();
+
+      await supabase.from('dashboard_access_log').insert({
+        user_id: user.id,
+        email: user.email,
+        timestamp: new Date().toISOString(),
+        user_agent: navigator.userAgent,
+        ip_address: geo?.ip ?? null,
+        city: geo?.city ?? null,
+        region: geo?.region ?? null,
+        country: geo?.country_name ?? null,
+      });
+    }
+
+    logAccess();
   }, []);
 
   return (
@@ -46,21 +51,16 @@ export default function DashboardPage() {
           View Access Logs
         </Link>
       </div>
+
       <AuthGuard roles={['admin']}>
         <Dashboard
           renderers={{}}
           order={[]}
           hidden={[]}
-          onSave={() => {
-            return;
-          }}
-          onAddBlock={() => {
-            return;
-          }}
+          onSave={() => {}}
+          onAddBlock={() => {}}
           settings={{}}
-          updateBlockSetting={() => {
-            return;
-          }}
+          updateBlockSetting={() => {}}
         />
       </AuthGuard>
     </Page>

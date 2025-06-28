@@ -1,4 +1,5 @@
-// /components/layout/page.tsx
+'use client';
+
 import AppHeader from '@/components/admin/AppHeader/app-header';
 import AdminLayout from '@/components/layout/admin-layout';
 import { getSessionContext } from '@/lib/supabase/getSessionContext';
@@ -6,20 +7,19 @@ import { getSessionContext } from '@/lib/supabase/getSessionContext';
 export default async function AdminLayoutWithHeader({ children }: { children: React.ReactNode }) {
   const { user, role } = await getSessionContext();
 
+  const safeUser = {
+    id: user?.id ?? '',
+    email: user?.email ?? '',
+    avatar_url: user?.avatar_url ?? '',
+  };
+
   return (
     <AdminLayout>
-      <AppHeader
-            user={{
-                id: user?.id ?? '',
-                email: user?.email ?? '',
-                avatar_url: user?.avatar_url ?? '', // Ensure this is a string
-            }}
-            role={role}
-        />
+      <AppHeader user={safeUser} role={role} />
 
       <div className="text-xs text-gray-400 bg-zinc-900 px-4 py-2 border-b border-zinc-700">
         <code>
-          Authenticated as {user?.email} with role {role}
+          Authenticated as {safeUser.email} with role {role}
         </code>
       </div>
 

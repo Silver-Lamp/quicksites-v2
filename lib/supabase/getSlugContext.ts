@@ -29,8 +29,8 @@ export async function getSlugContext({
   headersOverride,
   cookiesOverride,
 }: Options = {}): Promise<SlugContext> {
-  const headers = headersOverride || (getHeaders() as unknown as Headers);
-  const cookies = cookiesOverride || (getCookies() as unknown as ReturnType<typeof getCookies>);
+  const headers = headersOverride || (await getHeaders());
+  const cookies = cookiesOverride || (await getCookies());
 
   const rawHost = headers.get('x-forwarded-host') || headers.get('host') || '';
   const host = rawHost.toLowerCase().trim();

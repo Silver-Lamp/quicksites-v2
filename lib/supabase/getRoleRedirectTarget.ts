@@ -2,8 +2,11 @@
 
 import { getSessionContext } from './getSessionContext';
 import { getSlugContext } from './getSlugContext';
+import type { Database } from '@/types/supabase';
 
-type RoleMap = Partial<Record<string, string>>;
+type Role = 'admin' | 'owner' | 'reseller' | 'viewer' | string;
+
+type RoleMap = Partial<Record<Role, string>>;
 
 type Options = {
   roleRoutes?: RoleMap;
@@ -13,13 +16,14 @@ type Options = {
 
 type RedirectTargetResult = {
   path: string;
-  role: string;
+  role: Role;
   slug: string;
   user: {
     id: string;
     email: string | null;
   } | null;
   slugContext: {
+    slug: string;
     source: 'header' | 'cookie' | 'host' | 'lookup' | 'default';
     host: string;
     domain?: string;
@@ -42,24 +46,23 @@ export async function getRoleRedirectTarget({
   replacements = {},
 }: Options = {}): Promise<RedirectTargetResult> {
   const { user, role } = await getSessionContext();
+
   const slugContext = await getSlugContext({
     subdomainSlugMode: true,
     resolveTenantId: true,
   });
 
-  const { slug } = slugContext;
+  const slug = slugContext.slug ?? 'default';
 
-  const template = user
-    ? roleRoutes[role] || fallbackRoute
-    : '/login';
+  const template = user ? roleRoutes[role] ?? fallbackRoute : '/login';
 
   const tokenMap: Record<string, string> = {
     slug,
     role,
-    ...(replacements || {}),
+    ...replacements,
   };
 
-  const resolvedPath = template.replace(/:([a-zA-Z0-9_]+)/g, (_, key) =>
+  const resolvedPath = template.replace(/:([a-zA-Z0-9_]+)/g, (_, key: string) =>
     tokenMap[key] ?? `:${key}`
   );
 
@@ -68,8 +71,14 @@ export async function getRoleRedirectTarget({
     role,
     slug,
     user: user
-      ? { id: user.id, email: user.email }
+      ? {
+          id: user.id,
+          email: user.email ?? null,
+        }
       : null,
-    slugContext,
+    slugContext: {
+      ...slugContext,
+      slug,
+    },
   };
 }

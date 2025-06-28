@@ -1,16 +1,21 @@
+// app/api/deploy-webhook/route.ts
+// Use deployWebhook() when you need to deploy a domain
+// Use getUserFromRequest() when you need the user context
+
 export const runtime = 'nodejs';
 
 import { createClient } from '@supabase/supabase-js';
 import { NextRequest } from 'next/server';
+import type { Database } from '@/types/supabase';
 
-const supabase = createClient(
+const supabase = createClient<Database>(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
 export async function POST(req: NextRequest) {
   try {
-    const { domain } = await req.json();
+    const { domain }: { domain: string } = await req.json();
     const webhook = process.env.VERCEL_DEPLOY_WEBHOOK;
 
     if (!domain || !webhook) {
@@ -33,11 +38,10 @@ export async function POST(req: NextRequest) {
         status: 401,
         error: 'Missing or invalid auth token',
       });
-
       return Response.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Load domain record
+    // Fetch domain record
     const { data: domainRow, error: domainErr } = await supabase
       .from('domains')
       .select('*')
@@ -52,7 +56,6 @@ export async function POST(req: NextRequest) {
         status: 404,
         error: 'Domain not found',
       });
-
       return Response.json({ error: 'Domain not found' }, { status: 404 });
     }
 
@@ -64,11 +67,10 @@ export async function POST(req: NextRequest) {
         status: 403,
         error: 'Domain is not claimed',
       });
-
       return Response.json({ error: 'Domain is not claimed' }, { status: 403 });
     }
 
-    // Fetch user role (admin bypass)
+    // Check authorization: admin or domain owner
     const { data: profile } = await supabase
       .from('user_profiles')
       .select('role')
@@ -86,11 +88,10 @@ export async function POST(req: NextRequest) {
         status: 403,
         error: 'Unauthorized user for this domain',
       });
-
       return Response.json({ error: 'Unauthorized for this domain' }, { status: 403 });
     }
 
-    // Trigger the deploy
+    // ✅ Trigger deploy
     const vercelRes = await fetch(webhook, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -119,7 +120,7 @@ export async function POST(req: NextRequest) {
       },
     });
   } catch (err: any) {
-    console.error('[Deploy webhook error]', err);
+    console.error('[❌ Deploy webhook error]', err);
 
     await supabase.from('deploy_logs').insert({
       domain: 'unknown',

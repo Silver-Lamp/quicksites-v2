@@ -3,7 +3,7 @@ import { cookies } from 'next/headers';
 import { Database } from '@/types/supabase';
 
 export async function lookupTenantBySlug(slug: string): Promise<string | null> {
-  const cookieStore = cookies(); // ✅ synchronous now
+  const cookieStore = cookies();
 
   const supabase = createServerClient<Database, 'public'>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -11,8 +11,8 @@ export async function lookupTenantBySlug(slug: string): Promise<string | null> {
     {
       cookies: {
         async get(name: string) {
-          const cookie = (await cookieStore).get(name);
-          return cookie?.value;
+          const cookie = await cookieStore;
+          return cookie.get(name)?.value;
         },
       },
     }

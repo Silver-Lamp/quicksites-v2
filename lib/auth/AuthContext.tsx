@@ -1,14 +1,15 @@
 'use client';
 
 import { createContext, useContext, useEffect, useState } from 'react';
-import { supabase } from '@/lib/supabase/client';
+import { supabase } from '../supabase/client';
 import type { User } from '@supabase/supabase-js';
+import React from 'react';
 
 type AuthState = {
   user: User | null;
   role: string | null;
   ready: boolean;
-  roleSource: string;
+  roleSource: 'profile' | 'cache' | 'onAuthChange-profile' | 'onAuthChange-cache' | 'init';
   refetch: () => void;
 };
 
@@ -23,14 +24,16 @@ const AuthContext = createContext<AuthState>({
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [role, setRole] = useState<string | null>(null);
-  const [roleSource, setRoleSource] = useState('init');
+  const [roleSource, setRoleSource] = useState<AuthState['roleSource']>('init');
   const [ready, setReady] = useState(false);
 
-  const getCachedRole = (email: string | undefined | null) =>
-    email ? localStorage.getItem(`cached-role-${email}`) ?? 'viewer' : 'viewer';
+  const getCachedRole = (email: string | null | undefined): string => {
+    if (!email) return 'viewer';
+    return localStorage.getItem(`cached-role-${email}`) ?? 'viewer';
+  };
 
-  const cacheRole = (email: string, role: string) => {
-    localStorage.setItem(`cached-role-${email}`, role);
+  const cacheRole = (email: string | null | undefined, role: string) => {
+    if (email) localStorage.setItem(`cached-role-${email}`, role);
   };
 
   const loadSession = async () => {
@@ -44,7 +47,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     setUser(user);
 
-    const { data: profile, error: profileError } = await supabase
+    const { data: profile } = await supabase
       .from('user_profiles')
       .select('role')
       .eq('user_id', user.id)
@@ -53,10 +56,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (profile?.role) {
       setRole(profile.role);
       setRoleSource('profile');
-      cacheRole(user.email ?? '', profile.role);
+      cacheRole(user.email, profile.role);
     } else {
-      const fallbackRole = getCachedRole(user.email);
-      setRole(fallbackRole);
+      const fallback = getCachedRole(user.email);
+      setRole(fallback);
       setRoleSource('cache');
     }
 
@@ -82,7 +85,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             if (data?.role) {
               setRole(data.role);
               setRoleSource('onAuthChange-profile');
-              cacheRole(u.email ?? '', data.role);
+              cacheRole(u.email, data.role);
             } else {
               const fallback = getCachedRole(u.email);
               setRole(fallback);
@@ -96,11 +99,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      subscription.unsubscribe();
+    };
   }, []);
 
   return (
-    <AuthContext.Provider value={{ user, role, roleSource, ready, refetch: loadSession }}>
+    <AuthContext.Provider value={{ user, role, ready, roleSource, refetch: loadSession }}>
       {children}
     </AuthContext.Provider>
   );

@@ -1,60 +1,75 @@
+// app/api/create-campaign/route.ts
+// Use createCampaign() when you need to create a campaign
+// Use getUserFromRequest() when you need the user context
+
 export const runtime = 'nodejs';
 
-import { createClient } from '@supabase/supabase-js';
 import { NextRequest } from 'next/server';
+import { createClient } from '@supabase/supabase-js';
 import slugify from 'slugify';
 import { customAlphabet } from 'nanoid';
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
-
 const nanoid = customAlphabet('abcdefghijklmnopqrstuvwxyz0123456789', 6);
 
-async function ensureUniqueSlug(base: string) {
+// Create Supabase client inside the handler to avoid edge leakage
+function getSupabaseClient() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  );
+}
+
+async function ensureUniqueSlug(base: string, supabase: ReturnType<typeof getSupabaseClient>) {
   let candidate = base;
   let attempt = 1;
 
-  while (true) {
-    const { data: existing } = await supabase
+  while (attempt <= 5) {
+    const { data } = await supabase
       .from('support_campaigns')
       .select('id')
       .eq('slug', candidate)
       .maybeSingle();
 
-    if (!existing) return candidate;
+    if (!data) return candidate;
     candidate = `${base}-${nanoid()}`;
     attempt++;
-    if (attempt > 5) throw new Error('Failed to generate unique slug');
   }
+
+  throw new Error('Failed to generate unique slug after multiple attempts');
 }
 
-export async function POST(req: NextRequest) {
-  const token = req.headers.get('authorization')?.replace('Bearer ', '');
-  const { slug, headline, goal_count, target_action, block_id } = await req.json();
+export async function POST(req: NextRequest): Promise<Response> {
+  const supabase = getSupabaseClient();
+
+  const token = req.headers.get('authorization')?.replace(/^Bearer\s+/i, '');
+  if (!token) {
+    return Response.json({ error: 'Missing auth token' }, { status: 401 });
+  }
 
   const {
     data: { user },
+    error: userError,
   } = await supabase.auth.getUser(token);
 
-  if (!user) {
+  if (userError || !user) {
     return Response.json({ error: 'Unauthorized' }, { status: 401 });
   }
+
+  const body = await req.json();
+  const { slug, headline, goal_count, target_action, block_id } = body;
 
   const baseSlug = slug
     ? slugify(slug, { lower: true, strict: true })
     : slugify(headline || 'campaign', { lower: true, strict: true });
 
   let finalSlug: string;
-
   try {
-    finalSlug = await ensureUniqueSlug(baseSlug);
+    finalSlug = await ensureUniqueSlug(baseSlug, supabase);
   } catch (err: any) {
     return Response.json({ error: err.message || 'Slug generation failed' }, { status: 500 });
   }
 
-  const { error } = await supabase.from('support_campaigns').insert({
+  const { error: insertError } = await supabase.from('support_campaigns').insert({
     slug: finalSlug,
     headline,
     goal_count,
@@ -63,8 +78,8 @@ export async function POST(req: NextRequest) {
     created_by: user.id,
   });
 
-  if (error) {
-    return Response.json({ error: error.message }, { status: 500 });
+  if (insertError) {
+    return Response.json({ error: insertError.message }, { status: 500 });
   }
 
   return Response.json({ success: true, slug: finalSlug });

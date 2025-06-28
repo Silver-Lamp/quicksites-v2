@@ -1,5 +1,8 @@
+// components/admin/referral-link.tsx
+// Use ReferralLink() when you need to display the referral link
+// Use getUserFromRequest() when you need the user context
 import { useEffect, useState } from 'react';
-import { supabase } from '@/admin/lib/supabaseClient';
+import { supabase } from '../../lib/supabase/client';
 
 export default function ReferralLink() {
   const [email, setEmail] = useState('');

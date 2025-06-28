@@ -1,7 +1,9 @@
+'use client';
+
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import dayjs from 'dayjs';
-import { supabase } from '../admin/lib/supabaseClient';
+import { supabase } from '@/admin/lib/supabaseClient';
 import { useLeads } from './useLeads';
 
 function slugify(name: string): string {
@@ -13,6 +15,7 @@ function slugify(name: string): string {
 
 export function useCampaignForm(city: string, state: string) {
   const router = useRouter();
+
   const [name, setName] = useState('');
   const [nameWasManuallySet, setNameWasManuallySet] = useState(false);
   const [alt1, setAlt1] = useState('');
@@ -23,34 +26,34 @@ export function useCampaignForm(city: string, state: string) {
   const [email, setEmail] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
-
   const { leads, loading: leadsLoading } = useLeads({ city, state, industry: 'towing' });
 
   const [selectedLeads, setSelectedLeads] = useState<string[]>([]);
 
   function toggleLead(id: string) {
-    setSelectedLeads((prev) => (prev.includes(id) ? prev.filter((l) => l !== id) : [...prev, id]));
+    setSelectedLeads((prev) =>
+      prev.includes(id) ? prev.filter((l) => l !== id) : [...prev, id]
+    );
   }
 
   useEffect(() => {
     if (!nameWasManuallySet && city && selectedLeads.length >= 2 && startsAt) {
       const a = leads.find((l) => l.id === selectedLeads[0])?.business_name?.split(' ')[0] || 'A';
       const b = leads.find((l) => l.id === selectedLeads[1])?.business_name?.split(' ')[0] || 'B';
-      const category = 'Towing';
       const date = dayjs(startsAt).format('YYYY-MM-DD');
-      setName(`${city} ${category}: ${a} vs ${b} ${date}`);
+      setName(`${city} Towing: ${a} vs ${b} ${date}`);
     }
-  }, [city, selectedLeads, nameWasManuallySet, startsAt]);
+  }, [city, selectedLeads, nameWasManuallySet, startsAt, leads]);
 
   useEffect(() => {
     if (selectedLeads.length >= 2) {
       const leadA = leads.find((l) => l.id === selectedLeads[0]);
       const leadB = leads.find((l) => l.id === selectedLeads[1]);
 
-      if (leadA && !alt1) setAlt1(slugify(leadA.business_name || '') + '.com');
-      if (leadB && !alt2) setAlt2(slugify(leadB.business_name || '') + '.com');
+      if (leadA && !alt1) setAlt1(`${slugify(leadA.business_name || '')}.com`);
+      if (leadB && !alt2) setAlt2(`${slugify(leadB.business_name || '')}.com`);
     }
-  }, [selectedLeads, leads]);
+  }, [selectedLeads, leads, alt1, alt2]);
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {

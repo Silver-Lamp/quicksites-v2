@@ -1,3 +1,6 @@
+// lib/supabase/server/getServerUserProfile.ts
+// Use getServerUserProfile() when you need to get the user context
+// Use getSupabase() when you need the scoped client
 'use server';
 
 import { getSupabase } from '../server';
@@ -15,7 +18,7 @@ export async function getServerUserProfile(): Promise<{
   } = await supabase.auth.getUser();
 
   if (userError || !user?.id) {
-    console.warn('[getServerUserProfile] No logged-in user — returning fallback role');
+    console.warn('[getServerUserProfile] No user found — defaulting to viewer');
     return {
       role: 'viewer',
       email: null,
@@ -25,22 +28,17 @@ export async function getServerUserProfile(): Promise<{
 
   const { data: profile, error: profileError } = await supabase
     .from('user_profiles')
-    .select('role, email')
+    .select('role')
     .eq('user_id', user.id)
     .maybeSingle();
 
-  if (profileError || !profile) {
-    console.warn('[getServerUserProfile] Profile missing or error — using default role');
-    return {
-      role: 'viewer',
-      email: user.email ?? null,
-      isAnonymous: false,
-    };
+  if (profileError) {
+    console.warn('[getServerUserProfile] Profile lookup failed:', profileError.message);
   }
 
   return {
-    role: profile.role ?? 'viewer',
-    email: profile.email ?? user.email ?? null,
+    role: profile?.role ?? 'viewer',
+    email: user.email ?? null,
     isAnonymous: false,
   };
 }

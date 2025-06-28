@@ -3,8 +3,8 @@ import { cookies, headers } from 'next/headers';
 import type { Database } from '../../types/supabase';
 
 export async function getSupabase() {
-  const cookieStore = cookies(); // ✅ sync in App Router
-  const headerStore = headers(); // ✅ sync
+  const cookieStore = cookies();
+  const headerStore = headers();
 
   try {
     const allCookies = (await cookieStore).getAll();
@@ -21,8 +21,8 @@ export async function getSupabase() {
     {
       cookies: {
         async get(name: string) {
-          const cookie = (await cookieStore).get(name);
-          return cookie?.value;
+          const cookie = await cookieStore;
+          return cookie.get(name)?.value;
         },
       },
     }

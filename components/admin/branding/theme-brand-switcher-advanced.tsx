@@ -1,31 +1,40 @@
+'use client';
+
 import { useEffect, useState } from 'react';
 import QRCode from 'qrcode';
 import { supabase } from '@/admin/lib/supabaseClient';
 
-const themes = ['light', 'dark'];
-const brands = ['green', 'blue', 'red'];
+const themes = ['light', 'dark'] as const;
+const brands = ['green', 'blue', 'red'] as const;
+
+type Theme = (typeof themes)[number];
+type Brand = (typeof brands)[number];
+
+type Props = {
+  profileId: string;
+  initialTheme?: Theme;
+  initialBrand?: Brand;
+  ownerId?: string;
+};
 
 export default function ThemeBrandSwitcherAdvanced({
   profileId,
   initialTheme = 'dark',
   initialBrand = 'green',
   ownerId,
-}: {
-  profileId: string;
-  initialTheme?: string;
-  initialBrand?: string;
-  ownerId?: string;
-}) {
-  const [theme, setTheme] = useState(initialTheme);
-  const [brand, setBrand] = useState(initialBrand);
+}: Props) {
+  const [theme, setTheme] = useState<Theme>(initialTheme);
+  const [brand, setBrand] = useState<Brand>(initialBrand);
   const [url, setUrl] = useState('');
   const [qr, setQr] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
 
+  // Load user ID and local storage preferences
   useEffect(() => {
-    const storedTheme = localStorage.getItem('branding_theme');
-    const storedBrand = localStorage.getItem('branding_brand');
+    const storedTheme = localStorage.getItem('branding_theme') as Theme | null;
+    const storedBrand = localStorage.getItem('branding_brand') as Brand | null;
+
     if (storedTheme && themes.includes(storedTheme)) setTheme(storedTheme);
     if (storedBrand && brands.includes(storedBrand)) setBrand(storedBrand);
 
@@ -34,10 +43,14 @@ export default function ThemeBrandSwitcherAdvanced({
     });
   }, []);
 
+  // Update QR and URL when theme/brand change
   useEffect(() => {
     const updated = `/api/og/snapshot?theme=${theme}&brand=${brand}`;
     setUrl(updated);
-    QRCode.toDataURL(window.location.origin + updated).then(setQr);
+
+    const fullUrl = typeof window !== 'undefined' ? `${window.location.origin}${updated}` : updated;
+    QRCode.toDataURL(fullUrl).then(setQr);
+
     localStorage.setItem('branding_theme', theme);
     localStorage.setItem('branding_brand', brand);
   }, [theme, brand]);
@@ -58,8 +71,11 @@ export default function ThemeBrandSwitcherAdvanced({
         {themes.map((t) => (
           <button
             key={t}
-            className={`text-sm px-2 py-1 border rounded transition-all ${t === theme ? 'bg-black text-white' : 'bg-gray-100'}`}
+            aria-pressed={t === theme}
             onClick={() => setTheme(t)}
+            className={`text-sm px-2 py-1 border rounded transition-all ${
+              t === theme ? 'bg-black text-white' : 'bg-gray-100'
+            }`}
           >
             {t}
           </button>
@@ -71,23 +87,26 @@ export default function ThemeBrandSwitcherAdvanced({
         {brands.map((b) => (
           <button
             key={b}
-            className={`text-sm px-2 py-1 border rounded transition-all ${b === brand ? 'bg-black text-white' : 'bg-gray-100'}`}
+            aria-pressed={b === brand}
             onClick={() => setBrand(b)}
+            className={`text-sm px-2 py-1 border rounded transition-all ${
+              b === brand ? 'bg-black text-white' : 'bg-gray-100'
+            }`}
           >
             {b}
           </button>
         ))}
       </div>
 
-      <div className="mt-2 transition-opacity duration-300">
+      <div className="mt-2">
         <p className="text-xs">OG URL:</p>
         <code className="text-xs block bg-gray-100 p-2 rounded">{url}</code>
       </div>
 
       {qr && (
-        <div className="mt-2 transition-opacity duration-300">
+        <div className="mt-2">
           <p className="text-xs text-muted-foreground">QR:</p>
-          <img src={qr} alt="QR" className="w-24 h-24 border rounded shadow" />
+          <img src={qr} alt="QR Code preview" className="w-24 h-24 border rounded shadow" />
         </div>
       )}
 
@@ -97,7 +116,7 @@ export default function ThemeBrandSwitcherAdvanced({
           disabled={saving}
           className="text-xs mt-2 underline text-blue-600"
         >
-          {saving ? 'Saving...' : 'Save as Default'}
+          {saving ? 'Saving…' : 'Save as Default'}
         </button>
       )}
     </div>

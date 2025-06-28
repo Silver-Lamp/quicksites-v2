@@ -1,3 +1,6 @@
+// app/login/page.tsx
+// Use LoginPage() when you need to display the login page
+// Use getUserFromRequest() when you need the user context
 'use client';
 
 import { useEffect, useRef, useState } from 'react';

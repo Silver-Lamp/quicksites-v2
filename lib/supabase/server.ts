@@ -1,3 +1,6 @@
+// lib/supabase/server.ts
+// Use getSupabase() when you need the scoped client
+// Use getUserFromRequest() when you need the user context
 'use server';
 
 if (typeof window !== 'undefined') {

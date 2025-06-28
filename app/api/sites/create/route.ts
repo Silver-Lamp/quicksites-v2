@@ -1,3 +1,7 @@
+// app/api/sites/create/route.ts
+// Use createSite() when you need to create a site
+// Use getUserFromRequest() when you need the user context
+
 export const runtime = 'nodejs';
 
 import { json } from '@/lib/api/json';
@@ -7,18 +11,21 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 
 function baseSlug(businessName: string, location?: string): string {
   const name = businessName.toLowerCase().replace(/[^a-z0-9]+/g, '-');
-  const loc =
-    location
-      ?.toLowerCase()
-      .split(',')[0]
-      .replace(/[^a-z0-9]+/g, '-') || '';
+  const loc = location?.toLowerCase().split(',')[0].replace(/[^a-z0-9]+/g, '-') || '';
   const raw = `${name}-${loc}`.replace(/^-+|-+$/g, '');
   return raw.replace(/--+/g, '-');
 }
 
 export async function POST(req: Request) {
   const body = await req.json();
-  const { template_version_id, business_name, location, domain, slug: clientSlug, email } = body;
+  const {
+    template_version_id,
+    business_name,
+    location,
+    domain,
+    slug: clientSlug,
+    email,
+  } = body;
 
   const supabase = await getSupabase();
 
@@ -27,12 +34,14 @@ export async function POST(req: Request) {
 
   const {
     data: { user },
+    error: authError,
   } = await supabase.auth.getUser();
 
-  if (!user) {
+  if (authError || !user) {
     return json({ error: 'Unauthorized' }, { status: 401 });
   }
 
+  // ⏳ Rate limiting: one site every 10 minutes per user
   const recent = await supabase
     .from('sites')
     .select('created_at')
@@ -45,6 +54,7 @@ export async function POST(req: Request) {
     return json({ error: 'Too soon — please wait 10 minutes before creating another site.' });
   }
 
+  // 🧱 Fetch template version
   const { data: versions, error: fetchError } = await supabase
     .from('template_versions')
     .select('*')
@@ -55,7 +65,9 @@ export async function POST(req: Request) {
     return json({ error: 'Template not found' });
   }
 
-  const full_data = versions[0].full_data;
+  const version = versions[0];
+  const full_data = version.full_data;
+
   if (!full_data) {
     return json({ error: 'Template data missing' });
   }
@@ -82,27 +94,25 @@ export async function POST(req: Request) {
       throw insertError;
     }
 
+    // ✉️ Send welcome email if provided
     if (email) {
       try {
-        const response = await fetch(
-          `${process.env.NEXT_PUBLIC_BASE_URL}/api/resend-welcome-email`,
-          {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              email,
-              name: business_name,
-              slug: newSite.slug,
-              templateName: versions[0].template_name || 'a QuickSites template',
-            }),
-          }
-        );
+        const res = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/api/resend-welcome-email`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            email,
+            name: business_name,
+            slug: newSite.slug,
+            templateName: version.template_name || 'a QuickSites template',
+          }),
+        });
 
-        if (!response.ok) {
-          console.warn('⚠️ Failed to send welcome email:', await response.text());
+        if (!res.ok) {
+          console.warn('⚠️ Failed to send welcome email:', await res.text());
         }
       } catch (err) {
-        console.warn('⚠️ Error sending welcome email:', err);
+        console.warn('⚠️ Welcome email error:', err);
       }
     }
 
@@ -131,7 +141,6 @@ export async function GET() {
   return json({ message: '👋 POST to this endpoint to create a site.' });
 }
 
-// Helper updated to take Supabase client as a parameter
 async function generateUniqueSlug(
   base: string,
   supabase: SupabaseClient
@@ -144,6 +153,7 @@ async function generateUniqueSlug(
       .select('id')
       .eq('slug', slug)
       .maybeSingle();
+
     if (!data) break;
     attempt += 1;
     slug = `${base}-${attempt}`;

@@ -1,6 +1,0 @@
-// After rendering a block (requires counts to be joined or fetched separately)
-<div className="flex gap-3 text-xs text-zinc-400 mt-2">
-  {b.cheer_count > 0 && <span>🎉 {b.cheer_count}</span>}
-  {b.echo_count > 0 && <span>🔁 {b.echo_count}</span>}
-  {b.reflect_count > 0 && <span>🪞 {b.reflect_count}</span>}
-</div>

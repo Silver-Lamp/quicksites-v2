@@ -1,4 +1,4 @@
-// TemplateEditor.tsx (with logging + fallback JSON)
+// TemplateEditor.tsx (with logging + fallback JSON and optional initialData)
 import { useEffect, useState } from 'react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -16,12 +16,17 @@ import { Button } from '@/components/ui/button';
 import { toast } from 'react-hot-toast';
 import ImageUploader from '../admin/image-uploader';
 import TemplateImageGallery from '../admin/template-image-gallery';
-import type { Template } from '@/types/template';
+import type { Template, TemplateData, Snapshot } from '@/types/template';
 import type { Block } from '@/types/blocks';
 import { normalizeTemplate } from '@/admin/utils/normalizeTemplate';
-import type { TemplateData } from '@/types/template';
 
-export default function TemplateEditor({ templateName }: { templateName: string }) {
+export default function TemplateEditor({
+  templateName,
+  initialData,
+}: {
+  templateName: string;
+  initialData?: Snapshot;
+}) {
   const [template, setTemplate] = useState<Template>({
     name: templateName,
     layout: 'default',
@@ -34,7 +39,7 @@ export default function TemplateEditor({ templateName }: { templateName: string 
   });
 
   const [rawJson, setRawJson] = useState('');
-  const [livePreviewData, setLivePreviewData] = useState({});
+  const [livePreviewData, setLivePreviewData] = useState<TemplateData>({ pages: [] });
   const [showPublishModal, setShowPublishModal] = useState(false);
   const autosave = useAutosaveTemplate(template, rawJson);
 
@@ -98,10 +103,24 @@ export default function TemplateEditor({ templateName }: { templateName: string 
   ];
 
   useEffect(() => {
+    if (initialData) {
+      const normalized = normalizeTemplate({
+        name: initialData.template_name,
+        layout: initialData.layout,
+        color_scheme: initialData.color_scheme,
+        theme: initialData.theme,
+        brand: initialData.brand,
+        data: initialData.data,
+      });
+      setTemplate(normalized);
+      setRawJson(JSON.stringify(initialData.data, null, 2));
+      setLivePreviewData(initialData.data);
+      return;
+    }
+
     fetch(`/api/templates/${templateName}`)
       .then((res) => res.json())
       .then((data) => {
-        console.log('Fetched template data:', data);
         const fallback = {
           pages: [
             {
@@ -118,7 +137,7 @@ export default function TemplateEditor({ templateName }: { templateName: string 
         setRawJson(JSON.stringify(finalData, null, 2));
         setLivePreviewData(finalData);
       });
-  }, [templateName]);
+  }, [templateName, initialData]);
 
   useEffect(() => {
     setRawJson(JSON.stringify(template.data, null, 2));

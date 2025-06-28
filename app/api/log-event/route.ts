@@ -1,3 +1,6 @@
+// Use logEvent() when you need to log an event
+// Use getUserFromRequest() when you need the user context
+
 import { cookies, headers } from 'next/headers';
 import { createServerClient } from '@supabase/ssr';
 import { Database } from '@/types/supabase';
@@ -5,8 +8,8 @@ import { Database } from '@/types/supabase';
 export const runtime = 'nodejs';
 
 export async function POST(req: Request) {
-  const cookieStore = cookies();
-  const headerStore = await headers();
+  const cookieStore = cookies(); // ✅ no need to await
+  const headerStore = headers();
 
   const supabase = createServerClient<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -22,14 +25,22 @@ export async function POST(req: Request) {
   );
 
   const { href, type = 'nav_click', meta = {} } = await req.json();
-  const { data: { user } } = await supabase.auth.getUser();
+
+  const {
+    data: { user },
+    error: userError,
+  } = await supabase.auth.getUser();
+
+  if (userError) {
+    console.error('❌ Failed to get user:', userError.message);
+  }
 
   const ip =
-    headerStore.get('x-forwarded-for')?.split(',')[0]?.trim() ||
-    headerStore.get('x-real-ip') ||
+    (await headerStore).get('x-forwarded-for')?.split(',')[0]?.trim() ||
+    (await headerStore).get('x-real-ip') ||
     'unknown';
 
-  const userAgent = headerStore.get('user-agent') || 'unknown';
+  const userAgent = (await headerStore).get('user-agent') || 'unknown';
 
   const { data: inserted, error } = await supabase
     .from('nav_events')
@@ -47,13 +58,8 @@ export async function POST(req: Request) {
 
   if (error) {
     console.error('❌ Error inserting nav_event:', error.message);
-    return new Response(JSON.stringify({ error: error.message }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    return Response.json({ error: error.message }, { status: 500 });
   }
 
-  return new Response(JSON.stringify({ ok: true, inserted }), {
-    headers: { 'Content-Type': 'application/json' },
-  });
+  return Response.json({ ok: true, inserted });
 }

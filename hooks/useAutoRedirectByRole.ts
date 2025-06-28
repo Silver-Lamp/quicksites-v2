@@ -4,7 +4,9 @@ import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/admin/lib/supabaseClient';
 
-type RoleMap = Partial<Record<string, string>>;
+type Role = 'admin' | 'owner' | 'reseller' | 'viewer' | string;
+
+type RoleMap = Partial<Record<Role, string>>;
 
 type Options = {
   roleRoutes?: RoleMap;
@@ -29,14 +31,21 @@ export function useAutoRedirectByRole({
   const router = useRouter();
 
   useEffect(() => {
-    const isTestMode = enableTestBypass && process.env.NEXT_PUBLIC_IS_PLAYWRIGHT_TEST === 'true';
+    if (typeof window === 'undefined') return;
+
+    const isTestMode =
+      enableTestBypass && process.env.NEXT_PUBLIC_IS_PLAYWRIGHT_TEST === 'true';
 
     if (isTestMode) {
       router.replace(roleRoutes.admin || '/admin/dashboard');
       return;
     }
 
-    supabase.auth.getUser().then(async ({ data: { user } }) => {
+    const fetchAndRedirect = async () => {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
       if (!user?.id) {
         router.replace('/login');
         return;
@@ -49,10 +58,15 @@ export function useAutoRedirectByRole({
         .maybeSingle();
 
       const role = profile?.role ?? 'viewer';
-      const redirectTo = roleRoutes[role] || fallbackRoute;
+      const redirectTo = roleRoutes[role] ?? fallbackRoute;
 
-      console.log(`[🔁 AutoRedirect] Role "${role}" → ${redirectTo}`);
+      if (process.env.NODE_ENV === 'development') {
+        console.log(`[🔁 AutoRedirect] Role "${role}" → ${redirectTo}`);
+      }
+
       router.replace(redirectTo);
-    });
+    };
+
+    fetchAndRedirect();
   }, [router, roleRoutes, fallbackRoute, enableTestBypass]);
 }

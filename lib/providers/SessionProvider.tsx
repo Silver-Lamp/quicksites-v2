@@ -7,16 +7,18 @@ import {
   useState,
   type ReactNode,
 } from 'react';
-import { supabase } from '@/lib/supabase/client'; // ✅ Use singleton
+import { supabase } from '@/lib/supabase/client';
 import type { Database } from '@/types/supabase';
-import { SupabaseClient } from '@supabase/supabase-js';
+import type { SupabaseClient, User } from '@supabase/supabase-js';
+
+type SessionUser = {
+  id: string;
+  email: string;
+  avatar_url?: string;
+};
 
 type SessionContextType = {
-  user: {
-    id: string;
-    email: string;
-    avatar_url?: string;
-  } | null;
+  user: SessionUser | null;
   role: string;
   supabase: SupabaseClient<Database>;
 };
@@ -30,12 +32,12 @@ export function useSession() {
 }
 
 export function SessionProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<SessionContextType['user'] | null>(null);
+  const [user, setUser] = useState<SessionUser | null>(null);
   const [role, setRole] = useState<string>('guest');
 
   async function refreshUser() {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
+    const { data: { user }, error } = await supabase.auth.getUser();
+    if (error || !user) {
       setUser(null);
       setRole('guest');
       return;
@@ -43,7 +45,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
 
     setUser({
       id: user.id,
-      email: user.email ?? '',
+      email: user.email ?? 'unknown',
       avatar_url: user.user_metadata?.avatar_url ?? '',
     });
 
@@ -53,7 +55,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       .eq('user_id', user.id)
       .maybeSingle();
 
-    setRole(profile?.role || 'guest');
+    setRole(profile?.role ?? 'guest');
   }
 
   useEffect(() => {

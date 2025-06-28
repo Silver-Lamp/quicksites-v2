@@ -1,19 +1,23 @@
 'use client';
 
+import { useEffect, useState } from 'react';
+import { supabase } from '@/admin/lib/supabaseClient';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { formatDistanceToNow, format } from 'date-fns';
+import Image from 'next/image';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
-import { supabase } from '@/admin/lib/supabaseClient';
-import { formatDistanceToNow } from 'date-fns';
-import { format } from 'date-fns-tz';
-import { useEffect, useState } from 'react';
 import { toast } from 'react-hot-toast';
 
 export default function ProfilePage() {
   const [latestLog, setLatestLog] = useState<any | null>(null);
   const [showUtc, setShowUtc] = useState(false);
   const [userMetadata, setUserMetadata] = useState<any | null>(null);
+  const { user } = useCurrentUser();
+  const [avatarUrl, setAvatarUrl] = useState(user?.avatar_url || '');
+  const [displayName, setDisplayName] = useState(user?.name || '');
+  const [bio, setBio] = useState(user?.bio || '');
   const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
 
   useEffect(() => {
@@ -22,36 +26,23 @@ export default function ProfilePage() {
       .select('id, email, deleted_at, user_id, admin_actor, reason')
       .order('deleted_at', { ascending: false })
       .limit(1)
-      .then(({ data }: { data: any }) => {
+      .then(({ data }) => {
         if (data?.length) setLatestLog(data[0]);
       });
 
-    supabase.auth.getUser().then(({ data }: { data: any }) => {
+    supabase.auth.getUser().then(({ data }) => {
       setUserMetadata(data.user ?? null);
     });
   }, []);
-
-  const { user } = useCurrentUser();
-  const [avatarUrl, setAvatarUrl] = useState(user?.avatar_url || '');
-  const [displayName, setDisplayName] = useState(user?.name || '');
-  const [bio, setBio] = useState(user?.bio || '');
 
   const handleSave = async () => {
     const { error } = await supabase.auth.updateUser({
       data: { avatar_url: avatarUrl, name: displayName, bio },
     });
     if (error) {
-      if (typeof toast.error === 'function') {
-        toast.error('Failed to update profile');
-      } else {
-        console.error('Toast error function is not available.');
-      }
+      toast.error('Failed to update profile');
     } else {
-      if (typeof toast.success === 'function') {
-        toast.success('Profile updated!');
-      } else {
-        console.error('Toast success function is not available.');
-      }
+      toast.success('Profile updated!');
     }
   };
 
@@ -62,7 +53,9 @@ export default function ProfilePage() {
       {userMetadata && (
         <div className="bg-zinc-900 border border-zinc-700 p-4 rounded mb-6 text-sm">
           <h2 className="font-semibold mb-2">User Metadata</h2>
-          <pre className="text-xs whitespace-pre-wrap">{JSON.stringify(userMetadata, null, 2)}</pre>
+          <pre className="text-xs whitespace-pre-wrap">
+            {JSON.stringify(userMetadata, null, 2)}
+          </pre>
         </div>
       )}
 
@@ -94,11 +87,14 @@ export default function ProfilePage() {
             placeholder="https://example.com/avatar.png"
           />
         </div>
+
         <div className="flex gap-2 items-center">
-          <img
+          <Image
             src={avatarUrl || '/default-avatar.png'}
             alt="preview"
-            className="w-16 h-16 rounded-full border border-white object-cover"
+            width={64}
+            height={64}
+            className="rounded-full border border-white object-cover"
           />
           <Button onClick={handleSave}>Save</Button>
         </div>
@@ -109,26 +105,22 @@ export default function ProfilePage() {
             <Button
               variant="secondary"
               onClick={async () => {
-                const { error } = await supabase.auth.resetPasswordForEmail(user?.email || '', {
-                  redirectTo: `${window.location.origin}/reset`,
-                });
+                const { error } = await supabase.auth.resetPasswordForEmail(
+                  user?.email || '',
+                  {
+                    redirectTo: `${window.location.origin}/reset`,
+                  }
+                );
                 if (error) {
-                  if (typeof toast.error === 'function') {
-                    toast.error('Failed to send reset email');
-                  } else {
-                    console.error('Toast error function is not available.');
-                  }
+                  toast.error('Failed to send reset email');
                 } else {
-                  if (typeof toast.success === 'function') {
-                    toast.success('Reset email sent!');
-                  } else {
-                    console.error('Toast success function is not available.');
-                  }
+                  toast.success('Reset email sent!');
                 }
               }}
             >
               Send Password Reset Email
             </Button>
+
             <Button
               variant="outline"
               onClick={async () => {
@@ -137,17 +129,9 @@ export default function ProfilePage() {
                   sent_from: 'profile_page',
                 });
                 if (error) {
-                  if (typeof toast.error === 'function') {
-                    toast.error('Failed to send verification');
-                  } else {
-                    console.error('Toast error function is not available.');
-                  }
+                  toast.error('Failed to send verification');
                 } else {
-                  if (typeof toast.success === 'function') {
-                    toast.success('Verification email sent!');
-                  } else {
-                    console.error('Toast success function is not available.');
-                  }
+                  toast.success('Verification email sent!');
                 }
               }}
             >
@@ -174,17 +158,9 @@ export default function ProfilePage() {
                 });
 
                 if (error) {
-                  if (typeof toast.error === 'function') {
-                    toast.error('Failed to delete account');
-                  } else {
-                    console.error('Toast error function is not available.');
-                  }
+                  toast.error('Failed to delete account');
                 } else {
-                  if (typeof toast.success === 'function') {
-                    toast.success('Account deleted');
-                  } else {
-                    console.error('Toast success function is not available.');
-                  }
+                  toast.success('Account deleted');
                   setTimeout(() => {
                     window.location.href = '/goodbye';
                   }, 1500);
@@ -207,21 +183,23 @@ export default function ProfilePage() {
               Most recent deletion:
               <code className="ml-2 bg-zinc-800 px-2 py-1 rounded text-xs text-yellow-300">
                 {latestLog
-                  ? `${latestLog.email} • ${format(new Date(latestLog.deleted_at), showUtc ? "MMM d, yyyy HH:mm 'UTC'" : 'MMM d, yyyy HH:mm zzz')}
- (${formatDistanceToNow(new Date(latestLog.deleted_at), { addSuffix: true })})` +
-                    (latestLog.admin_actor ? ` (by ${latestLog.admin_actor})` : '')
+                  ? `${latestLog.email} • ${format(
+                      new Date(latestLog.deleted_at),
+                      showUtc ? "MMM d, yyyy HH:mm 'UTC'" : 'MMM d, yyyy HH:mm zzz'
+                    )} (${formatDistanceToNow(new Date(latestLog.deleted_at), {
+                      addSuffix: true,
+                    })})${latestLog.admin_actor ? ` (by ${latestLog.admin_actor})` : ''}`
                   : 'Loading...'}
               </code>
             </p>
             <p className="text-sm text-zinc-400">
               Account deletions are recorded in{' '}
-              <code className="bg-zinc-800 px-1 rounded">user_deletion_logs</code>. This table
-              stores the user ID, email, and timestamp. Admins can view and audit this log from the
-              Supabase dashboard or the audit UI. Local timezone is:{' '}
-              <code className="bg-zinc-800 px-1 rounded">{timeZone}</code>. A similar log is
-              recorded for verification emails via the{' '}
-              <code className="bg-zinc-800 px-1 rounded">verification_logs</code> table, including
-              user agent and origin info.
+              <code className="bg-zinc-800 px-1 rounded">user_deletion_logs</code> including user
+              ID, email, and timestamp. Admins can audit this log from the Supabase dashboard or
+              audit UI. Local timezone:{' '}
+              <code className="bg-zinc-800 px-1 rounded">{timeZone}</code>. Email verifications are
+              also logged in{' '}
+              <code className="bg-zinc-800 px-1 rounded">verification_logs</code> with user agent and origin.
             </p>
           </div>
         </div>

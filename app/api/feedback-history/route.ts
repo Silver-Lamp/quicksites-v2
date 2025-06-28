@@ -4,7 +4,9 @@ import { createClient } from '@supabase/supabase-js';
 import { json } from '@/lib/api/json';
 import { NextRequest } from 'next/server';
 
-const supabase = createClient(
+import type { Database } from '@/types/supabase';
+
+const supabase = createClient<Database>(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
@@ -12,12 +14,17 @@ const supabase = createClient(
 // GET: Fetch feedback (sent or received) for authenticated user
 export async function GET(req: NextRequest) {
   const token = req.headers.get('Authorization')?.replace('Bearer ', '');
-  const { data: auth } = await supabase.auth.getUser(token);
-  const user = auth?.user;
-  if (!user) return json({ error: 'Unauthorized' }, { status: 401 });
+  if (!token) return json({ error: 'Missing token' }, { status: 401 });
+
+  const {
+    data: { user },
+    error: authError,
+  } = await supabase.auth.getUser(token);
+
+  if (authError || !user) return json({ error: 'Unauthorized' }, { status: 401 });
 
   const { searchParams } = new URL(req.url);
-  const type = searchParams.get('type') || 'sent'; // default to sent
+  const type = searchParams.get('type') || 'sent';
   const limit = parseInt(searchParams.get('limit') || '50');
   const offset = parseInt(searchParams.get('offset') || '0');
 
@@ -38,12 +45,16 @@ export async function GET(req: NextRequest) {
 // POST: Add new feedback
 export async function POST(req: NextRequest) {
   const token = req.headers.get('Authorization')?.replace('Bearer ', '');
-  const { data: auth } = await supabase.auth.getUser(token);
-  const user = auth?.user;
-  if (!user) return json({ error: 'Unauthorized' }, { status: 401 });
+  if (!token) return json({ error: 'Missing token' }, { status: 401 });
 
-  const body = await req.json();
-  const { block_id, action = 'echo', message = '' } = body;
+  const {
+    data: { user },
+    error: authError,
+  } = await supabase.auth.getUser(token);
+
+  if (authError || !user) return json({ error: 'Unauthorized' }, { status: 401 });
+
+  const { block_id, action = 'echo', message = '' } = await req.json();
 
   if (!block_id) return json({ error: 'Missing block_id' }, { status: 400 });
 

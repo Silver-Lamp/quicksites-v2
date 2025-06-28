@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useCanonicalRole } from '@/hooks/useCanonicalRole';
 import { supabase } from '@/admin/lib/supabaseClient';
+import { useCanonicalRole } from '@/hooks/useCanonicalRole';
 import dayjs from 'dayjs';
 import Image from 'next/image';
 
@@ -13,25 +13,40 @@ export default function ViewerDashboard() {
   const router = useRouter();
   const { role } = useCanonicalRole();
 
+  // Fetch user email
   useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => {
-      const user = data?.user;
-      setEmail(user?.email || '');
+    supabase.auth.getUser().then(({ data, error }) => {
+      if (error || !data?.user) {
+        console.warn('[ViewerDashboard] No user found');
+        return;
+      }
+      setEmail(data.user.email ?? '');
     });
   }, []);
 
+  // Redirect non-viewers
   useEffect(() => {
     if (role && role !== 'viewer') {
       router.push('/dashboard');
     }
-  }, [role]);
+  }, [role, router]);
 
+  // Fetch domains
   useEffect(() => {
-    supabase
-      .from('domains')
-      .select('*, campaigns(*)')
-      .order('date_created', { ascending: false })
-      .then(({ data }) => setDomains(data || []));
+    const fetchDomains = async () => {
+      const { data, error } = await supabase
+        .from('domains')
+        .select('*, campaigns(*)')
+        .order('date_created', { ascending: false });
+
+      if (error) {
+        console.error('[ViewerDashboard] Error loading domains:', error.message);
+      }
+
+      setDomains(data ?? []);
+    };
+
+    fetchDomains();
   }, []);
 
   const logClick = async (domain_id: string, action_type: string) => {
@@ -45,7 +60,7 @@ export default function ViewerDashboard() {
   };
 
   const renderTimer = (campaign: any) => {
-    if (!campaign) return '—';
+    if (!campaign?.ends_at) return '—';
     const now = dayjs();
     const end = dayjs(campaign.ends_at);
     const diff = end.diff(now, 'minute');
@@ -82,7 +97,7 @@ export default function ViewerDashboard() {
               <td className="px-4 py-2">
                 <Image
                   src={d.screenshot_url}
-                  alt="screenshot"
+                  alt={`Preview of ${d.domain}`}
                   width={128}
                   height={72}
                   className="w-32 border rounded cursor-pointer"
@@ -100,7 +115,7 @@ export default function ViewerDashboard() {
               </td>
             </tr>
           ))}
-          {domains.map((d, _i) => {
+          {domains.map((d) => {
             const alt = d.campaigns?.alt_domains?.[d.campaigns.lead_ids?.indexOf(d.lead_id)];
             const hasClaimed = d.domains?.is_claimed;
 

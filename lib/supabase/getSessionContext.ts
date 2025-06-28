@@ -1,8 +1,10 @@
+// lib/supabase/getSessionContext.ts
+// Use getSessionContext() when you need user + role
+// Use getSupabaseContext() when you just want the scoped client + headers/cookies
 'use server';
 
-import { cookies, headers } from 'next/headers';
-import { createServerClient } from '@supabase/ssr';
-import type { Database } from '@/types/supabase';
+import type { BaseContext } from './getBaseContext';
+import { getBaseContext } from './getBaseContext';
 
 type ExtendedUser = {
   id: string;
@@ -10,37 +12,27 @@ type ExtendedUser = {
   avatar_url?: string | null;
 };
 
-export async function getSessionContext(): Promise<{
-  user: ExtendedUser | null;
-  role: string;
-  headers: Headers;
-  cookies: ReturnType<typeof cookies>;
-  ip: string;
-  userAgent: string;
-  supabase: ReturnType<typeof createServerClient<Database>>;
-}> {
-  const cookieStore = cookies();  // ReadonlyRequestCookies
-  const headerStore = headers();  // ReadonlyHeaders
-
-  const supabase = createServerClient<Database>(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        async get(name: string) {
-          const cookie = await cookieStore;
-          return cookie.get(name)?.value;
-        },
-      },
-    }
-  );
+export async function getSessionContext(): Promise<
+  BaseContext & {
+    user: ExtendedUser | null;
+    role: string;
+  }
+> {
+  const base = await getBaseContext();
+  const {
+    supabase,
+    cookies: cookieStore,
+    headers: headerStore,
+    ip,
+    userAgent,
+  } = base;
 
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
   let extendedUser: ExtendedUser | null = null;
-  let role: string = 'viewer';
+  let role = 'viewer';
 
   if (user) {
     const { data: profile } = await supabase
@@ -60,20 +52,9 @@ export async function getSessionContext(): Promise<{
     }
   }
 
-  const ip =
-    (await headerStore).get('x-forwarded-for')?.split(',')[0]?.trim() ||
-    (await headerStore).get('x-real-ip') ||
-    'unknown';
-
-  const userAgent = (await headerStore).get('user-agent') || 'unknown';
-
   return {
+    ...base,
     user: extendedUser,
     role,
-    headers: await headerStore,
-    cookies: cookieStore,
-    ip,
-    userAgent,
-    supabase,
   };
 }

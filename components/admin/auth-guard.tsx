@@ -60,6 +60,7 @@ export default function AuthGuard({
         source: roleSource,
         expected: roles,
       });
+      console.log('🔐 [auth-guard] Redirecting to login (Reason: Unauthorized)');
       router.replace(`/login?error=unauthorized`);
     }
   }, [readyToCheck, user, role, roles, router, roleSource, isLoading, session, skipRoleCheck]);

@@ -18,6 +18,7 @@ export default function ReferralsPage() {
     if (role === null) return;
 
     if (role !== 'admin') {
+      console.log('🔐 [referrals] Redirecting to login (Reason: Unauthorized)');
       router.push('/login?error=unauthorized');
       return;
     }

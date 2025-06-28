@@ -1,4 +1,4 @@
-// ✅ route.ts
+// ✅ app/api/login/route.ts
 export const runtime = 'nodejs';
 
 import { createClient } from '@supabase/supabase-js';
@@ -6,11 +6,11 @@ import { NextRequest } from 'next/server';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY! // using anon key for auth
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 );
 
 const enforceRateLimit = false;
-const enforceRecaptcha = false; // ✅ off by default for local dev
+const enforceRecaptcha = false;
 const RATE_LIMIT_MINUTES = 5;
 
 export async function POST(req: NextRequest) {
@@ -53,9 +53,11 @@ export async function POST(req: NextRequest) {
     }
   }
 
+  // ✅ Dynamically use the request origin
+  const origin = req.headers.get('origin') || process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
+
   // 🔐 Optional reCAPTCHA check
   if (enforceRecaptcha) {
-    console.log('[🔍 reCAPTCHA validation starting]', { recaptchaToken });
     try {
       const recaptchaRes = await fetch('https://www.google.com/recaptcha/api/siteverify', {
         method: 'POST',
@@ -67,8 +69,6 @@ export async function POST(req: NextRequest) {
       });
 
       const result = await recaptchaRes.json();
-      console.log('[✅ reCAPTCHA result]', result);
-
       if (!result.success || result.score < 0.5) {
         await supabase.from('session_logs').insert({
           type: 'recaptcha_fail',
@@ -91,14 +91,14 @@ export async function POST(req: NextRequest) {
   try {
     console.log('[🔐 Sending Magic Link]', {
       email,
-      redirect: `${process.env.NEXT_PUBLIC_BASE_URL}/login`,
+      redirect: `${origin}/login`,
       supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL,
     });
 
     const { data, error } = await supabase.auth.signInWithOtp({
       email,
       options: {
-        emailRedirectTo: `${process.env.NEXT_PUBLIC_BASE_URL}/login`,
+        emailRedirectTo: `${origin}/login`,
       },
     });
 

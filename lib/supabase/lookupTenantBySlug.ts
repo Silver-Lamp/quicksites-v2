@@ -3,16 +3,16 @@ import { cookies } from 'next/headers';
 import { Database } from '@/types/supabase';
 
 export async function lookupTenantBySlug(slug: string): Promise<string | null> {
-  // eslint-disable-next-line no-restricted-syntax
-  const cookieStore = await cookies();
+  const cookieStore = cookies(); // ✅ synchronous now
 
   const supabase = createServerClient<Database, 'public'>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookies: {
-        get(name: string) {
-          return cookieStore.get(name)?.value;
+        async get(name: string) {
+          const cookie = (await cookieStore).get(name);
+          return cookie?.value;
         },
       },
     }
@@ -25,7 +25,7 @@ export async function lookupTenantBySlug(slug: string): Promise<string | null> {
     .maybeSingle();
 
   if (error) {
-    console.error('Tenant lookup error:', error.message);
+    console.error('[❌ Tenant lookup error]', error.message);
     return null;
   }
 

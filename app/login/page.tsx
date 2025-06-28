@@ -135,14 +135,6 @@ export default function LoginPage() {
   //     </main>
   //   );
   // }
-  // {process.env.NODE_ENV === 'development' && debug && (
-  //   <details className="mt-4">
-  //     <summary className="cursor-pointer text-sm text-zinc-500">Debug Info</summary>
-  //     <pre className="text-xs bg-zinc-800 text-zinc-300 rounded p-2 overflow-auto max-h-64">
-  //       {JSON.stringify(debug, null, 2)}
-  //     </pre>
-  //   </details>
-  // )}
   return (
     <main className="min-h-screen flex items-center justify-center bg-background text-foreground px-4">
       {loading ? (
@@ -194,6 +186,24 @@ export default function LoginPage() {
                 >
                   {message}
                 </p>
+              )}
+              {process.env.NODE_ENV === 'development' && debug && (
+                <details className="mt-4 space-y-3">
+                  <summary className="cursor-pointer text-sm text-zinc-500">Debug Info</summary>
+                  <pre className="text-xs bg-zinc-800 text-zinc-300 rounded p-2 overflow-auto max-h-64">
+                    {JSON.stringify(debug, null, 2)}
+                  </pre>
+                  <button
+                    onClick={async () => {
+                      await supabase.auth.signOut();
+                      router.replace('/login?logout=1');
+                      setTimeout(() => window.location.reload(), 300); // Optional hard reload
+                    }}
+                    className="w-full bg-red-700 hover:bg-red-800 text-white py-2 text-sm rounded transition"
+                  >
+                    Log Out
+                  </button>
+                </details>
               )}
               <ReCAPTCHA sitekey={process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY!} size="invisible" ref={recaptchaRef} />
             </>

@@ -1,6 +1,6 @@
 'use server';
 
-import { cookies as getCookies, headers as getHeaders } from 'next/headers';
+import { cookies, headers } from 'next/headers';
 import { createServerClient } from '@supabase/ssr';
 import type { Database } from '@/types/supabase';
 
@@ -14,13 +14,13 @@ export async function getSessionContext(): Promise<{
   user: ExtendedUser | null;
   role: string;
   headers: Headers;
-  cookies: ReturnType<typeof getCookies>;
+  cookies: ReturnType<typeof cookies>;
   ip: string;
   userAgent: string;
   supabase: ReturnType<typeof createServerClient<Database>>;
 }> {
-  const cookieStore = getCookies(); // ✅ synchronous
-  const headerStore = getHeaders(); // ✅ synchronous
+  const cookieStore = cookies();  // ReadonlyRequestCookies
+  const headerStore = headers();  // ReadonlyHeaders
 
   const supabase = createServerClient<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -28,7 +28,8 @@ export async function getSessionContext(): Promise<{
     {
       cookies: {
         async get(name: string) {
-          return (await cookieStore).get(name)?.value;
+          const cookie = await cookieStore;
+          return cookie.get(name)?.value;
         },
       },
     }
@@ -39,13 +40,13 @@ export async function getSessionContext(): Promise<{
   } = await supabase.auth.getUser();
 
   let extendedUser: ExtendedUser | null = null;
-  let role = 'viewer';
+  let role: string = 'viewer';
 
   if (user) {
     const { data: profile } = await supabase
       .from('user_profiles')
       .select('role, avatar_url')
-      .eq('user_id', user.id as string)
+      .eq('user_id', user.id)
       .maybeSingle();
 
     extendedUser = {
@@ -60,11 +61,11 @@ export async function getSessionContext(): Promise<{
   }
 
   const ip =
-    (await headerStore).get('x-forwarded-for')?.toString() ||
-    (await headerStore).get('x-real-ip')?.toString() ||
+    (await headerStore).get('x-forwarded-for')?.split(',')[0]?.trim() ||
+    (await headerStore).get('x-real-ip') ||
     'unknown';
 
-  const userAgent = (await headerStore).get('user-agent')?.toString() || 'unknown';
+  const userAgent = (await headerStore).get('user-agent') || 'unknown';
 
   return {
     user: extendedUser,

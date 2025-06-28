@@ -44,6 +44,7 @@ function Dashboard() {
 
   useEffect(() => {
     if (activeDashboardId && searchParams?.get('dashboard') !== activeDashboardId) {
+      console.log('🔐 [dashboard] Redirecting to dashboard (Reason: Active dashboard ID)');
       router.replace(`?dashboard=${activeDashboardId}`);
     }
   }, [activeDashboardId]);
@@ -53,6 +54,7 @@ function Dashboard() {
     if (role === 'viewer') {
       router.push('/viewer');
     } else if (!['admin', 'reseller', 'owner'].includes(role)) {
+      console.log('🔐 [dashboard] Redirecting to login (Reason: Unauthorized)');
       router.push('/login?error=unauthorized');
     }
 

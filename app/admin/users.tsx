@@ -16,6 +16,7 @@ export default function UsersPage() {
     if (role === null) return;
 
     if (role !== 'admin') {
+      console.log('🔐 [users] Redirecting to login (Reason: Unauthorized)');
       router.push('/login?error=unauthorized');
       return;
     }

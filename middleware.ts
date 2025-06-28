@@ -1,54 +1,52 @@
-import { NextResponse } from 'next/server';
-import type { NextRequest } from 'next/server';
-import { createMiddlewareSupabaseClient } from '@/lib/supabase/middlewareClient';
+import { NextResponse, type NextRequest } from 'next/server';
+import { createServerClient } from '@supabase/ssr';
+import type { Database } from './types/supabase';
 
-const DEBUG = process.env.DEBUG_AUTH === 'true';
-
+/**
+ * Middleware to protect /admin/* routes.
+ */
 export async function middleware(req: NextRequest) {
   const res = NextResponse.next();
-  const supabase = createMiddlewareSupabaseClient(req);
+
+  const supabase = createServerClient<Database>(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        get(name: string) {
+          return req.cookies.get(name)?.value;
+        },
+        set(name, value, options) {
+          res.cookies.set({ name, value, ...options });
+        },
+        remove(name) {
+          res.cookies.set(name, '', { maxAge: 0 });
+        },
+      },
+    }
+  );
 
   const {
     data: { session },
-    error: sessionError,
+    error,
   } = await supabase.auth.getSession();
 
   const user = session?.user;
 
-  if (DEBUG) {
-    console.log('🔐 [middleware] Session user:', user?.email || 'none');
-    if (sessionError) console.warn('⚠️ [middleware] Session error:', sessionError.message);
-  }
+  console.log('🔐 [middleware] Session user:', user?.email || 'none');
+  if (error) console.warn('⚠️ [middleware] Session error:', error.message);
 
   if (!user) {
+    console.log('🔐 [middleware] Redirecting to login (Reason: No user)');
     return NextResponse.redirect(new URL('/login?error=unauthorized', req.url));
   }
 
-  const { data: profile, error: profileError } = await supabase
-    .from('user_profiles')
-    .select('role')
-    .eq('user_id', user.id)
-    .maybeSingle();
+  // Optionally attach role info or headers
+  // res.headers.set('x-user-role', session.user.role ?? 'authenticated');
 
-  const role = profile?.role ?? 'unknown';
-
-  if (DEBUG) {
-    console.log('📄 [middleware] Role:', role);
-    if (profileError) console.warn('❌ [middleware] Role error:', profileError.message);
-  }
-
-  // 🔐 Role check (customize as needed)
-  const allowedRoles = ['admin', 'owner', 'reseller'];
-  if (!allowedRoles.includes(role)) {
-    return NextResponse.redirect(new URL('/login?error=forbidden', req.url));
-  }
-
-  // ✅ Attach role to response header for debugging or downstream context
-  res.headers.set('x-user-role', role);
-
-  return res;
+  return res; // ✅ Return modified response to apply any Set-Cookie headers
 }
 
 export const config = {
-  matcher: ['/admin/:path*'], // Only protect /admin/ routes
+  matcher: ['/admin/:path*'],
 };

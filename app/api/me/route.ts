@@ -1,31 +1,34 @@
-import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
-import { NextRequest } from 'next/server';
-
-import { Database } from '@/types/supabase';
+import { createServerClient } from '@supabase/ssr';
+import type { Database } from '@/types/supabase';
 
 export const runtime = 'nodejs';
 
-export async function GET(req: NextRequest) {
-  const cookieStore = cookies() as unknown as {
-    get(name: string): { value: string } | undefined;
-  };
+export async function GET() {
+  const cookieStore = cookies(); // App Router-compatible, no type cast needed
 
   const supabase = createServerClient<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookies: {
-        get(name: string) {
-          return cookieStore.get(name)?.value;
-        },
+        get: async (name: string) => (await cookieStore).get(name)?.value,
       },
     }
   );
 
   const {
     data: { user },
+    error,
   } = await supabase.auth.getUser();
+
+  if (error) {
+    console.error('[❌ Supabase getUser error]', error.message);
+    return new Response(JSON.stringify({ error: error.message }), {
+      status: 401,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
 
   return new Response(JSON.stringify({ user }), {
     status: 200,

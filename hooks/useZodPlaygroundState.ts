@@ -18,7 +18,7 @@ export function useZodPlaygroundState() {
   const params = useSearchParams();
   const { user } = useCurrentUser();
 
-  // @ts-expect-error TS2589: deep type inference
+  // was: ts-expect-error TS2589: deep type inference
   const [schema, setSchema] = useState<ZodTypeAny>(defaultSchema);
   const [error, setError] = useState<string | null>(null);
   const [jsonExport, setJsonExport] = useState<string | null>(null);
@@ -37,7 +37,7 @@ export function useZodPlaygroundState() {
       const decoded = decodeURIComponent(encoded);
       const parsed = JSON.parse(decoded);
       const zodified = jsonSchemaToZod(parsed);
-      // @ts-expect-error TS2589: deep type inference
+      // was: @ts-expect-error TS2589: deep type inference
       setSchema(zodified);
       setJsonExport(decoded);
     } catch (err: any) {
@@ -78,7 +78,7 @@ export function useZodPlaygroundState() {
 
   const exportJsonSchema = () => {
     try {
-      // @ts-expect-error TS2589: deep type inference
+      // was: @ts-expect-error TS2589: deep type inference
       const json = zodToJsonSchema(schema);
       const stringified = JSON.stringify(json, null, 2);
       setJsonExport(stringified);

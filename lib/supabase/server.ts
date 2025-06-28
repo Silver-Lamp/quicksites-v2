@@ -1,7 +1,7 @@
 'use server';
 
 if (typeof window !== 'undefined') {
-  throw new Error('[💥 server.ts] This file should not be imported client-side.');
+  throw new Error('[❌ server.ts] This file must not run on the client.');
 }
 
 import type { SupabaseClient } from '@supabase/supabase-js';
@@ -9,14 +9,14 @@ import type { Database } from '@/types/supabase';
 import { createScopedSupabaseClient } from './createScopedClient';
 
 /**
- * Returns a Supabase client with access to server-side cookies.
+ * Provides the scoped Supabase client.
  */
 export async function getSupabase(): Promise<SupabaseClient<Database>> {
   return createScopedSupabaseClient();
 }
 
 /**
- * Gets the authenticated user from the current request context (or null).
+ * Fetches the currently authenticated user from cookies.
  */
 export async function getUserFromRequest(): Promise<{
   user: Awaited<ReturnType<SupabaseClient<Database>['auth']['getUser']>>['data']['user'];

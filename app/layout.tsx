@@ -8,10 +8,10 @@ import { redirect } from 'next/navigation';
 import AdminLayout from '@/components/layouts/admin-layout';
 import ViewerLayout from '@/components/layouts/viewer-layout';
 import AppHeader from '@/components/admin/AppHeader/app-header';
-import { eachMinuteOfInterval } from 'date-fns';
+import { SessionProvider } from '@/lib/providers/SessionProvider';
 
 export const metadata = {
-  metadataBase: new URL('https://quicksites.ai'), // Prevent OG image warning
+  metadataBase: new URL('https://quicksites.ai'),
   title: 'QuickSites | One-Click Local Websites',
   description: 'Launch your website in minutes with QuickSites.ai — no code needed.',
   openGraph: {
@@ -39,13 +39,15 @@ export default async function RootLayout({
 }) {
   const { user, role } = await getSessionContext();
 
-  const Layout =
-    ['admin', 'owner', 'reseller'].includes(role) ? AdminLayout : ViewerLayout;
+  const Layout = ['admin', 'owner', 'reseller'].includes(role)
+    ? AdminLayout
+    : ViewerLayout;
 
   return (
-    <html lang="en" className="dark"> {/* 👈 Ensures dark mode tokens apply */}
+    <html lang="en" className="dark">
       <head />
       <body className="bg-background text-foreground min-h-screen">
+        <SessionProvider>
         {user ? (
           <>
             <AppHeader
@@ -67,8 +69,9 @@ export default async function RootLayout({
               </p>
               {children}
             </div>
-          </main>
-        )}
+            </main>
+          )}
+        </SessionProvider>
       </body>
     </html>
   );

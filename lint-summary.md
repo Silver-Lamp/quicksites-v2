@@ -1,5 +1,5 @@
 # ESLint Report
-Found **234** files with issues.
+Found **241** files with issues.
 
 ## 📁 `admin/`
 ### 🔹 `/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/admin/guest-tokens/page.tsx`
@@ -97,6 +97,34 @@ Found **234** files with issues.
   - [warning] Line 110:15 – Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element (@next/next/no-img-element)
 
 ## 📁 `app/`
+### 🔹 `/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/app/layout.tsx`
+- **24 issues**: 0 error(s), 24 warning(s)
+
+  - [warning] Line 7:10 – 'redirect' is defined but never used. (@typescript-eslint/no-unused-vars)
+  - [warning] Line 35:43 – Replace `⏎··children,⏎}:·{⏎··children:·React.ReactNode;⏎` with `·children·}:·{·children:·React.ReactNode·` (prettier/prettier)
+  - [warning] Line 42:63 – Replace `⏎····?·AdminLayout⏎···` with `·?·AdminLayout` (prettier/prettier)
+  - [warning] Line 51:9 – Insert `··` (prettier/prettier)
+  - [warning] Line 52:11 – Insert `··` (prettier/prettier)
+  - [warning] Line 53:1 – Insert `··` (prettier/prettier)
+  - [warning] Line 54:15 – Insert `··` (prettier/prettier)
+  - [warning] Line 55:1 – Insert `··` (prettier/prettier)
+  - [warning] Line 56:1 – Insert `··` (prettier/prettier)
+  - [warning] Line 57:17 – Insert `··` (prettier/prettier)
+  - [warning] Line 58:15 – Insert `··` (prettier/prettier)
+  - [warning] Line 59:1 – Insert `··` (prettier/prettier)
+  - [warning] Line 60:1 – Insert `··` (prettier/prettier)
+  - [warning] Line 61:13 – Insert `··` (prettier/prettier)
+  - [warning] Line 62:11 – Insert `··` (prettier/prettier)
+  - [warning] Line 63:1 – Insert `··` (prettier/prettier)
+  - [warning] Line 64:1 – Replace `··········` with `············` (prettier/prettier)
+  - [warning] Line 65:13 – Insert `··` (prettier/prettier)
+  - [warning] Line 66:1 – Replace `··············` with `················` (prettier/prettier)
+  - [warning] Line 67:15 – Insert `··` (prettier/prettier)
+  - [warning] Line 68:1 – Replace `················` with `··················` (prettier/prettier)
+  - [warning] Line 69:15 – Insert `··` (prettier/prettier)
+  - [warning] Line 70:1 – Insert `··` (prettier/prettier)
+  - [warning] Line 71:1 – Insert `··` (prettier/prettier)
+
 ### 🔹 `/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/app/admin/leads.tsx`
 - **23 issues**: 0 error(s), 23 warning(s)
 
@@ -135,6 +163,26 @@ Found **234** files with issues.
   - [warning] Line 86:46 – Delete `·` (prettier/prettier)
   - [warning] Line 87:44 – Delete `·` (prettier/prettier)
 
+### 🔹 `/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/app/admin/analytics.exportable.tsx`
+- **6 issues**: 0 error(s), 6 warning(s)
+
+  - [warning] Line 4:8 – 'ThemedBarChart' is defined but never used. (@typescript-eslint/no-unused-vars)
+  - [warning] Line 10:36 – Insert `⏎···` (prettier/prettier)
+  - [warning] Line 11:1 – Insert `··` (prettier/prettier)
+  - [warning] Line 12:1 – Replace `····` with `······` (prettier/prettier)
+  - [warning] Line 13:3 – Replace `)` with `··)⏎··` (prettier/prettier)
+  - [warning] Line 67:6 – React Hook useEffect has a missing dependency: 'siteId'. Either include it or remove the dependency array. (react-hooks/exhaustive-deps)
+
+### 🔹 `/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/app/admin/people.tsx`
+- **6 issues**: 0 error(s), 6 warning(s)
+
+  - [warning] Line 10:43 – 'res' is defined but never used. Allowed unused args must match /^_/u. (@typescript-eslint/no-unused-vars)
+  - [warning] Line 22:1 – Delete `··` (prettier/prettier)
+  - [warning] Line 26:9 – 'user' is assigned a value but never used. (@typescript-eslint/no-unused-vars)
+  - [warning] Line 28:17 – 'error' is assigned a value but never used. (@typescript-eslint/no-unused-vars)
+  - [warning] Line 54:33 – Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element (@next/next/no-img-element)
+  - [warning] Line 54:33 – img elements must have an alt prop, either with meaningful text, or an empty string for decorative images. (jsx-a11y/alt-text)
+
 ### 🔹 `/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/app/admin/admin/analytics.tsx`
 - **5 issues**: 0 error(s), 5 warning(s)
 
@@ -171,6 +219,15 @@ Found **234** files with issues.
   - [warning] Line 5:20 – 'isAfter' is defined but never used. (@typescript-eslint/no-unused-vars)
   - [warning] Line 5:29 – 'isBefore' is defined but never used. (@typescript-eslint/no-unused-vars)
 
+### 🔹 `/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/app/admin/analytics.supabase.tsx`
+- **5 issues**: 0 error(s), 5 warning(s)
+
+  - [warning] Line 4:8 – 'ThemedBarChart' is defined but never used. (@typescript-eslint/no-unused-vars)
+  - [warning] Line 10:36 – Insert `⏎···` (prettier/prettier)
+  - [warning] Line 11:1 – Insert `··` (prettier/prettier)
+  - [warning] Line 12:1 – Replace `····` with `······` (prettier/prettier)
+  - [warning] Line 13:3 – Replace `)` with `··)⏎··` (prettier/prettier)
+
 ### 🔹 `/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/app/admin/analytics/[slug].tsx`
 - **5 issues**: 0 error(s), 5 warning(s)
 
@@ -187,22 +244,6 @@ Found **234** files with issues.
   - [warning] Line 110:13 – Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element (@next/next/no-img-element)
   - [warning] Line 116:11 – Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element (@next/next/no-img-element)
   - [warning] Line 126:13 – Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element (@next/next/no-img-element)
-
-### 🔹 `/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/app/admin/people.tsx`
-- **4 issues**: 0 error(s), 4 warning(s)
-
-  - [warning] Line 15:9 – 'user' is assigned a value but never used. (@typescript-eslint/no-unused-vars)
-  - [warning] Line 17:17 – 'error' is assigned a value but never used. (@typescript-eslint/no-unused-vars)
-  - [warning] Line 43:33 – Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element (@next/next/no-img-element)
-  - [warning] Line 43:33 – img elements must have an alt prop, either with meaningful text, or an empty string for decorative images. (jsx-a11y/alt-text)
-
-### 🔹 `/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/app/layout.tsx`
-- **4 issues**: 0 error(s), 4 warning(s)
-
-  - [warning] Line 7:10 – 'redirect' is defined but never used. (@typescript-eslint/no-unused-vars)
-  - [warning] Line 34:43 – Replace `⏎··children,⏎}:·{⏎··children:·React.ReactNode;⏎` with `·children·}:·{·children:·React.ReactNode·` (prettier/prettier)
-  - [warning] Line 41:17 – Delete `⏎···` (prettier/prettier)
-  - [warning] Line 45:38 – Insert `⏎······{'·'}⏎·····` (prettier/prettier)
 
 ### 🔹 `/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/app/admin/demo/list.tsx`
 - **3 issues**: 0 error(s), 3 warning(s)
@@ -282,12 +323,6 @@ Found **234** files with issues.
   - [warning] Line 2:10 – 'GetServerSideProps' is defined but never used. (@typescript-eslint/no-unused-vars)
   - [warning] Line 5:7 – 'supabase' is assigned a value but never used. (@typescript-eslint/no-unused-vars)
 
-### 🔹 `/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/app/admin/analytics.exportable.tsx`
-- **2 issues**: 0 error(s), 2 warning(s)
-
-  - [warning] Line 4:8 – 'ThemedBarChart' is defined but never used. (@typescript-eslint/no-unused-vars)
-  - [warning] Line 64:6 – React Hook useEffect has a missing dependency: 'siteId'. Either include it or remove the dependency array. (react-hooks/exhaustive-deps)
-
 ### 🔹 `/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/app/admin/analytics/archive.tsx`
 - **2 issues**: 0 error(s), 2 warning(s)
 
@@ -366,12 +401,6 @@ Found **234** files with issues.
   - [warning] Line 1:10 – 'GetServerSideProps' is defined but never used. (@typescript-eslint/no-unused-vars)
   - [warning] Line 4:7 – 'supabase' is assigned a value but never used. (@typescript-eslint/no-unused-vars)
 
-### 🔹 `/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/app/admin/zod-playground.tsx`
-- **2 issues**: 0 error(s), 2 warning(s)
-
-  - [warning] Line 5:10 – 'z' is defined but never used. (@typescript-eslint/no-unused-vars)
-  - [warning] Line 80:6 – React Hook useEffect has missing dependencies: 'isEmbed', 'loadSchemaFromQueryParam', and 'router'. Either include them or remove the dependency array. (react-hooks/exhaustive-deps)
-
 ### 🔹 `/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/app/posters/[slug]/page.tsx`
 - **2 issues**: 0 error(s), 2 warning(s)
 
@@ -408,11 +437,6 @@ Found **234** files with issues.
 
   - [warning] Line 2:10 – 'useRouter' is defined but never used. (@typescript-eslint/no-unused-vars)
 
-### 🔹 `/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/app/admin/analytics.supabase.tsx`
-- **1 issues**: 0 error(s), 1 warning(s)
-
-  - [warning] Line 4:8 – 'ThemedBarChart' is defined but never used. (@typescript-eslint/no-unused-vars)
-
 ### 🔹 `/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/app/admin/audit.tsx`
 - **1 issues**: 0 error(s), 1 warning(s)
 
@@ -432,6 +456,11 @@ Found **234** files with issues.
 - **1 issues**: 0 error(s), 1 warning(s)
 
   - [warning] Line 8:10 – 'error' is assigned a value but never used. (@typescript-eslint/no-unused-vars)
+
+### 🔹 `/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/app/admin/logs/dashboard.tsx`
+- **1 issues**: 0 error(s), 1 warning(s)
+
+  - [warning] Line 32:1 – Delete `··⏎` (prettier/prettier)
 
 ### 🔹 `/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/app/admin/logs/notifications.tsx`
 - **1 issues**: 0 error(s), 1 warning(s)
@@ -481,7 +510,7 @@ Found **234** files with issues.
 ### 🔹 `/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/app/admin/tokens/page.tsx`
 - **1 issues**: 0 error(s), 1 warning(s)
 
-  - [warning] Line 22:6 – React Hook useEffect has a missing dependency: 'loadTokens'. Either include it or remove the dependency array. (react-hooks/exhaustive-deps)
+  - [warning] Line 25:6 – React Hook useEffect has a missing dependency: 'loadTokens'. Either include it or remove the dependency array. (react-hooks/exhaustive-deps)
 
 ### 🔹 `/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/app/admin/tools/digest.tsx`
 - **1 issues**: 0 error(s), 1 warning(s)
@@ -502,6 +531,11 @@ Found **234** files with issues.
 - **1 issues**: 0 error(s), 1 warning(s)
 
   - [warning] Line 27:6 – React Hook useEffect has a missing dependency: 'router'. Either include it or remove the dependency array. (react-hooks/exhaustive-deps)
+
+### 🔹 `/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/app/admin/zod-playground.tsx`
+- **1 issues**: 0 error(s), 1 warning(s)
+
+  - [warning] Line 103:67 – Replace `⏎················Slack·Username·(optional)⏎··············` with `Slack·Username·(optional)` (prettier/prettier)
 
 ### 🔹 `/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/app/api/analytics/signals/route.ts`
 - **1 issues**: 0 error(s), 1 warning(s)
@@ -526,7 +560,7 @@ Found **234** files with issues.
 ### 🔹 `/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/app/api/log-event/route.ts`
 - **1 issues**: 0 error(s), 1 warning(s)
 
-  - [warning] Line 18:50 – Replace `⏎····(await·headerStore).get('x-real-ip')·||⏎···` with `·(await·headerStore).get('x-real-ip')·||` (prettier/prettier)
+  - [warning] Line 27:13 – Replace `⏎····headerStore.get('x-forwarded-for')·||⏎····headerStore.get('x-real-ip')·||⏎···` with `·headerStore.get('x-forwarded-for')·||·headerStore.get('x-real-ip')·||` (prettier/prettier)
 
 ### 🔹 `/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/app/api/match/route.ts`
 - **1 issues**: 0 error(s), 1 warning(s)
@@ -758,7 +792,7 @@ Found **234** files with issues.
 ### 🔹 `/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/components/admin/query-param-editor.tsx`
 - **1 issues**: 0 error(s), 1 warning(s)
 
-  - [warning] Line 117:52 – 'slug' is defined but never used. Allowed unused args must match /^_/u. (@typescript-eslint/no-unused-vars)
+  - [warning] Line 119:52 – 'slug' is defined but never used. Allowed unused args must match /^_/u. (@typescript-eslint/no-unused-vars)
 
 ### 🔹 `/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/components/admin/referral-link.tsx`
 - **1 issues**: 0 error(s), 1 warning(s)
@@ -844,6 +878,11 @@ Found **234** files with issues.
 - **1 issues**: 0 error(s), 1 warning(s)
 
   - [warning] Line 5:10 – 'renderVersionDiff' is defined but never used. (@typescript-eslint/no-unused-vars)
+
+### 🔹 `/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/components/auth/RequireRole.tsx`
+- **1 issues**: 0 error(s), 1 warning(s)
+
+  - [warning] Line 16:38 – Replace `⏎····?·role.includes(currentRole)⏎···` with `·?·role.includes(currentRole)` (prettier/prettier)
 
 ### 🔹 `/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/components/domain-preview-card.tsx`
 - **1 issues**: 0 error(s), 1 warning(s)
@@ -957,7 +996,22 @@ Found **234** files with issues.
 
   - [warning] Line 12:21 – 'error' is assigned a value but never used. (@typescript-eslint/no-unused-vars)
 
+### 🔹 `/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/hooks/useTypedQueryParam.ts`
+- **1 issues**: 0 error(s), 1 warning(s)
+
+  - [warning] Line 41:3 – Replace `⏎··key:·string,⏎··fallback:·any,⏎··type:·T,⏎··schema?:·z.ZodTypeAny⏎` with `key:·string,·fallback:·any,·type:·T,·schema?:·z.ZodTypeAny` (prettier/prettier)
+
+### 🔹 `/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/hooks/useZodPlaygroundState.ts`
+- **1 issues**: 0 error(s), 1 warning(s)
+
+  - [warning] Line 77:6 – React Hook useEffect has missing dependencies: 'isEmbed', 'loadSchemaFromQueryParam', and 'router'. Either include them or remove the dependency array. (react-hooks/exhaustive-deps)
+
 ## 📁 `lib/`
+### 🔹 `/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/lib/supabase/lookupTenantBySlug.ts`
+- **1 issues**: 1 error(s), 0 warning(s)
+
+  - [error] Line 13:25 – ❌ Do not use `await cookies()`. This function is synchronous in App Router. (no-restricted-syntax)
+
 ### 🔹 `/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/lib/qr/helpers.block-qr.ts`
 - **14 issues**: 0 error(s), 14 warning(s)
 
@@ -994,12 +1048,20 @@ Found **234** files with issues.
   - [warning] Line 47:35 – 'profileError' is assigned a value but never used. (@typescript-eslint/no-unused-vars)
   - [warning] Line 100:6 – React Hook useEffect has a missing dependency: 'loadSession'. Either include it or remove the dependency array. (react-hooks/exhaustive-deps)
 
+### 🔹 `/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/lib/providers/SessionProvider.tsx`
+- **4 issues**: 0 error(s), 4 warning(s)
+
+  - [warning] Line 3:9 – Replace `⏎··createContext,⏎··useContext,⏎··useEffect,⏎··useState,⏎··type·ReactNode,⏎` with `·createContext,·useContext,·useEffect,·useState,·type·ReactNode·` (prettier/prettier)
+  - [warning] Line 41:12 – Replace `·data:·{·user·}` with `⏎······data:·{·user·},⏎···` (prettier/prettier)
+  - [warning] Line 78:6 – React Hook useEffect has missing dependencies: 'refreshUser' and 'supabase.auth'. Either include them or remove the dependency array. (react-hooks/exhaustive-deps)
+  - [warning] Line 81:63 – Replace `⏎······{children}⏎····` with `{children}` (prettier/prettier)
+
 ### 🔹 `/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/lib/supabase/client.ts`
 - **3 issues**: 0 error(s), 3 warning(s)
 
-  - [warning] Line 12:29 – Delete `······` (prettier/prettier)
-  - [warning] Line 13:31 – Delete `····` (prettier/prettier)
-  - [warning] Line 14:32 – Delete `··` (prettier/prettier)
+  - [warning] Line 12:29 – Delete `·······` (prettier/prettier)
+  - [warning] Line 13:31 – Delete `·····` (prettier/prettier)
+  - [warning] Line 14:32 – Delete `···` (prettier/prettier)
 
 ### 🔹 `/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/lib/supabase/getRoleRedirectTarget.ts`
 - **3 issues**: 0 error(s), 3 warning(s)
@@ -1012,6 +1074,11 @@ Found **234** files with issues.
 - **1 issues**: 0 error(s), 1 warning(s)
 
   - [warning] Line 9:1 – Delete `⏎` (prettier/prettier)
+
+### 🔹 `/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/lib/supabase/middlewareClient.ts`
+- **1 issues**: 0 error(s), 1 warning(s)
+
+  - [warning] Line 7:48 – Replace `⏎··req:·NextRequest⏎` with `req:·NextRequest` (prettier/prettier)
 
 ### 🔹 `/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/lib/useInviteGate.ts`
 - **1 issues**: 0 error(s), 1 warning(s)
@@ -1030,14 +1097,6 @@ Found **234** files with issues.
   - [warning] Line 5:1 – Assign object to a variable before exporting as module default (import/no-anonymous-default-export)
 
 ## 📁 `pages/`
-### 🔹 `/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/pages/starter.tsx`
-- **4 issues**: 1 error(s), 3 warning(s)
-
-  - [warning] Line 3:10 – 'json' is defined but never used. (@typescript-eslint/no-unused-vars)
-  - [error] Line 39:26 – React Hook "useSearchParams" cannot be called inside a callback. React Hooks must be called in a React function component or a custom React Hook function. (react-hooks/rules-of-hooks)
-  - [warning] Line 59:7 – React Hook useEffect has a complex expression in the dependency array. Extract it to a separate variable so it can be statically checked. (react-hooks/exhaustive-deps)
-  - [warning] Line 151:13 – Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element (@next/next/no-img-element)
-
 ### 🔹 `/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/pages/login.tsx`
 - **12 issues**: 0 error(s), 12 warning(s)
 
@@ -1306,6 +1365,11 @@ Found **234** files with issues.
 - **1 issues**: 0 error(s), 1 warning(s)
 
   - [warning] Line 3:10 – 'json' is defined but never used. (@typescript-eslint/no-unused-vars)
+
+### 🔹 `/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/pages/starter.tsx`
+- **1 issues**: 0 error(s), 1 warning(s)
+
+  - [warning] Line 190:29 – Replace `⏎··············setSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]+/g,·'-'))⏎············` with `·setSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]+/g,·'-'))` (prettier/prettier)
 
 ### 🔹 `/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/pages/support/create.tsx`
 - **1 issues**: 0 error(s), 1 warning(s)

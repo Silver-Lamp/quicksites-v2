@@ -1,17 +1,17 @@
 'use client';
 
 import { createBrowserClient } from '@supabase/ssr';
-import type { Database } from '@/types/supabase'; // Adjust path if needed
+import type { Database } from '@/types/supabase';
 
-// ✅ Browser-side Supabase client — for use in Client Components only
+// ✅ This client is for use in Client Components (e.g. hooks, React context)
 export const supabase = createBrowserClient<Database>(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
   {
     auth: {
-      persistSession: true,       // Saves session in localStorage
-      autoRefreshToken: true,     // Refresh JWT automatically
-      detectSessionInUrl: true,   // Handles OAuth callbacks
+      persistSession: true,        // Stores session in localStorage
+      autoRefreshToken: true,      // Auto-refresh JWT tokens when near expiry
+      detectSessionInUrl: true,    // Enables OAuth flow support
     },
   }
 );

@@ -9,6 +9,7 @@ import AdminLayout from '@/components/layouts/admin-layout';
 import ViewerLayout from '@/components/layouts/viewer-layout';
 import AppHeader from '@/components/admin/AppHeader/app-header';
 import { SessionProvider } from '@/lib/providers/SessionProvider';
+import UnauthenticatedLayout from '@/components/layouts/unauthenticated-layout';
 
 export const metadata = {
   metadataBase: new URL('https://quicksites.ai'),
@@ -32,11 +33,7 @@ export const metadata = {
   },
 };
 
-export default async function RootLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const { user, role } = await getSessionContext();
 
   const Layout = ['admin', 'owner', 'reseller'].includes(role)
@@ -48,28 +45,20 @@ export default async function RootLayout({
       <head />
       <body className="bg-background text-foreground min-h-screen">
         <SessionProvider>
-        {user ? (
-          <>
-            <AppHeader
-              user={{
-                id: user.id,
-                email: user.email ?? '',
-                avatar_url: user.avatar_url ?? '',
-              }}
-              role={role}
-            />
-            <Layout>{children}</Layout>
-          </>
-        ) : (
-          <main className="flex items-center justify-center h-screen text-center">
-            <div className="space-y-6">
-              <h1 className="text-4xl font-extrabold">Welcome to QuickSites</h1>
-              <p className="text-muted-foreground text-lg">
-                Your one-click local site is moments away.
-              </p>
-              {children}
-            </div>
-            </main>
+          {user ? (
+            <>
+              <AppHeader
+                user={{
+                  id: user.id,
+                  email: user.email ?? '',
+                  avatar_url: user.avatar_url ?? '',
+                }}
+                role={role}
+              />
+              <Layout>{children}</Layout>
+            </>
+          ) : (
+            <UnauthenticatedLayout>{children}</UnauthenticatedLayout>
           )}
         </SessionProvider>
       </body>

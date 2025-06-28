@@ -1,12 +1,9 @@
 'use client';
 import { useEffect, useState } from 'react';
-import { createBrowserClient } from '@supabase/ssr';
+import { supabase } from '@/lib/supabase/client';
 
 export default function TokenManager() {
-  const supabase = createBrowserClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  );
+
   const [tokens, setTokens] = useState<any[]>([]);
   const [fileName, setFileName] = useState('');
   const [expiresAt, setExpiresAt] = useState('');

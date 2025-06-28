@@ -7,8 +7,9 @@ import {
   useState,
   type ReactNode,
 } from 'react';
-import { createBrowserClient } from '@supabase/ssr';
+import { supabase } from '@/lib/supabase/client'; // ✅ Use singleton
 import type { Database } from '@/types/supabase';
+import { SupabaseClient } from '@supabase/supabase-js';
 
 type SessionContextType = {
   user: {
@@ -17,7 +18,7 @@ type SessionContextType = {
     avatar_url?: string;
   } | null;
   role: string;
-  supabase: ReturnType<typeof createBrowserClient<Database>>;
+  supabase: SupabaseClient<Database>;
 };
 
 const SessionContext = createContext<SessionContextType | null>(null);
@@ -29,11 +30,6 @@ export function useSession() {
 }
 
 export function SessionProvider({ children }: { children: ReactNode }) {
-  const supabase = createBrowserClient<Database>(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  );
-
   const [user, setUser] = useState<SessionContextType['user'] | null>(null);
   const [role, setRole] = useState<string>('guest');
 
@@ -61,10 +57,8 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   }
 
   useEffect(() => {
-    // Initial load
     refreshUser();
 
-    // Listen for sign-in/out/session-change events
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((event) => {

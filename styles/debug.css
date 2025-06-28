@@ -1,0 +1,10 @@
+/* styles/debug.css */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer components {
+  .bg-debug {
+    background-color: red;
+  }
+}

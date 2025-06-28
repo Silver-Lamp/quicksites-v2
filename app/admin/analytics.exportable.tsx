@@ -1,16 +1,13 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { createBrowserClient } from '@supabase/ssr';
+import { supabase } from '@/lib/supabase/client';
+
 import ThemedBarChart from '@/components/ui/themed-bar-chart';
 import { Modal } from '@/components/ui/modal';
 import { Input, Label } from '@/components/ui/form';
 import { Bar } from 'react-chartjs-2';
 
 export default function AnalyticsPage() {
-  const [supabase] = useState(() => createBrowserClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  ));
   const [showModal, setShowModal] = useState(false);
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');

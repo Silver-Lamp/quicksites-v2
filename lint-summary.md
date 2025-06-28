@@ -163,16 +163,6 @@ Found **241** files with issues.
   - [warning] Line 86:46 – Delete `·` (prettier/prettier)
   - [warning] Line 87:44 – Delete `·` (prettier/prettier)
 
-### 🔹 `/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/app/admin/analytics.exportable.tsx`
-- **6 issues**: 0 error(s), 6 warning(s)
-
-  - [warning] Line 4:8 – 'ThemedBarChart' is defined but never used. (@typescript-eslint/no-unused-vars)
-  - [warning] Line 10:36 – Insert `⏎···` (prettier/prettier)
-  - [warning] Line 11:1 – Insert `··` (prettier/prettier)
-  - [warning] Line 12:1 – Replace `····` with `······` (prettier/prettier)
-  - [warning] Line 13:3 – Replace `)` with `··)⏎··` (prettier/prettier)
-  - [warning] Line 67:6 – React Hook useEffect has a missing dependency: 'siteId'. Either include it or remove the dependency array. (react-hooks/exhaustive-deps)
-
 ### 🔹 `/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/app/admin/people.tsx`
 - **6 issues**: 0 error(s), 6 warning(s)
 
@@ -219,15 +209,6 @@ Found **241** files with issues.
   - [warning] Line 5:20 – 'isAfter' is defined but never used. (@typescript-eslint/no-unused-vars)
   - [warning] Line 5:29 – 'isBefore' is defined but never used. (@typescript-eslint/no-unused-vars)
 
-### 🔹 `/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/app/admin/analytics.supabase.tsx`
-- **5 issues**: 0 error(s), 5 warning(s)
-
-  - [warning] Line 4:8 – 'ThemedBarChart' is defined but never used. (@typescript-eslint/no-unused-vars)
-  - [warning] Line 10:36 – Insert `⏎···` (prettier/prettier)
-  - [warning] Line 11:1 – Insert `··` (prettier/prettier)
-  - [warning] Line 12:1 – Replace `····` with `······` (prettier/prettier)
-  - [warning] Line 13:3 – Replace `)` with `··)⏎··` (prettier/prettier)
-
 ### 🔹 `/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/app/admin/analytics/[slug].tsx`
 - **5 issues**: 0 error(s), 5 warning(s)
 
@@ -244,6 +225,20 @@ Found **241** files with issues.
   - [warning] Line 110:13 – Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element (@next/next/no-img-element)
   - [warning] Line 116:11 – Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element (@next/next/no-img-element)
   - [warning] Line 126:13 – Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element (@next/next/no-img-element)
+
+### 🔹 `/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/app/admin/analytics.exportable.tsx`
+- **3 issues**: 0 error(s), 3 warning(s)
+
+  - [warning] Line 5:8 – 'ThemedBarChart' is defined but never used. (@typescript-eslint/no-unused-vars)
+  - [warning] Line 27:6 – React Hook useEffect has an unnecessary dependency: 'supabase'. Either exclude it or remove the dependency array. Outer scope values like 'supabase' aren't valid dependencies because mutating them doesn't re-render the component. (react-hooks/exhaustive-deps)
+  - [warning] Line 64:6 – React Hook useEffect has a missing dependency: 'siteId'. Either include it or remove the dependency array. Outer scope values like 'supabase' aren't valid dependencies because mutating them doesn't re-render the component. (react-hooks/exhaustive-deps)
+
+### 🔹 `/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/app/admin/analytics.supabase.tsx`
+- **3 issues**: 0 error(s), 3 warning(s)
+
+  - [warning] Line 3:8 – 'ThemedBarChart' is defined but never used. (@typescript-eslint/no-unused-vars)
+  - [warning] Line 10:1 – Delete `⏎` (prettier/prettier)
+  - [warning] Line 40:6 – React Hook useEffect has an unnecessary dependency: 'supabase'. Either exclude it or remove the dependency array. Outer scope values like 'supabase' aren't valid dependencies because mutating them doesn't re-render the component. (react-hooks/exhaustive-deps)
 
 ### 🔹 `/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/app/admin/demo/list.tsx`
 - **3 issues**: 0 error(s), 3 warning(s)
@@ -507,10 +502,15 @@ Found **241** files with issues.
 
   - [warning] Line 4:10 – 'json' is defined but never used. (@typescript-eslint/no-unused-vars)
 
+### 🔹 `/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/app/admin/tokens/logs.tsx`
+- **1 issues**: 0 error(s), 1 warning(s)
+
+  - [warning] Line 22:6 – React Hook useEffect has an unnecessary dependency: 'supabase'. Either exclude it or remove the dependency array. Outer scope values like 'supabase' aren't valid dependencies because mutating them doesn't re-render the component. (react-hooks/exhaustive-deps)
+
 ### 🔹 `/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/app/admin/tokens/page.tsx`
 - **1 issues**: 0 error(s), 1 warning(s)
 
-  - [warning] Line 25:6 – React Hook useEffect has a missing dependency: 'loadTokens'. Either include it or remove the dependency array. (react-hooks/exhaustive-deps)
+  - [warning] Line 6:1 – Delete `⏎` (prettier/prettier)
 
 ### 🔹 `/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/app/admin/tools/digest.tsx`
 - **1 issues**: 0 error(s), 1 warning(s)
@@ -1007,11 +1007,6 @@ Found **241** files with issues.
   - [warning] Line 77:6 – React Hook useEffect has missing dependencies: 'isEmbed', 'loadSchemaFromQueryParam', and 'router'. Either include them or remove the dependency array. (react-hooks/exhaustive-deps)
 
 ## 📁 `lib/`
-### 🔹 `/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/lib/supabase/lookupTenantBySlug.ts`
-- **1 issues**: 1 error(s), 0 warning(s)
-
-  - [error] Line 13:25 – ❌ Do not use `await cookies()`. This function is synchronous in App Router. (no-restricted-syntax)
-
 ### 🔹 `/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/lib/qr/helpers.block-qr.ts`
 - **14 issues**: 0 error(s), 14 warning(s)
 
@@ -1052,16 +1047,9 @@ Found **241** files with issues.
 - **4 issues**: 0 error(s), 4 warning(s)
 
   - [warning] Line 3:9 – Replace `⏎··createContext,⏎··useContext,⏎··useEffect,⏎··useState,⏎··type·ReactNode,⏎` with `·createContext,·useContext,·useEffect,·useState,·type·ReactNode·` (prettier/prettier)
-  - [warning] Line 41:12 – Replace `·data:·{·user·}` with `⏎······data:·{·user·},⏎···` (prettier/prettier)
-  - [warning] Line 78:6 – React Hook useEffect has missing dependencies: 'refreshUser' and 'supabase.auth'. Either include them or remove the dependency array. (react-hooks/exhaustive-deps)
-  - [warning] Line 81:63 – Replace `⏎······{children}⏎····` with `{children}` (prettier/prettier)
-
-### 🔹 `/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/lib/supabase/client.ts`
-- **3 issues**: 0 error(s), 3 warning(s)
-
-  - [warning] Line 12:29 – Delete `·······` (prettier/prettier)
-  - [warning] Line 13:31 – Delete `·····` (prettier/prettier)
-  - [warning] Line 14:32 – Delete `···` (prettier/prettier)
+  - [warning] Line 11:15 – 'Database' is defined but never used. (@typescript-eslint/no-unused-vars)
+  - [warning] Line 36:12 – Replace `·data:·{·user·}` with `⏎······data:·{·user·},⏎···` (prettier/prettier)
+  - [warning] Line 74:63 – Replace `⏎······{children}⏎····` with `{children}` (prettier/prettier)
 
 ### 🔹 `/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/lib/supabase/getRoleRedirectTarget.ts`
 - **3 issues**: 0 error(s), 3 warning(s)
@@ -1069,6 +1057,11 @@ Found **241** files with issues.
   - [warning] Line 52:24 – Replace `⏎····?·roleRoutes[role]·||·fallbackRoute⏎···` with `·?·roleRoutes[role]·||·fallbackRoute` (prettier/prettier)
   - [warning] Line 62:41 – Replace `/:([a-zA-Z0-9_]+)/g,·(_,·key)·=>⏎···` with `⏎····/:([a-zA-Z0-9_]+)/g,⏎····(_,·key)·=>` (prettier/prettier)
   - [warning] Line 70:15 – Replace `⏎······?·{·id:·user.id,·email:·user.email·}⏎·····` with `·?·{·id:·user.id,·email:·user.email·}` (prettier/prettier)
+
+### 🔹 `/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/lib/supabase/client.ts`
+- **1 issues**: 0 error(s), 1 warning(s)
+
+  - [warning] Line 7:27 – Replace `⏎··|·ReturnType<typeof·createBrowserClient<Database>>⏎·` with `·ReturnType<typeof·createBrowserClient<Database>>` (prettier/prettier)
 
 ### 🔹 `/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/lib/supabase/getServerContext.ts`
 - **1 issues**: 0 error(s), 1 warning(s)

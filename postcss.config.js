@@ -1,7 +1,8 @@
-// ✅ postcss.config.js
+// postcss.config.js
+console.log('✅ LOADED POSTCSS CONFIG')
 export default {
     plugins: {
-      '@tailwindcss/postcss': {},
+      tailwindcss: {},
       autoprefixer: {},
     },
   };

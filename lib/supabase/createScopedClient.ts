@@ -4,15 +4,22 @@ import { createServerClient } from '@supabase/ssr';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { Database } from '@/types/supabase';
 
-/**
- * Returns a Supabase client that reads cookies from the current request context.
- * Should only be used in Server Components or Server Actions.
- */
-export async function createScopedSupabaseClient(): Promise<SupabaseClient<Database>> {
-  const { cookies } = await import('next/headers');
-  const cookieStore = cookies(); // ✅ now sync in Next 13.5+
+// ⚠️ Avoid repeated instantiation across server contexts
+let cachedClient: SupabaseClient<Database> | null = null;
 
-  return createServerClient<Database>(
+export async function createScopedSupabaseClient(): Promise<SupabaseClient<Database>> {
+  if (cachedClient) {
+    if (process.env.NODE_ENV === 'development') {
+      console.warn('[⚠️ Supabase Server Client] Duplicate instantiation detected');
+    }
+
+    return cachedClient;
+  }
+
+  const { cookies } = await import('next/headers');
+  const cookieStore = cookies(); // ✅ sync in App Router
+
+  const client = createServerClient<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
@@ -23,4 +30,7 @@ export async function createScopedSupabaseClient(): Promise<SupabaseClient<Datab
       },
     }
   );
+
+  cachedClient = client;
+  return client;
 }

@@ -1,12 +1,11 @@
 'use client';
 
-import { createBrowserClient } from '@supabase/ssr';
+import { supabase } from '@/lib/supabase/client';
 
-const supabase = createBrowserClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
-
+/**
+ * Logs a user or system event to Supabase.
+ * Reuses the singleton Supabase client to avoid duplication warnings.
+ */
 export async function logEvent(type: string, payload: Record<string, any>) {
   try {
     await supabase.from('site_events').insert([

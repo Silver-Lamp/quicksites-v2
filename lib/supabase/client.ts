@@ -3,15 +3,32 @@
 import { createBrowserClient } from '@supabase/ssr';
 import type { Database } from '@/types/supabase';
 
-// ✅ This client is for use in Client Components (e.g. hooks, React context)
-export const supabase = createBrowserClient<Database>(
+// Singleton cache to avoid multiple instantiations
+let browserSupabaseClient:
+  | ReturnType<typeof createBrowserClient<Database>>
+  | null = null;
+
+// Optional: Set this flag during debugging to see where second inits come from
+const DEBUG_SUPABASE_CLIENT = false;
+
+if (browserSupabaseClient) {
+  if (DEBUG_SUPABASE_CLIENT) {
+    console.error('[❌ SupabaseClient] Already instantiated');
+    console.trace(); // Optional: print call stack
+  }
+  throw new Error('[❌ SupabaseClient] Multiple browser Supabase clients detected');
+}
+
+browserSupabaseClient = createBrowserClient<Database>(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
   {
     auth: {
-      persistSession: true,        // Stores session in localStorage
-      autoRefreshToken: true,      // Auto-refresh JWT tokens when near expiry
-      detectSessionInUrl: true,    // Enables OAuth flow support
+      persistSession: true,
+      autoRefreshToken: true,
+      detectSessionInUrl: true,
     },
   }
 );
+
+export const supabase = browserSupabaseClient;

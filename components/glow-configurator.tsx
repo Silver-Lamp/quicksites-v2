@@ -52,34 +52,97 @@ export default function GlowConfigurator({ defaultGlowConfig, siteSlug = 'defaul
     const fallback = Array.isArray(defaultGlowConfig)
       ? defaultGlowConfig
       : [defaultGlowConfig];
-
-    supabase.auth.getUser().then(async ({ data: { user } }) => {
-      if (user) {
-        setUserId(user.id);
-        const { data } = await supabase
-          .from('user_site_settings')
-          .select('glow_config')
-          .eq('user_id', user.id)
-          .eq('site_slug', siteSlug)
-          .single();
-        if (data?.glow_config) {
-          setGlowLayers(Array.isArray(data.glow_config) ? data.glow_config : [data.glow_config]);
-        } else {
-          setGlowLayers(fallback);
+  
+    let resolved = false;
+  
+    const fetchAndSeedConfig = async () => {
+      try {
+        // 🚫 Skip during SSR
+        if (typeof window === 'undefined') {
+          console.warn('[GlowConfigurator] Skipping config fetch during SSR');
+          return;
         }
-      } else {
-        const local = localStorage.getItem(LOCAL_KEY);
-        if (local) {
-          try {
-            const parsed = JSON.parse(local);
-            setGlowLayers(Array.isArray(parsed) ? parsed : [parsed]);
-            return;
-          } catch {}
+  
+        // ✅ Wrap getUser to safely catch auth error
+        let user = null;
+        try {
+          const result = await supabase.auth.getUser();
+          user = result.data.user;
+          if (result.error) console.warn('[GlowConfigurator] Auth warning:', result.error.message);
+        } catch (err: any) {
+          console.warn('[GlowConfigurator] Auth getUser failed:', err.message);
         }
+  
+        if (user) {
+          setUserId(user.id);
+          const { data, error } = await supabase
+            .from('user_site_settings')
+            .select('glow_config')
+            .eq('user_id', user.id)
+            .eq('site_slug', siteSlug)
+            .single();
+  
+          if (error) console.error('[GlowConfigurator] DB fetch error:', error);
+          if (data?.glow_config) {
+            const parsed = Array.isArray(data.glow_config)
+              ? data.glow_config
+              : [data.glow_config];
+            setGlowLayers(parsed);
+            resolved = true;
+          } else {
+            console.log('[GlowConfigurator] No glow_config found for user — seeding with fallback');
+            await supabase
+              .from('user_site_settings')
+              .upsert({
+                user_id: user.id,
+                site_slug: siteSlug,
+                glow_config: fallback,
+              });
+            setGlowLayers(fallback);
+            resolved = true;
+          }
+        }
+  
+        if (!resolved) {
+          if (typeof window !== 'undefined') {
+            const local = localStorage.getItem(LOCAL_KEY);
+            if (local) {
+              try {
+                const parsed = JSON.parse(local);
+                setGlowLayers(Array.isArray(parsed) ? parsed : [parsed]);
+                resolved = true;
+              } catch (err) {
+                console.error('[GlowConfigurator] localStorage parse error:', err);
+              }
+            }
+          }
+  
+          if (!resolved) {
+            console.log('[GlowConfigurator] Using fallback default glow config');
+            setGlowLayers(fallback);
+            resolved = true;
+          }
+        }
+      } catch (err) {
+        console.error('[GlowConfigurator] Unexpected failure:', err);
         setGlowLayers(fallback);
       }
-    });
+    };
+  
+    fetchAndSeedConfig();
+  
+    const timeoutId = setTimeout(() => {
+      if (!resolved && !glowLayers) {
+        console.warn('[GlowConfigurator] Timeout fallback triggered');
+        setGlowLayers(fallback);
+      }
+    }, 5000);
+  
+    return () => clearTimeout(timeoutId);
   }, [siteSlug]);
+  
+  
+  
 
   useEffect(() => {
     if (!glowLayers) return;
@@ -129,7 +192,8 @@ export default function GlowConfigurator({ defaultGlowConfig, siteSlug = 'defaul
   };
 
   if (!glowLayers || glowLayers.some((g) => g == null)) {
-    return <div className="absolute top-4 right-4 z-50 text-white text-xs">Loading glow config...</div>;
+    // return <div className="absolute top-4 right-4 z-50 text-white text-xs">Loading glow config...</div>;
+    return null;
   }
 
   return (

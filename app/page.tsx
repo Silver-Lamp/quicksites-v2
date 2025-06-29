@@ -2,14 +2,40 @@
 
 import { motion } from 'framer-motion';
 import Image from 'next/image';
-// import BackgroundGlow from '@/components/background-glow';
+import BackgroundGlow from '@/components/background-glow';
 import GlowConfigurator from '@/components/glow-configurator';
+import { useState, useEffect } from 'react';
+// const [isExpanded, setIsExpanded] = useState(false);
+import QuickSitesPup from '@/components/quick-sites-pup';
+
+const defaultGlowConfig = {
+  size: 'xl',
+  intensity: 0.2,
+  colors: ['from-indigo-600', 'via-blue-400', 'to-fuchsia-500'],
+};
+
+const features = [
+  "🚀 AI-generated websites in seconds",
+  "🧠 Built-in SEO optimization",
+  "📱 Mobile-ready, always",
+  "🎨 Fully customizable designs",
+  "🔒 Secure & privacy-respecting",
+];
 
 export default function HomePage() {
+  const [currentFeatureIndex, setCurrentFeatureIndex] = useState(0);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrentFeatureIndex((i) => (i + 1) % features.length);
+    }, 3000); // rotate every 3s
+    return () => clearInterval(interval);
+  }, []);
+  
   return (
     <div className="relative min-h-screen flex flex-col bg-zinc-950 text-white overflow-hidden">
-      {/* <BackgroundGlow /> 👈 Add it just inside the wrapper */}
-      <GlowConfigurator />
+      <BackgroundGlow />
+      <GlowConfigurator defaultGlowConfig={{ size: 'xl' as 'xl', intensity: 0.2, colors: ['from-indigo-600', 'via-blue-400', 'to-fuchsia-500'] }} />
 
       {/* Main Content */}
       <main className="relative z-10 flex-1 flex flex-col items-center justify-center px-6 py-12 text-center">
@@ -52,7 +78,9 @@ export default function HomePage() {
       {/* Sticky Footer */}
       <footer className="relative z-10 text-center text-xs text-zinc-600 py-4">
         &copy; {new Date().getFullYear()} QuickSites.ai — All rights reserved.
+        <QuickSitesPup />
       </footer>
+
     </div>
   );
 }

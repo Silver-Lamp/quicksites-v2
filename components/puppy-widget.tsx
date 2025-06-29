@@ -1,7 +1,6 @@
-// components/quick-sites-pup.tsx
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Link from 'next/link';
 
@@ -13,17 +12,13 @@ const features = [
   '🔒 Secure & privacy-respecting',
 ];
 
-type Props = {
-  rememberState?: boolean;
-};
-
-export default function QuickSitesPup({ rememberState = true }: Props) {
+export default function PuppyWidget() {
   const [isExpanded, setIsExpanded] = useState(false);
   const [currentFeatureIndex, setCurrentFeatureIndex] = useState(0);
 
   const LOCAL_KEY = 'quicksites::pup-expanded';
 
-  // Feature rotation
+  // Rotate feature messages every 3s
   useEffect(() => {
     const interval = setInterval(() => {
       setCurrentFeatureIndex((i) => (i + 1) % features.length);
@@ -31,24 +26,24 @@ export default function QuickSitesPup({ rememberState = true }: Props) {
     return () => clearInterval(interval);
   }, []);
 
-  // Load saved expansion state
+  // Load expansion state from localStorage
   useEffect(() => {
-    if (rememberState && typeof window !== 'undefined') {
+    if (typeof window !== 'undefined') {
       const saved = localStorage.getItem(LOCAL_KEY);
       if (saved === 'true') setIsExpanded(true);
     }
-  }, [rememberState]);
+  }, []);
 
   // Save expansion state
   useEffect(() => {
-    if (rememberState && typeof window !== 'undefined') {
+    if (typeof window !== 'undefined') {
       localStorage.setItem(LOCAL_KEY, isExpanded.toString());
     }
-  }, [isExpanded, rememberState]);
+  }, [isExpanded]);
 
   return (
     <div className="fixed bottom-4 right-4 z-50 group hidden md:block">
-      {/* Circular Puppy Video */}
+      {/* Floating Circular Puppy */}
       <div
         onClick={() => setIsExpanded((prev) => !prev)}
         className="cursor-pointer w-24 h-24 rounded-full overflow-hidden border-2 border-white shadow-lg transition-all hover:scale-105"
@@ -64,7 +59,7 @@ export default function QuickSitesPup({ rememberState = true }: Props) {
         />
       </div>
 
-      {/* Tooltip on Hover */}
+      {/* Tooltip on hover */}
       <AnimatePresence>
         {!isExpanded && (
           <motion.div

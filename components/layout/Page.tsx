@@ -15,7 +15,7 @@ export default async function AdminLayoutWithHeader({ children }: { children: Re
 
   return (
     <AdminLayout>
-      <AppHeader user={safeUser} role={role} />
+      <AppHeader />
 
       <div className="text-xs text-gray-400 bg-zinc-900 px-4 py-2 border-b border-zinc-700">
         <code>

@@ -5,8 +5,9 @@ import Image from 'next/image';
 import BackgroundGlow from '@/components/background-glow';
 import GlowConfigurator from '@/components/glow-configurator';
 import { useState, useEffect } from 'react';
-// const [isExpanded, setIsExpanded] = useState(false);
-import QuickSitesPup from '@/components/quick-sites-pup';
+import QuickSitesWidget from '@/components/quick-sites-widget';
+import event from '@vercel/analytics';
+import { useSafeAuth } from '../hooks/useSafeAuth';
 
 const defaultGlowConfig = {
   size: 'xl',
@@ -24,14 +25,24 @@ const features = [
 
 export default function HomePage() {
   const [currentFeatureIndex, setCurrentFeatureIndex] = useState(0);
+  const { user, role, isLoggedIn } = useSafeAuth();
 
   useEffect(() => {
     const interval = setInterval(() => {
       setCurrentFeatureIndex((i) => (i + 1) % features.length);
-    }, 3000); // rotate every 3s
+    }, 3000);
     return () => clearInterval(interval);
   }, []);
-  
+
+  useEffect(() => {
+    event.track('landing_page_viewed', {
+      user: user?.id || user?.email || 'guest',
+      role,
+      isLoggedIn,
+      feature: features[currentFeatureIndex],
+    });
+  }, [user?.id, user?.email, role, isLoggedIn]);
+
   return (
     <div className="relative min-h-screen flex flex-col bg-zinc-950 text-white overflow-hidden">
       <BackgroundGlow />
@@ -78,9 +89,8 @@ export default function HomePage() {
       {/* Sticky Footer */}
       <footer className="relative z-10 text-center text-xs text-zinc-600 py-4">
         &copy; {new Date().getFullYear()} QuickSites.ai — All rights reserved.
-        <QuickSitesPup />
+        <QuickSitesWidget forceVariant="puppy" />
       </footer>
-
     </div>
   );
 }

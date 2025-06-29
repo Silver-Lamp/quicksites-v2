@@ -1,4 +1,4 @@
-// ✅ app/layout.tsx
+// app/layout.tsx
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 export const preferredRegion = 'iad1';
@@ -10,9 +10,10 @@ import ViewerLayout from '@/components/layouts/viewer-layout';
 import AppHeader from '@/components/admin/AppHeader/app-header';
 import UnauthenticatedLayout from '@/components/layouts/unauthenticated-layout';
 import { SessionProvider } from '@/lib/providers/SessionProvider';
-import { getSessionContext } from '@/lib/supabase/getSessionContext';
+import { getRequestContext } from '@/lib/request/getRequestContext';
 import { Toaster } from 'react-hot-toast';
 import DevToolsWidget from '@/components/dev-tools-widget';
+import TraceViewer from '@/components/dev/trace-viewer';
 
 export const metadata = {
   metadataBase: new URL('https://quicksites.ai'),
@@ -37,7 +38,16 @@ export const metadata = {
 };
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
-  const { user, role } = await getSessionContext();
+  const {
+    userId = '',
+    userEmail = '',
+    role = 'guest',
+    userAgent,
+    ip,
+    abVariant,
+    sessionId,
+    traceId,
+  } = await getRequestContext(); // 🚀 Uses your unified helper
 
   const Layout = ['admin', 'owner', 'reseller'].includes(role)
     ? AdminLayout
@@ -46,27 +56,29 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   return (
     <html lang="en" className="dark">
       <head />
-      <body className="bg-background text-foreground min-h-screen">
+      <body
+        className="bg-background text-foreground min-h-screen"
+        data-user-id={userId}
+        data-user-email={userEmail}
+        data-user-role={role}
+        data-user-agent={userAgent}
+        data-ip={ip}
+        data-session-id={sessionId}
+        data-ab-variant={abVariant}
+        data-trace-id={traceId}
+      >
         <Toaster position="top-center" />
         <SessionProvider>
-          {user ? (
+          {userId ? (
             <>
-              <AppHeader
-                user={{
-                  id: user.id,
-                  email: user.email ?? '',
-                  avatar_url: user.avatar_url ?? '',
-                }}
-                role={role}
-              />
-              <Layout>
-                {children}
-              </Layout>
+              <AppHeader />
+              <Layout>{children}</Layout>
             </>
           ) : (
             <UnauthenticatedLayout>{children}</UnauthenticatedLayout>
           )}
-          <DevToolsWidget /> {/* 👈 Always rendered, only visible in dev */}
+          <DevToolsWidget />
+          <TraceViewer />
         </SessionProvider>
       </body>
     </html>

@@ -27,8 +27,8 @@ export async function getServerUserProfile(): Promise<{
     return {
       user: null,
       role: 'viewer',
-      headers,
-      cookies,
+      headers: await headers,
+      cookies: cookies,
     };
   }
 
@@ -45,10 +45,10 @@ export async function getServerUserProfile(): Promise<{
   return {
     user: {
       id: user.id,
-      email: user.email,
+      email: user.email ?? null,
     },
     role: profile?.role ?? 'viewer',
-    headers,
+    headers: await headers,
     cookies,
   };
 }

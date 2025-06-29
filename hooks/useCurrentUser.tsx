@@ -85,8 +85,8 @@ export function useCurrentUser(): CurrentUserContextType & {
 
   return {
     ...context,
-    user: isMocked && mockUser ? { ...mockUser } : context.user,
-    role: role as 'viewer' | 'admin' | 'editor' | 'owner' | 'reseller',
+    user: isMocked && mockUser ? { ...mockUser, role: role as 'viewer' | 'admin' | 'editor' | 'owner' } : context.user,
+    role: role as 'viewer' | 'admin' | 'editor' | 'owner',
     roleSource,
     isLoading,
     ready: !isLoading,

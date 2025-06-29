@@ -2,12 +2,17 @@
 
 import { motion } from 'framer-motion';
 import Image from 'next/image';
+// import BackgroundGlow from '@/components/background-glow';
+import GlowConfigurator from '@/components/glow-configurator';
 
 export default function HomePage() {
   return (
-    <div className="min-h-screen flex flex-col bg-zinc-950 text-white">
+    <div className="relative min-h-screen flex flex-col bg-zinc-950 text-white overflow-hidden">
+      {/* <BackgroundGlow /> 👈 Add it just inside the wrapper */}
+      <GlowConfigurator />
+
       {/* Main Content */}
-      <main className="flex-1 flex flex-col items-center justify-center px-6 py-12 text-center">
+      <main className="relative z-10 flex-1 flex flex-col items-center justify-center px-6 py-12 text-center">
         <div className="space-y-6 max-w-xl">
           <div className="flex justify-center items-center gap-3">
             <Image
@@ -45,7 +50,7 @@ export default function HomePage() {
       </main>
 
       {/* Sticky Footer */}
-      <footer className="text-center text-xs text-zinc-600 py-4">
+      <footer className="relative z-10 text-center text-xs text-zinc-600 py-4">
         &copy; {new Date().getFullYear()} QuickSites.ai — All rights reserved.
       </footer>
     </div>

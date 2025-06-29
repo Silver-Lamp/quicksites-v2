@@ -1,5 +1,5 @@
 # ESLint Report
-Found **252** files with issues.
+Found **248** files with issues.
 
 ## 📁 `admin/`
 ### 🔹 `/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/admin/guest-tokens/page.tsx`
@@ -97,41 +97,11 @@ Found **252** files with issues.
   - [warning] Line 110:15 – Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element (@next/next/no-img-element)
 
 ## 📁 `app/`
-### 🔹 `/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/app/admin/profile.tsx`
-- **11 issues**: 3 error(s), 8 warning(s)
+### 🔹 `/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/app/api/login/route.ts`
+- **2 issues**: 1 error(s), 1 warning(s)
 
-  - [error] Line 42:5 – Expected an assignment or function call and instead saw an expression. (@typescript-eslint/no-unused-expressions)
-  - [warning] Line 86:11 – Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element (@next/next/no-img-element)
-  - [error] Line 103:17 – Expected an assignment or function call and instead saw an expression. (@typescript-eslint/no-unused-expressions)
-  - [warning] Line 103:22 – Replace `·?·toast.error('Failed·to·send·reset·email')` with `⏎··················?·toast.error('Failed·to·send·reset·email')⏎·················` (prettier/prettier)
-  - [error] Line 116:17 – Expected an assignment or function call and instead saw an expression. (@typescript-eslint/no-unused-expressions)
-  - [warning] Line 116:22 – Replace `·?·toast.error('Failed·to·send·verification')` with `⏎··················?·toast.error('Failed·to·send·verification')⏎·················` (prettier/prettier)
-  - [warning] Line 128:48 – Replace `'Please·confirm·your·password·to·delete·your·account:'` with `⏎··················'Please·confirm·your·password·to·delete·your·account:'⏎················` (prettier/prettier)
-  - [warning] Line 130:50 – Replace `'Are·you·absolutely·sure?·This·action·cannot·be·undone.'` with `⏎··················'Are·you·absolutely·sure?·This·action·cannot·be·undone.'⏎················` (prettier/prettier)
-  - [warning] Line 174:100 – Replace `·user·ID,·email,⏎··············and·timestamp.·Admins·can·audit·this·log·from·the·Supabase·dashboard` with `⏎··············user·ID,·email,·and·timestamp.·Admins·can·audit·this·log·from·the·Supabase·dashboard⏎·············` (prettier/prettier)
-  - [warning] Line 176:100 – Delete `·also·logged` (prettier/prettier)
-  - [warning] Line 177:14 – Replace `·to·<code·className="bg-zinc-800·px-1·rounded">verification_logs</code>` with `·also·logged·to·<code·className="bg-zinc-800·px-1·rounded">verification_logs</code>{'·'}⏎·············` (prettier/prettier)
-
-### 🔹 `/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/app/api/me/route.ts`
-- **4 issues**: 1 error(s), 3 warning(s)
-
-  - [error] Line 12:29 – ❌ Do not use `await cookies()`. This function is synchronous in App Router. (no-restricted-syntax)
-  - [warning] Line 33:25 – Replace `⏎······JSON.stringify({·error:·error?.message·||·'Unauthorized'·}),` with `JSON.stringify({·error:·error?.message·||·'Unauthorized'·}),·{` (prettier/prettier)
-  - [warning] Line 35:6 – Replace `·{·status:·401,·headers:·{·'Content-Type':·'application/json'·}·}` with `·status:·401,⏎······headers:·{·'Content-Type':·'application/json'·},` (prettier/prettier)
-  - [warning] Line 36:5 – Insert `}` (prettier/prettier)
-
-### 🔹 `/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/app/api/logout/route.ts`
-- **3 issues**: 1 error(s), 2 warning(s)
-
-  - [error] Line 9:29 – ❌ Do not use `await cookies()`. This function is synchronous in App Router. (no-restricted-syntax)
-  - [warning] Line 20:11 – Replace `(cookieStore)` with `cookieStore` (prettier/prettier)
-  - [warning] Line 23:11 – Replace `(cookieStore)` with `cookieStore` (prettier/prettier)
-
-### 🔹 `/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/app/api/log-event/route.ts`
-- **2 issues**: 2 error(s), 0 warning(s)
-
-  - [error] Line 11:29 – ❌ Do not use `await cookies()`. This function is synchronous in App Router. (no-restricted-syntax)
-  - [error] Line 12:29 – ❌ Do not use `await headers()`. This function is synchronous in App Router. (no-restricted-syntax)
+  - [error] Line 20:29 – ❌ Do not use `await cookies()`. This function is synchronous in App Router. (no-restricted-syntax)
+  - [warning] Line 56:17 – Insert `⏎···` (prettier/prettier)
 
 ### 🔹 `/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/app/api/echo/route.ts`
 - **38 issues**: 0 error(s), 38 warning(s)
@@ -224,6 +194,16 @@ Found **252** files with issues.
   - [warning] Line 88:46 – Delete `·` (prettier/prettier)
   - [warning] Line 89:44 – Delete `·` (prettier/prettier)
 
+### 🔹 `/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/app/admin/profile.tsx`
+- **6 issues**: 0 error(s), 6 warning(s)
+
+  - [warning] Line 56:56 – Replace `⏎············{JSON.stringify(userMetadata,·null,·2)}⏎··········` with `{JSON.stringify(userMetadata,·null,·2)}` (prettier/prettier)
+  - [warning] Line 108:77 – Replace `⏎··················user?.email·||·'',⏎·················` with `user?.email·||·'',` (prettier/prettier)
+  - [warning] Line 111:1 – Delete `··` (prettier/prettier)
+  - [warning] Line 112:17 – Replace `··}⏎················` with `}` (prettier/prettier)
+  - [warning] Line 199:40 – Replace `{'·'}⏎··············<code·className="bg-zinc-800·px-1·rounded">{timeZone}</code>.·Email·verifications·are⏎·············` with `·<code·className="bg-zinc-800·px-1·rounded">{timeZone}</code>⏎··············.·Email·verifications·are` (prettier/prettier)
+  - [warning] Line 202:98 – Insert `⏎·············` (prettier/prettier)
+
 ### 🔹 `/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/app/admin/admin/analytics.tsx`
 - **5 issues**: 0 error(s), 5 warning(s)
 
@@ -278,15 +258,6 @@ Found **252** files with issues.
   - [warning] Line 144:35 – Replace `⏎··base:·string,⏎··supabase:·SupabaseClient⏎` with `base:·string,·supabase:·SupabaseClient` (prettier/prettier)
   - [warning] Line 151:36 – Replace `⏎······.from('sites')⏎······.select('id')⏎······.eq('slug',·slug)⏎······` with `.from('sites').select('id').eq('slug',·slug)` (prettier/prettier)
 
-### 🔹 `/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/app/login/page.tsx`
-- **5 issues**: 0 error(s), 5 warning(s)
-
-  - [warning] Line 8:21 – 'useSearchParams' is defined but never used. (@typescript-eslint/no-unused-vars)
-  - [warning] Line 25:14 – Replace `·data:·{·user·},·error` with `⏎········data:·{·user·},⏎········error,⏎·····` (prettier/prettier)
-  - [warning] Line 103:16 – Replace `res.ok·?·'✅·Check·your·email·for·the·magic·link.'·:·`❌·${data.error·||·'Login·failed.'}`` with `⏎······res.ok·?·'✅·Check·your·email·for·the·magic·link.'·:·`❌·${data.error·||·'Login·failed.'}`⏎····` (prettier/prettier)
-  - [warning] Line 108:12 – Replace `·data:·{·user·}` with `⏎······data:·{·user·},⏎···` (prettier/prettier)
-  - [warning] Line 211:25 – Replace `·sitekey={process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY!}·size="invisible"·ref={recaptchaRef}` with `⏎················sitekey={process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY!}⏎················size="invisible"⏎················ref={recaptchaRef}⏎·············` (prettier/prettier)
-
 ### 🔹 `/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/app/admin/admin/branding/[id].tsx`
 - **4 issues**: 0 error(s), 4 warning(s)
 
@@ -298,10 +269,18 @@ Found **252** files with issues.
 ### 🔹 `/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/app/admin/people.tsx`
 - **4 issues**: 0 error(s), 4 warning(s)
 
-  - [warning] Line 45:33 – Replace `(⏎··················<img·src={p.avatar_url}·className="w-8·h-8·rounded-full"·/>⏎················)·:·(⏎··················'—'⏎················)` with `<img·src={p.avatar_url}·className="w-8·h-8·rounded-full"·/>·:·'—'` (prettier/prettier)
-  - [warning] Line 46:19 – Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element (@next/next/no-img-element)
-  - [warning] Line 46:19 – img elements must have an alt prop, either with meaningful text, or an empty string for decorative images. (jsx-a11y/alt-text)
-  - [warning] Line 58:1 – Delete `⏎` (prettier/prettier)
+  - [warning] Line 46:33 – Replace `(⏎··················<img·src={p.avatar_url}·className="w-8·h-8·rounded-full"·/>⏎················)·:·(⏎··················'—'⏎················)` with `<img·src={p.avatar_url}·className="w-8·h-8·rounded-full"·/>·:·'—'` (prettier/prettier)
+  - [warning] Line 47:19 – Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element (@next/next/no-img-element)
+  - [warning] Line 47:19 – img elements must have an alt prop, either with meaningful text, or an empty string for decorative images. (jsx-a11y/alt-text)
+  - [warning] Line 59:1 – Delete `⏎` (prettier/prettier)
+
+### 🔹 `/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/app/login/page.tsx`
+- **4 issues**: 0 error(s), 4 warning(s)
+
+  - [warning] Line 22:14 – Replace `·data:·{·user·},·error` with `⏎········data:·{·user·},⏎········error,⏎·····` (prettier/prettier)
+  - [warning] Line 98:16 – Replace `res.ok·?·'✅·Check·your·email·for·the·magic·link.'·:·`❌·${data.error·||·'Login·failed.'}`` with `⏎······res.ok·?·'✅·Check·your·email·for·the·magic·link.'·:·`❌·${data.error·||·'Login·failed.'}`⏎····` (prettier/prettier)
+  - [warning] Line 102:12 – Replace `·data:·{·user·}` with `⏎······data:·{·user·},⏎···` (prettier/prettier)
+  - [warning] Line 160:58 – Replace `Email·address` with `⏎················Email·address⏎··············` (prettier/prettier)
 
 ### 🔹 `/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/app/admin/analytics.exportable.tsx`
 - **3 issues**: 0 error(s), 3 warning(s)
@@ -446,7 +425,7 @@ Found **252** files with issues.
 - **2 issues**: 0 error(s), 2 warning(s)
 
   - [warning] Line 4:10 – 'useRouter' is defined but never used. (@typescript-eslint/no-unused-vars)
-  - [warning] Line 69:22 – Replace `⏎········templateName="new-template"⏎········initialData={initialData·??·undefined}⏎·····` with `·templateName="new-template"·initialData={initialData·??·undefined}` (prettier/prettier)
+  - [warning] Line 76:2 – Insert `⏎` (prettier/prettier)
 
 ### 🔹 `/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/app/admin/tools/chart.tsx`
 - **2 issues**: 0 error(s), 2 warning(s)
@@ -618,10 +597,10 @@ Found **252** files with issues.
 
   - [warning] Line 20:32 – 'fetchError' is assigned a value but never used. (@typescript-eslint/no-unused-vars)
 
-### 🔹 `/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/app/api/login/route.ts`
+### 🔹 `/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/app/api/logout/route.ts`
 - **1 issues**: 0 error(s), 1 warning(s)
 
-  - [warning] Line 57:17 – Insert `⏎···` (prettier/prettier)
+  - [warning] Line 9:28 – 'req' is defined but never used. Allowed unused args must match /^_/u. (@typescript-eslint/no-unused-vars)
 
 ### 🔹 `/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/app/api/match/route.ts`
 - **1 issues**: 0 error(s), 1 warning(s)
@@ -701,7 +680,7 @@ Found **252** files with issues.
 ### 🔹 `/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/app/layout.tsx`
 - **1 issues**: 0 error(s), 1 warning(s)
 
-  - [warning] Line 44:63 – Replace `⏎····?·AdminLayout⏎···` with `·?·AdminLayout` (prettier/prettier)
+  - [warning] Line 42:63 – Replace `⏎····?·AdminLayout⏎···` with `·?·AdminLayout` (prettier/prettier)
 
 ### 🔹 `/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/app/test/[slug]/page.tsx`
 - **1 issues**: 0 error(s), 1 warning(s)
@@ -736,6 +715,12 @@ Found **252** files with issues.
   - [warning] Line 1:21 – 'useState' is defined but never used. (@typescript-eslint/no-unused-vars)
   - [warning] Line 42:11 – Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element (@next/next/no-img-element)
 
+### 🔹 `/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/components/admin/AppHeader/app-header.tsx`
+- **2 issues**: 0 error(s), 2 warning(s)
+
+  - [warning] Line 41:1 – Delete `··⏎` (prettier/prettier)
+  - [warning] Line 50:17 – Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element (@next/next/no-img-element)
+
 ### 🔹 `/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/components/admin/AppHeader/nav-sections.tsx`
 - **2 issues**: 0 error(s), 2 warning(s)
 
@@ -759,6 +744,12 @@ Found **252** files with issues.
 
   - [warning] Line 21:11 – 'start' is assigned a value but never used. (@typescript-eslint/no-unused-vars)
   - [warning] Line 21:18 – 'end' is assigned a value but never used. (@typescript-eslint/no-unused-vars)
+
+### 🔹 `/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/components/admin/profile-dropdown.tsx`
+- **2 issues**: 0 error(s), 2 warning(s)
+
+  - [warning] Line 13:1 – Delete `··` (prettier/prettier)
+  - [warning] Line 18:5 – Delete `⏎··` (prettier/prettier)
 
 ### 🔹 `/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/components/admin/template-assigner.tsx`
 - **2 issues**: 0 error(s), 2 warning(s)
@@ -784,15 +775,10 @@ Found **252** files with issues.
   - [warning] Line 23:10 – 'prevPlacement' is assigned a value but never used. (@typescript-eslint/no-unused-vars)
   - [warning] Line 38:6 – React Hook useEffect has a missing dependency: 'autoPlacement'. Either include it or remove the dependency array. You can also replace multiple useState variables with useReducer if 'setPrevPlacement' needs the current value of 'autoPlacement'. (react-hooks/exhaustive-deps)
 
-### 🔹 `/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/components/admin/AppHeader/app-header.tsx`
-- **1 issues**: 0 error(s), 1 warning(s)
-
-  - [warning] Line 50:17 – Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element (@next/next/no-img-element)
-
 ### 🔹 `/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/components/admin/AppHeader/avatar-menu.tsx`
 - **1 issues**: 0 error(s), 1 warning(s)
 
-  - [warning] Line 50:11 – Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element (@next/next/no-img-element)
+  - [warning] Line 58:11 – Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element (@next/next/no-img-element)
 
 ### 🔹 `/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/components/admin/AppHeader/mobile-drawer.tsx`
 - **1 issues**: 0 error(s), 1 warning(s)
@@ -1087,29 +1073,6 @@ Found **252** files with issues.
   - [warning] Line 77:6 – React Hook useEffect has missing dependencies: 'isEmbed', 'loadSchemaFromQueryParam', and 'router'. Either include them or remove the dependency array. (react-hooks/exhaustive-deps)
 
 ## 📁 `lib/`
-### 🔹 `/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/lib/supabase/getServerContext.ts`
-- **5 issues**: 2 error(s), 3 warning(s)
-
-  - [warning] Line 4:26 – 'ServerHeaders' is defined but never used. (@typescript-eslint/no-unused-vars)
-  - [warning] Line 9:1 – Delete `⏎` (prettier/prettier)
-  - [error] Line 21:29 – ❌ Do not use `await cookies()`. This function is synchronous in App Router. (no-restricted-syntax)
-  - [error] Line 22:29 – ❌ Do not use `await headers()`. This function is synchronous in App Router. (no-restricted-syntax)
-  - [warning] Line 30:18 – Replace `(cookieStore)` with `cookieStore` (prettier/prettier)
-
-### 🔹 `/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/lib/supabase/universal.ts`
-- **5 issues**: 2 error(s), 3 warning(s)
-
-  - [error] Line 6:29 – ❌ Do not use `await cookies()`. This function is synchronous in App Router. (no-restricted-syntax)
-  - [error] Line 7:29 – ❌ Do not use `await headers()`. This function is synchronous in App Router. (no-restricted-syntax)
-  - [warning] Line 10:24 – Replace `(cookieStore)` with `cookieStore` (prettier/prettier)
-  - [warning] Line 11:35 – Replace `(headerStore)` with `headerStore` (prettier/prettier)
-  - [warning] Line 24:26 – Replace `(cookieStore)` with `cookieStore` (prettier/prettier)
-
-### 🔹 `/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/lib/supabase/lookupTenantBySlug.ts`
-- **1 issues**: 1 error(s), 0 warning(s)
-
-  - [error] Line 6:29 – ❌ Do not use `await cookies()`. This function is synchronous in App Router. (no-restricted-syntax)
-
 ### 🔹 `/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/lib/qr/helpers.block-qr.ts`
 - **14 issues**: 0 error(s), 14 warning(s)
 
@@ -1138,15 +1101,6 @@ Found **252** files with issues.
   - [warning] Line 61:1 – Replace `····` with `········` (prettier/prettier)
   - [warning] Line 62:1 – Insert `····` (prettier/prettier)
 
-### 🔹 `/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/lib/supabase/getSessionContext.ts`
-- **5 issues**: 0 error(s), 5 warning(s)
-
-  - [warning] Line 22:10 – Replace `⏎····supabase,⏎····cookies:·cookieStore,⏎····headers:·headerStore,⏎····ip,⏎····userAgent,⏎·` with `·supabase,·cookies:·cookieStore,·headers:·headerStore,·ip,·userAgent` (prettier/prettier)
-  - [warning] Line 24:14 – 'cookieStore' is assigned a value but never used. (@typescript-eslint/no-unused-vars)
-  - [warning] Line 25:14 – 'headerStore' is assigned a value but never used. (@typescript-eslint/no-unused-vars)
-  - [warning] Line 26:5 – 'ip' is assigned a value but never used. (@typescript-eslint/no-unused-vars)
-  - [warning] Line 27:5 – 'userAgent' is assigned a value but never used. (@typescript-eslint/no-unused-vars)
-
 ### 🔹 `/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/lib/providers/SessionProvider.tsx`
 - **4 issues**: 0 error(s), 4 warning(s)
 
@@ -1173,6 +1127,12 @@ Found **252** files with issues.
 
   - [warning] Line 8:1 – Delete `⏎` (prettier/prettier)
   - [warning] Line 23:1 – Delete `⏎··` (prettier/prettier)
+
+### 🔹 `/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/lib/supabase/getServerContext.ts`
+- **2 issues**: 0 error(s), 2 warning(s)
+
+  - [warning] Line 4:26 – 'ServerHeaders' is defined but never used. (@typescript-eslint/no-unused-vars)
+  - [warning] Line 9:1 – Delete `⏎` (prettier/prettier)
 
 ### 🔹 `/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/lib/supabase/client.ts`
 - **1 issues**: 0 error(s), 1 warning(s)

@@ -1,24 +1,34 @@
-// ✅ app/api/login/route.ts
+// app/api/login/route.ts
 export const runtime = 'nodejs';
 
-import { createClient } from '@supabase/supabase-js';
-import { NextRequest } from 'next/server';
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
+import { NextRequest, NextResponse } from 'next/server';
+import { createServerClient } from '@supabase/ssr';
+import type { Database } from '@/types/supabase';
 
 const enforceRateLimit = false;
 const enforceRecaptcha = false;
 const RATE_LIMIT_MINUTES = 5;
 
 export async function POST(req: NextRequest) {
-  const { email, recaptchaToken } = await req.json();
+  const res = NextResponse.next();
+
+  const { email, recaptchaToken }: { email: string; recaptchaToken: string } = await req.json();
 
   if (!email || !recaptchaToken) {
     return Response.json({ error: 'Missing email or reCAPTCHA token' }, { status: 400 });
   }
+
+  const supabase = createServerClient<Database>(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        get: (name) => req.cookies.get(name)?.value ?? null,
+        set: (name, value, options) => res.cookies.set({ name, value, ...options }),
+        remove: (name) => res.cookies.set({ name, value: '', maxAge: 0 }),
+      },
+    }
+  );
 
   const ip =
     req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
@@ -27,7 +37,6 @@ export async function POST(req: NextRequest) {
 
   const userAgent = req.headers.get('user-agent') || 'unknown';
 
-  // 🚫 Rate limiting
   if (enforceRateLimit) {
     const { data: recent } = await supabase
       .from('session_logs')
@@ -53,10 +62,8 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  // ✅ Dynamically use the request origin
   const origin = req.headers.get('origin') || process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
 
-  // 🔐 Optional reCAPTCHA check
   if (enforceRecaptcha) {
     try {
       const recaptchaRes = await fetch('https://www.google.com/recaptcha/api/siteverify', {
@@ -87,22 +94,18 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  // ✅ Send OTP magic link
   try {
     console.log('[🔐 Sending Magic Link]', {
       email,
       redirect: `${origin}/login`,
-      supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL,
     });
 
-    const { data, error } = await supabase.auth.signInWithOtp({
+    const { error } = await supabase.auth.signInWithOtp({
       email,
       options: {
         emailRedirectTo: `${origin}/login`,
       },
     });
-
-    console.log('[📤 Supabase OTP Response]', { data, error });
 
     await supabase.from('session_logs').insert({
       type: error ? 'login_failed' : 'login_sent',
@@ -115,6 +118,7 @@ export async function POST(req: NextRequest) {
     });
 
     if (error) {
+      console.error('[❌ Supabase OTP Error]', error.message);
       return Response.json({ error: error.message }, { status: 500 });
     }
 

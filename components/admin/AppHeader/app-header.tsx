@@ -29,16 +29,16 @@ export default function AppHeader({ user, role }: AppHeaderProps) {
 
   const logout = async () => {
     try {
-      const { supabase } = await import('@/admin/lib/supabaseClient');
-      await supabase.auth.signOut();
+      await fetch('/api/logout', { method: 'POST' });
       localStorage.removeItem(`cached-role-${user.email}`);
-      router.replace('/login');
-      setTimeout(() => window.location.reload(), 200);
+      router.replace('/login?logout=1');
+      setTimeout(() => window.location.reload(), 300); // ensure full app reset
     } catch (err) {
       console.error('❌ Logout failed', err);
       alert('Logout error. Please try again.');
     }
   };
+  
 
   return (
     <>

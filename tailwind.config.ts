@@ -7,6 +7,20 @@ const config: Config = {
     './pages/**/*.{ts,tsx}',
     './lib/**/*.{ts,tsx}',
   ],
+  safelist: [
+    {
+      pattern: /bg-(indigo|cyan|fuchsia|red|green|blue)-(100|200|300|400|500|600|700)/,
+    },
+    {
+      pattern: /border-(indigo|cyan|fuchsia|red|green|blue)-(100|200|300|400|500|600|700)/,
+    },
+    {
+      pattern: /rounded-(none|sm|md|lg|xl|2xl|3xl|full)/,
+    },
+    {
+      pattern: /font-(sans|serif|mono)/,
+    },
+  ],
   theme: {
     extend: {
       colors: {
@@ -37,6 +51,15 @@ const config: Config = {
         lg: 'var(--radius)',
         md: 'calc(var(--radius) - 2px)',
         sm: 'calc(var(--radius) - 4px)',
+      },
+      keyframes: {
+        'pulse-slow': {
+          '0%, 100%': { transform: 'scale(1)', opacity: '0.2' },
+          '50%': { transform: 'scale(1.05)', opacity: '0.3' },
+        },
+      },
+      animation: {
+        'pulse-slow': 'pulse-slow 10s ease-in-out infinite',
       },
     },
   },

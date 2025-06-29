@@ -1,11 +1,15 @@
-// lib/supabase/getSupabaseContext.ts
-// Use getSessionContext() when you need user + role
-// Use getSupabaseContext() when you just want the scoped client + headers/cookies
+// lib/supabase/getSupabase.ts
 'use server';
 
-import type { BaseContext } from './getBaseContext';
-import { getBaseContext } from './getBaseContext';
+import { cookies } from 'next/headers';
+import { createServerComponentClient } from '@supabase/auth-helpers-nextjs';
+import type { Database } from '../../types/supabase';
 
-export function getSupabaseContext(): BaseContext {
-  return getBaseContext();
+export function getSupabase() {
+  const cookieStore = cookies(); // ✅ sync-safe call in App Router
+  const supabase = createServerComponentClient<Database>({
+    cookies: () => cookieStore,
+  });
+
+  return supabase;
 }

@@ -1,3 +1,4 @@
+// app/api/og/[slug]/image/route.ts
 import { ImageResponse } from '@vercel/og';
 import { renderOgImage } from '@/lib/og/renderOgImage';
 import { createClient } from '@supabase/supabase-js';

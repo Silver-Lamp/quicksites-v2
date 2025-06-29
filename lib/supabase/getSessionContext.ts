@@ -1,10 +1,8 @@
-// lib/supabase/getSessionContext.ts
-// Use getSessionContext() when you need user + role
-// Use getSupabaseContext() when you just want the scoped client + headers/cookies
 'use server';
 
-import type { BaseContext } from './getBaseContext';
-import { getBaseContext } from './getBaseContext';
+import { cookies, headers } from 'next/headers';
+import { createServerComponentClient } from '@supabase/auth-helpers-nextjs';
+import type { Database } from '@/types/supabase';
 
 type ExtendedUser = {
   id: string;
@@ -12,34 +10,39 @@ type ExtendedUser = {
   avatar_url?: string | null;
 };
 
-export async function getSessionContext(): Promise<
-  BaseContext & {
-    user: ExtendedUser | null;
-    role: string;
-  }
-> {
-  const base = await getBaseContext();
-  const {
-    supabase,
-    cookies: cookieStore,
-    headers: headerStore,
-    ip,
-    userAgent,
-  } = base;
+export async function getSessionContext(): Promise<{
+  user: ExtendedUser | null;
+  role: string;
+}> {
+  const cookieStore = cookies(); // ✅ sync-safe per App Router
+  const headerStore = headers();
+
+  const supabase = createServerComponentClient<Database>({
+    cookies: () => Promise.resolve(cookieStore), // ✅ makes Supabase happy
+  });
 
   const {
     data: { user },
+    error: authError,
   } = await supabase.auth.getUser();
+
+  if (authError) {
+    console.warn('[⚠️ getSessionContext] Supabase auth error:', authError.message);
+  }
 
   let extendedUser: ExtendedUser | null = null;
   let role = 'viewer';
 
   if (user) {
-    const { data: profile } = await supabase
+    const { data: profile, error: profileError } = await supabase
       .from('user_profiles')
       .select('role, avatar_url')
       .eq('user_id', user.id)
       .maybeSingle();
+
+    if (profileError) {
+      console.warn('[⚠️ getSessionContext] Profile lookup failed:', profileError.message);
+    }
 
     extendedUser = {
       id: user.id,
@@ -53,7 +56,6 @@ export async function getSessionContext(): Promise<
   }
 
   return {
-    ...base,
     user: extendedUser,
     role,
   };

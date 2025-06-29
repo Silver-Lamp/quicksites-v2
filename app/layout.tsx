@@ -1,7 +1,4 @@
-// app/layout.tsx
-// Use RootLayout() when you need to wrap your app with the session context
-// Use getSessionContext() when you need the user context
-
+// ✅ app/layout.tsx
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 export const preferredRegion = 'iad1';
@@ -13,8 +10,9 @@ import ViewerLayout from '@/components/layouts/viewer-layout';
 import AppHeader from '@/components/admin/AppHeader/app-header';
 import UnauthenticatedLayout from '@/components/layouts/unauthenticated-layout';
 import { SessionProvider } from '@/lib/providers/SessionProvider';
-
 import { getSessionContext } from '@/lib/supabase/getSessionContext';
+import { Toaster } from 'react-hot-toast';
+import DevToolsWidget from '@/components/dev-tools-widget';
 
 export const metadata = {
   metadataBase: new URL('https://quicksites.ai'),
@@ -49,6 +47,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     <html lang="en" className="dark">
       <head />
       <body className="bg-background text-foreground min-h-screen">
+        <Toaster position="top-center" />
         <SessionProvider>
           {user ? (
             <>
@@ -60,11 +59,14 @@ export default async function RootLayout({ children }: { children: React.ReactNo
                 }}
                 role={role}
               />
-              <Layout>{children}</Layout>
+              <Layout>
+                {children}
+              </Layout>
             </>
           ) : (
             <UnauthenticatedLayout>{children}</UnauthenticatedLayout>
           )}
+          <DevToolsWidget /> {/* 👈 Always rendered, only visible in dev */}
         </SessionProvider>
       </body>
     </html>

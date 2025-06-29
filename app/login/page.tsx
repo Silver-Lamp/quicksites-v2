@@ -1,6 +1,3 @@
-// app/login/page.tsx
-// Use LoginPage() when you need to display the login page
-// Use getUserFromRequest() when you need the user context
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
@@ -10,22 +7,22 @@ import ReCAPTCHA from 'react-google-recaptcha';
 
 export default function LoginPage() {
   const router = useRouter();
-  const recaptchaRef = useRef<any>(null);
+  const searchParams = useSearchParams();
+  const recaptchaRef = useRef<ReCAPTCHA | null>(null);
 
   const [email, setEmail] = useState('');
   const [message, setMessage] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
-  const [showOnboarding, setShowOnboarding] = useState(false);
-  const [loading, setLoading] = useState(true);
   const [debug, setDebug] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [showOnboarding, setShowOnboarding] = useState(false);
 
-  // ✅ Check session on load
   useEffect(() => {
-    const checkUser = async () => {
+    (async () => {
       const { data: { user }, error } = await supabase.auth.getUser();
       if (!user || error) {
         setLoading(false);
-        setDebug({ error, user });
+        setDebug({ user: null, error });
         return;
       }
 
@@ -37,6 +34,7 @@ export default function LoginPage() {
 
       const role = profile?.role ?? 'viewer';
       const plan = profile?.plan ?? 'free';
+
       setDebug({ user, profile, role, plan });
 
       if (role !== 'viewer') {
@@ -52,46 +50,43 @@ export default function LoginPage() {
       }
 
       setLoading(false);
-    };
-
-    checkUser();
+    })();
   }, [router]);
 
-  // ✅ Dev AutoLogin
   useEffect(() => {
     if (process.env.NODE_ENV !== 'development') return;
-    const devEmail = new URLSearchParams(window.location.search).get('dev-login');
+    const devEmail = searchParams?.get('dev-login');
     if (!devEmail?.includes('@')) return;
-
-    console.log(`[⚙️ Dev AutoLogin Trigger] ${devEmail}`);
 
     supabase.auth
       .signInWithOtp({
         email: devEmail,
         options: { emailRedirectTo: `${window.location.origin}/login` },
       })
-      .then(({ error }) => {
-        if (error) console.error('[❌ Dev AutoLogin Error]', error.message);
-        else console.log('[✅ Dev Magic Link Sent]');
-      });
-  }, []);
+      .then(({ error }) =>
+        error
+          ? console.error('[❌ Dev AutoLogin Error]', error.message)
+          : console.log('[✅ Dev Magic Link Sent]')
+      );
+  }, [searchParams]);
 
-  // ✅ Magic Link Handler
   useEffect(() => {
     const { data: listener } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === 'SIGNED_IN' && session?.user) {
-        router.replace('/login'); // Force logic refresh
+        router.replace('/login');
       }
     });
     return () => listener.subscription.unsubscribe();
   }, [router]);
 
-  // ✅ Send magic link
   const handleLogin = async () => {
     const token = await recaptchaRef.current?.executeAsync();
     recaptchaRef.current?.reset();
 
-    if (!token) return setMessage('❌ reCAPTCHA failed. Try again.');
+    if (!token) {
+      setMessage('❌ reCAPTCHA failed. Try again.');
+      return;
+    }
 
     const res = await fetch('/api/login', {
       method: 'POST',
@@ -103,12 +98,12 @@ export default function LoginPage() {
     setMessage(res.ok ? '✅ Check your email for the magic link.' : `❌ ${data.error || 'Login failed.'}`);
   };
 
-  // ✅ Assign role and redirect
   const assignRole = async (selected: string) => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user?.id || !user?.email) return;
 
     const now = new Date().toISOString();
+
     await supabase.from('user_profiles').upsert({
       user_id: user.id,
       email: user.email,
@@ -131,13 +126,7 @@ export default function LoginPage() {
     router.replace(selected === 'admin' ? '/admin/dashboard' : '/?message=role-assigned');
     setTimeout(() => window.location.reload(), 1000);
   };
-  // if (debug && process.env.NODE_ENV === 'development') {
-  //   return (
-  //     <main className="p-8 text-white bg-black min-h-screen">
-  //       <pre>{JSON.stringify(debug, null, 2)}</pre>
-  //     </main>
-  //   );
-  // }
+
   return (
     <main className="min-h-screen flex items-center justify-center bg-background text-foreground px-4">
       {loading ? (
@@ -168,10 +157,18 @@ export default function LoginPage() {
             </div>
           ) : (
             <>
+              <label htmlFor="email" className="sr-only">Email address</label>
               <input
+                id="email"
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    handleLogin();
+                  }
+                }}
                 placeholder="you@example.com"
                 className="w-full px-4 py-2 rounded-md bg-zinc-800 text-white border border-zinc-700 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-indigo-500"
               />
@@ -198,9 +195,9 @@ export default function LoginPage() {
                   </pre>
                   <button
                     onClick={async () => {
-                      await supabase.auth.signOut();
+                      await fetch('/api/logout', { method: 'POST' });
                       router.replace('/login?logout=1');
-                      setTimeout(() => window.location.reload(), 300); // Optional hard reload
+                      setTimeout(() => window.location.reload(), 300);
                     }}
                     className="w-full bg-red-700 hover:bg-red-800 text-white py-2 text-sm rounded transition"
                   >
@@ -208,7 +205,11 @@ export default function LoginPage() {
                   </button>
                 </details>
               )}
-              <ReCAPTCHA sitekey={process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY!} size="invisible" ref={recaptchaRef} />
+              <ReCAPTCHA
+                sitekey={process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY!}
+                size="invisible"
+                ref={recaptchaRef}
+              />
             </>
           )}
         </div>

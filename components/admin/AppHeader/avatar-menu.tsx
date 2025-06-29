@@ -1,9 +1,8 @@
-// components/admin/AppHeader/AvatarMenu.tsx
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { LogOut, UserCircle } from 'lucide-react';
+import { LogOut, Loader2, UserCircle } from 'lucide-react';
 import md5 from 'blueimp-md5';
 import { RoleBadge } from './role-badge';
 
@@ -21,12 +20,12 @@ export function AvatarMenu({
   onLogout: () => void;
 }) {
   const [open, setOpen] = useState(false);
+  const [loggingOut, setLoggingOut] = useState(false);
   const avatar =
     avatarUrl ||
     `https://gravatar.com/avatar/${email ? md5(email.trim().toLowerCase()) : 'unknown'}?d=identicon`;
   const menuRef = useRef<HTMLDivElement>(null);
 
-  // Close on outside click
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
       if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
@@ -38,6 +37,15 @@ export function AvatarMenu({
     }
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [open]);
+
+  const handleLogout = async () => {
+    setLoggingOut(true);
+    try {
+      await onLogout();
+    } finally {
+      setLoggingOut(false);
+    }
+  };
 
   return (
     <div className="relative" ref={menuRef}>
@@ -66,11 +74,24 @@ export function AvatarMenu({
             </div>
             <RoleBadge role={role} source={source} />
             <button
-              onClick={onLogout}
-              className="flex items-center gap-2 text-red-400 hover:underline text-left w-full"
+              onClick={handleLogout}
+              disabled={loggingOut}
+              aria-disabled={loggingOut}
+              className={`flex items-center gap-2 text-red-400 hover:underline text-left w-full ${
+                loggingOut ? 'opacity-50 cursor-not-allowed' : ''
+              }`}
             >
-              <LogOut size={14} />
-              Log Out
+              {loggingOut ? (
+                <>
+                  <Loader2 size={14} className="animate-spin" />
+                  Logging out...
+                </>
+              ) : (
+                <>
+                  <LogOut size={14} />
+                  Log Out
+                </>
+              )}
             </button>
           </motion.div>
         )}

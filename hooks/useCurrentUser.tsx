@@ -1,4 +1,4 @@
-// /hooks/useCurrentUser.tsx
+// /hooks/useCurrentUser.tsx (enhanced with mock support and role helpers)
 import { useContext, useEffect, useState } from 'react';
 import {
   CurrentUserContext,
@@ -11,23 +11,39 @@ export function useCurrentUser(): CurrentUserContextType & {
   roleSource: string;
   isLoading: boolean;
   ready: boolean;
+  isAdmin: boolean;
+  isOwner: boolean;
+  isReseller: boolean;
+  isViewer: boolean;
+  isMocked: boolean;
 } {
   const context = useContext(CurrentUserContext);
 
   const [fetchedRole, setFetchedRole] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [roleSource, setRoleSource] = useState<'session' | 'db' | 'cache'>('session');
+  const [roleSource, setRoleSource] = useState<'simulated' | 'session' | 'db' | 'cache'>('session');
+  const [mockUser, setMockUser] = useState<{ id: string; email: string } | null>(null);
 
   useEffect(() => {
     const fetchRole = async () => {
-      if (!context.user?.email) {
+      const devMockRole = typeof window !== 'undefined' ? (window as any).__DEV_MOCK_ROLE__ : null;
+      const devMockUser = typeof window !== 'undefined' ? (window as any).__DEV_MOCK_USER__ : null;
+      if (devMockRole && devMockUser) {
+        setFetchedRole(devMockRole);
+        setRoleSource('simulated');
+        setMockUser(devMockUser);
         setIsLoading(false);
         return;
       }
 
-      const cacheKey = `cached-role-${context.user.email}`;
+      const email = context.user?.email;
+      if (!email) {
+        setIsLoading(false);
+        return;
+      }
 
-      // Check localStorage first
+      const cacheKey = `cached-role-${email}`;
+
       const cached = localStorage.getItem(cacheKey);
       if (cached) {
         console.debug('📦 Using cached fallback role:', cached);
@@ -37,11 +53,10 @@ export function useCurrentUser(): CurrentUserContextType & {
         return;
       }
 
-      // Otherwise query Supabase
       const { data, error } = await supabase
         .from('user_roles')
         .select('new_role')
-        .eq('user_email', context.user.email)
+        .eq('user_email', email)
         .order('updated_at', { ascending: false })
         .limit(1)
         .single();
@@ -62,15 +77,23 @@ export function useCurrentUser(): CurrentUserContextType & {
   }, [context.user?.email]);
 
   const role: string =
-    (fetchedRole as 'viewer' | 'admin' | 'editor' | 'owner') ||
+    (fetchedRole as 'viewer' | 'admin' | 'editor' | 'owner' | 'reseller') ||
     context.user?.role ||
     'viewer';
 
+  const isMocked = roleSource === 'simulated';
+
   return {
     ...context,
-    role: role as 'viewer' | 'admin' | 'editor' | 'owner',
+    user: isMocked && mockUser ? { ...mockUser } : context.user,
+    role: role as 'viewer' | 'admin' | 'editor' | 'owner' | 'reseller',
     roleSource,
     isLoading,
     ready: !isLoading,
+    isMocked,
+    isAdmin: role === 'admin',
+    isOwner: role === 'owner',
+    isReseller: role === 'reseller',
+    isViewer: role === 'viewer',
   };
 }

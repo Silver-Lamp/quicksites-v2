@@ -10,8 +10,13 @@ export default function ProfileDropdown() {
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
-    router.push('/login');
+  
+    // Clear any local auth state if needed
+    router.replace('/login?logout=1');
+    router.refresh(); // ✅ Triggers SSR rerender of AppHeader
+    setTimeout(() => window.location.reload(), 200); // optional hard reload
   };
+  
 
   return (
     <Menu as="div" className="relative inline-block text-left">

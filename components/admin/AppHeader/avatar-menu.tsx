@@ -1,30 +1,27 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
+import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
-import { LogOut, Loader2, UserCircle } from 'lucide-react';
+import { LogOut, Loader2, UserCircle, Settings, User } from 'lucide-react';
 import md5 from 'blueimp-md5';
-import { RoleBadge } from './role-badge';
 
-export function AvatarMenu({
-  email,
-  avatarUrl,
-  role,
-  source,
-  onLogout,
-}: {
-  email?: string;
-  avatarUrl?: string;
-  role?: string;
-  source?: string;
-  onLogout: () => void;
-}) {
+import { RoleBadge } from './role-badge';
+import { useSafeAuth } from '@/hooks/useSafeAuth';
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
+
+export function AvatarMenu() {
+  const { user, role, isLoggedIn } = useSafeAuth();
+  const router = useRouter();
   const [open, setOpen] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
-  const avatar =
-    avatarUrl ||
-    `https://gravatar.com/avatar/${email ? md5(email.trim().toLowerCase()) : 'unknown'}?d=identicon`;
   const menuRef = useRef<HTMLDivElement>(null);
+
+  const avatarUrl =
+    user?.avatar_url ||
+    `https://gravatar.com/avatar/${md5(user?.email?.trim().toLowerCase() ?? '')}?d=identicon`;
+
+  const isAdmin = ['admin', 'owner', 'reseller'].includes(role);
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
@@ -41,11 +38,16 @@ export function AvatarMenu({
   const handleLogout = async () => {
     setLoggingOut(true);
     try {
-      await onLogout();
+      const supabase = createClientComponentClient();
+      await supabase.auth.signOut();
+      router.push('/login?logout=1');
+      setTimeout(() => window.location.reload(), 300);
     } finally {
       setLoggingOut(false);
     }
   };
+
+  if (!isLoggedIn || !user) return null;
 
   return (
     <div className="relative" ref={menuRef}>
@@ -55,7 +57,7 @@ export function AvatarMenu({
         aria-label="Avatar menu"
       >
         <div className="w-6 h-6 sm:w-5 sm:h-5 rounded-full overflow-hidden border border-white">
-          <img src={avatar} alt="avatar" className="w-full h-full object-cover" />
+          <img src={avatarUrl} alt="avatar" className="w-full h-full object-cover" />
         </div>
       </button>
 
@@ -66,17 +68,38 @@ export function AvatarMenu({
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: -5 }}
             transition={{ duration: 0.15 }}
-            className="absolute right-0 mt-2 w-48 bg-zinc-900 border border-zinc-700 rounded shadow-xl text-xs z-50 p-2 space-y-2"
+            className="absolute right-0 mt-2 w-56 bg-zinc-900 border border-zinc-700 rounded shadow-xl text-xs z-50 p-3 space-y-3"
           >
             <div className="flex items-center gap-2 text-gray-300">
               <UserCircle size={14} />
-              <span className="truncate">{email}</span>
+              <span className="truncate">{user.email}</span>
             </div>
-            <RoleBadge role={role} source={source} />
+
+            <RoleBadge role={role} />
+
+            <div className="border-t border-zinc-700 pt-2 space-y-2">
+              <button
+                onClick={() => router.push('/profile')}
+                className="flex items-center gap-2 hover:underline text-left text-gray-300 w-full"
+              >
+                <User size={14} />
+                My Profile
+              </button>
+
+              {isAdmin && (
+                <button
+                  onClick={() => router.push('/admin/settings')}
+                  className="flex items-center gap-2 hover:underline text-left text-gray-300 w-full"
+                >
+                  <Settings size={14} />
+                  Admin Settings
+                </button>
+              )}
+            </div>
+
             <button
               onClick={handleLogout}
               disabled={loggingOut}
-              aria-disabled={loggingOut}
               className={`flex items-center gap-2 text-red-400 hover:underline text-left w-full ${
                 loggingOut ? 'opacity-50 cursor-not-allowed' : ''
               }`}

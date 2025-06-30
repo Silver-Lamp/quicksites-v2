@@ -1,9 +1,11 @@
+// app/page.tsx
 'use client';
 
 import { motion } from 'framer-motion';
 import Image from 'next/image';
+import Head from 'next/head';
 import BackgroundGlow from '@/components/background-glow';
-import GlowConfigurator from '@/components/glow-configurator';
+import GlowConfigurator, { GlowConfig } from '@/components/glow-configurator';
 import { useState, useEffect } from 'react';
 import QuickSitesWidget from '@/components/quick-sites-widget';
 import event from '@vercel/analytics';
@@ -35,18 +37,29 @@ export default function HomePage() {
   }, []);
 
   useEffect(() => {
-    event.track('landing_page_viewed', {
-      user: user?.id || user?.email || 'guest',
-      role,
-      isLoggedIn,
-      feature: features[currentFeatureIndex],
-    });
-  }, [user?.id, user?.email, role, isLoggedIn]);
+    if (typeof window !== 'undefined') {
+      const traceId = document?.body?.dataset?.traceId ?? '';
+      const sessionId = document?.body?.dataset?.sessionId ?? '';
+
+      event.track('landing_page_viewed', {
+        user: user?.id || user?.email || 'guest',
+        role,
+        isLoggedIn,
+        feature: features[currentFeatureIndex],
+        traceId,
+        sessionId,
+      });
+    }
+  }, [user?.id, user?.email, role, isLoggedIn, currentFeatureIndex]);
 
   return (
     <div className="relative min-h-screen flex flex-col bg-zinc-950 text-white overflow-hidden">
+      <Head>
+        <title>QuickSites | One Click Websites</title>
+        <meta name="description" content="Launch your local business site in seconds with AI." />
+      </Head>
       <BackgroundGlow />
-      <GlowConfigurator defaultGlowConfig={{ size: 'xl' as 'xl', intensity: 0.2, colors: ['from-indigo-600', 'via-blue-400', 'to-fuchsia-500'] }} />
+      <GlowConfigurator defaultGlowConfig={defaultGlowConfig as GlowConfig} />
 
       {/* Main Content */}
       <main className="relative z-10 flex-1 flex flex-col items-center justify-center px-6 py-12 text-center">
@@ -75,14 +88,25 @@ export default function HomePage() {
             Turn your local business into a digital presence in minutes. No code. No hassle.
           </p>
 
-          <motion.a
-            href="/login"
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.97 }}
-            className="inline-block mt-4 px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white text-base font-medium rounded-lg shadow-lg transition-all"
-          >
-            Log In to Get Started
-          </motion.a>
+          {isLoggedIn && role !== 'guest' ? (
+            <motion.a
+              href="/admin/dashboard"
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.97 }}
+              className="inline-block mt-4 px-6 py-3 bg-green-600 hover:bg-green-700 text-white text-base font-medium rounded-lg shadow-lg transition-all"
+            >
+              Go to Dashboard
+            </motion.a>
+          ) : (
+            <motion.a
+              href="/login"
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.97 }}
+              className="inline-block mt-4 px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white text-base font-medium rounded-lg shadow-lg transition-all"
+            >
+              Log In to Get Started
+            </motion.a>
+          )}
         </div>
       </main>
 

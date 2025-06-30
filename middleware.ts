@@ -16,16 +16,29 @@ export async function middleware(req: NextRequest) {
 
   if (!supabaseUrl || !supabaseKey) {
     console.error('[❌ middleware] Missing Supabase env vars');
-    const loginUrl = new URL('/login?error=missing_config', req.url);
-    return NextResponse.redirect(loginUrl);
+    return NextResponse.redirect(new URL('/login?error=missing_config', req.url));
   }
 
+  // ✅ Optional dev warning for malformed auth cookies
+  if (process.env.NODE_ENV === 'development') {
+    for (const cookie of req.cookies.getAll()) {
+      if (cookie.name.startsWith('sb-')) {
+        try {
+          JSON.parse(cookie.value);
+        } catch {
+          console.warn(`[⚠️ malformed sb-* cookie: ${cookie.name}]`, cookie.value.slice(0, 40));
+        }
+      }
+    }
+  }
+
+  // ✅ Create Supabase client with safe cookie handling
   const supabase = createServerClient<Database>(supabaseUrl, supabaseKey, {
     cookies: {
       get(name: string) {
         const raw = req.cookies.get(name)?.value;
         if (!raw) return undefined;
-        if (name.startsWith('sb-')) return raw;
+        if (name.startsWith('sb-')) return raw; // Never parse Supabase cookies
         return safeParse(raw);
       },
       set(name, value, options?: CookieOptions) {
@@ -59,26 +72,19 @@ export async function middleware(req: NextRequest) {
 
   console.log('[✅ middleware] Authenticated user:', user.email);
 
-  // Enrich request with headers used in getRequestContext()
+  // 🧠 Inject identity and context headers
   res.headers.set('x-user-id', user.id);
   res.headers.set('x-user-email', user.email ?? '');
   res.headers.set('x-user-role', user.user_metadata?.role ?? 'viewer');
   res.headers.set('x-user-name', user.user_metadata?.name ?? '');
   res.headers.set('x-user-avatar-url', user.user_metadata?.avatar_url ?? '');
 
-  // Optional: add analytics headers
+  // 📊 Optional: analytics / debugging headers
   res.headers.set('x-user-agent', req.headers.get('user-agent') ?? '');
   res.headers.set('x-ip', req.headers.get('x-forwarded-for')?.split(',')[0].trim() ?? '');
   res.headers.set('x-trace-id', req.headers.get('x-trace-id') ?? '');
-  res.headers.set('x-session-id', req.headers.get('x-session-id') ?? '');
   res.headers.set('x-ab-variant', req.cookies.get('ab-variant')?.value ?? '');
-
-  // Add experimental A/B and session variant headers from cookies
-  const abVariant = req.cookies.get('ab-variant')?.value ?? '';
-  const sessionId = req.cookies.get('session-id')?.value ?? '';
-
-  if (abVariant) res.headers.set('x-ab-variant', abVariant);
-  if (sessionId) res.headers.set('x-session-id', sessionId);
+  res.headers.set('x-session-id', req.cookies.get('session-id')?.value ?? '');
 
   return res;
 }

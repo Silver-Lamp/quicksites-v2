@@ -1,20 +1,17 @@
-// /app/viewer/page.tsx
 'use client';
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAutoRedirectByRole } from '@/hooks/useAutoRedirectByRole';
-import { useCurrentUser } from '@/hooks/useCurrentUser';
-import { useCanonicalRole } from '@/hooks/useCanonicalRole';
+import { useSafeAuth } from '@/hooks/useSafeAuth';
 import { NavSections } from '@/components/admin/AppHeader/nav-sections';
-import { AvatarMenu } from '@/components/admin/AppHeader/avatar-menu';
+import UserMenu from '@/components/auth/user-menu';
 
 export default function ViewerHomeRedirect() {
   const [cancelled, setCancelled] = useState(false);
   const [showNav, setShowNav] = useState(false);
   const router = useRouter();
-  const { user, ready } = useCurrentUser();
-  const { role } = useCanonicalRole();
+  const { user, role, isLoggedIn } = useSafeAuth();
 
   useAutoRedirectByRole({
     roleRoutes: {
@@ -29,7 +26,7 @@ export default function ViewerHomeRedirect() {
 
   useEffect(() => {
     if (typeof window !== 'undefined' && window.location.hostname.includes('quicksites.ai')) {
-      if (ready && user) setShowNav(true);
+      if (isLoggedIn && user) setShowNav(true);
     }
 
     const timeout = setTimeout(() => {
@@ -40,7 +37,7 @@ export default function ViewerHomeRedirect() {
     }, 10000);
 
     return () => clearTimeout(timeout);
-  }, [cancelled, ready, user, router]);
+  }, [cancelled, isLoggedIn, user, router]);
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-black text-white">
@@ -56,14 +53,9 @@ export default function ViewerHomeRedirect() {
         </div>
       )}
 
-      {ready && user && (
+      {isLoggedIn && user && (
         <div className="animate-fade-in transition-opacity duration-700 ease-in mt-4 opacity-100">
-          <AvatarMenu
-            email={user.email ?? ''}
-            avatarUrl={(user as any).avatar_url || ''}
-            role={role || 'viewer'}
-            onLogout={() => router.replace('/login')}
-          />
+          <UserMenu />
         </div>
       )}
 

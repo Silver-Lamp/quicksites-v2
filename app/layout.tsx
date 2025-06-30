@@ -14,6 +14,7 @@ import { getRequestContext } from '@/lib/request/getRequestContext';
 import { Toaster } from 'react-hot-toast';
 import DevToolsWidget from '@/components/dev-tools-widget';
 import TraceViewer from '@/components/dev/trace-viewer';
+import { getLayoutForRole } from '@/lib/roles/layoutForRole';
 
 export const metadata = {
   metadataBase: new URL('https://quicksites.ai'),
@@ -47,15 +48,15 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     abVariant,
     sessionId,
     traceId,
-  } = await getRequestContext(); // 🚀 Uses your unified helper
+  } = await getRequestContext();
 
-  const Layout = ['admin', 'owner', 'reseller'].includes(role)
-    ? AdminLayout
-    : ViewerLayout;
+  const Layout = getLayoutForRole(role);
 
   return (
-    <html lang="en" className="dark">
-      <head />
+    <html lang="en" className="dark" suppressHydrationWarning>
+      <head>
+        <title>QuickSites | One-Click Local Websites</title>
+      </head>
       <body
         className="bg-background text-foreground min-h-screen"
         data-user-id={userId}

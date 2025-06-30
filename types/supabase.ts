@@ -1,4 +1,9 @@
+// types/supabase.ts
+import { ReadonlyRequestCookies } from 'next/dist/server/web/spec-extension/adapters/request-cookies';
+export type SupabaseCookieAdapter = () => Promise<ReadonlyRequestCookies>;
+
 export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[];
+
 
 export type Database = {
   graphql_public: {

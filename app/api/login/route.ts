@@ -4,10 +4,11 @@ export const runtime = 'nodejs';
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerClient } from '@supabase/ssr';
 import type { Database } from '@/types/supabase';
+import { safeParse } from '@/lib/safeCookies';
 
+const RATE_LIMIT_MINUTES = 5;
 const enforceRateLimit = false;
 const enforceRecaptcha = false;
-const RATE_LIMIT_MINUTES = 5;
 
 export async function POST(req: NextRequest) {
   const res = NextResponse.next();
@@ -23,9 +24,19 @@ export async function POST(req: NextRequest) {
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookies: {
-        get: (name) => req.cookies.get(name)?.value ?? null,
-        set: (name, value, options) => res.cookies.set({ name, value, ...options }),
-        remove: (name) => res.cookies.set({ name, value: '', maxAge: 0 }),
+        get: (name) => {
+          const raw = req.cookies.get(name)?.value;
+          if (!raw) return null;
+          if (name.startsWith('sb-')) return raw;
+          return safeParse(raw);
+        },
+        set: (name, value, options) => {
+          const encoded = typeof value === 'string' ? value : JSON.stringify(value);
+          res.cookies.set(name, encoded, options);
+        },
+        remove: (name) => {
+          res.cookies.set(name, '', { maxAge: 0 });
+        },
       },
     }
   );
@@ -36,6 +47,7 @@ export async function POST(req: NextRequest) {
     'unknown';
 
   const userAgent = req.headers.get('user-agent') || 'unknown';
+  const origin = req.headers.get('origin') || process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
 
   if (enforceRateLimit) {
     const { data: recent } = await supabase
@@ -53,16 +65,12 @@ export async function POST(req: NextRequest) {
       const diffMinutes = (now.getTime() - lastSent.getTime()) / 60000;
       if (diffMinutes < RATE_LIMIT_MINUTES) {
         return Response.json(
-          {
-            error: `Please wait ${Math.ceil(RATE_LIMIT_MINUTES - diffMinutes)} min before retrying.`,
-          },
+          { error: `Please wait ${Math.ceil(RATE_LIMIT_MINUTES - diffMinutes)} min before retrying.` },
           { status: 429 }
         );
       }
     }
   }
-
-  const origin = req.headers.get('origin') || process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
 
   if (enforceRecaptcha) {
     try {
@@ -76,6 +84,7 @@ export async function POST(req: NextRequest) {
       });
 
       const result = await recaptchaRes.json();
+
       if (!result.success || result.score < 0.5) {
         await supabase.from('session_logs').insert({
           type: 'recaptcha_fail',
@@ -95,10 +104,7 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    console.log('[🔐 Sending Magic Link]', {
-      email,
-      redirect: `${origin}/login`,
-    });
+    console.log('[🔐 Sending Magic Link]', { email, redirect: `${origin}/login` });
 
     const { error } = await supabase.auth.signInWithOtp({
       email,
@@ -112,8 +118,8 @@ export async function POST(req: NextRequest) {
       email,
       ip,
       user_agent: userAgent,
-      token_start: recaptchaToken?.slice(0, 4) || '',
-      token_end: recaptchaToken?.slice(-4) || '',
+      token_start: recaptchaToken?.slice(0, 4),
+      token_end: recaptchaToken?.slice(-4),
       timestamp: new Date().toISOString(),
     });
 

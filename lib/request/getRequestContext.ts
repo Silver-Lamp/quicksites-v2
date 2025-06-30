@@ -1,13 +1,16 @@
-import { cookies as getCookies } from 'next/headers';
+// lib/request/getRequestContext.ts
+'use server';
+
+import crypto from 'crypto';
 import { getCookieStore, getSafeCookie } from '../safeCookies';
 import { getHeaderStore } from '../safeHeaders';
+import { getOrCreateSessionCookie } from '../cookies/getOrCreateSessionCookie';
 import { createServerComponentClient } from '@supabase/auth-helpers-nextjs';
 import type { Database } from '../../types/supabase';
-import { v4 as uuidv4 } from 'uuid';
-import crypto from 'crypto';
+import type { SupabaseCookieAdapter } from '@/types/supabase';
 
 export type RequestContext = {
-  cookies: Awaited<ReturnType<typeof getCookies>>;
+  cookies: Awaited<ReturnType<typeof getCookieStore>>;
   headers: Awaited<ReturnType<typeof getHeaderStore>>;
   ip: string;
   userAgent: string;
@@ -48,16 +51,8 @@ export async function getRequestContext(withSupabase = false): Promise<RequestCo
   const role = headers.get('x-user-role') ?? undefined;
   const userId = headers.get('x-user-id') ?? undefined;
   const userEmail = headers.get('x-user-email') ?? undefined;
-
   const abVariant = (await getSafeCookie('ab-variant', cookies)) as string | undefined;
-
-  let sessionId =
-    (await getSafeCookie('session-id', cookies)) as string | undefined;
-
-  if (!sessionId) {
-    sessionId = uuidv4();
-    // cookies.set('session-id', sessionId); // optional: persist for next requests
-  }
+  const sessionId = await getOrCreateSessionCookie(); // will safely create if missing
 
   const context: RequestContext = {
     cookies,
@@ -73,9 +68,10 @@ export async function getRequestContext(withSupabase = false): Promise<RequestCo
     traceId,
   };
 
-  // Optional Supabase block
   if (withSupabase) {
-    const supabase = createServerComponentClient<Database>({ cookies: () => Promise.resolve(cookies) });
+    const supabase = createServerComponentClient<Database>({
+      cookies: () => Promise.resolve(cookies), // consistent with Supabase expectations
+    });
 
     const {
       data: { user },

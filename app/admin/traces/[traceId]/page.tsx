@@ -2,6 +2,7 @@ import { createServerComponentClient } from '@supabase/auth-helpers-nextjs';
 import { cookies } from 'next/headers';
 import type { Database } from '@/types/supabase';
 import { notFound } from 'next/navigation';
+import { TraceInspector } from '@/components/admin/traces/trace-inspector';
 
 export const dynamic = 'force-dynamic';
 

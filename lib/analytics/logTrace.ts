@@ -1,4 +1,4 @@
-import { getRequestContext } from '@/lib/request/getRequestContext';
+import { getRequestContext } from '../request/getRequestContext';
 
 type LogTraceOptions = {
   level?: 'info' | 'warn' | 'error';

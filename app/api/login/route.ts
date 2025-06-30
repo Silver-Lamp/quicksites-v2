@@ -4,7 +4,7 @@ export const runtime = 'nodejs';
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerClient } from '@supabase/ssr';
 import type { Database } from '@/types/supabase';
-import { safeParse } from '@/lib/safeCookies';
+import { safeParse } from '@/lib/utils/safeParse';
 
 const RATE_LIMIT_MINUTES = 5;
 const enforceRateLimit = false;

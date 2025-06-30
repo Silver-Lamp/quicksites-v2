@@ -3,11 +3,14 @@
 
 import crypto from 'crypto';
 import { getCookieStore, getSafeCookie } from '../safeCookies';
-import { getHeaderStore } from '../safeHeaders';
+import { getHeaderStore, getClientIp, getUserAgent, getReferer } from '../safeHeaders';
 import { getOrCreateSessionCookie } from '../cookies/getOrCreateSessionCookie';
+import { getMockLocation } from './getMockLocation';
+
 import { createServerComponentClient } from '@supabase/auth-helpers-nextjs';
-import type { Database } from '../../types/supabase';
+import type { Database } from '@/types/supabase';
 import type { SupabaseCookieAdapter } from '@/types/supabase';
+import type { MockGeoLocation } from '@/types/location';
 
 export type RequestContext = {
   cookies: Awaited<ReturnType<typeof getCookieStore>>;
@@ -21,6 +24,7 @@ export type RequestContext = {
   abVariant?: string;
   sessionId: string;
   traceId: string;
+  geo: MockGeoLocation | null;
   supabase?: {
     client: ReturnType<typeof createServerComponentClient<Database>>;
     user: {
@@ -36,23 +40,25 @@ let _requestContextCache: RequestContext | null = null;
 export async function getRequestContext(withSupabase = false): Promise<RequestContext> {
   if (_requestContextCache) return _requestContextCache;
 
-  const cookies = await getCookieStore();
-  const headers = await getHeaderStore();
-  const traceId = crypto.randomUUID();
+  const [cookies, headers] = await Promise.all([
+    getCookieStore(),
+    getHeaderStore(),
+  ]);
 
-  const ip =
-    headers.get('x-forwarded-for')?.split(',')[0].trim() ??
-    headers.get('x-real-ip') ??
-    'unknown';
-
-  const userAgent = headers.get('user-agent') ?? 'unknown';
-  const referer = headers.get('referer') ?? undefined;
+  const [ip, userAgent, referer, abVariant, sessionId, geo] = await Promise.all([
+    getClientIp(),
+    getUserAgent(),
+    getReferer(),
+    getSafeCookie('ab-variant', cookies) as Promise<string | undefined>,
+    getOrCreateSessionCookie(),
+    getMockLocation(),
+  ]);
 
   const role = headers.get('x-user-role') ?? undefined;
   const userId = headers.get('x-user-id') ?? undefined;
   const userEmail = headers.get('x-user-email') ?? undefined;
-  const abVariant = (await getSafeCookie('ab-variant', cookies)) as string | undefined;
-  const sessionId = await getOrCreateSessionCookie(); // will safely create if missing
+
+  const traceId = crypto.randomUUID();
 
   const context: RequestContext = {
     cookies,
@@ -66,11 +72,12 @@ export async function getRequestContext(withSupabase = false): Promise<RequestCo
     abVariant,
     sessionId,
     traceId,
+    geo,
   };
 
   if (withSupabase) {
     const supabase = createServerComponentClient<Database>({
-      cookies: () => Promise.resolve(cookies), // consistent with Supabase expectations
+      cookies: getCookieStore, // ✅ fixed
     });
 
     const {

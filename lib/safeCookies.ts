@@ -1,43 +1,61 @@
-// lib/safeCookies.ts
 'use server';
 
 import { cookies as rawCookies } from 'next/headers';
-import type { ResponseCookies } from 'next/dist/compiled/@edge-runtime/cookies';
 import type { ReadonlyRequestCookies } from 'next/dist/server/web/spec-extension/adapters/request-cookies';
+import type { ResponseCookies } from 'next/dist/compiled/@edge-runtime/cookies';
 import type { CookieOptions } from '@/types/cookies';
 import { safeParse } from './utils/safeParse';
 
-// Async resolver: safe for Server Actions or Route Handlers
+/**
+ * Resolves cookie store safely, accounting for Next.js context quirks.
+ */
 export async function getCookieStore(): Promise<ReadonlyRequestCookies> {
-  const result = rawCookies();
-  return result instanceof Promise ? await result : result;
+  const store = rawCookies();
+  return store instanceof Promise ? await store : store;
 }
 
-// Async getter — used in layouts, server actions, and routes
+/**
+ * Reads a cookie value safely, avoiding JSON.parse on base64 or JWT tokens.
+ */
 export async function getSafeCookie(
   name: string,
   cookieStore?: ReadonlyRequestCookies
 ): Promise<string | object | undefined> {
   const store = cookieStore ?? (await getCookieStore());
-  const raw = store.get(name)?.value;
-  return safeParse(raw);
+
+  // Guard against environments where `store.get` may not exist
+  const value = typeof store?.get === 'function' ? store.get(name)?.value : undefined;
+  return safeParse(value);
 }
 
-// Set cookie — only works in Server Actions or Route Handlers
+/**
+ * Sets a cookie. Only works in Server Actions or Route Handlers.
+ */
 export async function setSafeCookie(
   name: string,
   value: string | object,
   options: CookieOptions = {}
 ) {
-  const store = (await getCookieStore()) as ResponseCookies;
+  const store = await getCookieStore();
   const encoded = typeof value === 'string' ? value : JSON.stringify(value);
-  //// @ts-expect-error: .set only available in route handlers
-  store.set?.(name, encoded, options);
+
+  // Guard in case we're in a context where store.set is not defined
+  if (typeof (store as ResponseCookies)?.set === 'function') {
+    (store as ResponseCookies).set(name, encoded, options);
+  } else {
+    console.warn(`[⚠️ setSafeCookie] Cannot set "${name}" outside a Route Handler or Server Action`);
+  }
 }
 
-// Remove cookie
+/**
+ * Removes a cookie by setting maxAge to 0. Only works in Server Actions or Route Handlers.
+ */
 export async function removeSafeCookie(name: string) {
-  const store = (await getCookieStore()) as ResponseCookies;
-  //// @ts-expect-error: .set() only available in Route Handlers
-  store.set?.(name, '', { maxAge: 0 });
+  const store = await getCookieStore();
+
+  if (typeof (store as ResponseCookies)?.set === 'function') {
+    (store as ResponseCookies).set(name, '', { maxAge: 0 });
+  } else {
+    console.warn(`[⚠️ removeSafeCookie] Cannot remove "${name}" outside a Route Handler or Server Action`);
+  }
 }

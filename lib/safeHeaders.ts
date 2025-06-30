@@ -1,16 +1,21 @@
-import { headers as getRawHeaders } from 'next/headers';
+'use server';
 
-let _headerCache: Awaited<ReturnType<typeof getRawHeaders>> | null = null;
+import { headers as rawHeaders } from 'next/headers';
 
-export async function getHeaderStore() {
+let _headerCache: Awaited<ReturnType<typeof rawHeaders>> | null = null;
+
+/**
+ * Retrieves a cached or fresh header store.
+ */
+export async function getHeaderStore(): Promise<Headers> {
   if (_headerCache) return _headerCache;
-  const maybePromise = getRawHeaders();
-  _headerCache = maybePromise instanceof Promise ? await maybePromise : maybePromise;
+  const result = rawHeaders();
+  _headerCache = result instanceof Promise ? await result : result;
   return _headerCache;
 }
 
 /**
- * Safely get a single header value by name.
+ * Retrieves a specific header value, lowercased.
  */
 export async function getSafeHeader(name: string): Promise<string | undefined> {
   const store = await getHeaderStore();
@@ -18,21 +23,29 @@ export async function getSafeHeader(name: string): Promise<string | undefined> {
 }
 
 /**
- * Get the client IP address, with standard fallback.
+ * Get the client IP address, with standard fallbacks.
  */
 export async function getClientIp(): Promise<string> {
-  const h = await getHeaderStore();
+  const headers = await getHeaderStore();
   return (
-    h.get('x-forwarded-for')?.split(',')[0].trim() ??
-    h.get('x-real-ip') ??
+    headers.get('x-forwarded-for')?.split(',')[0].trim() ??
+    headers.get('x-real-ip') ??
     'unknown'
   );
 }
 
 /**
- * Get the client user-agent string.
+ * Get the user-agent string from headers.
  */
 export async function getUserAgent(): Promise<string> {
-  const h = await getHeaderStore();
-  return h.get('user-agent') ?? 'unknown';
+  const headers = await getHeaderStore();
+  return headers.get('user-agent') ?? 'unknown';
+}
+
+/**
+ * Get the referrer, if present.
+ */
+export async function getReferer(): Promise<string | undefined> {
+  const headers = await getHeaderStore();
+  return headers.get('referer') ?? undefined;
 }

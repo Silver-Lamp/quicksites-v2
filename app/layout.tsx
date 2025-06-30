@@ -78,7 +78,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           ) : (
             <UnauthenticatedLayout>{children}</UnauthenticatedLayout>
           )}
-          <DevToolsWidget />
+          {/* <DevToolsWidget minimized={true} /> */}
           <TraceViewer />
         </SessionProvider>
       </body>

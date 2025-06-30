@@ -1,7 +1,7 @@
 import SmartLink from './smart-link';
 import SmartLinkMeta from './smart-link-meta';
-import Tooltip from './tooltip';
-import type { SmartLinkItem } from '@/types/SmartLinkItem';
+import { Tooltip } from '../ui/tooltip';
+import type { SmartLinkItem } from '../../types/SmartLinkItem';
 
 export default function SmartLinkGallery({ items }: { items: SmartLinkItem[] }) {
   return (

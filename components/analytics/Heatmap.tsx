@@ -1,3 +1,4 @@
+// components/analytics/heatmap.tsx
 'use client';
 
 import { useEffect, useState } from 'react';

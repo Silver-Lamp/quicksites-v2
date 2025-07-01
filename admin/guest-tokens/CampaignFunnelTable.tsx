@@ -4,8 +4,8 @@
 
 import { useMemo, useState } from 'react';
 import { parseISO, isAfter, isBefore } from 'date-fns';
-import { Button } from '../../components/ui/button';
-import { Card } from '../../components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
 import { ResponsiveContainer, PieChart, Pie, Cell, Tooltip, Legend } from 'recharts';
 
 interface UpgradeEvent {

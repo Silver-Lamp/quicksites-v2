@@ -1,9 +1,10 @@
 // app/login/page.tsx
-// import { sessionGuard } from '@/lib/guards/sessionGuard';
-import LoginClient from './login-client';
+import LoginForm from './LoginForm';
 
-export default async function LoginPage() {
-  // await sessionGuard('/admin/dashboard'); // ⬅️ SSR redirect if already logged in
-
-  return <LoginClient />;
+export default function LoginPage() {
+  return (
+    <main className="min-h-screen bg-black text-white">
+      <LoginForm />
+    </main>
+  );
 }

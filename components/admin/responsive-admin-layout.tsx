@@ -26,7 +26,7 @@ export default function ResponsiveAdminLayout({ children }: { children: React.Re
 
   return (
     <>
-      <AppHeader user={user} role={role || ''} />
+      <AppHeader />
       {isMobile ? (
         <>
           <MobileDrawerSidebar />

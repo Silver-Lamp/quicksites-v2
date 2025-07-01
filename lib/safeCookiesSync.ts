@@ -1,7 +1,7 @@
 // lib/safeCookiesSync.ts
 import { cookies as rawCookies } from 'next/headers';
 import type { ReadonlyRequestCookies } from 'next/dist/server/web/spec-extension/adapters/request-cookies';
-import { safeParse } from './safeCookies';
+import { safeParse } from './utils/safeParse';
 
 export function resolveCookiesSync(): ReadonlyRequestCookies {
   const result = rawCookies();

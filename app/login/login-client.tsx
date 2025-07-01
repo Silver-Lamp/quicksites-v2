@@ -3,6 +3,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import ReCAPTCHA from 'react-google-recaptcha';
+import { supabase } from '@/admin/lib/supabaseClient';
 
 export default function LoginClient() {
   const recaptchaRef = useRef<ReCAPTCHA | null>(null);
@@ -16,6 +17,45 @@ export default function LoginClient() {
     if (process.env.NODE_ENV === 'development') {
       setEmail('sandon@quicksites.ai');
     }
+  }, []);
+
+  // ✅ Check for active session on mount
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data }) => {
+      const session = data.session;
+      if (session?.user) {
+        fetch('/api/session-log', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ referer: document.referrer }),
+        })
+          .catch((err) => console.error('Error logging session:', err))
+          .finally(() => {
+            window.location.href = '/auth/callback';
+          });
+      }
+    });
+  }, []);
+
+  // ✅ Listen for successful login
+  useEffect(() => {
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'SIGNED_IN' && session?.user) {
+        fetch('/api/session-log', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ referer: document.referrer }),
+        })
+          .catch((err) => console.error('Error logging session:', err))
+          .finally(() => {
+            window.location.href = '/auth/callback';
+          });
+      }
+    });
+
+    return () => subscription?.unsubscribe?.();
   }, []);
 
   const handleLogin = async () => {

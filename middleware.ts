@@ -1,8 +1,7 @@
 // middleware.ts
 import { NextResponse, type NextRequest } from 'next/server';
-import { createServerClient, type CookieOptions } from '@supabase/ssr';
+import { createMiddlewareClient } from '@supabase/auth-helpers-nextjs';
 import type { Database } from './types/supabase';
-import { safeParse } from './lib/utils/safeParse';
 
 /**
  * Middleware to protect /admin/* routes via Supabase session check,
@@ -11,45 +10,7 @@ import { safeParse } from './lib/utils/safeParse';
 export async function middleware(req: NextRequest) {
   const res = NextResponse.next();
 
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-
-  if (!supabaseUrl || !supabaseKey) {
-    console.error('[❌ middleware] Missing Supabase env vars');
-    return NextResponse.redirect(new URL('/login?error=missing_config', req.url));
-  }
-
-  // ✅ Optional dev warning for malformed auth cookies
-  if (process.env.NODE_ENV === 'development') {
-    for (const cookie of req.cookies.getAll()) {
-      if (cookie.name.startsWith('sb-')) {
-        try {
-          JSON.parse(cookie.value);
-        } catch {
-          console.warn(`[⚠️ malformed sb-* cookie: ${cookie.name}]`, cookie.value.slice(0, 40));
-        }
-      }
-    }
-  }
-
-  // ✅ Create Supabase client with safe cookie handling
-  const supabase = createServerClient<Database>(supabaseUrl, supabaseKey, {
-    cookies: {
-      get(name: string) {
-        const raw = req.cookies.get(name)?.value;
-        if (!raw) return undefined;
-        if (name.startsWith('sb-')) return raw; // Never parse Supabase cookies
-        return safeParse(raw);
-      },
-      set(name, value, options?: CookieOptions) {
-        const encoded = typeof value === 'string' ? value : JSON.stringify(value);
-        res.cookies.set(name, encoded, options);
-      },
-      remove(name: string) {
-        res.cookies.set(name, '', { maxAge: 0 });
-      },
-    },
-  });
+  const supabase = createMiddlewareClient<Database>({ req, res });
 
   const {
     data: { session },

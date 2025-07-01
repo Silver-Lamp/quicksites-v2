@@ -1,16 +1,16 @@
-'use client';
+// components/layout/page.tsx
 
 import AppHeader from '@/components/admin/AppHeader/app-header';
 import AdminLayout from '@/components/layout/admin-layout';
 import { getSessionContext } from '@/lib/supabase/getSessionContext';
 
 export default async function AdminLayoutWithHeader({ children }: { children: React.ReactNode }) {
-  const { user, role } = await getSessionContext();
+  const { userId, userEmail, role } = await getSessionContext();
 
   const safeUser = {
-    id: user?.id ?? '',
-    email: user?.email ?? '',
-    avatar_url: user?.avatar_url ?? '',
+    id: userId ?? '',
+    email: userEmail ?? '',
+    avatar_url: '',
   };
 
   return (

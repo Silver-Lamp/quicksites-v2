@@ -2,7 +2,8 @@
 'use server';
 
 import crypto from 'crypto';
-import { getCookieStore, getSafeCookie } from '../safeCookies';
+import { getSafeCookie } from '../safeCookies';
+import { getReadableCookieStore } from '../utils/getReadableCookieStore';
 import { getHeaderStore, getClientIp, getUserAgent, getReferer } from '../safeHeaders';
 import { getOrCreateSessionCookie } from '../cookies/getOrCreateSessionCookie';
 import { getMockLocation } from './getMockLocation';
@@ -13,7 +14,7 @@ import type { SupabaseCookieAdapter } from '@/types/supabase';
 import type { MockGeoLocation } from '@/types/location';
 
 export type RequestContext = {
-  cookies: Awaited<ReturnType<typeof getCookieStore>>;
+  cookies: Awaited<ReturnType<typeof getReadableCookieStore>>;
   headers: Awaited<ReturnType<typeof getHeaderStore>>;
   ip: string;
   userAgent: string;
@@ -41,7 +42,7 @@ export async function getRequestContext(withSupabase = false): Promise<RequestCo
   if (_requestContextCache) return _requestContextCache;
 
   const [cookies, headers] = await Promise.all([
-    getCookieStore(),
+    getReadableCookieStore(),
     getHeaderStore(),
   ]);
 
@@ -77,7 +78,7 @@ export async function getRequestContext(withSupabase = false): Promise<RequestCo
 
   if (withSupabase) {
     const supabase = createServerComponentClient<Database>({
-      cookies: getCookieStore, // ✅ fixed
+      cookies: getReadableCookieStore, // ✅ use consistent read-only adapter
     });
 
     const {

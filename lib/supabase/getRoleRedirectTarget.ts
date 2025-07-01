@@ -1,3 +1,4 @@
+// lib/supabase/getRoleRedirectTarget.ts
 'use server';
 
 import { getSessionContext } from './getSessionContext';
@@ -45,7 +46,7 @@ export async function getRoleRedirectTarget({
   fallbackRoute = '/unauthorized',
   replacements = {},
 }: Options = {}): Promise<RedirectTargetResult> {
-  const { user, role } = await getSessionContext();
+  const { userId, userEmail, role } = await getSessionContext();
 
   const slugContext = await getSlugContext({
     subdomainSlugMode: true,
@@ -54,11 +55,11 @@ export async function getRoleRedirectTarget({
 
   const slug = slugContext.slug ?? 'default';
 
-  const template = user ? roleRoutes[role] ?? fallbackRoute : '/login';
+  const template = userId ? roleRoutes[role as Role] ?? fallbackRoute : '/login';
 
   const tokenMap: Record<string, string> = {
     slug,
-    role,
+    role: role as Role,
     ...replacements,
   };
 
@@ -68,12 +69,12 @@ export async function getRoleRedirectTarget({
 
   return {
     path: resolvedPath,
-    role,
+    role: role as Role,
     slug,
-    user: user
+    user: userId
       ? {
-          id: user.id,
-          email: user.email ?? null,
+          id: userId,
+          email: userEmail ?? null,
         }
       : null,
     slugContext: {

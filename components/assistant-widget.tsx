@@ -58,8 +58,11 @@ export default function AssistantWidget() {
 
     setTyping(false);
     setMessages([
-      ...newMessages,
-      { role: 'assistant', content: data.reply || 'Sorry, something went wrong.' },
+      ...(newMessages as Message[]),
+      {
+        role: 'assistant',
+        content: data.reply || 'Sorry, something went wrong.',
+      } as Message,
     ]);
     setLoading(false);
   };

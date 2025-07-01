@@ -1,7 +1,12 @@
-// lib/cookies/getSafeCookie.ts
 'use server';
 
-import { getCookieStore, resolveCookiesSync, safeParse } from '../safeCookies';
+import {
+  getReadableCookieStore,
+  getWritableCookieStore,
+  resolveCookiesSync,
+  safeParse,
+} from '../safeCookies';
+
 import type { ReadonlyRequestCookies, ResponseCookies } from 'next/headers';
 
 /**
@@ -11,7 +16,7 @@ export async function getSafeCookie(
   name: string,
   cookieStore?: ReadonlyRequestCookies
 ): Promise<string | object | undefined> {
-  const store = cookieStore ?? await getCookieStore();
+  const store = cookieStore ?? await getReadableCookieStore(); // ✅ updated
   const raw = store.get(name)?.value;
   return safeParse(raw);
 }
@@ -36,15 +41,15 @@ export async function setSafeCookie(
   value: string | object,
   options: Parameters<ResponseCookies['set']>[2] = {}
 ) {
-  const store = await getCookieStore() as ResponseCookies;
+  const store = await getWritableCookieStore(); // ✅ updated
   const encoded = typeof value === 'string' ? value : JSON.stringify(value);
-  store.set?.(name, encoded, options);
+  store.set(name, encoded, options); // no optional chaining — required in writable contexts
 }
 
 /**
  * Async remover — only works in Server Actions or Route Handlers.
  */
 export async function removeSafeCookie(name: string) {
-  const store = await getCookieStore() as ResponseCookies;
-  store.set?.(name, '', { maxAge: 0 });
+  const store = await getWritableCookieStore(); // ✅ updated
+  store.set(name, '', { maxAge: 0 });
 }

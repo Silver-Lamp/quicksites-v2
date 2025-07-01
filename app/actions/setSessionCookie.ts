@@ -1,12 +1,12 @@
 'use server';
 
-import { cookies } from 'next/headers';
+import { getWritableCookieStore } from '@/lib/utils/getWritableCookieStore';
 
 /**
  * Sets the session-id cookie. Safe only in Server Action or Route Handler.
  */
 export async function setSessionCookie(sessionId: string) {
-  const store = cookies();
+  const store = await getWritableCookieStore();
 
   store.set('session-id', sessionId, {
     path: '/',

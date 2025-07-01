@@ -18,7 +18,7 @@ export default function DefaultPublicLayout({ children }: { children: React.Reac
 
   return (
     <div className="min-h-screen bg-black text-white">
-      <AppHeader user={user} role={role || ''} />
+      <AppHeader />
       <main className="p-6 max-w-5xl mx-auto">{children}</main>
 
       <footer className="text-center text-sm text-gray-500 mt-10 mb-6 space-y-2">

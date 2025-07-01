@@ -54,11 +54,12 @@ export default function AppHeader() {
 
           {/* 🐞 Small debug tag */}
           {(traceId || sessionId) && (
-            <div className="absolute -bottom-5 right-2 text-[10px] text-zinc-500 font-mono">
-              trace:{' '}
-              <span className="text-zinc-400">{traceId?.slice(0, 6) || '---'}</span>{' '}
-              | session:{' '}
-              <span className="text-zinc-400">{sessionId?.slice(0, 6) || '---'}</span>
+            <div
+              className="absolute -bottom-5 right-2 text-[10px] text-zinc-500 font-mono"
+              title={`Trace ID: ${traceId}\nSession ID: ${sessionId}`}
+            >
+              trace: <span className="text-cyan-400">{traceId?.slice(0, 6) || '---'}</span> | session:{' '}
+              <span className="text-amber-400">{sessionId?.slice(0, 6) || '---'}</span>
             </div>
           )}
         </div>

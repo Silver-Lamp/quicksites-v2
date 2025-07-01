@@ -15,7 +15,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
 
   return (
     <div className="min-h-screen bg-black text-white">
-      <AppHeader user={user} role={role || ''} />
+      <AppHeader />
       <main>{children}</main>
     </div>
   );

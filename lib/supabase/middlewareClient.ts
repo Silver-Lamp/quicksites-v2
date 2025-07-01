@@ -2,7 +2,7 @@ import { createServerClient, type CookieOptions } from '@supabase/ssr';
 import type { Database } from '../../types/supabase';
 import type { NextRequest } from 'next/server';
 import { NextResponse } from 'next/server';
-import { safeParse } from '../safeCookies';
+import { safeParse } from '../utils/safeParse';
 
 /**
  * Creates a Supabase client for use in Next.js middleware.

@@ -1,6 +1,7 @@
 import React from 'react';
-import { ThemeToggleButton, Button } from '@/components/ui';
-import { Card } from '@/components/ui/card';
+import { ThemeToggleButton } from '@/components/ui/theme-toggle-button';
+import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui';
 
 export default function ThemePreviewPage() {
   return (

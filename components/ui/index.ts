@@ -4,7 +4,7 @@ export * from './badge';
 // export * from './breadcrumbs';        // ❌ check if file exists
 export * from './button';
 export * from './calendar';
-// export * from './card';              // ❌ check if it's Card.tsx?
+export * from './card';
 // export * from './loader';            // ❌ check file exists
 // export * from './modal';             // ❌ check file or folder conflict
 export * from './checkbox';

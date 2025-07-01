@@ -4,7 +4,7 @@
 // Use getUserFromRequest() when you need the user context
 
 import { useEffect } from 'react';
-import Page from '@/components/layout/page';
+// import Page from '@/components/layout/page';
 import Dashboard from '@/components/admin/dashboard-grid-draggable';
 import { supabase } from '@/admin/lib/supabaseClient';
 import Link from 'next/link';
@@ -44,7 +44,8 @@ export default function DashboardPage() {
   }, []);
 
   return (
-    <Page>
+    // <Page>
+    <>
       <div className="flex justify-between items-center mb-4">
         <h1 className="text-xl font-bold">Admin Dashboard</h1>
         <Link href="/admin/logs/dashboard" className="text-sm text-blue-600 hover:underline">
@@ -63,6 +64,6 @@ export default function DashboardPage() {
           updateBlockSetting={() => {}}
         />
       </AuthGuard>
-    </Page>
+    </>
   );
 }

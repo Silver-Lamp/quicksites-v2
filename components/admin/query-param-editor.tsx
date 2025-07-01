@@ -2,10 +2,7 @@
 
 import { Fragment } from 'react';
 import { z, ZodObject, ZodFirstPartyTypeKind } from 'zod';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Switch } from '@/components/ui/switch';
-import { Select, SelectTrigger, SelectContent, SelectItem } from '@/components/ui/select';
+import { Input, Label, FieldLabel, Switch, Select, SelectTrigger, SelectContent, SelectItem } from '@/components/ui';
 import useTypedQueryParam from '@/hooks/useTypedQueryParam';
 
 function FieldRenderer({
@@ -38,7 +35,7 @@ function FieldRenderer({
     const nestedFields = Object.entries(validator.shape);
     return (
       <div className="border rounded p-4 space-y-2 bg-gray-50 dark:bg-gray-900">
-        <Label className="text-xs uppercase tracking-wide text-muted-foreground">{fieldKey}</Label>
+        <FieldLabel className="text-xs uppercase tracking-wide text-muted-foreground">{fieldKey}</FieldLabel>
         {nestedFields.map(([nestedKey, nestedValidator]) => (
           <FieldRenderer
             key={nestedKey}
@@ -54,7 +51,7 @@ function FieldRenderer({
   if (type === ZodFirstPartyTypeKind.ZodEnum && enumValues) {
     return (
       <div className="space-y-1">
-        <Label htmlFor={fullKey}>{fieldKey}</Label>
+        <FieldLabel>{fieldKey}</FieldLabel>
         <Select value={value as string} onValueChange={setValue}>
           <SelectTrigger id={fullKey} />
           <SelectContent>
@@ -72,7 +69,7 @@ function FieldRenderer({
   if (type === ZodFirstPartyTypeKind.ZodBoolean) {
     return (
       <div className="space-y-1">
-        <Label htmlFor={fullKey}>{fieldKey}</Label>
+        <FieldLabel htmlFor={fullKey}>{fieldKey}</FieldLabel>
         <Switch
           id={fullKey}
           checked={value === true || value === 'true'}
@@ -86,7 +83,7 @@ function FieldRenderer({
     const asString = Array.isArray(value) ? value.join(', ') : '';
     return (
       <div className="space-y-1">
-        <Label htmlFor={fullKey}>{fieldKey}</Label>
+        <FieldLabel htmlFor={fullKey}>{fieldKey}</FieldLabel>
         <Input
           id={fullKey}
           value={asString}
@@ -105,7 +102,7 @@ function FieldRenderer({
 
   return (
     <div className="space-y-1">
-      <Label htmlFor={fullKey}>{fieldKey}</Label>
+      <FieldLabel htmlFor={fullKey}>{fieldKey}</FieldLabel>
       <Input
         id={fullKey}
         type={queryType}

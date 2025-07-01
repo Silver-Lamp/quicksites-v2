@@ -1,6 +1,7 @@
+// admin/__tests__/TemplateEditor.test.tsx
+import { describe, it, expect } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import TemplateEditor from '@/components/admin/templates/template-editor';
-import { describe, it, expect } from 'vitest';
 
 describe('TemplateEditor validation', () => {
   it('auto-adds a blank page if none exist', async () => {

@@ -1,13 +1,12 @@
 'use server';
 
-import {
-  getReadableCookieStore,
-  getWritableCookieStore,
-  resolveCookiesSync,
-  safeParse,
-} from '../safeCookies';
+import { getReadableCookieStore } from '../utils/getReadableCookieStore';
+import { getWritableCookieStore } from '../utils/getWritableCookieStore';
+import { resolveCookiesSync } from '../safeCookiesSync';
+import { safeParse } from '../utils/safeParse';
 
-import type { ReadonlyRequestCookies, ResponseCookies } from 'next/headers';
+import type { ReadonlyRequestCookies } from 'next/dist/server/web/spec-extension/adapters/request-cookies';
+import type { ResponseCookies } from 'next/dist/compiled/@edge-runtime/cookies';
 
 /**
  * Async getter — use in layouts, route handlers, or Server Actions.

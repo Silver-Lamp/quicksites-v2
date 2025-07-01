@@ -2,8 +2,7 @@
 
 import useSWR from 'swr';
 import { useEffect, useState } from 'react';
-import { AvatarWithTooltip } from '@/components/ui/avatar-with-tooltip';
-import { TooltipProvider } from '@/components/ui/tooltip';
+import { AvatarWithTooltip, TooltipProvider } from '@/components/ui';
 
 export default function HabitLeaderboard({ slug }: { slug: string }) {
   const [selected, setSelected] = useState<string | null>(null);

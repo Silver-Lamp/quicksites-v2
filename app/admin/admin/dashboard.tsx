@@ -3,7 +3,7 @@ import Head from 'next/head';
 // import { json } from '@/lib/api/json';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 // import SeedButton from '@/components/admin/admin/seed-button';
-// import { Card, CardContent, CardHeader } from '@/components/ui/card';
+import { Card, CardContent, CardHeader } from '@/components/ui';
 import { useEffect, useState } from 'react';
 import { supabase } from '@/admin/lib/supabaseClient';
 
@@ -55,14 +55,16 @@ export default function AdminDashboard() {
       <div className="max-w-5xl mx-auto p-6 space-y-6">
         <h1 className="text-2xl font-bold mb-4">🛠 Admin Tools... Coming Soon</h1>
 
-        {/* {hasRole(['admin', 'owner']) && (
+        {hasRole(['admin', 'owner']) && (
           <Card>
             <CardHeader className="text-lg font-semibold">Seed Tools</CardHeader>
             <CardContent>
               <p className="text-sm text-gray-500 mb-2">
                 Quickly add an example template to test the builder.
+                <br />
+                (Seed Button Coming Soon)
               </p>
-              <SeedButton />
+              {/* <SeedButton /> */}
             </CardContent>
           </Card>
         )}
@@ -214,7 +216,7 @@ export default function AdminDashboard() {
               </CardContent>
             </Card>
           </div>
-        )} */}
+        )}
       </div>
     </>
   );

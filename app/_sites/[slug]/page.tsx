@@ -1,4 +1,4 @@
-// /app/site/[slug]/page.tsx (with OG image regeneration + DB sync)
+// /app/_sites/[slug]/page.tsx
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 export const preferredRegion = 'iad1';
@@ -7,7 +7,8 @@ import TemplateRenderer from '@/components/template-renderer';
 import { getSupabase } from '@/lib/supabase/server';
 import { notFound } from 'next/navigation';
 import Head from 'next/head';
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
+import { DevToolsToggler } from '@/components/DevToolsToggler';
 
 export default async function SitePage({
   params,
@@ -50,17 +51,18 @@ export default async function SitePage({
     console.warn('⚠️ OG image prefetch failed:', err);
   }
 
-  useEffect(() => {
-    const minimized = localStorage.getItem('devtools:minimized');
-    if (minimized === 'true') {
-      document.documentElement.classList.add('devtools-minimized');
-    } else {
-      document.documentElement.classList.remove('devtools-minimized');
-    }
-  }, []);
+  // useEffect(() => {
+  //   const minimized = localStorage.getItem('devtools:minimized');
+  //   if (minimized === 'true') {
+  //     document.documentElement.classList.add('devtools-minimized');
+  //   } else {
+  //     document.documentElement.classList.remove('devtools-minimized');
+  //   }
+  // }, []);
 
   return (
     <>
+      <DevToolsToggler />
       <Head>
         <title>{site.seo_title || site.business_name}</title>
         <meta name="description" content={site.seo_description || ''} />

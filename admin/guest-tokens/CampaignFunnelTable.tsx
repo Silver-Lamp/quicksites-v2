@@ -4,8 +4,7 @@
 
 import { useMemo, useState } from 'react';
 import { parseISO, isAfter, isBefore } from 'date-fns';
-// import { Button } from '@/components/ui/button';
-// import { Card } from '@/components/ui/card';
+import { Button, Card } from '@/components/ui';
 import { ResponsiveContainer, PieChart, Pie, Cell, Tooltip, Legend } from 'recharts';
 
 interface UpgradeEvent {
@@ -148,8 +147,7 @@ export function CampaignFunnelTable({ events, logs, dateRange }: Props) {
   };
 
   return (
-    // <Card className="p-4 space-y-6">
-    <>
+    <Card className="p-4 space-y-6">
       <div className="flex justify-between items-center">
         <h2 className="text-lg font-semibold">Campaign Cohorts</h2>
         <div className="flex gap-2">
@@ -161,12 +159,12 @@ export function CampaignFunnelTable({ events, logs, dateRange }: Props) {
             className="w-20 text-sm border rounded px-2 py-1"
             placeholder="Min views"
           />
-          {/* <Button variant="outline" size="sm" onClick={exportCampaignCSV}>
+          <Button variant="outline" size="sm" onClick={exportCampaignCSV}>
             Export CSV
           </Button>
           <Button variant="outline" size="sm" onClick={() => setShowAllTime(!showAllTime)}>
             {showAllTime ? 'Show Date Range' : 'Show All Time'}
-          </Button> */}
+          </Button>
         </div>
       </div>
 
@@ -221,13 +219,13 @@ export function CampaignFunnelTable({ events, logs, dateRange }: Props) {
                         <div>
                           <strong>Sources:</strong> {row.sources.join(', ') || '—'}
                         </div>
-                        {/* <Button
+                        <Button
                           size="sm"
                           variant="outline"
                           onClick={() => exportUserList(row.campaign, row.userList)}
                         >
                           Download Users CSV
-                        </Button> */}
+                        </Button>
                         <ul className="text-xs list-disc pl-4 max-h-32 overflow-y-auto">
                           {row.userList.map(([id, label]) => (
                             <li key={id}>{label}</li>
@@ -242,7 +240,6 @@ export function CampaignFunnelTable({ events, logs, dateRange }: Props) {
           </tbody>
         </table>
       </div>
-    </>
-    // {/* </Card> */}
+    </Card>
   );
 }

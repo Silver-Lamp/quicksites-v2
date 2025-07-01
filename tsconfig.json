@@ -8,7 +8,8 @@
     "pages",
     "types",
     "admin",                    // ← Add this line
-    ".next/types/**/*.ts"
+    ".next/types/**/*.ts",
+    "lib/admin"
   ],
   "exclude": [
     "node_modules",

@@ -1,7 +1,7 @@
 'use client';
 
 import Image from 'next/image';
-import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
+import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui';
 
 type Props = {
   avatarUrl?: string;

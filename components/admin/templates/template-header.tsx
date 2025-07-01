@@ -1,5 +1,5 @@
-import Link from 'next/link';
-import SafeLink from '@/components/ui/safe-link';
+// import Link from 'next/link';
+import { SafeLink } from '@/components/ui';
 
 type TemplateHeaderProps = {
   name: string;

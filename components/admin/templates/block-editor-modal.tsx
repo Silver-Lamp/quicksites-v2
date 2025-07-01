@@ -1,9 +1,8 @@
 import { useEffect, useState } from 'react';
-import { Dialog, DialogContent } from '@/components/ui/dialog';
+import { Dialog, DialogContent, Button } from '@/components/ui';
 import { BlocksEditor } from '@/components/admin/templates/blocks-editor';
 import toast from 'react-hot-toast';
-import { Button } from '@/components/ui/button';
-import { BlockEditorModalProps } from '@/types/blocks';
+// import { BlockEditorModalProps } from '@/types/blocks';
 
 const schemaHints: Record<string, string> = {
   type: 'Block type (e.g. hero, services)',

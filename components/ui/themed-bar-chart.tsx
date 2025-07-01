@@ -1,3 +1,4 @@
+// components/ui/themed-bar-chart.tsx
 'use client';
 import { useTheme } from 'next-themes';
 import { Bar } from 'react-chartjs-2';

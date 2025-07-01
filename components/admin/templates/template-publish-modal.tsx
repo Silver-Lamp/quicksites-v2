@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Dialog, DialogContent } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, Button } from '@/components/ui';
 import toast from 'react-hot-toast';
 import { supabase } from '@/admin/lib/supabaseClient';
 // import VersionHistoryPanel from '@/components/templates/version-history-panel';

@@ -1,7 +1,7 @@
 'use client';
 
 import { usePathname } from 'next/navigation';
-import SafeLink from '@/components/ui/safe-link';
+import { SafeLink } from '@/components/ui';
 import { cn } from '@/lib/utils';
 import {
   LayoutDashboard,

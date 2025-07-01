@@ -4,8 +4,7 @@ import { useEffect, useState } from 'react';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { useSearchParams } from 'next/navigation';
 import { supabase } from '@/admin/lib/supabaseClient';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, Button } from '@/components/ui';
 
 interface UpgradeModalProps {
   open: boolean;

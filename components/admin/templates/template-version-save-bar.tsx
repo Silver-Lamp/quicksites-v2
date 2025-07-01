@@ -1,6 +1,5 @@
 import { useState } from 'react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import { Button, Input } from '@/components/ui';
 import { supabase } from '@/admin/lib/supabaseClient';
 import { toast } from 'react-hot-toast';
 import { uploadSnapshotToSupabase } from '@/admin/lib/uploadSnapshotToSupabase';

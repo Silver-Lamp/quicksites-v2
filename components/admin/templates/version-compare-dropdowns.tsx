@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Button } from '@/components/ui/button';
+import { Button } from '@/components/ui';
 import { supabase } from '@/admin/lib/supabaseClient';
 import VersionCompareDropdowns from '@/components/admin/templates/version-compare-dropdowns';
 import { renderVersionDiff } from '@/admin/utils/renderVersionDiff';

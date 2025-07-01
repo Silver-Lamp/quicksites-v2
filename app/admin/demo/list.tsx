@@ -1,8 +1,8 @@
-import { createClient } from '@supabase/supabase-js';
+// import { createClient } from '@supabase/supabase-js';
 import Link from 'next/link';
-import { GetServerSideProps } from 'next';
-import { Button } from '@/components/ui/button';
-import { supabase } from '@/admin/lib/supabaseClient';
+// import { GetServerSideProps } from 'next';
+import { Button } from '@/components/ui';
+// import { supabase } from '@/admin/lib/supabaseClient';
 
 export default function DemoList({ templates }: { templates: any[] }) {
   return (

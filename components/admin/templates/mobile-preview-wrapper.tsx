@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Button } from '@/components/ui/button';
+import { Button } from '@/components/ui';
 import { Monitor, Smartphone } from 'lucide-react';
 
 export default function MobilePreviewWrapper({

@@ -3,9 +3,7 @@
 
 import { useEffect, useState } from 'react';
 import { supabase } from '@/admin/lib/supabaseClient';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import { Button, Input, Label } from '@/components/ui';
 import { toast } from 'react-hot-toast';
 import Image from 'next/image';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
@@ -140,7 +138,7 @@ export default function ProfileForm() {
 
       <div className="space-y-4">
         <div>
-          <Label htmlFor="displayName">Display Name</Label>
+          <Label>Display Name</Label>
           <Input
             id="displayName"
             value={displayName}
@@ -149,7 +147,7 @@ export default function ProfileForm() {
           />
         </div>
         <div>
-          <Label htmlFor="bio">Bio</Label>
+          <Label>Bio</Label>
           <Input
             id="bio"
             value={bio}
@@ -158,7 +156,7 @@ export default function ProfileForm() {
           />
         </div>
         <div>
-          <Label htmlFor="avatarUrl">Avatar URL</Label>
+          <Label>Avatar URL</Label>
           <Input
             id="avatarUrl"
             value={avatarUrl}

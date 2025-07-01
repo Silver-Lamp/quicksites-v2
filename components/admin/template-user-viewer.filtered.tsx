@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from 'react';
 import { supabase } from '@/admin/lib/supabaseClient';
-import { Button } from '@/components/ui/button';
-import { Template } from '@/types/template';
+import { Button } from '@/components/ui';
+// import { Template } from '@/types/template';
 
 export default function TemplateUserViewer() {
   type Assignment = {

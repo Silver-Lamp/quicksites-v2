@@ -1,8 +1,6 @@
 'use client';
 import { useState, useEffect } from 'react';
-import ThemedBarChart from '@/components/ui/themed-bar-chart';
-import { Modal } from '@/components/ui/modal';
-import { Input, Label } from '@/components/ui/form';
+import { Modal, Input, Label } from '@/components/ui';
 import { Bar } from 'react-chartjs-2';
 import { supabase } from '@/lib/supabase/client';
 

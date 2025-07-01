@@ -1,10 +1,7 @@
 // BlockSidebar.tsx
-import { useState } from 'react';
+// import { useState } from 'react';
 import { X } from 'lucide-react';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { Label } from '@/components/ui/label';
-import { Button } from '@/components/ui/button';
+import { Input, Textarea, Label, Button } from '@/components/ui';
 import {
   Block,
   HeroBlockContent,
@@ -13,7 +10,7 @@ import {
   TextBlockContent,
   CtaBlockContent,
   QuoteBlockContent,
-  BlockSidebarProps,
+  // BlockSidebarProps,
 } from '@/types/blocks';
 
 type Props = {

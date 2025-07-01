@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { createClient } from '@supabase/supabase-js';
-import { Input } from '@/components/ui/input';
+import { Input } from '@/components/ui';
 import {
   Table,
   TableBody,
@@ -8,7 +8,7 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from '@/components/ui/table';
+} from '@/components/ui';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,

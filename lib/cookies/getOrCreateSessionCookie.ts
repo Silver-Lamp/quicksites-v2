@@ -1,3 +1,4 @@
+// lib/cookies/getOrCreateSessionCookie.ts
 'use server';
 
 import { cookies } from 'next/headers';
@@ -8,7 +9,8 @@ import { v4 as uuidv4 } from 'uuid';
  * Does not write the cookie—safe for layout.tsx or any SSR context.
  */
 export async function getOrCreateSessionCookie(): Promise<string> {
-  const store = await cookies(); // ✅ await here
+  // eslint-disable-next-line no-restricted-syntax
+  const store = await cookies();
   const existing = store.get('session-id')?.value;
 
   if (existing) return existing;

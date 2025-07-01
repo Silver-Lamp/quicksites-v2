@@ -1,22 +1,23 @@
 'use client';
 import Head from 'next/head';
-import { json } from '@/lib/api/json';
+// import { json } from '@/lib/api/json';
 
 import { useEffect, useState, useRef } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import { createClient } from '@supabase/supabase-js';
 import { GripVertical } from 'lucide-react';
-import RenderBlock from '@/components/admin/templates/render-block';
-import BlockSidebar from '@/components/admin/templates/block-sidebar';
-import { SortableBlockList } from '@/components/admin/templates/sortable-block-list';
+// import RenderBlock from '@/components/admin/templates/render-block';
+// import BlockSidebar from '@/components/admin/templates/block-sidebar';
+// import { SortableBlockList } from '@/components/admin/templates/sortable-block-list';
 import { DndContext, closestCenter } from '@dnd-kit/core';
 import { SortableContext, arrayMove, verticalListSortingStrategy } from '@dnd-kit/sortable';
-const SiteSettingsPanel = dynamic(() => import('@/components/admin/site-settings-panel'), {
-  ssr: false,
-});
-import ModalWrapper from '@/components/ui/modal-wrapper';
-import type { SiteData } from '@/types/site';
+import React from 'react';
+// const SiteSettingsPanel = dynamic(() => import('@/components/admin/site-settings-panel'), {
+//   ssr: false,
+// });
+// import { ModalWrapper } from '@/components/ui';
+// import type { SiteData } from '@/types/site';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -26,7 +27,7 @@ const supabase = createClient(
 export default function EditPage() {
   const searchParams = useSearchParams();
   const slug = searchParams?.get('slug') as string;
-  const [siteData, setSiteData] = useState<SiteData | null>(null);
+  const [siteData, setSiteData] = useState<any | null>(null);
   const [currentPageIndex, setCurrentPageIndex] = useState(0);
   const [selectedBlockIndex, setSelectedBlockIndex] = useState<number | null>(null);
   const [showBlockPicker, setShowBlockPicker] = useState(false);
@@ -121,191 +122,195 @@ export default function EditPage() {
 
   console.debug('[EditPage] siteData:', JSON.stringify(siteData));
   return (
-    <>
-      <Head>
-        <title>{siteData?.seo_title || siteData?.business_name || 'Editing Site'}</title>
-        <meta
-          name="description"
-          content={siteData?.seo_description || 'Edit this site’s content, SEO, and design.'}
-        />
-        {siteData?.slug && (
-          <link
-            rel="canonical"
-            href={`https://${siteData.custom_domain || `${siteData.slug}.quicksites.ai`}`}
-          />
-        )}
-        {siteData?.twitter_handle && <meta name="twitter:site" content={siteData.twitter_handle} />}
-      </Head>
+    // <>
+    //   <Head>
+    //     <title>{siteData?.seo_title || siteData?.business_name || 'Editing Site'}</title>
+    //     <meta
+    //       name="description"
+    //       content={siteData?.seo_description || 'Edit this site’s content, SEO, and design.'}
+    //     />
+    //     {siteData?.slug && (
+    //       <link
+    //         rel="canonical"
+    //         href={`https://${siteData.custom_domain || `${siteData.slug}.quicksites.ai`}`}
+    //       />
+    //     )}
+    //     {siteData?.twitter_handle && <meta name="twitter:site" content={siteData.twitter_handle} />}
+    //   </Head>
 
-      <div className="text-white p-6 max-w-screen-xl mx-auto relative">
-        <div className="flex justify-between items-center mb-4">
-          <div>
-            <input
-              type="text"
-              value={siteData?.slug || ''}
-              onChange={handleSlugChange}
-              className="text-2xl font-bold bg-transparent border-b border-zinc-600 focus:outline-none px-2 py-1"
-              placeholder="custom-slug"
-            />
-            <span className="ml-2 text-sm text-zinc-400">
-              {siteData?.is_published ? '🌐 Live' : '📝 Draft'}
-            </span>
-          </div>
+    //   <div className="text-white p-6 max-w-screen-xl mx-auto relative">
+    //     <div className="flex justify-between items-center mb-4">
+    //       <div>
+    //         <input
+    //           type="text"
+    //           value={siteData?.slug || ''}
+    //           onChange={handleSlugChange}
+    //           className="text-2xl font-bold bg-transparent border-b border-zinc-600 focus:outline-none px-2 py-1"
+    //           placeholder="custom-slug"
+    //         />
+    //         <span className="ml-2 text-sm text-zinc-400">
+    //           {siteData?.is_published ? '🌐 Live' : '📝 Draft'}
+    //         </span>
+    //       </div>
 
-          <div className="flex items-center gap-4">
-            <label className="flex items-center gap-2 text-sm cursor-pointer">
-              <input
-                type="checkbox"
-                checked={!!siteData?.is_published}
-                onChange={handleTogglePublish}
-                className="accent-blue-500"
-              />
-              Publish
-            </label>
+    //       <div className="flex items-center gap-4">
+    //         <label className="flex items-center gap-2 text-sm cursor-pointer">
+    //           <input
+    //             type="checkbox"
+    //             checked={!!siteData?.is_published}
+    //             onChange={handleTogglePublish}
+    //             className="accent-blue-500"
+    //           />
+    //           Publish
+    //         </label>
 
-            {siteData?.slug && (
-              <a
-                href={`https://${siteData.slug}.quicksites.ai`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-blue-400 text-sm hover:underline"
-              >
-                🔗 View Site
-              </a>
-            )}
+    //         {siteData?.slug && (
+    //           <a
+    //             href={`https://${siteData.slug}.quicksites.ai`}
+    //             target="_blank"
+    //             rel="noopener noreferrer"
+    //             className="text-blue-400 text-sm hover:underline"
+    //           >
+    //             🔗 View Site
+    //           </a>
+    //         )}
 
-            <button
-              onClick={() => setShowSettings(true)}
-              className="text-sm text-blue-400 hover:underline"
-            >
-              🛠 Site Settings
-            </button>
-          </div>
-        </div>
+    //         <button
+    //           onClick={() => setShowSettings(true)}
+    //           className="text-sm text-blue-400 hover:underline"
+    //         >
+    //           🛠 Site Settings
+    //         </button>
+    //       </div>
+    //     </div>
 
-        {saved && (
-          <div className="absolute top-4 right-6 text-green-400 text-sm bg-zinc-800 px-3 py-1 rounded shadow">
-            ✅ Saved
-          </div>
-        )}
+    //     {saved && (
+    //       <div className="absolute top-4 right-6 text-green-400 text-sm bg-zinc-800 px-3 py-1 rounded shadow">
+    //         ✅ Saved
+    //       </div>
+    //     )}
 
-        {isHydrated && showSettings && siteData?._meta?.id && (
-          <ModalWrapper open={showSettings} onClose={() => setShowSettings(false)}>
-            <div className="h-full p-6">
-              <SiteSettingsPanel siteId={siteData._meta.id} />
-            </div>
-          </ModalWrapper>
-        )}
+    //     {isHydrated && showSettings && siteData?._meta?.id && (
+    //       <ModalWrapper open={showSettings} onClose={() => setShowSettings(false)}>
+    //         <div className="h-full p-6">
+    //           <SiteSettingsPanel siteId={siteData._meta.id} />
+    //         </div>
+    //       </ModalWrapper>
+    //     )}
 
-        {!siteData ? (
-          <p>Loading...</p>
-        ) : (
-          <>
-            <div className="flex justify-between mb-4">
-              <label className="text-sm text-zinc-400">Page:</label>
-              <select
-                value={currentPageIndex}
-                onChange={(e) => setCurrentPageIndex(Number(e.target.value))}
-                className="bg-zinc-800 p-2 rounded ml-2"
-              >
-                {siteData.pages.map((p: any, i: number) => (
-                  <option key={p.id} value={i}>
-                    {p.slug || `Page ${i + 1}`}
-                  </option>
-                ))}
-              </select>
-              <button
-                onClick={() => setPreviewMode(!previewMode)}
-                className="text-sm text-blue-400 hover:underline"
-              >
-                {previewMode ? '🔧 Edit Mode' : '👁️ Preview Mode'}
-              </button>
-            </div>
+    //     {!siteData ? (
+    //       <p>Loading...</p>
+    //     ) : (
+    //       <>
+    //         <div className="flex justify-between mb-4">
+    //           <label className="text-sm text-zinc-400">Page:</label>
+    //           <select
+    //             value={currentPageIndex}
+    //             onChange={(e) => setCurrentPageIndex(Number(e.target.value))}
+    //             className="bg-zinc-800 p-2 rounded ml-2"
+    //           >
+    //             {siteData.pages.map((p: any, i: number) => (
+    //               <option key={p.id} value={i}>
+    //                 {p.slug || `Page ${i + 1}`}
+    //               </option>
+    //             ))}
+    //           </select>
+    //           <button
+    //             onClick={() => setPreviewMode(!previewMode)}
+    //             className="text-sm text-blue-400 hover:underline"
+    //           >
+    //             {previewMode ? '🔧 Edit Mode' : '👁️ Preview Mode'}
+    //           </button>
+    //         </div>
 
-            {previewMode ? (
-              <DndContext collisionDetection={closestCenter}>
-                <SortableContext
-                  items={siteData.pages.map((p: any) => p.id)}
-                  strategy={verticalListSortingStrategy}
-                >
-                  <div className="space-y-4">
-                    {siteData.pages.map((page: any, pageIndex: number) => (
-                      <div key={page.id} className="mb-8 bg-zinc-800 rounded p-4 shadow">
-                        <div className="flex items-center gap-2 text-zinc-300 mb-4">
-                          <GripVertical className="w-4 h-4 opacity-60" />
-                          <h2 className="text-lg font-semibold">
-                            📄 {page.slug || `Page ${pageIndex + 1}`}
-                          </h2>
-                        </div>
-                        {page.content_blocks.map((block: any, i: number) => (
-                          <div key={i} className="mb-4">
-                            <RenderBlock block={block} />
-                          </div>
-                        ))}
-                      </div>
-                    ))}
-                  </div>
-                </SortableContext>
-              </DndContext>
-            ) : (
-              <>
-                <SortableBlockList
-                  blocks={blocksWithId}
-                  onChange={(next) => {
-                    const pages = [...siteData.pages];
-                    pages[currentPageIndex].content_blocks = next;
-                    setSiteData({ ...siteData, pages });
-                  }}
-                  /*
-                onDelete={(blockId: string) => {
-                  const pages = [...siteData.pages];
-                  pages[currentPageIndex].content_blocks = pages[currentPageIndex].content_blocks.filter(
-                      (b: { _id: string }) => b._id !== blockId
-                  );
-                  setSiteData({ ...siteData, pages });
-                }}
-                onEdit={(blockId: string) => {
-                  const index = blocksWithId.findIndex((b: { _id: string }) => b._id === blockId);
-                  if (index !== -1) setSelectedBlockIndex(index);
-                }}
-                */
-                />
-                <button
-                  className="mt-4 px-3 py-2 text-sm bg-blue-700 rounded hover:bg-blue-800"
-                  onClick={() => setShowBlockPicker(true)}
-                >
-                  ➕ Add Block
-                </button>
+    //         {previewMode ? (
+    //           <DndContext collisionDetection={closestCenter}>
+    //             <SortableContext
+    //               items={siteData.pages.map((p: any) => p.id)}
+    //               strategy={verticalListSortingStrategy}
+    //             >
+    //               <div className="space-y-4">
+    //                 {siteData.pages.map((page: any, pageIndex: number) => (
+    //                   <div key={page.id} className="mb-8 bg-zinc-800 rounded p-4 shadow">
+    //                     <div className="flex items-center gap-2 text-zinc-300 mb-4">
+    //                       <GripVertical className="w-4 h-4 opacity-60" />
+    //                       <h2 className="text-lg font-semibold">
+    //                         📄 {page.slug || `Page ${pageIndex + 1}`}
+    //                       </h2>
+    //                     </div>
+    //                     {page.content_blocks.map((block: any, i: number) => (
+    //                       <div key={i} className="mb-4">
+    //                         <RenderBlock block={block} />
+    //                       </div>
+    //                     ))}
+    //                   </div>
+    //                 ))}
+    //               </div>
+    //             </SortableContext>
+    //           </DndContext>
+    //         ) : (
+    //           <>
+    //             <SortableBlockList
+    //               blocks={blocksWithId}
+    //               onChange={(next) => {
+    //                 const pages = [...siteData.pages];
+    //                 pages[currentPageIndex].content_blocks = next;
+    //                 setSiteData({ ...siteData, pages });
+    //               }}
+    //               /*
+    //             onDelete={(blockId: string) => {
+    //               const pages = [...siteData.pages];
+    //               pages[currentPageIndex].content_blocks = pages[currentPageIndex].content_blocks.filter(
+    //                   (b: { _id: string }) => b._id !== blockId
+    //               );
+    //               setSiteData({ ...siteData, pages });
+    //             }}
+    //             onEdit={(blockId: string) => {
+    //               const index = blocksWithId.findIndex((b: { _id: string }) => b._id === blockId);
+    //               if (index !== -1) setSelectedBlockIndex(index);
+    //             }}
+    //             */
+    //             />
+    //             <button
+    //               className="mt-4 px-3 py-2 text-sm bg-blue-700 rounded hover:bg-blue-800"
+    //               onClick={() => setShowBlockPicker(true)}
+    //             >
+    //               ➕ Add Block
+    //             </button>
 
-                {showBlockPicker && (
-                  <div className="mt-4 p-4 border border-zinc-700 rounded bg-zinc-800">
-                    <h3 className="text-sm font-semibold mb-2">Choose a block type</h3>
-                    <div className="grid grid-cols-2 gap-3">
-                      {['hero', 'services', 'testimonial', 'text', 'cta', 'quote'].map((type) => (
-                        <button
-                          key={type}
-                          onClick={() => handleAddBlock(type)}
-                          className="text-left p-2 rounded bg-zinc-700 hover:bg-zinc-600"
-                        >
-                          <span className="block font-medium capitalize">{type}</span>
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </>
-            )}
+    //             {showBlockPicker && (
+    //               <div className="mt-4 p-4 border border-zinc-700 rounded bg-zinc-800">
+    //                 <h3 className="text-sm font-semibold mb-2">Choose a block type</h3>
+    //                 <div className="grid grid-cols-2 gap-3">
+    //                   {['hero', 'services', 'testimonial', 'text', 'cta', 'quote'].map((type) => (
+    //                     <button
+    //                       key={type}
+    //                       onClick={() => handleAddBlock(type)}
+    //                       className="text-left p-2 rounded bg-zinc-700 hover:bg-zinc-600"
+    //                     >
+    //                       <span className="block font-medium capitalize">{type}</span>
+    //                     </button>
+    //                   ))}
+    //                 </div>
+    //               </div>
+    //             )}
+    //           </>
+    //         )}
 
-            {selectedBlockIndex !== null && (
-              <BlockSidebar
-                block={siteData.pages[currentPageIndex].content_blocks[selectedBlockIndex]}
-                onChange={(updated) => handleBlockSave(updated)}
-                onClose={() => setSelectedBlockIndex(null)}
-              />
-            )}
-          </>
-        )}
-      </div>
-    </>
+    //         {selectedBlockIndex !== null && (
+    //           <BlockSidebar
+    //             block={siteData.pages[currentPageIndex].content_blocks[selectedBlockIndex]}
+    //             onChange={(updated) => handleBlockSave(updated)}
+    //             onClose={() => setSelectedBlockIndex(null)}
+    //           />
+    //         )}
+    //       </>
+    //     )}
+    //   </div>
+    // </>
+    <div className="text-white p-6 max-w-screen-xl mx-auto relative">
+      <h1 className="text-2xl font-bold">Edit Page</h1>
+      <p>This is the edit page. (Coming soon)</p>
+    </div>
   );
 }

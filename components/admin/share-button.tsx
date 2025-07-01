@@ -1,6 +1,6 @@
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
-import { Button } from '@/components/ui/button';
+import { Button } from '@/components/ui';
 import { toast } from 'react-hot-toast';
 import { useSharedPreview } from '@/hooks/useSharedPreview';
 

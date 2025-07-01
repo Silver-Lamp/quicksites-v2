@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { supabase } from '@/admin/lib/supabaseClient';
-import { Button } from '@/components/ui/button';
+import { Button } from '@/components/ui';
 
 type Template = {
   id: string;

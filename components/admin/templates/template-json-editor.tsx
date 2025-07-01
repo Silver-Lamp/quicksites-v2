@@ -1,6 +1,6 @@
 // ✅ FILE: components/admin/templates/template-json-editor.tsx (fixed quotes)
 import { useState, useEffect } from 'react';
-import { Button } from '@/components/ui/button';
+import { Button } from '@/components/ui';
 import { ChevronRight, ChevronDown } from 'lucide-react';
 import type { JsonValue } from '@/types/json';
 

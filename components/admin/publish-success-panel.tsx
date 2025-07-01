@@ -1,4 +1,4 @@
-import { Button } from '@/components/ui/button';
+import { Button } from '@/components/ui';
 import QRCode from 'react-qr-code';
 import QRCodeLib from 'qrcode';
 

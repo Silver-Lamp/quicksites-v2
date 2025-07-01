@@ -142,5 +142,5 @@ export default function StartCampaign() {
 }
 
 StartCampaign.getLayout = function getLayout(page: React.ReactNode) {
-  return <AdminLayout>{page}</AdminLayout>;
+  return <>{page}</>;
 };

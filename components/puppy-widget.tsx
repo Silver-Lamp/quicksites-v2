@@ -93,12 +93,12 @@ export default function PuppyWidget() {
                 <li key={i}>{f.replace(/^.+? /, '')}</li>
               ))}
             </ul>
-            <Link
-              // href="/login"
+            {/* <Link
+              href="/login"
               className="block text-center mt-2 px-4 py-2 rounded bg-indigo-600 hover:bg-indigo-700 text-white font-medium text-sm transition"
             >
               Log In to Explore (Coming Soon)
-            </Link>
+            </Link> */}
           </motion.div>
         )}
       </AnimatePresence>

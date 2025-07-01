@@ -9,10 +9,10 @@ import {
   SelectValue,
   SelectContent,
   SelectItem,
-  Card,
   Button,
-  Input,
 } from '@/components/ui';
+import { Card } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
 import { parseISO, isAfter, isBefore } from 'date-fns';
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Legend } from 'recharts';
 import { useRouter } from 'next/navigation';

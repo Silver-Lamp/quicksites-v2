@@ -4,14 +4,12 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { createClient } from '@supabase/supabase-js';
-import { formatDistanceToNow, isAfter, isBefore, parseISO, subDays } from 'date-fns';
-import { Button, Card, CardContent } from '@/components/ui';
-import { CalendarIcon, DownloadIcon, FilterIcon, TagIcon } from 'lucide-react';
-import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip } from 'recharts';
+import { isAfter, isBefore, parseISO, subDays } from 'date-fns';
+import { Button } from '@/components/ui';
+import { CalendarIcon, DownloadIcon } from 'lucide-react';
 import { DateRange } from 'react-day-picker';
 import { Calendar } from '@/components/ui';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui';
-import { cn } from '@/lib/utils';
 
 interface UpgradeEvent {
   id: string;

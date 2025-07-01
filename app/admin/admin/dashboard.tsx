@@ -3,7 +3,7 @@ import Head from 'next/head';
 // import { json } from '@/lib/api/json';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 // import SeedButton from '@/components/admin/admin/seed-button';
-import { Card, CardContent, CardHeader } from '@/components/ui';
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { useEffect, useState } from 'react';
 import { supabase } from '@/admin/lib/supabaseClient';
 

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { createClient } from '@supabase/supabase-js';
-import { Input } from '@/components/ui';
+import { Input } from '@/components/ui/input';
 import {
   Table,
   TableBody,

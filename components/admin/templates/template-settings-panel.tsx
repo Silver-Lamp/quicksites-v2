@@ -1,6 +1,7 @@
 // TemplateSettingsPanel.tsx
 import { useEffect, useState } from 'react';
-import { Label, Input } from '@/components/ui';
+import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
 import { supabase } from '@/admin/lib/supabaseClient';
 import type { Template } from '@/types/template';
 

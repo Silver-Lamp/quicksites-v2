@@ -2,7 +2,9 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase/client';
 
-import { Modal, Input, Label } from '@/components/ui';
+import { Modal } from '@/components/ui/modal';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Bar } from 'react-chartjs-2';
 
 export default function AnalyticsPage() {

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { supabase } from '@/admin/lib/supabaseClient';
-import { Label } from '@/components/ui';
+import { Label } from '@/components/ui/label';
 
 interface TemplateEditorBrandingProps {
   selectedProfileId: string | null;

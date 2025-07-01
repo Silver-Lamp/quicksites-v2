@@ -2,7 +2,10 @@
 
 import { Fragment } from 'react';
 import { z, ZodObject, ZodFirstPartyTypeKind } from 'zod';
-import { Input, Label, FieldLabel, Switch, Select, SelectTrigger, SelectContent, SelectItem } from '@/components/ui';
+import { Input } from '@/components/ui/input';
+import { FieldLabel } from '@/components/ui';
+import { Switch } from '@/components/ui/switch';
+import { Select, SelectTrigger, SelectContent, SelectItem } from '@/components/ui/select';
 import useTypedQueryParam from '@/hooks/useTypedQueryParam';
 
 function FieldRenderer({

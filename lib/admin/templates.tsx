@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import { createClient } from '@supabase/supabase-js';
-import { Input, SafeLink, Button } from '@/components/ui';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import SafeLink from '@/components/ui/safe-link';
 import TagFilterDropdown from '@/components/admin/templates/tag-filter-dropdown';
 import {
   Table,

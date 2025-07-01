@@ -1,6 +1,8 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { Modal, Input, Label } from '@/components/ui';
+import { Modal } from '@/components/ui/modal';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Bar } from 'react-chartjs-2';
 import { supabase } from '@/lib/supabase/client';
 

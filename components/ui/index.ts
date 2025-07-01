@@ -1,20 +1,17 @@
-// Clear, non-conflicting exports
-
 export * from './alert';
 export * from './avatar-with-tooltip';
 export * from './badge';
-export * from './breadcrumbs';
+// export * from './breadcrumbs';        // ❌ check if file exists
 export * from './button';
 export * from './calendar';
-export * from './card';
-export * from './celebration-modal';
+// export * from './card';              // ❌ check if it's Card.tsx?
+// export * from './loader';            // ❌ check file exists
+// export * from './modal';             // ❌ check file or folder conflict
 export * from './checkbox';
 export * from './command-palette';
 export * from './dialog';
-export * from './loader';
 export * from './loading-redirect';
 export * from './modal-wrapper';
-export * from './modal';
 export * from './nav-badge';
 export * from './popover';
 export { default as SafeLink } from './safe-link';
@@ -31,9 +28,6 @@ export * from './theme-toggle';
 export { default as ThemedBarChart } from './themed-bar-chart';
 export * from './tooltip';
 
-// Resolve naming conflict by aliasing one Input
-// export * from './form'; // if this exports { Input }
-export { Input as InputField } from './input'; // re-export under different name
-export { Label as FieldLabel } from './label'; // ✅ if you're avoiding naming conflicts
-export { Input, Label } from './form'; // ✅ if you're avoiding naming conflicts
-export { default as Form } from './form'; // ✅ if you're avoiding naming conflicts
+// 🔀 Conflict-resolved, safe exports
+export { Input as InputField } from './input';
+export { Label as FieldLabel } from './label';

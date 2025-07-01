@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/admin/lib/supabaseClient';
 import dayjs from 'dayjs';
-import AdminLayout from '@/components/layout/admin-layout';
+// import AdminLayout from '@/components/layout/deprecated- admin-layout';
 
 type Campaign = {
   id: string;

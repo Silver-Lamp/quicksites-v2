@@ -1,7 +1,7 @@
 'use client';
 import { useState } from 'react';
 import { useSearchParams } from 'next/navigation';
-import AdminLayout from '@/components/layout/admin-layout';
+// import AdminLayout from '@/components/layout/deprecated- admin-layout';
 import { useCampaignForm } from '@/hooks/useCampaignForm';
 
 export default function StartCampaign() {

@@ -52,7 +52,7 @@ export default function AdminDashboard() {
         <title>Admin Dashboard</title>
       </Head>
 
-      <div className="max-w-5xl mx-auto p-6 space-y-6">
+      <div className="p-6 space-y-6">
         <h1 className="text-2xl font-bold mb-4">🛠 Admin Tools</h1>
 
         {hasRole(['admin', 'owner']) && (

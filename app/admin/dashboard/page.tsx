@@ -1,3 +1,4 @@
+// app/admin/dashboard/page.tsx
 'use client';
 
 import { useEffect, useState } from 'react';
@@ -5,7 +6,6 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { useCanonicalRole } from '@/hooks/useCanonicalRole';
-import Page from '@/components/layout/page';
 import AdminTabs from '@/components/admin/admin-tabs';
 import { DashboardSelector } from '@/components/admin/dashboard-selector';
 import { useDashboardLayout } from '@/hooks/useDashboardLayout';
@@ -171,7 +171,5 @@ function Dashboard() {
     </>
   );
 }
-
-Dashboard.getLayout = (page: React.ReactNode) => <Page>{page}</Page>;
 
 export default Dashboard;

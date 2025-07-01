@@ -5,16 +5,17 @@ export const preferredRegion = 'iad1';
 
 import '@/styles/globals.css';
 
-import AdminLayout from '@/components/layouts/admin-layout';
-import ViewerLayout from '@/components/layouts/viewer-layout';
+// import AdminLayout from '@/components/layouts/admin-layout';
+// import ViewerLayout from '@/components/layouts/viewer-layout';
 import AppHeader from '@/components/admin/AppHeader/app-header';
-import UnauthenticatedLayout from '@/components/layouts/unauthenticated-layout';
+// import UnauthenticatedLayout from '@/components/layouts/unauthenticated-layout';
 import { SessionProvider } from '@/lib/providers/SessionProvider';
 import { getRequestContext } from '@/lib/request/getRequestContext';
 import { Toaster } from 'react-hot-toast';
 import DevToolsWidget from '@/components/dev-tools-widget';
-import TraceViewer from '@/components/dev/trace-viewer';
-import { getLayoutForRole } from '@/lib/roles/layoutForRole';
+// import TraceViewer from '@/components/dev/trace-viewer';
+// import { getLayoutForRole } from '@/lib/roles/layoutForRole';
+// import { AdminNavSections } from '@/components/admin/AppHeader/AdminNavSections';
 
 export const metadata = {
   metadataBase: new URL('https://quicksites.ai'),
@@ -50,7 +51,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     traceId,
   } = await getRequestContext();
 
-  const Layout = getLayoutForRole(role);
+  // const Layout = getLayoutForRole(role);
 
   return (
     <html lang="en" className="dark" suppressHydrationWarning>
@@ -70,16 +71,17 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       >
         <Toaster position="top-center" />
         <SessionProvider>
-          {userId ? (
-            <>
-              <AppHeader />
-              <Layout>{children}</Layout>
-            </>
+          {/* {userId ? (
+            <> */}
+              {/* <Layout> */}
+                {children}
+                {/* </Layout> */}
+            {/* </>
           ) : (
             <UnauthenticatedLayout>{children}</UnauthenticatedLayout>
-          )}
+          )} */}
           <DevToolsWidget />
-          <TraceViewer />
+          {/* <TraceViewer /> */}
         </SessionProvider>
       </body>
     </html>

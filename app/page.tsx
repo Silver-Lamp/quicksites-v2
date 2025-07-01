@@ -11,6 +11,8 @@ import QuickSitesWidget from '@/components/quick-sites-widget';
 import event from '@vercel/analytics';
 import { useSafeAuth } from '../hooks/useSafeAuth';
 
+const isProd = process.env.NODE_ENV === 'production';
+
 const defaultGlowConfig = {
   size: 'xl',
   intensity: 0.2,
@@ -97,16 +99,20 @@ export default function HomePage() {
             >
               Go to Dashboard
             </motion.a>
+          ) : isProd ? (
+            <div className="mt-4 px-6 py-3 bg-zinc-700 text-white text-base font-medium rounded-lg shadow-lg opacity-70 cursor-not-allowed">
+              Log In (Coming Soon)
+            </div>
           ) : (
             <motion.a
               href="/login"
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.97 }}
-              className="inline-block mt-4 px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white text-base font-medium rounded-lg shadow-lg transition-all"
-            >
-              Log In to Get Started
-            </motion.a>
-          )}
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.97 }}
+                className="inline-block mt-4 px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white text-base font-medium rounded-lg shadow-lg transition-all"
+              >
+                Log In to Get Started
+              </motion.a>
+            )}                      
         </div>
       </main>
 

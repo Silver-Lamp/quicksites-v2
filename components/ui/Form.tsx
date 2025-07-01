@@ -1,3 +1,4 @@
+import React from 'react';
 export function Input(props: React.InputHTMLAttributes<HTMLInputElement>) {
   return (
     <input
@@ -10,3 +11,4 @@ export function Input(props: React.InputHTMLAttributes<HTMLInputElement>) {
 export function Label({ children }: { children: React.ReactNode }) {
   return <label className="block text-sm font-medium text-text mb-1">{children}</label>;
 }
+export { Form as default } from 'react-hook-form';

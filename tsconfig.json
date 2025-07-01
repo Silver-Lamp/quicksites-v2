@@ -9,7 +9,8 @@
     "types",
     "admin",                    // ← Add this line
     ".next/types/**/*.ts",
-    "lib/admin"
+    "lib/admin",
+    "_pages-legacy"
   ],
   "exclude": [
     "node_modules",

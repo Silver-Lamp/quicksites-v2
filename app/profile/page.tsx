@@ -1,7 +1,7 @@
 // app/profile/page.tsx
 'use client';
 
-import ProfileForm from '../../components/profile-form';
+import ProfileForm from '@/components/profile-form';
 
 export default function ProfilePage() {
   return (

@@ -94,10 +94,10 @@ export default function PuppyWidget() {
               ))}
             </ul>
             <Link
-              href="/login"
+              // href="/login"
               className="block text-center mt-2 px-4 py-2 rounded bg-indigo-600 hover:bg-indigo-700 text-white font-medium text-sm transition"
             >
-              Log In to Explore
+              Log In to Explore (Coming Soon)
             </Link>
           </motion.div>
         )}

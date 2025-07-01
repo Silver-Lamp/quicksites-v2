@@ -10,12 +10,12 @@ import {
   SelectContent,
   SelectItem,
 } from '@/components/ui/select';
-import { Card } from '@/components/ui/card';
+// import { Card } from '@/components/ui/card';
 import { parseISO, isAfter, isBefore } from 'date-fns';
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Legend } from 'recharts';
 import { Input } from '@/components/ui/input';
 import { useRouter } from 'next/navigation';
-import { Button } from '@/components/ui/button';
+// import { Button } from '@/components/ui/button';
 
 interface UpgradeEvent {
   id: string;
@@ -134,12 +134,13 @@ export function CampaignComparison({ events, logs, dateRange }: Props) {
   };
 
   return (
-    <Card className="p-4 space-y-6">
+    // <Card className="p-4 space-y-6">
+    <>
       <div className="flex justify-between items-center">
         <h2 className="text-lg font-semibold">Compare Campaigns</h2>
-        <Button onClick={handleShare} variant="outline" size="sm">
+        {/* <Button onClick={handleShare} variant="outline" size="sm">
           Share View
-        </Button>
+        </Button> */}
       </div>
 
       <div className="flex gap-4">
@@ -223,6 +224,7 @@ export function CampaignComparison({ events, logs, dateRange }: Props) {
           </BarChart>
         </ResponsiveContainer>
       )}
-    </Card>
+    </>
+    // {/* </Card> */}
   );
 }

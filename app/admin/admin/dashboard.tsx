@@ -52,10 +52,10 @@ export default function AdminDashboard() {
         <title>Admin Dashboard</title>
       </Head>
 
-      <div className="p-6 space-y-6">
-        <h1 className="text-2xl font-bold mb-4">🛠 Admin Tools</h1>
+      <div className="max-w-5xl mx-auto p-6 space-y-6">
+        <h1 className="text-2xl font-bold mb-4">🛠 Admin Tools... Coming Soon</h1>
 
-        {hasRole(['admin', 'owner']) && (
+        {/* {hasRole(['admin', 'owner']) && (
           <Card>
             <CardHeader className="text-lg font-semibold">Seed Tools</CardHeader>
             <CardContent>
@@ -214,7 +214,7 @@ export default function AdminDashboard() {
               </CardContent>
             </Card>
           </div>
-        )}
+        )} */}
       </div>
     </>
   );

@@ -1,8 +1,8 @@
 'use client';
 
 import clsx from 'clsx';
-import { useEffect, useState } from 'react';
-import { useMediaQuery } from '../hooks/useMediaQuery';
+// import { useEffect, useState } from 'react';
+// import { useMediaQuery } from '../hooks/useMediaQuery';
 
 type BackgroundGlowProps = {
   size?: 'sm' | 'md' | 'lg' | 'xl';
@@ -24,15 +24,15 @@ export default function BackgroundGlow({
   colors = ['from-purple-600', 'via-blue-500', 'to-pink-500'],
   className = '',
 }: BackgroundGlowProps) {
-  const isLargeScreen = useMediaQuery('(min-width: 768px)');
-  const [prefersReducedMotion, setReducedMotion] = useState(false);
+  // const isLargeScreen = useMediaQuery('(min-width: 768px)');
+  // const [prefersReducedMotion, setReducedMotion] = useState(false);
 
-  useEffect(() => {
-    const media = window.matchMedia('(prefers-reduced-motion: reduce)');
-    setReducedMotion(media.matches);
-  }, []);
+  // useEffect(() => {
+  //   const media = window.matchMedia('(prefers-reduced-motion: reduce)');
+  //   setReducedMotion(media.matches);
+  // }, []);
 
-  if (!isLargeScreen || prefersReducedMotion) return null;
+  // if (!isLargeScreen || prefersReducedMotion) return null;
 
   const gradientClass = `bg-gradient-to-tr ${colors.join(' ')}`;
   const opacity = Math.min(Math.max(intensity, 0), 1);

@@ -10,6 +10,8 @@ import { useState, useEffect } from 'react';
 import QuickSitesWidget from '@/components/quick-sites-widget';
 import event from '@vercel/analytics';
 import { useSafeAuth } from '../hooks/useSafeAuth';
+import { SiteFlags } from '@/lib/site-config';
+import useMediaQuery from '@/hooks/useMediaQuery';
 
 const isProd = process.env.NODE_ENV === 'production';
 
@@ -30,6 +32,9 @@ const features = [
 export default function HomePage() {
   const [currentFeatureIndex, setCurrentFeatureIndex] = useState(0);
   const { user, role, isLoggedIn } = useSafeAuth();
+  const isMobile = useMediaQuery('(max-width: 768px)');
+  const showWidget = SiteFlags.showMobileWidget || !isMobile;
+  const showGlow = SiteFlags.showMobileGradients || !isMobile;
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -60,8 +65,12 @@ export default function HomePage() {
         <title>QuickSites | One Click Websites</title>
         <meta name="description" content="Launch your local business site in seconds with AI." />
       </Head>
-      <BackgroundGlow />
-      <GlowConfigurator defaultGlowConfig={defaultGlowConfig as GlowConfig} />
+      {showGlow && (
+        <>
+          <BackgroundGlow />
+          <GlowConfigurator defaultGlowConfig={defaultGlowConfig as GlowConfig} />
+        </>
+      )}
 
       {/* Main Content */}
       <main className="relative z-10 flex-1 flex flex-col items-center justify-center px-6 py-12 text-center">
@@ -119,7 +128,9 @@ export default function HomePage() {
       {/* Sticky Footer */}
       <footer className="relative z-10 text-center text-xs text-zinc-600 py-4">
         &copy; {new Date().getFullYear()} QuickSites.ai — All rights reserved.
+        {/* {showWidget && <QuickSitesWidget forceVariant="puppy" />} */}
         <QuickSitesWidget forceVariant="puppy" />
+        hi there
       </footer>
     </div>
   );

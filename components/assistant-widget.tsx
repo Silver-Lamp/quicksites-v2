@@ -2,6 +2,8 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { Bot, Loader, X, Trash2 } from 'lucide-react';
+import { SiteFlags } from '@/lib/site-config';
+import clsx from 'clsx';
 
 type Message = {
   role: 'user' | 'assistant';
@@ -73,7 +75,14 @@ export default function AssistantWidget() {
   };
 
   return (
-    <div className="fixed bottom-4 right-4 z-50 hidden md:block">
+    <div
+      className={clsx(
+        'fixed bottom-4 right-4 z-50 group',
+        SiteFlags.showMobileWidget ? 'block' : 'hidden',
+        'md:block'
+      )}
+    >      
+
       <button
         onClick={() => setIsOpen((o) => !o)}
         className="w-14 h-14 rounded-full bg-indigo-600 hover:bg-indigo-700 flex items-center justify-center text-white shadow-lg"

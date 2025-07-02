@@ -17,6 +17,8 @@ import DevToolsWidget from '@/components/dev-tools-widget';
 // import { getLayoutForRole } from '@/lib/roles/layoutForRole';
 // import { AdminNavSections } from '@/components/admin/AppHeader/AdminNavSections';
 
+const isProd = process.env.NODE_ENV === 'production';
+
 export const metadata = {
   metadataBase: new URL('https://quicksites.ai'),
   title: 'QuickSites | One-Click Local Websites',
@@ -80,7 +82,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           ) : (
             <UnauthenticatedLayout>{children}</UnauthenticatedLayout>
           )} */}
-          <DevToolsWidget />
+          {!isProd && <DevToolsWidget />}
           {/* <TraceViewer /> */}
         </SessionProvider>
       </body>

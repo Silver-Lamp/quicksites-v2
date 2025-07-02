@@ -3,6 +3,8 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Link from 'next/link';
+import clsx from 'clsx';
+import { SiteFlags } from '@/lib/site-config';
 
 const features = [
   '🚀 AI-generated websites in seconds',
@@ -42,8 +44,14 @@ export default function PuppyWidget() {
   }, [isExpanded]);
 
   return (
-    <div className="fixed bottom-4 right-4 z-50 group hidden md:block">
-      {/* Floating Circular Puppy */}
+    <div
+      className={clsx(
+        'fixed bottom-4 right-4 z-50 group',
+        SiteFlags.showMobileWidget ? 'block' : 'hidden',
+        'md:block'
+      )}
+    >      
+    {/* Floating Circular Puppy */}
       <div
         onClick={() => setIsExpanded((prev) => !prev)}
         className="cursor-pointer w-24 h-24 rounded-full overflow-hidden border-2 border-white shadow-lg transition-all hover:scale-105"

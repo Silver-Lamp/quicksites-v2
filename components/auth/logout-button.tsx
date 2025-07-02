@@ -1,38 +1,39 @@
 'use client';
 
-import { useLoginStatus } from '@/hooks/useLoginStatus';
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
-import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { supabase } from '@/lib/supabase/client';
 
 export default function LogoutButton() {
-  const { user } = useLoginStatus();
-  const supabase = createClientComponentClient();
-  const router = useRouter();
-  const [loading, setLoading] = useState(false);
-
   const handleLogout = async () => {
-    setLoading(true);
-    await supabase.auth.signOut();
-    router.push('/login');
-    setTimeout(() => window.location.reload(), 500);
+    try {
+      // 🚪 Global logout: invalidates server-side refresh token
+      await supabase.auth.signOut({ scope: 'global' });
+
+      // 🧹 Clear local auth cookies (incl. PKCE code-verifier)
+      const projectRef = process.env.NEXT_PUBLIC_SUPABASE_URL?.split('https://')[1]?.split('.')[0];
+
+      const cookiesToClear = [
+        `sb-${projectRef}-auth-token`,
+        `sb-${projectRef}-auth-token-code-verifier`,
+      ];
+
+      cookiesToClear.forEach((cookieName) => {
+        document.cookie = `${cookieName}=; Max-Age=0; path=/;`;
+        console.log(`[🧼 Cleared cookie: ${cookieName}]`);
+      });
+
+      // Optional: clear dev-only login error
+      localStorage.removeItem('lastLoginError');
+    } catch (err) {
+      console.error('[❌ Logout Failed]', err);
+    }
+
+    // 🔁 Redirect to login or homepage
+    window.location.href = '/login';
   };
 
-  useEffect(() => {
-    if (user) {
-      console.log('[👤 Logged in as]', user.email);
-    }
-  }, [user]);
-
-  if (!user) return null;
-
   return (
-    <button
-      onClick={handleLogout}
-      disabled={loading}
-      className="text-red-500 underline text-xs mt-2"
-    >
-      {loading ? 'Logging out...' : 'Log out'}
+    <button onClick={handleLogout} className="text-sm text-red-400 underline mt-4">
+      Log out
     </button>
   );
 }

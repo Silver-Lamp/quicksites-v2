@@ -1,3 +1,4 @@
+// components/quick-sites-widget.tsx
 'use client';
 
 import { useEffect, useState } from 'react';

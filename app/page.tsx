@@ -130,7 +130,6 @@ export default function HomePage() {
         &copy; {new Date().getFullYear()} QuickSites.ai — All rights reserved.
         {/* {showWidget && <QuickSitesWidget forceVariant="puppy" />} */}
         <QuickSitesWidget forceVariant="puppy" />
-        hi there
       </footer>
     </div>
   );

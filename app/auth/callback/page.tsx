@@ -8,13 +8,19 @@ export default function AuthCallback() {
 
   useEffect(() => {
     const run = async () => {
-      const { error } = await supabase.auth.exchangeCodeForSession(window.location.href);
+      const hash = window.location.hash; // includes `#access_token=...`
+      const url = `${window.location.origin}/auth/callback${hash}`;
+
+      const { error } = await supabase.auth.exchangeCodeForSession(url);
+
       if (error) {
         console.error('[❌ Exchange Failed]', error);
+        router.push('/login?error=exchange_failed');
       } else {
-        router.push('/'); // or your desired redirect
+        router.push('/');
       }
     };
+
     run();
   }, []);
 

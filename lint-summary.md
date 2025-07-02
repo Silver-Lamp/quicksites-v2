@@ -1,5 +1,5 @@
 # ESLint Report
-Found **282** files with issues.
+Found **285** files with issues.
 
 ## 📁 `_pages-legacy/`
 ### 🔹 `/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/_pages-legacy/edit/[slug].tsx`
@@ -289,24 +289,6 @@ Found **282** files with issues.
   - [warning] Line 3:10 – 'json' is defined but never used. (@typescript-eslint/no-unused-vars)
 
 ## 📁 `admin/`
-### 🔹 `/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/admin/guest-tokens/page.tsx`
-- **14 issues**: 0 error(s), 14 warning(s)
-
-  - [warning] Line 7:10 – 'formatDistanceToNow' is defined but never used. (@typescript-eslint/no-unused-vars)
-  - [warning] Line 8:18 – 'Card' is defined but never used. (@typescript-eslint/no-unused-vars)
-  - [warning] Line 8:24 – 'CardContent' is defined but never used. (@typescript-eslint/no-unused-vars)
-  - [warning] Line 9:38 – 'FilterIcon' is defined but never used. (@typescript-eslint/no-unused-vars)
-  - [warning] Line 9:50 – 'TagIcon' is defined but never used. (@typescript-eslint/no-unused-vars)
-  - [warning] Line 10:10 – 'ResponsiveContainer' is defined but never used. (@typescript-eslint/no-unused-vars)
-  - [warning] Line 10:31 – 'BarChart' is defined but never used. (@typescript-eslint/no-unused-vars)
-  - [warning] Line 10:41 – 'Bar' is defined but never used. (@typescript-eslint/no-unused-vars)
-  - [warning] Line 10:46 – 'XAxis' is defined but never used. (@typescript-eslint/no-unused-vars)
-  - [warning] Line 10:53 – 'YAxis' is defined but never used. (@typescript-eslint/no-unused-vars)
-  - [warning] Line 10:60 – 'Tooltip' is defined but never used. (@typescript-eslint/no-unused-vars)
-  - [warning] Line 14:10 – 'cn' is defined but never used. (@typescript-eslint/no-unused-vars)
-  - [warning] Line 29:25 – 'setContextFilter' is assigned a value but never used. (@typescript-eslint/no-unused-vars)
-  - [warning] Line 62:6 – React Hook useEffect has a missing dependency: 'supabase'. Either include it or remove the dependency array. (react-hooks/exhaustive-deps)
-
 ### 🔹 `/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/admin/__tests__/TemplateFields.test.tsx`
 - **5 issues**: 0 error(s), 5 warning(s)
 
@@ -354,9 +336,9 @@ Found **282** files with issues.
 ### 🔹 `/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/admin/guest-tokens/CampaignFunnelTable.tsx`
 - **3 issues**: 0 error(s), 3 warning(s)
 
-  - [warning] Line 75:19 – 'campaign' is assigned a value but never used. (@typescript-eslint/no-unused-vars)
-  - [warning] Line 104:6 – React Hook useMemo has a missing dependency: 'isInRange'. Either include it or remove the dependency array. (react-hooks/exhaustive-deps)
-  - [warning] Line 119:6 – React Hook useMemo has a missing dependency: 'isInRange'. Either include it or remove the dependency array. (react-hooks/exhaustive-deps)
+  - [warning] Line 76:19 – 'campaign' is assigned a value but never used. (@typescript-eslint/no-unused-vars)
+  - [warning] Line 105:6 – React Hook useMemo has a missing dependency: 'isInRange'. Either include it or remove the dependency array. (react-hooks/exhaustive-deps)
+  - [warning] Line 120:6 – React Hook useMemo has a missing dependency: 'isInRange'. Either include it or remove the dependency array. (react-hooks/exhaustive-deps)
 
 ### 🔹 `/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/admin/lib/withAuth.tsx`
 - **3 issues**: 0 error(s), 3 warning(s)
@@ -364,6 +346,12 @@ Found **282** files with issues.
   - [warning] Line 6:9 – 'displayName' is assigned a value but never used. (@typescript-eslint/no-unused-vars)
   - [warning] Line 7:9 – 'ProtectedComponent' is assigned a value but never used. (@typescript-eslint/no-unused-vars)
   - [warning] Line 15:8 – React Hook useEffect has a missing dependency: 'router'. Either include it or remove the dependency array. (react-hooks/exhaustive-deps)
+
+### 🔹 `/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/admin/guest-tokens/page.tsx`
+- **2 issues**: 0 error(s), 2 warning(s)
+
+  - [warning] Line 27:25 – 'setContextFilter' is assigned a value but never used. (@typescript-eslint/no-unused-vars)
+  - [warning] Line 60:6 – React Hook useEffect has a missing dependency: 'supabase'. Either include it or remove the dependency array. (react-hooks/exhaustive-deps)
 
 ### 🔹 `/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/admin/api/compare-slugs/route.ts`
 - **1 issues**: 0 error(s), 1 warning(s)
@@ -456,20 +444,21 @@ Found **282** files with issues.
   - [warning] Line 107:9 – 'saveReviewedLead' is assigned a value but never used. (@typescript-eslint/no-unused-vars)
 
 ### 🔹 `/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/app/page.tsx`
-- **12 issues**: 0 error(s), 12 warning(s)
+- **13 issues**: 0 error(s), 13 warning(s)
 
-  - [warning] Line 23:3 – Replace `"🚀·AI-generated·websites·in·seconds"` with `'🚀·AI-generated·websites·in·seconds'` (prettier/prettier)
-  - [warning] Line 24:3 – Replace `"🧠·Built-in·SEO·optimization"` with `'🧠·Built-in·SEO·optimization'` (prettier/prettier)
-  - [warning] Line 25:3 – Replace `"📱·Mobile-ready,·always"` with `'📱·Mobile-ready,·always'` (prettier/prettier)
-  - [warning] Line 26:3 – Replace `"🎨·Fully·customizable·designs"` with `'🎨·Fully·customizable·designs'` (prettier/prettier)
-  - [warning] Line 27:3 – Replace `"🔒·Secure·&·privacy-respecting"` with `'🔒·Secure·&·privacy-respecting'` (prettier/prettier)
-  - [warning] Line 109:15 – Delete `··` (prettier/prettier)
-  - [warning] Line 110:15 – Delete `··` (prettier/prettier)
-  - [warning] Line 111:1 – Delete `··` (prettier/prettier)
-  - [warning] Line 112:13 – Delete `··` (prettier/prettier)
-  - [warning] Line 113:1 – Delete `··` (prettier/prettier)
-  - [warning] Line 114:13 – Delete `··` (prettier/prettier)
-  - [warning] Line 115:11 – Replace `··)}······················` with `)}` (prettier/prettier)
+  - [warning] Line 25:3 – Replace `"🚀·AI-generated·websites·in·seconds"` with `'🚀·AI-generated·websites·in·seconds'` (prettier/prettier)
+  - [warning] Line 26:3 – Replace `"🧠·Built-in·SEO·optimization"` with `'🧠·Built-in·SEO·optimization'` (prettier/prettier)
+  - [warning] Line 27:3 – Replace `"📱·Mobile-ready,·always"` with `'📱·Mobile-ready,·always'` (prettier/prettier)
+  - [warning] Line 28:3 – Replace `"🎨·Fully·customizable·designs"` with `'🎨·Fully·customizable·designs'` (prettier/prettier)
+  - [warning] Line 29:3 – Replace `"🔒·Secure·&·privacy-respecting"` with `'🔒·Secure·&·privacy-respecting'` (prettier/prettier)
+  - [warning] Line 36:9 – 'showWidget' is assigned a value but never used. (@typescript-eslint/no-unused-vars)
+  - [warning] Line 118:15 – Delete `··` (prettier/prettier)
+  - [warning] Line 119:15 – Delete `··` (prettier/prettier)
+  - [warning] Line 120:1 – Delete `··` (prettier/prettier)
+  - [warning] Line 121:13 – Delete `··` (prettier/prettier)
+  - [warning] Line 122:1 – Delete `··` (prettier/prettier)
+  - [warning] Line 123:13 – Delete `··` (prettier/prettier)
+  - [warning] Line 124:11 – Replace `··)}······················` with `)}` (prettier/prettier)
 
 ### 🔹 `/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/app/admin/campaigns.tsx`
 - **7 issues**: 0 error(s), 7 warning(s)
@@ -551,10 +540,19 @@ Found **282** files with issues.
 - **5 issues**: 0 error(s), 5 warning(s)
 
   - [warning] Line 10:8 – 'AppHeader' is defined but never used. (@typescript-eslint/no-unused-vars)
-  - [warning] Line 76:11 – Delete `····` (prettier/prettier)
-  - [warning] Line 77:1 – Replace `················` with `··········` (prettier/prettier)
-  - [warning] Line 78:1 – Delete `······` (prettier/prettier)
-  - [warning] Line 79:1 – Delete `··` (prettier/prettier)
+  - [warning] Line 78:11 – Delete `····` (prettier/prettier)
+  - [warning] Line 79:1 – Replace `················` with `··········` (prettier/prettier)
+  - [warning] Line 80:1 – Delete `······` (prettier/prettier)
+  - [warning] Line 81:1 – Delete `··` (prettier/prettier)
+
+### 🔹 `/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/app/login/LoginForm.tsx`
+- **5 issues**: 0 error(s), 5 warning(s)
+
+  - [warning] Line 35:78 – Insert `,` (prettier/prettier)
+  - [warning] Line 81:13 – Insert `··` (prettier/prettier)
+  - [warning] Line 82:1 – Insert `··` (prettier/prettier)
+  - [warning] Line 90:17 – Insert `··` (prettier/prettier)
+  - [warning] Line 91:1 – Insert `··` (prettier/prettier)
 
 ### 🔹 `/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/app/_sites/[slug]/page.tsx`
 - **4 issues**: 0 error(s), 4 warning(s)
@@ -626,12 +624,6 @@ Found **282** files with issues.
   - [warning] Line 1:10 – 'useRouter' is defined but never used. (@typescript-eslint/no-unused-vars)
   - [warning] Line 61:11 – Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element (@next/next/no-img-element)
 
-### 🔹 `/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/app/admin/admin/templates.tsx`
-- **2 issues**: 0 error(s), 2 warning(s)
-
-  - [warning] Line 2:10 – 'useRouter' is defined but never used. (@typescript-eslint/no-unused-vars)
-  - [warning] Line 6:9 – Replace `⏎··Select,⏎··SelectTrigger,⏎··SelectContent,⏎··SelectItem,⏎··SelectValue,⏎` with `·Select,·SelectTrigger,·SelectContent,·SelectItem,·SelectValue·` (prettier/prettier)
-
 ### 🔹 `/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/app/admin/admin/templates/[name]/activity.tsx`
 - **2 issues**: 0 error(s), 2 warning(s)
 
@@ -642,7 +634,7 @@ Found **282** files with issues.
 - **2 issues**: 0 error(s), 2 warning(s)
 
   - [warning] Line 1:10 – 'GetServerSideProps' is defined but never used. (@typescript-eslint/no-unused-vars)
-  - [warning] Line 7:7 – 'supabase' is assigned a value but never used. (@typescript-eslint/no-unused-vars)
+  - [warning] Line 8:7 – 'supabase' is assigned a value but never used. (@typescript-eslint/no-unused-vars)
 
 ### 🔹 `/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/app/admin/admin/trash.tsx`
 - **2 issues**: 0 error(s), 2 warning(s)
@@ -653,14 +645,14 @@ Found **282** files with issues.
 ### 🔹 `/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/app/admin/analytics.exportable.tsx`
 - **2 issues**: 0 error(s), 2 warning(s)
 
-  - [warning] Line 25:6 – React Hook useEffect has an unnecessary dependency: 'supabase'. Either exclude it or remove the dependency array. Outer scope values like 'supabase' aren't valid dependencies because mutating them doesn't re-render the component. (react-hooks/exhaustive-deps)
-  - [warning] Line 62:6 – React Hook useEffect has a missing dependency: 'siteId'. Either include it or remove the dependency array. Outer scope values like 'supabase' aren't valid dependencies because mutating them doesn't re-render the component. (react-hooks/exhaustive-deps)
+  - [warning] Line 27:6 – React Hook useEffect has an unnecessary dependency: 'supabase'. Either exclude it or remove the dependency array. Outer scope values like 'supabase' aren't valid dependencies because mutating them doesn't re-render the component. (react-hooks/exhaustive-deps)
+  - [warning] Line 64:6 – React Hook useEffect has a missing dependency: 'siteId'. Either include it or remove the dependency array. Outer scope values like 'supabase' aren't valid dependencies because mutating them doesn't re-render the component. (react-hooks/exhaustive-deps)
 
 ### 🔹 `/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/app/admin/analytics.supabase.tsx`
 - **2 issues**: 0 error(s), 2 warning(s)
 
-  - [warning] Line 8:1 – Delete `⏎` (prettier/prettier)
-  - [warning] Line 38:6 – React Hook useEffect has an unnecessary dependency: 'supabase'. Either exclude it or remove the dependency array. Outer scope values like 'supabase' aren't valid dependencies because mutating them doesn't re-render the component. (react-hooks/exhaustive-deps)
+  - [warning] Line 10:1 – Delete `⏎` (prettier/prettier)
+  - [warning] Line 40:6 – React Hook useEffect has an unnecessary dependency: 'supabase'. Either exclude it or remove the dependency array. Outer scope values like 'supabase' aren't valid dependencies because mutating them doesn't re-render the component. (react-hooks/exhaustive-deps)
 
 ### 🔹 `/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/app/admin/analytics/archive.tsx`
 - **2 issues**: 0 error(s), 2 warning(s)
@@ -740,6 +732,12 @@ Found **282** files with issues.
   - [warning] Line 68:39 – Replace `typeof·supportMap` with `(typeof·supportMap)` (prettier/prettier)
   - [warning] Line 93:41 – Replace `⏎····(profiles·??·[]).map((u)·=>·[u.id,·u.user_metadata·??·{}])⏎··` with `(profiles·??·[]).map((u)·=>·[u.id,·u.user_metadata·??·{}])` (prettier/prettier)
 
+### 🔹 `/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/app/auth/callback/page.tsx`
+- **2 issues**: 0 error(s), 2 warning(s)
+
+  - [warning] Line 14:1 – Delete `········` (prettier/prettier)
+  - [warning] Line 22:6 – React Hook useEffect has a missing dependency: 'router'. Either include it or remove the dependency array. (react-hooks/exhaustive-deps)
+
 ### 🔹 `/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/app/posters/[slug]/page.tsx`
 - **2 issues**: 0 error(s), 2 warning(s)
 
@@ -770,7 +768,12 @@ Found **282** files with issues.
 ### 🔹 `/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/app/admin/admin/templates-new.tsx`
 - **1 issues**: 0 error(s), 1 warning(s)
 
-  - [warning] Line 103:17 – Replace `⏎············value={template.layout}⏎············onChange={(e)·=>·handleChange('layout',·e.target.value)}⏎·········` with `·value={template.layout}·onChange={(e)·=>·handleChange('layout',·e.target.value)}` (prettier/prettier)
+  - [warning] Line 106:17 – Replace `⏎············value={template.layout}⏎············onChange={(e)·=>·handleChange('layout',·e.target.value)}⏎·········` with `·value={template.layout}·onChange={(e)·=>·handleChange('layout',·e.target.value)}` (prettier/prettier)
+
+### 🔹 `/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/app/admin/admin/templates.tsx`
+- **1 issues**: 0 error(s), 1 warning(s)
+
+  - [warning] Line 5:9 – Replace `⏎··Select,⏎··SelectTrigger,⏎··SelectContent,⏎··SelectItem,⏎··SelectValue,⏎` with `·Select,·SelectTrigger,·SelectContent,·SelectItem,·SelectValue·` (prettier/prettier)
 
 ### 🔹 `/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/app/admin/admin/views.tsx`
 - **1 issues**: 0 error(s), 1 warning(s)
@@ -982,11 +985,6 @@ Found **282** files with issues.
 
   - [warning] Line 7:7 – 'supabase' is assigned a value but never used. (@typescript-eslint/no-unused-vars)
 
-### 🔹 `/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/app/auth/callback/page.tsx`
-- **1 issues**: 0 error(s), 1 warning(s)
-
-  - [warning] Line 19:6 – React Hook useEffect has a missing dependency: 'router'. Either include it or remove the dependency array. (react-hooks/exhaustive-deps)
-
 ### 🔹 `/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/app/login/login-client.tsx`
 - **1 issues**: 0 error(s), 1 warning(s)
 
@@ -1150,6 +1148,15 @@ Found **282** files with issues.
   - [warning] Line 39:12 – Replace `<span·className="text-zinc-400">role:</span>·{data.role}` with `⏎········<span·className="text-zinc-400">role:</span>·{data.role}⏎······` (prettier/prettier)
   - [warning] Line 40:19 – Replace `<div><span·className="text-zinc-400">A/B:</span>·{data.ab}</div>` with `(⏎········<div>⏎··········<span·className="text-zinc-400">A/B:</span>·{data.ab}⏎········</div>⏎······)` (prettier/prettier)
 
+### 🔹 `/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/components/profile-form.tsx`
+- **5 issues**: 0 error(s), 5 warning(s)
+
+  - [warning] Line 6:16 – Delete `,` (prettier/prettier)
+  - [warning] Line 12:8 – 'Link' is defined but never used. (@typescript-eslint/no-unused-vars)
+  - [warning] Line 184:18 – Replace `⏎············variant="outline"⏎············disabled={requesting}⏎············onClick={requestAccess}⏎··········` with `·variant="outline"·disabled={requesting}·onClick={requestAccess}` (prettier/prettier)
+  - [warning] Line 205:72 – Replace `Approve` with `⏎····················Approve⏎··················` (prettier/prettier)
+  - [warning] Line 206:89 – Replace `Deny` with `⏎····················Deny⏎··················` (prettier/prettier)
+
 ### 🔹 `/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/components/admin/AppHeader/app-header.tsx`
 - **4 issues**: 0 error(s), 4 warning(s)
 
@@ -1158,14 +1165,6 @@ Found **282** files with issues.
   - [warning] Line 13:28 – 'setSidebarCollapsed' is assigned a value but never used. (@typescript-eslint/no-unused-vars)
   - [warning] Line 46:17 – Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element (@next/next/no-img-element)
 
-### 🔹 `/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/components/admin/query-param-editor.tsx`
-- **4 issues**: 0 error(s), 4 warning(s)
-
-  - [warning] Line 5:9 – Replace `·Input,·Label,·FieldLabel,·Switch,·Select,·SelectTrigger,·SelectContent,·SelectItem·` with `⏎··Input,⏎··Label,⏎··FieldLabel,⏎··Switch,⏎··Select,⏎··SelectTrigger,⏎··SelectContent,⏎··SelectItem,⏎` (prettier/prettier)
-  - [warning] Line 5:17 – 'Label' is defined but never used. (@typescript-eslint/no-unused-vars)
-  - [warning] Line 38:87 – Replace `{fieldKey}` with `⏎··········{fieldKey}⏎········` (prettier/prettier)
-  - [warning] Line 116:52 – 'slug' is defined but never used. Allowed unused args must match /^_/u. (@typescript-eslint/no-unused-vars)
-
 ### 🔹 `/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/components/admin/templates/reorderable-block-list.tsx`
 - **4 issues**: 0 error(s), 4 warning(s)
 
@@ -1173,14 +1172,6 @@ Found **282** files with issues.
   - [warning] Line 15:10 – 'CSS' is defined but never used. (@typescript-eslint/no-unused-vars)
   - [warning] Line 18:10 – 'ReorderableBlockListProps' is defined but never used. (@typescript-eslint/no-unused-vars)
   - [warning] Line 30:3 – 'onBlockClick' is defined but never used. Allowed unused args must match /^_/u. (@typescript-eslint/no-unused-vars)
-
-### 🔹 `/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/components/profile-form.tsx`
-- **4 issues**: 0 error(s), 4 warning(s)
-
-  - [warning] Line 10:8 – 'Link' is defined but never used. (@typescript-eslint/no-unused-vars)
-  - [warning] Line 182:18 – Replace `⏎············variant="outline"⏎············disabled={requesting}⏎············onClick={requestAccess}⏎··········` with `·variant="outline"·disabled={requesting}·onClick={requestAccess}` (prettier/prettier)
-  - [warning] Line 203:72 – Replace `Approve` with `⏎····················Approve⏎··················` (prettier/prettier)
-  - [warning] Line 204:89 – Replace `Deny` with `⏎····················Deny⏎··················` (prettier/prettier)
 
 ### 🔹 `/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/components/admin/AppHeader/mobile-drawer.tsx`
 - **3 issues**: 0 error(s), 3 warning(s)
@@ -1246,6 +1237,12 @@ Found **282** files with issues.
   - [warning] Line 13:1 – Delete `··` (prettier/prettier)
   - [warning] Line 18:5 – Delete `⏎··` (prettier/prettier)
 
+### 🔹 `/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/components/admin/query-param-editor.tsx`
+- **2 issues**: 0 error(s), 2 warning(s)
+
+  - [warning] Line 41:87 – Replace `{fieldKey}` with `⏎··········{fieldKey}⏎········` (prettier/prettier)
+  - [warning] Line 119:52 – 'slug' is defined but never used. Allowed unused args must match /^_/u. (@typescript-eslint/no-unused-vars)
+
 ### 🔹 `/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/components/admin/responsive-admin-layout.tsx`
 - **2 issues**: 0 error(s), 2 warning(s)
 
@@ -1261,8 +1258,8 @@ Found **282** files with issues.
 ### 🔹 `/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/components/admin/template-browser.tsx`
 - **2 issues**: 0 error(s), 2 warning(s)
 
-  - [warning] Line 2:9 – Replace `·Dialog,·DialogTrigger,·DialogContent,·Card,·CardContent,·Button,·ScrollArea,·SafeLink·` with `⏎··Dialog,⏎··DialogTrigger,⏎··DialogContent,⏎··Card,⏎··CardContent,⏎··Button,⏎··ScrollArea,⏎··SafeLink,⏎` (prettier/prettier)
-  - [warning] Line 18:10 – 'selected' is assigned a value but never used. (@typescript-eslint/no-unused-vars)
+  - [warning] Line 2:46 – Delete `,` (prettier/prettier)
+  - [warning] Line 22:10 – 'selected' is assigned a value but never used. (@typescript-eslint/no-unused-vars)
 
 ### 🔹 `/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/components/admin/template-user-viewer.filtered.tsx`
 - **2 issues**: 0 error(s), 2 warning(s)
@@ -1282,6 +1279,12 @@ Found **282** files with issues.
   - [warning] Line 23:10 – 'prevPlacement' is assigned a value but never used. (@typescript-eslint/no-unused-vars)
   - [warning] Line 38:6 – React Hook useEffect has a missing dependency: 'autoPlacement'. Either include it or remove the dependency array. You can also replace multiple useState variables with useReducer if 'setPrevPlacement' needs the current value of 'autoPlacement'. (react-hooks/exhaustive-deps)
 
+### 🔹 `/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/components/assistant-widget.tsx`
+- **2 issues**: 0 error(s), 2 warning(s)
+
+  - [warning] Line 4:15 – 'Loader' is defined but never used. (@typescript-eslint/no-unused-vars)
+  - [warning] Line 84:6 – Delete `······⏎` (prettier/prettier)
+
 ### 🔹 `/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/components/dev-tools-widget/MockGeolocationEditor.tsx`
 - **2 issues**: 0 error(s), 2 warning(s)
 
@@ -1293,6 +1296,12 @@ Found **282** files with issues.
 
   - [warning] Line 72:18 – Replace `⏎············className="text-green-400·underline"⏎············onClick={handleSave}⏎··········` with `·className="text-green-400·underline"·onClick={handleSave}` (prettier/prettier)
   - [warning] Line 78:18 – Replace `⏎············className="text-red-400·underline"⏎············onClick={handleClear}⏎··········` with `·className="text-red-400·underline"·onClick={handleClear}` (prettier/prettier)
+
+### 🔹 `/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/components/puppy-widget.tsx`
+- **2 issues**: 0 error(s), 2 warning(s)
+
+  - [warning] Line 19:10 – 'tooltipDismissed' is assigned a value but never used. (@typescript-eslint/no-unused-vars)
+  - [warning] Line 130:2 – Insert `⏎` (prettier/prettier)
 
 ### 🔹 `/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/components/admin/AppHeader/AdminNavSections.tsx`
 - **1 issues**: 0 error(s), 1 warning(s)
@@ -1347,7 +1356,7 @@ Found **282** files with issues.
 ### 🔹 `/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/components/admin/comment-thread.tsx`
 - **1 issues**: 0 error(s), 1 warning(s)
 
-  - [warning] Line 24:6 – React Hook useEffect has a missing dependency: 'loadComments'. Either include it or remove the dependency array. (react-hooks/exhaustive-deps)
+  - [warning] Line 26:6 – React Hook useEffect has a missing dependency: 'loadComments'. Either include it or remove the dependency array. (react-hooks/exhaustive-deps)
 
 ### 🔹 `/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/components/admin/referral-link.tsx`
 - **1 issues**: 0 error(s), 1 warning(s)
@@ -1367,7 +1376,7 @@ Found **282** files with issues.
 ### 🔹 `/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/components/admin/templates/block-editor.tsx`
 - **1 issues**: 0 error(s), 1 warning(s)
 
-  - [warning] Line 57:25 – Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element (@next/next/no-img-element)
+  - [warning] Line 60:25 – Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element (@next/next/no-img-element)
 
 ### 🔹 `/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/components/admin/templates/grouped-preview.tsx`
 - **1 issues**: 0 error(s), 1 warning(s)
@@ -1429,11 +1438,6 @@ Found **282** files with issues.
 
   - [warning] Line 9:1 – Delete `⏎` (prettier/prettier)
 
-### 🔹 `/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/components/assistant-widget.tsx`
-- **1 issues**: 0 error(s), 1 warning(s)
-
-  - [warning] Line 4:15 – 'Loader' is defined but never used. (@typescript-eslint/no-unused-vars)
-
 ### 🔹 `/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/components/auth/require-login.tsx`
 - **1 issues**: 0 error(s), 1 warning(s)
 
@@ -1469,15 +1473,10 @@ Found **282** files with issues.
 
   - [warning] Line 27:6 – React Hook useEffect has a missing dependency: 'duration'. Either include it or remove the dependency array. (react-hooks/exhaustive-deps)
 
-### 🔹 `/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/components/ui/breadcrumbs.tsx`
+### 🔹 `/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/components/ui/form.tsx`
 - **1 issues**: 0 error(s), 1 warning(s)
 
-  - [warning] Line 1:10 – 'useRouter' is defined but never used. (@typescript-eslint/no-unused-vars)
-
-### 🔹 `/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/components/ui/index.ts`
-- **1 issues**: 0 error(s), 1 warning(s)
-
-  - [warning] Line 35:25 – Delete `·············` (prettier/prettier)
+  - [warning] Line 14:51 – Insert `⏎` (prettier/prettier)
 
 ### 🔹 `/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/components/ui/modal-wrapper.tsx`
 - **1 issues**: 0 error(s), 1 warning(s)
@@ -1786,6 +1785,14 @@ Found **282** files with issues.
   - [warning] Line 39:12 – Replace `·data:·{·user·},·error` with `⏎······data:·{·user·},⏎······error,⏎···` (prettier/prettier)
   - [warning] Line 77:63 – Replace `⏎······{children}⏎····` with `{children}` (prettier/prettier)
 
+### 🔹 `/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/lib/site-config.ts`
+- **4 issues**: 0 error(s), 4 warning(s)
+
+  - [warning] Line 3:3 – Delete `··` (prettier/prettier)
+  - [warning] Line 4:1 – Delete `··` (prettier/prettier)
+  - [warning] Line 5:1 – Delete `··` (prettier/prettier)
+  - [warning] Line 6:1 – Delete `··` (prettier/prettier)
+
 ### 🔹 `/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/lib/supabase/getRoleRedirectTarget.ts`
 - **3 issues**: 0 error(s), 3 warning(s)
 
@@ -1820,7 +1827,7 @@ Found **282** files with issues.
 ### 🔹 `/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/lib/admin/templates.tsx`
 - **1 issues**: 0 error(s), 1 warning(s)
 
-  - [warning] Line 5:9 – Replace `⏎··Table,⏎··TableBody,⏎··TableCell,⏎··TableHead,⏎··TableHeader,⏎··TableRow,⏎` with `·Table,·TableBody,·TableCell,·TableHead,·TableHeader,·TableRow·` (prettier/prettier)
+  - [warning] Line 7:9 – Replace `⏎··Table,⏎··TableBody,⏎··TableCell,⏎··TableHead,⏎··TableHeader,⏎··TableRow,⏎` with `·Table,·TableBody,·TableCell,·TableHead,·TableHeader,·TableRow·` (prettier/prettier)
 
 ### 🔹 `/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/lib/cookies/getSafeCookie.ts`
 - **1 issues**: 0 error(s), 1 warning(s)
@@ -1836,6 +1843,11 @@ Found **282** files with issues.
 - **1 issues**: 0 error(s), 1 warning(s)
 
   - [warning] Line 31:60 – Replace `⏎····headers.get('x-real-ip')·??⏎···` with `·headers.get('x-real-ip')·??` (prettier/prettier)
+
+### 🔹 `/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/lib/supabase/client.ts`
+- **1 issues**: 0 error(s), 1 warning(s)
+
+  - [warning] Line 16:1 – Delete `⏎` (prettier/prettier)
 
 ### 🔹 `/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/lib/supabase/middlewareClient.ts`
 - **1 issues**: 0 error(s), 1 warning(s)

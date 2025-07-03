@@ -1,13 +1,22 @@
+// app/admin/start-campaign/page.tsx
 'use client';
-import { useState } from 'react';
+
+import { useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
-// import AdminLayout from '@/components/layout/deprecated- admin-layout';
 import { useCampaignForm } from '@/hooks/useCampaignForm';
 
 export default function StartCampaign() {
   const searchParams = useSearchParams();
-  const [city, setCity] = useState((searchParams?.get('city') as string) || '');
-  const [state, setState] = useState((searchParams?.get('state') as string) || '');
+
+  const cityParam = searchParams?.get('city') || '';
+  const stateParam = searchParams?.get('state') || '';
+  const industryParam = searchParams?.get('industry') || '';
+  const leadIdsParam = searchParams?.get('leadIds') || '';
+  const initialLeadIds = searchParams?.get('initialLeadIds')?.split(',').filter(Boolean) || [];
+
+  const [city, setCity] = useState(cityParam);
+  const [state, setState] = useState(stateParam);
+  const [industry, setIndustry] = useState(industryParam);
 
   const {
     name,
@@ -29,9 +38,28 @@ export default function StartCampaign() {
     submit,
     leads,
     selectedLeads,
+    // setSelectedLeads,
     toggleLead,
     leadsLoading,
-  } = useCampaignForm(city, state);
+    initialLeadIds: initialLeadIdsFromParams,
+  } = useCampaignForm(city, state, initialLeadIds);
+
+  // Optional: auto-generate campaign name
+  useEffect(() => {
+    if (!nameWasManuallySet && city) {
+      setName(`${city} Campaign`);
+    }
+  }, [city, nameWasManuallySet]);
+
+  // Sync selected leads once leads are loaded
+  useEffect(() => {
+    if (initialLeadIds.length && leads.length) {
+      const validIds = leads
+        .map((l) => l.id)
+        .filter((id) => initialLeadIds.includes(id));
+      // setSelectedLeads(validIds);
+    }
+  }, [leads]);
 
   return (
     <div className="p-6 max-w-3xl mx-auto text-white">
@@ -68,6 +96,13 @@ export default function StartCampaign() {
             className="w-full px-3 py-2 rounded bg-zinc-800 border border-zinc-600"
           />
         </div>
+
+        <input
+          placeholder="Industry"
+          value={industry}
+          onChange={(e) => setIndustry(e.target.value)}
+          className="w-full px-3 py-2 rounded bg-zinc-800 border border-zinc-600"
+        />
 
         <div className="space-y-2">
           <p className="text-sm font-semibold">Select at least 2 Leads</p>

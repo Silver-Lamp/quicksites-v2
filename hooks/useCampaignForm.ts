@@ -13,7 +13,7 @@ function slugify(name: string): string {
     .replace(/^-|-$/g, '');
 }
 
-export function useCampaignForm(city: string, state: string) {
+export function useCampaignForm(city: string, state: string, initialLeadIds: string[] = []) {
   const router = useRouter();
 
   const [name, setName] = useState('');
@@ -92,6 +92,7 @@ export function useCampaignForm(city: string, state: string) {
           alt_domains: [alt1, alt2],
           created_by: email,
           status,
+          initial_lead_ids: initialLeadIds,
         },
       ])
       .select()
@@ -117,7 +118,7 @@ export function useCampaignForm(city: string, state: string) {
 
       router.push(`/admin/campaigns?new=${data.id}`);
     } else {
-      router.push(`/admin/start-campaign?draftId=${data.id}`);
+      router.push(`/admin/start-campaign?draftId=${data.id}&city=${city}&state=${state}&initialLeadIds=${initialLeadIds.join(',')}`);
     }
   };
 
@@ -144,5 +145,6 @@ export function useCampaignForm(city: string, state: string) {
     selectedLeads,
     toggleLead,
     leadsLoading,
+    initialLeadIds,
   };
 }

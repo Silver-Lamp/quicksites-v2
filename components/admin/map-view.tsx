@@ -7,6 +7,7 @@ import {
   TileLayer,
   Tooltip,
   useMap,
+  Popup,
 } from 'react-leaflet';
 import MarkerClusterGroup from 'react-leaflet-cluster';
 import L from 'leaflet';
@@ -62,19 +63,16 @@ function MapEvents({
 
     const onZoom = () => setZoom(map.getZoom());
     map.on('zoomend', onZoom);
-
-    return () => {
-      map.off('zoomend', onZoom);
-    };
+    // return () => map.off('zoomend', onZoom);
   }, [map, setZoom]);
 
   useEffect(() => {
-    const validCoords = points
+    const coords = points
       .filter((p) => typeof p.lat === 'number' && typeof p.lon === 'number')
       .map((p) => [p.lat!, p.lon!] as [number, number]);
 
-    if (validCoords.length > 0) {
-      const bounds = L.latLngBounds(validCoords);
+    if (coords.length > 0) {
+      const bounds = L.latLngBounds(coords);
       map.fitBounds(bounds, { padding: [50, 50] });
     }
   }, [map, points]);
@@ -116,6 +114,7 @@ export default function MapView({
       key={Date.now()}
     >
       <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+
       <MapEvents
         setZoom={setZoom}
         mapRef={mapRef}
@@ -147,7 +146,7 @@ export default function MapView({
         {points.map((p, i) =>
           typeof p.lat === 'number' && typeof p.lon === 'number' ? (
             <Marker
-              key={getPointKey(p) + '-' + i}
+              key={`${getPointKey(p)}-${i}`}
               position={[p.lat, p.lon]}
               icon={L.divIcon({
                 className: '',
@@ -158,24 +157,35 @@ export default function MapView({
                 iconAnchor: [15, 30],
                 popupAnchor: [0, -30],
               })}
-              eventHandlers={{
-                click: () =>
-                  router.push(
-                    `/admin/city/${p.city.toLowerCase()}-${p.state.toLowerCase()}`
-                  ),
-              }}
             >
-              <Tooltip>
-                <div>
-                  <strong>
+                <Popup>
+                <div className="space-y-1 text-sm text-black">
+                    <strong>
                     {getIndustryIcon(p.industry)} {p.city}, {p.state}
-                  </strong>
-                  <div>
-                    {p.leads} lead(s), {p.domains} domain(s)
-                  </div>
-                  <div>{p.industry || 'Industry N/A'}</div>
+                    </strong>
+                    <div>{p.leads} lead(s), {p.domains} domain(s)</div>
+                    <div>{p.industry || 'Industry N/A'}</div>
+
+                    {p.leads >= 2 && (
+                    <button
+                        className="mt-1 px-2 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700"
+                        onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        const query = new URLSearchParams({
+                            city: p.city,
+                            state: p.state,
+                            industry: p.industry || '',
+                            leadIds: (p.leadIds || []).join(','),
+                        });
+                        router.push(`/admin/start-campaign?${query}`);
+                        }}
+                    >
+                        🚀 Start Campaign
+                    </button>
+                    )}
                 </div>
-              </Tooltip>
+                </Popup>
             </Marker>
           ) : null
         )}

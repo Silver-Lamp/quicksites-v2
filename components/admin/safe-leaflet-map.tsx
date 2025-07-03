@@ -42,6 +42,7 @@ export default function SafeLeafletMap({
         router={router}
         getColor={getColor}
         mapRef={mapRef}
+        hoveredPointId={null}
       />
     );
   }, [mapVisible]);

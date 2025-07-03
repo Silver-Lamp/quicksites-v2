@@ -9,27 +9,55 @@ import {
   useMap,
 } from 'react-leaflet';
 import MarkerClusterGroup from 'react-leaflet-cluster';
-import L from 'leaflet'; // ✅ Full import for runtime value use
+import L from 'leaflet';
 import type { CityPoint } from '@/types/grid';
 import type { AppRouterInstance } from 'next/dist/shared/lib/app-router-context.shared-runtime';
-import type LMap from 'leaflet'; // Optional: still use type import for mapRef
+import type LMap from 'leaflet';
+
 import 'leaflet/dist/leaflet.css';
 import 'leaflet.markercluster/dist/MarkerCluster.css';
 import 'leaflet.markercluster/dist/MarkerCluster.Default.css';
+
+function getIndustryIcon(industry?: string): string {
+  const key = (industry || '').toLowerCase();
+  if (key.includes('tow')) return '🚛';
+  if (key.includes('concrete')) return '🏗️';
+  if (key.includes('roof')) return '🧱';
+  if (key.includes('plumb')) return '🚽';
+  if (key.includes('lawn') || key.includes('landscap')) return '🌱';
+  return '🧰';
+}
+
+function getBorderColorClass(p: CityPoint): string {
+  if (p.leads >= 2 && p.domains > 0) return 'border-green-500';
+  if (p.leads >= 2) return 'border-orange-500';
+  if (p.domains > 0) return 'border-blue-500';
+  if (p.leads > 0) return 'border-yellow-400';
+  return 'border-gray-400';
+}
+
+function getPointKey(p: CityPoint): string {
+  return `${p.city}${p.state}`;
+}
 
 function MapEvents({
   setZoom,
   mapRef,
   points,
+  hoveredPointId,
 }: {
   setZoom: (z: number) => void;
   mapRef: React.MutableRefObject<LMap.Map | null>;
   points: CityPoint[];
+  hoveredPointId: string | null;
 }) {
   const map = useMap();
 
   useEffect(() => {
     mapRef.current = map;
+  }, [map]);
+
+  useEffect(() => {
     setZoom(map.getZoom());
 
     const onZoom = () => setZoom(map.getZoom());
@@ -38,7 +66,7 @@ function MapEvents({
     return () => {
       map.off('zoomend', onZoom);
     };
-  }, [map, setZoom, mapRef]);
+  }, [map, setZoom]);
 
   useEffect(() => {
     const validCoords = points
@@ -51,6 +79,14 @@ function MapEvents({
     }
   }, [map, points]);
 
+  useEffect(() => {
+    if (!hoveredPointId) return;
+    const match = points.find((p) => getPointKey(p) === hoveredPointId);
+    if (match?.lat && match.lon) {
+      map.flyTo([match.lat, match.lon], Math.max(map.getZoom(), 10));
+    }
+  }, [hoveredPointId, points, map]);
+
   return null;
 }
 
@@ -61,6 +97,7 @@ export default function MapView({
   router,
   getColor,
   mapRef,
+  hoveredPointId,
 }: {
   points: CityPoint[];
   zoom: number;
@@ -68,6 +105,7 @@ export default function MapView({
   router: AppRouterInstance;
   getColor: (p: CityPoint) => string;
   mapRef: React.MutableRefObject<LMap.Map | null>;
+  hoveredPointId: string | null;
 }) {
   return (
     <MapContainer
@@ -78,14 +116,48 @@ export default function MapView({
       key={Date.now()}
     >
       <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
-      <MapEvents setZoom={setZoom} mapRef={mapRef} points={points} />
+      <MapEvents
+        setZoom={setZoom}
+        mapRef={mapRef}
+        points={points}
+        hoveredPointId={hoveredPointId}
+      />
 
-      <MarkerClusterGroup>
+      <MarkerClusterGroup
+        iconCreateFunction={(cluster: any) => {
+          const markers = cluster.getAllChildMarkers();
+          const counts: Record<string, number> = {};
+
+          markers.forEach((marker: any) => {
+            const emoji = marker.getElement()?.innerText || '🧰';
+            counts[emoji] = (counts[emoji] || 0) + 1;
+          });
+
+          const summary = Object.entries(counts)
+            .map(([emoji, count]) => `${emoji}x${count}`)
+            .join(' ');
+
+          return L.divIcon({
+            html: `<div class="emoji-cluster">${summary}</div>`,
+            className: '',
+            iconSize: [40, 40],
+          });
+        }}
+      >
         {points.map((p, i) =>
           typeof p.lat === 'number' && typeof p.lon === 'number' ? (
             <Marker
-              key={`${p.city}-${p.state}-${i}`}
+              key={getPointKey(p) + '-' + i}
               position={[p.lat, p.lon]}
+              icon={L.divIcon({
+                className: '',
+                html: `<div class="emoji-marker ${getBorderColorClass(p)} ${
+                  getPointKey(p) === hoveredPointId ? 'glow' : ''
+                }">${getIndustryIcon(p.industry)}</div>`,
+                iconSize: [30, 30],
+                iconAnchor: [15, 30],
+                popupAnchor: [0, -30],
+              })}
               eventHandlers={{
                 click: () =>
                   router.push(
@@ -96,10 +168,12 @@ export default function MapView({
               <Tooltip>
                 <div>
                   <strong>
-                    {p.city}, {p.state}
+                    {getIndustryIcon(p.industry)} {p.city}, {p.state}
                   </strong>
-                  <div>{p.leads} lead(s), {p.domains} domain(s)</div>
-                  <div>Industry: {p.industry || 'N/A'}</div>
+                  <div>
+                    {p.leads} lead(s), {p.domains} domain(s)
+                  </div>
+                  <div>{p.industry || 'Industry N/A'}</div>
                 </div>
               </Tooltip>
             </Marker>

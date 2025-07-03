@@ -27,3 +27,34 @@
 .animate-pulse-slow {
   animation: pulse-slow 10s ease-in-out infinite;
 }
+
+.emoji-marker {
+  font-size: 22px;
+  line-height: 28px;
+  background: white;
+  border-radius: 9999px;
+  border-width: 2px;
+  height: 30px;
+  width: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: box-shadow 0.3s ease;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.4);
+}
+
+.emoji-marker.glow {
+  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.8), 0 0 10px #fff;
+}
+
+.emoji-cluster {
+  background: white;
+  border: 2px solid #333;
+  border-radius: 9999px;
+  padding: 4px 6px;
+  font-size: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+}

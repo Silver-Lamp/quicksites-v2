@@ -13,14 +13,20 @@ export async function middleware(req: NextRequest) {
   const user = session?.user;
 
   if (user) {
+    console.log('[middleware] user:', user?.email);
+
     // 🔍 Fetch role from your app DB (user_profiles or user_roles)
     const { data: profile, error } = await supabase
       .from('user_profiles')
       .select('role')
       .eq('user_id', user.id)
-      .single();
+      .maybeSingle();
+
+    console.log('[middleware] role:', profile?.role);
 
     const resolvedRole = profile?.role || 'guest';
+
+    console.log('[middleware] resolvedRole:', resolvedRole);
 
     // 🔁 Inject headers
     res.headers.set('x-user-id', user.id);

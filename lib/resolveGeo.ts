@@ -1,31 +1,55 @@
-// lib/resolveGeo.ts
-import staticGeo from '../public/staticGeo.json' with { type: 'module' };
-import { getCachedGeo, setCachedGeo } from './geoCache';
+type GeoResult = { lat: number; lon: number };
+const memoryCache: Record<string, GeoResult> = {};
 
-function getStaticFallback(city: string, state: string) {
+const getLocalStorageCache = (): Record<string, GeoResult> => {
+  if (typeof window === 'undefined') return {};
+  try {
+    const cached = localStorage.getItem('geoCache');
+    return cached ? JSON.parse(cached) : {};
+  } catch {
+    return {};
+  }
+};
+
+const setLocalStorageCache = (cache: Record<string, GeoResult>) => {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.setItem('geoCache', JSON.stringify(cache));
+  } catch {}
+};
+
+export async function resolveGeo(city: string, state: string): Promise<GeoResult> {
   const key = `${city.trim().toLowerCase()},${state.trim().toLowerCase()}`;
-  return staticGeo[key as keyof typeof staticGeo];
-}
 
-export async function resolveGeo(
-  city: string,
-  state: string
-): Promise<{ lat: number; lon: number }> {
-  const mem = getCachedGeo(city, state);
-  if (mem) return mem;
+  // Check in-memory cache first
+  if (memoryCache[key]) return memoryCache[key];
 
-  const fallback = getStaticFallback(city, state);
-  if (fallback) {
-    setCachedGeo(city, state, fallback.lat, fallback.lon);
-    return fallback;
+  // Check localStorage cache
+  const localCache = getLocalStorageCache();
+  if (localCache[key]) {
+    memoryCache[key] = localCache[key]; // hydrate into memory
+    return localCache[key];
   }
 
-  const res = await fetch(
-    `/api/geocode?city=${encodeURIComponent(city)}&state=${encodeURIComponent(state)}`
-  );
-  if (!res.ok) return { lat: 0, lon: 0 };
+  console.log('[🗺️ geoCache miss]', key);
 
-  const data = await res.json();
-  setCachedGeo(city, state, data.lat, data.lon);
-  return { lat: data.lat, lon: data.lon };
+  // Fetch from API
+  try {
+    const res = await fetch(`/api/geocode?city=${encodeURIComponent(city)}&state=${encodeURIComponent(state)}`);
+    const json = await res.json();
+
+    const lat = json.lat ?? 39.5;
+    const lon = json.lon ?? -98.35;
+    const result = { lat, lon };
+
+    // Cache result in both memory + localStorage
+    memoryCache[key] = result;
+    localCache[key] = result;
+    setLocalStorageCache(localCache);
+
+    return result;
+  } catch (err) {
+    console.warn('[⚠️ geocode failed]', err);
+    return { lat: 39.5, lon: -98.35 }; // fallback: US center
+  }
 }

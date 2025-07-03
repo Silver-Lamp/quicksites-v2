@@ -1,5 +1,5 @@
 # ESLint Report
-Found **285** files with issues.
+Found **286** files with issues.
 
 ## 📁 `_pages-legacy/`
 ### 🔹 `/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/_pages-legacy/edit/[slug].tsx`
@@ -545,15 +545,6 @@ Found **285** files with issues.
   - [warning] Line 80:1 – Delete `······` (prettier/prettier)
   - [warning] Line 81:1 – Delete `··` (prettier/prettier)
 
-### 🔹 `/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/app/login/LoginForm.tsx`
-- **5 issues**: 0 error(s), 5 warning(s)
-
-  - [warning] Line 35:78 – Insert `,` (prettier/prettier)
-  - [warning] Line 81:13 – Insert `··` (prettier/prettier)
-  - [warning] Line 82:1 – Insert `··` (prettier/prettier)
-  - [warning] Line 90:17 – Insert `··` (prettier/prettier)
-  - [warning] Line 91:1 – Insert `··` (prettier/prettier)
-
 ### 🔹 `/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/app/_sites/[slug]/page.tsx`
 - **4 issues**: 0 error(s), 4 warning(s)
 
@@ -605,6 +596,13 @@ Found **285** files with issues.
   - [warning] Line 14:37 – Replace `⏎··params,⏎}:·{⏎··params:·{·slug:·string·};⏎` with `·params·}:·{·params:·{·slug:·string·}·` (prettier/prettier)
   - [warning] Line 23:13 – Replace `⏎······'*,·snapshots(data),·branding_profiles(name,·theme,·brand,·accent_color,·logo_url)'⏎····` with `'*,·snapshots(data),·branding_profiles(name,·theme,·brand,·accent_color,·logo_url)'` (prettier/prettier)
   - [warning] Line 42:13 – Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element (@next/next/no-img-element)
+
+### 🔹 `/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/app/login/LoginForm.tsx`
+- **3 issues**: 0 error(s), 3 warning(s)
+
+  - [warning] Line 55:22 – Replace `⏎··············?·'bg-zinc-700·cursor-not-allowed'⏎·············` with `·?·'bg-zinc-700·cursor-not-allowed'` (prettier/prettier)
+  - [warning] Line 70:17 – Insert `··` (prettier/prettier)
+  - [warning] Line 71:1 – Insert `··` (prettier/prettier)
 
 ### 🔹 `/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/app/admin/admin/branding/og-editor/[id].tsx`
 - **2 issues**: 0 error(s), 2 warning(s)
@@ -731,12 +729,6 @@ Found **285** files with issues.
 
   - [warning] Line 68:39 – Replace `typeof·supportMap` with `(typeof·supportMap)` (prettier/prettier)
   - [warning] Line 93:41 – Replace `⏎····(profiles·??·[]).map((u)·=>·[u.id,·u.user_metadata·??·{}])⏎··` with `(profiles·??·[]).map((u)·=>·[u.id,·u.user_metadata·??·{}])` (prettier/prettier)
-
-### 🔹 `/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/app/auth/callback/page.tsx`
-- **2 issues**: 0 error(s), 2 warning(s)
-
-  - [warning] Line 14:1 – Delete `········` (prettier/prettier)
-  - [warning] Line 22:6 – React Hook useEffect has a missing dependency: 'router'. Either include it or remove the dependency array. (react-hooks/exhaustive-deps)
 
 ### 🔹 `/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/app/posters/[slug]/page.tsx`
 - **2 issues**: 0 error(s), 2 warning(s)
@@ -984,6 +976,11 @@ Found **285** files with issues.
 - **1 issues**: 0 error(s), 1 warning(s)
 
   - [warning] Line 7:7 – 'supabase' is assigned a value but never used. (@typescript-eslint/no-unused-vars)
+
+### 🔹 `/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/app/auth/callback/page.tsx`
+- **1 issues**: 0 error(s), 1 warning(s)
+
+  - [warning] Line 34:10 – Replace `(⏎····<div·className="p-4·text-white">⏎······Logging·you·in...⏎····</div>⏎··)` with `<div·className="p-4·text-white">Logging·you·in...</div>` (prettier/prettier)
 
 ### 🔹 `/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/app/login/login-client.tsx`
 - **1 issues**: 0 error(s), 1 warning(s)
@@ -1863,6 +1860,12 @@ Found **285** files with issues.
 - **1 issues**: 0 error(s), 1 warning(s)
 
   - [warning] Line 1:23 – 'useRouter' is defined but never used. (@typescript-eslint/no-unused-vars)
+
+## 📁 `middleware.ts/`
+### 🔹 `/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/middleware.ts`
+- **1 issues**: 0 error(s), 1 warning(s)
+
+  - [warning] Line 17:28 – 'error' is assigned a value but never used. (@typescript-eslint/no-unused-vars)
 
 ## 📁 `next-seo.config.js/`
 ### 🔹 `/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/next-seo.config.js`

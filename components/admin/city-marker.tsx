@@ -1,4 +1,4 @@
-// components/admin/CityMarker.tsx
+// components/admin/city-marker.tsx
 import { CircleMarker, Popup } from 'react-leaflet';
 import { useMemo } from 'react';
 import { useRouter } from 'next/navigation';
@@ -8,9 +8,10 @@ interface CityMarkerProps {
   zoom: number;
   getColor: (point: any) => string;
   router: ReturnType<typeof useRouter>;
+  onClick?: () => void;
 }
 
-export default function CityMarker({ point, zoom, getColor, router }: CityMarkerProps) {
+export default function CityMarker({ point, zoom, getColor, router, onClick }: CityMarkerProps) {
   const shouldRender = useMemo(() => {
     return !(zoom < 4 && point.leads + point.domains < 3);
   }, [zoom, point]);
@@ -25,6 +26,9 @@ export default function CityMarker({ point, zoom, getColor, router }: CityMarker
         color: getColor(point),
         fillColor: getColor(point),
         fillOpacity: 0.7,
+      }}
+      eventHandlers={{
+        click: () => onClick?.(),
       }}
     >
       <Popup className="w-64 p-4 bg-gray-800 text-white rounded-lg shadow-lg">

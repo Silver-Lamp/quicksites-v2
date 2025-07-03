@@ -37,31 +37,27 @@ export default function AppHeader() {
   }
 
   return (
-    <div className="flex min-h-screen">
-      <div className="flex-1 flex flex-col">
-        <header className="bg-gray-800 text-white sticky top-0 z-50 px-4 py-3 shadow-md border-b border-zinc-800">
-          <div className="flex justify-between items-center max-w-screen-xl mx-auto relative">
-            <div className="flex items-center overflow-x-auto whitespace-nowrap max-w-full flex-1">
-              <SafeLink href="/" className="text-blue-400 hover:underline">
-                <img src="/logo.png" alt="QuickSites" width={100} height={100} />
-              </SafeLink>
-            </div>
-            <div className="ml-4">
-              <UserMenu />
-            </div>
+    <header className="bg-gray-800 text-white sticky top-0 z-50 px-4 py-3 shadow-md border-b border-zinc-800">
+      <div className="flex justify-between items-center max-w-screen-xl mx-auto relative">
+        <div className="flex items-center overflow-x-auto whitespace-nowrap max-w-full flex-1">
+          <SafeLink href="/" className="text-blue-400 hover:underline">
+            <img src="/logo.png" alt="QuickSites" width={100} height={100} />
+          </SafeLink>
+        </div>
+        <div className="ml-4">
+          <UserMenu />
+        </div>
 
-            {/* {(traceId || sessionId) && (
-              <div
-                className="absolute -bottom-5 right-2 text-[10px] text-zinc-500 font-mono"
-                title={`Trace ID: ${traceId}\nSession ID: ${sessionId}`}
-              >
-                trace: <span className="text-cyan-400">{traceId?.slice(0, 6) || '---'}</span> | session:{' '}
-                <span className="text-amber-400">{sessionId?.slice(0, 6) || '---'}</span>
-              </div>
-            )} */}
+        {/* {(traceId || sessionId) && (
+          <div
+            className="absolute -bottom-5 right-2 text-[10px] text-zinc-500 font-mono"
+            title={`Trace ID: ${traceId}\nSession ID: ${sessionId}`}
+          >
+            trace: <span className="text-cyan-400">{traceId?.slice(0, 6) || '---'}</span> | session:{' '}
+            <span className="text-amber-400">{sessionId?.slice(0, 6) || '---'}</span>
           </div>
-        </header>
+        )} */}
       </div>
-    </div>
+    </header>
   );
 }

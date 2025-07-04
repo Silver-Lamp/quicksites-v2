@@ -9,6 +9,59 @@ import { useRequestMeta } from '@/hooks/useRequestMeta';
 // import { AdminNavSections } from './AdminNavSections';
 
 export default function AppHeader() {
+  useEffect(() => {
+    let lastScrollY = window.scrollY;
+    let ticking = false;
+    const header = document.querySelector('header');
+    let hideTimeout: NodeJS.Timeout | null = null;
+
+    const handleScroll = () => {
+      if (!header) return;
+
+      const currentScrollY = window.scrollY;
+
+      if (currentScrollY > lastScrollY && currentScrollY > 48) {
+        if (!header.classList.contains('translate-y-[-100%]')) {
+          header.classList.add('translate-y-[-100%]', 'transition-transform', 'duration-300');
+        }
+      } else {
+        header.classList.remove('translate-y-[-100%]');
+      }
+
+      if (currentScrollY > 10) {
+        header.classList.add('opacity-90', 'backdrop-blur-md');
+      } else {
+        header.classList.remove('opacity-90', 'backdrop-blur-md');
+      }
+
+      lastScrollY = currentScrollY;
+    };
+    window.addEventListener('scroll', () => {
+      if (!ticking) {
+        window.requestAnimationFrame(() => {
+          handleScroll();
+          ticking = false;
+        });
+        ticking = true;
+      }
+    });
+
+    header?.addEventListener('mouseenter', () => {
+      if (header.classList.contains('translate-y-[-100%]')) {
+        header.classList.remove('translate-y-[-100%]');
+      }
+      if (hideTimeout) clearTimeout(hideTimeout);
+    });
+
+    header?.addEventListener('mouseleave', () => {
+      hideTimeout = setTimeout(() => {
+        if (window.scrollY > 48) {
+          header.classList.add('translate-y-[-100%]');
+        }
+      }, 1200);
+    });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
   const router = useRouter();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const { user, role, isLoggedIn } = useSafeAuth();
@@ -37,15 +90,19 @@ export default function AppHeader() {
   }
 
   return (
-    <header className="bg-gray-800 text-white sticky top-0 z-50 px-4 py-3 shadow-md border-b border-zinc-800">
+    <header className="bg-gray-800 text-white sticky top-0 z-50 px-2 py-[6px] shadow-sm border-b border-zinc-700 min-h-[48px] transition-transform duration-300">
       <div className="flex justify-between items-center max-w-screen-xl mx-auto relative">
         <div className="flex items-center overflow-x-auto whitespace-nowrap max-w-full flex-1">
           <SafeLink href="/" className="text-blue-400 hover:underline">
-            <img src="/logo.png" alt="QuickSites" width={100} height={100} />
+            <img src="/logo_v1.png" alt="QuickSites" className="h-16 w-auto" />
           </SafeLink>
         </div>
-        <div className="ml-4">
-          <UserMenu />
+        <div className="ml-2 flex items-center gap-2" style={{ minWidth: 'auto' }}>
+          <div className="text-xs text-gray-400 mr-2 text-right leading-tight" style={{ lineHeight: '1.1rem' }}>
+            <div>{user.email}</div>
+            <div className="text-zinc-500">role: {role}</div>
+          </div>
+          {/* <UserMenu /> */}
         </div>
 
         {/* {(traceId || sessionId) && (

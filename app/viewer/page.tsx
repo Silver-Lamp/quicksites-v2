@@ -53,11 +53,11 @@ export default function ViewerHomeRedirect() {
         </div>
       )}
 
-      {isLoggedIn && user && (
+      {/* {isLoggedIn && user && (
         <div className="animate-fade-in transition-opacity duration-700 ease-in mt-4 opacity-100">
           <UserMenu />
         </div>
-      )}
+      )} */}
 
       <button
         className="text-xs text-red-400 underline mt-6"

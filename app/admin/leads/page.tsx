@@ -13,6 +13,13 @@ const CONFIDENCE_THRESHOLD = 0.85;
 const LEADS_PER_PAGE = 20;
 
 export default function LeadsPage() {
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+  useEffect(() => {
+    if (toastMessage) {
+      const timeout = setTimeout(() => setToastMessage(null), 3000);
+      return () => clearTimeout(timeout);
+    }
+  }, [toastMessage]);
   const [leads, setLeads] = useState<Lead[]>([]);
   const [totalCount, setTotalCount] = useState<number>(0);
   const [summary, setSummary] = useState({ total: 0, matchedDomains: 0, matchedCampaigns: 0, duplicates: 0 });
@@ -235,6 +242,142 @@ export default function LeadsPage() {
 
       {/* Leads Table */}
       <LeadsTable leads={filteredLeads} setEditingLead={setEditingLead} setSelectedIds={setSelectedIds} />
+
+      {toastMessage && (
+        <div className="fixed bottom-4 left-1/2 transform -translate-x-1/2 bg-blue-600 text-white px-4 py-2 rounded shadow-lg z-50 animate-fade-in">
+          {toastMessage}
+        </div>
+      )}
+
+      {editingLead && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
+          <div className="bg-gray-900 text-white p-6 rounded shadow-lg w-full max-w-md animate-fade-in">
+            <h2 className="text-xl font-bold mb-4">Edit Lead</h2>
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                if (!editingLead.business_name || !editingLead.address_city) {
+                  setToastMessage('Business name and city are required.')
+                  return;
+                }
+                supabase
+                  .from('leads')
+                  .update({
+                    business_name: editingLead.business_name,
+                    address_city: editingLead.address_city,
+                    status: editingLead.status,
+                    industry: editingLead.industry,
+                  })
+                  .eq('id', editingLead.id)
+                  .then(({ error }) => {
+                    if (!error) {
+                      setToastMessage('Lead updated.')
+                      setEditingLead(null);
+                      fetchLeads(true);
+                    }
+                  });
+              }}
+              // onKeyDown={async (e: React.KeyboardEvent<HTMLFormElement>) => {
+              //   e.preventDefault();
+              //   if (!editingLead.business_name || !editingLead.address_city) return;
+              //   const { error } = await supabase
+              //     .from('leads')
+              //     .update({
+              //       business_name: editingLead.business_name,
+              //       address_city: editingLead.address_city,
+              //       status: editingLead.status,
+              //       industry: editingLead.industry,
+              //     })
+              //     .eq('id', editingLead.id);
+
+              //   if (!error) {
+              //     setEditingLead(null);
+              //     fetchLeads(true);
+              //   }
+              // }}
+            >
+              <label className="block mb-2">
+                Business Name:
+                <input
+                  autoFocus
+                  required
+                  value={editingLead.business_name || ''}
+                  onChange={(e) =>
+                    setEditingLead({ ...editingLead, business_name: e.target.value })
+                  }
+                  className="mt-1 block w-full border rounded px-2 py-1 bg-gray-800 text-white placeholder-gray-400 border-gray-700 focus:ring-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500 hover:border-blue-400 shadow-sm focus:shadow-md transition duration-200"
+                />
+              </label>
+              <label className="block mb-2">
+                City:
+                <input
+                  required
+                  value={editingLead.address_city || ''}
+                  onChange={(e) =>
+                    setEditingLead({ ...editingLead, address_city: e.target.value })
+                  }
+                  className="mt-1 block w-full border rounded px-2 py-1 bg-gray-800 text-white placeholder-gray-400 border-gray-700 focus:ring-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500 hover:border-blue-400 shadow-sm focus:shadow-md transition duration-200"
+                />
+              </label>
+              <label className="block mb-2">
+                Status:
+                <select
+                  value={editingLead.status || ''}
+                  onChange={(e) =>
+                    setEditingLead({ ...editingLead, status: e.target.value })
+                  }
+                  className="mt-1 block w-full border rounded px-2 py-1 bg-gray-800 text-white placeholder-gray-400 border-gray-700 focus:ring-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500 hover:border-blue-400 shadow-sm focus:shadow-md transition duration-200"
+                >
+                  <option value="">--</option>
+                  <option value="reviewed">Reviewed</option>
+                  <option value="needs_review">Needs Review</option>
+                  <option value="duplicate">Duplicate</option>
+                </select>
+              </label>
+              <label className="block mb-2">
+                Industry:
+                <input
+                  value={editingLead.industry || ''}
+                  onChange={(e) =>
+                    setEditingLead({ ...editingLead, industry: e.target.value })
+                  }
+                  className="mt-1 block w-full border rounded px-2 py-1 bg-gray-800 text-white placeholder-gray-400 border-gray-700 focus:ring-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500 hover:border-blue-400 shadow-sm focus:shadow-md transition duration-200"
+                />
+              </label>
+              <div className="flex justify-between items-center gap-4 mt-4">
+                <button
+                  type="button"
+                  onClick={async () => {
+                    const { error } = await supabase.from('leads').delete().eq('id', editingLead.id);
+                    if (!error) setToastMessage('Lead deleted.')
+                    setEditingLead(null);
+                    fetchLeads(true);
+                    fetchTotalCount();
+                  }}
+                  className="text-red-600 hover:underline text-sm"
+                >
+                  Delete
+                </button>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setEditingLead(null)}
+                    className="text-gray-300 hover:underline"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+                  >
+                    Save
+                  </button>
+                </div>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* Loader */}
       <div ref={loaderRef} className="text-center text-sm py-6 text-gray-400">

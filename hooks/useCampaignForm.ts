@@ -92,7 +92,6 @@ export function useCampaignForm(city: string, state: string, initialLeadIds: str
           alt_domains: [alt1, alt2],
           created_by: email,
           status,
-          initial_lead_ids: initialLeadIds,
         },
       ])
       .select()

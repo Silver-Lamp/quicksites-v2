@@ -14,6 +14,7 @@ const LEADS_PER_PAGE = 20;
 
 export default function LeadsPage() {
   const [leads, setLeads] = useState<Lead[]>([]);
+  const [totalCount, setTotalCount] = useState<number>(0);
   const [summary, setSummary] = useState({ total: 0, matchedDomains: 0, matchedCampaigns: 0, duplicates: 0 });
   const [nextAction, setNextAction] = useState(false);
   const [error, setError] = useState('');
@@ -35,9 +36,13 @@ export default function LeadsPage() {
   const [hasMore, setHasMore] = useState(true);
   const [search, setSearch] = useState('');
 
-  const fetchLeads = useCallback(async (reset = false) => {
-    if (!reset && !hasMore) return; // ✅ prevent infinite fetches
+  const fetchTotalCount = useCallback(async () => {
+    const { count } = await supabase.from('leads').select('*', { count: 'exact', head: true });
+    if (typeof count === 'number') setTotalCount(count);
+  }, []);
 
+  const fetchLeads = useCallback(async (reset = false) => {
+    if (!reset && !hasMore) return;
     setLoading(true);
 
     let query = supabase
@@ -51,6 +56,19 @@ export default function LeadsPage() {
     const from = reset ? 0 : currentPageRef.current * LEADS_PER_PAGE;
     const to = from + LEADS_PER_PAGE - 1;
     const { data, error } = await query.range(from, to);
+
+    if (data) {
+      data.forEach((lead, index) => {
+        try {
+          if (!lead.business_name || typeof lead.business_name !== 'string') {
+            console.warn(`[Lead Skipped] Row ${from + index} (id: ${lead.id}): Invalid business_name`, lead);
+            lead.business_name = '[INVALID LEAD]';
+          }
+        } catch (e) {
+          console.error(`[Lead Error] Row ${from + index} (id: ${lead.id}):`, e, lead);
+        }
+      });
+    }
 
     if (error) {
       console.error('Error fetching leads:', error);
@@ -75,7 +93,9 @@ export default function LeadsPage() {
 
   useEffect(() => {
     fetchLeads(true);
-  }, [fetchLeads]);
+    fetchTotalCount();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     const observer = new IntersectionObserver(([entry]) => {
@@ -114,6 +134,7 @@ export default function LeadsPage() {
     if (confidence >= CONFIDENCE_THRESHOLD) {
       await supabase.from('leads').insert([leadData]);
       fetchLeads();
+      fetchTotalCount();
     } else {
       setReviewLead({ ...leadData, confidence });
     }
@@ -127,10 +148,13 @@ export default function LeadsPage() {
     setReviewLead(null);
     setReviewImage(null);
     fetchLeads();
+    fetchTotalCount();
   };
 
-  const filteredLeads = leads.filter((l) =>
-    l.business_name?.toLowerCase().includes(search.toLowerCase())
+  const dedupedLeads = Array.from(new Map(leads.map((l) => [l.id, l])).values());
+  const filteredLeads = dedupedLeads.filter((l) =>
+    l.business_name?.toLowerCase().includes(search.toLowerCase()) ||
+    l.address_city?.toLowerCase().includes(search.toLowerCase())
   );
 
   return (
@@ -152,25 +176,36 @@ export default function LeadsPage() {
             className="hidden"
           />
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 items-center">
           <input
             type="text"
             placeholder="Search business name..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="border rounded px-2 py-1"
+            className="border rounded px-2 py-1 bg-gray-900 text-white placeholder-gray-400 border-gray-700 focus:ring-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500 hover:border-blue-400 shadow-sm focus:shadow-md transition duration-200"
           />
-          <select value={filterSource} onChange={(e) => setFilterSource(e.target.value)} className="border rounded px-2 py-1">
+          {search && (
+            <button
+              onClick={() => setSearch('')}
+              className="text-sm text-blue-600 underline"
+            >
+              Clear
+            </button>
+          )}
+          <select value={filterSource} onChange={(e) => setFilterSource(e.target.value)} className="border rounded px-2 py-1 bg-gray-900 text-white placeholder-gray-400 border-gray-700 focus:ring-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500 hover:border-blue-400 shadow-sm focus:shadow-md transition duration-200">
             <option value="all">All Sources</option>
             <option value="photo">Photo</option>
             <option value="csv">CSV</option>
           </select>
-          <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)} className="border rounded px-2 py-1">
+          <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)} className="border rounded px-2 py-1 bg-gray-900 text-white placeholder-gray-400 border-gray-700 focus:ring-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500 hover:border-blue-400 shadow-sm focus:shadow-md transition duration-200">
             <option value="all">All Statuses</option>
             <option value="reviewed">Reviewed</option>
             <option value="needs_review">Needs Review</option>
             <option value="duplicate">Duplicate</option>
           </select>
+          <span className="text-sm text-gray-600">
+            Showing {filteredLeads.length} of {leads.length} loaded / {totalCount} total
+          </span>
         </div>
       </div>
 

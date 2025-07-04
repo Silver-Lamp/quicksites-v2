@@ -1,5 +1,6 @@
 export type Lead = {
   id: string;
+  source: string | null;
   business_name: string;
   contact_name: string;
   phone: string;
@@ -26,6 +27,7 @@ export type Lead = {
 };
 export type CSVLeadRow = {
   Tags?: string;
+  Source?: string;
   BusinessName?: string;
   ContactName?: string;
   Phone?: string;

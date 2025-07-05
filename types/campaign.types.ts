@@ -12,5 +12,7 @@ export type CampaignType = {
     created_at?: string;
     updated_at?: string;
     status: 'draft' | 'published' | 'paused' | 'archived';
+    silent_mode: boolean;
+    alt_domains: string[];
   };
   

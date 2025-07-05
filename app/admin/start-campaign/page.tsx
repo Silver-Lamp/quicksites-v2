@@ -16,15 +16,15 @@ export default function StartCampaign() {
   const searchParams = useSearchParams();
 
   const cityParam = searchParams?.get('city') || '';
-  const stateParam = searchParams?.get('state') || '';
-  const industryParam = searchParams?.get('industry') || '';
+  const stateParam = searchParams?.get('state')?.trim().toUpperCase() || '';
+  const industryParam = searchParams?.get('industry')?.trim().toLowerCase() || '';
   const initialLeadIds = searchParams?.get('initialLeadIds')?.split(',').filter(Boolean) || [];
 
   const [draft, updateDraft, clearDraft] = useSavedCampaignDraft();
 
   const [city, setCity] = useState(draft.city || cityParam);
-  const [state, setState] = useState(draft.state || stateParam);
-  const [industry, setIndustry] = useState(draft.industry || industryParam);
+  const [state, setState] = useState(draft.state || stateParam ? stateParam.toUpperCase() : '');
+  const [industry, setIndustry] = useState(draft.industry || industryParam ? industryParam.charAt(0).toUpperCase() + industryParam.slice(1) : '');
   const [alt1, setAlt1] = useState(draft.alt1 || '');
   const [alt2, setAlt2] = useState(draft.alt2 || '');
   const [silentMode, setSilentMode] = useState(draft.silentMode ?? false);
@@ -168,16 +168,24 @@ export default function StartCampaign() {
         }}
         className="space-y-4"
       >
-        <input
-          placeholder="Campaign Name"
-          value={name}
+
+        {/* // industry */}
+        <select
+          value={industry}
           onChange={(e) => {
-            setName(e.target.value);
-            setNameWasManuallySet(true);
+            const val = e.target.value;
+            setIndustry(val);
+            updateDraft({ industry: val });
           }}
           className="w-full px-3 py-2 rounded bg-zinc-800 border border-zinc-600"
-        />
-
+        >
+          <option value="">Select Industry</option>
+          {availableIndustries.map((ind) => (
+            <option key={ind} value={ind}>{ind.charAt(0).toUpperCase() + ind.slice(1)}</option>
+          ))}
+        </select>
+        
+        {/* // city and state */}
         <div className="flex gap-4">
           <input
             placeholder="City"
@@ -201,23 +209,8 @@ export default function StartCampaign() {
           />
         </div>
 
-        <select
-          value={industry}
-          onChange={(e) => {
-            const val = e.target.value;
-            setIndustry(val);
-            updateDraft({ industry: val });
-          }}
-          className="w-full px-3 py-2 rounded bg-zinc-800 border border-zinc-600"
-        >
-          <option value="">Select Industry</option>
-          {availableIndustries.map((ind) => (
-            <option key={ind} value={ind}>
-              {ind}
-            </option>
-          ))}
-        </select>
 
+        {/* // lead selector */}
         {filteredLeads.length > 0 ? (
           <LeadSelectorWithRadius
             leads={filteredLeads}
@@ -234,7 +227,19 @@ export default function StartCampaign() {
             No leads found for this location and industry.
           </p>
         )}
+        
+        {/* // campaign name */}
+        <input
+          placeholder="Campaign Name"
+          value={name}
+          onChange={(e) => {
+            setName(e.target.value);
+            setNameWasManuallySet(true);
+          }}
+          className="w-full px-3 py-2 rounded bg-zinc-800 border border-zinc-600"
+        />
 
+        {/* // alt domains */}
         <div className="flex gap-4">
           <input
             placeholder="Alt Domain 1"
@@ -258,6 +263,7 @@ export default function StartCampaign() {
           />
         </div>
 
+        {/* // starts at and ends at */}
         <div className="flex gap-4">
           <input
             type="datetime-local"
@@ -273,6 +279,7 @@ export default function StartCampaign() {
           />
         </div>
 
+        {/* // silent mode */}
         <label className="flex items-center gap-2 text-sm">
           <input
             type="checkbox"
@@ -286,6 +293,7 @@ export default function StartCampaign() {
           Silent Mode (no notifications)
         </label>
 
+        {/* // published */}
         <label className="flex items-center gap-2 text-sm">
           <input
             type="checkbox"
@@ -295,10 +303,12 @@ export default function StartCampaign() {
           Published
         </label>
 
+        {/* // error */}
         {error && (
           <div className="text-red-400 text-sm border border-red-600 p-2 rounded">⚠️ {error}</div>
         )}
 
+        {/* // launch campaign */}
         <button
           type="submit"
           className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"

@@ -93,7 +93,7 @@ export default function CityMarker({
               }}
               className="mt-3 px-3 py-2 bg-blue-600 text-white rounded-md text-sm hover:bg-blue-700 w-full"
               >
-                🚀 Start Campaign
+                🚀 Start Campaignz
               </button>
             </>
           )}

@@ -10,6 +10,7 @@ import {
   Settings,
   Users,
   Shield,
+  MapPin,
 } from 'lucide-react';
 
 export function AdminNavSections() {
@@ -34,6 +35,7 @@ export function AdminNavSections() {
         <p className="font-semibold text-blue-300 mb-1">Core</p>
         <div className="flex flex-col gap-1">
           <NavLink href="/admin" label="Dashboard" icon={LayoutDashboard} />
+          <NavLink href="/admin/the-grid" label="Map of Opportunites" icon={MapPin} />
           <NavLink href="/admin/leads" label="Leads" icon={FileText} />
           <NavLink href="/admin/campaigns" label="Campaigns" icon={FileText} />
           <NavLink href="/admin/start-campaign" label="Start Campaign" icon={FileSignature} />

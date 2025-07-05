@@ -51,6 +51,7 @@ export function MobileDrawer({
                 <summary className="cursor-pointer font-semibold text-blue-300">Core</summary>
                 <div className="ml-4 flex flex-col gap-1">
                   <SafeLink href="/admin">Dashboard</SafeLink>
+                  <SafeLink href="/admin/the-grid">Map of Opportunites</SafeLink>
                   <SafeLink href="/admin/leads">Leads</SafeLink>
                   <SafeLink href="/admin/campaigns">Campaigns</SafeLink>
                   <SafeLink href="/admin/start-campaign">Start Campaign</SafeLink>

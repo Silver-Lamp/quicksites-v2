@@ -6,9 +6,9 @@
 
 import { createClient } from '@supabase/supabase-js';
 import dotenv from 'dotenv';
-import { geocodeCity } from '../lib/utils/geocode.js';
+import { getLatLonForCityState } from '../lib/utils/geocode.js';
 import fs from 'fs';
-import { getDistanceMiles } from '../lib/utils/distance.js';
+import { getDistanceMiles } from '../lib/leads/distance.js';
 
 dotenv.config();
 
@@ -50,7 +50,7 @@ async function enrichLeadCoordinates() {
     try {
       for (let attempt = 1; attempt <= 3; attempt++) {
         try {
-          coords = await geocodeCity(city, state);
+          coords = await getLatLonForCityState(city, state);
           if (coords) break;
         } catch {
           console.warn(`🌐 Attempt ${attempt} failed for ${city}, ${state}`);

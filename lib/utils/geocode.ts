@@ -1,4 +1,4 @@
-export async function geocodeCity(
+export async function getLatLonForCityState(
     city: string,
     state?: string
   ): Promise<{ lat: number; lon: number } | null> {

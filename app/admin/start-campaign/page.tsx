@@ -1,9 +1,14 @@
-// app/admin/start-campaign/page.tsx
 'use client';
 
 import { useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { useCampaignForm } from '@/hooks/useCampaignForm';
+import { useSelectedLeadsWrapper } from '@/hooks/useSelectedLeadsWrapper';
+import { useRadiusFilter } from '@/hooks/useRadiusFilter';
+import { useSavedCampaignDraft } from '@/hooks/useSavedCampaignDraft';
+import LeadSelectorWithRadius from '@/components/admin/campaigns/lead-selector-with-radius';
+import { getLatLonForCityState } from '@/lib/utils/geocode';
+import { Lead } from '@/types/lead.types';
 
 export default function StartCampaign() {
   const searchParams = useSearchParams();
@@ -11,53 +16,93 @@ export default function StartCampaign() {
   const cityParam = searchParams?.get('city') || '';
   const stateParam = searchParams?.get('state') || '';
   const industryParam = searchParams?.get('industry') || '';
-  const leadIdsParam = searchParams?.get('leadIds') || '';
   const initialLeadIds = searchParams?.get('initialLeadIds')?.split(',').filter(Boolean) || [];
 
-  const [city, setCity] = useState(cityParam);
-  const [state, setState] = useState(stateParam);
-  const [industry, setIndustry] = useState(industryParam);
+  const [draft, updateDraft, clearDraft] = useSavedCampaignDraft();
+
+  const [city, setCity] = useState(draft.city || cityParam);
+  const [state, setState] = useState(draft.state || stateParam);
+  const [industry, setIndustry] = useState(draft.industry || industryParam);
+  const [alt1, setAlt1] = useState(draft.alt1 || '');
+  const [alt2, setAlt2] = useState(draft.alt2 || '');
+  const [silentMode, setSilentMode] = useState(draft.silentMode ?? false);
+  const [cityLat, setCityLat] = useState<number | null>(null);
+  const [cityLon, setCityLon] = useState<number | null>(null);
+  const [availableIndustries, setAvailableIndustries] = useState<string[]>([]);
 
   const {
     name,
     setName,
     nameWasManuallySet,
     setNameWasManuallySet,
-    alt1,
-    alt2,
-    setAlt1,
-    setAlt2,
     startsAt,
     setStartsAt,
     endsAt,
     setEndsAt,
-    silentMode,
-    setSilentMode,
     error,
     validationErrors,
     submit,
     leads,
     selectedLeads,
-    // setSelectedLeads,
     toggleLead,
     leadsLoading,
-    initialLeadIds: initialLeadIdsFromParams,
   } = useCampaignForm(city, state, initialLeadIds);
 
-  // Optional: auto-generate campaign name
+  const { setSelectedLeadIds } = useSelectedLeadsWrapper(selectedLeads, (id) => {
+    toggleLead(id);
+    const updated = selectedLeads.includes(id)
+      ? selectedLeads.filter((x) => x !== id)
+      : [...selectedLeads, id];
+    updateDraft({ selectedLeadIds: updated });
+  });
+
+  const { radius, setRadius } = useRadiusFilter(50);
+
   useEffect(() => {
     if (!nameWasManuallySet && city) {
       setName(`${city} Campaign`);
     }
   }, [city, nameWasManuallySet]);
 
-  // Sync selected leads once leads are loaded
   useEffect(() => {
-    if (initialLeadIds.length && leads.length) {
-      const validIds = leads
-        .map((l) => l.id)
-        .filter((id) => initialLeadIds.includes(id));
-      // setSelectedLeads(validIds);
+    async function fetchLatLon() {
+      if (city && state) {
+        const coords = await getLatLonForCityState(city, state);
+        if (coords) {
+          setCityLat(coords.lat);
+          setCityLon(coords.lon);
+        }
+      }
+    }
+    fetchLatLon();
+  }, [city, state]);
+
+  useEffect(() => {
+    async function fetchIndustries() {
+      try {
+        const res = await fetch('/api/industries');
+        const data = await res.json();
+        if (Array.isArray(data)) {
+          setAvailableIndustries(data.sort());
+        }
+      } catch (err) {
+        console.error('Failed to load industries:', err);
+      }
+    }
+    fetchIndustries();
+  }, []);
+
+  const filteredLeads: Lead[] = (industry
+    ? leads.filter((l) => l.industry === industry)
+    : leads) as Lead[];
+
+  useEffect(() => {
+    if (!industry && leads.length > 0) {
+      const firstWithIndustry = leads.find((l) => l.industry);
+      if (firstWithIndustry?.industry) {
+        setIndustry(firstWithIndustry.industry);
+        updateDraft({ industry: firstWithIndustry.industry });
+      }
     }
   }, [leads]);
 
@@ -80,58 +125,82 @@ export default function StartCampaign() {
           }}
           className="w-full px-3 py-2 rounded bg-zinc-800 border border-zinc-600"
         />
-        {validationErrors.name && <p className="text-sm text-red-400">{validationErrors.name}</p>}
 
         <div className="flex gap-4">
           <input
             placeholder="City"
             value={city}
-            onChange={(e) => setCity(e.target.value)}
+            onChange={(e) => {
+              const val = e.target.value;
+              setCity(val);
+              updateDraft({ city: val });
+            }}
             className="w-full px-3 py-2 rounded bg-zinc-800 border border-zinc-600"
           />
           <input
             placeholder="State"
             value={state}
-            onChange={(e) => setState(e.target.value)}
+            onChange={(e) => {
+              const val = e.target.value;
+              setState(val);
+              updateDraft({ state: val });
+            }}
             className="w-full px-3 py-2 rounded bg-zinc-800 border border-zinc-600"
           />
         </div>
 
-        <input
-          placeholder="Industry"
+        <select
           value={industry}
-          onChange={(e) => setIndustry(e.target.value)}
+          onChange={(e) => {
+            const val = e.target.value;
+            setIndustry(val);
+            updateDraft({ industry: val });
+          }}
           className="w-full px-3 py-2 rounded bg-zinc-800 border border-zinc-600"
-        />
-
-        <div className="space-y-2">
-          <p className="text-sm font-semibold">Select at least 2 Leads</p>
-          {leads.map((lead) => (
-            <label key={lead.id} className="flex items-center gap-2">
-              <input
-                type="checkbox"
-                checked={selectedLeads.includes(lead.id)}
-                onChange={() => toggleLead(lead.id)}
-              />
-              <span>{lead.business_name}</span>
-            </label>
+        >
+          <option value="">Select Industry</option>
+          {availableIndustries.map((ind) => (
+            <option key={ind} value={ind}>
+              {ind}
+            </option>
           ))}
-          {validationErrors.leads && (
-            <p className="text-sm text-red-400">{validationErrors.leads}</p>
-          )}
-        </div>
+        </select>
+
+        {filteredLeads.length > 0 ? (
+          <LeadSelectorWithRadius
+            leads={filteredLeads}
+            selectedLeadIds={selectedLeads}
+            setSelectedLeadIds={setSelectedLeadIds}
+            cityLat={cityLat}
+            cityLon={cityLon}
+            radius={radius}
+            setRadius={setRadius}
+          />
+        ) : (
+          <p className="text-sm text-zinc-400 border border-zinc-700 rounded p-3 bg-zinc-800">
+            No leads found for this location and industry.
+          </p>
+        )}
 
         <div className="flex gap-4">
           <input
             placeholder="Alt Domain 1"
             value={alt1}
-            onChange={(e) => setAlt1(e.target.value)}
+            onChange={(e) => {
+              const val = e.target.value;
+              setAlt1(val);
+              updateDraft({ alt1: val });
+            }}
             className="w-full px-3 py-2 rounded bg-zinc-800 border border-zinc-600"
           />
           <input
             placeholder="Alt Domain 2"
             value={alt2}
-            onChange={(e) => setAlt2(e.target.value)}
+            onChange={(e) => {
+              const val = e.target.value;
+              setAlt2(val);
+              updateDraft({ alt2: val });
+            }}
             className="w-full px-3 py-2 rounded bg-zinc-800 border border-zinc-600"
           />
         </div>
@@ -150,13 +219,16 @@ export default function StartCampaign() {
             className="w-full px-3 py-2 rounded bg-zinc-800 border border-zinc-600"
           />
         </div>
-        {validationErrors.dates && <p className="text-sm text-red-400">{validationErrors.dates}</p>}
 
         <label className="flex items-center gap-2 text-sm">
           <input
             type="checkbox"
             checked={silentMode}
-            onChange={(e) => setSilentMode(e.target.checked)}
+            onChange={(e) => {
+              const checked = e.target.checked;
+              setSilentMode(checked);
+              updateDraft({ silentMode: checked });
+            }}
           />
           Silent Mode (no notifications)
         </label>

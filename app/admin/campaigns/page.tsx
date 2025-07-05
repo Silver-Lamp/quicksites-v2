@@ -9,7 +9,7 @@ import { supabase } from '@/admin/lib/supabaseClient';
 import dayjs from 'dayjs';
 import { enrichLead } from '@/lib/leads/enrichLead';
 import type { Lead as BaseLead } from '@/types/lead.types';
-import { geocodeCity } from '@/lib/utils/geocode';
+import { getLatLonForCityState } from '@/lib/utils/geocode';
 import { sortLeadsByDistance } from '@/lib/leads/distance';
 import CampaignHeader from '@/components/admin/campaigns/campaign-header';
 import CampaignPanel from '@/components/admin/campaigns/campaign-panel';
@@ -86,7 +86,7 @@ export default function CampaignsPage() {
 
   useEffect(() => {
     if (editingCampaign) {
-      geocodeCity(editingCampaign.city).then((coords) => {
+      getLatLonForCityState(editingCampaign.city).then((coords) => {
         if (coords) setGeoCenter(coords);
       });
     }

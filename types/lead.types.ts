@@ -24,6 +24,7 @@ export type Lead = {
   address_lat: number | null;
   address_lon: number | null;
   address_full: string | null;
+  link_type: string | null;
 };
 export type CSVLeadRow = {
   Tags?: string;

@@ -27,6 +27,7 @@ export * from './theme-toggle-button';
 export * from './theme-toggle';
 export { default as ThemedBarChart } from './themed-bar-chart';
 export * from './tooltip';
+export { default as InspirationalQuote } from './inspirational-quote';
 
 // 🔀 Conflict-resolved, safe exports
 export { Input as InputField } from './input';

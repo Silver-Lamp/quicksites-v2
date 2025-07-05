@@ -7,6 +7,8 @@ import { useSafeAuth } from '@/hooks/useSafeAuth';
 import UserMenu from '@/components/auth/user-menu';
 import { useRequestMeta } from '@/hooks/useRequestMeta';
 // import { AdminNavSections } from './AdminNavSections';
+// import { InspirationalQuote } from '@/components/ui';
+import InspirationalQuote from '@/components/ui/inspirational-quote';
 
 export default function AppHeader() {
   useEffect(() => {
@@ -60,7 +62,9 @@ export default function AppHeader() {
         }
       }, 1200);
     });
-    return () => window.removeEventListener('scroll', handleScroll);
+
+
+return () => window.removeEventListener('scroll', handleScroll);
   }, []);
   const router = useRouter();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
@@ -79,13 +83,18 @@ export default function AppHeader() {
   if (!isLoggedIn || !user) {
     return (
       <header className="px-4 py-2 text-zinc-400 text-sm shadow-sm border-b border-zinc-800">
-        <div className="max-w-screen-lg mx-auto flex justify-between items-center">
-          <span>QuickSites</span>
-          <a href="/login" className="text-blue-400 hover:underline">
-            Log In
-          </a>
-        </div>
-      </header>
+  <div className="max-w-screen-lg mx-auto flex justify-between items-center">
+    <div className="flex items-center gap-4">
+      <span>QuickSites</span>
+      <div className="text-xs text-cyan-300 truncate max-w-xs">
+       <h1>hello</h1> <InspirationalQuote tags={["small-business", "seo", "persistence"]} />
+      </div>
+    </div>
+    <a href="/login" className="text-blue-400 hover:underline">
+      Log In
+    </a>
+  </div>
+</header>
     );
   }
 
@@ -94,7 +103,7 @@ export default function AppHeader() {
       <div className="flex justify-between items-center max-w-screen-xl mx-auto relative">
         <div className="flex items-center overflow-x-auto whitespace-nowrap max-w-full flex-1">
           <SafeLink href="/" className="text-blue-400 hover:underline">
-            <img src="/logo_v1.png" alt="QuickSites" className="h-16 w-auto" />
+            <img src="/logo_v1.png" alt="QuickSites" className="h-12 w-auto" />
           </SafeLink>
         </div>
         <div className="ml-2 flex items-center gap-2" style={{ minWidth: 'auto' }}>

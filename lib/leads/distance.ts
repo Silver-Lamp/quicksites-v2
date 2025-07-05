@@ -1,4 +1,6 @@
 // lib/leads/distance.ts
+import { Lead } from '@/types/lead.types';
+
 export function getDistanceMiles(lat1: number, lon1: number, lat2: number, lon2: number): number {
     const R = 3958.8; // Earth radius in miles
     const toRad = (deg: number) => deg * (Math.PI / 180);

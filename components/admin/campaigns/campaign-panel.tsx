@@ -2,17 +2,18 @@
 
 'use client';
 
-import { Campaign, Lead } from '@/app/admin/campaigns/page';
+import { CampaignType } from '@/types/campaign.types';
+import { Lead } from '@/types/lead.types';
 import dayjs, { Dayjs } from 'dayjs';
 import { useMemo } from 'react';
 
 type Props = {
-  campaign: Campaign;
+  campaign: CampaignType;
   leads: Lead[];
   now: Dayjs;
   expanded: boolean;
   setExpanded: (v: boolean) => void;
-  setEditingCampaign: (c: Campaign) => void;
+  setEditingCampaign: (c: CampaignType) => void;
   setSelectedLeadIds: (ids: string[]) => void;
 };
 
@@ -88,11 +89,11 @@ export default function CampaignPanel({
               <div className="text-xs text-zinc-400">{l.address_city}, {l.address_state}</div>
               <div className="text-xs text-zinc-500 italic">{l.industry}</div>
               <div className="text-xs text-zinc-400">{l.phone} • {l.email}</div>
-              {l.distance_km != null && (
+              {/* {l.distance_miles != null && (
                 <div className="text-[11px] text-zinc-500">
-                  {l.distance_km.toFixed(1)} km away
+                  {l.distance_miles.toFixed(1)} mi away
                 </div>
-              )}
+              )} */}
             </div>
           ))}
         </div>

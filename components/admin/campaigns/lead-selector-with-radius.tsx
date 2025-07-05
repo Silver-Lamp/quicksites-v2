@@ -5,14 +5,17 @@ import { useEffect, useState } from 'react';
 import { getDistanceMiles } from '@/lib/utils/distance';
 
 type Lead = {
-  id: string;
-  business_name: string;
-  address_lat?: number | null;
-  address_lon?: number | null;
-  address_city?: string | null;
-  address_state?: string | null;
-  industry?: string | null;
-};
+    id: string;
+    business_name: string;
+    address_lat?: number | null;
+    address_lon?: number | null;
+    address_city?: string | null;
+    address_state?: string | null;
+    industry?: string | null;
+    current_campaign_id?: string | null;
+    current_campaign_expires_at?: string | null;
+  };
+  
 
 type Props = {
   leads: Lead[];
@@ -24,6 +27,9 @@ type Props = {
   setRadius: (radius: number) => void;
   geoCenter?: { lat: number; lon: number } | null;
   industry?: string | null;
+  state?: string | null;
+  currentCampaignId?: string | null;
+  currentCampaignExpiresAt?: string | null;
 };
 
 export default function LeadSelectorWithRadius({
@@ -36,12 +42,26 @@ export default function LeadSelectorWithRadius({
   setRadius,
   geoCenter,
   industry,
+  currentCampaignId,
+  currentCampaignExpiresAt,
 }: Props) {
-  const toggle = (id: string) => {
-    setSelectedLeadIds(
-      selectedLeadIds.includes(id)
-        ? selectedLeadIds.filter((x) => x !== id)
-        : [...selectedLeadIds, id]
+    const isLeadDisabled = (lead: Lead): boolean => {
+        if (!lead.current_campaign_id) return false;
+      
+        const isExpired =
+          !lead.current_campaign_expires_at ||
+          new Date(lead.current_campaign_expires_at) < new Date();
+      
+        const isSameCampaign = lead.current_campaign_id === currentCampaignId;
+      
+        return !(isExpired || isSameCampaign);
+      };
+    
+    const toggle = (id: string) => {
+      setSelectedLeadIds(
+        selectedLeadIds.includes(id)
+          ? selectedLeadIds.filter((x) => x !== id)
+          : [...selectedLeadIds, id]
     );
   };
 
@@ -67,23 +87,32 @@ export default function LeadSelectorWithRadius({
     { label: '25–50 mi', min: 25, max: 50 },
   ];
 
-  const renderLeadLine = (lead: Lead, distanceLabel: string) => (
-    <div key={lead.id} className="flex flex-col gap-1 mb-2">
-      <label className="flex items-center gap-2">
-        <input
-          type="checkbox"
-          checked={selectedLeadIds.includes(lead.id)}
-          onChange={() => toggle(lead.id)}
-        />
-        <div className="text-sm text-white">
-          <span className="font-semibold">{lead.business_name}</span>{' '}
-          <span className="text-xs text-zinc-400">
-            ({lead.address_city}, {lead.address_state} • {lead.industry}) — {distanceLabel}
-          </span>
-        </div>
-      </label>
-    </div>
-  );
+  const renderLeadLine = (lead: Lead, distanceLabel: string) => {
+    const disabled = isLeadDisabled(lead);
+  
+    return (
+      <div key={lead.id} className="flex flex-col gap-1 mb-2">
+        <label
+          className={`flex items-center gap-2 ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
+          title={disabled ? 'Already part of an active campaign' : ''}
+        >
+          <input
+            type="checkbox"
+            disabled={disabled}
+            checked={selectedLeadIds.includes(lead.id)}
+            onChange={() => toggle(lead.id)}
+          />
+          <div className="text-sm text-white">
+            <span className="font-semibold">{lead.business_name}</span>{' '}
+            <span className="text-xs text-zinc-400">
+              ({lead.address_city}, {lead.address_state} • {lead.industry}) — {distanceLabel}
+            </span>
+          </div>
+        </label>
+      </div>
+    );
+  };
+  
 
   const renderGroup = (label: string, min: number, max: number) => {
     const group = sortedLeads.filter((l) => {

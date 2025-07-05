@@ -44,36 +44,55 @@ export default function CampaignsPage() {
     supabase.auth.getUser().then(({ data }) => {
       setUserEmail(data?.user?.email ?? null);
     });
-
-    Promise.all([
-      supabase
-        .from('campaigns')
-        .select('id, name, city, city_lat, city_lon, starts_at, ends_at, lead_ids, status, industry, state')
-        .order('starts_at', { ascending: false }),
-      supabase
-        .from('leads')
-        .select('*, draft_sites:domain_id(domain, is_claimed), users:user_profiles!owner_id(email)')
-    ]).then(([campaignRes, leadRes]) => {
-      setCampaigns(campaignRes.data || []);
-      setAllLeads(leadRes.data || []);
-
+  
+    async function loadData() {
+      const [{ data: campaignData }, { data: leadData }, { data: linkData }] = await Promise.all([
+        supabase
+          .from('campaigns')
+          .select('id, name, city, city_lat, city_lon, starts_at, ends_at, status, industry, state, silent_mode, alt_domains')
+          .order('starts_at', { ascending: false }),
+  
+        supabase
+          .from('leads')
+          .select('*, draft_sites:domain_id(domain, is_claimed), users:user_profiles!owner_id(email)'),
+  
+        supabase
+          .from('campaign_leads')
+          .select('campaign_id, lead_id'),
+      ]);
+  
+      setCampaigns(campaignData || []);
+      setAllLeads(leadData || []);
+  
+      // Build a campaignId → leadIds[] map
+      const campaignMap = new Map<string, string[]>();
+      for (const row of linkData || []) {
+        const list = campaignMap.get(row.campaign_id) ?? [];
+        list.push(row.lead_id);
+        campaignMap.set(row.campaign_id, list);
+      }
+  
+      // Group enriched leads under each campaign
       const grouped: Record<string, Lead[]> = {};
-      const campaignMap = new Map(
-        (campaignRes.data || []).map((c) => [c.id, Array.isArray(c.lead_ids) ? c.lead_ids.map(String) : []])
-      );
-
-      for (const rawLead of leadRes.data || []) {
+      for (const rawLead of leadData || []) {
         const lead = enrichLead(rawLead, campaignMap);
         if (!lead) continue;
-
-        const campaignKey = lead.campaign_id || '__unlinked__';
+  
+        const foundCampaignId = [...campaignMap.entries()].find(([_, ids]) =>
+          ids.includes(lead.id)
+        )?.[0];
+  
+        const campaignKey = foundCampaignId ?? '__unlinked__';
         if (!grouped[campaignKey]) grouped[campaignKey] = [];
         grouped[campaignKey].push(lead);
       }
-
+  
       setLeadsByCampaign(grouped);
-    });
+    }
+  
+    loadData();
   }, []);
+  
 
   useEffect(() => {
     if (editingCampaign) {

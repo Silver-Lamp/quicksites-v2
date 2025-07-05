@@ -7,6 +7,8 @@ export type LeadSummary = {
   address_state?: string | null;
   created_at?: string | null;
   industry?: string | null;
+  current_campaign_id?: string | null;
+  current_campaign_expires_at?: string | null;
 };
 
 type LoadLeadsOptions = {
@@ -29,7 +31,16 @@ export async function loadLeads(options: LoadLeadsOptions = {}): Promise<LeadSum
 
   const { data, error } = await supabase
     .from('leads')
-    .select('id, business_name, address_city, address_state, created_at, industry');
+    .select(`
+      id,
+      business_name,
+      address_city,
+      address_state,
+      created_at,
+      industry,
+      current_campaign_id,
+      current_campaign_expires_at
+    `);
 
   if (error) {
     console.error('Error loading leads:', error.message);

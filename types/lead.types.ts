@@ -25,7 +25,10 @@ export type Lead = {
   address_lon: number | null;
   address_full: string | null;
   link_type: string | null;
+  current_campaign_id: string | null;
+  current_campaign_expires_at: string | null;
 };
+
 export type CSVLeadRow = {
   Tags?: string;
   Source?: string;

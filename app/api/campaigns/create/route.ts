@@ -34,7 +34,8 @@ export async function POST(req: NextRequest): Promise<Response> {
     return Response.json({ error: 'Missing required fields' }, { status: 400 });
   }
 
-  const { data: campaign, error } = await supabase
+  // Step 1: Create campaign
+  const { data: campaign, error: campaignError } = await supabase
     .from('campaigns')
     .insert({
       name,
@@ -52,17 +53,32 @@ export async function POST(req: NextRequest): Promise<Response> {
     .select()
     .single();
 
-  if (error) {
-    console.error('[❌ create campaign]', error);
-    return Response.json({ error: error.message }, { status: 500 });
+  if (campaignError) {
+    console.error('[❌ create campaign]', campaignError);
+    return Response.json({ error: campaignError.message }, { status: 500 });
   }
 
-  if (Array.isArray(lead_ids)) {
+  // Step 2: Link leads (via join table)
+  if (Array.isArray(lead_ids) && lead_ids.length > 0) {
     const leadLinks = lead_ids.map((lead_id) => ({ campaign_id: campaign.id, lead_id }));
     const { error: linkError } = await supabase.from('campaign_leads').insert(leadLinks);
     if (linkError) {
       console.error('[❌ link leads]', linkError);
       return Response.json({ error: linkError.message }, { status: 500 });
+    }
+
+    // Step 3: Update leads with campaign_id + expiration
+    const { error: updateLeadsError } = await supabase
+      .from('leads')
+      .update({
+        current_campaign_id: campaign.id,
+        current_campaign_expires_at: ends_at,
+      })
+      .in('id', lead_ids);
+
+    if (updateLeadsError) {
+      console.error('[❌ update leads]', updateLeadsError);
+      return Response.json({ error: updateLeadsError.message }, { status: 500 });
     }
   }
 

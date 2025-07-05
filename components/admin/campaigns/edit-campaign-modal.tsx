@@ -26,6 +26,8 @@ export type Props = {
   leadsByCampaign: Record<string, Lead[]>;
   setEditingCampaign: (c: CampaignType | null) => void;
   geoCenter?: { lat: number; lon: number } | null;
+  currentCampaignId?: string | null;
+  currentCampaignExpiresAt?: string | null;
 };
 
 export default function EditCampaignModal({
@@ -36,6 +38,8 @@ export default function EditCampaignModal({
   leadsByCampaign,
   setEditingCampaign,
   geoCenter,
+  currentCampaignId,
+  currentCampaignExpiresAt,
 }: Props) {
   const [radius, setRadius] = useState(50);
   const [availableIndustries, setAvailableIndustries] = useState<string[]>([]);
@@ -46,6 +50,7 @@ export default function EditCampaignModal({
   const [cityLat, setCityLat] = useState<number | null>(campaign.city_lat ?? null);
   const [cityLon, setCityLon] = useState<number | null>(campaign.city_lon ?? null);
 
+  // fetch industries
   useEffect(() => {
     async function fetchIndustries() {
       try {
@@ -61,6 +66,7 @@ export default function EditCampaignModal({
     fetchIndustries();
   }, []);
 
+  // sync lat lon
   useEffect(() => {
     async function syncLatLon() {
       if (campaignCity && campaignState) {
@@ -74,6 +80,7 @@ export default function EditCampaignModal({
     syncLatLon();
   }, [campaignCity, campaignState]);
 
+  // sync campaign state
   useEffect(() => {
     setCampaignState(campaign.state || '');
     setCampaignIndustry(campaign.industry || '');
@@ -83,6 +90,25 @@ export default function EditCampaignModal({
     setCityLon(campaign.city_lon ?? null);
   }, [campaign]);
 
+  // fetch linked leads
+  useEffect(() => {
+    async function fetchLinkedLeads() {
+      if (!campaign?.id) return;
+  
+      const res = await fetch(`/api/campaigns/${campaign.id}/leads`);
+      const json = await res.json();
+  
+      if (res.ok && Array.isArray(json.lead_ids)) {
+        setSelectedLeadIds(json.lead_ids);
+      } else {
+        console.warn('Failed to fetch campaign-linked leads:', json.error || json);
+      }
+    }
+  
+    fetchLinkedLeads();
+  }, [campaign?.id]);
+
+  // filter leads by industry
   const filteredLeads = useMemo(() => {
     const leads = campaignIndustry
       ? allLeads.filter((l) => l.industry?.toLowerCase().trim() === campaignIndustry.toLowerCase().trim())
@@ -90,6 +116,7 @@ export default function EditCampaignModal({
     return leads;
   }, [allLeads, campaignIndustry]);
 
+  // count leads by radius
   const leadCountByRadius = useMemo(() => {
     if (!cityLat || !cityLon) return {};
     return {
@@ -267,6 +294,8 @@ export default function EditCampaignModal({
               radius={radius}
               setRadius={setRadius}
               industry={campaignIndustry}
+              currentCampaignId={campaign.id}
+              currentCampaignExpiresAt={campaign.ends_at}
             />
           </div>
 

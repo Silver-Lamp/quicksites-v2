@@ -1,6 +1,6 @@
-// lib/leads/enrichLead.ts
 import { z } from 'zod';
 import type { Lead as BaseLead } from '@/types/lead.types';
+import { getDistanceMiles } from './distance';
 
 export const zLead = z.object({
   id: z.string(),
@@ -19,6 +19,8 @@ export const zLead = z.object({
     })
     .nullable()
     .optional(),
+  address_lat: z.number().nullable().optional(),
+  address_lon: z.number().nullable().optional(),
 });
 
 export type EnrichedLead = BaseLead & {
@@ -29,7 +31,10 @@ export type EnrichedLead = BaseLead & {
   users?: {
     email?: string;
   };
-  link_type: string | null;
+  address_lat?: number | null;
+  address_lon?: number | null;
+  link_type: '📎 campaign_id' | '📦 lead_ids[]' | null;
+  distance_km?: number;
 };
 
 export function enrichLead(
@@ -38,7 +43,7 @@ export function enrichLead(
 ): EnrichedLead | null {
   const parsed = zLead.safeParse(lead);
   if (!parsed.success) {
-    console.warn('❌ Invalid lead skipped', parsed.error.format());
+    console.warn('❌ Invalid lead skipped:', parsed.error.format());
     return null;
   }
 
@@ -56,4 +61,24 @@ export function enrichLead(
     ...lead,
     link_type,
   };
+}
+
+export function enrichLeadWithDistance(
+  lead: any,
+  campaignMap: Map<string, string[]>,
+  campaignLat: number,
+  campaignLon: number
+): EnrichedLead | null {
+  const base = enrichLead(lead, campaignMap);
+  if (!base) return null;
+
+  const lat = base.address_lat;
+  const lon = base.address_lon;
+
+  if (lat !== null && lon !== null && typeof lat === 'number' && typeof lon === 'number') {
+    const distMiles = getDistanceMiles(campaignLat, campaignLon, lat, lon);
+    return { ...base, distance_km: Math.round(distMiles * 1.60934 * 10) / 10 }; // round to 1 decimal
+  }
+
+  return base;
 }

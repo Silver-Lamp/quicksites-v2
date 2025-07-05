@@ -5,14 +5,23 @@ export async function geocodeCity(
     const query = `${city}${state ? `, ${state}` : ''}`;
     const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}`;
   
-    const res = await fetch(url);
-    const data = await res.json();
+    try {
+      const res = await fetch(url, {
+        headers: {
+          'User-Agent': 'QuickSites-Geocoder/1.0 (admin@quicksites.ai)',
+          'Accept': 'application/json',
+        },
+      });
   
-    if (Array.isArray(data) && data.length > 0) {
-      return {
-        lat: parseFloat(data[0].lat),
-        lon: parseFloat(data[0].lon),
-      };
+      const data = await res.json();
+      if (Array.isArray(data) && data.length > 0) {
+        return {
+          lat: parseFloat(data[0].lat),
+          lon: parseFloat(data[0].lon),
+        };
+      }
+    } catch (e) {
+      console.warn(`🌐 Failed to geocode city: ${query}`, e);
     }
   
     return null;

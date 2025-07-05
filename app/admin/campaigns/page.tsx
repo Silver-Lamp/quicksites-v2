@@ -14,17 +14,7 @@ import { sortLeadsByDistance } from '@/lib/leads/distance';
 import CampaignHeader from '@/components/admin/campaigns/campaign-header';
 import CampaignPanel from '@/components/admin/campaigns/campaign-panel';
 import EditCampaignModal from '@/components/admin/campaigns/edit-campaign-modal';
-
-export type Campaign = {
-  id: string;
-  name: string;
-  city: string;
-  starts_at: string;
-  ends_at: string;
-  lead_ids?: string[];
-  city_lat?: number;
-  city_lon?: number;
-};
+import { CampaignType } from '@/types/campaign.types';
 
 export type Lead = BaseLead & {
   draft_sites?: {
@@ -38,11 +28,12 @@ export type Lead = BaseLead & {
 };
 
 export default function CampaignsPage() {
-  const [campaigns, setCampaigns] = useState<Campaign[]>([]);
+  const [statusFilter, setStatusFilter] = useState<'all' | 'draft' | 'published' | 'paused' | 'archived'>('published');
+  const [campaigns, setCampaigns] = useState<CampaignType[]>([]);
   const [leadsByCampaign, setLeadsByCampaign] = useState<Record<string, Lead[]>>({});
   const [now, setNow] = useState(dayjs());
   const [userEmail, setUserEmail] = useState<string | null>(null);
-  const [editingCampaign, setEditingCampaign] = useState<Campaign | null>(null);
+  const [editingCampaign, setEditingCampaign] = useState<CampaignType | null>(null);
   const [selectedLeadIds, setSelectedLeadIds] = useState<string[]>([]);
   const [allLeads, setAllLeads] = useState<Lead[]>([]);
   const [geoCenter, setGeoCenter] = useState<{ lat: number; lon: number } | null>(null);
@@ -57,7 +48,7 @@ export default function CampaignsPage() {
     Promise.all([
       supabase
         .from('campaigns')
-        .select('id, name, city, city_lat, city_lon, starts_at, ends_at, lead_ids')
+        .select('id, name, city, city_lat, city_lon, starts_at, ends_at, lead_ids, status, industry, state')
         .order('starts_at', { ascending: false }),
       supabase
         .from('leads')
@@ -103,8 +94,26 @@ export default function CampaignsPage() {
         showTimestamps={showTimestamps}
         setShowTimestamps={setShowTimestamps}
       />
-      {campaigns.map((c) => (
-        <CampaignPanel
+      <div className="mb-4">
+        <label className="text-sm font-medium text-white mr-2">Filter by status:</label>
+        <select
+          value={statusFilter}
+          onChange={(e) => setStatusFilter(e.target.value as 'all' | 'draft' | 'published' | 'paused' | 'archived')}
+          className="px-2 py-1 rounded bg-zinc-800 border border-zinc-700 text-white"
+        >
+          <option value="all">All</option>
+          <option value="draft">Draft</option>
+          <option value="published">Published</option>
+          <option value="paused">Paused</option>
+          <option value="archived">Archived</option>
+        </select>
+      </div>
+      {campaigns
+        .filter((c) => statusFilter === 'all' || c.status === statusFilter)
+        .map((c) => (
+          <div key={c.id} className="border-b border-zinc-700 pb-4 mb-4">
+            <div className="text-xs text-zinc-400 uppercase mb-1">Status: {c.status}</div>
+            <CampaignPanel
           key={c.id}
           campaign={c}
           leads={leadsByCampaign[c.id] || []}
@@ -114,6 +123,7 @@ export default function CampaignsPage() {
           setEditingCampaign={setEditingCampaign}
           setSelectedLeadIds={setSelectedLeadIds}
         />
+        </div>
       ))}
       {editingCampaign && (
         <EditCampaignModal

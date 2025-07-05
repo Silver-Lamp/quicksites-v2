@@ -1,3 +1,4 @@
+// app/admin/start-campaign/page.tsx
 'use client';
 
 import { useEffect, useState } from 'react';
@@ -9,6 +10,7 @@ import { useSavedCampaignDraft } from '@/hooks/useSavedCampaignDraft';
 import LeadSelectorWithRadius from '@/components/admin/campaigns/lead-selector-with-radius';
 import { getLatLonForCityState } from '@/lib/utils/geocode';
 import { Lead } from '@/types/lead.types';
+import { getDistanceMiles } from '@/lib/utils/distance';
 
 export default function StartCampaign() {
   const searchParams = useSearchParams();
@@ -26,6 +28,7 @@ export default function StartCampaign() {
   const [alt1, setAlt1] = useState(draft.alt1 || '');
   const [alt2, setAlt2] = useState(draft.alt2 || '');
   const [silentMode, setSilentMode] = useState(draft.silentMode ?? false);
+  const [published, setPublished] = useState(false);
   const [cityLat, setCityLat] = useState<number | null>(null);
   const [cityLon, setCityLon] = useState<number | null>(null);
   const [availableIndustries, setAvailableIndustries] = useState<string[]>([]);
@@ -93,15 +96,34 @@ export default function StartCampaign() {
   }, []);
 
   const filteredLeads: Lead[] = (industry
-    ? leads.filter((l) => l.industry === industry)
+    ? leads.filter((l) => l.industry?.trim().toLowerCase() === industry.trim().toLowerCase())
     : leads) as Lead[];
 
   useEffect(() => {
-    if (!industry && leads.length > 0) {
+    console.log('[🔍 Leads Debug]', { industry, allLeads: leads, filteredLeads });
+  }, [industry, leads]);
+
+  useEffect(() => {
+    if (filteredLeads.length > 0 && cityLat && cityLon && selectedLeads.length === 0) {
+      const inRadius = filteredLeads.find(
+        (l) =>
+          l.address_lat &&
+          l.address_lon &&
+          getDistanceMiles(l.address_lat, l.address_lon, cityLat, cityLon) <= radius
+      );
+      if (inRadius) {
+        toggleLead(inRadius.id);
+      }
+    }
+  }, [filteredLeads, cityLat, cityLon, radius, selectedLeads]);
+
+  useEffect(() => {
+    if ((!industry || industry.length < 2) && leads.length > 0) {
       const firstWithIndustry = leads.find((l) => l.industry);
       if (firstWithIndustry?.industry) {
-        setIndustry(firstWithIndustry.industry);
-        updateDraft({ industry: firstWithIndustry.industry });
+        const normalized = firstWithIndustry.industry.trim();
+        setIndustry(normalized);
+        updateDraft({ industry: normalized });
       }
     }
   }, [leads]);
@@ -110,9 +132,39 @@ export default function StartCampaign() {
     <div className="p-6 max-w-3xl mx-auto text-white">
       <h1 className="text-2xl font-bold mb-4">Start Campaign</h1>
       <form
-        onSubmit={(e) => {
+        onSubmit={async (e) => {
           e.preventDefault();
-          submit();
+          try {
+            const res = await fetch('/api/campaigns/create', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                name,
+                city,
+                state,
+                industry,
+                starts_at: startsAt,
+                ends_at: endsAt,
+                alt_domains: [alt1, alt2].filter(Boolean),
+                lead_ids: selectedLeads,
+                city_lat: cityLat,
+                city_lon: cityLon,
+                silent_mode: silentMode,
+                status: published ? 'published' : 'draft',
+              }),
+            });
+
+            const json = await res.json();
+
+            if (!res.ok || json.error) {
+              console.error('❌ Launch failed:', json.error || 'Unknown error');
+              return;
+            }
+
+            window.location.href = '/admin/campaigns';
+          } catch (err) {
+            console.error('❌ Network error while launching campaign:', err);
+          }
         }}
         className="space-y-4"
       >
@@ -175,6 +227,7 @@ export default function StartCampaign() {
             cityLon={cityLon}
             radius={radius}
             setRadius={setRadius}
+            industry={industry}
           />
         ) : (
           <p className="text-sm text-zinc-400 border border-zinc-700 rounded p-3 bg-zinc-800">
@@ -231,6 +284,15 @@ export default function StartCampaign() {
             }}
           />
           Silent Mode (no notifications)
+        </label>
+
+        <label className="flex items-center gap-2 text-sm">
+          <input
+            type="checkbox"
+            checked={published}
+            onChange={(e) => setPublished(e.target.checked)}
+          />
+          Published
         </label>
 
         {error && (

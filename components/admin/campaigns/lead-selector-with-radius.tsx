@@ -1,3 +1,4 @@
+// components/admin/campaigns/lead-selector-with-radius.tsx
 'use client';
 
 import { useEffect, useState } from 'react';
@@ -8,6 +9,9 @@ type Lead = {
   business_name: string;
   address_lat?: number | null;
   address_lon?: number | null;
+  address_city?: string | null;
+  address_state?: string | null;
+  industry?: string | null;
 };
 
 type Props = {
@@ -19,6 +23,7 @@ type Props = {
   radius: number;
   setRadius: (radius: number) => void;
   geoCenter?: { lat: number; lon: number } | null;
+  industry?: string | null;
 };
 
 export default function LeadSelectorWithRadius({
@@ -30,6 +35,7 @@ export default function LeadSelectorWithRadius({
   radius,
   setRadius,
   geoCenter,
+  industry,
 }: Props) {
   const toggle = (id: string) => {
     setSelectedLeadIds(
@@ -47,7 +53,11 @@ export default function LeadSelectorWithRadius({
       ? getDistanceMiles(l.address_lat, l.address_lon, resolvedLat, resolvedLon)
       : Infinity;
 
-  const sortedLeads = leads
+  const filteredLeads = leads.filter((l) =>
+    !industry || l.industry?.trim().toLowerCase() === industry.trim().toLowerCase()
+  );
+
+  const sortedLeads = filteredLeads
     .filter((l) => getDist(l) <= radius)
     .sort((a, b) => getDist(a) - getDist(b));
 
@@ -56,6 +66,24 @@ export default function LeadSelectorWithRadius({
     { label: '10–25 mi', min: 10, max: 25 },
     { label: '25–50 mi', min: 25, max: 50 },
   ];
+
+  const renderLeadLine = (lead: Lead, distanceLabel: string) => (
+    <div key={lead.id} className="flex flex-col gap-1 mb-2">
+      <label className="flex items-center gap-2">
+        <input
+          type="checkbox"
+          checked={selectedLeadIds.includes(lead.id)}
+          onChange={() => toggle(lead.id)}
+        />
+        <div className="text-sm text-white">
+          <span className="font-semibold">{lead.business_name}</span>{' '}
+          <span className="text-xs text-zinc-400">
+            ({lead.address_city}, {lead.address_state} • {lead.industry}) — {distanceLabel}
+          </span>
+        </div>
+      </label>
+    </div>
+  );
 
   const renderGroup = (label: string, min: number, max: number) => {
     const group = sortedLeads.filter((l) => {
@@ -67,20 +95,12 @@ export default function LeadSelectorWithRadius({
     return (
       <div key={label} className="pt-2">
         <div className="text-xs font-semibold text-zinc-400 mb-1">{label}</div>
-        {group.map((lead) => (
-          <div key={lead.id} className="flex items-center gap-2 mb-1">
-            <input type="checkbox" checked={selectedLeadIds.includes(lead.id)} onChange={() => toggle(lead.id)} />
-            <span className="text-sm text-white">
-              {lead.business_name}
-              <span className="text-zinc-400 ml-1 text-xs">({getDist(lead).toFixed(1)} mi)</span>
-            </span>
-          </div>
-        ))}
+        {group.map((lead) => renderLeadLine(lead, `${getDist(lead).toFixed(1)} mi`))}
       </div>
     );
   };
 
-  const outsideRadius = leads.filter((l) => getDist(l) > radius);
+  const outsideRadius = filteredLeads.filter((l) => getDist(l) > radius);
 
   return (
     <div className="mb-4">
@@ -103,15 +123,7 @@ export default function LeadSelectorWithRadius({
         {outsideRadius.length > 0 && (
           <div className="pt-4">
             <div className="text-xs font-semibold text-zinc-400 mb-1">Other Leads</div>
-            {outsideRadius.map((lead) => (
-              <div key={lead.id} className="flex items-center gap-2 mb-1">
-                <input type="checkbox" checked={selectedLeadIds.includes(lead.id)} onChange={() => toggle(lead.id)} />
-                <span className="text-sm text-white">
-                  {lead.business_name}
-                  <span className="text-zinc-400 ml-1 text-xs">(outside radius)</span>
-                </span>
-              </div>
-            ))}
+            {outsideRadius.map((lead) => renderLeadLine(lead, 'outside radius'))}
           </div>
         )}
       </div>

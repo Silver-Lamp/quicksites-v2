@@ -14,6 +14,8 @@ const SafeLeafletMap = dynamic(() => import('./safe-leaflet-map'), {
   ssr: false,
 });
 
+const _cache: { points?: CityPoint[]; lastFetched?: number } = {};
+
 export default function GridMap() {
   const [industry, setIndustry] = useState('');
   const [points, setPoints] = useState<CityPoint[]>([]);
@@ -22,6 +24,18 @@ export default function GridMap() {
 
   useEffect(() => {
     const load = async () => {
+      const now = Date.now();
+      if (_cache.points && _cache.lastFetched && now - _cache.lastFetched < 60_000) {
+        setPoints(_cache.points);
+        return;
+      }
+      const { data: campaignLinks } = await supabase
+        .from('campaign_leads')
+        .select('campaign_id, lead_id');
+
+      const { data: campaigns } = await supabase
+        .from('campaigns')
+        .select('id, name, city, state');
       const { data: leads } = await supabase
         .from('leads')
         .select('id, business_name, address_city, address_state, industry');
@@ -75,23 +89,52 @@ export default function GridMap() {
               typeof count === 'number' && count > acc[1] ? [ind, count] : acc,
             ['', 0]
           )[0];
-          return { ...entry, lat, lon, industry: primaryIndustry };
+      
+          const campaignIds = new Set(
+            campaignLinks
+              ?.filter((cl) => entry.leadIds.includes(cl.lead_id))
+              .map((cl) => cl.campaign_id)
+          );
+      
+          const campaignNames = campaigns
+            ?.filter((c) => campaignIds.has(c.id))
+            .map((c) => c.name) ?? [];
+      
+          const unclaimed = entry.leadIds.filter(
+            (id) => !campaignLinks?.some((cl) => cl.lead_id === id)
+          ).length;
+      
+          return {
+            ...entry,
+            lat,
+            lon,
+            industry: primaryIndustry,
+            campaigns: campaignNames,
+            unclaimedLeadCount: unclaimed,
+          };
         })
       );
+      
 
       setPoints(enriched);
+      _cache.points = enriched;
+      _cache.lastFetched = now;
     };
 
     load();
   }, []);
 
   const getColor = (p: CityPoint) => {
+    if (p.unclaimedLeadCount && p.unclaimedLeadCount >= 3) return 'red';
+    if (p.unclaimedLeadCount && p.unclaimedLeadCount >= 1) return 'yellow';
     if (p.leads >= 2 && p.domains > 0) return 'green';
     if (p.leads >= 2) return 'orange';
     if (p.domains > 0) return 'blue';
     if (p.leads > 0) return 'yellow';
     return 'gray';
   };
+  
+  
 
   const filteredPoints = points.filter((p) => {
     if (!industry || industry === '') return true;
@@ -101,7 +144,19 @@ export default function GridMap() {
 
   return (
     <div className="p-6 text-white">
-      <h1 className="text-3xl font-bold mb-6">🌍 The Grid</h1>
+      <div className="flex items-center justify-between mb-6">
+        <h1 className="text-3xl font-bold">🌍 The Grid</h1>
+        <button
+          className="text-xs bg-zinc-800 hover:bg-zinc-700 px-3 py-1 rounded border border-zinc-600"
+          onClick={() => {
+            _cache.points = undefined;
+            _cache.lastFetched = 0;
+            location.reload();
+          }}
+        >
+          🔄 Refresh
+        </button>
+      </div>
       <div className="flex flex-col md:flex-row gap-6">
         <div className="md:w-2/5 w-full">
           <GridSidebar

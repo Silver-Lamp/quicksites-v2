@@ -10,5 +10,7 @@ export type CityPoint = {
     leadIds: string[];
     industry?: string;
     industryCounts?: Record<string, number>;
+    unclaimedLeadCount?: number;
+    campaigns?: string[];
   };
   

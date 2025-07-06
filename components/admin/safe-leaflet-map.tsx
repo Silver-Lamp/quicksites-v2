@@ -1,3 +1,4 @@
+// components/admin/safe-leaflet-map.tsx
 'use client';
 
 import { useEffect, useRef, useState } from 'react';

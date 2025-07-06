@@ -1,3 +1,4 @@
+// components/admin/map-view.tsx
 'use client';
 
 import { useEffect } from 'react';
@@ -163,7 +164,29 @@ export default function MapView({
                     <strong>
                     {getIndustryIcon(p.industry)} {p.city}, {p.state}
                     </strong>
-                    <div>{p.leads} lead(s), {p.domains} domain(s)</div>
+                    <div>
+  {p.leads} lead(s), {p.domains} domain(s)
+  {typeof p.unclaimedLeadCount === 'number' && (
+    <div>🟡 {p.unclaimedLeadCount} unclaimed</div>
+  )}
+  {Array.isArray(p.campaigns) && p.campaigns.length > 0 && (
+    <div>
+      📋 {p.campaigns.length} campaign(s):
+      <ul className="list-disc list-inside text-xs mt-1">
+  {p.campaigns.map((c, i) => (
+    <li key={i}>
+      <a
+        href={`/admin/campaigns?highlight=${encodeURIComponent(c)}`}
+        className="text-blue-600 underline hover:text-blue-800"
+      >
+        {c}
+      </a>
+    </li>
+  ))}
+</ul>
+    </div>
+  )}
+</div>
                     <div>{p.industry || 'Industry N/A'}</div>
 
                     {p.leads >= 2 && (

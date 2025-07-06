@@ -1,3 +1,4 @@
+// components/admin/grid-map.tsx
 'use client';
 
 import { useEffect, useState } from 'react';
@@ -51,15 +52,16 @@ export default function GridMap() {
         geo[key] = geo[key] || {
           city: l.address_city,
           state: l.address_state,
-          leads: 0,
+          leadsQty: 0,
           domains: 0,
-          leadNames: [],
+          leads: [],
           domainNames: [],
           leadIds: [],
           industryCounts: {},
         };
-        geo[key].leads += 1;
-        if (l.business_name) geo[key].leadNames.push(l.business_name);
+        geo[key].leadsQty += 1;
+        const isUnclaimed = !campaignLinks?.some((cl) => cl.lead_id === l.id);
+        if (l.business_name) geo[key].leads.push({ id: l.id, name: l.business_name, isClaimed: !isUnclaimed, campaignId: '' });
         geo[key].leadIds.push(l.id);
         const indKey = (l.industry || '').trim().toLowerCase();
         geo[key].industryCounts![indKey] = (geo[key].industryCounts![indKey] || 0) + 1;
@@ -127,10 +129,10 @@ export default function GridMap() {
   const getColor = (p: CityPoint) => {
     if (p.unclaimedLeadCount && p.unclaimedLeadCount >= 3) return 'red';
     if (p.unclaimedLeadCount && p.unclaimedLeadCount >= 1) return 'yellow';
-    if (p.leads >= 2 && p.domains > 0) return 'green';
-    if (p.leads >= 2) return 'orange';
+    if (p.leadsQty >= 2 && p.domains > 0) return 'green';
+    if (p.leadsQty >= 2) return 'orange';
     if (p.domains > 0) return 'blue';
-    if (p.leads > 0) return 'yellow';
+    if (p.leadsQty > 0) return 'yellow';
     return 'gray';
   };
   

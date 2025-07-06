@@ -3,9 +3,9 @@ export type CityPoint = {
     state: string;
     lat: number;
     lon: number;
-    leads: number;
+    leadsQty: number;
     domains: number;
-    leadNames: string[];
+    leads: { id: string; name: string, isClaimed: boolean, campaignId: string }[];
     domainNames: string[];
     leadIds: string[];
     industry?: string;

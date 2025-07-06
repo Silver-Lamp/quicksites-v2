@@ -31,10 +31,10 @@ function getIndustryIcon(industry?: string): string {
 }
 
 function getBorderColorClass(p: CityPoint): string {
-  if (p.leads >= 2 && p.domains > 0) return 'border-green-500';
-  if (p.leads >= 2) return 'border-orange-500';
+  if (p.leadsQty >= 2 && p.domains > 0) return 'border-green-500';
+  if (p.leadsQty >= 2) return 'border-orange-500';
   if (p.domains > 0) return 'border-blue-500';
-  if (p.leads > 0) return 'border-yellow-400';
+  if (p.leadsQty > 0) return 'border-yellow-400';
   return 'border-gray-400';
 }
 
@@ -164,32 +164,70 @@ export default function MapView({
                     <strong>
                     {getIndustryIcon(p.industry)} {p.city}, {p.state}
                     </strong>
+                    {Array.isArray(p.leads) && p.leads.length > 0 && (
+                      <div className="mt-1 text-xs text-zinc-300">
+                        Leads:
+                        <div className="text-zinc-500 text-[10px] font-medium mb-1">🔵 Assigned</div>
+                        <ul className="list-disc list-inside">
+                          {p.leads.filter((l) => l.isClaimed).map((l) => (
+                            <li key={l.id}>
+                              <a
+                                href={`/admin/leads/${l.id}`}
+                                className="text-blue-500 underline"
+                                title="Assigned to campaign"
+                              >
+                                {l.name}
+                              </a>
+                            </li>
+                          ))}
+                        </ul>
+                        {p.leads.some((l) => !l.isClaimed) && (
+                          <>
+                            <div className="text-zinc-500 text-[10px] font-medium mt-2">🟡 Unclaimed</div>
+                            <ul className="list-disc list-inside">
+                              {p.leads.filter((l) => !l.isClaimed).map((l) => (
+                                <li key={l.id}>
+                                  <a
+                                    href={`/admin/leads/${l.id}`}
+                                    className="text-yellow-600 font-semibold underline"
+                                    title="Not part of any campaign yet"
+                                  >
+                                    {l.name} 🟡
+                                  </a>
+                                </li>
+                              ))}
+                            </ul>
+                          </>
+                        )}
+                      </div>
+                    )}
+
                     <div>
-  {p.leads} lead(s), {p.domains} domain(s)
-  {typeof p.unclaimedLeadCount === 'number' && (
-    <div>🟡 {p.unclaimedLeadCount} unclaimed</div>
-  )}
-  {Array.isArray(p.campaigns) && p.campaigns.length > 0 && (
-    <div>
-      📋 {p.campaigns.length} campaign(s):
-      <ul className="list-disc list-inside text-xs mt-1">
-  {p.campaigns.map((c, i) => (
-    <li key={i}>
-      <a
-        href={`/admin/campaigns?highlight=${encodeURIComponent(c)}`}
-        className="text-blue-600 underline hover:text-blue-800"
-      >
-        {c}
-      </a>
-    </li>
-  ))}
-</ul>
-    </div>
-  )}
-</div>
+                      {p.leadsQty} lead(s), {p.domains} domain(s)
+                      {typeof p.unclaimedLeadCount === 'number' && (
+                        <div>🟡 {p.unclaimedLeadCount} unclaimed</div>
+                      )}
+                      {Array.isArray(p.campaigns) && p.campaigns.length > 0 && (
+                        <div>
+                          📋 {p.campaigns.length} campaign(s):
+                          <ul className="list-disc list-inside text-xs mt-1">
+                      {p.campaigns.map((c, i) => (
+                        <li key={i}>
+                          <a
+                            href={`/admin/campaigns?highlight=${encodeURIComponent(c)}`}
+                            className="text-blue-600 underline hover:text-blue-800"
+                          >
+                            {c}
+                          </a>
+                        </li>
+                      ))}
+                    </ul>
+                        </div>
+                      )}
+                    </div>
                     <div>{p.industry || 'Industry N/A'}</div>
 
-                    {p.leads >= 2 && (
+                    {p.leadsQty >= 2 && (
                     <button
                         className="mt-1 px-2 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700"
                         onClick={(e) => {

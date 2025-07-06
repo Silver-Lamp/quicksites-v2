@@ -108,8 +108,8 @@ export default function ClaimPoster({
     >
       <div className="text-xs text-zinc-300 uppercase mb-2 tracking-wide">Towing Website SEO</div>
 
-      <div className="mb-6" style={{ transform: `translateY(${settings.arcOffsetY}px)` }}>
-        <svg width="100%" height="80" viewBox="0 0 300 100">
+      <div className="mb-6" style={{ transform: `translateY(${settings.arcOffsetY}px)`, height: `${settings.arcRadius}px` }}>
+        <svg width="100%" height="230" viewBox="0 0 300 150">
           <path
             id="arcPath"
             d={arcPath}

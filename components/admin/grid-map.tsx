@@ -185,7 +185,7 @@ export default function GridMap() {
             filteredPoints={filteredPoints}
             showHotspotsOnly={showHotspotsOnly}
             setShowHotspotsOnly={setShowHotspotsOnly}
-            visiblePoints={visiblePoints}
+            // visiblePoints={visiblePoints}
           />
         </div>
       </div>

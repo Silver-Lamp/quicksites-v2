@@ -9,14 +9,21 @@ function getClient() {
   );
 }
 
-export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
-  const supabase = getClient();
-  const campaignId = params.id;
+export async function GET(req: NextRequest) {
+  const { searchParams } = new URL(req.url);
+  const campaignId = searchParams.get('id'); // fallback for dev tools
 
+  // or if using route segments:
+  const pathname = req.nextUrl.pathname;
+  const match = pathname.match(/\/api\/campaigns\/(.*?)\/leads/);
+
+  const extractedId = match?.[1];
+
+  const supabase = getClient();
   const { data, error } = await supabase
     .from('campaign_leads')
     .select('lead_id')
-    .eq('campaign_id', campaignId);
+    .eq('campaign_id', extractedId ?? campaignId);
 
   if (error) {
     console.error('[❌ Fetch campaign_leads]', error);

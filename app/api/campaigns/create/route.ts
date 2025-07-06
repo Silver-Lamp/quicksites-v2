@@ -28,11 +28,15 @@ export async function POST(req: NextRequest): Promise<Response> {
     city_lat,
     city_lon,
     silent_mode,
+    created_by,
   } = body;
 
   if (!name || !city || !state || !industry || !starts_at || !ends_at) {
     return Response.json({ error: 'Missing required fields' }, { status: 400 });
   }
+
+  // Try to extract user info from headers if present
+  const userId = req.headers.get('x-user-id') || null;
 
   // Step 1: Create campaign
   const { data: campaign, error: campaignError } = await supabase
@@ -49,6 +53,8 @@ export async function POST(req: NextRequest): Promise<Response> {
       city_lat,
       city_lon,
       silent_mode,
+      owner_id: userId,
+      created_by: userId,
     })
     .select()
     .single();

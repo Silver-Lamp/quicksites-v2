@@ -1,13 +1,13 @@
 // components/admin/campaigns/campaign-panel.tsx
 
-'use client';
-
 import { CampaignType } from '@/types/campaign.types';
 import { Lead } from '@/types/lead.types';
 import dayjs, { Dayjs } from 'dayjs';
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
+import ClaimPoster from './claim-poster';
+import TowTruckLogo from '@/public/images/tow-truck-logo.png'; // adjust path as needed
 
-type Props = {
+export type Props = {
   campaign: CampaignType;
   leads: Lead[];
   now: Dayjs;
@@ -26,8 +26,10 @@ export default function CampaignPanel({
   setEditingCampaign,
   setSelectedLeadIds,
 }: Props) {
-  const start = dayjs(campaign.starts_at);
-  const end = dayjs(campaign.ends_at);
+  const [posterEditing, setPosterEditing] = useState(false);
+
+  const start = dayjs(campaign.starts_at || new Date());
+  const end = dayjs(campaign.ends_at || new Date(Date.now() + 3 * 24 * 60 * 60 * 1000)); // 3 days from now 
   const isActive = now.isAfter(start) && now.isBefore(end);
   const isUpcoming = now.isBefore(start);
   const isEnded = now.isAfter(end);
@@ -54,21 +56,37 @@ export default function CampaignPanel({
     status = `🔴 Ended ${d}d ${h}h ago`;
   }
 
+  const topTwoLeads = leads.slice(0, 2);
+
+  const handlePanelClick = () => {
+    if (!posterEditing) {
+      setEditingCampaign(campaign);
+      setSelectedLeadIds(campaign.lead_ids ?? []);
+    }
+  };
+
   return (
     <div
-      className={`border p-4 rounded shadow cursor-pointer mb-4 transition hover:opacity-90 text-white ${
+      className={`border p-4 rounded shadow mb-4 transition hover:opacity-90 text-white ${
         isActive ? 'bg-green-900 border-green-600' : isUpcoming ? 'bg-yellow-900 border-yellow-600' : 'bg-zinc-800 border-zinc-600 opacity-80'
       }`}
-      onClick={() => {
-        setEditingCampaign(campaign);
-        setSelectedLeadIds(campaign.lead_ids ?? []);
-      }}
+      // removed automatic modal trigger
+// onClick={!posterEditing ? handlePanelClick : undefined}
     >
-      <div className="flex items-center justify-between mb-1">
+      <div className="flex items-center justify-between mb-1 gap-3">
+        <button
+          className="text-xs bg-zinc-700 hover:bg-zinc-600 px-2 py-1 rounded text-white"
+          onClick={() => {
+            if (!posterEditing) {
+              setEditingCampaign(campaign);
+              setSelectedLeadIds(campaign.lead_ids ?? []);
+            }
+          }}
+        >
+          Edit
+        </button>
         <div className="font-semibold text-lg">{campaign.name} — {campaign.city}</div>
-        <div className="text-sm text-zinc-300" title={`Start: ${start.format('MMM D, h:mm A')} • End: ${end.format('MMM D, h:mm A')}`}>
-          {status}
-        </div>
+        <div className="text-sm text-zinc-300" title={`Start: ${start.format('MMM D, h:mm A')} • End: ${end.format('MMM D, h:mm A')}`}>{status}</div>
       </div>
 
       {isActive && (
@@ -82,20 +100,34 @@ export default function CampaignPanel({
       </div>
 
       {expanded && (
-        <div className="mt-3 space-y-2">
-          {leads.map((l) => (
-            <div key={l.id} className="p-2 rounded bg-zinc-900 border border-zinc-700">
-              <div className="font-semibold text-sm">{l.business_name}</div>
-              <div className="text-xs text-zinc-400">{l.address_city}, {l.address_state}</div>
-              <div className="text-xs text-zinc-500 italic">{l.industry}</div>
-              <div className="text-xs text-zinc-400">{l.phone} • {l.email}</div>
-              {/* {l.distance_miles != null && (
-                <div className="text-[11px] text-zinc-500">
-                  {l.distance_miles.toFixed(1)} mi away
+        <div className="mt-4">
+          {topTwoLeads.length === 2 && campaign.alt_domains?.[0] ? (
+            <ClaimPoster
+              domain={campaign.alt_domains[0]}
+              offerEndsAt={campaign.ends_at}
+              arcOffsetY={campaign.arc_offset_y}
+              logoOffsetY={campaign.logo_offset_y}
+              arcRadius={campaign.arc_radius}
+              leadA={{ name: topTwoLeads[0].business_name || 'Lead A' }}
+              leadB={{ name: topTwoLeads[1].business_name || 'Lead B' }}
+              qrUrl={`https://quicksites.ai/claim/${campaign.alt_domains[0]}`}
+              imageSrc={TowTruckLogo.src}
+              campaignId={campaign.id}
+              onEditStart={() => setPosterEditing(true)}
+              onEditEnd={() => setPosterEditing(false)}
+            />
+          ) : (
+            <div className="space-y-2">
+              {leads.map((l) => (
+                <div key={l.id} className="p-2 rounded bg-zinc-900 border border-zinc-700">
+                  <div className="font-semibold text-sm">{l.business_name}</div>
+                  <div className="text-xs text-zinc-400">{l.address_city}, {l.address_state}</div>
+                  <div className="text-xs text-zinc-500 italic">{l.industry}</div>
+                  <div className="text-xs text-zinc-400">{l.phone} • {l.email}</div>
                 </div>
-              )} */}
+              ))}
             </div>
-          ))}
+          )}
         </div>
       )}
     </div>

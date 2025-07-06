@@ -11,6 +11,9 @@ import LeadSelectorWithRadius from '@/components/admin/campaigns/lead-selector-w
 import { getLatLonForCityState } from '@/lib/utils/geocode';
 import { Lead } from '@/types/lead.types';
 import { getDistanceMiles } from '@/lib/utils/distance';
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
+
+const supabase = createClientComponentClient();
 
 export default function StartCampaign() {
   const searchParams = useSearchParams();
@@ -128,6 +131,7 @@ export default function StartCampaign() {
     }
   }, [leads]);
 
+  const user_id = supabase.auth.getUser().then(({ data: { user } }) => user?.id || '');
   return (
     <div className="p-6 max-w-3xl mx-auto text-white">
       <h1 className="text-2xl font-bold mb-4">Start Campaign</h1>
@@ -137,7 +141,6 @@ export default function StartCampaign() {
           try {
             const res = await fetch('/api/campaigns/create', {
               method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
                 name,
                 city,
@@ -151,6 +154,8 @@ export default function StartCampaign() {
                 city_lon: cityLon,
                 silent_mode: silentMode,
                 status: published ? 'published' : 'draft',
+                created_by: user_id,
+                owner_id: user_id,
               }),
             });
 

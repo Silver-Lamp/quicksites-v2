@@ -14,5 +14,8 @@ export type CampaignType = {
     status: 'draft' | 'published' | 'paused' | 'archived';
     silent_mode: boolean;
     alt_domains: string[];
+    arc_offset_y?: number;
+    logo_offset_y?: number;
+    arc_radius?: number;
   };
   

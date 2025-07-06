@@ -1,7 +1,7 @@
 // components/admin/campaigns/edit-campaign-modal.tsx
 'use client';
 
-import { Lead } from '@/app/admin/campaigns/page';
+import { Lead } from '@/types/lead.types';
 import { Dispatch, SetStateAction, useEffect, useMemo, useState } from 'react';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
@@ -30,17 +30,26 @@ export type Props = {
   currentCampaignExpiresAt?: string | null;
 };
 
-export default function EditCampaignModal({
-  campaign,
-  allLeads,
-  selectedLeadIds,
-  setSelectedLeadIds,
-  leadsByCampaign,
-  setEditingCampaign,
-  geoCenter,
-  currentCampaignId,
-  currentCampaignExpiresAt,
-}: Props) {
+export default function EditCampaignModal(props: Props) {
+  const {
+    campaign,
+    allLeads,
+    selectedLeadIds,
+    setSelectedLeadIds,
+    leadsByCampaign,
+    setEditingCampaign,
+    geoCenter,
+    currentCampaignId,
+    currentCampaignExpiresAt,
+  } = props;
+
+  useEffect(() => {
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setEditingCampaign(null);
+    };
+    window.addEventListener('keydown', handleKey);
+    return () => window.removeEventListener('keydown', handleKey);
+  }, []);
   const [radius, setRadius] = useState(50);
   const [availableIndustries, setAvailableIndustries] = useState<string[]>([]);
   const [campaignIndustry, setCampaignIndustry] = useState(campaign.industry || '');
@@ -134,7 +143,7 @@ export default function EditCampaignModal({
 
   return (
     <div className="fixed inset-0 z-50 bg-black bg-opacity-50 flex items-center justify-center">
-      <div className="bg-zinc-900 text-white p-6 rounded shadow-xl w-full max-w-md">
+      <div className="bg-zinc-900 text-white p-6 rounded shadow-xl w-full max-w-md max-h-[90vh] overflow-y-auto relative">
         <h2 className="text-lg font-bold mb-4">Edit Campaign</h2>
         <form
           onSubmit={async (e) => {
@@ -299,7 +308,7 @@ export default function EditCampaignModal({
             />
           </div>
 
-          <div className="flex justify-end gap-3">
+          <div className="flex justify-end gap-3 sticky bottom-0 bg-zinc-900 pt-3 pb-4 z-10">
             <button
               type="button"
               className="text-sm text-zinc-400 hover:underline"

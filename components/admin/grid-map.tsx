@@ -21,6 +21,7 @@ export default function GridMap() {
   const [industry, setIndustry] = useState('');
   const [points, setPoints] = useState<CityPoint[]>([]);
   const [zoom, setZoom] = useState(4);
+  const [showHotspotsOnly, setShowHotspotsOnly] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
@@ -61,7 +62,7 @@ export default function GridMap() {
         };
         geo[key].leadsQty += 1;
         const isUnclaimed = !campaignLinks?.some((cl) => cl.lead_id === l.id);
-        if (l.business_name) geo[key].leads.push({ id: l.id, name: l.business_name, isClaimed: !isUnclaimed, campaignId: '' });
+        if (l.business_name) geo[key].leads.push({ id: l.id, name: l.business_name, isClaimed: !isUnclaimed, campaignId: '', industry: l.industry || '' });
         geo[key].leadIds.push(l.id);
         const indKey = (l.industry || '').trim().toLowerCase();
         geo[key].industryCounts![indKey] = (geo[key].industryCounts![indKey] || 0) + 1;
@@ -91,21 +92,33 @@ export default function GridMap() {
               typeof count === 'number' && count > acc[1] ? [ind, count] : acc,
             ['', 0]
           )[0];
-      
+
           const campaignIds = new Set(
             campaignLinks
               ?.filter((cl) => entry.leadIds.includes(cl.lead_id))
               .map((cl) => cl.campaign_id)
           );
-      
+
           const campaignNames = campaigns
             ?.filter((c) => campaignIds.has(c.id))
             .map((c) => c.name) ?? [];
-      
+
           const unclaimed = entry.leadIds.filter(
             (id) => !campaignLinks?.some((cl) => cl.lead_id === id)
           ).length;
-      
+          const unclaimedByIndustry: Record<string, number> = {};
+
+          for (const lead of entry.leads) {
+            const ind = (lead.industry || '').trim().toLowerCase();
+            if (!lead.isClaimed) {
+              unclaimedByIndustry[ind] = (unclaimedByIndustry[ind] || 0) + 1;
+            }
+          }
+
+          const has2PlusUnclaimedInSameIndustry = Object.values(unclaimedByIndustry).some(
+            (count) => count >= 2
+          );
+
           return {
             ...entry,
             lat,
@@ -113,10 +126,10 @@ export default function GridMap() {
             industry: primaryIndustry,
             campaigns: campaignNames,
             unclaimedLeadCount: unclaimed,
+            has2PlusUnclaimedInSameIndustry,
           };
         })
       );
-      
 
       setPoints(enriched);
       _cache.points = enriched;
@@ -127,7 +140,7 @@ export default function GridMap() {
   }, []);
 
   const getColor = (p: CityPoint) => {
-    if (p.unclaimedLeadCount && p.unclaimedLeadCount >= 3) return 'red';
+    if (p.has2PlusUnclaimedInSameIndustry) return 'red';
     if (p.unclaimedLeadCount && p.unclaimedLeadCount >= 1) return 'yellow';
     if (p.leadsQty >= 2 && p.domains > 0) return 'green';
     if (p.leadsQty >= 2) return 'orange';
@@ -135,8 +148,10 @@ export default function GridMap() {
     if (p.leadsQty > 0) return 'yellow';
     return 'gray';
   };
-  
-  
+
+  const getUnclaimedLeadCount = (p: CityPoint) => {
+    return p.leads.filter((l) => !l.isClaimed).length;
+  };
 
   const filteredPoints = points.filter((p) => {
     if (!industry || industry === '') return true;
@@ -144,9 +159,14 @@ export default function GridMap() {
     return p.industry.trim().toLowerCase() === industry.trim().toLowerCase();
   });
 
+  const visiblePoints = showHotspotsOnly
+    ? filteredPoints.filter((p) => p.has2PlusUnclaimedInSameIndustry)
+    : filteredPoints;
+
   return (
     <div className="p-6 text-white">
       <div className="flex items-center justify-between mb-6">
+
         <h1 className="text-3xl font-bold">🌍 The Grid</h1>
         <button
           className="text-xs bg-zinc-800 hover:bg-zinc-700 px-3 py-1 rounded border border-zinc-600"
@@ -158,18 +178,21 @@ export default function GridMap() {
         >
           🔄 Refresh
         </button>
-      </div>
-      <div className="flex flex-col md:flex-row gap-6">
         <div className="md:w-2/5 w-full">
           <GridSidebar
             industry={industry}
             setIndustry={setIndustry}
             filteredPoints={filteredPoints}
+            showHotspotsOnly={showHotspotsOnly}
+            setShowHotspotsOnly={setShowHotspotsOnly}
+            visiblePoints={visiblePoints}
           />
         </div>
-        <div className="md:w-3/5 w-full h-[600px] border border-gray-700 rounded overflow-hidden">
+      </div>
+      <div className="flex flex-col md:flex-row gap-6">
+        <div className="w-full h-[600px] border border-gray-700 rounded overflow-hidden">
           <SafeLeafletMap
-            points={filteredPoints}
+            points={visiblePoints}
             zoom={zoom}
             setZoom={setZoom}
             router={router}
@@ -177,6 +200,15 @@ export default function GridMap() {
           />
         </div>
       </div>
+      <div className="text-xs text-zinc-400 mt-2">
+          <div className="flex gap-4 items-center text-sm mt-2">
+            <div className="flex items-center gap-1"><span className="inline-block w-3 h-3 bg-yellow-500 rounded-full"></span> 1 Lead</div>
+            <div className="flex items-center gap-1"><span className="inline-block w-3 h-3 bg-orange-500 rounded-full"></span> 2+ Leads</div>
+            <div className="flex items-center gap-1"><span className="inline-block w-3 h-3 bg-blue-500 rounded-full"></span> 1+ Domain</div>
+            <div className="flex items-center gap-1"><span className="inline-block w-3 h-3 bg-green-500 rounded-full"></span> Lead + Domain</div>
+            <div className="flex items-center gap-1"><span className="inline-block w-3 h-3 bg-red-600 rounded-full"></span> 2+ Unclaimed in 1 Industry</div>
+          </div>
+        </div>
     </div>
   );
 }

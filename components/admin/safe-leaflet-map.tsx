@@ -19,23 +19,18 @@ type Props = {
   getColor: (p: CityPoint) => string;
 };
 
-export default function SafeLeafletMap({
-  points,
-  zoom,
-  setZoom,
-  router,
-  getColor,
-}: Props) {
+export default function SafeLeafletMap({ points, zoom, setZoom, router, getColor }: Props) {
   const [mapVisible, setMapVisible] = useState(false);
+  const [hydrated, setHydrated] = useState(false);
   const mapRef = useRef<L.Map | null>(null);
   const mountRef = useRef<HTMLDivElement | null>(null);
+  const rootRef = useRef<ReactDOM.Root | null>(null);
 
-  // Mount the map into the DOM only after the button is clicked
   useEffect(() => {
-    if (!mapVisible || !mountRef.current) return;
-
-    const root = ReactDOM.createRoot(mountRef.current);
-    root.render(
+    if (!mapVisible || !mountRef.current || rootRef.current) return;
+  
+    rootRef.current = ReactDOM.createRoot(mountRef.current);
+    rootRef.current.render(
       <MapView
         points={points}
         zoom={zoom}
@@ -47,19 +42,28 @@ export default function SafeLeafletMap({
       />
     );
   }, [mapVisible]);
+  
 
-  // Fix tiles not showing properly due to late container visibility
   useEffect(() => {
-    if (!mapVisible) return;
+    setHydrated(true);
+  }, []);
 
-    const timeout = setTimeout(() => {
-      if (mapRef.current) {
-        mapRef.current.invalidateSize();
-      }
-    }, 200);
+  const stats = points.reduce(
+    (acc, p) => {
+      if (p.has2PlusUnclaimedInSameIndustry) acc.red++;
+      else if (p.leadsQty >= 2 && p.domains > 0) acc.green++;
+      else if (p.leadsQty >= 2) acc.orange++;
+      else if (p.domains > 0) acc.blue++;
+      else if (p.leadsQty > 0) acc.yellow++;
+      return acc;
+    },
+    { yellow: 0, orange: 0, blue: 0, green: 0, red: 0 }
+  );
 
-    return () => clearTimeout(timeout);
-  }, [mapVisible]);
+  const monthlyValue = points.reduce((sum, p) => {
+    if (p.has2PlusUnclaimedInSameIndustry) sum += 49;
+    return sum;
+  }, 0);
 
   return (
     <div className="relative h-full w-full">
@@ -72,6 +76,20 @@ export default function SafeLeafletMap({
         </button>
       )}
       <div ref={mountRef} className="h-full w-full" />
+
+      {/* Always show legend when map is visible and hydrated */}
+      {mapVisible && hydrated && (
+        <div className="absolute bottom-4 left-4 text-sm text-white bg-black/60 p-2 rounded shadow z-[1000]">
+          <div className="flex gap-2 items-center">
+            <div className="w-3 h-3 bg-yellow-500 rounded-full" /> {stats.yellow}
+            <div className="w-3 h-3 bg-orange-500 rounded-full" /> {stats.orange}
+            <div className="w-3 h-3 bg-blue-500 rounded-full" /> {stats.blue}
+            <div className="w-3 h-3 bg-green-500 rounded-full" /> {stats.green}
+            <div className="w-3 h-3 bg-red-600 rounded-full" /> {stats.red}
+          </div>
+          <div className="mt-1 text-lime-300">💰 ${monthlyValue.toFixed(2)} / month</div>
+        </div>
+      )}
     </div>
   );
 }

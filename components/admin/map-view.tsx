@@ -112,8 +112,8 @@ export default function MapView({
       zoom={zoom}
       scrollWheelZoom
       style={{ height: '100%', width: '100%' }}
-      key={Date.now()}
     >
+
       <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
 
       <MapEvents

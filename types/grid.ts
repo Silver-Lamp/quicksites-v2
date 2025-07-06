@@ -5,12 +5,13 @@ export type CityPoint = {
     lon: number;
     leadsQty: number;
     domains: number;
-    leads: { id: string; name: string, isClaimed: boolean, campaignId: string }[];
+    leads: { id: string; name: string, isClaimed: boolean, campaignId: string, industry: string }[];
     domainNames: string[];
     leadIds: string[];
     industry?: string;
     industryCounts?: Record<string, number>;
     unclaimedLeadCount?: number;
     campaigns?: string[];
+    has2PlusUnclaimedInSameIndustry?: boolean;
   };
   

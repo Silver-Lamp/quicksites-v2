@@ -1,3 +1,6 @@
+// types/grid.ts
+// this is for the grid map view
+// not for the grid block editor
 export type CityPoint = {
     city: string;
     state: string;

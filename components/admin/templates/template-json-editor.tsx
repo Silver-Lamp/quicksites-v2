@@ -1,9 +1,11 @@
-// ✅ FILE: components/admin/templates/template-json-editor.tsx (fixed quotes)
+// components/admin/templates/template-json-editor.tsx
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui';
 import { ChevronRight, ChevronDown } from 'lucide-react';
+import { TemplateSaveSchema, ValidatedTemplate } from '@/admin/lib/zod/templateSaveSchema';
 import type { JsonValue } from '@/types/json';
-
+import { validateBlocksInTemplate } from '@/admin/lib/validateBlocksInTemplate';
+  
 type TemplateJsonEditorProps = {
   rawJson: string;
   setRawJson: (value: string) => void;
@@ -11,15 +13,39 @@ type TemplateJsonEditorProps = {
 
 export default function TemplateJsonEditor({ rawJson, setRawJson }: TemplateJsonEditorProps) {
   const [isReadOnly, setIsReadOnly] = useState(true);
-  const [parsedJson, setParsedJson] = useState(null);
+  const [parsedJson, setParsedJson] = useState<ValidatedTemplate | null>(null);
+  const [validationError, setValidationError] = useState<string | null>(null);
   const [collapsed, setCollapsed] = useState(new Set<string>());
 
   useEffect(() => {
     try {
       const parsed = JSON.parse(rawJson);
-      setParsedJson(parsed);
+      const result = TemplateSaveSchema.safeParse(parsed);
+      if (result.success) {
+        setParsedJson(result.data);
+
+        // setValidationError(null);
+        const blockErrors = validateBlocksInTemplate(result.data);
+        if (blockErrors.length > 0) {
+          setValidationError(blockErrors.join('\n'));
+        } else {
+          setValidationError(null);
+        }
+
+      } else {
+        setParsedJson(null);
+        const formErrors = result.error.flatten();
+        setValidationError(
+          formErrors.formErrors.length > 0
+            ? formErrors.formErrors.join(', ')
+            : 'Some field(s) inside blocks or pages are incorrectly formatted.'
+        );
+        console.warn('[❌ Zod Field Errors]', formErrors);
+        console.warn('JSON failed schema validation:', result.error.flatten());
+      }
     } catch {
       setParsedJson(null);
+      setValidationError('Invalid JSON syntax');
     }
   }, [rawJson]);
 
@@ -108,6 +134,12 @@ export default function TemplateJsonEditor({ rawJson, setRawJson }: TemplateJson
           </Button>
         </div>
       </div>
+
+      {validationError && (
+        <div className="text-red-400 text-sm font-mono px-1">
+          ⚠️ {validationError}
+        </div>
+      )}
 
       <div className="overflow-auto rounded border border-gray-700 bg-gray-900 font-mono text-sm text-white max-h-[500px] p-4">
         {isReadOnly ? (

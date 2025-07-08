@@ -1,3 +1,4 @@
+// types/template.ts
 import type { Block } from './blocks.js';
 
 export type Page = {

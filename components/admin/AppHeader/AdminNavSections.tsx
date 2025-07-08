@@ -1,4 +1,5 @@
-'use client';
+// components/admin/AppHeader/AdminNavSections.tsx
+"use client";
 
 import { usePathname } from 'next/navigation';
 import { SafeLink } from '@/components/ui';
@@ -56,8 +57,9 @@ export function AdminNavSections() {
         <p className="font-semibold text-yellow-300 mb-1">Templates</p>
         <div className="flex flex-col gap-1">
           <NavLink href="/admin/templates" label="All Templates" icon={FileText} />
-          {/* <NavLink href="/admin/templates-new" label="+ New Template" icon={FileSignature} /> */}
           <NavLink href="/admin/templates/new" label="+ New Template" icon={FileSignature} />
+          <NavLink href="/admin/presets" label="Grid Presets" icon={FileText} />
+          <NavLink href="/admin/presets/new" label="+ New Preset" icon={FileSignature} />
         </div>
       </div>
 

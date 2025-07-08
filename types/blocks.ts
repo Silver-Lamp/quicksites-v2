@@ -1,3 +1,5 @@
+// types/blocks.ts
+
 export type HeroBlockContent = {
   headline: string;
   subheadline?: string;
@@ -29,7 +31,7 @@ export type QuoteBlockContent = {
 };
 
 export type Block = {
-  id?: string;
+  _id?: string;
   type: string;
   content?:
     | HeroBlockContent
@@ -73,9 +75,11 @@ export type TemplatePageEditorProps = {
   onBlockChange: (pageIndex: number, updated: Block[]) => void;
 };
 
-export function normalizeBlock(block: Block): Block & { id: string } {
+export function normalizeBlock(block: Block): Block & { _id: string } {
   return {
     ...block,
-    id: block.id || crypto.randomUUID(),
+    _id: (block as any)._id || crypto.randomUUID(),
   };
 }
+export type BlockWithId = Block & { _id: string };
+

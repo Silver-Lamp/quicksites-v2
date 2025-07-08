@@ -9,6 +9,7 @@
     "types",
     "admin",                    // ← Add this line
     ".next/types/**/*.ts",
+    "lib",
     "lib/admin",
     "_pages-legacy"
   ],

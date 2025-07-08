@@ -1,4 +1,4 @@
-// lib/zod/blockSchema.ts
+// admin/lib/zod/blockSchema.ts
 import { z } from 'zod';
 
 export const TextBlockSchema = z.object({

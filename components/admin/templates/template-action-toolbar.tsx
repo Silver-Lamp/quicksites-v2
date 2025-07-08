@@ -1,3 +1,4 @@
+// components/admin/templates/template-action-toolbar.tsx
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui';
@@ -10,10 +11,14 @@ export default function TemplateActionToolbar({
   template,
   autosaveStatus,
   onSaveDraft,
-}: {
+  onUndo,
+  onRedo,
+}: {  
   template: any;
   autosaveStatus?: string;
   onSaveDraft?: () => void;
+  onUndo: () => void;
+  onRedo: () => void;
 }) {
   const router = useRouter();
   const [status, setStatus] = useState('Draft');
@@ -87,6 +92,16 @@ export default function TemplateActionToolbar({
         {autosaveStatus && (
           <span className="text-xs text-gray-400 italic">💾 {autosaveStatus}</span>
         )}
+        {autosaveStatus === 'saved' && (
+          <span className="text-xs text-green-400 animate-fade-out duration-1000">✓ Saved</span>
+        )}
+        {autosaveStatus === 'error' && <span className="text-xs text-red-400">⚠ Error</span>}
+        <Button variant="ghost" onClick={onUndo}>
+          Undo
+        </Button>
+        <Button variant="ghost" onClick={onRedo}>
+          Redo
+        </Button>
       </div>
 
       <div className="flex items-center gap-3">

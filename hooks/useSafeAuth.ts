@@ -1,16 +1,13 @@
+// hooks/useSafeAuth.ts
 'use client';
 
 import { useEffect, useState } from 'react';
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 import type { Database } from '@/types/supabase';
+import type { SafeUser } from '@/types/safe-user';
 
 type SafeAuth = {
-  user: {
-    id: string;
-    email: string;
-    avatar_url?: string | null;
-    name?: string;
-  } | null;
+  user: SafeUser | null;
   role: string;
   isLoggedIn: boolean;
   ip?: string;

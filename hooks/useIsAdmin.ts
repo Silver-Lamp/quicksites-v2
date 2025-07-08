@@ -1,9 +1,9 @@
 // hooks/useIsAdmin.ts
 'use client';
 
-import { useSession } from '@/lib/providers/SessionProvider';
+import { useSafeAuth } from '@/hooks/useSafeAuth';
 
 export function useIsAdmin() {
-  const { role } = useSession();
+  const { role } = useSafeAuth();
   return role === 'admin' || role === 'owner';
 }

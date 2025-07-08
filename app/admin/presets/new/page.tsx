@@ -65,7 +65,7 @@ export default function AdminPresetsNewPage() {
         onInsert={(index) => {
           const fallback: Block = {
             type: "text",
-            value: { value: "New block..." },
+            content: { value: "New block..." },
             _id: crypto.randomUUID(),
           };
           const updated = [...blocks];

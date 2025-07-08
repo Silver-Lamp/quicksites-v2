@@ -1,4 +1,4 @@
-Found 286 files with issues:
+Found 343 files with issues:
 
 _pages-legacy/
   23 issues (0 errors, 23 warnings): /Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/_pages-legacy/edit/[slug].tsx
@@ -57,14 +57,19 @@ admin/
   2 issues (0 errors, 2 warnings): /Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/admin/guest-tokens/page.tsx
   1 issues (0 errors, 1 warnings): /Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/admin/api/compare-slugs/route.ts
   1 issues (0 errors, 1 warnings): /Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/admin/dashboard.tsx
+  1 issues (0 errors, 1 warnings): /Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/admin/lib/fixInvalidBlocksInTemplate.ts
   1 issues (0 errors, 1 warnings): /Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/admin/lib/useLocale.ts
+  1 issues (0 errors, 1 warnings): /Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/admin/lib/validateBlocksInTemplate.ts
   1 issues (0 errors, 1 warnings): /Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/admin/tools/prebuild-og/page.tsx
 
 app/
+  59 issues (0 errors, 59 warnings): /Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/app/admin/presets/edit/[id]/page.tsx
+  58 issues (0 errors, 58 warnings): /Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/app/admin/leads/page.tsx
   38 issues (0 errors, 38 warnings): /Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/app/api/echo/route.ts
-  23 issues (0 errors, 23 warnings): /Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/app/admin/leads/page.tsx
+  19 issues (0 errors, 19 warnings): /Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/app/admin/presets/new/page.tsx
+  17 issues (0 errors, 17 warnings): /Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/app/admin/start-campaign/page.tsx
   13 issues (0 errors, 13 warnings): /Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/app/page.tsx
-  7 issues (0 errors, 7 warnings): /Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/app/admin/campaigns.tsx
+  8 issues (0 errors, 8 warnings): /Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/app/edit/[slug]/page.tsx
   7 issues (0 errors, 7 warnings): /Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/app/admin/dashboard/page.tsx
   5 issues (0 errors, 5 warnings): /Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/app/admin/admin/analytics.tsx
   5 issues (0 errors, 5 warnings): /Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/app/admin/admin/logs.tsx
@@ -76,11 +81,15 @@ app/
   4 issues (0 errors, 4 warnings): /Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/app/_sites/[slug]/page.tsx
   4 issues (0 errors, 4 warnings): /Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/app/admin/admin/branding/[id].tsx
   4 issues (0 errors, 4 warnings): /Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/app/admin/people.tsx
+  4 issues (0 errors, 4 warnings): /Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/app/admin/templates/page.tsx
+  3 issues (0 errors, 3 warnings): /Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/app/admin/campaigns/page.tsx
   3 issues (0 errors, 3 warnings): /Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/app/admin/launch.tsx
   3 issues (0 errors, 3 warnings): /Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/app/admin/people-stats.tsx
   3 issues (0 errors, 3 warnings): /Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/app/admin/shared/[id].tsx
   3 issues (0 errors, 3 warnings): /Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/app/admin/sites/[slug]/page.tsx
+  3 issues (0 errors, 3 warnings): /Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/app/admin/the-grid/page.tsx
   3 issues (0 errors, 3 warnings): /Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/app/login/LoginForm.tsx
+  3 issues (0 errors, 3 warnings): /Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/app/viewer/page.tsx
   2 issues (0 errors, 2 warnings): /Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/app/admin/admin/branding/og-editor/[id].tsx
   2 issues (0 errors, 2 warnings): /Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/app/admin/admin/docs.tsx
   2 issues (0 errors, 2 warnings): /Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/app/admin/admin/share/[id].tsx
@@ -95,19 +104,17 @@ app/
   2 issues (0 errors, 2 warnings): /Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/app/admin/logs/feedback.tsx
   2 issues (0 errors, 2 warnings): /Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/app/admin/people-heatmap.download.tsx
   2 issues (0 errors, 2 warnings): /Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/app/admin/people-heatmap.users.tsx
-  2 issues (0 errors, 2 warnings): /Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/app/admin/start-campaign.tsx
-  2 issues (0 errors, 2 warnings): /Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/app/admin/templates/new.tsx
+  2 issues (0 errors, 2 warnings): /Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/app/admin/templates/new/page.tsx
   2 issues (0 errors, 2 warnings): /Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/app/admin/tools/chart.tsx
   2 issues (0 errors, 2 warnings): /Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/app/admin/tools/print-all.tsx
   2 issues (0 errors, 2 warnings): /Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/app/admin/unsubscribe/[token].tsx
   2 issues (0 errors, 2 warnings): /Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/app/api/session-log/route.ts
   2 issues (0 errors, 2 warnings): /Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/app/api/supporters/route.ts
+  2 issues (0 errors, 2 warnings): /Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/app/edit/metadata.ts
   2 issues (0 errors, 2 warnings): /Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/app/posters/[slug]/page.tsx
-  2 issues (0 errors, 2 warnings): /Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/app/viewer/page.tsx
   1 issues (0 errors, 1 warnings): /Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/app/admin/admin/branding/import.tsx
   1 issues (0 errors, 1 warnings): /Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/app/admin/admin/embed-views.tsx
   1 issues (0 errors, 1 warnings): /Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/app/admin/admin/screenshots.tsx
-  1 issues (0 errors, 1 warnings): /Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/app/admin/admin/templates-new.tsx
   1 issues (0 errors, 1 warnings): /Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/app/admin/admin/templates.tsx
   1 issues (0 errors, 1 warnings): /Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/app/admin/admin/views.tsx
   1 issues (0 errors, 1 warnings): /Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/app/admin/audit.tsx
@@ -116,6 +123,7 @@ app/
   1 issues (0 errors, 1 warnings): /Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/app/admin/logs/dashboard.tsx
   1 issues (0 errors, 1 warnings): /Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/app/admin/logs/notifications.tsx
   1 issues (0 errors, 1 warnings): /Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/app/admin/page.tsx
+  1 issues (0 errors, 1 warnings): /Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/app/admin/presets/page.tsx
   1 issues (0 errors, 1 warnings): /Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/app/admin/print/[id].tsx
   1 issues (0 errors, 1 warnings): /Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/app/admin/referrals.tsx
   1 issues (0 errors, 1 warnings): /Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/app/admin/register.tsx
@@ -131,6 +139,7 @@ app/
   1 issues (0 errors, 1 warnings): /Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/app/admin/zod-playground.tsx
   1 issues (0 errors, 1 warnings): /Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/app/api/analytics/signals/route.ts
   1 issues (0 errors, 1 warnings): /Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/app/api/block-qr/save/route.ts
+  1 issues (0 errors, 1 warnings): /Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/app/api/campaigns/create/route.ts
   1 issues (0 errors, 1 warnings): /Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/app/api/cheer/route.ts
   1 issues (0 errors, 1 warnings): /Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/app/api/docs/route.ts
   1 issues (0 errors, 1 warnings): /Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/app/api/geocode/route.ts
@@ -152,21 +161,47 @@ app/
   1 issues (0 errors, 1 warnings): /Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/app/api/weekly-digest-live/route.ts
   1 issues (0 errors, 1 warnings): /Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/app/api/weekly-digest/route.ts
   1 issues (0 errors, 1 warnings): /Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/app/auth/callback/page.tsx
+  1 issues (0 errors, 1 warnings): /Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/app/edit/layout.tsx
   1 issues (0 errors, 1 warnings): /Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/app/login/login-client.tsx
   1 issues (0 errors, 1 warnings): /Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/app/test/[slug]/page.tsx
 
 components/
   78 issues (0 errors, 78 warnings): /Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/components/glow-configurator.tsx
+  76 issues (0 errors, 76 warnings): /Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/components/admin/leads-table.tsx
+  60 issues (0 errors, 60 warnings): /Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/components/admin/map-view.tsx
+  53 issues (0 errors, 53 warnings): /Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/components/admin/templates/template-editor-toolbar.tsx
+  38 issues (0 errors, 38 warnings): /Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/components/admin/templates/sortable-grid-block.tsx
+  36 issues (0 errors, 36 warnings): /Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/components/admin/campaigns/edit-campaign-modal.tsx
+  32 issues (0 errors, 32 warnings): /Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/components/admin/campaigns/lead-selector-with-radius.tsx
   23 issues (0 errors, 23 warnings): /Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/components/dev-tools-widget/TopMetadataSummary.tsx
+  22 issues (0 errors, 22 warnings): /Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/components/admin/templates/grid-template-manager.tsx
+  20 issues (0 errors, 20 warnings): /Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/components/admin/templates/template-editor-content.tsx
+  19 issues (0 errors, 19 warnings): /Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/components/admin/AppHeader/app-header.tsx
+  15 issues (0 errors, 15 warnings): /Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/components/admin/city-marker.tsx
+  14 issues (0 errors, 14 warnings): /Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/components/admin/grid-map.tsx
+  14 issues (0 errors, 14 warnings): /Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/components/admin/grid-sidebar.tsx
+  11 issues (0 errors, 11 warnings): /Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/components/admin/campaigns/campaign-panel.tsx
+  10 issues (0 errors, 10 warnings): /Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/components/admin/templates/sortable-block-board.tsx
   9 issues (0 errors, 9 warnings): /Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/components/dev-tools-widget/index.tsx
+  8 issues (0 errors, 8 warnings): /Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/components/admin/campaigns/claim-poster.tsx
+  7 issues (0 errors, 7 warnings): /Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/components/admin/campaigns/campaign-header.tsx
+  7 issues (0 errors, 7 warnings): /Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/components/admin/templates/grid-template-modal.tsx
+  7 issues (0 errors, 7 warnings): /Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/components/admin/templates/sortable-block-list.tsx
   7 issues (0 errors, 7 warnings): /Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/components/admin/traces/trace-filter-controls.tsx
+  6 issues (0 errors, 6 warnings): /Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/components/admin/templates/editor-loader.tsx
   6 issues (0 errors, 6 warnings): /Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/components/admin/traces/group-by-route.tsx
   5 issues (0 errors, 5 warnings): /Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/components/dev/trace-viewer.tsx
   5 issues (0 errors, 5 warnings): /Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/components/profile-form.tsx
-  4 issues (0 errors, 4 warnings): /Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/components/admin/AppHeader/app-header.tsx
   4 issues (0 errors, 4 warnings): /Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/components/admin/templates/reorderable-block-list.tsx
   3 issues (0 errors, 3 warnings): /Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/components/admin/AppHeader/mobile-drawer.tsx
+  3 issues (0 errors, 3 warnings): /Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/components/admin/safe-leaflet-map.tsx
   3 issues (0 errors, 3 warnings): /Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/components/admin/templates/branding-preview.tsx
+  3 issues (0 errors, 3 warnings): /Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/components/admin/templates/render-block.tsx
+  3 issues (0 errors, 3 warnings): /Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/components/admin/templates/template-action-toolbar.tsx
+  3 issues (0 errors, 3 warnings): /Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/components/admin/templates/template-editor.tsx
+  3 issues (0 errors, 3 warnings): /Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/components/admin/templates/template-json-editor.tsx
+  3 issues (0 errors, 3 warnings): /Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/components/admin/templates/template-page-editor.tsx
+  3 issues (0 errors, 3 warnings): /Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/components/admin/templates/use-template-editor-state.ts
   3 issues (0 errors, 3 warnings): /Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/components/auth/user-menu.tsx
   3 issues (0 errors, 3 warnings): /Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/components/dev-tools-widget/DevToolsPanel.tsx
   2 issues (0 errors, 2 warnings): /Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/components/admin/AppHeader/nav-sections.tsx
@@ -174,13 +209,18 @@ components/
   2 issues (0 errors, 2 warnings): /Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/components/admin/branding/theme-brand-switcher.tsx
   2 issues (0 errors, 2 warnings): /Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/components/admin/context/current-user-provider.tsx
   2 issues (0 errors, 2 warnings): /Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/components/admin/logs/admin-log-toolbar.tsx
+  2 issues (0 errors, 2 warnings): /Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/components/admin/map-instance.tsx
   2 issues (0 errors, 2 warnings): /Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/components/admin/profile-dropdown.tsx
   2 issues (0 errors, 2 warnings): /Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/components/admin/query-param-editor.tsx
   2 issues (0 errors, 2 warnings): /Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/components/admin/responsive-admin-layout.tsx
   2 issues (0 errors, 2 warnings): /Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/components/admin/template-assigner.tsx
   2 issues (0 errors, 2 warnings): /Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/components/admin/template-browser.tsx
   2 issues (0 errors, 2 warnings): /Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/components/admin/template-user-viewer.filtered.tsx
-  2 issues (0 errors, 2 warnings): /Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/components/admin/templates/template-action-toolbar.tsx
+  2 issues (0 errors, 2 warnings): /Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/components/admin/templates/blocks-editor.tsx
+  2 issues (0 errors, 2 warnings): /Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/components/admin/templates/grid-preset-playground.tsx
+  2 issues (0 errors, 2 warnings): /Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/components/admin/templates/grid-thumbnail-renderer.tsx
+  2 issues (0 errors, 2 warnings): /Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/components/admin/templates/page-header-form.tsx
+  2 issues (0 errors, 2 warnings): /Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/components/admin/templates/sortable-page.tsx
   2 issues (0 errors, 2 warnings): /Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/components/admin/tooltip.tsx
   2 issues (0 errors, 2 warnings): /Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/components/assistant-widget.tsx
   2 issues (0 errors, 2 warnings): /Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/components/dev-tools-widget/MockGeolocationEditor.tsx
@@ -197,15 +237,17 @@ components/
   1 issues (0 errors, 1 warnings): /Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/components/admin/branding/theme-brand-switcher-advanced.tsx
   1 issues (0 errors, 1 warnings): /Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/components/admin/breadcrumb-nav.tsx
   1 issues (0 errors, 1 warnings): /Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/components/admin/comment-thread.tsx
+  1 issues (0 errors, 1 warnings): /Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/components/admin/map-events.tsx
+  1 issues (0 errors, 1 warnings): /Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/components/admin/map-ready-handler.tsx
   1 issues (0 errors, 1 warnings): /Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/components/admin/referral-link.tsx
   1 issues (0 errors, 1 warnings): /Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/components/admin/site-settings-panel.tsx
   1 issues (0 errors, 1 warnings): /Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/components/admin/tag-filter-controls.tsx
   1 issues (0 errors, 1 warnings): /Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/components/admin/templates/block-editor.tsx
   1 issues (0 errors, 1 warnings): /Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/components/admin/templates/grouped-preview.tsx
+  1 issues (0 errors, 1 warnings): /Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/components/admin/templates/page-controls.tsx
   1 issues (0 errors, 1 warnings): /Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/components/admin/templates/preview-export-button.tsx
-  1 issues (0 errors, 1 warnings): /Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/components/admin/templates/render-block.tsx
+  1 issues (0 errors, 1 warnings): /Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/components/admin/templates/sortable-block.tsx
   1 issues (0 errors, 1 warnings): /Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/components/admin/templates/template-editor.loader.tsx
-  1 issues (0 errors, 1 warnings): /Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/components/admin/templates/template-editor.tsx
   1 issues (0 errors, 1 warnings): /Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/components/admin/templates/template-history.tsx
   1 issues (0 errors, 1 warnings): /Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/components/admin/templates/template-save-bar.tsx
   1 issues (0 errors, 1 warnings): /Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/components/admin/templates/thumbnail-preview-modal.tsx
@@ -224,17 +266,18 @@ components/
   1 issues (0 errors, 1 warnings): /Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/components/ui/modal-wrapper.tsx
 
 hooks/
+  23 issues (0 errors, 23 warnings): /Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/hooks/useSelectedLeadsWrapper.ts
   5 issues (0 errors, 5 warnings): /Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/hooks/useDateRange.ts
   3 issues (0 errors, 3 warnings): /Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/hooks/useGlowTheme.tsx
   3 issues (0 errors, 3 warnings): /Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/hooks/useLiveTableWrapper.ts
   3 issues (0 errors, 3 warnings): /Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/hooks/useQueryFlash.ts
   2 issues (0 errors, 2 warnings): /Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/hooks/useAutoRedirectByRole.ts
+  2 issues (0 errors, 2 warnings): /Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/hooks/useAutosaveTemplate.ts
+  2 issues (0 errors, 2 warnings): /Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/hooks/useCampaignForm.ts
   2 issues (0 errors, 2 warnings): /Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/hooks/useFlashToast.ts
   2 issues (0 errors, 2 warnings): /Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/hooks/useSetSessionFromHash.ts
   2 issues (0 errors, 2 warnings): /Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/hooks/useThemeContext.tsx
-  1 issues (0 errors, 1 warnings): /Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/hooks/useAutosaveTemplate.ts
   1 issues (0 errors, 1 warnings): /Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/hooks/useBrandingAutoSuggest.ts
-  1 issues (0 errors, 1 warnings): /Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/hooks/useCampaignForm.ts
   1 issues (0 errors, 1 warnings): /Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/hooks/useCurrentUser.tsx
   1 issues (0 errors, 1 warnings): /Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/hooks/useDashboardLayout.ts
   1 issues (0 errors, 1 warnings): /Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/hooks/useGeoLocation.ts
@@ -244,14 +287,20 @@ hooks/
   1 issues (0 errors, 1 warnings): /Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/hooks/useRequestMeta.ts
   1 issues (0 errors, 1 warnings): /Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/hooks/useResolvedRole.ts
   1 issues (0 errors, 1 warnings): /Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/hooks/useSafeAuth.ts
+  1 issues (0 errors, 1 warnings): /Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/hooks/useSavedCampaignDraft.ts
   1 issues (0 errors, 1 warnings): /Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/hooks/useSession.ts
   1 issues (0 errors, 1 warnings): /Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/hooks/useTypedQueryParam.ts
   1 issues (0 errors, 1 warnings): /Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/hooks/useZodPlaygroundState.ts
 
 lib/
+  52 issues (0 errors, 52 warnings): /Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/lib/presets.ts
   31 issues (0 errors, 31 warnings): /Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/lib/safeSessionStorage.ts
+  29 issues (0 errors, 29 warnings): /Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/lib/utils/slug.ts
+  28 issues (0 errors, 28 warnings): /Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/lib/utils/geocode.ts
+  23 issues (0 errors, 23 warnings): /Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/lib/leads/distance.ts
   20 issues (0 errors, 20 warnings): /Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/lib/utils/location.ts
   18 issues (0 errors, 18 warnings): /Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/lib/safeQueryParam.ts
+  18 issues (0 errors, 18 warnings): /Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/lib/utils/distance.ts
   17 issues (0 errors, 17 warnings): /Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/lib/utils/safeParse.ts
   14 issues (0 errors, 14 warnings): /Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/lib/qr/helpers.block-qr.ts
   10 issues (0 errors, 10 warnings): /Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/lib/supabase/createClientWithContext.ts
@@ -267,6 +316,10 @@ lib/
   2 issues (0 errors, 2 warnings): /Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/lib/supabase/getServerContext.ts
   1 issues (0 errors, 1 warnings): /Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/lib/admin/templates.tsx
   1 issues (0 errors, 1 warnings): /Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/lib/cookies/getSafeCookie.ts
+  1 issues (0 errors, 1 warnings): /Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/lib/create-default-block.ts
+  1 issues (0 errors, 1 warnings): /Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/lib/leads/enrichLead.ts
+  1 issues (0 errors, 1 warnings): /Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/lib/loadLeads.ts
+  1 issues (0 errors, 1 warnings): /Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/lib/resolveGeo.ts
   1 issues (0 errors, 1 warnings): /Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/lib/safeCookies.ts
   1 issues (0 errors, 1 warnings): /Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/lib/safeHeaders.ts
   1 issues (0 errors, 1 warnings): /Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/lib/supabase/client.ts
@@ -286,6 +339,7 @@ postcss.config.js/
 scripts/
   3 issues (0 errors, 3 warnings): /Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/scripts/workers/worker.block-qr.ts
   2 issues (0 errors, 2 warnings): /Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/scripts/check-cookies-usage.ts
+  2 issues (0 errors, 2 warnings): /Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/scripts/enrich-leads-latlon.ts
   2 issues (0 errors, 2 warnings): /Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/scripts/lint-digest.ts
   2 issues (0 errors, 2 warnings): /Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/scripts/lint-summary-markdown.ts
   2 issues (0 errors, 2 warnings): /Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/scripts/lint-summary.ts
@@ -293,6 +347,7 @@ scripts/
   1 issues (0 errors, 1 warnings): /Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/scripts/cleanup-expired-tokens.ts
   1 issues (0 errors, 1 warnings): /Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/scripts/cleanup-sitemaps.ts
   1 issues (0 errors, 1 warnings): /Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/scripts/detect-campaign-winners.ts
+  1 issues (0 errors, 1 warnings): /Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/scripts/enrich-campaigns-latlon.ts
   1 issues (0 errors, 1 warnings): /Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/scripts/gen-openapi.ts
   1 issues (0 errors, 1 warnings): /Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/scripts/geo-alerts.ts
   1 issues (0 errors, 1 warnings): /Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/scripts/modernize-api-json.ts
@@ -304,6 +359,8 @@ scripts/
   1 issues (0 errors, 1 warnings): /Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/scripts/visualize-routes.ts
 
 types/
+  20 issues (0 errors, 20 warnings): /Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/types/campaign.types.ts
+  16 issues (0 errors, 16 warnings): /Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/types/grid.ts
   9 issues (0 errors, 9 warnings): /Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/types/cookies.ts
   6 issues (0 errors, 6 warnings): /Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/types/supabase.ts
   4 issues (0 errors, 4 warnings): /Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/types/location.ts

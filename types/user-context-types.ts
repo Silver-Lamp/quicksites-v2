@@ -1,3 +1,4 @@
+// types/user-context-types.ts
 import type { Role } from '@/admin/utils/roles';
 import type { Session, User } from '@supabase/auth-helpers-react';
 import type { ReactNode } from 'react';

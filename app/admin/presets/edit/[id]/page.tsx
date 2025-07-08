@@ -12,6 +12,7 @@ import type { Database } from "@/types/supabase";
 import TemplatePreview from "@/components/admin/templates/template-preview";
 import { defaultGridPresets } from "@/types/grid-presets";
 import GridThumbnailRenderer from "@/components/admin/templates/grid-thumbnail-renderer";
+import { createDefaultBlock } from '@/lib/create-default-block';
 
 export default function AdminPresetsEditPage() {
   const { id } = useParams();
@@ -21,7 +22,7 @@ export default function AdminPresetsEditPage() {
   const [name, setName] = useState("");
   const [columns, setColumns] = useState(2);
   const [blocks, setBlocks] = useState<Block[]>([]);
-
+  
   useEffect(() => {
     if (!id || typeof id !== "string") return;
     supabase
@@ -63,32 +64,41 @@ export default function AdminPresetsEditPage() {
   };
 
   const handleInsertBlock = (index: number, type: string) => {
-    let newBlock: Block;
-
-    if (type === "grid") {
-      newBlock = {
-        type: "grid",
-        _id: crypto.randomUUID(),
-        content: {
-          columns: 2,
-          items: [
-            { type: "text", content: { value: "Item 1" }, _id: crypto.randomUUID() },
-            { type: "text", content: { value: "Item 2" }, _id: crypto.randomUUID() },
-          ],
-        },
-      };
-    } else {
-      newBlock = {
-        type,
-        content: { value: `New ${type} block` },
-        _id: crypto.randomUUID(),
-      };
-    }
-
+    const newBlock = createDefaultBlock(type as Block['type']);
     const updated = [...blocks];
     updated.splice(index, 0, newBlock);
     setBlocks(updated);
   };
+
+//   const handleInsertBlock = (index: number, type: string) => {
+//     let newBlock: Block;
+
+//     if (type === "grid") {
+//       newBlock = {
+//         type: "grid",
+//         _id: crypto.randomUUID(),
+//         content: {
+//           columns: 2,
+//           items: [
+//             { type: "text", content: { value: "Item 1" }, _id: crypto.randomUUID() },
+//             { type: "text", content: { value: "Item 2" }, _id: crypto.randomUUID() },
+//           ],
+//         },
+//       };
+//     } else {
+//       newBlock = {
+//         type: type as Block['type'],
+//         _id: crypto.randomUUID(),
+//         content: {
+//             value: `New ${type} block`,
+//         },
+//       };
+//     }
+
+//     const updated = [...blocks];
+//     updated.splice(index, 0, newBlock);
+//     setBlocks(updated);
+//   };
 
   return (
     <div className="max-w-7xl mx-auto py-8 space-y-6">
@@ -137,7 +147,7 @@ export default function AdminPresetsEditPage() {
           items={blocks}
           columns={columns}
           onChange={setBlocks}
-          onInsert={handleInsertBlock}
+          onInsert={(index) => handleInsertBlock(index, 'text')}
         />
 
         <div className="bg-white/5 rounded p-4 border border-white/10">

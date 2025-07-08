@@ -1,201 +1,68 @@
-import { useState, useEffect, useMemo } from 'react';
+// components/admin/templates/use-template-editor-state.ts
+import { useState, useEffect } from 'react';
+import { createEmptyTemplate } from '@/lib/createEmptyTemplate';
 import { useAutosaveTemplate } from '@/hooks/useAutosaveTemplate';
-import { generateUniqueTemplateName, slugify, stripTimestampFromName } from '@/lib/utils/slug';
+import { useTemplateMeta } from '@/hooks/useTemplateMeta';
+import { useTemplateJsonSync } from '@/hooks/useTemplateJsonSync';
 import { normalizeTemplate } from '@/admin/utils/normalizeTemplate';
-import { supabase } from '@/lib/supabase';
-import { toast } from 'react-hot-toast';
-import debounce from 'lodash.debounce';
-import type { TemplateData } from '@/types/template';
+import { useTemplateSave } from '@/hooks/useTemplateSave';
+import type { Snapshot } from '@/types/template';
+import toast from 'react-hot-toast';
 
-export function useTemplateEditorState({ templateName, initialData, onRename }: {
+export function useTemplateEditorState({
+  templateName,
+  initialData,
+  onRename,
+}: {
   templateName: string;
-  initialData?: any;
+  initialData?: Snapshot;
   onRename?: (newName: string) => void;
 }) {
-  const [template, setTemplate] = useState<any>({
-    id: initialData?.id || '',
-    name: templateName,
-    layout: 'default',
-    color_scheme: '',
-    commit: '',
-    industry: '',
-    theme: '',
-    brand: '',
-    data: { pages: [] },
-  });
-
-  const [rawJson, setRawJson] = useState('');
-  const [livePreviewData, setLivePreviewData] = useState<TemplateData>({ pages: [] });
-  const [isCreating, setIsCreating] = useState(false);
-  const [isRenaming, setIsRenaming] = useState(false);
-  const [slugPreview, setSlugPreview] = useState('');
-
-  const baseName = templateName || 'new-template';
-  const uniqueName = generateUniqueTemplateName(baseName);
-  const cleanName = stripTimestampFromName(uniqueName);
-  const [inputValue, setInputValue] = useState(cleanName);
-
-  const debouncedSetPendingName = useMemo(
-    () => debounce((val: string) => setInputValue(val), 100),
-    []
+  const fallback = createEmptyTemplate(templateName);
+  const [template, setTemplate] = useState(() =>
+    initialData ? normalizeTemplate(initialData) : fallback
   );
+  const [isCreating, setIsCreating] = useState(!initialData);
+  const [isRenaming, setIsRenaming] = useState(false);
 
-  useEffect(() => {
-    const handler = setTimeout(() => {
-      setSlugPreview(slugify(inputValue));
-    }, 150);
-    return () => clearTimeout(handler);
-  }, [inputValue]);
-
-  const sampleBlocks = [
-    { type: 'text', content: { text: 'Welcome to the playground!' } },
-    { type: 'image', content: { url: 'https://placekitten.com/800/400', alt: 'A cute kitten' } },
-  ];
+  const { rawJson, setRawJson, livePreviewData } = useTemplateJsonSync(template.data);
+  const { inputValue, setInputValue, slugPreview, nameExists } = useTemplateMeta(template.name, template.id);
 
   const autosave = useAutosaveTemplate(template, rawJson);
 
-  const createNewTemplate = async () => {
-    const fallbackData = {
-      pages: [
-        {
-          id: 'index',
-          slug: 'index',
-          title: 'Sample Page',
-          content_blocks: sampleBlocks,
-        },
-      ],
-    };
-
-    const safeName = generateUniqueTemplateName(templateName || 'new-template');
-    const safeSlug = slugify(safeName);
-
-    setIsCreating(true);
-    const { data, error } = await supabase
-      .from('templates')
-      .insert({
-        template_name: safeName,
-        slug: safeSlug,
-        layout: 'default',
-        data: fallbackData,
-      })
-      .select()
-      .single();
-
-    if (error || !data) {
-      toast.error('Failed to create new template');
-      setIsCreating(false);
-      console.error('Insert error:', error);
-      return;
-    }
-
-    window.location.href = `/admin/templates/${data.slug}`;
-  };
-
   useEffect(() => {
-    if (template.id) return;
-
-    const fallbackData = {
-      pages: [
-        {
-          id: 'index',
-          slug: 'index',
-          title: 'Sample Page',
-          content_blocks: sampleBlocks,
-        },
-      ],
-    };
-
-    if (initialData) {
-      const normalized = normalizeTemplate({
-        ...initialData,
-        data: initialData.data ?? fallbackData,
-      });
-      setTemplate(normalized);
-      setRawJson(JSON.stringify(normalized.data, null, 2));
-      setLivePreviewData(normalized.data);
-    } else {
-      createNewTemplate();
+    if (!initialData && isCreating && template?.slug) {
+      const timeout = setTimeout(() => {
+        window.location.href = `/admin/templates/${template.slug}`;
+      }, 1200);
+      return () => clearTimeout(timeout);
     }
-  }, [initialData, template.id]);
-
-  useEffect(() => {
-    setRawJson(JSON.stringify(template.data, null, 2));
-  }, [template.data]);
-
-  useEffect(() => {
-    try {
-      const parsed = JSON.parse(rawJson);
-      setLivePreviewData(parsed);
-      setTemplate((prev: any) => ({ ...prev, data: parsed }));
-    } catch {
-      // ignore
-    }
-  }, [rawJson]);
+  }, [isCreating, initialData, template]); // ✅ Track the whole object instead of `template.slug`
+  
+  
 
   const handleSaveDraft = () => {
     localStorage.setItem(`draft-${template.id}`, rawJson);
-    toast.success('Draft saved manually');
+    toast.success('Draft saved');
   };
 
   const handleRename = async () => {
     const newName = inputValue.trim();
-    if (newName.length < 3) {
-      toast.error('Name must be at least 3 characters.');
-      return;
-    }
-    if (newName === template.name) {
-      setIsRenaming(false);
-      return;
-    }
-    let res: Response;
-    try {
-      res = await fetch('/api/templates/rename', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ template_id: template.id, newName }),
-      });
-    } catch {
-      toast.error('Network error while renaming');
-      return;
-    }
-    let data: any = null;
-    try {
-      data = await res.json();
-    } catch {
-      toast.error('Unexpected response format');
-      return;
-    }
-    if (!res.ok) {
-      toast.error(data?.error || 'Failed to rename template');
-      return;
-    }
-    // toast.success('Template renamed!');
-    setTemplate((prev: any) => ({ ...prev, name: newName }));
+    if (newName.length < 3) return toast.error('Name must be at least 3 chars.');
+    if (newName === template.name) return setIsRenaming(false);
+
+    const res = await fetch('/api/templates/rename', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ template_id: template.id, newName }),
+    });
+    const json = await res.json();
+    if (!res.ok) return toast.error(json?.error || 'Failed to rename');
+
+    setTemplate((prev) => ({ ...prev, name: newName }));
+    onRename?.(newName);
     setIsRenaming(false);
-    if (onRename) onRename(newName);
   };
-
-  const [nameExists, setNameExists] = useState(false);
-
-  useEffect(() => {
-    if (!inputValue.trim() || inputValue === template.name) return;
-    const checkName = debounce(async () => {
-      const { data } = await supabase
-        .from('templates')
-        .select('id')
-        .eq('template_name', inputValue.trim())
-        .neq('id', template.id)
-        .maybeSingle();
-
-      setNameExists(!!data);
-      if (!data) {
-        setNameExists(false);
-      }
-    }, 300);
-
-    checkName();
-    return () => checkName.cancel?.();
-  }, [inputValue, template.id, template.name]);
 
   return {
     template,

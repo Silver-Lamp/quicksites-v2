@@ -7,7 +7,6 @@ import { useSafeAuth } from '@/hooks/useSafeAuth';
 import UserMenu from '@/components/auth/user-menu';
 import { useRequestMeta } from '@/hooks/useRequestMeta';
 // import { AdminNavSections } from './AdminNavSections';
-// import { InspirationalQuote } from '@/components/ui';
 import InspirationalQuote from '@/components/ui/inspirational-quote';
 
 export default function AppHeader() {
@@ -101,28 +100,32 @@ return () => window.removeEventListener('scroll', handleScroll);
   return (
     <header className="bg-gray-800 text-white sticky top-0 z-50 px-2 py-[6px] shadow-sm border-b border-zinc-700 min-h-[48px] transition-transform duration-300">
       <div className="flex justify-between items-center max-w-screen-xl mx-auto relative">
-        <div className="flex items-center overflow-x-auto whitespace-nowrap max-w-full flex-1">
+        <div className="flex items-center gap-4 overflow-x-auto whitespace-nowrap max-w-full flex-1">
           <SafeLink href="/" className="text-blue-400 hover:underline">
             <img src="/logo_v1.png" alt="QuickSites" className="h-12 w-auto" />
           </SafeLink>
-        </div>
-        <div className="ml-2 flex items-center gap-2" style={{ minWidth: 'auto' }}>
-          <div className="text-xs text-gray-400 mr-2 text-right leading-tight" style={{ lineHeight: '1.1rem' }}>
-            <div>{user.email}</div>
-            <div className="text-zinc-500">role: {role}</div>
+  
+          {/* ✅ Always show inspirational quote */}
+          <div className="text-xs text-cyan-300 truncate max-w-xs">
+            <InspirationalQuote tags={['small-business', 'seo', 'persistence']} />
           </div>
-          {/* <UserMenu /> */}
         </div>
-
-        {/* {(traceId || sessionId) && (
-          <div
-            className="absolute -bottom-5 right-2 text-[10px] text-zinc-500 font-mono"
-            title={`Trace ID: ${traceId}\nSession ID: ${sessionId}`}
-          >
-            trace: <span className="text-cyan-400">{traceId?.slice(0, 6) || '---'}</span> | session:{' '}
-            <span className="text-amber-400">{sessionId?.slice(0, 6) || '---'}</span>
-          </div>
-        )} */}
+  
+        <div className="ml-2 flex items-center gap-2">
+          {isLoggedIn && user ? (
+            <div
+              className="text-xs text-gray-400 mr-2 text-right leading-tight"
+              style={{ lineHeight: '1.1rem' }}
+            >
+              <div>{user.email}</div>
+              <div className="text-zinc-500">role: {role}</div>
+            </div>
+          ) : (
+            <a href="/login" className="text-blue-400 hover:underline">
+              Log In
+            </a>
+          )}
+        </div>
       </div>
     </header>
   );

@@ -1,11 +1,13 @@
+// components/admin/templates/template-editor.tsx
 "use client";
 
 import { useRouter } from 'next/navigation';
-import { ScrollArea } from '@/components/ui';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { TemplateEditorToolbar } from './template-editor-toolbar';
 import { useTemplateEditorState } from './use-template-editor-state';
 import { TemplateEditorContent } from './template-editor-content';
-import type { Snapshot } from '@/types/template';
+import type { Snapshot, Template } from '@/types/template';
+import { Dispatch, SetStateAction } from 'react';
 
 export default function TemplateEditor({
   templateName,
@@ -68,11 +70,11 @@ export default function TemplateEditor({
         nameExists={nameExists}
         setShowNameError={() => {}} />
       <TemplateEditorContent
-        template={template}
+        template={template as Template}
         rawJson={rawJson}
         setRawJson={setRawJson}
         livePreviewData={livePreviewData}
-        setTemplate={setTemplate}
+        setTemplate={setTemplate as Dispatch<SetStateAction<Template>>}
         autosaveStatus={autosave.status}
         setShowPublishModal={() => {}}
       />

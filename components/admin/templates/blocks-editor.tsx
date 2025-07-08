@@ -14,14 +14,13 @@ import { GripVertical, Pencil, AlertTriangle } from 'lucide-react';
 
 import { Button } from '@/components/ui';
 import BlockSidebar from './block-sidebar';
-import type { Block } from '@/types/blocks';
-import type { BlocksEditorProps } from '@/types/blocks';
+import type { Block, BlockWithId, BlocksEditorProps } from '@/types/blocks';
 import { normalizeBlock } from '@/types/blocks';
 import { industryPresets } from '@/lib/presets';
 import { BlockSchema } from '@/admin/lib/zod/blockSchema';
 
 type SortableBlockProps = {
-  block: Block;
+  block: BlockWithId;
   index: number;
   onEdit: (index: number) => void;
 };
@@ -32,7 +31,7 @@ function isBlockInvalid(block: Block): boolean {
 
 function SortableBlock({ block, index, onEdit }: SortableBlockProps) {
   const { attributes, listeners, setNodeRef, transform, transition } = useSortable({
-    id: block.id || `block-${index}`,
+    id: block._id,
   });
 
   const style = {
@@ -74,10 +73,13 @@ function SortableBlock({ block, index, onEdit }: SortableBlockProps) {
 export const BlocksEditor = ({ blocks, onChange, industry = 'default' }: BlocksEditorProps) => {
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
 
-  const ensureIds = (blocks: Block[]) =>
-    blocks.map((block) => ({ ...block, id: block.id || crypto.randomUUID() }));
+  const ensureIds = (blocks: Block[]): BlockWithId[] =>
+    blocks.map((block) => ({
+      ...block,
+      _id: block._id ?? crypto.randomUUID(),
+    }));
 
-  const safeBlocks: (Block & { id: string })[] = ensureIds(blocks);
+  const safeBlocks: BlockWithId[] = ensureIds(blocks);
 
   const handleUpdate = (index: number, updatedBlock: Block) => {
     const updatedBlocks = [...safeBlocks];
@@ -93,8 +95,8 @@ export const BlocksEditor = ({ blocks, onChange, industry = 'default' }: BlocksE
 
   const handleDragEnd = ({ active, over }: any) => {
     if (active.id !== over.id) {
-      const oldIndex = safeBlocks.findIndex((b) => b.id === active.id);
-      const newIndex = safeBlocks.findIndex((b) => b.id === over.id);
+      const oldIndex = safeBlocks.findIndex((b) => b._id === active.id);
+      const newIndex = safeBlocks.findIndex((b) => b._id === over.id);
       const reordered = arrayMove(safeBlocks, oldIndex, newIndex);
       onChange(reordered);
     }
@@ -105,10 +107,10 @@ export const BlocksEditor = ({ blocks, onChange, industry = 'default' }: BlocksE
   return (
     <div className="space-y-4">
       <DndContext collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-        <SortableContext items={safeBlocks.map((b) => b.id)} strategy={verticalListSortingStrategy}>
+        <SortableContext items={safeBlocks.map((b) => b._id)} strategy={verticalListSortingStrategy}>
           {safeBlocks.map((block, index) => (
             <SortableBlock
-              key={block.id || `${block.type}-${index}`}
+              key={block._id}
               block={block}
               index={index}
               onEdit={setSelectedIndex}

@@ -1,31 +1,37 @@
 'use client';
 
+import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { z } from 'zod';
 import { parseTypedQueryValue } from '@/admin/lib/query/parseTypedQueryValue';
 
+type InferParamType<T> =
+  T extends 'string[]' ? string[] :
+  T extends 'number[]' ? number[] :
+  T extends 'string' ? string :
+  T extends 'number' ? number :
+  T extends 'date' ? Date :
+  T extends 'date[]' ? Date[] :
+  T extends 'json' ? Record<string, any> :
+  T extends 'json[]' ? Record<string, any>[] :
+  T extends 'boolean' ? boolean :
+  never;
+
 type ParamReturn<T> = [
-  T extends 'string[]'
-    ? string[]
-    : T extends 'number[]'
-      ? number[]
-      : T extends 'string'
-        ? string
-        : T extends 'number'
-          ? number
-          : T extends 'date'
-            ? Date
-            : T extends 'date[]'
-              ? Date[]
-              : T extends 'json'
-                ? Record<string, any>
-                : T extends 'json[]'
-                  ? Record<string, any>[]
-                  : T extends 'boolean'
-                    ? boolean
-                    : never,
+  InferParamType<T>,
   (value: any) => void,
+  () => void
 ];
+
+function getSearchParams(): URLSearchParams {
+  return typeof window !== 'undefined'
+    ? new URLSearchParams(window.location.search)
+    : new URLSearchParams();
+}
+
+function isArrayType(type: string): boolean {
+  return ['string[]', 'number[]', 'date[]', 'json[]'].includes(type);
+}
 
 export default function useTypedQueryParam<
   T extends
@@ -37,7 +43,7 @@ export default function useTypedQueryParam<
     | 'date'
     | 'date[]'
     | 'json'
-    | 'json[]',
+    | 'json[]'
 >(
   key: string,
   fallback: any,
@@ -45,9 +51,19 @@ export default function useTypedQueryParam<
   schema?: z.ZodTypeAny
 ): ParamReturn<T> {
   const router = useRouter();
-  const searchParams = new URLSearchParams(
-    typeof window !== 'undefined' ? window.location.search : ''
-  );
+  const searchParams = getSearchParams();
+
+  // Set default param if missing (only in browser)
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    if (!searchParams.has(key) && fallback !== undefined && type !== 'json') {
+      const updated = new URLSearchParams(window.location.search);
+      updated.set(key, String(fallback));
+      const newUrl = `${window.location.pathname}?${updated.toString()}`;
+      router.replace(newUrl);
+    }
+  }, [key, fallback, router, type]);
 
   const setParam = (value: any) => {
     const newParams = new URLSearchParams(window.location.search);
@@ -56,7 +72,9 @@ export default function useTypedQueryParam<
       newParams.delete(key);
       value.forEach((v) => {
         const serialized =
-          typeof v === 'object' ? encodeURIComponent(JSON.stringify(v)) : String(v);
+          typeof v === 'object'
+            ? encodeURIComponent(JSON.stringify(v))
+            : String(v);
         newParams.append(key, serialized);
       });
     } else if (value instanceof Date) {
@@ -71,25 +89,24 @@ export default function useTypedQueryParam<
     router.replace(newUrl);
   };
 
-  if (!searchParams.has(key) && fallback !== undefined && type !== 'json') {
-    searchParams.set(key, String(fallback));
-    const newUrl = `${window.location.pathname}?${searchParams.toString()}`;
+  const clearParam = () => {
+    const newParams = new URLSearchParams(window.location.search);
+    newParams.delete(key);
+    const newUrl = `${window.location.pathname}?${newParams.toString()}`;
     router.replace(newUrl);
-  }
+  };
 
   const values = searchParams.getAll(key);
-  const value = ['string[]', 'number[]', 'date[]', 'json[]'].includes(type)
-    ? values
-    : searchParams.get(key);
+  const raw = isArrayType(type) ? values : searchParams.get(key);
 
-  const parsed: ParamReturn<T>[0] = parseTypedQueryValue(
+  const parsed: InferParamType<T> = parseTypedQueryValue(
     key,
-    value,
+    raw,
     fallback,
     type,
     schema as any,
     router as any
   );
 
-  return [parsed, setParam];
+  return [parsed, setParam, clearParam];
 }

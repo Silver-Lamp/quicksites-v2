@@ -1,51 +1,93 @@
 // types/blocks.ts
 
-export type HeroBlockContent = {
-  headline: string;
-  subheadline?: string;
-  cta_text?: string;
-  cta_link?: string;
-};
-
-export type ServicesBlockContent = {
-  items: string[];
-};
-
-export type TestimonialBlockContent = {
-  quote: string;
-  attribution?: string;
-};
-
-export type TextBlockContent = {
-  value: string;
-};
-
-export type CtaBlockContent = {
-  label: string;
-  link: string;
-};
-
-export type QuoteBlockContent = {
-  text: string;
-  attribution?: string;
-};
-
-export type Block = {
+// Base type for shared props
+export type BaseBlock = {
   _id?: string;
-  type: string;
-  content?:
-    | HeroBlockContent
-    | ServicesBlockContent
-    | TestimonialBlockContent
-    | TextBlockContent
-    | CtaBlockContent
-    | QuoteBlockContent
-    | Record<string, any>;
 };
 
-export type PresetBlock = Record<string, any>;
-export type PresetMap = Record<string, Record<string, PresetBlock>>;
+// Individual block definitions
+export type TextBlock = BaseBlock & {
+  type: 'text';
+  content: {
+    value: string;
+  };
+};
 
+export type ImageBlock = BaseBlock & {
+  type: 'image';
+  content: {
+    url: string;
+    alt: string;
+  };
+};
+
+export type VideoBlock = BaseBlock & {
+  type: 'video';
+  content: {
+    url: string;
+    caption?: string;
+  };
+};
+
+export type AudioBlock = BaseBlock & {
+  type: 'audio';
+  content: {
+    url: string;
+    title?: string;
+    provider?: 'spotify' | 'soundcloud' | 'suno';
+  };
+};
+
+export type QuoteBlock = BaseBlock & {
+  type: 'quote';
+  content: {
+    text: string;
+    attribution?: string;
+  };
+};
+
+export type ButtonBlock = BaseBlock & {
+  type: 'button';
+  content: {
+    label: string;
+    href: string;
+    style?: 'primary' | 'secondary' | 'ghost';
+  };
+};
+
+export type GridBlock = BaseBlock & {
+  type: 'grid';
+  content: {
+    columns: number;
+    items: Block[];
+  };
+};
+
+// Unified Block union
+export type Block =
+  | TextBlock
+  | ImageBlock
+  | VideoBlock
+  | AudioBlock
+  | QuoteBlock
+  | ButtonBlock
+  | GridBlock
+  | HeroBlock
+  | ServicesBlock
+  | CtaBlock
+  | TestimonialBlock;
+// Block with enforced _id
+export type BlockWithId = Block & { _id: string };
+
+// Normalization helper
+export function normalizeBlock(block: Partial<Block>): BlockWithId {
+  return {
+    ...block,
+    _id: block._id ?? crypto.randomUUID(),
+  } as BlockWithId;
+}
+
+// Editor-related types
 export type BlocksEditorProps = {
   blocks: Block[];
   onChange: (updated: Block[]) => void;
@@ -75,11 +117,39 @@ export type TemplatePageEditorProps = {
   onBlockChange: (pageIndex: number, updated: Block[]) => void;
 };
 
-export function normalizeBlock(block: Block): Block & { _id: string } {
-  return {
-    ...block,
-    _id: (block as any)._id || crypto.randomUUID(),
-  };
-}
-export type BlockWithId = Block & { _id: string };
+// Optional: used in presets
+export type PresetBlock = Record<string, any>;
+export type PresetMap = Record<string, Record<string, PresetBlock>>;
 
+export type HeroBlock = BaseBlock & {
+  type: 'hero';
+  content: {
+    title: string;
+    description?: string;
+    cta_label?: string;
+    cta_link?: string;
+  };
+};
+
+export type ServicesBlock = BaseBlock & {
+  type: 'services';
+  content: {
+    items: string[];
+  };
+};
+
+export type CtaBlock = BaseBlock & {
+  type: 'cta';
+  content: {
+    label: string;
+    link: string;
+  };
+};
+
+export type TestimonialBlock = BaseBlock & {
+  type: 'testimonial';
+  content: {
+    quote: string;
+    attribution?: string;
+  };
+};

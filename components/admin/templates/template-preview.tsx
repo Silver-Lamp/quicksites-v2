@@ -1,3 +1,4 @@
+// components/admin/templates/template-preview.tsx
 import type { TemplateData } from '@/types/template';
 import type { Block } from '@/types/blocks';
 
@@ -35,7 +36,7 @@ export default function TemplatePreview({
           <h2 className="text-lg font-semibold mb-2">Page: {page.slug}</h2>
           {page.content_blocks.map((block) => (
             <div
-              key={block.id}
+              key={block._id}
               className="border p-2 mb-2 bg-white shadow-sm"
               onClick={() => onBlockClick?.(block)}
             >

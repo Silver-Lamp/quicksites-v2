@@ -47,7 +47,7 @@ export default function BlockEditorModal({
         <BlocksEditor
           blocks={[
             {
-              id: crypto.randomUUID(),
+              _id: crypto.randomUUID(),
               type: 'hero',
               content: {
                 title: 'Hello',

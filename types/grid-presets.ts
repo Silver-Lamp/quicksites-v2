@@ -24,12 +24,12 @@ export const defaultGridPresets: GridPreset[] = [
     items: [
       {
         type: 'text',
-        value: { value: 'Welcome to our product' },
+        content: { value: 'Welcome to our product' },
         _id: crypto.randomUUID(),
       },
       {
         type: 'button',
-        value: {
+        content: {
           label: 'Get Started',
           href: '#',
           style: 'primary',
@@ -46,17 +46,17 @@ export const defaultGridPresets: GridPreset[] = [
     items: [
       {
         type: 'quote',
-        value: { text: 'Reliable', author: 'Alex' },
+        content: { text: 'Reliable', attribution: 'Alex' },
         _id: crypto.randomUUID(),
       },
       {
         type: 'quote',
-        value: { text: 'Fast', author: 'Casey' },
+        content: { text: 'Fast', attribution: 'Casey' },
         _id: crypto.randomUUID(),
       },
       {
         type: 'quote',
-        value: { text: 'Affordable', author: 'Jordan' },
+        content: { text: 'Affordable', attribution: 'Jordan' },
         _id: crypto.randomUUID(),
       },
     ],
@@ -69,17 +69,17 @@ export const defaultGridPresets: GridPreset[] = [
     items: [
       {
         type: 'text',
-        value: { value: 'Basic Plan' },
+        content: { value: 'Basic Plan' },
         _id: crypto.randomUUID(),
       },
       {
         type: 'text',
-        value: { value: 'Pro Plan' },
+        content: { value: 'Pro Plan' },
         _id: crypto.randomUUID(),
       },
       {
         type: 'text',
-        value: { value: 'Enterprise' },
+        content: { value: 'Enterprise' },
         _id: crypto.randomUUID(),
       },
     ],
@@ -92,22 +92,22 @@ export const defaultGridPresets: GridPreset[] = [
     items: [
       {
         type: 'quote',
-        value: { text: 'This changed my business.', author: 'Morgan' },
+        content: { text: 'This changed my business.', attribution: 'Morgan' },
         _id: crypto.randomUUID(),
       },
       {
         type: 'quote',
-        value: { text: 'Support is top-notch.', author: 'Skyler' },
+        content: { text: 'Support is top-notch.', attribution: 'Skyler' },
         _id: crypto.randomUUID(),
       },
       {
         type: 'quote',
-        value: { text: 'Super easy to use.', author: 'Jordan' },
+        content: { text: 'Super easy to use.', attribution: 'Jordan' },
         _id: crypto.randomUUID(),
       },
       {
         type: 'quote',
-        value: { text: 'Highly recommend!', author: 'Taylor' },
+        content: { text: 'Highly recommend!', attribution: 'Taylor' },
         _id: crypto.randomUUID(),
       },
     ],

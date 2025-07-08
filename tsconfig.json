@@ -11,6 +11,7 @@
     ".next/types/**/*.ts",
     "lib",
     "lib/admin",
+    "hooks",
     "_pages-legacy"
   ],
   "exclude": [

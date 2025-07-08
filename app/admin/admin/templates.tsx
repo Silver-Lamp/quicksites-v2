@@ -58,7 +58,7 @@ export default function TemplatesPage() {
 
         <div className="flex gap-3 items-end">
           {typeof window !== 'undefined' && selectedTemplate ? (
-            <Link href={`/admin/templates-new?copy=${selectedTemplate}`}>
+            <Link href={`/admin/templates/new?copy=${selectedTemplate}`}>
               <Button variant="secondary">Duplicate</Button>
             </Link>
           ) : (
@@ -66,7 +66,7 @@ export default function TemplatesPage() {
               Duplicate
             </Button>
           )}
-          <Link href="/admin/templates-new">
+          <Link href="/admin/templates/new">
             <Button>Create New</Button>
           </Link>
         </div>

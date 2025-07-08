@@ -12,7 +12,7 @@ export function useAutosaveTemplate(template: any, rawJson: string) {
         localStorage.setItem(`draft-${template.id}`, rawJson);
         lastSave.current = rawJson;
         setStatus('saved');
-        toast.success('Changes autosaved');
+        // toast.success('Changes autosaved');
       }
     }, 2000);
 

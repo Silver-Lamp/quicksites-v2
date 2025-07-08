@@ -9,7 +9,7 @@ import { describe, it, expect } from 'vitest';
 //       template={{
 //         name: 'snapshot-template',
 //         updatedAt: '2025-05-24T20:00:00Z',
-//         duplicateUrl: '/admin/templates-new?copy=snapshot-template'
+//         duplicateUrl: '/admin/templates/new?copy=snapshot-template'
 //       }}
 //     />
 //   );

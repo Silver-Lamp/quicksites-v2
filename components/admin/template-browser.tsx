@@ -70,7 +70,7 @@ export default function TemplateBrowser({ onSelect }: Props) {
                         Hero: {t.data?.pages[0]?.content_blocks?.[0]?.headline}
                       </p>
                       <div className="flex justify-end gap-2 mt-4">
-                        <SafeLink href={`/admin/templates-new?copy=${t.template_name}`}>
+                        <SafeLink href={`/admin/templates/new?copy=${t.template_name}`}>
                           <Button variant="secondary" size="sm">
                             Duplicate This
                           </Button>

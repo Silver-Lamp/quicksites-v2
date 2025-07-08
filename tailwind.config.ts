@@ -53,12 +53,18 @@ const config: Config = {
         sm: 'calc(var(--radius) - 4px)',
       },
       keyframes: {
+        fadeOut: {
+          '0%': { opacity: '1' },
+          '50%': { opacity: '0.5' },
+          '100%': { opacity: '0' },
+        },
         'pulse-slow': {
           '0%, 100%': { transform: 'scale(1)', opacity: '0.2' },
           '50%': { transform: 'scale(1.05)', opacity: '0.3' },
         },
       },
       animation: {
+        'fade-out': 'fadeOut 1s ease-out forwards',
         'pulse-slow': 'pulse-slow 10s ease-in-out infinite',
       },
     },

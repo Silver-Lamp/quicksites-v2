@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 import { createClient } from '@supabase/supabase-js';
 import TemplateEditor from '@/components/admin/templates/template-editor';
 import { TemplateSnapshot } from '@/types/template';
@@ -65,13 +65,9 @@ export default function NewTemplatePage() {
   }, [from]);
 
   return (
-    <div className="p-4">
-      <div className="text-red-500">new template page</div>
-      <h1 className="text-xl font-bold mb-4">New Template</h1>
       <TemplateEditor
         templateName="new-template"
         initialData={initialData as TemplateSnapshot | undefined}
       />
-    </div>
   );
 }

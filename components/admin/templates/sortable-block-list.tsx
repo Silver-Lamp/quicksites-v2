@@ -70,61 +70,45 @@ export function SortableBlockList({
               const isValid = BlockSchema.safeParse(block).success;
 
               return (
-                <div key={block._id}>
-                  {/* insertion zone above */}
-                  {onInsertBlock && (
-                    <div className="text-center my-1">
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        onClick={() => handleInsert(i)}
-                        className="text-xs opacity-50 hover:opacity-100"
-                      >
-                        <Plus className="w-3 h-3 mr-1" />
-                        Add Block Here
-                      </Button>
-                    </div>
-                  )}
-
-                  <SortableBlock id={block._id}>
-                    <motion.div
-                      layout
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      exit={{ opacity: 0 }}
-                      className={`rounded border px-3 py-2 text-sm flex justify-between items-center ${
-                        isValid
-                          ? 'border-gray-700 bg-white/5'
-                          : 'border-red-500 bg-red-500/10'
-                      }`}
-                    >
-                      <div>{block?.type || '(unknown)'}</div>
-                      <div className="flex gap-1">
-                        {onBlockEdit && (
-                          <Button
-                            size="icon"
-                            variant="ghost"
-                            onClick={() => onBlockEdit(block, i)}
-                          >
-                            <Pencil className="w-3 h-3" />
-                          </Button>
-                        )}
+                <SortableBlock id={block._id} key={block._id}>
+                  <motion.div
+                    layout
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    className={`rounded border px-3 py-2 text-sm flex justify-between items-center ${
+                      isValid
+                        ? 'border-gray-700 bg-white/5'
+                        : 'border-red-500 bg-red-500/10'
+                    }`}
+                  >
+                    <div>{block?.type || '(unknown)'}</div>
+                    <div className="flex gap-1">
+                      {onBlockEdit && (
                         <Button
                           size="icon"
                           variant="ghost"
-                          onClick={() => handleDelete(i)}
+                          onClick={() => onBlockEdit(block, i)}
                         >
-                          <Trash2 className="w-3 h-3" />
+                          <Pencil className="w-3 h-3" />
                         </Button>
-                      </div>
-                    </motion.div>
-                  </SortableBlock>
-                </div>
+                      )}
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        onClick={() => handleDelete(i)}
+                      >
+                        <Trash2 className="w-3 h-3" />
+                      </Button>
+                    </div>
+                  </motion.div>
+                </SortableBlock>
               );
             })}
 
             {blocks.length === 0 && (
               <motion.div
+                key="empty-state"
                 layout
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 0.5 }}
@@ -133,21 +117,6 @@ export function SortableBlockList({
               >
                 No blocks yet. Drag or insert to begin.
               </motion.div>
-            )}
-
-            {/* insertion zone at end */}
-            {onInsertBlock && (
-              <div className="text-center my-1">
-                <Button
-                  size="icon"
-                  variant="ghost"
-                  onClick={() => handleInsert(blocks.length)}
-                  className="text-xs opacity-50 hover:opacity-100"
-                >
-                  <Plus className="w-3 h-3 mr-1" />
-                  Add Block to End
-                </Button>
-              </div>
             )}
           </AnimatePresence>
         </div>

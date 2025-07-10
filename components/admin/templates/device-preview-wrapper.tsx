@@ -4,7 +4,7 @@ import { Monitor, Smartphone, Tablet, RotateCw } from 'lucide-react';
 
 type Mode = 'mobile' | 'tablet' | 'desktop';
 type Orientation = 'portrait' | 'landscape';
-
+const showBezel = false;
 export default function DevicePreviewWrapper({ children }: { children: React.ReactNode }) {
   const [mode, setMode] = useState<Mode>('mobile');
   const [orientation, setOrientation] = useState<Orientation>('portrait');
@@ -33,10 +33,14 @@ export default function DevicePreviewWrapper({ children }: { children: React.Rea
   };
 
   const bezelFrame = (content: React.ReactNode) => {
+    // console.log('showBezel: ', showBezel);
+    // if (!showBezel) return content;
+
     if (mode === 'desktop') return content;
 
     return (
       <div className="relative w-fit">
+        {showBezel && (
         <svg
           className="absolute inset-0 z-10 pointer-events-none"
           width="100%"
@@ -56,6 +60,7 @@ export default function DevicePreviewWrapper({ children }: { children: React.Rea
             strokeWidth="20"
           />
         </svg>
+        )}
         <div
           className={`z-0 relative rounded-md overflow-hidden ${getSizeClass(mode, orientation)}`}
           id="preview-target"

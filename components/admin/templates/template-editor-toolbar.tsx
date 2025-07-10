@@ -41,7 +41,8 @@ export function TemplateEditorToolbar({
         </Button>
       </div> */}
 
-      <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2">
+{/* <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2"> */}
+<div className="">
   {isRenaming ? (
     <>
       <input
@@ -93,7 +94,7 @@ export function TemplateEditorToolbar({
 </div>
 
       <div className="fixed top-4 right-4 z-50 flex items-center gap-2">
-        <Button
+        {/* <Button
           variant="secondary"
           size="sm"
           disabled={autosaveStatus === 'saving'}
@@ -101,7 +102,7 @@ export function TemplateEditorToolbar({
           className="bg-zinc-800 text-white border border-zinc-700 hover:bg-zinc-700"
         >
           {autosaveStatus === 'saving' ? 'Saving…' : 'Save Draft'}
-        </Button>
+        </Button> */}
         {autosaveStatus === 'saved' && (
   <span className="text-xs text-green-400 animate-fade-out duration-1000">✓ Saved</span>
 )}

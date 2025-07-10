@@ -41,8 +41,10 @@ export default function TemplatePageEditor({ template, onChange, onLivePreviewUp
   const [newTitle, setNewTitle] = useState('');
   const [newSlug, setNewSlug] = useState('');
   const [newContentBlocks, setNewContentBlocks] = useState<any[]>([]);
-  const [expandedPages, setExpandedPages] = useState<Record<string, boolean>>({});
-
+  const [expandedPages, setExpandedPages] = useState<Record<string, boolean>>(() =>
+    Object.fromEntries(template.data.pages.map((p) => [p.id, false]))
+  );
+  
   const sensors = useSensors(useSensor(PointerSensor));
 
   const handleDragEnd = (event: any) => {

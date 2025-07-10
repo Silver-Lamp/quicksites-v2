@@ -69,6 +69,7 @@ export function TemplateEditorContent({
   // 💾 Save function
   const handleSaveDraft = async () => {
     try {
+      console.log('handleSaveDraft: ', JSON.stringify(template, null, 2));
       const parsed = JSON.parse(rawJson);
   
       const fullTemplate: Template = { ...template, data: parsed };

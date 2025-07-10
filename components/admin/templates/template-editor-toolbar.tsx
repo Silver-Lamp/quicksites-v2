@@ -30,7 +30,7 @@ export function TemplateEditorToolbar({
 }) {
   return (
     <>
-      <div className="fixed top-4 left-4 z-50">
+      {/* <div className="fixed top-4 left-4 z-50">
         <Button
           variant="outline"
           size="sm"
@@ -39,7 +39,7 @@ export function TemplateEditorToolbar({
         >
           ← Back to Templates
         </Button>
-      </div>
+      </div> */}
 
       <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2">
   {isRenaming ? (

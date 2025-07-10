@@ -1,32 +1,31 @@
-// ✅ FILE: next.config.mjs
-
-import path from 'node:path';
-import { fileURLToPath } from 'node:url';
-
-/** Needed to support `__dirname` in ESM context */
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // ✅ This should be top-level, not inside webpack()
+  devIndicators: {
+    buildActivity: false,
+    autoPrerender: false,
+  },
+
   webpack(config, { isServer }) {
     config.resolve.alias['@'] = path.resolve(__dirname);
 
-    // Optionally exclude server-only packages like 'nodemailer' from the client bundle
     if (isServer) {
       config.externals = config.externals || [];
       config.externals.push({
         nodemailer: 'commonjs nodemailer',
       });
     }
-    config.module.exprContextCritical = false; // suppress dynamic require warnings
+
+    config.module.exprContextCritical = false;
     return config;
   },
 
   eslint: {
-    ignoreDuringBuilds: true, // ✅ Prevent build blocking due to ESLint errors
+    ignoreDuringBuilds: true,
   },
+
   serverExternalPackages: ['nodemailer', 'playwright', 'fs'],
+
   async rewrites() {
     return [
       { source: '/@/:handle', destination: '/creator/:handle' },
@@ -36,5 +35,3 @@ const nextConfig = {
     ];
   },
 };
-
-export default nextConfig;

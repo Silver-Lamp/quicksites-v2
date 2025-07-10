@@ -14,30 +14,42 @@ import {
 } from 'lucide-react';
 import clsx from 'clsx';
 
-type NavItem = {
-  label: string;
-  href?: string;
-  icon: React.ReactNode;
-  children?: { label: string; href: string }[];
-};
+type NavItem =
+  | {
+      type: 'section';
+      label: string;
+    }
+  | {
+      type: 'item';
+      label: string;
+      href?: string;
+      icon: React.ReactNode;
+      children?: { label: string; href: string }[];
+    };
 
 const navItems: NavItem[] = [
+  { type: 'section', label: 'Core' },
   {
+    type: 'item',
     label: 'Dashboard',
     href: '/admin/dashboard',
     icon: <LayoutDashboard size={18} />,
   },
   {
+    type: 'item',
     label: 'Map of Opportunities',
     href: '/admin/the-grid',
     icon: <MapPinned size={18} />,
   },
   {
+    type: 'item',
     label: 'Leads',
     href: '/admin/leads',
     icon: <PhoneForwarded size={18} />,
   },
+  { type: 'section', label: 'Tools' },
   {
+    type: 'item',
     label: 'Campaigns',
     icon: <Rocket size={18} />,
     children: [
@@ -46,6 +58,7 @@ const navItems: NavItem[] = [
     ],
   },
   {
+    type: 'item',
     label: 'Templates',
     icon: <FileStack size={18} />,
     children: [
@@ -54,6 +67,7 @@ const navItems: NavItem[] = [
     ],
   },
   {
+    type: 'item',
     label: 'Analytics',
     href: '/admin/analytics',
     icon: <Activity size={18} />,
@@ -64,41 +78,52 @@ export function AdminNavSections({ collapsed = false }: { collapsed?: boolean })
   const pathname = usePathname();
   const [openMenus, setOpenMenus] = useState<Record<string, boolean>>({});
 
-  // Open any submenu containing the current path
   useEffect(() => {
-    const updated = { ...openMenus };
+    const updated: Record<string, boolean> = {};
     navItems.forEach((item) => {
-      if (item.children) {
-        const shouldOpen = item.children.some((child) => pathname?.startsWith(child.href));
-        if (shouldOpen) updated[item.label] = true;
+      if (item.type === 'item' && item.children) {
+        const isMatch = item.children.some((child) => pathname?.startsWith(child.href));
+        if (isMatch) updated[item.label] = true;
       }
     });
     setOpenMenus(updated);
   }, [pathname]);
 
-  const toggleMenu = (label: string) => {
+  const toggleMenu = (label: string) =>
     setOpenMenus((prev) => ({ ...prev, [label]: !prev[label] }));
-  };
 
   return (
     <nav className="flex flex-col gap-1 px-1">
-      {navItems.map((item) => {
+      {navItems.map((item, idx) => {
+        if (item.type === 'section') {
+          return !collapsed ? (
+            <div
+              key={`section-${item.label}-${idx}`}
+              className="text-xs uppercase text-zinc-500 px-3 pt-4 pb-1 tracking-wide"
+            >
+              — {item.label}
+            </div>
+          ) : null;
+        }
+
         const isActive = item.href && pathname?.startsWith(item.href);
         const isOpen = openMenus[item.label];
 
         return (
-          <div key={item.label} className="relative group">
+          <div key={`item-${item.label}`}>
             <button
-              onClick={() => item.children ? toggleMenu(item.label) : undefined}
+              onClick={() => item.children && toggleMenu(item.label)}
               className={clsx(
-                'w-full flex items-center gap-3 px-3 py-2 text-sm rounded transition',
+                'group relative w-full flex items-center gap-3 px-3 py-2 text-sm rounded transition',
                 isActive
                   ? 'bg-zinc-800 font-semibold text-white'
-                  : 'hover:bg-zinc-800 text-zinc-300',
-                !item.children && 'text-left'
+                  : 'hover:bg-zinc-800 text-zinc-300'
               )}
             >
-              <span className="text-white">{item.icon}</span>
+              {/* Icon */}
+              <div className="text-white">{item.icon}</div>
+
+              {/* Label */}
               <span
                 className={clsx(
                   'whitespace-nowrap transition-all duration-200 flex-1 text-left',
@@ -107,33 +132,40 @@ export function AdminNavSections({ collapsed = false }: { collapsed?: boolean })
               >
                 {item.label}
               </span>
+
+              {/* Chevron */}
               {item.children && !collapsed && (
                 <ChevronDown
                   className={clsx(
-                    'transition-transform',
+                    'transition-transform duration-300',
                     isOpen ? 'rotate-180' : 'rotate-0'
                   )}
                   size={16}
                 />
               )}
+
+              {/* Tooltip for collapsed mode */}
+              {collapsed && (
+                <span className="absolute left-14 top-1/2 -translate-y-1/2 whitespace-nowrap rounded bg-zinc-800 px-2 py-1 text-xs text-white opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-50 shadow-md pointer-events-none">
+                  {item.label}
+                </span>
+              )}
             </button>
 
-            {/* Tooltip for collapsed state */}
-            {collapsed && (
-              <span className="absolute left-14 top-1/2 -translate-y-1/2 whitespace-nowrap rounded bg-zinc-800 px-2 py-1 text-xs text-white opacity-0 group-hover:opacity-100 transition-all z-20 shadow-lg">
-                {item.label}
-              </span>
-            )}
-
             {/* Submenu */}
-            {item.children && isOpen && !collapsed && (
-              <div className="ml-8 mt-1 flex flex-col gap-1">
-                {item.children.map((child) => (
+            <div
+              className={clsx(
+                'ml-8 transition-all duration-300 overflow-hidden',
+                collapsed || !isOpen ? 'max-h-0' : 'max-h-64 mt-1'
+              )}
+            >
+              {!collapsed &&
+                item.children?.map((child) => (
                   <Link
                     key={child.href}
                     href={child.href}
                     className={clsx(
-                      'text-sm px-3 py-1 rounded transition',
+                      'block text-sm px-3 py-1 rounded transition',
                       pathname?.startsWith(child.href)
                         ? 'bg-zinc-800 text-white font-medium'
                         : 'text-zinc-400 hover:bg-zinc-800 hover:text-white'
@@ -142,8 +174,7 @@ export function AdminNavSections({ collapsed = false }: { collapsed?: boolean })
                     {child.label}
                   </Link>
                 ))}
-              </div>
-            )}
+            </div>
           </div>
         );
       })}

@@ -1,5 +1,4 @@
-// ✅ FILE: components/admin/layout/AdminSidebarLayout.tsx
-
+// components/admin/layout/admin-sidebar-layout.tsx
 'use client';
 
 import { useEffect, useState, ReactNode } from 'react';

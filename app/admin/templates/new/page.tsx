@@ -66,6 +66,7 @@ export default function NewTemplatePage() {
 
   return (
     <div className="p-4">
+      <div className="text-red-500">new template page</div>
       <h1 className="text-xl font-bold mb-4">New Template</h1>
       <TemplateEditor
         templateName="new-template"

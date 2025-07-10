@@ -1,21 +1,14 @@
 // app/layout.tsx
+
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 export const preferredRegion = 'iad1';
 
 import '@/styles/globals.css';
 
-// import AdminLayout from '@/components/layouts/admin-layout';
-// import ViewerLayout from '@/components/layouts/viewer-layout';
-import AppHeader from '@/components/admin/AppHeader/app-header';
-// import UnauthenticatedLayout from '@/components/layouts/unauthenticated-layout';
 import { SessionProvider } from '@/lib/providers/SessionProvider';
-import { getRequestContext } from '@/lib/request/getRequestContext';
 import { Toaster } from 'react-hot-toast';
 import DevToolsWidget from '@/components/dev-tools-widget';
-// import TraceViewer from '@/components/dev/trace-viewer';
-// import { getLayoutForRole } from '@/lib/roles/layoutForRole';
-// import { AdminNavSections } from '@/components/admin/AppHeader/AdminNavSections';
 
 const isProd = process.env.NODE_ENV === 'production';
 
@@ -42,18 +35,27 @@ export const metadata = {
 };
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
-  const {
-    userId = '',
-    userEmail = '',
-    role = 'guest',
-    userAgent,
-    ip,
-    abVariant,
-    sessionId,
-    traceId,
-  } = await getRequestContext();
+  // ✅ Capture cookies and headers safely before async
+  // const { cookieStore, headerStore } = await extractUserContext();
 
-  // const Layout = getLayoutForRole(role);
+  // const context = await getRequestContext(
+  //   {
+  //     cookieStore,
+  //     headerStore,
+  //   },
+  //   true // include supabase
+  // );
+
+  // const {
+  //   userId = '',
+  //   userEmail = '',
+  //   role = 'guest',
+  //   userAgent,
+  //   ip,
+  //   abVariant,
+  //   sessionId,
+  //   traceId,
+  // } = context;
 
   return (
     <html lang="en" className="dark" suppressHydrationWarning>
@@ -62,28 +64,20 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       </head>
       <body
         className="bg-background text-foreground min-h-screen"
-        data-user-id={userId}
-        data-user-email={userEmail}
-        data-user-role={role}
-        data-user-agent={userAgent}
-        data-ip={ip}
-        data-session-id={sessionId}
-        data-ab-variant={abVariant}
-        data-trace-id={traceId}
+        // data-user-id={userId}
+        // data-user-email={userEmail}
+        // data-user-role={role}
+        // data-user-agent={userAgent}
+        // data-ip={ip}
+        // data-session-id={sessionId}
+        // data-ab-variant={abVariant}
+        // data-trace-id={traceId}
       >
         <Toaster position="top-center" />
         <SessionProvider>
-          {/* {userId ? (
-            <> */}
-              {/* <Layout> */}
-                {children}
-                {/* </Layout> */}
-            {/* </>
-          ) : (
-            <UnauthenticatedLayout>{children}</UnauthenticatedLayout>
-          )} */}
+          {/* You can conditionally wrap children based on role if needed */}
+          {children}
           {!isProd && <DevToolsWidget />}
-          {/* <TraceViewer /> */}
         </SessionProvider>
       </body>
     </html>

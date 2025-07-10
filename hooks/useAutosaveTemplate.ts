@@ -1,4 +1,4 @@
-// hooks/useAutosaveTemplate.ts
+ // hooks/useAutosaveTemplate.ts
 import { useEffect, useRef, useState } from 'react';
 import { toast } from 'react-hot-toast';
 
@@ -7,6 +7,8 @@ export function useAutosaveTemplate(template: any, rawJson: string) {
   const lastSave = useRef('');
 
   useEffect(() => {
+    if (!template?.id || template.id.length < 8) return; // 🛡️ Don't autosave yet
+
     const timeout = setTimeout(() => {
       if (rawJson !== lastSave.current) {
         setStatus('saving');
@@ -18,14 +20,15 @@ export function useAutosaveTemplate(template: any, rawJson: string) {
     }, 2000);
 
     return () => clearTimeout(timeout);
-  }, [rawJson]);
+  }, [rawJson, template?.id]); // 👈 also track id in case it gets populated later
 
   const restore = () => {
-    const saved = localStorage.getItem(`draft-${template.id}`);
-    return saved || '';
+    if (!template?.id || template.id.length < 8) return '';
+    return localStorage.getItem(`draft-${template.id}`) || '';
   };
 
   const clear = () => {
+    if (!template?.id || template.id.length < 8) return;
     localStorage.removeItem(`draft-${template.id}`);
   };
 

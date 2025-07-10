@@ -152,6 +152,7 @@
     "react-leaflet-cluster": "^2.1.0",
     "react-markdown": "^10.1.0",
     "react-qr-code": "^2.0.15",
+    "react-tooltip": "^5.29.1",
     "reactflow": "^11.11.4",
     "recharts": "^2.15.3",
     "redoc": "^2.5.0",

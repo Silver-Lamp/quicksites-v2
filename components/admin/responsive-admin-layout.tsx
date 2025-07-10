@@ -7,6 +7,7 @@ import AdminSidebarLayout from '@/components/admin/layout/admin-sidebar-layout';
 import AppHeader from '@/components/admin/AppHeader/app-header';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { useCanonicalRole } from '@/hooks/useCanonicalRole';
+import AdminSidebar from '@/components/admin/admin-sidebar';
 
 export default function ResponsiveAdminLayout({ children }: { children: React.ReactNode }) {
   const [isMobile, setIsMobile] = useState(false);
@@ -26,7 +27,7 @@ export default function ResponsiveAdminLayout({ children }: { children: React.Re
 
   return (
     <>
-      <AppHeader />
+      <AdminSidebar />
       {isMobile ? (
         <>
           <MobileDrawerSidebar />

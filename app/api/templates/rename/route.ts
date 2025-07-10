@@ -3,7 +3,11 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase/admin';
 
 export async function POST(req: NextRequest) {
+  console.log('.:. app/api/templates/rename/route.ts: POST request received');
+  console.log('.:. app/api/templates/rename/route.ts: req:', req);
   const { template_id, newName } = await req.json();
+  console.log('.:. app/api/templates/rename/route.ts: template_id:', template_id);
+  console.log('.:. app/api/templates/rename/route.ts: newName:', newName);
 
   if (!template_id || !newName || newName.trim().length < 3) {
     return NextResponse.json({ error: 'Invalid input' }, { status: 400 });

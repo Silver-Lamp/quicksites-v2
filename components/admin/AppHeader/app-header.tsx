@@ -8,6 +8,7 @@ import UserMenu from '@/components/auth/user-menu';
 import { useRequestMeta } from '@/hooks/useRequestMeta';
 // import { AdminNavSections } from './AdminNavSections';
 import InspirationalQuote from '@/components/ui/inspirational-quote';
+import { AvatarMenu } from './avatar-menu';
 
 export default function AppHeader() {
   useEffect(() => {
@@ -85,8 +86,8 @@ return () => window.removeEventListener('scroll', handleScroll);
   <div className="max-w-screen-lg mx-auto flex justify-between items-center">
     <div className="flex items-center gap-4">
       <span>QuickSites</span>
-      <div className="text-xs text-cyan-300 truncate max-w-xs">
-       <h1>hello</h1> <InspirationalQuote tags={["small-business", "seo", "persistence"]} />
+      <div className="text-xs text-cyan-300 max-w-xs">
+       <InspirationalQuote tags={["small-business", "seo", "persistence"]} />
       </div>
     </div>
     <a href="/login" className="text-blue-400 hover:underline">
@@ -106,19 +107,19 @@ return () => window.removeEventListener('scroll', handleScroll);
           </SafeLink>
   
           {/* ✅ Always show inspirational quote */}
-          <div className="text-xs text-cyan-300 truncate max-w-xs">
+          <div className="text-xs text-cyan-300 max-w-xs">
             <InspirationalQuote tags={['small-business', 'seo', 'persistence']} />
           </div>
         </div>
   
         <div className="ml-2 flex items-center gap-2">
           {isLoggedIn && user ? (
-            <div
-              className="text-xs text-gray-400 mr-2 text-right leading-tight"
-              style={{ lineHeight: '1.1rem' }}
-            >
-              <div>{user.email}</div>
-              <div className="text-zinc-500">role: {role}</div>
+            <div className="flex items-center gap-2">
+              <AvatarMenu />
+              <div>
+                <div>{user.email}</div>
+                <div className="text-zinc-500">role: {role}</div>
+              </div>
             </div>
           ) : (
             <a href="/login" className="text-blue-400 hover:underline">

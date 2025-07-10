@@ -1,84 +1,152 @@
-// components/admin/AppHeader/AdminNavSections.tsx
-"use client";
+'use client';
 
+import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { SafeLink } from '@/components/ui';
-import { cn } from '@/lib/utils';
+import { useState, useEffect } from 'react';
 import {
   LayoutDashboard,
-  FileText,
-  FileSignature,
-  Settings,
-  Users,
-  Shield,
-  MapPin,
+  MapPinned,
+  PhoneForwarded,
+  Rocket,
+  FileStack,
+  Activity,
+  ChevronDown,
 } from 'lucide-react';
+import clsx from 'clsx';
 
-export function AdminNavSections() {
+type NavItem = {
+  label: string;
+  href?: string;
+  icon: React.ReactNode;
+  children?: { label: string; href: string }[];
+};
+
+const navItems: NavItem[] = [
+  {
+    label: 'Dashboard',
+    href: '/admin/dashboard',
+    icon: <LayoutDashboard size={18} />,
+  },
+  {
+    label: 'Map of Opportunities',
+    href: '/admin/the-grid',
+    icon: <MapPinned size={18} />,
+  },
+  {
+    label: 'Leads',
+    href: '/admin/leads',
+    icon: <PhoneForwarded size={18} />,
+  },
+  {
+    label: 'Campaigns',
+    icon: <Rocket size={18} />,
+    children: [
+      { label: 'All Campaigns', href: '/admin/campaigns' },
+      { label: 'Start Campaign', href: '/admin/start-campaign' },
+    ],
+  },
+  {
+    label: 'Templates',
+    icon: <FileStack size={18} />,
+    children: [
+      { label: 'Browse Templates', href: '/admin/templates' },
+      { label: 'Create Template', href: '/admin/templates/new' },
+    ],
+  },
+  {
+    label: 'Analytics',
+    href: '/admin/analytics',
+    icon: <Activity size={18} />,
+  },
+];
+
+export function AdminNavSections({ collapsed = false }: { collapsed?: boolean }) {
   const pathname = usePathname();
+  const [openMenus, setOpenMenus] = useState<Record<string, boolean>>({});
 
-  const NavLink = ({ href, label, icon: Icon }: { href: string; label: string; icon: any }) => (
-    <SafeLink
-      href={href}
-      className={cn(
-        'flex items-center gap-2 px-2 py-1 rounded hover:bg-zinc-800 transition-colors text-sm',
-        pathname === href && 'bg-zinc-800 text-white font-semibold'
-      )}
-    >
-      <Icon size={16} />
-      {label}
-    </SafeLink>
-  );
+  // Open any submenu containing the current path
+  useEffect(() => {
+    const updated = { ...openMenus };
+    navItems.forEach((item) => {
+      if (item.children) {
+        const shouldOpen = item.children.some((child) => pathname?.startsWith(child.href));
+        if (shouldOpen) updated[item.label] = true;
+      }
+    });
+    setOpenMenus(updated);
+  }, [pathname]);
+
+  const toggleMenu = (label: string) => {
+    setOpenMenus((prev) => ({ ...prev, [label]: !prev[label] }));
+  };
 
   return (
-    <nav className="space-y-4 text-sm">
-      <div>
-        <p className="font-semibold text-blue-300 mb-1">Core</p>
-        <div className="flex flex-col gap-1">
-          <NavLink href="/admin" label="Dashboard" icon={LayoutDashboard} />
-          <NavLink href="/admin/the-grid" label="Map of Opportunites" icon={MapPin} />
-          <NavLink href="/admin/leads" label="Leads" icon={FileText} />
-          <NavLink href="/admin/campaigns" label="Campaigns" icon={FileText} />
-          <NavLink href="/admin/start-campaign" label="Start Campaign" icon={FileSignature} />
-        </div>
-      </div>
+    <nav className="flex flex-col gap-1 px-1">
+      {navItems.map((item) => {
+        const isActive = item.href && pathname?.startsWith(item.href);
+        const isOpen = openMenus[item.label];
 
-      <div>
-        <p className="font-semibold text-green-300 mb-1">Logs & Analytics</p>
-        <div className="flex flex-col gap-1">
-          <NavLink href="/admin/logs" label="Logs" icon={FileText} />
-          <NavLink href="/admin/logs/sessions" label="Session Logs" icon={FileText} />
-          <NavLink href="/admin/analytics" label="Analytics" icon={FileText} />
-          <NavLink href="/admin/heatmap" label="Heatmap" icon={FileText} />
-        </div>
-      </div>
+        return (
+          <div key={item.label} className="relative group">
+            <button
+              onClick={() => item.children ? toggleMenu(item.label) : undefined}
+              className={clsx(
+                'w-full flex items-center gap-3 px-3 py-2 text-sm rounded transition',
+                isActive
+                  ? 'bg-zinc-800 font-semibold text-white'
+                  : 'hover:bg-zinc-800 text-zinc-300',
+                !item.children && 'text-left'
+              )}
+            >
+              <span className="text-white">{item.icon}</span>
+              <span
+                className={clsx(
+                  'whitespace-nowrap transition-all duration-200 flex-1 text-left',
+                  collapsed ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100 w-auto'
+                )}
+              >
+                {item.label}
+              </span>
+              {item.children && !collapsed && (
+                <ChevronDown
+                  className={clsx(
+                    'transition-transform',
+                    isOpen ? 'rotate-180' : 'rotate-0'
+                  )}
+                  size={16}
+                />
+              )}
+            </button>
 
-      <div>
-        <p className="font-semibold text-yellow-300 mb-1">Templates</p>
-        <div className="flex flex-col gap-1">
-          <NavLink href="/admin/templates" label="All Templates" icon={FileText} />
-          <NavLink href="/admin/templates/new" label="+ New Template" icon={FileSignature} />
-          <NavLink href="/admin/presets" label="Grid Presets" icon={FileText} />
-          <NavLink href="/admin/presets/new" label="+ New Preset" icon={FileSignature} />
-        </div>
-      </div>
+            {/* Tooltip for collapsed state */}
+            {collapsed && (
+              <span className="absolute left-14 top-1/2 -translate-y-1/2 whitespace-nowrap rounded bg-zinc-800 px-2 py-1 text-xs text-white opacity-0 group-hover:opacity-100 transition-all z-20 shadow-lg">
+                {item.label}
+              </span>
+            )}
 
-      <div>
-        <p className="font-semibold text-purple-300 mb-1">Dev Tools</p>
-        <div className="flex flex-col gap-1">
-          <NavLink href="/admin/docs" label="Docs" icon={FileText} />
-          <NavLink href="/admin/query-usecases" label="Params" icon={Settings} />
-          <NavLink href="/admin/branding/og-editor/xyz" label="OG Editor" icon={FileText} />
-        </div>
-      </div>
-
-      <div>
-        <p className="font-semibold text-red-300 mb-1">Admin</p>
-        <div className="flex flex-col gap-1">
-          <NavLink href="/admin/users" label="Users" icon={Users} />
-          <NavLink href="/admin/roles" label="Roles" icon={Shield} />
-        </div>
-      </div>
+            {/* Submenu */}
+            {item.children && isOpen && !collapsed && (
+              <div className="ml-8 mt-1 flex flex-col gap-1">
+                {item.children.map((child) => (
+                  <Link
+                    key={child.href}
+                    href={child.href}
+                    className={clsx(
+                      'text-sm px-3 py-1 rounded transition',
+                      pathname?.startsWith(child.href)
+                        ? 'bg-zinc-800 text-white font-medium'
+                        : 'text-zinc-400 hover:bg-zinc-800 hover:text-white'
+                    )}
+                  >
+                    {child.label}
+                  </Link>
+                ))}
+              </div>
+            )}
+          </div>
+        );
+      })}
     </nav>
   );
 }

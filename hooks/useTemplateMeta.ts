@@ -20,14 +20,20 @@ export function useTemplateMeta(name: string, currentId?: string) {
   useEffect(() => {
     if (!inputValue.trim()) return;
     const check = debounce(async () => {
-      const { data } = await supabase
+      const query = supabase
         .from('templates')
         .select('id')
-        .eq('template_name', inputValue.trim())
-        .neq('id', currentId)
-        .maybeSingle();
+        .eq('template_name', inputValue.trim());
+    
+      // Only apply the filter if currentId is a valid UUID string
+      if (currentId && currentId.length >= 8) {
+        query.neq('id', currentId);
+      }
+    
+      const { data } = await query.maybeSingle();
       setNameExists(!!data);
     }, 300);
+    
     check();
     return () => check.cancel?.();
   }, [inputValue, currentId]);

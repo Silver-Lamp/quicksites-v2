@@ -17,7 +17,7 @@ export default function SiteHeader() {
             <img src="/logo_v1.png" alt="QuickSites" className="h-12 w-auto" />
           </SafeLink>
 
-          <div className="text-xs text-cyan-300 truncate max-w-xs">
+          <div className="text-xs text-cyan-300 max-w-xs">
             <InspirationalQuote tags={['small-business', 'seo', 'persistence']} />
           </div>
         </div>

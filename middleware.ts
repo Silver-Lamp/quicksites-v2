@@ -3,6 +3,13 @@ import { createMiddlewareClient } from '@supabase/auth-helpers-nextjs';
 import type { Database } from './types/supabase';
 
 export async function middleware(req: NextRequest) {
+  const { pathname } = req.nextUrl;
+
+  // 🛑 Skip .js.map requests (prevent slug confusion)
+  if (pathname.endsWith('.js.map')) {
+    return NextResponse.next();
+  }
+
   const res = NextResponse.next();
   const supabase = createMiddlewareClient<Database>({ req, res });
 

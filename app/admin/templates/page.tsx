@@ -1,25 +1,27 @@
-// app/admin/templates/page.tsx
-import { createServerComponentClient } from '@supabase/auth-helpers-nextjs';
-import { cookies } from 'next/headers';
+'use server';
+
 import { getFromDate } from '@/lib/getFromDate';
 import TemplatesIndexTable from '@/components/admin/templates/templates-index-table';
-import type { Database } from '@/types/supabase';
+import { getSupabase } from '@/lib/supabase/server';
 
-export default async function TemplatesIndexPage({
-  searchParams,
-}: {
-  searchParams: { date?: string };
-}) {
-  const supabase = createServerComponentClient<Database>({ cookies });
-  const query = supabase.from('templates').select('*').order('updated_at', { ascending: false });
+export default async function TemplatesIndexPage({ searchParams }: { searchParams: Promise<{ date?: string }> }) {
+  // const supabase = createServerComponentClient<Database>({ cookies: () => undefined });
+  const supabase = await getSupabase();
 
-  const fromDate = getFromDate(searchParams.date || '');
+  const resolvedParams = await searchParams;
+  const dateParam = resolvedParams?.date || '';
+  const fromDate = getFromDate(dateParam);
 
-  const finalQuery = fromDate
-    ? query.gte('updated_at', fromDate.toISOString())
-    : query;
+  let query = supabase
+    .from('templates')
+    .select('*')
+    .order('updated_at', { ascending: false });
 
-  const { data: templates, error } = await finalQuery;
+  if (fromDate) {
+    query = query.gte('updated_at', fromDate.toISOString());
+  }
+
+  const { data: templates, error } = await query;
 
   if (error) {
     console.error('Error loading templates:', error.message);
@@ -28,7 +30,7 @@ export default async function TemplatesIndexPage({
   return (
     <TemplatesIndexTable
       templates={templates || []}
-      selectedFilter={searchParams.date || ''}
+      selectedFilter={dateParam}
     />
   );
 }

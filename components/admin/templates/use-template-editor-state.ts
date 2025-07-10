@@ -32,8 +32,13 @@ export function useTemplateEditorState({
 
   useEffect(() => {
     if (!initialData && isCreating && template?.slug) {
+      console.log('template.slug', template.slug);
+      console.log('template.id', template.id);
       const timeout = setTimeout(() => {
-        window.location.href = `/admin/templates/${template.slug}`;
+        // window.location.href = `/admin/templates/${template.slug}`;
+        // window.location.href = `/admin/templates/${template.id}`;
+        console.log('would have redirected to', window.location.href + '/admin/templates/' + template.id);
+        alert('would have redirected to ' + window.location.href + '/admin/templates/' + template.id);
       }, 1200);
       return () => clearTimeout(timeout);
     }

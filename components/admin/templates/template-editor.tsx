@@ -38,13 +38,13 @@ export default function TemplateEditor({
     // setShowNameError,
   } = useTemplateEditorState({ templateName, initialData, onRename });
 
-  if (isCreating) {
-    return (
-      <div className="p-6 text-muted-foreground text-sm italic">
-        Saving and redirecting...
-      </div>
-    );
-  }
+  // if (isCreating) {
+  //   return (
+  //     <div className="p-6 text-muted-foreground text-sm italic">
+  //       Saving and redirecting...
+  //     </div>
+  //   );
+  // }
 
   // if (!template.id) {
   //   return (

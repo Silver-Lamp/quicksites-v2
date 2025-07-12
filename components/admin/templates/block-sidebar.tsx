@@ -41,7 +41,9 @@ export default function BlockSidebar({ block, onChange, onClose, errors }: { blo
           </select>
         </div>
 
-        {errors && errors.length > 0 && <BlockErrorDisplay messages={errors} />}
+        {errors && errors.length > 0 && (
+          <BlockErrorDisplay messages={errors} blockType={block.type} />
+        )}
 
         {/* ...existing block type renders here (hero, services, etc) */}
 

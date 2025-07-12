@@ -1,3 +1,4 @@
+// admin/lib/zod/blockSchema.ts
 import { z } from 'zod';
 
 // Step 1: Define per-block content schemas with metadata
@@ -53,9 +54,9 @@ export const blockContentSchemaMap = {
     label: 'Hero',
     icon: '🎯',
     schema: z.object({
-      title: z.string(),
-      description: z.string().optional(),
-      cta_label: z.string().optional(),
+      headline: z.string(),
+      subheadline: z.string().optional(),
+      cta_text: z.string().optional(),
       cta_link: z.string().optional(),
     }),
   },
@@ -79,9 +80,9 @@ export const blockContentSchemaMap = {
     icon: '🚀',
     schema: z.object({
       label: z.string(),
-      link: z.string().url(),
+      link: z.string().min(1), // ← allows both "/contact" and "https://..."
     }),
-  },
+  },  
 } as const;
 
 // Step 2: Factory function to generate block union + UI metadata
@@ -100,10 +101,10 @@ export function createBlockUnion<
     schemas.push(
       z.object({
         type: z.literal(type),
-        value: config.schema,
+        content: config.schema,
       }) as z.ZodDiscriminatedUnionOption<'type'>
     );
-  
+
     meta[type as keyof T] = {
       label: config.label,
       icon: config.icon,
@@ -115,7 +116,6 @@ export function createBlockUnion<
     meta: Record<keyof T, { label: string; icon: string }>;
   };
 }
-
 
 // Step 3: Create base schemas + grid + final union
 const { schemas: BasicBlockSchemas, meta: blockMeta } = createBlockUnion(blockContentSchemaMap);
@@ -129,7 +129,6 @@ export const GridBlockSchema = z.object({
     items: z.lazy(() => z.array(BlockSchema).max(4, 'Limit 4 blocks inside a grid')),
   }),
 });
-
 
 // Step 4: Export schema, helpers, and types
 export type Block = z.infer<typeof BlockSchema>;

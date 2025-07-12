@@ -102,15 +102,13 @@ function SortableBlock({ block, index, onEdit, onReplaceWithAI, onClone, onShowP
           </Tooltip>
         )}
         {hasPrompt && onShowPrompt && (
-          <Tooltip>
-            <Button
-              size="sm"
-              variant="ghost"
-              onClick={() => onShowPrompt(block.meta?.prompt || '', index)}
-            >
-              <Brain className="w-4 h-4 text-purple-300" />
-            </Button>
-          </Tooltip>
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={() => onShowPrompt(block.meta?.prompt || '', index)}
+          >
+            <Brain className="w-4 h-4 text-purple-300" />
+          </Button>
         )}
         {undoAvailable && onUndo && (
           <Tooltip>

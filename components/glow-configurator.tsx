@@ -4,7 +4,7 @@
 import { useEffect, useState } from 'react';
 import { SlidersHorizontal } from 'lucide-react';
 import BackgroundGlow from './background-glow';
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
+import { createClient } from '@supabase/supabase-js';
 import type { Database } from '@/types/supabase';
 
 export type GlowConfig = {
@@ -41,7 +41,7 @@ const sizeMap = {
 };
 
 export default function GlowConfigurator({ defaultGlowConfig, siteSlug = 'default' }: Props) {
-  const supabase = createClientComponentClient<Database>();
+  const supabase = createClient<Database>(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!);
   const [userId, setUserId] = useState<string | null>(null);
   const [isOpen, setIsOpen] = useState(false);
   const [glowLayers, setGlowLayers] = useState<GlowConfig[] | null>(null);

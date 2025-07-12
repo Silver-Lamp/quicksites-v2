@@ -120,7 +120,7 @@ export function createBlockUnion<
 // Step 3: Create base schemas + grid + final union
 const { schemas: BasicBlockSchemas, meta: blockMeta } = createBlockUnion(blockContentSchemaMap);
 
-let BlockSchema: z.ZodType<any>;
+export const BlockSchema: z.ZodType<any> = z.discriminatedUnion('type', BasicBlockSchemas as [z.ZodDiscriminatedUnionOption<'type'>, ...z.ZodDiscriminatedUnionOption<'type'>[]]);
 
 export const GridBlockSchema = z.object({
   type: z.literal('grid'),
@@ -130,19 +130,8 @@ export const GridBlockSchema = z.object({
   }),
 });
 
-const AllBlockSchemas = [
-  ...BasicBlockSchemas,
-  GridBlockSchema as z.ZodDiscriminatedUnionOption<'type'>
-];
-
-BlockSchema = z.discriminatedUnion(
-  'type',
-  AllBlockSchemas as [z.ZodDiscriminatedUnionOption<'type'>, ...z.ZodDiscriminatedUnionOption<'type'>[]]
-);
-
 
 // Step 4: Export schema, helpers, and types
-export { BlockSchema };
 export type Block = z.infer<typeof BlockSchema>;
 export type GridBlock = z.infer<typeof GridBlockSchema>;
 

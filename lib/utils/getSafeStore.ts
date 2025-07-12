@@ -1,24 +1,28 @@
 import { cookies, headers } from 'next/headers';
-import type { ResponseCookies } from 'next/dist/compiled/@edge-runtime/cookies';
-import type { ReadonlyRequestCookies } from 'next/dist/server/web/spec-extension/adapters/request-cookies';
-import type { ReadonlyHeaders } from 'next/dist/server/web/spec-extension/adapters/headers';
 
-export async function getSafeCookieStore(
-  mode: 'readable' | 'writable'
-): Promise<ReadonlyRequestCookies | ResponseCookies> {
-  const store = await cookies(); // ✅ explicitly await
+type CookieStore = ReturnType<typeof cookies>;
+type HeaderStore = ReturnType<typeof headers>;
 
-  if (mode === 'readable' && !('set' in store)) {
-    return store as ReadonlyRequestCookies;
+/**
+ * Returns either readable or writable cookie store, depending on context
+ */
+export function getSafeCookieStore(mode: 'readable' | 'writable'): CookieStore {
+  const store = cookies() as any; // ← workaround TS bug
+
+  if (mode === 'readable' && typeof store.get === 'function' && typeof store.set !== 'function') {
+    return store;
   }
 
-  if (mode === 'writable' && 'set' in store) {
-    return store as ResponseCookies;
+  if (mode === 'writable' && typeof store.set === 'function') {
+    return store;
   }
 
   throw new Error(`getSafeCookieStore: store not valid for mode '${mode}'`);
 }
 
-export async function getSafeHeaderStore(): Promise<ReadonlyHeaders> {
-  return await headers(); // Also explicitly await headers to be safe
+/**
+ * Safe header access
+ */
+export function getSafeHeaderStore(): HeaderStore {
+  return headers();
 }

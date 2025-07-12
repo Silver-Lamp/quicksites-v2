@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import SortableGridBlock from "@/components/admin/templates/sortable-grid-block";
 import { normalizeBlock } from "@/types/blocks";
 import type { Block } from "@/types/blocks";
-import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
+import { createClient } from "@supabase/supabase-js";
 import type { Database } from "@/types/supabase";
 import TemplatePreview from "@/components/admin/templates/template-preview";
 import { defaultGridPresets } from "@/types/grid-presets";
@@ -17,7 +17,7 @@ import { createDefaultBlock } from '@/lib/create-default-block';
 export default function AdminPresetsEditPage() {
   const { id } = useParams();
   const router = useRouter();
-  const supabase = createClientComponentClient<Database>();
+  const supabase = createClient<Database>(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!);
 
   const [name, setName] = useState("");
   const [columns, setColumns] = useState(2);

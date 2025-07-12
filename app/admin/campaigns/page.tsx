@@ -2,15 +2,16 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
+import { createClient } from '@supabase/supabase-js';
 import CampaignPanel from '@/components/admin/campaigns/campaign-panel';
 import { CampaignType } from '@/types/campaign.types';
 import { Lead } from '@/types/lead.types';
 import dayjs from 'dayjs';
 import EditCampaignModal from '@/components/admin/campaigns/edit-campaign-modal';
+import { Database } from '@/types/supabase';
 
 export default function CampaignsPage() {
-  const supabase = createClientComponentClient();
+  const supabase = createClient<Database>(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!);
   const [campaigns, setCampaigns] = useState<CampaignType[]>([]);
   const [leadsByCampaign, setLeadsByCampaign] = useState<Record<string, Lead[]>>({});
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});

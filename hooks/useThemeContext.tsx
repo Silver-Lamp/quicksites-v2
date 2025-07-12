@@ -1,6 +1,6 @@
 // /hooks/useThemeContext.tsx
 import { createContext, useContext, useEffect, useState } from 'react';
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
+import { createClient } from '@supabase/supabase-js';
 import type { Database } from '@/types/supabase';
 
 export type GlowConfig = {
@@ -44,7 +44,7 @@ export function ThemeProvider({
   children: React.ReactNode;
   siteSlug?: string;
 }) {
-  const supabase = createClientComponentClient<Database>();
+  const supabase = createClient<Database>(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!);
   const [theme, setThemeState] = useState<SiteTheme>(defaultTheme);
 
   useEffect(() => {

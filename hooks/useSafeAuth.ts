@@ -2,7 +2,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
+import { createClient } from '@supabase/supabase-js';
 import type { Database } from '@/types/supabase';
 import type { SafeUser } from '@/types/safe-user';
 
@@ -24,7 +24,7 @@ export function useSafeAuth(): SafeAuth {
   });
 
   useEffect(() => {
-    const supabase = createClientComponentClient<Database>();
+    const supabase = createClient<Database>(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!);
 
     const readFromBody = () => {
       if (typeof window === 'undefined') return null;

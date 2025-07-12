@@ -25,7 +25,7 @@ export default function TemplateEditorLayout({
       {/* Header */}
       <header className="sticky top-0 z-40 flex items-center justify-between border-b bg-zinc-900 px-4 py-2">
         <div className="text-sm font-semibold text-white">
-          {template.name}
+          {template.template_name}
           <span className="ml-2 text-xs text-muted-foreground">
             {autosave.status === 'saving' && (
               <span className="flex items-center gap-1 text-yellow-400">

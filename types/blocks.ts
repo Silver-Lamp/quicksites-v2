@@ -3,6 +3,10 @@
 // Base type for shared props
 export type BaseBlock = {
   _id?: string;
+  tone?: string; // e.g. "professional", "casual", "friendly"
+  industry?: string; // e.g. "technology", "finance", "healthcare"
+  tags?: string[]; // e.g. ["technology", "finance", "healthcare"]
+  meta?: Record<string, any>; // e.g. { "color": "blue", "size": "large" }
 };
 
 // Individual block definitions
@@ -92,6 +96,8 @@ export type BlocksEditorProps = {
   blocks: Block[];
   onChange: (updated: Block[]) => void;
   industry?: string;
+  onReplaceWithAI?: (index: number) => void;
+  onEdit?: (index: number) => void;
 };
 
 export type BlockSidebarProps = {

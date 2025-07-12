@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { motion, AnimatePresence } from "framer-motion";
 import GridThumbnailRenderer from "./grid-thumbnail-renderer";
 import Link from "next/link";
-import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
+import { createClient } from "@supabase/supabase-js";
 import type { Database } from "@/types/supabase";
 import { useRouter } from "next/navigation";
 
@@ -20,7 +20,7 @@ export default function GridTemplateManager({
 }) {
   const [presets, setPresets] = useState<GridPreset[]>([]);
   const [filter, setFilter] = useState<string | null>(null);
-  const supabase = createClientComponentClient<Database>();
+  const supabase = createClient<Database>(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!);
   const router = useRouter();
 
   useEffect(() => {

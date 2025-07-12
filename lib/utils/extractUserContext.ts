@@ -1,23 +1,20 @@
 'use server';
 
-import { cookies } from 'next/headers';
-import { headers } from 'next/headers';
-import type { ReadonlyRequestCookies } from 'next/dist/server/web/spec-extension/adapters/request-cookies';
-import type { ReadonlyHeaders } from 'next/dist/server/web/spec-extension/adapters/headers';
+import { cookies, headers } from 'next/headers';
 
 /**
  * Returns static request stores. Safe to call early in Server Components.
  * Do not use `.get()` until after entering the async boundary.
  */
-export async function extractUserContext(): Promise<{
-  cookieStore: ReadonlyRequestCookies;
-  headerStore: ReadonlyHeaders;
-}> {
-  const cookieResult = await cookies();
-  const headerResult = await headers();
+export function extractUserContext(): {
+  cookieStore: ReturnType<typeof cookies>;
+  headerStore: ReturnType<typeof headers>;
+} {
+  const cookieStore = cookies();
+  const headerStore = headers();
 
   return {
-    cookieStore: cookieResult,
-    headerStore: headerResult,
+    cookieStore,
+    headerStore,
   };
 }

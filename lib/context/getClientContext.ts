@@ -1,5 +1,5 @@
-import { useSafeCookies, type SafeCookiesResult } from '../utils/useSafeCookies';
-import { useSafeHeaders, type SafeHeadersResult } from '../utils/useSafeHeaders';
+import { useSafeCookies, type SafeCookiesResult } from '@/lib/utils/useSafeCookies';
+import { useSafeHeaders, type SafeHeadersResult } from '@/lib/utils/useSafeHeaders';
 
 export interface SafeRequestContext {
   cookies: SafeCookiesResult['cookies'];
@@ -12,7 +12,7 @@ export interface SafeRequestContext {
  * Returns a unified interface to safe cookies and headers
  * across Server Components and Route Handlers.
  */
-export function getSafeRequestContext(): SafeRequestContext {
+export function useSafeRequestContext(): SafeRequestContext {
   const { cookies, cookieMode } = useSafeCookies();
   const { headers, headerMode } = useSafeHeaders();
 

@@ -30,6 +30,7 @@ export function TemplateEditorContent({
   setTemplate,
   autosaveStatus,
   setShowPublishModal,
+  recentlyInsertedBlockId,
 }: {
   template: Template;
   rawJson: string;
@@ -38,6 +39,7 @@ export function TemplateEditorContent({
   setTemplate: React.Dispatch<React.SetStateAction<Template>>;
   autosaveStatus: string;
   setShowPublishModal: (v: boolean) => void;
+  recentlyInsertedBlockId: string | null;
 }) {
   const [showModal, setModal] = useState(false);
   const [historyStack, setHistoryStack] = useState<Template[]>(() => {

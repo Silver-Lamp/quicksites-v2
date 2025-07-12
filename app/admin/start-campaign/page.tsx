@@ -11,9 +11,9 @@ import LeadSelectorWithRadius from '@/components/admin/campaigns/lead-selector-w
 import { getLatLonForCityState } from '@/lib/utils/geocode';
 import { Lead } from '@/types/lead.types';
 import { getDistanceMiles } from '@/lib/utils/distance';
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
+import { createClient } from '@supabase/supabase-js';
 
-const supabase = createClientComponentClient();
+const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!);
 
 export default function StartCampaign() {
   const searchParams = useSearchParams();

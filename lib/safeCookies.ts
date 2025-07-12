@@ -5,8 +5,8 @@ import type { CookieOptions } from '@/types/cookies';
 import type { ReadonlyRequestCookies } from 'next/dist/server/web/spec-extension/adapters/request-cookies';
 import type { ResponseCookies } from 'next/dist/compiled/@edge-runtime/cookies';
 
-import { safeParse } from './utils/safeParse';
-import { getWritableCookieStore } from './utils/getWritableCookieStore';
+import { safeParse } from '@/lib/utils/safeParse';
+import { getWritableCookieStore } from '@/lib/utils/getWritableCookieStore';
 
 /**
  * Reads a cookie value safely. Supports optional injection.

@@ -1,16 +1,17 @@
 'use client';
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
+import { createClient } from '@supabase/supabase-js';
 import type { Database } from '@/types/supabase';
 
-const isLocalhost = typeof window !== 'undefined' && window.location.hostname === 'localhost';
-
-export const supabase = createClientComponentClient<Database>({
-  cookieOptions: {
-    name: 'sb',
-    path: '/',
-    sameSite: 'Lax',
-    domain: isLocalhost ? 'localhost' : '.yourdomain.com',
-    secure: !isLocalhost,
+export const supabase = createClient<Database>(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!, {
+  auth: {
+    autoRefreshToken: true,
+    storageKey: 'sb-auth-token',
+    persistSession: true,
+    detectSessionInUrl: true,
+    // storage: 'cookie',
+  },
+  global: {
+    fetch: fetch,
   },
 });
 

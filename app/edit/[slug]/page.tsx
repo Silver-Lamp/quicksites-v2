@@ -3,7 +3,7 @@
 
 import { useEffect, useState } from 'react';
 import { useParams, notFound } from 'next/navigation';
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
+import { createClient } from '@supabase/supabase-js';
 import TemplateEditor from '@/components/admin/templates/template-editor';
 import type { Snapshot } from '@/types/template';
 import type { Database } from '@/types/supabase';
@@ -27,7 +27,7 @@ import { Metadata } from 'next';
 
 export default function EditPage() {
   const { slug } = useParams() as { slug: string };
-  const supabase = createClientComponentClient<Database>();
+  const supabase = createClient<Database>(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!);
 
   const [data, setData] = useState<Snapshot | null>(null);
   const [loading, setLoading] = useState(true);

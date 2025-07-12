@@ -1,4 +1,5 @@
 // types/template.ts
+import { BlockValidationErrorMap } from '@/lib/validateBlock.js';
 import type { Block } from './blocks.js';
 
 export type Page = {
@@ -12,25 +13,19 @@ export type TemplateData = {
   pages: Page[];
 };
 
-export type Template = {
-  id?: string;
-  site_id?: string;
-  name: string;
+export type Snapshot = {
+  id: string;
+  template_name: string;
   layout: string;
   color_scheme: string;
-  commit: string;
-  industry: string;
   theme: string;
   brand: string;
-  headline?: string;
-  description?: string;
-  hero_url?: string;
-  banner_url?: string;
-  logo_url?: string;
-  team_url?: string;
-
   data: TemplateData;
-
+  slug: string;
+  industry: string;
+  block_errors?: BlockValidationErrorMap;
+  block_errors_map?: Record<string, string[]>;
+  commit?: string;
   created_at?: string;
   updated_at?: string;
   domain?: string | null;
@@ -38,7 +33,6 @@ export type Template = {
   custom_domain?: string | null;
   name_exists?: boolean;
   show_name_error?: boolean;
-  slug?: string;
   slug_preview?: string;
   input_value?: string;
   is_renaming?: boolean;
@@ -49,14 +43,16 @@ export type Template = {
   autosave_timestamp?: string;
 };
 
-export type Snapshot = {
-  id: string;
-  template_name: string;
-  layout: string;
-  color_scheme: string;
-  theme: string;
-  brand: string;
-  data: TemplateData;
+export type Template = Snapshot & {
+  name: string;
+  template_name?: string;
+  site_id?: string;
+  headline?: string;
+  description?: string;
+  hero_url?: string;
+  banner_url?: string;
+  logo_url?: string;
+  team_url?: string;
 };
 
 export type TemplateSnapshot = Snapshot;

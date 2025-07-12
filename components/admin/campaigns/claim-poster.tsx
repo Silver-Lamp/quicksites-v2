@@ -2,8 +2,9 @@ import Image from 'next/image';
 import QRCode from 'react-qr-code';
 import { formatDistanceToNowStrict, parseISO } from 'date-fns';
 import { useState } from 'react';
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
+import { createClient } from '@supabase/supabase-js';
 import { toast } from 'react-hot-toast';
+import { Database } from '@/types/supabase';
 
 export type ClaimPosterProps = {
   domain: string;
@@ -42,7 +43,7 @@ export default function ClaimPoster({
 }: ClaimPosterProps) {
   console.log('[🧩 ClaimPoster props]', { campaignId, arcOffsetY, logoOffsetY, arcRadius });
 
-  const supabase = createClientComponentClient();
+  const supabase = createClient<Database>(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!);
   const [editing, setEditing] = useState(false);
   const [settings, setSettings] = useState({ arcOffsetY, logoOffsetY, arcRadius });
   const [original, setOriginal] = useState({ arcOffsetY, logoOffsetY, arcRadius });

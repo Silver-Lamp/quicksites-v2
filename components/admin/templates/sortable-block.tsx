@@ -1,3 +1,4 @@
+// components/admin/templates/sortable-block.tsx
 'use client';
 
 import { useSortable } from '@dnd-kit/sortable';

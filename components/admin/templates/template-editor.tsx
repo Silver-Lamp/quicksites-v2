@@ -15,6 +15,8 @@ import { Button } from '@/components/ui/button';
 import { useTemplateInsert } from '@/hooks/useTemplateInsert';
 import { BlocksEditor } from './blocks-editor';
 import BlockSidebar from './block-sidebar';
+import { BlockSchema } from '@/admin/lib/zod/blockSchema';
+import { z } from 'zod';
 
 export default function TemplateEditor({
   templateName,
@@ -68,6 +70,17 @@ export default function TemplateEditor({
   const selectedBlock = selectedIndex !== null ? template.data.pages[0].content_blocks[selectedIndex] : null;
   const selectedId = selectedBlock?._id ?? '';
 
+  const validationSummary = Object.entries(blockErrors).map(([blockId, errors]) => (
+    <div key={blockId} className="text-sm text-red-300 border-b border-zinc-700 pb-2 mb-2">
+      <strong className="text-red-400">Block {blockId}:</strong>
+      <ul className="list-disc list-inside">
+        {errors.map((e, i) => (
+          <li key={i}>{e}</li>
+        ))}
+      </ul>
+    </div>
+  ));
+
   return (
     <>
       <ScrollArea className="h-screen w-full p-6">
@@ -85,6 +98,13 @@ export default function TemplateEditor({
           nameExists={nameExists}
           setShowNameError={() => {}}
         />
+
+        {Object.keys(blockErrors).length > 0 && (
+          <div className="bg-red-900/40 text-red-300 p-4 rounded border border-red-500 mb-4">
+            <div className="font-bold text-red-200 mb-2">Some block(s) have validation errors:</div>
+            {validationSummary}
+          </div>
+        )}
 
         <TemplateEditorContent
           template={template as unknown as Template}

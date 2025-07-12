@@ -1,13 +1,36 @@
-import { useState } from 'react';
+'use client';
+
+import { useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/ui';
-import { Monitor, Smartphone, Tablet, RotateCw } from 'lucide-react';
+import { Monitor, Smartphone, Tablet, RotateCw, Eye, EyeOff } from 'lucide-react';
 
 type Mode = 'mobile' | 'tablet' | 'desktop';
 type Orientation = 'portrait' | 'landscape';
+
 const showBezel = false;
-export default function DevicePreviewWrapper({ children }: { children: React.ReactNode }) {
+
+export default function DevicePreviewWrapper({
+  children,
+  showDebug = true,
+}: {
+  children: React.ReactNode;
+  showDebug?: boolean;
+}) {
   const [mode, setMode] = useState<Mode>('mobile');
   const [orientation, setOrientation] = useState<Orientation>('portrait');
+  const [showInspector, setShowInspector] = useState(showDebug);
+  const previewRef = useRef<HTMLDivElement>(null);
+  const [classList, setClassList] = useState<string>('');
+  const [bgColor, setBgColor] = useState<string>('');
+
+  useEffect(() => {
+    const el = previewRef.current;
+    if (el) {
+      setClassList(el.className);
+      const style = getComputedStyle(el);
+      setBgColor(style.backgroundColor);
+    }
+  });
 
   const renderIcon = (target: Mode) => {
     if (target === 'mobile') return <Smartphone size={14} />;
@@ -33,33 +56,30 @@ export default function DevicePreviewWrapper({ children }: { children: React.Rea
   };
 
   const bezelFrame = (content: React.ReactNode) => {
-    // console.log('showBezel: ', showBezel);
-    // if (!showBezel) return content;
-
     if (mode === 'desktop') return content;
 
     return (
       <div className="relative w-fit">
         {showBezel && (
-        <svg
-          className="absolute inset-0 z-10 pointer-events-none"
-          width="100%"
-          height="100%"
-          viewBox="0 0 400 800"
-          preserveAspectRatio="xMidYMid meet"
-        >
-          <rect
-            x="10"
-            y="10"
-            width="380"
-            height="780"
-            rx="40"
-            ry="40"
-            fill="none"
-            stroke="#999"
-            strokeWidth="20"
-          />
-        </svg>
+          <svg
+            className="absolute inset-0 z-10 pointer-events-none"
+            width="100%"
+            height="100%"
+            viewBox="0 0 400 800"
+            preserveAspectRatio="xMidYMid meet"
+          >
+            <rect
+              x="10"
+              y="10"
+              width="380"
+              height="780"
+              rx="40"
+              ry="40"
+              fill="none"
+              stroke="#999"
+              strokeWidth="20"
+            />
+          </svg>
         )}
         <div
           className={`z-0 relative rounded-md overflow-hidden ${getSizeClass(mode, orientation)}`}
@@ -67,9 +87,24 @@ export default function DevicePreviewWrapper({ children }: { children: React.Rea
         >
           <div
             id="preview-capture"
-            className="bg-white dark:bg-gray-900 w-full h-full overflow-y-auto p-4"
+            ref={previewRef}
+            className="w-full h-full overflow-y-auto p-4 transition-colors"
           >
-            {content}
+            {showInspector && (
+              <div className="text-xs mb-3 px-3 py-2 rounded border bg-yellow-100 dark:bg-yellow-800 text-yellow-900 dark:text-yellow-100 border-yellow-300 dark:border-yellow-500 font-mono">
+                <div className="mb-1 font-semibold">#preview-capture Debug</div>
+                <div><strong>class:</strong> {classList}</div>
+                <div className="flex items-center gap-2">
+                  <strong>background:</strong>
+                  <span
+                    className="inline-block w-4 h-4 rounded border border-gray-300"
+                    style={{ backgroundColor: bgColor }}
+                  />
+                  <code>{bgColor}</code>
+                </div>
+              </div>
+            )}
+            {children}
           </div>
         </div>
       </div>
@@ -101,6 +136,17 @@ export default function DevicePreviewWrapper({ children }: { children: React.Rea
             className="flex items-center gap-2"
           >
             <RotateCw size={14} /> {orientation === 'portrait' ? 'Portrait' : 'Landscape'}
+          </Button>
+        )}
+
+        {showDebug && (
+          <Button
+            onClick={() => setShowInspector((prev) => !prev)}
+            size="sm"
+            variant="outline"
+            className="flex items-center gap-2"
+          >
+            {showInspector ? <EyeOff size={14} /> : <Eye size={14} />} Debug
           </Button>
         )}
       </div>

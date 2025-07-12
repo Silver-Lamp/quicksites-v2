@@ -111,9 +111,15 @@ export default function ReorderablePageList({
             </div>
             <TemplatePreview
               data={{ pages: [page] }}
-              colorScheme={colorScheme}
-              onBlockClick={onBlockClick as any}
+              colorScheme="slate"
+              theme="clean"
+              brand="default"
+              onBlockClick={(block) => {
+                console.log('block: ', block);
+              }}
+              showJsonFallback={true}
             />
+
           </SortablePage>
         ))}
       </SortableContext>

@@ -58,13 +58,17 @@ export default function ReorderableBlockList({
         onReorder(updatedData);
       }}
     >
-      <SortableContext items={blocks.map((b: any) => b._id)} strategy={verticalListSortingStrategy}>
-        <TemplatePreview
-          data={data}
-          colorScheme={colorScheme}
-          // onBlockClick={onBlockClick}
-        />
-      </SortableContext>
+    <TemplatePreview
+      data={data}
+      colorScheme="slate"
+      theme="clean"
+      brand="default"
+      onBlockClick={(block) => {
+        console.log('block: ', block);
+      }}
+      showJsonFallback={true}
+    />
+
     </DndContext>
   );
 }

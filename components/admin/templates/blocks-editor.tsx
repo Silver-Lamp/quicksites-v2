@@ -1,3 +1,4 @@
+
 // components/admin/templates/blocks-editor.tsx
 'use client';
 
@@ -21,6 +22,7 @@ import { BlockSchema } from '@/admin/lib/zod/blockSchema';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { Modal } from '@/components/ui/modal';
 import { RenderChangedFields } from '@/components/ui/render-changed-fields';
+import { blockContentExamples } from '@/lib/blockContentExamples';
 
 interface BlocksEditorPropsExtended extends BlocksEditorProps {
   onReplaceWithAI?: (index: number) => void;
@@ -199,6 +201,32 @@ export const BlocksEditor = ({ blocks, onChange, industry = 'default', onReplace
 
   return (
     <div className="space-y-4">
+      {safeBlocks.some(b => !BlockSchema.safeParse(b).success) && (
+        <div className="rounded border border-red-500/50 bg-red-500/10 text-red-300 text-sm p-3 space-y-2">
+          <strong className="block text-red-400 mb-1">Validation Issues:</strong>
+          {safeBlocks.map((block, idx) => {
+            const result = BlockSchema.safeParse(block);
+            if (result.success) return null;
+            return (
+              <div key={block._id || idx} className="ml-2">
+                <div className="font-medium text-red-400 mb-1 cursor-pointer hover:underline" onClick={() => setSelectedIndex(idx)}>
+                  Block <code>{block.type}</code> — <code>{block._id}</code>
+                </div>
+                <ul className="list-disc list-inside">
+                  {result.error.errors.map((err, i) => (
+                    <li key={i}>
+                      <code>{err.path.join('.')}</code>: {err.message}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+
+    <div className="space-y-4">
       <div className="flex justify-end gap-2">
         <Button size="sm" variant="ghost" onClick={() => document.querySelectorAll('[data-diff-toggle]').forEach(el => (el as HTMLElement).style.display = 'block')}>
           Expand All Diffs
@@ -299,14 +327,23 @@ export const BlocksEditor = ({ blocks, onChange, industry = 'default', onReplace
                 + {type.charAt(0).toUpperCase() + type.slice(1)}
               </Button>
             );
-        })}
+          })}
+      </div>
       </div>
 
       {selectedIndex !== null && (
         <BlockSidebar
           block={safeBlocks[selectedIndex]}
           onChange={(updatedBlock) => handleUpdate(selectedIndex, updatedBlock)}
-          errors={BlockSchema.safeParse(safeBlocks[selectedIndex]).success ? undefined : ['Invalid structure']}
+          errors={(() => {
+            const parsed = BlockSchema.safeParse(safeBlocks[selectedIndex]);
+            if (parsed.success) return undefined;
+            const expected = blockContentExamples[safeBlocks[selectedIndex].type];
+            return [
+              'Invalid structure',
+              expected ? `Expected: ${JSON.stringify(expected, null, 2)}` : '',
+            ].filter(Boolean);
+          })()}
           onClose={() => setSelectedIndex(null)}
         />
       )}

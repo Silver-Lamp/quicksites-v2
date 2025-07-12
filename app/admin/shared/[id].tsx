@@ -84,13 +84,17 @@ export default function SharedSnapshotPage() {
       <div
         className="border rounded bg-white dark:bg-gray-800 shadow-md overflow-x-auto p-4"
         id="preview-capture"
-      >
-        <TemplatePreview
-          data={template.data}
-          theme={template.theme}
-          brand={template.brand}
-          colorScheme={template.color_scheme}
-        />
+        >
+          <TemplatePreview
+            data={template.data}
+            theme={template.theme}
+            brand={template.brand}
+            colorScheme={template.color_scheme}
+            onBlockClick={(block) => {
+              console.log('block: ', block);
+            }}
+            showJsonFallback={true}
+          />
       </div>
 
       <div className="flex flex-wrap gap-3 mt-6 justify-between">

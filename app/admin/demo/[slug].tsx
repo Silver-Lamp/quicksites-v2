@@ -10,7 +10,9 @@ export default function DemoTemplate({ data, slug }: { data: any; slug: string }
     <div className="max-w-5xl mx-auto p-6">
       <h1 className="text-xl font-semibold mb-4">Preview: {slug}</h1>
       <ScrollArea className="h-[600px] border rounded bg-white">
-        <TemplatePreview data={data} colorScheme={data.color_scheme || 'slate'} />
+        <TemplatePreview data={data} colorScheme={data.color_scheme || 'slate'} onBlockClick={(block) => {
+          console.log('block: ', block);
+        }} showJsonFallback={true} />
       </ScrollArea>
     </div>
   );

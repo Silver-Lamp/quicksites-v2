@@ -155,6 +155,10 @@ export default function AdminPresetsEditPage() {
           <TemplatePreview
             data={{ pages: [{ id: id as string, title: name, slug: "preview", content_blocks: blocks }] }}
             colorScheme="blue"
+            onBlockClick={(block) => {
+              console.log('block: ', block);
+            }}
+            showJsonFallback={true}
           />
         </div>
       </div>

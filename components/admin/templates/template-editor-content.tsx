@@ -1,26 +1,29 @@
-// components/admin/templates/template-editor-content.tsx
 'use client';
+
+import { useEffect, useState } from 'react';
+import toast from 'react-hot-toast';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui';
+
+import type { Template, TemplateData } from '@/types/template';
+import { saveTemplate } from '@/admin/lib/saveTemplate';
 
 import TemplateSettingsPanel from './template-settings-panel';
 import { TemplateEditorBranding } from './template-editor.branding';
 import TemplatePageEditor from './template-page-editor';
 import TemplateJsonEditor from './template-json-editor';
 import TemplateHistory from './template-history';
-import TemplatePreview from './template-preview';
+import TemplatePreviewWithToggle from './template-preview-with-toggle';
 import TemplatePublishModal from './template-publish-modal';
 import DevicePreviewWrapper from './device-preview-wrapper';
 import ImageUploader from '../admin/image-uploader';
 import TemplateImageGallery from '../admin/template-image-gallery';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui';
 import TemplateActionToolbar from './template-action-toolbar';
-import type { Template, TemplateData } from '@/types/template';
-import { useEffect, useState } from 'react';
-import toast from 'react-hot-toast';
-import { saveTemplate } from '@/admin/lib/saveTemplate';
+import ThemeScope from '@/components/ui/theme-scope';
+import ThemeDebugger from '@/components/ui/theme-debugger';
 
 function pushWithLimit<T>(stack: T[], item: T, limit = 10): T[] {
-    return [...stack.slice(-limit + 1), item];
-  }
+  return [...stack.slice(-limit + 1), item];
+}
 
 export function TemplateEditorContent({
   template,
@@ -46,56 +49,62 @@ export function TemplateEditorContent({
     const stored = localStorage.getItem('templateHistory');
     return stored ? JSON.parse(stored) : [];
   });
-  
+
   const [redoStack, setRedoStack] = useState<Template[]>(() => {
     const stored = localStorage.getItem('templateRedo');
     return stored ? JSON.parse(stored) : [];
   });
 
+  const [isDark, setIsDark] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const stored = localStorage.getItem('preview-theme');
+      if (stored === 'dark') return true;
+      if (stored === 'light') return false;
+      return window.matchMedia('(prefers-color-scheme: dark)').matches;
+    }
+    return true;
+  });
+
+  useEffect(() => {
+    localStorage.setItem('preview-theme', isDark ? 'dark' : 'light');
+  }, [isDark]);
+
   useEffect(() => {
     localStorage.setItem('templateHistory', JSON.stringify(historyStack));
-    }, [historyStack]);
-    
+  }, [historyStack]);
+
   useEffect(() => {
     localStorage.setItem('templateRedo', JSON.stringify(redoStack));
-    }, [redoStack]);
+  }, [redoStack]);
 
-  // 🔧 Update template + JSON together  
   const handleTemplateChange = (updated: Template) => {
     setHistoryStack((prev) => pushWithLimit(prev, updated, 10));
     setRedoStack((prev) => pushWithLimit(prev, updated, 10));
     setTemplate(updated);
     setRawJson(JSON.stringify(updated.data, null, 2));
   };
-  
-  // 💾 Save function
+
   const handleSaveDraft = async () => {
     try {
-      console.log('handleSaveDraft: ', JSON.stringify(template, null, 2));
       const parsed = JSON.parse(rawJson);
-  
       const fullTemplate: Template = { ...template, data: parsed };
-  
       const promise = saveTemplate(fullTemplate);
-  
+
       toast.promise(promise, {
         loading: 'Saving...',
         success: 'Template saved successfully!',
         error: 'Failed to save template',
       });
-  
+
       const saved = await promise;
-  
-      // update local state too
       setTemplate(saved);
       setRawJson(JSON.stringify(saved.data, null, 2));
-  
     } catch (err: any) {
       console.error('[❌ JSON Parse Error]', err.message);
       toast.error('Invalid JSON: could not save.');
     }
   };
-  
+
   const handleUndo = () => {
     if (historyStack.length === 0) {
       toast('Nothing to undo');
@@ -108,7 +117,7 @@ export function TemplateEditorContent({
     setRawJson(JSON.stringify(previous.data, null, 2));
     toast.success('Undo successful');
   };
-  
+
   const handleRedo = () => {
     if (redoStack.length === 0) {
       toast('Nothing to redo');
@@ -120,7 +129,7 @@ export function TemplateEditorContent({
     setTemplate(next);
     setRawJson(JSON.stringify(next.data, null, 2));
     toast.success('Redo successful');
-  };  
+  };
 
   return (
     <>
@@ -162,14 +171,19 @@ export function TemplateEditorContent({
         </TabsContent>
 
         <TabsContent value="preview">
-          <DevicePreviewWrapper>
-            <TemplatePreview
-              data={livePreviewData}
-              colorScheme={template.color_scheme}
-              theme={template.theme}
-              brand={template.brand}
-            />
-          </DevicePreviewWrapper>
+          <ThemeScope mode={isDark ? 'dark' : 'light'}>
+            <DevicePreviewWrapper>
+              <TemplatePreviewWithToggle
+                isDark={isDark}
+                toggleDark={() => setIsDark(prev => !prev)}
+                data={template.data}
+                theme={template.theme}
+                brand={template.brand}
+                colorScheme="slate"
+                showJsonFallback={true}
+              />
+            </DevicePreviewWrapper>
+          </ThemeScope>
         </TabsContent>
 
         <TabsContent value="history">
@@ -183,13 +197,13 @@ export function TemplateEditorContent({
         snapshotId={template.id || ''}
       />
 
-    <TemplateActionToolbar
+      <TemplateActionToolbar
         template={template}
         autosaveStatus={autosaveStatus}
         onSaveDraft={handleSaveDraft}
         onUndo={handleUndo}
         onRedo={handleRedo}
-        />
+      />
     </>
   );
 }

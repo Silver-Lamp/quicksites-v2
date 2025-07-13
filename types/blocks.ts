@@ -68,10 +68,11 @@ export type GridBlock = BaseBlock & {
 export type HeroBlock = BaseBlock & {
   type: 'hero';
   content: {
-    title: string;
-    description?: string;
-    cta_label?: string;
+    headline: string;
+    subheadline?: string;
+    cta_text?: string;
     cta_link?: string;
+    image_url?: string;
   };
 };
 

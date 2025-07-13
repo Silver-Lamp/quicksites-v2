@@ -1,28 +1,30 @@
 'use client';
+import type { Block } from '@/types/blocks';
 
-import type { HeroBlock } from '@/types/blocks';
+type HeroBlock = Extract<Block, { type: 'hero' }>;
 
-export default function HeroBlock({ content }: { content?: HeroBlock['content'] }) {
-  if (!content) {
-    return (
-      <section className="mb-8 text-center text-red-500 italic">
-        ⚠️ Missing content for hero block.
-      </section>
-    );
-  }
+export default function HeroRender({ block }: { block: HeroBlock }) {
+  const { headline, subheadline, cta_text, cta_link, image_url } = block.content;
+
+  const safeImage = image_url?.startsWith('blob:') ? undefined : image_url;
 
   return (
-    <section className="mb-8 text-center bg-white text-gray-900 dark:bg-neutral-900 dark:text-white">
-      <h1 className="text-3xl font-bold mb-2">{content.title}</h1>
-      {content.description && (
-        <p className="text-gray-600 dark:text-gray-400 mb-4">{content.description}</p>
+    <section className="bg-neutral-900 text-white py-16 px-4 md:px-12 text-center rounded-lg shadow-lg">
+      {safeImage && (
+        <img
+          src={safeImage}
+          alt={headline || 'Hero Image'}
+          className="mx-auto mb-6 rounded-xl shadow max-h-96 object-cover"
+        />
       )}
-      {content.cta_label && content.cta_link && (
+      <h1 className="text-3xl md:text-5xl font-bold mb-4">{headline}</h1>
+      {subheadline && <p className="text-lg md:text-xl mb-6">{subheadline}</p>}
+      {cta_text && cta_link && (
         <a
-          href={content.cta_link}
-          className="inline-block px-5 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition"
+          href={cta_link}
+          className="inline-block bg-purple-600 hover:bg-purple-700 text-white font-medium py-3 px-6 rounded-full transition"
         >
-          {content.cta_label}
+          {cta_text}
         </a>
       )}
     </section>

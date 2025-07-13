@@ -1,79 +1,86 @@
 'use client';
-
 import { useState } from 'react';
-import type { Block, HeroBlock } from '@/types/blocks';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Button } from '@/components/ui/button';
+import type { Block } from '@/types/blocks';
+import type { BlockEditorProps } from './index';
+import { uploadToStorage } from '@/lib/uploadToStorage';
 
-type Props = {
-  block: Block;
-  onSave: (updated: Block) => void;
-  onClose: () => void;
-};
+type HeroBlock = Extract<Block, { type: 'hero' }>;
+type HeroContent = HeroBlock['content'];
 
-export default function HeroEditor({ block, onSave, onClose }: Props) {
+export default function HeroEditor({ block, onSave, onClose }: BlockEditorProps) {
   const heroBlock = block as HeroBlock;
-  const [content, setContent] = useState(heroBlock.content);
+  const [local, setLocal] = useState<HeroContent>(heroBlock.content || {});
+
+  const handleSave = () => {
+    onSave({ ...heroBlock, content: local });
+    onClose();
+  };
 
   return (
-    <form
-      className="space-y-4 bg-white text-black dark:bg-neutral-900 dark:text-white p-4 rounded-md"
-      onSubmit={(e) => {
-        e.preventDefault();
-        onSave({ ...heroBlock, content });
-      }}
-    >
+    <div className="space-y-4">
       <div>
-        <Label htmlFor="headline" className="text-sm text-gray-800 dark:text-gray-200">Headline</Label>
-        <Input
-          id="headline"
-          placeholder="e.g. 24/7 Emergency Towing"
-          value={content.title || ''}
-          onChange={(e) => setContent({ ...content, title: e.target.value })}
-          className="bg-white dark:bg-neutral-800 text-black dark:text-white border-gray-300 dark:border-neutral-700"
+        <label className="block text-sm font-medium">Headline</label>
+        <input
+          className="w-full p-2 rounded bg-neutral-800 text-white"
+          value={local.headline || ''}
+          onChange={(e) => setLocal({ ...local, headline: e.target.value })}
         />
       </div>
-
       <div>
-        <Label htmlFor="subheadline" className="text-sm text-gray-800 dark:text-gray-200">Subheadline</Label>
-        <Input
-          id="subheadline"
-          placeholder="e.g. Fast, Reliable, Affordable"
-          value={content.description || ''}
-          onChange={(e) => setContent({ ...content, description: e.target.value })}
-          className="bg-white dark:bg-neutral-800 text-black dark:text-white border-gray-300 dark:border-neutral-700"
+        <label className="block text-sm font-medium">Subheadline</label>
+        <input
+          className="w-full p-2 rounded bg-neutral-800 text-white"
+          value={local.subheadline || ''}
+          onChange={(e) => setLocal({ ...local, subheadline: e.target.value })}
         />
       </div>
-
       <div>
-        <Label htmlFor="cta_text" className="text-sm text-gray-800 dark:text-gray-200">CTA Label</Label>
-        <Input
-          id="cta_text"
-          placeholder='e.g. "Get Help Now"'
-          value={content.cta_label || ''}
-          onChange={(e) => setContent({ ...content, cta_label: e.target.value })}
-          className="bg-white dark:bg-neutral-800 text-black dark:text-white border-gray-300 dark:border-neutral-700"
+        <label className="block text-sm font-medium">CTA Text</label>
+        <input
+          className="w-full p-2 rounded bg-neutral-800 text-white"
+          value={local.cta_text || ''}
+          onChange={(e) => setLocal({ ...local, cta_text: e.target.value })}
         />
       </div>
-
       <div>
-        <Label htmlFor="cta_link" className="text-sm text-gray-800 dark:text-gray-200">CTA Link</Label>
-        <Input
-          id="cta_link"
-          placeholder='e.g. /contact or tel:+15551234567'
-          value={content.cta_link || ''}
-          onChange={(e) => setContent({ ...content, cta_link: e.target.value })}
-          className="bg-white dark:bg-neutral-800 text-black dark:text-white border-gray-300 dark:border-neutral-700"
+        <label className="block text-sm font-medium">CTA Link</label>
+        <input
+          className="w-full p-2 rounded bg-neutral-800 text-white"
+          value={local.cta_link || ''}
+          onChange={(e) => setLocal({ ...local, cta_link: e.target.value })}
         />
       </div>
-
-      <div className="flex justify-end gap-2 pt-4">
-        <Button type="button" variant="ghost" onClick={onClose}>
+      <div>
+        <label className="block text-sm font-medium">Image</label>
+        {local.image_url && (
+          <img
+            src={local.image_url}
+            alt="Hero Image"
+            className="mb-2 rounded shadow max-w-xs"
+          />
+        )}
+        <input
+          type="file"
+          accept="image/*"
+          onChange={async (e) => {
+            const file = e.target.files?.[0];
+            if (!file) return;
+            const url = await uploadToStorage(file);
+            setLocal({ ...local, image_url: url });
+          }}
+        />
+      </div>
+      <div className="flex gap-2 justify-end pt-4">
+        <button onClick={onClose} className="text-sm px-4 py-2 border rounded">
           Cancel
-        </Button>
-        <Button type="submit">Save</Button>
+        </button>
+        <button
+          onClick={handleSave}
+          className="text-sm px-4 py-2 bg-purple-600 text-white rounded"
+        >
+          Save
+        </button>
       </div>
-    </form>
+    </div>
   );
 }

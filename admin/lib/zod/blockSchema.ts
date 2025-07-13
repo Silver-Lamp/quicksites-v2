@@ -50,6 +50,7 @@ export const blockContentSchemaMap = {
       subheadline: z.string().optional(),
       cta_text: z.string().optional(),
       cta_link: z.string().optional(),
+      image_url: z.string().url('Image must be a valid URL').optional(),
     }),
   },
   services: {

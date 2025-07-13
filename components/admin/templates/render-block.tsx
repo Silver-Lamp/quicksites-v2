@@ -3,7 +3,7 @@
 import type { Block } from '@/types/blocks';
 import dynamic from 'next/dynamic';
 import { JSX } from 'react';
-import FallbackRenderer from '@/lib/ui/fallback-renderer'; // optional external fallback component
+import FallbackRenderer from '@/lib/ui/fallback-renderer';
 
 const BLOCK_RENDERERS: Record<
   Block['type'],
@@ -39,10 +39,21 @@ export default function RenderBlock({
     ssr: false,
   });
 
+  // Inject blob-safe fallback for hero block image
+  const content =
+    block.type === 'hero' && typeof block.content === 'object'
+      ? {
+          ...block.content,
+          image_url: block.content.image_url?.startsWith('blob:')
+            ? undefined
+            : block.content.image_url,
+        }
+      : block.content;
+
   const props =
     block.type === 'grid'
-      ? { content: block.content, handleNestedBlockUpdate, parentBlock: block }
-      : { content: block.content };
+      ? { content, handleNestedBlockUpdate, parentBlock: block }
+      : { content };
 
   return <LazyBlock {...props} />;
 }
@@ -50,8 +61,6 @@ export default function RenderBlock({
 function fallbackRenderer(block: Block) {
   return () =>
     Promise.resolve({
-      default: () => (
-        <FallbackRenderer block={block} />
-      ),
+      default: () => <FallbackRenderer block={block} />,
     });
 }

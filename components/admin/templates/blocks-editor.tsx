@@ -334,7 +334,7 @@ export const BlocksEditor = ({ blocks, onChange, industry = 'default', onReplace
       {selectedIndex !== null && (
         <BlockSidebar
           block={safeBlocks[selectedIndex]}
-          onChange={(updatedBlock) => handleUpdate(selectedIndex, updatedBlock)}
+          onSave={(updatedBlock) => handleUpdate(selectedIndex, updatedBlock)}
           errors={(() => {
             const parsed = BlockSchema.safeParse(safeBlocks[selectedIndex]);
             if (parsed.success) return undefined;
@@ -345,6 +345,7 @@ export const BlocksEditor = ({ blocks, onChange, industry = 'default', onReplace
             ].filter(Boolean);
           })()}
           onClose={() => setSelectedIndex(null)}
+          onOpen={selectedIndex !== null}
         />
       )}
 

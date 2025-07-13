@@ -7,6 +7,11 @@ export type Page = {
   slug: string;
   title: string;
   content_blocks: Block[];
+  meta?: {
+    title?: string;
+    description?: string;
+    visible?: boolean;
+  };
 };
 
 export type TemplateData = {

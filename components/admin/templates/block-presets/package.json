@@ -1,0 +1,17 @@
+{
+  "name": "@quicksites/block-presets",
+  "version": "0.1.0",
+  "main": "index.ts",
+  "types": "index.ts",
+  "license": "UNLICENSED",
+  "private": true,
+  "description": "Internal UI block preset module for QuickSites editors",
+  "keywords": ["quicksites", "editor", "presets", "ui"],
+  "author": "QuickSites Team",
+  "exports": {
+    ".": {
+      "import": "./index.ts",
+      "types": "./index.ts"
+    }
+  }
+}

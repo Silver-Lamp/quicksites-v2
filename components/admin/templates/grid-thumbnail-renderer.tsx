@@ -15,7 +15,7 @@ export default function GridThumbnailRenderer({ preset, onSelect }: Props) {
       className={`grid gap-2 mb-1 grid-cols-${preset.columns}`}
     >
       {preset.items.map((block, i) => (
-        <div key={i} className="border border-white/10 rounded p-1 text-xs text-white bg-white/5" onClick={() => onSelect?.(preset)}>
+        <div key={i} id={`block-${block._id}`} className="border border-white/10 rounded p-1 text-xs text-white bg-white/5" onClick={() => onSelect?.(preset)}>
           <RenderBlock block={normalizeBlock(block)} />
         </div>
       ))}

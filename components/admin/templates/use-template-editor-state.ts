@@ -10,6 +10,7 @@ import type { Snapshot, Template } from '@/types/template';
 import toast from 'react-hot-toast';
 import { validateBlock } from '@/lib/validateBlock';
 import { Block } from '@/types/blocks';
+import { validateTemplateBlocks } from '@/hooks/validateTemplateBlocks';
 
 export function useTemplateEditorState({
   templateName,
@@ -91,6 +92,7 @@ export function useTemplateEditorState({
     }
 
     setBlockErrors(errors);
+    console.log('blockErrors', errors);
     return snapshot;
   };
 
@@ -119,6 +121,18 @@ export function useTemplateEditorState({
   }, [isCreating, initialData, template]);
 
   const handleSaveDraft = () => {
+    const { isValid, errors } = validateTemplateBlocks(template as Template);
+  
+    if (!isValid) {
+      console.log('errors', errors);
+      setBlockErrors(errors);
+      const firstInvalidId = Object.keys(errors)[0];
+      const el = document.getElementById(`block-${firstInvalidId}`);
+      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      toast.error('Please fix validation errors before saving.');
+      return;
+    }
+  
     localStorage.setItem(`draft-${template.id}`, rawJson);
     toast.success('Draft saved');
   };
@@ -158,5 +172,6 @@ export function useTemplateEditorState({
     handleSaveDraft,
     nameExists,
     blockErrors,
+    setBlockErrors,
   };
 }

@@ -15,7 +15,7 @@ import { Button } from '@/components/ui/button';
 import { useTemplateInsert } from '@/hooks/useTemplateInsert';
 import { BlocksEditor } from './blocks-editor';
 import BlockSidebar from './block-sidebar';
-import { BlockSchema } from '@/admin/lib/zod/blockSchema';
+import { Block, BlockSchema } from '@/admin/lib/zod/blockSchema';
 import { z } from 'zod';
 
 export default function TemplateEditor({
@@ -51,6 +51,7 @@ export default function TemplateEditor({
     handleSaveDraft,
     nameExists,
     blockErrors,
+    setBlockErrors
   } = useTemplateEditorState({ templateName, initialData, onRename });
 
   const {
@@ -115,8 +116,8 @@ export default function TemplateEditor({
           autosaveStatus={autosave.status}
           setShowPublishModal={() => {}}
           recentlyInsertedBlockId={recentlyInsertedBlockId ?? null}
+          setBlockErrors={setBlockErrors}
         />
-
         <BlocksEditor
           blocks={template.data.pages[0].content_blocks}
           onChange={(updatedBlocks) =>
@@ -150,7 +151,7 @@ export default function TemplateEditor({
           <BlockSidebar
             block={selectedBlock}
             errors={blockErrors[selectedId] || []}
-            onChange={(updatedBlock) => {
+            onSave={(updatedBlock: Block) => {
               setTemplate((prev) => {
                 const updated = { ...prev };
                 updated.data.pages[0].content_blocks[selectedIndex] = updatedBlock;
@@ -158,6 +159,7 @@ export default function TemplateEditor({
               });
             }}
             onClose={() => setSelectedIndex(null)}
+            onOpen={selectedIndex !== null}
           />
         )}
       </ScrollArea>

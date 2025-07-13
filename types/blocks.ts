@@ -1,5 +1,3 @@
-// types/blocks.ts
-
 // Base type for shared props
 export type BaseBlock = {
   _id?: string;
@@ -67,6 +65,53 @@ export type GridBlock = BaseBlock & {
   };
 };
 
+export type HeroBlock = BaseBlock & {
+  type: 'hero';
+  content: {
+    title: string;
+    description?: string;
+    cta_label?: string;
+    cta_link?: string;
+  };
+};
+
+export type ServicesBlock = BaseBlock & {
+  type: 'services';
+  content: {
+    items: string[];
+  };
+};
+
+export type CtaBlock = BaseBlock & {
+  type: 'cta';
+  content: {
+    label: string;
+    link: string;
+  };
+};
+
+export type TestimonialBlock = BaseBlock & {
+  type: 'testimonial';
+  content: {
+    quote: string;
+    attribution?: string;
+  };
+};
+
+export type FooterBlock = BaseBlock & {
+  type: 'footer';
+  content: {
+    businessName: string;
+    address: string;
+    cityState: string;
+    phone: string;
+    links: {
+      label: string;
+      href: string;
+    }[];
+  };
+};
+
 // Unified Block union
 export type Block =
   | TextBlock
@@ -79,7 +124,9 @@ export type Block =
   | HeroBlock
   | ServicesBlock
   | CtaBlock
-  | TestimonialBlock;
+  | TestimonialBlock
+  | FooterBlock;
+
 // Block with enforced _id
 export type BlockWithId = Block & { _id: string };
 
@@ -126,36 +173,3 @@ export type TemplatePageEditorProps = {
 // Optional: used in presets
 export type PresetBlock = Record<string, any>;
 export type PresetMap = Record<string, Record<string, PresetBlock>>;
-
-export type HeroBlock = BaseBlock & {
-  type: 'hero';
-  content: {
-    title: string;
-    description?: string;
-    cta_label?: string;
-    cta_link?: string;
-  };
-};
-
-export type ServicesBlock = BaseBlock & {
-  type: 'services';
-  content: {
-    items: string[];
-  };
-};
-
-export type CtaBlock = BaseBlock & {
-  type: 'cta';
-  content: {
-    label: string;
-    link: string;
-  };
-};
-
-export type TestimonialBlock = BaseBlock & {
-  type: 'testimonial';
-  content: {
-    quote: string;
-    attribution?: string;
-  };
-};

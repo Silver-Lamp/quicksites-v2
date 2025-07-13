@@ -19,7 +19,7 @@ import ImageUploader from '../admin/image-uploader';
 import TemplateImageGallery from '../admin/template-image-gallery';
 import TemplateActionToolbar from './template-action-toolbar';
 import ThemeScope from '@/components/ui/theme-scope';
-import ThemeDebugger from '@/components/ui/theme-debugger';
+import { validateTemplateBlocks } from '@/hooks/validateTemplateBlocks';
 
 function pushWithLimit<T>(stack: T[], item: T, limit = 10): T[] {
   return [...stack.slice(-limit + 1), item];
@@ -34,6 +34,7 @@ export function TemplateEditorContent({
   autosaveStatus,
   setShowPublishModal,
   recentlyInsertedBlockId,
+  setBlockErrors,
 }: {
   template: Template;
   rawJson: string;
@@ -43,6 +44,7 @@ export function TemplateEditorContent({
   autosaveStatus: string;
   setShowPublishModal: (v: boolean) => void;
   recentlyInsertedBlockId: string | null;
+  setBlockErrors: (errors: Record<string, string[]>) => void;
 }) {
   const [showModal, setModal] = useState(false);
   const [historyStack, setHistoryStack] = useState<Template[]>(() => {
@@ -88,6 +90,18 @@ export function TemplateEditorContent({
     try {
       const parsed = JSON.parse(rawJson);
       const fullTemplate: Template = { ...template, data: parsed };
+
+      const { isValid, errors } = validateTemplateBlocks(fullTemplate);
+      if (!isValid) {
+        console.warn('[🛑 Validation Errors]', errors);
+        setBlockErrors(errors);
+        const firstInvalidId = Object.keys(errors)[0];
+        const el = document.getElementById(`block-${firstInvalidId}`);
+        if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        toast.error('Fix validation errors before saving.');
+        return;
+      }
+
       const promise = saveTemplate(fullTemplate);
 
       toast.promise(promise, {
@@ -99,6 +113,7 @@ export function TemplateEditorContent({
       const saved = await promise;
       setTemplate(saved);
       setRawJson(JSON.stringify(saved.data, null, 2));
+      setBlockErrors({});
     } catch (err: any) {
       console.error('[❌ JSON Parse Error]', err.message);
       toast.error('Invalid JSON: could not save.');

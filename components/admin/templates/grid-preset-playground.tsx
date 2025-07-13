@@ -40,6 +40,7 @@ export default function GridPresetPlayground() {
         {blocks.map((block, i) => (
           <div
             key={block._id}
+            id={`block-${block._id}`}
             className="border border-white/10 bg-muted rounded p-2 text-white"
           >
             <RenderBlock block={block} />

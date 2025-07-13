@@ -1,4 +1,3 @@
-// lib/createDefaultBlock.ts
 import type { Block } from '@/admin/lib/zod/blockSchema';
 import crypto from 'crypto';
 import { blockContentSchemaMap } from '@/admin/lib/zod/blockSchema';
@@ -112,6 +111,25 @@ export function createDefaultBlock(type: Block['type']): Block {
           items: [
             createDefaultBlock('text'),
             createDefaultBlock('image'),
+          ],
+        },
+      };
+
+    case 'footer':
+      return {
+        type,
+        _id,
+        value: {
+          businessName: 'Grafton Towing',
+          address: '1600 7th Ave',
+          cityState: 'Grafton, WI',
+          phone: '(262) 228-2491',
+          links: [
+            { label: 'Home', href: '/' },
+            { label: 'Towing Service', href: '/towing-service' },
+            { label: 'Emergency Towing', href: '/emergency-towing' },
+            { label: 'Roadside Assistance', href: '/roadside-assistance' },
+            { label: 'Auto Wrecking & Flatbed', href: '/auto-wrecking' },
           ],
         },
       };

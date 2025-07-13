@@ -94,6 +94,7 @@ export default function SharedSnapshotPage() {
               console.log('block: ', block);
             }}
             showJsonFallback={true}
+            mode="dark"
           />
       </div>
 

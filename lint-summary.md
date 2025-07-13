@@ -1,5 +1,5 @@
 # ESLint Report
-Found **381** files with issues.
+Found **418** files with issues.
 
 ## 📁 `_pages-legacy/`
 ### 🔹 `/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/_pages-legacy/edit/[slug].tsx`
@@ -325,15 +325,6 @@ Found **381** files with issues.
   - [warning] Line 3:20 – 'it' is defined but never used. (@typescript-eslint/no-unused-vars)
   - [warning] Line 3:24 – 'expect' is defined but never used. (@typescript-eslint/no-unused-vars)
 
-### 🔹 `/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/admin/lib/zod/blockSchema.ts`
-- **5 issues**: 0 error(s), 5 warning(s)
-
-  - [warning] Line 89:82 – Insert `,` (prettier/prettier)
-  - [warning] Line 106:1 – Delete `··` (prettier/prettier)
-  - [warning] Line 119:1 – Delete `⏎` (prettier/prettier)
-  - [warning] Line 123:65 – Replace `'type',·BasicBlockSchemas·as·[z.ZodDiscriminatedUnionOption<'type'>,·...z.ZodDiscriminatedUnionOption<'type'>[]]` with `⏎··'type',⏎··BasicBlockSchemas·as·[⏎····z.ZodDiscriminatedUnionOption<'type'>,⏎····...z.ZodDiscriminatedUnionOption<'type'>[],⏎··]⏎` (prettier/prettier)
-  - [warning] Line 131:4 – Delete `⏎` (prettier/prettier)
-
 ### 🔹 `/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/admin/lib/links/hooks/useLinkBuilder.ts`
 - **4 issues**: 0 error(s), 4 warning(s)
 
@@ -355,6 +346,13 @@ Found **381** files with issues.
   - [warning] Line 6:9 – 'displayName' is assigned a value but never used. (@typescript-eslint/no-unused-vars)
   - [warning] Line 7:9 – 'ProtectedComponent' is assigned a value but never used. (@typescript-eslint/no-unused-vars)
   - [warning] Line 15:8 – React Hook useEffect has a missing dependency: 'router'. Either include it or remove the dependency array. (react-hooks/exhaustive-deps)
+
+### 🔹 `/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/admin/lib/zod/blockSchema.ts`
+- **3 issues**: 0 error(s), 3 warning(s)
+
+  - [warning] Line 104:1 – Delete `⏎` (prettier/prettier)
+  - [warning] Line 107:82 – Insert `,` (prettier/prettier)
+  - [warning] Line 140:65 – Replace `'type',·BasicBlockSchemas·as·[z.ZodDiscriminatedUnionOption<'type'>,·...z.ZodDiscriminatedUnionOption<'type'>[]]` with `⏎··'type',⏎··BasicBlockSchemas·as·[⏎····z.ZodDiscriminatedUnionOption<'type'>,⏎····...z.ZodDiscriminatedUnionOption<'type'>[],⏎··]⏎` (prettier/prettier)
 
 ### 🔹 `/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/admin/guest-tokens/page.tsx`
 - **2 issues**: 0 error(s), 2 warning(s)
@@ -641,6 +639,25 @@ Found **381** files with issues.
   - [warning] Line 217:1 – Delete `⏎` (prettier/prettier)
   - [warning] Line 235:1 – Delete `········` (prettier/prettier)
 
+### 🔹 `/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/app/admin/shared/[id].tsx`
+- **15 issues**: 0 error(s), 15 warning(s)
+
+  - [warning] Line 1:10 – 'useRouter' is defined but never used. (@typescript-eslint/no-unused-vars)
+  - [warning] Line 75:13 – Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element (@next/next/no-img-element)
+  - [warning] Line 87:7 – Delete `··` (prettier/prettier)
+  - [warning] Line 88:1 – Delete `··` (prettier/prettier)
+  - [warning] Line 89:11 – Delete `··` (prettier/prettier)
+  - [warning] Line 90:1 – Replace `············` with `··········` (prettier/prettier)
+  - [warning] Line 91:1 – Delete `··` (prettier/prettier)
+  - [warning] Line 92:1 – Replace `············` with `··········` (prettier/prettier)
+  - [warning] Line 93:1 – Delete `··` (prettier/prettier)
+  - [warning] Line 94:13 – Delete `··` (prettier/prettier)
+  - [warning] Line 95:1 – Delete `··` (prettier/prettier)
+  - [warning] Line 96:11 – Delete `··` (prettier/prettier)
+  - [warning] Line 97:1 – Replace `············` with `··········` (prettier/prettier)
+  - [warning] Line 98:1 – Delete `··` (prettier/prettier)
+  - [warning] Line 102:16 – Replace `·variant="outline"·onClick={()·=>·(window.location.href·=·`/templates/new?from=${id}`)}` with `⏎··········variant="outline"⏎··········onClick={()·=>·(window.location.href·=·`/templates/new?from=${id}`)}⏎········` (prettier/prettier)
+
 ### 🔹 `/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/app/page.tsx`
 - **13 issues**: 0 error(s), 13 warning(s)
 
@@ -780,6 +797,13 @@ Found **381** files with issues.
   - [warning] Line 30:43 – Replace `process.env.NEXT_PUBLIC_SUPABASE_URL!,·process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!` with `⏎····process.env.NEXT_PUBLIC_SUPABASE_URL!,⏎····process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!⏎··` (prettier/prettier)
   - [warning] Line 55:6 – React Hook useEffect has a missing dependency: 'supabase'. Either include it or remove the dependency array. (react-hooks/exhaustive-deps)
 
+### 🔹 `/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/app/admin/demo/[slug].tsx`
+- **3 issues**: 0 error(s), 3 warning(s)
+
+  - [warning] Line 13:25 – Replace `·data={data}·colorScheme={data.color_scheme·||·'slate'}` with `⏎··········data={data}⏎··········colorScheme={data.color_scheme·||·'slate'}⏎·········` (prettier/prettier)
+  - [warning] Line 14:1 – Replace `··········` with `············` (prettier/prettier)
+  - [warning] Line 15:9 – Replace `}}·showJsonFallback={true}·mode="dark"` with `··}}⏎··········showJsonFallback={true}⏎··········mode="dark"⏎·······` (prettier/prettier)
+
 ### 🔹 `/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/app/admin/launch.tsx`
 - **3 issues**: 0 error(s), 3 warning(s)
 
@@ -793,13 +817,6 @@ Found **381** files with issues.
   - [warning] Line 1:10 – 'GetServerSideProps' is defined but never used. (@typescript-eslint/no-unused-vars)
   - [warning] Line 4:7 – 'supabase' is assigned a value but never used. (@typescript-eslint/no-unused-vars)
   - [warning] Line 15:6 – 'UserProfileRow' is defined but never used. (@typescript-eslint/no-unused-vars)
-
-### 🔹 `/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/app/admin/shared/[id].tsx`
-- **3 issues**: 0 error(s), 3 warning(s)
-
-  - [warning] Line 1:10 – 'useRouter' is defined but never used. (@typescript-eslint/no-unused-vars)
-  - [warning] Line 75:13 – Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element (@next/next/no-img-element)
-  - [warning] Line 97:16 – Replace `·variant="outline"·onClick={()·=>·(window.location.href·=·`/templates/new?from=${id}`)}` with `⏎··········variant="outline"⏎··········onClick={()·=>·(window.location.href·=·`/templates/new?from=${id}`)}⏎········` (prettier/prettier)
 
 ### 🔹 `/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/app/admin/sites/[slug]/page.tsx`
 - **3 issues**: 0 error(s), 3 warning(s)
@@ -1251,55 +1268,136 @@ Found **381** files with issues.
   - [warning] Line 6:36 – Replace `⏎··props:·Promise<{·params:·{·slug:·string·}·}>⏎` with `props:·Promise<{·params:·{·slug:·string·}·}>` (prettier/prettier)
 
 ## 📁 `components/`
-### 🔹 `/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/components/admin/templates/use-template-editor-state.ts`
-- **46 issues**: 1 error(s), 45 warning(s)
+### 🔹 `/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/components/admin/templates/block-error-display.tsx`
+- **4 issues**: 2 error(s), 2 warning(s)
 
-  - [warning] Line 8:10 – 'useTemplateSave' is defined but never used. (@typescript-eslint/no-unused-vars)
-  - [warning] Line 41:15 – Insert `⏎·········` (prettier/prettier)
-  - [warning] Line 42:1 – Insert `··` (prettier/prettier)
-  - [warning] Line 43:11 – Insert `··` (prettier/prettier)
-  - [warning] Line 44:1 – Insert `··` (prettier/prettier)
-  - [warning] Line 45:11 – Insert `··` (prettier/prettier)
-  - [warning] Line 46:1 – Insert `··` (prettier/prettier)
-  - [warning] Line 48:13 – Insert `··` (prettier/prettier)
-  - [warning] Line 49:1 – Insert `··` (prettier/prettier)
-  - [warning] Line 50:15 – Insert `··` (prettier/prettier)
-  - [warning] Line 51:1 – Insert `··` (prettier/prettier)
-  - [warning] Line 52:15 – Insert `··` (prettier/prettier)
-  - [warning] Line 53:1 – Insert `··` (prettier/prettier)
-  - [warning] Line 54:15 – Insert `··` (prettier/prettier)
-  - [warning] Line 55:1 – Insert `··` (prettier/prettier)
-  - [warning] Line 56:15 – Insert `··` (prettier/prettier)
-  - [warning] Line 57:1 – Insert `··` (prettier/prettier)
-  - [warning] Line 58:15 – Insert `··` (prettier/prettier)
-  - [warning] Line 59:15 – Insert `··` (prettier/prettier)
-  - [warning] Line 60:13 – Insert `··` (prettier/prettier)
-  - [warning] Line 62:1 – Insert `··` (prettier/prettier)
-  - [error] Line 62:17 – 'content' is never reassigned. Use 'const' instead. (prefer-const)
-  - [warning] Line 63:13 – Insert `··` (prettier/prettier)
-  - [warning] Line 64:15 – Insert `··` (prettier/prettier)
-  - [warning] Line 65:13 – Insert `··` (prettier/prettier)
-  - [warning] Line 67:1 – Insert `··` (prettier/prettier)
-  - [warning] Line 68:15 – Insert `··` (prettier/prettier)
-  - [warning] Line 69:1 – Insert `··` (prettier/prettier)
-  - [warning] Line 70:15 – Insert `··` (prettier/prettier)
-  - [warning] Line 71:1 – Replace `··············` with `················` (prettier/prettier)
-  - [warning] Line 72:13 – Insert `··` (prettier/prettier)
-  - [warning] Line 74:1 – Replace `············` with `··············` (prettier/prettier)
-  - [warning] Line 75:13 – Insert `··` (prettier/prettier)
-  - [warning] Line 76:1 – Replace `··············` with `················` (prettier/prettier)
-  - [warning] Line 78:1 – Insert `··` (prettier/prettier)
-  - [warning] Line 79:17 – Replace `console.warn('[TemplateEditor]·Block·schema·validation·failed·for:',·fullBlock.type,·errorList` with `··console.warn(⏎····················'[TemplateEditor]·Block·schema·validation·failed·for:',⏎····················fullBlock.type,⏎····················errorList⏎··················` (prettier/prettier)
-  - [warning] Line 80:1 – Insert `··` (prettier/prettier)
-  - [warning] Line 81:13 – Insert `··` (prettier/prettier)
-  - [warning] Line 83:1 – Insert `··` (prettier/prettier)
-  - [warning] Line 84:11 – Insert `··` (prettier/prettier)
-  - [warning] Line 85:1 – Insert `··` (prettier/prettier)
-  - [warning] Line 90:19 – Replace `'[TemplateEditor]·Auto-filled·block·content·types:',·Array.from(new·Set(autoFilled))` with `⏎········'[TemplateEditor]·Auto-filled·block·content·types:',⏎········Array.from(new·Set(autoFilled))⏎······` (prettier/prettier)
-  - [warning] Line 101:22 – 'setIsCreating' is assigned a value but never used. (@typescript-eslint/no-unused-vars)
-  - [warning] Line 105:82 – Replace `template.template_name,·template.id` with `⏎····template.template_name,⏎····template.id⏎··` (prettier/prettier)
-  - [warning] Line 114:21 – Replace `'would·have·redirected·to',·window.location.href·+·'/admin/templates/'·+·template.id` with `⏎··········'would·have·redirected·to',⏎··········window.location.href·+·'/admin/templates/'·+·template.id⏎········` (prettier/prettier)
-  - [warning] Line 115:15 – Replace `'would·have·redirected·to·'·+·window.location.href·+·'/admin/templates/'·+·template.id` with `⏎··········'would·have·redirected·to·'·+·window.location.href·+·'/admin/templates/'·+·template.id⏎········` (prettier/prettier)
+  - [warning] Line 7:36 – Replace `·messages,·blockType·}:·{·messages?:·string[];·blockType?:·string·` with `⏎··messages,⏎··blockType,⏎}:·{⏎··messages?:·string[];⏎··blockType?:·string;⏎` (prettier/prettier)
+  - [warning] Line 25:70 – Replace `Expected·structure·for·type·"{blockType}"` with `⏎············Expected·structure·for·type·"{blockType}"⏎··········` (prettier/prettier)
+  - [error] Line 25:98 – `"` can be escaped with `&quot;`, `&ldquo;`, `&#34;`, `&rdquo;`. (react/no-unescaped-entities)
+  - [error] Line 25:110 – `"` can be escaped with `&quot;`, `&ldquo;`, `&#34;`, `&rdquo;`. (react/no-unescaped-entities)
+
+### 🔹 `/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/components/admin/templates/blocks-editor.tsx`
+- **119 issues**: 0 error(s), 119 warning(s)
+
+  - [warning] Line 1:1 – Delete `⏎` (prettier/prettier)
+  - [warning] Line 48:25 – Replace `·block,·index,·onEdit,·onReplaceWithAI,·onClone,·onShowPrompt,·onUndo,·onViewDiff,·undoAvailable·` with `⏎··block,⏎··index,⏎··onEdit,⏎··onReplaceWithAI,⏎··onClone,⏎··onShowPrompt,⏎··onUndo,⏎··onViewDiff,⏎··undoAvailable,⏎` (prettier/prettier)
+  - [warning] Line 49:85 – Replace `·id:·block._id` with `⏎····id:·block._id,⏎·` (prettier/prettier)
+  - [warning] Line 65:16 – Replace `·?·'border-red-500·bg-red-500/10·animate-pulse·shadow-red-500/30·shadow-md'` with `⏎··········?·'border-red-500·bg-red-500/10·animate-pulse·shadow-red-500/30·shadow-md'⏎·········` (prettier/prettier)
+  - [warning] Line 97:1 – Replace `············` with `··············` (prettier/prettier)
+  - [warning] Line 98:15 – Insert `··` (prettier/prettier)
+  - [warning] Line 99:1 – Insert `··` (prettier/prettier)
+  - [warning] Line 101:29 – Replace `⏎··············View·difference⏎············` with `View·difference` (prettier/prettier)
+  - [warning] Line 118:13 – Insert `··` (prettier/prettier)
+  - [warning] Line 119:1 – Insert `··` (prettier/prettier)
+  - [warning] Line 120:13 – Insert `··` (prettier/prettier)
+  - [warning] Line 122:29 – Replace `⏎··············Undo·Autofix⏎············` with `Undo·Autofix` (prettier/prettier)
+  - [warning] Line 153:31 – Replace `·blocks,·onChange,·industry·=·'default',·onReplaceWithAI,·onEdit·` with `⏎··blocks,⏎··onChange,⏎··industry·=·'default',⏎··onReplaceWithAI,⏎··onEdit,⏎` (prettier/prettier)
+  - [warning] Line 153:89 – 'onEdit' is defined but never used. Allowed unused args must match /^_/u. (@typescript-eslint/no-unused-vars)
+  - [warning] Line 157:10 – 'responseText' is assigned a value but never used. (@typescript-eslint/no-unused-vars)
+  - [warning] Line 167:22 – 'setSafeBlocks' is assigned a value but never used. (@typescript-eslint/no-unused-vars)
+  - [warning] Line 204:24 – Replace `b` with `(b)` (prettier/prettier)
+  - [warning] Line 212:21 – Replace `·className="font-medium·text-red-400·mb-1·cursor-pointer·hover:underline"·onClick={()·=>·setSelectedIndex(idx)}` with `⏎··················className="font-medium·text-red-400·mb-1·cursor-pointer·hover:underline"⏎··················onClick={()·=>·setSelectedIndex(idx)}⏎················` (prettier/prettier)
+  - [warning] Line 228:1 – Replace `⏎` with `··` (prettier/prettier)
+  - [warning] Line 230:1 – Insert `··` (prettier/prettier)
+  - [warning] Line 231:9 – Replace `<Button·size="sm"·variant="ghost"·onClick={()·=>·document.querySelectorAll('[data-diff-toggle]').forEach(el·=>·(el·as·HTMLElement).style.display·=·'block')}` with `··<Button⏎············size="sm"⏎············variant="ghost"⏎············onClick={()·=>⏎··············document⏎················.querySelectorAll('[data-diff-toggle]')⏎················.forEach((el)·=>·((el·as·HTMLElement).style.display·=·'block'))⏎············}⏎··········` (prettier/prettier)
+  - [warning] Line 232:1 – Insert `··` (prettier/prettier)
+  - [warning] Line 233:9 – Insert `··` (prettier/prettier)
+  - [warning] Line 234:1 – Replace `········<Button·size="sm"·variant="ghost"·onClick={()·=>·document.querySelectorAll('[data-diff-toggle]').forEach(el·=>·(el·as·HTMLElement).style.display·=·'none')}` with `··········<Button⏎············size="sm"⏎············variant="ghost"⏎············onClick={()·=>⏎··············document⏎················.querySelectorAll('[data-diff-toggle]')⏎················.forEach((el)·=>·((el·as·HTMLElement).style.display·=·'none'))⏎············}⏎··········` (prettier/prettier)
+  - [warning] Line 235:1 – Insert `··` (prettier/prettier)
+  - [warning] Line 236:9 – Insert `··` (prettier/prettier)
+  - [warning] Line 237:7 – Insert `··` (prettier/prettier)
+  - [warning] Line 238:1 – Insert `··` (prettier/prettier)
+  - [warning] Line 239:1 – Insert `··` (prettier/prettier)
+  - [warning] Line 240:11 – Insert `··` (prettier/prettier)
+  - [warning] Line 241:11 – Insert `··` (prettier/prettier)
+  - [warning] Line 242:1 – Insert `··` (prettier/prettier)
+  - [warning] Line 243:11 – Insert `··` (prettier/prettier)
+  - [warning] Line 244:9 – Insert `··` (prettier/prettier)
+  - [warning] Line 245:1 – Insert `··` (prettier/prettier)
+  - [warning] Line 246:11 – Insert `··` (prettier/prettier)
+  - [warning] Line 247:13 – Insert `··` (prettier/prettier)
+  - [warning] Line 248:11 – Insert `··` (prettier/prettier)
+  - [warning] Line 249:1 – Replace `········` with `··········` (prettier/prettier)
+  - [warning] Line 250:1 – Insert `··` (prettier/prettier)
+  - [warning] Line 251:11 – Insert `··` (prettier/prettier)
+  - [warning] Line 252:1 – Replace `············` with `··············` (prettier/prettier)
+  - [warning] Line 253:1 – Insert `··` (prettier/prettier)
+  - [warning] Line 254:17 – Insert `··` (prettier/prettier)
+  - [warning] Line 255:1 – Replace `················` with `··················` (prettier/prettier)
+  - [warning] Line 256:19 – Insert `··` (prettier/prettier)
+  - [warning] Line 257:1 – Insert `··` (prettier/prettier)
+  - [warning] Line 258:1 – Replace `····················` with `······················` (prettier/prettier)
+  - [warning] Line 259:1 – Insert `··` (prettier/prettier)
+  - [warning] Line 260:23 – Insert `··` (prettier/prettier)
+  - [warning] Line 261:1 – Replace `························` with `··························` (prettier/prettier)
+  - [warning] Line 262:1 – Insert `··` (prettier/prettier)
+  - [warning] Line 263:27 – Insert `··` (prettier/prettier)
+  - [warning] Line 264:1 – Replace `··························` with `····························` (prettier/prettier)
+  - [warning] Line 265:1 – Insert `··` (prettier/prettier)
+  - [warning] Line 266:1 – Insert `··` (prettier/prettier)
+  - [warning] Line 267:1 – Replace `··························` with `····························` (prettier/prettier)
+  - [warning] Line 268:25 – Insert `··` (prettier/prettier)
+  - [warning] Line 269:1 – Insert `··` (prettier/prettier)
+  - [warning] Line 270:1 – Replace `························` with `··························` (prettier/prettier)
+  - [warning] Line 271:1 – Insert `··` (prettier/prettier)
+  - [warning] Line 272:21 – Insert `··` (prettier/prettier)
+  - [warning] Line 273:1 – Insert `··` (prettier/prettier)
+  - [warning] Line 274:21 – Insert `··` (prettier/prettier)
+  - [warning] Line 275:19 – Insert `··` (prettier/prettier)
+  - [warning] Line 276:1 – Insert `··` (prettier/prettier)
+  - [warning] Line 277:15 – Insert `··` (prettier/prettier)
+  - [warning] Line 278:13 – Insert `··` (prettier/prettier)
+  - [warning] Line 279:1 – Insert `··` (prettier/prettier)
+  - [warning] Line 280:9 – Insert `··` (prettier/prettier)
+  - [warning] Line 281:1 – Insert `··` (prettier/prettier)
+  - [warning] Line 283:1 – Replace `······<DndContext·collisionDetection={closestCenter}` with `········<DndContext⏎··········collisionDetection={closestCenter}⏎·········` (prettier/prettier)
+  - [warning] Line 284:1 – Insert `····` (prettier/prettier)
+  - [warning] Line 285:11 – Insert `····` (prettier/prettier)
+  - [warning] Line 286:1 – Replace `··········` with `··············` (prettier/prettier)
+  - [warning] Line 287:11 – Insert `····` (prettier/prettier)
+  - [warning] Line 288:1 – Replace `··········` with `··············` (prettier/prettier)
+  - [warning] Line 289:9 – Insert `····` (prettier/prettier)
+  - [warning] Line 290:1 – Replace `······}}` with `··········}}⏎········` (prettier/prettier)
+  - [warning] Line 291:1 – Replace `········<SortableContext·items={safeBlocks.map((b)·=>·b._id)}·strategy={verticalListSortingStrategy}` with `··········<SortableContext⏎············items={safeBlocks.map((b)·=>·b._id)}⏎············strategy={verticalListSortingStrategy}⏎··········` (prettier/prettier)
+  - [warning] Line 292:1 – Insert `··` (prettier/prettier)
+  - [warning] Line 293:1 – Insert `··` (prettier/prettier)
+  - [warning] Line 294:15 – Insert `··` (prettier/prettier)
+  - [warning] Line 295:1 – Insert `··` (prettier/prettier)
+  - [warning] Line 296:15 – Insert `··` (prettier/prettier)
+  - [warning] Line 297:1 – Replace `··············` with `················` (prettier/prettier)
+  - [warning] Line 298:1 – Insert `··` (prettier/prettier)
+  - [warning] Line 299:15 – Insert `··` (prettier/prettier)
+  - [warning] Line 300:1 – Replace `··············` with `················` (prettier/prettier)
+  - [warning] Line 301:15 – Insert `··` (prettier/prettier)
+  - [warning] Line 302:1 – Insert `··` (prettier/prettier)
+  - [warning] Line 303:1 – Replace `················` with `··················` (prettier/prettier)
+  - [warning] Line 304:15 – Insert `··` (prettier/prettier)
+  - [warning] Line 305:1 – Insert `··` (prettier/prettier)
+  - [warning] Line 306:1 – Replace `············` with `··············` (prettier/prettier)
+  - [warning] Line 307:1 – Insert `··` (prettier/prettier)
+  - [warning] Line 308:1 – Insert `··` (prettier/prettier)
+  - [warning] Line 309:1 – Insert `··` (prettier/prettier)
+  - [warning] Line 311:7 – Insert `··` (prettier/prettier)
+  - [warning] Line 312:1 – Insert `··` (prettier/prettier)
+  - [warning] Line 313:1 – Replace `··········Object.keys(industryPresets[industry.toLowerCase()]·||·industryPresets.default).map(` with `············Object.keys(industryPresets[industry.toLowerCase()]·||·industryPresets.default).map(⏎··············` (prettier/prettier)
+  - [warning] Line 314:1 – Replace `············const·preset·=·(industryPresets[industry.toLowerCase()]·||·industryPresets.default)[type` with `················const·preset·=·(industryPresets[industry.toLowerCase()]·||·industryPresets.default)[⏎··················type⏎················` (prettier/prettier)
+  - [warning] Line 315:1 – Insert `····` (prettier/prettier)
+  - [warning] Line 316:1 – Replace `············` with `················` (prettier/prettier)
+  - [warning] Line 317:13 – Insert `····` (prettier/prettier)
+  - [warning] Line 318:15 – Insert `····` (prettier/prettier)
+  - [warning] Line 319:1 – Replace `················` with `····················` (prettier/prettier)
+  - [warning] Line 320:1 – Insert `····` (prettier/prettier)
+  - [warning] Line 321:17 – Insert `····` (prettier/prettier)
+  - [warning] Line 322:1 – Replace `················` with `····················` (prettier/prettier)
+  - [warning] Line 323:1 – Insert `····` (prettier/prettier)
+  - [warning] Line 324:19 – Insert `····` (prettier/prettier)
+  - [warning] Line 325:1 – Replace `················` with `····················` (prettier/prettier)
+  - [warning] Line 326:15 – Insert `····` (prettier/prettier)
+  - [warning] Line 327:1 – Insert `····` (prettier/prettier)
+  - [warning] Line 328:1 – Replace `··············` with `··················` (prettier/prettier)
+  - [warning] Line 329:1 – Insert `····` (prettier/prettier)
+  - [warning] Line 330:11 – Replace `}` with `····}⏎············` (prettier/prettier)
+  - [warning] Line 331:1 – Insert `··` (prettier/prettier)
 
 ### 🔹 `/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/components/glow-configurator.tsx`
 - **79 issues**: 0 error(s), 79 warning(s)
@@ -1528,69 +1626,6 @@ Found **381** files with issues.
   - [warning] Line 247:19 – Delete `··` (prettier/prettier)
   - [warning] Line 249:1 – Delete `··` (prettier/prettier)
 
-### 🔹 `/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/components/admin/templates/render-block.tsx`
-- **59 issues**: 0 error(s), 59 warning(s)
-
-  - [warning] Line 22:9 – Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element (@next/next/no-img-element)
-  - [warning] Line 74:17 – Insert `··` (prettier/prettier)
-  - [warning] Line 75:1 – Insert `··` (prettier/prettier)
-  - [warning] Line 136:3 – Insert `····` (prettier/prettier)
-  - [warning] Line 137:1 – Insert `····` (prettier/prettier)
-  - [warning] Line 138:1 – Insert `····` (prettier/prettier)
-  - [warning] Line 139:1 – Replace `······` with `··········` (prettier/prettier)
-  - [warning] Line 140:1 – Insert `····` (prettier/prettier)
-  - [warning] Line 141:1 – Replace `······` with `··········` (prettier/prettier)
-  - [warning] Line 142:1 – Insert `····` (prettier/prettier)
-  - [warning] Line 143:1 – Replace `········` with `············` (prettier/prettier)
-  - [warning] Line 144:1 – Insert `····` (prettier/prettier)
-  - [warning] Line 145:1 – Insert `····` (prettier/prettier)
-  - [warning] Line 146:1 – Replace `········` with `············` (prettier/prettier)
-  - [warning] Line 147:1 – Insert `····` (prettier/prettier)
-  - [warning] Line 148:9 – Insert `····` (prettier/prettier)
-  - [warning] Line 149:1 – Replace `······` with `··········` (prettier/prettier)
-  - [warning] Line 150:1 – Replace `····` with `········` (prettier/prettier)
-  - [warning] Line 151:1 – Insert `····` (prettier/prettier)
-  - [warning] Line 153:3 – Insert `··` (prettier/prettier)
-  - [warning] Line 154:3 – Insert `····` (prettier/prettier)
-  - [warning] Line 155:1 – Replace `····` with `········` (prettier/prettier)
-  - [warning] Line 156:1 – Insert `····` (prettier/prettier)
-  - [warning] Line 157:7 – Insert `····` (prettier/prettier)
-  - [warning] Line 158:1 – Replace `········` with `············` (prettier/prettier)
-  - [warning] Line 159:11 – Insert `····` (prettier/prettier)
-  - [warning] Line 160:1 – Replace `········` with `············` (prettier/prettier)
-  - [warning] Line 161:1 – Insert `····` (prettier/prettier)
-  - [warning] Line 162:1 – Replace `····` with `········` (prettier/prettier)
-  - [warning] Line 163:1 – Insert `····` (prettier/prettier)
-  - [warning] Line 165:3 – Insert `··` (prettier/prettier)
-  - [warning] Line 166:3 – Insert `····` (prettier/prettier)
-  - [warning] Line 167:1 – Replace `····` with `········` (prettier/prettier)
-  - [warning] Line 168:1 – Insert `····` (prettier/prettier)
-  - [warning] Line 169:9 – Insert `····` (prettier/prettier)
-  - [warning] Line 170:1 – Replace `········` with `············` (prettier/prettier)
-  - [warning] Line 171:7 – Insert `····` (prettier/prettier)
-  - [warning] Line 172:1 – Insert `····` (prettier/prettier)
-  - [warning] Line 173:7 – Insert `····` (prettier/prettier)
-  - [warning] Line 174:1 – Replace `····` with `········` (prettier/prettier)
-  - [warning] Line 175:1 – Insert `····` (prettier/prettier)
-  - [warning] Line 177:3 – Insert `··` (prettier/prettier)
-  - [warning] Line 178:3 – Insert `····` (prettier/prettier)
-  - [warning] Line 179:1 – Replace `····` with `········` (prettier/prettier)
-  - [warning] Line 180:7 – Insert `····` (prettier/prettier)
-  - [warning] Line 181:1 – Insert `····` (prettier/prettier)
-  - [warning] Line 182:1 – Replace `········<footer·className="mt-2·text-sm·text-blue-300">⏎··········—·{block.content.attribution}⏎········` with `············<footer·className="mt-2·text-sm·text-blue-300">—·{block.content.attribution}` (prettier/prettier)
-  - [warning] Line 185:7 – Insert `····` (prettier/prettier)
-  - [warning] Line 186:1 – Replace `····` with `········` (prettier/prettier)
-  - [warning] Line 187:3 – Insert `····` (prettier/prettier)
-  - [warning] Line 189:1 – Insert `··` (prettier/prettier)
-  - [warning] Line 190:5 – Insert `··` (prettier/prettier)
-  - [warning] Line 190:11 – '_exhaustiveCheck' is assigned a value but never used. (@typescript-eslint/no-unused-vars)
-  - [warning] Line 191:1 – Insert `··` (prettier/prettier)
-  - [warning] Line 192:7 – Insert `··` (prettier/prettier)
-  - [warning] Line 193:1 – Replace `········` with `··········` (prettier/prettier)
-  - [warning] Line 194:7 – Insert `··` (prettier/prettier)
-  - [warning] Line 195:1 – Insert `··` (prettier/prettier)
-  - [warning] Line 196:3 – Replace `}⏎··⏎⏎····` with `··}` (prettier/prettier)
-
 ### 🔹 `/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/components/admin/templates/template-editor-toolbar.tsx`
 - **57 issues**: 0 error(s), 57 warning(s)
 
@@ -1652,96 +1687,54 @@ Found **381** files with issues.
   - [warning] Line 116:11 – Delete `··` (prettier/prettier)
   - [warning] Line 118:7 – Replace `··)}⏎` with `)}` (prettier/prettier)
 
-### 🔹 `/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/components/admin/templates/blocks-editor.tsx`
+### 🔹 `/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/components/admin/templates/use-template-editor-state.ts`
 - **45 issues**: 0 error(s), 45 warning(s)
 
-  - [warning] Line 46:25 – Replace `·block,·index,·onEdit,·onReplaceWithAI,·onClone,·onShowPrompt,·onUndo,·onViewDiff,·undoAvailable·` with `⏎··block,⏎··index,⏎··onEdit,⏎··onReplaceWithAI,⏎··onClone,⏎··onShowPrompt,⏎··onUndo,⏎··onViewDiff,⏎··undoAvailable,⏎` (prettier/prettier)
-  - [warning] Line 47:85 – Replace `·id:·block._id` with `⏎····id:·block._id,⏎·` (prettier/prettier)
-  - [warning] Line 63:16 – Replace `·?·'border-red-500·bg-red-500/10·animate-pulse·shadow-red-500/30·shadow-md'` with `⏎··········?·'border-red-500·bg-red-500/10·animate-pulse·shadow-red-500/30·shadow-md'⏎·········` (prettier/prettier)
-  - [warning] Line 95:13 – Insert `··` (prettier/prettier)
-  - [warning] Line 96:15 – Insert `··` (prettier/prettier)
-  - [warning] Line 97:1 – Replace `············` with `··············` (prettier/prettier)
-  - [warning] Line 99:29 – Replace `⏎··············View·difference⏎············` with `View·difference` (prettier/prettier)
-  - [warning] Line 118:13 – Insert `··` (prettier/prettier)
-  - [warning] Line 119:15 – Insert `··` (prettier/prettier)
-  - [warning] Line 120:1 – Replace `············` with `··············` (prettier/prettier)
-  - [warning] Line 122:29 – Replace `⏎··············Undo·Autofix⏎············` with `Undo·Autofix` (prettier/prettier)
-  - [warning] Line 159:31 – Replace `·blocks,·onChange,·industry·=·'default',·onReplaceWithAI,·onEdit·` with `⏎··blocks,⏎··onChange,⏎··industry·=·'default',⏎··onReplaceWithAI,⏎··onEdit,⏎` (prettier/prettier)
-  - [warning] Line 159:89 – 'onEdit' is defined but never used. Allowed unused args must match /^_/u. (@typescript-eslint/no-unused-vars)
-  - [warning] Line 163:10 – 'responseText' is assigned a value but never used. (@typescript-eslint/no-unused-vars)
-  - [warning] Line 173:22 – 'setSafeBlocks' is assigned a value but never used. (@typescript-eslint/no-unused-vars)
-  - [warning] Line 211:16 – Replace `·size="sm"·variant="ghost"·onClick={()·=>·document.querySelectorAll('[data-diff-toggle]').forEach(el·=>·(el·as·HTMLElement).style.display·=·'block')}` with `⏎··········size="sm"⏎··········variant="ghost"⏎··········onClick={()·=>⏎············document⏎··············.querySelectorAll('[data-diff-toggle]')⏎··············.forEach((el)·=>·((el·as·HTMLElement).style.display·=·'block'))⏎··········}⏎········` (prettier/prettier)
-  - [warning] Line 214:16 – Replace `·size="sm"·variant="ghost"·onClick={()·=>·document.querySelectorAll('[data-diff-toggle]').forEach(el·=>·(el·as·HTMLElement).style.display·=·'none')}` with `⏎··········size="sm"⏎··········variant="ghost"⏎··········onClick={()·=>⏎············document⏎··············.querySelectorAll('[data-diff-toggle]')⏎··············.forEach((el)·=>·((el·as·HTMLElement).style.display·=·'none'))⏎··········}⏎········` (prettier/prettier)
-  - [warning] Line 263:18 – Replace `·collisionDetection={closestCenter}` with `⏎········collisionDetection={closestCenter}⏎·······` (prettier/prettier)
-  - [warning] Line 264:1 – Replace `········` with `··········` (prettier/prettier)
-  - [warning] Line 265:1 – Insert `··` (prettier/prettier)
-  - [warning] Line 266:1 – Replace `··········` with `············` (prettier/prettier)
-  - [warning] Line 267:11 – Insert `··` (prettier/prettier)
-  - [warning] Line 268:1 – Replace `··········` with `············` (prettier/prettier)
-  - [warning] Line 269:9 – Insert `··` (prettier/prettier)
-  - [warning] Line 270:1 – Replace `······}}` with `········}}⏎······` (prettier/prettier)
-  - [warning] Line 271:25 – Replace `·items={safeBlocks.map((b)·=>·b._id)}·strategy={verticalListSortingStrategy}` with `⏎··········items={safeBlocks.map((b)·=>·b._id)}⏎··········strategy={verticalListSortingStrategy}⏎········` (prettier/prettier)
-  - [warning] Line 293:95 – Insert `⏎············` (prettier/prettier)
-  - [warning] Line 294:1 – Replace `············const·preset·=·(industryPresets[industry.toLowerCase()]·||·industryPresets.default)[type` with `··············const·preset·=·(industryPresets[industry.toLowerCase()]·||·industryPresets.default)[⏎················type⏎··············` (prettier/prettier)
-  - [warning] Line 295:1 – Insert `··` (prettier/prettier)
-  - [warning] Line 296:1 – Replace `············` with `··············` (prettier/prettier)
-  - [warning] Line 297:13 – Insert `··` (prettier/prettier)
-  - [warning] Line 298:1 – Replace `··············` with `················` (prettier/prettier)
-  - [warning] Line 299:1 – Insert `··` (prettier/prettier)
-  - [warning] Line 300:1 – Insert `··` (prettier/prettier)
-  - [warning] Line 301:17 – Insert `··` (prettier/prettier)
-  - [warning] Line 302:1 – Replace `················` with `··················` (prettier/prettier)
-  - [warning] Line 303:1 – Insert `··` (prettier/prettier)
-  - [warning] Line 304:19 – Insert `··` (prettier/prettier)
-  - [warning] Line 305:17 – Insert `··` (prettier/prettier)
-  - [warning] Line 306:1 – Replace `··············` with `················` (prettier/prettier)
-  - [warning] Line 307:1 – Insert `··` (prettier/prettier)
-  - [warning] Line 308:15 – Insert `··` (prettier/prettier)
-  - [warning] Line 309:13 – Insert `··` (prettier/prettier)
-  - [warning] Line 310:1 – Replace `········}` with `············}⏎··········` (prettier/prettier)
-  - [warning] Line 317:19 – Replace `BlockSchema.safeParse(safeBlocks[selectedIndex]).success·?·undefined·:·['Invalid·structure']` with `⏎············BlockSchema.safeParse(safeBlocks[selectedIndex]).success⏎··············?·undefined⏎··············:·['Invalid·structure']⏎··········` (prettier/prettier)
-
-### 🔹 `/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/components/admin/templates/sortable-grid-block.tsx`
-- **38 issues**: 0 error(s), 38 warning(s)
-
-  - [warning] Line 11:9 – Replace `⏎··SortableContext,⏎··verticalListSortingStrategy,⏎··arrayMove,⏎` with `·SortableContext,·verticalListSortingStrategy,·arrayMove·` (prettier/prettier)
-  - [warning] Line 19:18 – 'AnimatePresence' is defined but never used. (@typescript-eslint/no-unused-vars)
-  - [warning] Line 105:9 – Insert `··` (prettier/prettier)
-  - [warning] Line 108:13 – Insert `··` (prettier/prettier)
-  - [warning] Line 109:1 – Insert `··` (prettier/prettier)
-  - [warning] Line 112:17 – Insert `··` (prettier/prettier)
-  - [warning] Line 113:1 – Insert `··` (prettier/prettier)
-  - [warning] Line 115:1 – Replace `············` with `··············` (prettier/prettier)
-  - [warning] Line 117:1 – Insert `··` (prettier/prettier)
-  - [warning] Line 118:1 – Insert `··` (prettier/prettier)
-  - [warning] Line 120:1 – Replace `················` with `··················` (prettier/prettier)
-  - [warning] Line 122:13 – Insert `··` (prettier/prettier)
-  - [warning] Line 124:1 – Insert `··` (prettier/prettier)
-  - [warning] Line 164:39 – 'i' is defined but never used. Allowed unused args must match /^_/u. (@typescript-eslint/no-unused-vars)
-  - [warning] Line 171:36 – Replace `⏎······························?·'border-gray-700·bg-white/5'⏎·····························` with `·?·'border-gray-700·bg-white/5'` (prettier/prettier)
-  - [warning] Line 197:19 – Delete `··` (prettier/prettier)
-  - [warning] Line 198:1 – Delete `····` (prettier/prettier)
-  - [warning] Line 199:1 – Replace `························` with `····················` (prettier/prettier)
-  - [warning] Line 200:1 – Delete `··` (prettier/prettier)
-  - [warning] Line 203:1 – Delete `··` (prettier/prettier)
-  - [warning] Line 204:19 – Delete `··` (prettier/prettier)
-  - [warning] Line 205:1 – Delete `··` (prettier/prettier)
-  - [warning] Line 206:19 – Delete `··` (prettier/prettier)
-  - [warning] Line 207:1 – Replace `························` with `····················` (prettier/prettier)
-  - [warning] Line 208:1 – Delete `····` (prettier/prettier)
-  - [warning] Line 209:23 – Delete `··` (prettier/prettier)
-  - [warning] Line 210:25 – Delete `····` (prettier/prettier)
-  - [warning] Line 211:1 – Delete `····` (prettier/prettier)
-  - [warning] Line 212:25 – Delete `····` (prettier/prettier)
-  - [warning] Line 213:23 – Delete `··` (prettier/prettier)
-  - [warning] Line 214:1 – Delete `··` (prettier/prettier)
-  - [warning] Line 215:1 – Delete `··` (prettier/prettier)
-  - [warning] Line 216:23 – Delete `··` (prettier/prettier)
-  - [warning] Line 217:21 – Delete `····` (prettier/prettier)
-  - [warning] Line 218:1 – Delete `··` (prettier/prettier)
-  - [warning] Line 219:1 – Replace `····················` with `················` (prettier/prettier)
-  - [warning] Line 220:1 – Delete `··` (prettier/prettier)
-  - [warning] Line 221:17 – Replace `····</Button>⏎` with `</Button>` (prettier/prettier)
+  - [warning] Line 8:10 – 'useTemplateSave' is defined but never used. (@typescript-eslint/no-unused-vars)
+  - [warning] Line 41:15 – Insert `⏎·········` (prettier/prettier)
+  - [warning] Line 42:1 – Insert `··` (prettier/prettier)
+  - [warning] Line 43:11 – Insert `··` (prettier/prettier)
+  - [warning] Line 44:1 – Insert `··` (prettier/prettier)
+  - [warning] Line 45:11 – Insert `··` (prettier/prettier)
+  - [warning] Line 46:1 – Insert `··` (prettier/prettier)
+  - [warning] Line 48:13 – Insert `··` (prettier/prettier)
+  - [warning] Line 49:1 – Insert `··` (prettier/prettier)
+  - [warning] Line 50:15 – Insert `··` (prettier/prettier)
+  - [warning] Line 51:1 – Insert `··` (prettier/prettier)
+  - [warning] Line 52:15 – Insert `··` (prettier/prettier)
+  - [warning] Line 53:1 – Insert `··` (prettier/prettier)
+  - [warning] Line 54:15 – Insert `··` (prettier/prettier)
+  - [warning] Line 55:1 – Insert `··` (prettier/prettier)
+  - [warning] Line 56:15 – Insert `··` (prettier/prettier)
+  - [warning] Line 57:1 – Insert `··` (prettier/prettier)
+  - [warning] Line 58:15 – Insert `··` (prettier/prettier)
+  - [warning] Line 59:15 – Insert `··` (prettier/prettier)
+  - [warning] Line 60:13 – Insert `··` (prettier/prettier)
+  - [warning] Line 62:1 – Insert `··` (prettier/prettier)
+  - [warning] Line 63:13 – Insert `··` (prettier/prettier)
+  - [warning] Line 64:15 – Insert `··` (prettier/prettier)
+  - [warning] Line 65:13 – Insert `··` (prettier/prettier)
+  - [warning] Line 67:1 – Insert `··` (prettier/prettier)
+  - [warning] Line 68:15 – Insert `··` (prettier/prettier)
+  - [warning] Line 69:1 – Insert `··` (prettier/prettier)
+  - [warning] Line 70:15 – Insert `··` (prettier/prettier)
+  - [warning] Line 71:1 – Replace `··············` with `················` (prettier/prettier)
+  - [warning] Line 72:13 – Insert `··` (prettier/prettier)
+  - [warning] Line 74:1 – Replace `············` with `··············` (prettier/prettier)
+  - [warning] Line 75:13 – Insert `··` (prettier/prettier)
+  - [warning] Line 76:1 – Replace `··············` with `················` (prettier/prettier)
+  - [warning] Line 78:1 – Insert `··` (prettier/prettier)
+  - [warning] Line 79:17 – Replace `console.warn('[TemplateEditor]·Block·schema·validation·failed·for:',·fullBlock.type,·errorList` with `··console.warn(⏎····················'[TemplateEditor]·Block·schema·validation·failed·for:',⏎····················fullBlock.type,⏎····················errorList⏎··················` (prettier/prettier)
+  - [warning] Line 80:1 – Insert `··` (prettier/prettier)
+  - [warning] Line 81:13 – Insert `··` (prettier/prettier)
+  - [warning] Line 83:1 – Insert `··` (prettier/prettier)
+  - [warning] Line 84:11 – Insert `··` (prettier/prettier)
+  - [warning] Line 85:1 – Insert `··` (prettier/prettier)
+  - [warning] Line 90:19 – Replace `'[TemplateEditor]·Auto-filled·block·content·types:',·Array.from(new·Set(autoFilled))` with `⏎········'[TemplateEditor]·Auto-filled·block·content·types:',⏎········Array.from(new·Set(autoFilled))⏎······` (prettier/prettier)
+  - [warning] Line 101:22 – 'setIsCreating' is assigned a value but never used. (@typescript-eslint/no-unused-vars)
+  - [warning] Line 105:82 – Replace `template.template_name,·template.id` with `⏎····template.template_name,⏎····template.id⏎··` (prettier/prettier)
+  - [warning] Line 114:21 – Replace `'would·have·redirected·to',·window.location.href·+·'/admin/templates/'·+·template.id` with `⏎··········'would·have·redirected·to',⏎··········window.location.href·+·'/admin/templates/'·+·template.id⏎········` (prettier/prettier)
+  - [warning] Line 115:15 – Replace `'would·have·redirected·to·'·+·window.location.href·+·'/admin/templates/'·+·template.id` with `⏎··········'would·have·redirected·to·'·+·window.location.href·+·'/admin/templates/'·+·template.id⏎········` (prettier/prettier)
 
 ### 🔹 `/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/components/admin/campaigns/edit-campaign-modal.tsx`
 - **36 issues**: 0 error(s), 36 warning(s)
@@ -1873,31 +1866,6 @@ Found **381** files with issues.
   - [warning] Line 26:1 – Delete `··` (prettier/prettier)
   - [warning] Line 27:1 – Delete `··` (prettier/prettier)
 
-### 🔹 `/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/components/admin/templates/template-editor-content.tsx`
-- **21 issues**: 0 error(s), 21 warning(s)
-
-  - [warning] Line 22:3 – Delete `··` (prettier/prettier)
-  - [warning] Line 23:1 – Delete `··` (prettier/prettier)
-  - [warning] Line 32:3 – 'setShowPublishModal' is defined but never used. Allowed unused args must match /^_/u. (@typescript-eslint/no-unused-vars)
-  - [warning] Line 33:3 – 'recentlyInsertedBlockId' is defined but never used. Allowed unused args must match /^_/u. (@typescript-eslint/no-unused-vars)
-  - [warning] Line 49:1 – Delete `··` (prettier/prettier)
-  - [warning] Line 57:3 – Delete `··` (prettier/prettier)
-  - [warning] Line 58:1 – Delete `····` (prettier/prettier)
-  - [warning] Line 61:3 – Delete `··` (prettier/prettier)
-  - [warning] Line 63:40 – Delete `··` (prettier/prettier)
-  - [warning] Line 70:1 – Delete `··` (prettier/prettier)
-  - [warning] Line 76:1 – Delete `··` (prettier/prettier)
-  - [warning] Line 78:1 – Delete `··` (prettier/prettier)
-  - [warning] Line 80:1 – Delete `··` (prettier/prettier)
-  - [warning] Line 86:1 – Delete `··` (prettier/prettier)
-  - [warning] Line 88:1 – Delete `··` (prettier/prettier)
-  - [warning] Line 92:3 – Delete `⏎··` (prettier/prettier)
-  - [warning] Line 98:1 – Delete `··` (prettier/prettier)
-  - [warning] Line 111:1 – Delete `··` (prettier/prettier)
-  - [warning] Line 123:5 – Delete `··` (prettier/prettier)
-  - [warning] Line 186:5 – Insert `··` (prettier/prettier)
-  - [warning] Line 192:1 – Delete `··` (prettier/prettier)
-
 ### 🔹 `/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/components/admin/AppHeader/app-header.tsx`
 - **20 issues**: 0 error(s), 20 warning(s)
 
@@ -1921,53 +1889,6 @@ Found **381** files with issues.
   - [warning] Line 106:13 – Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element (@next/next/no-img-element)
   - [warning] Line 108:1 – Delete `··` (prettier/prettier)
   - [warning] Line 114:1 – Delete `··` (prettier/prettier)
-
-### 🔹 `/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/components/admin/templates/block-sidebar.tsx`
-- **20 issues**: 0 error(s), 20 warning(s)
-
-  - [warning] Line 11:39 – Replace `·block,·onChange,·onClose,·errors·}:·{·block:·Block;·onChange:·(b:·Block)·=>·void;·onClose:·()·=>·void;·errors?:·string[]·` with `⏎··block,⏎··onChange,⏎··onClose,⏎··errors,⏎}:·{⏎··block:·Block;⏎··onChange:·(b:·Block)·=>·void;⏎··onClose:·()·=>·void;⏎··errors?:·string[];⏎` (prettier/prettier)
-  - [warning] Line 48:33 – Insert `⏎·········` (prettier/prettier)
-  - [warning] Line 49:11 – Insert `··` (prettier/prettier)
-  - [warning] Line 50:1 – Insert `··` (prettier/prettier)
-  - [warning] Line 51:13 – Insert `··` (prettier/prettier)
-  - [warning] Line 52:1 – Insert `··` (prettier/prettier)
-  - [warning] Line 53:17 – Insert `··` (prettier/prettier)
-  - [warning] Line 54:17 – Replace `<Input·className={inputClass}·value={cta.label·||·''}·onChange={(e)·=>·updateContent('label',·e.target.value)}` with `··<Input⏎····················className={inputClass}⏎····················value={cta.label·||·''}⏎····················onChange={(e)·=>·updateContent('label',·e.target.value)}⏎·················` (prettier/prettier)
-  - [warning] Line 55:1 – Insert `··` (prettier/prettier)
-  - [warning] Line 56:17 – Replace `<Input·className={inputClass}·value={cta.link·||·''}·onChange={(e)·=>·updateContent('link',·e.target.value)}` with `··<Input⏎····················className={inputClass}⏎····················value={cta.link·||·''}⏎····················onChange={(e)·=>·updateContent('link',·e.target.value)}⏎·················` (prettier/prettier)
-  - [warning] Line 57:1 – Insert `··` (prettier/prettier)
-  - [warning] Line 58:1 – Insert `··` (prettier/prettier)
-  - [warning] Line 59:11 – Insert `··` (prettier/prettier)
-  - [warning] Line 60:1 – Insert `··` (prettier/prettier)
-  - [warning] Line 61:11 – Insert `··` (prettier/prettier)
-  - [warning] Line 62:1 – Insert `··` (prettier/prettier)
-  - [warning] Line 71:29 – Replace `·onChange({·...block,·meta:·{·...block.meta,·prompt:·e.target.value·}·})` with `⏎··············onChange({·...block,·meta:·{·...block.meta,·prompt:·e.target.value·}·})⏎············` (prettier/prettier)
-  - [warning] Line 81:29 – Replace `·onChange({·...block,·meta:·{·...block.meta,·summary:·e.target.value·}·})` with `⏎··············onChange({·...block,·meta:·{·...block.meta,·summary:·e.target.value·}·})⏎············` (prettier/prettier)
-  - [warning] Line 91:29 – Replace `·onChange({·...block,·meta:·{·...block.meta,·comment:·e.target.value·}·})` with `⏎··············onChange({·...block,·meta:·{·...block.meta,·comment:·e.target.value·}·})⏎············` (prettier/prettier)
-  - [warning] Line 101:29 – Replace `·onChange({·...block,·tags:·e.target.value.split(',').map((s)·=>·s.trim())·})` with `⏎··············onChange({·...block,·tags:·e.target.value.split(',').map((s)·=>·s.trim())·})⏎············` (prettier/prettier)
-
-### 🔹 `/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/components/admin/templates/device-preview-wrapper.tsx`
-- **19 issues**: 0 error(s), 19 warning(s)
-
-  - [warning] Line 44:9 – Insert `··` (prettier/prettier)
-  - [warning] Line 45:1 – Insert `··` (prettier/prettier)
-  - [warning] Line 46:11 – Insert `··` (prettier/prettier)
-  - [warning] Line 47:1 – Insert `··` (prettier/prettier)
-  - [warning] Line 48:1 – Insert `··` (prettier/prettier)
-  - [warning] Line 49:11 – Insert `··` (prettier/prettier)
-  - [warning] Line 50:9 – Insert `··` (prettier/prettier)
-  - [warning] Line 51:1 – Replace `··········` with `············` (prettier/prettier)
-  - [warning] Line 52:1 – Insert `··` (prettier/prettier)
-  - [warning] Line 53:1 – Replace `············` with `··············` (prettier/prettier)
-  - [warning] Line 54:1 – Insert `··` (prettier/prettier)
-  - [warning] Line 55:1 – Insert `··` (prettier/prettier)
-  - [warning] Line 56:13 – Insert `··` (prettier/prettier)
-  - [warning] Line 57:1 – Insert `··` (prettier/prettier)
-  - [warning] Line 58:1 – Replace `············` with `··············` (prettier/prettier)
-  - [warning] Line 59:1 – Insert `··` (prettier/prettier)
-  - [warning] Line 60:1 – Insert `··` (prettier/prettier)
-  - [warning] Line 61:11 – Insert `··` (prettier/prettier)
-  - [warning] Line 62:1 – Insert `··` (prettier/prettier)
 
 ### 🔹 `/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/components/admin/city-marker.tsx`
 - **15 issues**: 0 error(s), 15 warning(s)
@@ -2093,6 +2014,18 @@ Found **381** files with issues.
   - [warning] Line 88:32 – Replace `⏎··························size="icon"⏎··························variant="ghost"⏎··························onClick={()·=>·onBlockEdit(block,·i)}⏎························` with `·size="icon"·variant="ghost"·onClick={()·=>·onBlockEdit(block,·i)}` (prettier/prettier)
   - [warning] Line 96:30 – Replace `⏎························size="icon"⏎························variant="ghost"⏎························onClick={()·=>·handleDelete(i)}⏎······················` with `·size="icon"·variant="ghost"·onClick={()·=>·handleDelete(i)}` (prettier/prettier)
 
+### 🔹 `/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/components/admin/templates/block-editors/footer-editor.tsx`
+- **8 issues**: 0 error(s), 8 warning(s)
+
+  - [warning] Line 17:66 – Replace `typeof·content` with `(typeof·content)` (prettier/prettier)
+  - [warning] Line 24:18 – Replace `·type="text"·label="Business·Name"·value={content.businessName}·onChange={(v)·=>·update('businessName',·v)}` with `⏎········type="text"⏎········label="Business·Name"⏎········value={content.businessName}⏎········onChange={(v)·=>·update('businessName',·v)}⏎·····` (prettier/prettier)
+  - [warning] Line 25:18 – Replace `·type="text"·label="Address"·value={content.address}·onChange={(v)·=>·update('address',·v)}` with `⏎········type="text"⏎········label="Address"⏎········value={content.address}⏎········onChange={(v)·=>·update('address',·v)}⏎·····` (prettier/prettier)
+  - [warning] Line 26:18 – Replace `·type="text"·label="City/State"·value={content.cityState}·onChange={(v)·=>·update('cityState',·v)}` with `⏎········type="text"⏎········label="City/State"⏎········value={content.cityState}⏎········onChange={(v)·=>·update('cityState',·v)}⏎·····` (prettier/prettier)
+  - [warning] Line 27:18 – Replace `·type="text"·label="Phone"·value={content.phone}·onChange={(v)·=>·update('phone',·v)}` with `⏎········type="text"⏎········label="Phone"⏎········value={content.phone}⏎········onChange={(v)·=>·update('phone',·v)}⏎·····` (prettier/prettier)
+  - [warning] Line 58:88 – Replace `Cancel` with `⏎··········Cancel⏎········` (prettier/prettier)
+  - [warning] Line 59:16 – Replace `·onClick={()·=>·onSave({·...footerBlock,·content·})}·className="px-4·py-2·bg-blue-600·text-white·rounded">Save` with `⏎··········onClick={()·=>·onSave({·...footerBlock,·content·})}⏎··········className="px-4·py-2·bg-blue-600·text-white·rounded"⏎········>⏎··········Save⏎········` (prettier/prettier)
+  - [warning] Line 63:2 – Insert `⏎` (prettier/prettier)
+
 ### 🔹 `/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/components/admin/campaigns/campaign-header.tsx`
 - **7 issues**: 0 error(s), 7 warning(s)
 
@@ -2115,6 +2048,17 @@ Found **381** files with issues.
   - [warning] Line 8:28 – Replace `"@/types/grid-presets"` with `'@/types/grid-presets'` (prettier/prettier)
   - [warning] Line 9:19 – Replace `"lucide-react"` with `'lucide-react'` (prettier/prettier)
 
+### 🔹 `/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/components/admin/templates/template-editor.tsx`
+- **7 issues**: 0 error(s), 7 warning(s)
+
+  - [warning] Line 18:17 – 'BlockSchema' is defined but never used. (@typescript-eslint/no-unused-vars)
+  - [warning] Line 19:10 – 'z' is defined but never used. (@typescript-eslint/no-unused-vars)
+  - [warning] Line 44:5 – 'isCreating' is assigned a value but never used. (@typescript-eslint/no-unused-vars)
+  - [warning] Line 56:10 – Replace `⏎····insertBlock,⏎····undoInsert,⏎····recentlyInsertedBlockId,⏎····hasUndo,⏎··}·=·useTemplateInsert(setTemplate·as·unknown·as·(updater:·(prev:·Template)·=>·Template)·=>·void` with `·insertBlock,·undoInsert,·recentlyInsertedBlockId,·hasUndo·}·=·useTemplateInsert(⏎····setTemplate·as·unknown·as·(updater:·(prev:·Template)·=>·Template)·=>·void⏎··` (prettier/prettier)
+  - [warning] Line 70:24 – Insert `⏎···` (prettier/prettier)
+  - [warning] Line 139:61 – Replace `⏎············Suggest·Block⏎··········` with `Suggest·Block` (prettier/prettier)
+  - [warning] Line 168:56 – Replace `·handleUseBlock(text,·mode·as·'insert'·|·'replace',·index·as·number·|·undefined)` with `⏎············handleUseBlock(text,·mode·as·'insert'·|·'replace',·index·as·number·|·undefined)⏎··········` (prettier/prettier)
+
 ### 🔹 `/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/components/admin/traces/trace-filter-controls.tsx`
 - **7 issues**: 0 error(s), 7 warning(s)
 
@@ -2136,6 +2080,26 @@ Found **381** files with issues.
   - [warning] Line 30:6 – React Hook useEffect has a missing dependency: 'supabase'. Either include it or remove the dependency array. (react-hooks/exhaustive-deps)
   - [warning] Line 36:10 – Replace `(⏎····<TemplateEditor⏎······templateName={template.template_name}⏎······initialData={template}⏎····/>⏎··)` with `<TemplateEditor·templateName={template.template_name}·initialData={template}·/>` (prettier/prettier)
 
+### 🔹 `/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/components/admin/templates/reorderable-page-list.tsx`
+- **6 issues**: 0 error(s), 6 warning(s)
+
+  - [warning] Line 3:9 – Replace `⏎··DndContext,⏎··closestCenter,⏎··useSensor,⏎··useSensors,⏎··PointerSensor,⏎` with `·DndContext,·closestCenter,·useSensor,·useSensors,·PointerSensor·` (prettier/prettier)
+  - [warning] Line 33:10 – Replace `⏎····attributes,⏎····listeners,⏎····setNodeRef,⏎····transform,⏎····transition,⏎····isDragging,⏎··}·=·useSortable({·id` with `·attributes,·listeners,·setNodeRef,·transform,·transition,·isDragging·}·=·useSortable({⏎····id,⏎·` (prettier/prettier)
+  - [warning] Line 139:42 – Replace `⏎······p.id·===·updatedPage.id·?·updatedPage·:·p⏎····` with `·(p.id·===·updatedPage.id·?·updatedPage·:·p)` (prettier/prettier)
+  - [warning] Line 149:30 – Replace `⏎········.map((id)·=>·pages.find((p)·=>·p.id·===·id))⏎········` with `.map((id)·=>·pages.find((p)·=>·p.id·===·id))` (prettier/prettier)
+  - [warning] Line 155:6 – React Hook useEffect has missing dependencies: 'onReorder' and 'pages'. Either include them or remove the dependency array. If 'onReorder' changes too often, find the parent component that defines it and wrap that definition in useCallback. (react-hooks/exhaustive-deps)
+  - [warning] Line 233:2 – Insert `⏎` (prettier/prettier)
+
+### 🔹 `/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/components/admin/templates/sortable-grid-block.tsx`
+- **6 issues**: 0 error(s), 6 warning(s)
+
+  - [warning] Line 3:9 – Replace `⏎··useSortable,⏎··SortableContext,⏎··verticalListSortingStrategy,⏎` with `·useSortable,·SortableContext,·verticalListSortingStrategy·` (prettier/prettier)
+  - [warning] Line 34:10 – Replace `⏎····attributes,⏎····listeners,⏎····setNodeRef,⏎····transform,⏎····transition,⏎····isDragging,⏎··}·=·useSortable({·id:·block._id!` with `·attributes,·listeners,·setNodeRef,·transform,·transition,·isDragging·}·=·useSortable({⏎····id:·block._id!,⏎·` (prettier/prettier)
+  - [warning] Line 64:85 – Replace `✏️` with `⏎··············✏️⏎············` (prettier/prettier)
+  - [warning] Line 67:86 – Replace `🗑️` with `⏎··············🗑️⏎············` (prettier/prettier)
+  - [warning] Line 78:3 – 'onChange' is defined but never used. Allowed unused args must match /^_/u. (@typescript-eslint/no-unused-vars)
+  - [warning] Line 79:3 – 'onInsert' is defined but never used. Allowed unused args must match /^_/u. (@typescript-eslint/no-unused-vars)
+
 ### 🔹 `/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/components/admin/traces/group-by-route.tsx`
 - **6 issues**: 0 error(s), 6 warning(s)
 
@@ -2146,14 +2110,23 @@ Found **381** files with issues.
   - [warning] Line 24:5 – Insert `··` (prettier/prettier)
   - [warning] Line 25:1 – Replace `··},·{}·as·Record<string,·TraceEntry[]>` with `····},⏎····{}·as·Record<string,·TraceEntry[]>⏎··` (prettier/prettier)
 
-### 🔹 `/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/components/admin/templates/template-editor.tsx`
+### 🔹 `/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/components/admin/templates/block-editor.tsx`
 - **5 issues**: 0 error(s), 5 warning(s)
 
-  - [warning] Line 42:5 – 'isCreating' is assigned a value but never used. (@typescript-eslint/no-unused-vars)
-  - [warning] Line 54:10 – Replace `⏎····insertBlock,⏎····undoInsert,⏎····recentlyInsertedBlockId,⏎····hasUndo,⏎··}·=·useTemplateInsert(setTemplate·as·unknown·as·(updater:·(prev:·Template)·=>·Template)·=>·void` with `·insertBlock,·undoInsert,·recentlyInsertedBlockId,·hasUndo·}·=·useTemplateInsert(⏎····setTemplate·as·unknown·as·(updater:·(prev:·Template)·=>·Template)·=>·void⏎··` (prettier/prettier)
-  - [warning] Line 68:24 – Insert `⏎···` (prettier/prettier)
-  - [warning] Line 119:61 – Replace `⏎············Suggest·Block⏎··········` with `Suggest·Block` (prettier/prettier)
-  - [warning] Line 147:56 – Replace `·handleUseBlock(text,·mode·as·'insert'·|·'replace',·index·as·number·|·undefined)` with `⏎············handleUseBlock(text,·mode·as·'insert'·|·'replace',·index·as·number·|·undefined)⏎··········` (prettier/prettier)
+  - [warning] Line 5:15 – 'JSX' is defined but never used. (@typescript-eslint/no-unused-vars)
+  - [warning] Line 11:3 – 'preloadCommonEditors' is defined but never used. (@typescript-eslint/no-unused-vars)
+  - [warning] Line 27:18 – Replace `⏎············className="mb-2·text-xs·text-blue-400·underline"⏎············onClick={()·=>·setMode('form')}⏎··········` with `·className="mb-2·text-xs·text-blue-400·underline"·onClick={()·=>·setMode('form')}` (prettier/prettier)
+  - [warning] Line 40:20 – Replace `(⏎······<p·className="text-sm·italic·text-gray-500">Loading·editor...</p>⏎····)` with `<p·className="text-sm·italic·text-gray-500">Loading·editor...</p>` (prettier/prettier)
+  - [warning] Line 50:16 – Replace `⏎··········onClick={()·=>·setMode('json')}⏎··········className="text-xs·text-blue-400·underline"⏎········` with `·onClick={()·=>·setMode('json')}·className="text-xs·text-blue-400·underline"` (prettier/prettier)
+
+### 🔹 `/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/components/admin/templates/template-editor-content.tsx`
+- **5 issues**: 0 error(s), 5 warning(s)
+
+  - [warning] Line 22:8 – 'ThemeDebugger' is defined but never used. (@typescript-eslint/no-unused-vars)
+  - [warning] Line 32:3 – 'livePreviewData' is defined but never used. Allowed unused args must match /^_/u. (@typescript-eslint/no-unused-vars)
+  - [warning] Line 35:3 – 'setShowPublishModal' is defined but never used. Allowed unused args must match /^_/u. (@typescript-eslint/no-unused-vars)
+  - [warning] Line 36:3 – 'recentlyInsertedBlockId' is defined but never used. Allowed unused args must match /^_/u. (@typescript-eslint/no-unused-vars)
+  - [warning] Line 178:45 – Replace `prev` with `(prev)` (prettier/prettier)
 
 ### 🔹 `/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/components/dev/trace-viewer.tsx`
 - **5 issues**: 0 error(s), 5 warning(s)
@@ -2173,13 +2146,14 @@ Found **381** files with issues.
   - [warning] Line 205:72 – Replace `Approve` with `⏎····················Approve⏎··················` (prettier/prettier)
   - [warning] Line 206:89 – Replace `Deny` with `⏎····················Deny⏎··················` (prettier/prettier)
 
-### 🔹 `/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/components/admin/templates/reorderable-block-list.tsx`
-- **4 issues**: 0 error(s), 4 warning(s)
+### 🔹 `/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/components/ui/theme-debugger.tsx`
+- **5 issues**: 0 error(s), 5 warning(s)
 
-  - [warning] Line 12:3 – 'useSortable' is defined but never used. (@typescript-eslint/no-unused-vars)
-  - [warning] Line 15:10 – 'CSS' is defined but never used. (@typescript-eslint/no-unused-vars)
-  - [warning] Line 18:10 – 'ReorderableBlockListProps' is defined but never used. (@typescript-eslint/no-unused-vars)
-  - [warning] Line 30:3 – 'onBlockClick' is defined but never used. Allowed unused args must match /^_/u. (@typescript-eslint/no-unused-vars)
+  - [warning] Line 5:40 – Replace `⏎··targetId·=·'preview-capture',⏎}:·{⏎··targetId?:·string;⏎` with `·targetId·=·'preview-capture'·}:·{·targetId?:·string·` (prettier/prettier)
+  - [warning] Line 29:12 – Replace `Target:·<code>#{targetId}</code>` with `⏎········Target:·<code>#{targetId}</code>⏎······` (prettier/prettier)
+  - [warning] Line 30:12 – Replace `Scope:·<strong>{theme}</strong>` with `⏎········Scope:·<strong>{theme}</strong>⏎······` (prettier/prettier)
+  - [warning] Line 31:12 – Replace `Computed·Background:·<code>{bg}</code>` with `⏎········Computed·Background:·<code>{bg}</code>⏎······` (prettier/prettier)
+  - [warning] Line 32:12 – Replace `Computed·Text:·<code>{text}</code>` with `⏎········Computed·Text:·<code>{text}</code>⏎······` (prettier/prettier)
 
 ### 🔹 `/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/components/admin/templates/template-page-editor.tsx`
 - **4 issues**: 0 error(s), 4 warning(s)
@@ -2211,12 +2185,47 @@ Found **381** files with issues.
   - [warning] Line 44:6 – React Hook useEffect has missing dependencies: 'getColor', 'points', 'router', 'setZoom', and 'zoom'. Either include them or remove the dependency array. (react-hooks/exhaustive-deps)
   - [warning] Line 44:20 – Delete `⏎··` (prettier/prettier)
 
+### 🔹 `/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/components/admin/templates/block-editors/services-editor.tsx`
+- **3 issues**: 0 error(s), 3 warning(s)
+
+  - [warning] Line 38:16 – Replace `·onClick={()·=>·setItems([...items,·'New·Service'])}·className="text-sm·text-green-400·underline"` with `⏎··········onClick={()·=>·setItems([...items,·'New·Service'])}⏎··········className="text-sm·text-green-400·underline"⏎········` (prettier/prettier)
+  - [warning] Line 42:18 – Replace `·onClick={()·=>·setItems(items.slice(0,·-1))}·className="text-sm·text-red-400·underline"` with `⏎············onClick={()·=>·setItems(items.slice(0,·-1))}⏎············className="text-sm·text-red-400·underline"⏎··········` (prettier/prettier)
+  - [warning] Line 61:2 – Insert `⏎` (prettier/prettier)
+
+### 🔹 `/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/components/admin/templates/block-presets/PresetPreviewCard.tsx`
+- **3 issues**: 0 error(s), 3 warning(s)
+
+  - [warning] Line 5:44 – Replace `⏎··block,⏎}:·{⏎··block:·Block;⏎` with `·block·}:·{·block:·Block·` (prettier/prettier)
+  - [warning] Line 32:9 – Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element (@next/next/no-img-element)
+  - [warning] Line 44:2 – Insert `⏎` (prettier/prettier)
+
+### 🔹 `/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/components/admin/templates/block-presets/preset-selector-grouped.tsx`
+- **3 issues**: 0 error(s), 3 warning(s)
+
+  - [warning] Line 56:87 – Replace `🕘·Recently·Used` with `⏎············🕘·Recently·Used⏎··········` (prettier/prettier)
+  - [warning] Line 98:87 – Replace `⏎············#{tag}⏎··········` with `#{tag}` (prettier/prettier)
+  - [warning] Line 121:2 – Insert `⏎` (prettier/prettier)
+
 ### 🔹 `/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/components/admin/templates/branding-preview.tsx`
 - **3 issues**: 0 error(s), 3 warning(s)
 
   - [warning] Line 1:10 – 'useEffect' is defined but never used. (@typescript-eslint/no-unused-vars)
   - [warning] Line 1:21 – 'useState' is defined but never used. (@typescript-eslint/no-unused-vars)
   - [warning] Line 42:11 – Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element (@next/next/no-img-element)
+
+### 🔹 `/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/components/admin/templates/page-settings-modal.tsx`
+- **3 issues**: 0 error(s), 3 warning(s)
+
+  - [warning] Line 61:20 – Replace `⏎··········type="boolean"⏎··········label="Published"⏎··········value={visible}⏎··········onChange={setVisible}⏎·······` with `·type="boolean"·label="Published"·value={visible}·onChange={setVisible}` (prettier/prettier)
+  - [warning] Line 69:53 – Replace `Cancel` with `⏎············Cancel⏎··········` (prettier/prettier)
+  - [warning] Line 75:2 – Insert `⏎` (prettier/prettier)
+
+### 🔹 `/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/components/admin/templates/reorderable-block-list.tsx`
+- **3 issues**: 0 error(s), 3 warning(s)
+
+  - [warning] Line 14:3 – 'useSortable' is defined but never used. (@typescript-eslint/no-unused-vars)
+  - [warning] Line 17:10 – 'CSS' is defined but never used. (@typescript-eslint/no-unused-vars)
+  - [warning] Line 21:22 – 'ReorderableBlockListProps' is defined but never used. (@typescript-eslint/no-unused-vars)
 
 ### 🔹 `/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/components/admin/templates/template-action-toolbar.tsx`
 - **3 issues**: 0 error(s), 3 warning(s)
@@ -2325,6 +2334,48 @@ Found **381** files with issues.
   - [warning] Line 17:10 – 'selectedTemplate' is assigned a value but never used. (@typescript-eslint/no-unused-vars)
   - [warning] Line 17:28 – 'setSelectedTemplate' is assigned a value but never used. (@typescript-eslint/no-unused-vars)
 
+### 🔹 `/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/components/admin/templates/block-editor-modal.tsx`
+- **2 issues**: 0 error(s), 2 warning(s)
+
+  - [warning] Line 3:33 – 'Button' is defined but never used. (@typescript-eslint/no-unused-vars)
+  - [warning] Line 36:21 – Replace `⏎··········block={currentBlock}⏎··········onSave={handleSave}⏎··········onClose={onClose}⏎·······` with `·block={currentBlock}·onSave={handleSave}·onClose={onClose}` (prettier/prettier)
+
+### 🔹 `/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/components/admin/templates/block-editors/audio-editor.tsx`
+- **2 issues**: 0 error(s), 2 warning(s)
+
+  - [warning] Line 27:7 – Replace `··/>⏎` with `/>` (prettier/prettier)
+  - [warning] Line 57:2 – Insert `⏎` (prettier/prettier)
+
+### 🔹 `/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/components/admin/templates/block-editors/block-field.tsx`
+- **2 issues**: 0 error(s), 2 warning(s)
+
+  - [warning] Line 103:29 – Replace `(⏎········<p·className="text-xs·text-gray-400·mt-1">{props.description}</p>⏎······)` with `<p·className="text-xs·text-gray-400·mt-1">{props.description}</p>` (prettier/prettier)
+  - [warning] Line 107:23 – Replace `(⏎········<p·className="text-xs·text-red-400·mt-1">{props.error}</p>⏎······)` with `<p·className="text-xs·text-red-400·mt-1">{props.error}</p>` (prettier/prettier)
+
+### 🔹 `/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/components/admin/templates/block-editors/hero-editor.tsx`
+- **2 issues**: 0 error(s), 2 warning(s)
+
+  - [warning] Line 20:66 – Replace `typeof·content` with `(typeof·content)` (prettier/prettier)
+  - [warning] Line 72:2 – Insert `⏎` (prettier/prettier)
+
+### 🔹 `/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/components/admin/templates/block-presets/PresetPreviewCard.stories.tsx`
+- **2 issues**: 0 error(s), 2 warning(s)
+
+  - [warning] Line 16:9 – Replace `·style={{·display:·'grid',·gap:·'1rem',·gridTemplateColumns:·'repeat(auto-fit,·minmax(200px,·1fr))'·}}` with `⏎······style={{⏎········display:·'grid',⏎········gap:·'1rem',⏎········gridTemplateColumns:·'repeat(auto-fit,·minmax(200px,·1fr))',⏎······}}⏎····` (prettier/prettier)
+  - [warning] Line 24:3 – Insert `⏎` (prettier/prettier)
+
+### 🔹 `/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/components/admin/templates/block-presets/preset-selector.tsx`
+- **2 issues**: 0 error(s), 2 warning(s)
+
+  - [warning] Line 20:28 – Replace `⏎······prev.includes(tag)·?·prev.filter((t)·=>·t·!==·tag)·:·[...prev,·tag]⏎····` with `·(prev.includes(tag)·?·prev.filter((t)·=>·t·!==·tag)·:·[...prev,·tag])` (prettier/prettier)
+  - [warning] Line 73:2 – Insert `⏎` (prettier/prettier)
+
+### 🔹 `/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/components/admin/templates/device-preview-wrapper.tsx`
+- **2 issues**: 0 error(s), 2 warning(s)
+
+  - [warning] Line 26:3 – React Hook useEffect contains a call to 'setClassList'. Without a list of dependencies, this can lead to an infinite chain of updates. To fix this, pass [] as a second argument to the useEffect Hook. (react-hooks/exhaustive-deps)
+  - [warning] Line 96:22 – Replace `<strong>class:</strong>·{classList}` with `⏎··················<strong>class:</strong>·{classList}⏎················` (prettier/prettier)
+
 ### 🔹 `/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/components/admin/templates/grid-preset-playground.tsx`
 - **2 issues**: 0 error(s), 2 warning(s)
 
@@ -2342,6 +2393,24 @@ Found **381** files with issues.
 
   - [warning] Line 17:13 – Replace `⏎········value={page.title}⏎········onChange={(e)·=>·onChange('title',·e.target.value)}⏎·····` with `·value={page.title}·onChange={(e)·=>·onChange('title',·e.target.value)}` (prettier/prettier)
   - [warning] Line 23:13 – Replace `⏎········value={page.slug}⏎········onChange={(e)·=>·onChange('slug',·e.target.value)}⏎·····` with `·value={page.slug}·onChange={(e)·=>·onChange('slug',·e.target.value)}` (prettier/prettier)
+
+### 🔹 `/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/components/admin/templates/render-blocks/button.tsx`
+- **2 issues**: 0 error(s), 2 warning(s)
+
+  - [warning] Line 10:7 – Insert `··` (prettier/prettier)
+  - [warning] Line 11:1 – Insert `··` (prettier/prettier)
+
+### 🔹 `/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/components/admin/templates/render-blocks/footer.tsx`
+- **2 issues**: 0 error(s), 2 warning(s)
+
+  - [warning] Line 15:84 – Replace `{link.label}` with `⏎··················{link.label}⏎················` (prettier/prettier)
+  - [warning] Line 23:14 – Replace `{content.content.address}<br·/>{content.content.cityState}` with `⏎············{content.content.address}⏎············<br·/>⏎············{content.content.cityState}⏎··········` (prettier/prettier)
+
+### 🔹 `/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/components/admin/templates/render-blocks/image.tsx`
+- **2 issues**: 0 error(s), 2 warning(s)
+
+  - [warning] Line 6:10 – Replace `(⏎····<img⏎······src={content.url}⏎······alt={content.alt}⏎······className="mb-4·rounded·shadow-md·max-w-full"⏎····/>⏎··)` with `<img·src={content.url}·alt={content.alt}·className="mb-4·rounded·shadow-md·max-w-full"·/>` (prettier/prettier)
+  - [warning] Line 7:5 – Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element (@next/next/no-img-element)
 
 ### 🔹 `/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/components/admin/templates/sortable-page.tsx`
 - **2 issues**: 0 error(s), 2 warning(s)
@@ -2378,6 +2447,12 @@ Found **381** files with issues.
 
   - [warning] Line 19:10 – 'tooltipDismissed' is assigned a value but never used. (@typescript-eslint/no-unused-vars)
   - [warning] Line 130:2 – Insert `⏎` (prettier/prettier)
+
+### 🔹 `/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/components/ui/dark-scoped.tsx`
+- **2 issues**: 0 error(s), 2 warning(s)
+
+  - [warning] Line 9:37 – Replace `·children,·className·=·''·}:·{·children:·ReactNode;·className?:·string·` with `⏎··children,⏎··className·=·'',⏎}:·{⏎··children:·ReactNode;⏎··className?:·string;⏎` (prettier/prettier)
+  - [warning] Line 10:10 – Replace `(⏎····<div·className={`dark·${className}`}>⏎······{children}⏎····</div>⏎··)` with `<div·className={`dark·${className}`}>{children}</div>` (prettier/prettier)
 
 ### 🔹 `/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/components/ui/drawer.tsx`
 - **2 issues**: 0 error(s), 2 warning(s)
@@ -2471,10 +2546,65 @@ Found **381** files with issues.
 
   - [warning] Line 2:10 – 'useEffect' is defined but never used. (@typescript-eslint/no-unused-vars)
 
-### 🔹 `/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/components/admin/templates/block-editor.tsx`
+### 🔹 `/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/components/admin/templates/block-editors/button-editor.tsx`
 - **1 issues**: 0 error(s), 1 warning(s)
 
-  - [warning] Line 60:25 – Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element (@next/next/no-img-element)
+  - [warning] Line 61:2 – Insert `⏎` (prettier/prettier)
+
+### 🔹 `/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/components/admin/templates/block-editors/cta-editor.tsx`
+- **1 issues**: 0 error(s), 1 warning(s)
+
+  - [warning] Line 48:2 – Insert `⏎` (prettier/prettier)
+
+### 🔹 `/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/components/admin/templates/block-editors/image-editor.tsx`
+- **1 issues**: 0 error(s), 1 warning(s)
+
+  - [warning] Line 53:2 – Insert `⏎` (prettier/prettier)
+
+### 🔹 `/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/components/admin/templates/block-editors/quote-editor.tsx`
+- **1 issues**: 0 error(s), 1 warning(s)
+
+  - [warning] Line 53:2 – Insert `⏎` (prettier/prettier)
+
+### 🔹 `/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/components/admin/templates/block-editors/testimonial-editor.tsx`
+- **1 issues**: 0 error(s), 1 warning(s)
+
+  - [warning] Line 53:2 – Insert `⏎` (prettier/prettier)
+
+### 🔹 `/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/components/admin/templates/block-editors/text-editor.tsx`
+- **1 issues**: 0 error(s), 1 warning(s)
+
+  - [warning] Line 46:2 – Insert `⏎` (prettier/prettier)
+
+### 🔹 `/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/components/admin/templates/block-editors/video-editor.tsx`
+- **1 issues**: 0 error(s), 1 warning(s)
+
+  - [warning] Line 48:2 – Insert `⏎` (prettier/prettier)
+
+### 🔹 `/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/components/admin/templates/block-presets/PresetSelectorModal.tsx`
+- **1 issues**: 0 error(s), 1 warning(s)
+
+  - [warning] Line 48:2 – Insert `⏎` (prettier/prettier)
+
+### 🔹 `/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/components/admin/templates/block-presets/block-presets.ts`
+- **1 issues**: 0 error(s), 1 warning(s)
+
+  - [warning] Line 87:3 – Insert `⏎` (prettier/prettier)
+
+### 🔹 `/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/components/admin/templates/block-presets/index.ts`
+- **1 issues**: 0 error(s), 1 warning(s)
+
+  - [warning] Line 5:68 – Insert `⏎` (prettier/prettier)
+
+### 🔹 `/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/components/admin/templates/block-sidebar.tsx`
+- **1 issues**: 0 error(s), 1 warning(s)
+
+  - [warning] Line 46:2 – Insert `⏎` (prettier/prettier)
+
+### 🔹 `/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/components/admin/templates/create-fallback-block.ts`
+- **1 issues**: 0 error(s), 1 warning(s)
+
+  - [warning] Line 57:2 – Insert `⏎` (prettier/prettier)
 
 ### 🔹 `/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/components/admin/templates/grouped-preview.tsx`
 - **1 issues**: 0 error(s), 1 warning(s)
@@ -2490,6 +2620,26 @@ Found **381** files with issues.
 - **1 issues**: 0 error(s), 1 warning(s)
 
   - [warning] Line 1:10 – 'useRef' is defined but never used. (@typescript-eslint/no-unused-vars)
+
+### 🔹 `/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/components/admin/templates/render-block.tsx`
+- **1 issues**: 0 error(s), 1 warning(s)
+
+  - [warning] Line 53:22 – Replace `(⏎········<FallbackRenderer·block={block}·/>⏎······)` with `<FallbackRenderer·block={block}·/>` (prettier/prettier)
+
+### 🔹 `/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/components/admin/templates/render-blocks/grid.tsx`
+- **1 issues**: 0 error(s), 1 warning(s)
+
+  - [warning] Line 112:2 – Insert `⏎` (prettier/prettier)
+
+### 🔹 `/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/components/admin/templates/render-blocks/text.tsx`
+- **1 issues**: 0 error(s), 1 warning(s)
+
+  - [warning] Line 6:10 – Replace `(⏎····<p·className="mb-4·text-base·text-gray-900·dark:text-gray-100">⏎······{content.value}⏎····</p>⏎··)` with `<p·className="mb-4·text-base·text-gray-900·dark:text-gray-100">{content.value}</p>` (prettier/prettier)
+
+### 🔹 `/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/components/admin/templates/render-blocks/video.tsx`
+- **1 issues**: 0 error(s), 1 warning(s)
+
+  - [warning] Line 12:70 – Replace `⏎··········{content.caption}⏎········` with `{content.caption}` (prettier/prettier)
 
 ### 🔹 `/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/components/admin/templates/sortable-block.tsx`
 - **1 issues**: 0 error(s), 1 warning(s)
@@ -2525,6 +2675,11 @@ Found **381** files with issues.
 - **1 issues**: 0 error(s), 1 warning(s)
 
   - [warning] Line 20:9 – Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element (@next/next/no-img-element)
+
+### 🔹 `/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/components/admin/templates/utils/extractFieldErrors.ts`
+- **1 issues**: 0 error(s), 1 warning(s)
+
+  - [warning] Line 11:2 – Insert `⏎` (prettier/prettier)
 
 ### 🔹 `/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/components/admin/templates/version-compare-dropdowns.tsx`
 - **1 issues**: 0 error(s), 1 warning(s)
@@ -2610,6 +2765,11 @@ Found **381** files with issues.
 - **1 issues**: 0 error(s), 1 warning(s)
 
   - [warning] Line 3:9 – Replace `⏎··Dialog,⏎··DialogContent,⏎··DialogOverlay,⏎··DialogClose,⏎··DialogTitle,⏎` with `·Dialog,·DialogContent,·DialogOverlay,·DialogClose,·DialogTitle·` (prettier/prettier)
+
+### 🔹 `/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/components/ui/theme-scope.tsx`
+- **1 issues**: 0 error(s), 1 warning(s)
+
+  - [warning] Line 17:9 – Replace `⏎······key={`theme-${mode}`}⏎······data-theme={mode}⏎······className={className}⏎····` with `·key={`theme-${mode}`}·data-theme={mode}·className={className}` (prettier/prettier)
 
 ## 📁 `context/`
 ### 🔹 `/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/context/template-editor-context.tsx`
@@ -2941,6 +3101,58 @@ Found **381** files with issues.
   - [warning] Line 53:1 – Replace `······` with `····` (prettier/prettier)
   - [warning] Line 54:1 – Delete `··` (prettier/prettier)
   - [warning] Line 55:1 – Replace `··};` with `};⏎` (prettier/prettier)
+
+### 🔹 `/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/lib/blockContentExamples.ts`
+- **48 issues**: 0 error(s), 48 warning(s)
+
+  - [warning] Line 4:3 – Delete `··` (prettier/prettier)
+  - [warning] Line 5:1 – Delete `··` (prettier/prettier)
+  - [warning] Line 6:1 – Delete `··` (prettier/prettier)
+  - [warning] Line 7:3 – Delete `··` (prettier/prettier)
+  - [warning] Line 8:1 – Delete `··` (prettier/prettier)
+  - [warning] Line 9:1 – Delete `··` (prettier/prettier)
+  - [warning] Line 10:3 – Delete `··` (prettier/prettier)
+  - [warning] Line 11:1 – Delete `··` (prettier/prettier)
+  - [warning] Line 12:1 – Delete `··` (prettier/prettier)
+  - [warning] Line 13:5 – Delete `··` (prettier/prettier)
+  - [warning] Line 14:3 – Delete `··` (prettier/prettier)
+  - [warning] Line 15:1 – Delete `··` (prettier/prettier)
+  - [warning] Line 16:5 – Delete `··` (prettier/prettier)
+  - [warning] Line 17:5 – Delete `··` (prettier/prettier)
+  - [warning] Line 18:1 – Delete `··` (prettier/prettier)
+  - [warning] Line 19:3 – Delete `··` (prettier/prettier)
+  - [warning] Line 20:1 – Delete `··` (prettier/prettier)
+  - [warning] Line 21:1 – Delete `··` (prettier/prettier)
+  - [warning] Line 22:5 – Delete `··` (prettier/prettier)
+  - [warning] Line 23:3 – Delete `··` (prettier/prettier)
+  - [warning] Line 24:1 – Delete `··` (prettier/prettier)
+  - [warning] Line 25:5 – Delete `··` (prettier/prettier)
+  - [warning] Line 26:5 – Delete `··` (prettier/prettier)
+  - [warning] Line 27:1 – Delete `··` (prettier/prettier)
+  - [warning] Line 28:3 – Delete `··` (prettier/prettier)
+  - [warning] Line 29:1 – Delete `··` (prettier/prettier)
+  - [warning] Line 30:1 – Delete `··` (prettier/prettier)
+  - [warning] Line 31:3 – Delete `··` (prettier/prettier)
+  - [warning] Line 32:1 – Delete `··` (prettier/prettier)
+  - [warning] Line 33:1 – Delete `··` (prettier/prettier)
+  - [warning] Line 34:3 – Delete `··` (prettier/prettier)
+  - [warning] Line 35:1 – Delete `··` (prettier/prettier)
+  - [warning] Line 36:1 – Delete `··` (prettier/prettier)
+  - [warning] Line 37:5 – Delete `··` (prettier/prettier)
+  - [warning] Line 38:5 – Delete `··` (prettier/prettier)
+  - [warning] Line 39:1 – Delete `··` (prettier/prettier)
+  - [warning] Line 40:3 – Delete `··` (prettier/prettier)
+  - [warning] Line 41:1 – Delete `··` (prettier/prettier)
+  - [warning] Line 42:1 – Delete `··` (prettier/prettier)
+  - [warning] Line 43:5 – Delete `··` (prettier/prettier)
+  - [warning] Line 44:1 – Delete `··` (prettier/prettier)
+  - [warning] Line 45:1 – Delete `··` (prettier/prettier)
+  - [warning] Line 46:3 – Delete `··` (prettier/prettier)
+  - [warning] Line 47:1 – Delete `··` (prettier/prettier)
+  - [warning] Line 48:1 – Delete `··` (prettier/prettier)
+  - [warning] Line 49:3 – Delete `··` (prettier/prettier)
+  - [warning] Line 50:1 – Delete `··` (prettier/prettier)
+  - [warning] Line 51:1 – Delete `··` (prettier/prettier)
 
 ### 🔹 `/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/lib/create-default-block.ts`
 - **42 issues**: 0 error(s), 42 warning(s)
@@ -3330,8 +3542,8 @@ Found **381** files with issues.
 ### 🔹 `/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/lib/createDefaultBlock.ts`
 - **2 issues**: 0 error(s), 2 warning(s)
 
-  - [warning] Line 4:10 – 'blockContentSchemaMap' is defined but never used. (@typescript-eslint/no-unused-vars)
-  - [warning] Line 112:19 – Replace `⏎············createDefaultBlock('text'),⏎············createDefaultBlock('image'),⏎··········` with `createDefaultBlock('text'),·createDefaultBlock('image')` (prettier/prettier)
+  - [warning] Line 3:10 – 'blockContentSchemaMap' is defined but never used. (@typescript-eslint/no-unused-vars)
+  - [warning] Line 111:19 – Replace `⏎············createDefaultBlock('text'),⏎············createDefaultBlock('image'),⏎··········` with `createDefaultBlock('text'),·createDefaultBlock('image')` (prettier/prettier)
 
 ### 🔹 `/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/lib/supabase/createScopedClient.ts`
 - **2 issues**: 0 error(s), 2 warning(s)
@@ -3404,6 +3616,11 @@ Found **381** files with issues.
 - **1 issues**: 0 error(s), 1 warning(s)
 
   - [warning] Line 11:48 – Replace `⏎··req:·NextRequest,⏎··res:·NextResponse⏎` with `req:·NextRequest,·res:·NextResponse` (prettier/prettier)
+
+### 🔹 `/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/lib/ui/fallback-renderer.tsx`
+- **1 issues**: 0 error(s), 1 warning(s)
+
+  - [warning] Line 11:101 – Insert `⏎·······` (prettier/prettier)
 
 ### 🔹 `/Users/sandonjurowski/Desktop/_SilverLamp/quicksites-v2/lib/useInviteGate.ts`
 - **1 issues**: 0 error(s), 1 warning(s)

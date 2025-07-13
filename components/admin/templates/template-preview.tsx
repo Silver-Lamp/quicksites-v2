@@ -3,6 +3,7 @@
 import type { TemplateData } from '@/types/template';
 import type { Block } from '@/types/blocks';
 import RenderBlock from './render-block';
+import { normalizePageBlocks } from '@/lib/utils/normalizePageBlocks';
 
 type TemplatePreviewProps = {
   data: TemplateData;
@@ -38,7 +39,7 @@ export default function TemplatePreview({
     <div
       key={`preview-${mode}`} // 🔄 force remount on theme switch
       className={`
-        preview-block ${previewBg}
+        preview-block \${previewBg}
         bg-white text-gray-900
         dark:bg-neutral-900 dark:text-white
         border border-gray-200 dark:border-neutral-700
@@ -52,39 +53,43 @@ export default function TemplatePreview({
         </div>
       )}
 
-      {data.pages.map((page, pageIndex) => (
-        <div key={page.slug || `page-${pageIndex}`} className="mb-10 space-y-6">
-          {page.slug && (
-            <h2 className="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-2">
-              Page: {page.slug}
-            </h2>
-          )}
+      {data.pages.map((page, pageIndex) => {
+        const normalizedPage = normalizePageBlocks(page);
+        return (
+          <div key={normalizedPage.slug || `page-${pageIndex}`} className="mb-10 space-y-6">
+            {normalizedPage.slug && (
+              <h2 className="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-2">
+                Page: {normalizedPage.slug}
+              </h2>
+            )}
 
-          {page.content_blocks.map((block) => (
-            <div
-              key={block._id}
-              onClick={() => onBlockClick?.(block)}
-              className={`
-                group rounded-md p-4 transition
-                bg-white text-gray-900 border border-gray-200
-                dark:bg-neutral-800 dark:text-gray-100 dark:border-neutral-700
-                ${onBlockClick ? 'cursor-pointer hover:ring hover:ring-blue-400/30' : ''}
-              `}
-            >
-              <RenderBlock block={block} handleNestedBlockUpdate={onBlockClick} />
+            {normalizedPage.content_blocks.map((block, i) => (
+              <div
+                key={block._id ?? `${block.type}-${pageIndex}-${i}`}
+                id={`block-${block._id}`}
+                onClick={() => onBlockClick?.(block)}
+                className={`
+                  group rounded-md p-4 transition
+                  bg-white text-gray-900 border border-gray-200
+                  dark:bg-neutral-800 dark:text-gray-100 dark:border-neutral-700
+                  ${onBlockClick ? 'cursor-pointer hover:ring hover:ring-blue-400/30' : ''}
+                `}
+              >
+                <RenderBlock block={block} handleNestedBlockUpdate={onBlockClick} />
 
-              {showJsonFallback && (
-                <details className="mt-3 text-xs text-gray-500 dark:text-gray-400">
-                  <summary className="cursor-pointer select-none">Show Raw JSON</summary>
-                  <pre className="mt-1 whitespace-pre-wrap break-words">
-                    {JSON.stringify(block.content, null, 2)}
-                  </pre>
-                </details>
-              )}
-            </div>
-          ))}
-        </div>
-      ))}
+                {showJsonFallback && (
+                  <details className="mt-3 text-xs text-gray-500 dark:text-gray-400">
+                    <summary className="cursor-pointer select-none">Show Raw JSON</summary>
+                    <pre className="mt-1 whitespace-pre-wrap break-words">
+                      {JSON.stringify(block.content, null, 2)}
+                    </pre>
+                  </details>
+                )}
+              </div>
+            ))}
+          </div>
+        );
+      })}
     </div>
   );
 }

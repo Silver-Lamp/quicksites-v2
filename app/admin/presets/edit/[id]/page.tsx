@@ -159,6 +159,7 @@ export default function AdminPresetsEditPage() {
               console.log('block: ', block);
             }}
             showJsonFallback={true}
+            mode="dark"
           />
         </div>
       </div>

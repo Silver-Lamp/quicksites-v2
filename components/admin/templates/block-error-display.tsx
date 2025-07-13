@@ -22,7 +22,7 @@ export function BlockErrorDisplay({ messages, blockType }: { messages?: string[]
       </ul>
       {example && (
         <details className="mt-2 bg-zinc-800/30 border border-zinc-700 rounded p-2">
-          <summary className="cursor-pointer text-red-200 underline">Expected structure for type "{blockType}"</summary>
+          <summary className="cursor-pointer text-red-200 underline">Expected structure for type <code>{blockType}</code></summary>
           <pre className="mt-2 text-xs text-red-100 whitespace-pre-wrap">
             {JSON.stringify(example, null, 2)}
           </pre>

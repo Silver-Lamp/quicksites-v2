@@ -47,16 +47,8 @@ export default function RenderBlock({
     ssr: false,
   });
 
-  // Fix for hero blob image preview
-  const safeContent =
-    block.type === 'hero' && typeof block.content === 'object'
-      ? {
-          ...block.content,
-          image_url: block.content.image_url?.startsWith('blob:')
-            ? undefined
-            : block.content.image_url,
-        }
-      : block.content;
+  // No longer stripping blob: URLs — show them in preview mode
+  const safeContent = block.content;
 
   const commonProps = {
     block,
@@ -66,7 +58,6 @@ export default function RenderBlock({
     compact,
   };
 
-  // Special case for grid
   if (block.type === 'grid') {
     return (
       <LazyBlock

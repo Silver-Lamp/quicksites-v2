@@ -19,7 +19,7 @@ export default function HeroRender({ block, compact = false }: Props) {
   }
 
   const { headline, subheadline, cta_text, cta_link, image_url } = block.content;
-  const safeImage = image_url?.startsWith('blob:') ? undefined : image_url;
+  const safeImage = image_url || undefined;
 
   return (
     <section

@@ -122,7 +122,8 @@ export default function TemplateEditor({
           setBlockErrors={setBlockErrors}
         />
 
-        <div className="mt-6 flex gap-4">
+        {/* Suggest Block */}
+        {/* <div className="mt-6 flex gap-4">
           <Button onClick={() => setShowVectorDrawer(true)}>
             Suggest Block
           </Button>
@@ -131,7 +132,7 @@ export default function TemplateEditor({
               Undo Last Insert
             </Button>
           )}
-        </div>
+        </div> */}
 
         {/* Block Editor */}
         {selectedBlock && selectedIndex !== null && (

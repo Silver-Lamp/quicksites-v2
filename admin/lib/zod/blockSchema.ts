@@ -53,6 +53,7 @@ export const blockContentSchemaMap = {
       image_url: z
         .union([z.string().url(), z.literal('')])
         .optional(),
+      show_image_as_bg: z.boolean().optional(),
     }),
   },
   services: {

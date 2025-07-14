@@ -65,29 +65,6 @@ export default function TemplatePageEditor({
 
   return (
     <div className="space-y-6">
-      {/* Page Add Form */}
-      <div className="border rounded p-4 bg-muted">
-        <h3 className="text-lg font-semibold mb-2">Add New Page</h3>
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-          <input
-            type="text"
-            placeholder="Page Title"
-            className="rounded border p-2 bg-white/5 text-white"
-            value={newPageTitle}
-            onChange={(e) => setNewPageTitle(e.target.value)}
-          />
-          <input
-            type="text"
-            placeholder="Slug"
-            className="rounded border p-2 bg-white/5 text-white"
-            value={newPageSlug}
-            onChange={(e) => setNewPageSlug(e.target.value)}
-          />
-          <Button onClick={handleAddPage} className="w-full">
-            + Add Page
-          </Button>
-        </div>
-      </div>
 
       {/* Pages with BlocksEditor and BlockAdder */}
       {template.data.pages.map((page, index) => (
@@ -126,6 +103,31 @@ export default function TemplatePageEditor({
           )}
         </div>
       ))}
+
+      {/* Page Add Form */}
+      <div className="border rounded p-4 bg-muted">
+        <h3 className="text-lg font-semibold mb-2">Add New Page</h3>
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+          <input
+            type="text"
+            placeholder="Page Title"
+            className="rounded border p-2 bg-white/5 text-white"
+            value={newPageTitle}
+            onChange={(e) => setNewPageTitle(e.target.value)}
+          />
+          <input
+            type="text"
+            placeholder="Slug"
+            className="rounded border p-2 bg-white/5 text-white"
+            value={newPageSlug}
+            onChange={(e) => setNewPageSlug(e.target.value)}
+          />
+          <Button onClick={handleAddPage} className="w-full">
+            + Add Page
+          </Button>
+        </div>
+      </div>
+      
     </div>
   );
 }

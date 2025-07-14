@@ -196,7 +196,7 @@ export function TemplateEditorContent({
               <CollapsiblePanel id="template-settings" title="Template Settings">
                 <TemplateSettingsPanel template={template} onChange={handleTemplateChange} />
               </CollapsiblePanel>
-              <CollapsiblePanel id="template-branding" title="Branding">
+              {/* <CollapsiblePanel id="template-branding" title="Branding">
                 <TemplateEditorBranding
                   selectedProfileId={template.brand || ''}
                   onSelectProfileId={(selectedId) =>
@@ -231,7 +231,7 @@ export function TemplateEditorContent({
                 <div className="text-sm text-muted-foreground italic pt-2">No brand selected.</div>
               )}
 
-              </CollapsiblePanel>
+              </CollapsiblePanel> */}
               <CollapsiblePanel id="template-pages" title="Pages">
                 <TemplatePageEditor
                   template={template}
@@ -239,10 +239,10 @@ export function TemplateEditorContent({
                   onLivePreviewUpdate={(data) => setRawJson(JSON.stringify(data, null, 2))}
                 />
               </CollapsiblePanel>
-              <CollapsiblePanel id="template-gallery" title="Image Gallery">
+              {/* <CollapsiblePanel id="template-gallery" title="Image Gallery">
                 <TemplateImageGallery templateId={template.id || ''} />
-              </CollapsiblePanel>
-              <CollapsiblePanel id="template-uploader" title="Hero Image Uploader">
+              </CollapsiblePanel> */}
+              {/* <CollapsiblePanel id="template-uploader" title="Hero Image Uploader">
                 <ImageUploader
                   siteId={template.site_id || ''}
                   templateId={template.id || ''}
@@ -263,7 +263,7 @@ export function TemplateEditorContent({
                     </div>
                   )}
                 </div>
-              </CollapsiblePanel>
+              </CollapsiblePanel> */}
             </div>
             <TemplateJsonEditor rawJson={rawJson} setRawJson={setRawJson} />
           </div>

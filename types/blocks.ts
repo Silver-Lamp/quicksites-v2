@@ -73,6 +73,7 @@ export type HeroBlock = BaseBlock & {
     cta_text?: string;
     cta_link?: string;
     image_url?: string;
+    show_image_as_bg?: boolean;
   };
 };
 

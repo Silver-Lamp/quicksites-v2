@@ -84,6 +84,7 @@ export default function TemplateEditor({
 
   return (
     <>
+      {/* Template Editor Toolbar */}
       <ScrollArea className="h-screen w-full p-6">
         <TemplateEditorToolbar
           templateName={template.template_name}
@@ -100,6 +101,7 @@ export default function TemplateEditor({
           setShowNameError={() => {}}
         />
 
+        {/* Block Errors */}
         {Object.keys(blockErrors).length > 0 && (
           <div className="bg-red-900/40 text-red-300 p-4 rounded border border-red-500 mb-4">
             <div className="font-bold text-red-200 mb-2">Some block(s) have validation errors:</div>
@@ -107,6 +109,7 @@ export default function TemplateEditor({
           </div>
         )}
 
+        {/* Template Editor Content */}
         <TemplateEditorContent
           template={template as unknown as Template}
           rawJson={rawJson}
@@ -117,23 +120,6 @@ export default function TemplateEditor({
           setShowPublishModal={() => {}}
           recentlyInsertedBlockId={recentlyInsertedBlockId ?? null}
           setBlockErrors={setBlockErrors}
-        />
-        <BlocksEditor
-          blocks={template.data.pages[0].content_blocks}
-          onChange={(updatedBlocks) =>
-            setTemplate((prev) => {
-              const updated = { ...prev };
-              updated.data.pages[0].content_blocks = updatedBlocks;
-              return updated;
-            })
-          }
-          industry={template.industry || 'default'}
-          onReplaceWithAI={(index) => {
-            setPendingAction('replace');
-            setTargetBlockIndex(index);
-            setShowVectorDrawer(true);
-          }}
-          onEdit={(index) => setSelectedIndex(index)}
         />
 
         <div className="mt-6 flex gap-4">
@@ -147,6 +133,7 @@ export default function TemplateEditor({
           )}
         </div>
 
+        {/* Block Editor */}
         {selectedBlock && selectedIndex !== null && (
           <BlockSidebar
             block={selectedBlock}
@@ -164,12 +151,14 @@ export default function TemplateEditor({
         )}
       </ScrollArea>
 
+      {/* AI Block Suggestions */}
       <Drawer open={showVectorDrawer} onClose={() => setShowVectorDrawer(false)}>
         <VectorQueryPage
           onUseBlock={(text, mode = 'insert', index) => handleUseBlock(text, mode as 'insert' | 'replace', index as number | undefined)}
         />
       </Drawer>
 
+      {/* AI Block Preview */}
       <Modal show={!!pendingText} onClose={() => setPendingText(null)} title="🧠 Preview AI Block">
         <textarea
           className="w-full border rounded bg-zinc-800 text-white p-2 text-sm mb-4"
@@ -209,6 +198,10 @@ export default function TemplateEditor({
           </Button>
         </div>
       </Modal>
+      <div>&nbsp;</div>
+      <div>&nbsp;</div>
+      <div>&nbsp;</div>
+      <div>&nbsp;</div>
     </>
   );
 }

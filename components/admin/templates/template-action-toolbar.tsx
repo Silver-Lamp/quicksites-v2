@@ -1,4 +1,6 @@
 // components/admin/templates/template-action-toolbar.tsx
+'use client';
+
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui';
@@ -6,6 +8,7 @@ import { saveAsTemplate } from '@/admin/lib/saveAsTemplate';
 import { createSharedPreview } from '@/admin/lib/createSharedPreview';
 import { supabase } from '@/admin/lib/supabaseClient';
 import toast from 'react-hot-toast';
+import { usePanelControls } from '@/components/ui/panel-context';
 
 export default function TemplateActionToolbar({
   template,
@@ -127,6 +130,18 @@ export default function TemplateActionToolbar({
           Share Snapshot
         </Button>
       </div>
+    </div>
+  );
+}
+
+export function PanelActions() {
+  const { resetPanels, openAll, closeAll } = usePanelControls();
+
+  return (
+    <div className="flex gap-2">
+      <Button variant="ghost" size="sm" onClick={openAll}>Open All</Button>
+      <Button variant="ghost" size="sm" onClick={closeAll}>Collapse All</Button>
+      <Button variant="outline" size="sm" onClick={resetPanels}>Reset Panel States</Button>
     </div>
   );
 }

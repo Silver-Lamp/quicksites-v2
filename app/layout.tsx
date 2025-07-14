@@ -9,6 +9,7 @@ import '@/styles/globals.css';
 import { SessionProvider } from '@/lib/providers/SessionProvider';
 import { Toaster } from 'react-hot-toast';
 import DevToolsWidget from '@/components/dev-tools-widget';
+import { PanelProvider } from '@/components/ui/panel-context';
 
 const isProd = process.env.NODE_ENV === 'production';
 
@@ -75,9 +76,11 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       >
         <Toaster position="top-center" />
         <SessionProvider>
-          {/* You can conditionally wrap children based on role if needed */}
-          {children}
-          {!isProd && <DevToolsWidget />}
+        <PanelProvider>
+            {/* You can conditionally wrap children based on role if needed */}
+            {children}
+            {/* {!isProd && <DevToolsWidget />} */}
+          </PanelProvider>
         </SessionProvider>
       </body>
     </html>

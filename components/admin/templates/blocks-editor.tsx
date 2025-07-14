@@ -200,7 +200,9 @@ export const BlocksEditor = ({ blocks, onChange, industry = 'default', onReplace
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 border rounded p-3">
+      {/* <h3 className="text-lg font-semibold capitalize">Blocks Editor</h3> */}
+      {/* <br /> */}
       {safeBlocks.some(b => !BlockSchema.safeParse(b).success) && (
         <div className="rounded border border-red-500/50 bg-red-500/10 text-red-300 text-sm p-3 space-y-2">
           <strong className="block text-red-400 mb-1">Validation Issues:</strong>

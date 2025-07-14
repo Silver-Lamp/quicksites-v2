@@ -1,3 +1,4 @@
+// updated TemplateEditorContent with fallback preview enhancements and brand swatch
 'use client';
 
 import { useEffect, useState } from 'react';
@@ -7,6 +8,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui';
 import type { Template, TemplateData } from '@/types/template';
 import { saveTemplate } from '@/admin/lib/saveTemplate';
 
+import CollapsiblePanel from '@/components/ui/collapsible-panel';
+import { PanelActions } from './template-action-toolbar';
+
 import TemplateSettingsPanel from './template-settings-panel';
 import { TemplateEditorBranding } from './template-editor.branding';
 import TemplatePageEditor from './template-page-editor';
@@ -15,15 +19,45 @@ import TemplateHistory from './template-history';
 import TemplatePreviewWithToggle from './template-preview-with-toggle';
 import TemplatePublishModal from './template-publish-modal';
 import DevicePreviewWrapper from './device-preview-wrapper';
-import ImageUploader from '../admin/image-uploader';
 import TemplateImageGallery from '../admin/template-image-gallery';
 import TemplateActionToolbar from './template-action-toolbar';
 import ThemeScope from '@/components/ui/theme-scope';
+import ImageUploader from '../admin/image-uploader';
 import { validateTemplateBlocks } from '@/hooks/validateTemplateBlocks';
 
 function pushWithLimit<T>(stack: T[], item: T, limit = 10): T[] {
   return [...stack.slice(-limit + 1), item];
 }
+
+const brandColors: Record<string, string> = {
+  blue: '#3b82f6',
+  green: '#22c55e',
+  red: '#ef4444',
+  yellow: '#eab308',
+};
+
+const brandDetails: Record<string, {
+  color: string;
+  font: string;
+  logoUrl: string;
+}> = {
+  blue: {
+    color: '#3b82f6',
+    font: 'Inter',
+    logoUrl: '/brands/blue/logo.png',
+  },
+  green: {
+    color: '#22c55e',
+    font: 'Poppins',
+    logoUrl: '/brands/green/logo.png',
+  },
+  red: {
+    color: '#ef4444',
+    font: 'Roboto',
+    logoUrl: '/brands/red/logo.png',
+  },
+};
+
 
 export function TemplateEditorContent({
   template,
@@ -93,7 +127,7 @@ export function TemplateEditorContent({
 
       const { isValid, errors } = validateTemplateBlocks(fullTemplate);
       if (!isValid) {
-        console.warn('[🛑 Validation Errors]', errors);
+        console.warn('[🚩 Validation Errors]', errors);
         setBlockErrors(errors);
         const firstInvalidId = Object.keys(errors)[0];
         const el = document.getElementById(`block-${firstInvalidId}`);
@@ -158,28 +192,78 @@ export function TemplateEditorContent({
         <TabsContent value="edit">
           <div className="grid md:grid-cols-2 gap-6 pt-4">
             <div className="space-y-4">
-              <TemplateSettingsPanel template={template} onChange={handleTemplateChange} />
-              <TemplateEditorBranding
-                selectedProfileId={template.brand || ''}
-                onSelectProfileId={(selectedId) =>
-                  handleTemplateChange({ ...template, brand: selectedId || '' })
-                }
-              />
-              <TemplatePageEditor
-                template={template}
-                onChange={handleTemplateChange}
-                onLivePreviewUpdate={(data) => {
-                  setRawJson(JSON.stringify(data, null, 2));
-                }}
-              />
-              <ImageUploader
-                siteId={template.site_id || ''}
-                templateId={template.id || ''}
-                folder="hero"
-                dbField="hero_url"
-                label="Hero Image"
-              />
-              <TemplateImageGallery templateId={template.id || ''} />
+              <PanelActions />
+              <CollapsiblePanel id="template-settings" title="Template Settings">
+                <TemplateSettingsPanel template={template} onChange={handleTemplateChange} />
+              </CollapsiblePanel>
+              <CollapsiblePanel id="template-branding" title="Branding">
+                <TemplateEditorBranding
+                  selectedProfileId={template.brand || ''}
+                  onSelectProfileId={(selectedId) =>
+                    handleTemplateChange({ ...template, brand: selectedId || '' })
+                  }
+                />
+              {template.brand && brandDetails[template.brand] ? (
+                <div className="mt-4 flex items-center gap-4 p-3 border border-white/10 rounded bg-white/5">
+                  <img
+                    src={brandDetails[template.brand].logoUrl}
+                    alt={`${template.brand} logo`}
+                    className="w-12 h-12 object-contain rounded bg-white/10"
+                  />
+                  <div className="space-y-1 text-sm">
+                    <div>
+                      <span className="text-muted-foreground">Font:</span>{' '}
+                      <span style={{ fontFamily: brandDetails[template.brand].font }}>
+                        {brandDetails[template.brand].font}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-muted-foreground">Primary Color:</span>
+                      <div
+                        className="w-4 h-4 rounded-full border"
+                        style={{ backgroundColor: brandDetails[template.brand].color }}
+                      />
+                      <code className="text-xs">{brandDetails[template.brand].color}</code>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="text-sm text-muted-foreground italic pt-2">No brand selected.</div>
+              )}
+
+              </CollapsiblePanel>
+              <CollapsiblePanel id="template-pages" title="Pages">
+                <TemplatePageEditor
+                  template={template}
+                  onChange={handleTemplateChange}
+                  onLivePreviewUpdate={(data) => setRawJson(JSON.stringify(data, null, 2))}
+                />
+              </CollapsiblePanel>
+              <CollapsiblePanel id="template-gallery" title="Image Gallery">
+                <TemplateImageGallery templateId={template.id || ''} />
+              </CollapsiblePanel>
+              <CollapsiblePanel id="template-uploader" title="Hero Image Uploader">
+                <ImageUploader
+                  siteId={template.site_id || ''}
+                  templateId={template.id || ''}
+                  folder="hero"
+                  dbField="hero_url"
+                  label="Hero Image"
+                />
+                <div className="pt-4">
+                  {template.hero_url ? (
+                    <img
+                      src={template.hero_url}
+                      alt="Hero Preview"
+                      className="rounded shadow-md max-w-full h-auto"
+                    />
+                  ) : (
+                    <div className="text-muted-foreground text-sm italic">
+                      No image uploaded.
+                    </div>
+                  )}
+                </div>
+              </CollapsiblePanel>
             </div>
             <TemplateJsonEditor rawJson={rawJson} setRawJson={setRawJson} />
           </div>
@@ -190,7 +274,7 @@ export function TemplateEditorContent({
             <DevicePreviewWrapper>
               <TemplatePreviewWithToggle
                 isDark={isDark}
-                toggleDark={() => setIsDark(prev => !prev)}
+                toggleDark={() => setIsDark((prev) => !prev)}
                 data={template.data}
                 theme={template.theme}
                 brand={template.brand}

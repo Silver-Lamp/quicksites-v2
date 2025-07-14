@@ -1,4 +1,3 @@
-// components/admin/templates/use-template-editor-state.ts
 import { useState, useEffect } from 'react';
 import { createEmptyTemplate } from '@/lib/createEmptyTemplate';
 import { useAutosaveTemplate } from '@/hooks/useAutosaveTemplate';
@@ -11,6 +10,7 @@ import toast from 'react-hot-toast';
 import { validateBlock } from '@/lib/validateBlock';
 import { Block } from '@/types/blocks';
 import { validateTemplateBlocks } from '@/hooks/validateTemplateBlocks';
+import { fixTemplatePages } from '@/lib/fixBlockDefaults';
 
 export function useTemplateEditorState({
   templateName,
@@ -25,9 +25,6 @@ export function useTemplateEditorState({
   const [blockErrors, setBlockErrors] = useState<Record<string, string[]>>({});
 
   const applyDefaults = (tpl: Partial<Template>): Snapshot => {
-    const autoFilled: string[] = [];
-    const errors: Record<string, string[]> = {};
-
     const snapshot: Snapshot = {
       template_name: 'template_name' in tpl ? tpl.template_name || templateName : templateName,
       layout: tpl.layout || 'standard',
@@ -38,61 +35,27 @@ export function useTemplateEditorState({
       id: tpl.id || crypto.randomUUID(),
       slug: tpl.slug || '',
       industry: tpl.industry || 'default',
-      data: {
-        pages: tpl.data?.pages?.map((page) => ({
-          id: page.id || crypto.randomUUID(),
-          slug: page.slug || '',
-          title: page.title || '',
-          content_blocks: (page.content_blocks?.map((block) => {
-            const type = block.type || 'text';
-
-            const defaultContent: Record<string, any> = {
-              text: { value: '' },
-              image: { url: '', alt: '' },
-              video: { url: '', caption: '' },
-              audio: { url: '', title: '', provider: 'spotify' },
-              quote: { text: '', attribution: '' },
-              cta: { label: '', link: '' },
-              testimonial: { quote: '', attribution: '' },
-              services: { items: [] },
-              hero: { headline: '', subheadline: '', cta_text: '', cta_link: '' },
-              button: { label: '', href: '', style: 'primary' },
-              grid: { columns: 2, items: [] },
-            };
-
-            const content = block.content || defaultContent[type] || {};
-            if (!block.content && defaultContent[type]) {
-              autoFilled.push(type);
-            }
-
-            const fullBlock = {
-              ...block,
-              type,
-              content,
-              _id: block._id || crypto.randomUUID(),
-            };
-
-            const errorList = validateBlock(fullBlock as Block);
-            if (errorList.length) {
-              errors[fullBlock._id] = errorList;
-
-              if (process.env.NODE_ENV === 'development') {
-                console.warn('[TemplateEditor] Block schema validation failed for:', fullBlock.type, errorList);
-              }
-            }
-
-            return fullBlock;
-          }) ?? []) as Block[],
-        })) ?? [],
-      },
+      data: fixTemplatePages(tpl.data || { pages: [] }),
     };
 
-    if (autoFilled.length && process.env.NODE_ENV === 'development') {
-      console.log('[TemplateEditor] Auto-filled block content types:', Array.from(new Set(autoFilled)));
+    const errors: Record<string, string[]> = {};
+    for (const page of snapshot.data.pages) {
+      for (const block of page.content_blocks) {
+        const errorList = validateBlock(block as Block);
+        if (errorList.length) {
+          errors[block._id || ''] = errorList;
+          if (process.env.NODE_ENV === 'development') {
+            console.warn('[TemplateEditor] Block schema validation failed for:', block.type, errorList);
+          }
+        }
+      }
+    }
+
+    if (Object.keys(errors).length) {
+      console.log('blockErrors', errors);
     }
 
     setBlockErrors(errors);
-    console.log('blockErrors', errors);
     return snapshot;
   };
 
@@ -110,10 +73,7 @@ export function useTemplateEditorState({
 
   useEffect(() => {
     if (!initialData && isCreating && template?.slug) {
-      console.log('template.slug', template.slug);
-      console.log('template.id', template.id);
       const timeout = setTimeout(() => {
-        console.log('would have redirected to', window.location.href + '/admin/templates/' + template.id);
         alert('would have redirected to ' + window.location.href + '/admin/templates/' + template.id);
       }, 1200);
       return () => clearTimeout(timeout);
@@ -122,7 +82,7 @@ export function useTemplateEditorState({
 
   const handleSaveDraft = () => {
     const { isValid, errors } = validateTemplateBlocks(template as Template);
-  
+
     if (!isValid) {
       console.log('errors', errors);
       setBlockErrors(errors);
@@ -132,7 +92,7 @@ export function useTemplateEditorState({
       toast.error('Please fix validation errors before saving.');
       return;
     }
-  
+
     localStorage.setItem(`draft-${template.id}`, rawJson);
     toast.success('Draft saved');
   };

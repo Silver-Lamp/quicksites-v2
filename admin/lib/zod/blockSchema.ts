@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-// Step 1: Define per-block content schemas with metadata
+// Step 1: Define content schema map w/ UI metadata
 export const blockContentSchemaMap = {
   text: {
     label: 'Text Block',
@@ -50,7 +50,9 @@ export const blockContentSchemaMap = {
       subheadline: z.string().optional(),
       cta_text: z.string().optional(),
       cta_link: z.string().optional(),
-      image_url: z.string().url('Image must be a valid URL').optional(),
+      image_url: z
+        .union([z.string().url(), z.literal('')])
+        .optional(),
     }),
   },
   services: {
@@ -97,68 +99,77 @@ export const blockContentSchemaMap = {
   },
 };
 
-// Step 2: Factory function to generate block union + UI metadata
+// Step 2: Build base block schemas with shared fields
 export function createBlockUnion<
   T extends Record<string, { label: string; icon: string; schema: z.ZodTypeAny }>
->(
-  map: T
-): {
-  schemas: z.ZodDiscriminatedUnionOption<'type'>[];
-  meta: Record<keyof T, { label: string; icon: string }>;
-} {
+>(map: T) {
   const schemas: z.ZodDiscriminatedUnionOption<'type'>[] = [];
-  const meta: Partial<Record<keyof T, { label: string; icon: string }>> = {};
+  const meta: Record<keyof T, { label: string; icon: string }> = {} as any;
 
   for (const [type, config] of Object.entries(map)) {
     schemas.push(
-      z.object({
-        type: z.literal(type),
-        content: config.schema,
-      }) as z.ZodDiscriminatedUnionOption<'type'>
+      z
+        .object({
+          type: z.literal(type),
+          content: config.schema,
+          _id: z.string().optional(),
+          tone: z.string().optional(),
+          industry: z.string().optional(),
+          tags: z.array(z.string()).optional(),
+          meta: z.record(z.any()).optional(),
+        }) as z.ZodDiscriminatedUnionOption<'type'>
     );
-
     meta[type as keyof T] = {
       label: config.label,
       icon: config.icon,
     };
   }
 
-  return { schemas, meta } as {
-    schemas: z.ZodDiscriminatedUnionOption<'type'>[];
-    meta: Record<keyof T, { label: string; icon: string }>;
-  };
+  return { schemas, meta };
 }
 
-// Step 3: Create base schemas + grid + final union
 const { schemas: BasicBlockSchemas, meta: blockMeta } = createBlockUnion(blockContentSchemaMap);
 
-export const BlockSchema: z.ZodType<any> = z.discriminatedUnion(
-  'type',
-  BasicBlockSchemas as [z.ZodDiscriminatedUnionOption<'type'>, ...z.ZodDiscriminatedUnionOption<'type'>[]]
-);
+// Step 3: Final block schema (with grid + recursion)
+export const BlockSchema: z.ZodTypeAny = z.lazy(() => {
+  const GridBlockSchema: z.ZodDiscriminatedUnionOption<'type'> = z.object({
+    type: z.literal('grid'),
+    content: z.object({
+      columns: z.number().min(1).max(12),
+      items: z.array(BlockSchema),
+    }),
+    _id: z.string().optional(),
+    tone: z.string().optional(),
+    industry: z.string().optional(),
+    tags: z.array(z.string()).optional(),
+    meta: z.record(z.any()).optional(),
+  }) as z.ZodDiscriminatedUnionOption<'type'>;
 
-export const GridBlockSchema = z.object({
-  type: z.literal('grid'),
-  value: z.object({
-    columns: z.number().min(1).max(12),
-    items: z.lazy(() => z.array(BlockSchema).max(4, 'Limit 4 blocks inside a grid')),
-  }),
+  return z.discriminatedUnion('type', [
+    ...BasicBlockSchemas as unknown as [z.ZodDiscriminatedUnionOption<'type'>, ...z.ZodDiscriminatedUnionOption<'type'>[]],
+    GridBlockSchema,
+  ]);
 });
 
-// Step 4: Export schema, helpers, and types
+// Step 4: Export helpers and types
+export const BlocksArraySchema = z.array(BlockSchema);
 export type Block = z.infer<typeof BlockSchema>;
-export type GridBlock = z.infer<typeof GridBlockSchema>;
 
 export function isValidBlock(data: unknown): data is Block {
   return BlockSchema.safeParse(data).success;
 }
 
-export const blockPreviewFallback: Record<Block['type'], string> = Object.entries(blockMeta).reduce(
-  (acc, [key, val]) => {
-    acc[key as Block['type']] = val.icon + ' ' + val.label;
-    return acc;
-  },
-  {} as Record<Block['type'], string>
-);
+export function migrateLegacyBlock(block: any): any {
+  if ('content' in block) return block;
+  if ('value' in block) return { ...block, content: block.value };
+  return block;
+}
+
+export const blockPreviewFallback: Record<Block['type'], string> = Object.entries(
+  blockMeta as Record<Block['type'], { label: string; icon: string }>
+).reduce((acc, [key, val]) => {
+  acc[key as Block['type']] = `${val.icon} ${val.label}`;
+  return acc;
+}, {} as Record<Block['type'], string>);
 
 export { blockMeta };

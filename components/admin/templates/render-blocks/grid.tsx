@@ -1,6 +1,6 @@
 'use client';
 
-import type { GridBlock, Block } from '@/types/blocks';
+import type { GridBlock as GridBlockType, Block } from '@/types/blocks';
 import { useState } from 'react';
 import { normalizeBlock } from '@/types/blocks';
 import SortableGridBlock from '../sortable-grid-block';
@@ -10,7 +10,7 @@ import PresetSelectorModal from '../block-presets/PresetSelectorModal';
 import type { BlockWithId } from '@/types/blocks';
 
 function updateGridBlock(block: Block, items: BlockWithId[]): Block {
-  const grid = block as GridBlock;
+  const grid = block as GridBlockType;
   return {
     ...grid,
     content: {
@@ -20,15 +20,21 @@ function updateGridBlock(block: Block, items: BlockWithId[]): Block {
   };
 }
 
+type Props = {
+  block?: GridBlockType;
+  content: GridBlockType['content'];
+  handleNestedBlockUpdate?: (updated: Block) => void;
+  parentBlock?: Block;
+  compact?: boolean;
+};
+
 export default function GridBlock({
+  block,
   content,
   handleNestedBlockUpdate,
   parentBlock,
-}: {
-  content: GridBlock['content'];
-  handleNestedBlockUpdate?: (updated: Block) => void;
-  parentBlock: Block;
-}) {
+  compact = false,
+}: Props) {
   const [editingBlockIndex, setEditingBlockIndex] = useState<number | null>(null);
   const [showPresetModal, setShowPresetModal] = useState(false);
 
@@ -37,16 +43,30 @@ export default function GridBlock({
   const columns = content.columns || 1;
 
   const handleSaveBlock = (updatedBlock: Block) => {
-    if (editingBlockIndex === null) return;
+    if (editingBlockIndex === null || !parentBlock) return;
     const items = [...normalizedItems];
     items[editingBlockIndex] = normalizeBlock(updatedBlock);
     handleNestedBlockUpdate?.(updateGridBlock(parentBlock, items));
   };
 
   const handleInsertBlock = (block: BlockWithId) => {
+    if (!parentBlock) return;
     const items = [...normalizedItems, block];
     handleNestedBlockUpdate?.(updateGridBlock(parentBlock, items));
   };
+
+  if (compact) {
+    return (
+      <div className="grid gap-2 grid-cols-2 text-sm border rounded p-2">
+        {normalizedItems.slice(0, 2).map((b, i) => (
+          <RenderBlock key={i} block={b} compact />
+        ))}
+        {normalizedItems.length === 0 && (
+          <div className="text-gray-400 italic col-span-2">No blocks in grid</div>
+        )}
+      </div>
+    );
+  }
 
   return (
     <div className="mb-4 relative">
@@ -62,16 +82,16 @@ export default function GridBlock({
           <SortableGridBlock
             columns={columns}
             items={normalizedItems}
-            onChange={(updated) => {
-              handleNestedBlockUpdate?.(updateGridBlock(parentBlock, updated as BlockWithId[]));
-            }}
+            onChange={(updated) =>
+              handleNestedBlockUpdate?.(updateGridBlock(parentBlock!, updated as BlockWithId[]))
+            }
             onInsert={(index) => {
               setEditingBlockIndex(index);
             }}
             onDelete={(index) => {
               const items = [...normalizedItems];
               items.splice(index, 1);
-              handleNestedBlockUpdate?.(updateGridBlock(parentBlock, items));
+              handleNestedBlockUpdate?.(updateGridBlock(parentBlock!, items));
             }}
             onEdit={(index) => {
               setEditingBlockIndex(index);
@@ -88,9 +108,8 @@ export default function GridBlock({
           </div>
 
           <PresetSelectorModal
-            open={showPresetModal}
-            onClose={() => setShowPresetModal(false)}
             onSelect={handleInsertBlock}
+            onHover={() => {}}
           />
 
           <BlockSidebar
@@ -103,8 +122,8 @@ export default function GridBlock({
       ) : (
         <div className={`grid grid-cols-${columns} gap-4`}>
           {normalizedItems.map((b: Block, i: number) => (
-            <div id={`block-${b._id}`}>
-              <RenderBlock key={i} block={b} />
+            <div id={`block-${b._id}`} key={b._id}>
+              <RenderBlock block={b} />
             </div>
           ))}
         </div>

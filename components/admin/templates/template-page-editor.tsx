@@ -6,14 +6,20 @@ import { BlocksEditor } from './blocks-editor';
 import { createDefaultPage } from '@/lib/pageDefaults';
 import type { Template, TemplateData } from '@/types/template';
 import type { Block } from '@/types/blocks';
+import BlockAdderGrouped from '@/components/admin/block-adder-grouped';
+import { createDefaultBlock } from '@/lib/createDefaultBlock';
 
 type Props = {
   template: Template;
   onChange: (updated: Template) => void;
-  onLivePreviewUpdate: (data: TemplateData) => void;  
+  onLivePreviewUpdate: (data: TemplateData) => void;
 };
 
-export default function TemplatePageEditor({ template, onChange, onLivePreviewUpdate }: Props) {
+export default function TemplatePageEditor({
+  template,
+  onChange,
+  onLivePreviewUpdate,
+}: Props) {
   const [collapsedPages, setCollapsedPages] = useState<Record<string, boolean>>({});
   const [newPageTitle, setNewPageTitle] = useState('');
   const [newPageSlug, setNewPageSlug] = useState('');
@@ -34,9 +40,27 @@ export default function TemplatePageEditor({ template, onChange, onLivePreviewUp
   };
 
   const handlePageBlockChange = (pageIndex: number, updatedBlocks: Block[]) => {
-    const newPages = [...template.data.pages];
-    newPages[pageIndex].content_blocks = updatedBlocks;
-    onLivePreviewUpdate({ ...template.data, pages: newPages });
+    const newPages = template.data.pages.map((page, i) =>
+      i === pageIndex ? { ...page, content_blocks: [...updatedBlocks] } : page
+    );
+
+    const updated = { ...template, data: { ...template.data, pages: newPages } };
+    onChange(updated);
+    onLivePreviewUpdate(updated.data);
+  };
+
+  const handleAddBlockToPage = (pageIndex: number, blockType: Block['type']) => {
+    const newBlock = createDefaultBlock(blockType);
+
+    const newPages = template.data.pages.map((page, i) =>
+      i === pageIndex
+        ? { ...page, content_blocks: [...page.content_blocks, newBlock] }
+        : page
+    );
+
+    const updated = { ...template, data: { ...template.data, pages: newPages } };
+    onChange(updated);
+    onLivePreviewUpdate(updated.data);
   };
 
   return (
@@ -65,7 +89,7 @@ export default function TemplatePageEditor({ template, onChange, onLivePreviewUp
         </div>
       </div>
 
-      {/* Pages with BlocksEditor */}
+      {/* Pages with BlocksEditor and BlockAdder */}
       {template.data.pages.map((page, index) => (
         <div key={page.slug} className="border rounded p-4 bg-muted space-y-4">
           <div className="flex justify-between items-center">
@@ -85,13 +109,20 @@ export default function TemplatePageEditor({ template, onChange, onLivePreviewUp
           </div>
 
           {!collapsedPages[page.slug] && (
-            <BlocksEditor
-              blocks={page.content_blocks}
-              onChange={(updated) => handlePageBlockChange(index, updated)}
-              industry={template.industry}
-              onEdit={(i) => {}}
-              onReplaceWithAI={(i) => {}}
-            />
+            <>
+              <BlocksEditor
+                blocks={page.content_blocks}
+                onChange={(updated) => handlePageBlockChange(index, updated)}
+                industry={template.industry}
+                onEdit={() => {}}
+                onReplaceWithAI={() => {}}
+              />
+
+              <BlockAdderGrouped
+                existingBlocks={page.content_blocks}
+                onAdd={(type) => handleAddBlockToPage(index, type)}
+              />
+            </>
           )}
         </div>
       ))}

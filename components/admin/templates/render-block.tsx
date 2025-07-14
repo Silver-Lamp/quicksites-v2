@@ -23,13 +23,21 @@ const BLOCK_RENDERERS: Record<
   footer: () => import('./render-blocks/footer'),
 };
 
+type RenderProps = {
+  block: Block;
+  handleNestedBlockUpdate?: (updated: Block) => void;
+  mode?: 'preview' | 'editor';
+  disableInteraction?: boolean;
+  compact?: boolean;
+};
+
 export default function RenderBlock({
   block,
   handleNestedBlockUpdate,
-}: {
-  block: Block;
-  handleNestedBlockUpdate?: (updated: Block) => void;
-}) {
+  mode = 'preview',
+  disableInteraction = false,
+  compact = false,
+}: RenderProps) {
   const LazyBlock = dynamic(BLOCK_RENDERERS[block.type] ?? fallbackRenderer(block), {
     loading: () => (
       <div className="mb-4 text-gray-500 dark:text-gray-400 italic animate-pulse">
@@ -39,8 +47,8 @@ export default function RenderBlock({
     ssr: false,
   });
 
-  // Inject blob-safe fallback for hero block image
-  const content =
+  // Fix for hero blob image preview
+  const safeContent =
     block.type === 'hero' && typeof block.content === 'object'
       ? {
           ...block.content,
@@ -50,12 +58,26 @@ export default function RenderBlock({
         }
       : block.content;
 
-  const props =
-    block.type === 'grid'
-      ? { content, handleNestedBlockUpdate, parentBlock: block }
-      : { content };
+  const commonProps = {
+    block,
+    content: safeContent,
+    mode,
+    disableInteraction,
+    compact,
+  };
 
-  return <LazyBlock {...props} />;
+  // Special case for grid
+  if (block.type === 'grid') {
+    return (
+      <LazyBlock
+        {...commonProps}
+        handleNestedBlockUpdate={handleNestedBlockUpdate}
+        parentBlock={block}
+      />
+    );
+  }
+
+  return <LazyBlock {...commonProps} />;
 }
 
 function fallbackRenderer(block: Block) {

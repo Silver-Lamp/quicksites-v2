@@ -1,73 +1,46 @@
 'use client';
 
-import { useState } from 'react';
-import { blockPresets } from './block-presets';
 import type { BlockWithId } from '@/types/blocks';
-import PresetPreviewCard from './PresetPreviewCard';
+import { createDefaultBlock } from '@/lib/createDefaultBlock';
+import { blockMeta } from '@/admin/lib/zod/blockSchema';
+import RenderBlockMini from '@/components/admin/templates/render-block-mini';
 
-export default function PresetSelector({
-  onSelect,
-  onHover,
-}: {
+type Props = {
   onSelect: (block: BlockWithId) => void;
   onHover?: (block: BlockWithId | null) => void;
-}) {
-  const [activeTags, setActiveTags] = useState<string[]>([]);
+};
 
-  const allTags = Array.from(new Set(blockPresets.flatMap((p) => p.tags)));
-
-  const toggleTag = (tag: string) => {
-    setActiveTags((prev) =>
-      prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]
-    );
-  };
-
-  const visiblePresets = activeTags.length
-    ? blockPresets.filter((preset) => activeTags.every((t) => preset.tags.includes(t)))
-    : blockPresets;
+export default function PresetSelector({ onSelect, onHover }: Props) {
+  const types = Object.keys(blockMeta) as BlockWithId['type'][];
 
   return (
-    <>
-      <div className="mb-4 flex flex-wrap gap-2">
-        {allTags.map((tag) => (
-          <button
-            key={tag}
-            onClick={() => toggleTag(tag)}
-            className={`text-sm px-2 py-1 rounded border ${
-              activeTags.includes(tag)
-                ? 'bg-blue-600 text-white'
-                : 'bg-gray-100 dark:bg-neutral-800'
-            }`}
-          >
-            #{tag}
-          </button>
-        ))}
-        {activeTags.length > 0 && (
-          <button
-            onClick={() => setActiveTags([])}
-            className="text-sm ml-2 px-2 py-1 text-red-600 border border-red-200 rounded hover:bg-red-50 dark:border-red-400 dark:hover:bg-red-800"
-          >
-            Clear
-          </button>
-        )}
-      </div>
+    <ul className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+      {types.map((type) => {
+        const meta = blockMeta[type as keyof typeof blockMeta];
+        const block = createDefaultBlock(type);
 
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-        {visiblePresets.map((preset) => {
-          const preview = preset.generate();
-          return (
-            <button
-              key={preset.type}
-              onClick={() => onSelect(preview)}
-              onMouseEnter={() => onHover?.(preview)}
-              onMouseLeave={() => onHover?.(null)}
-              className="border border-gray-300 dark:border-gray-700 rounded hover:ring-2 hover:ring-blue-500 transition-all"
-            >
-              <PresetPreviewCard block={preview} />
-            </button>
-          );
-        })}
-      </div>
-    </>
+        return (
+          <li
+            key={type}
+            className="border dark:border-neutral-700 bg-white dark:bg-neutral-900 text-black dark:text-white rounded overflow-hidden shadow-sm hover:shadow-md hover:bg-gray-50 dark:hover:bg-neutral-800 transition cursor-pointer"
+            onClick={() => onSelect(block as unknown as BlockWithId)}
+            onMouseEnter={() => onHover?.(block as unknown as BlockWithId | null)}
+            onMouseLeave={() => onHover?.(null)}
+          >
+            <div className="p-3 space-y-2 h-full flex flex-col justify-between">
+              <div className="flex items-center gap-2">
+                <span className="text-lg">{meta.icon}</span>
+                <span className="font-semibold text-gray-800 dark:text-white">
+                  {meta.label}
+                </span>
+              </div>
+              <div className="border-t dark:border-neutral-700 pt-2">
+                <RenderBlockMini block={block} />
+              </div>
+            </div>
+          </li>
+        );
+      })}
+    </ul>
   );
 }

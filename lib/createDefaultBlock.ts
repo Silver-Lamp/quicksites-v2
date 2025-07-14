@@ -1,19 +1,24 @@
-import type { Block } from '@/admin/lib/zod/blockSchema';
+import type { Block } from '@/types/blocks'; // adjust import path as needed
 import crypto from 'crypto';
-import { blockContentSchemaMap } from '@/admin/lib/zod/blockSchema';
 
 export function createDefaultBlock(type: Block['type']): Block {
   const _id = crypto.randomUUID?.() || Date.now().toString();
 
   switch (type) {
     case 'text':
-      return { type, _id, value: { value: 'Sample text block' } };
+      return {
+        type,
+        _id,
+        content: {
+          value: 'Sample text block',
+        },
+      };
 
     case 'image':
       return {
         type,
         _id,
-        value: {
+        content: {
           url: 'https://placekitten.com/800/400',
           alt: 'A cute kitten',
         },
@@ -23,7 +28,7 @@ export function createDefaultBlock(type: Block['type']): Block {
       return {
         type,
         _id,
-        value: {
+        content: {
           url: 'https://www.youtube.com/embed/dQw4w9WgXcQ',
           caption: 'Intro video',
         },
@@ -33,7 +38,7 @@ export function createDefaultBlock(type: Block['type']): Block {
       return {
         type,
         _id,
-        value: {
+        content: {
           provider: 'spotify',
           url: 'https://spotify.com/sample',
           title: 'Sample Audio',
@@ -44,9 +49,9 @@ export function createDefaultBlock(type: Block['type']): Block {
       return {
         type,
         _id,
-        value: {
+        content: {
           text: 'This changed everything.',
-          author: 'Jane Doe',
+          attribution: 'Jane Doe',
         },
       };
 
@@ -54,7 +59,7 @@ export function createDefaultBlock(type: Block['type']): Block {
       return {
         type,
         _id,
-        value: {
+        content: {
           label: 'Click Me',
           href: '#',
           style: 'primary',
@@ -65,11 +70,12 @@ export function createDefaultBlock(type: Block['type']): Block {
       return {
         type,
         _id,
-        value: {
-          title: 'Welcome to Your Site!',
-          description: 'This is the hero section.',
-          cta_label: 'Get Started',
+        content: {
+          headline: 'Welcome to Your Site!',
+          subheadline: 'This is the hero section.',
+          cta_text: 'Get Started',
           cta_link: '#',
+          image_url: 'https://placekitten.com/1200/600',
         },
       };
 
@@ -77,7 +83,7 @@ export function createDefaultBlock(type: Block['type']): Block {
       return {
         type,
         _id,
-        value: {
+        content: {
           items: ['Service A', 'Service B', 'Service C'],
         },
       };
@@ -86,7 +92,7 @@ export function createDefaultBlock(type: Block['type']): Block {
       return {
         type,
         _id,
-        value: {
+        content: {
           quote: 'They did a great job!',
           attribution: 'Happy Client',
         },
@@ -96,7 +102,7 @@ export function createDefaultBlock(type: Block['type']): Block {
       return {
         type,
         _id,
-        value: {
+        content: {
           label: 'Learn More',
           link: '#about',
         },
@@ -106,7 +112,7 @@ export function createDefaultBlock(type: Block['type']): Block {
       return {
         type,
         _id,
-        value: {
+        content: {
           columns: 2,
           items: [
             createDefaultBlock('text'),
@@ -119,7 +125,7 @@ export function createDefaultBlock(type: Block['type']): Block {
       return {
         type,
         _id,
-        value: {
+        content: {
           businessName: 'Grafton Towing',
           address: '1600 7th Ave',
           cityState: 'Grafton, WI',
@@ -138,7 +144,7 @@ export function createDefaultBlock(type: Block['type']): Block {
       return {
         type: 'text',
         _id,
-        value: { value: `Unsupported block type: ${type}` },
+        content: { value: `Unsupported block type: ${type}` },
       };
   }
 }

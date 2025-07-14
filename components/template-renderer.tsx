@@ -17,7 +17,7 @@ export default function TemplateRenderer({
   children: React.ReactNode;
 }) {
   return (
-    <ThemeProvider siteSlug={siteSlug}>
+    <ThemeProvider siteSlug={siteSlug} >
       <ThemedPage>{children}</ThemedPage>
     </ThemeProvider>
   );

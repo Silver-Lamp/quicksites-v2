@@ -14,7 +14,7 @@ export default function CollapsiblePanel({ id, title, defaultOpen = false, child
   const contentRef = useRef<HTMLDivElement>(null);
 
   return (
-    <div className="border rounded overflow-hidden">
+    <div className="border border-gray-700 rounded overflow-hidden">
       <div
         className="flex items-center justify-between p-3 cursor-pointer bg-muted"
         onClick={toggle}

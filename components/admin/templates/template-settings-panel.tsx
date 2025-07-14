@@ -31,7 +31,7 @@ export default function TemplateSettingsPanel({ template, onChange }: TemplateSe
   }, []);
 
   return (
-    <div className="grid md:grid-cols-2 gap-4 border rounded p-3">
+    <div className="grid md:grid-cols-2 gap-4 rounded p-3">
       <div>
         <Label>Industry</Label>
         <select

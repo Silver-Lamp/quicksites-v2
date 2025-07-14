@@ -162,7 +162,7 @@ export default function TemplateEditor({
       {/* AI Block Preview */}
       <Modal show={!!pendingText} onClose={() => setPendingText(null)} title="🧠 Preview AI Block">
         <textarea
-          className="w-full border rounded bg-zinc-800 text-white p-2 text-sm mb-4"
+          className="w-full border-gray-700 rounded bg-zinc-800 text-white p-2 text-sm mb-4"
           rows={5}
           value={pendingText || ''}
           onChange={(e) => setPendingText(e.target.value)}

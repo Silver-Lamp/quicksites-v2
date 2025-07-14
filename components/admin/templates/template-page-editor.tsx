@@ -64,11 +64,11 @@ export default function TemplatePageEditor({
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 border-gray-700 rounded p-4">
 
       {/* Pages with BlocksEditor and BlockAdder */}
       {template.data.pages.map((page, index) => (
-        <div key={page.slug} className="border rounded p-4 bg-muted space-y-4">
+        <div key={page.slug} className="border border-gray-700 rounded p-4 bg-muted space-y-4">
           <div className="flex justify-between items-center">
             <h4 className="text-md font-semibold">{page.title}</h4>
             <Button
@@ -105,20 +105,20 @@ export default function TemplatePageEditor({
       ))}
 
       {/* Page Add Form */}
-      <div className="border rounded p-4 bg-muted">
+      <div className="rounded border-gray-700 bg-muted p-4">
         <h3 className="text-lg font-semibold mb-2">Add New Page</h3>
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
           <input
             type="text"
             placeholder="Page Title"
-            className="rounded border p-2 bg-white/5 text-white"
+            className="rounded border-gray-700 p-2 bg-white/5 text-white"
             value={newPageTitle}
             onChange={(e) => setNewPageTitle(e.target.value)}
           />
           <input
             type="text"
             placeholder="Slug"
-            className="rounded border p-2 bg-white/5 text-white"
+            className="rounded border-gray-700 p-2 bg-white/5 text-white"
             value={newPageSlug}
             onChange={(e) => setNewPageSlug(e.target.value)}
           />
@@ -127,7 +127,7 @@ export default function TemplatePageEditor({
           </Button>
         </div>
       </div>
-      
+
     </div>
   );
 }

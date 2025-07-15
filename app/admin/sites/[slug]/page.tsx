@@ -14,9 +14,9 @@ const supabase = createClient(
 export default async function Page({
   params,
 }: {
-  params: { slug: string };
+  params: Promise<{ slug: string }>;
 }) {
-  const { slug } = params;
+  const { slug } = await params;
 
   const { data: site } = await supabase
     .from('published_sites')

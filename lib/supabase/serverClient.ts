@@ -4,9 +4,5 @@ import { cookies } from 'next/headers';
 import type { Database } from '@/types/supabase';
 
 export function getServerSupabaseClient() {
-  const cookieStore = cookies();
-
-  return createServerComponentClient<Database>({
-    cookies: () => cookieStore,
-  });
+  return createServerComponentClient<Database>({ cookies });
 }

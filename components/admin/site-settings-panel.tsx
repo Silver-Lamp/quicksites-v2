@@ -115,7 +115,7 @@ export default function SiteSettingsPanel({ siteId }: { siteId: string }) {
     if (createError) alert('❌ Duplicate failed');
     else {
       alert('✅ Duplicated!');
-      router.push(`/edit/${newSlug}`);
+      router.push(`/template/${newSlug}/edit`);
     }
   };
 

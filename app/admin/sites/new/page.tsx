@@ -50,7 +50,7 @@ export default function CreateSitePage() {
     if (error) {
       setError(error.message);
     } else if (data?.slug) {
-      router.push(`/edit/${data.slug}`);
+      router.push(`/site/${data.slug}/edit`);
     }
   };
 

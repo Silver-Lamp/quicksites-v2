@@ -79,7 +79,7 @@ export default async function SitePage({
         <h1 className="text-2xl font-bold mb-4">{site.business_name}</h1>
         <div
           className="text-sm text-zinc-300"
-          dangerouslySetInnerHTML={{ __html: site.content }}
+          dangerouslySetInnerHTML={{ __html: site.data }}
         />
       </TemplateRenderer>
     </>

@@ -1,4 +1,3 @@
-// NewSitePage with preview theme toggle and brand preview
 'use client';
 
 import { useEffect, useState } from 'react';
@@ -11,20 +10,40 @@ import ThemeScope from '@/components/ui/theme-scope';
 
 const supabase = createClientComponentClient<Database>();
 
+type BrandingProfile = {
+  id: string;
+  name: string;
+  logo_url?: string;
+};
+
+type Template = {
+  id: string;
+  name: string;
+  created_at: string;
+  thumbnail_url?: string;
+  data: any;
+  theme?: string;
+  brand?: string;
+  color_scheme?: string;
+};
+
 export default function NewSitePage() {
   const router = useRouter();
-  const [profiles, setProfiles] = useState<any[]>([]);
-  const [templates, setTemplates] = useState<any[]>([]);
-  const [selectedTemplate, setSelectedTemplate] = useState<any | null>(null);
-  const [selectedProfile, setSelectedProfile] = useState<any | null>(null);
+
+  const [profiles, setProfiles] = useState<BrandingProfile[]>([]);
+  const [templates, setTemplates] = useState<Template[]>([]);
+  const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(null);
+  const [selectedProfile, setSelectedProfile] = useState<BrandingProfile | null>(null);
   const [templateData, setTemplateData] = useState<any | null>(null);
   const [isDark, setIsDark] = useState(false);
+
   const [form, setForm] = useState({
     slug: '',
     site_name: '',
     branding_profile_id: '',
     template_id: '',
   });
+
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [slugError, setSlugError] = useState<string | null>(null);
@@ -32,58 +51,55 @@ export default function NewSitePage() {
   const [slugAvailable, setSlugAvailable] = useState(false);
 
   useEffect(() => {
-    supabase.from('branding_profiles').select('id, name, logo_url').then(({ data }) => setProfiles(data || []));
+    supabase
+      .from('branding_profiles')
+      .select('id, name, logo_url')
+      .then(({ data }) => setProfiles(data || []));
+
     supabase
       .from('templates')
       .select('id, name, created_at, thumbnail_url, data, theme, brand, color_scheme')
       .eq('published', true)
       .order('created_at', { ascending: false })
       .then(({ data }) => {
-        if (data) {
+        if (data?.length) {
           setTemplates(data);
-          setForm((f) => ({ ...f, template_id: f.template_id || data[0]?.id || '' }));
-          setSelectedTemplate(data[0] || null);
-          setTemplateData(data[0]?.data || null);
+          const initialTemplate = data[0];
+          setForm((f) => ({ ...f, template_id: f.template_id || initialTemplate.id }));
+          setSelectedTemplate(initialTemplate);
+          setTemplateData(initialTemplate.data || null);
         }
       });
   }, []);
 
   useEffect(() => {
-    if (form.template_id) {
-      const t = templates.find((t) => t.id === form.template_id);
-      setSelectedTemplate(t || null);
-      setTemplateData(t?.data || null);
-    }
+    const selected = templates.find((t) => t.id === form.template_id);
+    setSelectedTemplate(selected || null);
+    setTemplateData(selected?.data || null);
   }, [form.template_id]);
 
   useEffect(() => {
-    if (form.branding_profile_id) {
-      const b = profiles.find((p) => p.id === form.branding_profile_id);
-      setSelectedProfile(b || null);
-    }
+    const selected = profiles.find((p) => p.id === form.branding_profile_id);
+    setSelectedProfile(selected || null);
   }, [form.branding_profile_id]);
 
   const checkSlugUniqueness = debounce(async (slug: string) => {
+    if (!slug) return;
     setCheckingSlug(true);
     const { data } = await supabase.from('sites').select('id').eq('slug', slug);
-    if (data && data.length > 0) {
-      setSlugError('Slug is already in use');
-      setSlugAvailable(false);
-    } else {
-      setSlugError(null);
-      setSlugAvailable(true);
-    }
+    setSlugError(data?.length ? 'Slug is already in use' : null);
+    setSlugAvailable(!data?.length);
     setCheckingSlug(false);
   }, 400);
 
   useEffect(() => {
-    const slug = form.site_name
+    const generatedSlug = form.site_name
       .toLowerCase()
       .trim()
       .replace(/[^a-z0-9]+/g, '-')
       .replace(/(^-|-$)/g, '');
-    setForm((f) => ({ ...f, slug }));
-    checkSlugUniqueness(slug);
+    setForm((f) => ({ ...f, slug: generatedSlug }));
+    checkSlugUniqueness(generatedSlug);
   }, [form.site_name]);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -96,7 +112,7 @@ export default function NewSitePage() {
       return;
     }
 
-    let content = {};
+    let data = {};
 
     if (form.template_id) {
       const { data: template, error: templateError } = await supabase
@@ -104,18 +120,17 @@ export default function NewSitePage() {
         .select('data')
         .eq('id', form.template_id)
         .single();
-    
+
       if (templateError || !template?.data) {
         setLoading(false);
-        setError('Failed to load template content');
+        setError('Failed to load template data');
         return;
       }
-    
-      content = template.data;
-    }
-    
 
-    const { data, error } = await supabase
+      data = template.data;
+    }
+
+    const { data: siteData, error } = await supabase
       .from('sites')
       .insert([
         {
@@ -123,7 +138,7 @@ export default function NewSitePage() {
           site_name: form.site_name,
           branding_profile_id: form.branding_profile_id || null,
           template_id: form.template_id || null,
-          content,
+          data,
           is_published: false,
         },
       ])
@@ -134,14 +149,15 @@ export default function NewSitePage() {
 
     if (error) {
       setError(error.message);
-    } else if (data?.slug) {
-      router.push(`/edit/${data.slug}`);
+    } else if (siteData?.slug) {
+      router.push(`/site/${siteData.slug}/edit`);
     }
   };
 
   return (
     <div className="max-w-5xl mx-auto p-6 space-y-6">
       <h1 className="text-xl font-bold">Create New Site</h1>
+
       <form onSubmit={handleSubmit} className="space-y-4 max-w-xl">
         <div>
           <label className="block text-sm font-medium">Site Name</label>
@@ -161,9 +177,14 @@ export default function NewSitePage() {
             placeholder="e.g. towing-pro"
             value={form.slug}
             onChange={(e) => {
-              const slug = e.target.value;
-              setForm((f) => ({ ...f, slug }));
-              checkSlugUniqueness(slug);
+              const raw = e.target.value;
+              const sanitized = raw
+                .toLowerCase()
+                .trim()
+                .replace(/[^a-z0-9-]+/g, '-')
+                .replace(/(^-|-$)/g, '');
+              setForm((f) => ({ ...f, slug: sanitized }));
+              checkSlugUniqueness(sanitized);
             }}
             required
           />
@@ -173,7 +194,7 @@ export default function NewSitePage() {
               {slugAvailable && <span className="text-green-500 ml-2">✅ Available</span>}
             </p>
           )}
-          {checkingSlug && <p className="text-sm text-yellow-400">Checking slug availability...</p>}
+          {checkingSlug && <p className="text-sm text-yellow-500">Checking availability...</p>}
           {slugError && <p className="text-sm text-red-500">{slugError}</p>}
         </div>
 
@@ -207,6 +228,7 @@ export default function NewSitePage() {
               </option>
             ))}
           </select>
+
           {selectedProfile?.logo_url && (
             <div className="mt-2">
               <img
@@ -223,7 +245,9 @@ export default function NewSitePage() {
         <button
           type="submit"
           disabled={loading || !!slugError || !slugAvailable}
-          className={`px-4 py-2 rounded mt-4 text-white ${loading || slugError || !slugAvailable ? 'bg-gray-500' : 'bg-black'}`}
+          className={`px-4 py-2 rounded mt-4 text-white ${
+            loading || slugError || !slugAvailable ? 'bg-gray-500' : 'bg-black'
+          }`}
         >
           {loading ? 'Creating...' : 'Create Site'}
         </button>

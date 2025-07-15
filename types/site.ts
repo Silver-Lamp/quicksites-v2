@@ -1,10 +1,8 @@
-// ✅ types/site.ts
-
 // Block Types
 export type HeroBlock = {
   _id: string;
   type: 'hero';
-  content: {
+  data: {
     headline: string;
     subheadline?: string;
     cta_text?: string;
@@ -15,7 +13,7 @@ export type HeroBlock = {
 export type ServicesBlock = {
   _id: string;
   type: 'services';
-  content: {
+  data: {
     items: string[];
   };
 };
@@ -46,10 +44,16 @@ export type SiteMeta = {
 
 // ✅ Full shape used in EditPage
 export type SiteData = {
-  slug: string; // used for viewing and editing
+  id: string;
+  slug: string;
   is_published: boolean;
-  pages: Page[];
+
+  data: {
+    pages: Page[];
+  };
+
   _meta: SiteMeta;
+
   seo_title?: string;
   seo_description?: string;
   twitter_handle?: string;

@@ -7,56 +7,70 @@ const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 );
 
-export function useTemplateLoader(templateName: string) {
-  const [template, setTemplate] = useState<any | null>(null);
+export function useEditorLoader(slug: string) {
+  const [record, setRecord] = useState<any | null>(null);
+  const [mode, setMode] = useState<'template' | 'site' | null>(null);
 
   useEffect(() => {
-    const loadTemplate = async () => {
-      const { data, error } = await supabase
-        .from('templates')
+    const load = async () => {
+      const { data: site, error: siteError } = await supabase
+        .from('sites')
         .select('*')
-        .eq('template_name', templateName)
+        .eq('slug', slug)
         .single();
 
-      if (error || !data) {
-        toast.error('Failed to load template from DB');
+      if (site) {
+        setMode('site');
+        setRecord(site);
         return;
       }
 
-      const draftKey = `draft-${data.id}`;
-      const savedDraft = localStorage.getItem(draftKey);
+      const { data: template, error: templateError } = await supabase
+        .from('templates')
+        .select('*')
+        .eq('slug', slug)
+        .single();
 
-      if (savedDraft) {
-        try {
-          const parsed = JSON.parse(savedDraft);
-          if (parsed && parsed.pages && parsed.pages.length > 0) {
-            toast((t) => (
-              <span>
-                📝 A draft was found.
-                <button
-                  className="ml-2 underline text-blue-400"
-                  onClick={() => {
-                    toast.dismiss(t.id);
-                    setTemplate({ ...data, data: parsed });
-                  }}
-                >
-                  Restore it?
-                </button>
-              </span>
-            ));
-            setTemplate({ ...data }); // Don't restore by default
-            return;
+      if (template) {
+        const draftKey = `draft-${template.id}`;
+        const savedDraft = localStorage.getItem(draftKey);
+
+        if (savedDraft) {
+          try {
+            const parsed = JSON.parse(savedDraft);
+            if (parsed && parsed.pages && parsed.pages.length > 0) {
+              toast((t) => (
+                <span>
+                  📝 A draft was found.
+                  <button
+                    className="ml-2 underline text-blue-400"
+                    onClick={() => {
+                      toast.dismiss(t.id);
+                      setRecord({ ...template, data: parsed });
+                    }}
+                  >
+                    Restore it?
+                  </button>
+                </span>
+              ));
+              setRecord({ ...template }); // Don't restore by default
+              setMode('template');
+              return;
+            }
+          } catch (err) {
+            console.warn('Failed to parse draft JSON');
           }
-        } catch (err) {
-          console.warn('Failed to parse draft JSON');
         }
-      }
 
-      setTemplate(data);
+        setRecord(template);
+        setMode('template');
+      } else {
+        toast.error('Failed to load template or site from DB');
+      }
     };
 
-    loadTemplate();
-  }, [templateName]);
+    load();
+  }, [slug]);
 
-  return template;
+  return { record, mode };
 }

@@ -1,85 +1,259 @@
+// NewSitePage with preview theme toggle and brand preview
+'use client';
+
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { createClient } from '@supabase/supabase-js';
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
+import debounce from 'lodash.debounce';
+import type { Database } from '@/types/supabase';
+import TemplatePreviewWithToggle from '@/components/admin/templates/template-preview-with-toggle';
+import ThemeScope from '@/components/ui/theme-scope';
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
+const supabase = createClientComponentClient<Database>();
 
 export default function NewSitePage() {
   const router = useRouter();
   const [profiles, setProfiles] = useState<any[]>([]);
-  const [snapshots, setSnapshots] = useState<any[]>([]);
+  const [templates, setTemplates] = useState<any[]>([]);
+  const [selectedTemplate, setSelectedTemplate] = useState<any | null>(null);
+  const [selectedProfile, setSelectedProfile] = useState<any | null>(null);
+  const [templateData, setTemplateData] = useState<any | null>(null);
+  const [isDark, setIsDark] = useState(false);
   const [form, setForm] = useState({
-    snapshot_id: '',
-    branding_profile_id: '',
     slug: '',
+    site_name: '',
+    branding_profile_id: '',
+    template_id: '',
   });
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [slugError, setSlugError] = useState<string | null>(null);
+  const [checkingSlug, setCheckingSlug] = useState(false);
+  const [slugAvailable, setSlugAvailable] = useState(false);
 
   useEffect(() => {
+    supabase.from('branding_profiles').select('id, name, logo_url').then(({ data }) => setProfiles(data || []));
     supabase
-      .from('branding_profiles')
-      .select('id, name')
-      .then(({ data }) => setProfiles(data || []));
-    supabase
-      .from('snapshots')
-      .select('id, template_name')
-      .then(({ data }) => setSnapshots(data || []));
+      .from('templates')
+      .select('id, name, created_at, thumbnail_url, data, theme, brand, color_scheme')
+      .eq('published', true)
+      .order('created_at', { ascending: false })
+      .then(({ data }) => {
+        if (data) {
+          setTemplates(data);
+          setForm((f) => ({ ...f, template_id: f.template_id || data[0]?.id || '' }));
+          setSelectedTemplate(data[0] || null);
+          setTemplateData(data[0]?.data || null);
+        }
+      });
   }, []);
 
-  const publish = async () => {
-    const { error } = await supabase.from('published_sites').insert([
-      {
-        ...form,
-        status: 'published',
-        published_at: new Date().toISOString(),
-      },
-    ]);
-    if (!error) router.push('/admin/sites');
+  useEffect(() => {
+    if (form.template_id) {
+      const t = templates.find((t) => t.id === form.template_id);
+      setSelectedTemplate(t || null);
+      setTemplateData(t?.data || null);
+    }
+  }, [form.template_id]);
+
+  useEffect(() => {
+    if (form.branding_profile_id) {
+      const b = profiles.find((p) => p.id === form.branding_profile_id);
+      setSelectedProfile(b || null);
+    }
+  }, [form.branding_profile_id]);
+
+  const checkSlugUniqueness = debounce(async (slug: string) => {
+    setCheckingSlug(true);
+    const { data } = await supabase.from('sites').select('id').eq('slug', slug);
+    if (data && data.length > 0) {
+      setSlugError('Slug is already in use');
+      setSlugAvailable(false);
+    } else {
+      setSlugError(null);
+      setSlugAvailable(true);
+    }
+    setCheckingSlug(false);
+  }, 400);
+
+  useEffect(() => {
+    const slug = form.site_name
+      .toLowerCase()
+      .trim()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/(^-|-$)/g, '');
+    setForm((f) => ({ ...f, slug }));
+    checkSlugUniqueness(slug);
+  }, [form.site_name]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setError(null);
+
+    if (slugError) {
+      setLoading(false);
+      return;
+    }
+
+    let content = {};
+
+    if (form.template_id) {
+      const { data: template, error: templateError } = await supabase
+        .from('templates')
+        .select('data')
+        .eq('id', form.template_id)
+        .single();
+    
+      if (templateError || !template?.data) {
+        setLoading(false);
+        setError('Failed to load template content');
+        return;
+      }
+    
+      content = template.data;
+    }
+    
+
+    const { data, error } = await supabase
+      .from('sites')
+      .insert([
+        {
+          slug: form.slug,
+          site_name: form.site_name,
+          branding_profile_id: form.branding_profile_id || null,
+          template_id: form.template_id || null,
+          content,
+          is_published: false,
+        },
+      ])
+      .select()
+      .single();
+
+    setLoading(false);
+
+    if (error) {
+      setError(error.message);
+    } else if (data?.slug) {
+      router.push(`/edit/${data.slug}`);
+    }
   };
 
   return (
-    <div className="max-w-xl mx-auto p-6 space-y-4">
-      <h1 className="text-xl font-bold">Publish New Site</h1>
+    <div className="max-w-5xl mx-auto p-6 space-y-6">
+      <h1 className="text-xl font-bold">Create New Site</h1>
+      <form onSubmit={handleSubmit} className="space-y-4 max-w-xl">
+        <div>
+          <label className="block text-sm font-medium">Site Name</label>
+          <input
+            className="border px-2 py-1 w-full rounded"
+            placeholder="e.g. Towing Pro"
+            value={form.site_name}
+            onChange={(e) => setForm((f) => ({ ...f, site_name: e.target.value }))}
+            required
+          />
+        </div>
 
-      <label className="block text-sm font-medium">Slug</label>
-      <input
-        className="border px-2 py-1 w-full rounded"
-        placeholder="e.g. towing-pro"
-        value={form.slug}
-        onChange={(e) => setForm((f) => ({ ...f, slug: e.target.value }))}
-      />
+        <div>
+          <label className="block text-sm font-medium">Slug</label>
+          <input
+            className="border px-2 py-1 w-full rounded"
+            placeholder="e.g. towing-pro"
+            value={form.slug}
+            onChange={(e) => {
+              const slug = e.target.value;
+              setForm((f) => ({ ...f, slug }));
+              checkSlugUniqueness(slug);
+            }}
+            required
+          />
+          {form.slug && (
+            <p className="text-sm text-muted-foreground mt-1">
+              URL Preview: <code>{form.slug}.quicksites.ai</code>{' '}
+              {slugAvailable && <span className="text-green-500 ml-2">✅ Available</span>}
+            </p>
+          )}
+          {checkingSlug && <p className="text-sm text-yellow-400">Checking slug availability...</p>}
+          {slugError && <p className="text-sm text-red-500">{slugError}</p>}
+        </div>
 
-      <label className="block text-sm font-medium">Snapshot</label>
-      <select
-        className="w-full border rounded px-2 py-1"
-        onChange={(e) => setForm((f) => ({ ...f, snapshot_id: e.target.value }))}
-      >
-        <option value="">Select snapshot</option>
-        {snapshots.map((s) => (
-          <option key={s.id} value={s.id}>
-            {s.template_name}
-          </option>
-        ))}
-      </select>
+        <div>
+          <label className="block text-sm font-medium">Template</label>
+          <select
+            className="w-full border rounded px-2 py-1"
+            value={form.template_id}
+            onChange={(e) => setForm((f) => ({ ...f, template_id: e.target.value }))}
+          >
+            <option value="">— Select a template —</option>
+            {templates.map((tpl) => (
+              <option key={tpl.id} value={tpl.id}>
+                {tpl.name}
+              </option>
+            ))}
+          </select>
+        </div>
 
-      <label className="block text-sm font-medium">Branding Profile</label>
-      <select
-        className="w-full border rounded px-2 py-1"
-        onChange={(e) => setForm((f) => ({ ...f, branding_profile_id: e.target.value }))}
-      >
-        <option value="">Select profile</option>
-        {profiles.map((p) => (
-          <option key={p.id} value={p.id}>
-            {p.name}
-          </option>
-        ))}
-      </select>
+        <div>
+          <label className="block text-sm font-medium">Branding Profile</label>
+          <select
+            className="w-full border rounded px-2 py-1"
+            value={form.branding_profile_id}
+            onChange={(e) => setForm((f) => ({ ...f, branding_profile_id: e.target.value }))}
+          >
+            <option value="">— Select profile —</option>
+            {profiles.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.name}
+              </option>
+            ))}
+          </select>
+          {selectedProfile?.logo_url && (
+            <div className="mt-2">
+              <img
+                src={selectedProfile.logo_url}
+                alt="Brand logo"
+                className="h-12 w-12 rounded object-contain"
+              />
+            </div>
+          )}
+        </div>
 
-      <button onClick={publish} className="bg-black text-white px-4 py-2 rounded mt-4">
-        Publish
-      </button>
+        {error && <p className="text-sm text-red-500">{error}</p>}
+
+        <button
+          type="submit"
+          disabled={loading || !!slugError || !slugAvailable}
+          className={`px-4 py-2 rounded mt-4 text-white ${loading || slugError || !slugAvailable ? 'bg-gray-500' : 'bg-black'}`}
+        >
+          {loading ? 'Creating...' : 'Create Site'}
+        </button>
+      </form>
+
+      {templateData && (
+        <div className="pt-6">
+          <h2 className="text-lg font-semibold mb-2 flex justify-between items-center">
+            <span>Live Template Preview</span>
+            <button
+              onClick={() => setIsDark((prev) => !prev)}
+              className="text-sm text-blue-400 hover:text-blue-300"
+            >
+              Toggle {isDark ? 'Light' : 'Dark'} Mode
+            </button>
+          </h2>
+          <ThemeScope mode={isDark ? 'dark' : 'light'}>
+            <div className="border rounded shadow overflow-hidden">
+              <TemplatePreviewWithToggle
+                data={templateData}
+                theme={selectedTemplate?.theme || 'light'}
+                brand={selectedTemplate?.brand || ''}
+                colorScheme={selectedTemplate?.color_scheme || 'gray'}
+                isDark={isDark}
+                toggleDark={() => setIsDark((prev) => !prev)}
+              />
+            </div>
+          </ThemeScope>
+        </div>
+      )}
     </div>
   );
 }

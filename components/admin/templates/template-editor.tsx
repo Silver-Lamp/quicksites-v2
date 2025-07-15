@@ -5,7 +5,7 @@ import { useState } from 'react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { TemplateEditorToolbar } from './template-editor-toolbar';
 import { useTemplateEditorState } from './use-template-editor-state';
-import { TemplateEditorContent } from './template-editor-content';
+import { EditorContent } from './template-editor-content';
 import { Drawer } from '@/components/ui/drawer';
 import { Modal } from '@/components/ui/modal';
 import VectorQueryPage from '@/app/admin/vector-query/page';
@@ -23,10 +23,12 @@ export default function TemplateEditor({
   templateName,
   initialData,
   onRename,
+  initialMode = 'template',
 }: {
   templateName: string;
   initialData?: Snapshot;
   onRename?: (newName: string) => void;
+  initialMode?: 'template' | 'site';
 }) {
   const router = useRouter();
   const [showVectorDrawer, setShowVectorDrawer] = useState(false);
@@ -99,7 +101,7 @@ export default function TemplateEditor({
           slugPreview={slugPreview}
           handleRename={handleRename}
           handleSaveDraft={handleSaveDraft}
-          onBack={() => router.push('/admin/templates')}
+          onBack={() => router.push(initialMode === 'site' ? '/admin/sites' : '/admin/templates')}
           nameExists={nameExists}
           setShowNameError={() => {}}
         />
@@ -113,7 +115,7 @@ export default function TemplateEditor({
         )}
 
         {/* Template Editor Content */}
-        <TemplateEditorContent
+        <EditorContent
           template={template as unknown as Template}
           rawJson={rawJson}
           setRawJson={setRawJson}
@@ -124,6 +126,7 @@ export default function TemplateEditor({
           recentlyInsertedBlockId={recentlyInsertedBlockId ?? null}
           setBlockErrors={setBlockErrors as unknown as (errors: Record<string, BlockValidationError[]>) => void}
           blockErrors={blockErrors as unknown as Record<string, BlockValidationError[]> | null  }
+          mode="template"
         />
 
         {/* Suggest Block */}

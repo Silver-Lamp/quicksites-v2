@@ -1,4 +1,4 @@
-// updated TemplateEditorContent with fallback preview enhancements and brand swatch
+// updated EditorContent to support both templates and sites
 'use client';
 
 import { useEffect, useState } from 'react';
@@ -7,6 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui';
 
 import type { Template, TemplateData } from '@/types/template';
 import { saveTemplate } from '@/admin/lib/saveTemplate';
+import { saveSite } from '@/admin/lib/saveSite';
 
 import CollapsiblePanel from '@/components/ui/collapsible-panel';
 import { PanelActions } from './template-action-toolbar';
@@ -25,42 +26,14 @@ import ThemeScope from '@/components/ui/theme-scope';
 import ImageUploader from '../admin/image-uploader';
 import { BlockValidationError, validateTemplateBlocks } from '@/hooks/validateTemplateBlocks';
 import { TemplateSaveSchema } from '@/admin/lib/zod/templateSaveSchema';
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
+import type { Database } from '@/types/supabase';
 
 function pushWithLimit<T>(stack: T[], item: T, limit = 10): T[] {
   return [...stack.slice(-limit + 1), item];
 }
 
-const brandColors: Record<string, string> = {
-  blue: '#3b82f6',
-  green: '#22c55e',
-  red: '#ef4444',
-  yellow: '#eab308',
-};
-
-const brandDetails: Record<string, {
-  color: string;
-  font: string;
-  logoUrl: string;
-}> = {
-  blue: {
-    color: '#3b82f6',
-    font: 'Inter',
-    logoUrl: '/brands/blue/logo.png',
-  },
-  green: {
-    color: '#22c55e',
-    font: 'Poppins',
-    logoUrl: '/brands/green/logo.png',
-  },
-  red: {
-    color: '#ef4444',
-    font: 'Roboto',
-    logoUrl: '/brands/red/logo.png',
-  },
-};
-
-
-export function TemplateEditorContent({
+export function EditorContent({
   template,
   rawJson,
   setRawJson,
@@ -71,6 +44,7 @@ export function TemplateEditorContent({
   recentlyInsertedBlockId,
   setBlockErrors,
   blockErrors,
+  mode,
 }: {
   template: Template;
   rawJson: string;
@@ -82,7 +56,60 @@ export function TemplateEditorContent({
   recentlyInsertedBlockId: string | null;
   setBlockErrors: (errors: Record<string, BlockValidationError[]>) => void;
   blockErrors: Record<string, BlockValidationError[]> | null;
+  mode: 'template' | 'site';
 }) {
+  const supabase = createClientComponentClient<Database>();
+
+  const handleTogglePublished = async (value: boolean) => {
+    const updated = { ...template, published: value };
+    setTemplate(updated);
+
+    const { error } = await supabase
+      .from(mode === 'template' ? 'templates' : 'sites')
+      .update({ published: value })
+      .eq('id', template.id);
+
+    if (error) {
+      toast.error('Failed to update publish status');
+      setTemplate({ ...template, published: !value });
+    } else {
+      toast.success(value ? 'Published' : 'Unpublished');
+    }
+  };
+
+  const handleSave = async () => {
+    try {
+      const parsed = JSON.parse(rawJson);
+      const full = { ...template, data: parsed };
+
+      const { isValid: blocksAreValid, errors: blockErrorsMap } = validateTemplateBlocks(full);
+      const result = TemplateSaveSchema.safeParse(full);
+      const hasAnyErrors = !result.success || Object.keys(blockErrorsMap).length > 0;
+
+      setBlockErrors(blockErrorsMap);
+
+      if (hasAnyErrors) {
+        toast.error('Validation failed. Fix errors to save.');
+        return;
+      }
+
+      const saveFn = mode === 'template' ? saveTemplate : saveSite;
+      const promise = saveFn(full);
+
+      toast.promise(promise, {
+        loading: 'Saving...',
+        success: 'Saved!',
+        error: 'Save failed',
+      });
+
+      const saved = await promise;
+      setTemplate(saved);
+      setRawJson(JSON.stringify(saved.data, null, 2));
+      setBlockErrors({});
+    } catch (err: any) {
+      toast.error('Invalid JSON');
+    }
+  };
   const [templateErrors, setTemplateErrors] = useState<Record<string, string[]>>({});
   const [formErrors, setFormErrors] = useState<string[]>([]);
   

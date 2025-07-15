@@ -50,6 +50,7 @@ export type Snapshot = {
 };
 
 export type Template = Snapshot & {
+  site_name?: string;
   template_name?: string;
   site_id?: string;
   headline?: string;

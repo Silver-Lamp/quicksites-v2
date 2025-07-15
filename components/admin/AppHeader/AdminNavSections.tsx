@@ -11,6 +11,7 @@ import {
   FileStack,
   Activity,
   ChevronDown,
+  Globe,
 } from 'lucide-react';
 import clsx from 'clsx';
 
@@ -64,6 +65,15 @@ const navItems: NavItem[] = [
     children: [
       { label: 'Browse Templates', href: '/admin/templates' },
       { label: 'Create Template', href: '/admin/templates/new' },
+    ],
+  },
+  {
+    type: 'item',
+    label: 'Sites',
+    icon: <Globe size={18} />,
+    children: [
+      { label: 'Browse Sites', href: '/admin/sites' },
+      { label: 'Create Site', href: '/admin/sites/new' },
     ],
   },
   {

@@ -75,6 +75,13 @@ export function MobileDrawer({
                 </div>
               </details>
               <details>
+                <summary className="cursor-pointer font-semibold text-yellow-300">Sites</summary>
+                <div className="ml-4 flex flex-col gap-1">
+                  <SafeLink href="/admin/sites">All Sites</SafeLink>
+                  <SafeLink href="/admin/sites/new">+ New Site</SafeLink>
+                </div>
+              </details>
+              <details>
                 <summary className="cursor-pointer font-semibold text-purple-300">Dev Tools</summary>
                 <div className="ml-4 flex flex-col gap-1">
                   <SafeLink href="/admin/docs">Docs</SafeLink>

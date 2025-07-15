@@ -77,14 +77,14 @@ export default function TemplatePreview({
               >
                 <RenderBlock block={block} handleNestedBlockUpdate={onBlockClick} />
 
-                {showJsonFallback && (
+                {/* {showJsonFallback && (
                   <details className="mt-3 text-xs text-gray-500 dark:text-gray-400">
                     <summary className="cursor-pointer select-none">Show Raw JSON</summary>
                     <pre className="mt-1 whitespace-pre-wrap break-words">
                       {JSON.stringify(block.content, null, 2)}
                     </pre>
                   </details>
-                )}
+                )} */}
               </div>
             ))}
           </div>

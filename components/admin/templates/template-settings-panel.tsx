@@ -7,6 +7,7 @@ import { supabase } from '@/admin/lib/supabaseClient';
 import type { Template } from '@/types/template';
 import { Switch } from '@/components/ui/switch';
 import debounce from 'lodash.debounce';
+import { toast } from 'react-hot-toast';
 
 type TemplateSettingsPanelProps = {
   template: Template;
@@ -85,8 +86,21 @@ export default function TemplateSettingsPanel({ template, onChange }: TemplateSe
     checkSlugUniqueness(slug);
   }, [template.slug]);
 
-  const handleTogglePublished = () => {
-    onChange({ ...template, published: !template.published });
+  const handleTogglePublished = async (value: boolean) => {
+    const updated = { ...template, published: value };
+    onChange(updated);
+  
+    const { error } = await supabase
+      .from('templates')
+      .update({ published: value })
+      .eq('id', template.id);
+  
+    if (error) {
+      toast.error('Failed to update publish status');
+      onChange({ ...template, published: !value }); // revert
+    } else {
+      toast.success(value ? 'Template published' : 'Template unpublished');
+    }
   };
 
   return (
@@ -147,7 +161,10 @@ export default function TemplateSettingsPanel({ template, onChange }: TemplateSe
         <Label>Status</Label>
         <div className="flex gap-2 items-center">
           <span className="text-sm text-muted-foreground">Published</span>
-          <Switch checked={!!template.published} onCheckedChange={handleTogglePublished} />
+          <Switch
+            checked={!!template.published}
+            onCheckedChange={handleTogglePublished}
+          />
         </div>
       </div>
 

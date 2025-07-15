@@ -35,6 +35,7 @@ export type Snapshot = {
   updated_at?: string;
   domain?: string | null;
   published?: boolean;
+  archived?: boolean;
   custom_domain?: string | null;
   name_exists?: boolean;
   show_name_error?: boolean;

@@ -9,7 +9,7 @@ import type { Snapshot, Template } from '@/types/template';
 import toast from 'react-hot-toast';
 import { validateBlock } from '@/lib/validateBlock';
 import { Block } from '@/types/blocks';
-import { validateTemplateBlocks } from '@/hooks/validateTemplateBlocks';
+import { BlockValidationError, validateTemplateBlocks } from '@/hooks/validateTemplateBlocks';
 import { fixTemplatePages } from '@/lib/fixBlockDefaults';
 
 export function useTemplateEditorState({
@@ -22,7 +22,7 @@ export function useTemplateEditorState({
   onRename?: (newName: string) => void;
 }) {
   const fallback = createEmptyTemplate(templateName);
-  const [blockErrors, setBlockErrors] = useState<Record<string, string[]>>({});
+  const [blockErrors, setBlockErrors] = useState<Record<string, BlockValidationError[]>>({});
 
   const applyDefaults = (tpl: Partial<Template>): Snapshot => {
     const snapshot: Snapshot = {
@@ -38,12 +38,12 @@ export function useTemplateEditorState({
       data: fixTemplatePages(tpl.data || { pages: [] }),
     };
 
-    const errors: Record<string, string[]> = {};
+    const errors: Record<string, BlockValidationError[]> = {};
     for (const page of snapshot.data.pages) {
       for (const block of page.content_blocks) {
         const errorList = validateBlock(block as Block);
         if (errorList.length) {
-          errors[block._id || ''] = errorList;
+          errors[block._id || ''] = errorList as unknown as BlockValidationError[];
           if (process.env.NODE_ENV === 'development') {
             console.warn('[TemplateEditor] Block schema validation failed for:', block.type, errorList);
           }
@@ -85,7 +85,7 @@ export function useTemplateEditorState({
 
     if (!isValid) {
       console.log('errors', errors);
-      setBlockErrors(errors);
+      setBlockErrors(errors as unknown as Record<string, BlockValidationError[]>);
       const firstInvalidId = Object.keys(errors)[0];
       const el = document.getElementById(`block-${firstInvalidId}`);
       if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });

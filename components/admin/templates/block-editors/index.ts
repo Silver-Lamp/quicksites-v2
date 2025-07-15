@@ -1,9 +1,13 @@
+import { BlockValidationError } from '@/hooks/validateTemplateBlocks';
 import type { Block } from '@/types/blocks';
+import { Template } from '@/types/template';
 
 export type BlockEditorProps = {
   block: Block;
   onSave: (updated: Block) => void;
   onClose: () => void;
+  errors?: BlockValidationError[];
+  template?: Template;
 };
 
 // Dynamic imports for all known editors

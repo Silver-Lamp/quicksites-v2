@@ -15,7 +15,8 @@ export default async function TemplatesIndexPage({ searchParams }: { searchParam
   let query = supabase
     .from('templates')
     .select('*')
-    .order('updated_at', { ascending: false });
+    .order('updated_at', { ascending: false })
+    .eq('archived', false);
 
   if (fromDate) {
     query = query.gte('updated_at', fromDate.toISOString());

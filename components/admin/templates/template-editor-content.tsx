@@ -23,7 +23,8 @@ import TemplateImageGallery from '../admin/template-image-gallery';
 import TemplateActionToolbar from './template-action-toolbar';
 import ThemeScope from '@/components/ui/theme-scope';
 import ImageUploader from '../admin/image-uploader';
-import { validateTemplateBlocks } from '@/hooks/validateTemplateBlocks';
+import { BlockValidationError, validateTemplateBlocks } from '@/hooks/validateTemplateBlocks';
+import { TemplateSaveSchema } from '@/admin/lib/zod/templateSaveSchema';
 
 function pushWithLimit<T>(stack: T[], item: T, limit = 10): T[] {
   return [...stack.slice(-limit + 1), item];
@@ -69,6 +70,7 @@ export function TemplateEditorContent({
   setShowPublishModal,
   recentlyInsertedBlockId,
   setBlockErrors,
+  blockErrors,
 }: {
   template: Template;
   rawJson: string;
@@ -78,8 +80,12 @@ export function TemplateEditorContent({
   autosaveStatus: string;
   setShowPublishModal: (v: boolean) => void;
   recentlyInsertedBlockId: string | null;
-  setBlockErrors: (errors: Record<string, string[]>) => void;
+  setBlockErrors: (errors: Record<string, BlockValidationError[]>) => void;
+  blockErrors: Record<string, BlockValidationError[]> | null;
 }) {
+  const [templateErrors, setTemplateErrors] = useState<Record<string, string[]>>({});
+  const [formErrors, setFormErrors] = useState<string[]>([]);
+  
   const [showModal, setModal] = useState(false);
   const [historyStack, setHistoryStack] = useState<Template[]>(() => {
     const stored = localStorage.getItem('templateHistory');
@@ -124,35 +130,88 @@ export function TemplateEditorContent({
     try {
       const parsed = JSON.parse(rawJson);
       const fullTemplate: Template = { ...template, data: parsed };
-
-      const { isValid, errors } = validateTemplateBlocks(fullTemplate);
-      if (!isValid) {
-        console.warn('[🚩 Validation Errors]', errors);
-        setBlockErrors(errors);
-        const firstInvalidId = Object.keys(errors)[0];
-        const el = document.getElementById(`block-${firstInvalidId}`);
-        if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        toast.error('Fix validation errors before saving.');
+  
+      // First validate blocks (page content)
+      const { isValid: blocksAreValid, errors: blockErrorsMap } = validateTemplateBlocks(fullTemplate);
+  
+      // Then validate the full template object using Zod
+      const result = TemplateSaveSchema.safeParse(fullTemplate);
+  
+      const fieldErrors = result.success ? {} : result.error.flatten().fieldErrors;
+      const formErrors = result.success ? [] : result.error.flatten().formErrors;
+  
+      // Capture Zod template errors if any
+      setTemplateErrors(fieldErrors); // includes slug, name, layout, etc
+      setFormErrors(formErrors);      // non-field-specific issues
+      setBlockErrors(blockErrorsMap); // block-level field issues
+  
+      if (!result.success) {
+        console.log('.:.[⛔ templateSaveSchema failed]', result.error.flatten());
+      }
+      
+      const hasAnyErrors =
+        !result.success || Object.keys(blockErrorsMap).length > 0;
+  
+      if (hasAnyErrors) {
+        console.warn('[🚩 Validation Errors]', {
+          fieldErrors,
+          formErrors,
+          blockErrorsMap,
+        });
+  
+        // Scroll to first block issue
+        const firstErrorBlockId = Object.keys(blockErrorsMap)[0];
+        if (firstErrorBlockId) {
+          const el = document.getElementById(`block-${firstErrorBlockId}`);
+          if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+  
+        toast.custom((t) => (
+          <div className="bg-red-900/80 text-red-100 border border-red-700 px-4 py-2 rounded shadow max-w-md text-sm">
+            <strong>Template validation failed</strong>
+            <ul className="mt-1 list-disc list-inside">
+              {Object.entries(blockErrorsMap).slice(0, 3).map(([blockId, messages]) => (
+                <li key={blockId}>
+                  Block <code>{blockId}</code>: {messages.join(', ')}
+                </li>
+              ))}
+              {Object.keys(blockErrorsMap).length > 3 && <li>...and more</li>}
+            </ul>
+            <button
+              onClick={() => toast.dismiss(t.id)}
+              className="text-xs mt-2 underline text-red-300 hover:text-red-200"
+            >
+              Dismiss
+            </button>
+          </div>
+        ));
+  
         return;
       }
-
+  
+      // ✅ Save if valid
       const promise = saveTemplate(fullTemplate);
-
+  
       toast.promise(promise, {
         loading: 'Saving...',
         success: 'Template saved successfully!',
         error: 'Failed to save template',
       });
-
+  
       const saved = await promise;
       setTemplate(saved);
       setRawJson(JSON.stringify(saved.data, null, 2));
+  
+      // Clear errors on success
       setBlockErrors({});
+      setTemplateErrors({});
+      setFormErrors([]);
     } catch (err: any) {
       console.error('[❌ JSON Parse Error]', err.message);
       toast.error('Invalid JSON: could not save.');
     }
   };
+  
 
   const handleUndo = () => {
     if (historyStack.length === 0) {
@@ -182,7 +241,42 @@ export function TemplateEditorContent({
 
   return (
     <>
+      {blockErrors && Object.keys(blockErrors).length > 0 && (
+        <div className="bg-red-900/10 border border-red-700 text-red-300 px-4 py-3 rounded text-sm mb-4">
+          ⚠ {Object.keys(blockErrors).length} block(s) have validation issues. Expand pages to review.
+        </div>
+      )}
+
+
       <Tabs defaultValue="edit">
+        {process.env.NODE_ENV === 'development' && (
+          <details className="text-xs text-yellow-200 bg-black p-3 mb-4 rounded max-h-60 overflow-auto border border-yellow-400/40">
+            <summary className="cursor-pointer font-mono text-yellow-300">
+              ⛏ Debug: Validation State
+            </summary>
+            <div className="pt-2 space-y-2">
+              <div>
+                <strong className="text-yellow-400">templateErrors</strong>
+                <pre className="whitespace-pre-wrap">
+                  {JSON.stringify(templateErrors, null, 2)}
+                </pre>
+              </div>
+              <div>
+                <strong className="text-yellow-400">formErrors</strong>
+                <pre className="whitespace-pre-wrap">
+                  {JSON.stringify(formErrors, null, 2)}
+                </pre>
+              </div>
+              <div>
+                <strong className="text-yellow-400">blockErrors</strong>
+                <pre className="whitespace-pre-wrap">
+                  {JSON.stringify(blockErrors, null, 2)}
+                </pre>
+              </div>
+            </div>
+          </details>
+        )}
+
         <TabsList>
           <TabsTrigger value="edit">Edit</TabsTrigger>
           <TabsTrigger value="preview">Preview</TabsTrigger>
@@ -236,7 +330,8 @@ export function TemplateEditorContent({
                 <TemplatePageEditor
                   template={template}
                   onChange={handleTemplateChange}
-                  onLivePreviewUpdate={(data) => setRawJson(JSON.stringify(data, null, 2))}
+                  onLivePreviewUpdate={(data: TemplateData) => setRawJson(JSON.stringify(data, null, 2))}
+                  blockErrors={blockErrors || {}}
                 />
               </CollapsiblePanel>
               {/* <CollapsiblePanel id="template-gallery" title="Image Gallery">

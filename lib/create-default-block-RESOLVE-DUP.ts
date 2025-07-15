@@ -1,3 +1,4 @@
+// lib/create-default-block-RESOLVE-DUP.ts
 import type { Block } from '@/types/blocks';
 
 export function createDefaultBlock(type: Block['type']): Block {

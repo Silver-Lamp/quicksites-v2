@@ -12,7 +12,7 @@ import type { Database } from "@/types/supabase";
 import TemplatePreview from "@/components/admin/templates/template-preview";
 import { defaultGridPresets } from "@/types/grid-presets";
 import GridThumbnailRenderer from "@/components/admin/templates/grid-thumbnail-renderer";
-import { createDefaultBlock } from '@/lib/create-default-block';
+import { createDefaultBlock } from '@/lib/createDefaultBlock';
 
 export default function AdminPresetsEditPage() {
   const { id } = useParams();

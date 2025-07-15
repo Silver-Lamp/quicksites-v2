@@ -1,18 +1,30 @@
-// components/admin/templates/block-editor.tsx
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import dynamic from 'next/dynamic';
 import JsonFallbackEditor from './block-editors/json-fallback-editor';
 import { BLOCK_EDITORS, type BlockEditorProps } from './block-editors';
+import type { BlockValidationError } from '@/hooks/validateTemplateBlocks';
 
-export default function BlockEditor({ block, onSave, onClose }: BlockEditorProps) {
+export default function BlockEditor({ block, onSave, onClose, template }: BlockEditorProps) {
   const [mode, setMode] = useState<'form' | 'json'>('form');
   const [hasEditor, setHasEditor] = useState<boolean>(block.type in BLOCK_EDITORS);
 
   useEffect(() => {
     setHasEditor(block.type in BLOCK_EDITORS);
   }, [block.type]);
+
+  const errors: BlockValidationError[] = (block as any)._meta?.errorMessages || [];
+
+  // Group by field for use in forms if needed
+  const errorsByField = useMemo(() => {
+    const grouped: Record<string, string[]> = {};
+    for (const err of errors) {
+      if (!grouped[err.field]) grouped[err.field] = [];
+      grouped[err.field].push(err.message);
+    }
+    return grouped;
+  }, [errors]);
 
   if (mode === 'json' || !hasEditor) {
     return (
@@ -25,10 +37,28 @@ export default function BlockEditor({ block, onSave, onClose }: BlockEditorProps
             ← Back to Form Editor
           </button>
         )}
+
+        {errors.length > 0 && (
+          <div className="mb-3 p-2 bg-red-900/20 text-red-200 text-sm rounded border border-red-700">
+            <strong>This block has validation issues:</strong>
+            <ul className="list-disc list-inside mt-1 space-y-1">
+              {errors.map((err, i) => (
+                <li key={i}>
+                  <code>{err.field}</code>: {err.message}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
         <JsonFallbackEditor block={block} onSave={onSave} onClose={onClose} />
+
         {!hasEditor && (
           <div className="mt-4 p-2 bg-yellow-100 text-yellow-800 rounded text-sm dark:bg-yellow-900 dark:text-yellow-200">
-            <p><strong>Heads up:</strong> No visual editor exists for type <code>{block.type}</code>. Using fallback JSON editor.</p>
+            <p>
+              <strong>Heads up:</strong> No visual editor exists for type{' '}
+              <code>{block.type}</code>. Using fallback JSON editor.
+            </p>
           </div>
         )}
       </div>
@@ -36,12 +66,12 @@ export default function BlockEditor({ block, onSave, onClose }: BlockEditorProps
   }
 
   const LazyEditor = dynamic(BLOCK_EDITORS[block.type], {
-    loading: () => <p className="text-sm italic text-gray-500 dark:text-gray-300">Loading editor...</p>,
     ssr: false,
+    loading: () => <p>Loading editor...</p>,
   });
 
   return (
-    <div className="dark:bg-neutral-900 dark:text-white">
+    <div className="space-y-4 bg-black text-white border border-black p-4 rounded">
       <div className="flex justify-between items-center mb-3">
         <h3 className="text-lg font-semibold capitalize">{block.type} Editor</h3>
         <button
@@ -51,7 +81,28 @@ export default function BlockEditor({ block, onSave, onClose }: BlockEditorProps
           Switch to JSON
         </button>
       </div>
-      <LazyEditor block={block} onSave={onSave} onClose={onClose} />
+
+      {/* Optional: Debug view of errors per field */}
+      {errors.length > 0 && (
+        <div className="p-2 bg-red-900/10 border border-red-700 rounded text-sm text-red-200">
+          <strong>Validation issues detected:</strong>
+          <ul className="list-disc list-inside mt-1">
+            {Object.entries(errorsByField).map(([field, messages]) => (
+              <li key={field}>
+                <code>{field}</code>: {messages.join(', ')}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      <LazyEditor
+        template={template}
+        block={block}
+        onSave={onSave}
+        onClose={onClose}
+        errors={errorsByField as unknown as BlockValidationError[]}
+      />
     </div>
   );
 }

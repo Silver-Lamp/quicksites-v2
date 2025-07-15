@@ -117,6 +117,12 @@ export default function GridBlock({
             block={editingBlockIndex !== null ? normalizedItems[editingBlockIndex] : null}
             onClose={() => setEditingBlockIndex(null)}
             onSave={handleSaveBlock}
+            onReplaceWithAI={() => {}}
+            onClone={() => {}}
+            onShowPrompt={() => {}}
+            onUndo={() => {}}
+            onViewDiff={() => {}}
+            undoAvailable={false}
           />
         </>
       ) : (

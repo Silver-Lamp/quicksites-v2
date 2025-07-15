@@ -1,3 +1,4 @@
+// lib/createDefaultBlock.ts
 import type { Block } from '@/types/blocks'; // adjust import path as needed
 import crypto from 'crypto';
 

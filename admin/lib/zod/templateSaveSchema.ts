@@ -23,21 +23,27 @@ export type ValidatedTemplateData = z.infer<typeof TemplateDataSchema>;
 // Full Template
 export const TemplateSaveSchema = z.object({
   id: z.string().optional(),
-  slug: z.string(), // ✅ Added this
+  slug: z
+    .string()
+    .min(1, 'Slug is required')
+    .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, {
+      message: 'Slug must be lowercase, alphanumeric, and hyphen-separated',
+    }),
   site_id: z.string().optional(),
-  name: z.string(),
+  template_name: z.string(),
   layout: z.string(),
   color_scheme: z.string(),
   industry: z.string(),
   theme: z.string(),
   headline: z.string().optional(),
   description: z.string().optional(),
-  hero_url: z.string().optional(),
-  banner_url: z.string().optional(),
-  logo_url: z.string().optional(),
-  team_url: z.string().optional(),
+  hero_url: z.string().nullable().optional(),
+  banner_url: z.string().nullable().optional(),
+  logo_url: z.string().nullable().optional(),
+  team_url: z.string().nullable().optional(),
   data: TemplateDataSchema,
   updated_at: z.string().optional(),
 });
+
 
 export type ValidatedTemplate = z.infer<typeof TemplateSaveSchema>;

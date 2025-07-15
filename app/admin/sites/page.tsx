@@ -2,8 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { createClient } from '@supabase/supabase-js';
-// import Page from '@/components/layout/page';
-// import AdminLayout from '@/components/admin/admin-layout';
+import AdminSidebarLayout from '@/components/admin/layout/admin-sidebar-layout';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -58,5 +57,5 @@ export default function SiteDirectory() {
 // SiteDirectory.getLayout = (page: React.ReactNode) => (
 //   <AdminSidebarLayout>{page}</AdminSidebarLayout>
 // );
-// SiteDirectory.getLayout = (page: any) => <AdminLayout>{page}</AdminLayout>;
-SiteDirectory.getLayout = (page: any) => <>{page}</>;
+SiteDirectory.getLayout = (page: any) => <AdminSidebarLayout>{page}</AdminSidebarLayout>;
+// SiteDirectory.getLayout = (page: any) => <>{page}</>;

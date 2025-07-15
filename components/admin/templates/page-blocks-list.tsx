@@ -69,8 +69,15 @@ export function PageBlocksList({
       {selectedIndex !== null && (
         <BlockSidebar
           block={page.content_blocks[selectedIndex]}
-          onChange={handleSidebarChange}
+          onSave={handleSidebarChange}
           onClose={() => setSelectedIndex(null)}
+          onOpen={true}
+          onReplaceWithAI={() => {}}
+          onClone={() => {}}
+          onShowPrompt={() => {}}
+          onUndo={() => {}}
+          onViewDiff={() => {}}
+          undoAvailable={false}
         />
       )}
     </div>

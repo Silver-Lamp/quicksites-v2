@@ -29,10 +29,12 @@ export const blockContentSchemaMap = {
   cta: {
     label: 'Call to Action',
     icon: '🚀',
-    schema: z.object({
-      label: z.string().min(1, 'CTA label is required'),
-      link: z.string().min(1, 'CTA link is required'),
-    }),
+    schema: z
+      .object({
+        label: z.string().min(1, 'CTA label is required'),
+        link: z.string().min(1, 'CTA link is required'),
+      })
+      .strict(),
   },
   testimonial: {
     label: 'Testimonial',
@@ -45,16 +47,16 @@ export const blockContentSchemaMap = {
   hero: {
     label: 'Hero',
     icon: '🎯',
-    schema: z.object({
-      headline: z.string().min(1, 'Headline is required'),
-      subheadline: z.string().optional(),
-      cta_text: z.string().optional(),
-      cta_link: z.string().optional(),
-      image_url: z
-        .union([z.string().url(), z.literal('')])
-        .optional(),
-      show_image_as_bg: z.boolean().optional(),
-    }),
+    schema: z
+      .object({
+        headline: z.string().min(1, 'Headline is required'),
+        subheadline: z.string().optional(),
+        cta_text: z.string().optional(),
+        cta_link: z.string().optional(),
+        image_url: z.union([z.string().url(), z.literal('')]).optional(),
+        show_image_as_bg: z.boolean().optional(),
+      })
+      .strict(),
   },
   services: {
     label: 'Services',
@@ -84,9 +86,9 @@ export const blockContentSchemaMap = {
     label: 'Footer',
     icon: '📞',
     schema: z.object({
-      businessName: z.string().min(1, 'Business name is required'),
+      business_name: z.string().min(1, 'Business name is required'),
       address: z.string().min(1, 'Address is required'),
-      cityState: z.string().min(1, 'City/State is required'),
+      city_state: z.string().min(1, 'City/State is required'),
       phone: z.string().min(1, 'Phone number is required'),
       links: z
         .array(

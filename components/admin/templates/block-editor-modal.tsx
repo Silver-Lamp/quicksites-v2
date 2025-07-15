@@ -31,13 +31,16 @@ export default function BlockEditorModal({
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="bg-white dark:bg-gray-900 text-gray-900 dark:text-white max-w-2xl max-h-screen overflow-y-auto">
+      {/* <DialogContent className="bg-white dark:bg-gray-900 text-gray-900 dark:text-white max-w-2xl max-h-screen overflow-y-auto"> */}
+      <DialogContent>
+      <div className="space-y-4" style={{ backgroundColor: 'black', color: 'white', border: '1px solid black', padding: '10px' }}>
         <h2 className="text-lg font-bold mb-4">Edit Block</h2>
         <BlockEditor
           block={currentBlock}
           onSave={handleSave}
           onClose={onClose}
-        />
+          />
+      </div>
       </DialogContent>
     </Dialog>
   );

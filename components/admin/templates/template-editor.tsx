@@ -17,6 +17,7 @@ import { BlocksEditor } from './blocks-editor';
 import BlockSidebar from './block-sidebar';
 import { Block, BlockSchema } from '@/admin/lib/zod/blockSchema';
 import { z } from 'zod';
+import { BlockValidationError } from '@/hooks/validateTemplateBlocks';
 
 export default function TemplateEditor({
   templateName,
@@ -76,7 +77,9 @@ export default function TemplateEditor({
       <strong className="text-red-400">Block {blockId}:</strong>
       <ul className="list-disc list-inside">
         {errors.map((e, i) => (
-          <li key={i}>{e}</li>
+          <li key={i}>
+            <code>{e.field}</code>: {e.message}
+          </li>
         ))}
       </ul>
     </div>
@@ -119,7 +122,8 @@ export default function TemplateEditor({
           autosaveStatus={autosave.status}
           setShowPublishModal={() => {}}
           recentlyInsertedBlockId={recentlyInsertedBlockId ?? null}
-          setBlockErrors={setBlockErrors}
+          setBlockErrors={setBlockErrors as unknown as (errors: Record<string, BlockValidationError[]>) => void}
+          blockErrors={blockErrors as unknown as Record<string, BlockValidationError[]> | null  }
         />
 
         {/* Suggest Block */}
@@ -138,7 +142,7 @@ export default function TemplateEditor({
         {selectedBlock && selectedIndex !== null && (
           <BlockSidebar
             block={selectedBlock}
-            errors={blockErrors[selectedId] || []}
+            errors={blockErrors[selectedId] as unknown as BlockValidationError[] || []}
             onSave={(updatedBlock: Block) => {
               setTemplate((prev) => {
                 const updated = { ...prev };
@@ -148,6 +152,12 @@ export default function TemplateEditor({
             }}
             onClose={() => setSelectedIndex(null)}
             onOpen={selectedIndex !== null}
+            onReplaceWithAI={() => {}}
+            onClone={() => {}}
+            onShowPrompt={() => {}}
+            onUndo={() => {}}
+            onViewDiff={() => {}}
+            undoAvailable={false}
           />
         )}
       </ScrollArea>

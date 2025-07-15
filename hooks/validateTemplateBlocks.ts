@@ -1,21 +1,28 @@
 import { BlockSchema } from '@/admin/lib/zod/blockSchema';
 import type { Template } from '@/types/template';
 
+export type BlockValidationError = {
+  field: string;
+  message: string;
+};
+
 export function validateTemplateBlocks(template: Template): {
   isValid: boolean;
-  errors: Record<string, string[]>;
+  errors: Record<string, BlockValidationError[]>;
 } {
-  const errors: Record<string, string[]> = {};
+  const errors: Record<string, BlockValidationError[]> = {};
 
-  const blocks = template.data.pages.flatMap((page) => page.content_blocks);
-
-  blocks.forEach((block) => {
-    const result = BlockSchema.safeParse(block);
-    if (!result.success) {
-      errors[block._id ?? 'unknown'] = result.error.errors.map((e) => {
-        return e.path.join('.') + ' ' + e.message;
-      });
-    }
+  template.data.pages.forEach((page, pageIndex) => {
+    page.content_blocks.forEach((block, blockIndex) => {
+      const result = BlockSchema.safeParse(block);
+      if (!result.success) {
+        const key = block._id || `${page.slug}-block-${blockIndex}`;
+        errors[key] = result.error.errors.map((e) => ({
+          field: e.path.join('.'),
+          message: e.message,
+        }));
+      }
+    });
   });
 
   return {

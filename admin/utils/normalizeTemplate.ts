@@ -4,7 +4,8 @@ export function normalizeTemplate(entry: any): Template {
   return {
     id: entry.id,
     site_id: entry.site_id,
-    name: entry.template_name,
+    template_name: entry.template_name,
+    slug: entry.slug,
     layout: entry.layout,
     color_scheme: entry.color_scheme,
     commit: entry.commit,

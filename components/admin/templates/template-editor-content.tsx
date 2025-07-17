@@ -1,4 +1,4 @@
-// updated EditorContent to support both templates and sites
+// components/editor/EditorContent.tsx
 'use client';
 
 import { useEffect, useState } from 'react';
@@ -10,24 +10,22 @@ import { saveTemplate } from '@/admin/lib/saveTemplate';
 import { saveSite } from '@/admin/lib/saveSite';
 
 import CollapsiblePanel from '@/components/ui/collapsible-panel';
-
 import TemplateSettingsPanel from './template-settings-panel';
-// import { TemplateEditorBranding } from './template-editor.branding';
-import TemplatePageEditor from './template-page-editor';
 import TemplateJsonEditor from './template-json-editor';
 import TemplateHistory from './template-history';
 import TemplatePreviewWithToggle from './template-preview-with-toggle';
 import TemplatePublishModal from './template-publish-modal';
-import DevicePreviewWrapper from './device-preview-wrapper';
-// import TemplateImageGallery from '../admin/template-image-gallery';
 import { TemplateActionToolbar } from './template-action-toolbar';
 import ThemeScope from '@/components/ui/theme-scope';
-// import ImageUploader from '../admin/image-uploader';
+import { IndustryThemeScope } from '@/components/ui/industry-theme-scope';
 import { BlockValidationError, validateTemplateBlocks } from '@/hooks/validateTemplateBlocks';
 import { TemplateSaveSchema } from '@/admin/lib/zod/templateSaveSchema';
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 import type { Database } from '@/types/supabase';
 import { usePanelControls } from '@/components/ui/panel-context';
+import { EditorContentOverlay } from '@/components/editor/editor-content-overlay';
+import DevicePreviewWrapper from '@/components/admin/templates/device-preview-wrapper';
+import { LiveEditorPreview } from '@/components/editor/live-editor-preview';
 
 function pushWithLimit<T>(stack: T[], item: T, limit = 10): T[] {
   return [...stack.slice(-limit + 1), item];
@@ -60,65 +58,32 @@ export function EditorContent({
 }) {
   const supabase = createClientComponentClient<Database>();
 
-  const handleTogglePublished = async (value: boolean) => {
-    const updated = { ...template, published: value };
+  const handleTemplateChange = (updated: Template) => {
+    setHistoryStack((prev) => pushWithLimit(prev, template, 10));
+    setRedoStack([]);
     setTemplate(updated);
+    setRawJson(JSON.stringify(updated.data, null, 2));
+    setTemplateErrors({});
+    setFormErrors([]);
 
-    const { error } = await supabase
-      .from(mode === 'template' ? 'templates' : 'sites')
-      .update({ published: value })
-      .eq('id', template.id);
-
-    if (error) {
-      toast.error('Failed to update publish status');
-      setTemplate({ ...template, published: !value });
-    } else {
-      toast.success(value ? 'Published' : 'Unpublished');
+    const updatedBlockIds = new Set(
+      updated.data.pages.flatMap((page) => page.content_blocks.map((b) => b._id))
+    );
+    const prevErrors = blockErrors || {};
+    const filtered: Record<string, BlockValidationError[]> = {};
+    for (const id in prevErrors) {
+      if (updatedBlockIds.has(id)) filtered[id] = prevErrors[id];
     }
+    setBlockErrors(filtered);
   };
 
-  const handleSave = async () => {
-    try {
-      const parsed = JSON.parse(rawJson);
-      const full = { ...template, data: parsed };
-
-      const { isValid: blocksAreValid, errors: blockErrorsMap } = validateTemplateBlocks(full);
-      const result = TemplateSaveSchema.safeParse(full);
-      const hasAnyErrors = !result.success || Object.keys(blockErrorsMap).length > 0;
-
-      setBlockErrors(blockErrorsMap);
-
-      if (hasAnyErrors) {
-        toast.error('Validation failed. Fix errors to save.');
-        return;
-      }
-
-      const saveFn = mode === 'template' ? saveTemplate : saveSite;
-      const promise = saveFn(full);
-
-      toast.promise(promise, {
-        loading: 'Saving...',
-        success: 'Saved!',
-        error: 'Save failed',
-      });
-
-      const saved = await promise;
-      setTemplate(saved);
-      setRawJson(JSON.stringify(saved.data, null, 2));
-      setBlockErrors({});
-    } catch (err: any) {
-      toast.error('Invalid JSON');
-    }
-  };
   const [templateErrors, setTemplateErrors] = useState<Record<string, string[]>>({});
   const [formErrors, setFormErrors] = useState<string[]>([]);
-  
   const [showModal, setModal] = useState(false);
   const [historyStack, setHistoryStack] = useState<Template[]>(() => {
     const stored = localStorage.getItem('templateHistory');
     return stored ? JSON.parse(stored) : [];
   });
-
   const [redoStack, setRedoStack] = useState<Template[]>(() => {
     const stored = localStorage.getItem('templateRedo');
     return stored ? JSON.parse(stored) : [];
@@ -138,132 +103,11 @@ export function EditorContent({
     localStorage.setItem('preview-theme', isDark ? 'dark' : 'light');
   }, [isDark]);
 
-  useEffect(() => {
-    localStorage.setItem('templateHistory', JSON.stringify(historyStack));
-  }, [historyStack]);
-
-  useEffect(() => {
-    localStorage.setItem('templateRedo', JSON.stringify(redoStack));
-  }, [redoStack]);
-
-  const handleTemplateChange = (updated: Template) => {
-    setHistoryStack((prev) => pushWithLimit(prev, template, 10));
-    setRedoStack([]);
-    setTemplate(updated);
-    setRawJson(JSON.stringify(updated.data, null, 2));
-  
-    // ✅ Clear field/form-level errors
-    setTemplateErrors({});
-    setFormErrors([]);
-  
-    // ✅ Remove orphaned block errors
-    const updatedBlockIds = new Set(
-      updated.data.pages.flatMap((page) => page.content_blocks.map((b) => b._id))
-    );
-  
-    const prevErrors = blockErrors || {};
-    const filtered: Record<string, BlockValidationError[]> = {};
-    for (const id in prevErrors) {
-      if (updatedBlockIds.has(id)) {
-        filtered[id] = prevErrors[id];
-      }
-    }
-    setBlockErrors(filtered);
-  };  
-
-  const handleSaveDraft = async () => {
-    try {
-      const parsed = JSON.parse(rawJson);
-      const fullTemplate: Template = { ...template, data: parsed };
-  
-      // First validate blocks (page content)
-      const { isValid: blocksAreValid, errors: blockErrorsMap } = validateTemplateBlocks(fullTemplate);
-  
-      // Then validate the full template object using Zod
-      const result = TemplateSaveSchema.safeParse(fullTemplate);
-  
-      const fieldErrors = result.success ? {} : result.error.flatten().fieldErrors;
-      const formErrors = result.success ? [] : result.error.flatten().formErrors;
-  
-      // Capture Zod template errors if any
-      setTemplateErrors(fieldErrors); // includes slug, name, layout, etc
-      setFormErrors(formErrors);      // non-field-specific issues
-      setBlockErrors(blockErrorsMap); // block-level field issues
-  
-      if (!result.success) {
-        console.log('.:.[⛔ templateSaveSchema failed]', result.error.flatten());
-      }
-      
-      const hasAnyErrors =
-        !result.success || Object.keys(blockErrorsMap).length > 0;
-  
-      if (hasAnyErrors) {
-        console.warn('[🚩 Validation Errors]', {
-          fieldErrors,
-          formErrors,
-          blockErrorsMap,
-        });
-  
-        // Scroll to first block issue
-        const firstErrorBlockId = Object.keys(blockErrorsMap)[0];
-        if (firstErrorBlockId) {
-          const el = document.getElementById(`block-${firstErrorBlockId}`);
-          if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        }
-  
-        toast.custom((t) => (
-          <div className="bg-red-900/80 text-red-100 border border-red-700 px-4 py-2 rounded shadow max-w-md text-sm">
-            <strong>Template validation failed</strong>
-            <ul className="mt-1 list-disc list-inside">
-              {Object.entries(blockErrorsMap).slice(0, 3).map(([blockId, messages]) => (
-                <li key={blockId}>
-                  Block <code>{blockId}</code>: {messages.join(', ')}
-                </li>
-              ))}
-              {Object.keys(blockErrorsMap).length > 3 && <li>...and more</li>}
-            </ul>
-            <button
-              onClick={() => toast.dismiss(t.id)}
-              className="text-xs mt-2 underline text-red-300 hover:text-red-200"
-            >
-              Dismiss
-            </button>
-          </div>
-        ));
-  
-        return;
-      }
-  
-      // ✅ Save if valid
-      const promise = saveTemplate(fullTemplate);
-  
-      toast.promise(promise, {
-        loading: 'Saving...',
-        success: 'Template saved successfully!',
-        error: 'Failed to save template',
-      });
-  
-      const saved = await promise;
-      setTemplate(saved);
-      setRawJson(JSON.stringify(saved.data, null, 2));
-  
-      // Clear errors on success
-      setBlockErrors({});
-      setTemplateErrors({});
-      setFormErrors([]);
-    } catch (err: any) {
-      console.error('[❌ JSON Parse Error]', err.message);
-      toast.error('Invalid JSON: could not save.');
-    }
-  };
-  
-
   const handleUndo = () => {
     if (historyStack.length === 0) {
       toast('Nothing to undo');
       return;
     }
-  
     const previous = historyStack[historyStack.length - 1];
     setHistoryStack((prev) => prev.slice(0, -1));
     setRedoStack((prev) => pushWithLimit(prev, template, 10));
@@ -271,14 +115,12 @@ export function EditorContent({
     setRawJson(JSON.stringify(previous.data, null, 2));
     toast.success('Undo successful');
   };
-  
 
   const handleRedo = () => {
     if (redoStack.length === 0) {
       toast('Nothing to redo');
       return;
     }
-  
     const next = redoStack[redoStack.length - 1];
     setRedoStack((prev) => prev.slice(0, -1));
     setHistoryStack((prev) => pushWithLimit(prev, template, 10));
@@ -286,156 +128,70 @@ export function EditorContent({
     setRawJson(JSON.stringify(next.data, null, 2));
     toast.success('Redo successful');
   };
-  
-  function PanelActions() {
-    const { resetPanels, openAll, closeAll } = usePanelControls();
-  
-    return (
-      <div className="flex gap-2 mb-2">
-        <Button variant="ghost" size="sm" onClick={openAll}>Open All</Button>
-        <Button variant="ghost" size="sm" onClick={closeAll}>Collapse All</Button>
-        <Button variant="outline" size="sm" onClick={resetPanels}>Reset Panel States</Button>
-      </div>
-    );
-  }
-  
+
+  const handleSaveDraft = async () => {
+    try {
+      const parsed = JSON.parse(rawJson);
+      const full = { ...template, data: parsed };
+      const { isValid, errors } = validateTemplateBlocks(full);
+      const result = TemplateSaveSchema.safeParse(full);
+      const fieldErrors = result.success ? {} : result.error.flatten().fieldErrors;
+      const formErrors = result.success ? [] : result.error.flatten().formErrors;
+
+      setTemplateErrors(fieldErrors);
+      setFormErrors(formErrors);
+      setBlockErrors(errors);
+
+      if (!result.success || Object.keys(errors).length > 0) {
+        toast.error('Validation failed. Fix errors to save.');
+        return;
+      }
+
+      const promise = (mode === 'template' ? saveTemplate : saveSite)(full);
+      toast.promise(promise, {
+        loading: 'Saving...',
+        success: 'Template saved!',
+        error: 'Failed to save',
+      });
+
+      const saved = await promise;
+      setTemplate(saved);
+      setRawJson(JSON.stringify(saved.data, null, 2));
+      setBlockErrors({});
+    } catch (err: any) {
+      toast.error('Invalid JSON');
+    }
+  };
+
   return (
-    <>
-      {blockErrors && Object.keys(blockErrors).length > 0 && (
-        <div className="bg-red-900/10 border border-red-700 text-red-300 px-4 py-3 rounded text-sm mb-4">
-          ⚠ {Object.keys(blockErrors).length} block(s) have validation issues. Expand pages to review.
-        </div>
-      )}
-
-
-      <Tabs defaultValue="edit">
-        {process.env.NODE_ENV === 'development' && (
-          <details className="text-xs text-yellow-200 bg-black p-3 mb-4 rounded max-h-60 overflow-auto border border-yellow-400/40">
-            <summary className="cursor-pointer font-mono text-yellow-300">
-              ⛏ Debug: Validation State
-            </summary>
-            <div className="pt-2 space-y-2">
-              <div>
-                <strong className="text-yellow-400">templateErrors</strong>
-                <pre className="whitespace-pre-wrap">
-                  {JSON.stringify(templateErrors, null, 2)}
-                </pre>
-              </div>
-              <div>
-                <strong className="text-yellow-400">formErrors</strong>
-                <pre className="whitespace-pre-wrap">
-                  {JSON.stringify(formErrors, null, 2)}
-                </pre>
-              </div>
-              <div>
-                <strong className="text-yellow-400">blockErrors</strong>
-                <pre className="whitespace-pre-wrap">
-                  {JSON.stringify(blockErrors, null, 2)}
-                </pre>
-              </div>
-            </div>
-          </details>
-        )}
-
+    <IndustryThemeScope industry={template.industry}>
+      <Tabs defaultValue="preview">
         <TabsList>
-          <TabsTrigger value="edit">Edit</TabsTrigger>
           <TabsTrigger value="preview">Preview</TabsTrigger>
+          <TabsTrigger value="edit">Edit</TabsTrigger>
           <TabsTrigger value="history">History</TabsTrigger>
         </TabsList>
 
         <TabsContent value="edit">
-          <div className="grid md:grid-cols-2 gap-6 pt-4">
-            <div className="space-y-4">
-              <PanelActions />
-              <CollapsiblePanel id="template-settings" title="Template Settings">
-                <TemplateSettingsPanel template={template} onChange={handleTemplateChange} />
-              </CollapsiblePanel>
-              {/* <CollapsiblePanel id="template-branding" title="Branding">
-                <TemplateEditorBranding
-                  selectedProfileId={template.brand || ''}
-                  onSelectProfileId={(selectedId) =>
-                    handleTemplateChange({ ...template, brand: selectedId || '' })
-                  }
-                />
-              {template.brand && brandDetails[template.brand] ? (
-                <div className="mt-4 flex items-center gap-4 p-3 border border-white/10 rounded bg-white/5">
-                  <img
-                    src={brandDetails[template.brand].logoUrl}
-                    alt={`${template.brand} logo`}
-                    className="w-12 h-12 object-contain rounded bg-white/10"
-                  />
-                  <div className="space-y-1 text-sm">
-                    <div>
-                      <span className="text-muted-foreground">Font:</span>{' '}
-                      <span style={{ fontFamily: brandDetails[template.brand].font }}>
-                        {brandDetails[template.brand].font}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-muted-foreground">Primary Color:</span>
-                      <div
-                        className="w-4 h-4 rounded-full border"
-                        style={{ backgroundColor: brandDetails[template.brand].color }}
-                      />
-                      <code className="text-xs">{brandDetails[template.brand].color}</code>
-                    </div>
-                  </div>
-                </div>
-              ) : (
-                <div className="text-sm text-muted-foreground italic pt-2">No brand selected.</div>
-              )}
-
-              </CollapsiblePanel> */}
-              <CollapsiblePanel id="template-pages" title="Pages">
-                <TemplatePageEditor
-                  template={template}
-                  onChange={handleTemplateChange as (template: Template) => void}
-                  onLivePreviewUpdate={(data: TemplateData) => setRawJson(JSON.stringify(data, null, 2))}
-                  blockErrors={blockErrors || {}}
-                />
-              </CollapsiblePanel>
-              {/* <CollapsiblePanel id="template-gallery" title="Image Gallery">
-                <TemplateImageGallery templateId={template.id || ''} />
-              </CollapsiblePanel> */}
-              {/* <CollapsiblePanel id="template-uploader" title="Hero Image Uploader">
-                <ImageUploader
-                  siteId={template.site_id || ''}
-                  templateId={template.id || ''}
-                  folder="hero"
-                  dbField="hero_url"
-                  label="Hero Image"
-                />
-                <div className="pt-4">
-                  {template.hero_url ? (
-                    <img
-                      src={template.hero_url}
-                      alt="Hero Preview"
-                      className="rounded shadow-md max-w-full h-auto"
-                    />
-                  ) : (
-                    <div className="text-muted-foreground text-sm italic">
-                      No image uploaded.
-                    </div>
-                  )}
-                </div>
-              </CollapsiblePanel> */}
-            </div>
-            <TemplateJsonEditor rawJson={rawJson} setRawJson={setRawJson} />
-          </div>
+          <EditorContentOverlay
+            template={template}
+            rawJson={rawJson}
+            setRawJson={setRawJson}
+            onChange={handleTemplateChange}
+          />
         </TabsContent>
 
         <TabsContent value="preview">
           <ThemeScope mode={isDark ? 'dark' : 'light'}>
             <DevicePreviewWrapper>
-              <TemplatePreviewWithToggle
-                isDark={isDark}
-                toggleDark={() => setIsDark((prev) => !prev)}
-                data={template.data}
-                theme={template.theme}
-                brand={template.brand}
-                colorScheme="slate"
-                showJsonFallback={true}
-              />
+              <IndustryThemeScope industry={template.industry}>
+                <LiveEditorPreview
+                  template={template}
+                  onChange={handleTemplateChange}
+                  industry={template.industry}
+                  errors={blockErrors}
+                />
+              </IndustryThemeScope>
             </DevicePreviewWrapper>
           </ThemeScope>
         </TabsContent>
@@ -458,6 +214,6 @@ export function EditorContent({
         onUndo={handleUndo}
         onRedo={handleRedo}
       />
-    </>
+    </IndustryThemeScope>
   );
 }

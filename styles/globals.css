@@ -64,3 +64,19 @@
     @apply bg-background/80 backdrop-blur border border-border rounded-md shadow-xl text-white;
   }
 }
+
+.block-hover {
+  position: relative;
+  border: 1px dashed transparent;
+  transition: border-color 0.2s ease;
+}
+
+.block-hover:hover {
+  border-color: #9333ea; /* purple-600 */
+  background-color: rgba(147, 51, 234, 0.05);
+}
+
+.block-selected {
+  border: 2px solid #9333ea;
+  box-shadow: 0 0 0 2px rgba(147, 51, 234, 0.3);
+}

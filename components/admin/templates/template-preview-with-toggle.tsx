@@ -1,5 +1,6 @@
 'use client';
 
+import { IndustryThemeScope } from '@/components/ui/industry-theme-scope';
 import TemplatePreview from './template-preview';
 import type { TemplateData } from '@/types/template';
 
@@ -11,6 +12,7 @@ export default function TemplatePreviewWithToggle({
   showJsonFallback,
   isDark,
   toggleDark,
+  industry,
 }: {
   data: TemplateData;
   theme?: string;
@@ -19,6 +21,7 @@ export default function TemplatePreviewWithToggle({
   showJsonFallback?: boolean;
   isDark: boolean;
   toggleDark: () => void;
+  industry: string;
 }) {
   const mode = isDark ? 'dark' : 'light';
 
@@ -32,7 +35,7 @@ export default function TemplatePreviewWithToggle({
           {isDark ? '🌙 Dark Mode' : '☀️ Light Mode'}
         </button>
       </div>
-
+      <IndustryThemeScope industry={industry}>
       <TemplatePreview
         data={data}
         mode={mode}
@@ -41,6 +44,7 @@ export default function TemplatePreviewWithToggle({
         colorScheme={colorScheme}
         showJsonFallback={showJsonFallback}
       />
+      </IndustryThemeScope>
     </div>
   );
 }

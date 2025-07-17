@@ -1,3 +1,4 @@
+// components/admin/templates/template-page-editor.tsx
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -11,6 +12,7 @@ import { createDefaultBlock } from '@/lib/createDefaultBlock';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { BlockValidationError } from '@/hooks/validateTemplateBlocks';
 import type { Page } from '@/types/site';
+import { FloatingAddBlockHere } from '@/components/editor/floating-add-block-here';
 
 export default function TemplatePageEditor({
   template,
@@ -75,14 +77,14 @@ export default function TemplatePageEditor({
     onLivePreviewUpdate(updated.data);
   };
 
-  const handleAddBlockToPage = (pageIndex: number, blockType: string) => {
+  const handleInsertBlockAt = (pageIndex: number, insertIndex: number, blockType: string) => {
     const newBlock = createDefaultBlock(blockType as any);
-
-    const newPages = (template.data?.pages || []).map((page, i) =>
-      i === pageIndex
-        ? { ...page, content_blocks: [...page.content_blocks, newBlock] }
-        : page
-    );
+    const newPages = template.data.pages.map((page, i) => {
+      if (i !== pageIndex) return page;
+      const newBlocks = [...page.content_blocks];
+      newBlocks.splice(insertIndex, 0, newBlock);
+      return { ...page, content_blocks: newBlocks };
+    });
 
     const updated = { ...template, data: { ...template.data, pages: newPages } };
     onChange(updated);
@@ -127,7 +129,7 @@ export default function TemplatePageEditor({
         </div>
       )}
 
-      {(template.data?.pages || []).map((page, index) => {
+      {(template.data?.pages || []).map((page, pageIndex) => {
         const errorCount = page.content_blocks.filter((b) => b._id && blockErrors[b._id])?.length || 0;
         return (
           <div
@@ -168,27 +170,43 @@ export default function TemplatePageEditor({
 
             {!collapsedPages[page.slug] && (
               <>
-                <BlocksEditor
-                  blocks={page.content_blocks.map((block) => {
-                    const hasError = block._id && blockErrors[block._id];
-                    return {
-                      ...block,
-                      _meta: {
-                        ...(block.meta || {}),
-                        hasError,
-                        errorMessages: block._id ? (blockErrors[block._id] as BlockValidationError[] || []) : [],
-                      },
-                    };
-                  })}
-                  onChange={(updated) => handlePageBlockChange(index, updated)}
-                  industry={template.industry}
-                  onEdit={() => {}}
-                  onReplaceWithAI={() => {}}
-                />
+                {(page.content_blocks || []).map((block, blockIndex) => (
+                  <div key={block._id || blockIndex}>
+                    <BlocksEditor
+                      blocks={[
+                        {
+                          ...block,
+                          meta: {
+                            ...(block.meta || {}),
+                            hasError: !!blockErrors[block._id ?? ''],
+                            errorMessages: blockErrors[block._id ?? ''] || [],
+                          },
+                        },
+                      ]}
+                      onChange={(updated) => {
+                        const updatedBlocks = [...page.content_blocks];
+                        updatedBlocks[blockIndex] = updated[0];
+                        handlePageBlockChange(pageIndex, updatedBlocks);
+                      }}
+                      industry={template.industry}
+                      onEdit={() => {}}
+                      onReplaceWithAI={() => {}}
+                    />
+                    <FloatingAddBlockHere
+                      onAdd={(type) => handleInsertBlockAt(pageIndex, blockIndex + 1, type)}
+                    />
+                  </div>
+                ))}
+
+                {page.content_blocks.length === 0 && (
+                  <FloatingAddBlockHere
+                    onAdd={(type) => handleInsertBlockAt(pageIndex, 0, type)}
+                  />
+                )}
 
                 <BlockAdderGrouped
                   existingBlocks={page.content_blocks}
-                  onAdd={(type) => handleAddBlockToPage(index, type)}
+                  onAdd={(type) => handleInsertBlockAt(pageIndex, page.content_blocks.length, type)}
                 />
               </>
             )}

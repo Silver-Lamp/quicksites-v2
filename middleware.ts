@@ -15,14 +15,24 @@ export async function middleware(req: NextRequest) {
   const host = req.headers.get('host') || '';
   const res = NextResponse.next();
 
-  const isLocalhost = host.includes('localhost') || host.includes('lvh.me') || host.includes('127.0.0.1');
+  const isLocalhost =
+    host.includes('localhost') || host.includes('lvh.me') || host.includes('127.0.0.1');
   const baseDomain = 'quicksites.ai';
 
-  // ✅ Prevent subdomain logic from activating on localhost
+  // ✅ Extract subdomain from host (including stripping port)
   const subdomain = (() => {
-    if (isLocalhost) return null;
-    if (!host.endsWith(baseDomain)) return null;
-    const parts = host.replace(`.${baseDomain}`, '').split('.');
+    const hostWithoutPort = host.split(':')[0]; // Remove port (e.g. :3000)
+
+    if (isLocalhost) {
+      const parts = hostWithoutPort.split('.');
+      if (parts.length === 2 && parts[1] === 'localhost') {
+        return parts[0]; // e.g. tow-test-1.localhost → "tow-test-1"
+      }
+      return null;
+    }
+
+    if (!hostWithoutPort.endsWith(baseDomain)) return null;
+    const parts = hostWithoutPort.replace(`.${baseDomain}`, '').split('.');
     const name = parts[0];
     return name !== 'www' ? name : null;
   })();
@@ -33,7 +43,7 @@ export async function middleware(req: NextRequest) {
 
   if (pathname.endsWith('.js.map')) return res;
 
-  // ✅ Rewrite root `/` for subdomain to /sites/[slug]/[firstPage]
+  // ✅ Rewrite `/` to /sites/[slug]/[firstPage] for valid subdomain
   if (subdomain && pathname === '/') {
     const now = Date.now();
     const cached = validSlugCache.get(subdomain);
@@ -76,7 +86,7 @@ export async function middleware(req: NextRequest) {
     }
   }
 
-  // ✅ Rewrite /contact etc. → /sites/[slug]/contact for subdomains
+  // ✅ Rewrite sub-routes like /about → /sites/[slug]/about
   if (
     subdomain &&
     pathname !== '/' &&
@@ -93,7 +103,7 @@ export async function middleware(req: NextRequest) {
     return NextResponse.rewrite(url);
   }
 
-  // ✅ Auth headers for /admin routes
+  // ✅ Supabase Auth Header Injection for Admin Routes
   const supabase = createMiddlewareClient<Database>({ req, res });
   const {
     data: { session },
@@ -123,10 +133,5 @@ export async function middleware(req: NextRequest) {
 }
 
 export const config = {
-  matcher: [
-    '/admin/:path*',
-    '/login',
-    '/',
-    '/(.*)',
-  ],
+  matcher: ['/admin/:path*', '/login', '/', '/(.*)'],
 };

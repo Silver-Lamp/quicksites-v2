@@ -10,6 +10,7 @@ export async function createSharedPreview({
   theme,
   brand,
   colorScheme,
+  isSite,
 }: {
   templateId: string;
   templateName: string;
@@ -18,6 +19,7 @@ export async function createSharedPreview({
   theme?: string;
   brand?: string;
   colorScheme?: string;
+  isSite?: boolean;
 }): Promise<string | null> {
   const node = document.getElementById('preview-capture');
   if (!node) {
@@ -59,6 +61,7 @@ export async function createSharedPreview({
         theme,
         brand,
         color_scheme: colorScheme,
+        is_site: isSite,
         thumbnail_url: public_url,
         shared_at: new Date().toISOString(),
       },

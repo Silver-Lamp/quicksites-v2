@@ -40,14 +40,19 @@ type BlockFieldProps =
 export default function BlockField(props: BlockFieldProps) {
   const id = useId();
 
+  const baseInputClass =
+    'w-full px-3 py-1.5 bg-gray-800 border border-gray-600 rounded text-white';
+
   return (
     <div className={cn('mb-4', props.className)}>
-      {props.label && (
+      {/* ✅ Label */}
+      {props.label && props.type !== 'boolean' && (
         <label htmlFor={id} className="block text-sm font-medium text-white mb-1">
           {props.label}
         </label>
       )}
 
+      {/* ✅ Input types */}
       {props.type === 'text' && (
         <input
           id={id}
@@ -55,7 +60,7 @@ export default function BlockField(props: BlockFieldProps) {
           value={props.value}
           onChange={(e) => props.onChange(e.target.value)}
           placeholder={props.placeholder}
-          className="w-full px-3 py-1.5 bg-gray-800 border border-gray-600 rounded text-white"
+          className={baseInputClass}
         />
       )}
 
@@ -68,7 +73,7 @@ export default function BlockField(props: BlockFieldProps) {
           min={props.min}
           max={props.max}
           step={props.step}
-          className="w-full px-3 py-1.5 bg-gray-800 border border-gray-600 rounded text-white"
+          className={baseInputClass}
         />
       )}
 
@@ -77,7 +82,7 @@ export default function BlockField(props: BlockFieldProps) {
           id={id}
           value={props.value}
           onChange={(e) => props.onChange(e.target.value)}
-          className="w-full px-3 py-1.5 bg-gray-800 border border-gray-600 rounded text-white"
+          className={baseInputClass}
         >
           {props.options.map((opt) => (
             <option key={opt} value={opt}>
@@ -88,7 +93,7 @@ export default function BlockField(props: BlockFieldProps) {
       )}
 
       {props.type === 'boolean' && (
-        <label className="flex items-center gap-2 text-sm text-white">
+        <div className="flex items-center gap-2">
           <input
             id={id}
             type="checkbox"
@@ -96,14 +101,16 @@ export default function BlockField(props: BlockFieldProps) {
             onChange={(e) => props.onChange(e.target.checked)}
             className="w-4 h-4"
           />
-          {props.label}
-        </label>
+          <label htmlFor={id} className="text-sm text-white">
+            {props.label}
+          </label>
+        </div>
       )}
 
+      {/* ✅ Optional helpers */}
       {props.description && (
         <p className="text-xs text-gray-400 mt-1">{props.description}</p>
       )}
-
       {props.error && (
         <p className="text-xs text-red-400 mt-1">{props.error}</p>
       )}

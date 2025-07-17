@@ -11,12 +11,12 @@ type Props = {
   onSave: (updated: Block) => void;
   onClose: () => void;
   onOpen: boolean;
-  onReplaceWithAI: (index: number) => void;
-  onClone: (index: number) => void;
-  onShowPrompt: (prompt: string, index: number) => void;
-  onUndo: (index: number) => void;
-  onViewDiff: (index: number) => void;
-  undoAvailable: boolean;
+  onReplaceWithAI?: (index: number) => void;
+  onClone?: (index: number) => void;
+  onShowPrompt?: (prompt: string, index: number) => void;
+  onUndo?: (index: number) => void;
+  onViewDiff?: (index: number) => void;
+  undoAvailable?: boolean;
 };
 
 export default function BlockSidebar({
@@ -30,7 +30,7 @@ export default function BlockSidebar({
   onShowPrompt,
   onUndo,
   onViewDiff,
-  undoAvailable,
+  undoAvailable = false,
 }: Props) {
   if (!block || typeof block._id !== 'string') return null;
 
@@ -54,7 +54,6 @@ export default function BlockSidebar({
           </div>
         )}
 
-
         <BlockEditor
           block={block}
           onSave={(updated) => {
@@ -63,6 +62,44 @@ export default function BlockSidebar({
           }}
           onClose={onClose}
         />
+
+        {(onReplaceWithAI || onClone || onUndo || onViewDiff) && (
+          <div className="mt-4 flex flex-wrap gap-2 text-sm">
+            {onReplaceWithAI && (
+              <button
+                onClick={() => onReplaceWithAI(0)}
+                className="bg-purple-600 hover:bg-purple-700 text-white px-3 py-1 rounded"
+              >
+                🤖 Replace with AI
+              </button>
+            )}
+            {onClone && (
+              <button
+                onClick={() => onClone(0)}
+                className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded"
+              >
+                📋 Clone Block
+              </button>
+            )}
+            {onUndo && (
+              <button
+                disabled={!undoAvailable}
+                onClick={() => onUndo(0)}
+                className="bg-yellow-500 hover:bg-yellow-600 disabled:opacity-50 text-black px-3 py-1 rounded"
+              >
+                ↩ Undo
+              </button>
+            )}
+            {onViewDiff && (
+              <button
+                onClick={() => onViewDiff(0)}
+                className="bg-gray-700 hover:bg-gray-800 text-white px-3 py-1 rounded"
+              >
+                🪞 View Diff
+              </button>
+            )}
+          </div>
+        )}
       </DialogContent>
     </Dialog>
   );

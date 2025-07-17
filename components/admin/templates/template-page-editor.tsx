@@ -10,6 +10,7 @@ import BlockAdderGrouped from '@/components/admin/block-adder-grouped';
 import { createDefaultBlock } from '@/lib/createDefaultBlock';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { BlockValidationError } from '@/hooks/validateTemplateBlocks';
+import type { Page } from '@/types/site';
 
 export default function TemplatePageEditor({
   template,
@@ -28,12 +29,12 @@ export default function TemplatePageEditor({
   const [showErrorBanner, setShowErrorBanner] = useState(true);
 
   useEffect(() => {
-    const errorPages = template.data.pages.filter((page) =>
+    const errorPages = (template.data?.pages || []).filter((page) =>
       page.content_blocks.some((block) => block._id && blockErrors[block._id])
     );
 
     const expandedByDefault: Record<string, boolean> = {};
-    for (const page of template.data.pages) {
+    for (const page of template.data?.pages || []) {
       expandedByDefault[page.slug] = errorPages.some((ep) => ep.slug === page.slug);
     }
     setCollapsedPages(expandedByDefault);
@@ -47,7 +48,7 @@ export default function TemplatePageEditor({
     if (Object.keys(blockErrors).length > 0) {
       setShowErrorBanner(true);
     }
-  }, [template.data.pages, blockErrors]);
+  }, [template.data?.pages, blockErrors]);
 
   const handleAddPage = () => {
     if (!newPageTitle || !newPageSlug) return;
@@ -56,7 +57,7 @@ export default function TemplatePageEditor({
       ...template,
       data: {
         ...template.data,
-        pages: [...template.data.pages, newPage],
+        pages: [...(template.data?.pages || []), newPage],
       },
     };
     onChange(updated);
@@ -65,7 +66,7 @@ export default function TemplatePageEditor({
   };
 
   const handlePageBlockChange = (pageIndex: number, updatedBlocks: Block[]) => {
-    const newPages = template.data.pages.map((page, i) =>
+    const newPages = (template.data?.pages || []).map((page, i) =>
       i === pageIndex ? { ...page, content_blocks: [...updatedBlocks] } : page
     );
 
@@ -77,7 +78,7 @@ export default function TemplatePageEditor({
   const handleAddBlockToPage = (pageIndex: number, blockType: string) => {
     const newBlock = createDefaultBlock(blockType as any);
 
-    const newPages = template.data.pages.map((page, i) =>
+    const newPages = (template.data?.pages || []).map((page, i) =>
       i === pageIndex
         ? { ...page, content_blocks: [...page.content_blocks, newBlock] }
         : page
@@ -98,7 +99,7 @@ export default function TemplatePageEditor({
 
   const collapseCleanPages = () => {
     const collapsed: Record<string, boolean> = {};
-    for (const page of template.data.pages) {
+    for (const page of template.data?.pages || []) {
       const hasErrors = page.content_blocks.some((b) => b._id && blockErrors[b._id]);
       collapsed[page.slug] = !hasErrors;
     }
@@ -126,7 +127,7 @@ export default function TemplatePageEditor({
         </div>
       )}
 
-      {template.data.pages.map((page, index) => {
+      {(template.data?.pages || []).map((page, index) => {
         const errorCount = page.content_blocks.filter((b) => b._id && blockErrors[b._id])?.length || 0;
         return (
           <div

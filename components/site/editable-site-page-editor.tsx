@@ -1,17 +1,19 @@
 // components/site/editable-site-page-editor.tsx
 'use client';
 
-import PageEditor from '@/components/admin/templates/template-page-editor';
+import TemplatePageEditor from '@/components/admin/templates/template-page-editor';
 import type { Page } from '@/types/site';
 import type { Template } from '@/types/template';
 import { nanoid } from 'nanoid';
 
 export default function EditableSitePageEditor({
-  pages,
+//   pages,
+  data,
   onChange,
 }: {
-  pages: Page[];
-  onChange: (updated: Page[]) => void;
+//   pages: Page[];
+    data: Template['data'] | Page[];
+  onChange: (updated: Template['data'] | Page[]) => void;
 }) {
   const mockTemplate: Template = {
     id: 'site-editor-template',
@@ -22,16 +24,14 @@ export default function EditableSitePageEditor({
     brand: '',
     theme: 'light',
     color_scheme: 'gray',
-    data: {
-      pages: pages as Template['data']['pages'],
-    },
+    data: data as Template['data'],
   };
 
   return (
-    <PageEditor
+    <TemplatePageEditor
       template={mockTemplate}
       onChange={(updatedTemplate) => {
-        onChange(updatedTemplate.data.pages as Page[]);
+        onChange(updatedTemplate as Template['data'] | Page[]);
       }}
       onLivePreviewUpdate={() => {}}
       blockErrors={{}}

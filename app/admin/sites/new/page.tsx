@@ -19,10 +19,13 @@ export default function CreateSitePage() {
   useEffect(() => {
     supabase
       .from('templates')
-      .select('id, name')
+      .select('id, name, data')
       .eq('published', true)
-      .then(({ data, error }) => {
-        if (!error && data) setTemplates(data);
+      .then(({ data: templateData, error: templateError }) => {
+        if (!templateError && templateData) {
+            console.log(`.:.Template data:`, JSON.stringify(templateData, null, 2));
+            setTemplates(templateData);
+        }
       });
   }, [supabase]);
 
@@ -31,14 +34,14 @@ export default function CreateSitePage() {
     setLoading(true);
     setError(null);
 
-    const { data, error } = await supabase
+    const { data: siteData, error: siteError } = await supabase
       .from('sites')
-      .insert([
+      .insert([ 
         {
           site_name: siteName,
           slug,
           template_id: templateId || null,
-          content: {}, // default empty content — can evolve later
+          data: templateId ? templates.find((t) => t.id === templateId)?.data : {},
           is_published: false,
         },
       ])
@@ -47,10 +50,12 @@ export default function CreateSitePage() {
 
     setLoading(false);
 
-    if (error) {
-      setError(error.message);
-    } else if (data?.slug) {
-      router.push(`/site/${data.slug}/edit`);
+    console.log(`.:.Site data:`, JSON.stringify(siteData, null, 2));
+
+    if (siteError) {
+      setError(siteError.message);
+    } else if (siteData?.slug) {
+      router.push(`/site/${siteData.slug}/edit`);
     }
   };
 

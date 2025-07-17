@@ -10,4 +10,5 @@ export type TemplateEntry = {
   domain: string | null;
   published: boolean;
   custom_domain: string | null;
+  is_site: boolean;
 };

@@ -14,6 +14,7 @@ import {
   Pencil,
   AlertTriangle,
   Sparkles,
+  Trash2,
 } from 'lucide-react';
 
 import { Button, Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui';
@@ -33,7 +34,7 @@ interface SortableBlockProps {
   errors?: BlockValidationError[];
   onEdit: (index: number) => void;
   onReplaceWithAI?: (index: number) => void;
-  undoAvailable?: boolean;
+  onDelete: (index: number) => void;
 }
 
 function SortableBlock({
@@ -42,7 +43,7 @@ function SortableBlock({
   errors = [],
   onEdit,
   onReplaceWithAI,
-  undoAvailable,
+  onDelete,
 }: SortableBlockProps) {
   const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id: block._id });
   const style = {
@@ -107,6 +108,18 @@ function SortableBlock({
               <Sparkles className="w-4 h-4 text-purple-400" />
             </Button>
           )}
+          <Button
+            size="sm"
+            variant="ghost"
+            className="text-red-500 hover:text-red-700"
+            onClick={() => {
+              if (confirm('Delete this block?')) {
+                onDelete(index);
+              }
+            }}
+          >
+            <Trash2 className="w-4 h-4" />
+          </Button>
         </div>
       </div>
 
@@ -131,7 +144,6 @@ export const BlocksEditor = ({
   onEdit,
 }: BlocksEditorPropsExtended) => {
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
-  const [undoMap, setUndoMap] = useState<Record<string, BlockWithId>>({});
 
   const ensureIds = (blocks: Block[]): BlockWithId[] =>
     blocks.map((block) => ({
@@ -139,21 +151,21 @@ export const BlocksEditor = ({
       _id: block._id ?? crypto.randomUUID(),
     }));
 
-  const [safeBlocks, setSafeBlocks] = useState<BlockWithId[]>(ensureIds(blocks));
+  const blocksWithIds = ensureIds(blocks);
 
   const handleUpdate = (index: number, updatedBlock: Block) => {
-    const updatedBlocks = [...safeBlocks];
+    const updatedBlocks = [...blocksWithIds];
     updatedBlocks[index] = normalizeBlock(updatedBlock);
     onChange(updatedBlocks);
   };
 
   useEffect(() => {
-    const first = safeBlocks.find((b) => (b as any)._meta?.errorMessages?.length > 0);
+    const first = blocksWithIds.find((b) => (b as any)._meta?.errorMessages?.length > 0);
     if (first) {
       const el = document.getElementById(`block-${first._id}`);
       if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
-  }, [safeBlocks]);
+  }, [blocksWithIds]);
 
   return (
     <div className="space-y-4 rounded p-3">
@@ -161,15 +173,15 @@ export const BlocksEditor = ({
         collisionDetection={closestCenter}
         onDragEnd={({ active, over }) => {
           if (active.id !== over?.id) {
-            const oldIndex = safeBlocks.findIndex((b) => b._id === active.id);
-            const newIndex = safeBlocks.findIndex((b) => b._id === over?.id);
-            const reordered = arrayMove(safeBlocks, oldIndex, newIndex);
+            const oldIndex = blocksWithIds.findIndex((b) => b._id === active.id);
+            const newIndex = blocksWithIds.findIndex((b) => b._id === over?.id);
+            const reordered = arrayMove(blocksWithIds, oldIndex, newIndex);
             onChange(reordered);
           }
         }}
       >
-        <SortableContext items={safeBlocks.map((b) => b._id)} strategy={verticalListSortingStrategy}>
-          {safeBlocks.map((block, index) => (
+        <SortableContext items={blocksWithIds.map((b) => b._id)} strategy={verticalListSortingStrategy}>
+          {blocksWithIds.map((block, index) => (
             <SortableBlock
               key={block._id}
               block={block}
@@ -177,7 +189,11 @@ export const BlocksEditor = ({
               errors={(block as any)._meta?.errorMessages as BlockValidationError[] || []}
               onReplaceWithAI={onReplaceWithAI}
               onEdit={setSelectedIndex}
-              undoAvailable={!!undoMap[block._id.toString()]}
+              onDelete={(deleteIndex) => {
+                const updated = [...blocksWithIds];
+                updated.splice(deleteIndex, 1);
+                onChange(updated);
+              }}
             />
           ))}
         </SortableContext>
@@ -185,8 +201,8 @@ export const BlocksEditor = ({
 
       {selectedIndex !== null && (
         <BlockSidebar
-          block={safeBlocks[selectedIndex]}
-          errors={(safeBlocks[selectedIndex] as any)._meta?.errorMessages || []}
+          block={blocksWithIds[selectedIndex]}
+          errors={(blocksWithIds[selectedIndex] as any)._meta?.errorMessages || []}
           onSave={(updatedBlock) => {
             handleUpdate(selectedIndex, updatedBlock);
             setSelectedIndex(null);

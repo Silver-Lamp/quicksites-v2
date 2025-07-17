@@ -16,6 +16,7 @@ type Props = {
   onUndo?: (index: number) => void;
   onViewDiff?: (index: number) => void;
   undoAvailable?: boolean;
+  children: React.ReactNode;
 };
 
 export default function SortableBlock({

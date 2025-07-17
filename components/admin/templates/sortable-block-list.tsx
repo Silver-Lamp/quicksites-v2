@@ -70,7 +70,7 @@ export function SortableBlockList({
               const isValid = BlockSchema.safeParse(block).success;
 
               return (
-                <SortableBlock id={block._id} key={block._id}>
+                <SortableBlock block={block} key={block._id} index={i} onEdit={() => {}}>
                   <motion.div
                     layout
                     initial={{ opacity: 0 }}

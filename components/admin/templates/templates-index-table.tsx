@@ -13,6 +13,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { toast } from 'react-hot-toast';
 import debounce from 'lodash.debounce';
+import { CheckCircle, FileStack, Globe, XCircle } from 'lucide-react';
 
 type Template = {
   id: string;
@@ -21,6 +22,8 @@ type Template = {
   updated_at: string;
   banner_url?: string | null;
   status?: 'draft' | 'published' | null;
+  is_site?: boolean;
+  published?: boolean;
 };
 
 const dateOptions = ['Last 7 days', 'This month', 'This year', 'All time'];
@@ -34,19 +37,26 @@ export default function TemplatesIndexTable({
 }) {
   const router = useRouter();
   const [currentFilter, setCurrentFilter] = useState(selectedFilter);
+  const [viewMode, setViewMode] = useState<'all' | 'templates' | 'sites'>('all');
   const [search, setSearch] = useState('');
   const [editingId, setEditingId] = useState<string | null>(null);
   const [renames, setRenames] = useState<Record<string, string>>({});
 
   const filtered = useMemo(() => {
-    return templates.filter((t) => {
-      const term = search.toLowerCase();
-      return (
-        t.template_name.toLowerCase().includes(term) ||
-        t.slug.toLowerCase().includes(term)
-      );
-    });
-  }, [templates, search]);
+    return templates
+      .filter((t) => {
+        const term = search.toLowerCase();
+        return (
+          t.template_name.toLowerCase().includes(term) ||
+          t.slug.toLowerCase().includes(term)
+        );
+      })
+      .filter((t) => {
+        if (viewMode === 'sites') return t.is_site === true;
+        if (viewMode === 'templates') return !t.is_site;
+        return true;
+      });
+  }, [templates, search, viewMode]);
 
   const handleFilterChange = (option: string) => {
     const url = new URL(window.location.href);
@@ -105,7 +115,30 @@ export default function TemplatesIndexTable({
     <div className="space-y-6">
       <div className="flex flex-wrap gap-4 justify-between items-center">
         <div className="text-lg font-semibold text-white">Templates</div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
+          {/* View Toggle Buttons */}
+          <div className="flex gap-1 text-xs">
+            <Button
+              variant={viewMode === 'all' ? 'default' : 'outline'}
+              onClick={() => setViewMode('all')}
+            >
+              All
+            </Button>
+            <Button
+              variant={viewMode === 'templates' ? 'default' : 'outline'}
+              onClick={() => setViewMode('templates')}
+            >
+              Templates
+            </Button>
+            <Button
+              variant={viewMode === 'sites' ? 'default' : 'outline'}
+              onClick={() => setViewMode('sites')}
+            >
+              Sites
+            </Button>
+          </div>
+
+          {/* Search + Date Filter */}
           <Input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
@@ -133,17 +166,34 @@ export default function TemplatesIndexTable({
         <table className="min-w-full text-sm">
           <thead>
             <tr className="bg-zinc-900 text-white text-left">
+              <th className="p-2 text-right">Actions</th>
+              <th className="p-2 text-right">Type</th>
               <th className="p-2 w-[60px]">Preview</th>
               <th className="p-2">Name</th>
               <th className="p-2">Slug</th>
-              <th className="p-2">Status</th>
+              <th className="p-2">Published</th>
               <th className="p-2">Updated</th>
-              <th className="p-2 text-right">Actions</th>
             </tr>
           </thead>
           <tbody>
             {filtered.map((t) => (
               <tr key={t.id} className="border-t border-white/10 hover:bg-zinc-800 transition">
+                <td className="p-2 text-right space-x-1">
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => router.push(`/template/${t.slug}/edit`)}
+                  >
+                    Edit
+                  </Button>
+                </td>
+                <td className="p-2 text-right">
+                  {t.is_site ? (
+                    <Globe className="w-4 h-4 text-blue-400" />
+                  ) : (
+                    <FileStack className="w-4 h-4 text-blue-400" />
+                  )}
+                </td>
                 <td className="p-2">
                   {t.banner_url ? (
                     <img
@@ -182,36 +232,21 @@ export default function TemplatesIndexTable({
                   )}
                 </td>
                 <td className="p-2 text-zinc-400">{t.slug}</td>
-                <td className="p-2 text-xs">
-                  {t.status === 'published' ? (
-                    <span className="text-green-400">Published</span>
+                <td className="p-2 text-zinc-400">
+                  {t.published ? (
+                    <CheckCircle className="w-4 h-4 text-green-400" />
                   ) : (
-                    <span className="text-yellow-400">Draft</span>
+                    <XCircle className="w-4 h-4 text-red-400" />
                   )}
                 </td>
                 <td className="p-2 text-zinc-400">
                   {formatDistanceToNow(new Date(t.updated_at), { addSuffix: true })}
                 </td>
-                <td className="p-2 text-right space-x-1">
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    onClick={() => router.push(`/edit/${t.slug}`)}
-                  >
-                    Edit
-                  </Button>
-                  <Button size="sm" variant="ghost" onClick={() => handleDuplicate(t.slug)}>
-                    Duplicate
-                  </Button>
-                  <Button size="sm" variant="ghost" onClick={() => handleExport(t.id)}>
-                    Export
-                  </Button>
-                </td>
               </tr>
             ))}
             {filtered.length === 0 && (
               <tr>
-                <td colSpan={6} className="p-4 text-center text-muted-foreground italic">
+                <td colSpan={7} className="p-4 text-center text-muted-foreground italic">
                   No matching templates.
                 </td>
               </tr>

@@ -8,7 +8,7 @@ export default function SaveShareButtons({ template }: { template: any }) {
   const router = useRouter();
 
   const handleSaveAs = async () => {
-    const newId = await saveAsTemplate(template);
+    const newId = await saveAsTemplate(template, 'template');
     if (newId) {
       toast.success('Template copied');
       router.push(`/admin/templates?selected=${newId}`);

@@ -58,13 +58,16 @@ function SortableBlockItem({
 
       <div className="relative border rounded p-2 bg-white dark:bg-neutral-900">
         {children}
-
         <div className="absolute top-1 right-1 flex gap-1 opacity-0 group-hover:opacity-100 transition">
           {onEdit && (
-            <button onClick={() => onEdit(index)} className="text-xs text-blue-600">✏️</button>
+            <button onClick={() => onEdit(index)} className="text-xs text-blue-600">
+              ✏️
+            </button>
           )}
           {onDelete && (
-            <button onClick={() => onDelete(index)} className="text-xs text-red-600">🗑️</button>
+            <button onClick={() => onDelete(index)} className="text-xs text-red-600">
+              🗑️
+            </button>
           )}
         </div>
       </div>
@@ -81,8 +84,11 @@ export default function SortableGridBlock({
   onEdit,
 }: SortableGridBlockProps) {
   return (
-    <SortableContext items={items.map((b) => b._id!)} strategy={verticalListSortingStrategy}>
-      <div className={`grid grid-cols-${columns} gap-4`}>
+    <SortableContext
+      items={items.map((b) => b._id!)}
+      strategy={verticalListSortingStrategy}
+    >
+      <div className={`grid gap-4 ${getGridCols(columns)}`}>
         {items.map((block, index) => (
           <SortableBlockItem
             key={block._id}
@@ -96,7 +102,22 @@ export default function SortableGridBlock({
             </div>
           </SortableBlockItem>
         ))}
+
+        {onInsert && (
+          <button
+            onClick={() => onInsert(items.length)}
+            className="border-2 border-dashed rounded p-4 text-sm text-gray-400 hover:text-white hover:border-white transition"
+          >
+            ➕ Add Block
+          </button>
+        )}
       </div>
     </SortableContext>
   );
+}
+
+// 🔧 Tailwind-safe grid column helper
+function getGridCols(cols: number): string {
+  const safeCols = Math.max(1, Math.min(6, cols));
+  return `grid-cols-${safeCols}` as const;
 }

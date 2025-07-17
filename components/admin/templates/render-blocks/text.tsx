@@ -1,11 +1,32 @@
 'use client';
 
-import type { TextBlock } from '@/types/blocks';
+import type { Block } from '@/types/blocks';
+import SectionShell from '@/components/ui/section-shell';
 
-export default function TextBlock({ content }: { content: TextBlock['content'] }) {
+type TextBlock = Extract<Block, { type: 'text' }>;
+
+type Props = {
+  block?: TextBlock;
+  content?: TextBlock['content'];
+  compact?: boolean;
+};
+
+export default function TextRender({ block, content, compact = false }: Props) {
+  const final = content || block?.content;
+
+  if (!final || !final.value?.trim()) {
+    return (
+      <div className="text-red-500 italic text-sm p-2 bg-red-50 dark:bg-red-900/20 rounded">
+        ⚠️ Missing text block content.
+      </div>
+    );
+  }
+
   return (
-    <p className="mb-4 text-base text-gray-900 dark:text-gray-100">
-      {content.value}
-    </p>
+    <SectionShell compact={compact}>
+      <p className="text-base text-gray-900 dark:text-gray-100 leading-relaxed">
+        {final.value}
+      </p>
+    </SectionShell>
   );
 }

@@ -11,6 +11,7 @@ type Template = {
   layout: string;
   color_scheme: string;
   data?: any;
+  is_site?: boolean;
 };
 
 type Props = {

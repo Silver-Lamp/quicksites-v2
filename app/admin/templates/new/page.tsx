@@ -17,6 +17,7 @@ type Snapshot = {
   brand?: string;
   color_scheme?: string;
   template_name?: string;
+  is_site?: boolean;
 };
 
 export default function NewTemplatePage() {
@@ -30,7 +31,7 @@ export default function NewTemplatePage() {
 
       const { data: snapshot, error } = await supabase
         .from('snapshots')
-        .select('data, theme, brand, color_scheme')
+        .select('data, theme, brand, color_scheme, is_site')
         .eq('id', from)
         .maybeSingle();
 
@@ -58,6 +59,7 @@ export default function NewTemplatePage() {
         theme: snapshot.theme,
         brand: snapshot.brand,
         data: snapshot.data,
+        is_site: snapshot.is_site,
       });
     }
 

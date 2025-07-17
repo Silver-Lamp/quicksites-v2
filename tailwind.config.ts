@@ -5,6 +5,7 @@ const config: Config = {
   content: [
     './app/**/*.{ts,tsx}',
     './components/**/*.{ts,tsx}',
+    './components/admin/templates/**/*.{ts,tsx}',
     './pages/**/*.{ts,tsx}',
     './lib/**/*.{ts,tsx}',
   ],

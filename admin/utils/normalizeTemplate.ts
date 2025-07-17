@@ -8,6 +8,7 @@ export function normalizeTemplate(entry: any): Template {
     slug: entry.slug,
     layout: entry.layout,
     color_scheme: entry.color_scheme,
+    is_site: entry.is_site,
     commit: entry.commit,
     industry: entry.industry,
     theme: entry.theme,

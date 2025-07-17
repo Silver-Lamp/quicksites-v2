@@ -26,7 +26,7 @@ export default function SiteSettingsPanel({ siteId }: { siteId: string }) {
   const [seoDescription, setSeoDescription] = useState('');
   const [twitterHandle, setTwitterHandle] = useState('');
   const [siteName, setSiteName] = useState('');
-
+  const [isSite, setIsSite] = useState(false);
   useEffect(() => {
     if (!siteId) return;
     (async () => {
@@ -47,7 +47,8 @@ export default function SiteSettingsPanel({ siteId }: { siteId: string }) {
         setSeoDescription(data.seo_description || '');
         setTwitterHandle(data.twitter_handle || '');
         setSiteName(data.site_name || '');
-      }
+        setIsSite(data.is_site || false);
+      } 
     })();
   }, [siteId]);
 
@@ -91,6 +92,7 @@ export default function SiteSettingsPanel({ siteId }: { siteId: string }) {
         seo_description: seoDescription,
         twitter_handle: twitterHandle,
         site_name: siteName,
+        is_site: isSite,
       })
       .eq('id', siteId);
     if (error) alert('❌ Save failed.');

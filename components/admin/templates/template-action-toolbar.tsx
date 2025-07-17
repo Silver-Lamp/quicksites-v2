@@ -1,23 +1,23 @@
-// components/admin/templates/template-action-toolbar.tsx
 'use client';
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { RotateCcw, RotateCw } from 'lucide-react';
 import { Button } from '@/components/ui';
 import { saveAsTemplate } from '@/admin/lib/saveAsTemplate';
 import { createSharedPreview } from '@/admin/lib/createSharedPreview';
 import { supabase } from '@/admin/lib/supabaseClient';
 import toast from 'react-hot-toast';
-import { usePanelControls } from '@/components/ui/panel-context';
+import type { Template } from '@/types/template';
 
-export default function TemplateActionToolbar({
+export function TemplateActionToolbar({
   template,
   autosaveStatus,
   onSaveDraft,
   onUndo,
   onRedo,
-}: {  
-  template: any;
+}: {
+  template: Template;
   autosaveStatus?: string;
   onSaveDraft?: () => void;
   onUndo: () => void;
@@ -38,7 +38,7 @@ export default function TemplateActionToolbar({
           if (data) setVersions(data);
         });
 
-      setStatus(template?.published_at ? 'Published' : 'Draft');
+      setStatus(template?.published ? 'Published' : 'Draft');
     }
   }, [template?.template_name]);
 
@@ -52,17 +52,13 @@ export default function TemplateActionToolbar({
         e.preventDefault();
         handleShare();
       }
-      if (e.metaKey && e.shiftKey && e.key.toLowerCase() === 'c') {
-        e.preventDefault();
-        toast.success('Copy preview (not implemented)');
-      }
     };
     window.addEventListener('keydown', handleHotkey);
     return () => window.removeEventListener('keydown', handleHotkey);
   }, [template]);
 
-  const handleSaveAs = async () => {
-    const newId = await saveAsTemplate(template);
+  const handleSaveAs = async (type: 'template' | 'site') => {
+    const newId = await saveAsTemplate(template, type);
     if (newId) {
       toast.success('Template copied');
       router.push(`/admin/templates?selected=${newId}`);
@@ -72,7 +68,11 @@ export default function TemplateActionToolbar({
   };
 
   const handleShare = async () => {
-    const id = await createSharedPreview(template.id);
+    const id = await createSharedPreview({
+      templateId: template.id,
+      templateName: template.template_name,
+      templateData: template.data,
+    });
     if (id) {
       toast.success('Preview shared!');
       router.push(`/shared/${id}`);
@@ -82,7 +82,7 @@ export default function TemplateActionToolbar({
   };
 
   return (
-    <div className="fixed bottom-0 left-0 w-full z-40 border-t border-gray-700 bg-gray-900 px-6 py-3 flex justify-between items-center text-white">
+    <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-40 rounded-lg bg-gray-900 border border-gray-700 px-6 py-3 shadow-xl max-w-5xl w-[95%] flex justify-between items-center text-white">
       <div className="text-sm font-medium flex gap-4 items-center">
         <span>📄 {template.template_name}</span>
         <span
@@ -95,53 +95,63 @@ export default function TemplateActionToolbar({
         {autosaveStatus && (
           <span className="text-xs text-gray-400 italic">💾 {autosaveStatus}</span>
         )}
-        {autosaveStatus === 'saved' && (
-          <span className="text-xs text-green-400 animate-fade-out duration-1000">✓ Saved</span>
-        )}
-        {autosaveStatus === 'error' && <span className="text-xs text-red-400">⚠ Error</span>}
-        <Button variant="ghost" onClick={onUndo}>
-          Undo
+        <Button size="icon" variant="ghost" onClick={onUndo} title="Undo (⌘Z)">
+          <RotateCcw className="w-4 h-4" />
         </Button>
-        <Button variant="ghost" onClick={onRedo}>
-          Redo
+        <Button size="icon" variant="ghost" onClick={onRedo} title="Redo (⇧⌘Z)">
+          <RotateCw className="w-4 h-4" />
         </Button>
       </div>
 
       <div className="flex items-center gap-3">
         <select
           className="bg-gray-800 border border-gray-600 text-sm text-white rounded px-2 py-1"
-          onChange={(e) => toast(`Selected version: ${e.target.value}`)}
+          onChange={async (e) => {
+          const versionId = e.target.value;
+          if (!versionId || versionId === 'View Version') return;
+
+          const { data, error } = await supabase
+            .from('template_versions')
+            .select('snapshot')
+            .eq('id', versionId)
+            .single();
+
+          if (error || !data?.snapshot) {
+            toast.error('Failed to load version');
+            return;
+          }
+
+          if (confirm('Restore this version? This will overwrite the current draft.')) {
+            const restored = {
+              ...template,
+              data: data.snapshot,
+            };
+            toast.success('Version restored!');
+            location.reload();
+          }
+        }}
         >
           <option>View Version</option>
           {versions.map((v) => (
-            <option key={v.id}>
+            <option key={v.id} value={v.id}>
               {v.commit_message || 'Untitled'} — {new Date(v.created_at).toLocaleDateString()}
             </option>
           ))}
         </select>
 
         <Button size="sm" variant="secondary" onClick={onSaveDraft}>
-          Save Draft
+          Save
         </Button>
-        <Button size="sm" variant="secondary" onClick={handleSaveAs}>
-          Save As Template
+        <Button size="sm" variant="secondary" onClick={() => handleSaveAs('site')}>
+          Duplicate as a Site
+        </Button>
+        <Button size="sm" variant="secondary" onClick={() => handleSaveAs('template')}>
+          Duplicate as a Template
         </Button>
         <Button size="sm" variant="secondary" onClick={handleShare}>
           Share Snapshot
         </Button>
       </div>
-    </div>
-  );
-}
-
-export function PanelActions() {
-  const { resetPanels, openAll, closeAll } = usePanelControls();
-
-  return (
-    <div className="flex gap-2">
-      <Button variant="ghost" size="sm" onClick={openAll}>Open All</Button>
-      <Button variant="ghost" size="sm" onClick={closeAll}>Collapse All</Button>
-      <Button variant="outline" size="sm" onClick={resetPanels}>Reset Panel States</Button>
     </div>
   );
 }

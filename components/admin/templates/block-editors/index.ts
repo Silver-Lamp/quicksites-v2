@@ -1,16 +1,16 @@
-import { BlockValidationError } from '@/hooks/validateTemplateBlocks';
 import type { Block } from '@/types/blocks';
-import { Template } from '@/types/template';
+import type { Template } from '@/types/template';
+import type { BlockValidationError } from '@/hooks/validateTemplateBlocks';
 
 export type BlockEditorProps = {
   block: Block;
   onSave: (updated: Block) => void;
   onClose: () => void;
-  errors?: BlockValidationError[];
+  errors?: Record<string, BlockValidationError[]>;
   template?: Template;
 };
 
-// Dynamic imports for all known editors
+// 🌐 Mapping of block type → dynamic React component import
 export const BLOCK_EDITORS: Record<
   Block['type'],
   () => Promise<{ default: React.FC<BlockEditorProps> }>
@@ -21,7 +21,7 @@ export const BLOCK_EDITORS: Record<
   audio: () => import('./audio-editor'),
   quote: () => import('./quote-editor'),
   button: () => import('./button-editor'),
-  grid: () => import('./json-fallback-editor'),
+  grid: () => import('./json-fallback-editor'), // uses JSON fallback
   hero: () => import('./hero-editor'),
   services: () => import('./services-editor'),
   testimonial: () => import('./testimonial-editor'),
@@ -29,16 +29,16 @@ export const BLOCK_EDITORS: Record<
   footer: () => import('./footer-editor'),
 };
 
-// Optional preload function for key editors
+// 🧠 Optional preloader for a single block type (for speed optimization)
 export function preloadBlockEditor(type: Block['type']) {
   if (type in BLOCK_EDITORS) {
     void BLOCK_EDITORS[type]();
   }
 }
 
-// Preload these ahead of time if common
-export const preloadCommonEditors = () => {
+// ⚡ Preload most-used editors (optional: call early in app)
+export function preloadCommonEditors() {
   preloadBlockEditor('hero');
   preloadBlockEditor('text');
   preloadBlockEditor('cta');
-};
+}

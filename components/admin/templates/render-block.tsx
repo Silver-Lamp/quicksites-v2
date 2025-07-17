@@ -4,6 +4,7 @@ import type { Block } from '@/types/blocks';
 import dynamic from 'next/dynamic';
 import { JSX } from 'react';
 import FallbackRenderer from '@/lib/ui/fallback-renderer';
+import { useBlockFix } from '@/components/ui/block-fix-context';
 
 const BLOCK_RENDERERS: Record<
   Block['type'],
@@ -38,17 +39,26 @@ export default function RenderBlock({
   disableInteraction = false,
   compact = false,
 }: RenderProps) {
-  const LazyBlock = dynamic(BLOCK_RENDERERS[block.type] ?? fallbackRenderer(block), {
-    loading: () => (
-      <div className="mb-4 text-gray-500 dark:text-gray-400 italic animate-pulse">
-        Loading block: {block.type}...
-      </div>
-    ),
-    ssr: false,
-  });
+  const { enabled: fixEnabled, draftFixes } = useBlockFix();
+  
+  if (!block || !block.type) {
+    return <div className="text-red-500">⚠️ Invalid block</div>;
+  }
 
-  // No longer stripping blob: URLs — show them in preview mode
-  const safeContent = block.content;
+  const DynamicBlock = dynamic(
+    BLOCK_RENDERERS[block.type] ?? fallbackRenderer(block),
+    {
+      loading: () => (
+        <div className="mb-4 text-gray-500 dark:text-gray-400 italic animate-pulse">
+          Loading block: {block.type}...
+        </div>
+      ),
+      ssr: true,
+    }
+  );
+
+  const override = fixEnabled ? draftFixes[block._id || ''] : {};
+  const safeContent = { ...block.content, ...override };
 
   const commonProps = {
     block,
@@ -58,17 +68,34 @@ export default function RenderBlock({
     compact,
   };
 
+  const wrapperProps = {
+    'data-block-id': block._id || 'unknown',
+    'data-block-type': block.type,
+    className: 'relative group',
+    ref: (el: HTMLDivElement | null) => {
+      if (el) {
+        (el as any).__squatterContent = safeContent; // used by SquatBot for patching
+      }
+    },
+  };
+
   if (block.type === 'grid') {
     return (
-      <LazyBlock
-        {...commonProps}
-        handleNestedBlockUpdate={handleNestedBlockUpdate}
-        parentBlock={block}
-      />
+      <div {...wrapperProps}>
+        <DynamicBlock
+          {...commonProps}
+          handleNestedBlockUpdate={handleNestedBlockUpdate}
+          parentBlock={block}
+        />
+      </div>
     );
   }
 
-  return <LazyBlock {...commonProps} />;
+  return (
+    <div {...wrapperProps}>
+      <DynamicBlock {...commonProps} />
+    </div>
+  );
 }
 
 function fallbackRenderer(block: Block) {

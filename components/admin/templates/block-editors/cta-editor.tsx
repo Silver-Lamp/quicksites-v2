@@ -1,44 +1,108 @@
 'use client';
 
 import { useState } from 'react';
-import type { Block, CtaBlock } from '@/types/blocks';
+import type { Block } from '@/types/blocks';
+import type { BlockEditorProps } from './index';
 import BlockField from './block-field';
+import CtaBlockRender from '@/components/admin/templates/render-blocks/cta'; // Live preview
+import { cn } from '@/admin/lib/utils';
 
-type Props = {
-  block: Block;
-  onSave: (updated: Block) => void;
-  onClose: () => void;
-};
+type CtaBlock = Extract<Block, { type: 'cta' }>;
+type CtaContent = CtaBlock['content'];
 
-export default function CtaEditor({ block, onSave, onClose }: Props) {
+const SUGGESTED_URLS = ['/contact', '/get-quote', '/services', '/book-now'];
+
+export default function CtaEditor({
+  block,
+  onSave,
+  onClose,
+}: BlockEditorProps) {
   const ctaBlock = block as CtaBlock;
-  const [content, setContent] = useState(ctaBlock.content);
+  const [content, setContent] = useState<CtaContent>(ctaBlock.content || {});
+  const [errors, setErrors] = useState<{ label?: string; link?: string }>({});
+
+  const update = <K extends keyof CtaContent>(key: K, value: CtaContent[K]) => {
+    setContent((prev) => ({ ...prev, [key]: value }));
+    setErrors((prev) => ({ ...prev, [key]: undefined }));
+  };
+
+  const validate = (): boolean => {
+    const nextErrors: typeof errors = {};
+    if (!content.label?.trim()) nextErrors.label = 'Label is required';
+    if (!content.link?.trim()) {
+      nextErrors.link = 'Link URL is required';
+    } else if (!/^\/|^https?:\/\//.test(content.link)) {
+      nextErrors.link = 'Must start with / or http(s)://';
+    }
+    setErrors(nextErrors);
+    return Object.keys(nextErrors).length === 0;
+  };
+
+  const handleSave = () => {
+    if (!validate()) return;
+    onSave({ ...ctaBlock, content });
+    onClose();
+  };
+
+  const isExternalLink = content.link?.startsWith('http');
 
   return (
-    <div className="p-4 space-y-4">
+    <div className="space-y-4 bg-black text-white border border-black p-4 rounded">
       <h3 className="text-lg font-semibold">Edit Call to Action</h3>
 
       <BlockField
         type="text"
         label="Label"
-        value={content.label}
-        onChange={(v) => setContent({ ...content, label: v })}
+        value={content.label || ''}
+        onChange={(v) => update('label', v)}
+        error={errors.label}
       />
 
       <BlockField
         type="text"
         label="Link URL"
-        value={content.link}
-        onChange={(v) => setContent({ ...content, link: v })}
+        value={content.link || ''}
+        onChange={(v) => update('link', v)}
+        error={errors.link}
+        description={
+          isExternalLink
+            ? '🔗 External link (will open in new tab)'
+            : '↩️ Internal link (on-site navigation)'
+        }
       />
 
+      {/* 💡 Suggested links */}
+      <div className="text-xs text-white/70">
+        Suggested Links:{' '}
+        {SUGGESTED_URLS.map((url) => (
+          <button
+            key={url}
+            onClick={() => update('link', url)}
+            className="px-2 py-0.5 bg-white text-black rounded-full text-xs font-mono mr-2 mb-1 hover:bg-gray-200"
+          >
+            {url}
+          </button>
+        ))}
+      </div>
+
+      {/* 🔍 Live Preview */}
+      <div className="mt-6 border-t border-white/10 pt-4">
+        <p className="text-sm text-white/70 mb-1">Live Preview:</p>
+        <div className={cn('p-4 rounded bg-neutral-900 border border-white/10')}>
+          <CtaBlockRender block={{ ...block, type: 'cta', content }} />
+        </div>
+      </div>
+
       <div className="flex justify-end gap-2 pt-4">
-        <button onClick={onClose} className="px-4 py-2 bg-gray-700 text-white rounded">
+        <button
+          onClick={onClose}
+          className="text-sm px-4 py-2 border border-gray-500 rounded hover:bg-neutral-800"
+        >
           Cancel
         </button>
         <button
-          onClick={() => onSave({ ...ctaBlock, content })}
-          className="px-4 py-2 bg-blue-600 text-white rounded"
+          onClick={handleSave}
+          className="text-sm px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700"
         >
           Save
         </button>

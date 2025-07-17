@@ -7,7 +7,8 @@ import { Button } from '@/components/ui/button';
 import PageEditor from '../admin/templates/template-page-editor';
 import toast from 'react-hot-toast';
 import EditableSitePageEditor from './editable-site-page-editor';
-
+import type { Template } from '@/types/template';
+    
 export default function SiteEditor({ site }: { site: SiteData }) {
   const [editingSite, setEditingSite] = useState(site);
   const [isSaving, setIsSaving] = useState(false);
@@ -43,13 +44,14 @@ export default function SiteEditor({ site }: { site: SiteData }) {
       </div>
 
       <EditableSitePageEditor
-        pages={editingSite.pages || []}
-        onChange={(updatedPages) =>
-            setEditingSite((prev) => ({
-            ...prev,
-            pages: updatedPages,
-            }))
-        }
+        data={editingSite.data as Template['data']}
+        onChange={() => {}}
+        // onChange={(updatedData) =>
+        //     setEditingSite((prev) => ({
+        //         ...prev,
+        //         data: updatedData as Template['data'],
+        //     }))
+        // }
         />
     </div>
   );

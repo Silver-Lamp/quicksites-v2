@@ -11,7 +11,9 @@
     }
   },
   "scripts": {
-    "dev": "next dev",
+    "hosts:add": "ts-node scripts/manage-hosts-from-supabase.ts add",
+    "hosts:remove": "ts-node scripts/manage-hosts-from-supabase.ts remove",
+    "dev": "next dev --hostname 0.0.0.0",
     "build": "next build",
     "build:prod": "rm -rf .next;NODE_OPTIONS='--max-old-space-size=8192' next build",
     "start": "next start",
@@ -95,7 +97,7 @@
     "@supabase/auth-helpers-react": "^0.5.0",
     "@supabase/functions-js": "^2.4.4",
     "@supabase/ssr": "^0.6.1",
-    "@supabase/supabase-js": "^2.50.5",
+    "@supabase/supabase-js": "^2.51.0",
     "@testing-library/react": "^16.3.0",
     "@vercel/analytics": "^1.5.0",
     "@vercel/og": "^0.6.8",

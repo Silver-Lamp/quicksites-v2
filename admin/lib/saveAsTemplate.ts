@@ -1,16 +1,21 @@
 import { supabase } from '@/admin/lib/supabaseClient';
 
-export async function saveAsTemplate(template: any): Promise<string | null> {
+export async function saveAsTemplate(template: any, type: 'template' | 'site'): Promise<string | null> {
   const newName = `Copy of ${template.template_name || 'untitled'}`;
   const { data, error } = await supabase
     .from('templates')
     .insert([
       {
-        template_name: newName,
+        template_name: `${newName} (${type}) ${new Date().toISOString().replace('T', ' ').substring(0, 19)}`,
+        slug: `${template.slug}-${type}-${new Date().toISOString().replace('T', '-').substring(0, 19).replace(/:/g, '')}`,
         layout: template.layout,
         color_scheme: template.color_scheme,
         industry: template.industry,
         data: template.data,
+        is_site: type === 'site',
+        published: false,
+        domain: null,
+        custom_domain: null,
       },
     ])
     .select()

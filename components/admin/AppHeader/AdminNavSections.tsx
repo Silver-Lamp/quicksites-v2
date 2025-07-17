@@ -60,22 +60,22 @@ const navItems: NavItem[] = [
   },
   {
     type: 'item',
-    label: 'Templates',
+    label: 'Templates & Sites',
     icon: <FileStack size={18} />,
     children: [
-      { label: 'Browse Templates', href: '/admin/templates' },
-      { label: 'Create Template', href: '/admin/templates/new' },
+      { label: 'Browse', href: '/admin/templates' },
+      { label: 'Create', href: '/admin/templates/new' },
     ],
   },
-  {
-    type: 'item',
-    label: 'Sites',
-    icon: <Globe size={18} />,
-    children: [
-      { label: 'Browse Sites', href: '/admin/sites' },
-      { label: 'Create Site', href: '/admin/sites/new' },
-    ],
-  },
+  // {
+  //   type: 'item',
+  //   label: 'Sites',
+  //   icon: <Globe size={18} />,
+  //   children: [
+  //     { label: 'Browse Sites', href: '/admin/sites' },
+  //     { label: 'Create Site', href: '/admin/sites/new' },
+  //   ],
+  // },
   {
     type: 'item',
     label: 'Analytics',

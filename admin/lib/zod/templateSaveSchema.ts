@@ -35,6 +35,8 @@ export const TemplateSaveSchema = z.object({
   color_scheme: z.string(),
   industry: z.string(),
   theme: z.string(),
+  is_site: z.boolean().optional(),
+  published: z.boolean().optional(),
   headline: z.string().optional(),
   description: z.string().optional(),
   hero_url: z.string().nullable().optional(),

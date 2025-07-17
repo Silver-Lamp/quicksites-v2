@@ -1,10 +1,10 @@
 // Base type for shared props
 export type BaseBlock = {
   _id?: string;
-  tone?: string; // e.g. "professional", "casual", "friendly"
-  industry?: string; // e.g. "technology", "finance", "healthcare"
-  tags?: string[]; // e.g. ["technology", "finance", "healthcare"]
-  meta?: Record<string, any>; // e.g. { "color": "blue", "size": "large" }
+  tone?: string;
+  industry?: string;
+  tags?: string[];
+  meta?: Record<string, any>;
 };
 
 // Individual block definitions
@@ -89,14 +89,21 @@ export type CtaBlock = BaseBlock & {
   content: {
     label: string;
     link: string;
+    appearance?: 'button' | 'link';
   };
 };
 
 export type TestimonialBlock = BaseBlock & {
   type: 'testimonial';
   content: {
-    quote: string;
-    attribution?: string;
+    testimonials: {
+      quote: string;
+      attribution?: string;
+      avatar_url?: string;
+      rating?: number;
+    }[];
+    randomized?: boolean;
+    layout?: 'list' | 'carousel';
   };
 };
 
@@ -110,6 +117,11 @@ export type FooterBlock = BaseBlock & {
     links: {
       label: string;
       href: string;
+    }[];
+    logo_url?: string;
+    social_links?: {
+      platform: string;
+      url: string;
     }[];
   };
 };
@@ -175,3 +187,84 @@ export type TemplatePageEditorProps = {
 // Optional: used in presets
 export type PresetBlock = Record<string, any>;
 export type PresetMap = Record<string, Record<string, PresetBlock>>;
+
+// Dev: mock content helpers
+export function generateMockTestimonial(): TestimonialBlock['content']['testimonials'][0] {
+  const quotes = [
+    'Absolutely fantastic service!',
+    'They went above and beyond!',
+    'Fast, friendly, and reliable.',
+    'I highly recommend them!',
+    'Saved me in a pinch. 10/10.',
+  ];
+  const names = ['Jane D.', 'John S.', 'Emily R.', 'Carlos M.', 'Tina K.'];
+  return {
+    quote: quotes[Math.floor(Math.random() * quotes.length)],
+    attribution: names[Math.floor(Math.random() * names.length)],
+    rating: Math.ceil(Math.random() * 5),
+    avatar_url: `https://i.pravatar.cc/150?img=${Math.ceil(Math.random() * 70)}`,
+  };
+}
+
+export function generateMockHero(): HeroBlock['content'] {
+  return {
+    headline: 'Your Local Experts in Towing & Recovery',
+    subheadline: 'Here when you need us — day or night.',
+    cta_text: 'Get Help Now',
+    cta_link: '/contact',
+    image_url: 'https://source.unsplash.com/featured/?towtruck',
+    show_image_as_bg: true,
+  };
+}
+
+export function generateMockFooter(): FooterBlock['content'] {
+  return {
+    businessName: 'QuickTow Services',
+    address: '123 Main Street',
+    cityState: 'Anytown, USA',
+    phone: '(555) 123-4567',
+    links: [
+      { label: 'Home', href: '/' },
+      { label: 'Services', href: '/services' },
+      { label: 'Contact', href: '/contact' },
+    ],
+    logo_url: 'https://placehold.co/100x40?text=Logo',
+    social_links: [
+      { platform: 'Facebook', url: 'https://facebook.com' },
+      { platform: 'Instagram', url: 'https://instagram.com' },
+    ],
+  };
+}
+
+export function generateMockServices(): ServicesBlock['content'] {
+  const presets: Record<string, string[]> = {
+    towing: [
+      '24/7 Emergency Towing',
+      'Roadside Assistance',
+      'Flatbed Towing',
+      'Battery Jumpstart',
+      'Vehicle Lockout',
+    ],
+    plumbing: [
+      'Leak Detection',
+      'Pipe Repairs',
+      'Drain Cleaning',
+      'Water Heater Installation',
+      'Emergency Plumbing',
+    ],
+    it: [
+      'Network Setup',
+      'Cybersecurity Audits',
+      'Cloud Migration',
+      'IT Support & Helpdesk',
+      'Software Deployment',
+    ],
+  };
+
+  const allServices = Object.values(presets).flat();
+  const sample = allServices.sort(() => 0.5 - Math.random()).slice(0, 4);
+
+  return {
+    items: sample,
+  };
+}

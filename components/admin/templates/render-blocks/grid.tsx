@@ -22,25 +22,29 @@ function updateGridBlock(block: Block, items: BlockWithId[]): Block {
 
 type Props = {
   block?: GridBlockType;
-  content: GridBlockType['content'];
+  content?: GridBlockType['content'];
   handleNestedBlockUpdate?: (updated: Block) => void;
   parentBlock?: Block;
   compact?: boolean;
 };
 
-export default function GridBlock({
+export default function GridRender({
   block,
   content,
   handleNestedBlockUpdate,
   parentBlock,
   compact = false,
 }: Props) {
+  const final = content || block?.content;
   const [editingBlockIndex, setEditingBlockIndex] = useState<number | null>(null);
   const [showPresetModal, setShowPresetModal] = useState(false);
 
-  const normalizedItems = content.items?.map(normalizeBlock) || [];
-  const gridLabel = handleNestedBlockUpdate ? 'Grid (drag enabled)' : 'Grid (static)';
-  const columns = content.columns || 1;
+  const normalizedItems = final?.items?.map(normalizeBlock) || [];
+  const columns = final?.columns || 1;
+
+  const gridLabel = handleNestedBlockUpdate
+    ? 'Grid (drag enabled)'
+    : 'Grid (static)';
 
   const handleSaveBlock = (updatedBlock: Block) => {
     if (editingBlockIndex === null || !parentBlock) return;
@@ -83,19 +87,17 @@ export default function GridBlock({
             columns={columns}
             items={normalizedItems}
             onChange={(updated) =>
-              handleNestedBlockUpdate?.(updateGridBlock(parentBlock!, updated as BlockWithId[]))
+              handleNestedBlockUpdate?.(
+                updateGridBlock(parentBlock!, updated as BlockWithId[])
+              )
             }
-            onInsert={(index) => {
-              setEditingBlockIndex(index);
-            }}
+            onInsert={(index) => setEditingBlockIndex(index)}
             onDelete={(index) => {
               const items = [...normalizedItems];
               items.splice(index, 1);
               handleNestedBlockUpdate?.(updateGridBlock(parentBlock!, items));
             }}
-            onEdit={(index) => {
-              setEditingBlockIndex(index);
-            }}
+            onEdit={(index) => setEditingBlockIndex(index)}
           />
 
           <div className="mt-6">
@@ -107,10 +109,7 @@ export default function GridBlock({
             </button>
           </div>
 
-          <PresetSelectorModal
-            onSelect={handleInsertBlock}
-            onHover={() => {}}
-          />
+          <PresetSelectorModal onSelect={handleInsertBlock} onHover={() => {}} />
 
           <BlockSidebar
             onOpen={editingBlockIndex !== null}
@@ -128,7 +127,7 @@ export default function GridBlock({
       ) : (
         <div className={`grid grid-cols-${columns} gap-4`}>
           {normalizedItems.map((b: Block, i: number) => (
-            <div id={`block-${b._id}`} key={b._id}>
+            <div key={b._id || i}>
               <RenderBlock block={b} />
             </div>
           ))}

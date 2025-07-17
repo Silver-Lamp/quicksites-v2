@@ -47,6 +47,7 @@ export type Snapshot = {
   autosave_error?: string;
   autosave_message?: string;
   autosave_timestamp?: string;
+  is_site?: boolean;
 };
 
 export type Template = Snapshot & {

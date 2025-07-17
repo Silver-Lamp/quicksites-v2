@@ -1,10 +1,19 @@
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+/** ✅ Fix for __dirname in ESM */
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // ✅ This should be top-level, not inside webpack()
-  devIndicators: {
-    buildActivity: false,
-    autoPrerender: false,
+  // ✅ Fix subdomain asset loading
+  assetPrefix: '/',
+  images: {
+    domains: ['randomuser.me', 'your-supabase-project.supabase.co', 'cdn.sanity.io'],
   },
+  // ⚠ Removed deprecated option
+  // devIndicators: { buildActivity: false },
 
   webpack(config, { isServer }) {
     config.resolve.alias['@'] = path.resolve(__dirname);
@@ -35,3 +44,5 @@ const nextConfig = {
     ];
   },
 };
+
+export default nextConfig;

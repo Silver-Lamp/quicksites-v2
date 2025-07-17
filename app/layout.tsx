@@ -10,6 +10,9 @@ import { SessionProvider } from '@/lib/providers/SessionProvider';
 import { Toaster } from 'react-hot-toast';
 import DevToolsWidget from '@/components/dev-tools-widget';
 import { PanelProvider } from '@/components/ui/panel-context';
+import SquatBotPanel from '@/components/dev/squat-bot-panel';
+import BlockInspectorOverlay from '@/components/dev/block-inspector-overlay';
+import { TooltipProvider } from '@/components/ui/tooltip';
 
 const isProd = process.env.NODE_ENV === 'production';
 
@@ -63,23 +66,16 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       <head>
         <title>QuickSites | One-Click Local Websites</title>
       </head>
-      <body
-        className="bg-background text-foreground min-h-screen"
-        // data-user-id={userId}
-        // data-user-email={userEmail}
-        // data-user-role={role}
-        // data-user-agent={userAgent}
-        // data-ip={ip}
-        // data-session-id={sessionId}
-        // data-ab-variant={abVariant}
-        // data-trace-id={traceId}
-      >
+      <body className="bg-background text-foreground min-h-screen">
         <Toaster position="top-center" />
         <SessionProvider>
-        <PanelProvider>
-            {/* You can conditionally wrap children based on role if needed */}
-            {children}
-            {/* {!isProd && <DevToolsWidget />} */}
+          <PanelProvider>
+            <TooltipProvider>
+              {children}
+              {!isProd && <DevToolsWidget />}
+              {!isProd && <SquatBotPanel />}
+              {!isProd && <BlockInspectorOverlay />}
+            </TooltipProvider>
           </PanelProvider>
         </SessionProvider>
       </body>

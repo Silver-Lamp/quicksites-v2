@@ -29,34 +29,37 @@ export const blockContentSchemaMap = {
   cta: {
     label: 'Call to Action',
     icon: '🚀',
-    schema: z
-      .object({
-        label: z.string().min(1, 'CTA label is required'),
-        link: z.string().min(1, 'CTA link is required'),
-      })
-      .strict(),
+    schema: z.object({
+      label: z.string().min(1, 'CTA label is required'),
+      link: z.string().min(1, 'CTA link is required'),
+    }),
   },
   testimonial: {
     label: 'Testimonial',
     icon: '💬',
     schema: z.object({
-      quote: z.string().min(1, 'Quote is required'),
-      attribution: z.string().optional(),
+      testimonials: z.array(
+        z.object({
+          quote: z.string().min(1, 'Quote is required'),
+          attribution: z.string().optional(),
+          avatar_url: z.string().url().optional(),
+          rating: z.number().min(1).max(5).optional(),
+        })
+      ).min(1, 'At least one testimonial is required'),
+      randomized: z.boolean().optional(),
     }),
   },
   hero: {
     label: 'Hero',
     icon: '🎯',
-    schema: z
-      .object({
-        headline: z.string().min(1, 'Headline is required'),
-        subheadline: z.string().optional(),
-        cta_text: z.string().optional(),
-        cta_link: z.string().optional(),
-        image_url: z.union([z.string().url(), z.literal('')]).optional(),
-        show_image_as_bg: z.boolean().optional(),
-      })
-      .strict(),
+    schema: z.object({
+      headline: z.string().min(1, 'Headline is required'),
+      subheadline: z.string().optional(),
+      cta_text: z.string().optional(),
+      cta_link: z.string().optional(),
+      image_url: z.union([z.string().url(), z.literal('')]).optional(),
+      show_image_as_bg: z.boolean().optional(),
+    }),
   },
   services: {
     label: 'Services',
@@ -90,14 +93,12 @@ export const blockContentSchemaMap = {
       address: z.string().min(1, 'Address is required'),
       city_state: z.string().min(1, 'City/State is required'),
       phone: z.string().min(1, 'Phone number is required'),
-      links: z
-        .array(
-          z.object({
-            label: z.string().min(1, 'Link label is required'),
-            href: z.string().url('Link must be a valid URL'),
-          })
-        )
-        .min(1, 'At least one link is required'),
+      links: z.array(
+        z.object({
+          label: z.string().min(1, 'Link label is required'),
+          href: z.string().url('Link must be a valid URL'),
+        })
+      ).min(1, 'At least one link is required'),
     }),
   },
 };
@@ -111,16 +112,15 @@ export function createBlockUnion<
 
   for (const [type, config] of Object.entries(map)) {
     schemas.push(
-      z
-        .object({
-          type: z.literal(type),
-          content: config.schema,
-          _id: z.string().optional(),
-          tone: z.string().optional(),
-          industry: z.string().optional(),
-          tags: z.array(z.string()).optional(),
-          meta: z.record(z.any()).optional(),
-        }) as z.ZodDiscriminatedUnionOption<'type'>
+      z.object({
+        type: z.literal(type),
+        content: config.schema,
+        _id: z.string().optional(),
+        tone: z.string().optional(),
+        industry: z.string().optional(),
+        tags: z.array(z.string()).optional(),
+        meta: z.record(z.any()).optional(),
+      }) as z.ZodDiscriminatedUnionOption<'type'>
     );
     meta[type as keyof T] = {
       label: config.label,

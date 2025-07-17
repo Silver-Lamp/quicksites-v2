@@ -6,7 +6,12 @@ import JsonFallbackEditor from './block-editors/json-fallback-editor';
 import { BLOCK_EDITORS, type BlockEditorProps } from './block-editors';
 import type { BlockValidationError } from '@/hooks/validateTemplateBlocks';
 
-export default function BlockEditor({ block, onSave, onClose, template }: BlockEditorProps) {
+export default function BlockEditor({
+  block,
+  onSave,
+  onClose,
+  template,
+}: BlockEditorProps) {
   const [mode, setMode] = useState<'form' | 'json'>('form');
   const [hasEditor, setHasEditor] = useState<boolean>(block.type in BLOCK_EDITORS);
 
@@ -16,7 +21,6 @@ export default function BlockEditor({ block, onSave, onClose, template }: BlockE
 
   const errors: BlockValidationError[] = (block as any)._meta?.errorMessages || [];
 
-  // Group by field for use in forms if needed
   const errorsByField = useMemo(() => {
     const grouped: Record<string, string[]> = {};
     for (const err of errors) {
@@ -40,7 +44,7 @@ export default function BlockEditor({ block, onSave, onClose, template }: BlockE
 
         {errors.length > 0 && (
           <div className="mb-3 p-2 bg-red-900/20 text-red-200 text-sm rounded border border-red-700">
-            <strong>This block has validation issues:</strong>
+            <strong>Validation issues:</strong>
             <ul className="list-disc list-inside mt-1 space-y-1">
               {errors.map((err, i) => (
                 <li key={i}>
@@ -56,8 +60,7 @@ export default function BlockEditor({ block, onSave, onClose, template }: BlockE
         {!hasEditor && (
           <div className="mt-4 p-2 bg-yellow-100 text-yellow-800 rounded text-sm dark:bg-yellow-900 dark:text-yellow-200">
             <p>
-              <strong>Heads up:</strong> No visual editor exists for type{' '}
-              <code>{block.type}</code>. Using fallback JSON editor.
+              <strong>Note:</strong> No visual editor exists for type <code>{block.type}</code>. Using JSON fallback.
             </p>
           </div>
         )}
@@ -82,10 +85,9 @@ export default function BlockEditor({ block, onSave, onClose, template }: BlockE
         </button>
       </div>
 
-      {/* Optional: Debug view of errors per field */}
       {errors.length > 0 && (
         <div className="p-2 bg-red-900/10 border border-red-700 rounded text-sm text-red-200">
-          <strong>Validation issues detected:</strong>
+          <strong>Validation issues:</strong>
           <ul className="list-disc list-inside mt-1">
             {Object.entries(errorsByField).map(([field, messages]) => (
               <li key={field}>
@@ -101,7 +103,7 @@ export default function BlockEditor({ block, onSave, onClose, template }: BlockE
         block={block}
         onSave={onSave}
         onClose={onClose}
-        errors={errorsByField as unknown as BlockValidationError[]}
+        errors={errorsByField as unknown as Record<string, BlockValidationError[]>}
       />
     </div>
   );

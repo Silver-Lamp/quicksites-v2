@@ -99,10 +99,12 @@ export default function TemplateSettingsPanel({ template, onChange }: TemplateSe
       toast.error('Failed to update publish status');
       onChange({ ...template, published: !value }); // revert
     } else {
-      toast.success(value ? 'Template published' : 'Template unpublished');
+      toast.success(value ? `${isSite ? 'Site' : 'Template' } published` : `${isSite ? 'Site' : 'Template'} unpublished`);
     }
   };
 
+  const isSite = template.is_site;
+  console.log('.:.TemplateSettingsPanel template record: ', JSON.stringify(template, null, 2));
   return (
     <div className="grid md:grid-cols-2 gap-4 rounded p-3">
       {/* Template Name */}
@@ -160,7 +162,7 @@ export default function TemplateSettingsPanel({ template, onChange }: TemplateSe
       <div className="md:col-span-2 flex justify-between items-center py-2 border-t border-white/10 mt-2">
         <Label>Status</Label>
         <div className="flex gap-2 items-center">
-          <span className="text-sm text-muted-foreground">Published</span>
+          <span className="text-sm text-muted-foreground">Publish {isSite ? 'Site' : 'Template'}</span>
           <Switch
             checked={!!template.published}
             onCheckedChange={handleTogglePublished}

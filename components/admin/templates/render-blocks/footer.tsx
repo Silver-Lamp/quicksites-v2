@@ -2,18 +2,20 @@
 
 import type { Block } from '@/types/blocks';
 import Link from 'next/link';
+import SectionShell from '@/components/ui/section-shell';
 
 type FooterBlock = Extract<Block, { type: 'footer' }>;
 
 type Props = {
   block?: FooterBlock;
+  content?: FooterBlock['content'];
   compact?: boolean;
 };
 
-export default function FooterBlock({ block, compact = false }: Props) {
-  const content = block?.content;
+export default function FooterRender({ block, content, compact = false }: Props) {
+  const final = content || block?.content;
 
-  if (!content) {
+  if (!final) {
     return (
       <div className="text-red-500 italic text-sm p-2 bg-red-50 dark:bg-red-900/20 rounded">
         ⚠️ Missing footer block content.
@@ -27,14 +29,14 @@ export default function FooterBlock({ block, compact = false }: Props) {
     cityState = 'Your City, ST',
     phone = '(555) 555-5555',
     links = [],
-  } = content;
+  } = final;
 
   if (compact) {
     return (
-      <footer className="bg-neutral-900 text-white text-xs p-2 rounded">
+      <SectionShell compact className="bg-neutral-900 text-white text-xs rounded" textAlign="left">
         <p className="font-semibold">{businessName}</p>
         <p className="text-gray-400">{cityState}</p>
-      </footer>
+      </SectionShell>
     );
   }
 

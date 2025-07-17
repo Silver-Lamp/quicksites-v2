@@ -16,6 +16,8 @@ export async function createSnapshot({
   colorScheme,
   editorEmail,
   thumbnailUrl,
+  isSite,
+  published,
 }: {
   templateId: string;
   templateName: string;
@@ -26,6 +28,8 @@ export async function createSnapshot({
   colorScheme?: string;
   editorEmail?: string;
   thumbnailUrl?: string;
+  isSite?: boolean;
+  published?: boolean;
 }) {
   const { data: result, error } = await supabase
     .from('snapshots')
@@ -41,6 +45,8 @@ export async function createSnapshot({
         editor_email: editorEmail,
         thumbnail_url: thumbnailUrl,
         shared_at: new Date().toISOString(),
+        is_site: isSite,
+        published: published,
       },
     ])
     .select('*')

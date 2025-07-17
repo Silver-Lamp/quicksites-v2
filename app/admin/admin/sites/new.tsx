@@ -25,6 +25,8 @@ type Template = {
   theme?: string;
   brand?: string;
   color_scheme?: string;
+  is_site?: boolean;
+  published?: boolean;
 };
 
 export default function NewSitePage() {
@@ -58,8 +60,9 @@ export default function NewSitePage() {
 
     supabase
       .from('templates')
-      .select('id, name, created_at, thumbnail_url, data, theme, brand, color_scheme')
+      .select('id, name, created_at, thumbnail_url, data, theme, brand, color_scheme, is_site, published')
       .eq('published', true)
+      .eq('is_site', false)
       .order('created_at', { ascending: false })
       .then(({ data }) => {
         if (data?.length) {

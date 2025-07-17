@@ -44,7 +44,7 @@ export function createFallbackBlock(type: Block['type']): BlockWithId {
       return {
         _id: id,
         type: 'testimonial',
-        content: { quote: 'Great service!' },
+        content: { testimonials: [{ quote: 'Great service!', attribution: 'John Doe' }] },
       };
     case 'image':
       return {

@@ -15,12 +15,7 @@ export async function saveSite(site: Template): Promise<Template> {
       brand: site.brand,
       layout: site.layout,
       color_scheme: site.color_scheme,
-      seo_title: site.seo_title,
-      seo_description: site.seo_description,
-      twitter_handle: site.twitter_handle,
-      template_id: site.template_id,
-      branding_profile_id: site.branding_profile_id,
-      is_published: site.is_published,
+      is_site: true,
     })
     .eq('id', site.id)
     .select()

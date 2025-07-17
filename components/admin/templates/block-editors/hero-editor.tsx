@@ -6,14 +6,14 @@ import type { BlockEditorProps } from './index';
 import { uploadToStorage } from '@/lib/uploadToStorage';
 import { Switch } from '@/components/ui/switch';
 import BlockPreviewToggle from '@/components/admin/ui/block-preview-toggle';
-import { BlockValidationError } from '@/hooks/validateTemplateBlocks';
+import type { BlockValidationError } from '@/hooks/validateTemplateBlocks';
 import toast from 'react-hot-toast';
 
 type HeroBlock = Extract<Block, { type: 'hero' }>;
 type HeroContent = HeroBlock['content'];
 
 type HeroEditorProps = BlockEditorProps & {
-    errors?: Record<string, BlockValidationError[]>;
+  errors?: Record<string, BlockValidationError[]>;
 };
 
 export default function HeroEditor({
@@ -48,15 +48,7 @@ export default function HeroEditor({
     }`;
 
   return (
-    <div
-      className="space-y-4"
-      style={{
-        backgroundColor: 'black',
-        color: 'white',
-        border: '1px solid black',
-        padding: '10px',
-      }}
-    >
+    <div className="space-y-4 bg-black text-white border border-black p-4 rounded">
       <div>
         <label className="block text-sm font-medium mb-1">Headline</label>
         <input
@@ -102,7 +94,7 @@ export default function HeroEditor({
         {local.image_url && (
           <img
             src={local.image_url}
-            alt="Hero Image"
+            alt="Hero"
             className="mb-2 rounded shadow max-w-xs"
           />
         )}
@@ -113,14 +105,14 @@ export default function HeroEditor({
           onChange={async (e) => {
             const file = e.target.files?.[0];
             if (!file) return;
-          
             try {
               const url = await uploadToStorage(file, `template-${template?.id}/hero`);
               update('image_url', url);
             } catch (err: any) {
               toast.error(err.message || 'Upload failed');
             }
-          }}                  />
+          }}
+        />
         {errorText('content.image_url')}
       </div>
 

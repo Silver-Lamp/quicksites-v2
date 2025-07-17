@@ -3,31 +3,31 @@
 
 import { useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui';
+import { Button, Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui';
 
 import type { Template, TemplateData } from '@/types/template';
 import { saveTemplate } from '@/admin/lib/saveTemplate';
 import { saveSite } from '@/admin/lib/saveSite';
 
 import CollapsiblePanel from '@/components/ui/collapsible-panel';
-import { PanelActions } from './template-action-toolbar';
 
 import TemplateSettingsPanel from './template-settings-panel';
-import { TemplateEditorBranding } from './template-editor.branding';
+// import { TemplateEditorBranding } from './template-editor.branding';
 import TemplatePageEditor from './template-page-editor';
 import TemplateJsonEditor from './template-json-editor';
 import TemplateHistory from './template-history';
 import TemplatePreviewWithToggle from './template-preview-with-toggle';
 import TemplatePublishModal from './template-publish-modal';
 import DevicePreviewWrapper from './device-preview-wrapper';
-import TemplateImageGallery from '../admin/template-image-gallery';
-import TemplateActionToolbar from './template-action-toolbar';
+// import TemplateImageGallery from '../admin/template-image-gallery';
+import { TemplateActionToolbar } from './template-action-toolbar';
 import ThemeScope from '@/components/ui/theme-scope';
-import ImageUploader from '../admin/image-uploader';
+// import ImageUploader from '../admin/image-uploader';
 import { BlockValidationError, validateTemplateBlocks } from '@/hooks/validateTemplateBlocks';
 import { TemplateSaveSchema } from '@/admin/lib/zod/templateSaveSchema';
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 import type { Database } from '@/types/supabase';
+import { usePanelControls } from '@/components/ui/panel-context';
 
 function pushWithLimit<T>(stack: T[], item: T, limit = 10): T[] {
   return [...stack.slice(-limit + 1), item];
@@ -147,11 +147,29 @@ export function EditorContent({
   }, [redoStack]);
 
   const handleTemplateChange = (updated: Template) => {
-    setHistoryStack((prev) => pushWithLimit(prev, updated, 10));
-    setRedoStack((prev) => pushWithLimit(prev, updated, 10));
+    setHistoryStack((prev) => pushWithLimit(prev, template, 10));
+    setRedoStack([]);
     setTemplate(updated);
     setRawJson(JSON.stringify(updated.data, null, 2));
-  };
+  
+    // ✅ Clear field/form-level errors
+    setTemplateErrors({});
+    setFormErrors([]);
+  
+    // ✅ Remove orphaned block errors
+    const updatedBlockIds = new Set(
+      updated.data.pages.flatMap((page) => page.content_blocks.map((b) => b._id))
+    );
+  
+    const prevErrors = blockErrors || {};
+    const filtered: Record<string, BlockValidationError[]> = {};
+    for (const id in prevErrors) {
+      if (updatedBlockIds.has(id)) {
+        filtered[id] = prevErrors[id];
+      }
+    }
+    setBlockErrors(filtered);
+  };  
 
   const handleSaveDraft = async () => {
     try {
@@ -245,27 +263,42 @@ export function EditorContent({
       toast('Nothing to undo');
       return;
     }
+  
     const previous = historyStack[historyStack.length - 1];
     setHistoryStack((prev) => prev.slice(0, -1));
-    setRedoStack((prev) => [...prev, template]);
+    setRedoStack((prev) => pushWithLimit(prev, template, 10));
     setTemplate(previous);
     setRawJson(JSON.stringify(previous.data, null, 2));
     toast.success('Undo successful');
   };
+  
 
   const handleRedo = () => {
     if (redoStack.length === 0) {
       toast('Nothing to redo');
       return;
     }
+  
     const next = redoStack[redoStack.length - 1];
     setRedoStack((prev) => prev.slice(0, -1));
-    setHistoryStack((prev) => [...prev, template]);
+    setHistoryStack((prev) => pushWithLimit(prev, template, 10));
     setTemplate(next);
     setRawJson(JSON.stringify(next.data, null, 2));
     toast.success('Redo successful');
   };
-
+  
+  function PanelActions() {
+    const { resetPanels, openAll, closeAll } = usePanelControls();
+  
+    return (
+      <div className="flex gap-2 mb-2">
+        <Button variant="ghost" size="sm" onClick={openAll}>Open All</Button>
+        <Button variant="ghost" size="sm" onClick={closeAll}>Collapse All</Button>
+        <Button variant="outline" size="sm" onClick={resetPanels}>Reset Panel States</Button>
+      </div>
+    );
+  }
+  
   return (
     <>
       {blockErrors && Object.keys(blockErrors).length > 0 && (
@@ -356,7 +389,7 @@ export function EditorContent({
               <CollapsiblePanel id="template-pages" title="Pages">
                 <TemplatePageEditor
                   template={template}
-                  onChange={handleTemplateChange}
+                  onChange={handleTemplateChange as (template: Template) => void}
                   onLivePreviewUpdate={(data: TemplateData) => setRawJson(JSON.stringify(data, null, 2))}
                   blockErrors={blockErrors || {}}
                 />

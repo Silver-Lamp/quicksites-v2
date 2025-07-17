@@ -36,6 +36,8 @@ export function useTemplateEditorState({
       slug: tpl.slug || '',
       industry: tpl.industry || 'default',
       data: fixTemplatePages(tpl.data || { pages: [] }),
+      is_site: tpl.is_site || false,
+      published: tpl.published || false,
     };
 
     const errors: Record<string, BlockValidationError[]> = {};
@@ -60,7 +62,7 @@ export function useTemplateEditorState({
   };
 
   const [template, setTemplate] = useState(() =>
-    applyDefaults(initialData ? normalizeTemplate(initialData as Template) : fallback)
+    applyDefaults(initialData ? normalizeTemplate(initialData as Template) : fallback as Template)
   );
 
   const [isCreating, setIsCreating] = useState(!initialData);

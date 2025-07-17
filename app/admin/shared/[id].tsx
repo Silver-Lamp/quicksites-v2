@@ -37,7 +37,7 @@ export default function SharedSnapshotPage() {
         res = await supabase
           .from('snapshots')
           .select(
-            'data, template_name, editor_email, shared_at, thumbnail_url, theme, brand, color_scheme'
+            'data, template_name, editor_email, shared_at, thumbnail_url, theme, brand, color_scheme, is_site, published'
           )
           .eq('id', id)
           .single();

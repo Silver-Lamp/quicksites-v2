@@ -72,7 +72,6 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           <PanelProvider>
             <TooltipProvider>
               {children}
-              {!isProd && <DevToolsWidget />}
               {!isProd && <SquatBotPanel />}
               {!isProd && <BlockInspectorOverlay />}
             </TooltipProvider>

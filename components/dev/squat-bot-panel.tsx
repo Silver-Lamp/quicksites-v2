@@ -8,6 +8,7 @@ import { useBlockFix } from '@/components/ui/block-fix-context';
 import { useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
 import type { Block } from '@/types/blocks';
+import DevToolsWidget from '../dev-tools-widget';
 
 type BlockMeta = {
   id: string;
@@ -108,6 +109,7 @@ export default function SquatBotPanel() {
 
       {visible && (
         <div className="fixed bottom-4 left-4 z-50 w-[360px] max-h-[65vh] overflow-y-auto bg-neutral-900 text-white rounded-lg shadow-xl border border-white/10 text-sm">
+        <DevToolsWidget />
           <div className="p-3 border-b border-white/10 flex justify-between items-center">
             <span className="font-semibold">🦾 SquatBot Dev Panel</span>
             <div className="flex gap-2 text-xs">

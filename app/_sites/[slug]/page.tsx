@@ -1,3 +1,4 @@
+// app/_sites/[slug]/page.tsx
 import { getSupabase } from '@/lib/supabase/server';
 import { notFound } from 'next/navigation';
 import type { TemplateData } from '@/types/template';
@@ -25,9 +26,9 @@ export default async function SitePage({ params }: { params: { slug: string; pag
 
   return (
     <div className="bg-black text-white min-h-screen">
-      <DevToolsToggler />
+      {/* <DevToolsToggler /> */}
       <div className="py-8 px-4 max-w-5xl mx-auto">
-        <h2 className="text-3xl font-bold mb-6">{currentPage.title}</h2>
+        {/* <h2 className="text-3xl font-bold mb-6">.:.{currentPage.title}</h2> */}
         {currentPage.content_blocks?.map((block, i) => (
           <div key={block._id || i} className="mb-8">
             <RenderBlock block={block} />

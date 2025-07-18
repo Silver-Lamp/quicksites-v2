@@ -27,6 +27,7 @@ type Template = {
   color_scheme?: string;
   is_site?: boolean;
   published?: boolean;
+  industry?: string;
 };
 
 export default function NewSitePage() {
@@ -276,6 +277,7 @@ export default function NewSitePage() {
                 colorScheme={selectedTemplate?.color_scheme || 'gray'}
                 isDark={isDark}
                 toggleDark={() => setIsDark((prev) => !prev)}
+                industry={selectedTemplate?.industry || ''}
               />
             </div>
           </ThemeScope>

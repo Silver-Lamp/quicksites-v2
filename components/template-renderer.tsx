@@ -4,7 +4,7 @@ import { ThemeProvider, useTheme } from '@/hooks/useThemeContext';
 import clsx from 'clsx';
 import { GoogleFontLoader } from './google-font-loader';
 import { getFontClasses } from '@/lib/theme/getFontClasses';
-import { GlowEffect } from './GlowEffect';
+import { GlowEffect } from './glow-effect';
 
 export default function TemplateRenderer({
   siteSlug = 'default',

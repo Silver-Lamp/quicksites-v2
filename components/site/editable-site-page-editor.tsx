@@ -31,7 +31,7 @@ export default function EditableSitePageEditor({
     <TemplatePageEditor
       template={mockTemplate}
       onChange={(updatedTemplate) => {
-        onChange(updatedTemplate as Template['data'] | Page[]);
+        onChange(updatedTemplate as unknown as Template['data'] | Page[]);
       }}
       onLivePreviewUpdate={() => {}}
       blockErrors={{}}

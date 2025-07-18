@@ -94,8 +94,7 @@ export function createDefaultBlock(type: Block['type']): Block {
         type,
         _id,
         content: {
-          quote: 'They did a great job!',
-          attribution: 'Happy Client',
+          testimonials: [{ quote: 'They did a great job!', attribution: 'Happy Client' }],
         },
       };
 

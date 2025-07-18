@@ -3,7 +3,7 @@ import TemplateEditorLayout from '@/components/admin/templates/template-editor-l
 import EditorForm from '@/components/admin/templates/template-editor';
 import PreviewPanel from '@/components/admin/templates/template-editor';
 import EditorToolbar from '@/components/admin/templates/template-editor';
-import { fetchTemplateBySlug } from '@/app/edit/[slug]/template-loader';
+import { fetchTemplateBySlug } from '@/app/template/\[slug\]/template-loader';
 import type { Snapshot } from '@/types/template';
 
 type PageProps = {

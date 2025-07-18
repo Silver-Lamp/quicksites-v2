@@ -23,7 +23,7 @@ import { Block } from '@/types/blocks';
 import BlockAdderGrouped from '@/components/admin/block-adder-grouped';
 import { useClickAway } from 'react-use';
 
-let undoStack: any[] = [];
+const undoStack: any[] = [];
 let redoStack: any[] = [];
 
 function SortableBlock({

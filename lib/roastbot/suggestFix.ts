@@ -18,8 +18,7 @@ export function suggestFix(block: Block): Partial<Block['content']> {
       };
     case 'testimonial':
       return {
-        quote: content?.quote || '"Great service at 2am!"',
-        attribution: content?.attribution || '– Happy Customer',
+        testimonials: content?.testimonials || [{ value: 'Great service at 2am!', attribution: '– Happy Customer' }],
       };
     case 'services':
       return {

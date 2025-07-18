@@ -44,7 +44,7 @@ export default function SiteEditor({ site }: { site: SiteData }) {
       </div>
 
       <EditableSitePageEditor
-        data={editingSite.data as Template['data']}
+        data={editingSite.data as unknown as Template['data']}
         onChange={() => {}}
         // onChange={(updatedData) =>
         //     setEditingSite((prev) => ({

@@ -8,10 +8,26 @@ import type { Template } from '@/types/template';
 import { Switch } from '@/components/ui/switch';
 import debounce from 'lodash.debounce';
 import { toast } from 'react-hot-toast';
+import { SiteTheme, useTheme } from '@/hooks/useThemeContext';
+import { getFontClasses } from '@/lib/theme/getFontClasses';
+import { ThemePreviewCard } from '@/components/admin/theme-preview-card';
+import clsx from 'clsx';
 
 type TemplateSettingsPanelProps = {
   template: Template;
   onChange: (updated: Template) => void;
+};
+
+const fonts = ['sans', 'serif', 'mono', 'cursive'];
+const radii = ['sm', 'md', 'lg', 'xl', 'full'];
+const modes = ['light', 'dark'];
+
+const defaultTheme = {
+  glow: [],
+  fontFamily: 'sans',
+  borderRadius: 'lg',
+  accentColor: 'indigo-600',
+  darkMode: 'dark',
 };
 
 export default function TemplateSettingsPanel({ template, onChange }: TemplateSettingsPanelProps) {
@@ -20,15 +36,10 @@ export default function TemplateSettingsPanel({ template, onChange }: TemplateSe
   const [slugError, setSlugError] = useState<string | null>(null);
   const [isCheckingSlug, setIsCheckingSlug] = useState(false);
   const [isSlugLocked, setIsSlugLocked] = useState(false);
+  const [activeTab, setActiveTab] = useState<'general' | 'theme'>('general');
 
-  const colorSchemes = [
-    { name: 'blue', hex: '#3b82f6' },
-    { name: 'green', hex: '#22c55e' },
-    { name: 'yellow', hex: '#eab308' },
-    { name: 'red', hex: '#ef4444' },
-  ];
-  const themes = ['dark', 'light'];
-  const brands = ['blue', 'green', 'red'];
+  const { setTheme } = useTheme();
+  const isSite = template.is_site;
 
   useEffect(() => {
     supabase
@@ -39,7 +50,6 @@ export default function TemplateSettingsPanel({ template, onChange }: TemplateSe
       });
   }, []);
 
-  // Auto-generate slug from name unless locked or manually edited
   useEffect(() => {
     if (!slugManuallyEdited && !isSlugLocked && template.template_name) {
       const slug = template.template_name
@@ -50,7 +60,6 @@ export default function TemplateSettingsPanel({ template, onChange }: TemplateSe
     }
   }, [template.template_name]);
 
-  // Debounced slug check
   const checkSlugUniqueness = debounce(async (slug: string) => {
     setIsCheckingSlug(true);
     const { data } = await supabase
@@ -68,7 +77,6 @@ export default function TemplateSettingsPanel({ template, onChange }: TemplateSe
     setIsCheckingSlug(false);
   }, 400);
 
-  // Slug validation
   useEffect(() => {
     const slug = template.slug || '';
     const slugRegex = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
@@ -77,9 +85,7 @@ export default function TemplateSettingsPanel({ template, onChange }: TemplateSe
       setSlugError('Slug is required');
       return;
     } else if (!slugRegex.test(slug)) {
-      setSlugError(
-        'Slug must be lowercase, alphanumeric, and hyphen-separated (e.g. towing-service)'
-      );
+      setSlugError('Slug must be lowercase, alphanumeric, and hyphen-separated (e.g. towing-service)');
       return;
     }
 
@@ -89,209 +95,178 @@ export default function TemplateSettingsPanel({ template, onChange }: TemplateSe
   const handleTogglePublished = async (value: boolean) => {
     const updated = { ...template, published: value };
     onChange(updated);
-  
     const { error } = await supabase
       .from('templates')
       .update({ published: value })
       .eq('id', template.id);
-  
+
     if (error) {
       toast.error('Failed to update publish status');
-      onChange({ ...template, published: !value }); // revert
+      onChange({ ...template, published: !value });
     } else {
-      toast.success(value ? `${isSite ? 'Site' : 'Template' } published` : `${isSite ? 'Site' : 'Template'} unpublished`);
+      toast.success(value ? 'Template published' : 'Template unpublished');
     }
   };
 
-  const isSite = template.is_site;
-  console.log('.:.TemplateSettingsPanel template record: ', JSON.stringify(template, null, 2));
+  const handleResetTheme = () => {
+    setTheme(defaultTheme as SiteTheme);
+    onChange({ ...template, theme: defaultTheme.fontFamily });
+  };
+
   return (
-    <div className="grid md:grid-cols-2 gap-4 rounded p-3">
-      {/* Template Name */}
-      <div className="md:col-span-2">
-        <Label>Template Name</Label>
-        <Input
-          value={template.template_name || ''}
-          onChange={(e) => onChange({ ...template, template_name: e.target.value })}
-          placeholder="e.g. Towing Starter"
-          className="bg-gray-800 text-white border border-gray-700"
-        />
+    <div className="rounded p-3 space-y-4">
+      <div className="flex gap-2 text-sm font-medium border-b border-white/10 pb-2">
+        <button
+          onClick={() => setActiveTab('general')}
+          className={clsx('px-3 py-1 rounded', activeTab === 'general' ? 'bg-purple-700 text-white' : 'bg-gray-800 text-gray-300')}
+        >
+          General
+        </button>
+        <button
+          onClick={() => setActiveTab('theme')}
+          className={clsx('px-3 py-1 rounded', activeTab === 'theme' ? 'bg-purple-700 text-white' : 'bg-gray-800 text-gray-300')}
+        >
+          Design
+        </button>
       </div>
 
-      {/* Slug */}
-      <div className="md:col-span-2 space-y-1">
-        <div className="flex justify-between items-center">
-          <Label>Slug</Label>
-          <div className="flex gap-2 items-center text-sm text-muted-foreground">
-            <span>Lock Slug</span>
-            <Switch
-              checked={isSlugLocked}
-              onCheckedChange={(val) => setIsSlugLocked(val)}
-              disabled={template.published}
+      {activeTab === 'general' && (
+        <div className="grid md:grid-cols-2 gap-4">
+          <div className="md:col-span-2">
+            <Label>Template Name</Label>
+            <Input
+              value={template.template_name || ''}
+              onChange={(e) => onChange({ ...template, template_name: e.target.value })}
+              placeholder="e.g. Towing Starter"
+              className="bg-gray-800 text-white border border-gray-700"
             />
           </div>
-        </div>
-        <Input
-          value={template.slug || ''}
-          disabled={template.published || !slugManuallyEdited}
-          onChange={(e) => {
-            setSlugManuallyEdited(true);
-            onChange({ ...template, slug: e.target.value });
-          }}
-          placeholder="e.g. towing-starter"
-          className={`bg-gray-800 text-white border ${
-            slugError ? 'border-red-500' : 'border-gray-700'
-          }`}
-        />
-        {isCheckingSlug && (
-          <p className="text-sm text-yellow-400">Checking slug availability...</p>
-        )}
-        {slugError && (
-          <p className="text-sm text-red-400">{slugError}</p>
-        )}
 
-        {/* ✅ Live preview of public URL */}
-        {template.slug && !slugError && (
-          <p className="text-sm text-muted-foreground pt-1">
-            URL Preview: <code>https://quicksites.ai/templates/{template.slug}</code>
-          </p>
-        )}
-      </div>
+          <div className="md:col-span-2 space-y-1">
+            <div className="flex justify-between items-center">
+              <Label>Slug</Label>
+              <div className="flex gap-2 items-center text-sm text-muted-foreground">
+                <span>Lock Slug</span>
+                <Switch
+                  checked={isSlugLocked}
+                  onCheckedChange={(val) => setIsSlugLocked(val)}
+                  disabled={template.published}
+                />
+              </div>
+            </div>
+            <Input
+              value={template.slug || ''}
+              disabled={template.published || !slugManuallyEdited}
+              onChange={(e) => {
+                setSlugManuallyEdited(true);
+                onChange({ ...template, slug: e.target.value });
+              }}
+              placeholder="e.g. towing-starter"
+              className={`bg-gray-800 text-white border ${slugError ? 'border-red-500' : 'border-gray-700'}`}
+            />
+            {isCheckingSlug && <p className="text-sm text-yellow-400">Checking slug availability...</p>}
+            {slugError && <p className="text-sm text-red-400">{slugError}</p>}
+            {template.slug && !slugError && (
+              <p className="text-sm text-muted-foreground pt-1">
+                URL Preview: <code>https://quicksites.ai/templates/{template.slug}</code>
+              </p>
+            )}
+          </div>
 
-      {/* ✅ Published Toggle */}
-      <div className="md:col-span-2 flex justify-between items-center py-2 border-t border-white/10 mt-2">
-        <Label>Status</Label>
-        <div className="flex gap-2 items-center">
-          <span className="text-sm text-muted-foreground">Publish {isSite ? 'Site' : 'Template'}</span>
-          <Switch
-            checked={!!template.published}
-            onCheckedChange={handleTogglePublished}
-          />
-        </div>
-      </div>
-
-      {/* ✅ Share Link */}
-      {template.slug && !slugError && (
-        <div className="md:col-span-2 flex justify-between items-center pt-2">
-          <Label>Share Link</Label>
-          <button
-            onClick={() => {
-              navigator.clipboard.writeText(`https://quicksites.ai/templates/${template.slug}`);
-            }}
-            className="text-sm text-blue-400 hover:text-blue-300 underline"
-          >
-            Copy https://quicksites.ai/templates/{template.slug}
-          </button>
+          <div className="md:col-span-2 flex justify-between items-center py-2 border-t border-white/10 mt-2">
+            <Label>Status</Label>
+            <div className="flex gap-2 items-center">
+              <span className="text-sm text-muted-foreground">Publish {isSite ? 'Site' : 'Template'}</span>
+              <Switch
+                checked={!!template.published}
+                onCheckedChange={handleTogglePublished}
+              />
+            </div>
+          </div>
         </div>
       )}
 
-      {/* ✅ Archive Toggle */}
-      <div className="md:col-span-2 flex justify-between items-center py-2 border-t border-white/10 mt-2">
-        <Label>Archive</Label>
-        <div className="flex gap-2 items-center">
-          <span className="text-sm text-muted-foreground">Archived</span>
-          <Switch
-            checked={!!template.archived}
-            onCheckedChange={(val) => {
-              onChange({
-                ...template,
-                archived: val,
-                published: val ? false : template.published, // auto-unpublish on archive
-              });
-            }}
-          />
-
-          {template.archived && (
-            <div className="md:col-span-2">
-              <p className="text-sm text-yellow-400">⚠ This template is currently archived.</p>
+      {activeTab === 'theme' && (
+        <div className="space-y-4">
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <Label>Font</Label>
+              <select
+                value={template.theme || ''}
+                onChange={(e) => {
+                  const font = e.target.value;
+                  onChange({ ...template, theme: font });
+                  setTheme({ glow: [], fontFamily: font });
+                }}
+                className="w-full bg-gray-800 text-white border border-gray-700 px-2 py-1 rounded mt-1"
+              >
+                <option value="">Default</option>
+                {fonts.map((f) => {
+                  const label = f === 'sans' ? 'Inter' : f === 'serif' ? 'Roboto Slab' : f === 'mono' ? 'Fira Code' : 'Pacifico';
+                  const fontStyle = getFontClasses({ fontFamily: f, glow: [] }).css;
+                  return (
+                    <option key={f} value={f} style={{ fontFamily: fontStyle }}>
+                      {label}
+                    </option>
+                  );
+                })}
+              </select>
             </div>
-          )}
-        </div>
-      </div>
 
-      {/* Rest of settings */}
-      <div>
-        <Label>Industry</Label>
-        <select
-          value={template.industry || ''}
-          onChange={(e) => onChange({ ...template, industry: e.target.value })}
-          className="w-full bg-gray-800 text-white border border-gray-700 px-2 py-1 rounded"
-        >
-          <option value="">Select Industry</option>
-          {industries.map((name) => (
-            <option key={name} value={name}>
-              {name}
-            </option>
-          ))}
-        </select>
-      </div>
+            <div>
+              <Label>Border Radius</Label>
+              <select
+                onChange={(e) => setTheme({ glow: [], fontFamily: template.theme || 'sans', borderRadius: e.target.value })}
+                className="w-full bg-gray-800 text-white border border-gray-700 px-2 py-1 rounded mt-1"
+              >
+                {radii.map((r) => (
+                  <option key={r} value={r}>{r}</option>
+                ))}
+              </select>
+            </div>
 
-      <div>
-        <Label>Layout</Label>
-        <Input
-          value={template.layout || ''}
-          onChange={(e) => onChange({ ...template, layout: e.target.value })}
-          className="bg-gray-800 text-white border border-gray-700"
-        />
-      </div>
+            <div>
+              <Label>Accent Color</Label>
+              <Input
+                placeholder="e.g. indigo-600"
+                onBlur={(e) => setTheme({ glow: [], fontFamily: template.theme || 'sans', accentColor: e.target.value })}
+                className="bg-gray-800 text-white border border-gray-700"
+              />
+            </div>
 
-      <div>
-        <Label>Color Scheme</Label>
-        <div className="flex gap-2 mt-1">
-          {colorSchemes.map(({ name, hex }) => (
+            <div>
+              <Label>Dark Mode</Label>
+              <select
+                onChange={(e) => setTheme({ glow: [], fontFamily: template.theme || 'sans', darkMode: e.target.value as 'dark' | 'light' })}
+                className="w-full bg-gray-800 text-white border border-gray-700 px-2 py-1 rounded mt-1"
+              >
+                {modes.map((m) => (
+                  <option key={m} value={m}>
+                    {m === 'dark' ? '🌙 Dark' : '☀ Light'}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          <ThemePreviewCard />
+
+          <div className="flex gap-4 pt-2">
             <button
-              key={name}
-              onClick={() => onChange({ ...template, color_scheme: name })}
-              className={`w-6 h-6 rounded-full border-2 ${
-                template.color_scheme === name ? 'border-white' : 'border-transparent'
-              }`}
-              style={{ backgroundColor: hex }}
-              title={name}
-            />
-          ))}
+              onClick={handleResetTheme}
+              className="bg-gray-700 hover:bg-gray-600 text-white text-sm px-4 py-2 rounded"
+            >
+              Reset Theme
+            </button>
+            <button
+              onClick={() => toast.success('🚧 Save as preset coming soon')}
+              className="bg-indigo-600 hover:bg-indigo-700 text-white text-sm px-4 py-2 rounded"
+            >
+              Save as Preset
+            </button>
+          </div>
         </div>
-      </div>
-
-      <div>
-        <Label>Theme</Label>
-        <select
-          value={template.theme || ''}
-          onChange={(e) => onChange({ ...template, theme: e.target.value })}
-          className="w-full bg-gray-800 text-white border border-gray-700 px-2 py-1 rounded"
-        >
-          <option value="">Select Theme</option>
-          {themes.map((t) => (
-            <option key={t} value={t}>
-              {t === 'dark' ? '🌙 Dark' : '☀️ Light'}
-            </option>
-          ))}
-        </select>
-      </div>
-
-      <div>
-        <Label>Brand</Label>
-        <select
-          value={template.brand || ''}
-          onChange={(e) => onChange({ ...template, brand: e.target.value })}
-          className="w-full bg-gray-800 text-white border border-gray-700 px-2 py-1 rounded"
-        >
-          <option value="">Select Brand</option>
-          {brands.map((b) => (
-            <option key={b} value={b}>
-              {b}
-            </option>
-          ))}
-        </select>
-      </div>
-
-      <div>
-        <Label>Commit Message</Label>
-        <Input
-          value={template.commit || ''}
-          onChange={(e) => onChange({ ...template, commit: e.target.value })}
-          className="bg-gray-800 text-white border border-gray-700"
-        />
-      </div>
+      )}
     </div>
   );
 }

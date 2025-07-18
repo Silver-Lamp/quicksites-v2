@@ -1,21 +1,34 @@
 'use client';
 
-import { ReactNode } from 'react';
+import { ReactNode, useEffect, useState } from 'react';
 import { SessionContextProvider } from '@supabase/auth-helpers-react';
 import { supabase } from '@/admin/lib/supabaseClient';
 import { SmartLinkProvider } from '@/components/admin/smart-link-provider';
 import { Toaster } from 'react-hot-toast';
-import { ThemeProvider } from 'next-themes';
+import { ThemeProvider as NextThemes } from 'next-themes';
+import { GoogleFontLoader } from '@/components/google-font-loader';
+import { ThemeProvider as AppThemeProvider } from '@/hooks/useThemeContext';
 
 export default function Providers({ children }: { children: ReactNode }) {
+  const [isClient, setIsClient] = useState(false);
+
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
+
+  if (!isClient) return null;
+
   return (
     <SessionContextProvider supabaseClient={supabase}>
-      <ThemeProvider attribute="class" defaultTheme="dark" enableSystem>
-        <SmartLinkProvider>
-          <Toaster />
-          {children}
-        </SmartLinkProvider>
-      </ThemeProvider>
+      <NextThemes attribute="class" defaultTheme="dark" enableSystem>
+        <AppThemeProvider siteSlug="default">
+          <SmartLinkProvider>
+            <Toaster />
+            <GoogleFontLoader />
+            {children}
+          </SmartLinkProvider>
+        </AppThemeProvider>
+      </NextThemes>
     </SessionContextProvider>
   );
 }

@@ -1,13 +1,11 @@
-// components/admin/block-adder-grouped.tsx
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { blockMeta } from '@/admin/lib/zod/blockSchema';
 import type { Block } from '@/types/blocks';
 import { createDefaultBlock } from '@/lib/createDefaultBlock';
 import RenderBlockMini from '@/components/admin/templates/render-block-mini';
 
-// Group definitions
 const blockGroups: Record<string, { label: string; types: Block['type'][] }> = {
   content: {
     label: 'Content Blocks',
@@ -27,7 +25,6 @@ const blockGroups: Record<string, { label: string; types: Block['type'][] }> = {
   },
 };
 
-// Collapsed state persistence
 function loadCollapsedGroups(): Record<string, boolean> {
   if (typeof window === 'undefined') return {};
   try {
@@ -49,6 +46,7 @@ type Props = {
   existingBlocks?: Block[];
   disallowDuplicates?: Block['type'][];
   label?: string;
+  triggerElement?: React.ReactNode;
 };
 
 export default function BlockAdderGrouped({
@@ -56,12 +54,21 @@ export default function BlockAdderGrouped({
   existingBlocks = [],
   disallowDuplicates = ['footer'],
   label = 'Add Block',
+  triggerElement,
 }: Props) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState('');
   const [collapsedGroups, setCollapsedGroups] = useState<Record<string, boolean>>(() =>
     loadCollapsedGroups()
   );
+
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setOpen(false);
+    };
+    document.addEventListener('keydown', onKeyDown);
+    return () => document.removeEventListener('keydown', onKeyDown);
+  }, []);
 
   const blocked = new Set(
     existingBlocks.filter((b) => disallowDuplicates.includes(b.type)).map((b) => b.type)
@@ -80,84 +87,109 @@ export default function BlockAdderGrouped({
   }, [search, existingBlocks]);
 
   return (
-    <div className="relative inline-block text-left w-full max-w-sm mb-4">
-      <button
-        onClick={() => setOpen((o) => !o)}
-        className="w-full bg-purple-600 text-white px-4 py-2 rounded hover:bg-purple-700"
-      >
-        {label}
-      </button>
+    <>
+      <div onClick={() => setOpen(true)}>
+        {triggerElement ? (
+          triggerElement
+        ) : (
+          <button
+            className="w-full bg-purple-600 text-white px-4 py-2 rounded hover:bg-purple-700 text-center"
+          >
+            {label}
+          </button>
+        )}
+      </div>
 
       {open && (
-        <div className="absolute z-30 mt-2 w-full rounded-md bg-white dark:bg-neutral-900 shadow-lg ring-1 ring-black ring-opacity-5 max-h-[32rem] overflow-y-auto">
-          <div className="p-2 border-b border-gray-200 dark:border-neutral-700">
-            <input
-              autoFocus
-              type="text"
-              placeholder="Search block types..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="w-full px-3 py-2 rounded-md border border-gray-300 dark:border-neutral-700 bg-gray-50 dark:bg-neutral-800 text-black dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500"
-            />
-          </div>
-
-          {filtered.map(({ key, label, types }) => (
-            <div key={key} className="border-b border-gray-200 dark:border-neutral-700">
-              <button
-                className="w-full text-left px-4 py-2 font-medium text-sm text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-neutral-800 hover:bg-gray-100 dark:hover:bg-neutral-700"
-                onClick={() => {
-                  const next = { ...collapsedGroups, [key]: !collapsedGroups[key] };
-                  setCollapsedGroups(next);
-                  saveCollapsedGroups(next);
-                }}
-              >
+        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-neutral-900 rounded-lg shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto border border-black/10 dark:border-white/10">
+            <div className="p-4 border-b border-gray-200 dark:border-neutral-700 flex justify-between items-center">
+              <h2 className="text-lg font-semibold text-gray-800 dark:text-white">
                 {label}
+              </h2>
+              <button
+                onClick={() => setOpen(false)}
+                className="text-sm text-gray-500 hover:text-red-500 dark:text-gray-400"
+              >
+                ✕
               </button>
+            </div>
 
-              {!collapsedGroups[key] && (
-                <div className="pl-4 py-2 grid grid-cols-1 gap-2">
-                  {types.length > 0 ? (
-                    types.map((type) => (
-                      <button
-                        key={type}
-                        onClick={() => {
-                          onAdd(type);
-                          setSearch('');
-                          setOpen(false);
-                        }}
-                        className="w-full text-left px-3 py-2 rounded-md border border-gray-300 dark:border-neutral-700 bg-white dark:bg-neutral-900 hover:bg-gray-50 dark:hover:bg-neutral-800 flex items-center gap-3"
-                      >
-                        <div className="flex-shrink-0 text-lg">{blockMeta[type as keyof typeof blockMeta].icon}</div>
-                        <div className="flex-grow">
-                          <div className="font-medium text-gray-800 dark:text-white">
-                            {blockMeta[type as keyof typeof blockMeta].label}
-                          </div>
-                          <div className="text-xs text-gray-500 dark:text-gray-400">
-                            Block type: {type}
-                          </div>
+            <div className="p-4 border-b border-gray-200 dark:border-neutral-700">
+              <input
+                autoFocus
+                type="text"
+                placeholder="Search block types..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="w-full px-3 py-2 rounded-md border border-gray-300 dark:border-neutral-700 bg-gray-50 dark:bg-neutral-800 text-black dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500"
+              />
+            </div>
+
+            <div className="p-4 space-y-6">
+              {filtered.map(({ key, label, types }) => (
+                <div key={key}>
+                  <button
+                    className="w-full text-left px-4 py-2 font-medium text-sm text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-neutral-800 hover:bg-gray-100 dark:hover:bg-neutral-700 rounded"
+                    onClick={() => {
+                      const next = { ...collapsedGroups, [key]: !collapsedGroups[key] };
+                      setCollapsedGroups(next);
+                      saveCollapsedGroups(next);
+                    }}
+                  >
+                    {label}
+                  </button>
+
+                  {!collapsedGroups[key] && (
+                    <div className="pt-2 flex flex-col gap-4 px-4">
+                      {types.length > 0 ? (
+                        types.map((type) => (
+                          <button
+                            key={type}
+                            onClick={() => {
+                              onAdd(type);
+                              setSearch('');
+                              setOpen(false);
+                            }}
+                            className="text-left px-4 py-4 rounded-md border border-gray-300 dark:border-neutral-700 bg-white dark:bg-neutral-900 hover:bg-gray-50 dark:hover:bg-neutral-800 space-y-3 text-sm"
+                          >
+                            <div className="flex items-center gap-2">
+                              <div className="text-lg">
+                                {blockMeta[type as keyof typeof blockMeta].icon}
+                              </div>
+                              <div>
+                                <div className="font-medium text-gray-800 dark:text-white">
+                                  {blockMeta[type as keyof typeof blockMeta].label}
+                                </div>
+                                <div className="text-xs text-gray-500 dark:text-gray-400">
+                                  Block type: {type}
+                                </div>
+                              </div>
+                            </div>
+                            <div className="w-full border rounded overflow-hidden">
+                              <RenderBlockMini block={createDefaultBlock(type)} className="w-full h-32" />
+                            </div>
+                          </button>
+                        ))
+                      ) : (
+                        <div className="px-2 py-1 text-sm text-gray-400 dark:text-gray-500">
+                          None available
                         </div>
-                        <div className="w-28 h-16">
-                          <RenderBlockMini block={createDefaultBlock(type)} className="h-full" />
-                        </div>
-                      </button>
-                    ))
-                  ) : (
-                    <div className="px-2 py-1 text-sm text-gray-400 dark:text-gray-500">
-                      None available
+                      )}
                     </div>
                   )}
                 </div>
+              ))}
+
+              {filtered.every((g) => g.types.length === 0) && (
+                <div className="px-4 py-2 text-sm text-gray-500 dark:text-gray-400">
+                  No matching block types found
+                </div>
               )}
             </div>
-          ))}
-
-          {filtered.every((g) => g.types.length === 0) && (
-            <div className="px-4 py-2 text-sm text-gray-500 dark:text-gray-400">
-              No matching block types found
-            </div>
-          )}
+          </div>
         </div>
       )}
-    </div>
+    </>
   );
 }

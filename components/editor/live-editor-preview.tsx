@@ -15,7 +15,7 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { useEffect, useRef, useState } from 'react';
-import { GripVertical } from 'lucide-react';
+import { GripVertical, Pencil, Trash2, PlusCircle } from 'lucide-react';
 import { createDefaultBlock } from '@/lib/createDefaultBlock';
 import RenderBlock from '@/components/admin/templates/render-block';
 import { DynamicBlockEditor } from './dynamic-block-editor';
@@ -95,32 +95,47 @@ function SortableBlock({
           <span className="uppercase tracking-wide">{block.type}</span>
         </div>
         <div className="hidden group-hover:flex gap-2">
-          <button onClick={() => setEditing(block)} className="text-xs text-blue-400 underline">Edit</button>
-          <button onClick={() => {
-            const updated = { ...template };
-            updated.data.pages[pageIndex].content_blocks.splice(blockIndex, 1);
-            onChange(updated);
-          }} className="text-xs text-red-400 underline">Delete</button>
+          <button onClick={() => setEditing(block)} className="text-xs text-blue-400 underline">
+            <Pencil size={16} />
+          </button>
+          <button
+            onClick={() => {
+              const updated = { ...template };
+              updated.data.pages[pageIndex].content_blocks.splice(blockIndex, 1);
+              onChange(updated);
+            }}
+            className="text-xs text-red-400 underline"
+          >
+            <Trash2 size={16} />
+          </button>
         </div>
       </div>
 
       <RenderBlock block={block} />
 
-      <div className="hidden group-hover:block mt-2" ref={adderRef}>
-          <BlockAdderGrouped
-            onAdd={(type) => {
-              const newBlock = createDefaultBlock(type);
-              const updated = { ...template };
-              const blocks = [...updated.data.pages[pageIndex].content_blocks];
-              blocks.splice(blockIndex + 1, 0, newBlock);
-              updated.data.pages[pageIndex].content_blocks = blocks;
-              setLastInsertedId(newBlock._id ?? null);
-              onChange(updated);
-              setShowAdder(false);
-            }}
-            existingBlocks={page.content_blocks}
-            label="+ Add Block Here"
-          />
+      <div className="hidden group-hover:block mt-2 animate-fade-in" ref={adderRef}>
+        <BlockAdderGrouped
+          onAdd={(type) => {
+            const newBlock = createDefaultBlock(type);
+            const updated = { ...template };
+            const blocks = [...updated.data.pages[pageIndex].content_blocks];
+            blocks.splice(blockIndex + 1, 0, newBlock);
+            updated.data.pages[pageIndex].content_blocks = blocks;
+            setLastInsertedId(newBlock._id ?? null);
+            onChange(updated);
+            setShowAdder(false);
+          }}
+          existingBlocks={page.content_blocks}
+          triggerElement={
+            <button
+              onClick={() => setShowAdder(true)}
+              className="w-full flex items-center justify-center gap-2 border border-purple-600 text-purple-600 dark:text-purple-400 rounded px-4 py-2 text-sm hover:bg-purple-50 dark:hover:bg-purple-900 transition-colors"
+            >
+              <PlusCircle className="w-4 h-4" />
+              <span>Add Block Below</span>
+            </button>
+          }
+        />
       </div>
     </div>
   );
@@ -156,30 +171,6 @@ export function LiveEditorPreview({
           className="text-blue-400 underline"
         >
           View: {layoutMode === 'stack' ? 'Vertical' : 'Grid'}
-        </button>
-        <button
-          onClick={() => {
-            if (undoStack.length > 0) {
-              redoStack.push(JSON.parse(JSON.stringify(template)));
-              const prev = undoStack.pop();
-              onChange(prev);
-            }
-          }}
-          className="text-yellow-400 underline"
-        >
-          Undo
-        </button>
-        <button
-          onClick={() => {
-            if (redoStack.length > 0) {
-              undoStack.push(JSON.parse(JSON.stringify(template)));
-              const next = redoStack.pop();
-              onChange(next);
-            }
-          }}
-          className="text-green-400 underline"
-        >
-          Redo
         </button>
       </div>
 
@@ -222,6 +213,28 @@ export function LiveEditorPreview({
               ))}
             </div>
           </SortableContext>
+
+          {/* Sticky footer adder per page */}
+          <div className="sticky bottom-0 z-40 bg-white dark:bg-neutral-900 p-4 border-t border-gray-200 dark:border-neutral-700 mt-6">
+            <BlockAdderGrouped
+              onAdd={(type) => {
+                const newBlock = createDefaultBlock(type);
+                const updated = { ...template };
+                updated.data.pages[pageIndex].content_blocks.push(newBlock);
+                setLastInsertedId(newBlock._id ?? null);
+                updateAndSave(updated);
+              }}
+              existingBlocks={page.content_blocks}
+              triggerElement={
+                <button
+                  className="w-full flex items-center justify-center gap-2 border border-purple-600 text-purple-600 dark:text-purple-400 rounded px-4 py-2 text-sm hover:bg-purple-50 dark:hover:bg-purple-900 transition-colors"
+                >
+                  <PlusCircle className="w-4 h-4" />
+                  <span>Add Block to End</span>
+                </button>
+              }
+            />
+          </div>
         </DndContext>
       ))}
 

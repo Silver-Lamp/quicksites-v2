@@ -7,7 +7,8 @@ import { PageControls } from './page-controls';
 import { PageBlocksList } from './page-blocks-list';
 import type { Template, Page } from '@/types/template';
 import { Button } from '@/components/ui/button';
-import { industryPresets } from '@/lib/presets';
+import { industryPresets } from '@/lib/theme/industryPresets';
+import type { SiteTheme } from '@/hooks/useThemeContext';
 
 type Props = {
   page: Page;
@@ -41,7 +42,7 @@ export function PageCard({
     if (!preset || !page.content_blocks.length) return null;
 
     return Object.keys(preset).find((key) => {
-      const block = preset[key];
+      const block = preset[key as keyof SiteTheme];
       return JSON.stringify(block) === JSON.stringify(page.content_blocks[0]);
     });
   }, [template.industry, page.content_blocks]);

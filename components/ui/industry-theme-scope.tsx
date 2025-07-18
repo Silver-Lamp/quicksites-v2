@@ -1,15 +1,15 @@
 // components/ui/IndustryThemeScope.tsx
 'use client';
-import { industryThemes } from '@/lib/themes/industryThemes';
+import { industryPresets } from '@/lib/theme/industryPresets';
 
 export function IndustryThemeScope({ industry = 'towing', children }: { industry?: string; children: React.ReactNode }) {
-  const theme = industryThemes[industry] || industryThemes['towing'];
+  const theme = industryPresets[industry] || industryPresets['towing'];
 
   return (
     <div
       style={{
-        '--font-family': theme.font,
-        '--primary-color': theme.primaryColor,
+        '--font-family': theme.fontFamily,
+        '--primary-color': theme.accentColor,
         '--radius': theme.borderRadius,
       } as React.CSSProperties}
       className="font-[var(--font-family)] text-white"

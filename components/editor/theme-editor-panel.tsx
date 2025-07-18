@@ -1,87 +1,87 @@
 // components/editor/ThemeEditorPanel.tsx
 'use client';
 
-import { useState, useEffect } from 'react';
-import { saveIndustryTheme } from '@/lib/db/themeService';
-import { ThemePreviewArea } from './theme-preview-area';
-import { ThemePresetsDropdown } from './theme-presets-dropdown';
+import { useTheme } from '@/hooks/useThemeContext';
+import { themePresets } from '@/lib/theme/themePresets';
+import { ThemePreviewCard } from '@/components/admin/theme-preview-card';
 
 export function ThemeEditorPanel({ industry }: { industry: string }) {
-  const [font, setFont] = useState("'Inter', sans-serif");
-  const [primaryColor, setPrimaryColor] = useState('#0ea5e9');
-  const [borderRadius, setBorderRadius] = useState('0.25rem');
-  const [status, setStatus] = useState('');
+  const { theme, setTheme, toggleDark } = useTheme();
 
-  const handleSave = async () => {
-    setStatus('Saving...');
-    const error = await saveIndustryTheme(industry, {
-      font,
-      primary_color: primaryColor,
-      border_radius: borderRadius,
-    });
-    setStatus(error ? 'Error saving theme' : 'Saved!');
+  const handleChange = (key: keyof typeof theme, value: any) => {
+    setTheme({ ...theme, [key]: value });
   };
 
   return (
     <div className="fixed right-4 top-20 z-50 w-80 bg-neutral-900 text-white border border-white/10 p-4 rounded shadow-lg space-y-4">
       <h3 className="text-lg font-semibold">Theme Editor</h3>
 
-      <div className="space-y-2 text-sm">
+      <div className="space-y-3 text-sm">
         <label className="block">
           <span className="text-white/70">Font Family</span>
           <select
-            value={font}
-            onChange={(e) => setFont(e.target.value)}
-            className="w-full p-1 mt-1 rounded text-black"
+            value={theme.fontFamily}
+            onChange={(e) => handleChange('fontFamily', e.target.value)}
+            className="w-full mt-1 rounded text-black p-1"
           >
-            <option value="'Inter', sans-serif">Inter</option>
-            <option value="'Roboto Slab', serif">Roboto Slab</option>
-            <option value="'Pacifico', cursive">Pacifico</option>
-            <option value="'Fira Code', monospace">Fira Code</option>
+            <option value="sans">Inter (Sans)</option>
+            <option value="serif">Roboto Slab (Serif)</option>
+            <option value="mono">Fira Code (Mono)</option>
           </select>
         </label>
 
         <label className="block">
-          <span className="text-white/70">Primary Color</span>
+          <span className="text-white/70">Accent Color</span>
           <input
-            type="color"
-            value={primaryColor}
-            onChange={(e) => setPrimaryColor(e.target.value)}
-            className="mt-1 w-full h-8 border rounded"
+            type="text"
+            value={theme.accentColor}
+            onChange={(e) => handleChange('accentColor', e.target.value)}
+            placeholder="e.g. indigo-600"
+            className="w-full mt-1 rounded text-black p-1"
           />
         </label>
 
         <label className="block">
           <span className="text-white/70">Border Radius</span>
-          <input
-            type="text"
-            value={borderRadius}
-            onChange={(e) => setBorderRadius(e.target.value)}
-            placeholder="e.g. 0.25rem"
-            className="mt-1 w-full p-1 text-black rounded"
-          />
+          <select
+            value={theme.borderRadius}
+            onChange={(e) => handleChange('borderRadius', e.target.value)}
+            className="w-full mt-1 rounded text-black p-1"
+          >
+            <option value="sm">Small</option>
+            <option value="md">Medium</option>
+            <option value="lg">Large</option>
+            <option value="xl">Extra Large</option>
+            <option value="full">Full</option>
+          </select>
+        </label>
+
+        <label className="block">
+          <span className="text-white/70">Dark Mode</span>
+          <select
+            value={theme.darkMode}
+            onChange={(e) => handleChange('darkMode', e.target.value)}
+            className="w-full mt-1 rounded text-black p-1"
+          >
+            <option value="light">Light</option>
+            <option value="dark">Dark</option>
+          </select>
         </label>
       </div>
 
-      <button
-        onClick={handleSave}
-        className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded text-sm"
-      >
-        Save Theme
-      </button>
+      <div className="flex flex-wrap gap-2 pt-2">
+        {Object.entries(themePresets).map(([name, preset]) => (
+          <button
+            key={name}
+            onClick={() => setTheme(preset)}
+            className="px-2 py-1 bg-white/10 hover:bg-white/20 rounded text-xs"
+          >
+            {name}
+          </button>
+        ))}
+      </div>
 
-      {status && <p className="text-xs text-green-400 pt-1">{status}</p>}
-
-      <ThemePresetsDropdown
-        onSelect={(preset) => {
-          setFont(preset.font);
-          setPrimaryColor(preset.primaryColor);
-          setBorderRadius(preset.borderRadius);
-        }}
-      />
-
-      <ThemePreviewArea font={font} primaryColor={primaryColor} borderRadius={borderRadius} />
-
+      <ThemePreviewCard />
     </div>
   );
 }

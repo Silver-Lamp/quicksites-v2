@@ -1,4 +1,3 @@
-// components/editor/LiveEditorPreview.polished.tsx
 'use client';
 
 import {
@@ -15,60 +14,109 @@ import {
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { GripVertical } from 'lucide-react';
-import { MotionBlockWrapper } from './motion-block-wrapper';
-import { BlockOverlayControls } from './block-overlay-controls';
-import { FloatingAddBlockHere } from './floating-add-block-here';
-import { AISuggestionOverlay } from './ai-suggestion-overlay';
+import { createDefaultBlock } from '@/lib/createDefaultBlock';
 import RenderBlock from '@/components/admin/templates/render-block';
-
-import { BlockSettingsDrawer } from './block-settings-drawer';
 import { DynamicBlockEditor } from './dynamic-block-editor';
+import { Block } from '@/types/blocks';
 
-type SortableBlockWrapperProps = {
+let undoStack: any[] = [];
+let redoStack: any[] = [];
+
+function SortableBlock({
+  block,
+  blockIndex,
+  template,
+  pageIndex,
+  page,
+  setEditing,
+  insertedId,
+  onChange,
+  setLastInsertedId,
+}: {
   block: any;
-  index: number;
-  listeners: any;
-  attributes: any;
-  setNodeRef: (node: HTMLElement | null) => void;
-  style: React.CSSProperties;
-  children?: React.ReactNode;
-  setEditing: (block: any) => void; // ← ADD THIS
-};
+  blockIndex: number;
+  template: any;
+  pageIndex: number;
+  page: any;
+  setEditing: (block: any) => void;
+  insertedId: string | null;
+  onChange: (updated: any) => void;
+  setLastInsertedId: (id: string | null) => void;
+}) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+  } = useSortable({ id: block._id });
 
-let editingBlock = null;
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  };
 
-function SortableBlockWrapper({ block, index, listeners, attributes, setNodeRef, style, children, setEditing }: any) {
+  const ref = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (insertedId === block._id && ref.current) {
+      ref.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      ref.current.classList.add('ring-2', 'ring-purple-400');
+      setTimeout(() => {
+        ref.current?.classList.remove('ring-2', 'ring-purple-400');
+      }, 2000);
+    }
+  }, [insertedId, block._id]);
+
   return (
-    <MotionBlockWrapper key={block._id}>
-      <div
-        ref={setNodeRef}
-        style={style}
-        className="group relative block-hover p-2 rounded border border-white/10"
-      >
-        <div className="flex justify-between items-center mb-1 opacity-80 text-xs text-white">
-          <div className="flex items-center gap-1">
-            <GripVertical
-              className="w-3 h-3 text-gray-500 cursor-move"
-              {...attributes}
-              {...listeners}
-            />
-            <span className="uppercase tracking-wide">{block.type}</span>
-          </div>
-          <div className="hidden group-hover:flex">
-            <BlockOverlayControls onEdit={() => setEditing(block)} onDelete={() => alert('Delete')} />
-          </div>
+    <div
+      ref={(el) => {
+        ref.current = el;
+        setNodeRef(el);
+      }}
+      style={style}
+      className="group relative block-hover p-2 rounded border border-white/10"
+    >
+      <div className="flex justify-between items-center mb-1 opacity-80 text-xs text-white">
+        <div className="flex items-center gap-1">
+          <GripVertical
+            className="w-3 h-3 text-gray-500 cursor-move"
+            {...attributes}
+            {...listeners}
+          />
+          <span className="uppercase tracking-wide">{block.type}</span>
         </div>
-
-        {children}
-
-        <div className="hidden group-hover:block mt-2">
-          <FloatingAddBlockHere onAdd={() => alert('Add block')} />
-          <AISuggestionOverlay onSelect={(text) => alert(`AI: ${text}`)} />
+        <div className="hidden group-hover:flex gap-2">
+          <button onClick={() => setEditing(block)} className="text-xs text-blue-400 underline">Edit</button>
+          <button onClick={() => {
+            const updated = { ...template };
+            updated.data.pages[pageIndex].content_blocks.splice(blockIndex, 1);
+            onChange(updated);
+          }} className="text-xs text-red-400 underline">Delete</button>
         </div>
       </div>
-    </MotionBlockWrapper>
+
+      <RenderBlock block={block} />
+
+      <div className="hidden group-hover:block mt-2">
+        <button
+          onClick={() => {
+            const newBlock = createDefaultBlock('text');
+            const updated = { ...template };
+            const blocks = [...updated.data.pages[pageIndex].content_blocks];
+            blocks.splice(blockIndex + 1, 0, newBlock);
+            updated.data.pages[pageIndex].content_blocks = blocks;
+            setLastInsertedId(newBlock._id ?? null);
+            onChange(updated);
+          }}
+          className="text-xs text-purple-400 underline"
+        >
+          + Add Block Here
+        </button>
+      </div>
+    </div>
   );
 }
 
@@ -86,29 +134,46 @@ export function LiveEditorPreview({
   const sensors = useSensors(useSensor(PointerSensor));
   const [layoutMode, setLayoutMode] = useState<'stack' | 'grid'>('stack');
   const [editing, setEditing] = useState<any | null>(null);
+  const [lastInsertedId, setLastInsertedId] = useState<string | null>(null);
 
-  const handleSaveBlock = (updatedBlock: any) => {
-    const updated = { ...template };
-    for (const page of updated.data.pages) {
-      const index = page.content_blocks.findIndex((b: any) => b._id === updatedBlock._id);
-      if (index !== -1) {
-        page.content_blocks[index] = updatedBlock;
-        break;
-      }
-    }
+  const updateAndSave = (updated: any) => {
+    undoStack.push(JSON.parse(JSON.stringify(template)));
+    redoStack = [];
     onChange(updated);
-    setEditing(null);
   };
-
 
   return (
     <div className="space-y-10 px-4 py-6">
-      <div className="text-right text-sm mb-2">
+      <div className="text-right text-sm mb-2 space-x-2">
         <button
           onClick={() => setLayoutMode((m) => (m === 'stack' ? 'grid' : 'stack'))}
           className="text-blue-400 underline"
         >
           View: {layoutMode === 'stack' ? 'Vertical' : 'Grid'}
+        </button>
+        <button
+          onClick={() => {
+            if (undoStack.length > 0) {
+              redoStack.push(JSON.parse(JSON.stringify(template)));
+              const prev = undoStack.pop();
+              onChange(prev);
+            }
+          }}
+          className="text-yellow-400 underline"
+        >
+          Undo
+        </button>
+        <button
+          onClick={() => {
+            if (redoStack.length > 0) {
+              undoStack.push(JSON.parse(JSON.stringify(template)));
+              const next = redoStack.pop();
+              onChange(next);
+            }
+          }}
+          className="text-green-400 underline"
+        >
+          Redo
         </button>
       </div>
 
@@ -125,66 +190,57 @@ export function LiveEditorPreview({
             const reordered = arrayMove(blocks, oldIndex, newIndex);
             const updated = { ...template };
             updated.data.pages[pageIndex].content_blocks = reordered;
-            onChange(updated);
+            updateAndSave(updated);
           }}
         >
           <h2 className="text-white font-semibold text-lg mb-2">{page.title}</h2>
+
           <SortableContext
             items={page.content_blocks.map((b: any) => b._id)}
             strategy={verticalListSortingStrategy}
           >
             <div className={layoutMode === 'grid' ? 'grid grid-cols-1 md:grid-cols-2 gap-4' : 'space-y-6'}>
-              {page.content_blocks.map((block: any, blockIndex: number) => {
-                const { setNodeRef, attributes, listeners, transform, transition } = useSortable({
-                  id: block._id,
-                });
-                const style = {
-                  transform: CSS.Transform.toString(transform),
-                  transition,
-                };
-                return (
-                  <SortableBlockWrapper
-                    key={block._id}
-                    block={block}
-                    index={blockIndex}
-                    setNodeRef={setNodeRef}
-                    listeners={listeners}
-                    attributes={attributes}
-                    style={style}
-                    setEditing={setEditing}
-                  >
-                    <RenderBlock block={block} />
-                  </SortableBlockWrapper>
-                );
-              })}
+              {page.content_blocks.map((block: any, blockIndex: number) => (
+                <SortableBlock
+                  key={block._id}
+                  block={block}
+                  blockIndex={blockIndex}
+                  template={template}
+                  pageIndex={pageIndex}
+                  page={page}
+                  setEditing={setEditing}
+                  insertedId={lastInsertedId}
+                  onChange={updateAndSave}
+                  setLastInsertedId={setLastInsertedId}
+                />
+              ))}
             </div>
           </SortableContext>
         </DndContext>
       ))}
-    {editing && (
-      <div className="fixed inset-0 bg-black/80 z-50 p-6 overflow-auto">
-        <DynamicBlockEditor
-          block={editing}
-          onSave={(updatedBlock) => {
-            const updated = { ...template };
-            for (const page of updated.data.pages) {
-              const index = page.content_blocks.findIndex((b: any) => b._id === updatedBlock._id);
-              if (index !== -1) {
-                page.content_blocks[index] = updatedBlock;
-                break;
+
+      {editing && (
+        <div className="fixed inset-0 bg-black/80 z-50 p-6 overflow-auto">
+          <DynamicBlockEditor
+            block={editing}
+            onSave={(updatedBlock) => {
+              const updated = { ...template };
+              for (const page of updated.data.pages) {
+                const index = page.content_blocks.findIndex((b: any) => b._id === updatedBlock._id);
+                if (index !== -1) {
+                  page.content_blocks[index] = updatedBlock;
+                  break;
+                }
               }
-            }
-            onChange(updated);
-            setEditing(null);
-          }}
-          onClose={() => setEditing(null)}
-          errors={errors?.[editing._id ?? ''] || []}
-          template={template}
-        />
-      </div>
-    )}
-
-
+              updateAndSave(updated);
+              setEditing(null);
+            }}
+            onClose={() => setEditing(null)}
+            errors={errors?.[editing._id ?? ''] || []}
+            template={template}
+          />
+        </div>
+      )}
     </div>
   );
 }

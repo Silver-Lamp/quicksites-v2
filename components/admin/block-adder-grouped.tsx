@@ -1,3 +1,4 @@
+// components/admin/block-adder-grouped.tsx
 'use client';
 
 import { useState, useMemo } from 'react';

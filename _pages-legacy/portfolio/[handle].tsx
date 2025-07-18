@@ -26,7 +26,7 @@ export default function CreatorTemplatesPage() {
       <ul className="space-y-4">
         {templates.map((t: Template, i) => (
           <li key={i} className="bg-zinc-800 rounded p-4">
-            <div className="font-semibold">{t.name}</div>
+            <div className="font-semibold">{t.template_name}</div>
             <div className="text-zinc-400 text-sm">{t.headline || t.description}</div>
           </li>
         ))}

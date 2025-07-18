@@ -20,7 +20,8 @@ import { createDefaultBlock } from '@/lib/createDefaultBlock';
 import RenderBlock from '@/components/admin/templates/render-block';
 import { DynamicBlockEditor } from './dynamic-block-editor';
 import { Block } from '@/types/blocks';
-import TemplateSettingsPanel from '../admin/templates/template-settings-panel';
+import BlockAdderGrouped from '@/components/admin/block-adder-grouped';
+import { useClickAway } from 'react-use';
 
 let undoStack: any[] = [];
 let redoStack: any[] = [];
@@ -60,6 +61,10 @@ function SortableBlock({
   };
 
   const ref = useRef<HTMLDivElement | null>(null);
+  const adderRef = useRef<HTMLDivElement | null>(null);
+  const [showAdder, setShowAdder] = useState(false);
+
+  useClickAway(adderRef, () => setShowAdder(false));
 
   useEffect(() => {
     if (insertedId === block._id && ref.current) {
@@ -101,21 +106,21 @@ function SortableBlock({
 
       <RenderBlock block={block} />
 
-      <div className="hidden group-hover:block mt-2">
-        <button
-          onClick={() => {
-            const newBlock = createDefaultBlock('text');
-            const updated = { ...template };
-            const blocks = [...updated.data.pages[pageIndex].content_blocks];
-            blocks.splice(blockIndex + 1, 0, newBlock);
-            updated.data.pages[pageIndex].content_blocks = blocks;
-            setLastInsertedId(newBlock._id ?? null);
-            onChange(updated);
-          }}
-          className="text-xs text-purple-400 underline"
-        >
-          + Add Block Here
-        </button>
+      <div className="hidden group-hover:block mt-2" ref={adderRef}>
+          <BlockAdderGrouped
+            onAdd={(type) => {
+              const newBlock = createDefaultBlock(type);
+              const updated = { ...template };
+              const blocks = [...updated.data.pages[pageIndex].content_blocks];
+              blocks.splice(blockIndex + 1, 0, newBlock);
+              updated.data.pages[pageIndex].content_blocks = blocks;
+              setLastInsertedId(newBlock._id ?? null);
+              onChange(updated);
+              setShowAdder(false);
+            }}
+            existingBlocks={page.content_blocks}
+            label="+ Add Block Here"
+          />
       </div>
     </div>
   );
@@ -177,6 +182,7 @@ export function LiveEditorPreview({
           Redo
         </button>
       </div>
+
       {template.data.pages.map((page: any, pageIndex: number) => (
         <DndContext
           key={page.slug}

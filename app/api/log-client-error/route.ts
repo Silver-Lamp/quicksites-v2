@@ -2,6 +2,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getRequestContext } from '@/lib/request/getRequestContext';
 import crypto from 'crypto';
+import { cookies } from 'next/headers';
 
 export async function POST(req: NextRequest) {
   const body = await req.json();
@@ -21,7 +22,7 @@ export async function POST(req: NextRequest) {
     sessionId,
     abVariant,
     headers,
-  } = await getRequestContext(true); // withSupabase = true
+  } = await getRequestContext({ cookieStore: await cookies(), headerStore: req.headers });
 
   const traceId = crypto.randomUUID(); // Optional correlation ID
 

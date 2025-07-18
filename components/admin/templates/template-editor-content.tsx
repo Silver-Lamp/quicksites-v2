@@ -5,7 +5,7 @@ import { useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
 import { Button, Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui';
 
-import type { Template, TemplateData } from '@/types/template';
+import type { Template, TemplateData, Theme } from '@/types/template';
 import { saveTemplate } from '@/admin/lib/saveTemplate';
 import { saveSite } from '@/admin/lib/saveSite';
 
@@ -16,7 +16,6 @@ import TemplateHistory from './template-history';
 import TemplatePreviewWithToggle from './template-preview-with-toggle';
 import TemplatePublishModal from './template-publish-modal';
 import { TemplateActionToolbar } from './template-action-toolbar';
-import ThemeScope from '@/components/ui/theme-scope';
 import { IndustryThemeScope } from '@/components/ui/industry-theme-scope';
 import { BlockValidationError, validateTemplateBlocks } from '@/hooks/validateTemplateBlocks';
 import { TemplateSaveSchema } from '@/admin/lib/zod/templateSaveSchema';
@@ -26,6 +25,7 @@ import { usePanelControls } from '@/components/ui/panel-context';
 import { EditorContentOverlay } from '@/components/editor/editor-content-overlay';
 import DevicePreviewWrapper from '@/components/admin/templates/device-preview-wrapper';
 import { LiveEditorPreview } from '@/components/editor/live-editor-preview';
+import ThemeScope from '@/components/ui/theme-scope';
 
 function pushWithLimit<T>(stack: T[], item: T, limit = 10): T[] {
   return [...stack.slice(-limit + 1), item];
@@ -168,22 +168,23 @@ export function EditorContent({
       <Tabs defaultValue="preview">
         <TabsList>
           <TabsTrigger value="preview">Preview</TabsTrigger>
-          <TabsTrigger value="edit">Edit</TabsTrigger>
+          <TabsTrigger value="settings">Settings</TabsTrigger>
           <TabsTrigger value="history">History</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="edit">
-          <EditorContentOverlay
+        <TabsContent value="settings">
+          <TemplateSettingsPanel template={template} onChange={handleTemplateChange} /> 
+          {/* <EditorContentOverlay
             template={template}
             rawJson={rawJson}
             setRawJson={setRawJson}
             onChange={handleTemplateChange}
-          />
+          /> */}
         </TabsContent>
 
         <TabsContent value="preview">
-          <ThemeScope mode={isDark ? 'dark' : 'light'}>
-            <DevicePreviewWrapper>
+        <ThemeScope mode={template.theme === 'light' ? 'light' : 'dark'}>
+            <DevicePreviewWrapper theme={template.theme as Theme}>
               <IndustryThemeScope industry={template.industry}>
                 <LiveEditorPreview
                   template={template}

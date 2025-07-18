@@ -6,15 +6,18 @@ import { Monitor, Smartphone, Tablet, RotateCw, Eye, EyeOff } from 'lucide-react
 
 type Mode = 'mobile' | 'tablet' | 'desktop';
 type Orientation = 'portrait' | 'landscape';
+type Theme = 'light' | 'dark';
 
 const showBezel = false;
 
 export default function DevicePreviewWrapper({
   children,
   showDebug = true,
+  theme = 'dark',
 }: {
   children: React.ReactNode;
   showDebug?: boolean;
+  theme?: Theme;
 }) {
   const [mode, setMode] = useState<Mode>('desktop');
   const [orientation, setOrientation] = useState<Orientation>('portrait');
@@ -88,11 +91,14 @@ export default function DevicePreviewWrapper({
           <div
             id="preview-capture"
             ref={previewRef}
-            className="w-full h-full overflow-y-auto p-4 transition-colors"
+            className={`w-full h-full overflow-y-auto p-4 transition-colors ${
+              theme === 'dark' ? 'bg-neutral-900 text-white' : 'bg-white text-black'
+            }`}
           >
             {showInspector && (
               <div className="text-xs mb-3 px-3 py-2 rounded border bg-yellow-100 dark:bg-yellow-800 text-yellow-900 dark:text-yellow-100 border-yellow-300 dark:border-yellow-500 font-mono">
                 <div className="mb-1 font-semibold">#preview-capture Debug</div>
+                <div><strong>Theme:</strong> {theme}</div>
                 <div><strong>class:</strong> {classList}</div>
                 <div className="flex items-center gap-2">
                   <strong>background:</strong>

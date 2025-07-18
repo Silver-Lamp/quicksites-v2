@@ -20,6 +20,7 @@ import { createDefaultBlock } from '@/lib/createDefaultBlock';
 import RenderBlock from '@/components/admin/templates/render-block';
 import { DynamicBlockEditor } from './dynamic-block-editor';
 import { Block } from '@/types/blocks';
+import TemplateSettingsPanel from '../admin/templates/template-settings-panel';
 
 let undoStack: any[] = [];
 let redoStack: any[] = [];
@@ -176,7 +177,6 @@ export function LiveEditorPreview({
           Redo
         </button>
       </div>
-
       {template.data.pages.map((page: any, pageIndex: number) => (
         <DndContext
           key={page.slug}

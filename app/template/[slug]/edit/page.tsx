@@ -7,8 +7,8 @@ import { createClient } from '@supabase/supabase-js';
 import TemplateEditor from '@/components/admin/templates/template-editor';
 import type { Snapshot } from '@/types/template';
 import type { Database } from '@/types/supabase';
-import { fetchTemplateBySlug } from './template-loader';
-import { Metadata } from 'next';
+// import { fetchTemplateBySlug } from '@/app/template/[slug]/template-loader';
+// import { Metadata } from 'next';
 
 // export async function generateMetadata({
 //   params,

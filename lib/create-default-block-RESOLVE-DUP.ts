@@ -34,9 +34,8 @@ export function createDefaultBlock(type: Block['type']): Block {
           type: 'hero',
           _id,
           content: {
-            title: 'Welcome!',
-            description: 'This is a hero block',
-            cta_label: 'Learn More',
+            headline: 'Welcome!',
+            subheadline: 'This is a hero block',
             cta_link: '#',
           },
         };
@@ -65,8 +64,7 @@ export function createDefaultBlock(type: Block['type']): Block {
           type: 'testimonial',
           _id,
           content: {
-            quote: 'This product changed my life.',
-            attribution: 'Happy User',
+            testimonials: [{ quote: 'This product changed my life.', attribution: 'Happy User' }],
           },
         };      
       default:

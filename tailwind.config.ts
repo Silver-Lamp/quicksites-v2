@@ -28,6 +28,9 @@ const config: Config = {
   ],
   theme: {
     extend: {
+      spacing: {
+        '64': '16rem', // Ensures sidebar width matches `ml-64`
+      },  
       fontFamily: {
         sans: ['Inter', 'system-ui', 'sans-serif'],
         serif: ['Roboto Slab', 'serif'],

@@ -14,8 +14,8 @@ export default function PresetPreviewCard({
       {block.type === 'quote' && <blockquote className="italic">“{block.content.text}”</blockquote>}
       {block.type === 'hero' && (
         <div>
-          <h2 className="text-base font-semibold">{block.content.title}</h2>
-          <p className="text-xs">{block.content.description}</p>
+          <h2 className="text-base font-semibold">{block.content.headline}</h2>
+          <p className="text-xs">{block.content.subheadline}</p>
         </div>
       )}
       {block.type === 'cta' && (

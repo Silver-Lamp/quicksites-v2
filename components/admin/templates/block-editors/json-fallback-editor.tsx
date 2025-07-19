@@ -1,18 +1,13 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import type { Block } from '@/types/blocks';
+import type { BlockEditorProps } from './index'; // ✅ Reuse the shared type
+import { extractFieldErrors } from '../utils/extractFieldErrors';
 
-type Props = {
-  block: Block;
-  onSave: (block: Block) => void;
-  onClose: () => void;
-};
-
-export default function JsonFallbackEditor({ block, onSave, onClose }: Props) {
+export default function JsonFallbackEditor({ block, onSave, onClose, errors = {}, template }: BlockEditorProps) {
   const [value, setValue] = useState<string>('');
   const [error, setError] = useState<string | null>(null);
-
+  const fieldErrors = extractFieldErrors(errors as unknown as string[]); // now accepts Record<string, BlockValidationError[]>
   useEffect(() => {
     setValue(JSON.stringify(block, null, 2));
     setError(null);

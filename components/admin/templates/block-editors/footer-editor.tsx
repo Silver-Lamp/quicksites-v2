@@ -1,18 +1,16 @@
 'use client';
 
 import { useState } from 'react';
-import type { Block, FooterBlock } from '@/types/blocks';
+import type { FooterBlock } from '@/types/blocks';
 import BlockField from './block-field';
+import type { BlockEditorProps } from './index'; // ✅ Reuse the shared type
+import { extractFieldErrors } from '../utils/extractFieldErrors';
+import { BlockValidationError } from '@/hooks/validateTemplateBlocks';
 
-type Props = {
-  block: Block;
-  onSave: (updated: Block) => void;
-  onClose: () => void;
-};
-
-export default function FooterEditor({ block, onSave, onClose }: Props) {
+export default function FooterEditor({ block, onSave, onClose, errors = {}, template }: BlockEditorProps) {
   const footerBlock = block as FooterBlock;
   const [content, setContent] = useState(footerBlock.content);
+  const fieldErrors = extractFieldErrors(errors as unknown as string[]); // now accepts Record<string, BlockValidationError[]>
 
   const update = <K extends keyof typeof content>(key: K, value: typeof content[K]) =>
     setContent({ ...content, [key]: value });

@@ -1,19 +1,15 @@
 'use client';
 
 import { useState } from 'react';
-import type { Block, VideoBlock } from '@/types/blocks';
+import type { VideoBlock } from '@/types/blocks';
 import BlockField from './block-field';
+import { extractFieldErrors } from '../utils/extractFieldErrors';
+import type { BlockEditorProps } from './index'; // ✅ Reuse the shared type
 
-type Props = {
-  block: Block;
-  onSave: (updated: Block) => void;
-  onClose: () => void;
-};
-
-export default function VideoEditor({ block, onSave, onClose }: Props) {
+export default function VideoEditor({ block, onSave, onClose, errors = {}, template }: BlockEditorProps) {
   const videoBlock = block as VideoBlock;
   const [content, setContent] = useState(videoBlock.content);
-
+  const fieldErrors = extractFieldErrors(errors as unknown as string[]); // now accepts Record<string, BlockValidationError[]>
   return (
     <div className="p-4 space-y-4">
       <h3 className="text-lg font-semibold">Edit Video Block</h3>
@@ -23,13 +19,14 @@ export default function VideoEditor({ block, onSave, onClose }: Props) {
         label="Video URL"
         value={content.url}
         onChange={(v) => setContent({ ...content, url: v })}
+        error={fieldErrors['content.url']}
       />
-
       <BlockField
         type="text"
         label="Caption"
         value={content.caption || ''}
         onChange={(v) => setContent({ ...content, caption: v })}
+        error={fieldErrors['content.caption']}
       />
 
       <div className="flex justify-end gap-2 pt-4">

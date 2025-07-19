@@ -6,15 +6,10 @@ import type { BlockEditorProps } from './index';
 import { uploadToStorage } from '@/lib/uploadToStorage';
 import { Switch } from '@/components/ui/switch';
 import BlockPreviewToggle from '@/components/admin/ui/block-preview-toggle';
-import type { BlockValidationError } from '@/hooks/validateTemplateBlocks';
 import toast from 'react-hot-toast';
 
 type HeroBlock = Extract<Block, { type: 'hero' }>;
 type HeroContent = HeroBlock['content'];
-
-type HeroEditorProps = BlockEditorProps & {
-  errors?: Record<string, BlockValidationError[]>;
-};
 
 export default function HeroEditor({
   block,
@@ -22,7 +17,7 @@ export default function HeroEditor({
   onClose,
   errors,
   template,
-}: HeroEditorProps) {
+}: BlockEditorProps) {
   const heroBlock = block as HeroBlock;
   const [local, setLocal] = useState<HeroContent>(heroBlock.content || {});
 

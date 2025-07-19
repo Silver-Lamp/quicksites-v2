@@ -1,22 +1,16 @@
 'use client';
 
 import { useState } from 'react';
-import type { Block, TextBlock } from '@/types/blocks';
+import type { TextBlock } from '@/types/blocks';
+import type { BlockEditorProps } from './index'; // ✅ Reuse the shared type
 import BlockField from './block-field';
 import { extractFieldErrors } from '../utils/extractFieldErrors';
 
-type Props = {
-  block: Block;
-  onSave: (updated: Block) => void;
-  onClose: () => void;
-  errors?: string[];
-};
-
-export default function TextEditor({ block, onSave, onClose, errors = [] }: Props) {
+export default function TextEditor({ block, onSave, onClose, errors = {}, template }: BlockEditorProps) {
   const textBlock = block as TextBlock;
   const [value, setValue] = useState(textBlock.content.value);
 
-  const fieldErrors = extractFieldErrors(errors);
+  const fieldErrors = extractFieldErrors(errors as unknown as string[]); // now accepts Record<string, BlockValidationError[]>
 
   return (
     <div className="p-4 space-y-4">

@@ -6,6 +6,8 @@ import type { BlockEditorProps } from './index';
 import BlockField from './block-field';
 import CtaBlockRender from '@/components/admin/templates/render-blocks/cta'; // Live preview
 import { cn } from '@/admin/lib/utils';
+import { extractFieldErrors } from '../utils/extractFieldErrors';
+import { BlockValidationError } from '@/hooks/validateTemplateBlocks';
 
 type CtaBlock = Extract<Block, { type: 'cta' }>;
 type CtaContent = CtaBlock['content'];
@@ -16,25 +18,27 @@ export default function CtaEditor({
   block,
   onSave,
   onClose,
+  errors = {},
+  template,
 }: BlockEditorProps) {
   const ctaBlock = block as CtaBlock;
   const [content, setContent] = useState<CtaContent>(ctaBlock.content || {});
-  const [errors, setErrors] = useState<{ label?: string; link?: string }>({});
-
+  const [errorsContent, setErrorsContent] = useState<{ label?: BlockValidationError[]; link?: BlockValidationError[] }>({});
+  const fieldErrors = extractFieldErrors(errors as unknown as string[]);
   const update = <K extends keyof CtaContent>(key: K, value: CtaContent[K]) => {
     setContent((prev) => ({ ...prev, [key]: value }));
-    setErrors((prev) => ({ ...prev, [key]: undefined }));
+    setErrorsContent((prev) => ({ ...prev, [key]: undefined }));
   };
 
   const validate = (): boolean => {
-    const nextErrors: typeof errors = {};
-    if (!content.label?.trim()) nextErrors.label = 'Label is required';
+    const nextErrors: typeof errorsContent = {};
+    if (!content.label?.trim()) nextErrors.label = [{ message: 'Label is required', field: 'label' }];
     if (!content.link?.trim()) {
-      nextErrors.link = 'Link URL is required';
+      nextErrors.link = [{ message: 'Link URL is required', field: 'link' }];
     } else if (!/^\/|^https?:\/\//.test(content.link)) {
-      nextErrors.link = 'Must start with / or http(s)://';
+      nextErrors.link = [{ message: 'Must start with / or http(s)://', field: 'link' }];
     }
-    setErrors(nextErrors);
+    setErrorsContent(nextErrors);
     return Object.keys(nextErrors).length === 0;
   };
 
@@ -55,7 +59,7 @@ export default function CtaEditor({
         label="Label"
         value={content.label || ''}
         onChange={(v) => update('label', v)}
-        error={errors.label}
+        error={errorsContent.label}
       />
 
       <BlockField
@@ -63,7 +67,7 @@ export default function CtaEditor({
         label="Link URL"
         value={content.link || ''}
         onChange={(v) => update('link', v)}
-        error={errors.link}
+        error={errorsContent.link}
         description={
           isExternalLink
             ? '🔗 External link (will open in new tab)'

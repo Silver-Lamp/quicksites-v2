@@ -1,19 +1,15 @@
 'use client';
 
 import { useState } from 'react';
-import type { Block, ServicesBlock } from '@/types/blocks';
+import type { ServicesBlock } from '@/types/blocks';
 import BlockField from './block-field';
+import type { BlockEditorProps } from './index'; // ✅ Reuse the shared type
+import { extractFieldErrors } from '../utils/extractFieldErrors';
 
-type Props = {
-  block: Block;
-  onSave: (updated: Block) => void;
-  onClose: () => void;
-};
-
-export default function ServicesEditor({ block, onSave, onClose }: Props) {
+export default function ServicesEditor({ block, onSave, onClose, errors = {}, template }: BlockEditorProps) {
   const servicesBlock = block as ServicesBlock;
   const [items, setItems] = useState(servicesBlock.content.items);
-
+  const fieldErrors = extractFieldErrors(errors as unknown as string[]); // now accepts Record<string, BlockValidationError[]>
   const updateItem = (i: number, v: string) => {
     const updated = [...items];
     updated[i] = v;

@@ -2,12 +2,13 @@
 
 import { useId } from 'react';
 import { cn } from '@/admin/lib/utils';
+import { BlockValidationError } from '@/hooks/validateTemplateBlocks';
 
 type FieldBaseProps = {
   label?: string;
   description?: string;
   className?: string;
-  error?: string;
+  error?: string | BlockValidationError[];
 };
 
 type BlockFieldProps =
@@ -112,7 +113,7 @@ export default function BlockField(props: BlockFieldProps) {
         <p className="text-xs text-gray-400 mt-1">{props.description}</p>
       )}
       {props.error && (
-        <p className="text-xs text-red-400 mt-1">{props.error}</p>
+        <p className="text-xs text-red-400 mt-1">{Array.isArray(props.error) ? props.error.map(err => err.message).join(', ') : props.error}</p>
       )}
     </div>
   );

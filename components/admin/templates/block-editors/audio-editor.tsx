@@ -1,18 +1,17 @@
 'use client';
 
 import { useState } from 'react';
-import type { Block, AudioBlock } from '@/types/blocks';
+import type { AudioBlock } from '@/types/blocks';
 import BlockField from './block-field';
+import { extractFieldErrors } from '../utils/extractFieldErrors';
+import type { BlockEditorProps } from './index'; // ✅ Reuse the shared type
 
-type Props = {
-  block: Block;
-  onSave: (updated: Block) => void;
-  onClose: () => void;
-};
 
-export default function AudioEditor({ block, onSave, onClose }: Props) {
+
+export default function AudioEditor({ block, onSave, onClose, errors = {}, template }: BlockEditorProps) {
   const audioBlock = block as AudioBlock;
   const [content, setContent] = useState(audioBlock.content);
+  const fieldErrors = extractFieldErrors(errors as unknown as string[]); // now accepts Record<string, BlockValidationError[]>
 
   return (
     <div className="p-4 space-y-4">
@@ -24,14 +23,15 @@ export default function AudioEditor({ block, onSave, onClose }: Props) {
         value={content.provider ?? 'spotify'}
         onChange={(v) => setContent({ ...content, provider: v as any })}
         options={['spotify', 'soundcloud', 'suno']}
-        />
-
+        error={fieldErrors['content.provider']}
+      />
 
       <BlockField
         type="text"
         label="URL"
         value={content.url}
         onChange={(v) => setContent({ ...content, url: v })}
+        error={fieldErrors['content.url']}
       />
 
       <BlockField
@@ -39,6 +39,7 @@ export default function AudioEditor({ block, onSave, onClose }: Props) {
         label="Title (optional)"
         value={content.title || ''}
         onChange={(v) => setContent({ ...content, title: v })}
+        error={fieldErrors['content.title']}
       />
 
       <div className="flex justify-end gap-2 pt-4">

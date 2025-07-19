@@ -18,6 +18,8 @@ import TestimonialBlockComponent from '@/components/admin/templates/render-block
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 import type { Database } from '@/types/supabase';
 import Image from 'next/image';
+import { extractFieldErrors } from '../utils/extractFieldErrors';
+import { BlockValidationError } from '@/hooks/validateTemplateBlocks';
 
 function SortableItem({ item, index, onEdit, onDelete }: any) {
   const {
@@ -74,7 +76,7 @@ const TESTIMONIAL_PRESETS: Record<string, { quote: string; attribution: string }
   ],
 };
 
-export default function TestimonialEditor({ block, onSave, onClose }: BlockEditorProps) {
+export default function TestimonialEditor({ block, onSave, onClose, errors = {}, template }: BlockEditorProps) {
   const industry = block.industry || 'towing';
   const initial = (block.content as any)?.testimonials || [];
   const [testimonials, setTestimonials] = useState(initial.map((t: any) => ({ ...t, _id: uuidv4() })));
@@ -84,7 +86,7 @@ export default function TestimonialEditor({ block, onSave, onClose }: BlockEdito
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [aiPrompt, setAiPrompt] = useState('');
   const [loading, setLoading] = useState(false);
-
+  const fieldErrors = extractFieldErrors(errors as unknown as string[]); // now accepts Record<string, BlockValidationError[]>
   const supabase = createClientComponentClient<Database>();
 
 async function uploadAvatar(file: File, blockId: string): Promise<string | null> {
@@ -181,6 +183,7 @@ async function uploadAvatar(file: File, blockId: string): Promise<string | null>
           placeholder="e.g. 'Mention quick arrival and kindness'"
           value={aiPrompt}
           onChange={setAiPrompt}
+          error={fieldErrors['content.ai_prompt']}
         />
         <button
           disabled={loading}

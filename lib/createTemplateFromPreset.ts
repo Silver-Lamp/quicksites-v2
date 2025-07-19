@@ -21,7 +21,7 @@ export const templatePresets = {
     return {
       ...templateDefaults, // ✅ moved first
       id: '',
-      name,
+      // name,
       slug,
       industry,
       layout: 'default',
@@ -52,7 +52,7 @@ export function createTemplateFromPreset({
 
   return {
     id: '',
-    name,
+    // name,
     slug,
     // industry,
     // layout,

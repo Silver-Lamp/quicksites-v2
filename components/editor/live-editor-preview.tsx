@@ -15,10 +15,10 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { useEffect, useRef, useState } from 'react';
-import { GripVertical, Pencil, Trash2, PlusCircle, File } from 'lucide-react';
+import { GripVertical, Pencil, Trash2, PlusCircle, File, FilePlus } from 'lucide-react';
 import { createDefaultBlock } from '@/lib/createDefaultBlock';
 import RenderBlock from '@/components/admin/templates/render-block';
-import { DynamicBlockEditor } from './dynamic-block-editor';
+import { DynamicBlockEditor } from '@/components/editor/dynamic-block-editor';
 import BlockAdderGrouped from '@/components/admin/block-adder-grouped';
 import { useClickAway } from 'react-use';
 import { Template } from '@/types/template';
@@ -26,11 +26,32 @@ import { BlockValidationError } from '@/hooks/validateTemplateBlocks';
 import { PageManagerSidebar } from './page-manager-sidebar';
 
 function BlockWrapper({ block, children, onEdit, onDelete }: any) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+  } = useSortable({ id: block._id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  };
+
   return (
-    <div className="group relative border border-white/10 rounded p-2">
+    <div
+      ref={setNodeRef}
+      style={style}
+      className="group relative border border-white/10 rounded p-2"
+    >
       <div className="flex justify-between items-center mb-1 opacity-80 text-xs text-white">
         <div className="flex items-center gap-1">
-          <GripVertical className="w-3 h-3 text-gray-500 cursor-move" />
+          <GripVertical
+            className="w-3 h-3 text-gray-500 cursor-move"
+            {...attributes}
+            {...listeners}
+          />
           <span className="uppercase tracking-wide">{block.type}</span>
         </div>
         <div className="hidden group-hover:flex gap-2">
@@ -82,6 +103,17 @@ export function LiveEditorPreview({
     updateAndSave(updated);
   };
 
+  const handleCreatePageWithSlug = (slug: string, title?: string): Template => {
+    const updated = { ...template };
+    updated.data.pages.push({
+      id: crypto.randomUUID(),
+      slug,
+      title: title || slug,
+      content_blocks: [],
+    });
+    return updated;
+  };
+
   const handleRenamePage = (index: number, newTitle: string) => {
     const updated = { ...template };
     updated.data.pages[index].title = newTitle;
@@ -103,7 +135,7 @@ export function LiveEditorPreview({
 
   return (
     <div className="flex h-screen overflow-hidden dark:bg-neutral-900 text-white">
-      <div className="w-64 bg-neutral-900 border-r border-neutral-800 overflow-y-auto h-screen fixed left-0 top-0 z-40">
+      <div className="w-64 shrink-0 bg-neutral-900 border-r border-neutral-800 overflow-y-auto h-screen fixed top-0 left-0 z-40">
         <PageManagerSidebar
           pages={template.data.pages}
           selectedIndex={selectedPageIndex}
@@ -115,7 +147,7 @@ export function LiveEditorPreview({
         />
       </div>
 
-      <div className="flex-1 overflow-y-auto h-screen ml-64">
+      <div className="flex-1 overflow-y-auto h-screen ml-64 relative z-0">
         <div className="p-6 space-y-6 max-w-screen-md mx-auto">
           <div className="flex justify-between items-center">
             <h1 className="text-xl font-bold text-white">{template.template_name}</h1>
@@ -168,6 +200,10 @@ export function LiveEditorPreview({
                           updated.data.pages[selectedPageIndex].content_blocks.splice(blockIndex + 1, 0, newBlock);
                           setLastInsertedId(newBlock._id ?? '');
                           updateAndSave(updated);
+                          setTimeout(() => {
+                            const el = document.getElementById(newBlock._id ?? '');
+                            if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                          }, 50);
                         }}
                         existingBlocks={selectedPage.content_blocks}
                         triggerElement={
@@ -181,7 +217,7 @@ export function LiveEditorPreview({
                 </div>
               </SortableContext>
 
-              <div className="sticky bottom-0 z-40 bg-white dark:bg-neutral-900 p-4 border-t border-gray-200 dark:border-neutral-700 mt-6">
+              <div className="relative z-10 bg-white dark:bg-neutral-900 p-4 border-t border-gray-200 dark:border-neutral-700 mt-6">
                 <BlockAdderGrouped
                   onAdd={(type) => {
                     const newBlock = createDefaultBlock(type);
@@ -207,7 +243,8 @@ export function LiveEditorPreview({
       </div>
 
       {editing && (
-        <div className="fixed inset-0 bg-black/80 z-50 p-6 overflow-auto">
+        <div className="fixed inset-0 bg-black/90 z-[999] p-6 overflow-auto flex items-center justify-center">
+          <div className="w-full max-w-4xl bg-neutral-900 border border-white/10 rounded-xl shadow-xl overflow-hidden">
           <DynamicBlockEditor
             block={editing}
             onSave={(updatedBlock) => {
@@ -223,9 +260,10 @@ export function LiveEditorPreview({
               setEditing(null);
             }}
             onClose={() => setEditing(null)}
-            // errors={errors?.[editing._id ?? ''] || {}}
+            errors={errors}
             template={template}
           />
+        </div>
         </div>
       )}
     </div>

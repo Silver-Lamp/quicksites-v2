@@ -5,7 +5,7 @@ import { useState } from 'react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { TemplateEditorToolbar } from './template-editor-toolbar';
 import { useTemplateEditorState } from './use-template-editor-state';
-import { EditorContent } from './template-editor-content';
+import { EditorContent } from '@/components/admin/templates/template-editor-content';
 import { Drawer } from '@/components/ui/drawer';
 import { Modal } from '@/components/ui/modal';
 import VectorQueryPage from '@/app/admin/vector-query/page';

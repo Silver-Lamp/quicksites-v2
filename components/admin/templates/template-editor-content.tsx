@@ -190,7 +190,7 @@ export function EditorContent({
                   template={template}
                   onChange={handleTemplateChange}
                   industry={template.industry}
-                  errors={blockErrors}
+                  errors={blockErrors ?? {}}
                 />
               </IndustryThemeScope>
             </DevicePreviewWrapper>

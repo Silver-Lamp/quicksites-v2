@@ -123,6 +123,7 @@ export type FooterBlock = BaseBlock & {
       platform: string;
       url: string;
     }[];
+    copyright?: string;
   };
 };
 

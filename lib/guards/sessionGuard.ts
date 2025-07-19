@@ -9,7 +9,7 @@ import { cookies } from 'next/headers';
  * Use this on routes like /login or /signup.
  */
 export async function sessionGuard(redirectTo = '/admin/dashboard') {
-  const { userId } = await getRequestContext({ cookieStore: cookies(), headerStore: new Headers() } as any); // withSupabase = true
+  const { userId } = await getRequestContext({ cookieStore: await cookies(), headerStore: new Headers() } as any); // withSupabase = true
 
   if (userId) {
     redirect(redirectTo); // Server redirect

@@ -48,7 +48,7 @@ export const blockPresets: {
     generate: () => ({
       _id: crypto.randomUUID(),
       type: 'hero',
-      content: { title: 'Welcome!', description: 'This is your hero block.' },
+      content: { headline: 'Welcome!', subheadline: 'This is your hero block.' },
     }),
   },
   {
@@ -81,7 +81,7 @@ export const blockPresets: {
     generate: () => ({
       _id: crypto.randomUUID(),
       type: 'testimonial',
-      content: { quote: 'They did a great job!' },
+      content: { testimonials: [{ quote: 'They did a great job!', attribution: 'John Doe' }] },
     }),
   },
 ];

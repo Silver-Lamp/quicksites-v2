@@ -9,7 +9,7 @@ export function createEmptyTemplate(name?: string): ValidatedTemplate {
 
   return {
     id: uuidv4(), // ✅ generate valid UUID here
-    name: safeName,
+    // template_name: safeName,
     slug: safeSlug,
     ...templateDefaults,
     data: {

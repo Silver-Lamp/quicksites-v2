@@ -15,7 +15,7 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { useEffect, useRef, useState } from 'react';
-import { GripVertical, Pencil, Trash2, PlusCircle, File, FilePlus } from 'lucide-react';
+import { GripVertical, Pencil, Trash2, PlusCircle } from 'lucide-react';
 import { createDefaultBlock } from '@/lib/createDefaultBlock';
 import RenderBlock from '@/components/admin/templates/render-block';
 import { DynamicBlockEditor } from '@/components/editor/dynamic-block-editor';
@@ -23,7 +23,7 @@ import BlockAdderGrouped from '@/components/admin/block-adder-grouped';
 import { useClickAway } from 'react-use';
 import { Template } from '@/types/template';
 import { BlockValidationError } from '@/hooks/validateTemplateBlocks';
-import { PageManagerSidebar } from './page-manager-sidebar';
+import { FloatingPageSidebar } from '@/components/editor/floating-page-sidebar';
 
 function BlockWrapper({ block, children, onEdit, onDelete }: any) {
   const {
@@ -134,136 +134,132 @@ export function LiveEditorPreview({
   };
 
   return (
-    <div className="flex h-screen overflow-hidden dark:bg-neutral-900 text-white">
-      <div className="w-64 shrink-0 bg-neutral-900 border-r border-neutral-800 overflow-y-auto h-screen fixed top-0 left-0 z-40">
-        <PageManagerSidebar
-          pages={template.data.pages}
-          selectedIndex={selectedPageIndex}
-          onSelect={setSelectedPageIndex}
-          onAdd={handleAddPage}
-          onRename={handleRenamePage}
-          onDelete={handleDeletePage}
-          onReorder={handleReorderPage}
-        />
-      </div>
+    <div className="relative dark:bg-neutral-900 text-white min-h-screen">
+      <FloatingPageSidebar
+        pages={template.data.pages}
+        selectedIndex={selectedPageIndex}
+        onSelect={setSelectedPageIndex}
+        onAdd={handleAddPage}
+        onRename={handleRenamePage}
+        onDelete={handleDeletePage}
+        onReorder={handleReorderPage}
+      />
 
-      <div className="flex-1 overflow-y-auto h-screen ml-64 relative z-0">
-        <div className="p-6 space-y-6 max-w-screen-md mx-auto">
-          <div className="flex justify-between items-center">
-            <h1 className="text-xl font-bold text-white">{template.template_name}</h1>
-            <div className="text-right text-sm space-x-2">
-              <button
-                onClick={() => setLayoutMode((m) => (m === 'stack' ? 'grid' : 'stack'))}
-                className="text-blue-400 underline"
-              >
-                View: {layoutMode === 'stack' ? 'Vertical' : 'Grid'}
-              </button>
-            </div>
-          </div>
-
-          {selectedPage ? (
-            <DndContext
-              sensors={sensors}
-              collisionDetection={closestCenter}
-              onDragEnd={({ active, over }) => {
-                if (!over || active.id === over.id) return;
-                const blocks = [...selectedPage.content_blocks];
-                const oldIndex = blocks.findIndex((b) => b._id === active.id);
-                const newIndex = blocks.findIndex((b) => b._id === over.id);
-                const reordered = arrayMove(blocks, oldIndex, newIndex);
-                const updated = { ...template };
-                updated.data.pages[selectedPageIndex].content_blocks = reordered;
-                updateAndSave(updated);
-              }}
+      <div className="p-6 pb-40 space-y-6 max-w-screen-md mx-auto w-full">
+        <div className="flex justify-between items-center">
+          <h1 className="text-xl font-bold text-white">{template.template_name}</h1>
+          <div className="text-right text-sm space-x-2">
+            <button
+              onClick={() => setLayoutMode((m) => (m === 'stack' ? 'grid' : 'stack'))}
+              className="text-blue-400 underline"
             >
-              <SortableContext
-                items={selectedPage.content_blocks.map((b) => b._id ?? '')}
-                strategy={verticalListSortingStrategy}
-              >
-                <div className={layoutMode === 'grid' ? 'grid grid-cols-1 md:grid-cols-2 gap-4' : 'space-y-6'}>
-                  {selectedPage.content_blocks.map((block, blockIndex) => (
-                    <BlockWrapper
-                      key={block._id}
-                      block={block}
-                      onEdit={() => setEditing(block)}
-                      onDelete={() => {
-                        const updated = { ...template };
-                        updated.data.pages[selectedPageIndex].content_blocks.splice(blockIndex, 1);
-                        updateAndSave(updated);
-                      }}
-                    >
-                      <RenderBlock block={block} />
-                      <BlockAdderGrouped
-                        onAdd={(type) => {
-                          const newBlock = createDefaultBlock(type);
-                          const updated = { ...template };
-                          updated.data.pages[selectedPageIndex].content_blocks.splice(blockIndex + 1, 0, newBlock);
-                          setLastInsertedId(newBlock._id ?? '');
-                          updateAndSave(updated);
-                          setTimeout(() => {
-                            const el = document.getElementById(newBlock._id ?? '');
-                            if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                          }, 50);
-                        }}
-                        existingBlocks={selectedPage.content_blocks}
-                        triggerElement={
-                          <button className="text-sm text-purple-500 hover:underline mt-2">
-                            + Add Block Below
-                          </button>
-                        }
-                      />
-                    </BlockWrapper>
-                  ))}
-                </div>
-              </SortableContext>
-
-              <div className="relative z-10 bg-white dark:bg-neutral-900 p-4 border-t border-gray-200 dark:border-neutral-700 mt-6">
-                <BlockAdderGrouped
-                  onAdd={(type) => {
-                    const newBlock = createDefaultBlock(type);
-                    const updated = { ...template };
-                    updated.data.pages[selectedPageIndex].content_blocks.push(newBlock);
-                    setLastInsertedId(newBlock._id ?? '');
-                    updateAndSave(updated);
-                  }}
-                  existingBlocks={selectedPage.content_blocks}
-                  triggerElement={
-                    <button className="w-full flex items-center justify-center gap-2 border border-purple-600 text-purple-600 dark:text-purple-400 rounded px-4 py-2 text-sm hover:bg-purple-50 dark:hover:bg-purple-900 transition-colors">
-                      <PlusCircle className="w-4 h-4" />
-                      <span>Add Block to End</span>
-                    </button>
-                  }
-                />
-              </div>
-            </DndContext>
-          ) : (
-            <p className="text-gray-400">No pages yet. Add one to get started.</p>
-          )}
+              View: {layoutMode === 'stack' ? 'Vertical' : 'Grid'}
+            </button>
+          </div>
         </div>
+
+        {selectedPage ? (
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragEnd={({ active, over }) => {
+              if (!over || active.id === over.id) return;
+              const blocks = [...selectedPage.content_blocks];
+              const oldIndex = blocks.findIndex((b) => b._id === active.id);
+              const newIndex = blocks.findIndex((b) => b._id === over.id);
+              const reordered = arrayMove(blocks, oldIndex, newIndex);
+              const updated = { ...template };
+              updated.data.pages[selectedPageIndex].content_blocks = reordered;
+              updateAndSave(updated);
+            }}
+          >
+            <SortableContext
+              items={selectedPage.content_blocks.map((b) => b._id ?? '')}
+              strategy={verticalListSortingStrategy}
+            >
+              <div className={layoutMode === 'grid' ? 'grid grid-cols-1 md:grid-cols-2 gap-4' : 'space-y-6'}>
+                {selectedPage.content_blocks.map((block, blockIndex) => (
+                  <BlockWrapper
+                    key={block._id}
+                    block={block}
+                    onEdit={() => setEditing(block)}
+                    onDelete={() => {
+                      const updated = { ...template };
+                      updated.data.pages[selectedPageIndex].content_blocks.splice(blockIndex, 1);
+                      updateAndSave(updated);
+                    }}
+                  >
+                    <RenderBlock block={block} />
+                    <BlockAdderGrouped
+                      onAdd={(type) => {
+                        const newBlock = createDefaultBlock(type);
+                        const updated = { ...template };
+                        updated.data.pages[selectedPageIndex].content_blocks.splice(blockIndex + 1, 0, newBlock);
+                        setLastInsertedId(newBlock._id ?? '');
+                        updateAndSave(updated);
+                        setTimeout(() => {
+                          const el = document.getElementById(newBlock._id ?? '');
+                          if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        }, 50);
+                      }}
+                      existingBlocks={selectedPage.content_blocks}
+                      triggerElement={
+                        <button className="text-sm text-purple-500 hover:underline mt-2">
+                          + Add Block Below
+                        </button>
+                      }
+                    />
+                  </BlockWrapper>
+                ))}
+              </div>
+            </SortableContext>
+
+            <div className="relative z-10 bg-white dark:bg-neutral-900 p-4 border-t border-gray-200 dark:border-neutral-700 mt-6">
+              <BlockAdderGrouped
+                onAdd={(type) => {
+                  const newBlock = createDefaultBlock(type);
+                  const updated = { ...template };
+                  updated.data.pages[selectedPageIndex].content_blocks.push(newBlock);
+                  setLastInsertedId(newBlock._id ?? '');
+                  updateAndSave(updated);
+                }}
+                existingBlocks={selectedPage.content_blocks}
+                triggerElement={
+                  <button className="w-full flex items-center justify-center gap-2 border border-purple-600 text-purple-600 dark:text-purple-400 rounded px-4 py-2 text-sm hover:bg-purple-50 dark:hover:bg-purple-900 transition-colors">
+                    <PlusCircle className="w-4 h-4" />
+                    <span>Add Block to End</span>
+                  </button>
+                }
+              />
+            </div>
+          </DndContext>
+        ) : (
+          <p className="text-gray-400">No pages yet. Add one to get started.</p>
+        )}
       </div>
 
       {editing && (
         <div className="fixed inset-0 bg-black/90 z-[999] p-6 overflow-auto flex items-center justify-center">
           <div className="w-full max-w-4xl bg-neutral-900 border border-white/10 rounded-xl shadow-xl overflow-hidden">
-          <DynamicBlockEditor
-            block={editing}
-            onSave={(updatedBlock) => {
-              const updated = { ...template };
-              for (const page of updated.data.pages) {
-                const index = page.content_blocks.findIndex((b) => b._id === updatedBlock._id);
-                if (index !== -1) {
-                  page.content_blocks[index] = updatedBlock;
-                  break;
+            <DynamicBlockEditor
+              block={editing}
+              onSave={(updatedBlock) => {
+                const updated = { ...template };
+                for (const page of updated.data.pages) {
+                  const index = page.content_blocks.findIndex((b) => b._id === updatedBlock._id);
+                  if (index !== -1) {
+                    page.content_blocks[index] = updatedBlock;
+                    break;
+                  }
                 }
-              }
-              updateAndSave(updated);
-              setEditing(null);
-            }}
-            onClose={() => setEditing(null)}
-            errors={errors}
-            template={template}
-          />
-        </div>
+                updateAndSave(updated);
+                setEditing(null);
+              }}
+              onClose={() => setEditing(null)}
+              errors={errors}
+              template={template}
+            />
+          </div>
         </div>
       )}
     </div>

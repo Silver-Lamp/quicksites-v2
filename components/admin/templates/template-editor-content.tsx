@@ -183,19 +183,22 @@ export function EditorContent({
         </TabsContent>
 
         <TabsContent value="preview">
-        <ThemeScope mode={template.theme === 'light' ? 'light' : 'dark'}>
-            <DevicePreviewWrapper theme={template.theme as Theme}>
-              <IndustryThemeScope industry={template.industry}>
-                <LiveEditorPreview
-                  template={template}
-                  onChange={handleTemplateChange}
-                  industry={template.industry}
-                  errors={blockErrors ?? {}}
-                />
-              </IndustryThemeScope>
-            </DevicePreviewWrapper>
-          </ThemeScope>
+          <div className="relative md:ml-64 transition-all duration-300">
+            <ThemeScope mode={template.theme === 'light' ? 'light' : 'dark'}>
+              <DevicePreviewWrapper theme={template.theme as Theme}>
+                <IndustryThemeScope industry={template.industry}>
+                  <LiveEditorPreview
+                    template={template}
+                    onChange={handleTemplateChange}
+                    industry={template.industry}
+                    errors={blockErrors ?? {}}
+                  />
+                </IndustryThemeScope>
+              </DevicePreviewWrapper>
+            </ThemeScope>
+          </div>
         </TabsContent>
+
 
         <TabsContent value="history">
           <TemplateHistory template={template} onRevert={handleTemplateChange} />

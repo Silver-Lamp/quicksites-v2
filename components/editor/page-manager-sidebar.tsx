@@ -10,24 +10,22 @@ import {
 import {
   SortableContext,
   useSortable,
-  arrayMove,
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { useEffect, useRef, useState } from 'react';
-import { GripVertical, Pencil, Trash2, PlusCircle, File } from 'lucide-react';
-import { createDefaultBlock } from '@/lib/createDefaultBlock';
-import RenderBlock from '@/components/admin/templates/render-block';
-import { DynamicBlockEditor } from './dynamic-block-editor';
-import BlockAdderGrouped from '@/components/admin/block-adder-grouped';
-import { useClickAway } from 'react-use';
-import { useMediaQuery } from 'usehooks-ts';
-import {
-  SortableContext as DndSortableContext,
-  useSortable as useDndSortable,
-} from '@dnd-kit/sortable';
+import { useState } from 'react';
+import { GripVertical, PlusCircle, File, Home, Phone, Wrench, User } from 'lucide-react';
 import { Template } from '@/types/template';
-
+  
+  function getPageIcon(slug: string) {
+    const lower = slug.toLowerCase();
+    if (lower.includes('home')) return <Home className="w-4 h-4 text-green-400 shrink-0" />;
+    if (lower.includes('contact')) return <Phone className="w-4 h-4 text-blue-400 shrink-0" />;
+    if (lower.includes('services')) return <Wrench className="w-4 h-4 text-orange-400 shrink-0" />;
+    if (lower.includes('about')) return <User className="w-4 h-4 text-pink-400 shrink-0" />;
+    return <File className="w-4 h-4 text-purple-400 shrink-0" />;
+  }
+  
 export function PageManagerSidebar({
   pages,
   selectedIndex,
@@ -36,6 +34,7 @@ export function PageManagerSidebar({
   onRename,
   onDelete,
   onReorder,
+  compact = false,
 }: {
   pages: Template['data']['pages'];
   selectedIndex: number;
@@ -44,36 +43,46 @@ export function PageManagerSidebar({
   onRename: (index: number, title: string) => void;
   onDelete: (index: number) => void;
   onReorder: (oldIndex: number, newIndex: number) => void;
+  compact?: boolean;
 }) {
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [draftTitle, setDraftTitle] = useState('');
 
+  const sensors = useSensors(useSensor(PointerSensor));
+
   return (
-    <div className="p-4 space-y-4 sticky top-0">
+    <div
+      className={`p-3 space-y-3 ${
+        compact ? 'text-xs leading-tight' : 'text-sm'
+      }`}
+    >
       <div className="flex justify-between items-center">
-        <h3 className="text-lg font-bold text-white">Pages</h3>
+        <h3 className="font-semibold text-white">Pages</h3>
         <button
           onClick={onAdd}
-          className="text-green-500 hover:underline text-sm"
+          className="text-green-400 hover:underline flex items-center gap-1"
         >
-          + Add
+          <PlusCircle className="w-4 h-4" /> Add
         </button>
       </div>
 
       <DndContext
+        sensors={sensors}
         collisionDetection={closestCenter}
         onDragEnd={({ active, over }) => {
           if (!over || active.id === over.id) return;
           const oldIndex = pages.findIndex((p) => p.slug === active.id);
           const newIndex = pages.findIndex((p) => p.slug === over.id);
           if (oldIndex !== -1 && newIndex !== -1) {
-            const reordered = arrayMove([...pages], oldIndex, newIndex);
             onReorder(oldIndex, newIndex);
           }
         }}
       >
-        <SortableContext items={pages.map((p) => p.slug)} strategy={verticalListSortingStrategy}>
-          <ul className="space-y-2">
+        <SortableContext
+          items={pages.map((p) => p.slug)}
+          strategy={verticalListSortingStrategy}
+        >
+          <ul className="space-y-1">
             {pages.map((page, idx) => (
               <SidebarPageItem
                 key={page.slug}
@@ -125,7 +134,7 @@ function SidebarPageItem({
     setNodeRef,
     transform,
     transition,
-  } = useDndSortable({ id: page.slug });
+  } = useSortable({ id: page.slug });
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -136,16 +145,21 @@ function SidebarPageItem({
     <li
       ref={setNodeRef}
       style={style}
-      className={`p-2 rounded text-white flex items-center gap-2 ${
+      className={`flex items-center gap-2 px-2 py-1 rounded group transition ${
         isSelected ? 'bg-neutral-800' : 'hover:bg-neutral-800'
       }`}
       title={page.title}
     >
-      <GripVertical className="w-4 h-4 text-gray-500 cursor-move" {...attributes} {...listeners} />
-      <File className="w-4 h-4 text-purple-400" />
+      <GripVertical
+        className="w-4 h-4 text-gray-500 cursor-move"
+        {...attributes}
+        {...listeners}
+      />
+      {getPageIcon(page.slug)}
+
       {editingIndex === index ? (
         <input
-          className="w-full bg-neutral-800 border border-neutral-600 px-2 py-1 rounded"
+          className="w-full bg-neutral-800 border border-neutral-600 px-2 py-1 rounded text-white"
           value={draftTitle}
           onChange={(e) => setDraftTitle(e.target.value)}
           onBlur={() => {
@@ -164,11 +178,11 @@ function SidebarPageItem({
         <div className="flex justify-between items-center w-full">
           <button
             onClick={onSelect}
-            className="text-left flex-1 truncate"
+            className="text-left flex-1 truncate text-white hover:underline"
           >
             {page.title}
           </button>
-          <div className="flex gap-2 ml-2 text-sm">
+          <div className="flex gap-2 ml-2 text-xs opacity-80 group-hover:opacity-100">
             <button
               onClick={() => {
                 setEditingIndex(index);

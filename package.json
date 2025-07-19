@@ -73,7 +73,6 @@
   },
   "dependencies": {
     "@asteasolutions/zod-to-openapi": "^7.3.4",
-    "@chroma-core/default-embed": "^0.1.8",
     "@dnd-kit/core": "^6.3.1",
     "@dnd-kit/sortable": "^10.0.0",
     "@dnd-kit/utilities": "^3.2.2",
@@ -109,7 +108,6 @@
     "canvas-confetti": "^1.9.3",
     "chart.js": "^4.4.9",
     "child_process": "^1.0.2",
-    "chromadb": "^3.0.7",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "csv-stringify": "^6.5.2",

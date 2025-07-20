@@ -23,6 +23,7 @@ const BLOCK_RENDERERS: Record<
   testimonial: () => import('./render-blocks/testimonial'),
   footer: () => import('./render-blocks/footer'),
   service_areas: () => import('./render-blocks/service-areas'),
+  page_header: () => import('./render-blocks/page-header'),
 };
 
 type RenderProps = {

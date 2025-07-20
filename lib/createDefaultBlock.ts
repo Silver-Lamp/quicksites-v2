@@ -153,7 +153,21 @@ export function createDefaultBlock(type: Block['type']): Block {
           allCities: [],
         },
       };
-      
+      case 'page_header':
+        return {
+          type: 'page_header',
+          _id,
+          content: {
+            logoUrl: '/logo.png',
+            navItems: [
+              { label: 'Towing Service', href: '/services/towing' },
+              { label: 'Emergency Towing', href: '/services/emergency' },
+              { label: 'Roadside Assistance', href: '/services/roadside' },
+              { label: 'Auto Wrecking & Flatbed Towing', href: '/services/flatbed' },
+            ],
+          },
+        };
+            
     default:
       return {
         type: 'text',

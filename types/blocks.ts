@@ -140,6 +140,13 @@ export type ServiceAreaBlock = BaseBlock & {
   };
 };
 
+export type PageHeaderBlock = BaseBlock & {
+  type: 'page_header';
+  content: {
+    logoUrl?: string;
+    navItems: { label: string; href: string }[];
+  };
+};
 
 // Unified Block union
 export type Block =
@@ -155,7 +162,8 @@ export type Block =
   | CtaBlock
   | TestimonialBlock
   | FooterBlock
-  | ServiceAreaBlock;
+  | ServiceAreaBlock
+  | PageHeaderBlock;
 
 // Block with enforced _id
 export type BlockWithId = Block & { _id: string };

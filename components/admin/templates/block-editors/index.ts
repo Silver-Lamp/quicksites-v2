@@ -28,6 +28,7 @@ export const BLOCK_EDITORS: Record<
   cta: () => import('./cta-editor'),
   footer: () => import('./footer-editor'),
   service_areas: () => import('./service-areas-editor'),
+  page_header: () => import('./page-header-editor'),
 };
 
 // 🧠 Optional preloader for a single block type (for speed optimization)

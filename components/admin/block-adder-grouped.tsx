@@ -13,7 +13,7 @@ const blockGroups: Record<string, { label: string; types: Block['type'][] }> = {
   },
   layout: {
     label: 'Layout',
-    types: ['grid', 'footer'],
+    types: ['grid', 'footer', 'page_header'],
   },
   callToAction: {
     label: 'Calls to Action',

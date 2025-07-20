@@ -108,6 +108,14 @@ export const blockContentSchemaMap = {
       cities: z.array(z.string()).min(1, 'At least one city is required'),
     }),
   },
+  page_header: {
+    label: 'Page Header',
+    icon: '🏠',
+    schema: z.object({
+      logoUrl: z.string().url().optional(),
+      navItems: z.array(z.object({ label: z.string(), href: z.string() })).min(1, 'At least one nav item is required'),
+    }),
+  },
 };
 
 // Step 2: Build base block schemas with shared fields

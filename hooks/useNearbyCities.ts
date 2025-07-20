@@ -1,8 +1,19 @@
 import { useState } from 'react';
 
+function toTitleCase(name: string): string {
+  return name.trim().toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
+export type CityInfo = {
+  name: string;
+  distance: number;
+  lat: number;
+  lng: number;
+};
+
 export function useNearbyCities() {
   const [loading, setLoading] = useState(false);
-  const [cities, setCities] = useState<string[]>([]);
+  const [cities, setCities] = useState<CityInfo[]>([]);
   const [error, setError] = useState<string | null>(null);
 
   const fetchCities = async (lat: number, lng: number, radiusMiles = 30) => {
@@ -18,7 +29,13 @@ export function useNearbyCities() {
       console.log('[useNearbyCities] API response', data);
 
       if (res.ok) {
-        setCities(data.cities || []);
+        const normalized: CityInfo[] = (data.cities || []).map((c: any) => ({
+          name: toTitleCase(c.name),
+          distance: c.distance,
+          lat: c.lat,
+          lng: c.lng,
+        }));
+        setCities(normalized);
       } else {
         throw new Error(data.error || 'Unknown error');
       }

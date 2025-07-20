@@ -140,6 +140,20 @@ export function createDefaultBlock(type: Block['type']): Block {
         },
       };
 
+    case 'service_areas':
+      return {
+        type: 'service_areas',
+        _id,
+        content: {
+          title: 'Our Service Areas',
+          subtitle: 'We proudly serve the surrounding towns and cities within 30 miles.',
+          cities: [],
+          sourceLat: 43.3242,
+          sourceLng: -88.0899,
+          allCities: [],
+        },
+      };
+      
     default:
       return {
         type: 'text',

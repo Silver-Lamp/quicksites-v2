@@ -22,6 +22,7 @@ const BLOCK_RENDERERS: Record<
   cta: () => import('./render-blocks/cta'),
   testimonial: () => import('./render-blocks/testimonial'),
   footer: () => import('./render-blocks/footer'),
+  service_areas: () => import('./render-blocks/service-areas'),
 };
 
 type RenderProps = {

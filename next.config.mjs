@@ -1,5 +1,9 @@
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { createRequire } from 'node:module';
+import webpack from 'webpack'; // needed for ProvidePlugin
+
+const require = createRequire(import.meta.url); // ✅ ESM-safe require
 
 /** ✅ Fix for __dirname in ESM */
 const __filename = fileURLToPath(import.meta.url);
@@ -7,13 +11,10 @@ const __dirname = path.dirname(__filename);
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // ✅ Fix subdomain asset loading
   assetPrefix: '/',
   images: {
     domains: ['randomuser.me', 'your-supabase-project.supabase.co', 'cdn.sanity.io'],
   },
-  // ⚠ Removed deprecated option
-  // devIndicators: { buildActivity: false },
 
   webpack(config, { isServer }) {
     config.resolve.alias['@'] = path.resolve(__dirname);
@@ -24,6 +25,17 @@ const nextConfig = {
         nodemailer: 'commonjs nodemailer',
       });
     }
+
+    // ✅ Polyfill for Buffer (node:buffer)
+    config.resolve.fallback = {
+      ...config.resolve.fallback,
+      buffer: require.resolve('buffer/'),
+    };
+    config.plugins.push(
+      new webpack.ProvidePlugin({
+        Buffer: ['buffer', 'Buffer'],
+      })
+    );
 
     config.module.exprContextCritical = false;
     return config;

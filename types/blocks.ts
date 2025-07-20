@@ -127,6 +127,20 @@ export type FooterBlock = BaseBlock & {
   };
 };
 
+export type ServiceAreaBlock = BaseBlock & {
+  type: 'service_areas';
+  content: {
+    title?: string;
+    subtitle?: string;
+    cities: string[];
+    allCities?: string[];
+    sourceLat?: number;
+    sourceLng?: number;
+    radiusMiles?: number;
+  };
+};
+
+
 // Unified Block union
 export type Block =
   | TextBlock
@@ -140,7 +154,8 @@ export type Block =
   | ServicesBlock
   | CtaBlock
   | TestimonialBlock
-  | FooterBlock;
+  | FooterBlock
+  | ServiceAreaBlock;
 
 // Block with enforced _id
 export type BlockWithId = Block & { _id: string };

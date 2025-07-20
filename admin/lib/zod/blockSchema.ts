@@ -101,6 +101,13 @@ export const blockContentSchemaMap = {
       ).min(1, 'At least one link is required'),
     }),
   },
+  service_areas: {
+    label: 'Service Areas',
+    icon: '🌍',
+    schema: z.object({
+      cities: z.array(z.string()).min(1, 'At least one city is required'),
+    }),
+  },
 };
 
 // Step 2: Build base block schemas with shared fields

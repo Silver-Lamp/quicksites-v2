@@ -21,7 +21,7 @@ const blockGroups: Record<string, { label: string; types: Block['type'][] }> = {
   },
   services: {
     label: 'Business Features',
-    types: ['services'],
+    types: ['services', 'service_areas'],
   },
 };
 

@@ -84,4 +84,22 @@ export const blockPresets: {
       content: { testimonials: [{ quote: 'They did a great job!', attribution: 'John Doe' }] },
     }),
   },
+  {
+    type: 'service_areas',
+    label: 'Service Areas',
+    icon: '🌍',
+    tags: ['location'],
+    generate: () => ({
+      _id: crypto.randomUUID(),
+      type: 'service_areas',
+      content: {
+        title: 'Our Service Areas',
+        subtitle: 'We proudly serve the surrounding towns and cities within 30 miles.',
+        cities: [],
+        allCities: [],
+        sourceLat: 43.3242,
+        sourceLng: -88.0899,
+      },
+    }),
+  },
 ];

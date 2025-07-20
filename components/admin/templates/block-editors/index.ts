@@ -9,7 +9,7 @@ export type BlockEditorProps = {
   errors?: Record<string, BlockValidationError[]>;
   template?: Template;
 };
-
+    
 // 🌐 Mapping of block type → dynamic React component import
 export const BLOCK_EDITORS: Record<
   Block['type'],
@@ -27,6 +27,7 @@ export const BLOCK_EDITORS: Record<
   testimonial: () => import('./testimonial-editor'),
   cta: () => import('./cta-editor'),
   footer: () => import('./footer-editor'),
+  service_areas: () => import('./service-areas-editor'),
 };
 
 // 🧠 Optional preloader for a single block type (for speed optimization)

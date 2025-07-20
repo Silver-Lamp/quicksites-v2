@@ -85,6 +85,19 @@ export function createFallbackBlock(type: Block['type']): BlockWithId {
           ],
         },
       };
+    case 'service_areas':
+      return {
+        _id: id,
+        type: 'service_areas',
+        content: {
+          title: 'Our Service Areas',
+          subtitle: 'We proudly serve the surrounding towns and cities within 30 miles.',
+          cities: [],
+          allCities: [],
+          sourceLat: 43.3242,
+          sourceLng: -88.0899,
+        },
+      };
     default:
       return {
         _id: id,

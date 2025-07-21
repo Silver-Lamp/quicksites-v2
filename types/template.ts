@@ -6,8 +6,8 @@ export type Page = {
   slug: string;
   title: string;
   content_blocks: Block[];
-  showHeader?: boolean;
-  showFooter?: boolean;
+  show_header?: boolean;
+  show_footer?: boolean;
   meta?: {
     title?: string;
     description?: string;
@@ -37,7 +37,8 @@ export type Snapshot = {
   // 🆕 Global header/footer blocks
   headerBlock?: Block | null;
   footerBlock?: Block | null;
-
+  show_header?: boolean;
+  show_footer?: boolean;
   block_errors?: BlockValidationErrorMap;
   block_errors_map?: Record<string, string[]>;
   commit?: string;

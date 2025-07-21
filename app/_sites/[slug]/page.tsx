@@ -49,36 +49,41 @@ export default async function SitePage({ params }: { params: { slug: string; pag
 
   if (!currentPage) return notFound();
 
+  // 🧠 Use template-level fallback for header/footer visibility
+  const showHeader = currentPage.show_header ?? site.show_header ?? true;
+  const showFooter = currentPage.show_footer ?? site.show_footer ?? true;
+
   return (
     <>
-    <MetaHead
-      title={currentPage.meta?.title || site.template_name || ''}
-      description={currentPage.meta?.description || site.description || ''}
-      ogImage={currentPage.meta?.ogImage || site.logo_url || 'https://quicksites.ai/og-cache/og-default.png'}
-      faviconSizes={currentPage.meta?.faviconSizes || site.logo_url || 'https://quicksites.ai/og-cache/og-default.png'}
-      appleIcons={currentPage.meta?.appleIcons || site.logo_url || 'https://quicksites.ai/og-cache/og-default.png'}
-    />
-<div className="bg-black text-white min-h-screen">
-      {(currentPage.showHeader ?? true) && site.headerBlock && (
-        <div className="mb-8 border-b border-white/10">
-          <RenderBlock block={site.headerBlock} />
-        </div>
-      )}
+      <MetaHead
+        title={currentPage.meta?.title || site.template_name || ''}
+        description={currentPage.meta?.description || site.description || ''}
+        ogImage={currentPage.meta?.ogImage || site.logo_url || 'https://quicksites.ai/og-cache/og-default.png'}
+        faviconSizes={currentPage.meta?.faviconSizes || site.logo_url || 'https://quicksites.ai/og-cache/og-default.png'}
+        appleIcons={currentPage.meta?.appleIcons || site.logo_url || 'https://quicksites.ai/og-cache/og-default.png'}
+      />
 
-      <main className="py-8 px-4 max-w-5xl mx-auto space-y-8">
-        {currentPage.content_blocks?.map((block, i) => (
-          <div key={block._id || i}>
-            <RenderBlock block={block} />
+      <div className="bg-black text-white min-h-screen">
+        {showHeader && site.headerBlock && (
+          <div className="mb-8 border-b border-white/10">
+            <RenderBlock block={site.headerBlock} />
           </div>
-        ))}
-      </main>
+        )}
 
-      {(currentPage.showFooter ?? true) && site.footerBlock && (
-        <div className="mt-12 border-t border-white/10">
-          <RenderBlock block={site.footerBlock} />
-        </div>
-      )}
-    </div>
+        <main className="py-8 px-4 max-w-5xl mx-auto space-y-8">
+          {currentPage.content_blocks?.map((block, i) => (
+            <div key={block._id || i}>
+              <RenderBlock block={block} />
+            </div>
+          ))}
+        </main>
+
+        {showFooter && site.footerBlock && (
+          <div className="mt-12 border-t border-white/10">
+            <RenderBlock block={site.footerBlock} />
+          </div>
+        )}
+      </div>
     </>
   );
 }

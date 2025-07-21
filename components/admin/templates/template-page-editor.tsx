@@ -13,6 +13,8 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import { BlockValidationError } from '@/hooks/validateTemplateBlocks';
 import type { Page } from '@/types/site';
 import { FloatingAddBlockHere } from '@/components/editor/floating-add-block-here';
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
 
 export default function TemplatePageEditor({
   template,
@@ -154,18 +156,42 @@ export default function TemplatePageEditor({
                   </Tooltip>
                 )}
               </h4>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() =>
-                  setCollapsedPages((prev) => ({
-                    ...prev,
-                    [page.slug]: !prev[page.slug],
-                  }))
-                }
-              >
-                {collapsedPages[page.slug] ? 'Expand' : 'Collapse'}
-              </Button>
+              <div className="flex gap-4 items-center">
+                <Label className="flex items-center gap-2 text-xs">
+                  <Switch
+                    checked={page.show_header ?? template.show_header ?? true}
+                    onCheckedChange={(val) => {
+                      const updatedPages = [...template.data.pages];
+                      updatedPages[pageIndex].show_header = val;
+                      onChange({ ...template, data: { ...template.data, pages: updatedPages } });
+                    }}
+                  />
+                  Header
+                </Label>
+                <Label className="flex items-center gap-2 text-xs">
+                  <Switch
+                    checked={page.show_footer ?? template.show_footer ?? true}
+                    onCheckedChange={(val) => {
+                      const updatedPages = [...template.data.pages];
+                      updatedPages[pageIndex].show_footer = val;
+                      onChange({ ...template, data: { ...template.data, pages: updatedPages } });
+                    }}
+                  />
+                  Footer
+                </Label>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() =>
+                    setCollapsedPages((prev) => ({
+                      ...prev,
+                      [page.slug]: !prev[page.slug],
+                    }))
+                  }
+                >
+                  {collapsedPages[page.slug] ? 'Expand' : 'Collapse'}
+                </Button>
+              </div>
             </div>
 
             {!collapsedPages[page.slug] && (

@@ -1,6 +1,5 @@
 'use server';
 
-// import { getSupabase } from '@/lib/supabase/server';
 import { createClient } from '@supabase/supabase-js';
 import { notFound } from 'next/navigation';
 import type { TemplateData, Template } from '@/types/template';
@@ -43,7 +42,6 @@ export async function generateMetadata({ params }: { params: { slug: string; pag
   };
 }
 
-
 export default async function SitePage({ params }: { params: { slug: string; page: string } }) {
   const { slug, page } = await Promise.resolve(params);
 
@@ -63,43 +61,46 @@ export default async function SitePage({ params }: { params: { slug: string; pag
 
   const pages = (site.data as TemplateData)?.pages || [];
   const currentPage = pages.find((p) => p.slug === page);
-
   if (!currentPage) return notFound();
 
   const theme = currentPage.meta?.theme || site.theme || 'dark';
 
+  // 🔁 Template-wide header/footer fallback logic
+  const showHeader = currentPage.show_header ?? site.show_header ?? true;
+  const showFooter = currentPage.show_footer ?? site.show_footer ?? true;
+
   return (
     <>
-    <MetaHead
-      title={currentPage.meta?.title || site.template_name || ''}
-      description={currentPage.meta?.description || site.description || ''}
-      ogImage={currentPage.meta?.ogImage || site.logo_url || 'https://quicksites.ai/og-cache/og-default.png'}
-      faviconSizes={currentPage.meta?.faviconSizes || site.logo_url || 'https://quicksites.ai/og-cache/og-default.png'}
-      appleIcons={currentPage.meta?.appleIcons || site.logo_url || 'https://quicksites.ai/og-cache/og-default.png'}
-    />
-    <ThemeScope mode={theme === 'light' ? 'light' : 'dark'}>
-      <div className="min-h-screen bg-black text-white">
-        {(currentPage.showHeader ?? true) && site.headerBlock && (
-          <div className="mb-8 border-b border-white/10">
-            <RenderBlock block={site.headerBlock} />
-          </div>
-        )}
-
-        <main className="py-8 px-4 max-w-5xl mx-auto space-y-8">
-          {currentPage.content_blocks?.map((block, i) => (
-            <div key={block._id || i}>
-              <RenderBlock block={block} />
+      <MetaHead
+        title={currentPage.meta?.title || site.template_name || ''}
+        description={currentPage.meta?.description || site.description || ''}
+        ogImage={currentPage.meta?.ogImage || site.logo_url || 'https://quicksites.ai/og-cache/og-default.png'}
+        faviconSizes={currentPage.meta?.faviconSizes || site.logo_url || 'https://quicksites.ai/og-cache/og-default.png'}
+        appleIcons={currentPage.meta?.appleIcons || site.logo_url || 'https://quicksites.ai/og-cache/og-default.png'}
+      />
+      <ThemeScope mode={theme === 'light' ? 'light' : 'dark'}>
+        <div className="min-h-screen bg-black text-white">
+          {showHeader && site.headerBlock && (
+            <div className="mb-8 border-b border-white/10">
+              <RenderBlock block={site.headerBlock} />
             </div>
-          ))}
-        </main>
+          )}
 
-        {(currentPage.showFooter ?? true) && site.footerBlock && (
-          <div className="mt-12 border-t border-white/10">
-            <RenderBlock block={site.footerBlock} />
-          </div>
-        )}
-      </div>
-    </ThemeScope>
+          <main className="py-8 px-4 max-w-5xl mx-auto space-y-8">
+            {currentPage.content_blocks?.map((block, i) => (
+              <div key={block._id || i}>
+                <RenderBlock block={block} />
+              </div>
+            ))}
+          </main>
+
+          {showFooter && site.footerBlock && (
+            <div className="mt-12 border-t border-white/10">
+              <RenderBlock block={site.footerBlock} />
+            </div>
+          )}
+        </div>
+      </ThemeScope>
     </>
   );
 }

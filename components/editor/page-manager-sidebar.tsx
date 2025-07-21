@@ -18,16 +18,16 @@ import { GripVertical, PlusCircle, File, Home, Phone, Wrench, User } from 'lucid
 import { Template } from '@/types/template';
 import { Switch } from '@radix-ui/react-switch';
 import { Label } from '@/components/ui/label';
-  
-  function getPageIcon(slug: string) {
-    const lower = slug.toLowerCase();
-    if (lower.includes('home')) return <Home className="w-4 h-4 text-green-400 shrink-0" />;
-    if (lower.includes('contact')) return <Phone className="w-4 h-4 text-blue-400 shrink-0" />;
-    if (lower.includes('services')) return <Wrench className="w-4 h-4 text-orange-400 shrink-0" />;
-    if (lower.includes('about')) return <User className="w-4 h-4 text-pink-400 shrink-0" />;
-    return <File className="w-4 h-4 text-purple-400 shrink-0" />;
-  }
-  
+
+function getPageIcon(slug: string) {
+  const lower = slug.toLowerCase();
+  if (lower.includes('home')) return <Home className="w-4 h-4 text-green-400 shrink-0" />;
+  if (lower.includes('contact')) return <Phone className="w-4 h-4 text-blue-400 shrink-0" />;
+  if (lower.includes('services')) return <Wrench className="w-4 h-4 text-orange-400 shrink-0" />;
+  if (lower.includes('about')) return <User className="w-4 h-4 text-pink-400 shrink-0" />;
+  return <File className="w-4 h-4 text-purple-400 shrink-0" />;
+}
+
 export function PageManagerSidebar({
   pages,
   selectedIndex,
@@ -39,6 +39,8 @@ export function PageManagerSidebar({
   compact = false,
   onToggleHeader,
   onToggleFooter,
+  templateShowHeader,
+  templateShowFooter,
 }: {
   pages: Template['data']['pages'];
   selectedIndex: number;
@@ -50,6 +52,8 @@ export function PageManagerSidebar({
   compact?: boolean;
   onToggleHeader: (index: number, value: boolean) => void;
   onToggleFooter: (index: number, value: boolean) => void;
+  templateShowHeader?: boolean;
+  templateShowFooter?: boolean;
 }) {
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [draftTitle, setDraftTitle] = useState('');
@@ -57,11 +61,7 @@ export function PageManagerSidebar({
   const sensors = useSensors(useSensor(PointerSensor));
 
   return (
-    <div
-      className={`p-3 space-y-3 ${
-        compact ? 'text-xs leading-tight' : 'text-sm'
-      }`}
-    >
+    <div className={`p-3 space-y-3 ${compact ? 'text-xs leading-tight' : 'text-sm'}`}>
       <div className="flex justify-between items-center">
         <h3 className="font-semibold text-white">Pages</h3>
         <button
@@ -104,6 +104,8 @@ export function PageManagerSidebar({
                 setDraftTitle={setDraftTitle}
                 onToggleHeader={onToggleHeader}
                 onToggleFooter={onToggleFooter}
+                templateShowHeader={templateShowHeader}
+                templateShowFooter={templateShowFooter}
               />
             ))}
           </ul>
@@ -126,6 +128,8 @@ function SidebarPageItem({
   setDraftTitle,
   onToggleHeader,
   onToggleFooter,
+  templateShowHeader,
+  templateShowFooter,
 }: {
   page: Template['data']['pages'][number];
   index: number;
@@ -139,6 +143,8 @@ function SidebarPageItem({
   setDraftTitle: (title: string) => void;
   onToggleHeader: (index: number, value: boolean) => void;
   onToggleFooter: (index: number, value: boolean) => void;
+  templateShowHeader?: boolean;
+  templateShowFooter?: boolean;
 }) {
   const {
     attributes,
@@ -152,6 +158,9 @@ function SidebarPageItem({
     transform: CSS.Transform.toString(transform),
     transition,
   };
+
+  const effectiveShowHeader = page.show_header ?? templateShowHeader ?? true;
+  const effectiveShowFooter = page.show_footer ?? templateShowFooter ?? true;
 
   return (
     <li
@@ -194,20 +203,28 @@ function SidebarPageItem({
           >
             {page.title}
           </button>
+
           <div className="mt-2 space-y-2 text-sm text-white/80">
             <Label className="flex items-center gap-2">
               <Switch
-                checked={page.showHeader ?? true}
+                checked={effectiveShowHeader}
                 onCheckedChange={(val) => onToggleHeader(index, val)}
               />
               Show Header
+              {page.show_header === undefined && (
+                <span className="text-yellow-400 text-xs">(inherited)</span>
+              )}
             </Label>
+
             <Label className="flex items-center gap-2">
               <Switch
-                checked={page.showFooter ?? true}
+                checked={effectiveShowFooter}
                 onCheckedChange={(val) => onToggleFooter(index, val)}
               />
               Show Footer
+              {page.show_footer === undefined && (
+                <span className="text-yellow-400 text-xs">(inherited)</span>
+              )}
             </Label>
           </div>
 

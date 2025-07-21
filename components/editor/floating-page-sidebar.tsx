@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { PageManagerSidebar } from './page-manager-sidebar';
 import { LayoutPanelTop } from 'lucide-react';
+import type { Template } from '@/types/template';
 
 export function FloatingPageSidebar({
   pages,
@@ -15,7 +16,12 @@ export function FloatingPageSidebar({
   onReorder,
   onToggleHeader,
   onToggleFooter,
-}: React.ComponentProps<typeof PageManagerSidebar>) {
+  templateShowHeader,
+  templateShowFooter,
+}: React.ComponentProps<typeof PageManagerSidebar> & {
+  templateShowHeader?: Template['show_header'];
+  templateShowFooter?: Template['show_footer'];
+}) {
   const [collapsed, setCollapsed] = useState(false);
 
   // Compact layout if many pages
@@ -45,7 +51,7 @@ export function FloatingPageSidebar({
   }
 
   return (
-    <motion.div     
+    <motion.div
       drag
       dragMomentum={false}
       dragElastic={0.15}
@@ -77,6 +83,8 @@ export function FloatingPageSidebar({
         compact={compactMode}
         onToggleHeader={onToggleHeader}
         onToggleFooter={onToggleFooter}
+        templateShowHeader={templateShowHeader}
+        templateShowFooter={templateShowFooter}
       />
     </motion.div>
   );

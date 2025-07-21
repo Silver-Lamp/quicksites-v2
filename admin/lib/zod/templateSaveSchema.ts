@@ -10,8 +10,8 @@ export const PageSchema = z.object({
   title: z.string(),
   slug: z.string(),
   content_blocks: z.array(BlockSchema),
-  showHeader: z.boolean().optional().default(true),
-  showFooter: z.boolean().optional().default(true),
+  show_header: z.boolean().optional().default(true),
+  show_footer: z.boolean().optional().default(true),
 });
 export type ValidatedPage = z.infer<typeof PageSchema>;
 

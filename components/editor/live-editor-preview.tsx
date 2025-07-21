@@ -97,8 +97,8 @@ export function LiveEditorPreview({
       slug: `page-${Date.now()}`,
       title: `Untitled Page ${updated.data.pages.length + 1}`,
       content_blocks: [],
-      showHeader: true,
-      showFooter: true,
+      show_header: true,
+      show_footer: true,
     });
     setSelectedPageIndex(updated.data.pages.length - 1);
     updateAndSave(updated);
@@ -129,12 +129,12 @@ export function LiveEditorPreview({
         }}
         onToggleHeader={(i, val) => {
           const updated = { ...template };
-          updated.data.pages[i].showHeader = val;
+          updated.data.pages[i].show_header = val;
           updateAndSave(updated);
         }}
         onToggleFooter={(i, val) => {
           const updated = { ...template };
-          updated.data.pages[i].showFooter = val;
+          updated.data.pages[i].show_footer = val;
           updateAndSave(updated);
         }}
       />
@@ -152,7 +152,7 @@ export function LiveEditorPreview({
           </div>
         </div>
 
-        {selectedPage?.showHeader !== false && template.headerBlock && (
+        {selectedPage?.show_header !== false && template.headerBlock && (
           <RenderBlock block={template.headerBlock} />
         )}
 
@@ -227,7 +227,7 @@ export function LiveEditorPreview({
           </div>
         </DndContext>
 
-        {selectedPage?.showFooter !== false && template.footerBlock && (
+        {selectedPage?.show_footer !== false && template.footerBlock && (
           <RenderBlock block={template.footerBlock} />
         )}
       </div>

@@ -1,18 +1,43 @@
-// app/_sites/[slug]/page.tsx
+'use server';
+
 import { getSupabase } from '@/lib/supabase/server';
 import { notFound } from 'next/navigation';
-import type { TemplateData } from '@/types/template';
+import type { TemplateData, Template } from '@/types/template';
 import RenderBlock from '@/components/admin/templates/render-block';
-import { DevToolsToggler } from '@/components/DevToolsToggler';
+import { Metadata } from 'next';
+import MetaHead from '@/components/head/MetaHead';
+
+export const generateMetadata = async ({ params }: { params: { slug: string; page: string } }): Promise<Metadata> => {
+  const { slug, page } = params;
+  const supabase = await getSupabase();
+  const { data: site } = await supabase
+    .from('templates')
+    .select('data, template_name, description, slug')
+    .eq('slug', slug)
+    .eq('is_site', true)
+    .maybeSingle();
+
+  const pages = (site?.data as TemplateData)?.pages || [];
+  const currentPage = pages.find((p) => p.slug === page);
+
+  return {
+    title: `${currentPage?.title || site?.template_name} | QuickSites`,
+    description: currentPage?.meta?.description || site?.description || 'A professional QuickSites website.',
+    openGraph: {
+      title: currentPage?.title || site?.template_name,
+      description: currentPage?.meta?.description || site?.description,
+      url: `https://quicksites.ai/${slug}/${page}`,
+    },
+  };
+};
 
 export default async function SitePage({ params }: { params: { slug: string; page: string } }) {
-  const { slug, page } = await Promise.resolve(params); // ✅ fixes Next.js error
-
+  const { slug, page } = await Promise.resolve(params);
   const supabase = await getSupabase();
 
   const { data: site, error } = await supabase
     .from('templates')
-    .select('data, slug')
+    .select('*')
     .eq('slug', slug)
     .eq('is_site', true)
     .maybeSingle();
@@ -25,16 +50,35 @@ export default async function SitePage({ params }: { params: { slug: string; pag
   if (!currentPage) return notFound();
 
   return (
-    <div className="bg-black text-white min-h-screen">
-      {/* <DevToolsToggler /> */}
-      <div className="py-8 px-4 max-w-5xl mx-auto">
-        {/* <h2 className="text-3xl font-bold mb-6">.:.{currentPage.title}</h2> */}
+    <>
+    <MetaHead
+      title={currentPage.meta?.title || site.template_name || ''}
+      description={currentPage.meta?.description || site.description || ''}
+      ogImage={currentPage.meta?.ogImage || site.logo_url || 'https://quicksites.ai/og-cache/og-default.png'}
+      faviconSizes={currentPage.meta?.faviconSizes || site.logo_url || 'https://quicksites.ai/og-cache/og-default.png'}
+      appleIcons={currentPage.meta?.appleIcons || site.logo_url || 'https://quicksites.ai/og-cache/og-default.png'}
+    />
+<div className="bg-black text-white min-h-screen">
+      {(currentPage.showHeader ?? true) && site.headerBlock && (
+        <div className="mb-8 border-b border-white/10">
+          <RenderBlock block={site.headerBlock} />
+        </div>
+      )}
+
+      <main className="py-8 px-4 max-w-5xl mx-auto space-y-8">
         {currentPage.content_blocks?.map((block, i) => (
-          <div key={block._id || i} className="mb-8">
+          <div key={block._id || i}>
             <RenderBlock block={block} />
           </div>
         ))}
-      </div>
+      </main>
+
+      {(currentPage.showFooter ?? true) && site.footerBlock && (
+        <div className="mt-12 border-t border-white/10">
+          <RenderBlock block={site.footerBlock} />
+        </div>
+      )}
     </div>
+    </>
   );
 }

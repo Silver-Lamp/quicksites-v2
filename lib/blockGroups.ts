@@ -13,7 +13,7 @@ export const blockGroups: Record<
   },
   layout: {
     label: 'Layout',
-    types: ['grid', 'footer', 'page_header'],
+    types: ['grid', 'footer', 'header'],
   },
   callToAction: {
     label: 'Calls to Action',

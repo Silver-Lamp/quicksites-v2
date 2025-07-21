@@ -8,7 +8,7 @@ import { useDropzone } from 'react-dropzone';
 import imageCompression from 'browser-image-compression';
 import { supabase } from '@/lib/supabase/client';
 import toast from 'react-hot-toast';
-import type { Block, PageHeaderBlock } from '@/types/blocks';
+import type { Block, HeaderBlock } from '@/types/blocks';
 import { BlockValidationError } from '@/hooks/validateTemplateBlocks';
 import { Template } from '@/types/template';
 import QuickLinksEditor from '@/components/admin/fields/quick-links-editor';
@@ -23,11 +23,11 @@ type Props = {
 };
 
 export default function PageHeaderEditor({ block, onSave, onClose, errors = {}, template }: Props) {
-  if (block.type !== 'page_header') {
+  if (block.type !== 'header') {
     return <div className="text-red-500">Invalid block type</div>;
   }
 
-  const headerBlock = block as PageHeaderBlock;
+  const headerBlock = block as HeaderBlock;
   const [logoUrl, setLogoUrl] = useState(headerBlock.content.logoUrl || template?.logo_url || '');
   const [navItems, setNavItems] = useState([...headerBlock.content.navItems]);
   const [isUploading, setIsUploading] = useState(false);

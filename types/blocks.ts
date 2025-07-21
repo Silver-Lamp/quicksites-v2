@@ -140,8 +140,8 @@ export type ServiceAreaBlock = BaseBlock & {
   };
 };
 
-export type PageHeaderBlock = BaseBlock & {
-  type: 'page_header';
+export type HeaderBlock = BaseBlock & {
+  type: 'header';
   content: {
     logoUrl?: string;
     navItems: { label: string; href: string }[];
@@ -163,7 +163,7 @@ export type Block =
   | TestimonialBlock
   | FooterBlock
   | ServiceAreaBlock
-  | PageHeaderBlock;
+  | HeaderBlock;
 
 // Block with enforced _id
 export type BlockWithId = Block & { _id: string };

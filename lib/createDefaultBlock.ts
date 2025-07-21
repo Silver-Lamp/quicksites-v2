@@ -153,9 +153,9 @@ export function createDefaultBlock(type: Block['type']): Block {
           allCities: [],
         },
       };
-      case 'page_header':
+      case 'header':
         return {
-          type: 'page_header',
+          type: 'header',
           _id,
           content: {
             logoUrl: '/logo.png',

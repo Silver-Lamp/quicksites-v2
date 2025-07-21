@@ -14,13 +14,12 @@ import {
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { useEffect, useRef, useState } from 'react';
+import { useState } from 'react';
 import { GripVertical, Pencil, Trash2, PlusCircle } from 'lucide-react';
 import { createDefaultBlock } from '@/lib/createDefaultBlock';
 import RenderBlock from '@/components/admin/templates/render-block';
 import { DynamicBlockEditor } from '@/components/editor/dynamic-block-editor';
 import BlockAdderGrouped from '@/components/admin/block-adder-grouped';
-import { useClickAway } from 'react-use';
 import { Template } from '@/types/template';
 import { BlockValidationError } from '@/hooks/validateTemplateBlocks';
 import { FloatingPageSidebar } from '@/components/editor/floating-page-sidebar';
@@ -98,38 +97,10 @@ export function LiveEditorPreview({
       slug: `page-${Date.now()}`,
       title: `Untitled Page ${updated.data.pages.length + 1}`,
       content_blocks: [],
+      showHeader: true,
+      showFooter: true,
     });
     setSelectedPageIndex(updated.data.pages.length - 1);
-    updateAndSave(updated);
-  };
-
-  const handleCreatePageWithSlug = (slug: string, title?: string): Template => {
-    const updated = { ...template };
-    updated.data.pages.push({
-      id: crypto.randomUUID(),
-      slug,
-      title: title || slug,
-      content_blocks: [],
-    });
-    return updated;
-  };
-
-  const handleRenamePage = (index: number, newTitle: string) => {
-    const updated = { ...template };
-    updated.data.pages[index].title = newTitle;
-    updateAndSave(updated);
-  };
-
-  const handleDeletePage = (index: number) => {
-    const updated = { ...template };
-    updated.data.pages.splice(index, 1);
-    setSelectedPageIndex(Math.max(0, index - 1));
-    updateAndSave(updated);
-  };
-
-  const handleReorderPage = (oldIndex: number, newIndex: number) => {
-    const updated = { ...template };
-    updated.data.pages = arrayMove(updated.data.pages, oldIndex, newIndex);
     updateAndSave(updated);
   };
 
@@ -140,9 +111,32 @@ export function LiveEditorPreview({
         selectedIndex={selectedPageIndex}
         onSelect={setSelectedPageIndex}
         onAdd={handleAddPage}
-        onRename={handleRenamePage}
-        onDelete={handleDeletePage}
-        onReorder={handleReorderPage}
+        onRename={(i, title) => {
+          const updated = { ...template };
+          updated.data.pages[i].title = title;
+          updateAndSave(updated);
+        }}
+        onDelete={(i) => {
+          const updated = { ...template };
+          updated.data.pages.splice(i, 1);
+          setSelectedPageIndex(Math.max(0, i - 1));
+          updateAndSave(updated);
+        }}
+        onReorder={(oldIndex, newIndex) => {
+          const updated = { ...template };
+          updated.data.pages = arrayMove(updated.data.pages, oldIndex, newIndex);
+          updateAndSave(updated);
+        }}
+        onToggleHeader={(i, val) => {
+          const updated = { ...template };
+          updated.data.pages[i].showHeader = val;
+          updateAndSave(updated);
+        }}
+        onToggleFooter={(i, val) => {
+          const updated = { ...template };
+          updated.data.pages[i].showFooter = val;
+          updateAndSave(updated);
+        }}
       />
 
       <div className="p-6 pb-40 space-y-6 max-w-screen-md mx-auto w-full">
@@ -158,83 +152,83 @@ export function LiveEditorPreview({
           </div>
         </div>
 
-        {selectedPage ? (
-          <DndContext
-            sensors={sensors}
-            collisionDetection={closestCenter}
-            onDragEnd={({ active, over }) => {
-              if (!over || active.id === over.id) return;
-              const blocks = [...selectedPage.content_blocks];
-              const oldIndex = blocks.findIndex((b) => b._id === active.id);
-              const newIndex = blocks.findIndex((b) => b._id === over.id);
-              const reordered = arrayMove(blocks, oldIndex, newIndex);
-              const updated = { ...template };
-              updated.data.pages[selectedPageIndex].content_blocks = reordered;
-              updateAndSave(updated);
-            }}
+        {selectedPage?.showHeader !== false && template.headerBlock && (
+          <RenderBlock block={template.headerBlock} />
+        )}
+
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          onDragEnd={({ active, over }) => {
+            if (!over || active.id === over.id) return;
+            const blocks = [...selectedPage.content_blocks];
+            const oldIndex = blocks.findIndex((b) => b._id === active.id);
+            const newIndex = blocks.findIndex((b) => b._id === over.id);
+            const reordered = arrayMove(blocks, oldIndex, newIndex);
+            const updated = { ...template };
+            updated.data.pages[selectedPageIndex].content_blocks = reordered;
+            updateAndSave(updated);
+          }}
+        >
+          <SortableContext
+            items={selectedPage.content_blocks.map((b) => b._id ?? '')}
+            strategy={verticalListSortingStrategy}
           >
-            <SortableContext
-              items={selectedPage.content_blocks.map((b) => b._id ?? '')}
-              strategy={verticalListSortingStrategy}
-            >
-              <div className={layoutMode === 'grid' ? 'grid grid-cols-1 md:grid-cols-2 gap-4' : 'space-y-6'}>
-                {selectedPage.content_blocks.map((block, blockIndex) => (
-                  <BlockWrapper
-                    key={block._id}
-                    block={block}
-                    onEdit={() => setEditing(block)}
-                    onDelete={() => {
+            <div className={layoutMode === 'grid' ? 'grid grid-cols-1 md:grid-cols-2 gap-4' : 'space-y-6'}>
+              {selectedPage.content_blocks.map((block, blockIndex) => (
+                <BlockWrapper
+                  key={block._id}
+                  block={block}
+                  onEdit={() => setEditing(block)}
+                  onDelete={() => {
+                    const updated = { ...template };
+                    updated.data.pages[selectedPageIndex].content_blocks.splice(blockIndex, 1);
+                    updateAndSave(updated);
+                  }}
+                >
+                  <RenderBlock block={block} />
+                  <BlockAdderGrouped
+                    onAdd={(type) => {
+                      const newBlock = createDefaultBlock(type);
                       const updated = { ...template };
-                      updated.data.pages[selectedPageIndex].content_blocks.splice(blockIndex, 1);
+                      updated.data.pages[selectedPageIndex].content_blocks.splice(blockIndex + 1, 0, newBlock);
+                      setLastInsertedId(newBlock._id ?? '');
                       updateAndSave(updated);
                     }}
-                  >
-                    <RenderBlock block={block} />
-                    <BlockAdderGrouped
-                      onAdd={(type) => {
-                        const newBlock = createDefaultBlock(type);
-                        const updated = { ...template };
-                        updated.data.pages[selectedPageIndex].content_blocks.splice(blockIndex + 1, 0, newBlock);
-                        setLastInsertedId(newBlock._id ?? '');
-                        updateAndSave(updated);
-                        setTimeout(() => {
-                          const el = document.getElementById(newBlock._id ?? '');
-                          if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                        }, 50);
-                      }}
-                      existingBlocks={selectedPage.content_blocks}
-                      triggerElement={
-                        <button className="text-sm text-purple-500 hover:underline mt-2">
-                          + Add Block Below
-                        </button>
-                      }
-                    />
-                  </BlockWrapper>
-                ))}
-              </div>
-            </SortableContext>
-
-            <div className="relative z-10 bg-white dark:bg-neutral-900 p-4 border-t border-gray-200 dark:border-neutral-700 mt-6">
-              <BlockAdderGrouped
-                onAdd={(type) => {
-                  const newBlock = createDefaultBlock(type);
-                  const updated = { ...template };
-                  updated.data.pages[selectedPageIndex].content_blocks.push(newBlock);
-                  setLastInsertedId(newBlock._id ?? '');
-                  updateAndSave(updated);
-                }}
-                existingBlocks={selectedPage.content_blocks}
-                triggerElement={
-                  <button className="w-full flex items-center justify-center gap-2 border border-purple-600 text-purple-600 dark:text-purple-400 rounded px-4 py-2 text-sm hover:bg-purple-50 dark:hover:bg-purple-900 transition-colors">
-                    <PlusCircle className="w-4 h-4" />
-                    <span>Add Block to End</span>
-                  </button>
-                }
-              />
+                    existingBlocks={selectedPage.content_blocks}
+                    triggerElement={
+                      <button className="text-sm text-purple-500 hover:underline mt-2">
+                        + Add Block Below
+                      </button>
+                    }
+                  />
+                </BlockWrapper>
+              ))}
             </div>
-          </DndContext>
-        ) : (
-          <p className="text-gray-400">No pages yet. Add one to get started.</p>
+          </SortableContext>
+
+          <div className="relative z-10 bg-white dark:bg-neutral-900 p-4 border-t border-gray-200 dark:border-neutral-700 mt-6">
+            <BlockAdderGrouped
+              onAdd={(type) => {
+                const newBlock = createDefaultBlock(type);
+                const updated = { ...template };
+                updated.data.pages[selectedPageIndex].content_blocks.push(newBlock);
+                setLastInsertedId(newBlock._id ?? '');
+                updateAndSave(updated);
+              }}
+              existingBlocks={selectedPage.content_blocks}
+              triggerElement={
+                <button className="w-full flex items-center justify-center gap-2 border border-purple-600 text-purple-600 dark:text-purple-400 rounded px-4 py-2 text-sm hover:bg-purple-50 dark:hover:bg-purple-900 transition-colors">
+                  <PlusCircle className="w-4 h-4" />
+                  <span>Add Block to End</span>
+                </button>
+              }
+            />
+          </div>
+        </DndContext>
+
+        {selectedPage?.showFooter !== false && template.footerBlock && (
+          <RenderBlock block={template.footerBlock} />
         )}
       </div>
 

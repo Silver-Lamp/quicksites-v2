@@ -1,1 +1,14 @@
-{}
+{
+  "rewrites": [
+    {
+      "source": "/sitemap.xml",
+      "has": [{ "type": "host", "value": ":domain" }],
+      "destination": "/sitemap.xml/:domain"
+    },
+    {
+      "source": "/robots.txt",
+      "has": [{ "type": "host", "value": ":domain" }],
+      "destination": "/robots.txt"
+    }
+  ]
+}

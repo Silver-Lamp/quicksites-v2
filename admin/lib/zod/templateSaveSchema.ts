@@ -1,4 +1,3 @@
-// admin/lib/zod/templateSaveSchema.ts
 import { z } from 'zod';
 import { BlockSchema } from './blockSchema';
 
@@ -11,6 +10,8 @@ export const PageSchema = z.object({
   title: z.string(),
   slug: z.string(),
   content_blocks: z.array(BlockSchema),
+  showHeader: z.boolean().optional().default(true),
+  showFooter: z.boolean().optional().default(true),
 });
 export type ValidatedPage = z.infer<typeof PageSchema>;
 
@@ -43,9 +44,21 @@ export const TemplateSaveSchema = z.object({
   banner_url: z.string().nullable().optional(),
   logo_url: z.string().nullable().optional(),
   team_url: z.string().nullable().optional(),
+
+  // 🆕 Global blocks
+  headerBlock: BlockSchema.optional().nullable(),
+  footerBlock: BlockSchema.optional().nullable(),
+
   data: TemplateDataSchema,
   updated_at: z.string().optional(),
+  verified: z.boolean().optional(),
+  meta: z.object({
+    title: z.string().optional(),
+    description: z.string().optional(),
+    ogImage: z.string().optional(),
+    faviconSizes: z.string().optional(),
+    appleIcons: z.string().optional(),
+  }).optional(),
 });
-
 
 export type ValidatedTemplate = z.infer<typeof TemplateSaveSchema>;

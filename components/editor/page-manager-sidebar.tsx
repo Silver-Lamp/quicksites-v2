@@ -16,6 +16,8 @@ import { CSS } from '@dnd-kit/utilities';
 import { useState } from 'react';
 import { GripVertical, PlusCircle, File, Home, Phone, Wrench, User } from 'lucide-react';
 import { Template } from '@/types/template';
+import { Switch } from '@radix-ui/react-switch';
+import { Label } from '@/components/ui/label';
   
   function getPageIcon(slug: string) {
     const lower = slug.toLowerCase();
@@ -35,6 +37,8 @@ export function PageManagerSidebar({
   onDelete,
   onReorder,
   compact = false,
+  onToggleHeader,
+  onToggleFooter,
 }: {
   pages: Template['data']['pages'];
   selectedIndex: number;
@@ -44,6 +48,8 @@ export function PageManagerSidebar({
   onDelete: (index: number) => void;
   onReorder: (oldIndex: number, newIndex: number) => void;
   compact?: boolean;
+  onToggleHeader: (index: number, value: boolean) => void;
+  onToggleFooter: (index: number, value: boolean) => void;
 }) {
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [draftTitle, setDraftTitle] = useState('');
@@ -96,6 +102,8 @@ export function PageManagerSidebar({
                 setEditingIndex={setEditingIndex}
                 draftTitle={draftTitle}
                 setDraftTitle={setDraftTitle}
+                onToggleHeader={onToggleHeader}
+                onToggleFooter={onToggleFooter}
               />
             ))}
           </ul>
@@ -116,6 +124,8 @@ function SidebarPageItem({
   setEditingIndex,
   draftTitle,
   setDraftTitle,
+  onToggleHeader,
+  onToggleFooter,
 }: {
   page: Template['data']['pages'][number];
   index: number;
@@ -127,6 +137,8 @@ function SidebarPageItem({
   setEditingIndex: (index: number | null) => void;
   draftTitle: string;
   setDraftTitle: (title: string) => void;
+  onToggleHeader: (index: number, value: boolean) => void;
+  onToggleFooter: (index: number, value: boolean) => void;
 }) {
   const {
     attributes,
@@ -182,6 +194,23 @@ function SidebarPageItem({
           >
             {page.title}
           </button>
+          <div className="mt-2 space-y-2 text-sm text-white/80">
+            <Label className="flex items-center gap-2">
+              <Switch
+                checked={page.showHeader ?? true}
+                onCheckedChange={(val) => onToggleHeader(index, val)}
+              />
+              Show Header
+            </Label>
+            <Label className="flex items-center gap-2">
+              <Switch
+                checked={page.showFooter ?? true}
+                onCheckedChange={(val) => onToggleFooter(index, val)}
+              />
+              Show Footer
+            </Label>
+          </div>
+
           <div className="flex gap-2 ml-2 text-xs opacity-80 group-hover:opacity-100">
             <button
               onClick={() => {

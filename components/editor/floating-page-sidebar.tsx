@@ -13,6 +13,8 @@ export function FloatingPageSidebar({
   onRename,
   onDelete,
   onReorder,
+  onToggleHeader,
+  onToggleFooter,
 }: React.ComponentProps<typeof PageManagerSidebar>) {
   const [collapsed, setCollapsed] = useState(false);
 
@@ -43,7 +45,7 @@ export function FloatingPageSidebar({
   }
 
   return (
-    <motion.div
+    <motion.div     
       drag
       dragMomentum={false}
       dragElastic={0.15}
@@ -73,6 +75,8 @@ export function FloatingPageSidebar({
         onDelete={onDelete}
         onReorder={onReorder}
         compact={compactMode}
+        onToggleHeader={onToggleHeader}
+        onToggleFooter={onToggleFooter}
       />
     </motion.div>
   );

@@ -1,5 +1,11 @@
 import { z } from 'zod';
 
+// Shared link schema
+const LinkSchema = z.object({
+  label: z.string().min(1, 'Label is required'),
+  href: z.string().min(1, 'URL is required'),
+});
+
 // Step 1: Define content schema map w/ UI metadata
 export const blockContentSchemaMap = {
   text: {
@@ -87,18 +93,26 @@ export const blockContentSchemaMap = {
   },
   footer: {
     label: 'Footer',
-    icon: '📞',
+    icon: '🏠',
     schema: z.object({
-      business_name: z.string().min(1, 'Business name is required'),
-      address: z.string().min(1, 'Address is required'),
-      city_state: z.string().min(1, 'City/State is required'),
-      phone: z.string().min(1, 'Phone number is required'),
-      links: z.array(
-        z.object({
-          label: z.string().min(1, 'Link label is required'),
-          href: z.string().url('Link must be a valid URL'),
-        })
-      ).min(1, 'At least one link is required'),
+      businessName: z.string(),
+      address: z.string(),
+      cityState: z.string(),
+      phone: z.string(),
+      links: z.array(LinkSchema),
+      logo_url: z.string().optional(),
+      social_links: z
+        .array(z.object({ platform: z.string(), url: z.string() }))
+        .optional(),
+      copyright: z.string().optional(),
+    }),
+  },
+  header: {
+    label: 'Header',
+    icon: '🏠',
+    schema: z.object({
+      logoUrl: z.string().optional(),
+      navItems: z.array(LinkSchema),
     }),
   },
   service_areas: {
@@ -106,14 +120,6 @@ export const blockContentSchemaMap = {
     icon: '🌍',
     schema: z.object({
       cities: z.array(z.string()).min(1, 'At least one city is required'),
-    }),
-  },
-  page_header: {
-    label: 'Page Header',
-    icon: '🏠',
-    schema: z.object({
-      logoUrl: z.string().url().optional(),
-      navItems: z.array(z.object({ label: z.string(), href: z.string() })).min(1, 'At least one nav item is required'),
     }),
   },
 };

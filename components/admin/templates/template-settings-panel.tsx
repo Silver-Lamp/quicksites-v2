@@ -12,6 +12,15 @@ import { SiteTheme, useTheme } from '@/hooks/useThemeContext';
 import { getFontClasses } from '@/lib/theme/getFontClasses';
 import { ThemePreviewCard } from '@/components/admin/theme-preview-card';
 import clsx from 'clsx';
+import DomainInstructions from '@/components/admin/domain-instructions';
+import DomainStatusBadge from '@/components/admin/domain-status-badge';
+import FaviconUploader from '../favicon-uploader';
+import OGBulkRebuild from '../og-bulk-rebuild';
+import HeadRenderer from '@/components/head/HeadRenderer';
+import SeoPreviewTestLinks from '../seo-preview-test-links';
+import SeoPreviewThumbnail from '../seo-preview-thumbnail';
+import SeoShareCardPanel from '../seo-share-card-panel';
+import SeoRescrapeButtons from '../seo-rescrape-buttons';
 
 type TemplateSettingsPanelProps = {
   template: Template;
@@ -182,6 +191,31 @@ export default function TemplateSettingsPanel({ template, onChange }: TemplateSe
                 onCheckedChange={handleTogglePublished}
               />
             </div>
+          </div>
+          <div className="flex gap-2 items-center">
+          <DomainStatusBadge domain={template.custom_domain || ''} />
+          <DomainInstructions domain={template.custom_domain || ''} />
+            <FaviconUploader
+              templateId={template.id}
+              currentUrl={template.logo_url}
+              onUpload={(url) => onChange({ ...template, logo_url: url })}
+            />
+          <OGBulkRebuild slug={template.slug} />
+          <HeadRenderer
+            title={template.meta?.title || ''}
+            description={template.meta?.description || ''}
+            ogImage={template.meta?.ogImage || ''}
+            jsonLd={{
+              '@context': 'https://schema.org',
+              '@type': 'LocalBusiness',
+              name: 'QuickTow Services',
+              url: 'https://quicksites.ai/slug/page',
+            }}
+          />
+          <SeoPreviewTestLinks url={template.slug} />
+          <SeoPreviewThumbnail pageUrl={template.slug} ogImageUrl={template.meta?.ogImage || ''} />
+          <SeoShareCardPanel url={template.slug} />
+          {/* <SeoRescrapeButtons url={`https://quicksites.ai/sites/${template.slug}/${page}`} /> */}
           </div>
         </div>
       )}

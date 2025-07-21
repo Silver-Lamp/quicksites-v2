@@ -5,7 +5,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 
 type Props = {
-  block: Extract<Block, { type: 'page_header' }>;
+  block: Extract<Block, { type: 'header' }>;
 };
 
 export default function PageHeader({ block }: Props) {

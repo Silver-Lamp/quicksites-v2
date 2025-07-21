@@ -1,4 +1,3 @@
-// types/template.ts
 import { BlockValidationErrorMap } from '@/lib/validateBlock.js';
 import type { Block } from './blocks.js';
 
@@ -7,10 +6,16 @@ export type Page = {
   slug: string;
   title: string;
   content_blocks: Block[];
+  showHeader?: boolean;
+  showFooter?: boolean;
   meta?: {
     title?: string;
     description?: string;
     visible?: boolean;
+    theme?: string;
+    ogImage?: string;
+    faviconSizes?: string;
+    appleIcons?: string;
   };
 };
 
@@ -25,9 +30,14 @@ export type Snapshot = {
   color_scheme: string;
   theme: string;
   brand: string;
-  data: TemplateData;
   slug: string;
   industry: string;
+  data: TemplateData;
+
+  // 🆕 Global header/footer blocks
+  headerBlock?: Block | null;
+  footerBlock?: Block | null;
+
   block_errors?: BlockValidationErrorMap;
   block_errors_map?: Record<string, string[]>;
   commit?: string;
@@ -36,7 +46,6 @@ export type Snapshot = {
   domain?: string | null;
   published?: boolean;
   archived?: boolean;
-  custom_domain?: string | null;
   name_exists?: boolean;
   show_name_error?: boolean;
   slug_preview?: string;
@@ -48,6 +57,22 @@ export type Snapshot = {
   autosave_message?: string;
   autosave_timestamp?: string;
   is_site?: boolean;
+  verified?: boolean;
+  custom_domain?: string;
+  custom_domain_verified?: boolean;
+  custom_domain_verification_token?: string;
+  custom_domain_verification_token_expires_at?: string;
+  custom_domain_verification_status?: string;
+  custom_domain_verification_error?: string;
+  custom_domain_verification_message?: string;
+  custom_domain_verification_timestamp?: string;
+  meta?: {
+    title?: string;
+    description?: string;
+    ogImage?: string;
+    faviconSizes?: string;
+    appleIcons?: string;
+  };
 };
 
 export type Template = Snapshot & {
@@ -65,4 +90,4 @@ export type Template = Snapshot & {
 export type TemplateSnapshot = Snapshot;
 
 export type Theme = 'light' | 'dark';
-export type Brand = 'green' | 'blue' | 'purple' | 'red' | 'orange'; // Add whatever variants you support
+export type Brand = 'green' | 'blue' | 'purple' | 'red' | 'orange'; // Add more as needed

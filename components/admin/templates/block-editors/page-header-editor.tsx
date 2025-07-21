@@ -1,10 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
-import { Trash2, Plus } from 'lucide-react';
 import Image from 'next/image';
 import { useDropzone } from 'react-dropzone';
 import imageCompression from 'browser-image-compression';
@@ -13,55 +11,43 @@ import toast from 'react-hot-toast';
 import type { Block, PageHeaderBlock } from '@/types/blocks';
 import { BlockValidationError } from '@/hooks/validateTemplateBlocks';
 import { Template } from '@/types/template';
+import QuickLinksEditor from '@/components/admin/fields/quick-links-editor';
 
 type Props = {
   block: Block;
   onSave: (updated: Block) => void;
   onClose: () => void;
-  errors: BlockValidationError[];
-  template: Template;
+  errors?: Record<string, BlockValidationError[]>;
+  template?: Template;
+  isSaving?: boolean;
 };
 
-export default function PageHeaderEditor({ block, onSave, onClose, errors = [], template }: Props) {
+export default function PageHeaderEditor({ block, onSave, onClose, errors = {}, template }: Props) {
   if (block.type !== 'page_header') {
     return <div className="text-red-500">Invalid block type</div>;
   }
 
   const headerBlock = block as PageHeaderBlock;
-  const [logoUrl, setLogoUrl] = useState(headerBlock.content.logoUrl || template.logo_url || '');
+  const [logoUrl, setLogoUrl] = useState(headerBlock.content.logoUrl || template?.logo_url || '');
   const [navItems, setNavItems] = useState([...headerBlock.content.navItems]);
   const [isUploading, setIsUploading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
-  const updateNavItem = (index: number, field: 'label' | 'href', value: string) => {
-    const updated = [...navItems];
-    updated[index] = { ...updated[index], [field]: value };
-    setNavItems(updated);
-  };
-
-  const removeNavItem = (index: number) => {
-    const updated = [...navItems];
-    updated.splice(index, 1);
-    setNavItems(updated);
-  };
-
-  const addNavItem = () => {
-    setNavItems([...navItems, { label: '', href: '' }]);
-  };
+  const areLinksValid = navItems.every((link) => link.label.trim() && link.href.trim());
 
   const handleFileUpload = async (file: File): Promise<string> => {
     const compressed = await imageCompression(file, {
-      maxSizeMB: 0.5,
+      maxSizeMB: 5.0,
       maxWidthOrHeight: 500,
       useWebWorker: true,
     });
 
     const fileExt = compressed.name.split('.').pop() || 'jpg';
     const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
-    const filePath = `logos/${fileName}`;
+    const filePath = `${fileName}`;
 
     const { error } = await supabase.storage
-      .from('public')
+      .from('logos')
       .upload(filePath, compressed, {
         cacheControl: '3600',
         upsert: false,
@@ -71,8 +57,8 @@ export default function PageHeaderEditor({ block, onSave, onClose, errors = [], 
 
     const {
       data: { publicUrl },
-    } = supabase.storage.from('public').getPublicUrl(filePath);
-
+    } = supabase.storage.from('logos').getPublicUrl(filePath);
+    console.log('publicUrl', publicUrl);
     return publicUrl;
   };
 
@@ -94,7 +80,7 @@ export default function PageHeaderEditor({ block, onSave, onClose, errors = [], 
   const { getRootProps, getInputProps } = useDropzone({
     onDrop,
     accept: { 'image/png': [], 'image/jpeg': [], 'image/webp': [], 'image/svg+xml': [] },
-    maxSize: 1 * 1024 * 1024,
+    maxSize: 5 * 1024 * 1024, // 5MB
   });
 
   const saveBlock = () => {
@@ -139,7 +125,7 @@ export default function PageHeaderEditor({ block, onSave, onClose, errors = [], 
           ) : (
             <p className="text-sm text-neutral-400">
               Drag and drop a logo image here, or click to browse<br />
-              (PNG, JPG, SVG, WebP — Max 1MB)
+              (PNG, JPG, SVG, WebP — Max 5MB)
             </p>
           )}
         </div>
@@ -147,34 +133,20 @@ export default function PageHeaderEditor({ block, onSave, onClose, errors = [], 
 
       <div className="space-y-4">
         <Label className="text-white">Navigation Links</Label>
-        {navItems.map((item, idx) => (
-          <div key={idx} className="flex gap-2 items-center">
-            <Input className="flex-1" value={item.label} onChange={(e) => updateNavItem(idx, 'label', e.target.value)} placeholder="Label" />
-            <Input className="flex-1" value={item.href} onChange={(e) => updateNavItem(idx, 'href', e.target.value)} placeholder="/link" />
-            <Button variant="ghost" onClick={() => removeNavItem(idx)} size="icon">
-              <Trash2 className="w-4 h-4" />
-            </Button>
-          </div>
-        ))}
-
-        <Button type="button" variant="secondary" onClick={addNavItem}>
-          <Plus className="w-4 h-4 mr-1" /> Add Link
-        </Button>
+        <QuickLinksEditor links={navItems} onChange={setNavItems} template={template || ({} as Template)} />
       </div>
 
-      {errors.length > 0 && (
-        <div className="text-red-500">
-          {errors.map((error, index) => (
-            <p key={index}>{error.message}</p>
-          ))}
+      {!areLinksValid && (
+        <div className="bg-red-900/40 text-red-300 border border-red-500 rounded p-3 text-sm">
+          ⚠️ Please complete all required navigation links before saving.
         </div>
       )}
 
-      <div className="flex justify-end gap-2">
+      <div className="flex justify-end gap-2 pt-4">
         <Button variant="ghost" onClick={onClose} disabled={isSaving}>
           Cancel
         </Button>
-        <Button onClick={saveBlock} disabled={isSaving}>
+        <Button onClick={saveBlock} disabled={isSaving || !areLinksValid}>
           {isSaving ? 'Saving...' : 'Save'}
         </Button>
       </div>

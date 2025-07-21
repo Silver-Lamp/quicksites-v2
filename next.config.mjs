@@ -13,7 +13,7 @@ const __dirname = path.dirname(__filename);
 const nextConfig = {
   assetPrefix: '/',
   images: {
-    domains: ['randomuser.me', 'your-supabase-project.supabase.co', 'cdn.sanity.io'],
+    domains: ['randomuser.me', 'kcwruliugwidsdgsrthy.supabase.co', 'cdn.sanity.io'],
   },
 
   webpack(config, { isServer }) {

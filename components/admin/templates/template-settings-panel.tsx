@@ -21,11 +21,7 @@ import SeoPreviewTestLinks from '../seo-preview-test-links';
 import SeoPreviewThumbnail from '../seo-preview-thumbnail';
 import SeoShareCardPanel from '../seo-share-card-panel';
 import SeoRescrapeButtons from '../seo-rescrape-buttons';
-
-type TemplateSettingsPanelProps = {
-  template: Template;
-  onChange: (updated: Template) => void;
-};
+import OGPreviewModal from '@/components/admin/og-preview-modal';
 
 const fonts = ['sans', 'serif', 'mono', 'cursive'];
 const radii = ['sm', 'md', 'lg', 'xl', 'full'];
@@ -39,13 +35,22 @@ const defaultTheme = {
   darkMode: 'dark',
 };
 
+const MAX_TITLE_LENGTH = 60;
+const MAX_DESC_LENGTH = 160;
+
+type TemplateSettingsPanelProps = {
+  template: Template;
+  onChange: (updated: Template) => void;
+};
+
 export default function TemplateSettingsPanel({ template, onChange }: TemplateSettingsPanelProps) {
   const [industries, setIndustries] = useState<string[]>([]);
   const [slugManuallyEdited, setSlugManuallyEdited] = useState(false);
   const [slugError, setSlugError] = useState<string | null>(null);
   const [isCheckingSlug, setIsCheckingSlug] = useState(false);
   const [isSlugLocked, setIsSlugLocked] = useState(false);
-  const [activeTab, setActiveTab] = useState<'general' | 'theme'>('general');
+  const [activeTab, setActiveTab] = useState<'general' | 'theme' | 'seo'>('general');
+  const [showOGPreview, setShowOGPreview] = useState(false);
 
   const { setTheme } = useTheme();
   const isSite = template.is_site;
@@ -122,8 +127,13 @@ export default function TemplateSettingsPanel({ template, onChange }: TemplateSe
     onChange({ ...template, theme: defaultTheme.fontFamily });
   };
 
+  const handleMetaChange = (key: 'title' | 'description', value: string) => {
+    const meta = { ...template.meta, [key]: value };
+    onChange({ ...template, meta });
+  };
+
   return (
-    <div className="rounded p-3 space-y-4">
+    <div className="space-y-6">
       <div className="flex gap-2 text-sm font-medium border-b border-white/10 pb-2">
         <button
           onClick={() => setActiveTab('general')}
@@ -137,169 +147,93 @@ export default function TemplateSettingsPanel({ template, onChange }: TemplateSe
         >
           Design
         </button>
+        <button
+          onClick={() => setActiveTab('seo')}
+          className={clsx('px-3 py-1 rounded', activeTab === 'seo' ? 'bg-purple-700 text-white' : 'bg-gray-800 text-gray-300')}
+        >
+          SEO
+        </button>
       </div>
-
-      {activeTab === 'general' && (
-        <div className="grid md:grid-cols-2 gap-4">
-          <div className="md:col-span-2">
-            <Label>Template Name</Label>
+      {activeTab === 'seo' && (
+        <div className="space-y-4">
+          <div>
+            <Label>SEO Title</Label>
             <Input
-              value={template.template_name || ''}
-              onChange={(e) => onChange({ ...template, template_name: e.target.value })}
-              placeholder="e.g. Towing Starter"
-              className="bg-gray-800 text-white border border-gray-700"
+              value={template.meta?.title || ''}
+              onChange={(e) => handleMetaChange('title', e.target.value)}
+              placeholder="e.g. Best Tow Trucks in Phoenix"
             />
+            <p className={`text-xs mt-1 ${template.meta?.title?.length && template.meta.title.length > MAX_TITLE_LENGTH ? 'text-red-400' : 'text-muted-foreground'}`}>
+              {template.meta?.title?.length || 0} / {MAX_TITLE_LENGTH} characters
+            </p>
           </div>
 
-          <div className="md:col-span-2 space-y-1">
-            <div className="flex justify-between items-center">
-              <Label>Slug</Label>
-              <div className="flex gap-2 items-center text-sm text-muted-foreground">
-                <span>Lock Slug</span>
-                <Switch
-                  checked={isSlugLocked}
-                  onCheckedChange={(val) => setIsSlugLocked(val)}
-                  disabled={template.published}
-                />
-              </div>
-            </div>
+          <div>
+            <Label>SEO Description</Label>
             <Input
-              value={template.slug || ''}
-              disabled={template.published || !slugManuallyEdited}
-              onChange={(e) => {
-                setSlugManuallyEdited(true);
-                onChange({ ...template, slug: e.target.value });
-              }}
-              placeholder="e.g. towing-starter"
-              className={`bg-gray-800 text-white border ${slugError ? 'border-red-500' : 'border-gray-700'}`}
+              value={template.meta?.description || ''}
+              onChange={(e) => handleMetaChange('description', e.target.value)}
+              placeholder="e.g. QuickSites helps you launch a towing site fast."
             />
-            {isCheckingSlug && <p className="text-sm text-yellow-400">Checking slug availability...</p>}
-            {slugError && <p className="text-sm text-red-400">{slugError}</p>}
-            {template.slug && !slugError && (
-              <p className="text-sm text-muted-foreground pt-1">
-                URL Preview: <code>https://quicksites.ai/templates/{template.slug}</code>
-              </p>
-            )}
+            <p className={`text-xs mt-1 ${template.meta?.description?.length && template.meta.description.length > MAX_DESC_LENGTH ? 'text-red-400' : 'text-muted-foreground'}`}>
+              {template.meta?.description?.length || 0} / {MAX_DESC_LENGTH} characters
+            </p>
           </div>
 
-          <div className="md:col-span-2 flex justify-between items-center py-2 border-t border-white/10 mt-2">
-            <Label>Status</Label>
-            <div className="flex gap-2 items-center">
-              <span className="text-sm text-muted-foreground">Publish {isSite ? 'Site' : 'Template'}</span>
-              <Switch
-                checked={!!template.published}
-                onCheckedChange={handleTogglePublished}
-              />
-            </div>
-          </div>
-          <div className="flex gap-2 items-center">
-          <DomainStatusBadge domain={template.custom_domain || ''} />
-          <DomainInstructions domain={template.custom_domain || ''} />
-            <FaviconUploader
-              templateId={template.id}
-              currentUrl={template.logo_url}
-              onUpload={(url) => onChange({ ...template, logo_url: url })}
-            />
-          <OGBulkRebuild slug={template.slug} />
-          <HeadRenderer
-            title={template.meta?.title || ''}
-            description={template.meta?.description || ''}
-            ogImage={template.meta?.ogImage || ''}
-            jsonLd={{
-              '@context': 'https://schema.org',
-              '@type': 'LocalBusiness',
-              name: 'QuickTow Services',
-              url: 'https://quicksites.ai/slug/page',
+          <SeoPreviewThumbnail
+            pageUrl={template.slug}
+            ogImageUrl={template.meta?.ogImage || ''}
+          />
+
+          <SeoPreviewTestLinks url={template.slug} />
+
+          <SeoShareCardPanel url={template.slug} />
+
+          <OGBulkRebuild
+            slug={template.slug}
+            endpoint="/api/og/rebuild-all"
+            onResult={(results: Record<string, string>) => {
+              const failures = Object.entries(results).filter(([_, result]) => result.startsWith('❌'));
+              if (failures.length > 0) {
+                toast.error(`OG rebuild failed on ${failures.length} page(s): ${failures.join(', ')}`);
+              } else {
+                toast.success('✅ All OG images rebuilt successfully');
+              }
             }}
           />
-          <SeoPreviewTestLinks url={template.slug} />
-          <SeoPreviewThumbnail pageUrl={template.slug} ogImageUrl={template.meta?.ogImage || ''} />
-          <SeoShareCardPanel url={template.slug} />
-          {/* <SeoRescrapeButtons url={`https://quicksites.ai/sites/${template.slug}/${page}`} /> */}
-          </div>
+
+          <button
+            onClick={() => setShowOGPreview(true)}
+            className="text-sm underline text-indigo-400 hover:text-indigo-300"
+          >
+            View Current OG Image
+          </button>
+
+          <OGPreviewModal
+            open={showOGPreview}
+            onOpenChange={setShowOGPreview}
+            ogImageUrl={template.meta?.ogImage || ''}
+          />
         </div>
       )}
-
-      {activeTab === 'theme' && (
-        <div className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <Label>Font</Label>
-              <select
-                value={template.theme || ''}
-                onChange={(e) => {
-                  const font = e.target.value;
-                  onChange({ ...template, theme: font });
-                  setTheme({ glow: [], fontFamily: font });
-                }}
-                className="w-full bg-gray-800 text-white border border-gray-700 px-2 py-1 rounded mt-1"
-              >
-                <option value="">Default</option>
-                {fonts.map((f) => {
-                  const label = f === 'sans' ? 'Inter' : f === 'serif' ? 'Roboto Slab' : f === 'mono' ? 'Fira Code' : 'Pacifico';
-                  const fontStyle = getFontClasses({ fontFamily: f, glow: [] }).css;
-                  return (
-                    <option key={f} value={f} style={{ fontFamily: fontStyle }}>
-                      {label}
-                    </option>
-                  );
-                })}
-              </select>
-            </div>
-
-            <div>
-              <Label>Border Radius</Label>
-              <select
-                onChange={(e) => setTheme({ glow: [], fontFamily: template.theme || 'sans', borderRadius: e.target.value })}
-                className="w-full bg-gray-800 text-white border border-gray-700 px-2 py-1 rounded mt-1"
-              >
-                {radii.map((r) => (
-                  <option key={r} value={r}>{r}</option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <Label>Accent Color</Label>
-              <Input
-                placeholder="e.g. indigo-600"
-                onBlur={(e) => setTheme({ glow: [], fontFamily: template.theme || 'sans', accentColor: e.target.value })}
-                className="bg-gray-800 text-white border border-gray-700"
-              />
-            </div>
-
-            <div>
-              <Label>Dark Mode</Label>
-              <select
-                onChange={(e) => setTheme({ glow: [], fontFamily: template.theme || 'sans', darkMode: e.target.value as 'dark' | 'light' })}
-                className="w-full bg-gray-800 text-white border border-gray-700 px-2 py-1 rounded mt-1"
-              >
-                {modes.map((m) => (
-                  <option key={m} value={m}>
-                    {m === 'dark' ? '🌙 Dark' : '☀ Light'}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          <ThemePreviewCard />
-
-          <div className="flex gap-4 pt-2">
+      {activeTab === 'general' && (
+        <div className="flex gap-4 pt-4">
             <button
-              onClick={handleResetTheme}
+              onClick={() => {
+                handleMetaChange('title', '');
+                handleMetaChange('description', '');
+              }}
               className="bg-gray-700 hover:bg-gray-600 text-white text-sm px-4 py-2 rounded"
             >
-              Reset Theme
+              Reset Meta
             </button>
             <button
-              onClick={() => toast.success('🚧 Save as preset coming soon')}
+              onClick={() => toast.success('🌐 Multi-language meta coming soon')}
               className="bg-indigo-600 hover:bg-indigo-700 text-white text-sm px-4 py-2 rounded"
             >
-              Save as Preset
+              i18n Setup
             </button>
           </div>
-        </div>
       )}
     </div>
   );

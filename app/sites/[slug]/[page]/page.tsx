@@ -1,6 +1,7 @@
 'use server';
 
-import { getSupabase } from '@/lib/supabase/server';
+// import { getSupabase } from '@/lib/supabase/server';
+import { createClient } from '@supabase/supabase-js';
 import { notFound } from 'next/navigation';
 import type { TemplateData, Template } from '@/types/template';
 import RenderBlock from '@/components/admin/templates/render-block';
@@ -9,8 +10,11 @@ import { Metadata } from 'next';
 import MetaHead from '@/components/head/MetaHead';
 
 export async function generateMetadata({ params }: { params: { slug: string; page: string } }): Promise<Metadata> {
-  const { slug, page } = params;
-  const supabase = await getSupabase();
+  const { slug, page } = await Promise.resolve(params);
+  const supabase = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  );
 
   const { data: site } = await supabase
     .from('templates')
@@ -43,7 +47,10 @@ export async function generateMetadata({ params }: { params: { slug: string; pag
 export default async function SitePage({ params }: { params: { slug: string; page: string } }) {
   const { slug, page } = await Promise.resolve(params);
 
-  const supabase = await getSupabase();
+  const supabase = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  );
 
   const { data: site, error } = await supabase
     .from('templates')

@@ -4,29 +4,28 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'react-hot-toast';
 
-export default function OGBulkRebuild({ slug }: { slug: string }) {
-  const [progress, setProgress] = useState<string[]>([]);
+export default function OGBulkRebuild({ slug, endpoint, onResult }: { slug: string, endpoint: string, onResult: (results: Record<string, string>) => void }) {
+  const [progress, setProgress] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
 
   const handleRebuildAll = async () => {
     setLoading(true);
-    setProgress([]);
+    setProgress({});
     try {
-      const res = await fetch('/api/dev/og/rebuild-all', {
+      const res = await fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ slug }),
       });
       const data = await res.json();
       if (res.ok) {
-        const results = Object.entries(data.pages).map(
-          ([page, result]) => `${page}: ${result}`
-        );
-        setProgress(results);
-        toast.success('OG rebuild complete');
+        setProgress(data.pages);
+        onResult(data.pages);
       } else {
-        toast.error('Failed to rebuild all OG images');
+        const message = data?.error || `Error ${res.status}`;
+        toast.error(`❌ Failed to rebuild: ${message}`);
       }
+            
     } catch (err) {
       console.error(err);
       toast.error('Error during OG rebuild');
@@ -40,10 +39,10 @@ export default function OGBulkRebuild({ slug }: { slug: string }) {
       <Button onClick={handleRebuildAll} disabled={loading}>
         {loading ? 'Rebuilding OG Images...' : 'Rebuild All OG Images'}
       </Button>
-      {progress.length > 0 && (
+      {Object.keys(progress).length > 0 && (
         <div className="text-sm text-white/80 space-y-1">
-          {progress.map((line, i) => (
-            <div key={i}>{line}</div>
+          {Object.entries(progress).map(([page, result]) => (
+            <div key={page}>{page}: {result}</div>
           ))}
         </div>
       )}

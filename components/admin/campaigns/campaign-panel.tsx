@@ -3,9 +3,10 @@
 import { CampaignType } from '@/types/campaign.types';
 import { Lead } from '@/types/lead.types';
 import dayjs, { Dayjs } from 'dayjs';
-import { useMemo, useState } from 'react';
+import { Suspense, useMemo, useState } from 'react';
 import ClaimPoster from './claim-poster';
-import TowTruckLogo from '@/public/images/tow-truck-logo.png'; // adjust path as needed
+import TowTruckLogo from 'public/images/tow-truck-logo.png'; // adjust path as needed
+import { normalizeImageSrc } from '@/lib/normalizeImageSrc';
 
 export type Props = {
   campaign: CampaignType;
@@ -102,6 +103,7 @@ export default function CampaignPanel({
       {expanded && (
         <div className="mt-4">
           {topTwoLeads.length === 2 && campaign.alt_domains?.[0] ? (
+            <Suspense fallback={<div>Loading...</div>}>
             <ClaimPoster
               domain={campaign.alt_domains[0]}
               offerEndsAt={campaign.ends_at}
@@ -111,11 +113,14 @@ export default function CampaignPanel({
               leadA={{ name: topTwoLeads[0].business_name || 'Lead A' }}
               leadB={{ name: topTwoLeads[1].business_name || 'Lead B' }}
               qrUrl={`https://quicksites.ai/claim/${campaign.alt_domains[0]}`}
-              imageSrc={TowTruckLogo.src}
+              imageSrc={campaign.logo_url || '/images/tow-truck-logo.png'}
+              // imageSrc={TowTruckLogo.src}
               campaignId={campaign.id}
               onEditStart={() => setPosterEditing(true)}
               onEditEnd={() => setPosterEditing(false)}
+              expired={isEnded}
             />
+            </Suspense>
           ) : (
             <div className="space-y-2">
               {leads.map((l) => (

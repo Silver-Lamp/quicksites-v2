@@ -17,5 +17,6 @@ export type CampaignType = {
     arc_offset_y?: number;
     logo_offset_y?: number;
     arc_radius?: number;
+    logo_url?: string;
   };
   

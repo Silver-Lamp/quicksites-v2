@@ -11,7 +11,6 @@ import {
   FileStack,
   Activity,
   ChevronDown,
-  Globe,
 } from 'lucide-react';
 import clsx from 'clsx';
 
@@ -69,20 +68,75 @@ const navItems: NavItem[] = [
   },
   // {
   //   type: 'item',
-  //   label: 'Sites',
-  //   icon: <Globe size={18} />,
-  //   children: [
-  //     { label: 'Browse Sites', href: '/admin/sites' },
-  //     { label: 'Create Site', href: '/admin/sites/new' },
-  //   ],
+  //   label: 'Analytics',
+  //   href: '/admin/analytics',
+  //   icon: <Activity size={18} />,
   // },
-  {
-    type: 'item',
-    label: 'Analytics',
-    href: '/admin/analytics',
-    icon: <Activity size={18} />,
-  },
 ];
+
+function NavItemButtonOrLink({
+  item,
+  isActive,
+  isOpen,
+  collapsed,
+  toggleMenu,
+}: {
+  item: Extract<NavItem, { type: 'item' }>;
+  isActive: boolean;
+  isOpen: boolean;
+  collapsed: boolean;
+  toggleMenu: () => void;
+}) {
+  const baseClasses = clsx(
+    'group relative w-full flex items-center gap-3 px-3 py-2 text-sm rounded transition',
+    isActive ? 'bg-zinc-800 font-semibold text-white' : 'hover:bg-zinc-800 text-zinc-300'
+  );
+
+  const icon = <div className="text-white">{item.icon}</div>;
+  const label = (
+    <span
+      className={clsx(
+        'whitespace-nowrap transition-all duration-200 flex-1 text-left',
+        collapsed ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100 w-auto'
+      )}
+    >
+      {item.label}
+    </span>
+  );
+  const tooltip = collapsed && (
+    <span className="absolute left-14 top-1/2 -translate-y-1/2 whitespace-nowrap rounded bg-zinc-800 px-2 py-1 text-xs text-white opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-50 shadow-md pointer-events-none">
+      {item.label}
+    </span>
+  );
+
+  // 👇 Determine if we want to default to first child for click
+  const defaultHref = item.href || item.children?.[0]?.href;
+
+  return (
+    <Link
+      href={defaultHref || '#'}
+      onClick={(e) => {
+        // only toggle menu if explicitly clicked and has children
+        if (item.children) {
+          e.preventDefault(); // prevent nav
+          toggleMenu();
+        }
+      }}
+      className={baseClasses}
+    >
+      {icon}
+      {label}
+      {item.children && !collapsed && (
+        <ChevronDown
+          className={clsx('transition-transform duration-300', isOpen ? 'rotate-180' : 'rotate-0')}
+          size={16}
+        />
+      )}
+      {tooltip}
+    </Link>
+  );
+}
+
 
 export function AdminNavSections({ collapsed = false }: { collapsed?: boolean }) {
   const pathname = usePathname();
@@ -121,48 +175,13 @@ export function AdminNavSections({ collapsed = false }: { collapsed?: boolean })
 
         return (
           <div key={`item-${item.label}`}>
-            <button
-              onClick={() => item.children && toggleMenu(item.label)}
-              className={clsx(
-                'group relative w-full flex items-center gap-3 px-3 py-2 text-sm rounded transition',
-                isActive
-                  ? 'bg-zinc-800 font-semibold text-white'
-                  : 'hover:bg-zinc-800 text-zinc-300'
-              )}
-            >
-              {/* Icon */}
-              <div className="text-white">{item.icon}</div>
-
-              {/* Label */}
-              <span
-                className={clsx(
-                  'whitespace-nowrap transition-all duration-200 flex-1 text-left',
-                  collapsed ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100 w-auto'
-                )}
-              >
-                {item.label}
-              </span>
-
-              {/* Chevron */}
-              {item.children && !collapsed && (
-                <ChevronDown
-                  className={clsx(
-                    'transition-transform duration-300',
-                    isOpen ? 'rotate-180' : 'rotate-0'
-                  )}
-                  size={16}
-                />
-              )}
-
-              {/* Tooltip for collapsed mode */}
-              {collapsed && (
-                <span className="absolute left-14 top-1/2 -translate-y-1/2 whitespace-nowrap rounded bg-zinc-800 px-2 py-1 text-xs text-white opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-50 shadow-md pointer-events-none">
-                  {item.label}
-                </span>
-              )}
-            </button>
-
-            {/* Submenu */}
+            <NavItemButtonOrLink
+              item={item}
+              isActive={!!isActive}
+              isOpen={isOpen}
+              collapsed={collapsed}
+              toggleMenu={() => item.children && toggleMenu(item.label)}
+            />
             <div
               className={clsx(
                 'ml-8 transition-all duration-300 overflow-hidden',

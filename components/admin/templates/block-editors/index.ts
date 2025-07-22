@@ -31,6 +31,7 @@ export const BLOCK_EDITORS: Record<
   service_areas: () => import('./service-areas-editor'),
   header: () => import('./header-editor'),
   faq: () => import('./faq-editor'),
+  contact_form: () => import('./contact-form-editor').then(mod => ({ default: mod.ContactFormEditor })),
 };
 
 // 🧠 Optional preloader for a single block type (for speed optimization)

@@ -18,7 +18,7 @@ const blockGroups: Record<string, { label: string; types: Block['type'][] }> = {
   },
   callToAction: {
     label: 'Calls to Action',
-    types: ['hero', 'cta', 'button'],
+    types: ['hero', 'cta', 'contact_form', 'button'],
   },
   services: {
     label: 'Business Features',

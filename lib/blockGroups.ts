@@ -17,7 +17,7 @@ export const blockGroups: Record<
   },
   callToAction: {
     label: 'Calls to Action',
-    types: ['hero', 'cta', 'button'],
+    types: ['hero', 'cta', 'contact_form', 'button'],
   },
   services: {
     label: 'Business Features',

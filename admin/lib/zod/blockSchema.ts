@@ -135,6 +135,14 @@ export const blockContentSchemaMap = {
       cities: z.array(z.string()).min(1, 'At least one city is required'),
     }),
   },
+  contact_form: {
+    label: 'Contact Form',
+    icon: '📧',
+    schema: z.object({
+      title: z.string().min(1, 'Title is required'),
+      notificationEmail: z.string().email('Invalid email address'),
+    }),
+  },
 };
 
 // Step 2: Build base block schemas with shared fields

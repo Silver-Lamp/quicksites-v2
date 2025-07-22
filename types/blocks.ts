@@ -168,6 +168,14 @@ export type HeaderBlock = BaseBlock & {
   };
 };
 
+export type ContactFormBlock = BaseBlock & {
+  type: 'contact_form';
+  content: {
+    title: string;
+    notificationEmail: string;
+  };
+};
+
 // Unified Block union
 export type Block =
   | TextBlock
@@ -184,7 +192,8 @@ export type Block =
   | FooterBlock
   | ServiceAreaBlock
   | HeaderBlock
-  | FAQBlock;
+  | FAQBlock
+  | ContactFormBlock;
 
 // Block with enforced _id
 export type BlockWithId = Block & { _id: string };
@@ -332,4 +341,10 @@ export function generateMockFAQ(): FAQBlock['content'] {
       items,
       layout: 'accordion',
     };  
+}
+export function generateMockContactForm(): ContactFormBlock['content'] {
+  return {
+    title: 'Contact Us',
+    notificationEmail: 'info@quicktowservices.com',
+  };
 }

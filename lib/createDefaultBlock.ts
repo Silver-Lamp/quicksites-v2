@@ -90,6 +90,13 @@ export function createDefaultBlock(type: Block['type']): Block {
         },
       };
 
+    case 'contact_form':
+      return {
+        type,
+        _id,
+        content: { title: 'Contact Us' },
+      };
+
     case 'testimonial':
       return {
         type,

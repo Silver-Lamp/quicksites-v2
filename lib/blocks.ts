@@ -19,6 +19,11 @@ export function createFallbackBlock(type: Block['type'] = 'text'): BlockWithId {
         type: 'button',
         content: { label: 'Click me', href: '#' },
       });
+    case 'contact_form':
+      return normalizeBlock({
+        type: 'contact_form',
+        content: { title: 'Contact Us', notificationEmail: 'info@quicktowservices.com' },
+      });
     // Add more defaults as needed
     default:
       return normalizeBlock({

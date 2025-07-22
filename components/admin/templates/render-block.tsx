@@ -25,6 +25,7 @@ const BLOCK_RENDERERS: Record<
   service_areas: () => import('./render-blocks/service-areas'),
   header: () => import('./render-blocks/header'),
   faq: () => import('./render-blocks/faq'),
+  contact_form: () => import('./render-blocks/contact-form'),
 };
 
 type RenderProps = {

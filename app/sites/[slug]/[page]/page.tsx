@@ -80,7 +80,7 @@ export default async function SitePage({ params }: { params: { slug: string; pag
         appleIcons={currentPage.meta?.appleIcons || site.logo_url || 'https://quicksites.ai/og-cache/og-default.png'}
       />
       <ThemeScope mode={theme === 'light' ? 'light' : 'dark'}>
-        <div className="min-h-screen bg-black text-white">
+        <div className="min-h-screen text-white">
           {showHeader && site.headerBlock && (
             <div className="mb-8">
               <RenderBlock block={site.headerBlock} />

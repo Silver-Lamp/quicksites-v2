@@ -15,7 +15,7 @@ export default function PageHeader({ block }: Props) {
   const [menuOpen, setMenuOpen] = useState(false);
 
   return (
-    <header className="w-full bg-neutral-950 text-white">
+    <header className="w-full text-white">
       <div className="w-full mx-auto max-w-screen-xl px-4 sm:px-6 lg:px-8 flex items-center justify-between h-20">
       {/* Logo */}
         {logoUrl && (

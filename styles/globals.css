@@ -75,7 +75,9 @@ body {
 
 .dark,
 [data-theme='dark'] {
-  --background: 222.2 47.4% 11.2%;
+  /* --background: 222.2 47.4% 11.2%; */
+  /* --background: white; */
+  --background: 0 0% 6%;
   --foreground: 210 40% 98%;
 }
 

@@ -5,11 +5,12 @@ import { blockMeta } from '@/admin/lib/zod/blockSchema';
 import type { Block } from '@/types/blocks';
 import { createDefaultBlock } from '@/lib/createDefaultBlock';
 import RenderBlockMini from '@/components/admin/templates/render-block-mini';
+import SafeTriggerButton from '@/components/ui/safe-trigger-button';
 
 const blockGroups: Record<string, { label: string; types: Block['type'][] }> = {
   content: {
     label: 'Content Blocks',
-    types: ['text', 'quote', 'testimonial', 'video', 'audio'],
+    types: ['text', 'quote', 'faq', 'testimonial', 'video', 'audio'],
   },
   layout: {
     label: 'Layout',
@@ -92,11 +93,12 @@ export default function BlockAdderGrouped({
         {triggerElement ? (
           triggerElement
         ) : (
-          <button
+          <SafeTriggerButton
+            onClick={() => setOpen(true)}
             className="w-full bg-purple-600 text-white px-4 py-2 rounded hover:bg-purple-700 text-center"
           >
             {label}
-          </button>
+          </SafeTriggerButton>
         )}
       </div>
 

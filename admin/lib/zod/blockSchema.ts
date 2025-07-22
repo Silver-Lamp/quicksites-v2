@@ -40,6 +40,14 @@ export const blockContentSchemaMap = {
       link: z.string().min(1, 'CTA link is required'),
     }),
   },
+  faq: {
+    label: 'FAQ',
+    icon: '❓',
+    schema: z.object({
+      title: z.string().min(1, 'FAQ title is required'),
+      items: z.array(z.object({ question: z.string().min(1, 'Question is required'), answer: z.string().min(1, 'Answer is required') })).min(1, 'At least one FAQ item is required'),
+    }),
+  },
   testimonial: {
     label: 'Testimonial',
     icon: '💬',

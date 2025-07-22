@@ -98,7 +98,7 @@ export default async function SitePage({ params }: { params: { slug: string; pag
           </main>
           <main className="py-8 space-y-8">
             {currentPage.content_blocks?.map((block, i) => (
-              block.type !== 'header' && (
+              block.type !== 'header' && block.type !== 'footer' && (
                 <div
                 key={block._id || i}
                 className={
@@ -112,12 +112,21 @@ export default async function SitePage({ params }: { params: { slug: string; pag
               )
             ))}
           </main>
+          <main className="">
+            {currentPage.content_blocks?.map((block, i) => (
+              block.type === 'footer' && (
+                <div key={block._id || i}>
+                  <RenderBlock block={block} />
+                </div>
+              )
+            ))}
+          </main>
 
-          {showFooter && site.footerBlock && (
-            <div className="mt-12 border-t border-white/10">
+          {/* {showFooter && site.footerBlock && (
+            <div className="mt-12">
               <RenderBlock block={site.footerBlock} />
             </div>
-          )}
+          )} */}
         </div>
       </ThemeScope>
     </>

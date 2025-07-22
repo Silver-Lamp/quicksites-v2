@@ -23,6 +23,7 @@ import BlockAdderGrouped from '@/components/admin/block-adder-grouped';
 import { Template } from '@/types/template';
 import { BlockValidationError } from '@/hooks/validateTemplateBlocks';
 import { FloatingPageSidebar } from '@/components/editor/floating-page-sidebar';
+import SafeTriggerButton from '@/components/ui/safe-trigger-button';
 
 function BlockWrapper({ block, children, onEdit, onDelete }: any) {
   const {
@@ -197,9 +198,18 @@ export function LiveEditorPreview({
                     }}
                     existingBlocks={selectedPage.content_blocks}
                     triggerElement={
-                      <button className="text-sm text-purple-500 hover:underline mt-2">
+                      <SafeTriggerButton
+                        onClick={() => {
+                          const newBlock = createDefaultBlock('text');
+                          const updated = { ...template };
+                          updated.data.pages[selectedPageIndex].content_blocks.splice(blockIndex + 1, 0, newBlock);
+                          setLastInsertedId(newBlock._id ?? '');
+                          updateAndSave(updated);
+                        }}
+                        className="text-sm text-purple-500 hover:underline mt-2"
+                      >
                         + Add Block Below
-                      </button>
+                      </SafeTriggerButton>
                     }
                   />
                 </BlockWrapper>
@@ -218,10 +228,19 @@ export function LiveEditorPreview({
               }}
               existingBlocks={selectedPage.content_blocks}
               triggerElement={
-                <button className="w-full flex items-center justify-center gap-2 border border-purple-600 text-purple-600 dark:text-purple-400 rounded px-4 py-2 text-sm hover:bg-purple-50 dark:hover:bg-purple-900 transition-colors">
+                <SafeTriggerButton
+                  onClick={() => {
+                    const newBlock = createDefaultBlock('text');
+                    const updated = { ...template };
+                    updated.data.pages[selectedPageIndex].content_blocks.push(newBlock);
+                    setLastInsertedId(newBlock._id ?? '');
+                    updateAndSave(updated);
+                  }}
+                  className="w-full flex items-center justify-center gap-2 border border-purple-600 text-purple-600 dark:text-purple-400 rounded px-4 py-2 text-sm hover:bg-purple-50 dark:hover:bg-purple-900 transition-colors"
+                >
                   <PlusCircle className="w-4 h-4" />
                   <span>Add Block to End</span>
-                </button>
+                </SafeTriggerButton>
               }
             />
           </div>

@@ -1,6 +1,7 @@
 // lib/createDefaultBlock.ts
 import type { Block } from '@/types/blocks'; // adjust import path as needed
 import crypto from 'crypto';
+import { generateMockFAQ } from '@/types/blocks';
 
 export function createDefaultBlock(type: Block['type']): Block {
   const _id = crypto.randomUUID?.() || Date.now().toString();
@@ -105,6 +106,16 @@ export function createDefaultBlock(type: Block['type']): Block {
         content: {
           label: 'Learn More',
           link: '#about',
+        },
+      };
+
+    case 'faq':
+      return {
+        type,
+        _id,
+        content: {
+          title: 'Frequently Asked Questions',
+          items: generateMockFAQ().items,
         },
       };
 

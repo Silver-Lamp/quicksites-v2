@@ -9,7 +9,7 @@ export const blockGroups: Record<
 > = {
   content: {
     label: 'Content Blocks',
-    types: ['text', 'quote', 'testimonial', 'video', 'audio'],
+    types: ['text', 'quote', 'faq', 'testimonial', 'video', 'audio'],
   },
   layout: {
     label: 'Layout',

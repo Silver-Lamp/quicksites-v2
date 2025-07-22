@@ -8,16 +8,17 @@ import { Menu, X } from 'lucide-react';
 
 type Props = {
   block: Extract<Block, { type: 'header' }>;
+  previewOnly?: boolean;
 };
 
-export default function PageHeader({ block }: Props) {
+export default function PageHeader({ block, previewOnly = false }: Props) {
   const { logoUrl, navItems } = block.content;
   const [menuOpen, setMenuOpen] = useState(false);
 
   return (
     <header className="w-full text-white">
       <div className="w-full mx-auto max-w-screen-xl px-4 sm:px-6 lg:px-8 flex items-center justify-between h-20">
-      {/* Logo */}
+        {/* Logo */}
         {logoUrl && (
           <Link href="/" className="flex items-center">
             <Image
@@ -45,17 +46,23 @@ export default function PageHeader({ block }: Props) {
         </nav>
 
         {/* Hamburger icon (mobile) */}
-        <button
-          className="md:hidden text-white"
-          onClick={() => setMenuOpen((prev) => !prev)}
-          aria-label="Toggle menu"
-        >
-          {menuOpen ? <X size={24} /> : <Menu size={24} />}
-        </button>
+        {!previewOnly ? (
+          <button
+            className="md:hidden text-white"
+            onClick={() => setMenuOpen((prev) => !prev)}
+            aria-label="Toggle menu"
+          >
+            {menuOpen ? <X size={24} /> : <Menu size={24} />}
+          </button>
+        ) : (
+          <div className="md:hidden text-white opacity-50">
+            <Menu size={24} />
+          </div>
+        )}
       </div>
 
       {/* Mobile dropdown menu */}
-      {menuOpen && (
+      {menuOpen && !previewOnly && (
         <div className="md:hidden bg-neutral-950 px-4 pb-4 space-y-2 text-sm font-medium">
           {navItems.map((item) => (
             <Link

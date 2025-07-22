@@ -24,6 +24,7 @@ const BLOCK_RENDERERS: Record<
   footer: () => import('./render-blocks/footer'),
   service_areas: () => import('./render-blocks/service-areas'),
   header: () => import('./render-blocks/header'),
+  faq: () => import('./render-blocks/faq'),
 };
 
 type RenderProps = {
@@ -32,6 +33,7 @@ type RenderProps = {
   mode?: 'preview' | 'editor';
   disableInteraction?: boolean;
   compact?: boolean;
+  previewOnly?: boolean;
 };
 
 export default function RenderBlock({
@@ -40,6 +42,7 @@ export default function RenderBlock({
   mode = 'preview',
   disableInteraction = false,
   compact = false,
+  previewOnly = false,
 }: RenderProps) {
   const { enabled: fixEnabled, draftFixes } = useBlockFix();
   
@@ -68,6 +71,7 @@ export default function RenderBlock({
     mode,
     disableInteraction,
     compact,
+    previewOnly,
   };
 
   const wrapperProps = {

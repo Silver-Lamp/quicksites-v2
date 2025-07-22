@@ -28,6 +28,12 @@ export function createFallbackBlock(type: Block['type']): BlockWithId {
         type: 'cta',
         content: { label: 'Learn more', link: '#' },
       };
+    case 'faq':
+      return {
+        _id: id,
+        type: 'faq',
+        content: { title: 'Frequently Asked Questions', items: [] },
+      };
     case 'hero':
       return {
         _id: id,

@@ -16,6 +16,7 @@ export default function RenderBlockMini({ block, className = '' }: Props) {
         compact
         mode="preview"
         disableInteraction
+        previewOnly
       />
     </div>
   );

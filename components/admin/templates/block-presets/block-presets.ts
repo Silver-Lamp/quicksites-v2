@@ -102,4 +102,15 @@ export const blockPresets: {
       },
     }),
   },
+  {
+    type: 'faq',
+    label: 'FAQ',
+    icon: '❓',
+    tags: ['content'],
+    generate: () => ({
+      _id: crypto.randomUUID(),
+      type: 'faq',
+      content: { title: 'Frequently Asked Questions', items: [] },
+    }),
+  },
 ];

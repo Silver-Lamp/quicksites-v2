@@ -30,6 +30,7 @@ export const BLOCK_EDITORS: Record<
   footer: () => import('./footer-editor'),
   service_areas: () => import('./service-areas-editor'),
   header: () => import('./header-editor'),
+  faq: () => import('./faq-editor'),
 };
 
 // 🧠 Optional preloader for a single block type (for speed optimization)
@@ -44,4 +45,5 @@ export function preloadCommonEditors() {
   preloadBlockEditor('hero');
   preloadBlockEditor('text');
   preloadBlockEditor('cta');
+  preloadBlockEditor('faq');
 }

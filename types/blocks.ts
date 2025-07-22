@@ -85,7 +85,22 @@ export type HeroBlock = BaseBlock & {
 export type ServicesBlock = BaseBlock & {
   type: 'services';
   content: {
+    title?: string;
+    subtitle?: string;
     items: string[];
+  };
+};
+
+export type FAQBlock = BaseBlock & {
+  type: 'faq';
+  content: {
+    title?: string;
+    subtitle?: string;
+    items: {
+      question: string;
+      answer: string;
+    }[];
+    layout?: 'list' | 'accordion';
   };
 };
 
@@ -168,7 +183,8 @@ export type Block =
   | TestimonialBlock
   | FooterBlock
   | ServiceAreaBlock
-  | HeaderBlock;
+  | HeaderBlock
+  | FAQBlock;
 
 // Block with enforced _id
 export type BlockWithId = Block & { _id: string };
@@ -267,13 +283,7 @@ export function generateMockFooter(): FooterBlock['content'] {
 
 export function generateMockServices(): ServicesBlock['content'] {
   const presets: Record<string, string[]> = {
-    towing: [
-      '24/7 Emergency Towing',
-      'Roadside Assistance',
-      'Flatbed Towing',
-      'Battery Jumpstart',
-      'Vehicle Lockout',
-    ],
+    towing: ['24/7 Emergency Towing', 'Roadside Assistance', 'Flatbed Towing', 'Battery Jumpstart', 'Vehicle Lockout'],
     plumbing: [
       'Leak Detection',
       'Pipe Repairs',
@@ -289,11 +299,37 @@ export function generateMockServices(): ServicesBlock['content'] {
       'Software Deployment',
     ],
   };
-
-  const allServices = Object.values(presets).flat();
-  const sample = allServices.sort(() => 0.5 - Math.random()).slice(0, 4);
-
+  const items = Object.values(presets).flat();
   return {
-    items: sample,
+    items,
   };
+}
+
+export function generateMockFAQ(): FAQBlock['content'] {
+    const title = "Frequently Asked Questions";
+    const subtitle = "We're here to help you with all your towing and roadside assistance needs.";
+    const items = [
+      {
+        question: 'How quickly can you arrive?',
+        answer: "We usually arrive within 30 minutes in Grafton and nearby areas.",
+      },
+      {
+        question: 'Do you offer 24/7 service?',
+        answer: "Yes, we're available 24/7 for all towing and roadside assistance needs.",
+      },
+      {
+        question: 'What forms of payment do you accept?',
+        answer: "We accept all major credit cards, cash, and digital payments.",
+      },
+      {
+        question: 'Are you licensed and insured?',
+        answer: "Yes, we're fully licensed and insured for your peace of mind.",
+      },
+    ];
+    return {
+      title,
+      subtitle,
+      items,
+      layout: 'accordion',
+    };  
 }

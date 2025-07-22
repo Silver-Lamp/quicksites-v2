@@ -1,8 +1,48 @@
 'use client';
 
+import dynamic from 'next/dynamic';
 import type { Block } from '@/types/blocks';
 import Link from 'next/link';
 import SectionShell from '@/components/ui/section-shell';
+import 'leaflet/dist/leaflet.css';
+import { useEffect, useState } from 'react';
+
+const LeafletMap = dynamic(() => import('@/components/ui/leaflet-footer-map').then(mod => mod.LeafletFooterMap), { ssr: false });
+
+const geocodeCache = new Map<string, [number, number]>();
+
+function useGeocode(address: string) {
+  const [coords, setCoords] = useState<[number, number] | null>(null);
+
+  useEffect(() => {
+    if (geocodeCache.has(address)) {
+      setCoords(geocodeCache.get(address)!);
+      return;
+    }
+
+    const fetchCoords = async () => {
+      try {
+        const res = await fetch(
+          `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(address)}&format=json&limit=1`,
+          { headers: { 'User-Agent': 'QuickSites (admin@quicksites.ai)' } }
+        );
+        const data = await res.json();
+        if (data?.length > 0) {
+          const { lat, lon } = data[0];
+          const parsed: [number, number] = [parseFloat(lat), parseFloat(lon)];
+          geocodeCache.set(address, parsed);
+          setCoords(parsed);
+        }
+      } catch (err) {
+        console.error('Geocoding failed:', err);
+      }
+    };
+
+    fetchCoords();
+  }, [address]);
+
+  return coords;
+}
 
 type FooterBlock = Extract<Block, { type: 'footer' }>;
 
@@ -30,6 +70,9 @@ export default function FooterRender({ block, content, compact = false }: Props)
     phone = '(555) 555-5555',
     links = [],
   } = final;
+
+  const fullAddress = `${address}, ${cityState}`;
+  const coords = useGeocode(fullAddress);
 
   if (compact) {
     return (
@@ -64,10 +107,14 @@ export default function FooterRender({ block, content, compact = false }: Props)
             {cityState}
           </p>
           <p className="mt-1">{phone}</p>
+
+          {coords && (
+            <LeafletMap coords={coords} businessName={businessName} fullAddress={fullAddress} />
+          )}
         </div>
       </div>
       <div className="text-center mt-8 text-xs text-gray-400">
-        © 2025 {businessName}. Fast, Reliable, Local Service 24/7.
+        © {new Date().getFullYear()} {businessName}. Fast, Reliable, Local Service 24/7.
       </div>
     </footer>
   );

@@ -73,7 +73,12 @@ export type HeroBlock = BaseBlock & {
     cta_text?: string;
     cta_link?: string;
     image_url?: string;
-    show_image_as_bg?: boolean;
+    layout_mode?: 'inline' | 'background' | 'full_bleed';
+    blur_amount?: number;
+    parallax_enabled?: boolean;
+    image_position?: 'top' | 'center' | 'bottom';
+    image_x?: number;
+    image_y?: number;
   };
 };
 
@@ -237,7 +242,7 @@ export function generateMockHero(): HeroBlock['content'] {
     cta_text: 'Get Help Now',
     cta_link: '/contact',
     image_url: 'https://source.unsplash.com/featured/?towtruck',
-    show_image_as_bg: true,
+    layout_mode: 'background',
   };
 }
 

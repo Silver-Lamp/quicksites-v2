@@ -64,7 +64,12 @@ export const blockContentSchemaMap = {
       cta_text: z.string().optional(),
       cta_link: z.string().optional(),
       image_url: z.union([z.string().url(), z.literal('')]).optional(),
-      show_image_as_bg: z.boolean().optional(),
+      layout_mode: z.enum(['inline', 'background', 'full_bleed']).optional(),
+      blur_amount: z.number().min(0).max(100).optional(),
+      parallax_enabled: z.boolean().optional(),
+      image_position: z.enum(['top', 'center', 'bottom']).optional(),
+      image_x: z.number().min(0).max(100).optional(),
+      image_y: z.number().min(0).max(100).optional(),
     }),
   },
   services: {

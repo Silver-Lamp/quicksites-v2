@@ -1,3 +1,4 @@
+// app/_sites/[slug]/page.tsx
 'use server';
 
 import { getSupabase } from '@/lib/supabase/server';
@@ -70,9 +71,16 @@ export default async function SitePage({ params }: { params: { slug: string; pag
           </div>
         )}
 
-        <main className="py-8 px-4 max-w-5xl mx-auto space-y-8">
+        <main className="py-8 space-y-8">
           {currentPage.content_blocks?.map((block, i) => (
-            <div key={block._id || i}>
+            <div
+              key={block._id || i}
+              className={
+                block.type === 'hero' && block.content?.layout_mode === 'full_bleed'
+                  ? ''
+                  : 'px-4 max-w-5xl mx-auto'
+              }
+            >
               <RenderBlock block={block} />
             </div>
           ))}

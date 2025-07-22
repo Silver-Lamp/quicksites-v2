@@ -8,6 +8,7 @@ export type BlockEditorProps = {
   onClose: () => void;
   errors?: Record<string, BlockValidationError[]>;
   template?: Template;
+  fullBleed?: boolean;
 };
     
 // 🌐 Mapping of block type → dynamic React component import

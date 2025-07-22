@@ -3,6 +3,8 @@
 import type { Block } from '@/types/blocks';
 import Image from 'next/image';
 import Link from 'next/link';
+import { useState } from 'react';
+import { Menu, X } from 'lucide-react'; // Or any icon lib you're using
 
 type Props = {
   block: Extract<Block, { type: 'header' }>;
@@ -10,16 +12,20 @@ type Props = {
 
 export default function PageHeader({ block }: Props) {
   const { logoUrl, navItems } = block.content;
+  const [menuOpen, setMenuOpen] = useState(false);
 
   return (
     <header className="bg-black text-white">
       <div className="mx-auto max-w-screen-xl px-4 sm:px-6 lg:px-8 flex items-center justify-between h-20">
+        {/* Logo */}
         {logoUrl && (
           <Link href="/" className="flex items-center">
             <Image src={logoUrl} alt="Site Logo" width={50} height={50} className="h-10 w-auto" />
           </Link>
         )}
-        <nav className="flex gap-8 text-sm font-medium">
+
+        {/* Desktop nav */}
+        <nav className="hidden md:flex gap-8 text-sm font-medium">
           {navItems.map((item) => (
             <Link
               key={item.href}
@@ -30,7 +36,32 @@ export default function PageHeader({ block }: Props) {
             </Link>
           ))}
         </nav>
+
+        {/* Hamburger icon (mobile) */}
+        <button
+          className="md:hidden text-white"
+          onClick={() => setMenuOpen((prev) => !prev)}
+          aria-label="Toggle menu"
+        >
+          {menuOpen ? <X size={24} /> : <Menu size={24} />}
+        </button>
       </div>
+
+      {/* Mobile dropdown menu */}
+      {menuOpen && (
+        <div className="md:hidden bg-black px-4 pb-4 space-y-2 text-sm font-medium">
+          {navItems.map((item) => (
+            <Link
+              key={item.href}
+              href={item.href}
+              className="block hover:text-yellow-400 transition-colors duration-200"
+              onClick={() => setMenuOpen(false)}
+            >
+              {item.label}
+            </Link>
+          ))}
+        </div>
+      )}
     </header>
   );
 }

@@ -66,7 +66,7 @@ export default async function SitePage({ params }: { params: { slug: string; pag
 
       <div className="bg-black text-white min-h-screen">
         {showHeader && site.headerBlock && (
-          <div className="mb-8 border-b border-white/10">
+          <div className="mb-8">
             <RenderBlock block={site.headerBlock} />
           </div>
         )}

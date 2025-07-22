@@ -82,14 +82,24 @@ export default async function SitePage({ params }: { params: { slug: string; pag
       <ThemeScope mode={theme === 'light' ? 'light' : 'dark'}>
         <div className="min-h-screen bg-black text-white">
           {showHeader && site.headerBlock && (
-            <div className="mb-8 border-b border-white/10">
+            <div className="mb-8">
               <RenderBlock block={site.headerBlock} />
             </div>
           )}
 
+          <main className="">
+            {currentPage.content_blocks?.map((block, i) => (
+              block.type === 'header' && (
+                <div key={block._id || i}>
+                  <RenderBlock block={block} />
+                </div>
+              )
+            ))}
+          </main>
           <main className="py-8 space-y-8">
             {currentPage.content_blocks?.map((block, i) => (
-              <div
+              block.type !== 'header' && (
+                <div
                 key={block._id || i}
                 className={
                   block.type === 'hero' && block.content?.layout_mode === 'full_bleed'
@@ -99,6 +109,7 @@ export default async function SitePage({ params }: { params: { slug: string; pag
               >
                 <RenderBlock block={block} />
               </div>
+              )
             ))}
           </main>
 

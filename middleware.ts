@@ -1,13 +1,11 @@
-// middleware.ts
-
 import { NextResponse, type NextRequest } from 'next/server';
 import { createMiddlewareClient } from '@supabase/auth-helpers-nextjs';
 import type { Database } from './types/supabase';
 import type { TemplateData } from './types/template';
 
 const previewToken = process.env.SITE_PREVIEW_TOKEN || 'secret123';
-
 const validSlugCache = new Map<string, { timestamp: number; firstPage: string }>();
+const customDomainCache = new Map<string, { timestamp: number; slug: string }>();
 const CACHE_TTL = 60_000;
 
 export async function middleware(req: NextRequest) {
@@ -19,31 +17,31 @@ export async function middleware(req: NextRequest) {
     host.includes('localhost') || host.includes('lvh.me') || host.includes('127.0.0.1');
   const baseDomain = 'quicksites.ai';
 
-  // ✅ Extract subdomain from host (including stripping port)
-  const subdomain = (() => {
-    const hostWithoutPort = host.split(':')[0]; // Remove port (e.g. :3000)
+  const hostWithoutPort = host.split(':')[0];
 
+  // ✅ Extract subdomain
+  const subdomain = (() => {
     if (isLocalhost) {
       const parts = hostWithoutPort.split('.');
-      if (parts.length === 2 && parts[1] === 'localhost') {
-        return parts[0]; // e.g. tow-test-1.localhost → "tow-test-1"
-      }
+      if (parts.length === 2 && parts[1] === 'localhost') return parts[0];
       return null;
     }
 
     if (!hostWithoutPort.endsWith(baseDomain)) return null;
     const parts = hostWithoutPort.replace(`.${baseDomain}`, '').split('.');
-    const name = parts[0];
-    return name !== 'www' ? name : null;
+    return parts[0] !== 'www' ? parts[0] : null;
   })();
 
   const isPreview = searchParams.get('preview') === previewToken;
+  const isStaticAsset = pathname.startsWith('/_next') || pathname === '/favicon.ico' || pathname.endsWith('.js.map');
 
   console.log(`[middleware] host: ${host}, pathname: ${pathname}, subdomain: ${subdomain}`);
 
-  if (pathname.endsWith('.js.map')) return res;
+  if (isStaticAsset) return res;
 
-  // ✅ Rewrite `/` to /sites/[slug]/[firstPage] for valid subdomain
+  const supabase = createMiddlewareClient<Database>({ req, res });
+
+  // ✅ Handle root path for subdomains (e.g. florencetow.quicksites.ai/)
   if (subdomain && pathname === '/') {
     const now = Date.now();
     const cached = validSlugCache.get(subdomain);
@@ -52,11 +50,8 @@ export async function middleware(req: NextRequest) {
     if (isFresh) {
       const url = req.nextUrl.clone();
       url.pathname = `/sites/${subdomain}/${cached.firstPage}`;
-      console.log(`[middleware] ✅ Rewriting / to cached: ${url.pathname}`);
       return NextResponse.rewrite(url);
     }
-
-    const supabase = createMiddlewareClient<Database>({ req, res });
 
     let query = supabase
       .from('templates')
@@ -65,46 +60,116 @@ export async function middleware(req: NextRequest) {
       .eq('is_site', true)
       .limit(1);
 
-    if (!isPreview) {
-      query = query.eq('published', true);
-    }
+    if (!isPreview) query = query.eq('published', true);
 
-    const { data: site, error } = await query.maybeSingle();
+    const { data: site } = await query.maybeSingle();
 
     const pages = (site?.data as TemplateData)?.pages || [];
     const firstPage = pages.length > 0 ? pages[0].slug : 'home';
 
-    if (site && !error) {
+    if (site) {
       validSlugCache.set(subdomain, { timestamp: now, firstPage });
       const url = req.nextUrl.clone();
       url.pathname = `/sites/${subdomain}/${firstPage}`;
-      console.log(`[middleware] ✅ Rewriting / to ${url.pathname}`);
       return NextResponse.rewrite(url);
     } else {
-      console.warn(`[middleware] ⚠️ Invalid or unpublished site: ${subdomain}`, { error });
       return NextResponse.redirect(new URL('/', req.url));
     }
   }
 
-  // ✅ Rewrite sub-routes like /about → /sites/[slug]/about
+  // ✅ Handle root path for custom domains
+  if (!subdomain && !isLocalhost && pathname === '/') {
+    const now = Date.now();
+    const cached = customDomainCache.get(hostWithoutPort);
+    const isFresh = cached && now - cached.timestamp < CACHE_TTL;
+
+    let slug: string | null = null;
+
+    if (isFresh) {
+      slug = cached.slug;
+    } else {
+      const { data: site } = await supabase
+        .from('templates')
+        .select('slug, data')
+        .eq('custom_domain', hostWithoutPort)
+        .eq('published', true)
+        .maybeSingle();
+
+      if (site) {
+        slug = site.slug;
+        customDomainCache.set(hostWithoutPort, { timestamp: now, slug: slug || '' });
+      }
+    }
+
+    if (slug) {
+      const { data: site } = await supabase
+        .from('templates')
+        .select('data')
+        .eq('slug', slug)
+        .maybeSingle();
+
+      const pages = (site?.data as TemplateData)?.pages || [];
+      const firstPage = pages.length > 0 ? pages[0].slug : 'home';
+
+      const url = req.nextUrl.clone();
+      url.pathname = `/sites/${slug}/${firstPage}`;
+      return NextResponse.rewrite(url);
+    }
+  }
+
+  // ✅ Rewrite sub-routes for subdomain (e.g. /contact → /sites/florencetow/contact)
   if (
     subdomain &&
-    pathname !== '/' &&
+    !pathname.startsWith('/sites') &&
+    !pathname.startsWith('/admin') &&
+    !pathname.startsWith('/login') &&
+    !pathname.startsWith('/api')
+  ) {
+    const url = req.nextUrl.clone();
+    url.pathname = `/sites/${subdomain}${pathname}`;
+    return NextResponse.rewrite(url);
+  }
+
+  // ✅ Rewrite sub-routes for custom domain (e.g. /contact on florencetow.com)
+  if (
+    !subdomain &&
+    !isLocalhost &&
     !pathname.startsWith('/sites') &&
     !pathname.startsWith('/admin') &&
     !pathname.startsWith('/login') &&
     !pathname.startsWith('/api') &&
-    !pathname.startsWith('/_next') &&
-    !pathname.startsWith('/favicon.ico')
+    !isStaticAsset
   ) {
-    const url = req.nextUrl.clone();
-    url.pathname = `/sites/${subdomain}${pathname}`;
-    console.log(`[middleware] ✏️ Rewriting ${pathname} → ${url.pathname}`);
-    return NextResponse.rewrite(url);
+    const now = Date.now();
+    const cached = customDomainCache.get(hostWithoutPort);
+    const isFresh = cached && now - cached.timestamp < CACHE_TTL;
+
+    let slug: string | null = null;
+
+    if (isFresh) {
+      slug = cached.slug;
+    } else {
+      const { data: site } = await supabase
+        .from('templates')
+        .select('slug')
+        .eq('custom_domain', hostWithoutPort)
+        .eq('published', true)
+        .maybeSingle();
+
+      if (site) {
+        slug = site.slug;
+        customDomainCache.set(hostWithoutPort, { timestamp: now, slug: slug || '' });
+      }
+    }
+
+    if (slug) {
+      const url = req.nextUrl.clone();
+      url.pathname = `/sites/${slug}${pathname}`;
+      return NextResponse.rewrite(url);
+    }
   }
 
-  // ✅ Supabase Auth Header Injection for Admin Routes
-  const supabase = createMiddlewareClient<Database>({ req, res });
+  // ✅ Inject Supabase Auth headers (unchanged)
   const {
     data: { session },
   } = await supabase.auth.getSession();
@@ -125,8 +190,6 @@ export async function middleware(req: NextRequest) {
     res.headers.set('x-user-role', resolvedRole);
     res.headers.set('x-user-name', user.user_metadata?.name ?? '');
     res.headers.set('x-user-avatar-url', user.user_metadata?.avatar_url ?? '');
-
-    console.log(`[middleware] 🔐 Set headers for ${user.email}`);
   }
 
   return res;

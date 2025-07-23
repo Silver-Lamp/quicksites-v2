@@ -3,6 +3,8 @@ import { writeFileSync } from 'fs';
 import path from 'path';
 import sharp from 'sharp';
 
+export const runtime = 'nodejs';
+
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!

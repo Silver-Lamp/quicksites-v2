@@ -2,7 +2,8 @@ import { ImageResponse } from 'next/og';
 import { getSupabase } from '@/lib/supabase/server';
 import { cacheOgImage } from '@/lib/og/cacheOgImage';
 
-export const runtime = 'edge';
+export const runtime = 'nodejs';
+// export const runtime = 'edge';
 
 export async function GET(_: Request, { params }: { params: { slug: string; page: string } }) {
   const { slug, page } = params;

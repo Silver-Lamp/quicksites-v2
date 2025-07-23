@@ -4,7 +4,7 @@ Modern template engine + affiliate funnel automation, now powered by clean archi
 
 ---
 
-## 📁 Project Structure 
+## 📁 Project Structure  
 
 ```
 .

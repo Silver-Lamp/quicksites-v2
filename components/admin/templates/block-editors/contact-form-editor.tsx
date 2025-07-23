@@ -10,7 +10,7 @@ export type ContactFormBlock = Extract<Block, { type: 'contact_form' }>;
 export function ContactFormEditor({ block, onSave, onClose }: BlockEditorProps) {
   const formBlock = block as ContactFormBlock;
   const [title, setTitle] = useState(formBlock.content?.title || 'Contact Us');
-  const [notificationEmail, setNotificationEmail] = useState(formBlock.content?.notificationEmail || '');
+  const [notification_email, setnotification_email] = useState(formBlock.content?.notification_email || '');
 
   return (
     <div className="p-4 space-y-4">
@@ -26,8 +26,8 @@ export function ContactFormEditor({ block, onSave, onClose }: BlockEditorProps) 
       <BlockField
         type="text"
         label="Notification Email"
-        value={notificationEmail}
-        onChange={(v) => setNotificationEmail(v)}
+        value={notification_email}
+        onChange={(v) => setnotification_email(v)}
       />
 
       <div className="flex justify-end gap-2 pt-4">
@@ -35,7 +35,7 @@ export function ContactFormEditor({ block, onSave, onClose }: BlockEditorProps) 
           Cancel
         </button>
         <button
-          onClick={() => onSave({ ...formBlock, content: { title, notificationEmail } })}
+          onClick={() => onSave({ ...formBlock, content: { title, notification_email } })}
           className="px-4 py-2 bg-blue-600 text-white rounded"
         >
           Save

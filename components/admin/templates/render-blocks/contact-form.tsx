@@ -14,17 +14,18 @@ export default function ContactFormRender({ block }: { block: ContactFormBlock }
       ? window.location.hostname.split('.')[0]
       : 'unknown';
 
-  const { title = 'Contact Us', notificationEmail = 'info@quicktowservices.com' } = block.content || {};
-  console.log('notificationEmail', notificationEmail);
+  const { title = 'Contact Us', notification_email = 'sandon@quicksites.ai' } = block.content || {};
+  console.log('notification_email', notification_email);
   console.log('title', title);
   console.log('siteSlug', siteSlug);
+  console.log('block', block);
   const [formData, setFormData] = useState({
     name: '',
     email: '',
     phone: '',
     service: '',
     title: 'Contact Us',
-    notificationEmail: 'info@quicktowservices.com',
+    notification_email: 'sandon@quicksites.com',
   });
   const [submitted, setSubmitted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -56,19 +57,72 @@ export default function ContactFormRender({ block }: { block: ContactFormBlock }
     if (formData.phone && !isValidPhone(formData.phone)) newErrors.phone = 'Phone number must be in US format (e.g. (555) 123-4567).';
     setErrors(newErrors);
     if (Object.keys(newErrors).length > 0) return;
-
+  
     setSubmitting(true);
-    const { error } = await supabase.from('form_submissions').insert([
+  
+    const { data, error: insertError } = await supabase.from('form_submissions').insert([
       { ...formData, site_slug: siteSlug }
-    ]);
-    setSubmitting(false);
-    if (!error) {
-      setSubmitted(true);
-      setFormData({ name: '', email: '', phone: '', service: '', title: title, notificationEmail: notificationEmail });
-    } else {
-      alert('There was a problem submitting the form.');
+    ]).select().single();
+  
+    if (insertError || !data) {
+      console.error('Insert error:', insertError);
+      alert('There was a problem submitting the form. Please try again. If the problem persists, contact us at ' + notification_email);
+      setSubmitting(false);
+      return;
     }
+  
+    let emailStatus = 'pending';
+    let emailResponseId: string | null = null;
+    let emailError: string | null = null;
+  
+    try {
+      const res = await fetch('/api/send-contact-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          to: [notification_email, 'sandon@quicksites.ai'],
+          subject: `New Contact Form Submission from ${siteSlug}`,
+          message: `
+  New contact form submission from ${siteSlug}:
+  
+  Name: ${formData.name}
+  Email: ${formData.email || 'N/A'}
+  Phone: ${formData.phone || 'N/A'}
+  Service: ${formData.service || 'N/A'}
+          `.trim(),
+          user_email: formData.email || null, // ✨ SEND CONFIRMATION
+        }),
+      });
+  
+      const json = await res.json();
+      if (res.ok && json.success) {
+        emailStatus = 'sent';
+        emailResponseId = json.id || null;
+      } else {
+        emailStatus = 'error';
+        emailError = json.error || 'Unknown email error';
+      }
+    } catch (err: any) {
+      console.error('Resend error:', err);
+      emailStatus = 'error';
+      emailError = err.message || 'Unexpected exception';
+    }
+  
+    await supabase
+      .from('form_submissions')
+      .update({
+        email_status: emailStatus,
+        email_response_id: emailResponseId,
+        email_error: emailError,
+      })
+      .eq('id', data.id);
+  
+    setSubmitting(false);
+    setSubmitted(true);
+    setFormData({ name: '', email: '', phone: '', service: '', title, notification_email });
   };
+  
+    
 
   return (
     <SectionShell className="bg-white dark:bg-neutral-900 text-black dark:text-white rounded border-2 border-yellow-400 max-w-md mx-auto p-6">

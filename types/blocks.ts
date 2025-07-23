@@ -172,7 +172,7 @@ export type ContactFormBlock = BaseBlock & {
   type: 'contact_form';
   content: {
     title: string;
-    notificationEmail: string;
+    notification_email: string;
   };
 };
 
@@ -345,6 +345,6 @@ export function generateMockFAQ(): FAQBlock['content'] {
 export function generateMockContactForm(): ContactFormBlock['content'] {
   return {
     title: 'Contact Us',
-    notificationEmail: 'info@quicktowservices.com',
+    notification_email: 'sandon@quicksites.com',
   };
 }

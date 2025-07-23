@@ -47,7 +47,11 @@ export default function ThemeEditorPage() {
 
       <GlowConfigurator defaultGlowConfig={theme.glow} siteSlug={siteSlug} />
 
-      <ThemePreviewCard />
+      <ThemePreviewCard
+        theme={theme.name || ''}
+        onSelectFont={(font) => console.log('Selected font:', font)}
+      />
+
       <ThemeDevicePreview />
     </div>
   );

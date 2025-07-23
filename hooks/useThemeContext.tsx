@@ -19,6 +19,8 @@ export type SiteTheme = {
   accentColor?: string;
   darkMode?: 'light' | 'dark';
   fontUrl?: string; // optional reference
+  name?: string;
+  description?: string;
 };
 
 const defaultGlow: GlowConfig[] = [
@@ -88,7 +90,7 @@ export function ThemeProvider({
       if (userId) {
         const { data } = await supabase
           .from('user_site_settings')
-          .select('glow_config, theme_font, theme_radius, theme_accent, theme_mode, theme_font_url')
+          .select('glow_config, theme_font, theme_radius, theme_accent, theme_mode, theme_font_url, theme_name, theme_description')
           .eq('user_id', userId)
           .eq('site_slug', siteSlug)
           .single();
@@ -101,6 +103,8 @@ export function ThemeProvider({
             accentColor: data.theme_accent || defaultTheme.accentColor,
             darkMode: data.theme_mode || defaultTheme.darkMode,
             fontUrl: data.theme_font_url || fontMap[data.theme_font as keyof typeof fontMap]?.googleUrl,
+            name: data.theme_name || '',
+            description: data.theme_description || '',
           };
         }
       }
@@ -147,6 +151,8 @@ export function ThemeProvider({
           theme_accent: foundTheme.accentColor,
           theme_mode: foundTheme.darkMode,
           theme_font_url: fontUrl,
+          theme_name: foundTheme.name,
+          theme_description: foundTheme.description,
         });
       }
     };
@@ -178,6 +184,8 @@ export function ThemeProvider({
           theme_accent: value.accentColor,
           theme_mode: value.darkMode,
           theme_font_url: fontUrl,
+          theme_name: value.name,
+          theme_description: value.description,
         });
       }
     } catch (err) {

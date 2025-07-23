@@ -4,7 +4,8 @@ import { createClient } from '@supabase/supabase-js';
 import { cacheOgImage } from '../../../../lib/og/cacheOgImage';
 import React from 'react';
 
-export const runtime = 'edge';
+export const runtime = 'nodejs';
+// export const runtime = 'edge';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,

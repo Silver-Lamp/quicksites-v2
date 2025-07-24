@@ -11,6 +11,7 @@
     }
   },
   "scripts": {
+    "quickpush": "bash -c 'read -p \"Commit message: \" msg && git add -A && git commit -m \"$msg\" --no-verify && git push -f'",
     "fonts": "ts-node scripts/download-google-fonts.ts",
     "hosts:add": "ts-node scripts/manage-hosts-from-supabase.ts add",
     "hosts:remove": "ts-node scripts/manage-hosts-from-supabase.ts remove",

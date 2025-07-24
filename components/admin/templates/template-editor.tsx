@@ -18,6 +18,8 @@ import BlockSidebar from './block-sidebar';
 import { Block, BlockSchema } from '@/admin/lib/zod/blockSchema';
 import { z } from 'zod';
 import { BlockValidationError } from '@/hooks/validateTemplateBlocks';
+import { JsonEditorOverlay } from '@/components/editor/json-editor-overlay';
+import TemplateJsonEditor from './template-json-editor';
 
 export default function TemplateEditor({
   templateName,
@@ -36,6 +38,13 @@ export default function TemplateEditor({
   const [pendingAction, setPendingAction] = useState<'insert' | 'replace'>('insert');
   const [targetBlockIndex, setTargetBlockIndex] = useState<number | null>(null);
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
+  const [showJsonEditor, setShowJsonEditor] = useState(false);
+  const [jsonEditorRawJson, setJsonEditorRawJson] = useState('');
+
+  const handleJsonEditorClose = () => {
+    setShowJsonEditor(false);
+    setJsonEditorRawJson(rawJson);
+  };
 
   const {
     template,
@@ -212,6 +221,18 @@ export default function TemplateEditor({
           </Button>
         </div>
       </Modal>
+
+      {/* JSON Editor */}
+      {/* <JsonEditorOverlay
+        rawJson={jsonEditorRawJson}
+        setRawJson={setJsonEditorRawJson}
+        onClose={handleJsonEditorClose} */}
+      {/* /> */}
+      {/* <Button onClick={() => setShowJsonEditor(true)}>Edit JSON</Button> */}  
+
+      {/* <Modal show={showJsonEditor} onClose={handleJsonEditorClose} title="Edit JSON">
+        <TemplateJsonEditor rawJson={jsonEditorRawJson} setRawJson={setJsonEditorRawJson} />
+      </Modal> */}
       <div>&nbsp;</div>
       <div>&nbsp;</div>
       <div>&nbsp;</div>

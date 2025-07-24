@@ -11,6 +11,7 @@ import {
   FileStack,
   Activity,
   ChevronDown,
+  Mail,
 } from 'lucide-react';
 import clsx from 'clsx';
 
@@ -65,6 +66,12 @@ const navItems: NavItem[] = [
       { label: 'Browse', href: '/admin/templates' },
       { label: 'Create', href: '/admin/templates/new' },
     ],
+  },
+  {
+    type: 'item',
+    label: 'Email Logs',
+    href: '/admin/email-logs',
+    icon: <Mail size={18} />,
   },
   // {
   //   type: 'item',

@@ -1,4 +1,4 @@
-// components/editor/JsonEditorOverlay.tsx
+// components/editor/json-editor-overlay.tsx
 'use client';
 import { X } from 'lucide-react';
 import TemplateJsonEditor from '@/components/admin/templates/template-json-editor';

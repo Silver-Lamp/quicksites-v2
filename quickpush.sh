@@ -34,6 +34,16 @@ esac
 
 final_msg="$emoji $msg"
 
+# Check for --debug flag
+DEBUG=false
+if [[ "$1" == "--debug" ]]; then
+  DEBUG=true
+  echo "🔍 SquatBot Debug Mode ON"
+fi
+
+# Get latest commit SHA to track exact deployment
+commit_sha=$(git rev-parse HEAD)
+
 # Log the prompt + final message
 timestamp=$(date +"%Y-%m-%d %H:%M:%S")
 echo -e "[$timestamp]\nPrompt: $prompt\nCommit: $final_msg\n" >> ~/.squatbot-commits
@@ -52,14 +62,18 @@ projectId=$(jq -r .projectId .vercel/project.json)
 
 # Wait until Vercel registers a new deployment
 echo "🔍 Checking for latest deployment ID..."
-echo -n "🤖 Waiting for Vercel to register deployment "
+echo -n "🤖 Waiting for Vercel to register deployment for commit $commit_sha "
 spinner="/|\\-"
-max_attempts=30  # 30 × 10s = 5 minutes
+max_attempts=30
 attempt=0
 
 while (( attempt < max_attempts )); do
-  deployment=$(curl -s -H "Authorization: Bearer $VERCEL_TOKEN" \
-    "https://api.vercel.com/v6/deployments?projectId=$projectId" | jq -r ".deployments[0].id")
+  response=$(curl -s -H "Authorization: Bearer $VERCEL_TOKEN" \
+    "https://api.vercel.com/v6/deployments?projectId=$projectId&meta.githubCommitSha=$commit_sha")
+
+  $DEBUG && echo "$response" > /tmp/squatbot-debug.json
+
+  deployment=$(echo "$response" | jq -r ".deployments[0].id")
 
   if [[ "$deployment" != "null" && -n "$deployment" ]]; then
     echo -e "\r✅ Found deployment ID: $deployment"
@@ -72,16 +86,16 @@ while (( attempt < max_attempts )); do
   secs=$(( remaining % 60 ))
   time_display=$(printf "%02d:%02d" $mins $secs)
 
-  echo -ne "\r🤖 Waiting for Vercel to register deployment $spin_char ⏳ $time_display remaining"
+  echo -ne "\r🤖 Waiting for deployment $spin_char ⏳ $time_display remaining"
   sleep 10
   ((attempt++))
 done
 
 if [[ "$deployment" == "null" || -z "$deployment" ]]; then
-  echo -e "\n❌ Failed to get a valid deployment ID after 5 minutes."
+  echo -e "\n❌ Could not find a Vercel deployment for commit $commit_sha"
+  $DEBUG && echo "📂 Debug JSON saved to /tmp/squatbot-debug.json"
   exit 1
 fi
-
 
 echo "🔄 Waiting for deployment to complete..."
 

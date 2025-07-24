@@ -12,6 +12,10 @@ export function validateTemplateBlocks(template: Template): {
 } {
   const errors: Record<string, BlockValidationError[]> = {};
 
+  if (!template.data || !Array.isArray(template.data.pages)) {
+    return { isValid: true, errors }; // treat as valid (nothing to validate)
+  }
+
   template.data.pages.forEach((page, pageIndex) => {
     page.content_blocks.forEach((block, blockIndex) => {
       const result = BlockSchema.safeParse(block);

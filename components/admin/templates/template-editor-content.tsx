@@ -62,7 +62,7 @@ export function EditorContent({
     setHistoryStack((prev) => pushWithLimit(prev, template, 10));
     setRedoStack([]);
     setTemplate(updated);
-    setRawJson(JSON.stringify(updated.data, null, 2));
+    setRawJson(JSON.stringify(updated, null, 2));
     setTemplateErrors({});
     setFormErrors([]);
 
@@ -112,7 +112,7 @@ export function EditorContent({
     setHistoryStack((prev) => prev.slice(0, -1));
     setRedoStack((prev) => pushWithLimit(prev, template, 10));
     setTemplate(previous);
-    setRawJson(JSON.stringify(previous.data, null, 2));
+    setRawJson(JSON.stringify(previous, null, 2));
     toast.success('Undo successful');
   };
 
@@ -125,14 +125,48 @@ export function EditorContent({
     setRedoStack((prev) => prev.slice(0, -1));
     setHistoryStack((prev) => pushWithLimit(prev, template, 10));
     setTemplate(next);
-    setRawJson(JSON.stringify(next.data, null, 2));
+    setRawJson(JSON.stringify(next, null, 2));
     toast.success('Redo successful');
   };
 
   const handleSaveDraft = async () => {
     try {
       const parsed = JSON.parse(rawJson);
-      const full = { ...template, data: parsed };
+      const full = {
+        ...parsed,
+        data: parsed.data ?? { pages: [] }, // make sure data is nested
+        verified: parsed.verified ?? false,
+        meta: {
+          title: '',
+          description: '',
+          ogImage: '',
+          ...parsed.meta,
+        },
+      };
+
+      const heroBlock = parsed.pages?.[0]?.content_blocks?.find((b: any) => b.type === 'hero');
+
+      // const full = {
+      //   ...template,
+      //   data: parsed,
+      //   verified: template.verified ?? false,
+      //   meta: {
+      //     ogImage: template.meta?.ogImage || heroBlock?.content?.image_url || '',
+      //     title: template.meta?.title || parsed.pages?.[0]?.title || template.template_name || '',
+      //     description:
+      //       template.meta?.description ||
+      //       heroBlock?.content?.subheadline ||
+      //       heroBlock?.content?.headline ||
+      //       '',
+      //     ...template.meta,
+      //   },
+      // };
+
+      console.log('EditorContent: full:', full);
+      console.log('EditorContent: template:', template);
+      console.log('EditorContent: parsed:', parsed);
+      console.log('EditorContent: heroBlock:', heroBlock);
+      
       const { isValid, errors } = validateTemplateBlocks(full);
       const result = TemplateSaveSchema.safeParse(full);
       const fieldErrors = result.success ? {} : result.error.flatten().fieldErrors;
@@ -143,6 +177,14 @@ export function EditorContent({
       setBlockErrors(errors);
 
       if (!result.success || Object.keys(errors).length > 0) {
+        console.error('Validation failed. Fix errors to save. (template-editor-content.tsx)');
+        // console.error('Validation errors:', errors);
+        // console.error('Form errors:', formErrors);
+        // console.error('Field errors:', fieldErrors);
+        console.error('Result:', result);
+        // console.error('Full:', full);
+        // console.error('Template:', template);
+        // console.error('Parsed:', parsed);
         toast.error('Validation failed. Fix errors to save.');
         return;
       }
@@ -156,10 +198,11 @@ export function EditorContent({
 
       const saved = await promise;
       setTemplate(saved);
-      setRawJson(JSON.stringify(saved.data, null, 2));
+      setRawJson(JSON.stringify(saved, null, 2));
       setBlockErrors({});
     } catch (err: any) {
-      toast.error('Invalid JSON');
+      console.error('Invalid JSON (template-editor-content.tsx):', err);
+      toast.error('Invalid JSON (template-editor-content.tsx)');
     }
   };
 

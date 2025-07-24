@@ -19,6 +19,8 @@ export function createEmptyTemplate(name?: string): ValidatedTemplate {
           slug: 'index',
           title: 'Sample Page',
           content_blocks: [],
+          show_header: true,
+          show_footer: true,
         },
       ],
     },

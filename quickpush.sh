@@ -17,7 +17,7 @@ declare -a COMMIT_PROMPTS=(
 )
 
 prompt=${COMMIT_PROMPTS[$RANDOM % ${#COMMIT_PROMPTS[@]}]}
-read -p "$prompt " msg
+read -p "🤖 $prompt " msg
 
 # Add a label emoji based on keywords
 msg_lc=$(echo "$msg" | tr '[:upper:]' '[:lower:]')
@@ -50,8 +50,29 @@ git push -f
 
 projectId=$(jq -r .projectId .vercel/project.json)
 
-deployment=$(curl -s -H "Authorization: Bearer $VERCEL_TOKEN" \
-  "https://api.vercel.com/v6/deployments?projectId=$projectId" | jq -r ".deployments[0].id")
+# Wait until Vercel registers a new deployment
+echo "🔍 Checking for latest deployment ID..."
+echo -n "🤖 Waiting for Vercel to register deployment "
+spinner="/|\\-"
+for i in {1..20}; do
+  deployment=$(curl -s -H "Authorization: Bearer $VERCEL_TOKEN" \
+    "https://api.vercel.com/v6/deployments?projectId=$projectId" | jq -r ".deployments[0].id")
+
+  if [[ "$deployment" != "null" && -n "$deployment" ]]; then
+    echo -e "\r✅ Found deployment ID: $deployment"
+    break
+  fi
+
+  spin_char=${spinner:i%4:1}
+  echo -ne "\r🤖 Waiting for Vercel to register deployment $spin_char"
+  sleep 0.3
+done
+
+if [[ "$deployment" == "null" || -z "$deployment" ]]; then
+  echo -e "\n❌ Failed to get a valid deployment ID after multiple attempts."
+  exit 1
+fi
+
 
 echo "🔄 Waiting for deployment to complete..."
 

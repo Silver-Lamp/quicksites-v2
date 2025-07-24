@@ -165,6 +165,31 @@ export function EditorContent({
 
   return (
     <IndustryThemeScope industry={template.industry}>
+      {(formErrors.length > 0 || Object.keys(templateErrors).length > 0) && (
+        <div className="p-4 bg-red-100 border border-red-300 text-red-800 rounded-md mb-4 max-w-3xl mx-auto">
+          <h4 className="font-semibold mb-2">Validation Issues</h4>
+
+          {formErrors.length > 0 && (
+            <ul className="list-disc ml-6 mb-2">
+              {formErrors.map((err, idx) => (
+                <li key={`form-error-${idx}`}>{err}</li>
+              ))}
+            </ul>
+          )}
+
+          {Object.entries(templateErrors).map(([field, errors]) => (
+            <div key={field} className="mb-2">
+              <div className="font-medium">{field}:</div>
+              <ul className="list-disc ml-6">
+                {errors.map((err, idx) => (
+                  <li key={`${field}-error-${idx}`}>{err}</li>
+                ))}
+              </ul>
+            </div>
+          ))}
+        </div>
+      )}
+
       <Tabs defaultValue="preview">
         <TabsList>
           <TabsTrigger value="preview">Preview</TabsTrigger>
@@ -204,6 +229,11 @@ export function EditorContent({
           <TemplateHistory template={template} onRevert={handleTemplateChange} />
         </TabsContent>
       </Tabs>
+
+      <TemplateJsonEditor
+        rawJson={rawJson}
+        setRawJson={setRawJson}
+      />
 
       <TemplatePublishModal
         open={showModal}

@@ -136,8 +136,13 @@ export default function TemplateJsonEditor({ rawJson, setRawJson }: TemplateJson
       </div>
 
       {validationError && (
-        <div className="text-red-400 text-sm font-mono px-1">
-          ⚠️ {validationError}
+        <div className="bg-red-950 text-red-300 border border-red-700 p-3 rounded text-sm space-y-2 max-w-3xl">
+          <div className="font-semibold text-red-200">Validation Errors:</div>
+          {validationError.split('\n').map((line, i) => (
+            <div key={i} className="whitespace-pre-line">
+              • {line}
+            </div>
+          ))}
         </div>
       )}
 

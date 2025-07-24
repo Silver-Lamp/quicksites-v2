@@ -8,10 +8,22 @@ import { supabase } from '@/lib/supabase/client';
 export type ContactFormBlock = Extract<Block, { type: 'contact_form' }>;
 
 export default function ContactFormRender({ block }: { block: ContactFormBlock }) {
+  function getSiteSlugFromHostname(hostname: string): string {
+    if (hostname.endsWith('.quicksites.ai')) {
+      // subdomain.quicksites.ai → subdomain
+      return hostname.split('.')[0];
+    } else {
+      // Strip 'www.' if present and return domain without TLD
+      const parts = hostname.replace(/^www\./, '').split('.');
+      return parts.length >= 2 ? parts[0] : hostname;
+    }
+  }
+  
   const siteSlug =
     typeof window !== 'undefined'
-      ? window.location.hostname.split('.')[0]
+      ? getSiteSlugFromHostname(window.location.hostname)
       : 'unknown';
+  
 
   const { title = 'Contact Us', notification_email = 'sandon@quicksites.ai' } = block.content || {};
 

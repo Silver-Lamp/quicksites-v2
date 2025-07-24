@@ -15,14 +15,15 @@ export async function generateFaviconBundle(file: File): Promise<{ ico: Blob; si
       resized[size] = new Blob([resizedBuf], { type: 'image/png' });
     }
 
-    const icoBuffer = await sharp({ create: { width: 64, height: 64, channels: 4, background: 'transparent' } })
-      .composite([{ input: pngs[2] }])
-      .resize(64, 64)
-      .toFormat('ico')
-      .toBuffer();
+    // const icoBuffer = await sharp({ create: { width: 64, height: 64, channels: 4, background: 'transparent' } })
+    //   .composite([{ input: pngs[2] }])
+    //   .resize(64, 64)
+    //   .toFormat('ico')
+    //   .toBuffer();
 
     return {
-      ico: new Blob([icoBuffer], { type: 'image/x-icon' }),
+      // ico: new Blob([icoBuffer], { type: 'image/x-icon' }),
+      ico: new Blob([pngs[2]], { type: 'image/png' }),
       sizes: resized,
     };
   } catch (err) {

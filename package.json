@@ -15,7 +15,7 @@
     "fonts": "ts-node scripts/download-google-fonts.ts",
     "hosts:add": "ts-node scripts/manage-hosts-from-supabase.ts add",
     "hosts:remove": "ts-node scripts/manage-hosts-from-supabase.ts remove",
-    "dev": "next dev --hostname 0.0.0.0",
+    "dev": "node scripts/dev-motd.js && next dev --hostname 0.0.0.0",
     "build": "next build",
     "build:prod": "rm -rf .next;NODE_OPTIONS='--max-old-space-size=8192' next build",
     "start": "next start",

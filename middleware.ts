@@ -16,32 +16,34 @@ export async function middleware(req: NextRequest) {
   const isLocalhost =
     host.includes('localhost') || host.includes('lvh.me') || host.includes('127.0.0.1');
   const baseDomain = 'quicksites.ai';
-
   const hostWithoutPort = host.split(':')[0];
 
-  // ✅ Extract subdomain
+  const isCustomDomain = !isLocalhost && !hostWithoutPort.endsWith(baseDomain);
+
+  // ✅ Extract subdomain if applicable
   const subdomain = (() => {
     if (isLocalhost) {
       const parts = hostWithoutPort.split('.');
-      if (parts.length === 2 && parts[1] === 'localhost') return parts[0];
-      return null;
+      return parts.length === 2 && parts[1] === 'localhost' ? parts[0] : null;
     }
-
-    if (!hostWithoutPort.endsWith(baseDomain)) return null;
-    const parts = hostWithoutPort.replace(`.${baseDomain}`, '').split('.');
-    return parts[0] !== 'www' ? parts[0] : null;
+    if (hostWithoutPort.endsWith(baseDomain)) {
+      const parts = hostWithoutPort.replace(`.${baseDomain}`, '').split('.');
+      return parts[0] !== 'www' ? parts[0] : null;
+    }
+    return null;
   })();
 
   const isPreview = searchParams.get('preview') === previewToken;
-  const isStaticAsset = pathname.startsWith('/_next') || pathname === '/favicon.ico' || pathname.endsWith('.js.map');
+  const isStaticAsset =
+    pathname.startsWith('/_next') || pathname === '/favicon.ico' || pathname.endsWith('.js.map');
 
-  console.log(`[middleware] host: ${host}, pathname: ${pathname}, subdomain: ${subdomain}`);
+  console.log(`[middleware] host: ${host}, pathname: ${pathname}, subdomain: ${subdomain}, isCustomDomain: ${isCustomDomain}`);
 
   if (isStaticAsset) return res;
 
   const supabase = createMiddlewareClient<Database>({ req, res });
 
-  // ✅ Handle root path for subdomains (e.g. florencetow.quicksites.ai/)
+  // ✅ Handle subdomain homepage
   if (subdomain && pathname === '/') {
     const now = Date.now();
     const cached = validSlugCache.get(subdomain);
@@ -63,7 +65,6 @@ export async function middleware(req: NextRequest) {
     if (!isPreview) query = query.eq('published', true);
 
     const { data: site } = await query.maybeSingle();
-
     const pages = (site?.data as TemplateData)?.pages || [];
     const firstPage = pages.length > 0 ? pages[0].slug : 'home';
 
@@ -77,17 +78,13 @@ export async function middleware(req: NextRequest) {
     }
   }
 
-  // ✅ Handle root path for custom domains
-  if (!subdomain && !isLocalhost && pathname === '/') {
+  // ✅ Handle custom domain homepage
+  if (isCustomDomain && pathname === '/') {
     const now = Date.now();
     const cached = customDomainCache.get(hostWithoutPort);
-    const isFresh = cached && now - cached.timestamp < CACHE_TTL;
+    let slug = cached?.slug;
 
-    let slug: string | null = null;
-
-    if (isFresh) {
-      slug = cached.slug;
-    } else {
+    if (!slug || !cached || now - cached.timestamp >= CACHE_TTL) {
       const { data: site } = await supabase
         .from('templates')
         .select('slug, data')
@@ -117,7 +114,7 @@ export async function middleware(req: NextRequest) {
     }
   }
 
-  // ✅ Rewrite sub-routes for subdomain (e.g. /contact → /sites/florencetow/contact)
+  // ✅ Handle internal subdomain paths (e.g. /about)
   if (
     subdomain &&
     !pathname.startsWith('/sites') &&
@@ -130,10 +127,9 @@ export async function middleware(req: NextRequest) {
     return NextResponse.rewrite(url);
   }
 
-  // ✅ Rewrite sub-routes for custom domain (e.g. /contact on florencetow.com)
+  // ✅ Handle internal custom domain paths (e.g. /contact)
   if (
-    !subdomain &&
-    !isLocalhost &&
+    isCustomDomain &&
     !pathname.startsWith('/sites') &&
     !pathname.startsWith('/admin') &&
     !pathname.startsWith('/login') &&
@@ -142,13 +138,9 @@ export async function middleware(req: NextRequest) {
   ) {
     const now = Date.now();
     const cached = customDomainCache.get(hostWithoutPort);
-    const isFresh = cached && now - cached.timestamp < CACHE_TTL;
+    let slug = cached?.slug;
 
-    let slug: string | null = null;
-
-    if (isFresh) {
-      slug = cached.slug;
-    } else {
+    if (!slug || !cached || now - cached.timestamp >= CACHE_TTL) {
       const { data: site } = await supabase
         .from('templates')
         .select('slug')
@@ -169,7 +161,7 @@ export async function middleware(req: NextRequest) {
     }
   }
 
-  // ✅ Inject Supabase Auth headers (unchanged)
+  // ✅ Inject Supabase Auth headers
   const {
     data: { session },
   } = await supabase.auth.getSession();

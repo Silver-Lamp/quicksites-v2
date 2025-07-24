@@ -11,7 +11,7 @@
     }
   },
   "scripts": {
-    "quickpush": "bash -c 'read -p \"Commit message: \" msg && git add -A && git commit -m \"$msg\" --no-verify && git push -f'",
+    "quickpush": "bash -c 'read -p \"Commit message: \" msg && git add -A && git commit -m \"$msg\" --no-verify && git push -f && curl -s -H \"Authorization: Bearer $VERCEL_TOKEN\" \"https://api.vercel.com/v6/deployments?projectId=$(cat .vercel/project.json | jq -r .projectId)\" | jq -r \".deployments[0] | \\\"Latest: [\\(.state)] \\(.url)\\\"\"'",
     "fonts": "ts-node scripts/download-google-fonts.ts",
     "hosts:add": "ts-node scripts/manage-hosts-from-supabase.ts add",
     "hosts:remove": "ts-node scripts/manage-hosts-from-supabase.ts remove",

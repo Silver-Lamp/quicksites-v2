@@ -1,5 +1,6 @@
 import { getSupabase } from '@/lib/supabase/server';
 import { NextResponse } from 'next/server';
+import type { Page } from '@/types/page';
 
 export async function GET(req: Request, { params }: { params: { domain: string } }) {
   const { domain } = params;
@@ -19,7 +20,7 @@ export async function GET(req: Request, { params }: { params: { domain: string }
   const base = site.custom_domain ? `https://${site.custom_domain}` : `https://quicksites.ai`;
   const pages = site.data?.pages || [];
 
-  const urls = pages.map((page) => {
+  const urls = pages.map((page: Page) => {
     const url = `${base}/${site.slug}/${page.slug}`;
     const lastmod = new Date(site.updated_at || new Date()).toISOString();
     return `

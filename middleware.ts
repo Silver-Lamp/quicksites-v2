@@ -20,12 +20,12 @@ export async function middleware(req: NextRequest) {
   const isCustomDomain = !isLocalhost && !hostWithoutPort.endsWith(baseDomain);
 
   // Optional: normalize www.
-  if (host.startsWith('www.')) {
-    const cleanHost = host.replace('www.', '');
-    const url = req.nextUrl.clone();
-    url.hostname = cleanHost;
-    return NextResponse.redirect(url);
-  }
+  // if (host.startsWith('www.')) {
+  //   const cleanHost = host.replace('www.', '');
+  //   const url = req.nextUrl.clone();
+  //   url.hostname = cleanHost;
+  //   return NextResponse.redirect(url);
+  // }
 
   const subdomain = (() => {
     if (isLocalhost) {

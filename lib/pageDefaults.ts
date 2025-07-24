@@ -8,6 +8,8 @@ export function createDefaultPage(overrides: Partial<ValidatedPage> = {}): Valid
     slug: 'index',
     title: 'Sample Page',
     content_blocks: [],
+    show_header: true,
+    show_footer: true,
     ...overrides,
   };
 }

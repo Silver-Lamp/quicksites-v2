@@ -56,10 +56,13 @@ export async function middleware(req: NextRequest) {
       const parts = baseHost.split('.');
       return parts.length === 2 && parts[1] === 'localhost' ? parts[0] : null;
     }
+    if (baseHost === baseDomain) return null;
+
     if (baseHost.endsWith(baseDomain)) {
       const parts = baseHost.replace(`.${baseDomain}`, '').split('.');
       return parts[0] !== 'www' ? parts[0] : null;
     }
+    
     return null;
   })();
 

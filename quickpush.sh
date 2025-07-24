@@ -54,7 +54,10 @@ projectId=$(jq -r .projectId .vercel/project.json)
 echo "🔍 Checking for latest deployment ID..."
 echo -n "🤖 Waiting for Vercel to register deployment "
 spinner="/|\\-"
-for i in {1..20}; do
+max_attempts=30  # 30 × 10s = 5 minutes
+attempt=0
+
+while (( attempt < max_attempts )); do
   deployment=$(curl -s -H "Authorization: Bearer $VERCEL_TOKEN" \
     "https://api.vercel.com/v6/deployments?projectId=$projectId" | jq -r ".deployments[0].id")
 
@@ -63,13 +66,19 @@ for i in {1..20}; do
     break
   fi
 
-  spin_char=${spinner:i%4:1}
-  echo -ne "\r🤖 Waiting for Vercel to register deployment $spin_char"
-  sleep 0.3
+  spin_char=${spinner:attempt%4:1}
+  remaining=$(( (max_attempts - attempt) * 10 ))
+  mins=$(( remaining / 60 ))
+  secs=$(( remaining % 60 ))
+  time_display=$(printf "%02d:%02d" $mins $secs)
+
+  echo -ne "\r🤖 Waiting for Vercel to register deployment $spin_char ⏳ $time_display remaining"
+  sleep 10
+  ((attempt++))
 done
 
 if [[ "$deployment" == "null" || -z "$deployment" ]]; then
-  echo -e "\n❌ Failed to get a valid deployment ID after multiple attempts."
+  echo -e "\n❌ Failed to get a valid deployment ID after 5 minutes."
   exit 1
 fi
 

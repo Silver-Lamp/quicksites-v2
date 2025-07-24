@@ -94,7 +94,7 @@ export function createDefaultBlock(type: Block['type']): Block {
       return {
         type,
         _id,
-        content: { title: 'Contact Us' },
+        content: { title: 'Contact Us', notification_email: 'sandon@quicksites.ai' },
       };
 
     case 'testimonial':

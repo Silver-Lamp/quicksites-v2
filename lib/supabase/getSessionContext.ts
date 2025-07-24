@@ -10,5 +10,8 @@ export type { RequestContext as SessionContext } from '@/lib/request/getRequestC
  * Returns full user session context including Supabase client and IP/userAgent headers.
  */
 export async function getSessionContext() {
-  return await getRequestContext({ cookieStore: await cookies(), headerStore: new Headers() } as any); // withSupabase = true
+  return await getRequestContext({
+    cookieStore: cookies(), // ✅ now sync
+    headerStore: new Headers(),
+  } as any); // withSupabase = true
 }

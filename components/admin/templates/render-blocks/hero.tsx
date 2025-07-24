@@ -14,6 +14,15 @@ type Props = {
 };
 
 export default function HeroRender({ block, content, compact = false }: Props) {
+  const heroRef = useRef(null);
+
+  // ✅ Always call hooks before conditional logic
+  const { scrollYProgress } = useScroll({
+    target: heroRef,
+    offset: ['start start', 'end start'],
+  });
+  const y = useTransform(scrollYProgress, [0, 1], ['0%', '-20%']);
+
   const final = content || block?.content;
 
   if (!block || !final) {
@@ -42,16 +51,6 @@ export default function HeroRender({ block, content, compact = false }: Props) {
   const backgroundPosition = image_x && image_y
     ? `${image_x} ${image_y}`
     : image_position || 'center';
-
-  // ✅ Ref and scroll motion logic
-  const heroRef = useRef(null);
-  const { scrollYProgress } = useScroll({
-    target: heroRef,
-    offset: ['start start', 'end start'],
-  });
-
-  // Parallax: moves image up as user scrolls down
-  const y = useTransform(scrollYProgress, [0, 1], ['0%', '-20%']);
 
   // 🧱 Full-bleed layout
   if (layout_mode === 'full_bleed' && hasImage) {

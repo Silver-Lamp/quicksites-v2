@@ -12,17 +12,17 @@ export function renderHeadHTML({
   appleTouch?: boolean;
 }): string {
   const iconHref = useIco
-    ? \`\${iconPath}/favicon.ico\`
-    : \`\${iconPath}/favicon.png\`;
+    ? `${iconPath}/favicon.ico`
+    : `${iconPath}/favicon.png`;
 
   const links = [
-    \`<link rel="icon" href="\${iconHref}">\`,
-    appleTouch ? \`<link rel="apple-touch-icon" sizes="180x180" href="\${iconPath}/favicon.png">\` : '',
+    `<link rel="icon" href="${iconHref}">`,
+    appleTouch ? `<link rel="apple-touch-icon" sizes="180x180" href="${iconPath}/favicon.png">` : '',
   ];
 
   return [
-    \`<title>\${title}</title>\`,
-    \`<meta name="description" content="\${description}">\`,
+    `<title>${title}</title>`,
+    `<meta name="description" content="${description}">`,
     ...links,
   ]
     .filter(Boolean)

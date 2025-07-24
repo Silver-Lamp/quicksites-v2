@@ -171,7 +171,7 @@ export default function ContactFormRender({ block }: { block: ContactFormBlock }
             )}
           </div>
           <div>
-            <label className="block font-semibold mb-1">I'm Interested In:</label>
+            <label className="block font-semibold mb-1">I&apos;m Interested In:</label>
             <select
               name="service"
               className="w-full border rounded px-3 py-2 bg-white dark:bg-neutral-800 text-black dark:text-white"

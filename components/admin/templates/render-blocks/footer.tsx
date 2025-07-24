@@ -7,14 +7,19 @@ import SectionShell from '@/components/ui/section-shell';
 import 'leaflet/dist/leaflet.css';
 import { useEffect, useState } from 'react';
 
-const LeafletMap = dynamic(() => import('@/components/ui/leaflet-footer-map').then(mod => mod.LeafletFooterMap), { ssr: false });
+const LeafletMap = dynamic(
+  () => import('@/components/ui/leaflet-footer-map').then(mod => mod.LeafletFooterMap),
+  { ssr: false }
+);
 
 const geocodeCache = new Map<string, [number, number]>();
 
-function useGeocode(address: string) {
+function useGeocode(address: string | null | undefined) {
   const [coords, setCoords] = useState<[number, number] | null>(null);
 
   useEffect(() => {
+    if (!address) return;
+
     if (geocodeCache.has(address)) {
       setCoords(geocodeCache.get(address)!);
       return;
@@ -55,6 +60,10 @@ type Props = {
 export default function FooterRender({ block, content, compact = false }: Props) {
   const final = content || block?.content;
 
+  // ✅ Always call hooks before conditionals
+  const fullAddress = final ? `${final.address || '123 Main St'}, ${final.cityState || ''}` : null;
+  const coords = useGeocode(fullAddress);
+
   if (!final) {
     return (
       <div className="text-red-500 italic text-sm p-2 bg-red-50 dark:bg-red-900/20 rounded">
@@ -70,9 +79,6 @@ export default function FooterRender({ block, content, compact = false }: Props)
     phone = '(555) 555-5555',
     links = [],
   } = final;
-
-  const fullAddress = `${address}, ${cityState}`;
-  const coords = useGeocode(fullAddress);
 
   if (compact) {
     return (
@@ -109,7 +115,7 @@ export default function FooterRender({ block, content, compact = false }: Props)
           <p className="mt-1">{phone}</p>
 
           {coords && (
-            <LeafletMap coords={coords} businessName={businessName} fullAddress={fullAddress} />
+            <LeafletMap coords={coords} businessName={businessName} fullAddress={fullAddress!} />
           )}
         </div>
       </div>

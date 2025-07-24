@@ -23,17 +23,21 @@ type Props = {
 };
 
 export default function PageHeaderEditor({ block, onSave, onClose, errors = {}, template }: Props) {
-  if (block.type !== 'header') {
-    return <div className="text-red-500">Invalid block type</div>;
-  }
-
   const headerBlock = block as HeaderBlock;
-  const [logoUrl, setLogoUrl] = useState(headerBlock.content.logoUrl || template?.logo_url || '');
-  const [navItems, setNavItems] = useState([...headerBlock.content.navItems]);
+
+  const [logoUrl, setLogoUrl] = useState(
+    block.type === 'header' ? headerBlock.content.logoUrl || template?.logo_url || '' : ''
+  );
+  const [navItems, setNavItems] = useState(
+    block.type === 'header' ? [...headerBlock.content.navItems] : []
+  );
   const [isUploading, setIsUploading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
-  const areLinksValid = navItems.every((link) => link.label.trim() && link.href.trim());
+  const areLinksValid =
+    block.type === 'header'
+      ? navItems.every((link) => link.label.trim() && link.href.trim())
+      : false;
 
   const handleFileUpload = async (file: File): Promise<string> => {
     const compressed = await imageCompression(file, {
@@ -46,19 +50,16 @@ export default function PageHeaderEditor({ block, onSave, onClose, errors = {}, 
     const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
     const filePath = `${fileName}`;
 
-    const { error } = await supabase.storage
-      .from('logos')
-      .upload(filePath, compressed, {
-        cacheControl: '3600',
-        upsert: false,
-      });
+    const { error } = await supabase.storage.from('logos').upload(filePath, compressed, {
+      cacheControl: '3600',
+      upsert: false,
+    });
 
     if (error) throw new Error('Upload failed');
 
     const {
       data: { publicUrl },
     } = supabase.storage.from('logos').getPublicUrl(filePath);
-    console.log('publicUrl', publicUrl);
     return publicUrl;
   };
 
@@ -82,6 +83,10 @@ export default function PageHeaderEditor({ block, onSave, onClose, errors = {}, 
     accept: { 'image/png': [], 'image/jpeg': [], 'image/webp': [], 'image/svg+xml': [] },
     maxSize: 5 * 1024 * 1024, // 5MB
   });
+
+  if (block.type !== 'header') {
+    return <div className="text-red-500">Invalid block type</div>;
+  }
 
   const saveBlock = () => {
     setIsSaving(true);

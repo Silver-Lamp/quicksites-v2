@@ -14,20 +14,21 @@ export async function POST(req: Request) {
 
   try {
     const resized = await sharp(buffer).resize(64, 64).png().toBuffer();
-    const ico = await sharp(buffer).resize(64, 64).toFormat('ico').toBuffer();
+    // const ico = await sharp(buffer).resize(64, 64).toFormat('ico').toBuffer();
 
     const pngPath = `favicons/${templateId}/favicon.png`;
-    const icoPath = `favicons/${templateId}/favicon.ico`;
+    // const icoPath = `favicons/${templateId}/favicon.ico`;
 
     const { error: pngError } = await supabase.storage
       .from('public')
       .upload(pngPath, resized, { contentType: 'image/png', upsert: true });
 
-    const { error: icoError } = await supabase.storage
-      .from('public')
-      .upload(icoPath, ico, { contentType: 'image/x-icon', upsert: true });
+    // const { error: icoError } = await supabase.storage
+    //   .from('public')
+    //   .upload(icoPath, ico, { contentType: 'image/x-icon', upsert: true });
 
-    if (pngError || icoError) {
+    // if (pngError || icoError) {
+    if (pngError) {
       return new NextResponse('Upload failed', { status: 500 });
     }
 
@@ -41,7 +42,7 @@ export async function POST(req: Request) {
     return NextResponse.json({
       success: true,
       png: publicUrl.publicUrl,
-      ico: supabase.storage.from('public').getPublicUrl(icoPath).data.publicUrl,
+      // ico: supabase.storage.from('public').getPublicUrl(icoPath).data.publicUrl,
     });
   } catch (err) {
     console.error('Favicon optimization failed:', err);

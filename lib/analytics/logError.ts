@@ -18,12 +18,12 @@ export async function logError(
     console.warn('[🚨 logError]', payload);
   }
 
-  try {
-    await fetch('/api/log-client-error', {
-      method: 'POST',
-      body: JSON.stringify(payload),
-    });
-  } catch (err) {
-    console.warn('[logError → failed to report]', err);
-  }
+  // try {
+  //   await fetch('/api/log-client-error', {
+  //     method: 'POST',
+  //     body: JSON.stringify(payload),
+  //   });
+  // } catch (err) {
+  //   console.warn('[logError → failed to report]', err);
+  // }
 }

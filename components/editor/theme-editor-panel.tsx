@@ -81,7 +81,7 @@ export function ThemeEditorPanel({ industry }: { industry: string }) {
         ))}
       </div>
 
-      <ThemePreviewCard />
+      <ThemePreviewCard theme={theme.name || ''} onSelectFont={() => {}} />
     </div>
   );
 }

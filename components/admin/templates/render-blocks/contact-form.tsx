@@ -25,7 +25,7 @@ export default function ContactFormRender({ block }: { block: ContactFormBlock }
     phone: '',
     service: '',
     title: 'Contact Us',
-    notification_email: 'sandon@quicksites.com',
+    notification_email: 'sandon@quicksites.ai',
   });
   const [submitted, setSubmitted] = useState(false);
   const [submitting, setSubmitting] = useState(false);

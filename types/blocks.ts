@@ -345,6 +345,6 @@ export function generateMockFAQ(): FAQBlock['content'] {
 export function generateMockContactForm(): ContactFormBlock['content'] {
   return {
     title: 'Contact Us',
-    notification_email: 'sandon@quicksites.com',
+    notification_email: 'sandon@quicksites.ai',
   };
 }

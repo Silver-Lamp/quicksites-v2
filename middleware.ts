@@ -11,16 +11,22 @@ const CACHE_TTL = 60_000;
 export async function middleware(req: NextRequest) {
   const { pathname, searchParams } = req.nextUrl;
   const host = req.headers.get('host') || '';
+  const hostWithoutPort = host.split(':')[0];
   const res = NextResponse.next();
 
   const isLocalhost =
     host.includes('localhost') || host.includes('lvh.me') || host.includes('127.0.0.1');
   const baseDomain = 'quicksites.ai';
-  const hostWithoutPort = host.split(':')[0];
-
   const isCustomDomain = !isLocalhost && !hostWithoutPort.endsWith(baseDomain);
 
-  // ✅ Extract subdomain if applicable
+  // Optional: normalize www. domains
+  if (host.startsWith('www.')) {
+    const cleanHost = host.replace('www.', '');
+    const url = req.nextUrl.clone();
+    url.hostname = cleanHost;
+    return NextResponse.redirect(url);
+  }
+
   const subdomain = (() => {
     if (isLocalhost) {
       const parts = hostWithoutPort.split('.');
@@ -43,7 +49,7 @@ export async function middleware(req: NextRequest) {
 
   const supabase = createMiddlewareClient<Database>({ req, res });
 
-  // ✅ Handle subdomain homepage
+  // ✅ Handle root path for subdomains
   if (subdomain && pathname === '/') {
     const now = Date.now();
     const cached = validSlugCache.get(subdomain);
@@ -69,7 +75,7 @@ export async function middleware(req: NextRequest) {
     const firstPage = pages.length > 0 ? pages[0].slug : 'home';
 
     if (site) {
-      validSlugCache.set(subdomain, { timestamp: now, firstPage });
+      validSlugCache.set(subdomain, { timestamp: Date.now(), firstPage });
       const url = req.nextUrl.clone();
       url.pathname = `/sites/${subdomain}/${firstPage}`;
       return NextResponse.rewrite(url);
@@ -78,7 +84,7 @@ export async function middleware(req: NextRequest) {
     }
   }
 
-  // ✅ Handle custom domain homepage
+  // ✅ Handle root path for custom domains
   if (isCustomDomain && pathname === '/') {
     const now = Date.now();
     const cached = customDomainCache.get(hostWithoutPort);
@@ -110,11 +116,12 @@ export async function middleware(req: NextRequest) {
 
       const url = req.nextUrl.clone();
       url.pathname = `/sites/${slug}/${firstPage}`;
+      console.log(`[middleware] ✅ rewriting / → /sites/${slug}/${firstPage}`);
       return NextResponse.rewrite(url);
     }
   }
 
-  // ✅ Handle internal subdomain paths (e.g. /about)
+  // ✅ Handle subdomain internal routes
   if (
     subdomain &&
     !pathname.startsWith('/sites') &&
@@ -127,7 +134,7 @@ export async function middleware(req: NextRequest) {
     return NextResponse.rewrite(url);
   }
 
-  // ✅ Handle internal custom domain paths (e.g. /contact)
+  // ✅ Handle custom domain internal routes
   if (
     isCustomDomain &&
     !pathname.startsWith('/sites') &&
@@ -161,7 +168,7 @@ export async function middleware(req: NextRequest) {
     }
   }
 
-  // ✅ Inject Supabase Auth headers
+  // ✅ Auth headers
   const {
     data: { session },
   } = await supabase.auth.getSession();

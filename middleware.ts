@@ -72,6 +72,21 @@ export async function middleware(req: NextRequest) {
 
   console.log(`[middleware] host: ${host}, pathname: ${pathname}, subdomain: ${subdomain}, isCustomDomain: ${isCustomDomain}`);
 
+  // ✅ Sitemap.xml
+  if (isCustomDomain && pathname === '/sitemap.xml') {
+    const newUrl = req.nextUrl.clone();
+    newUrl.pathname = `/api/sitemap.xml/${baseHost}`;
+    return NextResponse.rewrite(newUrl);
+  }
+
+  // ✅ Robots.txt
+  if (isCustomDomain && pathname === '/robots.txt') {
+    const newUrl = req.nextUrl.clone();
+    newUrl.pathname = `/api/robots.txt/${baseHost}`;
+    return NextResponse.rewrite(newUrl);
+  }
+
+  // ✅ Static assets and /api pass-through
   if (
     pathname.startsWith('/sites') ||
     pathname.startsWith('/admin') ||

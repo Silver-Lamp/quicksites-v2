@@ -1,3 +1,4 @@
+// app/api/sitemap.xml/route.ts
 export const runtime = 'nodejs';
 
 import { supabase } from '@/admin/lib/supabaseClient';

@@ -38,6 +38,13 @@ async function log404Once({
 
 export async function middleware(req: NextRequest) {
   const { pathname, searchParams } = req.nextUrl;
+
+  // ✅ Custom 404 trigger handler
+  if (pathname === '/not-found-trigger') {
+    req.nextUrl.pathname = '/404';
+    return NextResponse.rewrite(req.nextUrl);
+  }
+
   const host = req.headers.get('host') || '';
   const hostWithoutPort = host.split(':')[0];
   const baseHost = hostWithoutPort.replace(/^www\./, '');

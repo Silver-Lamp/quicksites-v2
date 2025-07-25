@@ -1,4 +1,3 @@
-// app/api/sitemap.xml/route.ts
 export const runtime = 'nodejs';
 
 import { supabase } from '@/admin/lib/supabaseClient';
@@ -7,15 +6,25 @@ import { NextRequest } from 'next/server';
 const BASE_URL = 'https://quicksites.ai';
 const MAX_URLS_PER_SITEMAP = 1000;
 
+function escapeXml(unsafe: string) {
+  return unsafe.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
 function generateXml(pages: { loc: string; changefreq: string; priority: number }[]) {
+  const urlEntries = pages
+    .map((page) => {
+      return `
+<url>
+  <loc>${escapeXml(page.loc)}</loc>
+  <changefreq>${page.changefreq}</changefreq>
+  <priority>${page.priority}</priority>
+</url>`;
+    })
+    .join('\n');
+
   return `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-${pages
-  .map(
-    (page) =>
-      `<url><loc>${page.loc}</loc><changefreq>${page.changefreq}</changefreq><priority>${page.priority}</priority></url>`
-  )
-  .join('\n')}
+${urlEntries}
 </urlset>`;
 }
 

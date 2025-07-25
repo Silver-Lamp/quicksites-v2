@@ -1,5 +1,8 @@
 import { NextRequest } from 'next/server';
+import { NextResponse } from 'next/server';
 import { supabase } from '@/admin/lib/supabaseClient';
+
+const NEXT_PUBLIC_BASE_URL = process.env.NEXT_PUBLIC_BASE_URL;
 
 export const runtime = 'nodejs';
 
@@ -35,9 +38,10 @@ export async function GET(req: NextRequest, { params }: { params: { domain: stri
     .eq('published', true)
     .maybeSingle();
 
-  if (!site) {
-    return new Response('Not found', { status: 404 });
-  }
+    if (!site) {
+      return NextResponse.redirect(`${NEXT_PUBLIC_BASE_URL}/not-found-trigger`, 307);
+    }
+    
 
   const slug = site.slug;
   const pages = (site.data as any)?.pages || [];

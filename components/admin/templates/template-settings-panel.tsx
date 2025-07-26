@@ -197,6 +197,39 @@ export default function TemplateSettingsPanel({ template, onChange }: TemplateSe
           className="bg-gray-800 text-white border border-gray-700"
         />
       </div>
+      <div className="space-y-1">
+        <Label>Industry</Label>
+        <select
+          value={template.industry || ''}
+          onChange={(e) => {
+            const value = e.target.value;
+            if (value === '__add_new__') {
+              const newIndustry = prompt('Enter new industry name:');
+              if (newIndustry?.trim()) {
+                const updatedList = [...industries, newIndustry.trim()];
+                setIndustries(updatedList);
+                onChange({ ...template, industry: newIndustry.trim() });
+
+                supabase.from('industries').insert({ name: newIndustry.trim() }).then(({ error }) => {
+                  if (error) toast.error('Failed to save new industry');
+                  else toast.success('New industry added');
+                });
+              }
+            } else {
+              onChange({ ...template, industry: value });
+            }
+          }}
+          className="w-full bg-gray-800 text-white border border-gray-700 px-2 py-1 rounded"
+        >
+          <option value="">Select industry</option>
+          {industries.map((i) => (
+            <option key={i} value={i}>
+              {i}
+            </option>
+          ))}
+          <option value="__add_new__">+ Add new industry...</option>
+        </select>
+      </div>
     </Collapsible>
 
     <Collapsible title="URL & Slug Settings" id="url-slug-settings">

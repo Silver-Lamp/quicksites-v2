@@ -61,7 +61,7 @@ export default function HeroEditor({
   };
 
   return (
-    <div className="space-y-4 bg-black text-white border border-black p-4 rounded">
+    <div className="space-y-4 bg-black text-white border border-black p-4 rounded max-h-[90vh] overflow-y-auto">
 
       <div>
         <label className="block text-sm font-medium mb-1">Headline</label>

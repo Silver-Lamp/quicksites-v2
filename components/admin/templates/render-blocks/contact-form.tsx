@@ -10,22 +10,23 @@ export type ContactFormBlock = Extract<Block, { type: 'contact_form' }>;
 export default function ContactFormRender({ block }: { block: ContactFormBlock }) {
   function getSiteSlugFromHostname(hostname: string): string {
     if (hostname.endsWith('.quicksites.ai')) {
-      // subdomain.quicksites.ai → subdomain
       return hostname.split('.')[0];
     } else {
-      // Strip 'www.' if present and return domain without TLD
       const parts = hostname.replace(/^www\./, '').split('.');
       return parts.length >= 2 ? parts[0] : hostname;
     }
   }
-  
+
   const siteSlug =
     typeof window !== 'undefined'
       ? getSiteSlugFromHostname(window.location.hostname)
       : 'unknown';
-  
 
-  const { title = 'Contact Us', notification_email = 'sandon@quicksites.ai' } = block.content || {};
+  const {
+    title = 'Contact Us',
+    notification_email = 'sandon@quicksites.ai',
+    services = [], // ✅ pull services array from block.content
+  } = block.content || {};
 
   const [formData, setFormData] = useState({
     name: '',
@@ -62,7 +63,7 @@ export default function ContactFormRender({ block }: { block: ContactFormBlock }
     if (!formData.name) newErrors.name = 'Name is required.';
     if (!formData.email && !formData.phone) newErrors.contact = 'Please provide either an email or phone number.';
     if (formData.email && !isValidEmail(formData.email)) newErrors.email = 'Email format is invalid.';
-    if (formData.phone && !isValidPhone(formData.phone)) newErrors.phone = 'Phone number must be in US format (e.g. (555) 123-4567).';
+    if (formData.phone && !isValidPhone(formData.phone)) newErrors.phone = 'Phone number must be in US format.';
     setErrors(newErrors);
     if (Object.keys(newErrors).length > 0) return;
 
@@ -76,7 +77,7 @@ export default function ContactFormRender({ block }: { block: ContactFormBlock }
 
     if (insertError || !data) {
       console.error('Insert error:', insertError);
-      alert('There was a problem submitting the form. Please try again. If the problem persists, contact us at ' + notification_email);
+      alert('There was a problem submitting the form. Please try again later.');
       setSubmitting(false);
       return;
     }
@@ -93,19 +94,18 @@ export default function ContactFormRender({ block }: { block: ContactFormBlock }
           to: [notification_email, 'sandon@quicksites.ai'],
           subject: `New Contact Form Submission from ${siteSlug}`,
           message: `
-      New contact form submission from ${siteSlug}:
-      
-      Name: ${formData.name}
-      Email: ${formData.email || 'N/A'}
-      Phone: ${formData.phone || 'N/A'}
-      Service: ${formData.service || 'N/A'}
+New contact form submission from ${siteSlug}:
+
+Name: ${formData.name}
+Email: ${formData.email || 'N/A'}
+Phone: ${formData.phone || 'N/A'}
+Service: ${formData.service || 'N/A'}
           `.trim(),
           user_email: formData.email || null,
           site_slug: siteSlug,
-          form_submission_id: data.id, // 🔗 Linked to email_logs
+          form_submission_id: data.id,
         }),
       });
-      
 
       const json = await res.json();
       if (res.ok && json.success) {
@@ -191,10 +191,11 @@ export default function ContactFormRender({ block }: { block: ContactFormBlock }
               required
             >
               <option value="">Select a service</option>
-              <option value="Towing">Towing</option>
-              <option value="Roadside Assistance">Roadside Assistance</option>
-              <option value="Battery Jumpstart">Battery Jumpstart</option>
-              <option value="Lockout Service">Lockout Service</option>
+              {(services.length > 0 ? services : ['Towing', 'Roadside Assistance', 'Battery Jumpstart', 'Lockout Service']).map((s: string) => (
+                <option key={s} value={s}>
+                  {s}
+                </option>
+              ))}
             </select>
           </div>
           <div className="flex justify-center gap-4 pt-2">

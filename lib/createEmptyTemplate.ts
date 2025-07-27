@@ -23,6 +23,7 @@ export function createEmptyTemplate(name?: string): ValidatedTemplate {
           show_footer: true,
         },
       ],
+      services: [],
     },
   };
 }

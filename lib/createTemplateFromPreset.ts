@@ -33,6 +33,7 @@ export const templatePresets = {
             content_blocks: blocks,
           }),
         ],
+        services: [],
       },
     };
   }
@@ -70,6 +71,7 @@ export function createTemplateFromPreset({
           ],
         }),
       ],
+      services: [],
     },
   };
 }

@@ -18,6 +18,7 @@ export type ValidatedPage = z.infer<typeof PageSchema>;
 // TemplateData
 export const TemplateDataSchema = z.object({
   pages: z.array(PageSchema),
+  services: z.array(z.string()),
 });
 export type ValidatedTemplateData = z.infer<typeof TemplateDataSchema>;
 
@@ -52,6 +53,7 @@ export const TemplateSaveSchema = z.object({
   data: TemplateDataSchema,
   updated_at: z.string().optional(),
   verified: z.boolean().optional(),
+  services: z.array(z.string()),
   meta: z.object({
     title: z.string().optional(),
     description: z.string().optional(),

@@ -139,7 +139,17 @@ export function TemplateActionToolbar({
           ))}
         </select>
 
-        <Button size="sm" variant="secondary" onClick={onSaveDraft}>
+        <Button
+          size="sm"
+          variant="secondary"
+          onClick={() => {
+            if (typeof onSaveDraft === 'function') {
+              onSaveDraft();
+            } else {
+              toast.error('No save handler found');
+            }
+          }}
+        >
           Save
         </Button>
         <Button size="sm" variant="secondary" onClick={() => handleSaveAs('site')}>

@@ -21,6 +21,7 @@ export type Page = {
 
 export type TemplateData = {
   pages: Page[];
+  services?: string[];
 };
 
 export type Snapshot = {
@@ -67,6 +68,7 @@ export type Snapshot = {
   custom_domain_verification_error?: string;
   custom_domain_verification_message?: string;
   custom_domain_verification_timestamp?: string;
+  services?: string[];
   meta?: {
     title?: string;
     description?: string;

@@ -7,7 +7,13 @@ import { supabase } from '@/lib/supabase/client';
 
 export type ContactFormBlock = Extract<Block, { type: 'contact_form' }>;
 
-export default function ContactFormRender({ block }: { block: ContactFormBlock }) {
+export default function ContactFormRender({
+  block,
+  template,
+}: {
+  block: ContactFormBlock;
+  template: { data?: { services?: string[] } };
+}) {
   function getSiteSlugFromHostname(hostname: string): string {
     if (hostname.endsWith('.quicksites.ai')) {
       return hostname.split('.')[0];
@@ -25,8 +31,23 @@ export default function ContactFormRender({ block }: { block: ContactFormBlock }
   const {
     title = 'Contact Us',
     notification_email = 'sandon@quicksites.ai',
-    services = [], // ✅ pull services array from block.content
+    services = [],
   } = block.content || {};
+
+  const templateServices = template?.data?.services || [];
+  const fallbackServices = [
+    'Towing',
+    'Roadside Assistance',
+    'Battery Jumpstart',
+    'Lockout Service',
+  ];
+
+  const renderedServices =
+    services.length > 0
+      ? services
+      : templateServices.length > 0
+      ? templateServices
+      : fallbackServices;
 
   const [formData, setFormData] = useState({
     name: '',
@@ -191,7 +212,7 @@ Service: ${formData.service || 'N/A'}
               required
             >
               <option value="">Select a service</option>
-              {(services.length > 0 ? services : ['Towing', 'Roadside Assistance', 'Battery Jumpstart', 'Lockout Service']).map((s: string) => (
+              {renderedServices.map((s: string) => (
                 <option key={s} value={s}>
                   {s}
                 </option>

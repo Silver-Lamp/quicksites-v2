@@ -1,7 +1,7 @@
 // components/admin/templates/template-json-editor.tsx
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui';
-import { ChevronRight, ChevronDown } from 'lucide-react';
+import { ChevronRight, ChevronDown, Lock, Unlock } from 'lucide-react';
 import { TemplateSaveSchema, ValidatedTemplate } from '@/admin/lib/zod/templateSaveSchema';
 import type { JsonValue } from '@/types/json';
 import { validateBlocksInTemplate } from '@/admin/lib/validateBlocksInTemplate';
@@ -9,9 +9,26 @@ import { validateBlocksInTemplate } from '@/admin/lib/validateBlocksInTemplate';
 type TemplateJsonEditorProps = {
   rawJson: string;
   setRawJson: (value: string) => void;
+  sidebarValues?: {
+    template_name?: string;
+    slug?: string;
+    industry?: string;
+  };
+  setSidebarValues?: (values: {
+    template_name?: string;
+    slug?: string;
+    industry?: string;
+  }) => void;
 };
 
-export default function TemplateJsonEditor({ rawJson, setRawJson }: TemplateJsonEditorProps) {
+
+export default function TemplateJsonEditor({
+  rawJson,
+  setRawJson,
+  sidebarValues = {},
+  setSidebarValues,
+}: TemplateJsonEditorProps) {
+
   const [isReadOnly, setIsReadOnly] = useState(true);
   const [parsedJson, setParsedJson] = useState<ValidatedTemplate | null>(null);
   const [validationError, setValidationError] = useState<string | null>(null);
@@ -21,17 +38,18 @@ export default function TemplateJsonEditor({ rawJson, setRawJson }: TemplateJson
     try {
       const parsed = JSON.parse(rawJson);
       const result = TemplateSaveSchema.safeParse(parsed);
+  
+      // Extract and sync back to sidebar
+      if (setSidebarValues) {
+        const { template_name, slug, industry } = parsed;
+        setSidebarValues({ template_name, slug, industry });
+      }
+  
       if (result.success) {
         setParsedJson(result.data);
-
-        // setValidationError(null);
+  
         const blockErrors = validateBlocksInTemplate(result.data);
-        if (blockErrors.length > 0) {
-          setValidationError(blockErrors.join('\n'));
-        } else {
-          setValidationError(null);
-        }
-
+        setValidationError(blockErrors.length > 0 ? blockErrors.join('\n') : null);
       } else {
         setParsedJson(null);
         const formErrors = result.error.flatten();
@@ -41,13 +59,13 @@ export default function TemplateJsonEditor({ rawJson, setRawJson }: TemplateJson
             : 'Some field(s) inside blocks or pages are incorrectly formatted.'
         );
         console.warn('[❌ Zod Field Errors]', formErrors);
-        console.warn('JSON failed schema validation:', result.error.flatten());
       }
     } catch {
       setParsedJson(null);
       setValidationError('Invalid JSON syntax');
     }
   }, [rawJson]);
+  
 
   const toggleCollapse = (path: string) => {
     const newSet = new Set(collapsed);
@@ -115,21 +133,34 @@ export default function TemplateJsonEditor({ rawJson, setRawJson }: TemplateJson
   const handlePrettify = () => {
     try {
       const parsed = JSON.parse(rawJson);
-      setRawJson(JSON.stringify(parsed, null, 2));
+  
+      // Inject sidebar → JSON
+      const merged = {
+        ...parsed,
+        template_name: sidebarValues.template_name || parsed.template_name,
+        slug: sidebarValues.slug || parsed.slug,
+        industry: sidebarValues.industry || parsed.industry,
+      };
+  
+      const prettified = JSON.stringify(merged, null, 2);
+      setRawJson(prettified);
     } catch {
       alert('Invalid JSON. Cannot format.');
     }
   };
+  
+  
 
   return (
     <div className="space-y-2">
       <div className="flex justify-between items-center">
         <h3 className="text-white text-sm font-semibold">JSON Editor</h3>
         <div className="flex gap-2">
-          <Button variant="secondary" size="sm" onClick={handlePrettify}>
+          {/* <Button variant="secondary" size="sm" onClick={handlePrettify}>
             Prettify
-          </Button>
+          </Button> */}
           <Button variant="secondary" size="sm" onClick={() => setIsReadOnly(!isReadOnly)}>
+            {isReadOnly ? <Lock size={16} /> : <Unlock size={16} />}
             {isReadOnly ? 'Unlock' : 'Read-Only'}
           </Button>
         </div>

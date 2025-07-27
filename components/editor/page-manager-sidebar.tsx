@@ -15,7 +15,7 @@ import {
 import { CSS } from '@dnd-kit/utilities';
 import { useState } from 'react';
 import { GripVertical, PlusCircle, File, Home, Phone, Wrench, User } from 'lucide-react';
-import { Template } from '@/types/template';
+import { Page, Template } from '@/types/template';
 import { Switch } from '@radix-ui/react-switch';
 import { Label } from '@/components/ui/label';
 
@@ -45,7 +45,7 @@ export function PageManagerSidebar({
   pages: Template['data']['pages'];
   selectedIndex: number;
   onSelect: (index: number) => void;
-  onAdd: () => void;
+  onAdd: (newPage: Page) => void;
   onRename: (index: number, title: string) => void;
   onDelete: (index: number) => void;
   onReorder: (oldIndex: number, newIndex: number) => void;
@@ -65,7 +65,14 @@ export function PageManagerSidebar({
       <div className="flex justify-between items-center">
         <h3 className="font-semibold text-white">Pages</h3>
         <button
-          onClick={onAdd}
+          onClick={() => onAdd({
+            id: crypto.randomUUID(),
+            slug: 'new-page',
+            title: 'New Page',
+            content_blocks: [],
+            show_header: true,
+            show_footer: true,
+          })}
           className="text-green-400 hover:underline flex items-center gap-1"
         >
           <PlusCircle className="w-4 h-4" /> Add

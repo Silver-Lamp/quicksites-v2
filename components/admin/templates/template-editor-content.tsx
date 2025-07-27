@@ -1,4 +1,3 @@
-// components/editor/EditorContent.tsx
 'use client';
 
 import { useEffect, useState } from 'react';
@@ -9,11 +8,9 @@ import type { Template, TemplateData, Theme } from '@/types/template';
 import { saveTemplate } from '@/admin/lib/saveTemplate';
 import { saveSite } from '@/admin/lib/saveSite';
 
-import CollapsiblePanel from '@/components/ui/collapsible-panel';
-import TemplateSettingsPanel from './template-settings-panel';
+import SidebarSettings from '../template-settings-panel/sidebar-settings';
 import TemplateJsonEditor from './template-json-editor';
 import TemplateHistory from './template-history';
-import TemplatePreviewWithToggle from './template-preview-with-toggle';
 import TemplatePublishModal from './template-publish-modal';
 import { TemplateActionToolbar } from './template-action-toolbar';
 import { IndustryThemeScope } from '@/components/ui/industry-theme-scope';
@@ -21,11 +18,13 @@ import { BlockValidationError, validateTemplateBlocks } from '@/hooks/validateTe
 import { TemplateSaveSchema } from '@/admin/lib/zod/templateSaveSchema';
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 import type { Database } from '@/types/supabase';
-import { usePanelControls } from '@/components/ui/panel-context';
-import { EditorContentOverlay } from '@/components/editor/editor-content-overlay';
+import ThemeScope from '@/components/ui/theme-scope';
+import { normalizeTemplate } from '@/admin/utils/normalizeTemplate';
+import { printZodErrors } from '@/admin/lib/printZodErrors';
+import { ZodError } from 'zod';
+import DevValidatorPanel from '../dev-validator-panel';
 import DevicePreviewWrapper from '@/components/admin/templates/device-preview-wrapper';
 import { LiveEditorPreview } from '@/components/editor/live-editor-preview';
-import ThemeScope from '@/components/ui/theme-scope';
 
 function pushWithLimit<T>(stack: T[], item: T, limit = 10): T[] {
   return [...stack.slice(-limit + 1), item];
@@ -58,6 +57,39 @@ export function EditorContent({
 }) {
   const supabase = createClientComponentClient<Database>();
 
+  const [zodError, setZodError] = useState<ZodError | null>(null);
+  const [templateErrors, setTemplateErrors] = useState<Record<string, string[]>>({});
+  const [formErrors, setFormErrors] = useState<string[]>([]);
+  const [showModal, setModal] = useState(false);
+  const [historyStack, setHistoryStack] = useState<Template[]>(() => {
+    const stored = localStorage.getItem('templateHistory');
+    return stored ? JSON.parse(stored) : [];
+  });
+  const [redoStack, setRedoStack] = useState<Template[]>(() => {
+    const stored = localStorage.getItem('templateRedo');
+    return stored ? JSON.parse(stored) : [];
+  });
+  const [sidebarValues, setSidebarValues] = useState<{
+    template_name?: string;
+    slug?: string;
+    industry?: string;
+  }>({
+    template_name: template.template_name,
+    slug: template.slug,
+    industry: template.industry,
+  });
+
+  // Resizable + responsive sidebar
+  const [sidebarWidth, setSidebarWidth] = useState(320);
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const update = () => setIsMobile(window.innerWidth < 768);
+    update();
+    window.addEventListener('resize', update);
+    return () => window.removeEventListener('resize', update);
+  }, []);
+
   const handleTemplateChange = (updated: Template) => {
     setHistoryStack((prev) => pushWithLimit(prev, template, 10));
     setRedoStack([]);
@@ -77,37 +109,8 @@ export function EditorContent({
     setBlockErrors(filtered);
   };
 
-  const [templateErrors, setTemplateErrors] = useState<Record<string, string[]>>({});
-  const [formErrors, setFormErrors] = useState<string[]>([]);
-  const [showModal, setModal] = useState(false);
-  const [historyStack, setHistoryStack] = useState<Template[]>(() => {
-    const stored = localStorage.getItem('templateHistory');
-    return stored ? JSON.parse(stored) : [];
-  });
-  const [redoStack, setRedoStack] = useState<Template[]>(() => {
-    const stored = localStorage.getItem('templateRedo');
-    return stored ? JSON.parse(stored) : [];
-  });
-
-  const [isDark, setIsDark] = useState(() => {
-    if (typeof window !== 'undefined') {
-      const stored = localStorage.getItem('preview-theme');
-      if (stored === 'dark') return true;
-      if (stored === 'light') return false;
-      return window.matchMedia('(prefers-color-scheme: dark)').matches;
-    }
-    return true;
-  });
-
-  useEffect(() => {
-    localStorage.setItem('preview-theme', isDark ? 'dark' : 'light');
-  }, [isDark]);
-
   const handleUndo = () => {
-    if (historyStack.length === 0) {
-      toast('Nothing to undo');
-      return;
-    }
+    if (historyStack.length === 0) return toast('Nothing to undo');
     const previous = historyStack[historyStack.length - 1];
     setHistoryStack((prev) => prev.slice(0, -1));
     setRedoStack((prev) => pushWithLimit(prev, template, 10));
@@ -117,10 +120,7 @@ export function EditorContent({
   };
 
   const handleRedo = () => {
-    if (redoStack.length === 0) {
-      toast('Nothing to redo');
-      return;
-    }
+    if (redoStack.length === 0) return toast('Nothing to redo');
     const next = redoStack[redoStack.length - 1];
     setRedoStack((prev) => prev.slice(0, -1));
     setHistoryStack((prev) => pushWithLimit(prev, template, 10));
@@ -132,64 +132,27 @@ export function EditorContent({
   const handleSaveDraft = async () => {
     try {
       const parsed = JSON.parse(rawJson);
-      const full = {
-        ...parsed,
-        data: parsed.data ?? { pages: [] }, // make sure data is nested
-        verified: parsed.verified ?? false,
-        meta: {
-          title: '',
-          description: '',
-          ogImage: '',
-          ...parsed.meta,
-        },
-      };
+      const full = normalizeTemplate(parsed);
 
-      const heroBlock = parsed.pages?.[0]?.content_blocks?.find((b: any) => b.type === 'hero');
+      const { errors: blockErrors } = validateTemplateBlocks(full);
+      setBlockErrors(blockErrors);
 
-      // const full = {
-      //   ...template,
-      //   data: parsed,
-      //   verified: template.verified ?? false,
-      //   meta: {
-      //     ogImage: template.meta?.ogImage || heroBlock?.content?.image_url || '',
-      //     title: template.meta?.title || parsed.pages?.[0]?.title || template.template_name || '',
-      //     description:
-      //       template.meta?.description ||
-      //       heroBlock?.content?.subheadline ||
-      //       heroBlock?.content?.headline ||
-      //       '',
-      //     ...template.meta,
-      //   },
-      // };
-
-      console.log('EditorContent: full:', full);
-      console.log('EditorContent: template:', template);
-      console.log('EditorContent: parsed:', parsed);
-      console.log('EditorContent: heroBlock:', heroBlock);
-      
-      const { isValid, errors } = validateTemplateBlocks(full);
       const result = TemplateSaveSchema.safeParse(full);
-      const fieldErrors = result.success ? {} : result.error.flatten().fieldErrors;
-      const formErrors = result.success ? [] : result.error.flatten().formErrors;
 
-      setTemplateErrors(fieldErrors);
-      setFormErrors(formErrors);
-      setBlockErrors(errors);
-
-      if (!result.success || Object.keys(errors).length > 0) {
-        console.error('Validation failed. Fix errors to save. (template-editor-content.tsx)');
-        // console.error('Validation errors:', errors);
-        // console.error('Form errors:', formErrors);
-        // console.error('Field errors:', fieldErrors);
-        console.error('Result:', result);
-        // console.error('Full:', full);
-        // console.error('Template:', template);
-        // console.error('Parsed:', parsed);
-        toast.error('Validation failed. Fix errors to save.');
+      if (!result.success || Object.keys(blockErrors).length > 0) {
+        printZodErrors(result.error as ZodError, '❌ Template Validation Failed');
+        setZodError(result.error ?? null);
+        const flat = result.error?.flatten();
+        const firstField = Object.keys(flat?.fieldErrors ?? {})[0];
+        const firstError = flat?.fieldErrors?.[firstField as keyof typeof flat.fieldErrors]?.[0];
+        setTemplateErrors(flat?.fieldErrors ?? {});
+        setFormErrors(flat?.formErrors ?? []);
+        toast.error(firstError || 'Template validation failed. Fix errors to save.');
         return;
       }
 
-      const promise = (mode === 'template' ? saveTemplate : saveSite)(full);
+      const { services, ...safeToSave } = full;
+      const promise = (mode === 'template' ? saveTemplate : saveSite)(safeToSave);
       toast.promise(promise, {
         loading: 'Saving...',
         success: 'Template saved!',
@@ -200,82 +163,131 @@ export function EditorContent({
       setTemplate(saved);
       setRawJson(JSON.stringify(saved, null, 2));
       setBlockErrors({});
+      setZodError(null);
     } catch (err: any) {
       console.error('Invalid JSON (template-editor-content.tsx):', err);
-      toast.error('Invalid JSON (template-editor-content.tsx)');
+      toast.error('Invalid JSON. Fix formatting and try again.');
     }
   };
 
   return (
     <IndustryThemeScope industry={template.industry}>
-      {(formErrors.length > 0 || Object.keys(templateErrors).length > 0) && (
-        <div className="p-4 bg-red-100 border border-red-300 text-red-800 rounded-md mb-4 max-w-3xl mx-auto">
-          <h4 className="font-semibold mb-2">Validation Issues</h4>
-
-          {formErrors.length > 0 && (
-            <ul className="list-disc ml-6 mb-2">
-              {formErrors.map((err, idx) => (
-                <li key={`form-error-${idx}`}>{err}</li>
-              ))}
-            </ul>
-          )}
-
-          {Object.entries(templateErrors).map(([field, errors]) => (
-            <div key={field} className="mb-2">
-              <div className="font-medium">{field}:</div>
-              <ul className="list-disc ml-6">
-                {errors.map((err, idx) => (
-                  <li key={`${field}-error-${idx}`}>{err}</li>
-                ))}
-              </ul>
-            </div>
-          ))}
-        </div>
-      )}
-
       <Tabs defaultValue="preview">
         <TabsList>
           <TabsTrigger value="preview">Preview</TabsTrigger>
-          <TabsTrigger value="settings">Settings</TabsTrigger>
           <TabsTrigger value="history">History</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="settings">
-          <TemplateSettingsPanel template={template} onChange={handleTemplateChange} /> 
-          {/* <EditorContentOverlay
-            template={template}
-            rawJson={rawJson}
-            setRawJson={setRawJson}
-            onChange={handleTemplateChange}
-          /> */}
-        </TabsContent>
-
         <TabsContent value="preview">
-          <div className="relative md:ml-64 transition-all duration-300">
-            <ThemeScope mode={template.theme === 'light' ? 'light' : 'dark'}>
-              <DevicePreviewWrapper theme={template.theme as Theme}>
-                <IndustryThemeScope industry={template.industry}>
-                  <LiveEditorPreview
-                    template={template}
-                    onChange={handleTemplateChange}
-                    industry={template.industry}
-                    errors={blockErrors ?? {}}
+          <div className="flex h-full">
+            {/* Sidebar */}
+            <div
+              className={`relative shrink-0 border-r border-white/10 bg-black transition-all duration-300 ${
+                isMobile ? 'w-0 opacity-0' : 'opacity-100'
+              }`}
+              style={{ width: isMobile ? 0 : sidebarWidth }}
+            >
+              {!isMobile && (
+                <div className="sticky top-0 h-screen overflow-y-auto flex flex-col">
+                  {/* Logo Bar */}
+                  <div className="px-4 py-3 border-b border-white/10">
+                    <a href="/admin/templates" className="inline-block text-white hover:opacity-80 transition">
+                      <img
+                        src="/logo_v1.png" // or /quicksites-logo.png depending on your asset
+                        alt="QuickSites"
+                        className="h-6 w-auto"
+                        style={{
+                          width: '100px',
+                          height: '100px',
+                        }}
+                      />
+                    </a>
+                  </div>
+
+                  {/* Scrollable Settings */}
+                  <div className="flex-1 overflow-y-auto">
+                    <SidebarSettings template={template} onChange={handleTemplateChange} />
+                  </div>
+                </div>
+              )}
+
+                  <div
+                    className="absolute top-0 right-0 w-2 h-full cursor-col-resize z-50 hover:bg-white/5 transition"
+                    onMouseDown={(e) => {
+                      e.preventDefault();
+                      const startX = e.clientX;
+                      const startWidth = sidebarWidth;
+
+                      const onMouseMove = (moveEvent: MouseEvent) => {
+                        const newWidth = Math.min(
+                          Math.max(startWidth + (moveEvent.clientX - startX), 240),
+                          600
+                        );
+                        setSidebarWidth(newWidth);
+                      };
+
+                      const onMouseUp = () => {
+                        window.removeEventListener('mousemove', onMouseMove);
+                        window.removeEventListener('mouseup', onMouseUp);
+                      };
+
+                      window.addEventListener('mousemove', onMouseMove);
+                      window.addEventListener('mouseup', onMouseUp);
+                    }}
                   />
-                </IndustryThemeScope>
-              </DevicePreviewWrapper>
-            </ThemeScope>
+            </div>
+
+            {/* Preview */}
+            <div className="flex-1 overflow-x-hidden">
+              <ThemeScope mode={template.theme === 'light' ? 'light' : 'dark'}>
+                <DevicePreviewWrapper theme={template.theme as Theme}>
+                  <IndustryThemeScope industry={template.industry}>
+                    <LiveEditorPreview
+                      template={template}
+                      onChange={handleTemplateChange}
+                      industry={template.industry}
+                      errors={blockErrors ?? {}}
+                    />
+                  </IndustryThemeScope>
+                </DevicePreviewWrapper>
+              </ThemeScope>
+            </div>
           </div>
         </TabsContent>
-
 
         <TabsContent value="history">
           <TemplateHistory template={template} onRevert={handleTemplateChange} />
         </TabsContent>
       </Tabs>
 
+      <Button
+        onClick={() => {
+          try {
+            const parsed = JSON.parse(rawJson);
+            const normalized = normalizeTemplate(parsed);
+            setRawJson(JSON.stringify(normalized, null, 2));
+            toast.success('Template fixed & prettified!');
+          } catch (err) {
+            toast.error('Invalid JSON');
+            console.error(err);
+          }
+        }}
+        variant="secondary"
+        className="mt-4 text-green-400 border-green-400"
+      >
+        Prettify & Fix
+      </Button>
+
+      <details className="mt-4 bg-red-950 text-red-100 p-3 rounded-lg border border-red-700">
+        <summary className="cursor-pointer font-bold">🧪 Validation Issues (Dev Only)</summary>
+        <DevValidatorPanel error={zodError} />
+      </details>
+
       <TemplateJsonEditor
         rawJson={rawJson}
         setRawJson={setRawJson}
+        sidebarValues={sidebarValues}
+        setSidebarValues={setSidebarValues}
       />
 
       <TemplatePublishModal

@@ -85,14 +85,17 @@ export default function DevicePreviewWrapper({
           </svg>
         )}
         <div
-          className={`z-0 relative rounded-md overflow-hidden ${getSizeClass(mode, orientation)}`}
+          className={`z-0 relative ${getSizeClass(mode, orientation)}`}
           id="preview-target"
+          style={{ border: 'none', boxShadow: 'none' }}
         >
           <div
             id="preview-capture"
             ref={previewRef}
             className={`w-full h-full overflow-y-auto p-4 transition-colors ${
-              theme === 'dark' ? 'bg-neutral-900 text-white' : 'bg-white text-black'
+              theme === 'dark'
+                ? 'bg-neutral-900 text-white'
+                : 'bg-transparent text-black'
             }`}
           >
             {showInspector && (
@@ -157,7 +160,7 @@ export default function DevicePreviewWrapper({
         )}
       </div>
 
-      <div className="flex justify-center mt-4">{bezelFrame(<>{children}</>)}</div>
+      <div className="mt-0">{bezelFrame(<>{children}</>)}</div>
     </div>
   );
 }

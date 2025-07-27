@@ -21,11 +21,9 @@ export const templatePresets = {
     return {
       ...templateDefaults, // ✅ moved first
       id: '',
-      // name,
       slug,
       industry,
       layout: 'default',
-    //   brand: '',
       data: {
         pages: [
           createDefaultPage({
@@ -53,11 +51,7 @@ export function createTemplateFromPreset({
 
   return {
     id: '',
-    // name,
     slug,
-    // industry,
-    // layout,
-    // brand,
     ...templateDefaults,
     data: {
       pages: [

@@ -8,8 +8,7 @@ export function createEmptyTemplate(name?: string): ValidatedTemplate {
   const safeSlug = slugify(safeName);
 
   return {
-    id: uuidv4(), // ✅ generate valid UUID here
-    // template_name: safeName,
+    id: uuidv4(),
     slug: safeSlug,
     ...templateDefaults,
     data: {

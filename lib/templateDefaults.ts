@@ -4,13 +4,12 @@ export const templateDefaults: Omit<ValidatedTemplate, 'id' | 'name' | 'slug'> =
   template_name: '',
   layout: 'default',
   color_scheme: '',
-//   commit: '',
   industry: '',
   theme: '',
-//   brand: '',
-//   site_id: undefined,
   updated_at: new Date().toISOString(),
+  services: [],
   data: {
     pages: [],
+    services: [],
   },
 };

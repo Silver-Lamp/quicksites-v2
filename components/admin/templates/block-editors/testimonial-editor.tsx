@@ -10,7 +10,7 @@ import {
   useSortable,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import type { Block, TestimonialBlock } from '@/types/blocks';
+import type { Block } from '@/types/blocks';
 import type { BlockEditorProps } from './index';
 import BlockField from './block-field';
 import { Switch } from '@/components/ui/switch';
@@ -202,13 +202,15 @@ async function uploadAvatar(file: File, blockId: string): Promise<string | null>
         {preview && (
           <div className="bg-neutral-900 p-4 mt-2 rounded border border-white/10">
             <TestimonialBlockComponent
-              block={{
+              block={
+                {
                 ...block,
                 content: {
                   testimonials: testimonials.map(({ _id, ...t }: { _id: string; [key: string]: any }) => t),
                   randomized,
                 },
-              } as TestimonialBlock}
+              } as unknown as Block
+              }
             />
           </div>
         )}

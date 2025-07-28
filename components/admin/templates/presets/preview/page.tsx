@@ -13,7 +13,7 @@ export default function PresetPreviewPage() {
       {Object.entries(templatePresets).map(([industry, pages]) => (
         <div key={industry}>
           <h2 className="text-2xl font-semibold mb-4">{industry}</h2>
-          {Object.entries(pages).map(([pageName, blocks]) => (
+          {Object.entries(pages as unknown as Record<string, unknown>).map(([pageName, blocks]: [string, unknown]) => (
             <div key={pageName} className="mb-8 border border-neutral-800 rounded-xl p-6 bg-neutral-900">
               <h3 className="text-lg font-medium mb-4 capitalize">{pageName}</h3>
               <TemplatePreview

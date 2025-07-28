@@ -7,18 +7,17 @@ import {
   PointerSensor,
   useSensor,
   useSensors,
+  type DragEndEvent,
 } from '@dnd-kit/core';
 import {
   arrayMove,
   SortableContext,
-  useSortable,
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
-import { CSS } from '@dnd-kit/utilities';
 import { useState } from 'react';
 import TemplatePreview from './template-preview';
 import type { TemplateData } from '@/types/template';
-import type { Block, ReorderableBlockListProps } from '@/types/blocks';
+import type { Block } from '@/types/blocks';
 
 type Props = {
   data: TemplateData;
@@ -39,7 +38,7 @@ export default function ReorderableBlockList({
   const pages = data?.pages || [];
   const blocks: Block[] = pages[activePageIdx]?.content_blocks || [];
 
-  const handleDragEnd = ({ active, over }: { active: any; over: any }) => {
+  const handleDragEnd = ({ active, over }: { active: { id: string }; over: { id: string } }) => {
     if (!over || active.id === over.id) return;
 
     const oldIndex = blocks.findIndex((b) => b._id === active.id);
@@ -57,7 +56,11 @@ export default function ReorderableBlockList({
   };
 
   return (
-    <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+    <DndContext 
+      sensors={sensors} 
+      collisionDetection={closestCenter} 
+      onDragEnd={handleDragEnd as unknown as (event: DragEndEvent) => void}
+    >
       <SortableContext items={blocks.map((b) => b._id!)} strategy={verticalListSortingStrategy}>
         <TemplatePreview
           data={data}

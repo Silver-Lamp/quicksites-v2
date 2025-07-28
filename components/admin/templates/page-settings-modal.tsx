@@ -61,8 +61,8 @@ export default function PageSettingsModal({ page, open, onClose, onSave }: Props
         <BlockField
           type="boolean"
           label="Published"
-          value={visible}
-          onChange={setVisible}
+          value={visible as unknown as string | number}
+          onChange={(v: any) => setVisible(v)}
         />
 
         <div className="flex justify-end gap-2 mt-4">

@@ -14,13 +14,13 @@ type FieldBaseProps = {
 type BlockFieldProps =
   | (FieldBaseProps & {
       type: 'text';
-      value: string;
+      value: string | number;
       onChange: (v: string) => void;
       placeholder?: string;
     })
   | (FieldBaseProps & {
       type: 'number';
-      value: number;
+      value: string | number;
       onChange: (v: number) => void;
       min?: number;
       max?: number;
@@ -28,13 +28,13 @@ type BlockFieldProps =
     })
   | (FieldBaseProps & {
       type: 'select';
-      value: string;
+      value: string | number;
       onChange: (v: string) => void;
       options: string[];
     })
   | (FieldBaseProps & {
       type: 'boolean';
-      value: boolean;
+      value: string | number;
       onChange: (v: boolean) => void;
     });
 
@@ -81,7 +81,7 @@ export default function BlockField(props: BlockFieldProps) {
       {props.type === 'select' && (
         <select
           id={id}
-          value={props.value}
+          value={props.value as string}
           onChange={(e) => props.onChange(e.target.value)}
           className={baseInputClass}
         >
@@ -98,7 +98,7 @@ export default function BlockField(props: BlockFieldProps) {
           <input
             id={id}
             type="checkbox"
-            checked={props.value}
+            checked={props.value as unknown as boolean}
             onChange={(e) => props.onChange(e.target.checked)}
             className="w-4 h-4"
           />
@@ -113,7 +113,7 @@ export default function BlockField(props: BlockFieldProps) {
         <p className="text-xs text-gray-400 mt-1">{props.description}</p>
       )}
       {props.error && (
-        <p className="text-xs text-red-400 mt-1">{Array.isArray(props.error) ? props.error.map(err => err.message).join(', ') : props.error}</p>
+        <p className="text-xs text-red-400 mt-1">{Array.isArray(props.error) ? props.error.map((err: any) => err.message).join(', ') : props.error}</p>
       )}
     </div>
   );

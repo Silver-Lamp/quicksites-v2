@@ -25,7 +25,7 @@ export function BlockSettingsDrawer({
   const handleAIFill = async () => {
     setLoadingAI(true);
     await new Promise((res) => setTimeout(res, 1000)); // placeholder
-    setForm((f) => ({
+    setForm((f: any) => ({
       ...f,
       headline: 'AI-generated Headline',
       subheadline: 'This was created by AI.',
@@ -45,9 +45,9 @@ export function BlockSettingsDrawer({
       {Object.entries(form).map(([key, value]) => (
         <BlockField
           key={key}
-          type={typeof value === 'number' ? 'number' : 'text'}
+          type={typeof value === 'number' ? 'number' : 'text' as 'number' | 'text'}
           label={key}
-          value={value}
+          value={value as string | number}
           onChange={(v: any) => update(key, v)}
         />
       ))}

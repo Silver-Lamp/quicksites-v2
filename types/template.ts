@@ -23,6 +23,13 @@ export type Page = {
 export type TemplateData = {
   pages: Page[];
   services?: string[];
+  testimonials?: string[];
+  cta?: string[];
+  faqs?: string[];
+  contact_form?: string[];
+  header?: string[];
+  footer?: string[];
+  service_areas?: string[];
 };
 
 export type Snapshot = {

@@ -6,10 +6,8 @@ import type { Block } from '@/types/blocks';
 import BlockField from './block-field';
 import { extractFieldErrors } from '../utils/extractFieldErrors';
 
-type FAQBlock = Extract<Block, { type: 'faq' }>;
-
 export default function FaqEditor({ block, onSave, onClose, errors = {}, template }: BlockEditorProps) {
-  const faqBlock = block as FAQBlock;
+  const faqBlock = block as unknown as Block;
   const [title, setTitle] = useState(faqBlock.content.title || 'Frequently Asked Questions');
   const [items, setItems] = useState(faqBlock.content.items || []);
   const fieldErrors = extractFieldErrors(errors as unknown as string[]);
@@ -32,7 +30,7 @@ export default function FaqEditor({ block, onSave, onClose, errors = {}, templat
         error={fieldErrors?.title}
       />
 
-      {items.map((item, i) => (
+      {items.map((item: { question: string; answer: string }, i: number) => (
         <div key={i} className="border border-white/10 p-3 rounded space-y-2">
           <BlockField
             type="text"
@@ -71,7 +69,7 @@ export default function FaqEditor({ block, onSave, onClose, errors = {}, templat
           Cancel
         </button>
         <button
-          onClick={() => onSave({ ...faqBlock, content: { title, items } })}
+          onClick={() => onSave({ ...faqBlock, content: { title, items } as unknown as typeof faqBlock.content })}
           className="px-4 py-2 bg-blue-600 text-white rounded"
         >
           Save

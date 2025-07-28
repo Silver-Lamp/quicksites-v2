@@ -38,7 +38,7 @@ export default function ImageEditor({ block, onSave, onClose, errors = {}, templ
           Cancel
         </button>
         <button
-          onClick={() => onSave({ ...imageBlock, content })}
+          onClick={() => onSave({ ...imageBlock, content: content as unknown as typeof imageBlock.content })}
           className="px-4 py-2 bg-blue-600 text-white rounded"
         >
           Save

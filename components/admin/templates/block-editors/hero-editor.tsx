@@ -247,7 +247,7 @@ export default function HeroEditor({
         </>
       )}
 
-      <BlockPreviewToggle block={{ ...block, type: 'hero', content: local }} />
+      <BlockPreviewToggle block={{ ...block, type: 'hero', content: local as unknown as typeof block.content }} />
 
       <div className="flex gap-2 justify-end pt-4">
         <button

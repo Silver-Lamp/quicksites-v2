@@ -1,13 +1,13 @@
 'use client';
 
 import { useState } from 'react';
-import type { QuoteBlock } from '@/types/blocks';
+import type { Block } from '@/types/blocks';
 import BlockField from './block-field';
 import { extractFieldErrors } from '../utils/extractFieldErrors';
 import type { BlockEditorProps } from './index'; // ✅ Reuse the shared type
 
 export default function QuoteEditor({ block, onSave, onClose, errors = {}, template }: BlockEditorProps) {
-  const quoteBlock = block as QuoteBlock;
+  const quoteBlock = block as unknown as Block;
   const [content, setContent] = useState(quoteBlock.content);
   const fieldErrors = extractFieldErrors(errors as unknown as string[]); // now accepts Record<string, BlockValidationError[]>
 

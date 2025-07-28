@@ -1,14 +1,12 @@
 'use client';
 
-import type { Block } from '@/admin/lib/zod/blockSchema';
+import type { Block } from '@/types/blocks';
 import { useState } from 'react';
 import BlockField from '@/components/admin/templates/block-editors/block-field';
 import type { BlockEditorProps } from '@/components/admin/templates/block-editors';
 
-export type ContactFormBlock = Extract<Block, { type: 'contact_form' }>;
-
 export function ContactFormEditor({ block, onSave, onClose, template }: BlockEditorProps) {
-  const formBlock = block as ContactFormBlock;
+  const formBlock = block as unknown as Block;
   const [title, setTitle] = useState(formBlock.content?.title || 'Contact Us');
   const [notification_email, setNotificationEmail] = useState(formBlock.content?.notification_email || '');
   const [services, setServices] = useState<string[]>(formBlock.content?.services || []);

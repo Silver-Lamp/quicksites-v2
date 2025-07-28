@@ -46,7 +46,7 @@ export default function ServicesEditor({ block, onSave, onClose, errors = {}, te
           Cancel
         </button>
         <button
-          onClick={() => onSave({ ...servicesBlock, content: { items } })}
+          onClick={() => onSave({ ...servicesBlock, content: { items } as unknown as typeof servicesBlock.content })}
           className="px-4 py-2 bg-blue-600 text-white rounded"
         >
           Save

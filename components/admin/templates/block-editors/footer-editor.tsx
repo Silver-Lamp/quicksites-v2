@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import type { FooterBlock } from '@/types/blocks';
+import type { Block } from '@/types/blocks';
 import BlockField from './block-field';
 import type { BlockEditorProps } from './index';
 import { extractFieldErrors } from '../utils/extractFieldErrors';
@@ -16,7 +16,7 @@ export default function FooterEditor({
   errors = {},
   template,
 }: BlockEditorProps) {
-  const footerBlock = block as FooterBlock;
+  const footerBlock = block as unknown as Block;
   const [content, setContent] = useState(footerBlock.content);
   const fieldErrors = extractFieldErrors(errors as unknown as string[]);
 

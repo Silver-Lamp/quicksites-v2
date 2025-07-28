@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import type { BlockEditorProps } from './index'; // ✅ Reuse the shared type
 import { extractFieldErrors } from '../utils/extractFieldErrors';
+import type { Block } from '@/types/blocks';
 
 export default function JsonFallbackEditor({ block, onSave, onClose, errors = {}, template }: BlockEditorProps) {
   const [value, setValue] = useState<string>('');
@@ -16,7 +17,7 @@ export default function JsonFallbackEditor({ block, onSave, onClose, errors = {}
   const handleSave = () => {
     try {
       const parsed = JSON.parse(value);
-      onSave(parsed);
+      onSave(parsed as unknown as Block);
       onClose();
     } catch (e: any) {
       setError(e.message || 'Invalid JSON');

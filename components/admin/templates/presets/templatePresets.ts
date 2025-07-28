@@ -1,14 +1,25 @@
 import { generatePresetBlocks } from './generatePresetBlocks';
-import type { PresetMap } from '@/types/blocks';
+import type { TemplateData } from '@/types/template';
 
-export const templatePresets: PresetMap = {
-  Towing: {
-    homepage: generatePresetBlocks(['hero', 'services', 'testimonial', 'cta']),
-  },
-  Bakery: {
-    homepage: generatePresetBlocks(['hero', 'image', 'quote', 'cta']),
-  },
-  Agency: {
-    homepage: generatePresetBlocks(['hero', 'video', 'quote', 'grid']),
-  },
-};
+export const templatePresets = {
+  pages: [
+    {
+      id: '1',
+      slug: 'towing',
+      title: 'Towing',
+      content_blocks: generatePresetBlocks(['hero', 'services', 'testimonial', 'cta']),
+    },
+    {
+      id: '2',
+      slug: 'bakery',
+      title: 'Bakery',
+      content_blocks: generatePresetBlocks(['hero', 'image', 'quote', 'cta']),
+    },
+    {
+      id: '3',
+      slug: 'agency',
+      title: 'Agency',
+      content_blocks: generatePresetBlocks(['hero', 'video', 'quote', 'grid']),
+    },
+  ],
+} as TemplateData;

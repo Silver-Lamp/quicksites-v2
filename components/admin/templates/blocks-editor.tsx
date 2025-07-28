@@ -1,3 +1,4 @@
+// components/admin/templates/blocks-editor.tsx
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -19,11 +20,14 @@ import {
 
 import { Button, Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui';
 import BlockSidebar from './block-sidebar';
-import type { Block, BlockWithId, BlocksEditorProps } from '@/types/blocks';
+import type { Block, BlockWithId } from '@/types/blocks';
 import { normalizeBlock } from '@/types/blocks';
 import type { BlockValidationError } from '@/hooks/validateTemplateBlocks';
 
-interface BlocksEditorPropsExtended extends BlocksEditorProps {
+interface BlocksEditorPropsExtended {
+  blocks: Block[];
+  onChange: (blocks: Block[]) => void;
+  industry?: string;
   onReplaceWithAI?: (index: number) => void;
   onEdit?: (index: number) => void;
 }

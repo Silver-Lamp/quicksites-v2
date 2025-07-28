@@ -7,7 +7,7 @@ import type { Block } from '@/types/blocks';
 
 export default function PublicEditPage() {
   const searchParams = useSearchParams();
-  const slug = searchParams?.get('slug') as string;
+  const slug = searchParams?.get('slug') as string; // TODO: remove this file
   const [data, setData] = useState<Block[] | null>(null);
   const [forked, setForked] = useState(false);
 
@@ -30,7 +30,7 @@ export default function PublicEditPage() {
   return (
     <div className="p-6 text-white max-w-4xl mx-auto">
       <h1 className="text-xl font-bold mb-4">Remix: {slug}</h1>
-      {data && <BlocksEditor blocks={data} onChange={(updated) => setData(updated)} />}
+      {data && <BlocksEditor blocks={data} onChange={(updated: Block[]) => setData(updated)} />}
       <button onClick={saveFork} className="mt-4 bg-green-700 px-4 py-2 rounded">
         Save a Copy
       </button>

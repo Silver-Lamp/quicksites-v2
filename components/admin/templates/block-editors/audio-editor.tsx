@@ -1,16 +1,19 @@
 'use client';
 
 import { useState } from 'react';
-import type { AudioBlock } from '@/types/blocks';
+import type { Block } from '@/types/blocks';
 import BlockField from './block-field';
 import { extractFieldErrors } from '../utils/extractFieldErrors';
 import type { BlockEditorProps } from './index'; // ✅ Reuse the shared type
 
-
-
 export default function AudioEditor({ block, onSave, onClose, errors = {}, template }: BlockEditorProps) {
-  const audioBlock = block as AudioBlock;
+  if (!('content' in block)) {
+    throw new Error('Invalid block: missing content');
+  }
+  const audioBlock = block as unknown as Block;
+
   const [content, setContent] = useState(audioBlock.content);
+
   const fieldErrors = extractFieldErrors(errors as unknown as string[]); // now accepts Record<string, BlockValidationError[]>
 
   return (
@@ -47,7 +50,7 @@ export default function AudioEditor({ block, onSave, onClose, errors = {}, templ
           Cancel
         </button>
         <button
-          onClick={() => onSave({ ...audioBlock, content })}
+          onClick={() => onSave({ ...audioBlock, content: content as unknown as typeof audioBlock.content })}
           className="px-4 py-2 bg-blue-600 text-white rounded"
         >
           Save

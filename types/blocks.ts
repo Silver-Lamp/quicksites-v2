@@ -81,10 +81,13 @@ export type BlockCategory = 'layout' | 'content' | 'interactive' | 'meta';
 // Top-level block
 export type Block = BaseBlock & {
   type: BlockType;
-  content: BlockContentMap[BlockType];
+  content: BlockContentMap[BlockType] | any;
   layout_mode?: 'full_bleed' | 'inline' | 'background';
   image_url?: string;
   image_alt?: string;
+  audio_url?: string;
+  audio_title?: string;
+  audio_provider?: 'spotify' | 'soundcloud' | 'suno';
 };
 
 export type BlockWithId = Block & { _id: string };

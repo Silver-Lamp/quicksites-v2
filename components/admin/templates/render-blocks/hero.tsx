@@ -3,7 +3,9 @@
 import type { Block } from '@/types/blocks';
 import SectionShell from '@/components/ui/section-shell';
 import { useRef } from 'react';
-import { motion, useScroll, useTransform } from 'framer-motion';
+import { motion, type MotionValue } from 'framer-motion';
+import { useSafeScroll } from '@/hooks/useSafeScroll';
+import DebugOverlay from '@/components/ui/debug-overlay';
 
 type HeroBlock = Extract<Block, { type: 'hero' }>;
 
@@ -11,21 +13,20 @@ type Props = {
   block: HeroBlock | undefined;
   content?: HeroBlock['content'];
   compact?: boolean;
+  verboseUi?: boolean;
 };
 
-export default function HeroRender({ block, content, compact = false }: Props) {
-  const heroRef = useRef(null);
-
-  // ✅ Always call hooks before conditional logic
-  const { scrollYProgress } = useScroll({
-    target: heroRef,
-    offset: ['start start', 'end start'],
-  });
-  const y = useTransform(scrollYProgress, [0, 1], ['0%', '-20%']);
-
+export default function HeroRender({
+  block,
+  content,
+  compact = false,
+  verboseUi = false,
+}: Props) {
+  const heroRef = useRef<HTMLDivElement | null>(null);
   const final = content || block?.content;
 
   if (!block || !final) {
+    console.warn('[⚠️ HeroRender] Invalid block or missing content.');
     return (
       <div className="text-red-500 text-sm p-2 bg-red-50 dark:bg-red-900/20 rounded">
         Invalid hero block
@@ -48,14 +49,27 @@ export default function HeroRender({ block, content, compact = false }: Props) {
 
   const hasImage = image_url?.trim() !== '';
   const blurPx = `${blur_amount}px`;
-  const backgroundPosition = image_x && image_y
-    ? `${image_x} ${image_y}`
-    : image_position || 'center';
+  const backgroundPosition =
+    image_x && image_y ? `${image_x} ${image_y}` : image_position || 'center';
+
+  let y: string | MotionValue<string> = '0%';
+  if (layout_mode === 'full_bleed' && hasImage) {
+    const scroll = useSafeScroll({
+      target: heroRef as any,
+      offset: ['start start', 'end start'],
+    });
+    if (scroll?.y) y = scroll.y;
+  }
 
   // 🧱 Full-bleed layout
   if (layout_mode === 'full_bleed' && hasImage) {
     return (
       <div ref={heroRef} className="relative w-full text-white max-h-[90vh] overflow-hidden">
+        {verboseUi && (
+          <DebugOverlay>
+            {`[HeroBlock]\nLayout: full_bleed\nImage: ${image_url || 'N/A'}`}
+          </DebugOverlay>
+        )}
         <motion.div
           className="absolute inset-0 bg-fixed"
           style={{
@@ -69,9 +83,7 @@ export default function HeroRender({ block, content, compact = false }: Props) {
         <div className="absolute inset-0 bg-black/40" />
         <div className="relative z-10 max-w-6xl mx-auto px-4 pt-32 pb-20 text-center sm:pt-24 sm:pb-16">
           <h1 className="text-4xl md:text-5xl font-bold mb-4 drop-shadow">{headline}</h1>
-          {subheadline && (
-            <p className="text-lg md:text-2xl mb-6 drop-shadow">{subheadline}</p>
-          )}
+          {subheadline && <p className="text-lg md:text-2xl mb-6 drop-shadow">{subheadline}</p>}
           {cta_text && cta_link && (
             <a
               href={cta_link}
@@ -93,6 +105,11 @@ export default function HeroRender({ block, content, compact = false }: Props) {
         className="relative text-white rounded-lg overflow-hidden"
         textAlign="center"
       >
+        {verboseUi && (
+          <DebugOverlay>
+            {`[HeroBlock]\nLayout: background\nImage: ${image_url || 'N/A'}`}
+          </DebugOverlay>
+        )}
         <div
           className="absolute inset-0"
           style={{
@@ -105,9 +122,7 @@ export default function HeroRender({ block, content, compact = false }: Props) {
         <div className="absolute inset-0 bg-black/30" />
         <div className="relative z-10 py-16 px-4">
           <h1 className="text-3xl md:text-5xl font-bold mb-4 drop-shadow">{headline}</h1>
-          {subheadline && (
-            <p className="text-lg md:text-xl mb-6 drop-shadow">{subheadline}</p>
-          )}
+          {subheadline && <p className="text-lg md:text-xl mb-6 drop-shadow">{subheadline}</p>}
           {cta_text && cta_link && (
             <a
               href={cta_link}
@@ -121,13 +136,18 @@ export default function HeroRender({ block, content, compact = false }: Props) {
     );
   }
 
-  // 📸 Inline image layout
+  // 📸 Inline layout
   return (
     <SectionShell
       compact={compact}
       bg="bg-neutral-900 text-white rounded-lg shadow"
       textAlign="center"
     >
+      {verboseUi && (
+        <DebugOverlay>
+          {`[HeroBlock]\nLayout: inline\nImage: ${hasImage ? 'yes' : 'no'}`}
+        </DebugOverlay>
+      )}
       {hasImage && (
         <img
           src={image_url}

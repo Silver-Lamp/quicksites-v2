@@ -1,10 +1,10 @@
+// app/admin/campaigns/claim-poster.tsx
 import Image from 'next/image';
 import QRCode from 'react-qr-code';
 import { formatDistanceToNowStrict, parseISO } from 'date-fns';
 import { useState, useEffect } from 'react';
-import { createClient } from '@supabase/supabase-js';
+import { supabase } from '@/lib/supabaseClient';
 import { toast } from 'react-hot-toast';
-import { Database } from '@/types/supabase';
 import { normalizeImageSrc } from '@/lib/normalizeImageSrc';
 
 export type ClaimPosterProps = {
@@ -44,11 +44,6 @@ export default function ClaimPoster({
   campaignId,
   expired,
 }: ClaimPosterProps) {
-  const supabase = createClient<Database>(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  );
-
   const [editing, setEditing] = useState(false);
   const [settings, setSettings] = useState({ arcOffsetY, logoOffsetY, arcRadius });
   const [original, setOriginal] = useState({ arcOffsetY, logoOffsetY, arcRadius });

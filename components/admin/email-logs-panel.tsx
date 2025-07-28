@@ -1,14 +1,11 @@
+// app/admin/email-logs-panel.tsx
 'use client';
 
 import { useEffect, useState } from 'react';
-import { createClient } from '@supabase/supabase-js';
+import { supabase } from '@/lib/supabaseClient';
 import { formatDistanceToNow } from 'date-fns';
 
 export default function EmailLogsPanel() {
-  const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  );
   const [logs, setLogs] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 

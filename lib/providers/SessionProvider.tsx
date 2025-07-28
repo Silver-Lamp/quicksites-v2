@@ -1,3 +1,4 @@
+// lib/providers/SessionProvider.tsx
 'use client';
 
 import {

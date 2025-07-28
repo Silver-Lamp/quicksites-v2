@@ -1,3 +1,4 @@
+// app/admin/templates/list/page.tsx
 'use server';
 
 import { getFromDate } from '@/lib/getFromDate';

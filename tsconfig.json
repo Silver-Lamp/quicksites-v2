@@ -2,56 +2,41 @@
   "extends": "./tsconfig.base.json",
   "include": [
     ".next/types",
+    "_pages-legacy",
+    "admin",
     "app",
     "components",
+    "hooks",
+    "lib",
     "next-env.d.ts",
     "pages",
+    "scripts",
     "types",
-    "admin",                    // ← Add this line
-    ".next/types/**/*.ts",
-    "lib",
-    "lib/admin",
-    "hooks",
-    "_pages-legacy",
-    "scripts"
+    ".next/types/**/*.ts"
   ],
   "exclude": [
     "node_modules",
     ".next"
   ],
   "compilerOptions": {
-    "baseUrl": ".",
-    "paths": {
-      "@/*": ["./*"],
-      "@/admin/*": ["admin/*"],
-      "@/components/*": ["components/*"],
-      "@/pages/*": ["pages/*"],
-      "@/lib/*": ["lib/*"]
-    },
     "jsx": "preserve",
-    "target": "ES2020",
-    "module": "ESNext",
-    "moduleResolution": "bundler",
-    "esModuleInterop": true,
-    "resolveJsonModule": true,
-    "allowSyntheticDefaultImports": true,
-    "maxNodeModuleJsDepth": 2,
     "tsBuildInfoFile": "./.tsbuildinfo",
-    "skipLibCheck": true,
+    "outDir": ".lint-tmp",
+    "typeRoots": [
+      "./types",
+      "./node_modules/@types"
+    ],
     "types": [
       "next",
       "next/image-types/global",
       "node"
     ],
-    "typeRoots": [
-      "./types",
-      "./node_modules/@types"
-    ],
-    "outDir": ".lint-tmp",
     "plugins": [
       {
         "name": "next"
       }
-    ]
+    ],
+    "allowJs": true,
+    "isolatedModules": true
   }
 }

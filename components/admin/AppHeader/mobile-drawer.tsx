@@ -69,7 +69,7 @@ export function MobileDrawer({
               <details>
                 <summary className="cursor-pointer font-semibold text-yellow-300">Templates</summary>
                 <div className="ml-4 flex flex-col gap-1">
-                  <SafeLink href="/admin/templates">All Templates</SafeLink>
+                  <SafeLink href="/admin/templates/list">All Templates</SafeLink>
                   {/* <SafeLink href="/admin/templates-new">+ New Template</SafeLink> */}
                   <SafeLink href="/admin/templates/new">+ New Template</SafeLink>
                 </div>

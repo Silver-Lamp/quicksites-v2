@@ -1,4 +1,3 @@
-// ✅ FILE: .eslintrc.cjs
 require('@rushstack/eslint-patch/modern-module-resolution');
 
 module.exports = {
@@ -60,6 +59,19 @@ module.exports = {
     '@typescript-eslint/no-explicit-any': 'off',
     '@typescript-eslint/no-empty-interface': 'off',
     '@typescript-eslint/no-empty-object-type': 'off',
+    'no-restricted-imports': [
+      'warn',
+      {
+        paths: [
+          {
+            name: '@supabase/supabase-js',
+            importNames: ['createClient'],
+            message:
+              '⚠️ Use the shared client from `lib/supabaseClient.ts` instead of creating a new Supabase client.',
+          },
+        ],
+      },
+    ],
   },
   overrides: [
     {

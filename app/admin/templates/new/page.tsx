@@ -1,33 +1,45 @@
+// app/admin/templates/new/page.tsx
 'use client';
 
 import { useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { createClient } from '@supabase/supabase-js';
+import { supabase } from '@/lib/supabaseClient';
 import TemplateEditor from '@/components/admin/templates/template-editor';
-import { TemplateSnapshot } from '@/types/template';
+import type { TemplateSnapshot } from '@/types/template';
+import { createEmptyTemplate } from '@/lib/createEmptyTemplate';
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
+/** Optional fallback generator */
+function generateLocalSlug(base = 'new-template') {
+  return `${base}-${Math.random().toString(36).slice(2, 6)}`;
+}
 
-type Snapshot = {
-  data: any;
-  theme?: string;
-  brand?: string;
-  color_scheme?: string;
-  template_name?: string;
-  is_site?: boolean;
-};
+/** Use Supabase RPC to generate a unique name */
+async function getUniqueTemplateSlug(): Promise<string> {
+  const { data, error } = await supabase.rpc('generate_unique_template_name');
+  if (error || !data) {
+    console.warn('[⚠️ RPC fallback] generate_unique_template_name failed:', error?.message);
+    return generateLocalSlug();
+  }
+  return data;
+}
 
 export default function NewTemplatePage() {
   const searchParams = useSearchParams();
   const from = searchParams?.get('from') ?? '';
-  const [initialData, setInitialData] = useState<Snapshot | null>(null);
+
+  const [initialData, setInitialData] = useState<TemplateSnapshot | null>(null);
+  const [uniqueSlug, setUniqueSlug] = useState<string>('');
 
   useEffect(() => {
-    async function loadSnapshot() {
-      if (!from) return;
+    async function initializeTemplate() {
+      const slug = await getUniqueTemplateSlug();
+      setUniqueSlug(slug);
+
+      if (!from) {
+        const newTemplate = createEmptyTemplate(slug);
+        setInitialData(newTemplate);
+        return;
+      }
 
       const { data: snapshot, error } = await supabase
         .from('snapshots')
@@ -53,23 +65,23 @@ export default function NewTemplatePage() {
         ]);
       }
 
-      setInitialData({
-        template_name: 'Untitled (Remix)',
-        color_scheme: snapshot.color_scheme,
-        theme: snapshot.theme,
-        brand: snapshot.brand,
-        data: snapshot.data,
-        is_site: snapshot.is_site,
-      });
+      const remixed = createEmptyTemplate(slug);
+      remixed.data = snapshot.data;
+      remixed.color_scheme = snapshot.color_scheme ?? 'neutral';
+      remixed.theme = snapshot.theme ?? 'default';
+      remixed.brand = snapshot.brand ?? 'default';
+      remixed.is_site = snapshot.is_site ?? false;
+      remixed.published = false;
+      setInitialData(remixed);
     }
 
-    loadSnapshot();
+    initializeTemplate();
   }, [from]);
 
   return (
-      <TemplateEditor
-        templateName="new-template"
-        initialData={initialData as TemplateSnapshot | undefined}
-      />
+    <TemplateEditor
+      templateName={uniqueSlug || 'new-template'}
+      initialData={initialData || undefined}
+    />
   );
 }

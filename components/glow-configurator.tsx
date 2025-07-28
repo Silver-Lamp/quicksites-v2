@@ -1,11 +1,10 @@
-// GlowConfigurator.tsx — v2.2: fix edge crash from stale glow=null in map
+// app/admin/glow-configurator.tsx
 'use client';
 
 import { useEffect, useState } from 'react';
 import { SlidersHorizontal } from 'lucide-react';
 import BackgroundGlow from './background-glow';
-import { createClient } from '@supabase/supabase-js';
-import type { Database } from '@/types/supabase';
+import { supabase } from '@/lib/supabaseClient';
 
 export type GlowConfig = {
   size: 'sm' | 'md' | 'lg' | 'xl';
@@ -41,7 +40,6 @@ const sizeMap = {
 };
 
 export default function GlowConfigurator({ defaultGlowConfig, siteSlug = 'default' }: Props) {
-  const supabase = createClient<Database>(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!);
   const [userId, setUserId] = useState<string | null>(null);
   const [isOpen, setIsOpen] = useState(false);
   const [glowLayers, setGlowLayers] = useState<GlowConfig[] | null>(null);

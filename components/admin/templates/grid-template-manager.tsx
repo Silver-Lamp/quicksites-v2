@@ -1,3 +1,4 @@
+// app/admin/templates/grid-template-manager.tsx
 "use client";
 
 import { useEffect, useState } from "react";
@@ -7,8 +8,7 @@ import { Button } from "@/components/ui/button";
 import { motion, AnimatePresence } from "framer-motion";
 import GridThumbnailRenderer from "./grid-thumbnail-renderer";
 import Link from "next/link";
-import { createClient } from "@supabase/supabase-js";
-import type { Database } from "@/types/supabase";
+import { supabase } from "@/lib/supabaseClient";
 import { useRouter } from "next/navigation";
 
 export default function GridTemplateManager({
@@ -20,7 +20,6 @@ export default function GridTemplateManager({
 }) {
   const [presets, setPresets] = useState<GridPreset[]>([]);
   const [filter, setFilter] = useState<string | null>(null);
-  const supabase = createClient<Database>(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!);
   const router = useRouter();
 
   useEffect(() => {

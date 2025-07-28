@@ -1,12 +1,7 @@
 // pages/admin/schemas.tsx
 import { useEffect, useState } from 'react';
-import { createClient } from '@supabase/supabase-js';
+import { supabase } from '@/lib/supabaseClient';
 import Head from 'next/head';
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
 
 export default function SupabaseSchemaDashboard() {
   const [schemas, setSchemas] = useState<any[]>([]);

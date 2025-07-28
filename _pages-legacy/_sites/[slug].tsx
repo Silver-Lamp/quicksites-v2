@@ -1,6 +1,6 @@
-// pages/_sites/[slug].tsx
+// app/_sites/[slug].tsx
 import { GetServerSideProps } from 'next';
-import { createClient } from '@supabase/supabase-js';
+import { supabase } from '@/lib/supabaseClient';
 
 export default function PublicSite({ siteData }: any) {
   if (!siteData) {
@@ -26,11 +26,6 @@ export default function PublicSite({ siteData }: any) {
 
 export const getServerSideProps: GetServerSideProps = async (context) => {
   const slug = context.params?.slug as string;
-
-  const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  );
 
   const { data: siteData, error } = await supabase
     .from('sites')

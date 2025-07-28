@@ -1,8 +1,8 @@
+// app/admin/hooks/useThemeContext.tsx
 'use client';
 
 import { createContext, useContext, useEffect, useState } from 'react';
-import { createClient } from '@supabase/supabase-js';
-import type { Database } from '@/types/supabase';
+import { supabase } from '@/lib/supabaseClient';
 import { industryPresets } from '@/lib/theme/industryPresets';
 import { fontMap } from '@/lib/theme/fontMap';
 
@@ -54,11 +54,6 @@ export function ThemeProvider({
   children: React.ReactNode;
   siteSlug?: string;
 }) {
-  const supabase = createClient<Database>(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  );
-
   const [theme, setThemeState] = useState<SiteTheme>(defaultTheme);
   const [isClient, setIsClient] = useState(false);
 

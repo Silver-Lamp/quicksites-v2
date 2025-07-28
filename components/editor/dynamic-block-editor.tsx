@@ -1,4 +1,3 @@
-// components/editor/DynamicBlockEditor.tsx
 'use client';
 
 import dynamic from 'next/dynamic';
@@ -21,7 +20,7 @@ export function DynamicBlockEditor({
   useEffect(() => {
     const load = async () => {
       if (block?.type && BLOCK_EDITORS[block.type]) {
-        const mod = await BLOCK_EDITORS[block.type]();
+        const mod = await BLOCK_EDITORS[block.type]!();
         setEditorComponent(() => mod.default);
       }
     };

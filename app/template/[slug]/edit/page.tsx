@@ -3,32 +3,12 @@
 
 import { useEffect, useState } from 'react';
 import { useParams, notFound } from 'next/navigation';
-import { createClient } from '@supabase/supabase-js';
 import TemplateEditor from '@/components/admin/templates/template-editor';
 import type { Snapshot } from '@/types/template';
-import type { Database } from '@/types/supabase';
-// import { fetchTemplateBySlug } from '@/app/template/[slug]/template-loader';
-// import { Metadata } from 'next';
-
-// export async function generateMetadata({
-//   params,
-// }: {
-//   params: { slug: string };
-// }): Promise<Metadata> {
-//   const data = await fetchTemplateBySlug(params.slug);
-
-//   return {
-//     title: data ? `Edit: ${data.template_name}` : 'Template Not Found',
-//     description: data
-//       ? `Editing template for ${data.template_name}`
-//       : 'No template found for that slug',
-//   };
-// }
+import { supabase } from '@/lib/supabaseClient';
 
 export default function EditPage() {
   const { slug } = useParams() as { slug: string };
-  const supabase = createClient<Database>(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!);
-
   const [data, setData] = useState<Snapshot | null>(null);
   const [loading, setLoading] = useState(true);
 

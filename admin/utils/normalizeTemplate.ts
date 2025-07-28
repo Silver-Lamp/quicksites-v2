@@ -1,7 +1,31 @@
+// admin/utils/normalizeTemplate.ts
 import type { Template } from '@/types/template';
+
 export function normalizeTemplate(entry: any): Template {
-  const pages = entry.data?.pages ?? entry.pages ?? [];
+  const rawPages = entry.data?.pages ?? entry.pages ?? [];
   const services = entry.services ?? entry.data?.services ?? [];
+
+  // Normalize page array with fallback
+  const pages = Array.isArray(rawPages) && rawPages.length > 0
+    ? rawPages.map((page: any, i: number) => ({
+        id: page.id || `page-${i}`,
+        slug: page.slug || 'home',
+        title: page.title || 'Home',
+        show_footer: page.show_footer ?? true,
+        show_header: page.show_header ?? true,
+        content_blocks: Array.isArray(page.content_blocks) ? page.content_blocks : [],
+        ...page,
+      }))
+    : [
+        {
+          id: 'home-page',
+          slug: 'home',
+          title: 'Home',
+          show_footer: true,
+          show_header: true,
+          content_blocks: [],
+        },
+      ];
 
   // Prefer explicitly passed values first
   const rawName = entry.template_name?.trim();
@@ -9,12 +33,14 @@ export function normalizeTemplate(entry: any): Template {
   const industry = entry.industry?.trim() ?? '';
 
   // Fallback derivation logic
-  const derivedName = rawName || 'Untitled';
-  const derivedSlug = rawSlug || derivedName
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/(^-|-$)/g, '')
-    .trim();
+  const derivedName = rawName || rawSlug || `new-template-${Math.random().toString(36).slice(2, 6)}`;
+  const derivedSlug =
+    rawSlug ||
+    derivedName
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/(^-|-$)/g, '')
+      .trim();
 
   // Hero block fallback metadata
   const heroBlock = pages[0]?.content_blocks?.find((b: any) => b.type === 'hero');
@@ -37,8 +63,8 @@ export function normalizeTemplate(entry: any): Template {
     logo_url: entry.logo_url ?? '',
     team_url: entry.team_url ?? '',
     is_site: entry.is_site ?? false,
-    created_at: entry.created_at ?? '',
-    updated_at: entry.updated_at ?? '',
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
     domain: entry.domain ?? '',
     custom_domain: entry.custom_domain ?? '',
     published: entry.published ?? false,

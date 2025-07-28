@@ -1,16 +1,11 @@
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import { createClient } from '@supabase/supabase-js';
+import { supabase } from '@/lib/supabaseClient';
 import QRCode from 'qrcode';
 import Image from 'next/image';
 import TemplatePreview from '@/components/admin/templates/template-preview';
 import { Button } from '@/components/ui';
 import { generateSocialCard } from '@/admin/lib/generateSocialCard';
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
 
 export default function SharedSnapshotPage() {
   const searchParams = useSearchParams();

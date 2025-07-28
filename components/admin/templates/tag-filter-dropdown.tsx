@@ -1,12 +1,8 @@
+// app/admin/templates/tag-filter-dropdown.tsx
 import { useEffect, useState } from 'react';
-import { createClient } from '@supabase/supabase-js';
+import { supabase } from '@/lib/supabaseClient';
 import { Checkbox } from '../../ui/checkbox';
 import { Label } from '../../ui/label';
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
 
 type TagFilterDropdownProps = {
   selected: string[];

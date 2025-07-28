@@ -1,75 +1,33 @@
 // lib/createDefaultBlock.ts
-import type { Block } from '@/types/blocks'; // adjust import path as needed
+import type { Block, BlockType, BlockWithId } from '@/types/blocks';
+import { BLOCK_TYPES } from '@/types/blocks';
 import crypto from 'crypto';
-import { generateMockFAQ } from '@/types/blocks';
+import { normalizeBlock } from '@/types/blocks';
 
-export function createDefaultBlock(type: Block['type']): Block {
+export function createDefaultBlock(type: BlockType): BlockWithId {
   const _id = crypto.randomUUID?.() || Date.now().toString();
 
   switch (type) {
     case 'text':
-      return {
-        type,
-        _id,
-        content: {
-          value: 'Sample text block',
-        },
-      };
+      return normalizeBlock({ type, _id, content: { value: 'Sample text block' } });
 
     case 'image':
-      return {
-        type,
-        _id,
-        content: {
-          url: 'https://placekitten.com/800/400',
-          alt: 'A cute kitten',
-        },
-      };
+      return normalizeBlock({ type, _id, content: { url: 'https://placekitten.com/800/400', alt: 'A cute kitten' } });
 
     case 'video':
-      return {
-        type,
-        _id,
-        content: {
-          url: 'https://www.youtube.com/embed/dQw4w9WgXcQ',
-          caption: 'Intro video',
-        },
-      };
+      return normalizeBlock({ type, _id, content: { url: 'https://www.youtube.com/embed/dQw4w9WgXcQ', caption: 'Intro video' } });
 
     case 'audio':
-      return {
-        type,
-        _id,
-        content: {
-          provider: 'spotify',
-          url: 'https://spotify.com/sample',
-          title: 'Sample Audio',
-        },
-      };
+      return normalizeBlock({ type, _id, content: { provider: 'spotify', url: 'https://spotify.com/sample', title: 'Sample Audio' } });
 
     case 'quote':
-      return {
-        type,
-        _id,
-        content: {
-          text: 'This changed everything.',
-          attribution: 'Jane Doe',
-        },
-      };
+      return normalizeBlock({ type, _id, content: { text: 'This changed everything.', attribution: 'Jane Doe' } });
 
     case 'button':
-      return {
-        type,
-        _id,
-        content: {
-          label: 'Click Me',
-          href: '#',
-          style: 'primary',
-        },
-      };
+      return normalizeBlock({ type, _id, content: { label: 'Click Me', href: '#', style: 'primary' } });
 
     case 'hero':
-      return {
+      return normalizeBlock({
         type,
         _id,
         content: {
@@ -79,68 +37,53 @@ export function createDefaultBlock(type: Block['type']): Block {
           cta_link: '#',
           image_url: 'https://placekitten.com/1200/600',
         },
-      };
+      });
 
     case 'services':
-      return {
-        type,
-        _id,
-        content: {
-          items: ['Service A', 'Service B', 'Service C'],
-        },
-      };
+      return normalizeBlock({ type, _id, content: { items: ['Service A', 'Service B', 'Service C'] } });
 
     case 'contact_form':
-      return {
-        type,
-        _id,
-        content: { title: 'Contact Us', notification_email: 'sandon@quicksites.ai' },
-      };
+      return normalizeBlock({ type, _id, content: { title: 'Contact Us', notification_email: 'sandon@quicksites.ai' } });
 
     case 'testimonial':
-      return {
+      return normalizeBlock({
         type,
         _id,
         content: {
           testimonials: [{ quote: 'They did a great job!', attribution: 'Happy Client' }],
         },
-      };
+      });
 
     case 'cta':
-      return {
-        type,
-        _id,
-        content: {
-          label: 'Learn More',
-          link: '#about',
-        },
-      };
+      return normalizeBlock({ type, _id, content: { label: 'Learn More', link: '#about' } });
 
     case 'faq':
-      return {
+      return normalizeBlock({
         type,
         _id,
         content: {
           title: 'Frequently Asked Questions',
-          items: generateMockFAQ().items,
+          subtitle: '',
+          items: [
+            { question: 'How fast is your response time?', answer: 'Usually within 30 minutes.' },
+            { question: 'Do you offer 24/7 towing?', answer: 'Yes, always on call.' },
+          ],
+          layout: 'accordion',
         },
-      };
+      });
 
     case 'grid':
-      return {
+      return normalizeBlock({
         type,
         _id,
         content: {
           columns: 2,
-          items: [
-            createDefaultBlock('text'),
-            createDefaultBlock('image'),
-          ],
+          items: [createDefaultBlock('text'), createDefaultBlock('image')],
         },
-      };
+      });
 
     case 'footer':
-      return {
+      return normalizeBlock({
         type,
         _id,
         content: {
@@ -156,41 +99,42 @@ export function createDefaultBlock(type: Block['type']): Block {
             { label: 'Auto Wrecking & Flatbed', href: '/auto-wrecking' },
           ],
         },
-      };
+      });
 
     case 'service_areas':
-      return {
-        type: 'service_areas',
+      return normalizeBlock({
+        type,
         _id,
         content: {
           title: 'Our Service Areas',
-          subtitle: 'We proudly serve the surrounding towns and cities within 30 miles.',
+          subtitle: 'We serve a 30 mile radius.',
           cities: [],
+          allCities: [],
           sourceLat: 43.3242,
           sourceLng: -88.0899,
-          allCities: [],
+          radiusMiles: 30,
         },
-      };
-      case 'header':
-        return {
-          type: 'header',
-          _id,
-          content: {
-            logoUrl: '/logo.png',
-            navItems: [
-              { label: 'Towing Service', href: '/services/towing' },
-              { label: 'Emergency Towing', href: '/services/emergency' },
-              { label: 'Roadside Assistance', href: '/services/roadside' },
-              { label: 'Auto Wrecking & Flatbed Towing', href: '/services/flatbed' },
-            ],
-          },
-        };
-            
+      });
+
+    case 'header':
+      return normalizeBlock({
+        type,
+        _id,
+        content: {
+          logoUrl: '/logo.png',
+          navItems: [
+            { label: 'Home', href: '/' },
+            { label: 'Services', href: '/services' },
+            { label: 'Contact', href: '/contact' },
+          ],
+        },
+      });
+
     default:
-      return {
+      return normalizeBlock({
         type: 'text',
         _id,
         content: { value: `Unsupported block type: ${type}` },
-      };
+      });
   }
 }

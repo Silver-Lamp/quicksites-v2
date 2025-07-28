@@ -63,7 +63,7 @@ const navItems: NavItem[] = [
     label: 'Templates & Sites',
     icon: <FileStack size={18} />,
     children: [
-      { label: 'Browse', href: '/admin/templates' },
+      { label: 'Browse', href: '/admin/templates/list' },
       { label: 'Create', href: '/admin/templates/new' },
     ],
   },

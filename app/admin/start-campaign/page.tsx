@@ -11,9 +11,7 @@ import LeadSelectorWithRadius from '@/components/admin/campaigns/lead-selector-w
 import { getLatLonForCityState } from '@/lib/utils/geocode';
 import { Lead } from '@/types/lead.types';
 import { getDistanceMiles } from '@/lib/utils/distance';
-import { createClient } from '@supabase/supabase-js';
-
-const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!);
+import { supabase } from '@/lib/supabaseClient';
 
 export default function StartCampaign() {
   const searchParams = useSearchParams();

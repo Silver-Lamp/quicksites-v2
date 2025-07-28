@@ -1,3 +1,4 @@
+// app/admin/AppHeader/avatar-menu.tsx
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
@@ -8,7 +9,7 @@ import md5 from 'blueimp-md5';
 
 import { RoleBadge } from './role-badge';
 import { useSafeAuth } from '@/hooks/useSafeAuth';
-import { createClient } from '@supabase/supabase-js';
+import { supabase } from '@/lib/supabaseClient';
 
 export function AvatarMenu() {
   const { user, role, isLoggedIn } = useSafeAuth();
@@ -38,7 +39,6 @@ export function AvatarMenu() {
   const handleLogout = async () => {
     setLoggingOut(true);
     try {
-      const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!);
       await supabase.auth.signOut();
       router.push('/login?logout=1');
       setTimeout(() => window.location.reload(), 300);

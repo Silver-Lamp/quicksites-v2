@@ -2,13 +2,10 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 import debounce from 'lodash.debounce';
-import type { Database } from '@/types/supabase';
+import { supabase } from '@/lib/supabaseClient';
 import TemplatePreviewWithToggle from '@/components/admin/templates/template-preview-with-toggle';
 import ThemeScope from '@/components/ui/theme-scope';
-
-const supabase = createClientComponentClient<Database>();
 
 type BrandingProfile = {
   id: string;

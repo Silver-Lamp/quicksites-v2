@@ -1,5 +1,6 @@
+// app/admin/not-found.tsx
 import { useEffect, useState } from 'react';
-import { createClient } from '@supabase/supabase-js';
+import { supabase } from '@/lib/supabaseClient';
 import { cn } from '../lib/utils.js'; // Optional helper for conditional classNames
 
 type LogEntry = {
@@ -12,11 +13,6 @@ type LogEntry = {
   context: 'admin' | 'public';
   isNew?: boolean;
 };
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
 
 export default function NotFoundLogsPage() {
   const [logs, setLogs] = useState<LogEntry[]>([]);

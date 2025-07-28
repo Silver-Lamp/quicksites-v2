@@ -1,3 +1,4 @@
+// app/edit/[slug].tsx
 'use client';
 import Head from 'next/head';
 // import { json } from '@/lib/api/json';
@@ -5,7 +6,7 @@ import Head from 'next/head';
 import { useEffect, useState, useRef } from 'react';
 import { useSearchParams } from 'next/navigation';
 import dynamic from 'next/dynamic';
-import { createClient } from '@supabase/supabase-js';
+import { supabase } from '@/lib/supabaseClient';
 import { GripVertical } from 'lucide-react';
 // import RenderBlock from '@/components/admin/templates/render-block';
 // import BlockSidebar from '@/components/admin/templates/block-sidebar';
@@ -18,11 +19,6 @@ import React from 'react';
 // });
 // import { ModalWrapper } from '@/components/ui';
 // import type { SiteData } from '@/types/site';
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
 
 export default function EditPage() {
   const searchParams = useSearchParams();

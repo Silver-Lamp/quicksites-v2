@@ -1,14 +1,10 @@
+// app/admin/admin/branding/[id].tsx
 'use client';
 
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import { createClient } from '@supabase/supabase-js';
+import { supabase } from '@/lib/supabaseClient';
 import QRCode from 'qrcode';
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
 
 export default function BrandingProfilePage() {
   const searchParams = useSearchParams();

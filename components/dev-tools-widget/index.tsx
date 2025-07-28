@@ -1,11 +1,9 @@
-// components/dev-tools-widget/index.tsx
+// app/admin/dev-tools-widget/index.tsx
 'use client';
 
 import { useEffect, useState } from 'react';
-import { createClient } from '@supabase/supabase-js';
 import { useMockGeolocation } from '@/hooks/useMockGeolocation';
 import { useRequestMeta } from '@/hooks/useRequestMeta';
-import type { Database } from '@/types/supabase';
 import type { Session } from '@supabase/supabase-js';
 import { DevToolsPanel } from './DevToolsPanel';
 import { CookieEditor } from './CookieEditor';
@@ -14,6 +12,7 @@ import { SessionViewer } from './SessionViewer';
 import { TopMetadataSummary } from './TopMetadataSummary';
 import { MockGeolocationEditor } from './MockGeolocationEditor';
 import { MockUserEditor } from './MockUserEditor';
+import { supabase } from '@/lib/supabaseClient';
 
 export default function DevToolsWidget() {
   const [visible, setVisible] = useState(true);
@@ -36,8 +35,6 @@ export default function DevToolsWidget() {
     setVisible(true);
     const minimizedFlag = localStorage.getItem('devtools:minimized') === 'true';
     setMinimized(minimizedFlag);
-
-    const supabase = createClient<Database>(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!);
 
     supabase.auth.getSession().then(({ data }) => {
       setSession(data.session);

@@ -1,11 +1,6 @@
-import { createClient } from '@supabase/supabase-js';
+import { supabase } from '@/lib/supabaseClient';
 import { GetServerSideProps } from 'next';
 import { Button } from '@/components/ui';
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
 
 export default function Trash({ templates }: { templates: any[] }) {
   const restoreTemplate = async (template_name: string) => {

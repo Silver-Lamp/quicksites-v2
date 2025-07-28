@@ -30,7 +30,7 @@ export async function GET(_req: NextRequest) {
       color: 'text-yellow-300',
       routes: [
         { href: '/template-market', label: 'Template Market' },
-        { href: '/admin/templates', label: 'All Templates' },
+        { href: '/admin/templates/list', label: 'All Templates' },
         // { href: '/admin/templates-new', label: '+ New Template' },
         { href: '/admin/templates/new', label: '+ New Template' },
       ],

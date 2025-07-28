@@ -1,5 +1,5 @@
 import { GetServerSideProps } from 'next';
-import { createClient } from '@supabase/supabase-js';
+import { supabase } from '@/lib/supabaseClient';
 import {
   BarChart,
   Bar,
@@ -12,11 +12,6 @@ import {
   Cell,
   Legend,
 } from 'recharts';
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
 
 export default function SharedAnalytics({ domain, views }: { domain: string; views: any[] }) {
   const byDay: Record<string, number> = {};

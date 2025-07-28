@@ -1,5 +1,6 @@
-import { BlockValidationErrorMap } from '@/lib/validateBlock.js';
-import type { Block } from './blocks.js';
+// types/template.ts
+import { BlockValidationErrorMap } from '@/lib/validateBlock';
+import type { Block } from './blocks';
 
 export type Page = {
   id: string;

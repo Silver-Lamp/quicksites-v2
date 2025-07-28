@@ -14,7 +14,7 @@
   font-style: normal;
   font-weight: 100 900;
   font-display: swap;
-  src: url('/fonts/Inter-Variable.woff2') format('woff2-variations');
+  src: url('/fonts/Inter.ttf') format('truetype');
 }
 
 @font-face {
@@ -31,7 +31,7 @@
   font-display: swap;
 }
 
-@font-face {
+/* @font-face {
   font-family: 'Fira Code';
   font-style: normal;
   font-weight: 400;
@@ -51,7 +51,7 @@
   font-weight: 400;
   src: url('/fonts/Pacifico-Regular.woff2') format('woff2');
   font-display: swap;
-}
+} */
 
 /* Optional global default */
 body {
@@ -174,3 +174,44 @@ body {
 .ring-offset-2.ring-red-400 {
   box-shadow: 0 0 0 4px rgba(248, 113, 113, 0.6);
 }
+
+/* ------------------------------------------------ */
+/* 🛠 Fix Browser Console Warnings */
+/* ------------------------------------------------ */
+
+/* Replace invalid image-rendering values */
+img,
+canvas {
+  image-rendering: auto;
+  image-rendering: crisp-edges;
+  image-rendering: pixelated;
+}
+
+/* Replace invalid `behavior` usage with scroll-behavior */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Remove use of old IE filters (progid) — use modern effects */
+.legacy-filter {
+  /* legacy: filter: progid:DXImageTransform.Microsoft.Alpha(opacity=50); */
+  opacity: 0.5;
+}
+
+/* Fix -webkit-text-size-adjust to valid values */
+body {
+  -webkit-text-size-adjust: 100%;
+}
+
+/* Replace deprecated -moz-column-gap with column-gap */
+.columns {
+  column-gap: 1.5rem; /* Adjust as needed */
+}
+
+/* Remove invalid `out` and `timeout` props */
+.animated-custom {
+  /* out: ease-out; ❌ */
+  /* timeout: 500ms; ❌ */
+  transition: all 0.5s ease-out;
+}
+

@@ -1,3 +1,4 @@
+// app/admin/presets/edit/[id]/page.tsx
 "use client";
 
 import { useEffect, useState } from "react";
@@ -7,8 +8,7 @@ import { Button } from "@/components/ui/button";
 import SortableGridBlock from "@/components/admin/templates/sortable-grid-block";
 import { normalizeBlock } from "@/types/blocks";
 import type { Block } from "@/types/blocks";
-import { createClient } from "@supabase/supabase-js";
-import type { Database } from "@/types/supabase";
+import { supabase } from "@/lib/supabaseClient";
 import TemplatePreview from "@/components/admin/templates/template-preview";
 import { defaultGridPresets } from "@/types/grid-presets";
 import GridThumbnailRenderer from "@/components/admin/templates/grid-thumbnail-renderer";
@@ -17,7 +17,6 @@ import { createDefaultBlock } from '@/lib/createDefaultBlock';
 export default function AdminPresetsEditPage() {
   const { id } = useParams();
   const router = useRouter();
-  const supabase = createClient<Database>(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!);
 
   const [name, setName] = useState("");
   const [columns, setColumns] = useState(2);

@@ -1,12 +1,7 @@
 // pages/admin/access-requests.tsx
 import { useEffect, useState } from 'react';
-import { createClient } from '@supabase/supabase-js';
+import { supabase } from '@/lib/supabaseClient';
 import Head from 'next/head';
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
 
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 

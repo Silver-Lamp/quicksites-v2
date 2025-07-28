@@ -1,13 +1,8 @@
-// pages/admin/embed-views.tsx
+  // pages/admin/embed-views.tsx
 import { useEffect, useState } from 'react';
-import { createClient } from '@supabase/supabase-js';
+import { supabase } from '@/lib/supabaseClient';
 import Head from 'next/head';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
 
 function getFlagEmoji(countryCode: string) {
   if (!countryCode || countryCode.length !== 2) return '🌐';

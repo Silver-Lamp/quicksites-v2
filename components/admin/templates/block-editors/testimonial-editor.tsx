@@ -1,4 +1,4 @@
-// testimonial-editor.tsx — safe OpenAI usage via API route
+// app/admin/templates/block-editors/testimonial-editor.tsx
 'use client';
 
 import { useState } from 'react';
@@ -15,8 +15,7 @@ import type { BlockEditorProps } from './index';
 import BlockField from './block-field';
 import { Switch } from '@/components/ui/switch';
 import TestimonialBlockComponent from '@/components/admin/templates/render-blocks/testimonial';
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
-import type { Database } from '@/types/supabase';
+import { supabase } from '@/lib/supabaseClient';
 import Image from 'next/image';
 import { extractFieldErrors } from '../utils/extractFieldErrors';
 import { BlockValidationError } from '@/hooks/validateTemplateBlocks';
@@ -87,7 +86,6 @@ export default function TestimonialEditor({ block, onSave, onClose, errors = {},
   const [aiPrompt, setAiPrompt] = useState('');
   const [loading, setLoading] = useState(false);
   const fieldErrors = extractFieldErrors(errors as unknown as string[]); // now accepts Record<string, BlockValidationError[]>
-  const supabase = createClientComponentClient<Database>();
 
 async function uploadAvatar(file: File, blockId: string): Promise<string | null> {
   const filename = `avatars/${blockId}-${Date.now()}.${file.name.split('.').pop()}`;

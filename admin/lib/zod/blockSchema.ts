@@ -141,6 +141,7 @@ export const blockContentSchemaMap = {
     schema: z.object({
       title: z.string().min(1, 'Title is required'),
       notification_email: z.string().email('Invalid email address'),
+      services: z.array(z.string()).optional(),
     }),
   },
 };

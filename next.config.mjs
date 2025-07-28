@@ -1,9 +1,9 @@
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createRequire } from 'node:module';
-import webpack from 'webpack'; // needed for ProvidePlugin
+import webpack from 'webpack';
 
-const require = createRequire(import.meta.url); // ✅ ESM-safe require
+const require = createRequire(import.meta.url);
 
 /** ✅ Fix for __dirname in ESM */
 const __filename = fileURLToPath(import.meta.url);
@@ -13,24 +13,43 @@ const __dirname = path.dirname(__filename);
 const nextConfig = {
   assetPrefix: '/',
   images: {
-    domains: ['randomuser.me', 'kcwruliugwidsdgsrthy.supabase.co', 'cdn.sanity.io', 'image.thum.io'],
+    domains: [
+      'randomuser.me',
+      'kcwruliugwidsdgsrthy.supabase.co',
+      'cdn.sanity.io',
+      'image.thum.io',
+    ],
   },
 
   webpack(config, { isServer }) {
-    config.resolve.alias['@'] = path.resolve(__dirname);
+    // ✅ Enable aliases
+    config.resolve.alias = {
+      ...(config.resolve.alias || {}),
+      '@': path.resolve(__dirname),
+      '~': path.resolve(__dirname), // quick fallback alias to root
+      '@/components': path.resolve(__dirname, 'components'),
+      '@/admin': path.resolve(__dirname, 'admin'),
+      '@/lib': path.resolve(__dirname, 'lib'),
+      '@/pages': path.resolve(__dirname, 'pages'),
+      '@/hooks': path.resolve(__dirname, 'hooks'),
+      '@/types': path.resolve(__dirname, 'types'),
+    };
 
     if (isServer) {
       config.externals = config.externals || [];
       config.externals.push({
         nodemailer: 'commonjs nodemailer',
       });
+    } else {
+      config.devtool = 'cheap-module-source-map';
     }
 
-    // ✅ Polyfill for Buffer (node:buffer)
+    // ✅ Buffer polyfill
     config.resolve.fallback = {
       ...config.resolve.fallback,
       buffer: require.resolve('buffer/'),
     };
+
     config.plugins.push(
       new webpack.ProvidePlugin({
         Buffer: ['buffer', 'Buffer'],

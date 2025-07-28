@@ -1,19 +1,14 @@
 import { useEffect, useState } from 'react';
-import { createClient } from '@supabase/supabase-js';
+import { supabase } from '@/lib/supabaseClient';
 import { Input } from '@/components/ui/input';
 import {
   Table,
   TableBody,
-  TableCell,
+  TableCell,  
   TableHead,
   TableHeader,
   TableRow,
 } from '@/components/ui';
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
 
 export default function ViewsDashboard() {
   const [views, setViews] = useState<any[]>([]);

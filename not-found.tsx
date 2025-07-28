@@ -1,7 +1,8 @@
+// app/not-found.tsx
 'use client';
 
 import { useEffect } from 'react';
-import { createClient } from '@supabase/supabase-js';
+import { supabase } from './lib/supabaseClient';
 import React from 'react';
 
 export default function Custom404() {
@@ -10,11 +11,6 @@ export default function Custom404() {
       const pathname = window.location.pathname;
       const referer = document.referrer || null;
       const userAgent = navigator.userAgent;
-
-      const supabase = createClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-      );
 
       await supabase.from('404_logs').insert({
         pathname,

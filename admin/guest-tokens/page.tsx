@@ -1,9 +1,9 @@
-/* app/admin/guest-tokens/page.tsx */
+// app/admin/guest-tokens/page.tsx
 
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { createClient } from '@supabase/supabase-js';
+import { supabase } from '@/lib/supabaseClient';
 import { isAfter, isBefore, parseISO, subDays } from 'date-fns';
 import { Button } from '@/components/ui';
 import { CalendarIcon, DownloadIcon } from 'lucide-react';
@@ -30,11 +30,6 @@ export default function GuestUpgradeDashboard() {
     to: new Date(),
   });
   const [openStep, setOpenStep] = useState<string | null>(null);
-
-  const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  );
 
   const toggleStep = (key: string) => setOpenStep((prev) => (prev === key ? null : key));
 

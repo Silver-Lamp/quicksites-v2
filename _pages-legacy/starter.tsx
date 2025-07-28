@@ -3,13 +3,8 @@
 import { useEffect, useState, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Image from 'next/image';
-import { createClient } from '@supabase/supabase-js';
 import { generateBaseSlug } from '@/lib/slugHelpers';
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
+import { supabase } from '../lib/supabaseClient';
 
 const copyToClipboard = (text: string) => {
   navigator.clipboard.writeText(text).then(() => {

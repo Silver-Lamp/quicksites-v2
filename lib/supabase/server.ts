@@ -1,3 +1,4 @@
+// lib/supabase/server.ts
 'use server';
 
 import { createServerComponentClient } from '@supabase/auth-helpers-nextjs';

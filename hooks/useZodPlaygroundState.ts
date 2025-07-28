@@ -1,17 +1,13 @@
+// app/admin/hooks/useZodPlaygroundState.ts
 import { useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { createClient } from '@supabase/supabase-js';
+import { supabase } from '@/lib/supabaseClient';
 import { ZodTypeAny } from 'zod';
 import { defaultSchema } from '@/admin/lib/defaultSchema';
 import { jsonSchemaToZod } from '@/admin/utils/jsonSchemaToZod';
 import { zodToJsonSchema } from '@/admin/utils/zodToJsonSchema';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { logEmbedView } from '@/admin/lib/logEmbedView';
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
 
 export function useZodPlaygroundState() {
   const router = useRouter();

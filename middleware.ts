@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { createMiddlewareClient } from '@supabase/auth-helpers-nextjs';
-import { supabaseAdmin } from './lib/supabase/admin'; // service role key
+import { supabaseAdmin } from './lib/supabase/admin';
 import type { Database } from './types/supabase';
 import type { TemplateData } from './types/template';
 
@@ -9,7 +9,7 @@ const validSlugCache = new Map<string, { timestamp: number; firstPage: string }>
 const customDomainCache = new Map<string, { timestamp: number; slug: string }>();
 const logCache = new Map<string, number>();
 const CACHE_TTL = 60_000;
-const LOG_DEDUP_TTL = 5 * 60 * 1000; // 5 minutes
+const LOG_DEDUP_TTL = 5 * 60 * 1000;
 
 async function log404Once({
   hostname,
@@ -24,7 +24,6 @@ async function log404Once({
 }) {
   const key = `${hostname}::${pathname}::${reason}`;
   const now = Date.now();
-
   if (logCache.has(key) && now - logCache.get(key)! < LOG_DEDUP_TTL) return;
   logCache.set(key, now);
 
@@ -39,7 +38,13 @@ async function log404Once({
 export async function middleware(req: NextRequest) {
   const { pathname, searchParams } = req.nextUrl;
 
-  // ✅ Custom 404 trigger handler
+  if (pathname.endsWith('.js.map')) return NextResponse.next();
+
+  // Immediately skip static assets (redundant with matcher but fast)
+  if (/\.(js\.map|json|txt|xml|svg|ico|png|jpg|jpeg|webp|woff2?)$/i.test(pathname)) {
+    return NextResponse.next();
+  }
+
   if (pathname === '/not-found-trigger') {
     req.nextUrl.pathname = '/404';
     return NextResponse.rewrite(req.nextUrl);
@@ -48,9 +53,7 @@ export async function middleware(req: NextRequest) {
   const host = req.headers.get('host') || '';
   const hostWithoutPort = host.split(':')[0];
   const baseHost = hostWithoutPort.replace(/^www\./, '');
-  const ip =
-    req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown';
-
+  const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown';
   const res = NextResponse.next();
 
   const isLocalhost =
@@ -64,36 +67,28 @@ export async function middleware(req: NextRequest) {
       return parts.length === 2 && parts[1] === 'localhost' ? parts[0] : null;
     }
     if (baseHost === baseDomain) return null;
-
     if (baseHost.endsWith(baseDomain)) {
       const parts = baseHost.replace(`.${baseDomain}`, '').split('.');
       return parts[0] !== 'www' ? parts[0] : null;
     }
-    
     return null;
   })();
 
   const isPreview = searchParams.get('preview') === previewToken;
-  const isStaticAsset =
-    pathname.startsWith('/_next') || pathname === '/favicon.ico' || pathname.endsWith('.js.map');
+  const isStaticAsset = pathname.startsWith('/_next') || pathname === '/favicon.ico';
 
   console.log(`[middleware] host: ${host}, pathname: ${pathname}, subdomain: ${subdomain}, isCustomDomain: ${isCustomDomain}`);
 
-  // ✅ Sitemap.xml
   if (isCustomDomain && pathname === '/sitemap.xml') {
-    const newUrl = req.nextUrl.clone();
-    newUrl.pathname = `/api/sitemap.xml/${baseHost}`;
-    return NextResponse.rewrite(newUrl);
+    req.nextUrl.pathname = `/api/sitemap.xml/${baseHost}`;
+    return NextResponse.rewrite(req.nextUrl);
   }
 
-  // ✅ Robots.txt
   if (isCustomDomain && pathname === '/robots.txt') {
-    const newUrl = req.nextUrl.clone();
-    newUrl.pathname = `/api/robots.txt/${baseHost}`;
-    return NextResponse.rewrite(newUrl);
+    req.nextUrl.pathname = `/api/robots.txt/${baseHost}`;
+    return NextResponse.rewrite(req.nextUrl);
   }
 
-  // ✅ Static assets and /api pass-through
   if (
     pathname.startsWith('/sites') ||
     pathname.startsWith('/admin') ||
@@ -106,7 +101,6 @@ export async function middleware(req: NextRequest) {
 
   const supabase = createMiddlewareClient<Database>({ req, res });
 
-  // ✅ Subdomain homepage
   if (subdomain && pathname === '/') {
     const now = Date.now();
     const cached = validSlugCache.get(subdomain);
@@ -143,7 +137,6 @@ export async function middleware(req: NextRequest) {
     return NextResponse.rewrite(req.nextUrl);
   }
 
-  // ✅ Custom domain homepage
   if (isCustomDomain && pathname === '/') {
     const now = Date.now();
     const cached = customDomainCache.get(baseHost);
@@ -188,13 +181,11 @@ export async function middleware(req: NextRequest) {
     return NextResponse.rewrite(req.nextUrl);
   }
 
-  // ✅ Internal subdomain routes
   if (subdomain) {
     req.nextUrl.pathname = `/sites/${subdomain}${pathname}`;
     return NextResponse.rewrite(req.nextUrl);
   }
 
-  // ✅ Internal custom domain routes
   if (isCustomDomain) {
     const now = Date.now();
     const cached = customDomainCache.get(baseHost);
@@ -233,6 +224,14 @@ export async function middleware(req: NextRequest) {
   return res;
 }
 
+// ✅ Improved matcher to block static assets from hitting dynamic routes
 export const config = {
-  matcher: ['/:path*'],
+  matcher: [
+    // Run middleware on all routes EXCEPT those starting with:
+    // - /_next/static
+    // - /_next/image
+    // - /favicon.ico
+    // - Any file ending in a static asset extension like .js.map, .json, etc.
+    '/((?!_next/static|_next/image|favicon\\.ico|.*\\.js\\.map|.*\\.json|.*\\.txt|.*\\.xml|.*\\.svg|.*\\.ico|.*\\.png|.*\\.jpg|.*\\.jpeg|.*\\.webp|.*\\.woff2?).*)',
+  ],
 };

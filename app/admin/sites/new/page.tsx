@@ -2,12 +2,10 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
-import type { Database } from '@/types/supabase';
+import { supabase } from '@/lib/supabaseClient';
 
 export default function CreateSitePage() {
   const router = useRouter();
-  const supabase = createClientComponentClient<Database>();
 
   const [siteName, setSiteName] = useState('');
   const [slug, setSlug] = useState('');

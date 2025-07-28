@@ -1,3 +1,4 @@
+// app/admin/presets/new/page.tsx
 "use client";
 
 import { useState } from "react";
@@ -7,15 +8,13 @@ import SortableGridBlock from "@/components/admin/templates/sortable-grid-block"
 import { normalizeBlock } from "@/types/blocks";
 import type { Block } from "@/types/blocks";
 import { useRouter } from "next/navigation";
-import { createClient } from "@supabase/supabase-js";
-import type { Database } from "@/types/supabase";
+import { supabase } from "@/lib/supabaseClient";
 
 export default function AdminPresetsNewPage() {
   const [name, setName] = useState("");
   const [columns, setColumns] = useState(2);
   const [blocks, setBlocks] = useState<Block[]>([]);
   const router = useRouter();
-  const supabase = createClient<Database>(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!);
 
   const handleSave = async () => {
     if (!name.trim()) return alert("Name is required");

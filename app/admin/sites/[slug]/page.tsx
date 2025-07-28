@@ -1,14 +1,7 @@
-// app/admin/sites/[slug]/page.tsx
-
-import { createClient } from '@supabase/supabase-js';
+import { supabase } from '@/lib/supabaseClient';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
 
 // ✅ Type directly and do not try to match PageProps — Next infers this correctly
 export default async function Page({

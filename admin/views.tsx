@@ -1,5 +1,6 @@
+// app/admin/views.tsx
 import { useEffect, useState } from 'react';
-import { createClient } from '@supabase/supabase-js';
+import { supabase } from '@/lib/supabaseClient';
 import { Input } from '../components/ui/input';
 import TagFilterDropdown from '../components/admin/templates/tag-filter-dropdown.jsx';
 import {
@@ -10,11 +11,6 @@ import {
   TableHeader,
   TableRow,
 } from '../components/ui/table';
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
 
 export default function ViewsDashboard() {
   const [views, setViews] = useState<any[]>([]);

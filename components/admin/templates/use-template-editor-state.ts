@@ -1,16 +1,30 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { createEmptyTemplate } from '@/lib/createEmptyTemplate';
 import { useAutosaveTemplate } from '@/hooks/useAutosaveTemplate';
 import { useTemplateMeta } from '@/hooks/useTemplateMeta';
 import { useTemplateJsonSync } from '@/hooks/useTemplateJsonSync';
 import { normalizeTemplate } from '@/admin/utils/normalizeTemplate';
-import { useTemplateSave } from '@/hooks/useTemplateSave';
 import type { Snapshot, Template } from '@/types/template';
 import toast from 'react-hot-toast';
 import { validateBlock } from '@/lib/validateBlock';
 import { Block } from '@/types/blocks';
 import { BlockValidationError, validateTemplateBlocks } from '@/hooks/validateTemplateBlocks';
 import { fixTemplatePages } from '@/lib/fixBlockDefaults';
+import { handleTemplateSave } from '@/admin/lib/handleTemplateSave';
+import { ZodError } from 'zod';
+
+function generateSlug(base: string) {
+  return base
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/(^-|-$)/g, '')
+    .trim();
+}
+
+function generateUniqueSlug(base: string) {
+  const suffix = Math.random().toString(36).slice(2, 6);
+  return `${generateSlug(base)}-${suffix}`;
+}
 
 export function useTemplateEditorState({
   templateName,
@@ -23,22 +37,35 @@ export function useTemplateEditorState({
 }) {
   const fallback = createEmptyTemplate(templateName);
   const [blockErrors, setBlockErrors] = useState<Record<string, BlockValidationError[]>>({});
+  const hasPrettified = useRef(false);
 
   const applyDefaults = (tpl: Partial<Template>): Snapshot => {
+    const base: Partial<Template> = normalizeTemplate({
+      ...tpl,
+      template_name: tpl.template_name || 'Untitled',
+      slug:
+        tpl.slug ||
+        generateUniqueSlug(tpl.template_name || templateName || 'template'),
+      industry: tpl.industry || 'general',
+      meta: {
+        title: tpl.meta?.title || tpl.template_name || 'Untitled',
+        description: tpl.meta?.description || 'Auto-generated template description',
+        ...tpl.meta,
+      },
+    });
+
     const snapshot: Snapshot = {
-      template_name: 'template_name' in tpl ? tpl.template_name || templateName : templateName,
-      layout: tpl.layout || 'standard',
-      color_scheme: tpl.color_scheme || 'neutral',
-      theme: tpl.theme || 'default',
-      brand: tpl.brand || 'default',
-      commit: 'commit' in tpl ? tpl.commit || '' : '',
-      id: tpl.id || crypto.randomUUID(),
-      slug: tpl.slug || '',
-      industry: tpl.industry || 'default',
-      data: fixTemplatePages(tpl.data || { pages: [] }),
-      is_site: tpl.is_site || false,
-      published: tpl.published || false,
-    };
+      ...base,
+      layout: base.layout || 'standard',
+      color_scheme: base.color_scheme || 'neutral',
+      theme: base.theme || 'default',
+      brand: base.brand || 'default',
+      commit: base.commit || '',
+      id: base.id || crypto.randomUUID(),
+      data: fixTemplatePages(base.data || { pages: [] }),
+      is_site: base.is_site || false,
+      published: base.published || false,
+    } as Snapshot;
 
     const errors: Record<string, BlockValidationError[]> = {};
     for (const page of snapshot.data.pages) {
@@ -62,7 +89,7 @@ export function useTemplateEditorState({
   };
 
   const [template, setTemplate] = useState(() =>
-    applyDefaults(initialData ? normalizeTemplate(initialData as Template) : fallback as Template)
+    applyDefaults(initialData || fallback)
   );
 
   const [isCreating, setIsCreating] = useState(!initialData);
@@ -73,30 +100,38 @@ export function useTemplateEditorState({
 
   const autosave = useAutosaveTemplate(template, rawJson);
 
+  // Auto-prettify + normalize JSON after new template creation
   useEffect(() => {
-    if (!initialData && isCreating && template?.slug) {
-      const timeout = setTimeout(() => {
-        alert('would have redirected to ' + window.location.href + '/admin/templates/' + template.id);
-      }, 1200);
-      return () => clearTimeout(timeout);
+    if (!initialData && template && !hasPrettified.current) {
+      hasPrettified.current = true;
+      const normalized = normalizeTemplate(template);
+      setRawJson(JSON.stringify(normalized, null, 2));
     }
-  }, [isCreating, initialData, template]);
+  }, [initialData, template]);
+
+  // Simulated redirect after creation
+  // useEffect(() => {
+  //   if (!initialData && isCreating && template?.slug) {
+  //     const timeout = setTimeout(() => {
+  //       alert('would have redirected to ' + window.location.href + '/admin/templates/' + template.id);
+  //     }, 1200);
+  //     return () => clearTimeout(timeout);
+  //   }
+  // }, [isCreating, initialData, template]);
 
   const handleSaveDraft = () => {
-    const { isValid, errors } = validateTemplateBlocks(template as Template);
-
-    if (!isValid) {
-      console.log('errors', errors);
-      setBlockErrors(errors as unknown as Record<string, BlockValidationError[]>);
-      const firstInvalidId = Object.keys(errors)[0];
-      const el = document.getElementById(`block-${firstInvalidId}`);
-      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      toast.error('Please fix validation errors before saving.');
-      return;
-    }
-
-    localStorage.setItem(`draft-${template.id}`, rawJson);
-    toast.success('Draft saved');
+    handleTemplateSave({
+      rawJson,
+      mode: 'template',
+      onSuccess: (updated: Template) => {
+        setTemplate(updated);
+        localStorage.setItem(`draft-${updated.id}`, rawJson);
+        toast.success('Draft saved');
+      },
+      onError: (err: ZodError | string) => {
+        console.warn('Block errors:', err);
+      },
+    });
   };
 
   const handleRename = async () => {

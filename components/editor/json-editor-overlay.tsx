@@ -2,6 +2,7 @@
 'use client';
 import { X } from 'lucide-react';
 import TemplateJsonEditor from '@/components/admin/templates/template-json-editor';
+import ClientOnly from '../client-only';
 
 export function JsonEditorOverlay({ rawJson, setRawJson, onClose }: { rawJson: string; setRawJson: (v: string) => void; onClose: () => void }) {
   return (
@@ -10,7 +11,9 @@ export function JsonEditorOverlay({ rawJson, setRawJson, onClose }: { rawJson: s
         <h2 className="text-lg font-semibold">JSON Editor</h2>
         <button onClick={onClose}><X size={20} className="text-white" /></button>
       </div>
-      <TemplateJsonEditor rawJson={rawJson} setRawJson={setRawJson} />
+      <ClientOnly>
+        <TemplateJsonEditor rawJson={rawJson} setRawJson={setRawJson} />
+      </ClientOnly>
     </div>
   );
 }

@@ -1,4 +1,3 @@
-// components/admin/templates/template-editor-content.tsx
 'use client';
 
 import { useEffect, useState } from 'react';
@@ -53,7 +52,6 @@ export function EditorContent({
 }) {
   const [zodError, setZodError] = useState<ZodError | null>(null);
   const [showModal, setModal] = useState(false);
-
   const [historyStack, setHistoryStack] = useState<Template[]>(() => {
     if (typeof window !== 'undefined') {
       const stored = localStorage.getItem('templateHistory');
@@ -61,7 +59,6 @@ export function EditorContent({
     }
     return [];
   });
-
   const [redoStack, setRedoStack] = useState<Template[]>(() => {
     if (typeof window !== 'undefined') {
       const stored = localStorage.getItem('templateRedo');
@@ -69,51 +66,38 @@ export function EditorContent({
     }
     return [];
   });
-
   const [sidebarValues, setSidebarValues] = useState({
     template_name: template.template_name,
     slug: template.slug,
     industry: template.industry,
   });
-
   const [sidebarWidth, setSidebarWidth] = useState(320);
   const [isMobile, setIsMobile] = useState(false);
-
   const [isClient, setIsClient] = useState(false);
   useEffect(() => setIsClient(true), []);
-
-  // Sync stack to localStorage when changed
   useEffect(() => {
     if (typeof window === 'undefined') return;
-  
     const timeout = setTimeout(() => {
       localStorage.setItem('templateHistory', JSON.stringify(historyStack));
-    }, 500); // debounce delay
-  
+    }, 500);
     return () => clearTimeout(timeout);
   }, [historyStack]);
-  
   useEffect(() => {
     if (typeof window === 'undefined') return;
-  
     const timeout = setTimeout(() => {
       localStorage.setItem('templateRedo', JSON.stringify(redoStack));
-    }, 500); // debounce delay
-  
+    }, 500);
     return () => clearTimeout(timeout);
   }, [redoStack]);
-  
   useEffect(() => {
     const update = () => setIsMobile(window.innerWidth < 768);
     update();
     window.addEventListener('resize', update);
     return () => window.removeEventListener('resize', update);
   }, []);
-
   useEffect(() => {
     const isMissingMeta =
       !template.template_name || !template.slug || template.template_name === 'Untitled' || template.slug === 'untitled';
-
     if (
       isMissingMeta &&
       sidebarValues.template_name &&
@@ -121,7 +105,6 @@ export function EditorContent({
       sidebarValues.template_name !== 'Untitled' &&
       sidebarValues.slug !== 'untitled'
     ) {
-        console.log('setting raw json');
       setRawJson((prev: string) => {
         try {
           const parsed = JSON.parse(prev);
@@ -146,13 +129,11 @@ export function EditorContent({
     const safeSlug = updated.slug === 'untitled'
       ? safeName || `new-template-${Math.random().toString(36).slice(2, 6)}`
       : updated.slug;
-  
     const final = {
       ...updated,
       template_name: safeName,
       slug: safeSlug,
     };
-  
     setHistoryStack((prev) => pushWithLimit(prev, template, 10));
     setRedoStack([]);
     setTemplate(final);
@@ -163,7 +144,6 @@ export function EditorContent({
       industry: final.industry,
     });
   };
-  
 
   const handleUndo = () => {
     if (historyStack.length === 0) return toast('Nothing to undo');
@@ -191,7 +171,6 @@ export function EditorContent({
       const merged = { ...parsed, ...sidebarValues };
       const normalized = normalizeTemplate(merged);
       const json = JSON.stringify(normalized, null, 2);
-
       await handleTemplateSave({
         rawJson: json,
         mode,
@@ -218,140 +197,122 @@ export function EditorContent({
           <TabsTrigger value="history">History</TabsTrigger>
         </TabsList>
         {isClient && (
-        <>
-          <TabsContent value="preview">
-            <div className="flex h-full">
-              <div
-                className={`relative shrink-0 border-r border-white/10 bg-black transition-all duration-300 ${
-                  isMobile ? 'w-0 opacity-0' : 'opacity-100'
-                }`}
-                style={{ width: isMobile ? 0 : sidebarWidth }}
-              >
-                {!isMobile && (
-                  <div className="sticky top-0 h-screen overflow-y-auto flex flex-col">
-                    <div className="px-4 py-3 border-b border-white/10">
-                      <a href="/admin/templates/list" className="inline-block text-white hover:opacity-80 transition">
-                        <img
-                          src="/logo_v1.png"
-                          alt="QuickSites"
-                          className="h-6 w-auto"
-                          style={{ width: '100px', height: '100px' }}
-                        />
-                      </a>
-                    </div>
-                    <div className="flex-1 overflow-y-auto">
-                      <SidebarSettings
-                        template={template}
-                        onChange={handleTemplateChange}
-                      />
-                    </div>
-                  </div>
-                )}
-                <div
-                  className="absolute top-0 right-0 w-2 h-full cursor-col-resize z-50 hover:bg-white/5 transition"
-                  onMouseDown={(e) => {
-                    e.preventDefault();
-                    const startX = e.clientX;
-                    const startWidth = sidebarWidth;
-
-                    const onMouseMove = (moveEvent: MouseEvent) => {
-                      const newWidth = Math.min(
-                        Math.max(startWidth + (moveEvent.clientX - startX), 240),
-                        600
-                      );
-                      setSidebarWidth(newWidth);
-                    };
-
-                    const onMouseUp = () => {
-                      window.removeEventListener('mousemove', onMouseMove);
-                      window.removeEventListener('mouseup', onMouseUp);
-                    };
-
-                    window.addEventListener('mousemove', onMouseMove);
-                    window.addEventListener('mouseup', onMouseUp);
-                  }}
-                />
-              </div>
-
-              <div className="flex-1 overflow-x-hidden">
-                <ThemeScope mode={template.theme === 'light' ? 'light' : 'dark'}>
-                  <DevicePreviewWrapper theme={template.theme as Theme}>
-                    <IndustryThemeScope industry={template.industry}>
-                      <ClientOnly>
-                      <LiveEditorPreview
-                        template={template}
-                        onChange={handleTemplateChange}
-                        industry={template.industry}
-                        errors={blockErrors ?? {}}
-                      />
-                      </ClientOnly>
-                    </IndustryThemeScope>
-                  </DevicePreviewWrapper>
-                </ThemeScope>
-              </div>
-            </div>
-          </TabsContent>
-
-          <TabsContent value="history">
-            <TemplateHistory template={template} onRevert={handleTemplateChange} />
-          </TabsContent>
-        </>
-      )}
+          <>
+            <TabsContent value="preview">
+  <div className="flex h-full">
+  <div
+    className={`relative shrink-0 border-r border-white/10 bg-black transition-all duration-300 ${isMobile ? 'w-0 opacity-0' : 'opacity-100'}`}
+    style={{ width: isMobile ? 0 : sidebarWidth }}
+  >
+    {!isMobile && (
+      <div className="sticky top-0 h-screen overflow-y-auto flex flex-col">
+        <div className="px-4 py-3 border-b border-white/10">
+          <a href="/admin/templates/list" className="inline-block text-white hover:opacity-80 transition">
+            <img
+              src="/logo_v1.png"
+              alt="QuickSites"
+              className="h-6 w-auto"
+              style={{ width: '100px', height: '100px' }}
+            />
+          </a>
+        </div>
+        <div className="flex-1 overflow-y-auto">
+          <SidebarSettings
+            template={template}
+            onChange={handleTemplateChange}
+          />
+        </div>
+      </div>
+    )}
+    <div
+      className="absolute top-0 right-0 w-2 h-full cursor-col-resize z-50 hover:bg-white/5 transition"
+      onMouseDown={(e) => {
+        e.preventDefault();
+        const startX = e.clientX;
+        const startWidth = sidebarWidth;
+        const onMouseMove = (moveEvent: MouseEvent) => {
+          const newWidth = Math.min(Math.max(startWidth + (moveEvent.clientX - startX), 240), 600);
+          setSidebarWidth(newWidth);
+        };
+        const onMouseUp = () => {
+          window.removeEventListener('mousemove', onMouseMove);
+          window.removeEventListener('mouseup', onMouseUp);
+        };
+        window.addEventListener('mousemove', onMouseMove);
+        window.addEventListener('mouseup', onMouseUp);
+      }}
+    />
+  </div>
+  <div className="flex-1 overflow-x-hidden">
+    <ThemeScope mode={template.theme === 'light' ? 'light' : 'dark'}>
+      <DevicePreviewWrapper theme={template.theme as Theme}>
+        <IndustryThemeScope industry={template.industry}>
+          <ClientOnly>
+            <LiveEditorPreview
+              template={template}
+              onChange={handleTemplateChange}
+              industry={template.industry}
+              errors={blockErrors ?? {}}
+            />
+          </ClientOnly>
+        </IndustryThemeScope>
+      </DevicePreviewWrapper>
+    </ThemeScope>
+  </div>
+</div>
+</TabsContent>
+            <TabsContent value="history">
+              <TemplateHistory template={template} onRevert={handleTemplateChange} />
+            </TabsContent>
+          </>
+        )}
       </Tabs>
-
-      <Button
-        onClick={() => {
-          try {
-            const parsed = JSON.parse(rawJson);
-            const merged = { ...parsed, ...sidebarValues };
-            const normalized = normalizeTemplate(merged);
-            handleTemplateChange(normalized);
-            toast.success('Template fixed & prettified!');
-          } catch (err) {
-            toast.error('Invalid JSON');
-            console.error(err);
-          }
-        }}
-        variant="secondary"
-        className="mt-4 text-green-400 border-green-400"
-      >
+      <Button onClick={() => {
+        try {
+          const parsed = JSON.parse(rawJson);
+          const merged = { ...parsed, ...sidebarValues };
+          const normalized = normalizeTemplate(merged);
+          handleTemplateChange(normalized);
+          toast.success('Template fixed & prettified!');
+        } catch (err) {
+          toast.error('Invalid JSON');
+          console.error(err);
+        }
+      }} variant="secondary" className="mt-4 text-green-400 border-green-400">
         Prettify & Fix
       </Button>
-
       <details className="mt-4 bg-red-950 text-red-100 p-3 rounded-lg border border-red-700">
         <summary className="cursor-pointer font-bold">🧪 Validation Issues (Dev Only)</summary>
         <DevValidatorPanel error={zodError} />
       </details>
       <ClientOnly>
-      <TemplateJsonEditor
-        rawJson={rawJson}
-        setRawJson={setRawJson}
-        sidebarValues={sidebarValues}
-        setSidebarValues={(values) => {
-          setSidebarValues((prev) => {
-            const next = { ...prev, ...values };
-            setTimeout(() => {
-              const normalized = normalizeTemplate({ ...template, ...next });
-              setRawJson(JSON.stringify(normalized, null, 2));
-            }, 0);
-            return next;
-          });
-        }}
-      />
-
-      <TemplatePublishModal
-        open={showModal}
-        onClose={() => setModal(false)}
-        snapshotId={template.id || ''}
-      />
-
-      <TemplateActionToolbar
-        template={template}
-        autosaveStatus={autosaveStatus}
-        onSaveDraft={handleSaveDraft}
-        onUndo={handleUndo}
-        onRedo={handleRedo}
-      />
+        <TemplateJsonEditor
+          rawJson={rawJson}
+          setRawJson={setRawJson}
+          sidebarValues={sidebarValues}
+          setSidebarValues={(values) => {
+            setSidebarValues((prev) => {
+              const next = { ...prev, ...values };
+              setTimeout(() => {
+                const normalized = normalizeTemplate({ ...template, ...next });
+                setRawJson(JSON.stringify(normalized, null, 2));
+              }, 0);
+              return next;
+            });
+          }}
+        />
+        <TemplatePublishModal
+          open={showModal}
+          onClose={() => setModal(false)}
+          snapshotId={template.id || ''}
+        />
+        <TemplateActionToolbar
+          template={template}
+          autosaveStatus={autosaveStatus}
+          onSaveDraft={handleSaveDraft}
+          onUndo={handleUndo}
+          onRedo={handleRedo}
+        />
       </ClientOnly>
     </IndustryThemeScope>
   );

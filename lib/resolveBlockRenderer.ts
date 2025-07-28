@@ -1,6 +1,7 @@
+// lib/resolveBlockRenderer.ts
 import { DYNAMIC_RENDERERS, STATIC_RENDERERS } from '@/lib/renderBlockRegistry'; // or break this out separately
 import type { BlockType } from '@/types/blocks';
-import { fallbackRenderer } from '@/components/admin/templates/render-block'; // export it if it's private
+import fallbackRenderer from '@/components/admin/templates/render-block';
 
 export function getRendererForBlockType(type: BlockType) {
   if (type in STATIC_RENDERERS) {

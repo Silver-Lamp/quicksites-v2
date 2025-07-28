@@ -1,3 +1,6 @@
+// admin/lib/handleTemplateSave.ts
+'use client';
+
 import toast from 'react-hot-toast';
 import type { Template } from '@/types/template';
 import { ZodError } from 'zod';

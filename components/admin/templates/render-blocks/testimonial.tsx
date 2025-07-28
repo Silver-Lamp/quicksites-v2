@@ -11,8 +11,6 @@ type TestimonialItem = {
   rating?: number;
 };
 
-type TestimonialBlock = Extract<Block, { type: 'testimonial' }>;
-
 function renderStars(rating?: number) {
   if (!rating) return null;
   return (
@@ -28,10 +26,10 @@ export default function TestimonialBlock({
   block,
   compact = false,
 }: {
-  block: TestimonialBlock;
+  block: Block;
   compact?: boolean;
 }) {
-  const content = block?.content;
+  const content = block?.content as unknown as { testimonials: TestimonialItem[]; randomized?: boolean } | undefined;
   const testimonials: TestimonialItem[] = content?.testimonials ?? [];
   const randomized = content?.randomized;
   const list = randomized ? [...testimonials].sort(() => 0.5 - Math.random()) : testimonials;

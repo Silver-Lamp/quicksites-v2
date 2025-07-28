@@ -1,4 +1,3 @@
-// app/admin/templates/new/page.tsx
 'use client';
 
 import { useEffect, useState } from 'react';
@@ -8,12 +7,12 @@ import TemplateEditor from '@/components/admin/templates/template-editor';
 import type { TemplateSnapshot } from '@/types/template';
 import { createEmptyTemplate } from '@/lib/createEmptyTemplate';
 
-/** Optional fallback generator */
+/** Fallback local slug generator */
 function generateLocalSlug(base = 'new-template') {
   return `${base}-${Math.random().toString(36).slice(2, 6)}`;
 }
 
-/** Use Supabase RPC to generate a unique name */
+/** Try Supabase RPC for a unique template slug, fallback to local */
 async function getUniqueTemplateSlug(): Promise<string> {
   const { data, error } = await supabase.rpc('generate_unique_template_name');
   if (error || !data) {
@@ -35,12 +34,13 @@ export default function NewTemplatePage() {
       const slug = await getUniqueTemplateSlug();
       setUniqueSlug(slug);
 
+      // Case: Fresh new template
       if (!from) {
-        const newTemplate = createEmptyTemplate(slug);
-        setInitialData(newTemplate);
+        setInitialData(createEmptyTemplate(slug));
         return;
       }
 
+      // Case: Remixing from snapshot
       const { data: snapshot, error } = await supabase
         .from('snapshots')
         .select('data, theme, brand, color_scheme, is_site')
@@ -52,19 +52,18 @@ export default function NewTemplatePage() {
         return;
       }
 
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-
-      if (user?.id) {
+      // Log remix event
+      const { data: auth } = await supabase.auth.getUser();
+      if (auth?.user?.id) {
         await supabase.from('remix_events').insert([
           {
             original_snapshot_id: from,
-            user_id: user.id,
+            user_id: auth.user.id,
           },
         ]);
       }
 
+      // Build new template with snapshot data
       const remixed = createEmptyTemplate(slug);
       remixed.data = snapshot.data;
       remixed.color_scheme = snapshot.color_scheme ?? 'neutral';
@@ -72,6 +71,7 @@ export default function NewTemplatePage() {
       remixed.brand = snapshot.brand ?? 'default';
       remixed.is_site = snapshot.is_site ?? false;
       remixed.published = false;
+
       setInitialData(remixed);
     }
 

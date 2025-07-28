@@ -9,8 +9,8 @@ export type BaseBlock = {
   meta?: Record<string, any>;
 };
 
-// Individual blocks
-type BlockContent = {
+// Content mapping for all block types
+export type BlockContentMap = {
   text: { value: string };
   image: { url: string; alt: string };
   video: { url: string; caption?: string };
@@ -32,7 +32,12 @@ type BlockContent = {
     image_y?: number;
   };
   services: { title?: string; subtitle?: string; items: string[] };
-  faq: { title?: string; subtitle?: string; items: { question: string; answer: string }[]; layout?: 'list' | 'accordion' };
+  faq: {
+    title?: string;
+    subtitle?: string;
+    items: { question: string; answer: string }[];
+    layout?: 'list' | 'accordion';
+  };
   cta: { label: string; link: string; appearance?: 'button' | 'link' };
   testimonial: {
     testimonials: { quote: string; attribution?: string; avatar_url?: string; rating?: number }[];
@@ -40,7 +45,7 @@ type BlockContent = {
     layout?: 'list' | 'carousel';
   };
   footer: {
-    businessName: string;
+    business_name: string;
     address: string;
     cityState: string;
     phone: string;
@@ -62,8 +67,9 @@ type BlockContent = {
   contact_form: { title: string; notification_email: string };
 };
 
-export type BlockType = keyof BlockContent;
-export const BLOCK_TYPES = Object.keys({
+export type BlockType = keyof BlockContentMap;
+
+export const BLOCK_TYPES: BlockType[] = Object.keys({
   text: true, image: true, video: true, audio: true, quote: true,
   button: true, grid: true, hero: true, services: true, faq: true,
   cta: true, testimonial: true, footer: true, service_areas: true,
@@ -72,9 +78,13 @@ export const BLOCK_TYPES = Object.keys({
 
 export type BlockCategory = 'layout' | 'content' | 'interactive' | 'meta';
 
+// Top-level block
 export type Block = BaseBlock & {
   type: BlockType;
-  content: BlockContent[BlockType];
+  content: BlockContentMap[BlockType];
+  layout_mode?: 'full_bleed' | 'inline' | 'background';
+  image_url?: string;
+  image_alt?: string;
 };
 
 export type BlockWithId = Block & { _id: string };
@@ -85,6 +95,25 @@ export function normalizeBlock(block: Partial<Block>): BlockWithId {
     _id: block._id ?? crypto.randomUUID(),
   } as BlockWithId;
 }
+
+// Named block types for specific use
+export type ExtractBlock<T extends BlockType> = Extract<Block, { type: T }>;
+export type TextBlock = ExtractBlock<'text'>;
+export type ImageBlock = ExtractBlock<'image'>;
+export type VideoBlock = ExtractBlock<'video'>;
+export type AudioBlock = ExtractBlock<'audio'>;
+export type QuoteBlock = ExtractBlock<'quote'>;
+export type ButtonBlock = ExtractBlock<'button'>;
+export type GridBlock = ExtractBlock<'grid'>;
+export type HeroBlock = ExtractBlock<'hero'>;
+export type ServicesBlock = ExtractBlock<'services'>;
+export type FAQBlock = ExtractBlock<'faq'>;
+export type CtaBlock = ExtractBlock<'cta'>;
+export type TestimonialBlock = ExtractBlock<'testimonial'>;
+export type FooterBlock = ExtractBlock<'footer'>;
+export type ServiceAreaBlock = ExtractBlock<'service_areas'>;
+export type HeaderBlock = ExtractBlock<'header'>;
+export type ContactFormBlock = ExtractBlock<'contact_form'>;
 
 export type BlockRegistryEntry = {
   type: BlockType;

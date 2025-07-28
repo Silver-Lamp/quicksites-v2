@@ -8,6 +8,7 @@ import RenderBlock from '@/components/admin/templates/render-block';
 import ThemeScope from '@/components/ui/theme-scope';
 import { Metadata } from 'next';
 import MetaHead from '@/components/head/MetaHead';
+import { Block } from '@/types/blocks';
 
 export async function generateMetadata({ params }: { params: { slug: string; page: string } }): Promise<Metadata> {
   const { slug, page } = await Promise.resolve(params);
@@ -102,7 +103,7 @@ export default async function SitePage({ params }: { params: { slug: string; pag
                 <div
                 key={block._id || i}
                 className={
-                  block.type === 'hero' && block.content?.layout_mode === 'full_bleed'
+                  block.type === 'hero' && (block.content as unknown as Block)?.layout_mode === 'full_bleed'
                     ? ''
                     : 'px-4 max-w-5xl mx-auto'
                 }

@@ -87,7 +87,7 @@ export function createDefaultBlock(type: BlockType): BlockWithId {
         type,
         _id,
         content: {
-          businessName: 'Grafton Towing',
+          business_name: 'Grafton Towing',
           address: '1600 7th Ave',
           cityState: 'Grafton, WI',
           phone: '(262) 228-2491',

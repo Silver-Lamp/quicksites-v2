@@ -7,6 +7,7 @@ import type { TemplateData, Template } from '@/types/template';
 import RenderBlock from '@/components/admin/templates/render-block';
 import { Metadata } from 'next';
 import MetaHead from '@/components/head/MetaHead';
+import type { Block } from '@/types/blocks';
 
 export const generateMetadata = async ({ params }: { params: { slug: string; page: string } }): Promise<Metadata> => {
   const { slug, page } = params;
@@ -72,18 +73,17 @@ export default async function SitePage({ params }: { params: { slug: string; pag
         )}
 
         <main className="py-8 space-y-8">
-          {currentPage.content_blocks?.map((block, i) => (
-            <div
-              key={block._id || i}
-              className={
-                block.type === 'hero' && block.content?.layout_mode === 'full_bleed'
-                  ? ''
-                  : 'px-4 max-w-5xl mx-auto'
-              }
-            >
-              <RenderBlock block={block} />
-            </div>
-          ))}
+          {currentPage.content_blocks?.map((block, i) => {
+            const layoutMode = (block.type === 'hero' ? (block as Block).content : null);
+            return (
+              <div
+                key={block._id || i}
+                className={block.type === 'hero' && (layoutMode as unknown as Block)?.layout_mode === 'full_bleed' ? '' : 'px-4 max-w-5xl mx-auto'}
+              >
+                <RenderBlock block={block} />
+              </div>
+            );
+          })}
         </main>
 
         {showFooter && site.footerBlock && (

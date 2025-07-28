@@ -2,7 +2,7 @@
 'use client';
 
 import { RefObject, useEffect, useRef, useState } from 'react';
-import { useScroll, useTransform, motionValue, type MotionValue } from 'framer-motion';
+import { useScroll, useTransform, type MotionValue } from 'framer-motion';
 
 type SafeScrollOptions = {
   target: RefObject<HTMLElement>;
@@ -20,6 +20,12 @@ export function useSafeScroll({
   offset = ['start start', 'end start'],
   layoutEffect = false,
 }: SafeScrollOptions): SafeScrollResult | null {
+  const { scrollYProgress } = useScroll({
+    target,
+    offset: offset as any,
+    layoutEffect,
+  });
+
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
@@ -28,14 +34,6 @@ export function useSafeScroll({
     }
   }, [target.current]);
 
-  if (!mounted) return null;
-
-  const { scrollYProgress } = useScroll({
-    target,
-    offset: offset as any,
-    layoutEffect,
-  });
-
   const y = useTransform(scrollYProgress, [0, 1], ['0%', '-20%']);
-  return { scrollYProgress, y };
+  return mounted ? { scrollYProgress, y } : null;
 }

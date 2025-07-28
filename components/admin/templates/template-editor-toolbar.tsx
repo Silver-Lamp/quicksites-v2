@@ -1,3 +1,6 @@
+// components/admin/templates/template-editor-toolbar.tsx
+'use client';
+
 import { Button } from '@/components/ui';
 import { Pencil } from 'lucide-react';
 
@@ -10,10 +13,7 @@ export function TemplateEditorToolbar({
   setInputValue,
   slugPreview,
   handleRename,
-  handleSaveDraft,
-  onBack,
   nameExists,
-  // setShowNameError,
 }: {
   templateName: string;
   autosaveStatus: string;
@@ -23,10 +23,7 @@ export function TemplateEditorToolbar({
   setInputValue: (v: string) => void;
   slugPreview: string;
   handleRename: () => void;
-  handleSaveDraft: () => void;
-  onBack: () => void;
   nameExists: boolean;
-  setShowNameError: (v: boolean) => void;
 }) {
   return (
     <>

@@ -1,3 +1,4 @@
+// components/editor/live-editor-preview.tsx
 'use client';
 
 import {

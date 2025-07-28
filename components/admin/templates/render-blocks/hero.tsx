@@ -1,3 +1,4 @@
+// components/admin/templates/render-blocks/hero.tsx
 'use client';
 
 import type { Block } from '@/types/blocks';
@@ -23,7 +24,7 @@ export default function HeroRender({
   verboseUi = false,
 }: Props) {
   const heroRef = useRef<HTMLDivElement | null>(null);
-  const final = content || block?.content;
+  const final = content;
 
   if (!block || !final) {
     console.warn('[⚠️ HeroRender] Invalid block or missing content.');
@@ -47,22 +48,23 @@ export default function HeroRender({
     image_y,
   } = final;
 
-  const hasImage = image_url?.trim() !== '';
+  const hasImage = (image_url as string)?.trim() !== '';
   const blurPx = `${blur_amount}px`;
   const backgroundPosition =
     image_x && image_y ? `${image_x} ${image_y}` : image_position || 'center';
 
+  const scroll = useSafeScroll({
+    target: heroRef as any,
+    offset: ['start start', 'end start'],
+  });
+
   let y: string | MotionValue<string> = '0%';
-  if (layout_mode === 'full_bleed' && hasImage) {
-    const scroll = useSafeScroll({
-      target: heroRef as any,
-      offset: ['start start', 'end start'],
-    });
-    if (scroll?.y) y = scroll.y;
+  if ((layout_mode as string) === 'full_bleed' && hasImage && scroll?.y) {
+    y = scroll.y;
   }
 
   // 🧱 Full-bleed layout
-  if (layout_mode === 'full_bleed' && hasImage) {
+  if ((layout_mode as string) === 'full_bleed' && hasImage) {
     return (
       <div ref={heroRef} className="relative w-full text-white max-h-[90vh] overflow-hidden">
         {verboseUi && (
@@ -98,7 +100,7 @@ export default function HeroRender({
   }
 
   // 🖼️ Background image layout
-  if (layout_mode === 'background' && hasImage) {
+  if ((layout_mode as string) === 'background' && hasImage) {
     return (
       <SectionShell
         compact={compact}

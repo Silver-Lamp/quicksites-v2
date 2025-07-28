@@ -5,13 +5,14 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import type { Template } from '@/types/template';
+// import {  } from '@/types/blocks';
 
 export default function SeoPanel({ template, onChange }: { template: Template; onChange: (updated: Template) => void }) {
   const heroBlock = template.data?.pages?.[0]?.content_blocks?.find((b) => b.type === 'hero');
   const businessName = template.data?.pages
     ?.flatMap((p) => p.content_blocks || [])
-    .find((b) => b.type === 'footer')?.content?.businessName;
-
+    .find((b) => b.type === 'footer')?.content;
+  const heroBlockContent = heroBlock?.content;
   return (
     <Collapsible title="Verification & SEO Meta" id="verification-seo-meta">
       <div className="flex items-center justify-between py-2 border-t border-white/10 mt-2">
@@ -42,8 +43,8 @@ export default function SeoPanel({ template, onChange }: { template: Template; o
           )}
           <Button
             onClick={() => {
-              const ogImage = heroBlock?.content?.image_url || '';
-              const description = heroBlock?.content?.subheadline || heroBlock?.content?.headline || '';
+              const ogImage = (heroBlockContent as unknown as any)?.image_url || '';
+              const description = (heroBlockContent as unknown as any)?.subheadline || (heroBlockContent as unknown as any)?.headline || '';
               const title = template.template_name || template.data?.pages?.[0]?.title || '';
               onChange({
                 ...template,
@@ -68,7 +69,7 @@ export default function SeoPanel({ template, onChange }: { template: Template; o
             onChange={(e) => onChange({ ...template, meta: { ...template.meta, title: e.target.value } })}
             onBlur={(e) => {
               if (!e.target.value.trim()) {
-                const fallbackTitle = businessName || template.template_name || template.data?.pages?.[0]?.title || heroBlock?.content?.headline || '';
+                const fallbackTitle = businessName || template.template_name || template.data?.pages?.[0]?.title || (heroBlockContent as unknown as any)?.headline || '';
                 onChange({ ...template, meta: { ...template.meta, title: fallbackTitle } });
               }
             }}
@@ -77,7 +78,7 @@ export default function SeoPanel({ template, onChange }: { template: Template; o
           <Button
             onClick={() => {
               if (businessName) {
-                onChange({ ...template, meta: { ...template.meta, title: businessName } });
+                onChange({ ...template, meta: { ...template.meta, title: businessName as unknown as string } });
               }
             }}
             className="text-sm bg-gray-700 text-white px-2 py-1 rounded hover:bg-gray-600"
@@ -93,7 +94,7 @@ export default function SeoPanel({ template, onChange }: { template: Template; o
             onChange={(e) => onChange({ ...template, meta: { ...template.meta, description: e.target.value } })}
             onBlur={(e) => {
               if (!e.target.value.trim()) {
-                const fallbackDesc = heroBlock?.content?.subheadline || heroBlock?.content?.headline || '';
+                const fallbackDesc = (heroBlockContent as unknown as any)?.subheadline || (heroBlockContent as unknown as any)?.headline || '';
                 onChange({ ...template, meta: { ...template.meta, description: fallbackDesc } });
               }
             }}
@@ -101,7 +102,7 @@ export default function SeoPanel({ template, onChange }: { template: Template; o
           />
           <Button
             onClick={() => {
-              const fallbackDesc = heroBlock?.content?.subheadline || heroBlock?.content?.headline || '';
+              const fallbackDesc = (heroBlockContent as unknown as any)?.subheadline || (heroBlockContent as unknown as any)?.headline || '';
               onChange({ ...template, meta: { ...template.meta, description: fallbackDesc } });
             }}
             className="text-sm bg-gray-700 text-white px-2 py-1 rounded hover:bg-gray-600"

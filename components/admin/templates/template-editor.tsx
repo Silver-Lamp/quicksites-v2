@@ -1,3 +1,4 @@
+// components/admin/templates/template-editor.tsx
 'use client';
 
 import { useRouter } from 'next/navigation';
@@ -13,13 +14,9 @@ import type { Snapshot, Template } from '@/types/template';
 import { Dispatch, SetStateAction } from 'react';
 import { Button } from '@/components/ui/button';
 import { useTemplateInsert } from '@/hooks/useTemplateInsert';
-import { BlocksEditor } from './blocks-editor';
 import BlockSidebar from './block-sidebar';
-import { Block, BlockSchema } from '@/admin/lib/zod/blockSchema';
-import { z } from 'zod';
+import { Block } from '@/admin/lib/zod/blockSchema';
 import { BlockValidationError } from '@/hooks/validateTemplateBlocks';
-import { JsonEditorOverlay } from '@/components/editor/json-editor-overlay';
-import TemplateJsonEditor from './template-json-editor';
 
 export default function TemplateEditor({
   templateName,
@@ -38,13 +35,6 @@ export default function TemplateEditor({
   const [pendingAction, setPendingAction] = useState<'insert' | 'replace'>('insert');
   const [targetBlockIndex, setTargetBlockIndex] = useState<number | null>(null);
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
-  const [showJsonEditor, setShowJsonEditor] = useState(false);
-  const [jsonEditorRawJson, setJsonEditorRawJson] = useState('');
-
-  const handleJsonEditorClose = () => {
-    setShowJsonEditor(false);
-    setJsonEditorRawJson(rawJson);
-  };
 
   const {
     template,
@@ -53,7 +43,6 @@ export default function TemplateEditor({
     livePreviewData,
     setTemplate,
     autosave,
-    isCreating,
     isRenaming,
     setIsRenaming,
     handleRename,
@@ -68,9 +57,7 @@ export default function TemplateEditor({
 
   const {
     insertBlock,
-    undoInsert,
     recentlyInsertedBlockId,
-    hasUndo,
   } = useTemplateInsert(setTemplate as unknown as (updater: (prev: Template) => Template) => void);
 
   const handleUseBlock = (text: string, action: 'insert' | 'replace', index?: number) => {
@@ -137,18 +124,6 @@ export default function TemplateEditor({
           blockErrors={blockErrors as unknown as Record<string, BlockValidationError[]> | null  }
           mode="template"
         />
-
-        {/* Suggest Block */}
-        {/* <div className="mt-6 flex gap-4">
-          <Button onClick={() => setShowVectorDrawer(true)}>
-            Suggest Block
-          </Button>
-          {hasUndo && (
-            <Button variant="ghost" onClick={undoInsert}>
-              Undo Last Insert
-            </Button>
-          )}
-        </div> */}
 
         {/* Block Editor */}
         {selectedBlock && selectedIndex !== null && (
@@ -222,17 +197,6 @@ export default function TemplateEditor({
         </div>
       </Modal>
 
-      {/* JSON Editor */}
-      {/* <JsonEditorOverlay
-        rawJson={jsonEditorRawJson}
-        setRawJson={setJsonEditorRawJson}
-        onClose={handleJsonEditorClose} */}
-      {/* /> */}
-      {/* <Button onClick={() => setShowJsonEditor(true)}>Edit JSON</Button> */}  
-
-      {/* <Modal show={showJsonEditor} onClose={handleJsonEditorClose} title="Edit JSON">
-        <TemplateJsonEditor rawJson={jsonEditorRawJson} setRawJson={setJsonEditorRawJson} />
-      </Modal> */}
       <div>&nbsp;</div>
       <div>&nbsp;</div>
       <div>&nbsp;</div>

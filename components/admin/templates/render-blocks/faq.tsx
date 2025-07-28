@@ -3,16 +3,14 @@
 import type { Block } from '@/types/blocks';
 import SectionShell from '@/components/ui/section-shell';
 
-type FAQBlock = Extract<Block, { type: 'faq' }>;
-
 type Props = {
-  block?: FAQBlock;
-  content?: FAQBlock['content'];
+  block?: Block;
+  content?: Block['content'];
   compact?: boolean;
 };
 
 export default function FaqRender({ block, content, compact = false }: Props) {
-  const final = content || block?.content;
+  const final = content || block?.content || { items: [] };
 
   if (!final || !final.items?.length) {
     return (
@@ -34,7 +32,7 @@ export default function FaqRender({ block, content, compact = false }: Props) {
           </h3>
           <hr className="my-4" />
           <dl className="space-y-4">
-            {final.items.map((item, i) => (
+            {final.items.map((item: { question: string; answer: string }, i: number) => (
               <div key={i}>
                 <dt className="font-semibold">{item.question}</dt>
                 <dd className="ml-4 mt-1 text-sm text-white/80">{item.answer}</dd>

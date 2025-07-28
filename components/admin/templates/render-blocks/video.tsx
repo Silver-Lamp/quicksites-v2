@@ -1,8 +1,8 @@
 'use client';
 
-import type { VideoBlock } from '@/types/blocks';
+import type { Block } from '@/types/blocks';
 
-export default function VideoBlock({ content }: { content: VideoBlock['content'] }) {
+export default function VideoBlock({ content }: { content: Block['content'] }) {
   return (
     <div className="mb-4">
       <video controls className="max-w-full rounded">

@@ -49,11 +49,9 @@ function useGeocode(address: string | null | undefined) {
   return coords;
 }
 
-type FooterBlock = Extract<Block, { type: 'footer' }>;
-
 type Props = {
-  block?: FooterBlock;
-  content?: FooterBlock['content'];
+  block?: Block;
+  content?: Block['content'];
   compact?: boolean;
 };
 
@@ -95,7 +93,7 @@ export default function FooterRender({ block, content, compact = false }: Props)
         <div>
           <h4 className="font-bold uppercase mb-3">Quick Links</h4>
           <ul className="space-y-1">
-            {links.map((link, i) => (
+            {links.map((link: { href: string; label: string }, i: number) => (
               <li key={i}>
                 <Link href={link.href} className="text-yellow-400 hover:underline">
                   {link.label}

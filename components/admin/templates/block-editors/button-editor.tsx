@@ -1,15 +1,14 @@
 'use client';
 
 import { useState } from 'react';
-import type { ButtonBlock } from '@/types/blocks';
+import type { Block } from '@/types/blocks';
 import BlockField from './block-field';
 import { extractFieldErrors } from '../utils/extractFieldErrors';
 import type { BlockEditorProps } from './index'; // ✅ Reuse the shared type
-import { BlockValidationError } from '@/hooks/validateTemplateBlocks';
 
 export default function ButtonEditor({ block, onSave, onClose, errors = {}, template }: BlockEditorProps) {
-  const buttonBlock = block as ButtonBlock;
-  const [content, setContent] = useState(buttonBlock.content);
+  const buttonBlock = block as unknown as Block;
+  const [content, setContent] = useState(buttonBlock.content as unknown as typeof buttonBlock.content);
   const fieldErrors = extractFieldErrors(errors as unknown as string[]); // now accepts Record<string, BlockValidationError[]>
 
   return (
@@ -45,7 +44,7 @@ export default function ButtonEditor({ block, onSave, onClose, errors = {}, temp
           Cancel
         </button>
         <button
-          onClick={() => onSave({ ...buttonBlock, content })}
+          onClick={() => onSave({ ...buttonBlock, content: content as unknown as typeof buttonBlock.content })}
           className="px-4 py-2 bg-blue-600 text-white rounded"
         >
           Save

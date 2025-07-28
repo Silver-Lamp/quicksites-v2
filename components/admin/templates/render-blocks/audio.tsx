@@ -1,8 +1,8 @@
 'use client';
 
-import type { AudioBlock } from '@/types/blocks';
+import type { Block } from '@/types/blocks';
 
-export default function AudioBlock({ content }: { content: AudioBlock['content'] }) {
+export default function AudioBlock({ content }: { content: Block['content'] }) {
   return (
     <div className="mb-4">
       <iframe

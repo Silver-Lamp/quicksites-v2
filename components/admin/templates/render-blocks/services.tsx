@@ -3,11 +3,9 @@
 import type { Block } from '@/types/blocks';
 import SectionShell from '@/components/ui/section-shell';
 
-type ServicesBlock = Extract<Block, { type: 'services' }>;
-
 type Props = {
-  block?: ServicesBlock;
-  content?: ServicesBlock['content'];
+  block?: Block;
+  content?: Block['content'];
   compact?: boolean;
 };
 
@@ -39,7 +37,7 @@ export default function ServicesRender({ block, content, compact = false }: Prop
                 : 'space-y-1'
             }`}
           >
-            {final.items.map((item, i) => (
+            {final.items.map((item: string, i: number) => (
               <li key={i}>{item}</li>
             ))}
           </ul>

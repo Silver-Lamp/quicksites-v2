@@ -1,6 +1,6 @@
 'use client';
 
-import type { GridBlock as GridBlockType, Block } from '@/types/blocks';
+import type { Block } from '@/types/blocks';
 import { useState } from 'react';
 import { normalizeBlock } from '@/types/blocks';
 import SortableGridBlock from '../sortable-grid-block';
@@ -10,7 +10,7 @@ import PresetSelectorModal from '../block-presets/PresetSelectorModal';
 import type { BlockWithId } from '@/types/blocks';
 
 function updateGridBlock(block: Block, items: BlockWithId[]): Block {
-  const grid = block as GridBlockType;
+  const grid = block as unknown as Block;
   return {
     ...grid,
     content: {
@@ -21,8 +21,8 @@ function updateGridBlock(block: Block, items: BlockWithId[]): Block {
 }
 
 type Props = {
-  block?: GridBlockType;
-  content?: GridBlockType['content'];
+  block?: Block;
+  content?: Block['content'];
   handleNestedBlockUpdate?: (updated: Block) => void;
   parentBlock?: Block;
   compact?: boolean;
@@ -35,7 +35,7 @@ export default function GridRender({
   parentBlock,
   compact = false,
 }: Props) {
-  const final = content || block?.content;
+  const final = content || block?.content || { items: [] };
   const [editingBlockIndex, setEditingBlockIndex] = useState<number | null>(null);
   const [showPresetModal, setShowPresetModal] = useState(false);
 
@@ -62,7 +62,7 @@ export default function GridRender({
   if (compact) {
     return (
       <div className="grid gap-2 grid-cols-2 text-sm border rounded p-2">
-        {normalizedItems.slice(0, 2).map((b, i) => (
+        {normalizedItems.slice(0, 2).map((b: Block, i: number) => (
           <RenderBlock key={i} block={b} compact />
         ))}
         {normalizedItems.length === 0 && (

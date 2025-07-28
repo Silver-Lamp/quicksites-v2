@@ -3,11 +3,9 @@
 import type { Block } from '@/types/blocks';
 import SectionShell from '@/components/ui/section-shell';
 
-type TextBlock = Extract<Block, { type: 'text' }>;
-
 type Props = {
-  block?: TextBlock;
-  content?: TextBlock['content'];
+  block?: Block;
+  content?: Block['content'];
   compact?: boolean;
 };
 

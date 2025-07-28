@@ -1,8 +1,8 @@
 'use client';
 
-import type { ButtonBlock } from '@/types/blocks';
+import type { Block } from '@/types/blocks';
 
-export default function ButtonBlock({ content }: { content: ButtonBlock['content'] }) {
+export default function ButtonBlock({ content }: { content: Block['content'] }) {
   const styleClass =
     content.style === 'ghost'
       ? 'bg-transparent border border-gray-300 text-gray-800 dark:text-gray-100'

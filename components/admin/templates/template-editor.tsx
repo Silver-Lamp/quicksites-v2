@@ -15,7 +15,7 @@ import { Dispatch, SetStateAction } from 'react';
 import { Button } from '@/components/ui/button';
 import { useTemplateInsert } from '@/hooks/useTemplateInsert';
 import BlockSidebar from './block-sidebar';
-import { Block } from '@/admin/lib/zod/blockSchema';
+import type { Block } from '@/types/blocks';
 import { BlockValidationError } from '@/hooks/validateTemplateBlocks';
 
 export default function TemplateEditor({
@@ -95,9 +95,9 @@ export default function TemplateEditor({
           inputValue={inputValue}
           setInputValue={setInputValue}
           slugPreview={slugPreview}
-          handleRename={handleRename}
-          handleSaveDraft={handleSaveDraft}
-          onBack={() => router.push(initialMode === 'site' ? '/admin/sites' : '/admin/templates')}
+          handleRename={handleRename as unknown as () => void}
+          handleSaveDraft={handleSaveDraft as unknown as () => void}
+          onBack={() => router.push(initialMode === 'site' ? '/admin/sites' : '/admin/templates') as unknown as () => void}
           nameExists={nameExists}
           setShowNameError={() => {}}
         />

@@ -8,11 +8,9 @@ import { motion, type MotionValue } from 'framer-motion';
 import { useSafeScroll } from '@/hooks/useSafeScroll';
 import DebugOverlay from '@/components/ui/debug-overlay';
 
-type HeroBlock = Extract<Block, { type: 'hero' }>;
-
 type Props = {
-  block: HeroBlock | undefined;
-  content?: HeroBlock['content'];
+  block: Block | undefined;
+  content?: Block['content'];
   compact?: boolean;
   verboseUi?: boolean;
 };

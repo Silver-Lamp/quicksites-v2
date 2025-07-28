@@ -36,7 +36,7 @@ export default function TestimonialBlock({
 
   return (
     <div className={`grid gap-4 ${compact ? 'text-sm' : 'text-base'}`}>
-      {list.map((t, i) => (
+      {list.map((t: TestimonialItem, i: number) => (
         <div
           key={i}
           className={`border-l-4 pl-4 italic relative ${

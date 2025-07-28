@@ -14,6 +14,9 @@ export function TemplateEditorToolbar({
   slugPreview,
   handleRename,
   nameExists,
+  handleSaveDraft,
+  onBack,
+  setShowNameError,
 }: {
   templateName: string;
   autosaveStatus: string;
@@ -24,6 +27,9 @@ export function TemplateEditorToolbar({
   slugPreview: string;
   handleRename: () => void;
   nameExists: boolean;
+  handleSaveDraft: () => void;
+  onBack: () => void;
+  setShowNameError: (v: boolean) => void;
 }) {
   return (
     <>
@@ -55,12 +61,12 @@ export function TemplateEditorToolbar({
         value={inputValue}
         onChange={(e) => {
           setInputValue(e.target.value);
-          // setShowNameError(false);
+          setShowNameError(false);
         }}
         onKeyDown={(e) => {
           if (e.key === 'Enter') {
             e.preventDefault();
-            handleRename();
+            handleRename as unknown as () => void;
           }
           if (e.key === 'Escape') {
             e.preventDefault();
@@ -69,7 +75,7 @@ export function TemplateEditorToolbar({
         }}
         className="text-xl font-bold bg-background border border-muted rounded px-3 py-2 focus:outline-none focus:ring w-full max-w-md"
       />
-      <Button onClick={handleRename} size="sm" variant="default" disabled={!inputValue.trim() || inputValue === templateName || nameExists}>Save</Button>
+      <Button onClick={handleRename as unknown as () => void} size="sm" variant="default" disabled={!inputValue.trim() || inputValue === templateName || nameExists}>Save</Button>
       {nameExists && (
         <span className="text-xs text-red-500">That name already exists</span>
       )}

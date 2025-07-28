@@ -1,8 +1,8 @@
 'use client';
 
-import type { ImageBlock } from '@/types/blocks';
+import type { Block } from '@/types/blocks';
 
-export default function ImageBlock({ content }: { content: ImageBlock['content'] }) {
+export default function ImageBlock({ content }: { content: Block['content'] }) {
   return (
     <img
       src={content.url}

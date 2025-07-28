@@ -9,9 +9,6 @@ import { cn } from '@/admin/lib/utils';
 import { extractFieldErrors } from '../utils/extractFieldErrors';
 import { BlockValidationError } from '@/hooks/validateTemplateBlocks';
 
-type CtaBlock = Extract<Block, { type: 'cta' }>;
-type CtaContent = CtaBlock['content'];
-
 const SUGGESTED_URLS = ['/contact', '/get-quote', '/services', '/book-now'];
 
 export default function CtaEditor({
@@ -21,12 +18,15 @@ export default function CtaEditor({
   errors = {},
   template,
 }: BlockEditorProps) {
-  const ctaBlock = block as CtaBlock;
-  const [content, setContent] = useState<CtaContent>(ctaBlock.content || {});
+  if (!('content' in block)) {
+    throw new Error('Invalid block: missing content');
+  }
+  const ctaBlock = block as unknown as Block;
+  const [content, setContent] = useState<typeof ctaBlock.content>(ctaBlock.content as unknown as typeof ctaBlock.content);
   const [errorsContent, setErrorsContent] = useState<{ label?: BlockValidationError[]; link?: BlockValidationError[] }>({});
   const fieldErrors = extractFieldErrors(errors as unknown as string[]);
-  const update = <K extends keyof CtaContent>(key: K, value: CtaContent[K]) => {
-    setContent((prev) => ({ ...prev, [key]: value }));
+  const update = <K extends keyof typeof ctaBlock.content>(key: K, value: typeof ctaBlock.content[K]) => {
+    setContent((prev: typeof ctaBlock.content) => ({ ...prev, [key]: value }));
     setErrorsContent((prev) => ({ ...prev, [key]: undefined }));
   };
 
@@ -44,7 +44,7 @@ export default function CtaEditor({
 
   const handleSave = () => {
     if (!validate()) return;
-    onSave({ ...ctaBlock, content });
+    onSave({ ...ctaBlock, content: content as unknown as typeof ctaBlock.content });
     onClose();
   };
 
@@ -93,7 +93,7 @@ export default function CtaEditor({
       <div className="mt-6 border-t border-white/10 pt-4">
         <p className="text-sm text-white/70 mb-1">Live Preview:</p>
         <div className={cn('p-4 rounded bg-neutral-900 border border-white/10')}>
-          <CtaBlockRender block={{ ...block, type: 'cta', content }} />
+          <CtaBlockRender block={{ ...block, type: 'cta', content: content as unknown as typeof block.content }} />
         </div>
       </div>
 

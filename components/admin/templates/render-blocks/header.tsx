@@ -7,7 +7,7 @@ import { useState } from 'react';
 import { Menu, X } from 'lucide-react';
 
 type Props = {
-  block: Extract<Block, { type: 'header' }>;
+  block: Block;
   previewOnly?: boolean;
 };
 
@@ -34,7 +34,7 @@ export default function PageHeader({ block, previewOnly = false }: Props) {
 
         {/* Desktop nav */}
         <nav className="hidden md:flex gap-8 text-sm font-medium">
-          {navItems.map((item) => (
+          {navItems.map((item: { href: string; label: string }) => (
             <Link
               key={item.href}
               href={item.href}
@@ -64,7 +64,7 @@ export default function PageHeader({ block, previewOnly = false }: Props) {
       {/* Mobile dropdown menu */}
       {menuOpen && !previewOnly && (
         <div className="md:hidden bg-neutral-950 px-4 pb-4 space-y-2 text-sm font-medium">
-          {navItems.map((item) => (
+          {navItems.map((item: { href: string; label: string }) => (
             <Link
               key={item.href}
               href={item.href}

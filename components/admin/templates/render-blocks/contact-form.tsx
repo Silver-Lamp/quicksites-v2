@@ -5,13 +5,11 @@ import SectionShell from '@/components/ui/section-shell';
 import { useState } from 'react';
 import { supabase } from '@/lib/supabase/client';
 
-export type ContactFormBlock = Extract<Block, { type: 'contact_form' }>;
-
 export default function ContactFormRender({
   block,
   template,
 }: {
-  block: ContactFormBlock;
+  block: Block;
   template: { data?: { services?: string[] } };
 }) {
   function getSiteSlugFromHostname(hostname: string): string {

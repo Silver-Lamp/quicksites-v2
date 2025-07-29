@@ -65,6 +65,7 @@ const navItems: NavItem[] = [
     children: [
       { label: 'Browse', href: '/admin/templates/list' },
       { label: 'Create', href: '/admin/templates/new' },
+      { label: 'GSC Bulk Stats', href: '/admin/templates/gsc-bulk-stats' },
     ],
   },
   {

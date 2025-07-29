@@ -125,6 +125,7 @@
     "framer-motion": "^12.23.1",
     "fs": "^0.0.1-security",
     "fs-extra": "^11.2.0",
+    "googleapis": "^154.1.0",
     "html-pdf-node": "^1.0.8",
     "html2canvas": "^1.4.1",
     "html2pdf": "^0.0.11",

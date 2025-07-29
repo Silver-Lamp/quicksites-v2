@@ -1,5 +1,6 @@
 import { ImageResponse } from '@vercel/og';
 import { createClient } from '@supabase/supabase-js';
+import React from 'react';
 
 export const config = {
   runtime: 'edge',

@@ -26,7 +26,7 @@ const nextConfig = {
     config.resolve.alias = {
       ...(config.resolve.alias || {}),
       '@': path.resolve(__dirname),
-      '~': path.resolve(__dirname), // quick fallback alias to root
+      '~': path.resolve(__dirname),
       '@/components': path.resolve(__dirname, 'components'),
       '@/admin': path.resolve(__dirname, 'admin'),
       '@/lib': path.resolve(__dirname, 'lib'),
@@ -73,6 +73,26 @@ const nextConfig = {
       { source: '/admin/sites/:slug', destination: '/sites/:slug' },
       { source: '/admin/sites', destination: '/sites' },
     ];
+  },
+
+  async redirects() {
+    const isLocal = process.env.NODE_ENV === 'development';
+  
+    return isLocal
+      ? [] // ⛔ No redirect during local dev
+      : [
+          {
+            source: '/:path*',
+            has: [
+              {
+                type: 'host',
+                value: '^(?!www\\.).*', // match non-www domains
+              },
+            ],
+            destination: 'https://www.:host/:path*',
+            permanent: true, // ✅ Permanent redirect 301
+          },
+        ];
   },
 };
 

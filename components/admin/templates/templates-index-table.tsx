@@ -14,6 +14,7 @@ import {
 import { toast } from 'react-hot-toast';
 import debounce from 'lodash.debounce';
 import { CheckCircle, FileStack, Globe, XCircle } from 'lucide-react';
+import { GSCStatusBadge } from '@/components/admin/gsc-status-badge';
 
 type Template = {
   id: string;
@@ -24,6 +25,7 @@ type Template = {
   status?: 'draft' | 'published' | null;
   is_site?: boolean;
   published?: boolean;
+  custom_domain?: string;
 };
 
 const dateOptions = ['Last 7 days', 'This month', 'This year', 'All time'];
@@ -173,6 +175,7 @@ export default function TemplatesIndexTable({
               <th className="p-2">Slug</th>
               <th className="p-2">Published</th>
               <th className="p-2">Updated</th>
+              <th className="p-2">GSC</th>
             </tr>
           </thead>
           <tbody>
@@ -241,6 +244,9 @@ export default function TemplatesIndexTable({
                 </td>
                 <td className="p-2 text-zinc-400">
                   {formatDistanceToNow(new Date(t.updated_at), { addSuffix: true })}
+                </td>
+                <td className="p-2 text-zinc-400">
+                  {t.custom_domain && <GSCStatusBadge domain={`https://${t.custom_domain}`} />}
                 </td>
               </tr>
             ))}

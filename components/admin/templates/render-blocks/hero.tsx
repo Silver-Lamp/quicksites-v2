@@ -1,4 +1,3 @@
-// components/admin/templates/render-blocks/hero.tsx
 'use client';
 
 import type { Block } from '@/types/blocks';
@@ -7,6 +6,8 @@ import { useRef } from 'react';
 import { motion, type MotionValue } from 'framer-motion';
 import { useSafeScroll } from '@/hooks/useSafeScroll';
 import DebugOverlay from '@/components/ui/debug-overlay';
+import HeroNaturalHeight from './hero-natural-height';
+import { useIsMobile } from '@/hooks/useIsMobile';
 
 type Props = {
   block: Block | undefined;
@@ -39,12 +40,18 @@ export default function HeroRender({
     cta_text,
     cta_link,
     image_url,
-    layout_mode = 'background',
+    layout_mode = 'inline',
+    mobile_layout_mode = 'inline',
+    mobile_crop_behavior = 'cover',
     blur_amount = 8,
+    parallax_enabled,
     image_position,
     image_x,
     image_y,
   } = final;
+
+  const isMobile = useIsMobile();
+  const activeLayoutMode = typeof window === 'undefined' ? layout_mode : (isMobile ? mobile_layout_mode : layout_mode);
 
   const hasImage = (image_url as string)?.trim() !== '';
   const blurPx = `${blur_amount}px`;
@@ -57,12 +64,17 @@ export default function HeroRender({
   });
 
   let y: string | MotionValue<string> = '0%';
-  if ((layout_mode as string) === 'full_bleed' && hasImage && scroll?.y) {
+  if (activeLayoutMode === 'full_bleed' && hasImage && scroll?.y) {
     y = scroll.y;
   }
 
+  // 📸 Natural height layout — full image, overlayed text
+  if (activeLayoutMode === 'natural_height' && hasImage) {
+    return <HeroNaturalHeight block={{ ...block, content: final }} cropBehavior={mobile_crop_behavior} />;
+  }
+
   // 🧱 Full-bleed layout
-  if ((layout_mode as string) === 'full_bleed' && hasImage) {
+  if (activeLayoutMode === 'full_bleed' && hasImage) {
     return (
       <div ref={heroRef} className="relative w-full text-white max-h-[90vh] overflow-hidden">
         {verboseUi && (
@@ -98,7 +110,7 @@ export default function HeroRender({
   }
 
   // 🖼️ Background image layout
-  if ((layout_mode as string) === 'background' && hasImage) {
+  if (activeLayoutMode === 'background' && hasImage) {
     return (
       <SectionShell
         compact={compact}
@@ -136,7 +148,7 @@ export default function HeroRender({
     );
   }
 
-  // 📸 Inline layout
+  // 🧱 Inline layout fallback
   return (
     <SectionShell
       compact={compact}

@@ -43,7 +43,8 @@ export default function DomainStatusBadge({ domain }: { domain: string }) {
       setLastChecked(new Date(parsed.lastChecked));
     }
     fetchStatus();
-    const interval = setInterval(fetchStatus, 15 * 1000);
+    // const interval = setInterval(fetchStatus, 15 * 1000); // 15 seconds
+    const interval = setInterval(fetchStatus, 60 * 1000); // 1 minute
     return () => clearInterval(interval);
   }, [domain]);
 

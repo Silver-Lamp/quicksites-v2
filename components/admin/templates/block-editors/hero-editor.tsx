@@ -7,6 +7,7 @@ import { uploadToStorage } from '@/lib/uploadToStorage';
 import { Switch } from '@/components/ui/switch';
 import BlockPreviewToggle from '@/components/admin/ui/block-preview-toggle';
 import toast from 'react-hot-toast';
+import clsx from 'clsx';
 
 const previewSizes = {
   desktop: 'max-w-full',
@@ -31,6 +32,7 @@ export default function HeroEditor({
 
   const [local, setLocal] = useState(block.content as unknown as any);
   const [previewSize, setPreviewSize] = useState<'desktop' | 'tablet' | 'mobile'>('desktop');
+  const [forceMobilePreview, setForceMobilePreview] = useState(false);
 
   const update = <K extends keyof typeof local>(key: K, value: typeof local[K]) => {
     setLocal((prev: any) => ({ ...prev, [key]: value as unknown as typeof local[K] }));
@@ -140,10 +142,15 @@ export default function HeroEditor({
               <option value="inline">Inline Image</option>
               <option value="background">Image as Background</option>
               <option value="full_bleed">Full-Bleed Image</option>
+              <option value="natural_height">Use Natural Image Height</option>
             </select>
           </div>
-
-          {((local as unknown as any).layout_mode === 'background' || (local as unknown as any) .layout_mode === 'full_bleed') && (
+          {(local as any).layout_mode === 'natural_height' && (
+            <div className="pt-4 text-sm text-gray-400">
+              This mode will render the full image using its original height. Make sure your image isn't too tall on mobile.
+            </div>
+          )}
+          {['background', 'full_bleed'].includes((local as any).layout_mode) && (
             <>
               <div className="pt-4">
                 <label className="block text-sm font-medium mb-1">
@@ -217,8 +224,9 @@ export default function HeroEditor({
               )}
 
               <div className="pt-4">
-                <div className="flex items-center justify-between mb-2">
-                  <label className="block text-sm font-medium mb-1">Live Preview</label>
+              <div className="flex items-center justify-between mb-2">
+                <label className="text-sm font-medium">Live Preview</label>
+                <div className="flex items-center gap-2">
                   <select
                     value={previewSize}
                     onChange={(e) => setPreviewSize(e.target.value as 'desktop' | 'tablet' | 'mobile')}
@@ -228,19 +236,38 @@ export default function HeroEditor({
                     <option value="tablet">Tablet</option>
                     <option value="mobile">Mobile</option>
                   </select>
+                  <label className="text-xs flex items-center gap-1">
+                    <input
+                      type="checkbox"
+                      className="form-checkbox"
+                      checked={forceMobilePreview}
+                      onChange={(e) => setForceMobilePreview(e.target.checked)}
+                    />
+                    Force Mobile Layout
+                  </label>
                 </div>
-                <div className={`relative rounded overflow-hidden border border-neutral-700 h-40 w-full mx-auto ${previewSizes[previewSize]} ${positionStyles[(local as unknown as any).image_position as keyof typeof positionStyles] || 'center'}`}>
-                  <div
-                    className="absolute inset-0 bg-cover"
-                    style={{
-                      backgroundImage: `url(${(local as unknown as any).image_url})`,
-                      filter: `blur(${(local as unknown as any).blur_amount ?? 8}px) brightness(0.5)`,
-                    }}
-                  />
-                  <div className="absolute inset-0 flex items-center justify-center text-white text-xs backdrop-blur-sm bg-black/20">
-                    Preview (blur + brightness)
-                  </div>
+              </div>
+
+              <div
+                className={clsx(
+                  'relative rounded overflow-hidden border border-neutral-700 h-40 w-full mx-auto',
+                  previewSizes[previewSize],
+                  positionStyles[(local.image_position as keyof typeof positionStyles) || 'center'],
+                  forceMobilePreview && 'max-w-xs'
+                )}
+              >
+                <div
+                  className="absolute inset-0 bg-cover"
+                  style={{
+                    backgroundImage: `url(${local.image_url})`,
+                    filter: `blur(${local.blur_amount ?? 8}px) brightness(0.5)`,
+                  }}
+                />
+                <div className="absolute inset-0 flex items-center justify-center text-white text-xs backdrop-blur-sm bg-black/20">
+                  {forceMobilePreview ? 'Mobile Layout Mode' : 'Preview (blur + brightness)'}
                 </div>
+              </div>
+
               </div>
             </>
           )}

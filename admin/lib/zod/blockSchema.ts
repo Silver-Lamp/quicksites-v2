@@ -72,14 +72,26 @@ export const blockContentSchemaMap = {
       cta_text: z.string().optional(),
       cta_link: z.string().optional(),
       image_url: z.union([z.string().url(), z.literal('')]).optional(),
-      layout_mode: z.enum(['inline', 'background', 'full_bleed']).optional(),
+      layout_mode: z
+        .enum(['inline', 'background', 'full_bleed', 'natural_height'])
+        .default('inline'),
+      mobile_layout_mode: z
+        .enum(['inline', 'background', 'full_bleed', 'natural_height'])
+        .optional()
+        .default('inline'),
+      mobile_crop_behavior: z
+        .enum(['contain', 'cover', 'none'])
+        .optional()
+        .default('cover'),
       blur_amount: z.number().min(0).max(100).optional(),
       parallax_enabled: z.boolean().optional(),
-      image_position: z.enum(['top', 'center', 'bottom']).optional(),
+      image_position: z
+        .enum(['top', 'center', 'bottom'])
+        .default('center'),
       image_x: z.number().min(0).max(100).optional(),
       image_y: z.number().min(0).max(100).optional(),
     }),
-  },
+  },  
   services: {
     label: 'Services',
     icon: '🧰',

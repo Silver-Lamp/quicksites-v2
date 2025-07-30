@@ -125,12 +125,17 @@ export default function HomePage() {
         </div>
       </main>
 
-      {/* Sticky Footer */}
       <footer className="relative z-10 text-center text-xs text-zinc-600 py-4">
         &copy; {new Date().getFullYear()} QuickSites.ai — All rights reserved.
-        {/* {showWidget && <QuickSitesWidget forceVariant="puppy" />} */}
+        <span className="mx-2">|</span>
+        <a href="/legal/privacy" className="underline hover:text-zinc-800 dark:hover:text-zinc-200">Privacy</a>
+        <span className="mx-1">•</span>
+        <a href="/legal/terms" className="underline hover:text-zinc-800 dark:hover:text-zinc-200">Terms</a>
+
+        {/* Widget always loaded */}
         <QuickSitesWidget forceVariant="puppy" />
       </footer>
+
     </div>
   );
 }

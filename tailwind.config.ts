@@ -113,9 +113,30 @@ const config: Config = {
         popup: '0 0 0 1px rgba(0, 0, 0, 0.04), 0 10px 15px rgba(0, 0, 0, 0.1)',
         'xl-dark': '0 20px 30px rgba(0, 0, 0, 0.8)',
       },
+      typography: {
+        DEFAULT: {
+          css: {
+            '--tw-prose-body': 'hsl(var(--foreground))',
+            '--tw-prose-headings': 'hsl(var(--foreground))',
+            '--tw-prose-p': 'hsl(var(--foreground))',
+            '--tw-prose-li': 'hsl(var(--foreground))',
+            '--tw-prose-strong': 'hsl(var(--foreground))',
+            '--tw-prose-a': 'hsl(var(--foreground))',
+            '--tw-prose-code': 'hsl(var(--foreground))',
+            '--tw-prose-pre': 'hsl(var(--foreground))',
+            '--tw-prose-pre-code': 'hsl(var(--foreground))',
+            '--tw-prose-pre-bg': 'hsl(var(--foreground))',
+            '--tw-prose-pre-code-bg': 'hsl(var(--foreground))',
+            '--tw-prose-pre-code-text': 'hsl(var(--foreground))',
+          },
+        },
+      },
     },
   },
-  plugins: [require('tailwindcss-animate')],
+  plugins: [
+    require('tailwindcss-animate'),
+    require('@tailwindcss/typography'),
+  ],
 };
 
 export default config;

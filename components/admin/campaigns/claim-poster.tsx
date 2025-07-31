@@ -1,4 +1,6 @@
 // app/admin/campaigns/claim-poster.tsx
+'use client';
+
 import Image from 'next/image';
 import QRCode from 'react-qr-code';
 import { formatDistanceToNowStrict, parseISO } from 'date-fns';
@@ -6,18 +8,13 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { toast } from 'react-hot-toast';
 import { normalizeImageSrc } from '@/lib/normalizeImageSrc';
+import Link from 'next/link';
 
 export type ClaimPosterProps = {
   domain: string;
   offerEndsAt: string;
-  leadA: {
-    name: string;
-    logoUrl?: string;
-  };
-  leadB: {
-    name: string;
-    logoUrl?: string;
-  };
+  leadA: { name: string; logoUrl?: string };
+  leadB: { name: string; logoUrl?: string };
   qrUrl: string;
   imageSrc: string;
   arcOffsetY?: number;
@@ -27,6 +24,8 @@ export type ClaimPosterProps = {
   onEditEnd?: () => void;
   campaignId?: string;
   expired?: boolean;
+  contactPhone?: string;
+  contactEmail?: string;
 };
 
 export default function ClaimPoster({
@@ -43,6 +42,8 @@ export default function ClaimPoster({
   onEditEnd,
   campaignId,
   expired,
+  contactPhone,
+  contactEmail,
 }: ClaimPosterProps) {
   const [editing, setEditing] = useState(false);
   const [settings, setSettings] = useState({ arcOffsetY, logoOffsetY, arcRadius });
@@ -105,12 +106,12 @@ export default function ClaimPoster({
       className="bg-[#080a03] text-white p-6 rounded-lg w-full max-w-md mx-auto text-center font-semibold shadow-lg border border-zinc-700"
       onClick={(e) => e.stopPropagation()}
     >
-      <div className="text-xs text-zinc-300 uppercase mb-2 tracking-wide">Towing Website SEO</div>
+      <div className="text-xs text-zinc-400 uppercase mb-2 tracking-wider">Towing Website SEO</div>
 
       <div className="mb-6" style={{ transform: `translateY(${settings.arcOffsetY}px)`, height: `${settings.arcRadius}px` }}>
         <svg width="100%" height="230" viewBox="0 0 300 150">
           <path id="arcPath" d={arcPath} fill="transparent" />
-          <text fill="white" fontSize="14" fontWeight="600" textAnchor="middle">
+          <text fill="white" fontSize="14" fontWeight="700" textAnchor="middle" letterSpacing="1px">
             <textPath href="#arcPath" startOffset="50%">
               {domain.toUpperCase()}
             </textPath>
@@ -124,25 +125,44 @@ export default function ClaimPoster({
 
       <div className="flex justify-center items-center my-4 gap-4">
         <LeadCard name={leadA.name} logoUrl={leadA.logoUrl} />
-        <div className="text-sm text-zinc-500">or</div>
+        <div className="text-sm text-zinc-500 font-normal">or</div>
         <LeadCard name={leadB.name} logoUrl={leadB.logoUrl} />
       </div>
 
-      <div className="w-24 h-24 mx-auto mb-2 bg-white p-2 rounded shadow-md">
-        <QRCode value={qrUrl} size={96} />
+      <div className="w-24 h-24 mx-auto mb-3 bg-white p-2 rounded shadow-md">
+        <QRCode value={qrUrl} size={80} />
       </div>
 
-      <div className="text-xs text-zinc-300">Scan to claim it first</div>
-      {!expired && (
+      <div className="text-xs text-zinc-300">
+        Scan or{' '}
+        <Link href={qrUrl} className="text-blue-400 hover:text-blue-300 underline" target="_blank" rel="noopener noreferrer">
+          click here
+        </Link>{' '}
+        to claim it first
+      </div>
+
+      {expired ? (
+        <div className="mt-3 text-red-400 text-sm tracking-wider">EXPIRED</div>
+      ) : (
         <>
           <div className="mt-3 text-yellow-400 text-sm tracking-wider">72-HOUR OFFERING</div>
           <div className="text-xs text-zinc-400">(Time left: {timeLeft})</div>
         </>
       )}
-      {expired ? (
-        <div className="mt-3 text-red-400 text-sm tracking-wider">EXPIRED</div>
-      ) : (
-        <div className="mt-3 text-yellow-400 text-sm tracking-wider">72-HOUR OFFERING</div>
+      
+      {(contactPhone || contactEmail) && (
+        <div className="mt-4 text-xs text-zinc-400">
+          {contactPhone && (
+            <div>
+              Call: <a href={`tel:${contactPhone}`} className="text-blue-400 hover:text-blue-300">{contactPhone}</a>
+            </div>
+          )}
+          {contactEmail && (
+            <div>
+              Email: <a href={`mailto:${contactEmail}`} className="text-blue-400 hover:text-blue-300">{contactEmail}</a>
+            </div>
+          )}
+        </div>
       )}
 
       <div className="mt-4">
@@ -203,7 +223,7 @@ export default function ClaimPoster({
 
 function LeadCard({ name, logoUrl }: { name: string; logoUrl?: string }) {
   return (
-    <div className="w-28 h-20 flex items-center justify-center bg-zinc-800 rounded border border-zinc-600 p-2">
+    <div className="w-32 h-20 flex items-center justify-center bg-zinc-800 rounded border border-zinc-600 p-2 hover:bg-zinc-700 transition">
       {logoUrl ? (
         <Image src={logoUrl} alt={name} width={100} height={60} className="object-contain" />
       ) : (

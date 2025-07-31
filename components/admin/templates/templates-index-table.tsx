@@ -121,7 +121,6 @@ export default function TemplatesIndexTable({
           </div>
         </div>
       )}
-
       <div className="border border-white/10 rounded overflow-x-auto">
         <table className="min-w-full text-sm">
           <thead>

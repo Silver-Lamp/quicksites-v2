@@ -1,10 +1,10 @@
-// components/admin/templates/edit-wrapper.tsx
 'use client';
 
 import { useEffect, useState } from 'react';
 import TemplateEditor from '@/components/admin/templates/template-editor';
 import type { Snapshot } from '@/types/template';
 import { supabase } from '@/lib/supabaseClient';
+import { normalizeTemplate } from '@/admin/utils/normalizeTemplate';
 
 export default function EditWrapper({ slug }: { slug: string }) {
   const [data, setData] = useState<Snapshot | null>(null);
@@ -12,14 +12,24 @@ export default function EditWrapper({ slug }: { slug: string }) {
 
   useEffect(() => {
     const load = async () => {
-      const { data, error } = await supabase
+      const { data: raw, error } = await supabase
         .from('templates')
         .select('*')
         .eq('slug', slug)
         .single();
 
-      if (!error && data) setData(data);
-      else setData(null);
+      if (!error && raw) {
+        const normalized = normalizeTemplate(raw);
+
+        // Defensive: ensure no top-level pages sneak through
+        if ('pages' in normalized) {
+          delete (normalized as any).pages;
+        }
+
+        setData(normalized);
+      } else {
+        setData(null);
+      }
 
       setLoading(false);
     };

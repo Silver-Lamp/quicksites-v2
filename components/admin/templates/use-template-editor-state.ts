@@ -30,10 +30,12 @@ export function useTemplateEditorState({
   templateName,
   initialData,
   onRename,
+  onSaveDraft,
 }: {
   templateName: string;
   initialData?: Snapshot | Template;
   onRename?: (newName: string) => void;
+  onSaveDraft?: (rawJson: string) => void;
 }) {
   const fallback = createEmptyTemplate(templateName);
   const [blockErrors, setBlockErrors] = useState<Record<string, BlockValidationError[]>>({});
@@ -127,7 +129,8 @@ export function useTemplateEditorState({
         setTemplate(updated);
         localStorage.setItem(`draft-${updated.id}`, rawJson);
         toast.success('Draft saved');
-      },
+        onSaveDraft?.(rawJson);
+        },
       onError: (err: ZodError | string) => {
         console.warn('Block errors:', err);
       },

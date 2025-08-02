@@ -31,7 +31,7 @@ export const TemplateSaveSchema = z.object({
     .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, {
       message: 'Slug must be lowercase, alphanumeric, and hyphen-separated',
     }),
-  site_id: z.string().optional(),
+  site_id: z.string().nullable().optional(),
   template_name: z.string(),
   layout: z.string(),
   color_scheme: z.string(),

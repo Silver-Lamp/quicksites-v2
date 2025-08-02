@@ -14,13 +14,17 @@ import PagesPanel from '../templates/panels/pages-panel';
 export default function SidebarSettings({
   template,
   onChange,
+  selectedPageIndex,
+  onSelectPage,
 }: {
   template: Template;
   onChange: (updated: Template) => void;
+  selectedPageIndex: number;
+  onSelectPage: (index: number) => void;
 }) {
   return (
     <div className="space-y-4 px-4 pt-2 w-full">
-      <PagesPanel template={template} onChange={onChange} />
+      <PagesPanel template={template} onChange={onChange} selectedIndex={selectedPageIndex} onSelectPage={(i) => setSelectedPageIndex(i)}/>
       <IdentityPanel template={template} onChange={onChange} />
       <ServicesPanel template={template} onChange={onChange} />
       <SlugPanel template={template} onChange={onChange} />

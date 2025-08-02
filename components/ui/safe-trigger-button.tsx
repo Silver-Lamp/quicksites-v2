@@ -1,6 +1,7 @@
 'use client';
 
-import { ReactNode } from 'react';
+import { ReactNode, useEffect } from 'react';
+import { isValidElement } from 'react';
 
 type Props = {
   onClick: () => void;
@@ -9,7 +10,23 @@ type Props = {
   title?: string;
 };
 
-export default function SafeTriggerButton({ onClick, children, className = '', title }: Props) {
+export default function SafeTriggerButton({
+  onClick,
+  children,
+  className = '',
+  title,
+}: Props) {
+  useEffect(() => {
+    if (process.env.NODE_ENV === 'development') {
+      const containsButton = checkForButton(children);
+      if (containsButton) {
+        console.warn(
+          '🚨 <SafeTriggerButton> received a <button> element as a child — this may cause hydration errors. Use <div> or <span> instead.'
+        );
+      }
+    }
+  }, [children]);
+
   return (
     <div
       role="button"
@@ -27,4 +44,19 @@ export default function SafeTriggerButton({ onClick, children, className = '', t
       {children}
     </div>
   );
+}
+
+// 🔍 Recursive check for <button> in React children tree
+function checkForButton(child: ReactNode): boolean {
+  if (!child) return false;
+  if (Array.isArray(child)) {
+    return child.some(checkForButton);
+  }
+  if (isValidElement(child)) {
+    if (typeof child.type === 'string' && child.type === 'button') {
+      return true;
+    }
+    return checkForButton((child as any).props?.children);
+  }
+  return false;
 }

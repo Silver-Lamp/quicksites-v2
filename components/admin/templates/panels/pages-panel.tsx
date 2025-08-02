@@ -8,14 +8,17 @@ import type { Page, Template } from '@/types/template';
 export default function PagesPanel({
   template,
   onChange,
+  selectedIndex,
+  onSelectPage,
 }: {
   template: Template;
   onChange: (updated: Template) => void;
+  selectedIndex: number;
+  onSelectPage: (index: number) => void;
 }) {
   const [collapsed, setCollapsed] = useState(false);
 
   const pages = template?.data?.pages || [];
-  const selectedIndex = 0; // you can wire this up to state if needed
 
   const handleUpdatePages = (updatedPages: Template['data']['pages']) => {
     onChange({
@@ -28,21 +31,17 @@ export default function PagesPanel({
   };
 
   return (
-    <Collapsible
-      id="pages"
-      title="Pages"
-      defaultOpen
-    //   onToggle={() => setCollapsed(!collapsed)}
-    >
+    <Collapsible id="pages" title="Pages" defaultOpen>
       <PageManagerSidebar
         pages={pages}
         selectedIndex={selectedIndex}
-        onSelect={(index) => {
-          console.log('Selected page:', pages[index]);
-        }}
+        onSelect={(index) => onSelectPage(index)}
         onAdd={(newPage: Page) => {
-            console.log('Adding page:', newPage);
-            handleUpdatePages([...pages, newPage]);
+          const fullPage: Page = {
+            ...newPage,
+            site_id: template.site_id || '',
+          };
+          handleUpdatePages([...pages, fullPage]);
         }}
         onRename={(index, newTitle) => {
           const updated = [...pages];

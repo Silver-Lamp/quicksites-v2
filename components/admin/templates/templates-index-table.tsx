@@ -14,7 +14,7 @@ import {
 import { toast } from 'react-hot-toast';
 import debounce from 'lodash.debounce';
 import { CheckCircle, FileStack, Globe, XCircle } from 'lucide-react';
-import { GSCStatusBadge } from '@/components/admin/gsc-status-badge';
+// import { GSCStatusBadge } from '@/components/admin/gsc-status-badge';
 import RowActions from '@/components/admin/templates/row-actions';
 import { Template } from '@/types/template';
 import { cn } from '@/lib/utils';
@@ -137,12 +137,12 @@ export default function TemplatesIndexTable({
               </th>
               <th className="p-2 text-right">Actions</th>
               <th className="p-2 text-right">Type</th>
-              <th className="p-2 w-[60px]">Preview</th>
-              <th className="p-2">Name</th>
-              <th className="p-2">Slug</th>
               <th className="p-2">Published</th>
+              <th className="p-2">Name</th>
+              <th className="p-2">Phone</th>
               <th className="p-2">Updated</th>
               <th className="p-2">GSC</th>
+              <th className="p-2 w-[60px]">Preview</th>
             </tr>
           </thead>
           <tbody>
@@ -179,15 +179,12 @@ export default function TemplatesIndexTable({
                 <td className="p-2 text-right">
                   {t.is_site ? <Globe className="w-4 h-4 text-blue-400" /> : <FileStack className="w-4 h-4 text-blue-400" />}
                 </td>
-                <td className="p-2">
-                  {t.banner_url ? (
-                    <img src={t.banner_url} alt="preview" className="w-12 h-8 rounded object-cover" />
-                  ) : (
-                    <div className="w-12 h-8 bg-zinc-700 rounded flex items-center justify-center text-xs text-white/40">N/A</div>
-                  )}
+                <td className="p-2 text-zinc-400">
+                  {t.published ? <CheckCircle className="w-4 h-4 text-green-400" /> : <XCircle className="w-4 h-4 text-red-400" />}
                 </td>
+
                 <td className="p-2">
-                  {editingId === t.id ? (
+                  {/* {editingId === t.id ? (
                     <Input
                       value={renames[t.id] || t.template_name}
                       onChange={(e) => {
@@ -210,17 +207,26 @@ export default function TemplatesIndexTable({
                       setEditingId(t.id);
                       setRenames((prev) => ({ ...prev, [t.id]: t.template_name }));
                     }}>{t.template_name}</button>
-                  )}
+                  )} */}
+                  <div className="text-white hover:underline text-left" onClick={() => router.push(`/template/${t.slug}/edit`)}>
+                    {t.template_name}
+                  </div>
                 </td>
-                <td className="p-2 text-zinc-400">{t.slug}</td>
                 <td className="p-2 text-zinc-400">
-                  {t.published ? <CheckCircle className="w-4 h-4 text-green-400" /> : <XCircle className="w-4 h-4 text-red-400" />}
+                  {t.phone && <div className="text-xs text-zinc-400">{t.phone}</div>}
                 </td>
                 <td className="p-2 text-zinc-400">
                   {t.updated_at ? formatDistanceToNow(new Date(t.updated_at), { addSuffix: true }) : 'N/A'}
                 </td>
                 <td className="p-2 text-zinc-400">
-                  {t.custom_domain && <GSCStatusBadge domain={`https://${t.custom_domain}`} />}
+                  {/* {t.custom_domain && <GSCStatusBadge domain={`https://${t.custom_domain}`} />} */}
+                </td>
+                <td className="p-2">
+                  {t.banner_url ? (
+                    <img src={t.banner_url} alt="preview" className="w-12 h-8 rounded object-cover" />
+                  ) : (
+                    <div className="w-12 h-8 bg-zinc-700 rounded flex items-center justify-center text-xs text-white/40">N/A</div>
+                  )}
                 </td>
               </tr>
             ))}

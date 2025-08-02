@@ -3,6 +3,8 @@
 import Image from 'next/image';
 import { useEffect, useState } from 'react';
 
+const THUMIO_KEY = process.env.NEXT_PUBLIC_THUMIO_API_KEY;
+
 export default function SeoPreviewThumbnail({
   pageUrl,
   ogImageUrl,
@@ -11,7 +13,9 @@ export default function SeoPreviewThumbnail({
   ogImageUrl?: string;
 }) {
   const [imgSrc, setImgSrc] = useState<string | null>(null);
-  const fallback = `https://image.thum.io/get/width/800/crop/768/${pageUrl}`;
+  const fallback = `https://image.thum.io/get/width/800/crop/768/${pageUrl}${
+    THUMIO_KEY ? `?apikey=${THUMIO_KEY}` : ''
+  }`;
 
   useEffect(() => {
     setImgSrc(ogImageUrl || fallback);

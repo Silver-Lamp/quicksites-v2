@@ -220,7 +220,7 @@ export function EditorContent({
           <SidebarSettings
             template={template}
             onChange={handleTemplateChange}
-          />
+            />
         </div>
       </div>
     )}
@@ -290,7 +290,7 @@ export function EditorContent({
           rawJson={rawJson}
           setRawJson={setRawJson}
           sidebarValues={sidebarValues}
-          setSidebarValues={(values) => {
+          setSidebarValues={(values: any) => {
             setSidebarValues((prev) => {
               const next = { ...prev, ...values };
               setTimeout(() => {

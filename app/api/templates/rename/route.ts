@@ -4,21 +4,24 @@ import { supabaseAdmin } from '@/lib/supabase/admin';
 
 export async function POST(req: NextRequest) {
   console.log('.:. app/api/templates/rename/route.ts: POST request received');
-  console.log('.:. app/api/templates/rename/route.ts: req:', req);
-  const { template_id, newName } = await req.json();
-  console.log('.:. app/api/templates/rename/route.ts: template_id:', template_id);
-  console.log('.:. app/api/templates/rename/route.ts: newName:', newName);
+
+  const body = await req.json();
+  if ('pages' in body) delete body.pages;
+
+  const { template_id, newName } = body;
+  console.log('.:. template_id:', template_id);
+  console.log('.:. newName:', newName);
 
   if (!template_id || !newName || newName.trim().length < 3) {
     return NextResponse.json({ error: 'Invalid input' }, { status: 400 });
   }
 
-  // Check for duplicate name (optional, still useful)
+  // Check for duplicate name
   const { data: existing } = await supabaseAdmin
     .from('templates')
     .select('template_name')
     .eq('template_name', newName.trim())
-    .neq('id', template_id) // exclude current template
+    .neq('id', template_id)
     .maybeSingle();
 
   if (existing) {
@@ -36,17 +39,36 @@ export async function POST(req: NextRequest) {
     .replace(/[\s_-]+/g, '-')
     .replace(/^-+|-+$/g, '');
 
-  // Update template
-  const { error } = await supabaseAdmin
+  // Fetch full template
+  const { data: currentTemplate, error: fetchError } = await supabaseAdmin
     .from('templates')
-    .update({
-      template_name: newName.trim(),
-      slug,
-    })
-    .eq('id', template_id);
+    .select('*')
+    .eq('id', template_id)
+    .single();
 
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+  if (fetchError || !currentTemplate) {
+    return NextResponse.json({ error: 'Template not found' }, { status: 404 });
+  }
+
+  // Apply new name + slug
+  const updatedTemplate = {
+    ...currentTemplate,
+    template_name: newName.trim(),
+    slug,
+  };
+
+  // 🧹 Strip top-level pages if accidentally present
+  if ('pages' in updatedTemplate) {
+    delete (updatedTemplate as any).pages;
+  }
+
+  // Save full updated object
+  const { error: saveError } = await supabaseAdmin
+    .from('templates')
+    .upsert(updatedTemplate, { onConflict: 'id' });
+
+  if (saveError) {
+    return NextResponse.json({ error: saveError.message }, { status: 500 });
   }
 
   return NextResponse.json({ message: 'Template renamed' });

@@ -9,6 +9,7 @@ import { createSharedPreview } from '@/admin/lib/createSharedPreview';
 import { supabase } from '@/admin/lib/supabaseClient';
 import toast from 'react-hot-toast';
 import type { Template } from '@/types/template';
+import { validateAndLogTemplate } from '@/admin/lib/validateTemplate';
 
 export function TemplateActionToolbar({
   template,
@@ -143,8 +144,14 @@ export function TemplateActionToolbar({
           size="sm"
           variant="secondary"
           onClick={() => {
+            const check = validateAndLogTemplate(template);
+            if (!check.valid) {
+              toast.error('Validation failed — check console for details.');
+              return;
+            }
+
             if (typeof onSaveDraft === 'function') {
-              onSaveDraft();
+              onSaveDraft(); // optionally pass check.data if you want a sanitized version
             } else {
               toast.error('No save handler found');
             }

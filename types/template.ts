@@ -9,6 +9,7 @@ export type Page = {
   content_blocks: Block[];
   show_header?: boolean;
   show_footer?: boolean;
+  site_id?: string;
   meta?: {
     title?: string;
     description?: string;
@@ -30,6 +31,7 @@ export type TemplateData = {
   header?: string[];
   footer?: string[];
   service_areas?: string[];
+  site_id?: string;
 };
 
 export type Snapshot = {
@@ -77,6 +79,8 @@ export type Snapshot = {
   custom_domain_verification_message?: string;
   custom_domain_verification_timestamp?: string;
   services?: string[];
+  site_id?: string;
+  phone?: string;
   meta?: {
     title?: string;
     description?: string;
@@ -89,7 +93,6 @@ export type Snapshot = {
 export type Template = Snapshot & {
   site_name?: string;
   template_name?: string;
-  site_id?: string;
   headline?: string;
   description?: string;
   hero_url?: string;

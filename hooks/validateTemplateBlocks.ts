@@ -1,9 +1,12 @@
+// hooks/validateTemplateBlocks.ts
 import { BlockSchema } from '@/admin/lib/zod/blockSchema';
 import type { Template } from '@/types/template';
 
 export type BlockValidationError = {
   field: string;
   message: string;
+  blockId?: string;
+  blockType?: string;
 };
 
 export function validateTemplateBlocks(template: Template): {
@@ -13,7 +16,7 @@ export function validateTemplateBlocks(template: Template): {
   const errors: Record<string, BlockValidationError[]> = {};
 
   if (!template.data || !Array.isArray(template.data.pages)) {
-    return { isValid: true, errors }; // treat as valid (nothing to validate)
+    return { isValid: true, errors };
   }
 
   template.data.pages.forEach((page, pageIndex) => {
@@ -24,6 +27,8 @@ export function validateTemplateBlocks(template: Template): {
         errors[key] = result.error.errors.map((e) => ({
           field: e.path.join('.'),
           message: e.message,
+          blockId: block._id,
+          blockType: block.type,
         }));
       }
     });

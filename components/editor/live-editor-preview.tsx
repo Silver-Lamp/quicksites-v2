@@ -1,4 +1,3 @@
-// components/editor/live-editor-preview.tsx
 'use client';
 
 import {
@@ -25,13 +24,7 @@ import { Template } from '@/types/template';
 import { BlockValidationError } from '@/hooks/validateTemplateBlocks';
 import SafeTriggerButton from '@/components/ui/safe-trigger-button';
 
-function BlockWrapper({
-  block,
-  children,
-  onEdit,
-  onDelete,
-  showOutlines,
-}: any) {
+function BlockWrapper({ block, children, onEdit, onDelete, showOutlines }: any) {
   const {
     attributes,
     listeners,
@@ -93,59 +86,103 @@ export function LiveEditorPreview({
   const [layoutMode, setLayoutMode] = useState<'stack' | 'grid'>('stack');
   const [editing, setEditing] = useState<any | null>(null);
   const [lastInsertedId, setLastInsertedId] = useState<string | null>(null);
-  const [selectedPageIndex] = useState(0);
+  const [selectedPageIndex, setSelectedPageIndex] = useState(0); // ✅ now editable
   const [isCentered, setIsCentered] = useState(false);
   const [showOutlines, setShowOutlines] = useState(false);
 
+  // 🧹 Strip template.pages on first load
   useEffect(() => {
-    const handleKey = (e: KeyboardEvent) => {
-      if (e.metaKey && e.key.toLowerCase() === 'o') {
-        e.preventDefault();
-        setShowOutlines((prev) => !prev);
-      }
-    };
-    window.addEventListener('keydown', handleKey);
-    return () => window.removeEventListener('keydown', handleKey);
+    if ('pages' in template) {
+      console.warn('🧹 Removing top-level template.pages from runtime state');
+      const updated = { ...template };
+      delete (updated as any).pages;
+      onChange(updated);
+    }
   }, []);
+
+  // 🛡 Prevent fallback unless truly no usable pages exist
+  useEffect(() => {
+    const dataPages = template?.data?.pages;
+    const rootPages = (template as any)?.pages;
+
+    const hasValidDataPages =
+      Array.isArray(dataPages) &&
+      dataPages.length > 0 &&
+      dataPages.some((p) => Array.isArray(p?.content_blocks));
+
+    const hasRootPages =
+      Array.isArray(rootPages) && rootPages.length > 0;
+
+    if (!hasValidDataPages && !hasRootPages) {
+      console.warn('⚠️ Fallback page injected — no usable pages found', {
+        dataPages,
+        rootPages,
+        template,
+      });
+
+      const defaultHeroBlock = createDefaultBlock('hero');
+      const defaultPage = {
+        id: 'home-page',
+        slug: 'home',
+        title: 'Home',
+        show_footer: true,
+        show_header: true,
+        content_blocks: [defaultHeroBlock],
+      };
+
+      const updated = {
+        ...template,
+        data: {
+          ...(template.data || {}),
+          pages: [defaultPage],
+        },
+      };
+
+      onChange(updated);
+    }
+  }, [template, onChange]);
+
+  const pages =
+    template?.data?.pages?.length > 0
+      ? template.data.pages
+      : (template as any).pages ?? [];
+
+  const selectedPage = pages[selectedPageIndex] ?? null;
+
+  if (!selectedPage) {
+    return (
+      <div className="p-8 text-white text-center">
+        <div className="text-lg font-semibold mb-2">No page found</div>
+        <p className="text-sm text-white/70">
+          The template has no pages defined yet. Add one to begin editing.
+        </p>
+      </div>
+    );
+  }
 
   const updateAndSave = (updated: Template) => {
     onChange({ ...updated });
   };
 
-  const selectedPage = template.data.pages[selectedPageIndex];
-
   return (
     <div className="w-full max-w-none px-0">
       <div className="relative dark:bg-neutral-900 text-white min-h-screen">
-        <div
-          className={`px-0 sm:px-2 xl:px-0 pb-20 pt-4 space-y-6 w-full ${
-            isCentered ? 'mx-auto max-w-screen-md' : 'xl:max-w-[90%] xl:mx-auto max-w-none'
-          }`}
-        >
-          <div className="flex justify-between items-center">
-            {/* <h1 className="text-xl font-bold text-white">
-              {template.template_name}
-            </h1> */}
-            <div className="text-right text-sm space-x-2">
+        <div className="px-0 sm:px-2 xl:px-0 pb-20 pt-4 space-y-6 w-full xl:max-w-[90%] xl:mx-auto">
+          {/* Page switcher (basic dev version) */}
+          <div className="flex gap-2 mb-4 text-sm text-white/70">
+            {pages.map((p: any, i: number) => (
               <button
-                onClick={() => setLayoutMode((m) => (m === 'stack' ? 'grid' : 'stack'))}
-                className="text-blue-400 underline"
+                key={p.id}
+                onClick={() => setSelectedPageIndex(i)}
+                className={`px-3 py-1 rounded ${
+                  i === selectedPageIndex
+                    ? 'bg-purple-700 text-white'
+                    : 'bg-zinc-800 hover:bg-zinc-700'
+                }`}
               >
-                View: {layoutMode === 'stack' ? 'Vertical' : 'Grid'}
+                {p.title || p.slug || `Page ${i + 1}`}
               </button>
-              <button
-                onClick={() => setIsCentered((v) => !v)}
-                className="text-purple-400 underline"
-              >
-                {isCentered ? 'Uncenter' : 'Center Preview'}
-              </button>
-              <button
-                onClick={() => setShowOutlines((v) => !v)}
-                className="text-yellow-400 underline"
-              >
-                {showOutlines ? 'Hide Outlines' : 'Show Outlines'}
-              </button>
-            </div>
+            ))}
           </div>
 
           {selectedPage?.show_header !== false && template.headerBlock && (
@@ -157,7 +194,7 @@ export function LiveEditorPreview({
             collisionDetection={closestCenter}
             onDragEnd={({ active, over }) => {
               if (!over || active.id === over.id) return;
-              const blocks = [...selectedPage.content_blocks];
+              const blocks = [...(selectedPage?.content_blocks ?? [])];
               const oldIndex = blocks.findIndex((b) => b._id === active.id);
               const newIndex = blocks.findIndex((b) => b._id === over.id);
               const reordered = arrayMove(blocks, oldIndex, newIndex);
@@ -167,7 +204,7 @@ export function LiveEditorPreview({
             }}
           >
             <SortableContext
-              items={selectedPage.content_blocks.map((b) => b._id ?? '')}
+              items={(selectedPage?.content_blocks ?? []).map((b: any) => b._id ?? '')}
               strategy={verticalListSortingStrategy}
             >
               <div
@@ -177,12 +214,12 @@ export function LiveEditorPreview({
                     : 'space-y-6'
                 }
               >
-                {selectedPage.content_blocks.map((block, blockIndex) => (
+                {(selectedPage?.content_blocks ?? []).map((block: any, blockIndex: number) => (
                   <BlockWrapper
                     key={block._id}
                     block={block}
                     showOutlines={showOutlines}
-                    onEdit={() => setEditing(block)}
+                    onEdit={() => setEditing(block)} // ✅ this is the missing line
                     onDelete={() => {
                       const updated = { ...template };
                       updated.data.pages[selectedPageIndex].content_blocks.splice(blockIndex, 1);
@@ -226,6 +263,7 @@ export function LiveEditorPreview({
                     />
                   </BlockWrapper>
                 ))}
+
               </div>
             </SortableContext>
 
@@ -262,34 +300,34 @@ export function LiveEditorPreview({
             <RenderBlock block={template.footerBlock} />
           )}
         </div>
-
-        {editing && (
-          <div className="fixed inset-0 bg-black/90 z-[999] p-6 overflow-auto flex items-center justify-center">
-            <div className="w-full max-w-4xl bg-neutral-900 border border-white/10 rounded-xl shadow-xl overflow-hidden">
-              <DynamicBlockEditor
-                block={editing}
-                onSave={(updatedBlock) => {
-                  const updated = { ...template };
-                  for (const page of updated.data.pages) {
-                    const index = page.content_blocks.findIndex(
-                      (b) => b._id === updatedBlock._id
-                    );
-                    if (index !== -1) {
-                      page.content_blocks[index] = updatedBlock;
-                      break;
-                    }
-                  }
-                  updateAndSave(updated);
-                  setEditing(null);
-                }}
-                onClose={() => setEditing(null)}
-                errors={errors}
-                template={template}
-              />
-            </div>
-          </div>
-        )}
       </div>
+      {editing && (
+  <div className="fixed inset-0 bg-black/90 z-[999] p-6 overflow-auto flex items-center justify-center">
+    <div className="w-full max-w-4xl bg-neutral-900 border border-white/10 rounded-xl shadow-xl overflow-hidden">
+      <DynamicBlockEditor
+        block={editing}
+        onSave={(updatedBlock) => {
+          const updated = { ...template };
+          for (const page of updated.data.pages) {
+            const index = page.content_blocks.findIndex(
+              (b) => b._id === updatedBlock._id
+            );
+            if (index !== -1) {
+              page.content_blocks[index] = updatedBlock;
+              break;
+            }
+          }
+          updateAndSave(updated);
+          setEditing(null);
+        }}
+        onClose={() => setEditing(null)}
+        errors={errors}
+        template={template}
+      />
+    </div>
+  </div>
+)}
+
     </div>
   );
 }

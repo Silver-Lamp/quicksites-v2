@@ -5,49 +5,36 @@ export function normalizeTemplate(entry: any): Template {
   const rawPages = entry.data?.pages ?? entry.pages ?? [];
   const services = entry.services ?? entry.data?.services ?? [];
 
-  // Normalize page array with fallback
-  const pages = Array.isArray(rawPages) && rawPages.length > 0
-    ? rawPages.map((page: any, i: number) => ({
-        id: page.id || `page-${i}`,
-        slug: page.slug || 'home',
-        title: page.title || 'Home',
-        show_footer: page.show_footer ?? true,
-        show_header: page.show_header ?? true,
-        content_blocks: Array.isArray(page.content_blocks) ? page.content_blocks : [],
-        ...page,
-      }))
-    : [
-        {
-          id: 'home-page',
-          slug: 'home',
-          title: 'Home',
-          show_footer: true,
-          show_header: true,
-          content_blocks: [],
-        },
-      ];
+  const pages = Array.isArray(rawPages)
+    ? rawPages.map((page: any, i: number) => {
+        const {
+          site_id, // ❌ Strip fields not in schema
+          ...rest
+        } = page;
+        return {
+          id: rest.id || `page-${i}`,
+          slug: rest.slug || 'home',
+          title: rest.title || 'Home',
+          show_footer: rest.show_footer ?? true,
+          show_header: rest.show_header ?? true,
+          content_blocks: Array.isArray(rest.content_blocks) ? rest.content_blocks : [],
+          ...rest,
+        };
+      })
+    : [];
 
-  // Prefer explicitly passed values first
   const rawName = entry.template_name?.trim();
   const rawSlug = entry.slug?.trim();
   const industry = entry.industry?.trim() ?? '';
 
-  // Fallback derivation logic
   const derivedName = rawName || rawSlug || `new-template-${Math.random().toString(36).slice(2, 6)}`;
-  const derivedSlug =
-    rawSlug ||
-    derivedName
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, '-')
-      .replace(/(^-|-$)/g, '')
-      .trim();
+  const derivedSlug = rawSlug || derivedName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
 
-  // Hero block fallback metadata
   const heroBlock = pages[0]?.content_blocks?.find((b: any) => b.type === 'hero');
   const fallbackTitle = derivedName || heroBlock?.content?.headline || '';
   const fallbackDesc = heroBlock?.content?.subheadline || heroBlock?.content?.headline || '';
 
-  return {
+  const normalized: Template = {
     id: entry.id,
     site_id: entry.site_id ?? '',
     template_name: derivedName,
@@ -82,9 +69,12 @@ export function normalizeTemplate(entry: any): Template {
     },
 
     data: {
-      pages,
-      services: Array.isArray(services) ? services : [],
       ...entry.data,
+      services: Array.isArray(services) ? services : [],
+      pages,
     },
   };
+
+  delete (normalized as any).pages;
+  return normalized;
 }

@@ -44,6 +44,12 @@ const navItems: NavItem[] = [
   },
   {
     type: 'item',
+    label: 'Outreach (Coming Soon)',
+    href: '/admin/outreach',
+    icon: <Mail size={18} />,
+  },
+  {
+    type: 'item',
     label: 'Leads',
     href: '/admin/leads',
     icon: <PhoneForwarded size={18} />,

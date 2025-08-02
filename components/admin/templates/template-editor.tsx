@@ -1,4 +1,3 @@
-// components/admin/templates/template-editor.tsx
 'use client';
 
 import { useRouter } from 'next/navigation';
@@ -17,6 +16,9 @@ import { useTemplateInsert } from '@/hooks/useTemplateInsert';
 import BlockSidebar from './block-sidebar';
 import type { Block } from '@/types/blocks';
 import { BlockValidationError } from '@/hooks/validateTemplateBlocks';
+import { toast } from 'react-hot-toast';
+import { saveTemplate } from '@/admin/lib/saveTemplate';
+import { usePageCountDebugger } from '@/hooks/usePageCountDebugger';
 
 export default function TemplateEditor({
   templateName,
@@ -55,6 +57,8 @@ export default function TemplateEditor({
     setBlockErrors
   } = useTemplateEditorState({ templateName, initialData, onRename });
 
+  usePageCountDebugger(template as Template);
+  
   const {
     insertBlock,
     recentlyInsertedBlockId,
@@ -83,6 +87,24 @@ export default function TemplateEditor({
     </div>
   ));
 
+  // 🧼 Clean wrapper before saving to prevent fallback page leak
+  const handleCleanSaveDraft = async () => {
+    const cleaned = { ...template };
+    if ('pages' in cleaned) {
+      console.warn('🧹 Stripping top-level template.pages before save (template-editor.tsx)');
+      delete (cleaned as any).pages;
+    }
+  
+    try {
+      const saved = await saveTemplate(cleaned);
+      toast.success('Template saved');
+      setTemplate(saved); // update state with fresh clean version
+    } catch (err) {
+      console.error(err);
+      toast.error('Error saving template');
+    }
+  };
+
   return (
     <>
       {/* Template Editor Toolbar */}
@@ -96,8 +118,10 @@ export default function TemplateEditor({
           setInputValue={setInputValue}
           slugPreview={slugPreview}
           handleRename={handleRename as unknown as () => void}
-          handleSaveDraft={handleSaveDraft as unknown as () => void}
-          onBack={() => router.push(initialMode === 'site' ? '/admin/sites' : '/admin/templates') as unknown as () => void}
+          handleSaveDraft={handleCleanSaveDraft} // ✅ updated here
+          onBack={() =>
+            router.push(initialMode === 'site' ? '/admin/sites' : '/admin/templates') as unknown as () => void
+          }
           nameExists={nameExists}
           setShowNameError={() => {}}
         />
@@ -121,7 +145,7 @@ export default function TemplateEditor({
           setShowPublishModal={() => {}}
           recentlyInsertedBlockId={recentlyInsertedBlockId ?? null}
           setBlockErrors={setBlockErrors as unknown as (errors: Record<string, BlockValidationError[]>) => void}
-          blockErrors={blockErrors as unknown as Record<string, BlockValidationError[]> | null  }
+          blockErrors={blockErrors as unknown as Record<string, BlockValidationError[]> | null}
           mode="template"
         />
 
@@ -129,7 +153,7 @@ export default function TemplateEditor({
         {selectedBlock && selectedIndex !== null && (
           <BlockSidebar
             block={selectedBlock}
-            errors={blockErrors[selectedId] as unknown as BlockValidationError[] || []}
+            errors={blockErrors[selectedId] as BlockValidationError[] || []}
             onSave={(updatedBlock: Block) => {
               setTemplate((prev) => {
                 const updated = { ...prev };
@@ -152,7 +176,9 @@ export default function TemplateEditor({
       {/* AI Block Suggestions */}
       <Drawer open={showVectorDrawer} onClose={() => setShowVectorDrawer(false)}>
         <VectorQueryPage
-          onUseBlock={(text, mode = 'insert', index) => handleUseBlock(text, mode as 'insert' | 'replace', index as number | undefined)}
+          onUseBlock={(text, mode = 'insert', index) =>
+            handleUseBlock(text, mode as 'insert' | 'replace', index as number | undefined)
+          }
         />
       </Drawer>
 

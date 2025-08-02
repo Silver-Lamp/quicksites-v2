@@ -27,20 +27,18 @@ export default function NewTemplatePage() {
   const from = searchParams?.get('from') ?? '';
 
   const [initialData, setInitialData] = useState<TemplateSnapshot | null>(null);
-  const [uniqueSlug, setUniqueSlug] = useState<string>('');
+  const [uniqueSlug, setUniqueSlug] = useState<string | null>(null);
 
   useEffect(() => {
     async function initializeTemplate() {
       const slug = await getUniqueTemplateSlug();
       setUniqueSlug(slug);
 
-      // Case: Fresh new template
       if (!from) {
         setInitialData(createEmptyTemplate(slug));
         return;
       }
 
-      // Case: Remixing from snapshot
       const { data: snapshot, error } = await supabase
         .from('snapshots')
         .select('data, theme, brand, color_scheme, is_site')
@@ -52,7 +50,6 @@ export default function NewTemplatePage() {
         return;
       }
 
-      // Log remix event
       const { data: auth } = await supabase.auth.getUser();
       if (auth?.user?.id) {
         await supabase.from('remix_events').insert([
@@ -63,7 +60,6 @@ export default function NewTemplatePage() {
         ]);
       }
 
-      // Build new template with snapshot data
       const remixed = createEmptyTemplate(slug);
       remixed.data = snapshot.data;
       remixed.color_scheme = snapshot.color_scheme ?? 'neutral';
@@ -78,9 +74,20 @@ export default function NewTemplatePage() {
     initializeTemplate();
   }, [from]);
 
+  // 🛡 Wait for slug to stabilize before rendering editor
+  if (!uniqueSlug) {
+    return (
+      <div className="flex h-screen w-full items-center justify-center">
+        <div className="animate-pulse text-white/60 bg-neutral-800 px-6 py-4 rounded shadow border border-neutral-700">
+          Generating unique template slug...
+        </div>
+      </div>
+    );
+  }
+
   return (
     <TemplateEditor
-      templateName={uniqueSlug || 'new-template'}
+      templateName={uniqueSlug}
       initialData={initialData || undefined}
     />
   );

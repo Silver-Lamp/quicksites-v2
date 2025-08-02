@@ -10,20 +10,18 @@ import SeoPanel from '../templates/panels/seo-panel';
 import ThemePanel from '../templates/panels/theme-panel';
 import type { Template } from '@/types/template';
 import PagesPanel from '../templates/panels/pages-panel';
+import { useState } from 'react';
 
 export default function SidebarSettings({
   template,
   onChange,
-  selectedPageIndex,
-  onSelectPage,
 }: {
   template: Template;
   onChange: (updated: Template) => void;
-  selectedPageIndex: number;
-  onSelectPage: (index: number) => void;
 }) {
+  const [selectedPageIndex, setSelectedPageIndex] = useState(0);
   return (
-    <div className="space-y-4 px-4 pt-2 w-full">
+    <div className="space-y-4 px-4 pt-2 w-full" id="sidebar-settings">
       <PagesPanel template={template} onChange={onChange} selectedIndex={selectedPageIndex} onSelectPage={(i) => setSelectedPageIndex(i)}/>
       <IdentityPanel template={template} onChange={onChange} />
       <ServicesPanel template={template} onChange={onChange} />

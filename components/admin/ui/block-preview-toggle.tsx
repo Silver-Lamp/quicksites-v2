@@ -29,7 +29,7 @@ export default function BlockPreviewToggle({ block, className = '' }: Props) {
           </div>
 
           <div className="mt-3 rounded border border-neutral-700 bg-neutral-800 p-4">
-            <RenderBlock block={block} compact={compact} mode="preview" disableInteraction />
+            <RenderBlock block={block} showDebug={false} compact={compact} mode="preview" disableInteraction />
           </div>
         </>
       )}

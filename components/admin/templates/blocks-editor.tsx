@@ -30,6 +30,7 @@ interface BlocksEditorPropsExtended {
   industry?: string;
   onReplaceWithAI?: (index: number) => void;
   onEdit?: (index: number) => void;
+  colorMode?: 'light' | 'dark';
 }
 
 interface SortableBlockProps {
@@ -39,6 +40,7 @@ interface SortableBlockProps {
   onEdit: (index: number) => void;
   onReplaceWithAI?: (index: number) => void;
   onDelete: (index: number) => void;
+  colorMode?: 'light' | 'dark';
 }
 
 function SortableBlock({
@@ -48,6 +50,7 @@ function SortableBlock({
   onEdit,
   onReplaceWithAI,
   onDelete,
+  colorMode = 'dark',
 }: SortableBlockProps) {
   const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id: block._id });
   const style = {
@@ -67,7 +70,9 @@ function SortableBlock({
       className={`flex flex-col gap-2 border rounded p-3 ${
         invalid
           ? 'border-red-500 bg-red-500/10 animate-pulse shadow-red-500/30 shadow-md'
-          : 'bg-white/5 border-white/10'
+          : colorMode === 'dark'
+            ? 'bg-black/5 border-black/10 text-white'
+            : 'bg-white/5 border-white/10 text-black'
       }`}
     >
       <div className="flex items-center justify-between gap-2">
@@ -77,7 +82,7 @@ function SortableBlock({
             {...attributes}
             {...listeners}
           />
-          <span className="text-sm font-medium text-white">{block.type}</span>
+          <span className="text-sm font-medium">{block.type}</span>
           {wasAutofixed && (
             <Tooltip>
               <TooltipTrigger>
@@ -131,7 +136,7 @@ function SortableBlock({
         <ul className="text-xs text-red-300 list-disc list-inside pl-1 pt-1 space-y-1">
           {errors.map((err, i) => (
             <li key={i}>
-              <code>{err.field}</code>: {err.message}
+              <code className={colorMode === 'dark' ? 'text-white' : 'text-black'}>{err.field}</code>: {err.message}
             </li>
           ))}
         </ul>
@@ -146,6 +151,7 @@ export const BlocksEditor = ({
   industry = 'default',
   onReplaceWithAI,
   onEdit,
+  colorMode = 'dark',
 }: BlocksEditorPropsExtended) => {
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
 
@@ -172,7 +178,7 @@ export const BlocksEditor = ({
   }, [blocksWithIds]);
 
   return (
-    <div className="space-y-4 rounded p-3">
+    <div className={`space-y-4 rounded p-3 ${colorMode === 'dark' ? 'bg-black/5 border-black/10 text-white' : 'bg-white/5 border-white/10 text-black'}`}>
       <DndContext
         collisionDetection={closestCenter}
         onDragEnd={({ active, over }) => {
@@ -198,6 +204,7 @@ export const BlocksEditor = ({
                 updated.splice(deleteIndex, 1);
                 onChange(updated);
               }}
+              colorMode={colorMode}
             />
           ))}
         </SortableContext>
@@ -219,6 +226,7 @@ export const BlocksEditor = ({
           onUndo={() => {}}
           onViewDiff={() => {}}
           undoAvailable={false}
+          colorMode={colorMode as 'light' | 'dark'}
         />
       )}
     </div>

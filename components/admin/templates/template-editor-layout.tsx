@@ -6,6 +6,7 @@ import { useTemplateEditor } from '@/context/template-editor-context';
 import { cn } from '@/admin/lib/utils';
 import { CheckCircle, Loader2 } from 'lucide-react';
 import type { ReactNode } from 'react';
+import { Template } from '@/types/template';
 
 export default function TemplateEditorLayout({
   children,
@@ -19,9 +20,10 @@ export default function TemplateEditorLayout({
   className?: string;
 }) {
   const { autosave, isCreating, template } = useTemplateEditor();
+  const { color_mode } = template as Template;
 
   return (
-    <div className="min-h-screen bg-background text-foreground">
+    <div className={`min-h-screen bg-background text-foreground ${color_mode === 'dark' ? 'dark' : ''}`}>
       {/* Header */}
       <header className="sticky top-0 z-40 flex items-center justify-between border-b bg-zinc-900 px-4 py-2">
         <div className="text-sm font-semibold text-white">

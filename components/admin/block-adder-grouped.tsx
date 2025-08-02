@@ -49,6 +49,7 @@ type Props = {
   disallowDuplicates?: Block['type'][];
   label?: string;
   triggerElement?: React.ReactNode;
+  colorMode?: 'light' | 'dark';
 };
 
 export default function BlockAdderGrouped({
@@ -57,6 +58,7 @@ export default function BlockAdderGrouped({
   disallowDuplicates = ['footer'],
   label = 'Add Block',
   triggerElement,
+  colorMode = 'dark',
 }: Props) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState('');
@@ -193,6 +195,8 @@ export default function BlockAdderGrouped({
                               <RenderBlockMini
                                 block={createDefaultBlock(type)}
                                 className="w-full h-32"
+                                showDebug={false}
+                                colorMode={colorMode}
                               />
                             </div>
                           </div>

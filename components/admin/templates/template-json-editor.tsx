@@ -14,9 +14,17 @@ type TemplateJsonEditorProps = {
   setRawJson: (value: string) => void;
   sidebarValues: any;
   setSidebarValues: (values: any) => void;
+  colorMode: 'light' | 'dark';
 };
 
-export default function TemplateJsonEditor({ rawJson, setRawJson, sidebarValues, setSidebarValues }: TemplateJsonEditorProps) {
+export default function TemplateJsonEditor({ 
+  rawJson, 
+  setRawJson, 
+  sidebarValues, 
+  setSidebarValues, 
+  colorMode = 'dark' 
+}: TemplateJsonEditorProps) {
+  console.log('🧪 TemplateJsonEditor colorMode:', colorMode);
   const [isReadOnly, setIsReadOnly] = useState(true);
   const [parsedJson, setParsedJson] = useState<ValidatedTemplate | null>(null);
   const [validationError, setValidationError] = useState<string | null>(null);

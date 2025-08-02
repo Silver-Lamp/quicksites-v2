@@ -8,6 +8,7 @@ type Props = {
   bg?: string;
   textAlign?: 'left' | 'center' | 'right';
   className?: string;
+  colorMode?: 'light' | 'dark';
 };
 
 export default function SectionShell({
@@ -16,6 +17,7 @@ export default function SectionShell({
   bg = '',
   textAlign = 'left',
   className = '',
+  colorMode = 'dark',
 }: Props) {
   return (
     <section
@@ -24,6 +26,7 @@ export default function SectionShell({
         bg,
         compact ? 'py-8' : 'py-16',
         'px-4 md:px-6 lg:px-8',
+        colorMode === 'dark' ? 'text-white' : 'text-black',
         className
       )}
     >

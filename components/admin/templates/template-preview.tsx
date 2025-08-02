@@ -13,6 +13,7 @@ type TemplatePreviewProps = {
   mode: 'light' | 'dark'; // 🔥 used only for remount key
   onBlockClick?: (block: Block) => void;
   showJsonFallback?: boolean;
+  colorMode?: 'light' | 'dark';
 };
 
 const bgColorMap: Record<string, string> = {
@@ -32,6 +33,7 @@ export default function TemplatePreview({
   onBlockClick,
   showJsonFallback = false,
   mode,
+  colorMode = 'light',
 }: TemplatePreviewProps) {
   const previewBg = bgColorMap[colorScheme] || 'bg-gray-100';
 
@@ -75,7 +77,7 @@ export default function TemplatePreview({
                   ${onBlockClick ? 'cursor-pointer hover:ring hover:ring-blue-400/30' : ''}
                 `}
               >
-                <RenderBlock block={block} handleNestedBlockUpdate={onBlockClick} />
+                <RenderBlock block={block} handleNestedBlockUpdate={onBlockClick} showDebug={false} colorMode={colorMode} />
 
                 {/* {showJsonFallback && (
                   <details className="mt-3 text-xs text-gray-500 dark:text-gray-400">

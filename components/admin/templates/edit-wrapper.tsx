@@ -2,43 +2,69 @@
 
 import { useEffect, useState } from 'react';
 import TemplateEditor from '@/components/admin/templates/template-editor';
-import type { Snapshot } from '@/types/template';
 import { supabase } from '@/lib/supabaseClient';
 import { normalizeTemplate } from '@/admin/utils/normalizeTemplate';
+import type { Template, Snapshot } from '@/types/template';
+import { TemplateEditorProvider } from '@/context/template-editor-context';
 
-export default function EditWrapper({ slug }: { slug: string }) {
+type Props = {
+  slug: string;
+};
+
+export default function EditWrapper({ slug }: Props) {
   const [data, setData] = useState<Snapshot | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const load = async () => {
+    const loadTemplate = async () => {
       const { data: raw, error } = await supabase
         .from('templates')
         .select('*')
         .eq('slug', slug)
-        .single();
+        .maybeSingle<Template>();
 
-      if (!error && raw) {
-        const normalized = normalizeTemplate(raw);
-
-        // Defensive: ensure no top-level pages sneak through
-        if ('pages' in normalized) {
-          delete (normalized as any).pages;
-        }
-
-        setData(normalized);
-      } else {
+      if (error) {
+        console.error(`[EditWrapper] Supabase error for slug "${slug}":`, error.message);
         setData(null);
+        setLoading(false);
+        return;
       }
 
+      if (!raw) {
+        setData(null);
+        setLoading(false);
+        return;
+      }
+
+      const normalized = normalizeTemplate(raw);
+
+      // Defensive: strip accidental top-level `pages` if not wrapped in `data`
+      if ('pages' in normalized) {
+        delete (normalized as any).pages;
+      }
+
+      setData(normalized);
       setLoading(false);
     };
 
-    load();
+    loadTemplate();
   }, [slug]);
 
-  if (loading) return <div className="p-6 text-muted-foreground text-sm italic">Loading template...</div>;
-  if (!data) return <div>Template not found.</div>;
+  if (loading) {
+    return <div className="p-6 text-muted-foreground text-sm italic">Loading template...</div>;
+  }
 
-  return <TemplateEditor templateName={data.template_name} initialData={data} />;
+  if (!data) {
+    return <div className="p-6 text-red-500">Template not found.</div>;
+  }
+
+  return (
+    <TemplateEditorProvider templateName={slug} colorMode="light">
+      <TemplateEditor
+        templateName={data.template_name}
+        initialData={data}
+        colorMode="light"
+      />
+    </TemplateEditorProvider>
+  );
 }

@@ -43,7 +43,8 @@ type RenderProps = {
   disableInteraction?: boolean;
   compact?: boolean;
   previewOnly?: boolean;
-  verboseUi?: boolean;
+  showDebug?: boolean;
+  colorMode?: 'light' | 'dark';
 };
 
 export default function RenderBlock({
@@ -53,7 +54,8 @@ export default function RenderBlock({
   disableInteraction = false,
   compact = false,
   previewOnly = false,
-  verboseUi = isDev,
+  showDebug = false,
+  colorMode = 'light',
 }: RenderProps) {
   const { enabled: fixEnabled, draftFixes } = useBlockFix();
 
@@ -75,19 +77,20 @@ export default function RenderBlock({
     disableInteraction,
     compact,
     previewOnly,
-    verboseUi,
+    showDebug,
+    colorMode,
   };
 
   const wrapperProps = {
     'data-block-id': block._id || 'unknown',
     'data-block-type': block.type,
-    className: 'relative group',
+    className: `relative group w-full ${colorMode === 'light' ? 'bg-white text-black border border-zinc-200' : 'bg-neutral-900 text-white border border-white/5'}`,
     ref: (el: HTMLDivElement | null) => {
       if (el) (el as any).__squatterContent = safeContent;
     },
   };
 
-  const debugOverlay = verboseUi ? (
+  const debugOverlay = showDebug ? (
     <DebugOverlay position="bottom-right">
       {`[Block: ${block.type}]
 ID: ${block._id || 'n/a'}`}
@@ -100,7 +103,7 @@ ID: ${block._id || 'n/a'}`}
     <div {...wrapperProps}>
       {debugOverlay}
       <Component
-        {...commonProps as any}
+        {...(commonProps as any)}
         {...(block.type === 'grid' && handleNestedBlockUpdate
           ? { handleNestedBlockUpdate, parentBlock: block }
           : {})}

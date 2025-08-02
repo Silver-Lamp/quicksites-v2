@@ -68,7 +68,7 @@ export function SortableBlock({
       insertedId={insertedId}
       page={page}
     >
-      <RenderBlock block={block} />
+      <RenderBlock block={block} showDebug={false}/>
     </SortableBlockWrapper>
   );
 }

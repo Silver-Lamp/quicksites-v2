@@ -13,14 +13,14 @@ type Props = {
   block: Block | undefined;
   content?: Block['content'];
   compact?: boolean;
-  verboseUi?: boolean;
+  showDebug?: boolean;
 };
 
 export default function HeroRender({
   block,
   content,
   compact = false,
-  verboseUi = false,
+  showDebug = false,
 }: Props) {
   const heroRef = useRef<HTMLDivElement | null>(null);
   const final = content;
@@ -77,7 +77,7 @@ export default function HeroRender({
   if (activeLayoutMode === 'full_bleed' && hasImage) {
     return (
       <div ref={heroRef} className="relative w-full text-white max-h-[90vh] overflow-hidden">
-        {verboseUi && (
+        {showDebug && (
           <DebugOverlay>
             {`[HeroBlock]\nLayout: full_bleed\nImage: ${image_url || 'N/A'}`}
           </DebugOverlay>
@@ -117,7 +117,7 @@ export default function HeroRender({
         className="relative text-white rounded-lg overflow-hidden"
         textAlign="center"
       >
-        {verboseUi && (
+        {showDebug && (
           <DebugOverlay>
             {`[HeroBlock]\nLayout: background\nImage: ${image_url || 'N/A'}`}
           </DebugOverlay>
@@ -152,10 +152,10 @@ export default function HeroRender({
   return (
     <SectionShell
       compact={compact}
-      bg="bg-neutral-900 text-white rounded-lg shadow"
+      bg="bg-neutral-900 text-white rounded-lg shadow dark:bg-neutral-950 dark:text-white"
       textAlign="center"
     >
-      {verboseUi && (
+      {showDebug && (
         <DebugOverlay>
           {`[HeroBlock]\nLayout: inline\nImage: ${hasImage ? 'yes' : 'no'}`}
         </DebugOverlay>

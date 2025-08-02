@@ -6,23 +6,25 @@ import type { ReactNode } from 'react';
 import { useTemplateEditorState } from '@/components/admin/templates/use-template-editor-state';
 import type { Snapshot } from '@/types/template';
 
-const TemplateEditorContext = createContext<ReturnType<typeof useTemplateEditorState> | null>(null);
+const TemplateEditorContext = createContext<ReturnType<typeof useTemplateEditorState> & { colorMode: 'light' | 'dark' } | null>(null);
 
 export function TemplateEditorProvider({
   templateName,
   initialData,
   onRename,
   children,
+  colorMode,
 }: {
   templateName: string;
   initialData?: Snapshot;
   onRename?: (name: string) => void;
   children: ReactNode;
+  colorMode: 'light' | 'dark';
 }) {
-  const editor = useTemplateEditorState({ templateName, initialData, onRename });
+  const editor = useTemplateEditorState({ templateName, initialData, onRename, colorMode });
 
   return (
-    <TemplateEditorContext.Provider value={editor}>
+    <TemplateEditorContext.Provider value={{ ...editor, colorMode: colorMode as 'light' | 'dark' }}>
       {children}
     </TemplateEditorContext.Provider>
   );

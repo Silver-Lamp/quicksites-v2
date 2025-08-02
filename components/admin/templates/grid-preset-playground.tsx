@@ -10,7 +10,8 @@ export default function GridPresetPlayground() {
   const [selected, setSelected] = useState(defaultGridPresets[0]);
   const [blocks, setBlocks] = useState(selected.items.map(normalizeBlock));
   const [columns, setColumns] = useState(selected.columns);
-
+  const [colorMode, setColorMode] = useState('dark');
+  
   const applyPreset = (name: string) => {
     const preset = defaultGridPresets.find((p) => p.name === name);
     if (!preset) return;
@@ -43,7 +44,7 @@ export default function GridPresetPlayground() {
             id={`block-${block._id}`}
             className="border border-white/10 bg-muted rounded p-2 text-white"
           >
-            <RenderBlock block={block} />
+            <RenderBlock block={block} showDebug={false} colorMode={colorMode as 'light' | 'dark'} />
           </div>
         ))}
       </div>

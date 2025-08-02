@@ -11,9 +11,12 @@ type Props = {
   page: string;
   baseUrl: string;
   enableThemeWrapper?: boolean;
+  colorMode?: 'light' | 'dark';
+  className?: string;
+  id?: string;
 };
 
-export default function SiteRenderer({ site, page, baseUrl, enableThemeWrapper = false }: Props) {
+export default function SiteRenderer({ site, page, baseUrl, enableThemeWrapper = true, colorMode = 'dark', id = 'site-renderer', className = '' }: Props) {
   const pages = site.data?.pages || [];
   const currentPage = pages.find((p) => p.slug === page);
   if (!currentPage) return null;
@@ -60,14 +63,14 @@ export default function SiteRenderer({ site, page, baseUrl, enableThemeWrapper =
         schemaLocalBusiness={schemaLocalBusiness}
       />
 
-      <div className="min-h-screen text-white bg-black">
+      <div className={`min-h-screen ${colorMode === 'dark' ? 'text-white bg-black' : 'text-black bg-white'} ${className}`} id={id}>
         {showHeader && site.headerBlock && (
-          <div className="mb-8">
-            <RenderBlock block={site.headerBlock} />
+            <div className="mb-8 rounded-lg bg-white dark:bg-neutral-950 dark:text-white" id="site-renderer-header">
+            <RenderBlock block={site.headerBlock} showDebug={false} colorMode={colorMode} />
           </div>
         )}
 
-        <main className="py-8 space-y-8">
+        <main className="py-8 space-y-8 rounded-lg bg-white dark:bg-neutral-950 dark:text-white" id="site-renderer-main">
           {currentPage.content_blocks?.map((block, i) => {
             const layoutMode = block.type === 'hero' ? (block.content as Block)?.layout_mode : undefined;
             const isFullBleed = block.type === 'hero' && layoutMode === 'full_bleed';
@@ -77,15 +80,15 @@ export default function SiteRenderer({ site, page, baseUrl, enableThemeWrapper =
                 key={block._id || i}
                 className={isFullBleed ? '' : 'px-4 max-w-5xl mx-auto'}
               >
-                <RenderBlock block={block} />
+                <RenderBlock block={block} colorMode={colorMode} />
               </div>
             );
           })}
         </main>
 
         {showFooter && site.footerBlock && (
-          <div className="mt-12 border-t border-white/10">
-            <RenderBlock block={site.footerBlock} />
+          <div className="mt-12 border-t border-white/10 rounded-lg bg-white dark:bg-neutral-950 dark:text-white" id="site-renderer-footer">
+            <RenderBlock block={site.footerBlock} colorMode={colorMode} />
           </div>
         )}
       </div>
@@ -93,7 +96,7 @@ export default function SiteRenderer({ site, page, baseUrl, enableThemeWrapper =
   );
 
   return enableThemeWrapper ? (
-    <ThemeScope mode={theme === 'light' ? 'light' : 'dark'}>{content}</ThemeScope>
+    <ThemeScope mode={theme === 'light' ? 'light' : 'dark'} className="site-renderer-theme-scope">{content}</ThemeScope>
   ) : (
     content
   );

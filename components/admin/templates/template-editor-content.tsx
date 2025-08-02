@@ -133,6 +133,7 @@ export function EditorContent({
       ...updated,
       template_name: safeName,
       slug: safeSlug,
+      color_mode: updated.color_mode || 'dark',
     };
     setHistoryStack((prev) => pushWithLimit(prev, template, 10));
     setRedoStack([]);
@@ -192,7 +193,7 @@ export function EditorContent({
   return (
     <IndustryThemeScope industry={template.industry}>
       <Tabs defaultValue="preview">
-        <TabsList>
+        <TabsList className="rounded-lg">
           <TabsTrigger value="preview">Preview</TabsTrigger>
           <TabsTrigger value="history">History</TabsTrigger>
         </TabsList>
@@ -205,7 +206,7 @@ export function EditorContent({
     style={{ width: isMobile ? 0 : sidebarWidth }}
   >
     {!isMobile && (
-      <div className="sticky top-0 h-screen overflow-y-auto flex flex-col">
+      <div className="sticky top-0 h-screen overflow-y-auto flex flex-col rounded-lg" id="sidebar-settings">
         <div className="px-4 py-3 border-b border-white/10">
           <a href="/admin/templates/list" className="inline-block text-white hover:opacity-80 transition">
             <img
@@ -244,7 +245,7 @@ export function EditorContent({
     />
   </div>
   <div className="flex-1 overflow-x-hidden">
-    <ThemeScope mode={template.theme === 'light' ? 'light' : 'dark'}>
+    <ThemeScope mode={template.color_mode as 'light' | 'dark'}>
       <DevicePreviewWrapper theme={template.theme as Theme}>
         <IndustryThemeScope industry={template.industry}>
           <ClientOnly>
@@ -253,6 +254,7 @@ export function EditorContent({
               onChange={handleTemplateChange}
               industry={template.industry}
               errors={blockErrors ?? {}}
+              templateId={template.id || ''}
             />
           </ClientOnly>
         </IndustryThemeScope>
@@ -299,7 +301,9 @@ export function EditorContent({
               }, 0);
               return next;
             });
+            handleTemplateChange({ ...template, ...values, color_mode: template.color_mode as 'light' | 'dark' });
           }}
+          colorMode={template.color_mode as 'light' | 'dark'}
         />
         <TemplatePublishModal
           open={showModal}

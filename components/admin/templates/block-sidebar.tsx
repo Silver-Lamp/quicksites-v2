@@ -17,6 +17,7 @@ type Props = {
   onUndo?: (index: number) => void;
   onViewDiff?: (index: number) => void;
   undoAvailable?: boolean;
+  colorMode?: 'light' | 'dark';
 };
 
 export default function BlockSidebar({
@@ -31,6 +32,7 @@ export default function BlockSidebar({
   onUndo,
   onViewDiff,
   undoAvailable = false,
+  colorMode = 'dark',
 }: Props) {
   if (!block || typeof block._id !== 'string') return null;
 
@@ -61,6 +63,7 @@ export default function BlockSidebar({
             onClose();
           }}
           onClose={onClose}
+          colorMode={colorMode as 'light' | 'dark'}
         />
 
         {(onReplaceWithAI || onClone || onUndo || onViewDiff) && (

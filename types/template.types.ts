@@ -4,6 +4,7 @@ export type TemplateEntry = {
   industry: string;
   layout: string;
   color_scheme: string;
+  color_mode?: 'light' | 'dark';
   data: any; // consider replacing with TemplateSchema type if available
   created_at: string; // or Date
   updated_at: string; // or Date

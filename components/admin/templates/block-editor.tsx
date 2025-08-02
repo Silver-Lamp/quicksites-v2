@@ -11,7 +11,8 @@ export default function BlockEditor({
   onSave,
   onClose,
   template,
-}: BlockEditorProps) {
+  colorMode = 'dark',
+}: BlockEditorProps & { colorMode?: 'light' | 'dark' }) {
   const [mode, setMode] = useState<'form' | 'json'>('form');
   const [hasEditor, setHasEditor] = useState<boolean>(block.type in BLOCK_EDITORS);
 
@@ -32,7 +33,7 @@ export default function BlockEditor({
 
   if (mode === 'json' || !hasEditor) {
     return (
-      <div className="dark:bg-neutral-900 dark:text-white">
+      <div className={`${colorMode === 'dark' ? 'dark:bg-neutral-900 dark:text-white' : 'bg-white/5 border-white/10 text-black'}`}>
         {hasEditor && (
           <button
             className="mb-2 text-xs text-blue-400 underline"
@@ -55,7 +56,7 @@ export default function BlockEditor({
           </div>
         )}
 
-        <JsonFallbackEditor block={block} onSave={onSave} onClose={onClose} />
+        <JsonFallbackEditor block={block} onSave={onSave} onClose={onClose} colorMode={colorMode as 'light' | 'dark'} />
 
         {!hasEditor && (
           <div className="mt-4 p-2 bg-yellow-100 text-yellow-800 rounded text-sm dark:bg-yellow-900 dark:text-yellow-200">
@@ -74,7 +75,7 @@ export default function BlockEditor({
   });
 
   return (
-    <div className="space-y-4 bg-black text-white border border-black p-4 rounded">
+    <div className={`space-y-4 ${colorMode === 'dark' ? 'bg-black text-white border border-black' : 'bg-white/5 border-white/10 text-black'} p-4 rounded`}>
       <div className="flex justify-between items-center mb-3">
         <h3 className="text-lg font-semibold capitalize">{block.type} Editor</h3>
         <button

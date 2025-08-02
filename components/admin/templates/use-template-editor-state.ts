@@ -31,11 +31,13 @@ export function useTemplateEditorState({
   initialData,
   onRename,
   onSaveDraft,
+  colorMode,
 }: {
   templateName: string;
   initialData?: Snapshot | Template;
   onRename?: (newName: string) => void;
   onSaveDraft?: (rawJson: string) => void;
+  colorMode: 'light' | 'dark';
 }) {
   const fallback = createEmptyTemplate(templateName);
   const [blockErrors, setBlockErrors] = useState<Record<string, BlockValidationError[]>>({});
@@ -67,6 +69,7 @@ export function useTemplateEditorState({
       data: fixTemplatePages(base.data || { pages: [] }),
       is_site: base.is_site || false,
       published: base.published || false,
+      color_mode: colorMode,
     } as Snapshot;
 
     const errors: Record<string, BlockValidationError[]> = {};

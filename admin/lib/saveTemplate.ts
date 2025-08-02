@@ -7,7 +7,6 @@ const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 );
 
-// Remove only legacy top-level fields (not nested `data.pages`)
 function sanitizeTemplateData(raw: any) {
   const {
     slug,
@@ -16,6 +15,7 @@ function sanitizeTemplateData(raw: any) {
     color_scheme,
     industry,
     theme,
+    font,
     is_site,
     published,
     hero_url,
@@ -28,8 +28,9 @@ function sanitizeTemplateData(raw: any) {
     domain,
     custom_domain,
     id,
-    services, // optional legacy
-    pages, // ⚠️ ignore legacy top-level `pages`
+    color_mode,
+    services,
+    pages,
     ...rest
   } = raw;
 
@@ -40,23 +41,43 @@ function sanitizeTemplateData(raw: any) {
     ...rest,
     pages: fallbackPages,
     services: fallbackServices,
+    color_mode,
+    theme,
+    font,
   };
 }
 
-// Save template (upsert)
-export async function saveTemplate(template: Omit<Template, 'services'>) {
+export async function saveTemplate(template: Omit<Template, 'services' | 'font'>, templateId?: string) {
+  const id = templateId || template.id;
+  if (!id || id === '') {
+    throw new Error('Missing or invalid template.id');
+  }
+
   const sanitizedData = sanitizeTemplateData(template);
-  console.log('🧪 Upserting with sanitized data:', sanitizedData);
+
+  const upsertPayload = {
+    id,
+    data: sanitizedData,
+    color_mode: sanitizedData.color_mode,
+    template_name: template.template_name,
+    layout: template.layout,
+    color_scheme: template.color_scheme,
+    industry: template.industry,
+    theme: template.theme,
+    font: template.font,
+    brand: template.brand || 'default',
+    site_id: template.site_id || null,
+    slug: template.slug,
+    verified: template.verified || false,
+    published: template.published || false,
+    phone: (template as any).phone || null,
+  };
+
+  console.log('🟣 Upserting with payload:', upsertPayload);
 
   const { data, error } = await supabase
     .from('templates')
-    .upsert(
-      {
-        ...template,
-        data: sanitizedData,
-      },
-      { onConflict: 'id' }
-    )
+    .upsert(upsertPayload, { onConflict: 'id' })
     .select('*')
     .maybeSingle();
 

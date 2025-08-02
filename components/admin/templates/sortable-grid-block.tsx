@@ -98,7 +98,7 @@ export default function SortableGridBlock({
             onEdit={onEdit}
           >
             <div id={`block-${block._id}`}>
-              <RenderBlock block={block} />
+              <RenderBlock block={block} showDebug={false} />
             </div>
           </SortableBlockItem>
         ))}

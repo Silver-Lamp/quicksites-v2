@@ -36,6 +36,7 @@ export const TemplateSaveSchema = z.object({
   phone: z.string().optional(),
   layout: z.string(),
   color_scheme: z.string(),
+  color_mode: z.string().optional(),
   industry: z.string(),
   theme: z.string(),
   is_site: z.boolean().optional(),

@@ -12,7 +12,7 @@ export function IndustryThemeScope({ industry = 'towing', children }: { industry
         '--primary-color': theme.accentColor,
         '--radius': theme.borderRadius,
       } as React.CSSProperties}
-      className="font-[var(--font-family)] text-white"
+      className="font-[var(--font-family)] text-white rounded-lg"
     >
       {children}
     </div>

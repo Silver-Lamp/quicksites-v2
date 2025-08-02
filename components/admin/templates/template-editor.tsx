@@ -25,11 +25,13 @@ export default function TemplateEditor({
   initialData,
   onRename,
   initialMode = 'template',
+  colorMode = 'light',
 }: {
   templateName: string;
   initialData?: Snapshot;
   onRename?: (newName: string) => void;
   initialMode?: 'template' | 'site';
+  colorMode?: 'light' | 'dark';
 }) {
   const router = useRouter();
   const [showVectorDrawer, setShowVectorDrawer] = useState(false);
@@ -55,10 +57,10 @@ export default function TemplateEditor({
     nameExists,
     blockErrors,
     setBlockErrors
-  } = useTemplateEditorState({ templateName, initialData, onRename });
+  } = useTemplateEditorState({ templateName, initialData, onRename, colorMode });
 
   usePageCountDebugger(template as Template);
-  
+
   const {
     insertBlock,
     recentlyInsertedBlockId,

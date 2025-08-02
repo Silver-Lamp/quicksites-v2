@@ -67,7 +67,12 @@ export default function ThemePanel({ template, onChange }: { template: Template;
         <div>
           <Label>Dark Mode</Label>
           <select
-            onChange={(e) => setTheme({ glow: [], fontFamily: template.theme || 'sans', darkMode: e.target.value as 'dark' | 'light' })}
+            value={template.color_mode || 'dark'} // ✅ bound
+            onChange={(e) => {
+              const mode = e.target.value as 'light' | 'dark';
+              onChange({ ...template, color_mode: mode });
+              setTheme({ glow: [], fontFamily: template.theme || 'sans', darkMode: mode });
+            }}
             className="w-full bg-gray-800 text-white border border-gray-700 px-2 py-1 rounded mt-1"
           >
             {modes.map((m) => (
@@ -77,6 +82,7 @@ export default function ThemePanel({ template, onChange }: { template: Template;
             ))}
           </select>
         </div>
+
       </div>
 
       <ThemePreviewCard theme={template.theme || ''} onSelectFont={(font: string) => onChange({ ...template, theme: font })} />

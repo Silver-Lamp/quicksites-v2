@@ -77,8 +77,8 @@ export default function AdminSidebarLayout({ children }: { children: ReactNode }
 
   return (
     <SidebarNavProvider role={role} groups={navItems}>
-      <div className="flex min-h-screen bg-black text-white">
-        <aside className="w-64 bg-zinc-900 p-4 hidden md:block border-r border-zinc-700">
+      <div className="flex min-h-screen bg-black text-white" id="admin-sidebar-layout">
+        <aside className="w-64 bg-zinc-900 p-4 hidden md:block border-r border-zinc-700 rounded-lg" id="admin-sidebar">
           <h2 className="text-lg font-bold mb-4">Admin Panel</h2>
           {process.env.NODE_ENV !== 'production' && (
             <div className="text-xs text-gray-400 mb-4">Role: {role}</div>
@@ -86,7 +86,7 @@ export default function AdminSidebarLayout({ children }: { children: ReactNode }
           <GroupedNav />
         </aside>
 
-        <main className="flex-1 p-6 overflow-auto">{children}</main>
+        <main className="flex-1 p-6 overflow-auto" id="admin-sidebar-content">{children}</main>
       </div>
     </SidebarNavProvider>
   );

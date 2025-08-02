@@ -13,6 +13,7 @@ import { PanelProvider } from '@/components/ui/panel-context';
 import SquatBotPanel from '@/components/dev/squat-bot-panel';
 import BlockInspectorOverlay from '@/components/dev/block-inspector-overlay';
 import { TooltipProvider } from '@/components/ui/tooltip';
+import ThemeScope from '@/components/ui/theme-scope';
 
 const isProd = process.env.NODE_ENV === 'production';
 
@@ -39,30 +40,8 @@ export const metadata = {
 };
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
-  // ✅ Capture cookies and headers safely before async
-  // const { cookieStore, headerStore } = await extractUserContext();
-
-  // const context = await getRequestContext(
-  //   {
-  //     cookieStore,
-  //     headerStore,
-  //   },
-  //   true // include supabase
-  // );
-
-  // const {
-  //   userId = '',
-  //   userEmail = '',
-  //   role = 'guest',
-  //   userAgent,
-  //   ip,
-  //   abVariant,
-  //   sessionId,
-  //   traceId,
-  // } = context;
-
   return (
-    <html lang="en" className="dark" suppressHydrationWarning>
+    <html lang="en" suppressHydrationWarning>
       <head>
         <title>QuickSites | One-Click Local Websites</title>
       </head>
@@ -71,9 +50,11 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         <SessionProvider>
           <PanelProvider>
             <TooltipProvider>
-              {children}
-              {!isProd && <SquatBotPanel />}
-              {!isProd && <BlockInspectorOverlay />}
+              <ThemeScope mode="dark">
+                {children}
+                {!isProd && <SquatBotPanel />}
+                {!isProd && <BlockInspectorOverlay />}
+              </ThemeScope>
             </TooltipProvider>
           </PanelProvider>
         </SessionProvider>

@@ -33,6 +33,7 @@ export type TemplateData = {
   service_areas?: string[];
   site_id?: string | null;
   phone?: string;
+  color_mode?: 'light' | 'dark';
 };
 
 export type Snapshot = {
@@ -100,6 +101,7 @@ export type Template = Snapshot & {
   banner_url?: string;
   logo_url?: string;
   team_url?: string;
+  color_mode?: 'light' | 'dark';
 };
 
 export type TemplateSnapshot = Snapshot;

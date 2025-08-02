@@ -1,3 +1,4 @@
+// LiveEditorPreview.tsx
 'use client';
 
 import {
@@ -15,7 +16,7 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { useState, useEffect } from 'react';
-import { GripVertical, Pencil, Trash2, PlusCircle } from 'lucide-react';
+import { GripVertical, Pencil, Trash2, PlusCircle, Moon, Sun } from 'lucide-react';
 import { createDefaultBlock } from '@/lib/createDefaultBlock';
 import RenderBlock from '@/components/admin/templates/render-block';
 import { DynamicBlockEditor } from '@/components/editor/dynamic-block-editor';
@@ -23,6 +24,8 @@ import BlockAdderGrouped from '@/components/admin/block-adder-grouped';
 import { Template } from '@/types/template';
 import { BlockValidationError } from '@/hooks/validateTemplateBlocks';
 import SafeTriggerButton from '@/components/ui/safe-trigger-button';
+import { saveTemplate } from '@/admin/lib/saveTemplate';
+import { TemplateThemeWrapper } from '@/components/theme/template-theme-wrapper';
 
 function BlockWrapper({ block, children, onEdit, onDelete, showOutlines }: any) {
   const {
@@ -42,13 +45,13 @@ function BlockWrapper({ block, children, onEdit, onDelete, showOutlines }: any) 
     <div
       ref={setNodeRef}
       style={style}
-      className={`group relative rounded p-2 ${
+      className={`group relative rounded p-2 transition-all ${
         showOutlines
           ? 'border border-dashed border-purple-700/40'
-          : 'border border-white/10'
-      }`}
+          : 'border border-gray-300 dark:border-white/10'
+      } bg-white dark:bg-zinc-900`}
     >
-      <div className="flex justify-between items-center mb-1 opacity-80 text-xs text-white">
+      <div className="flex justify-between items-center mb-1 opacity-80 text-xs text-black dark:text-white">
         <div className="flex items-center gap-1">
           <GripVertical
             className="w-3 h-3 text-gray-500 cursor-move"
@@ -58,10 +61,10 @@ function BlockWrapper({ block, children, onEdit, onDelete, showOutlines }: any) 
           <span className="uppercase tracking-wide">{block.type}</span>
         </div>
         <div className="hidden group-hover:flex gap-2">
-          <button onClick={onEdit} className="text-xs text-blue-400 underline">
+          <button onClick={onEdit} className="text-xs text-blue-500 underline">
             <Pencil size={16} />
           </button>
-          <button onClick={onDelete} className="text-xs text-red-400 underline">
+          <button onClick={onDelete} className="text-xs text-red-500 underline">
             <Trash2 size={16} />
           </button>
         </div>
@@ -76,21 +79,22 @@ export function LiveEditorPreview({
   onChange,
   industry,
   errors,
+  templateId,
 }: {
   template: Template;
   onChange: (template: Template) => void;
   industry: string;
   errors: Record<string, BlockValidationError[]>;
+  templateId: string;
 }) {
   const sensors = useSensors(useSensor(PointerSensor));
   const [layoutMode, setLayoutMode] = useState<'stack' | 'grid'>('stack');
   const [editing, setEditing] = useState<any | null>(null);
   const [lastInsertedId, setLastInsertedId] = useState<string | null>(null);
-  const [selectedPageIndex, setSelectedPageIndex] = useState(0); // ✅ now editable
+  const [selectedPageIndex, setSelectedPageIndex] = useState(0);
   const [isCentered, setIsCentered] = useState(false);
   const [showOutlines, setShowOutlines] = useState(false);
 
-  // 🧹 Strip template.pages on first load
   useEffect(() => {
     if ('pages' in template) {
       console.warn('🧹 Removing top-level template.pages from runtime state');
@@ -100,7 +104,14 @@ export function LiveEditorPreview({
     }
   }, []);
 
-  // 🛡 Prevent fallback unless truly no usable pages exist
+  useEffect(() => {
+    if (template.color_mode === 'dark') {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+  }, [template.color_mode]);
+
   useEffect(() => {
     const dataPages = template?.data?.pages;
     const rootPages = (template as any)?.pages;
@@ -110,8 +121,7 @@ export function LiveEditorPreview({
       dataPages.length > 0 &&
       dataPages.some((p) => Array.isArray(p?.content_blocks));
 
-    const hasRootPages =
-      Array.isArray(rootPages) && rootPages.length > 0;
+    const hasRootPages = Array.isArray(rootPages) && rootPages.length > 0;
 
     if (!hasValidDataPages && !hasRootPages) {
       console.warn('⚠️ Fallback page injected — no usable pages found', {
@@ -149,6 +159,23 @@ export function LiveEditorPreview({
 
   const selectedPage = pages[selectedPageIndex] ?? null;
 
+  const updateAndSave = async (updated: Template) => {
+    onChange({ ...updated });
+    try {
+      const validId = updated.id && updated.id.trim() !== '' ? updated.id : undefined;
+      if (!validId) throw new Error('Missing template ID');
+      await saveTemplate(updated, validId);
+    } catch (err) {
+      console.error('❌ Failed to save template update', err);
+    }
+  };
+
+  const toggleColorMode = async () => {
+    const mode = template.color_mode === 'dark' ? 'light' : 'dark';
+    const updated = { ...template, color_mode: mode as 'light' | 'dark' };
+    await updateAndSave(updated);
+  };
+
   if (!selectedPage) {
     return (
       <div className="p-8 text-white text-center">
@@ -160,35 +187,44 @@ export function LiveEditorPreview({
     );
   }
 
-  const updateAndSave = (updated: Template) => {
-    onChange({ ...updated });
-  };
-
   return (
-    <div className="w-full max-w-none px-0">
-      <div className="relative dark:bg-neutral-900 text-white min-h-screen">
-        <div className="px-0 sm:px-2 xl:px-0 pb-20 pt-4 space-y-6 w-full xl:max-w-[90%] xl:mx-auto">
-          {/* Page switcher (basic dev version) */}
-          <div className="flex gap-2 mb-4 text-sm text-white/70">
-            {pages.map((p: any, i: number) => (
-              <button
-                key={p.id}
-                onClick={() => setSelectedPageIndex(i)}
-                className={`px-3 py-1 rounded ${
-                  i === selectedPageIndex
-                    ? 'bg-purple-700 text-white'
-                    : 'bg-zinc-800 hover:bg-zinc-700'
-                }`}
-              >
-                {p.title || p.slug || `Page ${i + 1}`}
-              </button>
-            ))}
-          </div>
+    <TemplateThemeWrapper colorMode={template.color_mode as 'light' | 'dark'}>
+      <div className="w-full max-w-none px-0">
+        <div className="absolute top-0 right-0 z-10 m-2">
+          <button
+            onClick={toggleColorMode}
+            className="flex items-center gap-1 px-3 py-1 text-sm text-white bg-zinc-800 rounded hover:bg-zinc-700"
+          >
+            {template.color_mode === 'dark' ? <Moon size={16} /> : <Sun size={16} />}
+            {template.color_mode === 'dark' ? 'Dark' : 'Light'}
+          </button>
+        </div>
 
-          {selectedPage?.show_header !== false && template.headerBlock && (
-            <RenderBlock block={template.headerBlock} />
-          )}
+        <div className="relative min-h-screen">
+          <div className="px-0 sm:px-2 xl:px-0 pb-20 pt-4 space-y-6 w-full xl:max-w-[90%] xl:mx-auto">
+            <div className="flex gap-2 mb-4 text-sm text-black dark:text-white/70">
+              {pages.map((p: any, i: number) => (
+                <button
+                  key={p.id}
+                  onClick={() => setSelectedPageIndex(i)}
+                  className={`px-3 py-1 rounded ${
+                    i === selectedPageIndex
+                      ? 'bg-purple-700 text-white'
+                      : 'bg-zinc-200 hover:bg-zinc-300 dark:bg-zinc-800 dark:hover:bg-zinc-700'
+                  }`}
+                >
+                  {p.title || p.slug || `Page ${i + 1}`}
+                </button>
+              ))}
+            </div>
 
+            {selectedPage?.show_header !== false && template.headerBlock && (
+              <RenderBlock
+                block={template.headerBlock}
+                showDebug={false}
+                colorMode={template.color_mode as 'light' | 'dark'}
+              />
+            )}
           <DndContext
             sensors={sensors}
             collisionDetection={closestCenter}
@@ -227,7 +263,7 @@ export function LiveEditorPreview({
                   }}
                 >
                     <div id={`block-${block._id}`} data-block-id={block._id}>
-                      <RenderBlock block={block} />
+                      <RenderBlock block={block} showDebug={false} colorMode={template.color_mode as 'light' | 'dark'}/>
                     </div>
                     <BlockAdderGrouped
                       onAdd={(type) => {
@@ -297,37 +333,38 @@ export function LiveEditorPreview({
           </DndContext>
 
           {selectedPage?.show_footer !== false && template.footerBlock && (
-            <RenderBlock block={template.footerBlock} />
+            <RenderBlock block={template.footerBlock} showDebug={false} colorMode={template.color_mode as 'light' | 'dark'}/>
           )}
         </div>
       </div>
-      {editing && (
-  <div className="fixed inset-0 bg-black/90 z-[999] p-6 overflow-auto flex items-center justify-center">
-    <div className="w-full max-w-4xl bg-neutral-900 border border-white/10 rounded-xl shadow-xl overflow-hidden">
-      <DynamicBlockEditor
-        block={editing}
-        onSave={(updatedBlock) => {
-          const updated = { ...template };
-          for (const page of updated.data.pages) {
-            const index = page.content_blocks.findIndex(
-              (b) => b._id === updatedBlock._id
-            );
-            if (index !== -1) {
-              page.content_blocks[index] = updatedBlock;
-              break;
-            }
-          }
-          updateAndSave(updated);
-          setEditing(null);
-        }}
-        onClose={() => setEditing(null)}
-        errors={errors}
-        template={template}
-      />
-    </div>
-  </div>
-)}
 
+      {editing && (
+        <div className="fixed inset-0 bg-black/90 z-[999] p-6 overflow-auto flex items-center justify-center">
+          <div className="w-full max-w-4xl bg-neutral-900 border border-white/10 rounded-xl shadow-xl overflow-hidden">
+            <DynamicBlockEditor
+              block={editing}
+              onSave={(updatedBlock) => {
+                const updated = { ...template };
+                for (const page of updated.data.pages) {
+                  const index = page.content_blocks.findIndex(
+                    (b) => b._id === updatedBlock._id
+                  );
+                  if (index !== -1) {
+                    page.content_blocks[index] = updatedBlock;
+                    break;
+                  }
+                }
+                updateAndSave(updated);
+                setEditing(null);
+              }}
+              onClose={() => setEditing(null)}
+              errors={errors}
+              template={template}
+            />
+          </div>
+        </div>
+      )}
     </div>
+    </TemplateThemeWrapper>
   );
 }

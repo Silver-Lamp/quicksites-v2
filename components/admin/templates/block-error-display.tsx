@@ -4,13 +4,13 @@
 import { AlertTriangle } from 'lucide-react';
 import { blockContentExamples } from '@/lib/blockContentExamples';
 
-export function BlockErrorDisplay({ messages, blockType }: { messages?: string[]; blockType?: string }) {
+export function BlockErrorDisplay({ messages, blockType, colorMode = 'dark' }: { messages?: string[]; blockType?: string; colorMode?: 'light' | 'dark' }) {
   if (!messages?.length) return null;
 
   const example = blockType ? blockContentExamples?.[blockType] : null;
 
   return (
-    <div className="bg-red-500/10 border border-red-500 rounded p-2 mt-2 text-sm text-red-300 space-y-1">
+    <div className={`${colorMode === 'dark' ? 'bg-red-500/10 border border-red-500' : 'bg-red-500/10 border border-red-500 text-black'} rounded p-2 mt-2 text-sm text-red-300 space-y-1`}>
       <div className="flex items-center gap-1 font-medium">
         <AlertTriangle className="w-4 h-4" />
         Validation Error{messages.length > 1 ? 's' : ''}

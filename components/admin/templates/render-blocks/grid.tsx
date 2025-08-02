@@ -63,7 +63,7 @@ export default function GridRender({
     return (
       <div className="grid gap-2 grid-cols-2 text-sm border rounded p-2">
         {normalizedItems.slice(0, 2).map((b: Block, i: number) => (
-          <RenderBlock key={i} block={b} compact />
+          <RenderBlock key={i} block={b} compact showDebug={false} />
         ))}
         {normalizedItems.length === 0 && (
           <div className="text-gray-400 italic col-span-2">No blocks in grid</div>
@@ -128,7 +128,7 @@ export default function GridRender({
         <div className={`grid grid-cols-${columns} gap-4`}>
           {normalizedItems.map((b: Block, i: number) => (
             <div key={b._id || i}>
-              <RenderBlock block={b} />
+              <RenderBlock block={b} showDebug={false} />
             </div>
           ))}
         </div>

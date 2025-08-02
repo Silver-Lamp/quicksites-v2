@@ -5,6 +5,7 @@ import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
 import SiteRenderer from '@/components/sites/site-renderer';
 import { generatePageMetadata } from '../../../../lib/seo/generateMetadata';
+import { TemplateEditorProvider } from '@/context/template-editor-context';
 
 export async function generateMetadata({ params }: { params: { slug: string; page: string } }): Promise<Metadata> {
   const supabase = createClient(
@@ -43,12 +44,17 @@ export default async function SitePage({ params }: { params: { slug: string; pag
 
   if (!site || error) return notFound();
 
+  const colorMode = site.color_mode as 'light' | 'dark';
+
   return (
+    <TemplateEditorProvider templateName={site.template_name} colorMode={colorMode} initialData={site}>
     <SiteRenderer
       site={site}
       page={params.page}
       baseUrl="https://quicksites.ai/sites"
       enableThemeWrapper
+      colorMode={colorMode}
     />
+    </TemplateEditorProvider>
   );
 }

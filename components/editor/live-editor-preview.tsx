@@ -214,18 +214,18 @@ export function LiveEditorPreview({
                     : 'space-y-6'
                 }
               >
-                {(selectedPage?.content_blocks ?? []).map((block: any, blockIndex: number) => (
-                  <BlockWrapper
-                    key={block._id}
-                    block={block}
-                    showOutlines={showOutlines}
-                    onEdit={() => setEditing(block)} // ✅ this is the missing line
-                    onDelete={() => {
-                      const updated = { ...template };
-                      updated.data.pages[selectedPageIndex].content_blocks.splice(blockIndex, 1);
-                      updateAndSave(updated);
-                    }}
-                  >
+              {(selectedPage?.content_blocks ?? []).map((block: any, blockIndex: number) => (
+                <BlockWrapper
+                  key={block._id || `block-${blockIndex}`}
+                  block={block}
+                  showOutlines={showOutlines}
+                  onEdit={() => setEditing(block)}
+                  onDelete={() => {
+                    const updated = { ...template };
+                    updated.data.pages[selectedPageIndex].content_blocks.splice(blockIndex, 1);
+                    updateAndSave(updated);
+                  }}
+                >
                     <div id={`block-${block._id}`} data-block-id={block._id}>
                       <RenderBlock block={block} />
                     </div>

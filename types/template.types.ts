@@ -11,4 +11,5 @@ export type TemplateEntry = {
   published: boolean;
   custom_domain: string | null;
   is_site: boolean;
+  phone: string | null;
 };

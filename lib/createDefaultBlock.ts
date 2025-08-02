@@ -4,8 +4,13 @@ import { BLOCK_TYPES } from '@/types/blocks';
 import crypto from 'crypto';
 import { normalizeBlock } from '@/types/blocks';
 
+// Always generates a valid _id
+function generateBlockId(): string {
+  return crypto.randomUUID?.() || `${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+}
+
 export function createDefaultBlock(type: BlockType): BlockWithId {
-  const _id = crypto.randomUUID?.() || Date.now().toString();
+  const _id = generateBlockId();
 
   switch (type) {
     case 'text':
@@ -78,7 +83,10 @@ export function createDefaultBlock(type: BlockType): BlockWithId {
         _id,
         content: {
           columns: 2,
-          items: [createDefaultBlock('text'), createDefaultBlock('image')],
+          items: [
+            { ...createDefaultBlock('text'), _id: generateBlockId() },
+            { ...createDefaultBlock('image'), _id: generateBlockId() },
+          ],
         },
       });
 

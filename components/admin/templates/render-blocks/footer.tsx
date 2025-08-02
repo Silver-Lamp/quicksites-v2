@@ -53,9 +53,15 @@ type Props = {
   block?: Block;
   content?: Block['content'];
   compact?: boolean;
+  colorMode?: 'light' | 'dark';
 };
 
-export default function FooterRender({ block, content, compact = false }: Props) {
+export default function FooterRender({
+  block,
+  content,
+  compact = false,
+  colorMode = 'dark',
+}: Props) {
   const final = content || block?.content;
 
   const fullAddress = final ? `${final.address || '123 Main St'}, ${final.cityState || ''}` : null;
@@ -77,24 +83,30 @@ export default function FooterRender({ block, content, compact = false }: Props)
     links = [],
   } = final;
 
+  const bgColor = colorMode === 'light' ? 'bg-white' : 'bg-neutral-950';
+  const textColor = colorMode === 'light' ? 'text-gray-900' : 'text-white';
+  const subText = colorMode === 'light' ? 'text-gray-600' : 'text-gray-400';
+  const linkColor = colorMode === 'light' ? 'text-blue-600 hover:text-blue-700' : 'text-yellow-400 hover:text-yellow-500';
+  const headingColor = colorMode === 'light' ? 'text-black' : 'text-white';
+
   if (compact) {
     return (
-      <SectionShell compact className="bg-white text-gray-900 dark:bg-neutral-900 dark:text-white text-xs rounded" textAlign="left">
+      <SectionShell compact className={`${bgColor} ${textColor} text-xs rounded`} textAlign="left">
         <p className="font-semibold">{businessName}</p>
-        <p className="text-gray-600 dark:text-gray-400">{cityState}</p>
+        <p className={subText}>{cityState}</p>
       </SectionShell>
     );
   }
 
   return (
-    <footer className="bg-white text-gray-900 dark:bg-neutral-950 dark:text-white px-6 py-10 text-sm mt-10">
+    <footer className={`${bgColor} ${textColor} px-6 py-10 text-sm mt-10`}>
       <div className="max-w-6xl mx-auto flex flex-col md:flex-row justify-between gap-8">
         <div>
-          <h4 className="font-bold uppercase mb-3 text-black dark:text-white">Quick Links</h4>
+          <h4 className={`font-bold uppercase mb-3 ${headingColor}`}>Quick Links</h4>
           <ul className="space-y-1">
             {links.map((link: { href: string; label: string }, i: number) => (
               <li key={i}>
-                <Link href={link.href} className="text-blue-600 hover:underline dark:text-yellow-400">
+                <Link href={link.href} className={`${linkColor} hover:underline`}>
                   {link.label}
                 </Link>
               </li>
@@ -102,21 +114,21 @@ export default function FooterRender({ block, content, compact = false }: Props)
           </ul>
         </div>
         <div>
-          <h4 className="font-bold uppercase mb-3 text-black dark:text-white">Company Info</h4>
-          <p className="font-semibold">{businessName}</p>
-          <p>
+          <h4 className={`font-bold uppercase mb-3 ${headingColor}`}>Company Info</h4>
+          <p className={`font-semibold ${textColor}`}>{businessName}</p>
+          <p className={textColor}>
             {address}
             <br />
             {cityState}
           </p>
-          <p className="mt-1">{phone}</p>
+          <p className={`mt-1 ${textColor}`}>{phone}</p>
 
           {coords && (
             <LeafletMap coords={coords} businessName={businessName} fullAddress={fullAddress!} />
           )}
         </div>
       </div>
-      <div className="text-center mt-8 text-xs text-gray-600 dark:text-gray-400">
+      <div className={`text-center mt-8 text-xs ${subText}`}>
         © {new Date().getFullYear()} {businessName}. Fast, Reliable, Local Service 24/7.
       </div>
     </footer>

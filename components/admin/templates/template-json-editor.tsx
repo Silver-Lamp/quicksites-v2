@@ -129,7 +129,7 @@ export default function TemplateJsonEditor({
 
   return (
     <div className="space-y-2">
-      <div className="flex justify-between items-center">
+      <div className="flex  justify-start items-start gap-2">
         <h3 className="text-white text-sm font-semibold">JSON Editor (Layout Only)</h3>
         <div className="flex gap-2">
           <Button variant="secondary" size="sm" onClick={handlePrettify}>

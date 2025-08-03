@@ -1,4 +1,3 @@
-// app/admin/templates/block-editors/testimonial-editor.tsx
 'use client';
 
 import { useState } from 'react';
@@ -13,7 +12,6 @@ import { CSS } from '@dnd-kit/utilities';
 import type { Block } from '@/types/blocks';
 import type { BlockEditorProps } from './index';
 import BlockField from './block-field';
-import { Switch } from '@/components/ui/switch';
 import TestimonialBlockComponent from '@/components/admin/templates/render-blocks/testimonial';
 import { supabase } from '@/lib/supabaseClient';
 import Image from 'next/image';
@@ -82,20 +80,9 @@ export default function TestimonialEditor({ block, onSave, onClose, errors = {},
   const [editing, setEditing] = useState<any | null>(null);
   const [randomized, setRandomized] = useState<boolean>((block.content as any)?.randomized || false);
   const [preview, setPreview] = useState(true);
-  const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [aiPrompt, setAiPrompt] = useState('');
   const [loading, setLoading] = useState(false);
-  const fieldErrors = extractFieldErrors(errors as unknown as string[]); // now accepts Record<string, BlockValidationError[]>
-
-async function uploadAvatar(file: File, blockId: string): Promise<string | null> {
-  const filename = `avatars/${blockId}-${Date.now()}.${file.name.split('.').pop()}`;
-  const { data, error } = await supabase.storage.from('public').upload(filename, file, {
-    upsert: true,
-  });
-  if (error) return null;
-  return supabase.storage.from('public').getPublicUrl(filename).data.publicUrl;
-}
-
+  const fieldErrors = extractFieldErrors(errors as unknown as string[]);
 
   const handleSave = () => {
     const content = {
@@ -202,15 +189,13 @@ async function uploadAvatar(file: File, blockId: string): Promise<string | null>
         {preview && (
           <div className="bg-neutral-900 p-4 mt-2 rounded border border-white/10">
             <TestimonialBlockComponent
-              block={
-                {
+              block={{
                 ...block,
                 content: {
                   testimonials: testimonials.map(({ _id, ...t }: { _id: string; [key: string]: any }) => t),
                   randomized,
                 },
-              } as unknown as Block
-              }
+              } as Block}
             />
           </div>
         )}
@@ -230,6 +215,54 @@ async function uploadAvatar(file: File, blockId: string): Promise<string | null>
           Save
         </button>
       </div>
+
+      {/* Custom Modal */}
+      {editing && (
+        <div className="fixed inset-0 z-[9999] bg-black/60 backdrop-blur-sm flex items-center justify-center">
+          <div className="bg-white text-black p-6 rounded-lg w-[90vw] max-w-md shadow-xl space-y-4">
+            <h3 className="text-lg font-semibold">Edit Testimonial</h3>
+
+            <BlockField
+              type="text"
+              label="Quote"
+              value={editing.quote}
+              onChange={(v) => setEditing((e: any) => ({ ...e, quote: v }))}
+            />
+            <BlockField
+              type="text"
+              label="Attribution"
+              value={editing.attribution}
+              onChange={(v) => setEditing((e: any) => ({ ...e, attribution: v }))}
+            />
+            <BlockField
+              type="number"
+              label="Rating"
+              value={editing.rating?.toString() || '5'}
+              onChange={(v) => setEditing((e: any) => ({ ...e, rating: Number(v) }))}
+            />
+
+            <div className="flex justify-end gap-2 pt-2">
+              <button
+                onClick={() => setEditing(null)}
+                className="text-sm px-4 py-2 border border-gray-400 rounded hover:bg-gray-100"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  setTestimonials((prev: any[]) =>
+                    prev.map((t) => (t._id === editing._id ? editing : t))
+                  );
+                  setEditing(null);
+                }}
+                className="text-sm px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+              >
+                Save
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

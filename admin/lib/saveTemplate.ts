@@ -64,7 +64,7 @@ export async function saveTemplate(template: Omit<Template, 'services' | 'font'>
     color_scheme: template.color_scheme,
     industry: template.industry,
     theme: template.theme,
-    font: template.font,
+    // font: template.font,
     brand: template.brand || 'default',
     site_id: template.site_id || null,
     slug: template.slug,

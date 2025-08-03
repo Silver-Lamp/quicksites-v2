@@ -12,14 +12,14 @@ const showBezel = false;
 
 export default function DevicePreviewWrapper({
   children,
-  showDebug = true,
+  showDebug = false,
   theme = 'dark',
 }: {
   children: React.ReactNode;
   showDebug?: boolean;
   theme?: Theme;
 }) {
-  const [mode, setMode] = useState<Mode>('desktop');
+  const [mode, setMode] = useState<Mode>('tablet');
   const [orientation, setOrientation] = useState<Orientation>('portrait');
   const [showInspector, setShowInspector] = useState(showDebug);
   const previewRef = useRef<HTMLDivElement>(null);
@@ -122,7 +122,7 @@ export default function DevicePreviewWrapper({
 
   return (
     <div className="space-y-4">
-      <div className="flex justify-end gap-2 flex-wrap">
+      <div className="flex justify-start gap-2 flex-wrap">
         {(['mobile', 'tablet', 'desktop'] as Mode[]).map((opt) => (
           <Button
             key={opt}

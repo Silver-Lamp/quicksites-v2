@@ -164,7 +164,7 @@ Service: ${formData.service || 'N/A'}
 
   return (
     <div className={mode}>
-      <ThemeScope mode={mode} className="dark:bg-neutral-950">
+      <ThemeScope mode={mode} className="dark:bg-neutral-950 rounded-lg p-4">
         <h2 className="text-center text-2xl font-bold text-blue-900 dark:text-white mb-6 p-4 bg-white dark:bg-neutral-950">{title}</h2>
 
         {submitted ? (

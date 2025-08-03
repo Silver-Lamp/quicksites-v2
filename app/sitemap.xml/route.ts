@@ -1,12 +1,10 @@
-// app/sitemap.xml/route.ts
 export const dynamic = 'force-dynamic';
 
 import { getSupabase } from '@/lib/supabase/server';
 import { NextResponse } from 'next/server';
-import type { Page } from '@/types/page';
 
-function escapeXml(unsafe: string) {
-  return unsafe
+function escapeXml(str: string) {
+  return str
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
@@ -32,11 +30,10 @@ export async function GET(req: Request, { params }: { params: { domain: string }
   const base = site.custom_domain ? `https://${site.custom_domain}` : `https://quicksites.ai`;
   const pages = site.data?.pages || [];
 
-  const urls = pages.map((page: Page) => {
+  const urls = pages.map((page: any) => {
     const path = page.slug === 'home' || page.slug === '' ? '' : `/${page.slug}`;
     const url = `${base}/${site.slug}${path}`;
     const lastmod = new Date(site.updated_at || new Date()).toISOString();
-
     return `
       <url>
         <loc>${escapeXml(url)}</loc>
@@ -47,11 +44,10 @@ export async function GET(req: Request, { params }: { params: { domain: string }
     `;
   });
 
-  const xml = `
-<?xml version="1.0" encoding="UTF-8"?>
+  const xml = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
 ${urls.join('\n')}
-</urlset>`.trim();
+</urlset>`;
 
   return new NextResponse(xml, {
     headers: {

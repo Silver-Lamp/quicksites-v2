@@ -28,6 +28,7 @@ export default async function TemplateEditPage({ params }: PageProps) {
     <TemplateEditorProvider
       templateName={template.template_name}
       initialData={template as Snapshot}
+      colorMode="dark"
     >
       <TemplateEditorLayout
         toolbar={

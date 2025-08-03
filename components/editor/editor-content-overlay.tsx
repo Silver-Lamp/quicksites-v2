@@ -101,6 +101,8 @@ export function EditorContentOverlay({
           rawJson={rawJson}
           setRawJson={setRawJson}
           onClose={() => setShowJson(false)}
+          sidebarValues={template}
+          setSidebarValues={onChange}
         />
       )}
     </>

@@ -1,22 +1,12 @@
-import { getSupabase } from '@/lib/supabase/server';
 import { NextResponse } from 'next/server';
 
-export async function GET() {
-  const supabase = await getSupabase();
-  const { data: sites } = await supabase
-    .from('templates')
-    .select('slug, custom_domain')
-    .eq('is_site', true);
-
-  const sitemapUrls = (sites || []).map((site) => {
-    const domain = site.custom_domain || `quicksites.ai`;
-    return `https://${domain}/sitemap.xml`;
-  });
+export async function GET(req: Request) {
+  const host = new URL(req.url).host;
 
   const content = [
     'User-agent: *',
     'Allow: /',
-    ...sitemapUrls.map((url) => `Sitemap: ${url}`)
+    `Sitemap: https://${host}/sitemap.xml`,
   ].join('\n');
 
   return new NextResponse(content, {

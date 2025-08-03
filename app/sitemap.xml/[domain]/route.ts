@@ -1,3 +1,4 @@
+// app/sitemap.xml/[domain]/route.ts
 import { getSupabase } from '@/lib/supabase/server';
 import { NextResponse } from 'next/server';
 import type { Page } from '@/types/page';

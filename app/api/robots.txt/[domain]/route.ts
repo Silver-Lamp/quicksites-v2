@@ -1,14 +1,4 @@
-export function GET(_: Request, { params }: { params: { domain: string } }) {
-    const domain = params.domain;
-    const body = `User-agent: *
-  Sitemap: https://${domain}/sitemap.xml
-  Disallow:
-  `;
-  
-    return new Response(body, {
-      headers: {
-        'Content-Type': 'text/plain',
-      },
-    });
-  }
-  
+// app/api/robots.txt/[domain]/route.ts
+export function GET(req: Request, { params }: { params: { domain: string } }) {
+  return Response.redirect(`https://${params.domain}/robots.txt`, 307);
+}

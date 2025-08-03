@@ -1,4 +1,5 @@
-// app/sitemap.xml/[domain]/route.ts
+export const dynamic = 'force-dynamic';
+
 import { getSupabase } from '@/lib/supabase/server';
 import { NextResponse } from 'next/server';
 
@@ -12,14 +13,18 @@ function escapeXml(str: string) {
 }
 
 export async function GET(req: Request, { params }: { params: { domain: string } }) {
-  const { domain } = params;
+  const original = params.domain;
+  const normalized = original.replace(/^www\./, ''); // strips 'www.'
+
   const supabase = await getSupabase();
 
   const { data: site, error } = await supabase
     .from('templates')
     .select('slug, custom_domain, updated_at, data')
     .eq('is_site', true)
-    .or(`custom_domain.eq.${domain},slug.eq.${domain}`)
+    .or(
+      `custom_domain.eq.${normalized},custom_domain.eq.www.${normalized},slug.eq.${normalized},slug.eq.www.${normalized}`
+    )
     .maybeSingle();
 
   if (!site || error) {
@@ -33,7 +38,6 @@ export async function GET(req: Request, { params }: { params: { domain: string }
     const path = page.slug === 'home' || page.slug === '' ? '' : `/${page.slug}`;
     const url = `${base}/${site.slug}${path}`;
     const lastmod = new Date(site.updated_at || new Date()).toISOString();
-  
     return `
       <url>
         <loc>${escapeXml(url)}</loc>
@@ -43,13 +47,11 @@ export async function GET(req: Request, { params }: { params: { domain: string }
       </url>
     `;
   });
-  
 
-  const xml = `
-<?xml version="1.0" encoding="UTF-8"?>
+  const xml = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-  ${urls.join('')}
-</urlset>`.trim();
+${urls.join('\n')}
+</urlset>`;
 
   return new NextResponse(xml, {
     headers: {

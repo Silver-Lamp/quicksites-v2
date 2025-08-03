@@ -1,4 +1,6 @@
 // app/sitemap.xml/route.ts
+export const dynamic = 'force-dynamic';
+
 import { getSupabase } from '@/lib/supabase/server';
 import { NextResponse } from 'next/server';
 import type { Page } from '@/types/page';

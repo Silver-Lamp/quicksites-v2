@@ -64,13 +64,15 @@ export default function SiteRenderer({ site, page, baseUrl, enableThemeWrapper =
       />
 
       <div className={`min-h-screen ${colorMode === 'dark' ? 'text-white bg-black' : 'text-black bg-white'} ${className}`} id={id}>
+        {/* hellow there */}
         {showHeader && site.headerBlock && (
-            <div className="mb-8 rounded-lg bg-white dark:bg-neutral-950 dark:text-white" id="site-renderer-header">
+          // <div className="mb-8 rounded-lg bg-white dark:bg-neutral-950 dark:text-white" id="site-renderer-header">
             <RenderBlock block={site.headerBlock} showDebug={false} colorMode={colorMode} />
-          </div>
+          // </div>
         )}
 
-        <main className="py-8 space-y-8 rounded-lg bg-white dark:bg-neutral-950 dark:text-white" id="site-renderer-main">
+        {/* <main className="py-8 space-y-8 rounded-lg bg-white dark:bg-neutral-950 dark:text-white" id="site-renderer-main"> */}
+        <main className="" id="site-renderer-main">
           {currentPage.content_blocks?.map((block, i) => {
             const layoutMode = block.type === 'hero' ? (block.content as Block)?.layout_mode : undefined;
             const isFullBleed = block.type === 'hero' && layoutMode === 'full_bleed';

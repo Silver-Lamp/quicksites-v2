@@ -4,13 +4,18 @@ import type { Block } from '@/admin/lib/zod/blockSchema';
 import SectionShell from '@/components/ui/section-shell';
 import { useState } from 'react';
 import { supabase } from '@/lib/supabase/client';
+import ThemeScope from '@/components/ui/theme-scope';
+
+type ThemeMode = 'light' | 'dark';
 
 export default function ContactFormRender({
   block,
   template,
+  mode = 'light', // fallback
 }: {
   block: Block;
   template: { data?: { services?: string[] } };
+  mode?: ThemeMode;
 }) {
   function getSiteSlugFromHostname(hostname: string): string {
     if (hostname.endsWith('.quicksites.ai')) {
@@ -154,80 +159,85 @@ Service: ${formData.service || 'N/A'}
     setFormData({ name: '', email: '', phone: '', service: '', title, notification_email });
   };
 
-  return (
-    <SectionShell className="bg-white dark:bg-neutral-900 text-black dark:text-white rounded border-2 border-yellow-400 max-w-md mx-auto p-6">
-      <h2 className="text-center text-2xl font-bold text-blue-900 dark:text-white mb-6">{title}</h2>
+  const inputClass = (error?: boolean) =>
+    `w-full border ${error ? 'border-red-500' : 'border-zinc-300 dark:border-zinc-700'} rounded px-3 py-2 bg-white dark:bg-neutral-800 text-black dark:text-white transition-colors input-class-dark`;
 
-      {submitted ? (
-        <p className="text-green-500 text-center">Thank you! Your submission has been received.</p>
-      ) : (
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block font-semibold mb-1">Name:</label>
-            <input
-              type="text"
-              name="name"
-              className={`w-full border rounded px-3 py-2 bg-white dark:bg-neutral-800 text-black dark:text-white ${errors.name ? 'border-red-500' : ''}`}
-              value={formData.name}
-              onChange={handleChange}
-            />
-            {errors.name && <p className="text-red-500 text-sm mt-1">{errors.name}</p>}
-          </div>
-          <div>
-            <label className="block font-semibold mb-1">Email:</label>
-            <input
-              type="email"
-              name="email"
-              className={`w-full border rounded px-3 py-2 bg-white dark:bg-neutral-800 text-black dark:text-white ${errors.email ? 'border-red-500' : ''}`}
-              value={formData.email}
-              onChange={handleChange}
-            />
-            {errors.email && <p className="text-red-500 text-sm mt-1">{errors.email}</p>}
-          </div>
-          <div>
-            <label className="block font-semibold mb-1">Phone Number:</label>
-            <input
-              type="tel"
-              name="phone"
-              inputMode="numeric"
-              placeholder="(555) 123-4567"
-              maxLength={14}
-              className={`w-full border rounded px-3 py-2 bg-white dark:bg-neutral-800 text-black dark:text-white ${errors.phone || errors.contact ? 'border-red-500' : ''}`}
-              value={formData.phone}
-              onChange={(e) => setFormData({ ...formData, phone: formatPhone(e.target.value) })}
-            />
-            {(errors.phone || errors.contact) && (
-              <p className="text-red-500 text-sm mt-1">{errors.phone || errors.contact}</p>
-            )}
-          </div>
-          <div>
-            <label className="block font-semibold mb-1">I&apos;m Interested In:</label>
-            <select
-              name="service"
-              className="w-full border rounded px-3 py-2 bg-white dark:bg-neutral-800 text-black dark:text-white"
-              value={formData.service}
-              onChange={handleChange}
-              required
-            >
-              <option value="">Select a service</option>
-              {renderedServices.map((s: string) => (
-                <option key={s} value={s}>
-                  {s}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div className="flex justify-center gap-4 pt-2">
-            <button
-              type="submit"
-              disabled={submitting}
-              className="bg-blue-900 text-white px-6 py-2 rounded disabled:opacity-50"
-            >
-              {submitting ? 'Submitting...' : 'Submit'}
-            </button>
-          </div>
-        </form>
-      )}
-    </SectionShell>
+  return (
+    <div className={mode}>
+      <ThemeScope mode={mode} className="dark:bg-neutral-950">
+        <h2 className="text-center text-2xl font-bold text-blue-900 dark:text-white mb-6 p-4 bg-white dark:bg-neutral-950">{title}</h2>
+
+        {submitted ? (
+          <p className="text-green-500 text-center">Thank you! Your submission has been received.</p>
+        ) : (
+          <form onSubmit={handleSubmit} className="space-y-4 text-black dark:text-white p-4">
+            <div>
+              <label className="block font-semibold mb-1">Name:</label>
+              <input
+                type="text"
+                name="name"
+                className={inputClass(!!errors.name)}
+                value={formData.name}
+                onChange={handleChange}
+              />
+              {errors.name && <p className="text-red-500 text-sm mt-1">{errors.name}</p>}
+            </div>
+            <div>
+              <label className="block font-semibold mb-1">Email:</label>
+              <input
+                type="email"
+                name="email"
+                className={inputClass(!!errors.email)}
+                value={formData.email}
+                onChange={handleChange}
+              />
+              {errors.email && <p className="text-red-500 text-sm mt-1">{errors.email}</p>}
+            </div>
+            <div>
+              <label className="block font-semibold mb-1">Phone Number:</label>
+              <input
+                type="tel"
+                name="phone"
+                inputMode="numeric"
+                placeholder="(555) 123-4567"
+                maxLength={14}
+                className={inputClass(!!errors.phone || !!errors.contact)}
+                value={formData.phone}
+                onChange={(e) => setFormData({ ...formData, phone: formatPhone(e.target.value) })}
+              />
+              {(errors.phone || errors.contact) && (
+                <p className="text-red-500 text-sm mt-1">{errors.phone || errors.contact}</p>
+              )}
+            </div>
+            <div>
+              <label className="block font-semibold mb-1">I&apos;m Interested In:</label>
+              <select
+                name="service"
+                className={inputClass()}
+                value={formData.service}
+                onChange={handleChange}
+                required
+              >
+                <option value="">Select a service</option>
+                {renderedServices.map((s: string) => (
+                  <option key={s} value={s}>
+                    {s}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="flex justify-center gap-4 pt-2">
+              <button
+                type="submit"
+                disabled={submitting}
+                className="bg-blue-900 hover:bg-blue-800 text-white px-6 py-2 rounded transition disabled:opacity-50"
+              >
+                {submitting ? 'Submitting...' : 'Submit'}
+              </button>
+            </div>
+          </form>
+        )}
+      </ThemeScope>
+    </div>
   );
 }

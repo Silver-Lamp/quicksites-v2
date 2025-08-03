@@ -22,7 +22,7 @@ export function ContactFormEditor({ block, onSave, onClose, template }: BlockEdi
   };
 
   return (
-    <div className="p-4 space-y-4">
+    <div className="p-4 space-y-4 bg-white dark:bg-neutral-950 rounded-md">
       <h3 className="text-lg font-semibold">Edit Contact Form</h3>
 
       <BlockField

@@ -84,7 +84,8 @@ export default function RenderBlock({
   const wrapperProps = {
     'data-block-id': block._id || 'unknown',
     'data-block-type': block.type,
-    className: `relative group w-full ${colorMode === 'light' ? 'bg-white text-black border border-zinc-200' : 'bg-neutral-900 text-white border border-white/5'}`,
+    // className: `relative group w-full ${colorMode === 'light' ? 'bg-white text-black border border-zinc-200' : 'bg-neutral-900 text-white border border-white/5'}`,
+    className: `relative group w-full ${colorMode === 'light' ? 'bg-white text-black rounded-md' : 'bg-neutral-950 text-white rounded-md'}`,
     ref: (el: HTMLDivElement | null) => {
       if (el) (el as any).__squatterContent = safeContent;
     },

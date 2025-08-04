@@ -62,7 +62,6 @@ export default function GSCBulkStatsTable() {
 
   return (
     <div className="space-y-4">
-      {/* Controls */}
       <div className="flex items-center gap-4 text-sm text-white/80">
         <span>Showing:</span>
         <select
@@ -76,7 +75,6 @@ export default function GSCBulkStatsTable() {
             </option>
           ))}
         </select>
-
         <span className="opacity-50">
           ({selectedRange.start} to {selectedRange.end})
         </span>
@@ -105,6 +103,11 @@ export default function GSCBulkStatsTable() {
                 const isOpen = expanded[domain] ?? true;
                 const typedRows = isError ? [] : (rows as Row[]);
 
+                const clicks = Math.max(...typedRows.map(r => r.clicks ?? 0), 0);
+                const impressions = typedRows.reduce((sum, r) => sum + (r.impressions ?? 0), 0);
+                const bestCTR = Math.max(...typedRows.map(r => r.ctr ?? 0), 0);
+                const bestPosition = Math.min(...typedRows.map(r => r.position ?? Infinity));
+
                 const groupedByPage = typedRows.reduce((acc, row) => {
                   if (!acc[row.page]) acc[row.page] = [];
                   acc[row.page].push(row);
@@ -123,8 +126,14 @@ export default function GSCBulkStatsTable() {
                         <span className="mr-2">{isOpen ? '▼' : '▶'}</span>
                         {domain}
                       </TableCell>
-                      <TableCell colSpan={5} className="text-white/50 italic">
-                        {isOpen ? '' : 'Query breakdown by page'}
+                      <TableCell className="text-xs text-white/70 italic">
+                        {isOpen ? '' : 'Best-performing query'}
+                      </TableCell>
+                      <TableCell className="text-green-400">{clicks}</TableCell>
+                      <TableCell className="text-blue-300">{impressions}</TableCell>
+                      <TableCell className="text-yellow-300">{bestCTR.toFixed(2)}</TableCell>
+                      <TableCell className="text-purple-300">
+                        {bestPosition === Infinity ? '—' : bestPosition.toFixed(1)}
                       </TableCell>
                     </TableRow>
 

@@ -32,6 +32,7 @@ export default async function CallLogsPage() {
                 <th className="px-4 py-2">Status</th>
                 <th className="px-4 py-2 text-right">Duration</th>
                 <th className="px-4 py-2 text-right">Time</th>
+                <th className="px-4 py-2">Site</th>
               </tr>
             </thead>
             <tbody>
@@ -47,12 +48,33 @@ export default async function CallLogsPage() {
                   <td className="px-4 py-2 text-right text-zinc-400 text-xs">
                     {formatDistanceToNow(new Date(log.timestamp), { addSuffix: true })}
                   </td>
+                  <td className="px-4 py-2 text-sm">
+                    {log.custom_domain ? (
+                      <a
+                        href={`https://${log.custom_domain}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-blue-400 hover:underline"
+                      >
+                        {log.custom_domain}
+                      </a>
+                    ) : log.template_slug ? (
+                      <Link
+                        href={`/sites/${log.template_slug}`}
+                        className="text-blue-400 hover:underline"
+                      >
+                        {log.template_slug}
+                      </Link>
+                    ) : (
+                      <span className="text-zinc-500 italic">No match</span>
+                    )}
+                  </td>
                 </tr>
               ))}
 
               {logs?.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="text-center px-4 py-8 text-zinc-500">
+                  <td colSpan={7} className="text-center px-4 py-8 text-zinc-500">
                     No call logs found.
                   </td>
                 </tr>

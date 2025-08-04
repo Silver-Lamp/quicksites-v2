@@ -1,12 +1,19 @@
-// components/admin/gsc-bulk-stats-table.tsx
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
 import { Loader } from 'lucide-react';
 
 type Row = {
-  keys?: string[];
+  page: string;
+  query: string;
   clicks: number;
   impressions: number;
   ctr?: number;
@@ -36,7 +43,8 @@ function today() {
 export default function GSCBulkStatsTable() {
   const [data, setData] = useState<DomainResult>({});
   const [loading, setLoading] = useState(true);
-  const [rangeIndex, setRangeIndex] = useState(1); // Default to 30 days
+  const [rangeIndex, setRangeIndex] = useState(1);
+  const [expanded, setExpanded] = useState<Record<string, boolean>>({});
 
   const selectedRange = datePresets[rangeIndex];
 
@@ -54,8 +62,8 @@ export default function GSCBulkStatsTable() {
 
   return (
     <div className="space-y-4">
-      {/* Date Range Selector */}
-      <div className="flex items-center gap-2 text-sm text-white/80">
+      {/* Controls */}
+      <div className="flex items-center gap-4 text-sm text-white/80">
         <span>Showing:</span>
         <select
           value={rangeIndex}
@@ -68,23 +76,23 @@ export default function GSCBulkStatsTable() {
             </option>
           ))}
         </select>
-        <span className="opacity-50">({selectedRange.start} to {selectedRange.end})</span>
+
+        <span className="opacity-50">
+          ({selectedRange.start} to {selectedRange.end})
+        </span>
       </div>
 
-      {/* Data Table */}
       {loading ? (
         <div className="flex items-center justify-center text-white opacity-70 py-12">
           <Loader className="animate-spin mr-2" /> Loading Search Console data...
         </div>
-      ) : Object.keys(data).length === 0 ? (
-        <p className="text-sm text-white/60">No GSC data available.</p>
       ) : (
         <div className="overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow className="text-left text-sm uppercase text-white/60">
                 <TableHead>Domain</TableHead>
-                <TableHead>Page</TableHead>
+                <TableHead>Page or Query</TableHead>
                 <TableHead>Clicks</TableHead>
                 <TableHead>Impressions</TableHead>
                 <TableHead>CTR</TableHead>
@@ -92,27 +100,61 @@ export default function GSCBulkStatsTable() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {Object.entries(data).flatMap(([domain, rows]) => {
-                if ('error' in (rows as any)) {
-                  return (
-                    <TableRow key={domain}>
-                      <TableCell colSpan={6}>
-                        <span className="text-red-400 font-semibold">{domain}</span> — {(rows as any).error}
+              {Object.entries(data).map(([domain, rows]) => {
+                const isError = 'error' in (rows as any);
+                const isOpen = expanded[domain] ?? true;
+                const typedRows = isError ? [] : (rows as Row[]);
+
+                const groupedByPage = typedRows.reduce((acc, row) => {
+                  if (!acc[row.page]) acc[row.page] = [];
+                  acc[row.page].push(row);
+                  return acc;
+                }, {} as Record<string, Row[]>);
+
+                return (
+                  <tbody key={domain}>
+                    <TableRow
+                      className="cursor-pointer hover:bg-white/5"
+                      onClick={() =>
+                        setExpanded((prev) => ({ ...prev, [domain]: !isOpen }))
+                      }
+                    >
+                      <TableCell className="text-white font-semibold">
+                        <span className="mr-2">{isOpen ? '▼' : '▶'}</span>
+                        {domain}
+                      </TableCell>
+                      <TableCell colSpan={5} className="text-white/50 italic">
+                        {isOpen ? '' : 'Query breakdown by page'}
                       </TableCell>
                     </TableRow>
-                  );
-                }
 
-                return (rows as Row[]).map((row, i) => (
-                  <TableRow key={`${domain}-${i}`}>
-                    <TableCell className="text-white">{domain}</TableCell>
-                    <TableCell className="text-white text-xs">{row.keys?.[0]}</TableCell>
-                    <TableCell className="text-green-400">{row.clicks}</TableCell>
-                    <TableCell className="text-blue-300">{row.impressions}</TableCell>
-                    <TableCell className="text-yellow-300">{(row.ctr || 0).toFixed(2)}</TableCell>
-                    <TableCell className="text-purple-300">{(row.position || 0).toFixed(1)}</TableCell>
-                  </TableRow>
-                ));
+                    {isOpen &&
+                      Object.entries(groupedByPage).map(([page, queries]) => (
+                        <>
+                          <TableRow className="bg-black/10 text-white/70 text-xs">
+                            <TableCell />
+                            <TableCell colSpan={5}>{page}</TableCell>
+                          </TableRow>
+                          {queries.map((row, i) => (
+                            <TableRow key={`${domain}-${page}-${i}`}>
+                              <TableCell />
+                              <TableCell className="text-white text-xs">
+                                "{row.query}"
+                              </TableCell>
+                              <TableCell className="text-green-400">{row.clicks}</TableCell>
+                              <TableCell className="text-blue-300">{row.impressions}</TableCell>
+                              <TableCell className="text-yellow-300">
+                                {(row.ctr ?? 0).toFixed(2)}
+                              </TableCell>
+                              <TableCell className="text-purple-300">
+                                {(row.position ?? 0).toFixed(1)}
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </>
+                      ))}
+                  </tbody>
+                );
               })}
             </TableBody>
           </Table>

@@ -71,7 +71,9 @@ const navItems: NavItem[] = [
     children: [
       { label: 'Browse', href: '/admin/templates/list' },
       { label: 'Create', href: '/admin/templates/new' },
+      { label: 'GSC Connect', href: '/api/gsc/auth-url' },
       { label: 'GSC Bulk Stats', href: '/admin/templates/gsc-bulk-stats' },
+      { label: 'GSC Sites', href: '/admin/gsc/sites' },
     ],
   },
   {

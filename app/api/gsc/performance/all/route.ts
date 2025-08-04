@@ -1,41 +1,104 @@
-// app/api/gsc/performance/all/route.ts
-import { google } from 'googleapis';
-import { NextRequest, NextResponse } from 'next/server';
-import { getAllValidOAuthClients } from '@/lib/gsc/getAllValidOAuthClients';
+import { NextResponse } from 'next/server';
+import { createClient } from '@supabase/supabase-js';
+import { getAllValidGscTokens } from '@/lib/gsc/getAllTokens';
 
-export async function GET(req: NextRequest) {
-  const startDate = req.nextUrl.searchParams.get('startDate') || new Date(new Date().setDate(new Date().getDate() - 30)).toISOString().split('T')[0];
-  const endDate = req.nextUrl.searchParams.get('endDate') || new Date().toISOString().split('T')[0];
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+);
 
-  const clients = await getAllValidOAuthClients();
+export const dynamic = 'force-dynamic';
+
+export async function GET(req: Request) {
+  const { searchParams } = new URL(req.url);
+  const startDate = searchParams.get('startDate');
+  const endDate = searchParams.get('endDate');
+  const forceRefresh = searchParams.get('forceRefresh') === 'true';
+
+  if (!startDate || !endDate) {
+    return NextResponse.json({ error: 'Missing startDate or endDate' }, { status: 400 });
+  }
+
+  const tokenMap = await getAllValidGscTokens();
   const results: Record<string, any> = {};
 
-  for (const entry of clients) {
-    console.log('GSC Client Domain:', entry.domain);
-    if (entry.error) {
-      results[entry.domain] = { error: entry.error };
-      console.log('GSC Client Error:', entry.error);
-      continue;
-    }
+  await Promise.all(
+    Object.entries(tokenMap).map(async ([domain, token]) => {
+      try {
+        // Check cache
+        if (!forceRefresh) {
+          const { data: cached } = await supabase
+            .from('gsc_cache')
+            .select('data, expires_at')
+            .eq('domain', domain)
+            .eq('start_date', startDate)
+            .eq('end_date', endDate)
+            .single();
 
-    try {
-      const searchconsole = google.searchconsole({ version: 'v1', auth: entry.oauth2Client });
+          if (
+            cached?.data &&
+            cached.expires_at &&
+            new Date(cached.expires_at) > new Date()
+          ) {
+            results[domain] = cached.data;
+            return;
+          }
+        }
 
-      const response = await searchconsole.searchanalytics.query({
-        siteUrl: entry.domain,
-        requestBody: {
-          startDate,
-          endDate,
-          dimensions: ['page'],
-        },
-      });
-      console.log('GSC Client Response:', response.data.rows);
-      results[entry.domain] = response.data.rows || [];
-    } catch (err: any) {
-      results[entry.domain] = { error: err.message || 'Failed to fetch' };
-      console.log('GSC Client Error:', err.message);
-    }
-  }
+        // Fetch from Google Search Console API
+        const gscRes = await fetch(
+          `https://searchconsole.googleapis.com/webmasters/v3/sites/${encodeURIComponent(domain)}/searchAnalytics/query`,
+          {
+            method: 'POST',
+            headers: {
+              Authorization: `Bearer ${token}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              startDate,
+              endDate,
+              dimensions: ['page', 'query'], // order matters — keys[0] = page, keys[1] = query
+              rowLimit: 1000,
+            }),
+          }
+        );
+
+        const json = await gscRes.json();
+
+        if (json.rows) {
+          const parsed = json.rows.map((row: any) => ({
+            page: row.keys?.[0],
+            query: row.keys?.[1],
+            clicks: row.clicks,
+            impressions: row.impressions,
+            ctr: row.ctr,
+            position: row.position,
+          }));
+
+          results[domain] = parsed;
+
+          // Store in cache with 24-hour TTL
+          await supabase.from('gsc_cache').upsert(
+            {
+              domain,
+              start_date: startDate,
+              end_date: endDate,
+              data: parsed,
+              expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+            },
+            { onConflict: 'domain,start_date,end_date' }
+          );
+        } else {
+          results[domain] = {
+            error: json.error?.message || 'No rows returned',
+            meta: json,
+          };
+        }
+      } catch (err: any) {
+        results[domain] = { error: err.message };
+      }
+    })
+  );
 
   return NextResponse.json(results);
 }

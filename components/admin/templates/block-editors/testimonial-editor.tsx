@@ -16,9 +16,8 @@ import TestimonialBlockComponent from '@/components/admin/templates/render-block
 import { supabase } from '@/lib/supabaseClient';
 import Image from 'next/image';
 import { extractFieldErrors } from '../utils/extractFieldErrors';
-import { BlockValidationError } from '@/hooks/validateTemplateBlocks';
 
-function SortableItem({ item, index, onEdit, onDelete }: any) {
+function SortableItem({ item, index, onEdit, onDelete, isEditing, onChange, onSave, onCancel }: any) {
   const {
     setNodeRef,
     attributes,
@@ -40,44 +39,65 @@ function SortableItem({ item, index, onEdit, onDelete }: any) {
       style={style}
       className="p-2 border rounded bg-neutral-800 text-white space-y-1 relative"
     >
-      <div className="text-sm">“{item.quote || ''}”</div>
-      <div className="text-xs text-gray-400">{item.attribution}</div>
-      {item.avatar_url ? (
-        <Image
-          src={item.avatar_url}
-          alt={item.attribution || 'Avatar'}
-          width={40}
-          height={40}
-          className="rounded-full object-cover"
-          placeholder="blur"
-          blurDataURL="/avatar-blur.png"
-        />
-      ) : (
-        <div className="w-10 h-10 rounded-full bg-gray-700 text-white flex items-center justify-center text-sm font-medium">
-          {(item.attribution?.split(' ').map((word: string) => word[0]).join('') || '?').toUpperCase()}
+      {isEditing ? (
+        <div className="space-y-2">
+          <BlockField
+            type="text"
+            label="Quote"
+            value={item.quote}
+            onChange={(v: string) => onChange({ ...item, quote: v })}
+          />
+          <BlockField
+            type="text"
+            label="Attribution"
+            value={item.attribution}
+            onChange={(v: string) => onChange({ ...item, attribution: v })}
+          />
+          <BlockField
+            type="number"
+            label="Rating"
+            value={item.rating?.toString() || '5'}
+            onChange={(v: number) => onChange({ ...item, rating: v })}
+          />
+          <div className="flex justify-end gap-2">
+            <button onClick={onCancel} className="text-xs px-2 py-1 border rounded">Cancel</button>
+            <button onClick={onSave} className="text-xs px-2 py-1 bg-blue-600 rounded text-white">Save</button>
+          </div>
         </div>
+      ) : (
+        <>
+          <div className="text-sm">“{item.quote || ''}”</div>
+          <div className="text-xs text-gray-400">{item.attribution}</div>
+          {item.avatar_url ? (
+            <Image
+              src={item.avatar_url}
+              alt={item.attribution || 'Avatar'}
+              width={40}
+              height={40}
+              className="rounded-full object-cover"
+              placeholder="blur"
+              blurDataURL="/avatar-blur.png"
+            />
+          ) : (
+            <div className="w-10 h-10 rounded-full bg-gray-700 text-white flex items-center justify-center text-sm font-medium">
+              {(item.attribution?.split(' ').map((word: string) => word[0]).join('') || '?').toUpperCase()}
+            </div>
+          )}
+          <div className="absolute top-2 right-2 flex gap-1 text-xs">
+            <button onClick={onEdit} {...attributes} {...listeners} className="text-blue-300">✏️</button>
+            <button onClick={onDelete} className="text-red-400">🗑</button>
+          </div>
+        </>
       )}
-
-      <div className="absolute top-2 right-2 flex gap-1 text-xs">
-        <button onClick={onEdit} {...attributes} {...listeners} className="text-blue-300">✏️</button>
-        <button onClick={onDelete} className="text-red-400">🗑</button>
-      </div>
     </div>
   );
 }
 
-const TESTIMONIAL_PRESETS: Record<string, { quote: string; attribution: string }[]> = {
-  towing: [
-    { quote: "Fast and friendly roadside help — got me out of a jam!", attribution: "Sarah P." },
-    { quote: "Affordable, on-time, and super professional.", attribution: "Mike J." },
-  ],
-};
-
-export default function TestimonialEditor({ block, onSave, onClose, errors = {}, template }: BlockEditorProps) {
+export default function TestimonialEditor({ block, onSave, onClose, errors = {} }: BlockEditorProps) {
   const industry = block.industry || 'towing';
   const initial = (block.content as any)?.testimonials || [];
   const [testimonials, setTestimonials] = useState(initial.map((t: any) => ({ ...t, _id: uuidv4() })));
-  const [editing, setEditing] = useState<any | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [randomized, setRandomized] = useState<boolean>((block.content as any)?.randomized || false);
   const [preview, setPreview] = useState(true);
   const [aiPrompt, setAiPrompt] = useState('');
@@ -86,37 +106,11 @@ export default function TestimonialEditor({ block, onSave, onClose, errors = {},
 
   const handleSave = () => {
     const content = {
-      testimonials: testimonials.map(({ _id, ...t }: { _id: string; [key: string]: any }) => t),
+      testimonials: testimonials.map(({ _id, ...t }: any) => t),
       randomized,
     };
-    onSave({ ...block, content } as unknown as Block);
+    onSave({ ...block, content } as Block);
     onClose();
-  };
-
-  const generateTestimonial = async () => {
-    setLoading(true);
-    const res = await fetch('/api/generate-testimonial', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ prompt: aiPrompt, industry }),
-    });
-    const data = await res.json();
-    const quote = data.quote.replace(/^\"|\"$/g, '').trim();
-
-    const newTestimonial = {
-      quote,
-      attribution: 'Anonymous',
-      rating: 5,
-      _id: uuidv4(),
-    };
-
-    setTestimonials((prev: { _id: string }[]) => [...prev, newTestimonial]);
-    setAiPrompt('');
-    setLoading(false);
-
-    await supabase.from('testimonial_presets').insert([
-      { industry, quote, attribution: 'Anonymous', tags: ['ai-generated'] },
-    ]);
   };
 
   return (
@@ -131,59 +125,35 @@ export default function TestimonialEditor({ block, onSave, onClose, errors = {},
                 key={item._id}
                 item={item}
                 index={i}
-                onEdit={() => setEditing(item)}
-                onDelete={() => setTestimonials((prev: { _id: string }[]) => prev.filter((_, idx) => idx !== i))}
+                isEditing={editingId === item._id}
+                onEdit={() => setEditingId(item._id)}
+                onCancel={() => setEditingId(null)}
+                onChange={(updated: any) =>
+                  setTestimonials((prev: any) =>
+                    prev.map((t: any) => (t._id === item._id ? updated : t))
+                  )
+                }
+                onSave={() => setEditingId(null)}
+                onDelete={() =>
+                  setTestimonials((prev: any) => prev.filter((t: any) => t._id !== item._id))
+                }
               />
             ))}
           </div>
         </SortableContext>
       </DndContext>
 
-      <div className="flex gap-2">
+      <div className="pt-2">
         <button
-          onClick={() =>
-            setTestimonials((prev: { _id: string }[]) => [...prev, { quote: '', attribution: '', _id: uuidv4(), rating: 5 }])
-          }
+          onClick={() => setTestimonials((prev: any) => [...prev, { quote: '', attribution: '', rating: 5, _id: uuidv4() }])}
           className="text-sm bg-green-600 hover:bg-green-700 px-3 py-1 rounded text-white"
         >
           ➕ Add Testimonial
         </button>
-        <button
-          onClick={() => {
-            const industryKey = (industry || 'towing').toLowerCase();
-            const presets = TESTIMONIAL_PRESETS[industryKey] || [];
-            const newOnes = presets.map((t) => ({ ...t, _id: uuidv4(), rating: 5 }));
-            setTestimonials((prev: { _id: string }[]) => [...prev, ...newOnes]);
-          }}
-          className="text-sm bg-blue-600 hover:bg-blue-700 px-3 py-1 rounded text-white"
-        >
-          🪄 Autofill from Industry
-        </button>
-      </div>
-
-      <div className="pt-2 space-y-2">
-        <BlockField
-          type="text"
-          label="Describe a testimonial"
-          placeholder="e.g. 'Mention quick arrival and kindness'"
-          value={aiPrompt}
-          onChange={setAiPrompt}
-          error={fieldErrors['content.ai_prompt']}
-        />
-        <button
-          disabled={loading}
-          onClick={generateTestimonial}
-          className="bg-indigo-600 hover:bg-indigo-700 px-4 py-1 rounded text-white text-sm"
-        >
-          {loading ? 'Generating...' : '✨ Generate with AI'}
-        </button>
       </div>
 
       <div className="pt-2">
-        <button
-          onClick={() => setPreview(!preview)}
-          className="text-xs underline text-white/70"
-        >
+        <button onClick={() => setPreview(!preview)} className="text-xs underline text-white/70">
           {preview ? 'Hide' : 'Show'} Preview
         </button>
         {preview && (
@@ -192,7 +162,7 @@ export default function TestimonialEditor({ block, onSave, onClose, errors = {},
               block={{
                 ...block,
                 content: {
-                  testimonials: testimonials.map(({ _id, ...t }: { _id: string; [key: string]: any }) => t),
+                  testimonials: testimonials.map(({ _id, ...t }: any) => t),
                   randomized,
                 },
               } as Block}
@@ -215,54 +185,6 @@ export default function TestimonialEditor({ block, onSave, onClose, errors = {},
           Save
         </button>
       </div>
-
-      {/* Custom Modal */}
-      {editing && (
-        <div className="fixed inset-0 z-[9999] bg-black/60 backdrop-blur-sm flex items-center justify-center">
-          <div className="bg-white text-black p-6 rounded-lg w-[90vw] max-w-md shadow-xl space-y-4">
-            <h3 className="text-lg font-semibold">Edit Testimonial</h3>
-
-            <BlockField
-              type="text"
-              label="Quote"
-              value={editing.quote}
-              onChange={(v) => setEditing((e: any) => ({ ...e, quote: v }))}
-            />
-            <BlockField
-              type="text"
-              label="Attribution"
-              value={editing.attribution}
-              onChange={(v) => setEditing((e: any) => ({ ...e, attribution: v }))}
-            />
-            <BlockField
-              type="number"
-              label="Rating"
-              value={editing.rating?.toString() || '5'}
-              onChange={(v) => setEditing((e: any) => ({ ...e, rating: Number(v) }))}
-            />
-
-            <div className="flex justify-end gap-2 pt-2">
-              <button
-                onClick={() => setEditing(null)}
-                className="text-sm px-4 py-2 border border-gray-400 rounded hover:bg-gray-100"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={() => {
-                  setTestimonials((prev: any[]) =>
-                    prev.map((t) => (t._id === editing._id ? editing : t))
-                  );
-                  setEditing(null);
-                }}
-                className="text-sm px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-              >
-                Save
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

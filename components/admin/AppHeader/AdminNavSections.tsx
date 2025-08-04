@@ -9,9 +9,9 @@ import {
   PhoneForwarded,
   Rocket,
   FileStack,
-  Activity,
   ChevronDown,
   Mail,
+  Phone,
 } from 'lucide-react';
 import clsx from 'clsx';
 
@@ -82,6 +82,13 @@ const navItems: NavItem[] = [
     href: '/admin/email-logs',
     icon: <Mail size={18} />,
   },
+  {
+    type: 'item',
+    label: 'Call Logs',
+    href: '/admin/call-logs',
+    icon: <Phone size={18} />,
+  },
+
   // {
   //   type: 'item',
   //   label: 'Analytics',

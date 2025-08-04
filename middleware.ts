@@ -11,9 +11,6 @@ const logCache = new Map<string, number>();
 const CACHE_TTL = 60_000;
 const LOG_DEDUP_TTL = 5 * 60 * 1000;
 
-// 🚫 Bypass for API webhooks
-const BYPASS_PATHS = ['/api/twilio-callback', '/api/stripe/webhook'];
-
 async function log404Once({
   hostname,
   pathname,
@@ -41,11 +38,17 @@ async function log404Once({
 export async function middleware(req: NextRequest) {
   const { pathname, searchParams } = req.nextUrl;
 
-  // ✅ Bypass Twilio or Stripe webhooks
-  if (BYPASS_PATHS.includes(pathname)) return NextResponse.next();
+  // ✅ Bypass Twilio or Stripe webhooks (safer: startsWith)
+  if (
+    pathname.startsWith('/api/twilio-callback') ||
+    pathname.startsWith('/api/stripe/webhook')
+  ) {
+    console.log('[middleware] bypassing webhook for', pathname);
+    return NextResponse.next();
+  }
 
   if (pathname.endsWith('.js.map')) return NextResponse.next();
-  if (/\.(js\.map|json|txt|xml|svg|ico|png|jpg|jpeg|webp|woff2?)$/i.test(pathname)) {
+  if (/\.(js\.map|json|txt|xml|svg|ico|png|jpg|jpeg|webp|woff2?|woff)$/i.test(pathname)) {
     return NextResponse.next();
   }
 
@@ -232,9 +235,6 @@ export async function middleware(req: NextRequest) {
 
 export const config = {
   matcher: [
-    // Run middleware on all routes except:
-    // - static files
-    // - explicitly excluded webhook/API routes
-    '/((?!_next/static|_next/image|favicon\\.ico|.*\\.js\\.map|.*\\.json|.*\\.txt|.*\\.xml|.*\\.svg|.*\\.ico|.*\\.png|.*\\.jpg|.*\\.jpeg|.*\\.webp|.*\\.woff2?|api/twilio-callback|api/stripe/webhook).*)',
+    '/((?!_next/static|_next/image|favicon\\.ico|.*\\.js\\.map|.*\\.json|.*\\.txt|.*\\.xml|.*\\.svg|.*\\.ico|.*\\.png|.*\\.jpg|.*\\.jpeg|.*\\.webp|.*\\.woff|.*\\.woff2|api/twilio-callback|api/stripe/webhook).*)',
   ],
 };

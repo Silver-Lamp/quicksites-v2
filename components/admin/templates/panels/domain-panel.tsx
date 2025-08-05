@@ -38,7 +38,7 @@ export default function DomainPanel({ template, onChange, isSite }: { template: 
       </div>
 
       <div className="flex gap-2 items-center flex-wrap">
-        <DomainStatusBadge domain={template.custom_domain || ''} />
+        {/* <DomainStatusBadge domain={template.custom_domain || ''} /> */}
         <DomainInstructions domain={template.custom_domain || ''} />
         <FaviconUploader
           templateId={template.id}

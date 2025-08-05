@@ -28,6 +28,22 @@ function getPageIcon(slug: string) {
   return <File className="w-4 h-4 text-purple-400 shrink-0" />;
 }
 
+function generateSlug(title: string, existingSlugs: Set<string>): string {
+  const base = title
+    .toLowerCase()
+    .trim()
+    .replace(/[^\w\s-]/g, '')
+    .replace(/\s+/g, '-') || 'untitled';
+
+  let slug = base;
+  let count = 2;
+  while (existingSlugs.has(slug)) {
+    slug = `${base}-${count++}`;
+  }
+
+  return slug;
+}
+
 export function PageManagerSidebar({
   pages,
   selectedIndex,
@@ -46,7 +62,7 @@ export function PageManagerSidebar({
   selectedIndex: number;
   onSelect: (index: number) => void;
   onAdd: (newPage: Page) => void;
-  onRename: (index: number, title: string) => void;
+  onRename: (index: number, title: string, slug?: string) => void;
   onDelete: (index: number) => void;
   onReorder: (oldIndex: number, newIndex: number) => void;
   compact?: boolean;
@@ -65,14 +81,34 @@ export function PageManagerSidebar({
       <div className="flex justify-between items-center">
         <h3 className="font-semibold text-white">Pages</h3>
         <button
-          onClick={() => onAdd({
-            id: crypto.randomUUID(),
-            slug: 'new-page',
-            title: 'New Page',
-            content_blocks: [],
-            show_header: true,
-            show_footer: true,
-          })}
+          onClick={() => {
+            const baseTitle = 'New Page';
+            const baseSlug = 'new-page';
+            const existingSlugs = new Set(pages.map(p => p.slug));
+
+            let slug = baseSlug;
+            let count = 2;
+            while (existingSlugs.has(slug)) {
+              slug = `${baseSlug}-${count++}`;
+            }
+
+            const newPage: Page = {
+              id: crypto.randomUUID(),
+              slug,
+              title: baseTitle,
+              content_blocks: [],
+              show_header: true,
+              show_footer: true,
+            };
+
+            onAdd(newPage);
+
+            setTimeout(() => {
+              const newIndex = pages.length;
+              setEditingIndex(newIndex);
+              setDraftTitle(newPage.title);
+            }, 0);
+          }}
           className="text-green-400 hover:underline flex items-center gap-1"
         >
           <PlusCircle className="w-4 h-4" /> Add
@@ -103,7 +139,17 @@ export function PageManagerSidebar({
                 index={idx}
                 isSelected={idx === selectedIndex}
                 onSelect={() => onSelect(idx)}
-                onRename={(newTitle: string) => onRename(idx, newTitle)}
+                onRename={(newTitle: string) => {
+                  const otherTitles = new Set(pages.map((p, i) => i !== idx ? p.title.toLowerCase().trim() : '').filter(Boolean));
+                  if (otherTitles.has(newTitle.toLowerCase().trim())) {
+                    alert(`A page with the title "${newTitle}" already exists.`);
+                    return;
+                  }
+                
+                  const otherSlugs = new Set(pages.map((p, i) => i !== idx ? p.slug : '').filter(Boolean));
+                  const newSlug = generateSlug(newTitle, otherSlugs);
+                  onRename(idx, newTitle, newSlug);
+                }}                
                 onDelete={() => onDelete(idx)}
                 editingIndex={editingIndex}
                 setEditingIndex={setEditingIndex}

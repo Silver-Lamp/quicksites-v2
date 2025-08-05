@@ -1,3 +1,4 @@
+// admin/lib/validateTemplate.ts
 import { TemplateSaveSchema } from '@/admin/lib/zod/templateSaveSchema';
 
 export function validateAndLogTemplate(template: any) {

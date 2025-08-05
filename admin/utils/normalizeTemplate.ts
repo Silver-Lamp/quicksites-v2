@@ -1,10 +1,24 @@
-// admin/utils/normalizeTemplate.ts
 import type { Template } from '@/types/template';
 
+/**
+ * Recursively unwraps `.data` fields until it hits a layer without `.data`
+ */
+function unwrapData<T = any>(obj: any): T {
+  let current = obj;
+  let depth = 0;
+  while (current?.data && depth < 10) {
+    current = current.data;
+    depth++;
+  }
+  return current;
+}
+
 export function normalizeTemplate(entry: any): Template {
-  // ✅ Prefer deeply nested data.pages
-  const rawPages = entry.data?.pages ?? [];
-  const services = entry.services ?? entry.data?.services ?? [];
+  const unwrapped = unwrapData(entry);
+
+  // ✅ Prefer deeply nested unwrapped pages
+  const rawPages = unwrapped.pages ?? [];
+  const services = entry.services ?? unwrapped.services ?? [];
 
   const pages = Array.isArray(rawPages)
     ? rawPages.map((page: any, i: number) => ({
@@ -18,11 +32,10 @@ export function normalizeTemplate(entry: any): Template {
       }))
     : [];
 
-  // Use defined values or fallback
   const rawName = entry.template_name?.trim();
   const rawSlug = entry.slug?.trim();
   const industry = entry.industry?.trim() ?? '';
-  const phone = entry.phone ?? ''; // ✅ Preserve phone if present
+  const phone = entry.phone ?? '';
 
   const derivedName = rawName || rawSlug || `new-template-${Math.random().toString(36).slice(2, 6)}`;
   const derivedSlug =
@@ -48,7 +61,7 @@ export function normalizeTemplate(entry: any): Template {
     brand: entry.brand ?? 'default',
     commit: entry.commit ?? '',
     industry,
-    phone, // ✅ add back here
+    phone,
     hero_url: entry.hero_url ?? '',
     banner_url: entry.banner_url ?? '',
     logo_url: entry.logo_url ?? '',
@@ -73,7 +86,7 @@ export function normalizeTemplate(entry: any): Template {
     },
 
     data: {
-      ...entry.data,
+      ...unwrapped,
       services: Array.isArray(services) ? services : [],
       pages,
     },

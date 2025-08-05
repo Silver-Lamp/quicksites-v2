@@ -7,6 +7,7 @@ import { ChevronRight, ChevronDown, Lock, Unlock } from 'lucide-react';
 import { TemplateSaveSchema, ValidatedTemplate } from '@/admin/lib/zod/templateSaveSchema';
 import type { JsonValue } from '@/types/json';
 import { validateBlocksInTemplate } from '@/admin/lib/validateBlocksInTemplate';
+import { unwrapData, cleanTemplateDataStructure } from '@/admin/lib/cleanTemplateData';
 import { normalizeTemplate } from '@/admin/utils/normalizeTemplate';
 
 type TemplateJsonEditorProps = {
@@ -113,19 +114,45 @@ export default function TemplateJsonEditor({
     return <span className="text-white">{value as string}</span>;
   };
 
+
   const handlePrettify = () => {
     try {
       const parsed = JSON.parse(rawJson);
-      const cleaned = { ...parsed };
-      delete cleaned.pages;
-      delete cleaned.services;
-      const normalized = normalizeTemplate(cleaned);
-      setRawJson(JSON.stringify(normalized, null, 2));
+  
+      // ✅ Unwrap repeated `.data.data.data...` layers
+      const unwrapped = unwrapData(parsed);
+  
+      // 🧠 Rewrap into a full template so normalizeTemplate can work
+      const fullTemplate = {
+        id: 'temp-id',
+        template_name: sidebarValues?.template_name || 'Untitled',
+        slug: sidebarValues?.slug || 'untitled',
+        layout: sidebarValues?.layout || 'standard',
+        industry: sidebarValues?.industry || '',
+        phone: sidebarValues?.phone || '',
+        data: unwrapped,
+      };
+  
+      const normalized = normalizeTemplate(fullTemplate);
+      const cleanedDataOnly = cleanTemplateDataStructure(normalized); // just the `.data` object again
+  
+      setRawJson(JSON.stringify(cleanedDataOnly, null, 2));
+  
+      // Optional: Sync sidebar values if missing
+      setSidebarValues({
+        ...sidebarValues,
+        template_name: normalized.template_name,
+        slug: normalized.slug,
+        phone: normalized.phone,
+      });
+  
+      setValidationError(null);
     } catch (err) {
       console.error('Failed to prettify:', err);
       alert('Invalid JSON. Cannot format.');
     }
   };
+  
 
   return (
     <div className="space-y-2">

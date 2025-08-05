@@ -20,6 +20,7 @@ import { handleTemplateSave } from '@/admin/lib/handleTemplateSave';
 import { ZodError } from 'zod';
 import { normalizeTemplate } from '@/admin/utils/normalizeTemplate';
 import ClientOnly from '@/components/client-only';
+import { unwrapData, cleanTemplateDataStructure } from '@/admin/lib/cleanTemplateData';
 
 function pushWithLimit<T>(stack: T[], item: T, limit = 10): T[] {
   return [...stack.slice(-limit + 1), item];
@@ -169,9 +170,18 @@ export function EditorContent({
   const handleSaveDraft = async () => {
     try {
       const parsed = JSON.parse(rawJson);
-      const merged = { ...parsed, ...sidebarValues };
-      const normalized = normalizeTemplate(merged);
+      const unwrapped = unwrapData(parsed);
+      
+      const fullTemplate = {
+        ...template,
+        ...sidebarValues,
+        data: unwrapped,
+      };
+      
+      const normalized = normalizeTemplate(fullTemplate);
       const json = JSON.stringify(normalized, null, 2);
+      console.log('✅ Final phone before save:', normalized.phone);
+
       await handleTemplateSave({
         rawJson: json,
         mode,
@@ -269,7 +279,7 @@ export function EditorContent({
           </>
         )}
       </Tabs>
-      <Button onClick={() => {
+      {/* <Button onClick={() => {
         try {
           const parsed = JSON.parse(rawJson);
           const merged = { ...parsed, ...sidebarValues };
@@ -282,7 +292,7 @@ export function EditorContent({
         }
       }} variant="secondary" className="mt-4 text-green-400 border-green-400">
         Prettify & Fix
-      </Button>
+      </Button> */}
       <details className="mt-4 bg-red-950 text-red-100 p-3 rounded-lg border border-red-700">
         <summary className="cursor-pointer font-bold">🧪 Validation Issues (Dev Only)</summary>
         <DevValidatorPanel error={zodError} />

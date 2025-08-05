@@ -1,3 +1,4 @@
+// lib/utils/normalizePageBlocks.ts
 import type { Page } from '@/types/template';
 import { normalizeBlock } from '@/types/blocks';
 

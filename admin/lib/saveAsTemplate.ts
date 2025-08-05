@@ -1,7 +1,11 @@
+// admin/lib/saveAsTemplate.ts
 import { supabase } from '@/admin/lib/supabaseClient';
+import { cleanTemplateDataStructure } from './cleanTemplateData';
 
 export async function saveAsTemplate(template: any, type: 'template' | 'site'): Promise<string | null> {
   const newName = `Copy of ${template.template_name || 'untitled'}`;
+  const cleanedData = cleanTemplateDataStructure(template);
+
   const { data, error } = await supabase
     .from('templates')
     .insert([
@@ -11,7 +15,7 @@ export async function saveAsTemplate(template: any, type: 'template' | 'site'): 
         layout: template.layout,
         color_scheme: template.color_scheme,
         industry: template.industry,
-        data: template.data,
+        data: cleanedData,
         is_site: type === 'site',
         published: false,
         domain: null,

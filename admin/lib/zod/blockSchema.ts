@@ -156,6 +156,38 @@ export const blockContentSchemaMap = {
       services: z.array(z.string()).optional(),
     }),
   },
+  chef_profile: {
+    label: 'Chef Profile',
+    icon: '👨‍🍳',
+    schema: z.object({
+      name: z.string().min(1, 'Name is required'),
+      location: z.string().min(1, 'Location is required'),
+      profile_image_url: z.string().url('Profile image URL must be valid'),
+      kitchen_video_url: z.string().url('Kitchen video URL must be valid').optional(),
+      bio: z.string().min(1, 'Bio is required'),
+      certifications: z.array(z.string()).min(1, 'At least one certification is required'),
+      meals: z.array(z.object({
+        title: z.string().min(1, 'Meal title is required'),
+        price: z.string().min(1, 'Meal price is required'),
+        availability: z.string().min(1, 'Meal availability is required'),
+        image_url: z.string().url('Meal image URL must be valid'),
+      })).min(1, 'At least one meal is required'),
+    }),
+  },
+  meal_card: {
+    label: 'Meal Card',
+    icon: '🍽️',
+    schema: z.object({
+      title: z.string().min(1, 'Meal title is required'),
+      chef_name: z.string().min(1, 'Chef name is required'),
+      price: z.string().min(1, 'Meal price is required'),
+      image_url: z.string().url('Meal image URL must be valid'),
+      description: z.string().min(1, 'Meal description is required'),
+      availability: z.string().min(1, 'Meal availability is required'),
+      tags: z.array(z.string()).optional(),
+      video_url: z.string().url('Meal video URL must be valid').optional(),
+    }),
+  },
 };
 
 // Step 2: Build base block schemas with shared fields

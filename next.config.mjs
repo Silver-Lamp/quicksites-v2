@@ -18,6 +18,7 @@ const nextConfig = {
       'kcwruliugwidsdgsrthy.supabase.co',
       'cdn.sanity.io',
       'image.thum.io',
+      'placekitten.com',
     ],
   },
 

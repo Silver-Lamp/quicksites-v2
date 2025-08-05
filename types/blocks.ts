@@ -1,5 +1,4 @@
 // types/blocks.ts
-
 // Base shared fields
 export type BaseBlock = {
   _id?: string;
@@ -65,6 +64,33 @@ export type BlockContentMap = {
   };
   header: { logoUrl?: string; navItems: { label: string; href: string }[] };
   contact_form: { title: string; notification_email: string };
+
+  // ✅ Delivered.menu blocks
+  meal_card: {
+    title: string;
+    chef_name: string;
+    price: string;
+    image_url: string;
+    description: string;
+    availability: string;
+    tags?: string[];
+    video_url?: string;
+  };
+
+  chef_profile: {
+    name: string;
+    location: string;
+    profile_image_url: string;
+    kitchen_video_url?: string;
+    bio: string;
+    certifications: string[];
+    meals: {
+      title: string;
+      price: string;
+      availability: string;
+      image_url: string;
+    }[];
+  };
 };
 
 export type BlockType = keyof BlockContentMap;
@@ -74,11 +100,11 @@ export const BLOCK_TYPES: BlockType[] = Object.keys({
   button: true, grid: true, hero: true, services: true, faq: true,
   cta: true, testimonial: true, footer: true, service_areas: true,
   header: true, contact_form: true,
+  meal_card: true, chef_profile: true,
 }) as BlockType[];
 
 export type BlockCategory = 'layout' | 'content' | 'interactive' | 'meta';
 
-// Top-level block
 export type Block = BaseBlock & {
   type: BlockType;
   content: BlockContentMap[BlockType] | any;
@@ -99,7 +125,7 @@ export function normalizeBlock(block: Partial<Block>): BlockWithId {
   } as BlockWithId;
 }
 
-// Named block types for specific use
+// Named types
 export type ExtractBlock<T extends BlockType> = Extract<Block, { type: T }>;
 export type TextBlock = ExtractBlock<'text'>;
 export type ImageBlock = ExtractBlock<'image'>;
@@ -117,6 +143,8 @@ export type FooterBlock = ExtractBlock<'footer'>;
 export type ServiceAreaBlock = ExtractBlock<'service_areas'>;
 export type HeaderBlock = ExtractBlock<'header'>;
 export type ContactFormBlock = ExtractBlock<'contact_form'>;
+export type MealCardBlock = ExtractBlock<'meal_card'>;
+export type ChefProfileBlock = ExtractBlock<'chef_profile'>;
 
 export type BlockRegistryEntry = {
   type: BlockType;
@@ -126,6 +154,7 @@ export type BlockRegistryEntry = {
   isStatic?: boolean;
 };
 
+// Registry
 export const BLOCK_METADATA: BlockRegistryEntry[] = [
   { type: 'text', label: 'Text', icon: '📝', category: 'content' },
   { type: 'image', label: 'Image', icon: '🖼️', category: 'content' },
@@ -143,4 +172,6 @@ export const BLOCK_METADATA: BlockRegistryEntry[] = [
   { type: 'service_areas', label: 'Service Areas', icon: '📍', category: 'meta' },
   { type: 'header', label: 'Header', icon: '⬆️', category: 'meta' },
   { type: 'contact_form', label: 'Contact Form', icon: '📩', category: 'interactive' },
+  { type: 'meal_card', label: 'Meal Card', icon: '🍽️', category: 'content' },
+  { type: 'chef_profile', label: 'Chef Profile', icon: '👨‍🍳', category: 'content' },
 ];

@@ -18,4 +18,6 @@ export const DYNAMIC_RENDERERS: Record<string, any> = {
   quote: dynamic(() => import('@/components/admin/templates/render-blocks/quote'), { ssr: false }),
   button: dynamic(() => import('@/components/admin/templates/render-blocks/button'), { ssr: false }),
   grid: dynamic(() => import('@/components/admin/templates/render-blocks/grid'), { ssr: false }),
+  chef_profile: dynamic(() => import('@/components/admin/templates/render-blocks/chef-profile'), { ssr: false }),
+  meal_card: dynamic(() => import('@/components/admin/templates/render-blocks/meal-card'), { ssr: false }),
 };

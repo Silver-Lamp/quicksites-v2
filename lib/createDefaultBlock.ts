@@ -138,6 +138,12 @@ export function createDefaultBlock(type: BlockType): BlockWithId {
         },
       });
 
+    case 'chef_profile':
+      return normalizeBlock({ type, _id, content: { name: 'John Doe', location: 'New York, NY', profile_image_url: 'https://placekitten.com/800/400', kitchen_video_url: 'https://www.youtube.com/embed/dQw4w9WgXcQ', bio: 'This is a bio', certifications: ['Certification A', 'Certification B'], meals: [{ title: 'Meal A', price: '$10', availability: 'Available', image_url: 'https://placekitten.com/800/400' }] } });
+
+    case 'meal_card':
+      return normalizeBlock({ type, _id, content: { title: 'Meal A', chef_name: 'John Doe', price: '$10', image_url: 'https://placekitten.com/800/400', description: 'This is a description', availability: 'Available', tags: ['Tag A', 'Tag B'], video_url: 'https://www.youtube.com/embed/dQw4w9WgXcQ' } }); 
+
     default:
       return normalizeBlock({
         type: 'text',

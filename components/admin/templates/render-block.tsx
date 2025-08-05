@@ -2,7 +2,7 @@
 'use client';
 
 import type { Block } from '@/types/blocks';
-import { BLOCK_METADATA, BLOCK_TYPES, type BlockType } from '@/types/blocks';
+import { BLOCK_TYPES, type BlockType } from '@/types/blocks';
 import { JSX } from 'react';
 import { useBlockFix } from '@/components/ui/block-fix-context';
 import DebugOverlay from '@/components/ui/debug-overlay';

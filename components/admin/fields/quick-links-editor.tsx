@@ -26,7 +26,7 @@ function SortableLinkItem({
   id,
   onChange,
   onRemove,
-  internalSlugs,
+  internalPages,
   createNewPage,
   focusOnMount,
 }: {
@@ -35,7 +35,7 @@ function SortableLinkItem({
   id: string;
   onChange: (updated: Link) => void;
   onRemove: () => void;
-  internalSlugs: string[];
+  internalPages: { slug: string; title?: string }[];
   createNewPage: () => string;
   focusOnMount?: boolean;
 }) {
@@ -62,6 +62,8 @@ function SortableLinkItem({
       labelRef.current.focus();
     }
   }, [focusOnMount, isLabelMissing]);
+
+  const internalSlugs = internalPages.map((p) => p.slug);
 
   return (
     <div
@@ -112,9 +114,9 @@ function SortableLinkItem({
           onChange={(e) => onChange({ ...link, href: e.target.value })}
         >
           <option value="">– Internal Page –</option>
-          {internalSlugs.map((slug) => (
-            <option key={slug} value={`/${slug}`}>
-              /{slug}
+          {internalPages.map((page) => (
+            <option key={page.slug} value={`/${page.slug}`}>
+              {page.title || `/${page.slug}`}
             </option>
           ))}
         </select>
@@ -159,22 +161,34 @@ export default function QuickLinksEditor({
   template: Template;
 }) {
   const sensors = useSensors(useSensor(PointerSensor));
-  const internalSlugs = template?.data.pages.map((p) => p.slug) || [];
+  const internalPages = template?.pages ?? template?.data?.pages ?? [];
   const linkRefs = useRef<(HTMLDivElement | null)[]>([]);
 
+  const generateSlug = (input: string): string =>
+    input
+      .toLowerCase()
+      .trim()
+      .replace(/[^\w\s-]/g, '') // remove punctuation
+      .replace(/\s+/g, '-') // convert spaces to hyphens
+
   const createNewPage = (label: string): string => {
-    const slug = label.toLowerCase().replace(/\s+/g, '-');
+    const slug = generateSlug(label || `page-${Date.now()}`);
     const newPage = {
       id: crypto.randomUUID(),
       slug,
       title: label,
       content_blocks: [],
     };
-    template?.data.pages.push(newPage);
+
+    if (Array.isArray(template?.data?.pages)) {
+      template.data.pages.push(newPage);
+    } else if (Array.isArray(template?.pages)) {
+      template.pages.push(newPage);
+    }
+
     return `/${slug}`;
   };
 
-  // Scroll to first invalid field on mount or update
   useEffect(() => {
     const firstInvalidIndex = links.findIndex(
       (link) => !link.label.trim() || !link.href.trim()
@@ -222,7 +236,7 @@ export default function QuickLinksEditor({
                   updated.splice(i, 1);
                   onChange(updated);
                 }}
-                internalSlugs={internalSlugs}
+                internalPages={internalPages}
                 createNewPage={() =>
                   createNewPage(link.label || `Page ${i + 1}`)
                 }

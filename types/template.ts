@@ -102,6 +102,7 @@ export type Template = Snapshot & {
   logo_url?: string;
   team_url?: string;
   color_mode?: 'light' | 'dark';
+  pages?: Page[];
 };
 
 export type TemplateSnapshot = Snapshot;

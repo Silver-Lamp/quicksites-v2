@@ -100,6 +100,11 @@ export default function PageHeaderEditor({ block, onSave, onClose, errors = {}, 
     onClose();
     setIsSaving(false);
   };
+  const normalizedTemplate = {
+    ...template,
+    pages: template?.pages ?? template?.data?.pages ?? [],
+  };  
+  console.log('Normalized slugs:', normalizedTemplate.pages.map(p => p.slug));
 
   return (
     <div className="p-4 space-y-6 text-white bg-neutral-900 rounded-xl">
@@ -138,8 +143,8 @@ export default function PageHeaderEditor({ block, onSave, onClose, errors = {}, 
 
       <div className="space-y-4">
         <Label className="text-white">Navigation Links</Label>
-        <QuickLinksEditor links={navItems} onChange={setNavItems} template={template || ({} as Template)} />
-      </div>
+        <QuickLinksEditor links={navItems} onChange={setNavItems} template={normalizedTemplate as Template} />
+        </div>
 
       {!areLinksValid && (
         <div className="bg-red-900/40 text-red-300 border border-red-500 rounded p-3 text-sm">

@@ -43,11 +43,15 @@ export default function PagesPanel({
           };
           handleUpdatePages([...pages, fullPage]);
         }}
-        onRename={(index, newTitle) => {
+        onRename={(index, newTitle, newSlug) => {
           const updated = [...pages];
-          updated[index].title = newTitle;
+          updated[index] = {
+            ...updated[index],
+            title: newTitle,
+            slug: newSlug ?? updated[index].slug,
+          };
           handleUpdatePages(updated);
-        }}
+        }}        
         onDelete={(index) => {
           const updated = [...pages];
           updated.splice(index, 1);

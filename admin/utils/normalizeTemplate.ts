@@ -1,3 +1,4 @@
+// admin/utils/normalizeTemplate.ts
 import type { Template } from '@/types/template';
 
 /**
@@ -21,15 +22,31 @@ export function normalizeTemplate(entry: any): Template {
   const services = entry.services ?? unwrapped.services ?? [];
 
   const pages = Array.isArray(rawPages)
-    ? rawPages.map((page: any, i: number) => ({
-        id: page.id || `page-${i}`,
-        slug: page.slug || 'home',
-        title: page.title || 'Home',
-        show_footer: page.show_footer ?? true,
-        show_header: page.show_header ?? true,
-        content_blocks: Array.isArray(page.content_blocks) ? page.content_blocks : [],
-        ...page,
-      }))
+    ? rawPages.map((page: any, i: number) => {
+        const originalBlocks = Array.isArray(page.content_blocks) ? page.content_blocks : [];
+        const filteredBlocks = originalBlocks.filter((block: any) => {
+          if (!block?.type || !block?.content) return false;
+          if (block.type === 'text' && !block.content?.value?.trim()) return false;
+          return true;
+        });
+
+        const removedCount = originalBlocks.length - filteredBlocks.length;
+        if (removedCount > 0) {
+          console.log(
+            `🧹 normalizeTemplate: Removed ${removedCount} empty block(s) from page "${page.slug || page.title || 'untitled'}"`
+          );
+        }
+
+        return {
+          id: page.id || `page-${i}`,
+          slug: page.slug || 'home',
+          title: page.title || 'Home',
+          show_footer: page.show_footer ?? true,
+          show_header: page.show_header ?? true,
+          content_blocks: filteredBlocks,
+          ...page,
+        };
+      })
     : [];
 
   const rawName = entry.template_name?.trim();

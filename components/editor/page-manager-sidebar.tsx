@@ -1,3 +1,4 @@
+// components/editor/page-manager-sidebar.tsx
 'use client';
 
 import {
@@ -18,6 +19,8 @@ import { GripVertical, PlusCircle, File, Home, Phone, Wrench, User } from 'lucid
 import { Page, Template } from '@/types/template';
 import { Switch } from '@radix-ui/react-switch';
 import { Label } from '@/components/ui/label';
+import { PageEditFields } from '@/components/page-edit-fields';
+import { generateSlug } from '@/lib/utils/generateSlug';
 
 function getPageIcon(slug: string) {
   const lower = slug.toLowerCase();
@@ -26,22 +29,6 @@ function getPageIcon(slug: string) {
   if (lower.includes('services')) return <Wrench className="w-4 h-4 text-orange-400 shrink-0" />;
   if (lower.includes('about')) return <User className="w-4 h-4 text-pink-400 shrink-0" />;
   return <File className="w-4 h-4 text-purple-400 shrink-0" />;
-}
-
-function generateSlug(title: string, existingSlugs: Set<string>): string {
-  const base = title
-    .toLowerCase()
-    .trim()
-    .replace(/[^\w\s-]/g, '')
-    .replace(/\s+/g, '-') || 'untitled';
-
-  let slug = base;
-  let count = 2;
-  while (existingSlugs.has(slug)) {
-    slug = `${base}-${count++}`;
-  }
-
-  return slug;
 }
 
 export function PageManagerSidebar({
@@ -83,14 +70,7 @@ export function PageManagerSidebar({
         <button
           onClick={() => {
             const baseTitle = 'New Page';
-            const baseSlug = 'new-page';
-            const existingSlugs = new Set(pages.map(p => p.slug));
-
-            let slug = baseSlug;
-            let count = 2;
-            while (existingSlugs.has(slug)) {
-              slug = `${baseSlug}-${count++}`;
-            }
+            const slug = generateSlug(baseTitle);
 
             const newPage: Page = {
               id: crypto.randomUUID(),
@@ -136,20 +116,32 @@ export function PageManagerSidebar({
               <SidebarPageItem
                 key={page.slug}
                 page={page}
+                pages={pages}
                 index={idx}
                 isSelected={idx === selectedIndex}
                 onSelect={() => onSelect(idx)}
-                onRename={(newTitle: string) => {
-                  const otherTitles = new Set(pages.map((p, i) => i !== idx ? p.title.toLowerCase().trim() : '').filter(Boolean));
+                onRename={(newTitle: string, newSlug: string) => {
+                  const otherTitles = new Set(
+                    pages.map((p, i) => (i !== idx ? p.title.toLowerCase().trim() : '')).filter(Boolean)
+                  );
                   if (otherTitles.has(newTitle.toLowerCase().trim())) {
                     alert(`A page with the title "${newTitle}" already exists.`);
                     return;
                   }
                 
-                  const otherSlugs = new Set(pages.map((p, i) => i !== idx ? p.slug : '').filter(Boolean));
-                  const newSlug = generateSlug(newTitle, otherSlugs);
-                  onRename(idx, newTitle, newSlug);
-                }}                
+                  const otherSlugs = new Set(
+                    pages.map((p, i) => (i !== idx ? p.slug : '')).filter(Boolean)
+                  );
+                  let finalSlug = newSlug.trim();
+                  if (otherSlugs.has(finalSlug)) {
+                    const base = finalSlug.replace(/-\d+$/, '');
+                    let count = 2;
+                    while (otherSlugs.has(`${base}-${count}`)) count++;
+                    finalSlug = `${base}-${count}`;
+                  }
+                
+                  onRename(idx, newTitle, finalSlug);
+                }}
                 onDelete={() => onDelete(idx)}
                 editingIndex={editingIndex}
                 setEditingIndex={setEditingIndex}
@@ -170,6 +162,7 @@ export function PageManagerSidebar({
 
 function SidebarPageItem({
   page,
+  pages,
   index,
   isSelected,
   onSelect,
@@ -185,10 +178,11 @@ function SidebarPageItem({
   templateShowFooter,
 }: {
   page: Template['data']['pages'][number];
+  pages: Template['data']['pages'];
   index: number;
   isSelected: boolean;
   onSelect: () => void;
-  onRename: (newTitle: string) => void;
+  onRename: (newTitle: string, newSlug: string) => void;
   onDelete: () => void;
   editingIndex: number | null;
   setEditingIndex: (index: number | null) => void;
@@ -232,21 +226,15 @@ function SidebarPageItem({
       {getPageIcon(page.slug)}
 
       {editingIndex === index ? (
-        <input
-          className="w-full bg-neutral-800 border border-neutral-600 px-2 py-1 rounded text-white"
-          value={draftTitle}
-          onChange={(e) => setDraftTitle(e.target.value)}
-          onBlur={() => {
-            onRename(draftTitle);
+        <PageEditFields
+          initialTitle={draftTitle}
+          initialSlug={page.slug}
+          existingSlugs={new Set(pages.map((p, i) => i !== index ? p.slug : ''))}
+          onSave={(newTitle, newSlug) => {
+            onRename(newTitle, newSlug);
             setEditingIndex(null);
           }}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter') {
-              onRename(draftTitle);
-              setEditingIndex(null);
-            }
-          }}
-          autoFocus
+          onCancel={() => setEditingIndex(null)}
         />
       ) : (
         <div className="flex justify-between items-center w-full">

@@ -1,17 +1,12 @@
+// admin/utils/ensureValidTemplateFields.ts
 import type { Template } from '@/types/template';
+import { generateSlug } from '@/lib/utils/generateSlug';
 
 export function ensureValidTemplateFields(
   template: Partial<Template>,
   options?: { lastEditorId?: string }
 ): Template {
   const now = new Date().toISOString();
-
-  const generateSlug = (base: string) =>
-    base
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, '-')
-      .replace(/(^-|-$)/g, '')
-      .trim();
 
   const generateUniqueSlug = (base: string) =>
     `${generateSlug(base)}-${Math.random().toString(36).slice(2, 6)}`;

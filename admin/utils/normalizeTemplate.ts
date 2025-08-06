@@ -7,7 +7,7 @@ import type { Template } from '@/types/template';
 function unwrapData<T = any>(obj: any): T {
   let current = obj;
   let depth = 0;
-  while (current?.data && depth < 10) {
+  while (current?.data && typeof current.data === 'object' && depth < 10) {
     current = current.data;
     depth++;
   }
@@ -17,7 +17,6 @@ function unwrapData<T = any>(obj: any): T {
 export function normalizeTemplate(entry: any): Template {
   const unwrapped = unwrapData(entry);
 
-  // ✅ Prefer deeply nested unwrapped pages
   const rawPages = unwrapped.pages ?? [];
   const services = entry.services ?? unwrapped.services ?? [];
 
@@ -52,7 +51,7 @@ export function normalizeTemplate(entry: any): Template {
   const rawName = entry.template_name?.trim();
   const rawSlug = entry.slug?.trim();
   const industry = entry.industry?.trim() ?? '';
-  const phone = entry.phone ?? '';
+  const phone = entry.phone ?? entry.data?.phone ?? '';
 
   const derivedName = rawName || rawSlug || `new-template-${Math.random().toString(36).slice(2, 6)}`;
   const derivedSlug =

@@ -10,7 +10,7 @@ const ChefProfileBlock: FC<{
     bio: string;
     certifications: string[];
     meals: {
-      title: string;
+      name: string;
       price: string;
       availability: string;
       image_url: string;
@@ -54,18 +54,18 @@ const ChefProfileBlock: FC<{
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           {content.meals.map((meal) => (
             <div
-              key={meal.title}
+              key={meal.name}
               className="border rounded-lg overflow-hidden shadow-sm"
             >
               <Image
                 src={meal.image_url}
-                alt={meal.title}
+                alt={meal.name}
                 width={600}
                 height={400}
                 className="w-full h-40 object-cover"
               />
               <div className="p-3">
-                <p className="font-medium">{meal.title}</p>
+                <p className="font-medium">{meal.name}</p>
                 <p className="text-sm text-gray-500">{meal.availability}</p>
                 <p className="text-green-700 font-semibold">{meal.price}</p>
               </div>

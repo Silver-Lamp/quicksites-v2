@@ -2,7 +2,7 @@
 
 import type { Block } from '@/types/blocks';
 import { useState } from 'react';
-import { normalizeBlock } from '@/types/blocks';
+import { normalizeBlock } from '@/lib/utils/normalizeBlock';
 import SortableGridBlock from '../sortable-grid-block';
 import RenderBlock from '../render-block';
 import BlockSidebar from '../block-sidebar';
@@ -15,7 +15,7 @@ function updateGridBlock(block: Block, items: BlockWithId[]): Block {
     ...grid,
     content: {
       ...grid.content,
-      items,
+      items: items as any,
     },
   };
 }
@@ -26,25 +26,26 @@ type Props = {
   handleNestedBlockUpdate?: (updated: Block) => void;
   parentBlock?: Block;
   compact?: boolean;
+  columns?: number;
+  gridLabel?: string;
+  gridLabelStatic?: string;
 };
 
 export default function GridRender({
   block,
-  content,
+  content: contentProp,
   handleNestedBlockUpdate,
   parentBlock,
   compact = false,
+  columns = 1,
+  gridLabel = 'Grid',
+  gridLabelStatic = 'Grid',
 }: Props) {
-  const final = content || block?.content || { items: [] };
+  const final = contentProp as any || block?.content || { items: [] };
   const [editingBlockIndex, setEditingBlockIndex] = useState<number | null>(null);
   const [showPresetModal, setShowPresetModal] = useState(false);
 
   const normalizedItems = final?.items?.map(normalizeBlock) || [];
-  const columns = final?.columns || 1;
-
-  const gridLabel = handleNestedBlockUpdate
-    ? 'Grid (drag enabled)'
-    : 'Grid (static)';
 
   const handleSaveBlock = (updatedBlock: Block) => {
     if (editingBlockIndex === null || !parentBlock) return;

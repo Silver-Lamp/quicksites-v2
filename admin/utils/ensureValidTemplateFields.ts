@@ -1,6 +1,7 @@
 // admin/utils/ensureValidTemplateFields.ts
 import type { Template } from '@/types/template';
 import { generateSlug } from '@/lib/utils/generateSlug';
+import { ensureBlockId } from '@/admin/lib/ensureBlockId';
 
 export function ensureValidTemplateFields(
   template: Partial<Template>,
@@ -34,7 +35,7 @@ export function ensureValidTemplateFields(
   const stripBlockIds = (template.data?.pages || []).map((page) => ({
     ...page,
     content_blocks: page.content_blocks.map((block) => {
-      const { _id, ...cleaned } = block;
+      const { _id, ...cleaned } = ensureBlockId(block);
       return cleaned;
     }),
   }));
@@ -48,6 +49,7 @@ export function ensureValidTemplateFields(
     created_at: template.created_at || now,
     updated_at: now,
     saved_at: now,
+    phone: template.phone || template.data?.phone || '',
     save_count: (template as any).save_count ? (template as any).save_count + 1 : 1,
     last_editor: options?.lastEditorId || (template as any).last_editor || '',
     verified: typeof template.verified === 'boolean' ? template.verified : false,

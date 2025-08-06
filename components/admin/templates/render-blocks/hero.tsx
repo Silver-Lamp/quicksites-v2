@@ -8,6 +8,7 @@ import { useSafeScroll } from '@/hooks/useSafeScroll';
 import DebugOverlay from '@/components/ui/debug-overlay';
 import HeroNaturalHeight from './hero-natural-height';
 import { useIsMobile } from '@/hooks/useIsMobile';
+// import { HeroBlockContent } from '@/types/blocks';
 
 type Props = {
   block: Block | undefined;
@@ -48,7 +49,7 @@ export default function HeroRender({
     image_position,
     image_x,
     image_y,
-  } = final;
+  } = final as any;
 
   const isMobile = useIsMobile();
   const activeLayoutMode = typeof window === 'undefined' ? layout_mode : (isMobile ? mobile_layout_mode : layout_mode);

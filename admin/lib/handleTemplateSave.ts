@@ -1,4 +1,3 @@
-// admin/lib/handleTemplateSave.ts
 'use client';
 
 import toast from 'react-hot-toast';
@@ -11,6 +10,16 @@ import { printZodErrors } from '@/admin/lib/printZodErrors';
 import { saveTemplate } from '@/admin/lib/saveTemplate';
 import { saveSite } from '@/admin/lib/saveSite';
 import { ensureValidTemplateFields } from '@/admin/utils/ensureValidTemplateFields';
+import { unwrapData } from '@/admin/lib/cleanTemplateData';
+import { ensureBlockId } from '@/admin/lib/ensureBlockId';
+
+function slugify(str: string): string {
+  return str
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/(^-|-$)/g, '')
+    .trim();
+}
 
 export async function handleTemplateSave({
   rawJson,
@@ -28,10 +37,31 @@ export async function handleTemplateSave({
   try {
     const parsed = JSON.parse(rawJson);
 
-    // Normalize and ensure required fields are present
+    // Step 1: Normalize + ensure base fields
     const normalized = normalizeTemplate(parsed);
     const base = ensureValidTemplateFields(normalized);
 
+    // Step 2: Flatten `.data.data` early
+    const cleanedData = unwrapData(base.data);
+    base.data = {
+      ...cleanedData,
+      pages: Array.isArray(cleanedData.pages) ? cleanedData.pages : [],
+      services: Array.isArray(cleanedData.services) ? cleanedData.services : [],
+    };
+
+    // Step 3: Enforce valid slugs + block IDs
+    base.data.pages = base.data.pages.map((page, i) => ({
+      ...page,
+      slug: page.slug || slugify(page.title || `page-${i}`),
+      content_blocks: Array.isArray(page.content_blocks)
+        ? page.content_blocks.map(ensureBlockId)
+        : [],
+    }));
+
+    // Step 4: Sanitize phone (nullable input bug)
+    base.phone = typeof base.phone === 'string' ? base.phone : '';
+
+    // Step 5: Validate
     const { errors: blockErrors } = validateTemplateBlocks(base);
     const result = TemplateSaveSchema.safeParse(base);
 
@@ -42,8 +72,7 @@ export async function handleTemplateSave({
       const firstField = Object.keys(flat?.fieldErrors ?? {})[0];
       const firstError = flat?.fieldErrors?.[firstField as keyof typeof flat.fieldErrors]?.[0];
 
-      // Try to scroll to first invalid block
-      if (scrollToBlock && result.error?.issues?.length && result.error.issues.length > 0) {
+      if (scrollToBlock && result.error?.issues?.length) {
         const blockPath = result.error.issues.find((issue) =>
           issue.path.includes('content_blocks')
         );
@@ -63,11 +92,17 @@ export async function handleTemplateSave({
       return;
     }
 
-    // Safe to save
-    const { services, ...safeToSave } = base;
+    // Step 6: Strip legacy fields + save
     const saveFn = mode === 'template' ? saveTemplate : saveSite;
+    const payload: Template = {
+      ...base,
+      data: base.data,
+    };
 
-    const promise = saveFn(safeToSave);
+    delete (payload as any).pages;
+    delete (payload as any).services;
+
+    const promise = saveFn(payload);
 
     toast.promise(promise, {
       loading: 'Saving...',

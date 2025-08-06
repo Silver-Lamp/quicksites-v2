@@ -24,12 +24,12 @@ type Props = {
 
 export default function PageHeaderEditor({ block, onSave, onClose, errors = {}, template }: Props) {
   const headerBlock = block as unknown as Block;
-
+  console.log('headerBlock', headerBlock);
   const [logoUrl, setLogoUrl] = useState(
-    block.type === 'header' ? headerBlock.content.logoUrl || template?.logo_url || '' : ''
+    block.type === 'header' ? (headerBlock.content as any).logoUrl || template?.logo_url || '' : ''
   );
   const [navItems, setNavItems] = useState(
-    block.type === 'header' ? [...headerBlock.content.navItems] : []
+    block.type === 'header' ? [...(headerBlock.content as any).links || []] : []
   );
   const [isUploading, setIsUploading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -93,8 +93,8 @@ export default function PageHeaderEditor({ block, onSave, onClose, errors = {}, 
     onSave({
       ...block,
       content: {
-        logoUrl,
-        navItems,
+        logoUrl: logoUrl,
+        navItems: navItems,
       },
     });
     onClose();

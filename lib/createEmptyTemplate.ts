@@ -1,7 +1,7 @@
 // lib/createEmptyTemplate.ts
 import type { Template } from '@/types/template';
 import { createDefaultBlock } from '@/lib/createDefaultBlock';
-import { BLOCK_TYPES } from '@/types/blocks';
+import { BlockType } from '@/types/blocks';
 
 function generateSlug(base: string) {
   return base
@@ -56,7 +56,7 @@ export function createEmptyTemplate(base = 'new-template'): Template {
           title: 'Home',
           show_header: true,
           show_footer: true,
-          content_blocks: [createDefaultBlock('hero')],
+          content_blocks: [createDefaultBlock('hero') as any],
         },
       ],
     },

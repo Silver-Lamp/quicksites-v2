@@ -202,7 +202,7 @@ export function EditorContent({
 
   return (
     <IndustryThemeScope industry={template.industry}>
-      <Tabs defaultValue="preview">
+      <Tabs defaultValue="preview" className="rounded-lg">
         <TabsList className="rounded-lg">
           <TabsTrigger value="preview">Preview</TabsTrigger>
           <TabsTrigger value="history">History</TabsTrigger>

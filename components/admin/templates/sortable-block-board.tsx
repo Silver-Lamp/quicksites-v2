@@ -21,6 +21,7 @@ import { BlockSchema } from '@/admin/lib/zod/blockSchema';
 import { GripVertical } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useSortable } from '@dnd-kit/sortable';
+import { ensureBlockId } from '@/admin/lib/ensureBlockId';
 
 type Props = {
   template: Template;
@@ -132,7 +133,7 @@ function SortableBlock({ block }: { block: any }) {
     transition,
   };
 
-  const isValid = BlockSchema.safeParse(block).success;
+  const isValid = BlockSchema.safeParse(ensureBlockId(block)).success;
 
   return (
     <motion.div

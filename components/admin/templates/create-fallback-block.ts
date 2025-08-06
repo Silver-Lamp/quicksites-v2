@@ -14,25 +14,25 @@ export function createFallbackBlock(type: Block['type']): BlockWithId {
       return {
         _id: id,
         type: 'quote',
-        content: { text: 'New quote' },
+        content: { text: 'New quote', attribution: 'John Doe' },
       };
     case 'button':
       return {
         _id: id,
         type: 'button',
-        content: { label: 'Click me', href: '#' },
+        content: { label: 'Click me', href: '#', style: 'default' },
       };
     case 'cta':
       return {
         _id: id,
         type: 'cta',
-        content: { label: 'Learn more', link: '#' },
+        content: { label: 'Learn more', link: '#', appearance: 'default' },
       };
     case 'faq':
       return {
         _id: id,
         type: 'faq',
-        content: { title: 'Frequently Asked Questions', items: [] },
+        content: { title: 'Frequently Asked Questions', subtitle: 'We answer the most common questions.', items: [], layout: 'accordion' },
       };
     case 'hero':
       return {
@@ -44,31 +44,49 @@ export function createFallbackBlock(type: Block['type']): BlockWithId {
           cta_text: 'Get Help Now',
           cta_link: '#',
           image_url: 'https://placekitten.com/600/300',
+          layout_mode: 'full_width',
+          blur_amount: 0,
+          image_position: 'center',
+          parallax_enabled: false,
+          mobile_layout_mode: 'full_width',
+          mobile_crop_behavior: 'cover',
+          mobile_crop_amount: 0,
+          mobile_crop_position: 'center',
+          mobile_crop_focal_point: { x: 0.5, y: 0.5 },
+          mobile_crop_focal_point_offset: { x: 0, y: 0 },
+          mobile_crop_focal_point_offset_x: 0,
+          mobile_crop_focal_point_offset_y: 0,
+          mobile_crop_focal_point_offset_x_mobile: 0,
+          mobile_crop_focal_point_offset_y_mobile: 0,
         },
       };
     case 'testimonial':
       return {
         _id: id,
         type: 'testimonial',
-        content: { testimonials: [{ quote: 'Great service!', attribution: 'John Doe' }] },
+        content: { testimonials: [{ quote: 'Great service!', attribution: 'John Doe', image_url: 'https://placekitten.com/600/300', rating: 5 }], randomized: false, layout: 'default' },
       };
     case 'image':
       return {
         _id: id,
         type: 'image',
-        content: { url: 'https://placekitten.com/600/300', alt: 'Placeholder image' },
+        content: { url: 'https://placekitten.com/600/300', alt: 'Placeholder image', caption: 'Placeholder image' },
       };
     case 'services':
       return {
         _id: id,
         type: 'services',
-        content: { items: ['Roadside Assistance', 'Flatbed Towing', 'Jump Starts'] },
+        content: {
+          title: 'Our Services',
+          subtitle: 'We offer everything from towing to roadside assistance.',
+          items: ['Roadside Assistance', 'Flatbed Towing', 'Jump Starts'],
+        },
       };
     case 'video':
       return {
         _id: id,
         type: 'video',
-        content: { url: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ', caption: 'Watch our service in action' },
+        content: { url: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ', caption: 'Watch our service in action', title: 'Customer Testimonial', provider: 'youtube' },
       };
     case 'audio':
       return {
@@ -80,14 +98,35 @@ export function createFallbackBlock(type: Block['type']): BlockWithId {
       return {
         _id: id,
         type: 'footer',
+        tone: 'professional',
+        industry: 'transportation',
+        tags: ['towing', 'roadside assistance'],
+        meta: {
+          sourceLat: 43.3242,
+          sourceLng: -88.0899,
+          cityState: 'Springfield, IL',
+        },
         content: {
-          businessName: 'Towing Co.',
+          business_name: 'Towing Co.',
           address: '123 Main St',
           cityState: 'Springfield, IL',
           phone: '(555) 123-4567',
           links: [
-            { label: 'Privacy Policy', href: '#' },
-            { label: 'Terms of Service', href: '#' },
+            { label: 'Privacy Policy', href: '#', appearance: 'default' },
+            { label: 'Terms of Service', href: '#', appearance: 'default' },
+          ],
+        },
+      };
+    case 'header':
+      return {
+        _id: id,
+        type: 'header',
+        content: {
+          logo_url: 'https://placekitten.com/600/300',
+          nav_items: [
+            { label: 'Home', href: '#', appearance: 'default' },
+            { label: 'About', href: '#', appearance: 'default' },
+            { label: 'Contact', href: '#', appearance: 'default' },
           ],
         },
       };
@@ -98,10 +137,14 @@ export function createFallbackBlock(type: Block['type']): BlockWithId {
         content: {
           title: 'Our Service Areas',
           subtitle: 'We proudly serve the surrounding towns and cities within 30 miles.',
-          cities: [],
-          allCities: [],
-          sourceLat: 43.3242,
-          sourceLng: -88.0899,
+          cities: [
+            { name: 'Springfield', address: '123 Main St', radius_miles: 30 },
+            { name: 'Chicago', address: '123 Main St', radius_miles: 30 },
+            { name: 'St. Louis', address: '123 Main St', radius_miles: 30 },
+            { name: 'Kansas City', address: '123 Main St', radius_miles: 30 },
+            { name: 'Omaha', address: '123 Main St', radius_miles: 30 },
+          ],
+          radius_miles: 30,
         },
       };
     default:

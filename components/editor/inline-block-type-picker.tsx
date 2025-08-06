@@ -14,7 +14,7 @@ export function InlineBlockTypePicker({ onSelect }: { onSelect: (type: string) =
         onClick={() => setOpen((o) => !o)}
         className="flex items-center gap-1 px-3 py-1 border border-purple-500 rounded hover:bg-purple-700 bg-purple-600"
       >
-        <PlusCircle size={16} /> Add Blockz
+        <PlusCircle size={16} /> Add Block
       </button>
       {open && (
         <div className="absolute mt-1 bg-black border border-white/10 rounded shadow-lg z-10 w-48">

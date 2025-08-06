@@ -1,5 +1,8 @@
 // types/blocks.ts
-// Base shared fields
+// Core block typing
+export type BlockType = keyof typeof BlockContentMap;
+export type BlockCategory = 'layout' | 'content' | 'interactive' | 'meta';
+
 export type BaseBlock = {
   _id?: string;
   tone?: string;
@@ -8,154 +11,86 @@ export type BaseBlock = {
   meta?: Record<string, any>;
 };
 
-// Content mapping for all block types
-export type BlockContentMap = {
-  text: { value: string };
-  image: { url: string; alt: string };
-  video: { url: string; caption?: string };
-  audio: { url: string; title?: string; provider?: 'spotify' | 'soundcloud' | 'suno' };
-  quote: { text: string; attribution?: string };
-  button: { label: string; href: string; style?: 'primary' | 'secondary' | 'ghost' };
-  grid: { columns: number; items: Block[] };
+export const BlockContentMap = {
+  text: { value: '' },
+  image: { url: '', alt: '' },
+  video: { url: '', caption: '' },
+  audio: { url: '', title: '', provider: 'suno' },
+  quote: { text: '', attribution: '' },
+  button: { label: '', href: '', style: 'primary' },
+  grid: { columns: 1, items: [] },
   hero: {
-    headline: string;
-    subheadline?: string;
-    cta_text?: string;
-    cta_link?: string;
-    image_url?: string;
-    layout_mode?: 'inline' | 'background' | 'full_bleed';
-    blur_amount?: number;
-    parallax_enabled?: boolean;
-    image_position?: 'top' | 'center' | 'bottom';
-    image_x?: number;
-    image_y?: number;
-  };
-  services: { title?: string; subtitle?: string; items: string[] };
-  faq: {
-    title?: string;
-    subtitle?: string;
-    items: { question: string; answer: string }[];
-    layout?: 'list' | 'accordion';
-  };
-  cta: { label: string; link: string; appearance?: 'button' | 'link' };
+    headline: '',
+    subheadline: '',
+    cta_text: '',
+    cta_link: '',
+    image_url: '',
+    layout_mode: 'inline',
+    blur_amount: 0,
+    image_position: 'center',
+    parallax_enabled: false,
+    mobile_layout_mode: 'inline',
+    mobile_crop_behavior: 'cover',
+    mobile_crop_amount: 0,
+    mobile_crop_position: 'center',
+    mobile_crop_focal_point: { x: 0.5, y: 0.5 },
+    mobile_crop_focal_point_offset: { x: 0, y: 0 },
+    mobile_crop_focal_point_offset_x: 0,
+    mobile_crop_focal_point_offset_y: 0,
+    mobile_crop_focal_point_offset_x_mobile: 0,
+    mobile_crop_focal_point_offset_y_mobile: 0,
+  },
+  services: {
+    title: 'Our Services',
+    subtitle: 'What we offer',
+    items: ['Towing', 'Roadside Assistance', 'Jump Starts'],
+  },  
+  faq: { title: '', subtitle: '', items: [{ question: '', answer: '', appearance: 'default' }], layout: 'accordion' },
+  cta: { label: '', link: '', appearance: 'button' },
   testimonial: {
-    testimonials: { quote: string; attribution?: string; avatar_url?: string; rating?: number }[];
-    randomized?: boolean;
-    layout?: 'list' | 'carousel';
-  };
+    testimonials: [{ quote: '', attribution: '', image_url: '', rating: 0 }],
+    randomized: false,
+    layout: 'list',
+  },
   footer: {
-    business_name: string;
-    address: string;
-    cityState: string;
-    phone: string;
-    links: { label: string; href: string }[];
-    logo_url?: string;
-    social_links?: { platform: string; url: string }[];
-    copyright?: string;
-  };
+    business_name: '',
+    address: '',
+    cityState: '',
+    phone: '',
+    links: [{ label: '', href: '', appearance: 'default' }],
+  },
   service_areas: {
-    title?: string;
-    subtitle?: string;
-    cities: string[];
-    allCities?: string[];
-    sourceLat?: number;
-    sourceLng?: number;
-    radiusMiles?: number;
-  };
-  header: { logoUrl?: string; navItems: { label: string; href: string }[] };
-  contact_form: { title: string; notification_email: string };
-
-  // ✅ Delivered.menu blocks
+    cities: [{ name: '', address: '', radius_miles: 0 }],
+    radius_miles: 0,
+  },
+  header: { logo_url: '', nav_items: [{ label: '', href: '', appearance: 'default' }] },
+  contact_form: { title: '', notification_email: '' },
   meal_card: {
-    title: string;
-    chef_name: string;
-    price: string;
-    image_url: string;
-    description: string;
-    availability: string;
-    tags?: string[];
-    video_url?: string;
-  };
-
+    title: '',
+    chef_name: '',
+    price: '',
+    image_url: '',
+    description: '',
+    availability: '',
+  },
   chef_profile: {
-    name: string;
-    location: string;
-    profile_image_url: string;
-    kitchen_video_url?: string;
-    bio: string;
-    certifications: string[];
-    meals: {
-      title: string;
-      price: string;
-      availability: string;
-      image_url: string;
-    }[];
-  };
-};
-
-export type BlockType = keyof BlockContentMap;
-
-export const BLOCK_TYPES: BlockType[] = Object.keys({
-  text: true, image: true, video: true, audio: true, quote: true,
-  button: true, grid: true, hero: true, services: true, faq: true,
-  cta: true, testimonial: true, footer: true, service_areas: true,
-  header: true, contact_form: true,
-  meal_card: true, chef_profile: true,
-}) as BlockType[];
-
-export type BlockCategory = 'layout' | 'content' | 'interactive' | 'meta';
+    name: '',
+    location: '',
+    profile_image_url: '',
+    bio: '',
+    certifications: [''],
+    meals: [{ name: '', description: '', image_url: '', price: '', availability: '' }],
+  },
+} satisfies Record<string, any>;
 
 export type Block = BaseBlock & {
   type: BlockType;
-  content: BlockContentMap[BlockType] | any;
-  layout_mode?: 'full_bleed' | 'inline' | 'background';
-  image_url?: string;
-  image_alt?: string;
-  audio_url?: string;
-  audio_title?: string;
-  audio_provider?: 'spotify' | 'soundcloud' | 'suno';
+  content: (typeof BlockContentMap)[BlockType];
 };
 
 export type BlockWithId = Block & { _id: string };
 
-export function normalizeBlock(block: Partial<Block>): BlockWithId {
-  return {
-    ...block,
-    _id: block._id ?? crypto.randomUUID(),
-  } as BlockWithId;
-}
-
-// Named types
-export type ExtractBlock<T extends BlockType> = Extract<Block, { type: T }>;
-export type TextBlock = ExtractBlock<'text'>;
-export type ImageBlock = ExtractBlock<'image'>;
-export type VideoBlock = ExtractBlock<'video'>;
-export type AudioBlock = ExtractBlock<'audio'>;
-export type QuoteBlock = ExtractBlock<'quote'>;
-export type ButtonBlock = ExtractBlock<'button'>;
-export type GridBlock = ExtractBlock<'grid'>;
-export type HeroBlock = ExtractBlock<'hero'>;
-export type ServicesBlock = ExtractBlock<'services'>;
-export type FAQBlock = ExtractBlock<'faq'>;
-export type CtaBlock = ExtractBlock<'cta'>;
-export type TestimonialBlock = ExtractBlock<'testimonial'>;
-export type FooterBlock = ExtractBlock<'footer'>;
-export type ServiceAreaBlock = ExtractBlock<'service_areas'>;
-export type HeaderBlock = ExtractBlock<'header'>;
-export type ContactFormBlock = ExtractBlock<'contact_form'>;
-export type MealCardBlock = ExtractBlock<'meal_card'>;
-export type ChefProfileBlock = ExtractBlock<'chef_profile'>;
-
-export type BlockRegistryEntry = {
-  type: BlockType;
-  label: string;
-  icon?: string;
-  category: BlockCategory;
-  isStatic?: boolean;
-};
-
-// Registry
-export const BLOCK_METADATA: BlockRegistryEntry[] = [
+export const BLOCK_METADATA = [
   { type: 'text', label: 'Text', icon: '📝', category: 'content' },
   { type: 'image', label: 'Image', icon: '🖼️', category: 'content' },
   { type: 'video', label: 'Video', icon: '🎥', category: 'content' },
@@ -163,15 +98,15 @@ export const BLOCK_METADATA: BlockRegistryEntry[] = [
   { type: 'quote', label: 'Quote', icon: '❝', category: 'content' },
   { type: 'button', label: 'Button', icon: '🔘', category: 'interactive' },
   { type: 'grid', label: 'Grid Layout', icon: '🔲', category: 'layout' },
-  { type: 'hero', label: 'Hero Section', icon: '🌄', category: 'layout', isStatic: true },
+  { type: 'hero', label: 'Hero Section', icon: '🌄', category: 'layout' },
   { type: 'services', label: 'Services List', icon: '🛠️', category: 'content' },
   { type: 'faq', label: 'FAQs', icon: '❓', category: 'interactive' },
   { type: 'cta', label: 'Call to Action', icon: '📣', category: 'interactive' },
   { type: 'testimonial', label: 'Testimonials', icon: '💬', category: 'interactive' },
   { type: 'footer', label: 'Footer', icon: '⬇️', category: 'meta' },
   { type: 'service_areas', label: 'Service Areas', icon: '📍', category: 'meta' },
-  { type: 'header', label: 'Header', icon: '⬆️', category: 'meta' },
+  { type: 'header', label: 'Header', icon: '⬆️', category: 'meta', isStatic: true },
   { type: 'contact_form', label: 'Contact Form', icon: '📩', category: 'interactive' },
   { type: 'meal_card', label: 'Meal Card', icon: '🍽️', category: 'content' },
   { type: 'chef_profile', label: 'Chef Profile', icon: '👨‍🍳', category: 'content' },
-];
+] as const;

@@ -73,10 +73,10 @@ export const blockContentSchemaMap = {
       cta_link: z.string().optional(),
       image_url: z.union([z.string().url(), z.literal('')]).optional(),
       layout_mode: z
-        .enum(['inline', 'background', 'full_bleed', 'natural_height'])
+        .enum(['inline', 'background', 'full_bleed', 'natural_height', 'full_width', 'full_height', 'full_width_height', 'cover'])
         .default('inline'),
       mobile_layout_mode: z
-        .enum(['inline', 'background', 'full_bleed', 'natural_height'])
+        .enum(['inline', 'background', 'full_bleed', 'natural_height', 'full_width', 'full_height', 'full_width_height', 'cover', 'full_width_height_mobile'])
         .optional()
         .default('inline'),
       mobile_crop_behavior: z

@@ -1,4 +1,5 @@
 // app/api/fix-template/route.ts
+import { ensureBlockId } from '@/admin/lib/ensureBlockId';
 import { getSupabase } from '@/lib/supabase/server';
 import { NextResponse } from 'next/server';
 
@@ -20,13 +21,7 @@ export async function POST(req: Request) {
 
   const updatedPages = site.data.pages.map((page: any) => ({
     ...page,
-    content_blocks: page.content_blocks.map((block: any) => ({
-      ...block,
-      content: {
-        ...block.content,
-        ...(fixes[block._id] || {}),
-      },
-    })),
+    content_blocks: page.content_blocks.map((block: any) => ensureBlockId(block)),
   }));
 
   const { error: updateError } = await supabase

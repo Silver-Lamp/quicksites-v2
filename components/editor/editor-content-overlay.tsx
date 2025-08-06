@@ -10,6 +10,7 @@ import { BlockOverlayControls } from './block-overlay-controls';
 import { FloatingAddBlockHere } from './floating-add-block-here';
 import { InlineBlockTypePicker } from './inline-block-type-picker';
 import { AISuggestionOverlay } from './ai-suggestion-overlay';
+import { ensureBlockId } from '@/admin/lib/ensureBlockId';
 
 export function EditorContentOverlay({
   template,
@@ -67,7 +68,7 @@ export function EditorContentOverlay({
               <h2 className="text-lg font-semibold text-white">{page.title}</h2>
 
               {page.content_blocks.map((block: any, blockIndex: number) => (
-                <MotionBlockWrapper key={block._id}>
+                <MotionBlockWrapper key={ensureBlockId(block)._id}>
                   <div className="relative block-hover rounded border border-white/10 p-3">
                     <BlockOverlayControls
                       onEdit={() => alert(`Edit ${block.type}`)}

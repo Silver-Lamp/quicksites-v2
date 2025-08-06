@@ -2,7 +2,7 @@
 'use client';
 
 import type { Block } from '@/types/blocks';
-import { BLOCK_TYPES, type BlockType } from '@/types/blocks';
+import { BlockContentMap, BlockType } from '@/types/blocks';
 import { JSX } from 'react';
 import { useBlockFix } from '@/components/ui/block-fix-context';
 import DebugOverlay from '@/components/ui/debug-overlay';
@@ -20,7 +20,7 @@ function assertAllRenderersCovered() {
     ...Object.keys(STATIC_RENDERERS),
     ...Object.keys(DYNAMIC_RENDERERS),
   ]);
-  const missing = BLOCK_TYPES.filter(type => !handled.has(type));
+  const missing = Object.keys(BlockContentMap).filter((type: string) => !handled.has(type));
   if (missing.length > 0) {
     const msg = `[🛑 BLOCK_RENDERERS] Missing renderers for: ${missing.join(', ')}`;
     if (isDev) throw new Error(msg);

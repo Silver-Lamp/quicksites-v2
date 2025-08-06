@@ -193,7 +193,7 @@ export default function BlockAdderGrouped({
                             </div>
                             <div className="w-full border rounded overflow-hidden">
                               <RenderBlockMini
-                                block={createDefaultBlock(type)}
+                                block={createDefaultBlock(type) as any}
                                 className="w-full h-32"
                                 showDebug={false}
                                 colorMode={colorMode}

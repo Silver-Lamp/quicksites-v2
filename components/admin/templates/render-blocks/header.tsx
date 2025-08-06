@@ -17,7 +17,14 @@ export default function PageHeader({
   previewOnly = false,
   colorMode = 'dark', // default to dark if not passed
 }: Props) {
-  const { logoUrl, navItems } = block.content;
+  const { logo_url, nav_items } = block.content as unknown as {
+    logo_url: string;
+    nav_items: {
+      label: string;
+      href: string;
+      appearance: string;
+    }[];
+  };
   const [menuOpen, setMenuOpen] = useState(false);
 
   const isLight = colorMode === 'light';
@@ -29,10 +36,10 @@ export default function PageHeader({
     <header className={`w-full ${bgColor} ${textColor}`}>
       <div className="w-full mx-auto max-w-screen-xl px-4 sm:px-6 lg:px-8 flex items-center justify-between h-20">
         {/* Logo */}
-        {logoUrl && (
+        {logo_url && (
           <Link href="/" className="flex items-center">
             <Image
-              src={logoUrl}
+              src={logo_url}
               alt="Site Logo"
               width={60}
               height={60}
@@ -44,11 +51,11 @@ export default function PageHeader({
 
         {/* Desktop nav */}
         <nav className={`hidden md:flex gap-8 text-sm font-medium`}>
-          {navItems.map((item: { href: string; label: string }) => (
+          {nav_items.map((item: { href: string; label: string; appearance: string }) => (
             <Link
               key={item.href}
               href={item.href}
-              className={`transition-colors duration-200 ${textColor} ${hoverColor}`}
+              className={`transition-colors duration-200 ${textColor} ${hoverColor} ${item.appearance}`}
             >
               {item.label}
             </Link>
@@ -74,11 +81,11 @@ export default function PageHeader({
       {/* Mobile dropdown menu */}
       {menuOpen && !previewOnly && (
         <div className={`${bgColor} px-4 pb-4 space-y-2 text-sm font-medium`}>
-          {navItems.map((item: { href: string; label: string }) => (
+          {nav_items.map((item: { href: string; label: string; appearance: string }) => (
             <Link
               key={item.href}
               href={item.href}
-              className={`block transition-colors duration-200 ${textColor} ${hoverColor}`}
+              className={`block transition-colors duration-200 ${textColor} ${hoverColor} ${item.appearance}`}
               onClick={() => setMenuOpen(false)}
             >
               {item.label}

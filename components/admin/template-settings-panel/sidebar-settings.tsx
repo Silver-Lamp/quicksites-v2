@@ -11,6 +11,7 @@ import ThemePanel from '../templates/panels/theme-panel';
 import type { Template } from '@/types/template';
 import PagesPanel from '../templates/panels/pages-panel';
 import { useState } from 'react';
+import TemplateJsonEditor from '../templates/template-json-editor';
 
 export default function SidebarSettings({
   template,
@@ -29,6 +30,7 @@ export default function SidebarSettings({
       <DomainPanel template={template} onChange={onChange} isSite={template.is_site ?? false} />
       <SeoPanel template={template} onChange={onChange} />
       <ThemePanel template={template} onChange={onChange} />
+      <TemplateJsonEditor template={template} rawJson={JSON.stringify(template.data, null, 2)} setRawJson={() => {}} sidebarValues={template.data} setSidebarValues={() => {}} colorMode={template.color_mode as 'light' | 'dark'} />
     </div>
   );
 }

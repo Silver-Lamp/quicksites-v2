@@ -1,52 +1,44 @@
 // admin/utils/normalizeTemplate.ts
-import type { Template } from '@/types/template';
+import type { Template, Page} from '@/types/template';
 
 /**
- * Recursively unwraps `.data` fields until it hits a layer without `.data`
+ * Gracefully handles legacy `.data` wrappers if present
  */
-function unwrapData<T = any>(obj: any): T {
-  let current = obj;
-  let depth = 0;
-  while (current?.data && typeof current.data === 'object' && depth < 10) {
-    current = current.data;
-    depth++;
-  }
-  return current;
+function unwrapLegacyPages(entry: any): any[] {
+  if (Array.isArray(entry.pages)) return entry.pages;
+  if (entry.data?.pages && Array.isArray(entry.data.pages)) return entry.data.pages;
+  return [];
 }
 
 export function normalizeTemplate(entry: any): Template {
-  const unwrapped = unwrapData(entry);
+  const rawPages = unwrapLegacyPages(entry);
+  const services = entry.services ?? entry.data?.services ?? [];
 
-  const rawPages = unwrapped.pages ?? [];
-  const services = entry.services ?? unwrapped.services ?? [];
+  const pages = rawPages.map((page: any, i: number) => {
+    const originalBlocks = Array.isArray(page.content_blocks) ? page.content_blocks : [];
+    const filteredBlocks = originalBlocks.filter((block: any) => {
+      if (!block?.type || !block?.content) return false;
+      if (block.type === 'text' && !block.content?.value?.trim()) return false;
+      return true;
+    });
 
-  const pages = Array.isArray(rawPages)
-    ? rawPages.map((page: any, i: number) => {
-        const originalBlocks = Array.isArray(page.content_blocks) ? page.content_blocks : [];
-        const filteredBlocks = originalBlocks.filter((block: any) => {
-          if (!block?.type || !block?.content) return false;
-          if (block.type === 'text' && !block.content?.value?.trim()) return false;
-          return true;
-        });
+    const removedCount = originalBlocks.length - filteredBlocks.length;
+    if (removedCount > 0) {
+      console.log(
+        `🧹 normalizeTemplate: Removed ${removedCount} empty block(s) from page "${page.slug || page.title || 'untitled'}"`
+      );
+    }
 
-        const removedCount = originalBlocks.length - filteredBlocks.length;
-        if (removedCount > 0) {
-          console.log(
-            `🧹 normalizeTemplate: Removed ${removedCount} empty block(s) from page "${page.slug || page.title || 'untitled'}"`
-          );
-        }
-
-        return {
-          id: page.id || `page-${i}`,
-          slug: page.slug || 'home',
-          title: page.title || 'Home',
-          show_footer: page.show_footer ?? true,
-          show_header: page.show_header ?? true,
-          content_blocks: filteredBlocks,
-          ...page,
-        };
-      })
-    : [];
+    return {
+      id: page.id || `page-${i}`,
+      slug: page.slug || 'home',
+      title: page.title || 'Home',
+      show_footer: page.show_footer ?? true,
+      show_header: page.show_header ?? true,
+      content_blocks: filteredBlocks,
+      ...page,
+    };
+  });
 
   const rawName = entry.template_name?.trim();
   const rawSlug = entry.slug?.trim();
@@ -89,8 +81,8 @@ export function normalizeTemplate(entry: any): Template {
     custom_domain: entry.custom_domain ?? '',
     published: entry.published ?? false,
     verified: entry.verified ?? false,
-
     services: Array.isArray(services) ? services : [],
+    pages: pages as Page[],
 
     meta: {
       title: entry.meta?.title?.trim() || fallbackTitle,
@@ -100,16 +92,7 @@ export function normalizeTemplate(entry: any): Template {
       appleIcons: entry.meta?.appleIcons ?? '',
       ...entry.meta,
     },
-
-    data: {
-      ...unwrapped,
-      services: Array.isArray(services) ? services : [],
-      pages,
-    },
   };
-
-  // 🚫 Strip legacy top-level pages
-  delete (normalized as any).pages;
 
   return normalized;
 }

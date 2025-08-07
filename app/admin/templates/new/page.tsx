@@ -35,7 +35,9 @@ export default function NewTemplatePage() {
       setUniqueSlug(slug);
 
       if (!from) {
-        setInitialData(createEmptyTemplate(slug));
+        const fresh = createEmptyTemplate(slug);
+        console.log('[🧪 Fresh new template]', fresh);
+        setInitialData(fresh);
         return;
       }
 
@@ -61,20 +63,24 @@ export default function NewTemplatePage() {
       }
 
       const remixed = createEmptyTemplate(slug);
-      remixed.data = snapshot.data;
+      remixed.data = {
+        services: Array.isArray(snapshot.data?.services) ? snapshot.data.services : [],
+        pages: Array.isArray(snapshot.data?.pages) ? snapshot.data.pages : [],
+      };
+
       remixed.color_scheme = snapshot.color_scheme ?? 'neutral';
       remixed.theme = snapshot.theme ?? 'default';
       remixed.brand = snapshot.brand ?? 'default';
       remixed.is_site = snapshot.is_site ?? false;
       remixed.published = false;
 
+      console.log('[🧪 Remixed from snapshot]', remixed);
       setInitialData(remixed);
     }
 
     initializeTemplate();
   }, [from]);
 
-  // 🛡 Wait for slug to stabilize before rendering editor
   if (!uniqueSlug) {
     return (
       <div className="flex h-screen w-full items-center justify-center">
@@ -84,6 +90,9 @@ export default function NewTemplatePage() {
       </div>
     );
   }
+
+  console.log('[🧪 Final initialData being passed]', initialData);
+  console.log('[🧪 Final initialData.data]', initialData?.data);
 
   return (
     <TemplateEditor

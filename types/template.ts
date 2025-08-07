@@ -1,4 +1,3 @@
-// types/template.ts
 import { BlockValidationErrorMap } from '@/lib/validateBlock';
 import type { Block } from './blocks';
 
@@ -22,7 +21,7 @@ export type Page = {
 };
 
 export type TemplateData = {
-  pages: Page[];
+  pages?: Page[];
   services?: string[];
   testimonials?: string[];
   cta?: string[];
@@ -36,53 +35,48 @@ export type TemplateData = {
   color_mode?: 'light' | 'dark';
 };
 
+// Represents the persisted state (matches DB + zod schema)
 export type Snapshot = {
   id: string;
   template_name: string;
+  slug: string;
   layout: string;
   color_scheme: string;
   theme: string;
   brand: string;
-  slug: string;
-  industry: string;
-  data: TemplateData;
-
-  // 🆕 Global header/footer blocks
-  headerBlock?: Block | null;
-  footerBlock?: Block | null;
-  show_header?: boolean;
-  show_footer?: boolean;
-  block_errors?: BlockValidationErrorMap;
-  block_errors_map?: Record<string, string[]>;
   commit?: string;
+  industry: string;
+  phone?: string;
+  is_site?: boolean;
+  published?: boolean;
+  verified?: boolean;
+
+  hero_url?: string;
+  banner_url?: string;
+  logo_url?: string;
+  team_url?: string;
+  color_mode?: 'light' | 'dark';
+
+  domain?: string | null;
+  custom_domain?: string;
+  default_subdomain?: string;
+
   created_at?: string;
   updated_at?: string;
-  domain?: string | null;
-  published?: boolean;
-  archived?: boolean;
-  name_exists?: boolean;
-  show_name_error?: boolean;
-  slug_preview?: string;
-  input_value?: string;
-  is_renaming?: boolean;
-  is_creating?: boolean;
-  autosave_status?: string;
-  autosave_error?: string;
-  autosave_message?: string;
-  autosave_timestamp?: string;
-  is_site?: boolean;
-  verified?: boolean;
-  custom_domain?: string;
-  custom_domain_verified?: boolean;
-  custom_domain_verification_token?: string;
-  custom_domain_verification_token_expires_at?: string;
-  custom_domain_verification_status?: string;
-  custom_domain_verification_error?: string;
-  custom_domain_verification_message?: string;
-  custom_domain_verification_timestamp?: string;
+  saved_at?: string;
+  save_count?: number;
+  last_editor?: string;
+
+  claimed_by?: string;
+  claimed_at?: string;
+  claim_source?: string;
+
+  search_engines_last_pinged_at?: string;
+  search_engines_last_ping_response?: any;
+
   services?: string[];
   site_id?: string | null;
-  phone?: string;
+
   meta?: {
     title?: string;
     description?: string;
@@ -90,22 +84,37 @@ export type Snapshot = {
     faviconSizes?: string;
     appleIcons?: string;
   };
+
+  data?: TemplateData;
+  pages?: Page[];
+
+  headerBlock?: Block | null;
+  footerBlock?: Block | null;
 };
 
+// Editor/runtime-only properties go here
 export type Template = Snapshot & {
   site_name?: string;
-  template_name?: string;
   headline?: string;
   description?: string;
-  hero_url?: string;
-  banner_url?: string;
-  logo_url?: string;
-  team_url?: string;
-  color_mode?: 'light' | 'dark';
-  pages?: Page[];
+  name_exists?: boolean;
+  show_name_error?: boolean;
+  slug_preview?: string;
+  input_value?: string;
+  is_renaming?: boolean;
+  is_creating?: boolean;
+  // Autosave feedback
+  autosave_status?: string;
+  autosave_error?: string;
+  autosave_message?: string;
+  autosave_timestamp?: string;
+
+  // Block diagnostics
+  block_errors?: BlockValidationErrorMap;
+  block_errors_map?: Record<string, string[]>;
 };
 
 export type TemplateSnapshot = Snapshot;
 
 export type Theme = 'light' | 'dark';
-export type Brand = 'green' | 'blue' | 'purple' | 'red' | 'orange'; // Add more as needed
+export type Brand = 'green' | 'blue' | 'purple' | 'red' | 'orange';

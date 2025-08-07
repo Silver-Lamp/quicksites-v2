@@ -2,6 +2,8 @@ import { z } from 'zod';
 import { BlockSchema } from './blockSchemas';
 import { stringOrEmpty, nullableString } from './sharedHelpers';
 
+// ─────────────────────────────────────
+// 🔹 Slug Preprocessor
 function slugify(str: string): string {
   return str
     .toLowerCase()
@@ -9,6 +11,9 @@ function slugify(str: string): string {
     .replace(/(^-|-$)/g, '')
     .trim();
 }
+
+// ─────────────────────────────────────
+// 🔹 Page Schema
 
 export const PageSchema = z.object({
   id: stringOrEmpty,
@@ -19,12 +24,8 @@ export const PageSchema = z.object({
   show_footer: z.boolean().optional().default(true),
 });
 
-export const TemplateDataSchema = z
-  .object({
-    pages: z.array(PageSchema),
-    services: z.array(z.string()).optional().default([]),
-  })
-  .strict();
+// ─────────────────────────────────────
+// 🔹 Base Template Schema (flattened)
 
 export const TemplateSaveSchema = z
   .object({
@@ -42,12 +43,19 @@ export const TemplateSaveSchema = z
 
     site_id: z.string().nullable().optional(),
     template_name: z.string().min(1).default('untitled-template'),
-    phone: stringOrEmpty,
+    phone: nullableString,
     layout: z.string(),
     color_scheme: z.string(),
     color_mode: z.string().optional(),
     industry: z.string().default('General'),
     theme: z.string(),
+    brand: nullableString,
+    commit: nullableString,
+    saved_at: nullableString,
+    save_count: z.number().nullable().optional(),
+    last_editor: nullableString,
+    default_subdomain: nullableString,
+
     is_site: z.boolean().optional(),
     published: z.boolean().optional(),
     headline: z.string().optional(),
@@ -60,11 +68,11 @@ export const TemplateSaveSchema = z
     headerBlock: BlockSchema.optional().nullable(),
     footerBlock: BlockSchema.optional().nullable(),
 
-    data: TemplateDataSchema,
+    pages: z.array(PageSchema),
+    services: z.array(z.string()).optional().default([]),
 
     updated_at: z.string().optional(),
     verified: z.boolean().optional(),
-    services: z.array(z.string()).optional().default([]),
 
     meta: z.preprocess(
       (val) => (val === null ? {} : val),
@@ -79,9 +87,6 @@ export const TemplateSaveSchema = z
         .optional()
     ),
   })
-  .transform((obj) => {
-    const { pages, services, ...rest } = obj as any;
-    return rest;
-  });
+  .strict();
 
 export type ValidatedTemplate = z.infer<typeof TemplateSaveSchema>;

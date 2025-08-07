@@ -10,11 +10,11 @@ export function unwrapData<T = any>(obj: any): T {
   }
   
   export function cleanTemplateDataStructure(raw: any) {
-    const unwrapped = unwrapData(raw?.data || {});
+    const { data, ...rest } = raw || {};
     return {
-      ...unwrapped,
-      pages: Array.isArray(unwrapped.pages) ? unwrapped.pages : [],
-      services: Array.isArray(unwrapped.services) ? unwrapped.services : [],
+      ...rest,
+      pages: Array.isArray(raw.pages) ? raw.pages : [],
+      services: Array.isArray(raw.services) ? raw.services : [],
     };
   }
   

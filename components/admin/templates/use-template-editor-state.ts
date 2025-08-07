@@ -1,3 +1,4 @@
+// components/admin/templates/use-template-editor-state.ts
 import { useState, useEffect, useRef } from 'react';
 import { createEmptyTemplate } from '@/lib/createEmptyTemplate';
 import { useAutosaveTemplate } from '@/hooks/useAutosaveTemplate';
@@ -12,6 +13,8 @@ import { BlockValidationError, validateTemplateBlocks } from '@/hooks/validateTe
 import { fixTemplatePages } from '@/lib/fixBlockDefaults';
 import { handleTemplateSave } from '@/admin/lib/handleTemplateSave';
 import { ZodError } from 'zod';
+import { cleanTemplateDataStructure } from '@/admin/lib/cleanTemplateData';
+import { prepareTemplateForSave } from '@/admin/lib/prepareTemplateForSave';
 
 function generateSlug(base: string) {
   return base
@@ -73,7 +76,7 @@ export function useTemplateEditorState({
     } as Snapshot;
 
     const errors: Record<string, BlockValidationError[]> = {};
-    for (const page of snapshot.data.pages) {
+    for (const page of snapshot.data?.pages || []) {
       for (const block of page.content_blocks) {
         const errorList = validateBlock(block as Block);
         if (errorList.length) {
@@ -100,7 +103,7 @@ export function useTemplateEditorState({
   const [isCreating, setIsCreating] = useState(!initialData);
   const [isRenaming, setIsRenaming] = useState(false);
 
-  const { rawJson, setRawJson, livePreviewData } = useTemplateJsonSync(template.data);
+  const { rawJson, setRawJson, livePreviewData } = useTemplateJsonSync(template.data || {});
   const { inputValue, setInputValue, slugPreview, nameExists } = useTemplateMeta(template.template_name, template.id);
 
   const autosave = useAutosaveTemplate(template, rawJson);
@@ -109,9 +112,10 @@ export function useTemplateEditorState({
   useEffect(() => {
     if (!initialData && template && !hasPrettified.current) {
       hasPrettified.current = true;
-      const normalized = normalizeTemplate(template);
-      setRawJson(JSON.stringify(normalized, null, 2));
-    }
+
+      const dbSafe = prepareTemplateForSave(template); // strips top-level stuff
+      const layoutOnly = cleanTemplateDataStructure(dbSafe); // keeps pages/meta/etc only
+      setRawJson(JSON.stringify(layoutOnly, null, 2));    }
   }, [initialData, template]);
 
   // Simulated redirect after creation

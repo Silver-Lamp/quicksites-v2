@@ -3,7 +3,7 @@ import type { BlockType } from '@/types/blocks';
 import { normalizeBlock } from '@/lib/utils/normalizeBlock';
 import { DEFAULT_BLOCK_CONTENT } from '@/lib/blocks/defaultBlockContent';
 import { z } from 'zod';
-import { BlockSchema } from '@/admin/lib/zod/templateSaveSchema';
+import { BlockSchema } from '@/admin/lib/zod/blockSchemas';
 
 export function createDefaultBlock(type: BlockType): z.infer<typeof BlockSchema> {
   const _id = crypto.randomUUID();

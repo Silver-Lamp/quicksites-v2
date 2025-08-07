@@ -1,14 +1,8 @@
-// lib/createEmptyTemplate.ts
 import type { Template } from '@/types/template';
 import { createDefaultBlock } from '@/lib/createDefaultBlock';
-import { BlockType } from '@/types/blocks';
 
 function generateSlug(base: string) {
-  return base
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/(^-|-$)/g, '')
-    .trim();
+  return base.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '').trim();
 }
 
 function generateUniqueSuffix() {
@@ -17,6 +11,8 @@ function generateUniqueSuffix() {
 
 export function createEmptyTemplate(base = 'new-template'): Template {
   const slug = `${generateSlug(base)}-${generateUniqueSuffix()}`;
+
+  const now = new Date().toISOString();
 
   return {
     id: crypto.randomUUID(),
@@ -35,8 +31,8 @@ export function createEmptyTemplate(base = 'new-template'): Template {
     is_site: false,
     published: false,
     verified: false,
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
+    created_at: now,
+    updated_at: now,
     domain: '',
     custom_domain: '',
     services: [],
@@ -47,6 +43,7 @@ export function createEmptyTemplate(base = 'new-template'): Template {
       faviconSizes: '',
       appleIcons: '',
     },
+    // ✅ Wrap layout in `.data` instead of flattening it
     data: {
       services: [],
       pages: [

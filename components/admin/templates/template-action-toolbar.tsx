@@ -9,7 +9,7 @@ import { createSharedPreview } from '@/admin/lib/createSharedPreview';
 import { supabase } from '@/admin/lib/supabaseClient';
 import toast from 'react-hot-toast';
 import type { Template } from '@/types/template';
-import { validateAndLogTemplate } from '@/admin/lib/validateTemplate';
+import { validateTemplateAndFix } from '@/admin/lib/validateTemplate';
 
 export function TemplateActionToolbar({
   template,
@@ -144,7 +144,7 @@ export function TemplateActionToolbar({
           size="sm"
           variant="secondary"
           onClick={() => {
-            const check = validateAndLogTemplate(template);
+            const check = validateTemplateAndFix(template);
             if (!check.valid) {
               toast.error('Validation failed — check console for details.');
               return;

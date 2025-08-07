@@ -1,4 +1,4 @@
-'use client';
+"use client";
 
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
@@ -56,15 +56,13 @@ export default function TemplateEditor({
     handleSaveDraft,
     nameExists,
     blockErrors,
-    setBlockErrors
+    setBlockErrors,
   } = useTemplateEditorState({ templateName, initialData, onRename, colorMode });
 
   usePageCountDebugger(template as Template);
 
-  const {
-    insertBlock,
-    recentlyInsertedBlockId,
-  } = useTemplateInsert(setTemplate as unknown as (updater: (prev: Template) => Template) => void);
+  const { insertBlock, recentlyInsertedBlockId } =
+    useTemplateInsert(setTemplate as (updater: (prev: Template) => Template) => void);
 
   const handleUseBlock = (text: string, action: 'insert' | 'replace', index?: number) => {
     setPendingText(text);
@@ -89,18 +87,16 @@ export default function TemplateEditor({
     </div>
   ));
 
-  // 🧼 Clean wrapper before saving to prevent fallback page leak
   const handleCleanSaveDraft = async () => {
     const cleaned = { ...template };
     if ('pages' in cleaned) {
-      console.warn('🧹 Stripping top-level template.pages before save (template-editor.tsx)');
       delete (cleaned as any).pages;
     }
-  
+
     try {
       const saved = await saveTemplate(cleaned);
       toast.success('Template saved');
-      setTemplate(saved); // update state with fresh clean version
+      setTemplate(saved);
     } catch (err) {
       console.error(err);
       toast.error('Error saving template');
@@ -109,7 +105,6 @@ export default function TemplateEditor({
 
   return (
     <>
-      {/* Template Editor Toolbar */}
       <ScrollArea className="h-screen w-full p-6">
         <TemplateEditorToolbar
           templateName={template.template_name}
@@ -119,8 +114,8 @@ export default function TemplateEditor({
           inputValue={inputValue}
           setInputValue={setInputValue}
           slugPreview={slugPreview}
-          handleRename={handleRename as unknown as () => void}
-          handleSaveDraft={handleCleanSaveDraft} // ✅ updated here
+          handleRename={handleRename as () => void}
+          handleSaveDraft={handleCleanSaveDraft}
           onBack={() =>
             router.push(initialMode === 'site' ? '/admin/sites' : '/admin/templates') as unknown as () => void
           }
@@ -128,7 +123,6 @@ export default function TemplateEditor({
           setShowNameError={() => {}}
         />
 
-        {/* Block Errors */}
         {Object.keys(blockErrors).length > 0 && (
           <div className="bg-red-900/40 text-red-300 p-4 rounded border border-red-500 mb-4">
             <div className="font-bold text-red-200 mb-2">Some block(s) have validation errors:</div>
@@ -136,22 +130,20 @@ export default function TemplateEditor({
           </div>
         )}
 
-        {/* Template Editor Content */}
         <EditorContent
-          template={template as unknown as Template}
+          template={template as Template}
           rawJson={rawJson}
           setRawJson={setRawJson}
           livePreviewData={livePreviewData}
-          setTemplate={setTemplate as unknown as Dispatch<SetStateAction<Template>>}
+          setTemplate={setTemplate as Dispatch<SetStateAction<Template>>}
           autosaveStatus={autosave.status}
           setShowPublishModal={() => {}}
           recentlyInsertedBlockId={recentlyInsertedBlockId ?? null}
-          setBlockErrors={setBlockErrors as unknown as (errors: Record<string, BlockValidationError[]>) => void}
-          blockErrors={blockErrors as unknown as Record<string, BlockValidationError[]> | null}
+          setBlockErrors={setBlockErrors as (errors: Record<string, BlockValidationError[]>) => void}
+          blockErrors={blockErrors as Record<string, BlockValidationError[]>}
           mode="template"
         />
 
-        {/* Block Editor */}
         {selectedBlock && selectedIndex !== null && (
           <BlockSidebar
             block={selectedBlock}
@@ -175,7 +167,6 @@ export default function TemplateEditor({
         )}
       </ScrollArea>
 
-      {/* AI Block Suggestions */}
       <Drawer open={showVectorDrawer} onClose={() => setShowVectorDrawer(false)}>
         <VectorQueryPage
           onUseBlock={(text, mode = 'insert', index) =>
@@ -184,7 +175,6 @@ export default function TemplateEditor({
         />
       </Drawer>
 
-      {/* AI Block Preview */}
       <Modal show={!!pendingText} onClose={() => setPendingText(null)} title="🧠 Preview AI Block">
         <textarea
           className="w-full border-gray-700 rounded bg-zinc-800 text-white p-2 text-sm mb-4"
@@ -224,11 +214,6 @@ export default function TemplateEditor({
           </Button>
         </div>
       </Modal>
-
-      <div>&nbsp;</div>
-      <div>&nbsp;</div>
-      <div>&nbsp;</div>
-      <div>&nbsp;</div>
     </>
   );
 }

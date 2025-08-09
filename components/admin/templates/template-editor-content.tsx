@@ -55,6 +55,7 @@ export function EditorContent({
   blockErrors,
   mode,
   setShowPublishModal, // optional
+  onChange,
 }: {
   template: Template;
   rawJson: string;
@@ -67,6 +68,7 @@ export function EditorContent({
   blockErrors: Record<string, BlockValidationError[]> | null;
   mode: 'template' | 'site';
   setShowPublishModal?: (v: boolean) => void;
+  onChange: (patch: Partial<Template>) => void;
 }) {
   const [zodError, setZodError] = useState<ZodError | null>(null);
   const [showModal, setModal] = useState(false);

@@ -36,7 +36,10 @@ export default function SidebarSettings({ template, onChange }: Props) {
   );
 
   return (
-    <div className="space-y-4 px-4 pt-2 w-full" id="sidebar-settings">
+    <div
+      className="space-y-4 px-4 pt-2 w-1/4 min-w-[280px] max-w-[320px] flex-shrink-0"
+      id="sidebar-settings"
+    >
       <PagesPanel
         template={template}
         onChange={(updated) => {

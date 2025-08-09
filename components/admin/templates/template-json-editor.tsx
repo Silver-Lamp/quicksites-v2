@@ -230,7 +230,7 @@ export default function TemplateJsonEditor({
   };
 
   return (
-    <Collapsible title="JSON Editor (Layout Only)" id="template-json-editor" defaultOpen={true}>
+    <Collapsible title="JSON Editor" id="template-json-editor" defaultOpen={true}>
       <div className="space-y-2">
         <div className="space-y-2">
           <div className="flex justify-start items-start gap-2">

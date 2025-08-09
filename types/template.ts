@@ -1,5 +1,7 @@
+// types/template.ts
 import { BlockValidationErrorMap } from '@/lib/validateBlock';
 import type { Block } from './blocks';
+import { z } from 'zod';
 
 export type Page = {
   id: string;
@@ -120,3 +122,115 @@ export type TemplateSnapshot = Snapshot;
 
 export type Theme = 'light' | 'dark';
 export type Brand = 'green' | 'blue' | 'purple' | 'red' | 'orange';
+
+
+/* ===========================
+   Zod schemas (editor-friendly)
+   =========================== */
+
+   const UUID = z.string().uuid().nullable().optional();
+   const BlockSchema = z.any(); // editor: allow any block shape
+   
+   const PageSchema = z.object({
+     id: z.string(),
+     slug: z.string(),
+     title: z.string(),
+     content_blocks: z.array(BlockSchema),
+     show_header: z.boolean().optional(),
+     show_footer: z.boolean().optional(),
+     site_id: UUID,
+     meta: z.object({
+       title: z.string().optional(),
+       description: z.string().optional(),
+       visible: z.boolean().optional(),
+       theme: z.string().optional(),
+       ogImage: z.string().optional(),
+       faviconSizes: z.string().optional(),
+       appleIcons: z.string().optional(),
+     })
+     .partial()
+     .passthrough()
+     .optional(),
+   }).passthrough(); // allow page extensions
+   
+   const TemplateDataSchema = z.object({
+     pages: z.array(PageSchema).optional(),
+     services: z.array(z.string()).optional(),
+     testimonials: z.array(z.string()).optional(),
+     cta: z.array(z.string()).optional(),
+     faqs: z.array(z.string()).optional(),
+     contact_form: z.array(z.string()).optional(),
+     header: z.array(z.string()).optional(),
+     footer: z.array(z.string()).optional(),
+     service_areas: z.array(z.string()).optional(),
+     site_id: UUID,
+     phone: z.string().optional(),
+     color_mode: z.enum(['light', 'dark']).optional(),
+     archived: z.boolean().optional(),
+   }).passthrough(); // accept extra keys inside data
+   
+   // Core template shape used by the editor; intentionally permissive.
+   export const TemplateFormSchema = z.object({
+     id: z.string().uuid(),
+     template_name: z.string(),
+     slug: z.string(),
+     layout: z.string(),
+     color_scheme: z.string(),
+     theme: z.string(),
+     brand: z.string(),
+   
+     industry: z.string().optional(),
+     phone: z.string().optional(),
+   
+     is_site: z.boolean().optional(),
+     published: z.boolean().optional(),
+     verified: z.boolean().optional(),
+   
+     // editor can carry both top-level pages and data.pages
+     pages: z.array(PageSchema).optional(),
+   
+     show_header: z.boolean().optional(),
+     show_footer: z.boolean().optional(),
+   
+     hero_url: z.string().optional(),
+     banner_url: z.string().optional(),
+     logo_url: z.string().optional(),
+     team_url: z.string().optional(),
+     color_mode: z.enum(['light', 'dark']).optional(),
+   
+     // DB-ish fields (allowed, not enforced)
+     domain: z.string().nullable().optional(),
+     custom_domain: z.string().optional(),
+     default_subdomain: z.string().optional(),
+     created_at: z.string().optional(),
+     updated_at: z.string().optional(),
+     saved_at: z.string().optional(),
+     save_count: z.number().optional(),
+     last_editor: z.string().optional(),
+     claimed_by: z.string().optional(),
+     claimed_at: z.string().optional(),
+     claim_source: z.string().optional(),
+     search_engines_last_pinged_at: z.string().optional(),
+     search_engines_last_ping_response: z.any().optional(),
+     services: z.array(z.string()).optional(),
+     site_id: UUID,
+   
+     meta: z.object({
+       title: z.string().optional(),
+       description: z.string().optional(),
+       ogImage: z.string().optional(),
+       faviconSizes: z.string().optional(),
+       appleIcons: z.string().optional(),
+     })
+     .partial()
+     .passthrough()
+     .optional(),
+   
+     data: TemplateDataSchema.optional(),
+   
+     headerBlock: BlockSchema.nullable().optional(),
+     footerBlock: BlockSchema.nullable().optional(),
+   })
+   .passthrough(); // 👈 key: accept unknown top-level keys
+   
+   export type TemplateForm = z.infer<typeof TemplateFormSchema>;

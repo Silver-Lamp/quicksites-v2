@@ -42,6 +42,13 @@ export const TemplateSaveSchema = z
     ),
 
     site_id: z.string().nullable().optional(),
+    editor_id: z.string().nullable().optional(),
+    claimed_by: z.string().nullable().optional(), // uuid
+    claimed_at: z.string().nullable().optional(), // timestamp
+    claim_source: z.string().nullable().optional(),
+    archived: z.boolean().optional(),
+    created_at: z.string().nullable().optional(), // timestamp
+    updated_at: z.string().nullable().optional(), // timestamp
     template_name: z.string().min(1).default('untitled-template'),
     phone: nullableString,
     layout: z.string(),
@@ -71,8 +78,8 @@ export const TemplateSaveSchema = z
     pages: z.array(PageSchema),
     services: z.array(z.string()).optional().default([]),
 
-    updated_at: z.string().optional(),
     verified: z.boolean().optional(),
+    verified_at: z.string().nullable().optional(), // timestamp
 
     meta: z.preprocess(
       (val) => (val === null ? {} : val),
@@ -87,6 +94,7 @@ export const TemplateSaveSchema = z
         .optional()
     ),
   })
-  .strict();
+  .passthrough();
+  // .strict();
 
 export type ValidatedTemplate = z.infer<typeof TemplateSaveSchema>;

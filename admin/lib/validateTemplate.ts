@@ -19,7 +19,7 @@ export function validateTemplateAndFix(input: any): {
       },
     };
   }
-
+  // alert('validateTemplateAndFix');
   // Step 1: flatten and unwrap any legacy .data wrappers
   const migrated = migrateLegacyTemplate(input);
 

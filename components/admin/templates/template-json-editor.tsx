@@ -8,10 +8,10 @@ import type { JsonValue } from '@/types/json';
 import { validateBlocksInTemplate } from '@/admin/lib/validateBlocksInTemplate';
 import { cleanTemplateDataStructure } from '@/admin/lib/cleanTemplateData';
 import { TemplateValidationInspector } from '@/components/admin/dev/template-validation-inspector';
-import { extractSqlFieldsFromJson } from '@/lib/utils/extractSqlFieldsFromJson';
+// import { extractSqlFieldsFromJson } from '@/lib/utils/extractSqlFieldsFromJson';
 import { SqlFieldPreview } from '@/components/admin/dev/sql-field-preview';
 import { validateTemplateAndFix } from '@/admin/lib/validateTemplate';
-import { Template } from '@/types/template';
+// import { Template } from '@/types/template';
 import Collapsible from '@/components/ui/collapsible-panel';
 
 type TemplateJsonEditorProps = {
@@ -20,7 +20,7 @@ type TemplateJsonEditorProps = {
   sidebarValues: any;
   setSidebarValues: (values: any) => void;
   colorMode: 'light' | 'dark';
-  template: Template;
+  // template: Template;
 };
 
 export default function TemplateJsonEditor({
@@ -29,7 +29,7 @@ export default function TemplateJsonEditor({
   sidebarValues,
   setSidebarValues,
   colorMode = 'dark',
-  template,
+  // template,
 }: TemplateJsonEditorProps) {
   const [isReadOnly, setIsReadOnly] = useState(true);
   const [parsedJson, setParsedJson] = useState<ValidatedTemplate | null>(null);
@@ -81,43 +81,43 @@ export default function TemplateJsonEditor({
     return cleaned as ValidatedTemplate;
   };
 
-  useEffect(() => {
-    // Cleanup rawJson on mount if not already sanitized
-    const cleaned = sanitizeJsonInput(rawJson);
-    if (cleaned !== rawJson) {
-      setRawJson(cleaned);
-    }
-  }, []);
+  // useEffect(() => {
+  //   // Cleanup rawJson on mount if not already sanitized
+  //   const cleaned = sanitizeJsonInput(rawJson);
+  //   if (cleaned !== rawJson) {
+  //     setRawJson(cleaned);
+  //   }
+  // }, []);
   
-  useEffect(() => {
-    try {
-      const parsed = JSON.parse(rawJson);
-      const result = validateTemplateAndFix(parsed);
+  // useEffect(() => {
+  //   try {
+  //     const parsed = JSON.parse(rawJson);
+  //     const result = validateTemplateAndFix(parsed);
 
-      if (!result.valid) {
-        setParsedJson(null);
-        setZodFieldErrors(result.errors?.fieldErrors || {});
-        const formErrors = result.errors?.formErrors || [];
-        setValidationError(
-          formErrors.length > 0
-            ? formErrors.join(', ')
-            : 'Some field(s) inside blocks or pages are incorrectly formatted.'
-        );
-        return;
-      }
+  //     if (!result.valid) {
+  //       setParsedJson(null);
+  //       setZodFieldErrors(result.errors?.fieldErrors || {});
+  //       const formErrors = result.errors?.formErrors || [];
+  //       setValidationError(
+  //         formErrors.length > 0
+  //           ? formErrors.join(', ')
+  //           : 'Some field(s) inside blocks or pages are incorrectly formatted.'
+  //       );
+  //       return;
+  //     }
 
-      const { data } = result;
-      const cleaned = cleanParsedForZod(data);
-      setParsedJson(cleaned);
+  //     const { data } = result;
+  //     const cleaned = cleanParsedForZod(data);
+  //     setParsedJson(cleaned);
 
-      const blockErrors = validateBlocksInTemplate(cleaned);
-      setValidationError(blockErrors.length > 0 ? blockErrors.join('\n') : null);
-      setZodFieldErrors(null);
-    } catch {
-      setParsedJson(null);
-      setValidationError('Invalid JSON syntax');
-    }
-  }, [rawJson]);
+  //     const blockErrors = validateBlocksInTemplate(cleaned);
+  //     setValidationError(blockErrors.length > 0 ? blockErrors.join('\n') : null);
+  //     setZodFieldErrors(null);
+  //   } catch {
+  //     setParsedJson(null);
+  //     setValidationError('Invalid JSON syntax');
+  //   }
+  // }, [rawJson]);
 
   const toggleCollapse = (path: string) => {
     const newSet = new Set(collapsed);
@@ -126,6 +126,7 @@ export default function TemplateJsonEditor({
   };
 
   const renderValue = (value: JsonValue, path = '') => {
+    // alert('renderValue');
     const type = typeof value;
     if (value === null) return <span className="text-pink-400">null</span>;
     if (Array.isArray(value)) {
@@ -173,6 +174,7 @@ export default function TemplateJsonEditor({
   };
 
   const handlePrettify = () => {
+    // alert('handlePrettify');
     try {
       const parsed = JSON.parse(rawJson);
       const result = validateTemplateAndFix(parsed);
@@ -232,7 +234,6 @@ export default function TemplateJsonEditor({
       <div className="space-y-2">
         <div className="space-y-2">
           <div className="flex justify-start items-start gap-2">
-            <h3 className="text-white text-sm font-semibold">JSON Editor (Layout Only)</h3>
             <div className="flex gap-2">
               <Button variant="secondary" size="sm" onClick={handlePrettify}>
                 Prettify & Fix

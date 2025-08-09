@@ -44,11 +44,12 @@ export function PageManagerSidebar({
   onToggleFooter,
   templateShowHeader,
   templateShowFooter,
+  template,
 }: {
-  pages: Template['data']['pages'];
+  pages: Page[] | undefined;
   selectedIndex: number;
   onSelect: (index: number) => void;
-  onAdd: (newPage: Page) => void;
+  onAdd: (newPage: Page, template: Template) => void;
   onRename: (index: number, title: string, slug?: string) => void;
   onDelete: (index: number) => void;
   onReorder: (oldIndex: number, newIndex: number) => void;
@@ -57,6 +58,7 @@ export function PageManagerSidebar({
   onToggleFooter: (index: number, value: boolean) => void;
   templateShowHeader?: boolean;
   templateShowFooter?: boolean;
+  template: Template;
 }) {
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [draftTitle, setDraftTitle] = useState('');
@@ -79,12 +81,13 @@ export function PageManagerSidebar({
               content_blocks: [],
               show_header: true,
               show_footer: true,
+              site_id: template.site_id || '',
             };
 
-            onAdd(newPage);
+            onAdd(newPage, template);
 
             setTimeout(() => {
-              const newIndex = pages.length;
+              const newIndex = pages?.length ?? 0;
               setEditingIndex(newIndex);
               setDraftTitle(newPage.title);
             }, 0);
@@ -100,19 +103,19 @@ export function PageManagerSidebar({
         collisionDetection={closestCenter}
         onDragEnd={({ active, over }) => {
           if (!over || active.id === over.id) return;
-          const oldIndex = pages.findIndex((p) => p.slug === active.id);
-          const newIndex = pages.findIndex((p) => p.slug === over.id);
-          if (oldIndex !== -1 && newIndex !== -1) {
+          const oldIndex = pages?.findIndex((p: Page) => p.slug === active.id);
+          const newIndex = pages?.findIndex((p: Page) => p.slug === over.id);
+          if (oldIndex !== undefined && newIndex !== undefined) {
             onReorder(oldIndex, newIndex);
           }
         }}
       >
         <SortableContext
-          items={pages.map((p) => p.slug)}
+          items={pages?.map((p: Page) => p.slug) ?? []}
           strategy={verticalListSortingStrategy}
         >
           <ul className="space-y-1">
-            {pages.map((page, idx) => (
+            {pages?.map((page: Page, idx: number) => (
               <SidebarPageItem
                 key={page.slug}
                 page={page}
@@ -122,7 +125,7 @@ export function PageManagerSidebar({
                 onSelect={() => onSelect(idx)}
                 onRename={(newTitle: string, newSlug: string) => {
                   const otherTitles = new Set(
-                    pages.map((p, i) => (i !== idx ? p.title.toLowerCase().trim() : '')).filter(Boolean)
+                    pages?.map((p: Page, i: number) => (i !== idx ? p.title.toLowerCase().trim() : '')).filter(Boolean)
                   );
                   if (otherTitles.has(newTitle.toLowerCase().trim())) {
                     alert(`A page with the title "${newTitle}" already exists.`);
@@ -130,7 +133,7 @@ export function PageManagerSidebar({
                   }
                 
                   const otherSlugs = new Set(
-                    pages.map((p, i) => (i !== idx ? p.slug : '')).filter(Boolean)
+                    pages?.map((p: Page, i: number) => (i !== idx ? p.slug : '')).filter(Boolean)
                   );
                   let finalSlug = newSlug.trim();
                   if (otherSlugs.has(finalSlug)) {
@@ -177,8 +180,8 @@ function SidebarPageItem({
   templateShowHeader,
   templateShowFooter,
 }: {
-  page: Template['data']['pages'][number];
-  pages: Template['data']['pages'];
+  page: Page;
+  pages: Page[] | undefined;
   index: number;
   isSelected: boolean;
   onSelect: () => void;
@@ -229,7 +232,7 @@ function SidebarPageItem({
         <PageEditFields
           initialTitle={draftTitle}
           initialSlug={page.slug}
-          existingSlugs={new Set(pages.map((p, i) => i !== index ? p.slug : ''))}
+          existingSlugs={new Set(pages?.map((p: Page, i: number) => i !== index ? p.slug : ''))}
           onSave={(newTitle, newSlug) => {
             onRename(newTitle, newSlug);
             setEditingIndex(null);

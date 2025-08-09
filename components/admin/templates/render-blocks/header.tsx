@@ -51,7 +51,7 @@ export default function PageHeader({
 
         {/* Desktop nav */}
         <nav className={`hidden md:flex gap-8 text-sm font-medium`}>
-          {nav_items.map((item: { href: string; label: string; appearance: string }) => (
+          {nav_items?.map((item: { href: string; label: string; appearance: string }) => (
             <Link
               key={item.href}
               href={item.href}
@@ -81,7 +81,7 @@ export default function PageHeader({
       {/* Mobile dropdown menu */}
       {menuOpen && !previewOnly && (
         <div className={`${bgColor} px-4 pb-4 space-y-2 text-sm font-medium`}>
-          {nav_items.map((item: { href: string; label: string; appearance: string }) => (
+          {nav_items?.map((item: { href: string; label: string; appearance: string }) => (
             <Link
               key={item.href}
               href={item.href}

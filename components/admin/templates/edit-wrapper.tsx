@@ -9,9 +9,21 @@ import { TemplateEditorProvider } from '@/context/template-editor-context';
 import { prepareTemplateForSave } from '@/admin/lib/prepareTemplateForSave';
 import { cleanTemplateDataStructure } from '@/admin/lib/cleanTemplateData';
 
-type Props = {
-  slug: string;
-};
+type Props = { slug: string };
+
+// --- helpers ----------------------------------------------------
+function coalescePages(obj: any): any[] {
+  if (Array.isArray(obj?.data?.pages)) return obj.data.pages;
+  if (Array.isArray(obj?.pages)) return obj.pages;
+  return [];
+}
+function coalesceBlock(obj: any, key: 'headerBlock' | 'footerBlock') {
+  return obj?.data?.[key] ?? obj?.[key] ?? null;
+}
+function withSyncedPages<T extends { data?: any; pages?: any[] }>(tpl: T, pages: any[]): T {
+  return { ...tpl, pages, data: { ...(tpl.data ?? {}), pages } } as T;
+}
+// ----------------------------------------------------------------
 
 export default function EditWrapper({ slug }: Props) {
   const [data, setData] = useState<Snapshot | null>(null);
@@ -25,77 +37,88 @@ export default function EditWrapper({ slug }: Props) {
         .eq('slug', slug)
         .maybeSingle<Template>();
 
-      if (error) {
-        console.error(`[EditWrapper] Supabase error for slug "${slug}":`, error.message);
+      if (error || !raw) {
+        if (error) console.error(`[EditWrapper] Supabase error for slug "${slug}":`, error.message);
         setData(null);
         setLoading(false);
         return;
       }
 
-      if (!raw) {
-        setData(null);
-        setLoading(false);
-        return;
-      }
+      // 1) Pull pages/blocks straight from DB BEFORE any transforms
+      const pagesFromDB = coalescePages(raw);
+      const headerFromDB = coalesceBlock(raw, 'headerBlock');
+      const footerFromDB = coalesceBlock(raw, 'footerBlock');
 
-      // 🧪 Log full raw Supabase payload for diagnostics
       console.log('[📦 Raw Supabase template]', raw);
 
-      const normalized = normalizeTemplate(raw);
+      // 2) Normalize (may shuffle things; don't trust it for pages)
+      let normalized = normalizeTemplate(raw);
 
-      // 🧼 Step 1: prepare for DB-safe splitting
+      // 3) Prep + clean layout (this may drop keys; we’ll re-inject)
       const dbPayload = prepareTemplateForSave(normalized);
-
-      // 🧼 Step 2: keep only layout-relevant fields for `.data`
       const layoutOnly = cleanTemplateDataStructure(dbPayload);
 
-      // 🧪 Diagnostic: log and auto-strip any unexpected keys
-      const allowed = ['pages', 'meta', 'headerBlock', 'footerBlock'];
-      const cleanedLayout: Record<string, any> = {};
-      const extraKeys: string[] = [];
-
-      for (const [key, value] of Object.entries(layoutOnly)) {
-        if (allowed.includes(key)) {
-          cleanedLayout[key] = value;
-        } else {
-          extraKeys.push(key);
-        }
-      }
-
-      if (extraKeys.length > 0) {
-        console.warn('[🚨 Stripped invalid keys from layout .data]', extraKeys);
-      } else {
-        console.log('[✅ Layout-only data is clean]', Object.keys(cleanedLayout));
-      }
-
-      // 🧱 Step 3: Rehydrate for editor
-      const final: Snapshot = {
-        ...normalized,
-        data: cleanedLayout,
+      // 4) Build the layout data explicitly
+      const cleanedLayout: Record<string, any> = {
+        // force pages back in
+        pages: pagesFromDB,
+        // keep any meta or allowed bits that survived cleaning
+        ...(layoutOnly?.meta ? { meta: layoutOnly.meta } : {}),
+        // force blocks back in
+        ...(headerFromDB ? { headerBlock: headerFromDB } : {}),
+        ...(footerFromDB ? { footerBlock: footerFromDB } : {}),
       };
 
-      setData(final);
+      // 5) Final snapshot mirrored both ways
+      // const final: Snapshot = withSyncedPages(
+      //   {
+      //     ...normalized,
+      //     data: cleanedLayout,
+      //     // keep root blocks too for any legacy readers
+      //     ...(headerFromDB ? { headerBlock: headerFromDB } : {}),
+      //     ...(footerFromDB ? { footerBlock: footerFromDB } : {}),
+      //   } as Snapshot,
+      //   pagesFromDB
+      // );
+
+      // console.log('[🧩 EditWrapper -> final snapshot]', {
+      //   rootPages: final.pages?.length,
+      //   dataPages: final.data?.pages?.length,
+      //   firstPage: final.data?.pages?.[0]?.slug,
+      // });
+
+
+      const layoutPages = Array.isArray(cleanedLayout?.pages) ? cleanedLayout.pages : [];
+      const normalizedTopPages =
+        Array.isArray((normalized as any).pages) ? (normalized as any).pages : layoutPages;
+      
+      const pages = normalizedTopPages.length ? normalizedTopPages : layoutPages;
+      
+      const final: Snapshot = {
+        ...normalized,
+        pages,                                        // <-- mirror to top-level
+        data: { ...cleanedLayout, pages },            // <-- and canonical location
+      };
+      
+      console.log('[🧩 EditWrapper -> final snapshot]', {
+        rootPages: final.pages?.length ?? 0,
+        dataPages: final.data?.pages?.length ?? 0,
+        firstPage: final.data?.pages?.[0]?.slug,
+      });
+      
+      setData(final); 
       setLoading(false);
     };
 
     loadTemplate();
   }, [slug]);
 
-  if (loading) {
-    return <div className="p-6 text-muted-foreground text-sm italic">Loading template...</div>;
-  }
-
-  if (!data) {
-    return <div className="p-6 text-red-500">Template not found.</div>;
-  }
+  if (loading) return <div className="p-6 text-muted-foreground text-sm italic">Loading template...</div>;
+  if (!data) return <div className="p-6 text-red-500">Template not found.</div>;
 
   return (
     <TemplateEditorProvider templateName={slug} colorMode="light">
-      <TemplateEditor
-        templateName={data.template_name}
-        initialData={data}
-        colorMode="light"
-      />
+      <TemplateEditor templateName={data.template_name} initialData={data} colorMode="light" />
     </TemplateEditorProvider>
   );
 }

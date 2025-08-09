@@ -41,7 +41,8 @@ export default function TemplatesIndexTable({
     return templates
       .filter((t) => {
         const isLocallyArchived = archivedIds.includes(t.id);
-        const isArchived = t.archived || isLocallyArchived;
+        const isArchived = t.data?.archived ?? isLocallyArchived;
+        console.log('.:. [TemplatesIndexTable: 📦 isArchived]', isArchived, t.data?.archived, isLocallyArchived, t.data?.archived, t);
 
         if (archiveFilter === 'archived') return isArchived;
         if (archiveFilter === 'active') return !isArchived;
@@ -147,7 +148,7 @@ export default function TemplatesIndexTable({
           </thead>
           <tbody>
             {filtered.map((t) => (
-              <tr key={t.id} className={cn('border-t border-white/10 hover:bg-zinc-800 transition', t.archived && 'opacity-50 italic', restoredIds.includes(t.id) && 'animate-fadeIn')}>
+              <tr key={t.id} className={cn('border-t border-white/10 hover:bg-zinc-800 transition', t.data?.archived && 'opacity-50 italic', restoredIds.includes(t.id) && 'animate-fadeIn')}>
                 <td className="p-2">
                   <input
                     type="checkbox"
@@ -160,7 +161,7 @@ export default function TemplatesIndexTable({
                   />
                 </td>
                 <td className="p-2 text-right">
-                  <RowActions id={t.id} slug={t.slug} archived={t.archived} onArchiveToggle={(id, archived) => {
+                  <RowActions id={t.id} slug={t.slug} archived={t.data?.archived ?? false} onArchiveToggle={(id, archived) => {
                     fetch('/api/templates/archive', {
                       method: 'POST',
                       headers: { 'Content-Type': 'application/json' },

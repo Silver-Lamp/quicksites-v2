@@ -33,6 +33,7 @@ export type TemplateData = {
   site_id?: string | null;
   phone?: string;
   color_mode?: 'light' | 'dark';
+  archived?: boolean;
 };
 
 // Represents the persisted state (matches DB + zod schema)
@@ -50,7 +51,9 @@ export type Snapshot = {
   is_site?: boolean;
   published?: boolean;
   verified?: boolean;
-
+  pages?: Page[];
+  show_header?: boolean;
+  show_footer?: boolean;
   hero_url?: string;
   banner_url?: string;
   logo_url?: string;
@@ -86,7 +89,6 @@ export type Snapshot = {
   };
 
   data?: TemplateData;
-  pages?: Page[];
 
   headerBlock?: Block | null;
   footerBlock?: Block | null;

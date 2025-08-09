@@ -9,7 +9,7 @@ import { EditorContent } from '@/components/admin/templates/template-editor-cont
 import { Drawer } from '@/components/ui/drawer';
 import { Modal } from '@/components/ui/modal';
 import VectorQueryPage from '@/app/admin/vector-query/page';
-import type { Snapshot, Template } from '@/types/template';
+import type { Template } from '@/types/template';
 import { Dispatch, SetStateAction } from 'react';
 import { Button } from '@/components/ui/button';
 import { useTemplateInsert } from '@/hooks/useTemplateInsert';
@@ -20,6 +20,18 @@ import { toast } from 'react-hot-toast';
 import { saveTemplate } from '@/admin/lib/saveTemplate';
 import { usePageCountDebugger } from '@/hooks/usePageCountDebugger';
 
+// ---------- helpers ----------
+function getPages(t: any) {
+  if (Array.isArray(t?.data?.pages)) return t.data.pages;
+  if (Array.isArray(t?.pages)) return t.pages;
+  return [];
+}
+function withSyncedPages<T extends { data?: any; pages?: any[] }>(tpl: T): T {
+  const pages = getPages(tpl);
+  return { ...tpl, pages, data: { ...(tpl.data ?? {}), pages } } as T;
+}
+// -----------------------------
+
 export default function TemplateEditor({
   templateName,
   initialData,
@@ -28,7 +40,7 @@ export default function TemplateEditor({
   colorMode = 'light',
 }: {
   templateName: string;
-  initialData?: Snapshot;
+  initialData?: Template;
   onRename?: (newName: string) => void;
   initialMode?: 'template' | 'site';
   colorMode?: 'light' | 'dark';
@@ -53,7 +65,7 @@ export default function TemplateEditor({
     inputValue,
     setInputValue,
     slugPreview,
-    handleSaveDraft,
+    handleSaveDraft, // (unused here)
     nameExists,
     blockErrors,
     setBlockErrors,
@@ -61,8 +73,17 @@ export default function TemplateEditor({
 
   usePageCountDebugger(template as Template);
 
+  // 🔒 Guard all template updates so pages never disappear
+  const setTemplateSynced: Dispatch<SetStateAction<Template>> = (updater) => {
+    if (typeof updater === 'function') {
+      setTemplate((prev) => withSyncedPages((updater as (p: Template) => Template)(withSyncedPages(prev))));
+    } else {
+      setTemplate((prev) => withSyncedPages({ ...withSyncedPages(prev), ...updater }));
+    }
+  };
+
   const { insertBlock, recentlyInsertedBlockId } =
-    useTemplateInsert(setTemplate as (updater: (prev: Template) => Template) => void);
+    useTemplateInsert(setTemplateSynced as (updater: (prev: Template) => Template) => void);
 
   const handleUseBlock = (text: string, action: 'insert' | 'replace', index?: number) => {
     setPendingText(text);
@@ -71,7 +92,8 @@ export default function TemplateEditor({
     setShowVectorDrawer(false);
   };
 
-  const selectedBlock = selectedIndex !== null ? template.data.pages[0].content_blocks[selectedIndex] : null;
+  const selectedBlock =
+    selectedIndex !== null ? template.data?.pages?.[0]?.content_blocks?.[selectedIndex] : null;
   const selectedId = selectedBlock?._id ?? '';
 
   const validationSummary = Object.entries(blockErrors).map(([blockId, errors]) => (
@@ -88,15 +110,19 @@ export default function TemplateEditor({
   ));
 
   const handleCleanSaveDraft = async () => {
-    const cleaned = { ...template };
-    if ('pages' in cleaned) {
-      delete (cleaned as any).pages;
-    }
-
     try {
-      const saved = await saveTemplate(cleaned);
+      // Create payload for saving WITHOUT root pages, but DO NOT mutate state
+      const payload: Template = (() => {
+        const out = { ...template };
+        // only strip for the outgoing payload
+        if ('pages' in out) delete (out as any).pages;
+        return out;
+      })();
+
+      const saved = await saveTemplate(payload);
+      // Ensure returned record is mirrored back into state
+      setTemplateSynced(saved);
       toast.success('Template saved');
-      setTemplate(saved);
     } catch (err) {
       console.error(err);
       toast.error('Error saving template');
@@ -131,11 +157,11 @@ export default function TemplateEditor({
         )}
 
         <EditorContent
-          template={template as Template}
+          template={withSyncedPages(template as Template)} // always feed synced shape
           rawJson={rawJson}
           setRawJson={setRawJson}
           livePreviewData={livePreviewData}
-          setTemplate={setTemplate as Dispatch<SetStateAction<Template>>}
+          setTemplate={setTemplateSynced}
           autosaveStatus={autosave.status}
           setShowPublishModal={() => {}}
           recentlyInsertedBlockId={recentlyInsertedBlockId ?? null}
@@ -147,11 +173,13 @@ export default function TemplateEditor({
         {selectedBlock && selectedIndex !== null && (
           <BlockSidebar
             block={selectedBlock}
-            errors={blockErrors[selectedId] as BlockValidationError[] || []}
+            errors={(blockErrors[selectedId] as BlockValidationError[]) || []}
             onSave={(updatedBlock: Block) => {
-              setTemplate((prev) => {
+              setTemplateSynced((prev) => {
                 const updated = { ...prev };
-                updated.data.pages[0].content_blocks[selectedIndex] = updatedBlock;
+                if (updated.data?.pages?.[0]?.content_blocks?.[selectedIndex]) {
+                  updated.data.pages[0].content_blocks[selectedIndex] = updatedBlock;
+                }
                 return updated;
               });
             }}
@@ -190,18 +218,20 @@ export default function TemplateEditor({
             onClick={() => {
               if (!pendingText) return;
               if (pendingAction === 'replace' && targetBlockIndex !== null) {
-                setTemplate((prev) => {
+                setTemplateSynced((prev) => {
                   const updated = { ...prev };
-                  updated.data.pages[0].content_blocks[targetBlockIndex] = {
-                    _id: updated.data.pages[0].content_blocks[targetBlockIndex]._id,
-                    type: 'text',
-                    content: { value: pendingText },
-                    tags: ['ai'],
-                    meta: {
-                      ...updated.data.pages[0].content_blocks[targetBlockIndex].meta,
-                      prompt: pendingText,
-                    },
-                  };
+                  if (updated.data?.pages?.[0]?.content_blocks?.[targetBlockIndex]) {
+                    updated.data.pages[0].content_blocks[targetBlockIndex] = {
+                      _id: updated.data.pages[0].content_blocks[targetBlockIndex]._id,
+                      type: 'text',
+                      content: { value: pendingText },
+                      tags: ['ai'],
+                      meta: {
+                        ...updated.data?.pages?.[0]?.content_blocks?.[targetBlockIndex]?.meta,
+                        prompt: pendingText,
+                      },
+                    };
+                  }
                   return updated;
                 });
               } else {

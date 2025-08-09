@@ -44,7 +44,7 @@ export default function TemplateSettingsPanel({
 
   useEffect(() => {
     if (!template.meta?.title || template.meta.title.trim() === '') {
-      const hero = template.data.pages[0]?.content_blocks?.find(b => b.type === 'hero');
+      const hero = template.data?.pages?.[0]?.content_blocks?.find(b => b.type === 'hero');
       const fallbackTitle = template.template_name || (hero?.content as unknown as any)?.headline || '';
       onChange({
         ...template,
@@ -52,7 +52,7 @@ export default function TemplateSettingsPanel({
       });
     }
     if (!template.meta?.description || template.meta.description.trim() === '') {
-      const hero = template.data.pages[0]?.content_blocks?.find(b => b.type === 'hero');
+      const hero = template.data?.pages?.[0]?.content_blocks?.find(b => b.type === 'hero');
       const fallbackDesc = (hero?.content as unknown as any)?.subheadline || (hero?.content as unknown as any)?.headline || '';
       onChange({
         ...template,

@@ -28,6 +28,7 @@ const SQL_FIELDS = [
     sqlFields: Record<SqlFieldKey, any>;
     layoutJson: Record<string, any>;
   } {
+    // alert('extractSqlFieldsFromJson');
     const sqlFields: Record<SqlFieldKey, any> = {} as any;
     const layoutJson: Record<string, any> = {};
   

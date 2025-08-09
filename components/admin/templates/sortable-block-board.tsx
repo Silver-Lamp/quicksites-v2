@@ -44,10 +44,10 @@ export function SortableBlockBoard({ template, onChange, onLivePreviewUpdate, ma
 
     if (!over || active.id === over.id) return;
 
-    const fromPage = template.data.pages.find((p) =>
+    const fromPage = template.data?.pages?.find((p) =>
       p.content_blocks.some((b) => b._id === active.id)
     );
-    const toPage = template.data.pages.find((p) =>
+    const toPage = template.data?.pages?.find((p) =>
       p.content_blocks.some((b) => b._id === over.id)
     );
 
@@ -70,7 +70,7 @@ export function SortableBlockBoard({ template, onChange, onLivePreviewUpdate, ma
     const toBlocks = [...toPage.content_blocks];
     toBlocks.splice(toIndex, 0, moved);
 
-    const updatedPages = template.data.pages.map((p) => {
+    const updatedPages = template.data?.pages?.map((p) => {
       if (p.id === fromPage.id) return { ...p, content_blocks: fromBlocks };
       if (p.id === toPage.id) return { ...p, content_blocks: toBlocks };
       return p;
@@ -89,7 +89,7 @@ export function SortableBlockBoard({ template, onChange, onLivePreviewUpdate, ma
       onDragEnd={handleDragEnd}
     >
       <div className="space-y-6">
-        {template.data.pages.map((page, index) => (
+        {template.data?.pages?.map((page, index) => (
           <div key={page.id} className="border rounded p-4 bg-muted/50 space-y-2 group">
             <div className="flex justify-between items-center">
               <div className="font-semibold text-sm">{page.title || `Page ${index + 1}`}</div>

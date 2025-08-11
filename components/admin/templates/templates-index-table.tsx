@@ -12,7 +12,6 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { toast } from 'react-hot-toast';
-import debounce from 'lodash.debounce';
 import { CheckCircle, FileStack, Globe, XCircle } from 'lucide-react';
 // import { GSCStatusBadge } from '@/components/admin/gsc-status-badge';
 import RowActions from '@/components/admin/templates/row-actions';
@@ -36,13 +35,14 @@ export default function TemplatesIndexTable({
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [archivedIds, setArchivedIds] = useState<string[]>([]);
   const [restoredIds, setRestoredIds] = useState<string[]>([]);
+  const [lastSelectedIndex, setLastSelectedIndex] = useState<number | null>(null);
 
   const filtered = useMemo(() => {
     return templates
       .filter((t) => {
         const isLocallyArchived = archivedIds.includes(t.id);
         const isArchived = t.data?.archived ?? isLocallyArchived;
-        console.log('.:. [TemplatesIndexTable: 📦 isArchived]', isArchived, t.data?.archived, isLocallyArchived, t.data?.archived, t);
+        // console.log('.:. [TemplatesIndexTable: 📦 isArchived]', isArchived, t.data?.archived, isLocallyArchived, t.data?.archived, t);
 
         if (archiveFilter === 'archived') return isArchived;
         if (archiveFilter === 'active') return !isArchived;
@@ -61,6 +61,35 @@ export default function TemplatesIndexTable({
         return true;
       });
   }, [templates, search, viewMode, archiveFilter, archivedIds]);
+
+  // Reset the anchor if the filtered list changes
+  useEffect(() => {
+    setLastSelectedIndex(null);
+  }, [filtered]);
+
+  function toggleSelectionRange(index: number, willSelect: boolean, opts?: { exclusive?: boolean }) {
+    const start = Math.min(lastSelectedIndex ?? index, index);
+    const end = Math.max(lastSelectedIndex ?? index, index);
+    const rangeIds = filtered.slice(start, end + 1).map((t) => t.id);
+
+    setSelectedIds((prev) => {
+      if (opts?.exclusive) {
+        // Clear all and select just this range (or deselect to empty if willSelect=false)
+        return willSelect ? [...rangeIds] : [];
+      }
+
+      if (willSelect) {
+        // Add range ids uniquely
+        const set = new Set(prev);
+        rangeIds.forEach((id) => set.add(id));
+        return Array.from(set);
+      } else {
+        // Remove range ids
+        const remove = new Set(rangeIds);
+        return prev.filter((id) => !remove.has(id));
+      }
+    });
+  }
 
   const handleBulkArchive = async (ids: string[]) => {
     const res = await fetch('/api/templates/archive', {
@@ -147,35 +176,66 @@ export default function TemplatesIndexTable({
             </tr>
           </thead>
           <tbody>
-            {filtered.map((t) => (
-              <tr key={t.id} className={cn('border-t border-white/10 hover:bg-zinc-800 transition', t.data?.archived && 'opacity-50 italic', restoredIds.includes(t.id) && 'animate-fadeIn')}>
+            {filtered.map((t, index) => (
+              <tr
+                key={t.id}
+                className={cn(
+                  'border-t border-white/10 hover:bg-zinc-800 transition',
+                  t.data?.archived && 'opacity-50 italic',
+                  restoredIds.includes(t.id) && 'animate-fadeIn'
+                )}
+              >
                 <td className="p-2">
                   <input
                     type="checkbox"
                     checked={selectedIds.includes(t.id)}
+                    onClick={(e) => {
+                      const evt = e as React.MouseEvent<HTMLInputElement>;
+                      const withShift = evt.shiftKey;
+                      const withMeta = evt.metaKey || evt.ctrlKey;
+                      const isChecked = selectedIds.includes(t.id);
+                      const willSelect = !isChecked;
+
+                      if (withShift && lastSelectedIndex !== null) {
+                        toggleSelectionRange(index, willSelect, { exclusive: withMeta });
+                      } else if (withMeta) {
+                        // Exclusive single selection
+                        setSelectedIds(willSelect ? [t.id] : []);
+                      } else {
+                        // Regular toggle
+                        setSelectedIds((prev) =>
+                          isChecked ? prev.filter((id) => id !== t.id) : [...prev, t.id]
+                        );
+                      }
+
+                      setLastSelectedIndex(index);
+                    }}
                     onChange={() => {
-                      setSelectedIds((prev) =>
-                        prev.includes(t.id) ? prev.filter((id) => id !== t.id) : [...prev, t.id]
-                      );
+                      // handled in onClick to access modifier keys
                     }}
                   />
                 </td>
                 <td className="p-2 text-right">
-                  <RowActions id={t.id} slug={t.slug} archived={t.data?.archived ?? false} onArchiveToggle={(id, archived) => {
-                    fetch('/api/templates/archive', {
-                      method: 'POST',
-                      headers: { 'Content-Type': 'application/json' },
-                      body: JSON.stringify({ ids: [id], archived }),
-                    }).then((res) => {
-                      if (res.ok) {
-                        setArchivedIds((prev) => archived ? [...prev, id] : prev.filter((x) => x !== id));
-                        setRestoredIds((prev) => archived ? prev : [...prev, id]);
-                        toast.success(`Template ${archived ? 'archived' : 'restored'}`);
-                      } else {
-                        toast.error(`Failed to ${archived ? 'archive' : 'restore'} template`);
-                      }
-                    });
-                  }} />
+                  <RowActions
+                    id={t.id}
+                    slug={t.slug}
+                    archived={t.data?.archived ?? false}
+                    onArchiveToggle={(id, archived) => {
+                      fetch('/api/templates/archive', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ ids: [id], archived }),
+                      }).then((res) => {
+                        if (res.ok) {
+                          setArchivedIds((prev) => archived ? [...prev, id] : prev.filter((x) => x !== id));
+                          setRestoredIds((prev) => archived ? prev : [...prev, id]);
+                          toast.success(`Template ${archived ? 'archived' : 'restored'}`);
+                        } else {
+                          toast.error(`Failed to ${archived ? 'archive' : 'restore'} template`);
+                        }
+                      });
+                    }}
+                  />
                 </td>
                 <td className="p-2 text-right">
                   {t.is_site ? <Globe className="w-4 h-4 text-blue-400" /> : <FileStack className="w-4 h-4 text-blue-400" />}
@@ -209,7 +269,10 @@ export default function TemplatesIndexTable({
                       setRenames((prev) => ({ ...prev, [t.id]: t.template_name }));
                     }}>{t.template_name}</button>
                   )} */}
-                  <div className="text-white hover:underline text-left" onClick={() => router.push(`/template/${t.slug}/edit`)}>
+                  <div
+                    className="text-white hover:underline text-left cursor-pointer"
+                    onClick={() => router.push(`/template/${t.slug}/edit`)}
+                  >
                     {t.template_name}
                   </div>
                 </td>

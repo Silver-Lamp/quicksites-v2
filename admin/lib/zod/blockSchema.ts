@@ -41,7 +41,9 @@ const toCityString = (item: unknown): string => {
   return String(item ?? '');
 };
 
-// Footer content: map legacy keys → canonical shape
+const REL = /^(https?:\/\/|\/|#|mailto:|tel:)/i;
+
+// Footer content: map legacy keys → canonical shape + sanitize links
 const FooterContent = z.preprocess((raw) => {
   const c = (raw && typeof raw === 'object') ? { ...(raw as any) } : {};
 
@@ -50,6 +52,19 @@ const FooterContent = z.preprocess((raw) => {
   if (Array.isArray(c.navItems) && !Array.isArray(c.links)) c.links = c.navItems;
   if (typeof c.logoUrl === 'string' && !c.logo_url) c.logo_url = c.logoUrl;
 
+  // --- sanitize links BEFORE validation so bad rows don't drop the whole array
+  if (Array.isArray(c.links)) {
+    c.links = c.links
+      .map((l: any) => {
+        const label = String(l?.label ?? '').trim();
+        const hrefRaw = String(l?.href ?? '').trim();
+        const href = hrefRaw || '/';               // safe default to satisfy RelativeOrAbsoluteUrl
+        const appearance = l?.appearance;
+        return { label, href, appearance };
+      })
+      .filter((l: any) => l.label && REL.test(l.href)); // keep only valid rows
+  }
+
   delete c.nav_items;
   delete c.navItems;
   delete c.logoUrl;
@@ -57,7 +72,6 @@ const FooterContent = z.preprocess((raw) => {
   return c;
 }, z.object({
   logo_url: z.string().optional(),
-  // ⬅ important: default to [] so “missing” doesn’t explode
   links: z.array(LinkSchema).default([]),
 }).passthrough());
 

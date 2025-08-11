@@ -1,3 +1,4 @@
+// components/admin/AppHeader/AdminNavSections.tsx
 'use client';
 
 import Link from 'next/link';
@@ -12,14 +13,12 @@ import {
   ChevronDown,
   Mail,
   Phone,
+  Search,
 } from 'lucide-react';
 import clsx from 'clsx';
 
 type NavItem =
-  | {
-      type: 'section';
-      label: string;
-    }
+  | { type: 'section'; label: string }
   | {
       type: 'item';
       label: string;
@@ -28,75 +27,66 @@ type NavItem =
       children?: { label: string; href: string }[];
     };
 
-const navItems: NavItem[] = [
-  { type: 'section', label: 'Core' },
-  {
-    type: 'item',
-    label: 'Dashboard',
-    href: '/admin/dashboard',
-    icon: <LayoutDashboard size={18} />,
-  },
-  {
-    type: 'item',
-    label: 'Map of Opportunities',
-    href: '/admin/the-grid',
-    icon: <MapPinned size={18} />,
-  },
-  {
-    type: 'item',
-    label: 'Outreach (Coming Soon)',
-    href: '/admin/outreach',
-    icon: <Mail size={18} />,
-  },
-  {
-    type: 'item',
-    label: 'Leads',
-    href: '/admin/leads',
-    icon: <PhoneForwarded size={18} />,
-  },
-  { type: 'section', label: 'Tools' },
-  {
-    type: 'item',
-    label: 'Campaigns',
-    icon: <Rocket size={18} />,
-    children: [
-      { label: 'All Campaigns', href: '/admin/campaigns' },
-      { label: 'Start Campaign', href: '/admin/start-campaign' },
-    ],
-  },
-  {
-    type: 'item',
-    label: 'Templates & Sites',
-    icon: <FileStack size={18} />,
-    children: [
-      { label: 'Browse', href: '/admin/templates/list' },
-      { label: 'Create', href: '/admin/templates/new' },
-      { label: 'GSC Connect', href: '/api/gsc/auth-url' },
-      { label: 'GSC Bulk Stats', href: '/admin/templates/gsc-bulk-stats' },
-      { label: 'GSC Sites', href: '/admin/gsc/sites' },
-    ],
-  },
-  {
-    type: 'item',
-    label: 'Email Logs',
-    href: '/admin/email-logs',
-    icon: <Mail size={18} />,
-  },
-  {
-    type: 'item',
-    label: 'Call Logs',
-    href: '/admin/call-logs',
-    icon: <Phone size={18} />,
-  },
-
-  // {
-  //   type: 'item',
-  //   label: 'Analytics',
-  //   href: '/admin/analytics',
-  //   icon: <Activity size={18} />,
-  // },
-];
-
+    const navItems: NavItem[] = [
+      { type: 'section', label: 'Core' },
+      {
+        type: 'item',
+        label: 'Dashboard',
+        href: '/admin/dashboard',
+        icon: <LayoutDashboard size={18} />,
+      },
+      {
+        type: 'item',
+        label: 'Map of Opportunities',
+        href: '/admin/the-grid',
+        icon: <MapPinned size={18} />,
+      },
+      {
+        type: 'item',
+        label: 'Outreach (Coming Soon)',
+        href: '/admin/outreach',
+        icon: <Mail size={18} />,
+      },
+      {
+        type: 'item',
+        label: 'Leads',
+        href: '/admin/leads',
+        icon: <PhoneForwarded size={18} />,
+      },
+    
+      { type: 'section', label: 'Tools' },
+      {
+        type: 'item',
+        label: 'Campaigns',
+        icon: <Rocket size={18} />,
+        children: [
+          { label: 'View All Campaigns', href: '/admin/campaigns' },
+          { label: 'Start New Campaign', href: '/admin/start-campaign' },
+        ],
+      },
+      {
+        type: 'item',
+        label: 'Templates & Sites',
+        icon: <FileStack size={18} />,
+        children: [
+          { label: 'Browse Sites and Templates', href: '/admin/templates/list' },
+          { label: 'Create New Site or Template', href: '/admin/templates/new' },
+         ],
+      },    
+      {
+        type: 'item',
+        label: 'Google Search Console',
+        icon: <Search size={18} />,
+        children: [
+          { label: 'Google Search Console Stats', href: '/admin/templates/gsc-bulk-stats' },
+          { label: 'Connect', href: '/api/gsc/auth-url' },
+          { label: 'Sites', href: '/admin/gsc/sites' },
+        ],
+      },
+    
+      { type: 'item', label: 'Email Logs', href: '/admin/email-logs', icon: <Mail size={18} /> },
+      { type: 'item', label: 'Call Logs', href: '/admin/call-logs', icon: <Phone size={18} /> },
+    ];
 function NavItemButtonOrLink({
   item,
   isActive,
@@ -115,7 +105,14 @@ function NavItemButtonOrLink({
     isActive ? 'bg-zinc-800 font-semibold text-white' : 'hover:bg-zinc-800 text-zinc-300'
   );
 
+  const firstChild = item.children?.[0];
+  const defaultHref = item.href || firstChild?.href || '#';
+
+  // What the user will actually go to on click
+  const targetLabel = collapsed && firstChild ? firstChild.label : item.label;
+
   const icon = <div className="text-white">{item.icon}</div>;
+
   const label = (
     <span
       className={clsx(
@@ -126,26 +123,30 @@ function NavItemButtonOrLink({
       {item.label}
     </span>
   );
-  const tooltip = collapsed && (
-    <span className="absolute left-14 top-1/2 -translate-y-1/2 whitespace-nowrap rounded bg-zinc-800 px-2 py-1 text-xs text-white opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-50 shadow-md pointer-events-none">
-      {item.label}
-    </span>
-  );
 
-  // 👇 Determine if we want to default to first child for click
-  const defaultHref = item.href || item.children?.[0]?.href;
+  // Collapsed custom tooltip now shows the real destination (first child) when applicable
+  const tooltip =
+    collapsed && (
+      <span className="absolute left-14 top-1/2 -translate-y-1/2 whitespace-nowrap rounded bg-zinc-800 px-2 py-1 text-xs text-white opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-50 shadow-md pointer-events-none">
+        {item.children ? `${item.label} → ${firstChild?.label ?? ''}` : item.label}
+      </span>
+    );
 
   return (
     <Link
-      href={defaultHref || '#'}
+      href={defaultHref}
+      title={targetLabel}            // native tooltip mirrors target
+      aria-label={targetLabel}       // improves a11y & tooltips on some UIs
       onClick={(e) => {
-        // only toggle menu if explicitly clicked and has children
         if (item.children) {
-          e.preventDefault(); // prevent nav
+          if (collapsed) return;     // collapsed: navigate to first child
+          e.preventDefault();        // expanded: toggle submenu instead
           toggleMenu();
         }
       }}
       className={baseClasses}
+      aria-expanded={!!item.children && !collapsed ? isOpen : undefined}
+      aria-haspopup={!!item.children && !collapsed ? 'menu' : undefined}
     >
       {icon}
       {label}
@@ -193,7 +194,11 @@ export function AdminNavSections({ collapsed = false }: { collapsed?: boolean })
           ) : null;
         }
 
-        const isActive = item.href && pathname?.startsWith(item.href);
+        // ✅ active if parent matches OR any child matches
+        const isActive =
+          (item.href && pathname?.startsWith(item.href)) ||
+          (item.children?.some((c) => pathname?.startsWith(c.href)) ?? false);
+
         const isOpen = openMenus[item.label];
 
         return (
@@ -201,7 +206,7 @@ export function AdminNavSections({ collapsed = false }: { collapsed?: boolean })
             <NavItemButtonOrLink
               item={item}
               isActive={!!isActive}
-              isOpen={isOpen}
+              isOpen={!!isOpen}
               collapsed={collapsed}
               toggleMenu={() => item.children && toggleMenu(item.label)}
             />

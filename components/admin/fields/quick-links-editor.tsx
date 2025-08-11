@@ -1,3 +1,4 @@
+// components/admin/fields/quick-links-editor.tsx
 'use client';
 
 import { useRef, useEffect } from 'react';
@@ -36,7 +37,7 @@ function SortableLinkItem({
   onChange: (updated: Link) => void;
   onRemove: () => void;
   internalPages: { slug: string; title?: string }[];
-  createNewPage: () => string;
+  createNewPage: (label: string | undefined) => string;
   focusOnMount?: boolean;
 }) {
   const {
@@ -111,7 +112,30 @@ function SortableLinkItem({
         <select
           className="bg-neutral-900 border border-neutral-700 rounded px-2 py-1 text-sm"
           value={internalSlugs.includes(link.href?.replace(/^\//, '')) ? link.href : ''}
-          onChange={(e) => onChange({ ...link, href: e.target.value })}
+          onChange={(e) => {
+            const value = e.target.value; // e.g. "/contact" or ""
+            // Base update
+            let next: Link = { ...link, href: value };
+
+            // If user selected an internal page AND label is empty, auto-fill label
+            if (value) {
+              const slug = value.replace(/^\//, '');
+              if (!link.label || !link.label.trim()) {
+                const match = internalPages.find((p) => p.slug === slug);
+                if (match?.title && match.title.trim()) {
+                  next.label = match.title;
+                } else {
+                  // Fallback: prettify slug → "Contact Us"
+                  next.label = slug
+                    .split('-')
+                    .map((w) => (w ? w[0].toUpperCase() + w.slice(1) : w))
+                    .join(' ');
+                }
+              }
+            }
+
+            onChange(next);
+          }}
         >
           <option value="">– Internal Page –</option>
           {internalPages.map((page) => (
@@ -142,7 +166,7 @@ function SortableLinkItem({
       {!internalSlugs.includes(link.href?.replace(/^\//, '')) && (
         <button
           className="text-xs text-green-400 underline mt-1"
-          onClick={() => onChange({ ...link, href: createNewPage() })}
+          onClick={() => onChange({ ...link, href: createNewPage(link.label) })}
         >
           Create internal page for this link
         </button>
@@ -168,8 +192,8 @@ export default function QuickLinksEditor({
     input
       .toLowerCase()
       .trim()
-      .replace(/[^\w\s-]/g, '') // remove punctuation
-      .replace(/\s+/g, '-') // convert spaces to hyphens
+      .replace(/[^\w\s-]/g, '')
+      .replace(/\s+/g, '-');
 
   const createNewPage = (label: string): string => {
     const slug = generateSlug(label || `page-${Date.now()}`);
@@ -215,13 +239,16 @@ export default function QuickLinksEditor({
         }}
       >
         <SortableContext
-          items={links.map((l) => l.label || `link-${l.href}`)}
+          items={links.map((l, i) => l.label || `link-${l.href || i}`)}
           strategy={verticalListSortingStrategy}
         >
           {links.map((link, i) => (
-            <div key={i} ref={(el) => {
-              linkRefs.current[i] = el;
-            }}>
+            <div
+              key={i}
+              ref={(el) => {
+                linkRefs.current[i] = el;
+              }}
+            >
               <SortableLinkItem
                 id={link.label || `link-${i}`}
                 index={i}
@@ -248,7 +275,7 @@ export default function QuickLinksEditor({
       </DndContext>
 
       <button
-        onClick={() => onChange([...links, { label: '', href: '' }])}
+        onClick={() => onChange([...links, { label: '', href: '/' }])}
         className="flex items-center gap-2 text-purple-400 hover:text-purple-200 mt-2"
       >
         <PlusCircle size={16} /> Add New Link

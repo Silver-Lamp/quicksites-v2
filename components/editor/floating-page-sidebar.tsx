@@ -1,3 +1,4 @@
+// components/editor/floating-page-sidebar.tsx
 'use client';
 
 import { useEffect, useState } from 'react';
@@ -6,26 +7,32 @@ import { PageManagerSidebar } from './page-manager-sidebar';
 import { LayoutPanelTop } from 'lucide-react';
 import type { Template } from '@/types/template';
 
-export function FloatingPageSidebar({
-  pages,
-  selectedIndex,
-  onSelect,
-  onAdd,
-  onRename,
-  onDelete,
-  onReorder,
-  onToggleHeader,
-  onToggleFooter,
-  templateShowHeader,
-  templateShowFooter,
-}: React.ComponentProps<typeof PageManagerSidebar> & {
+type Props = React.ComponentProps<typeof PageManagerSidebar> & {
   templateShowHeader?: Template['show_header'];
   templateShowFooter?: Template['show_footer'];
-}) {
+};
+
+export function FloatingPageSidebar(props: Props) {
+  const {
+    pages = [],
+    selectedIndex,
+    onSelect,
+    onAdd,
+    onRename,
+    onDelete,
+    onReorder,
+    onToggleHeader,
+    onToggleFooter,
+    templateShowHeader,
+    templateShowFooter,
+    compact,
+    template, // required by PageManagerSidebar — pass through
+  } = props;
+
   const [collapsed, setCollapsed] = useState(false);
 
   // Compact layout if many pages
-  const compactMode = pages.length > 10;
+  const compactMode = (pages?.length ?? 0) > 10 || !!compact;
 
   // Auto-collapse on small screens
   useEffect(() => {
@@ -73,6 +80,7 @@ export function FloatingPageSidebar({
 
       {/* Sidebar body */}
       <PageManagerSidebar
+        template={template}
         pages={pages}
         selectedIndex={selectedIndex}
         onSelect={onSelect}

@@ -16,14 +16,16 @@ import {
 } from '@dnd-kit/sortable';
 import { useState } from 'react';
 import TemplatePreview from './template-preview';
-import type { TemplateData } from '@/types/template';
+import type { TemplateData, Page } from '@/types/template';
 import type { Block } from '@/types/blocks';
 
 type Props = {
   data: TemplateData;
   colorScheme: string;
   onBlockClick?: (block: Block) => void;
-  onReorder: (updatedData: TemplateData) => void;
+
+  /** Return a guaranteed pages array (required, not optional). */
+  onReorder: (updated: { pages: Page[] }) => void;
 };
 
 export default function ReorderableBlockList({
@@ -33,33 +35,36 @@ export default function ReorderableBlockList({
   onReorder,
 }: Props) {
   const sensors = useSensors(useSensor(PointerSensor), useSensor(KeyboardSensor));
-  const [activePageIdx] = useState(0); // assuming 1-page only for now
+  const [activePageIdx] = useState(0); // single-page for now
 
-  const pages = data?.pages || [];
-  const blocks: Block[] = pages[activePageIdx]?.content_blocks || [];
+  const pages: Page[] = Array.isArray(data?.pages) ? (data.pages as Page[]) : [];
+  const blocks: Block[] = Array.isArray(pages[activePageIdx]?.content_blocks)
+    ? (pages[activePageIdx].content_blocks as Block[])
+    : [];
 
-  const handleDragEnd = ({ active, over }: { active: { id: string }; over: { id: string } }) => {
+  const handleDragEnd = (evt: DragEndEvent) => {
+    const { active, over } = evt;
     if (!over || active.id === over.id) return;
 
     const oldIndex = blocks.findIndex((b) => b._id === active.id);
     const newIndex = blocks.findIndex((b) => b._id === over.id);
+    if (oldIndex < 0 || newIndex < 0) return;
+
     const reordered = arrayMove(blocks, oldIndex, newIndex);
 
-    const updatedData: TemplateData = {
-      ...data,
-      pages: data.pages.map((page, i) =>
-        i === activePageIdx ? { ...page, content_blocks: reordered } : page
-      ),
-    };
+    const nextPages: Page[] = pages.map((p, i) =>
+      i === activePageIdx ? { ...p, content_blocks: reordered } : p
+    );
 
-    onReorder(updatedData);
+    // Send a payload that guarantees pages is present.
+    onReorder({ pages: nextPages });
   };
 
   return (
-    <DndContext 
-      sensors={sensors} 
-      collisionDetection={closestCenter} 
-      onDragEnd={handleDragEnd as unknown as (event: DragEndEvent) => void}
+    <DndContext
+      sensors={sensors}
+      collisionDetection={closestCenter}
+      onDragEnd={handleDragEnd}
     >
       <SortableContext items={blocks.map((b) => b._id!)} strategy={verticalListSortingStrategy}>
         <TemplatePreview

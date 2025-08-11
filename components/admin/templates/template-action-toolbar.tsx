@@ -10,7 +10,9 @@ import { supabase } from '@/admin/lib/supabaseClient';
 import toast from 'react-hot-toast';
 import type { Template } from '@/types/template';
 import { validateTemplateAndFix } from '@/admin/lib/validateTemplate';
-
+// import { ZodError } from 'zod';
+// import { get } from 'lodash';
+import { prepareTemplateForSave } from '@/admin/lib/prepareTemplateForSave';
 type Props = {
   template: Template;
   autosaveStatus?: string;
@@ -97,47 +99,44 @@ export function TemplateActionToolbar({
     el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
   };
 
-  /** Centralized Save click with explicit error logging */
+  // TemplateActionToolbar.tsx
+
   const handleSaveClick = () => {
     try {
-      const check = validateTemplateAndFix(template);
+      // 1) strip/normalize BEFORE validation
+      const prepped: Template = prepareTemplateForSave
+        ? prepareTemplateForSave(template)
+        : (() => {
+            const t = { ...template } as any;
+            // If root pages is an object/array, remove it (we persist via data.pages)
+            if (t.pages && typeof t.pages !== 'string') delete t.pages;
+            return t;
+          })();
 
-      // Expect (best effort): { valid, data?, zodError?, blockErrors?, firstBlockId?, firstBlockMessage? }
+      const check = validateTemplateAndFix(prepped);
       if (!check?.valid) {
-        console.groupCollapsed('❌ Validation failed');
-        if (check?.errors) {
-          // zod flatten if present
-          const flat = check.errors.flatten?.();
-          console.error('[Schema]', check.errors);
-          if (flat?.fieldErrors) console.table(flat.fieldErrors);
+        // improved logging for non-Zod flatten outputs
+        const e = (check as any).errors;
+        if (e?.fieldErrors) {
+          console.table(
+            Object.entries(e.fieldErrors).flatMap(([field, msgs]: any) =>
+              (msgs ?? []).map((m: string) => ({ field, message: m }))
+            )
+          );
+        } else {
+          console.error('[Unknown validation error payload]', JSON.stringify(e, null, 2));
         }
-        // Fallback if the helper threw something else
-        if (!check?.errors) {
-          console.error('[Unknown validation error payload]', check);
-        }
-        console.groupEnd();
-
-        // Try to help the user visually
-        // scrollToBlock(check?.firstBlockId);
-
-        toast.error(
-          check?.errors?.firstBlockMessage ||
-            'Validation failed — open console for details.'
-        );  
-        return;
+        return toast.error('Validation failed — see console for details.');
       }
 
-      // If the validator returns a sanitized template, hand it to the saver
-      if (typeof onSaveDraft === 'function') {
-        onSaveDraft(check?.data as Template);
-      } else {
-        toast.error('No save handler found');
-      }
+      onSaveDraft?.(check.data as Template);
+      toast.success('Saved!');
     } catch (err) {
       console.error('❌ Exception during validation:', err);
       toast.error('Validation crashed — see console.');
     }
   };
+
 
   return (
     <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-40 rounded-lg bg-gray-900 border border-gray-700 px-6 py-3 shadow-xl max-w-5xl w-[95%] flex justify-between items-center text-white opacity-80">

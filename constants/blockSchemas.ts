@@ -1,5 +1,5 @@
 // constants/blockSchemas.ts
-
+// UI settings for blocks.
 export const BLOCK_SETTING_SCHEMAS: Record<
   string,
   {

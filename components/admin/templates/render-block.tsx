@@ -2,12 +2,13 @@
 'use client';
 
 import type { Block } from '@/types/blocks';
-import { BlockContentMap, BlockType } from '@/types/blocks';
+import { BlockType } from '@/types/blocks';
 import { JSX } from 'react';
 import { useBlockFix } from '@/components/ui/block-fix-context';
 import DebugOverlay from '@/components/ui/debug-overlay';
 import HeroRender from '@/components/admin/templates/render-blocks/hero';
 import { DYNAMIC_RENDERERS } from '@/lib/dynamic-renderers';
+import { blockContentSchemaMap } from '@/admin/lib/zod/blockSchema';
 
 const isDev = typeof process !== 'undefined' && process.env.NODE_ENV === 'development';
 
@@ -20,7 +21,7 @@ function assertAllRenderersCovered() {
     ...Object.keys(STATIC_RENDERERS),
     ...Object.keys(DYNAMIC_RENDERERS),
   ]);
-  const missing = Object.keys(BlockContentMap).filter((type: string) => !handled.has(type));
+  const missing = Object.keys(blockContentSchemaMap).filter((type: string) => !handled.has(type));
   if (missing.length > 0) {
     const msg = `[🛑 BLOCK_RENDERERS] Missing renderers for: ${missing.join(', ')}`;
     if (isDev) throw new Error(msg);

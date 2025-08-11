@@ -1,23 +1,41 @@
+// components/admin/templates/grid-preset-playground.tsx
 'use client';
 
 import { useState } from 'react';
 import { defaultGridPresets } from '@/types/grid-presets';
 import RenderBlock from './render-block';
-import { normalizeBlock } from '@/types/blocks';
 import { Button } from '@/components/ui/button';
+import { normalizeBlock } from '@/lib/utils/normalizeBlock';
+import type { Block } from '@/types/blocks';
+
+type GridPreset = (typeof defaultGridPresets)[number];
+
+function safeNormalize(b: unknown): Block {
+  try {
+    return normalizeBlock(b as Partial<Block>) as unknown as Block;
+  } catch {
+    return {
+      type: 'text',
+      _id: crypto.randomUUID(),
+      content: { value: '[Invalid block in preset]' },
+    } as unknown as Block;
+  }
+}
 
 export default function GridPresetPlayground() {
-  const [selected, setSelected] = useState(defaultGridPresets[0]);
-  const [blocks, setBlocks] = useState(selected.items.map(normalizeBlock));
-  const [columns, setColumns] = useState(selected.columns);
-  const [colorMode, setColorMode] = useState('dark');
-  
+  const [selected, setSelected] = useState<GridPreset>(defaultGridPresets[0]);
+  const [blocks, setBlocks] = useState<Block[]>(
+    selected.items.map(safeNormalize)
+  );
+  const [columns, setColumns] = useState<number>(selected.columns ?? 2);
+  const [colorMode] = useState<'light' | 'dark'>('dark');
+
   const applyPreset = (name: string) => {
     const preset = defaultGridPresets.find((p) => p.name === name);
     if (!preset) return;
     setSelected(preset);
-    setBlocks(preset.items.map(normalizeBlock));
-    setColumns(preset.columns);
+    setBlocks(preset.items.map(safeNormalize));
+    setColumns(preset.columns ?? 2);
   };
 
   return (
@@ -37,14 +55,22 @@ export default function GridPresetPlayground() {
         </select>
       </div>
 
-      <div className={`grid grid-cols-${columns} gap-4`}>
-        {blocks.map((block, i) => (
+      {/* Use inline grid-template-columns so Tailwind doesn't purge dynamic classes */}
+      <div
+        className="grid gap-4"
+        style={{ gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))` }}
+      >
+        {blocks.map((block) => (
           <div
-            key={block._id}
+            key={block._id ?? crypto.randomUUID()}
             id={`block-${block._id}`}
             className="border border-white/10 bg-muted rounded p-2 text-white"
           >
-            <RenderBlock block={block} showDebug={false} colorMode={colorMode as 'light' | 'dark'} />
+            <RenderBlock
+              block={block}
+              showDebug={false}
+              colorMode={colorMode}
+            />
           </div>
         ))}
       </div>

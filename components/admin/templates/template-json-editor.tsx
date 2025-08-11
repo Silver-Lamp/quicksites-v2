@@ -1,18 +1,18 @@
+// components/admin/templates/template-json-editor.tsx
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Button } from '@/components/ui';
 import { ChevronRight, ChevronDown, Lock, Unlock } from 'lucide-react';
-import { TemplateSaveSchema, ValidatedTemplate } from '@/admin/lib/zod/templateSaveSchema';
+import { TemplateSaveSchema, type ValidatedTemplate } from '@/admin/lib/zod/templateSaveSchema';
 import type { JsonValue } from '@/types/json';
 import { validateBlocksInTemplate } from '@/admin/lib/validateBlocksInTemplate';
 import { cleanTemplateDataStructure } from '@/admin/lib/cleanTemplateData';
 import { TemplateValidationInspector } from '@/components/admin/dev/template-validation-inspector';
-// import { extractSqlFieldsFromJson } from '@/lib/utils/extractSqlFieldsFromJson';
 import { SqlFieldPreview } from '@/components/admin/dev/sql-field-preview';
 import { validateTemplateAndFix } from '@/admin/lib/validateTemplate';
-// import { Template } from '@/types/template';
 import Collapsible from '@/components/ui/collapsible-panel';
+import { keysFromSchema, pickAllowedKeys } from '@/lib/zod/utils';
 
 type TemplateJsonEditorProps = {
   rawJson: string;
@@ -20,7 +20,6 @@ type TemplateJsonEditorProps = {
   sidebarValues: any;
   setSidebarValues: (values: any) => void;
   colorMode: 'light' | 'dark';
-  // template: Template;
 };
 
 export default function TemplateJsonEditor({
@@ -29,7 +28,6 @@ export default function TemplateJsonEditor({
   sidebarValues,
   setSidebarValues,
   colorMode = 'dark',
-  // template,
 }: TemplateJsonEditorProps) {
   const [isReadOnly, setIsReadOnly] = useState(true);
   const [parsedJson, setParsedJson] = useState<ValidatedTemplate | null>(null);
@@ -38,20 +36,20 @@ export default function TemplateJsonEditor({
   const [collapsed, setCollapsed] = useState(new Set<string>());
   const [extractedSqlFields, setExtractedSqlFields] = useState<Record<string, any>>({});
 
+  // ---------- sanitize & clean ----------
   const sanitizeJsonInput = (raw: string) => {
     try {
       const parsed = JSON.parse(raw);
-      const keysToRemove = ['created_at', 'domain', 'custom_domain', 'data'];
-      for (const key of keysToRemove) delete parsed[key];
 
-      const allowedKeys = Object.keys(TemplateSaveSchema.shape);
-      const filtered: Record<string, any> = {};
-      for (const key of allowedKeys) {
-        if (Object.prototype.hasOwnProperty.call(parsed, key)) {
-          filtered[key] = parsed[key];
-        }
-      }
+      // strip fields we never want the user to edit
+      const toRemove = ['created_at', 'domain', 'custom_domain', 'data'];
+      for (const k of toRemove) delete parsed[k];
 
+      // only keep allowed keys according to the schema (works with ZodEffects)
+      const allowedKeys = keysFromSchema(TemplateSaveSchema);
+      const filtered = pickAllowedKeys(parsed, allowedKeys);
+
+      // defaults expected by schema
       filtered.slug ??= 'new-template-' + Math.random().toString(36).slice(2, 6);
       filtered.template_name ??= filtered.slug;
       filtered.layout ??= 'standard';
@@ -65,13 +63,8 @@ export default function TemplateJsonEditor({
   };
 
   const cleanParsedForZod = (data: any): ValidatedTemplate => {
-    const allowedKeys = Object.keys(TemplateSaveSchema.shape);
-    const cleaned: Record<string, any> = {};
-    for (const key of allowedKeys) {
-      if (Object.prototype.hasOwnProperty.call(data, key)) {
-        cleaned[key] = data[key];
-      }
-    }
+    const allowedKeys = keysFromSchema(TemplateSaveSchema);
+    const cleaned = pickAllowedKeys(data, allowedKeys);
 
     delete cleaned.created_at;
     delete cleaned.domain;
@@ -81,54 +74,17 @@ export default function TemplateJsonEditor({
     return cleaned as ValidatedTemplate;
   };
 
-  // useEffect(() => {
-  //   // Cleanup rawJson on mount if not already sanitized
-  //   const cleaned = sanitizeJsonInput(rawJson);
-  //   if (cleaned !== rawJson) {
-  //     setRawJson(cleaned);
-  //   }
-  // }, []);
-  
-  // useEffect(() => {
-  //   try {
-  //     const parsed = JSON.parse(rawJson);
-  //     const result = validateTemplateAndFix(parsed);
-
-  //     if (!result.valid) {
-  //       setParsedJson(null);
-  //       setZodFieldErrors(result.errors?.fieldErrors || {});
-  //       const formErrors = result.errors?.formErrors || [];
-  //       setValidationError(
-  //         formErrors.length > 0
-  //           ? formErrors.join(', ')
-  //           : 'Some field(s) inside blocks or pages are incorrectly formatted.'
-  //       );
-  //       return;
-  //     }
-
-  //     const { data } = result;
-  //     const cleaned = cleanParsedForZod(data);
-  //     setParsedJson(cleaned);
-
-  //     const blockErrors = validateBlocksInTemplate(cleaned);
-  //     setValidationError(blockErrors.length > 0 ? blockErrors.join('\n') : null);
-  //     setZodFieldErrors(null);
-  //   } catch {
-  //     setParsedJson(null);
-  //     setValidationError('Invalid JSON syntax');
-  //   }
-  // }, [rawJson]);
-
+  // ---------- UI helpers ----------
   const toggleCollapse = (path: string) => {
-    const newSet = new Set(collapsed);
-    newSet.has(path) ? newSet.delete(path) : newSet.add(path);
-    setCollapsed(newSet);
+    const s = new Set(collapsed);
+    s.has(path) ? s.delete(path) : s.add(path);
+    setCollapsed(s);
   };
 
   const renderValue = (value: JsonValue, path = '') => {
-    // alert('renderValue');
     const type = typeof value;
     if (value === null) return <span className="text-pink-400">null</span>;
+
     if (Array.isArray(value)) {
       const isCollapsed = collapsed.has(path);
       return (
@@ -140,13 +96,14 @@ export default function TemplateJsonEditor({
           {!isCollapsed && (
             <div className="ml-4">
               {value.map((v, i) => (
-                <div key={i}>{renderValue(v, `${path}[${i}]`)}</div>
+                <div key={i}>{renderValue(v as JsonValue, `${path}[${i}]`)}</div>
               ))}
             </div>
           )}
         </div>
       );
     }
+
     if (type === 'object') {
       const isCollapsed = collapsed.has(path);
       return (
@@ -157,7 +114,7 @@ export default function TemplateJsonEditor({
           </span>
           {!isCollapsed && (
             <div className="ml-4">
-              {Object.entries(value).map(([k, v]) => (
+              {Object.entries(value as Record<string, JsonValue>).map(([k, v]) => (
                 <div key={k}>
                   <span className="text-green-400">&quot;{k}&quot;</span>: {renderValue(v, `${path}.${k}`)}
                 </div>
@@ -167,14 +124,15 @@ export default function TemplateJsonEditor({
         </div>
       );
     }
+
     if (type === 'string') return <span className="text-emerald-400">"{value as string}"</span>;
     if (type === 'number') return <span className="text-cyan-400">{value as number}</span>;
-    if (type === 'boolean') return <span className="text-orange-400">{value.toString()}</span>;
-    return <span className="text-white">{value as string}</span>;
+    if (type === 'boolean') return <span className="text-orange-400">{String(value)}</span>;
+    return <span className="text-white">{String(value)}</span>;
   };
 
+  // ---------- prettify & validate ----------
   const handlePrettify = () => {
-    // alert('handlePrettify');
     try {
       const parsed = JSON.parse(rawJson);
       const result = validateTemplateAndFix(parsed);
@@ -186,43 +144,45 @@ export default function TemplateJsonEditor({
       }
 
       const { data } = result;
-
-      const allowedKeys = Object.keys(TemplateSaveSchema.shape);
-      const cleaned: Record<string, any> = {};
-      for (const key of allowedKeys) {
-        if (Object.prototype.hasOwnProperty.call(data, key)) {
-          cleaned[key] = (data as any)[key];
-        }
-      }
+      const allowedKeys = keysFromSchema(TemplateSaveSchema);
+      const cleaned = pickAllowedKeys(data as any, allowedKeys);
 
       const finalData = cleanTemplateDataStructure(cleaned);
       setRawJson(JSON.stringify(finalData, null, 2));
 
+      // mirror a few top-levels into the sidebar
       setSidebarValues((prev: any) => ({
         ...prev,
-        template_name: data?.template_name,
-        slug: data?.slug,
-        layout: data?.layout,
-        color_scheme: data?.color_scheme,
-        theme: data?.theme,
-        brand: data?.brand,
-        industry: data?.industry,
-        phone: data?.phone,
-        commit: data?.commit,
-        is_site: data?.is_site,
-        published: data?.published,
-        verified: data?.verified,
-        saved_at: data?.saved_at,
-        save_count: data?.save_count,
-        last_editor: data?.last_editor,
-        hero_url: data?.hero_url,
-        banner_url: data?.banner_url,
-        logo_url: data?.logo_url,
-        team_url: data?.team_url,
+        template_name: (data as any)?.template_name,
+        slug: (data as any)?.slug,
+        layout: (data as any)?.layout,
+        color_scheme: (data as any)?.color_scheme,
+        theme: (data as any)?.theme,
+        brand: (data as any)?.brand,
+        industry: (data as any)?.industry,
+        phone: (data as any)?.phone,
+        commit: (data as any)?.commit,
+        is_site: (data as any)?.is_site,
+        published: (data as any)?.published,
+        verified: (data as any)?.verified,
+        saved_at: (data as any)?.saved_at,
+        save_count: (data as any)?.save_count,
+        last_editor: (data as any)?.last_editor,
+        hero_url: (data as any)?.hero_url,
+        banner_url: (data as any)?.banner_url,
+        logo_url: (data as any)?.logo_url,
+        team_url: (data as any)?.team_url,
       }));
 
       setValidationError(null);
       setZodFieldErrors(null);
+
+      // keep a parsed snapshot for the read-only viewer
+      const parsedForViewer = cleanParsedForZod(data);
+      setParsedJson(parsedForViewer);
+
+      const blockIssues = validateBlocksInTemplate(parsedForViewer);
+      if (blockIssues.length) setValidationError(blockIssues.join('\n'));
     } catch (err) {
       console.error('Failed to prettify:', err);
       alert('Invalid JSON. Cannot format.');
@@ -230,7 +190,7 @@ export default function TemplateJsonEditor({
   };
 
   return (
-    <Collapsible title="JSON Editor" id="template-json-editor" defaultOpen={true}>
+    <Collapsible title="JSON Editor" id="template-json-editor" defaultOpen>
       <div className="space-y-2">
         <div className="space-y-2">
           <div className="flex justify-start items-start gap-2">
@@ -261,7 +221,7 @@ export default function TemplateJsonEditor({
 
           <div className="overflow-auto rounded border border-gray-700 bg-gray-900 font-mono text-sm text-white max-h-[500px] p-4">
             {isReadOnly ? (
-              parsedJson ? renderValue(parsedJson) : <pre>{rawJson}</pre>
+              parsedJson ? renderValue(parsedJson as any) : <pre>{rawJson}</pre>
             ) : (
               <textarea
                 value={rawJson}

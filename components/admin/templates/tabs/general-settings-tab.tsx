@@ -1,8 +1,8 @@
+// components/admin/templates/tabs/general-settings-tab.tsx
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { toast } from 'react-hot-toast';
-import { Input } from '@/components/ui/input';
-import type { Template } from '@/types/template';
+import type { Template, Page } from '@/types/template';
 
 type Props = {
   template: Template;
@@ -11,6 +11,37 @@ type Props = {
 };
 
 export default function GeneralSettingsTab({ template, onChange, handleMetaChange }: Props) {
+  const pages: Page[] = Array.isArray(template.data?.pages) ? template.data!.pages : [];
+
+  const patchAllPages = (patch: Partial<Page>, successMsg: string) => {
+    const updatedPages = pages.map((p) => ({ ...p, ...patch }));
+    onChange({
+      ...template,
+      data: {
+        ...(template.data ?? {}),
+        pages: updatedPages,
+      },
+    });
+    toast.success(successMsg);
+  };
+
+  const resetAllOverrides = () => {
+    if (!confirm('Reset all per-page header/footer overrides?')) return;
+    const resetPages = pages.map((p) => ({
+      ...p,
+      show_header: undefined,
+      show_footer: undefined,
+    }));
+    onChange({
+      ...template,
+      data: {
+        ...(template.data ?? {}),
+        pages: resetPages,
+      },
+    });
+    toast.success('Cleared all overrides (falling back to template default)');
+  };
+
   return (
     <div className="space-y-6 pt-4">
       <div className="flex gap-4">
@@ -53,41 +84,25 @@ export default function GeneralSettingsTab({ template, onChange, handleMetaChang
 
         <div className="flex flex-wrap gap-2">
           <button
-            onClick={() => {
-              const updatedPages = template.data.pages.map((p) => ({ ...p, show_header: true }));
-              onChange({ ...template, data: { ...template.data, pages: updatedPages } });
-              toast.success('Applied "Show Header: true" to all pages');
-            }}
+            onClick={() => patchAllPages({ show_header: true }, 'Applied "Show Header: true" to all pages')}
             className="px-3 py-1 text-xs bg-green-600 hover:bg-green-500 rounded text-white"
           >
             Apply Header: true
           </button>
           <button
-            onClick={() => {
-              const updatedPages = template.data.pages.map((p) => ({ ...p, show_header: false }));
-              onChange({ ...template, data: { ...template.data, pages: updatedPages } });
-              toast.success('Applied "Show Header: false" to all pages');
-            }}
+            onClick={() => patchAllPages({ show_header: false }, 'Applied "Show Header: false" to all pages')}
             className="px-3 py-1 text-xs bg-red-600 hover:bg-red-500 rounded text-white"
           >
             Apply Header: false
           </button>
           <button
-            onClick={() => {
-              const updatedPages = template.data.pages.map((p) => ({ ...p, show_footer: true }));
-              onChange({ ...template, data: { ...template.data, pages: updatedPages } });
-              toast.success('Applied "Show Footer: true" to all pages');
-            }}
+            onClick={() => patchAllPages({ show_footer: true }, 'Applied "Show Footer: true" to all pages')}
             className="px-3 py-1 text-xs bg-green-600 hover:bg-green-500 rounded text-white"
           >
             Apply Footer: true
           </button>
           <button
-            onClick={() => {
-              const updatedPages = template.data.pages.map((p) => ({ ...p, show_footer: false }));
-              onChange({ ...template, data: { ...template.data, pages: updatedPages } });
-              toast.success('Applied "Show Footer: false" to all pages');
-            }}
+            onClick={() => patchAllPages({ show_footer: false }, 'Applied "Show Footer: false" to all pages')}
             className="px-3 py-1 text-xs bg-red-600 hover:bg-red-500 rounded text-white"
           >
             Apply Footer: false
@@ -95,17 +110,7 @@ export default function GeneralSettingsTab({ template, onChange, handleMetaChang
         </div>
 
         <button
-          onClick={() => {
-            if (confirm('Reset all per-page header/footer overrides?')) {
-              const resetPages = template.data.pages.map((p) => ({
-                ...p,
-                show_header: undefined,
-                show_footer: undefined,
-              }));
-              onChange({ ...template, data: { ...template.data, pages: resetPages } });
-              toast.success('Cleared all overrides (falling back to template default)');
-            }
-          }}
+          onClick={resetAllOverrides}
           className="mt-3 text-sm bg-yellow-700 hover:bg-yellow-600 text-white px-4 py-2 rounded"
         >
           ⟲ Reset All Page Overrides

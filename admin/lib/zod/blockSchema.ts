@@ -1,3 +1,4 @@
+// admin/lib/zod/blockSchema.ts
 import { z } from 'zod';
 
 // Shared link schema
@@ -6,104 +7,118 @@ const LinkSchema = z.object({
   href: z.string().min(1, 'URL is required'),
 });
 
-// Step 1: Define content schema map w/ UI metadata
+// ── Chef meal (unified shape + legacy coercion) ───────────────────────────────
+const ChefMealBase = z.object({
+  id: z.string().optional(),
+  name: z.string().min(1, 'Meal name is required'),
+  description: z.string().optional().default(''),
+  price: z.string().min(1, 'Meal price is required'),
+  availability: z.string().min(1, 'Meal availability is required'),
+  image_url: z.string().url('Meal image URL must be valid'),
+});
+
+const ChefMealSchema = z.preprocess((val) => {
+  if (val && typeof val === 'object' && !('name' in (val as any)) && 'title' in (val as any)) {
+    const v = val as any;
+    return { ...v, name: v.title };
+  }
+  return val;
+}, ChefMealBase);
+
+// ── 1) Content schema map + UI meta (single source of truth) ─────────────────
 export const blockContentSchemaMap = {
   text: {
     label: 'Text Block',
     icon: '📝',
+    schema: z.object({ value: z.string().min(1, 'Text content is required') }),
+  },
+  image: {
+    label: 'Image',
+    icon: '🖼️',
     schema: z.object({
-      value: z.string().min(1, 'Text content is required'),
+      url: z.string().url('Image URL must be valid'),
+      alt: z.string().optional(),
+    }),
+  },
+  grid: {
+    label: 'Grid Layout',
+    icon: '🔲',
+    schema: z.object({
+      columns: z.number().min(1).max(12).default(2),
+      // recursion via BlockSchema
+      items: z.array(z.lazy(() => BlockSchema as any)).default([]),
+      title: z.string().optional(),
+      subtitle: z.string().optional(),
+      layout: z.string().optional(),
     }),
   },
   quote: {
     label: 'Quote',
     icon: '❝',
-    schema: z.object({
-      text: z.string().min(1, 'Quote text is required'),
-      attribution: z.string().optional(),
-    }),
+    schema: z.object({ text: z.string().min(1), attribution: z.string().optional() }),
   },
   button: {
     label: 'Button',
     icon: '🔘',
     schema: z.object({
-      label: z.string().min(1, 'Button label is required'),
+      label: z.string().min(1),
       href: z.string().url('Link must be a valid URL'),
       style: z.enum(['primary', 'secondary', 'ghost']).optional(),
-    }),
-  },
-  cta: {
-    label: 'Call to Action',
-    icon: '🚀',
-    schema: z.object({
-      label: z.string().min(1, 'CTA label is required'),
-      link: z.string().min(1, 'CTA link is required'),
-    }),
-  },
-  faq: {
-    label: 'FAQ',
-    icon: '❓',
-    schema: z.object({
-      title: z.string().min(1, 'FAQ title is required'),
-      items: z.array(z.object({ question: z.string().min(1, 'Question is required'), answer: z.string().min(1, 'Answer is required') })).min(1, 'At least one FAQ item is required'),
-    }),
-  },
-  testimonial: {
-    label: 'Testimonial',
-    icon: '💬',
-    schema: z.object({
-      testimonials: z.array(
-        z.object({
-          quote: z.string().min(1, 'Quote is required'),
-          attribution: z.string().optional(),
-          avatar_url: z.string().url().optional(),
-          rating: z.number().min(1).max(5).optional(),
-        })
-      ).min(1, 'At least one testimonial is required'),
-      randomized: z.boolean().optional(),
     }),
   },
   hero: {
     label: 'Hero',
     icon: '🎯',
     schema: z.object({
-      headline: z.string().min(1, 'Headline is required'),
+      headline: z.string().min(1),
       subheadline: z.string().optional(),
       cta_text: z.string().optional(),
       cta_link: z.string().optional(),
       image_url: z.union([z.string().url(), z.literal('')]).optional(),
-      layout_mode: z
-        .enum(['inline', 'background', 'full_bleed', 'natural_height', 'full_width', 'full_height', 'full_width_height', 'cover'])
-        .default('inline'),
-      mobile_layout_mode: z
-        .enum(['inline', 'background', 'full_bleed', 'natural_height', 'full_width', 'full_height', 'full_width_height', 'cover', 'full_width_height_mobile'])
-        .optional()
-        .default('inline'),
-      mobile_crop_behavior: z
-        .enum(['contain', 'cover', 'none'])
-        .optional()
-        .default('cover'),
+      layout_mode: z.enum([
+        'inline','background','full_bleed','natural_height','full_width','full_height','full_width_height','cover'
+      ]).default('inline'),
+      mobile_layout_mode: z.enum([
+        'inline','background','full_bleed','natural_height','full_width','full_height','full_width_height','cover','full_width_height_mobile'
+      ]).optional().default('inline'),
+      mobile_crop_behavior: z.enum(['contain','cover','none']).optional().default('cover'),
       blur_amount: z.number().min(0).max(100).optional(),
       parallax_enabled: z.boolean().optional(),
-      image_position: z
-        .enum(['top', 'center', 'bottom'])
-        .default('center'),
+      image_position: z.enum(['top','center','bottom']).default('center'),
       image_x: z.number().min(0).max(100).optional(),
       image_y: z.number().min(0).max(100).optional(),
     }),
-  },  
+  },
   services: {
     label: 'Services',
     icon: '🧰',
+    schema: z.object({ items: z.array(z.string()).min(1) }),
+  },
+  cta: {
+    label: 'Call to Action',
+    icon: '🔘',
     schema: z.object({
-      items: z.array(z.string()).min(1, 'At least one service is required'),
+      label: z.string().min(1),
+      href: z.string().url('Link must be a valid URL'),
+      style: z.enum(['primary', 'secondary', 'ghost']).optional(),
+    }),
+  },
+  service_areas: {
+    label: 'Service Areas',
+    icon: '🌍',
+    schema: z.object({
+      cities: z.array(z.string()).min(1),
+      allCities: z.array(z.string()).min(1),
+      sourceLat: z.number().min(-90).max(90),
+      sourceLng: z.number().min(-180).max(180),
+      radiusMiles: z.number().min(1),
     }),
   },
   audio: {
     label: 'Audio',
     icon: '🎧',
     schema: z.object({
-      provider: z.enum(['spotify', 'soundcloud', 'suno']),
+      provider: z.enum(['spotify','soundcloud','suno']),
       url: z.string().url('Audio URL must be valid'),
       title: z.string().optional(),
     }),
@@ -111,24 +126,19 @@ export const blockContentSchemaMap = {
   video: {
     label: 'Video',
     icon: '📹',
-    schema: z.object({
-      url: z.string().url('Video URL must be valid'),
-      caption: z.string().optional(),
-    }),
+    schema: z.object({ url: z.string().url('Video URL must be valid'), caption: z.string().optional() }),
   },
   footer: {
     label: 'Footer',
     icon: '🏠',
     schema: z.object({
-      businessName: z.string(),
+      business_name: z.string(),
       address: z.string(),
       cityState: z.string(),
       phone: z.string(),
       links: z.array(LinkSchema),
       logo_url: z.string().optional(),
-      social_links: z
-        .array(z.object({ platform: z.string(), url: z.string() }))
-        .optional(),
+      social_links: z.array(z.object({ platform: z.string(), url: z.string() })).optional(),
       copyright: z.string().optional(),
     }),
   },
@@ -136,61 +146,73 @@ export const blockContentSchemaMap = {
     label: 'Header',
     icon: '🏠',
     schema: z.object({
-      logoUrl: z.string().optional(),
-      navItems: z.array(LinkSchema),
+      logo_url: z.string().optional(),
+      nav_items: z.array(LinkSchema),
     }),
   },
-  service_areas: {
-    label: 'Service Areas',
-    icon: '🌍',
+  faq: {
+    label: 'FAQ',
+    icon: '❓',
     schema: z.object({
-      cities: z.array(z.string()).min(1, 'At least one city is required'),
+      title: z.string().min(1),
+      items: z.array(z.object({
+        question: z.string().min(1),
+        answer: z.string().min(1),
+      })).min(1),
+    }),
+  },
+  testimonial: {
+    label: 'Testimonial',
+    icon: '💬',
+    schema: z.object({
+      testimonials: z.array(z.object({
+        quote: z.string().min(1),
+        attribution: z.string().optional(),
+        avatar_url: z.string().url().optional(),
+        rating: z.number().min(1).max(5).optional(),
+      })).min(1),
+      randomized: z.boolean().optional(),
     }),
   },
   contact_form: {
     label: 'Contact Form',
     icon: '📧',
     schema: z.object({
-      title: z.string().min(1, 'Title is required'),
+      title: z.string().min(1),
       notification_email: z.string().email('Invalid email address'),
       services: z.array(z.string()).optional(),
-    }),
-  },
-  chef_profile: {
-    label: 'Chef Profile',
-    icon: '👨‍🍳',
-    schema: z.object({
-      name: z.string().min(1, 'Name is required'),
-      location: z.string().min(1, 'Location is required'),
-      profile_image_url: z.string().url('Profile image URL must be valid'),
-      kitchen_video_url: z.string().url('Kitchen video URL must be valid').optional(),
-      bio: z.string().min(1, 'Bio is required'),
-      certifications: z.array(z.string()).min(1, 'At least one certification is required'),
-      meals: z.array(z.object({
-        title: z.string().min(1, 'Meal title is required'),
-        price: z.string().min(1, 'Meal price is required'),
-        availability: z.string().min(1, 'Meal availability is required'),
-        image_url: z.string().url('Meal image URL must be valid'),
-      })).min(1, 'At least one meal is required'),
     }),
   },
   meal_card: {
     label: 'Meal Card',
     icon: '🍽️',
     schema: z.object({
-      title: z.string().min(1, 'Meal title is required'),
-      chef_name: z.string().min(1, 'Chef name is required'),
-      price: z.string().min(1, 'Meal price is required'),
-      image_url: z.string().url('Meal image URL must be valid'),
-      description: z.string().min(1, 'Meal description is required'),
-      availability: z.string().min(1, 'Meal availability is required'),
+      title: z.string().min(1),
+      chef_name: z.string().min(1),
+      price: z.string().min(1),
+      image_url: z.string().url(),
+      description: z.string().optional().default(''),
+      availability: z.string().min(1),
       tags: z.array(z.string()).optional(),
-      video_url: z.string().url('Meal video URL must be valid').optional(),
+      video_url: z.string().url().optional(),
     }),
   },
-};
+  chef_profile: {
+    label: 'Chef Profile',
+    icon: '👨‍🍳',
+    schema: z.object({
+      name: z.string().min(1),
+      location: z.string().min(1),
+      profile_image_url: z.string().url('Profile image URL must be valid'),
+      kitchen_video_url: z.string().url('Kitchen video URL must be valid').optional(),
+      bio: z.string().min(1),
+      certifications: z.array(z.string()).min(1),
+      meals: z.array(ChefMealSchema).min(1),
+    }),
+  },
+} satisfies Record<string, { label: string; icon: string; schema: z.ZodTypeAny }>;
 
-// Step 2: Build base block schemas with shared fields
+// ── 2) Build union + meta ────────────────────────────────────────────────────
 export function createBlockUnion<
   T extends Record<string, { label: string; icon: string; schema: z.ZodTypeAny }>
 >(map: T) {
@@ -209,39 +231,24 @@ export function createBlockUnion<
         meta: z.record(z.any()).optional(),
       }) as z.ZodDiscriminatedUnionOption<'type'>
     );
-    meta[type as keyof T] = {
-      label: config.label,
-      icon: config.icon,
-    };
+    meta[type as keyof T] = { label: config.label, icon: config.icon };
   }
-
   return { schemas, meta };
 }
 
 const { schemas: BasicBlockSchemas, meta: blockMeta } = createBlockUnion(blockContentSchemaMap);
 
-// Step 3: Final block schema (with grid + recursion)
-export const BlockSchema: z.ZodTypeAny = z.lazy(() => {
-  const GridBlockSchema: z.ZodDiscriminatedUnionOption<'type'> = z.object({
-    type: z.literal('grid'),
-    content: z.object({
-      columns: z.number().min(1).max(12),
-      items: z.array(BlockSchema),
-    }),
-    _id: z.string().optional(),
-    tone: z.string().optional(),
-    industry: z.string().optional(),
-    tags: z.array(z.string()).optional(),
-    meta: z.record(z.any()).optional(),
-  }) as z.ZodDiscriminatedUnionOption<'type'>;
+// ✅ No duplicate Grid entry here; the map’s grid already recurses
+export const BlockSchema: z.ZodTypeAny = z.lazy(() =>
+  z.discriminatedUnion(
+    'type',
+    BasicBlockSchemas as unknown as [
+      z.ZodDiscriminatedUnionOption<'type'>,
+      ...z.ZodDiscriminatedUnionOption<'type'>[]
+    ]
+  )
+);
 
-  return z.discriminatedUnion('type', [
-    ...BasicBlockSchemas as unknown as [z.ZodDiscriminatedUnionOption<'type'>, ...z.ZodDiscriminatedUnionOption<'type'>[]],
-    GridBlockSchema,
-  ]);
-});
-
-// Step 4: Export helpers and types
 export const BlocksArraySchema = z.array(BlockSchema);
 export type Block = z.infer<typeof BlockSchema>;
 
@@ -249,12 +256,58 @@ export function isValidBlock(data: unknown): data is Block {
   return BlockSchema.safeParse(data).success;
 }
 
+// Legacy migration (kept + add header/footer normalization)
 export function migrateLegacyBlock(block: any): any {
-  if ('content' in block) return block;
+  if (!block || typeof block !== 'object') return block;
+
+  // already in new format
+  if ('content' in block) {
+    // header/footer field renames
+    if (block.type === 'header' && block.content) {
+      const c = block.content;
+      if ('logoUrl' in c || 'navItems' in c) {
+        block.content = {
+          logo_url: c.logo_url ?? c.logoUrl ?? '',
+          nav_items: c.nav_items ?? c.navItems ?? [],
+        };
+      }
+    }
+    if (block.type === 'footer' && block.content) {
+      const c = block.content;
+      if ('businessName' in c) {
+        block.content = {
+          business_name: c.business_name ?? c.businessName ?? '',
+          address: c.address ?? '',
+          cityState: c.cityState ?? '',
+          phone: c.phone ?? '',
+          links: c.links ?? [],
+          logo_url: c.logo_url ?? c.logoUrl,
+          social_links: c.social_links ?? c.socialLinks,
+          copyright: c.copyright,
+        };
+      }
+    }
+
+    // migrate chef_profile meal items if needed
+    if (block.type === 'chef_profile' && Array.isArray(block.content?.meals)) {
+      block.content.meals = block.content.meals.map((m: any, idx: number) => ({
+        id: m?.id,
+        name: m?.name ?? m?.title ?? `Meal ${idx + 1}`,
+        description: typeof m?.description === 'string' ? m.description : '',
+        price: m?.price ?? '',
+        availability: m?.availability ?? '',
+        image_url: m?.image_url ?? '',
+      }));
+    }
+    return block;
+  }
+
+  // very old form { value: … }
   if ('value' in block) return { ...block, content: block.value };
   return block;
 }
 
+// Simple preview fallback strings for UI
 export const blockPreviewFallback: Record<Block['type'], string> = Object.entries(
   blockMeta as Record<Block['type'], { label: string; icon: string }>
 ).reduce((acc, [key, val]) => {

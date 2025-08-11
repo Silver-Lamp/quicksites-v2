@@ -1,19 +1,14 @@
+// admin/lib/zod/templateSaveSchema.ts
 import { z } from 'zod';
-import { BlockSchema } from './blockSchemas';
+import { BlockSchema } from './blockSchema';
 import { stringOrEmpty, nullableString } from './sharedHelpers';
 
-// ─────────────────────────────────────
-// 🔹 Slug Preprocessor
-function slugify(str: string): string {
-  return str
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/(^-|-$)/g, '')
-    .trim();
+function slugify(str: string) {
+  return str.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '').trim();
 }
 
 // ─────────────────────────────────────
-// 🔹 Page Schema
+// Page schema
 
 export const PageSchema = z.object({
   id: stringOrEmpty,
@@ -24,77 +19,116 @@ export const PageSchema = z.object({
   show_footer: z.boolean().optional().default(true),
 });
 
+const PagesArray = z.array(PageSchema);
+
+// Allow legacy: pages as a JSON string
+const CoercePages = z.preprocess((val) => {
+  if (typeof val === 'string') {
+    try {
+      return JSON.parse(val);
+    } catch {
+      return [];
+    }
+  }
+  return val;
+}, PagesArray);
+
+// Always return an object so we don’t hand undefined to z.object
+const hoistPagesFromData = (raw: unknown) => {
+  const t: any = raw && typeof raw === 'object' ? { ...(raw as any) } : {};
+  if (!t.pages && Array.isArray(t?.data?.pages)) t.pages = t.data.pages;
+  return t;
+};
+
 // ─────────────────────────────────────
-// 🔹 Base Template Schema (flattened)
+// Template save schema
+// NOTE: .passthrough() is on the INNER z.object(...), not after preprocess!
 
-export const TemplateSaveSchema = z
-  .object({
-    id: z.string().optional(),
+export const TemplateSaveSchema = z.preprocess(
+  hoistPagesFromData,
+  z
+    .object({
+      id: z.string().optional(),
 
-    slug: z.preprocess(
-      (val) => (typeof val === 'string' ? slugify(val) : ''),
-      z
-        .string()
-        .min(1, 'Slug is required')
-        .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, {
-          message: 'Slug must be lowercase, alphanumeric, and hyphen-separated',
-        })
-    ),
+      slug: z.preprocess(
+        (val) => (typeof val === 'string' ? slugify(val) : ''),
+        z
+          .string()
+          .min(1, 'Slug is required')
+          .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, {
+            message: 'Slug must be lowercase, alphanumeric, and hyphen-separated',
+          })
+      ),
 
-    site_id: z.string().nullable().optional(),
-    editor_id: z.string().nullable().optional(),
-    claimed_by: z.string().nullable().optional(), // uuid
-    claimed_at: z.string().nullable().optional(), // timestamp
-    claim_source: z.string().nullable().optional(),
-    archived: z.boolean().optional(),
-    created_at: z.string().nullable().optional(), // timestamp
-    updated_at: z.string().nullable().optional(), // timestamp
-    template_name: z.string().min(1).default('untitled-template'),
-    phone: nullableString,
-    layout: z.string(),
-    color_scheme: z.string(),
-    color_mode: z.string().optional(),
-    industry: z.string().default('General'),
-    theme: z.string(),
-    brand: nullableString,
-    commit: nullableString,
-    saved_at: nullableString,
-    save_count: z.number().nullable().optional(),
-    last_editor: nullableString,
-    default_subdomain: nullableString,
+      site_id: z.string().nullable().optional(),
+      editor_id: z.string().nullable().optional(),
+      claimed_by: z.string().nullable().optional(),
+      claimed_at: z.string().nullable().optional(),
+      claim_source: z.string().nullable().optional(),
+      archived: z.boolean().optional(),
+      created_at: z.string().nullable().optional(),
+      updated_at: z.string().nullable().optional(),
 
-    is_site: z.boolean().optional(),
-    published: z.boolean().optional(),
-    headline: z.string().optional(),
-    description: z.string().optional(),
-    hero_url: nullableString,
-    banner_url: nullableString,
-    logo_url: nullableString,
-    team_url: nullableString,
+      template_name: z.string().min(1).default('untitled-template'),
+      phone: nullableString,
+      layout: z.string(),
+      color_scheme: z.string(),
+      color_mode: z.string().optional(),
+      industry: z.string().default('General'),
+      theme: z.string(),
+      brand: nullableString,
+      commit: nullableString,
+      saved_at: nullableString,
+      save_count: z.number().nullable().optional(),
+      last_editor: nullableString,
+      default_subdomain: nullableString,
 
-    headerBlock: BlockSchema.optional().nullable(),
-    footerBlock: BlockSchema.optional().nullable(),
+      is_site: z.boolean().optional(),
+      published: z.boolean().optional(),
+      headline: z.string().optional(),
+      description: z.string().optional(),
+      hero_url: nullableString,
+      banner_url: nullableString,
+      logo_url: nullableString,
+      team_url: nullableString,
 
-    pages: z.array(PageSchema),
-    services: z.array(z.string()).optional().default([]),
+      // Optional header/footer blocks
+      headerBlock: BlockSchema.optional().nullable(),
+      footerBlock: BlockSchema.optional().nullable(),
 
-    verified: z.boolean().optional(),
-    verified_at: z.string().nullable().optional(), // timestamp
+      // Was required; now optional + legacy string allowed
+      pages: CoercePages.optional().default([]),
 
-    meta: z.preprocess(
-      (val) => (val === null ? {} : val),
-      z
+      services: z.array(z.string()).optional().default([]),
+
+      // Verification fields (present in your data model)
+      verified: z.boolean().optional(),
+      verified_at: z.string().nullable().optional(),
+
+      meta: z.preprocess(
+        (val) => (val === null ? {} : val),
+        z
+          .object({
+            title: z.string().optional(),
+            description: z.string().optional(),
+            ogImage: z.string().optional(),
+            faviconSizes: z.string().optional(),
+            appleIcons: z.string().optional(),
+          })
+          .optional()
+      ),
+
+      // Editor canonical fields; keep optional/partial
+      data: z
         .object({
-          title: z.string().optional(),
-          description: z.string().optional(),
-          ogImage: z.string().optional(),
-          faviconSizes: z.string().optional(),
-          appleIcons: z.string().optional(),
+          pages: PagesArray.optional(),
+          meta: z.any().optional(),
         })
-        .optional()
-    ),
-  })
-  .passthrough();
-  // .strict();
+        .partial()
+        .optional(),
+    })
+    .passthrough()
+);
 
+export type ValidatedPage = z.infer<typeof PageSchema>;
 export type ValidatedTemplate = z.infer<typeof TemplateSaveSchema>;

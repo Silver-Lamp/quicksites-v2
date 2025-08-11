@@ -1,7 +1,8 @@
+// components/admin/templates/template-editor.tsx
 "use client";
 
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useState, Dispatch, SetStateAction } from 'react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { TemplateEditorToolbar } from './template-editor-toolbar';
 import { useTemplateEditorState } from './use-template-editor-state';
@@ -10,7 +11,6 @@ import { Drawer } from '@/components/ui/drawer';
 import { Modal } from '@/components/ui/modal';
 import VectorQueryPage from '@/app/admin/vector-query/page';
 import type { Template } from '@/types/template';
-import { Dispatch, SetStateAction } from 'react';
 import { Button } from '@/components/ui/button';
 import { useTemplateInsert } from '@/hooks/useTemplateInsert';
 import BlockSidebar from './block-sidebar';
@@ -26,6 +26,7 @@ function getPages(t: any) {
   if (Array.isArray(t?.pages)) return t.pages;
   return [];
 }
+
 function withSyncedPages<T extends { data?: any; pages?: any[] }>(tpl: T): T {
   const pages = getPages(tpl);
   return { ...tpl, pages, data: { ...(tpl.data ?? {}), pages } } as T;
@@ -76,10 +77,17 @@ export default function TemplateEditor({
   // 🔒 Guard all template updates so pages never disappear
   const setTemplateSynced: Dispatch<SetStateAction<Template>> = (updater) => {
     if (typeof updater === 'function') {
-      setTemplate((prev) => withSyncedPages((updater as (p: Template) => Template)(withSyncedPages(prev))));
+      setTemplate((prev) =>
+        withSyncedPages((updater as (p: Template) => Template)(withSyncedPages(prev)))
+      );
     } else {
       setTemplate((prev) => withSyncedPages({ ...withSyncedPages(prev), ...updater }));
     }
+  };
+
+  // ✅ EditorContent requires onChange — merge patches safely
+  const handleEditorPatch = (patch: Partial<Template>) => {
+    setTemplateSynced((prev) => withSyncedPages({ ...prev, ...patch }));
   };
 
   const { insertBlock, recentlyInsertedBlockId } =
@@ -114,13 +122,12 @@ export default function TemplateEditor({
       // Create payload for saving WITHOUT root pages, but DO NOT mutate state
       const payload: Template = (() => {
         const out = { ...template };
-        // only strip for the outgoing payload
-        if ('pages' in out) delete (out as any).pages;
+        if ('pages' in out) delete (out as any).pages; // strip only on the outbound payload
         return out;
       })();
 
       const saved = await saveTemplate(payload);
-      // Ensure returned record is mirrored back into state
+      // Ensure returned record is mirrored back into state (and kept in sync)
       setTemplateSynced(saved);
       toast.success('Template saved');
     } catch (err) {
@@ -168,6 +175,7 @@ export default function TemplateEditor({
           setBlockErrors={setBlockErrors as (errors: Record<string, BlockValidationError[]>) => void}
           blockErrors={blockErrors as Record<string, BlockValidationError[]>}
           mode="template"
+          onChange={handleEditorPatch} // ✅ critical: satisfy EditorContent's prop
         />
 
         {selectedBlock && selectedIndex !== null && (

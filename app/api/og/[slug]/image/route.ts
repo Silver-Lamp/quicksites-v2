@@ -1,8 +1,6 @@
 // app/api/og/[slug]/image/route.ts
-import { ImageResponse } from '@vercel/og';
 import { renderOgImage } from '@/lib/og/renderOgImage';
 import { createClient } from '@supabase/supabase-js';
-// import { Resvg } from '@resvg/resvg-js';
 
 export const runtime = 'nodejs';
 
@@ -11,23 +9,27 @@ const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 );
 
-export async function GET(request: Request, { params }: { params: { slug: string } }) {
+export async function GET(
+  request: Request,
+  { params }: { params: { slug: string } }
+) {
   const slug = params.slug;
   const bucket = 'og-cache';
-  const path = `snapshots/${slug}.png`;
+  // Use SVG consistently for cache path + content type
+  const path = `snapshots/${slug}.svg`;
 
-  // ✅ Try serving cached image (data is a Blob)
+  // Serve cached SVG if present
   const { data: cached } = await supabase.storage.from(bucket).download(path);
   if (cached) {
     return new Response(cached, {
       headers: {
-        'Content-Type': 'image/png',
+        'Content-Type': 'image/svg+xml',
         'Cache-Control': 'public, max-age=86400',
       },
     });
   }
 
-  // 🧠 Fetch site branding
+  // Fetch published site + branding
   const { data: site } = await supabase
     .from('published_sites')
     .select('*, branding_profiles(name, theme, brand, logo_url)')
@@ -38,37 +40,33 @@ export async function GET(request: Request, { params }: { params: { slug: string
   const title = site?.branding_profiles?.name || slug;
   const theme = site?.branding_profiles?.theme || 'dark';
   const brand = site?.branding_profiles?.brand || 'green';
-  const logoUrl = site?.branding_profiles?.logo_url;
+  const logo_url = site?.branding_profiles?.logo_url; // ← canonical key
 
-  // 🎨 Render OG SVG
+  // Render OG as SVG
   const svgResponse = await renderOgImage({
     title,
     content: `${slug}.quicksites.ai`,
     theme,
     brand,
-    logoUrl,
+    logo_url, // ← pass canonical key expected by renderOgImage()
   });
 
   const svg = await svgResponse.text();
 
-  return new Response(svg, {
-    headers: {
-      'Content-Type': 'image/svg+xml',
-      'Cache-Control': 'public, max-age=86400',
-    },
-  });
-  // const png = new Resvg(svg).render().asPng();
-
-  // 💾 Upload to Supabase Storage
+  // Upload to Supabase Storage (SVG)
   await supabase.storage.from(bucket).upload(path, svg, {
-    contentType: 'image/png',
+    contentType: 'image/svg+xml',
     upsert: true,
   });
 
-  // 🌐 Update og_image_url in DB
+  // Update og_image_url to the public SVG URL
   const publicUrl = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/${bucket}/${path}`;
-  await supabase.from('published_sites').update({ og_image_url: publicUrl }).eq('slug', slug);
+  await supabase
+    .from('published_sites')
+    .update({ og_image_url: publicUrl })
+    .eq('slug', slug);
 
+  // Return freshly rendered SVG
   return new Response(svg, {
     headers: {
       'Content-Type': 'image/svg+xml',

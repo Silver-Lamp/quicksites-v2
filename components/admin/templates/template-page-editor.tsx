@@ -5,13 +5,12 @@ import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui';
 import { BlocksEditor } from './blocks-editor';
 import { createDefaultPage } from '@/lib/pageDefaults';
-import type { Template, TemplateData } from '@/types/template';
+import type { Template, TemplateData, Page } from '@/types/template';
 import type { Block } from '@/types/blocks';
 import BlockAdderGrouped from '@/components/admin/block-adder-grouped';
 import { createDefaultBlock } from '@/lib/createDefaultBlock';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { BlockValidationError } from '@/hooks/validateTemplateBlocks';
-import type { Page } from '@/types/site';
 import { FloatingAddBlockHere } from '@/components/editor/floating-add-block-here';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
@@ -32,21 +31,25 @@ export default function TemplatePageEditor({
   const [newPageSlug, setNewPageSlug] = useState('');
   const [showErrorBanner, setShowErrorBanner] = useState(true);
 
+  const pages: Page[] = Array.isArray(template.data?.pages) ? template.data!.pages : [];
+
   useEffect(() => {
-    const errorPages = (template.data?.pages || []).filter((page) =>
-      page.content_blocks.some((block) => block._id && blockErrors[block._id])
+    const errorPages = pages.filter((page) =>
+      (page.content_blocks || []).some((block) => block._id && blockErrors[block._id])
     );
 
     const expandedByDefault: Record<string, boolean> = {};
-    for (const page of template.data?.pages || []) {
+    for (const page of pages) {
       expandedByDefault[page.slug] = errorPages.some((ep) => ep.slug === page.slug);
     }
     setCollapsedPages(expandedByDefault);
 
     const firstBlockId = Object.keys(blockErrors)[0];
     if (firstBlockId) {
-      const el = document.getElementById(`block-${firstBlockId}`);
-      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      document.getElementById(`block-${firstBlockId}`)?.scrollIntoView({
+        behavior: 'smooth',
+        block: 'center',
+      });
     }
 
     if (Object.keys(blockErrors).length > 0) {
@@ -54,57 +57,57 @@ export default function TemplatePageEditor({
     }
   }, [template.data?.pages, blockErrors]);
 
+  // ——— helpers ———
+  const commitPages = (nextPages: Page[]) => {
+    const updated: Template = {
+      ...template,
+      data: { ...(template.data ?? {}), pages: nextPages },
+    };
+    onChange(updated);
+    onLivePreviewUpdate(updated.data!);
+  };
+
+  const patchPageAt = (index: number, patch: Partial<Page>) => {
+    const next = pages.map((p, i) => (i === index ? { ...p, ...patch } : p));
+    commitPages(next);
+  };
+
   const handleAddPage = () => {
     if (!newPageTitle || !newPageSlug) return;
     const newPage = createDefaultPage({ title: newPageTitle, slug: newPageSlug });
-    const updated = {
-      ...template,
-      data: {
-        ...template.data,
-        pages: [...(template.data?.pages || []), newPage],
-      },
-    };
-    onChange(updated);
+    commitPages([...pages, newPage]);
     setNewPageTitle('');
     setNewPageSlug('');
   };
 
   const handlePageBlockChange = (pageIndex: number, updatedBlocks: Block[]) => {
-    const newPages = (template.data?.pages || []).map((page, i) =>
-      i === pageIndex ? { ...page, content_blocks: [...updatedBlocks] } : page
-    );
-
-    const updated = { ...template, data: { ...template.data, pages: newPages } };
-    onChange(updated);
-    onLivePreviewUpdate(updated.data);
+    patchPageAt(pageIndex, { content_blocks: [...updatedBlocks] });
   };
 
   const handleInsertBlockAt = (pageIndex: number, insertIndex: number, blockType: string) => {
     const newBlock = createDefaultBlock(blockType as any);
-    const newPages = template.data.pages.map((page, i) => {
-      if (i !== pageIndex) return page;
-      const newBlocks = [...page.content_blocks];
-      newBlocks.splice(insertIndex, 0, newBlock);
-      return { ...page, content_blocks: newBlocks };
-    });
+    const target = pages[pageIndex];
+    if (!target) return;
 
-    const updated = { ...template, data: { ...template.data, pages: newPages } };
-    onChange(updated);
-    onLivePreviewUpdate(updated.data);
+    const newBlocks = [...(target.content_blocks || [])];
+    newBlocks.splice(insertIndex, 0, newBlock);
+    patchPageAt(pageIndex, { content_blocks: newBlocks });
   };
 
   const scrollToFirstError = () => {
     const firstBlockId = Object.keys(blockErrors)[0];
     if (firstBlockId) {
-      const el = document.getElementById(`block-${firstBlockId}`);
-      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      document.getElementById(`block-${firstBlockId}`)?.scrollIntoView({
+        behavior: 'smooth',
+        block: 'center',
+      });
     }
   };
 
   const collapseCleanPages = () => {
     const collapsed: Record<string, boolean> = {};
-    for (const page of template.data?.pages || []) {
-      const hasErrors = page.content_blocks.some((b) => b._id && blockErrors[b._id]);
+    for (const page of pages) {
+      const hasErrors = (page.content_blocks || []).some((b) => b._id && blockErrors[b._id]);
       collapsed[page.slug] = !hasErrors;
     }
     setCollapsedPages(collapsed);
@@ -114,9 +117,7 @@ export default function TemplatePageEditor({
     <div className="space-y-6 border-gray-700 rounded p-4">
       {Object.keys(blockErrors).length > 0 && showErrorBanner && (
         <div className="flex justify-between items-center border border-red-600 bg-red-900/10 text-red-300 px-4 py-2 rounded">
-          <div>
-            ⚠ {Object.keys(blockErrors).length} block(s) have validation issues.
-          </div>
+          <div>⚠ {Object.keys(blockErrors).length} block(s) have validation issues.</div>
           <div className="flex gap-2">
             <Button variant="ghost" size="sm" onClick={scrollToFirstError}>
               Jump to First
@@ -131,8 +132,11 @@ export default function TemplatePageEditor({
         </div>
       )}
 
-      {(template.data?.pages || []).map((page, pageIndex) => {
-        const errorCount = page.content_blocks.filter((b) => b._id && blockErrors[b._id])?.length || 0;
+      {(pages || []).map((page, pageIndex) => {
+        const contentBlocks = page.content_blocks || [];
+        const errorCount =
+          contentBlocks.filter((b) => b._id && blockErrors[b._id])?.length || 0;
+
         return (
           <div
             key={page.slug}
@@ -160,25 +164,17 @@ export default function TemplatePageEditor({
                 <Label className="flex items-center gap-2 text-xs">
                   <Switch
                     checked={page.show_header ?? template.show_header ?? true}
-                    onCheckedChange={(val) => {
-                      const updatedPages = [...template.data.pages];
-                      updatedPages[pageIndex].show_header = val;
-                      onChange({ ...template, data: { ...template.data, pages: updatedPages } });
-                    }}
+                    onCheckedChange={(val) => patchPageAt(pageIndex, { show_header: val })}
                   />
                   Header
                 </Label>
                 <Label className="flex items-center gap-2 text-xs">
                   <Switch
                     checked={page.show_footer ?? template.show_footer ?? true}
-                    onCheckedChange={(val) => {
-                      const updatedPages = [...template.data.pages];
-                      updatedPages[pageIndex].show_footer = val;
-                      onChange({ ...template, data: { ...template.data, pages: updatedPages } });
-                    }}
+                    onCheckedChange={(val) => patchPageAt(pageIndex, { show_footer: val })}
                   />
-                  Footer
-                </Label>
+                    Footer
+                  </Label>
                 <Button
                   variant="ghost"
                   size="sm"
@@ -196,7 +192,7 @@ export default function TemplatePageEditor({
 
             {!collapsedPages[page.slug] && (
               <>
-                {(page.content_blocks || []).map((block, blockIndex) => (
+                {contentBlocks.map((block, blockIndex) => (
                   <div key={block._id || blockIndex}>
                     <BlocksEditor
                       blocks={[
@@ -210,7 +206,7 @@ export default function TemplatePageEditor({
                         },
                       ]}
                       onChange={(updated) => {
-                        const updatedBlocks = [...page.content_blocks];
+                        const updatedBlocks = [...contentBlocks];
                         updatedBlocks[blockIndex] = updated[0];
                         handlePageBlockChange(pageIndex, updatedBlocks);
                       }}
@@ -224,15 +220,13 @@ export default function TemplatePageEditor({
                   </div>
                 ))}
 
-                {page.content_blocks.length === 0 && (
-                  <FloatingAddBlockHere
-                    onAdd={(type) => handleInsertBlockAt(pageIndex, 0, type)}
-                  />
+                {contentBlocks.length === 0 && (
+                  <FloatingAddBlockHere onAdd={(type) => handleInsertBlockAt(pageIndex, 0, type)} />
                 )}
 
                 <BlockAdderGrouped
-                  existingBlocks={page.content_blocks}
-                  onAdd={(type) => handleInsertBlockAt(pageIndex, page.content_blocks.length, type)}
+                  existingBlocks={contentBlocks}
+                  onAdd={(type) => handleInsertBlockAt(pageIndex, contentBlocks.length, type)}
                 />
               </>
             )}

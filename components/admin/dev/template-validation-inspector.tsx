@@ -1,111 +1,87 @@
+// components/admin/dev/template-validation-inspector.tsx
 'use client';
 
 import { useEffect, useState } from 'react';
-import { validateTemplateAndFix } from '@/admin/lib/validateTemplate';
 import { TemplateSaveSchema } from '@/admin/lib/zod/templateSaveSchema';
+import { keysFromSchema, pickAllowedKeys } from '@/lib/zod/utils';
 
-export function TemplateValidationInspector({ fullTemplateJson }: { fullTemplateJson: any }) {
-  const [diagnostics, setDiagnostics] = useState<null | {
-    formErrors: string[];
-    fieldErrors: Record<string, string[]>;
-    topLevelKeys: string[];
-    nestedDataKeys: string[];
-    suspicious: boolean;
-  }>(null);
+type Diagnostics = {
+  formErrors: string[];
+  fieldErrors: Record<string, string[]>;
+  topLevelKeys: string[];
+  suspicious: boolean;
+};
 
-  const cleanForValidation = (input: any) => {
-    const allowedKeys = Object.keys(TemplateSaveSchema.shape);
-    const cleaned: Record<string, any> = {};
-
-    for (const key of allowedKeys) {
-      if (Object.prototype.hasOwnProperty.call(input, key)) {
-        cleaned[key] = input[key];
-      }
-    }
-
-    // Explicitly remove legacy or DB fields
-    delete cleaned.created_at;
-    delete cleaned.domain;
-    delete cleaned.custom_domain;
-    delete cleaned.data;
-
-    return cleaned;
-  };
+export function TemplateValidationInspector({
+  fullTemplateJson,
+}: {
+  fullTemplateJson?: unknown;
+}) {
+  const [diag, setDiag] = useState<Diagnostics | null>(null);
 
   useEffect(() => {
-    if (!fullTemplateJson) return;
+    if (!fullTemplateJson || typeof fullTemplateJson !== 'object') {
+      setDiag(null);
+      return;
+    }
 
-    const cleaned = cleanForValidation(fullTemplateJson);
-    const result = validateTemplateAndFix(cleaned);
+    try {
+      // Keep only keys allowed by the save schema (works even if wrapped in z.preprocess)
+      const allowedKeys = keysFromSchema(TemplateSaveSchema);
+      const cleaned = pickAllowedKeys(fullTemplateJson as Record<string, unknown>, allowedKeys);
 
-    if (!result.valid) {
-      const formErrors = result.errors?.formErrors || [];
-      const fieldErrors = result.errors?.fieldErrors || {};
-      const topLevelKeys = Object.keys(fullTemplateJson || {});
-      const nestedDataKeys =
-        fullTemplateJson?.data && typeof fullTemplateJson.data === 'object'
-          ? Object.keys(fullTemplateJson.data)
-          : [];
+      const result = TemplateSaveSchema.safeParse(cleaned);
 
-      const suspicious = !!fullTemplateJson?.data?.data;
-
-      setDiagnostics({
-        formErrors,
-        fieldErrors,
-        topLevelKeys,
-        nestedDataKeys,
-        suspicious,
+      if (result.success) {
+        setDiag({
+          formErrors: [],
+          fieldErrors: {},
+          topLevelKeys: Object.keys(cleaned),
+          suspicious: false,
+        });
+      } else {
+        const flat = result.error.flatten();
+        setDiag({
+          formErrors: flat.formErrors ?? [],
+          fieldErrors: (flat.fieldErrors as Record<string, string[]>) ?? {},
+          topLevelKeys: Object.keys(cleaned),
+          suspicious: true,
+        });
+      }
+    } catch {
+      setDiag({
+        formErrors: ['Exception while validating'],
+        fieldErrors: {},
+        topLevelKeys: [],
+        suspicious: true,
       });
-    } else {
-      setDiagnostics(null);
     }
   }, [fullTemplateJson]);
 
-  if (!diagnostics) return null;
+  if (!diag) return null;
+
+  const hasErrors =
+    diag.suspicious ||
+    diag.formErrors.length > 0 ||
+    Object.keys(diag.fieldErrors).length > 0;
 
   return (
-    <div className="bg-red-950 text-red-200 border border-red-700 p-4 rounded text-sm max-w-4xl space-y-2">
-      <div className="font-semibold text-red-300">[❌ Template Validation Inspector]</div>
-
-      {diagnostics.suspicious && (
-        <div className="text-yellow-300">
-          ⚠️ Suspicious `.data.data` nesting detected. Consider unwrapping before saving.
-        </div>
-      )}
-
-      <div>
-        <span className="font-semibold">Top-Level Keys:</span>{' '}
-        {diagnostics.topLevelKeys.join(', ') || 'N/A'}
-      </div>
-
-      <div>
-        <span className="font-semibold">Nested `data` Keys:</span>{' '}
-        {diagnostics.nestedDataKeys.join(', ') || 'N/A'}
-      </div>
-
-      {diagnostics.formErrors.length > 0 && (
-        <div>
-          <span className="font-semibold">Form Errors:</span>
-          <ul className="list-disc list-inside">
-            {diagnostics.formErrors.map((err, i) => (
-              <li key={i}>{err}</li>
-            ))}
-          </ul>
-        </div>
-      )}
-
-      {Object.keys(diagnostics.fieldErrors).length > 0 && (
-        <div>
-          <span className="font-semibold">Field Errors:</span>
-          <ul className="list-disc list-inside">
-            {Object.entries(diagnostics.fieldErrors).map(([field, errors]) => (
-              <li key={field}>
-                <strong>{field}:</strong> {errors.join(', ')}
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
+    <div
+      className={[
+        'text-xs rounded px-2 py-1 border',
+        hasErrors
+          ? 'border-red-700 text-red-300 bg-red-950'
+          : 'border-emerald-700 text-emerald-300 bg-emerald-950',
+      ].join(' ')}
+      title={
+        hasErrors
+          ? 'Schema errors detected. Hover to see details.'
+          : 'Template matches TemplateSaveSchema'
+      }
+    >
+      {hasErrors ? 'Schema errors' : 'Schema OK'}
     </div>
   );
 }
+
+export default TemplateValidationInspector;

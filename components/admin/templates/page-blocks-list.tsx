@@ -1,3 +1,4 @@
+// components/admin/templates/page-blocks-list.tsx
 'use client';
 
 import { useState } from 'react';
@@ -5,43 +6,65 @@ import type { Page, Template } from '@/types/template';
 import { SortableBlockList } from './sortable-block-list';
 import BlockSidebar from './block-sidebar';
 
+type Props = {
+  page: Page;
+  template: Template;
+  onChange: (updated: Template) => void;
+  onLivePreviewUpdate: (data: Template['data']) => void;
+};
+
 export function PageBlocksList({
   page,
   template,
   onChange,
   onLivePreviewUpdate,
-}: {
-  page: Page;
-  template: Template;
-  onChange: (updated: Template) => void;
-  onLivePreviewUpdate: (data: Template['data']) => void;
-}) {
+}: Props) {
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
 
-  const ensureIds = (blocks: any[]) =>
+  // Ensure every block has an _id
+  const ensureIds = <T extends { _id?: string }>(blocks: T[]) =>
     blocks.map((b) => ({ ...b, _id: b._id || crypto.randomUUID() }));
 
+  // Always work with a defined array for the current page’s blocks
+  const pageBlocks = ensureIds(page.content_blocks ?? []);
+
   const handleBlocksChange = (newBlocks: any[]) => {
-    const updatedPages = template.data.pages.map((p) =>
+    // Work with a defined pages array
+    const currentPages = Array.isArray(template.data?.pages)
+      ? template.data.pages
+      : [];
+
+    const updatedPages = currentPages.map((p) =>
       p.id === page.id ? { ...p, content_blocks: ensureIds(newBlocks) } : p
     );
-    const updatedTemplate = {
+
+    const nextData = {
+      ...(template.data ?? {}),
+      pages: updatedPages,
+    } as Template['data'];
+
+    const updatedTemplate: Template = {
       ...template,
-      data: { ...template.data, pages: updatedPages },
+      data: nextData,
     };
+
     onChange(updatedTemplate);
-    onLivePreviewUpdate(updatedTemplate.data);
+    onLivePreviewUpdate(nextData);
   };
 
   const handleInsertBlockAt = (index: number) => {
     const fallback = {
       type: 'text',
-      value: { value: 'New block...' },
+      content: { value: 'New block...' },
       _id: crypto.randomUUID(),
     };
 
-    const blocks = ensureIds(page.content_blocks);
-    const newBlocks = [...blocks.slice(0, index), fallback, ...blocks.slice(index)];
+    const newBlocks = [
+      ...pageBlocks.slice(0, index),
+      fallback,
+      ...pageBlocks.slice(index),
+    ];
+
     handleBlocksChange(newBlocks);
     setSelectedIndex(index);
   };
@@ -51,27 +74,27 @@ export function PageBlocksList({
   };
 
   const handleSidebarChange = (updatedBlock: any) => {
-    const blocks = ensureIds(page.content_blocks);
-    const updated = [...blocks];
-    updated[selectedIndex!] = updatedBlock;
+    if (selectedIndex == null) return;
+    const updated = [...pageBlocks];
+    updated[selectedIndex] = updatedBlock;
     handleBlocksChange(updated);
   };
 
   return (
     <div className="mt-2">
       <SortableBlockList
-        blocks={ensureIds(page.content_blocks)}
+        blocks={pageBlocks}
         onChange={handleBlocksChange}
         onBlockEdit={handleEditBlock}
         onInsertBlock={handleInsertBlockAt}
       />
 
-      {selectedIndex !== null && (
+      {selectedIndex !== null && pageBlocks[selectedIndex] && (
         <BlockSidebar
-          block={page.content_blocks[selectedIndex]}
+          block={pageBlocks[selectedIndex]}
           onSave={handleSidebarChange}
           onClose={() => setSelectedIndex(null)}
-          onOpen={true}
+          onOpen
           onReplaceWithAI={() => {}}
           onClone={() => {}}
           onShowPrompt={() => {}}
@@ -83,3 +106,5 @@ export function PageBlocksList({
     </div>
   );
 }
+
+export default PageBlocksList;

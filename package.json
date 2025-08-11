@@ -139,6 +139,7 @@
     "just-diff": "^6.0.2",
     "leaflet": "^1.9.4",
     "lodash.debounce": "^4.0.8",
+    "lodash.get": "^4.4.2",
     "lucide-react": "^0.513.0",
     "marked": "^15.0.12",
     "mkdirp": "^3.0.1",

@@ -15,7 +15,7 @@ export async function useTemplateSave(template: ValidatedTemplate): Promise<bool
   }
   if (!validated.success) {
     toast.error('Template is invalid. Cannot save.');
-    console.warn('[Validation Error]', validated.error.format());
+    console.warn('[Validation Error]', (validated.error as any).format());
     return false;
   }
 

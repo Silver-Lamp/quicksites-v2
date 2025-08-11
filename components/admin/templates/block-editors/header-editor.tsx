@@ -1,16 +1,19 @@
+// components/admin/templates/block-editors/header-editor.tsx
 'use client';
 
 import { useState } from 'react';
-import { Button } from '@/components/ui/button';
-import { Label } from '@/components/ui/label';
 import Image from 'next/image';
 import { useDropzone } from 'react-dropzone';
 import imageCompression from 'browser-image-compression';
-import { supabase } from '@/lib/supabase/client';
 import toast from 'react-hot-toast';
+
+import { Button } from '@/components/ui/button';
+import { Label } from '@/components/ui/label';
+import { supabase } from '@/lib/supabase/client';
+
 import type { Block } from '@/types/blocks';
-import { BlockValidationError } from '@/hooks/validateTemplateBlocks';
-import { Template } from '@/types/template';
+import type { Template } from '@/types/template';
+import type { BlockValidationError } from '@/hooks/validateTemplateBlocks';
 import QuickLinksEditor from '@/components/admin/fields/quick-links-editor';
 
 type Props = {
@@ -22,22 +25,62 @@ type Props = {
   isSaving?: boolean;
 };
 
-export default function PageHeaderEditor({ block, onSave, onClose, errors = {}, template }: Props) {
-  const headerBlock = block as unknown as Block;
-  console.log('headerBlock', headerBlock);
-  const [logoUrl, setLogoUrl] = useState(
-    block.type === 'header' ? (headerBlock.content as any).logoUrl || template?.logo_url || '' : ''
+// Normalize header content from any legacy shapes to the canonical one
+function normalizeHeaderContent(input: any, fallbackLogo?: string) {
+  const c = input ?? {};
+
+  // logo can be logo_url (canonical) or legacy logoUrl/url
+  const logo_url: string = c.logo_url ?? c.logoUrl ?? c.url ?? fallbackLogo ?? '';
+
+  // nav items can be nav_items (canonical) or legacy navItems/links
+  const raw =
+    Array.isArray(c.nav_items) ? c.nav_items :
+    Array.isArray(c.navItems)  ? c.navItems  :
+    Array.isArray(c.links)     ? c.links     : [];
+
+  const nav_items = raw.map((l: any) => ({
+    label: typeof l?.label === 'string' ? l.label : '',
+    href: typeof l?.href === 'string' ? l.href : '',
+    appearance: typeof l?.appearance === 'string' ? l.appearance : 'default',
+  }));
+
+  return { logo_url, nav_items };
+}
+
+export default function PageHeaderEditor({
+  block,
+  onSave,
+  onClose,
+  errors = {},
+  template,
+  isSaving: isSavingProp,
+}: Props) {
+  if (block.type !== 'header') {
+    return <div className="text-red-500">Invalid block type</div>;
+  }
+
+  // Template normalization for QuickLinksEditor
+  const normalizedTemplate = {
+    ...template,
+    pages: template?.pages ?? template?.data?.pages ?? [],
+  };
+
+  // Read both legacy and canonical content shapes
+  const initial = normalizeHeaderContent(block.content, template?.logo_url);
+
+  const [logoUrl, setLogoUrl] = useState<string>(initial.logo_url);
+  const [navItems, setNavItems] = useState<Array<{ label: string; href: string; appearance?: string }>>(
+    initial.nav_items
   );
-  const [navItems, setNavItems] = useState(
-    block.type === 'header' ? [...(headerBlock.content as any).links || []] : []
-  );
+
   const [isUploading, setIsUploading] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
+  const [isSavingLocal, setIsSavingLocal] = useState(false);
+
+  const saving = Boolean(isSavingProp) || isSavingLocal;
 
   const areLinksValid =
-    block.type === 'header'
-      ? navItems.every((link) => link.label.trim() && link.href.trim())
-      : false;
+    navItems.length > 0 &&
+    navItems.every((link) => link?.label?.trim?.() && link?.href?.trim?.());
 
   const handleFileUpload = async (file: File): Promise<string> => {
     const compressed = await imageCompression(file, {
@@ -48,18 +91,17 @@ export default function PageHeaderEditor({ block, onSave, onClose, errors = {}, 
 
     const fileExt = compressed.name.split('.').pop() || 'jpg';
     const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
-    const filePath = `${fileName}`;
 
-    const { error } = await supabase.storage.from('logos').upload(filePath, compressed, {
+    const { error } = await supabase.storage.from('logos').upload(fileName, compressed, {
       cacheControl: '3600',
       upsert: false,
     });
-
     if (error) throw new Error('Upload failed');
 
     const {
       data: { publicUrl },
-    } = supabase.storage.from('logos').getPublicUrl(filePath);
+    } = supabase.storage.from('logos').getPublicUrl(fileName);
+
     return publicUrl;
   };
 
@@ -71,8 +113,8 @@ export default function PageHeaderEditor({ block, onSave, onClose, errors = {}, 
       setLogoUrl(url);
       toast.success('Logo uploaded!');
     } catch (err) {
-      toast.error('Upload failed');
       console.error(err);
+      toast.error('Upload failed');
     } finally {
       setIsUploading(false);
     }
@@ -84,27 +126,22 @@ export default function PageHeaderEditor({ block, onSave, onClose, errors = {}, 
     maxSize: 5 * 1024 * 1024, // 5MB
   });
 
-  if (block.type !== 'header') {
-    return <div className="text-red-500">Invalid block type</div>;
-  }
-
   const saveBlock = () => {
-    setIsSaving(true);
-    onSave({
-      ...block,
-      content: {
-        logoUrl: logoUrl,
-        navItems: navItems,
-      },
-    });
-    onClose();
-    setIsSaving(false);
+    setIsSavingLocal(true);
+    try {
+      onSave({
+        ...block,
+        // Always write canonical field names
+        content: {
+          logo_url: logoUrl,
+          nav_items: navItems,
+        },
+      });
+      onClose();
+    } finally {
+      setIsSavingLocal(false);
+    }
   };
-  const normalizedTemplate = {
-    ...template,
-    pages: template?.pages ?? template?.data?.pages ?? [],
-  };  
-  console.log('Normalized slugs:', normalizedTemplate.pages.map(p => p.slug));
 
   return (
     <div className="p-4 space-y-6 text-white bg-neutral-900 rounded-xl">
@@ -134,7 +171,8 @@ export default function PageHeaderEditor({ block, onSave, onClose, errors = {}, 
             </div>
           ) : (
             <p className="text-sm text-neutral-400">
-              Drag and drop a logo image here, or click to browse<br />
+              Drag and drop a logo image here, or click to browse
+              <br />
               (PNG, JPG, SVG, WebP — Max 5MB)
             </p>
           )}
@@ -144,7 +182,7 @@ export default function PageHeaderEditor({ block, onSave, onClose, errors = {}, 
       <div className="space-y-4">
         <Label className="text-white">Navigation Links</Label>
         <QuickLinksEditor links={navItems} onChange={setNavItems} template={normalizedTemplate as Template} />
-        </div>
+      </div>
 
       {!areLinksValid && (
         <div className="bg-red-900/40 text-red-300 border border-red-500 rounded p-3 text-sm">
@@ -153,11 +191,11 @@ export default function PageHeaderEditor({ block, onSave, onClose, errors = {}, 
       )}
 
       <div className="flex justify-end gap-2 pt-4">
-        <Button variant="ghost" onClick={onClose} disabled={isSaving}>
+        <Button variant="ghost" onClick={onClose} disabled={saving}>
           Cancel
         </Button>
-        <Button onClick={saveBlock} disabled={isSaving || !areLinksValid}>
-          {isSaving ? 'Saving...' : 'Save'}
+        <Button onClick={saveBlock} disabled={saving || !areLinksValid}>
+          {saving ? 'Saving...' : 'Save'}
         </Button>
       </div>
     </div>

@@ -1,3 +1,4 @@
+// components/admin/templates/template-preview.tsx
 'use client';
 
 import type { TemplateData } from '@/types/template';
@@ -10,7 +11,7 @@ type TemplatePreviewProps = {
   colorScheme?: string;
   theme?: string;
   brand?: string;
-  mode: 'light' | 'dark'; // 🔥 used only for remount key
+  mode: 'light' | 'dark'; // used only for remount key
   onBlockClick?: (block: Block) => void;
   showJsonFallback?: boolean;
   colorMode?: 'light' | 'dark';
@@ -35,28 +36,31 @@ export default function TemplatePreview({
   mode,
   colorMode = 'light',
 }: TemplatePreviewProps) {
-  const previewBg = bgColorMap[colorScheme] || 'bg-gray-100';
+  const previewBg = bgColorMap[colorScheme] ?? 'bg-gray-100';
+  const pages = Array.isArray(data?.pages) ? data.pages : [];
 
   return (
     <div
-      key={`preview-${mode}`} // 🔄 force remount on theme switch
-      className={`
-        preview-block \${previewBg}
+      key={`preview-${mode}`} // force remount on theme switch
+      className={`preview-block ${previewBg}
         bg-white text-gray-900
         dark:bg-neutral-900 dark:text-white
         border border-gray-200 dark:border-neutral-700
-        p-6 rounded-lg
-        transition-colors
-      `}
+        p-6 rounded-lg transition-colors`}
     >
       {(theme || brand) && (
         <div className="mb-4 text-sm text-gray-700 dark:text-gray-300">
-          Theme: <strong>{theme || 'none'}</strong> · Brand: <strong>{brand || 'none'}</strong>
+          Theme: <strong>{theme || 'none'}</strong> · Brand:{' '}
+          <strong>{brand || 'none'}</strong>
         </div>
       )}
 
-      {data.pages.map((page, pageIndex) => {
+      {pages.map((page, pageIndex) => {
         const normalizedPage = normalizePageBlocks(page);
+        const blocks = Array.isArray(normalizedPage.content_blocks)
+          ? normalizedPage.content_blocks
+          : [];
+
         return (
           <div key={normalizedPage.slug || `page-${pageIndex}`} className="mb-10 space-y-6">
             {normalizedPage.slug && (
@@ -65,28 +69,32 @@ export default function TemplatePreview({
               </h2>
             )}
 
-            {normalizedPage.content_blocks.map((block, i) => (
+            {blocks.map((block, i) => (
               <div
                 key={block._id ?? `${block.type}-${pageIndex}-${i}`}
-                id={`block-${block._id}`}
+                id={block._id ? `block-${block._id}` : undefined}
                 onClick={() => onBlockClick?.(block)}
-                className={`
-                  group rounded-md p-4 transition
+                className={`group rounded-md p-4 transition
                   bg-white text-gray-900 border border-gray-200
                   dark:bg-neutral-800 dark:text-gray-100 dark:border-neutral-700
-                  ${onBlockClick ? 'cursor-pointer hover:ring hover:ring-blue-400/30' : ''}
-                `}
+                  ${onBlockClick ? 'cursor-pointer hover:ring hover:ring-blue-400/30' : ''}`}
               >
-                <RenderBlock block={block} handleNestedBlockUpdate={onBlockClick} showDebug={false} colorMode={colorMode} />
+                <RenderBlock
+                  block={block}
+                  // if your RenderBlock supports bubbling selection from nested blocks:
+                  handleNestedBlockUpdate={onBlockClick}
+                  showDebug={false}
+                  colorMode={colorMode}
+                />
 
-                {/* {showJsonFallback && (
+                {showJsonFallback && (
                   <details className="mt-3 text-xs text-gray-500 dark:text-gray-400">
                     <summary className="cursor-pointer select-none">Show Raw JSON</summary>
                     <pre className="mt-1 whitespace-pre-wrap break-words">
                       {JSON.stringify(block.content, null, 2)}
                     </pre>
                   </details>
-                )} */}
+                )}
               </div>
             ))}
           </div>

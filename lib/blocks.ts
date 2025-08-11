@@ -1,7 +1,6 @@
 // lib/blocks.ts
 import type { Block, BlockWithId } from '@/types/blocks';
 import { normalizeBlock } from '@/types/blocks';
-// import { normalizeBlock } from '@/lib/normalizeBlock'; // TODO: move to types/blocks.ts and remove this file
 
 export function createFallbackBlock(type: Block['type'] = 'text'): BlockWithId {
   switch (type) {

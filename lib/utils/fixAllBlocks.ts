@@ -6,7 +6,7 @@ export function fixAllBlocks(template: Template): Template {
     ...template,
     data: {
       ...template.data,
-      pages: template.data.pages.map(normalizePageBlocks),
+      pages: template.data?.pages?.map(normalizePageBlocks) || [],
     },
   };
 }

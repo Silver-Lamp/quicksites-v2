@@ -3,118 +3,117 @@ import type { BlockType } from '@/types/blocks';
 import { normalizeBlock } from '@/lib/utils/normalizeBlock';
 import { DEFAULT_BLOCK_CONTENT } from '@/lib/blocks/defaultBlockContent';
 import { z } from 'zod';
-import { BlockSchema } from '@/admin/lib/zod/blockSchemas';
+import { BlockSchema } from '@/admin/lib/zod/blockSchema';
+
+const clone = <T,>(v: T): T =>
+  typeof structuredClone === 'function' ? structuredClone(v) : JSON.parse(JSON.stringify(v));
 
 export function createDefaultBlock(type: BlockType): z.infer<typeof BlockSchema> {
   const _id = crypto.randomUUID();
 
-  let content = DEFAULT_BLOCK_CONTENT[type];
+  // Start from a fresh copy so we never mutate the shared defaults.
+  // Use `any` here to avoid union-literal fights across block shapes.
+  const base: any = clone(DEFAULT_BLOCK_CONTENT[type]);
+  let content: any = base;
 
   switch (type) {
-    case 'grid':
+    case 'grid': {
       content = {
-        ...content,
+        ...base,
         title: 'Grid',
         subtitle: 'This is a grid block',
         layout: 'grid',
         items: [
           {
-            question: 'How fast is your response time?',
-            answer: 'Usually within 30 minutes.',
-            appearance: 'default',
+            type: 'text',
+            _id: crypto.randomUUID(),
+            content: { value: 'How fast is your response time? Usually within 30 minutes.' },
           },
           {
-            question: 'This is a text block',
-            answer: 'This is a text block',
-            appearance: 'default',
+            type: 'text',
+            _id: crypto.randomUUID(),
+            content: { value: 'This is a second text block inside the grid.' },
           },
         ],
       };
       break;
+    }
 
-    case 'testimonial':
+    case 'testimonial': {
       content = {
-        ...content,
+        ...base,
         testimonials: [
-          {
-            quote: 'They did a great job!',
-            attribution: 'Happy Client',
-            image_url: '',
-            rating: 5,
-          },
+          { quote: 'They did a great job!', attribution: 'Happy Client', avatar_url: '', rating: 5 },
         ],
-        layout: 'list',
         randomized: false,
       };
       break;
+    }
 
-    case 'faq':
+    case 'faq': {
       content = {
-        ...content,
+        ...base,
         title: 'Frequently Asked Questions',
-        subtitle: 'We answer the most common questions.',
         items: [
-          { question: 'How fast is your response time?', answer: 'Usually within 30 minutes.', appearance: 'default' },
-          { question: 'Do you offer 24/7 towing?', answer: 'Yes, always on call.', appearance: 'default' },
+          { question: 'How fast is your response time?', answer: 'Usually within 30 minutes.' },
+          { question: 'Do you offer 24/7 towing?', answer: 'Yes, always on call.' },
         ],
-        layout: 'accordion',
       };
       break;
+    }
 
-    case 'chef_profile':
+    case 'chef_profile': {
       content = {
-        ...content,
+        ...base,
         certifications: ['Certification A', 'Certification B'],
         meals: [
           {
+            id: crypto.randomUUID(),
             name: 'Meal A',
             description: 'This is a description',
             price: '$10',
             availability: 'Available',
-            image_url: 'https://placebear.com/800/400',
+            image_url: 'https://placehold.co/800x400',
           },
         ],
       };
       break;
+    }
 
-    case 'services':
-      content = {
-        ...content,
-        items: ['Towing', 'Jump Starts', 'Battery Replacement'],
-        title: 'Our Services',
-        subtitle: 'We offer everything from towing to roadside assistance.',
-      };
+    case 'services': {
+      content = { ...base, items: ['Towing', 'Jump Starts', 'Battery Replacement'] };
       break;
+    }
 
-    case 'header':
+    case 'header': {
       content = {
-        ...content,
-        logo_url: 'https://placebear.com/800/400',
+        ...base,
+        logo_url: 'https://placehold.co/200x80',
         nav_items: [
-          { label: 'Home', href: '/', appearance: 'default' },
-          { label: 'Services', href: '/services', appearance: 'default' },
-          { label: 'Contact', href: '/contact', appearance: 'default' },
+          { label: 'Home', href: '/' },
+          { label: 'Services', href: '/services' },
+          { label: 'Contact', href: '/contact' },
         ],
       };
       break;
+    }
 
-    case 'footer':
+    case 'footer': {
       content = {
-        ...content,
-        nav_items: [
-          { label: 'Home', href: '/', appearance: 'default' },
-          { label: 'Towing', href: '/towing', appearance: 'default' },
-          { label: 'Contact', href: '/contact', appearance: 'default' },
+        ...base,
+        links: [
+          { label: 'Home', href: '/' },
+          { label: 'Towing', href: '/towing' },
+          { label: 'Contact', href: '/contact' },
         ],
       };
       break;
+    }
 
-    // Add others as needed
+    default:
+      // leave `content` as the cloned base
+      break;
   }
 
-  return normalizeBlock({
-    type,
-    _id,
-    content,
-  }) as z.infer<typeof BlockSchema>;
+  return normalizeBlock({ type, _id, content }) as z.infer<typeof BlockSchema>;
 }

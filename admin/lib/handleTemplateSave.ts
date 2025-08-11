@@ -14,17 +14,32 @@ import { ensureValidTemplateFields } from '@/admin/utils/ensureValidTemplateFiel
 import { unwrapData } from '@/admin/lib/cleanTemplateData';
 import { ensureBlockId } from '@/admin/lib/ensureBlockId';
 import { TemplateFormSchema } from '@/types/template';
+import { canonicalizeUrlKeysDeep } from '@/admin/lib/migrations/canonicalizeUrls';
+
+// ─────────────────────────────────────
+// utils
 
 function slugify(str: string): string {
-  return str
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/(^-|-$)/g, '')
-    .trim();
+  return str.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '').trim();
 }
 
 const normalizeUuid = (v: any) =>
   typeof v === 'string' && v.trim() === '' ? null : v ?? null;
+
+function getAtPath(obj: unknown, path: (string | number)[]) {
+  try {
+    let cur: any = obj;
+    for (const seg of path) {
+      const key = typeof seg === 'number' ? seg : /^\d+$/.test(String(seg)) ? Number(seg) : seg;
+      cur = cur?.[key];
+    }
+    return cur;
+  } catch {
+    return undefined;
+  }
+}
+
+// ─────────────────────────────────────
 
 export async function handleTemplateSave({
   rawJson,
@@ -41,9 +56,13 @@ export async function handleTemplateSave({
 }): Promise<void> {
   try {
     // 1) Parse JSON
-    const candidate = JSON.parse(rawJson);
+    const parsedRaw = JSON.parse(rawJson);
 
-    // 1a) Normalize UUID-ish fields
+    // 1a) Canonicalize url-ish keys (deep): imageUrl -> image_url, logoUrl -> logo_url, navItems -> nav_items, etc.
+    //     This also fixes header/footer/editor drift before any validation.
+    const candidate = canonicalizeUrlKeysDeep(parsedRaw);
+
+    // 1b) Normalize UUID-ish fields
     candidate.site_id = normalizeUuid(candidate.site_id);
     if (Array.isArray(candidate.pages)) {
       candidate.pages = candidate.pages.map((p: any) => ({
@@ -61,7 +80,7 @@ export async function handleTemplateSave({
       candidate.data.site_id = normalizeUuid(candidate.data.site_id);
     }
 
-    // 1b) Capture pages up-front (prevents drops through transforms)
+    // 1c) Capture pages up-front (prevents drops through transforms)
     const capturedPages =
       (Array.isArray(candidate.pages) && candidate.pages.length > 0
         ? candidate.pages
@@ -69,7 +88,7 @@ export async function handleTemplateSave({
         ? candidate.data.pages
         : []) ?? [];
 
-    // 2) Permissive form validation
+    // 2) Permissive form validation (loosest gate)
     const parsed = TemplateFormSchema.passthrough().safeParse(candidate);
     if (!parsed.success) {
       printZodErrors(parsed.error, '❌ Template Validation Failed (Form)');
@@ -107,7 +126,6 @@ export async function handleTemplateSave({
     }
 
     // Debug: ensure we still have pages
-    // eslint-disable-next-line no-console
     console.debug(
       '[handleTemplateSave] about to validate, page count =',
       Array.isArray(base.data?.pages) ? base.data.pages.length : 0
@@ -116,12 +134,14 @@ export async function handleTemplateSave({
     // 6) Sanitize phone
     base.phone = typeof base.phone === 'string' ? base.phone : '';
 
-    // ✅ 6.1) Default color_mode to a valid string if null/undefined
+    // 6.1) Default color_mode if null/undefined
     if (base.color_mode == null) base.color_mode = 'dark'; // or 'light'
 
-    // 7) Block validation + permissive final schema
+    // 7) Block validation + final schema
     const { errors: blockErrors } = validateTemplateBlocks(base);
-    const result = TemplateSaveSchema.passthrough().safeParse(base);
+
+    // NOTE: TemplateSaveSchema is a ZodEffects; do NOT call .passthrough() here.
+    const result = TemplateSaveSchema.safeParse(base);
 
     // Helper: first block error (for toast + scroll)
     const getFirstBlockError = () => {
@@ -137,16 +157,30 @@ export async function handleTemplateSave({
 
     if (!result.success || firstBlockErr) {
       if (!result.success) {
+        // Pretty console table with offending values
+        const rows = result.error.errors.map((e) => ({
+          path: e.path.join('.'),
+          code: e.code,
+          message: e.message,
+          value: getAtPath(base, e.path),
+        }));
+        console.groupCollapsed('❌ Template Validation Failed (Schema)');
+        try {
+          console.table(rows);
+        } catch {
+          console.log(rows);
+        }
+        console.groupEnd();
+
+        // Keep your existing detailed printer too
         printZodErrors(result.error, '❌ Template Validation Failed (Schema)');
       }
 
       if (firstBlockErr) {
-        // eslint-disable-next-line no-console
         console.error('❌ Block validation failed', {
           first: firstBlockErr,
           all: blockErrors,
         });
-
         if (scrollToBlock) {
           const el = document.getElementById(`block-${firstBlockErr.blockId}`);
           el?.scrollIntoView({ behavior: 'smooth', block: 'center' });

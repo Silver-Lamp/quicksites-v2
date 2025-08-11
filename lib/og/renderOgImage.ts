@@ -26,14 +26,14 @@ export function renderOgImage({
   theme = 'dark',
   brand = 'green',
   emoji,
-  logoUrl,
+  logo_url,
 }: {
   title: string;
   content: string;
   theme?: Theme;
   brand?: Brand;
   emoji?: string; // optional emoji/icon to prefix title
-  logoUrl?: string; // optional logo to display top-right
+  logo_url?: string; // optional logo to display top-right
 }) {
   const t = THEMES[theme] ?? THEMES.dark;
   const accent = BRANDS[brand] ?? BRANDS.green;
@@ -56,10 +56,10 @@ export function renderOgImage({
           position: 'relative',
         },
         children: [
-          logoUrl && {
+          logo_url && {
             type: 'img',
             props: {
-              src: logoUrl,
+              src: logo_url,
               style: {
                 position: 'absolute',
                 top: 40,

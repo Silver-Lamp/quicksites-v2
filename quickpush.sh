@@ -56,6 +56,8 @@ git add -A
 git commit -m "$final_msg" --no-verify
 git push -f
 
+npm run typecheck --no-verify
+
 # === Vercel Deployment Monitoring ===
 
 projectId=$(jq -r .projectId .vercel/project.json)

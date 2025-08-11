@@ -1,8 +1,8 @@
-import type { Block } from '@/types/blocks';
+import type { Block, BlockType } from '@/types/blocks';
 
 // Extract the content type for each Block variant
 type BlockContentByType = {
-  [B in Block as B['type']]: B extends { content: infer C } ? C : never;
+  [B in BlockType]: B extends { content: infer C } ? C : never;
 };
 
 // Restrict keys to valid block types

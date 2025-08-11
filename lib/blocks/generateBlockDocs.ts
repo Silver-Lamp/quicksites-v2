@@ -1,7 +1,13 @@
 // lib/blocks/generateBlockDocs.ts
-import { blockSchemas } from '@/admin/lib/zod/blockSchemas';
+import { z } from 'zod';
+import {
+  blockContentSchemaMap as blockSchemas,
+  blockMeta,
+} from '@/admin/lib/zod/blockSchema';
+
 import { DEFAULT_BLOCK_CONTENT } from './defaultBlockContent';
 import { describeZodField } from './describeZodField';
+
 type BlockDoc = {
   type: string;
   label: string;
@@ -11,26 +17,40 @@ type BlockDoc = {
   defaultContent: Record<string, any>;
 };
 
+// best-effort shape getter (works with ZodObject, preprocess/effects-wrapped objects)
+function getObjectShape(schema: z.ZodTypeAny): Record<string, z.ZodTypeAny> {
+  const def = (schema as any)?._def;
+  if (def?.shape) {
+    // Some versions expose shape as a function
+    const maybeFn = def.shape;
+    if (typeof maybeFn === 'function') return maybeFn();
+  }
+  return (schema as any).shape ?? {};
+}
+
 export function generateBlockDocs(): Record<string, BlockDoc> {
   return Object.fromEntries(
-    Object.entries(blockSchemas).map(([type, schema]) => {
-      const contentShape = (schema as any).shape.content.shape as Record<string, any>;
+    Object.entries(blockSchemas).map(([type, cfg]) => {
+      const contentShape = getObjectShape(cfg.schema);
+
       const fields = Object.fromEntries(
-        Object.entries(contentShape).map(([key, val]) => {
-          return [key, describeZodField(val)];
-        })
+        Object.entries(contentShape).map(([key, val]) => [key, describeZodField(val as z.ZodTypeAny)])
       );
 
-      const meta = (schema as any)._meta ?? {};
-      const defaultContent = DEFAULT_BLOCK_CONTENT?.[type as keyof typeof DEFAULT_BLOCK_CONTENT] ?? {};
+      // Prefer values from the map; fall back to blockMeta; then to sensible defaults
+      const label = cfg.label ?? blockMeta?.[type as keyof typeof blockMeta]?.label ?? type;
+      const icon = cfg.icon ?? blockMeta?.[type as keyof typeof blockMeta]?.icon ?? '📦';
+
+      const defaultContent =
+        DEFAULT_BLOCK_CONTENT?.[type as keyof typeof DEFAULT_BLOCK_CONTENT] ?? {};
 
       return [
         type,
         {
           type,
-          label: meta.label || type,
-          description: meta.description || '',
-          icon: meta.icon || '📦',
+          label,
+          description: '', // add descriptions to the map if you want these populated
+          icon,
           fields,
           defaultContent,
         },

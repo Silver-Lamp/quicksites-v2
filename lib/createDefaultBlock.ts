@@ -41,15 +41,20 @@ export function createDefaultBlock(type: BlockType): z.infer<typeof BlockSchema>
 
     case 'testimonial': {
       content = {
-        ...base,
+        ...content,
         testimonials: [
-          { quote: 'They did a great job!', attribution: 'Happy Client', avatar_url: '', rating: 5 },
+          {
+            quote: 'They did a great job!',
+            attribution: 'Happy Client',
+            avatar_url: 'https://placehold.co/96x96',
+            rating: 5,
+          },
         ],
         randomized: false,
       };
       break;
     }
-
+    
     case 'faq': {
       content = {
         ...base,
@@ -103,9 +108,8 @@ export function createDefaultBlock(type: BlockType): z.infer<typeof BlockSchema>
         ...base,
         links: [
           { label: 'Home', href: '/' },
-          { label: 'Towing', href: '/towing' },
-          { label: 'Contact', href: '/contact' },
         ],
+        logo_url: 'https://placehold.co/200x80',
       };
       break;
     }

@@ -41,6 +41,9 @@ if [[ "$1" == "--debug" ]]; then
   echo "🔍 SquatBot Debug Mode ON"
 fi
 
+# Run typecheck before commit
+npm run typecheck --no-verify
+
 # Get latest commit SHA to track exact deployment
 commit_sha=$(git rev-parse HEAD)
 
@@ -55,8 +58,6 @@ start_time=$(date +%s)
 git add -A
 git commit -m "$final_msg" --no-verify
 git push -f
-
-npm run typecheck --no-verify
 
 # === Vercel Deployment Monitoring ===
 

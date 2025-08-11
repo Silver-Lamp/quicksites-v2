@@ -1,11 +1,51 @@
 // admin/lib/zod/blockSchema.ts
 import { z } from 'zod';
 
-// Shared link schema
+// Allow http(s)://, /relative, #anchor, mailto:, tel:
+const RelativeOrAbsoluteUrl = z.string().min(1).refine(
+  (v) => /^(https?:\/\/|\/|#|mailto:|tel:)/i.test(v),
+  { message: 'Link must start with http(s)://, /, #, mailto:, or tel:' }
+);
+
+// Shared link schema (now tolerant + default)
 const LinkSchema = z.object({
   label: z.string().min(1, 'Label is required'),
-  href: z.string().min(1, 'URL is required'),
+  // If href is missing, default to "/" so Zod doesn’t throw during creation.
+  href: RelativeOrAbsoluteUrl.default('/'),
 });
+
+const toCityString = (item: unknown): string => {
+  if (typeof item === 'string') return item;
+  if (item && typeof item === 'object') {
+    const o = item as Record<string, unknown>;
+    // prefer "name"; otherwise join common pieces
+    const name = (o.name ?? o.city ?? o.label ?? '') as string;
+    const addr = (o.address ?? o.street ?? '') as string;
+    const city = [name, addr].filter(Boolean).join(' ').trim();
+    return city || JSON.stringify(item);
+  }
+  return String(item ?? '');
+};
+
+// Footer content: map legacy keys → canonical shape
+const FooterContent = z.preprocess((raw) => {
+  const c = (raw && typeof raw === 'object') ? { ...(raw as any) } : {};
+
+  // aliases → canonical
+  if (Array.isArray(c.nav_items) && !Array.isArray(c.links)) c.links = c.nav_items;
+  if (Array.isArray(c.navItems) && !Array.isArray(c.links)) c.links = c.navItems;
+  if (typeof c.logoUrl === 'string' && !c.logo_url) c.logo_url = c.logoUrl;
+
+  delete c.nav_items;
+  delete c.navItems;
+  delete c.logoUrl;
+
+  return c;
+}, z.object({
+  logo_url: z.string().optional(),
+  // ⬅ important: default to [] so “missing” doesn’t explode
+  links: z.array(LinkSchema).default([]),
+}).passthrough());
 
 // ── Chef meal (unified shape + legacy coercion) ───────────────────────────────
 const ChefMealBase = z.object({
@@ -62,7 +102,8 @@ export const blockContentSchemaMap = {
     icon: '🔘',
     schema: z.object({
       label: z.string().min(1),
-      href: z.string().url('Link must be a valid URL'),
+      // was: z.string().url('Link must be a valid URL')
+      href: RelativeOrAbsoluteUrl.default('/'),
       style: z.enum(['primary', 'secondary', 'ghost']).optional(),
     }),
   },
@@ -99,20 +140,53 @@ export const blockContentSchemaMap = {
     icon: '🔘',
     schema: z.object({
       label: z.string().min(1),
-      href: z.string().url('Link must be a valid URL'),
+      // was: z.string().url('Link must be a valid URL')
+      href: RelativeOrAbsoluteUrl.default('/'),
       style: z.enum(['primary', 'secondary', 'ghost']).optional(),
     }),
   },
   service_areas: {
     label: 'Service Areas',
     icon: '🌍',
-    schema: z.object({
-      cities: z.array(z.string()).min(1),
-      allCities: z.array(z.string()).min(1),
-      sourceLat: z.number().min(-90).max(90),
-      sourceLng: z.number().min(-180).max(180),
-      radiusMiles: z.number().min(1),
-    }),
+    schema: z.preprocess((raw) => {
+      const c = (raw && typeof raw === 'object') ? { ...(raw as any) } : {};
+  
+      // 1) Accept objects or strings for cities/allCities
+      const cities = Array.isArray(c.cities) ? c.cities.map(toCityString).filter(Boolean) : [];
+      let allCities =
+        Array.isArray(c.allCities) ? c.allCities.map(toCityString).filter(Boolean) : [...cities];
+  
+      // 2) Legacy field names / shapes
+      if (c.source && typeof c.source === 'object') {
+        const s = c.source as any;
+        c.sourceLat ??= s.lat ?? s.latitude ?? s.y;
+        c.sourceLng ??= s.lng ?? s.longitude ?? s.x;
+      }
+      if (c.radius_miles != null && c.radiusMiles == null) c.radiusMiles = c.radius_miles;
+  
+      // 3) Coerce numbers safely (defaults are permissive to avoid hard failures)
+      const toNum = (v: any, d = 0) => {
+        const n = Number(v);
+        return Number.isFinite(n) ? n : d;
+      };
+  
+      return {
+        cities,
+        allCities,
+        sourceLat: toNum(c.sourceLat, 0),
+        sourceLng: toNum(c.sourceLng, 0),
+        radiusMiles: toNum(c.radiusMiles, 0),
+      };
+    },
+    z.object({
+      // keep them as strings post-normalization
+      cities: z.array(z.string()).default([]),
+      allCities: z.array(z.string()).default([]),
+      // make coordinates/radius tolerant with safe defaults
+      sourceLat: z.number().default(0),
+      sourceLng: z.number().default(0),
+      radiusMiles: z.number().default(0),
+    })),
   },
   audio: {
     label: 'Audio',
@@ -131,16 +205,8 @@ export const blockContentSchemaMap = {
   footer: {
     label: 'Footer',
     icon: '🏠',
-    schema: z.object({
-      business_name: z.string(),
-      address: z.string(),
-      cityState: z.string(),
-      phone: z.string(),
-      links: z.array(LinkSchema),
-      logo_url: z.string().optional(),
-      social_links: z.array(z.object({ platform: z.string(), url: z.string() })).optional(),
-      copyright: z.string().optional(),
-    }),
+    // 👇 use the tolerant, alias-aware schema with links: [].default()
+    schema: FooterContent,
   },
   header: {
     label: 'Header',
@@ -168,7 +234,7 @@ export const blockContentSchemaMap = {
       testimonials: z.array(z.object({
         quote: z.string().min(1),
         attribution: z.string().optional(),
-        avatar_url: z.string().url().optional(),
+        avatar_url: z.union([z.string().url(), z.literal('')]).optional(),
         rating: z.number().min(1).max(5).optional(),
       })).min(1),
       randomized: z.boolean().optional(),

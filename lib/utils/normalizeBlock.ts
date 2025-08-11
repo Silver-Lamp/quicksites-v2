@@ -97,6 +97,26 @@ export function normalizeBlock(block: Partial<Block>): z.infer<typeof BlockSchem
   // 2) Migrate any legacy shapes (e.g., chef_profile meal title->name, {value} → content)
   let candidate: any = migrateLegacyBlock(withId);
 
+  if (candidate.type === 'footer') {
+    const c: any = { ...(candidate.content ?? {}) };
+  
+    // Prefer canonical links; hoist legacy keys if needed
+    if (!Array.isArray(c.links)) {
+      c.links = Array.isArray(c.nav_items)
+        ? c.nav_items
+        : Array.isArray(c.navItems)
+        ? c.navItems
+        : [];
+    }
+    if (typeof c.logoUrl === 'string' && !c.logo_url) c.logo_url = c.logoUrl;
+  
+    delete c.nav_items;
+    delete c.navItems;
+    delete c.logoUrl;
+  
+    candidate = { ...candidate, content: c };
+  }
+  
   // 3) Early sanity check before we dive deeper
   if (!isLikelyValidBlockShape(candidate)) {
     console.warn('⚠️ Skipping malformed block:', JSON.stringify(candidate, null, 2));

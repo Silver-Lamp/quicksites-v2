@@ -24,9 +24,9 @@ export function createFallbackBlock(type: Block['type']): BlockWithId {
       };
     case 'cta':
       return {
-        _id: id,
         type: 'cta',
-        content: { label: 'Learn more', link: '#', appearance: 'default' },
+        _id: crypto.randomUUID(),
+        content: { label: 'Contact', href: '/contact' },
       };
     case 'faq':
       return {

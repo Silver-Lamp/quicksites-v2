@@ -20,6 +20,7 @@ const nextConfig = {
       'image.thum.io',
       'placebear.com',
       'placekitten.com',
+      'placehold.co',
     ],
   },
 

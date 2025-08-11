@@ -1,4 +1,4 @@
-// LiveEditorPreview.tsx
+// components/admin/templates/LiveEditorPreview.tsx
 'use client';
 
 import {
@@ -15,7 +15,7 @@ import {
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { GripVertical, Pencil, Trash2, PlusCircle, Moon, Sun } from 'lucide-react';
 import { createDefaultBlock } from '@/lib/createDefaultBlock';
 import RenderBlock from '@/components/admin/templates/render-block';
@@ -26,6 +26,7 @@ import { BlockValidationError } from '@/hooks/validateTemplateBlocks';
 import SafeTriggerButton from '@/components/ui/safe-trigger-button';
 import { saveTemplate } from '@/admin/lib/saveTemplate';
 import { TemplateThemeWrapper } from '@/components/theme/template-theme-wrapper';
+import { useTheme } from '@/hooks/useThemeContext';
 
 // ---------- helpers (pure) ----------
 function getPages(tpl: any) {
@@ -34,20 +35,6 @@ function getPages(tpl: any) {
   if (Array.isArray(dataPages)) return dataPages;
   if (Array.isArray(rootPages)) return rootPages;
   return [];
-}
-
-function resolvePages(next: Partial<Template>, prev: Template) {
-  const nextDataPages = (next as any)?.data?.pages;
-  const nextRootPages = (next as any)?.pages;
-  const prevPages =
-    (prev as any)?.data?.pages ??
-    (prev as any)?.pages ??
-    [];
-  return Array.isArray(nextDataPages)
-    ? nextDataPages
-    : Array.isArray(nextRootPages)
-    ? nextRootPages
-    : prevPages;
 }
 
 function withSyncedPages(tpl: Template): Template {
@@ -105,84 +92,66 @@ export function LiveEditorPreview({
   templateId: string;
 }) {
   const sensors = useSensors(useSensor(PointerSensor));
-  const [layoutMode, setLayoutMode] = useState<'stack' | 'grid'>('stack');
+  const [layoutMode] = useState<'stack' | 'grid'>('stack');
   const [editing, setEditing] = useState<any | null>(null);
   const [lastInsertedId, setLastInsertedId] = useState<string | null>(null);
-  const [selectedPageIndex, setSelectedPageIndex] = useState(0);
-  const [isCentered, setIsCentered] = useState(false);
   const [showOutlines, setShowOutlines] = useState(false);
 
-  console.log('[Preview] incoming pages',
-    { top: (template as any)?.pages?.length, data: template?.data?.pages?.length }
-  );
-  
-  const pages = getPages(template);
-  // ❌ DO NOT mutate or strip template.pages here
-  // That was the root cause of "pages disappear"
+  // Theme context + a single resolved color mode for the whole UI
+  const { theme: ctxTheme, setTheme } = useTheme();
+  const resolvedColorMode =
+    ((template as any).color_mode as 'light' | 'dark' | undefined) ??
+    (ctxTheme?.darkMode as 'light' | 'dark' | undefined) ??
+    'light';
 
+  // Keep <html> class in sync
   useEffect(() => {
-    if (template.color_mode === 'dark') {
-      document.documentElement.classList.add('dark');
-    } else {
-      document.documentElement.classList.remove('dark');
+    document.documentElement.classList.toggle('dark', resolvedColorMode === 'dark');
+  }, [resolvedColorMode]);
+
+  // Keep context in sync with the template when template.color_mode changes (e.g., after a save/refresh)
+  useEffect(() => {
+    const tMode = (template as any).color_mode as 'light' | 'dark' | undefined;
+    if (tMode && ctxTheme?.darkMode !== tMode) {
+      setTheme({ ...(ctxTheme || {}), darkMode: tMode } as any);
     }
-  }, [template.color_mode]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [(template as any).color_mode]);
 
-  // ❗ ensure selected index is valid
+  // ---------- PAGE SELECTION BY ID (persists across saves/remounts) ----------
+  const pages = getPages(template);
+  const STORAGE_KEY = `qs:selectedPageId:${templateId}`;
+
+  const [selectedPageId, setSelectedPageId] = useState<string | null>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = window.localStorage.getItem(STORAGE_KEY);
+      if (saved) return saved;
+    }
+    return pages?.[0]?.id ?? null;
+  });
+
   useEffect(() => {
-    if (selectedPageIndex >= pages.length) setSelectedPageIndex(0);
-  }, [pages.length, selectedPageIndex]);
+    if (selectedPageId && typeof window !== 'undefined') {
+      window.localStorage.setItem(STORAGE_KEY, selectedPageId);
+    }
+  }, [selectedPageId, STORAGE_KEY]);
 
-  // ✅ Fallback: guarded for hydration + one-shot
-  const attemptedFallbackRef = useRef(false);
-
-  // Inject a fallback page ONLY if neither data.pages nor root pages exist.
-  // Keep it mirrored in both places and do not remove root pages.
-  // useEffect(() => {
-  //   if (attemptedFallbackRef.current) return;
-
-  //   const dataPages = template?.data?.pages;
-  //   const rootPages = (template as any)?.pages;
-
-  //   const dataDefined = Array.isArray(dataPages);
-  //   const rootDefined = Array.isArray(rootPages);
-
-  //   // Not hydrated yet → do nothing
-  //   if (!dataDefined && !rootDefined) return;
-
-  //   // If we have any pages, do nothing
-  //   if ((dataDefined && dataPages!.length) || (rootDefined && rootPages!.length)) return;
-
-  //   attemptedFallbackRef.current = true;
-
-  //   // Inject a single default page, mirrored in both places
-  //   const defaultHeroBlock = createDefaultBlock('hero');
-  //   const defaultPage = {
-  //     id: 'home-page',
-  //     slug: 'home',
-  //     title: 'Home',
-  //     show_footer: true,
-  //     show_header: true,
-  //     content_blocks: [defaultHeroBlock],
-  //   };
-
-  //   onChange({
-  //     ...template,
-  //     pages: [defaultPage] as any,
-  //     data: { ...(template.data || {}), pages: [defaultPage] },
-  //   } as any);
-  // }, [template, onChange]);
-
-  // const pages = getPages(template);
   useEffect(() => {
-    if (selectedPageIndex >= pages.length) setSelectedPageIndex(0);
-  }, [pages.length, selectedPageIndex]);
+    if (!pages?.length) return;
+    if (!selectedPageId || !pages.some((p: any) => p.id === selectedPageId)) {
+      setSelectedPageId(pages[0]?.id ?? null);
+    }
+  }, [pages, selectedPageId]);
 
+  const selectedPageIndex = Math.max(0, pages.findIndex((p: any) => p.id === selectedPageId));
   const selectedPage = pages[selectedPageIndex] ?? null;
 
-  // Always save a synced shape
+  // Always save with pages synced AND the current color mode preserved
   const updateAndSave = async (updatedRaw: Template) => {
-    const updated = withSyncedPages(updatedRaw);
+    const ensuredColor = ((updatedRaw as any).color_mode as 'light' | 'dark' | undefined) ?? resolvedColorMode;
+    const ensured: Template = { ...updatedRaw, color_mode: ensuredColor } as any;
+
+    const updated = withSyncedPages(ensured);
     onChange({ ...updated });
     try {
       const validId = updated.id && updated.id.trim() !== '' ? updated.id : undefined;
@@ -194,8 +163,15 @@ export function LiveEditorPreview({
   };
 
   const toggleColorMode = async () => {
-    const mode = template.color_mode === 'dark' ? 'light' : 'dark';
-    await updateAndSave({ ...template, color_mode: mode as 'light' | 'dark' });
+    const next = resolvedColorMode === 'dark' ? 'light' : 'dark';
+
+    // Optimistic context update to keep side panel aligned
+    setTheme({ ...(ctxTheme || {}), darkMode: next } as any);
+
+    // Persist on the template and keep current page selected
+    const keepId = selectedPageId;
+    await updateAndSave({ ...template, color_mode: next as 'light' | 'dark' });
+    if (keepId) setSelectedPageId(keepId);
   };
 
   if (!selectedPage) {
@@ -207,17 +183,16 @@ export function LiveEditorPreview({
     );
   }
 
-  console.log(template.pages, template.data?.pages)
   return (
-    <TemplateThemeWrapper colorMode={template.color_mode as 'light' | 'dark'}>
+    <TemplateThemeWrapper colorMode={resolvedColorMode}>
       <div className="w-full max-w-none px-0">
         <div className="absolute top-0 right-0 z-10 m-2">
           <button
             onClick={toggleColorMode}
             className="flex items-center gap-1 px-3 py-1 text-sm text-white bg-zinc-800 rounded hover:bg-zinc-700"
           >
-            {template.color_mode === 'dark' ? <Moon size={16} /> : <Sun size={16} />}
-            {template.color_mode === 'dark' ? 'Dark' : 'Light'}
+            {resolvedColorMode === 'dark' ? <Moon size={16} /> : <Sun size={16} />}
+            {resolvedColorMode === 'dark' ? 'Dark' : 'Light'}
           </button>
         </div>
 
@@ -227,7 +202,7 @@ export function LiveEditorPreview({
               {pages.map((p: any, i: number) => (
                 <button
                   key={p.id ?? `page-${i}`}
-                  onClick={() => setSelectedPageIndex(i)}
+                  onClick={() => setSelectedPageId(p.id)}
                   className={`px-3 py-1 rounded ${
                     i === selectedPageIndex
                       ? 'bg-purple-700 text-white'
@@ -239,8 +214,12 @@ export function LiveEditorPreview({
               ))}
             </div>
 
-            {selectedPage?.show_header !== false && template.headerBlock && (
-              <RenderBlock block={template.headerBlock} showDebug={false} colorMode={template.color_mode as 'light' | 'dark'} />
+            {selectedPage?.show_header !== false && (template as any).headerBlock && (
+              <RenderBlock
+                block={(template as any).headerBlock}
+                showDebug={false}
+                colorMode={resolvedColorMode}
+              />
             )}
 
             <DndContext
@@ -249,14 +228,16 @@ export function LiveEditorPreview({
               onDragEnd={({ active, over }) => {
                 if (!over || active.id === over.id) return;
                 const blocks = [...(selectedPage?.content_blocks ?? [])];
-                const oldIndex = blocks.findIndex((b) => b._id === active.id);
-                const newIndex = blocks.findIndex((b) => b._id === over.id);
+                const oldIndex = blocks.findIndex((b: any) => b._id === active.id);
+                const newIndex = blocks.findIndex((b: any) => b._id === over.id);
+                if (oldIndex < 0 || newIndex < 0) return;
                 const reordered = arrayMove(blocks, oldIndex, newIndex);
                 const updated = withSyncedPages({
                   ...template,
+                  color_mode: resolvedColorMode, // ensure we don’t drop it
                   data: {
                     ...(template.data ?? {}),
-                    pages: pages.map((p, idx) =>
+                    pages: pages.map((p: any, idx: number) =>
                       idx === selectedPageIndex ? { ...p, content_blocks: reordered } : p
                     ),
                   },
@@ -264,7 +245,10 @@ export function LiveEditorPreview({
                 updateAndSave(updated);
               }}
             >
-              <SortableContext items={(selectedPage?.content_blocks ?? []).map((b: any) => b._id ?? '')} strategy={verticalListSortingStrategy}>
+              <SortableContext
+                items={(selectedPage?.content_blocks ?? []).map((b: any) => b._id ?? '')}
+                strategy={verticalListSortingStrategy}
+              >
                 <div className={layoutMode === 'grid' ? 'grid grid-cols-1 md:grid-cols-2 gap-4' : 'space-y-6'}>
                   {(selectedPage?.content_blocks ?? []).map((block: any, blockIndex: number) => (
                     <BlockWrapper
@@ -279,16 +263,21 @@ export function LiveEditorPreview({
                         };
                         const next = withSyncedPages({
                           ...template,
+                          color_mode: resolvedColorMode,
                           data: {
                             ...(template.data ?? {}),
-                            pages: pages.map((p, idx) => (idx === selectedPageIndex ? updatedPage : p)),
+                            pages: pages.map((p: any, idx: number) => (idx === selectedPageIndex ? updatedPage : p)),
                           },
                         } as Template);
                         updateAndSave(next);
                       }}
                     >
                       <div id={`block-${block._id}`} data-block-id={block._id}>
-                        <RenderBlock block={block} showDebug={false} colorMode={template.color_mode as 'light' | 'dark'} />
+                        <RenderBlock
+                          block={block}
+                          showDebug={false}
+                          colorMode={resolvedColorMode}
+                        />
                       </div>
                       <BlockAdderGrouped
                         onAdd={(type) => {
@@ -301,12 +290,13 @@ export function LiveEditorPreview({
                               ...(selectedPage?.content_blocks ?? []).slice(blockIndex + 1),
                             ],
                           };
-                          setLastInsertedId(newBlock._id ?? '');
+                          setLastInsertedId((newBlock as any)._id ?? '');
                           const next = withSyncedPages({
                             ...template,
+                            color_mode: resolvedColorMode,
                             data: {
                               ...(template.data ?? {}),
-                              pages: pages.map((p, idx) => (idx === selectedPageIndex ? updatedPage : p)),
+                              pages: pages.map((p: any, idx: number) => (idx === selectedPageIndex ? updatedPage : p)),
                             },
                           } as Template);
                           updateAndSave(next);
@@ -324,12 +314,13 @@ export function LiveEditorPreview({
                                   ...(selectedPage?.content_blocks ?? []).slice(blockIndex + 1),
                                 ],
                               };
-                              setLastInsertedId(newBlock._id ?? '');
+                              setLastInsertedId((newBlock as any)._id ?? '');
                               const next = withSyncedPages({
                                 ...template,
+                                color_mode: resolvedColorMode,
                                 data: {
                                   ...(template.data ?? {}),
-                                  pages: pages.map((p, idx) => (idx === selectedPageIndex ? updatedPage : p)),
+                                  pages: pages.map((p: any, idx: number) => (idx === selectedPageIndex ? updatedPage : p)),
                                 },
                               } as Template);
                               updateAndSave(next);
@@ -353,12 +344,13 @@ export function LiveEditorPreview({
                       ...selectedPage,
                       content_blocks: [...(selectedPage?.content_blocks ?? []), newBlock as any],
                     };
-                    setLastInsertedId(newBlock._id ?? '');
+                    setLastInsertedId((newBlock as any)._id ?? '');
                     const next = withSyncedPages({
                       ...template,
+                      color_mode: resolvedColorMode,
                       data: {
                         ...(template.data ?? {}),
-                        pages: pages.map((p, idx) => (idx === selectedPageIndex ? updatedPage : p)),
+                        pages: pages.map((p: any, idx: number) => (idx === selectedPageIndex ? updatedPage : p)),
                       },
                     } as Template);
                     updateAndSave(next);
@@ -372,12 +364,13 @@ export function LiveEditorPreview({
                           ...selectedPage,
                           content_blocks: [...(selectedPage?.content_blocks ?? []), newBlock as any],
                         };
-                        setLastInsertedId(newBlock._id ?? '');
+                        setLastInsertedId((newBlock as any)._id ?? '');
                         const next = withSyncedPages({
                           ...template,
+                          color_mode: resolvedColorMode,
                           data: {
                             ...(template.data ?? {}),
-                            pages: pages.map((p, idx) => (idx === selectedPageIndex ? updatedPage : p)),
+                            pages: pages.map((p: any, idx: number) => (idx === selectedPageIndex ? updatedPage : p)),
                           },
                         } as Template);
                         updateAndSave(next);
@@ -392,8 +385,12 @@ export function LiveEditorPreview({
               </div>
             </DndContext>
 
-            {selectedPage?.show_footer !== false && template.footerBlock && (
-              <RenderBlock block={template.footerBlock} showDebug={false} colorMode={template.color_mode as 'light' | 'dark'} />
+            {selectedPage?.show_footer !== false && (template as any).footerBlock && (
+              <RenderBlock
+                block={(template as any).footerBlock}
+                showDebug={false}
+                colorMode={resolvedColorMode}
+              />
             )}
           </div>
         </div>
@@ -412,9 +409,10 @@ export function LiveEditorPreview({
                   };
                   const next = withSyncedPages({
                     ...template,
+                    color_mode: resolvedColorMode,
                     data: {
                       ...(template.data ?? {}),
-                      pages: pages.map((p, idx) => (idx === selectedPageIndex ? updatedPage : p)),
+                      pages: pages.map((p: any, idx: number) => (idx === selectedPageIndex ? updatedPage : p)),
                     },
                   } as Template);
                   updateAndSave(next);

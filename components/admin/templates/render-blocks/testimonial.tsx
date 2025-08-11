@@ -1,3 +1,4 @@
+// components/admin/templates/render-blocks/testimonial.tsx
 'use client';
 
 import ThemeScope from '@/components/ui/theme-scope';
@@ -26,19 +27,27 @@ function renderStars(rating?: number) {
 export default function TestimonialBlock({
   block,
   compact = false,
+  colorMode = 'dark', // <-- now accepts colorMode from props
 }: {
   block: Block;
   compact?: boolean;
+  colorMode?: 'light' | 'dark';
 }) {
-  const content = block?.content as { testimonials: TestimonialItem[]; randomized?: boolean } | undefined;
+  const content = block?.content as { testimonials: TestimonialItem[]; randomized?: boolean; title?: string } | undefined;
   const testimonials: TestimonialItem[] = content?.testimonials ?? [];
   const randomized = content?.randomized;
   const list = randomized ? [...testimonials].sort(() => 0.5 - Math.random()) : testimonials;
 
   return (
-    <ThemeScope mode="dark" className={`bg-white dark:bg-neutral-950 p-6 rounded-md`}>
-      <h2 className="text-2xl font-bold text-blue-900 dark:text-white mb-6 p-4 bg-white dark:bg-neutral-950 rounded-md">
-        {block.content?.title || 'Testimonials'}
+    <ThemeScope mode={colorMode} className={`p-6 rounded-md ${colorMode === 'light' ? 'bg-white' : 'bg-neutral-950'}`}>
+      <h2
+        className={`text-2xl font-bold mb-6 p-4 rounded-md ${
+          colorMode === 'light'
+            ? 'text-blue-900 bg-white'
+            : 'text-white bg-neutral-950'
+        }`}
+      >
+        {content?.title || 'Testimonials'}
       </h2>
 
       <div className={`grid gap-4 ${compact ? 'text-sm' : 'text-base'}`}>
@@ -47,8 +56,12 @@ export default function TestimonialBlock({
             key={i}
             className={`relative border-l-4 pl-4 italic rounded ${
               compact
-                ? 'border-blue-400 text-zinc-700 dark:text-zinc-300 bg-transparent dark:bg-neutral-950'
-                : 'border-blue-500 text-zinc-800 dark:text-zinc-200 bg-white dark:bg-neutral-900 p-4'
+                ? colorMode === 'light'
+                  ? 'border-blue-400 text-zinc-700 bg-transparent'
+                  : 'border-blue-400 text-zinc-300 bg-transparent'
+                : colorMode === 'light'
+                  ? 'border-blue-500 text-zinc-800 bg-white p-4'
+                  : 'border-blue-500 text-zinc-200 bg-neutral-900 p-4'
             }`}
           >
             {t.avatar_url && (
@@ -57,12 +70,18 @@ export default function TestimonialBlock({
                 alt={t.attribution || 'Avatar'}
                 width={40}
                 height={40}
-                className="rounded-full absolute -left-5 top-2 border border-white dark:border-zinc-800 shadow"
+                className={`rounded-full absolute -left-5 top-2 border shadow ${
+                  colorMode === 'light' ? 'border-white' : 'border-zinc-800'
+                }`}
               />
             )}
             <p>“{t.quote}”</p>
             {t.attribution && (
-              <footer className="mt-1 text-sm text-blue-600 dark:text-blue-300">
+              <footer
+                className={`mt-1 text-sm ${
+                  colorMode === 'light' ? 'text-blue-600' : 'text-blue-300'
+                }`}
+              >
                 — {t.attribution}
               </footer>
             )}
@@ -71,7 +90,13 @@ export default function TestimonialBlock({
         ))}
 
         {list.length === 0 && (
-          <p className="text-zinc-400 dark:text-zinc-600 italic bg-zinc-50 dark:bg-neutral-900 p-4 rounded-md">
+          <p
+            className={`italic p-4 rounded-md ${
+              colorMode === 'light'
+                ? 'text-zinc-400 bg-zinc-50'
+                : 'text-zinc-600 bg-neutral-900'
+            }`}
+          >
             No testimonials yet.
           </p>
         )}

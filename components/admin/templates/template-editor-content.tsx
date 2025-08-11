@@ -116,11 +116,11 @@ export function EditorContent({
     setTemplate(next);
   };
 
-
   /**
    * Deep-merge a template patch into the previous template.
    * - Never drops pages accidentally.
    * - Mirrors pages to both data.pages (canonical) and legacy pages.
+   * - Never drops color_mode (critical for light/dark persistence).
    * - Optional guard to ignore accidental "shrink to 1 Home page" during hydration.
    */
   function mergeTemplate(
@@ -155,9 +155,16 @@ export function EditorContent({
 
     const pages = nextPagesCandidate;
 
+    // ✅ Preserve color_mode no matter what the patch omits
+    const mode: 'light' | 'dark' =
+      ((patch as any).color_mode as 'light' | 'dark' | undefined) ??
+      ((prev as any).color_mode as 'light' | 'dark' | undefined) ??
+      'light';
+
     return {
       ...prev,
       ...patch,
+      color_mode: mode,
       data: { ...prevData, ...nextData, pages },
       pages,
     } as Template;
@@ -234,9 +241,13 @@ export function EditorContent({
         (template as any)?.pages ??
         [];
 
+      // ✅ Force color_mode to persist through the save pipeline
+      const color_mode = (template as any).color_mode ?? 'light';
+
       const fullTemplate = withSyncedPages({
         ...template,
         ...sidebarValues,
+        color_mode,
         data: { ...unwrapped, pages },
       });
 
@@ -247,7 +258,8 @@ export function EditorContent({
         rawJson: json,
         mode,
         onSuccess: (saved) => {
-          const synced = withSyncedPages(saved);
+          const ensuredMode = (saved as any)?.color_mode ?? color_mode;
+          const synced = withSyncedPages({ ...(saved as any), color_mode: ensuredMode } as Template);
           setTemplate(synced);
           setRawDataFromTemplate(synced);
           setBlockErrors({});

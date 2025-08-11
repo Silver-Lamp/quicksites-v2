@@ -18,21 +18,16 @@ import QuickLinksEditor from '@/components/admin/fields/quick-links-editor';
 
 type Props = {
   block: Block;
-  onSave: (updated: Block) => void;
+  onSave: (updated: Block) => void | Promise<void>;
   onClose: () => void;
   errors?: Record<string, BlockValidationError[]>;
   template?: Template;
   isSaving?: boolean;
 };
 
-// Normalize header content from any legacy shapes to the canonical one
 function normalizeHeaderContent(input: any, fallbackLogo?: string) {
   const c = input ?? {};
-
-  // logo can be logo_url (canonical) or legacy logoUrl/url
   const logo_url: string = c.logo_url ?? c.logoUrl ?? c.url ?? fallbackLogo ?? '';
-
-  // nav items can be nav_items (canonical) or legacy navItems/links
   const raw =
     Array.isArray(c.nav_items) ? c.nav_items :
     Array.isArray(c.navItems)  ? c.navItems  :
@@ -59,50 +54,49 @@ export default function PageHeaderEditor({
     return <div className="text-red-500">Invalid block type</div>;
   }
 
-  // Template normalization for QuickLinksEditor
   const normalizedTemplate = {
     ...template,
     pages: template?.pages ?? template?.data?.pages ?? [],
   };
 
-  // Read both legacy and canonical content shapes
-  const initial = normalizeHeaderContent(block.content, template?.logo_url);
-
+  const initial = normalizeHeaderContent(block.content, (template as any)?.logo_url);
   const [logoUrl, setLogoUrl] = useState<string>(initial.logo_url);
   const [navItems, setNavItems] = useState<Array<{ label: string; href: string; appearance?: string }>>(
     initial.nav_items
   );
-
   const [isUploading, setIsUploading] = useState(false);
   const [isSavingLocal, setIsSavingLocal] = useState(false);
 
   const saving = Boolean(isSavingProp) || isSavingLocal;
 
   const areLinksValid =
-    navItems.length > 0 &&
+    navItems.length === 0 || // allow empty; change to >0 if you want to require links
     navItems.every((link) => link?.label?.trim?.() && link?.href?.trim?.());
 
   const handleFileUpload = async (file: File): Promise<string> => {
-    const compressed = await imageCompression(file, {
-      maxSizeMB: 5.0,
-      maxWidthOrHeight: 500,
-      useWebWorker: true,
-    });
+    // SVGs shouldn’t be run through browser-image-compression
+    const isSvg = file.type === 'image/svg+xml' || /\.svg$/i.test(file.name);
 
-    const fileExt = compressed.name.split('.').pop() || 'jpg';
-    const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
+    const toUpload = isSvg
+      ? file
+      : await imageCompression(file, {
+          maxSizeMB: 5.0,
+          maxWidthOrHeight: 500,
+          useWebWorker: true,
+        });
 
-    const { error } = await supabase.storage.from('logos').upload(fileName, compressed, {
+    const fileExt = (toUpload.name.split('.').pop() || 'jpg').toLowerCase();
+    const fileName = `${Date.now()}-${Math.random().toString(36).slice(2)}.${fileExt}`;
+
+    const { error } = await supabase.storage.from('logos').upload(fileName, toUpload, {
       cacheControl: '3600',
       upsert: false,
+      contentType: isSvg ? 'image/svg+xml' : undefined,
     });
-    if (error) throw new Error('Upload failed');
+    if (error) throw new Error(error.message || 'Upload failed');
 
-    const {
-      data: { publicUrl },
-    } = supabase.storage.from('logos').getPublicUrl(fileName);
-
-    return publicUrl;
+    const { data } = supabase.storage.from('logos').getPublicUrl(fileName);
+    return data.publicUrl;
   };
 
   const onDrop = async (acceptedFiles: File[]) => {
@@ -123,18 +117,23 @@ export default function PageHeaderEditor({
   const { getRootProps, getInputProps } = useDropzone({
     onDrop,
     accept: { 'image/png': [], 'image/jpeg': [], 'image/webp': [], 'image/svg+xml': [] },
-    maxSize: 5 * 1024 * 1024, // 5MB
+    multiple: false,
+    maxSize: 5 * 1024 * 1024,
   });
 
-  const saveBlock = () => {
+  const saveBlock = async () => {
     setIsSavingLocal(true);
     try {
-      onSave({
+      // Always write canonical keys
+      await onSave({
         ...block,
-        // Always write canonical field names
         content: {
-          logo_url: logoUrl,
-          nav_items: navItems,
+          logo_url: logoUrl || undefined,
+          nav_items: (navItems ?? []).map((l) => ({
+            label: l.label?.trim() ?? '',
+            href: l.href?.trim() ?? '',
+            appearance: l.appearance ?? 'default',
+          })),
         },
       });
       onClose();
@@ -156,7 +155,7 @@ export default function PageHeaderEditor({
           <input {...getInputProps()} />
           {isUploading ? (
             <div className="flex items-center gap-2 text-neutral-300">
-              <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24" fill="none">
+              <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24" fill="none" aria-hidden>
                 <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                 <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
               </svg>

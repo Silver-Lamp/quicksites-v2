@@ -73,7 +73,7 @@ export const TemplateSaveSchema = z.preprocess(
       phone: nullableString,
       layout: z.string(),
       color_scheme: z.string(),
-      color_mode: z.string().optional(),
+      color_mode: z.enum(['light', 'dark']).optional().default('light'),
       industry: z.string().default('General'),
       theme: z.string(),
       brand: nullableString,

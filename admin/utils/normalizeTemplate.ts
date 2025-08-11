@@ -1,5 +1,5 @@
 // admin/utils/normalizeTemplate.ts
-import type { Template, Page} from '@/types/template';
+import type { Template, Page } from '@/types/template';
 
 /**
  * Gracefully handles legacy `.data` wrappers if present
@@ -8,6 +8,15 @@ function unwrapLegacyPages(entry: any): any[] {
   if (Array.isArray(entry.pages)) return entry.pages;
   if (entry.data?.pages && Array.isArray(entry.data.pages)) return entry.data.pages;
   return [];
+}
+
+function resolveColorMode(entry: any): 'light' | 'dark' | undefined {
+  const top = entry?.color_mode;
+  const nested = entry?.data?.color_mode;
+  if (top === 'light' || top === 'dark') return top;
+  if (nested === 'light' || nested === 'dark') return nested;
+  // ⚠️ Do NOT invent a default here; callers/UI decide fallback.
+  return undefined;
 }
 
 export function normalizeTemplate(entry: any): Template {
@@ -45,7 +54,8 @@ export function normalizeTemplate(entry: any): Template {
   const industry = entry.industry?.trim() ?? '';
   const phone = entry.phone ?? entry.data?.phone ?? '';
 
-  const derivedName = rawName || rawSlug || `new-template-${Math.random().toString(36).slice(2, 6)}`;
+  const derivedName =
+    rawName || rawSlug || `new-template-${Math.random().toString(36).slice(2, 6)}`;
   const derivedSlug =
     rawSlug ||
     derivedName
@@ -57,6 +67,8 @@ export function normalizeTemplate(entry: any): Template {
   const heroBlock = pages[0]?.content_blocks?.find((b: any) => b.type === 'hero');
   const fallbackTitle = derivedName || heroBlock?.content?.headline || '';
   const fallbackDesc = heroBlock?.content?.subheadline || heroBlock?.content?.headline || '';
+
+  const color_mode = resolveColorMode(entry);
 
   const normalized: Template = {
     id: entry.id,
@@ -83,6 +95,9 @@ export function normalizeTemplate(entry: any): Template {
     verified: entry.verified ?? false,
     services: Array.isArray(services) ? services : [],
     pages: pages as Page[],
+
+    // ✅ Preserve color_mode if provided (no default here)
+    ...(color_mode ? { color_mode } : {}),
 
     meta: {
       title: entry.meta?.title?.trim() || fallbackTitle,

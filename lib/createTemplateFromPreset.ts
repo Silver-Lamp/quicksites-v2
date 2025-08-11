@@ -38,6 +38,7 @@ export function createTemplateFromPresetWithBlocks(
     slug,
     industry,
     layout: 'default',
+    color_mode: 'light',
     data: {
       ...(templateDefaults.data ?? {}),
       pages: [page],
@@ -85,6 +86,7 @@ export function createTemplateFromPreset({
     slug,
     industry: 'General',
     layout,
+    color_mode: 'light',
     data: {
       ...(templateDefaults.data ?? {}),
       pages: [starterPage],

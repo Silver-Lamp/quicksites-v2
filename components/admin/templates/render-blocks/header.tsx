@@ -15,16 +15,17 @@ type Props = {
 export default function PageHeader({
   block,
   previewOnly = false,
-  colorMode = 'dark', // default to dark if not passed
+  colorMode = 'dark',
 }: Props) {
-  const { logo_url, nav_items } = block.content as unknown as {
-    logo_url: string;
-    nav_items: {
-      label: string;
-      href: string;
-      appearance: string;
-    }[];
-  };
+  const content = (block?.content ?? {}) as any;
+
+  // Accept both camelCase and snake_case, plus a generic "links" fallback
+  const logoUrl: string =
+    content.logo_url || content.logoUrl || '';
+
+  const navItems: Array<{ href?: string; label?: string; appearance?: string }> =
+    content.nav_items || content.navItems || content.links || [];
+
   const [menuOpen, setMenuOpen] = useState(false);
 
   const isLight = colorMode === 'light';
@@ -36,10 +37,10 @@ export default function PageHeader({
     <header className={`w-full ${bgColor} ${textColor}`}>
       <div className="w-full mx-auto max-w-screen-xl px-4 sm:px-6 lg:px-8 flex items-center justify-between h-20">
         {/* Logo */}
-        {logo_url && (
+        {logoUrl ? (
           <Link href="/" className="flex items-center">
             <Image
-              src={logo_url}
+              src={logoUrl}
               alt="Site Logo"
               width={60}
               height={60}
@@ -47,19 +48,22 @@ export default function PageHeader({
               priority
             />
           </Link>
+        ) : (
+          <div />
         )}
 
         {/* Desktop nav */}
-        <nav className={`hidden md:flex gap-8 text-sm font-medium`}>
-          {nav_items?.map((item: { href: string; label: string; appearance: string }) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={`transition-colors duration-200 ${textColor} ${hoverColor} ${item.appearance}`}
-            >
-              {item.label}
-            </Link>
-          ))}
+        <nav className="hidden md:flex gap-8 text-sm font-medium">
+          {Array.isArray(navItems) &&
+            navItems.map((item, i) => (
+              <Link
+                key={`${item.href ?? '#'}-${i}`}
+                href={item.href ?? '#'}
+                className={`transition-colors duration-200 ${textColor} ${hoverColor} ${item.appearance ?? ''}`}
+              >
+                {item.label ?? 'Link'}
+              </Link>
+            ))}
         </nav>
 
         {/* Hamburger icon (mobile) */}
@@ -81,16 +85,17 @@ export default function PageHeader({
       {/* Mobile dropdown menu */}
       {menuOpen && !previewOnly && (
         <div className={`${bgColor} px-4 pb-4 space-y-2 text-sm font-medium`}>
-          {nav_items?.map((item: { href: string; label: string; appearance: string }) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={`block transition-colors duration-200 ${textColor} ${hoverColor} ${item.appearance}`}
-              onClick={() => setMenuOpen(false)}
-            >
-              {item.label}
-            </Link>
-          ))}
+          {Array.isArray(navItems) &&
+            navItems.map((item, i) => (
+              <Link
+                key={`${item.href ?? '#'}-m-${i}`}
+                href={item.href ?? '#'}
+                className={`block transition-colors duration-200 ${textColor} ${hoverColor} ${item.appearance ?? ''}`}
+                onClick={() => setMenuOpen(false)}
+              >
+                {item.label ?? 'Link'}
+              </Link>
+            ))}
         </div>
       )}
     </header>

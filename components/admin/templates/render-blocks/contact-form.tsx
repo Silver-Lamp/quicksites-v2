@@ -1,3 +1,4 @@
+// components/admin/templates/render-blocks/contact-form.tsx
 'use client';
 
 import type { Block } from '@/admin/lib/zod/blockSchema';
@@ -11,19 +12,18 @@ type ThemeMode = 'light' | 'dark';
 export default function ContactFormRender({
   block,
   template,
-  mode = 'light', // fallback
+  colorMode = 'light', // <-- use colorMode, not "mode"
 }: {
   block: Block;
   template: { data?: { services?: string[] } };
-  mode?: ThemeMode;
+  colorMode?: ThemeMode;
 }) {
+  const isLight = colorMode === 'light';
+
   function getSiteSlugFromHostname(hostname: string): string {
-    if (hostname.endsWith('.quicksites.ai')) {
-      return hostname.split('.')[0];
-    } else {
-      const parts = hostname.replace(/^www\./, '').split('.');
-      return parts.length >= 2 ? parts[0] : hostname;
-    }
+    if (hostname.endsWith('.quicksites.ai')) return hostname.split('.')[0];
+    const parts = hostname.replace(/^www\./, '').split('.');
+    return parts.length >= 2 ? parts[0] : hostname;
   }
 
   const siteSlug =
@@ -35,22 +35,13 @@ export default function ContactFormRender({
     title = 'Contact Us',
     notification_email = 'sandon@quicksites.ai',
     services = [],
-  } = block.content || {};
+  } = (block.content as any) || {};
 
   const templateServices = template?.data?.services || [];
-  const fallbackServices = [
-    'Towing',
-    'Roadside Assistance',
-    'Battery Jumpstart',
-    'Lockout Service',
-  ];
+  const fallbackServices = ['Towing', 'Roadside Assistance', 'Battery Jumpstart', 'Lockout Service'];
 
   const renderedServices =
-    services.length > 0
-      ? services
-      : templateServices.length > 0
-      ? templateServices
-      : fallbackServices;
+    services.length > 0 ? services : templateServices.length > 0 ? templateServices : fallbackServices;
 
   const [formData, setFormData] = useState({
     name: '',
@@ -160,84 +151,99 @@ Service: ${formData.service || 'N/A'}
   };
 
   const inputClass = (error?: boolean) =>
-    `w-full border ${error ? 'border-red-500' : 'border-zinc-300 dark:border-zinc-700'} rounded px-3 py-2 bg-white dark:bg-neutral-800 text-black dark:text-white transition-colors input-class-dark`;
+    `w-full rounded px-3 py-2 transition-colors bg-white text-black dark:bg-neutral-800 dark:text-white ${
+      error ? 'border border-red-500' : 'border border-zinc-300 dark:border-zinc-700'
+    }`;
 
   return (
-    <div className={mode}>
-      <ThemeScope mode={mode} className="dark:bg-neutral-950 rounded-lg p-4">
-        <h2 className="text-center text-2xl font-bold text-blue-900 dark:text-white mb-6 p-4 bg-white dark:bg-neutral-950">{title}</h2>
+    <ThemeScope
+      mode={colorMode}
+      className={`${isLight ? 'bg-white' : 'dark:bg-neutral-950'} rounded-lg p-4`}
+    >
+      <h2
+        className={`text-center text-2xl font-bold mb-6 p-4 rounded-md ${
+          isLight ? 'text-blue-900 bg-white' : 'text-white dark:bg-neutral-950'
+        }`}
+      >
+        {title}
+      </h2>
 
-        {submitted ? (
-          <p className="text-green-500 text-center">Thank you! Your submission has been received.</p>
-        ) : (
-          <form onSubmit={handleSubmit} className="space-y-4 text-black dark:text-white p-4">
-            <div>
-              <label className="block font-semibold mb-1">Name:</label>
-              <input
-                type="text"
-                name="name"
-                className={inputClass(!!errors.name)}
-                value={formData.name}
-                onChange={handleChange}
-              />
-              {errors.name && <p className="text-red-500 text-sm mt-1">{errors.name}</p>}
-            </div>
-            <div>
-              <label className="block font-semibold mb-1">Email:</label>
-              <input
-                type="email"
-                name="email"
-                className={inputClass(!!errors.email)}
-                value={formData.email}
-                onChange={handleChange}
-              />
-              {errors.email && <p className="text-red-500 text-sm mt-1">{errors.email}</p>}
-            </div>
-            <div>
-              <label className="block font-semibold mb-1">Phone Number:</label>
-              <input
-                type="tel"
-                name="phone"
-                inputMode="numeric"
-                placeholder="(555) 123-4567"
-                maxLength={14}
-                className={inputClass(!!errors.phone || !!errors.contact)}
-                value={formData.phone}
-                onChange={(e) => setFormData({ ...formData, phone: formatPhone(e.target.value) })}
-              />
-              {(errors.phone || errors.contact) && (
-                <p className="text-red-500 text-sm mt-1">{errors.phone || errors.contact}</p>
-              )}
-            </div>
-            <div>
-              <label className="block font-semibold mb-1">I&apos;m Interested In:</label>
-              <select
-                name="service"
-                className={inputClass()}
-                value={formData.service}
-                onChange={handleChange}
-                required
-              >
-                <option value="">Select a service</option>
-                {renderedServices.map((s: string) => (
-                  <option key={s} value={s}>
-                    {s}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="flex justify-center gap-4 pt-2">
-              <button
-                type="submit"
-                disabled={submitting}
-                className="bg-blue-900 hover:bg-blue-800 text-white px-6 py-2 rounded transition disabled:opacity-50"
-              >
-                {submitting ? 'Submitting...' : 'Submit'}
-              </button>
-            </div>
-          </form>
-        )}
-      </ThemeScope>
-    </div>
+      {submitted ? (
+        <p className={isLight ? 'text-green-600 text-center' : 'text-green-500 text-center'}>
+          Thank you! Your submission has been received.
+        </p>
+      ) : (
+        <form onSubmit={handleSubmit} className={`space-y-4 p-4 ${isLight ? 'text-black' : 'text-white'}`}>
+          <div>
+            <label className="block font-semibold mb-1">Name:</label>
+            <input
+              type="text"
+              name="name"
+              className={inputClass(!!errors.name)}
+              value={formData.name}
+              onChange={handleChange}
+            />
+            {errors.name && <p className="text-red-500 text-sm mt-1">{errors.name}</p>}
+          </div>
+
+          <div>
+            <label className="block font-semibold mb-1">Email:</label>
+            <input
+              type="email"
+              name="email"
+              className={inputClass(!!errors.email)}
+              value={formData.email}
+              onChange={handleChange}
+            />
+            {errors.email && <p className="text-red-500 text-sm mt-1">{errors.email}</p>}
+          </div>
+
+          <div>
+            <label className="block font-semibold mb-1">Phone Number:</label>
+            <input
+              type="tel"
+              name="phone"
+              inputMode="numeric"
+              placeholder="(555) 123-4567"
+              maxLength={14}
+              className={inputClass(!!errors.phone || !!errors.contact)}
+              value={formData.phone}
+              onChange={(e) => setFormData({ ...formData, phone: formatPhone(e.target.value) })}
+            />
+            {(errors.phone || errors.contact) && (
+              <p className="text-red-500 text-sm mt-1">{errors.phone || errors.contact}</p>
+            )}
+          </div>
+
+          <div>
+            <label className="block font-semibold mb-1">I&apos;m Interested In:</label>
+            <select
+              name="service"
+              className={inputClass()}
+              value={formData.service}
+              onChange={handleChange}
+              required
+            >
+              <option value="">Select a service</option>
+              {renderedServices.map((s: string) => (
+                <option key={s} value={s}>
+                  {s}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="flex justify-center gap-4 pt-2">
+            <button
+              type="submit"
+              disabled={submitting}
+              className="bg-blue-900 hover:bg-blue-800 text-white px-6 py-2 rounded transition disabled:opacity-50"
+            >
+              {submitting ? 'Submitting...' : 'Submit'}
+            </button>
+          </div>
+        </form>
+      )}
+    </ThemeScope>
   );
 }

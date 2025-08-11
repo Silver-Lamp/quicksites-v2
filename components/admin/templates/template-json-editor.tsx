@@ -1,9 +1,9 @@
 // components/admin/templates/template-json-editor.tsx
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui';
-import { ChevronRight, ChevronDown, Lock, Unlock } from 'lucide-react';
+import { ChevronRight, ChevronDown, Lock, Unlock, Copy, Check } from 'lucide-react';
 import { TemplateSaveSchema, type ValidatedTemplate } from '@/admin/lib/zod/templateSaveSchema';
 import type { JsonValue } from '@/types/json';
 import { validateBlocksInTemplate } from '@/admin/lib/validateBlocksInTemplate';
@@ -35,6 +35,7 @@ export default function TemplateJsonEditor({
   const [zodFieldErrors, setZodFieldErrors] = useState<Record<string, string[]> | null>(null);
   const [collapsed, setCollapsed] = useState(new Set<string>());
   const [extractedSqlFields, setExtractedSqlFields] = useState<Record<string, any>>({});
+  const [copied, setCopied] = useState(false);
 
   // ---------- sanitize & clean ----------
   const sanitizeJsonInput = (raw: string) => {
@@ -189,6 +190,39 @@ export default function TemplateJsonEditor({
     }
   };
 
+  // ---------- copy to clipboard ----------
+  const handleCopy = async () => {
+    try {
+      // const textToCopy =
+      //   isReadOnly && parsedJson
+      //     ? JSON.stringify(parsedJson, null, 2)
+      //     : rawJson;
+      const textToCopy = rawJson;
+
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(textToCopy);
+      } else {
+        // fallback for older browsers
+        const ta = document.createElement('textarea');
+        ta.value = textToCopy;
+        ta.style.position = 'fixed';
+        ta.style.opacity = '0';
+        document.body.appendChild(ta);
+        ta.focus();
+        ta.select();
+        document.execCommand('copy');
+        document.body.removeChild(ta);
+      }
+
+      setCopied(true);
+      // reset the check icon after a moment
+      window.setTimeout(() => setCopied(false), 1500);
+    } catch (e) {
+      console.error('Copy failed:', e);
+      alert('Could not copy to clipboard');
+    }
+  };
+
   return (
     <Collapsible title="JSON Editor" id="template-json-editor" defaultOpen>
       <div className="space-y-2">
@@ -201,6 +235,10 @@ export default function TemplateJsonEditor({
               <Button variant="secondary" size="sm" onClick={() => setIsReadOnly(!isReadOnly)}>
                 {isReadOnly ? <Lock size={16} /> : <Unlock size={16} />}
                 {isReadOnly ? 'Unlock' : 'Read-Only'}
+              </Button>
+              <Button variant="secondary" size="sm" onClick={handleCopy} title="Copy JSON to clipboard">
+                {copied ? <Check size={16} /> : <Copy size={16} />}
+                {copied ? 'Copied' : 'Copy'}
               </Button>
             </div>
             <TemplateValidationInspector fullTemplateJson={parsedJson} />

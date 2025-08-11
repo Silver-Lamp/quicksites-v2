@@ -12,7 +12,21 @@ const LinkSchema = z.object({
   label: z.string().min(1, 'Label is required'),
   // If href is missing, default to "/" so Zod doesn’t throw during creation.
   href: RelativeOrAbsoluteUrl.default('/'),
+  appearance: z.string().optional(),
 });
+
+export const HeaderContent = z.preprocess((raw) => {
+  const c = raw && typeof raw === 'object' ? { ...(raw as any) } : {};
+  if (Array.isArray(c.navItems) && !Array.isArray(c.nav_items)) c.nav_items = c.navItems;
+  if (Array.isArray(c.links) && !Array.isArray(c.nav_items)) c.nav_items = c.links;
+  if (typeof c.logoUrl === 'string' && !c.logo_url) c.logo_url = c.logoUrl;
+  delete c.navItems;
+  delete c.logoUrl;
+  return c;
+}, z.object({
+  logo_url: z.string().optional(),
+  nav_items: z.array(LinkSchema).default([]),
+}));
 
 const toCityString = (item: unknown): string => {
   if (typeof item === 'string') return item;
@@ -211,10 +225,7 @@ export const blockContentSchemaMap = {
   header: {
     label: 'Header',
     icon: '🏠',
-    schema: z.object({
-      logo_url: z.string().optional(),
-      nav_items: z.array(LinkSchema),
-    }),
+    schema: HeaderContent,
   },
   faq: {
     label: 'FAQ',

@@ -1,18 +1,46 @@
 // components/admin/theme-preview-card.tsx
-
+import { useEffect } from 'react';
 import { useTheme, SiteTheme } from '@/hooks/useThemeContext';
 import { Template } from '@/types/template';
 import { themeToClassnames } from '@/lib/theme/themeToClassnames';
 import clsx from 'clsx';
 
-export function ThemePreviewCard({ theme, onSelectFont }: { theme: Template['theme'] | string, onSelectFont: (font: string) => void }) {
-  const { toggleDark } = useTheme();
+export function ThemePreviewCard({
+  theme,
+  colorMode,                 // <- saved template color mode: 'light' | 'dark'
+  onToggleColorMode,         // <- parent persists template.color_mode
+  onSelectFont,
+}: {
+  theme: Template['theme'] | string;
+  colorMode: 'light' | 'dark';
+  onToggleColorMode: () => void | Promise<void>;
+  onSelectFont: (font: string) => void;
+}) {
+  const { theme: ctxTheme, setTheme } = useTheme();
+
+  // Keep the theme context in sync with the saved template color mode
+  useEffect(() => {
+    if (!ctxTheme) return;
+    if (colorMode && ctxTheme.darkMode !== colorMode) {
+      setTheme({ ...ctxTheme, darkMode: colorMode });
+    }
+  }, [colorMode, ctxTheme, setTheme]);
+
   const styles = themeToClassnames(theme as unknown as SiteTheme);
-  const glow = (theme as unknown as SiteTheme).glow?.[0];
+  const glow = (theme as unknown as SiteTheme)?.glow?.[0];
 
   const glowBg = glow
     ? `bg-gradient-to-br ${glow.colors.join(' ')} opacity-[${glow.intensity}]`
     : '';
+
+  const isDark = (ctxTheme?.darkMode ?? 'light') === 'dark';
+
+  const handleToggle = async () => {
+    // optimistic update for instant visual feedback
+    const nextMode = isDark ? 'light' : 'dark';
+    setTheme({ ...(ctxTheme || ({} as SiteTheme)), darkMode: nextMode });
+    await onToggleColorMode?.();
+  };
 
   return (
     <div className={clsx('p-6 border shadow-lg space-y-4', styles.radius, styles.font)}>
@@ -28,8 +56,8 @@ export function ThemePreviewCard({ theme, onSelectFont }: { theme: Template['the
         </div>
       </div>
 
-      <button onClick={toggleDark} className="text-sm text-blue-500 underline">
-        Toggle to {theme === 'dark' ? 'light' : 'dark'} mode
+      <button onClick={handleToggle} className="text-sm text-blue-500 underline">
+        Toggle to {isDark ? 'light' : 'dark'} mode
       </button>
     </div>
   );

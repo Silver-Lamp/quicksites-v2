@@ -15,7 +15,8 @@ const blockGroups: Record<string, { label: string; types: Block['type'][] }> = {
   },
   layout: {
     label: 'Layout',
-    types: ['grid', 'footer', 'header'],
+    // types: ['grid', 'footer', 'header'],
+    types: ['grid'],
   },
   callToAction: {
     label: 'Calls to Action',
@@ -55,7 +56,7 @@ type Props = {
 export default function BlockAdderGrouped({
   onAdd,
   existingBlocks = [],
-  disallowDuplicates = ['footer'],
+  disallowDuplicates = ['footer', 'header'],
   label = 'Add Block',
   triggerElement,
   colorMode = 'dark',

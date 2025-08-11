@@ -1,3 +1,4 @@
+// lib/createEmptyTemplate.ts
 import type { Template } from '@/types/template';
 import { createDefaultBlock } from '@/lib/createDefaultBlock';
 
@@ -11,8 +12,20 @@ function generateUniqueSuffix() {
 
 export function createEmptyTemplate(base = 'new-template'): Template {
   const slug = `${generateSlug(base)}-${generateUniqueSuffix()}`;
-
   const now = new Date().toISOString();
+
+  // Seed a single page (no header/footer blocks inside the page body)
+  const pages = [
+    {
+      id: 'index',
+      slug: 'index',
+      title: 'Home',
+      show_header: true,
+      show_footer: true,
+      // page content starts with a hero; header/footer live globally on the template
+      content_blocks: [createDefaultBlock('hero') as any],
+    },
+  ];
 
   return {
     id: crypto.randomUUID(),
@@ -36,6 +49,14 @@ export function createEmptyTemplate(base = 'new-template'): Template {
     domain: '',
     custom_domain: '',
     services: [],
+
+    // Global site-wide chrome (single source of truth)
+    headerBlock: createDefaultBlock('header') as any,
+    footerBlock: createDefaultBlock('footer') as any,
+
+    // Legacy readers may still look here
+    pages,
+
     meta: {
       title: slug,
       description: `Website template for ${slug}`,
@@ -43,19 +64,12 @@ export function createEmptyTemplate(base = 'new-template'): Template {
       faviconSizes: '',
       appleIcons: '',
     },
-    // ✅ Wrap layout in `.data` instead of flattening it
+
+    // Canonical location for editor/runtime data
     data: {
       services: [],
-      pages: [
-        {
-          id: 'index',
-          slug: 'index',
-          title: 'Home',
-          show_header: true,
-          show_footer: true,
-          content_blocks: [createDefaultBlock('hero') as any],
-        },
-      ],
+      pages, // keep in sync with top-level `pages`
+      // color_mode intentionally not defaulted; editor/runtime decides fallback
     },
-  };
+  } as Template;
 }

@@ -7,68 +7,95 @@ const DB_FIELD_NAMES = new Set([
     'custom_domain','color_mode','created_at','updated_at','editor_id','claimed_by',
     'claimed_at','claim_source','archived',
   ]);
+  // ❗ Do NOT add non-existent columns like `pages`, `headerBlock`, `footerBlock` at the top level.
   
-  // Incoming editor JSON is allowed to carry these at top-level;
-  // if present, they should override what's inside `.data`.
-  const JSON_TOPLEVEL_KEYS = new Set(['pages','meta']);
-  
-  // Treat "" as null for uuid-like columns
   function coerceEmptyToNull(v: unknown) {
     return typeof v === 'string' && v.trim() === '' ? null : v;
   }
   const UUID_KEYS = new Set(['site_id','editor_id','claimed_by']);
   
+  const isHeader = (b: any) => b?.type === 'header';
+  const isFooter = (b: any) => b?.type === 'footer';
+  
+  function stripHeaderFooterFromPage(page: any) {
+    const blocks = Array.isArray(page?.content_blocks) ? page.content_blocks : [];
+    return {
+      ...page,
+      content_blocks: blocks.filter((b: any) => !isHeader(b) && !isFooter(b)),
+    };
+  }
+  
   export function prepareTemplateForSave(fullTemplate: Record<string, any>) {
     const db: Record<string, any> = {};
   
-    // -------- color_mode: compute once with clear precedence ----------
-    // 1) top-level color_mode from the editor/template object
-    // 2) fallback to data.color_mode if someone stashed it there (legacy)
-    // (Do NOT invent a default here; let callers pass the correct value.)
+    // color_mode precedence (no default invented)
     const incomingMode = (fullTemplate?.color_mode ?? fullTemplate?.data?.color_mode) as
-      | 'light'
-      | 'dark'
-      | undefined;
+      | 'light' | 'dark' | undefined;
   
-    // -------- copy allowed scalar fields ----------
+    // copy approved top-level scalars only
     for (const [k, v] of Object.entries(fullTemplate)) {
       if (!DB_FIELD_NAMES.has(k)) continue;
       db[k] = UUID_KEYS.has(k) ? coerceEmptyToNull(v) : v;
     }
-  
-    // Ensure color_mode is explicitly present if we resolved it above
     if (incomingMode === 'light' || incomingMode === 'dark') {
       db.color_mode = incomingMode;
-    } else if ('color_mode' in db && (db.color_mode === undefined || db.color_mode === null)) {
-      // Avoid upserting undefined which can leave the row at an old value
+    } else if ('color_mode' in db && (db.color_mode == null)) {
       delete db.color_mode;
     }
   
-    // -------- start from .data and merge top-level overrides ----------
+    // start from .data clone
     const fromData =
       fullTemplate && typeof fullTemplate.data === 'object' && fullTemplate.data
         ? structuredClone(fullTemplate.data)
         : {};
   
-    // pages: only override if top-level has a non-empty array
-    if (Array.isArray(fullTemplate.pages) && fullTemplate.pages.length > 0) {
-      (fromData as any).pages = fullTemplate.pages;
-    }
-    // meta: top-level always wins if provided
-    if (fullTemplate.meta) {
-      (fromData as any).meta = fullTemplate.meta;
+    // choose source pages (top-level if provided, else data.pages)
+    const topPages = Array.isArray(fullTemplate.pages) ? fullTemplate.pages : undefined;
+    const dataPages = Array.isArray((fromData as any).pages) ? (fromData as any).pages : undefined;
+    const rawPages: any[] = (topPages && topPages.length > 0) ? topPages : (dataPages ?? []);
+  
+    // determine header/footer (prefer explicit in data, then top-level, then hoist from first page)
+    let headerBlock =
+      (fullTemplate.data as any)?.headerBlock ??
+      fullTemplate.headerBlock ??
+      null;
+  
+    let footerBlock =
+      (fullTemplate.data as any)?.footerBlock ??
+      fullTemplate.footerBlock ??
+      null;
+  
+    if ((!headerBlock || !footerBlock) && rawPages.length > 0) {
+      const firstBlocks = Array.isArray(rawPages[0]?.content_blocks) ? rawPages[0].content_blocks : [];
+      if (!headerBlock) headerBlock = firstBlocks.find(isHeader) ?? null;
+      if (!footerBlock) footerBlock = firstBlocks.find(isFooter) ?? null;
     }
   
-    // Safety: normalize pages to an array
-    if (!Array.isArray((fromData as any).pages)) {
-      (fromData as any).pages = [];
+    // strip header/footer from page bodies
+    const cleanedPages = rawPages.map(stripHeaderFooterFromPage);
+  
+    // write only into data (no db.pages)
+    (fromData as any).pages = cleanedPages;
+  
+    // persist chrome INSIDE data; omit keys if not present
+    if (headerBlock) (fromData as any).headerBlock = headerBlock; else delete (fromData as any).headerBlock;
+    if (footerBlock) (fromData as any).footerBlock = footerBlock; else delete (fromData as any).footerBlock;
+  
+    // merge top-level meta override if provided
+    if (fullTemplate.meta) (fromData as any).meta = fullTemplate.meta;
+  
+    // if top-level color_mode missing, allow nested one to carry through
+    if (!(incomingMode === 'light' || incomingMode === 'dark')) {
+      const nested = (fromData as any)?.color_mode;
+      if (nested === 'light' || nested === 'dark') db.color_mode = nested;
     }
   
     db.data = fromData;
   
-    // Optional visibility for debugging
+    // debug
     console.debug('[prepareTemplateForSave] color_mode out:', db.color_mode);
-    console.debug('[prepareTemplateForSave] pages out:', db.data.pages.length);
+    console.debug('[prepareTemplateForSave] pages out:', Array.isArray(db.data?.pages) ? db.data.pages.length : 0);
+    console.debug('[prepareTemplateForSave] header/footer present in data:', !!db.data?.headerBlock, !!db.data?.footerBlock);
   
     return db;
   }

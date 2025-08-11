@@ -22,6 +22,60 @@ type TemplateJsonEditorProps = {
   colorMode: 'light' | 'dark';
 };
 
+// ---------- helpers for header/footer hoist + page sync ----------
+const isHeader = (b: any) => b?.type === 'header';
+const isFooter = (b: any) => b?.type === 'footer';
+
+function getPages(tpl: any): any[] {
+  const dataPages = tpl?.data?.pages;
+  const rootPages = tpl?.pages;
+  if (Array.isArray(dataPages)) return dataPages;
+  if (Array.isArray(rootPages)) return rootPages;
+  return [];
+}
+
+function stripHeaderFooterFromPage(page: any) {
+  const blocks = Array.isArray(page?.content_blocks) ? page.content_blocks : [];
+  return {
+    ...page,
+    content_blocks: blocks.filter((b: any) => !isHeader(b) && !isFooter(b)),
+  };
+}
+
+function hoistHeaderFooterIntoRoot(input: any) {
+  const tpl = { ...(input || {}) };
+  const pagesIn = getPages(tpl);
+  let headerBlock = tpl.headerBlock ?? tpl?.data?.headerBlock ?? null;
+  let footerBlock = tpl.footerBlock ?? tpl?.data?.footerBlock ?? null;
+
+  if ((!headerBlock || !footerBlock) && pagesIn.length > 0) {
+    const firstBlocks = Array.isArray(pagesIn[0]?.content_blocks) ? pagesIn[0].content_blocks : [];
+    if (!headerBlock) headerBlock = firstBlocks.find(isHeader) ?? null;
+    if (!footerBlock) footerBlock = firstBlocks.find(isFooter) ?? null;
+  }
+
+  const cleanedPages = pagesIn.map(stripHeaderFooterFromPage);
+
+  // Sync pages to both locations
+  tpl.pages = cleanedPages;
+  tpl.data = { ...(tpl.data ?? {}), pages: cleanedPages };
+
+  // Persist the single source of truth at root
+  tpl.headerBlock = headerBlock ?? null;
+  tpl.footerBlock = footerBlock ?? null;
+
+  // color_mode precedence: top-level beats nested; don't invent defaults here
+  const topMode = tpl?.color_mode;
+  const nestedMode = tpl?.data?.color_mode;
+  if (topMode === 'light' || topMode === 'dark') {
+    // keep as-is
+  } else if (nestedMode === 'light' || nestedMode === 'dark') {
+    tpl.color_mode = nestedMode;
+  }
+
+  return tpl;
+}
+
 export default function TemplateJsonEditor({
   rawJson,
   setRawJson,
@@ -43,20 +97,21 @@ export default function TemplateJsonEditor({
       const parsed = JSON.parse(raw);
 
       // strip fields we never want the user to edit
-      const toRemove = ['created_at', 'domain', 'custom_domain', 'data'];
-      for (const k of toRemove) delete parsed[k];
+      const toRemove = ['created_at', 'domain', 'custom_domain'];
+      for (const k of toRemove) delete (parsed as any)[k];
 
-      // only keep allowed keys according to the schema (works with ZodEffects)
+      // keep `data` (don’t delete), we normalize it below during prettify
       const allowedKeys = keysFromSchema(TemplateSaveSchema);
       const filtered = pickAllowedKeys(parsed, allowedKeys);
 
-      // defaults expected by schema
+      // defaults expected by schema (gentle)
       filtered.slug ??= 'new-template-' + Math.random().toString(36).slice(2, 6);
       filtered.template_name ??= filtered.slug;
       filtered.layout ??= 'standard';
       filtered.color_scheme ??= 'neutral';
       filtered.theme ??= 'default';
 
+      // do not hoist/strip here (only prettify does structural changes)
       return JSON.stringify(cleanTemplateDataStructure(filtered), null, 2);
     } catch {
       return raw;
@@ -67,10 +122,10 @@ export default function TemplateJsonEditor({
     const allowedKeys = keysFromSchema(TemplateSaveSchema);
     const cleaned = pickAllowedKeys(data, allowedKeys);
 
-    delete cleaned.created_at;
-    delete cleaned.domain;
-    delete cleaned.custom_domain;
-    delete cleaned.data;
+    // Never expose these in the viewer payload
+    delete (cleaned as any).created_at;
+    delete (cleaned as any).domain;
+    delete (cleaned as any).custom_domain;
 
     return cleaned as ValidatedTemplate;
   };
@@ -136,50 +191,57 @@ export default function TemplateJsonEditor({
   const handlePrettify = () => {
     try {
       const parsed = JSON.parse(rawJson);
-      const result = validateTemplateAndFix(parsed);
 
+      // 1) Validate & apply your existing structural fixes
+      const result = validateTemplateAndFix(parsed);
       if (!result.valid) {
         console.warn('[❌ Failed to validate after prettify]', result.errors);
         alert('Unable to prettify: Template has structural issues.');
         return;
       }
 
-      const { data } = result;
-      const allowedKeys = keysFromSchema(TemplateSaveSchema);
-      const cleaned = pickAllowedKeys(data as any, allowedKeys);
+      // 2) Hoist header/footer to template root; strip from pages; sync pages both places
+      const normalizedHF = hoistHeaderFooterIntoRoot(result.data);
 
+      // 3) Keep only allowed keys per save schema
+      const allowedKeys = keysFromSchema(TemplateSaveSchema);
+      const cleaned = pickAllowedKeys(normalizedHF as any, allowedKeys);
+
+      // 4) Make sure the internal structure (data/pages) is consistently shaped
       const finalData = cleanTemplateDataStructure(cleaned);
+
+      // 5) Emit prettified JSON back to editor
       setRawJson(JSON.stringify(finalData, null, 2));
 
-      // mirror a few top-levels into the sidebar
+      // Mirror top-levels into sidebar (unchanged)
       setSidebarValues((prev: any) => ({
         ...prev,
-        template_name: (data as any)?.template_name,
-        slug: (data as any)?.slug,
-        layout: (data as any)?.layout,
-        color_scheme: (data as any)?.color_scheme,
-        theme: (data as any)?.theme,
-        brand: (data as any)?.brand,
-        industry: (data as any)?.industry,
-        phone: (data as any)?.phone,
-        commit: (data as any)?.commit,
-        is_site: (data as any)?.is_site,
-        published: (data as any)?.published,
-        verified: (data as any)?.verified,
-        saved_at: (data as any)?.saved_at,
-        save_count: (data as any)?.save_count,
-        last_editor: (data as any)?.last_editor,
-        hero_url: (data as any)?.hero_url,
-        banner_url: (data as any)?.banner_url,
-        logo_url: (data as any)?.logo_url,
-        team_url: (data as any)?.team_url,
+        template_name: (finalData as any)?.template_name,
+        slug: (finalData as any)?.slug,
+        layout: (finalData as any)?.layout,
+        color_scheme: (finalData as any)?.color_scheme,
+        theme: (finalData as any)?.theme,
+        brand: (finalData as any)?.brand,
+        industry: (finalData as any)?.industry,
+        phone: (finalData as any)?.phone,
+        commit: (finalData as any)?.commit,
+        is_site: (finalData as any)?.is_site,
+        published: (finalData as any)?.published,
+        verified: (finalData as any)?.verified,
+        saved_at: (finalData as any)?.saved_at,
+        save_count: (finalData as any)?.save_count,
+        last_editor: (finalData as any)?.last_editor,
+        hero_url: (finalData as any)?.hero_url,
+        banner_url: (finalData as any)?.banner_url,
+        logo_url: (finalData as any)?.logo_url,
+        team_url: (finalData as any)?.team_url,
       }));
 
+      // 6) Clear validation banners; re-run block validation on the normalized version
       setValidationError(null);
       setZodFieldErrors(null);
 
-      // keep a parsed snapshot for the read-only viewer
-      const parsedForViewer = cleanParsedForZod(data);
+      const parsedForViewer = cleanParsedForZod(finalData);
       setParsedJson(parsedForViewer);
 
       const blockIssues = validateBlocksInTemplate(parsedForViewer);
@@ -193,16 +255,11 @@ export default function TemplateJsonEditor({
   // ---------- copy to clipboard ----------
   const handleCopy = async () => {
     try {
-      // const textToCopy =
-      //   isReadOnly && parsedJson
-      //     ? JSON.stringify(parsedJson, null, 2)
-      //     : rawJson;
       const textToCopy = rawJson;
-
       if (navigator.clipboard?.writeText) {
         await navigator.clipboard.writeText(textToCopy);
       } else {
-        // fallback for older browsers
+        // fallback
         const ta = document.createElement('textarea');
         ta.value = textToCopy;
         ta.style.position = 'fixed';
@@ -213,9 +270,7 @@ export default function TemplateJsonEditor({
         document.execCommand('copy');
         document.body.removeChild(ta);
       }
-
       setCopied(true);
-      // reset the check icon after a moment
       window.setTimeout(() => setCopied(false), 1500);
     } catch (e) {
       console.error('Copy failed:', e);

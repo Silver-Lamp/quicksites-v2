@@ -248,7 +248,7 @@ function SidebarPageItem({
             {page.title}
           </button>
 
-          <div className="mt-2 space-y-2 text-sm text-white/80">
+          {/* <div className="mt-2 space-y-2 text-sm text-white/80">
             <Label className="flex items-center gap-2">
               <Switch
                 checked={effectiveShowHeader}
@@ -270,7 +270,7 @@ function SidebarPageItem({
                 <span className="text-yellow-400 text-xs">(inherited)</span>
               )}
             </Label>
-          </div>
+          </div> */}
 
           <div className="flex gap-2 ml-2 text-xs opacity-80 group-hover:opacity-100">
             <button

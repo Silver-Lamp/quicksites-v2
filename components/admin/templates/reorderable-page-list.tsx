@@ -1,3 +1,4 @@
+// components/admin/templates/reorderable-page-list.tsx
 'use client';
 
 import {
@@ -14,13 +15,13 @@ import {
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Input } from '../../ui/input';
 import { Button } from '../../ui/button';
 import ReorderableBlockList from './reorderable-block-list';
 import PageSettingsModal from './page-settings-modal';
 import type { Page } from '@/types/template';
 import type { Block } from '@/types/blocks';
-import { useEffect, useState } from 'react';
 
 type ReorderablePageListProps = {
   pages: Page[];
@@ -30,14 +31,7 @@ type ReorderablePageListProps = {
 };
 
 function SortablePage({ id, children }: { id: string; children: React.ReactNode }) {
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-    isDragging,
-  } = useSortable({ id });
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -51,11 +45,13 @@ function SortablePage({ id, children }: { id: string; children: React.ReactNode 
       ref={setNodeRef}
       style={style}
       {...attributes}
-      className="group relative border rounded mb-6"
+      className="qs-page-card group relative border rounded mb-6"
     >
       <div
         {...listeners}
-        className="absolute -left-6 top-2 text-gray-300 group-hover:text-gray-600 cursor-grab"
+        className="absolute -left-6 top-2 text-gray-300 group-hover:text-gray-600 cursor-grab select-none"
+        aria-label="Drag to reorder"
+        title="Drag to reorder"
       >
         ☰
       </div>
@@ -66,13 +62,11 @@ function SortablePage({ id, children }: { id: string; children: React.ReactNode 
 
 function getPageTitle(page: Page): string {
   const blocks = page.content_blocks || [];
-  const hero = blocks.find((b) => b.type === 'hero') as any;
+  const hero = blocks.find((b: any) => b.type === 'hero');
   if (hero?.content?.title) return hero.content.title;
-
-  const text = blocks.find((b) => b.type === 'text') as any;
-  if (text?.content?.value) return text.content.value.slice(0, 40) + '...';
-
-  return page.slug;
+  const text = blocks.find((b: any) => b.type === 'text');
+  if ((text as any)?.content?.value) return ((text as any).content.value as string).slice(0, 40) + '...';
+  return page.slug || page.id || 'Untitled';
 }
 
 export default function ReorderablePageList({
@@ -84,18 +78,26 @@ export default function ReorderablePageList({
   const sensors = useSensors(useSensor(PointerSensor));
   const [settingsPage, setSettingsPage] = useState<Page | null>(null);
   const [search, setSearch] = useState('');
+  const [newDraftId, setNewDraftId] = useState<string | null>(null);
+
+  // Keep per-page input refs so we can focus/scroll
+  const inputRefs = useRef<Record<string, HTMLInputElement | null>>({});
 
   const getId = (page: Page, index: number) => page.slug || page.id || `page-${index}`;
 
-  const filteredPages = pages.filter(
-    (p) =>
-      p.slug?.toLowerCase().includes(search.toLowerCase()) ||
-      getPageTitle(p).toLowerCase().includes(search.toLowerCase())
+  const filteredPages = useMemo(
+    () =>
+      pages.filter(
+        (p) =>
+          (p.slug || '').toLowerCase().includes(search.toLowerCase()) ||
+          getPageTitle(p).toLowerCase().includes(search.toLowerCase())
+      ),
+    [pages, search]
   );
 
   const handleSlugChange = (index: number, newSlug: string) => {
     const updated = [...pages];
-    updated[index].slug = newSlug;
+    updated[index] = { ...updated[index], slug: newSlug };
     onReorder(updated);
   };
 
@@ -110,7 +112,7 @@ export default function ReorderablePageList({
     const original = pages[index];
     const clone: Page = {
       ...original,
-      slug: original.slug + '-copy',
+      slug: (original.slug || 'page') + '-copy',
       id: `${original.id || original.slug || 'page'}-${Date.now()}`,
     };
     const updated = [...pages.slice(0, index + 1), clone, ...pages.slice(index + 1)];
@@ -118,14 +120,35 @@ export default function ReorderablePageList({
   };
 
   const handleAddPage = () => {
+    const id = `page-${Date.now()}`;
     const newPage: Page = {
-      id: `page-${Date.now()}`,
+      id,
       slug: `new-page-${pages.length + 1}`,
       content_blocks: [],
       title: `New Page ${pages.length + 1}`,
+      // mark as draft so we show inline Save/Cancel
+      meta: { ...(pages[0]?.meta || {}), isDraft: true } as any,
     };
     onReorder([...pages, newPage]);
+    setNewDraftId(id);
   };
+
+  // After adding, scroll the new page into view and focus input
+  useEffect(() => {
+    if (!newDraftId) return;
+    const input = inputRefs.current[newDraftId];
+    // scroll the containing card, not just the input, so buttons are visible
+    const card = input?.closest('.qs-page-card') as HTMLElement | null;
+    if (card) {
+      card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+    // slight delay to ensure layout complete, then focus/select
+    const t = setTimeout(() => {
+      input?.focus();
+      input?.select();
+    }, 150);
+    return () => clearTimeout(t);
+  }, [newDraftId]);
 
   const handlePageDrag = ({ active, over }: { active: any; over: any }) => {
     if (!over || active.id === over.id) return;
@@ -142,6 +165,7 @@ export default function ReorderablePageList({
     onReorder(updatedPages);
   };
 
+  // Persist order locally
   useEffect(() => {
     const saved = localStorage.getItem('page-order');
     if (saved) {
@@ -152,6 +176,7 @@ export default function ReorderablePageList({
       const missing = pages.filter((p) => !order.includes(p.id!));
       if (reordered.length > 0) onReorder([...reordered, ...missing]);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
@@ -171,50 +196,91 @@ export default function ReorderablePageList({
 
       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handlePageDrag}>
         <SortableContext items={filteredPages.map(getId)} strategy={verticalListSortingStrategy}>
-          {filteredPages.map((page, index) => (
-            <SortablePage key={getId(page, index)} id={getId(page, index)}>
-              <div className="px-4 py-3 bg-muted/50 border-b flex items-center justify-between gap-3">
-                <div className="flex items-center gap-2 w-full max-w-sm">
-                  <Input
-                    value={page.slug}
-                    onChange={(e) => handleSlugChange(index, e.target.value)}
-                    className="w-full text-sm"
-                  />
-                  {page.meta?.visible === false ? (
-                    <span className="px-2 py-0.5 text-xs rounded bg-yellow-200 text-yellow-800">
-                      Hidden
-                    </span>
-                  ) : (
-                    <span className="px-2 py-0.5 text-xs rounded bg-green-200 text-green-800">
-                      Visible
-                    </span>
-                  )}
-                </div>
-                <div className="flex gap-2">
-                  <Button size="sm" variant="ghost" onClick={() => setSettingsPage(page)}>
-                    ⚙️
-                  </Button>
-                  <Button size="sm" variant="ghost" onClick={() => handleDuplicate(index)}>
-                    📄
-                  </Button>
-                  <Button size="sm" variant="destructive" onClick={() => handleDelete(index)}>
-                    🗑️
-                  </Button>
-                </div>
-              </div>
+          {filteredPages.map((page, index) => {
+            const id = page.id || getId(page, index);
+            const isDraft = (page as any)?.meta?.isDraft === true;
 
-              <ReorderableBlockList
-                data={{ pages: [page] }}
-                colorScheme={colorScheme}
-                onBlockClick={onBlockClick}
-                onReorder={(updatedPageData) => {
-                  const updatedPages = [...pages];
-                  updatedPages[index] = updatedPageData.pages[0];
-                  onReorder(updatedPages);
-                }}
-              />
-            </SortablePage>
-          ))}
+            return (
+              <SortablePage key={getId(page, index)} id={getId(page, index)}>
+                {/* Header row: slug + visibility + actions (now with Save/Cancel for drafts) */}
+                <div className="px-4 py-3 bg-muted/50 border-b flex flex-wrap items-center justify-between gap-3">
+                  <div className="flex items-center gap-2 w-full sm:w-auto sm:max-w-sm flex-1">
+                    <Input
+                      ref={(el) => {
+                        if (el) inputRefs.current[id] = el;
+                      }}
+                      value={page.slug}
+                      onChange={(e) => handleSlugChange(index, e.target.value)}
+                      className="w-full text-sm"
+                    />
+                    {page.meta?.visible === false ? (
+                      <span className="px-2 py-0.5 text-xs rounded bg-yellow-200 text-yellow-800">
+                        Hidden
+                      </span>
+                    ) : (
+                      <span className="px-2 py-0.5 text-xs rounded bg-green-200 text-green-800">
+                        Visible
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    {isDraft ? (
+                      <>
+                        <Button
+                          size="sm"
+                          onClick={() => {
+                            const updated = [...pages];
+                            const p = { ...updated[index] } as any;
+                            p.meta = { ...(p.meta || {}), isDraft: false };
+                            updated[index] = p;
+                            onReorder(updated);
+                            if (newDraftId === id) setNewDraftId(null);
+                          }}
+                        >
+                          Save
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="secondary"
+                          onClick={() => {
+                            const updated = pages.filter((pg) => (pg.id || '') !== id);
+                            onReorder(updated);
+                            if (newDraftId === id) setNewDraftId(null);
+                          }}
+                        >
+                          Cancel
+                        </Button>
+                      </>
+                    ) : (
+                      <>
+                        <Button size="sm" variant="ghost" onClick={() => setSettingsPage(page)}>
+                          ⚙️
+                        </Button>
+                        <Button size="sm" variant="ghost" onClick={() => handleDuplicate(index)}>
+                          📄
+                        </Button>
+                        <Button size="sm" variant="destructive" onClick={() => handleDelete(index)}>
+                          🗑️
+                        </Button>
+                      </>
+                    )}
+                  </div>
+                </div>
+
+                <ReorderableBlockList
+                  data={{ pages: [page] }}
+                  colorScheme={colorScheme}
+                  onBlockClick={onBlockClick}
+                  onReorder={(updatedPageData) => {
+                    const updatedPages = [...pages];
+                    updatedPages[index] = updatedPageData.pages[0];
+                    onReorder(updatedPages);
+                  }}
+                />
+              </SortablePage>
+            );
+          })}
         </SortableContext>
       </DndContext>
 

@@ -17,16 +17,18 @@ import {
 import { CSS } from '@dnd-kit/utilities';
 import { useState, useEffect } from 'react';
 import { GripVertical, Pencil, Trash2, PlusCircle, Moon, Sun } from 'lucide-react';
+
 import { createDefaultBlock } from '@/lib/createDefaultBlock';
 import RenderBlock from '@/components/admin/templates/render-block';
 import { DynamicBlockEditor } from '@/components/editor/dynamic-block-editor';
 import BlockAdderGrouped from '@/components/admin/block-adder-grouped';
-import { Template } from '@/types/template';
-import { BlockValidationError } from '@/hooks/validateTemplateBlocks';
+import type { Template } from '@/types/template';
+import type { BlockValidationError } from '@/hooks/validateTemplateBlocks';
 import SafeTriggerButton from '@/components/ui/safe-trigger-button';
 import { saveTemplate } from '@/admin/lib/saveTemplate';
 import { TemplateThemeWrapper } from '@/components/theme/template-theme-wrapper';
 import { useTheme } from '@/hooks/useThemeContext';
+import GlobalChromeEditors from '@/components/admin/templates/global-chrome-editors';
 
 // ---------- helpers (pure) ----------
 function getPages(tpl: any) {
@@ -45,9 +47,30 @@ function withSyncedPages(tpl: Template): Template {
     data: { ...(tpl.data ?? {}), pages }, // canonical
   } as Template;
 }
+
+function getEffectiveHeader(page: any, template: any) {
+  if (page?.show_header === false) return null;
+  return page?.headerOverride ?? template?.headerBlock ?? null;
+}
+function getEffectiveFooter(page: any, template: any) {
+  if (page?.show_footer === false) return null;
+  return page?.footerOverride ?? template?.footerBlock ?? null;
+}
 // ------------------------------------
 
-function BlockWrapper({ block, children, onEdit, onDelete, showOutlines }: any) {
+function BlockWrapper({
+  block,
+  children,
+  onEdit,
+  onDelete,
+  showOutlines,
+}: {
+  block: any;
+  children: React.ReactNode;
+  onEdit: () => void;
+  onDelete: () => void;
+  showOutlines: boolean;
+}) {
   const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id: block._id });
   const style = { transform: CSS.Transform.toString(transform), transition };
 
@@ -56,7 +79,9 @@ function BlockWrapper({ block, children, onEdit, onDelete, showOutlines }: any) 
       ref={setNodeRef}
       style={style}
       className={`group relative rounded p-2 transition-all ${
-        showOutlines ? 'border border-dashed border-purple-700/40' : 'border border-gray-300 dark:border-white/10'
+        showOutlines
+          ? 'border border-dashed border-purple-700/40'
+          : 'border border-gray-300 dark:border-white/10'
       } bg-white dark:bg-zinc-900`}
     >
       <div className="flex justify-between items-center mb-1 opacity-80 text-xs text-black dark:text-white">
@@ -103,6 +128,27 @@ export function LiveEditorPreview({
     ((template as any).color_mode as 'light' | 'dark' | undefined) ??
     (ctxTheme?.darkMode as 'light' | 'dark' | undefined) ??
     'light';
+
+  const setPageChrome = async (
+    key: 'show_header' | 'show_footer',
+    value: boolean
+  ) => {
+    if (!selectedPage) return;
+    const updatedPage = { ...selectedPage, [key]: value };
+
+    const next = withSyncedPages({
+      ...template,
+      color_mode: resolvedColorMode,
+      data: {
+        ...(template.data ?? {}),
+        pages: pages.map((p: any, idx: number) =>
+          idx === selectedPageIndex ? updatedPage : p
+        ),
+      },
+    } as Template);
+
+    await updateAndSave(next);
+  };
 
   // Keep <html> class in sync
   useEffect(() => {
@@ -174,6 +220,13 @@ export function LiveEditorPreview({
     if (keepId) setSelectedPageId(keepId);
   };
 
+  // Auto-scroll newly inserted blocks into view
+  useEffect(() => {
+    if (!lastInsertedId) return;
+    const el = document.querySelector<HTMLElement>(`[data-block-id="${lastInsertedId}"]`);
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }, [lastInsertedId]);
+
   if (!selectedPage) {
     return (
       <div className="p-8 text-white text-center">
@@ -182,6 +235,10 @@ export function LiveEditorPreview({
       </div>
     );
   }
+
+  // Resolve effective header/footer based on page toggles + overrides
+  const effectiveHeader = getEffectiveHeader(selectedPage, template);
+  const effectiveFooter = getEffectiveFooter(selectedPage, template);
 
   return (
     <TemplateThemeWrapper colorMode={resolvedColorMode}>
@@ -198,6 +255,45 @@ export function LiveEditorPreview({
 
         <div className="relative min-h-screen">
           <div className="px-0 sm:px-2 xl:px-0 pb-20 pt-4 space-y-6 w-full xl:max-w-[90%] xl:mx-auto">
+            <GlobalChromeEditors
+              template={template}
+              onChange={onChange}
+              onSaveTemplate={updateAndSave}
+            />
+
+            {/* Per-page chrome visibility */}
+            <div className="flex flex-wrap items-center gap-2 mb-4">
+              <span className="text-xs uppercase tracking-wide text-black/60 dark:text-white/60">
+                Page Settings:
+              </span>
+
+              {/* Header toggle */}
+              <button
+                type="button"
+                onClick={() => setPageChrome('show_header', !(selectedPage?.show_header !== false))}
+                className={`px-2 py-1 text-xs rounded border transition
+                  ${selectedPage?.show_header !== false
+                    ? 'bg-emerald-600/20 text-emerald-300 border-emerald-600/40 hover:bg-emerald-600/30'
+                    : 'bg-zinc-800 text-zinc-300 border-zinc-600 hover:bg-zinc-700'}`}
+                title="Show or hide the global header on this page"
+              >
+                Header: {selectedPage?.show_header !== false ? 'Visible' : 'Hidden'}
+              </button>
+
+              {/* Footer toggle */}
+              <button
+                type="button"
+                onClick={() => setPageChrome('show_footer', !(selectedPage?.show_footer !== false))}
+                className={`px-2 py-1 text-xs rounded border transition
+                  ${selectedPage?.show_footer !== false
+                    ? 'bg-emerald-600/20 text-emerald-300 border-emerald-600/40 hover:bg-emerald-600/30'
+                    : 'bg-zinc-800 text-zinc-300 border-zinc-600 hover:bg-zinc-700'}`}
+                title="Show or hide the global footer on this page"
+              >
+                Footer: {selectedPage?.show_footer !== false ? 'Visible' : 'Hidden'}
+              </button>
+            </div>
+
             <div className="flex gap-2 mb-4 text-sm text-black dark:text-white/70">
               {pages.map((p: any, i: number) => (
                 <button
@@ -214,12 +310,8 @@ export function LiveEditorPreview({
               ))}
             </div>
 
-            {selectedPage?.show_header !== false && (template as any).headerBlock && (
-              <RenderBlock
-                block={(template as any).headerBlock}
-                showDebug={false}
-                colorMode={resolvedColorMode}
-              />
+            {effectiveHeader && (
+              <RenderBlock block={effectiveHeader} showDebug={false} colorMode={resolvedColorMode} />
             )}
 
             <DndContext
@@ -246,7 +338,9 @@ export function LiveEditorPreview({
               }}
             >
               <SortableContext
-                items={(selectedPage?.content_blocks ?? []).map((b: any) => b._id ?? '')}
+                items={(selectedPage?.content_blocks ?? []).map(
+                  (b: any, i: number) => b?._id ?? `idx-${i}`
+                )}
                 strategy={verticalListSortingStrategy}
               >
                 <div className={layoutMode === 'grid' ? 'grid grid-cols-1 md:grid-cols-2 gap-4' : 'space-y-6'}>
@@ -259,26 +353,64 @@ export function LiveEditorPreview({
                       onDelete={() => {
                         const updatedPage = {
                           ...selectedPage,
-                          content_blocks: (selectedPage?.content_blocks ?? []).filter((_: any, i: number) => i !== blockIndex),
+                          content_blocks: (selectedPage?.content_blocks ?? []).filter(
+                            (_: any, i: number) => i !== blockIndex
+                          ),
                         };
                         const next = withSyncedPages({
                           ...template,
                           color_mode: resolvedColorMode,
                           data: {
                             ...(template.data ?? {}),
-                            pages: pages.map((p: any, idx: number) => (idx === selectedPageIndex ? updatedPage : p)),
+                            pages: pages.map((p: any, idx: number) =>
+                              idx === selectedPageIndex ? updatedPage : p
+                            ),
                           },
                         } as Template);
                         updateAndSave(next);
                       }}
                     >
+                      {/* NEW: Add Block Above */}
+                      <BlockAdderGrouped
+                        onAdd={(type) => {
+                          const newBlock = createDefaultBlock(type);
+                          const updatedPage = {
+                            ...selectedPage,
+                            content_blocks: [
+                              ...(selectedPage?.content_blocks ?? []).slice(0, blockIndex),
+                              newBlock as any,
+                              ...(selectedPage?.content_blocks ?? []).slice(blockIndex),
+                            ],
+                          };
+                          setLastInsertedId((newBlock as any)._id ?? '');
+                          const next = withSyncedPages({
+                            ...template,
+                            color_mode: resolvedColorMode,
+                            data: {
+                              ...(template.data ?? {}),
+                              pages: pages.map((p: any, idx: number) =>
+                                idx === selectedPageIndex ? updatedPage : p
+                              ),
+                            },
+                          } as Template);
+                          updateAndSave(next);
+                        }}
+                        existingBlocks={selectedPage.content_blocks}
+                        triggerElement={
+                          <SafeTriggerButton
+                            onClick={() => {}}
+                            className="text-sm text-purple-500 hover:underline mb-2"
+                          >
+                            + Add Block Above
+                          </SafeTriggerButton>
+                        }
+                      />
+
                       <div id={`block-${block._id}`} data-block-id={block._id}>
-                        <RenderBlock
-                          block={block}
-                          showDebug={false}
-                          colorMode={resolvedColorMode}
-                        />
+                        <RenderBlock block={block} showDebug={false} colorMode={resolvedColorMode} />
                       </div>
+
+                      {/* Existing: Add Block Below */}
                       <BlockAdderGrouped
                         onAdd={(type) => {
                           const newBlock = createDefaultBlock(type);
@@ -296,7 +428,9 @@ export function LiveEditorPreview({
                             color_mode: resolvedColorMode,
                             data: {
                               ...(template.data ?? {}),
-                              pages: pages.map((p: any, idx: number) => (idx === selectedPageIndex ? updatedPage : p)),
+                              pages: pages.map((p: any, idx: number) =>
+                                idx === selectedPageIndex ? updatedPage : p
+                              ),
                             },
                           } as Template);
                           updateAndSave(next);
@@ -304,27 +438,7 @@ export function LiveEditorPreview({
                         existingBlocks={selectedPage.content_blocks}
                         triggerElement={
                           <SafeTriggerButton
-                            onClick={() => {
-                              const newBlock = createDefaultBlock('text');
-                              const updatedPage = {
-                                ...selectedPage,
-                                content_blocks: [
-                                  ...(selectedPage?.content_blocks ?? []).slice(0, blockIndex + 1),
-                                  newBlock as any,
-                                  ...(selectedPage?.content_blocks ?? []).slice(blockIndex + 1),
-                                ],
-                              };
-                              setLastInsertedId((newBlock as any)._id ?? '');
-                              const next = withSyncedPages({
-                                ...template,
-                                color_mode: resolvedColorMode,
-                                data: {
-                                  ...(template.data ?? {}),
-                                  pages: pages.map((p: any, idx: number) => (idx === selectedPageIndex ? updatedPage : p)),
-                                },
-                              } as Template);
-                              updateAndSave(next);
-                            }}
+                            onClick={() => {}}
                             className="text-sm text-purple-500 hover:underline mt-2"
                           >
                             + Add Block Below
@@ -350,7 +464,9 @@ export function LiveEditorPreview({
                       color_mode: resolvedColorMode,
                       data: {
                         ...(template.data ?? {}),
-                        pages: pages.map((p: any, idx: number) => (idx === selectedPageIndex ? updatedPage : p)),
+                        pages: pages.map((p: any, idx: number) =>
+                          idx === selectedPageIndex ? updatedPage : p
+                        ),
                       },
                     } as Template);
                     updateAndSave(next);
@@ -358,23 +474,7 @@ export function LiveEditorPreview({
                   existingBlocks={selectedPage.content_blocks}
                   triggerElement={
                     <SafeTriggerButton
-                      onClick={() => {
-                        const newBlock = createDefaultBlock('text');
-                        const updatedPage = {
-                          ...selectedPage,
-                          content_blocks: [...(selectedPage?.content_blocks ?? []), newBlock as any],
-                        };
-                        setLastInsertedId((newBlock as any)._id ?? '');
-                        const next = withSyncedPages({
-                          ...template,
-                          color_mode: resolvedColorMode,
-                          data: {
-                            ...(template.data ?? {}),
-                            pages: pages.map((p: any, idx: number) => (idx === selectedPageIndex ? updatedPage : p)),
-                          },
-                        } as Template);
-                        updateAndSave(next);
-                      }}
+                      onClick={() => {}}
                       className="w-full flex items-center justify-center gap-2 border border-purple-600 text-purple-600 dark:text-purple-400 rounded px-4 py-2 text-sm hover:bg-purple-50 dark:hover:bg-purple-900 transition-colors"
                     >
                       <PlusCircle className="w-4 h-4" />
@@ -385,12 +485,8 @@ export function LiveEditorPreview({
               </div>
             </DndContext>
 
-            {selectedPage?.show_footer !== false && (template as any).footerBlock && (
-              <RenderBlock
-                block={(template as any).footerBlock}
-                showDebug={false}
-                colorMode={resolvedColorMode}
-              />
+            {effectiveFooter && (
+              <RenderBlock block={effectiveFooter} showDebug={false} colorMode={resolvedColorMode} />
             )}
           </div>
         </div>
@@ -412,7 +508,9 @@ export function LiveEditorPreview({
                     color_mode: resolvedColorMode,
                     data: {
                       ...(template.data ?? {}),
-                      pages: pages.map((p: any, idx: number) => (idx === selectedPageIndex ? updatedPage : p)),
+                      pages: pages.map((p: any, idx: number) =>
+                        idx === selectedPageIndex ? updatedPage : p
+                      ),
                     },
                   } as Template);
                   updateAndSave(next);

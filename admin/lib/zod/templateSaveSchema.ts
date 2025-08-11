@@ -92,7 +92,7 @@ export const TemplateSaveSchema = z.preprocess(
       logo_url: nullableString,
       team_url: nullableString,
 
-      // Optional header/footer blocks
+      // Optional header/footer blocks (top-level mirror)
       headerBlock: BlockSchema.optional().nullable(),
       footerBlock: BlockSchema.optional().nullable(),
 
@@ -118,11 +118,16 @@ export const TemplateSaveSchema = z.preprocess(
           .optional()
       ),
 
-      // Editor canonical fields; keep optional/partial
+      // Canonical editor payload
       data: z
         .object({
           pages: PagesArray.optional(),
           meta: z.any().optional(),
+          // ⬇️ allow chrome + common fields inside data
+          headerBlock: BlockSchema.optional().nullable(),
+          footerBlock: BlockSchema.optional().nullable(),
+          color_mode: z.enum(['light', 'dark']).optional(),
+          phone: nullableString.optional(),
         })
         .partial()
         .optional(),

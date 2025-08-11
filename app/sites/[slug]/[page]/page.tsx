@@ -1,3 +1,4 @@
+// app/sites/[slug]/[page]/page.tsx
 'use server';
 
 import { createClient } from '@supabase/supabase-js';

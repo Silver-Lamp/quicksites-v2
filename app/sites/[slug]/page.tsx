@@ -1,3 +1,4 @@
+// app/sites/[slug]/page.tsx
 import { getSupabase } from '@/lib/supabase/server';
 import { redirect, notFound } from 'next/navigation';
 

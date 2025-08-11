@@ -70,7 +70,7 @@ export const blockPresets: {
     generate: () => ({
       _id: crypto.randomUUID(),
       type: 'image',
-      content: { url: 'https://placekitten.com/800/400', alt: 'A cute kitten' },
+      content: { url: 'https://placebear.com/800/400', alt: 'A cute kitten' },
     }),
   },
   {

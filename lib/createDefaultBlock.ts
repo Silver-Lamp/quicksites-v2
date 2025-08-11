@@ -71,7 +71,7 @@ export function createDefaultBlock(type: BlockType): z.infer<typeof BlockSchema>
             description: 'This is a description',
             price: '$10',
             availability: 'Available',
-            image_url: 'https://placekitten.com/800/400',
+            image_url: 'https://placebear.com/800/400',
           },
         ],
       };
@@ -89,7 +89,7 @@ export function createDefaultBlock(type: BlockType): z.infer<typeof BlockSchema>
     case 'header':
       content = {
         ...content,
-        logo_url: 'https://placekitten.com/800/400',
+        logo_url: 'https://placebear.com/800/400',
         nav_items: [
           { label: 'Home', href: '/', appearance: 'default' },
           { label: 'Services', href: '/services', appearance: 'default' },

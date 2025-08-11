@@ -43,7 +43,7 @@ export function createFallbackBlock(type: Block['type']): BlockWithId {
           subheadline: 'Fast, Friendly, and Available 24/7',
           cta_text: 'Get Help Now',
           cta_link: '#',
-          image_url: 'https://placekitten.com/600/300',
+          image_url: 'https://placebear.com/600/300',
           layout_mode: 'full_width',
           blur_amount: 0,
           image_position: 'center',
@@ -64,13 +64,13 @@ export function createFallbackBlock(type: Block['type']): BlockWithId {
       return {
         _id: id,
         type: 'testimonial',
-        content: { testimonials: [{ quote: 'Great service!', attribution: 'John Doe', image_url: 'https://placekitten.com/600/300', rating: 5 }], randomized: false, layout: 'default' },
+        content: { testimonials: [{ quote: 'Great service!', attribution: 'John Doe', image_url: 'https://placebear.com/600/300', rating: 5 }], randomized: false, layout: 'default' },
       };
     case 'image':
       return {
         _id: id,
         type: 'image',
-        content: { url: 'https://placekitten.com/600/300', alt: 'Placeholder image', caption: 'Placeholder image' },
+        content: { url: 'https://placebear.com/600/300', alt: 'Placeholder image', caption: 'Placeholder image' },
       };
     case 'services':
       return {
@@ -122,7 +122,7 @@ export function createFallbackBlock(type: Block['type']): BlockWithId {
         _id: id,
         type: 'header',
         content: {
-          logo_url: 'https://placekitten.com/600/300',
+          logo_url: 'https://placebear.com/600/300',
           nav_items: [
             { label: 'Home', href: '#', appearance: 'default' },
             { label: 'About', href: '#', appearance: 'default' },

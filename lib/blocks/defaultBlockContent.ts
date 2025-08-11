@@ -6,7 +6,7 @@ export const DEFAULT_BLOCK_CONTENT: Record<BlockType, any> = {
     value: 'Sample text block',
   },
   image: {
-    url: 'https://placekitten.com/800/400',
+    url: 'https://placebear.com/800/400',
     alt: 'A cute kitten',
   },
   video: {
@@ -36,7 +36,7 @@ export const DEFAULT_BLOCK_CONTENT: Record<BlockType, any> = {
     subheadline: 'This is the hero section.',
     cta_text: 'Get Started',
     cta_link: '#',
-    image_url: 'https://placekitten.com/1200/600',
+    image_url: 'https://placebear.com/1200/600',
     blur_amount: 0,
     layout_mode: 'cover',
   },
@@ -70,7 +70,7 @@ export const DEFAULT_BLOCK_CONTENT: Record<BlockType, any> = {
       {
         quote: 'They did a great job!',
         attribution: 'Happy Client',
-        avatar_url: 'https://placekitten.com/800/400',
+        avatar_url: 'https://placebear.com/800/400',
         rating: 5,
       },
     ],
@@ -98,7 +98,7 @@ export const DEFAULT_BLOCK_CONTENT: Record<BlockType, any> = {
     radiusMiles: 30,
   },
   header: {
-    logoUrl: 'https://placekitten.com/800/400',
+    logoUrl: 'https://placebear.com/800/400',
     navItems: [
       { label: 'Home', href: '/', appearance: 'default' },
       { label: 'Services', href: '/services', appearance: 'default' },
@@ -113,7 +113,7 @@ export const DEFAULT_BLOCK_CONTENT: Record<BlockType, any> = {
     title: 'Meal A',
     chef_name: 'John Doe',
     price: '$10',
-    image_url: 'https://placekitten.com/800/400',
+    image_url: 'https://placebear.com/800/400',
     description: 'This is a description',
     availability: 'Available',
     tags: ['Vegan', 'Spicy'],
@@ -122,7 +122,7 @@ export const DEFAULT_BLOCK_CONTENT: Record<BlockType, any> = {
   chef_profile: {
     name: 'John Doe',
     location: 'New York, NY',
-    profile_image_url: 'https://placekitten.com/800/400',
+    profile_image_url: 'https://placebear.com/800/400',
     kitchen_video_url: 'https://www.youtube.com/embed/dQw4w9WgXcQ',
     bio: 'This is a bio',
     certifications: ['Certification A', 'Certification B'],
@@ -131,7 +131,7 @@ export const DEFAULT_BLOCK_CONTENT: Record<BlockType, any> = {
         title: 'Meal A',
         price: '$10',
         availability: 'Available',
-        image_url: 'https://placekitten.com/800/400',
+        image_url: 'https://placebear.com/800/400',
       },
     ],
   },

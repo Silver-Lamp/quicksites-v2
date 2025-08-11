@@ -26,7 +26,7 @@ INSERT INTO templates (
         'title', 'Sample Page',
         'content_blocks', jsonb_build_array(
           jsonb_build_object('type', 'text', 'value', 'Welcome to the playground!'),
-          jsonb_build_object('type', 'image', 'value', jsonb_build_object('url', 'https://placekitten.com/800/400', 'alt', 'A cute kitten')),
+          jsonb_build_object('type', 'image', 'value', jsonb_build_object('url', 'https://placebear.com/800/400', 'alt', 'A cute kitten')),
           jsonb_build_object('type', 'video', 'value', jsonb_build_object('url', 'https://www.w3schools.com/html/mov_bbb.mp4', 'caption', 'Example video')),
           jsonb_build_object('type', 'audio', 'value', jsonb_build_object('provider', 'soundcloud', 'url', 'https://w.soundcloud.com/player/?url=https%3A//api.soundcloud.com/tracks/293', 'title', 'Sound demo')),
           jsonb_build_object('type', 'quote', 'value', jsonb_build_object('text', 'The best way to predict the future is to invent it.', 'author', 'Alan Kay')),

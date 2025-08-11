@@ -25,7 +25,7 @@ const sample = {
           {
             type: 'image',
             value: {
-              url: 'https://placekitten.com/800/400',
+              url: 'https://placebear.com/800/400',
               alt: 'A cute kitten',
             },
           },

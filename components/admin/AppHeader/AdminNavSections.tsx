@@ -14,6 +14,7 @@ import {
   Mail,
   Phone,
   Search,
+  Plus,
 } from 'lucide-react';
 import clsx from 'clsx';
 
@@ -27,66 +28,67 @@ type NavItem =
       children?: { label: string; href: string }[];
     };
 
-    const navItems: NavItem[] = [
-      { type: 'section', label: 'Core' },
-      {
-        type: 'item',
-        label: 'Dashboard',
-        href: '/admin/dashboard',
-        icon: <LayoutDashboard size={18} />,
-      },
-      {
-        type: 'item',
-        label: 'Map of Opportunities',
-        href: '/admin/the-grid',
-        icon: <MapPinned size={18} />,
-      },
-      {
-        type: 'item',
-        label: 'Outreach (Coming Soon)',
-        href: '/admin/outreach',
-        icon: <Mail size={18} />,
-      },
-      {
-        type: 'item',
-        label: 'Leads',
-        href: '/admin/leads',
-        icon: <PhoneForwarded size={18} />,
-      },
-    
-      { type: 'section', label: 'Tools' },
-      {
-        type: 'item',
-        label: 'Campaigns',
-        icon: <Rocket size={18} />,
-        children: [
-          { label: 'View All Campaigns', href: '/admin/campaigns' },
-          { label: 'Start New Campaign', href: '/admin/start-campaign' },
-        ],
-      },
-      {
-        type: 'item',
-        label: 'Templates & Sites',
-        icon: <FileStack size={18} />,
-        children: [
-          { label: 'Browse Sites and Templates', href: '/admin/templates/list' },
-          { label: 'Create New Site or Template', href: '/admin/templates/new' },
-         ],
-      },    
-      {
-        type: 'item',
-        label: 'Google Search Console',
-        icon: <Search size={18} />,
-        children: [
-          { label: 'Google Search Console Stats', href: '/admin/templates/gsc-bulk-stats' },
-          { label: 'Connect', href: '/api/gsc/auth-url' },
-          { label: 'Sites', href: '/admin/gsc/sites' },
-        ],
-      },
-    
-      { type: 'item', label: 'Email Logs', href: '/admin/email-logs', icon: <Mail size={18} /> },
-      { type: 'item', label: 'Call Logs', href: '/admin/call-logs', icon: <Phone size={18} /> },
-    ];
+const navItems: NavItem[] = [
+  { type: 'section', label: 'Core' },
+  {
+    type: 'item',
+    label: 'Dashboard',
+    href: '/admin/dashboard',
+    icon: <LayoutDashboard size={18} />,
+  },
+  {
+    type: 'item',
+    label: 'Map of Opportunities',
+    href: '/admin/the-grid',
+    icon: <MapPinned size={18} />,
+  },
+  {
+    type: 'item',
+    label: 'Outreach (Coming Soon)',
+    href: '/admin/outreach',
+    icon: <Mail size={18} />,
+  },
+  {
+    type: 'item',
+    label: 'Leads',
+    href: '/admin/leads',
+    icon: <PhoneForwarded size={18} />,
+  },
+
+  { type: 'section', label: 'Tools' },
+  {
+    type: 'item',
+    label: 'Campaigns',
+    icon: <Rocket size={18} />,
+    children: [
+      { label: 'View All Campaigns', href: '/admin/campaigns' },
+      { label: 'Start New Campaign', href: '/admin/start-campaign' },
+    ],
+  },
+  {
+    type: 'item',
+    label: 'Templates & Sites',
+    icon: <FileStack size={18} />,
+    children: [
+      { label: 'Browse Sites and Templates', href: '/admin/templates/list' },
+      { label: 'Create New Site or Template', href: '/admin/templates/new' },
+    ],
+  },
+  {
+    type: 'item',
+    label: 'Google Search Console',
+    icon: <Search size={18} />,
+    children: [
+      { label: 'Google Search Console Stats', href: '/admin/templates/gsc-bulk-stats' },
+      { label: 'Connect', href: '/api/gsc/auth-url' },
+      { label: 'Sites', href: '/admin/gsc/sites' },
+    ],
+  },
+
+  { type: 'item', label: 'Email Logs', href: '/admin/email-logs', icon: <Mail size={18} /> },
+  { type: 'item', label: 'Call Logs', href: '/admin/call-logs', icon: <Phone size={18} /> },
+];
+
 function NavItemButtonOrLink({
   item,
   isActive,
@@ -107,12 +109,9 @@ function NavItemButtonOrLink({
 
   const firstChild = item.children?.[0];
   const defaultHref = item.href || firstChild?.href || '#';
-
-  // What the user will actually go to on click
   const targetLabel = collapsed && firstChild ? firstChild.label : item.label;
 
   const icon = <div className="text-white">{item.icon}</div>;
-
   const label = (
     <span
       className={clsx(
@@ -124,7 +123,6 @@ function NavItemButtonOrLink({
     </span>
   );
 
-  // Collapsed custom tooltip now shows the real destination (first child) when applicable
   const tooltip =
     collapsed && (
       <span className="absolute left-14 top-1/2 -translate-y-1/2 whitespace-nowrap rounded bg-zinc-800 px-2 py-1 text-xs text-white opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-50 shadow-md pointer-events-none">
@@ -135,12 +133,12 @@ function NavItemButtonOrLink({
   return (
     <Link
       href={defaultHref}
-      title={targetLabel}            // native tooltip mirrors target
-      aria-label={targetLabel}       // improves a11y & tooltips on some UIs
+      title={targetLabel}
+      aria-label={targetLabel}
       onClick={(e) => {
         if (item.children) {
-          if (collapsed) return;     // collapsed: navigate to first child
-          e.preventDefault();        // expanded: toggle submenu instead
+          if (collapsed) return; // collapsed: navigate to first child
+          e.preventDefault(); // expanded: toggle submenu
           toggleMenu();
         }
       }}
@@ -160,7 +158,6 @@ function NavItemButtonOrLink({
     </Link>
   );
 }
-
 
 export function AdminNavSections({ collapsed = false }: { collapsed?: boolean }) {
   const pathname = usePathname();
@@ -194,7 +191,6 @@ export function AdminNavSections({ collapsed = false }: { collapsed?: boolean })
           ) : null;
         }
 
-        // ✅ active if parent matches OR any child matches
         const isActive =
           (item.href && pathname?.startsWith(item.href)) ||
           (item.children?.some((c) => pathname?.startsWith(c.href)) ?? false);
@@ -210,6 +206,7 @@ export function AdminNavSections({ collapsed = false }: { collapsed?: boolean })
               collapsed={collapsed}
               toggleMenu={() => item.children && toggleMenu(item.label)}
             />
+
             <div
               className={clsx(
                 'ml-8 transition-all duration-300 overflow-hidden',
@@ -217,20 +214,41 @@ export function AdminNavSections({ collapsed = false }: { collapsed?: boolean })
               )}
             >
               {!collapsed &&
-                item.children?.map((child) => (
-                  <Link
-                    key={child.href}
-                    href={child.href}
-                    className={clsx(
-                      'block text-sm px-3 py-1 rounded transition',
-                      pathname?.startsWith(child.href)
-                        ? 'bg-zinc-800 text-white font-medium'
-                        : 'text-zinc-400 hover:bg-zinc-800 hover:text-white'
-                    )}
-                  >
-                    {child.label}
-                  </Link>
-                ))}
+                item.children?.map((child) => {
+                  const isActiveChild = pathname?.startsWith(child.href);
+                  const isNewTemplate = child.href === '/admin/templates/new';
+
+                  // Standard child link classes
+                  const baseChild =
+                    'block text-sm px-3 py-1 rounded transition';
+
+                  // Special green "New Template" button
+                  const newBtnClasses = clsx(
+                    'mt-1 inline-flex items-center gap-2 rounded-md px-3 py-1.5 font-medium shadow-sm',
+                    isActiveChild
+                      ? 'bg-emerald-700 text-white ring-1 ring-emerald-300/30'
+                      : 'bg-emerald-600 text-white hover:bg-emerald-500'
+                  );
+
+                  const normalClasses = clsx(
+                    baseChild,
+                    isActiveChild
+                      ? 'bg-zinc-800 text-white font-medium'
+                      : 'text-zinc-400 hover:bg-zinc-800 hover:text-white'
+                  );
+
+                  return (
+                    <Link
+                      key={child.href}
+                      href={child.href}
+                      className={isNewTemplate ? newBtnClasses : normalClasses}
+                      title={isNewTemplate ? 'Create a new template or site' : child.label}
+                    >
+                      {isNewTemplate && <Plus size={14} />}
+                      {isNewTemplate ? 'New Template' : child.label}
+                    </Link>
+                  );
+                })}
             </div>
           </div>
         );

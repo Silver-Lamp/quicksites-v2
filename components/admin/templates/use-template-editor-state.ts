@@ -32,7 +32,6 @@ function generateUniqueSlug(base: string) {
 
 /** Make sure pages exist in both places and are identical. */
 function withSyncedPages<T extends Partial<Template>>(tpl: T): Template {
-  // Prefer canonical data.pages, else legacy pages, else []
   const dataPages = (tpl as any)?.data?.pages;
   const rootPages = (tpl as any)?.pages;
   const pages = Array.isArray(dataPages)
@@ -41,7 +40,7 @@ function withSyncedPages<T extends Partial<Template>>(tpl: T): Template {
     ? rootPages
     : [];
 
-  const fixed = fixTemplatePages({ pages } as any); // ensures shape, block defaults, etc.
+  const fixed = fixTemplatePages({ pages } as any);
 
   return {
     ...(tpl as any),
@@ -60,6 +59,43 @@ function collectBlockErrors(tpl: Template): Record<string, BlockValidationError[
     }
   }
   return errs;
+}
+
+/**
+ * One-shot creator that ALWAYS serializes the full DB-safe template.
+ * This avoids Zod "Required" errors on id/template_name/slug/... during first save.
+ */
+function makeOneShotSave(
+  _handleTemplateSave: typeof import('@/admin/lib/handleTemplateSave').handleTemplateSave,
+  getCurrentTemplate: () => Template,
+  guardedSetTemplate: (tpl: Template) => void
+) {
+  let inFlight: Promise<Template> | null = null;
+
+  return () => {
+    if (inFlight) return inFlight;
+
+    const fullDbSafe = prepareTemplateForSave(getCurrentTemplate());
+    const payload = JSON.stringify(fullDbSafe);
+
+    inFlight = new Promise<Template>((resolve, reject) => {
+      _handleTemplateSave({
+        rawJson: payload,
+        mode: 'template',
+        onSuccess: (updated) => {
+          // ensure local state has the DB id/slug/etc.
+          guardedSetTemplate(updated);
+          resolve(updated);
+        },
+        onError: (err) => {
+          inFlight = null; // allow retry
+          reject(err as any);
+        },
+      });
+    });
+
+    return inFlight;
+  };
 }
 
 // ------------------------------
@@ -107,10 +143,7 @@ export function useTemplateEditorState({
       data: fixTemplatePages(((initialData as any)?.data || { pages: [] }) as any),
     } as Partial<Template>);
 
-    // ensure mirrored pages
-    const synced = withSyncedPages(baseNorm);
-
-    return synced;
+    return withSyncedPages(baseNorm);
   }, [initialData, fallback, templateName, colorMode]);
 
   // 2) State
@@ -147,7 +180,7 @@ export function useTemplateEditorState({
     const next = withSyncedPages(normalizeTemplate(initialData as Template));
     guardedSetTemplate(next);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [initialData?.id]); // rehydrate when switching templates
+  }, [initialData?.id]);
 
   // 6) Guarded setter prevents accidental page collapse + re-collects errors
   function guardedSetTemplate(next: Template) {
@@ -162,8 +195,6 @@ export function useTemplateEditorState({
         to: nextCount,
         next,
       });
-      // In dev you could throw to catch the offender:
-      // throw new Error('Pages collapsed unexpectedly');
     }
 
     const synced = withSyncedPages(next);
@@ -171,16 +202,47 @@ export function useTemplateEditorState({
     setBlockErrors(collectBlockErrors(synced));
   }
 
+  // 6.5) One-shot saver + auto-create on mount for new templates
+  const saveOnce = useRef<(() => Promise<Template>) | null>(null);
+  const didInitialCreate = useRef(false);
+
+  useEffect(() => {
+    saveOnce.current = makeOneShotSave(
+      handleTemplateSave,
+      () => template,
+      guardedSetTemplate
+    );
+  }, [template]);
+
+  // Auto-create a DB row when a brand-new editor opens
+  useEffect(() => {
+    if (!isCreating) return;
+    if (didInitialCreate.current) return;
+
+    didInitialCreate.current = true;
+    saveOnce.current?.()
+      .catch((e) => {
+        console.warn('[initial create] failed; will retry later:', e);
+        didInitialCreate.current = false;
+      });
+  }, [isCreating]);
+
   // 7) Save draft via API
   const handleSaveDraft = () => {
+    // If the JSON panel is empty, still send a full DB-safe payload.
+    const payload =
+      rawJson && rawJson.trim()
+        ? rawJson
+        : JSON.stringify(prepareTemplateForSave(template), null, 2);
+
     handleTemplateSave({
-      rawJson,
+      rawJson: payload,
       mode: 'template',
       onSuccess: (updated: Template) => {
         guardedSetTemplate(updated);
-        localStorage.setItem(`draft-${updated.id}`, rawJson);
+        localStorage.setItem(`draft-${updated.id}`, payload);
         toast.success('Draft saved');
-        onSaveDraft?.(rawJson);
+        onSaveDraft?.(payload);
       },
       onError: (err: ZodError | string) => {
         console.warn('Save failed', err);
@@ -189,23 +251,63 @@ export function useTemplateEditorState({
     });
   };
 
-  // 8) Rename flow
+  // 8) Rename flow — ensures a persisted row exists, retries once on 404
   const handleRename = async () => {
     const newName = inputValue.trim();
     if (newName.length < 3) return toast.error('Name must be at least 3 chars.');
-    if (newName === template.template_name) return setIsRenaming(false);
+    if (!newName) return;
 
-    const res = await fetch('/api/templates/rename', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ template_id: template.id, newName }),
-    });
-    const json = await res.json();
-    if (!res.ok) return toast.error(json?.error || 'Failed to rename');
+    try {
+      // ensure persisted row
+      toast.loading('Creating draft…', { id: 'firstsave' });
+      const ensured = await (saveOnce.current?.() ?? Promise.resolve(template));
+      toast.dismiss('firstsave');
 
-    guardedSetTemplate({ ...template, template_name: newName });
-    onRename?.(newName);
-    setIsRenaming(false);
+      const templateId = ensured.id;
+
+      const tryRename = async () => {
+        const res = await fetch('/api/templates/rename', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ template_id: templateId, newName }),
+        });
+        const json = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          const err = new Error(json?.error || 'Failed to rename') as any;
+          err.status = res.status;
+          throw err;
+        }
+      };
+
+      try {
+        await tryRename();
+      } catch (e: any) {
+        if (e?.status === 404) {
+          const again = await (saveOnce.current?.() ?? Promise.resolve(template));
+          guardedSetTemplate(again);
+          await tryRename();
+        } else {
+          throw e;
+        }
+      }
+
+      // optimistic local update
+      const nextSlug = generateSlug(newName);
+      guardedSetTemplate({
+        ...ensured,
+        template_name: newName,
+        slug: nextSlug || ensured.slug,
+        meta: { ...ensured.meta, title: newName },
+      });
+
+      onRename?.(newName);
+      toast.success('Renamed');
+    } catch (err: any) {
+      console.error('[rename] failed', err);
+      toast.error(err?.message || 'Rename failed');
+    } finally {
+      setIsRenaming(false);
+    }
   };
 
   // 9) Public setter that ALWAYS keeps pages mirrored
@@ -213,7 +315,6 @@ export function useTemplateEditorState({
     if (typeof updater === 'function') {
       _setTemplate(prev => {
         const next = withSyncedPages((updater as any)(prev));
-        // same guard + errors as guardedSetTemplate
         const prevCount =
           prev?.data?.pages?.length ?? (prev as any)?.pages?.length ?? 0;
         const nextCount =

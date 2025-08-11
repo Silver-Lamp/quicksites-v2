@@ -25,9 +25,9 @@ export const DEFAULT_BLOCK_CONTENT = {
   },
 
   hero: {
-    headline: 'Locally Prepared Meals',
-    subheadline: 'Delivered with care.',
-    cta_text: 'Browse Meals',
+    headline: 'Welcome to Your New Site',
+    subheadline: 'Start editing, and let the magic happen.',
+    cta_text: 'Get Started',
     cta_link: '#',
     image_url: '',
     layout_mode: 'inline',

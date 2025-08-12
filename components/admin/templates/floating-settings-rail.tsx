@@ -3,7 +3,7 @@
 
 import * as React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { cn } from '@/lib/utils/cn'; // or replace with your own class joiner
+import { cn } from '@/lib/utils/cn';
 import { Settings2, ChevronLeft, ChevronRight } from 'lucide-react';
 
 type Section = {

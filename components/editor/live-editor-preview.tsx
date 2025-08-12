@@ -16,7 +16,7 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { useState, useEffect } from 'react';
-import { GripVertical, Pencil, Trash2, PlusCircle, Moon, Sun } from 'lucide-react';
+import { GripVertical, Pencil, Trash2, PlusCircle, Moon, Sun, X } from 'lucide-react';
 
 import { createDefaultBlock } from '@/lib/createDefaultBlock';
 import RenderBlock from '@/components/admin/templates/render-block';
@@ -131,6 +131,103 @@ export function LiveEditorPreview({
     (ctxTheme?.darkMode as 'light' | 'dark' | undefined) ??
     'light';
 
+  // --- Immersive / Fullscreen state & helpers ---
+  const [isImmersive, setIsImmersive] = useState(false);
+
+  function scrollToFirstBlockTop() {
+    const el =
+      document.getElementById(`block-${pages?.[selectedPageIndex]?.content_blocks?.[0]?._id}`) ??
+      document.querySelector<HTMLElement>('[data-block-id]');
+    if (!el) return;
+    const rect = el.getBoundingClientRect();
+    const current = window.pageYOffset || document.documentElement.scrollTop || 0;
+    const top = current + rect.top - 24;
+    window.scrollTo({ top, behavior: 'smooth' });
+  }
+
+  async function enterImmersive() {
+    try {
+      const el: any = document.documentElement;
+      if (el.requestFullscreen) {
+        await el.requestFullscreen({ navigationUI: 'hide' } as any);
+      } else if (el.webkitRequestFullscreen) {
+        el.webkitRequestFullscreen();
+      }
+      setIsImmersive(true);
+      setTimeout(scrollToFirstBlockTop, 10);
+    } catch {
+      // If fullscreen rejected, still engage "immersive" UX
+      setIsImmersive(true);
+      setTimeout(scrollToFirstBlockTop, 10);
+    }
+  }
+
+  async function exitImmersive() {
+    try {
+      if (document.fullscreenElement) {
+        await document.exitFullscreen?.();
+      } else if ((document as any).webkitFullscreenElement) {
+        (document as any).webkitExitFullscreen?.();
+      }
+    } finally {
+      setIsImmersive(false);
+    }
+  }
+
+  // Keep <html> class in sync
+  useEffect(() => {
+    document.documentElement.classList.toggle('dark', resolvedColorMode === 'dark');
+  }, [resolvedColorMode]);
+
+  // Keep context in sync with the template when template.color_mode changes (e.g., after a save/refresh)
+  useEffect(() => {
+    const tMode = (template as any).color_mode as 'light' | 'dark' | undefined;
+    if (tMode && ctxTheme?.darkMode !== tMode) {
+      setTheme({ ...(ctxTheme || {}), darkMode: tMode } as any);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [(template as any).color_mode]);
+
+  // Sync immersive state if user exits fullscreen via browser controls
+  useEffect(() => {
+    const sync = () => {
+      const active =
+        !!document.fullscreenElement || !!(document as any).webkitFullscreenElement;
+      setIsImmersive(active);
+    };
+    document.addEventListener('fullscreenchange', sync);
+    document.addEventListener('webkitfullscreenchange', sync as any);
+    return () => {
+      document.removeEventListener('fullscreenchange', sync);
+      document.removeEventListener('webkitfullscreenchange', sync as any);
+    };
+  }, []);
+
+  // Hotkeys: f to toggle immersive, Esc to exit (ignored while typing)
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const tag = (e.target as HTMLElement)?.tagName;
+      const isTyping =
+        ['INPUT', 'TEXTAREA', 'SELECT'].includes(tag || '') ||
+        (e.target as HTMLElement)?.isContentEditable;
+
+      if (isTyping) return;
+
+      if (!e.metaKey && !e.ctrlKey && !e.altKey) {
+        if (e.key.toLowerCase() === 'f') {
+          e.preventDefault();
+          isImmersive ? exitImmersive() : enterImmersive();
+        }
+        if (e.key === 'Escape' && isImmersive) {
+          e.preventDefault();
+          exitImmersive();
+        }
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [isImmersive, templateId]);
+
   const setPageChrome = async (
     key: 'show_header' | 'show_footer',
     value: boolean
@@ -151,20 +248,6 @@ export function LiveEditorPreview({
 
     await updateAndSave(next);
   };
-
-  // Keep <html> class in sync
-  useEffect(() => {
-    document.documentElement.classList.toggle('dark', resolvedColorMode === 'dark');
-  }, [resolvedColorMode]);
-
-  // Keep context in sync with the template when template.color_mode changes (e.g., after a save/refresh)
-  useEffect(() => {
-    const tMode = (template as any).color_mode as 'light' | 'dark' | undefined;
-    if (tMode && ctxTheme?.darkMode !== tMode) {
-      setTheme({ ...(ctxTheme || {}), darkMode: tMode } as any);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [(template as any).color_mode]);
 
   // ---------- PAGE SELECTION BY ID (persists across saves/remounts) ----------
   const pages = getPages(template);
@@ -246,6 +329,21 @@ export function LiveEditorPreview({
   
   return (
     <TemplateThemeWrapper colorMode={resolvedColorMode}>
+      {/* Exit immersive button */}
+      {isImmersive && (
+        <button
+          onClick={exitImmersive}
+          aria-label="Exit full screen"
+          title="Exit full screen (Esc)"
+          className="fixed top-3 left-3 z-[1000] rounded-full p-2
+                     bg-black/60 border border-purple-500/60
+                     shadow-[0_0_0_2px_rgba(168,85,247,.35),0_0_18px_2px_rgba(168,85,247,.35)]
+                     hover:bg-black/70 transition"
+        >
+          <X className="w-4 h-4 text-white" />
+        </button>
+      )}
+
       <div className="w-full max-w-none px-0">
           <button
             onClick={toggleColorMode}
@@ -298,21 +396,6 @@ export function LiveEditorPreview({
               </button>
             </div>
 
-            {/* <div className="flex gap-2 mb-4 text-sm text-black dark:text-white/70">
-              {pages.map((p: any, i: number) => (
-                <button
-                  key={p.id ?? `page-${i}`}
-                  onClick={() => setSelectedPageId(p.id)}
-                  className={`px-3 py-1 rounded ${
-                    i === selectedPageIndex
-                      ? 'bg-purple-700 text-white'
-                      : 'bg-zinc-200 hover:bg-zinc-300 dark:bg-zinc-800 dark:hover:bg-zinc-700'
-                  }`}
-                >
-                  {p.title || p.slug || `Page ${i + 1}`}
-                </button>
-              ))}
-            </div> */}
             <PageTabsBar
               pages={pages}
               selectedIndex={selectedPageIndex}

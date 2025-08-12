@@ -10,20 +10,46 @@ import HeroRender from '@/components/admin/templates/render-blocks/hero';
 import { DYNAMIC_RENDERERS } from '@/lib/dynamic-renderers';
 import { blockContentSchemaMap } from '@/admin/lib/zod/blockSchema';
 
-const isDev = typeof process !== 'undefined' && process.env.NODE_ENV === 'development';
+const isDev =
+  typeof process !== 'undefined' && process.env.NODE_ENV === 'development';
 
-const STATIC_RENDERERS: Partial<Record<BlockType, (props: any) => JSX.Element>> = {
-  hero: HeroRender,
-};
+/** Inline renderer for `text` blocks (rich HTML from Tiptap or legacy value) */
+function TextRender({
+  content,
+  compact,
+}: {
+  content: any;
+  compact?: boolean;
+}): JSX.Element {
+  const html = content?.html ?? content?.value ?? '';
+  return (
+    <div
+      className={`prose max-w-none ${
+        compact ? 'prose-sm' : 'lg:prose-lg'
+      }`}
+      dangerouslySetInnerHTML={{ __html: html }}
+    />
+  );
+}
+
+const STATIC_RENDERERS: Partial<Record<BlockType, (props: any) => JSX.Element>> =
+  {
+    hero: HeroRender,
+    text: TextRender, // ✅ new static renderer
+  };
 
 function assertAllRenderersCovered() {
   const handled = new Set([
     ...Object.keys(STATIC_RENDERERS),
     ...Object.keys(DYNAMIC_RENDERERS),
   ]);
-  const missing = Object.keys(blockContentSchemaMap).filter((type: string) => !handled.has(type));
+  const missing = Object.keys(blockContentSchemaMap).filter(
+    (type: string) => !handled.has(type)
+  );
   if (missing.length > 0) {
-    const msg = `[🛑 BLOCK_RENDERERS] Missing renderers for: ${missing.join(', ')}`;
+    const msg = `[🛑 BLOCK_RENDERERS] Missing renderers for: ${missing.join(
+      ', '
+    )}`;
     if (isDev) throw new Error(msg);
     else console.warn(msg);
   }
@@ -32,7 +58,8 @@ function assertAllRenderersCovered() {
 assertAllRenderersCovered();
 
 function resolveRenderer(type: BlockType) {
-  if (type in STATIC_RENDERERS) return STATIC_RENDERERS[type as keyof typeof STATIC_RENDERERS];
+  if (type in STATIC_RENDERERS)
+    return STATIC_RENDERERS[type as keyof typeof STATIC_RENDERERS];
   if (type in DYNAMIC_RENDERERS) return DYNAMIC_RENDERERS[type];
   return fallbackRenderer(type);
 }
@@ -85,8 +112,11 @@ export default function RenderBlock({
   const wrapperProps = {
     'data-block-id': block._id || 'unknown',
     'data-block-type': block.type,
-    // className: `relative group w-full ${colorMode === 'light' ? 'bg-white text-black border border-zinc-200' : 'bg-neutral-900 text-white border border-white/5'}`,
-    className: `relative group w-full ${colorMode === 'light' ? 'bg-white text-black rounded-md' : 'bg-neutral-950 text-white rounded-md'}`,
+    className: `relative group w-full ${
+      colorMode === 'light'
+        ? 'bg-white text-black rounded-md'
+        : 'bg-neutral-950 text-white rounded-md'
+    }`,
     ref: (el: HTMLDivElement | null) => {
       if (el) (el as any).__squatterContent = safeContent;
     },

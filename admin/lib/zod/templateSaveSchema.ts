@@ -105,8 +105,8 @@ export const TemplateSaveSchema = z.preprocess(
       team_url: nullableString,
 
       // Optional header/footer blocks (top-level mirror)
-      headerBlock: BlockSchema.optional().nullable(),
-      footerBlock: BlockSchema.optional().nullable(),
+      headerBlock: BlockSchema.nullable().optional().default(null),
+      footerBlock: BlockSchema.nullable().optional().default(null),
 
       // Was required; now optional + legacy string allowed
       pages: CoercePages.optional().default([]),

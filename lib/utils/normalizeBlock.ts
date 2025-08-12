@@ -86,7 +86,14 @@ function harmonizeContentByType(
       return tt;
     });
   }
-
+  
+  // Text block: value → html (backcompat)
+  if (type === 'text') {
+    if (typeof c.value === 'string' && !c.html && !c.json) {
+      c.html = c.value;
+      c.format = c.format ?? 'html';
+    }
+  }
   return c;
 }
 

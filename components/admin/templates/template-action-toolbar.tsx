@@ -1,9 +1,8 @@
-// components/admin/templates/template-action-toolbar.tsx
 'use client';
 
 import { useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { RotateCcw, RotateCw } from 'lucide-react';
+import { RotateCcw, RotateCw, AlertTriangle, X } from 'lucide-react';
 import { Button } from '@/components/ui';
 import { saveAsTemplate } from '@/admin/lib/saveAsTemplate';
 import { createSharedPreview } from '@/admin/lib/createSharedPreview';
@@ -13,6 +12,9 @@ import type { Template } from '@/types/template';
 import { validateTemplateAndFix } from '@/admin/lib/validateTemplate';
 import { prepareTemplateForSave } from '@/admin/lib/prepareTemplateForSave';
 import AsyncGifOverlay from '@/components/ui/async-gif-overlay';
+
+// Mirror Warning type from validateTemplateAndFix
+type SaveWarning = { field: 'headerBlock' | 'footerBlock' | string; message: string };
 
 type Props = {
   template: Template;
@@ -60,11 +62,7 @@ function stripHFPage(page: any) {
   };
 }
 
-/** Normalize for duplication/snapshot:
- *  - ensure headerBlock/footerBlock live at root
- *  - remove header/footer blocks from page bodies
- *  - keep pages synced in both places
- */
+/** Normalize for duplication/snapshot */
 function normalizeForSnapshot(t: Template): Template {
   const tpl: any = JSON.parse(JSON.stringify(t));
   const pagesIn = getPages(tpl);
@@ -84,7 +82,6 @@ function normalizeForSnapshot(t: Template): Template {
   tpl.pages = cleanedPages;
   tpl.data = { ...(tpl.data ?? {}), pages: cleanedPages };
 
-  // Respect color_mode precedence (top-level wins)
   const topMode = tpl?.color_mode;
   const nestedMode = tpl?.data?.color_mode;
   if (topMode === 'light' || topMode === 'dark') {
@@ -96,7 +93,7 @@ function normalizeForSnapshot(t: Template): Template {
   return tpl as Template;
 }
 
-/** Build the payload we send to createSharedPreview so viewers have header/footer */
+/** Build the payload for shared preview viewers */
 function buildSharedSnapshotPayload(t: Template) {
   const normalized = normalizeForSnapshot(t);
   const templateData = {
@@ -108,13 +105,7 @@ function buildSharedSnapshotPayload(t: Template) {
   return { normalized, templateData };
 }
 
-export function TemplateActionToolbar({
-  template,
-  autosaveStatus,
-  onSaveDraft,
-  onUndo,
-  onRedo,
-}: Props) {
+export function TemplateActionToolbar({ template, autosaveStatus, onSaveDraft, onUndo, onRedo }: Props) {
   const router = useRouter();
   const [status, setStatus] = useState('Draft');
   const [versions, setVersions] = useState<any[]>([]);
@@ -124,6 +115,10 @@ export function TemplateActionToolbar({
   // Overlay state for async actions (e.g., duplicate)
   const [overlayOpen, setOverlayOpen] = useState(false);
   const [overlayMsg, setOverlayMsg] = useState<string>('Working…');
+
+  // Inline warnings from last save/validate
+  const [saveWarnings, setSaveWarnings] = useState<{ field: string; message: string }[]>([]);
+  const warningTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     if (!template?.template_name) return;
@@ -142,12 +137,7 @@ export function TemplateActionToolbar({
           return;
         }
         setVersions(data ?? []);
-      })
-      // .catch((err: any) => {
-      //   if (!mounted) return;
-      //   console.warn('[Toolbar] Versions fetch failed:', err?.message || err);
-      //   setVersions([]);
-      // });
+      });
 
     setStatus(template?.published ? 'Published' : 'Draft');
 
@@ -196,13 +186,11 @@ export function TemplateActionToolbar({
         return;
       }
 
-      // Prefer slug returned by the insert; otherwise resolve by id
       const slug = created.slug ?? (created.id ? await resolveSlugForId(created.id) : null);
 
       if (slug) {
         router.push(`/template/${slug}/edit`);
       } else {
-        // fallback: take them to list so they can find it
         router.push('/admin/templates');
       }
 
@@ -245,12 +233,12 @@ export function TemplateActionToolbar({
 
   const handleSaveClick = () => {
     try {
-      // Normalize BEFORE validation; ensures header/footer at root & pages clean
       const preppedDbShape = prepareTemplateForSave
         ? prepareTemplateForSave(normalizeForSnapshot(template))
         : (template as any);
-
+  
       const check = validateTemplateAndFix(preppedDbShape);
+  
       if (!check?.valid) {
         const e = (check as any).errors;
         if (e?.issues || e?.errors) {
@@ -272,9 +260,24 @@ export function TemplateActionToolbar({
         }
         return toast.error('Validation failed — see console for details.');
       }
-
+  
+      if (check.warnings?.length) {
+        setSaveWarnings(check.warnings);
+        check.warnings.forEach((w) => toast((t) => (
+          <span className="text-yellow-500">⚠️ {w.message}</span>
+        )));
+  
+        // Auto-hide banner after 5 seconds
+        if (warningTimerRef.current) clearTimeout(warningTimerRef.current);
+        warningTimerRef.current = setTimeout(() => {
+          setSaveWarnings([]);
+        }, 5000);
+      } else {
+        setSaveWarnings([]);
+      }
+  
       onSaveDraft?.(check.data as Template);
-      // toast.success('Saved!');
+      toast.success('Saved!');
     } catch (err) {
       console.error('❌ Exception during validation:', err);
       toast.error('Validation crashed — see console.');
@@ -310,43 +313,69 @@ export function TemplateActionToolbar({
 
   return (
     <>
-      <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-40 rounded-lg bg-gray-900 border border-gray-700 px-6 py-3 shadow-xl max-w-5xl w-[95%] flex justify-between items-center text-white opacity-80">
-        <div className="text-sm font-medium flex gap-4 items-center">
-          <span
-            className={`text-xs px-2 py-1 rounded ${
-              status === 'Published' ? 'bg-green-600' : 'bg-yellow-600'
-            }`}
-          >
-            {status}
-          </span>
-          {autosaveStatus && (
-            <span className="text-xs text-gray-400 italic">💾 {autosaveStatus}</span>
-          )}
-          <Button size="icon" variant="ghost" onClick={onUndo} title="Undo (⌘Z)">
-            <RotateCcw className="w-4 h-4" />
-          </Button>
-          <Button size="icon" variant="ghost" onClick={onRedo} title="Redo (⇧⌘Z)">
-            <RotateCw className="w-4 h-4" />
-          </Button>
-        </div>
-
-        <div className="flex items-center gap-3">
-          <Button size="sm" variant="secondary" onClick={handleSaveClick}>
-            Save
-          </Button>
-
-          {/* Simple “Duplicate Site” button (no split menu) */}
-          <div className="relative" ref={menuRef}>
-            <Button
-              size="sm"
-              variant="secondary"
-              onClick={() => handleSaveAs('site')}
-              disabled={overlayOpen}
-            >
-              Duplicate Site
+      <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-40 rounded-lg bg-gray-900 border border-gray-700 px-6 py-3 shadow-xl max-w-5xl w-[95%] text-white opacity-90">
+        {/* Top row: status, autosave, undo/redo, save/duplicate */}
+        <div className="w-full flex justify-between items-center gap-3">
+          <div className="text-sm font-medium flex gap-3 items-center">
+            <span className={`text-xs px-2 py-1 rounded ${status === 'Published' ? 'bg-green-600' : 'bg-yellow-600'}`}>
+              {status}
+            </span>
+            {autosaveStatus && (
+              <span className="text-xs text-gray-400 italic">💾 {autosaveStatus}</span>
+            )}
+            <Button size="icon" variant="ghost" onClick={onUndo} title="Undo (⌘Z)">
+              <RotateCcw className="w-4 h-4" />
+            </Button>
+            <Button size="icon" variant="ghost" onClick={onRedo} title="Redo (⇧⌘Z)">
+              <RotateCw className="w-4 h-4" />
             </Button>
           </div>
+
+          {saveWarnings.length > 0 && (
+            <div className="absolute -top-10 left-0 w-full bg-yellow-100 text-yellow-800 text-xs px-4 py-2 rounded-md border border-yellow-300 flex justify-between items-start">
+              <div>
+                {saveWarnings.map((w, i) => (
+                  <div key={i}>⚠️ {w.message}</div>
+                ))}
+              </div>
+              <button onClick={() => setSaveWarnings([])} className="ml-2 text-yellow-800 hover:text-yellow-900">
+                ×
+              </button>
+            </div>
+          )}
+
+          <div className="flex items-center gap-3">
+            <Button size="sm" variant="secondary" onClick={handleSaveClick}>
+              Save
+            </Button>
+
+            {/* Simple “Duplicate Site” button (no split menu) */}
+            <div className="relative" ref={menuRef}>
+              <Button size="sm" variant="secondary" onClick={() => handleSaveAs('site')} disabled={overlayOpen}>
+                Duplicate Site
+              </Button>
+            </div>
+          </div>
         </div>
+
+        {/* Inline warnings banner (non‑blocking) */}
+        {saveWarnings.length > 0 && (
+          <div className="mt-3 rounded-md border border-yellow-500/30 bg-yellow-500/10 text-yellow-200 text-xs px-3 py-2 flex items-start gap-2">
+            <AlertTriangle className="w-4 h-4 mt-[2px] flex-none" />
+            <div className="flex-1 space-y-1">
+              {saveWarnings.map((w, i) => (
+                <div key={i}>{w.message}</div>
+              ))}
+            </div>
+            <button
+              aria-label="Dismiss warnings"
+              onClick={() => setSaveWarnings([])}
+              className="p-1 rounded hover:bg-yellow-500/20"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        )}
       </div>
 
       <AsyncGifOverlay open={overlayOpen} message={overlayMsg} />

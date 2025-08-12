@@ -1,3 +1,4 @@
+// admin/lib/zod/cleanAndValidateTemplate.ts
 import { TemplateSaveSchema } from './templateSaveSchema';
 
 // Strip fields that are not allowed in validation

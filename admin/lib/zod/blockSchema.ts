@@ -15,6 +15,30 @@ const LinkSchema = z.object({
   appearance: z.string().optional(),
 });
 
+export const TextBlockContent = z.preprocess((raw) => {
+  const c = raw && typeof raw === 'object' ? { ...(raw as any) } : {};
+  // Back‑compat: if value:string exists, map to html
+  if (typeof (c as any).value === 'string' && !c.html && !c.json) {
+    (c as any).html = (c as any).value;
+    (c as any).format = (c as any).format ?? 'html';
+  }
+  return c;
+}, z.object({
+  format: z.enum(['tiptap', 'html']).default('tiptap'),
+  json: z.record(z.any()).optional(),
+  html: z.string().optional(),
+  summary: z.string().optional(),
+  word_count: z.number().optional(),
+}));
+
+export const TextBlockSchema = z.object({
+  type: z.literal('text'),
+  content: TextBlockContent,
+  meta: z.record(z.any()).optional(),
+  tags: z.array(z.string()).default([]),
+  tone: z.string().default('neutral'),
+});
+
 export const HeaderContent = z.preprocess((raw) => {
   const c = raw && typeof raw === 'object' ? { ...(raw as any) } : {};
   if (Array.isArray(c.navItems) && !Array.isArray(c.nav_items)) c.nav_items = c.navItems;
@@ -98,7 +122,7 @@ export const blockContentSchemaMap = {
   text: {
     label: 'Text Block',
     icon: '📝',
-    schema: z.object({ value: z.string().min(1, 'Text content is required') }),
+    schema: TextBlockContent,
   },
   image: {
     label: 'Image',
@@ -394,7 +418,11 @@ export function migrateLegacyBlock(block: any): any {
   }
 
   // very old form { value: … }
-  if ('value' in block) return { ...block, content: block.value };
+  if ('value' in block) {
+    const val = (block as any).value;
+    return { ...block, content: typeof val === 'string' ? { value: val } : val };
+  }
+
   return block;
 }
 

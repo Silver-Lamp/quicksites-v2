@@ -1,4 +1,4 @@
-// lib/validateTemplate.ts
+// admin/lib/validateTemplate.ts
 'use client';
 
 import { ZodError } from 'zod';
@@ -6,6 +6,8 @@ import { TemplateSaveSchema } from './zod/templateSaveSchema';
 import type { ValidatedTemplate } from './zod/templateSaveSchema';
 import { migrateLegacyTemplate } from './migrateLegacyTemplate';
 import { canonicalizeUrlKeysDeep } from './migrations/canonicalizeUrls';
+
+type Warning = { field: 'headerBlock' | 'footerBlock'; message: string };
 
 /** Safe getter for "a.b.0.c" style paths from Zod errors */
 function getAtPath(obj: unknown, pathSegments: (string | number)[]) {
@@ -42,7 +44,7 @@ function getAllowedTemplateKeys(): string[] {
 }
 
 export type ValidateResult =
-  | { valid: true; data: ValidatedTemplate }
+| { valid: true; data: ValidatedTemplate; warnings: Warning[] }
   | {
       valid: false;
       errors:
@@ -70,25 +72,16 @@ export type ValidateResult =
  * - Provides rich diagnostics (flattened + rows with offending values)
  */
 export function validateTemplateAndFix(input: unknown): ValidateResult {
-  // Guard: must be an object
   if (!input || typeof input !== 'object') {
     return {
       valid: false,
-      errors: {
-        formErrors: ['Template is empty or invalid structure'],
-        fieldErrors: {},
-      },
+      errors: { formErrors: ['Template is empty or invalid structure'], fieldErrors: {} },
     };
   }
 
-  // 1) Migrate legacy shapes (unwrap nested .data, etc.)
   const migrated = migrateLegacyTemplate(input as Record<string, any>) ?? {};
-
-  // 2) Canonicalize url-ish keys deeply (imageUrl → image_url, etc.)
   const normalized = canonicalizeUrlKeysDeep(migrated);
 
-  // 3) Prepare a "clean" object limited to schema-known keys
-  //    NOTE: keep `.data` intact so schema preprocess can read `data.pages`.
   const allowedKeys = getAllowedTemplateKeys();
   const cleaned: Record<string, any> = {};
   for (const key of allowedKeys) {
@@ -97,24 +90,19 @@ export function validateTemplateAndFix(input: unknown): ValidateResult {
     }
   }
 
-  // 4) Remove risky server-managed fields if present (but DO NOT remove .data)
   delete cleaned.created_at;
   delete cleaned.domain;
   delete cleaned.custom_domain;
 
-  // 5) Inject safe defaults (only when missing)
   cleaned.slug ??= 'new-template-' + Math.random().toString(36).slice(2, 6);
   cleaned.template_name ??= cleaned.slug;
   cleaned.layout ??= 'standard';
   cleaned.color_scheme ??= 'neutral';
   cleaned.theme ??= 'default';
-  if (cleaned.color_mode == null) cleaned.color_mode = 'dark'; // keep consistent with save path
+  if (cleaned.color_mode == null) cleaned.color_mode = 'dark';
 
-  // 6) Validate with Zod
   const result = TemplateSaveSchema.safeParse(cleaned);
-
   if (!result.success) {
-    // Build friendly debug rows
     const rows = result.error.errors.map((e) => ({
       path: e.path.join('.'),
       code: e.code,
@@ -122,43 +110,47 @@ export function validateTemplateAndFix(input: unknown): ValidateResult {
       value: getAtPath(cleaned, e.path),
     }));
 
-    // Console diagnostics (collapsed)
     console.groupCollapsed('❌ [validateTemplateAndFix] schema errors');
-    try {
-      console.table(rows);
-    } catch {
-      console.log(rows);
-    }
+    try { console.table(rows); } catch { console.log(rows); }
     console.groupEnd();
 
-    return {
-      valid: false,
-      errors: {
-        ...result.error.flatten(),
-        rows,
-      },
-    };
+    return { valid: false, errors: { ...result.error.flatten(), rows } };
   }
 
-  // 7) Post-parse normalization: ensure data.pages exists
+  // --- success path ---
   const t: any = result.data;
 
+  // Ensure data.pages exists
   if (!Array.isArray(t?.data?.pages)) {
     if (Array.isArray(t.pages)) {
       t.data = { ...(t.data ?? {}), pages: t.pages };
     } else if (typeof t.pages === 'string') {
-      try {
-        t.data = { ...(t.data ?? {}), pages: JSON.parse(t.pages) };
-      } catch {
-        t.data = { ...(t.data ?? {}), pages: [] };
-      }
+      try { t.data = { ...(t.data ?? {}), pages: JSON.parse(t.pages) }; }
+      catch { t.data = { ...(t.data ?? {}), pages: [] }; }
     } else {
       t.data = { ...(t.data ?? {}), pages: [] };
     }
   }
 
-  return {
-    valid: true,
-    data: t as ValidatedTemplate,
-  };
+  // ⬇️ Non-blocking warnings (do not fail validation)
+  const warnings: Warning[] = [];
+  const hasHeader = !!(t.headerBlock ?? t.data?.headerBlock);
+  const hasFooter = !!(t.footerBlock ?? t.data?.footerBlock);
+
+  if (!hasHeader) {
+    warnings.push({
+      field: 'headerBlock',
+      message:
+        'Global header is missing. Pages will render without a header unless a per-page override is set.',
+    });
+  }
+  if (!hasFooter) {
+    warnings.push({
+      field: 'footerBlock',
+      message:
+        'Global footer is missing. Pages will render without a footer unless a per-page override is set.',
+    });
+  }
+
+  return { valid: true, data: t as ValidatedTemplate, warnings };
 }

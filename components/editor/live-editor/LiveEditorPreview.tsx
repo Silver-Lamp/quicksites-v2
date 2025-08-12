@@ -16,6 +16,7 @@ import type { Template, Page } from '@/types/template';
 import type { BlockValidationError } from '@/hooks/validateTemplateBlocks';
 import { createDefaultBlock } from '@/lib/createDefaultBlock';
 import { DynamicBlockEditor } from '@/components/editor/dynamic-block-editor';
+import Portal from '@/components/ui/portal';
 
 export default function LiveEditorPreview({
   template,
@@ -47,6 +48,12 @@ export default function LiveEditorPreview({
   const hasBlocks = (selectedPage?.content_blocks?.length ?? 0) > 0;
 
   const { isImmersive, enterImmersive, exitImmersive } = useImmersive();
+
+  useEffect(() => {
+    const root = document.documentElement;
+    if (editing) root.classList.add('qs-modal-open');
+    return () => root.classList.remove('qs-modal-open');
+  }, [editing]);
 
   useEffect(() => {
     document.documentElement.classList.toggle('dark', resolvedColorMode === 'dark');
@@ -286,37 +293,44 @@ export default function LiveEditorPreview({
         </div>
 
         {editing && (
-          <div className="fixed inset-0 bg-black/90 z-[999] p-6 overflow-auto flex items-center justify-center">
-            <div className="w-full max-w-4xl bg-neutral-900 border border-white/10 rounded-xl shadow-xl overflow-hidden">
-            <DynamicBlockEditor
-                block={editing}
-                onSave={(updatedBlock: any) => {
-                  const updatedPage = {
-                    ...selectedPage,
-                    content_blocks: (selectedPage?.content_blocks ?? []).map((b: any) =>
-                      b._id === updatedBlock._id ? updatedBlock : b
-                    ),
-                  };
-                  const next = withSyncedPages({
-                    ...template,
-                    color_mode: resolvedColorMode,
-                    data: {
-                      ...(template.data ?? {}),
-                      pages: pages.map((p: any, idx: number) =>
-                        idx === selectedPageIndex ? updatedPage : p
-                      ),
-                    },
-                  } as Template);
-                  updateAndSave(next);
-                  setEditing(null);
-                }}
-                onClose={() => setEditing(null)}
-                errors={errors}
-                template={template}
-              />
-            </div>
-          </div>
-        )}
+            <Portal>
+                <div
+                className={[
+                    resolvedColorMode === 'dark' ? 'dark' : '',
+                    'fixed inset-0 z-[1200] bg-black/90 p-6 overflow-auto flex items-center justify-center',
+                ].join(' ')}
+                >
+                <div className="w-full max-w-4xl bg-neutral-900 border border-white/10 rounded-xl shadow-xl overflow-hidden">
+                    <DynamicBlockEditor
+                    block={editing}
+                    onSave={(updatedBlock: any) => {
+                        const updatedPage = {
+                        ...selectedPage,
+                        content_blocks: (selectedPage?.content_blocks ?? []).map((b: any) =>
+                            b._id === updatedBlock._id ? updatedBlock : b
+                        ),
+                        };
+                        const next = withSyncedPages({
+                        ...template,
+                        color_mode: resolvedColorMode,
+                        data: {
+                            ...(template.data ?? {}),
+                            pages: pages.map((p: any, idx: number) =>
+                            idx === selectedPageIndex ? updatedPage : p
+                            ),
+                        },
+                        } as Template);
+                        updateAndSave(next);
+                        setEditing(null);
+                    }}
+                    onClose={() => setEditing(null)}
+                    errors={errors}
+                    template={template}
+                    />
+                </div>
+                </div>
+            </Portal>
+            )}
       </div>
     </TemplateThemeWrapper>
   );

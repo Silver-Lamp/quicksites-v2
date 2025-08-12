@@ -7,6 +7,11 @@ const RelativeOrAbsoluteUrl = z.string().min(1).refine(
   { message: 'Link must start with http(s)://, /, #, mailto:, or tel:' }
 );
 
+const urlOptional = z.preprocess(
+  (v) => (typeof v === 'string' && v.trim() === '' ? undefined : v),
+  z.string().url('Kitchen video URL must be valid').optional()
+);
+
 // Shared link schema (now tolerant + default)
 const LinkSchema = z.object({
   label: z.string().min(1, 'Label is required'),
@@ -319,7 +324,7 @@ export const blockContentSchemaMap = {
       name: z.string().min(1),
       location: z.string().min(1),
       profile_image_url: z.string().url('Profile image URL must be valid'),
-      kitchen_video_url: z.string().url('Kitchen video URL must be valid').optional(),
+      kitchen_video_url: urlOptional,
       bio: z.string().min(1),
       certifications: z.array(z.string()).min(1),
       meals: z.array(ChefMealSchema).min(1),

@@ -12,6 +12,7 @@ const __dirname = path.dirname(__filename);
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   assetPrefix: '/',
+
   images: {
     domains: [
       'randomuser.me',
@@ -22,6 +23,10 @@ const nextConfig = {
       'placekitten.com',
       'placehold.co',
     ],
+    /** ✅ Allow SVGs (you said you’re comfortable with the risk) */
+    dangerouslyAllowSVG: true,
+    /** ✅ Lock SVGs down so scripts inside them can’t run */
+    contentSecurityPolicy: "default-src 'self'; script-src 'none'; sandbox;",
   },
 
   webpack(config, { isServer }) {
@@ -80,20 +85,14 @@ const nextConfig = {
 
   async redirects() {
     const isLocal = process.env.NODE_ENV === 'development';
-  
     return isLocal
-      ? [] // ⛔ No redirect during local dev
+      ? []
       : [
           {
             source: '/:path*',
-            has: [
-              {
-                type: 'host',
-                value: '^(?!www\\.).*', // match non-www domains
-              },
-            ],
+            has: [{ type: 'host', value: '^(?!www\\.).*' }],
             destination: 'https://www.:host/:path*',
-            permanent: true, // ✅ Permanent redirect 301
+            permanent: true,
           },
         ];
   },

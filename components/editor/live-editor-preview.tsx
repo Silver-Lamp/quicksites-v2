@@ -677,7 +677,7 @@ export function LiveEditorPreview({
             <div className="w-full max-w-4xl bg-neutral-900 border border-white/10 rounded-xl shadow-xl overflow-hidden">
               <DynamicBlockEditor
                 block={editing}
-                onSave={(updatedBlock) => {
+                onSave={(updatedBlock: any) => {
                   const updatedPage = {
                     ...selectedPage,
                     content_blocks: (selectedPage?.content_blocks ?? []).map((b: any) =>
@@ -700,6 +700,7 @@ export function LiveEditorPreview({
                 onClose={() => setEditing(null)}
                 errors={errors}
                 template={template}
+                colorMode={resolvedColorMode}
               />
             </div>
           </div>

@@ -32,6 +32,8 @@ export const BLOCK_EDITORS: Record<
   header: () => import('./header-editor'),
   faq: () => import('./faq-editor'),
   contact_form: () => import('./contact-form-editor').then(mod => ({ default: mod.ContactFormEditor })),
+  meal_card: () => import('./meal-card-editor'),
+  chef_profile: () => import('./chef-profile-editor'),
 };
 
 // 🧠 Optional preloader for a single block type (for speed optimization)

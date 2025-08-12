@@ -128,6 +128,8 @@ export default function TemplatePageEditor({
     setCollapsedPages(collapsed);
   };
 
+  const resolvedColorMode = template?.color_mode || 'dark';
+
   return (
     <div className="space-y-6 border-gray-700 rounded p-4">
       {/* … existing banner, page loop, etc … */}
@@ -203,7 +205,7 @@ export default function TemplatePageEditor({
           <div className="w-full max-w-4xl bg-neutral-900 border border-white/10 rounded-xl shadow-xl overflow-hidden">
             <DynamicBlockEditor
               block={editingBlock}
-              onSave={(updatedBlock) => {
+              onSave={(updatedBlock: any) => {
                 const pageIdx =
                   editingPageIndex ??
                   pages.findIndex((p) =>
@@ -227,6 +229,7 @@ export default function TemplatePageEditor({
               onClose={() => setEditingBlock(null)}
               errors={blockErrors}
               template={template}
+              colorMode={resolvedColorMode}
             />
           </div>
         </div>

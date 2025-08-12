@@ -38,6 +38,8 @@ export default function GlobalChromeEditors({ template, onChange, onSaveTemplate
   const hasHeader = !!template.headerBlock;
   const hasFooter = !!template.footerBlock;
 
+  const resolvedColorMode = template?.color_mode || 'dark';
+
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
       <Card className="p-3 bg-zinc-900 border border-zinc-700 hover:border-purple-500 transition-colors">
@@ -94,7 +96,8 @@ export default function GlobalChromeEditors({ template, onChange, onSaveTemplate
               block={draftBlock}
               template={template}
               errors={{}}
-              onSave={async (updated) => {
+              colorMode={resolvedColorMode}
+              onSave={async (updated: any) => {
                 const next: Template =
                   editing === 'header'
                     ? { ...template, headerBlock: updated as any }

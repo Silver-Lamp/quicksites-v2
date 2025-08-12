@@ -20,40 +20,48 @@ export type RichTextValue = {
   html?: string;
 };
 
-function buildEditorClass(tight: boolean) {
-  const base = [
-    'prose prose-slate dark:prose-invert',
-    'max-w-none min-h-[240px] rounded-xl outline-none',
-    'bg-white text-zinc-900 dark:bg-zinc-900 dark:text-zinc-100',
-    'leading-relaxed text-[15px]',
-  ];
-  const comfy = [
-    'prose-p:my-3 prose-ul:my-3 prose-ol:my-3 prose-blockquote:my-4',
-    'prose-headings:my-3 prose-h2:mt-4 prose-h2:mb-2 prose-h3:my-2',
-  ];
-  const compact = [
-    'prose-p:my-1 prose-ul:my-1 prose-ol:my-1 prose-blockquote:my-2',
-    'prose-headings:my-2 prose-h2:mt-3 prose-h2:mb-1 prose-h3:my-1',
-  ];
-  return [...base, ...(tight ? compact : comfy)].join(' ');
-}
+// Build classes without depending on "dark:" inheritance
+function buildEditorClass(tight: boolean, isDark: boolean) {
+    const base = [
+      'prose prose-slate',
+      'max-w-none min-h-[240px]',
+      // no inner rounding/borders; also kill any focus outline/ring entirely
+      'rounded-none border-0 ring-0 outline-none focus:outline-none focus-visible:outline-none focus:ring-0 focus-visible:ring-0',
+      isDark ? 'bg-neutral-900 text-neutral-100' : 'bg-white text-zinc-900',
+      'px-4 py-3',
+      'leading-relaxed text-[15px]',
+    ];
+    const comfy = [
+      'prose-p:my-3 prose-ul:my-3 prose-ol:my-3 prose-blockquote:my-4',
+      'prose-headings:my-3 prose-h2:mt-4 prose-h2:mb-2 prose-h3:my-2',
+    ];
+    const compact = [
+      'prose-p:my-1 prose-ul:my-1 prose-ol:my-1 prose-blockquote:my-2',
+      'prose-headings:my-2 prose-h2:mt-3 prose-h2:mb-1 prose-h3:my-1',
+    ];
+    if (isDark) base.push('prose-invert');
+    return [...base, ...(tight ? compact : comfy)].join(' ');
+  }
+  
 
 export default function RichTextEditor({
   value,
   onChange,
   onSave,           // Shift+Enter
-  onCancel,         // Esc key to cancel
+  onCancel,         // Esc
   placeholder = '',
   onUploadImage,
-}: {    
+  colorMode,        // 'dark' by default
+}: {
   value: RichTextValue;
   onChange: (next: RichTextValue & { word_count?: number }) => void;
   onSave?: () => void;
   onCancel?: () => void;
   placeholder?: string;
   onUploadImage?: (file: File) => Promise<string>;
+  colorMode?: 'light' | 'dark';
 }) {
-  // NEW: tight spacing toggle with persistence
+  // Tight spacing toggle with persistence
   const [tightSpacing, setTightSpacing] = useState<boolean>(() => {
     if (typeof window === 'undefined') return false;
     const saved = window.localStorage.getItem('qs_rte_tight');
@@ -65,23 +73,29 @@ export default function RichTextEditor({
     }
   }, [tightSpacing]);
 
-  const builtExtensions = useMemo(() => ([
-    StarterKit,
-    Underline,
-    Typography,
-    TaskList,
-    TaskItem,
-    CharacterCount.configure({ limit: 0 }),
-    TextAlign.configure({ types: ['heading', 'paragraph'] }),
-    Link.configure({
-      openOnClick: false,
-      autolink: true,
-      linkOnPaste: true,
-      HTMLAttributes: { rel: 'noopener noreferrer', target: '_blank' },
-    }),
-    Image.configure({ inline: false }),
-    Placeholder.configure({ placeholder }),
-  ]), [placeholder]);
+  // Default to dark if nothing is provided
+  const isDark = (colorMode ?? 'dark') === 'dark';
+
+  const builtExtensions = useMemo(
+    () => [
+      StarterKit,
+      Underline,
+      Typography,
+      TaskList,
+      TaskItem,
+      CharacterCount.configure({ limit: 0 }),
+      TextAlign.configure({ types: ['heading', 'paragraph'] }),
+      Link.configure({
+        openOnClick: false,
+        autolink: true,
+        linkOnPaste: true,
+        HTMLAttributes: { rel: 'noopener noreferrer', target: '_blank' },
+      }),
+      Image.configure({ inline: false }),
+      Placeholder.configure({ placeholder }),
+    ],
+    [placeholder]
+  );
 
   const extensions = useMemo(() => {
     const seen = new Set<string>();
@@ -100,21 +114,13 @@ export default function RichTextEditor({
     content: '<p></p>',
     editorProps: {
       attributes: {
-        class: [
-          'prose prose-slate dark:prose-invert',
-          'max-w-none min-h-[240px] rounded-xl outline-none',
-          'bg-white text-zinc-900',
-          'dark:bg-zinc-900 dark:text-zinc-100',
-          'leading-relaxed text-[15px]',
-          // your tight/comfy classes if you added them
-        ].join(' '),
+        class: buildEditorClass(tightSpacing, isDark),
       },
       handleKeyDown: (_view, event) => {
         // Ignore while composing (IME)
-        // // @ts-expect-error TS doesn't know isComposing on KeyboardEvent
+        // // @ts-expect-error
         if ((event as any).isComposing) return false;
 
-        // Esc → Cancel
         if (event.key === 'Escape') {
           if (onCancel) {
             event.preventDefault();
@@ -124,14 +130,12 @@ export default function RichTextEditor({
           return false;
         }
 
-        // Shift+Enter → Save
         if (event.key === 'Enter' && event.shiftKey) {
           event.preventDefault();
           onSave?.();
           return true;
         }
 
-        // Let Enter create paragraphs normally
         return false;
       },
     },
@@ -144,7 +148,7 @@ export default function RichTextEditor({
     },
   });
 
-  // Flip editor root classes when the toggle changes
+  // Reflect spacing changes live
   useEffect(() => {
     if (!editor) return;
     editor.setOptions({
@@ -152,30 +156,45 @@ export default function RichTextEditor({
         ...editor.options.editorProps,
         attributes: {
           ...(editor.options.editorProps?.attributes ?? {}),
-          class: buildEditorClass(tightSpacing),
+          class: buildEditorClass(tightSpacing, isDark),
         },
       },
     });
-  }, [editor, tightSpacing]);
+  }, [editor, tightSpacing, isDark]);
 
-  // Seed content after mount to avoid hydration mismatch
+  // Seed content
   useEffect(() => {
     if (!editor) return;
-    if (value?.json) editor.commands.setContent(value.json, { parseOptions: { preserveWhitespace: 'full' } });
-    else if (value?.html) editor.commands.setContent(value.html, { parseOptions: { preserveWhitespace: 'full' } });
+    if (value?.json)
+      editor.commands.setContent(value.json, { parseOptions: { preserveWhitespace: 'full' } });
+    else if (value?.html)
+      editor.commands.setContent(value.html, { parseOptions: { preserveWhitespace: 'full' } });
   }, [editor, value?.json, value?.html]);
 
   if (!editor) return null;
 
   return (
-    <div className="rounded-2xl border border-zinc-200 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+    <div
+    className={[
+        'rounded-2xl border overflow-hidden shadow-sm',
+        isDark ? 'bg-neutral-950 border-neutral-800' : 'bg-white border-zinc-200',
+    ].join(' ')}
+    >
       <Toolbar
         editor={editor}
         tightSpacing={tightSpacing}
         onToggleTight={() => setTightSpacing((t) => !t)}
+        isDark={isDark}
       />
-      <EditorContent editor={editor} />
-      <div className="flex items-center justify-between px-3 py-2 text-xs text-zinc-500 dark:text-zinc-400">
+    <div className={isDark ? 'bg-neutral-900' : 'bg-white'}>
+        <EditorContent editor={editor} />
+    </div>
+      <div
+        className={[
+            'flex items-center justify-between px-3 py-2 text-xs',
+            isDark ? 'text-neutral-400 bg-neutral-900' : 'text-zinc-500 bg-white',
+        ].join(' ')}
+        >
         <span>{(editor.storage.characterCount as any).words?.() ?? ''} words</span>
         <span>{(editor.storage.characterCount as any).characters?.() ?? ''} chars</span>
       </div>
@@ -187,21 +206,32 @@ function Toolbar({
   editor,
   tightSpacing,
   onToggleTight,
+  isDark,
 }: {
   editor: Editor;
   tightSpacing: boolean;
   onToggleTight: () => void;
+  isDark: boolean;
 }) {
-  const Btn = (props: { active?: boolean; onClick: () => void; children: React.ReactNode; title?: string }) => (
+  const Btn = (props: {
+    active?: boolean;
+    onClick: () => void;
+    children: React.ReactNode;
+    title?: string;
+  }) => (
     <button
       type="button"
       title={props.title}
       onClick={props.onClick}
       className={[
         'px-2 py-1 rounded-md text-sm transition',
-        'hover:bg-zinc-100 text-zinc-700',
-        'dark:hover:bg-zinc-800 dark:text-zinc-200',
-        props.active ? 'bg-zinc-200 dark:bg-zinc-700' : '',
+        props.active
+          ? isDark
+            ? 'bg-neutral-700 text-neutral-200'
+            : 'bg-zinc-200 text-zinc-700'
+          : isDark
+          ? 'text-neutral-200 hover:bg-neutral-800'
+          : 'text-zinc-700 hover:bg-zinc-100',
       ].join(' ')}
     >
       {props.children}
@@ -209,7 +239,12 @@ function Toolbar({
   );
 
   return (
-    <div className="flex flex-wrap gap-1 border-b border-zinc-200 px-2 py-2 dark:border-zinc-800">
+    <div
+    className={[
+        'flex flex-wrap gap-1 px-2 py-2 border-b',
+        isDark ? 'border-neutral-800 bg-neutral-900' : 'border-zinc-200 bg-white',
+    ].join(' ')}
+    >
       <Btn active={editor.isActive('bold')} onClick={() => editor.chain().focus().toggleBold().run()} title="Bold">B</Btn>
       <Btn active={editor.isActive('italic')} onClick={() => editor.chain().focus().toggleItalic().run()} title="Italic">I</Btn>
       <Btn active={editor.isActive('underline')} onClick={() => editor.chain().focus().toggleUnderline().run()} title="Underline">U</Btn>
@@ -222,13 +257,28 @@ function Toolbar({
       <Btn onClick={() => editor.chain().focus().toggleBlockquote().run()} title="Blockquote">❝</Btn>
       <Btn onClick={() => editor.chain().focus().undo().run()} title="Undo">↶</Btn>
       <Btn onClick={() => editor.chain().focus().redo().run()} title="Redo">↷</Btn>
-      <Btn onClick={() => { const url = window.prompt('Image URL'); if (url) editor.chain().focus().setImage({ src: url }).run(); }} title="Insert image">🖼</Btn>
-      <Btn onClick={() => { const url = window.prompt('Add link'); if (url) editor.chain().focus().extendMarkRange('link').setLink({ href: url }).run(); }} title="Add link">🔗</Btn>
+      <Btn
+        onClick={() => {
+          const url = window.prompt('Image URL');
+          if (url) editor.chain().focus().setImage({ src: url }).run();
+        }}
+        title="Insert image"
+      >
+        🖼
+      </Btn>
+      <Btn
+        onClick={() => {
+          const url = window.prompt('Add link');
+          if (url) editor.chain().focus().extendMarkRange('link').setLink({ href: url }).run();
+        }}
+        title="Add link"
+      >
+        🔗
+      </Btn>
       <Btn onClick={() => editor.chain().focus().unsetLink().run()} title="Remove link">⛓</Btn>
       <Btn onClick={() => editor.chain().focus().clearNodes().unsetAllMarks().run()} title="Clear formatting">Clear</Btn>
 
-      {/* NEW: Tight spacing toggle */}
-      <span className="mx-1 w-px self-stretch bg-zinc-200 dark:bg-zinc-800" />
+      <span className={['mx-1 w-px self-stretch', isDark ? 'bg-neutral-800' : 'bg-zinc-200'].join(' ')} />
       <Btn active={tightSpacing} onClick={onToggleTight} title="Toggle tight spacing">Tight Spacing</Btn>
     </div>
   );

@@ -30,6 +30,8 @@ export default function PageSettingsModal({ open, page, onClose, onSave, templat
 
   const overridesEnabled = Boolean(local.headerOverride || local.footerOverride);
 
+  const resolvedColorMode = template?.color_mode || 'dark';
+
   return (
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="max-w-3xl">
@@ -115,6 +117,7 @@ export default function PageSettingsModal({ open, page, onClose, onSave, templat
                     errors={errors}
                     onSave={(b) => set('headerOverride', b as any)}
                     onClose={() => {}}
+                    colorMode={resolvedColorMode}
                   />
                 </div>
                 <div className="rounded border p-2">
@@ -125,6 +128,7 @@ export default function PageSettingsModal({ open, page, onClose, onSave, templat
                     errors={errors}
                     onSave={(b) => set('footerOverride', b as any)}
                     onClose={() => {}}
+                    colorMode={resolvedColorMode}
                   />
                 </div>
               </div>

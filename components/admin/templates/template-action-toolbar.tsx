@@ -344,7 +344,9 @@ export function TemplateActionToolbar({ template, autosaveStatus, onSaveDraft, o
 
   return (
     <>
-      <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-40 rounded-lg bg-gray-900 border border-gray-700 px-6 py-3 shadow-xl max-w-5xl w-[95%] text-white opacity-90">
+      <div 
+        id="template-action-toolbar" 
+        className="fixed bottom-4 left-1/2 -translate-x-1/2 z-40 rounded-lg bg-gray-900 border border-gray-700 px-6 py-3 shadow-xl max-w-5xl w-[95%] text-white opacity-90">
         <div className="w-full flex justify-between items-center gap-3">
           <div className="text-sm font-medium flex gap-3 items-center">
             <span className={`text-xs px-2 py-1 rounded ${status === 'Published' ? 'bg-green-600' : 'bg-yellow-600'}`}>

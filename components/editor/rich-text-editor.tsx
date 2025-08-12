@@ -1,7 +1,7 @@
 // components/editor/rich-text-editor.tsx
 'use client';
 
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { EditorContent, useEditor, Editor } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Underline from '@tiptap/extension-underline';
@@ -20,20 +20,51 @@ export type RichTextValue = {
   html?: string;
 };
 
+function buildEditorClass(tight: boolean) {
+  const base = [
+    'prose prose-slate dark:prose-invert',
+    'max-w-none min-h-[240px] rounded-xl outline-none',
+    'bg-white text-zinc-900 dark:bg-zinc-900 dark:text-zinc-100',
+    'leading-relaxed text-[15px]',
+  ];
+  const comfy = [
+    'prose-p:my-3 prose-ul:my-3 prose-ol:my-3 prose-blockquote:my-4',
+    'prose-headings:my-3 prose-h2:mt-4 prose-h2:mb-2 prose-h3:my-2',
+  ];
+  const compact = [
+    'prose-p:my-1 prose-ul:my-1 prose-ol:my-1 prose-blockquote:my-2',
+    'prose-headings:my-2 prose-h2:mt-3 prose-h2:mb-1 prose-h3:my-1',
+  ];
+  return [...base, ...(tight ? compact : comfy)].join(' ');
+}
+
 export default function RichTextEditor({
   value,
   onChange,
-  onSave, // NEW: used when Shift+Enter is pressed
-  placeholder = 'Write something great…',
+  onSave,           // Shift+Enter
+  onCancel,         // Esc key to cancel
+  placeholder = '',
   onUploadImage,
-}: {
+}: {    
   value: RichTextValue;
   onChange: (next: RichTextValue & { word_count?: number }) => void;
   onSave?: () => void;
+  onCancel?: () => void;
   placeholder?: string;
   onUploadImage?: (file: File) => Promise<string>;
 }) {
-  // Build + de‑dupe extensions to avoid duplicate name warnings
+  // NEW: tight spacing toggle with persistence
+  const [tightSpacing, setTightSpacing] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return false;
+    const saved = window.localStorage.getItem('qs_rte_tight');
+    return saved ? saved === '1' : false;
+  });
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      window.localStorage.setItem('qs_rte_tight', tightSpacing ? '1' : '0');
+    }
+  }, [tightSpacing]);
+
   const builtExtensions = useMemo(() => ([
     StarterKit,
     Underline,
@@ -65,7 +96,7 @@ export default function RichTextEditor({
 
   const editor = useEditor({
     extensions,
-    immediatelyRender: false, // SSR‑safe
+    immediatelyRender: false,
     content: '<p></p>',
     editorProps: {
       attributes: {
@@ -74,24 +105,33 @@ export default function RichTextEditor({
           'max-w-none min-h-[240px] rounded-xl outline-none',
           'bg-white text-zinc-900',
           'dark:bg-zinc-900 dark:text-zinc-100',
-          'leading-relaxed text-[15px]'
+          'leading-relaxed text-[15px]',
+          // your tight/comfy classes if you added them
         ].join(' '),
       },
-      // ⬇️ Keyboard behavior overrides
       handleKeyDown: (_view, event) => {
-        // SHIFT+ENTER → Save
+        // Ignore while composing (IME)
+        // // @ts-expect-error TS doesn't know isComposing on KeyboardEvent
+        if ((event as any).isComposing) return false;
+
+        // Esc → Cancel
+        if (event.key === 'Escape') {
+          if (onCancel) {
+            event.preventDefault();
+            onCancel();
+            return true;
+          }
+          return false;
+        }
+
+        // Shift+Enter → Save
         if (event.key === 'Enter' && event.shiftKey) {
           event.preventDefault();
           onSave?.();
           return true;
         }
-        // ENTER → single line break (hardBreak)
-        if (event.key === 'Enter' && !event.shiftKey) {
-          event.preventDefault();
-          // Use hard break so it looks like 1 line (no paragraph margins)
-          editor?.chain().focus().setHardBreak().run();
-          return true;
-        }
+
+        // Let Enter create paragraphs normally
         return false;
       },
     },
@@ -104,6 +144,20 @@ export default function RichTextEditor({
     },
   });
 
+  // Flip editor root classes when the toggle changes
+  useEffect(() => {
+    if (!editor) return;
+    editor.setOptions({
+      editorProps: {
+        ...editor.options.editorProps,
+        attributes: {
+          ...(editor.options.editorProps?.attributes ?? {}),
+          class: buildEditorClass(tightSpacing),
+        },
+      },
+    });
+  }, [editor, tightSpacing]);
+
   // Seed content after mount to avoid hydration mismatch
   useEffect(() => {
     if (!editor) return;
@@ -115,7 +169,11 @@ export default function RichTextEditor({
 
   return (
     <div className="rounded-2xl border border-zinc-200 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
-      <Toolbar editor={editor} />
+      <Toolbar
+        editor={editor}
+        tightSpacing={tightSpacing}
+        onToggleTight={() => setTightSpacing((t) => !t)}
+      />
       <EditorContent editor={editor} />
       <div className="flex items-center justify-between px-3 py-2 text-xs text-zinc-500 dark:text-zinc-400">
         <span>{(editor.storage.characterCount as any).words?.() ?? ''} words</span>
@@ -125,10 +183,19 @@ export default function RichTextEditor({
   );
 }
 
-function Toolbar({ editor }: { editor: Editor }) {
-  const Btn = (props: { active?: boolean; onClick: () => void; children: React.ReactNode }) => (
+function Toolbar({
+  editor,
+  tightSpacing,
+  onToggleTight,
+}: {
+  editor: Editor;
+  tightSpacing: boolean;
+  onToggleTight: () => void;
+}) {
+  const Btn = (props: { active?: boolean; onClick: () => void; children: React.ReactNode; title?: string }) => (
     <button
       type="button"
+      title={props.title}
       onClick={props.onClick}
       className={[
         'px-2 py-1 rounded-md text-sm transition',
@@ -140,24 +207,29 @@ function Toolbar({ editor }: { editor: Editor }) {
       {props.children}
     </button>
   );
+
   return (
     <div className="flex flex-wrap gap-1 border-b border-zinc-200 px-2 py-2 dark:border-zinc-800">
-      <Btn active={editor.isActive('bold')} onClick={() => editor.chain().focus().toggleBold().run()}>B</Btn>
-      <Btn active={editor.isActive('italic')} onClick={() => editor.chain().focus().toggleItalic().run()}>I</Btn>
-      <Btn active={editor.isActive('underline')} onClick={() => editor.chain().focus().toggleUnderline().run()}>U</Btn>
-      <Btn active={editor.isActive('strike')} onClick={() => editor.chain().focus().toggleStrike().run()}>S</Btn>
-      <Btn onClick={() => editor.chain().focus().setParagraph().run()}>P</Btn>
-      <Btn active={editor.isActive('heading', { level: 2 })} onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}>H2</Btn>
-      <Btn active={editor.isActive('heading', { level: 3 })} onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()}>H3</Btn>
-      <Btn onClick={() => editor.chain().focus().toggleBulletList().run()}>• List</Btn>
-      <Btn onClick={() => editor.chain().focus().toggleOrderedList().run()}>1. List</Btn>
-      <Btn onClick={() => editor.chain().focus().toggleBlockquote().run()}>❝</Btn>
-      <Btn onClick={() => editor.chain().focus().undo().run()}>↶</Btn>
-      <Btn onClick={() => editor.chain().focus().redo().run()}>↷</Btn>
-      <Btn onClick={() => { const url = window.prompt('Image URL'); if (url) editor.chain().focus().setImage({ src: url }).run(); }}>🖼</Btn>
-      <Btn onClick={() => { const url = window.prompt('Add link'); if (url) editor.chain().focus().extendMarkRange('link').setLink({ href: url }).run(); }}>🔗</Btn>
-      <Btn onClick={() => editor.chain().focus().unsetLink().run()}>⛓</Btn>
-      <Btn onClick={() => editor.chain().focus().clearNodes().unsetAllMarks().run()}>Clear</Btn>
+      <Btn active={editor.isActive('bold')} onClick={() => editor.chain().focus().toggleBold().run()} title="Bold">B</Btn>
+      <Btn active={editor.isActive('italic')} onClick={() => editor.chain().focus().toggleItalic().run()} title="Italic">I</Btn>
+      <Btn active={editor.isActive('underline')} onClick={() => editor.chain().focus().toggleUnderline().run()} title="Underline">U</Btn>
+      <Btn active={editor.isActive('strike')} onClick={() => editor.chain().focus().toggleStrike().run()} title="Strike">S</Btn>
+      <Btn onClick={() => editor.chain().focus().setParagraph().run()} title="Paragraph">P</Btn>
+      <Btn active={editor.isActive('heading', { level: 2 })} onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()} title="Heading 2">H2</Btn>
+      <Btn active={editor.isActive('heading', { level: 3 })} onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()} title="Heading 3">H3</Btn>
+      <Btn onClick={() => editor.chain().focus().toggleBulletList().run()} title="Bulleted list">• List</Btn>
+      <Btn onClick={() => editor.chain().focus().toggleOrderedList().run()} title="Ordered list">1. List</Btn>
+      <Btn onClick={() => editor.chain().focus().toggleBlockquote().run()} title="Blockquote">❝</Btn>
+      <Btn onClick={() => editor.chain().focus().undo().run()} title="Undo">↶</Btn>
+      <Btn onClick={() => editor.chain().focus().redo().run()} title="Redo">↷</Btn>
+      <Btn onClick={() => { const url = window.prompt('Image URL'); if (url) editor.chain().focus().setImage({ src: url }).run(); }} title="Insert image">🖼</Btn>
+      <Btn onClick={() => { const url = window.prompt('Add link'); if (url) editor.chain().focus().extendMarkRange('link').setLink({ href: url }).run(); }} title="Add link">🔗</Btn>
+      <Btn onClick={() => editor.chain().focus().unsetLink().run()} title="Remove link">⛓</Btn>
+      <Btn onClick={() => editor.chain().focus().clearNodes().unsetAllMarks().run()} title="Clear formatting">Clear</Btn>
+
+      {/* NEW: Tight spacing toggle */}
+      <span className="mx-1 w-px self-stretch bg-zinc-200 dark:bg-zinc-800" />
+      <Btn active={tightSpacing} onClick={onToggleTight} title="Toggle tight spacing">Tight Spacing</Btn>
     </div>
   );
 }

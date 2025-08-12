@@ -23,20 +23,20 @@ export default function TextRender({
   const text = !html && typeof c?.value === 'string' ? c.value : '';
 
   const empty = (!html || html.trim() === '') && (!text || text.trim() === '');
-  if (empty) {
-    return (
-      <div
-        className={[
-          'italic text-sm p-2 rounded',
-          colorMode === 'dark'
-            ? 'text-red-300 bg-red-900/30'
-            : 'text-red-700 bg-red-50',
-        ].join(' ')}
-      >
-        ⚠️ Missing text block content.
-      </div>
-    );
-  }
+  // if (empty) {
+  //   return (
+  //     <div
+  //       className={[
+  //         'italic text-sm p-2 rounded',
+  //         colorMode === 'dark'
+  //           ? 'text-red-300 bg-red-900/30'
+  //           : 'text-red-700 bg-red-50',
+  //       ].join(' ')}
+  //     >
+  //       ⚠️ Missing text block content.
+  //     </div>
+  //   );
+  // }
 
   const size = compact ? 'prose-sm' : 'prose-lg';
 

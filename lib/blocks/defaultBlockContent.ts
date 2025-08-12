@@ -4,7 +4,7 @@ import type { BlockType } from '@/types/blocks';
 // Keep this aligned with the block types you actually support.
 // If you add/remove a block type, update this object (or your BlockType union).
 export const DEFAULT_BLOCK_CONTENT = {
-  text: { value: 'Write something great…' },
+  text: { value: '' },
 
   image: { url: 'https://placehold.co/800x400', alt: '' },
 

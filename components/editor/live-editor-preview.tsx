@@ -299,6 +299,7 @@ export function LiveEditorPreview({
 
   const selectedPageIndex = Math.max(0, pages.findIndex((p: any) => p.id === selectedPageId));
   const selectedPage = pages[selectedPageIndex] ?? null;
+  const hasBlocks = (selectedPage?.content_blocks?.length ?? 0) > 0;
 
   // Always save with pages synced AND the current color mode preserved
   const updateAndSave = async (updatedRaw: Template) => {
@@ -627,6 +628,7 @@ export function LiveEditorPreview({
                 </div>
               </SortableContext>
 
+              {!hasBlocks && (
               <div className="relative z-10 bg-white dark:bg-neutral-900 p-4 border-t border-gray-200 dark:border-neutral-700 mt-6">
                 <BlockAdderGrouped
                   onAdd={(type) => {
@@ -658,9 +660,10 @@ export function LiveEditorPreview({
                       <PlusCircle className="w-4 h-4" />
                       <span>Add Block</span>
                     </SafeTriggerButton>
-                  }
-                />
-              </div>
+                    }
+                  />
+                </div>
+              )}
             </DndContext>
 
             {effectiveFooter && (

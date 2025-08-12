@@ -15,7 +15,9 @@ import { BlockValidationError } from '@/hooks/validateTemplateBlocks';
 import ThemeScope from '@/components/ui/theme-scope';
 import DevValidatorPanel from '../dev-validator-panel';
 import DevicePreviewWrapper from '@/components/admin/templates/device-preview-wrapper';
-import { LiveEditorPreview } from '@/components/editor/live-editor-preview';
+
+import LiveEditorPreview from '@/components/editor/live-editor/LiveEditorPreview';
+
 import { handleTemplateSave } from '@/admin/lib/handleTemplateSave';
 import { ZodError } from 'zod';
 import { normalizeTemplate } from '@/admin/utils/normalizeTemplate';

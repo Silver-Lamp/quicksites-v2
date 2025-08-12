@@ -15,28 +15,10 @@ import TextRender from '@/components/admin/templates/render-blocks/text';
 const isDev =
   typeof process !== 'undefined' && process.env.NODE_ENV === 'development';
 
-/** Inline renderer for `text` blocks (rich HTML from Tiptap or legacy value) */
-// function TextRender({
-//   content,
-//   compact,
-// }: {
-//   content: any;
-//   compact?: boolean;
-// }): JSX.Element {
-//   const html = content?.html ?? content?.value ?? '';
-//   return (
-//     <div
-//       className={`prose max-w-none ${compact ? 'prose-sm' : 'lg:prose-lg'}`}
-//       dangerouslySetInnerHTML={{ __html: html }}
-//     />
-//   );
-// }
-
-const STATIC_RENDERERS: Partial<Record<BlockType, (props: any) => JSX.Element>> =
-  {
-    hero: HeroRender,
-    text: TextRender,
-  };
+const STATIC_RENDERERS: Partial<Record<BlockType, (props: any) => JSX.Element>> = {
+  hero: HeroRender,
+  text: TextRender,
+};
 
 function assertAllRenderersCovered() {
   const handled = new Set([
@@ -52,7 +34,6 @@ function assertAllRenderersCovered() {
     else console.warn(msg);
   }
 }
-
 assertAllRenderersCovered();
 
 function resolveRenderer(type: BlockType) {
@@ -71,7 +52,6 @@ type RenderProps = {
   previewOnly?: boolean;
   showDebug?: boolean;
   colorMode?: 'light' | 'dark';
-
   /** Optional editor actions wired by parent (no change to existing callers) */
   onEdit?: (block: Block) => void;
   onDelete?: (block: Block) => void;
@@ -119,9 +99,7 @@ export default function RenderBlock({
     'data-block-type': block.type,
     className: [
       'relative group w-full rounded-md transition-colors',
-      colorMode === 'light'
-        ? 'bg-white text-black'
-        : 'bg-neutral-950 text-white',
+      colorMode === 'light' ? 'bg-white text-black' : 'bg-neutral-950 text-white',
       // Border hidden until hover:
       'border border-transparent group-hover:border-neutral-200',
       'dark:group-hover:border-neutral-700',
@@ -139,34 +117,27 @@ ID: ${block._id || 'n/a'}`}
   ) : null;
 
   const Component = resolveRenderer(block.type);
-
-  const showControlsBar =
-    mode === 'editor' && !previewOnly && !disableInteraction;
+  const showControlsBar = mode === 'editor' && !previewOnly && !disableInteraction;
 
   return (
     <div {...wrapperProps}>
       {/* Controls bar (hidden until hover) */}
       {showControlsBar && (
         <div
+          data-no-edit // ← prevent click-to-edit from outer wrapper
           className={[
-            'pointer-events-none', // allow underlying content interactions unless over a button
-            'absolute inset-x-0 -top-px', // sit on the border
-            // Start hidden; reveal on hover
+            'pointer-events-auto', // allow content inside to be interactive
+            'absolute inset-x-0 -top-px',
             'opacity-0 group-hover:opacity-100 transition-opacity',
-            // Slight backdrop for contrast
-            colorMode === 'light'
-              ? 'bg-white/70'
-              : 'bg-neutral-900/60',
+            colorMode === 'light' ? 'bg-white/70' : 'bg-neutral-900/60',
             'flex items-center justify-between px-2 py-1 rounded-t-md',
-            // Draw the border line only when hovered (matches wrapper on hover)
             'border border-transparent group-hover:border-neutral-200 dark:group-hover:border-neutral-700',
           ].join(' ')}
-          // Let buttons be clickable
-          style={{ pointerEvents: 'auto' }}
         >
           <div className="flex items-center gap-2 min-w-0">
             {/* Grab handle */}
             <span
+              data-no-edit // ← dragging shouldn’t trigger edit
               className="inline-flex items-center justify-center w-6 h-6 rounded cursor-grab active:cursor-grabbing"
               title="Drag to reorder"
               aria-label="Drag handle"
@@ -183,12 +154,12 @@ ID: ${block._id || 'n/a'}`}
           <div className="flex items-center gap-1">
             {/* Edit */}
             <button
+              data-no-edit // ← guard
               type="button"
               className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded hover:bg-black/5 dark:hover:bg-white/10"
               onClick={(e) => {
                 e.stopPropagation();
                 onEdit?.(block);
-                // Fallback event for parent listeners if no prop is provided
                 if (!onEdit) {
                   window.dispatchEvent(
                     new CustomEvent('qs:block:edit', { detail: { block } })
@@ -202,6 +173,7 @@ ID: ${block._id || 'n/a'}`}
 
             {/* Delete */}
             <button
+              data-no-edit // ← guard
               type="button"
               className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded hover:bg-black/5 dark:hover:bg-white/10"
               onClick={(e) => {
@@ -224,7 +196,7 @@ ID: ${block._id || 'n/a'}`}
       {debugOverlay}
 
       {/* Actual block content */}
-      <div className="p-0"> 
+      <div className="p-0">
         <Component
           {...(commonProps as any)}
           {...(block.type === 'grid' && handleNestedBlockUpdate

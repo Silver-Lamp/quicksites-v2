@@ -24,6 +24,9 @@ import { unwrapData } from '@/admin/lib/cleanTemplateData';
 import { cleanTemplateDataStructure } from '@/admin/lib/cleanTemplateData';
 import { prepareTemplateForSave } from '@/admin/lib/prepareTemplateForSave';
 
+import { motion, AnimatePresence } from 'framer-motion';
+import { Settings2, ChevronLeft } from 'lucide-react';
+
 function pushWithLimit<T>(stack: T[], item: T, limit = 10): T[] {
   return [...stack.slice(-limit + 1), item];
 }
@@ -75,6 +78,35 @@ export function EditorContent({
   const [historyStack, setHistoryStack] = useState<Template[]>([]);
   const [redoStack, setRedoStack] = useState<Template[]>([]);
 
+  // --- NEW: collapsible sidebar (persisted) ---
+  const SETTINGS_KEY = 'qs:settingsOpen';
+  const [settingsOpen, setSettingsOpen] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return true;
+    const saved = window.localStorage.getItem(SETTINGS_KEY);
+    return saved ? saved === '1' : true;
+  });
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      window.localStorage.setItem(SETTINGS_KEY, settingsOpen ? '1' : '0');
+    }
+  }, [settingsOpen]);
+
+  // Hotkey: "s" toggles rail unless typing
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const t = e.target as HTMLElement | null;
+      const tag = t?.tagName?.toLowerCase();
+      if (tag === 'input' || tag === 'textarea' || t?.isContentEditable) return;
+      if (e.key.toLowerCase() === 's') {
+        e.preventDefault();
+        setSettingsOpen((o) => !o);
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
+  // -------------------------------------------
+
   // keep local + parent (if provided) in sync
   const setModalSynced = (open: boolean) => {
     setModal(open);
@@ -111,18 +143,10 @@ export function EditorContent({
 
     if (prevCount > 1 && nextCount === 1) {
       console.warn('[⚠️ PAGES SHRUNK]', { prevCount, nextCount, nextSnapshot: next });
-      // Optional: throw new Error('Pages shrunk unexpectedly');
     }
     setTemplate(next);
   };
 
-  /**
-   * Deep-merge a template patch into the previous template.
-   * - Never drops pages accidentally.
-   * - Mirrors pages to both data.pages (canonical) and legacy pages.
-   * - Never drops color_mode (critical for light/dark persistence).
-   * - Optional guard to ignore accidental "shrink to 1 Home page" during hydration.
-   */
   function mergeTemplate(
     prev: Template,
     patch: Partial<Template>,
@@ -149,13 +173,11 @@ export function EditorContent({
         nextCount === 1 &&
         (nextPagesCandidate[0]?.slug === 'home' || nextPagesCandidate[0]?.title === 'Home')
       ) {
-        return prev; // ignore spurious hydration collapse
+        return prev;
       }
     }
 
     const pages = nextPagesCandidate;
-
-    // ✅ Preserve color_mode no matter what the patch omits
     const mode: 'light' | 'dark' =
       ((patch as any).color_mode as 'light' | 'dark' | undefined) ??
       ((prev as any).color_mode as 'light' | 'dark' | undefined) ??
@@ -173,7 +195,6 @@ export function EditorContent({
   const handleTemplateChange = (patch: Partial<Template>) => {
     setHistoryStack((prev) => pushWithLimit(prev, template));
     setRedoStack([]); // clear redo on new change
-    console.log('[EditorContent] handleTemplateChange', { patch, template });
     const merged = mergeTemplate(template, patch, { isHydrating: hydratingRef.current });
     setTemplateGuarded(merged);
     setRawDataFromTemplate(merged);
@@ -187,11 +208,7 @@ export function EditorContent({
   };
 
   useEffect(() => {
-    // Debug visibility if you need it
-    // console.log('[EditorContent] pages', {
-    //   top: (template as any).pages?.length,
-    //   data: template?.data?.pages?.length,
-    // });
+    // debug if needed
   }, [template]);
 
   const handleUndo = () => {
@@ -241,7 +258,6 @@ export function EditorContent({
         (template as any)?.pages ??
         [];
 
-      // ✅ Force color_mode to persist through the save pipeline
       const color_mode = (template as any).color_mode ?? 'light';
 
       const fullTemplate = withSyncedPages({
@@ -285,21 +301,86 @@ export function EditorContent({
         </TabsList>
 
         <TabsContent value="preview">
-          <div className="flex">
-            {/* <- IMPORTANT: wire settings to our local change handler */}
-            <SidebarSettings template={template} onChange={handleTemplateChange} />
+          <div className="flex relative">
+            {/* Gear when collapsed */}
+            <AnimatePresence>
+              {!settingsOpen && (
+                <motion.button
+                  key="gear"
+                  initial={{ opacity: 0, scale: 0.9, y: 10 }}
+                  animate={{ opacity: 1, scale: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.9, y: 10 }}
+                  onClick={() => setSettingsOpen(true)}
+                  className="fixed left-10 top-20 z-40 inline-flex h-11 w-11 items-center justify-center rounded-full bg-zinc-900 text-zinc-100 shadow-lg ring-1 ring-white/10 border-2 border-purple-500 hover:bg-zinc-800 focus:outline-none focus:ring-2 focus:ring-purple-400"
+                  // className="
+                  //   relative translate-x-5
+                  //   border-2 border-purple-500
+                  //   shadow-[0_0_10px_rgba(168,85,247,0.8)]
+                  //   rounded-full
+                  // "
+                  aria-label="Open settings (S)"
+                  title="Open settings (S)"
+                >
+                  <Settings2 className="h-5 w-5" />
+                </motion.button>
+              )}
+            </AnimatePresence>
 
-            <DevicePreviewWrapper theme={template.theme as Theme}>
-              <ThemeScope mode={template.color_mode as 'light' | 'dark'}>
-                <LiveEditorPreview
-                  template={template}
-                  onChange={handleTemplateChange}
-                  errors={blockErrors ?? {}}
-                  industry={template.industry}
-                  templateId={template.id}
-                />
-              </ThemeScope>
-            </DevicePreviewWrapper>
+            {/* Collapsible rail with the existing SidebarSettings inside */}
+            <motion.aside
+              aria-label="Settings"
+              className="relative z-30 mr-4"
+              initial={false}
+              animate={{ width: settingsOpen ? 320 : 0, marginRight: settingsOpen ? 16 : 0 }}
+              transition={{ type: 'spring', stiffness: 260, damping: 30 }}
+            >
+              <AnimatePresence mode="popLayout">
+                {settingsOpen && (
+                  <motion.div
+                    key="settings-body"
+                    initial={{ opacity: 0, x: -8 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: -8 }}
+                    transition={{ duration: 0.18 }}
+                    className="h-full w-[320px] overflow-visible"
+                  >
+                    <div className="mb-2 flex items-center justify-between pr-2">
+                      <div className="flex items-center gap-2 text-sm font-semibold text-white">
+                        <Settings2 className="h-4 w-4 text-purple-400" />
+                        Settings
+                      </div>
+                      <button
+                        onClick={() => setSettingsOpen(false)}
+                        className="inline-flex items-center gap-1 rounded-md border border-white/10 bg-zinc-900 px-2 py-1 text-xs text-zinc-200 hover:bg-zinc-800 focus:outline-none focus:ring-2 focus:ring-purple-400"
+                        aria-label="Collapse settings (S)"
+                        title="Collapse settings (S)"
+                      >
+                        <ChevronLeft className="h-3.5 w-3.5" />
+                        Hide
+                      </button>
+                    </div>
+
+                    {/* IMPORTANT: same component you already use */}
+                    <SidebarSettings template={template} onChange={handleTemplateChange} />
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </motion.aside>
+
+            {/* Main preview area */}
+            <div className="flex-1 min-w-0">
+              <DevicePreviewWrapper theme={template.theme as Theme}>
+                <ThemeScope mode={template.color_mode as 'light' | 'dark'}>
+                  <LiveEditorPreview
+                    template={template}
+                    onChange={handleTemplateChange}
+                    errors={blockErrors ?? {}}
+                    industry={template.industry}
+                    templateId={template.id}
+                  />
+                </ThemeScope>
+              </DevicePreviewWrapper>
+            </div>
           </div>
         </TabsContent>
 

@@ -13,14 +13,47 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   // Load persisted state
   useEffect(() => {
-    const stored = localStorage.getItem('admin-sidebar-collapsed');
-    if (stored === 'true') setIsCollapsed(true);
+    try {
+      const stored = localStorage.getItem('admin-sidebar-collapsed');
+      if (stored === 'true') setIsCollapsed(true);
+    } catch {
+      /* noop */
+    }
   }, []);
 
   // Persist on change
   useEffect(() => {
-    localStorage.setItem('admin-sidebar-collapsed', String(isCollapsed));
+    try {
+      localStorage.setItem('admin-sidebar-collapsed', String(isCollapsed));
+    } catch {
+      /* noop */
+    }
   }, [isCollapsed]);
+
+  // Keyboard shortcut: press "e" to toggle
+  useEffect(() => {
+    const isTypingTarget = (el: EventTarget | null) => {
+      if (!(el instanceof HTMLElement)) return false;
+      const tag = el.tagName.toLowerCase();
+      if (tag === 'input' || tag === 'textarea' || el.isContentEditable) return true;
+      // Also skip if focused inside a code editor (monaco/ace/codemirror etc.)
+      const editorish = el.closest('.cm-editor, .monaco-editor, .ace_editor');
+      return Boolean(editorish);
+    };
+
+    const onKeyDown = (e: KeyboardEvent) => {
+      // Only plain "e" (no modifiers), and not while typing
+      if (e.key.toLowerCase() !== 'e') return;
+      if (e.metaKey || e.ctrlKey || e.altKey || e.shiftKey) return;
+      if (isTypingTarget(document.activeElement)) return;
+
+      e.preventDefault();
+      setIsCollapsed((c) => !c);
+    };
+
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, []);
 
   return (
     <div className="flex min-h-screen bg-zinc-950 text-white">
@@ -39,7 +72,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         <button
           onClick={() => setIsCollapsed(!isCollapsed)}
           className="p-2 hover:bg-zinc-800 rounded transition m-2"
-          title={isCollapsed ? 'Expand Sidebar' : 'Collapse Sidebar'}
+          title={isCollapsed ? 'Expand Sidebar (E)' : 'Collapse Sidebar (E)'}
+          aria-label={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
         >
           {isCollapsed ? <ChevronRight size={20} /> : <ChevronLeft size={20} />}
         </button>

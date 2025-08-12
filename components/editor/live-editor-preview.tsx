@@ -247,15 +247,15 @@ export function LiveEditorPreview({
   return (
     <TemplateThemeWrapper colorMode={resolvedColorMode}>
       <div className="w-full max-w-none px-0">
-        <div className="absolute top-0 right-0 z-10 m-2">
           <button
             onClick={toggleColorMode}
-            className="flex items-center gap-1 px-3 py-1 text-sm text-white bg-zinc-800 rounded hover:bg-zinc-700"
+            className="inline-flex items-center gap-1 rounded-md border border-white/10 bg-zinc-900 px-2 py-1 text-xs text-zinc-200 hover:bg-zinc-800 focus:outline-none focus:ring-2 focus:ring-purple-400"
+            aria-label="Toggle color mode"
+            title="Toggle color mode"
           >
             {resolvedColorMode === 'dark' ? <Moon size={16} /> : <Sun size={16} />}
             {resolvedColorMode === 'dark' ? 'Dark' : 'Light'}
           </button>
-        </div>
 
         <div className="relative min-h-screen">
           <div className="px-0 sm:px-2 xl:px-0 pb-20 pt-4 space-y-6 w-full xl:max-w-[90%] xl:mx-auto">

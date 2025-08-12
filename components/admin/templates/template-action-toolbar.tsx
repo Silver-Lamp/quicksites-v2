@@ -303,7 +303,7 @@ export function TemplateActionToolbar({
   return (
     <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-40 rounded-lg bg-gray-900 border border-gray-700 px-6 py-3 shadow-xl max-w-5xl w-[95%] flex justify-between items-center text-white opacity-80">
       <div className="text-sm font-medium flex gap-4 items-center">
-        <span>📄 {template.template_name}</span>
+        {/* <span>📄 {template.template_name}</span> */}
         <span
           className={`text-xs px-2 py-1 rounded ${
             status === 'Published' ? 'bg-green-600' : 'bg-yellow-600'
@@ -323,21 +323,21 @@ export function TemplateActionToolbar({
       </div>
 
       <div className="flex items-center gap-3">
-        <select
+        {/* <select
           className="bg-gray-800 border border-gray-600 text-sm text-white rounded px-2 py-1"
           onChange={async (e) => {
             const versionId = e.target.value;
             if (!versionId || versionId === 'View Version') return;
             await restoreVersion(versionId);
           }}
-        >
-          <option>View Version</option>
-          {versions.map((v) => (
+        > */}
+          {/* <option>View Version</option> */}
+          {/* {versions.map((v) => (
             <option key={v.id} value={v.id}>
               {(v.commit_message || 'Untitled') + ' — ' + new Date(v.created_at).toLocaleDateString()}
             </option>
-          ))}
-        </select>
+          ))} */}
+        {/* </select> */}
 
         <Button size="sm" variant="secondary" onClick={handleSaveClick}>
           Save
@@ -379,9 +379,9 @@ export function TemplateActionToolbar({
           )}
         </div>
 
-        <Button size="sm" variant="secondary" onClick={handleShare}>
+        {/* <Button size="sm" variant="secondary" onClick={handleShare}>
           Share Snapshot
-        </Button>
+        </Button> */}
       </div>
     </div>
   );

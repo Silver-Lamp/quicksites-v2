@@ -29,6 +29,19 @@ type Props = {
 const isHeader = (b: any) => b?.type === 'header';
 const isFooter = (b: any) => b?.type === 'footer';
 
+async function resolveSlugForId(id: string): Promise<string | null> {
+  const { data, error } = await supabase
+    .from('templates')
+    .select('slug')
+    .eq('id', id)
+    .maybeSingle();
+  if (error) {
+    console.warn('[Duplicate] could not resolve slug for id:', id, error);
+    return null;
+  }
+  return data?.slug ?? null;
+}
+
 function getPages(tpl: any) {
   const dataPages = tpl?.data?.pages;
   const rootPages = tpl?.pages;
@@ -168,12 +181,23 @@ export function TemplateActionToolbar({
     try {
       const normalized = normalizeForSnapshot(template);
       const newId = await saveAsTemplate(normalized, type);
-      if (newId) {
-        toast.success(`Duplicated as ${type}`);
-        router.push(`/admin/templates?selected=${newId}`);
-      } else {
+  
+      if (!newId) {
         toast.error('Failed to duplicate');
+        return;
       }
+  
+      // 👇 turn the id into the slug and route to the editor
+      const slug = await resolveSlugForId(newId.id);
+      if (slug) {
+        // same editor route for both templates and sites
+        router.push(`/template/${slug}/edit`);
+      } else {
+        // fallback: take them to list so they can find it
+        router.push('/admin/templates');
+      }
+  
+      toast.success(`Duplicated as ${type}`);
     } catch (e) {
       console.error('[Duplicate] failed:', e);
       toast.error('Failed to duplicate');
@@ -181,6 +205,7 @@ export function TemplateActionToolbar({
       setDupMenuOpen(false);
     }
   };
+  
 
   const handleShare = async () => {
     try {
@@ -323,12 +348,13 @@ export function TemplateActionToolbar({
           <Button
             size="sm"
             variant="secondary"
-            onClick={() => setDupMenuOpen((o) => !o)}
-            aria-haspopup="menu"
-            aria-expanded={dupMenuOpen}
+            // onClick={() => setDupMenuOpen((o) => !o)}
+            onClick={() => handleSaveAs('site')}
+            // aria-haspopup="menu"
+            // aria-expanded={dupMenuOpen}
           >
-            Duplicate…
-            <ChevronDown className="ml-1 h-4 w-4" />
+            Duplicate Site
+            {/* <ChevronDown className="ml-1 h-4 w-4" /> */}
           </Button>
           {dupMenuOpen && (
             <div
@@ -342,13 +368,13 @@ export function TemplateActionToolbar({
               >
                 As a Site
               </button>
-              <button
+              {/* <button
                 role="menuitem"
                 className="w-full text-left px-3 py-2 hover:bg-gray-700"
                 onClick={() => handleSaveAs('template')}
               >
                 As a Template
-              </button>
+              </button> */}
             </div>
           )}
         </div>

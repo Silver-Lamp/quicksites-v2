@@ -7,6 +7,12 @@ function slugify(str: string) {
   return str.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '').trim();
 }
 
+// Treat null/"" as undefined for optional string-ish fields
+const nullToUndefString = z.preprocess(
+  (v) => (v === null || v === '' ? undefined : v),
+  z.string().optional()
+);
+
 // ─────────────────────────────────────
 // Page schema
 
@@ -35,7 +41,10 @@ const CoercePages = z.preprocess((val) => {
 
 // Always return an object so we don’t hand undefined to z.object
 const hoistPagesFromData = (raw: unknown) => {
-  const t: any = raw && typeof raw === 'object' ? { ...(raw as any) } : {};
+  const t: any =
+    raw && typeof raw === 'object'
+      ? { ...(raw as Record<string, unknown>) }
+      : {};
   if (!t.pages && Array.isArray(t?.data?.pages)) t.pages = t.data.pages;
   return t;
 };
@@ -62,9 +71,12 @@ export const TemplateSaveSchema = z.preprocess(
 
       site_id: z.string().nullable().optional(),
       editor_id: z.string().nullable().optional(),
-      claimed_by: z.string().nullable().optional(),
-      claimed_at: z.string().nullable().optional(),
-      claim_source: z.string().nullable().optional(),
+
+      // null/"" tolerated and treated as undefined (prevents Zod errors during rename/duplicate)
+      claimed_by: nullToUndefString,
+      claimed_at: nullToUndefString,
+      claim_source: nullToUndefString,
+
       archived: z.boolean().optional(),
       created_at: z.string().nullable().optional(),
       updated_at: z.string().nullable().optional(),
@@ -123,7 +135,7 @@ export const TemplateSaveSchema = z.preprocess(
         .object({
           pages: PagesArray.optional(),
           meta: z.any().optional(),
-          // ⬇️ allow chrome + common fields inside data
+          // allow chrome + common fields inside data
           headerBlock: BlockSchema.optional().nullable(),
           footerBlock: BlockSchema.optional().nullable(),
           color_mode: z.enum(['light', 'dark']).optional(),

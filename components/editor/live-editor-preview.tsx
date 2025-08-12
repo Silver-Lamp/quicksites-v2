@@ -60,7 +60,7 @@ function getEffectiveFooter(page: any, template: any) {
 }
 // ------------------------------------
 
-// --- Block wrapper with hover-only chrome & ring ---
+// --- Block wrapper: no chrome at rest; bg + ring on hover ---
 function BlockWrapper({
   block,
   children,
@@ -78,15 +78,14 @@ function BlockWrapper({
     useSortable({ id: block._id });
   const style = { transform: CSS.Transform.toString(transform), transition };
 
-  // Debug mode: force visible dashed border; otherwise no border at all.
   const frameClasses = showOutlines
     ? 'border border-dashed border-purple-700/40'
     : [
-        // No border at rest; add a soft ring only on hover
-        'border-0 ring-0',
-        'group-hover/blk:ring-1',
-        'group-hover/blk:ring-gray-300',
-        'dark:group-hover/blk:ring-white/10',
+        // no chrome at rest
+        'border-0 ring-0 bg-transparent dark:bg-transparent',
+        // only show on hover
+        'group-hover/blk:ring-1 group-hover/blk:ring-gray-300 dark:group-hover/blk:ring-white/10',
+        'group-hover/blk:bg-white dark:group-hover/blk:bg-zinc-900',
       ].join(' ');
 
   return (
@@ -94,17 +93,14 @@ function BlockWrapper({
       ref={setNodeRef}
       style={style}
       className={[
-        'group/blk relative rounded p-2 transition-all',
+        'group/blk relative rounded p-2 transition-colors',
         frameClasses,
-        'bg-white dark:bg-zinc-900',
       ].join(' ')}
     >
-      {/* Top chrome (handle + name + actions) — hidden until hover */}
+      {/* top chrome (hidden until hover) */}
       <div
-        className={[
-          'flex justify-between items-center mb-1 text-xs text-black dark:text-white',
-          'opacity-0 group-hover/blk:opacity-100 transition-opacity',
-        ].join(' ')}
+        className="flex justify-between items-center mb-1 text-xs text-black dark:text-white
+                   opacity-0 group-hover/blk:opacity-100 transition-opacity"
         style={{ pointerEvents: 'auto' }}
       >
         <div className="flex items-center gap-1">
@@ -112,7 +108,7 @@ function BlockWrapper({
             className="w-3 h-3 text-gray-500 cursor-grab active:cursor-grabbing"
             {...attributes}
             {...listeners}
-            // title="Drag to reorder"
+            title="Drag to reorder"
             aria-label="Drag handle"
           />
           <span className="uppercase tracking-wide">{block.type}</span>

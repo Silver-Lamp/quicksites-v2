@@ -1,13 +1,19 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { X, Moon, Sun } from 'lucide-react';
 import { TemplateThemeWrapper } from '@/components/theme/template-theme-wrapper';
 import { useTheme } from '@/hooks/useThemeContext';
 import GlobalChromeEditors from '@/components/admin/templates/global-chrome-editors';
 import PageTabsBar from '@/components/admin/templates/page-tabs-bar';
 import { saveTemplate } from '@/admin/lib/saveTemplate';
-import { getEffectiveFooter, getEffectiveHeader, getPages, slugify, withSyncedPages } from '@/components/editor/live-editor/helpers';
+import {
+  getEffectiveFooter,
+  getEffectiveHeader,
+  getPages,
+  slugify,
+  withSyncedPages,
+} from '@/components/editor/live-editor/helpers';
 import { useImmersive, useSelectedPageId } from '@/components/editor/live-editor/hooks';
 import BlocksList from '@/components/editor/live-editor/BlocksList';
 import EmptyAddBlock from '@/components/editor/live-editor/EmptyAddBlock';
@@ -17,6 +23,7 @@ import type { BlockValidationError } from '@/hooks/validateTemplateBlocks';
 import { createDefaultBlock } from '@/lib/createDefaultBlock';
 import { DynamicBlockEditor } from '@/components/editor/dynamic-block-editor';
 import Portal from '@/components/ui/portal';
+import { makeSaveGuard } from '@/lib/editor/saveGuard';
 
 export default function LiveEditorPreview({
   template,
@@ -41,6 +48,14 @@ export default function LiveEditorPreview({
     (ctxTheme?.darkMode as 'light' | 'dark' | undefined) ??
     'light';
 
+  // ---- save guard ----------------------------------------------------------
+  const saveGuardRef = useRef(makeSaveGuard(template));
+  useEffect(() => {
+    // re-init guard when moving to a different template
+    saveGuardRef.current = makeSaveGuard(template);
+  }, [template?.id]);
+
+  // ---- pages / selection ---------------------------------------------------
   const pages = getPages(template);
   const STORAGE_KEY = `qs:selectedPageId:${templateId}`;
   const { selectedPageId, setSelectedPageId, selectedPageIndex, selectedPage } =
@@ -49,16 +64,19 @@ export default function LiveEditorPreview({
 
   const { isImmersive, enterImmersive, exitImmersive } = useImmersive();
 
+  // lock scrolling behind modal
   useEffect(() => {
     const root = document.documentElement;
     if (editing) root.classList.add('qs-modal-open');
     return () => root.classList.remove('qs-modal-open');
   }, [editing]);
 
+  // apply UI theme (does not persist)
   useEffect(() => {
     document.documentElement.classList.toggle('dark', resolvedColorMode === 'dark');
   }, [resolvedColorMode]);
 
+  // keep ThemeContext in sync with persisted template color_mode when present
   useEffect(() => {
     const tMode = (template as any).color_mode as 'light' | 'dark' | undefined;
     if (tMode && ctxTheme?.darkMode !== tMode) {
@@ -67,31 +85,48 @@ export default function LiveEditorPreview({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [(template as any).color_mode]);
 
-  // Save util (preserves color mode)
-  const updateAndSave = async (updatedRaw: Template) => {
-    const ensuredColor = ((updatedRaw as any).color_mode as 'light' | 'dark' | undefined) ?? resolvedColorMode;
-    const ensured: Template = { ...updatedRaw, color_mode: ensuredColor } as any;
+  // ---- save util -----------------------------------------------------------
+  /**
+   * IMPORTANT: Do NOT backfill color_mode here. Only persist color_mode when
+   * the caller explicitly includes it (e.g., the toggle button).
+   */
+  const updateAndSave = async (updatedRaw: Template, force = false) => {
+    // 1) Canonicalize pages etc., but do not inject color_mode defaults
+    const updated = withSyncedPages(updatedRaw);
 
-    const updated = withSyncedPages(ensured);
+    // 2) Always reflect UI state immediately
     onChange({ ...updated });
+
+    // 3) Skip save if nothing actually changed (unless forced)
+    const guard = saveGuardRef.current;
+    if (!force && !guard.hasChanged(updated)) return;
+
     try {
       const validId = updated.id && updated.id.trim() !== '' ? updated.id : undefined;
       if (!validId) throw new Error('Missing template ID');
-      await saveTemplate(updated, validId);
+
+      await guard.runCoalesced(async () => {
+        await saveTemplate(updated, validId);
+        guard.markSaved(updated);
+      });
     } catch (err) {
       console.error('❌ Failed to save template update', err);
     }
   };
 
-  // color mode toggle
+  // Explicit color mode toggle → now the ONLY place we persist color_mode
   const toggleColorMode = async () => {
     const next = resolvedColorMode === 'dark' ? 'light' : 'dark';
     setTheme({ ...(ctxTheme || {}), darkMode: next } as any);
     const keepId = selectedPageId;
-    await updateAndSave({ ...template, color_mode: next as 'light' | 'dark' });
+
+    // Only here we explicitly set color_mode so it’s saved
+    await updateAndSave({ ...template, color_mode: next as 'light' | 'dark' }, true);
+
     if (keepId) setSelectedPageId(keepId);
   };
 
+  // focus last added block
   useEffect(() => {
     if (!lastInsertedId) return;
     const el = document.querySelector<HTMLElement>(`[data-block-id="${lastInsertedId}"]`);
@@ -110,11 +145,11 @@ export default function LiveEditorPreview({
   const effectiveHeader = getEffectiveHeader(selectedPage, template);
   const effectiveFooter = getEffectiveFooter(selectedPage, template);
 
+  // NOTE: do NOT write color_mode in these page updates
   const setPageChrome = async (key: 'show_header' | 'show_footer', value: boolean) => {
     const updatedPage = { ...selectedPage, [key]: value };
     const next = withSyncedPages({
       ...template,
-      color_mode: resolvedColorMode,
       data: {
         ...(template.data ?? {}),
         pages: pages.map((p: any, idx: number) => (idx === selectedPageIndex ? updatedPage : p)),
@@ -160,24 +195,34 @@ export default function LiveEditorPreview({
 
             {/* Page toggles */}
             <div className="flex flex-wrap items-center gap-2 mb-4">
-              <span className="text-xs uppercase tracking-wide text-black/60 dark:text-white/60">Page Settings:</span>
+              <span className="text-xs uppercase tracking-wide text-black/60 dark:text-white/60">
+                Page Settings:
+              </span>
               <button
                 type="button"
-                onClick={() => setPageChrome('show_header', !(selectedPage?.show_header !== false))}
+                onClick={() =>
+                  setPageChrome('show_header', !(selectedPage?.show_header !== false))
+                }
                 className={`px-2 py-1 text-xs rounded border transition
-                  ${selectedPage?.show_header !== false
-                    ? 'bg-emerald-600/20 text-emerald-300 border-emerald-600/40 hover:bg-emerald-600/30'
-                    : 'bg-zinc-800 text-zinc-300 border-zinc-600 hover:bg-zinc-700'}`}
+                  ${
+                    selectedPage?.show_header !== false
+                      ? 'bg-emerald-600/20 text-emerald-300 border-emerald-600/40 hover:bg-emerald-600/30'
+                      : 'bg-zinc-800 text-zinc-300 border-zinc-600 hover:bg-zinc-700'
+                  }`}
               >
                 Header: {selectedPage?.show_header !== false ? 'Visible' : 'Hidden'}
               </button>
               <button
                 type="button"
-                onClick={() => setPageChrome('show_footer', !(selectedPage?.show_footer !== false))}
+                onClick={() =>
+                  setPageChrome('show_footer', !(selectedPage?.show_footer !== false))
+                }
                 className={`px-2 py-1 text-xs rounded border transition
-                  ${selectedPage?.show_footer !== false
-                    ? 'bg-emerald-600/20 text-emerald-300 border-emerald-600/40 hover:bg-emerald-600/30'
-                    : 'bg-zinc-800 text-zinc-300 border-zinc-600 hover:bg-zinc-700'}`}
+                  ${
+                    selectedPage?.show_footer !== false
+                      ? 'bg-emerald-600/20 text-emerald-300 border-emerald-600/40 hover:bg-emerald-600/30'
+                      : 'bg-zinc-800 text-zinc-300 border-zinc-600 hover:bg-zinc-700'
+                  }`}
               >
                 Footer: {selectedPage?.show_footer !== false ? 'Visible' : 'Hidden'}
               </button>
@@ -193,7 +238,6 @@ export default function LiveEditorPreview({
                 const next = withSyncedPages({
                   ...template,
                   data: { ...(template.data ?? {}), pages: [...pages, ensured] },
-                  color_mode: resolvedColorMode,
                 } as Template);
                 updateAndSave(next);
                 setSelectedPageId(ensured.id);
@@ -209,7 +253,6 @@ export default function LiveEditorPreview({
                 const next = withSyncedPages({
                   ...template,
                   data: { ...(template.data ?? {}), pages: updated },
-                  color_mode: resolvedColorMode,
                 } as Template);
                 updateAndSave(next);
                 setSelectedPageId(updated[index]?.id ?? null);
@@ -223,7 +266,6 @@ export default function LiveEditorPreview({
                 const next = withSyncedPages({
                   ...template,
                   data: { ...(template.data ?? {}), pages: updated },
-                  color_mode: resolvedColorMode,
                 } as Template);
                 updateAndSave(next);
                 const newIdx = Math.min(updated.length - 1, Math.max(0, index - 1));
@@ -237,7 +279,6 @@ export default function LiveEditorPreview({
                 const next = withSyncedPages({
                   ...template,
                   data: { ...(template.data ?? {}), pages: copy },
-                  color_mode: resolvedColorMode,
                 } as Template);
                 updateAndSave(next);
                 setSelectedPageId(moved.id);
@@ -273,7 +314,6 @@ export default function LiveEditorPreview({
                   setEditing(newBlock as any);
                   const next = withSyncedPages({
                     ...template,
-                    color_mode: resolvedColorMode,
                     data: {
                       ...(template.data ?? {}),
                       pages: pages.map((p: any, idx: number) =>
@@ -293,44 +333,44 @@ export default function LiveEditorPreview({
         </div>
 
         {editing && (
-            <Portal>
-                <div
-                className={[
-                    resolvedColorMode === 'dark' ? 'dark' : '',
-                    'fixed inset-0 z-[1200] bg-black/90 p-6 overflow-auto flex items-center justify-center',
-                ].join(' ')}
-                >
-                <div className="w-full max-w-4xl bg-neutral-900 border border-white/10 rounded-xl shadow-xl overflow-hidden">
-                    <DynamicBlockEditor
-                    block={editing}
-                    onSave={(updatedBlock: any) => {
-                        const updatedPage = {
-                        ...selectedPage,
-                        content_blocks: (selectedPage?.content_blocks ?? []).map((b: any) =>
-                            b._id === updatedBlock._id ? updatedBlock : b
+          <Portal>
+            <div
+              className={[
+                resolvedColorMode === 'dark' ? 'dark' : '',
+                'fixed inset-0 z-[1200] bg-black/90 p-6 overflow-auto flex items-center justify-center',
+              ].join(' ')}
+            >
+              <div className="w-full max-w-4xl bg-neutral-900 border border-white/10 rounded-xl shadow-xl overflow-hidden">
+                <DynamicBlockEditor
+                  block={editing}
+                  onSave={(updatedBlock: any) => {
+                    const updatedPage = {
+                      ...selectedPage,
+                      content_blocks: (selectedPage?.content_blocks ?? []).map((b: any) =>
+                        b._id === updatedBlock._id ? updatedBlock : b
+                      ),
+                    };
+                    // NOTE: no color_mode injection here either
+                    const next = withSyncedPages({
+                      ...template,
+                      data: {
+                        ...(template.data ?? {}),
+                        pages: pages.map((p: any, idx: number) =>
+                          idx === selectedPageIndex ? updatedPage : p
                         ),
-                        };
-                        const next = withSyncedPages({
-                        ...template,
-                        color_mode: resolvedColorMode,
-                        data: {
-                            ...(template.data ?? {}),
-                            pages: pages.map((p: any, idx: number) =>
-                            idx === selectedPageIndex ? updatedPage : p
-                            ),
-                        },
-                        } as Template);
-                        updateAndSave(next);
-                        setEditing(null);
-                    }}
-                    onClose={() => setEditing(null)}
-                    errors={errors}
-                    template={template}
-                    />
-                </div>
-                </div>
-            </Portal>
-            )}
+                      },
+                    } as Template);
+                    updateAndSave(next);
+                    setEditing(null);
+                  }}
+                  onClose={() => setEditing(null)}
+                  errors={errors}
+                  template={template}
+                />
+              </div>
+            </div>
+          </Portal>
+        )}
       </div>
     </TemplateThemeWrapper>
   );

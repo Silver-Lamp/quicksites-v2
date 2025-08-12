@@ -1,75 +1,71 @@
+// components/sites/site-renderer.tsx
 'use client';
 
 import * as React from 'react';
 import clsx from 'clsx';
 import RenderBlock from '@/components/admin/templates/render-block';
-import MetaHead from '@/components/head/MetaHead';
-import ThemeScope from '@/components/ui/theme-scope';
-import type { Template } from '@/types/template';
-import type { Block } from '@/types/blocks';
 import { TemplateThemeWrapper } from '@/components/theme/template-theme-wrapper';
-import { getPageBySlug, getEffectiveHeader, getEffectiveFooter } from '@/lib/site-chrome';
-
-
-type Props = {
-  site: Template;
-  page: string;
-  baseUrl: string;
-  enableThemeWrapper?: boolean;
-  colorMode?: 'light' | 'dark';
-  className?: string;
-  id?: string;
-};
+import type { Template } from '@/types/template';
+import {
+  getPageBySlug,
+  getEffectiveHeader,
+  getEffectiveFooter,
+  stripHeaderFooter,
+} from '@/lib/site-chrome';
 
 type SiteRendererProps = {
-  site: any;
-  page?: string;                 // slug
+  site: Template;
+  page?: string;                 // page slug (optional; will default to first page)
   baseUrl?: string;
   id?: string;
   className?: string;
   colorMode?: 'light' | 'dark';
-  enableThemeWrapper?: boolean;  // some routes pass this
+  enableThemeWrapper?: boolean;
 };
 
-export default function SiteRenderer(props: SiteRendererProps) {
-  const {
-    site,
-    page: pageSlug,
-    baseUrl,
-    id,
-    className,
-    colorMode = (site?.color_mode as 'light' | 'dark') ?? 'light',
-    enableThemeWrapper = true,
-  } = props;
+export default function SiteRenderer({
+  site,
+  page: pageSlug,
+  id,
+  className,
+  colorMode = (site?.color_mode as 'light' | 'dark') ?? 'light',
+  enableThemeWrapper = true,
+}: SiteRendererProps) {
+  const selectedPage = React.useMemo(
+    () => getPageBySlug(site, pageSlug),
+    [site, pageSlug]
+  );
 
-  const selectedPage = React.useMemo(() => getPageBySlug(site, pageSlug), [site, pageSlug]);
-  const header = React.useMemo(() => getEffectiveHeader(selectedPage, site), [selectedPage, site]);
-  const footer = React.useMemo(() => getEffectiveFooter(selectedPage, site), [selectedPage, site]);
-  const contentBlocks: any[] = selectedPage?.content_blocks ?? [];
+  const header = React.useMemo(
+    () => getEffectiveHeader(selectedPage, site),
+    [selectedPage, site]
+  );
+  const footer = React.useMemo(
+    () => getEffectiveFooter(selectedPage, site),
+    [selectedPage, site]
+  );
+
+  // Body blocks should never include header/footer blocks
+  const bodyBlocks = React.useMemo(
+    () => stripHeaderFooter(selectedPage?.content_blocks),
+    [selectedPage?.content_blocks]
+  );
 
   const body = (
     <div id={id ?? 'site-renderer'} className={clsx('w-full', className)}>
-      {/* Header (global or per-page override), hidden if page.show_header === false */}
       {header && <RenderBlock block={header} showDebug={false} colorMode={colorMode} />}
 
-      {/* Page body blocks */}
-      {contentBlocks.map((block, i) => (
+      {bodyBlocks.map((block: any, i: number) => (
         <div key={block?._id ?? i}>
           <RenderBlock block={block} showDebug={false} colorMode={colorMode} />
         </div>
       ))}
 
-      {/* Footer (global or per-page override), hidden if page.show_footer === false */}
       {footer && <RenderBlock block={footer} showDebug={false} colorMode={colorMode} />}
     </div>
   );
 
   if (!enableThemeWrapper) return body;
 
-  return (
-    <TemplateThemeWrapper colorMode={colorMode}>
-      {body}
-    </TemplateThemeWrapper>
-  );
+  return <TemplateThemeWrapper colorMode={colorMode}>{body}</TemplateThemeWrapper>;
 }
-

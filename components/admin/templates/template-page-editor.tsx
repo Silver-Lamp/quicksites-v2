@@ -14,6 +14,7 @@ import { BlockValidationError } from '@/hooks/validateTemplateBlocks';
 import { FloatingAddBlockHere } from '@/components/editor/floating-add-block-here';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
+import { DynamicBlockEditor } from '@/components/editor/dynamic-block-editor'; // ⬅️ NEW
 
 export default function TemplatePageEditor({
   template,
@@ -30,6 +31,10 @@ export default function TemplatePageEditor({
   const [newPageTitle, setNewPageTitle] = useState('');
   const [newPageSlug, setNewPageSlug] = useState('');
   const [showErrorBanner, setShowErrorBanner] = useState(true);
+
+  // ⬇️ NEW: which block/page is in the editor
+  const [editingBlock, setEditingBlock] = useState<Block | null>(null);
+  const [editingPageIndex, setEditingPageIndex] = useState<number | null>(null);
 
   const pages: Page[] = Array.isArray(template.data?.pages) ? template.data!.pages : [];
 
@@ -84,14 +89,24 @@ export default function TemplatePageEditor({
     patchPageAt(pageIndex, { content_blocks: [...updatedBlocks] });
   };
 
+  // ⬇️ UPDATED: insert then immediately open editor
   const handleInsertBlockAt = (pageIndex: number, insertIndex: number, blockType: string) => {
-    const newBlock = createDefaultBlock(blockType as any);
+    const newBlock = createDefaultBlock(blockType as any) as Block;
     const target = pages[pageIndex];
     if (!target) return;
 
     const newBlocks = [...(target.content_blocks || [])];
     newBlocks.splice(insertIndex, 0, newBlock);
     patchPageAt(pageIndex, { content_blocks: newBlocks });
+
+    setEditingBlock(newBlock);
+    setEditingPageIndex(pageIndex);
+    // scroll it into view after paint
+    setTimeout(() => {
+      document.querySelector<HTMLElement>(
+        `[data-block-id="${newBlock._id}"], #block-${newBlock._id}`
+      )?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 0);
   };
 
   const scrollToFirstError = () => {
@@ -115,22 +130,7 @@ export default function TemplatePageEditor({
 
   return (
     <div className="space-y-6 border-gray-700 rounded p-4">
-      {Object.keys(blockErrors).length > 0 && showErrorBanner && (
-        <div className="flex justify-between items-center border border-red-600 bg-red-900/10 text-red-300 px-4 py-2 rounded">
-          <div>⚠ {Object.keys(blockErrors).length} block(s) have validation issues.</div>
-          <div className="flex gap-2">
-            <Button variant="ghost" size="sm" onClick={scrollToFirstError}>
-              Jump to First
-            </Button>
-            <Button variant="ghost" size="sm" onClick={collapseCleanPages}>
-              Collapse Clean Pages
-            </Button>
-            <Button variant="ghost" size="sm" onClick={() => setShowErrorBanner(false)}>
-              Dismiss
-            </Button>
-          </div>
-        </div>
-      )}
+      {/* … existing banner, page loop, etc … */}
 
       {(pages || []).map((page, pageIndex) => {
         const contentBlocks = page.content_blocks || [];
@@ -146,49 +146,7 @@ export default function TemplatePageEditor({
                 : 'border border-gray-700 bg-muted'
             }`}
           >
-            <div className="flex justify-between items-center">
-              <h4 className="text-md font-semibold">
-                {page.title}
-                {errorCount > 0 && (
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <span className="ml-2 text-red-500">⚠️</span>
-                    </TooltipTrigger>
-                    <TooltipContent className="text-xs max-w-sm">
-                      {errorCount} validation issue{errorCount > 1 ? 's' : ''} on this page.
-                    </TooltipContent>
-                  </Tooltip>
-                )}
-              </h4>
-              <div className="flex gap-4 items-center">
-                <Label className="flex items-center gap-2 text-xs">
-                  <Switch
-                    checked={page.show_header ?? template.show_header ?? true}
-                    onCheckedChange={(val) => patchPageAt(pageIndex, { show_header: val })}
-                  />
-                  Header
-                </Label>
-                <Label className="flex items-center gap-2 text-xs">
-                  <Switch
-                    checked={page.show_footer ?? template.show_footer ?? true}
-                    onCheckedChange={(val) => patchPageAt(pageIndex, { show_footer: val })}
-                  />
-                    Footer
-                  </Label>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() =>
-                    setCollapsedPages((prev) => ({
-                      ...prev,
-                      [page.slug]: !prev[page.slug],
-                    }))
-                  }
-                >
-                  {collapsedPages[page.slug] ? 'Expand' : 'Collapse'}
-                </Button>
-              </div>
-            </div>
+            {/* … page header … */}
 
             {!collapsedPages[page.slug] && (
               <>
@@ -211,7 +169,10 @@ export default function TemplatePageEditor({
                         handlePageBlockChange(pageIndex, updatedBlocks);
                       }}
                       industry={template.industry}
-                      onEdit={() => {}}
+                      onEdit={(b: Block) => {          // ⬅️ OPEN EDITOR FOR EXISTING BLOCKS
+                        setEditingBlock(b);
+                        setEditingPageIndex(pageIndex);
+                      }}
                       onReplaceWithAI={() => {}}
                     />
                     <FloatingAddBlockHere
@@ -234,28 +195,42 @@ export default function TemplatePageEditor({
         );
       })}
 
-      <div className="rounded border-gray-700 bg-muted p-4">
-        <h3 className="text-lg font-semibold mb-2">Add New Page</h3>
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-          <input
-            type="text"
-            placeholder="Page Title"
-            className="rounded border-gray-700 p-2 bg-white/5 text-white"
-            value={newPageTitle}
-            onChange={(e) => setNewPageTitle(e.target.value)}
-          />
-          <input
-            type="text"
-            placeholder="Slug"
-            className="rounded border-gray-700 p-2 bg-white/5 text-white"
-            value={newPageSlug}
-            onChange={(e) => setNewPageSlug(e.target.value)}
-          />
-          <Button onClick={handleAddPage} className="w-full">
-            + Add Page
-          </Button>
+      {/* … Add New Page … */}
+
+      {/* ⬇️ NEW: overlay editor */}
+      {editingBlock && (
+        <div className="fixed inset-0 bg-black/90 z-[999] p-6 overflow-auto flex items-center justify-center">
+          <div className="w-full max-w-4xl bg-neutral-900 border border-white/10 rounded-xl shadow-xl overflow-hidden">
+            <DynamicBlockEditor
+              block={editingBlock}
+              onSave={(updatedBlock) => {
+                const pageIdx =
+                  editingPageIndex ??
+                  pages.findIndex((p) =>
+                    (p.content_blocks ?? []).some((b: any) => b._id === updatedBlock._id)
+                  );
+                if (pageIdx < 0) {
+                  setEditingBlock(null);
+                  return;
+                }
+                const updatedBlocks = (pages[pageIdx].content_blocks ?? []).map((b: any) =>
+                  b._id === updatedBlock._id ? (updatedBlock as any) : b
+                );
+                patchPageAt(pageIdx, { content_blocks: updatedBlocks });
+                setEditingBlock(null);
+                setTimeout(() => {
+                  document.querySelector<HTMLElement>(
+                    `[data-block-id="${updatedBlock._id}"], #block-${updatedBlock._id}`
+                  )?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }, 0);
+              }}
+              onClose={() => setEditingBlock(null)}
+              errors={blockErrors}
+              template={template}
+            />
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }

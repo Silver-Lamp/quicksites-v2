@@ -108,7 +108,7 @@ function BlockWrapper({
             className="w-3 h-3 text-gray-500 cursor-grab active:cursor-grabbing"
             {...attributes}
             {...listeners}
-            title="Drag to reorder"
+            // title="Drag to reorder"
             aria-label="Drag handle"
           />
           <span className="uppercase tracking-wide">{block.type}</span>
@@ -563,6 +563,7 @@ export function LiveEditorPreview({
                           ],
                         };
                         setLastInsertedId((newBlock as any)._id ?? '');
+                        setEditing(newBlock as any); 
                         const next = withSyncedPages({
                           ...template,
                           color_mode: resolvedColorMode,
@@ -601,6 +602,7 @@ export function LiveEditorPreview({
                           ],
                         };
                         setLastInsertedId((newBlock as any)._id ?? '');
+                        setEditing(newBlock as any);
                         const next = withSyncedPages({
                           ...template,
                           color_mode: resolvedColorMode,
@@ -634,6 +636,7 @@ export function LiveEditorPreview({
                       content_blocks: [...(selectedPage?.content_blocks ?? []), newBlock as any],
                     };
                     setLastInsertedId((newBlock as any)._id ?? '');
+                    setEditing(newBlock as any);
                     const next = withSyncedPages({
                       ...template,
                       color_mode: resolvedColorMode,

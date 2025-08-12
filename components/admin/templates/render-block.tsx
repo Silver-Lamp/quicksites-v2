@@ -10,26 +10,27 @@ import HeroRender from '@/components/admin/templates/render-blocks/hero';
 import { DYNAMIC_RENDERERS } from '@/lib/dynamic-renderers';
 import { blockContentSchemaMap } from '@/admin/lib/zod/blockSchema';
 import { GripVertical, Pencil, Trash2 } from 'lucide-react';
+import TextRender from '@/components/admin/templates/render-blocks/text';
 
 const isDev =
   typeof process !== 'undefined' && process.env.NODE_ENV === 'development';
 
 /** Inline renderer for `text` blocks (rich HTML from Tiptap or legacy value) */
-function TextRender({
-  content,
-  compact,
-}: {
-  content: any;
-  compact?: boolean;
-}): JSX.Element {
-  const html = content?.html ?? content?.value ?? '';
-  return (
-    <div
-      className={`prose max-w-none ${compact ? 'prose-sm' : 'lg:prose-lg'}`}
-      dangerouslySetInnerHTML={{ __html: html }}
-    />
-  );
-}
+// function TextRender({
+//   content,
+//   compact,
+// }: {
+//   content: any;
+//   compact?: boolean;
+// }): JSX.Element {
+//   const html = content?.html ?? content?.value ?? '';
+//   return (
+//     <div
+//       className={`prose max-w-none ${compact ? 'prose-sm' : 'lg:prose-lg'}`}
+//       dangerouslySetInnerHTML={{ __html: html }}
+//     />
+//   );
+// }
 
 const STATIC_RENDERERS: Partial<Record<BlockType, (props: any) => JSX.Element>> =
   {

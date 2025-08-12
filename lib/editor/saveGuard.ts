@@ -9,7 +9,7 @@ function stableStringify(v: unknown): string {
   return `{${keys.map(k => JSON.stringify(k) + ':' + stableStringify(obj[k])).join(',')}}`;
 }
 
-/** Keep only fields that matter for “did anything change?” */
+/** Keep only fields that matter for “did anything change?”  */
 export function canonicalizeTemplate(t: Template) {
   const dataPages = (t as any)?.data?.pages ?? (t as any)?.pages ?? [];
   return {

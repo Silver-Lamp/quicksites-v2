@@ -280,7 +280,7 @@ export function EditorContent({
           setRawDataFromTemplate(synced);
           setBlockErrors({});
           setZodError(null);
-          toast.success('Draft saved');
+          // toast.success('Draft saved');
         },
         onError: (err) => {
           if (err instanceof ZodError) setZodError(err);

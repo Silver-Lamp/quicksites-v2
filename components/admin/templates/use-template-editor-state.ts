@@ -241,7 +241,7 @@ export function useTemplateEditorState({
       onSuccess: (updated: Template) => {
         guardedSetTemplate(updated);
         localStorage.setItem(`draft-${updated.id}`, payload);
-        toast.success('Draft saved');
+        // toast.success('Draft saved');
         onSaveDraft?.(payload);
       },
       onError: (err: ZodError | string) => {

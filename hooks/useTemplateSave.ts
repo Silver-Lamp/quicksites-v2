@@ -29,6 +29,6 @@ export async function useTemplateSave(template: ValidatedTemplate): Promise<bool
     return false;
   }
 
-  toast.success('Template saved!');
+  // toast.success('Template saved!');
   return true;
 }

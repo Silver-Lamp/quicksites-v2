@@ -129,7 +129,7 @@ export default function TemplateEditor({
       const saved = await saveTemplate(payload);
       // Ensure returned record is mirrored back into state (and kept in sync)
       setTemplateSynced(saved);
-      toast.success('Template saved');
+      // toast.success('Template saved');
     } catch (err) {
       console.error(err);
       toast.error('Error saving template');

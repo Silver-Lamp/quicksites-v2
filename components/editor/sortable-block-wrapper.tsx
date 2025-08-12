@@ -1,3 +1,4 @@
+// components/editor/sortable-block-wrapper.tsx
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
@@ -58,18 +59,37 @@ export default function SortableBlockWrapper({
         setNodeRef(el);
       }}
       style={style}
-      className="group relative block-hover p-2 rounded border border-white/10"
+      className={[
+        // hover scope
+        'group/outer relative rounded-lg p-2',
+        // hide border until hover
+        'border border-transparent transition-colors',
+        'group-hover/outer:border-white/15',
+        // dark bg tint (optional; keep if desired)
+        'bg-neutral-900 text-neutral-100',
+      ].join(' ')}
     >
-      <div className="flex justify-between items-center mb-1 opacity-80 text-xs text-white">
+      {/* Top chrome: handle + block name + (existing) edit/delete */}
+      <div
+        className={[
+          'flex justify-between items-center mb-1 text-xs',
+          // hide until hover
+          'opacity-0 group-hover/outer:opacity-100 transition-opacity',
+          'text-white/80',
+        ].join(' ')}
+      >
         <div className="flex items-center gap-1">
+          {/* Drag handle only visible on hover */}
           <GripVertical
-            className="w-3 h-3 text-gray-500 cursor-move"
+            className="w-3 h-3 text-gray-500 cursor-grab active:cursor-grabbing"
             {...attributes}
             {...listeners}
           />
           <span className="uppercase tracking-wide">{block.type}</span>
         </div>
-        <div className="hidden group-hover:flex gap-2">
+
+        {/* Your existing buttons: already hidden until hover before, keep explicit */}
+        <div className="flex gap-2">
           <button
             onClick={() => setEditing(block)}
             className="text-xs text-blue-400 underline"
@@ -87,24 +107,27 @@ export default function SortableBlockWrapper({
 
       {children}
 
-      <div className="hidden group-hover:block mt-2" ref={adderRef}>
-        {showAdder ? (
-          <BlockAdderGrouped
-            onAdd={(type) => {
-              onInsertBlockAt(index + 1, type);
-              setShowAdder(false);
-            }}
-            existingBlocks={page.content_blocks}
-            label="Select Block Type"
-          />
-        ) : (
-          <button
-            onClick={() => setShowAdder(true)}
-            className="text-xs text-purple-400 underline"
-          >
-            + Add Block Here
-          </button>
-        )}
+      {/* Adder: hidden until hover */}
+      <div className="mt-2" ref={adderRef}>
+        <div className="opacity-0 group-hover/outer:opacity-100 transition-opacity">
+          {showAdder ? (
+            <BlockAdderGrouped
+              onAdd={(type) => {
+                onInsertBlockAt(index + 1, type);
+                setShowAdder(false);
+              }}
+              existingBlocks={page.content_blocks}
+              label="Select Block Type"
+            />
+          ) : (
+            <button
+              onClick={() => setShowAdder(true)}
+              className="text-xs text-purple-400 underline"
+            >
+              + Add Block Here
+            </button>
+          )}
+        </div>
       </div>
     </div>
   );

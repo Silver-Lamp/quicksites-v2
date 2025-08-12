@@ -1,3 +1,4 @@
+// components/editor/sortable-block.tsx
 'use client';
 
 import { useSortable } from '@dnd-kit/sortable';
@@ -41,6 +42,14 @@ export function SortableBlock({
     transition,
   };
 
+  const handleDelete = () => {
+    const updated = { ...template };
+    const blocks = [...updated.data.pages[pageIndex].content_blocks];
+    blocks.splice(blockIndex, 1);
+    updated.data.pages[pageIndex].content_blocks = blocks;
+    onChange(updated);
+  };
+
   return (
     <SortableBlockWrapper
       key={block._id}
@@ -68,7 +77,13 @@ export function SortableBlock({
       insertedId={insertedId}
       page={page}
     >
-      <RenderBlock block={block} showDebug={false}/>
+      <RenderBlock
+        block={block}
+        showDebug={false}
+        mode="editor"                 // enable hover-to-reveal controls
+        onEdit={(b) => setEditing(b)} // wire Edit
+        onDelete={handleDelete}       // wire Delete
+      />
     </SortableBlockWrapper>
   );
 }

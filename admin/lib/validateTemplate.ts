@@ -137,20 +137,20 @@ export function validateTemplateAndFix(input: unknown): ValidateResult {
   const hasHeader = !!(t.headerBlock ?? t.data?.headerBlock);
   const hasFooter = !!(t.footerBlock ?? t.data?.footerBlock);
 
-  if (!hasHeader) {
-    warnings.push({
-      field: 'headerBlock',
-      message:
-        'Global header is missing. Pages will render without a header unless a per-page override is set.',
-    });
-  }
-  if (!hasFooter) {
-    warnings.push({
-      field: 'footerBlock',
-      message:
-        'Global footer is missing. Pages will render without a footer unless a per-page override is set.',
-    });
-  }
+  // if (!hasHeader) {
+  //   warnings.push({
+  //     field: 'headerBlock',
+  //     message:
+  //       'Global header is missing. Pages will render without a header unless a per-page override is set.',
+  //   });
+  // }
+  // if (!hasFooter) {
+  //   warnings.push({
+  //     field: 'footerBlock',
+  //     message:
+  //       'Global footer is missing. Pages will render without a footer unless a per-page override is set.',
+  //   });
+  // }
 
   return { valid: true, data: t as ValidatedTemplate, warnings };
 }

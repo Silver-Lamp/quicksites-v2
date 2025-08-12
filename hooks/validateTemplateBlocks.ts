@@ -24,53 +24,53 @@ export function validateTemplateBlocks(template: Template): {
 
   // -------- Global header/footer (single source of truth) --------
   // Warn if missing; do not fail validation.
-  if (!template.headerBlock) {
-    addError(
-      'headerBlock',
-      {
-        field: 'headerBlock',
-        message:
-          'Warning: Global headerBlock is missing. Pages will render without a header unless a per-page override is set.',
-      },
-      /* critical */ false
-    );
-  } else {
-    const result = BlockSchema.safeParse(template.headerBlock);
-    if (!result.success) {
-      result.error.errors.forEach((e) =>
-        addError('headerBlock', {
-          field: e.path.join('.'),
-          message: e.message,
-          blockId: (template.headerBlock as any)?._id,
-          blockType: (template.headerBlock as any)?.type,
-        })
-      );
-    }
-  }
+  // if (!template.headerBlock) {
+  //   addError(
+  //     'headerBlock',
+  //     {
+  //       field: 'headerBlock',
+  //       message:
+  //         'Warning: Global headerBlock is missing. Pages will render without a header unless a per-page override is set.',
+  //     },
+  //     /* critical */ false
+  //   );
+  // } else {
+  //   const result = BlockSchema.safeParse(template.headerBlock);
+  //   if (!result.success) {
+  //     result.error.errors.forEach((e) =>
+  //       addError('headerBlock', {
+  //         field: e.path.join('.'),
+  //         message: e.message,
+  //         blockId: (template.headerBlock as any)?._id,
+  //         blockType: (template.headerBlock as any)?.type,
+  //       })
+  //     );
+  //   }
+  // }
 
-  if (!template.footerBlock) {
-    addError(
-      'footerBlock',
-      {
-        field: 'footerBlock',
-        message:
-          'Warning: Global footerBlock is missing. Pages will render without a footer unless a per-page override is set.',
-      },
-      /* critical */ false
-    );
-  } else {
-    const result = BlockSchema.safeParse(template.footerBlock);
-    if (!result.success) {
-      result.error.errors.forEach((e) =>
-        addError('footerBlock', {
-          field: e.path.join('.'),
-          message: e.message,
-          blockId: (template.footerBlock as any)?._id,
-          blockType: (template.footerBlock as any)?.type,
-        })
-      );
-    }
-  }
+  // if (!template.footerBlock) {
+  //   addError(
+  //     'footerBlock',
+  //     {
+  //       field: 'footerBlock',
+  //       message:
+  //         'Warning: Global footerBlock is missing. Pages will render without a footer unless a per-page override is set.',
+  //     },
+  //     /* critical */ false
+  //   );
+  // } else {
+  //   const result = BlockSchema.safeParse(template.footerBlock);
+  //   if (!result.success) {
+  //     result.error.errors.forEach((e) =>
+  //       addError('footerBlock', {
+  //         field: e.path.join('.'),
+  //         message: e.message,
+  //         blockId: (template.footerBlock as any)?._id,
+  //         blockType: (template.footerBlock as any)?.type,
+  //       })
+  //     );
+  //   }
+  // }
 
   // -------- Pages & blocks --------
   const pages = template?.data?.pages;

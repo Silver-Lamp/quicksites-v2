@@ -29,6 +29,8 @@ import { saveTemplate } from '@/admin/lib/saveTemplate';
 import { TemplateThemeWrapper } from '@/components/theme/template-theme-wrapper';
 import { useTheme } from '@/hooks/useThemeContext';
 import GlobalChromeEditors from '@/components/admin/templates/global-chrome-editors';
+import PageTabsBar from '@/components/admin/templates/page-tabs-bar';
+import type { Page } from '@/types/template';
 
 // ---------- helpers (pure) ----------
 function getPages(tpl: any) {
@@ -239,7 +241,9 @@ export function LiveEditorPreview({
   // Resolve effective header/footer based on page toggles + overrides
   const effectiveHeader = getEffectiveHeader(selectedPage, template);
   const effectiveFooter = getEffectiveFooter(selectedPage, template);
-
+  const slugify = (s: string) =>
+    s.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+  
   return (
     <TemplateThemeWrapper colorMode={resolvedColorMode}>
       <div className="w-full max-w-none px-0">
@@ -294,7 +298,7 @@ export function LiveEditorPreview({
               </button>
             </div>
 
-            <div className="flex gap-2 mb-4 text-sm text-black dark:text-white/70">
+            {/* <div className="flex gap-2 mb-4 text-sm text-black dark:text-white/70">
               {pages.map((p: any, i: number) => (
                 <button
                   key={p.id ?? `page-${i}`}
@@ -308,7 +312,81 @@ export function LiveEditorPreview({
                   {p.title || p.slug || `Page ${i + 1}`}
                 </button>
               ))}
-            </div>
+            </div> */}
+            <PageTabsBar
+              pages={pages}
+              selectedIndex={selectedPageIndex}
+              template={template}
+              onSelect={(i) => setSelectedPageId(pages[i]?.id ?? null)}
+              onAdd={(newPage) => {
+                const ensured: Page = { ...newPage, id: newPage.id || crypto.randomUUID() };
+                const next = withSyncedPages({
+                  ...template,
+                  data: { ...(template.data ?? {}), pages: [...pages, ensured] },
+                  color_mode: resolvedColorMode,
+                } as Template);
+                updateAndSave(next);
+                setSelectedPageId(ensured.id);
+              }}
+              onRename={(index, title, incomingSlug) => {
+                // Base slug from incoming or title
+                let nextSlug = (incomingSlug && incomingSlug.trim()) || slugify(title);
+              
+                // ensure uniqueness
+                const others = new Set(pages.map((p, i) => (i === index ? '' : p.slug)));
+                const base = nextSlug.replace(/-\d+$/, '');
+                let n = 2;
+                while (others.has(nextSlug)) nextSlug = `${base}-${n++}`;
+              
+                const updated = pages.map((p, i) =>
+                  i === index ? { ...p, title, slug: nextSlug } : p
+                );
+              
+                const next = withSyncedPages({
+                  ...template,
+                  data: { ...(template.data ?? {}), pages: updated },
+                  color_mode: resolvedColorMode,
+                } as Template);
+              
+                updateAndSave(next);
+              
+                // if the renamed page was selected, keep selection by id
+                setSelectedPageId(updated[index]?.id ?? null);
+              }}
+              
+              onDelete={(index) => {
+                // no confirm here — PageTabsBar handles prompting
+                if (pages.length <= 1) {
+                  alert('You must keep at least one page.');
+                  return;
+                }
+              
+                const updated = pages.filter((_, i) => i !== index);
+                const next = withSyncedPages({
+                  ...template,
+                  data: { ...(template.data ?? {}), pages: updated },
+                  color_mode: resolvedColorMode,
+                } as Template);
+                updateAndSave(next);
+              
+                const newIdx = Math.min(updated.length - 1, Math.max(0, index - 1));
+                setSelectedPageId(updated[newIdx]?.id ?? null);
+              }}
+              onReorder={(oldIndex, newIndex) => {
+                if (oldIndex === newIndex) return;
+                const copy = [...pages];
+                const [moved] = copy.splice(oldIndex, 1);
+                copy.splice(newIndex, 0, moved);
+                const next = withSyncedPages({
+                  ...template,
+                  data: { ...(template.data ?? {}), pages: copy },
+                  color_mode: resolvedColorMode,
+                } as Template);
+                updateAndSave(next);
+                // keep the same page selected after reorder
+                setSelectedPageId(moved.id);
+              }}
+            />
 
             {effectiveHeader && (
               <RenderBlock block={effectiveHeader} showDebug={false} colorMode={resolvedColorMode} />
@@ -478,7 +556,7 @@ export function LiveEditorPreview({
                       className="w-full flex items-center justify-center gap-2 border border-purple-600 text-purple-600 dark:text-purple-400 rounded px-4 py-2 text-sm hover:bg-purple-50 dark:hover:bg-purple-900 transition-colors"
                     >
                       <PlusCircle className="w-4 h-4" />
-                      <span>Add Block to End</span>
+                      <span>Add Block</span>
                     </SafeTriggerButton>
                   }
                 />

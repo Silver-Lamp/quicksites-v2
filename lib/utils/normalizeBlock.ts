@@ -163,12 +163,12 @@ export function normalizeBlock(block: Partial<Block>): z.infer<typeof BlockSchem
   }
 
   // Optional debug hooks
-  if (candidate.type === 'header') {
-    console.warn('🪵 HEADER BLOCK DEBUG', JSON.stringify(candidate, null, 2));
-  }
-  if (candidate.type === 'service_areas') {
-    console.warn('🪵 SERVICE AREAS BLOCK DEBUG', JSON.stringify(candidate, null, 2));
-  }
+//   if (candidate.type === 'header') {
+//     console.warn('🪵 HEADER BLOCK DEBUG', JSON.stringify(candidate, null, 2));
+//   }
+//   if (candidate.type === 'service_areas') {
+//     console.warn('🪵 SERVICE AREAS BLOCK DEBUG', JSON.stringify(candidate, null, 2));
+//   }
 
   // 7) Final validation
   const result = BlockSchema.safeParse(candidate);

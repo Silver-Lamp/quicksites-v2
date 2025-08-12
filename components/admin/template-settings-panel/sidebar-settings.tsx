@@ -8,7 +8,7 @@ import SlugPanel from '../templates/panels/slug-panel';
 import DomainPanel from '../templates/panels/domain-panel';
 import SeoPanel from '../templates/panels/seo-panel';
 import ThemePanel from '../templates/panels/theme-panel';
-import PagesPanel from '../templates/panels/pages-panel';
+// import PagesPanel from '../templates/panels/pages-panel';
 import TemplateJsonEditor from '../templates/template-json-editor';
 import type { Template, Page } from '@/types/template';
 
@@ -40,7 +40,7 @@ export default function SidebarSettings({ template, onChange }: Props) {
       className="space-y-4 px-4 pt-2 w-1/4 min-w-[280px] max-w-[320px] flex-shrink-0"
       id="sidebar-settings"
     >
-      <PagesPanel
+      {/* <PagesPanel
         template={template}
         onChange={(updated) => {
           const pages = (updated as any).pages ?? [];
@@ -52,7 +52,7 @@ export default function SidebarSettings({ template, onChange }: Props) {
         }}
         selectedIndex={selectedPageIndex}
         onSelectPage={(i) => setSelectedPageIndex(i)}
-      />
+      /> */}
 
       {/* The rest of the panels should emit PARTIALS only */}
       <IdentityPanel

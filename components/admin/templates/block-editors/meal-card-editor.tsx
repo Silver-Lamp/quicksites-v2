@@ -5,6 +5,9 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import type { BlockEditorProps } from '@/components/admin/templates/block-editors';
 import { createBrowserClient } from '@supabase/ssr';
 import { X } from 'lucide-react';
+import TagInput from '@/components/ui/tag-input';
+import { COMMON_CUISINES } from '@/lib/cuisines';
+import { Label } from '@/components/ui/label';
 
 async function uploadEditorImage(file: File, folder = 'editor-images') {
   const supabase = createBrowserClient(
@@ -37,13 +40,15 @@ export default function MealCardEditor({ block, onSave, onClose }: BlockEditorPr
     price: c.price ?? '',
     image_url: c.image_url ?? '',
     description: c.description ?? '',
+    cuisines: c.cuisines ?? [],
     availability: c.availability ?? 'Available',
   });
 
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState<{ title?: string; price?: string }>({});
   const dropRef = useRef<HTMLLabelElement | null>(null);
-
+  const [cuisineOptions, setCuisineOptions] = useState<string[]>(COMMON_CUISINES);
+  const [selectedCuisines, setSelectedCuisines] = useState<string[]>([]);
   // basic validations
   useEffect(() => {
     const next: typeof err = {};
@@ -202,6 +207,19 @@ export default function MealCardEditor({ block, onSave, onClose }: BlockEditorPr
           <span className={label}>Description</span>
           <textarea className={`${field} min-h-[120px] resize-vertical`} value={form.description} onChange={set('description')} />
         </label>
+
+
+        <div className="md:col-span-2">
+        <Label>Cuisines (tags)</Label>
+        <TagInput
+            value={selectedCuisines}
+            onChange={setSelectedCuisines}
+            suggestions={cuisineOptions}
+            maxTags={5}
+            placeholder="e.g., italian, vegan, gluten-free…"
+        />
+        </div>
+
       </div>
 
       <div className="mt-4 flex justify-end gap-2">

@@ -1,6 +1,8 @@
 // lib/blocks/defaultBlockContent.ts
 import type { BlockType } from '@/types/blocks';
 
+const DUMMY_UUID = "00000000-0000-0000-0000-000000000000";
+
 // Keep this aligned with the block types you actually support.
 // If you add/remove a block type, update this object (or your BlockType union).
 export const DEFAULT_BLOCK_CONTENT = {
@@ -101,12 +103,16 @@ export const DEFAULT_BLOCK_CONTENT = {
   },
 
   meal_card: {
-    title: 'Meal Title',
-    chef_name: 'Chef Name',
-    price: '$10',
-    image_url: 'https://placehold.co/800x400',
-    description: 'A tasty thing.',
-    availability: 'Available',
+    // leave mealId blank (it will be treated as undefined by the schema)
+    // mealId: "",
+    // placeholder ensures the refine passes on creation
+    mealSlug: "__select_meal__",   // <-- add this
+    showPrice: true,
+    showChef: false,
+    showRating: true,
+    showTags: true,
+    ctaText: "View meal",
+    variant: "default",
   },
 
   chef_profile: {
@@ -124,5 +130,25 @@ export const DEFAULT_BLOCK_CONTENT = {
         image_url: 'https://placehold.co/800x400',
       },
     ],
+  },
+  meals_grid: {
+    siteSlug: "",        // leave blank if you'll pass siteId instead
+    siteId: "",          // UUID optional
+    tag: "featured",
+    q: "",
+    sort: "recent",
+    limit: 12,
+    columns: 3,
+    ctaText: "View meal",
+  },
+  reviews_list: {
+    mealId: DUMMY_UUID,
+    chefId: DUMMY_UUID,
+    siteId: DUMMY_UUID,
+    pageSize: 6,
+    sort: "recent",
+    minStars: 1,
+    showSummary: true,
+    showWriteCta: false,
   },
 } as const satisfies Record<BlockType, any>;

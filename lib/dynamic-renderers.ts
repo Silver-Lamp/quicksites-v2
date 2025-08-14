@@ -20,4 +20,6 @@ export const DYNAMIC_RENDERERS: Record<string, any> = {
   grid: dynamic(() => import('@/components/admin/templates/render-blocks/grid'), { ssr: false }),
   chef_profile: dynamic(() => import('@/components/admin/templates/render-blocks/chef-profile'), { ssr: false }),
   meal_card: dynamic(() => import('@/components/admin/templates/render-blocks/meal-card'), { ssr: false }),
+  meals_grid: dynamic(() => import('@/components/admin/templates/render-blocks/meals-grid'), { ssr: false }),
+  reviews_list: dynamic(() => import('@/components/admin/templates/render-blocks/reviews-list.client'), { ssr: false }),
 };

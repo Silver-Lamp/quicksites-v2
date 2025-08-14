@@ -19,7 +19,7 @@ export default async function CallLogsPage() {
     <div className="p-4">
       <div className="max-w-6xl mx-auto space-y-4">
         <h2 className="text-xl font-semibold flex items-center gap-2">
-          📞 Call Logs
+          📞 Twilio Call Logs
         </h2>
 
         <div className="rounded border border-zinc-700 bg-black/30 overflow-hidden">

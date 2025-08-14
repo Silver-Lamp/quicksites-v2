@@ -29,7 +29,6 @@ type NavItem =
     };
 
 const navItems: NavItem[] = [
-  { type: 'section', label: 'Core' },
   {
     type: 'item',
     label: 'Dashboard',
@@ -38,36 +37,7 @@ const navItems: NavItem[] = [
   },
   {
     type: 'item',
-    label: 'Map of Opportunities',
-    href: '/admin/the-grid',
-    icon: <MapPinned size={18} />,
-  },
-  {
-    type: 'item',
-    label: 'Outreach (Coming Soon)',
-    href: '/admin/outreach',
-    icon: <Mail size={18} />,
-  },
-  {
-    type: 'item',
-    label: 'Leads',
-    href: '/admin/leads',
-    icon: <PhoneForwarded size={18} />,
-  },
-
-  { type: 'section', label: 'Tools' },
-  {
-    type: 'item',
-    label: 'Campaigns',
-    icon: <Rocket size={18} />,
-    children: [
-      { label: 'View All Campaigns', href: '/admin/campaigns' },
-      { label: 'Start New Campaign', href: '/admin/start-campaign' },
-    ],
-  },
-  {
-    type: 'item',
-    label: 'Templates & Sites',
+    label: 'Sites & Templates',
     icon: <FileStack size={18} />,
     children: [
       { label: 'Browse Sites and Templates', href: '/admin/templates/list' },
@@ -79,14 +49,40 @@ const navItems: NavItem[] = [
     label: 'Google Search Console',
     icon: <Search size={18} />,
     children: [
-      { label: 'Google Search Console Stats', href: '/admin/templates/gsc-bulk-stats' },
-      { label: 'Connect', href: '/api/gsc/auth-url' },
+      { label: 'Stats', href: '/admin/templates/gsc-bulk-stats' },
       { label: 'Sites', href: '/admin/gsc/sites' },
+      { label: '(re)Connect', href: '/api/gsc/auth-url' },
+    ],
+  },
+  { type: 'section', label: 'Marketing' },
+  {
+    type: 'item',
+    label: 'Map of Opportunities',
+    href: '/admin/the-grid',
+    icon: <MapPinned size={18} />,
+  },
+  {
+    type: 'item',
+    label: 'Leads',
+    href: '/admin/leads',
+    icon: <PhoneForwarded size={18} />,
+  },
+
+  {
+    type: 'item',
+    label: 'Campaigns',
+    icon: <Rocket size={18} />,
+    children: [
+      { label: 'View All Campaigns', href: '/admin/campaigns' },
+      { label: 'Start New Campaign', href: '/admin/start-campaign' },
     ],
   },
 
-  { type: 'item', label: 'Email Logs', href: '/admin/email-logs', icon: <Mail size={18} /> },
-  { type: 'item', label: 'Call Logs', href: '/admin/call-logs', icon: <Phone size={18} /> },
+  { type: 'section', label: 'Integrations' },
+  { type: 'item', label: 'Contact Form Email Logs', href: '/admin/email-logs', icon: <Mail size={18} /> },
+  { type: 'item', label: 'Twilio Call Logs', href: '/admin/call-logs', icon: <Phone size={18} /> },
+  { type: 'section', label: 'Tools' },
+  { type: 'item', label: 'Outreach (Coming Soon)', href: '/admin/outreach', icon: <Mail size={18} /> },
 ];
 
 function NavItemButtonOrLink({

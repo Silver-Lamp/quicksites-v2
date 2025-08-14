@@ -16,6 +16,9 @@ import ActivityWidget from '@/components/admin/admin/blocks/activity-widget';
 import EngagementWidget from '@/components/admin/admin/blocks/engagement-widget';
 import RetentionWidget from '@/components/admin/admin/blocks/retention-widget';
 import TrafficWidget from '@/components/admin/admin/blocks/traffic-widget';
+import AuthGuard from '@/components/admin/auth-guard';
+import ComplianceQueue from '@/components/admin/compliance/queue';
+import MehkoCountiesAdmin from '@/components/admin/mehko-counties';
 
 function Dashboard() {
   const router = useRouter();
@@ -74,6 +77,9 @@ function Dashboard() {
   return (
     <>
       <AdminTabs />
+      {/* <AuthGuard roles={['admin', 'owner', 'reseller']}> */}
+      <ComplianceQueue />
+      <MehkoCountiesAdmin />
       <div className="p-6">
         <h1 className="text-2xl font-bold mb-4 text-white">My Dashboard</h1>
         <DashboardSelector
@@ -101,6 +107,7 @@ function Dashboard() {
           updateBlockSetting={updateBlockSetting}
         />
       </div>
+      {/* </AuthGuard> */}
       <div className="p-6">
         <h2 className="text-xl font-bold mb-4 text-white">Claimed Sites</h2>
         <table className="w-full text-sm text-left text-gray-300 bg-gray-800 rounded overflow-hidden">

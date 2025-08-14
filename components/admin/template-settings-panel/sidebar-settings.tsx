@@ -11,6 +11,7 @@ import ThemePanel from '../templates/panels/theme-panel';
 // import PagesPanel from '../templates/panels/pages-panel';
 import TemplateJsonEditor from '../templates/template-json-editor';
 import type { Template, Page } from '@/types/template';
+import PaymentSettingsPanel from '../payments/payment-settings-panel';
 
 type Props = {
   template: Template;
@@ -53,7 +54,10 @@ export default function SidebarSettings({ template, onChange }: Props) {
         selectedIndex={selectedPageIndex}
         onSelectPage={(i) => setSelectedPageIndex(i)}
       /> */}
-
+      <ThemePanel
+        template={template}
+        onChange={(patch) => onChange(patch)}
+      />
       {/* The rest of the panels should emit PARTIALS only */}
       <IdentityPanel
         template={template}
@@ -83,11 +87,12 @@ export default function SidebarSettings({ template, onChange }: Props) {
           onChange(patch);
         }}
       />
-
-      <ThemePanel
-        template={template}
-        onChange={(patch) => onChange(patch)}
+      <PaymentSettingsPanel
+        siteId={template.id}
+        merchantId={'00001'}
+        initialPlatformFeeBps={75}
       />
+
 
       {/* ⚠️ Only keep this JSON editor if you really need it in the sidebar.
           If you do, make sure it ALSO emits partials, not full template objects. */}

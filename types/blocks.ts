@@ -33,6 +33,8 @@ export const BLOCK_CATEGORY: Record<BlockType, BlockCategory> = {
   meal_card: 'content',
   chef_profile: 'content',
   cta: 'interactive',
+  meals_grid: 'content',
+  reviews_list: 'content',
 } as const;
 
 export type BlockMetadata = {

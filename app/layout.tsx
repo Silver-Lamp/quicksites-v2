@@ -52,7 +52,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
             <TooltipProvider>
               <ThemeScope mode="dark">
                 {children}
-                {!isProd && <SquatBotPanel />}
+                {/* {!isProd && <SquatBotPanel />} */}
                 {!isProd && <BlockInspectorOverlay />}
               </ThemeScope>
             </TooltipProvider>

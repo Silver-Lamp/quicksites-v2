@@ -1,6 +1,9 @@
 import { FC } from 'react';
 import Image from 'next/image';
 import ThemeScope from '@/components/ui/theme-scope';
+import dynamic from 'next/dynamic';
+import { useCartStore } from '@/components/cart/cart-store';
+const ChefCouponBadge = dynamic(() => import('@/components/public/chef-coupon-badge'), { ssr: false });
 
 type Meal = {
   id?: string; // ✅ optional unique id if you have it
@@ -18,6 +21,7 @@ type ChefProfileContent = {
   bio: string;
   certifications: string[];
   meals: Meal[];
+  merchant_id: string;
 };
 
 // Small helper to create a stable, unique-ish key when there's no id.
@@ -34,6 +38,7 @@ const ChefProfileBlock: FC<{
   colorMode?: 'light' | 'dark';
   className?: string;
 }> = ({ content, colorMode = 'light', className = '' }) => {
+  const { couponCode } = useCartStore.getState();
   return (
     <ThemeScope
       mode={colorMode}
@@ -69,6 +74,8 @@ const ChefProfileBlock: FC<{
             />
           </div>
         )}
+
+        {couponCode && <ChefCouponBadge merchantId={content.merchant_id} />}
 
         <div className="mt-6">
           <h3 className="text-xl font-semibold mb-2">Upcoming Meals</h3>

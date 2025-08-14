@@ -1,1 +1,28 @@
-{}
+{
+  "crons": [{
+    "path": "/api/cron/email-drain",
+    "schedule": "0 10 * * *",
+    "headers": { "x-cron-secret": "@cron-secret" }
+  },
+  {
+    "path": "/api/cron/social-dispatch",
+    "schedule": "*/5 * * * *",
+    "headers": { "x-cron-secret": "@cron-secret" }
+  },
+  {
+    "path": "/api/cron/last-call-scan",
+    "schedule": "*/5 * * * *",
+    "headers": { "x-cron-secret": "@cron-secret" }
+  },
+  {
+    "path": "/api/cron/compliance-reminders",
+    "schedule": "0 9 * * *",
+    "headers": { "x-cron-secret": "@cron-secret" }
+  },
+  {
+    "path": "/api/cron/weekly-compliance-digest",
+    "schedule": "0 16 * * 1",
+    "headers": { "x-cron-secret": "@cron-secret" }
+  }
+]
+}

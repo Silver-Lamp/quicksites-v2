@@ -160,14 +160,6 @@ export const BLOCK_REGISTRY: { [K in BlockType]: BlockRegistryEntry<K> } = {
     defaultContent: DEFAULT_BLOCK_CONTENT.contact_form,
     render: lazyRenderer(() => import('@/components/admin/templates/render-blocks/contact-form')),
   },
-  meal_card: {
-    label: 'Meal Card',
-    icon: '🍽️',
-    category: 'content',
-    isStatic: false,
-    defaultContent: DEFAULT_BLOCK_CONTENT.meal_card,
-    render: lazyRenderer(() => import('@/components/admin/templates/render-blocks/meal-card')),
-  },
   chef_profile: {
     label: 'Chef Profile',
     icon: '👨‍🍳',
@@ -176,7 +168,67 @@ export const BLOCK_REGISTRY: { [K in BlockType]: BlockRegistryEntry<K> } = {
     defaultContent: DEFAULT_BLOCK_CONTENT.chef_profile,
     render: lazyRenderer(() => import('@/components/admin/templates/render-blocks/chef-profile')),
   },
+  meals_grid: {
+    label: 'Meals Grid',
+    icon: '🍱',
+    category: 'content',
+    isStatic: false,
+    defaultContent: DEFAULT_BLOCK_CONTENT.meals_grid,
+    render: lazyRenderer(() => import('@/components/admin/templates/render-blocks/meals-grid')),
+  }, 
+  reviews_list: {
+    label: 'Reviews List',
+    icon: '⭐',
+    category: 'content',
+    isStatic: false,
+    defaultContent: DEFAULT_BLOCK_CONTENT.reviews_list,
+    render: lazyRenderer(() => import('@/components/admin/templates/render-blocks/reviews-list')),
+  },
+  meal_card: {
+    label: 'Meal Card',
+    icon: '🍽️',
+    category: 'content',
+    isStatic: false,
+    defaultContent: DEFAULT_BLOCK_CONTENT.meal_card,
+    render: lazyRenderer(() => import('@/components/admin/templates/render-blocks/meal-card')),
+  },
 };
+
+// ---- client placeholders for blocks that don't yet have a client wrapper
+const clientPlaceholder = (label: string) => async () => ({
+    default: (props: any) => (
+      <div className="border rounded-md p-3 bg-amber-50 text-sm">
+        <b>{label}</b> — editor preview coming soon.
+      </div>
+    ),
+  });
+
+// Client loaders for the editor (used by the client-only RenderBlock)
+// NOTE: only point at *.client.tsx files here; everything else uses a placeholder.
+export const DYNAMIC_RENDERERS: Partial<Record<BlockType, () => Promise<{ default: any }>>> = {
+    // client wrappers (data-fetching)
+    meal_card:    () => import('@/components/admin/templates/render-blocks/meal-card.client'),
+    reviews_list: () => import('@/components/admin/templates/render-blocks/reviews-list.client'),
+    meals_grid:   () => import('@/components/admin/templates/render-blocks/meals-grid.client'),
+    // simple blocks (now client components)
+    image:         () => import('@/components/admin/templates/render-blocks/image'),
+    grid:          () => import('@/components/admin/templates/render-blocks/grid'),
+    quote:         () => import('@/components/admin/templates/render-blocks/quote'),
+    button:        () => import('@/components/admin/templates/render-blocks/button'),
+    services:      () => import('@/components/admin/templates/render-blocks/services'),
+    cta:           () => import('@/components/admin/templates/render-blocks/cta'),
+    service_areas: () => import('@/components/admin/templates/render-blocks/service-areas'),
+    audio:         () => import('@/components/admin/templates/render-blocks/audio'),
+    video:         () => import('@/components/admin/templates/render-blocks/video'),
+    footer:        () => import('@/components/admin/templates/render-blocks/footer'),
+    header:        () => import('@/components/admin/templates/render-blocks/header'),
+    faq:           () => import('@/components/admin/templates/render-blocks/faq'),
+    testimonial:   () => import('@/components/admin/templates/render-blocks/testimonial'),
+    contact_form:  () => import('@/components/admin/templates/render-blocks/contact-form'),
+    // keep chef_profile as a client wrapper if it fetches data
+    chef_profile:  () => import('@/components/admin/templates/render-blocks/chef-profile.client'),
+    // hero + text are handled by STATIC_RENDERERS in the client renderer
+  };
 
 if (process.env.NODE_ENV === 'development') {
   validateBlockSchemaCoverage();

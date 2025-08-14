@@ -11,7 +11,7 @@ import SafeTriggerButton from '@/components/ui/safe-trigger-button';
 const blockGroups: Record<string, { label: string; types: Block['type'][] }> = {
   content: {
     label: 'Content Blocks',
-    types: ['text', 'quote', 'faq', 'testimonial', 'video', 'audio', 'chef_profile', 'meal_card'],
+    types: ['text', 'quote', 'faq', 'testimonial', 'video', 'audio', 'chef_profile', 'meal_card', 'reviews_list'],
   },
   layout: {
     label: 'Layout',

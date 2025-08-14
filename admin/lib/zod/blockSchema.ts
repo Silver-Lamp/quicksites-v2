@@ -44,6 +44,58 @@ export const TextBlockSchema = z.object({
   tone: z.string().default('neutral'),
 });
 
+// Treat "" as undefined
+const emptyToUndef = <T extends z.ZodTypeAny>(schema: T) =>
+  z.preprocess(v => (typeof v === "string" && v.trim() === "" ? undefined : v), schema);
+
+export const mealCardPropsSchema = z.object({
+  mealId:  emptyToUndef(z.string().uuid()).optional(),   // must be .optional()
+  mealSlug: emptyToUndef(z.string().min(1)).optional(),  // must be .optional()
+  showPrice: z.boolean().default(true),
+  showChef: z.boolean().default(false),
+  showRating: z.boolean().default(true),
+  showTags: z.boolean().default(true),
+  ctaText: z.string().default("View meal"),
+  variant: z.enum(["default","compact","hero"]).default("default"),
+}).refine(p => !!p.mealId || !!p.mealSlug, {
+  message: "Provide mealId or mealSlug",
+  path: ["mealSlug"], // attach error to a field, not the whole object
+});
+
+export const reviewsListPropsSchema = z.object({
+  mealId:  emptyToUndef(z.string().uuid()).optional(),
+  chefId:  emptyToUndef(z.string().uuid()).optional(),
+  siteId:  emptyToUndef(z.string().uuid()).optional(),
+
+  pageSize: z.number().int().min(1).max(50).default(6),
+  sort: z.enum(["recent","top"]).default("recent"),
+
+  // 0 / "0" / "" means “no filter”
+  minStars: z.preprocess(
+    v => (v === 0 || v === "0" || v === "" ? undefined : v),
+    z.number().int().min(1).max(5)
+  ).optional(),
+
+  showSummary: z.boolean().default(true),
+  showWriteCta: z.boolean().default(false),
+})
+.refine(p => !!p.mealId || !!p.chefId || !!p.siteId, {
+  message: "Provide mealId, chefId, or siteId",
+  path: ["siteId"],   // attach error to a concrete field
+});
+
+export const mealsGridPropsSchema = z.object({
+  // allow blank in editor without tripping uuid/string validators
+  siteSlug: emptyToUndef(z.string().min(1)).optional(),
+  siteId: emptyToUndef(z.string().uuid()).optional(),
+  tag: z.string().optional(),
+  q: z.string().optional(),
+  sort: z.enum(["recent","rating","price_asc","price_desc","popular"]).default("recent"),
+  limit: z.number().int().min(1).max(48).default(12),
+  columns: z.number().int().min(1).max(6).default(3),
+  ctaText: z.string().default("View meal"),
+}).refine(p => !!p.siteSlug || !!p.siteId, { message: "Provide siteSlug or siteId" });
+
 export const HeaderContent = z.preprocess((raw) => {
   const c = raw && typeof raw === 'object' ? { ...(raw as any) } : {};
   if (Array.isArray(c.navItems) && !Array.isArray(c.nav_items)) c.nav_items = c.navItems;
@@ -306,16 +358,12 @@ export const blockContentSchemaMap = {
   meal_card: {
     label: 'Meal Card',
     icon: '🍽️',
-    schema: z.object({
-      title: z.string().min(1),
-      chef_name: z.string().min(1),
-      price: z.string().min(1),
-      image_url: z.string().url(),
-      description: z.string().optional().default(''),
-      availability: z.string().min(1),
-      tags: z.array(z.string()).optional(),
-      video_url: z.string().url().optional(),
-    }),
+    schema: mealCardPropsSchema,
+  },
+  reviews_list: {
+    label: 'Reviews List',
+    icon: '⭐',
+    schema: reviewsListPropsSchema,
   },
   chef_profile: {
     label: 'Chef Profile',
@@ -329,6 +377,11 @@ export const blockContentSchemaMap = {
       certifications: z.array(z.string()).min(1),
       meals: z.array(ChefMealSchema).min(1),
     }),
+  },
+  meals_grid: {
+    label: 'Meals Grid',
+    icon: '🍱',
+    schema: mealsGridPropsSchema,
   },
 } satisfies Record<string, { label: string; icon: string; schema: z.ZodTypeAny }>;
 

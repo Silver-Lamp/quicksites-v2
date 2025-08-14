@@ -28,6 +28,7 @@ import { prepareTemplateForSave } from '@/admin/lib/prepareTemplateForSave';
 
 import { motion, AnimatePresence } from 'framer-motion';
 import { Settings2, ChevronLeft } from 'lucide-react';
+import CommerceTab from '../commerce/commerce-tab';
 
 function pushWithLimit<T>(stack: T[], item: T, limit = 10): T[] {
   return [...stack.slice(-limit + 1), item];
@@ -299,7 +300,8 @@ export function EditorContent({
       <Tabs defaultValue="preview">
         <TabsList>
           <TabsTrigger value="preview">Preview</TabsTrigger>
-          <TabsTrigger value="history">History</TabsTrigger>
+          {/* <TabsTrigger value="history">History</TabsTrigger> */}
+          <TabsTrigger value="commerce">Commerce</TabsTrigger>
         </TabsList>
 
         <TabsContent value="preview">
@@ -386,10 +388,12 @@ export function EditorContent({
           </div>
         </TabsContent>
 
-        <TabsContent value="history">
+        {/* <TabsContent value="history">
           <TemplateHistory template={template} onRevert={handleTemplateChange} />
-        </TabsContent>
-
+        </TabsContent> */}
+        <TabsContent value="commerce" className="p-4">
+        <CommerceTab merchantId={'00001'} siteId={template.id} />
+</TabsContent>
         <DevValidatorPanel error={zodError} />
 
         <TemplatePublishModal

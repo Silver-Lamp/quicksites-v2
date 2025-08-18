@@ -13,11 +13,11 @@ export async function saveSiteWithClient(
     site_name: site.site_name,
     slug: site.slug,
     data: site.data,
-    // theme: site.theme,
-    // brand: site.brand,
-    // layout: site.layout,
-    // color_scheme: site.color_scheme,
-    // is_site: true,
+    theme: site.theme,
+    brand: site.brand,
+    layout: site.layout,
+    color_scheme: site.color_scheme,
+    is_site: true,
   };
 
   const { data, error } = await db

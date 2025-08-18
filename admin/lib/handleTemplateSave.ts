@@ -4,17 +4,17 @@
 import toast from 'react-hot-toast';
 import type { Template } from '../../types/template';
 import { ZodError } from 'zod';
-import { normalizeTemplate } from '@/utils/normalizeTemplate';
-import { TemplateSaveSchema } from '@/lib/zod/templateSaveSchema';
+import { normalizeTemplate } from '../utils/normalizeTemplate';
+import { TemplateSaveSchema } from '../lib/zod/templateSaveSchema';
 import { validateTemplateBlocks } from '../../hooks/validateTemplateBlocks';
-import { printZodErrors } from '@/lib/printZodErrors';
-import { saveTemplate } from '@/lib/saveTemplate'; // TODO: remove this
-import { saveSiteWithClient } from '@/lib/saveSite';
-import { ensureValidTemplateFields } from '@/utils/ensureValidTemplateFields';
-import { unwrapData } from '@/lib/cleanTemplateData';
-import { ensureBlockId } from '@/lib/ensureBlockId';
+import { printZodErrors } from '../lib/printZodErrors';
+import { saveTemplate } from '../lib/saveTemplate'; // TODO: remove this when sites fully replace templates
+import { saveSiteWithClient } from '../lib/saveSite';
+import { ensureValidTemplateFields } from '../utils/ensureValidTemplateFields';
+import { unwrapData } from '../lib/cleanTemplateData';
+import { ensureBlockId } from '../lib/ensureBlockId';
 import { TemplateFormSchema } from '../../types/template';
-import { canonicalizeUrlKeysDeep } from '@/lib/migrations/canonicalizeUrls';
+import { canonicalizeUrlKeysDeep } from '../lib/migrations/canonicalizeUrls';
 import { getSupabaseRSC } from '../../lib/supabase/serverClient';
 import type { Database } from '../../types/supabase';
 import type { SupabaseClient } from '@supabase/supabase-js';
@@ -58,6 +58,7 @@ export async function handleTemplateSave({
   scrollToBlock?: boolean;
 }): Promise<void> {
   const supabase = await getSupabaseRSC();
+
   try {
     // 1) Parse JSON
     const parsedRaw = JSON.parse(rawJson);
@@ -141,124 +142,140 @@ export async function handleTemplateSave({
     // 6.1) Default color_mode if null/undefined
     if (base.color_mode == null) base.color_mode = 'dark'; // or 'light'
 
-// 7) Block validation + final schema
-const raw = validateTemplateBlocks(base) as any;
+    // 7) Block validation + final schema
+    const raw = validateTemplateBlocks(base) as any;
 
-// Support multiple shapes: {errors}, {warnings}, {issues}, or flat object.
-const rawIssues: Record<string, any> =
-  raw?.errors ?? raw?.issues ?? raw ?? {};
+    // Support multiple shapes: {errors}, {warnings}, {issues}, or flat object.
+    const rawIssues: Record<string, any> =
+      raw?.errors ?? raw?.issues ?? raw ?? {};
 
-function normalizeIssue(item: any): { message: string; level: 'error' | 'warning' } {
-  // Common shapes:
-  //  - string
-  //  - { message, level? }
-  //  - { msg, level? }
-  //  - anything else → stringify
-  const message = typeof item === 'string'
-    ? item
-    : String(item?.message ?? item?.msg ?? item ?? '');
+    function normalizeIssue(item: any): { message: string; level: 'error' | 'warning' } {
+      // Common shapes:
+      //  - string
+      //  - { message, level? }
+      //  - { msg, level? }
+      //  - anything else → stringify
+      const message =
+        typeof item === 'string'
+          ? item
+          : String(item?.message ?? item?.msg ?? item ?? '');
 
-  const levelRaw = (typeof item === 'object' && (item?.level ?? item?.severity ?? item?.type)) || '';
-  const level = /^warning$/i.test(String(levelRaw)) || /^warning\b/i.test(message)
-    ? 'warning'
-    : 'error';
+      const levelRaw =
+        (typeof item === 'object' && (item?.level ?? item?.severity ?? item?.type)) || '';
+      const level =
+        /^warning$/i.test(String(levelRaw)) || /^warning\b/i.test(message)
+          ? 'warning'
+          : 'error';
 
-  return { message, level };
-}
-
-function splitIssues(src: Record<string, any>) {
-  const hard: Record<string, string[]> = {};
-  const soft: Record<string, string[]> = {};
-  for (const [blockId, value] of Object.entries(src || {})) {
-    const arr = Array.isArray(value) ? value : [value];
-    for (const it of arr) {
-      const { message, level } = normalizeIssue(it);
-      if (!message) continue;
-      const bucket = level === 'warning' ? soft : hard;
-      (bucket[blockId] ??= []).push(message);
+      return { message, level };
     }
-  }
-  return { hard, soft };
-}
 
-const { hard: hardBlockErrors, soft: softBlockWarnings } = splitIssues(rawIssues);
+    function splitIssues(src: Record<string, any>) {
+      const hard: Record<string, string[]> = {};
+      const soft: Record<string, string[]> = {};
+      for (const [blockId, value] of Object.entries(src || {})) {
+        const arr = Array.isArray(value) ? value : [value];
+        for (const it of arr) {
+          const { message, level } = normalizeIssue(it);
+          if (!message) continue;
+          const bucket = level === 'warning' ? soft : hard;
+          (bucket[blockId] ??= []).push(message);
+        }
+      }
+      return { hard, soft };
+    }
 
-// Helper: first HARD block error (for toast + scroll)
-const firstBlockErr = (() => {
-  for (const [blockId, msgs] of Object.entries(hardBlockErrors)) {
-    const msg = Array.isArray(msgs) ? msgs[0] : (msgs as any);
-    if (msg) return { blockId, msg: String(msg) };
-  }
-  return undefined;
-})();
+    const { hard: hardBlockErrors, soft: softBlockWarnings } = splitIssues(rawIssues);
 
-// Final schema check AFTER we split issues
-const result = TemplateSaveSchema.safeParse(base);
+    // Helper: first HARD block error (for toast + scroll)
+    const firstBlockErr = (() => {
+      for (const [blockId, msgs] of Object.entries(hardBlockErrors)) {
+        const msg = Array.isArray(msgs) ? msgs[0] : (msgs as any);
+        if (msg) return { blockId, msg: String(msg) };
+      }
+      return undefined;
+    })();
 
-// If schema failed OR there is a HARD block error -> block save
-if (!result.success || firstBlockErr) {
-  if (!result.success) {
-    const rows = result.error.errors.map((e) => ({
-      path: e.path.join('.'),
-      code: e.code,
-      message: e.message,
-      value: getAtPath(base, e.path),
-    }));
-    console.groupCollapsed('❌ Template Validation Failed (Schema)');
-    try { console.table(rows); } catch { console.log(rows); }
-    console.groupEnd();
-    printZodErrors(result.error, '❌ Template Validation Failed (Schema)');
-  }
+    // Final schema check AFTER we split issues
+    const result = TemplateSaveSchema.safeParse(base);
 
-  if (firstBlockErr) {
-    console.error('❌ Block validation failed', {
-      first: firstBlockErr,
-      all: hardBlockErrors,
-      warnings: softBlockWarnings,
+    // If schema failed OR there is a HARD block error -> block save
+    if (!result.success || firstBlockErr) {
+      if (!result.success) {
+        const rows = result.error.errors.map((e) => ({
+          path: e.path.join('.'),
+          code: e.code,
+          message: e.message,
+          value: getAtPath(base, e.path),
+        }));
+        console.groupCollapsed('❌ Template Validation Failed (Schema)');
+        try {
+          console.table(rows);
+        } catch {
+          console.log(rows);
+        }
+        console.groupEnd();
+        printZodErrors(result.error, '❌ Template Validation Failed (Schema)');
+      }
+
+      if (firstBlockErr) {
+        console.error('❌ Block validation failed', {
+          first: firstBlockErr,
+          all: hardBlockErrors,
+          warnings: softBlockWarnings,
+        });
+        if (scrollToBlock) {
+          const el = document.getElementById(`block-${firstBlockErr.blockId}`);
+          el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      }
+
+      const flat = !result.success ? (result.error as any).flatten?.() : undefined;
+      const firstField = flat ? Object.keys(flat.fieldErrors ?? {})[0] : undefined;
+      const firstFieldErr = firstField
+        ? flat?.fieldErrors?.[firstField as keyof typeof flat.fieldErrors]?.[0]
+        : undefined;
+
+      toast.error(firstBlockErr?.msg || firstFieldErr || 'Validation failed — check console for details.');
+      onError?.(!result.success ? result.error : (firstBlockErr?.msg ?? 'invalid'));
+      return;
+    }
+
+    // --- Only warnings remain → proceed, but surface them non-blocking
+    if (Object.keys(softBlockWarnings).length) {
+      console.warn('⚠️ Non-blocking block warnings:', softBlockWarnings);
+      const msgs = Object.values(softBlockWarnings).flat().map(String);
+      const text = `⚠️ ${msgs.join(' | ')}`;
+      toast(text, { duration: 4000 });
+    }
+
+    // 8) Strip editor-only fields and save
+    const payload: Template = { ...base, data: base.data };
+    delete (payload as any).pages;
+    delete (payload as any).services;
+
+    // Unify signatures to (db, t) => Promise<Template>
+    type SaveWithDb = (db: SupabaseClient<Database>, t: Template) => Promise<Template>;
+
+    const saveWithDb: SaveWithDb =
+      mode === 'template'
+        ? async (_db, t) => saveTemplate(t)
+        : saveSiteWithClient;
+
+    // Single promise for both toast + await
+    const savePromise = saveWithDb(supabase as SupabaseClient<Database>, payload);
+
+    toast.promise(savePromise, {
+      loading: 'Saving...',
+      success: 'Template saved!',
+      error: 'Failed to save',
     });
-    if (scrollToBlock) {
-      const el = document.getElementById(`block-${firstBlockErr.blockId}`);
-      el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    }
-  }
 
-  const flat = !result.success ? result.error.flatten?.() : undefined;
-  const firstField = flat ? Object.keys(flat.fieldErrors ?? {})[0] : undefined;
-  const firstFieldErr = firstField
-    ? flat?.fieldErrors?.[firstField as keyof typeof flat.fieldErrors]?.[0]
-    : undefined;
-
-  toast.error(firstBlockErr?.msg || firstFieldErr || 'Validation failed — check console for details.');
-  onError?.(!result.success ? result.error : (firstBlockErr?.msg ?? 'invalid'));
-  return;
-}
-
-// --- Only warnings remain → proceed, but surface them non-blocking
-if (Object.keys(softBlockWarnings).length) {
-  console.warn('⚠️ Non-blocking block warnings:', softBlockWarnings);
-  const msgs = Object.values(softBlockWarnings).flat().map(String);
-  const text = `⚠️ ${msgs.join(' | ')}`;
-  toast(text, { duration: 4000 });
-}
-
-
-// 8) Strip editor-only fields and save (unchanged)
-const saveFn = mode === 'template' ? saveTemplate : saveSiteWithClient;
-const payload: Template = { ...base, data: base.data };
-delete (payload as any).pages;
-delete (payload as any).services;
-
-  toast.promise(saveFn(supabase, payload as any) as unknown as Promise<any>, {
-  loading: 'Saving...',
-  success: 'Template saved!',
-  error: 'Failed to save',
-});
-
-const saved = await saveFn(supabase, payload as any) as unknown as any;
-onSuccess?.(saved);
+    const saved = await savePromise;
+    onSuccess?.(saved);
   } catch (err: any) {
     console.error('Invalid JSON while saving template:', err);
     toast.error('Invalid JSON. Fix formatting and try again.');
-    onError?.(err.message || 'invalid');
+    onError?.(err?.message || 'invalid');
   }
 }

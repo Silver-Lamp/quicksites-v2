@@ -1,9 +1,9 @@
 import SiteEditor from '@/components/site/site-editor';
-import { getServerSupabaseClient } from '@/lib/supabase/serverClient';
+import { getServerSupabase } from '@/lib/supabase/server';
 import { notFound } from 'next/navigation';
 
 export default async function EditSitePage({ params }: { params: { slug: string } }) {
-  const supabase = getServerSupabaseClient();
+  const supabase = await getServerSupabase();
   const { slug } = params;
 
   const { data: site, error } = await supabase

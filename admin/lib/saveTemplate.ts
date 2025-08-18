@@ -1,5 +1,5 @@
 // admin/lib/saveTemplate.ts
-import type { Template } from '@/types/template';
+import type { Template } from '../../types/template';
 import { createClient } from '@supabase/supabase-js';
 import { prepareTemplateForSave } from './prepareTemplateForSave';
 

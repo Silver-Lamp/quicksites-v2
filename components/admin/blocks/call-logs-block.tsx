@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
+import { getSupabaseRSC } from '@/lib/supabase/serverClient';
 import { formatDistanceToNow } from 'date-fns';
 import { Card, CardContent } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -17,11 +17,11 @@ type CallLog = {
   timestamp: string;
 };
 
-export default function CallLogsBlock() {
+export default async function CallLogsBlock() {
   const [logs, setLogs] = useState<CallLog[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const supabase = createClientComponentClient();
+  const supabase = await getSupabaseRSC();
 
   useEffect(() => {
     const fetchData = async () => {

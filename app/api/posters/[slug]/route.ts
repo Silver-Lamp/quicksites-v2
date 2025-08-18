@@ -1,5 +1,4 @@
 // app/api/posters/[slug]/route.ts
-
 import { createClient } from '@supabase/supabase-js';
 import { createCanvas, loadImage } from 'canvas';
 import QRCode from 'qrcode';
@@ -29,10 +28,9 @@ export async function GET(req: NextRequest, { params }: { params: { slug: string
   const ctx = canvas.getContext('2d');
 
   const campaignUrl = `https://quicksites.ai/support/${slug}`;
-  const qrCanvas = await QRCode.toCanvas(campaignUrl, {
-    margin: 1,
-    width: 300,
-  });
+
+  const qrCanvas = createCanvas(300, 300);
+  await QRCode.toCanvas(qrCanvas, campaignUrl, { margin: 1, width: 300 });
 
   ctx.fillStyle = '#000';
   ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -45,7 +43,7 @@ export async function GET(req: NextRequest, { params }: { params: { slug: string
   ctx.font = 'bold 26px sans-serif';
   ctx.fillText(campaign.headline, 40, 110);
 
-  ctx.drawImage(qrCanvas as any, 250, 160);
+  ctx.drawImage(qrCanvas, 250, 160);
 
   ctx.fillStyle = '#aaa';
   ctx.font = '16px sans-serif';
@@ -56,15 +54,19 @@ export async function GET(req: NextRequest, { params }: { params: { slug: string
       const img = await loadImage(campaign.logo_url);
       ctx.drawImage(img, 600, 20, 160, 60);
     } catch {
-      // skip logo if image fails to load
+      /* ignore logo errors */
     }
   }
 
-  const buffer = canvas.toBuffer('image/png');
-  return new Response(buffer, {
+  const buf = canvas.toBuffer('image/png');
+  const ab = buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength) as ArrayBuffer;
+
+  return new Response(ab, {
     headers: {
       'Content-Type': 'image/png',
       'Content-Disposition': `inline; filename="${slug}-poster.png"`,
+      'Content-Length': String(ab.byteLength),
+      'Cache-Control': 'public, max-age=604800',
     },
   });
 }

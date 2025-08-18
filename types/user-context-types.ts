@@ -1,7 +1,8 @@
 // types/user-context-types.ts
-import type { Role } from '@/admin/utils/roles';
-import type { Session, User } from '@supabase/auth-helpers-react';
+import type { Session, User } from '@supabase/supabase-js';
 import type { ReactNode } from 'react';
+
+export type Role = 'admin' | 'owner' | 'editor' | 'viewer';
 
 export interface CurrentUserContext {
   session: Session | null;

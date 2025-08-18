@@ -112,7 +112,7 @@ export default function PuppyWidget({ showOnMobile = true }: { showOnMobile?: bo
         </AnimatePresence>
 
         {/* Show tip button */}
-        {/* {tooltipDismissed && !isExpanded && (
+        {tooltipDismissed && !isExpanded && (
           <button
             onClick={() => {
               setTooltipVisible(true);
@@ -123,7 +123,7 @@ export default function PuppyWidget({ showOnMobile = true }: { showOnMobile?: bo
           >
             Show tip
           </button>
-        )} */}
+        )}
       </div>
     </div>
   );

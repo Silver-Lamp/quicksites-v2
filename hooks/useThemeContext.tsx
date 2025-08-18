@@ -2,7 +2,7 @@
 'use client';
 
 import { createContext, useContext, useEffect, useState } from 'react';
-import { supabase } from '@/lib/supabaseClient';
+import { supabase } from '@/lib/supabase/client';
 import { industryPresets } from '@/lib/theme/industryPresets';
 import { fontMap } from '@/lib/theme/fontMap';
 

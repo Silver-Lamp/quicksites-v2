@@ -27,28 +27,28 @@ export default async function TemplateEditPage({ params }: PageProps) {
   return (
     <TemplateEditorProvider
       templateName={template.template_name}
-      initialData={template as Snapshot}
+      initialData={template as unknown as Snapshot}
       colorMode="dark"
     >
       <TemplateEditorLayout
         toolbar={
           <EditorToolbar
             templateName={template.template_name}
-            initialData={template as Snapshot}
+            initialData={template as unknown as Snapshot}
             onRename={() => {}}
           />
         }
         preview={
           <PreviewPanel
             templateName={template.template_name}
-            initialData={template as Snapshot}
+            initialData={template as unknown as Snapshot}
             onRename={() => {}}
           />
         }
       >
         <EditorForm
           templateName={template.template_name}
-          initialData={template as Snapshot}
+          initialData={template as unknown as Snapshot}
           onRename={() => {}}
         />
       </TemplateEditorLayout>

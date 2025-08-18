@@ -1,8 +1,9 @@
 // app/api/chef/meals/update/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
+import { createServerClient, type CookieOptions } from '@supabase/ssr';
 import { slugify, RESERVED_SLUGS } from '@/lib/slug';
+import { Database } from '@/types/supabase';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -10,7 +11,24 @@ export const dynamic = 'force-dynamic';
 type Json = Record<string, any>;
 
 export async function PATCH(req: NextRequest) {
-  const supabase = createRouteHandlerClient({ cookies });
+      const store = await cookies();
+  const supabase = createServerClient<Database>(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookieEncoding: 'base64url',
+      cookies: {
+        getAll() {
+          return store.getAll().map(({ name, value }) => ({ name, value }));
+        },
+        setAll(cookies) {
+          for (const c of cookies) {
+            store.set(c.name, c.value, c.options as CookieOptions | undefined);
+          }
+        },
+      },
+    }
+  );
 
   // Auth
   const {

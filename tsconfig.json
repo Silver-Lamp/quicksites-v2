@@ -3,7 +3,6 @@
   "include": [
     ".next/types",
     "_pages-legacy",
-    "admin",
     "app",
     "components",
     "hooks",
@@ -12,7 +11,15 @@
     "pages",
     "scripts",
     "types",
-    ".next/types/**/*.ts"
+    ".next/types/**/*.ts",
+    "admin",
+    "admin/types",
+    "admin/components",
+    "admin/lib",
+    "admin/hooks",
+    "admin/pages",
+    "admin/lib/supabase",
+    "admin/lib/supabase/serverClient"
   ],
   "exclude": [
     "node_modules",

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
+import { createServerClient, type CookieOptions } from '@supabase/ssr';
 import PDFDocument from 'pdfkit';
 import QR from 'qrcode';
 import { createClient } from '@supabase/supabase-js';
@@ -11,7 +11,7 @@ import { Database } from '@/types/supabase';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-type Supa = ReturnType<typeof createRouteHandlerClient<Database>>;
+type Supa = ReturnType<typeof createServerClient<Database>>;
 
 const pt = (inches: number) => inches * 72;
 const mm = (n: number) => (n / 25.4) * 72;
@@ -90,7 +90,24 @@ const AVERY_TEMPLATES: Record<string, AveryTemplate> = {
 };
 
 async function assertAdmin() {
-  const supa = createRouteHandlerClient({ cookies });
+  const store = await cookies();
+  const supa = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookieEncoding: 'base64url',
+      cookies: {
+        getAll() {
+          return store.getAll().map(({ name, value }) => ({ name, value }));
+        },
+        setAll(cookies) {
+          for (const c of cookies) {
+            store.set(c.name, c.value, c.options as CookieOptions | undefined);
+          }
+        },
+      },
+    }
+  );
   const { data: { user } } = await supa.auth.getUser();
   if (!user) return { code: 401 as const, error: 'Not signed in' };
   const { data: admin } = await supa.from('admin_users').select('user_id').eq('user_id', user.id).maybeSingle();
@@ -172,7 +189,7 @@ async function ensureInvites(supa: Supa, meal: any, count: number, expiresInDays
 export async function POST(req: NextRequest) {
   const gate = await assertAdmin();
   if (gate.code !== 200) return NextResponse.json({ error: gate.error }, { status: gate.code });
-  const supa = gate.supa! as ReturnType<typeof createRouteHandlerClient<Database>>;
+  const supa = gate.supa! as ReturnType<typeof createServerClient<Database>>;
 
   const body = await req.json().catch(() => ({}));
   const {

@@ -4,6 +4,26 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Admin Tools: soften borders */
+@layer utilities {
+  /* Any Tailwind .border element */
+  .soft-borders :where(.border) {
+    border-color: hsl(var(--border) / 0.28) !important; /* ~28% opacity */
+  }
+
+  /* Dividers from divide-x / divide-y */
+  .soft-borders :where(.divide-x > :not([hidden]) ~ :not([hidden]),
+                       .soft-borders .divide-y > :not([hidden]) ~ :not([hidden])) {
+    border-color: hsl(var(--border) / 0.18) !important;
+  }
+
+  /* Basic form controls */
+  .soft-borders :where(input, select, textarea) {
+    border-color: hsl(var(--border) / 0.28) !important;
+  }
+}
+
+
 /* ------------------------------------------------ */
 /* ✨ Google Fonts – Self-Hosted or Variable Support */
 /* ------------------------------------------------ */
@@ -235,3 +255,17 @@ body {
   opacity: 0;
   pointer-events: none;
 }
+
+/* Reserve space below the sticky header and stop rubber-band over-scroll */
+.qs-content-scroll{
+  height: calc(100vh - 48px);       /* your header min-height */
+  overflow-y: auto;
+  overscroll-behavior-y: contain;   /* no “scroll past top” */
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Nice-to-have: stable layout when the sidebar animates */
+:root { --qs-sidebar-w: 288px; }
+
+/* Optional: when you toggle “fullscreen” in the editor (class added elsewhere) */
+.qs-fullscreen .qs-content-scroll{ height: 100vh; }

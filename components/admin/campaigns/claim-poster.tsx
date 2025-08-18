@@ -5,7 +5,7 @@ import Image from 'next/image';
 import QRCode from 'react-qr-code';
 import { formatDistanceToNowStrict, parseISO } from 'date-fns';
 import { useState, useEffect } from 'react';
-import { supabase } from '@/lib/supabaseClient';
+import { supabase } from '@/lib/supabase/client';
 import { toast } from 'react-hot-toast';
 import { normalizeImageSrc } from '@/lib/normalizeImageSrc';
 import Link from 'next/link';

@@ -1,102 +1,64 @@
 'use client';
 
-import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
-import { supabase } from '@/lib/supabase/client';
+import * as React from 'react';
+import type { User } from '@supabase/supabase-js';
+import { useSupabase } from '@/components/supabase-provider';
 
-import { getSupabase } from '@/lib/supabase/server';
-
-type CurrentUser = {
-  id: string;
-  email: string;
-  name?: string;
-  avatar_url?: string;
-  role: string;
-  bio?: string;
-  plan?: string;
-};
-
-export type CurrentUserContextType = {
-  user: CurrentUser | null;
-  ready: boolean;
-  role: 'admin' | 'editor' | 'viewer' | 'owner';
-  hasRole: (roles: string[]) => boolean;
-  refetch: () => void;
-};
-
-export const CurrentUserContext = createContext<CurrentUserContextType>({
+type State = { user: User | null; ready: boolean; isAdmin: boolean };
+export const CurrentUserContext = React.createContext<State>({
   user: null,
   ready: false,
-  role: 'viewer',
-  hasRole: () => false,
-  refetch: () => {},
+  isAdmin: false,
 });
 
-export function CurrentUserProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<CurrentUser | null>(null);
-  const [ready, setReady] = useState<boolean>(false);
+export function CurrentUserProvider({ children }: { children: React.ReactNode }) {
+  const { supabase } = useSupabase();
+  const [state, setState] = React.useState<State>({ user: null, ready: false, isAdmin: false });
 
-  const load = async () => {
-    const { data: sessionData } = await supabase.auth.getSession();
-    const u = sessionData?.session?.user;
-
-    if (!u?.id) {
-      setUser(null);
-      setReady(true);
-      return;
-    }
-
-    const { data: profile, error } = await supabase
-      .from('user_profiles')
-      .select('*')
-      .eq('user_id', u.id)
-      .single();
-
-    if (error) {
-      console.error('❌ Failed to fetch user_profiles:', error.message);
-      setUser(null);
-      setReady(true);
-      return;
-    }
-
-    const normalizedRole = (profile.role || 'viewer').toLowerCase() as CurrentUser['role'];
-
-    const user: CurrentUser = {
-      id: u.id,
-      email: u.email ?? profile.email,
-      name: profile.name ?? '',
-      avatar_url: profile.avatar_url ?? '',
-      role: normalizedRole,
-      bio: profile.bio ?? '',
-      plan: profile.plan ?? 'free',
-    };
-
-    console.log('✅ [User loaded]', {
-      email: user.email,
-      role: user.role,
-      plan: user.plan,
-    });
-
-    setUser(user);
-    setReady(true);
+  const computeIsAdmin = (u: User | null) => {
+    const meta = (u?.app_metadata ?? {}) as any;
+    if (meta?.isAdmin === true) return true;
+    const roles: string[] | undefined = meta?.roles;
+    return Array.isArray(roles) && roles.includes('admin');
   };
 
-  useEffect(() => {
-    load();
-  }, []);
+  React.useEffect(() => {
+    let cancelled = false;
 
-  const hasRole = (roles: string[]) =>
-    user?.role ? roles.map((r) => r.toLowerCase()).includes(user.role.toLowerCase()) : false;
+    (async () => {
+      // 1) Authoritative call to Supabase Auth
+      const { data, error } = await supabase.auth.getUser();
+      if (!cancelled && !error && data?.user) {
+        const user = data.user;
+        setState({ user, ready: true, isAdmin: computeIsAdmin(user) });
+        return;
+      }
+
+      // 2) Fallback to server whoami (reads HttpOnly cookie on server)
+      try {
+        const res = await fetch('/api/auth/whoami', { cache: 'no-store' });
+        const json = await res.json();
+        const user = json?.user ?? null; // not a Supabase User, but truthy for gating
+        if (!cancelled) setState({ user, ready: true, isAdmin: !!json?.isAdmin });
+      } catch {
+        if (!cancelled) setState({ user: null, ready: true, isAdmin: false });
+      }
+    })();
+
+    // 3) Live updates
+    const { data: sub } = supabase.auth.onAuthStateChange((_evt, session) => {
+      const user = session?.user ?? null;
+      setState({ user, ready: true, isAdmin: computeIsAdmin(user) });
+    });
+
+    return () => {
+      cancelled = true;
+      sub.subscription.unsubscribe();
+    };
+  }, [supabase]);
 
   return (
-    <CurrentUserContext.Provider
-      value={{
-        user,
-        ready,
-        role: (user?.role as 'admin' | 'editor' | 'viewer' | 'owner') || 'viewer',
-        hasRole,
-        refetch: load,
-      }}
-    >
+    <CurrentUserContext.Provider value={state}>
       {children}
     </CurrentUserContext.Provider>
   );

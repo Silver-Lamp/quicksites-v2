@@ -33,7 +33,7 @@ export default function ContactFormRender({
 
   const {
     title = 'Contact Us',
-    notification_email = 'sandon@quicksites.ai',
+    notification_email = 'sandon@pointsevenstudio.com',
     services = [],
   } = (block.content as any) || {};
 
@@ -106,7 +106,7 @@ export default function ContactFormRender({
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          to: [notification_email, 'sandon@quicksites.ai'],
+          to: [notification_email, 'sandon@pointsevenstudio.com'],
           subject: `New Contact Form Submission from ${siteSlug}`,
           message: `
 New contact form submission from ${siteSlug}:

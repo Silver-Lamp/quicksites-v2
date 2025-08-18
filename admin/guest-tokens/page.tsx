@@ -3,13 +3,13 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { supabase } from '@/lib/supabaseClient';
+import { supabase } from '../../lib/supabase/client';
 import { isAfter, isBefore, parseISO, subDays } from 'date-fns';
-import { Button } from '@/components/ui';
+import { Button } from '../../components/ui';
 import { CalendarIcon, DownloadIcon } from 'lucide-react';
 import { DateRange } from 'react-day-picker';
-import { Calendar } from '@/components/ui';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui';
+import { Calendar } from '../../components/ui';
+import { Popover, PopoverContent, PopoverTrigger } from '../../components/ui';
 
 interface UpgradeEvent {
   id: string;

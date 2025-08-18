@@ -1,11 +1,11 @@
-// pages/admin/param-lab.tsx
+// app/admin/admin/param-lab.tsx
 import { useSearchParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import QRCode from 'react-qr-code';
-import { supabase } from '@/lib/supabaseClient';
+import { supabase } from '@/lib/supabase/client';
 
 import { queryParamSchemas } from '@/admin/lib/queryParamSchemas';
-import { extractTags, summarizeQuery } from '@/admin/lib/queryUtils';
+import { extractTags } from '@/admin/lib/queryUtils';
 import QueryParamEditor from '@/components/admin/query-param-editor';
 import TagFilterControls from '@/components/admin/tag-filter-controls';
 import { useCurrentUser } from '@/hooks/useCurrentUser';

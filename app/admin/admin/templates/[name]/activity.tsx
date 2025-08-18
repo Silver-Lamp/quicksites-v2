@@ -1,4 +1,4 @@
-import { supabase } from '@/lib/supabaseClient';
+import { supabase } from '@/lib/supabase/client';
 import { GetServerSideProps } from 'next';
 
 export default function TemplateActivity({ logs, name }: { logs: any[]; name: string }) {

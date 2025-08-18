@@ -1,6 +1,6 @@
 // app/admin/views.tsx
 import { useEffect, useState } from 'react';
-import { supabase } from '@/lib/supabaseClient';
+import { supabase } from '@/lib/supabase/client';
 import { Input } from '../components/ui/input';
 import TagFilterDropdown from '../components/admin/templates/tag-filter-dropdown.jsx';
 import {

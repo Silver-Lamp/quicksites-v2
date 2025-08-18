@@ -1,11 +1,11 @@
 import { ImageResponse } from 'next/og';
-import { getSupabase } from '@/lib/supabase/server';
+import { getServerSupabase } from '@/lib/supabase/server';
 
 export const runtime = 'edge';
 
 export async function GET(_: Request, { params }: { params: { slug: string } }) {
   const { slug } = params;
-  const supabase = await getSupabase();
+  const supabase = await getServerSupabase();
 
   const { data: site } = await supabase
     .from('templates')

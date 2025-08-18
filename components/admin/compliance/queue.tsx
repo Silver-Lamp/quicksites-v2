@@ -1,3 +1,4 @@
+// components/admin/compliance/queue.tsx
 'use client';
 
 import { useEffect, useState } from 'react';
@@ -5,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { getJSON } from '../tools/http';
 
 type Row = {
   id:string; merchant_id:string; requirement_id:string;
@@ -23,8 +25,8 @@ export default function ComplianceQueue() {
 
   async function load() {
     const qs = new URLSearchParams({ status, ...(state?{state}:{}) , ...(op?{op}:{}) });
-    const r = await fetch(`/api/admin/compliance/docs/list?${qs.toString()}`);
-    const d = await r.json(); setRows(d.docs || []);
+    const r = await getJSON(`/api/admin/compliance/docs/list?${qs.toString()}`);
+    setRows(r.docs || []);
   }
   useEffect(() => { load(); }, [status, state, op]);
 

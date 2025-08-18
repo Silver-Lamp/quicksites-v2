@@ -1,6 +1,6 @@
 // app/admin/not-found.tsx
 import { useEffect, useState } from 'react';
-import { supabase } from '@/lib/supabaseClient';
+import { supabase } from '@/lib/supabase/client';
 import { cn } from '../lib/utils.js'; // Optional helper for conditional classNames
 
 type LogEntry = {

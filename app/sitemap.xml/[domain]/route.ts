@@ -1,6 +1,6 @@
 export const dynamic = 'force-dynamic';
 
-import { getSupabase } from '@/lib/supabase/server';
+import { getServerSupabase } from '@/lib/supabase/server';
 import { NextResponse } from 'next/server';
 
 function escapeXml(str: string) {
@@ -16,7 +16,7 @@ export async function GET(req: Request, { params }: { params: { domain: string }
   const original = params.domain;
   const normalized = original.replace(/^www\./, ''); // strips 'www.'
 
-  const supabase = await getSupabase();
+  const supabase = await getServerSupabase();
 
   const { data: site, error } = await supabase
     .from('templates')

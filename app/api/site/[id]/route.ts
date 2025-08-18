@@ -1,6 +1,6 @@
 // app/api/site/[id]/route.ts
 import { NextResponse } from 'next/server';
-import { getServerSupabaseClient } from '@/lib/supabase/serverClient';
+import { getServerSupabase } from '@/lib/supabase/server';
 import type { SiteData, Page } from '@/types/site';
 
 export async function POST(
@@ -18,7 +18,7 @@ export async function POST(
     );
   }
 
-  const supabase = getServerSupabaseClient();
+  const supabase = await getServerSupabase();
 
   const { error } = await supabase
     .from('sites')
@@ -39,7 +39,7 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
     const siteId = params.id;
     const body = await req.json();
   
-    const supabase = getServerSupabaseClient();
+    const supabase = await getServerSupabase();
     const { error } = await supabase
       .from('sites')
       .update(body)

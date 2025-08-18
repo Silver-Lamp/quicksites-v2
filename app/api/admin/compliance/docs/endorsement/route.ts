@@ -1,49 +1,117 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { cookies } from 'next/headers';
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
-import { createClient } from '@supabase/supabase-js';
+// app/api/admin/compliance/docs/endorsement/route.ts
+'use server';
+
 import { randomUUID } from 'crypto';
-import { Database } from '@/types/supabase';
+import { NextRequest, NextResponse } from 'next/server';
+import { cookies as nextCookies } from 'next/headers';
+import { createServerClient, type CookieOptions } from '@supabase/ssr';
+import { createClient as createAdminClient } from '@supabase/supabase-js';
+
+import type { SupabaseClient } from '@supabase/supabase-js';
+import type { Database } from '@/types/supabase';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
+/** Build a server-side Supabase client wired to Next.js route-handler cookies. */
+async function getSupabaseForRoute(): Promise<SupabaseClient<Database>> {
+  const store = await nextCookies(); // ✅ await to avoid Next’s warning
+
+  return createServerClient<Database>(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookieEncoding: 'base64url',
+      cookies: {
+        // @supabase/ssr server interface: getAll / setAll
+        getAll() {
+          return store.getAll().map(({ name, value }) => ({ name, value }));
+        },
+        setAll(cookies) {
+          for (const c of cookies) {
+            // Next’s cookie store can be mutated in route handlers
+            store.set(c.name, c.value, c.options as CookieOptions | undefined);
+          }
+        },
+      },
+    }
+  );
+}
+
 async function assertAdmin() {
-  const supa = createRouteHandlerClient({ cookies });
-  const { data: { user } } = await supa.auth.getUser();
+  const supa = await getSupabaseForRoute();
+
+  const {
+    data: { user },
+  } = await supa.auth.getUser();
+
   if (!user) return { code: 401 as const, error: 'Not signed in' };
-  const { data: admin } = await supa.from('admin_users').select('user_id').eq('user_id', user.id).maybeSingle();
+
+  const { data: admin } = await supa
+    .from('admin_users')
+    .select('user_id')
+    .eq('user_id', user.id)
+    .maybeSingle();
+
   if (!admin) return { code: 403 as const, error: 'Forbidden' };
+
   return { code: 200 as const, supa };
 }
 
 export async function POST(req: NextRequest) {
   const gate = await assertAdmin();
-  if (gate.code !== 200) return NextResponse.json({ error: gate.error }, { status: gate.code });
-  const supa = gate.supa! as ReturnType<typeof createRouteHandlerClient<Database>>;
+  if (gate.code !== 200) {
+    return NextResponse.json({ error: gate.error }, { status: gate.code });
+  }
 
+  const supa = gate.supa as SupabaseClient<Database>;
   const { email, merchant_id, expires_in_days = 180 } = await req.json();
 
   // Resolve merchant
-  let mid = merchant_id as string | undefined;
+  let mid: string | undefined = merchant_id;
   if (!mid && email) {
-    const admin = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
-    const { data: list, error: listErr } = await admin.auth.admin.listUsers({ page: 1, perPage: 200 });
+    const admin = createAdminClient<Database>(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    );
+
+    const { data: list, error: listErr } = await admin.auth.admin.listUsers({
+      page: 1,
+      perPage: 200,
+    });
     if (listErr) return NextResponse.json({ error: listErr.message }, { status: 500 });
-    const u = list?.users?.find(x => x.email?.toLowerCase() === String(email).toLowerCase());
+
+    const u = list?.users?.find(
+      (x) => x.email?.toLowerCase() === String(email).toLowerCase()
+    );
     if (!u) return NextResponse.json({ error: 'user not found' }, { status: 404 });
-    const { data: m } = await supa.from('merchants').select('id').eq('user_id', u.id).maybeSingle();
+
+    const { data: m } = await supa
+      .from('merchants')
+      .select('id')
+      .eq('user_id', u.id)
+      .maybeSingle();
+
     if (!m) return NextResponse.json({ error: 'merchant not found for user' }, { status: 404 });
     mid = m.id;
   }
-  if (!mid) return NextResponse.json({ error: 'merchant_id or email required' }, { status: 400 });
+
+  if (!mid) {
+    return NextResponse.json({ error: 'merchant_id or email required' }, { status: 400 });
+  }
 
   // Find insurance requirement for merchant jurisdiction (county > state)
-  const { data: prof } = await supa.from('merchant_compliance_profiles')
-    .select('state, county, operation_type, country').eq('merchant_id', mid).maybeSingle();
+  const { data: prof } = await supa
+    .from('merchant_compliance_profiles')
+    .select('state, county, operation_type, country')
+    .eq('merchant_id', mid)
+    .maybeSingle();
+
   if (!prof) return NextResponse.json({ error: 'merchant profile not set' }, { status: 400 });
 
-  const base = supa.from('compliance_requirements').select('id, code, juris_county')
+  const base = supa
+    .from('compliance_requirements')
+    .select('id, code, juris_county')
     .eq('active', true)
     .eq('juris_country', prof.country || 'US')
     .eq('juris_state', prof.state)
@@ -56,11 +124,18 @@ export async function POST(req: NextRequest) {
     const { data: state } = await base.is('juris_county', null).maybeSingle();
     reqRow = state || null;
   }
-  if (!reqRow) return NextResponse.json({ error: 'INSURANCE_GPL requirement not found' }, { status: 404 });
+  if (!reqRow) {
+    return NextResponse.json(
+      { error: 'INSURANCE_GPL requirement not found' },
+      { status: 404 }
+    );
+  }
 
-  const expires = new Date(Date.now() + Math.max(1, Number(expires_in_days)) * 24 * 3600 * 1000).toISOString();
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const row: any = {
+  const expires = new Date(
+    Date.now() + Math.max(1, Number(expires_in_days)) * 24 * 3600 * 1000
+  ).toISOString();
+
+  const row = {
     id: randomUUID(),
     merchant_id: mid,
     requirement_id: reqRow.id,
@@ -73,8 +148,17 @@ export async function POST(req: NextRequest) {
   const { error: insErr } = await supa.from('compliance_docs').insert(row);
   if (insErr) return NextResponse.json({ error: insErr.message }, { status: 500 });
 
-  try { await supa.rpc('compliance_recompute_status', { p_merchant_id: mid }); } catch {}
-  const { data: snap } = await supa.from('compliance_status').select('*').eq('merchant_id', mid).maybeSingle();
+  try {
+    await supa.rpc('compliance_recompute_status', { p_merchant_id: mid });
+  } catch {
+    /* ignore */
+  }
+
+  const { data: snap } = await supa
+    .from('compliance_status')
+    .select('*')
+    .eq('merchant_id', mid)
+    .maybeSingle();
 
   return NextResponse.json({ ok: true, inserted: row, snapshot: snap });
 }

@@ -48,6 +48,7 @@ export type TemplateData = {
   footer?: string[]; // legacy/unused in new model (kept for backward-compat)
   service_areas?: string[];
   site_id?: string | null;
+  brand?: string;
   phone?: string;
   color_mode?: 'light' | 'dark';
   archived?: boolean;
@@ -198,6 +199,7 @@ const TemplateDataSchema = z
     footer: z.array(z.string()).optional(), // legacy
     service_areas: z.array(z.string()).optional(),
     site_id: UUID,
+    brand: z.string().optional(),
     phone: z.string().optional(),
     color_mode: z.enum(['light', 'dark']).optional(),
     archived: z.boolean().optional(),

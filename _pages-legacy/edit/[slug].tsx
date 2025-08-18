@@ -6,7 +6,7 @@ import Head from 'next/head';
 import { useEffect, useState, useRef } from 'react';
 import { useSearchParams } from 'next/navigation';
 import dynamic from 'next/dynamic';
-import { supabase } from '@/lib/supabaseClient';
+import { supabase } from '@/lib/supabase/client';
 import { GripVertical } from 'lucide-react';
 // import RenderBlock from '@/components/admin/templates/render-block';
 // import BlockSidebar from '@/components/admin/templates/block-sidebar';

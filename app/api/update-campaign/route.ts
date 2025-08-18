@@ -2,7 +2,7 @@
 export const runtime = 'nodejs';
 
 import { json } from '@/lib/api/json';
-import { getSupabase } from '@/lib/supabase/server';
+import { getServerSupabase } from '@/lib/supabase/server';
 import { createClient } from '@supabase/supabase-js';
 
 // Service client for updates (bypasses RLS)
@@ -22,7 +22,7 @@ export async function POST(req: Request) {
     return json({ error: 'Invalid goal_count (must be a number)' }, { status: 400 });
   }
 
-  const userSupabase = await getSupabase(); // ✅ Auth-bound client
+  const userSupabase = await getServerSupabase(); // ✅ Auth-bound client
 
   const {
     data: { user },

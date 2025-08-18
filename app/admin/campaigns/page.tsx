@@ -2,7 +2,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { supabase } from '@/lib/supabaseClient';
+import { supabase } from '@/lib/supabase/client';
 import CampaignPanel from '@/components/admin/campaigns/campaign-panel';
 import { CampaignType } from '@/types/campaign.types';
 import { Lead } from '@/types/lead.types';

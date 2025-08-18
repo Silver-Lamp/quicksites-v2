@@ -1,9 +1,9 @@
 // lib/templates/getSiteByDomain.ts
-import { getSupabase } from '@/lib/supabase/server';
+import { getServerSupabase } from '@/lib/supabase/server';
 import type { Template } from '@/types/template';
 
 export async function getSiteByDomain(domain: string): Promise<Template | null> {
-  const supabase = await getSupabase();
+  const supabase = await getServerSupabase();
 
   const { data, error } = await supabase
     .from('templates')

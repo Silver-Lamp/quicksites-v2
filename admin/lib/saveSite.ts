@@ -1,29 +1,31 @@
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
-import type { Database } from '@/types/supabase';
-import type { Template } from '@/types/template';
+// admin/lib/saveSite.ts
+import type { SupabaseClient } from '@supabase/supabase-js';
+import type { Database } from '../../types/supabase';
+import type { Template } from '../../types/template';
+import { randomUUID } from 'crypto';
 
-export async function saveSite(site: Template): Promise<Template> {
-  const supabase = createClientComponentClient<Database>();
+export async function saveSiteWithClient(
+  db: SupabaseClient<Database>,
+  site: Template
+): Promise<Template> {
+  const payload = {
+    id: site.id ||= randomUUID(), // ensure this is set (client creates one; server can fallback)
+    site_name: site.site_name,
+    slug: site.slug,
+    data: site.data,
+    // theme: site.theme,
+    // brand: site.brand,
+    // layout: site.layout,
+    // color_scheme: site.color_scheme,
+    // is_site: true,
+  };
 
-  const { data, error } = await supabase
+  const { data, error } = await db
     .from('sites')
-    .update({
-      site_name: site.site_name,
-      slug: site.slug,
-      data: site.data,
-      theme: site.theme,
-      brand: site.brand,
-      layout: site.layout,
-      color_scheme: site.color_scheme,
-      is_site: true,
-    })
-    .eq('id', site.id)
+    .upsert(payload, { onConflict: 'id' }) // 👈 handles insert or update
     .select()
     .single();
 
-  if (error) {
-    throw new Error(error.message);
-  }
-
+  if (error) throw error;
   return data as Template;
 }

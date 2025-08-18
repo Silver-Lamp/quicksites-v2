@@ -1,8 +1,9 @@
+// components/auth/require-login.tsx
 'use client';
 
-import { useLoginStatus } from '@/hooks/useLoginStatus';
-import { useRouter } from 'next/navigation';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
+import { usePathname, useRouter } from 'next/navigation';
+import { supabase } from '@/lib/supabase/client';
 
 export default function RequireLogin({
   children,
@@ -13,14 +14,38 @@ export default function RequireLogin({
   fallback?: React.ReactNode;
   redirectTo?: string;
 }) {
-  const { isAuthenticated, loading } = useLoginStatus();
   const router = useRouter();
+  const pathname = usePathname();
+
+  const [loading, setLoading] = useState(true);
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
+
+  useEffect(() => {
+    let mounted = true;
+
+    (async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!mounted) return;
+      setIsAuthenticated(!!session);
+      setLoading(false);
+    })();
+
+    const { data: sub } = supabase.auth.onAuthStateChange((_e, session) => {
+      setIsAuthenticated(!!session);
+    });
+
+    return () => {
+      mounted = false;
+      sub.subscription?.unsubscribe();
+    };
+  }, []);
 
   useEffect(() => {
     if (!loading && !isAuthenticated) {
-      router.replace(`${redirectTo}?redirect=${window.location.pathname}`);
+      const next = encodeURIComponent(pathname || '/');
+      router.replace(`${redirectTo}?next=${next}`);
     }
-  }, [loading, isAuthenticated]);
+  }, [loading, isAuthenticated, pathname, redirectTo, router]);
 
   if (loading) return fallback;
   if (!isAuthenticated) return null;

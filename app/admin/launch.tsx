@@ -1,4 +1,4 @@
-// pages/launch.tsx
+// app/admin/launch.tsx
 'use client';
 
 import { useEffect, useState } from 'react';
@@ -25,7 +25,13 @@ export default function LaunchPage() {
     const raw = params?.get('params');
     if (!raw) return;
     try {
-      const parsed = JSON.parse(decodeURIComponent(raw));
+      let parsed: any = null;
+      try {
+        const str = decodeURIComponent(raw || '');
+        if (str && (str.startsWith('{') || str.startsWith('['))) parsed = JSON.parse(str);
+      } catch {
+        // not JSON; ignore
+      }
       setSiteParams(parsed);
       setStatus('confirm');
     } catch (err: any) {

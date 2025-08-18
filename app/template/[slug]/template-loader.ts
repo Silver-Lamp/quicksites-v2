@@ -1,16 +1,13 @@
-// app/edit/[slug]/template-loader.ts
 'use server';
 
-import { createServerComponentClient } from '@supabase/auth-helpers-nextjs';
-import { cookies as nextCookies } from 'next/headers';
+import { getServerSupabaseClient } from '@/lib/supabase/serverClient';
 import type { Database } from '@/types/supabase';
 
-export async function fetchTemplateBySlug(slug: string) {
-  const cookieStore = nextCookies(); // This is fine — `cookies()` returns a store, no need to await anymore in latest Next.js (as of v14+).
-  
-  const supabase = createServerComponentClient<Database>({
-    cookies: () => cookieStore, // ⬅️ wrap it like this
-  });
+type TemplateRow = Database['public']['Tables']['templates']['Row'];
+
+export async function fetchTemplateBySlug(slug: string): Promise<TemplateRow | null> {
+  // Uses server-side Supabase client that’s already wired to Next cookies
+  const supabase = await getServerSupabaseClient();
 
   const { data, error } = await supabase
     .from('templates')
@@ -19,9 +16,9 @@ export async function fetchTemplateBySlug(slug: string) {
     .single();
 
   if (error || !data) {
-    console.error('.:. Supabase fetchTemplateBySlug error:', error);
+    console.error('[fetchTemplateBySlug] Supabase error:', error);
     return null;
   }
 
-  return data;
+  return data as TemplateRow;
 }

@@ -1,4 +1,5 @@
 // lib/analytics/logError.ts
+import { cookies } from 'next/headers';
 import { getRequestContext } from '../request/getRequestContext';
 
 export async function logError(
@@ -6,7 +7,10 @@ export async function logError(
   context: Record<string, any> = {},
   options: { debug?: boolean } = {}
 ) {
-  const { traceId } = await getRequestContext();
+  const { traceId } = await getRequestContext({
+    cookieStore: await cookies(),
+    headerStore: new Headers(),
+  });
 
   const payload = {
     message,

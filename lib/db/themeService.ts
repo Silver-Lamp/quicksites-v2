@@ -1,8 +1,7 @@
 // lib/db/themeService.ts
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
-import type { Database } from '@/types/supabase';
+import { getSupabaseRSC } from '@/lib/supabase/serverClient';
 
-const supabase = createClientComponentClient<Database>();
+const supabase = await getSupabaseRSC();
 
 export async function fetchIndustryTheme(industry: string) {
   const { data, error } = await supabase

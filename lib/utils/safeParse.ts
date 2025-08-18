@@ -1,14 +1,19 @@
-/**
- * Safely attempts to parse JSON from a string. Returns original string if not JSON.
- * Falls back to undefined for null/empty or invalid values.
- */
-export function safeParse<T = unknown>(input: string | undefined | null): T | string | undefined {
-  if (!input || typeof input !== 'string') return undefined;
+// lib/utils/safeParse.ts
+export function safeParse<T = unknown>(input: string | null | undefined) {
+  if (input == null) return null;
+  const s = String(input).trim();
+  if (!s) return null;
+
+  // If it doesn't look like JSON, return it as-is (no logging)
+  const looksLikeJson =
+    s.startsWith('{') || s.startsWith('[') || s.startsWith('"') || s === 'null' || s === 'true' || s === 'false';
+
+  if (!looksLikeJson) return s;
 
   try {
-    const parsed = JSON.parse(input);
-    return parsed as T;
+    return JSON.parse(s) as T;
   } catch {
-    return input; // assume it was a plain string, like a cookie value
+    // Return raw string instead of logging noisy errors
+    return s;
   }
 }

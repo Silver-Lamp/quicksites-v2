@@ -1,47 +1,78 @@
 'use client';
 
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import clsx from 'clsx';
 import { AdminNavSections } from '@/components/admin/AppHeader/AdminNavSections';
 
-export default function AdminSidebar({
+const STORAGE_KEY = 'admin-sidebar-collapsed';
+
+export default function ResponsiveAdminLayout({
   onToggle,
+  collapsed,
 }: {
   onToggle?: (collapsed: boolean) => void;
+  collapsed?: boolean;
 }) {
-  const [isCollapsed, setIsCollapsed] = useState(false);
+  const [isCollapsed, setIsCollapsed] = useState(collapsed || false);
   const [isMobile, setIsMobile] = useState(false);
   const touchStartX = useRef<number | null>(null);
 
-  // Detect mobile
+  // Init from storage + viewport
   useEffect(() => {
     const update = () => setIsMobile(window.innerWidth < 768);
     update();
     window.addEventListener('resize', update);
+
+    const stored = window.localStorage.getItem(STORAGE_KEY);
+    const initial = stored === 'true' || window.innerWidth < 768;
+    setIsCollapsed(initial);
+
     return () => window.removeEventListener('resize', update);
   }, []);
 
-  // Load from storage
+  // Persist + notify
   useEffect(() => {
-    const stored = localStorage.getItem('admin-sidebar-collapsed');
-    if (stored === 'true' || window.innerWidth < 768) setIsCollapsed(true);
+    window.localStorage.setItem(STORAGE_KEY, String(isCollapsed));
+    onToggle?.(isCollapsed);
+    // Optional: broadcast that the state changed
+    window.dispatchEvent(new CustomEvent('qs:sidebar:changed', { detail: isCollapsed }));
+  }, [isCollapsed, onToggle]);
+
+  // Programmatic control from toolbar/fullscreen
+  useEffect(() => {
+    const onSet = (e: Event) => {
+      const val = (e as CustomEvent<boolean>).detail;
+      if (typeof val === 'boolean') setIsCollapsed(val);
+    };
+    window.addEventListener('qs:sidebar:set-collapsed' as any, onSet as EventListener);
+    return () =>
+      window.removeEventListener('qs:sidebar:set-collapsed' as any, onSet as EventListener);
   }, []);
 
+  // Hotkey: "e" toggles sidebar (not while typing)
   useEffect(() => {
-    localStorage.setItem('admin-sidebar-collapsed', String(isCollapsed));
-    onToggle?.(isCollapsed);
-  }, [isCollapsed, onToggle]);
+    const onKey = (e: KeyboardEvent) => {
+      if (e.metaKey || e.ctrlKey || e.altKey) return;
+      const t = e.target as HTMLElement | null;
+      const tag = t?.tagName?.toLowerCase();
+      if (tag === 'input' || tag === 'textarea' || t?.isContentEditable) return;
+      if (e.key?.toLowerCase() === 'e') {
+        e.preventDefault();
+        setIsCollapsed((v) => !v);
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
 
   // Swipe close (mobile)
   useEffect(() => {
-    const handleTouchStart = (e: TouchEvent) => {
-      touchStartX.current = e.touches[0].clientX;
-    };
-    const handleTouchEnd = (e: TouchEvent) => {
+    const handleTouchStart = (ev: TouchEvent) => (touchStartX.current = ev.touches[0].clientX);
+    const handleTouchEnd = (ev: TouchEvent) => {
       if (touchStartX.current === null) return;
-      const deltaX = e.changedTouches[0].clientX - touchStartX.current;
+      const deltaX = ev.changedTouches[0].clientX - touchStartX.current;
       if (deltaX < -50 && !isCollapsed) setIsCollapsed(true);
       touchStartX.current = null;
     };
@@ -51,14 +82,6 @@ export default function AdminSidebar({
       window.removeEventListener('touchstart', handleTouchStart);
       window.removeEventListener('touchend', handleTouchEnd);
     };
-  }, [isCollapsed]);
-
-  useEffect(() => {
-    const handleKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && !isCollapsed) setIsCollapsed(true);
-    };
-    window.addEventListener('keydown', handleKey);
-    return () => window.removeEventListener('keydown', handleKey);
   }, [isCollapsed]);
 
   return (
@@ -75,19 +98,19 @@ export default function AdminSidebar({
         />
       )}
 
-      {/* Sidebar container */}
       <motion.aside
-        animate={{ width: isCollapsed ? 56 : 288 }} // Tailwind w-14 vs w-72
+        animate={{ width: isCollapsed ? 56 : 288 }} // Tailwind: w-14 vs w-72
         transition={{ type: 'spring', stiffness: 250, damping: 30 }}
         className={clsx(
-          'fixed top-0 left-0 z-40 h-screen bg-zinc-900 border-r border-zinc-800 text-white overflow-y-auto flex flex-col group'
+          'sticky top-0 left-0 z-40 h-screen bg-zinc-900 border-r border-zinc-800 text-white overflow-y-auto flex flex-col group'
         )}
       >
         <div className="relative">
           <button
             onClick={() => setIsCollapsed(!isCollapsed)}
             className="p-2 m-2 hover:bg-zinc-800 rounded transition relative"
-            title={isCollapsed ? 'Expand Sidebar' : 'Collapse Sidebar'}
+            title={isCollapsed ? 'Expand Sidebar (E)' : 'Collapse Sidebar (E)'}
+            aria-label="Toggle sidebar"
           >
             {isCollapsed ? <ChevronRight size={20} /> : <ChevronLeft size={20} />}
             {isCollapsed && (
@@ -96,10 +119,6 @@ export default function AdminSidebar({
               </span>
             )}
           </button>
-
-          {isCollapsed && (
-            <div className="absolute top-0 right-0 w-2 h-full bg-transparent group-hover:bg-zinc-700 rounded-r cursor-pointer transition-all duration-200" />
-          )}
         </div>
 
         <div className={clsx('flex-1', isCollapsed && 'overflow-hidden')}>

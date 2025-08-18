@@ -38,20 +38,15 @@ export default function FloatingSettingsRail({
     }
   }, [open, storageKey]);
 
-  // Hotkey: "s" toggles rail (not when typing in input/textarea)
   React.useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      const tag = (e.target as HTMLElement)?.tagName?.toLowerCase();
-      if (tag === 'input' || tag === 'textarea' || (e.target as HTMLElement)?.isContentEditable) return;
-      if (e.key.toLowerCase() === 's') {
-        e.preventDefault();
-        setOpen((o) => !o);
-      }
+    const onToggle = (_e: Event) => setOpen((o) => !o);
+    // listen for the broadcast from EditorContent (and any other producers)
+    window.addEventListener('qs:settings:toggle' as any, onToggle as EventListener);
+    return () => {
+      window.removeEventListener('qs:settings:toggle' as any, onToggle as EventListener);
     };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
   }, []);
-
+  
   return (
     <>
       {/* Gear button (visible when collapsed) */}

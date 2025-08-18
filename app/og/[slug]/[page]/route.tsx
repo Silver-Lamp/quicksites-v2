@@ -1,5 +1,5 @@
 import { ImageResponse } from 'next/og';
-import { getSupabase } from '@/lib/supabase/server';
+import { getServerSupabase } from '@/lib/supabase/server';
 import { cacheOgImage } from '@/lib/og/cacheOgImage';
 
 export const runtime = 'nodejs';
@@ -7,7 +7,7 @@ export const runtime = 'nodejs';
 
 export async function GET(_: Request, { params }: { params: { slug: string; page: string } }) {
   const { slug, page } = params;
-  const supabase = await getSupabase();
+  const supabase = await getServerSupabase();
 
   const { data: site } = await supabase
     .from('templates')

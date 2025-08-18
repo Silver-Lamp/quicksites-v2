@@ -11,7 +11,8 @@ import { useTemplateJsonSync } from '@/hooks/useTemplateJsonSync';
 import { normalizeTemplate } from '@/admin/utils/normalizeTemplate';
 import { cleanTemplateDataStructure } from '@/admin/lib/cleanTemplateData';
 import { prepareTemplateForSave } from '@/admin/lib/prepareTemplateForSave';
-import { handleTemplateSave } from '@/admin/lib/handleTemplateSave';
+// ⬇️ use a Server Action (no direct server imports in client code)
+import { saveSiteAction } from '@/app/admin/templates/actions';
 
 import type { Snapshot, Template } from '@/types/template';
 import type { Block } from '@/types/blocks';
@@ -62,11 +63,11 @@ function collectBlockErrors(tpl: Template): Record<string, BlockValidationError[
 }
 
 /**
- * One-shot creator that ALWAYS serializes the full DB-safe template.
- * This avoids Zod "Required" errors on id/template_name/slug/... during first save.
+ * One-shot creator that ALWAYS serializes the full DB-safe template
+ * and persists it via a Server Action.
  */
 function makeOneShotSave(
-  _handleTemplateSave: typeof import('@/admin/lib/handleTemplateSave').handleTemplateSave,
+  saveFn: (tpl: Template) => Promise<Template>,
   getCurrentTemplate: () => Template,
   guardedSetTemplate: (tpl: Template) => void
 ) {
@@ -76,23 +77,16 @@ function makeOneShotSave(
     if (inFlight) return inFlight;
 
     const fullDbSafe = prepareTemplateForSave(getCurrentTemplate());
-    const payload = JSON.stringify(fullDbSafe);
 
-    inFlight = new Promise<Template>((resolve, reject) => {
-      _handleTemplateSave({
-        rawJson: payload,
-        mode: 'template',
-        onSuccess: (updated) => {
-          // ensure local state has the DB id/slug/etc.
-          guardedSetTemplate(updated);
-          resolve(updated);
-        },
-        onError: (err) => {
-          inFlight = null; // allow retry
-          reject(err as any);
-        },
+    inFlight = saveFn(fullDbSafe as Template)
+      .then((updated) => {
+        guardedSetTemplate(updated);
+        return updated;
+      })
+      .catch((err) => {
+        inFlight = null; // allow retry
+        throw err;
       });
-    });
 
     return inFlight;
   };
@@ -158,7 +152,7 @@ export function useTemplateEditorState({
   // 3) JSON syncing + autosave helpers
   const { rawJson, setRawJson, livePreviewData } = useTemplateJsonSync(template.data || {});
   const { inputValue, setInputValue, slugPreview, nameExists } = useTemplateMeta(
-    template.template_name,
+    template.template_name || '',
     template.id,
   );
   const autosave = useAutosaveTemplate(template, rawJson);
@@ -207,8 +201,9 @@ export function useTemplateEditorState({
   const didInitialCreate = useRef(false);
 
   useEffect(() => {
+    // 🔁 uses Server Action under the hood
     saveOnce.current = makeOneShotSave(
-      handleTemplateSave,
+      saveSiteAction,
       () => template,
       guardedSetTemplate
     );
@@ -227,28 +222,25 @@ export function useTemplateEditorState({
       });
   }, [isCreating]);
 
-  // 7) Save draft via API
+  // 7) Save draft via Server Action (DB-safe), preserve pretty JSON in panel
   const handleSaveDraft = () => {
-    // If the JSON panel is empty, still send a full DB-safe payload.
-    const payload =
+    const dbSafe = prepareTemplateForSave(template);
+    const prettyJson =
       rawJson && rawJson.trim()
         ? rawJson
-        : JSON.stringify(prepareTemplateForSave(template), null, 2);
+        : JSON.stringify(cleanTemplateDataStructure(dbSafe), null, 2);
 
-    handleTemplateSave({
-      rawJson: payload,
-      mode: 'template',
-      onSuccess: (updated: Template) => {
+    saveSiteAction(dbSafe as Template)
+      .then((updated) => {
         guardedSetTemplate(updated);
-        localStorage.setItem(`draft-${updated.id}`, payload);
+        localStorage.setItem(`draft-${updated.id}`, prettyJson);
+        onSaveDraft?.(prettyJson);
         // toast.success('Draft saved');
-        onSaveDraft?.(payload);
-      },
-      onError: (err: ZodError | string) => {
+      })
+      .catch((err: ZodError | Error | any) => {
         console.warn('Save failed', err);
         toast.error('Save failed');
-      },
-    });
+      });
   };
 
   // 8) Rename flow — ensures a persisted row exists, retries once on 404

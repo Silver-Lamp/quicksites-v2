@@ -1,0 +1,24 @@
+/* Softer borders only for the Admin Tools page */
+@layer utilities {
+    /* Any Tailwind .border element */
+    .soft-borders :where(.border) {
+      border-color: hsl(var(--border) / 0.28) !important; /* ~30% opacity */
+    }
+  
+    /* Dividers created by Tailwind's divide-x / divide-y */
+    .soft-borders :where(.divide-x > :not([hidden]) ~ :not([hidden]),
+                         .divide-y > :not([hidden]) ~ :not([hidden])) {
+      border-color: hsl(var(--border) / 0.18) !important;
+    }
+  
+    /* Form controls */
+    .soft-borders :where(input, select, textarea, .SelectTrigger, .Textarea, .Input) {
+      border-color: hsl(var(--border) / 0.28) !important;
+    }
+  
+    /* Optional: give cards a subtle shadow so the lighter border still has structure */
+    .soft-borders :where(.card, .Card, section > .border) {
+      box-shadow: 0 1px 0 0 hsl(var(--border) / 0.12);
+    }
+  }
+  

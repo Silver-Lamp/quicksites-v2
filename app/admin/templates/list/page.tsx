@@ -4,7 +4,7 @@
 import { getFromDate } from '@/lib/getFromDate';
 import TemplatesIndexTable from '@/components/admin/templates/templates-index-table';
 import VersionsToggle from '@/components/admin/templates/versions-toggle';
-import { getSupabase } from '@/lib/supabase/server';
+import { getServerSupabase } from '@/lib/supabase/server';
 
 type SearchParams = {
   date?: string;
@@ -35,7 +35,7 @@ export default async function TemplatesIndexPage({
 }: {
   searchParams: Promise<SearchParams>;
 }) {
-  const supabase = await getSupabase();
+  const supabase = await getServerSupabase();
 
   const resolvedParams = await searchParams;
   const dateParam = resolvedParams?.date || '';

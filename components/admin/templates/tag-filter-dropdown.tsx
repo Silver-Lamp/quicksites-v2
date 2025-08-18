@@ -1,6 +1,6 @@
 // app/admin/templates/tag-filter-dropdown.tsx
 import { useEffect, useState } from 'react';
-import { supabase } from '@/lib/supabaseClient';
+import { supabase } from '@/lib/supabase/client';
 import { Checkbox } from '../../ui/checkbox';
 import { Label } from '../../ui/label';
 

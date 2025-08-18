@@ -1,6 +1,6 @@
 import { useSearchParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import { supabase } from '@/lib/supabaseClient';
+import { supabase } from '@/lib/supabase/client';
 import QRCode from 'qrcode';
 import Image from 'next/image';
 import TemplatePreview from '@/components/admin/templates/template-preview';

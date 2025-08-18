@@ -15,7 +15,7 @@ export default function LoginClient() {
   // ✅ Autofill in dev mode
   useEffect(() => {
     if (process.env.NODE_ENV === 'development') {
-      setEmail('sandon@quicksites.ai');
+      setEmail('sandon@pointsevenstudio.com');
     }
   }, []);
 

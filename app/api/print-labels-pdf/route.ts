@@ -1,11 +1,10 @@
 // app/api/print-labels-pdf/route.ts
-
 import { createClient } from '@supabase/supabase-js';
 import { chromium } from 'playwright';
 import { NextRequest } from 'next/server';
-import { Readable } from 'stream';
+import { createCanvas } from 'canvas';
 
-export const runtime = 'nodejs'; // 👈 important: edge runtimes can't use fs or playwright
+export const runtime = 'nodejs';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -29,7 +28,10 @@ export async function POST(req: NextRequest) {
     return Response.json({ error: 'User not found' }, { status: 404 });
   }
 
-  const { data: blocks } = await supabase.from('blocks').select('*').eq('owner_id', user.id);
+  const { data: blocks } = await supabase
+    .from('blocks')
+    .select('*')
+    .eq('owner_id', user.id);
 
   const html = `
     <html>
@@ -44,18 +46,18 @@ export async function POST(req: NextRequest) {
       <body>
         <h1>Block QR Labels: @${handle}</h1>
         <div class="grid">
-          ${blocks
-            ?.map(
-              (b) => `
-            <div class="block">
-              <div style="font-size: 18px">${b.emoji} ${b.title}</div>
-              <div style="margin: 6px 0;">${b.message}</div>
-              <img src="https://quicksites.ai/api/block-qr?handle=${handle}&blockId=${b.id}" />
-              <div style="font-size: 10px;">/world/${handle}#block-${b.id}</div>
-            </div>
-          `
-            )
-            .join('')}
+          ${blocks?.map(
+            (b) => `
+              <div class="block">
+                <div style="font-size: 18px">${b.emoji ?? ''} ${b.title ?? ''}</div>
+                <div style="margin: 6px 0;">${b.message ?? ''}</div>
+                <img src="https://quicksites.ai/api/block-qr/preview?handle=${encodeURIComponent(
+                  handle
+                )}&blockId=${encodeURIComponent(b.id)}" />
+                <div style="font-size: 10px;">/world/${handle}#block-${b.id}</div>
+              </div>
+            `
+          ).join('') ?? ''}
         </div>
       </body>
     </html>
@@ -71,12 +73,18 @@ export async function POST(req: NextRequest) {
     margin: { top: '20mm', bottom: '20mm', left: '10mm', right: '10mm' },
   });
 
+  await page.close();
   await browser.close();
 
-  return new Response(pdfBuffer, {
+  const buf = createCanvas(100, 100).toBuffer('image/png');
+  const ab = buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength) as ArrayBuffer;
+
+  return new Response(ab, {
     headers: {
       'Content-Type': 'application/pdf',
       'Content-Disposition': `inline; filename="${handle}-qr-labels.pdf"`,
+      'Content-Length': String(ab.byteLength),
+      'Cache-Control': 'public, max-age=604800',
     },
   });
 }

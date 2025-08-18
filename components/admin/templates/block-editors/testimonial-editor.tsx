@@ -13,7 +13,7 @@ import type { Block } from '@/types/blocks';
 import type { BlockEditorProps } from './index';
 import BlockField from './block-field';
 import TestimonialBlockComponent from '@/components/admin/templates/render-blocks/testimonial';
-import { supabase } from '@/lib/supabaseClient';
+import { supabase } from '@/lib/supabase/client';
 import Image from 'next/image';
 import { extractFieldErrors } from '../utils/extractFieldErrors';
 

@@ -1,3 +1,4 @@
+// app/api/qr-poster/route.ts
 export const runtime = 'nodejs';
 
 import { createCanvas, loadImage } from 'canvas';
@@ -65,12 +66,14 @@ export async function GET(req: Request) {
     }
   }
 
-  const buffer = canvas.toBuffer('image/png');
+  const buf = canvas.toBuffer('image/png');
+  const ab = buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength) as ArrayBuffer;
 
-  return new Response(buffer, {
+  return new Response(ab, {
     headers: {
       'Content-Type': 'image/png',
-      'Cache-Control': 'public, max-age=604800', // 7 days
+      'Content-Length': String(ab.byteLength),
+      'Cache-Control': 'public, max-age=604800',
     },
   });
 }

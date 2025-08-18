@@ -4,7 +4,7 @@
 import { useEffect, useState } from 'react';
 import { SlidersHorizontal } from 'lucide-react';
 import BackgroundGlow from './background-glow';
-import { supabase } from '@/lib/supabaseClient';
+import { supabase } from '@/lib/supabase/client';
 
 export type GlowConfig = {
   size: 'sm' | 'md' | 'lg' | 'xl';

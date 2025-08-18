@@ -167,6 +167,7 @@ export function DynamicBlockEditor({
           }}
           onSave={() => onSave(block)}
           placeholder="Type ‘/’ for commands…"
+          colorMode={colorMode}
         />
       </div>
         <div className="mt-4 flex justify-end gap-2">

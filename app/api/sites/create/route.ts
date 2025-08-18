@@ -6,7 +6,7 @@ export const runtime = 'nodejs';
 
 import { json } from '@/lib/api/json';
 import { generateBaseSlug } from '@/lib/slugHelpers';
-import { getSupabase } from '@/lib/supabase/server';
+import { getServerSupabase } from '@/lib/supabase/server';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 function baseSlug(businessName: string, location?: string): string {
@@ -27,7 +27,7 @@ export async function POST(req: Request) {
     email,
   } = body;
 
-  const supabase = await getSupabase();
+  const supabase = await getServerSupabase();
 
   const base = generateBaseSlug(business_name, location);
   const slug = clientSlug || (await generateUniqueSlug(base, supabase));

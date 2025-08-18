@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { RotateCcw, RotateCw, AlertTriangle, X } from 'lucide-react';
+import { RotateCcw, RotateCw, AlertTriangle, X, Maximize2, Minimize2 } from 'lucide-react'; // ⬅ add icons
 import { Button } from '@/components/ui';
 import toast from 'react-hot-toast';
 
@@ -37,10 +37,74 @@ export function TemplateActionToolbar({ template, autosaveStatus, onSaveDraft, o
   const [saveWarnings, setSaveWarnings] = useState<SaveWarning[]>([]);
   const [versionsOpen, setVersionsOpen] = useState(false);
 
+  // ⤵ Fullscreen controls
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const prevSidebarCollapsedRef = useRef<boolean | null>(null);
+  const prevSettingsOpenRef = useRef<boolean | null>(null);
+
+  const readSidebarCollapsed = () =>
+    typeof window !== 'undefined' && window.localStorage.getItem('admin-sidebar-collapsed') === 'true';
+
+  const setSidebarCollapsed = (collapsed: boolean) => {
+    // notify ResponsiveAdminLayout
+    window.dispatchEvent(new CustomEvent('qs:sidebar:set-collapsed', { detail: collapsed }));
+    // persist so refresh doesn’t surprise the user
+    try {
+      window.localStorage.setItem('admin-sidebar-collapsed', String(collapsed));
+    } catch {}
+  };
+
+  const setSettingsOpen = (open: boolean) => {
+    // programmatically control editor settings rail
+    window.dispatchEvent(new CustomEvent('qs:settings:set-open', { detail: open }));
+    try {
+      window.localStorage.setItem('qs:settingsOpen', open ? '1' : '0');
+    } catch {}
+  };
+
+  const scrollFirstBlockToTop = () => {
+    const el =
+      document.querySelector<HTMLElement>('[data-block-id]') ??
+      document.querySelector<HTMLElement>('[data-block-type]');
+    if (!el) return;
+
+    const header = document.querySelector<HTMLElement>('header');
+    const offset = (header?.offsetHeight ?? 64) + 8;
+    const y = el.getBoundingClientRect().top + window.scrollY - offset;
+    window.scrollTo({ top: Math.max(0, y), behavior: 'smooth' });
+  };
+
+  const enterFullscreen = () => {
+    prevSidebarCollapsedRef.current = readSidebarCollapsed();
+    // settingsOpen lives in the editor; read the persisted value as our best guess
+    try {
+      prevSettingsOpenRef.current = window.localStorage.getItem('qs:settingsOpen') !== '0';
+    } catch {
+      prevSettingsOpenRef.current = true;
+    }
+
+    setSettingsOpen(false);
+    setSidebarCollapsed(true);
+
+    requestAnimationFrame(() => setTimeout(scrollFirstBlockToTop, 120));
+    setIsFullscreen(true);
+  };
+
+  const exitFullscreen = () => {
+    if (prevSettingsOpenRef.current !== null) setSettingsOpen(prevSettingsOpenRef.current);
+    if (prevSidebarCollapsedRef.current !== null) setSidebarCollapsed(prevSidebarCollapsedRef.current);
+    setIsFullscreen(false);
+  };
+
+  const toggleFullscreen = () => {
+    if (isFullscreen) exitFullscreen();
+    else enterFullscreen();
+  };
+  // ⤴ Fullscreen controls
+
   const slugOrName = (template as any).slug || template.template_name || '';
   const { versions, reloadVersions } = useTemplateVersions(slugOrName, (template as any)?.id ?? null);
 
-  // save guard sig (prevents “save on open” via toolbar)
   const lastSigRef = useRef<string>('');
   useEffect(() => {
     lastSigRef.current = templateSig(template);
@@ -211,6 +275,17 @@ export function TemplateActionToolbar({ template, autosaveStatus, onSaveDraft, o
 
           {/* Right controls */}
           <div className="flex items-center gap-3">
+            {/* Fullscreen toggle */}
+            <Button
+              size="icon"
+              variant="ghost"
+              title="Full screen (F)"
+              onClick={toggleFullscreen}
+              aria-pressed={isFullscreen}
+            >
+              {isFullscreen ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
+            </Button>
+
             <VersionsDropdown
               labelTitle={template.template_name || (template as any).slug || 'Untitled'}
               versions={versions}

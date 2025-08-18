@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { useUrlBuilder } from './useUrlBuilder';
-import { buildSafeLink } from '@/admin/lib/links/buildSafeLink';
-import { linkThemeMap } from '@/admin/lib/links';
+import { buildSafeLink } from '../buildSafeLink';
+import { linkThemeMap } from '../theme';
 import type { ReactNode } from 'react';
 
 type LinkProps = React.ComponentProps<typeof Link> & {
@@ -26,7 +26,7 @@ export function useLinkBuilder() {
     const target = _tg as '_blank' | '_self' | '_parent' | '_top' | undefined;
     return buildSafeLink(id, href.toString(), 'templateLink', children, {
       className: resolved,
-      prefetch: _p ?? undefined,
+      prefetch: _p === 'auto' ? undefined : _p ?? undefined,
       target,
       ...rest,
     });
@@ -46,7 +46,7 @@ export function useLinkBuilder() {
     const { theme: _t, href: _h, prefetch: _p, ...rest } = linkProps || {};
     return buildSafeLink(id, href.toString(), 'snapshotLink', children, {
       className: resolved,
-      prefetch: _p ?? undefined,
+      prefetch: _p === 'auto' ? undefined : _p ?? undefined,
       target: undefined as any,
       ...rest,
     });

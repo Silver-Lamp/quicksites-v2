@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { TwitterApi } from 'twitter-api-v2';
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
+import { createServerClient, type CookieOptions } from '@supabase/ssr';
+import { Database } from '@/types/supabase';
 
 export const runtime = 'edge';
 
@@ -27,7 +28,24 @@ export async function GET(req: NextRequest) {
 
   const me = await logged.v2.me();
 
-  const supa = createRouteHandlerClient({ cookies: () => Promise.resolve(cookieStore) });
+  const store = await cookies();
+  const supa = createServerClient<Database>(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookieEncoding: 'base64url',
+      cookies: {
+        getAll() {
+          return store.getAll().map(({ name, value }) => ({ name, value }));
+        },
+        setAll(cookies) {
+          for (const c of cookies) {
+            store.set(c.name, c.value, c.options as CookieOptions | undefined);
+          }
+        },
+      },
+    }
+  );
   const { data: { user } } = await supa.auth.getUser();
   if (!user) return NextResponse.redirect(new URL('/login', process.env.APP_BASE_URL!));
 

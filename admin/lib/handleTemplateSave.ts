@@ -2,20 +2,22 @@
 'use client';
 
 import toast from 'react-hot-toast';
-import type { Template } from '@/types/template';
+import type { Template } from '../../types/template';
 import { ZodError } from 'zod';
-import { normalizeTemplate } from '@/admin/utils/normalizeTemplate';
-import { TemplateSaveSchema } from '@/admin/lib/zod/templateSaveSchema';
-import { validateTemplateBlocks } from '@/hooks/validateTemplateBlocks';
-import { printZodErrors } from '@/admin/lib/printZodErrors';
-import { saveTemplate } from '@/admin/lib/saveTemplate';
-import { saveSite } from '@/admin/lib/saveSite';
-import { ensureValidTemplateFields } from '@/admin/utils/ensureValidTemplateFields';
-import { unwrapData } from '@/admin/lib/cleanTemplateData';
-import { ensureBlockId } from '@/admin/lib/ensureBlockId';
-import { TemplateFormSchema } from '@/types/template';
-import { canonicalizeUrlKeysDeep } from '@/admin/lib/migrations/canonicalizeUrls';
-import { Warning } from 'postcss';
+import { normalizeTemplate } from '@/utils/normalizeTemplate';
+import { TemplateSaveSchema } from '@/lib/zod/templateSaveSchema';
+import { validateTemplateBlocks } from '../../hooks/validateTemplateBlocks';
+import { printZodErrors } from '@/lib/printZodErrors';
+import { saveTemplate } from '@/lib/saveTemplate'; // TODO: remove this
+import { saveSiteWithClient } from '@/lib/saveSite';
+import { ensureValidTemplateFields } from '@/utils/ensureValidTemplateFields';
+import { unwrapData } from '@/lib/cleanTemplateData';
+import { ensureBlockId } from '@/lib/ensureBlockId';
+import { TemplateFormSchema } from '../../types/template';
+import { canonicalizeUrlKeysDeep } from '@/lib/migrations/canonicalizeUrls';
+import { getSupabaseRSC } from '../../lib/supabase/serverClient';
+import type { Database } from '../../types/supabase';
+import type { SupabaseClient } from '@supabase/supabase-js';
 
 // ─────────────────────────────────────
 // utils
@@ -55,6 +57,7 @@ export async function handleTemplateSave({
   onError?: (error: ZodError | string) => void;
   scrollToBlock?: boolean;
 }): Promise<void> {
+  const supabase = await getSupabaseRSC();
   try {
     // 1) Parse JSON
     const parsedRaw = JSON.parse(rawJson);
@@ -240,19 +243,18 @@ if (Object.keys(softBlockWarnings).length) {
 
 
 // 8) Strip editor-only fields and save (unchanged)
-const saveFn = mode === 'template' ? saveTemplate : saveSite;
+const saveFn = mode === 'template' ? saveTemplate : saveSiteWithClient;
 const payload: Template = { ...base, data: base.data };
 delete (payload as any).pages;
 delete (payload as any).services;
 
-const promise = saveFn(payload);
-toast.promise(promise, {
+  toast.promise(saveFn(supabase, payload as any) as unknown as Promise<any>, {
   loading: 'Saving...',
   success: 'Template saved!',
   error: 'Failed to save',
 });
 
-const saved = await promise;
+const saved = await saveFn(supabase, payload as any) as unknown as any;
 onSuccess?.(saved);
   } catch (err: any) {
     console.error('Invalid JSON while saving template:', err);

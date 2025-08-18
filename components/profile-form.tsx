@@ -2,21 +2,20 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { supabase } from '@/admin/lib/supabaseClient';
-import { Button, } from '@/components/ui/button';
+import { supabase } from '@/lib/supabase/client';
+import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { toast } from 'react-hot-toast';
 import Image from 'next/image';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
-import Link from 'next/link';
 import { RewardTally } from '@/components/reward-tally';
 
 export default function ProfileForm() {
   const { user, role } = useCurrentUser();
-  const [avatarUrl, setAvatarUrl] = useState(user?.avatar_url || '');
-  const [displayName, setDisplayName] = useState(user?.name || '');
-  const [bio, setBio] = useState(user?.bio || '');
+  const [avatarUrl, setAvatarUrl] = useState(user?.user_metadata?.avatar_url ?? '');
+  const [displayName, setDisplayName] = useState(user?.user_metadata?.name ?? '');
+  const [bio, setBio] = useState(user?.user_metadata?.bio ?? '');
   const [showUtc, setShowUtc] = useState(false);
   const [latestLog, setLatestLog] = useState<any | null>(null);
   const [requesting, setRequesting] = useState(false);
@@ -25,7 +24,7 @@ export default function ProfileForm() {
   const [refLink, setRefLink] = useState('');
   const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
 
-  const email = user?.email ?? (user as any)?.user_metadata?.email ?? '';
+  const email = user?.email ?? '';
 
   useEffect(() => {
     if (user?.id) {

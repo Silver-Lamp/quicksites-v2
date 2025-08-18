@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { supabase } from '@/lib/supabaseClient';
+import { supabase } from '@/lib/supabase/client';
 import TemplateEditor from '@/components/admin/templates/template-editor';
 import type { TemplateSnapshot } from '@/types/template';
 import { createEmptyTemplate } from '@/lib/createEmptyTemplate';

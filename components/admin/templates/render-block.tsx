@@ -98,6 +98,11 @@ export default function RenderBlock({
 }: RenderProps) {
   const { enabled: fixEnabled, draftFixes } = useBlockFix();
 
+  // 🔧 Hydration gate: prevents motion/useScroll hooks from attaching
+  // to refs before the element is hydrated.
+  const [hydrated, setHydrated] = React.useState(false);
+  React.useEffect(() => setHydrated(true), []);
+
   if (!block || !block.type) {
     return (
       <div className="text-red-500 text-sm p-2 bg-red-900/10 rounded">
@@ -215,12 +220,14 @@ ID: ${block._id || 'n/a'}`}
       {/* Actual block content (wrap in Suspense so lazy client renderers work) */}
       <div className="p-0">
         <Suspense fallback={<div className="p-2 text-sm text-muted-foreground">Loading block…</div>}>
-          <Component
-            {...(commonProps as any)}
-            {...(block.type === 'grid' && handleNestedBlockUpdate
-              ? { handleNestedBlockUpdate, parentBlock: block }
-              : {})}
-          />
+          {hydrated ? (
+            <Component
+              {...(commonProps as any)}
+              {...(block.type === 'grid' && handleNestedBlockUpdate
+                ? { handleNestedBlockUpdate, parentBlock: block }
+                : {})}
+            />
+          ) : null}
         </Suspense>
       </div>
     </div>

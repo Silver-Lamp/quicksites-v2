@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
+import { getServerSupabaseClient } from '@/lib/supabase/serverClient';
 import Stripe from 'stripe';
 
 export const runtime = 'nodejs';
@@ -11,7 +11,7 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, { apiVersion: '2025-07
 
 export async function POST(req: NextRequest) {
   const { siteId } = await req.json(); // delivered.menu site_id
-  const supabase = createRouteHandlerClient({ cookies });
+  const supabase = await getServerSupabaseClient();
 
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: 'Not signed in' }, { status: 401 });

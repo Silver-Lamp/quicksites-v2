@@ -1,6 +1,6 @@
 // app/posters/[slug]/page.tsx
 
-import { supabase } from '@/lib/supabaseClient';
+import { supabase } from '@/lib/supabase/client';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 

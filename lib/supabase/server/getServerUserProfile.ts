@@ -1,16 +1,16 @@
 // lib/supabase/server/getServerUserProfile.ts
 // Use getServerUserProfile() when you need to get the user context
-// Use getSupabase() when you need the scoped client
+// Use getServerSupabase() when you need the scoped client
 'use server';
 
-import { getSupabase } from '../server';
+import { getServerSupabase } from '@/lib/supabase/server';
 
 export async function getServerUserProfile(): Promise<{
   role: string;
   email: string | null;
   isAnonymous: boolean;
 } | null> {
-  const supabase = await getSupabase();
+  const supabase = await getServerSupabase();
 
   const {
     data: { user },

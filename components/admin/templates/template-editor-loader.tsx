@@ -1,7 +1,7 @@
 // app/admin/templates/template-editor-loader.tsx
 import { useEffect, useState } from 'react';
 import { toast } from 'react-hot-toast';
-import { supabase } from '@/lib/supabaseClient';
+import { supabase } from '@/lib/supabase/client';
 
 export function useEditorLoader(slug: string) {
   const [record, setRecord] = useState<any | null>(null);

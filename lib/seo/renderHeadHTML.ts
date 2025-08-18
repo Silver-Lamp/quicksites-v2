@@ -1,3 +1,4 @@
+// lib/seo/renderHeadHTML.ts
 export function renderHeadHTML({
   title,
   description,

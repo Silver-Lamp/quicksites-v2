@@ -1,30 +1,19 @@
 // lib/supabase/server.ts
-'use server';
-
-import { createServerComponentClient } from '@supabase/auth-helpers-nextjs';
-import { cookies } from 'next/headers';
-import type { SupabaseClient } from '@supabase/supabase-js';
+import { cookies as nextCookies } from 'next/headers';
+import { createServerClient } from '@supabase/ssr';
 import type { Database } from '@/types/supabase';
 
-export async function getSupabase(): Promise<SupabaseClient<Database>> {
-  const cookieStore = cookies(); // ✅ use safely in App Router
-  return createServerComponentClient<Database>({ cookies: () => cookieStore });
-}
-
-export async function getUserFromRequest(): Promise<{
-  user: Awaited<ReturnType<SupabaseClient<Database>['auth']['getUser']>>['data']['user'];
-  supabase: SupabaseClient<Database>;
-}> {
-  const supabase = await getSupabase();
-  const {
-    data: { user },
-    error,
-  } = await supabase.auth.getUser();
-
-  if (error || !user) {
-    console.warn('[⚠️ getUserFromRequest] No valid session:', error?.message);
-    return { user: null, supabase };
-  }
-
-  return { user, supabase };
+export async function getServerSupabase() {
+  const store = await nextCookies();
+  return createServerClient<Database>(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll: () => store.getAll(),   // never JSON.parse
+        setAll: () => {},               // RSC can’t set; noop
+      },
+      cookieEncoding: 'base64url',
+    }
+  );
 }

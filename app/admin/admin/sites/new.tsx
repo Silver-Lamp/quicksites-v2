@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import debounce from 'lodash.debounce';
-import { supabase } from '@/lib/supabaseClient';
+import { supabase } from '@/lib/supabase/client';
 import TemplatePreviewWithToggle from '@/components/admin/templates/template-preview-with-toggle';
 import ThemeScope from '@/components/ui/theme-scope';
 

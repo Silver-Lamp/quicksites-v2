@@ -1,5 +1,5 @@
 import { GetServerSideProps } from 'next';
-import { supabase } from '@/lib/supabaseClient';
+import { supabase } from '@/lib/supabase/client';
 
 type ActivityMap = Record<string, number>;
 

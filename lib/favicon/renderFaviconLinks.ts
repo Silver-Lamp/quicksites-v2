@@ -1,3 +1,4 @@
+// lib/favicon/renderFaviconLinks.ts
 export function renderFaviconLinks(urls: Partial<Record<string, string>>): string {
   const lines: string[] = [];
 

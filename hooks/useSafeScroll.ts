@@ -1,13 +1,24 @@
-// app/admin/hooks/useSafeScroll.ts
+// hooks/useSafeScroll.ts
 'use client';
 
 import { RefObject, useEffect, useRef, useState } from 'react';
-import { useScroll, useTransform, type MotionValue, motionValue } from 'framer-motion';
+import {
+  useScroll,
+  useTransform,
+  motionValue,
+  type MotionValue,
+  type UseScrollOptions,
+} from 'framer-motion';
 
 type SafeScrollOptions = {
   target: RefObject<HTMLElement>;
-  offset?: [string, string];
-  layoutEffect?: boolean; // default false to avoid hydration races
+  // Use the official type from framer-motion
+  offset?: UseScrollOptions['offset'];
+  /**
+   * @deprecated Framer Motion's `useScroll` doesn't support `layoutEffect`.
+   * Kept for backward compatibility; ignored.
+   */
+  layoutEffect?: boolean;
 };
 
 type SafeScrollResult = {
@@ -15,22 +26,14 @@ type SafeScrollResult = {
   y: MotionValue<string>;
 };
 
-/**
- * Safe wrapper around framer-motion useScroll:
- * - uses layoutEffect: false by default (prevents hydration warnings)
- * - always returns stable MotionValues (no nulls)
- * - detects when the ref becomes available
- */
 export function useSafeScroll({
   target,
   offset = ['start start', 'end start'],
-  layoutEffect = false,
 }: SafeScrollOptions): SafeScrollResult {
-  // Framer hook (will noop safely until target is ready when layoutEffect=false)
+  // Call useScroll with only supported options
   const { scrollYProgress } = useScroll({
     target,
-    offset: offset as any,
-    layoutEffect,
+    offset,
   });
 
   // Fallback MV for pre-mount / missing ref
@@ -39,12 +42,10 @@ export function useSafeScroll({
   // Track readiness of the target ref
   const [ready, setReady] = useState<boolean>(() => !!target.current);
   useEffect(() => {
-    // schedule to ensure DOM ref is attached
-    let id = requestAnimationFrame(() => setReady(!!target.current));
+    const id = requestAnimationFrame(() => setReady(!!target.current));
     return () => cancelAnimationFrame(id);
   }, [target]);
 
-  // Drive transform with either real progress or fallback
   const progress = ready ? scrollYProgress : fallback;
   const y = useTransform(progress, [0, 1], ['0%', '-20%']);
 

@@ -1,6 +1,6 @@
 // app/api/fix-template/route.ts
 import { ensureBlockId } from '@/admin/lib/ensureBlockId';
-import { getSupabase } from '@/lib/supabase/server';
+import { getServerSupabase } from '@/lib/supabase/server';
 import { NextResponse } from 'next/server';
 
 export async function POST(req: Request) {
@@ -9,7 +9,7 @@ export async function POST(req: Request) {
 
   if (!slug) return NextResponse.json({ error: 'Missing slug' }, { status: 400 });
 
-  const supabase = await getSupabase();
+  const supabase = await getServerSupabase();
   const { data: site, error } = await supabase
     .from('templates')
     .select('data')

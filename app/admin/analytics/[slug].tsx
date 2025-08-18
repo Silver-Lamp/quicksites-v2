@@ -1,5 +1,5 @@
 // app/admin/analytics/[slug].tsx
-import { supabase } from '@/lib/supabaseClient';
+import { supabase } from '@/lib/supabase/client';
 import {
   BarChart,
   Bar,

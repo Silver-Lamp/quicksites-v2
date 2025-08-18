@@ -18,7 +18,7 @@ export async function getSafeCookie(
   const store = cookieStore ?? (await nextCookies()); // ✅ Correct default
 
   const raw = store.get(name)?.value;
-  return safeParse(raw);
+  return safeParse(raw) as string | object | undefined;
 }
 /**
  * Sets a cookie. Use only in route handlers / server actions.

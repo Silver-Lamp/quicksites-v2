@@ -1,9 +1,9 @@
 // lib/templates/getTemplateBySlug.ts
-import { getSupabase } from '@/lib/supabase/server';
+import { getServerSupabase } from '@/lib/supabase/server';
 import type { Template } from '@/types/template';
 
 export async function getTemplateBySlug(slug: string): Promise<Template | null> {
-  const supabase = await getSupabase();
+  const supabase = await getServerSupabase();
 
   const { data, error } = await supabase
     .from('templates')

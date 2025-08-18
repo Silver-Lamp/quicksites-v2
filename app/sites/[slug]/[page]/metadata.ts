@@ -1,10 +1,10 @@
 import type { Metadata } from 'next';
-import { getSupabase } from '@/lib/supabase/server';
+import { getServerSupabase } from '@/lib/supabase/server';
 import type { TemplateData } from '@/types/template';
 
 export async function generateMetadata({ params }: { params: { slug: string; page: string } }): Promise<Metadata> {
   const { slug, page } = params;
-  const supabase = await getSupabase();
+  const supabase = await getServerSupabase();
 
   const { data: site } = await supabase
     .from('templates')

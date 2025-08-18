@@ -1,11 +1,28 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
+import { createServerClient, type CookieOptions } from '@supabase/ssr';
 
 export const runtime='nodejs'; export const dynamic='force-dynamic';
 
 export async function PATCH(req: NextRequest, { params }:{ params:{ id:string } }) {
-  const supa = createRouteHandlerClient({ cookies });
+    const store = await cookies();
+  const supa = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookieEncoding: 'base64url',
+      cookies: {
+        getAll() {
+          return store.getAll().map(({ name, value }) => ({ name, value }));
+        },
+        setAll(cookies) {
+          for (const c of cookies) {
+            store.set(c.name, c.value, c.options as CookieOptions | undefined);
+          }
+        },
+      },
+    }
+  );
   const { data: { user } } = await supa.auth.getUser();
   if (!user) return NextResponse.json({ error:'Unauthorized' }, { status:401 });
   const { data: admin } = await supa.from('admin_users').select('user_id').eq('user_id', user.id).maybeSingle();
@@ -23,7 +40,24 @@ export async function PATCH(req: NextRequest, { params }:{ params:{ id:string } 
 }
 
 export async function DELETE(_: NextRequest, { params }:{ params:{ id:string } }) {
-  const supa = createRouteHandlerClient({ cookies });
+    const store = await cookies();
+  const supa = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookieEncoding: 'base64url',
+      cookies: {
+        getAll() {
+          return store.getAll().map(({ name, value }) => ({ name, value }));
+        },
+        setAll(cookies) {
+          for (const c of cookies) {
+            store.set(c.name, c.value, c.options as CookieOptions | undefined);
+          }
+        },
+      },
+    }
+  );
   const { data: { user } } = await supa.auth.getUser();
   if (!user) return NextResponse.json({ error:'Unauthorized' }, { status:401 });
   const { data: admin } = await supa.from('admin_users').select('user_id').eq('user_id', user.id).maybeSingle();

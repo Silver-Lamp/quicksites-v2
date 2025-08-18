@@ -19,5 +19,5 @@ export function getSafeCookieSync(
 ): string | object | undefined {
   const store = cookieStore ?? resolveCookiesSync();
   const raw = store.get(name)?.value;
-  return safeParse(raw);
+  return safeParse(raw) as string | object | undefined;
 }

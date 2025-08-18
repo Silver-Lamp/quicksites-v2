@@ -1,33 +1,41 @@
-// components/admin/SeedButton.tsx
-import { useState } from 'react';
+// components/admin/admin/seed-button.tsx
+'use client';
+
+import { useState, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui';
 import toast from 'react-hot-toast';
+// If you already have the helper in utils, use that:
+import { postJSON } from '@/components/admin/tools/utils';
 
 export default function SeedButton() {
+  const router = useRouter();
   const [loading, setLoading] = useState(false);
 
-  const handleSeed = async () => {
+  const handleSeed = useCallback(async () => {
+    if (loading) return;
     setLoading(true);
     try {
-      const res = await fetch('/api/admin/seed-template', {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem('sb-access-token')}`,
-        },
-      });
-      const json = await res.json();
-      if (!res.ok) throw new Error(json.error?.message || 'Seed failed');
+      // Sends Supabase auth cookies via the helper (credentials:'include')
+      await postJSON('/api/admin/seed-template', {});
+
       toast.success('🎉 Seeded example template');
+      router.refresh(); // soft refresh any server components reading data
     } catch (err: any) {
-      toast.error(`Seed failed: ${err.message}`);
+      toast.error(`Seed failed: ${err?.message ?? 'Unknown error'}`);
     } finally {
       setLoading(false);
     }
-  };
+  }, [loading, router]);
 
   return (
-    <Button onClick={handleSeed} disabled={loading} className="text-sm">
-      {loading ? 'Seeding...' : '🌱 Seed Sample Template'}
+    <Button
+      onClick={handleSeed}
+      disabled={loading}
+      aria-busy={loading}
+      className="text-sm"
+    >
+      {loading ? 'Seeding…' : '🌱 Seed Sample Template'}
     </Button>
   );
 }

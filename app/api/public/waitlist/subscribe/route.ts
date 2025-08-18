@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
 import { cookies } from 'next/headers';
+import { getServerSupabaseClient } from '@/lib/supabase/serverClient';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -30,7 +30,7 @@ function clientIp(req: NextRequest) {
   }
 
   async function getUserId() {
-    const supabase = createRouteHandlerClient({ cookies });
+    const supabase = await getServerSupabaseClient();
     const { data: { user } } = await supabase.auth.getUser();
     return user?.id ?? null;
   }

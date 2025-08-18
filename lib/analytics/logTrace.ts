@@ -1,3 +1,4 @@
+import { cookies } from 'next/headers';
 import { getRequestContext } from '../request/getRequestContext';
 
 type LogTraceOptions = {
@@ -14,7 +15,10 @@ export async function logTrace(
   message: string,
   options: LogTraceOptions = {}
 ): Promise<string> {
-  const { traceId, userId, role, ip, sessionId } = await getRequestContext();
+  const { traceId, userId, role, ip, sessionId } = await getRequestContext({
+    cookieStore: await cookies(),
+    headerStore: new Headers(),
+  });
 
   const trace = `[trace:${traceId}]`;
   const roleInfo = role ? ` (${role})` : '';

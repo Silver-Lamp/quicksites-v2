@@ -9,7 +9,7 @@ import md5 from 'blueimp-md5';
 
 import { RoleBadge } from './role-badge';
 import { useSafeAuth } from '@/hooks/useSafeAuth';
-import { supabase } from '@/lib/supabaseClient';
+import { supabase } from '@/lib/supabase/client';
 
 export function AvatarMenu() {
   const { user, role, isLoggedIn } = useSafeAuth();

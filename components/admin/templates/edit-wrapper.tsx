@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import TemplateEditor from '@/components/admin/templates/template-editor';
-import { supabase } from '@/lib/supabaseClient';
+import { supabase } from '@/lib/supabase/client';
 import { normalizeTemplate } from '@/admin/utils/normalizeTemplate';
 import type { Template, Snapshot } from '@/types/template';
 import { TemplateEditorProvider } from '@/context/template-editor-context';

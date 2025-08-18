@@ -1,15 +1,8 @@
-// lib/supabase/getSupabase.ts
-'use server';
+// lib/supabase/getSupabaseContext.ts
+import 'server-only';
+import { getSupabaseRSC } from '@/lib/supabase/serverClient';
 
-import { cookies } from 'next/headers';
-import { createServerComponentClient } from '@supabase/auth-helpers-nextjs';
-import type { Database } from '../../types/supabase';
-
-export function getSupabase() {
-  const cookieStore = cookies(); // ✅ sync-safe call in App Router
-  const supabase = createServerComponentClient<Database>({
-    cookies: () => cookieStore,
-  });
-
-  return supabase;
+export async function getSupabaseContext() {
+  // thin wrapper to keep call sites simple
+  return getSupabaseRSC();
 }

@@ -1,7 +1,7 @@
 export const runtime = 'nodejs';
 
 import { json } from '@/lib/api/json';
-import { getSupabase } from '@/lib/supabase/server';
+import { getServerSupabase } from '@/lib/supabase/server';
 import { supabaseAdmin } from '@/lib/supabase/admin';
 
 export async function POST(req: Request) {
@@ -12,7 +12,7 @@ export async function POST(req: Request) {
     return json({ error: 'Missing site ID or data' }, { status: 400 });
   }
 
-  const userSupabase = await getSupabase();
+  const userSupabase = await getServerSupabase();
 
   const {
     data: { user },

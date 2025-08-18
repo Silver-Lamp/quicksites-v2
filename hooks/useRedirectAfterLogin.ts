@@ -1,37 +1,41 @@
-import { useRouter } from 'next/navigation.js';
-import { useCurrentUser } from './useCurrentUser.js';
-import { useQueryParam } from './useQueryParam.js';
-import { useEffect, useState } from 'react';
+// hooks/useRedirectAfterLogin.ts
+'use client';
+
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { useSearchParams, useRouter } from 'next/navigation';
+import { useCurrentUser } from './useCurrentUser';
 
 export function useRedirectAfterLogin() {
   const router = useRouter();
-  const { user } = useCurrentUser();
-  const redirectTo = useQueryParam('redirectTo', '/admin/dashboard');
+  const sp = useSearchParams();
+  const { user, ready } = useCurrentUser();
   const [isRedirecting, setIsRedirecting] = useState(false);
+  const toasted = useRef(false);
+
+  const dest = useMemo(() => {
+    const n = sp.get('next') || sp.get('redirectTo') || '/admin/tools';
+    return n.startsWith('/') ? n : '/admin/tools';
+  }, [sp]);
 
   useEffect(() => {
-    const loadToast = async () => {
-      if (user && redirectTo) {
-        const { toast } = await import('react-hot-toast');
-        if (typeof toast.success === 'function') {
+    if (!ready) return;
+    if (!user) return;
+
+    (async () => {
+      if (!toasted.current) {
+        toasted.current = true;
+        try {
+          const { toast } = await import('react-hot-toast');
           toast.success('✅ Logged in! Redirecting...', {
-            duration: 3000,
-            style: {
-              background: '#1e1e1e',
-              color: '#fff',
-            },
+            duration: 2000,
+            style: { background: '#1e1e1e', color: '#fff' },
           });
-        }
-
-        setIsRedirecting(true);
-        setTimeout(() => {
-          router.replace(redirectTo);
-        }, 1000);
+        } catch {}
       }
-    };
+      setIsRedirecting(true);
+      router.replace(dest);
+    })();
+  }, [user, ready, dest, router]);
 
-    loadToast();
-  }, [user, redirectTo, router]);
-
-  return { redirectTo, isRedirecting };
+  return { redirectTo: dest, isRedirecting };
 }

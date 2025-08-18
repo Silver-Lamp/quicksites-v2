@@ -1,10 +1,10 @@
 // app/sites/[slug]/page.tsx
-import { getSupabase } from '@/lib/supabase/server';
+import { getServerSupabase } from '@/lib/supabase/server';
 import { redirect, notFound } from 'next/navigation';
 
 export default async function SiteSlugRedirectPage({ params }: { params: { slug: string } }) {
   const { slug } = params;
-  const supabase = await getSupabase();
+  const supabase = await getServerSupabase();
 
   const { data: site, error } = await supabase
     .from('templates')

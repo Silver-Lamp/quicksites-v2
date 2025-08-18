@@ -1,13 +1,13 @@
-import { createServerComponentClient } from '@supabase/auth-helpers-nextjs';
-import { cookies } from 'next/headers';
-import type { Database } from '@/types/supabase';
+// app/admin/traces/[traceId]/page.tsx  (SERVER)
 import { notFound } from 'next/navigation';
+import { getSupabaseRSC } from '@/lib/supabase/serverClient';
 import { TraceInspector } from '@/components/admin/traces/trace-inspector';
 
 export const dynamic = 'force-dynamic';
 
 export default async function TracePage({ params }: { params: { traceId: string } }) {
-  const supabase = createServerComponentClient<Database>({ cookies });
+  const supabase = await getSupabaseRSC(); // ✅ RSC-safe (no cookie writes)
+
   const { data, error } = await supabase
     .from('client_errors')
     .select('*')
@@ -15,7 +15,7 @@ export default async function TracePage({ params }: { params: { traceId: string 
     .order('created_at', { ascending: false });
 
   if (error) {
-    console.error('[tracePage] Supabase error', error.message);
+    console.error('[TracePage] Supabase error:', error.message);
     return notFound();
   }
 
@@ -23,7 +23,5 @@ export default async function TracePage({ params }: { params: { traceId: string 
     return <div className="p-6 text-zinc-400">No events found for this trace.</div>;
   }
 
-  return (
-    <TraceInspector traceId={params.traceId} entries={data} />
-  );
+  return <TraceInspector traceId={params.traceId} entries={data} />;
 }

@@ -1,4 +1,4 @@
-import { supabase } from '@/lib/supabaseClient';
+import { supabase } from '@/lib/supabase/client';
 import { GetServerSideProps } from 'next';
 import { Button } from '@/components/ui';
 

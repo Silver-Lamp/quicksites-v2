@@ -1,80 +1,119 @@
+// app/login/LoginForm.tsx
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { useSearchParams, useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase/client';
 
+function normalizeEmail(raw: string) {
+  return raw.normalize('NFKC').replace(/[\u200B-\u200D\uFEFF\u00A0]/g, '').trim().toLowerCase();
+}
+function isValidEmail(raw: string) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizeEmail(raw));
+}
+
 export default function LoginForm() {
+  const sp = useSearchParams();
+  const router = useRouter();
+
   const [email, setEmail] = useState('');
-  const [status, setStatus] = useState('');
+  const [status, setStatus] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
+  // support both ?next=/path and legacy ?redirectTo=/path
+  const nextPath = useMemo(() => {
+    const n = sp.get('next') || sp.get('redirectTo') || '/admin/tools';
+    return n.startsWith('/') ? n : '/admin/tools';
+  }, [sp]);
+
+  // ⬇️ Hash-capture fallback: handle non-PKCE magic links (#access_token & #refresh_token)
   useEffect(() => {
-    if (process.env.NODE_ENV === 'development') {
-      setEmail('sandon@quicksites.ai');
+    // example: /login?error=missing_code#access_token=...&refresh_token=...&type=magiclink
+    const hash = typeof window !== 'undefined' ? window.location.hash : '';
+    if (!hash || !hash.includes('access_token')) return;
+
+    const params = new URLSearchParams(hash.replace(/^#/, ''));
+    const access_token = params.get('access_token');
+    const refresh_token = params.get('refresh_token');
+    const typ = params.get('type');
+
+    if (access_token && refresh_token && (typ === 'magiclink' || !typ)) {
+      setIsLoading(true);
+      setStatus('Signing you in…');
+
+      (async () => {
+        const { error } = await supabase.auth.setSession({ access_token, refresh_token });
+        // Clean the hash so tokens aren’t left in the address bar
+        history.replaceState(null, document.title, window.location.pathname + window.location.search);
+
+        if (error) {
+          console.error('[setSession error]', error);
+          setStatus('❌ Could not complete sign-in. Please try again.');
+          setIsLoading(false);
+          return;
+        }
+        // Kick them to their target
+        router.replace(nextPath);
+      })();
     }
+  }, [router, nextPath]);
+
+  useEffect(() => {
+    if (process.env.NODE_ENV === 'development') setEmail('sandon@pointsevenstudio.com');
   }, []);
 
-  const sendMagicLink = async () => {
-    setIsLoading(true);
-    setStatus('');
+  async function onSubmit(e?: React.FormEvent) {
+    e?.preventDefault();
+    setStatus(null);
 
-    const isDev = process.env.NODE_ENV === 'development';
-
-    const { error } = await supabase.auth.signInWithOtp({
-      email,
-      options: isDev
-        ? {} // 🧪 Dev mode: legacy redirect
-        : {
-            emailRedirectTo: 'http://localhost:3000/auth/callback', // ✅ Production PKCE
-          },
-    });
-
-    setIsLoading(false);
-
-    if (error) {
-      console.error('[❌ Magic Link Error]', error);
-      setStatus('❌ Error sending link. Please try again.');
-    } else {
-      setStatus('✅ Magic link sent! Check your inbox.');
+    const emailNorm = normalizeEmail(email);
+    if (!isValidEmail(emailNorm)) {
+      setStatus('❌ Please enter a valid email address.');
+      return;
     }
-  };
+
+    setIsLoading(true);
+    try {
+      const redirect = `${location.origin}/auth/callback?next=${encodeURIComponent(nextPath)}`;
+      const { error } = await supabase.auth.signInWithOtp({
+        email: emailNorm,
+        options: { emailRedirectTo: redirect },
+      });
+      if (error) {
+        console.error('[Magic Link Error]', error);
+        setStatus('❌ Error sending link. Please try again.');
+      } else {
+        setStatus('✅ Magic link sent! Check your inbox.');
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background text-foreground px-4">
-      <div className="w-full max-w-md bg-zinc-900 p-8 rounded-xl shadow-lg space-y-6">
+      <form onSubmit={onSubmit} className="w-full max-w-md bg-zinc-900 p-8 rounded-xl shadow-lg space-y-6">
         <h1 className="text-2xl font-extrabold text-center">Login</h1>
+
+        <label className="block text-sm text-muted-foreground" htmlFor="email">Email</label>
         <input
-          className="w-full p-2 mb-3 border border-zinc-600 bg-zinc-800 text-white rounded"
-          placeholder="Your email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          disabled={isLoading}
+          id="email" type="email" inputMode="email" autoComplete="email"
+          className="w-full p-2 mb-1 border border-zinc-600 bg-zinc-800 text-white rounded"
+          placeholder="you@yourdomain.com"
+          value={email} onChange={(e) => setEmail(e.target.value)} disabled={isLoading}
         />
-        <button
-          className={`w-full text-white py-2 px-4 rounded ${
-            isLoading
-              ? 'bg-zinc-700 cursor-not-allowed'
-              : 'bg-blue-600 hover:bg-blue-700'
-          }`}
-          onClick={sendMagicLink}
-          disabled={isLoading}
-        >
-          {isLoading ? 'Sending...' : 'Send Magic Link'}
+        <p className="text-xs text-muted-foreground">We’ll email you a one-time sign-in link.</p>
+
+        <button type="submit" className={`w-full text-white py-2 px-4 rounded ${isLoading ? 'bg-zinc-700 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'}`} disabled={isLoading}>
+          {isLoading ? 'Sending…' : 'Send Magic Link'}
         </button>
+
         {status && (
-          <p
-            className={`text-sm mt-4 ${
-              status.includes('✅')
-                ? 'text-green-400'
-                : status.includes('❌')
-                ? 'text-red-400'
-                : 'text-yellow-400'
-            }`}
-          >
+          <p className={`text-sm mt-4 ${status.startsWith('✅') ? 'text-green-400' : status.startsWith('❌') ? 'text-red-400' : 'text-yellow-400'}`}>
             {status}
           </p>
         )}
-      </div>
+      </form>
     </div>
   );
 }

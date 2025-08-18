@@ -1,6 +1,6 @@
 // app/_sites/[slug].tsx
 import { GetServerSideProps } from 'next';
-import { supabase } from '@/lib/supabaseClient';
+import { supabase } from '@/lib/supabase/client';
 
 export default function PublicSite({ siteData }: any) {
   if (!siteData) {

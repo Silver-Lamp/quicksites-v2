@@ -1,4 +1,4 @@
-import { supabase } from '@/admin/lib/supabaseClient';
+import { supabase } from '../../lib/supabase/client';
 import { startOfDay, endOfDay, subDays } from 'date-fns';
 
 export default async function CampaignsPage() {
@@ -21,7 +21,7 @@ export default async function CampaignsPage() {
     .limit(1000);
 
   const { CampaignsClientPage } = await import(
-    '../../components/admin/pages/campaigns-client-page.jsx'
+      '../../components/admin/pages/campaigns-client-page.jsx'
   );
 
   return (

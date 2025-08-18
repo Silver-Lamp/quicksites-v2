@@ -1,18 +1,23 @@
-'use client';
+// app/template/[slug]/edit/page.tsx
+import { redirect } from 'next/navigation';
+import { getSupabaseRSC } from '@/lib/supabase/serverClient';
+import AdminChrome from '@/components/admin/admin-chrome';
+import ClientEditor from './ClientEditor';
 
-import { use } from 'react';
-import { TemplateEditorProvider } from '@/context/template-editor-context';
-import EditWrapper from '@/components/admin/templates/edit-wrapper';
-import AdminLayout from '@/app/admin/layout';
+export default async function EditPage({
+  params,
+}: {
+  params: Promise<{ slug: string }>;
+}) {
+  const { slug } = await params;
 
-export default function EditPage(promiseParams: { params: Promise<{ slug: string }> }) {
-  const { slug } = use(promiseParams.params);
+  const supabase = await getSupabaseRSC();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) redirect(`/login?next=${encodeURIComponent(`/template/${slug}/edit`)}`);
 
   return (
-    <AdminLayout>
-      <TemplateEditorProvider templateName={slug} colorMode="light">
-        <EditWrapper slug={slug} />
-      </TemplateEditorProvider>
-    </AdminLayout>
+    <AdminChrome>
+      <ClientEditor slug={slug} />
+    </AdminChrome>
   );
 }

@@ -21,7 +21,15 @@
       "@/pages/*": ["pages/*"],
       "@/lib/*": ["lib/*"],
       "@/hooks/*": ["hooks/*"],
-      "@/types/*": ["types/*"]
+      "@/types/*": ["types/*"],
+      "@/admin/types/*": ["admin/types/*"],
+      "@/admin/components/*": ["admin/components/*"],
+      "@/admin/lib/*": ["admin/lib/*"],
+      "@/admin/hooks/*": ["admin/hooks/*"],
+      "@/admin/pages/*": ["admin/pages/*"],
+      "@/admin/lib/supabase/*": ["admin/lib/supabase/*"],
+      "@/admin/lib/supabase/serverClient": ["admin/lib/supabase/serverClient"],
+      "@/admin/lib/supabase/client": ["admin/lib/supabase/client"]
     }
   }
 }

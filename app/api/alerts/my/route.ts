@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
+import { getServerSupabaseClient } from '@/lib/supabase/serverClient';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 export async function GET() {
-  const supa = createRouteHandlerClient({ cookies });
+  const supa = await getServerSupabaseClient();
   const { data: { user } } = await supa.auth.getUser();
   if (!user) return NextResponse.json({ error: 'Not signed in' }, { status: 401 });
 

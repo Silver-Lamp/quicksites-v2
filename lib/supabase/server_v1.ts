@@ -1,9 +1,9 @@
 // app/api/industries/route.ts
 import { NextResponse } from 'next/server';
-import { getSupabase } from '@/lib/supabase/server';
+import { getServerSupabase } from '@/lib/supabase/server';
 
 export async function GET() {
-  const supabase = await getSupabase();
+  const supabase = await getServerSupabase();
 
   const { data, error } = await supabase
     .from('industries')
@@ -15,7 +15,7 @@ export async function GET() {
     return NextResponse.json({ error: 'Failed to fetch industries' }, { status: 500 });
   }
 
-  const industryNames = data.map((row) => row.name).filter(Boolean);
+  const industryNames = data.map((row: { name: string }) => row.name).filter(Boolean);
 
   return NextResponse.json(industryNames, {
     status: 200,

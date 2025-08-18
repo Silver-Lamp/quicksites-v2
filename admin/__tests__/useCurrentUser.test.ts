@@ -1,6 +1,5 @@
 import { renderHook } from '@testing-library/react';
-import { useCurrentUser } from '@/hooks/useCurrentUser';
-import { Role } from '@/admin/utils/roles';
+import { useCurrentUser } from '../../hooks/useCurrentUser';
 import { describe, expect, it, vi } from 'vitest';
 
 // Mock the supabase session hook
@@ -23,13 +22,14 @@ describe('useCurrentUser', () => {
     const { result } = renderHook(() => useCurrentUser());
 
     expect(result.current.user?.email).toBe('admin@example.com');
-    expect(result.current.role).toBe(Role.Admin);
-    expect(result.current.roleSource).toBe('user_profiles');
+    expect(result.current.role).toBe('admin');
+    expect(result.current.roleSource).toBe('context');
     expect(result.current.isLoading).toBe(false);
     expect(result.current.ready).toBe(true);
-    expect(result.current.hasRole([Role.Admin])).toBe(true);
-    expect(result.current.hasRole([Role.Owner, Role.Editor])).toBe(false);
-    expect(result.current.user?.role).toBe(Role.Admin);
+    expect(result.current.isAdmin).toBe(true);
+    expect(result.current.isOwner).toBe(false);
+    expect(result.current.isViewer).toBe(false);
+    expect(result.current.user?.role).toBe('admin');
     // expect(result.current.user?.permissions).toContain('view_logs');
     // expect(result.current.user?.team).toBe('alpha');
     // expect(result.current.user?.org).toBe('quicksites');

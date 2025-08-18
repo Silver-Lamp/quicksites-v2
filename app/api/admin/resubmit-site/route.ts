@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { pingSearchEngines } from '@/lib/pingSearchEngines';
-import { getSupabase } from '@/lib/supabase/server';
+import { getServerSupabase } from '@/lib/supabase/server';
 
 export async function POST(req: Request) {
   const { searchParams } = new URL(req.url);
@@ -8,7 +8,7 @@ export async function POST(req: Request) {
 
   if (!slug) return NextResponse.json({ error: 'Missing slug' }, { status: 400 });
 
-  const supabase = await getSupabase();
+  const supabase = await getServerSupabase();
   const { data: template, error } = await supabase
     .from('templates')
     .select('slug, custom_domain')

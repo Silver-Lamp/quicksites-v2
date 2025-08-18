@@ -1,3 +1,4 @@
+// lib/favicon/downloadFaviconBundle.ts
 import JSZip from 'jszip';
 import { saveAs } from 'file-saver';
 

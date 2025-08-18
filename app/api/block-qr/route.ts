@@ -1,3 +1,4 @@
+// app/api/block-qr/route.ts
 import { createCanvas, registerFont } from 'canvas';
 import QRCode from 'qrcode';
 import crypto from 'node:crypto';
@@ -32,10 +33,10 @@ async function ensureDir(handle: string) {
 async function createZipFromHandleDir(handle: string) {
   const dir = path.resolve('public/generated-qr', handle);
   const zipPath = path.resolve(dir, 'archive.zip');
-  const output = await fs.open(zipPath, 'w');
+  const fh = await fs.open(zipPath, 'w');
   const archive = archiver('zip', { zlib: { level: 9 } });
 
-  const stream = output.createWriteStream();
+  const stream = (fh as any).createWriteStream();
   archive.pipe(stream);
 
   const files = await fs.readdir(dir);
@@ -47,6 +48,11 @@ async function createZipFromHandleDir(handle: string) {
 
   await archive.finalize();
   return `/generated-qr/${handle}/archive.zip`;
+}
+
+// Helper: Node Buffer -> exact ArrayBuffer slice
+function bufferToArrayBuffer(buf: Buffer): ArrayBuffer {
+  return buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength) as ArrayBuffer;
 }
 
 export async function POST(req: NextRequest) {
@@ -93,9 +99,10 @@ export async function POST(req: NextRequest) {
   ctx.textAlign = 'center';
   ctx.fillText(label, canvas.width / 2, canvas.height - 10);
 
-  const buffer =
+  // Render once → reuse everywhere
+  const nodeBuffer =
     format === 'png'
-      ? canvas.toBuffer()
+      ? canvas.toBuffer('image/png')
       : (() => {
           throw new Error(`Unsupported format: ${format}`);
         })();
@@ -106,7 +113,7 @@ export async function POST(req: NextRequest) {
   if (mode === 'save') {
     await ensureDir(handle);
     const outputPath = getOutputPath(handle, filename);
-    await fs.writeFile(outputPath, buffer);
+    await fs.writeFile(outputPath, nodeBuffer);
 
     let zipPath: string | undefined;
     if (zip) {
@@ -121,11 +128,15 @@ export async function POST(req: NextRequest) {
     });
   }
 
-  return new Response(buffer, {
+  // ✅ Buffer → ArrayBuffer for Response body
+  const ab = bufferToArrayBuffer(nodeBuffer);
+  const mime = `image/${format}`;
+
+  return new Response(ab, {
     status: 200,
     headers: {
-      'Content-Type': `image/${format}`,
-      'Content-Length': buffer.length.toString(),
+      'Content-Type': mime,
+      'Content-Length': String(ab.byteLength),
       'Cache-Control': 'public, max-age=604800',
       ETag: etag,
     },

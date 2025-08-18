@@ -1,7 +1,7 @@
 // components/admin/templates/template-editor-content.tsx
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui';
 
@@ -15,10 +15,11 @@ import { BlockValidationError } from '@/hooks/validateTemplateBlocks';
 import ThemeScope from '@/components/ui/theme-scope';
 import DevValidatorPanel from '../dev-validator-panel';
 import DevicePreviewWrapper from '@/components/admin/templates/device-preview-wrapper';
-
 import LiveEditorPreview from '@/components/editor/live-editor/LiveEditorPreview';
 
-import { handleTemplateSave } from '@/admin/lib/handleTemplateSave';
+// ⬇️ uses server actions (no server-only imports in client)
+import { saveSiteAction, saveTemplateAction } from '@/app/admin/templates/actions';
+
 import { ZodError } from 'zod';
 import { normalizeTemplate } from '@/admin/utils/normalizeTemplate';
 import ClientOnly from '@/components/client-only';
@@ -28,6 +29,7 @@ import { prepareTemplateForSave } from '@/admin/lib/prepareTemplateForSave';
 
 import { motion, AnimatePresence } from 'framer-motion';
 import { Settings2, ChevronLeft } from 'lucide-react';
+
 import CommerceTab from '../commerce/commerce-tab';
 
 function pushWithLimit<T>(stack: T[], item: T, limit = 10): T[] {
@@ -81,7 +83,7 @@ export function EditorContent({
   const [historyStack, setHistoryStack] = useState<Template[]>([]);
   const [redoStack, setRedoStack] = useState<Template[]>([]);
 
-  // --- NEW: collapsible sidebar (persisted) ---
+  // --- Collapsible settings rail (persisted) ---
   const SETTINGS_KEY = 'qs:settingsOpen';
   const [settingsOpen, setSettingsOpen] = useState<boolean>(() => {
     if (typeof window === 'undefined') return true;
@@ -94,20 +96,88 @@ export function EditorContent({
     }
   }, [settingsOpen]);
 
-  // Hotkey: "s" toggles rail unless typing
+  // Accept programmatic open/close from toolbar (and others)
+  useEffect(() => {
+    const onSet = (e: Event) => {
+      const open = (e as CustomEvent<boolean>).detail;
+      if (typeof open === 'boolean') setSettingsOpen(open);
+    };
+    window.addEventListener('qs:settings:set-open' as any, onSet as EventListener);
+    return () =>
+      window.removeEventListener('qs:settings:set-open' as any, onSet as EventListener);
+  }, []);
+  // -------------------------------------------
+
+  // Fullscreen toggle (hide settings, collapse sidebar, scroll first block to top)
+  const prevSettingsRef = useRef<boolean | null>(null);
+  const prevSidebarCollapsedRef = useRef<boolean | null>(null);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+
+  const setSidebarCollapsed = useCallback((collapsed: boolean) => {
+    window.dispatchEvent(new CustomEvent('qs:sidebar:set-collapsed', { detail: collapsed }));
+    try {
+      window.localStorage.setItem('admin-sidebar-collapsed', String(collapsed));
+    } catch {}
+  }, []);
+
+  const scrollFirstBlockToTop = useCallback(() => {
+    const el =
+      document.querySelector<HTMLElement>('[data-block-id]') ??
+      document.querySelector<HTMLElement>('[data-block-type]');
+    if (!el) return;
+    const header = document.querySelector<HTMLElement>('header');
+    const offset = (header?.offsetHeight ?? 64) + 8;
+    const y = el.getBoundingClientRect().top + window.scrollY - offset;
+    window.scrollTo({ top: Math.max(0, y), behavior: 'smooth' });
+  }, []);
+
+  const enterFullscreen = useCallback(() => {
+    prevSettingsRef.current = settingsOpen;
+    try {
+      prevSidebarCollapsedRef.current =
+        window.localStorage.getItem('admin-sidebar-collapsed') === 'true';
+    } catch {
+      prevSidebarCollapsedRef.current = null;
+    }
+    setSettingsOpen(false);
+    setSidebarCollapsed(true);
+    requestAnimationFrame(() => setTimeout(scrollFirstBlockToTop, 120));
+    setIsFullscreen(true);
+  }, [settingsOpen, setSidebarCollapsed, scrollFirstBlockToTop]);
+
+  const exitFullscreen = useCallback(() => {
+    if (prevSettingsRef.current !== null) setSettingsOpen(prevSettingsRef.current);
+    if (prevSidebarCollapsedRef.current !== null)
+      setSidebarCollapsed(prevSidebarCollapsedRef.current);
+    setIsFullscreen(false);
+  }, [setSidebarCollapsed]);
+
+  const toggleFullscreen = useCallback(() => {
+    if (isFullscreen) exitFullscreen();
+    else enterFullscreen();
+  }, [isFullscreen, enterFullscreen, exitFullscreen]);
+
+  // Hotkeys: "s" toggles settings; "f" toggles fullscreen
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
+      if (e.metaKey || e.ctrlKey || e.altKey) return;
       const t = e.target as HTMLElement | null;
       const tag = t?.tagName?.toLowerCase();
       if (tag === 'input' || tag === 'textarea' || t?.isContentEditable) return;
-      if (e.key.toLowerCase() === 's') {
+
+      const key = e.key?.toLowerCase();
+      if (key === 's') {
         e.preventDefault();
         setSettingsOpen((o) => !o);
+        window.dispatchEvent(new CustomEvent('qs:settings:toggle'));
+      } else if (key === 'f') {
+        e.preventDefault();
+        toggleFullscreen();
       }
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, []);
+  }, [toggleFullscreen]);
   // -------------------------------------------
 
   // keep local + parent (if provided) in sync
@@ -250,9 +320,10 @@ export function EditorContent({
     toast.success('Redo successful');
   };
 
+  // Draft save via Server Actions
   const handleSaveDraft = async () => {
     try {
-      const parsed = JSON.parse(rawJson);
+      const parsed = rawJson.trim() ? JSON.parse(rawJson) : {};
       const unwrapped = unwrapData(parsed);
 
       const pages =
@@ -270,28 +341,26 @@ export function EditorContent({
         data: { ...unwrapped, pages },
       });
 
+      // Normalize + create a DB-safe payload
       const normalized = normalizeTemplate(fullTemplate);
-      const json = JSON.stringify(normalized, null, 2);
+      const dbSafe = prepareTemplateForSave(normalized);
 
-      await handleTemplateSave({
-        rawJson: json,
-        mode,
-        onSuccess: (saved) => {
-          const ensuredMode = (saved as any)?.color_mode ?? color_mode;
-          const synced = withSyncedPages({ ...(saved as any), color_mode: ensuredMode } as Template);
-          setTemplate(synced);
-          setRawDataFromTemplate(synced);
-          setBlockErrors({});
-          setZodError(null);
-          // toast.success('Draft saved');
-        },
-        onError: (err) => {
-          if (err instanceof ZodError) setZodError(err);
-          toast.error('Save failed');
-        },
-      });
-    } catch {
-      toast.error('Failed to parse JSON before saving');
+      const saved =
+        mode === 'site'
+          ? await saveSiteAction(dbSafe as Template)
+          : await saveTemplateAction(dbSafe as Template);
+
+      const ensuredMode = (saved as any)?.color_mode ?? color_mode;
+      const synced = withSyncedPages({ ...(saved as any), color_mode: ensuredMode } as Template);
+      setTemplate(synced);
+      setRawDataFromTemplate(synced);
+      setBlockErrors({});
+      setZodError(null);
+      // toast.success('Draft saved');
+    } catch (err: any) {
+      if (err instanceof ZodError) setZodError(err);
+      console.warn('Save failed', err);
+      toast.error('Save failed');
     }
   };
 
@@ -316,12 +385,6 @@ export function EditorContent({
                   exit={{ opacity: 0, scale: 0.9, y: 10 }}
                   onClick={() => setSettingsOpen(true)}
                   className="fixed left-10 top-20 z-40 inline-flex h-11 w-11 items-center justify-center rounded-full bg-zinc-900 text-zinc-100 shadow-lg ring-1 ring-white/10 border-2 border-purple-500 hover:bg-zinc-800 focus:outline-none focus:ring-2 focus:ring-purple-400"
-                  // className="
-                  //   relative translate-x-5
-                  //   border-2 border-purple-500
-                  //   shadow-[0_0_10px_rgba(168,85,247,0.8)]
-                  //   rounded-full
-                  // "
                   aria-label="Open settings (S)"
                   title="Open settings (S)"
                 >
@@ -364,7 +427,6 @@ export function EditorContent({
                       </button>
                     </div>
 
-                    {/* IMPORTANT: same component you already use */}
                     <SidebarSettings template={template} onChange={handleTemplateChange} />
                   </motion.div>
                 )}
@@ -392,8 +454,9 @@ export function EditorContent({
           <TemplateHistory template={template} onRevert={handleTemplateChange} />
         </TabsContent> */}
         <TabsContent value="commerce" className="p-4">
-        <CommerceTab merchantId={'00001'} siteId={template.id} />
-</TabsContent>
+          <CommerceTab merchantId={'00001'} siteId={template.id} />
+        </TabsContent>
+
         <DevValidatorPanel error={zodError} />
 
         <TemplatePublishModal

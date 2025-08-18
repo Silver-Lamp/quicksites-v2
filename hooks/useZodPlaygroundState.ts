@@ -1,7 +1,7 @@
 // app/admin/hooks/useZodPlaygroundState.ts
 import { useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { supabase } from '@/lib/supabaseClient';
+import { supabase } from '@/lib/supabase/client';
 import { ZodTypeAny } from 'zod';
 import { defaultSchema } from '@/admin/lib/defaultSchema';
 import { jsonSchemaToZod } from '@/admin/utils/jsonSchemaToZod';

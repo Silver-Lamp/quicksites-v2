@@ -5,21 +5,24 @@ import { safeParse } from '../utils/safeParse';
 import { getClientIp, getUserAgent, getReferer } from '../safeHeaders';
 import { getOrCreateSessionCookie } from '../cookies/getOrCreateSessionCookie';
 import { getMockLocation } from './getMockLocation';
-import { getSupabaseCookieAdapter } from '../utils/getSupabaseCookieAdapter';
 
-import { createServerComponentClient } from '@supabase/auth-helpers-nextjs';
+import { createServerClient } from '@supabase/ssr';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { Database } from '@/types/supabase';
 import type { MockGeoLocation } from '@/types/location';
 import type { ReadonlyRequestCookies } from 'next/dist/server/web/spec-extension/adapters/request-cookies';
 import type { ReadonlyHeaders } from 'next/dist/server/web/spec-extension/adapters/headers';
 
+import { getSupabaseCookieAdapter } from '../utils/getSupabaseCookieAdapter';
+
 export type RequestContext = {
+  // read-only stores for the current request
   cookies: ReadonlyRequestCookies;
   headers: ReadonlyHeaders;
   cookieMode: 'readonly';
   headerMode: 'readonly';
 
+  // request/user bits we surface everywhere
   ip: string;
   userAgent: string;
   referer?: string;
@@ -31,6 +34,7 @@ export type RequestContext = {
   traceId: string;
   geo: MockGeoLocation | null;
 
+  // optional Supabase client + current auth user
   supabase?: {
     client: SupabaseClient<Database>;
     user: {
@@ -41,10 +45,8 @@ export type RequestContext = {
   };
 };
 
-let _requestContextCache: RequestContext | null = null;
-
 export async function getRequestContext(
-  stores?: {
+  stores: {
     cookieStore: ReadonlyRequestCookies;
     headerStore: ReadonlyHeaders;
     abRaw?: string | null;
@@ -54,25 +56,19 @@ export async function getRequestContext(
   },
   withSupabase = false
 ): Promise<RequestContext> {
-  if (_requestContextCache) return _requestContextCache;
-
   if (!stores?.cookieStore || !stores?.headerStore) {
     throw new Error(
-      `getRequestContext: Missing cookieStore or headerStore. Did you forget to call extractUserContext()?`
+      'getRequestContext: Missing cookieStore or headerStore. ' +
+      'Make sure you pass the values returned from next/headers() helpers.'
     );
   }
 
-  const {
-    cookieStore,
-    headerStore,
-    abRaw,
-    role,
-    userId,
-    userEmail,
-  } = stores;
+  const { cookieStore, headerStore, abRaw, role, userId, userEmail } = stores;
 
-  const abVariant = safeParse(abRaw) as string | undefined;
+  // safe, permissive parse for A/B flag (accepts raw string too)
+  const abVariant = (safeParse(abRaw) as string | undefined) ?? (abRaw ?? undefined);
 
+  // pull common request metadata (these helpers should already await cookies()/headers() internally)
   const [ip, userAgent, referer, sessionId, geo] = await Promise.all([
     getClientIp(),
     getUserAgent(),
@@ -101,26 +97,32 @@ export async function getRequestContext(
   };
 
   if (withSupabase) {
-    const supabase = createServerComponentClient<Database>({
-      cookies: getSupabaseCookieAdapter(cookieStore),
-    });
+    // IMPORTANT: the adapter must follow CookieMethodsServer (getAll / setAll).
+    const cookieAdapter = getSupabaseCookieAdapter(cookieStore);
 
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
+    const supabase = createServerClient<Database>(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        cookies: cookieAdapter as any,
+        cookieEncoding: 'base64url', // <- required with modern helpers
+      }
+    );
+
+    const { data: { user } } = await supabase.auth.getUser();
 
     context.supabase = {
-      client: supabase,
+      client: supabase as any,
       user: user
         ? {
             id: user.id,
             email: user.email ?? '',
-            role: user.user_metadata?.role,
+            // allow either app_metadata.role or user_metadata.role
+            role: (user.app_metadata as any)?.role ?? (user.user_metadata as any)?.role,
           }
         : null,
     };
   }
 
-  _requestContextCache = context;
   return context;
 }

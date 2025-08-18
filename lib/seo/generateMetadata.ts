@@ -1,3 +1,4 @@
+// lib/seo/generateMetadata.ts
 import type { Template } from '@/types/template';
 import type { Metadata } from 'next';
 

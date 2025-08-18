@@ -1,6 +1,6 @@
 // app/admin/hooks/useThemePresets.ts
 import { useState } from 'react';
-import { supabase } from '@/lib/supabaseClient';
+import { supabase } from '@/lib/supabase/client';
 import type { SiteTheme } from '@/hooks/useThemeContext';
 
 export function useThemePresets(userId?: string) {

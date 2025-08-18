@@ -1,29 +1,40 @@
+// lib/favicon/generateFaviconBundle.ts
 import sharp from 'sharp';
 
-export async function generateFaviconBundle(file: File): Promise<{ ico: Blob; sizes: Record<string, Blob> } | null> {
+/** Convert Node.js Buffer (Uint8Array<ArrayBufferLike>) -> ArrayBuffer (DOM-friendly) */
+function bufferToArrayBuffer(buf: Uint8Array): ArrayBuffer {
+  // Ensure we pass a slice that points only to the bytes we need
+  return buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength) as ArrayBuffer;
+}
+
+export async function generateFaviconBundle(
+  file: File
+): Promise<{ ico: Blob; sizes: Record<string, Blob> } | null> {
   const buffer = await file.arrayBuffer();
   const base = sharp(Buffer.from(buffer));
 
   try {
-    const sizes = [16, 32, 48, 64];
-    const pngs: Buffer[] = [];
+    const sizes = [16, 32, 48, 64] as const;
 
     const resized: Record<string, Blob> = {};
+    const pngs: Uint8Array[] = [];
+
     for (const size of sizes) {
-      const resizedBuf = await base.clone().resize(size, size).png().toBuffer();
+      const resizedBuf = await base.clone().resize(size, size).png().toBuffer(); // Buffer
       pngs.push(resizedBuf);
-      resized[size] = new Blob([resizedBuf], { type: 'image/png' });
+      // Convert Buffer -> ArrayBuffer to satisfy BlobPart typing
+      resized[String(size)] = new Blob([bufferToArrayBuffer(resizedBuf)], {
+        type: 'image/png',
+      });
     }
 
-    // const icoBuffer = await sharp({ create: { width: 64, height: 64, channels: 4, background: 'transparent' } })
-    //   .composite([{ input: pngs[2] }])
-    //   .resize(64, 64)
-    //   .toFormat('ico')
-    //   .toBuffer();
+    // If you later switch to real .ico generation, convert and wrap similarly:
+    // const icoBuffer = await sharp(pngs[2]).toFormat('ico').toBuffer();
+    // const ico = new Blob([bufferToArrayBuffer(icoBuffer)], { type: 'image/x-icon' });
 
     return {
-      // ico: new Blob([icoBuffer], { type: 'image/x-icon' }),
-      ico: new Blob([pngs[2]], { type: 'image/png' }),
+      // For now we return PNG as "ico" placeholder
+      ico: new Blob([bufferToArrayBuffer(pngs[2])], { type: 'image/png' }),
       sizes: resized,
     };
   } catch (err) {

@@ -1,6 +1,6 @@
 // app/admin/hooks/useGlowTheme.ts
 import { createContext, useContext, useEffect, useState } from 'react';
-import { supabase } from '@/lib/supabaseClient';
+import { supabase } from '@/lib/supabase/client';
 
 export type GlowConfig = {
   size: 'sm' | 'md' | 'lg' | 'xl';

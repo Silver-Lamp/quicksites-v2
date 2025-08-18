@@ -2,7 +2,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { supabase } from '@/lib/supabaseClient';
+import { supabase } from '@/lib/supabase/client';
 import { useRouter } from 'next/navigation';
 import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui';
 import { ClipboardCopy } from 'lucide-react';

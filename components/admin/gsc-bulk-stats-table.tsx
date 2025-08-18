@@ -1,6 +1,7 @@
+// components/admin/gsc-bulk-stats-table.tsx
 'use client';
 
-import { useEffect, useState } from 'react';
+import { Fragment, useEffect, useState } from 'react';
 import {
   Table,
   TableBody,
@@ -61,7 +62,7 @@ export default function GSCBulkStatsTable() {
   }, [selectedRange]);
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 p-4">
       <div className="flex items-center gap-4 text-sm text-white/80">
         <span>Showing:</span>
         <select
@@ -86,27 +87,48 @@ export default function GSCBulkStatsTable() {
         </div>
       ) : (
         <div className="overflow-x-auto">
-          <Table>
-            <TableHeader>
-              <TableRow className="text-left text-sm uppercase text-white/60">
-                <TableHead>Domain</TableHead>
-                <TableHead>Page or Query</TableHead>
-                <TableHead>Clicks</TableHead>
-                <TableHead>Impressions</TableHead>
-                <TableHead>CTR</TableHead>
-                <TableHead>Avg Position</TableHead>
+          <Table
+            className="
+              w-full table-fixed
+              [&_tr]:border-b [&_tr]:border-white/10 [&_tr:last-child]:border-0
+            "
+          >
+            {/* Lock column widths so header/body never drift */}
+            <colgroup>
+              <col className="w-[34%]" />  {/* Domain */}
+              <col className="w-[38%]" />  {/* Page or Query */}
+              <col className="w-[9%]" />   {/* Clicks */}
+              <col className="w-[11%]" />  {/* Impressions */}
+              <col className="w-[4%]" />   {/* CTR */}
+              <col className="w-[4%]" />   {/* Avg Position */}
+            </colgroup>
+
+            <TableHeader className="sticky top-0 z-10 bg-neutral-950/95 backdrop-blur [&_tr]:border-white/10">
+              <TableRow className="text-left text-xs uppercase text-white/60 [&_th]:px-3 sm:[&_th]:px-4">
+                <TableHead className="text-left">Domain</TableHead>
+                <TableHead className="text-left">Page or Query</TableHead>
+                <TableHead className="text-right">Clicks</TableHead>
+                <TableHead className="text-right">Impressions</TableHead>
+                <TableHead className="text-right">CTR</TableHead>
+                <TableHead className="text-right">Avg Position</TableHead>
               </TableRow>
             </TableHeader>
-            <TableBody>
+
+            <TableBody className="[&_td]:px-3 sm:[&_td]:px-4 [&_tr:hover]:bg-white/5">
               {Object.entries(data).map(([domain, rows]) => {
                 const isError = 'error' in (rows as any);
-                const isOpen = expanded[domain] ?? true;
+                const isOpen = expanded[domain] ?? false;
                 const typedRows = isError ? [] : (rows as Row[]);
 
-                const clicks = Math.max(...typedRows.map(r => r.clicks ?? 0), 0);
-                const impressions = typedRows.reduce((sum, r) => sum + (r.impressions ?? 0), 0);
-                const bestCTR = Math.max(...typedRows.map(r => r.ctr ?? 0), 0);
-                const bestPosition = Math.min(...typedRows.map(r => r.position ?? Infinity));
+                const clicks = Math.max(...typedRows.map((r) => r.clicks ?? 0), 0);
+                const impressions = typedRows.reduce(
+                  (sum, r) => sum + (r.impressions ?? 0),
+                  0
+                );
+                const bestCTR = Math.max(...typedRows.map((r) => r.ctr ?? 0), 0);
+                const bestPosition = Math.min(
+                  ...typedRows.map((r) => r.position ?? Infinity)
+                );
 
                 const groupedByPage = typedRows.reduce((acc, row) => {
                   if (!acc[row.page]) acc[row.page] = [];
@@ -115,9 +137,11 @@ export default function GSCBulkStatsTable() {
                 }, {} as Record<string, Row[]>);
 
                 return (
-                  <tbody key={domain}>
+                  <Fragment key={domain}>
+                    {/* Domain summary */}
                     <TableRow
-                      className="cursor-pointer hover:bg-white/5"
+                      className="cursor-pointer"
+                      aria-expanded={isOpen}
                       onClick={() =>
                         setExpanded((prev) => ({ ...prev, [domain]: !isOpen }))
                       }
@@ -129,40 +153,65 @@ export default function GSCBulkStatsTable() {
                       <TableCell className="text-xs text-white/70 italic">
                         {isOpen ? '' : 'Best-performing query'}
                       </TableCell>
-                      <TableCell className="text-green-400">{clicks}</TableCell>
-                      <TableCell className="text-blue-300">{impressions}</TableCell>
-                      <TableCell className="text-yellow-300">{bestCTR.toFixed(2)}</TableCell>
-                      <TableCell className="text-purple-300">
+                      <TableCell className="text-right font-mono tabular-nums text-green-400">
+                        {clicks}
+                      </TableCell>
+                      <TableCell className="text-right font-mono tabular-nums text-blue-300">
+                        {impressions}
+                      </TableCell>
+                      <TableCell className="text-right font-mono tabular-nums text-yellow-300">
+                        {bestCTR.toFixed(2)}
+                      </TableCell>
+                      <TableCell className="text-right font-mono tabular-nums text-purple-300">
                         {bestPosition === Infinity ? '—' : bestPosition.toFixed(1)}
                       </TableCell>
                     </TableRow>
 
+                    {/* Error message */}
+                    {isError && (
+                      <TableRow>
+                        <TableCell />
+                        <TableCell colSpan={5} className="text-xs text-red-300">
+                          {(rows as any).error || 'Failed to load data for this domain.'}
+                        </TableCell>
+                      </TableRow>
+                    )}
+
+                    {/* Page + query rows */}
                     {isOpen &&
+                      !isError &&
                       Object.entries(groupedByPage).map(([page, queries]) => (
-                        <>
-                          <TableRow className="bg-black/10 text-white/70 text-xs">
+                        <Fragment key={`${domain}-${page}`}>
+                          <TableRow className="bg-white/[0.04] text-white/70 text-xs">
                             <TableCell />
-                            <TableCell colSpan={5}>{page}</TableCell>
+                            <TableCell colSpan={5} className="truncate">
+                              {page}
+                            </TableCell>
                           </TableRow>
+
                           {queries.map((row, i) => (
                             <TableRow key={`${domain}-${page}-${i}`}>
                               <TableCell />
-                              <TableCell className="text-white text-xs">
+                              <TableCell className="text-white text-xs truncate">
                                 "{row.query}"
                               </TableCell>
-                              <TableCell className="text-green-400">{row.clicks}</TableCell>
-                              <TableCell className="text-blue-300">{row.impressions}</TableCell>
-                              <TableCell className="text-yellow-300">
+                              <TableCell className="text-right font-mono tabular-nums text-green-400">
+                                {row.clicks}
+                              </TableCell>
+                              <TableCell className="text-right font-mono tabular-nums text-blue-300">
+                                {row.impressions}
+                              </TableCell>
+                              <TableCell className="text-right font-mono tabular-nums text-yellow-300">
                                 {(row.ctr ?? 0).toFixed(2)}
                               </TableCell>
-                              <TableCell className="text-purple-300">
+                              <TableCell className="text-right font-mono tabular-nums text-purple-300">
                                 {(row.position ?? 0).toFixed(1)}
                               </TableCell>
                             </TableRow>
                           ))}
-                        </>
+                        </Fragment>
                       ))}
-                  </tbody>
+                  </Fragment>
                 );
               })}
             </TableBody>

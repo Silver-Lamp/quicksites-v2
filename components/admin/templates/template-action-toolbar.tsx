@@ -248,7 +248,16 @@ export function TemplateActionToolbar({ template, autosaveStatus, onSaveDraft, o
     <>
       <div
         id="template-action-toolbar"
-        className="fixed bottom-4 left-1/2 -translate-x-1/2 z-40 rounded-lg bg-gray-900 border border-gray-700 px-6 py-3 shadow-xl max-w-5xl w-[95%] text-white opacity-90"
+        className="
+        fixed bottom-4 left-1/2 -translate-x-1/2 z-40
+        w-[95%] max-w-5xl
+        rounded-2xl border border-zinc-700
+        bg-zinc-900/95 backdrop-blur
+        hover:border-purple-500 transition-colors
+        px-4 sm:px-6 py-3 shadow-lg text-zinc-100
+        focus-within:ring-1 focus-within:ring-purple-500/40
+        opacity-50 hover:opacity-100 transition-opacity duration-300
+        "
       >
         <div className="w-full flex justify-between items-center gap-3">
           {/* Left: status + undo/redo */}

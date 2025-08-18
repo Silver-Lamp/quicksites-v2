@@ -9,7 +9,7 @@ import InspirationalQuote from '@/components/ui/inspirational-quote';
 import { AvatarMenu } from './avatar-menu';
 import clsx from 'clsx';
 
-export default function AppHeader() {
+export default function AppHeader({ collapsed = false, onToggleCollapsed }: { collapsed?: boolean, onToggleCollapsed?: (collapsed: boolean) => void } = {}) {
   const router = useRouter();
   const { user, role, isLoggedIn } = useSafeAuth();
   const { traceId, sessionId } = useRequestMeta();
@@ -113,9 +113,15 @@ export default function AppHeader() {
       ) : (
         <div className="flex justify-between items-center max-w-screen-xl mx-auto relative">
           <div className="flex items-center gap-4 overflow-x-auto whitespace-nowrap max-w-full flex-1">
-            <SafeLink href="/" className="text-blue-400 hover:underline">
-              <img src="/logo_v1.png" alt="QuickSites" className="h-12 w-auto" />
-            </SafeLink>
+            {collapsed ? (
+              <div className="text-blue-400 hover:underline">
+                <img src="/logo_v1.png" alt="QuickSites" className="h-8 w-auto" />
+              </div>
+            ) : (
+              <SafeLink href="/" className="text-blue-400 hover:underline">
+                <img src="/logo_v1.png" alt="QuickSites" className="h-8 w-auto" />
+              </SafeLink>
+            )}
             <div className="text-xs text-cyan-300 max-w-xs">
               <InspirationalQuote tags={quoteTags} />
             </div>

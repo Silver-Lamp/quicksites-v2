@@ -5,76 +5,82 @@ import * as React from 'react';
 import AppHeader from './AppHeader/app-header';
 import ResponsiveAdminLayout from './responsive-admin-layout';
 
-const SIDEBAR_EXPANDED = 288; // px (w-72)
-const SIDEBAR_COLLAPSED = 56; // px (w-14)
-const LS_KEY = 'admin-sidebar-collapsed';
+const DESKTOP_BP = 1024; // lg
 
 export default function AdminChrome({ children }: { children: React.ReactNode }) {
   const [collapsed, setCollapsed] = React.useState(false);
   const [isMobile, setIsMobile] = React.useState(false);
 
-  // read preference + viewport
+  // Sync viewport + saved sidebar state
   React.useEffect(() => {
-    const update = () => setIsMobile(window.innerWidth < 768);
-    update();
+    const onResize = () => setIsMobile(window.innerWidth < DESKTOP_BP);
+    onResize();
+    window.addEventListener('resize', onResize);
 
     try {
-      const stored = localStorage.getItem(LS_KEY);
+      const stored = localStorage.getItem('admin-sidebar-collapsed');
       if (stored != null) setCollapsed(stored === 'true');
-      else if (window.innerWidth < 768) setCollapsed(true);
-    } catch {}
+      else if (window.innerWidth < DESKTOP_BP) setCollapsed(true);
+    } catch {/* no-op */}
 
-    window.addEventListener('resize', update);
-    return () => window.removeEventListener('resize', update);
+    return () => window.removeEventListener('resize', onResize);
   }, []);
 
-  // “E” toggles sidebar (ignore while typing)
+  // Kill any global fixed-header spacer set earlier
   React.useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key.toLowerCase() !== 'e' || e.metaKey || e.ctrlKey || e.altKey) return;
-      const el = document.activeElement as HTMLElement | null;
-      const typing = el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.isContentEditable);
-      if (typing) return;
-      e.preventDefault();
-      setCollapsed((c) => {
-        const next = !c;
-        try { localStorage.setItem(LS_KEY, String(next)); } catch {}
-        return next;
-      });
+    const root = document.documentElement;
+    const prev = root.style.getPropertyValue('--app-header-h');
+    root.style.setProperty('--app-header-h', '0px');
+    return () => {
+      if (prev) root.style.setProperty('--app-header-h', prev);
+      else root.style.removeProperty('--app-header-h');
     };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
   }, []);
-
-  // keep a CSS var so any page can read the current sidebar width
-  React.useEffect(() => {
-    const w = isMobile ? 0 : (collapsed ? SIDEBAR_COLLAPSED : SIDEBAR_EXPANDED);
-    document.documentElement.style.setProperty('--qs-sidebar-w', `${w}px`);
-  }, [collapsed, isMobile]);
 
   return (
-    <>
-      {/* Fixed sidebar (handles its own z-index/positioning) */}
-      <ResponsiveAdminLayout
-        collapsed={collapsed}
-        onToggle={(c) => {
-          setCollapsed(c);
-          try { localStorage.setItem(LS_KEY, String(c)); } catch {}
-        }}
-      />
+    <div data-admin-root className="min-h-screen bg-background text-foreground">
+      <div className="relative flex">
+        {/* Sidebar (ResponsiveAdminLayout already renders the <aside/>) */}
+        {!isMobile && (
+          <ResponsiveAdminLayout
+            collapsed={collapsed}
+            onToggle={(next: boolean) => {
+              setCollapsed(next);
+              try { localStorage.setItem('admin-sidebar-collapsed', String(next)); } catch {}
+            }}
+          />
+        )}
 
-      {/* App frame: header + scrollable content */}
-      <div className="min-h-screen bg-background text-foreground">
-        <AppHeader />
-        {/* The ONLY scroll container for pages */}
-        <div
-          className="qs-content-scroll relative"
-          // left gutter for the fixed sidebar on desktop
-          style={{ paddingLeft: isMobile ? 0 : `var(--qs-sidebar-w, ${SIDEBAR_EXPANDED}px)` }}
-        >
-          <main className="min-w-0">{children}</main>
+        {/* Content column — NOTE: no padding-left */}
+        <div className="min-w-0 flex-1">
+          <header className="sticky top-0 z-30 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+            <AppHeader
+              collapsed={collapsed}
+              onToggleCollapsed={(next: boolean) => {
+                setCollapsed(next);
+                try { localStorage.setItem('admin-sidebar-collapsed', String(next)); } catch {}
+              }}
+            />
+          </header>
+
+          <main className="min-w-0 pt-0">
+            {children}
+          </main>
         </div>
       </div>
-    </>
+
+      {/* Hard reset for any legacy paddings */}
+      <style jsx global>{`
+        [data-admin-root] .content-scroll,
+        [data-admin-root] .gs-content-scroll,
+        [data-admin-root] main {
+          padding-top: 0 !important;
+          margin-top: 0 !important;
+          padding-left: 0 !important;
+          margin-left: 0 !important;
+        }
+        [data-admin-root] #app-header-spacer { display: none !important; }
+      `}</style>
+    </div>
   );
 }

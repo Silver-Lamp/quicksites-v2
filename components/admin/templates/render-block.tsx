@@ -1,8 +1,7 @@
 // components/admin/templates/render-block.tsx
 'use client';
 
-import type { Block } from '@/types/blocks';
-import type { BlockType } from '@/types/blocks';
+import type { Block, BlockType } from '@/types/blocks';
 import type { JSX } from 'react';
 import React, { Suspense } from 'react';
 
@@ -18,13 +17,13 @@ import { GripVertical, Pencil, Trash2 } from 'lucide-react';
 const isDev =
   typeof process !== 'undefined' && process.env.NODE_ENV === 'development';
 
-// Only include components here that are SAFE in a client tree.
+// Client-safe static renderers
 const STATIC_RENDERERS: Partial<Record<BlockType, (props: any) => JSX.Element>> = {
   hero: HeroRender,
   text: TextRender,
 };
 
-// Cache for React.lazy wrappers so we don't recreate them every render
+// Cache React.lazy wrappers
 const lazyCache = new Map<string, React.ComponentType<any>>();
 
 function assertAllRenderersCovered() {
@@ -52,11 +51,9 @@ function fallbackRenderer(type: string): React.ComponentType<any> {
 }
 
 function getClientRenderer(type: BlockType): React.ComponentType<any> {
-  // 1) Prefer static (already a component)
   const Static = STATIC_RENDERERS[type as keyof typeof STATIC_RENDERERS];
   if (Static) return Static;
 
-  // 2) If we have a dynamic loader, wrap with React.lazy (and cache it)
   const loader = DYNAMIC_RENDERERS[type as keyof typeof DYNAMIC_RENDERERS];
   if (loader) {
     const key = String(type);
@@ -67,7 +64,6 @@ function getClientRenderer(type: BlockType): React.ComponentType<any> {
     return Lazy;
   }
 
-  // 3) Fallback
   return fallbackRenderer(type);
 }
 
@@ -98,11 +94,6 @@ export default function RenderBlock({
 }: RenderProps) {
   const { enabled: fixEnabled, draftFixes } = useBlockFix();
 
-  // 🔧 Hydration gate: prevents motion/useScroll hooks from attaching
-  // to refs before the element is hydrated.
-  const [hydrated, setHydrated] = React.useState(false);
-  React.useEffect(() => setHydrated(true), []);
-
   if (!block || !block.type) {
     return (
       <div className="text-red-500 text-sm p-2 bg-red-900/10 rounded">
@@ -113,6 +104,31 @@ export default function RenderBlock({
 
   const override = fixEnabled ? draftFixes[block._id || ''] : {};
   const safeContent = { ...block.content, ...override };
+
+  // 1) Hydration gate (client-only)
+  const [hydrated, setHydrated] = React.useState(false);
+  React.useEffect(() => setHydrated(true), []);
+
+  // 2) Ref that blocks can use for motion/useScroll
+  const blockRef = React.useRef<HTMLDivElement | null>(null);
+  const setWrapperRef = React.useCallback((el: HTMLDivElement | null) => {
+    blockRef.current = el;
+  }, []);
+
+  // 3) Wait one frame AFTER mount so ref is actually attached
+  const [refReady, setRefReady] = React.useState(false);
+  React.useEffect(() => {
+    if (!hydrated) return;
+    const id = requestAnimationFrame(() => setRefReady(!!blockRef.current));
+    return () => cancelAnimationFrame(id);
+  }, [hydrated]);
+
+  // (optional) keep debug content on the element
+  React.useEffect(() => {
+    if (blockRef.current) {
+      (blockRef.current as any).__squatterContent = safeContent;
+    }
+  }, [safeContent]);
 
   const commonProps = {
     block,
@@ -126,6 +142,7 @@ export default function RenderBlock({
   };
 
   const wrapperProps = {
+    id: `block-${block._id || 'unknown'}`,
     'data-block-id': block._id || 'unknown',
     'data-block-type': block.type,
     className: [
@@ -134,9 +151,7 @@ export default function RenderBlock({
       'border border-transparent group-hover:border-neutral-200',
       'dark:group-hover:border-neutral-700',
     ].join(' '),
-    ref: (el: HTMLDivElement | null) => {
-      if (el) (el as any).__squatterContent = safeContent;
-    },
+    ref: setWrapperRef,
   };
 
   const debugOverlay = showDebug ? (
@@ -148,6 +163,9 @@ ID: ${block._id || 'n/a'}`}
 
   const Component = getClientRenderer(block.type);
   const showControlsBar = mode === 'editor' && !previewOnly && !disableInteraction;
+
+  // Only pass scrollRef once the ref is **attached** (avoids Motion error)
+  const runtimeProps = hydrated && refReady ? { scrollRef: blockRef } : {};
 
   return (
     <div {...(wrapperProps as any)}>
@@ -174,9 +192,7 @@ ID: ${block._id || 'n/a'}`}
             >
               <GripVertical className="w-4 h-4 opacity-80" />
             </span>
-            <span className="text-xs font-medium truncate opacity-90">
-              {block.type}
-            </span>
+            <span className="text-xs font-medium truncate opacity-90">{block.type}</span>
           </div>
 
           <div className="flex items-center gap-1">
@@ -217,12 +233,13 @@ ID: ${block._id || 'n/a'}`}
 
       {debugOverlay}
 
-      {/* Actual block content (wrap in Suspense so lazy client renderers work) */}
+      {/* Block content */}
       <div className="p-0">
         <Suspense fallback={<div className="p-2 text-sm text-muted-foreground">Loading block…</div>}>
-          {hydrated ? (
+          {hydrated && refReady ? (
             <Component
               {...(commonProps as any)}
+              {...(runtimeProps as any)} // scrollRef only when attached
               {...(block.type === 'grid' && handleNestedBlockUpdate
                 ? { handleNestedBlockUpdate, parentBlock: block }
                 : {})}

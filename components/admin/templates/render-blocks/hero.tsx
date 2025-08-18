@@ -3,7 +3,7 @@
 
 import type { Block } from '@/types/blocks';
 import SectionShell from '@/components/ui/section-shell';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { motion, type MotionValue } from 'framer-motion';
 import { useSafeScroll } from '@/hooks/useSafeScroll';
 import DebugOverlay from '@/components/ui/debug-overlay';
@@ -17,6 +17,8 @@ type Props = {
   showDebug?: boolean;
   /** Optional — parent (RenderBlock) can pass the resolved mode */
   colorMode?: 'light' | 'dark';
+  /** Optional — parent wrapper ref used by Motion hooks */
+  scrollRef?: React.RefObject<HTMLElement | null>;
 };
 
 export default function HeroRender({
@@ -25,9 +27,10 @@ export default function HeroRender({
   compact = false,
   showDebug = false,
   colorMode,
+  scrollRef, // ⬅️ new
 }: Props) {
-  const heroRef = useRef<HTMLDivElement | null>(null);
-  const final = content;
+  const localRef = useRef<HTMLDivElement | null>(null);
+  const targetRef = (scrollRef as React.RefObject<HTMLElement | null>) ?? (localRef as any);
 
   // derive mode from <html class="dark"> if not provided
   const [detectedMode, setDetectedMode] = useState<'light' | 'dark'>('light');
@@ -40,7 +43,7 @@ export default function HeroRender({
   const mode = colorMode ?? detectedMode;
   const isDark = mode === 'dark';
 
-  if (!block || !final) {
+  if (!block || !content) {
     console.warn('[⚠️ HeroRender] Invalid block or missing content.');
     return (
       <div className="text-red-500 text-sm p-2 bg-red-50 dark:bg-red-900/20 rounded">
@@ -59,11 +62,10 @@ export default function HeroRender({
     mobile_layout_mode = 'inline',
     mobile_crop_behavior = 'cover',
     blur_amount = 8,
-    parallax_enabled,
     image_position,
     image_x,
     image_y,
-  } = final as any;
+  } = content as any;
 
   const isMobile = useIsMobile();
   const activeLayoutMode =
@@ -74,14 +76,23 @@ export default function HeroRender({
   const backgroundPosition =
     image_x && image_y ? `${image_x} ${image_y}` : image_position || 'center';
 
+  // ✅ wait one frame so the ref is attached before Motion reads it
+  const [refReady, setRefReady] = useState(false);
+  useEffect(() => {
+    const id = requestAnimationFrame(() => setRefReady(!!targetRef?.current));
+    return () => cancelAnimationFrame(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Pass undefined until the ref is ready — avoids Motion "defined but not hydrated"
   const scroll = useSafeScroll({
-    target: heroRef as any,
-    offset: ['start start', 'end start'],
+    target: targetRef as any,
+    offset: ['start start', 'end start'] as any,
   });
 
   let y: string | MotionValue<string> = '0%';
-  if (activeLayoutMode === 'full_bleed' && hasImage && scroll?.y) {
-    y = scroll.y;
+  if (activeLayoutMode === 'full_bleed' && hasImage && (scroll as any)?.y) {
+    y = (scroll as any).y;
   }
 
   // shared tokens that flip with mode
@@ -91,11 +102,11 @@ export default function HeroRender({
   const fullBleedBrightness = isDark ? 'brightness(0.6)' : 'brightness(0.9)'; // darker in dark mode, lighter in light mode
   const bgBlurBrightness = isDark ? 'brightness(0.5)' : 'brightness(0.95)';
 
-  // 📸 Natural height layout — full image, overlayed text
+  // 📸 Natural height layout
   if (activeLayoutMode === 'natural_height' && hasImage) {
     return (
       <HeroNaturalHeight
-        block={{ ...block, content: final }}
+        block={{ ...block, content }}
         cropBehavior={mobile_crop_behavior}
       />
     );
@@ -104,7 +115,7 @@ export default function HeroRender({
   // 🧱 Full-bleed layout
   if (activeLayoutMode === 'full_bleed' && hasImage) {
     return (
-      <div ref={heroRef} className={`relative w-full ${textPrimary} max-h-[90vh] overflow-hidden`}>
+      <div ref={targetRef as any} className={`relative w-full ${textPrimary} max-h-[90vh] overflow-hidden`}>
         {showDebug && (
           <DebugOverlay>
             {`[HeroBlock]\nLayout: full_bleed\nImage: ${image_url || 'N/A'}\nMode: ${mode}`}

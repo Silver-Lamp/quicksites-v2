@@ -1,6 +1,11 @@
-import { supabase } from '@/admin/lib/supabaseClient';
+import { createClient } from '@supabase/supabase-js';
 import { toPng } from 'html-to-image';
 import toast from 'react-hot-toast';
+
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+);
 
 export async function createSharedPreview({
   templateId,

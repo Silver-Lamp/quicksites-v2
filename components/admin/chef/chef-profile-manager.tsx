@@ -6,6 +6,8 @@ import { createClient as createBrowserClient } from '@supabase/supabase-js';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Loader } from 'lucide-react';
+import { generateRandomChefProfile } from '@/admin/lib/randomChefProfile';
 
 type Chef = {
   id: string;
@@ -35,6 +37,7 @@ async function uploadToProfilesBucket(file: File) {
 export default function ChefProfileManager() {
   const [loading, setLoading] = React.useState(true);
   const [saving, setSaving] = React.useState(false);
+  const [busy, setBusy] = React.useState(false); // for randomize / AI avatar
   const [err, setErr] = React.useState<string | null>(null);
   const [chef, setChef] = React.useState<Chef | null>(null);
 
@@ -95,9 +98,65 @@ export default function ChefProfileManager() {
     }
   }
 
+  // --- New: randomize fields
+  function randomizeFields() {
+    setErr(null);
+    const rnd = generateRandomChefProfile();
+    setName(rnd.name);
+    setLocation(rnd.location);
+    setBio(rnd.bio);
+    setVideoUrl(rnd.youtube_url);
+    setCertsText(rnd.certifications_multiline);
+  }
+
+  // --- New: generate avatar via API -> sets profile image URL (uploaded public URL or data URL)
+  async function generateAvatar() {
+    setBusy(true);
+    setErr(null);
+    try {
+      const r = await fetch('/api/chef/profile/generate-avatar', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        // Don't include size. Aspect is implied by the route (avatar => 1024x1024).
+        body: JSON.stringify({
+          displayName: name,
+          cuisine: 'Italian',
+          vibe: 'Casual',
+        }),
+      });
+      const d = await r.json();
+      if (!r.ok) throw new Error(d?.error || 'Avatar generation failed');
+  
+      // Accept any of the known shapes, prefer the hardened route's { url }
+      const url = d.url || d.imageUrl || d.dataUrl;
+      if (!url) throw new Error('No image URL returned');
+  
+      setProfileUrl(url);
+    } catch (e: any) {
+      setErr(e.message || 'Avatar generation failed');
+    } finally {
+      setBusy(false);
+    }
+  }
+
   return (
     <div className="space-y-4">
       {err && <div className="rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">{err}</div>}
+
+      {/* Toolbar */}
+      <div className="flex flex-wrap items-center gap-2">
+        <Button
+          variant="secondary"
+          onClick={randomizeFields}
+          disabled={loading || saving || busy}
+          title="Fill name, location, bio, video URL, and certifications"
+        >
+          {busy ? <><Loader className="mr-2 h-4 w-4 animate-spin" />Working…</> : 'Fill Random Info'}
+        </Button>
+        <Button onClick={generateAvatar} disabled={loading || saving || busy}>
+          {busy ? <><Loader className="mr-2 h-4 w-4 animate-spin" />Generating…</> : 'Generate Avatar (AI)'}
+        </Button>
+      </div>
 
       <div className="grid gap-4 md:grid-cols-2">
         <div className="space-y-3">
@@ -112,7 +171,7 @@ export default function ChefProfileManager() {
           <div>
             <Label>Profile Image URL</Label>
             <Input value={profileUrl} onChange={(e) => setProfileUrl(e.target.value)} placeholder="https://…" />
-            <div className="mt-2">
+            <div className="mt-2 flex items-center gap-2">
               <label className="inline-flex items-center gap-2 rounded-md border px-2 py-1 text-xs cursor-pointer">
                 <input
                   type="file"
@@ -131,6 +190,9 @@ export default function ChefProfileManager() {
                 />
                 Upload
               </label>
+              <Button size="sm" variant="outline" onClick={generateAvatar} disabled={busy}>
+                {busy ? <><Loader className="mr-2 h-3 w-3 animate-spin" />AI…</> : 'AI Avatar'}
+              </Button>
             </div>
           </div>
           <div>
@@ -161,7 +223,7 @@ export default function ChefProfileManager() {
       <div>
         <Label>Bio</Label>
         <textarea
-          className="mt-1 w-full rounded-md border px-3 py-2 text-sm"
+          className="mt-1 w-full rounded-md border px-3 py-2 text-sm bg-background"
           rows={4}
           value={bio}
           onChange={(e) => setBio(e.target.value)}
@@ -172,7 +234,7 @@ export default function ChefProfileManager() {
       <div>
         <Label>Certifications (one per line)</Label>
         <textarea
-          className="mt-1 w-full rounded-md border px-3 py-2 text-sm"
+          className="mt-1 w-full rounded-md border px-3 py-2 text-sm bg-background"
           rows={3}
           value={certsText}
           onChange={(e) => setCertsText(e.target.value)}

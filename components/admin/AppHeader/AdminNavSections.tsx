@@ -29,6 +29,7 @@ import {
   List,
   Wrench,
   Book,
+  ChefHat,
 } from 'lucide-react';
 import clsx from 'clsx';
 
@@ -95,8 +96,11 @@ const navItems: NavItem[] = [
   { type: 'section', label: 'Integrations' },
   { type: 'item', label: 'Contact Form Email Logs', href: '/admin/email-logs', icon: <Mail size={18} /> },
   { type: 'item', label: 'Twilio Call Logs', href: '/admin/call-logs', icon: <Phone size={18} /> },
-  { type: 'section', label: 'Tools' },
-  { type: 'item', label: 'Tools', href: '/admin/tools', icon: <Wrench size={18} /> },
+  { type: 'section', label: 'DM Tools' },
+  { type: 'item', label: 'Admin', href: '/admin/tools', icon: <Wrench size={18} /> },
+  { type: 'item', label: 'Meals', href: '/admin/meals', icon: <ChefHat size={18} /> },
+  { type: 'item', label: 'Chefs', href: '/chef/dashboard', icon: <ChefHat size={18} /> },
+  { type: 'item', label: 'Dev', href: '/admin/dev', icon: <Wrench size={18} /> },
   { type: 'section', label: 'Experimental' },
   { type: 'item', label: 'Outreach (Coming Soon)', href: '/admin/outreach', icon: <Mail size={18} /> },
   { type: 'item', label: 'Revenue Estimator', href: '/admin/tools/revenue-estimator', icon: <DollarSign size={18} /> },

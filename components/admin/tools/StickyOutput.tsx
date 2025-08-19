@@ -1,4 +1,3 @@
-// components/admin/tools/StickyOutput.tsx
 'use client';
 
 import * as React from 'react';
@@ -14,42 +13,90 @@ export function StickyOutput({
   err?: string | null;
   out?: Json | null;
 }) {
-  // SSR-safe initial value (must not read window/localStorage here)
+  // panel open state
   const [open, setOpen] = React.useState(false);
   const [copied, setCopied] = React.useState(false);
+
+  // prevents auto-open from re-opening the same payload after user collapses
+  const [snoozeAutoOpen, setSnoozeAutoOpen] = React.useState(false);
 
   // Restore saved preference after mount (default to open if nothing saved)
   React.useEffect(() => {
     try {
       const saved = localStorage.getItem('adminToolsStickyOpen');
       setOpen(saved ? saved === '1' : true);
-    } catch {
-      // ignore
-    }
+    } catch { /* ignore */ }
   }, []);
 
   // Persist preference when it changes
   React.useEffect(() => {
     try {
       localStorage.setItem('adminToolsStickyOpen', open ? '1' : '0');
-    } catch {
-      // ignore
-    }
+    } catch { /* ignore */ }
   }, [open]);
 
-  // Auto-open if new error or output arrives
-  React.useEffect(() => {
-    if ((err || out) && !open) setOpen(true);
-  }, [err, out, open]);
+  // Build a lightweight signature for the current "payload".
+  // When this changes, we clear the snooze so auto-open can work again.
+  const payloadKey = React.useMemo(() => {
+    if (err) return `err:${err}`;
+    if (out) {
+      // try to use a stable-ish identifier before falling back to key set
+      const idish =
+        (out.id as string) ??
+        (out.meal_id as string) ??
+        (out.chef_id as string) ??
+        (out.merchant_id as string) ??
+        Object.keys(out).sort().join(',');
+      return `out:${idish}`;
+    }
+    if (busyLabel) return `busy:${busyLabel}`;
+    return 'none';
+  }, [err, out, busyLabel]);
 
-  // Close with ESC
+  // New payload -> allow auto-open again
+  React.useEffect(() => {
+    setSnoozeAutoOpen(false);
+  }, [payloadKey]);
+
+  // Auto-open only if we have output/error AND snooze is not active
+  React.useEffect(() => {
+    if (!snoozeAutoOpen && (err || out)) {
+      setOpen(true);
+    }
+  }, [payloadKey, snoozeAutoOpen, err, out]);
+
+  // Collapse with ESC (and snooze)
   React.useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && open) setOpen(false);
+      if (e.key === 'Escape' && open) {
+        collapse();
+      }
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
+
+  const collapse = React.useCallback(() => {
+    setOpen(false);
+    setSnoozeAutoOpen(true); // <- critical: don't auto-open again for this payload
+    try {
+      localStorage.setItem('adminToolsStickyOpen', '0');
+    } catch { /* ignore */ }
+  }, []);
+
+  const expand = React.useCallback(() => {
+    setSnoozeAutoOpen(false);
+    setOpen(true);
+    try {
+      localStorage.setItem('adminToolsStickyOpen', '1');
+    } catch { /* ignore */ }
+  }, []);
+
+  const toggle = React.useCallback(() => {
+    if (open) collapse();
+    else expand();
+  }, [open, collapse, expand]);
 
   const status = (() => {
     if (busyLabel) return { tone: 'busy' as const, text: `Working: ${busyLabel}…` };
@@ -120,7 +167,7 @@ export function StickyOutput({
               </button>
               <button
                 className="rounded-md px-2 py-1 text-xs hover:bg-muted"
-                onClick={() => setOpen(v => !v)}
+                onClick={toggle}
                 aria-expanded={open}
                 aria-controls="sticky-output-body"
               >
@@ -151,7 +198,7 @@ export function StickyOutput({
   : 'No output yet. Run a tool to see the response here.'}
               </pre>
               <p className="mt-2 text-[11px] text-muted-foreground">
-                Tip: Press <kbd>Esc</kbd> to collapse. The panel remembers your preference.
+                Tip: Press <kbd>Esc</kbd> to collapse. The panel won’t auto-reopen until a new result arrives.
               </p>
             </div>
           </div>

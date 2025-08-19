@@ -21,7 +21,7 @@ type Meal = {
   site_id: string;
 };
 
-export default function MealsTableEditable({ siteId }: { siteId: string }) {
+export default function MealsTableEditable({ siteId, reloadKey = 0 }: { siteId: string; reloadKey?: number }) {
   const [meals, setMeals] = useState<Meal[]>([]);
   const [loading, setLoading] = useState(true);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -29,6 +29,8 @@ export default function MealsTableEditable({ siteId }: { siteId: string }) {
   const [cuisineOpts, setCuisineOpts] = useState<string[]>(COMMON_CUISINES);
   const [saving, setSaving] = useState(false);
   const [shareMeal, setShareMeal] = useState<null | { id:string; slug?:string|null; title:string; price_cents:number; cuisines?:string[]|null }>(null);
+  
+  useEffect(() => { load(); }, [siteId, reloadKey]);
 
   async function load() {
     setLoading(true);
@@ -40,8 +42,6 @@ export default function MealsTableEditable({ siteId }: { siteId: string }) {
       setLoading(false);
     }
   }
-
-  useEffect(() => { load(); }, [siteId]);
 
   useEffect(() => {
     (async () => {

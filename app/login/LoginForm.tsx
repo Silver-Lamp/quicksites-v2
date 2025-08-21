@@ -1,4 +1,3 @@
-// app/login/LoginForm.tsx
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
@@ -26,9 +25,8 @@ export default function LoginForm() {
     return n.startsWith('/') ? n : '/admin/tools';
   }, [sp]);
 
-  // ⬇️ Hash-capture fallback: handle non-PKCE magic links (#access_token & #refresh_token)
+  // Hash-capture fallback for non-PKCE magic links: #access_token & #refresh_token
   useEffect(() => {
-    // example: /login?error=missing_code#access_token=...&refresh_token=...&type=magiclink
     const hash = typeof window !== 'undefined' ? window.location.hash : '';
     if (!hash || !hash.includes('access_token')) return;
 
@@ -52,7 +50,6 @@ export default function LoginForm() {
           setIsLoading(false);
           return;
         }
-        // Kick them to their target
         router.replace(nextPath);
       })();
     }
@@ -74,11 +71,19 @@ export default function LoginForm() {
 
     setIsLoading(true);
     try {
-      const redirect = `${location.origin}/auth/callback?next=${encodeURIComponent(nextPath)}`;
+      // Build redirect from the *current* origin (localhost, www, or preview)
+      const origin =
+        typeof window !== 'undefined'
+          ? window.location.origin
+          : process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
+
+      const redirect = `${origin}/auth/callback?next=${encodeURIComponent(nextPath)}`;
+
       const { error } = await supabase.auth.signInWithOtp({
         email: emailNorm,
         options: { emailRedirectTo: redirect },
       });
+
       if (error) {
         console.error('[Magic Link Error]', error);
         setStatus('❌ Error sending link. Please try again.');
@@ -104,7 +109,11 @@ export default function LoginForm() {
         />
         <p className="text-xs text-muted-foreground">We’ll email you a one-time sign-in link.</p>
 
-        <button type="submit" className={`w-full text-white py-2 px-4 rounded ${isLoading ? 'bg-zinc-700 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'}`} disabled={isLoading}>
+        <button
+          type="submit"
+          className={`w-full text-white py-2 px-4 rounded ${isLoading ? 'bg-zinc-700 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'}`}
+          disabled={isLoading}
+        >
           {isLoading ? 'Sending…' : 'Send Magic Link'}
         </button>
 

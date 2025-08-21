@@ -1,3 +1,4 @@
+// app/login/LoginForm.tsx
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
@@ -71,13 +72,22 @@ export default function LoginForm() {
 
     setIsLoading(true);
     try {
-      // Build redirect from the *current* origin (localhost, www, or preview)
-      const origin =
-        typeof window !== 'undefined'
-          ? window.location.origin
-          : process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
+      // Prefer an explicit prod override if provided (handy safety on prod)
+      const explicit = process.env.NEXT_PUBLIC_AUTH_REDIRECT_URL;
 
-      const redirect = `${origin}/auth/callback?next=${encodeURIComponent(nextPath)}`;
+      let redirect: string;
+      if (typeof window !== 'undefined') {
+        const u = new URL(explicit || '/auth/callback', explicit ? undefined : window.location.href);
+        u.searchParams.set('next', nextPath);
+        redirect = u.toString();
+      } else {
+        const base = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
+        const u = new URL('/auth/callback', base);
+        u.searchParams.set('next', nextPath);
+        redirect = u.toString();
+      }
+
+      console.debug('[login] emailRedirectTo =', redirect);
 
       const { error } = await supabase.auth.signInWithOtp({
         email: emailNorm,

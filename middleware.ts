@@ -1,39 +1,38 @@
 // middleware.ts
-import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
+import { NextResponse } from 'next/server';
 
 const MARKETING = new Set([
   'quicksites.ai',
   'www.quicksites.ai',
-  'localhost:3000',          // dev safety
+  'localhost:3000',
   '127.0.0.1:3000',
 ]);
 
 const ASSET = /\.(?:png|jpe?g|gif|svg|webp|ico|txt|xml|css|js|map|woff2?)$/i;
 
 export function middleware(req: NextRequest) {
-  const { pathname } = req.nextUrl;
+  const url = req.nextUrl;
+  const path = url.pathname;
   const host = (req.headers.get('x-forwarded-host') ?? req.headers.get('host') ?? '').toLowerCase();
   const domain = host.replace(/^www\./, '');
 
-  // Skip assets, Next internals, well-known, and API
-  if (
-    pathname.startsWith('/_next') ||
-    pathname.startsWith('/.well-known') ||
-    pathname.startsWith('/api') ||
-    ASSET.test(pathname)
-  ) {
+  // Skip Next internals, well-known, assets
+  if (path.startsWith('/_next') || path.startsWith('/.well-known') || ASSET.test(path)) {
     return NextResponse.next();
   }
 
-  // Rewrites for customer domains
+  // Let APIs go straight through (no rewrite)
+  if (path.startsWith('/api')) return NextResponse.next();
+
+  // Customer domains → rewrite to domain router
   if (!MARKETING.has(domain)) {
-    const url = req.nextUrl.clone();
-    url.pathname = `/_sites/${domain}${pathname || ''}`;
-    return NextResponse.rewrite(url);
+    const rew = url.clone();
+    rew.pathname = `/_domains/${domain}${path}`;
+    return NextResponse.rewrite(rew);
   }
 
-  // Marketing / app host behaves normally
+  // Marketing/app hosts: normal
   return NextResponse.next();
 }
 

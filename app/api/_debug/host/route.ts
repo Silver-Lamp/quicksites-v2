@@ -1,5 +1,5 @@
-// app/api/_debug/host/route.ts
 import { NextResponse } from 'next/server';
+
 export function GET(request: Request) {
   const h = new Headers(request.headers);
   return NextResponse.json({

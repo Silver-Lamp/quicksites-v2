@@ -1,13 +1,10 @@
-// app/_sites/[slug]/page.tsx
-'use server';
-
+import { headers } from 'next/headers';
 import { notFound } from 'next/navigation';
-import type { Metadata } from 'next';
+import { TemplateEditorProvider } from '@/context/template-editor-context';
 import SiteRenderer from '@/components/sites/site-renderer';
 import { generatePageMetadata } from '@/lib/seo/generateMetadata';
 import { getSiteBySlug } from '@/lib/templates/getSiteBySlug';
-import { TemplateEditorProvider } from '@/context/template-editor-context';
-import { headers } from 'next/headers';
+import { getSiteByDomain } from '@/lib/templates/getSiteByDomain'; // add below
 
 async function origin() {
   const h = await headers();
@@ -16,12 +13,20 @@ async function origin() {
   return `${proto}://${host}`;
 }
 
-export async function generateMetadata({
-  params,
-}: { params: { slug: string } }): Promise<Metadata> {
-  const site = await getSiteBySlug(params.slug);
+async function resolveSite(domain: string) {
+  // 1) Exact domain mapping
+  let site = await getSiteByDomain(domain);
+  if (site) return site;
+
+  // 2) Fallback: try second-level name as slug (e.g., graftontowing.com → graftontowing)
+  const maybeSlug = domain.split('.').slice(0, -1).join('.');
+  if (maybeSlug) site = await getSiteBySlug(maybeSlug);
+  return site;
+}
+
+export async function generateMetadata({ params }: { params: { domain: string } }) {
+  const site = await resolveSite(params.domain.toLowerCase());
   if (!site) return {};
-  // No page slug in this route — let metadata helper pick first page
   return generatePageMetadata({
     site,
     pageSlug: 'home',
@@ -29,8 +34,8 @@ export async function generateMetadata({
   });
 }
 
-export default async function SitePage({ params }: { params: { slug: string } }) {
-  const site = await getSiteBySlug(params.slug);
+export default async function DomainRouterPage({ params }: { params: { domain: string; rest?: string[] } }) {
+  const site = await resolveSite(params.domain.toLowerCase());
   if (!site) return notFound();
 
   const colorMode = (site.color_mode as 'light' | 'dark') ?? 'light';
@@ -43,8 +48,7 @@ export default async function SitePage({ params }: { params: { slug: string } })
     >
       <SiteRenderer
         site={site}
-        // no page slug in this route; defaults to first page
-        baseUrl={`${origin()}/_sites`}
+        baseUrl={`${origin()}/_sites`}   // ✅ use current host, not quicksites.ai
         id="site-renderer-page"
         colorMode={colorMode}
         className="bg-white text-black dark:bg-black dark:text-white"

@@ -11,6 +11,7 @@ import type { BlockEditorProps } from '@/components/admin/templates/block-editor
 import type { Block } from '@/types/blocks';
 import { InlineBlockTypePicker } from './inline-block-type-picker';
 import RichTextEditor from '@/components/editor/rich-text-editor';
+import type { Page } from '@/types/template';
 
 // --- config ---
 const TIMEOUT_MS = 6000; // “a few seconds” — tweak to taste
@@ -40,7 +41,8 @@ export function DynamicBlockEditor({
   errors,
   template,
   colorMode,
-}: BlockEditorProps & { colorMode?: 'light' | 'dark' }) {
+  currentPage,
+}: BlockEditorProps & { colorMode?: 'light' | 'dark', currentPage?: Page }) {
   const [EditorComponent, setEditorComponent] =
     useState<React.FC<BlockEditorProps> | null>(null);
 
@@ -168,6 +170,8 @@ export function DynamicBlockEditor({
           onSave={() => onSave(block)}
           placeholder="Type ‘/’ for commands…"
           colorMode={colorMode}
+          template={template}            // ⬅️ gives AI site context
+          currentPage={currentPage}      // ⬅️ better suggestions          
         />
       </div>
         <div className="mt-4 flex justify-end gap-2">

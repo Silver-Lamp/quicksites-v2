@@ -2,7 +2,7 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { X, Moon, Sun } from 'lucide-react';
+import { X, Moon, Sun, Settings2 } from 'lucide-react';
 import { TemplateThemeWrapper } from '@/components/theme/template-theme-wrapper';
 import { useTheme } from '@/hooks/useThemeContext';
 import PageTabsBar from '@/components/admin/templates/page-tabs-bar';
@@ -71,10 +71,10 @@ export default function LiveEditorPreview({
   const [device, setDevice] = useState<'mobile' | 'tablet' | 'desktop'>('desktop');
 
   // Optional right settings column (kept for layout compatibility)
-  const [showSettings] = useState(false);
+  // const [showSettings, setShowSettings] = useState(false);
 
-  const COLLAPSED_SIDEBAR_W = 64;
-  const SETTINGS_W = 420;
+  // const COLLAPSED_SIDEBAR_W = 64;
+  // const SETTINGS_W = 420;
 
   // Undo/redo
   const undoStack = useRef<Template[]>([]);
@@ -161,6 +161,8 @@ export default function LiveEditorPreview({
     [template, headerBlockCanon, footerBlockCanon]
   );
 
+  // const toggleSettings = () => setShowSettings(v => !v);
+
   const hasHeader = !!headerBlockCanon;
   const hasFooter = !!footerBlockCanon;
 
@@ -228,6 +230,22 @@ export default function LiveEditorPreview({
     next.data = d;
     return next;
   }
+/** Toggle the global settings panel (same as pressing `S`) */
+const toggleGlobalSettings = () => {
+  // If your app exposes a dedicated toggle, call it here.
+  // Otherwise, synthesize the exact key event that opens the global panel.
+  window.dispatchEvent(
+    new KeyboardEvent('keydown', {
+      key: 's',
+      code: 'KeyS',
+      ctrlKey: false,
+      altKey: false,
+      metaKey: false,
+      shiftKey: false,
+      bubbles: true,
+    })
+  );
+};
 
   // Persist helper
   const updateAndSave = async (updatedRaw: Template, force = false) => {
@@ -369,9 +387,7 @@ export default function LiveEditorPreview({
     await updateAndSave(next);
   };
 
-  const GRID_COLS = showSettings
-    ? `grid-cols-[${COLLAPSED_SIDEBAR_W}px,1fr,${SETTINGS_W}px]`
-    : 'grid-cols-1';
+  const GRID_COLS = 'grid-cols-1';
 
   // Device max width
   const deviceFrame =
@@ -391,6 +407,22 @@ export default function LiveEditorPreview({
         renderHeader={false}
         renderFooter={false}
       >
+      <button
+        type="button"
+        onClick={toggleGlobalSettings}
+        title="Template / Site Settings (S)"
+        aria-label="Open settings"
+        className={clsx(
+          'absolute top-2 left-2 sm:left-3 z-[60]',
+          'h-8 w-8 rounded-full flex items-center justify-center',
+          'border border-white/10 bg-zinc-900/85 hover:border-purple-500/50 hover:bg-zinc-800 shadow glow-purple-500/20'
+        )}
+        style={{ marginLeft: -12, marginTop: -10, zIndex: 1000 }}
+      >
+        <Settings2 className={clsx('h-4 w-4 transition-transform')} 
+          style={{ strokeWidth: 1.5, color: 'white' }} />
+      </button>
+
         {isImmersive && (
           <button
             onClick={exitImmersive}
@@ -405,7 +437,7 @@ export default function LiveEditorPreview({
           </button>
         )}
 
-        {/* 3-column layout */}
+        {/* editor layout */}
         <div
           className={clsx(
             'relative isolate grid w-full',
@@ -414,18 +446,6 @@ export default function LiveEditorPreview({
             GRID_COLS
           )}
         >
-          {/* left spacer (only when settings would be open) */}
-          {showSettings && (
-            <aside aria-label="Template settings" className="h-full overflow-y-auto border-l border-zinc-800 bg-zinc-900">
-              <div className="h-full overflow-auto">
-                {SidebarSettings ? (
-                  <SidebarSettings template={template} onChange={onChange as any} />
-                ) : (
-                  <div className="p-4 text-sm text-white/70">Loading settings…</div>
-                )}
-              </div>
-            </aside>
-          )}
 
           {/* main editor */}
           <main className="relative z-[50] min-h-0 overflow-y-auto overscroll-contain">

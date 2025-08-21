@@ -1,90 +1,75 @@
 // app/auth/callback/route.ts
-import { NextResponse, type NextRequest } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
+import { cookies } from 'next/headers';
 import { createServerClient } from '@supabase/ssr';
-import { serialize, type SerializeOptions } from 'cookie';
-import type { Database } from '@/types/supabase';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-const originOf = (req: NextRequest) => {
-  const host = req.headers.get('x-forwarded-host') ?? req.headers.get('host') ?? 'localhost:3000';
-  const proto = req.headers.get('x-forwarded-proto') ?? (host.includes('localhost') ? 'http' : 'https');
-  return `${proto}://${host}`;
-};
-
-// include ::1 and 0.0.0.0
-const isLocal = (req: NextRequest) => {
-  const h = (req.headers.get('x-forwarded-host') ?? req.headers.get('host') ?? '').toLowerCase();
-  return (
-    /(^|:)localhost(?::|$)/.test(h) ||
-    /(^|:)127\.0\.0\.1(?::|$)/.test(h) ||
-    /(^|:)0\.0\.0\.0(?::|$)/.test(h) ||
-    /(^|:)\[?::1\]?(?::|$)/.test(h)
-  );
-};
-
-function parseCookieHeader(raw: string | null) {
-  if (!raw) return [] as { name: string; value: string }[];
-  return raw.split(/;\s*/).filter(Boolean).map(p => {
-    const i = p.indexOf('=');
-    return { name: i < 0 ? p : p.slice(0, i), value: i < 0 ? '' : p.slice(i + 1) };
-  });
+function safeNext(n?: string | null) {
+  return n && n.startsWith('/') ? n : '/';
 }
 
 export async function GET(req: NextRequest) {
   const url = new URL(req.url);
   const code = url.searchParams.get('code');
-  const requestedNext = url.searchParams.get('next');
-  const nextPath = requestedNext && requestedNext.startsWith('/') ? requestedNext : '/admin/tools';
+  const next = safeNext(url.searchParams.get('next'));
 
-  if (!code) {
-    return NextResponse.redirect(
-      new URL(`/login?error=missing_code&next=${encodeURIComponent(nextPath)}`, originOf(req))
-    );
-  }
-
-  // Prepare a 302 redirect response up-front
-  const redirectRes = NextResponse.redirect(new URL(nextPath, originOf(req)));
-
-  const local = isLocal(req);
-
-  const supabase = createServerClient<Database>(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        getAll: () => parseCookieHeader(req.headers.get('cookie')),
-        setAll: (cookies) => {
-          for (const { name, value, options } of cookies) {
-            const o = { ...(options ?? {}) } as SerializeOptions;
-            o.path = '/';
-            delete (o as any).domain; // never set domain on localhost
-
-            if (local) {
-              o.sameSite = 'lax';
-              o.secure = false;
-            } else {
-              const same = (o.sameSite ?? 'lax') as SerializeOptions['sameSite'];
-              if ((same as any) === 'none') o.secure = true;
-              if (o.secure === undefined) o.secure = true;
-            }
-            o.httpOnly = true;
-
-            redirectRes.headers.append('set-cookie', serialize(name, value, o));
-          }
+  // Case A: PKCE / code exchange (e.g., OAuth)
+  if (code) {
+    const store = await cookies();
+    const supabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        cookies: {
+          get(name: string) { return store.get(name)?.value; },
+          set(name: string, value: string, options: any) { store.set({ name, value, ...options }); },
+          remove(name: string, options: any) { store.set({ name, value: '', ...options, maxAge: 0 }); },
         },
-      },
-      cookieEncoding: 'base64url',
-    }
-  );
-
-  const { error } = await supabase.auth.exchangeCodeForSession(code);
-  if (error) {
-    return NextResponse.redirect(
-      new URL(`/login?error=${encodeURIComponent(error.message)}&next=${encodeURIComponent(nextPath)}`, originOf(req))
+      }
     );
+
+    const { error } = await supabase.auth.exchangeCodeForSession(code);
+    if (error) {
+      return NextResponse.redirect(
+        new URL(`/login?error=callback&msg=${encodeURIComponent(error.message)}&next=${encodeURIComponent(next)}`, url.origin)
+      );
+    }
+    return NextResponse.redirect(new URL(next, url.origin));
   }
 
-  return redirectRes;
+  // Case B: Magic link (tokens are in the fragment; server can't see them).
+  // Return a tiny HTML page that:
+  //  1) reads tokens from location.hash
+  //  2) POSTs them to an API route that sets the server cookies
+  //  3) redirects to `next`
+  const finalizeUrl = new URL('/api/auth/set-session', url.origin).toString();
+  const dest = new URL(next, url.origin).toString();
+
+  return new NextResponse(
+    `<!doctype html><meta charset="utf-8"><title>Completing sign-in…</title>
+     <style>body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Helvetica,Arial,sans-serif;color:#eee;background:#111;margin:40px}</style>
+     <p>Completing sign-in…</p>
+     <script>
+      (function(){
+        var h = new URLSearchParams(location.hash.replace(/^#/, ''));
+        var at = h.get('access_token');
+        var rt = h.get('refresh_token');
+        if (!at || !rt) {
+          location.replace(${JSON.stringify('/login?error=missing_tokens')});
+          return;
+        }
+        fetch(${JSON.stringify(finalizeUrl)}, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({ access_token: at, refresh_token: rt })
+        }).then(function(r){ return r.json(); })
+          .then(function(){ location.replace(${JSON.stringify(dest)}); })
+          .catch(function(){ location.replace(${JSON.stringify('/login?error=cookie_set_failed')}); });
+      })();
+     </script>`,
+    { status: 200, headers: { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' } }
+  );
 }

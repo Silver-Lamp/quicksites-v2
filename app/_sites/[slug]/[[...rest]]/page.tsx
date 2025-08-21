@@ -8,8 +8,8 @@ import { TemplateEditorProvider } from '@/context/template-editor-context';
 import { getSiteBySlug } from '@/lib/templates/getSiteBySlug';
 import { generatePageMetadata } from '@/lib/seo/generateMetadata';
 
-async function origin() {
-  const h = await headers();
+async function getOrigin() {
+  const h = await headers(); // Next >=15 types this as Promise<ReadonlyHeaders>
   const host = h.get('x-forwarded-host') ?? h.get('host') ?? 'localhost:3000';
   const proto = h.get('x-forwarded-proto') ?? (host.includes('localhost') ? 'http' : 'https');
   return `${proto}://${host}`;
@@ -22,13 +22,11 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const site = await getSiteBySlug(params.slug);
   if (!site) return {};
-
   const pageSlug = params.rest?.[0] ?? 'home';
-
   return generatePageMetadata({
     site,
     pageSlug,
-    baseUrl: `${origin()}/_sites`,
+    baseUrl: `${await getOrigin()}/_sites`,
   });
 }
 
@@ -52,7 +50,7 @@ export default async function SitePage({
       <SiteRenderer
         site={site}
         page={pageSlug}
-        baseUrl={`${origin()}/_sites`}
+        baseUrl={`${await getOrigin()}/_sites`}
         id="site-renderer-page"
         colorMode={colorMode}
         className="bg-white text-black dark:bg-black dark:text-white"

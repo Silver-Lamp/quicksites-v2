@@ -1,3 +1,4 @@
+// app/api/sites/route.ts
 export const runtime = 'nodejs';
 
 import { createClient } from '@supabase/supabase-js';

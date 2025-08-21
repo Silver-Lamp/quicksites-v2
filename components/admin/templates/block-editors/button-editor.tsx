@@ -1,3 +1,4 @@
+// components/admin/templates/block-editors/button-editor.tsx
 'use client';
 
 import { useState } from 'react';

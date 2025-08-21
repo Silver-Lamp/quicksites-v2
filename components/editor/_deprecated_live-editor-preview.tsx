@@ -28,7 +28,7 @@ import SafeTriggerButton from '@/components/ui/safe-trigger-button';
 import { saveTemplate } from '@/admin/lib/saveTemplate';
 import { TemplateThemeWrapper } from '@/components/theme/template-theme-wrapper';
 import { useTheme } from '@/hooks/useThemeContext';
-import GlobalChromeEditors from '@/components/admin/templates/global-chrome-editors';
+// import GlobalChromeEditors from '@/components/admin/templates/_depracated_global-chrome-editors';
 import PageTabsBar from '@/components/admin/templates/page-tabs-bar';
 import type { Page } from '@/types/template';
 

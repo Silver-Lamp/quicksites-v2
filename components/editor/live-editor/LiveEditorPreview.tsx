@@ -3,6 +3,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { X, Moon, Sun, Settings2 } from 'lucide-react';
+import CollapsiblePanel from '@/components/ui/collapsible-panel';
 import { TemplateThemeWrapper } from '@/components/theme/template-theme-wrapper';
 import { useTheme } from '@/hooks/useThemeContext';
 import PageTabsBar from '@/components/admin/templates/page-tabs-bar';
@@ -451,14 +452,20 @@ const toggleGlobalSettings = () => {
           <main className="relative z-[50] min-h-0 overflow-y-auto overscroll-contain">
             <div className={`relative z-[1] px-0 sm:px-2 xl:px-0 pb-28 pt-4 space-y-6 w-full mx-auto ${deviceFrame}`}>
               {/* Global Header/Footer card */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="p-3 rounded-lg bg-zinc-900 border border-zinc-700 hover:border-purple-500 transition-colors">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <div className="text-sm font-semibold text-white">Global Header and Footer</div>
+              <CollapsiblePanel
+                id="global-header-footer"
+                title="Header and Footer"
+                defaultOpen={false}
+              >
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="p-3 rounded-lg bg-zinc-900 border border-zinc-700 hover:border-purple-500 transition-colors">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <div className="text-sm font-semibold text-white">Global Header and Footer</div>
+
                       <div className="text-xs text-zinc-300">Shown on pages unless hidden or overridden.</div>
                       <div className="flex flex-wrap items-center gap-2 mt-2">
-                        <span className="text-xs uppercase tracking-wide text-white/60">Page Settings:</span>
+                        <span className="text-xs uppercase tracking-wide text-white/60">{selectedPage?.title} Page Settings:</span>
                         <button
                           type="button"
                           onClick={() => setPageChrome('show_header', !(selectedPage?.show_header !== false))}
@@ -502,6 +509,7 @@ const toggleGlobalSettings = () => {
                   </div>
                 </div>
               </div>
+              </CollapsiblePanel>
 
               <PageTabsBar
                 pages={pages}

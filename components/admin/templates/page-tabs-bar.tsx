@@ -35,6 +35,9 @@ const slugify = (s: string) =>
 
 const stableId = (p: Page, i: number) => p.id || p.slug || `page-${i}`;
 
+const pageKey = (p: Page) =>
+  (p.slug ?? (p as any).path ?? (p as any).url ?? 'home').toString().replace(/^\//, '') || 'home';
+
 type Props = {
   pages: Page[];
   selectedIndex: number;
@@ -73,6 +76,19 @@ export default function PageTabsBar({
     }
   }, [selectedIndex, pages, editingIdx, selected]);
 
+  React.useEffect(() => {
+    const handler = (e: any) => {
+      const d = e?.detail ?? {};
+      let idx = typeof d.index === 'number' ? d.index : -1;
+      if (idx < 0 && d.id) idx = pages.findIndex(p => p.id === d.id);
+      if (idx < 0 && d.slug) idx = pages.findIndex(p => p.slug === d.slug);
+      if (idx < 0 && d.key)  idx = pages.findIndex(p => pageKey(p) === d.key);
+      if (idx >= 0) onSelect(idx);
+    };
+    window.addEventListener('qs:page:select', handler as any);
+    return () => window.removeEventListener('qs:page:select', handler as any);
+  }, [pages, onSelect]);
+  
   const beginEdit = (i: number) => {
     setEditingIdx(i);
     setTitle(pages[i]?.title ?? '');
@@ -173,6 +189,7 @@ export default function PageTabsBar({
                   key={stableId(p, i)}
                   id={stableId(p, i)}
                   page={p}
+                  pageKey={pageKey(p)}
                   isActive={i === selectedIndex}
                   isEditing={editingIdx === i}
                   title={i === editingIdx ? title : p.title}
@@ -261,6 +278,7 @@ export default function PageTabsBar({
 function PageTabItem({
   id,
   page,
+  pageKey,
   isActive,
   isEditing,
   title,
@@ -271,6 +289,7 @@ function PageTabItem({
 }: {
   id: string;
   page: Page;
+  pageKey: string;
   isActive: boolean;
   isEditing: boolean;
   title?: string;
@@ -285,6 +304,7 @@ function PageTabItem({
   return (
     <div ref={setNodeRef} style={style} className="inline-block">
       <div
+      data-editor-page={pageKey} 
         className={`flex items-center gap-2 px-3 py-1 rounded border cursor-pointer select-none
           ${isActive
             ? 'bg-purple-700 text-white border-purple-500'

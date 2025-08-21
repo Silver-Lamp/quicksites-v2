@@ -46,7 +46,6 @@ export default function PageHeaderEditor({
   block,
   onSave,
   onClose,
-  errors = {},
   template,
   isSaving: isSavingProp,
 }: Props) {
@@ -70,13 +69,10 @@ export default function PageHeaderEditor({
   const saving = Boolean(isSavingProp) || isSavingLocal;
 
   const areLinksValid =
-    navItems.length === 0 || // allow empty; change to >0 if you want to require links
-    navItems.every((link) => link?.label?.trim?.() && link?.href?.trim?.());
+    navItems.length === 0 || navItems.every((link) => link?.label?.trim?.() && link?.href?.trim?.());
 
   const handleFileUpload = async (file: File): Promise<string> => {
-    // SVGs shouldn’t be run through browser-image-compression
     const isSvg = file.type === 'image/svg+xml' || /\.svg$/i.test(file.name);
-
     const toUpload = isSvg
       ? file
       : await imageCompression(file, {
@@ -124,7 +120,6 @@ export default function PageHeaderEditor({
   const saveBlock = async () => {
     setIsSavingLocal(true);
     try {
-      // Always write canonical keys
       await onSave({
         ...block,
         content: {
@@ -142,60 +137,96 @@ export default function PageHeaderEditor({
     }
   };
 
+  const canSave = areLinksValid && !saving;
+
   return (
-    <div className="p-4 space-y-6 text-white bg-neutral-900 rounded-xl">
-      <h3 className="text-lg font-semibold">Edit Page Header</h3>
-
-      <div className="space-y-2">
-        <Label className="text-white">Logo</Label>
-        <div
-          {...getRootProps()}
-          className="border border-dashed rounded-md p-4 text-center cursor-pointer bg-neutral-900 min-h-[120px] flex items-center justify-center"
-        >
-          <input {...getInputProps()} />
-          {isUploading ? (
-            <div className="flex items-center gap-2 text-neutral-300">
-              <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24" fill="none" aria-hidden>
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
-              </svg>
-              Uploading...
-            </div>
-          ) : logoUrl ? (
-            <div className="flex flex-col items-center gap-2">
-              <Image src={logoUrl} alt="Logo" width={100} height={100} className="h-16 w-auto object-contain" />
-              <Button variant="ghost" size="sm" onClick={() => setLogoUrl('')}>
-                Remove Logo
-              </Button>
-            </div>
-          ) : (
-            <p className="text-sm text-neutral-400">
-              Drag and drop a logo image here, or click to browse
-              <br />
-              (PNG, JPG, SVG, WebP — Max 5MB)
-            </p>
-          )}
+    <div className="relative flex max-h-[calc(100vh-8rem)] min-h-0 flex-col text-white">
+      {/* Sticky top bar */}
+      <div className="sticky top-0 z-20 border-b border-white/10 bg-neutral-900/70 backdrop-blur px-6 py-4">
+        <div className="flex items-center justify-between gap-3">
+          <h3 className="text-lg font-semibold">Edit Page Header</h3>
+          <div className="flex gap-2">
+            <Button variant="ghost" onClick={onClose} disabled={saving}>Cancel</Button>
+            <Button onClick={saveBlock} disabled={!canSave} title={!areLinksValid ? 'Fill in link label + URL' : ''}>
+              {saving ? 'Saving...' : 'Save'}
+            </Button>
+          </div>
         </div>
       </div>
 
-      <div className="space-y-4">
-        <Label className="text-white">Navigation Links</Label>
-        <QuickLinksEditor links={navItems} onChange={setNavItems} template={normalizedTemplate as Template} />
+      {/* Scrollable content */}
+      <div className="flex-1 overflow-y-auto px-6 py-5 overscroll-contain">
+        {/* ⬇️ 1/3 (logo) | 2/3 (links) */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 items-start gap-6">
+          {/* LEFT: Logo = 1/3 */}
+          <section className="lg:col-span-1 max-w-full space-y-2">
+            <Label className="text-white">Logo</Label>
+            <div
+              {...getRootProps()}
+              className="border border-dashed rounded-md p-4 text-center cursor-pointer bg-neutral-900 min-h-[120px] flex items-center justify-center"
+            >
+              <input {...getInputProps()} />
+              {isUploading ? (
+                <div className="flex items-center gap-2 text-neutral-300">
+                  <svg className="h-5 w-5 animate-spin" viewBox="0 0 24 24" fill="none" aria-hidden>
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
+                  </svg>
+                  Uploading...
+                </div>
+              ) : logoUrl ? (
+                <div className="flex flex-col items-center gap-2">
+                  <Image src={logoUrl} alt="Logo" width={100} height={100} className="h-16 w-auto object-contain" />
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setLogoUrl('');
+                    }}
+                  >
+                    Remove Logo
+                  </Button>
+                </div>
+              ) : (
+                <p className="text-sm text-neutral-400">
+                  Drag and drop a logo image here, or click to browse
+                  <br />(PNG, JPG, SVG, WebP — Max 5MB)
+                </p>
+              )}
+            </div>
+          </section>
+
+          {/* RIGHT: Links = 2/3 */}
+          <section className="lg:col-span-2 min-w-0">
+            <Label className="mb-2 block text-white">Navigation Links</Label>
+            <div className="rounded-lg border border-white/10">
+              <div className="max-h-[60vh] overflow-y-auto p-3 pr-4">
+                <QuickLinksEditor
+                  links={navItems}
+                  onChange={setNavItems}
+                  template={normalizedTemplate as Template}
+                />
+              </div>
+            </div>
+
+            {!areLinksValid && (
+              <div className="mt-3 rounded border border-red-500 bg-red-900/40 p-3 text-sm text-red-300">
+                ⚠️ Please complete all required navigation links before saving.
+              </div>
+            )}
+          </section>
+        </div>
       </div>
 
-      {!areLinksValid && (
-        <div className="bg-red-900/40 text-red-300 border border-red-500 rounded p-3 text-sm">
-          ⚠️ Please complete all required navigation links before saving.
+      {/* Sticky bottom bar */}
+      <div className="sticky bottom-0 z-20 border-t border-white/10 bg-neutral-900/70 backdrop-blur px-6 py-3">
+        <div className="flex justify-end gap-2">
+          <Button variant="ghost" onClick={onClose} disabled={saving}>Cancel</Button>
+          <Button onClick={saveBlock} disabled={!canSave} title={!areLinksValid ? 'Fill in link label + URL' : ''}>
+            {saving ? 'Saving...' : 'Save'}
+          </Button>
         </div>
-      )}
-
-      <div className="flex justify-end gap-2 pt-4">
-        <Button variant="ghost" onClick={onClose} disabled={saving}>
-          Cancel
-        </Button>
-        <Button onClick={saveBlock} disabled={saving || !areLinksValid}>
-          {saving ? 'Saving...' : 'Save'}
-        </Button>
       </div>
     </div>
   );

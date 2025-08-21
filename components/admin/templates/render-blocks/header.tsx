@@ -76,7 +76,7 @@ export default function PageHeader({
       <div className="w-full mx-auto max-w-screen-xl px-4 sm:px-6 lg:px-8 flex items-center justify-between h-20">
         {/* Logo */}
         {logoUrl ? (
-          <Link href="/" className="flex items-center" aria-label="Home">
+          <Link href="/" className="flex items-center" aria-label="Home" data-editor-logo>
             <Image
               src={logoUrl}
               alt="Site Logo"

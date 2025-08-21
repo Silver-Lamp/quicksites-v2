@@ -1,3 +1,4 @@
+// components/admin/templates/block-editors/footer-editor.tsx
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
@@ -62,106 +63,133 @@ export default function FooterEditor({
         appearance: l?.appearance,
       }))
       .filter((l: any) => l.label && l.href);
-  
-    const nextContent: any = {
-      ...content,
-      links: cleanLinks,
-    };
-  
-    // 🚫 ensure legacy fields are removed so they can’t be re-merged server-side
+
+    const nextContent: any = { ...content, links: cleanLinks };
+    // 🚫 remove legacy fields so they don’t resurrect server-side
     delete nextContent.nav_items;
     delete nextContent.navItems;
-  
-    onSave({
-      ...footerBlock,
-      content: nextContent,
-    });
+
+    onSave({ ...footerBlock, content: nextContent });
   };
-  
+
+  const canSave = areLinksValid(content.links as Link[]);
+
   return (
-    <div className="p-6 space-y-6 text-white">
-      <h3 className="text-xl font-semibold mb-2">Edit Footer Block</h3>
+    /**
+     * Make THIS element the scroll container.
+     * - max-h keeps it inside the viewport
+     * - flex/min-h-0 ensure the inner overflow works even inside flex parents
+     */
+    <div className="relative flex max-h-[calc(100vh-8rem)] min-h-0 flex-col text-white">
 
-      <div className="grid md:grid-cols-2 gap-8">
-        {/* LEFT: Quick Links */}
-        <div>
-          <h4 className="text-md font-medium mb-2">Quick Links</h4>
-          <QuickLinksEditor
-            // ✅ pass normalized links so existing ones show up
-            links={content.links as Link[]}
-            onChange={(updated) => update('links', updated)}
-            template={template as Template}
-          />
-        </div>
-
-        {/* RIGHT: Company Info */}
-        <div className="space-y-4">
-          <BlockField
-            type="text"
-            label="Business Name"
-            value={content.businessName}
-            onChange={(v) => update('businessName', v)}
-            error={fieldErrors['content.businessName']}
-          />
-          <BlockField
-            type="text"
-            label="Address"
-            value={content.address}
-            onChange={(v) => update('address', v)}
-            error={fieldErrors['content.address']}
-          />
-          <BlockField
-            type="text"
-            label="City/State"
-            value={content.cityState}
-            onChange={(v) => update('cityState', v)}
-            error={fieldErrors['content.cityState']}
-          />
-          <BlockField
-            type="text"
-            label="Phone"
-            value={content.phone}
-            onChange={(v) => update('phone', v)}
-            error={fieldErrors['content.phone']}
-          />
-          <BlockField
-            type="text"
-            label="Copyright"
-            value={content.copyright || `${getYear(new Date())} ${content.businessName || ''}`.trim()}
-            onChange={(v) => update('copyright', v)}
-            error={fieldErrors['content.copyright']}
-          />
+      {/* Sticky header with actions so you never have to zoom/scroll to find Save */}
+      <div className="sticky top-0 z-20 border-b border-white/10 bg-neutral-900/70 backdrop-blur px-6 py-4">
+        <div className="flex items-center justify-between gap-3">
+          <h3 className="text-lg font-semibold">Edit Footer Block</h3>
+          <div className="flex gap-2">
+            <button onClick={onClose} className="px-3 py-2 rounded bg-gray-700 hover:bg-gray-600">
+              Cancel
+            </button>
+            <button
+              onClick={handleSave}
+              disabled={!canSave}
+              title={!canSave ? 'Some links are missing label or URL' : ''}
+              className={`px-3 py-2 rounded font-semibold ${
+                canSave ? 'bg-blue-600 hover:bg-blue-700' : 'bg-gray-600 cursor-not-allowed'
+              }`}
+            >
+              Save
+            </button>
+          </div>
         </div>
       </div>
 
-      {/* Inline alert for invalid links */}
-      {!areLinksValid(content.links as Link[]) && (
-        <div className="bg-red-900/40 text-red-300 border border-red-500 rounded p-3 text-sm">
-          ⚠️ Please complete all required Quick Link fields before saving.
-        </div>
-      )}
+      {/* Scrollable content area */}
+      <div className="flex-1 overflow-y-auto px-6 py-5 overscroll-contain">
 
-      {/* Action buttons */}
-      <div className="flex justify-end gap-2 pt-6">
-        <button onClick={onClose} className="px-4 py-2 bg-gray-700 rounded">
-          Cancel
-        </button>
-        <button
-          disabled={!areLinksValid(content.links as Link[])}
-          title={
-            !areLinksValid(content.links as Link[])
-              ? 'Some links are missing label or URL'
-              : ''
-          }
-          onClick={handleSave}
-          className={`px-4 py-2 rounded font-semibold ${
-            areLinksValid(content.links as Link[])
-              ? 'bg-blue-600 hover:bg-blue-700'
-              : 'bg-gray-600 cursor-not-allowed'
-          }`}
-        >
-          Save
-        </button>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* LEFT: Quick Links (own scroll to keep page compact) */}
+          <section>
+            <h4 className="mb-2 text-sm font-medium text-white/80">Quick Links</h4>
+            <div className="rounded-lg border border-white/10">
+              <div className="max-h-[60vh] overflow-y-auto p-3 pr-4">
+                <QuickLinksEditor
+                  links={content.links as Link[]}
+                  onChange={(updated) => update('links', updated)}
+                  template={template as Template}
+                />
+              </div>
+            </div>
+          </section>
+
+          {/* RIGHT: Company Info — denser spacing */}
+          <section className="space-y-3">
+            <BlockField
+              type="text"
+              label="Business Name"
+              value={content.businessName}
+              onChange={(v) => update('businessName', v)}
+              error={fieldErrors['content.businessName']}
+            />
+            <BlockField
+              type="text"
+              label="Address"
+              value={content.address}
+              onChange={(v) => update('address', v)}
+              error={fieldErrors['content.address']}
+            />
+            <BlockField
+              type="text"
+              label="City/State"
+              value={content.cityState}
+              onChange={(v) => update('cityState', v)}
+              error={fieldErrors['content.cityState']}
+            />
+            <BlockField
+              type="text"
+              label="Phone"
+              value={content.phone}
+              onChange={(v) => update('phone', v)}
+              error={fieldErrors['content.phone']}
+            />
+            <BlockField
+              type="text"
+              label="Copyright"
+              value={
+                content.copyright ||
+                `${getYear(new Date())} ${content.businessName || ''}`.trim()
+              }
+              onChange={(v) => update('copyright', v)}
+              error={fieldErrors['content.copyright']}
+            />
+          </section>
+        </div>
+
+        {/* Inline alert for invalid links */}
+        {!canSave && (
+          <div className="mt-4 rounded border border-red-500 bg-red-900/40 p-3 text-sm text-red-300">
+            ⚠️ Please complete all required Quick Link fields before saving.
+          </div>
+        )}
+      </div>
+
+      {/* Sticky bottom actions (nice on long forms; duplicates top for ergonomics) */}
+      <div className="sticky bottom-0 z-20 border-t border-white/10 bg-neutral-900/70 backdrop-blur px-6 py-3">
+        <div className="flex justify-end gap-2">
+          <button onClick={onClose} className="px-3 py-2 rounded bg-gray-700 hover:bg-gray-600">
+            Cancel
+          </button>
+          <button
+            onClick={handleSave}
+            disabled={!canSave}
+            title={!canSave ? 'Some links are missing label or URL' : ''}
+            className={`px-3 py-2 rounded font-semibold ${
+              canSave ? 'bg-blue-600 hover:bg-blue-700' : 'bg-gray-600 cursor-not-allowed'
+            }`}
+          >
+            Save
+          </button>
+        </div>
       </div>
     </div>
   );

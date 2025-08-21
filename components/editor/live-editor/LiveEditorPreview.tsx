@@ -333,6 +333,149 @@ const toggleGlobalSettings = () => {
     if (keepId) setSelectedPageId(keepId);
   };
 
+  // --------------------------------
+  // Header and Footer link-click capture handler
+  // --------------------------------
+// --- shared helpers ---
+const normPath = (s: string) => {
+  if (!s) return '/';
+  let x = s.trim();
+  try { x = new URL(x, window.location.origin).pathname; } catch {}
+  // allow bare "blog" → "/blog"
+  x = '/' + x.replace(/^\/*/, '').replace(/\/+$/, '');
+  return x === '//' ? '/' : x;
+};
+
+const matchesPagePath = (p: any, path: string) => {
+  const cands = new Set<string>([
+    p?.slug ? `/${p.slug}` : '',
+    p?.path ? normPath(p.path) : '',
+    p?.url  ? normPath(p.url)  : '',
+    p?.href ? normPath(p.href) : '',
+  ].filter(Boolean));
+  return cands.has(path);
+};
+
+const clickChipOrSelect = (pages: any[], idx: number, setSelectedPageId: (v: string|null)=>void) => {
+  const key = (pages[idx]?.slug ?? pages[idx]?.path ?? pages[idx]?.url ?? 'home')
+    .toString().replace(/^\//, '') || 'home';
+
+  const chip = document.querySelector(
+    `[data-editor-page="${key}"], [data-editor-page="/${key}"]`
+  ) as HTMLElement | null;
+
+  if (chip) chip.click();
+  else setSelectedPageId(pages[idx]?.id ?? null);
+
+  window.dispatchEvent(new CustomEvent('qs:page:select', { detail: { index: idx } }));
+};
+
+// convenience
+const softSelectByHref = (pages: any[], href: string, setSelectedPageId: (v: string|null)=>void) => {
+  const path = normPath(href);
+  const idx = pages.findIndex((p) => matchesPagePath(p, path) || (path === '/' && (p?.is_home || p?.slug === 'home')));
+  if (idx < 0) return false;
+  clickChipOrSelect(pages, idx, setSelectedPageId);
+  return true;
+};
+
+  const pageMatchesPath = (p: any, path: string) => {
+    const set = new Set<string>([
+      p?.slug ? `/${p.slug}` : '',
+      p?.path ? normPath(p.path) : '',
+      p?.url  ? normPath(p.url)  : '',
+      p?.href ? normPath(p.href) : '',
+    ].filter(Boolean));
+    // treat "/" as "home" fallback
+    if (path === '/') {
+      if ((p?.is_home ?? false) || String(p?.slug ?? '').toLowerCase() === 'home') return true;
+      // optionally: first page can be home
+      // (this still allows explicit matches above to win)
+    }
+    return set.has(path);
+  };
+
+  const getHomeIndex = (pages: any[]) => {
+    let i = pages.findIndex(p => p?.is_home);
+    if (i >= 0) return i;
+    i = pages.findIndex(p => String(p?.slug ?? '').toLowerCase() === 'home');
+    if (i >= 0) return i;
+    return 0; // fallback to first page
+  };
+
+  // --- header click-capture ---
+  const onHeaderLinkClickCapture: React.MouseEventHandler<HTMLDivElement> = (e) => {
+    if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+    if ((e.target as HTMLElement)?.closest('[data-editor-action],[data-no-edit]')) return;
+
+    const target = e.target as HTMLElement;
+
+    // 1) detect LOGO clicks (even if there is no <a>)
+    const headerContent = (effectiveHeader as any)?.content ?? {};
+    const logoUrl: string | undefined = headerContent.logo_url;
+    const logoEl =
+      target.closest('[data-editor-logo],[data-header-logo],[data-site-logo]') ||
+      target.closest('img[alt*="logo" i]') ||
+      target.closest('svg[aria-label*="logo" i]') ||
+      target.closest('img');
+
+    if (logoEl) {
+      // if we have a known logo url, try to confirm src match (loose)
+      let isLogo = true;
+      if (logoUrl && logoEl instanceof HTMLImageElement) {
+        const src = (logoEl.currentSrc || logoEl.src || '').replace(/[?#].*$/, '');
+        const norm = (s: string) => s.replace(/^https?:\/\/[^/]+/,'').replace(/[?#].*$/,'');
+        const a = norm(src), b = norm(logoUrl);
+        isLogo = !!a && !!b && (a === b || a.endsWith(b) || b.endsWith(a));
+      }
+      if (isLogo) {
+        e.preventDefault();
+        e.stopPropagation();
+        const idx = getHomeIndex(pages);
+        clickChipOrSelect(pages, idx, setSelectedPageId);
+        window.dispatchEvent(new CustomEvent('qs:page:select', { detail: { index: idx } }));
+        return;
+      }
+    }
+
+    // 2) handle normal <a> clicks (soft-route)
+    const a = target.closest('a') as HTMLAnchorElement | null;
+    if (!a) return;
+
+    const href = a.getAttribute('href') || '';
+    if (!href || /^(mailto:|tel:|javascript:)/i.test(href) || href.startsWith('#')) return;
+
+    const path = normPath(href);
+    let idx = pages.findIndex((p) => pageMatchesPath(p, path));
+    if (idx < 0 && path === '/') idx = getHomeIndex(pages);
+    if (idx < 0) return;
+
+    e.preventDefault();
+    e.stopPropagation();
+    clickChipOrSelect(pages, idx, setSelectedPageId);
+    window.dispatchEvent(new CustomEvent('qs:page:select', { detail: { index: idx } }));
+  };
+
+  // --- footer click-capture ---
+  const onFooterLinkClickCapture: React.MouseEventHandler<HTMLDivElement> = (e) => {
+    // only unmodified left-clicks; ignore edit buttons
+    if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+    if ((e.target as HTMLElement)?.closest('[data-editor-action],[data-no-edit]')) return;
+
+    const a = (e.target as HTMLElement).closest('a') as HTMLAnchorElement | null;
+    if (!a) return;
+
+    const href = a.getAttribute('href') || '';
+    // ignore external / mailto / tel / hash
+    if (!href || /^(https?:\/\/|mailto:|tel:|javascript:)/i.test(href) || href.startsWith('#')) return;
+
+    if (softSelectByHref(pages, href, setSelectedPageId)) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+  };
+  // --------------------------------
+
   // Scroll to last added block
   useEffect(() => {
     if (!lastInsertedId) return;
@@ -570,7 +713,7 @@ const toggleGlobalSettings = () => {
 
               {/* Header (only in-canvas; hover-edit) */}
               {effectiveHeader && (
-                <div ref={headerWrapRef} className="group relative">
+                <div ref={headerWrapRef} className="group relative" onClickCapture={onHeaderLinkClickCapture}>
                   <RenderBlock block={effectiveHeader} showDebug={false} colorMode={resolvedColorMode} />
                   <button
                     type="button"
@@ -635,7 +778,7 @@ const toggleGlobalSettings = () => {
 
               {/* Footer (in-canvas; hover-edit) */}
               {effectiveFooter && (
-                <div className="group relative mt-6 mb-16">
+                <div className="group relative mt-6 mb-16" onClickCapture={onFooterLinkClickCapture}>
                   <RenderBlock block={effectiveFooter} showDebug={false} colorMode={resolvedColorMode} />
                   <button
                     type="button"
@@ -651,22 +794,7 @@ const toggleGlobalSettings = () => {
                   </button>
                 </div>
               )}
-              {/* {!effectiveFooter && (
-                <div className="mt-6 mb-16 rounded-lg border border-dashed border-zinc-700 bg-zinc-900/40 p-6 text-center text-zinc-400">
-                  No global footer set.
-                  <div className="mt-3">
-                    <button
-                      type="button"
-                      onClick={() => openGlobalEditor('footer')}
-                      className="rounded-md border border-purple-500/40 bg-purple-600/20 px-3 py-1.5 text-xs text-purple-100 hover:bg-purple-600/30"
-                      title="Create Footer"
-                      aria-label="Create Footer"
-                    >
-                      Create Footer
-                    </button>
-                  </div>
-                </div>
-              )} */}
+
             </div>
           </main>
         </div>

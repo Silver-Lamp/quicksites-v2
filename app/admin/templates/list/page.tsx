@@ -2,9 +2,10 @@
 'use server';
 
 import { getFromDate } from '@/lib/getFromDate';
-import TemplatesIndexTable from '@/components/admin/templates/templates-index-table';
-import VersionsToggle from '@/components/admin/templates/versions-toggle';
+// import TemplatesIndexTable from '@/components/admin/templates/templates-index-table';
+// import VersionsToggle from '@/components/admin/templates/versions-toggle';
 import { getServerSupabase } from '@/lib/supabase/server';
+import TemplatesIndexWithLoading from '@/components/admin/templates/templates-index-with-loading';
 
 type SearchParams = {
   date?: string;
@@ -106,7 +107,8 @@ export default async function TemplatesIndexPage({
         <VersionsToggle hiddenCount={hiddenCount} />
       </div> */}
 
-      <TemplatesIndexTable templates={deduped} selectedFilter={dateParam} />
+      {/* <TemplatesIndexTable templates={deduped} selectedFilter={dateParam} /> */}
+      <TemplatesIndexWithLoading templates={deduped} selectedFilter={dateParam} />
     </>
   );
 }

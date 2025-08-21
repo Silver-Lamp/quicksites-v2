@@ -43,7 +43,29 @@ type NavItem =
       children?: { label: string; href: string }[];
     };
 
-const navItems: NavItem[] = [
+    function LoadingOverlay({ show }: { show: boolean }) {
+      if (!show) return null;
+      return (
+        <div
+          className="fixed inset-0 z-[9999] bg-black/40 backdrop-blur-sm flex items-center justify-center"
+          aria-live="polite"
+          aria-busy="true"
+        >
+          <div className="flex flex-col items-center gap-3">
+            {/* replace with any image you like */}
+            <img
+              src="/logo_v1.png"
+              alt="Loading…"
+              className="h-12 w-auto opacity-95 drop-shadow animate-pulse"
+            />
+            <div className="h-8 w-8 rounded-full border-2 border-white/40 border-t-white animate-spin" />
+            <div className="text-white/80 text-sm">Loading…</div>
+          </div>
+        </div>
+      );
+    }
+    
+  const navItems: NavItem[] = [
   {
     type: 'item',
     label: 'QuickSites',
@@ -139,12 +161,14 @@ function NavItemButtonOrLink({
   isOpen,
   collapsed,
   toggleMenu,
+  onNavigateStart,
 }: {
   item: Extract<NavItem, { type: 'item' }>;
   isActive: boolean;
   isOpen: boolean;
   collapsed: boolean;
   toggleMenu: () => void;
+  onNavigateStart: (href: string) => void;
 }) {
   const baseClasses = clsx(
     'group relative w-full flex items-center gap-3 px-3 py-2 text-sm rounded transition',
@@ -157,6 +181,8 @@ function NavItemButtonOrLink({
   const firstChild = item.children?.[0];
   const defaultHref = item.href || firstChild?.href || '#';
   const targetLabel = collapsed && firstChild ? firstChild.label : item.label;
+
+  const pathname = usePathname();
 
   const icon = (
     <div
@@ -193,10 +219,18 @@ function NavItemButtonOrLink({
       aria-label={targetLabel}
       onClick={(e) => {
         if (item.children) {
-          if (collapsed) return; // collapsed: navigate to first child
-          e.preventDefault(); // expanded: toggle submenu
+          if (collapsed) {
+            // collapsed: navigate to first child
+            if (defaultHref && pathname !== defaultHref) onNavigateStart(defaultHref);
+            return;
+          }
+          // expanded: toggle submenu, do NOT navigate
+          e.preventDefault();
           toggleMenu();
+          return;
         }
+        // simple leaf item: navigate
+        if (defaultHref && pathname !== defaultHref) onNavigateStart(defaultHref);
       }}
       className={baseClasses}
       aria-expanded={!!item.children && !collapsed ? isOpen : undefined}
@@ -218,6 +252,12 @@ function NavItemButtonOrLink({
 export function AdminNavSections({ collapsed = false }: { collapsed?: boolean }) {
   const pathname = usePathname();
   const [openMenus, setOpenMenus] = useState<Record<string, boolean>>({});
+  const [navLoading, setNavLoading] = useState(false); 
+
+  useEffect(() => {
+    // when route changes, hide overlay (slight delay to avoid flash if you like)
+    if (navLoading) setNavLoading(false);
+  }, [pathname]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     const updated: Record<string, boolean> = {};
@@ -232,6 +272,10 @@ export function AdminNavSections({ collapsed = false }: { collapsed?: boolean })
 
   const toggleMenu = (label: string) =>
     setOpenMenus((prev) => ({ ...prev, [label]: !prev[label] }));
+
+  const handleNavigateStart = (href: string) => {
+    if (href && href !== pathname) setNavLoading(true);
+  };
 
   return (
     <nav className="flex flex-col gap-1 px-1">
@@ -261,6 +305,7 @@ export function AdminNavSections({ collapsed = false }: { collapsed?: boolean })
               isOpen={!!isOpen}
               collapsed={collapsed}
               toggleMenu={() => item.children && toggleMenu(item.label)}
+              onNavigateStart={handleNavigateStart}
             />
 
             <div
@@ -299,6 +344,9 @@ export function AdminNavSections({ collapsed = false }: { collapsed?: boolean })
                       href={child.href}
                       className={isNewTemplate ? newBtnClasses : normalClasses}
                       title={isNewTemplate ? 'Create a new template or site' : child.label}
+                      onClick={() => {
+                        if (child.href && child.href !== pathname) handleNavigateStart(child.href); // ⬅️ NEW
+                      }}
                     >
                       {isNewTemplate && <Plus size={14} />}
                       {isNewTemplate ? 'New Template' : child.label}
@@ -309,6 +357,7 @@ export function AdminNavSections({ collapsed = false }: { collapsed?: boolean })
           </div>
         );
       })}
+      <LoadingOverlay show={navLoading} />
     </nav>
-  );
+);
 }

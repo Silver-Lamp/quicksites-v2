@@ -270,6 +270,8 @@ export default function TemplatesIndexTable({
                     }}>{t.template_name}</button>
                   )} */}
                   <div
+                    key={t.id}
+                    data-nav-href={`/template/${t.slug}/edit`} 
                     className="text-white hover:underline text-left cursor-pointer"
                     onClick={() => router.push(`/template/${t.slug}/edit`)}
                   >

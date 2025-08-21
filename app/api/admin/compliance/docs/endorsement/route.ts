@@ -1,6 +1,4 @@
 // app/api/admin/compliance/docs/endorsement/route.ts
-'use server';
-
 import { randomUUID } from 'crypto';
 import { NextRequest, NextResponse } from 'next/server';
 import { cookies as nextCookies } from 'next/headers';
@@ -15,7 +13,7 @@ export const dynamic = 'force-dynamic';
 
 /** Build a server-side Supabase client wired to Next.js route-handler cookies. */
 async function getSupabaseForRoute(): Promise<SupabaseClient<Database>> {
-  const store = await nextCookies(); // ✅ await to avoid Next’s warning
+  const store = await nextCookies(); // ✅ sync in route handlers
 
   return createServerClient<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -25,7 +23,7 @@ async function getSupabaseForRoute(): Promise<SupabaseClient<Database>> {
       cookies: {
         // @supabase/ssr server interface: getAll / setAll
         getAll() {
-          return store.getAll().map(({ name, value }) => ({ name, value }));
+          return store.getAll().map(({ name, value }: { name: string; value: string }) => ({ name, value }));
         },
         setAll(cookies) {
           for (const c of cookies) {

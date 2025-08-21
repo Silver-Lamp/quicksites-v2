@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import { getXClient } from '@/lib/social/x';
+// import { getXClient } from '@/lib/social/_disabled_x';
 import { render, defaultCaption } from '@/lib/text-template';
 import { composeHashtags } from '@/lib/hashtags';
 
@@ -53,23 +53,23 @@ async function buildWebhookMessage(db: any, p: any, hook: any) {
   return { text, link, image };
 }
 
-async function postToX(acc:any, text:string, imageUrl?:string, link?:string) {
-  const { client, updated } = await getXClient(acc);
-  if (updated) {
-    await db.from('social_accounts').update(updated).eq('id', acc.id);
-  }
+// async function postToX(acc:any, text:string, imageUrl?:string, link?:string) {
+//   const { client, updated } = await getXClient(acc);
+//   if (updated) {
+//     await db.from('social_accounts').update(updated).eq('id', acc.id);
+//   }
 
-  let mediaId: string | undefined;
-  if (imageUrl) {
-    const resp = await fetch(imageUrl);
-    const buf = Buffer.from(await resp.arrayBuffer());
-    const u = await client.v1.uploadMedia(buf, { mimeType: 'image/png' });
-    mediaId = u;
-  }
+//   let mediaId: string | undefined;
+//   if (imageUrl) {
+//     const resp = await fetch(imageUrl);
+//     const buf = Buffer.from(await resp.arrayBuffer());
+//     const u = await client.v1.uploadMedia(buf, { mimeType: 'image/png' });
+//     mediaId = u;
+//   }
 
-  const full = link ? `${text}\n${link}` : text;
-  await client.v2.tweet({ text: full, media: mediaId ? { media_ids: [mediaId] } : undefined });
-}
+//   const full = link ? `${text}\n${link}` : text;
+//   await client.v2.tweet({ text: full, media: mediaId ? { media_ids: [mediaId] } : undefined });
+// }
 async function postWebhook(hook:any, text:string, link:string, image?:string) {
   const url = hook.endpoint_url as string;
   if (/hooks\.slack\.com/.test(url)) {
@@ -135,16 +135,16 @@ export async function POST(req: NextRequest) {
         // Reuse existing postWebhook helper
         await postWebhook(hook, msg.text, msg.link, msg.image);
       }
-       else if (p.network === 'x') {
-          const { data: acc } = await db
-            .from('social_accounts')
-            .select('id, access_token, refresh_token, expires_at')
-            .eq('merchant_id', p.merchant_id)
-            .eq('provider', 'x')
-            .maybeSingle();
-          if (!acc) throw new Error('No X account connected');
-          await postToX(acc, p.text, p.image_url || undefined, p.link_url);
-        }
+      //  else if (p.network === 'x') {
+      //     const { data: acc } = await db
+      //       .from('social_accounts')
+      //       .select('id, access_token, refresh_token, expires_at')
+      //       .eq('merchant_id', p.merchant_id)
+      //       .eq('provider', 'x')
+      //       .maybeSingle();
+      //     if (!acc) throw new Error('No X account connected');
+      //     await postToX(acc, p.text, p.image_url || undefined, p.link_url);
+      //   }
       
       
       await db.from('scheduled_posts')

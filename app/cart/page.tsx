@@ -1,3 +1,4 @@
+'use client';
 import AutoApplyFromQuery from '@/components/cart/auto-apply-from-query';
 import CartSummary from './checkout/page';
 import { useState } from 'react';

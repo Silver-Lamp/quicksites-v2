@@ -1,4 +1,6 @@
 // /app/rv/[token]/page.tsx
+'use client';
+import { useState } from 'react';
 import Link from 'next/link';
 
 async function fetchOrderForToken(token: string) {
@@ -38,9 +40,6 @@ export default async function ReviewOrderPage({ params }: { params:{ token:strin
   );
 }
 
-// ----- client -----
-'use client';
-import { useState } from 'react';
 
 function Stars({ value, onChange }:{ value:number; onChange:(n:number)=>void }) {
   return <div className="flex gap-1 justify-center">

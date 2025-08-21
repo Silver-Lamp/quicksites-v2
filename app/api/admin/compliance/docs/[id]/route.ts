@@ -1,13 +1,9 @@
 // app/api/admin/compliance/docs/[id]/route.ts
-'use server';
-
 import { NextRequest, NextResponse } from 'next/server';
 import { cookies as nextCookies } from 'next/headers';
 import { randomUUID } from 'crypto';
-
 import { createServerClient, type CookieOptions } from '@supabase/ssr';
 import { createClient as createAdminClient, type SupabaseClient } from '@supabase/supabase-js';
-
 import type { Database } from '@/types/supabase';
 
 export const runtime = 'nodejs';
@@ -21,7 +17,7 @@ const svc = createAdminClient<Database>(
 
 // Build a Supabase client bound to this request's cookies (server adapter)
 async function getSupabase(): Promise<SupabaseClient<Database>> {
-  const store = await nextCookies(); // ✅ must await in route handlers
+  const store = await nextCookies(); // ✅ sync in route handlers
 
   return createServerClient<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -62,9 +58,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   const body = await req.json();
   const action = String(body.action || '').toLowerCase(); // 'approve' | 'reject'
   const note = body.note?.toString() || null;
-  const expires_at = body.expires_at
-    ? new Date(body.expires_at).toISOString().slice(0, 10)
-    : null;
+  const expires_at = body.expires_at ? new Date(body.expires_at).toISOString().slice(0, 10) : null;
   const issued_at = body.issued_at ? new Date(body.issued_at).toISOString().slice(0, 10) : null;
 
   // Load doc
@@ -123,8 +117,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   const prettyReq = `${detail?.compliance_requirements?.[0]?.juris_state}/${
     detail?.compliance_requirements?.[0]?.operation_type
   }/${detail?.compliance_requirements?.[0]?.code}`;
-  const title =
-    detail?.merchants?.[0]?.display_name || detail?.merchants?.[0]?.name || 'Chef';
+  const title = detail?.merchants?.[0]?.display_name || detail?.merchants?.[0]?.name || 'Chef';
 
   if (action === 'approve' && toEmail) {
     await svc.from('email_outbox').insert({
@@ -156,9 +149,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   // Optional Slack notification
   if (process.env.COMPLIANCE_SLACK_WEBHOOK_URL) {
     const payload = {
-      text: `Compliance ${action}: ${prettyReq} • ${title} (${
-        detail?.profiles?.[0]?.state
-      }/${detail?.profiles?.[0]?.county || '-'})`,
+      text: `Compliance ${action}: ${prettyReq} • ${title} (${detail?.profiles?.[0]?.state}/${detail?.profiles?.[0]?.county || '-'})`,
     };
     await fetch(process.env.COMPLIANCE_SLACK_WEBHOOK_URL, {
       method: 'POST',

@@ -1,3 +1,5 @@
+'use client';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 
 async function fetchMerchant(code: string) {
@@ -31,10 +33,6 @@ export default async function ReviewEntry({ params }: { params: { code: string }
     </div>
   );
 }
-
-// --- Client side ---
-'use client';
-import { useEffect, useState } from 'react';
 
 function Stars({ value, onChange }:{ value:number; onChange:(n:number)=>void }) {
   return (

@@ -2,135 +2,130 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { useSearchParams, useRouter } from 'next/navigation';
-import { supabase } from '@/lib/supabase/client';
+import { useSearchParams } from 'next/navigation';
 
-function normalizeEmail(raw: string) {
-  return raw.normalize('NFKC').replace(/[\u200B-\u200D\uFEFF\u00A0]/g, '').trim().toLowerCase();
-}
-function isValidEmail(raw: string) {
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizeEmail(raw));
-}
+type BuildInfo = { sha?: string; env?: string; deployId?: string };
 
-export default function LoginForm() {
+const normalizeEmail = (raw: string) =>
+  raw.normalize('NFKC').replace(/[\u200B-\u200D\uFEFF\u00A0]/g, '').trim().toLowerCase();
+
+const isValidEmail = (e: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e);
+
+export default function LoginForm({ build }: { build?: BuildInfo }) {
   const sp = useSearchParams();
-  const router = useRouter();
 
-  const [email, setEmail] = useState('');
-  const [status, setStatus] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
-
-  // support both ?next=/path and legacy ?redirectTo=/path
   const nextPath = useMemo(() => {
     const n = sp.get('next') || sp.get('redirectTo') || '/admin/tools';
     return n.startsWith('/') ? n : '/admin/tools';
   }, [sp]);
 
-  // Hash-capture fallback for non-PKCE magic links: #access_token & #refresh_token
+  const [email, setEmail] = useState('');
+  const [status, setStatus] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+
+  // optional: prefill during local dev
   useEffect(() => {
-    const hash = typeof window !== 'undefined' ? window.location.hash : '';
-    if (!hash || !hash.includes('access_token')) return;
-
-    const params = new URLSearchParams(hash.replace(/^#/, ''));
-    const access_token = params.get('access_token');
-    const refresh_token = params.get('refresh_token');
-    const typ = params.get('type');
-
-    if (access_token && refresh_token && (typ === 'magiclink' || !typ)) {
-      setIsLoading(true);
-      setStatus('Signing you in…');
-
-      (async () => {
-        const { error } = await supabase.auth.setSession({ access_token, refresh_token });
-        // Clean the hash so tokens aren’t left in the address bar
-        history.replaceState(null, document.title, window.location.pathname + window.location.search);
-
-        if (error) {
-          console.error('[setSession error]', error);
-          setStatus('❌ Could not complete sign-in. Please try again.');
-          setIsLoading(false);
-          return;
-        }
-        router.replace(nextPath);
-      })();
+    if (process.env.NODE_ENV === 'development') {
+      setEmail('sandon@pointsevenstudio.com');
     }
-  }, [router, nextPath]);
-
-  useEffect(() => {
-    if (process.env.NODE_ENV === 'development') setEmail('sandon@pointsevenstudio.com');
   }, []);
 
-  async function onSubmit(e?: React.FormEvent) {
+  const onSubmit = async (e?: React.FormEvent) => {
     e?.preventDefault();
-    setStatus(null);
+    if (isLoading) return;
 
     const emailNorm = normalizeEmail(email);
     if (!isValidEmail(emailNorm)) {
-      setStatus('❌ Please enter a valid email address.');
+      setStatus('❌ Please enter a valid email.');
       return;
     }
 
     setIsLoading(true);
+    setStatus('Sending magic link…');
+
     try {
-      // Prefer an explicit prod override if provided (handy safety on prod)
-      const explicit = process.env.NEXT_PUBLIC_AUTH_REDIRECT_URL;
+      const body = { email: emailNorm, next: nextPath };
+      console.debug('[login] POST /api/login body =', body);
 
-      let redirect: string;
-      if (typeof window !== 'undefined') {
-        const u = new URL(explicit || '/auth/callback', explicit ? undefined : window.location.href);
-        u.searchParams.set('next', nextPath);
-        redirect = u.toString();
-      } else {
-        const base = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
-        const u = new URL('/auth/callback', base);
-        u.searchParams.set('next', nextPath);
-        redirect = u.toString();
-      }
-
-      console.debug('[login] emailRedirectTo =', redirect);
-
-      const { error } = await supabase.auth.signInWithOtp({
-        email: emailNorm,
-        options: { emailRedirectTo: redirect },
+      const res = await fetch('/api/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
       });
 
-      if (error) {
-        console.error('[Magic Link Error]', error);
-        setStatus('❌ Error sending link. Please try again.');
-      } else {
-        setStatus('✅ Magic link sent! Check your inbox.');
+      const data = await res.json().catch(() => ({} as any));
+      // Surface exactly what the server used
+      if (data?.redirect || data?.origin) {
+        console.debug('[login] /api/login response =', data);
       }
+
+      if (!res.ok) {
+        setStatus(`❌ ${data?.error || 'Login failed.'}`);
+      } else {
+        setStatus('✅ Check your email for the magic link.');
+      }
+    } catch (err: any) {
+      console.error('[login] request error', err);
+      setStatus('❌ Network error. Please try again.');
     } finally {
       setIsLoading(false);
     }
-  }
+  };
+
+  const showDebug = process.env.NODE_ENV !== 'production';
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background text-foreground px-4">
       <form onSubmit={onSubmit} className="w-full max-w-md bg-zinc-900 p-8 rounded-xl shadow-lg space-y-6">
-        <h1 className="text-2xl font-extrabold text-center">Login</h1>
-
-        <label className="block text-sm text-muted-foreground" htmlFor="email">Email</label>
+        <label htmlFor="email" className="sr-only">Email</label>
         <input
-          id="email" type="email" inputMode="email" autoComplete="email"
-          className="w-full p-2 mb-1 border border-zinc-600 bg-zinc-800 text-white rounded"
-          placeholder="you@yourdomain.com"
-          value={email} onChange={(e) => setEmail(e.target.value)} disabled={isLoading}
+          id="email"
+          type="email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') {
+              e.preventDefault();
+              onSubmit();
+            }
+          }}
+          placeholder="you@example.com"
+          className="w-full px-4 py-2 rounded-md bg-zinc-800 text-white border border-zinc-700 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          disabled={isLoading}
         />
-        <p className="text-xs text-muted-foreground">We’ll email you a one-time sign-in link.</p>
 
         <button
           type="submit"
-          className={`w-full text-white py-2 px-4 rounded ${isLoading ? 'bg-zinc-700 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'}`}
           disabled={isLoading}
+          className={`w-full text-white py-2 px-4 rounded ${isLoading ? 'bg-zinc-700 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'}`}
         >
           {isLoading ? 'Sending…' : 'Send Magic Link'}
         </button>
 
         {status && (
-          <p className={`text-sm mt-4 ${status.startsWith('✅') ? 'text-green-400' : status.startsWith('❌') ? 'text-red-400' : 'text-yellow-400'}`}>
+          <p
+            className={`text-sm mt-4 ${
+              status.startsWith('✅') ? 'text-green-400' :
+              status.startsWith('❌') ? 'text-red-400' : 'text-yellow-400'
+            }`}
+          >
             {status}
           </p>
+        )}
+
+        {/* build stamp */}
+        {build && (
+          <p className="mt-6 text-center text-[10px] text-zinc-500">
+            build <span className="font-mono">{build.sha}</span> • {build.env}
+            {build.deployId ? <> • <span className="font-mono">{build.deployId}</span></> : null}
+          </p>
+        )}
+
+        {/* dev-only debug footer */}
+        {showDebug && (
+          <div className="mt-2 text-center text-[10px] text-zinc-500">
+            <span className="font-mono">next={nextPath}</span>
+          </div>
         )}
       </form>
     </div>

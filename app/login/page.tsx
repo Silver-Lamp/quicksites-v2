@@ -2,8 +2,8 @@
 import LoginForm from './LoginForm';
 
 export const runtime = 'nodejs';
-// optional if you want it recomputed every request:
-// export const dynamic = 'force-dynamic';
+export const dynamic = 'force-dynamic';
+
 
 export default function LoginPage() {
   const sha = process.env.VERCEL_GIT_COMMIT_SHA ?? process.env.GIT_COMMIT_SHA ?? '';

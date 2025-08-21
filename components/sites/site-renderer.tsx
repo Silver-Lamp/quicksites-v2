@@ -67,5 +67,6 @@ export default function SiteRenderer({
 
   if (!enableThemeWrapper) return body;
 
-  return <TemplateThemeWrapper colorMode={colorMode}>{body}</TemplateThemeWrapper>;
+  return <TemplateThemeWrapper mode="site" renderHeader={false} renderFooter={false} template={site}>{body}</TemplateThemeWrapper>;
 }
+    

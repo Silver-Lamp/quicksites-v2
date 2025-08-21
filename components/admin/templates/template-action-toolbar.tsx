@@ -161,7 +161,7 @@ export function TemplateActionToolbar({ template, autosaveStatus, onSaveDraft, o
   const handleSaveClick = () => {
     try {
       const preppedDbShape = prepareTemplateForSave
-        ? prepareTemplateForSave(normalizeForSnapshot(template))
+        ? prepareTemplateForSave(normalizeForSnapshot(template, { stripChrome: true }))
         : (template as any);
 
       const check = validateTemplateAndFix(preppedDbShape);

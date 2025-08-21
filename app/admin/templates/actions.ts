@@ -1,87 +1,114 @@
-// app/admin/templates/actions.ts
-'use server';
+// admin/lib/prepareTemplateForSave.ts
 
-import { randomUUID } from 'crypto';
-import { getSupabaseForAction } from '@/lib/supabase/serverClient';
-import type { Template } from '@/types/template';
+const DB_FIELD_NAMES = new Set([
+  'id','slug','template_name','layout','color_scheme','theme','brand','industry','phone',
+  'commit','saved_at','save_count','last_editor','is_site','published','verified',
+  'hero_url','banner_url','logo_url','team_url','default_subdomain','site_id','domain',
+  'custom_domain','color_mode','created_at','updated_at','editor_id','claimed_by',
+  'claimed_at','claim_source','archived',
+]);
+// ❗ Do NOT add non-existent columns like camelCase `pages`, `headerBlock`, `footerBlock` at the top level.
 
-const TABLE_TEMPLATES = 'templates';
-const TABLE_SITES = 'sites';
+function coerceEmptyToNull(v: unknown) {
+  return typeof v === 'string' && v.trim() === '' ? null : v;
+}
+const UUID_KEYS = new Set(['site_id','editor_id','claimed_by']);
 
-// Remove undefined so we don't send columns PostgREST doesn't like
-function stripUndef<T extends Record<string, any>>(obj: T): T {
-  const out: Record<string, any> = {};
-  for (const [k, v] of Object.entries(obj)) {
-    if (v !== undefined) out[k] = v;
-  }
-  return out as T;
+const isHeader = (b: any) => b?.type === 'header';
+const isFooter = (b: any) => b?.type === 'footer';
+
+function stripHeaderFooterFromPage(page: any) {
+  const blocks = Array.isArray(page?.content_blocks) ? page.content_blocks : [];
+  return {
+    ...page,
+    content_blocks: blocks.filter((b: any) => !isHeader(b) && !isFooter(b)),
+  };
 }
 
 /**
- * Save a TEMPLATE (design) into the `templates` table.
- * Only include columns that should reasonably exist there.
- * If your table name/columns differ, update TABLE_TEMPLATES / payload below.
+ * Prepare a template object for saving:
+ * - Copies only approved top-level scalar fields
+ * - Normalizes .data.pages and hoists/derives header/footer
+ * - Stores header/footer inside data for the editor
+ * - Returns { db, header_block, footer_block } where `db` is the payload you
+ *   typically pass to your save action, and header/footer snake_case snapshots
+ *   are provided if you want to persist them as columns.
  */
-export async function saveTemplateAction(tpl: Template): Promise<Template> {
-  const supabase = await getSupabaseForAction();
+export function prepareTemplateForSave(fullTemplate: Record<string, any>) {
+  const db: Record<string, any> = {};
 
-  // Whitelist top-level fields commonly stored on templates + jsonb `data`
-  const payload = stripUndef({
-    id: tpl.id,
-    template_name: tpl.template_name,
-    slug: tpl.slug,
-    layout: tpl.layout,
-    color_scheme: tpl.color_scheme,
-    theme: tpl.theme,
-    brand: tpl.brand,
-    industry: tpl.industry,
-    phone: tpl.phone ?? null,
-    color_mode: tpl.color_mode ?? null,
-    headerBlock: tpl.headerBlock ?? null,
-    footerBlock: tpl.footerBlock ?? null,
-    data: tpl.data ?? {}, // jsonb
-  });
+  // color_mode precedence (no default invented)
+  const incomingMode = (fullTemplate?.color_mode ?? fullTemplate?.data?.color_mode) as
+    | 'light' | 'dark' | undefined;
 
-  const { data, error } = await supabase
-    .from(TABLE_TEMPLATES)
-    .upsert(payload, { onConflict: 'id' })
-    .select()
-    .single();
-
-  if (error) {
-    console.error('[saveTemplateAction] upsert failed', error);
-    throw new Error(JSON.stringify(error));
+  // copy approved top-level scalars only
+  for (const [k, v] of Object.entries(fullTemplate)) {
+    if (!DB_FIELD_NAMES.has(k)) continue;
+    db[k] = UUID_KEYS.has(k) ? coerceEmptyToNull(v) : v;
+  }
+  if (incomingMode === 'light' || incomingMode === 'dark') {
+    db.color_mode = incomingMode;
+  } else if ('color_mode' in db && (db.color_mode == null)) {
+    delete db.color_mode;
   }
 
-  // Cast to Template for editor consumption
-  return data as unknown as Template;
-}
+  // start from .data clone
+  const fromData =
+    fullTemplate && typeof fullTemplate.data === 'object' && fullTemplate.data
+      ? structuredClone(fullTemplate.data)
+      : {};
 
-/**
- * Save a SITE instance into the `sites` table.
- * Keep the payload minimal (id, slug, site_name, data) to avoid schema mismatches
- * like the earlier "brand column not found" error.
- */
-export async function saveSiteAction(site: Template): Promise<Template> {
-  const supabase = await getSupabaseForAction();
+  // choose source pages (top-level if provided, else data.pages)
+  const topPages = Array.isArray(fullTemplate.pages) ? fullTemplate.pages : undefined;
+  const dataPages = Array.isArray((fromData as any).pages) ? (fromData as any).pages : undefined;
+  const rawPages: any[] = (topPages && topPages.length > 0) ? topPages : (dataPages ?? []);
 
-  const payload = stripUndef({
-    id: site.id ?? randomUUID(),
-    slug: site.slug,
-    site_name: site.site_name ?? null,
-    data: site.data ?? {}, // jsonb
-  });
+  // determine header/footer (prefer explicit in data, then top-level, then hoist from first page)
+  let headerBlock =
+    (fullTemplate.data as any)?.headerBlock ??
+    fullTemplate.headerBlock ??
+    null;
 
-  const { data, error } = await supabase
-    .from(TABLE_SITES)
-    .upsert(payload, { onConflict: 'id' })
-    .select()
-    .single();
+  let footerBlock =
+    (fullTemplate.data as any)?.footerBlock ??
+    fullTemplate.footerBlock ??
+    null;
 
-  if (error) {
-    console.error('[saveSiteAction] upsert failed', error);
-    throw new Error(JSON.stringify(error));
+  if ((!headerBlock || !footerBlock) && rawPages.length > 0) {
+    const firstBlocks = Array.isArray(rawPages[0]?.content_blocks) ? rawPages[0].content_blocks : [];
+    if (!headerBlock) headerBlock = firstBlocks.find(isHeader) ?? null;
+    if (!footerBlock) footerBlock = firstBlocks.find(isFooter) ?? null;
   }
 
-  return data as unknown as Template;
+  // strip header/footer from page bodies
+  const cleanedPages = rawPages.map(stripHeaderFooterFromPage);
+
+  // write only into data (no db.pages)
+  (fromData as any).pages = cleanedPages;
+
+  // persist chrome INSIDE data; omit keys if not present
+  if (headerBlock) (fromData as any).headerBlock = headerBlock; else delete (fromData as any).headerBlock;
+  if (footerBlock) (fromData as any).footerBlock = footerBlock; else delete (fromData as any).footerBlock;
+
+  // merge top-level meta override if provided
+  if (fullTemplate.meta) (fromData as any).meta = fullTemplate.meta;
+
+  // if top-level color_mode missing, allow nested one to carry through
+  if (!(incomingMode === 'light' || incomingMode === 'dark')) {
+    const nested = (fromData as any)?.color_mode;
+    if (nested === 'light' || nested === 'dark') db.color_mode = nested;
+  }
+
+  db.data = fromData;
+
+  // debug
+  console.debug('[prepareTemplateForSave] color_mode out:', db.color_mode);
+  console.debug('[prepareTemplateForSave] pages out:', Array.isArray(db.data?.pages) ? db.data.pages.length : 0);
+  console.debug('[prepareTemplateForSave] header/footer present in data:', !!db.data?.headerBlock, !!db.data?.footerBlock);
+
+  // Provide snake_case snapshots for callers that store columns:
+  const header_block = headerBlock ?? null;
+  const footer_block = footerBlock ?? null;
+
+  return { db, header_block, footer_block };
 }

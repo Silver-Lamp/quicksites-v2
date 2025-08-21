@@ -2,6 +2,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { Button } from '@/components/ui';
 import { BlocksEditor } from './blocks-editor';
 import { createDefaultPage } from '@/lib/pageDefaults';
@@ -9,12 +10,9 @@ import type { Template, TemplateData, Page } from '@/types/template';
 import type { Block } from '@/types/blocks';
 import BlockAdderGrouped from '@/components/admin/block-adder-grouped';
 import { createDefaultBlock } from '@/lib/createDefaultBlock';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { BlockValidationError } from '@/hooks/validateTemplateBlocks';
 import { FloatingAddBlockHere } from '@/components/editor/floating-add-block-here';
-import { Switch } from '@/components/ui/switch';
-import { Label } from '@/components/ui/label';
-import { DynamicBlockEditor } from '@/components/editor/dynamic-block-editor'; // ⬅️ NEW
+import { DynamicBlockEditor } from '@/components/editor/dynamic-block-editor';
 
 export default function TemplatePageEditor({
   template,
@@ -30,14 +28,70 @@ export default function TemplatePageEditor({
   const [collapsedPages, setCollapsedPages] = useState<Record<string, boolean>>({});
   const [newPageTitle, setNewPageTitle] = useState('');
   const [newPageSlug, setNewPageSlug] = useState('');
-  const [showErrorBanner, setShowErrorBanner] = useState(true);
 
-  // ⬇️ NEW: which block/page is in the editor
+  // Which block/page is in the editor
   const [editingBlock, setEditingBlock] = useState<Block | null>(null);
-  const [editingPageIndex, setEditingPageIndex] = useState<number | null>(null);
+  const [editingPageIndex, setEditingPageIndex] = useState<number | null>(null); // null => chrome (header)
 
   const pages: Page[] = Array.isArray(template.data?.pages) ? template.data!.pages : [];
 
+  // ---- header-as-block helpers ----
+  const getResolvedHeaderBlock = (): Block => {
+    const existing =
+      (template as any)?.data?.headerBlock ||
+      (template as any)?.headerBlock ||
+      null;
+
+    if (existing?.type === 'header') return existing as Block;
+
+    // seed a default header block if none present
+    const seeded = createDefaultBlock('header') as Block;
+
+    // Optionally seed nav items from pages
+    const navItems =
+      pages?.slice(0, 5)?.map((p) => ({ label: p.title || p.slug, href: `/${p.slug}` })) ?? [];
+    (seeded as any).content = {
+      ...(seeded as any).content,
+      navItems: (seeded as any).content?.navItems?.length
+        ? (seeded as any).content.navItems
+        : navItems,
+    };
+    return seeded;
+  };
+
+  const openHeaderEditor = () => {
+    const hdr = getResolvedHeaderBlock();
+    setEditingBlock(hdr);
+    setEditingPageIndex(null); // mark as chrome edit
+    // scroll to top where header renders in preview
+    setTimeout(() => {
+      document
+        .querySelector<HTMLElement>('[data-site-header], .qs-site-header')
+        ?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 0);
+  };
+
+  const commitHeader = (nextHeader: Block | null) => {
+    const updated: Template = {
+      ...template,
+      // Mirror for convenience
+      ...(nextHeader ? { headerBlock: nextHeader } : { headerBlock: undefined }),
+      data: {
+        ...(template.data ?? {}),
+        ...(nextHeader
+          ? { headerBlock: nextHeader }
+          : (() => {
+              const d = { ...(template.data ?? {}) } as any;
+              delete d.headerBlock;
+              return d;
+            })()),
+      },
+    };
+    onChange(updated);
+    onLivePreviewUpdate(updated.data!);
+  };
+
+  // Attach error-based expand/collapse & first-error scroll
   useEffect(() => {
     const errorPages = pages.filter((page) =>
       (page.content_blocks || []).some((block) => block._id && blockErrors[block._id])
@@ -56,11 +110,7 @@ export default function TemplatePageEditor({
         block: 'center',
       });
     }
-
-    if (Object.keys(blockErrors).length > 0) {
-      setShowErrorBanner(true);
-    }
-  }, [template.data?.pages, blockErrors]);
+  }, [template.data?.pages, blockErrors, pages]);
 
   // ——— helpers ———
   const commitPages = (nextPages: Page[]) => {
@@ -89,7 +139,7 @@ export default function TemplatePageEditor({
     patchPageAt(pageIndex, { content_blocks: [...updatedBlocks] });
   };
 
-  // ⬇️ UPDATED: insert then immediately open editor
+  // Insert then immediately open editor
   const handleInsertBlockAt = (pageIndex: number, insertIndex: number, blockType: string) => {
     const newBlock = createDefaultBlock(blockType as any) as Block;
     const target = pages[pageIndex];
@@ -103,36 +153,47 @@ export default function TemplatePageEditor({
     setEditingPageIndex(pageIndex);
     // scroll it into view after paint
     setTimeout(() => {
-      document.querySelector<HTMLElement>(
-        `[data-block-id="${newBlock._id}"], #block-${newBlock._id}`
-      )?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      document
+        .querySelector<HTMLElement>(`[data-block-id="${newBlock._id}"], #block-${newBlock._id}`)
+        ?.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }, 0);
-  };
-
-  const scrollToFirstError = () => {
-    const firstBlockId = Object.keys(blockErrors)[0];
-    if (firstBlockId) {
-      document.getElementById(`block-${firstBlockId}`)?.scrollIntoView({
-        behavior: 'smooth',
-        block: 'center',
-      });
-    }
-  };
-
-  const collapseCleanPages = () => {
-    const collapsed: Record<string, boolean> = {};
-    for (const page of pages) {
-      const hasErrors = (page.content_blocks || []).some((b) => b._id && blockErrors[b._id]);
-      collapsed[page.slug] = !hasErrors;
-    }
-    setCollapsedPages(collapsed);
   };
 
   const resolvedColorMode = template?.color_mode || 'dark';
 
+  // ---- Portal target for header hover chrome ----
+  const [headerHost, setHeaderHost] = useState<HTMLElement | null>(null);
+  useEffect(() => {
+    // Try to find the header element in the preview
+    const el = document.querySelector<HTMLElement>('[data-site-header], .qs-site-header');
+    setHeaderHost(el || null);
+  }, [
+    (template as any)?.data?.headerBlock, // re-query if header changes
+    template?.headerBlock,
+    pages?.length,
+    resolvedColorMode,
+  ]);
+
   return (
     <div className="space-y-6 border-gray-700 rounded p-4">
-      {/* … existing banner, page loop, etc … */}
+      {/* ===== Header hover chrome (rendered INSIDE the header via portal) ===== */}
+      {headerHost &&
+        createPortal(
+          <button
+            type="button"
+            className="pointer-events-auto absolute right-2 top-2 z-20 opacity-0 group-hover:opacity-100 transition-opacity text-xs rounded-md bg-black/60 hover:bg-black text-white px-2 py-1"
+            onClick={(e) => {
+              e.stopPropagation();
+              openHeaderEditor();
+            }}
+            // Ensure it's only visible when header root has .group
+            // Our header renderer should have 'relative group' on root.
+          >
+            Edit Header
+          </button>,
+          headerHost
+        )}
+      {/* ===== /Header hover chrome ===== */}
 
       {(pages || []).map((page, pageIndex) => {
         const contentBlocks = page.content_blocks || [];
@@ -148,7 +209,7 @@ export default function TemplatePageEditor({
                 : 'border border-gray-700 bg-muted'
             }`}
           >
-            {/* … page header … */}
+            {/* Page header (title, collapse, etc.) could be here */}
 
             {!collapsedPages[page.slug] && (
               <>
@@ -171,7 +232,7 @@ export default function TemplatePageEditor({
                         handlePageBlockChange(pageIndex, updatedBlocks);
                       }}
                       industry={template.industry}
-                      onEdit={(b: Block) => {          // ⬅️ OPEN EDITOR FOR EXISTING BLOCKS
+                      onEdit={(b: Block) => {
                         setEditingBlock(b);
                         setEditingPageIndex(pageIndex);
                       }}
@@ -197,15 +258,45 @@ export default function TemplatePageEditor({
         );
       })}
 
-      {/* … Add New Page … */}
+      {/* Add New Page UI could be here... */}
+      <div className="flex items-end gap-2">
+        <input
+          className="px-2 py-1 rounded bg-transparent border border-white/10"
+          placeholder="New page title"
+          value={newPageTitle}
+          onChange={(e) => setNewPageTitle(e.target.value)}
+        />
+        <input
+          className="px-2 py-1 rounded bg-transparent border border-white/10"
+          placeholder="new-page-slug"
+          value={newPageSlug}
+          onChange={(e) => setNewPageSlug(e.target.value)}
+        />
+        <Button size="sm" variant="secondary" onClick={handleAddPage}>
+          Add Page
+        </Button>
+      </div>
 
-      {/* ⬇️ NEW: overlay editor */}
+      {/* Overlay editor */}
       {editingBlock && (
         <div className="fixed inset-0 bg-black/90 z-[999] p-6 overflow-auto flex items-center justify-center">
           <div className="w-full max-w-4xl bg-neutral-900 border border-white/10 rounded-xl shadow-xl overflow-hidden">
             <DynamicBlockEditor
               block={editingBlock}
               onSave={(updatedBlock: any) => {
+                // If we are editing chrome (header), editingPageIndex === null
+                if (editingPageIndex === null || updatedBlock?.type === 'header') {
+                  commitHeader(updatedBlock as Block);
+                  setEditingBlock(null);
+                  setTimeout(() => {
+                    document
+                      .querySelector<HTMLElement>('[data-site-header], .qs-site-header')
+                      ?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                  }, 0);
+                  return;
+                }
+
+                // Otherwise find and replace in the page blocks
                 const pageIdx =
                   editingPageIndex ??
                   pages.findIndex((p) =>
@@ -221,9 +312,11 @@ export default function TemplatePageEditor({
                 patchPageAt(pageIdx, { content_blocks: updatedBlocks });
                 setEditingBlock(null);
                 setTimeout(() => {
-                  document.querySelector<HTMLElement>(
-                    `[data-block-id="${updatedBlock._id}"], #block-${updatedBlock._id}`
-                  )?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                  document
+                    .querySelector<HTMLElement>(
+                      `[data-block-id="${updatedBlock._id}"], #block-${updatedBlock._id}`
+                    )
+                    ?.scrollIntoView({ behavior: 'smooth', block: 'center' });
                 }, 0);
               }}
               onClose={() => setEditingBlock(null)}

@@ -25,13 +25,13 @@ async function uploadToProfilesBucket(file: File) {
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
   );
   const path = `profiles/${crypto.randomUUID()}-${file.name}`;
-  const { error } = await supabase.storage.from('public').upload(path, file, {
+  const { error } = await supabase.storage.from('profile-images').upload(path, file, {
     upsert: false,
     cacheControl: '3600',
     contentType: file.type,
   });
   if (error) throw error;
-  return supabase.storage.from('public').getPublicUrl(path).data.publicUrl;
+  return supabase.storage.from('profile-images').getPublicUrl(path).data.publicUrl;
 }
 
 export default function ChefProfileManager() {

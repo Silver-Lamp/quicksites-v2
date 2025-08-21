@@ -1,61 +1,38 @@
-// admin/lib/saveTemplate.ts
-import type { Template } from '../../types/template';
-import { createClient } from '@supabase/supabase-js';
-import { prepareTemplateForSave } from './prepareTemplateForSave';
+'use server';
+import { getSupabaseForAction } from '@/lib/supabase/serverClient';
+import type { Template } from '@/types/template';
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
+export async function saveTemplate(input: any, id?: string): Promise<Template> {
+  const supabase = await getSupabaseForAction();
 
-export async function saveTemplate(template: Template, templateId?: string) {
-  const id = templateId || template.id;
-  if (!id) throw new Error('Missing or invalid template.id');
+  // If caller passed { db, header_block, footer_block }, unwrap it; otherwise use input as source.
+  const src = input?.db ? input.db : input;
 
-  // 🔒 Always carry a color_mode through the entire save cycle
-  const ensuredColor: 'light' | 'dark' =
-    ((template as any).color_mode as 'light' | 'dark' | undefined) ?? 'light';
+  const payload: Record<string, any> = {
+    id: id ?? src.id,
+    template_name: src.template_name,
+    slug: src.slug,
+    layout: src.layout,
+    color_scheme: src.color_scheme,
+    theme: src.theme,
+    brand: src.brand,
+    industry: src.industry,
+    phone: src.phone ?? null,
+    color_mode: src.color_mode ?? null,
+    data: src.data ?? {},
+    // snapshots (prefer explicit snapshots if caller sent {db,...})
+    header_block: (input?.header_block ?? src.header_block ?? src.headerBlock) ?? null,
+    footer_block: (input?.footer_block ?? src.footer_block ?? src.footerBlock) ?? null,
+  };
 
-  const incomingPages =
-    Array.isArray(template?.data?.pages) ? template.data!.pages! : [];
-
-  // Run your normal cleaner, but seed color_mode in case the cleaner strips it
-  let dbPayload: any = prepareTemplateForSave({ ...template, id, color_mode: ensuredColor });
-
-  // Re-assert color_mode after prepare step (belt & suspenders)
-  if (!dbPayload || typeof dbPayload !== 'object') dbPayload = { id };
-  dbPayload.color_mode = dbPayload.color_mode ?? ensuredColor;
-
-  // 🛟 Safety: don’t allow pages to drop on the floor
-  const outgoingPages =
-    Array.isArray(dbPayload?.data?.pages) ? dbPayload.data.pages : [];
-
-  if (incomingPages.length > 0 && outgoingPages.length === 0) {
-    console.warn('⚠️ [saveTemplate] Restoring pages into payload to prevent drop.', {
-      restoredCount: incomingPages.length,
-    });
-    dbPayload = {
-      ...dbPayload,
-      data: { ...(dbPayload.data ?? {}), pages: incomingPages },
-    };
-  }
-
-  console.log('🟣 Upserting with payload (color_mode=%s):', dbPayload.color_mode, dbPayload);
+  for (const k of Object.keys(payload)) if (payload[k] === undefined) delete payload[k];
 
   const { data, error } = await supabase
     .from('templates')
-    .upsert(dbPayload, { onConflict: 'id' })
-    .select('*')
-    .maybeSingle();
+    .upsert(payload, { onConflict: 'id' })
+    .select()
+    .single();
 
-  if (error) {
-    console.error('❌ Supabase upsert error:', error);
-    throw error;
-  }
-
-  // Echo back color_mode even if the DB/view omits it in the response
-  const result = data ? { ...data, color_mode: (data as any)?.color_mode ?? ensuredColor } : data;
-
-  console.log('🟢 Saved template (color_mode=%s)', (result as any)?.color_mode);
-  return result as typeof data;
+  if (error) throw new Error(JSON.stringify(error));
+  return data as unknown as Template;
 }

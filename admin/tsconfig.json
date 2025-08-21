@@ -1,46 +1,17 @@
 {
-    "compilerOptions": {
-      /* Target & modules */
-      "target": "ES2022",
-      "module": "ESNext",
-      "moduleResolution": "Bundler",
-      "lib": ["DOM", "DOM.Iterable", "ES2022"],
-      "jsx": "preserve",
-      "allowJs": true,
-      "resolveJsonModule": true,
-      "isolatedModules": true,
-      "noEmit": true,
-      "incremental": true,
-  
-      /* Strictness & quality */
-      "strict": true,
-      "forceConsistentCasingInFileNames": true,
-      "skipLibCheck": true,
-  
-      /* Path aliases (match your `@/…` usage) */
-      "baseUrl": ".",
-      "paths": {
-        "@/*": ["./*"],
-        "@/admin/*": ["admin/*"],
-        "@/components/*": ["components/*"],
-        "@/pages/*": ["pages/*"],
-        "@/lib/*": ["lib/*"],
-        "@/hooks/*": ["hooks/*"],
-        "@/types/*": ["types/*"]
-      },
-  
-      /* Types for tests & Node */
-      "types": ["node", "jest", "@testing-library/jest-dom"]
-    },
-    "include": [
-      "**/*.ts",
-      "**/*.tsx",
-      "next-env.d.ts"
-    ],
-    "exclude": [
-      "node_modules",
-      ".next",
-      "dist"
-    ]
-  }
-  
+  "extends": "../tsconfig.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "incremental": true
+  },
+  "include": [
+    "**/*.ts",
+    "**/*.tsx",
+    "next-env.d.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    ".next",
+    "dist"
+  ]
+}

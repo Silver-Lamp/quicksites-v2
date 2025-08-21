@@ -1,480 +1,278 @@
 // components/admin/templates/template-editor-content.tsx
 'use client';
 
-import React, { useCallback, useEffect, useRef, useState } from 'react';
-import toast from 'react-hot-toast';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui';
+import { useEffect, useState, type Dispatch, type SetStateAction } from 'react';
+import dynamic from 'next/dynamic';
+import type { Template, TemplateData } from '@/types/template';
+import type { Block } from '@/types/blocks';
+import type { BlockValidationError } from '@/hooks/validateTemplateBlocks';
 
-import type { Template, TemplateData, Theme, Page } from '@/types/template';
-import SidebarSettings from '../template-settings-panel/sidebar-settings';
-import TemplateHistory from './template-history';
-import TemplatePublishModal from './template-publish-modal';
-import { TemplateActionToolbar } from './template-action-toolbar';
-import { IndustryThemeScope } from '@/components/ui/industry-theme-scope';
-import { BlockValidationError } from '@/hooks/validateTemplateBlocks';
-import ThemeScope from '@/components/ui/theme-scope';
-import DevValidatorPanel from '../dev-validator-panel';
-import DevicePreviewWrapper from '@/components/admin/templates/device-preview-wrapper';
+import { createDefaultBlock } from '@/lib/createDefaultBlock';
+import { DynamicBlockEditor } from '@/components/editor/dynamic-block-editor';
 import LiveEditorPreview from '@/components/editor/live-editor/LiveEditorPreview';
+import { Settings as SettingsIcon } from 'lucide-react';
 
-// ⬇️ uses server actions (no server-only imports in client)
-import { saveSiteAction, saveTemplateAction } from '@/app/admin/templates/actions';
+/** Lazy import the sidebar to avoid SSR issues */
+const SidebarSettings = dynamic(() => import('@/components/admin/template-settings-panel/sidebar-settings'), {
+  ssr: false,
+});
 
-import { ZodError } from 'zod';
-import { normalizeTemplate } from '@/admin/utils/normalizeTemplate';
-import ClientOnly from '@/components/client-only';
-import { unwrapData } from '@/admin/lib/cleanTemplateData';
-import { cleanTemplateDataStructure } from '@/admin/lib/cleanTemplateData';
-import { prepareTemplateForSave } from '@/admin/lib/prepareTemplateForSave';
+/** Widen TemplateData locally so we can store chrome inside data safely. */
+type TemplateDataWithChrome = TemplateData & {
+  headerBlock?: Block | null;
+  footerBlock?: Block | null;
+};
 
-import { motion, AnimatePresence } from 'framer-motion';
-import { Settings2, ChevronLeft } from 'lucide-react';
+type Props = {
+  template: Template;
 
-import CommerceTab from '../commerce/commerce-tab';
+  // Props used by toolbar / device toggles / JSON panel
+  rawJson: string;
+  setRawJson: Dispatch<SetStateAction<string>>;
+  livePreviewData: TemplateData;                    // accepted but not forwarded (LP doesn't need it)
+  setTemplate: Dispatch<SetStateAction<Template>>;
+  autosaveStatus?: string;                          // accepted to keep caller happy
+  setShowPublishModal?: (open: boolean) => void;    // accepted to keep caller happy
+  recentlyInsertedBlockId?: string | null;          // accepted to keep caller happy
 
-function pushWithLimit<T>(stack: T[], item: T, limit = 10): T[] {
-  return [...stack.slice(-limit + 1), item];
-}
+  // Validation
+  setBlockErrors: (errors: Record<string, BlockValidationError[]>) => void;
+  blockErrors: Record<string, BlockValidationError[]>;
 
-/** Mirror pages into both legacy `template.pages` and canonical `template.data.pages`. */
-function withSyncedPages(tpl: Template): Template {
-  const unwrappedData = unwrapData((tpl as any).data ?? {});
-  const candidate =
-    Array.isArray(unwrappedData?.pages)
-      ? unwrappedData.pages
-      : Array.isArray((tpl as any).pages)
-      ? (tpl as any).pages
-      : [];
+  // Editor mode + patcher
+  mode: 'template' | 'site';
+  onChange: (patch: Partial<Template>) => void;
+};
 
-  const data = { ...(tpl.data ?? {}), ...unwrappedData, pages: candidate };
-
-  return { ...tpl, pages: candidate, data } as Template;
-}
-
-export function EditorContent({
+/**
+ * Main editor content area:
+ * - Left: Settings sidebar (toggle with “S”)
+ * - Right: Live preview (with bottom toolbar & device toggles inside LP)
+ * - Header overlay edit preserved
+ */
+export default function EditorContent({
   template,
   rawJson,
   setRawJson,
-  livePreviewData, // kept for API parity
+  livePreviewData,        // eslint-disable-line @typescript-eslint/no-unused-vars
   setTemplate,
-  autosaveStatus,
-  recentlyInsertedBlockId, // kept for API parity
+  autosaveStatus,         // eslint-disable-line @typescript-eslint/no-unused-vars
+  setShowPublishModal,    // eslint-disable-line @typescript-eslint/no-unused-vars
+  recentlyInsertedBlockId,// eslint-disable-line @typescript-eslint/no-unused-vars
   setBlockErrors,
   blockErrors,
   mode,
-  setShowPublishModal, // optional
   onChange,
-}: {
-  template: Template;
-  rawJson: string;
-  setRawJson: React.Dispatch<React.SetStateAction<string>>;
-  livePreviewData: TemplateData;
-  setTemplate: React.Dispatch<React.SetStateAction<Template>>;
-  autosaveStatus: string;
-  recentlyInsertedBlockId: string | null;
-  setBlockErrors: (errors: Record<string, BlockValidationError[]>) => void;
-  blockErrors: Record<string, BlockValidationError[]> | null;
-  mode: 'template' | 'site';
-  setShowPublishModal?: (v: boolean) => void;
-  onChange: (patch: Partial<Template>) => void;
-}) {
-  const [zodError, setZodError] = useState<ZodError | null>(null);
-  const [showModal, setModal] = useState(false);
-  const [historyStack, setHistoryStack] = useState<Template[]>([]);
-  const [redoStack, setRedoStack] = useState<Template[]>([]);
+}: Props) {
+  // When non-null, show overlay editor for the header
+  const [editingHeader, setEditingHeader] = useState<Block | null>(null);
 
-  // --- Collapsible settings rail (persisted) ---
-  const SETTINGS_KEY = 'qs:settingsOpen';
-  const [settingsOpen, setSettingsOpen] = useState<boolean>(() => {
-    if (typeof window === 'undefined') return true;
-    const saved = window.localStorage.getItem(SETTINGS_KEY);
-    return saved ? saved === '1' : true;
-  });
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      window.localStorage.setItem(SETTINGS_KEY, settingsOpen ? '1' : '0');
-    }
-  }, [settingsOpen]);
+  // Settings sidebar visibility
+  const [showSettings, setShowSettings] = useState<boolean>(false);
 
-  // Accept programmatic open/close from toolbar (and others)
+  // Keyboard: toggle Settings with "s"
   useEffect(() => {
-    const onSet = (e: Event) => {
-      const open = (e as CustomEvent<boolean>).detail;
-      if (typeof open === 'boolean') setSettingsOpen(open);
+    const isTypingTarget = (el: EventTarget | null) => {
+      const n = el as HTMLElement | null;
+      if (!n) return false;
+      const editable =
+        (n.getAttribute?.('contenteditable') || '').toLowerCase() === 'true' ||
+        n.closest?.('[contenteditable="true"]');
+      const tag = (n.tagName || '').toLowerCase();
+      const isForm =
+        tag === 'input' ||
+        tag === 'textarea' ||
+        tag === 'select' ||
+        (n as HTMLInputElement).type === 'text';
+      const isEditors =
+        n.closest?.('.cm-editor, .CodeMirror, .ProseMirror'); // CodeMirror/ProseMirror
+      return !!(editable || isForm || isEditors);
     };
-    window.addEventListener('qs:settings:set-open' as any, onSet as EventListener);
-    return () =>
-      window.removeEventListener('qs:settings:set-open' as any, onSet as EventListener);
-  }, []);
-  // -------------------------------------------
 
-  // Fullscreen toggle (hide settings, collapse sidebar, scroll first block to top)
-  const prevSettingsRef = useRef<boolean | null>(null);
-  const prevSidebarCollapsedRef = useRef<boolean | null>(null);
-  const [isFullscreen, setIsFullscreen] = useState(false);
-
-  const setSidebarCollapsed = useCallback((collapsed: boolean) => {
-    window.dispatchEvent(new CustomEvent('qs:sidebar:set-collapsed', { detail: collapsed }));
-    try {
-      window.localStorage.setItem('admin-sidebar-collapsed', String(collapsed));
-    } catch {}
-  }, []);
-
-  const scrollFirstBlockToTop = useCallback(() => {
-    const el =
-      document.querySelector<HTMLElement>('[data-block-id]') ??
-      document.querySelector<HTMLElement>('[data-block-type]');
-    if (!el) return;
-    const header = document.querySelector<HTMLElement>('header');
-    const offset = (header?.offsetHeight ?? 64) + 8;
-    const y = el.getBoundingClientRect().top + window.scrollY - offset;
-    window.scrollTo({ top: Math.max(0, y), behavior: 'smooth' });
-  }, []);
-
-  const enterFullscreen = useCallback(() => {
-    prevSettingsRef.current = settingsOpen;
-    try {
-      prevSidebarCollapsedRef.current =
-        window.localStorage.getItem('admin-sidebar-collapsed') === 'true';
-    } catch {
-      prevSidebarCollapsedRef.current = null;
-    }
-    setSettingsOpen(false);
-    setSidebarCollapsed(true);
-    requestAnimationFrame(() => setTimeout(scrollFirstBlockToTop, 120));
-    setIsFullscreen(true);
-  }, [settingsOpen, setSidebarCollapsed, scrollFirstBlockToTop]);
-
-  const exitFullscreen = useCallback(() => {
-    if (prevSettingsRef.current !== null) setSettingsOpen(prevSettingsRef.current);
-    if (prevSidebarCollapsedRef.current !== null)
-      setSidebarCollapsed(prevSidebarCollapsedRef.current);
-    setIsFullscreen(false);
-  }, [setSidebarCollapsed]);
-
-  const toggleFullscreen = useCallback(() => {
-    if (isFullscreen) exitFullscreen();
-    else enterFullscreen();
-  }, [isFullscreen, enterFullscreen, exitFullscreen]);
-
-  // Hotkeys: "s" toggles settings; "f" toggles fullscreen
-  useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.metaKey || e.ctrlKey || e.altKey) return;
-      const t = e.target as HTMLElement | null;
-      const tag = t?.tagName?.toLowerCase();
-      if (tag === 'input' || tag === 'textarea' || t?.isContentEditable) return;
-
-      const key = e.key?.toLowerCase();
-      if (key === 's') {
-        e.preventDefault();
-        setSettingsOpen((o) => !o);
-        window.dispatchEvent(new CustomEvent('qs:settings:toggle'));
-      } else if (key === 'f') {
-        e.preventDefault();
-        toggleFullscreen();
+      const key = (e.key || '').toLowerCase();
+      const code = (e.code || '').toLowerCase(); // e.g., 'keys'
+      if (!e.metaKey && !e.ctrlKey && !e.altKey && !e.shiftKey) {
+        if (key === 's' || code === 'keys') {
+          if (isTypingTarget(e.target)) return;
+          e.preventDefault();
+          setShowSettings(prev => !prev);
+        }
       }
     };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [toggleFullscreen]);
-  // -------------------------------------------
 
-  // keep local + parent (if provided) in sync
-  const setModalSynced = (open: boolean) => {
-    setModal(open);
-    setShowPublishModal?.(open);
-  };
-
-  // Prefer data.pages first, fallback to top-level pages
-  const initialPages: Page[] =
-    (template?.data as any)?.pages ?? (template as any)?.pages ?? [];
-
-  const [sidebarValues, setSidebarValues] = useState({
-    template_name: template.template_name,
-    slug: template.slug,
-    industry: template.industry,
-    pages: initialPages,
-  });
-
-  const setRawDataFromTemplate = (tpl: Template) => {
-    const layoutOnly = cleanTemplateDataStructure(prepareTemplateForSave(tpl));
-    setRawJson(JSON.stringify(layoutOnly, null, 2));
-  };
-
-  const hydratingRef = useRef(true);
-  useEffect(() => {
-    const t = setTimeout(() => (hydratingRef.current = false), 500);
-    return () => clearTimeout(t);
+    // capture=true so inner handlers can't swallow it
+    window.addEventListener('keydown', onKey, { capture: true, passive: false });
+    return () => window.removeEventListener('keydown', onKey, { capture: true } as any);
   }, []);
 
-  const setTemplateGuarded = (next: Template) => {
-    const prevCount =
-      (template?.data?.pages?.length ?? template?.pages?.length ?? 0);
-    const nextCount =
-      (next?.data?.pages?.length ?? next?.pages?.length ?? 0);
 
-    if (prevCount > 1 && nextCount === 1) {
-      console.warn('[⚠️ PAGES SHRUNK]', { prevCount, nextCount, nextSnapshot: next });
-    }
-    setTemplate(next);
-  };
-
-  function mergeTemplate(
-    prev: Template,
-    patch: Partial<Template>,
-    opts?: { isHydrating?: boolean }
-  ): Template {
-    const prevData = prev.data ?? {};
-    const nextData = (patch as any).data ?? {};
-
-    const prevPages =
-      (prevData as any).pages ?? (prev as any).pages ?? [];
-
-    const nextPagesCandidate = Array.isArray((nextData as any).pages)
-      ? (nextData as any).pages
-      : Array.isArray((patch as any).pages)
-      ? (patch as any).pages
-      : prevPages;
-
-    if (opts?.isHydrating) {
-      const prevCount = Array.isArray(prevPages) ? prevPages.length : 0;
-      const nextCount = Array.isArray(nextPagesCandidate) ? nextPagesCandidate.length : 0;
-
-      if (
-        prevCount > 1 &&
-        nextCount === 1 &&
-        (nextPagesCandidate[0]?.slug === 'home' || nextPagesCandidate[0]?.title === 'Home')
-      ) {
-        return prev;
-      }
-    }
-
-    const pages = nextPagesCandidate;
-    const mode: 'light' | 'dark' =
-      ((patch as any).color_mode as 'light' | 'dark' | undefined) ??
-      ((prev as any).color_mode as 'light' | 'dark' | undefined) ??
-      'light';
-
-    return {
-      ...prev,
-      ...patch,
-      color_mode: mode,
-      data: { ...prevData, ...nextData, pages },
-      pages,
-    } as Template;
-  }
-
-  const handleTemplateChange = (patch: Partial<Template>) => {
-    setHistoryStack((prev) => pushWithLimit(prev, template));
-    setRedoStack([]); // clear redo on new change
-    const merged = mergeTemplate(template, patch, { isHydrating: hydratingRef.current });
-    setTemplateGuarded(merged);
-    setRawDataFromTemplate(merged);
-    setSidebarValues((v) => ({
-      ...v,
-      template_name: merged.template_name,
-      slug: merged.slug,
-      industry: merged.industry,
-      pages: merged.data?.pages ?? merged.pages ?? [],
-    }));
-  };
-
+  // Keep preview scrolled to header when it opens
   useEffect(() => {
-    // debug if needed
-  }, [template]);
+    if (!editingHeader) return;
+    document
+      .querySelector<HTMLElement>('[data-site-header], .qs-site-header')
+      ?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, [editingHeader]);
 
-  const handleUndo = () => {
-    if (historyStack.length === 0) return toast('Nothing to undo');
-    const previous = historyStack[historyStack.length - 1];
-    setHistoryStack((prev) => prev.slice(0, -1));
-    setRedoStack((prev) => pushWithLimit(prev, template));
-    const synced = withSyncedPages(previous);
-    setTemplate(synced);
-    setRawDataFromTemplate(synced);
-    setSidebarValues((v) => ({
-      ...v,
-      template_name: synced.template_name,
-      slug: synced.slug,
-      industry: synced.industry,
-      pages: (synced.data as any)?.pages ?? synced.pages ?? [],
-    }));
-    toast.success('Undo successful');
+  /** Resolve an existing header block or seed a sensible default. */
+  const resolveHeader = (): Block => {
+    const existing =
+      (template as any)?.data?.headerBlock ||
+      (template as any)?.headerBlock ||
+      null;
+
+    if (existing?.type === 'header') return existing as Block;
+
+    // Seed a default header and prime nav from first few pages
+    const seeded = createDefaultBlock('header') as Block;
+    const navItems =
+      (template?.data?.pages ?? [])
+        .slice(0, 5)
+        .map((p) => ({ label: p.title || p.slug, href: `/${p.slug}` })) ?? [];
+    (seeded as any).content = {
+      ...(seeded as any).content,
+      navItems:
+        (seeded as any).content?.navItems?.length
+          ? (seeded as any).content.navItems
+          : navItems,
+    };
+    return seeded;
   };
 
-  const handleRedo = () => {
-    if (redoStack.length === 0) return toast('Nothing to redo');
-    const next = redoStack[redoStack.length - 1];
-    setRedoStack((prev) => prev.slice(0, -1));
-    setHistoryStack((prev) => pushWithLimit(prev, template));
-    const synced = withSyncedPages(next);
-    setTemplate(synced);
-    setRawDataFromTemplate(synced);
-    setSidebarValues((v) => ({
-      ...v,
-      template_name: synced.template_name,
-      slug: synced.slug,
-      industry: synced.industry,
-      pages: (synced.data as any)?.pages ?? synced.pages ?? [],
-    }));
-    toast.success('Redo successful');
+  /** Triggered by the preview’s header hover “Edit” button. */
+  const openHeaderEditor = () => setEditingHeader(resolveHeader());
+
+  /** Persist the header back into template (top-level mirror + data). */
+  const saveHeader = (updatedHeader: Block) => {
+    const nextData: TemplateDataWithChrome = {
+      ...(template.data as TemplateDataWithChrome),
+      headerBlock: updatedHeader as Block,
+    };
+
+    const next: Template = {
+      ...template,
+      headerBlock: updatedHeader as any, // mirror if referenced elsewhere
+      data: nextData as Template['data'],
+    };
+
+    onChange(next); // Partial<Template> accepts a full Template
+    setEditingHeader(null);
+
+    // keep user oriented
+    setTimeout(() => {
+      document
+        .querySelector<HTMLElement>('[data-site-header], .qs-site-header')
+        ?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 0);
   };
 
-  // Draft save via Server Actions
-  const handleSaveDraft = async () => {
-    try {
-      const parsed = rawJson.trim() ? JSON.parse(rawJson) : {};
-      const unwrapped = unwrapData(parsed);
+  // Adapt (patch) → (full template) for LiveEditorPreview
+  const handlePreviewChange = (t: Template) => onChange(t);
 
-      const pages =
-        sidebarValues.pages ??
-        (template.data as any)?.pages ??
-        (template as any)?.pages ??
-        [];
-
-      const color_mode = (template as any).color_mode ?? 'light';
-
-      const fullTemplate = withSyncedPages({
-        ...template,
-        ...sidebarValues,
-        color_mode,
-        data: { ...unwrapped, pages },
-      });
-
-      // Normalize + create a DB-safe payload
-      const normalized = normalizeTemplate(fullTemplate);
-      const dbSafe = prepareTemplateForSave(normalized);
-
-      const saved =
-        mode === 'site'
-          ? await saveSiteAction(dbSafe as Template)
-          : await saveTemplateAction(dbSafe as Template);
-
-      const ensuredMode = (saved as any)?.color_mode ?? color_mode;
-      const synced = withSyncedPages({ ...(saved as any), color_mode: ensuredMode } as Template);
-      setTemplate(synced);
-      setRawDataFromTemplate(synced);
-      setBlockErrors({});
-      setZodError(null);
-      // toast.success('Draft saved');
-    } catch (err: any) {
-      if (err instanceof ZodError) setZodError(err);
-      console.warn('Save failed', err);
-      toast.error('Save failed');
-    }
+  // Safe onChange for sidebar (handles either patch or full template)
+  const handleSidebarChange = (patchOrFull: Partial<Template> | Template) => {
+    onChange(patchOrFull as Partial<Template>);
   };
 
   return (
-    <IndustryThemeScope>
-      <Tabs defaultValue="preview">
-        <TabsList>
-          <TabsTrigger value="preview">Preview</TabsTrigger>
-          {/* <TabsTrigger value="history">History</TabsTrigger> */}
-          <TabsTrigger value="commerce">Commerce</TabsTrigger>
-        </TabsList>
+    <div className="flex min-w-0">
+      {/* ===== Left Settings Sidebar ===== */}
+      <aside
+        className={[
+          'fixed z-[1100] inset-y-0 left-0 w-[300px] bg-neutral-950 border-r border-white/10',
+          'transform transition-transform duration-200 ease-out',
+          showSettings ? 'translate-x-0' : '-translate-x-full',
+          // On xl screens, allow docked view by default (optional):
+          // 'xl:static xl:translate-x-0 xl:block',
+        ].join(' ')}
+        aria-label="Settings"
+      >
+        <div className="h-full overflow-auto">
+          {/* Guard if the dynamic import hasn’t loaded yet */}
+          {SidebarSettings ? (
+            <SidebarSettings template={template} onChange={handleSidebarChange as any} />
+          ) : (
+            <div className="p-4 text-sm text-white/70">Loading settings…</div>
+          )}
+        </div>
 
-        <TabsContent value="preview">
-          <div className="flex relative">
-            {/* Gear when collapsed */}
-            <AnimatePresence>
-              {!settingsOpen && (
-                <motion.button
-                  key="gear"
-                  initial={{ opacity: 0, scale: 0.9, y: 10 }}
-                  animate={{ opacity: 1, scale: 1, y: 0 }}
-                  exit={{ opacity: 0, scale: 0.9, y: 10 }}
-                  onClick={() => setSettingsOpen(true)}
-                  className="fixed left-10 top-20 z-40 inline-flex h-11 w-11 items-center justify-center rounded-full bg-zinc-900 text-zinc-100 shadow-lg ring-1 ring-white/10 border-2 border-purple-500 hover:bg-zinc-800 focus:outline-none focus:ring-2 focus:ring-purple-400"
-                  aria-label="Open settings (S)"
-                  title="Open settings (S)"
-                >
-                  <Settings2 className="h-5 w-5" />
-                </motion.button>
-              )}
-            </AnimatePresence>
+        {/* Toggle hint for users */}
+        <div className="absolute bottom-2 left-1/2 -translate-x-1/2 text-[10px] text-white/40">
+          Press <kbd className="px-1 py-0.5 bg-white/10 rounded">S</kbd> to toggle
+        </div>
 
-            {/* Collapsible rail with the existing SidebarSettings inside */}
-            <motion.aside
-              aria-label="Settings"
-              className="relative z-30 mr-4"
-              initial={false}
-              animate={{ width: settingsOpen ? 320 : 0, marginRight: settingsOpen ? 16 : 0 }}
-              transition={{ type: 'spring', stiffness: 260, damping: 30 }}
-            >
-              <AnimatePresence mode="popLayout">
-                {settingsOpen && (
-                  <motion.div
-                    key="settings-body"
-                    initial={{ opacity: 0, x: -8 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0, x: -8 }}
-                    transition={{ duration: 0.18 }}
-                    className="h-full w-[320px] overflow-visible"
-                  >
-                    <div className="mb-2 flex items-center justify-between pr-2">
-                      <div className="flex items-center gap-2 text-sm font-semibold text-white">
-                        <Settings2 className="h-4 w-4 text-purple-400" />
-                        Settings
-                      </div>
-                      <button
-                        onClick={() => setSettingsOpen(false)}
-                        className="inline-flex items-center gap-1 rounded-md border border-white/10 bg-zinc-900 px-2 py-1 text-xs text-zinc-200 hover:bg-zinc-800 focus:outline-none focus:ring-2 focus:ring-purple-400"
-                        aria-label="Collapse settings (S)"
-                        title="Collapse settings (S)"
-                      >
-                        <ChevronLeft className="h-3.5 w-3.5" />
-                        Hide
-                      </button>
-                    </div>
+        <button
+          className="fixed bottom-4 left-4 z-[1400] rounded-full p-2
+                    border border-white/10 bg-zinc-900/90 text-white/85 shadow-lg
+                    hover:bg-zinc-800 focus:outline-none focus:ring-2 focus:ring-purple-400"
+          onClick={() => setShowSettings(prev => !prev)}
+          aria-label={showSettings ? 'Hide settings' : 'Show settings'}
+          aria-pressed={showSettings}
+          title={`${showSettings ? 'Hide' : 'Show'} settings (S)`}
+        >
+          <SettingsIcon size={18} />
+        </button>
+        {/* Close button (mobile/tablet) */}
+        <button
+          className="xl:hidden absolute top-2 right-2 text-white/70 hover:text-white"
+          onClick={() => setShowSettings(false)}
+          aria-label="Close settings"
+          title="Close"
+        >
+          ✕
+        </button>
+      </aside>
+      {/* ===== /Left Settings Sidebar ===== */}
 
-                    <SidebarSettings template={template} onChange={handleTemplateChange} />
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </motion.aside>
-
-            {/* Main preview area */}
-            <div className="flex-1 min-w-0">
-              <DevicePreviewWrapper theme={template.theme as Theme}>
-                <ThemeScope mode={template.color_mode as 'light' | 'dark'}>
-                  <LiveEditorPreview
-                    template={template}
-                    onChange={handleTemplateChange}
-                    errors={blockErrors ?? {}}
-                    industry={template.industry}
-                    templateId={template.id}
-                  />
-                </ThemeScope>
-              </DevicePreviewWrapper>
-            </div>
-          </div>
-        </TabsContent>
-
-        {/* <TabsContent value="history">
-          <TemplateHistory template={template} onRevert={handleTemplateChange} />
-        </TabsContent> */}
-        <TabsContent value="commerce" className="p-4">
-          <CommerceTab merchantId={'00001'} siteId={template.id} />
-        </TabsContent>
-
-        <DevValidatorPanel error={zodError} />
-
-        <TemplatePublishModal
-          open={showModal}
-          onClose={() => setModalSynced(false)}
-          snapshotId={template.id || ''}
+      {/* ===== Right: Live Preview ===== */}
+      <div className="flex-1 min-w-0 xl:ml-0 ml-0">
+        <LiveEditorPreview
+          // Core
+          template={template}
+          onChange={handlePreviewChange}
+          errors={blockErrors}
+          industry={template.industry}
+          templateId={template.id}
+          mode={mode}
+          // JSON panel / toolbar hooks
+          rawJson={rawJson}
+          setRawJson={setRawJson}
+          setTemplate={(t) => setTemplate(t)}
+          // Header chrome
+          showEditorChrome
+          onEditHeader={openHeaderEditor}
         />
+      </div>
+      {/* ===== /Right: Live Preview ===== */}
 
-        <ClientOnly>
-          <TemplateActionToolbar
-            template={template}
-            autosaveStatus={autosaveStatus}
-            onSaveDraft={handleSaveDraft}
-            onUndo={handleUndo}
-            onRedo={handleRedo}
-          />
-        </ClientOnly>
-      </Tabs>
-    </IndustryThemeScope>
+      {/* Overlay editor for header */}
+      {editingHeader && (
+        <div className="fixed inset-0 z-[1200] bg-black/90 p-6 overflow-auto flex items-center justify-center">
+          <div className="w-full max-w-4xl bg-neutral-900 border border-white/10 rounded-xl shadow-xl overflow-hidden">
+            <DynamicBlockEditor
+              block={editingHeader}
+              onSave={(b: any) => saveHeader(b as Block)}
+              onClose={() => setEditingHeader(null)}
+              errors={blockErrors}
+              template={template}
+              colorMode={template?.color_mode || 'dark'}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Floating open button when hidden on smaller screens */}
+      {!showSettings && (
+        <button
+          className="xl:hidden fixed bottom-4 left-4 z-[1200] rounded-md border border-white/10 bg-zinc-900/90 text-white/80 text-xs px-3 py-2 hover:bg-zinc-800"
+          onClick={() => setShowSettings(true)}
+          title="Open settings (S)"
+          aria-label="Open settings"
+        >
+          Settings
+        </button>
+      )}
+    </div>
   );
 }

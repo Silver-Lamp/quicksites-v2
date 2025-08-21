@@ -1,12 +1,12 @@
 // components/admin/templates/template-editor.tsx
-"use client";
+'use client';
 
 import { useRouter } from 'next/navigation';
 import { useState, Dispatch, SetStateAction } from 'react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { TemplateEditorToolbar } from './template-editor-toolbar';
 import { useTemplateEditorState } from './use-template-editor-state';
-import { EditorContent } from '@/components/admin/templates/template-editor-content';
+import EditorContent from '@/components/admin/templates/template-editor-content';
 import { Drawer } from '@/components/ui/drawer';
 import { Modal } from '@/components/ui/modal';
 import VectorQueryPage from '@/app/admin/vector-query/page';
@@ -19,6 +19,7 @@ import { BlockValidationError } from '@/hooks/validateTemplateBlocks';
 import { toast } from 'react-hot-toast';
 import { saveTemplate } from '@/admin/lib/saveTemplate';
 import { usePageCountDebugger } from '@/hooks/usePageCountDebugger';
+import { prepareTemplateForSave } from '@/admin/lib/prepareTemplateForSave';
 
 // ---------- helpers ----------
 function getPages(t: any) {
@@ -55,9 +56,6 @@ export default function TemplateEditor({
 
   const {
     template,
-    rawJson,
-    setRawJson,
-    livePreviewData,
     setTemplate,
     autosave,
     isRenaming,
@@ -66,11 +64,13 @@ export default function TemplateEditor({
     inputValue,
     setInputValue,
     slugPreview,
-    handleSaveDraft, // (unused here)
     nameExists,
     blockErrors,
+    rawJson,
+    setRawJson,
     setBlockErrors,
-  } = useTemplateEditorState({ templateName, initialData, onRename, colorMode });
+    livePreviewData,
+  } = useTemplateEditorState({ templateName, initialData, onRename, colorMode, mode: initialMode });
 
   usePageCountDebugger(template as Template);
 
@@ -90,7 +90,7 @@ export default function TemplateEditor({
     setTemplateSynced((prev) => withSyncedPages({ ...prev, ...patch }));
   };
 
-  const { insertBlock, recentlyInsertedBlockId } =
+  const { insertBlock } =
     useTemplateInsert(setTemplateSynced as (updater: (prev: Template) => Template) => void);
 
   const handleUseBlock = (text: string, action: 'insert' | 'replace', index?: number) => {
@@ -119,15 +119,9 @@ export default function TemplateEditor({
 
   const handleCleanSaveDraft = async () => {
     try {
-      // Create payload for saving WITHOUT root pages, but DO NOT mutate state
-      const payload: Template = (() => {
-        const out = { ...template };
-        if ('pages' in out) delete (out as any).pages; // strip only on the outbound payload
-        return out;
-      })();
-
-      const saved = await saveTemplate(payload);
-      // Ensure returned record is mirrored back into state (and kept in sync)
+      // Persist header/footer too (snapshots included)
+      const prepared = prepareTemplateForSave(template as Template, { stripChrome: false });
+      const saved = await saveTemplate(prepared as any);
       setTemplateSynced(saved);
       // toast.success('Template saved');
     } catch (err) {
@@ -138,7 +132,7 @@ export default function TemplateEditor({
 
   return (
     <>
-      <ScrollArea className="h-screen w-full p-6">
+      <ScrollArea className="h-screen w-full p-10 overflow-y-auto">
         <TemplateEditorToolbar
           templateName={template.template_name}
           autosaveStatus={autosave.status}
@@ -165,17 +159,17 @@ export default function TemplateEditor({
 
         <EditorContent
           template={withSyncedPages(template as Template)} // always feed synced shape
+          onChange={handleEditorPatch}
+          mode={initialMode}
+          blockErrors={blockErrors as Record<string, BlockValidationError[]>}
           rawJson={rawJson}
           setRawJson={setRawJson}
           livePreviewData={livePreviewData}
           setTemplate={setTemplateSynced}
           autosaveStatus={autosave.status}
           setShowPublishModal={() => {}}
-          recentlyInsertedBlockId={recentlyInsertedBlockId ?? null}
+          recentlyInsertedBlockId={null}
           setBlockErrors={setBlockErrors as (errors: Record<string, BlockValidationError[]>) => void}
-          blockErrors={blockErrors as Record<string, BlockValidationError[]>}
-          mode="template"
-          onChange={handleEditorPatch} // ✅ critical: satisfy EditorContent's prop
         />
 
         {selectedBlock && selectedIndex !== null && (
@@ -238,7 +232,7 @@ export default function TemplateEditor({
                         ...updated.data?.pages?.[0]?.content_blocks?.[targetBlockIndex]?.meta,
                         prompt: pendingText,
                       },
-                    };
+                    } as any;
                   }
                   return updated;
                 });

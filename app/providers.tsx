@@ -30,9 +30,9 @@ export function Providers({
               <SupabaseProvider initialSession={initialSession}>
                 <CurrentUserProvider>
                   {children}
-                  {!isProd && <SquatBotPanel />}
+                  {/* {!isProd && <SquatBotPanel />}
                   {!isProd && <BlockInspectorOverlay />}
-                  {!isProd && <DevToolsWidget />}
+                  {!isProd && <DevToolsWidget />} */}
                 </CurrentUserProvider>
               </SupabaseProvider>
             </ThemeScope>

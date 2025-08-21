@@ -25,7 +25,7 @@ function stripHFPage(page: any) {
 }
 
 /** Normalize the Template for saving/snapshotting */
-export function normalizeForSnapshot(t: Template): Template {
+export function normalizeForSnapshot(t: Template, options: { stripChrome?: boolean } = {}): Template {
   const tpl: any = JSON.parse(JSON.stringify(t));
   const pagesIn = getPages(tpl);
   let headerBlock = tpl.headerBlock ?? tpl?.data?.headerBlock ?? null;

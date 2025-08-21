@@ -21,7 +21,7 @@ export function TemplateEditorProvider({
   children: ReactNode;
   colorMode: 'light' | 'dark';
 }) {
-  const editor = useTemplateEditorState({ templateName, initialData, onRename, colorMode });
+  const editor = useTemplateEditorState({ templateName, initialData, onRename, colorMode, mode: 'template' });
 
   return (
     <TemplateEditorContext.Provider value={{ ...editor, colorMode: colorMode as 'light' | 'dark' }}>

@@ -19,7 +19,7 @@ export default function DevicePreviewWrapper({
   showDebug?: boolean;
   theme?: Theme;
 }) {
-  const [mode, setMode] = useState<Mode>('tablet');
+  const [mode, setMode] = useState<Mode>('desktop');
   const [orientation, setOrientation] = useState<Orientation>('portrait');
   const [showInspector, setShowInspector] = useState(showDebug);
   const previewRef = useRef<HTMLDivElement>(null);

@@ -52,6 +52,8 @@ export type TemplateData = {
   phone?: string;
   color_mode?: 'light' | 'dark';
   archived?: boolean;
+  headerBlock?: Block | null;
+  footerBlock?: Block | null;
 };
 
 // Represents the persisted state (matches DB + zod schema)

@@ -8,18 +8,19 @@ import { useRequestMeta } from '@/hooks/useRequestMeta';
 import InspirationalQuote from '@/components/ui/inspirational-quote';
 import { AvatarMenu } from './avatar-menu';
 import clsx from 'clsx';
+import { useAutoFadeOnScrollIdle } from '../hooks/useAutoFadeOnScrollIdle';
 
-export default function AppHeader({ collapsed = false, onToggleCollapsed }: { collapsed?: boolean, onToggleCollapsed?: (collapsed: boolean) => void } = {}) {
+export default function AppHeader(
+  { collapsed = false, onToggleCollapsed }: { collapsed?: boolean, onToggleCollapsed?: (collapsed: boolean) => void } = {}
+) {
   const router = useRouter();
   const { user, role, isLoggedIn } = useSafeAuth();
   const { traceId, sessionId } = useRequestMeta();
 
   const ref = React.useRef<HTMLElement | null>(null);
-  const lastY = React.useRef(0);
-  const hideTimer = React.useRef<number | null>(null);
 
-  const [hidden, setHidden] = React.useState(false);
   const [condensed, setCondensed] = React.useState(false);
+  const [faded, setFaded] = React.useState(false);     // ⬅️ auto-fade state
   const [h, setH] = React.useState(56);
 
   const quoteTags = React.useMemo(
@@ -41,40 +42,62 @@ export default function AppHeader({ collapsed = false, onToggleCollapsed }: { co
     return () => window.removeEventListener('resize', measure);
   }, []);
 
-  // scroll-driven hide/show (fixed header => no extra scroll space)
+  // Condense on scroll (but do not hide)
   React.useEffect(() => {
     const onScroll = () => {
       const y = window.scrollY;
       setCondensed(y > 10);
-
-      const goingDown = y > lastY.current;
-      setHidden(goingDown && y > h);
-
-      lastY.current = y;
     };
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
+
+  // Auto-fade header after 2s of idle; any scroll/touch/wheel/scroll-key wakes it
+  React.useEffect(() => {
+    let t: number | null = null;
+
+    const arm = (ms = 1000) => {
+      if (t) window.clearTimeout(t);
+      t = window.setTimeout(() => setFaded(true), ms);
+    };
+
+    const wake = () => {
+      if (t) window.clearTimeout(t);
+      setFaded(false);
+      arm(1000);
+    };
+
+    // show fully on mount for a moment, then arm
+    setFaded(false);
+    arm(1000);
+
+    const passiveCapture = { passive: true as const, capture: true as const };
+    const onKey = (e: KeyboardEvent) => {
+      // keys that imply scrolling
+      if (['ArrowUp','ArrowDown','PageUp','PageDown','Home','End',' '].includes(e.key)) wake();
+    };
+
+    window.addEventListener('scroll', wake, passiveCapture);
+    window.addEventListener('wheel', wake, passiveCapture);
+    window.addEventListener('touchmove', wake, passiveCapture);
+    window.addEventListener('keydown', onKey, true);
 
     const el = ref.current;
-    const onEnter = () => {
-      if (hideTimer.current) window.clearTimeout(hideTimer.current);
-      setHidden(false);
-    };
-    const onLeave = () => {
-      if (window.scrollY > h) {
-        hideTimer.current = window.setTimeout(() => setHidden(true), 1200) as any;
-      }
-    };
-
-    window.addEventListener('scroll', onScroll, { passive: true });
+    const onEnter = () => { if (t) window.clearTimeout(t); setFaded(false); };
+    const onLeave = () => arm(1200);
     el?.addEventListener('mouseenter', onEnter);
     el?.addEventListener('mouseleave', onLeave);
 
     return () => {
-      window.removeEventListener('scroll', onScroll);
+      if (t) window.clearTimeout(t);
+      window.removeEventListener('scroll', wake, passiveCapture as any);
+      window.removeEventListener('wheel', wake, passiveCapture as any);
+      window.removeEventListener('touchmove', wake, passiveCapture as any);
+      window.removeEventListener('keydown', onKey, true);
       el?.removeEventListener('mouseenter', onEnter);
       el?.removeEventListener('mouseleave', onLeave);
-      if (hideTimer.current) window.clearTimeout(hideTimer.current);
     };
-  }, [h]);
+  }, []);
 
   React.useEffect(() => {
     // safe debug
@@ -94,10 +117,12 @@ export default function AppHeader({ collapsed = false, onToggleCollapsed }: { co
         'px-2 py-[6px] min-h-[48px] border-b',
         guest ? 'bg-gray-900 text-zinc-300 border-zinc-800'
               : 'bg-gray-800 text-white border-zinc-700',
-        condensed && 'opacity-90 backdrop-blur-md',
-        'transition-transform duration-300 will-change-transform'
+        condensed && 'backdrop-blur-md',
+        // ⬇️ smooth opacity fade; hover always restores
+        'transition-opacity duration-500',
+        faded ? 'opacity-25 hover:opacity-100' : 'opacity-100'
       )}
-      style={{ transform: hidden ? 'translateY(-100%)' : 'translateY(0)' }}
+      // header stays always-visible; pages can pad using --app-header-h
       // style={{ ['--app-header-h' as any]: `${h}px` }}
     >
       {guest ? (
@@ -113,7 +138,7 @@ export default function AppHeader({ collapsed = false, onToggleCollapsed }: { co
       ) : (
         <div className="flex justify-between items-center max-w-screen-xl mx-auto relative">
           <div className="flex items-center gap-4 overflow-x-auto whitespace-nowrap max-w-full flex-1">
-            {collapsed ? (
+            {/* {collapsed ? (
               <div className="text-blue-400 hover:underline">
                 <img src="/logo_v1.png" alt="QuickSites" className="h-8 w-auto" />
               </div>
@@ -121,7 +146,7 @@ export default function AppHeader({ collapsed = false, onToggleCollapsed }: { co
               <SafeLink href="/" className="text-blue-400 hover:underline">
                 <img src="/logo_v1.png" alt="QuickSites" className="h-8 w-auto" />
               </SafeLink>
-            )}
+            )} */}
             <div className="text-xs text-cyan-300 max-w-xs">
               <InspirationalQuote tags={quoteTags} />
             </div>
@@ -129,9 +154,9 @@ export default function AppHeader({ collapsed = false, onToggleCollapsed }: { co
 
           <div className="ml-2 flex items-center gap-2">
             <AvatarMenu />
-            <div>
+            <div className="leading-tight">
               <div>{user.email}</div>
-              <div className="text-zinc-400">role: {role}</div>
+              <div className="text-zinc-400 text-xs">role: {role}</div>
             </div>
           </div>
         </div>

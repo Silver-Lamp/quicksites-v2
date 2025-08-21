@@ -12,7 +12,7 @@ import { normalizeTemplate } from '@/admin/utils/normalizeTemplate';
 import { cleanTemplateDataStructure } from '@/admin/lib/cleanTemplateData';
 import { prepareTemplateForSave } from '@/admin/lib/prepareTemplateForSave';
 // ⬇️ use a Server Action (no direct server imports in client code)
-import { saveSiteAction } from '@/app/admin/templates/actions';
+import { saveTemplate } from '@/admin/lib/saveTemplate';
 
 import type { Snapshot, Template } from '@/types/template';
 import type { Block } from '@/types/blocks';
@@ -67,7 +67,7 @@ function collectBlockErrors(tpl: Template): Record<string, BlockValidationError[
  * and persists it via a Server Action.
  */
 function makeOneShotSave(
-  saveFn: (tpl: Template) => Promise<Template>,
+  saveFn: (payload: any) => Promise<Template>,
   getCurrentTemplate: () => Template,
   guardedSetTemplate: (tpl: Template) => void
 ) {
@@ -76,9 +76,9 @@ function makeOneShotSave(
   return () => {
     if (inFlight) return inFlight;
 
-    const fullDbSafe = prepareTemplateForSave(getCurrentTemplate());
-
-    inFlight = saveFn(fullDbSafe as Template)
+    // 🔐 Do NOT strip chrome here — we want header/footer persisted
+    const prepared = prepareTemplateForSave(getCurrentTemplate(), { stripChrome: false });
+    inFlight = saveFn(prepared as any)
       .then((updated) => {
         guardedSetTemplate(updated);
         return updated;
@@ -101,12 +101,14 @@ export function useTemplateEditorState({
   onRename,
   onSaveDraft,
   colorMode,
+  mode,
 }: {
   templateName: string;
   initialData?: Snapshot | Template;
   onRename?: (newName: string) => void;
   onSaveDraft?: (rawJson: string) => void;
   colorMode: 'light' | 'dark';
+  mode: 'template' | 'site';
 }) {
   const fallback = createEmptyTemplate(templateName);
 
@@ -134,11 +136,13 @@ export function useTemplateEditorState({
       is_site: (initialData as any)?.is_site || false,
       published: (initialData as any)?.published || false,
       color_mode: (initialData as any)?.color_mode || colorMode,
+      headerBlock: (initialData as any)?.headerBlock || null,
+      footerBlock: (initialData as any)?.footerBlock || null,
       data: fixTemplatePages(((initialData as any)?.data || { pages: [] }) as any),
     } as Partial<Template>);
 
     return withSyncedPages(baseNorm);
-  }, [initialData, fallback, templateName, colorMode]);
+  }, [initialData, fallback, templateName, colorMode, mode]);
 
   // 2) State
   const [template, _setTemplate] = useState<Template>(initialSnapshot);
@@ -162,8 +166,8 @@ export function useTemplateEditorState({
   useEffect(() => {
     if (!initialData && template && !hasPrettified.current) {
       hasPrettified.current = true;
-      const dbSafe = prepareTemplateForSave(template); // keeps pages in data
-      const layoutOnly = cleanTemplateDataStructure(dbSafe);
+      const prepared = prepareTemplateForSave(template, { stripChrome: false }); // keep header/footer in data
+      const layoutOnly = cleanTemplateDataStructure(prepared.db);
       setRawJson(JSON.stringify(layoutOnly, null, 2));
     }
   }, [initialData, template, setRawJson]);
@@ -203,7 +207,7 @@ export function useTemplateEditorState({
   useEffect(() => {
     // 🔁 uses Server Action under the hood
     saveOnce.current = makeOneShotSave(
-      saveSiteAction,
+      saveTemplate,
       () => template,
       guardedSetTemplate
     );
@@ -224,14 +228,14 @@ export function useTemplateEditorState({
 
   // 7) Save draft via Server Action (DB-safe), preserve pretty JSON in panel
   const handleSaveDraft = () => {
-    const dbSafe = prepareTemplateForSave(template);
+    const prepared = prepareTemplateForSave(template, { stripChrome: false });
     const prettyJson =
       rawJson && rawJson.trim()
         ? rawJson
-        : JSON.stringify(cleanTemplateDataStructure(dbSafe), null, 2);
+        : JSON.stringify(cleanTemplateDataStructure(prepared.db), null, 2);
 
-    saveSiteAction(dbSafe as Template)
-      .then((updated) => {
+    saveTemplate(prepared as any)
+      .then((updated: any) => {
         guardedSetTemplate(updated);
         localStorage.setItem(`draft-${updated.id}`, prettyJson);
         onSaveDraft?.(prettyJson);

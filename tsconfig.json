@@ -3,6 +3,7 @@
   "include": [
     ".next/types",
     "_pages-legacy",
+    "admin",
     "app",
     "components",
     "hooks",
@@ -11,15 +12,7 @@
     "pages",
     "scripts",
     "types",
-    ".next/types/**/*.ts",
-    "admin",
-    "admin/types",
-    "admin/components",
-    "admin/lib",
-    "admin/hooks",
-    "admin/pages",
-    "admin/lib/supabase",
-    "admin/lib/supabase/serverClient"
+    ".next/types/**/*.ts"
   ],
   "exclude": [
     "node_modules",
@@ -44,6 +37,33 @@
       }
     ],
     "allowJs": true,
-    "isolatedModules": true
+    "isolatedModules": true,
+    "baseUrl": ".",
+    "paths": {
+      "@/*": [
+        "./*"
+      ],
+      "@/admin/*": [
+        "admin/*"
+      ],
+      "@/app/*": [
+        "app/*"
+      ],
+      "@/components/*": [
+        "components/*"
+      ],
+      "@/hooks/*": [
+        "hooks/*"
+      ],
+      "@/lib/*": [
+        "lib/*"
+      ],
+      "@/types/*": [
+        "types/*"
+      ],
+      "@/pages/*": [
+        "pages/*"
+      ]
+    }
   }
 }

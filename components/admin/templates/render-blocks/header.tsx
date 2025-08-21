@@ -7,22 +7,40 @@ import { useState } from 'react';
 import { Menu, X } from 'lucide-react';
 
 type Props = {
-  block: Block;
+  /** The header block to render (may be null/undefined if not set) */
+  block: Block | null | undefined;
+  /** Disable interactive bits (e.g., hamburger) in preview-only contexts */
   previewOnly?: boolean;
+  /** Force light/dark text/background styles */
   colorMode?: 'light' | 'dark';
+  /** When true, shows editor chrome (hover Edit button) */
+  showEditorChrome?: boolean;
+  /** Open your block editor; receives the resolved header block */
+  onEdit?: (b: Block) => void;
+  /** Optional extra classes for the outermost wrapper */
+  className?: string;
 };
 
 export default function PageHeader({
   block,
   previewOnly = false,
   colorMode = 'dark',
+  showEditorChrome = false,
+  onEdit,
+  className = '',
 }: Props) {
-  const content = (block?.content ?? {}) as any;
+  // Guard + normalize: allow rendering even if block missing or wrong type
+  const hdr: Block | null =
+    block && block.type === 'header'
+      ? block
+      : (block && (block as any).type === undefined
+          ? ({ ...block, type: 'header' } as Block)
+          : null);
 
-  // Accept both camelCase and snake_case, plus a generic "links" fallback
-  const logoUrl: string =
-    content.logo_url || content.logoUrl || '';
+  const content = ((hdr?.content ?? {}) as any) || {};
 
+  // Accept both camelCase and snake_case; also a generic "links" fallback
+  const logoUrl: string = content.logo_url || content.logoUrl || '';
   const navItems: Array<{ href?: string; label?: string; appearance?: string }> =
     content.nav_items || content.navItems || content.links || [];
 
@@ -32,13 +50,33 @@ export default function PageHeader({
   const textColor = isLight ? 'text-gray-900' : 'text-white';
   const hoverColor = isLight ? 'hover:text-blue-600' : 'hover:text-yellow-400';
   const bgColor = isLight ? 'bg-white' : 'bg-neutral-950';
+  const borderChrome = showEditorChrome ? 'hover:border-white/15 border border-transparent' : '';
 
   return (
-    <header className={`w-full ${bgColor} ${textColor}`}>
+    <header
+      className={`relative group w-full ${bgColor} ${textColor} ${borderChrome} ${className}`}
+      data-site-header
+      data-block-id={hdr?._id || 'site-header'}
+      aria-label="Site header"
+    >
+      {/* Editor chrome: hover “Edit Header” button */}
+      {showEditorChrome && hdr && (
+        <button
+          type="button"
+          className="pointer-events-auto absolute right-2 top-2 z-20 opacity-0 group-hover:opacity-100 transition-opacity text-xs rounded-md bg-black/60 hover:bg-black text-white px-2 py-1"
+          onClick={(e) => {
+            e.stopPropagation();
+            onEdit?.(hdr);
+          }}
+        >
+          Edit Header
+        </button>
+      )}
+
       <div className="w-full mx-auto max-w-screen-xl px-4 sm:px-6 lg:px-8 flex items-center justify-between h-20">
         {/* Logo */}
         {logoUrl ? (
-          <Link href="/" className="flex items-center">
+          <Link href="/" className="flex items-center" aria-label="Home">
             <Image
               src={logoUrl}
               alt="Site Logo"

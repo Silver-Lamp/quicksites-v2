@@ -41,7 +41,7 @@ export default function AdminChrome({ children }: { children: React.ReactNode })
     <div data-admin-root className="min-h-screen bg-background text-foreground">
       <div className="relative flex">
         {/* Sidebar (ResponsiveAdminLayout already renders the <aside/>) */}
-        {!isMobile && (
+        {/* {!isMobile && ( */}
           <ResponsiveAdminLayout
             collapsed={collapsed}
             onToggle={(next: boolean) => {
@@ -49,7 +49,7 @@ export default function AdminChrome({ children }: { children: React.ReactNode })
               try { localStorage.setItem('admin-sidebar-collapsed', String(next)); } catch {}
             }}
           />
-        )}
+        {/* )} */}
 
         {/* Content column — NOTE: no padding-left */}
         <div className="min-w-0 flex-1">

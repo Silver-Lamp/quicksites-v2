@@ -352,7 +352,12 @@ export function LiveEditorPreview({
     s.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
   
   return (
-    <TemplateThemeWrapper colorMode={resolvedColorMode}>
+    <TemplateThemeWrapper
+      template={template}
+      mode="template"
+      renderHeader={false}
+      renderFooter={false}
+    >
       {/* Exit immersive button */}
       {isImmersive && (
         <button
@@ -381,11 +386,11 @@ export function LiveEditorPreview({
 
         <div className="relative min-h-screen">
           <div className="px-0 sm:px-2 xl:px-0 pb-20 pt-4 space-y-6 w-full xl:max-w-[90%] xl:mx-auto">
-            <GlobalChromeEditors
+            {/* <GlobalChromeEditors
               template={template}
               onChange={onChange}
               onSaveTemplate={updateAndSave}
-            />
+            /> */}
 
             {/* Per-page chrome visibility */}
             <div className="flex flex-wrap items-center gap-2 mb-4">

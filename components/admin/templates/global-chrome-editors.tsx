@@ -13,9 +13,12 @@ type Props = {
   onChange: (t: Template) => void;
   onSaveTemplate: (t: Template) => Promise<void>;
   colorMode?: 'light' | 'dark';
+  rawJson: string;
+  setRawJson: (rawJson: string) => void;
+  setTemplate: (template: Template) => void;
 };
 
-export default function GlobalChromeEditors({ template, onChange, onSaveTemplate }: Props) {
+export default function GlobalChromeEditors({ template, onChange, onSaveTemplate, rawJson, setRawJson, setTemplate }: Props) {
   const [editing, setEditing] = React.useState<'header' | 'footer' | null>(null);
   const [draftBlock, setDraftBlock] = React.useState<any | null>(null);
 
@@ -38,56 +41,40 @@ export default function GlobalChromeEditors({ template, onChange, onSaveTemplate
   const hasHeader = !!template.headerBlock;
   const hasFooter = !!template.footerBlock;
 
-  const resolvedColorMode = template?.color_mode || 'dark';
+  const resolvedColorMode = (rawJson as any)?.color_mode || 'dark';
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
       <Card className="p-3 bg-zinc-900 border border-zinc-700 hover:border-purple-500 transition-colors">
     <div className="flex items-center justify-between">
         <div>
-        <div className="text-sm font-semibold text-white">Global Header</div>
+        <div className="text-sm font-semibold text-white">Global Header and Footer</div>
         <div className="text-xs text-zinc-300">
             Shown on pages unless hidden or overridden.
         </div>
-        {!hasHeader && (
+        {/* {!hasHeader && (
             <div className="mt-1 inline-block rounded bg-amber-500/20 text-amber-300 text-[10px] px-2 py-0.5">
             Not set
             </div>
-        )}
+        )} */}
         </div>
         <Button
         size="sm"
         className="bg-purple-600 hover:bg-purple-500 text-white"
         onClick={() => openEditor('header')}
         >
-        {hasHeader ? 'Edit' : 'Create'}
+        {hasHeader ? 'Edit Header' : 'Create Header'}
         </Button>
-    </div>
-      </Card>
-
-
-      <Card className="p-3 bg-zinc-900 border border-zinc-700 hover:border-purple-500 transition-colors">
-        <div className="flex items-center justify-between">
-            <div>
-            <div className="text-sm font-semibold text-white">Global Footer</div>
-            <div className="text-xs text-zinc-300">
-                Shown on pages unless hidden or overridden.
-            </div>
-            {!hasFooter && (
-                <div className="mt-1 inline-block rounded bg-amber-500/20 text-amber-300 text-[10px] px-2 py-0.5">
-                Not set
-                </div>
-            )}
-            </div>
-            <Button
+        <Button
             size="sm"
             className="bg-purple-600 hover:bg-purple-500 text-white"
             onClick={() => openEditor('footer')}
             >
-            {hasFooter ? 'Edit' : 'Create'}
+            {hasFooter ? 'Edit Footer' : 'Create Footer'}
             </Button>
-        </div>
+    </div>
       </Card>
+
 
       {editing && draftBlock && (
         <div className="fixed inset-0 bg-black/90 z-[999] p-6 overflow-auto flex items-center justify-center">

@@ -46,6 +46,19 @@ type NavItem =
 const navItems: NavItem[] = [
   {
     type: 'item',
+    label: 'QuickSites',
+    href: '/',
+    // ✅ fixed height; no inline styles
+    icon: (
+      <img
+        src="/logo_v1.png"
+        alt="QuickSites"
+        className="h-10 w-auto block pointer-events-none select-none"
+      />
+    ),
+  },
+  {
+    type: 'item',
     label: 'Dashboard',
     href: '/admin/dashboard',
     icon: <LayoutDashboard size={18} />,
@@ -135,14 +148,26 @@ function NavItemButtonOrLink({
 }) {
   const baseClasses = clsx(
     'group relative w-full flex items-center gap-3 px-3 py-2 text-sm rounded transition',
-    isActive ? 'bg-zinc-800 font-semibold text-white' : 'hover:bg-zinc-800 text-zinc-300'
+    isActive ? 'bg-zinc-800 font-semibold text-white' : 'hover:bg-zinc-800 text-zinc-300',
+    // (optional) keep layout tidy when collapsed
+    collapsed && 'justify-center'
   );
+
 
   const firstChild = item.children?.[0];
   const defaultHref = item.href || firstChild?.href || '#';
   const targetLabel = collapsed && firstChild ? firstChild.label : item.label;
 
-  const icon = <div className="text-white">{item.icon}</div>;
+  const icon = (
+    <div
+      className={clsx(
+        'text-white shrink-0 flex items-center justify-center',
+        collapsed ? 'w-10' : 'w-10'
+      )}
+    >
+      {item.icon}
+    </div>
+  );
   const label = (
     <span
       className={clsx(

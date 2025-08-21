@@ -1,3 +1,4 @@
+// components/admin/templates/render-block-mini.tsx
 'use client';
 
 import type { Block } from '@/types/blocks';

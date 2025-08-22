@@ -58,13 +58,14 @@ export async function middleware(req: NextRequest) {
       const sub = baseHost.replace(`.${BASE_DOMAIN}`, '').split('.')[0];
       if (sub && sub !== 'www') {
         const u = url.clone();
-        u.pathname = `/_sites/${sub}${path === '/' ? '/home' : path}`;
+        u.pathname = path === '/' ? `/_sites/${sub}` : `/_sites/${sub}${path}`;
         const res = NextResponse.rewrite(u);
         res.headers.set('x-qs-tenant', sub);
+        res.headers.set('x-qs-rewrite', u.pathname);
         return res;
       }
     }
-    return NextResponse.next(); // marketing host
+    return NextResponse.next();
   }
 
   // Custom domain → lookup slug once per minute
@@ -101,15 +102,13 @@ export async function middleware(req: NextRequest) {
       }
     }
 
-    if (!slug) {
-      // No mapping → let marketing or a custom 404 handle it
-      return NextResponse.next();
-    }
+    if (!slug) return NextResponse.next();
 
     const u = url.clone();
-    u.pathname = `/_sites/${slug}${path === '/' ? '/home' : path}`;
+    u.pathname = path === '/' ? `/_sites/${slug}` : `/_sites/${slug}${path}`;
     const res = NextResponse.rewrite(u);
     res.headers.set('x-qs-tenant', slug);
+    res.headers.set('x-qs-rewrite', u.pathname);
     return res;
   }
 
@@ -118,7 +117,6 @@ export async function middleware(req: NextRequest) {
 }
 
 export const config = {
-  // Narrow matcher so we don't run for static/known asset paths twice
   matcher: [
     '/((?!_next/|_vercel|api/|admin|viewer|favicon.ico|sitemap.xml|robots.txt|manifest.json|opengraph-image|runtime-service-worker.js|.*\\.(?:png|jpg|jpeg|gif|webp|svg|ico|css|js|map|txt|xml|woff2?|ttf|otf)$).*)',
   ],

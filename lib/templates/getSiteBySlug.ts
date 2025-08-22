@@ -1,85 +1,93 @@
 // lib/templates/getSiteBySlug.ts
-import { getServerSupabase } from '@/lib/supabase/server';
+import { createClient } from '@supabase/supabase-js';
+import { headers } from 'next/headers';
 import type { Template } from '@/types/template';
+import type { Database } from '@/types/supabase';
 
-type GetSiteOptions = {
-  /** Require is_site=true. Defaults to false to avoid 404s on older rows. */
-  requireIsSite?: boolean;
-  /** If you later add a published flag, you can turn this on. Defaults to false. */
-  requirePublished?: boolean;
-};
+// --- server-only admin client (bypasses RLS) with no-store fetch ---
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+if (!SUPABASE_URL || !SERVICE_KEY) {
+  // Fail loudly in logs so we don't silently 404
+  // (still return null to keep the page from crashing)
+  console.error('[getSiteBySlug] Missing SUPABASE envs');
+}
 
-export async function getSiteBySlug(
-  slug: string,
-  opts: GetSiteOptions = {}
-): Promise<Template | null> {
-  const normalized = (slug ?? '').trim().toLowerCase();
-  if (!normalized) return null;
+const admin = SUPABASE_URL && SERVICE_KEY
+  ? createClient<Database>(SUPABASE_URL, SERVICE_KEY, {
+      global: {
+        // prevent any Next caching of PostgREST calls
+        fetch: (input, init: any = {}) =>
+          fetch(input, { ...init, cache: 'no-store' }),
+        headers: { 'x-qs-srv': 'getSiteBySlug' },
+      },
+      auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
+    })
+  : null;
 
-  const supabase = await getServerSupabase();
+function normalize(v: string | null | undefined) {
+  return (v ?? '').trim().toLowerCase();
+}
 
-  // Helper to query a table/view with optional filters
-  const fetchOne = async (table: string, allowNonSiteFallback: boolean) => {
-    let q = supabase.from(table).select('*').eq('slug', normalized).limit(1);
+/**
+ * Fetch a site by slug in a way that doesn't flap due to RLS/caching.
+ * Order of attempts:
+ *  1) slug (exact, normalized)
+ *  2) base_slug (exact)
+ *  3) domain_lc or www.domain_lc from request headers
+ */
+export async function getSiteBySlug(slug: string): Promise<Template | null> {
+  const s = normalize(slug);
+  if (!admin || !s) return null;
 
-    if (opts.requireIsSite) q = q.eq('is_site', true as any);
-    if (opts.requirePublished) q = q.eq('published', true as any);
+  // 1) direct slug
+  let { data, error } = await admin
+    .from('templates')
+    .select('*')
+    .eq('slug', s)
+    .eq('is_site', true)
+    .limit(1)
+    .maybeSingle<Template>();
 
-    // Primary attempt
-    let { data, error } = (await q.maybeSingle()) as {
-      data: Template | null;
-      error: any;
-    };
-
-    // If we required is_site and got nothing, try again without that filter
-    if (!data && opts.requireIsSite && allowNonSiteFallback) {
-      let q2 = supabase.from(table).select('*').eq('slug', normalized).limit(1);
-      if (opts.requirePublished) q2 = q2.eq('published', true as any);
-      const res2 = (await q2.maybeSingle()) as { data: Template | null; error: any };
-      data = res2.data;
-      error = error ?? res2.error;
-    }
-
-    return { data, error };
-  };
-
-  // 1) Prefer a public view if present (ignore if it doesn't exist)
-  let data: Template | null = null;
-
-  try {
-    const res = await fetchOne('templates_public', true);
-    data = res.data;
-    // If the view doesn't exist, PostgREST returns an error; we silently fall back.
-  } catch (_e) {
-    // no-op: view likely not present
+  // 2) base_slug fallback
+  if (!data) {
+    const r2 = await admin
+      .from('templates')
+      .select('*')
+      .eq('base_slug', s)
+      .eq('is_site', true)
+      .limit(1)
+      .maybeSingle<Template>();
+    data = r2.data ?? null;
+    error = error ?? r2.error ?? null;
   }
 
-  // 2) Fall back to the base table
+  // 3) domain_lc fallback (from incoming Host)
   if (!data) {
-    const res = await fetchOne('templates', true);
-    if (res.error && String(res.error?.message || '').toLowerCase().includes('not exist')) {
-      // Table missing would be catastrophic; log and bail
-      console.error(`[getSiteBySlug] base table not found:`, res.error);
+    try {
+      const h = await headers();
+      const rawHost = normalize(h.get('x-forwarded-host') ?? h.get('host'));
+      const host = rawHost.replace(/^www\./, '');
+      if (host) {
+        const r3 = await admin
+          .from('templates')
+          .select('*')
+          .in('domain_lc', [host, `www.${host}`])
+          .eq('is_site', true)
+          .limit(1)
+          .maybeSingle<Template>();
+        data = r3.data ?? null;
+      }
+    } catch {
+      // headers() not available in some non-request contexts
     }
-    data = res.data;
   }
 
-  // 3) Final fallback: case-insensitive match (defensive)
-  if (!data) {
-    let q = supabase.from('templates').select('*').ilike('slug', normalized).limit(1);
-    if (opts.requirePublished) q = q.eq('published', true as any);
-    const { data: ilikeData, error: ilikeErr } = (await q.maybeSingle()) as {
-      data: Template | null;
-      error: any;
-    };
-    if (ilikeErr) {
-      console.error(`[getSiteBySlug] ilike fallback error for "${normalized}":`, ilikeErr);
-    }
-    data = ilikeData ?? null;
+  if (!data && error) {
+    console.error('[getSiteBySlug] select error:', error);
   }
-
   if (!data) {
-    console.warn(`[getSiteBySlug] not found for slug "${normalized}"`);
+    console.warn(`[getSiteBySlug] not found for "${s}"`);
   }
 
   return data ?? null;

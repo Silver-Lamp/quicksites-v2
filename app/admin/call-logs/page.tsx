@@ -16,7 +16,7 @@ export default async function CallLogsPage() {
     .limit(50);
 
   return (
-    <div className="p-4">
+    <div className="p-4 mt-12">
       <div className="max-w-6xl mx-auto space-y-4">
         <h2 className="text-xl font-semibold flex items-center gap-2">
           📞 Twilio Call Logs

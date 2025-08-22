@@ -62,7 +62,7 @@ export default function GSCBulkStatsTable() {
   }, [selectedRange]);
 
   return (
-    <div className="space-y-4 p-4">
+    <div className="space-y-4 p-6 mt-12">
       <div className="flex items-center gap-4 text-sm text-white/80">
         <span>Showing:</span>
         <select

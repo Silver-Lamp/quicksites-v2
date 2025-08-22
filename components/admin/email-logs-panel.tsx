@@ -27,7 +27,7 @@ export default function EmailLogsPanel() {
   if (loading) return <p className="text-sm text-gray-400">Loading email logs...</p>;
 
   return (
-    <div className="p-6 bg-white dark:bg-neutral-900 text-black dark:text-white rounded shadow max-w-full overflow-auto">
+    <div className="p-6 bg-white dark:bg-neutral-900 text-black dark:text-white rounded shadow max-w-full overflow-auto mt-12">
       <h2 className="text-2xl font-bold mb-6 text-blue-900 dark:text-white">📬 Contact Form Email Logs</h2>
       <div className="overflow-x-auto border rounded-lg">
         <table className="min-w-full text-sm text-left">

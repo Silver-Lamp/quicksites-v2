@@ -151,12 +151,12 @@ export async function middleware(req: NextRequest) {
   // Scoped client for DB reads used below (shares the same `res`)
   const supabase = createMiddlewareSupabaseClient(req, res);
 
-  // ---------- Subdomain root: /  ->  /sites/{slug}/{firstPage} ----------
+  // ---------- Subdomain root: /  ->  /_sites/{slug}/{firstPage} ----------
   if (subdomain && pathname === '/') {
     const now = Date.now();
     const cached = validSlugCache.get(subdomain);
     if (cached && now - cached.timestamp < CACHE_TTL && !isPreview) {
-      url.pathname = `/sites/${subdomain}/${cached.firstPage}`;
+      url.pathname = `/_sites/${subdomain}/${cached.firstPage}`;
       return rewritePreservingCookies(res, url, req);
     }
 
@@ -173,7 +173,7 @@ export async function middleware(req: NextRequest) {
 
     if (site) {
       validSlugCache.set(subdomain, { timestamp: Date.now(), firstPage });
-      url.pathname = `/sites/${subdomain}/${firstPage}`;
+      url.pathname = `/_sites/${subdomain}/${firstPage}`;
       return rewritePreservingCookies(res, url, req);
     }
 
@@ -188,7 +188,7 @@ export async function middleware(req: NextRequest) {
     return rewritePreservingCookies(res, url, req);
   }
 
-  // ---------- Custom domain root: /  ->  /sites/{slug}/{firstPage} ----------
+  // ---------- Custom domain root: /  ->  /_sites/{slug}/{firstPage} ----------
   if (isCustom && pathname === '/') {
     const now = Date.now();
     let cached = customDomainCache.get(baseHost);
@@ -228,13 +228,13 @@ export async function middleware(req: NextRequest) {
     const pages = (siteData?.data as TemplateData | undefined)?.pages || [];
     const firstPage = pages.length ? pages[0].slug : 'home';
 
-    url.pathname = `/sites/${slug}/${firstPage}`;
+    url.pathname = `/_sites/${slug}/${firstPage}`;
     return rewritePreservingCookies(res, url, req);
   }
 
   // ---------- Subdomain inner routes ----------
   if (subdomain) {
-    url.pathname = `/sites/${subdomain}${pathname}`;
+    url.pathname = `/_sites/${subdomain}${pathname}`;
     return rewritePreservingCookies(res, url, req);
   }
 
@@ -269,7 +269,7 @@ export async function middleware(req: NextRequest) {
       return rewritePreservingCookies(res, url, req);
     }
 
-    url.pathname = `/sites/${slug}${pathname}`;
+    url.pathname = `/_sites/${slug}${pathname}`;
     return rewritePreservingCookies(res, url, req);
   }
 

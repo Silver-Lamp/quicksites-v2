@@ -1,123 +1,160 @@
 // middleware.ts
-import type { NextRequest } from 'next/server';
-import { NextResponse } from 'next/server';
+import { NextResponse, type NextRequest } from 'next/server';
 import { createMiddlewareClient } from '@supabase/auth-helpers-nextjs';
 import type { Database } from './types/supabase';
 
-const BASE_DOMAIN = 'quicksites.ai';
-const ASSET = /\.(?:png|jpe?g|gif|svg|webp|ico|txt|xml|css|js|map|woff2?|ttf|otf)$/i;
-
-const CACHE_TTL = 60_000;
 const customDomainCache = new Map<string, { ts: number; slug: string }>();
+const LOG_TTL = 5 * 60 * 1000;
+const CACHE_TTL = 60_000;
+
+const logDedup = new Map<string, number>();
+
+async function log404Once({
+  hostname,
+  pathname,
+  reason,
+  ip_address,
+}: {
+  hostname: string;
+  pathname: string;
+  reason: string;
+  ip_address: string;
+}) {
+  const key = `${hostname}::${pathname}::${reason}`;
+  const now = Date.now();
+  if (logDedup.has(key) && now - logDedup.get(key)! < LOG_TTL) return;
+  logDedup.set(key, now);
+
+  // optional: write to your table (kept as a no-op if you removed supabaseAdmin)
+  // await supabaseAdmin.from('middleware_404_logs').insert({ hostname, pathname, reason, ip_address });
+}
+
+function isPublicFile(pathname: string) {
+  // any path that ends in ".ext"
+  return /\.[^/]+$/.test(pathname);
+}
 
 export async function middleware(req: NextRequest) {
-  const url = req.nextUrl;
-  const path = url.pathname;
+  const { nextUrl } = req;
+  const pathname = nextUrl.pathname;
 
-  // 0) Bypass internals & static (incl. common SW probes)
+  // Bypass webhooks and assets
   if (
-    path.startsWith('/_next') ||
-    path.startsWith('/_vercel') ||
-    path.startsWith('/.well-known') ||
-    path === '/runtime-service-worker.js' ||
-    ASSET.test(path)
+    pathname.startsWith('/api/twilio-callback') ||
+    pathname.startsWith('/api/stripe/webhook') ||
+    pathname.startsWith('/_next') ||
+    pathname.startsWith('/_sites') || // don't rewrite our own app routes
+    pathname === '/favicon.ico' ||
+    pathname === '/robots.txt' ||
+    pathname === '/sitemap.xml' ||
+    pathname === '/runtime-service-worker.js' || // saw this in logs
+    isPublicFile(pathname)
   ) {
     return NextResponse.next();
   }
 
-  // Allow APIs/marketing/admin/viewer untouched on any host
-  if (
-    path.startsWith('/api') ||
-    path.startsWith('/admin') ||
-    path.startsWith('/viewer') ||
-    path.startsWith('/opengraph-image') ||
-    path === '/robots.txt' ||
-    path === '/sitemap.xml' ||
-    path === '/favicon.ico' ||
-    path === '/manifest.json'
-  ) {
-    return NextResponse.next();
+  if (pathname === '/not-found-trigger') {
+    nextUrl.pathname = '/404';
+    return NextResponse.rewrite(nextUrl);
   }
 
-  // Don’t ever rewrite internal tenant paths
-  if (path.startsWith('/_sites/')) {
-    return NextResponse.next();
-  }
+  const host = req.headers.get('host') ?? '';
+  const hostNoPort = host.split(':')[0];
+  const baseHost = hostNoPort.replace(/^www\./, '');
+  const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown';
 
-  const rawHost = (req.headers.get('x-forwarded-host') ?? req.headers.get('host') ?? '').toLowerCase();
-  const host = rawHost.replace(/:\d+$/, '');
-  const baseHost = host.replace(/^www\./, '');
+  const baseDomain = 'quicksites.ai';
 
-  const isLocal = /localhost|127\.0\.0\.1/.test(host);
-  const isPlatform = !isLocal && (baseHost === BASE_DOMAIN || baseHost.endsWith(`.${BASE_DOMAIN}`));
-  const isCustom = !isLocal && !isPlatform;
+  const isLocal =
+    baseHost.includes('localhost') || baseHost.includes('lvh.me') || baseHost.includes('127.0.0.1');
 
-  // Platform subdomain → slug = first label
-  if (isPlatform) {
-    if (baseHost !== BASE_DOMAIN) {
-      const sub = baseHost.replace(`.${BASE_DOMAIN}`, '').split('.')[0];
-      if (sub && sub !== 'www') {
-        const u = url.clone();
-        u.pathname = path === '/' ? `/_sites/${sub}` : `/_sites/${sub}${path}`;
-        const res = NextResponse.rewrite(u);
-        res.headers.set('x-qs-tenant', sub);
-        res.headers.set('x-qs-rewrite', u.pathname);
-        return res;
-      }
+  // custom domain = not localhost and not under *.quicksites.ai
+  const isCustomDomain = !isLocal && !baseHost.endsWith(baseDomain);
+
+  // subdomain on quicksites.ai
+  const subdomain = (() => {
+    if (isLocal) {
+      const parts = baseHost.split('.');
+      return parts.length >= 2 && parts.at(-1) === 'localhost'
+        ? parts.slice(0, -1).join('.')
+        : null;
     }
-    return NextResponse.next();
+    if (baseHost === baseDomain) return null;
+    if (baseHost.endsWith(`.${baseDomain}`)) {
+      const without = baseHost.slice(0, -(`.${baseDomain}`).length);
+      const first = without.split('.')[0];
+      return first && first !== 'www' ? first : null;
+    }
+    return null;
+  })();
+
+  // robots/sitemap for custom domains
+  if (isCustomDomain && pathname === '/sitemap.xml') {
+    nextUrl.pathname = `/api/sitemap.xml/${baseHost}`;
+    return NextResponse.rewrite(nextUrl);
+  }
+  if (isCustomDomain && pathname === '/robots.txt') {
+    nextUrl.pathname = `/api/robots.txt/${baseHost}`;
+    return NextResponse.rewrite(nextUrl);
   }
 
-  // Custom domain → lookup slug once per minute
-  if (isCustom) {
+  // Subdomain: rewrite directly, preserve path
+  if (subdomain) {
+    const dest = new URL(
+      `/_sites/${subdomain}${pathname === '/' ? '' : pathname}${nextUrl.search}`,
+      req.url,
+    );
+    const res = NextResponse.rewrite(dest);
+    res.headers.set('x-rewrite-to', dest.pathname); // handy in Vercel logs
+    return res;
+  }
+
+  // Custom domain: look up slug from Supabase (cached)
+  if (isCustomDomain) {
     const now = Date.now();
     let cached = customDomainCache.get(baseHost);
     let slug = cached?.slug;
 
-    if (!cached || now - cached.ts >= CACHE_TTL) {
-      // auth-helper pattern requires a Response instance, but we don't need to return it
-      const res = NextResponse.next();
-      const supabase = createMiddlewareClient<Database>({ req, res });
-
-      // Prefer your current schema/column names
-      let { data: site } = await supabase
+    if (!slug || now - (cached?.ts ?? 0) >= CACHE_TTL) {
+      const supabase = createMiddlewareClient<Database>({ req, res: NextResponse.next() });
+      const { data: site } = await supabase
         .from('templates')
         .select('slug')
         .in('custom_domain', [baseHost, `www.${baseHost}`])
+        .eq('published', true)
         .maybeSingle();
 
-      // Fallback if you migrated column name
-      if (!site) {
-        const { data: site2 } = await supabase
-          .from('templates')
-          .select('slug')
-          .in('domain', [baseHost, `www.${baseHost}`])
-          .maybeSingle();
-        site = site2 ?? null;
+      if (!site?.slug) {
+        await log404Once({
+          hostname: baseHost,
+          pathname,
+          reason: 'custom domain slug not found',
+          ip_address: ip,
+        });
+        nextUrl.pathname = '/not-found-trigger';
+        return NextResponse.rewrite(nextUrl);
       }
 
-      if (site?.slug) {
-        slug = site.slug;
-        customDomainCache.set(baseHost, { ts: now, slug: slug || '' });
-      }
+      slug = site.slug as string;
+      customDomainCache.set(baseHost, { ts: now, slug });
     }
 
-    if (!slug) return NextResponse.next();
-
-    const u = url.clone();
-    u.pathname = path === '/' ? `/_sites/${slug}` : `/_sites/${slug}${path}`;
-    const res = NextResponse.rewrite(u);
-    res.headers.set('x-qs-tenant', slug);
-    res.headers.set('x-qs-rewrite', u.pathname);
+    const dest = new URL(
+      `/_sites/${slug}${pathname === '/' ? '' : pathname}${nextUrl.search}`,
+      req.url,
+    );
+    const res = NextResponse.rewrite(dest);
+    res.headers.set('x-rewrite-to', dest.pathname);
     return res;
   }
 
-  // localhost, etc.
+  // Otherwise, let the rest of the app handle it (marketing, admin, etc.)
   return NextResponse.next();
 }
 
 export const config = {
+  // exclude: _next, any "file.ext", api, our own _sites subtree, and a few known assets
   matcher: [
-    '/((?!_next/|_vercel|api/|admin|viewer|favicon.ico|sitemap.xml|robots.txt|manifest.json|opengraph-image|runtime-service-worker.js|.*\\.(?:png|jpg|jpeg|gif|webp|svg|ico|css|js|map|txt|xml|woff2?|ttf|otf)$).*)',
+    '/((?!_next|_sites|.*\\..*|api|favicon\\.ico|robots\\.txt|sitemap\\.xml|runtime-service-worker\\.js).*)',
   ],
 };

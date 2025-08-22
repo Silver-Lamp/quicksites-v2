@@ -1,122 +1,187 @@
-// middleware.ts
+// middleware.ts (root)
 import { NextResponse, type NextRequest } from 'next/server';
 import { createMiddlewareClient } from '@supabase/auth-helpers-nextjs';
+import { supabaseAdmin } from './lib/supabase/admin';
 import type { Database } from './types/supabase';
 
-const customDomainCache = new Map<string, { ts: number; slug: string }>();
-const LOG_TTL = 5 * 60 * 1000;
+const previewToken = process.env.SITE_PREVIEW_TOKEN || 'secret123';
+const BASE_DOMAIN = process.env.NEXT_PUBLIC_BASE_DOMAIN || 'quicksites.ai';
+
 const CACHE_TTL = 60_000;
+const LOG_DEDUP_TTL = 5 * 60_000;
 
-const logDedup = new Map<string, number>();
+const validSlugCache = new Map<string, { timestamp: number; firstPage: string }>();
+const customDomainCache = new Map<string, { timestamp: number; slug: string }>();
+const logCache = new Map<string, number>();
 
-async function log404Once({
-  hostname,
-  pathname,
-  reason,
-  ip_address,
-}: {
+async function log404Once(args: {
   hostname: string;
   pathname: string;
   reason: string;
   ip_address: string;
 }) {
-  const key = `${hostname}::${pathname}::${reason}`;
+  const key = `${args.hostname}::${args.pathname}::${args.reason}`;
   const now = Date.now();
-  if (logDedup.has(key) && now - logDedup.get(key)! < LOG_TTL) return;
-  logDedup.set(key, now);
-
-  // optional: write to your table (kept as a no-op if you removed supabaseAdmin)
-  // await supabaseAdmin.from('middleware_404_logs').insert({ hostname, pathname, reason, ip_address });
+  if (logCache.has(key) && now - (logCache.get(key) || 0) < LOG_DEDUP_TTL) return;
+  logCache.set(key, now);
+  await supabaseAdmin.from('middleware_404_logs').insert(args);
 }
 
-function isPublicFile(pathname: string) {
-  // any path that ends in ".ext"
-  return /\.[^/]+$/.test(pathname);
+function isStatic(pathname: string) {
+  return (
+    pathname.startsWith('/_next') ||
+    pathname === '/favicon.ico' ||
+    /\.(?:js\.map|json|txt|xml|svg|ico|png|jpg|jpeg|webp|gif|mp4|webm|woff2?|ttf|css)$/.test(pathname)
+  );
+}
+
+function deriveHostParts(hostHeader: string) {
+  const hostWithPort = hostHeader || '';
+  const host = hostWithPort.split(':')[0];
+  const baseHost = host.replace(/^www\./, '');
+
+  const isLocal =
+    baseHost === 'localhost' ||
+    baseHost.endsWith('.localhost') ||
+    baseHost === '127.0.0.1' ||
+    baseHost === '0.0.0.0' ||
+    baseHost === '::1' ||
+    baseHost === 'lvh.me' ||
+    baseHost.endsWith('.lvh.me');
+
+  const isCustom = !isLocal && !baseHost.endsWith(BASE_DOMAIN);
+
+  let subdomain: string | null = null;
+  if (isLocal) {
+    if (baseHost.endsWith('.localhost')) subdomain = baseHost.slice(0, -'.localhost'.length).split('.')[0] || null;
+    else if (baseHost.endsWith('.lvh.me')) subdomain = baseHost.slice(0, -'.lvh.me'.length).split('.')[0] || null;
+  } else if (baseHost !== BASE_DOMAIN && baseHost.endsWith(BASE_DOMAIN)) {
+    const left = baseHost.slice(0, -(BASE_DOMAIN.length + 1));
+    subdomain = left && left !== 'www' ? left.split('.')[0] : null;
+  }
+
+  return { host, baseHost, isLocal, isCustom, subdomain };
+}
+
+/** Preserve cookies on rewrite + expose a debug header. */
+function rewrite(res: NextResponse, req: NextRequest, pathname: string) {
+  const url = new URL(pathname, req.url);
+  const out = NextResponse.rewrite(url, { request: req });
+  for (const c of res.cookies.getAll()) out.cookies.set(c);
+  out.headers.set('x-qsites-rewrite', url.pathname); // <-- check in DevTools > Network
+  return out;
 }
 
 export async function middleware(req: NextRequest) {
-  const { nextUrl } = req;
-  const pathname = nextUrl.pathname;
+  const url = req.nextUrl;
+  const { pathname, searchParams } = url;
 
-  // Bypass webhooks and assets
+  // Skip obvious non-page routes
   if (
+    pathname.startsWith('/auth/') ||
     pathname.startsWith('/api/twilio-callback') ||
     pathname.startsWith('/api/stripe/webhook') ||
-    pathname.startsWith('/_next') ||
-    pathname.startsWith('/_sites') || // don't rewrite our own app routes
-    pathname === '/favicon.ico' ||
-    pathname === '/robots.txt' ||
-    pathname === '/sitemap.xml' ||
-    pathname === '/runtime-service-worker.js' || // saw this in logs
-    isPublicFile(pathname)
+    isStatic(pathname)
   ) {
     return NextResponse.next();
   }
 
-  if (pathname === '/not-found-trigger') {
-    nextUrl.pathname = '/404';
-    return NextResponse.rewrite(nextUrl);
-  }
+  // Keep Supabase session cookies fresh
+  let res = NextResponse.next();
+  try {
+    const supabase = createMiddlewareClient<Database>({ req, res });
+    await supabase.auth.getSession();
+  } catch {}
 
-  const host = req.headers.get('host') ?? '';
-  const hostNoPort = host.split(':')[0];
-  const baseHost = hostNoPort.replace(/^www\./, '');
+  const hostHeader = req.headers.get('host') || '';
+  const { host, baseHost, isCustom, subdomain } = deriveHostParts(hostHeader);
   const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown';
+  const isPreview = searchParams.get('preview') === previewToken;
 
-  const baseDomain = 'quicksites.ai';
-
-  const isLocal =
-    baseHost.includes('localhost') || baseHost.includes('lvh.me') || baseHost.includes('127.0.0.1');
-
-  // custom domain = not localhost and not under *.quicksites.ai
-  const isCustomDomain = !isLocal && !baseHost.endsWith(baseDomain);
-
-  // subdomain on quicksites.ai
-  const subdomain = (() => {
-    if (isLocal) {
-      const parts = baseHost.split('.');
-      return parts.length >= 2 && parts.at(-1) === 'localhost'
-        ? parts.slice(0, -1).join('.')
-        : null;
-    }
-    if (baseHost === baseDomain) return null;
-    if (baseHost.endsWith(`.${baseDomain}`)) {
-      const without = baseHost.slice(0, -(`.${baseDomain}`).length);
-      const first = without.split('.')[0];
-      return first && first !== 'www' ? first : null;
-    }
-    return null;
-  })();
-
-  // robots/sitemap for custom domains
-  if (isCustomDomain && pathname === '/sitemap.xml') {
-    nextUrl.pathname = `/api/sitemap.xml/${baseHost}`;
-    return NextResponse.rewrite(nextUrl);
-  }
-  if (isCustomDomain && pathname === '/robots.txt') {
-    nextUrl.pathname = `/api/robots.txt/${baseHost}`;
-    return NextResponse.rewrite(nextUrl);
-  }
-
-  // Subdomain: rewrite directly, preserve path
-  if (subdomain) {
-    const dest = new URL(
-      `/_sites/${subdomain}${pathname === '/' ? '' : pathname}${nextUrl.search}`,
-      req.url,
-    );
-    const res = NextResponse.rewrite(dest);
-    res.headers.set('x-rewrite-to', dest.pathname); // handy in Vercel logs
+  // Let the app handle these directly
+  if (pathname.startsWith('/sites') || pathname.startsWith('/admin') || pathname.startsWith('/login') || pathname.startsWith('/api')) {
     return res;
   }
 
-  // Custom domain: look up slug from Supabase (cached)
-  if (isCustomDomain) {
+  const supabase = createMiddlewareClient<Database>({ req, res });
+
+  // Subdomain root -> /sites/{slug}/{firstPage}
+  if (subdomain && pathname === '/') {
+    const now = Date.now();
+    const cached = validSlugCache.get(subdomain);
+    if (cached && now - cached.timestamp < CACHE_TTL && !isPreview) {
+      return rewrite(res, req, `/sites/${subdomain}/${cached.firstPage}`);
+    }
+
+    const { data: site } = await supabase
+      .from('templates')
+      .select('data')
+      .eq('slug', subdomain)
+      .eq('is_site', true)
+      .eq('published', true)
+      .maybeSingle();
+
+    const pages = (site?.data as any)?.pages || [];
+    const firstPage = pages.length ? pages[0].slug : 'home';
+
+    if (site) {
+      validSlugCache.set(subdomain, { timestamp: now, firstPage });
+      return rewrite(res, req, `/sites/${subdomain}/${firstPage}`);
+    }
+
+    await log404Once({ hostname: baseHost, pathname, reason: 'subdomain slug not found', ip_address: ip });
+    return rewrite(res, req, '/404');
+  }
+
+  // Custom domain root -> /sites/{slug}/{firstPage}
+  if (isCustom && pathname === '/') {
     const now = Date.now();
     let cached = customDomainCache.get(baseHost);
     let slug = cached?.slug;
 
-    if (!slug || now - (cached?.ts ?? 0) >= CACHE_TTL) {
-      const supabase = createMiddlewareClient<Database>({ req, res: NextResponse.next() });
+    if (!slug || now - (cached?.timestamp || 0) >= CACHE_TTL || isPreview) {
+      const { data: site } = await supabase
+        .from('templates')
+        .select('slug, data')
+        .in('custom_domain', [baseHost, `www.${baseHost}`])
+        .eq('published', true)
+        .maybeSingle();
+
+      if (site?.slug) {
+        slug = site.slug;
+        customDomainCache.set(baseHost, { timestamp: now, slug: slug || '' });
+      }
+    }
+
+    if (!slug) {
+      await log404Once({ hostname: baseHost, pathname, reason: 'custom domain slug not found', ip_address: ip });
+      return rewrite(res, req, '/404');
+    }
+
+    const { data: siteData } = await supabase
+      .from('templates')
+      .select('data')
+      .eq('slug', slug)
+      .maybeSingle();
+
+    const pages = (siteData?.data as any)?.pages || [];
+    const firstPage = pages.length ? pages[0].slug : 'home';
+
+    return rewrite(res, req, `/sites/${slug}/${firstPage}`);
+  }
+
+  // Subdomain inner routes
+  if (subdomain) {
+    return rewrite(res, req, `/sites/${subdomain}${pathname}`);
+  }
+
+  // Custom domain inner routes
+  if (isCustom) {
+    const now = Date.now();
+    let cached = customDomainCache.get(baseHost);
+    let slug = cached?.slug;
+
+    if (!slug || now - (cached?.timestamp || 0) >= CACHE_TTL) {
       const { data: site } = await supabase
         .from('templates')
         .select('slug')
@@ -124,37 +189,26 @@ export async function middleware(req: NextRequest) {
         .eq('published', true)
         .maybeSingle();
 
-      if (!site?.slug) {
-        await log404Once({
-          hostname: baseHost,
-          pathname,
-          reason: 'custom domain slug not found',
-          ip_address: ip,
-        });
-        nextUrl.pathname = '/not-found-trigger';
-        return NextResponse.rewrite(nextUrl);
+      if (site?.slug) {
+        slug = site.slug;
+        customDomainCache.set(baseHost, { timestamp: now, slug: slug || '' });
       }
-
-      slug = site.slug as string;
-      customDomainCache.set(baseHost, { ts: now, slug });
     }
 
-    const dest = new URL(
-      `/_sites/${slug}${pathname === '/' ? '' : pathname}${nextUrl.search}`,
-      req.url,
-    );
-    const res = NextResponse.rewrite(dest);
-    res.headers.set('x-rewrite-to', dest.pathname);
-    return res;
+    if (!slug) {
+      await log404Once({ hostname: baseHost, pathname, reason: 'custom domain route not found', ip_address: ip });
+      return rewrite(res, req, '/404');
+    }
+
+    return rewrite(res, req, `/sites/${slug}${pathname}`);
   }
 
-  // Otherwise, let the rest of the app handle it (marketing, admin, etc.)
-  return NextResponse.next();
+  // Bare base domain -> fall through
+  return res;
 }
 
 export const config = {
-  // exclude: _next, any "file.ext", api, our own _sites subtree, and a few known assets
   matcher: [
-    '/((?!_next|_sites|.*\\..*|api|favicon\\.ico|robots\\.txt|sitemap\\.xml|runtime-service-worker\\.js).*)',
+    '/((?!_next/static|_next/image|favicon\\.ico|auth|.*\\.js\\.map|.*\\.json|.*\\.txt|.*\\.xml|.*\\.svg|.*\\.ico|.*\\.png|.*\\.jpg|.*\\.jpeg|.*\\.webp|.*\\.woff|.*\\.woff2|.*\\.ttf|api/twilio-callback|api/stripe/webhook).*)',
   ],
 };

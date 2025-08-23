@@ -29,7 +29,7 @@ export default function ContactFormRender({
   colorMode?: ThemeMode;
 }) {
   const isLight = colorMode === 'light';
-
+  const anchorId = (block?.content as any)?.anchor_id || 'contact';
   function getSiteSlugFromHostname(hostname: string): string {
     if (hostname.endsWith('.quicksites.ai')) return hostname.split('.')[0];
     const parts = hostname.replace(/^www\./, '').split('.');
@@ -210,7 +210,11 @@ Service: ${formData.service || 'N/A'}
       mode={colorMode}
       className={`${isLight ? 'bg-white' : 'dark:bg-neutral-950'} rounded-lg p-4`}
     >
+      <section id={anchorId} data-contact-anchor className="contents">
       <SectionShell compact className="rounded-lg p-0">
+        <div className="flex flex-col items-center justify-center">
+
+        </div>
         <h2
           className={`text-center text-2xl font-bold mb-6 p-4 rounded-md ${
             isLight ? 'text-blue-900 bg-white' : 'text-white dark:bg-neutral-950'
@@ -313,6 +317,7 @@ Service: ${formData.service || 'N/A'}
           </form>
         )}
       </SectionShell>
+      </section>
     </ThemeScope>
   );
 }

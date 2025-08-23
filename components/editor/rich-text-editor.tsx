@@ -1,4 +1,3 @@
-// components/editor/rich-text-editor.tsx
 'use client';
 
 import { useEffect, useMemo, useState, useRef } from 'react';
@@ -18,18 +17,18 @@ import type { Template, Page } from '@/types/template';
 import { createPortal } from 'react-dom';
 import * as React from 'react';
 
+/* ---------- floating popover helpers ---------- */
 function useFloating(anchorRef: React.RefObject<HTMLElement>, open: boolean) {
   const [pos, setPos] = React.useState<{top:number; left:number; width:number; maxH:number}>({
     top: 0, left: 0, width: 384, maxH: 480
   });
-
   const recalc = React.useCallback(() => {
     const el = anchorRef.current;
     if (!el) return;
     const r = el.getBoundingClientRect();
     const vw = window.innerWidth;
     const vh = window.innerHeight;
-    const menuW = Math.min(416, vw - 16);        // 26rem max
+    const menuW = Math.min(416, vw - 16);
     const left = Math.min(vw - menuW - 8, Math.max(8, r.right - menuW));
     const top = Math.min(vh - 12, r.bottom + 8);
     const maxH = Math.max(160, Math.min(vh - top - 12, Math.floor(vh * 0.75)));
@@ -84,7 +83,6 @@ function AiMenuPopover({
 
   return createPortal(
     <>
-      {/* click-away overlay */}
       <div className="fixed inset-0 z-[9998]" onMouseDown={onClose} />
       <div
         role="dialog"
@@ -98,7 +96,6 @@ function AiMenuPopover({
         onMouseDown={(e) => e.stopPropagation()}
       >
         <div className="flex flex-col" style={{ maxHeight: maxH }}>
-          {/* sticky brief header */}
           <div className={[
             'sticky top-0 z-10 border-b px-3 py-2 backdrop-blur',
             isDark ? 'bg-neutral-900/95 border-neutral-800' : 'bg-white/95 border-zinc-200',
@@ -144,7 +141,6 @@ function AiMenuPopover({
             </div>
           </div>
 
-          {/* scrollable options */}
           <ul role="menu" className={['overflow-y-auto divide-y',
               isDark ? 'divide-neutral-800' : 'divide-zinc-200',
             ].join(' ')}>
@@ -182,7 +178,7 @@ function AiMenuPopover({
   );
 }
 
-
+/* ---------- RTE helpers ---------- */
 export type RichTextValue = {
   format?: 'tiptap' | 'html';
   json?: any;
@@ -210,30 +206,35 @@ function buildEditorClass(tight: boolean, isDark: boolean) {
   return [...base, ...(tight ? compact : comfy)].join(' ');
 }
 
-// --- Site context helpers (lightweight scan of template) ---
+/* ---------- Site context pulled from DB-backed template ---------- */
 function buildSiteSummary(template?: Template) {
   if (!template) return {};
-  const t: any = template;
+  const t = template as any;
   const dataPages: Page[] = t.pages ?? t.data?.pages ?? [];
 
-  // heuristic: services from template.services or page titles that look like services
+  const city = (t.city ?? '').toString().trim();
+  const state = (t.state ?? '').toString().trim();
+  const cityState = [city, state].filter(Boolean).join(', ');
+
   const services: string[] = Array.from(
     new Set(
       [
-        ...(t.services ?? []),
+        ...(Array.isArray(t.services) ? t.services : []),
         ...dataPages
           .map((p) => p?.title || '')
           .filter(Boolean)
-          .filter((title) => /service|towing|repair|roadside/i.test(title)),
+          .filter((title) => /service|towing|repair|roadside|cleaning|pressure/i.test(title)),
       ].filter(Boolean)
     )
   );
 
   return {
-    businessName: t.businessName ?? t.brand ?? t.template_name ?? t.slug ?? '',
-    cityState: t.cityState ?? t.city_state ?? '',
-    phone: t.phone ?? '',
-    industry: t.industry ?? '',
+    businessName: (t.business_name ?? t.brand ?? t.template_name ?? t.slug ?? '').toString(),
+    phone: (t.phone ?? '').toString(),
+    industry: (t.industry ?? '').toString(),
+    city,
+    state,
+    cityState,
     services,
     pages: dataPages.map((p) => ({ slug: p.slug, title: p.title })),
   };
@@ -250,43 +251,43 @@ type AIActionId =
   | 'shorten'
   | 'rewrite_simple';
 
+function aiInstructionFor(
+  id: AIActionId,
+  currentPage?: Page,
+  site?: ReturnType<typeof buildSiteSummary>,
+  selection?: string,
+  brief?: string
+) {
+  const pageTitle = currentPage?.title || currentPage?.slug || 'this page';
+  const phone = site?.phone ? ` Phone: ${site.phone}.` : '';
+  const locLine = site?.city || site?.state ? ` Location: ${[site.city, site.state].filter(Boolean).join(', ')}.` : '';
+  const biz = site?.businessName ? ` Business: ${site.businessName}.` : '';
+  const services = site?.services?.length ? ` Services include: ${site.services.join(', ')}.` : '';
+  const industry = site?.industry ? ` Industry: ${site.industry}.` : '';
+  const extra = brief?.trim() ? `\n\nAdditional brief/context to respect:\n${brief.trim()}\n` : '';
 
-  function aiInstructionFor(
-    id: AIActionId,
-    currentPage?: Page,
-    site?: ReturnType<typeof buildSiteSummary>,
-    selection?: string,
-    brief?: string
-  ) {
-    const pageTitle = currentPage?.title || currentPage?.slug || 'this page';
-    const phone = site?.phone ? ` Phone: ${site.phone}.` : '';
-    const city = site?.cityState ? ` Location: ${site.cityState}.` : '';
-    const biz = site?.businessName ? ` Business: ${site.businessName}.` : '';
-    const services = site?.services?.length ? ` Services include: ${site.services.join(', ')}.` : '';
-    const extra = brief?.trim() ? `\n\nAdditional brief/context to respect:\n${brief.trim()}\n` : '';
-  
-    switch (id) {
-      case 'write_intro':
-        return `Write a concise 2–3 paragraph HTML intro for the page “${pageTitle}”.${city}${biz}${phone}${services}${extra}
-  Use <p> and optional <h2>. Avoid fluff; highlight value, safety, speed, local expertise.`;
-      case 'faqs':
-        return `Create a <h2>FAQs</h2> section (5 Q&A pairs) for “${pageTitle}”. Use <h3> for questions and <p> answers. Keep answers 1–2 sentences.${extra}`;
-      case 'seo_bullets':
-        return `Output a compact <ul> of 6–8 SEO bullet points for “${pageTitle}”, focusing on benefits, response time, coverage area, pricing clarity.${extra}`;
-      case 'cta':
-        return `Write a strong <h2>Call Now</h2> with a brief <p> CTA for “${pageTitle}”.${phone} Keep under ~90 words.${extra}`;
-      case 'blog_intro':
-        return `Write an engaging blog intro (<h2> optional + 2 short <p>) connecting “${pageTitle}” to common customer problems. Professional, friendly.${extra}`;
-      case 'ideas':
-        return `List 10 blog post ideas as a <ul> for a ${site?.industry || 'local services'} business related to “${pageTitle}”.${extra}`;
-      case 'expand':
-        return `Expand the following into richer HTML with <p>/<ul> only, preserving meaning and voice.${extra}\n\n${selection || ''}`;
-      case 'shorten':
-        return `Shorten the following into tighter copy (<p> only), keeping key facts.${extra}\n\n${selection || ''}`;
-      case 'rewrite_simple':
-        return `Rewrite the following at a 6th-grade reading level (<p> only).${extra}\n\n${selection || ''}`;
-    }
+  switch (id) {
+    case 'write_intro':
+      return `Write a concise 2–3 paragraph HTML intro for the page “${pageTitle}”.${locLine}${biz}${industry}${phone}${services}${extra}
+Use <p> and optional <h2>. Avoid fluff; highlight value, safety, speed, and local expertise.`;
+    case 'faqs':
+      return `Create a <h2>FAQs</h2> section (5 Q&A pairs) for “${pageTitle}”. Use <h3> for questions and <p> for answers (1–2 sentences each). Keep specific to the locale and industry.${extra}`;
+    case 'seo_bullets':
+      return `Output a compact <ul> of 6–8 SEO bullet points for “${pageTitle}”, focusing on benefits, response time, coverage area, pricing clarity, and ${site?.industry || 'services'}.${extra}`;
+    case 'cta':
+      return `Write a strong <h2>Call Now</h2> and a short <p> CTA (≤ 90 words) tailored to “${pageTitle}”.${phone}${locLine}${extra}`;
+    case 'blog_intro':
+      return `Write an engaging blog intro (<h2> optional + 2 short <p>) connecting “${pageTitle}” to common customer problems. Professional, friendly.${extra}`;
+    case 'ideas':
+      return `List 10 blog post ideas as a <ul> for a ${site?.industry || 'local services'} business, relevant to “${pageTitle}” and the ${locLine || 'local area.'}${extra}`;
+    case 'expand':
+      return `Expand the following into richer HTML with <p>/<ul> only, preserving meaning and voice.${extra}\n\n${selection || ''}`;
+    case 'shorten':
+      return `Shorten the following into tighter copy (<p> only), keeping key facts.${extra}\n\n${selection || ''}`;
+    case 'rewrite_simple':
+      return `Rewrite the following at a 6th-grade reading level (<p> only).${extra}\n\n${selection || ''}`;
   }
+}
 
 export default function RichTextEditor({
   value,
@@ -296,8 +297,8 @@ export default function RichTextEditor({
   placeholder = '',
   onUploadImage,
   colorMode,
-  template,          // ⬅️ NEW
-  currentPage,       // ⬅️ NEW
+  template,          // ✅ DB-backed context
+  currentPage,
 }: {
   value: RichTextValue;
   onChange: (next: RichTextValue & { word_count?: number }) => void;
@@ -323,6 +324,7 @@ export default function RichTextEditor({
   const isDark = (colorMode ?? 'dark') === 'dark';
   const siteSummary = useMemo(() => buildSiteSummary(template), [template]);
 
+  /* ---------- tiptap setup ---------- */
   const builtExtensions = useMemo(
     () => [
       StarterKit,
@@ -355,17 +357,18 @@ export default function RichTextEditor({
     });
   }, [builtExtensions]);
 
+  const aiMenuBtnRef = useRef<HTMLButtonElement | null>(null);
+
   const editor = useEditor({
     extensions,
     immediatelyRender: false,
     content: '<p></p>',
     editorProps: {
-      attributes: {
-        class: buildEditorClass(tightSpacing, isDark),
-      },
+      attributes: { class: buildEditorClass(tightSpacing, isDark) },
       handleKeyDown: (_view, event) => {
+        // IME
         // // @ts-expect-error
-        if ((event as any).isComposing) return false;
+        if (event.isComposing) return false;
 
         if (event.key === 'Escape') {
           if (onCancel) {
@@ -419,13 +422,11 @@ export default function RichTextEditor({
       editor.commands.setContent(value.html, { parseOptions: { preserveWhitespace: 'full' } });
   }, [editor, value?.json, value?.html]);
 
-  // --- AI actions ---
+  /* ---------- AI actions ---------- */
   const [aiOpen, setAiOpen] = useState(false);
   const [aiBusy, setAiBusy] = useState(false);
-  const [aiBrief, setAiBrief] = useState<string>('');   // ⬅️ NEW
-  const aiMenuBtnRef = useRef<HTMLButtonElement | null>(null);
+  const [aiBrief, setAiBrief] = useState<string>(''); // ✨ brief seeded by selection
 
-  // when opening AI, prefill brief from current selection (trim + cap length)
   const captureSelection = () => {
     if (!editor) return '';
     const sel = editor.state.doc.textBetween(
@@ -436,28 +437,18 @@ export default function RichTextEditor({
     return sel.trim();
   };
 
-  // open AI: pre-seed brief with selection (cap ~1200 chars)
   const openAI = () => {
     const seed = captureSelection();
     setAiBrief(seed.slice(0, 1200));
     setAiOpen(true);
   };
 
-  // modify key handler to open AI via button ref or via openAI()
-  // inside handleKeyDown
-  if ((event as any)?.metaKey || (event as any)?.ctrlKey && (event as any)?.key?.toLowerCase() === 'j') {
-    // @ts-expect-error
-    event.preventDefault();
-    openAI();
-    return true;
-  }
-
   const runAI = async (id: AIActionId) => {
     if (!editor) return;
     setAiBusy(true);
     try {
       const selection = captureSelection();
-      const instruction = aiInstructionFor(id, currentPage, siteSummary, selection, aiBrief);
+      const instruction = aiInstructionFor(id, currentPage, siteSummary as any, selection, aiBrief);
 
       const res = await fetch('/api/ai/suggest', {
         method: 'POST',
@@ -465,7 +456,7 @@ export default function RichTextEditor({
         body: JSON.stringify({
           instruction,
           selection,
-          brief: aiBrief,               // ⬅️ send brief
+          brief: aiBrief,
           site: siteSummary,
           temperature: id === 'ideas' ? 0.9 : 0.7,
         }),
@@ -477,7 +468,6 @@ export default function RichTextEditor({
       const html: string = String(data.html || '').trim();
       if (!html) throw new Error('Empty AI response');
 
-      // Replace for edit actions; otherwise insert
       if (id === 'expand' || id === 'shorten' || id === 'rewrite_simple') {
         editor.chain().focus().deleteSelection().insertContent(html).run();
       } else {
@@ -501,22 +491,22 @@ export default function RichTextEditor({
         isDark ? 'bg-neutral-950 border-neutral-800' : 'bg-white border-zinc-200',
       ].join(' ')}
     >
-    <Toolbar
-      editor={editor}
-      tightSpacing={tightSpacing}
-      onToggleTight={() => setTightSpacing((t) => !t)}
-      isDark={isDark}
-      ai={{
-        open: aiOpen,
-        busy: aiBusy,
-        setOpen: (v) => (v ? openAI() : setAiOpen(false)), // ensure prefill on open
-        run: runAI,
-        btnRef: aiMenuBtnRef,
-        pageTitle: currentPage?.title || currentPage?.slug || 'this page',
-        brief: aiBrief,                 // ⬅️ NEW
-        setBrief: setAiBrief,           // ⬅️ NEW
-      }}
-    />
+      <Toolbar
+        editor={editor}
+        tightSpacing={tightSpacing}
+        onToggleTight={() => setTightSpacing((t) => !t)}
+        isDark={isDark}
+        ai={{
+          open: aiOpen,
+          busy: aiBusy,
+          setOpen: (v) => (v ? openAI() : setAiOpen(false)),
+          run: runAI,
+          btnRef: aiMenuBtnRef,
+          pageTitle: currentPage?.title || currentPage?.slug || 'this page',
+          brief: aiBrief,
+          setBrief: setAiBrief,
+        }}
+      />
       <div className={isDark ? 'bg-neutral-900' : 'bg-white'}>
         <EditorContent editor={editor} />
       </div>
@@ -551,8 +541,8 @@ function Toolbar({
     run: (id: any) => void;
     btnRef: React.RefObject<HTMLButtonElement | null>;
     pageTitle: string;
-    brief: string;                 // ⬅️ NEW
-    setBrief: (v: string) => void; // ⬅️ NEW
+    brief: string;
+    setBrief: (v: string) => void;
   };
 }) {
   const Btn = (props: {
@@ -590,7 +580,6 @@ function Toolbar({
         isDark ? 'border-neutral-800 bg-neutral-900' : 'border-zinc-200 bg-white',
       ].join(' ')}
     >
-      {/* formatting */}
       <Btn active={editor.isActive('bold')} onClick={() => editor.chain().focus().toggleBold().run()} title="Bold">B</Btn>
       <Btn active={editor.isActive('italic')} onClick={() => editor.chain().focus().toggleItalic().run()} title="Italic">I</Btn>
       <Btn active={editor.isActive('underline')} onClick={() => editor.chain().focus().toggleUnderline().run()} title="Underline">U</Btn>
@@ -626,7 +615,6 @@ function Toolbar({
 
       <span className={['mx-1 w-px self-stretch', isDark ? 'bg-neutral-800' : 'bg-zinc-200'].join(' ')} />
 
-      {/* Tight spacing */}
       <Btn active={tightSpacing} onClick={onToggleTight} title="Toggle tight spacing">Tight Spacing</Btn>
 
       {/* ✨ AI menu */}
@@ -656,7 +644,6 @@ function Toolbar({
           />
         )}
       </div>
-
     </div>
   );
 }

@@ -1,3 +1,4 @@
+// components/admin/templates/block-editors/service-areas-editor.tsx
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
@@ -7,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import type { BlockEditorProps } from '@/components/admin/templates/block-editors';
 import { useNearbyCities } from '@/hooks/useNearbyCities';
 import { MapWrapper } from './map-wrapper';
+import type { Template } from '@/types/template';
 
 type GeoHit = {
   display_name: string;
@@ -18,10 +20,50 @@ export default function ServiceAreasEditor({
   block,
   onSave,
   onClose,
-}: BlockEditorProps) {
+  template, // ✅ use DB defaults
+}: BlockEditorProps & { template: Template }) {
   const content = (block as any).content ?? {};
-  const [lat, setLat] = useState(content.sourceLat?.toString() || '');
-  const [lng, setLng] = useState(content.sourceLng?.toString() || '');
+
+  // --- DB identity defaults ---
+  const db = (template as any) || {};
+  const dbLat =
+    typeof db.latitude === 'number'
+      ? db.latitude
+      : db.latitude != null
+      ? Number(db.latitude)
+      : null;
+  const dbLng =
+    typeof db.longitude === 'number'
+      ? db.longitude
+      : db.longitude != null
+      ? Number(db.longitude)
+      : null;
+
+  const dbCity = (db.city ?? '').toString().trim();
+  const dbState = (db.state ?? '').toString().trim();
+  const dbAddr1 = (db.address_line1 ?? '').toString().trim();
+
+  // Build a sensible default place query from DB address
+  const dbPlaceQuery = [dbAddr1, [dbCity, dbState].filter(Boolean).join(', ')]
+    .filter(Boolean)
+    .join(', ')
+    .trim();
+
+  // --- Editor state (prefer block content; else DB defaults) ---
+  const [lat, setLat] = useState<string>(() =>
+    content.sourceLat != null && content.sourceLat !== ''
+      ? String(content.sourceLat)
+      : dbLat != null && Number.isFinite(dbLat)
+      ? String(dbLat)
+      : ''
+  );
+  const [lng, setLng] = useState<string>(() =>
+    content.sourceLng != null && content.sourceLng !== ''
+      ? String(content.sourceLng)
+      : dbLng != null && Number.isFinite(dbLng)
+      ? String(dbLng)
+      : ''
+  );
   const [radius, setRadius] = useState(content.radiusMiles?.toString() || '30');
   const [selected, setSelected] = useState<string[]>(content.cities || []);
   const [lastFetched, setLastFetched] = useState<string | null>(content.lastFetched || null);
@@ -30,7 +72,9 @@ export default function ServiceAreasEditor({
   const [citySearch, setCitySearch] = useState('');
 
   // NEW: place lookup
-  const [placeQuery, setPlaceQuery] = useState('');
+  const [placeQuery, setPlaceQuery] = useState<string>(() =>
+    content.placeQuery || dbPlaceQuery
+  );
   const [placeResults, setPlaceResults] = useState<GeoHit[] | null>(null);
   const [placeLoading, setPlaceLoading] = useState(false);
   const [placeError, setPlaceError] = useState<string | null>(null);
@@ -44,6 +88,7 @@ export default function ServiceAreasEditor({
     setLastFetched(now);
   };
 
+  // On mount: if we have no cached list, attempt a fetch using current center
   useEffect(() => {
     if (!Array.isArray(content.allCities) || content.allCities.length === 0) {
       runFetchCities();
@@ -80,6 +125,7 @@ export default function ServiceAreasEditor({
       ...block,
       content: {
         ...content,
+        placeQuery,
         cities: included.map((c) => c.name),
         allCities: sortedAll.map((c) => c.name),
         sourceLat: Number(lat),
@@ -105,21 +151,15 @@ export default function ServiceAreasEditor({
         q
       )}`;
       const res = await fetch(url, {
-        headers: {
-          // Accept is enough; browsers won’t let us set User-Agent.
-          Accept: 'application/json',
-        },
+        headers: { Accept: 'application/json' },
       });
       if (!res.ok) throw new Error(`Lookup failed (${res.status})`);
       const data = (await res.json()) as GeoHit[];
       setPlaceResults(data);
       if (data.length === 1) {
-        // Auto-apply if only one hit
         const hit = data[0];
         setLat(hit.lat);
         setLng(hit.lon);
-        // Optional: trigger a fresh city fetch with new center
-        // await runFetchCities();
       }
     } catch (e: any) {
       setPlaceError(e?.message || 'Lookup failed');
@@ -139,12 +179,12 @@ export default function ServiceAreasEditor({
       {/* Controls */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="rounded-xl border border-white/10 bg-zinc-900/60 p-4 shadow-sm">
-          {/* NEW: City, State lookup row */}
+          {/* City/State or Address lookup */}
           <div className="flex flex-col gap-2">
-            <label className="text-sm text-zinc-300">City, State</label>
+            <label className="text-sm text-zinc-300">City, State or Address</label>
             <div className="flex gap-2">
               <Input
-                placeholder="e.g., Tacoma, WA"
+                placeholder="e.g., 1600 7th Ave, Seattle, WA"
                 value={placeQuery}
                 onChange={(e) => setPlaceQuery(e.target.value)}
                 onKeyDown={(e) => {

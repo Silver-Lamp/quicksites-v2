@@ -2,8 +2,9 @@
 'use client';
 
 import type { Block } from '@/types/blocks';
+import type { Template } from '@/types/template';
 import SectionShell from '@/components/ui/section-shell';
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { motion, type MotionValue } from 'framer-motion';
 import { useSafeScroll } from '@/hooks/useSafeScroll';
 import DebugOverlay from '@/components/ui/debug-overlay';
@@ -15,11 +16,16 @@ type Props = {
   content?: Block['content'];
   compact?: boolean;
   showDebug?: boolean;
-  /** Optional — parent (RenderBlock) can pass the resolved mode */
   colorMode?: 'light' | 'dark';
-  /** Optional — parent wrapper ref used by Motion hooks */
   scrollRef?: React.RefObject<HTMLElement | null>;
+  template?: Template;
 };
+
+function formatPhoneDisplay(digits: string) {
+  const d = digits.replace(/\D/g, '');
+  if (d.length !== 10) return digits;
+  return `(${d.slice(0, 3)}) ${d.slice(3, 6)}-${d.slice(6)}`;
+}
 
 export default function HeroRender({
   block,
@@ -27,12 +33,12 @@ export default function HeroRender({
   compact = false,
   showDebug = false,
   colorMode,
-  scrollRef, // ⬅️ new
+  scrollRef,
+  template,
 }: Props) {
   const localRef = useRef<HTMLDivElement | null>(null);
   const targetRef = (scrollRef as React.RefObject<HTMLElement | null>) ?? (localRef as any);
 
-  // derive mode from <html class="dark"> if not provided
   const [detectedMode, setDetectedMode] = useState<'light' | 'dark'>('light');
   useEffect(() => {
     if (colorMode) return;
@@ -56,7 +62,11 @@ export default function HeroRender({
     headline,
     subheadline,
     cta_text,
-    cta_link,
+    cta_link,          // legacy / go_to_page url
+    cta_action,        // 'jump_to_contact' | 'go_to_page' | 'call_phone'
+    cta_phone,         // optional override
+    contact_anchor_id, // for jump
+    cta_show_phone_below, // boolean to print phone beneath button
     image_url,
     layout_mode = 'inline',
     mobile_layout_mode = 'inline',
@@ -67,6 +77,41 @@ export default function HeroRender({
     image_y,
   } = content as any;
 
+  // ---- CTA resolution (no conditional hooks) ----
+  const contactAnchor = (contact_anchor_id || 'contact').toString();
+  const handleJumpClick = useCallback<React.MouseEventHandler<HTMLAnchorElement>>(
+    (e) => {
+      const el = document.getElementById(contactAnchor);
+      if (el) {
+        e.preventDefault();
+        el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    },
+    [contactAnchor]
+  );
+
+  const dbPhoneDigits = (template?.phone || '').replace(/\D/g, '');
+  const resolvedPhoneDigits = (cta_phone || dbPhoneDigits || '').replace(/\D/g, '');
+  const resolvedPhoneDisplay = formatPhoneDisplay(resolvedPhoneDigits);
+
+  const action: 'jump_to_contact' | 'go_to_page' | 'call_phone' =
+    (cta_action as any) || 'go_to_page';
+
+  let href: string | undefined;
+  let onClick: React.MouseEventHandler<HTMLAnchorElement> | undefined;
+
+  if (action === 'jump_to_contact') {
+    href = `#${contactAnchor}`;
+    onClick = handleJumpClick;
+  } else if (action === 'call_phone') {
+    href = resolvedPhoneDigits ? `tel:${resolvedPhoneDigits}` : undefined;
+  } else {
+    href = cta_link || '/contact';
+  }
+
+  const canShowCTA = !!cta_text && !!href;
+
+  // ---- layout + parallax ----
   const isMobile = useIsMobile();
   const activeLayoutMode =
     typeof window === 'undefined' ? layout_mode : (isMobile ? mobile_layout_mode : layout_mode);
@@ -76,7 +121,6 @@ export default function HeroRender({
   const backgroundPosition =
     image_x && image_y ? `${image_x} ${image_y}` : image_position || 'center';
 
-  // ✅ wait one frame so the ref is attached before Motion reads it
   const [refReady, setRefReady] = useState(false);
   useEffect(() => {
     const id = requestAnimationFrame(() => setRefReady(!!targetRef?.current));
@@ -84,7 +128,6 @@ export default function HeroRender({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Pass undefined until the ref is ready — avoids Motion "defined but not hydrated"
   const scroll = useSafeScroll({
     target: targetRef as any,
     offset: ['start start', 'end start'] as any,
@@ -95,12 +138,21 @@ export default function HeroRender({
     y = (scroll as any).y;
   }
 
-  // shared tokens that flip with mode
+  // theme tokens
   const textPrimary = isDark ? 'text-white' : 'text-black';
   const textSecondary = isDark ? 'text-white' : 'text-neutral-800';
   const overlayTint = isDark ? 'bg-black/40' : 'bg-white/40';
-  const fullBleedBrightness = isDark ? 'brightness(0.6)' : 'brightness(0.9)'; // darker in dark mode, lighter in light mode
+  const fullBleedBrightness = isDark ? 'brightness(0.6)' : 'brightness(0.9)';
   const bgBlurBrightness = isDark ? 'brightness(0.5)' : 'brightness(0.95)';
+
+  const PhoneLine = () =>
+    cta_show_phone_below && resolvedPhoneDigits ? (
+      <div className={`mt-2 text-sm ${isDark ? 'text-white/85' : 'text-neutral-700'}`}>
+        <a href={`tel:${resolvedPhoneDigits}`} className="underline-offset-2 hover:underline">
+          {resolvedPhoneDisplay}
+        </a>
+      </div>
+    ) : null;
 
   // 📸 Natural height layout
   if (activeLayoutMode === 'natural_height' && hasImage) {
@@ -118,7 +170,11 @@ export default function HeroRender({
       <div ref={targetRef as any} className={`relative w-full ${textPrimary} max-h-[90vh] overflow-hidden`}>
         {showDebug && (
           <DebugOverlay>
-            {`[HeroBlock]\nLayout: full_bleed\nImage: ${image_url || 'N/A'}\nMode: ${mode}`}
+            {`[HeroBlock]
+Layout: full_bleed
+Image: ${image_url || 'N/A'}
+Mode: ${mode}
+CTA: ${action}${action === 'call_phone' ? ` (${resolvedPhoneDigits || 'no-phone'})` : ''}`}
           </DebugOverlay>
         )}
         <motion.div
@@ -137,15 +193,26 @@ export default function HeroRender({
           {subheadline && (
             <p className={`text-lg md:text-2xl mb-6 drop-shadow ${textPrimary}`}>{subheadline}</p>
           )}
-          {cta_text && cta_link && (
-            <a
-              href={cta_link}
-              className={`inline-block ${
-                isDark ? 'bg-yellow-400 hover:bg-yellow-500 text-black' : 'bg-purple-600 hover:bg-purple-700 text-white'
-              } font-bold py-3 px-6 rounded-full transition`}
-            >
-              {cta_text}
-            </a>
+          {canShowCTA && (
+            <>
+              <a
+                href={href}
+                onClick={onClick}
+                className={`inline-block ${
+                  isDark ? 'bg-yellow-400 hover:bg-yellow-500 text-black' : 'bg-purple-600 hover:bg-purple-700 text-white'
+                } font-bold py-3 px-6 rounded-full transition`}
+                aria-label={
+                  action === 'call_phone'
+                    ? 'Call us now'
+                    : action === 'jump_to_contact'
+                    ? 'Jump to contact form'
+                    : 'Go to contact page'
+                }
+              >
+                {cta_text}
+              </a>
+              <PhoneLine />
+            </>
           )}
         </div>
       </div>
@@ -162,7 +229,11 @@ export default function HeroRender({
       >
         {showDebug && (
           <DebugOverlay>
-            {`[HeroBlock]\nLayout: background\nImage: ${image_url || 'N/A'}\nMode: ${mode}`}
+            {`[HeroBlock]
+Layout: background
+Image: ${image_url || 'N/A'}
+Mode: ${mode}
+CTA: ${action}${action === 'call_phone' ? ` (${resolvedPhoneDigits || 'no-phone'})` : ''}`}
           </DebugOverlay>
         )}
         <div
@@ -180,13 +251,24 @@ export default function HeroRender({
           {subheadline && (
             <p className={`text-lg md:text-xl mb-6 drop-shadow ${textPrimary}`}>{subheadline}</p>
           )}
-          {cta_text && cta_link && (
-            <a
-              href={cta_link}
-              className="inline-block bg-purple-600 hover:bg-purple-700 text-white font-semibold py-3 px-6 rounded-full transition"
-            >
-              {cta_text}
-            </a>
+          {canShowCTA && (
+            <>
+              <a
+                href={href}
+                onClick={onClick}
+                className="inline-block bg-purple-600 hover:bg-purple-700 text-white font-semibold py-3 px-6 rounded-full transition"
+                aria-label={
+                  action === 'call_phone'
+                    ? 'Call us now'
+                    : action === 'jump_to_contact'
+                    ? 'Jump to contact form'
+                    : 'Go to contact page'
+                }
+              >
+                {cta_text}
+              </a>
+              <PhoneLine />
+            </>
           )}
         </div>
       </SectionShell>
@@ -202,7 +284,11 @@ export default function HeroRender({
     <SectionShell compact={compact} bg={inlineBg} textAlign="center">
       {showDebug && (
         <DebugOverlay>
-          {`[HeroBlock]\nLayout: inline\nImage: ${hasImage ? 'yes' : 'no'}\nMode: ${mode}`}
+          {`[HeroBlock]
+Layout: inline
+Image: ${hasImage ? 'yes' : 'no'}
+Mode: ${mode}
+CTA: ${action}${action === 'call_phone' ? ` (${resolvedPhoneDigits || 'no-phone'})` : ''}`}
         </DebugOverlay>
       )}
       {hasImage && (
@@ -214,13 +300,24 @@ export default function HeroRender({
       )}
       <h1 className={`text-3xl md:text-5xl font-bold mb-4 ${textPrimary}`}>{headline}</h1>
       {subheadline && <p className={`text-lg md:text-xl mb-6 ${textSecondary}`}>{subheadline}</p>}
-      {cta_text && cta_link && (
-        <a
-          href={cta_link}
-          className="inline-block bg-purple-600 hover:bg-purple-700 text-white font-semibold py-3 px-6 rounded-full transition"
-        >
-          {cta_text}
-        </a>
+      {canShowCTA && (
+        <>
+          <a
+            href={href}
+            onClick={onClick}
+            className="inline-block bg-purple-600 hover:bg-purple-700 text-white font-semibold py-3 px-6 rounded-full transition"
+            aria-label={
+              action === 'call_phone'
+                ? 'Call us now'
+                : action === 'jump_to_contact'
+                ? 'Jump to contact form'
+                : 'Go to contact page'
+            }
+          >
+            {cta_text}
+          </a>
+          <PhoneLine />
+        </>
       )}
     </SectionShell>
   );

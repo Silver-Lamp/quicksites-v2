@@ -1,40 +1,84 @@
 'use server';
+
 import { getSupabaseForAction } from '@/lib/supabase/serverClient';
 import type { Template } from '@/types/template';
+
+/** ---------- Sanitizers (server-side) ---------- */
+function trimOrNull(v: any) {
+  if (v == null) return null;
+  const s = String(v).trim();
+  return s === '' ? null : s;
+}
+function numberOrNull(v: any) {
+  if (v == null || v === '') return null;
+  const n = typeof v === 'number' ? v : Number(String(v));
+  return Number.isFinite(n) ? n : null;
+}
+function digitsOrNull(v: any) {
+  const s = String(v ?? '').replace(/\D/g, '');
+  return s.length ? s : null;
+}
+function cleanServices(v: any) {
+  if (!Array.isArray(v)) return undefined;
+  const arr = v
+    .map((s) => String(s ?? '').trim())
+    .filter(Boolean);
+  return arr.length ? Array.from(new Set(arr)) : [];
+}
+
+/** Keep only defined keys; let nulls pass through, drop undefined */
+function stripUndefined(obj: Record<string, any>) {
+  for (const k of Object.keys(obj)) {
+    if (obj[k] === undefined) delete obj[k];
+  }
+  return obj;
+}
 
 export async function saveTemplate(input: any, id?: string): Promise<Template> {
   const supabase = await getSupabaseForAction();
 
   // If caller passed { db, header_block, footer_block }, unwrap it; otherwise use input as source.
   const src = input?.db ? input.db : input;
+  const rowId = id ?? src?.id;
 
   const payload: Record<string, any> = {
-    id: id ?? src.id,
-    template_name: src.template_name,
-    slug: src.slug,
-    layout: src.layout,
-    color_scheme: src.color_scheme,
-    theme: src.theme,
-    brand: src.brand,
-    industry: src.industry,
-    phone: src.phone ?? null,
-    color_mode: src.color_mode ?? null,
-    data: src.data ?? {},
-    contact_email: src.contact_email ?? null,
-    business_name: src.business_name ?? null,
+    id: rowId,
+    // core strings
+    template_name: trimOrNull(src?.template_name),
+    slug: trimOrNull(src?.slug),
+    layout: trimOrNull(src?.layout),
+    color_scheme: trimOrNull(src?.color_scheme),
+    theme: trimOrNull(src?.theme),
+    brand: trimOrNull(src?.brand),
+    industry: trimOrNull(src?.industry),
+    color_mode: trimOrNull(src?.color_mode),
+
+    // DB canonical fields
+    business_name: trimOrNull(src?.business_name),
+    contact_email: trimOrNull(src?.contact_email),
+    phone: digitsOrNull(src?.phone),
+
+    address_line1: trimOrNull(src?.address_line1),
+    address_line2: trimOrNull(src?.address_line2),
+    city: trimOrNull(src?.city),
+    state: trimOrNull(src?.state),
+    postal_code: trimOrNull(src?.postal_code),
+
+    latitude: numberOrNull(src?.latitude),
+    longitude: numberOrNull(src?.longitude),
+
+    // JSON fields
+    data: src?.data ?? {},
+
     // snapshots (prefer explicit snapshots if caller sent {db,...})
-    header_block: (input?.header_block ?? src.header_block ?? src.headerBlock) ?? null,
-    footer_block: (input?.footer_block ?? src.footer_block ?? src.footerBlock) ?? null,
-    address_line1: src.address_line1 ?? null,
-    address_line2: src.address_line2 ?? null,
-    city: src.city ?? null,
-    state: src.state ?? null,
-    postal_code: src.postal_code ?? null,
-    latitude: src.latitude ?? null,
-    longitude: src.longitude ?? null,
+    header_block: (input?.header_block ?? src?.header_block ?? src?.headerBlock) ?? null,
+    footer_block: (input?.footer_block ?? src?.footer_block ?? src?.footerBlock) ?? null,
+
+    // optional services array (if caller included it)
+    services: cleanServices(src?.services),
   };
 
-  for (const k of Object.keys(payload)) if (payload[k] === undefined) delete payload[k];
+  stripUndefined(payload);
 
   const { data, error } = await supabase
     .from('templates')

@@ -1,7 +1,7 @@
 // components/admin/templates/block-editors/header-editor.tsx
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import Image from 'next/image';
 import { useDropzone } from 'react-dropzone';
 import imageCompression from 'browser-image-compression';
@@ -42,6 +42,15 @@ function normalizeHeaderContent(input: any, fallbackLogo?: string) {
   return { logo_url, nav_items };
 }
 
+// tiny helper for AI → File
+function b64ToFile(b64: string, filename: string, mime = 'image/png'): File {
+  const byteStr = atob(b64);
+  const len = byteStr.length;
+  const bytes = new Uint8Array(len);
+  for (let i = 0; i < len; i++) bytes[i] = byteStr.charCodeAt(i);
+  return new File([bytes], filename, { type: mime });
+}
+
 export default function PageHeaderEditor({
   block,
   onSave,
@@ -66,6 +75,21 @@ export default function PageHeaderEditor({
   const [isUploading, setIsUploading] = useState(false);
   const [isSavingLocal, setIsSavingLocal] = useState(false);
 
+  // === New: AI icon generator state ===
+  const businessName = useMemo(() => (template as any)?.business_name || '', [template]);
+  const industry = useMemo(() => template?.industry || '', [template]);
+  const initials = useMemo(
+    () => (businessName ? businessName.split(/\s+/).map((w: string) => w[0]).join('').slice(0, 3).toUpperCase() : ''),
+    [businessName]
+  );
+
+  const [genBusy, setGenBusy] = useState(false);
+  const [genError, setGenError] = useState<string | null>(null);
+  const [useInitials, setUseInitials] = useState(false);
+  const [style, setStyle] = useState<'flat' | 'badge' | 'monogram' | 'emblem'>('flat');
+  const [accentHex, setAccentHex] = useState('#6D28D9'); // default purple
+  const [transparentBG, setTransparentBG] = useState(true);
+
   const saving = Boolean(isSavingProp) || isSavingLocal;
 
   const areLinksValid =
@@ -81,7 +105,7 @@ export default function PageHeaderEditor({
           useWebWorker: true,
         });
 
-    const fileExt = (toUpload.name.split('.').pop() || 'jpg').toLowerCase();
+    const fileExt = (toUpload.name.split('.').pop() || 'png').toLowerCase();
     const fileName = `${Date.now()}-${Math.random().toString(36).slice(2)}.${fileExt}`;
 
     const { error } = await supabase.storage.from('logos').upload(fileName, toUpload, {
@@ -116,6 +140,45 @@ export default function PageHeaderEditor({
     multiple: false,
     maxSize: 5 * 1024 * 1024,
   });
+
+  // === New: generate icon via AI ===
+  const generateIcon = async () => {
+    setGenBusy(true);
+    setGenError(null);
+    try {
+      const res = await fetch('/api/icon/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          template_id: template?.id,
+          business_name: businessName,
+          industry,
+          style,
+          accent: accentHex,
+          initials: useInitials ? initials : null,
+          transparent: transparentBG,
+          size: '1024x1024',
+        }),
+      });
+      if (!res.ok) {
+        const j = await res.json().catch(() => ({}));
+        throw new Error(j?.error || `Generate failed (${res.status})`);
+      }
+      const { image_base64 } = await res.json();
+      if (!image_base64) throw new Error('No image returned');
+
+      const file = b64ToFile(image_base64, `icon-${Date.now()}.png`, 'image/png');
+      const url = await handleFileUpload(file);
+      setLogoUrl(url);
+      toast.success('Icon generated!');
+    } catch (e: any) {
+      console.error(e);
+      setGenError(e?.message || 'Icon generation failed');
+      toast.error('Icon generation failed');
+    } finally {
+      setGenBusy(false);
+    }
+  };
 
   const saveBlock = async () => {
     setIsSavingLocal(true);
@@ -156,10 +219,9 @@ export default function PageHeaderEditor({
 
       {/* Scrollable content */}
       <div className="flex-1 overflow-y-auto px-6 py-5 overscroll-contain">
-        {/* ⬇️ 1/3 (logo) | 2/3 (links) */}
         <div className="grid grid-cols-1 lg:grid-cols-3 items-start gap-6">
-          {/* LEFT: Logo = 1/3 */}
-          <section className="lg:col-span-1 max-w-full space-y-2">
+          {/* LEFT: Logo */}
+          <section className="lg:col-span-1 max-w-full space-y-3">
             <Label className="text-white">Logo</Label>
             <div
               {...getRootProps()}
@@ -195,9 +257,80 @@ export default function PageHeaderEditor({
                 </p>
               )}
             </div>
+
+            {/* NEW: AI Icon Generator */}
+            <div className="rounded-lg border border-white/10 p-3 bg-neutral-900/70">
+              <div className="text-sm font-medium mb-2">AI Icon Generator</div>
+              <div className="space-y-2 text-sm">
+                <div>
+                  <Label className="text-white/80">Business</Label>
+                  <div className="mt-1 text-white/90">{businessName || '—'}</div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <Label className="text-white/80">Style</Label>
+                    <select
+                      className="mt-1 w-full rounded border border-white/10 bg-neutral-950 px-2 py-1.5 text-sm"
+                      value={style}
+                      onChange={(e) => setStyle(e.target.value as any)}
+                    >
+                      <option value="flat">Flat / Minimal Mark</option>
+                      <option value="badge">Badge / Emblem</option>
+                      <option value="monogram">Monogram</option>
+                      <option value="emblem">Emblematic Shape</option>
+                    </select>
+                  </div>
+                  <div>
+                    <Label className="text-white/80">Accent Color</Label>
+                    <input
+                      type="color"
+                      value={accentHex}
+                      onChange={(e) => setAccentHex(e.target.value)}
+                      className="mt-1 h-9 w-full rounded border border-white/10 bg-neutral-950"
+                      title={accentHex}
+                    />
+                  </div>
+                </div>
+
+                <label className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    checked={useInitials}
+                    onChange={(e) => setUseInitials(e.target.checked)}
+                    className="accent-purple-600"
+                  />
+                  Use initials {initials ? `(${initials})` : ''}
+                </label>
+
+                <label className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    checked={transparentBG}
+                    onChange={(e) => setTransparentBG(e.target.checked)}
+                    className="accent-purple-600"
+                  />
+                  Transparent background (PNG)
+                </label>
+
+                <Button
+                  className="mt-2 w-full"
+                  onClick={generateIcon}
+                  disabled={genBusy}
+                >
+                  {genBusy ? 'Generating…' : 'Generate Icon'}
+                </Button>
+
+                {genError && (
+                  <div className="mt-2 rounded border border-red-500/40 bg-red-500/10 px-2 py-1 text-xs text-red-300">
+                    {genError}
+                  </div>
+                )}
+              </div>
+            </div>
           </section>
 
-          {/* RIGHT: Links = 2/3 */}
+          {/* RIGHT: Links */}
           <section className="lg:col-span-2 min-w-0">
             <Label className="mb-2 block text-white">Navigation Links</Label>
             <div className="rounded-lg border border-white/10">

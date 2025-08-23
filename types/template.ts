@@ -50,6 +50,16 @@ export type TemplateData = {
   site_id?: string | null;
   brand?: string;
   phone?: string;
+  business_name?: string;
+  contact_email?: string;
+  address_line1?: string | null;
+  address_line2?: string | null;
+  city?: string | null;
+  state?: string | null;
+  postal_code?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
+  industry?: string | null;
   color_mode?: 'light' | 'dark';
   archived?: boolean;
   headerBlock?: Block | null;
@@ -71,7 +81,15 @@ export type Snapshot = {
   is_site?: boolean;
   published?: boolean;
   verified?: boolean;
-
+  business_name?: string;
+  contact_email?: string;
+  address_line1?: string | null;
+  address_line2?: string | null;
+  city?: string | null;
+  state?: string | null;
+  postal_code?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
   // Some older records may still carry top-level pages; editor normalizes to data.pages
   pages?: Page[];
 
@@ -200,11 +218,21 @@ const TemplateDataSchema = z
     header: z.array(z.string()).optional(), // legacy
     footer: z.array(z.string()).optional(), // legacy
     service_areas: z.array(z.string()).optional(),
+    business_name: z.string().optional(),
+    contact_email: z.string().optional(),
     site_id: UUID,
     brand: z.string().optional(),
     phone: z.string().optional(),
     color_mode: z.enum(['light', 'dark']).optional(),
     archived: z.boolean().optional(),
+    address_line1: z.string().optional(),
+    address_line2: z.string().optional(),
+    city: z.string().optional(),
+    state: z.string().optional(),
+    postal_code: z.string().optional(),
+    latitude: z.number().optional(),
+    longitude: z.number().optional(),
+    industry: z.string().optional(),
   })
   .passthrough(); // accept extra keys inside data
 
@@ -218,14 +246,20 @@ export const TemplateFormSchema = z
     color_scheme: z.string(),
     theme: z.string(),
     brand: z.string(),
-
+    business_name: z.string().optional(),
+    contact_email: z.string().optional(),
     industry: z.string().optional(),
     phone: z.string().optional(),
-
     is_site: z.boolean().optional(),
     published: z.boolean().optional(),
     verified: z.boolean().optional(),
-
+    address_line1: z.string().optional(),
+    address_line2: z.string().optional(),
+    city: z.string().optional(),
+    state: z.string().optional(),
+    postal_code: z.string().optional(),
+    latitude: z.number().optional(),
+    longitude: z.number().optional(),
     // editor can carry both top-level pages and data.pages
     pages: z.array(PageSchema).optional(),
 

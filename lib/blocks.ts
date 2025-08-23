@@ -22,7 +22,7 @@ export function createFallbackBlock(type: Block['type'] = 'text'): BlockWithId {
     case 'contact_form':
       return normalizeBlock({
         type: 'contact_form',
-        content: { title: 'Contact Us', notification_email: 'sandon@pointsevenstudio.com' },
+        content: { title: 'Contact Us' },
       });
     // Add more defaults as needed
     default:

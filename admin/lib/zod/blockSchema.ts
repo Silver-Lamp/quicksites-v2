@@ -351,7 +351,6 @@ export const blockContentSchemaMap = {
     icon: '📧',
     schema: z.object({
       title: z.string().min(1),
-      notification_email: z.string().email('Invalid email address'),
       services: z.array(z.string()).optional(),
     }),
   },

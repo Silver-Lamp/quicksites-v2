@@ -134,7 +134,6 @@ export function normalizeTemplate(entry: any): Template {
     brand: entry.brand ?? 'default',
     commit: entry.commit ?? '',
     industry,
-    phone,
     hero_url: entry.hero_url ?? '',
     banner_url: entry.banner_url ?? '',
     logo_url: entry.logo_url ?? '',
@@ -147,7 +146,16 @@ export function normalizeTemplate(entry: any): Template {
     published: entry.published ?? false,
     verified: entry.verified ?? false,
     services: Array.isArray(services) ? services : [],
-
+    phone: entry?.data?.phone ?? phone ?? undefined,
+    business_name: entry.business_name || '',
+    contact_email: entry.contact_email || '',
+    address_line1: entry.address_line1 || '',
+    address_line2: entry.address_line2 || '',
+    city: entry.city || '',
+    state: entry.state || '',
+    postal_code: entry.postal_code || '',
+    latitude: entry.latitude || '',
+    longitude: entry.longitude || '',
     // Keep legacy readers happy
     pages: pages as Page[],
 
@@ -158,7 +166,6 @@ export function normalizeTemplate(entry: any): Template {
       headerBlock: headerBlock ?? null,
       footerBlock: footerBlock ?? null,
       color_mode: entry?.data?.color_mode ?? undefined,
-      phone: entry?.data?.phone ?? phone ?? undefined,
     },
 
     // Top-level color_mode only if provided (no default invented)

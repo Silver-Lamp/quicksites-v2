@@ -20,9 +20,18 @@ export async function saveTemplate(input: any, id?: string): Promise<Template> {
     phone: src.phone ?? null,
     color_mode: src.color_mode ?? null,
     data: src.data ?? {},
+    contact_email: src.contact_email ?? null,
+    business_name: src.business_name ?? null,
     // snapshots (prefer explicit snapshots if caller sent {db,...})
     header_block: (input?.header_block ?? src.header_block ?? src.headerBlock) ?? null,
     footer_block: (input?.footer_block ?? src.footer_block ?? src.footerBlock) ?? null,
+    address_line1: src.address_line1 ?? null,
+    address_line2: src.address_line2 ?? null,
+    city: src.city ?? null,
+    state: src.state ?? null,
+    postal_code: src.postal_code ?? null,
+    latitude: src.latitude ?? null,
+    longitude: src.longitude ?? null,
   };
 
   for (const k of Object.keys(payload)) if (payload[k] === undefined) delete payload[k];

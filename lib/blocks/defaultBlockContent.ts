@@ -99,7 +99,6 @@ export const DEFAULT_BLOCK_CONTENT = {
 
   contact_form: {
     title: 'Contact Us',
-    notification_email: 'you@example.com',
   },
 
   meal_card: {

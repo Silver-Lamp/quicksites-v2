@@ -1,10 +1,11 @@
-// components/site/render-blocks/footer.tsx (or your public renderer path)
+// components/site/render-blocks/footer.tsx
 'use client';
 
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { useMemo, useEffect, useState } from 'react';
 import type { Block } from '@/types/blocks';
+import type { Template } from '@/types/template';
 
 const LeafletMap = dynamic(
   () => import('@/components/ui/leaflet-footer-map').then((m) => m.LeafletFooterMap),
@@ -67,31 +68,79 @@ function normalizeFooterLinks(final: any): FooterLink[] {
 }
 const isInternal = (href: string) => href.startsWith('/');
 
+function fmtPhone(raw?: string | null): string {
+  const digits = (raw || '').replace(/\D/g, '');
+  if (digits.length !== 10) return raw || '';
+  return `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6)}`;
+}
+
 export default function PublicFooter({
   block,
   content,
+  template, // ✅ expect Template so we can read DB values
   compact = false,
   colorMode = 'dark',
 }: {
   block?: Block;
   content?: Block['content'];
+  template?: Template;
   compact?: boolean;
   colorMode?: 'light' | 'dark';
 }) {
   const final = (content || block?.content) as any;
 
-  // 🔧 normalize for published view as well
+  // Links from block content
   const links = useMemo(() => normalizeFooterLinks(final), [final]);
 
-  const businessName = final?.businessName ?? final?.business_name ?? 'Business';
-  const address = final?.address ?? final?.street_address ?? '123 Main St';
-  const cityState = final?.cityState ?? final?.city_state ?? 'Your City, ST';
-  const phone = final?.phone ?? final?.phone_number ?? '(555) 555-5555';
+  // ---------- Prefer DB fields, fall back to legacy block content ----------
+  const db = (template as any) || {};
+  const businessName =
+    (db.business_name && String(db.business_name).trim()) ||
+    (final?.businessName && String(final.businessName).trim()) ||
+    'Business';
 
-  const fullAddress =
-    `${address || ''}${address ? ', ' : ''}${cityState || ''}`.trim() || null;
-  const coords = useGeocode(fullAddress);
+  const addressLine1 =
+    (db.address_line1 && String(db.address_line1).trim()) ||
+    (final?.address && String(final.address).trim()) ||
+    '';
 
+  const addressLine2 = (db.address_line2 && String(db.address_line2).trim()) || '';
+
+  const city =
+    (db.city && String(db.city).trim()) ||
+    (final?.city || (final?.cityState ? String(final.cityState).split(',')[0] : ''));
+
+  const state =
+    (db.state && String(db.state).trim()) ||
+    (final?.state ||
+      (final?.cityState ? String(final.cityState).split(',')[1]?.trim().split(' ')[0] : ''));
+
+  const postal =
+    (db.postal_code && String(db.postal_code).trim()) ||
+    (final?.postal || '');
+
+  const phone =
+    fmtPhone(db.phone) || (final?.phone && String(final.phone)) || '';
+
+  const cityState = [city, state].filter(Boolean).join(', ');
+  const cityStatePostal = [cityState, postal].filter(Boolean).join(' ');
+
+  const fullAddressForDisplay = [addressLine1, addressLine2, cityStatePostal]
+    .filter(Boolean)
+    .join('\n');
+
+  const fullAddressForGeocode = [addressLine1, addressLine2, city, state, postal]
+    .filter(Boolean)
+    .join(', ') || null;
+
+  // Prefer DB lat/lon; fall back to geocoding if missing
+  const lat = typeof db.latitude === 'number' ? db.latitude : Number(db.latitude);
+  const lon = typeof db.longitude === 'number' ? db.longitude : Number(db.longitude);
+  const hasDbCoords = Number.isFinite(lat) && Number.isFinite(lon);
+  const geocoded = useGeocode(hasDbCoords ? null : fullAddressForGeocode);
+  const coords: [number, number] | null = hasDbCoords ? [lat, lon] : geocoded;
+
+  // ---------- theming ----------
   const bgColor = colorMode === 'light' ? 'bg-white' : 'bg-neutral-950';
   const textColor = colorMode === 'light' ? 'text-gray-900' : 'text-white';
   const subText = colorMode === 'light' ? 'text-gray-600' : 'text-gray-400';
@@ -105,10 +154,10 @@ export default function PublicFooter({
     return (
       <div className={`${bgColor} ${textColor} text-xs rounded p-3`}>
         <p className="font-semibold">{businessName}</p>
-        <p className={subText}>{cityState}</p>
+        <p className={subText}>{cityStatePostal}</p>
       </div>
     );
-  }
+    }
 
   return (
     <footer className={`${bgColor} ${textColor} px-6 py-10 text-sm mt-10`}>
@@ -150,14 +199,16 @@ export default function PublicFooter({
         <div>
           <h4 className={`font-bold uppercase mb-3 ${headingColor}`}>Company Info</h4>
           <p className={`font-semibold ${textColor}`}>{businessName}</p>
-          <p className={textColor}>
-            {address}
-            <br />
-            {cityState}
+          <p className={textColor} style={{ whiteSpace: 'pre-line' }}>
+            {fullAddressForDisplay || '—'}
           </p>
-          <p className={`mt-1 ${textColor}`}>{phone}</p>
+          {phone && <p className={`mt-1 ${textColor}`}>{phone}</p>}
           {coords && (
-            <LeafletMap coords={coords} businessName={businessName} fullAddress={fullAddress!} />
+            <LeafletMap
+              coords={coords}
+              businessName={businessName}
+              fullAddress={fullAddressForGeocode || ''}
+            />
           )}
         </div>
       </div>

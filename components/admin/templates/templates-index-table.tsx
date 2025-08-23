@@ -1,3 +1,4 @@
+// components/admin/templates/templates-index-table.tsx
 "use client";
 
 import { useState, useMemo, useEffect } from 'react';

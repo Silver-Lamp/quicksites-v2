@@ -2,7 +2,7 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { X, Moon, Sun, Settings2 } from 'lucide-react';
+import { X, Moon, Sun, Settings2, Copy } from 'lucide-react';
 import CollapsiblePanel from '@/components/ui/collapsible-panel';
 import { TemplateThemeWrapper } from '@/components/theme/template-theme-wrapper';
 import { useTheme } from '@/hooks/useThemeContext';
@@ -28,6 +28,8 @@ import { makeSaveGuard } from '@/lib/editor/saveGuard';
 import type { Block } from '@/types/blocks';
 import clsx from 'clsx';
 import SidebarSettings from '@/components/admin/template-settings-panel/sidebar-settings';
+import { toast } from 'react-hot-toast';
+import { useRouter } from 'next/navigation';
 
 type Props = {
   template: Template;
@@ -59,7 +61,9 @@ export default function LiveEditorPreview({
   setTemplate,
 }: Props) {
   const [debugMode] = useState(false);
-
+  const router = useRouter();
+  const [dupLoading, setDupLoading] = useState(false);
+  
   const [editing, setEditing] = useState<Block | null>(null);
   const [lastInsertedId, setLastInsertedId] = useState<string | null>(null);
   const [showOutlines] = useState(false);
@@ -332,7 +336,44 @@ const toggleGlobalSettings = () => {
     await updateAndSave({ ...template, color_mode: next as 'light' | 'dark' }, true);
     if (keepId) setSelectedPageId(keepId);
   };
-
+  const handleDuplicate = async () => {
+    try {
+      // persist any pending edits first
+      await updateAndSave(template, true);
+  
+      setDupLoading(true);
+      // also ping any global listeners you wired up on the list page
+      window.dispatchEvent(new Event('templates:overlay:show'));
+  
+      const res = await fetch(`/api/templates/duplicate?slug=${encodeURIComponent((template as any).slug)}`, {
+        method: 'POST',
+      });
+      if (!res.ok) {
+        const msg = await res.text();
+        throw new Error(msg || 'Duplicate failed');
+      }
+  
+      const json = await res.json();
+      toast.success('Template duplicated!');
+  
+      // keep overlay up; component will unmount on navigation
+      if (json?.slug) {
+        router.push(`/template/${json.slug}/edit`);
+        return;
+      }
+  
+      // no nav? hide overlay and refresh
+      setDupLoading(false);
+      window.dispatchEvent(new Event('templates:overlay:hide'));
+      router.refresh();
+    } catch (e: any) {
+      setDupLoading(false);
+      window.dispatchEvent(new Event('templates:overlay:hide'));
+      toast.error(e?.message || 'Duplicate failed');
+    }
+  };
+  
+  
   // --------------------------------
   // Header and Footer link-click capture handler
   // --------------------------------
@@ -860,7 +901,7 @@ const softSelectByHref = (pages: any[], href: string, setSelectedPageId: (v: str
 
             <div className="w-px h-5 bg-white/10 mx-1" />
 
-            {/* Undo/Redo/Save */}
+            {/* Undo/Redo/Save/Duplicate */}
             <button
               className="px-2 py-1 text-xs rounded border border-zinc-600 bg-zinc-800 text-zinc-200 hover:bg-zinc-700"
               onClick={handleUndo}
@@ -881,6 +922,19 @@ const softSelectByHref = (pages: any[], href: string, setSelectedPageId: (v: str
               title="Save"
             >
               Save
+            </button>
+            <button
+              onClick={handleDuplicate}
+              disabled={dupLoading}
+              className={clsx(
+                'px-3 py-1 text-xs rounded border flex items-center gap-1',
+                'border-purple-500 bg-purple-600/20 text-purple-100 hover:bg-purple-600/30',
+                'disabled:opacity-60 disabled:cursor-not-allowed'
+              )}
+              title="Duplicate this site/template"
+            >
+              <Copy size={14} />
+              Duplicate
             </button>
           </div>
         </div>
@@ -946,6 +1000,19 @@ const softSelectByHref = (pages: any[], href: string, setSelectedPageId: (v: str
                   onClose={closeGlobalEditor}
                 />
               </div>
+            </div>
+          </Portal>
+        )}
+        {dupLoading && (
+          <Portal>
+            <div
+              role="status"
+              aria-busy="true"
+              className="fixed inset-0 z-[2000] bg-black/40 backdrop-blur-sm flex flex-col items-center justify-center"
+            >
+              <img src="/logo_v1.png" alt="" className="h-12 w-auto opacity-95 animate-pulse" />
+              <div className="mt-3 h-8 w-8 rounded-full border-2 border-white/40 border-t-white animate-spin" />
+              <div className="mt-2 text-white/80 text-sm">Duplicating…</div>
             </div>
           </Portal>
         )}

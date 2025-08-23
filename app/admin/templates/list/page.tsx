@@ -65,35 +65,29 @@ export default async function TemplatesIndexPage({
   const groups = new Map<string, any[]>();
   for (const t of rows) {
     const slug = (t as any).slug || (t as any).template_name || (t as any).id || '';
-    const key = baseSlug(slug);
-    const arr = groups.get(key) || [];
+    const base = (t as any).base_slug || baseSlug(slug); // prefer DB-computed base
+    const arr = groups.get(base) || [];
     arr.push(t);
-    groups.set(key, arr);
+    groups.set(base, arr);
   }
-
-  // Pick one per base, with strong preferences:
-  // 1) Prefer canonical slug row (e.g., "deliveredmenu2")
-  // 2) Else prefer a row that actually has pages/content (newest among those)
-  // 3) Else the newest row by updated_at
+  
+  // Pick one per group (unchanged)
   const pickPerBase = (items: any[]) => {
     const canonical = items.find((t) =>
-      isCanonical((t as any).slug || (t as any).template_name)
+      ((t?.slug ?? '') as string) === ((t?.base_slug as string) || baseSlug(t?.slug ?? ''))
     );
     if (canonical) return canonical;
-
+  
     const withPages = items
       .filter((t) => hasPages(t))
-      .sort(
-        (a, b) =>
-          new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime()
-      );
+      .sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime());
     if (withPages[0]) return withPages[0];
-
+  
     return items.sort(
       (a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime()
     )[0];
   };
-
+  
   const deduped = includeVersions ? rows : Array.from(groups.values()).map(pickPerBase);
   const hiddenCount = rows.length - deduped.length;
 

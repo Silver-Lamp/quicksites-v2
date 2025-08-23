@@ -1,3 +1,4 @@
+// components/admin/templates/row-actions.tsx
 'use client';
 
 import {
@@ -38,16 +39,38 @@ export default function RowActions({ id, slug, archived = false, onArchiveToggle
   };
 
   const handleDuplicate = async () => {
+    // show the full-screen overlay right away
+    window.dispatchEvent(new Event('templates:overlay:show'));
     setLoading(true);
-    const res = await fetch(`/api/templates/duplicate?slug=${slug}`, {
-      method: 'POST',
-    });
-    setLoading(false);
-    if (res.ok) {
+  
+    try {
+      const res = await fetch(`/api/templates/duplicate?slug=${encodeURIComponent(slug)}`, {
+        method: 'POST',
+      });
+  
+      if (!res.ok) {
+        const msg = await res.text();
+        window.dispatchEvent(new Event('templates:overlay:hide')); // hide on failure
+        toast.error(`Duplicate failed${msg ? `: ${msg}` : ''}`);
+        return;
+      }
+  
+      const json = await res.json();
       toast.success('Template duplicated!');
-      router.refresh();
-    } else {
-      toast.error('Duplicate failed');
+  
+      // Keep the overlay shown; it will auto-hide on route change in the list page.
+      if (json?.slug) {
+        router.push(`/template/${json.slug}/edit`);
+      } else {
+        // If we *don’t* navigate, hide it ourselves and just refresh.
+        window.dispatchEvent(new Event('templates:overlay:hide'));
+        router.refresh();
+      }
+    } catch (e: any) {
+      window.dispatchEvent(new Event('templates:overlay:hide'));
+      toast.error(`Duplicate failed: ${e?.message ?? 'Unknown error'}`);
+    } finally {
+      setLoading(false);
     }
   };
 

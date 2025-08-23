@@ -1,3 +1,4 @@
+// components/admin/templates/templates-index-with-loading.tsx
 'use client';
 
 import { useEffect, useState, useRef } from 'react';
@@ -32,6 +33,18 @@ type Props = {
 export default function TemplatesIndexWithLoading({ templates, selectedFilter }: Props) {
   const pathname = usePathname();
   const [loading, setLoading] = useState(false);
+  // ✅ allow other components (like RowActions) to trigger the overlay
+  useEffect(() => {
+    const show: EventListener = () => setLoading(true);
+    const hide: EventListener = () => setLoading(false);
+    window.addEventListener('templates:overlay:show', show);
+    window.addEventListener('templates:overlay:hide', hide);
+    return () => {
+      window.removeEventListener('templates:overlay:show', show);
+      window.removeEventListener('templates:overlay:hide', hide);
+    };
+  }, []);
+  
   const containerRef = useRef<HTMLDivElement | null>(null);
 
   // hide overlay when the route changes

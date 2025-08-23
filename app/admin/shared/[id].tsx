@@ -90,6 +90,7 @@ export default function SharedSnapshotPage() {
             }}
             showJsonFallback={true}
             mode="dark"
+            template={template}
           />
       </div>
 

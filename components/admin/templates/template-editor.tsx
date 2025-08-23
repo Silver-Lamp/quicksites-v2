@@ -193,6 +193,7 @@ export default function TemplateEditor({
             onUndo={() => {}}
             onViewDiff={() => {}}
             undoAvailable={false}
+            template={template as unknown as Template}
           />
         )}
       </ScrollArea>

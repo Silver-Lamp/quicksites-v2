@@ -8,6 +8,7 @@ import { Switch } from '@/components/ui/switch';
 import BlockPreviewToggle from '@/components/admin/ui/block-preview-toggle';
 import toast from 'react-hot-toast';
 import clsx from 'clsx';
+import { Template } from '@/types/template';
 
 const previewSizes = {
   desktop: 'max-w-full',
@@ -274,7 +275,7 @@ export default function HeroEditor({
         </>
       )}
 
-      <BlockPreviewToggle block={{ ...block, type: 'hero', content: local as unknown as typeof block.content }} />
+      <BlockPreviewToggle block={{ ...block, type: 'hero', content: local as unknown as typeof block.content }} template={template as Template} />
 
       <div className="flex gap-2 justify-end pt-4">
         <button

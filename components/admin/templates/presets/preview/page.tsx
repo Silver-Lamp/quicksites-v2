@@ -3,9 +3,9 @@
 import { templatePresets } from '@/components/admin/templates/presets/templatePresets';
 import TemplatePreview from '@/components/admin/templates/template-preview';
 import type { Block } from '@/types/blocks';
-import type { TemplateData } from '@/types/template';
+import type { Template, TemplateData } from '@/types/template';
 
-export default function PresetPreviewPage() {
+export default function PresetPreviewPage({ template }: { template: Template }) {
   return (
     <div className="p-6 space-y-12 bg-neutral-950 text-white min-h-screen">
       <h1 className="text-4xl font-bold mb-8">Template Preset Preview</h1>
@@ -28,6 +28,7 @@ export default function PresetPreviewPage() {
                     ],
                   } as TemplateData
                 }
+                template={template as Template}
               />
             </div>
           ))}

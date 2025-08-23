@@ -7,6 +7,7 @@ import { Block } from '@/types/blocks';
 import SortableBlockWrapper from './sortable-block-wrapper';
 import RenderBlock from '@/components/admin/templates/render-block';
 import { createDefaultBlock } from '@/lib/createDefaultBlock';
+import { Template } from '@/types/template';
 
 export function SortableBlock({
   block,
@@ -76,6 +77,7 @@ export function SortableBlock({
       }}
       insertedId={insertedId}
       page={page}
+      template={template as Template}
     >
       <RenderBlock
         block={block}
@@ -83,6 +85,7 @@ export function SortableBlock({
         mode="editor"                 // enable hover-to-reveal controls
         onEdit={(b) => setEditing(b)} // wire Edit
         onDelete={handleDelete}       // wire Delete
+        template={template}
       />
     </SortableBlockWrapper>
   );

@@ -3,6 +3,7 @@
 
 import ThemeScope from '@/components/ui/theme-scope';
 import type { Block } from '@/types/blocks';
+import { Template } from '@/types/template';
 import { Star } from 'lucide-react';
 import Image from 'next/image';
 
@@ -28,10 +29,12 @@ export default function TestimonialBlock({
   block,
   compact = false,
   colorMode = 'dark', // <-- now accepts colorMode from props
+  template,
 }: {
   block: Block;
   compact?: boolean;
   colorMode?: 'light' | 'dark';
+  template: Template;
 }) {
   const content = block?.content as { testimonials: TestimonialItem[]; randomized?: boolean; title?: string } | undefined;
   const testimonials: TestimonialItem[] = content?.testimonials ?? [];

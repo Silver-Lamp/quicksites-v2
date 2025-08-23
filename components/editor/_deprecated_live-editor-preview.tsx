@@ -501,7 +501,7 @@ export function LiveEditorPreview({
             />
 
             {effectiveHeader && (
-              <RenderBlock block={effectiveHeader} showDebug={false} colorMode={resolvedColorMode} />
+              <RenderBlock block={effectiveHeader} showDebug={false} colorMode={resolvedColorMode} template={template as Template} />
             )}
 
             <DndContext
@@ -558,6 +558,7 @@ export function LiveEditorPreview({
                   >
                     {/* Add Above — hidden until hover */}
                     <BlockAdderGrouped
+                      template={template as Template}
                       onAdd={(type) => {
                         const newBlock = createDefaultBlock(type);
                         const updatedPage = {
@@ -592,11 +593,12 @@ export function LiveEditorPreview({
 
                     {/* Block content */}
                     <div id={`block-${block._id}`} data-block-id={block._id}>
-                      <RenderBlock block={block} showDebug={false} colorMode={resolvedColorMode} />
+                      <RenderBlock block={block} showDebug={false} colorMode={resolvedColorMode} template={template as Template} />
                     </div>
 
                     {/* Add Below — hidden until hover */}
                     <BlockAdderGrouped
+                      template={template as Template}
                       onAdd={(type) => {
                         const newBlock = createDefaultBlock(type);
                         const updatedPage = {
@@ -636,6 +638,7 @@ export function LiveEditorPreview({
               {!hasBlocks && (
               <div className="relative z-10 bg-white dark:bg-neutral-900 p-4 border-t border-gray-200 dark:border-neutral-700 mt-6">
                 <BlockAdderGrouped
+                  template={template as Template}
                   onAdd={(type) => {
                     const newBlock = createDefaultBlock(type);
                     const updatedPage = {
@@ -672,7 +675,7 @@ export function LiveEditorPreview({
             </DndContext>
 
             {effectiveFooter && (
-              <RenderBlock block={effectiveFooter} showDebug={false} colorMode={resolvedColorMode} />
+              <RenderBlock block={effectiveFooter} showDebug={false} colorMode={resolvedColorMode} template={template as Template} />
             )}
           </div>
         </div>

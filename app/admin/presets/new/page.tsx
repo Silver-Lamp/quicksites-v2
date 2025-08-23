@@ -71,6 +71,17 @@ export default function AdminPresetsNewPage() {
           updated.splice(index, 0, fallback);
           setBlocks(updated);
         }}
+        template={{
+          id: crypto.randomUUID(),
+          template_name: name,
+          slug: "preview",
+          pages: [{ id: crypto.randomUUID(), title: name, slug: "preview", content_blocks: blocks }],
+          color_scheme: "blue",
+          theme: "default",
+          brand: "default",
+          layout: "default",
+          industry: "default",
+        }}
       />
     </div>
   );

@@ -129,6 +129,7 @@ export default function BlocksList({
               >
                 {/* Add Above (hover) */}
                 <BlockAdderGrouped
+                  template={template}
                   onAdd={(type) => {
                     const newBlock = createDefaultBlock(type as any);
                     const updatedPage = {
@@ -193,11 +194,13 @@ export default function BlocksList({
                     block={block}
                     showDebug={false}
                     colorMode={colorMode}
+                    template={template}
                   />
                 </div>
 
                 {/* Add Below (hover) */}
                 <BlockAdderGrouped
+                  template={template}
                   onAdd={(type) => {
                     const newBlock = createDefaultBlock(type as any);
                     const updatedPage = {

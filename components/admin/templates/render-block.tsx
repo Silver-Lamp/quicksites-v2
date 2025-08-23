@@ -13,6 +13,7 @@ import TextRender from '@/components/admin/templates/render-blocks/text';
 import { DYNAMIC_RENDERERS } from '@/lib/blockRegistry';
 import { blockContentSchemaMap } from '@/admin/lib/zod/blockSchema';
 import { GripVertical, Pencil, Trash2 } from 'lucide-react';
+import type { Template } from '@/types/template';
 
 const isDev =
   typeof process !== 'undefined' && process.env.NODE_ENV === 'development';
@@ -69,6 +70,7 @@ function getClientRenderer(type: BlockType): React.ComponentType<any> {
 
 type RenderProps = {
   block: Block;
+  template: Template; // ✅ pass template to renderers
   handleNestedBlockUpdate?: (updated: Block) => void;
   mode?: 'preview' | 'editor';
   disableInteraction?: boolean;
@@ -82,6 +84,7 @@ type RenderProps = {
 
 export default function RenderBlock({
   block,
+  template,
   handleNestedBlockUpdate,
   mode = 'preview',
   disableInteraction = false,
@@ -133,6 +136,7 @@ export default function RenderBlock({
   const commonProps = {
     block,
     content: safeContent,
+    template, // ✅ forward template to all blocks
     mode,
     disableInteraction,
     compact,
@@ -180,7 +184,7 @@ ID: ${block._id || 'n/a'}`}
             colorMode === 'light' ? 'bg-white/70' : 'bg-neutral-900/60',
             'flex items-center justify-between px-2 py-1 rounded-t-md',
             'border border-transparent group-hover:border-neutral-200 dark:group-hover:border-neutral-700',
-          ].join(' ')}
+         ].join(' ')}
         >
           <div className="flex items-center gap-2 min-w-0">
             <span
@@ -242,6 +246,9 @@ ID: ${block._id || 'n/a'}`}
               {...(runtimeProps as any)} // scrollRef only when attached
               {...(block.type === 'grid' && handleNestedBlockUpdate
                 ? { handleNestedBlockUpdate, parentBlock: block }
+                : {})}
+              {...(block.type === 'services'
+                ? { services: template?.services ?? [] } // ✅ feed DB services directly
                 : {})}
             />
           ) : null}

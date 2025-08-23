@@ -8,6 +8,7 @@ import { createDefaultBlock } from '@/lib/createDefaultBlock';
 import RenderBlockMini from '@/components/admin/templates/render-block-mini';
 import SafeTriggerButton from '@/components/ui/safe-trigger-button';
 import { Sparkles } from 'lucide-react';
+import type { Template } from '@/types/template';
 
 const blockGroups: Record<string, { label: string; types: Block['type'][] }> = {
   content: {
@@ -55,6 +56,7 @@ type Props = {
   label?: string;
   triggerElement?: React.ReactNode;
   colorMode?: 'light' | 'dark';
+  template: Template;
 };
 
 export default function BlockAdderGrouped({
@@ -64,6 +66,7 @@ export default function BlockAdderGrouped({
   label = 'Add Block',
   triggerElement,
   colorMode = 'dark',
+  template,
 }: Props) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState('');
@@ -231,6 +234,7 @@ export default function BlockAdderGrouped({
                                   className="w-full h-32"
                                   showDebug={false}
                                   colorMode={colorMode}
+                                  template={template}
                                 />
                                 {isAiType(type) && (
                                   <span className="pointer-events-none absolute top-1.5 right-1.5 rounded px-1.5 py-0.5 text-[10px] font-medium bg-purple-600 text-white shadow">

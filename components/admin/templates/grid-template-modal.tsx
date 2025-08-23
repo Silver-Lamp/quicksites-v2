@@ -7,11 +7,14 @@ import { Button } from "@/components/ui/button";
 import GridTemplateManager from "./grid-template-manager";
 import { GridPreset } from "@/types/grid-presets";
 import { X } from "lucide-react";
+import { Template } from "@/types/template";
 
 export default function GridTemplateModal({
   onSelect,
+  template,
 }: {
   onSelect: (preset: GridPreset, applyAsSection: boolean) => void;
+  template: Template;
 }) {
   const [open, setOpen] = useState(false);
   const [showPreview, setShowPreview] = useState(true);
@@ -64,6 +67,7 @@ export default function GridTemplateModal({
               onSelect(preset, applyAsSection);
               setOpen(false);
             }}
+            template={template as unknown as Template}
           />
         </Dialog.Content>
       </Dialog.Portal>

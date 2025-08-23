@@ -4,8 +4,9 @@ import { useState } from 'react';
 import { PlusCircle, X } from 'lucide-react';
 import type { Block } from '@/types/blocks';
 import BlockAdderGrouped from '@/components/admin/block-adder-grouped';
+import { Template } from '@/types/template';
 
-export function FloatingAddBlockHere({ onAdd }: { onAdd: (type: Block['type']) => void }) {
+export function FloatingAddBlockHere({ onAdd, template }: { onAdd: (type: Block['type']) => void, template: Template }) {
   const [showPicker, setShowPicker] = useState(false);
 
   return (
@@ -43,6 +44,7 @@ export function FloatingAddBlockHere({ onAdd }: { onAdd: (type: Block['type']) =
             <BlockAdderGrouped
               existingBlocks={[]}
               onAdd={(type) => onAdd(type as Block['type'])}
+              template={template as Template}
             />
 
           </div>

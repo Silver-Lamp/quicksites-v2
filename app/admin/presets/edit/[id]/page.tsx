@@ -136,7 +136,17 @@ export default function AdminPresetsEditPage() {
             }}
           >
             <div className="font-medium mb-1">{preset.name}</div>
-            <GridThumbnailRenderer preset={preset} />
+            <GridThumbnailRenderer preset={preset} template={{
+              id: crypto.randomUUID(),
+              template_name: name,
+              slug: "preview",
+              pages: [{ id: crypto.randomUUID(), title: name, slug: "preview", content_blocks: blocks }],
+              color_scheme: "blue",
+              theme: "default",
+              brand: "default",
+              layout: "default",
+              industry: "default",
+            }} />
           </button>
         ))}
       </div>
@@ -147,6 +157,17 @@ export default function AdminPresetsEditPage() {
           columns={columns}
           onChange={setBlocks}
           onInsert={(index) => handleInsertBlock(index, 'text')}
+          template={{
+            id: crypto.randomUUID(),
+            template_name: name,
+            slug: "preview",
+            pages: [{ id: crypto.randomUUID(), title: name, slug: "preview", content_blocks: blocks }],
+            color_scheme: "blue",
+            theme: "default",
+            brand: "default",
+            layout: "default",
+            industry: "default",
+          }}
         />
 
         <div className="bg-white/5 rounded p-4 border border-white/10">
@@ -159,6 +180,17 @@ export default function AdminPresetsEditPage() {
             }}
             showJsonFallback={true}
             mode="dark"
+            template={{
+              id: crypto.randomUUID(),
+              template_name: name,
+              slug: "preview",
+              pages: [{ id: crypto.randomUUID(), title: name, slug: "preview", content_blocks: blocks }],
+              color_scheme: "blue",
+              theme: "default",
+              brand: "default",
+              layout: "default",
+              industry: "default",
+            }}
           />
         </div>
       </div>

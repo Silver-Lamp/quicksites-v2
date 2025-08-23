@@ -714,7 +714,7 @@ const softSelectByHref = (pages: any[], href: string, setSelectedPageId: (v: str
               {/* Header (only in-canvas; hover-edit) */}
               {effectiveHeader && (
                 <div ref={headerWrapRef} className="group relative" onClickCapture={onHeaderLinkClickCapture}>
-                  <RenderBlock block={effectiveHeader} showDebug={false} colorMode={resolvedColorMode} />
+                  <RenderBlock block={effectiveHeader} showDebug={false} colorMode={resolvedColorMode} template={template} />
                   <button
                     type="button"
                     onClick={handleHeaderEdit}
@@ -773,13 +773,14 @@ const softSelectByHref = (pages: any[], href: string, setSelectedPageId: (v: str
                     } as Template);
                     updateAndSave(next);
                   }}
+                  template={template as unknown as Template}
                 />
               )}
 
               {/* Footer (in-canvas; hover-edit) */}
               {effectiveFooter && (
                 <div className="group relative mt-6 mb-16" onClickCapture={onFooterLinkClickCapture}>
-                  <RenderBlock block={effectiveFooter} showDebug={false} colorMode={resolvedColorMode} />
+                  <RenderBlock block={effectiveFooter} showDebug={false} colorMode={resolvedColorMode} template={template}/>
                   <button
                     type="button"
                     onClick={handleFooterEdit}

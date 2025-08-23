@@ -6,6 +6,7 @@ import { GripVertical } from 'lucide-react';
 import { Block } from '@/types/blocks';
 import BlockAdderGrouped from '@/components/admin/block-adder-grouped';
 import { useClickAway } from 'react-use';
+import { Template } from '@/types/template';
 
 type Props = {
   block: Block;
@@ -20,6 +21,7 @@ type Props = {
   onDeleteBlockAt: (index: number) => void;
   insertedId: string | null;
   page: any;
+  template: Template;
 };
 
 export default function SortableBlockWrapper({
@@ -35,6 +37,7 @@ export default function SortableBlockWrapper({
   onDeleteBlockAt,
   insertedId,
   page,
+  template,
 }: Props) {
   const ref = useRef<HTMLDivElement | null>(null);
   const adderRef = useRef<HTMLDivElement | null>(null);
@@ -118,6 +121,7 @@ export default function SortableBlockWrapper({
               }}
               existingBlocks={page.content_blocks}
               label="Select Block Type"
+              template={template as Template}
             />
           ) : (
             <button

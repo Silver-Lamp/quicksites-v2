@@ -6,7 +6,7 @@ import { createPortal } from 'react-dom';
 import { Button } from '@/components/ui';
 import { BlocksEditor } from './blocks-editor';
 import { createDefaultPage } from '@/lib/pageDefaults';
-import type { Template, TemplateData, Page } from '@/types/template';
+import { Template, TemplateData, Page } from '@/types/template';
 import type { Block } from '@/types/blocks';
 import BlockAdderGrouped from '@/components/admin/block-adder-grouped';
 import { createDefaultBlock } from '@/lib/createDefaultBlock';
@@ -237,20 +237,23 @@ export default function TemplatePageEditor({
                         setEditingPageIndex(pageIndex);
                       }}
                       onReplaceWithAI={() => {}}
+                      template={template as unknown as Template}
                     />
                     <FloatingAddBlockHere
                       onAdd={(type) => handleInsertBlockAt(pageIndex, blockIndex + 1, type)}
+                      template={template as unknown as Template}
                     />
                   </div>
                 ))}
 
                 {contentBlocks.length === 0 && (
-                  <FloatingAddBlockHere onAdd={(type) => handleInsertBlockAt(pageIndex, 0, type)} />
+                  <FloatingAddBlockHere onAdd={(type) => handleInsertBlockAt(pageIndex, 0, type)} template={template as unknown as Template} />
                 )}
 
                 <BlockAdderGrouped
                   existingBlocks={contentBlocks}
                   onAdd={(type) => handleInsertBlockAt(pageIndex, contentBlocks.length, type)}
+                  template={template as Template}
                 />
               </>
             )}

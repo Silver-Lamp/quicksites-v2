@@ -16,7 +16,7 @@ import {
 } from '@dnd-kit/sortable';
 import { useState } from 'react';
 import TemplatePreview from './template-preview';
-import type { TemplateData, Page } from '@/types/template';
+import type { TemplateData, Page, Template } from '@/types/template';
 import type { Block } from '@/types/blocks';
 
 type Props = {
@@ -26,6 +26,7 @@ type Props = {
 
   /** Return a guaranteed pages array (required, not optional). */
   onReorder: (updated: { pages: Page[] }) => void;
+  template: Template;
 };
 
 export default function ReorderableBlockList({
@@ -33,6 +34,7 @@ export default function ReorderableBlockList({
   colorScheme,
   onBlockClick,
   onReorder,
+  template,
 }: Props) {
   const sensors = useSensors(useSensor(PointerSensor), useSensor(KeyboardSensor));
   const [activePageIdx] = useState(0); // single-page for now
@@ -75,6 +77,7 @@ export default function ReorderableBlockList({
           onBlockClick={onBlockClick}
           showJsonFallback
           mode="light"
+          template={template as Template}
         />
       </SortableContext>
     </DndContext>

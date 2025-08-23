@@ -8,6 +8,7 @@ import {
 import { CSS } from '@dnd-kit/utilities';
 import type { Block } from '@/types/blocks';
 import RenderBlock from './render-block';
+import type { Template } from '@/types/template';
 
 type SortableGridBlockProps = {
   items: Block[];
@@ -16,6 +17,7 @@ type SortableGridBlockProps = {
   onInsert?: (index: number) => void;
   onDelete?: (index: number) => void;
   onEdit?: (index: number) => void;
+  template: Template;
 };
 
 function SortableBlockItem({
@@ -82,6 +84,7 @@ export default function SortableGridBlock({
   onInsert,
   onDelete,
   onEdit,
+  template,
 }: SortableGridBlockProps) {
   return (
     <SortableContext
@@ -98,7 +101,7 @@ export default function SortableGridBlock({
             onEdit={onEdit}
           >
             <div id={`block-${block._id}`}>
-              <RenderBlock block={block} showDebug={false} />
+              <RenderBlock block={block} showDebug={false} template={template} />
             </div>
           </SortableBlockItem>
         ))}

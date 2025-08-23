@@ -7,6 +7,7 @@ import RenderBlock from './render-block';
 import { Button } from '@/components/ui/button';
 import { normalizeBlock } from '@/lib/utils/normalizeBlock';
 import type { Block } from '@/types/blocks';
+import type { Template } from '@/types/template';
 
 type GridPreset = (typeof defaultGridPresets)[number];
 
@@ -22,7 +23,7 @@ function safeNormalize(b: unknown): Block {
   }
 }
 
-export default function GridPresetPlayground() {
+export default function GridPresetPlayground({ template }: { template: Template }) {
   const [selected, setSelected] = useState<GridPreset>(defaultGridPresets[0]);
   const [blocks, setBlocks] = useState<Block[]>(
     selected.items.map(safeNormalize)
@@ -70,6 +71,7 @@ export default function GridPresetPlayground() {
               block={block}
               showDebug={false}
               colorMode={colorMode}
+              template={template}
             />
           </div>
         ))}

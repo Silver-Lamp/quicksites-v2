@@ -5,6 +5,7 @@ import dynamic from 'next/dynamic';
 import JsonFallbackEditor from './block-editors/json-fallback-editor';
 import { BLOCK_EDITORS, type BlockEditorProps } from './block-editors';
 import type { BlockValidationError } from '@/hooks/validateTemplateBlocks';
+import { Template } from '@/types/template';
 
 export default function BlockEditor({
   block,
@@ -56,7 +57,7 @@ export default function BlockEditor({
           </div>
         )}
 
-        <JsonFallbackEditor block={block} onSave={onSave} onClose={onClose} colorMode={colorMode as 'light' | 'dark'} />
+        <JsonFallbackEditor block={block} onSave={onSave} onClose={onClose} colorMode={colorMode as 'light' | 'dark'} template={template as unknown as Template} />
 
         {!hasEditor && (
           <div className="mt-4 p-2 bg-yellow-100 text-yellow-800 rounded text-sm dark:bg-yellow-900 dark:text-yellow-200">

@@ -1,21 +1,26 @@
-// components/admin/templates/render-blocks/contact-form.tsx
 'use client';
 
-import type { Block } from '@/admin/lib/zod/blockSchema';
+import type { Block } from '@/types/blocks';
+import type { Template } from '@/types/template';
 import SectionShell from '@/components/ui/section-shell';
+import ThemeScope from '@/components/ui/theme-scope';
 import { useState } from 'react';
 import { supabase } from '@/lib/supabase/client';
-import ThemeScope from '@/components/ui/theme-scope';
 
 type ThemeMode = 'light' | 'dark';
+
+function norm(arr: unknown): string[] {
+  if (!Array.isArray(arr)) return [];
+  return Array.from(new Set(arr.map((s) => String(s ?? '').trim()).filter(Boolean)));
+}
 
 export default function ContactFormRender({
   block,
   template,
-  colorMode = 'light', // <-- use colorMode, not "mode"
+  colorMode = 'light',
 }: {
   block: Block;
-  template: { data?: { services?: string[] } };
+  template: Template; // ✅ needs template.services available
   colorMode?: ThemeMode;
 }) {
   const isLight = colorMode === 'light';
@@ -31,17 +36,19 @@ export default function ContactFormRender({
       ? getSiteSlugFromHostname(window.location.hostname)
       : 'unknown';
 
+  // Content still controls title + destination email
   const {
     title = 'Contact Us',
     notification_email = 'sandon@pointsevenstudio.com',
-    services = [],
+    services: includedSubset = [], // optional subset chosen in editor
   } = (block.content as any) || {};
 
-  const templateServices = template?.data?.services || [];
-  const fallbackServices = ['Towing', 'Roadside Assistance', 'Battery Jumpstart', 'Lockout Service'];
-
-  const renderedServices =
-    services.length > 0 ? services : templateServices.length > 0 ? templateServices : fallbackServices;
+  // ✅ Canonical options come ONLY from DB (template.services)
+  const dbServices = norm(template?.services);
+  // If a subset is defined, show intersection; otherwise show all DB services
+  const renderedServices = (includedSubset?.length
+    ? dbServices.filter((s) => (includedSubset as string[]).includes(s))
+    : dbServices) as string[];
 
   const [formData, setFormData] = useState({
     name: '',
@@ -63,7 +70,6 @@ export default function ContactFormRender({
 
   const isValidEmail = (email: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
   const isValidPhone = (phone: string) => /^\(\d{3}\) \d{3}-\d{4}$/.test(phone);
-
   const formatPhone = (raw: string) => {
     const digits = raw.replace(/\D/g, '').slice(0, 10);
     return digits.replace(/(\d{0,3})(\d{0,3})(\d{0,4})/, (_, a, b, c) =>
@@ -155,6 +161,9 @@ Service: ${formData.service || 'N/A'}
       error ? 'border border-red-500' : 'border border-zinc-300 dark:border-zinc-700'
     }`;
 
+  // If no DB services, show a warning in place of the selector
+  const noServices = renderedServices.length === 0;
+
   return (
     <ThemeScope
       mode={colorMode}
@@ -215,28 +224,35 @@ Service: ${formData.service || 'N/A'}
             )}
           </div>
 
+          {/* ✅ Options come ONLY from template.services */}
           <div>
             <label className="block font-semibold mb-1">I&apos;m Interested In:</label>
-            <select
-              name="service"
-              className={inputClass()}
-              value={formData.service}
-              onChange={handleChange}
-              required
-            >
-              <option value="">Select a service</option>
-              {renderedServices.map((s: string) => (
-                <option key={s} value={s}>
-                  {s}
-                </option>
-              ))}
-            </select>
+            {noServices ? (
+              <div className="text-red-500 text-sm italic bg-red-900/10 border border-red-500/30 rounded px-3 py-2">
+                No services configured. This form reads from <code>template.services</code>.
+              </div>
+            ) : (
+              <select
+                name="service"
+                className={inputClass()}
+                value={formData.service}
+                onChange={handleChange}
+                required
+              >
+                <option value="">Select a service</option>
+                {renderedServices.map((s) => (
+                  <option key={s} value={s}>
+                    {s}
+                  </option>
+                ))}
+              </select>
+            )}
           </div>
 
           <div className="flex justify-center gap-4 pt-2">
             <button
               type="submit"
-              disabled={submitting}
+              disabled={submitting || noServices}
               className="bg-blue-900 hover:bg-blue-800 text-white px-6 py-2 rounded transition disabled:opacity-50"
             >
               {submitting ? 'Submitting...' : 'Submit'}

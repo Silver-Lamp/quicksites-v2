@@ -53,15 +53,15 @@ export default function SiteRenderer({
 
   const body = (
     <div id={id ?? 'site-renderer'} className={clsx('w-full', className)}>
-      {header && <RenderBlock block={header} showDebug={false} colorMode={colorMode} />}
+      {header && <RenderBlock block={header} showDebug={false} colorMode={colorMode} template={site} />}
 
       {bodyBlocks.map((block: any, i: number) => (
         <div key={block?._id ?? i}>
-          <RenderBlock block={block} showDebug={false} colorMode={colorMode} />
+          <RenderBlock block={block} showDebug={false} colorMode={colorMode} template={site} />
         </div>
       ))}
 
-      {footer && <RenderBlock block={footer} showDebug={false} colorMode={colorMode} />}
+      {footer && <RenderBlock block={footer} showDebug={false} colorMode={colorMode} template={site} />}
     </div>
   );
 

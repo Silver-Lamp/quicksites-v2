@@ -7,7 +7,7 @@ export type BlockEditorProps = {
   onSave: (updated: Block) => void;
   onClose: () => void;
   errors?: Record<string, BlockValidationError[]>;
-  template?: Template;
+  template: Template;
   fullBleed?: boolean;
 };
     

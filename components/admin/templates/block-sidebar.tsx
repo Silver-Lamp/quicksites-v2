@@ -4,6 +4,7 @@ import type { Block } from '@/types/blocks';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import BlockEditor from './block-editor';
 import type { BlockValidationError } from '@/hooks/validateTemplateBlocks';
+import { Template } from '@/types/template';
 
 type Props = {
   block: Block | null;
@@ -18,6 +19,7 @@ type Props = {
   onViewDiff?: (index: number) => void;
   undoAvailable?: boolean;
   colorMode?: 'light' | 'dark';
+  template: Template;
 };
 
 export default function BlockSidebar({
@@ -33,6 +35,7 @@ export default function BlockSidebar({
   onViewDiff,
   undoAvailable = false,
   colorMode = 'dark',
+  template,
 }: Props) {
   if (!block || typeof block._id !== 'string') return null;
 
@@ -64,6 +67,7 @@ export default function BlockSidebar({
           }}
           onClose={onClose}
           colorMode={colorMode as 'light' | 'dark'}
+          template={template as unknown as Template}
         />
 
         {(onReplaceWithAI || onClone || onUndo || onViewDiff) && (

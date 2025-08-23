@@ -23,6 +23,7 @@ import BlockSidebar from './block-sidebar';
 import type { Block, BlockWithId } from '@/types/blocks';
 import { normalizeBlock } from '@/types/blocks';
 import type { BlockValidationError } from '@/hooks/validateTemplateBlocks';
+import { Template } from '@/types/template';
 
 interface BlocksEditorPropsExtended {
   blocks: Block[];
@@ -31,6 +32,7 @@ interface BlocksEditorPropsExtended {
   onReplaceWithAI?: (index: number) => void;
   onEdit?: (index: number) => void;
   colorMode?: 'light' | 'dark';
+  template: Template;
 }
 
 interface SortableBlockProps {
@@ -41,6 +43,7 @@ interface SortableBlockProps {
   onReplaceWithAI?: (index: number) => void;
   onDelete: (index: number) => void;
   colorMode?: 'light' | 'dark';
+  template: Template;
 }
 
 function SortableBlock({
@@ -51,6 +54,7 @@ function SortableBlock({
   onReplaceWithAI,
   onDelete,
   colorMode = 'dark',
+  template,
 }: SortableBlockProps) {
   const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id: block._id });
   const style = {
@@ -152,6 +156,7 @@ export const BlocksEditor = ({
   onReplaceWithAI,
   onEdit,
   colorMode = 'dark',
+  template,
 }: BlocksEditorPropsExtended) => {
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
 
@@ -205,6 +210,7 @@ export const BlocksEditor = ({
                 onChange(updated);
               }}
               colorMode={colorMode}
+              template={template as unknown as Template}
             />
           ))}
         </SortableContext>
@@ -227,6 +233,7 @@ export const BlocksEditor = ({
           onViewDiff={() => {}}
           undoAvailable={false}
           colorMode={colorMode as 'light' | 'dark'}
+          template={template as unknown as Template}
         />
       )}
     </div>

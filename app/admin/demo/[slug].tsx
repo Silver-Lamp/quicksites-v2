@@ -12,7 +12,7 @@ export default function DemoTemplate({ data, slug }: { data: any; slug: string }
       <ScrollArea className="h-[600px] border rounded bg-white">
         <TemplatePreview data={data} colorScheme={data.color_scheme || 'slate'} onBlockClick={(block) => {
           console.log('block: ', block);
-        }} showJsonFallback={true} mode="dark" />
+        }} showJsonFallback={true} mode="dark" template={data} />
       </ScrollArea>
     </div>
   );

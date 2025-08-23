@@ -4,13 +4,15 @@ import type { BlockWithId } from '@/types/blocks';
 import { createDefaultBlock } from '@/lib/createDefaultBlock';
 import { blockMeta } from '@/admin/lib/zod/blockSchema';
 import RenderBlockMini from '@/components/admin/templates/render-block-mini';
+import type { Template } from '@/types/template';
 
 type Props = {
   onSelect: (block: BlockWithId) => void;
   onHover?: (block: BlockWithId | null) => void;
+  template: Template;
 };
 
-export default function PresetSelector({ onSelect, onHover }: Props) {
+export default function PresetSelector({ onSelect, onHover, template }: Props) {
   const types = Object.keys(blockMeta) as BlockWithId['type'][];
 
   return (
@@ -35,7 +37,7 @@ export default function PresetSelector({ onSelect, onHover }: Props) {
                 </span>
               </div>
               <div className="border-t dark:border-neutral-700 pt-2">
-                <RenderBlockMini block={block} />
+                <RenderBlockMini block={block} template={template} />
               </div>
             </div>
           </li>

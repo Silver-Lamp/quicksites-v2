@@ -6,6 +6,7 @@ import debounce from 'lodash.debounce';
 import { supabase } from '@/lib/supabase/client';
 import TemplatePreviewWithToggle from '@/components/admin/templates/template-preview-with-toggle';
 import ThemeScope from '@/components/ui/theme-scope';
+import { Template as TemplateType } from '@/types/template';
 
 type BrandingProfile = {
   id: string;
@@ -13,7 +14,7 @@ type BrandingProfile = {
   logo_url?: string;
 };
 
-type Template = {
+type Template = TemplateType & {
   id: string;
   name: string;
   created_at: string;
@@ -25,6 +26,9 @@ type Template = {
   is_site?: boolean;
   published?: boolean;
   industry?: string;
+  template_name?: string;
+  slug?: string;
+  layout?: string;
 };
 
 export default function NewSitePage() {
@@ -58,16 +62,16 @@ export default function NewSitePage() {
 
     supabase
       .from('templates')
-      .select('id, name, created_at, thumbnail_url, data, theme, brand, color_scheme, is_site, published')
+      .select('id, name, created_at, thumbnail_url, data, theme, brand, color_scheme, is_site, published, template_name, slug, layout, industry')
       .eq('published', true)
       .eq('is_site', false)
       .order('created_at', { ascending: false })
       .then(({ data }) => {
         if (data?.length) {
-          setTemplates(data);
+          setTemplates(data as unknown as Template[]);
           const initialTemplate = data[0];
           setForm((f) => ({ ...f, template_id: f.template_id || initialTemplate.id }));
-          setSelectedTemplate(initialTemplate);
+          setSelectedTemplate(initialTemplate as unknown as Template);
           setTemplateData(initialTemplate.data || null);
         }
       });
@@ -275,6 +279,7 @@ export default function NewSitePage() {
                 isDark={isDark}
                 toggleDark={() => setIsDark((prev) => !prev)}
                 industry={selectedTemplate?.industry || ''}
+                template={selectedTemplate as unknown as TemplateType}
               />
             </div>
           </ThemeScope>

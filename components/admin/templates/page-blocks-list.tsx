@@ -2,7 +2,7 @@
 'use client';
 
 import { useState } from 'react';
-import type { Page, Template } from '@/types/template';
+import { Page, Template } from '@/types/template';
 import { SortableBlockList } from './sortable-block-list';
 import BlockSidebar from './block-sidebar';
 
@@ -101,6 +101,7 @@ export function PageBlocksList({
           onUndo={() => {}}
           onViewDiff={() => {}}
           undoAvailable={false}
+          template={template as unknown as Template}
         />
       )}
     </div>

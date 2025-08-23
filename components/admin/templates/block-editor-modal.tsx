@@ -5,17 +5,20 @@ import { useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
 import type { Block } from '@/types/blocks';
 import BlockEditor from './block-editor';
+import { Template } from '@/types/template';
 
 export default function BlockEditorModal({
   open,
   onClose,
   block,
   onSave,
+  template,
 }: {
   open: boolean;
   onClose: () => void;
   block: Block;
   onSave: (updated: Block) => void;
+  template: Template;
 }) {
   const [currentBlock, setCurrentBlock] = useState<Block>(block);
 
@@ -39,6 +42,7 @@ export default function BlockEditorModal({
           block={currentBlock}
           onSave={handleSave}
           onClose={onClose}
+          template={template as unknown as Template}
           />
       </div>
       </DialogContent>

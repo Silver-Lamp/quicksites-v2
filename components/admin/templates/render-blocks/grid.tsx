@@ -8,6 +8,7 @@ import RenderBlock from '../render-block';
 import BlockSidebar from '../block-sidebar';
 import PresetSelectorModal from '../block-presets/PresetSelectorModal';
 import type { BlockWithId } from '@/types/blocks';
+import type { Template } from '@/types/template';
 
 function updateGridBlock(block: Block, items: BlockWithId[]): Block {
   const grid = block as unknown as Block;
@@ -29,6 +30,7 @@ type Props = {
   columns?: number;
   gridLabel?: string;
   gridLabelStatic?: string;
+  template: Template;
 };
 
 export default function GridRender({
@@ -40,6 +42,7 @@ export default function GridRender({
   columns = 1,
   gridLabel = 'Grid',
   gridLabelStatic = 'Grid',
+  template,
 }: Props) {
   const final = contentProp as any || block?.content || { items: [] };
   const [editingBlockIndex, setEditingBlockIndex] = useState<number | null>(null);
@@ -64,7 +67,7 @@ export default function GridRender({
     return (
       <div className="grid gap-2 grid-cols-2 text-sm border rounded p-2">
         {normalizedItems.slice(0, 2).map((b: Block, i: number) => (
-          <RenderBlock key={i} block={b} compact showDebug={false} />
+          <RenderBlock key={i} block={b} compact showDebug={false} template={template} />
         ))}
         {normalizedItems.length === 0 && (
           <div className="text-gray-400 italic col-span-2">No blocks in grid</div>
@@ -99,6 +102,7 @@ export default function GridRender({
               handleNestedBlockUpdate?.(updateGridBlock(parentBlock!, items));
             }}
             onEdit={(index) => setEditingBlockIndex(index)}
+            template={template}
           />
 
           <div className="mt-6">
@@ -110,7 +114,7 @@ export default function GridRender({
             </button>
           </div>
 
-          <PresetSelectorModal onSelect={handleInsertBlock} onHover={() => {}} />
+          <PresetSelectorModal onSelect={handleInsertBlock} onHover={() => {}} template={template} />
 
           <BlockSidebar
             onOpen={editingBlockIndex !== null}
@@ -123,13 +127,14 @@ export default function GridRender({
             onUndo={() => {}}
             onViewDiff={() => {}}
             undoAvailable={false}
+            template={template as unknown as Template}
           />
         </>
       ) : (
         <div className={`grid grid-cols-${columns} gap-4`}>
           {normalizedItems.map((b: Block, i: number) => (
             <div key={b._id || i}>
-              <RenderBlock block={b} showDebug={false} />
+              <RenderBlock block={b} showDebug={false} template={template} />
             </div>
           ))}
         </div>

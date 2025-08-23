@@ -5,6 +5,7 @@ import type { TemplateData } from '@/types/template';
 import type { Block } from '@/types/blocks';
 import RenderBlock from './render-block';
 import { normalizePageBlocks } from '@/lib/utils/normalizePageBlocks';
+import type { Template } from '@/types/template';
 
 type TemplatePreviewProps = {
   data: TemplateData;
@@ -15,6 +16,7 @@ type TemplatePreviewProps = {
   onBlockClick?: (block: Block) => void;
   showJsonFallback?: boolean;
   colorMode?: 'light' | 'dark';
+  template: Template;
 };
 
 const bgColorMap: Record<string, string> = {
@@ -35,6 +37,7 @@ export default function TemplatePreview({
   showJsonFallback = false,
   mode,
   colorMode = 'light',
+  template,
 }: TemplatePreviewProps) {
   const previewBg = bgColorMap[colorScheme] ?? 'bg-gray-100';
   const pages = Array.isArray(data?.pages) ? data.pages : [];
@@ -85,6 +88,7 @@ export default function TemplatePreview({
                   handleNestedBlockUpdate={onBlockClick}
                   showDebug={false}
                   colorMode={colorMode}
+                  template={template}
                 />
 
                 {showJsonFallback && (

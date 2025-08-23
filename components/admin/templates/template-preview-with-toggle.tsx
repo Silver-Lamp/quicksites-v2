@@ -3,6 +3,7 @@
 import { IndustryThemeScope } from '@/components/ui/industry-theme-scope';
 import TemplatePreview from './template-preview';
 import type { TemplateData } from '@/types/template';
+import { Template } from '@/types/template';
 
 export default function TemplatePreviewWithToggle({
   data,
@@ -13,6 +14,7 @@ export default function TemplatePreviewWithToggle({
   isDark,
   toggleDark,
   industry,
+  template,
 }: {
   data: TemplateData;
   theme?: string;
@@ -22,6 +24,7 @@ export default function TemplatePreviewWithToggle({
   isDark: boolean;
   toggleDark: () => void;
   industry: string;
+  template: Template | null;
 }) {
   const mode = isDark ? 'dark' : 'light';
 
@@ -43,6 +46,7 @@ export default function TemplatePreviewWithToggle({
         brand={brand}
         colorScheme={colorScheme}
         showJsonFallback={showJsonFallback}
+        template={template as unknown as Template}
       />
       </IndustryThemeScope>
     </div>

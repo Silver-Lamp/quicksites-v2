@@ -20,7 +20,7 @@ import { Input } from '../../ui/input';
 import { Button } from '../../ui/button';
 import ReorderableBlockList from './reorderable-block-list';
 import PageSettingsModal from './page-settings-modal';
-import type { Page } from '@/types/template';
+import type { Page, Template } from '@/types/template';
 import type { Block } from '@/types/blocks';
 
 type ReorderablePageListProps = {
@@ -28,6 +28,7 @@ type ReorderablePageListProps = {
   colorScheme: string;
   onReorder: (pages: Page[]) => void;
   onBlockClick?: (block: Block) => void;
+  template: Template;
 };
 
 function SortablePage({ id, children }: { id: string; children: React.ReactNode }) {
@@ -74,6 +75,7 @@ export default function ReorderablePageList({
   colorScheme,
   onBlockClick,
   onReorder,
+  template,
 }: ReorderablePageListProps) {
   const sensors = useSensors(useSensor(PointerSensor));
   const [settingsPage, setSettingsPage] = useState<Page | null>(null);
@@ -277,6 +279,7 @@ export default function ReorderablePageList({
                     updatedPages[index] = updatedPageData.pages[0];
                     onReorder(updatedPages);
                   }}
+                  template={template as unknown as Template}
                 />
               </SortablePage>
             );

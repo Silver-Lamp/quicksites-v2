@@ -11,6 +11,7 @@ import { FloatingAddBlockHere } from './floating-add-block-here';
 import { InlineBlockTypePicker } from './inline-block-type-picker';
 import { AISuggestionOverlay } from './ai-suggestion-overlay';
 import { ensureBlockId } from '@/admin/lib/ensureBlockId';
+import { Template } from '@/types/template';
 
 export function EditorContentOverlay({
   template,
@@ -75,7 +76,7 @@ export function EditorContentOverlay({
                       onDelete={() => handleBlockDelete(pageIndex, blockIndex)}
                     />
                     <pre className="text-xs text-white/80">{block.type}</pre>
-                    <FloatingAddBlockHere onAdd={() => handleAddBlock(pageIndex)} />
+                    <FloatingAddBlockHere onAdd={() => handleAddBlock(pageIndex)} template={template as unknown as Template} />
                   </div>
                 </MotionBlockWrapper>
               ))}

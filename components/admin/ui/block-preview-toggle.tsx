@@ -4,13 +4,15 @@ import { useState } from 'react';
 import type { Block } from '@/types/blocks';
 import RenderBlock from '@/components/admin/templates/render-block';
 import { Switch } from '@/components/ui/switch';
+import type { Template } from '@/types/template';
 
 type Props = {
   block: Block;
   className?: string;
+  template: Template;
 };
 
-export default function BlockPreviewToggle({ block, className = '' }: Props) {
+export default function BlockPreviewToggle({ block, className = '', template }: Props) {
   const [enabled, setEnabled] = useState(true);
   const [compact, setCompact] = useState(true);
 
@@ -29,7 +31,7 @@ export default function BlockPreviewToggle({ block, className = '' }: Props) {
           </div>
 
           <div className="mt-3 rounded border border-neutral-700 bg-neutral-800 p-4">
-            <RenderBlock block={block} showDebug={false} compact={compact} mode="preview" disableInteraction />
+            <RenderBlock block={block} showDebug={false} compact={compact} mode="preview" disableInteraction template={template} />
           </div>
         </>
       )}

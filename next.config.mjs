@@ -22,6 +22,7 @@ const nextConfig = {
       'placebear.com',
       'placekitten.com',
       'placehold.co',
+      'api.dicebear.com',
     ],
     /** ✅ Allow SVGs (you said you’re comfortable with the risk) */
     dangerouslyAllowSVG: true,

@@ -3,13 +3,16 @@
 import BlockAdderGrouped from '@/components/admin/block-adder-grouped';
 import SafeTriggerButton from '@/components/ui/safe-trigger-button';
 import { PlusCircle } from 'lucide-react';
+import { Template } from '@/types/template';
 
 export default function EmptyAddBlock({
   onAdd,
   existingBlocks,
+  template,
 }: {
   onAdd: (type: string) => void;
   existingBlocks: any[];
+  template: Template;
 }) {
   return (
     <div className="relative z-10 bg-white dark:bg-neutral-900 p-4 border-t border-gray-200 dark:border-neutral-700 mt-6">
@@ -25,6 +28,7 @@ export default function EmptyAddBlock({
             <span>Add Block</span>
           </SafeTriggerButton>
         }
+        template={template as Template}
       />
     </div>
   );

@@ -10,13 +10,16 @@ import GridThumbnailRenderer from "./grid-thumbnail-renderer";
 import Link from "next/link";
 import { supabase } from "@/lib/supabaseClient";
 import { useRouter } from "next/navigation";
+import { Template } from "@/types/template";
 
 export default function GridTemplateManager({
   onInsertTemplate,
   showPreview = true,
+  template,
 }: {
   onInsertTemplate?: (preset: GridPreset) => void;
   showPreview?: boolean;
+  template: Template;
 }) {
   const [presets, setPresets] = useState<GridPreset[]>([]);
   const [filter, setFilter] = useState<string | null>(null);
@@ -110,7 +113,7 @@ export default function GridTemplateManager({
                 </div>
               </div>
 
-              {showPreview && <GridThumbnailRenderer preset={preset} onSelect={onInsertTemplate} />}
+              {showPreview && <GridThumbnailRenderer preset={preset} onSelect={onInsertTemplate} template={template as Template} />}
 
               {onInsertTemplate && !showPreview && (
                 <div className="pt-2">

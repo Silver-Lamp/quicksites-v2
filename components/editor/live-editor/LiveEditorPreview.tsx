@@ -609,6 +609,8 @@ const softSelectByHref = (pages: any[], href: string, setSelectedPageId: (v: str
                       <div className="text-xs text-zinc-300">Shown on pages unless hidden or overridden.</div>
                       <div className="flex flex-wrap items-center gap-2 mt-2">
                         <span className="text-xs uppercase tracking-wide text-white/60">{selectedPage?.title} Page Settings:</span>
+                        </div>
+                        <div className="mt-2">
                         <button
                           type="button"
                           onClick={() => setPageChrome('show_header', !(selectedPage?.show_header !== false))}
@@ -631,6 +633,7 @@ const softSelectByHref = (pages: any[], href: string, setSelectedPageId: (v: str
                         >
                           Footer: {selectedPage?.show_footer !== false ? 'Visible' : 'Hidden'}
                         </button>
+                        </div>
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
@@ -651,7 +654,6 @@ const softSelectByHref = (pages: any[], href: string, setSelectedPageId: (v: str
                     </div>
                   </div>
                 </div>
-              </div>
               </CollapsiblePanel>
 
               <PageTabsBar

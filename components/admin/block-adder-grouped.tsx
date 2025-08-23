@@ -29,9 +29,42 @@ const blockGroups: Record<string, { label: string; types: Block['type'][] }> = {
   },
 };
 
-// ✅ Which block types have built-in AI assist in the editor
-const AI_ENABLED_TYPES = new Set<Block['type']>(['text'] as Block['type'][]);
+// ✅ Blocks with built-in AI assist
+// text: AI writer
+// testimonial: AI testimonial generator (uses industry/services)
+// faq: AI FAQ generator (uses industry/services)
+// service_areas: auto-generates service areas (treated as AI-enabled)
+const AI_ENABLED_TYPES = new Set<Block['type']>(
+  ['text', 'testimonial', 'faq', 'service_areas'] as Block['type'][]
+);
+
 const isAiType = (t: Block['type']) => AI_ENABLED_TYPES.has(t);
+
+const aiBadgeTitle = (t: Block['type']) => {
+  switch (t) {
+    case 'testimonial':
+      return 'AI-enabled: generate realistic testimonials using your industry & services';
+    case 'faq':
+      return 'AI-enabled: generate FAQs tailored to your industry & services';
+    case 'service_areas':
+      return 'AI-enabled: auto-generate service areas for your business';
+    default:
+      return 'AI-enabled: generate & rewrite content in the editor (⌘/Ctrl + J)';
+  }
+};
+
+const aiNote = (t: Block['type']) => {
+  switch (t) {
+    case 'testimonial':
+      return 'AI testimonial generator: short 1–2 sentence quotes that can reference your industry and services.';
+    case 'faq':
+      return 'AI FAQ generator: concise Q&A that reflects your industry and offered services.';
+    case 'service_areas':
+      return 'Auto-generates nearby cities/areas (and blurbs) to showcase your coverage.';
+    default:
+      return 'Built-in AI writing: intros, FAQs, CTAs, blog ideas, rewrite, shorten, expand.';
+  }
+};
 
 function loadCollapsedGroups(): Record<string, boolean> {
   if (typeof window === 'undefined') return {};
@@ -70,7 +103,9 @@ export default function BlockAdderGrouped({
 }: Props) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState('');
-  const [collapsedGroups, setCollapsedGroups] = useState<Record<string, boolean>>(() => loadCollapsedGroups());
+  const [collapsedGroups, setCollapsedGroups] = useState<Record<string, boolean>>(
+    () => loadCollapsedGroups()
+  );
 
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
@@ -166,92 +201,93 @@ export default function BlockAdderGrouped({
                     {label}
                   </div>
 
-                  {!collapsedGroups[key] && (
-                    <div className="pt-2 flex flex-col gap-4 px-4">
-                      {types.length > 0 ? (
-                        types.map((type) => {
-                          const meta = blockMeta[type as keyof typeof blockMeta];
-                          return (
-                            <div
-                              key={type}
-                              role="button"
-                              tabIndex={0}
-                              onClick={() => {
-                                onAdd(type);
-                                setSearch('');
-                                setOpen(false);
-                              }}
-                              onKeyDown={(e) => {
-                                if (e.key === 'Enter' || e.key === ' ') {
-                                  e.preventDefault();
+                    {!collapsedGroups[key] && (
+                      <div className="pt-2 flex flex-col gap-4 px-4">
+                        {types.length > 0 ? (
+                          types.map((type) => {
+                            const meta = blockMeta[type as keyof typeof blockMeta];
+                            const aiEnabled = isAiType(type);
+                            return (
+                              <div
+                                key={type}
+                                role="button"
+                                tabIndex={0}
+                                onClick={() => {
                                   onAdd(type);
                                   setSearch('');
                                   setOpen(false);
-                                }
-                              }}
-                              className={[
-                                'text-left px-4 py-4 rounded-md border bg-white dark:bg-neutral-900 space-y-3 cursor-pointer',
-                                'border-gray-300 dark:border-neutral-700',
-                                'hover:bg-gray-50 dark:hover:bg-neutral-800',
-                              ].join(' ')}
-                            >
-                              {/* Title row with AI badge */}
-                              <div className="flex items-center gap-2">
-                                <div className="text-lg">{meta.icon}</div>
-                                <div className="min-w-0">
-                                  <div className="font-medium text-gray-800 dark:text-white truncate">
-                                    {meta.label}
+                                }}
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter' || e.key === ' ') {
+                                    e.preventDefault();
+                                    onAdd(type);
+                                    setSearch('');
+                                    setOpen(false);
+                                  }
+                                }}
+                                className={[
+                                  'text-left px-4 py-4 rounded-md border bg-white dark:bg-neutral-900 space-y-3 cursor-pointer',
+                                  'border-gray-300 dark:border-neutral-700',
+                                  'hover:bg-gray-50 dark:hover:bg-neutral-800',
+                                ].join(' ')}
+                              >
+                                {/* Title row with AI badge */}
+                                <div className="flex items-center gap-2">
+                                  <div className="text-lg">{meta.icon}</div>
+                                  <div className="min-w-0">
+                                    <div className="font-medium text-gray-800 dark:text-white truncate">
+                                      {meta.label}
+                                    </div>
+                                    <div className="text-xs text-gray-500 dark:text-gray-400">
+                                      Block type: {type}
+                                    </div>
                                   </div>
-                                  <div className="text-xs text-gray-500 dark:text-gray-400">
-                                    Block type: {type}
-                                  </div>
+
+                                  {aiEnabled && (
+                                    <span
+                                      title={aiBadgeTitle(type)}
+                                      className="ml-auto inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px]
+                                                 bg-purple-100 text-purple-700 border-purple-300
+                                                 dark:bg-purple-600/15 dark:text-purple-200 dark:border-purple-500/40"
+                                    >
+                                      <Sparkles className="h-3 w-3" />
+                                      AI
+                                    </span>
+                                  )}
                                 </div>
 
-                                {isAiType(type) && (
-                                  <span
-                                    title="AI-enabled: generate & rewrite content in the editor (⌘/Ctrl + J)"
-                                    className="ml-auto inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px]
-                                               bg-purple-100 text-purple-700 border-purple-300
-                                               dark:bg-purple-600/15 dark:text-purple-200 dark:border-purple-500/40"
-                                  >
-                                    <Sparkles className="h-3 w-3" />
-                                    AI
-                                  </span>
+                                {/* AI note (type-specific) */}
+                                {aiEnabled && (
+                                  <div className="text-xs text-purple-700 dark:text-purple-300">
+                                    {aiNote(type)}
+                                  </div>
                                 )}
-                              </div>
 
-                              {/* Optional AI note (only for Text) */}
-                              {isAiType(type) && (
-                                <div className="text-xs text-purple-700 dark:text-purple-300">
-                                  Built-in AI writing: intros, FAQs, CTAs, blog ideas, rewrite, shorten, expand.
+                                {/* Mini preview with corner badge */}
+                                <div className="relative w-full border rounded overflow-hidden border-gray-300 dark:border-neutral-700">
+                                  <RenderBlockMini
+                                    block={createDefaultBlock(type) as any}
+                                    className="w-full h-32"
+                                    showDebug={false}
+                                    colorMode={colorMode}
+                                    template={template}
+                                  />
+                                  {aiEnabled && (
+                                    <span className="pointer-events-none absolute top-1.5 right-1.5 rounded px-1.5 py-0.5 text-[10px] font-medium bg-purple-600 text-white shadow">
+                                      ✨ AI
+                                    </span>
+                                  )}
                                 </div>
-                              )}
-
-                              {/* Mini preview with corner badge */}
-                              <div className="relative w-full border rounded overflow-hidden border-gray-300 dark:border-neutral-700">
-                                <RenderBlockMini
-                                  block={createDefaultBlock(type) as any}
-                                  className="w-full h-32"
-                                  showDebug={false}
-                                  colorMode={colorMode}
-                                  template={template}
-                                />
-                                {isAiType(type) && (
-                                  <span className="pointer-events-none absolute top-1.5 right-1.5 rounded px-1.5 py-0.5 text-[10px] font-medium bg-purple-600 text-white shadow">
-                                    ✨ AI
-                                  </span>
-                                )}
                               </div>
-                            </div>
-                          );
-                        })
-                      ) : (
-                        <div className="px-2 py-1 text-sm text-gray-400 dark:text-gray-500">
-                          None available
-                        </div>
-                      )}
-                    </div>
-                  )}
+                            );
+                          })
+                        ) : (
+                          <div className="px-2 py-1 text-sm text-gray-400 dark:text-gray-500">
+                            None available
+                          </div>
+                        )}
+                      </div>
+                    )}
                 </div>
               ))}
 

@@ -1,8 +1,8 @@
-// app/login/LoginForm.tsx
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
+import { createClient as createBrowserClient } from '@supabase/supabase-js';
 
 type BuildInfo = { sha?: string; env?: string; deployId?: string };
 
@@ -22,6 +22,16 @@ export default function LoginForm({ build }: { build?: BuildInfo }) {
   const [email, setEmail] = useState('');
   const [status, setStatus] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+
+  // Browser Supabase client (inherits user session from local storage)
+  const sb = useMemo(
+    () =>
+      createBrowserClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+      ),
+    []
+  );
 
   // optional: prefill during local dev
   useEffect(() => {
@@ -44,29 +54,47 @@ export default function LoginForm({ build }: { build?: BuildInfo }) {
     setStatus('Sending magic link…');
 
     try {
-      const body = { email: emailNorm, next: nextPath };
-      console.debug('[login] POST /api/login body =', body);
+      const origin = window.location.origin;
+      const redirectTo = `${origin}/auth/callback?next=${encodeURIComponent(nextPath)}`;
 
+      if (process.env.NODE_ENV !== 'production') {
+        // 🔒 DEV: send from the browser so redirect_to is always localhost
+        console.debug('[login] dev fallback → client signInWithOtp', { redirectTo });
+        const { error } = await sb.auth.signInWithOtp({
+          email: emailNorm,
+          options: { emailRedirectTo: redirectTo, shouldCreateUser: true },
+        });
+        if (error) throw error;
+        setStatus('✅ Check your email for the magic link.');
+        return;
+      }
+
+      // PROD: preferred flow via server route (uses the same redirectTo)
       const res = await fetch('/api/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
+        body: JSON.stringify({ email: emailNorm, next: nextPath }),
       });
 
       const data = await res.json().catch(() => ({} as any));
-      // Surface exactly what the server used
       if (data?.redirect || data?.origin) {
         console.debug('[login] /api/login response =', data);
       }
 
       if (!res.ok) {
-        setStatus(`❌ ${data?.error || 'Login failed.'}`);
-      } else {
-        setStatus('✅ Check your email for the magic link.');
+        // fall back to client if server failed
+        console.warn('[login] server route failed; fallback to client', data);
+        const { error } = await sb.auth.signInWithOtp({
+          email: emailNorm,
+          options: { emailRedirectTo: redirectTo, shouldCreateUser: true },
+        });
+        if (error) throw error;
       }
+
+      setStatus('✅ Check your email for the magic link.');
     } catch (err: any) {
-      console.error('[login] request error', err);
-      setStatus('❌ Network error. Please try again.');
+      console.error('[login] error', err);
+      setStatus(`❌ ${err?.message || 'Network error. Please try again.'}`);
     } finally {
       setIsLoading(false);
     }

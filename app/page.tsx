@@ -101,12 +101,12 @@ export default function HomePage() {
 
           {isLoggedIn && role !== 'guest' ? (
             <motion.a
-              href="/admin/dashboard"
+              href="/admin/tools"
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.97 }}
               className="inline-block mt-4 px-6 py-3 bg-green-600 hover:bg-green-700 text-white text-base font-medium rounded-lg shadow-lg transition-all"
             >
-              Go to Dashboard
+              Go to Admin Tools
             </motion.a>
           ) : isProd ? (
             <div className="mt-4 px-6 py-3 bg-zinc-700 text-white text-base font-medium rounded-lg shadow-lg opacity-70 cursor-not-allowed">

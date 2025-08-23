@@ -7,6 +7,7 @@ import type { Database } from '@/types/supabase';
 import { cookies } from 'next/headers';
 import { createServerClient } from '@supabase/ssr';
 import { Providers } from './providers';
+import MagicLinkBridge from '@/components/auth/MagicLinkBridge';
 
 export const metadata = { /* …your existing metadata… */ };
 
@@ -31,6 +32,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     <html lang="en" suppressHydrationWarning>
       <head><title>QuickSites | One-Click Local Websites</title></head>
       <body className="bg-background text-foreground min-h-screen">
+        <MagicLinkBridge />
         <Providers initialSession={session}>{children}</Providers>
       </body>
     </html>

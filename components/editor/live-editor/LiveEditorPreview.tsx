@@ -597,7 +597,7 @@ const softSelectByHref = (pages: any[], href: string, setSelectedPageId: (v: str
               {/* Global Header/Footer card */}
               <CollapsiblePanel
                 id="global-header-footer"
-                title="Header and Footer"
+                title="Header and Footer, Logo and Favicon"
                 defaultOpen={false}
               >
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

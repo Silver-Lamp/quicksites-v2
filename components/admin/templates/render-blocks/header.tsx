@@ -76,22 +76,24 @@ export default function PageHeader({
       <div className="w-full mx-auto max-w-screen-xl px-4 sm:px-6 lg:px-8 flex items-center justify-between h-20">
         {/* Logo */}
         {logoUrl ? (
-          <Link href="/" className="flex items-center" aria-label="Home" data-editor-logo>
+          <Link href="/" className="flex items-center shrink-0" aria-label="Home" data-editor-logo>
             <Image
               src={logoUrl}
               alt="Site Logo"
               width={60}
               height={60}
-              className="h-[60px] w-auto rounded"
+              className="h-[60px] w-auto rounded shrink-0"
               priority
             />
           </Link>
         ) : (
-          <div />
+          <div className="shrink-0" /> 
         )}
 
         {/* Desktop nav */}
-        <nav className="hidden md:flex gap-8 text-sm font-medium">
+        <nav className="hidden md:flex md:flex-1 min-w-0 items-center
+               gap-6 text-sm font-medium justify-center
+               overflow-x-auto whitespace-nowrap">
           {Array.isArray(navItems) &&
             navItems.map((item, i) => (
               <Link
@@ -107,14 +109,14 @@ export default function PageHeader({
         {/* Hamburger icon (mobile) */}
         {!previewOnly ? (
           <button
-            className={`md:hidden ${textColor}`}
+            className={`md:hidden ${textColor} shrink-0`}
             onClick={() => setMenuOpen((prev) => !prev)}
             aria-label="Toggle menu"
           >
             {menuOpen ? <X size={24} /> : <Menu size={24} />}
           </button>
         ) : (
-          <div className={`md:hidden ${textColor} opacity-50`}>
+          <div className={`md:hidden ${textColor} opacity-50 shrink-0`}>
             <Menu size={24} />
           </div>
         )}

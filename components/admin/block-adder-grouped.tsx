@@ -13,7 +13,6 @@ import type { Template } from '@/types/template';
 const blockGroups: Record<string, { label: string; types: Block['type'][] }> = {
   callToAction: {
     label: 'Calls to Action',
-    // types: ['hero', 'cta', 'contact_form', 'button'],
     types: ['hero', 'contact_form'],
   },
   services: {
@@ -22,13 +21,8 @@ const blockGroups: Record<string, { label: string; types: Block['type'][] }> = {
   },
   content: {
     label: 'Content Blocks',
-    // types: ['text', 'quote', 'faq', 'testimonial', 'video', 'audio', 'chef_profile', 'meal_card', 'reviews_list'],
-    types: ['text', 'quote', 'faq', 'testimonial', 'video', 'audio']
+    types: ['text', 'quote', 'faq', 'testimonial', 'video', 'audio'],
   },
-  // layout: {
-  //   label: 'Layout',
-  //   types: ['grid'],
-  // },
 };
 
 // ✅ Blocks with built-in AI assist
@@ -36,9 +30,10 @@ const blockGroups: Record<string, { label: string; types: Block['type'][] }> = {
 // hero: AI hero copy (headline/subheadline/CTA) + hero image generator
 // testimonial: AI testimonial generator (uses industry/services)
 // faq: AI FAQ generator (uses industry/services)
-// service_areas: auto-generates service areas (treated as AI-enabled)
+// services: AI service list suggester (uses industry/locale)
+// service_areas: AI nearby-cities generator (uses city/state/lat/lon)
 const AI_ENABLED_TYPES = new Set<Block['type']>(
-  ['text', 'hero', 'testimonial', 'faq', 'service_areas'] as Block['type'][]
+  ['text', 'hero', 'testimonial', 'faq', 'services', 'service_areas'] as Block['type'][]
 );
 
 const isAiType = (t: Block['type']) => AI_ENABLED_TYPES.has(t);
@@ -51,8 +46,10 @@ const aiBadgeTitle = (t: Block['type']) => {
       return 'AI-enabled: generate realistic testimonials using your industry & services';
     case 'faq':
       return 'AI-enabled: generate FAQs tailored to your industry & services';
+    case 'services':
+      return 'AI-enabled: suggest service list from your industry';
     case 'service_areas':
-      return 'AI-enabled: auto-generate service areas for your business';
+      return 'AI-enabled: auto-generate nearby service areas (uses your location)';
     default:
       return 'AI-enabled: generate & rewrite content in the editor (⌘/Ctrl + J)';
   }
@@ -66,8 +63,10 @@ const aiNote = (t: Block['type']) => {
       return 'AI testimonial generator: short 1–2 sentence quotes that can reference your industry and services.';
     case 'faq':
       return 'AI FAQ generator: concise Q&A that reflects your industry and offered services.';
+    case 'services':
+      return 'Suggests a clean list of customer-facing services (used by contact forms).';
     case 'service_areas':
-      return 'Auto-generates nearby cities/areas (and blurbs) to showcase your coverage.';
+      return 'Generates a list of nearby cities/areas (and blurbs) using your city/state or lat/lon.';
     default:
       return 'Built-in AI writing: intros, FAQs, CTAs, blog ideas, rewrite, shorten, expand.';
   }

@@ -92,7 +92,7 @@ export default async function TemplatesIndexPage({
   const hiddenCount = rows.length - deduped.length;
 
   return (
-    <>
+    <div className="soft-borders mx-auto max-w-6xl p-6 pb-[350px] lg:pb-[420px] mt-12"> 
       {/* Header / controls above the table */}
       {/* <div className="mb-3 flex items-center justify-between">
         <div className="text-sm text-zinc-400">
@@ -103,6 +103,6 @@ export default async function TemplatesIndexPage({
 
       {/* <TemplatesIndexTable templates={deduped} selectedFilter={dateParam} /> */}
       <TemplatesIndexWithLoading templates={deduped} selectedFilter={dateParam} />
-    </>
+    </div>
   );
 }

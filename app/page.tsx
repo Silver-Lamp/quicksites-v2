@@ -22,11 +22,11 @@ const defaultGlowConfig = {
 };
 
 const features = [
-  "🚀 AI-generated websites in seconds",
-  "🧠 Built-in SEO optimization",
-  "📱 Mobile-ready, always",
-  "🎨 Fully customizable designs",
-  "🔒 Secure & privacy-respecting",
+  '🚀 AI-generated websites in seconds',
+  '🧠 Built-in SEO optimization',
+  '📱 Mobile-ready, always',
+  '🎨 Fully customizable designs',
+  '🔒 Secure & privacy-respecting',
 ];
 
 export default function HomePage() {
@@ -65,6 +65,7 @@ export default function HomePage() {
         <title>QuickSites | One Click Websites</title>
         <meta name="description" content="Launch your local business site in seconds with AI." />
       </Head>
+
       {showGlow && (
         <>
           <BackgroundGlow />
@@ -99,35 +100,68 @@ export default function HomePage() {
             Turn your local business into a digital presence in minutes. No code. No hassle.
           </p>
 
+          {/* CTAs */}
           {isLoggedIn && role !== 'guest' ? (
-            <motion.a
-              href="/admin/tools"
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.97 }}
-              className="inline-block mt-4 px-6 py-3 bg-green-600 hover:bg-green-700 text-white text-base font-medium rounded-lg shadow-lg transition-all"
-            >
-              Go to Admin Tools
-            </motion.a>
-          ) : isProd ? (
-            <div className="mt-4 px-6 py-3 bg-zinc-700 text-white text-base font-medium rounded-lg shadow-lg opacity-70 cursor-not-allowed">
-              Log In (Coming Soon)
-            </div>
-          ) : (
-            <motion.a
-              href="/login"
+            <div className="mt-4 flex flex-wrap items-center justify-center gap-3">
+              <motion.a
+                href="/admin/tools"
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.97 }}
-                className="inline-block mt-4 px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white text-base font-medium rounded-lg shadow-lg transition-all"
+                className="inline-block px-6 py-3 bg-green-600 hover:bg-green-700 text-white text-base font-medium rounded-lg shadow-lg transition-all"
+              >
+                Go to Admin Tools
+              </motion.a>
+              <motion.a
+                href="/pricing"
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.97 }}
+                className="inline-block px-6 py-3 border border-zinc-700 hover:bg-zinc-800 text-white text-base font-medium rounded-lg transition-all"
+              >
+                See Pricing
+              </motion.a>
+            </div>
+          ) : isProd ? (
+            <div className="mt-4 flex flex-wrap items-center justify-center gap-3">
+              <div className="px-6 py-3 bg-zinc-700 text-white text-base font-medium rounded-lg shadow-lg opacity-70 cursor-not-allowed">
+                Log In (Coming Soon)
+              </div>
+              <motion.a
+                href="/pricing"
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.97 }}
+                className="inline-block px-6 py-3 border border-zinc-700 hover:bg-zinc-800 text-white text-base font-medium rounded-lg transition-all"
+              >
+                See Pricing
+              </motion.a>
+            </div>
+          ) : (
+            <div className="mt-4 flex flex-wrap items-center justify-center gap-3">
+              <motion.a
+                href="/login"
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.97 }}
+                className="inline-block px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white text-base font-medium rounded-lg shadow-lg transition-all"
               >
                 Log In to Get Started
               </motion.a>
-            )}                      
+              <motion.a
+                href="/pricing"
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.97 }}
+                className="inline-block px-6 py-3 border border-zinc-700 hover:bg-zinc-800 text-white text-base font-medium rounded-lg transition-all"
+              >
+                See Pricing
+              </motion.a>
+            </div>
+          )}
         </div>
       </main>
 
       <footer className="relative z-10 text-center text-xs text-zinc-600 py-4">
         &copy; {new Date().getFullYear()} QuickSites.ai — All rights reserved.
         <span className="mx-2">|</span>
+        <a href="/pricing" className="underline hover:text-zinc-800 dark:hover:text-zinc-200">Pricing</a>
+        <span className="mx-1">•</span>
         <a href="/legal/privacy" className="underline hover:text-zinc-800 dark:hover:text-zinc-200">Privacy</a>
         <span className="mx-1">•</span>
         <a href="/legal/terms" className="underline hover:text-zinc-800 dark:hover:text-zinc-200">Terms</a>
@@ -135,7 +169,6 @@ export default function HomePage() {
         {/* Widget always loaded */}
         <QuickSitesWidget forceVariant="puppy" />
       </footer>
-
     </div>
   );
 }

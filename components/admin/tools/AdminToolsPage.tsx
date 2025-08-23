@@ -115,7 +115,7 @@ export function AdminToolsPage() {
 
   return (
     <main className="soft-borders mx-auto max-w-6xl p-6 pb-[350px] lg:pb-[420px]">
-      <header id="top" className="mb-6">
+      <header id="top" className="mb-6 mt-12">
         <h1 className="text-2xl font-semibold">Admin Tools</h1>
         <p className="text-sm text-muted-foreground">
           Quick actions to seed accounts and move quickly in demos. Use the left

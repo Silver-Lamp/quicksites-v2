@@ -51,23 +51,24 @@ function firstPageSlug(site: PublicSiteRow): string {
 async function loadSiteForRequest(): Promise<{ site: PublicSiteRow; host: string } | null> {
   const h = await headers();
   const host = (h.get('x-forwarded-host') ?? h.get('host') ?? '')
-    .toLowerCase()
-    .replace(/\.$/, '');
-  if (!host) return null;
+  .toLowerCase()
+  .replace(/\.$/, '');
+
+const variants = host.startsWith('www.')
+  ? [host, host.slice(4)]                   // ["www.example.com", "example.com"]
+  : [host, `www.${host}`];     
 
   const supabase = await getServerSupabase();
 
   // 1) Exact custom-domain match
   const r1 = await supabase
-    .from('templates')
-    .select(selectColumns)
-    .eq('is_site', true)
-    .eq('published', true)
-    .eq('archived', false)
-    .eq('domain_lc', host)
-    .returns<PublicSiteRow>()
-    .maybeSingle();
-
+  .from('templates')
+  .select(selectColumns)
+  .eq('is_site', true)
+  .eq('published', true)
+  .eq('archived', false)
+  .in('domain_lc', variants)                // <-- accept either variant
+  .maybeSingle<PublicSiteRow>();
   let site = r1.data ?? null;
 
   // 2) *.BASE_DOMAIN subdomain support (e.g., foo.quicksites.ai)

@@ -12,6 +12,7 @@ import event from '@vercel/analytics';
 import { useSafeAuth } from '../hooks/useSafeAuth';
 import { SiteFlags } from '@/lib/site-config';
 import useMediaQuery from '@/hooks/useMediaQuery';
+import SiteHeader from '@/components/site/site-header';
 
 // shadcn/ui
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
@@ -21,6 +22,7 @@ import { Badge } from '@/components/ui/badge';
 // supabase
 import { createClient as createBrowserClient } from '@supabase/supabase-js';
 import LazyVideoEmbed from '@/components/ui/lazy-video-embed';
+
 
 const isProd = process.env.NODE_ENV === 'production';
 
@@ -115,6 +117,8 @@ export default function HomePage() {
   }, [user?.id, user?.email, role, isLoggedIn, currentFeatureIndex]);
 
   return (
+    <>
+    <SiteHeader sticky={true} />
     <div className="relative min-h-screen flex flex-col bg-zinc-950 text-white overflow-hidden">
       <Head>
         <title>QuickSites | One Click Websites</title>
@@ -124,7 +128,7 @@ export default function HomePage() {
       {showGlow && (
         <>
           <BackgroundGlow />
-          <GlowConfigurator defaultGlowConfig={defaultGlowConfig as GlowConfig} />
+          {/* <GlowConfigurator defaultGlowConfig={defaultGlowConfig as GlowConfig} /> */}
         </>
       )}
 
@@ -298,5 +302,6 @@ export default function HomePage() {
         <QuickSitesWidget forceVariant="puppy" />
       </footer>
     </div>
+    </>
   );
 }

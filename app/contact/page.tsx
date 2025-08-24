@@ -2,6 +2,7 @@
 
 import React from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { motion } from 'framer-motion';
 import { Mail, ArrowRight, Phone, Sparkles, Check, Loader } from 'lucide-react';
 
@@ -12,10 +13,11 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
+import SiteHeader from '@/components/site/site-header';
 
 const EMAIL_SALES = 'sandon@quicksites.ai';
 const EMAIL_SUPPORT = 'sandon@quicksites.ai';
-const API_PATH = '/api/contact'; // optional server route (we can scaffold if not present)
+const API_PATH = '/api/contact';
 
 export default function ContactPage() {
   const [name, setName] = React.useState('');
@@ -47,19 +49,16 @@ export default function ContactPage() {
       const res = await fetch(API_PATH, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, email, company, sites: Number(sites) || 0, message, migrating, wantFounder, includeAI }),
+        body: JSON.stringify({
+          name, email, company, sites: Number(sites) || 0,
+          message, migrating, wantFounder, includeAI
+        }),
       });
-
       if (!res.ok) throw new Error(`Request failed: ${res.status}`);
+
       setSuccess('Thanks! We received your message and will reply within 1 business day.');
-      setName('');
-      setEmail('');
-      setCompany('');
-      setSites('');
-      setMessage('');
-      setMigrating(false);
-      setIncludeAI(false);
-      setWantFounder(true);
+      setName(''); setEmail(''); setCompany(''); setSites(''); setMessage('');
+      setMigrating(false); setIncludeAI(false); setWantFounder(true);
     } catch (err) {
       console.error(err);
       setError('Something went wrong sending your message. You can also email us directly.');
@@ -69,7 +68,9 @@ export default function ContactPage() {
   }
 
   return (
-    <div className="relative">
+    <>
+    <SiteHeader sticky={true} />
+    <div className="relative min-h-screen flex flex-col bg-zinc-950 text-white overflow-hidden">
       {/* Hero */}
       <section className="relative overflow-hidden">
         <motion.div
@@ -80,11 +81,18 @@ export default function ContactPage() {
         >
           <div className="mb-3 flex flex-wrap items-center gap-2">
             <Badge variant="outline">Contact</Badge>
-            <Badge variant="secondary" className="flex items-center gap-1"><Sparkles className="h-3.5 w-3.5"/>Founder Window</Badge>
+            <Badge variant="secondary" className="flex items-center gap-1">
+              <Sparkles className="h-3.5 w-3.5" /> Founder Window
+            </Badge>
           </div>
           <h1 className="text-3xl md:text-5xl font-semibold tracking-tight">Talk to a human</h1>
-          <p className="mt-3 max-w-2xl text-muted-foreground">Have questions about pricing, migrations, or the AI Assist Pack? Send a message — we usually reply within one business day.</p>
+          <p className="mt-3 max-w-2xl text-muted-foreground">
+            Have questions about pricing, migrations, or the AI Assist Pack? Send a message — we usually reply within one business day.
+          </p>
           <div className="mt-6 flex flex-wrap items-center gap-3">
+            <Link href="/book" className="inline-flex">
+              <Button size="lg" variant="outline">Book a demo</Button>
+            </Link>
             <Link href="/pricing" className="inline-flex">
               <Button size="lg" variant="ghost">See Pricing</Button>
             </Link>
@@ -101,7 +109,7 @@ export default function ContactPage() {
 
       {/* Form + Info */}
       <section className="mx-auto max-w-6xl px-6 pb-14 grid grid-cols-1 md:grid-cols-3 gap-6">
-        <Card className="md:col-span-2">
+        <Card className="md:col-span-2 border-zinc-800/50">
           <CardHeader>
             <CardTitle>Send us a message</CardTitle>
             <CardDescription>We’ll follow up at the email you provide. Fields marked * are required.</CardDescription>
@@ -117,24 +125,11 @@ export default function ContactPage() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="name">Name *</Label>
-                  <Input
-                    id="name"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    placeholder="Jane Doe"
-                    required
-                  />
+                  <Input id="name" value={name} onChange={(e) => setName(e.target.value)} placeholder="Jane Doe" required />
                 </div>
                 <div>
                   <Label htmlFor="email">Email *</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="you@agency.com"
-                    required
-                  />
+                  <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@agency.com" required />
                 </div>
               </div>
 
@@ -164,18 +159,13 @@ export default function ContactPage() {
                   onChange={(e) => setMessage(e.target.value)}
                   placeholder="Tell us what you’re building, your timeline, and anything else we should know."
                   required
-                  className="mt-2 w-full rounded-md border border-border bg-background p-3 text-sm outline-none focus:ring-2 focus:ring-primary"
+                  className="mt-2 w-full rounded-md border border-zinc-800/50 bg-background p-3 text-sm outline-none focus:ring-2 focus:ring-primary"
                   rows={6}
                 />
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* <ToggleLine
-                  id="migrating"
-                  label={<span className="flex items-center gap-2">Migrating from Site Panda?<Badge variant="secondary">We’ll help</Badge></span>}
-                  checked={migrating}
-                  onChange={setMigrating}
-                /> */}
+                {/* <ToggleLine id="migrating" ... /> */}
                 <ToggleLine
                   id="founder"
                   label="Request Founder pricing (grandfathered)"
@@ -184,7 +174,7 @@ export default function ContactPage() {
                 />
                 <ToggleLine
                   id="ai"
-                  label={<span className="flex items-center gap-2"><Sparkles className="h-4 w-4"/>Interested in AI Assist Pack</span>}
+                  label={<span className="flex items-center gap-2"><Sparkles className="h-4 w-4" />Interested in AI Assist Pack</span>}
                   checked={includeAI}
                   onChange={setIncludeAI}
                 />
@@ -204,9 +194,9 @@ export default function ContactPage() {
               <div className="flex items-center gap-3">
                 <Button type="submit" disabled={isSubmitting}>
                   {isSubmitting ? (
-                    <span className="inline-flex items-center gap-2"><Loader className="h-4 w-4 animate-spin"/>Sending…</span>
+                    <span className="inline-flex items-center gap-2"><Loader className="h-4 w-4 animate-spin" />Sending…</span>
                   ) : (
-                    <span className="inline-flex items-center gap-2">Send message<ArrowRight className="h-4 w-4"/></span>
+                    <span className="inline-flex items-center gap-2">Send message<ArrowRight className="h-4 w-4" /></span>
                   )}
                 </Button>
                 <p className="text-xs text-muted-foreground">We reply within 1 business day.</p>
@@ -216,37 +206,44 @@ export default function ContactPage() {
         </Card>
 
         <aside className="space-y-6">
-          <Card>
+          <Card className="border-zinc-800/50">
             <CardHeader>
               <CardTitle>Contact</CardTitle>
               <CardDescription>Pick the channel that suits you.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-3 text-sm">
               <a href={`mailto:${EMAIL_SALES}`} className="group inline-flex items-center gap-2">
-                <Mail className="h-4 w-4"/>
+                <Mail className="h-4 w-4" />
                 <span>Sales:</span>
                 <span className="font-medium group-hover:underline">{EMAIL_SALES}</span>
               </a>
               <a href={`mailto:${EMAIL_SUPPORT}`} className="group inline-flex items-center gap-2">
-                <Mail className="h-4 w-4"/>
+                <Mail className="h-4 w-4" />
                 <span>Support:</span>
                 <span className="font-medium group-hover:underline">{EMAIL_SUPPORT}</span>
               </a>
-              <div className="text-xs text-muted-foreground">Prefer a quick call? Include your phone and availability and we’ll schedule.</div>
+              <div className="text-xs text-muted-foreground">
+                Prefer a quick call? Include your phone and availability and we’ll schedule.
+              </div>
             </CardContent>
-            <CardFooter>
-              <Link href="/pricing" className="inline-flex"><Button variant="outline">View pricing</Button></Link>
+            <CardFooter className="flex gap-2">
+              <Link href="/pricing" className="inline-flex">
+                <Button variant="outline">View pricing</Button>
+              </Link>
+              <Link href="/book" className="inline-flex">
+                <Button variant="secondary">Book a demo</Button>
+              </Link>
             </CardFooter>
           </Card>
 
-          <Card>
+          <Card className="border-zinc-800/50">
             <CardHeader>
               <CardTitle>FAQ</CardTitle>
               <CardDescription>Short answers to common questions.</CardDescription>
             </CardHeader>
             <CardContent className="text-sm space-y-3">
               <FaqItem q="Can you migrate my sites?" a="Yes. We can provide a guided migration from other platforms. We’ll also honor Founder pricing for 12 months." />
-              <FaqItem q="Do I need the AI add‑on?" a="No. The base platform includes everything to build and host. The AI pack is optional and can be added per user later." />
+              <FaqItem q="Do I need the AI add-on?" a="No. The base platform includes everything to build and host. The AI pack is optional and can be added per user later." />
               <FaqItem q="Is there an annual option?" a="We’re starting monthly-only during beta; annual plans will arrive as we exit beta." />
             </CardContent>
           </Card>
@@ -255,26 +252,43 @@ export default function ContactPage() {
 
       {/* Bottom CTA */}
       <section className="mx-auto max-w-6xl px-6 pb-14">
-        <Card className="bg-gradient-to-br from-primary/5 to-transparent">
+        <Card className="bg-gradient-to-br from-primary/5 to-transparent border-zinc-800/50">
           <CardContent className="py-8 flex flex-col md:flex-row items-center justify-between gap-6">
             <div>
               <h3 className="text-xl md:text-2xl font-semibold">Ready to switch?</h3>
               <p className="text-muted-foreground">Tell us what you’re building and we’ll help you launch — fast.</p>
             </div>
             <div className="flex items-center gap-3">
-              <Link href="/pricing" className="inline-flex"><Button size="lg" variant="outline">See pricing</Button></Link>
-              <a href={`mailto:${EMAIL_SALES}`} className="inline-flex"><Button size="lg">Email sales<ArrowRight className="ml-2 h-4 w-4"/></Button></a>
+              <Link href="/pricing" className="inline-flex">
+                <Button size="lg" variant="outline">See pricing</Button>
+              </Link>
+              <Link href="/book" className="inline-flex">
+                <Button size="lg" variant="secondary">
+                  Book a demo <ArrowRight className="ml-2 h-4 w-4" />
+                </Button>
+              </Link>
+              <a href={`mailto:${EMAIL_SALES}`} className="inline-flex">
+                <Button size="lg">
+                  Email sales <ArrowRight className="ml-2 h-4 w-4" />
+                </Button>
+              </a>
             </div>
           </CardContent>
         </Card>
       </section>
     </div>
+    </>
   );
 }
 
-function ToggleLine({ id, label, checked, onChange }: { id: string; label: React.ReactNode; checked: boolean; onChange: (v: boolean) => void }) {
+function ToggleLine({
+  id, label, checked, onChange,
+}: { id: string; label: React.ReactNode; checked: boolean; onChange: (v: boolean) => void }) {
   return (
-    <label htmlFor={id} className="flex items-center justify-between gap-3 rounded-lg border p-3 cursor-pointer select-none">
+    <label
+      htmlFor={id}
+      className="flex items-center justify-between gap-3 rounded-lg border border-zinc-800/50 p-3 cursor-pointer select-none"
+    >
       <span className="text-sm">{label}</span>
       <Switch id={id} checked={checked} onCheckedChange={onChange} />
     </label>

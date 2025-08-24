@@ -2,7 +2,6 @@
 
 import React from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
 import { motion } from 'framer-motion';
 import { Check, ArrowRight, Sparkles } from 'lucide-react';
 
@@ -13,6 +12,7 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
+import SiteHeader from '@/components/site/site-header';
 
 /**
  * QuickSites Pricing Page
@@ -88,15 +88,17 @@ function Calculator({
   const [pricePerSite, setPricePerSite] = React.useState(49); // what you charge your clients
 
   const numbers = plan === 'founder' ? FOUNDER_PLAN : PUBLIC_PLAN;
-
   const clamp = (n: number, min: number, max: number) => Math.min(max, Math.max(min, n));
 
-  const platformCost = numbers.platform;         // per user
-  const perSiteFlat = numbers.perSite;           // flat per-site
-  const siteCost = perSiteFlat * sites;          // monthly per-site total
-  const aiCost = includeAI ? AI_ADDON_PER_USER : 0; // per user
-  const monthlyCost = platformCost + siteCost + aiCost;
+  // Costs (your costs)
+  const platformCost = numbers.platform;                // per user
+  const perSiteFlat = numbers.perSite;                  // flat per-site cost to you
+  const siteCost = perSiteFlat * sites;                 // per-site cost total
+  const aiCost = includeAI ? AI_ADDON_PER_USER : 0;     // per user
+  const perUserTotal = platformCost + aiCost;           // merged: platform + AI (if enabled)
+  const monthlyCost = perUserTotal + siteCost;
 
+  // Revenue & margin (what you charge)
   const monthlyRevenue = pricePerSite * sites;
   const grossMargin = monthlyRevenue - monthlyCost;
 
@@ -106,6 +108,7 @@ function Calculator({
         <CardTitle>Estimate your monthly cost</CardTitle>
         <CardDescription>Quick napkin math — adjust sites and what you charge.</CardDescription>
       </CardHeader>
+
       <CardContent className="space-y-6 overflow-hidden">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {/* Sites slider + input */}
@@ -179,20 +182,56 @@ function Calculator({
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <SummaryTile label="Platform" value={usd.format(platformCost)} sub="per user / mo" />
-          <SummaryTile label={`Per-site × ${sites}`} value={usd.format(siteCost)} sub={`${usd.format(perSiteFlat)} each`} />
-          <SummaryTile label="AI Pack" value={usd.format(aiCost)} sub={includeAI ? '+$10/user' : 'optional'} />
+        {/* Merged tiles (Platform + AI) and Per-site */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <SummaryTile
+            label="Per user total"
+            value={usd.format(perUserTotal)}
+            sub={
+              includeAI
+                ? `${usd.format(platformCost)} platform + ${usd.format(AI_ADDON_PER_USER)} AI`
+                : `${usd.format(platformCost)} platform (AI optional)`
+            }
+          />
+          <SummaryTile
+            label={`Per-site cost × ${sites}`}
+            value={usd.format(siteCost)}
+            sub={`${usd.format(perSiteFlat)} each`}
+          />
         </div>
 
+        {/* Revenue & margin (react to price slider) */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <SummaryTile label="Your revenue" value={usd.format(monthlyRevenue)} sub={`${usd.format(pricePerSite)} × ${sites}`} highlight />
-          <SummaryTile label="Gross margin" value={usd.format(grossMargin)} sub="before payment processing" highlight subtle />
+          <SummaryTile
+            label="Your revenue"
+            value={usd.format(monthlyRevenue)}
+            sub={`${usd.format(pricePerSite)} × ${sites}`}
+            highlight
+          />
+          <SummaryTile
+            label="Gross margin"
+            value={usd.format(grossMargin)}
+            sub="before payment processing"
+            highlight
+            subtle
+          />
         </div>
+
+        {/* Live breakdown */}
+        <p className="text-xs text-muted-foreground" aria-live="polite">
+          {sites} site{sites === 1 ? '' : 's'} × {usd.format(pricePerSite)} billed ={' '}
+          <span className="font-medium text-foreground">{usd.format(monthlyRevenue)}</span> revenue. Your per-user total{' '}
+          <span className="font-medium text-foreground">{usd.format(perUserTotal)}</span> + per-site costs{' '}
+          <span className="font-medium text-foreground">{usd.format(siteCost)}</span> ={' '}
+          <span className="font-medium text-foreground">{usd.format(monthlyCost)}</span>. Estimated gross margin:{' '}
+          <span className="font-medium text-foreground">{usd.format(grossMargin)}</span>.
+        </p>
       </CardContent>
     </Card>
   );
 }
+
+
 
 function SummaryTile({ label, value, sub, highlight = false, subtle = false }:{
   label: string; value: string; sub?: string; highlight?: boolean; subtle?: boolean;
@@ -346,19 +385,9 @@ export default function PricingPage() {
   const numbers = mode === 'founder' ? FOUNDER_PLAN : PUBLIC_PLAN;
 
   return (
-    <div className="relative">
-      {/* Simple top nav with home links */}
-      <header className="border-b border-zinc-800/40">
-        <div className="mx-auto max-w-6xl px-6 py-3 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-2">
-            <Image src="/favicon.ico" alt="QuickSites" width={24} height={24} className="rounded" />
-            <span className="text-sm text-zinc-300">QuickSites</span>
-          </Link>
-          <Link href="/" className="inline-flex">
-            <Button variant="ghost" size="sm">← Back home</Button>
-          </Link>
-        </div>
-      </header>
+    <>
+    <SiteHeader sticky={true} />
+    <div className="relative min-h-screen flex flex-col bg-zinc-950 text-white overflow-hidden">
 
       {/* hero */}
       <section className="relative overflow-hidden">
@@ -469,6 +498,7 @@ export default function PricingPage() {
         </div>
       </section>
     </div>
+    </>
   );
 }
 

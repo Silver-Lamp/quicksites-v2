@@ -6,6 +6,7 @@ import { createServerClient } from '@supabase/ssr';
 import FeatureGalleryClient from './client-gallery';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import SiteHeader from '@/components/site/site-header';
 
 export const revalidate = 60;
 
@@ -80,21 +81,12 @@ export default async function FeaturesPage() {
   }
 
   return (
-    <div className="relative">
-      {/* Top header */}
-      <header className="border-b border-zinc-800/40">
-        <div className="mx-auto max-w-6xl px-6 py-3 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-2">
-            <Image src="/favicon.ico" alt="QuickSites" width={24} height={24} className="rounded" />
-            <span className="text-sm text-zinc-300">QuickSites</span>
-          </Link>
-          <Link href="/" className="inline-flex">
-            <Button variant="ghost" size="sm">← Back home</Button>
-          </Link>
-        </div>
-      </header>
+    <>
+    <SiteHeader sticky={true} />
+    <div className="relative min-h-screen flex flex-col bg-zinc-950 text-white overflow-hidden">
 
       <FeatureGalleryClient initialRows={(data ?? []) as FeatureRow[]} />
     </div>
+    </>
   );
 }

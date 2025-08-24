@@ -5,32 +5,21 @@ import { motion } from 'framer-motion';
 import Link from 'next/link';
 import { Calendar, ArrowRight, Sparkles } from 'lucide-react';
 
-import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
+import {
+  Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter
+} from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { Label } from '@/components/ui/label';
+import SiteHeader from '@/components/site/site-header';
 
 const CALENDLY_URL = process.env.NEXT_PUBLIC_CALENDLY_URL || '';
 
 export default function BookPage() {
-  // fallback form state
-  const [name, setName] = React.useState('');
-  const [email, setEmail] = React.useState('');
-  const [msg, setMsg] = React.useState('');
-  const [sent, setSent] = React.useState(false);
-  const ok = name.trim() && /\S+@\S+\.\S+/.test(email);
-
-  async function onSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    // TODO: swap to your existing contact API/email action
-    console.log('Demo request:', { name, email, msg });
-    setSent(true);
-  }
-
   return (
-    <div className="relative">
+    <>
+    <SiteHeader sticky={true} />
+    <div className="relative min-h-screen flex flex-col bg-zinc-950 text-white overflow-hidden">
+
       {/* hero */}
       <section className="relative overflow-hidden">
         <motion.div
@@ -59,6 +48,12 @@ export default function BookPage() {
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
             </Link>
+            <Link href="/pricing" className="inline-flex">
+              <Button size="lg" variant="ghost">
+                See pricing
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </Button>
+            </Link>
           </div>
         </motion.div>
         <div className="pointer-events-none absolute inset-0 -z-10 bg-gradient-to-b from-transparent via-primary/5 to-transparent" />
@@ -67,17 +62,24 @@ export default function BookPage() {
       {/* body */}
       <section className="mx-auto max-w-6xl px-6 pb-12 grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Calendly embed (if provided) */}
-        <Card className="h-full">
+        <Card
+          className={[
+            'h-full border-zinc-800/50',
+            'ring-1 ring-purple-500/25',
+            'bg-gradient-to-br from-purple-500/10 via-purple-500/5 to-transparent',
+            'shadow-[0_10px_40px_-12px_rgba(168,85,247,0.45)]',
+          ].join(' ')}
+        >
           <CardHeader>
             <div className="flex items-center gap-2">
-              <Calendar className="h-5 w-5" />
+              <Calendar className="h-5 w-5 text-purple-400" />
               <CardTitle>Pick a time</CardTitle>
             </div>
             <CardDescription>Connect on Zoom and get answers fast.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             {CALENDLY_URL ? (
-              <div className="aspect-video rounded-lg overflow-hidden border">
+              <div className="aspect-video rounded-lg overflow-hidden border border-zinc-800/50">
                 <iframe
                   title="Book a demo"
                   className="w-full h-full"
@@ -86,7 +88,7 @@ export default function BookPage() {
                 />
               </div>
             ) : (
-              <div className="rounded-lg border bg-muted/40 p-4 text-sm text-muted-foreground">
+              <div className="rounded-lg border border-zinc-800/50 bg-muted/40 p-4 text-sm text-muted-foreground">
                 Set <code>NEXT_PUBLIC_CALENDLY_URL</code> to show your scheduler here.
               </div>
             )}
@@ -98,37 +100,34 @@ export default function BookPage() {
           </CardFooter>
         </Card>
 
-        {/* Fallback request form */}
-        <Card className="h-full">
+        {/* Route to Contact instead of email form */}
+        <Card className="h-full border-zinc-800/50">
           <CardHeader>
-            <CardTitle>Request a custom demo</CardTitle>
-            <CardDescription>Tell us your use case — we’ll tailor the walkthrough.</CardDescription>
+            <CardTitle>No time on the calendar?</CardTitle>
+            <CardDescription>
+              Tell us your use case and preferred times — we’ll reply within 1 business day.
+            </CardDescription>
           </CardHeader>
-          <CardContent>
-            {sent ? (
-              <div className="rounded-lg bg-green-500/10 border border-green-500/30 p-4 text-sm">
-                Thanks! We’ll reply shortly.
-              </div>
-            ) : (
-              <form onSubmit={onSubmit} className="space-y-4">
-                <div>
-                  <Label htmlFor="name">Name</Label>
-                  <Input id="name" value={name} onChange={(e) => setName(e.target.value)} required />
-                </div>
-                <div>
-                  <Label htmlFor="email">Email</Label>
-                  <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
-                </div>
-                <div>
-                  <Label htmlFor="msg">What would you like to see?</Label>
-                  <Textarea id="msg" rows={5} value={msg} onChange={(e) => setMsg(e.target.value)} />
-                </div>
-                <Button type="submit" disabled={!ok}>Send request</Button>
-              </form>
-            )}
+          <CardContent className="space-y-3 text-sm text-muted-foreground">
+            <p>
+              Use our contact form to share details about your sites, migration plans, or the AI Assist Pack.
+              We’ll follow up with a tailored demo or async walkthrough.
+            </p>
           </CardContent>
+          <CardFooter className="flex gap-2">
+            <Link href="/contact" className="inline-flex">
+              <Button size="lg" variant="secondary">
+                Go to contact form
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </Button>
+            </Link>
+            <Link href="/features" className="inline-flex">
+              <Button size="lg" variant="outline">Explore features</Button>
+            </Link>
+          </CardFooter>
         </Card>
       </section>
     </div>
+    </>
   );
 }

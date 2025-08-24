@@ -8,8 +8,11 @@ import type { Template, Snapshot } from '@/types/template';
 import { TemplateEditorProvider } from '@/context/template-editor-context';
 import { prepareTemplateForSave } from '@/admin/lib/prepareTemplateForSave';
 import { cleanTemplateDataStructure } from '@/admin/lib/cleanTemplateData';
+import AdminChrome from '../admin-chrome';
 
-type Props = { slug: string };
+type EditWrapperProps =
+  | { id: string; slug?: never; initialTemplate?: Template }
+  | { slug: string; id?: never; initialTemplate?: Template };
 
 // --- helpers ----------------------------------------------------
 function coalescePages(obj: any): any[] {
@@ -20,105 +23,113 @@ function coalescePages(obj: any): any[] {
 function coalesceBlock(obj: any, key: 'headerBlock' | 'footerBlock') {
   return obj?.data?.[key] ?? obj?.[key] ?? null;
 }
-function withSyncedPages<T extends { data?: any; pages?: any[] }>(tpl: T, pages: any[]): T {
-  return { ...tpl, pages, data: { ...(tpl.data ?? {}), pages } } as T;
-}
 // ----------------------------------------------------------------
 
-export default function EditWrapper({ slug }: Props) {
+export default function EditWrapper(props: EditWrapperProps) {
+  const isId = 'id' in props;
+  const column = isId ? 'id' : 'slug';
+  const value = isId ? props.id : props.slug;
+
   const [data, setData] = useState<Snapshot | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const loadTemplate = async () => {
-      const { data: raw, error } = await supabase
-        .from('templates')
-        .select('*')
-        .eq('slug', slug)
-        .maybeSingle<Template>();
+    let cancelled = false;
 
-      if (error || !raw) {
-        if (error) console.error(`[EditWrapper] Supabase error for slug "${slug}":`, error.message);
+    const hydrate = async (rawIn?: Template | null) => {
+      const raw = rawIn ?? null;
+
+      if (!raw) {
         setData(null);
         setLoading(false);
         return;
       }
 
-      // 1) Pull pages/blocks straight from DB BEFORE any transforms
+      // Grab DB pages/blocks BEFORE transforms
       const pagesFromDB = coalescePages(raw);
       const headerFromDB = coalesceBlock(raw, 'headerBlock');
       const footerFromDB = coalesceBlock(raw, 'footerBlock');
 
-      console.log('[📦 Raw Supabase template]', raw);
-
-      // 2) Normalize (may shuffle things; don't trust it for pages)
+      // Normalize (structure/compat)
       let normalized = normalizeTemplate(raw);
 
-      // 3) Prep + clean layout (this may drop keys; we’ll re-inject)
+      // Prep + clean (layout-only), then re-inject authoritative pieces
       const dbPayload = prepareTemplateForSave(normalized);
       const layoutOnly = cleanTemplateDataStructure(dbPayload);
 
-      // 4) Build the layout data explicitly
       const cleanedLayout: Record<string, any> = {
-        // force pages back in
         pages: pagesFromDB,
-        // keep any meta or allowed bits that survived cleaning
         ...(layoutOnly?.meta ? { meta: layoutOnly.meta } : {}),
-        // force blocks back in
         ...(headerFromDB ? { headerBlock: headerFromDB } : {}),
         ...(footerFromDB ? { footerBlock: footerFromDB } : {}),
       };
 
-      // 5) Final snapshot mirrored both ways
-      // const final: Snapshot = withSyncedPages(
-      //   {
-      //     ...normalized,
-      //     data: cleanedLayout,
-      //     // keep root blocks too for any legacy readers
-      //     ...(headerFromDB ? { headerBlock: headerFromDB } : {}),
-      //     ...(footerFromDB ? { footerBlock: footerFromDB } : {}),
-      //   } as Snapshot,
-      //   pagesFromDB
-      // );
+      // Choose pages (prefer normalized top-level if present)
+      const normTopPages = Array.isArray((normalized as any).pages) ? (normalized as any).pages : [];
+      const pages = normTopPages.length ? normTopPages : (Array.isArray(cleanedLayout.pages) ? cleanedLayout.pages : []);
 
-      // console.log('[🧩 EditWrapper -> final snapshot]', {
-      //   rootPages: final.pages?.length,
-      //   dataPages: final.data?.pages?.length,
-      //   firstPage: final.data?.pages?.[0]?.slug,
-      // });
-
-
-      const layoutPages = Array.isArray(cleanedLayout?.pages) ? cleanedLayout.pages : [];
-      const normalizedTopPages =
-        Array.isArray((normalized as any).pages) ? (normalized as any).pages : layoutPages;
-      
-      const pages = normalizedTopPages.length ? normalizedTopPages : layoutPages;
-      
-      const final: Snapshot = {
+      const finalSnap: Snapshot = {
         ...normalized,
-        pages,                                        // <-- mirror to top-level
-        data: { ...cleanedLayout, pages },            // <-- and canonical location
+        pages,                               // mirror to top level
+        data: { ...cleanedLayout, pages },   // canonical location
       };
-      
-      console.log('[🧩 EditWrapper -> final snapshot]', {
-        rootPages: final.pages?.length ?? 0,
-        dataPages: final.data?.pages?.length ?? 0,
-        firstPage: final.data?.pages?.[0]?.slug,
-      });
-      
-      setData(final); 
-      setLoading(false);
+
+      if (!cancelled) {
+        setData(finalSnap);
+        setLoading(false);
+      }
     };
 
-    loadTemplate();
-  }, [slug]);
+    const load = async () => {
+      setLoading(true);
+
+      // If server already provided the row, use it (avoids re-fetch)
+      if (props.initialTemplate) {
+        await hydrate(props.initialTemplate);
+        return;
+      }
+
+      // Client fetch (RLS enforced): id → eq('id', …), slug → eq('slug', …)
+      const { data: raw, error } = await supabase
+        .from('templates')
+        .select('*')
+        .eq(column, value)
+        .maybeSingle<Template>();
+
+      if (error || !raw) {
+        if (error) console.error(`[EditWrapper] Supabase error for ${column}="${value}":`, error.message);
+        if (!cancelled) {
+          setData(null);
+          setLoading(false);
+        }
+        return;
+      }
+
+      await hydrate(raw);
+    };
+
+    load();
+
+    return () => {
+      cancelled = true;
+    };
+    // re-run when the key changes
+  }, [column, value, props.initialTemplate]);
 
   if (loading) return <div className="p-6 text-muted-foreground text-sm italic">Loading template...</div>;
   if (!data) return <div className="p-6 text-red-500">Template not found.</div>;
 
+  // Derive a nice label for editor chrome
+  const templateLabel =
+    data.template_name ||
+    (isId ? props.id : props.slug) ||
+    'Template';
+
   return (
-    <TemplateEditorProvider templateName={slug} colorMode="light">
-      <TemplateEditor templateName={data.template_name} initialData={data} colorMode="light" />
-    </TemplateEditorProvider>
+    <AdminChrome>
+      <TemplateEditorProvider templateName={templateLabel} colorMode="dark">
+        <TemplateEditor templateName={data.template_name} initialData={data} colorMode="dark" />
+      </TemplateEditorProvider>
+    </AdminChrome>
   );
 }

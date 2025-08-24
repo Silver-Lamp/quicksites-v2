@@ -37,7 +37,7 @@ export default function AdminSidebar({
   return (
     <aside
       className={clsx(
-        'group fixed top-0 left-0 z-40 h-screen bg-zinc-900 border-r border-zinc-800 text-white overflow-y-auto transition-all duration-300 flex flex-col',
+        'group fixed top-0 left-0 z-40 h-screen bg-zinc-900 border-r border-zinc-800 text-white overflow-y-auto transition-all duration-300 flex flex-col mt-12',
         isCollapsed ? 'w-14 group-hover:w-72' : 'w-72'
       )}
     >
@@ -62,7 +62,6 @@ export default function AdminSidebar({
       </div>
 
       <div className={clsx('flex-1', isCollapsed && 'overflow-hidden')}>
-        <h1>hello</h1>
         <AdminNavSections collapsed={isCollapsed} />
       </div>
     </aside>

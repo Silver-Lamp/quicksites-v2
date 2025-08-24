@@ -1,13 +1,18 @@
 // app/profile/page.tsx
 'use client';
 
+import AppHeader from '@/components/admin/AppHeader/app-header';
 import ProfileForm from '@/components/profile-form';
+import AdminNav from '@/components/admin/admin-sidebar';
 
 export default function ProfilePage() {
   return (
-    <div className="max-w-xl mx-auto py-12 px-4">
-      <h1 className="text-2xl font-bold mb-6">Your Profile</h1>
-      <ProfileForm />
+    <div className="flex flex-col gap-4">
+      <AppHeader />
+      <AdminNav />
+      <div className="max-w-xl mx-auto py-12 px-4">
+        <ProfileForm />
+      </div>
     </div>
   );
 }

@@ -10,6 +10,8 @@ import { toast } from 'react-hot-toast';
 import Image from 'next/image';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { RewardTally } from '@/components/reward-tally';
+import { Badge } from '@/components/ui/badge';
+import { Loader, Rocket, ChartBar, Mail, Map, Phone, ImageIcon, Star, Shield, Link2, Sparkles } from 'lucide-react';
 
 export default function ProfileForm() {
   const { user, role } = useCurrentUser();
@@ -22,8 +24,13 @@ export default function ProfileForm() {
   const [accessRequests, setAccessRequests] = useState<any[]>([]);
   const [rewardPoints, setRewardPoints] = useState(0);
   const [refLink, setRefLink] = useState('');
-  const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
 
+  // Membership state
+  const [membership, setMembership] = useState<any | null>(null);
+  const [loadingMembership, setLoadingMembership] = useState(true);
+  const [sendingTrialReq, setSendingTrialReq] = useState(false);
+
+  const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
   const email = user?.email ?? '';
 
   useEffect(() => {
@@ -62,6 +69,22 @@ export default function ProfileForm() {
         });
     }
   }, [role]);
+
+  // Fetch membership info for this user
+  useEffect(() => {
+    (async () => {
+      try {
+        setLoadingMembership(true);
+        const r = await fetch('/api/me/membership', { cache: 'no-store' });
+        const j = await r.json();
+        if (r.ok && j?.membership) setMembership(j.membership);
+      } catch {
+        // ignore
+      } finally {
+        setLoadingMembership(false);
+      }
+    })();
+  }, []);
 
   const handleSave = async () => {
     const { error } = await supabase.auth.updateUser({
@@ -120,6 +143,39 @@ export default function ProfileForm() {
     }
   };
 
+  const requestProTrial = async () => {
+    try {
+      setSendingTrialReq(true);
+      const r = await fetch('/api/contact/pro-trial', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          plan: 'pro',
+          message: `User ${email} requested a Pro trial from Profile page`,
+          context: { page: 'profile' },
+        }),
+      });
+      if (!r.ok) throw new Error('Request failed');
+      toast.success('Request sent! We\'ll reach out shortly.');
+    } catch (e: any) {
+      toast.error(e?.message ?? 'Could not send request');
+    } finally {
+      setSendingTrialReq(false);
+    }
+  };
+
+  const statusBadge = () => {
+    if (!membership) return null;
+    const s = membership.status;
+    if (s === 'trialing') return <Badge>Trialing</Badge>;
+    if (s === 'active') return <Badge variant="default">Active</Badge>;
+    if (s === 'none') return <Badge variant="secondary">Free</Badge>;
+    return <Badge variant="secondary">{s}</Badge>;
+  };
+
+  const trialEnds = membership?.trial_end ? new Date(membership.trial_end) : null;
+  const trialActive = membership?.status === 'trialing' && trialEnds && trialEnds.getTime() > Date.now();
+
   return (
     <div className="space-y-6">
       <div className="text-white">
@@ -129,9 +185,48 @@ export default function ProfileForm() {
             <div className="mb-6">
               <RewardTally points={rewardPoints} />
             </div>
+
+            {/* Membership card */}
+            <div className="bg-zinc-800 p-4 rounded text-sm border border-zinc-700">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <div className="text-zinc-400">Membership</div>
+                  {loadingMembership ? (
+                    <div className="flex items-center gap-2 mt-1 text-zinc-300">
+                      <Loader className="h-4 w-4 animate-spin" />
+                      <span>Loading…</span>
+                    </div>
+                  ) : (
+                    <div className="mt-1">
+                      <div className="flex items-center gap-2">
+                        <span className="text-white font-medium capitalize">{membership?.label ?? 'Free'}</span>
+                        {statusBadge()}
+                      </div>
+                      {trialActive && (
+                        <div className="text-xs text-zinc-400 mt-1">
+                          Trial ends {trialEnds?.toLocaleDateString()}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+                <div className="shrink-0 flex gap-2">
+                  <Button
+                    variant="secondary"
+                    onClick={requestProTrial}
+                    disabled={sendingTrialReq || trialActive || !user?.id}
+                    className={!user?.id ? 'opacity-50 cursor-not-allowed' : ''}
+                    title={trialActive ? 'Trial already active' : 'Request a Pro trial'}
+                  >
+                    {sendingTrialReq ? 'Sending…' : 'Request Pro Trial'}
+                  </Button>
+                </div>
+              </div>
+            </div>
+
             <div className="bg-zinc-800 p-4 rounded text-sm">
               <div className="text-zinc-400 mb-1">Your referral link:</div>
-              <code className="text-blue-400">{refLink}</code>
+              <code className="text-blue-400 break-all">{refLink}</code>
             </div>
           </>
         )}
@@ -234,6 +329,42 @@ export default function ProfileForm() {
           </p>
         </div>
       )}
+
+      {/* Features scroller */}
+      <FeaturesScroller />
+    </div>
+  );
+}
+
+function FeaturesScroller() {
+  const items = [
+    { icon: Sparkles, title: 'Instant AI sites', blurb: 'Generate and launch templates fast with AI-assisted blocks.' },
+    { icon: ChartBar, title: 'SEO + GSC', blurb: 'Bulk stats, CTR/position tables, sitemaps & robots per site.' },
+    { icon: ImageIcon, title: 'OG & previews', blurb: 'Live OG image generation and shareable comparison cards.' },
+    { icon: Mail, title: 'Inbox & forms', blurb: 'Centralized lead capture, contact routing, and notifications.' },
+    { icon: Phone, title: 'Call tracking', blurb: 'Twilio logs and attribution to pages, campaigns, and leads.' },
+    { icon: Map, title: 'The Grid', blurb: 'Geographic coverage map with revenue estimator & CTAs.' },
+    { icon: Star, title: 'Campaigns', blurb: 'City races, second-chance flows, and claim funnels.' },
+    { icon: Shield, title: 'Compliance', blurb: 'Profiles & snapshots to keep merchants in good standing.' },
+    { icon: Link2, title: 'Affiliate mode', blurb: 'Referrals, payouts, and scoped dashboards for partners.' },
+    { icon: Rocket, title: 'Pro performance', blurb: 'Faster builds, priority features, and advanced blocks.' },
+  ];
+  return (
+    <div className="pt-8">
+      <h3 className="text-white font-semibold mb-3">What you get with Pro</h3>
+      <div className="-mx-4 px-4 overflow-x-auto">
+        <ul className="flex gap-3 pb-2">
+          {items.map((f) => (
+            <li key={f.title} className="min-w-[240px] shrink-0 rounded-2xl border border-zinc-700 bg-zinc-800 p-4">
+              <div className="flex items-center gap-2">
+                <f.icon className="h-5 w-5" />
+                <div className="text-white font-medium">{f.title}</div>
+              </div>
+              <div className="text-sm text-zinc-400 mt-2">{f.blurb}</div>
+            </li>
+          ))}
+        </ul>
+      </div>
     </div>
   );
 }

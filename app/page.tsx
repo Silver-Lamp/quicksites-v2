@@ -232,7 +232,7 @@ export default function HomePage() {
         </div>
 
         {featLoading ? (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 border-zinc-500/30">
             {[...Array(3)].map((_, i) => (
               <Card key={i} className="h-full overflow-hidden">
                 <div className="animate-pulse aspect-video bg-zinc-800/50" />
@@ -247,10 +247,10 @@ export default function HomePage() {
             ))}
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-3 xl:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 xl:grid-cols-3 gap-6 border-zinc-500/30">
             {featured.map((f) => (
               <Card key={f.id} className="h-full flex flex-col overflow-hidden">
-                <div className="aspect-video w-full border-b border-zinc-800/70 overflow-hidden">
+                <div className="aspect-video w-full border-b border-zinc-500/30 overflow-hidden">
                   {f.video_url ? (
                     <LazyVideoEmbed url={f.video_url} title={f.title} className="h-full w-full" />
                   ) : (
@@ -289,7 +289,7 @@ export default function HomePage() {
       </div>
     </section>
 
-      <footer className="relative z-10 text-center text-xs text-zinc-600 py-4">
+      <footer className="relative z-10 text-center text-xs text-zinc-600 py-4 border-t border-zinc-500/30">
         &copy; {new Date().getFullYear()} QuickSites.ai — All rights reserved.
         <span className="mx-2">|</span>
         <a href="/pricing" className="underline hover:text-zinc-800 dark:hover:text-zinc-200">Pricing</a>

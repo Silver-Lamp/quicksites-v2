@@ -18,6 +18,8 @@
   {
     "path": "/api/cron/weekly-compliance-digest",
     "schedule": "0 16 * * 1"
-  }
+  },
+  { "path": "/api/admin/users/plan/expire-trials", "schedule": "0 * * * *" }
+
 ]
 }

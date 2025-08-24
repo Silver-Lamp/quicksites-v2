@@ -1,5 +1,5 @@
 import { notFound } from 'next/navigation';
-import { fetchTemplateBySlug } from '@/app/template/[slug]/template-loader';
+import { fetchTemplateBySlug } from '@/app/template/[key]/template-loader';
 import type { Snapshot } from '@/types/template';
 import { TemplateEditorProvider } from '@/context/template-editor-context';
 import TemplateEditorLayout from '@/components/admin/templates/template-editor-layout';

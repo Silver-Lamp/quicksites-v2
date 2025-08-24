@@ -1,31 +1,21 @@
 // app/admin/templates/list/page.tsx
-'use server';
+// (No 'use server' here)
+
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
 
 import { getFromDate } from '@/lib/getFromDate';
-// import TemplatesIndexTable from '@/components/admin/templates/templates-index-table';
-// import VersionsToggle from '@/components/admin/templates/versions-toggle';
 import { getServerSupabase } from '@/lib/supabase/server';
-import TemplatesIndexWithLoading from '@/components/admin/templates/templates-index-with-loading';
+import TemplatesIndexTable from '@/components/admin/templates/templates-index-table';
 
-type SearchParams = {
-  date?: string;
-  versions?: string; // 'all' to show all versions
-};
+type SearchParams = { date?: string; versions?: string };
 
 // normalize "deliveredmenu2-im55-cy91" -> "deliveredmenu2"
 function baseSlug(slug: string | null | undefined) {
   if (!slug) return '';
-  // remove one or more "-token" suffix groups (2–12 alnum chars each)
   return slug.replace(/(-[a-z0-9]{2,12})+$/i, '');
 }
-
-function isCanonical(slug: string | null | undefined) {
-  if (!slug) return false;
-  return slug === baseSlug(slug);
-}
-
 function hasPages(t: any) {
-  // Handles both legacy `pages` and canonical `data.pages`
   const p1 = Array.isArray(t?.pages) && t.pages.length > 0;
   const p2 = Array.isArray(t?.data?.pages) && t.data.pages.length > 0;
   return p1 || p2;
@@ -34,75 +24,77 @@ function hasPages(t: any) {
 export default async function TemplatesIndexPage({
   searchParams,
 }: {
-  searchParams: Promise<SearchParams>;
+  searchParams?: SearchParams;
 }) {
   const supabase = await getServerSupabase();
 
-  const resolvedParams = await searchParams;
-  const dateParam = resolvedParams?.date || '';
-  const includeVersions = resolvedParams?.versions === 'all';
+  const dateParam = (searchParams?.date as string) || '';
+  const includeVersions = searchParams?.versions === 'all';
   const fromDate = getFromDate(dateParam);
 
+  // Auth (server-side)
+  const { data: { user }, error: userErr } = await supabase.auth.getUser();
+  if (userErr || !user) {
+    return (
+      <div className="mx-auto max-w-6xl p-6 mt-12">
+        <p className="text-sm text-zinc-400">Please sign in to view your templates.</p>
+      </div>
+    );
+  }
+
+  // Owner-scoped query (RLS still enforces this)
   let query = supabase
     .from('templates')
     .select('*')
-    .order('updated_at', { ascending: false })
-    .eq('archived', false);
+    .eq('archived', false)
+    .eq('owner_id', user.id)
+    .order('updated_at', { ascending: false });
 
-  if (fromDate) {
-    query = query.gte('updated_at', fromDate.toISOString());
-  }
+  if (fromDate) query = query.gte('updated_at', fromDate.toISOString());
 
   const { data: templates, error } = await query;
-
   if (error) {
     console.error('Error loading templates:', error.message);
+    return (
+      <div className="mx-auto max-w-6xl p-6 mt-12">
+        <p className="text-sm text-red-400">Failed to load templates.</p>
+      </div>
+    );
   }
 
-  const rows = templates || [];
+  const rows = templates ?? [];
 
-  // Group by base slug (fallbacks keep behavior sane if slug missing)
+  // Group by base slug
   const groups = new Map<string, any[]>();
   for (const t of rows) {
     const slug = (t as any).slug || (t as any).template_name || (t as any).id || '';
-    const base = (t as any).base_slug || baseSlug(slug); // prefer DB-computed base
+    const base = (t as any).base_slug || baseSlug(slug);
     const arr = groups.get(base) || [];
     arr.push(t);
     groups.set(base, arr);
   }
-  
-  // Pick one per group (unchanged)
+
   const pickPerBase = (items: any[]) => {
-    const canonical = items.find((t) =>
-      ((t?.slug ?? '') as string) === ((t?.base_slug as string) || baseSlug(t?.slug ?? ''))
+    const canonical = items.find(
+      (t) => ((t?.slug ?? '') as string) === ((t?.base_slug as string) || baseSlug(t?.slug ?? ''))
     );
     if (canonical) return canonical;
-  
+
     const withPages = items
       .filter((t) => hasPages(t))
       .sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime());
     if (withPages[0]) return withPages[0];
-  
+
     return items.sort(
       (a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime()
     )[0];
   };
-  
+
   const deduped = includeVersions ? rows : Array.from(groups.values()).map(pickPerBase);
-  const hiddenCount = rows.length - deduped.length;
 
   return (
-    <div className="soft-borders mx-auto max-w-6xl p-6 pb-[350px] lg:pb-[420px] mt-12"> 
-      {/* Header / controls above the table */}
-      {/* <div className="mb-3 flex items-center justify-between">
-        <div className="text-sm text-zinc-400">
-          {deduped.length} template{deduped.length === 1 ? '' : 's'}
-        </div>
-        <VersionsToggle hiddenCount={hiddenCount} />
-      </div> */}
-
-      {/* <TemplatesIndexTable templates={deduped} selectedFilter={dateParam} /> */}
-      <TemplatesIndexWithLoading templates={deduped} selectedFilter={dateParam} />
+    <div className="soft-borders mx-auto max-w-6xl p-6 pb-[350px] lg:pb-[420px] mt-12">
+      <TemplatesIndexTable templates={deduped} selectedFilter={dateParam} />
     </div>
   );
 }

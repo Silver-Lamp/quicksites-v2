@@ -105,11 +105,12 @@ const navItems: NavItem[] = [
     ],
   },
   { type: 'section', label: 'Workflow' },
-  { type: 'item', label: 'Platform Pricing', href: '/pricing', icon: <DollarSign size={18} /> },
-
-  { type: 'item', label: 'Features', href: '/features', icon: <PlayCircle size={18} /> },
-  { type: 'item', label: 'Book a demo', href: '/book', icon: <Book size={18} /> },
+  { type: 'item', label: 'Users', href: '/admin/users', icon: <Users size={18} /> },
   { type: 'item', label: 'Feature Video Manager', href: '/admin/features/manage', icon: <Video size={18} /> },
+  { type: 'item', label: 'Features', href: '/features', icon: <PlayCircle size={18} /> },
+  { type: 'item', label: 'Platform Pricing', href: '/pricing', icon: <DollarSign size={18} /> },
+  { type: 'item', label: 'Book a demo', href: '/book', icon: <Book size={18} /> },
+  { type: 'item', label: 'Contact', href: '/contact', icon: <Mail size={18} /> },
   { type: 'item', label: 'Dev', href: '/admin/dev', icon: <Wrench size={18} /> },
 
   {
@@ -132,7 +133,6 @@ const navItems: NavItem[] = [
   { type: 'item', label: 'Admin', href: '/admin/tools', icon: <Wrench size={18} /> },
   { type: 'item', label: 'Meals', href: '/admin/meals', icon: <ChefHat size={18} /> },
   { type: 'item', label: 'Chefs', href: '/chef/dashboard', icon: <ChefHat size={18} /> },
-  { type: 'item', label: 'Dev', href: '/admin/dev', icon: <Wrench size={18} /> },
   // { type: 'section', label: 'Experimental' },
   // { type: 'item', label: 'Outreach (Coming Soon)', href: '/admin/outreach', icon: <Mail size={18} /> },
   // { type: 'item', label: 'Revenue Estimator', href: '/admin/tools/revenue-estimator', icon: <DollarSign size={18} /> },
@@ -145,7 +145,6 @@ const navItems: NavItem[] = [
   // { type: 'item', label: 'Heatmap', href: '/admin/heatmap', icon: <ChartBar size={18} /> },
   // { type: 'item', label: '404s', href: '/admin/not-found', icon: <AlertCircle size={18} /> },
   // { type: 'item', label: 'Sitemap Diffs', href: '/docs/diffs', icon: <FileText size={18} /> },
-  // { type: 'item', label: 'Users', href: '/admin/users', icon: <Users size={18} /> },
   // { type: 'item', label: 'Roles', href: '/admin/roles', icon: <Shield size={18} /> },
   // { type: 'item', label: 'Notifications', href: '/admin/logs/notifications', icon: <Bell size={18} /> },
   // { type: 'item', label: 'Session Logs', href: '/admin/logs/sessions', icon: <User size={18} /> },

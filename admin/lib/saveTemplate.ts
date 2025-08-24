@@ -34,16 +34,27 @@ function stripUndefined(obj: Record<string, any>) {
   return obj;
 }
 
+// small helper
+const omit = <T extends object, K extends keyof T>(obj: T, ...keys: K[]): Omit<T, K> => {
+  const clone: any = { ...obj };
+  for (const k of keys) delete clone[k];
+  return clone;
+};
+
 export async function saveTemplate(input: any, id?: string): Promise<Template> {
   const supabase = await getSupabaseForAction();
 
-  // If caller passed { db, header_block, footer_block }, unwrap it; otherwise use input as source.
-  const src = input?.db ? input.db : input;
-  const rowId = id ?? src?.id;
+  // auth
+  const { data: { user }, error: userErr } = await supabase.auth.getUser();
+  if (userErr || !user) throw new Error('Not authenticated');
 
-  const payload: Record<string, any> = {
+  // unwrap input
+  const src = input?.db ? input.db : input;
+  const rowId = id ?? src?.id ?? undefined;
+
+  // common payload
+  const basePayload: Record<string, any> = {
     id: rowId,
-    // core strings
     template_name: trimOrNull(src?.template_name),
     slug: trimOrNull(src?.slug),
     layout: trimOrNull(src?.layout),
@@ -53,7 +64,6 @@ export async function saveTemplate(input: any, id?: string): Promise<Template> {
     industry: trimOrNull(src?.industry),
     color_mode: trimOrNull(src?.color_mode),
 
-    // DB canonical fields
     business_name: trimOrNull(src?.business_name),
     contact_email: trimOrNull(src?.contact_email),
     phone: digitsOrNull(src?.phone),
@@ -67,25 +77,51 @@ export async function saveTemplate(input: any, id?: string): Promise<Template> {
     latitude: numberOrNull(src?.latitude),
     longitude: numberOrNull(src?.longitude),
 
-    // JSON fields
     data: src?.data ?? {},
 
-    // snapshots (prefer explicit snapshots if caller sent {db,...})
     header_block: (input?.header_block ?? src?.header_block ?? src?.headerBlock) ?? null,
     footer_block: (input?.footer_block ?? src?.footer_block ?? src?.footerBlock) ?? null,
 
-    // optional services array (if caller included it)
     services: cleanServices(src?.services),
+    // DO NOT trust client owner_id; we decide below
   };
 
-  stripUndefined(payload);
+  stripUndefined(basePayload);
 
-  const { data, error } = await supabase
-    .from('templates')
-    .upsert(payload, { onConflict: 'id' })
-    .select()
-    .single();
+  // decide: create vs update
+  let exists = false;
+  if (rowId) {
+    const { data: existing, error: existsErr } = await supabase
+      .from('templates')
+      .select('id, owner_id')
+      .eq('id', rowId)
+      .maybeSingle();
 
-  if (error) throw new Error(JSON.stringify(error));
-  return data as unknown as Template;
+    if (existsErr) throw new Error(JSON.stringify(existsErr));
+    exists = !!existing;
+  }
+
+  if (!exists) {
+    // CREATE: include owner_id from session (write-once)
+    const payload = { ...basePayload, owner_id: user.id };
+    const { data, error } = await supabase
+      .from('templates')
+      .insert(payload)
+      .select()
+      .single();
+    if (error) throw new Error(JSON.stringify(error));
+    return data as Template;
+  } else {
+    // UPDATE: never send owner_id; DB trigger prevents changes too
+    const payload = omit(basePayload, 'owner_id');
+    const { data, error } = await supabase
+      .from('templates')
+      .update(payload)
+      .eq('id', rowId!)
+      .select()
+      .single();
+    if (error) throw new Error(JSON.stringify(error));
+    return data as Template;
+  }
 }
+

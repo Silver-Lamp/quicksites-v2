@@ -125,6 +125,7 @@ export function normalizeTemplate(entry: any): Template {
 
   const normalized: Template = {
     id: entry.id,
+    owner_id: entry.owner_id ?? '',
     site_id: entry.site_id ?? '',
     template_name: derivedName,
     slug: derivedSlug,

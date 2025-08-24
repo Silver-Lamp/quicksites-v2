@@ -1,3 +1,4 @@
+// app/api/admin/users/list/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { createServerClient, type CookieOptions } from '@supabase/ssr';
@@ -56,6 +57,75 @@ export async function GET(req: NextRequest) {
     : users;
 
   const userIds = filtered.map(u => u.id);
+
+  // 0) Plans — prefer user_plans if present; else try Stripe-like tables
+  const planByUser = new Map<string, any>();
+  try {
+    const { data: ups, error: e } = await (admin as any)
+      .from('user_plans')
+      .select('user_id, plan, status, price_id, current_period_end, cancel_at, trial_end, updated_at')
+      .in('user_id', userIds);
+    if (!e) {
+      (ups ?? []).forEach((p: any) => {
+        if (p?.user_id) planByUser.set(p.user_id, { source: 'user_plans', ...p, label: p.plan });
+      });
+    }
+  } catch {}
+
+  const stillMissing = userIds.filter((id) => !planByUser.has(id));
+  if (stillMissing.length) {
+    const subTables = [
+      { name: 'subscriptions', fields: 'user_id, status, price_id, current_period_end, cancel_at, trial_end, updated_at' },
+      { name: 'billing_subscriptions', fields: 'user_id, status, price_id, current_period_end, cancel_at, trial_end, updated_at' },
+      { name: 'stripe_subscriptions', fields: 'user_id, status, price_id, current_period_end, cancel_at, trial_end, updated_at' },
+    ];
+    for (const t of subTables) {
+      const missingNow = userIds.filter((id) => !planByUser.has(id));
+      if (!missingNow.length) break;
+      try {
+        const { data: subs, error: e } = await (admin as any)
+          .from(t.name)
+          .select(t.fields)
+          .in('user_id', missingNow);
+        if (!e) {
+          (subs ?? []).forEach((s: any) => {
+            if (s?.user_id && !planByUser.has(s.user_id)) {
+              planByUser.set(s.user_id, { source: t.name, ...s });
+            }
+          });
+        }
+      } catch {}
+    }
+
+    // Enrich with price nickname/lookup_key/product name where possible
+    const priceIds = Array.from(planByUser.values())
+      .map((p: any) => p?.price_id)
+      .filter(Boolean);
+    let priceById = new Map<string, any>();
+    try {
+      const { data: prices } = await (admin as any)
+        .from('prices')
+        .select('id, nickname, lookup_key, product_id')
+        .in('id', priceIds);
+      priceById = new Map((prices ?? []).map((p: any) => [p.id, p]));
+    } catch {}
+
+    let productById = new Map<string, any>();
+    try {
+      const { data: products } = await (admin as any)
+        .from('products')
+        .select('id, name');
+      productById = new Map((products ?? []).map((p: any) => [p.id, p]));
+    } catch {}
+
+    for (const [uid, p] of Array.from(planByUser.entries())) {
+      if (p.source === 'user_plans') continue; // already labeled
+      const price = p?.price_id ? priceById.get(p.price_id) : null;
+      const product = price?.product_id ? productById.get(price.product_id) : null;
+      const label = price?.nickname ?? price?.lookup_key ?? product?.name ?? null;
+      planByUser.set(uid, { ...p, plan: label ?? null, label });
+    }
+  }
 
   // 2) tables (tolerate schema drift)
   const { data: chefs = [] } = await (admin as any)
@@ -125,6 +195,8 @@ export async function GET(req: NextRequest) {
       snap?.overall ??
       (prof ? 'pending' : 'none');
 
+    const plan = planByUser.get(u.id) ?? null;
+
     return {
       id: u.id,
       email: u.email,
@@ -147,6 +219,17 @@ export async function GET(req: NextRequest) {
         profile: prof,
         snapshot: snap,
         overall,
+      },
+      plan: plan && {
+        source: plan.source ?? 'unknown',
+        key: plan.plan ?? plan.label ?? null,
+        label: plan.label ?? plan.plan ?? null,
+        status: plan.status ?? null,
+        price_id: plan.price_id ?? null,
+        current_period_end: plan.current_period_end ?? null,
+        cancel_at: plan.cancel_at ?? null,
+        trial_end: plan.trial_end ?? null,
+        updated_at: plan.updated_at ?? null,
       },
     };
   });

@@ -2,6 +2,7 @@
 "use client";
 
 import { useState, useMemo, useEffect } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { formatDistanceToNow } from 'date-fns';
 import { Input } from '@/components/ui/input';
@@ -43,7 +44,6 @@ export default function TemplatesIndexTable({
       .filter((t) => {
         const isLocallyArchived = archivedIds.includes(t.id);
         const isArchived = t.data?.archived ?? isLocallyArchived;
-        // console.log('.:. [TemplatesIndexTable: 📦 isArchived]', isArchived, t.data?.archived, isLocallyArchived, t.data?.archived, t);
 
         if (archiveFilter === 'archived') return isArchived;
         if (archiveFilter === 'active') return !isArchived;
@@ -75,17 +75,14 @@ export default function TemplatesIndexTable({
 
     setSelectedIds((prev) => {
       if (opts?.exclusive) {
-        // Clear all and select just this range (or deselect to empty if willSelect=false)
         return willSelect ? [...rangeIds] : [];
       }
 
       if (willSelect) {
-        // Add range ids uniquely
         const set = new Set(prev);
         rangeIds.forEach((id) => set.add(id));
         return Array.from(set);
       } else {
-        // Remove range ids
         const remove = new Set(rangeIds);
         return prev.filter((id) => !remove.has(id));
       }
@@ -152,6 +149,7 @@ export default function TemplatesIndexTable({
           </div>
         </div>
       )}
+
       <div className="border border-white/10 rounded overflow-x-auto">
         <table className="min-w-full text-sm">
           <thead>
@@ -200,10 +198,8 @@ export default function TemplatesIndexTable({
                       if (withShift && lastSelectedIndex !== null) {
                         toggleSelectionRange(index, willSelect, { exclusive: withMeta });
                       } else if (withMeta) {
-                        // Exclusive single selection
                         setSelectedIds(willSelect ? [t.id] : []);
                       } else {
-                        // Regular toggle
                         setSelectedIds((prev) =>
                           isChecked ? prev.filter((id) => id !== t.id) : [...prev, t.id]
                         );
@@ -211,11 +207,10 @@ export default function TemplatesIndexTable({
 
                       setLastSelectedIndex(index);
                     }}
-                    onChange={() => {
-                      // handled in onClick to access modifier keys
-                    }}
+                    onChange={() => {}}
                   />
                 </td>
+
                 <td className="p-2 text-right">
                   <RowActions
                     id={t.id}
@@ -238,56 +233,37 @@ export default function TemplatesIndexTable({
                     }}
                   />
                 </td>
+
                 <td className="p-2 text-right">
                   {t.is_site ? <Globe className="w-4 h-4 text-blue-400" /> : <FileStack className="w-4 h-4 text-blue-400" />}
                 </td>
+
                 <td className="p-2 text-zinc-400">
                   {t.published ? <CheckCircle className="w-4 h-4 text-green-400" /> : <XCircle className="w-4 h-4 text-red-400" />}
                 </td>
 
                 <td className="p-2">
-                  {/* {editingId === t.id ? (
-                    <Input
-                      value={renames[t.id] || t.template_name}
-                      onChange={(e) => {
-                        const value = e.target.value;
-                        setRenames((prev) => ({ ...prev, [t.id]: value }));
-                        debounce(async () => {
-                          const res = await fetch('/api/templates/rename', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ template_id: t.id, newName: value }),
-                          });
-                          if (!res.ok) toast.error('Failed to rename');
-                        }, 400)();
-                      }}
-                      onBlur={() => setEditingId(null)}
-                      className="text-xs"
-                    />
-                  ) : (
-                    <button className="text-white hover:underline text-left" onClick={() => {
-                      setEditingId(t.id);
-                      setRenames((prev) => ({ ...prev, [t.id]: t.template_name }));
-                    }}>{t.template_name}</button>
-                  )} */}
-                  <div
-                    key={t.id}
-                    data-nav-href={`/template/${t.slug}/edit`} 
-                    className="text-white hover:underline text-left cursor-pointer"
-                    onClick={() => router.push(`/template/${t.slug}/edit`)}
+                  <Link
+                    href={`/template/${t.id}/edit`} // <-- ID-based route to match Actions → Edit
+                    prefetch={false}
+                    className="text-white hover:underline text-left"
                   >
-                    {t.template_name}
-                  </div>
+                    {t.template_name || t.slug || t.id}
+                  </Link>
                 </td>
+
                 <td className="p-2 text-zinc-400">
                   {t.phone && <div className="text-xs text-zinc-400">{t.phone}</div>}
                 </td>
+
                 <td className="p-2 text-zinc-400">
                   {t.updated_at ? formatDistanceToNow(new Date(t.updated_at), { addSuffix: true }) : 'N/A'}
                 </td>
+
                 <td className="p-2 text-zinc-400">
                   {/* {t.custom_domain && <GSCStatusBadge domain={`https://${t.custom_domain}`} />} */}
                 </td>
+
                 <td className="p-2">
                   {t.banner_url ? (
                     <img src={t.banner_url} alt="preview" className="w-12 h-8 rounded object-cover" />

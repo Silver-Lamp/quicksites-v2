@@ -112,6 +112,7 @@ export type Snapshot = {
   saved_at?: string;
   save_count?: number;
   last_editor?: string;
+  owner_id?: string;
 
   claimed_by?: string;
   claimed_at?: string;
@@ -220,6 +221,7 @@ const TemplateDataSchema = z
     service_areas: z.array(z.string()).optional(),
     business_name: z.string().optional(),
     contact_email: z.string().optional(),
+    owner_id: UUID,
     site_id: UUID,
     brand: z.string().optional(),
     phone: z.string().optional(),
@@ -288,6 +290,7 @@ export const TemplateFormSchema = z
     search_engines_last_pinged_at: z.string().optional(),
     search_engines_last_ping_response: z.any().optional(),
     services: z.array(z.string()).optional(),
+    owner_id: UUID,
     site_id: UUID,
 
     meta: z

@@ -58,7 +58,7 @@ export const TemplateSaveSchema = z.preprocess(
   z
     .object({
       id: z.string().optional(),
-
+      owner_id: z.string().nullable().optional(),
       slug: z.preprocess(
         (val) => (typeof val === 'string' ? slugify(val) : ''),
         z

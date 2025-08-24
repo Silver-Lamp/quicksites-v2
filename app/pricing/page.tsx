@@ -2,6 +2,7 @@
 
 import React from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { motion } from 'framer-motion';
 import { Check, ArrowRight, Sparkles } from 'lucide-react';
 
@@ -15,10 +16,6 @@ import { Switch } from '@/components/ui/switch';
 
 /**
  * QuickSites Pricing Page
- * - Toggle: Founder/Beta vs Public
- * - AI Assist Pack add-on (+$10/user/mo)
- * - Cost calculator (sites, price-per-site revenue)
- * - Simple FAQs + migration offers
  */
 
 // ---- Config ----
@@ -48,24 +45,13 @@ type PlanNumbers = {
   perSite: number;  // flat per site / month
 };
 
-const FOUNDER_PLAN: PlanNumbers = {
-  platform: 15,
-  perSite: 5, // ✅ grandfathered flat price
-};
-
-const PUBLIC_PLAN: PlanNumbers = {
-  platform: 19,
-  perSite: 6, // flat, no tiers
-};
-
+const FOUNDER_PLAN: PlanNumbers = { platform: 15, perSite: 5 };
+const PUBLIC_PLAN: PlanNumbers = { platform: 19, perSite: 6 };
 const AI_ADDON_PER_USER = 10; // $10/user/mo
 
 // ---- Utilities ----
 const usd = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 2 });
-
-function classNames(...xs: (string | false | null | undefined)[]) {
-  return xs.filter(Boolean).join(' ');
-}
+function classNames(...xs: (string | false | null | undefined)[]) { return xs.filter(Boolean).join(' '); }
 
 // ---- Toggle component ----
 function PlanToggle({ value, onChange }: { value: 'founder' | 'public'; onChange: (v: 'founder' | 'public') => void }) {
@@ -74,20 +60,16 @@ function PlanToggle({ value, onChange }: { value: 'founder' | 'public'; onChange
       <button
         type="button"
         onClick={() => onChange('founder')}
-        className={classNames(
-          'px-4 py-2 rounded-full text-sm font-medium transition',
-          value === 'founder' ? 'bg-background shadow text-foreground' : 'text-muted-foreground hover:text-foreground'
-        )}
+        className={classNames('px-4 py-2 rounded-full text-sm font-medium transition',
+          value === 'founder' ? 'bg-background shadow text-foreground' : 'text-muted-foreground hover:text-foreground')}
       >
         Founder / Beta
       </button>
       <button
         type="button"
         onClick={() => onChange('public')}
-        className={classNames(
-          'px-4 py-2 rounded-full text-sm font-medium transition',
-          value === 'public' ? 'bg-background shadow text-foreground' : 'text-muted-foreground hover:text-foreground'
-        )}
+        className={classNames('px-4 py-2 rounded-full text-sm font-medium transition',
+          value === 'public' ? 'bg-background shadow text-foreground' : 'text-muted-foreground hover:text-foreground')}
       >
         Public
       </button>
@@ -97,169 +79,131 @@ function PlanToggle({ value, onChange }: { value: 'founder' | 'public'; onChange
 
 // ---- Calculator card ----
 function Calculator({
-    plan,
-    includeAI,
-    onToggleAI,
-  }: {
-    plan: 'founder' | 'public';
-    includeAI: boolean;
-    onToggleAI: (v: boolean) => void;
-  }) {
-    const PRICE_MIN = 10;
-    const PRICE_MAX = 2000;
-  
-    const [sites, setSites] = React.useState(25);
-    const [pricePerSite, setPricePerSite] = React.useState(49); // what you charge your clients
-  
-    const numbers = plan === 'founder' ? FOUNDER_PLAN : PUBLIC_PLAN;
-  
-    // clamp helper
-    const clamp = (n: number, min: number, max: number) => Math.min(max, Math.max(min, n));
-  
-    const platformCost = numbers.platform;              // per user
-    const perSiteFlat = numbers.perSite;                // flat per-site
-    const siteCost = perSiteFlat * sites;               // monthly per-site total
-    const aiCost = includeAI ? AI_ADDON_PER_USER : 0;   // per user
-    const monthlyCost = platformCost + siteCost + aiCost;
-  
-    const monthlyRevenue = pricePerSite * sites;
-    const grossMargin = monthlyRevenue - monthlyCost;
-  
-    return (
-      <Card className="w-full">
-        <CardHeader>
-          <CardTitle>Estimate your monthly cost</CardTitle>
-          <CardDescription>Quick napkin math — adjust sites and what you charge.</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-6 overflow-hidden">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {/* Sites slider + input */}
-            <div>
-              <Label htmlFor="sites">Sites</Label>
-              <div className="mt-2 flex items-center gap-3">
-                <input
-                  id="sites"
-                  type="range"
-                  min={0}
-                  max={500}
-                  step={1}
-                  value={sites}
-                  onChange={(e) => setSites(parseInt(e.target.value || '0', 10))}
-                  className="w-full"
-                />
-                <Input
-                  type="number"
-                  min={0}
-                  value={sites}
-                  onChange={(e) => setSites(Math.max(0, Number(e.target.value || 0)))}
-                  className="w-24"
-                />
-              </div>
+  plan, includeAI, onToggleAI,
+}: { plan: 'founder' | 'public'; includeAI: boolean; onToggleAI: (v: boolean) => void; }) {
+  const PRICE_MIN = 10;
+  const PRICE_MAX = 2000;
+
+  const [sites, setSites] = React.useState(25);
+  const [pricePerSite, setPricePerSite] = React.useState(49); // what you charge your clients
+
+  const numbers = plan === 'founder' ? FOUNDER_PLAN : PUBLIC_PLAN;
+
+  const clamp = (n: number, min: number, max: number) => Math.min(max, Math.max(min, n));
+
+  const platformCost = numbers.platform;         // per user
+  const perSiteFlat = numbers.perSite;           // flat per-site
+  const siteCost = perSiteFlat * sites;          // monthly per-site total
+  const aiCost = includeAI ? AI_ADDON_PER_USER : 0; // per user
+  const monthlyCost = platformCost + siteCost + aiCost;
+
+  const monthlyRevenue = pricePerSite * sites;
+  const grossMargin = monthlyRevenue - monthlyCost;
+
+  return (
+    <Card className="w-full border-zinc-800/50">
+      <CardHeader>
+        <CardTitle>Estimate your monthly cost</CardTitle>
+        <CardDescription>Quick napkin math — adjust sites and what you charge.</CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-6 overflow-hidden">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {/* Sites slider + input */}
+          <div>
+            <Label htmlFor="sites">Sites</Label>
+            <div className="mt-2 flex items-center gap-3">
+              <input
+                id="sites"
+                type="range"
+                min={0}
+                max={500}
+                step={1}
+                value={sites}
+                onChange={(e) => setSites(parseInt(e.target.value || '0', 10))}
+                className="w-full"
+              />
+              <Input
+                type="number"
+                min={0}
+                value={sites}
+                onChange={(e) => setSites(Math.max(0, Number(e.target.value || 0)))}
+                className="w-24"
+              />
             </div>
-  
-            {/* Price you charge slider + input */}
-            <div>
-              <Label htmlFor="pps">Price you charge to resell to your clients</Label>
-              <div className="mt-2 space-y-2">
-                <div className="flex items-center gap-2">
-                  <span className="text-sm text-muted-foreground">USD</span>
-                  <Input
-                    id="pps"
-                    type="number"
-                    min={PRICE_MIN}
-                    max={PRICE_MAX}
-                    step={1}
-                    value={pricePerSite}
-                    onChange={(e) =>
-                      setPricePerSite(clamp(Number(e.target.value || 0), PRICE_MIN, PRICE_MAX))
-                    }
-                    className="w-32"
-                  />
-                  <span className="text-xs text-muted-foreground">
-                    {usd.format(PRICE_MIN)}–{usd.format(PRICE_MAX)}
-                  </span>
-                </div>
-                <input
-                  aria-label="Price you charge slider"
-                  type="range"
+          </div>
+
+          {/* Price you charge slider + input */}
+          <div>
+            <Label htmlFor="pps">Price you charge to resell to your clients</Label>
+            <div className="mt-2 space-y-2">
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-muted-foreground">USD</span>
+                <Input
+                  id="pps"
+                  type="number"
                   min={PRICE_MIN}
                   max={PRICE_MAX}
                   step={1}
                   value={pricePerSite}
-                  onChange={(e) => setPricePerSite(clamp(parseInt(e.target.value || '0', 10), PRICE_MIN, PRICE_MAX))}
-                  className="w-full"
+                  onChange={(e) => setPricePerSite(clamp(Number(e.target.value || 0), PRICE_MIN, PRICE_MAX))}
+                  className="w-32"
                 />
+                <span className="text-xs text-muted-foreground">
+                  {usd.format(PRICE_MIN)}–{usd.format(PRICE_MAX)}
+                </span>
               </div>
-            </div>
-  
-            {/* AI toggle (wrapping safe) */}
-            <div className="flex items-end md:items-center justify-between md:justify-start gap-3 flex-wrap">
-              <div className="flex items-center gap-3 min-w-0">
-                <Switch id="ai" checked={includeAI} onCheckedChange={onToggleAI} />
-                <Label
-                  htmlFor="ai"
-                  className="flex items-center gap-1 cursor-pointer min-w-0 break-words whitespace-normal"
-                >
-                  <Sparkles className="h-4 w-4 shrink-0" />
-                  <span className="min-w-0 break-words">
-                    Include AI Assist Pack{' '}
-                    <span className="text-muted-foreground">(+{usd.format(AI_ADDON_PER_USER)}/user/mo)</span>
-                  </span>
-                </Label>
-              </div>
+              <input
+                aria-label="Price you charge slider"
+                type="range"
+                min={PRICE_MIN}
+                max={PRICE_MAX}
+                step={1}
+                value={pricePerSite}
+                onChange={(e) => setPricePerSite(clamp(parseInt(e.target.value || '0', 10), PRICE_MIN, PRICE_MAX))}
+                className="w-full"
+              />
             </div>
           </div>
-  
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <SummaryTile label="Platform" value={usd.format(platformCost)} sub="per user / mo" />
-            <SummaryTile label={`Per-site × ${sites}`} value={usd.format(siteCost)} sub={`${usd.format(perSiteFlat)} each`} />
-            <SummaryTile label="AI Pack" value={usd.format(aiCost)} sub={includeAI ? '+$10/user' : 'optional'} />
+
+          {/* AI toggle (wrapping safe) */}
+          <div className="flex items-end md:items-center justify-between md:justify-start gap-3 flex-wrap">
+            <div className="flex items-center gap-3 min-w-0">
+              <Switch id="ai" checked={includeAI} onCheckedChange={onToggleAI} />
+              <Label htmlFor="ai" className="flex items-center gap-1 cursor-pointer min-w-0 break-words whitespace-normal">
+                <Sparkles className="h-4 w-4 shrink-0" />
+                <span className="min-w-0 break-words">
+                  Include AI Assist Pack <span className="text-muted-foreground">(+{usd.format(AI_ADDON_PER_USER)}/user/mo)</span>
+                </span>
+              </Label>
+            </div>
           </div>
-  
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <SummaryTile
-              label="Your revenue"
-              value={usd.format(monthlyRevenue)}
-              sub={`${usd.format(pricePerSite)} × ${sites}`}
-              highlight
-            />
-            <SummaryTile
-              label="Gross margin"
-              value={usd.format(grossMargin)}
-              sub="before payment processing"
-              highlight
-              subtle
-            />
-          </div>
-        </CardContent>
-      </Card>
-    );
-  }
-  
-function SummaryTile({
-  label,
-  value,
-  sub,
-  highlight = false,
-  subtle = false,
-}: {
-  label: string;
-  value: string;
-  sub?: string;
-  highlight?: boolean;
-  subtle?: boolean;
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <SummaryTile label="Platform" value={usd.format(platformCost)} sub="per user / mo" />
+          <SummaryTile label={`Per-site × ${sites}`} value={usd.format(siteCost)} sub={`${usd.format(perSiteFlat)} each`} />
+          <SummaryTile label="AI Pack" value={usd.format(aiCost)} sub={includeAI ? '+$10/user' : 'optional'} />
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <SummaryTile label="Your revenue" value={usd.format(monthlyRevenue)} sub={`${usd.format(pricePerSite)} × ${sites}`} highlight />
+          <SummaryTile label="Gross margin" value={usd.format(grossMargin)} sub="before payment processing" highlight subtle />
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function SummaryTile({ label, value, sub, highlight = false, subtle = false }:{
+  label: string; value: string; sub?: string; highlight?: boolean; subtle?: boolean;
 }) {
   return (
-    <Card className={classNames(highlight && 'border-primary/40', 'overflow-hidden')}>
+    <Card className={classNames('overflow-hidden border-zinc-800/50', highlight && 'border-primary/40')}>
       <CardHeader className="pb-2">
         <CardDescription>{label}</CardDescription>
         <CardTitle className={classNames('text-2xl', highlight && 'text-primary')}>{value}</CardTitle>
       </CardHeader>
-      {sub && (
-        <CardContent className={classNames('pt-0 text-sm', subtle ? 'text-muted-foreground' : '')}>
-          {sub}
-        </CardContent>
-      )}
+      {sub && <CardContent className={classNames('pt-0 text-sm', subtle ? 'text-muted-foreground' : '')}>{sub}</CardContent>}
     </Card>
   );
 }
@@ -267,13 +211,12 @@ function SummaryTile({
 // ---- Plan details card ----
 function PlanCard({ plan, kind }: { plan: PlanNumbers; kind: 'founder' | 'public' }) {
   const title = kind === 'founder' ? 'Founder / Beta' : 'Public';
-  const blurb =
-    kind === 'founder'
-      ? 'Grandfathered for 12 months. Limited time while we scale early partners.'
-      : 'Standard pricing once the beta window closes — still simple and fair.';
+  const blurb = kind === 'founder'
+    ? 'Grandfathered for 12 months. Limited time while we scale early partners.'
+    : 'Standard pricing once the beta window closes — still simple and fair.';
 
   return (
-    <Card className="h-full">
+    <Card className="h-full border-zinc-800/50">
       <CardHeader>
         <div className="flex items-center justify-between">
           <CardTitle className="text-xl">{title}</CardTitle>
@@ -315,23 +258,28 @@ function PlanCard({ plan, kind }: { plan: PlanNumbers; kind: 'founder' | 'public
 
 function NumberTile({ label, value, suffix }: { label: string; value: string; suffix?: string }) {
   return (
-    <div className="rounded-xl border p-4 overflow-hidden">
+    <div className="rounded-xl border border-zinc-800/50 p-4 overflow-hidden">
       <div className="text-sm text-muted-foreground">{label}</div>
       <div className="text-2xl font-semibold">
-        {value}
-        {suffix ? <span className="ml-1 text-base font-normal text-muted-foreground">{suffix}</span> : null}
+        {value}{suffix ? <span className="ml-1 text-base font-normal text-muted-foreground">{suffix}</span> : null}
       </div>
     </div>
   );
 }
 
-// ---- AI Add-on explainer ----
+// ---- AI Add-on explainer (with purple glow) ----
 function AiAddOn() {
   return (
-    <Card className="h-full border-primary/20">
+    <Card
+      className={classNames(
+        'h-full relative border-zinc-800/50 ring-1 ring-purple-500/25',
+        'bg-gradient-to-br from-purple-500/10 via-purple-500/5 to-transparent',
+        'shadow-[0_10px_40px_-12px_rgba(168,85,247,0.55)]'
+      )}
+    >
       <CardHeader>
         <div className="flex items-center gap-2">
-          <Sparkles className="h-5 w-5" />
+          <Sparkles className="h-5 w-5 text-purple-400" />
           <CardTitle>AI Assist Pack</CardTitle>
           <Badge className="ml-auto" variant="secondary">+{usd.format(AI_ADDON_PER_USER)}/user/mo</Badge>
         </div>
@@ -370,29 +318,17 @@ function Feature({ text }: { text: string }) {
 
 // ---- FAQs ----
 const FAQS: { q: string; a: string }[] = [
-  {
-    q: 'Can I lock in Founder pricing?',
-    a: 'Yes. Accounts created during the beta window are grandfathered at a flat $5/site/mo for 12 months from signup.',
-  },
-  {
-    q: 'Do you offer volume discounts?',
-    a: 'Not during beta. Founder pricing is already a reduced flat rate designed to be simple and predictable.',
-  },
-  {
-    q: 'What if I only need the platform for myself?',
-    a: 'Pricing is per user. Many agencies run a single owner account; you can add more seats later as you scale operations.',
-  },
-  {
-    q: 'What’s included without the AI add-on?',
-    a: 'Everything you need to build and host sites: templates, editor, routing, sitemaps, and support. The AI pack layers content and on-page accelerators on top.',
-  },
+  { q: 'Can I lock in Founder pricing?', a: 'Yes. Accounts created during the beta window are grandfathered at a flat $5/site/mo for 12 months from signup.' },
+  { q: 'Do you offer volume discounts?', a: 'Not during beta. Founder pricing is already a reduced flat rate designed to be simple and predictable.' },
+  { q: 'What if I only need the platform for myself?', a: 'Pricing is per user. Many agencies run a single owner account; you can add more seats later as you scale operations.' },
+  { q: 'What’s included without the AI add-on?', a: 'Everything you need to build and host sites: templates, editor, routing, sitemaps, and support. The AI pack layers content and on-page accelerators on top.' },
 ];
 
 function FaqList() {
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
       {FAQS.map((item, i) => (
-        <Card key={i}>
+        <Card key={i} className="border-zinc-800/50">
           <CardHeader>
             <CardTitle className="text-base">{item.q}</CardTitle>
           </CardHeader>
@@ -407,11 +343,23 @@ function FaqList() {
 export default function PricingPage() {
   const [mode, setMode] = React.useState<'founder' | 'public'>('founder');
   const [includeAI, setIncludeAI] = React.useState(false);
-
   const numbers = mode === 'founder' ? FOUNDER_PLAN : PUBLIC_PLAN;
 
   return (
     <div className="relative">
+      {/* Simple top nav with home links */}
+      <header className="border-b border-zinc-800/40">
+        <div className="mx-auto max-w-6xl px-6 py-3 flex items-center justify-between">
+          <Link href="/" className="flex items-center gap-2">
+            <Image src="/favicon.ico" alt="QuickSites" width={24} height={24} className="rounded" />
+            <span className="text-sm text-zinc-300">QuickSites</span>
+          </Link>
+          <Link href="/" className="inline-flex">
+            <Button variant="ghost" size="sm">← Back home</Button>
+          </Link>
+        </div>
+      </header>
+
       {/* hero */}
       <section className="relative overflow-hidden">
         <motion.div
@@ -424,12 +372,8 @@ export default function PricingPage() {
             <Badge variant="outline">{COPY.heroKicker}</Badge>
             <PlanToggle value={mode} onChange={setMode} />
           </div>
-          <h1 className="text-3xl md:text-5xl font-semibold tracking-tight">
-            {COPY.heroTitle}
-          </h1>
-          <p className="mt-3 max-w-2xl text-muted-foreground">
-            {COPY.heroSubtitle}
-          </p>
+          <h1 className="text-3xl md:text-5xl font-semibold tracking-tight">{COPY.heroTitle}</h1>
+          <p className="mt-3 max-w-2xl text-muted-foreground">{COPY.heroSubtitle}</p>
           <div className="mt-6 flex flex-wrap items-center gap-3">
             <Link href={COPY.ctas.primaryHref} className="inline-flex">
               <Button size="lg">
@@ -443,9 +387,7 @@ export default function PricingPage() {
           </div>
 
           <div className="mt-6 flex flex-wrap gap-2">
-            {COPY.ribbons.map((r) => (
-              <Badge key={r} variant="secondary">{r}</Badge>
-            ))}
+            {COPY.ribbons.map((r) => (<Badge key={r} variant="secondary">{r}</Badge>))}
           </div>
           <p className="mt-2 text-xs text-muted-foreground">{COPY.competitorNote}</p>
         </motion.div>
@@ -454,20 +396,18 @@ export default function PricingPage() {
         <div className="pointer-events-none absolute inset-0 -z-10 bg-gradient-to-b from-transparent via-primary/5 to-transparent" />
       </section>
 
-    {/* pricing cards + AI + calculator */}
-    <section className="mx-auto max-w-6xl px-6 py-8 grid grid-cols-1 md:grid-cols-2 gap-6">
-    <PlanCard plan={numbers} kind={mode} />
-    <AiAddOn />
-
-    {/* Calculator spans both columns below */}
-    <div className="md:col-span-2">
-        <Calculator plan={mode} includeAI={includeAI} onToggleAI={setIncludeAI} />
-    </div>
-    </section>
+      {/* pricing cards + AI + calculator */}
+      <section className="mx-auto max-w-6xl px-6 py-8 grid grid-cols-1 md:grid-cols-2 gap-6">
+        <PlanCard plan={numbers} kind={mode} />
+        <AiAddOn />
+        <div className="md:col-span-2">
+          <Calculator plan={mode} includeAI={includeAI} onToggleAI={setIncludeAI} />
+        </div>
+      </section>
 
       {/* comparison table */}
       <section className="mx-auto max-w-6xl px-6 py-8">
-        <Card>
+        <Card className="border-zinc-800/50">
           <CardHeader>
             <CardTitle>Side-by-side</CardTitle>
             <CardDescription>Flip the toggle to see numbers change. Flat per-site — no volume tiers.</CardDescription>
@@ -502,7 +442,7 @@ export default function PricingPage() {
 
       {/* CTA footer */}
       <section className="mx-auto max-w-6xl px-6 py-12">
-        <Card className="bg-gradient-to-br from-primary/5 to-transparent">
+        <Card className="bg-gradient-to-br from-primary/5 to-transparent border-zinc-800/50">
           <CardContent className="py-8 flex flex-col md:flex-row items-center justify-between gap-6">
             <div>
               <h3 className="text-xl md:text-2xl font-semibold">Ready to launch your next 10 sites?</h3>
@@ -521,6 +461,12 @@ export default function PricingPage() {
             </div>
           </CardContent>
         </Card>
+        {/* another home link at bottom for good measure */}
+        <div className="mt-6 text-center">
+          <Link href="/" className="inline-flex">
+            <Button variant="ghost" size="sm">← Back home</Button>
+          </Link>
+        </div>
       </section>
     </div>
   );
@@ -528,7 +474,7 @@ export default function PricingPage() {
 
 function Row({ planName, p, dim = false }: { planName: string; p: PlanNumbers; dim?: boolean }) {
   return (
-    <tr className={classNames('border-t', dim && 'opacity-80')}>
+    <tr className={classNames('border-t border-zinc-800/50', dim && 'opacity-80')}>
       <td className="py-3 pr-4 font-medium">{planName}</td>
       <td className="py-3 pr-4">{usd.format(p.platform)}/mo</td>
       <td className="py-3 pr-4">{usd.format(p.perSite)}/site/mo</td>

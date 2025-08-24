@@ -1,17 +1,26 @@
-// app/page.tsx
 'use client';
 
 import { motion } from 'framer-motion';
 import Image from 'next/image';
 import Head from 'next/head';
+import Link from 'next/link';
 import BackgroundGlow from '@/components/background-glow';
 import GlowConfigurator, { GlowConfig } from '@/components/glow-configurator';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import QuickSitesWidget from '@/components/quick-sites-widget';
 import event from '@vercel/analytics';
 import { useSafeAuth } from '../hooks/useSafeAuth';
 import { SiteFlags } from '@/lib/site-config';
 import useMediaQuery from '@/hooks/useMediaQuery';
+
+// shadcn/ui
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+
+// supabase
+import { createClient as createBrowserClient } from '@supabase/supabase-js';
+import LazyVideoEmbed from '@/components/ui/lazy-video-embed';
 
 const isProd = process.env.NODE_ENV === 'production';
 
@@ -29,12 +38,58 @@ const features = [
   '🔒 Secure & privacy-respecting',
 ];
 
+type FeatureRow = {
+  id: string;
+  title: string;
+  blurb: string;
+  category?: string | null;
+  video_url?: string | null;
+  doc_href?: string | null;
+  badge?: string | null;
+  created_at?: string | null;
+};
+
 export default function HomePage() {
   const [currentFeatureIndex, setCurrentFeatureIndex] = useState(0);
   const { user, role, isLoggedIn } = useSafeAuth();
   const isMobile = useMediaQuery('(max-width: 768px)');
   const showWidget = SiteFlags.showMobileWidget || !isMobile;
   const showGlow = SiteFlags.showMobileGradients || !isMobile;
+
+  // --- Featured demos (from Supabase) ---
+  const supabase = useMemo(
+    () =>
+      createBrowserClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+      ),
+    []
+  );
+  const [featured, setFeatured] = useState<FeatureRow[]>([]);
+  const [featLoading, setFeatLoading] = useState(true);
+
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        setFeatLoading(true);
+        // Pull up to 6 latest entries
+        const { data, error } = await supabase
+          .from('features')
+          .select('*')
+          .eq('featured', true)
+          .order('feature_order', { ascending: true, nullsFirst: false }) // ← new
+          .order('created_at', { ascending: false })                      // tie-break
+          .limit(6);
+        if (!error && mounted) setFeatured((data || []) as FeatureRow[]);
+      } finally {
+        if (mounted) setFeatLoading(false);
+      }
+    })();
+    return () => {
+      mounted = false;
+    };
+  }, [supabase]);
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -156,6 +211,79 @@ export default function HomePage() {
           )}
         </div>
       </main>
+
+    {/* --- Featured demos row --- */}
+    <section className="relative z-10 w-full border-t border-zinc-800/70 bg-zinc-950/60">
+      <div className="mx-auto max-w-6xl px-6 py-10">
+        <div className="flex items-end justify-between gap-3 mb-6">
+          <div className="text-left">
+            <h3 className="text-2xl font-semibold">Featured demos</h3>
+            <p className="text-sm text-zinc-400">
+              Hand-picked highlights from what QuickSites can do.
+            </p>
+          </div>
+          <Link href="/features" className="inline-flex">
+            <Button variant="outline" size="sm">See all features</Button>
+          </Link>
+        </div>
+
+        {featLoading ? (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {[...Array(3)].map((_, i) => (
+              <Card key={i} className="h-full overflow-hidden">
+                <div className="animate-pulse aspect-video bg-zinc-800/50" />
+                <CardHeader className="pb-2">
+                  <div className="h-4 w-1/2 bg-zinc-800/70 rounded animate-pulse" />
+                </CardHeader>
+                <CardContent>
+                  <div className="h-3 w-full bg-zinc-800/50 rounded mb-2 animate-pulse" />
+                  <div className="h-3 w-3/4 bg-zinc-800/50 rounded animate-pulse" />
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-3 xl:grid-cols-3 gap-6">
+            {featured.map((f) => (
+              <Card key={f.id} className="h-full flex flex-col overflow-hidden">
+                <div className="aspect-video w-full border-b border-zinc-800/70 overflow-hidden">
+                  {f.video_url ? (
+                    <LazyVideoEmbed url={f.video_url} title={f.title} className="h-full w-full" />
+                  ) : (
+                    <div className="h-full w-full grid place-items-center text-zinc-400 text-sm bg-zinc-900/60">
+                      Demo coming soon
+                    </div>
+                  )}
+                </div>
+                <CardHeader className="pb-2">
+                  <div className="flex items-center gap-2">
+                    <CardTitle className="text-base">{f.title}</CardTitle>
+                    {f.badge ? <Badge variant="secondary">{f.badge}</Badge> : null}
+                  </div>
+                </CardHeader>
+                <CardContent className="text-sm text-zinc-400">
+                  {f.blurb}
+                  <div className="mt-4">
+                    <Link href={`/features?q=${encodeURIComponent(f.title)}`} className="inline-flex">
+                      <Button size="sm" variant="secondary">
+                        {f.video_url ? 'Watch demo' : 'Learn more'}
+                      </Button>
+                    </Link>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+            {featured.length === 0 && (
+              <Card className="col-span-full">
+                <CardContent className="py-10 text-center text-zinc-400">
+                  No featured items yet. Mark some features as “Featured” in Admin.
+                </CardContent>
+              </Card>
+            )}
+          </div>
+        )}
+      </div>
+    </section>
 
       <footer className="relative z-10 text-center text-xs text-zinc-600 py-4">
         &copy; {new Date().getFullYear()} QuickSites.ai — All rights reserved.

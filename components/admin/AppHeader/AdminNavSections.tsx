@@ -5,6 +5,8 @@ import { usePathname } from 'next/navigation';
 import { useState, useEffect } from 'react';
 import { createClient as createBrowserClient } from '@supabase/supabase-js';
 import {
+  PlayCircle,
+  Video,
   LayoutDashboard,
   MapPinned,
   PhoneForwarded,
@@ -104,6 +106,12 @@ const navItems: NavItem[] = [
   },
   { type: 'section', label: 'Workflow' },
   { type: 'item', label: 'Platform Pricing', href: '/pricing', icon: <DollarSign size={18} /> },
+
+  { type: 'item', label: 'Features', href: '/features', icon: <PlayCircle size={18} /> },
+  { type: 'item', label: 'Book a demo', href: '/book', icon: <Book size={18} /> },
+  { type: 'item', label: 'Feature Video Manager', href: '/admin/features/manage', icon: <Video size={18} /> },
+  { type: 'item', label: 'Dev', href: '/admin/dev', icon: <Wrench size={18} /> },
+
   {
     type: 'item',
     label: 'Platform Contact Form Inbox',

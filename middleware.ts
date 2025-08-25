@@ -2,13 +2,16 @@
 import type { NextRequest } from 'next/server';
 import { NextResponse } from 'next/server';
 
-// Domains that are the *app* (NOT user sites)
+/** Hosts that should NOT be rewritten (your app itself). */
 const APP_HOSTS = new Set<string>([
+  'localhost:3000',
+  '127.0.0.1:3000',
+  '::1:3000',
   'quicksites.ai',
   'www.quicksites.ai',
-  'localhost:3000',
 ]);
 
+/** Paths we should never rewrite (Next internals, assets, specific APIs). */
 const IGNORE_PATHS: RegExp[] = [
   /^\/_next\//,
   /^\/static\//,
@@ -16,7 +19,9 @@ const IGNORE_PATHS: RegExp[] = [
   /^\/robots\.txt$/,
   /^\/sitemap\.xml$/,
   /^\/manifest\.json$/,
-  /\.(?:js\.map|json|txt|xml|svg|ico|png|jpg|jpeg|webp|gif|mp4|webm|woff2?|ttf|css)$/i,
+  // common static extensions
+  /\.(?:js(?:\.map)?|mjs|cjs|json|txt|xml|svg|ico|png|jpg|jpeg|gif|webp|avif|mp4|webm|css|woff2?|ttf)$/i,
+  // your webhooks / special APIs that must not be rewritten
   /^\/api\/twilio-callback/,
   /^\/api\/stripe\/webhook/,
 ];
@@ -26,39 +31,51 @@ function isIgnored(pathname: string) {
 }
 
 export function middleware(req: NextRequest) {
-  const { pathname, search } = req.nextUrl;
+  const u = req.nextUrl;
+  const pathname = u.pathname;
+  const search = u.search || '';
+
+  // Already on our handler or an API/static path? Let it pass.
+  if (
+    isIgnored(pathname) ||
+    pathname.startsWith('/host') ||     // host handler
+    pathname.startsWith('/admin') ||
+    pathname.startsWith('/sites') ||
+    pathname.startsWith('/login') ||
+    pathname.startsWith('/api')        // keep your APIs intact
+  ) {
+    return NextResponse.next();
+  }
+
   const hostHeader =
     req.headers.get('x-forwarded-host') ??
     req.headers.get('host') ??
     '';
 
-  if (isIgnored(pathname)) return NextResponse.next();
+  const host = hostHeader.toLowerCase();
 
-  // Let app + our host route + our diagnose route pass through
-  if (
-    pathname.startsWith('/admin') ||
-    pathname.startsWith('/sites') ||
-    pathname.startsWith('/login') ||
-    pathname.startsWith('/api') ||      // includes /api/host-diagnose
-    pathname.startsWith('/host')        // <-- new host handler path
-  ) {
+  // If this is our app host, don't rewrite (normal dashboard/app pages).
+  if (APP_HOSTS.has(host)) {
     return NextResponse.next();
   }
 
-  const host = hostHeader.toLowerCase();
-  const isAppHost = APP_HOSTS.has(host);
-  if (isAppHost) return NextResponse.next();
+  // Otherwise, this is a site request on a custom domain, *.quicksites.ai, or *.localhost
+  const rewriteUrl = req.nextUrl.clone();
+  // Preserve the original path under /host for your catch-all route
+  rewriteUrl.pathname = `/host${pathname === '/' ? '' : pathname}`;
+  // Keep query string
+  rewriteUrl.search = search;
 
-  // Rewrite custom domains to /host + original path
-  const url = req.nextUrl.clone();
-  url.pathname = `/host${pathname}`;
-  const res = NextResponse.rewrite(url);
-  res.headers.set('x-qsites-rewrite', url.pathname + (search || ''));
+  const res = NextResponse.rewrite(rewriteUrl);
+  // helpful debug headers (visible in DevTools → Network → Response Headers)
+  res.headers.set('x-qsites-rewrite', `${rewriteUrl.pathname}${rewriteUrl.search || ''}`);
+  res.headers.set('x-qsites-host', host);
   return res;
 }
 
 export const config = {
+  // Apply middleware to everything except the common static buckets above.
   matcher: [
-    '/((?!_next/static|_next/image|favicon\\.ico|robots\\.txt|sitemap\\.xml|manifest\\.json|.*\\.(?:js\\.map|json|txt|xml|svg|ico|png|jpg|jpeg|webp|gif|mp4|webm|woff2?|ttf|css)).*)',
+    '/((?!_next/static|_next/image|favicon\\.ico|robots\\.txt|sitemap\\.xml|manifest\\.json|.*\\.(?:js(?:\\.map)?|mjs|cjs|json|txt|xml|svg|ico|png|jpg|jpeg|gif|webp|avif|mp4|webm|css|woff2?|ttf)).*)',
   ],
 };

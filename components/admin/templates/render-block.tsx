@@ -186,6 +186,14 @@ ID: ${block._id || 'n/a'}`}
   // Only pass scrollRef once the ref is **attached** (avoids Motion error)
   const runtimeProps = hydrated && refReady ? { scrollRef: blockRef } : {};
 
+  // 🔸 Extra safety: mount the inner block one RAF after hydration
+  const [mounted, setMounted] = React.useState(false);
+  React.useEffect(() => {
+    if (!hydrated) return;
+    const id = requestAnimationFrame(() => setMounted(true));
+    return () => cancelAnimationFrame(id);
+  }, [hydrated]);
+
   return (
     <div {...(wrapperProps as any)}>
       {/* Controls bar (hidden until hover) */}
@@ -253,17 +261,17 @@ ID: ${block._id || 'n/a'}`}
       {debugOverlay}
 
       {/* Block content */}
-      <div className="p-0">
+      <div className="p-0" suppressHydrationWarning>
         <Suspense fallback={<span />}>
-          {hydrated && refReady ? (
+          {mounted ? (
             <Component
               {...(commonProps as any)}
-              {...(runtimeProps as any)}
+              {...(refReady ? (runtimeProps as any) : {})} // pass scrollRef only when attached
               {...(block.type === 'grid' && handleNestedBlockUpdate
                 ? { handleNestedBlockUpdate, parentBlock: block }
                 : {})}
               {...(block.type === 'services'
-                ? { services: identity.services } // ✅ feed DB-normalized services
+                ? { services: identity?.services ?? template?.services ?? [] }
                 : {})}
             />
           ) : null}

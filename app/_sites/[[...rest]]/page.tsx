@@ -1,6 +1,7 @@
 // app/_sites/[[...rest]]/page.tsx
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
+export const runtime = 'nodejs';
 
 import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
@@ -8,15 +9,9 @@ import { headers } from 'next/headers';
 import SiteRenderer from '@/components/sites/site-renderer';
 import { TemplateEditorProvider } from '@/context/template-editor-context';
 import { generatePageMetadata } from '@/lib/seo/generateMetadata';
-// import { supabase } from '@/admin/lib/supabaseClient';
 import { supabaseAdmin } from '@/lib/supabase/admin';
 import { getServerSupabase } from '@/lib/supabase/server';
 
-const supabase = process.env.SITE_PUBLIC_READ_WITH_SERVICE_ROLE === '1'
-  ? supabaseAdmin                      // server-only
-  : await getServerSupabase();
-
-// Local row shape to avoid drift with generated types
 type PublicSiteRow = {
   id: string;
   slug: string | null;
@@ -33,13 +28,13 @@ type PublicSiteRow = {
   archived: boolean | null;
 };
 
-// Keep selection identical across queries
-const selectColumns =
+const SELECT =
   'id, slug, template_name, data, header_block, footer_block, color_mode, meta, default_subdomain, domain_lc, published, is_site, archived';
 
 const BASE_DOMAIN = process.env.NEXT_PUBLIC_BASE_DOMAIN ?? 'quicksites.ai';
 
-async function originFromHeaders() {
+/* ---------- Helpers ---------- */
+async function originFromHeaders(): Promise<string> {
   const h = await headers();
   const host = (h.get('x-forwarded-host') ?? h.get('host') ?? 'localhost:3000')
     .toLowerCase()
@@ -54,38 +49,47 @@ function firstPageSlug(site: PublicSiteRow): string {
   return (first?.slug as string) || 'home';
 }
 
-async function loadSiteForRequest(): Promise<{ site: PublicSiteRow; host: string } | null> {
+async function getHostAndVariants(): Promise<{ host: string; variants: string[] }> {
   const h = await headers();
   const host = (h.get('x-forwarded-host') ?? h.get('host') ?? '')
     .toLowerCase()
     .replace(/\.$/, '');
-  
   const variants = host.startsWith('www.')
     ? [host, host.slice(4)]
     : [host, `www.${host}`];
-  
-  const selectColumns =
-    'id, slug, template_name, data, header_block, footer_block, color_mode, meta, default_subdomain, domain_lc, published, is_site, archived';
-  
+  return { host, variants };
+}
+
+async function getReadClient() {
+  if (process.env.SITE_PUBLIC_READ_WITH_SERVICE_ROLE === '1') return supabaseAdmin; // server-only
+  return await getServerSupabase();
+}
+
+async function loadSiteForRequest(): Promise<{ site: PublicSiteRow; host: string } | null> {
+  const { host, variants } = await getHostAndVariants();
+  if (!host) return null;
+
+  const supabase = await getReadClient();
+
+  // 1) custom domain (apex+www)
   const r1 = await supabase
     .from('templates')
-    .select(selectColumns)
+    .select(SELECT)
     .eq('is_site', true)
     .eq('published', true)
     .eq('archived', false)
-    .in('domain_lc', variants)   // <-- important
-    .maybeSingle();  
+    .in('domain_lc', variants)
+    .returns<PublicSiteRow>()
+    .maybeSingle();
+  let site = r1.data ?? null;
 
-    let site = r1.data ?? null;
-
-  // 2) *.BASE_DOMAIN subdomain support (e.g., foo.quicksites.ai)
+  // 2) *.BASE_DOMAIN subdomain fallback (e.g., foo.quicksites.ai)
   if (!site && host.endsWith(`.${BASE_DOMAIN}`)) {
-    const sub = host.slice(0, -(BASE_DOMAIN.length + 1)); // 'foo' from 'foo.quicksites.ai'
+    const sub = host.slice(0, -(BASE_DOMAIN.length + 1));
 
-    // Prefer default_subdomain first
     const r2 = await supabase
       .from('templates')
-      .select(selectColumns)
+      .select(SELECT)
       .eq('is_site', true)
       .eq('published', true)
       .eq('archived', false)
@@ -94,11 +98,10 @@ async function loadSiteForRequest(): Promise<{ site: PublicSiteRow; host: string
       .maybeSingle();
     site = r2.data ?? null;
 
-    // Fallback: slug == subdomain
     if (!site) {
       const r3 = await supabase
         .from('templates')
-        .select(selectColumns)
+        .select(SELECT)
         .eq('is_site', true)
         .eq('published', true)
         .eq('archived', false)
@@ -113,17 +116,16 @@ async function loadSiteForRequest(): Promise<{ site: PublicSiteRow; host: string
   return { site, host };
 }
 
-// Metadata
+/* ---------- Metadata ---------- */
 export async function generateMetadata({ params }: { params: { rest?: string[] } }): Promise<Metadata> {
   const payload = await loadSiteForRequest();
   if (!payload) return {};
   const { site } = payload;
   const pageSlug = params.rest?.[0] ?? firstPageSlug(site);
   return generatePageMetadata({ site: site as any, pageSlug, baseUrl: await originFromHeaders() });
-  // TODO: fix this
 }
 
-// Page
+/* ---------- Page ---------- */
 export default async function HostSitePage({ params }: { params: { rest?: string[] } }) {
   const payload = await loadSiteForRequest();
   if (!payload) return notFound();
@@ -131,7 +133,7 @@ export default async function HostSitePage({ params }: { params: { rest?: string
   const { site } = payload;
   const pageSlug = params.rest?.[0] ?? firstPageSlug(site);
   const colorMode = (site.color_mode ?? 'light') as 'light' | 'dark';
-  const baseUrl = originFromHeaders();
+  const baseUrl = await originFromHeaders();
 
   return (
     <TemplateEditorProvider
@@ -142,7 +144,7 @@ export default async function HostSitePage({ params }: { params: { rest?: string
       <SiteRenderer
         site={site as any}
         page={pageSlug}
-        baseUrl={await baseUrl}
+        baseUrl={baseUrl}
         id="site-renderer-page"
         colorMode={colorMode}
         className="bg-white text-black dark:bg-black dark:text-white"

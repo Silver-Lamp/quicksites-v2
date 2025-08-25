@@ -9,7 +9,6 @@ const APP_HOSTS = new Set<string>([
   'localhost:3000',
 ]);
 
-// Paths that should bypass rewrites entirely
 const IGNORE_PATHS: RegExp[] = [
   /^\/_next\//,
   /^\/static\//,
@@ -17,9 +16,7 @@ const IGNORE_PATHS: RegExp[] = [
   /^\/robots\.txt$/,
   /^\/sitemap\.xml$/,
   /^\/manifest\.json$/,
-  // common asset/file types
   /\.(?:js\.map|json|txt|xml|svg|ico|png|jpg|jpeg|webp|gif|mp4|webm|woff2?|ttf|css)$/i,
-  // webhooks & public APIs you don’t want rewritten
   /^\/api\/twilio-callback/,
   /^\/api\/stripe\/webhook/,
 ];
@@ -35,42 +32,33 @@ export function middleware(req: NextRequest) {
     req.headers.get('host') ??
     '';
 
-  // Quick exits for assets / special routes
   if (isIgnored(pathname)) return NextResponse.next();
 
-  // App routes should pass through untouched
+  // Let app + our host route + our diagnose route pass through
   if (
     pathname.startsWith('/admin') ||
     pathname.startsWith('/sites') ||
     pathname.startsWith('/login') ||
-    pathname.startsWith('/api') ||
-    pathname.startsWith('/_sites') // host-based page itself
+    pathname.startsWith('/api') ||      // includes /api/host-diagnose
+    pathname.startsWith('/host')        // <-- new host handler path
   ) {
     return NextResponse.next();
   }
 
   const host = hostHeader.toLowerCase();
   const isAppHost = APP_HOSTS.has(host);
+  if (isAppHost) return NextResponse.next();
 
-  // If we're on an app host (quicksites.ai / localhost), do nothing.
-  if (isAppHost) {
-    return NextResponse.next();
-  }
-
-  // Otherwise this is a custom domain or user subdomain.
-  // Rewrite to the host-based route while preserving the original path and query.
+  // Rewrite custom domains to /host + original path
   const url = req.nextUrl.clone();
-  url.pathname = `/_sites${pathname}`;
+  url.pathname = `/host${pathname}`;
   const res = NextResponse.rewrite(url);
-
-  // Debug header so you can confirm rewrites in DevTools Network
   res.headers.set('x-qsites-rewrite', url.pathname + (search || ''));
   return res;
 }
 
 export const config = {
   matcher: [
-    // run on everything except the common static buckets; keep in sync with IGNORE_PATHS
     '/((?!_next/static|_next/image|favicon\\.ico|robots\\.txt|sitemap\\.xml|manifest\\.json|.*\\.(?:js\\.map|json|txt|xml|svg|ico|png|jpg|jpeg|webp|gif|mp4|webm|woff2?|ttf|css)).*)',
   ],
 };

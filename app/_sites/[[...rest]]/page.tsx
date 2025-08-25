@@ -67,17 +67,16 @@ async function loadSiteForRequest(): Promise<{ site: PublicSiteRow; host: string
   const selectColumns =
     'id, slug, template_name, data, header_block, footer_block, color_mode, meta, default_subdomain, domain_lc, published, is_site, archived';
   
-  // 1) try custom domain (apex/www)
   const r1 = await supabase
     .from('templates')
     .select(selectColumns)
     .eq('is_site', true)
     .eq('published', true)
     .eq('archived', false)
-    .in('domain_lc', variants)   // <-- key change
-    .maybeSingle<PublicSiteRow>();
-  
-  let site = r1.data ?? null;
+    .in('domain_lc', variants)   // <-- important
+    .maybeSingle();  
+
+    let site = r1.data ?? null;
 
   // 2) *.BASE_DOMAIN subdomain support (e.g., foo.quicksites.ai)
   if (!site && host.endsWith(`.${BASE_DOMAIN}`)) {

@@ -133,10 +133,25 @@ export default function RenderBlock({
     }
   }, [safeContent]);
 
+  // 🔹 Normalize identity once (all blocks can use it)
+  const identity = React.useMemo(() => {
+    const t: any = template || {};
+    const normArr = (v: any) =>
+      Array.isArray(v) ? v.map((s) => String(s ?? '').trim()).filter(Boolean) : [];
+    const phoneDigits = String(t.phone ?? '').replace(/\D/g, '');
+    return {
+      services: normArr(t.services),
+      contact_email: (t.contact_email ?? '').toString().trim(),
+      business_name: (t.business_name ?? '').toString().trim(),
+      phone: phoneDigits, // raw digits; blocks can format as they like
+    };
+  }, [template]);
+
   const commonProps = {
     block,
     content: safeContent,
-    template, // ✅ forward template to all blocks
+    template,     // ✅ whole template (for rich use-cases)
+    identity,     // ✅ normalized identity (simple, consistent)
     mode,
     disableInteraction,
     compact,
@@ -239,18 +254,16 @@ ID: ${block._id || 'n/a'}`}
 
       {/* Block content */}
       <div className="p-0">
-        <Suspense 
-          // fallback={<div className="p-2 text-sm text-muted-foreground">Loading block…</div>}>
-          fallback={<span></span>}>
+        <Suspense fallback={<span />}>
           {hydrated && refReady ? (
             <Component
               {...(commonProps as any)}
-              {...(runtimeProps as any)} // scrollRef only when attached
+              {...(runtimeProps as any)}
               {...(block.type === 'grid' && handleNestedBlockUpdate
                 ? { handleNestedBlockUpdate, parentBlock: block }
                 : {})}
               {...(block.type === 'services'
-                ? { services: template?.services ?? [] } // ✅ feed DB services directly
+                ? { services: identity.services } // ✅ feed DB-normalized services
                 : {})}
             />
           ) : null}

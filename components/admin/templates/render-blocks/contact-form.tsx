@@ -18,19 +18,52 @@ const norm = (arr: unknown): string[] =>
 const isValidEmail = (email: string) =>
   /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(email ?? '').trim());
 
+const fmtPhone = (raw: string) => {
+  const d = String(raw ?? '').replace(/\D/g, '').slice(0, 10);
+  return d.replace(/(\d{0,3})(\d{0,3})(\d{0,4})/, (_, a, b, c) =>
+    [a && `(${a}`, b && `) ${b}`, c && `-${c}`].filter(Boolean).join('')
+  );
+};
+
 export default function ContactFormRender({
   block,
   template,
   colorMode = 'light',
 }: {
   block: Block;
-  template: Template | any; // tolerate mixed shapes
+  template: Template | any;
   colorMode?: ThemeMode;
 }) {
   const isLight = colorMode === 'light';
   const anchorId = (block?.content as any)?.anchor_id || 'contact';
 
-  // ------------- host helpers -------------
+  // Presentational bits from block
+  const {
+    title: titleRaw = 'Contact Us',
+    services: includedSubset = [],
+    notification_email: legacyBlockEmail,
+  } = (block?.content as any) || {};
+
+  // DB identity first, then block fallbacks
+  const dbServices = norm((template as any)?.services);
+  const blockServices = norm((block as any)?.content?.services ?? (block as any)?.content?.items);
+  const allServices = dbServices.length ? dbServices : blockServices;
+  const services =
+    includedSubset?.length ? allServices.filter((s) => (includedSubset as string[]).includes(s)) : allServices;
+
+  const dbEmail = String((template as any)?.contact_email ?? '').trim();
+  const effectiveEmail = dbEmail || String(legacyBlockEmail || '').trim();
+  const hasValidEmail = isValidEmail(effectiveEmail);
+  const showEmailNudge = !isValidEmail(dbEmail); // nudge if site-level email is missing
+
+  const businessName = String((template as any)?.business_name ?? '').trim();
+  const phoneDigits = String((template as any)?.phone ?? '').replace(/\D/g, '');
+  const displayPhone = phoneDigits ? fmtPhone(phoneDigits) : '';
+
+  const title =
+    titleRaw || (businessName ? `Contact ${businessName}` : 'Contact Us');
+
+  // site slug for email subject/logs
   const siteSlug =
     typeof window !== 'undefined'
       ? (() => {
@@ -41,39 +74,6 @@ export default function ContactFormRender({
         })()
       : 'unknown';
 
-  // ------------- content inputs -------------
-  const {
-    title = 'Contact Us',
-    services: includedSubset = [], // editor-chosen subset (optional)
-    notification_email: legacyBlockEmail, // legacy per-block email (fallback only)
-  } = ((block?.content as any) ?? {}) as {
-    title?: string;
-    services?: string[];
-    notification_email?: string;
-  };
-
-  // Prefer DB list; fallback to legacy items on the block
-  const dbServices = norm((template as any)?.services);
-  const blockServices = norm((block as any)?.content?.services ?? (block as any)?.content?.items);
-  const allServices = dbServices.length ? dbServices : blockServices;
-
-  const renderedServices =
-    includedSubset && includedSubset.length
-      ? allServices.filter((s) => (includedSubset as string[]).includes(s))
-      : allServices;
-
-  // Prefer DB email; fallback to legacy block email so the form still works
-  const dbEmail =
-    String(
-      (template as any)?.contact_email ??
-        (template as any)?.contactEmail ??
-        ''
-    ).trim();
-  const effectiveEmail = dbEmail || String(legacyBlockEmail || '').trim();
-  const hasValidEmail = isValidEmail(effectiveEmail);
-  const showEmailNudge = !isValidEmail(dbEmail); // show banner if DB email missing/invalid
-
-  // ------------- form state -------------
   const [formData, setFormData] = useState({ name: '', email: '', phone: '', service: '' });
   const [submitted, setSubmitted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -85,22 +85,6 @@ export default function ContactFormRender({
   };
 
   const isValidPhone = (phone: string) => /^\(\d{3}\) \d{3}-\d{4}$/.test(phone);
-  const formatPhone = (raw: string) => {
-    const digits = raw.replace(/\D/g, '').slice(0, 10);
-    return digits.replace(/(\d{0,3})(\d{0,3})(\d{0,4})/, (_, a, b, c) =>
-      [a && `(${a}`, b && `) ${b}`, c && `-${c}`].filter(Boolean).join('')
-    );
-  };
-
-  const noServices = renderedServices.length === 0;
-
-  // Helper to nudge users to configure Identity values
-  const openIdentityPanel = () => {
-    try {
-      window.dispatchEvent(new CustomEvent('qs:panel:open', { detail: { id: 'template-identity', focus: 'contact_email' } }));
-    } catch {}
-    if (typeof window !== 'undefined') window.location.hash = '#template-identity';
-  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -120,7 +104,6 @@ export default function ContactFormRender({
 
     setSubmitting(true);
 
-    // Store submission
     const { data, error: insertError } = await supabase
       .from('form_submissions')
       .insert([
@@ -142,7 +125,6 @@ export default function ContactFormRender({
       return;
     }
 
-    // Send email to effective destination
     let emailStatus = 'pending';
     let emailResponseId: string | null = null;
     let emailError: string | null = null;
@@ -152,10 +134,13 @@ export default function ContactFormRender({
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          to: [effectiveEmail],
+          to: [effectiveEmail], // use DB email; fallback to block if DB missing
           subject: `New Contact Form Submission from ${siteSlug}`,
           message: `
 New contact form submission from ${siteSlug}:
+
+Business: ${businessName || 'N/A'}
+Phone: ${displayPhone || 'N/A'}
 
 Name: ${formData.name}
 Email: ${formData.email || 'N/A'}
@@ -201,18 +186,30 @@ Service: ${formData.service || 'N/A'}
     <ThemeScope mode={colorMode} className={`${isLight ? 'bg-white' : 'dark:bg-neutral-950'} rounded-lg p-4`}>
       <section id={anchorId} data-contact-anchor className="contents">
         <SectionShell compact className="rounded-lg p-0">
-          <h2
-            className={`text-center text-2xl font-bold mb-6 p-4 rounded-md ${
-              isLight ? 'text-blue-900 bg-white' : 'text-white dark:bg-neutral-950'
-            }`}
-          >
+          <h2 className={`text-center text-2xl font-bold mb-2 p-4 rounded-md ${isLight ? 'text-blue-900 bg-white' : 'text-white dark:bg-neutral-950'}`}>
             {title}
           </h2>
 
+          {/* Identity surface: show what we’ll use */}
+          <div className="text-center text-sm mb-4 px-4">
+            {businessName && <div className={isLight ? 'text-gray-700' : 'text-gray-300'}>{businessName}</div>}
+            {displayPhone && (
+              <div className={isLight ? 'text-gray-700' : 'text-gray-300'}>
+                Or call us at <a href={`tel:${phoneDigits}`} className="underline">{displayPhone}</a>
+              </div>
+            )}
+            {hasValidEmail && (
+              <div className={isLight ? 'text-gray-600' : 'text-gray-400'}>We’ll reply from {effectiveEmail}</div>
+            )}
+          </div>
+
           {showEmailNudge && (
             <div className="mx-4 mb-4 rounded border border-yellow-500/40 bg-yellow-500/10 p-3 text-sm text-yellow-200">
-              No valid contact email is configured on the site.{' '}
-              <button onClick={openIdentityPanel} className="underline">
+              No valid <code>contact_email</code> is configured on the site.{' '}
+              <button onClick={() => {
+                try { window.dispatchEvent(new CustomEvent('qs:panel:open', { detail: { id: 'template-identity', focus: 'contact_email' } })); } catch {}
+                if (typeof window !== 'undefined') window.location.hash = '#template-identity';
+              }} className="underline">
                 Set it in Template Identity
               </button>
               {hasValidEmail && ' (using block-level fallback for now)'}
@@ -247,25 +244,22 @@ Service: ${formData.service || 'N/A'}
                   maxLength={14}
                   className={inputClass(!!errors.phone || !!errors.contact)}
                   value={formData.phone}
-                  onChange={(e) => setFormData({ ...formData, phone: formatPhone(e.target.value) })}
+                  onChange={(e) => setFormData({ ...formData, phone: fmtPhone(e.target.value) })}
                 />
                 {(errors.phone || errors.contact) && <p className="text-red-500 text-sm mt-1">{errors.phone || errors.contact}</p>}
               </div>
 
-              {/* Options prefer DB, fallback to block content */}
               <div>
                 <label className="block font-semibold mb-1">I&apos;m Interested In:</label>
-                {renderedServices.length === 0 ? (
+                {services.length === 0 ? (
                   <div className="text-red-500 text-sm italic bg-red-900/10 border border-red-500/30 rounded px-3 py-2">
                     No services configured. This form prefers <code>template.services</code> and falls back to the block’s own items.
                   </div>
                 ) : (
                   <select name="service" className={inputClass()} value={formData.service} onChange={handleChange} required>
                     <option value="">Select a service</option>
-                    {renderedServices.map((s) => (
-                      <option key={s} value={s}>
-                        {s}
-                      </option>
+                    {services.map((s) => (
+                      <option key={s} value={s}>{s}</option>
                     ))}
                   </select>
                 )}
@@ -274,7 +268,7 @@ Service: ${formData.service || 'N/A'}
               <div className="flex justify-center gap-4 pt-2">
                 <button
                   type="submit"
-                  disabled={submitting || renderedServices.length === 0 || !hasValidEmail}
+                  disabled={submitting || services.length === 0 || !hasValidEmail}
                   className="bg-blue-900 hover:bg-blue-800 text-white px-6 py-2 rounded transition disabled:opacity-50"
                 >
                   {submitting ? 'Submitting...' : 'Submit'}

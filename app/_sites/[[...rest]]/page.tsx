@@ -10,6 +10,23 @@ import { TemplateEditorProvider } from '@/context/template-editor-context';
 import { generatePageMetadata } from '@/lib/seo/generateMetadata';
 import { supabaseAdmin } from '@/lib/supabase/admin';
 import { getServerSupabase } from '@/lib/supabase/server';
+const QS_DEBUG = process.env.QSITES_DEBUG === '1';
+
+// helper to log without leaking secrets
+function qlog(msg: string, extra?: any) {
+  if (!QS_DEBUG) return;
+  try {
+    // mask keys if they somehow slip in
+    const scrub = (v: any) =>
+      typeof v === 'string' && v.length > 16 ? v.slice(0, 6) + '…' + v.slice(-4) : v;
+    const safe = extra && JSON.parse(JSON.stringify(extra, (_k, v) => scrub(v)));
+    // eslint-disable-next-line no-console
+    console.log(`[QSITES] ${msg}`, safe ?? '');
+  } catch {
+    // eslint-disable-next-line no-console
+    console.log(`[QSITES] ${msg}`);
+  }
+}
 
 type PublicSiteRow = {
   id: string;
@@ -89,79 +106,118 @@ async function fetchByDomainVariants(client: any, variants: string[]) {
 }
 
 async function loadSiteForRequest(): Promise<{ site: PublicSiteRow; host: string } | null> {
-  const { host, variants } = await getHostAndVariants();
+  const h = await headers();
+  const host = (h.get('x-forwarded-host') ?? h.get('host') ?? '')
+    .toLowerCase()
+    .replace(/\.$/, '');
+  const variants = host.startsWith('www.') ? [host, host.slice(4)] : [host, `www.${host}`];
+
+  qlog('env', {
+    baseDomain: BASE_DOMAIN,
+    supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL,
+    useAdminFallback: true, // we’ll try it below unconditionally
+    host, variants,
+  });
+
   if (!host) return null;
 
-  // 1) try with the normal SSR client (role = public/anon/authenticated depending on cookies)
-  const s1 = await readClient();
-  let { data: site, error } = await fetchByDomainVariants(s1, variants);
+  const s1 = await getServerSupabase();
 
-  // 2) if not found and it’s a *.BASE_DOMAIN subdomain, try the subdomain fallbacks
+  const r1 = await s1
+  .from('templates')
+  .select(SELECT)
+  .eq('is_site', true)
+  .eq('published', true)
+  .eq('archived', false)
+  .in('domain_lc', variants)
+  .returns<PublicSiteRow>()       // <-- add this
+  .maybeSingle();
+
+  let site: PublicSiteRow | null = r1.data ?? null;  // <-- type the variable
+
+
+  qlog('SSR query by domain_lc', { error: r1.error?.message ?? null, found: !!r1.data });
+
+
+
+  // *.BASE_DOMAIN fallback
   if (!site && host.endsWith(`.${BASE_DOMAIN}`)) {
     const sub = host.slice(0, -(BASE_DOMAIN.length + 1));
 
     const r2 = await s1
+    .from('templates')
+    .select(SELECT)
+    .eq('is_site', true)
+    .eq('published', true)
+    .eq('archived', false)
+    .eq('default_subdomain', `${sub}.${BASE_DOMAIN}`)
+    .returns<PublicSiteRow>()       // <-- add
+    .maybeSingle();
+  site = site ?? r2.data ?? null;
+
+  if (!site) {
+    const r3 = await s1
       .from('templates')
       .select(SELECT)
       .eq('is_site', true)
       .eq('published', true)
       .eq('archived', false)
-      .eq('default_subdomain', `${sub}.${BASE_DOMAIN}`)
-      .returns<PublicSiteRow>()
+      .eq('slug', sub)
+      .returns<PublicSiteRow>()     // <-- add
       .maybeSingle();
-
-    site = r2.data ?? null;
-
-    if (!site) {
-      const r3 = await s1
-        .from('templates')
-        .select(SELECT)
-        .eq('is_site', true)
-        .eq('published', true)
-        .eq('archived', false)
-        .eq('slug', sub)
-        .returns<PublicSiteRow>()
-        .maybeSingle();
-      site = r3.data ?? null;
-    }
+    site = r3.data ?? null;
+  }
+  
   }
 
-  // 3) belt-and-suspenders: if still no site, retry once with service role
+  // Admin fallback (service role) – belt & suspenders
   if (!site) {
-    const rAdmin = await fetchByDomainVariants(supabaseAdmin, variants);
-    site = rAdmin.data ?? null;
+    const a1 = await supabaseAdmin
+    .from('templates')
+    .select(SELECT)
+    .eq('is_site', true)
+    .eq('published', true)
+    .eq('archived', false)
+    .in('domain_lc', variants)
+    .returns<PublicSiteRow>()       // <-- add
+    .maybeSingle();
+  site = site ?? a1.data ?? null;
 
     if (!site && host.endsWith(`.${BASE_DOMAIN}`)) {
       const sub = host.slice(0, -(BASE_DOMAIN.length + 1));
       const a2 = await supabaseAdmin
         .from('templates')
         .select(SELECT)
-        .eq('is_site', true)
-        .eq('published', true)
-        .eq('archived', false)
+        .eq('is_site', true).eq('published', true).eq('archived', false)
         .eq('default_subdomain', `${sub}.${BASE_DOMAIN}`)
         .returns<PublicSiteRow>()
         .maybeSingle();
+      qlog('ADMIN by default_subdomain', { sub, error: a2.error?.message ?? null, found: !!a2.data });
       site = a2.data ?? null;
 
       if (!site) {
         const a3 = await supabaseAdmin
           .from('templates')
           .select(SELECT)
-          .eq('is_site', true)
-          .eq('published', true)
-          .eq('archived', false)
+          .eq('is_site', true).eq('published', true).eq('archived', false)
           .eq('slug', sub)
           .returns<PublicSiteRow>()
           .maybeSingle();
+        qlog('ADMIN by slug', { sub, error: a3.error?.message ?? null, found: !!a3.data });
         site = a3.data ?? null;
       }
     }
   }
 
-  if (!site) return null;
-  return { site, host };
+  if (!site) {
+    qlog('NOT FOUND – returning 404', { host, variants });
+    return null;
+  }
+  const found: PublicSiteRow = site;  // <-- narrow once, use below
+  qlog('FOUND site', { id: found.id, slug: found.slug, domain_lc: found.domain_lc });
+  return { site: found, host };
 }
+
 
 /* ---------- Metadata ---------- */
 export async function generateMetadata({ params }: { params: { rest?: string[] } }): Promise<Metadata> {

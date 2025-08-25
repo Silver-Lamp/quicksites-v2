@@ -18,23 +18,19 @@ function digitsOrNull(v: any) {
   const s = String(v ?? '').replace(/\D/g, '');
   return s.length ? s : null;
 }
-function cleanServices(v: any) {
+/** Normalize services to a clean string[]; return undefined when not provided */
+function cleanServices(v: any): string[] | undefined {
   if (!Array.isArray(v)) return undefined;
-  const arr = v
-    .map((s) => String(s ?? '').trim())
-    .filter(Boolean);
+  const arr = v.map((s) => String(s ?? '').trim()).filter(Boolean);
   return arr.length ? Array.from(new Set(arr)) : [];
 }
-
 /** Keep only defined keys; let nulls pass through, drop undefined */
-function stripUndefined(obj: Record<string, any>) {
+function stripUndefined<T extends Record<string, any>>(obj: T): T {
   for (const k of Object.keys(obj)) {
-    if (obj[k] === undefined) delete obj[k];
+    if (obj[k] === undefined) delete (obj as any)[k];
   }
   return obj;
 }
-
-// small helper
 const omit = <T extends object, K extends keyof T>(obj: T, ...keys: K[]): Omit<T, K> => {
   const clone: any = { ...obj };
   for (const k of keys) delete clone[k];
@@ -45,18 +41,29 @@ export async function saveTemplate(input: any, id?: string): Promise<Template> {
   const supabase = await getSupabaseForAction();
 
   // auth
-  const { data: { user }, error: userErr } = await supabase.auth.getUser();
+  const {
+    data: { user },
+    error: userErr,
+  } = await supabase.auth.getUser();
   if (userErr || !user) throw new Error('Not authenticated');
 
   // unwrap input
   const src = input?.db ? input.db : input;
   const rowId = id ?? src?.id ?? undefined;
 
-  // common payload
+  // normalize services (prefer explicit services_jsonb, else services)
+  const normalizedServices =
+    cleanServices(src?.services_jsonb) ?? cleanServices(src?.services);
+
+  // common payload (note: we DO NOT write legacy `services`)
   const basePayload: Record<string, any> = {
     id: rowId,
     template_name: trimOrNull(src?.template_name),
     slug: trimOrNull(src?.slug),
+
+    // -- this is derived, so we don't need to write it
+    // base_slug: trimOrNull(src?.base_slug) ?? deriveBaseSlug(src?.slug),
+
     layout: trimOrNull(src?.layout),
     color_scheme: trimOrNull(src?.color_scheme),
     theme: trimOrNull(src?.theme),
@@ -79,10 +86,13 @@ export async function saveTemplate(input: any, id?: string): Promise<Template> {
 
     data: src?.data ?? {},
 
-    header_block: (input?.header_block ?? src?.header_block ?? src?.headerBlock) ?? null,
-    footer_block: (input?.footer_block ?? src?.footer_block ?? src?.footerBlock) ?? null,
+    header_block:
+      (input?.header_block ?? src?.header_block ?? src?.headerBlock) ?? null,
+    footer_block:
+      (input?.footer_block ?? src?.footer_block ?? src?.footerBlock) ?? null,
 
-    services: cleanServices(src?.services),
+    // ✅ write to the JSONB column used by prod/view
+    services_jsonb: normalizedServices,
     // DO NOT trust client owner_id; we decide below
   };
 
@@ -96,7 +106,6 @@ export async function saveTemplate(input: any, id?: string): Promise<Template> {
       .select('id, owner_id')
       .eq('id', rowId)
       .maybeSingle();
-
     if (existsErr) throw new Error(JSON.stringify(existsErr));
     exists = !!existing;
   }
@@ -124,4 +133,3 @@ export async function saveTemplate(input: any, id?: string): Promise<Template> {
     return data as Template;
   }
 }
-

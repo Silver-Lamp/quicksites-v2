@@ -5,16 +5,27 @@ import EditWrapper from '@/components/admin/templates/edit-wrapper'; // client c
 
 type Params = { key: string };
 
-const UUID_V4 = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+// UUID v4 detector to decide if `key` is an ID or a slug
+const UUID_V4 =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
-export default async function TemplateEditPage({ params }: { params: Params }) {
-  const { key } = params;
+export default async function TemplateEditPage({
+  params, // ✅ Next.js 15: params is a Promise
+}: {
+  params: Promise<Params>;
+}) {
+  const { key } = await params; // ✅ must await
+
   const supabase = await getServerSupabase();
 
-  // Auth
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) {
-    return redirect(`/login?next=${encodeURIComponent(`/template/${key}/edit`)}`);
+  // Auth (use getUser rather than getSession to avoid security warning)
+  const {
+    data: { user },
+    error: userErr,
+  } = await supabase.auth.getUser();
+
+  if (userErr || !user) {
+    redirect(`/login?next=${encodeURIComponent(`/template/${key}/edit`)}`);
   }
 
   // Admin?
@@ -35,7 +46,9 @@ export default async function TemplateEditPage({ params }: { params: Params }) {
   if (!template) return notFound();
 
   // Pass initialTemplate to avoid a second client fetch
-  return isId
-    ? <EditWrapper id={template.id} initialTemplate={template} />
-    : <EditWrapper slug={template.slug} initialTemplate={template} />;
+  return isId ? (
+    <EditWrapper id={template.id} initialTemplate={template} />
+  ) : (
+    <EditWrapper slug={template.slug} initialTemplate={template} />
+  );
 }

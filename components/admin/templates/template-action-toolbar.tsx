@@ -244,6 +244,17 @@ export function TemplateActionToolbar({ template, autosaveStatus, onSaveDraft, o
     }
   };
 
+  const onPublish = async (id?: string) => {
+    try {
+      await fetch(`/api/templates/${slugOrName}/publish`, { method: 'POST' });
+      await reloadVersions();
+      toast.success('Published!');
+    } catch (e) {
+      console.error('[Publish] failed', e);
+      toast.error('Failed to publish');
+    }
+  };
+
   return (
     <>
       <div
@@ -302,6 +313,7 @@ export function TemplateActionToolbar({ template, autosaveStatus, onSaveDraft, o
               setOpen={setVersionsOpen}
               onCreateSnapshot={onCreateSnapshot}
               onRestore={onRestore}
+              onPublish={onPublish}
             />
 
             <Button size="sm" variant="secondary" onClick={handleSaveClick}>

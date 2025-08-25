@@ -10,6 +10,7 @@ export function useSaveTemplate() {
       theme,
       brand,
       colorScheme,
+      services,
     }: {
       templateId: string;
       templateName: string;
@@ -18,6 +19,7 @@ export function useSaveTemplate() {
       theme?: string;
       brand?: string;
       colorScheme?: string;
+      services?: string[];
     }): Promise<string | null> => {
       console.log('Saving template:', {
         templateId,
@@ -27,6 +29,7 @@ export function useSaveTemplate() {
         theme,
         brand,
         colorScheme,
+        services,
       });
       return templateId;
     },

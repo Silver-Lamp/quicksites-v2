@@ -1,18 +1,20 @@
 'use client';
 
-import { useRef } from 'react';
+import { useEffect, useRef } from 'react';
 import { Button } from '@/components/ui';
-import { Clock, ChevronDown } from 'lucide-react';
+import { Clock, ChevronDown, Check } from 'lucide-react';
 import { relativeTimeLabel } from '@/lib/editor/templateUtils';
 import type { VersionRow } from '@/hooks/useTemplateVersions';
 
 type Props = {
   labelTitle: string;
-  versions: VersionRow[];
+  versions: VersionRow[];                // sorted newest-first
   open: boolean;
   setOpen: (v: boolean) => void;
   onCreateSnapshot: () => Promise<void>;
   onRestore: (id: string) => Promise<void>;
+  onPublish: (id?: string) => Promise<void>;  // undefined => publish latest
+  publishedVersionId?: string | null;
 };
 
 export default function VersionsDropdown({
@@ -22,21 +24,20 @@ export default function VersionsDropdown({
   setOpen,
   onCreateSnapshot,
   onRestore,
+  onPublish,
+  publishedVersionId,
 }: Props) {
   const ref = useRef<HTMLDivElement | null>(null);
 
-  // outside click closer
-  // (parent should control open; this is here to keep it easy to reuse)
-  if (typeof window !== 'undefined') {
-    // useCapture-off simple handler
-    const handler = (e: MouseEvent) => {
-      if (!open) return;
-      if (!ref.current) return;
+  // Outside-click close with cleanup
+  useEffect(() => {
+    function onDown(e: MouseEvent) {
+      if (!open || !ref.current) return;
       if (!ref.current.contains(e.target as Node)) setOpen(false);
-    };
-    window.addEventListener('mousedown', handler);
-    // cleanup is handled by React unmount re-run; keep lightweight
-  }
+    }
+    window.addEventListener('mousedown', onDown);
+    return () => window.removeEventListener('mousedown', onDown);
+  }, [open, setOpen]);
 
   const latest = versions[0];
   const latestLabel = latest
@@ -60,57 +61,82 @@ export default function VersionsDropdown({
       </Button>
 
       {open && (
-        <div className="absolute bottom-full mb-2 right-0 w-80 max-h-96 overflow-auto rounded-md border border-gray-700 bg-gray-900 shadow-xl">
+        <div className="absolute bottom-full mb-2 right-0 w-96 max-h-[28rem] overflow-auto rounded-md border border-gray-700 bg-gray-900 shadow-xl">
           <div className="p-2 text-xs text-gray-400 sticky top-0 bg-gray-900/95 backdrop-blur">
             {labelTitle}
           </div>
 
+          <div className="px-3 py-2 space-y-2">
+            <div className="flex gap-2">
+              <Button
+                size="sm"
+                variant="secondary"
+                onClick={async () => {
+                  await onCreateSnapshot();
+                  setOpen(false);
+                }}
+              >
+                + Create snapshot
+              </Button>
+              <Button
+                size="sm"
+                variant="default"
+                onClick={async () => {
+                  await onPublish(); // publish latest
+                  setOpen(false);
+                }}
+                disabled={!versions.length}
+                title={versions.length ? 'Publish latest snapshot' : 'No versions yet'}
+              >
+                Publish latest
+              </Button>
+            </div>
+          </div>
+
           {versions.length === 0 ? (
-            <div className="px-3 py-3 text-sm text-gray-300">
+            <div className="px-3 pb-3 text-sm text-gray-300">
               No snapshots yet.
-              <div className="mt-2">
-                <Button
-                  size="sm"
-                  variant="secondary"
-                  onClick={async () => {
-                    await onCreateSnapshot();
-                    setOpen(false);
-                  }}
-                >
-                  Create snapshot
-                </Button>
-              </div>
             </div>
           ) : (
             <div className="py-1">
-              <div className="px-2 pb-2 flex justify-end">
-                <Button
-                  size="sm"
-                  variant="secondary"
-                  onClick={async () => {
-                    await onCreateSnapshot();
-                    setOpen(false);
-                  }}
-                >
-                  + Create snapshot
-                </Button>
-              </div>
-
               {versions.map((v) => {
-                const label = `${(v.commit?.trim() || 'Snapshot')} · ${relativeTimeLabel(
-                  v.updated_at || v.created_at || ''
-                )}`;
+                const when = relativeTimeLabel(v.updated_at || v.created_at || '');
+                const label = `${(v.commit?.trim() || 'Snapshot')} · ${when}`;
+                const isPublished = v.id === publishedVersionId;
                 return (
-                  <button
+                  <div
                     key={v.id}
-                    onClick={async () => {
-                      setOpen(false);
-                      await onRestore(v.id);
-                    }}
-                    className="w-full text-left px-3 py-2 hover:bg-gray-800 text-sm"
+                    className="w-full px-3 py-2 hover:bg-gray-800 text-sm flex items-center justify-between gap-2"
                   >
-                    {label}
-                  </button>
+                    <button
+                      onClick={async () => {
+                        setOpen(false);
+                        await onRestore(v.id);
+                      }}
+                      className="truncate text-left"
+                      title="Restore into editor"
+                    >
+                      {label}
+                    </button>
+                    <div className="flex items-center gap-2">
+                      {isPublished && (
+                        <span className="inline-flex items-center text-emerald-400 text-xs" title="Currently published">
+                          <Check className="w-3 h-3 mr-1" /> published
+                        </span>
+                      )}
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={async () => {
+                          await onPublish(v.id); // publish this specific version
+                          setOpen(false);
+                        }}
+                        title="Publish this version"
+                      >
+                        Publish
+                      </Button>
+                    </div>
+                  </div>
                 );
               })}
 

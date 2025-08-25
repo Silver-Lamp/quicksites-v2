@@ -13,7 +13,7 @@ export async function POST(req: Request) {
 
   try {
     await resend.emails.send({
-      from: 'QuickSites <welcome@quicksites.ai>',
+      from: 'QuickSites <support@quicksites.ai>',
       to: [email],
       subject: `🚀 Your QuickSite is Ready!`,
       html: `

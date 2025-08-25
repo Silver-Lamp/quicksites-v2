@@ -8,7 +8,7 @@ export async function getLatLonForCityState(
     try {
       const res = await fetch(url, {
         headers: {
-          'User-Agent': 'QuickSites-Geocoder/1.0 (admin@quicksites.ai)',
+          'User-Agent': 'QuickSites-Geocoder/1.0 (support@quicksites.ai)',
           'Accept': 'application/json',
         },
       });

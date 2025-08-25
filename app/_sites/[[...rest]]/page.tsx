@@ -1,14 +1,20 @@
-// app/_sites/[...rest]/page.tsx
+// app/_sites/[[...rest]]/page.tsx
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
 import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
 import { headers } from 'next/headers';
-import { getServerSupabase } from '@/lib/supabase/server';
 import SiteRenderer from '@/components/sites/site-renderer';
 import { TemplateEditorProvider } from '@/context/template-editor-context';
 import { generatePageMetadata } from '@/lib/seo/generateMetadata';
+// import { supabase } from '@/admin/lib/supabaseClient';
+import { supabaseAdmin } from '@/lib/supabase/admin';
+import { getServerSupabase } from '@/lib/supabase/server';
+
+const supabase = process.env.SITE_PUBLIC_READ_WITH_SERVICE_ROLE === '1'
+  ? supabaseAdmin                      // server-only
+  : await getServerSupabase();
 
 // Local row shape to avoid drift with generated types
 type PublicSiteRow = {
@@ -51,24 +57,26 @@ function firstPageSlug(site: PublicSiteRow): string {
 async function loadSiteForRequest(): Promise<{ site: PublicSiteRow; host: string } | null> {
   const h = await headers();
   const host = (h.get('x-forwarded-host') ?? h.get('host') ?? '')
-  .toLowerCase()
-  .replace(/\.$/, '');
-
-const variants = host.startsWith('www.')
-  ? [host, host.slice(4)]                   // ["www.example.com", "example.com"]
-  : [host, `www.${host}`];     
-
-  const supabase = await getServerSupabase();
-
-  // 1) Exact custom-domain match
+    .toLowerCase()
+    .replace(/\.$/, '');
+  
+  const variants = host.startsWith('www.')
+    ? [host, host.slice(4)]
+    : [host, `www.${host}`];
+  
+  const selectColumns =
+    'id, slug, template_name, data, header_block, footer_block, color_mode, meta, default_subdomain, domain_lc, published, is_site, archived';
+  
+  // 1) try custom domain (apex/www)
   const r1 = await supabase
-  .from('templates')
-  .select(selectColumns)
-  .eq('is_site', true)
-  .eq('published', true)
-  .eq('archived', false)
-  .in('domain_lc', variants)                // <-- accept either variant
-  .maybeSingle<PublicSiteRow>();
+    .from('templates')
+    .select(selectColumns)
+    .eq('is_site', true)
+    .eq('published', true)
+    .eq('archived', false)
+    .in('domain_lc', variants)   // <-- key change
+    .maybeSingle<PublicSiteRow>();
+  
   let site = r1.data ?? null;
 
   // 2) *.BASE_DOMAIN subdomain support (e.g., foo.quicksites.ai)

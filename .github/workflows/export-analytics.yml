@@ -35,7 +35,7 @@ jobs:
       - name: Commit updated reports
         run: |
           git config user.name "quicksites-bot"
-          git config user.email "bot@quicksites.ai"
+          git config user.email "support@quicksites.ai"
           git add reports/analytics
           git commit -m "📊 Nightly analytics snapshot [skip ci]" || echo "Nothing to commit"
           git push

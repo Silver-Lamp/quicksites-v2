@@ -34,7 +34,7 @@ jobs:
       - name: Commit snapshots
         run: |
           git config --global user.name "quicksites-bot"
-          git config --global user.email "bot@quicksites.ai"
+          git config --global user.email "support@quicksites.ai"
           git add snapshots/*.xml
           git commit -m "📦 nightly sitemap snapshot [skip ci]" || echo "No changes to commit"
           git push
@@ -76,7 +76,7 @@ jobs:
           curl -sSL https://kcwruliugwidsdgsrthy.supabase.co/storage/v1/object/public/sitemaps/sitemap-hreflang.diff.md -o reports/sitemap-hreflang.diff.md
 
           git config --global user.name "quicksites-bot"
-          git config --global user.email "bot@quicksites.ai"
+          git config --global user.email "support@quicksites.ai"
           git add reports/*.diff.md
           git commit -m "📝 nightly sitemap markdown diffs [skip ci]" || echo "No changes to commit"
           git push
@@ -98,5 +98,5 @@ jobs:
           password: ${{ secrets.EMAIL_PASS }}
           subject: '❌ Analytics Export Failed'
           to: your@email.com
-          from: 'QuickSites Bot <bot@quicksites.ai>'
+          from: 'QuickSites Bot <support@quicksites.ai>'
           body: 'The nightly analytics export failed. View logs at: ${{ github.run_url }}'

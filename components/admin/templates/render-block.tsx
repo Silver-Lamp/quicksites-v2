@@ -239,7 +239,9 @@ ID: ${block._id || 'n/a'}`}
 
       {/* Block content */}
       <div className="p-0">
-        <Suspense fallback={<div className="p-2 text-sm text-muted-foreground">Loading block…</div>}>
+        <Suspense 
+          // fallback={<div className="p-2 text-sm text-muted-foreground">Loading block…</div>}>
+          fallback={<span></span>}>
           {hydrated && refReady ? (
             <Component
               {...(commonProps as any)}

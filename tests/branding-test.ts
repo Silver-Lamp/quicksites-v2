@@ -46,7 +46,7 @@ test('branding snapshot end-to-end flow (with cleanup)', async () => {
       data: {
         pages: [{ content_blocks: [{ type: 'hero', content: 'Hello OG World' }] }],
       },
-      editor_email: 'dev@quicksites.ai',
+      editor_email: 'support@quicksites.ai',
       branding_profile_id: profile.id,
     };
 

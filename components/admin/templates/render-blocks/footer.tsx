@@ -29,7 +29,7 @@ function useGeocode(address: string | null | undefined) {
       try {
         const res = await fetch(
           `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(address)}&format=json&limit=1`,
-          { headers: { 'User-Agent': 'QuickSites (admin@quicksites.ai)' } }
+          { headers: { 'User-Agent': 'QuickSites (support@quicksites.ai)' } }
         );
         const data = await res.json();
         if (data?.length) {

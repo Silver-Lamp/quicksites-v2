@@ -36,7 +36,7 @@ export async function GET(req: NextRequest) {
   try {
     const geoRes = await fetch(url, {
       headers: {
-        'User-Agent': 'QuickSites/1.0 (admin@quicksites.ai)',
+        'User-Agent': 'QuickSites/1.0 (support@quicksites.ai)',
       },
     });
 

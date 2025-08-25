@@ -8,8 +8,8 @@ export const dynamic = 'force-dynamic';
 // Environment (safe on server)
 const RESEND_API_KEY = process.env.RESEND_API_KEY || '';
 const EMAIL_FROM = process.env.EMAIL_FROM || 'QuickSites <sandon@contact.quicksites.ai>';
-const EMAIL_SALES = process.env.EMAIL_SALES || 'sandon@quicksites.ai';
-const EMAIL_SUPPORT = process.env.EMAIL_SUPPORT || 'sandon@quicksites.ai';
+const EMAIL_SALES = process.env.EMAIL_SALES || 'support@quicksites.ai';
+const EMAIL_SUPPORT = process.env.EMAIL_SUPPORT || 'support@quicksites.ai';
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || '';

@@ -9,7 +9,7 @@ export default function ReportsDashboardExtended() {
     oldest: '',
     newest: '',
   });
-  const [email, setEmail] = useState('analytics@quicksites.ai');
+  const [email, setEmail] = useState('support@quicksites.ai');
   const [nightly, setNightly] = useState(true);
   const [weekly, setWeekly] = useState(true);
 

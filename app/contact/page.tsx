@@ -15,8 +15,8 @@ import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import SiteHeader from '@/components/site/site-header';
 
-const EMAIL_SALES = 'sandon@quicksites.ai';
-const EMAIL_SUPPORT = 'sandon@quicksites.ai';
+const EMAIL_SALES = 'support@quicksites.ai';
+const EMAIL_SUPPORT = 'support@quicksites.ai';
 const API_PATH = '/api/contact';
 
 export default function ContactPage() {
@@ -125,18 +125,18 @@ export default function ContactPage() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="name">Name *</Label>
-                  <Input id="name" value={name} onChange={(e) => setName(e.target.value)} placeholder="Jane Doe" required />
+                  <Input id="name" value={name} className="placeholder:text-zinc-400" onChange={(e) => setName(e.target.value)} placeholder="Jane Doe" required />
                 </div>
                 <div>
                   <Label htmlFor="email">Email *</Label>
-                  <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@agency.com" required />
+                  <Input id="email" type="email" className="placeholder:text-zinc-400" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@agency.com" required />
                 </div>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="company">Company</Label>
-                  <Input id="company" value={company} onChange={(e) => setCompany(e.target.value)} placeholder="Your Agency" />
+                  <Input className="placeholder:text-zinc-400" id="company" value={company} onChange={(e) => setCompany(e.target.value)} placeholder="Your Agency" />
                 </div>
                 <div>
                   <Label htmlFor="sites">How many sites?</Label>
@@ -147,6 +147,7 @@ export default function ContactPage() {
                     value={sites}
                     onChange={(e) => setSites(e.target.value === '' ? '' : Math.max(0, Number(e.target.value)))}
                     placeholder="e.g., 25"
+                    className="placeholder:text-zinc-400"
                   />
                 </div>
               </div>
@@ -212,14 +213,14 @@ export default function ContactPage() {
               <CardDescription>Pick the channel that suits you.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-3 text-sm">
-              <a href={`mailto:${EMAIL_SALES}`} className="group inline-flex items-center gap-2">
+              {/* <a href={`mailto:${EMAIL_SALES}`} className="group inline-flex items-center gap-2">
                 <Mail className="h-4 w-4" />
                 <span>Sales:</span>
                 <span className="font-medium group-hover:underline">{EMAIL_SALES}</span>
-              </a>
+              </a> */}
               <a href={`mailto:${EMAIL_SUPPORT}`} className="group inline-flex items-center gap-2">
                 <Mail className="h-4 w-4" />
-                <span>Support:</span>
+                <span> Sales & Support:</span>
                 <span className="font-medium group-hover:underline">{EMAIL_SUPPORT}</span>
               </a>
               <div className="text-xs text-muted-foreground">

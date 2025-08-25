@@ -1,4 +1,3 @@
-// app/_sites/[[...rest]]/page.tsx
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 export const runtime = 'nodejs';
@@ -33,7 +32,7 @@ const SELECT =
 
 const BASE_DOMAIN = process.env.NEXT_PUBLIC_BASE_DOMAIN ?? 'quicksites.ai';
 
-/* ---------- Helpers ---------- */
+/* ---------- tiny helpers ---------- */
 async function originFromHeaders(): Promise<string> {
   const h = await headers();
   const host = (h.get('x-forwarded-host') ?? h.get('host') ?? 'localhost:3000')
@@ -60,34 +59,48 @@ async function getHostAndVariants(): Promise<{ host: string; variants: string[] 
   return { host, variants };
 }
 
-async function getReadClient() {
-  if (process.env.SITE_PUBLIC_READ_WITH_SERVICE_ROLE === '1') return supabaseAdmin; // server-only
+async function readClient() {
+  // normal SSR client first; we’ll fallback to admin if needed
   return await getServerSupabase();
+}
+
+/* single place to run the select */
+async function fetchByDomainVariants(client: any, variants: string[]) {
+  try {
+    const { data, error } = await client
+      .from('templates')
+      .select(SELECT)
+      .eq('is_site', true)
+      .eq('published', true)
+      .eq('archived', false)
+      .in('domain_lc', variants)
+      .maybeSingle();
+
+    if (error) {
+      console.error('Error fetching domain variants:', error);
+      return null;
+    }
+
+    return data;
+  } catch (err) {
+    console.error('Unexpected error fetching domain variants:', err);
+    return null;
+  }
 }
 
 async function loadSiteForRequest(): Promise<{ site: PublicSiteRow; host: string } | null> {
   const { host, variants } = await getHostAndVariants();
   if (!host) return null;
 
-  const supabase = await getReadClient();
+  // 1) try with the normal SSR client (role = public/anon/authenticated depending on cookies)
+  const s1 = await readClient();
+  let { data: site, error } = await fetchByDomainVariants(s1, variants);
 
-  // 1) custom domain (apex+www)
-  const r1 = await supabase
-    .from('templates')
-    .select(SELECT)
-    .eq('is_site', true)
-    .eq('published', true)
-    .eq('archived', false)
-    .in('domain_lc', variants)
-    .returns<PublicSiteRow>()
-    .maybeSingle();
-  let site = r1.data ?? null;
-
-  // 2) *.BASE_DOMAIN subdomain fallback (e.g., foo.quicksites.ai)
+  // 2) if not found and it’s a *.BASE_DOMAIN subdomain, try the subdomain fallbacks
   if (!site && host.endsWith(`.${BASE_DOMAIN}`)) {
     const sub = host.slice(0, -(BASE_DOMAIN.length + 1));
 
-    const r2 = await supabase
+    const r2 = await s1
       .from('templates')
       .select(SELECT)
       .eq('is_site', true)
@@ -96,10 +109,11 @@ async function loadSiteForRequest(): Promise<{ site: PublicSiteRow; host: string
       .eq('default_subdomain', `${sub}.${BASE_DOMAIN}`)
       .returns<PublicSiteRow>()
       .maybeSingle();
+
     site = r2.data ?? null;
 
     if (!site) {
-      const r3 = await supabase
+      const r3 = await s1
         .from('templates')
         .select(SELECT)
         .eq('is_site', true)
@@ -109,6 +123,39 @@ async function loadSiteForRequest(): Promise<{ site: PublicSiteRow; host: string
         .returns<PublicSiteRow>()
         .maybeSingle();
       site = r3.data ?? null;
+    }
+  }
+
+  // 3) belt-and-suspenders: if still no site, retry once with service role
+  if (!site) {
+    const rAdmin = await fetchByDomainVariants(supabaseAdmin, variants);
+    site = rAdmin.data ?? null;
+
+    if (!site && host.endsWith(`.${BASE_DOMAIN}`)) {
+      const sub = host.slice(0, -(BASE_DOMAIN.length + 1));
+      const a2 = await supabaseAdmin
+        .from('templates')
+        .select(SELECT)
+        .eq('is_site', true)
+        .eq('published', true)
+        .eq('archived', false)
+        .eq('default_subdomain', `${sub}.${BASE_DOMAIN}`)
+        .returns<PublicSiteRow>()
+        .maybeSingle();
+      site = a2.data ?? null;
+
+      if (!site) {
+        const a3 = await supabaseAdmin
+          .from('templates')
+          .select(SELECT)
+          .eq('is_site', true)
+          .eq('published', true)
+          .eq('archived', false)
+          .eq('slug', sub)
+          .returns<PublicSiteRow>()
+          .maybeSingle();
+        site = a3.data ?? null;
+      }
     }
   }
 

@@ -179,20 +179,20 @@ export default function HomePage() {
                 See Pricing
               </motion.a>
             </div>
-          // ) : isProd ? (
-          //   <div className="mt-4 flex flex-wrap items-center justify-center gap-3">
-          //     <div className="px-6 py-3 bg-zinc-700 text-white text-base font-medium rounded-lg shadow-lg opacity-70 cursor-not-allowed">
-          //       Log In (Coming Soon)
-          //     </div>
-          //     <motion.a
-          //       href="/pricing"
-          //       whileHover={{ scale: 1.05 }}
-          //       whileTap={{ scale: 0.97 }}
-          //       className="inline-block px-6 py-3 border border-zinc-700 hover:bg-zinc-800 text-white text-base font-medium rounded-lg transition-all"
-          //     >
-          //       See Pricing
-          //     </motion.a>
-          //   </div>
+          ) : isProd ? (
+            <div className="mt-4 flex flex-wrap items-center justify-center gap-3">
+              <div className="px-6 py-3 bg-zinc-700 text-white text-base font-medium rounded-lg shadow-lg opacity-70 cursor-not-allowed">
+                Log In (Coming Soon)
+              </div>
+              <motion.a
+                href="/pricing"
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.97 }}
+                className="inline-block px-6 py-3 border border-zinc-700 hover:bg-zinc-800 text-white text-base font-medium rounded-lg transition-all"
+              >
+                See Pricing
+              </motion.a>
+            </div>
           ) : (
             <div className="mt-4 flex flex-wrap items-center justify-center gap-3">
               <motion.a

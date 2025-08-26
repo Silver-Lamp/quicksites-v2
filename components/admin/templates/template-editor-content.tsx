@@ -206,21 +206,39 @@ export default function EditorContent({
     if (!ref) return;
     setAdderTarget({ pageIdx: ref.pageIdx, insertAt: ref.blockIdx + 1 });
   }
-  function handleInsertBlockAt(pageIdx: number, insertAt: number, type: string) {
+  function handleInsertBlockAt(
+    pageIdx: number,
+    insertAt: number,
+    type: string,
+    opts?: { openEditor?: boolean }
+  ) {
     const pages = [...getTemplatePages(template)];
     const page = { ...pages[pageIdx] };
     const blocks = [...getPageBlocks(page)];
+  
     const newBlock = createDefaultBlock(type as any) as Block;
+    // Ensure it has a stable id we can edit immediately
+    (newBlock as any)._id =
+      (newBlock as any)._id || (newBlock as any).id || (globalThis.crypto?.randomUUID?.() ?? String(Date.now()));
+  
     blocks.splice(insertAt, 0, newBlock);
     setPageBlocks(page, blocks);
     pages[pageIdx] = page;
+  
     const nextTemplate: any = Array.isArray((template as any)?.data?.pages)
       ? { ...template, data: { ...(template as any).data, pages } }
       : { ...template, pages };
+  
     setTemplate(nextTemplate);
     onChange(nextTemplate);
     setAdderTarget(null);
+  
+    if (opts?.openEditor) {
+      // open editor for the newly inserted block
+      setEditingBlock({ ref: { pageIdx, blockIdx: insertAt, block: newBlock } });
+    }
   }
+  
   function deleteBlock(blockId?: string | null, blockPath?: string | null) {
     const ref =
       (blockPath ? findBlockByPath(template, blockPath) : null) ??
@@ -388,27 +406,43 @@ export default function EditorContent({
 
       {/* Block adder */}
       {adderTarget && (
-        <div className="fixed inset-0 z-[1200] bg-black/70 p-6 overflow-auto flex items-center justify-center">
-          <div className="w-full max-w-3xl bg-neutral-900 border border-white/10 rounded-xl shadow-xl overflow-hidden">
-            <div className="p-4 border-b border-white/10 text-sm text-white/80">Add a block</div>
-            <div className="p-4">
-              <BlockAdderGrouped
-                existingBlocks={getPageBlocks(getTemplatePages(template)[adderTarget.pageIdx])}
-                onAdd={(type: string) => handleInsertBlockAt(adderTarget.pageIdx, adderTarget.insertAt, type)}
-                template={template as any}
-              />
-            </div>
-            <div className="p-3 border-t border-white/10 text-right">
-              <button
-                className="rounded-md px-3 py-1.5 text-sm bg-white/10 hover:bg-white/20 text-white"
-                onClick={() => setAdderTarget(null)}
-              >
-                Cancel
-              </button>
+        <div className="fixed inset-0 z-[1200] bg-black/70 backdrop-blur-sm overflow-y-auto">
+          {/* Launch lower on the page and keep the whole thing scrollable */}
+          <div className="mx-auto max-w-4xl pt-[12vh] px-4 pb-12">
+            <div className="w-full rounded-xl border border-white/10 bg-neutral-900 shadow-2xl overflow-hidden">
+              <div className="p-4 border-b border-white/10 text-sm text-white/80">
+                Add a block
+              </div>
+
+              <div className="p-2 sm:p-4">
+                <BlockAdderGrouped
+                  inline
+                  showOnlyQuickPicks
+                  startCollapsed
+                  existingBlocks={getPageBlocks(getTemplatePages(template)[adderTarget.pageIdx])}
+                  onAdd={(type: string) =>
+                    handleInsertBlockAt(adderTarget.pageIdx, adderTarget.insertAt, type)
+                  }
+                  onAddAndEdit={(type: string) =>
+                    handleInsertBlockAt(adderTarget.pageIdx, adderTarget.insertAt, type, { openEditor: true })
+                  }
+                  template={template as any}
+                />
+              </div>
+
+              <div className="p-3 border-t border-white/10 text-right">
+                <button
+                  className="rounded-md px-3 py-1.5 text-sm bg-white/10 hover:bg-white/20 text-white"
+                  onClick={() => setAdderTarget(null)}
+                >
+                  Cancel
+                </button>
+              </div>
             </div>
           </div>
         </div>
       )}
+
 
       {/* Bottom toolbar — portal renders above iframe */}
       <TemplateActionToolbar

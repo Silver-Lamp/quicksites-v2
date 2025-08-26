@@ -9,6 +9,8 @@ import SiteRenderer from '@/components/sites/site-renderer';
 import { TemplateEditorProvider } from '@/context/template-editor-context';
 import { generatePageMetadata } from '@/lib/seo/generateMetadata';
 import { supabaseAdmin } from '@/lib/supabase/admin';
+import SiteThemeSetter from '@/components/sites/site-theme-setter';
+import Script from 'next/script';
 
 const QS_DEBUG = process.env.QSITES_DEBUG === '1';
 const BASE_DOMAIN = process.env.NEXT_PUBLIC_BASE_DOMAIN ?? 'quicksites.ai';
@@ -386,20 +388,33 @@ export default async function HostSitePage({
   const normalized = normalizeForRenderer(site);
   qlog('RENDER', { pageSlug, pagesLen: normalized.pages?.length });
 
+  const inline = `(function(m){try{
+    var h=document.documentElement,b=document.body;
+    if(m==='dark'){h.classList.add('dark');b.classList.add('dark');h.dataset.theme='dark';b.dataset.theme='dark';}
+    else {h.classList.remove('dark');b.classList.remove('dark');h.dataset.theme='light';b.dataset.theme='light';}
+    document.cookie='qs-site-theme='+m+'; Path=/; Max-Age=31536000; SameSite=Lax';
+  }catch(e){}})('${colorMode}');`;
+
   return (
-    <TemplateEditorProvider
-      templateName={normalized.template_name ?? normalized.slug ?? String(normalized.id)}
-      colorMode={colorMode}
-      initialData={normalized}
-    >
-      <SiteRenderer
-        site={normalized}
-        page={pageSlug}
-        baseUrl={baseUrl}
-        id="site-renderer-page"
+    <>
+      {/* Ensure correct theme before hydration/paint */}
+    <Script id="qs-site-theme" strategy="beforeInteractive" dangerouslySetInnerHTML={{ __html: inline }} />
+    <SiteThemeSetter mode={colorMode} />
+  
+      <TemplateEditorProvider
+        templateName={normalized.template_name ?? normalized.slug ?? String(normalized.id)}
         colorMode={colorMode}
-        className="bg-white text-black dark:bg-black dark:text-white"
-      />
-    </TemplateEditorProvider>
+        initialData={normalized}
+      >
+        <SiteRenderer
+          site={normalized}
+          page={pageSlug}
+          baseUrl={baseUrl}
+          id="site-renderer-page"
+          colorMode={colorMode}
+          className="bg-white text-black dark:bg-black dark:text-white"
+        />
+      </TemplateEditorProvider>
+    </>
   );
 }

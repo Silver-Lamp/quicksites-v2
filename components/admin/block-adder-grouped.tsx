@@ -1,4 +1,3 @@
-// components/admin/block-adder-grouped.tsx
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
@@ -7,119 +6,104 @@ import type { Block } from '@/types/blocks';
 import { createDefaultBlock } from '@/lib/createDefaultBlock';
 import RenderBlockMini from '@/components/admin/templates/render-block-mini';
 import SafeTriggerButton from '@/components/ui/safe-trigger-button';
-import { Sparkles } from 'lucide-react';
+import { Sparkles, Type as TypeIcon, Mail, Image as ImageIcon, HelpCircle } from 'lucide-react';
 import type { Template } from '@/types/template';
 
 const blockGroups: Record<string, { label: string; types: Block['type'][] }> = {
-  callToAction: {
-    label: 'Calls to Action',
-    types: ['hero', 'contact_form'],
-  },
-  services: {
-    label: 'Business Features',
-    types: ['services', 'service_areas'],
-  },
-  content: {
-    label: 'Content Blocks',
-    types: ['text', 'quote', 'faq', 'testimonial', 'video', 'audio'],
-  },
+  callToAction: { label: 'Calls to Action', types: ['hero', 'contact_form'] },
+  services: { label: 'Business Features', types: ['services', 'service_areas'] },
+  content: { label: 'Content Blocks', types: ['text', 'quote', 'faq', 'testimonial', 'video', 'audio'] },
 };
 
-// ✅ Blocks with built-in AI assist
-// text: AI writer
-// hero: AI hero copy (headline/subheadline/CTA) + hero image generator
-// testimonial: AI testimonial generator (uses industry/services)
-// faq: AI FAQ generator (uses industry/services)
-// services: AI service list suggester (uses industry/locale)
-// service_areas: AI nearby-cities generator (uses city/state/lat/lon)
+const QUICK_PICKS: Array<{ type: Block['type']; label: string; Icon: any }> = [
+  { type: 'text',         label: 'Text',    Icon: TypeIcon },
+  { type: 'contact_form', label: 'Contact', Icon: Mail },
+  { type: 'hero',         label: 'Hero',    Icon: ImageIcon },
+  { type: 'faq',          label: 'FAQ',     Icon: HelpCircle },
+];
+
 const AI_ENABLED_TYPES = new Set<Block['type']>(
   ['text', 'hero', 'testimonial', 'faq', 'services', 'service_areas'] as Block['type'][]
 );
-
 const isAiType = (t: Block['type']) => AI_ENABLED_TYPES.has(t);
 
 const aiBadgeTitle = (t: Block['type']) => {
   switch (t) {
-    case 'hero':
-      return 'AI-enabled: generate hero headline, subheadline, CTA, and image';
-    case 'testimonial':
-      return 'AI-enabled: generate realistic testimonials using your industry & services';
-    case 'faq':
-      return 'AI-enabled: generate FAQs tailored to your industry & services';
-    case 'services':
-      return 'AI-enabled: suggest service list from your industry';
-    case 'service_areas':
-      return 'AI-enabled: auto-generate nearby service areas (uses your location)';
-    default:
-      return 'AI-enabled: generate & rewrite content in the editor (⌘/Ctrl + J)';
+    case 'hero': return 'AI-enabled: generate hero headline/subheadline/CTA and image';
+    case 'testimonial': return 'AI-enabled: generate realistic testimonials';
+    case 'faq': return 'AI-enabled: generate FAQs for your industry/services';
+    case 'services': return 'AI-enabled: suggest a services list';
+    case 'service_areas': return 'AI-enabled: generate nearby service areas';
+    default: return 'AI writer tools available in editor (⌘/Ctrl + J)';
   }
 };
-
 const aiNote = (t: Block['type']) => {
   switch (t) {
-    case 'hero':
-      return 'Hero AI: suggests headline/subheadline/CTA and can generate a wide hero image.';
-    case 'testimonial':
-      return 'AI testimonial generator: short 1–2 sentence quotes that can reference your industry and services.';
-    case 'faq':
-      return 'AI FAQ generator: concise Q&A that reflects your industry and offered services.';
-    case 'services':
-      return 'Suggests a clean list of customer-facing services (used by contact forms).';
-    case 'service_areas':
-      return 'Generates a list of nearby cities/areas (and blurbs) using your city/state or lat/lon.';
-    default:
-      return 'Built-in AI writing: intros, FAQs, CTAs, blog ideas, rewrite, shorten, expand.';
+    case 'hero': return 'Suggests headline/subheadline/CTA, can generate a wide hero image.';
+    case 'testimonial': return 'Short realistic quotes tailored to your industry/services.';
+    case 'faq': return 'Concise Q&A reflecting your offerings.';
+    case 'services': return 'Clean list of customer-facing services.';
+    case 'service_areas': return 'Nearby cities/areas using your location.';
+    default: return 'Built-in AI writing: intros, FAQs, CTAs, rewrite, etc.';
   }
 };
 
-function loadCollapsedGroups(): Record<string, boolean> {
+function loadCollapsed(): Record<string, boolean> {
   if (typeof window === 'undefined') return {};
-  try {
-    const saved = localStorage.getItem('collapsedBlockGroups');
-    return saved ? JSON.parse(saved) : {};
-  } catch {
-    return {};
-  }
+  try { return JSON.parse(localStorage.getItem('collapsedBlockGroups') || '{}'); } catch { return {}; }
 }
-
-function saveCollapsedGroups(groups: Record<string, boolean>) {
-  if (typeof window !== 'undefined') {
-    localStorage.setItem('collapsedBlockGroups', JSON.stringify(groups));
-  }
+function saveCollapsed(groups: Record<string, boolean>) {
+  try { localStorage.setItem('collapsedBlockGroups', JSON.stringify(groups)); } catch {}
 }
 
 type Props = {
   onAdd: (type: Block['type']) => void;
+  onAddAndEdit?: (type: Block['type']) => void;
   existingBlocks?: Block[];
   disallowDuplicates?: Block['type'][];
   label?: string;
   triggerElement?: React.ReactNode;
   colorMode?: 'light' | 'dark';
   template: Template;
+
+  /** NEW: render directly (no internal trigger/modal) */
+  inline?: boolean;
+  /** NEW: start by showing only the large quick-pick buttons */
+  showOnlyQuickPicks?: boolean;
+  /** NEW: start collapsed for each group when “More” is expanded */
+  startCollapsed?: boolean;
 };
 
 export default function BlockAdderGrouped({
   onAdd,
+  onAddAndEdit,
   existingBlocks = [],
   disallowDuplicates = ['footer', 'header'],
   label = 'Add Block',
   triggerElement,
   colorMode = 'dark',
   template,
+  inline = false,
+  showOnlyQuickPicks = false,
+  startCollapsed = false,
 }: Props) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState('');
-  const [collapsedGroups, setCollapsedGroups] = useState<Record<string, boolean>>(
-    () => loadCollapsedGroups()
-  );
+  const [showMore, setShowMore] = useState(!showOnlyQuickPicks);
+
+  const initialCollapsed = startCollapsed
+    ? Object.fromEntries(Object.keys(blockGroups).map((k) => [k, true]))
+    : loadCollapsed();
+
+  const [collapsedGroups, setCollapsedGroups] = useState<Record<string, boolean>>(initialCollapsed);
 
   useEffect(() => {
-    const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setOpen(false);
-    };
-    document.addEventListener('keydown', onKeyDown);
-    return () => document.removeEventListener('keydown', onKeyDown);
-  }, []);
+    if (!inline) {
+      const onKeyDown = (e: KeyboardEvent) => { if (e.key === 'Escape') setOpen(false); };
+      document.addEventListener('keydown', onKeyDown);
+      return () => document.removeEventListener('keydown', onKeyDown);
+    }
+  }, [inline]);
 
   const blocked = new Set(
     existingBlocks.filter((b) => disallowDuplicates.includes(b.type)).map((b) => b.type)
@@ -133,23 +117,191 @@ export default function BlockAdderGrouped({
         if (blocked.has(type)) return false;
         const label = (blockMeta[type as keyof typeof blockMeta]?.label || '').toLowerCase();
         const t = String(type).toLowerCase();
-        const hit =
-          !q ||
-          label.includes(q) ||
-          t.includes(q) ||
-          (wantsAi && isAiType(type)); // typing "ai" shows AI-capable blocks
-        return hit;
+        return !q || label.includes(q) || t.includes(q) || (wantsAi && isAiType(type));
       });
       return { key, label: group.label, types: matches };
     });
   }, [search, existingBlocks]);
 
+  const close = () => setOpen(false);
+
+  const QuickPicks = (
+    <div className="p-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        {QUICK_PICKS.map(({ type, label, Icon }) => (
+          <button
+            key={type}
+            onClick={() => {
+              (onAddAndEdit ?? onAdd)(type);
+              setSearch('');
+              if (!inline) close();
+            }}
+            className="group relative rounded-xl border border-gray-300 dark:border-neutral-700 bg-gray-50 dark:bg-neutral-800 p-4
+                       hover:border-purple-500 hover:bg-white dark:hover:bg-neutral-700 transition text-left"
+          >
+            <div className="flex items-center gap-3">
+              <div className="h-11 w-11 rounded-lg flex items-center justify-center
+                              bg-white dark:bg-neutral-900 border border-gray-200 dark:border-neutral-700
+                              group-hover:border-purple-500">
+                <Icon className="h-6 w-6 text-gray-700 dark:text-gray-200" />
+              </div>
+              <div className="font-medium text-gray-900 dark:text-white">{label}</div>
+            </div>
+            <div className="mt-2 text-xs text-gray-500 dark:text-gray-400">
+              Adds a {label.toLowerCase()} block and opens the editor
+            </div>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+
+  const MoreList = (
+    <>
+      {/* Search only when "More" is open */}
+      <div className="px-4 pb-4">
+        <input
+          autoFocus
+          type="text"
+          placeholder='Search block types… (try "ai")'
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="w-full px-3 py-2 rounded-md border border-gray-300 dark:border-neutral-700 bg-gray-50 dark:bg-neutral-800 text-black dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500"
+        />
+      </div>
+
+      {/* Scrollable area for the rest */}
+      <div className="px-4 pb-4">
+        <div className="space-y-6 max-h-[60vh] overflow-y-auto pr-2">
+          {filtered.map(({ key, label, types }) => (
+            <div key={key}>
+              <div
+                role="button"
+                tabIndex={0}
+                onClick={() => {
+                  const next = { ...collapsedGroups, [key]: !collapsedGroups[key] };
+                  setCollapsedGroups(next); saveCollapsed(next);
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    const next = { ...collapsedGroups, [key]: !collapsedGroups[key] };
+                    setCollapsedGroups(next); saveCollapsed(next);
+                  }
+                }}
+                className="w-full text-left px-4 py-2 font-medium text-sm text-gray-700 dark:text-gray-300
+                           bg-gray-50 dark:bg-neutral-800 hover:bg-gray-100 dark:hover:bg-neutral-700 rounded cursor-pointer"
+              >
+                {label}
+              </div>
+
+              {!collapsedGroups[key] && (
+                <div className="pt-2 flex flex-col gap-4">
+                  {types.length > 0 ? (
+                    types.map((type) => {
+                      const meta = blockMeta[type as keyof typeof blockMeta];
+                      const aiEnabled = isAiType(type);
+                      return (
+                        <div
+                          key={type}
+                          role="button"
+                          tabIndex={0}
+                          onClick={() => { onAdd(type); setSearch(''); if (!inline) close(); }}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onAdd(type); setSearch(''); if (!inline) close(); }
+                          }}
+                          className="text-left px-4 py-4 rounded-md border bg-white dark:bg-neutral-900 space-y-3 cursor-pointer
+                                     border-gray-300 dark:border-neutral-700 hover:bg-gray-50 dark:hover:bg-neutral-800"
+                        >
+                          <div className="flex items-center gap-2">
+                            <div className="text-lg">{meta.icon}</div>
+                            <div className="min-w-0">
+                              <div className="font-medium text-gray-800 dark:text-white truncate">
+                                {meta.label}
+                              </div>
+                              <div className="text-xs text-gray-500 dark:text-gray-400">Block type: {type}</div>
+                            </div>
+                            {aiEnabled && (
+                              <span
+                                title={aiBadgeTitle(type)}
+                                className="ml-auto inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px]
+                                           bg-purple-100 text-purple-700 border-purple-300
+                                           dark:bg-purple-600/15 dark:text-purple-200 dark:border-purple-500/40"
+                              >
+                                <Sparkles className="h-3 w-3" />
+                                AI
+                              </span>
+                            )}
+                          </div>
+
+                          {aiEnabled && (
+                            <div className="text-xs text-purple-700 dark:text-purple-300">
+                              {aiNote(type)}
+                            </div>
+                          )}
+
+                          <div className="relative w-full border rounded overflow-hidden border-gray-300 dark:border-neutral-700">
+                            <RenderBlockMini
+                              block={createDefaultBlock(type) as any}
+                              className="w-full h-32"
+                              showDebug={false}
+                              colorMode={colorMode}
+                              template={template}
+                            />
+                            {aiEnabled && (
+                              <span className="pointer-events-none absolute top-1.5 right-1.5 rounded px-1.5 py-0.5 text-[10px] font-medium bg-purple-600 text-white shadow">
+                                ✨ AI
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })
+                  ) : (
+                    <div className="px-2 py-1 text-sm text-gray-500 dark:text-gray-400">None available</div>
+                  )}
+                </div>
+              )}
+            </div>
+          ))}
+
+          {filtered.every((g) => g.types.length === 0) && (
+            <div className="px-2 py-1 text-sm text-gray-500 dark:text-gray-400">
+              No matching block types found
+            </div>
+          )}
+        </div>
+      </div>
+    </>
+  );
+
+  /** Inline mode = render picker body directly */
+  if (inline) {
+    return (
+      <div>
+        {QuickPicks}
+
+        {!showMore ? (
+          <div className="px-4 pb-4">
+            <button
+              className="w-full rounded-md px-3 py-2 text-sm bg-white/10 hover:bg-white/20 text-white"
+              onClick={() => setShowMore(true)}
+            >
+              More block types…
+            </button>
+          </div>
+        ) : null}
+
+        {showMore && MoreList}
+      </div>
+    );
+  }
+
+  /** Legacy self-contained trigger + modal */
   return (
     <>
       <div onClick={() => setOpen(true)}>
-        {triggerElement ? (
-          triggerElement
-        ) : (
+        {triggerElement ?? (
           <SafeTriggerButton
             onClick={() => setOpen(true)}
             className="w-full bg-purple-600 text-white px-4 py-2 rounded hover:bg-purple-700 text-center"
@@ -161,148 +313,26 @@ export default function BlockAdderGrouped({
 
       {open && (
         <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-neutral-900 rounded-lg shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto border border-black/10 dark:border-white/10">
+          <div className="bg-white dark:bg-neutral-900 rounded-lg shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto border border-black/10 dark:border-white/10">
             <div className="p-4 border-b border-gray-200 dark:border-neutral-700 flex justify-between items-center">
               <h2 className="text-lg font-semibold text-gray-800 dark:text-white">{label}</h2>
-              <button
-                onClick={() => setOpen(false)}
-                className="text-sm text-gray-500 hover:text-red-500 dark:text-gray-400"
-              >
-                ✕
-              </button>
+              <button onClick={close} className="text-sm text-gray-500 hover:text-red-500 dark:text-gray-400">✕</button>
             </div>
 
-            <div className="p-4 border-b border-gray-200 dark:border-neutral-700">
-              <input
-                autoFocus
-                type="text"
-                placeholder='Search block types… (try "ai")'
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="w-full px-3 py-2 rounded-md border border-gray-300 dark:border-neutral-700 bg-gray-50 dark:bg-neutral-800 text-black dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500"
-              />
-            </div>
+            {QuickPicks}
 
-            <div className="p-4 space-y-6">
-              {filtered.map(({ key, label, types }) => (
-                <div key={key}>
-                  <div
-                    role="button"
-                    tabIndex={0}
-                    onClick={() => {
-                      const next = { ...collapsedGroups, [key]: !collapsedGroups[key] };
-                      setCollapsedGroups(next);
-                      saveCollapsedGroups(next);
-                    }}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' || e.key === ' ') {
-                        e.preventDefault();
-                        const next = { ...collapsedGroups, [key]: !collapsedGroups[key] };
-                        setCollapsedGroups(next);
-                        saveCollapsedGroups(next);
-                      }
-                    }}
-                    className="w-full text-left px-4 py-2 font-medium text-sm text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-neutral-800 hover:bg-gray-100 dark:hover:bg-neutral-700 rounded cursor-pointer"
-                  >
-                    {label}
-                  </div>
+            {!showMore ? (
+              <div className="px-4 pb-4">
+                <button
+                  className="w-full rounded-md px-3 py-2 text-sm bg-white/10 hover:bg-white/20 text-white"
+                  onClick={() => setShowMore(true)}
+                >
+                  More block types…
+                </button>
+              </div>
+            ) : null}
 
-                  {!collapsedGroups[key] && (
-                    <div className="pt-2 flex flex-col gap-4 px-4">
-                      {types.length > 0 ? (
-                        types.map((type) => {
-                          const meta = blockMeta[type as keyof typeof blockMeta];
-                          const aiEnabled = isAiType(type);
-                          return (
-                            <div
-                              key={type}
-                              role="button"
-                              tabIndex={0}
-                              onClick={() => {
-                                onAdd(type);
-                                setSearch('');
-                                setOpen(false);
-                              }}
-                              onKeyDown={(e) => {
-                                if (e.key === 'Enter' || e.key === ' ') {
-                                  e.preventDefault();
-                                  onAdd(type);
-                                  setSearch('');
-                                  setOpen(false);
-                                }
-                              }}
-                              className={[
-                                'text-left px-4 py-4 rounded-md border bg-white dark:bg-neutral-900 space-y-3 cursor-pointer',
-                                'border-gray-300 dark:border-neutral-700',
-                                'hover:bg-gray-50 dark:hover:bg-neutral-800',
-                              ].join(' ')}
-                            >
-                              {/* Title row with AI badge */}
-                              <div className="flex items-center gap-2">
-                                <div className="text-lg">{meta.icon}</div>
-                                <div className="min-w-0">
-                                  <div className="font-medium text-gray-800 dark:text-white truncate">
-                                    {meta.label}
-                                  </div>
-                                  <div className="text-xs text-gray-500 dark:text-gray-400">
-                                    Block type: {type}
-                                  </div>
-                                </div>
-
-                                {aiEnabled && (
-                                  <span
-                                    title={aiBadgeTitle(type)}
-                                    className="ml-auto inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px]
-                                               bg-purple-100 text-purple-700 border-purple-300
-                                               dark:bg-purple-600/15 dark:text-purple-200 dark:border-purple-500/40"
-                                  >
-                                    <Sparkles className="h-3 w-3" />
-                                    AI
-                                  </span>
-                                )}
-                              </div>
-
-                              {/* AI note (type-specific) */}
-                              {aiEnabled && (
-                                <div className="text-xs text-purple-700 dark:text-purple-300">
-                                  {aiNote(type)}
-                                </div>
-                              )}
-
-                              {/* Mini preview with corner badge */}
-                              <div className="relative w-full border rounded overflow-hidden border-gray-300 dark:border-neutral-700">
-                                <RenderBlockMini
-                                  block={createDefaultBlock(type) as any}
-                                  className="w-full h-32"
-                                  showDebug={false}
-                                  colorMode={colorMode}
-                                  template={template}
-                                />
-                                {aiEnabled && (
-                                  <span className="pointer-events-none absolute top-1.5 right-1.5 rounded px-1.5 py-0.5 text-[10px] font-medium bg-purple-600 text-white shadow">
-                                    ✨ AI
-                                  </span>
-                                )}
-                              </div>
-                            </div>
-                          );
-                        })
-                      ) : (
-                        <div className="px-2 py-1 text-sm text-gray-400 dark:text-gray-500">
-                          None available
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
-              ))}
-
-              {filtered.every((g) => g.types.length === 0) && (
-                <div className="px-4 py-2 text-sm text-gray-500 dark:text-gray-400">
-                  No matching block types found
-                </div>
-              )}
-            </div>
+            {showMore && MoreList}
           </div>
         </div>
       )}

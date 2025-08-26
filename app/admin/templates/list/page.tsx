@@ -1,6 +1,3 @@
-// app/admin/templates/list/page.tsx
-// (No 'use server' here)
-
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
@@ -20,6 +17,7 @@ function hasPages(t: any) {
   const p2 = Array.isArray(t?.data?.pages) && t.data.pages.length > 0;
   return p1 || p2;
 }
+const ts = (d?: string | null) => (d ? new Date(d).getTime() || 0 : 0);
 
 export default async function TemplatesIndexPage({
   searchParams,
@@ -74,6 +72,22 @@ export default async function TemplatesIndexPage({
     groups.set(base, arr);
   }
 
+  // Compute effective updated_at per base: max(canonical.updated_at, latest version.updated_at)
+  const effectiveUpdatedByBase = new Map<string, string>();
+  for (const [base, items] of groups.entries()) {
+    const canonical = items.find((x) => !x.is_version) ?? items[0];
+    const latestVersion = items
+      .filter((x) => x.is_version)
+      .sort((a, b) => ts(b.updated_at) - ts(a.updated_at))[0];
+
+    const best =
+      ts(latestVersion?.updated_at) > ts(canonical?.updated_at)
+        ? latestVersion?.updated_at
+        : canonical?.updated_at;
+
+    if (best) effectiveUpdatedByBase.set(base, best);
+  }
+
   const pickPerBase = (items: any[]) => {
     const canonical = items.find(
       (t) => ((t?.slug ?? '') as string) === ((t?.base_slug as string) || baseSlug(t?.slug ?? ''))
@@ -82,19 +96,33 @@ export default async function TemplatesIndexPage({
 
     const withPages = items
       .filter((t) => hasPages(t))
-      .sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime());
+      .sort((a, b) => ts(b.updated_at) - ts(a.updated_at));
     if (withPages[0]) return withPages[0];
 
-    return items.sort(
-      (a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime()
-    )[0];
+    return items.sort((a, b) => ts(b.updated_at) - ts(a.updated_at))[0];
   };
 
-  const deduped = includeVersions ? rows : Array.from(groups.values()).map(pickPerBase);
+  const attachEffective = (t: any) => {
+    const slug = (t as any).slug || (t as any).template_name || (t as any).id || '';
+    const base = (t as any).base_slug || baseSlug(slug);
+    // for canonical rows use the per-base effective value; for versions keep their own updated_at
+    const effective =
+      t.is_version ? t.updated_at : effectiveUpdatedByBase.get(base) || t.updated_at;
+    return { ...t, effective_updated_at: effective };
+  };
+
+  let finalRows: any[];
+  if (includeVersions) {
+    finalRows = rows.map(attachEffective);
+  } else {
+    finalRows = Array.from(groups.values()).map(pickPerBase).map(attachEffective);
+    // Sort by effective desc so "Updated" ordering makes sense
+    finalRows.sort((a, b) => ts(b.effective_updated_at) - ts(a.effective_updated_at));
+  }
 
   return (
     <div className="soft-borders mx-auto max-w-6xl p-6 pb-[350px] lg:pb-[420px] mt-12">
-      <TemplatesIndexTable templates={deduped} selectedFilter={dateParam} />
+      <TemplatesIndexTable templates={finalRows} selectedFilter={dateParam} />
     </div>
   );
 }

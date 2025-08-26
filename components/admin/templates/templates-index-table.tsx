@@ -1,4 +1,3 @@
-// components/admin/templates/templates-index-table.tsx
 "use client";
 
 import { useState, useMemo, useEffect } from 'react';
@@ -15,7 +14,6 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { toast } from 'react-hot-toast';
 import { CheckCircle, FileStack, Globe, XCircle } from 'lucide-react';
-// import { GSCStatusBadge } from '@/components/admin/gsc-status-badge';
 import RowActions from '@/components/admin/templates/row-actions';
 import { Template } from '@/types/template';
 import { cn } from '@/lib/utils';
@@ -24,7 +22,7 @@ export default function TemplatesIndexTable({
   templates,
   selectedFilter = '',
 }: {
-  templates: Template[];
+  templates: Template[]; // allows extra fields at runtime
   selectedFilter?: string;
 }) {
   const router = useRouter();
@@ -41,7 +39,7 @@ export default function TemplatesIndexTable({
 
   const filtered = useMemo(() => {
     return templates
-      .filter((t) => {
+      .filter((t: any) => {
         const isLocallyArchived = archivedIds.includes(t.id);
         const isArchived = t.data?.archived ?? isLocallyArchived;
 
@@ -52,13 +50,13 @@ export default function TemplatesIndexTable({
       .filter((t) => {
         const term = search.toLowerCase();
         return (
-          t.template_name.toLowerCase().includes(term) ||
-          t.slug.toLowerCase().includes(term)
+          (t.template_name || '').toLowerCase().includes(term) ||
+          (t.slug || '').toLowerCase().includes(term)
         );
       })
       .filter((t) => {
-        if (viewMode === 'sites') return t.is_site === true;
-        if (viewMode === 'templates') return !t.is_site;
+        if (viewMode === 'sites') return (t as any).is_site === true;
+        if (viewMode === 'templates') return !(t as any).is_site;
         return true;
       });
   }, [templates, search, viewMode, archiveFilter, archivedIds]);
@@ -71,7 +69,7 @@ export default function TemplatesIndexTable({
   function toggleSelectionRange(index: number, willSelect: boolean, opts?: { exclusive?: boolean }) {
     const start = Math.min(lastSelectedIndex ?? index, index);
     const end = Math.max(lastSelectedIndex ?? index, index);
-    const rangeIds = filtered.slice(start, end + 1).map((t) => t.id);
+    const rangeIds = filtered.slice(start, end + 1).map((t: any) => t.id);
 
     setSelectedIds((prev) => {
       if (opts?.exclusive) {
@@ -159,7 +157,7 @@ export default function TemplatesIndexTable({
                   type="checkbox"
                   checked={filtered.length > 0 && selectedIds.length === filtered.length}
                   onChange={(e) => {
-                    if (e.target.checked) setSelectedIds(filtered.map((t) => t.id));
+                    if (e.target.checked) setSelectedIds(filtered.map((t: any) => t.id));
                     else setSelectedIds([]);
                   }}
                 />
@@ -175,104 +173,105 @@ export default function TemplatesIndexTable({
             </tr>
           </thead>
           <tbody>
-            {filtered.map((t, index) => (
-              <tr
-                key={t.id}
-                className={cn(
-                  'border-t border-white/10 hover:bg-zinc-800 transition',
-                  t.data?.archived && 'opacity-50 italic',
-                  restoredIds.includes(t.id) && 'animate-fadeIn'
-                )}
-              >
-                <td className="p-2">
-                  <input
-                    type="checkbox"
-                    checked={selectedIds.includes(t.id)}
-                    onClick={(e) => {
-                      const evt = e as React.MouseEvent<HTMLInputElement>;
-                      const withShift = evt.shiftKey;
-                      const withMeta = evt.metaKey || evt.ctrlKey;
-                      const isChecked = selectedIds.includes(t.id);
-                      const willSelect = !isChecked;
-
-                      if (withShift && lastSelectedIndex !== null) {
-                        toggleSelectionRange(index, willSelect, { exclusive: withMeta });
-                      } else if (withMeta) {
-                        setSelectedIds(willSelect ? [t.id] : []);
-                      } else {
-                        setSelectedIds((prev) =>
-                          isChecked ? prev.filter((id) => id !== t.id) : [...prev, t.id]
-                        );
-                      }
-
-                      setLastSelectedIndex(index);
-                    }}
-                    onChange={() => {}}
-                  />
-                </td>
-
-                <td className="p-2 text-right">
-                  <RowActions
-                    id={t.id}
-                    slug={t.slug}
-                    archived={t.data?.archived ?? false}
-                    onArchiveToggle={(id, archived) => {
-                      fetch('/api/templates/archive', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ ids: [id], archived }),
-                      }).then((res) => {
-                        if (res.ok) {
-                          setArchivedIds((prev) => archived ? [...prev, id] : prev.filter((x) => x !== id));
-                          setRestoredIds((prev) => archived ? prev : [...prev, id]);
-                          toast.success(`Template ${archived ? 'archived' : 'restored'}`);
-                        } else {
-                          toast.error(`Failed to ${archived ? 'archive' : 'restore'} template`);
-                        }
-                      });
-                    }}
-                  />
-                </td>
-
-                <td className="p-2 text-right">
-                  {t.is_site ? <Globe className="w-4 h-4 text-blue-400" /> : <FileStack className="w-4 h-4 text-blue-400" />}
-                </td>
-
-                <td className="p-2 text-zinc-400">
-                  {t.published ? <CheckCircle className="w-4 h-4 text-green-400" /> : <XCircle className="w-4 h-4 text-red-400" />}
-                </td>
-
-                <td className="p-2">
-                  <Link
-                    href={`/template/${t.id}/edit`} // <-- ID-based route to match Actions → Edit
-                    prefetch={false}
-                    className="text-white hover:underline text-left"
-                  >
-                    {t.template_name || t.slug || t.id}
-                  </Link>
-                </td>
-
-                <td className="p-2 text-zinc-400">
-                  {t.phone && <div className="text-xs text-zinc-400">{t.phone}</div>}
-                </td>
-
-                <td className="p-2 text-zinc-400">
-                  {t.updated_at ? formatDistanceToNow(new Date(t.updated_at), { addSuffix: true }) : 'N/A'}
-                </td>
-
-                <td className="p-2 text-zinc-400">
-                  {/* {t.custom_domain && <GSCStatusBadge domain={`https://${t.custom_domain}`} />} */}
-                </td>
-
-                <td className="p-2">
-                  {t.banner_url ? (
-                    <img src={t.banner_url} alt="preview" className="w-12 h-8 rounded object-cover" />
-                  ) : (
-                    <div className="w-12 h-8 bg-zinc-700 rounded flex items-center justify-center text-xs text-white/40">N/A</div>
+            {filtered.map((t: any, index: number) => {
+              const updated = t.effective_updated_at ?? t.updated_at;
+              return (
+                <tr
+                  key={t.id}
+                  className={cn(
+                    'border-t border-white/10 hover:bg-zinc-800 transition',
+                    t.data?.archived && 'opacity-50 italic',
+                    restoredIds.includes(t.id) && 'animate-fadeIn'
                   )}
-                </td>
-              </tr>
-            ))}
+                >
+                  <td className="p-2">
+                    <input
+                      type="checkbox"
+                      checked={selectedIds.includes(t.id)}
+                      onClick={(e) => {
+                        const evt = e as React.MouseEvent<HTMLInputElement>;
+                        const withShift = evt.shiftKey;
+                        const withMeta = evt.metaKey || evt.ctrlKey;
+                        const isChecked = selectedIds.includes(t.id);
+                        const willSelect = !isChecked;
+
+                        if (withShift && lastSelectedIndex !== null) {
+                          toggleSelectionRange(index, willSelect, { exclusive: withMeta });
+                        } else if (withMeta) {
+                          setSelectedIds(willSelect ? [t.id] : []);
+                        } else {
+                          setSelectedIds((prev) =>
+                            isChecked ? prev.filter((id) => id !== t.id) : [...prev, t.id]
+                          );
+                        }
+
+                        setLastSelectedIndex(index);
+                      }}
+                      onChange={() => {}}
+                    />
+                  </td>
+
+                  <td className="p-2 text-right">
+                    <RowActions
+                      id={t.id}
+                      slug={t.slug}
+                      archived={t.data?.archived ?? false}
+                      onArchiveToggle={(id, archived) => {
+                        fetch('/api/templates/archive', {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ ids: [id], archived }),
+                        }).then((res) => {
+                          if (res.ok) {
+                            setArchivedIds((prev) => archived ? [...prev, id] : prev.filter((x) => x !== id));
+                            setRestoredIds((prev) => archived ? prev : [...prev, id]);
+                            toast.success(`Template ${archived ? 'archived' : 'restored'}`);
+                          } else {
+                            toast.error(`Failed to ${archived ? 'archive' : 'restore'} template`);
+                          }
+                        });
+                      }}
+                    />
+                  </td>
+
+                  <td className="p-2 text-right">
+                    {t.is_site ? <Globe className="w-4 h-4 text-blue-400" /> : <FileStack className="w-4 h-4 text-blue-400" />}
+                  </td>
+
+                  <td className="p-2 text-zinc-400">
+                    {t.published ? <CheckCircle className="w-4 h-4 text-green-400" /> : <XCircle className="w-4 h-4 text-red-400" />}
+                  </td>
+
+                  <td className="p-2">
+                    <Link
+                      href={`/template/${t.id}/edit`}
+                      prefetch={false}
+                      className="text-white hover:underline text-left"
+                    >
+                      {t.template_name || t.slug || t.id}
+                    </Link>
+                  </td>
+
+                  <td className="p-2 text-zinc-400">
+                    {t.phone && <div className="text-xs text-zinc-400">{t.phone}</div>}
+                  </td>
+
+                  <td className="p-2 text-zinc-400">
+                    {updated ? formatDistanceToNow(new Date(updated), { addSuffix: true }) : 'N/A'}
+                  </td>
+
+                  <td className="p-2 text-zinc-400" />
+
+                  <td className="p-2">
+                    {t.banner_url ? (
+                      <img src={t.banner_url} alt="preview" className="w-12 h-8 rounded object-cover" />
+                    ) : (
+                      <div className="w-12 h-8 bg-zinc-700 rounded flex items-center justify-center text-xs text-white/40">N/A</div>
+                    )}
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>

@@ -18,13 +18,11 @@ import type { Template } from '@/types/template';
 const isDev =
   typeof process !== 'undefined' && process.env.NODE_ENV === 'development';
 
-// Client-safe static renderers
 const STATIC_RENDERERS: Partial<Record<BlockType, (props: any) => JSX.Element>> = {
   hero: HeroRender,
   text: TextRender,
 };
 
-// Cache React.lazy wrappers
 const lazyCache = new Map<string, React.ComponentType<any>>();
 
 function assertAllRenderersCovered() {
@@ -64,13 +62,13 @@ function getClientRenderer(type: BlockType): React.ComponentType<any> {
     lazyCache.set(key, Lazy);
     return Lazy;
   }
-
   return fallbackRenderer(type);
 }
 
 type RenderProps = {
   block: Block;
-  template: Template; // ✅ pass template to renderers
+  template: Template;
+  blockPath?: string;
   handleNestedBlockUpdate?: (updated: Block) => void;
   mode?: 'preview' | 'editor';
   disableInteraction?: boolean;
@@ -85,6 +83,7 @@ type RenderProps = {
 export default function RenderBlock({
   block,
   template,
+  blockPath,
   handleNestedBlockUpdate,
   mode = 'preview',
   disableInteraction = false,
@@ -105,20 +104,49 @@ export default function RenderBlock({
     );
   }
 
-  const override = fixEnabled ? draftFixes[block._id || ''] : {};
+  // ── Show chrome only when embedded inside the editor iframe
+  const [isEmbedded, setIsEmbedded] = React.useState(false);
+  React.useEffect(() => {
+    try {
+      // Prefer explicit flag on the preview host
+      const host = document.getElementById('site-renderer-page');
+      const flagged = host?.getAttribute('data-editor-chrome') === '1';
+      if (flagged) {
+        setIsEmbedded(true);
+        return;
+      }
+      // Fallback to iframe detection (good enough when flag absent)
+      setIsEmbedded(window.self !== window.top);
+    } catch {
+      setIsEmbedded(false);
+    }
+  }, []);
+
+  // Stable id used by bridge
+  const generatedIdRef = React.useRef<string | null>(null);
+  if (!generatedIdRef.current) {
+    const seed =
+      (block as any)._id ||
+      (block as any).id ||
+      (typeof crypto !== 'undefined' && crypto.randomUUID
+        ? crypto.randomUUID()
+        : `blk_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`);
+    generatedIdRef.current = String(seed);
+  }
+  const blockId = (block as any)._id || (block as any).id || generatedIdRef.current;
+
+  const override = fixEnabled ? draftFixes[(block as any)._id || (block as any).id || ''] : {};
   const safeContent = { ...block.content, ...override };
 
-  // 1) Hydration gate (client-only)
+  // hydration + ref ready
   const [hydrated, setHydrated] = React.useState(false);
   React.useEffect(() => setHydrated(true), []);
 
-  // 2) Ref that blocks can use for motion/useScroll
   const blockRef = React.useRef<HTMLDivElement | null>(null);
   const setWrapperRef = React.useCallback((el: HTMLDivElement | null) => {
     blockRef.current = el;
   }, []);
 
-  // 3) Wait one frame AFTER mount so ref is actually attached
   const [refReady, setRefReady] = React.useState(false);
   React.useEffect(() => {
     if (!hydrated) return;
@@ -126,14 +154,12 @@ export default function RenderBlock({
     return () => cancelAnimationFrame(id);
   }, [hydrated]);
 
-  // (optional) keep debug content on the element
   React.useEffect(() => {
     if (blockRef.current) {
       (blockRef.current as any).__squatterContent = safeContent;
     }
   }, [safeContent]);
 
-  // 🔹 Normalize identity once (all blocks can use it)
   const identity = React.useMemo(() => {
     const t: any = template || {};
     const normArr = (v: any) =>
@@ -143,15 +169,15 @@ export default function RenderBlock({
       services: normArr(t.services),
       contact_email: (t.contact_email ?? '').toString().trim(),
       business_name: (t.business_name ?? '').toString().trim(),
-      phone: phoneDigits, // raw digits; blocks can format as they like
+      phone: phoneDigits,
     };
   }, [template]);
 
   const commonProps = {
     block,
     content: safeContent,
-    template,     // ✅ whole template (for rich use-cases)
-    identity,     // ✅ normalized identity (simple, consistent)
+    template,
+    identity,
     mode,
     disableInteraction,
     compact,
@@ -160,15 +186,19 @@ export default function RenderBlock({
     colorMode,
   };
 
+  // wrapper — hover border only when embedded
   const wrapperProps = {
-    id: `block-${block._id || 'unknown'}`,
-    'data-block-id': block._id || 'unknown',
+    id: `block-${blockId}`,
+    'data-block-id': blockId,
     'data-block-type': block.type,
+    'data-block-path': blockPath ?? undefined,
     className: [
+      'qs-block',
       'relative group w-full rounded-md transition-colors',
       colorMode === 'light' ? 'bg-white text-black' : 'bg-neutral-950 text-white',
-      'border border-transparent group-hover:border-neutral-200',
-      'dark:group-hover:border-neutral-700',
+      isEmbedded
+        ? 'border border-transparent group-hover:border-neutral-200 dark:group-hover:border-neutral-700'
+        : '',
     ].join(' '),
     ref: setWrapperRef,
   };
@@ -176,17 +206,14 @@ export default function RenderBlock({
   const debugOverlay = showDebug ? (
     <DebugOverlay position="bottom-right">
       {`[Block: ${block.type}]
-ID: ${block._id || 'n/a'}`}
+ID: ${blockId || 'n/a'}`}
     </DebugOverlay>
   ) : null;
 
   const Component = getClientRenderer(block.type);
-  const showControlsBar = mode === 'editor' && !previewOnly && !disableInteraction;
-
-  // Only pass scrollRef once the ref is **attached** (avoids Motion error)
+  const showControlsBar = isEmbedded && mode === 'editor' && !previewOnly && !disableInteraction;
   const runtimeProps = hydrated && refReady ? { scrollRef: blockRef } : {};
 
-  // 🔸 Extra safety: mount the inner block one RAF after hydration
   const [mounted, setMounted] = React.useState(false);
   React.useEffect(() => {
     if (!hydrated) return;
@@ -196,7 +223,7 @@ ID: ${block._id || 'n/a'}`}
 
   return (
     <div {...(wrapperProps as any)}>
-      {/* Controls bar (hidden until hover) */}
+      {/* Admin bar (drag + icons) — only inside editor */}
       {showControlsBar && (
         <div
           data-no-edit
@@ -206,8 +233,7 @@ ID: ${block._id || 'n/a'}`}
             'opacity-0 group-hover:opacity-100 transition-opacity',
             colorMode === 'light' ? 'bg-white/70' : 'bg-neutral-900/60',
             'flex items-center justify-between px-2 py-1 rounded-t-md',
-            'border border-transparent group-hover:border-neutral-200 dark:group-hover:border-neutral-700',
-         ].join(' ')}
+          ].join(' ')}
         >
           <div className="flex items-center gap-2 min-w-0">
             <span
@@ -226,47 +252,78 @@ ID: ${block._id || 'n/a'}`}
             <button
               data-no-edit
               type="button"
-              className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded hover:bg-black/5 dark:hover:bg-white/10"
+              className="inline-flex items-center justify-center h-7 w-7 rounded-md hover:bg-black/5 dark:hover:bg-white/10"
               onClick={(e) => {
                 e.stopPropagation();
                 onEdit?.(block);
-                if (!onEdit) {
-                  window.dispatchEvent(new CustomEvent('qs:block:edit', { detail: { block } }));
-                }
+                if (!onEdit) window.dispatchEvent(new CustomEvent('qs:block:edit', { detail: { block } }));
               }}
+              aria-label="Edit block"
+              title="Edit"
             >
-              <Pencil className="w-3.5 h-3.5" />
-              Edit
+              <Pencil className="w-4 h-4" />
             </button>
 
             <button
               data-no-edit
               type="button"
-              className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded hover:bg-black/5 dark:hover:bg-white/10"
+              className="inline-flex items-center justify-center h-7 w-7 rounded-md hover:bg-black/5 dark:hover:bg-white/10"
               onClick={(e) => {
                 e.stopPropagation();
                 onDelete?.(block);
-                if (!onDelete) {
-                  window.dispatchEvent(new CustomEvent('qs:block:delete', { detail: { block } }));
-                }
+                if (!onDelete) window.dispatchEvent(new CustomEvent('qs:block:delete', { detail: { block } }));
               }}
+              aria-label="Delete block"
+              title="Delete"
             >
-              <Trash2 className="w-3.5 h-3.5" />
-              Delete
+              <Trash2 className="w-4 h-4" />
             </button>
           </div>
         </div>
       )}
 
+      {/* Icon-only preview chrome (top-right) — only inside editor */}
+      {isEmbedded && (
+        <div className="pointer-events-none absolute right-2 top-2 z-40 hidden group-hover:flex items-center gap-1">
+          <button
+            type="button"
+            data-action="edit-block"
+            className="pointer-events-auto inline-flex items-center justify-center h-8 w-8 rounded-full border border-black/10 bg-white/85 text-black shadow-sm hover:bg-white dark:border-white/15 dark:bg-white/10 dark:text-white"
+            aria-label="Edit block"
+            title="Edit"
+            onClick={(e) => {
+              e.stopPropagation();
+              onEdit?.(block);
+              if (!onEdit) window.dispatchEvent(new CustomEvent('qs:block:edit', { detail: { block } }));
+            }}
+          >
+            <Pencil className="w-4 h-4" />
+          </button>
+
+          <button
+            type="button"
+            data-action="delete-block"
+            className="pointer-events-auto inline-flex items-center justify-center h-8 w-8 rounded-full border border-black/10 bg-white/85 text-black shadow-sm hover:bg-white dark:border-white/15 dark:bg-white/10 dark:text-white"
+            aria-label="Delete block"
+            title="Delete"
+            onClick={(e) => {
+              e.stopPropagation();
+              onDelete?.(block);
+            }}
+          >
+            <Trash2 className="w-4 h-4" />
+          </button>
+        </div>
+      )}
+
       {debugOverlay}
 
-      {/* Block content */}
       <div className="p-0" suppressHydrationWarning>
         <Suspense fallback={<span />}>
           {mounted ? (
             <Component
               {...(commonProps as any)}
-              {...(refReady ? (runtimeProps as any) : {})} // pass scrollRef only when attached
+              {...(refReady ? (runtimeProps as any) : {})}
               {...(block.type === 'grid' && handleNestedBlockUpdate
                 ? { handleNestedBlockUpdate, parentBlock: block }
                 : {})}

@@ -269,3 +269,24 @@ body {
 
 /* Optional: when you toggle “fullscreen” in the editor (class added elsewhere) */
 .qs-fullscreen .qs-content-scroll{ height: 100vh; }
+
+.qs-block { outline: 1px solid transparent; transition: outline-color .1s ease; }
+.qs-block:hover { outline-color: rgba(147, 197, 253, .6); }
+
+/* Hide ALL block borders/chrome unless the preview host explicitly says editor=1 */
+#site-renderer-page:not([data-editor-chrome="1"]) .qs-block {
+  border: 0 !important;
+  box-shadow: none !important;
+  outline: none !important;
+}
+
+/* Also kill any nested rings/borders some shells might add in non-editor view */
+#site-renderer-page:not([data-editor-chrome="1"]) .qs-block * {
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+/* Never show the big + unless editor=1 (extra safety) */
+#site-renderer-page:not([data-editor-chrome="1"]) .qs-add-btn {
+  display: none !important;
+}

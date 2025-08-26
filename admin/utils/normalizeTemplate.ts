@@ -87,12 +87,12 @@ export function normalizeTemplate(entry: any): Template {
       return true;
     });
 
-    const removedCount = originalBlocks.length - filteredBlocks.length;
-    if (process.env.NODE_ENV !== 'production' && removedCount > 0) {
-      console.log(
-        `🧹 normalizeTemplate: Removed ${removedCount} empty block(s) from page "${page.slug || page.title || 'untitled'}"`
-      );
-    }
+    // const removedCount = originalBlocks.length - filteredBlocks.length;
+    // if (process.env.NODE_ENV !== 'production' && removedCount > 0) {
+    //   console.log(
+    //     `🧹 normalizeTemplate: Removed ${removedCount} empty block(s) from page "${page.slug || page.title || 'untitled'}"`
+    //   );
+    // }
 
     return {
       id: page.id || `page-${i}`,

@@ -1,8 +1,13 @@
+// components/admin/templates/template-action-toolbar.tsx
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useRouter } from 'next/navigation';
-import { RotateCcw, RotateCw, AlertTriangle, X, Maximize2, Minimize2 } from 'lucide-react'; // ⬅ add icons
+import {
+  RotateCcw, RotateCw, AlertTriangle, X, Maximize2, Minimize2,
+  Smartphone, Tablet, Monitor, Sun, Moon, SlidersHorizontal
+} from 'lucide-react';
 import { Button } from '@/components/ui';
 import toast from 'react-hot-toast';
 
@@ -18,18 +23,56 @@ import { useTemplateVersions } from '@/hooks/useTemplateVersions';
 import { templateSig } from '@/lib/editor/saveGuard';
 import { buildSharedSnapshotPayload, normalizeForSnapshot } from '@/lib/editor/templateUtils';
 import { createSnapshotFromTemplate, loadVersionRow } from '@/admin/lib/templateSnapshots';
+import PageManagerToolbar from '@/components/admin/templates/page-manager-toolbar';
+
+/* ---------------------------------- */
+/* Local helpers (avoid circular deps) */
+/* ---------------------------------- */
+
+function getTemplatePagesLoose(t: Template): any[] {
+  const d: any = t ?? {};
+  if (Array.isArray(d?.data?.pages)) return d.data.pages;
+  if (Array.isArray(d?.pages)) return d.pages;
+  return [];
+}
+
+function withPages(t: Template, pages: any[]): Template {
+  const anyT: any = t ?? {};
+  if (Array.isArray(anyT?.data?.pages)) {
+    return { ...anyT, data: { ...anyT.data, pages } } as Template;
+  }
+  return { ...anyT, pages } as Template;
+}
 
 type SaveWarning = { field: string; message: string };
 
 type Props = {
   template: Template;
   autosaveStatus?: string;
+
+  /** Called on "Save" and also when color mode toggles */
   onSaveDraft?: (maybeSanitized?: Template) => void;
+
+  /** Undo/Redo emitters */
   onUndo: () => void;
   onRedo: () => void;
+
+  /** Open the Page Settings modal in the parent */
+  onOpenPageSettings?: () => void;
+
+  /** Apply a fully-formed template to parent (setTemplate + onChange) */
+  onApplyTemplate: (next: Template) => void;
 };
 
-export function TemplateActionToolbar({ template, autosaveStatus, onSaveDraft, onUndo, onRedo }: Props) {
+export function TemplateActionToolbar({
+  template,
+  autosaveStatus,
+  onSaveDraft,
+  onUndo,
+  onRedo,
+  onOpenPageSettings,
+  onApplyTemplate, // ← parent passes: (t) => { setTemplate(t); onChange(t); }
+}: Props) {
   const router = useRouter();
   const [status, setStatus] = useState('Draft');
   const [overlayOpen, setOverlayOpen] = useState(false);
@@ -37,73 +80,83 @@ export function TemplateActionToolbar({ template, autosaveStatus, onSaveDraft, o
   const [saveWarnings, setSaveWarnings] = useState<SaveWarning[]>([]);
   const [versionsOpen, setVersionsOpen] = useState(false);
 
+  // render in a portal so it’s above the iframe
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+
+  const [viewport, setViewport] = useState<'mobile' | 'tablet' | 'desktop'>(() => {
+    try { return (localStorage.getItem('qs:preview:viewport') as any) || 'desktop'; } catch { return 'desktop'; }
+  });
+  const [colorPref, setColorPref] = useState<'light' | 'dark'>(() => {
+    try { return (localStorage.getItem('qs:preview:color') as any) || 'dark'; } catch { return 'dark'; }
+  });
+
+  useEffect(() => {
+    window.dispatchEvent(new CustomEvent('qs:preview:set-viewport', { detail: viewport }));
+    window.dispatchEvent(new CustomEvent('qs:preview:set-color-mode', { detail: colorPref }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const setViewportAndEmit = (v: 'mobile'|'tablet'|'desktop') => {
+    setViewport(v);
+    try { localStorage.setItem('qs:preview:viewport', v); } catch {}
+    window.dispatchEvent(new CustomEvent('qs:preview:set-viewport', { detail: v }));
+  };
+
+  const toggleColor = () => {
+    const next = colorPref === 'dark' ? 'light' : 'dark';
+    setColorPref(next);
+    try { localStorage.setItem('qs:preview:color', next); } catch {}
+
+    // 1) update template (persist later in parent save if desired)
+    onSaveDraft?.({ ...template, color_mode: next });
+
+    // 2) flip iframe immediately
+    window.dispatchEvent(new CustomEvent('qs:preview:set-color-mode', { detail: next }));
+  };
+
   // ⤵ Fullscreen controls
   const [isFullscreen, setIsFullscreen] = useState(false);
   const prevSidebarCollapsedRef = useRef<boolean | null>(null);
   const prevSettingsOpenRef = useRef<boolean | null>(null);
-
   const readSidebarCollapsed = () =>
     typeof window !== 'undefined' && window.localStorage.getItem('admin-sidebar-collapsed') === 'true';
-
   const setSidebarCollapsed = (collapsed: boolean) => {
-    // notify ResponsiveAdminLayout
     window.dispatchEvent(new CustomEvent('qs:sidebar:set-collapsed', { detail: collapsed }));
-    // persist so refresh doesn’t surprise the user
-    try {
-      window.localStorage.setItem('admin-sidebar-collapsed', String(collapsed));
-    } catch {}
+    try { window.localStorage.setItem('admin-sidebar-collapsed', String(collapsed)); } catch {}
   };
-
   const setSettingsOpen = (open: boolean) => {
-    // programmatically control editor settings rail
     window.dispatchEvent(new CustomEvent('qs:settings:set-open', { detail: open }));
-    try {
-      window.localStorage.setItem('qs:settingsOpen', open ? '1' : '0');
-    } catch {}
+    try { window.localStorage.setItem('qs:settingsOpen', open ? '1' : '0'); } catch {}
   };
-
   const scrollFirstBlockToTop = () => {
     const el =
       document.querySelector<HTMLElement>('[data-block-id]') ??
       document.querySelector<HTMLElement>('[data-block-type]');
     if (!el) return;
-
     const header = document.querySelector<HTMLElement>('header');
     const offset = (header?.offsetHeight ?? 64) + 8;
     const y = el.getBoundingClientRect().top + window.scrollY - offset;
     window.scrollTo({ top: Math.max(0, y), behavior: 'smooth' });
   };
-
   const enterFullscreen = () => {
     prevSidebarCollapsedRef.current = readSidebarCollapsed();
-    // settingsOpen lives in the editor; read the persisted value as our best guess
-    try {
-      prevSettingsOpenRef.current = window.localStorage.getItem('qs:settingsOpen') !== '0';
-    } catch {
-      prevSettingsOpenRef.current = true;
-    }
-
+    try { prevSettingsOpenRef.current = window.localStorage.getItem('qs:settingsOpen') !== '0'; } catch { prevSettingsOpenRef.current = true; }
     setSettingsOpen(false);
     setSidebarCollapsed(true);
-
     requestAnimationFrame(() => setTimeout(scrollFirstBlockToTop, 120));
     setIsFullscreen(true);
   };
-
   const exitFullscreen = () => {
     if (prevSettingsOpenRef.current !== null) setSettingsOpen(prevSettingsOpenRef.current);
     if (prevSidebarCollapsedRef.current !== null) setSidebarCollapsed(prevSidebarCollapsedRef.current);
     setIsFullscreen(false);
   };
+  const toggleFullscreen = () => (isFullscreen ? exitFullscreen() : enterFullscreen());
 
-  const toggleFullscreen = () => {
-    if (isFullscreen) exitFullscreen();
-    else enterFullscreen();
-  };
-  // ⤴ Fullscreen controls
-
-  const slugOrName = (template as any).slug || template.template_name || '';
-  const { versions, reloadVersions } = useTemplateVersions(slugOrName, (template as any)?.id ?? null);
+  // versions
+  const idOrSlug = (template as any).slug || template.template_name || '';
+  const { versions, reloadVersions } = useTemplateVersions(idOrSlug, (template as any)?.id ?? null);
 
   const lastSigRef = useRef<string>('');
   useEffect(() => {
@@ -118,8 +171,7 @@ export function TemplateActionToolbar({ template, autosaveStatus, onSaveDraft, o
     const now = Date.now();
     const then = new Date(first.updated_at || first.created_at || Date.now()).getTime();
     const s = Math.max(1, Math.floor((now - then) / 1000));
-    const rel =
-      s < 60 ? `${s}s` : s < 3600 ? `${Math.floor(s / 60)}m` : s < 86400 ? `${Math.floor(s / 3600)}h` : `${Math.floor(s / 86400)}d`;
+    const rel = s < 60 ? `${s}s` : s < 3600 ? `${Math.floor(s / 60)}m` : s < 86400 ? `${Math.floor(s / 3600)}h` : `${Math.floor(s / 86400)}d`;
     return `${msg} · ${rel} ago`;
   }, [versions]);
 
@@ -244,31 +296,42 @@ export function TemplateActionToolbar({ template, autosaveStatus, onSaveDraft, o
     }
   };
 
-  const onPublish = async (id?: string) => {
+  const onPublish = async (_id?: string) => {
     try {
+      const slugOrName = (template as any).slug || template.template_name || '';
       await fetch(`/api/templates/${slugOrName}/publish`, { method: 'POST' });
       await reloadVersions();
       toast.success('Published!');
     } catch (e) {
-      console.error('[Publish] failed', e);
+      console.error('[Publish] failed:', e);
       toast.error('Failed to publish');
     }
   };
 
-  return (
+  if (!mounted) return null;
+
+  // current page label for the PageManager button
+  const currentSlug =
+    (typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('page')) ||
+    getTemplatePagesLoose(template)[0]?.slug ||
+    'home';
+
+  return createPortal(
     <>
       <div
         id="template-action-toolbar"
         className="
-        fixed bottom-4 left-1/2 -translate-x-1/2 z-40
-        w-[95%] max-w-5xl
-        rounded-2xl border border-zinc-700
-        bg-zinc-900/95 backdrop-blur
-        hover:border-purple-500 transition-colors
-        px-4 sm:px-6 py-3 shadow-lg text-zinc-100
-        focus-within:ring-1 focus-within:ring-purple-500/40
-        opacity-50 hover:opacity-100 transition-opacity duration-300
+          fixed bottom-4 left-1/2 -translate-x-1/2
+          z-[2147483647]
+          w-[95%] max-w-5xl
+          rounded-2xl border border-zinc-700
+          bg-zinc-900/95 backdrop-blur
+          px-4 sm:px-6 py-3 shadow-lg text-zinc-100
+          hover:border-purple-500
+          opacity-90 hover:opacity-100 transition
+          pointer-events-auto
         "
+        style={{ WebkitTapHighlightColor: 'transparent' }}
       >
         <div className="w-full flex justify-between items-center gap-3">
           {/* Left: status + undo/redo */}
@@ -285,25 +348,84 @@ export function TemplateActionToolbar({ template, autosaveStatus, onSaveDraft, o
             </Button>
           </div>
 
-          {/* Center: inline warnings */}
-          {saveWarnings.length > 0 && (
-            <div className="absolute -top-10 left-0 w-full bg-yellow-100 text-yellow-800 text-xs px-4 py-2 rounded-md border border-yellow-300 flex justify-between items-start">
-              <div>{saveWarnings.map((w, i) => (<div key={i}>⚠️ {w.message}</div>))}</div>
-              <button onClick={() => setSaveWarnings([])} className="ml-2 text-yellow-800 hover:text-yellow-900">×</button>
-            </div>
-          )}
+          {/* Middle: Page manager button + tray */}
+          <PageManagerToolbar
+            pages={getTemplatePagesLoose(template)}
+            currentSlug={currentSlug}
+            onSelect={(slug) => {
+              const sp = new URLSearchParams(window.location.search);
+              sp.set('page', slug);
+              history.replaceState(null, '', `${location.pathname}?${sp.toString()}`);
+            }}
+            onAdd={(newPage) => {
+              const pages = [...getTemplatePagesLoose(template), newPage];
+              const next = withPages(template, pages);
+              onApplyTemplate(next);
+            }}
+            onRename={(oldSlug, nextVals) => {
+              const pages = getTemplatePagesLoose(template).map((p: any) =>
+                p.slug === oldSlug ? { ...p, title: nextVals.title, slug: nextVals.slug } : p
+              );
+              const next = withPages(template, pages);
+              onApplyTemplate(next);
+            }}
+            onDelete={(slug) => {
+              const pages = getTemplatePagesLoose(template).filter((p: any) => p.slug !== slug);
+              const next = withPages(template, pages);
+              onApplyTemplate(next);
+            }}
+            onReorder={(from, to) => {
+              const pages = [...getTemplatePagesLoose(template)];
+              const [moved] = pages.splice(from, 1);
+              pages.splice(to, 0, moved);
+              const next = withPages(template, pages);
+              onApplyTemplate(next);
+            }}
+            siteId={(template as any).site_id}
+          />
 
-          {/* Right controls */}
+          {/* Right: viewport + color + versions + save */}
           <div className="flex items-center gap-3">
-            {/* Fullscreen toggle */}
+            <Button size="icon" variant="ghost" title="Full screen (F)" onClick={toggleFullscreen} aria-pressed={isFullscreen}>
+              {isFullscreen ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
+            </Button>
+
+            <div className="flex items-center gap-1">
+              <Button
+                size="icon" variant={viewport === 'mobile' ? 'secondary' : 'ghost'}
+                title="Mobile width" aria-pressed={viewport === 'mobile'}
+                onClick={() => setViewportAndEmit('mobile')}
+              >
+                <Smartphone className="w-4 h-4" />
+              </Button>
+              <Button
+                size="icon" variant={viewport === 'tablet' ? 'secondary' : 'ghost'}
+                title="Tablet width" aria-pressed={viewport === 'tablet'}
+                onClick={() => setViewportAndEmit('tablet')}
+              >
+                <Tablet className="w-4 h-4" />
+              </Button>
+              <Button
+                size="icon" variant={viewport === 'desktop' ? 'secondary' : 'ghost'}
+                title="Desktop width" aria-pressed={viewport === 'desktop'}
+                onClick={() => setViewportAndEmit('desktop')}
+              >
+                <Monitor className="w-4 h-4" />
+              </Button>
+            </div>
+
             <Button
               size="icon"
               variant="ghost"
-              title="Full screen (F)"
-              onClick={toggleFullscreen}
-              aria-pressed={isFullscreen}
+              title={colorPref === 'dark' ? 'Light mode' : 'Dark mode'}
+              onClick={toggleColor}
+              aria-pressed={colorPref === 'dark'}
             >
-              {isFullscreen ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
+              {colorPref === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+            </Button>
+
+            <Button size="icon" variant="ghost" title="Page Settings" onClick={() => onOpenPageSettings?.()}>
+              <SlidersHorizontal className="w-4 h-4" />
             </Button>
 
             <VersionsDropdown
@@ -326,7 +448,6 @@ export function TemplateActionToolbar({ template, autosaveStatus, onSaveDraft, o
           </div>
         </div>
 
-        {/* Bottom persistent warning strip */}
         {saveWarnings.length > 0 && (
           <div className="mt-3 rounded-md border border-yellow-500/30 bg-yellow-500/10 text-yellow-200 text-xs px-3 py-2 flex items-start gap-2">
             <AlertTriangle className="w-4 h-4 mt-[2px] flex-none" />
@@ -339,6 +460,7 @@ export function TemplateActionToolbar({ template, autosaveStatus, onSaveDraft, o
       </div>
 
       <AsyncGifOverlay open={overlayOpen} message={overlayMsg} />
-    </>
+    </>,
+    document.body
   );
 }

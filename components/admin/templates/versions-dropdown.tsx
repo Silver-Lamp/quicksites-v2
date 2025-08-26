@@ -2,20 +2,61 @@
 
 import { useEffect, useRef } from 'react';
 import { Button } from '@/components/ui';
-import { Clock, ChevronDown, Check } from 'lucide-react';
+import { Clock, ChevronDown, Check, ExternalLink } from 'lucide-react';
 import { relativeTimeLabel } from '@/lib/editor/templateUtils';
 import type { VersionRow } from '@/hooks/useTemplateVersions';
 
 type Props = {
   labelTitle: string;
-  versions: VersionRow[];                // sorted newest-first
+  versions: VersionRow[];                // newest-first
   open: boolean;
   setOpen: (v: boolean) => void;
   onCreateSnapshot: () => Promise<void>;
   onRestore: (id: string) => Promise<void>;
   onPublish: (id?: string) => Promise<void>;  // undefined => publish latest
   publishedVersionId?: string | null;
+
+  /** Optional context to build preview URLs more accurately */
+  baseSlug?: string;                     // canonical slug (e.g. "graftontowing")
+  domain?: string | null;                // custom domain (e.g. "www.graftontowing.com")
+  defaultSubdomain?: string | null;      // (e.g. "graftontowing.quicksites.ai")
 };
+
+const BASE_DOMAIN = process.env.NEXT_PUBLIC_BASE_DOMAIN || 'quicksites.ai';
+
+function deriveBaseSlug(slug?: string | null) {
+  if (!slug) return '';
+  // remove trailing "-token" groups (2–12 alnum chars each), 1+ times
+  return slug.replace(/(-[a-z0-9]{2,12})+$/i, '');
+}
+
+function buildPreviewUrl(
+  v: VersionRow,
+  opts: { baseSlug?: string; domain?: string | null; defaultSubdomain?: string | null }
+) {
+  const { baseSlug, domain, defaultSubdomain } = opts;
+  const loc = typeof window !== 'undefined' ? window.location : ({} as Location);
+  const isLocal = (loc?.hostname || '').includes('localhost');
+  const proto = loc?.protocol || 'https:';
+
+  const canonical = baseSlug || deriveBaseSlug(v.slug);
+  let host: string;
+
+  if (isLocal) {
+    // slug.localhost:3000
+    host = `${canonical}.localhost:3000`;
+  } else if (domain) {
+    host = domain;
+  } else if (defaultSubdomain) {
+    host = defaultSubdomain;
+  } else {
+    host = `${canonical}.${BASE_DOMAIN}`;
+  }
+
+  // include version identifier so host page can pick that exact snapshot
+  const qs = new URLSearchParams({ preview_version_id: v.id }).toString();
+  return `${proto}//${host}/?${qs}`;
+}
 
 export default function VersionsDropdown({
   labelTitle,
@@ -26,6 +67,9 @@ export default function VersionsDropdown({
   onRestore,
   onPublish,
   publishedVersionId,
+  baseSlug,
+  domain,
+  defaultSubdomain,
 }: Props) {
   const ref = useRef<HTMLDivElement | null>(null);
 
@@ -94,15 +138,14 @@ export default function VersionsDropdown({
           </div>
 
           {versions.length === 0 ? (
-            <div className="px-3 pb-3 text-sm text-gray-300">
-              No snapshots yet.
-            </div>
+            <div className="px-3 pb-3 text-sm text-gray-300">No snapshots yet.</div>
           ) : (
             <div className="py-1">
               {versions.map((v) => {
                 const when = relativeTimeLabel(v.updated_at || v.created_at || '');
                 const label = `${(v.commit?.trim() || 'Snapshot')} · ${when}`;
                 const isPublished = v.id === publishedVersionId;
+
                 return (
                   <div
                     key={v.id}
@@ -118,12 +161,31 @@ export default function VersionsDropdown({
                     >
                       {label}
                     </button>
+
                     <div className="flex items-center gap-2">
                       {isPublished && (
                         <span className="inline-flex items-center text-emerald-400 text-xs" title="Currently published">
                           <Check className="w-3 h-3 mr-1" /> published
                         </span>
                       )}
+
+                      {/* Preview button */}
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          const url = buildPreviewUrl(v, { baseSlug, domain, defaultSubdomain });
+                          window.open(url, '_blank', 'noopener,noreferrer');
+                          setOpen(false);
+                        }}
+                        title="Open this snapshot in a new tab"
+                      >
+                        <ExternalLink className="w-3.5 h-3.5 mr-1" />
+                        Preview
+                      </Button>
+
                       <Button
                         size="sm"
                         variant="outline"

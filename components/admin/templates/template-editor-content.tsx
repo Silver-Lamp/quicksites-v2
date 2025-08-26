@@ -32,8 +32,8 @@ export function getTemplatePages(t: Template): any[] {
 }
 function firstPageSlug(t: Template): string {
   const pages = getTemplatePages(t);
-  if (pages.length) return pages.find(p => p?.slug)?.slug ?? pages[0]?.slug ?? 'home';
-  return 'home';
+  if (pages.length) return pages.find(p => p?.slug)?.slug ?? pages[0]?.slug ?? 'index';
+  return 'index'; // default aligns with /preview/index
 }
 function getPageBlocks(p: any): Block[] {
   if (!p) return [];
@@ -109,82 +109,79 @@ export default function EditorContent({
   onChange,
 }: Props) {
 
+  // --- Undo/Redo history (template-level) ---
+  const deepClone = (o: any) => JSON.parse(JSON.stringify(o));
+  const pastRef = useRef<Template[]>([]);
+  const futureRef = useRef<Template[]>([]);
+  const applyingRef = useRef(false);
 
+  const captureHistory = useMemo(() => () => {
+    if (applyingRef.current) return;
+    pastRef.current.push(deepClone(template));
+    futureRef.current = [];
+  }, [template]);
 
-// --- Undo/Redo history (template-level) ---
-const deepClone = (o: any) => JSON.parse(JSON.stringify(o));
-const pastRef = useRef<Template[]>([]);
-const futureRef = useRef<Template[]>([]);
-const applyingRef = useRef(false);
-
-const captureHistory = useMemo(() => () => {
-  if (applyingRef.current) return;
-  pastRef.current.push(deepClone(template));
-  futureRef.current = [];
-}, [template]);
-
-const applySnapshot = (snap: Template) => {
-  applyingRef.current = true;
-  setTemplate(snap);
-  onChange(snap);
-  applyingRef.current = false;
-};
-
-const undo = useMemo(() => () => {
-  if (!pastRef.current.length) return;
-  futureRef.current.push(deepClone(template));
-  const prev = pastRef.current.pop()!;
-  applySnapshot(prev);
-}, [template]);
-
-const redo = useMemo(() => () => {
-  if (!futureRef.current.length) return;
-  pastRef.current.push(deepClone(template));
-  const next = futureRef.current.pop()!;
-  applySnapshot(next);
-}, [template]);
-
-useEffect(() => {
-  const h = (e: Event) => setShowSettings(!!(e as CustomEvent).detail);
-  window.addEventListener('qs:settings:set-open', h as any);
-  return () => window.removeEventListener('qs:settings:set-open', h as any);
-}, []);
-
-// Allow toolbar (or others) to ask for capture/undo/redo
-useEffect(() => {
-  const cap = () => captureHistory();
-  const u = () => undo();
-  const r = () => redo();
-  window.addEventListener('qs:history:capture', cap as any);
-  window.addEventListener('qs:history:undo', u as any);
-  window.addEventListener('qs:history:redo', r as any);
-  return () => {
-    window.removeEventListener('qs:history:capture', cap as any);
-    window.removeEventListener('qs:history:undo', u as any);
-    window.removeEventListener('qs:history:redo', r as any);
+  const applySnapshot = (snap: Template) => {
+    applyingRef.current = true;
+    setTemplate(snap);
+    onChange(snap);
+    applyingRef.current = false;
   };
-}, [captureHistory, undo, redo]);
 
-// Keyboard: ⌘Z / ⇧⌘Z (when not typing in an input/editor)
-useEffect(() => {
-  const isTyping = (n: EventTarget | null) => {
-    const el = n as HTMLElement | null;
-    if (!el) return false;
-    if (el.isContentEditable) return true;
-    const tag = (el.tagName || '').toLowerCase();
-    return tag === 'input' || tag === 'textarea' || tag === 'select' || !!el.closest?.('.cm-editor,.ProseMirror');
-  };
-  const onKey = (e: KeyboardEvent) => {
-    const k = (e.key || '').toLowerCase();
-    if (!(e.metaKey || e.ctrlKey) || k !== 'z') return;
-    if (isTyping(e.target)) return;
-    e.preventDefault();
-    e.shiftKey ? redo() : undo();
-  };
-  window.addEventListener('keydown', onKey, { capture: true });
-  return () => window.removeEventListener('keydown', onKey, { capture: true } as any);
-}, [undo, redo]);
+  const undo = useMemo(() => () => {
+    if (!pastRef.current.length) return;
+    futureRef.current.push(deepClone(template));
+    const prev = pastRef.current.pop()!;
+    applySnapshot(prev);
+  }, [template]);
 
+  const redo = useMemo(() => () => {
+    if (!futureRef.current.length) return;
+    pastRef.current.push(deepClone(template));
+    const next = futureRef.current.pop()!;
+    applySnapshot(next);
+  }, [template]);
+
+  useEffect(() => {
+    const h = (e: Event) => setShowSettings(!!(e as CustomEvent).detail);
+    window.addEventListener('qs:settings:set-open', h as any);
+    return () => window.removeEventListener('qs:settings:set-open', h as any);
+  }, []);
+
+  // Allow toolbar (or others) to ask for capture/undo/redo
+  useEffect(() => {
+    const cap = () => captureHistory();
+    const u = () => undo();
+    const r = () => redo();
+    window.addEventListener('qs:history:capture', cap as any);
+    window.addEventListener('qs:history:undo', u as any);
+    window.addEventListener('qs:history:redo', r as any);
+    return () => {
+      window.removeEventListener('qs:history:capture', cap as any);
+      window.removeEventListener('qs:history:undo', u as any);
+      window.removeEventListener('qs:history:redo', r as any);
+    };
+  }, [captureHistory, undo, redo]);
+
+  // Keyboard: ⌘Z / ⇧⌘Z (when not typing in an input/editor)
+  useEffect(() => {
+    const isTyping = (n: EventTarget | null) => {
+      const el = n as HTMLElement | null;
+      if (!el) return false;
+      if (el.isContentEditable) return true;
+      const tag = (el.tagName || '').toLowerCase();
+      return tag === 'input' || tag === 'textarea' || tag === 'select' || !!el.closest?.('.cm-editor,.ProseMirror');
+    };
+    const onKey = (e: KeyboardEvent) => {
+      const k = (e.key || '').toLowerCase();
+      if (!(e.metaKey || e.ctrlKey) || k !== 'z') return;
+      if (isTyping(e.target)) return;
+      e.preventDefault();
+      e.shiftKey ? redo() : undo();
+    };
+    window.addEventListener('keydown', onKey, { capture: true });
+    return () => window.removeEventListener('keydown', onKey as any, { capture: true } as any);
+  }, [undo, redo]);
 
   const searchParams = useSearchParams();
   const previewVersionId = searchParams.get('preview_version_id');
@@ -264,7 +261,7 @@ useEffect(() => {
       headerBlock: updatedHeader as any,
       data: nextData as Template['data'],
     };
-    setTemplate(next);       // iframe updates instantly
+    setTemplate(next);       // iframe/inline updates instantly
     onChange(next);          // persist
     setEditingHeader(null);  // close panel
   };
@@ -295,30 +292,28 @@ useEffect(() => {
     const pages = [...getTemplatePages(template)];
     const page = { ...pages[pageIdx] };
     const blocks = [...getPageBlocks(page)];
-  
+
     const newBlock = createDefaultBlock(type as any) as Block;
-    // Ensure it has a stable id we can edit immediately
     (newBlock as any)._id =
       (newBlock as any)._id || (newBlock as any).id || (globalThis.crypto?.randomUUID?.() ?? String(Date.now()));
-  
+
     blocks.splice(insertAt, 0, newBlock);
     setPageBlocks(page, blocks);
     pages[pageIdx] = page;
-  
+
     const nextTemplate: any = Array.isArray((template as any)?.data?.pages)
       ? { ...template, data: { ...(template as any).data, pages } }
       : { ...template, pages };
-  
+
     setTemplate(nextTemplate);
     onChange(nextTemplate);
     setAdderTarget(null);
-  
+
     if (opts?.openEditor) {
-      // open editor for the newly inserted block
       setEditingBlock({ ref: { pageIdx, blockIdx: insertAt, block: newBlock } });
     }
   }
-  
+
   function deleteBlock(blockId?: string | null, blockPath?: string | null) {
     captureHistory();
     const ref =
@@ -404,6 +399,16 @@ useEffect(() => {
     onChange(nextTemplate);     // persist
   };
 
+  // ----- decide when to use inline preview (no iframe) -----
+  const preferInlinePreview = useMemo(() => {
+    const pages = getTemplatePages(template);
+    const first = pages[0];
+    const hasBlocks = first && getPageBlocks(first).length > 0;
+    const fresh = !template?.is_site || !template?.published;
+    // Inline if: no preview version id AND either fresh site or no content yet
+    return (!previewVersionId) && (fresh || !hasBlocks);
+  }, [template, previewVersionId]);
+
   return (
     <div className="flex min-w-0">
       {/* Left settings */}
@@ -459,6 +464,7 @@ useEffect(() => {
           industry={template.industry}
           templateId={template.id}
           mode={mode}
+          preferInlinePreview={preferInlinePreview}
           rawJson={rawJson}
           setRawJson={setRawJson}
           setTemplate={(t) => setTemplate(t)}
@@ -490,7 +496,6 @@ useEffect(() => {
       {/* Block adder */}
       {adderTarget && (
         <div className="fixed inset-0 z-[1200] bg-black/70 backdrop-blur-sm overflow-y-auto">
-          {/* Launch lower on the page and keep the whole thing scrollable */}
           <div className="mx-auto max-w-4xl pt-[12vh] px-4 pb-12">
             <div className="w-full rounded-xl border border-white/10 bg-neutral-900 shadow-2xl overflow-hidden">
               <div className="p-4 border-b border-white/10 text-sm text-white/80">
@@ -526,19 +531,17 @@ useEffect(() => {
         </div>
       )}
 
-
-      {/* Bottom toolbar — portal renders above iframe */}
+      {/* Bottom toolbar — portal renders above iframe/inline preview */}
       <TemplateActionToolbar
         template={template}
         autosaveStatus={autosaveStatus}
         onSaveDraft={(t) => { setTemplate(t!); onChange(t!); }}
-        onUndo={undo}            // <-- use the real functions
-        onRedo={redo}            // <--
+        onUndo={undo}
+        onRedo={redo}
         onOpenPageSettings={() => setPageSettingsOpen(true)}
         onApplyTemplate={(next) => { setTemplate(next); onChange(next); }}
         onSetRawJson={(json) => setRawJson(json)}
       />
-
 
       {/* Page Settings modal */}
       <PageSettingsModal

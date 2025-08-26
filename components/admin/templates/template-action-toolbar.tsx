@@ -394,16 +394,22 @@ export function TemplateActionToolbar({
     }
   };
 
-  const onCreateSnapshot = async () => {
+  async function onCreateSnapshot() {
     try {
-      const v = await createSnapshotFromTemplate(tplRef.current, 'Snapshot');
+      const res = await fetch(`/api/templates/${template.id}/snapshots`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ label: undefined }), // optional label
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json?.error || 'Snapshot failed');
       toast.success('Snapshot created');
-      await reloadVersions();
+      // optionally refresh versions list here
     } catch (e) {
       console.error('[Snapshot] insert failed', e);
       toast.error('Failed to create snapshot');
     }
-  };
+  }
 
   const onRestore = async (id: string) => {
     try {

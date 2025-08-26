@@ -41,31 +41,60 @@ export function usePersistTemplate(
         onError?.(e);
         return false;
       }
+
       // cancel any in-flight request
       abortRef.current?.abort();
       const ac = new AbortController();
       abortRef.current = ac;
 
-      const payload = next ?? getCurrent();
+      // start from latest template
+      let payload: Template = next ?? getCurrent();
+
+      // --- client-side guardrails for RLS / first save ---
+      try {
+        // 1) Ensure owner_id so returning SELECT sees the row under RLS
+        if (!(payload as any).owner_id) {
+          const who = await fetch('/api/auth/whoami', { cache: 'no-store' }).then(r => r.ok ? r.json() : null).catch(() => null);
+          const uid = who?.user?.id ?? who?.id ?? who?.user_id;
+          if (uid) payload = { ...payload, owner_id: uid } as Template;
+        }
+        // 2) Don't try to mark new records verified=true on create
+        if ((payload as any).verified === true) {
+          payload = { ...(payload as any), verified: false } as Template;
+        }
+        // 3) Keep URL id authoritative
+        if ((payload as any).id && String((payload as any).id) !== String(id)) {
+          payload = { ...(payload as any), id } as Template;
+        }
+      } catch {
+        // non-fatal; server route still handles normalization
+      }
 
       try {
         setPending(true);
         setLastError(null);
 
-        const res = await fetch(`/api/templates/${encodeURIComponent(id)}/edit`, {
+        const init: RequestInit = {
           method: 'POST',
+          ...fetchInit, // allow user overrides, but we re-apply critical fields below
           headers: { 'content-type': 'application/json', ...(fetchInit?.headers ?? {}) },
           body: JSON.stringify({ template: payload }),
-          signal: ac.signal,
-          ...fetchInit,
-        });
+          signal: ac.signal, // ensure our abort signal wins
+        };
 
-        // best-effort JSON
+        const res = await fetch(`/api/templates/${encodeURIComponent(id)}/edit`, init);
+
+        // best-effort response parsing
         let json: any = undefined;
-        try { json = await res.json(); } catch {}
+        let text: string | undefined;
+        try {
+          json = await res.json();
+        } catch {
+          try { text = await res.text(); } catch {}
+        }
 
         if (!res.ok) {
-          const err = new Error(json?.error || `Save failed (${res.status})`);
+          const err = new Error(json?.error || text || `Save failed (${res.status})`);
           setLastError(err);
           onError?.(err);
           return false;

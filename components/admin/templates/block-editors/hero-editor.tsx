@@ -1,7 +1,7 @@
 // components/admin/templates/block-editors/hero-editor.tsx
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import type { Block } from '@/types/blocks';
 import type { BlockEditorProps } from './index';
 import type { Template } from '@/types/template';
@@ -23,10 +23,12 @@ const selectDark =
   'w-full rounded-md border border-white/10 bg-neutral-950 px-2 py-2 text-sm text-white ' +
   'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500';
 const rangeDark = 'w-full accent-violet-500';
+
 const btnPrimary =
   'inline-flex items-center gap-2 rounded bg-purple-600 hover:bg-purple-500 px-3 py-1.5 text-sm text-white disabled:opacity-60';
-const btnIndigo =
-  'inline-flex items-center gap-2 rounded bg-indigo-600 hover:bg-indigo-500 px-3 py-1.5 text-sm text-white disabled:opacity-60';
+const btnOutlinePurple =
+  'inline-flex items-center gap-1.5 rounded border-2 border-purple-500/70 text-purple-300 px-2 py-1 text-xs ' +
+  'hover:bg-purple-500/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-500 disabled:opacity-60';
 const btnGhost =
   'inline-flex items-center gap-1 rounded border border-white/10 bg-neutral-900 px-2 py-1 text-xs text-white hover:bg-neutral-800 disabled:opacity-60';
 
@@ -39,7 +41,48 @@ function b64ToFile(b64: string, filename: string, mime = 'image/png'): File {
 
 function formatPhone(d: string) {
   if (d.length !== 10) return d;
-  return `(${d.slice(0,3)}) ${d.slice(3,6)}-${d.slice(6)}`;
+  return `(${d.slice(0, 3)}) ${d.slice(3, 6)}-${d.slice(6)}`;
+}
+
+const INDUSTRIES = [
+  'Towing',
+  'Window Washing',
+  'Roof Cleaning',
+  'Landscaping',
+  'HVAC',
+  'Plumbing',
+  'Electrical',
+  'Auto Repair',
+  'Carpet Cleaning',
+  'Moving',
+  'Pest Control',
+  'Painting',
+  'General Contractor',
+  'Real Estate',
+  'Restaurant',
+  'Salon & Spa',
+  'Fitness',
+  'Photography',
+  'Legal',
+  'Medical / Dental',
+  'Other',
+];
+
+/** Subject presets that bias toward service outcome/equipment (not people) */
+function presetSubjectFor(industry: string, services: string[] = []) {
+  const s = (industry || '').toLowerCase();
+  if (s.includes('landscap'))
+    return 'lush green lawn with mowing stripes, tidy garden beds and stone edging, fresh mulch, tools or mower nearby, clean background';
+  if (s.includes('window'))
+    return 'close-up squeegee wiping a large house window with sparkling reflection, clean edges';
+  if (s.includes('towing'))
+    return 'tow truck assisting a sedan on roadside at dusk, hazard lights, safe shoulder, highway backdrop';
+  if (s.includes('roof'))
+    return 'freshly cleaned roof with streak-free shingles, gutter line visible, blue sky';
+  if (s.includes('hvac'))
+    return 'modern HVAC condenser unit next to a home with neat landscaping, subtle depth of field';
+  const first = services?.[0];
+  return `clean, modern banner depicting ${first || industry} results and equipment, wide exterior scene`;
 }
 
 export default function HeroEditor({
@@ -55,6 +98,27 @@ export default function HeroEditor({
   const [previewSize, setPreviewSize] = useState<'desktop' | 'tablet' | 'mobile'>('desktop');
   const [forceMobilePreview, setForceMobilePreview] = useState(false);
 
+  // Kickoff context (used by AI)
+  const initialIndustry = (template?.industry || '').toString();
+  const [aiIndustry, setAiIndustry] = useState<string>(
+    INDUSTRIES.find((i) => i.toLowerCase() === initialIndustry.toLowerCase()) ||
+      initialIndustry ||
+      'General'
+  );
+  const [aiIndustryOther, setAiIndustryOther] = useState<string>(
+    initialIndustry &&
+      !INDUSTRIES.some((i) => i.toLowerCase() === initialIndustry.toLowerCase())
+      ? initialIndustry
+      : ''
+  );
+  const effectiveIndustry = useMemo(
+    () =>
+      (aiIndustry === 'Other' ? aiIndustryOther : aiIndustry) ||
+      initialIndustry ||
+      'General',
+    [aiIndustry, aiIndustryOther, initialIndustry]
+  );
+
   // AI (copy) state
   const [aiLoading, setAiLoading] = useState(false);
   const [aiFieldLoading, setAiFieldLoading] =
@@ -64,8 +128,11 @@ export default function HeroEditor({
   // AI (image) state
   const [imgLoading, setImgLoading] = useState(false);
   const [imgError, setImgError] = useState<string | null>(null);
+  const [imgIncludePeople, setImgIncludePeople] = useState(false);
+  const [imgSubjectTouched, setImgSubjectTouched] = useState(false);
   const [imgSubject, setImgSubject] = useState(
-    local?.image_subject || `${(template as any)?.industry || 'Local Services'} hero photo`
+    local?.image_subject ||
+      `${effectiveIndustry} website hero banner`
   );
   const [imgStyle, setImgStyle] = useState<'photo' | 'illustration' | '3d' | 'minimal'>('photo');
 
@@ -87,13 +154,23 @@ export default function HeroEditor({
     update('image_y', undefined as any);
   };
 
+  // Auto-seed subject when industry changes (unless user already edited it)
+  useEffect(() => {
+    if (!imgSubjectTouched) {
+      const preset = presetSubjectFor(effectiveIndustry, (template?.services as any) || []);
+      setImgSubject(preset);
+      update('image_subject', preset as any);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [effectiveIndustry]);
+
   async function requestSuggestions() {
     const res = await fetch('/api/hero/suggest', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         template_id: template?.id,
-        industry: template?.industry,
+        industry: effectiveIndustry, // kickoff guidance
         services: template?.services ?? [],
         business_name: (template as any)?.business_name,
         city: (template as any)?.city,
@@ -144,19 +221,38 @@ export default function HeroEditor({
     setImgLoading(true);
     setImgError(null);
     try {
+      // Compose a precise, banner-oriented prompt for the API
+      const base =
+        `website hero (header/banner) image for a ${effectiveIndustry} small business. ` +
+        `${imgSubject}. ` +
+        `wide 16:9 composition with clear copy space for headline, clean modern background, high detail, no text, no watermarks, no logos.`;
+
+      const negatives = imgIncludePeople
+        ? 'no text, no watermark, no logo'
+        : 'no people, no faces, no portraits, no hands, no superheroes, no text, no watermark, no logo';
+
       const res = await fetch('/api/hero/generate-image', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           template_id: template?.id,
-          industry: template?.industry,
+          industry: effectiveIndustry,
           services: template?.services ?? [],
           business_name: (template as any)?.business_name,
           city: (template as any)?.city,
           state: (template as any)?.state,
-          subject: imgSubject,
+          subject: imgSubject,      // keep for backward compat
           style: imgStyle,
           aspect: 'wide',
+          // NEW fields understood by the updated API
+          prompt: base,
+          negative: negatives,
+          include_people: imgIncludePeople,
+          prompt_context: {
+            purpose: 'website hero header',
+            layout: 'wide 16:9 with copy space',
+            include_people: imgIncludePeople,
+          },
         }),
       });
       if (!res.ok) throw new Error(`Image generate failed (${res.status})`);
@@ -181,8 +277,40 @@ export default function HeroEditor({
   return (
     <div
       className="space-y-4 bg-black text-white border border-black p-4 rounded max-h-[90vh] overflow-y-auto"
-      onKeyDownCapture={(e) => e.stopPropagation()}
+      onKeyDownCapture={(e) => e.stopPropagation()} // keep global hotkeys from firing in modal
     >
+      {/* Kickoff: industry intent */}
+      <div className="rounded border border-white/10 bg-neutral-900 p-3 space-y-3">
+        <div className="text-sm font-medium mb-1">What kind of site are you building?</div>
+        <div className="grid md:grid-cols-3 gap-3">
+          <div className="md:col-span-1">
+            <label className="text-xs text-neutral-300">Industry</label>
+            <select
+              className={selectDark}
+              value={aiIndustry}
+              onChange={(e) => setAiIndustry(e.target.value)}
+            >
+              {INDUSTRIES.map((i) => (
+                <option key={i} value={i}>{i}</option>
+              ))}
+            </select>
+          </div>
+          <div className="md:col-span-2">
+            <label className="text-xs text-neutral-300">Other (if not in the list)</label>
+            <input
+              className={inputDark}
+              value={aiIndustryOther}
+              onChange={(e) => setAiIndustryOther(e.target.value)}
+              placeholder="e.g., Mobile Windshield Repair"
+              disabled={aiIndustry !== 'Other'}
+            />
+            <p className="mt-1 text-xs text-neutral-400">
+              We’ll use this when generating copy and images.
+            </p>
+          </div>
+        </div>
+      </div>
+
       {/* AI Assist header */}
       <div className="rounded border border-white/10 bg-neutral-900 p-3 space-y-3">
         <div className="flex items-center justify-between">
@@ -190,82 +318,29 @@ export default function HeroEditor({
             <Sparkles className="h-4 w-4 text-purple-300" />
             <div className="text-sm font-medium">AI Assist</div>
           </div>
-        </div>
-        {aiError && <div className="text-xs text-red-300">{aiError}</div>}
-
-        <div className="flex flex-wrap items-center gap-2">
           <button onClick={suggestAll} disabled={aiLoading} className={btnPrimary}>
             {aiLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
             {aiLoading ? 'Working…' : 'Suggest All'}
           </button>
-
-          <button
-            type="button"
-            className={btnGhost}
-            onClick={() => suggestOne('headline')}
-            disabled={aiFieldLoading === 'headline'}
-            title="Regenerate headline"
-          >
-            {aiFieldLoading === 'headline' ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
-            Headline
-          </button>
-
-          <button
-            type="button"
-            className={btnGhost}
-            onClick={() => suggestOne('subheadline')}
-            disabled={aiFieldLoading === 'subheadline'}
-            title="Regenerate subheadline"
-          >
-            {aiFieldLoading === 'subheadline' ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
-            Subheadline
-          </button>
-
-          <button
-            type="button"
-            className={btnGhost}
-            onClick={() => suggestOne('cta_text')}
-            disabled={aiFieldLoading === 'cta_text'}
-            title="Regenerate CTA"
-          >
-            {aiFieldLoading === 'cta_text' ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
-            CTA
-          </button>
         </div>
-
-        {/* Image generator controls */}
-        <div className="grid md:grid-cols-3 gap-3 pt-3">
-          <div className="md:col-span-2">
-            <label className="text-xs text-neutral-300">Image Subject</label>
-            <input
-              className={inputDark}
-              value={imgSubject}
-              onChange={(e) => setImgSubject(e.target.value)}
-              placeholder="e.g., Tow truck on highway at dusk"
-            />
-          </div>
-          <div>
-            <label className="text-xs text-neutral-300">Style</label>
-            <select className={selectDark} value={imgStyle} onChange={(e) => setImgStyle(e.target.value as any)}>
-              <option value="photo">Photo</option>
-              <option value="illustration">Illustration</option>
-              <option value="3d">3D Render</option>
-              <option value="minimal">Minimal</option>
-            </select>
-          </div>
-          <div className="md:col-span-3">
-            <button onClick={generateHeroImage} disabled={imgLoading} className={btnIndigo}>
-              {imgLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <ImageIcon className="h-4 w-4" />}
-              {imgLoading ? 'Generating…' : 'Generate Hero Image'}
-            </button>
-            {imgError && <div className="text-xs text-red-300 mt-1">{imgError}</div>}
-          </div>
-        </div>
+        {aiError && <div className="text-xs text-red-300">{aiError}</div>}
       </div>
 
       {/* Headline */}
       <div>
-        <label className="block text-sm font-medium mb-1">Headline</label>
+        <div className="flex items-center justify-between mb-1">
+          <label className="block text-sm font-medium">Headline</label>
+          <button
+            type="button"
+            className={btnOutlinePurple}
+            onClick={() => suggestOne('headline')}
+            disabled={aiFieldLoading === 'headline'}
+            title="Generate headline with AI"
+          >
+            {aiFieldLoading === 'headline' ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
+            AI
+          </button>
+        </div>
         <input
           className={inputDark}
           value={local?.headline || ''}
@@ -277,7 +352,19 @@ export default function HeroEditor({
 
       {/* Subheadline */}
       <div>
-        <label className="block text-sm font-medium mb-1">Subheadline</label>
+        <div className="flex items-center justify-between mb-1">
+          <label className="block text-sm font-medium">Subheadline</label>
+          <button
+            type="button"
+            className={btnOutlinePurple}
+            onClick={() => suggestOne('subheadline')}
+            disabled={aiFieldLoading === 'subheadline'}
+            title="Generate subheadline with AI"
+          >
+            {aiFieldLoading === 'subheadline' ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
+            AI
+          </button>
+        </div>
         <input
           className={inputDark}
           value={local?.subheadline || ''}
@@ -289,7 +376,19 @@ export default function HeroEditor({
 
       {/* CTA Text */}
       <div>
-        <label className="block text-sm font-medium mb-1">CTA Text</label>
+        <div className="flex items-center justify-between mb-1">
+          <label className="block text-sm font-medium">CTA Text</label>
+          <button
+            type="button"
+            className={btnOutlinePurple}
+            onClick={() => suggestOne('cta_text')}
+            disabled={aiFieldLoading === 'cta_text'}
+            title="Generate CTA text with AI"
+          >
+            {aiFieldLoading === 'cta_text' ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
+            AI
+          </button>
+        </div>
         <input
           className={inputDark}
           value={local?.cta_text || ''}
@@ -372,15 +471,73 @@ export default function HeroEditor({
             />
           </div>
           <p className="text-xs text-neutral-400">
-            Uses the phone from Template Identity{(template?.phone || '').replace(/\D/g, '') ? ` (${formatPhone((template?.phone || '').replace(/\D/g, ''))})` : ''}.
+            Uses the phone from Template Identity
+            {(template?.phone || '').replace(/\D/g, '')
+              ? ` (${formatPhone((template?.phone || '').replace(/\D/g, ''))})`
+              : ''}.
           </p>
         </div>
       </div>
 
+      {/* Image Subject + Style + Generate */}
+      <div className="grid md:grid-cols-3 gap-3">
+        <div className="md:col-span-2">
+          <div className="flex items-center justify-between">
+            <label className="text-xs text-neutral-300">Image Subject</label>
+            <button
+              onClick={generateHeroImage}
+              disabled={imgLoading}
+              className={btnOutlinePurple}
+              title="Generate hero image"
+            >
+              {imgLoading ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <ImageIcon className="h-3.5 w-3.5" />
+              )}
+              Generate
+            </button>
+          </div>
+          <input
+            className={inputDark}
+            value={imgSubject}
+            onChange={(e) => {
+              setImgSubject(e.target.value);
+              setImgSubjectTouched(true);
+              update('image_subject', e.target.value as any);
+            }}
+            placeholder={`${effectiveIndustry} website hero banner`}
+          />
+        </div>
+        <div>
+          <label className="text-xs text-neutral-300">Style</label>
+          <select
+            className={selectDark}
+            value={imgStyle}
+            onChange={(e) => setImgStyle(e.target.value as any)}
+          >
+            <option value="photo">Photo</option>
+            <option value="illustration">Illustration</option>
+            <option value="3d">3D Render</option>
+            <option value="minimal">Minimal</option>
+          </select>
+        </div>
+        <div className="md:col-span-3 flex items-center justify-between">
+          <label className="text-xs text-neutral-300">Include people in image</label>
+          <Switch
+            checked={imgIncludePeople}
+            onCheckedChange={(v) => setImgIncludePeople(!!v)}
+          />
+        </div>
+      </div>
+      {imgError && <div className="text-xs text-red-300">{imgError}</div>}
+
       {/* Image Upload */}
       <div>
         <label className="block text-sm font-medium mb-1">Image</label>
-        {local?.image_url && <img src={local.image_url} alt="Hero" className="mb-2 rounded shadow max-w-xs" />}
+        {local?.image_url && (
+          <img src={local.image_url} alt="Hero" className="mb-2 rounded shadow max-w-xs" />
+        )}
         <input
           type="file"
           accept="image/*"
@@ -441,7 +598,9 @@ export default function HeroEditor({
                   onChange={(e) => update('blur_amount', Number(e.target.value) as any)}
                   className={rangeDark}
                 />
-                <div className="text-xs text-neutral-400 mt-1">Current: {local?.blur_amount ?? 8}px</div>
+                <div className="text-xs text-neutral-400 mt-1">
+                  Current: {local?.blur_amount ?? 8}px
+                </div>
               </div>
 
               <div className="pt-4">
@@ -500,7 +659,9 @@ export default function HeroEditor({
                   <div className="flex items-center gap-2">
                     <select
                       value={previewSize}
-                      onChange={(e) => setPreviewSize(e.target.value as 'desktop' | 'tablet' | 'mobile')}
+                      onChange={(e) =>
+                        setPreviewSize(e.target.value as 'desktop' | 'tablet' | 'mobile')
+                      }
                       className={selectDark}
                     >
                       <option value="desktop">Desktop</option>
@@ -523,7 +684,9 @@ export default function HeroEditor({
                   className={clsx(
                     'relative rounded overflow-hidden border border-neutral-700 h-40 w-full mx-auto',
                     previewSizes[previewSize],
-                    positionStyles[(local.image_position as keyof typeof positionStyles) || 'center'],
+                    positionStyles[
+                      (local.image_position as keyof typeof positionStyles) || 'center'
+                    ],
                     forceMobilePreview && 'max-w-xs'
                   )}
                 >
@@ -556,7 +719,10 @@ export default function HeroEditor({
         >
           Cancel
         </button>
-        <button onClick={handleSave} className="text-sm px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700">
+        <button
+          onClick={handleSave}
+          className="text-sm px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700"
+        >
           Save
         </button>
       </div>

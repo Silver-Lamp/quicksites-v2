@@ -1,7 +1,9 @@
+// components/editor/live-editor/LiveEditorPreviewFrame.tsx
 'use client';
 
 import * as React from 'react';
 import { cn } from '@/lib/utils';
+import RenderBlock from '@/components/admin/templates/render-block';
 
 type Mode = 'view' | 'edit' | 'preview' | string;
 
@@ -34,7 +36,22 @@ type Props = {
 
   /** If true and a `qs:preview:save` event is fired, hard reload the iframe */
   reloadOnSave?: boolean;
+
+  /** Force inline (no iframe) for fresh/remixed templates */
+  preferInlinePreview?: boolean; // NEW
 };
+
+function getPages(t: any) {
+  return (t?.data?.pages ?? t?.pages ?? []) as any[];
+}
+function getFirstRenderablePage(t: any) {
+  const pages = getPages(t);
+  if (!Array.isArray(pages) || pages.length === 0) return null;
+  return pages.find((p: any) => p.slug === 'index' || p.path === '/') ?? pages[0];
+}
+function pageBlocks(p: any) {
+  return (p?.blocks ?? p?.content_blocks ?? []) as any[];
+}
 
 export default function LiveEditorPreviewFrame({
   template,
@@ -55,6 +72,7 @@ export default function LiveEditorPreviewFrame({
   className,
   style,
   reloadOnSave = false,
+  preferInlinePreview = false, // NEW
 }: Props) {
   const iframeRef = React.useRef<HTMLIFrameElement | null>(null);
   const [loaded, setLoaded] = React.useState(false);
@@ -92,6 +110,14 @@ export default function LiveEditorPreviewFrame({
     viewport === 'tablet' ? 768 :
     undefined; // desktop full
 
+  /* ---------------- Decide whether to inline or iframe ---------------- */
+  const firstPage = React.useMemo(() => getFirstRenderablePage(template), [template]);
+  const hasBlocks = React.useMemo(() => !!firstPage && pageBlocks(firstPage).length > 0, [firstPage]);
+
+  // Auto-fallback for new templates: not a site and no saved preview version yet.
+  const preferInlineAuto = !template?.is_site && !previewVersionId;
+  const useInline = preferInlinePreview || preferInlineAuto;
+
   /* ---------------- Build a STABLE iframe src (identifiers only) ---------------- */
   const buildSrc = React.useCallback(() => {
     const qs = new URLSearchParams();
@@ -109,24 +135,29 @@ export default function LiveEditorPreviewFrame({
 
   // Only update src when identifiers change
   React.useEffect(() => {
+    if (useInline) return; // no iframe; ignore src updates
     const next = buildSrc();
     if (next !== stableSrc) setStableSrc(next);
-  }, [buildSrc, stableSrc]);
+  }, [buildSrc, stableSrc, useInline]);
 
   /* ---------------- Parent → Iframe: send current state ---------------- */
   const postInit = React.useCallback(() => {
+    if (useInline) return; // nothing to init
     const iframe = iframeRef.current;
     if (!iframe?.contentWindow) return;
     try {
-      iframe.contentWindow.postMessage({
-        type: 'preview:init',
-        template,
-        mode,
-        pageSlug: pageSlug ?? null,
-        templateId: templateId ?? null,
-        rawJson: rawJson ?? null,
-        industry: industry ?? null,
-      }, '*');
+      iframe.contentWindow.postMessage(
+        {
+          type: 'preview:init',
+          template,
+          mode,
+          pageSlug: pageSlug ?? null,
+          templateId: templateId ?? null,
+          rawJson: rawJson ?? null,
+          industry: industry ?? null,
+        },
+        '*'
+      );
 
       // push current color preference once
       const stored = ((): 'light' | 'dark' => {
@@ -135,20 +166,22 @@ export default function LiveEditorPreviewFrame({
       })();
       iframe.contentWindow.postMessage({ type: 'preview:set-color-mode', mode: stored }, '*');
     } catch {}
-  }, [template, mode, pageSlug, templateId, rawJson, industry]);
+  }, [template, mode, pageSlug, templateId, rawJson, industry, useInline]);
 
   // Init after the iframe finishes loading
-  React.useEffect(() => { if (loaded) postInit(); }, [loaded, postInit]);
+  React.useEffect(() => { if (!useInline && loaded) postInit(); }, [loaded, postInit, useInline]);
 
   // When template content changes, DO NOT reload — just re-send state
   React.useEffect(() => {
+    if (useInline) return; // inline render updates via React
     if (!loaded) return;
     const t = setTimeout(postInit, 50);
     return () => clearTimeout(t);
-  }, [template, rawJson, postInit, loaded]);
+  }, [template, rawJson, postInit, loaded, useInline]);
 
   /* ---------------- Iframe → Parent messages ---------------- */
   React.useEffect(() => {
+    if (useInline) return;
     function onMessage(e: MessageEvent) {
       const data = e.data;
       if (!data || typeof data !== 'object') return;
@@ -167,23 +200,22 @@ export default function LiveEditorPreviewFrame({
     }
     window.addEventListener('message', onMessage);
     return () => window.removeEventListener('message', onMessage);
-  }, [onChange, setRawJson, setTemplate, onEditHeader, onRequestEditBlock, onRequestAddAfter]);
+  }, [onChange, setRawJson, setTemplate, onEditHeader, onRequestEditBlock, onRequestAddAfter, useInline]);
 
   /* ---------------- Optional: force reload on explicit "save" event ---------------- */
   React.useEffect(() => {
+    if (useInline) return;
     const handler = () => {
       if (reloadOnSave) {
-        // Small cache-buster to force navigation without changing identifiers
         const buster = stableSrc.includes('?') ? '&_ts=' : '?_ts=';
         setStableSrc(stableSrc + buster + Date.now());
       } else {
-        // Soft refresh: just re-post the latest state
         postInit();
       }
     };
     window.addEventListener('qs:preview:save', handler);
     return () => window.removeEventListener('qs:preview:save', handler);
-  }, [reloadOnSave, stableSrc, postInit]);
+  }, [reloadOnSave, stableSrc, postInit, useInline]);
 
   /* ---------------- Error badge ---------------- */
   const errorCount = React.useMemo(() => {
@@ -192,6 +224,13 @@ export default function LiveEditorPreviewFrame({
     if (typeof errors === 'object') return Object.keys(errors).length;
     return 0;
   }, [errors]);
+
+  /* ---------------- Inline content blocks ---------------- */
+  const inlineBlocks = React.useMemo(() => (firstPage ? pageBlocks(firstPage) : []), [firstPage]);
+
+  function blockIdOf(b: any, fallback: string) {
+    return String(b?._id || b?.id || fallback);
+  }
 
   return (
     <div className={cn('relative w-full', className)} style={{ minHeight: 600, ...style }}>
@@ -237,19 +276,92 @@ export default function LiveEditorPreviewFrame({
         className="mx-auto transition-all duration-150"
         style={{ width: widthPx ? `${widthPx}px` : '100%', maxWidth: '100%' }}
       >
-        {/* ← stays stable unless identifiers change */}
-        <iframe
-          ref={iframeRef}
-          src={stableSrc}
-          className="h-[70vh] w-full rounded-lg border border-black/10 bg-white dark:border-white/10 dark:bg-black"
-          style={{ minHeight: 600 }}
-          onLoad={() => setLoaded(true)}
-          loading="eager"
-          referrerPolicy="no-referrer-when-downgrade"
-        />
+        {useInline ? (
+          <div className="h-[70vh] w-full rounded-lg border border-black/10 bg-neutral-950 text-neutral-100 dark:border-white/10">
+            <div className="mx-auto max-w-[1100px] p-8 space-y-6">
+              {inlineBlocks.length === 0 ? (
+                <div className="flex flex-col items-center gap-3">
+                  <div className="text-sm text-neutral-400">This page is empty.</div>
+                  <button
+                    type="button"
+                    className="rounded-md border border-white/15 bg-white/5 px-3 py-1.5 text-sm hover:bg-white/10"
+                    onClick={() => {
+                      // add the first block to the first page
+                      onRequestAddAfter?.('__ADD_AT_START__'); // EditorContent will treat this specially
+                    }}
+                  >
+                    + Add your first block
+                  </button>
+                </div>
+              ) : (
+                inlineBlocks.map((b: any, i: number) => {
+                  const id = blockIdOf(b, `0:${i}`);
+
+                  // Clicking anywhere in the block opens its editor. We also block default
+                  // navigation on <a>, <button>, etc. so the click goes to the editor.
+                  const onAnyClick: React.MouseEventHandler = (e) => {
+                    const t = e.target as HTMLElement | null;
+                    if (!t) return;
+                    if (t.closest('a,button,input,label,select,textarea,video')) e.preventDefault();
+                    e.stopPropagation();
+                    onRequestEditBlock?.(id);
+                  };
+
+                  return (
+                    <div key={id} className="group relative rounded-lg ring-1 ring-white/5 hover:ring-white/15">
+                      {/* hover chrome */}
+                      <div className="pointer-events-none absolute -top-3 left-0 right-0 z-10 hidden justify-center group-hover:flex">
+                        <button
+                          type="button"
+                          className="pointer-events-auto rounded-md border border-white/20 bg-black/60 px-2 py-0.5 text-xs text-white hover:bg-black/80"
+                          onClick={(e) => { e.stopPropagation(); onRequestEditBlock?.(id); }}
+                        >
+                          Edit
+                        </button>
+                      </div>
+                      <button
+                        type="button"
+                        className="absolute right-2 top-2 z-10 hidden rounded-md border border-white/20 bg-black/60 px-2 py-0.5 text-xs text-white hover:bg-black/80 group-hover:block"
+                        onClick={(e) => { e.stopPropagation(); onRequestEditBlock?.(id); }}
+                      >
+                        Edit
+                      </button>
+
+                      {/* block content */}
+                      <div onClickCapture={onAnyClick}>
+                        <RenderBlock block={b} previewOnly template={template} />
+                      </div>
+
+                      {/* add-below affordance */}
+                      <div className="mt-2 flex justify-center">
+                        <button
+                          type="button"
+                          className="invisible group-hover:visible rounded-md border border-white/15 bg-white/5 px-2 py-1 text-xs hover:bg-white/10"
+                          onClick={(e) => { e.stopPropagation(); onRequestAddAfter?.(id); }}
+                        >
+                          + Add block below
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          </div>
+        ) : (
+          <iframe
+            ref={iframeRef}
+            src={stableSrc}
+            className="h-[70vh] w-full rounded-lg border border-black/10 bg-white dark:border-white/10 dark:bg-black"
+            style={{ minHeight: 600 }}
+            onLoad={() => setLoaded(true)}
+            loading="eager"
+            referrerPolicy="no-referrer-when-downgrade"
+          />
+        )}
       </div>
 
-      {!loaded && (
+      {!useInline && !loaded && (
         <div className="absolute inset-0 z-10 flex items-center justify-center rounded-lg bg-black/5 dark:bg-white/5">
           <div className="animate-pulse text-sm text-gray-600 dark:text-gray-300">Loading preview…</div>
         </div>

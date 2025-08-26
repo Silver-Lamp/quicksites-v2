@@ -50,20 +50,11 @@ type Props = {
   currentSlug: string | null | undefined;
 
   onSelect: (slug: string) => void;
-
-  // Create a new page; parent should add it to template and persist.
   onAdd: (newPage: PageLite) => void;
-
-  // Rename (by slug) — pass both new title and slug
   onRename: (slug: string, next: { title: string; slug: string }) => void;
-
-  // Delete a page by slug
   onDelete: (slug: string) => void;
-
-  // Reorder by index
   onReorder: (oldIndex: number, newIndex: number) => void;
 
-  // Optional for initializing site_id on new pages
   siteId?: string;
 };
 
@@ -128,7 +119,6 @@ export default function PageManagerToolbar({
 
     setEditingSlug(null);
     onRename(oldSlug, { title, slug: finalSlug });
-    // Auto-select the renamed page
     onSelect(finalSlug);
   }
 
@@ -151,7 +141,6 @@ export default function PageManagerToolbar({
       site_id: siteId ?? '',
     };
     onAdd(newPage);
-    // Put the new page into edit mode for quick rename
     setTimeout(() => {
       setEditingSlug(slug);
       setDraftTitle(baseTitle);
@@ -159,6 +148,34 @@ export default function PageManagerToolbar({
       onSelect(slug);
     }, 0);
   }
+
+  // === Suspend global hotkeys while tray is open or renaming ===
+  const hotkeysSuspended = open || editingSlug !== null;
+  React.useEffect(() => {
+    if (!hotkeysSuspended) return;
+
+    const stop = (e: KeyboardEvent) => {
+      // let the input/button handle it, but don't bubble to window listeners
+      e.stopPropagation();
+    };
+
+    // mark on <html> (optional: other listeners can check)
+    const html = document.documentElement;
+    const prev = html.getAttribute('data-hotkeys-suspended');
+    html.setAttribute('data-hotkeys-suspended', '1');
+
+    window.addEventListener('keydown', stop, true);
+    window.addEventListener('keypress', stop, true);
+    window.addEventListener('keyup', stop, true);
+
+    return () => {
+      if (prev == null) html.removeAttribute('data-hotkeys-suspended');
+      else html.setAttribute('data-hotkeys-suspended', prev);
+      window.removeEventListener('keydown', stop, true);
+      window.removeEventListener('keypress', stop, true);
+      window.removeEventListener('keyup', stop, true);
+    };
+  }, [hotkeysSuspended]);
 
   // ----- draggable item -----
   function SortableItem({
@@ -179,6 +196,18 @@ export default function PageManagerToolbar({
     };
 
     const isEditing = editingSlug === page.slug;
+
+    // key handlers for rename inputs
+    const handleRenameKey: React.KeyboardEventHandler<HTMLInputElement> = (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        commitRename(page.slug);
+      } else if (e.key === 'Escape') {
+        e.preventDefault();
+        cancelRename();
+      }
+      // other keys pass through; global hotkeys are already suspended
+    };
 
     return (
       <div
@@ -245,6 +274,7 @@ export default function PageManagerToolbar({
                 className="w-full rounded bg-neutral-950 border border-white/10 px-2 py-1"
                 value={draftTitle}
                 onChange={(e) => setDraftTitle(e.target.value)}
+                onKeyDown={handleRenameKey}
                 placeholder="Page title"
               />
             </div>
@@ -254,6 +284,7 @@ export default function PageManagerToolbar({
                 className="w-full rounded bg-neutral-950 border border-white/10 px-2 py-1"
                 value={draftSlug}
                 onChange={(e) => setDraftSlug(e.target.value)}
+                onKeyDown={handleRenameKey}
                 placeholder="my-page"
               />
             </div>
@@ -298,7 +329,12 @@ export default function PageManagerToolbar({
   const Tray = (
     <div
       className="fixed left-1/2 -translate-x-1/2 z-[2147483646]"
-      style={{ bottom: 104 }} // ≈ just above your toolbar (tweak if needed)
+      style={{ bottom: 104 }}
+      role="dialog"
+      aria-modal="true"
+      // Belt & suspenders: block bubbling to window listeners
+      onKeyDownCapture={(e) => e.stopPropagation()}
+      onKeyUpCapture={(e) => e.stopPropagation()}
     >
       <div className="w-screen max-w-5xl rounded-2xl border border-white/10 bg-neutral-950/95 backdrop-blur shadow-lg">
         {/* header row */}

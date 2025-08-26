@@ -14,18 +14,26 @@ export function createEmptyTemplate(base = 'new-template'): Template {
   const slug = `${generateSlug(base)}-${generateUniqueSuffix()}`;
   const now = new Date().toISOString();
 
-  // Seed a single page (no header/footer blocks inside the page body)
-  const pages = [
-    {
-      id: 'index',
-      slug: 'index',
-      title: 'Home',
-      show_header: true,
-      show_footer: true,
-      // page content starts with a hero; header/footer live globally on the template
-      content_blocks: [createDefaultBlock('hero') as any],
-    },
-  ];
+  // Default content blocks
+  const defaultHero = createDefaultBlock('hero') as any;
+  const headerBlock = createDefaultBlock('header') as any;
+  const footerBlock = createDefaultBlock('footer') as any;
+
+  // Seed a single Home page (header/footer are global; not part of page body)
+  const homePage = {
+    id: crypto.randomUUID(),
+    slug: 'index',
+    path: '/',                 // many renderers prefer a canonical path
+    title: 'Home',
+    show_header: true,
+    show_footer: true,
+    // Legacy readers:
+    content_blocks: [defaultHero],
+    // Canonical runtime/editor:
+    blocks: [defaultHero],
+  };
+
+  const pages = [homePage];
 
   return {
     id: crypto.randomUUID(),
@@ -51,10 +59,10 @@ export function createEmptyTemplate(base = 'new-template'): Template {
     services: [],
 
     // Global site-wide chrome (single source of truth)
-    headerBlock: createDefaultBlock('header') as any,
-    footerBlock: createDefaultBlock('footer') as any,
+    headerBlock,
+    footerBlock,
 
-    // Legacy readers may still look here
+    // Legacy top-level mirror (kept for backwards compatibility)
     pages,
 
     meta: {

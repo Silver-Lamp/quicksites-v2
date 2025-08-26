@@ -192,7 +192,7 @@ export default function RenderBlock({
     'data-block-path': blockPath ?? undefined,
     className: [
       'qs-block',
-      'relative group w-full rounded-md transition-colors',
+      'relative group w-full rounded-none transition-colors',
       colorMode === 'light' ? 'bg-white text-black' : 'bg-neutral-950 text-white',
       isEmbedded
         ? 'border border-transparent group-hover:border-neutral-200 dark:group-hover:border-neutral-700'
@@ -230,7 +230,7 @@ ID: ${blockId || 'n/a'}`}
             'absolute inset-x-0 -top-px',
             'opacity-0 group-hover:opacity-100 transition-opacity',
             colorMode === 'light' ? 'bg-white/70' : 'bg-neutral-900/60',
-            'flex items-center justify-between px-2 py-1 rounded-t-md',
+            'flex items-center justify-between px-2 py-1 rounded-t-none',
           ].join(' ')}
         >
           <div className="flex items-center gap-2 min-w-0">

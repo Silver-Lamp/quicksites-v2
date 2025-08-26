@@ -35,6 +35,7 @@ export function middleware(req: NextRequest) {
   const pathname = u.pathname;
   const search = u.search || '';
 
+  
   // Already on our handler or an API/static path? Let it pass.
   if (
     isIgnored(pathname) ||
@@ -52,13 +53,12 @@ export function middleware(req: NextRequest) {
     req.headers.get('host') ??
     '';
 
-  const host = hostHeader.toLowerCase();
-
   // If this is our app host, don't rewrite (normal dashboard/app pages).
-  if (APP_HOSTS.has(host)) {
+  const host = hostHeader.toLowerCase();
+  if (APP_HOSTS.has(host) || host.endsWith('.vercel.app')) {
     return NextResponse.next();
   }
-
+  
   // Otherwise, this is a site request on a custom domain, *.quicksites.ai, or *.localhost
   const rewriteUrl = req.nextUrl.clone();
   // Preserve the original path under /host for your catch-all route

@@ -48,6 +48,22 @@ function buildPreviewUrl(
   return `${proto}//${host}/?${qs}`;
 }
 
+function buildLiveUrl(
+  opts: { baseSlug?: string; domain?: string | null; defaultSubdomain?: string | null }
+) {
+  const { baseSlug, domain, defaultSubdomain } = opts;
+  const loc = typeof window !== 'undefined' ? window.location : ({} as Location);
+  const isLocal = (loc?.hostname || '').includes('localhost');
+  const proto = loc?.protocol || 'https:';
+  const canonical = baseSlug || '';
+  let host: string;
+  if (isLocal) host = `${canonical}.localhost:3000`;
+  else if (domain) host = domain;
+  else if (defaultSubdomain) host = defaultSubdomain;
+  else host = `${canonical}.${BASE_DOMAIN}`;
+  return `${proto}//${host}/`;
+}
+
 export default function VersionsDropdown({
   labelTitle,
   versions,
@@ -90,6 +106,13 @@ export default function VersionsDropdown({
     ? `${(latest.commit || '').trim() || 'Snapshot'} · ${relativeTimeLabel(latest.updated_at || latest.created_at || '')}`
     : 'No versions';
 
+  const publishedRow = publishedVersionId ? versions.find(v => v.id === publishedVersionId) ?? null : null;
+  const publishedLabel = publishedRow
+    ? `${(publishedRow.commit?.trim() || 'Snapshot')} · ${relativeTimeLabel(publishedRow.updated_at || publishedRow.created_at || '')}`
+    : null;
+  const triggerLabel = publishedRow ? `Live: ${publishedLabel}` : latestLabel;
+  const latestIsPublished = !!(publishedVersionId && latest && latest.id === publishedVersionId);
+
   return (
     <div className="relative" ref={ref}>
       <Button
@@ -99,10 +122,21 @@ export default function VersionsDropdown({
         title={versions.length ? 'Browse versions' : 'No versions yet'}
         className="inline-flex items-center gap-2"
       >
-        <Clock className="w-4 h-4" />
-        <span className="text-xs sm:text-sm max-w-[14ch] sm:max-w-none truncate">
-          {versions.length ? latestLabel : 'No versions'}
-        </span>
+        {publishedRow ? (
+          <>
+            <span className="w-2 h-2 rounded-full bg-emerald-400" aria-hidden="true" />
+            <span className="text-xs sm:text-sm max-w-[18ch] sm:max-w-none truncate text-emerald-400">
+              {triggerLabel}
+            </span>
+          </>
+        ) : (
+          <>
+            <Clock className="w-4 h-4" />
+            <span className="text-xs sm:text-sm max-w-[14ch] sm:max-w-none truncate">
+              {versions.length ? latestLabel : 'No versions'}
+            </span>
+          </>
+        )}
         <ChevronDown className="w-4 h-4 opacity-70" />
       </Button>
 
@@ -126,15 +160,21 @@ export default function VersionsDropdown({
               </Button>
               <Button
                 size="sm"
-                variant="default"
+                variant={latestIsPublished ? 'secondary' : 'default'}
                 onClick={async () => {
                   await onPublish(); // publish latest
                   setOpen(false);
                 }}
-                disabled={!versions.length}
-                title={versions.length ? 'Publish latest snapshot' : 'No versions yet'}
+                disabled={!versions.length || latestIsPublished}
+                title={
+                  !versions.length
+                    ? 'No versions yet'
+                    : latestIsPublished
+                    ? 'Latest is already live'
+                    : 'Publish latest snapshot'
+                }
               >
-                Publish latest
+                {latestIsPublished ? 'Live' : 'Publish latest'}
               </Button>
             </div>
           </div>
@@ -152,11 +192,19 @@ export default function VersionsDropdown({
                   <div
                     key={v.id}
                     data-published={isPublished ? 'true' : undefined}
+                    role="menuitemradio"
+                    aria-checked={isPublished}
                     className={[
-                      'w-full px-3 py-2 text-sm flex items-center justify-between gap-2 hover:bg-gray-800',
-                      isPublished ? 'bg-emerald-900/30 border-l-2 border-emerald-400' : '',
+                      'relative w-full px-3 py-2 text-sm flex items-center justify-between gap-2 hover:bg-gray-800 rounded',
+                      isPublished ? 'bg-emerald-950/30 ring-1 ring-emerald-500/30' : '',
                     ].join(' ')}
                   >
+                    {isPublished && (
+                      <span
+                        aria-hidden="true"
+                        className="absolute inset-y-0 left-0 w-1 bg-emerald-400 rounded-l"
+                      />
+                    )}
                     <button
                       onClick={async () => { setOpen(false); await onRestore(v.id); }}
                       className="truncate text-left"
@@ -166,34 +214,39 @@ export default function VersionsDropdown({
                     </button>
 
                     <div className="flex items-center gap-2">
-                      {isPublished && (
-                        <span className="inline-flex items-center text-emerald-400 text-xs font-medium" title="Currently deployed">
-                          <Check className="w-3 h-3 mr-1" /> deployed
-                        </span>
-                      )}
-
                       <Button
                         size="sm" variant="secondary"
                         onClick={(e) => {
                           e.preventDefault(); e.stopPropagation();
-                          const url = buildPreviewUrl(v, { baseSlug, domain, defaultSubdomain });
+                          const url = isPublished
+                            ? buildLiveUrl({ baseSlug, domain, defaultSubdomain })
+                            : buildPreviewUrl(v, { baseSlug, domain, defaultSubdomain });
                           window.open(url, '_blank', 'noopener,noreferrer');
                           setOpen(false);
                         }}
-                        title="Open this snapshot in a new tab"
+                        title={isPublished ? 'Open live site' : 'Open this snapshot in a new tab'}
                       >
                         <ExternalLink className="w-3.5 h-3.5 mr-1" />
-                        Preview
+                        {isPublished ? 'Open live' : 'Preview'}
                       </Button>
 
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={async () => { await onPublish(v.id); setOpen(false); }}
-                        title="Publish this version"
-                      >
-                        Publish
-                      </Button>
+                      {isPublished ? (
+                        <span
+                          className="inline-flex items-center px-2 py-1 rounded-md bg-emerald-500/10 text-emerald-400 text-xs font-medium"
+                          title="Currently deployed"
+                        >
+                          <Check className="w-3 h-3 mr-1" /> Live
+                        </span>
+                      ) : (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={async () => { await onPublish(v.id); setOpen(false); }}
+                          title="Publish this version"
+                        >
+                          Publish
+                        </Button>
+                      )}
                     </div>
                   </div>
                 );

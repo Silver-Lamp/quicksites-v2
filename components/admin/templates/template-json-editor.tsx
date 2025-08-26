@@ -3,7 +3,7 @@
 
 import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui';
-import { ChevronRight, ChevronDown, Lock, Unlock, Copy, Check } from 'lucide-react';
+import { ChevronRight, ChevronDown, Lock, Unlock, Copy, Check, Save } from 'lucide-react';
 import { TemplateSaveSchema, type ValidatedTemplate } from '@/admin/lib/zod/templateSaveSchema';
 import type { JsonValue } from '@/types/json';
 import { validateBlocksInTemplate } from '@/admin/lib/validateBlocksInTemplate';
@@ -14,15 +14,16 @@ import { validateTemplateAndFix } from '@/admin/lib/validateTemplate';
 import Collapsible from '@/components/ui/collapsible-panel';
 import { keysFromSchema, pickAllowedKeys } from '@/lib/zod/utils';
 
+/** Props are the same as before */
 type TemplateJsonEditorProps = {
   rawJson: string;
   setRawJson: (value: string) => void;
-  sidebarValues: any;
+  sidebarValues: any;                   // current working template-like object (should include id)
   setSidebarValues: (values: any) => void;
   colorMode: 'light' | 'dark';
 };
 
-// ---------- helpers for header/footer hoist + page sync ----------
+/* ------------------------ header/footer + pages helpers ------------------------ */
 const isHeader = (b: any) => b?.type === 'header';
 const isFooter = (b: any) => b?.type === 'footer';
 
@@ -33,7 +34,6 @@ function getPages(tpl: any): any[] {
   if (Array.isArray(rootPages)) return rootPages;
   return [];
 }
-
 function stripHeaderFooterFromPage(page: any) {
   const blocks = Array.isArray(page?.content_blocks) ? page.content_blocks : [];
   return {
@@ -42,6 +42,13 @@ function stripHeaderFooterFromPage(page: any) {
   };
 }
 
+/**
+ * Normalize incoming data:
+ *  - hoist header/footer to root
+ *  - strip header/footer from page content
+ *  - sync pages at root and under data.pages
+ *  - carry color_mode (top-level > nested)
+ */
 function hoistHeaderFooterIntoRoot(input: any) {
   const tpl = { ...(input || {}) };
   const pagesIn = getPages(tpl);
@@ -56,15 +63,15 @@ function hoistHeaderFooterIntoRoot(input: any) {
 
   const cleanedPages = pagesIn.map(stripHeaderFooterFromPage);
 
-  // Sync pages to both locations
+  // Sync pages to both locations (UI depends on both)
   tpl.pages = cleanedPages;
   tpl.data = { ...(tpl.data ?? {}), pages: cleanedPages };
 
-  // Persist the single source of truth at root
+  // Persist single source at root
   tpl.headerBlock = headerBlock ?? null;
   tpl.footerBlock = footerBlock ?? null;
 
-  // color_mode precedence: top-level beats nested; don't invent defaults here
+  // color_mode precedence: top-level beats nested
   const topMode = tpl?.color_mode;
   const nestedMode = tpl?.data?.color_mode;
   if (topMode === 'light' || topMode === 'dark') {
@@ -76,6 +83,7 @@ function hoistHeaderFooterIntoRoot(input: any) {
   return tpl;
 }
 
+/* ------------------------------ component ------------------------------ */
 export default function TemplateJsonEditor({
   rawJson,
   setRawJson,
@@ -90,8 +98,9 @@ export default function TemplateJsonEditor({
   const [collapsed, setCollapsed] = useState(new Set<string>());
   const [extractedSqlFields, setExtractedSqlFields] = useState<Record<string, any>>({});
   const [copied, setCopied] = useState(false);
+  const [saving, setSaving] = useState(false);
 
-  // ---------- sanitize & clean ----------
+  /* ---------- sanitize keystrokes ---------- */
   const sanitizeJsonInput = (raw: string) => {
     try {
       const parsed = JSON.parse(raw);
@@ -100,18 +109,17 @@ export default function TemplateJsonEditor({
       const toRemove = ['created_at', 'domain', 'custom_domain'];
       for (const k of toRemove) delete (parsed as any)[k];
 
-      // keep `data` (don’t delete), we normalize it below during prettify
+      // keep `data`; normalize later
       const allowedKeys = keysFromSchema(TemplateSaveSchema);
       const filtered = pickAllowedKeys(parsed, allowedKeys);
 
-      // defaults expected by schema (gentle)
+      // gentle defaults expected by schema
       filtered.slug ??= 'new-template-' + Math.random().toString(36).slice(2, 6);
       filtered.template_name ??= filtered.slug;
       filtered.layout ??= 'standard';
       filtered.color_scheme ??= 'neutral';
       filtered.theme ??= 'default';
 
-      // do not hoist/strip here (only prettify does structural changes)
       return JSON.stringify(cleanTemplateDataStructure(filtered), null, 2);
     } catch {
       return raw;
@@ -121,16 +129,13 @@ export default function TemplateJsonEditor({
   const cleanParsedForZod = (data: any): ValidatedTemplate => {
     const allowedKeys = keysFromSchema(TemplateSaveSchema);
     const cleaned = pickAllowedKeys(data, allowedKeys);
-
-    // Never expose these in the viewer payload
     delete (cleaned as any).created_at;
     delete (cleaned as any).domain;
     delete (cleaned as any).custom_domain;
-
     return cleaned as ValidatedTemplate;
   };
 
-  // ---------- UI helpers ----------
+  /* ---------- expand/collapse viewer ---------- */
   const toggleCollapse = (path: string) => {
     const s = new Set(collapsed);
     s.has(path) ? s.delete(path) : s.add(path);
@@ -187,12 +192,12 @@ export default function TemplateJsonEditor({
     return <span className="text-white">{String(value)}</span>;
   };
 
-  // ---------- prettify & validate ----------
+  /* ---------- prettify & validate (no side-effects) ---------- */
   const handlePrettify = () => {
     try {
       const parsed = JSON.parse(rawJson);
 
-      // 1) Validate & apply your existing structural fixes
+      // 1) validate + structural fix
       const result = validateTemplateAndFix(parsed);
       if (!result.valid) {
         console.warn('[❌ Failed to validate after prettify]', result.errors);
@@ -200,47 +205,22 @@ export default function TemplateJsonEditor({
         return;
       }
 
-      // 2) Hoist header/footer to template root; strip from pages; sync pages both places
+      // 2) hoist header/footer; strip from pages; sync pages both places
       const normalizedHF = hoistHeaderFooterIntoRoot(result.data);
 
-      // 3) Keep only allowed keys per save schema
+      // 3) allow only save schema keys
       const allowedKeys = keysFromSchema(TemplateSaveSchema);
       const cleaned = pickAllowedKeys(normalizedHF as any, allowedKeys);
 
-      // 4) Make sure the internal structure (data/pages) is consistently shaped
+      // 4) canonical internal structure
       const finalData = cleanTemplateDataStructure(cleaned);
 
-      // 5) Emit prettified JSON back to editor
+      // 5) write it back to text editor
       setRawJson(JSON.stringify(finalData, null, 2));
 
-      // Mirror top-levels into sidebar (unchanged)
-      setSidebarValues((prev: any) => ({
-        ...prev,
-        template_name: (finalData as any)?.template_name,
-        slug: (finalData as any)?.slug,
-        layout: (finalData as any)?.layout,
-        color_scheme: (finalData as any)?.color_scheme,
-        theme: (finalData as any)?.theme,
-        brand: (finalData as any)?.brand,
-        industry: (finalData as any)?.industry,
-        phone: (finalData as any)?.phone,
-        commit: (finalData as any)?.commit,
-        is_site: (finalData as any)?.is_site,
-        published: (finalData as any)?.published,
-        verified: (finalData as any)?.verified,
-        saved_at: (finalData as any)?.saved_at,
-        save_count: (finalData as any)?.save_count,
-        last_editor: (finalData as any)?.last_editor,
-        hero_url: (finalData as any)?.hero_url,
-        banner_url: (finalData as any)?.banner_url,
-        logo_url: (finalData as any)?.logo_url,
-        team_url: (finalData as any)?.team_url,
-      }));
-
-      // 6) Clear validation banners; re-run block validation on the normalized version
+      // keep viewer/inspector in sync
       setValidationError(null);
       setZodFieldErrors(null);
-
       const parsedForViewer = cleanParsedForZod(finalData);
       setParsedJson(parsedForViewer);
 
@@ -252,7 +232,77 @@ export default function TemplateJsonEditor({
     }
   };
 
-  // ---------- copy to clipboard ----------
+  /* ---------- apply to template (state only) ---------- */
+  const applyToTemplate = async () => {
+    try {
+      const parsed = JSON.parse(rawJson);
+
+      // validate & normalize as in prettify
+      const result = validateTemplateAndFix(parsed);
+      if (!result.valid) {
+        alert('Template has structural issues — fix before applying.');
+        return;
+      }
+      const normalizedHF = hoistHeaderFooterIntoRoot(result.data);
+      const allowedKeys = keysFromSchema(TemplateSaveSchema);
+      const cleaned = pickAllowedKeys(normalizedHF as any, allowedKeys);
+      const finalData = cleanTemplateDataStructure(cleaned);
+
+      // Update JSON text (pretty) and viewer
+      setRawJson(JSON.stringify(finalData, null, 2));
+      setParsedJson(cleanParsedForZod(finalData));
+      setValidationError(null);
+      setZodFieldErrors(null);
+
+      // Emit a merge so the parent editor updates working template immediately
+      window.dispatchEvent(new CustomEvent('qs:template:merge', { detail: finalData }));
+
+      // Mirror top-levels into sidebar
+      setSidebarValues((prev: any) => ({ ...prev, ...finalData }));
+
+    } catch (e) {
+      console.error('[applyToTemplate] failed', e);
+      alert('Could not apply JSON to template');
+    }
+  };
+
+  /* ---------- apply and persist to server ---------- */
+  const applyAndSave = async () => {
+    try {
+      setSaving(true);
+      await applyToTemplate(); // updates working state first
+
+      // best-effort: read the now-applied working template from sidebarValues (id is required)
+      const id = (sidebarValues as any)?.id;
+      if (!id) {
+        alert('Missing template id; cannot save.');
+        setSaving(false);
+        return;
+      }
+
+      // Persist to /api/templates/:id/edit (server normalizes again & stores color_mode, header/footer, pages)
+      const res = await fetch(`/api/templates/${encodeURIComponent(id)}/edit`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: rawJson, // already normalized and prettified above
+      });
+
+      let json: any = undefined;
+      try { json = await res.json(); } catch {}
+
+      if (!res.ok) {
+        console.error('[applyAndSave] server error:', json?.error || res.status);
+        alert(json?.error || 'Save failed');
+      }
+    } catch (e) {
+      console.error('[applyAndSave] failed', e);
+      alert('Save failed');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  /* ---------- copy to clipboard ---------- */
   const handleCopy = async () => {
     try {
       const textToCopy = rawJson;
@@ -282,7 +332,7 @@ export default function TemplateJsonEditor({
     <Collapsible title="JSON Editor" id="template-json-editor" defaultOpen>
       <div className="space-y-2">
         <div className="space-y-2">
-          <div className="flex justify-start items-start gap-2">
+          <div className="flex justify-start items-start gap-2 flex-wrap">
             <div className="flex gap-2">
               <Button variant="secondary" size="sm" onClick={handlePrettify}>
                 Prettify & Fix
@@ -296,6 +346,29 @@ export default function TemplateJsonEditor({
                 {copied ? 'Copied' : 'Copy'}
               </Button>
             </div>
+
+            {/* New: Apply and Apply & Save */}
+            <div className="flex gap-2">
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={applyToTemplate}
+                title="Apply JSON to the current template (editor only)"
+              >
+                Apply
+              </Button>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={applyAndSave}
+                disabled={saving}
+                title="Apply JSON and persist to server"
+              >
+                <Save size={16} className="mr-1" />
+                {saving ? 'Saving…' : 'Apply & Save'}
+              </Button>
+            </div>
+
             <TemplateValidationInspector fullTemplateJson={parsedJson} />
           </div>
 

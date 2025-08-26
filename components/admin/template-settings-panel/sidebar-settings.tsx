@@ -8,32 +8,84 @@ import SlugPanel from '../templates/panels/slug-panel';
 import DomainPanel from '../templates/panels/domain-panel';
 import SeoPanel from '../templates/panels/seo-panel';
 import ThemePanel from '../templates/panels/theme-panel';
-// import PagesPanel from '../templates/panels/pages-panel';
 import TemplateJsonEditor from '../templates/template-json-editor';
 import type { Template, Page } from '@/types/template';
 import PaymentSettingsPanel from '../payments/payment-settings-panel';
+import { usePersistTemplate, useTemplateRef } from '@/hooks/usePersistTemplate';
 
 type Props = {
   template: Template;
-  /** Accept partials to avoid clobbering state upstream */
+  /** Accept partials to avoid clobbering state upstream (we'll pass full next template) */
   onChange: (patch: Partial<Template>) => void;
 };
+
+/* ---- helpers ---- */
+function getPages(t: Template): Page[] {
+  const anyT: any = t ?? {};
+  if (Array.isArray(anyT?.data?.pages)) return anyT.data.pages;
+  if (Array.isArray(anyT?.pages)) return anyT.pages;
+  return [];
+}
+
+/** Merge a patch into the current template and keep pages mirrored at both levels. */
+function mergeTemplate(current: Template, patch: Partial<Template>): Template {
+  const next: any = {
+    ...current,
+    ...patch,
+    data: { ...(current as any).data, ...(patch as any).data },
+  };
+
+  // If patch contains pages either at root or under data, mirror them to both places.
+  const patchedPages =
+    (patch as any)?.pages ??
+    (patch as any)?.data?.pages ??
+    undefined;
+
+  if (patchedPages) {
+    next.pages = patchedPages;
+    next.data = { ...(next.data ?? {}), pages: patchedPages };
+  } else {
+    // Ensure pages remain present at both levels for UI stability
+    const pages = getPages(next);
+    next.pages = pages;
+    next.data = { ...(next.data ?? {}), pages };
+  }
+
+  return next as Template;
+}
 
 export default function SidebarSettings({ template, onChange }: Props) {
   const [selectedPageIndex, setSelectedPageIndex] = useState(0);
 
-  // helper so we always update canon + legacy in one go
+  // Always read latest template inside async saves
+  const tplRef = useTemplateRef(template);
+
+  // Persist (debounced) to /api/templates/:id/edit
+  const { persistSoon } = usePersistTemplate(
+    (template as any).id,
+    () => tplRef.current,
+    {
+      debounceMs: 350,
+      onError: (e) => console.error('[sidebar persist] failed:', e),
+    }
+  );
+
+  /** Apply a patch: merge → set state (parent) → persist soon */
+  const applyPatch = useCallback(
+    (patch: Partial<Template>) => {
+      const next = mergeTemplate(tplRef.current, patch);
+      onChange(next as Partial<Template>); // parent does setTemplate+onChange downstream
+      persistSoon(next);
+    },
+    [onChange, persistSoon, tplRef]
+  );
+
+  /** Helper so we always update canon + legacy in one go */
   const applyPages = useCallback(
     (pages: Page[]) => {
-      onChange({
-        pages, // legacy mirror
-        data: {
-          ...(template.data ?? {}),
-          pages, // canonical
-        },
-      });
+      applyPatch({ pages, data: { ...(template.data ?? {}), pages } as any });
     },
-    [onChange, template.data]
+    [applyPatch, template.data]
   );
 
   return (
@@ -41,62 +93,46 @@ export default function SidebarSettings({ template, onChange }: Props) {
       className="space-y-4 px-4 pt-2 w-1/4 min-w-[280px] max-w-[320px] flex-shrink-0"
       id="sidebar-settings"
     >
-      {/* <PagesPanel
-        template={template}
-        onChange={(updated) => {
-          const pages = (updated as any).pages ?? [];
-          onChange({
-            ...template,
-            pages,
-            data: { ...(template.data ?? {}), pages },
-          } as Template);
-        }}
-        selectedIndex={selectedPageIndex}
-        onSelectPage={(i) => setSelectedPageIndex(i)}
-      /> */}
+      {/* Theme updates color_mode; apply + persistSoon */}
       <ThemePanel
         template={template}
-        onChange={(patch) => onChange(patch)}
+        onChange={(patch) => applyPatch(patch)}
       />
-      {/* The rest of the panels should emit PARTIALS only */}
+
+      {/* Identity, Services, Slug, Domain all emit partials; we merge + persist */}
       <IdentityPanel
         template={template}
-        onChange={(patch) => onChange(patch)}
+        onChange={(patch) => applyPatch(patch)}
       />
 
       <ServicesPanel
         template={template}
-        onChange={(patch) => onChange(patch)}
+        onChange={(patch) => applyPatch(patch)}
       />
 
       <SlugPanel
         template={template}
-        onChange={(patch) => onChange(patch)}
+        onChange={(patch) => applyPatch(patch)}
       />
 
       <DomainPanel
         template={template}
         isSite={template.is_site ?? false}
-        onChange={(patch) => onChange(patch)}
+        onChange={(patch) => applyPatch(patch)}
       />
 
       <SeoPanel
         template={template}
-        onChange={(patch) => {
-          // If your SeoPanel writes into template.meta, just forward partials:
-          onChange(patch);
-        }}
+        onChange={(patch) => applyPatch(patch)}
       />
+
       <PaymentSettingsPanel
         siteId={template.id}
         merchantId={'00001'}
         initialPlatformFeeBps={75}
       />
 
-
-      {/* ⚠️ Only keep this JSON editor if you really need it in the sidebar.
-          If you do, make sure it ALSO emits partials, not full template objects. */}
-      
+      {/* Optional: JSON viewer (read-only here). If you want this to edit, wire it to applyPatch too. */}
       <TemplateJsonEditor
         rawJson={JSON.stringify(template, null, 2)}
         setRawJson={() => {}}
@@ -104,7 +140,6 @@ export default function SidebarSettings({ template, onChange }: Props) {
         setSidebarValues={() => {}}
         colorMode={(template.color_mode as 'light' | 'dark') ?? 'light'}
       />
-     
     </div>
   );
 }

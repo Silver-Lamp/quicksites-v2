@@ -108,14 +108,12 @@ export default function RenderBlock({
   const [isEmbedded, setIsEmbedded] = React.useState(false);
   React.useEffect(() => {
     try {
-      // Prefer explicit flag on the preview host
       const host = document.getElementById('site-renderer-page');
       const flagged = host?.getAttribute('data-editor-chrome') === '1';
       if (flagged) {
         setIsEmbedded(true);
         return;
       }
-      // Fallback to iframe detection (good enough when flag absent)
       setIsEmbedded(window.self !== window.top);
     } catch {
       setIsEmbedded(false);
@@ -249,10 +247,20 @@ ID: ${blockId || 'n/a'}`}
           </div>
 
           <div className="flex items-center gap-1">
+            {/* EDIT (admin bar) */}
             <button
               data-no-edit
               type="button"
-              className="inline-flex items-center justify-center h-7 w-7 rounded-md hover:bg-black/5 dark:hover:bg-white/10"
+              className={[
+                'inline-flex items-center justify-center h-7 w-7 rounded-md transition',
+                // Light mode: opaque pill + proper border/shadow
+                'bg-white/95 text-neutral-900 border border-neutral-300 shadow-sm',
+                'hover:bg-white',
+                // Dark mode
+                'dark:bg-white/10 dark:text-white dark:border-white/15 dark:shadow-none',
+                // Focus ring
+                'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-500/60',
+              ].join(' ')}
               onClick={(e) => {
                 e.stopPropagation();
                 onEdit?.(block);
@@ -261,22 +269,33 @@ ID: ${blockId || 'n/a'}`}
               aria-label="Edit block"
               title="Edit"
             >
-              <Pencil className="w-4 h-4" />
+              <Pencil className="w-4 h-4" strokeWidth={2.25} />
             </button>
 
+            {/* DELETE (admin bar) */}
             <button
               data-no-edit
               type="button"
-              className="inline-flex items-center justify-center h-7 w-7 rounded-md hover:bg-black/5 dark:hover:bg-white/10"
+              className={[
+                'inline-flex items-center justify-center h-7 w-7 rounded-md transition',
+                // 'bg-gray-500/95 text-neutral-900 border border-neutral-300 shadow-sm',
+                // 'hover:bg-white',
+                // 'dark:bg-white/10 dark:text-white dark:border-white/15 dark:shadow-none',
+                // 'border: 1px solid rgba(168,85,247,.35);',
+                // 'background: rgba(0,0,0,.55);',
+                // 'color: #fff; font-weight: 800; font-size: 18px; line-height: 1;',
+                // 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-500/60',
+              ].join(' ')}
               onClick={(e) => {
                 e.stopPropagation();
                 onDelete?.(block);
                 if (!onDelete) window.dispatchEvent(new CustomEvent('qs:block:delete', { detail: { block } }));
               }}
               aria-label="Delete block"
-              title="Delete"
+              title="Deletez"
             >
-              <Trash2 className="w-4 h-4" />
+              <Trash2 className="w-4 h-4" strokeWidth={2.25} />
+              <span className="text-xs font-medium truncate opacity-90">Deletez</span>
             </button>
           </div>
         </div>
@@ -285,10 +304,20 @@ ID: ${blockId || 'n/a'}`}
       {/* Icon-only preview chrome (top-right) — only inside editor */}
       {isEmbedded && (
         <div className="pointer-events-none absolute right-2 top-2 z-40 hidden group-hover:flex items-center gap-1">
+          {/* EDIT (icon chrome) */}
           <button
             type="button"
             data-action="edit-block"
-            className="pointer-events-auto inline-flex items-center justify-center h-8 w-8 rounded-full border border-black/10 bg-white/85 text-black shadow-sm hover:bg-white dark:border-white/15 dark:bg-white/10 dark:text-white"
+            className={[
+              'pointer-events-auto inline-flex items-center justify-center h-9 w-9 rounded-full transition',
+              'backdrop-blur border shadow-sm',
+              // 'bg-white/95 text-neutral-900 border-neutral-300 ring-1 ring-black/5 hover:bg-white',
+              // 'dark:bg-white/10 dark:text-white dark:border-white/15 dark:ring-0 dark:shadow-none',
+              // 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-500/60',
+              'border: 1px solid rgba(168,85,247,.35);',
+              'background: rgba(0,0,0,.55);',
+              'color: #fff; font-weight: 800; font-size: 18px; line-height: 1;',
+            ].join(' ')}
             aria-label="Edit block"
             title="Edit"
             onClick={(e) => {
@@ -297,13 +326,23 @@ ID: ${blockId || 'n/a'}`}
               if (!onEdit) window.dispatchEvent(new CustomEvent('qs:block:edit', { detail: { block } }));
             }}
           >
-            <Pencil className="w-4 h-4" />
+            <Pencil className="w-4 h-4" strokeWidth={2.25} />
           </button>
 
+          {/* DELETE (icon chrome) */}
           <button
             type="button"
             data-action="delete-block"
-            className="pointer-events-auto inline-flex items-center justify-center h-8 w-8 rounded-full border border-black/10 bg-white/85 text-black shadow-sm hover:bg-white dark:border-white/15 dark:bg-white/10 dark:text-white"
+            className={[
+              'pointer-events-auto inline-flex items-center justify-center h-9 w-9 rounded-full transition',
+              'backdrop-blur border shadow-sm',
+              // 'bg-white/95 text-neutral-900 border-neutral-300 ring-1 ring-black/5 hover:bg-white',
+              // 'dark:bg-white/10 dark:text-white dark:border-white/15 dark:ring-0 dark:shadow-none',
+              // 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-500/60',
+              'border: 1px solid rgba(168,85,247,.35);',
+              'background: rgba(0,0,0,.55);',
+              'color: #fff; font-weight: 800; font-size: 18px; line-height: 1;',
+            ].join(' ')}
             aria-label="Delete block"
             title="Delete"
             onClick={(e) => {
@@ -311,7 +350,7 @@ ID: ${blockId || 'n/a'}`}
               onDelete?.(block);
             }}
           >
-            <Trash2 className="w-4 h-4" />
+            <Trash2 className="w-4 h-4" strokeWidth={2.25} />
           </button>
         </div>
       )}

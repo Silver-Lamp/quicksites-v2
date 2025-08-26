@@ -15,18 +15,16 @@ type Props = {
   onRestore: (id: string) => Promise<void>;
   onPublish: (id?: string) => Promise<void>;  // undefined => publish latest
   publishedVersionId?: string | null;
-
-  /** Optional context to build preview URLs more accurately */
-  baseSlug?: string;                     // canonical slug (e.g. "graftontowing")
-  domain?: string | null;                // custom domain (e.g. "www.graftontowing.com")
-  defaultSubdomain?: string | null;      // (e.g. "graftontowing.quicksites.ai")
+  baseSlug?: string;
+  domain?: string | null;
+  defaultSubdomain?: string | null;
+  onOpenPageSettings?: () => void;
 };
 
 const BASE_DOMAIN = process.env.NEXT_PUBLIC_BASE_DOMAIN || 'quicksites.ai';
 
 function deriveBaseSlug(slug?: string | null) {
   if (!slug) return '';
-  // remove trailing "-token" groups (2–12 alnum chars each), 1+ times
   return slug.replace(/(-[a-z0-9]{2,12})+$/i, '');
 }
 
@@ -41,19 +39,11 @@ function buildPreviewUrl(
 
   const canonical = baseSlug || deriveBaseSlug(v.slug);
   let host: string;
+  if (isLocal) host = `${canonical}.localhost:3000`;
+  else if (domain) host = domain;
+  else if (defaultSubdomain) host = defaultSubdomain;
+  else host = `${canonical}.${BASE_DOMAIN}`;
 
-  if (isLocal) {
-    // slug.localhost:3000
-    host = `${canonical}.localhost:3000`;
-  } else if (domain) {
-    host = domain;
-  } else if (defaultSubdomain) {
-    host = defaultSubdomain;
-  } else {
-    host = `${canonical}.${BASE_DOMAIN}`;
-  }
-
-  // include version identifier so host page can pick that exact snapshot
   const qs = new URLSearchParams({ preview_version_id: v.id }).toString();
   return `${proto}//${host}/?${qs}`;
 }
@@ -70,10 +60,11 @@ export default function VersionsDropdown({
   baseSlug,
   domain,
   defaultSubdomain,
+  onOpenPageSettings,
 }: Props) {
   const ref = useRef<HTMLDivElement | null>(null);
 
-  // Outside-click close with cleanup
+  // Close on outside click
   useEffect(() => {
     function onDown(e: MouseEvent) {
       if (!open || !ref.current) return;
@@ -82,6 +73,17 @@ export default function VersionsDropdown({
     window.addEventListener('mousedown', onDown);
     return () => window.removeEventListener('mousedown', onDown);
   }, [open, setOpen]);
+
+  // Auto-scroll the deployed row into view when opening
+  useEffect(() => {
+    if (!open) return;
+    // wait one frame so rows exist
+    const id = requestAnimationFrame(() => {
+      const el = document.querySelector('[data-published="true"]') as HTMLElement | null;
+      el?.scrollIntoView({ block: 'center' });
+    });
+    return () => cancelAnimationFrame(id);
+  }, [open]);
 
   const latest = versions[0];
   const latestLabel = latest
@@ -149,13 +151,14 @@ export default function VersionsDropdown({
                 return (
                   <div
                     key={v.id}
-                    className="w-full px-3 py-2 hover:bg-gray-800 text-sm flex items-center justify-between gap-2"
+                    data-published={isPublished ? 'true' : undefined}
+                    className={[
+                      'w-full px-3 py-2 text-sm flex items-center justify-between gap-2 hover:bg-gray-800',
+                      isPublished ? 'bg-emerald-900/30 border-l-2 border-emerald-400' : '',
+                    ].join(' ')}
                   >
                     <button
-                      onClick={async () => {
-                        setOpen(false);
-                        await onRestore(v.id);
-                      }}
+                      onClick={async () => { setOpen(false); await onRestore(v.id); }}
                       className="truncate text-left"
                       title="Restore into editor"
                     >
@@ -164,18 +167,15 @@ export default function VersionsDropdown({
 
                     <div className="flex items-center gap-2">
                       {isPublished && (
-                        <span className="inline-flex items-center text-emerald-400 text-xs" title="Currently published">
-                          <Check className="w-3 h-3 mr-1" /> published
+                        <span className="inline-flex items-center text-emerald-400 text-xs font-medium" title="Currently deployed">
+                          <Check className="w-3 h-3 mr-1" /> deployed
                         </span>
                       )}
 
-                      {/* Preview button */}
                       <Button
-                        size="sm"
-                        variant="secondary"
+                        size="sm" variant="secondary"
                         onClick={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
+                          e.preventDefault(); e.stopPropagation();
                           const url = buildPreviewUrl(v, { baseSlug, domain, defaultSubdomain });
                           window.open(url, '_blank', 'noopener,noreferrer');
                           setOpen(false);
@@ -189,10 +189,7 @@ export default function VersionsDropdown({
                       <Button
                         size="sm"
                         variant="outline"
-                        onClick={async () => {
-                          await onPublish(v.id); // publish this specific version
-                          setOpen(false);
-                        }}
+                        onClick={async () => { await onPublish(v.id); setOpen(false); }}
                         title="Publish this version"
                       >
                         Publish

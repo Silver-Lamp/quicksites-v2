@@ -9,8 +9,15 @@ type Props = {
   template: any;
   onChange?: (next: any) => void;
   errors?: Record<string, any> | null;
+
+  /** shown in chrome badge only; NOT in URL to avoid reloads */
   industry?: string | null;
+
+  /** identifiers (safe in URL) */
   templateId?: string | null;
+  previewVersionId?: string | null;
+  pageSlug?: string | null;
+
   mode?: Mode;
 
   rawJson?: string;
@@ -22,47 +29,42 @@ type Props = {
   onRequestEditBlock?: (blockId: string) => void;
   onRequestAddAfter?: (blockId: string) => void;
 
-  previewVersionId?: string | null;
-  pageSlug?: string | null;
-
   className?: string;
   style?: React.CSSProperties;
+
+  /** If true and a `qs:preview:save` event is fired, hard reload the iframe */
+  reloadOnSave?: boolean;
 };
 
-export default function LiveEditorPreviewFrame(props: Props) {
-  const {
-    template,
-    onChange,
-    errors,
-    industry,
-    templateId,
-    mode = 'preview',
-    rawJson,
-    setRawJson,
-    setTemplate,
-    showEditorChrome = true,
-    onEditHeader,
-    onRequestEditBlock,
-    onRequestAddAfter,
-    previewVersionId,
-    pageSlug,
-    className,
-    style,
-  } = props;
-
+export default function LiveEditorPreviewFrame({
+  template,
+  onChange,
+  errors,
+  industry,
+  templateId,
+  mode = 'preview',
+  rawJson,
+  setRawJson,
+  setTemplate,
+  showEditorChrome = true,
+  onEditHeader,
+  onRequestEditBlock,
+  onRequestAddAfter,
+  previewVersionId,
+  pageSlug,
+  className,
+  style,
+  reloadOnSave = false,
+}: Props) {
   const iframeRef = React.useRef<HTMLIFrameElement | null>(null);
   const [loaded, setLoaded] = React.useState(false);
 
-  // Preview viewport (purely visual: never reload the iframe)
+  /* ---------------- Viewport wrapper (visual only; never in URL) ---------------- */
   const [viewport, setViewport] = React.useState<'mobile' | 'tablet' | 'desktop'>(() => {
-    try {
-      return (localStorage.getItem('qs:preview:viewport') as any) || 'desktop';
-    } catch {
-      return 'desktop';
-    }
+    try { return (localStorage.getItem('qs:preview:viewport') as any) || 'desktop'; }
+    catch { return 'desktop'; }
   });
 
-  // Listen for toolbar events (viewport & color mode) and forward color to iframe
   React.useEffect(() => {
     const onViewport = (e: Event) => {
       const detail = (e as CustomEvent).detail as 'mobile' | 'tablet' | 'desktop';
@@ -70,15 +72,13 @@ export default function LiveEditorPreviewFrame(props: Props) {
       setViewport(detail);
       try { localStorage.setItem('qs:preview:viewport', detail); } catch {}
     };
-
     const onColor = (e: Event) => {
-      const mode = (e as CustomEvent).detail as 'light' | 'dark';
+      const m = (e as CustomEvent).detail as 'light' | 'dark';
       try {
-        iframeRef.current?.contentWindow?.postMessage({ type: 'preview:set-color-mode', mode }, '*');
-        localStorage.setItem('qs:preview:color', mode);
+        iframeRef.current?.contentWindow?.postMessage({ type: 'preview:set-color-mode', mode: m }, '*');
+        localStorage.setItem('qs:preview:color', m);
       } catch {}
     };
-
     window.addEventListener('qs:preview:set-viewport', onViewport as any);
     window.addEventListener('qs:preview:set-color-mode', onColor as any);
     return () => {
@@ -87,48 +87,67 @@ export default function LiveEditorPreviewFrame(props: Props) {
     };
   }, []);
 
-  // Build preview URL — do NOT include viewport (avoid reload)
-  const qs = new URLSearchParams();
-  if (previewVersionId) qs.set('preview_version_id', previewVersionId as string);
-  if (pageSlug) qs.set('page', pageSlug as string);
-  if (templateId) qs.set('template_id', String(templateId));
-  if (industry) qs.set('industry', String(industry));
-  if (mode) qs.set('mode', String(mode));
-  qs.set('editor', '1'); // enable chrome in iframe
-
-  const path = pageSlug ? `/preview/${encodeURIComponent(pageSlug)}` : `/preview`;
-  const src = qs.toString() ? `${path}?${qs.toString()}` : path;
-
-  // Wrapper width (inline style so Tailwind JIT isn’t needed)
   const widthPx =
     viewport === 'mobile' ? 390 :
     viewport === 'tablet' ? 768 :
-    undefined; // desktop: full
+    undefined; // desktop full
 
-  // Parent -> iframe init handshake
+  /* ---------------- Build a STABLE iframe src (identifiers only) ---------------- */
+  const buildSrc = React.useCallback(() => {
+    const qs = new URLSearchParams();
+    if (previewVersionId) qs.set('preview_version_id', previewVersionId);
+    if (pageSlug) qs.set('page', pageSlug);
+    if (templateId) qs.set('template_id', String(templateId));
+    if (mode) qs.set('mode', String(mode));
+    qs.set('editor', '1');
+
+    const path = pageSlug ? `/preview/${encodeURIComponent(pageSlug)}` : `/preview`;
+    return qs.toString() ? `${path}?${qs.toString()}` : path;
+  }, [previewVersionId, pageSlug, templateId, mode]);
+
+  const [stableSrc, setStableSrc] = React.useState<string>(() => buildSrc());
+
+  // Only update src when identifiers change
+  React.useEffect(() => {
+    const next = buildSrc();
+    if (next !== stableSrc) setStableSrc(next);
+  }, [buildSrc, stableSrc]);
+
+  /* ---------------- Parent → Iframe: send current state ---------------- */
   const postInit = React.useCallback(() => {
     const iframe = iframeRef.current;
-    if (!iframe || !iframe.contentWindow) return;
-    const payload = {
-      type: 'preview:init',
-      template,
-      mode,
-      pageSlug: pageSlug ?? null,
-      templateId: templateId ?? null,
-      rawJson: rawJson ?? null,
-      industry: industry ?? null,
-    };
+    if (!iframe?.contentWindow) return;
     try {
-      iframe.contentWindow.postMessage(payload, '*');
-      // also push current color preference once on init
+      iframe.contentWindow.postMessage({
+        type: 'preview:init',
+        template,
+        mode,
+        pageSlug: pageSlug ?? null,
+        templateId: templateId ?? null,
+        rawJson: rawJson ?? null,
+        industry: industry ?? null,
+      }, '*');
+
+      // push current color preference once
       const stored = ((): 'light' | 'dark' => {
-        try { return (localStorage.getItem('qs:preview:color') as any) || 'dark'; } catch { return 'dark'; }
+        try { return (localStorage.getItem('qs:preview:color') as any) || 'dark'; }
+        catch { return 'dark'; }
       })();
       iframe.contentWindow.postMessage({ type: 'preview:set-color-mode', mode: stored }, '*');
     } catch {}
   }, [template, mode, pageSlug, templateId, rawJson, industry]);
 
-  // Single message handler (iframe -> parent)
+  // Init after the iframe finishes loading
+  React.useEffect(() => { if (loaded) postInit(); }, [loaded, postInit]);
+
+  // When template content changes, DO NOT reload — just re-send state
+  React.useEffect(() => {
+    if (!loaded) return;
+    const t = setTimeout(postInit, 50);
+    return () => clearTimeout(t);
+  }, [template, rawJson, postInit, loaded]);
+
+  /* ---------------- Iframe → Parent messages ---------------- */
   React.useEffect(() => {
     function onMessage(e: MessageEvent) {
       const data = e.data;
@@ -136,12 +155,8 @@ export default function LiveEditorPreviewFrame(props: Props) {
 
       if (data.type === 'preview:change') {
         onChange?.(data.payload);
-        if (setRawJson && typeof data.payload?.rawJson === 'string') {
-          setRawJson(data.payload.rawJson);
-        }
-        if (setTemplate && data.payload?.template) {
-          setTemplate(data.payload.template);
-        }
+        if (setRawJson && typeof data.payload?.rawJson === 'string') setRawJson(data.payload.rawJson);
+        if (setTemplate && data.payload?.template) setTemplate(data.payload.template);
       } else if (data.type === 'preview:edit-header') {
         onEditHeader?.();
       } else if (data.type === 'preview:edit-block' && data.blockId) {
@@ -154,15 +169,23 @@ export default function LiveEditorPreviewFrame(props: Props) {
     return () => window.removeEventListener('message', onMessage);
   }, [onChange, setRawJson, setTemplate, onEditHeader, onRequestEditBlock, onRequestAddAfter]);
 
-  // Send init on load + when template changes
-  React.useEffect(() => { if (loaded) postInit(); }, [loaded, postInit]);
+  /* ---------------- Optional: force reload on explicit "save" event ---------------- */
   React.useEffect(() => {
-    if (!loaded) return;
-    const t = setTimeout(postInit, 50);
-    return () => clearTimeout(t);
-  }, [template, rawJson, mode, postInit, loaded]);
+    const handler = () => {
+      if (reloadOnSave) {
+        // Small cache-buster to force navigation without changing identifiers
+        const buster = stableSrc.includes('?') ? '&_ts=' : '?_ts=';
+        setStableSrc(stableSrc + buster + Date.now());
+      } else {
+        // Soft refresh: just re-post the latest state
+        postInit();
+      }
+    };
+    window.addEventListener('qs:preview:save', handler);
+    return () => window.removeEventListener('qs:preview:save', handler);
+  }, [reloadOnSave, stableSrc, postInit]);
 
-  // Basic overlay chrome
+  /* ---------------- Error badge ---------------- */
   const errorCount = React.useMemo(() => {
     if (!errors) return 0;
     if (Array.isArray(errors)) return errors.length;
@@ -202,7 +225,7 @@ export default function LiveEditorPreviewFrame(props: Props) {
                 onClick={onEditHeader}
                 className="rounded-md bg-white/90 px-2 py-1 text-xs font-medium text-gray-900 shadow hover:bg-white dark:bg-white/10 dark:text-white dark:hover:bg-white/20"
               >
-                Edit Header
+                Edit Global Header, Logo and Favicon
               </button>
             )}
           </div>
@@ -214,9 +237,10 @@ export default function LiveEditorPreviewFrame(props: Props) {
         className="mx-auto transition-all duration-150"
         style={{ width: widthPx ? `${widthPx}px` : '100%', maxWidth: '100%' }}
       >
+        {/* ← stays stable unless identifiers change */}
         <iframe
           ref={iframeRef}
-          src={src}
+          src={stableSrc}
           className="h-[70vh] w-full rounded-lg border border-black/10 bg-white dark:border-white/10 dark:bg-black"
           style={{ minHeight: 600 }}
           onLoad={() => setLoaded(true)}

@@ -1,28 +1,8 @@
-// SPLIT STRATEGY:
-// ────────────────────────────────
-// We'll break this large file into:
-// 1. TemplateSettingsPanel/index.tsx (main layout)
-// 2. panels/IdentityPanel.tsx
-// 3. panels/ServicesPanel.tsx
-// 4. panels/SlugPanel.tsx
-// 5. panels/DomainPanel.tsx
-// 6. panels/SeoPanel.tsx
-// 7. panels/ThemePanel.tsx
-
-// We'll also create shared `extractBusinessName()` util for reuse.
-
-// Starting with this initial scaffold:
-
-// File: components/admin/template-settings-panel/index.tsx
-
+// components/admin/templates/template-settings-panel.tsx
 'use client';
 
-import { useState, useEffect } from 'react';
-import clsx from 'clsx';
-import { supabase } from '@/admin/lib/supabaseClient';
-import type { Template } from '@/types/template';
-import { useTheme } from '@/hooks/useThemeContext';
-import { toast } from 'react-hot-toast';
+import * as React from 'react';
+import type { Template, Page } from '@/types/template';
 
 import IdentityPanel from './panels/identity-panel';
 import ServicesPanel from './panels/services-panel';
@@ -30,65 +10,98 @@ import SlugPanel from './panels/slug-panel';
 import DomainPanel from './panels/domain-panel';
 import SeoPanel from './panels/seo-panel';
 import ThemePanel from './panels/theme-panel';
+import PaymentSettingsPanel from '../payments/payment-settings-panel';
 
-export default function TemplateSettingsPanel({
-  template,
-  onChange,
-}: {
+// ---------- helpers ----------
+function getPages(t: Template): Page[] {
+  const anyT: any = t ?? {};
+  if (Array.isArray(anyT?.data?.pages)) return anyT.data.pages;
+  if (Array.isArray(anyT?.pages)) return anyT.pages;
+  return [];
+}
+
+/** Merge a patch into the current template and keep pages mirrored at both levels. */
+function mergeTemplate(current: Template, patch: Partial<Template>): Template {
+  const next: any = {
+    ...current,
+    ...patch,
+    data: { ...(current as any).data, ...(patch as any).data },
+  };
+
+  // If the patch contains pages either at root or under data, mirror them to both places.
+  const patchedPages =
+    (patch as any)?.pages ??
+    (patch as any)?.data?.pages ??
+    undefined;
+
+  if (patchedPages) {
+    next.pages = patchedPages;
+    next.data = { ...(next.data ?? {}), pages: patchedPages };
+  } else {
+    // Ensure pages remain present at both levels for UI stability
+    const pages = getPages(next);
+    next.pages = pages;
+    next.data = { ...(next.data ?? {}), pages };
+  }
+
+  return next as Template;
+}
+
+// ---------- component ----------
+type Props = {
   template: Template;
+  /** Parent expects a FULL template update */
   onChange: (updated: Template) => void;
-}) {
-  const [activeTab, setActiveTab] = useState<'general' | 'theme'>('general');
-  const { setTheme } = useTheme();
-  const isSite = template.is_site;
+};
 
-  useEffect(() => {
-    if (!template.meta?.title || template.meta.title.trim() === '') {
-      const hero = template.data?.pages?.[0]?.content_blocks?.find(b => b.type === 'hero');
-      const fallbackTitle = template.template_name || (hero?.content as unknown as any)?.headline || '';
-      onChange({
-        ...template,
-        meta: { ...template.meta, title: fallbackTitle },
-      });
-    }
-    if (!template.meta?.description || template.meta.description.trim() === '') {
-      const hero = template.data?.pages?.[0]?.content_blocks?.find(b => b.type === 'hero');
-      const fallbackDesc = (hero?.content as unknown as any)?.subheadline || (hero?.content as unknown as any)?.headline || '';
-      onChange({
-        ...template,
-        meta: { ...template.meta, description: fallbackDesc },
-      });
-    }
-  }, [template]);
+export default function TemplateSettingsPanel({ template, onChange }: Props) {
+  // Adapter so panels that emit Partial<Template> still update the full object the parent wants
+  const applyPatch = React.useCallback(
+    (patch: Partial<Template>) => {
+      const next = mergeTemplate(template, patch);
+      onChange(next);
+    },
+    [template, onChange]
+  );
 
   return (
-    <div className="rounded p-3 space-y-4">
-      <div className="flex gap-2 text-sm font-medium border-b border-white/10 pb-2">
-        <button
-          onClick={() => setActiveTab('general')}
-          className={clsx('px-3 py-1 rounded', activeTab === 'general' ? 'bg-purple-700 text-white' : 'bg-gray-800 text-gray-300')}
-        >
-          General
-        </button>
-        <button
-          onClick={() => setActiveTab('theme')}
-          className={clsx('px-3 py-1 rounded', activeTab === 'theme' ? 'bg-purple-700 text-white' : 'bg-gray-800 text-gray-300')}
-        >
-          Design
-        </button>
-      </div>
+    <div className="space-y-4 px-4 pt-2 w-1/4 min-w-[280px] max-w-[320px] flex-shrink-0" id="sidebar-settings">
+      <ThemePanel
+        template={template}
+        onChange={(patch) => applyPatch(patch)}
+      />
 
-      {activeTab === 'general' && (
-        <div className="grid md:grid-cols-2 gap-4">
-          <IdentityPanel template={template} onChange={onChange} />
-          <ServicesPanel template={template} onChange={onChange} />
-          <SlugPanel template={template} onChange={onChange} />
-          <DomainPanel template={template} onChange={onChange} isSite={isSite ?? false} />
-          <SeoPanel template={template} onChange={onChange} />
-        </div>
-      )}
+      <IdentityPanel
+        template={template}
+        onChange={(patch) => applyPatch(patch)}
+      />
 
-      {activeTab === 'theme' && <ThemePanel template={template} onChange={onChange} />}
+      <ServicesPanel
+        template={template}
+        onChange={(patch) => applyPatch(patch)}
+      />
+
+      <SlugPanel
+        template={template}
+        onChange={(patch) => applyPatch(patch)}
+      />
+
+      <DomainPanel
+        template={template}
+        isSite={template.is_site ?? false}
+        onChange={(patch) => applyPatch(patch)}
+      />
+
+      <SeoPanel
+        template={template}
+        onChange={(patch) => applyPatch(patch)}
+      />
+
+      <PaymentSettingsPanel
+        siteId={template.id}
+        merchantId={'00001'}
+        initialPlatformFeeBps={75}
+      />
     </div>
   );
 }

@@ -24,8 +24,19 @@ function stripHFPage(page: any) {
   return { ...page, content_blocks: blocks.filter((b: any) => !isHeader(b) && !isFooter(b)) };
 }
 
+/** Options for snapshot/save normalization. The extra flags are accepted for API compatibility. */
+export type SnapshotOptions = {
+  stripChrome?: boolean;
+  /** currently a no-op (IDs are preserved by default here) */
+  preserveIds?: boolean;
+  /** currently a no-op (slug is preserved by default here) */
+  preserveSlug?: boolean;
+  /** currently a no-op (template_name is preserved by default here) */
+  preserveTemplateName?: boolean;
+};
+
 /** Normalize the Template for saving/snapshotting */
-export function normalizeForSnapshot(t: Template, options: { stripChrome?: boolean } = {}): Template {
+export function normalizeForSnapshot(t: Template, options: SnapshotOptions = {}): Template {
   const tpl: any = JSON.parse(JSON.stringify(t));
   const pagesIn = getPages(tpl);
   let headerBlock = tpl.headerBlock ?? tpl?.data?.headerBlock ?? null;
@@ -44,11 +55,19 @@ export function normalizeForSnapshot(t: Template, options: { stripChrome?: boole
   tpl.pages = cleanedPages;
   tpl.data = { ...(tpl.data ?? {}), pages: cleanedPages };
 
+  // carry color_mode from nested → top when needed
   const topMode = tpl?.color_mode;
   const nestedMode = tpl?.data?.color_mode;
   if (topMode !== 'light' && topMode !== 'dark' && (nestedMode === 'light' || nestedMode === 'dark')) {
     tpl.color_mode = nestedMode;
   }
+
+  // NOTE: preserveIds / preserveSlug / preserveTemplateName are acknowledged
+  // via typing but are currently no-ops here; nothing in this function alters
+  // ids/slug/template_name. If you want hard guarantees:
+  if (options.preserveSlug && t && (t as any).slug) tpl.slug = (t as any).slug;
+  if (options.preserveTemplateName && t && (t as any).template_name) tpl.template_name = (t as any).template_name;
+
   return tpl as Template;
 }
 

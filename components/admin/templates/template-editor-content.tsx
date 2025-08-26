@@ -419,7 +419,9 @@ export default function EditorContent({
         onRedo={() => window.dispatchEvent(new CustomEvent('qs:history:redo'))}
         onOpenPageSettings={() => setPageSettingsOpen(true)}
         onApplyTemplate={(next) => { setTemplate(next); onChange(next); }}
+        onSetRawJson={(json) => setRawJson(json)}
       />
+
 
       {/* Page Settings modal */}
       <PageSettingsModal

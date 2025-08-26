@@ -53,7 +53,7 @@ export default function PreviewBridge() {
       window.parent?.postMessage({ type, blockId, blockPath }, '*');
     }
 
-    // --- Anchor interceptor: keep navigation inside /preview and preserve required params
+    // ---- Anchor interceptor: keep navigation inside /preview and preserve key params
     function handleAnchor(e: MouseEvent, t: HTMLElement): boolean {
       const a = t.closest('a[href]') as HTMLAnchorElement | null;
       if (!a) return false;
@@ -71,8 +71,8 @@ export default function PreviewBridge() {
 
       const hostEl = getContainer(t);
       const siteDomain = (hostEl?.getAttribute('data-site-domain') || '').toLowerCase();
-      const siteSub = (hostEl?.getAttribute('data-site-subdomain') || '').toLowerCase();
-      const thost = target.host.toLowerCase();
+      const siteSub    = (hostEl?.getAttribute('data-site-subdomain') || '').toLowerCase();
+      const thost      = target.host.toLowerCase();
 
       // Internal if same-origin or matches site custom domain or default subdomain
       const internal =
@@ -80,39 +80,30 @@ export default function PreviewBridge() {
         (siteDomain && thost === siteDomain) ||
         (siteSub && thost === siteSub);
 
-      if (!internal) return false; // let true externals open normally
+      if (!internal) return false; // let externals open normally
 
       e.preventDefault();
 
       // Build a /preview/<path> AND MERGE required params from current URL
-      const rawPath = target.pathname || '/';
+      const rawPath  = target.pathname || '/';
       const nextPath = rawPath.startsWith('/preview') ? rawPath : `/preview${rawPath}`;
 
-      // Carry important params across navigations
-      const curSp = new URLSearchParams(cur.search);
+      const curSp    = new URLSearchParams(cur.search);
       const targetSp = new URLSearchParams(target.search);
-      const keep = new URLSearchParams();
+      const keep     = new URLSearchParams();
 
-      const carryKeys = [
-        'template_id',
-        'preview_version_id',
-        'editor',
-        'mode',
-        'industry',
-      ];
-      for (const k of carryKeys) {
+      const carry = ['template_id', 'preview_version_id', 'editor', 'mode', 'industry'];
+      for (const k of carry) {
         const v = curSp.get(k);
         if (v) keep.set(k, v);
       }
-      // allow explicit query on the link to override/extend
       targetSp.forEach((v, k) => keep.set(k, v));
 
       const dest = `${nextPath}${keep.toString() ? `?${keep.toString()}` : ''}${target.hash || ''}`;
 
-      // Navigate inside iframe
       window.location.assign(dest);
 
-      // Tell parent (optional)
+      // optional: notify parent
       const pageSlug = rawPath.replace(/^\/+/, '').split('/')[0] || 'home';
       window.parent?.postMessage({ type: 'preview:navigated', page: pageSlug }, '*');
       return true;
@@ -123,7 +114,7 @@ export default function PreviewBridge() {
       if (!t) return;
       if (isInsideNoEdit(t)) return;
 
-      // 1) Anchor handling first (keeps params & stays in /preview)
+      // 1) Anchors first (keeps params & stays in /preview)
       if (handleAnchor(ev, t)) return;
 
       // 2) Explicit chrome
@@ -133,23 +124,11 @@ export default function PreviewBridge() {
         return;
       }
       const editBtn = t.closest('[data-action="edit-block"]');
-      if (editBtn) {
-        post('preview:edit-block', getBlockEl(editBtn));
-        ev.preventDefault();
-        return;
-      }
+      if (editBtn) { post('preview:edit-block', getBlockEl(editBtn)); ev.preventDefault(); return; }
       const delBtn = t.closest('[data-action="delete-block"]');
-      if (delBtn) {
-        post('preview:delete-block', getBlockEl(delBtn));
-        ev.preventDefault();
-        return;
-      }
+      if (delBtn) { post('preview:delete-block', getBlockEl(delBtn)); ev.preventDefault(); return; }
       const addBtn = t.closest('[data-action="add-after"]');
-      if (addBtn) {
-        post('preview:add-after', getBlockEl(addBtn));
-        ev.preventDefault();
-        return;
-      }
+      if (addBtn) { post('preview:add-after', getBlockEl(addBtn)); ev.preventDefault(); return; }
 
       // 3) Generic click on a block => edit
       const blkEl = getBlockEl(t);
@@ -169,41 +148,71 @@ export default function PreviewBridge() {
       }
     }
 
-    // Large “+” injector (visible only on hover)
+    // --- Big "+" injector CSS (LEFT side, half size, purple glow, lighter black) ---
     const style = document.createElement('style');
     style.textContent = `
       .qs-block { position: relative; }
+
       .qs-add-btn {
         position: absolute;
-        right: 14px;
-        bottom: -28px;
+        left: 14px;                 /* moved to left */
+        bottom: -18px;              /* half-size offset */
         z-index: 50;
+
         display: inline-flex;
         align-items: center;
         justify-content: center;
-        width: 72px;
-        height: 72px;
+
+        width: 36px;                /* half the old 72px */
+        height: 36px;
         border-radius: 9999px;
-        border: 1px solid rgba(0,0,0,.15);
-        background: rgba(255,255,255,.95);
-        color: #111;
+
+        border: 1px solid rgba(168,85,247,.35);   /* purple-500 */
+        background: rgba(0,0,0,.55);              /* lighter black */
+        color: #fff;
         font-weight: 800;
-        font-size: 28px;
+        font-size: 18px;
         line-height: 1;
+
         cursor: pointer;
-        box-shadow: 0 4px 16px rgba(0,0,0,.18);
+        box-shadow:
+          0 2px 8px rgba(0,0,0,.18),
+          0 0 0 2px rgba(168,85,247,.20),
+          0 0 10px rgba(168,85,247,.30);         /* purple glow */
+
         opacity: 0;
-        transition: opacity .15s ease, transform .12s ease, box-shadow .12s ease;
+        transition:
+          opacity .15s ease,
+          transform .12s ease,
+          box-shadow .12s ease,
+          background .12s ease,
+          border-color .12s ease;
       }
       .qs-block:hover .qs-add-btn { opacity: 1; }
-      .qs-add-btn:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(0,0,0,.22); }
-      .qs-add-btn:active { transform: translateY(0); box-shadow: 0 3px 12px rgba(0,0,0,.18); }
-      html.dark .qs-add-btn {
-        background: rgba(0,0,0,.65);
-        color: #fff;
-        border-color: rgba(255,255,255,.15);
+
+      .qs-add-btn:hover {
+        transform: translateY(-1px);
+        background: rgba(0,0,0,.60);
+        box-shadow:
+          0 4px 14px rgba(0,0,0,.25),
+          0 0 0 2px rgba(168,85,247,.35),
+          0 0 16px rgba(168,85,247,.45);
       }
-      html.dark .qs-add-btn:hover { background: rgba(0,0,0,.72); }
+      .qs-add-btn:active {
+        transform: translateY(0);
+        box-shadow:
+          0 3px 12px rgba(0,0,0,.22),
+          0 0 0 2px rgba(168,85,247,.30),
+          0 0 12px rgba(168,85,247,.38);
+      }
+
+      html.dark .qs-add-btn {
+        background: rgba(0,0,0,.60);
+        border-color: rgba(168,85,247,.40);
+      }
+      html.dark .qs-add-btn:hover {
+        background: rgba(0,0,0,.68);
+      }
     `;
     document.head.appendChild(style);
 

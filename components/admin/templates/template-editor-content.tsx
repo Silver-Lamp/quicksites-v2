@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState, type Dispatch, type SetStateAction } from 'react';
+import { useEffect, useMemo, useState, type Dispatch, type SetStateAction, useRef } from 'react';
 import dynamic from 'next/dynamic';
 import { useSearchParams } from 'next/navigation';
 import type { Template, TemplateData } from '@/types/template';
@@ -108,6 +108,84 @@ export default function EditorContent({
   mode,
   onChange,
 }: Props) {
+
+
+
+// --- Undo/Redo history (template-level) ---
+const deepClone = (o: any) => JSON.parse(JSON.stringify(o));
+const pastRef = useRef<Template[]>([]);
+const futureRef = useRef<Template[]>([]);
+const applyingRef = useRef(false);
+
+const captureHistory = useMemo(() => () => {
+  if (applyingRef.current) return;
+  pastRef.current.push(deepClone(template));
+  futureRef.current = [];
+}, [template]);
+
+const applySnapshot = (snap: Template) => {
+  applyingRef.current = true;
+  setTemplate(snap);
+  onChange(snap);
+  applyingRef.current = false;
+};
+
+const undo = useMemo(() => () => {
+  if (!pastRef.current.length) return;
+  futureRef.current.push(deepClone(template));
+  const prev = pastRef.current.pop()!;
+  applySnapshot(prev);
+}, [template]);
+
+const redo = useMemo(() => () => {
+  if (!futureRef.current.length) return;
+  pastRef.current.push(deepClone(template));
+  const next = futureRef.current.pop()!;
+  applySnapshot(next);
+}, [template]);
+
+useEffect(() => {
+  const h = (e: Event) => setShowSettings(!!(e as CustomEvent).detail);
+  window.addEventListener('qs:settings:set-open', h as any);
+  return () => window.removeEventListener('qs:settings:set-open', h as any);
+}, []);
+
+// Allow toolbar (or others) to ask for capture/undo/redo
+useEffect(() => {
+  const cap = () => captureHistory();
+  const u = () => undo();
+  const r = () => redo();
+  window.addEventListener('qs:history:capture', cap as any);
+  window.addEventListener('qs:history:undo', u as any);
+  window.addEventListener('qs:history:redo', r as any);
+  return () => {
+    window.removeEventListener('qs:history:capture', cap as any);
+    window.removeEventListener('qs:history:undo', u as any);
+    window.removeEventListener('qs:history:redo', r as any);
+  };
+}, [captureHistory, undo, redo]);
+
+// Keyboard: ⌘Z / ⇧⌘Z (when not typing in an input/editor)
+useEffect(() => {
+  const isTyping = (n: EventTarget | null) => {
+    const el = n as HTMLElement | null;
+    if (!el) return false;
+    if (el.isContentEditable) return true;
+    const tag = (el.tagName || '').toLowerCase();
+    return tag === 'input' || tag === 'textarea' || tag === 'select' || !!el.closest?.('.cm-editor,.ProseMirror');
+  };
+  const onKey = (e: KeyboardEvent) => {
+    const k = (e.key || '').toLowerCase();
+    if (!(e.metaKey || e.ctrlKey) || k !== 'z') return;
+    if (isTyping(e.target)) return;
+    e.preventDefault();
+    e.shiftKey ? redo() : undo();
+  };
+  window.addEventListener('keydown', onKey, { capture: true });
+  return () => window.removeEventListener('keydown', onKey, { capture: true } as any);
+}, [undo, redo]);
+
+
   const searchParams = useSearchParams();
   const previewVersionId = searchParams.get('preview_version_id');
   const currentPageSlug = useMemo(
@@ -176,6 +254,7 @@ export default function EditorContent({
   const openHeaderEditor = () => setEditingHeader(resolveHeader());
 
   const saveHeader = async (updatedHeader: Block) => {
+    captureHistory();
     const nextData: TemplateDataWithChrome = {
       ...(template.data as TemplateDataWithChrome),
       headerBlock: updatedHeader as Block,
@@ -212,6 +291,7 @@ export default function EditorContent({
     type: string,
     opts?: { openEditor?: boolean }
   ) {
+    captureHistory();
     const pages = [...getTemplatePages(template)];
     const page = { ...pages[pageIdx] };
     const blocks = [...getPageBlocks(page)];
@@ -240,6 +320,7 @@ export default function EditorContent({
   }
   
   function deleteBlock(blockId?: string | null, blockPath?: string | null) {
+    captureHistory();
     const ref =
       (blockPath ? findBlockByPath(template, blockPath) : null) ??
       (blockId ? findBlockById(template, blockId) : null);
@@ -257,6 +338,7 @@ export default function EditorContent({
     onChange(nextTemplate);
   }
   function saveEditedBlock(updated: Block) {
+    captureHistory();
     const ref = editingBlock?.ref as { pageIdx: number; blockIdx: number; block: Block } | null;
     if (!ref) return;
     const pages = [...getTemplatePages(template)];
@@ -307,6 +389,7 @@ export default function EditorContent({
   }, [template, currentPageSlug]);
 
   const savePageSettings = (updatedPage: any) => {
+    captureHistory();
     const pages = [...getTemplatePages(template)];
     const idx = pages.findIndex((p: any) => p?.slug === currentPageSlug);
     const targetIdx = idx >= 0 ? idx : 0;
@@ -449,8 +532,8 @@ export default function EditorContent({
         template={template}
         autosaveStatus={autosaveStatus}
         onSaveDraft={(t) => { setTemplate(t!); onChange(t!); }}
-        onUndo={() => window.dispatchEvent(new CustomEvent('qs:history:undo'))}
-        onRedo={() => window.dispatchEvent(new CustomEvent('qs:history:redo'))}
+        onUndo={undo}            // <-- use the real functions
+        onRedo={redo}            // <--
         onOpenPageSettings={() => setPageSettingsOpen(true)}
         onApplyTemplate={(next) => { setTemplate(next); onChange(next); }}
         onSetRawJson={(json) => setRawJson(json)}

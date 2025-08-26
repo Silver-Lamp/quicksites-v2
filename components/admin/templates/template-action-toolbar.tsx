@@ -1,4 +1,3 @@
-// components/admin/templates/template-action-toolbar.tsx
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
@@ -6,7 +5,8 @@ import { createPortal } from 'react-dom';
 import { useRouter } from 'next/navigation';
 import {
   RotateCcw, RotateCw, AlertTriangle, X, Maximize2, Minimize2,
-  Smartphone, Tablet, Monitor, Sun, Moon, SlidersHorizontal, Check
+  Smartphone, Tablet, Monitor, Sun, Moon, SlidersHorizontal, Check,
+  Settings as SettingsIcon,  // ← gear
 } from 'lucide-react';
 import { Button } from '@/components/ui';
 import toast from 'react-hot-toast';
@@ -35,9 +35,7 @@ function getTemplatePagesLoose(t: Template): any[] {
 }
 function withPages(t: Template, pages: any[]): Template {
   const anyT: any = t ?? {};
-  if (Array.isArray(anyT?.data?.pages)) {
-    return { ...anyT, data: { ...anyT.data, pages } } as Template;
-  }
+  if (Array.isArray(anyT?.data?.pages)) return { ...anyT, data: { ...anyT.data, pages } } as Template;
   return { ...anyT, pages } as Template;
 }
 function pretty(next: Template) {
@@ -79,21 +77,34 @@ export function TemplateActionToolbar({
   const [saveWarnings, setSaveWarnings] = useState<SaveWarning[]>([]);
   const [versionsOpen, setVersionsOpen] = useState(false);
 
+  // history counters for badges
+  const [hist, setHist] = useState<{ past: number; future: number }>({ past: 0, future: 0 });
+
+  // settings sidebar open state (mirrors localStorage and listens to external changes)
+  const [settingsOpenState, setSettingsOpenState] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return false;
+    try { return (window.localStorage.getItem('qs:settingsOpen') ?? '0') !== '0'; } catch { return false; }
+  });
+  useEffect(() => {
+    const sync = (e: Event) => {
+      const v = !!(e as CustomEvent).detail;
+      setSettingsOpenState(v);
+    };
+    window.addEventListener('qs:settings:set-open', sync as any);
+    return () => window.removeEventListener('qs:settings:set-open', sync as any);
+  }, []);
+
   // latest template ref
   const tplRef = useTemplateRef(template);
 
   // signature of the LAST PERSISTED template
   const savedSigRef = useRef<string>('');
-  // initialize on mount & whenever the initial template changes identity
   useEffect(() => { savedSigRef.current = templateSig(template); }, []); // initial mount
-  useEffect(() => { /* when id changes, reset baseline */ }, [(template as any)?.id]);
+  useEffect(() => { /* when id changes, reset baseline if desired */ }, [(template as any)?.id]);
 
-  // derived "dirty" and key handling
+  // derived "dirty"
   const [dirty, setDirty] = useState(false);
-  useEffect(() => {
-    const currentSig = templateSig(template);
-    setDirty(currentSig !== savedSigRef.current);
-  }, [template]);
+  useEffect(() => { setDirty(templateSig(template) !== savedSigRef.current); }, [template]);
 
   // keyboard: Cmd/Ctrl+S to save when dirty
   useEffect(() => {
@@ -107,6 +118,39 @@ export function TemplateActionToolbar({
     return () => window.removeEventListener('keydown', onKey);
   }, [dirty]);
 
+  // also wire Cmd/Ctrl+Z (undo) & Shift+Cmd/Ctrl+Z (redo)
+  useEffect(() => {
+    const isTyping = (n: EventTarget | null) => {
+      const el = n as HTMLElement | null;
+      if (!el) return false;
+      if (el.isContentEditable) return true;
+      const tag = (el.tagName || '').toLowerCase();
+      return tag === 'input' || tag === 'textarea' || tag === 'select' || !!el.closest?.('.cm-editor,.ProseMirror');
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (!(e.metaKey || e.ctrlKey)) return;
+      const k = (e.key || '').toLowerCase();
+      if (k !== 'z') return;
+      if (isTyping(e.target)) return;
+      e.preventDefault();
+      if (e.shiftKey) handleRedo(); else handleUndo();
+    };
+    window.addEventListener('keydown', onKey, { capture: true });
+    return () => window.removeEventListener('keydown', onKey as any, { capture: true } as any);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // listen for history stats from EditorContent & ask for them at mount
+  useEffect(() => {
+    const onStats = (e: Event) => {
+      const d = (e as CustomEvent).detail || {};
+      setHist({ past: Number(d.past ?? 0), future: Number(d.future ?? 0) });
+    };
+    window.addEventListener('qs:history:stats', onStats as any);
+    window.dispatchEvent(new CustomEvent('qs:history:request-stats'));
+    return () => window.removeEventListener('qs:history:stats', onStats as any);
+  }, []);
+
   // apply helper (state + JSON view)
   const apply = (next: Template) => { onApplyTemplate(next); onSetRawJson?.(pretty(next)); };
 
@@ -117,7 +161,6 @@ export function TemplateActionToolbar({
     {
       debounceMs: 350,
       onSuccess: () => {
-        // mark the just-persisted state as the new baseline
         savedSigRef.current = templateSig(tplRef.current);
         setDirty(false);
       },
@@ -125,7 +168,7 @@ export function TemplateActionToolbar({
     }
   );
 
-  // portal mount
+  // portal mount guard
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
 
@@ -148,7 +191,18 @@ export function TemplateActionToolbar({
     window.dispatchEvent(new CustomEvent('qs:preview:set-viewport', { detail: v }));
   };
 
+  // === Template Settings sidebar control ===
+  const emitSettingsOpen = (open: boolean) => {
+    window.dispatchEvent(new CustomEvent('qs:settings:set-open', { detail: open }));
+    try { window.localStorage.setItem('qs:settingsOpen', open ? '1' : '0'); } catch {}
+    setSettingsOpenState(open);
+  };
+  const toggleTemplateSettings = () => emitSettingsOpen(!settingsOpenState);
+
+  const fireCapture = () => window.dispatchEvent(new CustomEvent('qs:history:capture'));
+
   const toggleColor = () => {
+    fireCapture();
     const nextMode: 'light'|'dark' = colorPref === 'dark' ? 'light' : 'dark';
     setColorPref(nextMode);
     try { localStorage.setItem('qs:preview:color', nextMode); } catch {}
@@ -168,10 +222,8 @@ export function TemplateActionToolbar({
     window.dispatchEvent(new CustomEvent('qs:sidebar:set-collapsed', { detail: c }));
     try { window.localStorage.setItem('admin-sidebar-collapsed', String(c)); } catch {}
   };
-  const setSettingsOpen = (open: boolean) => {
-    window.dispatchEvent(new CustomEvent('qs:settings:set-open', { detail: open }));
-    try { window.localStorage.setItem('qs:settingsOpen', open ? '1' : '0'); } catch {}
-  };
+  const setSettingsOpenFlag = (open: boolean) => emitSettingsOpen(open);
+
   const scrollFirstBlockToTop = () => {
     const el =
       document.querySelector<HTMLElement>('[data-block-id]') ??
@@ -184,14 +236,15 @@ export function TemplateActionToolbar({
   };
   const enterFullscreen = () => {
     prevSidebarCollapsedRef.current = readSidebarCollapsed();
-    try { prevSettingsOpenRef.current = window.localStorage.getItem('qs:settingsOpen') !== '0'; } catch { prevSettingsOpenRef.current = true; }
-    setSettingsOpen(false);
+    try { prevSettingsOpenRef.current = window.localStorage.getItem('qs:settingsOpen') !== '0'; }
+    catch { prevSettingsOpenRef.current = settingsOpenState; }
+    setSettingsOpenFlag(false); // hide settings sidebar in fullscreen
     setSidebarCollapsed(true);
     requestAnimationFrame(() => setTimeout(scrollFirstBlockToTop, 120));
     setIsFullscreen(true);
   };
   const exitFullscreen = () => {
-    if (prevSettingsOpenRef.current !== null) setSettingsOpen(prevSettingsOpenRef.current);
+    if (prevSettingsOpenRef.current !== null) setSettingsOpenFlag(prevSettingsOpenRef.current);
     if (prevSidebarCollapsedRef.current !== null) setSidebarCollapsed(prevSidebarCollapsedRef.current);
     setIsFullscreen(false);
   };
@@ -327,7 +380,6 @@ export function TemplateActionToolbar({
         setSaveWarnings([]);
       }
 
-      // apply + sync + persist
       onSaveDraft?.(nextTemplate as Template);
       onSetRawJson?.(pretty(nextTemplate as Template));
       const ok = await persist(nextTemplate as Template);
@@ -392,6 +444,18 @@ export function TemplateActionToolbar({
     }
   };
 
+  // Undo/Redo button handlers with toast + stats refresh
+  const handleUndo = () => {
+    onUndo();
+    window.dispatchEvent(new CustomEvent('qs:history:request-stats'));
+    toast('Undo', { icon: '↩️' });
+  };
+  const handleRedo = () => {
+    onRedo();
+    window.dispatchEvent(new CustomEvent('qs:history:request-stats'));
+    toast('Redo', { icon: '↪️' });
+  };
+
   if (!mounted) return null;
 
   const currentSlug =
@@ -407,21 +471,17 @@ export function TemplateActionToolbar({
         style={{ WebkitTapHighlightColor: 'transparent' }}
       >
         <div className="w-full flex justify-between items-center gap-3">
-          {/* Left: status + undo/redo */}
-          <div className="text-sm font-medium flex gap-3 items-center">
-            <span className={`text-xs px-2 py-1 rounded ${status === 'Published' ? 'bg-green-600' : 'bg-yellow-600'}`}>
-              {status}
-            </span>
-            {autosaveStatus && <span className="text-xs text-gray-400 italic">💾 {autosaveStatus}</span>}
-            <Button size="icon" variant="ghost" onClick={onUndo} title="Undo (⌘Z)">
-              <RotateCcw className="w-4 h-4" />
-            </Button>
-            <Button size="icon" variant="ghost" onClick={onRedo} title="Redo (⇧⌘Z)">
-              <RotateCw className="w-4 h-4" />
-            </Button>
-          </div>
-
-          {/* Middle: Page manager */}
+          {/* Buttons to the left of page manager */}
+          <Button
+            size="icon"
+            variant={settingsOpenState ? 'secondary' : 'ghost'}
+            title="Template Settings Sidebar"
+            aria-pressed={settingsOpenState}
+            onClick={toggleTemplateSettings}
+          >
+            <SettingsIcon className="w-4 h-4" />
+          </Button>
+          {/* Center: Page manager */}
           <PageManagerToolbar
             pages={getTemplatePagesLoose(template)}
             currentSlug={currentSlug}
@@ -431,12 +491,14 @@ export function TemplateActionToolbar({
               history.replaceState(null, '', `${location.pathname}?${sp.toString()}`);
             }}
             onAdd={(newPage) => {
+              fireCapture();
               const pages = [...getTemplatePagesLoose(tplRef.current), newPage];
               const next = withPages(tplRef.current, pages);
               apply(next);
               persistSoon(next);
             }}
             onRename={(oldSlug, nextVals) => {
+              fireCapture();
               const pages = getTemplatePagesLoose(tplRef.current).map((p: any) =>
                 p.slug === oldSlug ? { ...p, title: nextVals.title, slug: nextVals.slug } : p
               );
@@ -445,12 +507,14 @@ export function TemplateActionToolbar({
               persistSoon(next);
             }}
             onDelete={(slug) => {
+              fireCapture();
               const pages = getTemplatePagesLoose(tplRef.current).filter((p: any) => p.slug !== slug);
               const next = withPages(tplRef.current, pages);
               apply(next);
               persistSoon(next);
             }}
             onReorder={(from, to) => {
+              fireCapture();
               const pages = [...getTemplatePagesLoose(tplRef.current)];
               const [moved] = pages.splice(from, 1);
               pages.splice(to, 0, moved);
@@ -461,62 +525,89 @@ export function TemplateActionToolbar({
             siteId={(tplRef.current as any).site_id}
           />
 
-          {/* Right: viewport/theme/versions/save */}
-          <div className="flex items-center gap-3">
-            <Button size="icon" variant="ghost" title="Full screen (F)" onClick={toggleFullscreen} aria-pressed={isFullscreen}>
-              {isFullscreen ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
-            </Button>
+          <Button size="icon" variant="ghost" title="Page Settings" onClick={() => onOpenPageSettings?.()}>
+            <SlidersHorizontal className="w-4 h-4" />
+          </Button>
 
-            <div className="flex items-center gap-1">
-              <Button size="icon" variant={viewport === 'mobile' ? 'secondary' : 'ghost'} title="Mobile width" aria-pressed={viewport === 'mobile'} onClick={() => setViewportAndEmit('mobile')}>
-                <Smartphone className="w-4 h-4" />
+          <Button
+            size="icon"
+            variant="ghost"
+            title={colorPref === 'dark' ? 'Light mode' : 'Dark mode'}
+            onClick={toggleColor}
+            aria-pressed={colorPref === 'dark'}
+          >
+            {colorPref === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+          </Button>
+
+          <Button size="icon" variant="ghost" title="Full screen (F)" onClick={toggleFullscreen} aria-pressed={isFullscreen}>
+            {isFullscreen ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
+          </Button>
+
+          <div className="flex items-center gap-1">
+            <Button size="icon" variant={viewport === 'mobile' ? 'secondary' : 'ghost'} title="Mobile width" aria-pressed={viewport === 'mobile'} onClick={() => setViewportAndEmit('mobile')}>
+              <Smartphone className="w-4 h-4" />
+            </Button>
+            <Button size="icon" variant={viewport === 'tablet' ? 'secondary' : 'ghost'} title="Tablet width" aria-pressed={viewport === 'tablet'} onClick={() => setViewportAndEmit('tablet')}>
+              <Tablet className="w-4 h-4" />
+            </Button>
+            <Button size="icon" variant={viewport === 'desktop' ? 'secondary' : 'ghost'} title="Desktop width" aria-pressed={viewport === 'desktop'} onClick={() => setViewportAndEmit('desktop')}>
+              <Monitor className="w-4 h-4" />
+            </Button>
+          </div>
+
+          <VersionsDropdown
+            labelTitle={template.template_name || (tplAny?.slug as string) || 'Untitled'}
+            versions={versions}
+            open={versionsOpen}
+            setOpen={setVersionsOpen}
+            onCreateSnapshot={onCreateSnapshot}
+            onRestore={onRestore}
+            onPublish={onPublish}
+            publishedVersionId={publishedVersionId ?? null}
+            baseSlug={baseSlug(tplAny?.slug)}
+            domain={tplAny?.domain}
+            defaultSubdomain={tplAny?.default_subdomain}
+            onOpenPageSettings={onOpenPageSettings}
+          />
+
+          <Button
+            size="sm"
+            variant={dirty ? 'outline' : 'ghost'}
+            disabled={!dirty && !pending}
+            className={dirty ? 'bg-purple-500 hover:bg-purple-600' : ''}
+            onClick={handleSaveClick}
+            title={dirty ? 'Save changes (⌘/Ctrl+S)' : pending ? 'Saving…' : 'All changes saved'}
+          >
+            {pending ? 'Saving…' : dirty ? 'Save' : (<span className="inline-flex items-center gap-1"><Check className="w-3.5 h-3.5" />Saved</span>)}
+          </Button>
+
+          {/* Status + undo/redo */}
+          <div className="text-sm font-medium flex gap-3 items-center">
+            <span className={`text-xs px-2 py-1 rounded ${status === 'Published' ? 'bg-green-600' : 'bg-yellow-600'}`}>
+              {status}
+            </span>
+
+            <div className="relative">
+              <Button size="icon" variant="ghost" onClick={handleUndo} title={`Undo (${hist.past} step${hist.past === 1 ? '' : 's'} available) • ⌘Z`}>
+                <RotateCcw className="w-4 h-4" />
               </Button>
-              <Button size="icon" variant={viewport === 'tablet' ? 'secondary' : 'ghost'} title="Tablet width" aria-pressed={viewport === 'tablet'} onClick={() => setViewportAndEmit('tablet')}>
-                <Tablet className="w-4 h-4" />
-              </Button>
-              <Button size="icon" variant={viewport === 'desktop' ? 'secondary' : 'ghost'} title="Desktop width" aria-pressed={viewport === 'desktop'} onClick={() => setViewportAndEmit('desktop')}>
-                <Monitor className="w-4 h-4" />
-              </Button>
+              {hist.past > 0 && (
+                <span className="absolute -right-1 -top-1 min-w-[16px] px-1 rounded-full text-[10px] bg-zinc-200 text-zinc-900 dark:bg-white dark:text-black text-center">
+                  {hist.past}
+                </span>
+              )}
             </div>
 
-            <Button size="icon" variant="ghost" title={colorPref === 'dark' ? 'Light mode' : 'Dark mode'} onClick={toggleColor} aria-pressed={colorPref === 'dark'}>
-              {colorPref === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
-            </Button>
-
-            <Button size="icon" variant="ghost" title="Page Settings" onClick={() => onOpenPageSettings?.()}>
-              <SlidersHorizontal className="w-4 h-4" />
-            </Button>
-
-            <VersionsDropdown
-              labelTitle={template.template_name || (tplAny?.slug as string) || 'Untitled'}
-              versions={versions}
-              open={versionsOpen}
-              setOpen={setVersionsOpen}
-              onCreateSnapshot={onCreateSnapshot}
-              onRestore={onRestore}
-              onPublish={onPublish}
-              publishedVersionId={publishedVersionId ?? null}
-              baseSlug={baseSlug(tplAny?.slug)}
-              domain={tplAny?.domain}
-              defaultSubdomain={tplAny?.default_subdomain}
-              onOpenPageSettings={onOpenPageSettings}
-            />
-
-            {/* Save button reflects "dirty" and "pending" */}
-            <Button
-              size="sm"
-              variant={dirty ? 'outline' : 'ghost'}
-              disabled={!dirty && !pending}
-              className={dirty ? 'bg-purple-500 hover:bg-purple-600' : ''}
-              onClick={handleSaveClick}
-              title={dirty ? 'Save changes (⌘/Ctrl+S)' : pending ? 'Saving…' : 'All changes saved'}
-            >
-              {pending ? 'Saving…' : dirty ? 'Save' : (<span className="inline-flex items-center gap-1"><Check className="w-3.5 h-3.5" />Saved</span>)}
-            </Button>
-
-            <Button size="sm" variant="secondary" onClick={handleDuplicateSite}>
-              Duplicate Site
-            </Button>
+            <div className="relative">
+              <Button size="icon" variant="ghost" onClick={handleRedo} title={`Redo (${hist.future} step${hist.future === 1 ? '' : 's'} available) • ⇧⌘Z`}>
+                <RotateCw className="w-4 h-4" />
+              </Button>
+              {hist.future > 0 && (
+                <span className="absolute -right-1 -top-1 min-w-[16px] px-1 rounded-full text-[10px] bg-zinc-200 text-zinc-900 dark:bg-white dark:text-black text-center">
+                  {hist.future}
+                </span>
+              )}
+            </div>
           </div>
         </div>
 

@@ -163,8 +163,8 @@ export default function PreviewBridge() {
         align-items: center;
         justify-content: center;
 
-        width: 36px;                /* half the old 72px */
-        height: 36px;
+        width: 50px;                /* half the old 72px */
+        height: 50px;
         border-radius: 9999px;
 
         border: 1px solid rgba(168,85,247,.35);   /* purple-500 */
@@ -183,7 +183,7 @@ export default function PreviewBridge() {
         opacity: 0;
         transition:
           opacity .15s ease,
-          transform .12s ease,
+          transform .3s ease,
           box-shadow .12s ease,
           background .12s ease,
           border-color .12s ease;

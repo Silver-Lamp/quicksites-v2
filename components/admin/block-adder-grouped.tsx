@@ -66,11 +66,8 @@ type Props = {
   colorMode?: 'light' | 'dark';
   template: Template;
 
-  /** NEW: render directly (no internal trigger/modal) */
   inline?: boolean;
-  /** NEW: start by showing only the large quick-pick buttons */
   showOnlyQuickPicks?: boolean;
-  /** NEW: start collapsed for each group when “More” is expanded */
   startCollapsed?: boolean;
 };
 
@@ -97,6 +94,7 @@ export default function BlockAdderGrouped({
 
   const [collapsedGroups, setCollapsedGroups] = useState<Record<string, boolean>>(initialCollapsed);
 
+  // Close modal with Esc (only relevant when not inline)
   useEffect(() => {
     if (!inline) {
       const onKeyDown = (e: KeyboardEvent) => { if (e.key === 'Escape') setOpen(false); };
@@ -109,19 +107,38 @@ export default function BlockAdderGrouped({
     existingBlocks.filter((b) => disallowDuplicates.includes(b.type)).map((b) => b.type)
   );
 
-  const filtered = useMemo(() => {
+  const groups = useMemo(() => {
     const q = search.trim().toLowerCase();
-    const wantsAi = q && /(^|[^a-z])ai([^a-z]|$)|copy|write|generate/.test(q);
+    const searchActive = q.length > 0;
+    const wantsAi = searchActive && /(^|[^a-z])ai([^a-z]|$)|copy|write|generate/.test(q);
+
     return Object.entries(blockGroups).map(([key, group]) => {
-      const matches = group.types.filter((type) => {
+      const totalCount = group.types.filter((type) => !blocked.has(type)).length;
+
+      const matched = group.types.filter((type) => {
         if (blocked.has(type)) return false;
+        if (!searchActive) return true;
         const label = (blockMeta[type as keyof typeof blockMeta]?.label || '').toLowerCase();
         const t = String(type).toLowerCase();
-        return !q || label.includes(q) || t.includes(q) || (wantsAi && isAiType(type));
+        return label.includes(q) || t.includes(q) || (wantsAi && isAiType(type));
       });
-      return { key, label: group.label, types: matches };
+
+      return {
+        key,
+        label: group.label,
+        types: matched,           // what we render
+        totalCount,               // total available (unblocked)
+        matchedCount: matched.length,
+      };
     });
   }, [search, existingBlocks]);
+
+  const searchActive = search.trim().length > 0;
+
+  // If searching, open “More” automatically so results are visible
+  useEffect(() => {
+    if (searchActive) setShowMore(true);
+  }, [searchActive]);
 
   const close = () => setOpen(false);
 
@@ -158,7 +175,7 @@ export default function BlockAdderGrouped({
 
   const MoreList = (
     <>
-      {/* Search only when "More" is open */}
+      {/* Search field */}
       <div className="px-4 pb-4">
         <input
           autoFocus
@@ -170,112 +187,125 @@ export default function BlockAdderGrouped({
         />
       </div>
 
-      {/* Scrollable area for the rest */}
+      {/* Scrollable results */}
       <div className="px-4 pb-4">
         <div className="space-y-6 max-h-[60vh] overflow-y-auto pr-2">
-          {filtered.map(({ key, label, types }) => (
-            <div key={key}>
-              <div
-                role="button"
-                tabIndex={0}
-                onClick={() => {
-                  const next = { ...collapsedGroups, [key]: !collapsedGroups[key] };
-                  setCollapsedGroups(next); saveCollapsed(next);
-                }}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' || e.key === ' ') {
-                    e.preventDefault();
+          {groups.map(({ key, label, types, totalCount, matchedCount }) => {
+            // While searching: auto-open groups that have matches; collapse groups with 0 matches
+            const collapsed = searchActive ? matchedCount === 0 : (collapsedGroups[key] ?? false);
+            const displayCount = searchActive ? matchedCount : totalCount;
+
+            return (
+              <div key={key}>
+                <div
+                  role={searchActive ? 'region' : 'button'}
+                  tabIndex={searchActive ? -1 : 0}
+                  onClick={() => {
+                    if (searchActive) return; // disable manual toggle during active search
                     const next = { ...collapsedGroups, [key]: !collapsedGroups[key] };
                     setCollapsedGroups(next); saveCollapsed(next);
-                  }
-                }}
-                className="w-full text-left px-4 py-2 font-medium text-sm text-gray-700 dark:text-gray-300
-                           bg-gray-50 dark:bg-neutral-800 hover:bg-gray-100 dark:hover:bg-neutral-700 rounded cursor-pointer"
-              >
-                {label}
-              </div>
-
-              {!collapsedGroups[key] && (
-                <div className="pt-2 flex flex-col gap-4">
-                  {types.length > 0 ? (
-                    types.map((type) => {
-                      const meta = blockMeta[type as keyof typeof blockMeta];
-                      const aiEnabled = isAiType(type);
-                      return (
-                        <div
-                          key={type}
-                          role="button"
-                          tabIndex={0}
-                          onClick={() => { onAdd(type); setSearch(''); if (!inline) close(); }}
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onAdd(type); setSearch(''); if (!inline) close(); }
-                          }}
-                          className="text-left px-4 py-4 rounded-md border bg-white dark:bg-neutral-900 space-y-3 cursor-pointer
-                                     border-gray-300 dark:border-neutral-700 hover:bg-gray-50 dark:hover:bg-neutral-800"
-                        >
-                          <div className="flex items-center gap-2">
-                            <div className="text-lg">{meta.icon}</div>
-                            <div className="min-w-0">
-                              <div className="font-medium text-gray-800 dark:text-white truncate">
-                                {meta.label}
-                              </div>
-                              <div className="text-xs text-gray-500 dark:text-gray-400">Block type: {type}</div>
-                            </div>
-                            {aiEnabled && (
-                              <span
-                                title={aiBadgeTitle(type)}
-                                className="ml-auto inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px]
-                                           bg-purple-100 text-purple-700 border-purple-300
-                                           dark:bg-purple-600/15 dark:text-purple-200 dark:border-purple-500/40"
-                              >
-                                <Sparkles className="h-3 w-3" />
-                                AI
-                              </span>
-                            )}
-                          </div>
-
-                          {aiEnabled && (
-                            <div className="text-xs text-purple-700 dark:text-purple-300">
-                              {aiNote(type)}
-                            </div>
-                          )}
-
-                          <div className="relative w-full border rounded overflow-hidden border-gray-300 dark:border-neutral-700">
-                            <RenderBlockMini
-                              block={createDefaultBlock(type) as any}
-                              className="w-full h-32"
-                              showDebug={false}
-                              colorMode={colorMode}
-                              template={template}
-                            />
-                            {aiEnabled && (
-                              <span className="pointer-events-none absolute top-1.5 right-1.5 rounded px-1.5 py-0.5 text-[10px] font-medium bg-purple-600 text-white shadow">
-                                ✨ AI
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                      );
-                    })
-                  ) : (
-                    <div className="px-2 py-1 text-sm text-gray-500 dark:text-gray-400">None available</div>
-                  )}
+                  }}
+                  onKeyDown={(e) => {
+                    if (searchActive) return;
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      const next = { ...collapsedGroups, [key]: !collapsedGroups[key] };
+                      setCollapsedGroups(next); saveCollapsed(next);
+                    }
+                  }}
+                  className={[
+                    'w-full text-left px-4 py-2 font-medium text-sm rounded',
+                    'bg-gray-50 dark:bg-neutral-800 hover:bg-gray-100 dark:hover:bg-neutral-700',
+                    searchActive ? 'cursor-default opacity-95' : 'cursor-pointer',
+                    'text-gray-700 dark:text-gray-300 flex items-center justify-between'
+                  ].join(' ')}
+                >
+                  <span>{label}</span>
+                  <span
+                    className="ml-3 inline-flex items-center rounded-full border px-2 py-0.5 text-[11px]
+                               border-gray-300 text-gray-700 bg-white
+                               dark:border-neutral-600 dark:text-gray-200 dark:bg-neutral-900"
+                    title={searchActive ? `${matchedCount} match${matchedCount === 1 ? '' : 'es'}` : `${totalCount} total`}
+                  >
+                    {displayCount}
+                  </span>
                 </div>
-              )}
-            </div>
-          ))}
 
-          {filtered.every((g) => g.types.length === 0) && (
-            <div className="px-2 py-1 text-sm text-gray-500 dark:text-gray-400">
-              No matching block types found
-            </div>
-          )}
+                {!collapsed && (
+                  <div className="pt-2 flex flex-col gap-4">
+                    {types.length > 0 ? (
+                      types.map((type) => {
+                        const meta = blockMeta[type as keyof typeof blockMeta];
+                        const aiEnabled = isAiType(type);
+                        return (
+                          <div
+                            key={type}
+                            role="button"
+                            tabIndex={0}
+                            onClick={() => { onAdd(type); setSearch(''); if (!inline) close(); }}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onAdd(type); setSearch(''); if (!inline) close(); }
+                            }}
+                            className="text-left px-4 py-4 rounded-md border bg-white dark:bg-neutral-900 space-y-3 cursor-pointer
+                                       border-gray-300 dark:border-neutral-700 hover:bg-gray-50 dark:hover:bg-neutral-800"
+                          >
+                            <div className="flex items-center gap-2">
+                              <div className="text-lg">{meta.icon}</div>
+                              <div className="min-w-0">
+                                <div className="font-medium text-gray-800 dark:text-white truncate">
+                                  {meta.label}
+                                </div>
+                                <div className="text-xs text-gray-500 dark:text-gray-400">Block type: {type}</div>
+                              </div>
+                              {aiEnabled && (
+                                <span
+                                  title={aiBadgeTitle(type)}
+                                  className="ml-auto inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px]
+                                             bg-purple-100 text-purple-700 border-purple-300
+                                             dark:bg-purple-600/15 dark:text-purple-200 dark:border-purple-500/40"
+                                >
+                                  <Sparkles className="h-3 w-3" />
+                                  AI
+                                </span>
+                              )}
+                            </div>
+
+                            {aiEnabled && (
+                              <div className="text-xs text-purple-700 dark:text-purple-300">
+                                {aiNote(type)}
+                              </div>
+                            )}
+
+                            <div className="relative w-full border rounded overflow-hidden border-gray-300 dark:border-neutral-700">
+                              <RenderBlockMini
+                                block={createDefaultBlock(type) as any}
+                                className="w-full h-32"
+                                showDebug={false}
+                                colorMode={colorMode}
+                                template={template}
+                              />
+                              {aiEnabled && (
+                                <span className="pointer-events-none absolute top-1.5 right-1.5 rounded px-1.5 py-0.5 text-[10px] font-medium bg-purple-600 text-white shadow">
+                                  ✨ AI
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })
+                    ) : (
+                      <div className="px-2 py-1 text-sm text-gray-500 dark:text-gray-400">No matches</div>
+                    )}
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </div>
       </div>
     </>
   );
 
-  /** Inline mode = render picker body directly */
   if (inline) {
     return (
       <div>
@@ -297,7 +327,7 @@ export default function BlockAdderGrouped({
     );
   }
 
-  /** Legacy self-contained trigger + modal */
+  // Legacy self-contained trigger + modal mode
   return (
     <>
       <div onClick={() => setOpen(true)}>

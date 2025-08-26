@@ -89,8 +89,8 @@ function AiMenuPopover({
         aria-label="AI assist"
         className={[
           'fixed z-[9999] rounded-lg shadow-lg border overflow-hidden',
-          isDark ? 'bg-neutral-900 border-neutral-800 text-neutral-200'
-                 : 'bg-white border-zinc-200 text-zinc-800',
+          isDark ? 'bg-neutral-900 border-purple-200 text-neutral-200'
+                 : 'bg-white border-purple-200 text-zinc-800',
         ].join(' ')}
         style={{ top, left, width }}
         onMouseDown={(e) => e.stopPropagation()}

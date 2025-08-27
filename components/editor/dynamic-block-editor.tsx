@@ -54,6 +54,19 @@ export function DynamicBlockEditor({
   const [retryNonce, setRetryNonce] = useState(0);
   const timerRef = useRef<number | null>(null);
 
+  useEffect(() => {
+    if (block?.type === 'hours') {
+      window.dispatchEvent(
+        new CustomEvent('qs:open-settings-panel', {
+          detail: { panel: 'hours', openEditor: true, scroll: true, spotlightMs: 900 } as any,
+        })
+      );
+      // close immediately
+      const id = setTimeout(() => onClose?.(), 0);
+      return () => clearTimeout(id);
+    }
+  }, [block?.type, onClose]);
+  
   // Kick off lazy load of the block editor (except for text, which is inline)
   useEffect(() => {
     let cancelled = false;

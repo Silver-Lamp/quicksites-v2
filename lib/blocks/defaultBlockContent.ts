@@ -150,4 +150,19 @@ export const DEFAULT_BLOCK_CONTENT = {
     showSummary: true,
     showWriteCta: false,
   },
+  hours: {
+    title: 'Business Hours',
+    tz: 'America/Los_Angeles',
+    alwaysOpen: false,
+    note: '',
+    display_style: 'table',
+    days: [
+      { key: 'mon', label: 'Mon', closed: false, periods: [{ open: '09:00', close: '17:00' }] },
+      { key: 'tue', label: 'Tue', closed: false, periods: [{ open: '09:00', close: '17:00' }] },
+      { key: 'wed', label: 'Wed', closed: false, periods: [{ open: '09:00', close: '17:00' }] },
+      { key: 'thu', label: 'Thu', closed: false, periods: [{ open: '09:00', close: '17:00' }] },
+      { key: 'fri', label: 'Fri', closed: false, periods: [{ open: '09:00', close: '17:00' }] },
+    ],
+    exceptions: [],
+  }
 } as const satisfies Record<BlockType, any>;

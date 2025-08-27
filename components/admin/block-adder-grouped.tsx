@@ -6,12 +6,12 @@ import type { Block } from '@/types/blocks';
 import { createDefaultBlock } from '@/lib/createDefaultBlock';
 import RenderBlockMini from '@/components/admin/templates/render-block-mini';
 import SafeTriggerButton from '@/components/ui/safe-trigger-button';
-import { Sparkles, Type as TypeIcon, Mail, Image as ImageIcon, HelpCircle } from 'lucide-react';
+import { Sparkles, Type as TypeIcon, Mail, Image as ImageIcon, HelpCircle, Clock } from 'lucide-react';
 import type { Template } from '@/types/template';
 
 const blockGroups: Record<string, { label: string; types: Block['type'][] }> = {
   callToAction: { label: 'Calls to Action', types: ['hero', 'contact_form'] },
-  services: { label: 'Business Features', types: ['services', 'service_areas'] },
+  services: { label: 'Business Features', types: ['services', 'service_areas', 'hours'] },
   content: { label: 'Content Blocks', types: ['text', 'quote', 'faq', 'testimonial', 'video', 'audio'] },
 };
 
@@ -20,10 +20,11 @@ const QUICK_PICKS: Array<{ type: Block['type']; label: string; Icon: any }> = [
   { type: 'contact_form', label: 'Contact', Icon: Mail },
   { type: 'hero',         label: 'Hero',    Icon: ImageIcon },
   { type: 'faq',          label: 'FAQ',     Icon: HelpCircle },
+  { type: 'hours',        label: 'Hours',   Icon: Clock },
 ];
 
 const AI_ENABLED_TYPES = new Set<Block['type']>(
-  ['text', 'hero', 'testimonial', 'faq', 'services', 'service_areas'] as Block['type'][]
+  ['text', 'hero', 'testimonial', 'faq', 'services', 'service_areas', 'hours'] as Block['type'][]
 );
 const isAiType = (t: Block['type']) => AI_ENABLED_TYPES.has(t);
 
@@ -34,6 +35,7 @@ const aiBadgeTitle = (t: Block['type']) => {
     case 'faq': return 'AI-enabled: generate FAQs for your industry/services';
     case 'services': return 'AI-enabled: suggest a services list';
     case 'service_areas': return 'AI-enabled: generate nearby service areas';
+    case 'hours': return 'Hours of operation';
     default: return 'AI writer tools available in editor (⌘/Ctrl + J)';
   }
 };
@@ -75,7 +77,7 @@ export default function BlockAdderGrouped({
   onAdd,
   onAddAndEdit,
   existingBlocks = [],
-  disallowDuplicates = ['footer', 'header'],
+  disallowDuplicates = ['footer', 'header', 'hours'],
   label = 'Add Block',
   triggerElement,
   colorMode = 'dark',

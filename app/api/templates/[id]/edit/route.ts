@@ -89,6 +89,7 @@ export async function POST(
     footer_block: footerBlock,
     color_mode: colorMode ?? tpl.color_mode ?? null,
     updated_at: now,
+    hours: tpl.hours ?? null,
   };
 
   const idCols = [
@@ -96,7 +97,7 @@ export async function POST(
     'address_line1','address_line2','city','state','postal_code',
     'latitude','longitude','industry',
     'brand','theme','layout','color_scheme',
-    'published','verified',
+    'published','verified','hours',
   ];
   for (const k of idCols) if (k in tpl && tpl[k] !== undefined) update[k] = tpl[k];
 
@@ -130,6 +131,7 @@ export async function POST(
     verified: false,
     created_at: tpl.created_at || now,
     updated_at: now,
+    hours: tpl.hours ?? null,
     ...update,
   };
 

@@ -12,6 +12,111 @@ const urlOptional = z.preprocess(
   z.string().url('Kitchen video URL must be valid').optional()
 );
 
+export const hoursOfOperationPropsSchema = z.object({
+  title: z.string().optional(),
+  tz: z.string().optional(),
+  alwaysOpen: z.boolean().optional(),
+  note: z.string().optional(),
+  display_style: z.enum(['table', 'stack']).optional(),
+  days: z.array(z.object({
+    key: z.enum(['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun']),
+    label: z.string(),
+    closed: z.boolean(),
+    periods: z.array(z.object({
+      open: z.string(),
+      close: z.string()
+    })).optional(),
+  })).optional(),
+});
+
+export type DayKey = 'mon' | 'tue' | 'wed' | 'thu' | 'fri' | 'sat' | 'sun';
+export type HoursPeriod = {
+  /** 24h "HH:mm" (e.g., "09:00", "17:30") */
+  open: string;
+  /** 24h "HH:mm" (must be later than open on same day) */
+  close: string;
+};
+export type SpecialHours = {
+  id: string;                 // stable id for UI
+  label?: string;             // e.g., "Christmas Day"
+  /** ISO date "YYYY-MM-DD" in the business timezone (used for both modes) */
+  date: string;
+  /** When true, the month/day repeats every year (ignores the year of `date`) */
+  recurring?: boolean;
+  /** If true, this date is fully closed (periods will be ignored) */
+  closed?: boolean;
+  /** If not closed, time windows for this date */
+  periods: HoursPeriod[];
+};
+export type HoursOfOperationContent = {
+  title?: string;
+  tz?: string;
+  alwaysOpen?: boolean;
+  note?: string;
+  display_style?: 'table' | 'stack';
+  days: Array<{
+    key: DayKey;
+    label: string;
+    closed: boolean;
+    periods: HoursPeriod[];
+  }>;
+  /** Holidays / special hours that override normal hours for that date */
+  exceptions?: SpecialHours[];
+};
+
+
+// Helper to build sane defaults quickly
+export function defaultHoursContent(partial?: Partial<HoursOfOperationContent>): HoursOfOperationContent {
+  const baseDays: HoursOfOperationContent['days'] = [
+    { key: 'mon', label: 'Mon', closed: false, periods: [{ open: '09:00', close: '17:00' }] },
+    { key: 'tue', label: 'Tue', closed: false, periods: [{ open: '09:00', close: '17:00' }] },
+    { key: 'wed', label: 'Wed', closed: false, periods: [{ open: '09:00', close: '17:00' }] },
+    { key: 'thu', label: 'Thu', closed: false, periods: [{ open: '09:00', close: '17:00' }] },
+    { key: 'fri', label: 'Fri', closed: false, periods: [{ open: '09:00', close: '17:00' }] },
+    { key: 'sat', label: 'Sat', closed: true,  periods: [] },
+    { key: 'sun', label: 'Sun', closed: true,  periods: [] },
+  ];
+  return {
+    title: 'Business Hours',
+    tz: 'America/Los_Angeles',
+    alwaysOpen: false,
+    note: '',
+    display_style: 'table',
+    days: partial?.days ?? baseDays,
+    exceptions: partial?.exceptions ?? [],
+    ...partial,
+  };
+}
+
+export const HoursPeriodSchema = z.object({
+  open: z.string().regex(/^\d{2}:\d{2}$/),   // "HH:mm"
+  close: z.string().regex(/^\d{2}:\d{2}$/),  // "HH:mm"
+});
+
+const SpecialHoursSchema = z.object({
+  id: z.string(),
+  label: z.string().optional(),
+  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/), // "YYYY-MM-DD"
+  recurring: z.boolean().optional(),
+  closed: z.boolean().optional(),
+  periods: z.array(HoursPeriodSchema),
+});
+
+export const HoursOfOperationSchema = z.object({
+  title: z.string().optional(),
+  tz: z.string().optional(),
+  alwaysOpen: z.boolean().optional(),
+  note: z.string().optional(),
+  display_style: z.enum(['table', 'stack']).optional(),
+  days: z.array(z.object({
+    key: z.enum(['mon','tue','wed','thu','fri','sat','sun']),
+    label: z.string(),
+    closed: z.boolean(),
+    periods: z.array(HoursPeriodSchema),
+  })),
+  exceptions: z.array(SpecialHoursSchema).optional(),
+});
+
 // Shared link schema (now tolerant + default)
 const LinkSchema = z.object({
   label: z.string().min(1, 'Label is required'),
@@ -381,6 +486,11 @@ export const blockContentSchemaMap = {
     label: 'Meals Grid',
     icon: '🍱',
     schema: mealsGridPropsSchema,
+  },
+  hours: {
+    label: 'Hours of Operation',
+    icon: '⏰',
+    schema: HoursOfOperationSchema,
   },
 } satisfies Record<string, { label: string; icon: string; schema: z.ZodTypeAny }>;
 

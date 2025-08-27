@@ -39,4 +39,5 @@ export const DYNAMIC_RENDERERS: Record<
   header:       () => import('@/components/admin/templates/render-blocks/header'),
   faq:          () => import('@/components/admin/templates/render-blocks/faq'),
   contact_form: () => import('@/components/admin/templates/render-blocks/contact-form'),
+  hours:        () => import('@/components/admin/templates/render-blocks/hours'),
 } as const;

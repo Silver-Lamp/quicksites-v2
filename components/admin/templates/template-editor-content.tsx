@@ -1,3 +1,4 @@
+// components/admin/templates/template-editor-content.tsx
 'use client';
 
 import { useEffect, useMemo, useState, type Dispatch, type SetStateAction, useRef } from 'react';
@@ -22,6 +23,13 @@ const SidebarSettings = dynamic(
 );
 
 type TemplateDataWithChrome = TemplateData & { headerBlock?: Block | null; footerBlock?: Block | null };
+// global.d.ts
+declare global {
+  interface WindowEventMap {
+    'qs:open-settings-panel': CustomEvent<{ panel: 'hours'; openEditor?: boolean; scroll?: boolean; spotlightMs?: number }>;
+  }
+}
+export {};
 
 /* ---------- helpers ---------- */
 export function getTemplatePages(t: Template): any[] {
@@ -77,6 +85,20 @@ function findBlockByPath(t: Template, path?: string | null) {
   if (parsed.blockIdx < 0 || parsed.blockIdx >= blocks.length) return null;
   return { pageIdx: parsed.pageIdx, blockIdx: parsed.blockIdx, block: blocks[parsed.blockIdx] };
 }
+
+function openHoursSettingsPanel(setShowSettings: (open: boolean) => void) {
+  // ensure the sidebar is visible
+  setShowSettings(true);
+  // let the sidebar panel open/scroll/spotlight itself
+  requestAnimationFrame(() => {
+    window.dispatchEvent(
+      new CustomEvent('qs:open-settings-panel', {
+        detail: { panel: 'hours', openEditor: true, scroll: true, spotlightMs: 900 } as any,
+      })
+    );
+  });
+}
+
 
 /* ---------- component ---------- */
 type Props = {
@@ -273,8 +295,16 @@ export default function EditorContent({
       findBlockByPath(template, blockPath);
     if (!ref && blockId) ref = findBlockById(template, String(blockId));
     if (!ref) return;
+  
+    const t = (ref.block as any)?.type;
+    if (t === 'hours') {
+      openHoursSettingsPanel(setShowSettings);   // ← no modal
+      return;
+    }
+  
     setEditingBlock({ ref });
   }
+  
   function openAdder(blockId?: string | null, blockPath?: string | null) {
     const byPath = findBlockByPath(template, blockPath ?? null);
     const byId = blockId ? findBlockById(template, blockId) : null;
@@ -310,8 +340,13 @@ export default function EditorContent({
     setAdderTarget(null);
 
     if (opts?.openEditor) {
-      setEditingBlock({ ref: { pageIdx, blockIdx: insertAt, block: newBlock } });
+      if ((newBlock as any).type === 'hours') {
+        openHoursSettingsPanel(setShowSettings);  // ← route to sidebar
+      } else {
+        setEditingBlock({ ref: { pageIdx, blockIdx: insertAt, block: newBlock } });
+      }
     }
+    
   }
 
   function deleteBlock(blockId?: string | null, blockPath?: string | null) {

@@ -1,6 +1,6 @@
 // admin/lib/zod/templateSaveSchema.ts
 import { z } from 'zod';
-import { BlockSchema } from './blockSchema';
+import { BlockSchema, hoursOfOperationPropsSchema } from './blockSchema';
 import { stringOrEmpty, nullableString } from './sharedHelpers';
 
 function slugify(str: string) {
@@ -116,7 +116,7 @@ export const TemplateSaveSchema = z.preprocess(
       // Verification fields (present in your data model)
       verified: z.boolean().optional(),
       verified_at: z.string().nullable().optional(),
-
+      hoursOfOperation: hoursOfOperationPropsSchema.optional(),
       meta: z.preprocess(
         (val) => (val === null ? {} : val),
         z

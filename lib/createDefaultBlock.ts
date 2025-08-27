@@ -114,6 +114,11 @@ export function createDefaultBlock(type: BlockType): z.infer<typeof BlockSchema>
       break;
     }
 
+    case 'hours': {
+      content = { ...base, title: 'Business Hours', tz: 'America/Los_Angeles', alwaysOpen: false, note: '', display_style: 'table', days: [], exceptions: [] };
+      break;
+    }
+
     default:
       // leave `content` as the cloned base
       break;

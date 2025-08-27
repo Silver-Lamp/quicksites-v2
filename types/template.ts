@@ -2,6 +2,7 @@
 import { BlockValidationErrorMap } from '@/lib/validateBlock';
 import type { Block } from './blocks';
 import { z } from 'zod';
+import { hoursOfOperationPropsSchema, type HoursOfOperationContent } from '@/admin/lib/zod/blockSchema';
 
 /* ===========================
    Core domain types
@@ -64,6 +65,7 @@ export type TemplateData = {
   archived?: boolean;
   headerBlock?: Block | null;
   footerBlock?: Block | null;
+  hours?: HoursOfOperationContent | null;
 };
 
 // Represents the persisted state (matches DB + zod schema)
@@ -160,6 +162,7 @@ export type Template = Snapshot & {
   // Block diagnostics
   block_errors?: BlockValidationErrorMap;
   block_errors_map?: Record<string, string[]>;
+  hours?: HoursOfOperationContent | null;
 };
 
 export type TemplateSnapshot = Snapshot;
@@ -235,6 +238,7 @@ const TemplateDataSchema = z
     latitude: z.number().optional(),
     longitude: z.number().optional(),
     industry: z.string().optional(),
+    hours: hoursOfOperationPropsSchema.optional(),
   })
   .passthrough(); // accept extra keys inside data
 
@@ -310,6 +314,7 @@ export const TemplateFormSchema = z
     // 🔹 Global header/footer (single source of truth)
     headerBlock: BlockSchema.nullable().optional(),
     footerBlock: BlockSchema.nullable().optional(),
+    hours: hoursOfOperationPropsSchema.optional(),
   })
   .passthrough(); // accept unknown top-level keys
 

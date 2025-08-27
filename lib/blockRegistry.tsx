@@ -192,6 +192,14 @@ export const BLOCK_REGISTRY: { [K in BlockType]: BlockRegistryEntry<K> } = {
     defaultContent: DEFAULT_BLOCK_CONTENT.meal_card,
     render: lazyRenderer(() => import('@/components/admin/templates/render-blocks/meal-card')),
   },
+  hours: {
+    label: 'Hours of Operation',
+    icon: '⏰',
+    category: 'meta',
+    isStatic: false,
+    defaultContent: DEFAULT_BLOCK_CONTENT.hours,
+    render: lazyRenderer(() => import('@/components/admin/templates/render-blocks/hours')),
+  },
 };
 
 // ---- client placeholders for blocks that don't yet have a client wrapper
@@ -228,6 +236,7 @@ export const DYNAMIC_RENDERERS: Partial<Record<BlockType, () => Promise<{ defaul
     // keep chef_profile as a client wrapper if it fetches data
     chef_profile:  () => import('@/components/admin/templates/render-blocks/chef-profile.client'),
     // hero + text are handled by STATIC_RENDERERS in the client renderer
+    hours: () => import('@/components/admin/templates/render-blocks/hours'),
   };
 
 if (process.env.NODE_ENV === 'development') {

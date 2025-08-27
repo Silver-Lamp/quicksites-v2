@@ -163,12 +163,12 @@ export default function HomePage() {
           {isLoggedIn && role !== 'guest' ? (
             <div className="mt-4 flex flex-wrap items-center justify-center gap-3">
               <motion.a
-                href="/admin/tools"
+                href="/admin/templates/list"
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.97 }}
                 className="inline-block px-6 py-3 bg-green-600 hover:bg-green-700 text-white text-base font-medium rounded-lg shadow-lg transition-all"
               >
-                Go to Admin Tools
+                Go to Templates
               </motion.a>
               <motion.a
                 href="/pricing"

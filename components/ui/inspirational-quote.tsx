@@ -11,7 +11,6 @@ const QUOTES: readonly Quote[] = [
   { text: 'Your website is your digital storefront. Keep the lights on. Make it easy to walk in.', tags: ['seo', 'small-business'] },
   { text: 'One good lead can shift the future. Make sure you’re findable when it matters.', tags: ['seo', 'small-business'] },
   { text: 'Build slow. Rank steady. Win long-term. This is the rhythm of real growth.', tags: ['seo', 'persistence'] },
-  { text: 'Every click is a quiet moment of trust. Honor it.', tags: ['seo', 'persistence'] },
   { text: 'Most “overnight” success stories took a decade of quiet persistence.', tags: ['persistence'] },
   { text: 'When you support a small business, you support a dream — not a boardroom.', tags: ['small-business'] },
   { text: 'SEO isn’t magic. It’s consistency, clarity, and showing up every day.', tags: ['seo', 'persistence'] },

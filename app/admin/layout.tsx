@@ -6,6 +6,6 @@ import AdminChrome from '@/components/admin/admin-chrome';
 export default async function AdminLayout({ children }: { children: ReactNode }) {
   const supabase = await getSupabaseRSC();              // ✅ RSC-safe
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) redirect(`/login?next=${encodeURIComponent('/admin/tools')}`);
+  if (!user) redirect(`/login?next=${encodeURIComponent('/admin/templates/list')}`);
   return <AdminChrome>{children}</AdminChrome>;
 }

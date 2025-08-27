@@ -15,8 +15,8 @@ export default function LoginForm({ build }: { build?: BuildInfo }) {
   const sp = useSearchParams();
 
   const nextPath = useMemo(() => {
-    const n = sp.get('next') || sp.get('redirectTo') || '/admin/tools';
-    return n.startsWith('/') ? n : '/admin/tools';
+    const n = sp.get('next') || sp.get('redirectTo') || '/admin/templates/list';
+    return n.startsWith('/') ? n : '/admin/templates/list';
   }, [sp]);
 
   const [email, setEmail] = useState('');

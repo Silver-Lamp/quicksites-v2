@@ -26,8 +26,8 @@ export async function GET(req: NextRequest) {
   if (!isValid(email)) return NextResponse.json({ ok: false, error: 'Invalid email' }, { status: 400 });
 
   // Preserve ?next=/... (safe-guarded)
-  const requestedNext = url.searchParams.get('next') || url.searchParams.get('redirectTo') || '/admin/tools';
-  const safeNext = requestedNext.startsWith('/') ? requestedNext : '/admin/tools';
+  const requestedNext = url.searchParams.get('next') || url.searchParams.get('redirectTo') || '/admin/templates/list';
+  const safeNext = requestedNext.startsWith('/') ? requestedNext : '/admin/templates/list';
 
   const origin = getOrigin(req);
   const override = process.env.NEXT_PUBLIC_AUTH_REDIRECT_URL; // optional absolute OR relative (e.g. '/auth/callback')

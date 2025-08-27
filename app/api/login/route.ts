@@ -6,7 +6,7 @@ export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 function safeNext(n?: string | null) {
-  return n && n.startsWith('/') ? n : '/admin/tools';
+  return n && n.startsWith('/') ? n : '/admin/templates/list';
 }
 
 function detectOrigin(h: Headers) {

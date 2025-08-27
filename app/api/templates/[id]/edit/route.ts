@@ -1,4 +1,3 @@
-// app/api/templates/[id]/edit/route.ts
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
@@ -6,7 +5,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase/admin';
 import { getServerSupabase } from '@/lib/supabase/server';
 
-/* helpers (same as before) */
+/* helpers */
 const isHeader = (b: any) => b?.type === 'header';
 const isFooter = (b: any) => b?.type === 'footer';
 function getPages(tpl: any) {
@@ -53,12 +52,24 @@ function safeSlug(s: string | undefined | null) {
   const slug = base.replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
   return slug || `template-${Math.random().toString(36).slice(2, 6)}`;
 }
+// numeric sanitizer: '' → null, '43.1' → 43.1
+const num = (v: unknown) => {
+  if (v === null || v === undefined) return null;
+  if (typeof v === 'number' && Number.isFinite(v)) return v;
+  if (typeof v === 'string') {
+    const s = v.trim();
+    if (s === '') return null;
+    const n = Number.parseFloat(s);
+    return Number.isFinite(n) ? n : null;
+  }
+  return null;
+};
 
 export async function POST(
   req: NextRequest,
-  ctx: { params: Promise<{ id: string }> }   // 👈 params is a Promise
+  ctx: { params: Promise<{ id: string }> }
 ) {
-  const { id } = await ctx.params;           // 👈 must await
+  const { id } = await ctx.params;
   if (!id) return NextResponse.json({ error: 'Missing id' }, { status: 400 });
 
   const supa = await getServerSupabase();
@@ -66,7 +77,7 @@ export async function POST(
   if (authErr || !authData?.user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   const userId = authData.user.id;
 
-  const body = await req.json().catch(() => null) as { template?: any } | null;
+  const body = (await req.json().catch(() => null)) as { template?: any } | null;
   if (!body?.template) return NextResponse.json({ error: 'Missing template' }, { status: 400 });
 
   const { tpl, headerBlock, footerBlock, colorMode } = normalizeForSave(body.template);
@@ -89,8 +100,14 @@ export async function POST(
   ];
   for (const k of idCols) if (k in tpl && tpl[k] !== undefined) update[k] = tpl[k];
 
+  // sanitize numeric columns to avoid "" → double precision error
+  update.latitude  = num((tpl as any).latitude);
+  update.longitude = num((tpl as any).longitude);
+
+  // array-safe services
   if (Array.isArray(tpl?.services_jsonb)) update.services_jsonb = tpl.services_jsonb;
   else if (Array.isArray(tpl?.services))  update.services_jsonb = tpl.services;
+  else if (update.services_jsonb === undefined) update.services_jsonb = [];
 
   // Try update first
   const { data: upd, error: updErr } = await supabaseAdmin
@@ -107,7 +124,7 @@ export async function POST(
   const baseName = (tpl.template_name as string) || (tpl.slug as string) || 'untitled';
   const insertable = {
     id,
-    owner_id: tpl.owner_id || userId,
+    owner_id: (tpl as any).owner_id || userId,
     template_name: baseName,
     slug: safeSlug(tpl.slug || baseName),
     verified: false,

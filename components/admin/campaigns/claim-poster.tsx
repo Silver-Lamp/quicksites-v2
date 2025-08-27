@@ -48,7 +48,7 @@ export default function ClaimPoster({
   const [editing, setEditing] = useState(false);
   const [settings, setSettings] = useState({ arcOffsetY, logoOffsetY, arcRadius });
   const [original, setOriginal] = useState({ arcOffsetY, logoOffsetY, arcRadius });
-  const [resolvedSrc, setResolvedSrc] = useState('/logo-placeholder.png');
+  const [resolvedSrc, setResolvedSrc] = useState('/images/campaigns/tow-truck-logo.png');
 
   useEffect(() => {
     normalizeImageSrc(imageSrc).then(setResolvedSrc);
@@ -120,7 +120,17 @@ export default function ClaimPoster({
       </div>
 
       <div className="w-28 h-20 mx-auto mb-4" style={{ transform: `translateY(${settings.logoOffsetY}px)` }}>
-        <Image src={resolvedSrc} alt="Tow Truck Logo" width={112} height={80} className="object-contain w-full h-full" />
+        <Image src={resolvedSrc} 
+          alt="Tow Truck Logo" 
+          width={112} 
+          height={80} 
+          className="object-contain w-full h-full" 
+          referrerPolicy="no-referrer"
+          unoptimized
+          onError={(e) => {
+            e.currentTarget.src = '/images/campaigns/tow-truck-logo.png';
+          }}
+        />
       </div>
 
       <div className="flex justify-center items-center my-4 gap-4">
@@ -225,7 +235,7 @@ function LeadCard({ name, logoUrl }: { name: string; logoUrl?: string }) {
   return (
     <div className="w-32 h-20 flex items-center justify-center bg-zinc-800 rounded border border-zinc-600 p-2 hover:bg-zinc-700 transition">
       {logoUrl ? (
-        <Image src={logoUrl} alt={name} width={100} height={60} className="object-contain" />
+        <Image src={logoUrl} alt={name} width={100} height={60} className="object-contain" referrerPolicy="no-referrer" unoptimized />
       ) : (
         <span className="text-sm text-white text-center leading-tight">{name}</span>
       )}

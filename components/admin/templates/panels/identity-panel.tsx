@@ -253,7 +253,33 @@ export default function IdentityPanel({
             }
           >
             <option value="">Select industry</option>
-            {['Towing','Roof Cleaning','Window Cleaning','Pressure Washing','Junk Removal','Other'].map((industry) => (
+            {[
+              'Towing',
+              'Window Washing',
+              'Roof Cleaning',
+              'Landscaping',
+              'HVAC',
+              'Plumbing',
+              'Electrical',
+              'Auto Repair',
+              'Carpet Cleaning',
+              'Moving',
+              'Pest Control',
+              'Painting',
+              'General Contractor',
+              'Real Estate',
+              'Restaurant',
+              'Salon & Spa',
+              'Fitness',
+              'Photography',
+              'Legal',
+              'Medical / Dental',
+              // legacy/additional
+              'Window Cleaning',
+              'Pressure Washing',
+              'Junk Removal',
+              'Other',
+            ].map((industry) => (
               <option key={industry} value={industry}>{industry}</option>
             ))}
           </select>

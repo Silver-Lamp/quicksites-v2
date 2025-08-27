@@ -5,7 +5,7 @@ import { Lead } from '@/types/lead.types';
 import dayjs, { Dayjs } from 'dayjs';
 import { Suspense, useMemo, useState } from 'react';
 import ClaimPoster from './claim-poster';
-import TowTruckLogo from 'public/images/tow-truck-logo.png'; // adjust path as needed
+import TowTruckLogo from 'public/images/campaigns/tow-truck-logo.png'; // adjust path as needed
 
 export type Props = {
   campaign: CampaignType;

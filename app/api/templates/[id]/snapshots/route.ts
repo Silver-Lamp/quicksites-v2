@@ -5,6 +5,21 @@ export const dynamic = 'force-dynamic';
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSupabase } from '@/lib/supabase/server';
 
+const ALLOWED_THEME = new Set(['dark', 'light']);
+const ALLOWED_BRAND = new Set(['green', 'blue', 'red']);
+const lower = (x: any) => (typeof x === 'string' ? x.toLowerCase() : x);
+const num = (v: unknown) => {
+  if (v === null || v === undefined) return null;
+  if (typeof v === 'number' && Number.isFinite(v)) return v;
+  if (typeof v === 'string') {
+    const s = v.trim();
+    if (s === '') return null;
+    const n = Number.parseFloat(s);
+    return Number.isFinite(n) ? n : null;
+  }
+  return null;
+};
+
 export async function POST(
   req: NextRequest,
   ctx: { params: Promise<{ id: string }> }
@@ -13,7 +28,6 @@ export async function POST(
   if (!id) return NextResponse.json({ error: 'Missing id' }, { status: 400 });
 
   const supa = await getServerSupabase();
-
   const { data: auth } = await supa.auth.getUser();
   if (!auth?.user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   const userId = auth.user.id;
@@ -43,7 +57,15 @@ export async function POST(
   if (tplErr) return NextResponse.json({ error: tplErr.message }, { status: 400 });
   if (!tpl)   return NextResponse.json({ error: 'Template not found' }, { status: 404 });
 
-  // Insert snapshot
+  // ✔ clamp to pass snapshots_*_check constraints
+  const theme = ALLOWED_THEME.has(lower(tpl.theme)) ? lower(tpl.theme) : null;
+  const brand = ALLOWED_BRAND.has(lower(tpl.brand)) ? lower(tpl.brand) : null;
+
+  // ✔ ensure array + number sanitization
+  const services =
+    Array.isArray((tpl as any).services_jsonb) ? (tpl as any).services_jsonb :
+    Array.isArray((tpl as any).services)       ? (tpl as any).services       : [];
+
   const { data: snap, error: insErr } = await supa
     .from('snapshots')
     .insert({
@@ -60,8 +82,8 @@ export async function POST(
       industry: tpl.industry,
       layout: tpl.layout,
       color_scheme: tpl.color_scheme,
-      theme: tpl.theme,
-      brand: tpl.brand,
+      theme,               // ← clamped
+      brand,               // ← clamped
       is_site: tpl.is_site ?? false,
       meta: tpl.meta ?? null,
       color_mode: tpl.color_mode ?? null,
@@ -70,7 +92,7 @@ export async function POST(
       data: tpl.data ?? null,
       header_block: tpl.header_block ?? null,
       footer_block: tpl.footer_block ?? null,
-      services_jsonb: tpl.services_jsonb ?? '[]',
+      services_jsonb: services,
 
       // identity
       contact_email: tpl.contact_email,
@@ -80,8 +102,8 @@ export async function POST(
       city: tpl.city,
       state: tpl.state,
       postal_code: tpl.postal_code,
-      latitude: tpl.latitude,
-      longitude: tpl.longitude,
+      latitude: num(tpl.latitude),
+      longitude: num(tpl.longitude),
       phone: tpl.phone,
 
       // branding/media

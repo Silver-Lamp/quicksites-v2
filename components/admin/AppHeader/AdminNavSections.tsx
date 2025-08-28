@@ -154,6 +154,7 @@ const NAV_ADMIN: NavItem[] = [
 
 
   // .admin below is for admin-only links
+  { type: 'item', label: 'Admin Tools', href: '/admin/tools', icon: <Wrench size={18} />, adminOnly: true },
   { type: 'item', label: 'Admin Taxes: New Payout', href: '/admin/tax/payouts/new', icon: <DollarSignIcon size={18}/>, adminOnly: true },
   { type: 'item', label: 'Admin Taxes', href: '/admin/tax', icon: <DollarSignIcon size={18}/>, adminOnly: true },
   { type: 'item', label: 'View Payout Runs', href: '/admin/referrals/payout-runs', icon: <DollarSignIcon size={18}/>, adminOnly: true },
@@ -171,7 +172,6 @@ const NAV_ADMIN: NavItem[] = [
   // ------------------------------------------------------------
   { type: 'section', label: 'Delivered Menu', adminOnly: true },
 // ------------------------------------------------------------
-{ type: 'item', label: 'Admin', href: '/admin/tools', icon: <Wrench size={18} />, adminOnly: true },
   { type: 'item', label: 'Meals', href: '/admin/meals', icon: <ChefHat size={18} />, adminOnly: true },
   { type: 'item', label: 'Chefs', href: '/chef/dashboard', icon: <ChefHat size={18} />, adminOnly: true },
   { type: 'item', label: 'Dev', href: '/admin/dev', icon: <Wrench size={18} />, adminOnly: true },

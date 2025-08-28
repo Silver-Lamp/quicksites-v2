@@ -22,11 +22,17 @@ import {
   CloneMealCard, BulkGenerateMealsCard, NukeDemoDataCard,
   GenerateQrInvitesCard, StickerSheetCard,
 } from '@/components/admin/tools/cards/advanced';
+import { PromoteMerchantCard, CreateProductCard } from '@/components/admin/tools/cards/commerce';
+
 
 const GROUPS: ToolGroup[] = [
   { title: 'Users', items: [
     { id: 'tool-1', label: '1) Create new user' },
     { id: 'tool-2', label: '2) Promote to chef' },
+  ]},
+  { title: 'Merchants & Products', items: [
+    { id: 'tool-18', label: '18) Promote to merchant' },
+    { id: 'tool-19', label: '19) Create product' },
   ]},
   { title: 'Compliance', items: [
     { id: 'tool-3', label: '3) Enable compliance' },
@@ -35,7 +41,7 @@ const GROUPS: ToolGroup[] = [
     { id: 'tool-11', label: '11) Create AI Endorsement' },
     { id: 'tool-12', label: '12) Approve ALL requirements' },
   ]},
-  { title: 'Meals', items: [
+  { title: 'Meals (legacy)', items: [
     { id: 'tool-4', label: '4) Make a meal' },
     { id: 'tool-5', label: '5) Create demo reviews' },
     { id: 'tool-6', label: '6) Restock & waitlist' },
@@ -129,6 +135,12 @@ export function AdminToolsPage() {
         <div className="space-y-8">
           <section id="tool-1" data-tool-section="true" className="scroll-mt-24">
             <CreateUserCard run={run} isBusy={!!busy} emailState={sharedEmail} setEmailState={setSharedEmail} />
+          </section>
+          <section id="tool-18" data-tool-section="true" className="scroll-mt-24">
+            <PromoteMerchantCard run={run} isBusy={!!busy} emailState={sharedEmail} setEmailState={setSharedEmail} />
+          </section>
+          <section id="tool-19" data-tool-section="true" className="scroll-mt-24">
+            <CreateProductCard run={run} isBusy={!!busy} emailState={sharedEmail} setEmailState={setSharedEmail} />
           </section>
           <section id="tool-2" data-tool-section="true" className="scroll-mt-24">
             <PromoteChefCard run={run} isBusy={!!busy} emailState={sharedEmail} setEmailState={setSharedEmail} />

@@ -49,16 +49,17 @@ export async function GET(req: NextRequest) {
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   const users: Array<any> = lu.users ?? [];
 
-  const filtered = q
+  // fast prefilter on auth user email/name (kept from your original)
+  const prefiltered = q
     ? users.filter((u) =>
         (u.email ?? '').toLowerCase().includes(q) ||
         String((u.user_metadata as any)?.name ?? '').toLowerCase().includes(q)
       )
     : users;
 
-  const userIds = filtered.map(u => u.id);
+  const userIds = prefiltered.map(u => u.id);
 
-  // 0) Plans — prefer user_plans if present; else try Stripe-like tables
+  // 0) Plans — prefer user_plans; else try Stripe-like tables
   const planByUser = new Map<string, any>();
   try {
     const { data: ups, error: e } = await (admin as any)
@@ -101,6 +102,7 @@ export async function GET(req: NextRequest) {
     const priceIds = Array.from(planByUser.values())
       .map((p: any) => p?.price_id)
       .filter(Boolean);
+
     let priceById = new Map<string, any>();
     try {
       const { data: prices } = await (admin as any)
@@ -110,12 +112,15 @@ export async function GET(req: NextRequest) {
       priceById = new Map((prices ?? []).map((p: any) => [p.id, p]));
     } catch {}
 
+    // NOTE: this queries a table named "products" that you were already using
+    // for billing display. If you also have a merchant "products" table,
+    // consider renaming the billing one (e.g., stripe_products) to avoid confusion.
     let productById = new Map<string, any>();
     try {
-      const { data: products } = await (admin as any)
+      const { data: billingProducts } = await (admin as any)
         .from('products')
         .select('id, name');
-      productById = new Map((products ?? []).map((p: any) => [p.id, p]));
+      productById = new Map((billingProducts ?? []).map((p: any) => [p.id, p]));
     } catch {}
 
     for (const [uid, p] of Array.from(planByUser.entries())) {
@@ -186,7 +191,7 @@ export async function GET(req: NextRequest) {
   }
 
   // 5) shape response
-  const rows = filtered.map((u) => {
+  const shaped = prefiltered.map((u) => {
     const chef = chefByUser.get(u.id) ?? null;
     const merch = merchByUser.get(u.id) ?? null;
     const prof = merch ? (profileByMerchant.get(merch.id) ?? null) : null;
@@ -197,11 +202,12 @@ export async function GET(req: NextRequest) {
 
     const plan = planByUser.get(u.id) ?? null;
 
-    return {
+    const row = {
       id: u.id,
       email: u.email,
       name: (u.user_metadata as any)?.name ?? null,
       is_chef: !!chef,
+      is_merchant: !!merch, // ⬅️ added
       chef: chef && {
         id: chef.id,
         display_name: chef.display_name ?? chef.name ?? null,
@@ -232,14 +238,39 @@ export async function GET(req: NextRequest) {
         updated_at: plan.updated_at ?? null,
       },
     };
+
+    return row;
   });
+
+  // 6) deep filter on enriched fields (merchant/chef display names, plan labels, etc.)
+  const rows = q
+    ? shaped.filter((r) => {
+        const hay = [
+          r.email,
+          r.name,
+          r.plan?.label,
+          r.chef?.display_name,
+          r.chef?.name,
+          r.merchant?.name,
+          r.compliance?.overall,
+          r.compliance?.profile?.state,
+          r.compliance?.profile?.county,
+          r.compliance?.profile?.operation_type,
+        ].filter(Boolean).map((x) => String(x).toLowerCase());
+        return hay.some((s) => s.includes(q));
+      })
+    : shaped;
+
+  // 7) hasMore — reflect the auth-admin paging; deep filtering may shrink what you see
+  const hasMoreAuthPage = (lu.users?.length ?? 0) === perPage;
+  const hasMore = hasMoreAuthPage && !q ? true : rows.length === perPage;
 
   return NextResponse.json({
     ok: true,
     page,
     perPage,
     count: rows.length,
-    hasMore: rows.length === perPage,
+    hasMore,
     users: rows,
   });
 }

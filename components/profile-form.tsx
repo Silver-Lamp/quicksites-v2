@@ -1,4 +1,3 @@
-// components/ProfileForm.tsx
 'use client';
 
 import { useEffect, useState } from 'react';
@@ -29,6 +28,8 @@ export default function ProfileForm() {
   const [membership, setMembership] = useState<any | null>(null);
   const [loadingMembership, setLoadingMembership] = useState(true);
   const [sendingTrialReq, setSendingTrialReq] = useState(false);
+  const [upgrading, setUpgrading] = useState(false);
+  const [managing, setManaging] = useState(false);
 
   const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
   const email = user?.email ?? '';
@@ -95,11 +96,8 @@ export default function ProfileForm() {
         updated_at: new Date().toISOString(),
       },
     });
-    if (error) {
-      toast.error('Failed to update profile');
-    } else {
-      toast.success('Profile updated!');
-    }
+    if (error) toast.error('Failed to update profile');
+    else toast.success('Profile updated!');
   };
 
   const requestAccess = async () => {
@@ -110,11 +108,8 @@ export default function ProfileForm() {
       requested_at: new Date().toISOString(),
       reason: 'Wants to edit profile info',
     });
-    if (error) {
-      toast.error('Failed to submit access request');
-    } else {
-      toast.success('Access request sent!');
-    }
+    if (error) toast.error('Failed to submit access request');
+    else toast.success('Access request sent!');
     setRequesting(false);
   };
 
@@ -125,9 +120,8 @@ export default function ProfileForm() {
       role: 'reseller',
       updated_at: new Date().toISOString(),
     });
-    if (error) {
-      toast.error(`Failed to approve ${req.email}`);
-    } else {
+    if (error) toast.error(`Failed to approve ${req.email}`);
+    else {
       toast.success(`${req.email} approved as reseller`);
       setAccessRequests(accessRequests.filter((r) => r.id !== req.id));
     }
@@ -135,9 +129,8 @@ export default function ProfileForm() {
 
   const handleDeny = async (req: any) => {
     const { error } = await supabase.from('access_requests').delete().eq('id', req.id);
-    if (error) {
-      toast.error(`Failed to deny ${req.email}`);
-    } else {
+    if (error) toast.error(`Failed to deny ${req.email}`);
+    else {
       toast.success(`Denied request from ${req.email}`);
       setAccessRequests(accessRequests.filter((r) => r.id !== req.id));
     }
@@ -156,11 +149,44 @@ export default function ProfileForm() {
         }),
       });
       if (!r.ok) throw new Error('Request failed');
-      toast.success('Request sent! We\'ll reach out shortly.');
+      toast.success("Request sent! We'll reach out shortly.");
     } catch (e: any) {
       toast.error(e?.message ?? 'Could not send request');
     } finally {
       setSendingTrialReq(false);
+    }
+  };
+
+  // ---- NEW: Upgrade / Manage handlers ----
+  const handleUpgradeToPro = async () => {
+    try {
+      setUpgrading(true);
+      const r = await fetch('/api/billing/checkout', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ plan: 'pro' }),
+      });
+      const j = await r.json();
+      if (!r.ok || !j?.url) throw new Error(j?.error || 'Upgrade failed');
+      window.location.href = j.url;
+    } catch (e: any) {
+      toast.error(e?.message || 'Upgrade failed');
+    } finally {
+      setUpgrading(false);
+    }
+  };
+
+  const handleManageBilling = async () => {
+    try {
+      setManaging(true);
+      const r = await fetch('/api/billing/portal');
+      const j = await r.json();
+      if (!r.ok || !j?.url) throw new Error(j?.error || 'Could not open portal');
+      window.location.href = j.url;
+    } catch (e: any) {
+      toast.error(e?.message || 'Could not open portal');
+    } finally {
+      setManaging(false);
     }
   };
 
@@ -175,6 +201,9 @@ export default function ProfileForm() {
 
   const trialEnds = membership?.trial_end ? new Date(membership.trial_end) : null;
   const trialActive = membership?.status === 'trialing' && trialEnds && trialEnds.getTime() > Date.now();
+
+  const canManage = membership?.status && membership.status !== 'none';
+  const canUpgrade = !canManage;
 
   return (
     <div className="space-y-6">
@@ -210,7 +239,29 @@ export default function ProfileForm() {
                     </div>
                   )}
                 </div>
+
+                {/* NEW actions */}
                 <div className="shrink-0 flex gap-2">
+                  {canUpgrade && (
+                    <Button
+                      onClick={handleUpgradeToPro}
+                      disabled={upgrading || !user?.id}
+                      className="bg-purple-600 hover:bg-purple-500"
+                      title="Upgrade to Pro"
+                    >
+                      {upgrading ? 'Redirecting…' : 'Upgrade to Pro'}
+                    </Button>
+                  )}
+                  {canManage && (
+                    <Button
+                      variant="secondary"
+                      onClick={handleManageBilling}
+                      disabled={managing}
+                      title="Manage billing"
+                    >
+                      {managing ? 'Opening…' : 'Manage Billing'}
+                    </Button>
+                  )}
                   <Button
                     variant="secondary"
                     onClick={requestProTrial}
@@ -232,54 +283,30 @@ export default function ProfileForm() {
         )}
       </div>
 
+      {/* existing profile fields ... unchanged */}
       <div className="space-y-4">
         <div>
           <Label>Display Name</Label>
-          <Input
-            id="displayName"
-            value={displayName}
-            onChange={(e) => setDisplayName(e.target.value)}
-            placeholder="e.g. Taylor Swift"
-          />
+          <Input id="displayName" value={displayName} onChange={(e) => setDisplayName(e.target.value)} placeholder="e.g. Taylor Swift" />
         </div>
         <div>
           <Label>Bio</Label>
-          <Input
-            id="bio"
-            value={bio}
-            onChange={(e) => setBio(e.target.value)}
-            placeholder="Short description..."
-          />
+          <Input id="bio" value={bio} onChange={(e) => setBio(e.target.value)} placeholder="Short description..." />
         </div>
         <div>
           <Label>Avatar URL</Label>
-          <Input
-            id="avatarUrl"
-            value={avatarUrl}
-            onChange={(e) => setAvatarUrl(e.target.value)}
-            placeholder="https://example.com/avatar.png"
-          />
+          <Input id="avatarUrl" value={avatarUrl} onChange={(e) => setAvatarUrl(e.target.value)} placeholder="https://example.com/avatar.png" />
         </div>
 
         <div className="flex gap-2 items-center">
-          <Image
-            src={avatarUrl || '/default-avatar.png'}
-            alt="preview"
-            width={64}
-            height={64}
-            className="rounded-full border border-white object-cover"
-          />
+          <Image src={avatarUrl || '/default-avatar.png'} alt="preview" width={64} height={64} className="rounded-full border border-white object-cover" />
           <Button onClick={handleSave}>Save</Button>
         </div>
       </div>
 
       {role !== 'admin' && (
         <div className="pt-6">
-          <Button
-            variant="outline"
-            disabled={requesting}
-            onClick={requestAccess}
-          >
+          <Button variant="outline" disabled={requesting} onClick={requestAccess}>
             Request Elevated Access
           </Button>
         </div>
@@ -308,29 +335,21 @@ export default function ProfileForm() {
       {role === 'admin' && (
         <div className="pt-6">
           <h2 className="text-lg font-semibold text-yellow-400">Admin Log</h2>
-          <button
-            className="text-xs text-blue-400 hover:underline"
-            onClick={() => setShowUtc((v) => !v)}
-          >
+          <button className="text-xs text-blue-400 hover:underline" onClick={() => setShowUtc((v) => !v)}>
             Toggle UTC ({showUtc ? 'Local' : 'UTC'})
           </button>
           <p className="text-sm text-zinc-400 mt-2">
             Most recent deletion:
             <code className="ml-2 bg-zinc-800 px-2 py-1 rounded text-xs text-yellow-300">
               {latestLog
-                ? `${latestLog.email} • ${new Date(latestLog.deleted_at).toLocaleString('en-US', {
-                    timeZone: showUtc ? 'UTC' : timeZone,
-                  })}`
+                ? `${latestLog.email} • ${new Date(latestLog.deleted_at).toLocaleString('en-US', { timeZone: showUtc ? 'UTC' : timeZone })}`
                 : 'Loading...'}
             </code>
           </p>
-          <p className="text-sm text-zinc-400">
-            Admin deletions and access approvals are tracked in the database.
-          </p>
+          <p className="text-sm text-zinc-400">Admin deletions and access approvals are tracked in the database.</p>
         </div>
       )}
 
-      {/* Features scroller */}
       <FeaturesScroller />
     </div>
   );

@@ -2,12 +2,7 @@
 export const runtime = 'nodejs';
 
 import { NextRequest, NextResponse } from 'next/server';
-import Stripe from 'stripe';
-// import { supabaseAdmin } from '@/lib/supabase/admin';
-
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2025-07-30.basil' as Stripe.LatestApiVersion,
-});
+import { stripe } from '@/lib/stripe/server';
 
 export async function POST(req: NextRequest) {
   const { domain, email, coupon } = await req.json();

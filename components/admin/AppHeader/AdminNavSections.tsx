@@ -29,6 +29,7 @@ import {
   Bell,
   User,
   Printer,
+  DollarSignIcon,
 } from 'lucide-react';
 import clsx from 'clsx';
 
@@ -89,21 +90,11 @@ const NAV_ADMIN: NavItem[] = [
       { label: 'Sites', href: '/admin/gsc/sites' },
       { label: '(re)Connect', href: '/api/gsc/auth-url' },
     ] },
-  { type: 'section', label: 'Marketing', adminOnly: true },
-  { type: 'item', label: 'Map of Opportunities', href: '/admin/the-grid', icon: <MapPinned size={18} />, adminOnly: true },
-  { type: 'item', label: 'Leads', href: '/admin/leads', icon: <PhoneForwarded size={18} />, adminOnly: true },
-  { type: 'item', label: 'Campaigns', icon: <Rocket size={18} />, adminOnly: true, children: [
-      { label: 'View All Campaigns', href: '/admin/campaigns' },
-      { label: 'Start New Campaign', href: '/admin/start-campaign' },
-    ] },
-  { type: 'section', label: 'Workflow', adminOnly: true },
-  { type: 'item', label: 'Users', href: '/admin/users', icon: <Users size={18} />, adminOnly: true },
-  { type: 'item', label: 'Feature Video Manager', href: '/admin/features/manage', icon: <Video size={18} />, adminOnly: true },
-  { type: 'item', label: 'Features', href: '/features', icon: <PlayCircle size={18} />, adminOnly: true },
-  { type: 'item', label: 'Platform Pricing', href: '/pricing', icon: <DollarSign size={18} />, adminOnly: true },
-  { type: 'item', label: 'Book a demo', href: '/book', icon: <Book size={18} />, adminOnly: true },
-  { type: 'item', label: 'Contact', href: '/contact', icon: <Mail size={18} />, adminOnly: true },
-  { type: 'item', label: 'Dev', href: '/admin/dev', icon: <Wrench size={18} />, adminOnly: true },
+// ------------------------------------------------------------
+{ type: 'section', label: 'Communications', adminOnly: true },
+// ------------------------------------------------------------  
+  { type: 'item', label: 'Sites Contact Form Email Logs', href: '/admin/email-logs', icon: <Mail size={18} />, adminOnly: true },
+  { type: 'item', label: 'Twilio Call Logs', href: '/admin/call-logs', icon: <Phone size={18} />, adminOnly: true },
   {
     type: 'item',
     label: 'Platform Contact Form Inbox',
@@ -117,15 +108,77 @@ const NAV_ADMIN: NavItem[] = [
       { label: 'Archived', href: '/admin/inbox?status=archived' },
     ],
   },
-  { type: 'section', label: 'Integrations', adminOnly: true },
-  { type: 'item', label: 'Sites Contact Form Email Logs', href: '/admin/email-logs', icon: <Mail size={18} />, adminOnly: true },
-  { type: 'item', label: 'Twilio Call Logs', href: '/admin/call-logs', icon: <Phone size={18} />, adminOnly: true },
-  { type: 'section', label: 'DM Tools', adminOnly: true },
-  { type: 'item', label: 'Admin', href: '/admin/tools', icon: <Wrench size={18} />, adminOnly: true },
+// ------------------------------------------------------------
+
+
+
+
+// ------------------------------------------------------------
+{ type: 'section', label: 'Marketing', adminOnly: true },
+// ------------------------------------------------------------
+{ type: 'item', label: 'Map of Opportunities', href: '/admin/the-grid', icon: <MapPinned size={18} />, adminOnly: true },
+  { type: 'item', label: 'Leads', href: '/admin/leads', icon: <PhoneForwarded size={18} />, adminOnly: true },
+  { type: 'item', label: 'Campaigns', icon: <Rocket size={18} />, adminOnly: true, children: [
+      { label: 'View All Campaigns', href: '/admin/campaigns' },
+      { label: 'Start New Campaign', href: '/admin/start-campaign' },
+    ] },
+
+// ------------------------------------------------------------
+{ type: 'section', label: 'Workflow', adminOnly: true },
+// ------------------------------------------------------------
+{ type: 'item', label: 'Users', href: '/admin/users', icon: <Users size={18} />, adminOnly: true },
+  { type: 'item', label: 'Feature Video Manager', href: '/admin/features/manage', icon: <Video size={18} />, adminOnly: true },
+  { type: 'item', label: 'Features', href: '/features', icon: <PlayCircle size={18} />, adminOnly: true },
+  { type: 'item', label: 'Platform Pricing', href: '/pricing', icon: <DollarSign size={18} />, adminOnly: true },
+  { type: 'item', label: 'Book a demo', href: '/book', icon: <Book size={18} />, adminOnly: true },
+  { type: 'item', label: 'Contact', href: '/contact', icon: <Mail size={18} />, adminOnly: true },
+
+  // ------------------------------------------------------------
+  { type: 'section', label: 'eCommerce Platform', adminOnly: false},
+  // ------------------------------------------------------------
+  { type: 'item', label: 'Rep My Payouts', href: '/rep/payouts', icon: <DollarSignIcon size={18}/>, adminOnly: false },
+  { type: 'item', label: 'Rep My Taxes', href: '/rep/tax', icon: <DollarSignIcon size={18}/>, adminOnly: false },
+  { type: 'item', label: 'Merchant Payments', href: '/merchant/payments', icon: <FileStack size={18} />, adminOnly: false },
+  { type: 'item', label: 'Merchant Orders', href: '/merchant/orders', icon: <FileStack size={18} />, adminOnly: false },
+  { type: 'item', label: 'Merchant Catalog', href: '/merchant/catalog', icon: <FileStack size={18} />, adminOnly: false },
+  { type: 'item', label: 'Rep Referral Dashboard', href: '/rep/referrals', icon: <User size={18} />, adminOnly: false },
+  { type: 'item', label: 'Checkout Success', href: '/checkout/success', icon: <FileStack size={18} />, adminOnly: false },
+  { type: 'item', label: 'Checkout Cancel', href: '/checkout/cancel', icon: <FileStack size={18} />, adminOnly: false },
+  // { type: 'item', label: 'Checkout Failure', href: '/checkout/failure', icon: <FileStack size={18} />, adminOnly: false },
+  // { type: 'item', label: 'Checkout Pending', href: '/checkout/pending', icon: <FileStack size={18} />, adminOnly: false },
+  // { type: 'item', label: 'Checkout Processing', href: '/checkout/processing', icon: <FileStack size={18} />, adminOnly: false },
+  // { type: 'item', label: 'Checkout Complete', href: '/checkout/complete', icon: <FileStack size={18} />, adminOnly: false },
+  // { type: 'item', label: 'Checkout Refund', href: '/checkout/refund', icon: <FileStack size={18} />, adminOnly: false },
+  // { type: 'item', label: 'Checkout Refunded', href: '/checkout/refunded', icon: <FileStack size={18} />, adminOnly: false },
+
+
+
+  // .admin below is for admin-only links
+  { type: 'item', label: 'Admin Taxes: New Payout', href: '/admin/tax/payouts/new', icon: <DollarSignIcon size={18}/>, adminOnly: true },
+  { type: 'item', label: 'Admin Taxes', href: '/admin/tax', icon: <DollarSignIcon size={18}/>, adminOnly: true },
+  { type: 'item', label: 'View Payout Runs', href: '/admin/referrals/payout-runs', icon: <DollarSignIcon size={18}/>, adminOnly: true },
+  { type: 'item', label: 'Referrals Payout Wizard', href: '/admin/referrals/payout-wizard', icon: <DollarSignIcon size={18}/>, adminOnly: true },
+  { type: 'item', label: 'Billing Map', href: 'admin/billing/map', icon: <DollarSignIcon size={18}/>, adminOnly: true }, 
+  { type: 'item', label: 'Merchants', href: '/admin/merchants', icon: <User size={18} />, adminOnly: true },
+  { type: 'item', label: 'Referrals', href: '/admin/referrals', icon: <User size={18} />, adminOnly: true },
+  { type: 'item', label: 'Catalog', href: '/admin/catalog', icon: <FileStack size={18} />, adminOnly: true },
+  { type: 'item', label: 'Orders', href: '/admin/orders', icon: <FileStack size={18} />, adminOnly: true },
+  { type: 'item', label: 'Payments', href: '/admin/payments', icon: <FileStack size={18} />, adminOnly: true },
+  { type: 'item', label: 'Payment Accounts', href: '/admin/payment-accounts', icon: <FileStack size={18} />, adminOnly: true },
+  { type: 'item', label: 'Payment Transactions', href: '/admin/payment-transactions', icon: <FileStack size={18} />, adminOnly: true },
+  { type: 'item', label: 'Payment Transactions', href: '/admin/payment-transactions', icon: <FileStack size={18} />, adminOnly: true },
+  
+  // ------------------------------------------------------------
+  { type: 'section', label: 'Delivered Menu', adminOnly: true },
+// ------------------------------------------------------------
+{ type: 'item', label: 'Admin', href: '/admin/tools', icon: <Wrench size={18} />, adminOnly: true },
   { type: 'item', label: 'Meals', href: '/admin/meals', icon: <ChefHat size={18} />, adminOnly: true },
   { type: 'item', label: 'Chefs', href: '/chef/dashboard', icon: <ChefHat size={18} />, adminOnly: true },
+  { type: 'item', label: 'Dev', href: '/admin/dev', icon: <Wrench size={18} />, adminOnly: true },
 
+  // ------------------------------------------------------------
   // Keep your commented experimental/admin links here for convenience:
+  // ------------------------------------------------------------
   // { type: 'item', label: 'Outreach (Coming Soon)', href: '/admin/outreach', icon: <Mail size={18} />, adminOnly: true },
   // { type: 'item', label: 'Revenue Estimator', href: '/admin/tools/revenue-estimator', icon: <DollarSign size={18} />, adminOnly: true },
   // { type: 'item', label: 'Posters', href: '/admin/tools/print-all', icon: <Printer size={18} />, adminOnly: true },

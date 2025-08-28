@@ -287,15 +287,15 @@ export default function ProfileForm() {
       <div className="space-y-4">
         <div>
           <Label>Display Name</Label>
-          <Input id="displayName" value={displayName} onChange={(e) => setDisplayName(e.target.value)} placeholder="e.g. Taylor Swift" />
+          <Input id="displayName" value={displayName} onChange={(e) => setDisplayName(e.target.value)} placeholder="e.g. Johnathan Swift" className="bg-zinc-800 text-white placeholder:text-zinc-400" />
         </div>
         <div>
           <Label>Bio</Label>
-          <Input id="bio" value={bio} onChange={(e) => setBio(e.target.value)} placeholder="Short description..." />
+          <Input id="bio" value={bio} onChange={(e) => setBio(e.target.value)} placeholder="Short description..." className="bg-zinc-800 text-white placeholder:text-zinc-400" />
         </div>
         <div>
           <Label>Avatar URL</Label>
-          <Input id="avatarUrl" value={avatarUrl} onChange={(e) => setAvatarUrl(e.target.value)} placeholder="https://example.com/avatar.png" />
+          <Input id="avatarUrl" value={avatarUrl} onChange={(e) => setAvatarUrl(e.target.value)} placeholder="https://example.com/avatar.png" className="bg-zinc-800 text-white placeholder:text-zinc-400" />
         </div>
 
         <div className="flex gap-2 items-center">

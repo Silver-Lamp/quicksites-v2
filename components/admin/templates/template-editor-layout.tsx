@@ -19,7 +19,7 @@ export default function TemplateEditorLayout({
   preview?: ReactNode;
   className?: string;
 }) {
-  const { autosave, isCreating, template } = useTemplateEditor();
+  const { autosave: AutosaveStatus, isCreating, template } = useTemplateEditor();
   const { color_mode } = template as Template;
 
   return (
@@ -29,13 +29,13 @@ export default function TemplateEditorLayout({
         <div className="text-sm font-semibold text-white">
           {template.template_name}
           <span className="ml-2 text-xs text-muted-foreground">
-            {autosave.status === 'saving' && (
+            {isCreating && (
               <span className="flex items-center gap-1 text-yellow-400">
                 <Loader2 className="animate-spin w-3 h-3" />
                 Saving...
               </span>
             )}
-            {autosave.status === 'saved' && (
+            {AutosaveStatus === 'saved' && (
               <span className="flex items-center gap-1 text-green-400">
                 <CheckCircle className="w-3 h-3" />
                 Saved

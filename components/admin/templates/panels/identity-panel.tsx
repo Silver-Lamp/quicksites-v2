@@ -8,6 +8,9 @@ import type { Template } from '@/types/template';
 import { Button } from '@/components/ui';
 import { RefreshCw, Save } from 'lucide-react';
 
+// 🔗 single source of truth for industries
+import { getIndustryOptions, INDUSTRY_HINTS, resolveIndustry } from '@/lib/industries';
+
 function isValidEmail(v: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
 }
@@ -34,23 +37,25 @@ function digitsOnly(v?: string | null) {
 type Draft = {
   template_name: string;
   business_name: string;
-  industry: string;
+  industry: string;      // display label from registry
   contact_email: string;
-  phone: string;           // live formatted
+  phone: string;         // live formatted
   address_line1: string;
   address_line2: string;
   city: string;
   state: string;
   postal_code: string;
-  latitude: string;        // keep as text while typing
-  longitude: string;       // keep as text while typing
+  latitude: string;      // keep as text while typing
+  longitude: string;     // keep as text while typing
 };
 
 function toDraft(t: Template): Draft {
+  // Normalize whatever is in template.industry to a safe label for the select
+  const norm = resolveIndustry((t as any).industry || '', t.slug);
   return {
     template_name: t.template_name || '',
     business_name: t.business_name || '',
-    industry: (t as any).industry || '',
+    industry: norm.label,
     contact_email: (t as any).contact_email || '',
     phone: formatPhoneLive(digitsOnly(t.phone)),
     address_line1: t.address_line1 || '',
@@ -67,7 +72,11 @@ function changedKeys(d: Draft, t: Template): Partial<Template> {
   const patch: any = {};
   if (d.template_name !== (t.template_name || '')) patch.template_name = d.template_name;
   if (d.business_name !== (t.business_name || '')) patch.business_name = d.business_name;
-  if (d.industry !== ((t as any).industry || '')) patch.industry = d.industry;
+
+  // Write the label; server will map to key if needed
+  const currentIndustryLabel = (t as any).industry || '';
+  if (d.industry !== currentIndustryLabel) patch.industry = d.industry;
+
   if (d.contact_email.trim() !== (((t as any).contact_email || '') as string).trim())
     patch.contact_email = d.contact_email.trim();
 
@@ -83,8 +92,8 @@ function changedKeys(d: Draft, t: Template): Partial<Template> {
   // Ensure numbers or null for server
   const lat = d.latitude.trim() === '' ? null : Number(d.latitude);
   const lon = d.longitude.trim() === '' ? null : Number(d.longitude);
-  if (lat !== (t.latitude ?? null)) patch.latitude = lat;
-  if (lon !== (t.longitude ?? null)) patch.longitude = lon;
+  if (lat !== (t.latitude ?? null)) patch.latitude = lat == null ? null : clampLat(lat);
+  if (lon !== (t.longitude ?? null)) patch.longitude = lon == null ? null : clampLon(lon);
 
   return patch as Partial<Template>;
 }
@@ -107,6 +116,9 @@ export default function IdentityPanel({
   // Optional: turn on to auto-apply with debounce
   const [autoApply, setAutoApply] = React.useState(false);
   const debounceRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Centralized industries options
+  const industryOptions = React.useMemo(() => getIndustryOptions(), []);
 
   // reset draft if template changes externally
   React.useEffect(() => {
@@ -139,7 +151,6 @@ export default function IdentityPanel({
       setLonError('Longitude must be a number'); return;
     }
 
-    // apply patch only if there are changes
     if (Object.keys(patch).length) {
       onChange(patch);
       setDirty(false);
@@ -156,7 +167,6 @@ export default function IdentityPanel({
       if (key === 'phone') {
         const digits = digitsOnly(value as string);
         setPhoneError(digits && digits.length !== 10 ? 'Phone number must be exactly 10 digits' : null);
-        // schedule auto apply if enabled
         scheduleAutoApply(changedKeys({ ...next }, template));
       } else if (key === 'contact_email') {
         const v = String(value).trim();
@@ -175,6 +185,12 @@ export default function IdentityPanel({
       return next;
     });
   };
+
+  // Compute a helpful hint for the current industry (if any)
+  const industryHint = React.useMemo(() => {
+    const label = draft.industry?.trim();
+    return label ? INDUSTRY_HINTS[label] : undefined;
+  }, [draft.industry]);
 
   return (
     <Collapsible title="Template Identity" id="template-identity">
@@ -218,7 +234,7 @@ export default function IdentityPanel({
           </div>
         </div>
 
-        {/* Template Name (rename UI still handles slug; this only changes working state) */}
+        {/* Template Name */}
         <div>
           <Label>Template Name</Label>
           <Input
@@ -253,36 +269,13 @@ export default function IdentityPanel({
             }
           >
             <option value="">Select industry</option>
-            {[
-              'Towing',
-              'Window Washing',
-              'Roof Cleaning',
-              'Landscaping',
-              'HVAC',
-              'Plumbing',
-              'Electrical',
-              'Auto Repair',
-              'Carpet Cleaning',
-              'Moving',
-              'Pest Control',
-              'Painting',
-              'General Contractor',
-              'Real Estate',
-              'Restaurant',
-              'Salon & Spa',
-              'Fitness',
-              'Photography',
-              'Legal',
-              'Medical / Dental',
-              // legacy/additional
-              'Window Cleaning',
-              'Pressure Washing',
-              'Junk Removal',
-              'Other',
-            ].map((industry) => (
-              <option key={industry} value={industry}>{industry}</option>
+            {industryOptions.map((opt) => (
+              <option key={opt.value} value={opt.value}>{opt.label}</option>
             ))}
           </select>
+          {industryHint && (
+            <p className="text-xs text-white/60 mt-1">{industryHint}</p>
+          )}
         </div>
 
         {/* Contact Email */}
@@ -295,8 +288,8 @@ export default function IdentityPanel({
             placeholder="name@yourcompany.com"
             className={`${inputGhost} ${emailError ? 'border-red-500' : ''}`}
           />
-          {emailError && <p className="text-red-500 text-xs mt-1">{emailError}</p>}
         </div>
+        {emailError && <p className="text-red-500 text-xs mt-1">{emailError}</p>}
 
         {/* Phone — draft + live formatted */}
         <div>
@@ -308,8 +301,8 @@ export default function IdentityPanel({
             placeholder="(123) 456-7890"
             className={`${inputGhost} ${phoneError ? 'border-red-500' : ''}`}
           />
-          {phoneError && <p className="text-red-500 text-xs mt-1">{phoneError}</p>}
         </div>
+        {phoneError && <p className="text-red-500 text-xs mt-1">{phoneError}</p>}
 
         {/* Address Line 1 */}
         <div>

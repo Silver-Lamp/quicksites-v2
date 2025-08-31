@@ -135,7 +135,7 @@ export default function TemplateEditor({
       <ScrollArea className="h-screen w-full p-10 overflow-y-auto">
         <TemplateEditorToolbar
           templateName={template.template_name}
-          autosaveStatus={autosave.status}
+          autosaveStatus={autosave as any}
           isRenaming={isRenaming}
           setIsRenaming={setIsRenaming}
           inputValue={inputValue}
@@ -166,7 +166,7 @@ export default function TemplateEditor({
           setRawJson={setRawJson}
           livePreviewData={livePreviewData}
           setTemplate={setTemplateSynced}
-          autosaveStatus={autosave.status}
+          autosaveStatus={autosave as any}
           setShowPublishModal={() => {}}
           recentlyInsertedBlockId={null}
           setBlockErrors={setBlockErrors as (errors: Record<string, BlockValidationError[]>) => void}

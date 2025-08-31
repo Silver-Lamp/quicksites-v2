@@ -37,7 +37,7 @@ for (const item of queue || []) {
     const outputPath = path.join(outputDir, `${domain}.png`);
 
     fs.mkdirSync(outputDir, { recursive: true });
-    await page.screenshot({ path: outputPath, fullPage: true });
+    await page.screenshot({ path: outputPath as any, fullPage: true });
     await browser.close();
 
     await supabase

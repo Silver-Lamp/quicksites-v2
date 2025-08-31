@@ -1,5 +1,5 @@
-// admin/utils/normalizeTemplate.ts
 import type { Template, Page } from '@/types/template';
+import { normalizePageBlocks } from '@/lib/utils/normalizePageBlocks';
 
 /** Read pages from either legacy top-level or canonical data.pages */
 function unwrapLegacyPages(entry: any): any[] {
@@ -11,13 +11,32 @@ function unwrapLegacyPages(entry: any): any[] {
 function resolveColorMode(entry: any): 'light' | 'dark' | undefined {
   const top = entry?.color_mode;
   const nested = entry?.data?.color_mode;
-  if (top === 'light' || top === 'dark') return top;        // top-level wins
+  if (top === 'light' || top === 'dark') return top;
   if (nested === 'light' || nested === 'dark') return nested;
-  return undefined; // UI decides fallback
+  return undefined;
 }
 
 const isHeader = (b: any) => b?.type === 'header';
 const isFooter = (b: any) => b?.type === 'footer';
+
+/** Inject a minimal Home page when none exist */
+function defaultHomePage(): Page {
+  return {
+    id: 'home',
+    slug: 'home',
+    title: 'Home',
+    show_header: true,
+    show_footer: true,
+    content_blocks: [
+      { type: 'hero', content: { headline: 'Hero image', layout_mode: 'inline', image_position: 'center' } },
+      { type: 'services', content: { title: 'Our Services', columns: 3, items: [
+        { name: 'Service A', description: '' },
+        { name: 'Service B', description: '' },
+        { name: 'Service C', description: '' },
+      ] } },
+    ],
+  } as any;
+}
 
 /**
  * Hoist a single header/footer from legacy page blocks if needed, and
@@ -41,14 +60,8 @@ function hoistHeaderFooter(
     const first = pages[0];
     const nextBlocks: any[] = [];
     for (const b of first.content_blocks ?? []) {
-      if (!headerBlock && isHeader(b)) {
-        headerBlock = b;
-        continue;
-      }
-      if (!footerBlock && isFooter(b)) {
-        footerBlock = b;
-        continue;
-      }
+      if (!headerBlock && isHeader(b)) { headerBlock = b; continue; }
+      if (!footerBlock && isFooter(b)) { footerBlock = b; continue; }
       nextBlocks.push(b);
     }
     first.content_blocks = nextBlocks;
@@ -67,47 +80,27 @@ export function normalizeTemplate(entry: any): Template {
   const services = entry.services ?? entry.data?.services ?? [];
   const color_mode = resolveColorMode(entry);
 
-  // Prefer chrome from data.* first (DB stores it there), then fall back to root
   const preferredHeader = entry?.data?.headerBlock ?? entry?.headerBlock ?? null;
   const preferredFooter = entry?.data?.footerBlock ?? entry?.footerBlock ?? null;
 
-  // Hoist/strip header/footer as needed based on the preferred values
   const { cleanedPages: hfPages, headerBlock, footerBlock } = hoistHeaderFooter(
-    rawPages,
-    preferredHeader,
-    preferredFooter
+    rawPages, preferredHeader, preferredFooter
   );
 
-  // Normalize pages (filter empties; keep toggles & overrides)
-  const pages = (hfPages as any[]).map((page: any, i: number) => {
-    const originalBlocks = Array.isArray(page.content_blocks) ? page.content_blocks : [];
-    const filteredBlocks = originalBlocks.filter((block: any) => {
-      if (!block?.type || !block?.content) return false;
-      if (block.type === 'text' && !block.content?.value?.trim()) return false;
-      return true;
-    });
-
-    // const removedCount = originalBlocks.length - filteredBlocks.length;
-    // if (process.env.NODE_ENV !== 'production' && removedCount > 0) {
-    //   console.log(
-    //     `🧹 normalizeTemplate: Removed ${removedCount} empty block(s) from page "${page.slug || page.title || 'untitled'}"`
-    //   );
-    // }
-
-    return {
-      id: page.id || `page-${i}`,
-      slug: page.slug || (i === 0 ? 'home' : `page-${i + 1}`),
-      title: page.title || (i === 0 ? 'Home' : `Page ${i + 1}`),
-      show_footer: page.show_footer ?? true,
-      show_header: page.show_header ?? true,
-      headerOverride: page.headerOverride ?? null,
-      footerOverride: page.footerOverride ?? null,
-      content_blocks: filteredBlocks,
-      ...page,
-    } as Page;
+  // Normalize blocks per page (aliases, props→content, deep canonicalization, Zod)
+  let pages: Page[] = (hfPages as any[]).map((p: any, i: number) => {
+    const id = p.id || (i === 0 ? 'home' : `page-${i + 1}`);
+    const slug = p.slug || (i === 0 ? 'home' : `page-${i + 1}`);
+    const title = p.title || (i === 0 ? 'Home' : `Page ${i + 1}`);
+    const normalized = normalizePageBlocks({ ...p, id, slug, title } as Page);
+    return normalized as Page;
   });
 
-  // Meta fallbacks
+  // If no pages remain, create a minimal Home
+  if (!Array.isArray(pages) || pages.length === 0) {
+    pages = [defaultHomePage()];
+  }
+
   const rawName = entry.template_name?.trim();
   const rawSlug = entry.slug?.trim();
   const industry = entry.industry?.trim() ?? '';
@@ -157,10 +150,11 @@ export function normalizeTemplate(entry: any): Template {
     postal_code: entry.postal_code || '',
     latitude: entry.latitude || '',
     longitude: entry.longitude || '',
-    // Keep legacy readers happy
+
+    // Runtime mirror
     pages: pages as Page[],
 
-    // Canonical data blob (mirror header/footer here for DB round-trip)
+    // Canonical data blob
     data: {
       ...(entry.data ?? {}),
       pages: pages as Page[],
@@ -169,10 +163,8 @@ export function normalizeTemplate(entry: any): Template {
       color_mode: entry?.data?.color_mode ?? undefined,
     },
 
-    // Top-level color_mode only if provided (no default invented)
     ...(color_mode ? { color_mode } : {}),
 
-    // Mirror chrome to top-level for runtime
     headerBlock: headerBlock ?? null,
     footerBlock: footerBlock ?? null,
 

@@ -1,3 +1,4 @@
+// components/admin/templates/template-action-toolbar.tsx
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
@@ -6,7 +7,9 @@ import { useRouter } from 'next/navigation';
 import {
   RotateCcw, RotateCw, AlertTriangle, X, Maximize2, Minimize2,
   Smartphone, Tablet, Monitor, Sun, Moon, SlidersHorizontal, Check,
-  Settings as SettingsIcon,  // ← gear
+  Settings as SettingsIcon,
+  Trash2,
+  Database,
 } from 'lucide-react';
 import { Button } from '@/components/ui';
 import toast from 'react-hot-toast';
@@ -25,6 +28,15 @@ import { buildSharedSnapshotPayload, normalizeForSnapshot } from '@/lib/editor/t
 import { createSnapshotFromTemplate, loadVersionRow } from '@/admin/lib/templateSnapshots';
 import PageManagerToolbar from '@/components/admin/templates/page-manager-toolbar';
 import { usePersistTemplate, useTemplateRef } from '@/hooks/usePersistTemplate';
+import { AiCostPreview } from '@/components/admin/templates/AiCostPreview';
+
+// 🔽 Cache helpers
+import {
+  dispatchTemplateCacheInvalidate,
+  dispatchTemplateCacheUpdate,
+  readTemplateCache,
+  type TemplateCacheRow,
+} from '@/lib/templateCache';
 
 /* ---------- local helpers ---------- */
 function getTemplatePagesLoose(t: Template): any[] {
@@ -45,6 +57,19 @@ function pretty(next: Template) {
 function baseSlug(slug?: string | null) {
   if (!slug) return '';
   return slug.replace(/(-[a-z0-9]{2,12})+$/i, '');
+}
+// Shape a Template into a cache row
+function toCacheRow(t: any): TemplateCacheRow {
+  return {
+    id: t?.id,
+    slug: t?.slug ?? null,
+    template_name: t?.template_name ?? null,
+    updated_at: t?.updated_at ?? new Date().toISOString(),
+    color_mode: t?.color_mode ?? null,
+    data: t?.data ?? {},
+    header_block: t?.headerBlock ?? t?.data?.headerBlock ?? null,
+    footer_block: t?.footerBlock ?? t?.data?.footerBlock ?? null,
+  };
 }
 
 type SaveWarning = { field: string; message: string };
@@ -93,7 +118,12 @@ export function TemplateActionToolbar({
     window.addEventListener('qs:settings:set-open', sync as any);
     return () => window.removeEventListener('qs:settings:set-open', sync as any);
   }, []);
-
+  const [toolbarEnabled, setToolbarEnabled] = useState(true);
+  useEffect(() => {
+    const onToggle = (e: Event) => setToolbarEnabled(!!(e as CustomEvent).detail);
+    window.addEventListener('qs:toolbar:set-enabled', onToggle as any);
+    return () => window.removeEventListener('qs:toolbar:set-enabled', onToggle as any);
+  }, []);
   // latest template ref
   const tplRef = useTemplateRef(template);
 
@@ -191,6 +221,25 @@ export function TemplateActionToolbar({
     window.dispatchEvent(new CustomEvent('qs:preview:set-viewport', { detail: v }));
   };
 
+  useEffect(() => {
+    const onPatch = (e: Event) => {
+      const patch = (e as CustomEvent).detail || {};
+      if (!patch) return;
+      const next: any = {
+        ...tplRef.current,
+        ...('footerBlock' in patch ? { footerBlock: patch.footerBlock } : {}),
+      };
+      // merge nested data
+      if (patch.data) {
+        next.data = { ...(tplRef.current as any)?.data, ...patch.data };
+      }
+      apply(next);
+      persistSoon(next);
+    };
+    window.addEventListener('qs:template:apply-patch', onPatch as any);
+    return () => window.removeEventListener('qs:template:apply-patch', onPatch as any);
+  }, [apply, persistSoon]);
+  
   // === Template Settings sidebar control ===
   const emitSettingsOpen = (open: boolean) => {
     window.dispatchEvent(new CustomEvent('qs:settings:set-open', { detail: open }));
@@ -386,6 +435,11 @@ export function TemplateActionToolbar({
       if (ok) {
         savedSigRef.current = templateSig(nextTemplate as Template);
         setDirty(false);
+
+        // 🔁 Update cache from saved state
+        try {
+          dispatchTemplateCacheUpdate(toCacheRow(nextTemplate));
+        } catch {}
       }
       toast.success('Saved!');
     } catch (err) {
@@ -412,29 +466,84 @@ export function TemplateActionToolbar({
   }
 
   const onRestore = async (id: string) => {
+    const trace = `restore:${id}:${Date.now()}`;
+    console.time(`QSITES[versions] restore time ${trace}`);
     try {
+      console.info(`QSITES[versions] begin restore trace=${trace}`, { id });
+  
       const data = await loadVersionRow(id);
-      if (!confirm('Restore this version? This will overwrite the current draft.')) return;
-
+  
+      if (!confirm('Restore this version? This will overwrite the current draft.')) {
+        console.info(`QSITES[versions] cancelled by user trace=${trace}`);
+        return;
+      }
+  
+      // data.data may be stringified JSON or object, normalize it:
+      const payload = (() => {
+        try {
+          return typeof (data as any).data === 'string'
+            ? JSON.parse((data as any).data)
+            : (data as any).data ?? {};
+        } catch (e) {
+          console.warn('JSON parse failed for version.data, using raw', e);
+          return (data as any).data ?? {};
+        }
+      })();
+  
+      // Defensive block validator
+      const blockErrs: string[] = [];
+      for (const page of payload?.pages ?? []) {
+        for (const b of page?.content_blocks ?? []) {
+          if (!b?.type) blockErrs.push(`block missing type id=${b?.id || b?._id || '?'}`);
+          if (b?.props != null && typeof b.props !== 'object')
+            blockErrs.push(`block props not object id=${b?.id || b?._id || '?'}`);
+        }
+      }
+      if (blockErrs.length) {
+        console.warn(`QSITES[versions] ${blockErrs.length} invalid block(s)`, blockErrs);
+        toast((t) => (
+          <span>
+            Restored with warnings — {blockErrs.length} invalid block
+            {blockErrs.length === 1 ? '' : 's'} (see console).
+          </span>
+        ));
+      }
+  
       const restored: Template = {
         ...tplRef.current,
         ...(data.header_block ? { headerBlock: data.header_block } : {}),
         ...(data.footer_block ? { footerBlock: data.footer_block } : {}),
-        data: (data as any).data ?? data,
-        color_mode: (data as any).color_mode ?? (tplRef.current as any).color_mode,
+        data: payload,
+        color_mode:
+          (data as any).color_mode ??
+          (tplRef.current as any).color_mode,
       };
+  
       const normalized = normalizeForSnapshot(restored);
       onSaveDraft?.(normalized);
       onSetRawJson?.(pretty(normalized));
+  
       const ok = await persist(normalized);
       if (ok) {
         savedSigRef.current = templateSig(normalized);
         setDirty(false);
+
+        // 🔁 Update cache with restored version
+        try {
+          dispatchTemplateCacheUpdate(toCacheRow(normalized));
+        } catch {}
       }
       toast.success('Version restored!');
-    } catch (e) {
-      console.error('[Toolbar] Failed to load version', e);
-      toast.error('Failed to load version');
+    } catch (e: any) {
+      console.error('QSITES[versions] restore failed', {
+        trace,
+        message: e?.message,
+        stack: e?.stack,
+      });
+      const hint = e?.message?.toLowerCase?.().includes('permission') ? ' (RLS?)' : '';
+      toast.error(`Failed to load version: ${e?.message || 'Unknown error'}${hint}`);
+    } finally {
+      console.timeEnd(`QSITES[versions] restore time ${trace}`);
     }
   };
 
@@ -444,6 +553,12 @@ export function TemplateActionToolbar({
       await fetch(`/api/templates/${encodeURIComponent(slugOrName)}/publish`, { method: 'POST' });
       await reloadVersions();
       toast.success('Published!');
+
+      // 🧹 Invalidate cache after publish (or replace with update if your publish mutates local state)
+      try {
+        const key = (tplRef.current as any)?.id || (tplRef.current as any)?.slug;
+        if (key) dispatchTemplateCacheInvalidate(String(key));
+      } catch {}
     } catch (e) {
       console.error('[Publish] failed', e);
       toast.error('Failed to publish');
@@ -462,6 +577,46 @@ export function TemplateActionToolbar({
     toast('Redo', { icon: '↪️' });
   };
 
+  // ===== DEV: cache controls & hotkeys =====
+  const invalidateCache = () => {
+    const cur = tplRef.current as any;
+    const key = cur?.id || cur?.slug;
+    if (!key) return toast.error('No template key to invalidate');
+    dispatchTemplateCacheInvalidate(String(key));
+    toast('Template cache invalidated', { icon: '🗑️' });
+  };
+
+  const updateCacheFromEditor = () => {
+    const cur = tplRef.current as any;
+    if (!cur?.id) return toast.error('No template loaded');
+    dispatchTemplateCacheUpdate(toCacheRow(cur));
+    toast.success('Cache updated from editor state');
+  };
+
+  const showCacheInfo = () => {
+    const cur = tplRef.current as any;
+    const key = cur?.id || cur?.slug;
+    if (!key) return toast.error('No template key');
+    const cached = readTemplateCache(String(key));
+    if (!cached) return toast('No cache entry', { icon: 'ℹ️' });
+    console.log('[Template Cache]', cached);
+    toast(`Cache: ${cached?.updated_at?.slice(0,19).replace('T',' ')}`, { icon: '🗄️' });
+  };
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const mod = e.metaKey || e.ctrlKey;
+      if (!mod || !e.altKey) return;
+      const k = e.key.toLowerCase();
+      if (k === 'i') { e.preventDefault(); invalidateCache(); }
+      if (k === 'u') { e.preventDefault(); updateCacheFromEditor(); }
+      if (k === 'c') { e.preventDefault(); showCacheInfo(); }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   if (!mounted) return null;
 
   const currentSlug =
@@ -473,8 +628,7 @@ export function TemplateActionToolbar({
     <>
       <div
         id="template-action-toolbar"
-        className="fixed bottom-4 left-1/2 -translate-x-1/2 z-[2147483647] w-[95%] max-w-5xl rounded-2xl border border-zinc-700 bg-zinc-900/95 backdrop-blur px-4 sm:px-6 py-3 shadow-lg text-zinc-100 hover:border-purple-500 opacity-90 hover:opacity-100 transition pointer-events-auto"
-        style={{ WebkitTapHighlightColor: 'transparent' }}
+        className="fixed bottom-4 left-1/2 -translate-x-1/2 z-[2147483647] w-[95%] max-w-5xl rounded-2xl border border-zinc-700 bg-zinc-900/95 backdrop-blur px-4 sm:px-6 py-3 shadow-lg text-zinc-100 hover:border-purple-500 opacity-90 hover:opacity-100 transition pointer-events-auto"        style={{ WebkitTapHighlightColor: 'transparent', pointerEvents: toolbarEnabled ? 'auto' : 'none' }}
       >
         <div className="w-full flex justify-between items-center gap-3">
           {/* Buttons to the left of page manager */}
@@ -487,6 +641,7 @@ export function TemplateActionToolbar({
           >
             <SettingsIcon className="w-4 h-4" />
           </Button>
+
           {/* Center: Page manager */}
           <PageManagerToolbar
             pages={getTemplatePagesLoose(template)}
@@ -545,6 +700,7 @@ export function TemplateActionToolbar({
             {colorPref === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
           </Button>
 
+          {/* <AiCostPreview template={template} /> */}
           <Button size="icon" variant="ghost" title="Full screen (F)" onClick={toggleFullscreen} aria-pressed={isFullscreen}>
             {isFullscreen ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
           </Button>
@@ -575,6 +731,36 @@ export function TemplateActionToolbar({
             defaultSubdomain={tplAny?.default_subdomain}
             onOpenPageSettings={onOpenPageSettings}
           />
+
+          {/* DEV cache buttons */}
+          {process.env.NODE_ENV !== 'production' && (
+            <div className="flex items-center gap-1 mr-1">
+              <Button
+                size="icon"
+                variant="ghost"
+                title="Dev: Show cache info (⌥⌘C)"
+                onClick={showCacheInfo}
+              >
+                <Database className="w-4 h-4" />
+              </Button>
+              <Button
+                size="icon"
+                variant="ghost"
+                title="Dev: Update cache from editor (⌥⌘U)"
+                onClick={updateCacheFromEditor}
+              >
+                <Database className="w-4 h-4" />
+              </Button>
+              <Button
+                size="icon"
+                variant="ghost"
+                title="Dev: Invalidate cache (⌥⌘I)"
+                onClick={invalidateCache}
+              >
+                <Trash2 className="w-4 h-4" />
+              </Button>
+            </div>
+          )}
 
           <Button
             size="sm"

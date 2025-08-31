@@ -1,8 +1,8 @@
+// components/admin/templates/panels/services-panel.tsx
 'use client';
 
 import * as React from 'react';
 import Collapsible from '@/components/ui/collapsible-panel';
-import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import type { Template } from '@/types/template';

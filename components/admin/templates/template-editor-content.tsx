@@ -3,7 +3,8 @@
 
 import { useEffect, useMemo, useState, type Dispatch, type SetStateAction, useRef } from 'react';
 import dynamic from 'next/dynamic';
-import { useSearchParams } from 'next/navigation';
+import Link from 'next/link';
+import { usePathname, useSearchParams } from 'next/navigation';
 import type { Template, TemplateData } from '@/types/template';
 import type { Block } from '@/types/blocks';
 import type { BlockValidationError } from '@/hooks/validateTemplateBlocks';
@@ -23,6 +24,7 @@ const SidebarSettings = dynamic(
 );
 
 type TemplateDataWithChrome = TemplateData & { headerBlock?: Block | null; footerBlock?: Block | null };
+
 // global.d.ts
 declare global {
   interface WindowEventMap {
@@ -98,7 +100,6 @@ function openHoursSettingsPanel(setShowSettings: (open: boolean) => void) {
     );
   });
 }
-
 
 /* ---------- component ---------- */
 type Props = {
@@ -206,7 +207,9 @@ export default function EditorContent({
   }, [undo, redo]);
 
   const searchParams = useSearchParams();
+  const pathname = usePathname();
   const previewVersionId = searchParams.get('preview_version_id');
+  const tab = ((searchParams.get('tab') ?? 'blocks') as 'blocks' | 'live');
   const currentPageSlug = useMemo(
     () => searchParams.get('page') ?? firstPageSlug(template),
     [searchParams, template]
@@ -434,15 +437,17 @@ export default function EditorContent({
     onChange(nextTemplate);     // persist
   };
 
-  // ----- decide when to use inline preview (no iframe) -----
+  /* ---------- Tabs: Blocks (default) | Live (iframe) ---------- */
+  const buildTabHref = (which: 'blocks' | 'live') => {
+    const qp = new URLSearchParams(searchParams ?? undefined);
+    qp.set('tab', which);
+    return `${pathname}?${qp.toString()}`;
+  };
+
+  // Force "blocks" to render inline (no iframe). Force "live" to show iframe.
   const preferInlinePreview = useMemo(() => {
-    const pages = getTemplatePages(template);
-    const first = pages[0];
-    const hasBlocks = first && getPageBlocks(first).length > 0;
-    const fresh = !template?.is_site || !template?.published;
-    // Inline if: no preview version id AND either fresh site or no content yet
-    return (!previewVersionId) && (fresh || !hasBlocks);
-  }, [template, previewVersionId]);
+    return tab !== 'live'; // blocks => true (inline), live => false (iframe)
+  }, [tab]);
 
   return (
     <div className="flex min-w-0">
@@ -480,6 +485,34 @@ export default function EditorContent({
 
       {/* Right: header editor panel + preview */}
       <div className="flex-1 min-w-0 xl:ml-0 ml-0 px-0 lg:px-2">
+        {/* Tabs */}
+        <div className="flex gap-2 border-b border-white/10 mb-3 px-2 pt-2">
+          <Link
+            href={buildTabHref('blocks')}
+            className={[
+              'px-4 py-2 text-sm rounded-t-md border-b-2 transition-colors',
+              tab === 'blocks'
+                ? 'border-white/80 text-white'
+                : 'border-transparent text-white/60 hover:text-white'
+            ].join(' ')}
+            prefetch={false}
+          >
+            Blocks
+          </Link>
+          <Link
+            href={buildTabHref('live')}
+            className={[
+              'px-4 py-2 text-sm rounded-t-md border-b-2 transition-colors',
+              tab === 'live'
+                ? 'border-white/80 text-white'
+                : 'border-transparent text-white/60 hover:text-white'
+            ].join(' ')}
+            prefetch={false}
+          >
+            Live
+          </Link>
+        </div>
+
         {editingHeader && (
           <div className="mb-4 rounded-xl border border-white/10 bg-neutral-950/70 backdrop-blur">
             <PageHeaderEditor
@@ -492,6 +525,10 @@ export default function EditorContent({
           </div>
         )}
 
+        {/* Preview/Editor surface:
+            - tab === 'blocks'  -> preferInlinePreview = true  (blocks mode)
+            - tab === 'live'    -> preferInlinePreview = false (iframe mode)
+         */}
         <LiveEditorPreviewFrame
           template={template}
           onChange={(t) => onChange(t)}

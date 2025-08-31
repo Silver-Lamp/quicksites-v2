@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Loader, AlertTriangle, Settings2 } from 'lucide-react';
+import CollapsiblePanel from '@/components/ui/collapsible-panel';
 
 type PurgeMode = 'prefix' | 'targeted' | 'orphans';
 type PatternMode = 'regex' | 'glob';
@@ -178,12 +179,13 @@ export default function ResetStoragePanel() {
       : 'Only files referenced by the rows being deleted (targeted)';
 
   return (
-    <div className="rounded-xl border p-4 space-y-4">
-      <div className="flex items-center gap-2">
-        <div className="text-base font-semibold">Reset / Purge Utilities</div>
+    <CollapsiblePanel id="reset-storage-panel" title="Reset / Purge Utilities" defaultOpen={false}>
+      <div className="rounded-xl border p-4 space-y-4">
+        <div className="flex items-center gap-2">
         <span className="text-xs rounded bg-amber-50 text-amber-800 border border-amber-200 px-2 py-0.5">
           Danger zone — actions are destructive
         </span>
+      </div>
       </div>
 
       {/* PRESET ROW */}
@@ -456,7 +458,7 @@ export default function ResetStoragePanel() {
           <ResultViewer storage={res.storage} />
         </div>
       )}
-    </div>
+    </CollapsiblePanel>
   );
 }
 

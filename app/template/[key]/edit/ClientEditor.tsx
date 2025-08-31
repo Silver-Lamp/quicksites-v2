@@ -1,3 +1,4 @@
+// app/template/[key]/edit/ClientEditor.tsx
 'use client';
 
 import dynamic from 'next/dynamic';

@@ -1,4 +1,5 @@
-import SeedAllPanel from '@/components/admin/dev/seed-all-panel';
+// import SeedAllPanel from '@/components/admin/dev/seed-all-panel';
+import SeedAllPanel from '@/components/admin/dev/seeder/SeedAllPanel';
 import ResetStoragePanel from '@/components/admin/dev/reset-storage-panel';
 
 export default function DevPage() {

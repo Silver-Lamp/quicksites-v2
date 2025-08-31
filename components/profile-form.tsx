@@ -11,6 +11,7 @@ import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { RewardTally } from '@/components/reward-tally';
 import { Badge } from '@/components/ui/badge';
 import { Loader, Rocket, ChartBar, Mail, Map, Phone, ImageIcon, Star, Shield, Link2, Sparkles } from 'lucide-react';
+import AiCostEstimatorCard from '@/components/admin/billing/AiCostEstimatorCard';
 
 export default function ProfileForm() {
   const { user, role } = useCurrentUser();
@@ -304,6 +305,8 @@ export default function ProfileForm() {
         </div>
       </div>
 
+
+      <AiCostEstimatorCard />
       {role !== 'admin' && (
         <div className="pt-6">
           <Button variant="outline" disabled={requesting} onClick={requestAccess}>

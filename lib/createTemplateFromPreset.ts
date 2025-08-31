@@ -1,12 +1,18 @@
-// lib/createTemplateFromPreset.ts
-import { createDefaultPage } from '@/lib/pageDefaults';
-import { createDefaultBlock } from '@/lib/createDefaultBlock';
-import { generateUniqueTemplateName, slugify } from '@/lib/utils/slug';
+// lib/createTemplateFromPresetWithBlocks.ts
+import { makeDefaultBlock, validateBlock } from '@/lib/blockRegistry.core';
+import type { Block, SeedContext } from '@/types/blocks';
 import { templateDefaults } from '@/lib/templateDefaults';
-import type {
-  ValidatedTemplate,
-  ValidatedPage,
+import { createDefaultPage } from '@/lib/pageDefaults';
+import {
+  TemplateSaveSchema,
+  type ValidatedTemplate,
+  type ValidatedPage,
 } from '@/admin/lib/zod/templateSaveSchema';
+import { generateUniqueTemplateName } from './utils/slug';
+
+function slugify(str: string): string {
+  return str.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '').trim();
+}
 
 export const templatePresets = {
   Towing: ['hero', 'services', 'testimonial', 'cta'],
@@ -14,89 +20,62 @@ export const templatePresets = {
   Agency: ['hero', 'video', 'quote', 'grid'],
 } as const;
 
-// Preset + real blocks
 export function createTemplateFromPresetWithBlocks(
   industry: keyof typeof templatePresets
 ): ValidatedTemplate {
-  const name = generateUniqueTemplateName(industry);
-  const slug = slugify(name);
+  const template_name = generateUniqueTemplateName(industry);
+  const slug = slugify(template_name);
 
-  const blocks = templatePresets[industry].map((t) => createDefaultBlock(t));
+  // default-only context is fine for presets
+  const ctx: Partial<SeedContext> = {};
 
-  // Make the page explicit so TS knows show_header/show_footer are booleans
+  const blocks = templatePresets[industry]
+    .map((t) => makeDefaultBlock(t, ctx))
+    .filter(Boolean) as Block[];
+
+  const checked = blocks.map((b) => {
+    const v = validateBlock(b);
+    return v.ok ? v.value : b;
+  });
+
+  // derive services[] for the template (schema requires it)
+  const servicesFromBlocks =
+    checked
+      .filter((b) => b.type === 'services')
+      .flatMap((b) => {
+        const items = (b as any)?.props?.items;
+        return Array.isArray(items) ? items.map((i: any) => i?.name).filter(Boolean) : [];
+      }) ?? [];
+
   const page: ValidatedPage = createDefaultPage({
     title: `${industry} Site`,
     slug: 'index',
     show_header: true,
     show_footer: true,
-    content_blocks: blocks,
+    content_blocks: checked,
   });
 
-  const tpl: ValidatedTemplate = {
+  // Build the template object with explicit schema-required keys
+  const draft = {
+    // bring in your standard defaults (ids/branding/etc)
     ...templateDefaults,
+
+    // required by schema:
     id: '',
+    template_name,
+    industry: String(industry),
     slug,
-    industry,
-    layout: 'default',
-    color_mode: 'light',
-    data: {
-      ...(templateDefaults.data ?? {}),
-      pages: [page],
-    },
-    services: [],
-    template_name: name,
-    color_scheme: 'neutral',
-    theme: 'default',
-    // keep root pages for legacy/null-safety; schema’s preprocessor ignores it
-    pages: [],
+
+    // ensure these exist even if templateDefaults is loosely typed
+    layout: (templateDefaults as any).layout ?? 'standard',
+    color_scheme: (templateDefaults as any).color_scheme ?? 'neutral',
+    color_mode: (templateDefaults as any).color_mode ?? 'light',
+    theme: (templateDefaults as any).theme ?? 'default',
+    services: servicesFromBlocks,
+
+    pages: [page],
   };
 
-  return tpl;
-}
-
-// Generic starter preset
-export function createTemplateFromPreset({
-  industry = 'General',
-  layout = 'default',
-  brand = '',
-}: {
-  industry?: string;
-  layout?: string;
-  brand?: string;
-}): ValidatedTemplate {
-  const name = generateUniqueTemplateName(`${industry.toLowerCase()}-preset`);
-  const slug = slugify(name);
-
-  const starterPage: ValidatedPage = createDefaultPage({
-    title: 'Welcome',
-    slug: 'index',
-    show_header: true,
-    show_footer: true,
-    content_blocks: [
-      createDefaultBlock('hero'),
-      createDefaultBlock('services'),
-      createDefaultBlock('testimonial'),
-      createDefaultBlock('cta'),
-    ],
-  });
-
-  const tpl: ValidatedTemplate = {
-    ...templateDefaults,
-    id: '',
-    slug,
-    industry: 'General',
-    layout,
-    color_mode: 'light',
-    data: {
-      ...(templateDefaults.data ?? {}),
-      pages: [starterPage],
-    },
-    template_name: name,
-    color_scheme: 'neutral',
-    theme: 'default',
-    pages: [],
-    services: [],
-  };
-
-  return tpl;
+  // Runtime + type-level validation; returns ValidatedTemplate
+  return TemplateSaveSchema.parse(draft);
 }

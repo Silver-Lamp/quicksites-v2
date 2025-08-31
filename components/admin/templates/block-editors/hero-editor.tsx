@@ -12,6 +12,9 @@ import clsx from 'clsx';
 import { Sparkles, Image as ImageIcon, Loader2 } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
 
+// 🔗 single source of truth for industries
+import { getIndustryOptions, resolveIndustry } from '@/lib/industries';
+
 const previewSizes = { desktop: 'max-w-full', tablet: 'max-w-xl', mobile: 'max-w-xs' };
 const positionStyles = { top: 'bg-top', center: 'bg-center', bottom: 'bg-bottom' };
 
@@ -44,30 +47,6 @@ function formatPhone(d: string) {
   return `(${d.slice(0, 3)}) ${d.slice(3, 6)}-${d.slice(6)}`;
 }
 
-const INDUSTRIES = [
-  'Towing',
-  'Window Washing',
-  'Roof Cleaning',
-  'Landscaping',
-  'HVAC',
-  'Plumbing',
-  'Electrical',
-  'Auto Repair',
-  'Carpet Cleaning',
-  'Moving',
-  'Pest Control',
-  'Painting',
-  'General Contractor',
-  'Real Estate',
-  'Restaurant',
-  'Salon & Spa',
-  'Fitness',
-  'Photography',
-  'Legal',
-  'Medical / Dental',
-  'Other',
-];
-
 /** Subject presets that bias toward service outcome/equipment (not people) */
 function presetSubjectFor(industry: string, services: string[] = []) {
   const s = (industry || '').toLowerCase();
@@ -85,6 +64,14 @@ function presetSubjectFor(industry: string, services: string[] = []) {
   return `clean, modern banner depicting ${first || industry} results and equipment, wide exterior scene`;
 }
 
+/** Normalize a display label → slug we store in DB (sidebar/template.industry). */
+function toIndustrySlug(label: string) {
+  return (label || 'general')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '_')
+    .replace(/^_+|_+$/g, '') || 'general';
+}
+
 export default function HeroEditor({
   block,
   onSave,
@@ -98,25 +85,34 @@ export default function HeroEditor({
   const [previewSize, setPreviewSize] = useState<'desktop' | 'tablet' | 'mobile'>('desktop');
   const [forceMobilePreview, setForceMobilePreview] = useState(false);
 
-  // Kickoff context (used by AI)
-  const initialIndustry = (template?.industry || '').toString();
-  const [aiIndustry, setAiIndustry] = useState<string>(
-    INDUSTRIES.find((i) => i.toLowerCase() === initialIndustry.toLowerCase()) ||
-      initialIndustry ||
-      'General'
+  // Centralized options
+  const industryOptions = useMemo(() => getIndustryOptions(), []);
+
+  // Kickoff context (used by AI) — normalize whatever’s in template.industry
+  const initialDisplayLabel = useMemo(
+    () => resolveIndustry((template as any)?.industry || '', (template as any)?.slug).label,
+    [template]
   );
+
+  // Local industry state for AI assist controls (display label, not slug)
+  const [aiIndustry, setAiIndustry] = useState<string>(initialDisplayLabel || 'General');
   const [aiIndustryOther, setAiIndustryOther] = useState<string>(
-    initialIndustry &&
-      !INDUSTRIES.some((i) => i.toLowerCase() === initialIndustry.toLowerCase())
-      ? initialIndustry
+    initialDisplayLabel &&
+    !industryOptions.some((o) => o.label.toLowerCase() === initialDisplayLabel.toLowerCase())
+      ? initialDisplayLabel
       : ''
   );
-  const effectiveIndustry = useMemo(
-    () =>
-      (aiIndustry === 'Other' ? aiIndustryOther : aiIndustry) ||
-      initialIndustry ||
-      'General',
-    [aiIndustry, aiIndustryOther, initialIndustry]
+
+  /** Human-facing label we use for prompts */
+  const effectiveIndustryLabel = useMemo(
+    () => (aiIndustry === 'Other' ? aiIndustryOther : aiIndustry) || initialDisplayLabel || 'General',
+    [aiIndustry, aiIndustryOther, initialDisplayLabel]
+  );
+
+  /** Slug we persist to DB/sidebar */
+  const effectiveIndustrySlug = useMemo(
+    () => toIndustrySlug(effectiveIndustryLabel),
+    [effectiveIndustryLabel]
   );
 
   // AI (copy) state
@@ -131,8 +127,7 @@ export default function HeroEditor({
   const [imgIncludePeople, setImgIncludePeople] = useState(false);
   const [imgSubjectTouched, setImgSubjectTouched] = useState(false);
   const [imgSubject, setImgSubject] = useState(
-    local?.image_subject ||
-      `${effectiveIndustry} website hero banner`
+    local?.image_subject || `${effectiveIndustryLabel} website hero banner`
   );
   const [imgStyle, setImgStyle] = useState<'photo' | 'illustration' | '3d' | 'minimal'>('photo');
 
@@ -140,7 +135,9 @@ export default function HeroEditor({
     setLocal((prev: any) => ({ ...prev, [key]: value as (typeof local)[K] }));
 
   const handleSave = () => {
-    onSave({ ...block, content: local as typeof block.content });
+    // persist the normalized industry slug on the block as well
+    const nextBlock: Block = { ...(block as any), industry: effectiveIndustrySlug, content: local };
+    onSave(nextBlock);
     onClose();
   };
 
@@ -157,12 +154,25 @@ export default function HeroEditor({
   // Auto-seed subject when industry changes (unless user already edited it)
   useEffect(() => {
     if (!imgSubjectTouched) {
-      const preset = presetSubjectFor(effectiveIndustry, (template?.services as any) || []);
+      const preset = presetSubjectFor(effectiveIndustryLabel, (template?.services as any) || []);
       setImgSubject(preset);
       update('image_subject', preset as any);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [effectiveIndustry]);
+  }, [effectiveIndustryLabel]);
+
+  // 🔁 Keep template/sidebar/DB in sync when the editor’s Industry changes
+  useEffect(() => {
+    // store on the block (so subsequent prompts have context even before save)
+    (block as any).industry = effectiveIndustrySlug;
+    // push to template (EditorContent listens for this and persists to DB)
+    window.dispatchEvent(
+      new CustomEvent('qs:template:merge', {
+        detail: { industry: effectiveIndustrySlug },
+      })
+    );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [effectiveIndustrySlug]);
 
   async function requestSuggestions() {
     const res = await fetch('/api/hero/suggest', {
@@ -170,7 +180,8 @@ export default function HeroEditor({
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         template_id: template?.id,
-        industry: effectiveIndustry, // kickoff guidance
+        // Use human label for better prompting
+        industry: effectiveIndustryLabel,
         services: template?.services ?? [],
         business_name: (template as any)?.business_name,
         city: (template as any)?.city,
@@ -223,7 +234,7 @@ export default function HeroEditor({
     try {
       // Compose a precise, banner-oriented prompt for the API
       const base =
-        `website hero (header/banner) image for a ${effectiveIndustry} small business. ` +
+        `website hero (header/banner) image for a ${effectiveIndustryLabel} small business. ` +
         `${imgSubject}. ` +
         `wide 16:9 composition with clear copy space for headline, clean modern background, high detail, no text, no watermarks, no logos.`;
 
@@ -236,7 +247,8 @@ export default function HeroEditor({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           template_id: template?.id,
-          industry: effectiveIndustry,
+          // Use human label in the image prompt too
+          industry: effectiveIndustryLabel,
           services: template?.services ?? [],
           business_name: (template as any)?.business_name,
           city: (template as any)?.city,
@@ -244,7 +256,6 @@ export default function HeroEditor({
           subject: imgSubject,      // keep for backward compat
           style: imgStyle,
           aspect: 'wide',
-          // NEW fields understood by the updated API
           prompt: base,
           negative: negatives,
           include_people: imgIncludePeople,
@@ -290,8 +301,8 @@ export default function HeroEditor({
               value={aiIndustry}
               onChange={(e) => setAiIndustry(e.target.value)}
             >
-              {INDUSTRIES.map((i) => (
-                <option key={i} value={i}>{i}</option>
+              {industryOptions.map((opt) => (
+                <option key={opt.value} value={opt.label}>{opt.label}</option>
               ))}
             </select>
           </div>
@@ -305,7 +316,7 @@ export default function HeroEditor({
               disabled={aiIndustry !== 'Other'}
             />
             <p className="mt-1 text-xs text-neutral-400">
-              We’ll use this when generating copy and images.
+              AI suggestions & images use this immediately. The template’s industry is also kept in sync.
             </p>
           </div>
         </div>
@@ -318,12 +329,14 @@ export default function HeroEditor({
             <Sparkles className="h-4 w-4 text-purple-300" />
             <div className="text-sm font-medium">AI Assist</div>
           </div>
+        </div>
+        {aiError && <div className="text-xs text-red-300">{aiError}</div>}
+        <div className="flex items-center gap-2">
           <button onClick={suggestAll} disabled={aiLoading} className={btnPrimary}>
             {aiLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
             {aiLoading ? 'Working…' : 'Suggest All'}
           </button>
         </div>
-        {aiError && <div className="text-xs text-red-300">{aiError}</div>}
       </div>
 
       {/* Headline */}
@@ -506,7 +519,7 @@ export default function HeroEditor({
               setImgSubjectTouched(true);
               update('image_subject', e.target.value as any);
             }}
-            placeholder={`${effectiveIndustry} website hero banner`}
+            placeholder={`${effectiveIndustryLabel} website hero banner`}
           />
         </div>
         <div>

@@ -202,7 +202,7 @@ export default function PageHeaderEditor({
   const [isUploading, setIsUploading] = useState(false);
   const [isSavingLocal, setIsSavingLocal] = useState(false);
 
-  // === New: AI icon generator state ===
+  // === New: AI Logo generator state ===
   const businessName = useMemo(() => (template as any)?.business_name || '', [template]);
   const industry = useMemo(() => template?.industry || '', [template]);
   const initials = useMemo(
@@ -440,9 +440,9 @@ const generateFaviconAIHere = async () => {
               )}
             </div>
 
-            {/* NEW: AI Icon Generator */}
+            {/* NEW: AI Logo Generator */}
             <div className="rounded-lg border border-white/10 p-3 bg-neutral-900/70">
-              <div className="text-sm font-medium mb-2">AI Icon Generator</div>
+              <div className="text-sm font-medium mb-2">AI Logo Generator</div>
               <div className="space-y-2 text-sm">
                 <div>
                   <Label className="text-white/80">Business</Label>
@@ -500,7 +500,7 @@ const generateFaviconAIHere = async () => {
                   onClick={generateIcon}
                   disabled={genBusy}
                 >
-                  {genBusy ? 'Generating…' : 'Generate Icon'}
+                  {genBusy ? 'Generating…' : 'Generate Logo'}
                 </Button>
 
                 {genError && (

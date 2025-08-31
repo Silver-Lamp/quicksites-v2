@@ -1,24 +1,19 @@
-// app/template/[key]/edit/page.tsx
 import { redirect, notFound } from 'next/navigation';
 import { getServerSupabase } from '@/lib/supabase/server';
-import EditWrapper from '@/components/admin/templates/edit-wrapper'; // client component
+import CachedEditWrapper from '@/components/admin/templates/cached-edit-wrapper'; // ⬅️ use cached wrapper
 
 type Params = { key: string };
-
-// UUID v4 detector to decide if `key` is an ID or a slug
 const UUID_V4 =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
-export default async function TemplateEditPage({
-  params, // ✅ Next.js 15: params is a Promise
-}: {
-  params: Promise<Params>;
-}) {
-  const { key } = await params; // ✅ must await
+// Keep the payload lean; the editor only needs these on first paint
+const SELECT =
+  'id,slug,template_name,updated_at,created_at,owner_id,is_site,is_version,archived,industry,color_mode,data,header_block,footer_block,base_slug';
 
+export default async function TemplateEditPage({ params }: { params: Promise<Params> }) {
+  const { key } = await params;
   const supabase = await getServerSupabase();
 
-  // Auth (use getUser rather than getSession to avoid security warning)
   const {
     data: { user },
     error: userErr,
@@ -28,16 +23,14 @@ export default async function TemplateEditPage({
     redirect(`/login?next=${encodeURIComponent(`/template/${key}/edit`)}`);
   }
 
-  // Admin?
   const { data: adminRow } = await supabase
     .from('admin_users')
     .select('user_id')
     .eq('user_id', user.id)
     .maybeSingle();
 
-  // Decide whether key is an id or a slug
   const isId = UUID_V4.test(key);
-  let q = supabase.from('templates').select('*').limit(1);
+  let q = supabase.from('templates').select(SELECT).limit(1);
   q = isId ? q.eq('id', key) : q.eq('slug', key);
   if (!adminRow) q = q.eq('owner_id', user.id);
 
@@ -45,10 +38,9 @@ export default async function TemplateEditPage({
   if (error) throw new Error(error.message);
   if (!template) return notFound();
 
-  // Pass initialTemplate to avoid a second client fetch
   return isId ? (
-    <EditWrapper id={template.id} initialTemplate={template} />
+    <CachedEditWrapper id={template.id} initialTemplate={template} />
   ) : (
-    <EditWrapper slug={template.slug} initialTemplate={template} />
+    <CachedEditWrapper slug={template.slug} initialTemplate={template} />
   );
 }

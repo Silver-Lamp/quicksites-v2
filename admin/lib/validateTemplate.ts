@@ -1,4 +1,3 @@
-// admin/lib/validateTemplate.ts
 'use client';
 
 import { ZodError } from 'zod';
@@ -6,20 +5,17 @@ import { TemplateSaveSchema } from './zod/templateSaveSchema';
 import type { ValidatedTemplate } from './zod/templateSaveSchema';
 import { migrateLegacyTemplate } from './migrateLegacyTemplate';
 import { canonicalizeUrlKeysDeep } from './migrations/canonicalizeUrls';
+import { upgradeLegacyBlocksDeep } from '@/lib/blocks/upgradeLegacy';
+
+/* ----------------------------- small helpers ----------------------------- */
 
 type Warning = { field: 'headerBlock' | 'footerBlock'; message: string };
 
-/** Safe getter for "a.b.0.c" style paths from Zod errors */
 function getAtPath(obj: unknown, pathSegments: (string | number)[]) {
   try {
     let cur: any = obj;
     for (const seg of pathSegments) {
-      const key =
-        typeof seg === 'number'
-          ? seg
-          : /^\d+$/.test(String(seg))
-          ? Number(seg)
-          : seg;
+      const key = typeof seg === 'number' ? seg : /^\d+$/.test(String(seg)) ? Number(seg) : seg;
       cur = cur?.[key];
     }
     return cur;
@@ -28,13 +24,10 @@ function getAtPath(obj: unknown, pathSegments: (string | number)[]) {
   }
 }
 
-/** Get the inner ZodObject from a ZodEffects produced by z.preprocess */
 function getInnerZodObject(schema: any): any {
-  // zod v3: ZodEffects exposes inner schema via .innerType() or _def.schema
   return schema?.innerType?.() ?? schema?._def?.schema ?? schema;
 }
 
-/** Allowed top-level keys from TemplateSaveSchema (handles preprocess) */
 function getAllowedTemplateKeys(): string[] {
   const inner = getInnerZodObject(TemplateSaveSchema);
   const shape =
@@ -43,22 +36,17 @@ function getAllowedTemplateKeys(): string[] {
   return shape && typeof shape === 'object' ? Object.keys(shape) : [];
 }
 
+/* --------------------------------- API ----------------------------------- */
+
 export type ValidateResult =
-| { valid: true; data: ValidatedTemplate; warnings: Warning[] }
+  | { valid: true; data: ValidatedTemplate; warnings: Warning[] }
   | {
       valid: false;
       errors:
         | {
-            /** For UI banners */
             formErrors: string[];
             fieldErrors: Record<string, string[]>;
-            /** For console debugging */
-            rows?: Array<{
-              path: string;
-              code: string;
-              message: string;
-              value: unknown;
-            }>;
+            rows?: Array<{ path: string; code: string; message: string; value: unknown }>;
           }
         | Error
         | ZodError;
@@ -66,10 +54,10 @@ export type ValidateResult =
 
 /**
  * Validates and normalizes a full template object.
- * - Unwraps legacy .data
- * - Canonicalizes url-ish keys (imageUrl → image_url, logoUrl → logo_url, navItems → nav_items) across the whole object
- * - Preserves `.data` so TemplateSaveSchema's preprocessor can hoist `data.pages` -> `pages`
- * - Provides rich diagnostics (flattened + rows with offending values)
+ * - Migrates legacy template wrapper
+ * - Canonicalizes url-ish keys
+ * - Upgrades legacy block shapes (props->content, hero key mapping, safe defaults)
+ * - Preserves `.data` so TemplateSaveSchema's preprocessor can hoist `data.pages`
  */
 export function validateTemplateAndFix(input: unknown): ValidateResult {
   if (!input || typeof input !== 'object') {
@@ -79,9 +67,11 @@ export function validateTemplateAndFix(input: unknown): ValidateResult {
     };
   }
 
+  // 0) Migrate & canonicalize
   const migrated = migrateLegacyTemplate(input as Record<string, any>) ?? {};
   const normalized = canonicalizeUrlKeysDeep(migrated);
 
+  // 1) Strip to allowed top-level keys to match schema
   const allowedKeys = getAllowedTemplateKeys();
   const cleaned: Record<string, any> = {};
   for (const key of allowedKeys) {
@@ -89,11 +79,11 @@ export function validateTemplateAndFix(input: unknown): ValidateResult {
       cleaned[key] = (normalized as any)[key];
     }
   }
-
   delete cleaned.created_at;
   delete cleaned.domain;
   delete cleaned.custom_domain;
 
+  // 2) Identity basics (sane defaults)
   cleaned.slug ??= 'new-template-' + Math.random().toString(36).slice(2, 6);
   cleaned.template_name ??= cleaned.slug;
   cleaned.layout ??= 'standard';
@@ -101,6 +91,15 @@ export function validateTemplateAndFix(input: unknown): ValidateResult {
   cleaned.theme ??= 'default';
   if (cleaned.color_mode == null) cleaned.color_mode = 'dark';
 
+  // 3) **Upgrade legacy blocks** at root pages and nested data.pages
+  if (Array.isArray(cleaned.pages)) {
+    cleaned.pages = upgradeLegacyBlocksDeep({ pages: cleaned.pages }).pages;
+  }
+  if (cleaned.data && typeof cleaned.data === 'object') {
+    cleaned.data = upgradeLegacyBlocksDeep(cleaned.data);
+  }
+
+  // 4) Validate against the schema
   const result = TemplateSaveSchema.safeParse(cleaned);
   if (!result.success) {
     const rows = result.error.errors.map((e) => ({
@@ -110,47 +109,38 @@ export function validateTemplateAndFix(input: unknown): ValidateResult {
       value: getAtPath(cleaned, e.path),
     }));
 
-    console.groupCollapsed('❌ [validateTemplateAndFix] schema errors');
-    try { console.table(rows); } catch { console.log(rows); }
+    // Keep a compact console table for debugging (dev only)
+    // eslint-disable-next-line no-console
+    console.groupCollapsed('[validateTemplateAndFix] schema errors');
+    try {
+      // eslint-disable-next-line no-console
+      console.table(rows);
+    } catch {
+      // eslint-disable-next-line no-console
+      console.log(rows);
+    }
+    // eslint-disable-next-line no-console
     console.groupEnd();
 
     return { valid: false, errors: { ...result.error.flatten(), rows } };
   }
 
-  // --- success path ---
+  // --- success ---
   const t: any = result.data;
 
-  // Ensure data.pages exists
+  // Ensure data.pages exists and mirrors root pages
   if (!Array.isArray(t?.data?.pages)) {
     if (Array.isArray(t.pages)) {
       t.data = { ...(t.data ?? {}), pages: t.pages };
-    } else if (typeof t.pages === 'string') {
-      try { t.data = { ...(t.data ?? {}), pages: JSON.parse(t.pages) }; }
-      catch { t.data = { ...(t.data ?? {}), pages: [] }; }
     } else {
       t.data = { ...(t.data ?? {}), pages: [] };
     }
   }
 
-  // ⬇️ Non-blocking warnings (do not fail validation)
   const warnings: Warning[] = [];
-  const hasHeader = !!(t.headerBlock ?? t.data?.headerBlock);
-  const hasFooter = !!(t.footerBlock ?? t.data?.footerBlock);
-
-  // if (!hasHeader) {
-  //   warnings.push({
-  //     field: 'headerBlock',
-  //     message:
-  //       'Global header is missing. Pages will render without a header unless a per-page override is set.',
-  //   });
-  // }
-  // if (!hasFooter) {
-  //   warnings.push({
-  //     field: 'footerBlock',
-  //     message:
-  //       'Global footer is missing. Pages will render without a footer unless a per-page override is set.',
-  //   });
-  // }
+  // Optionally emit warnings about header/footer if you want:
+  // if (!t.headerBlock && !t?.data?.headerBlock) warnings.push({ field: 'headerBlock', message: 'Global header is missing.' });
+  // if (!t.footerBlock && !t?.data?.footerBlock) warnings.push({ field: 'footerBlock', message: 'Global footer is missing.' });
 
   return { valid: true, data: t as ValidatedTemplate, warnings };
 }

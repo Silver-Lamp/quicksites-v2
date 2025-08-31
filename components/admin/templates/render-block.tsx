@@ -65,6 +65,43 @@ function getClientRenderer(type: BlockType): React.ComponentType<any> {
   return fallbackRenderer(type);
 }
 
+/** Normalize a block's content so renderers always receive an object. */
+function getSafeContent(block: any, override: Record<string, any>) {
+  const raw =
+    (block && typeof block === 'object' && (block as any).content) ??
+    (block && typeof block === 'object' && (block as any).props) ??
+    {};
+  const base = raw && typeof raw === 'object' ? raw : {};
+  return { ...base, ...override };
+}
+
+/** Local error boundary to prevent a bad block from blanking the page. */
+class BlockBoundary extends React.Component<
+  React.PropsWithChildren<{ fallback?: React.ReactNode }>,
+  { err?: unknown }
+> {
+  constructor(props: React.PropsWithChildren<{ fallback?: React.ReactNode }>) {
+    super(props);
+    this.state = { err: undefined };
+  }
+  static getDerivedStateFromError(err: unknown) {
+    return { err };
+  }
+  componentDidCatch() { /* noop */ }
+  render() {
+    if (this.state.err) {
+      return (
+        this.props.fallback ?? (
+          <div className="text-red-500 text-sm p-2 bg-red-900/10 rounded">
+            ⚠️ Block crashed while rendering.
+          </div>
+        )
+      );
+    }
+    return this.props.children as React.ReactNode;
+  }
+}
+
 type RenderProps = {
   block: Block;
   template: Template;
@@ -75,6 +112,7 @@ type RenderProps = {
   compact?: boolean;
   previewOnly?: boolean;
   showDebug?: boolean;
+  /** Optional override; if omitted we infer from template JSON */
   colorMode?: 'light' | 'dark';
   onEdit?: (block: Block) => void;
   onDelete?: (block: Block) => void;
@@ -90,19 +128,33 @@ export default function RenderBlock({
   compact = false,
   previewOnly = false,
   showDebug = false,
-  colorMode = 'light',
+  colorMode, // NOTE: no default here; we compute from template if undefined
   onEdit,
   onDelete,
 }: RenderProps) {
   const { enabled: fixEnabled, draftFixes } = useBlockFix();
 
-  if (!block || !block.type) {
+  if (!block || !(block as any).type) {
     return (
       <div className="text-red-500 text-sm p-2 bg-red-900/10 rounded">
         ⚠️ Invalid block: missing or undefined type
       </div>
     );
   }
+
+  // ── Infer color mode from template when not explicitly provided
+  const computedMode: 'light' | 'dark' = React.useMemo(() => {
+    const t: any = template || {};
+    const tmpl =
+      t.color_mode ??
+      t.colorMode ??
+      t?.data?.theme?.mode ??
+      t?.data?.meta?.mode ??
+      t?.meta?.mode ??
+      null;
+    const chosen = (colorMode ?? tmpl ?? 'light') as string;
+    return String(chosen).toLowerCase() === 'dark' ? 'dark' : 'light';
+  }, [template, colorMode]);
 
   // ── Show chrome only when embedded inside the editor iframe
   const [isEmbedded, setIsEmbedded] = React.useState(false);
@@ -134,7 +186,14 @@ export default function RenderBlock({
   const blockId = (block as any)._id || (block as any).id || generatedIdRef.current;
 
   const override = fixEnabled ? draftFixes[(block as any)._id || (block as any).id || ''] : {};
-  const safeContent = { ...block.content, ...override };
+  const safeContent = getSafeContent(block, override);
+
+  // Ensure child renderers that read `block.content` get a value
+  const blockForChild = React.useMemo(
+    () => ({ ...(block as any), content: safeContent }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [safeContent, (block as any).type, (block as any)._id, (block as any).id]
+  );
 
   // hydration + ref ready
   const [hydrated, setHydrated] = React.useState(false);
@@ -172,7 +231,7 @@ export default function RenderBlock({
   }, [template]);
 
   const commonProps = {
-    block,
+    block: blockForChild,
     content: safeContent,
     template,
     identity,
@@ -181,19 +240,21 @@ export default function RenderBlock({
     compact,
     previewOnly,
     showDebug,
-    colorMode,
+    colorMode: computedMode, // ⬅️ pass down the computed mode
   };
 
   // wrapper — hover border only when embedded
   const wrapperProps = {
     id: `block-${blockId}`,
     'data-block-id': blockId,
-    'data-block-type': block.type,
+    'data-block-type': (block as any).type,
     'data-block-path': blockPath ?? undefined,
     className: [
+      // Put a local 'dark' class so any `dark:` utilities inside descendants activate
+      computedMode === 'dark' ? 'dark' : '',
       'qs-block',
       'relative group w-full rounded-none transition-colors',
-      colorMode === 'light' ? 'bg-white text-black' : 'bg-neutral-950 text-white',
+      computedMode === 'light' ? 'bg-white text-black' : 'bg-neutral-950 text-white',
       isEmbedded
         ? 'border border-transparent group-hover:border-neutral-200 dark:group-hover:border-neutral-700'
         : '',
@@ -203,12 +264,12 @@ export default function RenderBlock({
 
   const debugOverlay = showDebug ? (
     <DebugOverlay position="bottom-right">
-      {`[Block: ${block.type}]
+      {`[Block: ${(block as any).type}]
 ID: ${blockId || 'n/a'}`}
     </DebugOverlay>
   ) : null;
 
-  const Component = getClientRenderer(block.type);
+  const Component = getClientRenderer((block as any).type);
   const showControlsBar = isEmbedded && mode === 'editor' && !previewOnly && !disableInteraction;
   const runtimeProps = hydrated && refReady ? { scrollRef: blockRef } : {};
 
@@ -229,7 +290,7 @@ ID: ${blockId || 'n/a'}`}
             'pointer-events-auto',
             'absolute inset-x-0 -top-px',
             'opacity-0 group-hover:opacity-100 transition-opacity',
-            colorMode === 'light' ? 'bg-white/70' : 'bg-neutral-900/60',
+            computedMode === 'light' ? 'bg-white/70' : 'bg-neutral-900/60',
             'flex items-center justify-between px-2 py-1 rounded-t-none',
           ].join(' ')}
         >
@@ -243,28 +304,24 @@ ID: ${blockId || 'n/a'}`}
             >
               <GripVertical className="w-4 h-4 opacity-80" />
             </span>
-            <span className="text-xs font-medium truncate opacity-90">{block.type}</span>
+            <span className="text-xs font-medium truncate opacity-90">{(block as any).type}</span>
           </div>
 
           <div className="flex items-center gap-1">
-            {/* EDIT (admin bar) */}
             <button
               data-no-edit
               type="button"
               className={[
                 'inline-flex items-center justify-center h-7 w-7 rounded-md transition',
-                // Light mode: opaque pill + proper border/shadow
                 'bg-white/95 text-neutral-900 border border-neutral-300 shadow-sm',
                 'hover:bg-white',
-                // Dark mode
                 'dark:bg-white/10 dark:text-white dark:border-white/15 dark:shadow-none',
-                // Focus ring
                 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-500/60',
               ].join(' ')}
               onClick={(e) => {
                 e.stopPropagation();
-                onEdit?.(block);
-                if (!onEdit) window.dispatchEvent(new CustomEvent('qs:block:edit', { detail: { block } }));
+                onEdit?.(blockForChild as any);
+                if (!onEdit) window.dispatchEvent(new CustomEvent('qs:block:edit', { detail: { block: blockForChild } }));
               }}
               aria-label="Edit block"
               title="Edit"
@@ -272,106 +329,50 @@ ID: ${blockId || 'n/a'}`}
               <Pencil className="w-4 h-4" strokeWidth={2.25} />
             </button>
 
-            {/* DELETE (admin bar) */}
             <button
               data-no-edit
               type="button"
-              className={[
-                'inline-flex items-center justify-center h-7 w-7 rounded-md transition',
-                // 'bg-gray-500/95 text-neutral-900 border border-neutral-300 shadow-sm',
-                // 'hover:bg-white',
-                // 'dark:bg-white/10 dark:text-white dark:border-white/15 dark:shadow-none',
-                // 'border: 1px solid rgba(168,85,247,.35);',
-                // 'background: rgba(0,0,0,.55);',
-                // 'color: #fff; font-weight: 800; font-size: 18px; line-height: 1;',
-                // 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-500/60',
-              ].join(' ')}
+              className="inline-flex items-center justify-center h-7 w-7 rounded-md transition"
               onClick={(e) => {
                 e.stopPropagation();
-                onDelete?.(block);
-                if (!onDelete) window.dispatchEvent(new CustomEvent('qs:block:delete', { detail: { block } }));
+                onDelete?.(blockForChild as any);
+                if (!onDelete) window.dispatchEvent(new CustomEvent('qs:block:delete', { detail: { block: blockForChild } }));
               }}
               aria-label="Delete block"
-              title="Deletez"
+              title="Delete"
             >
               <Trash2 className="w-4 h-4" strokeWidth={2.25} />
-              <span className="text-xs font-medium truncate opacity-90">Deletez</span>
+              <span className="sr-only">Delete</span>
             </button>
           </div>
-        </div>
-      )}
-
-      {/* Icon-only preview chrome (top-right) — only inside editor */}
-      {isEmbedded && (
-        <div className="pointer-events-none absolute right-2 top-2 z-40 hidden group-hover:flex items-center gap-1">
-          {/* EDIT (icon chrome) */}
-          <button
-            type="button"
-            data-action="edit-block"
-            className={[
-              'pointer-events-auto inline-flex items-center justify-center h-9 w-9 rounded-full transition',
-              'backdrop-blur border shadow-sm',
-              // 'bg-white/95 text-neutral-900 border-neutral-300 ring-1 ring-black/5 hover:bg-white',
-              // 'dark:bg-white/10 dark:text-white dark:border-white/15 dark:ring-0 dark:shadow-none',
-              // 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-500/60',
-              'border: 1px solid rgba(168,85,247,.35);',
-              'background: rgba(0,0,0,.55);',
-              'color: #fff; font-weight: 800; font-size: 18px; line-height: 1;',
-            ].join(' ')}
-            aria-label="Edit block"
-            title="Edit"
-            onClick={(e) => {
-              e.stopPropagation();
-              onEdit?.(block);
-              if (!onEdit) window.dispatchEvent(new CustomEvent('qs:block:edit', { detail: { block } }));
-            }}
-          >
-            <Pencil className="w-4 h-4" strokeWidth={2.25} />
-          </button>
-
-          {/* DELETE (icon chrome) */}
-          <button
-            type="button"
-            data-action="delete-block"
-            className={[
-              'pointer-events-auto inline-flex items-center justify-center h-9 w-9 rounded-full transition',
-              'backdrop-blur border shadow-sm',
-              // 'bg-white/95 text-neutral-900 border-neutral-300 ring-1 ring-black/5 hover:bg-white',
-              // 'dark:bg-white/10 dark:text-white dark:border-white/15 dark:ring-0 dark:shadow-none',
-              // 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-500/60',
-              'border: 1px solid rgba(168,85,247,.35);',
-              'background: rgba(0,0,0,.55);',
-              'color: #fff; font-weight: 800; font-size: 18px; line-height: 1;',
-            ].join(' ')}
-            aria-label="Delete block"
-            title="Delete"
-            onClick={(e) => {
-              e.stopPropagation();
-              onDelete?.(block);
-            }}
-          >
-            <Trash2 className="w-4 h-4" strokeWidth={2.25} />
-          </button>
         </div>
       )}
 
       {debugOverlay}
 
       <div className="p-0" suppressHydrationWarning>
-        <Suspense fallback={<span />}>
-          {mounted ? (
-            <Component
-              {...(commonProps as any)}
-              {...(refReady ? (runtimeProps as any) : {})}
-              {...(block.type === 'grid' && handleNestedBlockUpdate
-                ? { handleNestedBlockUpdate, parentBlock: block }
-                : {})}
-              {...(block.type === 'services'
-                ? { services: identity?.services ?? template?.services ?? [] }
-                : {})}
-            />
-          ) : null}
-        </Suspense>
+        <BlockBoundary
+          fallback={
+            <div className="text-red-500 text-sm p-2 bg-red-900/10 rounded">
+              ⚠️ Block failed to render.
+            </div>
+          }
+        >
+          <Suspense fallback={<span />}>
+            {mounted ? (
+              <Component
+                {...(commonProps as any)}
+                {...(refReady ? ({ scrollRef: blockRef } as any) : {})}
+                {...((block as any).type === 'grid' && handleNestedBlockUpdate
+                  ? { handleNestedBlockUpdate, parentBlock: blockForChild }
+                  : {})}
+                {...((block as any).type === 'services'
+                  ? { services: identity?.services ?? (template as any)?.services ?? [] }
+                  : {})}
+              />
+            ) : null}
+          </Suspense>
+        </BlockBoundary>
       </div>
     </div>
   );

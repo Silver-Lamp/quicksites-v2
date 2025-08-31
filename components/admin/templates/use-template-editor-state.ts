@@ -1,4 +1,3 @@
-// components/admin/templates/use-template-editor-state.ts
 'use client';
 
 import { useState, useEffect, useRef, useMemo } from 'react';
@@ -92,6 +91,21 @@ function makeOneShotSave(
   };
 }
 
+/** Safe fallback to store text; returns 'local' | 'session' | null. */
+function tryStoreDraft(key: string, text: string): 'local' | 'session' | null {
+  try {
+    localStorage.setItem(key, text);
+    return 'local';
+  } catch {
+    try {
+      sessionStorage.setItem(key, text);
+      return 'session';
+    } catch {
+      return null;
+    }
+  }
+}
+
 // ------------------------------
 // hook
 // ------------------------------
@@ -169,7 +183,10 @@ export function useTemplateEditorState({
     template.template_name || '',
     template.id,
   );
-  const autosave = useAutosaveTemplate(template, rawJson);
+
+  // 🔄 Autosave (sanitized & debounced inside the hook)
+  //   NOTE: do NOT pass rawJson here — the hook serializes safely.
+  const { status: autosave, clear: clearAutosave } = useAutosaveTemplate(template, 800);
 
   // 4) Keep JSON panel prettified on first creation, without stripping pages
   const hasPrettified = useRef(false);
@@ -247,7 +264,14 @@ export function useTemplateEditorState({
     saveTemplate(prepared as any)
       .then((updated: any) => {
         guardedSetTemplate(updated);
-        localStorage.setItem(`draft-${updated.id}`, prettyJson);
+
+        // Safe local copy of the *pretty* JSON (may be large)
+        const key = `draft-${updated.id}`;
+        const where = tryStoreDraft(key, prettyJson);
+        if (!where) {
+          console.warn('[autosave] draft too large for storage; skipped caching');
+        }
+
         onSaveDraft?.(prettyJson);
         // toast.success('Draft saved');
       })
@@ -348,7 +372,8 @@ export function useTemplateEditorState({
     rawJson,
     setRawJson,
     livePreviewData,
-    autosave,
+    // expose autosave status & clearer
+    autosave,          // 'idle' | 'saving' | 'saved' | 'skipped' | 'error'
     isCreating,
     isRenaming,
     setIsRenaming,
@@ -360,5 +385,7 @@ export function useTemplateEditorState({
     nameExists,
     blockErrors,
     setBlockErrors,
+    // optional helper if you want a “discard local draft” button
+    clearAutosave,
   };
 }

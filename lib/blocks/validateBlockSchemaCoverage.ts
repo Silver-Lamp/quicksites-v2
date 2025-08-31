@@ -1,6 +1,6 @@
 // lib/blocks/validateBlockSchemaCoverage.ts
 import { blockContentSchemaMap } from '@/admin/lib/zod/blockSchema';
-import { BLOCK_REGISTRY } from '@/lib/blockRegistry';
+import { STATIC_RENDERERS, DYNAMIC_RENDERERS } from '@/lib/renderBlockRegistry';
 
 export function validateBlockSchemaCoverage() {
   // If you have blocks that intentionally don't need a renderer, list them here.
@@ -11,23 +11,33 @@ export function validateBlockSchemaCoverage() {
     .filter((k) => !IGNORE.has(k))
     .sort();
 
-  const registryKeys = Object.keys(BLOCK_REGISTRY)
+  // Compare against the union of static + dynamic renderer keys
+  const rendererKeys = Array.from(
+    new Set([
+      ...Object.keys(STATIC_RENDERERS),
+      ...Object.keys(DYNAMIC_RENDERERS),
+    ])
+  )
     .filter((k) => !IGNORE.has(k))
     .sort();
 
-  const missingInRegistry = schemaKeys.filter((k) => !registryKeys.includes(k));
-  const missingInSchemas = registryKeys.filter((k) => !schemaKeys.includes(k));
+  const missingRenderers = schemaKeys.filter((k) => !rendererKeys.includes(k));
+  const orphanRenderers = rendererKeys.filter((k) => !schemaKeys.includes(k));
 
-  if (missingInRegistry.length || missingInSchemas.length) {
+  if (missingRenderers.length || orphanRenderers.length) {
+    // eslint-disable-next-line no-console
     console.warn('⚠️ Block schema coverage mismatch:\n');
 
-    if (missingInRegistry.length) {
-      console.warn('⛔️ Missing in BLOCK_REGISTRY:', missingInRegistry);
+    if (missingRenderers.length) {
+      // eslint-disable-next-line no-console
+      console.warn('⛔️ Schema has no renderer for:', missingRenderers);
     }
-    if (missingInSchemas.length) {
-      console.warn('⛔️ Missing in blockContentSchemaMap:', missingInSchemas);
+    if (orphanRenderers.length) {
+      // eslint-disable-next-line no-console
+      console.warn('⛔️ Renderer exists but no schema for:', orphanRenderers);
     }
   } else {
-    console.log('✅ BLOCK_REGISTRY and blockContentSchemaMap are in sync!');
+    // eslint-disable-next-line no-console
+    console.log('✅ Schemas and renderers are in sync!');
   }
 }

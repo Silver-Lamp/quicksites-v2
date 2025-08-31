@@ -11,35 +11,107 @@ import { RoleBadge } from './role-badge';
 import { useSafeAuth } from '@/hooks/useSafeAuth';
 import { supabase } from '@/lib/supabase/client';
 
+/* ---------- cache helpers ---------- */
+const AUTH_CACHE_KEY = 'qs:auth:header:v1';
+const AUTH_TTL_MS = 5 * 60_000;
+
+type CachedAuth = {
+  isLoggedIn: boolean;
+  email?: string | null;
+  role?: string | null;
+  avatar_url?: string | null;
+  t: number;
+};
+
+const safeLS = {
+  get<T = any>(k: string): T | null {
+    try { const raw = localStorage.getItem(k); return raw ? JSON.parse(raw) as T : null; }
+    catch { return null; }
+  },
+  set(k: string, v: any) { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} },
+  remove(k: string) { try { localStorage.removeItem(k); } catch {} },
+};
+
 export function AvatarMenu() {
-  const { user, role, isLoggedIn } = useSafeAuth();
+  const { user, role, isLoggedIn } = useSafeAuth(); // may resolve async
   const router = useRouter();
+
+  // UI state
   const [open, setOpen] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
-  const avatarUrl =
-    user?.avatar_url ||
-    `https://gravatar.com/avatar/${md5(user?.email?.trim().toLowerCase() ?? '')}?d=identicon`;
+  // cache-first display state (prevents “Log In → avatar” flip)
+  const [display, setDisplay] = useState<{
+    isLoggedIn: boolean;
+    email?: string | null;
+    role?: string | null;
+    avatar_url?: string | null;
+    source: 'cache' | 'hook';
+  }>(() => {
+    if (typeof window === 'undefined') {
+      return { isLoggedIn: false, email: undefined, role: undefined, avatar_url: undefined, source: 'cache' };
+    }
+    const cached = safeLS.get<CachedAuth>(AUTH_CACHE_KEY);
+    if (cached && Date.now() - cached.t < AUTH_TTL_MS) return { ...cached, source: 'cache' };
+    return { isLoggedIn: false, email: undefined, role: undefined, avatar_url: undefined, source: 'cache' };
+  });
 
-  const isAdmin = ['admin', 'owner', 'reseller'].includes(role);
-
+  // Sync display with hook (and write cache)
   useEffect(() => {
-    function handleClickOutside(e: MouseEvent) {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
-        setOpen(false);
+    const next = {
+      isLoggedIn: !!isLoggedIn && !!user,
+      email: user?.email ?? null,
+      role: (role as string | undefined) ?? null,
+      avatar_url: (user as any)?.avatar_url ?? null,
+      source: 'hook' as const,
+    };
+    if (
+      display.isLoggedIn !== next.isLoggedIn ||
+      display.email !== next.email ||
+      display.role !== next.role ||
+      display.avatar_url !== next.avatar_url ||
+      display.source !== 'hook'
+    ) {
+      setDisplay(next);
+      safeLS.set(AUTH_CACHE_KEY, { ...next, t: Date.now() } as CachedAuth);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isLoggedIn, user?.email, (user as any)?.avatar_url, role]);
+
+  // Cross-tab / instant auth updates
+  useEffect(() => {
+    const sub = supabase.auth.onAuthStateChange((_evt, session) => {
+      if (!session) {
+        safeLS.remove(AUTH_CACHE_KEY);
+        setDisplay({ isLoggedIn: false, email: null, role: null, avatar_url: null, source: 'hook' });
+      } else {
+        const email = session.user?.email ?? null;
+        setDisplay(prev => {
+          const next = { ...prev, isLoggedIn: true, email, source: 'hook' as const };
+          safeLS.set(AUTH_CACHE_KEY, { ...next, t: Date.now() } as CachedAuth);
+          return next;
+        });
       }
+    });
+    return () => sub.data.subscription.unsubscribe();
+  }, []);
+
+  // Click outside to close (HOOK ALWAYS BEFORE ANY RETURNS)
+  useEffect(() => {
+    if (!open || !display.isLoggedIn) return;
+    function handleClickOutside(e: MouseEvent) {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) setOpen(false);
     }
-    if (open) {
-      document.addEventListener('mousedown', handleClickOutside);
-    }
+    document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [open]);
+  }, [open, display.isLoggedIn]);
 
   const handleLogout = async () => {
     setLoggingOut(true);
     try {
       await supabase.auth.signOut();
+      safeLS.remove(AUTH_CACHE_KEY); // clear cached auth
       router.push('/login?logout=1');
       setTimeout(() => window.location.reload(), 300);
     } finally {
@@ -47,12 +119,22 @@ export function AvatarMenu() {
     }
   };
 
-  if (!isLoggedIn || !user) return null;
+  // Now safe to early-return (no hooks after this line)
+  if (!display.isLoggedIn) return null;
+
+  const email = display.email ?? user?.email ?? '';
+  const roleStr = (display.role ?? role) || 'user';
+  const isAdmin = ['admin', 'owner', 'reseller'].includes(roleStr);
+
+  const avatarUrl =
+    display.avatar_url ||
+    (user as any)?.avatar_url ||
+    `https://gravatar.com/avatar/${md5(email.trim().toLowerCase())}?d=identicon`;
 
   return (
     <div className="relative" ref={menuRef}>
       <button
-        onClick={() => setOpen(!open)}
+        onClick={() => setOpen(v => !v)}
         className="focus:outline-none"
         aria-label="Avatar menu"
       >
@@ -72,10 +154,10 @@ export function AvatarMenu() {
           >
             <div className="flex items-center gap-2 text-gray-300">
               <UserCircle size={14} />
-              <span className="truncate">{user.email}</span>
+              <span className="truncate">{email}</span>
             </div>
 
-            <RoleBadge role={role} />
+            <RoleBadge role={roleStr} />
 
             <div className="border-t border-zinc-700 pt-2 space-y-2">
               <button
@@ -91,18 +173,16 @@ export function AvatarMenu() {
                   onClick={() => router.push('/admin/settings')}
                   className="flex items-center gap-2 hover:underline text-left text-gray-300 w-full"
                 >
-                  <Settings size={14} />
-                  Admin Settings
-                </button>
+                <Settings size={14} />
+                Admin Settings
+              </button>
               )}
             </div>
 
             <button
               onClick={handleLogout}
               disabled={loggingOut}
-              className={`flex items-center gap-2 text-red-400 hover:underline text-left w-full ${
-                loggingOut ? 'opacity-50 cursor-not-allowed' : ''
-              }`}
+              className={`flex items-center gap-2 text-red-400 hover:underline text-left w-full ${loggingOut ? 'opacity-50 cursor-not-allowed' : ''}`}
             >
               {loggingOut ? (
                 <>

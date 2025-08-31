@@ -5,20 +5,16 @@ import type { Database } from '@/types/supabase';
 
 type TemplateRow = Database['public']['Tables']['templates']['Row'];
 
-export async function fetchTemplateBySlug(slug: string): Promise<TemplateRow | null> {
-  // Uses server-side Supabase client that’s already wired to Next cookies
-  const supabase = await getServerSupabaseClient();
+const SELECT =
+  'id,slug,template_name,updated_at,created_at,is_site,is_version,archived,industry,color_mode,data,header_block,footer_block,base_slug';
 
-  const { data, error } = await supabase
+export async function fetchTemplateBySlug(slug: string): Promise<TemplateRow | any> {
+  const supabase = await getServerSupabaseClient() as any;
+  const { data, error } = await (supabase as any)
     .from('templates')
-    .select('*')
+    .select(SELECT)
     .eq('slug', slug)
     .single();
-
-  if (error || !data) {
-    console.error('[fetchTemplateBySlug] Supabase error:', error);
-    return null;
-  }
-
-  return data as TemplateRow;
+  if (error || !data) return null as any;
+  return data as TemplateRow | any;
 }

@@ -1,4 +1,3 @@
-// components/admin/templates/render-blocks/hero.tsx
 'use client';
 
 import type { Block } from '@/types/blocks';
@@ -21,6 +20,43 @@ type Props = {
   template?: Template;
 };
 
+/** Normalize legacy hero props -> modern content shape */
+function normalizeHeroContent(raw: any | null | undefined) {
+  if (!raw || typeof raw !== 'object') return null;
+  // Already in new shape?
+  const looksNew =
+    'headline' in raw ||
+    'subheadline' in raw ||
+    'cta_text' in raw ||
+    'cta_link' in raw ||
+    'image_url' in raw;
+  if (looksNew) return raw;
+
+  // Legacy -> New mapping
+  const mapped: any = {
+    headline: raw.heading ?? '',
+    subheadline: raw.subheading ?? '',
+    cta_text: raw.ctaLabel ?? '',
+    cta_link: raw.ctaHref ?? '',
+    image_url: raw.heroImage ?? raw.image_url ?? '',
+    layout_mode: raw.layout_mode ?? 'inline',
+    mobile_layout_mode: raw.mobile_layout_mode ?? 'inline',
+    mobile_crop_behavior: raw.mobile_crop_behavior ?? 'cover',
+    blur_amount: raw.blur_amount ?? 0,
+    parallax_enabled: raw.parallax_enabled ?? false,
+    image_position: raw.image_position ?? 'center',
+    image_x: raw.image_x,
+    image_y: raw.image_y,
+    // optional legacy extras:
+    cta_action: raw.cta_action,
+    cta_phone: raw.cta_phone,
+    contact_anchor_id: raw.contact_anchor_id,
+    cta_show_phone_below: raw.cta_show_phone_below,
+  };
+
+  return mapped;
+}
+
 function formatPhoneDisplay(digits: string) {
   const d = digits.replace(/\D/g, '');
   if (d.length !== 10) return digits;
@@ -39,6 +75,10 @@ export default function HeroRender({
   const localRef = useRef<HTMLDivElement | null>(null);
   const targetRef = (scrollRef as React.RefObject<HTMLElement | null>) ?? (localRef as any);
 
+  // --- Accept new OR legacy data sources ---
+  const rawFromBlock = (block as any)?.content ?? (block as any)?.props;
+  const safeContent = normalizeHeroContent(content ?? rawFromBlock);
+
   const [detectedMode, setDetectedMode] = useState<'light' | 'dark'>('light');
   useEffect(() => {
     if (colorMode) return;
@@ -49,8 +89,8 @@ export default function HeroRender({
   const mode = colorMode ?? detectedMode;
   const isDark = mode === 'dark';
 
-  if (!block || !content) {
-    console.warn('[⚠️ HeroRender] Invalid block or missing content.');
+  if (!block || !safeContent) {
+    if (showDebug) console.warn('[⚠️ HeroRender] Missing block content; got:', { block, content });
     return (
       <div className="text-red-500 text-sm p-2 bg-red-50 dark:bg-red-900/20 rounded">
         Invalid hero block
@@ -75,7 +115,7 @@ export default function HeroRender({
     image_position,
     image_x,
     image_y,
-  } = content as any;
+  } = safeContent as any;
 
   // ---- CTA resolution (no conditional hooks) ----
   const contactAnchor = (contact_anchor_id || 'contact').toString();
@@ -158,7 +198,7 @@ export default function HeroRender({
   if (activeLayoutMode === 'natural_height' && hasImage) {
     return (
       <HeroNaturalHeight
-        block={{ ...block, content }}
+        block={{ ...block, content: safeContent as any }}
         cropBehavior={mobile_crop_behavior}
       />
     );
@@ -260,9 +300,7 @@ CTA: ${action}${action === 'call_phone' ? ` (${resolvedPhoneDigits || 'no-phone'
                 aria-label={
                   action === 'call_phone'
                     ? 'Call us now'
-                    : action === 'jump_to_contact'
-                    ? 'Jump to contact form'
-                    : 'Go to contact page'
+                    : 'Jump to contact form'
                 }
               >
                 {cta_text}

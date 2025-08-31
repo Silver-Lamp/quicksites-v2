@@ -8,6 +8,29 @@ import { AdminNavSections } from '@/components/admin/AppHeader/AdminNavSections'
 
 const STORAGE_KEY = 'admin-sidebar-collapsed';
 
+/* ---------- resilient storage helpers ---------- */
+const safeStorage = {
+  get(key: string): string | null {
+    try {
+      if (typeof window === 'undefined') return null;
+      return window.localStorage.getItem(key);
+    } catch (e) {
+      // Firefox private mode or blocked storage
+      console.warn('[sidebar] localStorage.getItem failed:', e);
+      return null;
+    }
+  },
+  set(key: string, value: string): void {
+    try {
+      if (typeof window === 'undefined') return;
+      window.localStorage.setItem(key, value);
+    } catch (e) {
+      // QuotaExceededError or disabled storage
+      console.warn('[sidebar] localStorage.setItem failed:', e);
+    }
+  },
+};
+
 export default function ResponsiveAdminLayout({
   onToggle,
   collapsed,
@@ -21,23 +44,33 @@ export default function ResponsiveAdminLayout({
 
   // Init from storage + viewport
   useEffect(() => {
+    if (typeof window === 'undefined') return;
+
     const update = () => setIsMobile(window.innerWidth < 768);
     update();
     window.addEventListener('resize', update);
 
-    const stored = window.localStorage.getItem(STORAGE_KEY);
+    const stored = safeStorage.get(STORAGE_KEY);
     const initial = stored === 'true' || window.innerWidth < 768;
     setIsCollapsed(initial);
 
     return () => window.removeEventListener('resize', update);
   }, []);
 
-  // Persist + notify
+  // Persist + notify (debounced)
   useEffect(() => {
-    window.localStorage.setItem(STORAGE_KEY, String(isCollapsed));
-    onToggle?.(isCollapsed);
-    // Optional: broadcast that the state changed
-    window.dispatchEvent(new CustomEvent('qs:sidebar:changed', { detail: isCollapsed }));
+    // debounce to avoid rapid writes
+    const t = setTimeout(() => {
+      safeStorage.set(STORAGE_KEY, String(isCollapsed));
+      onToggle?.(isCollapsed);
+      try {
+        window.dispatchEvent(
+          new CustomEvent('qs:sidebar:changed', { detail: isCollapsed })
+        );
+      } catch {} // no-op if CustomEvent blocked
+    }, 50);
+
+    return () => clearTimeout(t);
   }, [isCollapsed, onToggle]);
 
   // Programmatic control from toolbar/fullscreen
@@ -57,7 +90,7 @@ export default function ResponsiveAdminLayout({
       if (e.metaKey || e.ctrlKey || e.altKey) return;
       const t = e.target as HTMLElement | null;
       const tag = t?.tagName?.toLowerCase();
-      if (tag === 'input' || tag === 'textarea' || t?.isContentEditable) return;
+      if (tag === 'input' || tag === 'textarea' || (t as any)?.isContentEditable) return;
       if (e.key?.toLowerCase() === 'e') {
         e.preventDefault();
         setIsCollapsed((v) => !v);
@@ -76,11 +109,11 @@ export default function ResponsiveAdminLayout({
       if (deltaX < -50 && !isCollapsed) setIsCollapsed(true);
       touchStartX.current = null;
     };
-    window.addEventListener('touchstart', handleTouchStart);
-    window.addEventListener('touchend', handleTouchEnd);
+    window.addEventListener('touchstart', handleTouchStart, { passive: true });
+    window.addEventListener('touchend', handleTouchEnd, { passive: true });
     return () => {
-      window.removeEventListener('touchstart', handleTouchStart);
-      window.removeEventListener('touchend', handleTouchEnd);
+      window.removeEventListener('touchstart', handleTouchStart as any);
+      window.removeEventListener('touchend', handleTouchEnd as any);
     };
   }, [isCollapsed]);
 

@@ -29,9 +29,38 @@ import {
   Bell,
   User,
   Printer,
-  DollarSignIcon,
 } from 'lucide-react';
 import clsx from 'clsx';
+
+/* ---------------- Safe localStorage ---------------- */
+const safeLS = {
+  get<T = any>(k: string): T | null {
+    try {
+      const raw = localStorage.getItem(k);
+      return raw ? (JSON.parse(raw) as T) : null;
+    } catch {
+      return null;
+    }
+  },
+  set(k: string, v: any) {
+    try {
+      localStorage.setItem(k, JSON.stringify(v));
+    } catch (e) {
+      // QuotaExceededError or blocked storage
+      console.warn('[nav] localStorage.set failed:', e);
+    }
+  },
+  remove(k: string) {
+    try {
+      localStorage.removeItem(k);
+    } catch {}
+  },
+};
+
+const OPEN_MENUS_KEY = 'qs:nav:open_menus:v1';
+const INBOX_COUNT_KEY = 'qs:nav:inbox_new_count:v1';
+const ADMIN_TTL_MS = 5 * 60_000; // 5 min
+const INBOX_TTL_MS = 60_000;     // 60 sec
 
 /* ---------------- Types ---------------- */
 type NavItem =
@@ -83,16 +112,21 @@ const NAV_CORE: NavItem[] = [
   },
 ];
 
-/** Admin-only extras live here (everything else you had before) */
+/** Admin-only extras live here */
 const NAV_ADMIN: NavItem[] = [
-  { type: 'item', label: 'Google Search Console', icon: <Mail size={18} />, adminOnly: true, children: [
+  {
+    type: 'item',
+    label: 'Google Search Console',
+    icon: <Mail size={18} />,
+    adminOnly: true,
+    children: [
       { label: 'Stats', href: '/admin/templates/gsc-bulk-stats' },
       { label: 'Sites', href: '/admin/gsc/sites' },
       { label: '(re)Connect', href: '/api/gsc/auth-url' },
-    ] },
-// ------------------------------------------------------------
-{ type: 'section', label: 'Communications', adminOnly: true },
-// ------------------------------------------------------------  
+    ],
+  },
+
+  { type: 'section', label: 'Communications', adminOnly: true },
   { type: 'item', label: 'Sites Contact Form Email Logs', href: '/admin/email-logs', icon: <Mail size={18} />, adminOnly: true },
   { type: 'item', label: 'Twilio Call Logs', href: '/admin/call-logs', icon: <Phone size={18} />, adminOnly: true },
   {
@@ -108,58 +142,47 @@ const NAV_ADMIN: NavItem[] = [
       { label: 'Archived', href: '/admin/inbox?status=archived' },
     ],
   },
-// ------------------------------------------------------------
 
-
-
-
-// ------------------------------------------------------------
-{ type: 'section', label: 'Marketing', adminOnly: true },
-// ------------------------------------------------------------
-{ type: 'item', label: 'Map of Opportunities', href: '/admin/the-grid', icon: <MapPinned size={18} />, adminOnly: true },
+  { type: 'section', label: 'Marketing', adminOnly: true },
+  { type: 'item', label: 'Map of Opportunities', href: '/admin/the-grid', icon: <MapPinned size={18} />, adminOnly: true },
   { type: 'item', label: 'Leads', href: '/admin/leads', icon: <PhoneForwarded size={18} />, adminOnly: true },
-  { type: 'item', label: 'Campaigns', icon: <Rocket size={18} />, adminOnly: true, children: [
+  {
+    type: 'item',
+    label: 'Campaigns',
+    icon: <Rocket size={18} />,
+    adminOnly: true,
+    children: [
       { label: 'View All Campaigns', href: '/admin/campaigns' },
       { label: 'Start New Campaign', href: '/admin/start-campaign' },
-    ] },
+    ],
+  },
 
-// ------------------------------------------------------------
-{ type: 'section', label: 'Workflow', adminOnly: true },
-// ------------------------------------------------------------
-{ type: 'item', label: 'Users', href: '/admin/users', icon: <Users size={18} />, adminOnly: true },
+  { type: 'section', label: 'Workflow', adminOnly: true },
+  { type: 'item', label: 'Users', href: '/admin/users', icon: <Users size={18} />, adminOnly: true },
   { type: 'item', label: 'Feature Video Manager', href: '/admin/features/manage', icon: <Video size={18} />, adminOnly: true },
   { type: 'item', label: 'Features', href: '/features', icon: <PlayCircle size={18} />, adminOnly: true },
   { type: 'item', label: 'Platform Pricing', href: '/pricing', icon: <DollarSign size={18} />, adminOnly: true },
   { type: 'item', label: 'Book a demo', href: '/book', icon: <Book size={18} />, adminOnly: true },
   { type: 'item', label: 'Contact', href: '/contact', icon: <Mail size={18} />, adminOnly: true },
 
-  // ------------------------------------------------------------
-  { type: 'section', label: 'eCommerce Platform', adminOnly: false},
-  // ------------------------------------------------------------
-  { type: 'item', label: 'Rep My Payouts', href: '/rep/payouts', icon: <DollarSignIcon size={18}/>, adminOnly: false },
-  { type: 'item', label: 'Rep My Taxes', href: '/rep/tax', icon: <DollarSignIcon size={18}/>, adminOnly: false },
+  { type: 'section', label: 'eCommerce Platform', adminOnly: false },
+  { type: 'item', label: 'Rep My Payouts', href: '/rep/payouts', icon: <DollarSign size={18} />, adminOnly: false },
+  { type: 'item', label: 'Rep My Taxes', href: '/rep/tax', icon: <DollarSign size={18} />, adminOnly: false },
   { type: 'item', label: 'Merchant Payments', href: '/merchant/payments', icon: <FileStack size={18} />, adminOnly: false },
   { type: 'item', label: 'Merchant Orders', href: '/merchant/orders', icon: <FileStack size={18} />, adminOnly: false },
   { type: 'item', label: 'Merchant Catalog', href: '/merchant/catalog', icon: <FileStack size={18} />, adminOnly: false },
   { type: 'item', label: 'Rep Referral Dashboard', href: '/rep/referrals', icon: <User size={18} />, adminOnly: false },
   { type: 'item', label: 'Checkout Success', href: '/checkout/success', icon: <FileStack size={18} />, adminOnly: false },
   { type: 'item', label: 'Checkout Cancel', href: '/checkout/cancel', icon: <FileStack size={18} />, adminOnly: false },
-  // { type: 'item', label: 'Checkout Failure', href: '/checkout/failure', icon: <FileStack size={18} />, adminOnly: false },
-  // { type: 'item', label: 'Checkout Pending', href: '/checkout/pending', icon: <FileStack size={18} />, adminOnly: false },
-  // { type: 'item', label: 'Checkout Processing', href: '/checkout/processing', icon: <FileStack size={18} />, adminOnly: false },
-  // { type: 'item', label: 'Checkout Complete', href: '/checkout/complete', icon: <FileStack size={18} />, adminOnly: false },
-  // { type: 'item', label: 'Checkout Refund', href: '/checkout/refund', icon: <FileStack size={18} />, adminOnly: false },
-  // { type: 'item', label: 'Checkout Refunded', href: '/checkout/refunded', icon: <FileStack size={18} />, adminOnly: false },
 
-
-
-  // .admin below is for admin-only links
   { type: 'item', label: 'Admin Tools', href: '/admin/tools', icon: <Wrench size={18} />, adminOnly: true },
-  { type: 'item', label: 'Admin Taxes: New Payout', href: '/admin/tax/payouts/new', icon: <DollarSignIcon size={18}/>, adminOnly: true },
-  { type: 'item', label: 'Admin Taxes', href: '/admin/tax', icon: <DollarSignIcon size={18}/>, adminOnly: true },
-  { type: 'item', label: 'View Payout Runs', href: '/admin/referrals/payout-runs', icon: <DollarSignIcon size={18}/>, adminOnly: true },
-  { type: 'item', label: 'Referrals Payout Wizard', href: '/admin/referrals/payout-wizard', icon: <DollarSignIcon size={18}/>, adminOnly: true },
-  { type: 'item', label: 'Billing Map', href: 'admin/billing/map', icon: <DollarSignIcon size={18}/>, adminOnly: true }, 
+  { type: 'item', label: 'Dev', href: '/admin/dev', icon: <Wrench size={18} />, adminOnly: true },
+  { type: 'item', label: 'AI Pricing', href: '/admin/settings/ai-pricing', icon: <Wrench />, adminOnly: true },
+  { type: 'item', label: 'Admin Taxes: New Payout', href: '/admin/tax/payouts/new', icon: <DollarSign size={18} />, adminOnly: true },
+  { type: 'item', label: 'Admin Taxes', href: '/admin/tax', icon: <DollarSign size={18} />, adminOnly: true },
+  { type: 'item', label: 'View Payout Runs', href: '/admin/referrals/payout-runs', icon: <DollarSign size={18} />, adminOnly: true },
+  { type: 'item', label: 'Referrals Payout Wizard', href: '/admin/referrals/payout-wizard', icon: <DollarSign size={18} />, adminOnly: true },
+  { type: 'item', label: 'Billing Map', href: 'admin/billing/map', icon: <DollarSign size={18} />, adminOnly: true },
   { type: 'item', label: 'Merchants', href: '/admin/merchants', icon: <User size={18} />, adminOnly: true },
   { type: 'item', label: 'Referrals', href: '/admin/referrals', icon: <User size={18} />, adminOnly: true },
   { type: 'item', label: 'Catalog', href: '/admin/catalog', icon: <FileStack size={18} />, adminOnly: true },
@@ -167,51 +190,33 @@ const NAV_ADMIN: NavItem[] = [
   { type: 'item', label: 'Payments', href: '/admin/payments', icon: <FileStack size={18} />, adminOnly: true },
   { type: 'item', label: 'Payment Accounts', href: '/admin/payment-accounts', icon: <FileStack size={18} />, adminOnly: true },
   { type: 'item', label: 'Payment Transactions', href: '/admin/payment-transactions', icon: <FileStack size={18} />, adminOnly: true },
-  { type: 'item', label: 'Payment Transactions', href: '/admin/payment-transactions', icon: <FileStack size={18} />, adminOnly: true },
-  
-  // ------------------------------------------------------------
+
   { type: 'section', label: 'Delivered Menu', adminOnly: true },
-// ------------------------------------------------------------
   { type: 'item', label: 'Meals', href: '/admin/meals', icon: <ChefHat size={18} />, adminOnly: true },
   { type: 'item', label: 'Chefs', href: '/chef/dashboard', icon: <ChefHat size={18} />, adminOnly: true },
-  { type: 'item', label: 'Dev', href: '/admin/dev', icon: <Wrench size={18} />, adminOnly: true },
-
-  // ------------------------------------------------------------
-  // Keep your commented experimental/admin links here for convenience:
-  // ------------------------------------------------------------
-  // { type: 'item', label: 'Outreach (Coming Soon)', href: '/admin/outreach', icon: <Mail size={18} />, adminOnly: true },
-  // { type: 'item', label: 'Revenue Estimator', href: '/admin/tools/revenue-estimator', icon: <DollarSign size={18} />, adminOnly: true },
-  // { type: 'item', label: 'Posters', href: '/admin/tools/print-all', icon: <Printer size={18} />, adminOnly: true },
-  // { type: 'item', label: 'Chart', href: '/admin/tools/chart', icon: <ChartBar size={18} />, adminOnly: true },
-  // { type: 'item', label: 'Campaigns CSV', href: '/api/campaign-analytics', icon: <FileText size={18} />, adminOnly: true },
-  // { type: 'item', label: 'Top Badges (ZIP)', href: '/api/badge/top', icon: <BadgeIcon size={18} />, adminOnly: true },
-  // { type: 'item', label: 'Leaderboard', href: '/leaderboard', icon: <Trophy size={18} />, adminOnly: true },
-  // { type: 'item', label: 'Analytics', href: '/admin/analytics', icon: <ChartBar size={18} />, adminOnly: true },
-  // { type: 'item', label: 'Heatmap', href: '/admin/heatmap', icon: <ChartBar size={18} />, adminOnly: true },
-  // { type: 'item', label: '404s', href: '/admin/not-found', icon: <AlertCircle size={18} />, adminOnly: true },
-  // { type: 'item', label: 'Sitemap Diffs', href: '/docs/diffs', icon: <FileText size={18} />, adminOnly: true },
-  // { type: 'item', label: 'Roles', href: '/admin/roles', icon: <Shield size={18} />, adminOnly: true },
-  // { type: 'item', label: 'Notifications', href: '/admin/logs/notifications', icon: <Bell size={18} />, adminOnly: true },
-  // { type: 'item', label: 'Session Logs', href: '/admin/logs/sessions', icon: <User size={18} />, adminOnly: true },
-  // { type: 'item', label: 'Docs', href: '/admin/docs', icon: <Book size={18} />, adminOnly: true },
 ];
 
-/* ---------------- Role helper ---------------- */
+/* ---------------- Role helper (cached) ---------------- */
 function useIsAdmin(): boolean {
   const [isAdmin, setIsAdmin] = useState(false);
+
   useEffect(() => {
     let cancelled = false;
     (async () => {
       try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) { if (!cancelled) setIsAdmin(false); return; }
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
+        if (!user) {
+          if (!cancelled) setIsAdmin(false);
+          return;
+        }
 
-        // Cache admin flag for 5 minutes per user
         const k = `qs:is_admin:${user.id}`;
-        const cached = localStorage.getItem(k);
-        if (cached) {
-          const { v, t } = JSON.parse(cached) as { v: boolean; t: number };
-          if (Date.now() - t < 5 * 60_000) { if (!cancelled) setIsAdmin(v); return; }
+        const cached = safeLS.get<{ v: boolean; t: number }>(k);
+        if (cached && Date.now() - cached.t < ADMIN_TTL_MS) {
+          if (!cancelled) setIsAdmin(cached.v);
+          return;
         }
 
         const { data } = await supabase
@@ -221,14 +226,17 @@ function useIsAdmin(): boolean {
           .maybeSingle();
 
         const v = !!data;
-        localStorage.setItem(k, JSON.stringify({ v, t: Date.now() }));
+        safeLS.set(k, { v, t: Date.now() });
         if (!cancelled) setIsAdmin(v);
       } catch {
         if (!cancelled) setIsAdmin(false);
       }
     })();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, []);
+
   return isAdmin;
 }
 
@@ -272,7 +280,10 @@ function NavItemButtonOrLink({
 
   const label = (
     <span
-      className={clsx('whitespace-nowrap transition-all duration-200 flex-1 text-left', collapsed ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100 w-auto')}
+      className={clsx(
+        'whitespace-nowrap transition-all duration-200 flex-1 text-left',
+        collapsed ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100 w-auto'
+      )}
     >
       {item.label}
       {isInbox && count > 0 && (
@@ -327,57 +338,132 @@ export function AdminNavSections({ collapsed = false }: { collapsed?: boolean })
   const [openMenus, setOpenMenus] = useState<Record<string, boolean>>({});
   const [navLoading, setNavLoading] = useState(false);
   const [inboxNewCount, setInboxNewCount] = useState<number | null>(null);
+  const [cleared, setCleared] = useState(false); // dev toast
   const isAdmin = useIsAdmin();
 
   // Build the visible nav list based on role
   const items = useMemo<NavItem[]>(() => {
-    // While role is resolving, show only core (safer UX)
     return isAdmin ? [...NAV_CORE, ...NAV_ADMIN] : [...NAV_CORE];
   }, [isAdmin]);
 
-  // Fetch inbox "new" count only if the Inbox item exists (admin)
+  /* -------- persist/restore open submenu state -------- */
+  useEffect(() => {
+    const cached = safeLS.get<Record<string, boolean>>(OPEN_MENUS_KEY);
+    if (cached) setOpenMenus(cached);
+  }, []);
+  useEffect(() => {
+    safeLS.set(OPEN_MENUS_KEY, openMenus);
+  }, [openMenus]);
+
+  // Auto-open matching submenus based on current path (merge with cache)
+  useEffect(() => {
+    const merged: Record<string, boolean> = { ...(safeLS.get<Record<string, boolean>>(OPEN_MENUS_KEY) || {}) };
+    items.forEach((item) => {
+      if (item.type === 'item' && item.children) {
+        const matchChild = item.children.some((c) => pathname?.startsWith(c.href.split('?')[0]));
+        const matchSelf = item.href ? pathname?.startsWith(item.href) : false;
+        if (matchChild || matchSelf) merged[item.label] = true;
+      }
+    });
+    setOpenMenus(merged);
+  }, [pathname, items]);
+
+  /* -------- inbox "new" count — cached with TTL + BG refresh -------- */
   useEffect(() => {
     let mounted = true;
     const hasInbox = items.some((i) => i.type === 'item' && i.href === '/admin/inbox');
-    if (!hasInbox) { setInboxNewCount(null); return; }
+    if (!hasInbox) {
+      setInboxNewCount(null);
+      return;
+    }
 
-    (async () => {
+    const cached = safeLS.get<{ count: number; t: number }>(INBOX_COUNT_KEY);
+    if (cached && Date.now() - cached.t < INBOX_TTL_MS) {
+      setInboxNewCount(cached.count);
+    }
+
+    const fetchCount = async () => {
       try {
         const { count, error } = await supabase
           .from('contact_messages')
           .select('id', { count: 'exact', head: true })
           .eq('status', 'new');
-        if (!error && mounted) setInboxNewCount(count ?? 0);
+        if (!error && mounted) {
+          setInboxNewCount(count ?? 0);
+          safeLS.set(INBOX_COUNT_KEY, { count: count ?? 0, t: Date.now() });
+        }
       } catch {}
-    })();
+    };
 
-    return () => { mounted = false; };
+    if (!cached || Date.now() - cached.t >= INBOX_TTL_MS) {
+      void fetchCount();
+    }
+
+    const onFocus = () => void fetchCount();
+    window.addEventListener('focus', onFocus);
+    window.addEventListener('visibilitychange', onFocus);
+    return () => {
+      mounted = false;
+      window.removeEventListener('focus', onFocus);
+      window.removeEventListener('visibilitychange', onFocus);
+    };
   }, [items]);
 
   // Hide overlay once route commits
-  useEffect(() => { if (navLoading) setNavLoading(false); }, [pathname]);
-
-  // Auto-open matching submenus based on current path
   useEffect(() => {
-    const updated: Record<string, boolean> = {};
-    items.forEach((item) => {
-      if (item.type === 'item' && item.children) {
-        const isMatch = item.children.some((child) => pathname?.startsWith(child.href.split('?')[0]));
-        if (isMatch || (item.href && pathname?.startsWith(item.href))) updated[item.label] = true;
-      }
-    });
-    setOpenMenus(updated);
-  }, [pathname, items]);
+    if (navLoading) setNavLoading(false);
+  }, [pathname, navLoading]);
 
-  const toggleMenu = (label: string) => setOpenMenus((prev) => ({ ...prev, [label]: !prev[label] }));
-  const handleNavigateStart = (href: string) => { if (href && href !== pathname) setNavLoading(true); };
+  const toggleMenu = (label: string) =>
+    setOpenMenus((prev) => {
+      const next = { ...prev, [label]: !prev[label] };
+      safeLS.set(OPEN_MENUS_KEY, next);
+      return next;
+    });
+
+  const handleNavigateStart = (href: string) => {
+    if (href && href !== pathname) setNavLoading(true);
+  };
+
+  /* -------- DEV: clear nav cache button + hotkey (⌥⌘K / Ctrl+Alt+K) -------- */
+  const clearNavCache = () => {
+    try {
+      safeLS.remove(OPEN_MENUS_KEY);
+      setOpenMenus({});
+      safeLS.remove(INBOX_COUNT_KEY);
+      setInboxNewCount(null);
+      Object.keys(localStorage).forEach((k) => {
+        if (k.startsWith('qs:is_admin:')) localStorage.removeItem(k);
+      });
+      setCleared(true);
+      setTimeout(() => setCleared(false), 1800);
+      console.info('[nav] cleared local cache');
+    } catch (e) {
+      console.warn('[nav] clear cache failed:', e);
+    }
+  };
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const isMod = e.metaKey || e.ctrlKey;
+      if (isMod && e.altKey && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        clearNavCache();
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
 
   return (
     <nav className="flex flex-col gap-1 px-1">
       {items.map((item, idx) => {
         if (item.type === 'section') {
           return !collapsed ? (
-            <div key={`section-${item.label}-${idx}`} className="text-xs uppercase text-zinc-500 px-3 pt-4 pb-1 tracking-wide">
+            <div
+              key={`section-${item.label}-${idx}`}
+              className="text-xs uppercase text-zinc-500 px-3 pt-4 pb-1 tracking-wide"
+            >
               — {item.label}
             </div>
           ) : null;
@@ -401,7 +487,12 @@ export function AdminNavSections({ collapsed = false }: { collapsed?: boolean })
               inboxNewCount={inboxNewCount ?? undefined}
             />
 
-            <div className={clsx('ml-8 transition-all duration-300 overflow-hidden', collapsed || !isOpen ? 'max-h-0' : 'max-h-64 mt-1')}>
+            <div
+              className={clsx(
+                'ml-8 transition-all duration-300 overflow-hidden',
+                collapsed || !isOpen ? 'max-h-0' : 'max-h-64 mt-1'
+              )}
+            >
               {!collapsed &&
                 item.children?.map((child) => {
                   const isActiveChild = pathname?.startsWith(child.href.split('?')[0]);
@@ -410,9 +501,16 @@ export function AdminNavSections({ collapsed = false }: { collapsed?: boolean })
                   const baseChild = 'block text-sm px-3 py-1 rounded transition';
                   const newBtnClasses = clsx(
                     'mt-1 inline-flex items-center gap-2 rounded-md px-3 py-1.5 font-medium shadow-sm',
-                    isActiveChild ? 'bg-emerald-700 text-white ring-1 ring-emerald-300/30' : 'bg-emerald-600 text-white hover:bg-emerald-500'
+                    isActiveChild
+                      ? 'bg-emerald-700 text-white ring-1 ring-emerald-300/30'
+                      : 'bg-emerald-600 text-white hover:bg-emerald-500'
                   );
-                  const normalClasses = clsx(baseChild, isActiveChild ? 'bg-zinc-800 text-white font-medium' : 'text-zinc-400 hover:bg-zinc-800 hover:text-white');
+                  const normalClasses = clsx(
+                    baseChild,
+                    isActiveChild
+                      ? 'bg-zinc-800 text-white font-medium'
+                      : 'text-zinc-400 hover:bg-zinc-800 hover:text-white'
+                  );
 
                   return (
                     <Link
@@ -420,7 +518,9 @@ export function AdminNavSections({ collapsed = false }: { collapsed?: boolean })
                       href={child.href}
                       className={isNewTemplate ? newBtnClasses : normalClasses}
                       title={isNewTemplate ? 'Create a new template or site' : child.label}
-                      onClick={() => { if (child.href && child.href !== pathname) handleNavigateStart(child.href); }}
+                      onClick={() => {
+                        if (child.href && child.href !== pathname) handleNavigateStart(child.href);
+                      }}
                     >
                       {isNewTemplate && <Plus size={14} />}
                       {isNewTemplate ? 'New Template' : child.label}
@@ -431,6 +531,21 @@ export function AdminNavSections({ collapsed = false }: { collapsed?: boolean })
           </div>
         );
       })}
+
+      {/* Dev-only: Clear nav cache */}
+      {process.env.NODE_ENV !== 'production' && (
+        <div className="mt-3 px-2 pb-2">
+          <button
+            type="button"
+            onClick={clearNavCache}
+            className="w-full text-[11px] rounded border border-zinc-700/80 hover:border-zinc-500 px-2 py-1 text-zinc-300 hover:text-white bg-zinc-900/50"
+            title="Clear cached admin flag, inbox count, and submenu state (⌥⌘K)"
+          >
+            Dev: Clear nav cache <span className="opacity-70">(⌥⌘K)</span>
+          </button>
+          {cleared && <div className="mt-1 text-[11px] text-emerald-400">Cleared.</div>}
+        </div>
+      )}
 
       <LoadingOverlay show={navLoading} />
     </nav>

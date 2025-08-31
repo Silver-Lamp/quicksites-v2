@@ -1,5 +1,5 @@
-import { generateHero } from '../lib/generateHero.js';
-import { generateServices } from '../lib/generateServices.js';
+import { generateHeroBlock } from '@/lib/generateHero';
+import { generateServices } from '@/lib/generateServices';
 
 export function SuggestBlockButton({
   type,
@@ -10,7 +10,7 @@ export function SuggestBlockButton({
 }) {
   const handleClick = () => {
     if (type === 'hero') {
-      const suggestion = generateHero('Your Business', 'clean');
+      const suggestion = generateHeroBlock('Your Business', 'clean');
       onSuggest(suggestion);
     } else {
       const suggestion = generateServices('template-clean');

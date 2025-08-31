@@ -12,6 +12,8 @@ const urlOptional = z.preprocess(
   z.string().url('Kitchen video URL must be valid').optional()
 );
 
+/* ───────────────────────────── Hours of Operation ───────────────────────────── */
+
 export const hoursOfOperationPropsSchema = z.object({
   title: z.string().optional(),
   tz: z.string().optional(),
@@ -30,22 +32,13 @@ export const hoursOfOperationPropsSchema = z.object({
 });
 
 export type DayKey = 'mon' | 'tue' | 'wed' | 'thu' | 'fri' | 'sat' | 'sun';
-export type HoursPeriod = {
-  /** 24h "HH:mm" (e.g., "09:00", "17:30") */
-  open: string;
-  /** 24h "HH:mm" (must be later than open on same day) */
-  close: string;
-};
+export type HoursPeriod = { open: string; close: string };
 export type SpecialHours = {
-  id: string;                 // stable id for UI
-  label?: string;             // e.g., "Christmas Day"
-  /** ISO date "YYYY-MM-DD" in the business timezone (used for both modes) */
+  id: string;
+  label?: string;
   date: string;
-  /** When true, the month/day repeats every year (ignores the year of `date`) */
   recurring?: boolean;
-  /** If true, this date is fully closed (periods will be ignored) */
   closed?: boolean;
-  /** If not closed, time windows for this date */
   periods: HoursPeriod[];
 };
 export type HoursOfOperationContent = {
@@ -54,18 +47,10 @@ export type HoursOfOperationContent = {
   alwaysOpen?: boolean;
   note?: string;
   display_style?: 'table' | 'stack';
-  days: Array<{
-    key: DayKey;
-    label: string;
-    closed: boolean;
-    periods: HoursPeriod[];
-  }>;
-  /** Holidays / special hours that override normal hours for that date */
+  days: Array<{ key: DayKey; label: string; closed: boolean; periods: HoursPeriod[] }>;
   exceptions?: SpecialHours[];
 };
 
-
-// Helper to build sane defaults quickly
 export function defaultHoursContent(partial?: Partial<HoursOfOperationContent>): HoursOfOperationContent {
   const baseDays: HoursOfOperationContent['days'] = [
     { key: 'mon', label: 'Mon', closed: false, periods: [{ open: '09:00', close: '17:00' }] },
@@ -89,14 +74,14 @@ export function defaultHoursContent(partial?: Partial<HoursOfOperationContent>):
 }
 
 export const HoursPeriodSchema = z.object({
-  open: z.string().regex(/^\d{2}:\d{2}$/),   // "HH:mm"
-  close: z.string().regex(/^\d{2}:\d{2}$/),  // "HH:mm"
+  open: z.string().regex(/^\d{2}:\d{2}$/),
+  close: z.string().regex(/^\d{2}:\d{2}$/),
 });
 
 const SpecialHoursSchema = z.object({
   id: z.string(),
   label: z.string().optional(),
-  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/), // "YYYY-MM-DD"
+  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   recurring: z.boolean().optional(),
   closed: z.boolean().optional(),
   periods: z.array(HoursPeriodSchema),
@@ -117,17 +102,18 @@ export const HoursOfOperationSchema = z.object({
   exceptions: z.array(SpecialHoursSchema).optional(),
 });
 
-// Shared link schema (now tolerant + default)
+/* ───────────────────────────── Shared Link schema ──────────────────────────── */
+
 const LinkSchema = z.object({
   label: z.string().min(1, 'Label is required'),
-  // If href is missing, default to "/" so Zod doesn’t throw during creation.
   href: RelativeOrAbsoluteUrl.default('/'),
   appearance: z.string().optional(),
 });
 
+/* ─────────────────────────────── Text Block ────────────────────────────────── */
+
 export const TextBlockContent = z.preprocess((raw) => {
   const c = raw && typeof raw === 'object' ? { ...(raw as any) } : {};
-  // Back‑compat: if value:string exists, map to html
   if (typeof (c as any).value === 'string' && !c.html && !c.json) {
     (c as any).html = (c as any).value;
     (c as any).format = (c as any).format ?? 'html';
@@ -149,13 +135,14 @@ export const TextBlockSchema = z.object({
   tone: z.string().default('neutral'),
 });
 
-// Treat "" as undefined
+/* ─────────────────────────── Meals/Reviews helpers ─────────────────────────── */
+
 const emptyToUndef = <T extends z.ZodTypeAny>(schema: T) =>
   z.preprocess(v => (typeof v === "string" && v.trim() === "" ? undefined : v), schema);
 
 export const mealCardPropsSchema = z.object({
-  mealId:  emptyToUndef(z.string().uuid()).optional(),   // must be .optional()
-  mealSlug: emptyToUndef(z.string().min(1)).optional(),  // must be .optional()
+  mealId:  emptyToUndef(z.string().uuid()).optional(),
+  mealSlug: emptyToUndef(z.string().min(1)).optional(),
   showPrice: z.boolean().default(true),
   showChef: z.boolean().default(false),
   showRating: z.boolean().default(true),
@@ -164,33 +151,27 @@ export const mealCardPropsSchema = z.object({
   variant: z.enum(["default","compact","hero"]).default("default"),
 }).refine(p => !!p.mealId || !!p.mealSlug, {
   message: "Provide mealId or mealSlug",
-  path: ["mealSlug"], // attach error to a field, not the whole object
+  path: ["mealSlug"],
 });
 
 export const reviewsListPropsSchema = z.object({
   mealId:  emptyToUndef(z.string().uuid()).optional(),
   chefId:  emptyToUndef(z.string().uuid()).optional(),
   siteId:  emptyToUndef(z.string().uuid()).optional(),
-
   pageSize: z.number().int().min(1).max(50).default(6),
   sort: z.enum(["recent","top"]).default("recent"),
-
-  // 0 / "0" / "" means “no filter”
   minStars: z.preprocess(
     v => (v === 0 || v === "0" || v === "" ? undefined : v),
     z.number().int().min(1).max(5)
   ).optional(),
-
   showSummary: z.boolean().default(true),
   showWriteCta: z.boolean().default(false),
-})
-.refine(p => !!p.mealId || !!p.chefId || !!p.siteId, {
+}).refine(p => !!p.mealId || !!p.chefId || !!p.siteId, {
   message: "Provide mealId, chefId, or siteId",
-  path: ["siteId"],   // attach error to a concrete field
+  path: ["siteId"],
 });
 
 export const mealsGridPropsSchema = z.object({
-  // allow blank in editor without tripping uuid/string validators
   siteSlug: emptyToUndef(z.string().min(1)).optional(),
   siteId: emptyToUndef(z.string().uuid()).optional(),
   tag: z.string().optional(),
@@ -200,6 +181,8 @@ export const mealsGridPropsSchema = z.object({
   columns: z.number().int().min(1).max(6).default(3),
   ctaText: z.string().default("View meal"),
 }).refine(p => !!p.siteSlug || !!p.siteId, { message: "Provide siteSlug or siteId" });
+
+/* ─────────────────────────── Header / Footer blocks ────────────────────────── */
 
 export const HeaderContent = z.preprocess((raw) => {
   const c = raw && typeof raw === 'object' ? { ...(raw as any) } : {};
@@ -218,7 +201,6 @@ const toCityString = (item: unknown): string => {
   if (typeof item === 'string') return item;
   if (item && typeof item === 'object') {
     const o = item as Record<string, unknown>;
-    // prefer "name"; otherwise join common pieces
     const name = (o.name ?? o.city ?? o.label ?? '') as string;
     const addr = (o.address ?? o.street ?? '') as string;
     const city = [name, addr].filter(Boolean).join(' ').trim();
@@ -229,26 +211,23 @@ const toCityString = (item: unknown): string => {
 
 const REL = /^(https?:\/\/|\/|#|mailto:|tel:)/i;
 
-// Footer content: map legacy keys → canonical shape + sanitize links
 const FooterContent = z.preprocess((raw) => {
   const c = (raw && typeof raw === 'object') ? { ...(raw as any) } : {};
 
-  // aliases → canonical
   if (Array.isArray(c.nav_items) && !Array.isArray(c.links)) c.links = c.nav_items;
   if (Array.isArray(c.navItems) && !Array.isArray(c.links)) c.links = c.navItems;
   if (typeof c.logoUrl === 'string' && !c.logo_url) c.logo_url = c.logoUrl;
 
-  // --- sanitize links BEFORE validation so bad rows don't drop the whole array
   if (Array.isArray(c.links)) {
     c.links = c.links
       .map((l: any) => {
         const label = String(l?.label ?? '').trim();
         const hrefRaw = String(l?.href ?? '').trim();
-        const href = hrefRaw || '/';               // safe default to satisfy RelativeOrAbsoluteUrl
+        const href = hrefRaw || '/';
         const appearance = l?.appearance;
         return { label, href, appearance };
       })
-      .filter((l: any) => l.label && REL.test(l.href)); // keep only valid rows
+      .filter((l: any) => l.label && REL.test(l.href));
   }
 
   delete c.nav_items;
@@ -261,7 +240,8 @@ const FooterContent = z.preprocess((raw) => {
   links: z.array(LinkSchema).default([]),
 }).passthrough());
 
-// ── Chef meal (unified shape + legacy coercion) ───────────────────────────────
+/* ───────────────────── Chef profile (legacy coercion) ─────────────────────── */
+
 const ChefMealBase = z.object({
   id: z.string().optional(),
   name: z.string().min(1, 'Meal name is required'),
@@ -279,13 +259,11 @@ const ChefMealSchema = z.preprocess((val) => {
   return val;
 }, ChefMealBase);
 
-// ── 1) Content schema map + UI meta (single source of truth) ─────────────────
+/* ───────────────────────────── Block schema map ────────────────────────────── */
+
 export const blockContentSchemaMap = {
-  text: {
-    label: 'Text Block',
-    icon: '📝',
-    schema: TextBlockContent,
-  },
+  text: { label: 'Text Block', icon: '📝', schema: TextBlockContent },
+
   image: {
     label: 'Image',
     icon: '🖼️',
@@ -294,33 +272,35 @@ export const blockContentSchemaMap = {
       alt: z.string().optional(),
     }),
   },
+
   grid: {
     label: 'Grid Layout',
     icon: '🔲',
     schema: z.object({
       columns: z.number().min(1).max(12).default(2),
-      // recursion via BlockSchema
       items: z.array(z.lazy(() => BlockSchema as any)).default([]),
       title: z.string().optional(),
       subtitle: z.string().optional(),
       layout: z.string().optional(),
     }),
   },
+
   quote: {
     label: 'Quote',
     icon: '❝',
     schema: z.object({ text: z.string().min(1), attribution: z.string().optional() }),
   },
+
   button: {
     label: 'Button',
     icon: '🔘',
     schema: z.object({
       label: z.string().min(1),
-      // was: z.string().url('Link must be a valid URL')
       href: RelativeOrAbsoluteUrl.default('/'),
       style: z.enum(['primary', 'secondary', 'ghost']).optional(),
     }),
   },
+
   hero: {
     label: 'Hero',
     icon: '🎯',
@@ -344,46 +324,58 @@ export const blockContentSchemaMap = {
       image_y: z.number().min(0).max(100).optional(),
     }),
   },
+
+  /* UPDATED: services matches seeded props (objects), plus optional title/columns */
   services: {
     label: 'Services',
     icon: '🧰',
-    schema: z.object({ items: z.array(z.string()).min(1) }),
+    schema: z.object({
+      title: z.string().optional(),
+      columns: z.number().int().min(1).max(6).default(3),
+      items: z.array(z.object({
+        name: z.string().min(1),
+        description: z.string().default(''),
+        // allow "$123", "From $99", or omit entirely
+        price: z.string().optional(),
+        href: z.string().optional(),
+        icon: z.string().optional(),
+      })).min(1),
+    }),
   },
+
   cta: {
     label: 'Call to Action',
     icon: '🔘',
     schema: z.object({
       label: z.string().min(1),
-      // was: z.string().url('Link must be a valid URL')
       href: RelativeOrAbsoluteUrl.default('/'),
       style: z.enum(['primary', 'secondary', 'ghost']).optional(),
     }),
   },
+
   service_areas: {
     label: 'Service Areas',
     icon: '🌍',
     schema: z.preprocess((raw) => {
       const c = (raw && typeof raw === 'object') ? { ...(raw as any) } : {};
-  
-      // 1) Accept objects or strings for cities/allCities
+
       const cities = Array.isArray(c.cities) ? c.cities.map(toCityString).filter(Boolean) : [];
-      let allCities =
-        Array.isArray(c.allCities) ? c.allCities.map(toCityString).filter(Boolean) : [...cities];
-  
-      // 2) Legacy field names / shapes
+      let allCities = Array.isArray(c.allCities)
+        ? c.allCities.map(toCityString).filter(Boolean)
+        : [...cities];
+
       if (c.source && typeof c.source === 'object') {
         const s = c.source as any;
         c.sourceLat ??= s.lat ?? s.latitude ?? s.y;
         c.sourceLng ??= s.lng ?? s.longitude ?? s.x;
       }
       if (c.radius_miles != null && c.radiusMiles == null) c.radiusMiles = c.radius_miles;
-  
-      // 3) Coerce numbers safely (defaults are permissive to avoid hard failures)
+
       const toNum = (v: any, d = 0) => {
         const n = Number(v);
         return Number.isFinite(n) ? n : d;
       };
-  
+
       return {
         cities,
         allCities,
@@ -391,17 +383,15 @@ export const blockContentSchemaMap = {
         sourceLng: toNum(c.sourceLng, 0),
         radiusMiles: toNum(c.radiusMiles, 0),
       };
-    },
-    z.object({
-      // keep them as strings post-normalization
+    }, z.object({
       cities: z.array(z.string()).default([]),
       allCities: z.array(z.string()).default([]),
-      // make coordinates/radius tolerant with safe defaults
       sourceLat: z.number().default(0),
       sourceLng: z.number().default(0),
       radiusMiles: z.number().default(0),
     })),
   },
+
   audio: {
     label: 'Audio',
     icon: '🎧',
@@ -411,22 +401,16 @@ export const blockContentSchemaMap = {
       title: z.string().optional(),
     }),
   },
+
   video: {
     label: 'Video',
     icon: '📹',
     schema: z.object({ url: z.string().url('Video URL must be valid'), caption: z.string().optional() }),
   },
-  footer: {
-    label: 'Footer',
-    icon: '🏠',
-    // 👇 use the tolerant, alias-aware schema with links: [].default()
-    schema: FooterContent,
-  },
-  header: {
-    label: 'Header',
-    icon: '🏠',
-    schema: HeaderContent,
-  },
+
+  footer: { label: 'Footer', icon: '🏠', schema: FooterContent },
+  header: { label: 'Header', icon: '🏠', schema: HeaderContent },
+
   faq: {
     label: 'FAQ',
     icon: '❓',
@@ -438,6 +422,7 @@ export const blockContentSchemaMap = {
       })).min(1),
     }),
   },
+
   testimonial: {
     label: 'Testimonial',
     icon: '💬',
@@ -451,6 +436,7 @@ export const blockContentSchemaMap = {
       randomized: z.boolean().optional(),
     }),
   },
+
   contact_form: {
     label: 'Contact Form',
     icon: '📧',
@@ -459,16 +445,10 @@ export const blockContentSchemaMap = {
       services: z.array(z.string()).optional(),
     }),
   },
-  meal_card: {
-    label: 'Meal Card',
-    icon: '🍽️',
-    schema: mealCardPropsSchema,
-  },
-  reviews_list: {
-    label: 'Reviews List',
-    icon: '⭐',
-    schema: reviewsListPropsSchema,
-  },
+
+  meal_card: { label: 'Meal Card', icon: '🍽️', schema: mealCardPropsSchema },
+  reviews_list: { label: 'Reviews List', icon: '⭐', schema: reviewsListPropsSchema },
+
   chef_profile: {
     label: 'Chef Profile',
     icon: '👨‍🍳',
@@ -478,23 +458,18 @@ export const blockContentSchemaMap = {
       profile_image_url: z.string().url('Profile image URL must be valid'),
       kitchen_video_url: urlOptional,
       bio: z.string().min(1),
-      certifications: z.array(z.string()).min(1),
+      certifications: z.array(z.string().min(1)).min(1),
       meals: z.array(ChefMealSchema).min(1),
     }),
   },
-  meals_grid: {
-    label: 'Meals Grid',
-    icon: '🍱',
-    schema: mealsGridPropsSchema,
-  },
-  hours: {
-    label: 'Hours of Operation',
-    icon: '⏰',
-    schema: HoursOfOperationSchema,
-  },
+
+  meals_grid: { label: 'Meals Grid', icon: '🍱', schema: mealsGridPropsSchema },
+
+  hours: { label: 'Hours of Operation', icon: '⏰', schema: HoursOfOperationSchema },
 } satisfies Record<string, { label: string; icon: string; schema: z.ZodTypeAny }>;
 
-// ── 2) Build union + meta ────────────────────────────────────────────────────
+/* ─────────────────────────── Discriminated union ──────────────────────────── */
+
 export function createBlockUnion<
   T extends Record<string, { label: string; icon: string; schema: z.ZodTypeAny }>
 >(map: T) {
@@ -520,7 +495,6 @@ export function createBlockUnion<
 
 const { schemas: BasicBlockSchemas, meta: blockMeta } = createBlockUnion(blockContentSchemaMap);
 
-// ✅ No duplicate Grid entry here; the map’s grid already recurses
 export const BlockSchema: z.ZodTypeAny = z.lazy(() =>
   z.discriminatedUnion(
     'type',
@@ -538,13 +512,12 @@ export function isValidBlock(data: unknown): data is Block {
   return BlockSchema.safeParse(data).success;
 }
 
-// Legacy migration (kept + add header/footer normalization)
+/* ─────────────────────────── Legacy migration helpers ─────────────────────── */
+
 export function migrateLegacyBlock(block: any): any {
   if (!block || typeof block !== 'object') return block;
 
-  // already in new format
   if ('content' in block) {
-    // header/footer field renames
     if (block.type === 'header' && block.content) {
       const c = block.content;
       if ('logoUrl' in c || 'navItems' in c) {
@@ -569,8 +542,6 @@ export function migrateLegacyBlock(block: any): any {
         };
       }
     }
-
-    // migrate chef_profile meal items if needed
     if (block.type === 'chef_profile' && Array.isArray(block.content?.meals)) {
       block.content.meals = block.content.meals.map((m: any, idx: number) => ({
         id: m?.id,
@@ -584,7 +555,6 @@ export function migrateLegacyBlock(block: any): any {
     return block;
   }
 
-  // very old form { value: … }
   if ('value' in block) {
     const val = (block as any).value;
     return { ...block, content: typeof val === 'string' ? { value: val } : val };
@@ -593,7 +563,8 @@ export function migrateLegacyBlock(block: any): any {
   return block;
 }
 
-// Simple preview fallback strings for UI
+/* ───────────────────────────── Preview metadata ───────────────────────────── */
+
 export const blockPreviewFallback: Record<Block['type'], string> = Object.entries(
   blockMeta as Record<Block['type'], { label: string; icon: string }>
 ).reduce((acc, [key, val]) => {
@@ -602,3 +573,10 @@ export const blockPreviewFallback: Record<Block['type'], string> = Object.entrie
 }, {} as Record<Block['type'], string>);
 
 export { blockMeta };
+
+/* ───────────────────────────── Convenience helper ─────────────────────────── */
+
+/** Return the content/props Zod schema for a given block type (or null). */
+export function schemaForBlockType(type: string): z.ZodTypeAny | null {
+  return (blockContentSchemaMap as any)[type]?.schema ?? null;
+}

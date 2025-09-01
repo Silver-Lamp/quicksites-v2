@@ -1,68 +1,37 @@
+// components/admin/templates/versions-dropdown.tsx
 'use client';
 
-import { useEffect, useRef } from 'react';
-import { Button } from '@/components/ui';
-import { Clock, ChevronDown, Check, ExternalLink } from 'lucide-react';
-import { relativeTimeLabel } from '@/lib/editor/templateUtils';
-import type { VersionRow } from '@/hooks/useTemplateVersions';
+import * as React from 'react';
+import { useMemo, useState } from 'react';
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuGroup,
+} from '@/components/ui/dropdown-menu';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import {
+  ChevronDown,
+  PlusCircle,
+  Rocket,
+  RotateCcw,
+  Tag,
+  Clock,
+  ExternalLink,
+} from 'lucide-react';
 
-type Props = {
-  labelTitle: string;
-  versions: VersionRow[];                // newest-first
-  open: boolean;
-  setOpen: (v: boolean) => void;
-  onCreateSnapshot: () => Promise<void>;
-  onRestore: (id: string) => Promise<void>;
-  onPublish: (id?: string) => Promise<void>;  // undefined => publish latest
-  publishedVersionId?: string | null;
-  baseSlug?: string;
-  domain?: string | null;
-  defaultSubdomain?: string | null;
-  onOpenPageSettings?: () => void;
+type VersionRow = {
+  id: string;                 // version id OR snapshot id (fallback)
+  tag?: string | null;        // human-friendly tag if this is a “version”
+  snapshot_id?: string | null;// underlying snapshot id (if available)
+  commit?: string | null;
+  created_at?: string | null;
+  updated_at?: string | null;
 };
-
-const BASE_DOMAIN = process.env.NEXT_PUBLIC_BASE_DOMAIN || 'quicksites.ai';
-
-function deriveBaseSlug(slug?: string | null) {
-  if (!slug) return '';
-  return slug.replace(/(-[a-z0-9]{2,12})+$/i, '');
-}
-
-function buildPreviewUrl(
-  v: VersionRow,
-  opts: { baseSlug?: string; domain?: string | null; defaultSubdomain?: string | null }
-) {
-  const { baseSlug, domain, defaultSubdomain } = opts;
-  const loc = typeof window !== 'undefined' ? window.location : ({} as Location);
-  const isLocal = (loc?.hostname || '').includes('localhost');
-  const proto = loc?.protocol || 'https:';
-
-  const canonical = baseSlug || deriveBaseSlug(v.slug);
-  let host: string;
-  if (isLocal) host = `${canonical}.localhost:3000`;
-  else if (domain) host = domain;
-  else if (defaultSubdomain) host = defaultSubdomain;
-  else host = `${canonical}.${BASE_DOMAIN}`;
-
-  const qs = new URLSearchParams({ preview_version_id: v.id }).toString();
-  return `${proto}//${host}/?${qs}`;
-}
-
-function buildLiveUrl(
-  opts: { baseSlug?: string; domain?: string | null; defaultSubdomain?: string | null }
-) {
-  const { baseSlug, domain, defaultSubdomain } = opts;
-  const loc = typeof window !== 'undefined' ? window.location : ({} as Location);
-  const isLocal = (loc?.hostname || '').includes('localhost');
-  const proto = loc?.protocol || 'https:';
-  const canonical = baseSlug || '';
-  let host: string;
-  if (isLocal) host = `${canonical}.localhost:3000`;
-  else if (domain) host = domain;
-  else if (defaultSubdomain) host = defaultSubdomain;
-  else host = `${canonical}.${BASE_DOMAIN}`;
-  return `${proto}//${host}/`;
-}
 
 export default function VersionsDropdown({
   labelTitle,
@@ -72,193 +41,229 @@ export default function VersionsDropdown({
   onCreateSnapshot,
   onRestore,
   onPublish,
-  publishedVersionId,
+  publishedVersionId = null,
+  publishedSnapshotId = null, // NEW (optional)
   baseSlug,
   domain,
   defaultSubdomain,
   onOpenPageSettings,
-}: Props) {
-  const ref = useRef<HTMLDivElement | null>(null);
+}: {
+  labelTitle: string;
+  versions: VersionRow[];
+  open: boolean;
+  setOpen: (v: boolean) => void;
+  onCreateSnapshot: () => Promise<string | void> | void;
+  onRestore: (id: string) => void;
+  onPublish: (snapshotId?: string) => void;
+  publishedVersionId?: string | null;
+  publishedSnapshotId?: string | null;
+  baseSlug?: string;
+  domain?: string | null;
+  defaultSubdomain?: string | null;
+  onOpenPageSettings?: () => void;
+}) {
+  const [busy, setBusy] = useState(false);
 
-  // Close on outside click
-  useEffect(() => {
-    function onDown(e: MouseEvent) {
-      if (!open || !ref.current) return;
-      if (!ref.current.contains(e.target as Node)) setOpen(false);
-    }
-    window.addEventListener('mousedown', onDown);
-    return () => window.removeEventListener('mousedown', onDown);
-  }, [open, setOpen]);
-
-  // Auto-scroll the deployed row into view when opening
-  useEffect(() => {
-    if (!open) return;
-    // wait one frame so rows exist
-    const id = requestAnimationFrame(() => {
-      const el = document.querySelector('[data-published="true"]') as HTMLElement | null;
-      el?.scrollIntoView({ block: 'center' });
+  // sort newest-first by updated/created
+  const list = useMemo(() => {
+    const sorted = [...(versions || [])];
+    sorted.sort((a, b) => {
+      const at = new Date(a.updated_at || a.created_at || 0).getTime();
+      const bt = new Date(b.updated_at || b.created_at || 0).getTime();
+      return bt - at;
     });
-    return () => cancelAnimationFrame(id);
-  }, [open]);
+    return sorted;
+  }, [versions]);
 
-  const latest = versions[0];
-  const latestLabel = latest
-    ? `${(latest.commit || '').trim() || 'Snapshot'} · ${relativeTimeLabel(latest.updated_at || latest.created_at || '')}`
-    : 'No versions';
+  const publishLabel = busy ? 'Working…' : 'Publish';
+  const createLabel = busy ? 'Working…' : 'Create snapshot';
 
-  const publishedRow = publishedVersionId ? versions.find(v => v.id === publishedVersionId) ?? null : null;
-  const publishedLabel = publishedRow
-    ? `${(publishedRow.commit?.trim() || 'Snapshot')} · ${relativeTimeLabel(publishedRow.updated_at || publishedRow.created_at || '')}`
-    : null;
-  const triggerLabel = publishedRow ? `Live: ${publishedLabel}` : latestLabel;
-  const latestIsPublished = !!(publishedVersionId && latest && latest.id === publishedVersionId);
+  const doCreateSnapshot = async () => {
+    if (busy) return;
+    setBusy(true);
+    try {
+      const id = (await onCreateSnapshot()) as string | void;
+      if (id) {
+        safeTruthRefresh();
+      }
+    } finally {
+      setBusy(false);
+      setOpen(false);
+    }
+  };
+
+  const doPublishLatest = async () => {
+    if (busy) return;
+    setBusy(true);
+    try {
+      await Promise.resolve(onPublish(undefined)); // toolbar will snapshot if needed
+      safeTruthRefresh();
+    } finally {
+      setBusy(false);
+      setOpen(false);
+    }
+  };
+
+  const doPublishSpecific = async (snapId?: string | null) => {
+    if (busy) return;
+    setBusy(true);
+    try {
+      await Promise.resolve(onPublish(snapId || undefined));
+      safeTruthRefresh();
+    } finally {
+      setBusy(false);
+      setOpen(false);
+    }
+  };
+
+  const doRestore = async (id: string) => {
+    if (busy) return;
+    setBusy(true);
+    try {
+      await Promise.resolve(onRestore(id));
+      safeTruthRefresh();
+    } finally {
+      setBusy(false);
+      setOpen(false);
+    }
+  };
+
+  const liveUrl = useMemo(() => {
+    if (domain) return `https://${domain}`;
+    if (defaultSubdomain) return `https://${defaultSubdomain}`;
+    if (baseSlug) return `https://${baseSlug}.quicksites.ai`;
+    return null;
+  }, [domain, defaultSubdomain, baseSlug]);
+
+  const pubMatch = (row: VersionRow) => {
+    // Prefer snapshot comparison; fallback to version id
+    const sid = row.snapshot_id ?? null;
+    if (publishedSnapshotId && sid) return sid === publishedSnapshotId;
+    if (publishedVersionId) return row.id === publishedVersionId;
+    return false;
+  };
 
   return (
-    <div className="relative" ref={ref}>
-      <Button
-        size="sm"
-        variant="ghost"
-        onClick={() => setOpen(!open)}
-        title={versions.length ? 'Browse versions' : 'No versions yet'}
-        className="inline-flex items-center gap-2"
-      >
-        {publishedRow ? (
-          <>
-            <span className="w-2 h-2 rounded-full bg-emerald-400" aria-hidden="true" />
-            <span className="text-xs sm:text-sm max-w-[18ch] sm:max-w-none truncate text-emerald-400">
-              {triggerLabel}
-            </span>
-          </>
-        ) : (
-          <>
-            <Clock className="w-4 h-4" />
-            <span className="text-xs sm:text-sm max-w-[14ch] sm:max-w-none truncate">
-              {versions.length ? latestLabel : 'No versions'}
-            </span>
-          </>
-        )}
-        <ChevronDown className="w-4 h-4 opacity-70" />
-      </Button>
+    <DropdownMenu open={open} onOpenChange={setOpen}>
+      <DropdownMenuTrigger asChild>
+        <Button size="sm" variant="outline" className="gap-2">
+          <span className="truncate max-w-[24ch]" title={labelTitle}>{labelTitle}</span>
+          <ChevronDown className="h-4 w-4 opacity-70" />
+        </Button>
+      </DropdownMenuTrigger>
 
-      {open && (
-        <div className="absolute bottom-full mb-2 right-0 w-96 max-h-[28rem] overflow-auto rounded-md border border-gray-700 bg-gray-900 shadow-xl">
-          <div className="p-2 text-xs text-gray-400 sticky top-0 bg-gray-900/95 backdrop-blur">
-            {labelTitle}
+      <DropdownMenuContent className="w-[360px] p-0">
+        <div className="px-3 pt-3 pb-2">
+          <div className="flex items-center justify-between">
+            <div className="text-sm font-medium">Versions & Publishing</div>
+            {liveUrl && (
+              <a href={liveUrl} target="_blank" rel="noreferrer" className="text-xs inline-flex items-center gap-1 text-muted-foreground hover:text-foreground">
+                Live <ExternalLink className="h-3.5 w-3.5" />
+              </a>
+            )}
           </div>
+        </div>
 
-          <div className="px-3 py-2 space-y-2">
-            <div className="flex gap-2">
-              <Button
-                size="sm"
-                variant="secondary"
-                onClick={async () => {
-                  await onCreateSnapshot();
-                  setOpen(false);
-                }}
-              >
-                + Create snapshot
-              </Button>
-              <Button
-                size="sm"
-                variant={latestIsPublished ? 'secondary' : 'default'}
-                onClick={async () => {
-                  await onPublish(); // publish latest
-                  setOpen(false);
-                }}
-                disabled={!versions.length || latestIsPublished}
-                title={
-                  !versions.length
-                    ? 'No versions yet'
-                    : latestIsPublished
-                    ? 'Latest is already live'
-                    : 'Publish latest snapshot'
-                }
-              >
-                {latestIsPublished ? 'Live' : 'Publish latest'}
-              </Button>
-            </div>
-          </div>
+        <DropdownMenuSeparator />
 
-          {versions.length === 0 ? (
-            <div className="px-3 pb-3 text-sm text-gray-300">No snapshots yet.</div>
-          ) : (
-            <div className="py-1">
-              {versions.map((v) => {
-                const when = relativeTimeLabel(v.updated_at || v.created_at || '');
-                const label = `${(v.commit?.trim() || 'Snapshot')} · ${when}`;
-                const isPublished = v.id === publishedVersionId;
-
-                return (
-                  <div
-                    key={v.id}
-                    data-published={isPublished ? 'true' : undefined}
-                    role="menuitemradio"
-                    aria-checked={isPublished}
-                    className={[
-                      'relative w-full px-3 py-2 text-sm flex items-center justify-between gap-2 hover:bg-gray-800 rounded',
-                      isPublished ? 'bg-emerald-950/30 ring-1 ring-emerald-500/30' : '',
-                    ].join(' ')}
-                  >
-                    {isPublished && (
-                      <span
-                        aria-hidden="true"
-                        className="absolute inset-y-0 left-0 w-1 bg-emerald-400 rounded-l"
-                      />
-                    )}
-                    <button
-                      onClick={async () => { setOpen(false); await onRestore(v.id); }}
-                      className="truncate text-left"
-                      title="Restore into editor"
-                    >
-                      {label}
-                    </button>
-
-                    <div className="flex items-center gap-2">
-                      <Button
-                        size="sm" variant="secondary"
-                        onClick={(e) => {
-                          e.preventDefault(); e.stopPropagation();
-                          const url = isPublished
-                            ? buildLiveUrl({ baseSlug, domain, defaultSubdomain })
-                            : buildPreviewUrl(v, { baseSlug, domain, defaultSubdomain });
-                          window.open(url, '_blank', 'noopener,noreferrer');
-                          setOpen(false);
-                        }}
-                        title={isPublished ? 'Open live site' : 'Open this snapshot in a new tab'}
-                      >
-                        <ExternalLink className="w-3.5 h-3.5 mr-1" />
-                        {isPublished ? 'Open live' : 'Preview'}
-                      </Button>
-
-                      {isPublished ? (
-                        <span
-                          className="inline-flex items-center px-2 py-1 rounded-md bg-emerald-500/10 text-emerald-400 text-xs font-medium"
-                          title="Currently deployed"
-                        >
-                          <Check className="w-3 h-3 mr-1" /> Live
-                        </span>
-                      ) : (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={async () => { await onPublish(v.id); setOpen(false); }}
-                          title="Publish this version"
-                        >
-                          Publish
-                        </Button>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
-
-              <div className="p-2 border-t border-gray-800 flex items-center justify-between text-xs">
-                <span className="text-gray-400">{versions.length} total</span>
-              </div>
-            </div>
+        <div className="px-3 py-2 flex items-center gap-2">
+          <Button size="sm" className="gap-1" disabled={busy} onClick={doCreateSnapshot}>
+            <PlusCircle className="h-4 w-4" />
+            {createLabel}
+          </Button>
+          <Button size="sm" variant="secondary" className="gap-1" disabled={busy} onClick={doPublishLatest}>
+            <Rocket className="h-4 w-4" />
+            {publishLabel}
+          </Button>
+          {onOpenPageSettings && (
+            <Button size="sm" variant="ghost" onClick={() => { setOpen(false); onOpenPageSettings(); }}>
+              Page settings
+            </Button>
           )}
         </div>
-      )}
-    </div>
+
+        <DropdownMenuSeparator />
+
+        <DropdownMenuLabel className="text-xs px-3 py-2 flex items-center gap-2">
+          <Clock className="h-3.5 w-3.5" />
+          History
+        </DropdownMenuLabel>
+
+        <DropdownMenuGroup>
+          <ScrollArea className="max-h-[42vh]">
+            <ul className="px-1 pb-2">
+              {list.length === 0 && (
+                <li className="px-3 py-2 text-xs text-muted-foreground">No versions yet—create a snapshot to get started.</li>
+              )}
+              {list.map((v) => {
+                const ts = v.updated_at || v.created_at || '';
+                const rel = ts ? relTime(ts) : '';
+                const isLive = pubMatch(v);
+                const snapId = v.snapshot_id ?? null;
+
+                return (
+                  <li key={v.id} className="px-3 py-2 hover:bg-muted/50 rounded-md">
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2 text-sm">
+                          {v.tag ? (
+                            <>
+                              <Tag className="h-3.5 w-3.5 opacity-70" />
+                              <span className="truncate max-w-[20ch]">{v.tag}</span>
+                            </>
+                          ) : (
+                            <>
+                              <span className="font-mono text-xs opacity-80">{shortId(v.id)}</span>
+                            </>
+                          )}
+                          {isLive && <Badge variant="secondary" className="h-5">Published</Badge>}
+                        </div>
+                        <div className="text-[11px] text-muted-foreground mt-0.5">
+                          {v.commit ? v.commit : 'Snapshot'} · {rel}
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <Button size="sm" variant="outline" className="h-7 px-2 gap-1" disabled={busy} onClick={() => doRestore(v.id)}>
+                          <RotateCcw className="h-3.5 w-3.5" />
+                          Restore
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant={isLive ? 'secondary' : 'default'}
+                          className="h-7 px-2 gap-1"
+                          disabled={busy}
+                          onClick={() => doPublishSpecific(snapId)}
+                          title={snapId ? 'Publish this snapshot' : 'Publish (will snapshot if needed)'}
+                        >
+                          <Rocket className="h-3.5 w-3.5" />
+                          {isLive ? 'Published' : 'Publish'}
+                        </Button>
+                      </div>
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+          </ScrollArea>
+        </DropdownMenuGroup>
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
+}
+
+/* ===== helpers ===== */
+function shortId(s?: string | null) {
+  if (!s) return '';
+  return s.length <= 8 ? s : s.slice(0, 8);
+}
+function relTime(iso: string) {
+  const d = new Date(iso).getTime();
+  const s = Math.max(1, Math.floor((Date.now() - d) / 1000));
+  if (s < 60) return `${s}s ago`;
+  if (s < 3600) return `${Math.floor(s / 60)}m ago`;
+  if (s < 86400) return `${Math.floor(s / 3600)}h ago`;
+  return `${Math.floor(s / 86400)}d ago`;
+}
+function safeTruthRefresh() {
+  try { window.dispatchEvent(new CustomEvent('qs:truth:refresh')); } catch {}
 }

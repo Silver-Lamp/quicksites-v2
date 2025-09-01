@@ -14,14 +14,14 @@ function baseSlug(slug: string | null | undefined) {
   if (!slug) return '';
   return slug.replace(/(-[a-z0-9]{2,12})+$/i, '');
 }
-function hasPages(t: any) {
-  const p1 = Array.isArray(t?.pages) && t.pages.length > 0;
-  const p2 = Array.isArray(t?.data?.pages) && t.data.pages.length > 0;
-  return p1 || p2;
-}
 const ts = (d?: string | null) => (d ? new Date(d).getTime() || 0 : 0);
 
+/**
+ * Given a flat list of template rows (canonical + versions), compute an
+ * "effective" updated_at per base and attach it to each row.
+ */
 function computeEffective(rows: any[]) {
+  // Group by base
   const groups = new Map<string, any[]>();
   for (const t of rows) {
     const slug = (t as any).slug || (t as any).template_name || (t as any).id || '';
@@ -31,6 +31,7 @@ function computeEffective(rows: any[]) {
     groups.set(base, arr);
   }
 
+  // For each base, compare canonical.updated_at vs latestVersion.updated_at
   const effectiveUpdatedByBase = new Map<string, string>();
   for (const [base, items] of groups.entries()) {
     const canonical = items.find((x) => !x.is_version) ?? items[0];
@@ -54,23 +55,7 @@ function computeEffective(rows: any[]) {
     return { ...t, effective_updated_at: effective };
   };
 
-  const pickPerBase = (items: any[]) => {
-    const canonical = items.find(
-      (t: any) =>
-        ((t?.slug ?? '') as string) ===
-        ((t?.base_slug as string) || baseSlug(t?.slug ?? '')),
-    );
-    if (canonical) return canonical;
-
-    const withPages = items
-      .filter((t: any) => hasPages(t))
-      .sort((a: any, b: any) => ts(b.updated_at) - ts(a.updated_at));
-    if (withPages[0]) return withPages[0];
-
-    return items.sort((a: any, b: any) => ts(b.updated_at) - ts(a.updated_at))[0];
-  };
-
-  return { groups, attachEffective, pickPerBase };
+  return { groups, attachEffective };
 }
 
 /* ----------------------------- page (server) ----------------------------- */
@@ -122,7 +107,7 @@ export default async function TemplatesIndexPage({
     d.setDate(d.getDate() - 120);
     return d;
   })();
-  const fromIso = fromDate ? fromDate.toISOString() : defaultFrom.toISOString();
+  const fromIso = (fromDate ?? defaultFrom).toISOString();
 
   let initialRows: any[] = [];
 
@@ -160,18 +145,18 @@ export default async function TemplatesIndexPage({
     // includeVersions keeps all rows but attaches effective timestamps
     initialRows = rows.map(attachEffective);
   } else {
-    // Fast path → query the secure view (owner/admin filter embedded in the view)
+    // Fast path → secure view (owner/admin filter embedded in the view)
     const MV_SELECT =
       'base_slug,canonical_id,canonical_slug,canonical_template_name,canonical_updated_at,canonical_created_at,is_site,archived,industry,color_mode,effective_updated_at';
 
-    let mv = supabase
+    // Let DB pre-sort by effective_updated_at
+    const { data: bases, error: mvErr } = await supabase
       .from('template_bases_secure') // secure view wrapping the MV
       .select(MV_SELECT)
       .gte('effective_updated_at', fromIso)
       .order('effective_updated_at', { ascending: false })
       .limit(800);
 
-    const { data: bases, error: mvErr } = await mv;
     if (mvErr) {
       console.error('Error loading template_bases_secure:', mvErr.message);
       return (
@@ -200,11 +185,13 @@ export default async function TemplatesIndexPage({
     }));
   }
 
-  // Sort by effective_updated_at desc for consistent ordering
+  // Final guard: sort by effective_updated_at desc for consistent ordering
   initialRows.sort(
     (a, b) =>
-      new Date(b.effective_updated_at || b.updated_at).getTime() -
-      new Date(a.effective_updated_at || a.updated_at).getTime(),
+      new Date(a.effective_updated_at || a.updated_at).getTime() <
+      new Date(b.effective_updated_at || b.updated_at).getTime()
+        ? 1
+        : -1
   );
 
   return (

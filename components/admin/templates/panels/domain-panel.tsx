@@ -1,190 +1,155 @@
-// panels/DomainPanel.tsx
+// components/admin/templates/panels/domain-panel.tsx
+'use client';
+
 import Collapsible from '@/components/ui/collapsible-panel';
 import { Label } from '@/components/ui/label';
-import { Switch } from '@/components/ui/switch';
 import DomainInstructions from '@/components/admin/domain-instructions';
-import FaviconUploader from '@/components/admin/favicon-uploader';
-import OGBulkRebuild from '@/components/admin/og-bulk-rebuild';
-import SeoPreviewTestLinks from '@/components/admin/seo-preview-test-links';
-import SeoPreviewThumbnail from '@/components/admin/seo-preview-thumbnail';
-import SeoShareCardPanel from '@/components/admin/seo-share-card-panel';
 import { Button } from '@/components/ui/button';
-import { toast } from 'react-hot-toast';
 import type { Template } from '@/types/template';
-
-// ❗️ use a **browser** supabase client in this panel
-import { createClient as createBrowserClient } from '@supabase/supabase-js';
 import * as React from 'react';
-import { Image as ImageIcon, Wand2 } from 'lucide-react';
+import { Copy } from 'lucide-react';
 
+/**
+ * Domain & Publishing panel
+ *
+ * This panel is informational and dispatches UI events only.
+ * Publishing (create snapshot → publish) is handled via the bottom toolbar
+ * “Versions” menu and the centralized commit/snapshot/publish pipeline.
+ */
 export default function DomainPanel({
   template,
-  onChange,
   isSite,
 }: {
   template: Template;
-  onChange: (updated: Template) => void;
   isSite: boolean;
+  // NOTE: no onChange here — this panel doesn’t write directly
 }) {
-  // make a single browser client (inherits session from local storage)
-  const sb = React.useMemo(
-    () =>
-      createBrowserClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-      ),
-    []
-  );
+  const slug = String(template.slug || '').trim();
+  const defaultSubdomain = slug ? `${slug}.quicksites.ai` : 'your-subdomain.quicksites.ai';
+  const customDomain =
+    (template as any)?.custom_domain ||
+    (template as any)?.domain ||
+    '';
 
-  const [genBusy, setGenBusy] = React.useState(false);
-  const [fromLogoBusy, setFromLogoBusy] = React.useState(false);
+  const baseUrlPreview = isSite
+    ? `https://${defaultSubdomain}`
+    : `https://quicksites.ai/templates/${slug || 'slug'}`;
 
-  const handleTogglePublished = async (value: boolean) => {
-    const updated = { ...template, published: value };
-    onChange(updated);
-    const { error } = await sb.from('templates').update({ published: value }).eq('id', template.id);
-    if (error) {
-      toast.error('Failed to update publish status');
-      onChange({ ...template, published: !value });
-    } else {
-      toast.success(value ? 'Template published' : 'Template unpublished');
-    }
-  };
-
-  const setFaviconUrl = async (url: string) => {
-    const nextMeta = { ...(template.meta || {}), favicon_url: url };
-    onChange({ ...template, meta: nextMeta });
-    const { error } = await sb.from('templates').update({ meta: nextMeta }).eq('id', template.id);
-    if (error) toast.error('Failed to save favicon URL');
-    else toast.success('Favicon updated');
-  };
-
-  const ensureAuthed = async () => {
-    const { data } = await sb.auth.getUser();
-    if (!data?.user) {
-      toast.error('Please sign in again to upload');
-      throw new Error('Not authenticated');
-    }
-  };
-
-  const uploadFaviconBlob = async (blob: Blob, nameBase = 'favicon') => {
-    await ensureAuthed();
-    const fileName = `template-${template.id}/${nameBase}-${Date.now()}.png`;
-    const { error } = await sb.storage.from('favicons').upload(fileName, blob, {
-      cacheControl: '3600',
-      upsert: false,
-      contentType: 'image/png',
-    });
-    if (error) throw new Error(error.message || 'Upload failed');
-    const { data } = sb.storage.from('favicons').getPublicUrl(fileName);
-    return data.publicUrl;
-  };
-
-  const dataUrlFromCanvas = (canvas: HTMLCanvasElement) =>
-    new Promise<string>((resolve) => resolve(canvas.toDataURL('image/png')));
-  const blobFromDataURL = async (dataUrl: string) => await (await fetch(dataUrl)).blob();
-
-  const rasterizeSquare = async (srcUrl: string, size = 32) => {
-    const img = new Image();
-    img.crossOrigin = 'anonymous';
-    img.src = srcUrl;
-    await new Promise((res, rej) => { img.onload = () => res(true); img.onerror = rej; });
-    const canvas = document.createElement('canvas');
-    canvas.width = size; canvas.height = size;
-    const ctx = canvas.getContext('2d')!;
-    const iw = img.naturalWidth || 1, ih = img.naturalHeight || 1;
-    const scale = Math.max(size / iw, size / ih);
-    const dw = iw * scale, dh = ih * scale;
-    const dx = (size - dw) / 2, dy = (size - dh) / 2;
-    ctx.clearRect(0, 0, size, size);
-    ctx.imageSmoothingQuality = 'high';
-    ctx.drawImage(img, dx, dy, dw, dh);
-    const dataUrl = await dataUrlFromCanvas(canvas);
-    return await blobFromDataURL(dataUrl);
-  };
-
-  const generateFaviconAI = async () => {
-    setGenBusy(true);
+  const copy = async (text: string) => {
     try {
-      const res = await fetch('/api/favicon/generate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          template_id: template.id,
-          business_name: (template as any)?.business_name,
-          industry: template.industry,
-          size: '1024x1024',
-          transparent: true,
+      await navigator.clipboard.writeText(text);
+    } catch {
+      // no-op
+    }
+  };
+
+  // Helper to nudge the editor to open the Versions menu / Identity panel
+  const openVersionsMenu = () => {
+    try {
+      // If your toolbar listens for this, it can open the Versions dropdown.
+      // Otherwise, this is a no-op and the instructions still guide users.
+      window.dispatchEvent(new CustomEvent('qs:versions:open'));
+    } catch {}
+  };
+  const openIdentityPanel = () => {
+    try {
+      window.dispatchEvent(new CustomEvent('qs:settings:set-open', { detail: true }));
+      window.dispatchEvent(
+        new CustomEvent('qs:open-settings-panel', {
+          detail: { panel: 'identity', openEditor: true, scroll: true, spotlightMs: 900 } as any,
         }),
-      });
-      const json = await res.json();
-      if (!res.ok) throw new Error(json?.error || `Generate failed (${res.status})`);
-      const b64 = json.image_base64 as string;
-      if (!b64) throw new Error('No image returned');
-
-      const bytes = Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
-      const blob1024 = new Blob([bytes], { type: 'image/png' });
-
-      const tmpUrl = URL.createObjectURL(blob1024);
-      const blob32 = await rasterizeSquare(tmpUrl, 32);
-      URL.revokeObjectURL(tmpUrl);
-
-      const url32 = await uploadFaviconBlob(blob32, 'favicon-32');
-      await setFaviconUrl(url32);
-    } catch (e: any) {
-      console.error(e);
-      toast.error(e?.message || 'Favicon generation failed');
-    } finally {
-      setGenBusy(false);
-    }
+      );
+    } catch {}
   };
-
-  const makeFaviconFromLogo = async () => {
-    const logo = (template as any)?.logo_url;
-    if (!logo) { toast.error('No header logo found to convert.'); return; }
-    setFromLogoBusy(true);
-    try {
-      const blob32 = await rasterizeSquare(logo, 32);
-      const url32 = await uploadFaviconBlob(blob32, 'favicon-32');
-      await setFaviconUrl(url32);
-    } catch (e: any) {
-      console.error(e);
-      toast.error(e?.message || 'Failed to create favicon from logo');
-    } finally {
-      setFromLogoBusy(false);
-    }
-  };
-
-  const currentFavicon = (template.meta as any)?.favicon_url || '';
 
   return (
     <Collapsible title="Publishing & Domain" id="publishing-domain">
-      {/* …rest of your UI… */}
-      <div className="flex gap-2 items-center flex-wrap">
-        <DomainInstructions domain={template.custom_domain || ''} />
-        {/* <FaviconUploader
-          templateId={template.id}
-          currentUrl={currentFavicon}
-          onUpload={(url) => setFaviconUrl(url)}
-          bucket="favicons"                               // ✅ keep consistent
-          folder={`template-${template.id}`}              // optional prefix
-        /> */}
+      <div className="space-y-4">
 
-        {/* <div className="flex items-center gap-2">
-          <Button size="sm" onClick={generateFaviconAI} disabled={genBusy}>
-            <Wand2 className="h-4 w-4 mr-1" /> {genBusy ? 'Generating…' : 'AI Favicon'}
-          </Button>
-          <Button
-            size="sm"
-            variant="secondary"
-            onClick={makeFaviconFromLogo}
-            disabled={fromLogoBusy || !(template as any)?.logo_url}
-          >
-            <ImageIcon className="h-4 w-4 mr-1" /> {fromLogoBusy ? 'Processing…' : 'From Logo'}
-          </Button>
-        </div> */}
+        {/* Live URL preview */}
+        <div className="rounded-lg border border-white/10 bg-neutral-900/50 p-3 text-sm text-white/90">
+          <Label className="block text-xs text-white/70 mb-1">Preview URL</Label>
+          <div className="flex items-center gap-2">
+            <code className="rounded bg-neutral-950/70 px-2 py-1">{baseUrlPreview}</code>
+            <Button size="sm" variant="outline" onClick={() => copy(baseUrlPreview)}>
+              <Copy className="h-4 w-4 mr-1" /> Copy
+            </Button>
+          </div>
+          {!isSite && (
+            <p className="mt-2 text-xs text-white/60">
+              This template isn’t published as a site yet. Use the <strong>Versions</strong> menu (bottom toolbar) to
+              create a snapshot and publish.
+            </p>
+          )}
+        </div>
 
-        {/* …other controls… */}
+        {/* Workflow steps */}
+        <div className="rounded-lg border border-white/10 bg-neutral-900/50 p-3 text-sm">
+          <Label className="block text-xs text-white/70 mb-2">How to go live</Label>
+          <ol className="list-decimal list-inside space-y-1 text-white/90">
+            <li>
+              <strong>Save</strong> your edits (autosave runs automatically).
+            </li>
+            <li>
+              Open the <strong>Versions</strong> menu (bottom toolbar) → <em>Create snapshot</em>{' '}
+              <span className="text-white/60">(captures the current draft)</span>.
+              {' '}
+              <Button size="sm" variant="ghost" className="ml-1 h-7 px-2" onClick={openVersionsMenu}>
+                Open Versions
+              </Button>
+            </li>
+            <li>
+              In <strong>Versions</strong>, select the snapshot → <em>Publish</em>.
+            </li>
+            <li>
+              Visit your live subdomain:{' '}
+              <code className="rounded bg-neutral-950/70 px-1 py-0.5">{`https://${defaultSubdomain}`}</code>.
+            </li>
+            <li>
+              (Optional) Connect a <strong>custom domain</strong> following the DNS instructions below.
+            </li>
+          </ol>
+        </div>
+
+        {/* Domain instructions */}
+        <div className="rounded-lg border border-white/10 bg-neutral-900/50 p-3">
+          <Label className="block text-xs text-white/70 mb-2">Custom Domain</Label>
+          <p className="text-sm text-white/80 mb-2">
+            Point your domain to your live site. If you haven’t already set your business address, open{' '}
+            <button
+              type="button"
+              onClick={openIdentityPanel}
+              className="underline text-blue-300 hover:text-blue-200"
+              title="Open Template Identity"
+            >
+              Template Identity
+            </button>{' '}
+            to set your contact info and branding.
+          </p>
+          <DomainInstructions domain={customDomain} />
+          {!customDomain && (
+            <p className="mt-2 text-xs text-white/60">
+              If you don’t have a custom domain yet, you can stay on{' '}
+              <code className="rounded bg-neutral-950/70 px-1 py-0.5">{defaultSubdomain}</code>.
+            </p>
+          )}
+        </div>
+
+        {/* Helpful notes */}
+        <div className="rounded-lg border border-white/10 bg-neutral-900/50 p-3 text-xs text-white/60 leading-relaxed">
+          <ul className="list-disc list-inside space-y-1">
+            <li>
+              Publishing is snapshot-based. The live site always reads from a snapshot, not your mutable draft.
+            </li>
+            <li>
+              After publishing, SEO and share images are generated from your current metadata. Update title/description in
+              <em> Identity</em> or your SEO panel as needed.
+            </li>
+            <li>
+              Favicon and logo live in <code>data.meta</code> (set via the Header/Identity panels). No changes are required here.
+            </li>
+          </ul>
+        </div>
       </div>
     </Collapsible>
   );

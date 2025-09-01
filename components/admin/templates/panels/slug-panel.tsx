@@ -1,27 +1,27 @@
+// components/admin/templates/panels/slug-panel.tsx
 'use client';
 
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import Collapsible from '@/components/ui/collapsible-panel';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
-import { supabase } from '@/admin/lib/supabaseClient';
 import type { Template } from '@/types/template';
+import { supabase } from '@/lib/supabase/client';
 
-function generateSlug(base: string) {
-  return base
+function sanitizeSlug(base: string) {
+  return String(base || '')
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, '-')
-    .replace(/(^-|-$)/g, '')
+    .replace(/^-+|-+$/g, '')
     .trim();
 }
-
-function generateUniqueSuffix() {
+function uniqueSuffix() {
   return Math.random().toString(36).slice(2, 6);
 }
-
-function generateUniqueSlug(base: string) {
-  return `${generateSlug(base)}-${generateUniqueSuffix()}`;
+function randomSlug(base: string) {
+  const s = sanitizeSlug(base || 'site');
+  return s ? `${s}-${uniqueSuffix()}` : `site-${uniqueSuffix()}`;
 }
 
 export default function SlugPanel({
@@ -29,77 +29,95 @@ export default function SlugPanel({
   onChange,
 }: {
   template: Template;
-  onChange: (updated: Template) => void;
+  onChange: (patch: Partial<Template>) => void; // PATCH (parent autosaves via commit)
 }) {
-  const [slugManuallyEdited, setSlugManuallyEdited] = useState(() =>
-    template.slug && template.slug !== 'untitled'
+  // Meta-first title for slug suggestion
+  const siteTitle = useMemo(
+    () => String((template?.data as any)?.meta?.siteTitle ?? template?.template_name ?? ''),
+    [template]
   );
-  const [slugError, setSlugError] = useState<string | null>(null);
-  const [isCheckingSlug, setIsCheckingSlug] = useState(false);
-  const [isSlugLocked, setIsSlugLocked] = useState(false);
-  const debounceTimer = useRef<NodeJS.Timeout | null>(null);
 
-  // Suggest slug on template name change
+  const [locked, setLocked] = useState(false);
+  const [manuallyEdited, setManuallyEdited] = useState(() => Boolean(template.slug && template.slug !== 'untitled'));
+  const [checking, setChecking] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Suggest slug from siteTitle when not locked or manually edited
   useEffect(() => {
-    if (!slugManuallyEdited && !isSlugLocked && template.template_name) {
-      const generated = generateSlug(template.template_name);
-      onChange({ ...template, slug: generated });
+    if (!locked && !manuallyEdited) {
+      const suggested = sanitizeSlug(siteTitle);
+      if (suggested && suggested !== template.slug) {
+        onChange({ slug: suggested });
+      }
     }
-  }, [template.template_name, isSlugLocked, slugManuallyEdited]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [siteTitle, locked, manuallyEdited]);
 
-  // Debounced slug validation
+  // Validate + check uniqueness (debounced)
   useEffect(() => {
     const slug = template.slug || '';
-    const slugRegex = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+    const rx = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
     if (!slug) {
-      setSlugError('Slug is required');
+      setError('Slug is required');
       return;
-    } else if (!slugRegex.test(slug)) {
-      setSlugError(
-        'Slug must be lowercase, alphanumeric, and hyphen-separated (e.g. roof-cleaning)'
-      );
+    }
+    if (!rx.test(slug)) {
+      setError('Slug must be lowercase letters, numbers and dashes (e.g. roof-cleaning)');
       return;
     }
 
-    if (debounceTimer.current) clearTimeout(debounceTimer.current);
-    debounceTimer.current = setTimeout(() => checkSlugUniqueness(slug), 500);
-  }, [template.slug]);
+    // Debounce: check both templates and sites (best-effort hint)
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(async () => {
+      try {
+        setChecking(true);
+        // Check in templates (excluding current id)
+        const { data: tHits } = await supabase
+          .from('templates')
+          .select('id')
+          .eq('slug', slug)
+          .neq('id', template.id);
 
-  const checkSlugUniqueness = async (slug: string) => {
-    setIsCheckingSlug(true);
-    const { data } = await supabase
-      .from('templates')
-      .select('id')
-      .eq('slug', slug)
-      .neq('id', template.id);
+        // Check in sites (slug uniqueness for live sites)
+        const { data: sHits } = await supabase
+          .from('sites')
+          .select('id')
+          .eq('slug', slug);
 
-    if (data && data.length > 0) {
-      const fixedSlug = `${slug}-${generateUniqueSuffix()}`;
-      setSlugError(`Slug taken. Suggested: ${fixedSlug}`);
-      onChange({ ...template, slug: fixedSlug });
-    } else {
-      setSlugError(null);
-    }
+        const taken = (tHits?.length ?? 0) > 0 || (sHits?.length ?? 0) > 0;
+        if (taken) {
+          const fix = `${slug}-${uniqueSuffix()}`;
+          setError(`Slug is taken. Suggested: ${fix}`);
+        } else {
+          setError(null);
+        }
+      } catch {
+        // Best-effort only; ignore errors (RLS may hide rows)
+        setError(null);
+      } finally {
+        setChecking(false);
+      }
+    }, 450);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [template.slug, template.id]);
 
-    setIsCheckingSlug(false);
-  };
-
-  const isSite = template.is_site;
-  const baseUrl = isSite
-    ? `https://${template.slug || 'yourdomain'}.quicksites.ai`
+  const isSite = !!template.is_site;
+  const urlPreview = isSite
+    ? `https://${template.slug || 'your-subdomain'}.quicksites.ai`
     : `https://quicksites.ai/templates/${template.slug || 'slug'}`;
 
   return (
     <Collapsible title="URL & Slug Settings" id="url-slug-settings">
-      <div className="md:col-span-2 space-y-1">
+      <div className="space-y-2">
         <div className="flex justify-between items-center">
           <Label>Slug</Label>
           <div className="flex gap-2 items-center text-sm text-muted-foreground">
             <span>Lock Slug</span>
             <Switch
-              checked={isSlugLocked}
-              onCheckedChange={(val) => setIsSlugLocked(val)}
+              checked={locked}
+              onCheckedChange={(v) => setLocked(v)}
               disabled={template.published}
             />
           </div>
@@ -109,23 +127,23 @@ export default function SlugPanel({
           value={template.slug || ''}
           disabled={template.published}
           onChange={(e) => {
-            const normalized = generateSlug(e.target.value);
-            setSlugManuallyEdited(true);
-            onChange({ ...template, slug: normalized });
+            const normalized = sanitizeSlug(e.target.value);
+            setManuallyEdited(true);
+            onChange({ slug: normalized });
           }}
           placeholder="e.g. roof-cleaning"
           className={`bg-gray-800 text-white border ${
-            slugError ? 'border-red-500' : 'border-gray-700'
+            error ? 'border-red-500' : 'border-gray-700'
           }`}
         />
 
-        <div className="flex gap-2 pt-2">
+        <div className="flex flex-wrap gap-3 pt-1">
           <button
             type="button"
             onClick={() => {
-              const unique = generateUniqueSlug(template.template_name || 'site');
-              setSlugManuallyEdited(true);
-              onChange({ ...template, slug: unique });
+              const unique = randomSlug(siteTitle || 'site');
+              setManuallyEdited(true);
+              onChange({ slug: unique });
             }}
             className="text-xs text-blue-400 underline"
           >
@@ -134,23 +152,36 @@ export default function SlugPanel({
           <button
             type="button"
             onClick={() => {
-              const suggested = generateSlug(template.template_name || '');
-              setSlugManuallyEdited(false);
-              onChange({ ...template, slug: suggested });
+              const suggested = sanitizeSlug(siteTitle || '');
+              setManuallyEdited(false);
+              onChange({ slug: suggested });
             }}
             className="text-xs text-gray-400 underline"
           >
             Reset to Suggested
           </button>
+          {error?.startsWith('Slug is taken') && (
+            <button
+              type="button"
+              onClick={() => {
+                const suggestion = error.split(':').pop()?.trim() || randomSlug(siteTitle);
+                onChange({ slug: suggestion });
+                setManuallyEdited(true);
+                setError(null);
+              }}
+              className="text-xs text-amber-400 underline"
+            >
+              Use Suggestion
+          </button>
+          )}
         </div>
 
-        {isCheckingSlug && (
-          <p className="text-sm text-yellow-400">Checking slug availability...</p>
-        )}
-        {slugError && <p className="text-sm text-red-400">{slugError}</p>}
-        {template.slug && !slugError && (
+        {checking && <p className="text-sm text-yellow-400">Checking slug availability…</p>}
+        {error && <p className="text-sm text-red-400">{error}</p>}
+
+        {template.slug && !error && (
           <p className="text-sm text-muted-foreground pt-1">
-            URL Preview: <code>{baseUrl}</code>
+            URL Preview: <code>{urlPreview}</code>
           </p>
         )}
       </div>

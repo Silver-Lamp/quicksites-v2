@@ -1,3 +1,4 @@
+// app/admin/templates/host/[[...rest]]/page.tsx
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 export const runtime = 'nodejs';
@@ -5,12 +6,13 @@ export const runtime = 'nodejs';
 import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
 import { headers } from 'next/headers';
+import Script from 'next/script';
+
 import SiteRenderer from '@/components/sites/site-renderer';
+import SiteThemeSetter from '@/components/sites/site-theme-setter';
 import { TemplateEditorProvider } from '@/context/template-editor-context';
 import { generatePageMetadata } from '@/lib/seo/generateMetadata';
 import { supabaseAdmin } from '@/lib/supabase/admin';
-import SiteThemeSetter from '@/components/sites/site-theme-setter';
-import Script from 'next/script';
 
 const QS_DEBUG = process.env.QSITES_DEBUG === '1';
 const BASE_DOMAIN = process.env.NEXT_PUBLIC_BASE_DOMAIN ?? 'quicksites.ai';
@@ -30,41 +32,37 @@ function qlog(msg: string, extra?: any) {
 }
 
 /* ---------- types ---------- */
-type PublicSiteRow = {
+type SiteRow = {
+  id: string;
+  slug: string | null;
+  domain: string | null;
+  default_subdomain: string | null;
+  template_id: string | null;
+  published_snapshot_id: string | null;
+};
+
+type SnapshotRow = {
+  id: string;
+  template_id: string;
+  data: any; // canonical JSON
+  hash?: string | null;
+  created_at?: string | null;
+};
+
+type RenderSite = {
   id: string;
   slug: string | null;
   template_name: string | null;
-
-  data: any;
-  header_block: any | null;
-  footer_block: any | null;
-
-  color_mode: 'light' | 'dark' | null;
-  meta: any | null;
-
-  default_subdomain: string | null;
   domain: string | null;
-
-  published: boolean | null;
-  is_site: boolean | null;
-  archived: boolean | null;
-
-  services: string[] | null;
-  contact_email: string | null;
-  phone: string | null;
-  business_name: string | null;
-  address_line1: string | null;
-  address_line2: string | null;
-  city: string | null;
-  state: string | null;
-  postal_code: string | null;
-  latitude: number | null;
-  longitude: number | null;
+  default_subdomain: string | null;
+  color_mode: 'light' | 'dark';
+  pages: any[];
+  headerBlock: any | null;
+  footerBlock: any | null;
+  data: any; // original snapshot data (for downstream)
 };
 
 /* ---------- helpers ---------- */
-
-// keep async if your TS setup types headers() as Promise<ReadonlyHeaders>
 async function originFromHeaders(): Promise<string> {
   const h = await headers();
   const host = (h.get('x-forwarded-host') ?? h.get('host') ?? 'localhost:3000')
@@ -74,7 +72,7 @@ async function originFromHeaders(): Promise<string> {
   return `${proto}://${host}`;
 }
 
-function firstPageSlug(site: PublicSiteRow): string {
+function firstPageSlug(site: { data?: any; pages?: any[] }): string {
   const pages = Array.isArray((site as any)?.pages)
     ? (site as any).pages
     : ((site as any)?.data?.pages ?? []);
@@ -82,312 +80,205 @@ function firstPageSlug(site: PublicSiteRow): string {
   return (first?.slug as string) || 'home';
 }
 
-function normalizeForRenderer(site: any) {
+function normalizeForRenderer(snapshotData: any, siteFields: Pick<SiteRow, 'id'|'slug'|'domain'|'default_subdomain'>): RenderSite {
+  const data = snapshotData ?? {};
+  const pages = Array.isArray(data?.pages) ? data.pages : [];
+  const headerBlock = data?.headerBlock ?? data?.header ?? null;
+  const footerBlock = data?.footerBlock ?? data?.footer ?? null;
+  const color_mode = (data?.meta?.theme === 'dark' ? 'dark' : data?.color_mode) ?? 'light';
+
   return {
-    ...site,
-    pages: Array.isArray(site?.pages) ? site.pages : site?.data?.pages ?? [],
-    headerBlock:
-      site?.headerBlock ??
-      site?.header_block ??
-      site?.data?.headerBlock ??
-      site?.data?.header ??
-      null,
-    footerBlock:
-      site?.footerBlock ??
-      site?.footer_block ??
-      site?.data?.footerBlock ??
-      site?.data?.footer ??
-      null,
+    id: siteFields.id,
+    slug: siteFields.slug,
+    template_name: data?.meta?.siteTitle ?? siteFields.slug ?? null,
+    domain: siteFields.domain,
+    default_subdomain: siteFields.default_subdomain,
+    color_mode,
+    pages,
+    headerBlock,
+    footerBlock,
+    data,
   };
 }
 
-function composeEffective(c: any, v?: any): PublicSiteRow {
-  const parse = (x: any) =>
-    typeof x === 'string'
-      ? (() => {
-          try { return JSON.parse(x); } catch { return null; }
-        })()
-      : x;
-
-  const hasPages = (d: any) => !!d && Array.isArray(d.pages) && d.pages.length > 0;
-
-  const cData = parse(c?.data) ?? {};
-  const vData = parse(v?.data) ?? {};
-
-  // prefer version content only if it actually has pages
-  const contentData = hasPages(vData) ? vData : cData;
-
-  const pick = (a: any, b: any): any => (a ?? b) ?? null;
-
-  const vServices: string[] = Array.isArray(v?.services_jsonb) ? v.services_jsonb : [];
-  const cServices: string[] = Array.isArray(c?.services_jsonb) ? c.services_jsonb : [];
-
-  return {
-    id: (v?.id ?? c?.id) as string,
-    slug: (c?.slug ?? null) as string | null,
-    template_name: (c?.template_name ?? null) as string | null,
-
-    data: contentData,
-    header_block: pick(v?.header_block, c?.header_block),
-    footer_block: pick(v?.footer_block, c?.footer_block),
-
-    color_mode: (pick(v?.color_mode, c?.color_mode) ?? null) as 'light' | 'dark' | null,
-    meta: (c?.meta ?? null),
-
-    default_subdomain: (c?.default_subdomain ?? null),
-    domain: (c?.domain ?? null),
-
-    published: (c?.published ?? null),
-    is_site: (c?.is_site ?? null),
-    archived: (c?.archived ?? null),
-
-    services: (vServices.length ? vServices : cServices) ?? [],
-    contact_email: (c?.contact_email ?? null),
-    phone: (c?.phone ?? null),
-    business_name: (c?.business_name ?? null),
-    address_line1: (c?.address_line1 ?? null),
-    address_line2: (c?.address_line2 ?? null),
-    city: (c?.city ?? null),
-    state: (c?.state ?? null),
-    postal_code: (c?.postal_code ?? null),
-    latitude: (c?.latitude ?? null),
-    longitude: (c?.longitude ?? null),
-  };
+function safeParse(x: any) {
+  if (typeof x !== 'string') return x;
+  try { return JSON.parse(x); } catch { return {}; }
 }
 
-async function getPublishedOrLatestVersionForCanonical(canonical: any) {
-  if (!canonical) return null;
-
-  if (canonical.published_version_id) {
-    const { data, error } = await supabaseAdmin
-      .from('templates')
-      .select('*')
-      .eq('id', canonical.published_version_id)
-      .maybeSingle();
-    if (error) qlog('version lookup (published) failed', error);
-    return data ?? null;
+async function loadSnapshotById(id: string): Promise<SnapshotRow | null> {
+  const { data, error } = await supabaseAdmin
+    .from('snapshots')
+    .select('id, template_id, data, hash, created_at')
+    .eq('id', id)
+    .maybeSingle();
+  if (error) {
+    qlog('snapshots lookup error', error?.message || error);
+    return null;
   }
+  return (data as SnapshotRow) ?? null;
+}
 
+async function loadDraftTemplate(templateId: string): Promise<{ data: any; siteFields: any } | null> {
   const { data, error } = await supabaseAdmin
     .from('templates')
-    .select('*')
-    .eq('base_slug', canonical.base_slug)
-    .eq('is_version', true)
-    .order('updated_at', { ascending: false })
-    .limit(1)
+    .select('id, template_name, slug, data, header_block, footer_block, color_mode, domain, default_subdomain')
+    .eq('id', templateId)
     .maybeSingle();
-  if (error) qlog('version lookup (latest) failed', error);
-  return data ?? null;
+  if (error) {
+    qlog('templates draft lookup error', error?.message || error);
+    return null;
+  }
+  const d = safeParse(data?.data) ?? {};
+  if (data?.header_block && !d?.headerBlock) d.headerBlock = data.header_block;
+  if (data?.footer_block && !d?.footerBlock) d.footerBlock = data.footer_block;
+  if (data?.color_mode && !d?.color_mode) d.color_mode = data.color_mode;
+
+  return { data: d, siteFields: { id: data!.id, slug: data!.slug, domain: data!.domain, default_subdomain: data!.default_subdomain } };
+}
+
+async function findSiteByHost(hostNoPort: string): Promise<SiteRow | null> {
+  const variants = hostNoPort.startsWith('www.')
+    ? [hostNoPort, hostNoPort.slice(4)]
+    : [hostNoPort, `www.${hostNoPort}`];
+
+  // 1) Direct domain
+  let { data: site, error } = await supabaseAdmin
+    .from('sites')
+    .select('id, slug, domain, default_subdomain, template_id, published_snapshot_id')
+    .in('domain', variants)
+    .maybeSingle();
+
+  if (site) return site as SiteRow;
+
+  // 2) *.BASE_DOMAIN
+  if (hostNoPort.endsWith(`.${BASE_DOMAIN}`)) {
+    const sub = hostNoPort.replace(/^www\./, '').slice(0, -(`.${BASE_DOMAIN}`).length);
+    // default_subdomain exact match
+    const { data: byDefault } = await supabaseAdmin
+      .from('sites')
+      .select('id, slug, domain, default_subdomain, template_id, published_snapshot_id')
+      .eq('default_subdomain', `${sub}.${BASE_DOMAIN}`)
+      .maybeSingle();
+    if (byDefault) return byDefault as SiteRow;
+
+    // slug fallback
+    const { data: bySlug } = await supabaseAdmin
+      .from('sites')
+      .select('id, slug, domain, default_subdomain, template_id, published_snapshot_id')
+      .eq('slug', sub)
+      .maybeSingle();
+    if (bySlug) return bySlug as SiteRow;
+  }
+
+  // 3) Local dev: <slug>.localhost
+  if (hostNoPort.endsWith('.localhost')) {
+    const sub = hostNoPort.replace(/^www\./, '').slice(0, -('.localhost'.length));
+    const { data: bySlugLocal } = await supabaseAdmin
+      .from('sites')
+      .select('id, slug, domain, default_subdomain, template_id, published_snapshot_id')
+      .eq('slug', sub)
+      .maybeSingle();
+    if (bySlugLocal) return bySlugLocal as SiteRow;
+  }
+
+  if (error) qlog('sites lookup error', error?.message || error);
+  return null;
 }
 
 /* ---------- data loader ---------- */
-async function loadSiteForRequest(): Promise<{ site: PublicSiteRow; host: string } | null> {
+async function loadSiteForRequest(previewSnapshotId?: string | null): Promise<{ site: RenderSite; host: string } | null> {
   const h = await headers();
-  const hostRaw = (h.get('x-forwarded-host') ?? h.get('host') ?? '')
+  const host = (h.get('x-forwarded-host') ?? h.get('host') ?? '')
     .toLowerCase()
     .replace(/\.$/, '');
-  const hostNoPort = hostRaw.split(':')[0];
-
+  const hostNoPort = host.split(':')[0];
   if (!hostNoPort) return null;
 
-  const variants =
-    hostNoPort.startsWith('www.')
-      ? [hostNoPort, hostNoPort.slice(4)]
-      : [hostNoPort, `www.${hostNoPort}`];
+  qlog('env', { baseDomain: BASE_DOMAIN, host: hostNoPort, previewSnapshotId });
 
-  qlog('env', { baseDomain: BASE_DOMAIN, host: hostNoPort, variants });
-
-  let canonical: any = null;
-
-  // A) Try custom domains directly on canonical `templates`
-  {
-    const { data, error } = await supabaseAdmin
-      .from('templates')
-      .select('*')
-      .eq('archived', false)
-      .eq('is_version', false)
-      .in('domain', variants)
-      .order('updated_at', { ascending: false })
-      .limit(1)
-      .maybeSingle();
-    if (error) qlog('canonical by domain failed', error);
-    if (data) {
-      canonical = data;
-      qlog('CANONICAL by domain', { id: canonical.id, domain: canonical.domain });
-    }
-  }
-
-  // B) *.BASE_DOMAIN → default_subdomain, slug/base_slug fallbacks
-  if (!canonical && hostNoPort.endsWith(`.${BASE_DOMAIN}`)) {
-    const sub = hostNoPort.replace(/^www\./, '').slice(0, -(`.${BASE_DOMAIN}`).length);
-
-    // B1) default_subdomain exact match
-    {
-      const { data, error } = await supabaseAdmin
-        .from('templates')
-        .select('*')
-        .eq('archived', false)
-        .eq('is_version', false)
-        .eq('default_subdomain', `${sub}.${BASE_DOMAIN}`)
-        .order('updated_at', { ascending: false })
-        .limit(1)
-        .maybeSingle();
-      if (error) qlog('canonical by default_subdomain failed', error);
-      if (data) {
-        canonical = data;
-        qlog('CANONICAL by default_subdomain', { sub, id: canonical.id });
-      }
-    }
-
-    // B2) slug / base_slug fallback
-    if (!canonical) {
-      // Try slug first
-      let r = await supabaseAdmin
-        .from('templates')
-        .select('*')
-        .eq('archived', false)
-        .eq('is_version', false)
-        .eq('slug', sub)
-        .order('updated_at', { ascending: false })
-        .limit(1)
-        .maybeSingle();
-
-      if (!r.data) {
-        r = await supabaseAdmin
-          .from('templates')
-          .select('*')
-          .eq('archived', false)
-          .eq('is_version', false)
-          .eq('base_slug', sub)
-          .order('updated_at', { ascending: false })
-          .limit(1)
-          .maybeSingle();
-      }
-
-      if (r.error) qlog('canonical by slug/base_slug failed', r.error);
-      if (r.data) {
-        canonical = r.data;
-        qlog('CANONICAL by slug/base_slug', { sub, id: canonical.id });
-      }
-    }
-  }
-
-  // C) Local dev: <slug>.localhost
-  if (!canonical && hostNoPort.endsWith('.localhost')) {
-    const sub = hostNoPort.replace(/^www\./, '').slice(0, -('.localhost'.length));
-
-    // Try slug then base_slug then template_name
-    let r = await supabaseAdmin
-      .from('templates')
-      .select('*')
-      .eq('archived', false)
-      .eq('is_version', false)
-      .eq('slug', sub)
-      .order('updated_at', { ascending: false })
-      .limit(1)
-      .maybeSingle();
-
-    if (!r.data) {
-      r = await supabaseAdmin
-        .from('templates')
-        .select('*')
-        .eq('archived', false)
-        .eq('is_version', false)
-        .eq('base_slug', sub)
-        .order('updated_at', { ascending: false })
-        .limit(1)
-        .maybeSingle();
-    }
-
-    if (!r.data) {
-      r = await supabaseAdmin
-        .from('templates')
-        .select('*')
-        .eq('archived', false)
-        .eq('is_version', false)
-        .eq('template_name', sub)
-        .order('updated_at', { ascending: false })
-        .limit(1)
-        .maybeSingle();
-    }
-
-    if (r.error) qlog('LOCAL canonical lookup failed', r.error);
-    if (r.data) {
-      canonical = r.data;
-      qlog('LOCAL CANONICAL', { sub, id: canonical.id });
-    }
-  }
-
-  if (!canonical) {
-    qlog('NOT FOUND – returning 404', { host: hostNoPort, variants });
+  const siteRow = await findSiteByHost(hostNoPort);
+  if (!siteRow) {
+    qlog('NOT FOUND site row – returning 404', { host: hostNoPort });
     return null;
   }
 
-  const version = await getPublishedOrLatestVersionForCanonical(canonical);
-  const site = composeEffective(canonical, version || undefined);
+  // Choose snapshot: preview ? preview : published
+  const snapId = previewSnapshotId || siteRow.published_snapshot_id || null;
 
-  // Backstop: ensure there are pages; if not, try template_name canonical (rare datasets)
-  const hasPages = (d: any) => !!d && Array.isArray(d.pages) && d.pages.length > 0;
-  if (!hasPages(site?.data)) {
-    const subAlt = canonical?.template_name ?? canonical?.slug ?? canonical?.base_slug;
-    if (subAlt && subAlt !== canonical?.slug) {
-      const r2 = await supabaseAdmin
-        .from('templates')
-        .select('*')
-        .eq('archived', false)
-        .eq('is_version', false)
-        .eq('template_name', subAlt)
-        .order('updated_at', { ascending: false })
-        .limit(1)
-        .maybeSingle();
+  let normalized: RenderSite | null = null;
 
-      if (r2.data) {
-        const v2 = await getPublishedOrLatestVersionForCanonical(r2.data);
-        const retry = composeEffective(r2.data, v2 || undefined);
-        if (hasPages(retry?.data)) {
-          qlog('Backstop: canonical-by-name used', { subAlt, usedVersion: !!v2?.id });
-          return { site: retry, host: hostNoPort };
-        }
-      }
+  if (snapId) {
+    const snap = await loadSnapshotById(snapId);
+    if (snap?.data) {
+      normalized = normalizeForRenderer(snap.data, {
+        id: siteRow.id,
+        slug: siteRow.slug,
+        domain: siteRow.domain,
+        default_subdomain: siteRow.default_subdomain,
+      });
+      qlog('render snapshot', { snapId, pages: normalized.pages?.length ?? 0 });
     }
   }
 
-  qlog('FOUND site', { id: site.id, slug: site.slug, domain: site.domain });
-  return { site, host: hostNoPort };
+  // Backstop (dev): if no snapshot, render the draft template
+  if (!normalized && siteRow.template_id) {
+    const draft = await loadDraftTemplate(siteRow.template_id);
+    if (draft?.data) {
+      normalized = normalizeForRenderer(draft.data, draft.siteFields);
+      qlog('render draft backstop', { pages: normalized.pages?.length ?? 0 });
+    }
+  }
+
+  if (!normalized) return null;
+
+  return { site: normalized, host: hostNoPort };
 }
 
 /* ---------- metadata ---------- */
 export async function generateMetadata({
   params,
+  searchParams,
 }: {
-  params: Promise<{ rest?: string[] }>;
+  params: { rest?: string[] };
+  searchParams?: Record<string, string | string[] | undefined>;
 }): Promise<Metadata> {
-  const payload = await loadSiteForRequest();
+  const previewSnapshotId =
+    (Array.isArray(searchParams?.preview_snapshot_id)
+      ? searchParams?.preview_snapshot_id?.[0]
+      : searchParams?.preview_snapshot_id) ?? null;
+
+  const payload = await loadSiteForRequest(previewSnapshotId);
   if (!payload) return {};
   const { site } = payload;
-  const { rest } = await params;
-  const pageSlug = rest?.[0] ?? firstPageSlug(site);
+  const pageSlug = (params?.rest && params.rest[0]) || firstPageSlug(site);
   return generatePageMetadata({ site: site as any, pageSlug, baseUrl: await originFromHeaders() });
 }
 
 /* ---------- page ---------- */
 export default async function HostSitePage({
   params,
+  searchParams,
 }: {
-  params: Promise<{ rest?: string[] }>;
+  params: { rest?: string[] };
+  searchParams?: Record<string, string | string[] | undefined>;
 }) {
-  const payload = await loadSiteForRequest();
+  const previewSnapshotId =
+    (Array.isArray(searchParams?.preview_snapshot_id)
+      ? searchParams?.preview_snapshot_id?.[0]
+      : searchParams?.preview_snapshot_id) ?? null;
+
+  const payload = await loadSiteForRequest(previewSnapshotId);
   if (!payload) return notFound();
 
   const { site } = payload;
-  const { rest } = await params;
-  const pageSlug = rest?.[0] ?? firstPageSlug(site);
+  const pageSlug = (params?.rest && params.rest[0]) || firstPageSlug(site);
   const colorMode = (site.color_mode ?? 'light') as 'light' | 'dark';
   const baseUrl = await originFromHeaders();
 
-  const normalized = normalizeForRenderer(site);
-  qlog('RENDER', { pageSlug, pagesLen: normalized.pages?.length });
+  qlog('RENDER', { pageSlug, pagesLen: site.pages?.length });
 
+  // Ensure correct theme before hydration/paint
   const inline = `(function(m){try{
     var h=document.documentElement,b=document.body;
     if(m==='dark'){h.classList.add('dark');b.classList.add('dark');h.dataset.theme='dark';b.dataset.theme='dark';}
@@ -397,17 +288,16 @@ export default async function HostSitePage({
 
   return (
     <>
-      {/* Ensure correct theme before hydration/paint */}
-    <Script id="qs-site-theme" strategy="beforeInteractive" dangerouslySetInnerHTML={{ __html: inline }} />
-    <SiteThemeSetter mode={colorMode} />
-  
+      <Script id="qs-site-theme" strategy="beforeInteractive" dangerouslySetInnerHTML={{ __html: inline }} />
+      <SiteThemeSetter mode={colorMode} />
+
       <TemplateEditorProvider
-        templateName={normalized.template_name ?? normalized.slug ?? String(normalized.id)}
+        templateName={site.template_name ?? site.slug ?? String(site.id)}
         colorMode={colorMode}
-        initialData={normalized}
+        initialData={site as any}
       >
         <SiteRenderer
-          site={normalized}
+          site={site as any}
           page={pageSlug}
           baseUrl={baseUrl}
           id="site-renderer-page"

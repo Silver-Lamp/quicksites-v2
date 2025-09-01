@@ -1,36 +1,33 @@
 // components/admin/templates/template-action-toolbar.tsx
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useRouter } from 'next/navigation';
 import {
   RotateCcw, RotateCw, AlertTriangle, X, Maximize2, Minimize2,
   Smartphone, Tablet, Monitor, Sun, Moon, SlidersHorizontal, Check,
-  Settings as SettingsIcon,
-  Trash2,
-  Database,
+  Settings as SettingsIcon, Trash2, Database,
 } from 'lucide-react';
 import { Button } from '@/components/ui';
 import toast from 'react-hot-toast';
 
 import type { Template } from '@/types/template';
 import { validateTemplateAndFix } from '@/admin/lib/validateTemplate';
-import { prepareTemplateForSave } from '@/admin/lib/prepareTemplateForSave';
-import { saveAsTemplate } from '@/admin/lib/saveAsTemplate';
+import { saveAsTemplate } from '@/admin/lib/saveAsTemplate'; // kept for duplicate site flow
 import { createSharedPreview } from '@/admin/lib/createSharedPreview';
 
 import AsyncGifOverlay from '@/components/ui/async-gif-overlay';
 import VersionsDropdown from '@/components/admin/templates/versions-dropdown';
 import { useTemplateVersions } from '@/hooks/useTemplateVersions';
 import { templateSig } from '@/lib/editor/saveGuard';
-import { buildSharedSnapshotPayload, normalizeForSnapshot } from '@/lib/editor/templateUtils';
-import { createSnapshotFromTemplate, loadVersionRow } from '@/admin/lib/templateSnapshots';
+import { buildSharedSnapshotPayload } from '@/lib/editor/templateUtils'; // NOTE: no normalizeForSnapshot import anymore
+import { loadVersionRow } from '@/admin/lib/templateSnapshots';
 import PageManagerToolbar from '@/components/admin/templates/page-manager-toolbar';
-import { usePersistTemplate, useTemplateRef } from '@/hooks/usePersistTemplate';
-import { AiCostPreview } from '@/components/admin/templates/AiCostPreview';
+import { useTemplateRef } from '@/hooks/usePersistTemplate'; // only the ref helper
+// import { AiCostPreview } from '@/components/admin/templates/AiCostPreview'; // optional
+import type { ValidateResult, Warning } from '@/admin/lib/validateTemplate';
 
-// 🔽 Cache helpers
 import {
   dispatchTemplateCacheInvalidate,
   dispatchTemplateCacheUpdate,
@@ -72,6 +69,16 @@ function toCacheRow(t: any): TemplateCacheRow {
   };
 }
 
+/* ---------- debounced helper ---------- */
+function useDebounced<T extends (...args: any[]) => void>(fn: T, delay = 350) {
+  const tRef = useRef<any>(null);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  return useCallback((...args: Parameters<T>) => {
+    if (tRef.current) clearTimeout(tRef.current);
+    tRef.current = setTimeout(() => fn(...args), delay);
+  }, [fn, delay]);
+}
+
 type SaveWarning = { field: string; message: string };
 
 type Props = {
@@ -84,6 +91,59 @@ type Props = {
   onApplyTemplate: (next: Template) => void;
   onSetRawJson?: (json: string) => void;
 };
+
+/* ---------- Commit API hook (new system) ---------- */
+function useCommitApi(templateId: string | undefined) {
+  const [pending, setPending] = useState(false);
+  const revRef = useRef<number | null>(null);
+
+  const loadRev = useCallback(async () => {
+    if (!templateId) return null;
+    const res = await fetch(`/api/templates/state?id=${templateId}`, { cache: 'no-store' });
+    const json = await res.json();
+    if (!res.ok) throw new Error(json?.error || 'Failed to load state');
+    const rev = json?.infra?.template?.rev ?? 0;
+    revRef.current = rev;
+    return rev;
+  }, [templateId]);
+
+  useEffect(() => {
+    void loadRev();
+  }, [loadRev]);
+
+  const commit = useCallback(async (patchData: any, kind: 'save' | 'autosave' = 'save') => {
+    if (!templateId) throw new Error('No template id');
+    const baseRev = revRef.current ?? (await loadRev()) ?? 0;
+
+    setPending(true);
+    const res = await fetch('/api/templates/commit', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        id: templateId,
+        baseRev,
+        patch: { data: patchData }, // ONLY send canonical JSON
+        kind,
+      }),
+    });
+    const json = await res.json();
+    setPending(false);
+    if (!res.ok) throw new Error(json?.error || 'Commit failed');
+    // keep rev in sync for subsequent commits
+    if (typeof json?.rev === 'number') revRef.current = json.rev;
+    // ping truth tracker to refresh
+    try { window.dispatchEvent(new CustomEvent('qs:truth:refresh')); } catch {}
+    return json;
+  }, [templateId, loadRev]);
+
+  const commitSoon = useDebounced((data: any) => {
+    commit(data, 'autosave').catch((e) => {
+      console.warn('[autosave/commit] failed:', e);
+    });
+  }, 400);
+
+  return { pending, commit, commitSoon, loadRev, revRef };
+}
 
 export function TemplateActionToolbar({
   template,
@@ -102,41 +162,39 @@ export function TemplateActionToolbar({
   const [saveWarnings, setSaveWarnings] = useState<SaveWarning[]>([]);
   const [versionsOpen, setVersionsOpen] = useState(false);
 
-  // history counters for badges
   const [hist, setHist] = useState<{ past: number; future: number }>({ past: 0, future: 0 });
 
-  // settings sidebar open state (mirrors localStorage and listens to external changes)
   const [settingsOpenState, setSettingsOpenState] = useState<boolean>(() => {
     if (typeof window === 'undefined') return false;
     try { return (window.localStorage.getItem('qs:settingsOpen') ?? '0') !== '0'; } catch { return false; }
   });
   useEffect(() => {
-    const sync = (e: Event) => {
-      const v = !!(e as CustomEvent).detail;
-      setSettingsOpenState(v);
-    };
+    const sync = (e: Event) => setSettingsOpenState(!!(e as CustomEvent).detail);
     window.addEventListener('qs:settings:set-open', sync as any);
     return () => window.removeEventListener('qs:settings:set-open', sync as any);
   }, []);
+
   const [toolbarEnabled, setToolbarEnabled] = useState(true);
   useEffect(() => {
     const onToggle = (e: Event) => setToolbarEnabled(!!(e as CustomEvent).detail);
     window.addEventListener('qs:toolbar:set-enabled', onToggle as any);
     return () => window.removeEventListener('qs:toolbar:set-enabled', onToggle as any);
   }, []);
-  // latest template ref
+
   const tplRef = useTemplateRef(template);
 
-  // signature of the LAST PERSISTED template
+  // Track LAST PERSISTED signature (logical dirty check)
   const savedSigRef = useRef<string>('');
   useEffect(() => { savedSigRef.current = templateSig(template); }, []); // initial mount
-  useEffect(() => { /* when id changes, reset baseline if desired */ }, [(template as any)?.id]);
+  useEffect(() => { /* reset on id change if desired */ }, [(template as any)?.id]);
 
-  // derived "dirty"
   const [dirty, setDirty] = useState(false);
   useEffect(() => { setDirty(templateSig(template) !== savedSigRef.current); }, [template]);
 
-  // keyboard: Cmd/Ctrl+S to save when dirty
+  // New commit API
+  const { pending, commit, commitSoon, loadRev } = useCommitApi((template as any)?.id);
+
+  // keyboard save
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && (e.key === 's' || e.key === 'S')) {
@@ -146,9 +204,9 @@ export function TemplateActionToolbar({
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [dirty]);
+  }, [dirty]); // eslint-disable-line
 
-  // also wire Cmd/Ctrl+Z (undo) & Shift+Cmd/Ctrl+Z (redo)
+  // undo/redo keyboard (unchanged)
   useEffect(() => {
     const isTyping = (n: EventTarget | null) => {
       const el = n as HTMLElement | null;
@@ -167,10 +225,8 @@ export function TemplateActionToolbar({
     };
     window.addEventListener('keydown', onKey, { capture: true });
     return () => window.removeEventListener('keydown', onKey as any, { capture: true } as any);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, []); // eslint-disable-line
 
-  // listen for history stats from EditorContent & ask for them at mount
   useEffect(() => {
     const onStats = (e: Event) => {
       const d = (e as CustomEvent).detail || {};
@@ -181,24 +237,10 @@ export function TemplateActionToolbar({
     return () => window.removeEventListener('qs:history:stats', onStats as any);
   }, []);
 
-  // apply helper (state + JSON view)
+  // apply helper
   const apply = (next: Template) => { onApplyTemplate(next); onSetRawJson?.(pretty(next)); };
 
-  // persist hook (to /api/templates/:id/edit)
-  const { persist, persistSoon, pending } = usePersistTemplate(
-    (template as any)?.id,
-    () => tplRef.current,
-    {
-      debounceMs: 350,
-      onSuccess: () => {
-        savedSigRef.current = templateSig(tplRef.current);
-        setDirty(false);
-      },
-      onError: (e) => console.error('[persistTemplate] failed:', e),
-    }
-  );
-
-  // portal mount guard
+  // portal guard
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
 
@@ -212,8 +254,7 @@ export function TemplateActionToolbar({
   useEffect(() => {
     window.dispatchEvent(new CustomEvent('qs:preview:set-viewport', { detail: viewport }));
     window.dispatchEvent(new CustomEvent('qs:preview:set-color-mode', { detail: colorPref }));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, []); // eslint-disable-line
 
   const setViewportAndEmit = (v: 'mobile'|'tablet'|'desktop') => {
     setViewport(v);
@@ -221,6 +262,7 @@ export function TemplateActionToolbar({
     window.dispatchEvent(new CustomEvent('qs:preview:set-viewport', { detail: v }));
   };
 
+  // Patch bus → apply + autosave (commitSoon with data only)
   useEffect(() => {
     const onPatch = (e: Event) => {
       const patch = (e as CustomEvent).detail || {};
@@ -229,25 +271,24 @@ export function TemplateActionToolbar({
         ...tplRef.current,
         ...('footerBlock' in patch ? { footerBlock: patch.footerBlock } : {}),
       };
-      // merge nested data
       if (patch.data) {
         next.data = { ...(tplRef.current as any)?.data, ...patch.data };
       }
       apply(next);
-      persistSoon(next);
+      // autosave canonical JSON (data)
+      try { commitSoon(next.data); } catch {}
     };
     window.addEventListener('qs:template:apply-patch', onPatch as any);
     return () => window.removeEventListener('qs:template:apply-patch', onPatch as any);
-  }, [apply, persistSoon]);
-  
-  // === Template Settings sidebar control ===
+  }, [apply, commitSoon, tplRef]);
+
+  // Settings sidebar control
   const emitSettingsOpen = (open: boolean) => {
     window.dispatchEvent(new CustomEvent('qs:settings:set-open', { detail: open }));
     try { window.localStorage.setItem('qs:settingsOpen', open ? '1' : '0'); } catch {}
     setSettingsOpenState(open);
   };
   const toggleTemplateSettings = () => emitSettingsOpen(!settingsOpenState);
-
   const fireCapture = () => window.dispatchEvent(new CustomEvent('qs:history:capture'));
 
   const toggleColor = () => {
@@ -257,7 +298,7 @@ export function TemplateActionToolbar({
     try { localStorage.setItem('qs:preview:color', nextMode); } catch {}
     const next = { ...tplRef.current, color_mode: nextMode } as Template;
     apply(next);
-    persistSoon(next);
+    try { commitSoon(next.data); } catch {}
     window.dispatchEvent(new CustomEvent('qs:preview:set-color-mode', { detail: nextMode }));
   };
 
@@ -287,7 +328,7 @@ export function TemplateActionToolbar({
     prevSidebarCollapsedRef.current = readSidebarCollapsed();
     try { prevSettingsOpenRef.current = window.localStorage.getItem('qs:settingsOpen') !== '0'; }
     catch { prevSettingsOpenRef.current = settingsOpenState; }
-    setSettingsOpenFlag(false); // hide settings sidebar in fullscreen
+    setSettingsOpenFlag(false);
     setSidebarCollapsed(true);
     requestAnimationFrame(() => setTimeout(scrollFirstBlockToTop, 120));
     setIsFullscreen(true);
@@ -299,7 +340,7 @@ export function TemplateActionToolbar({
   };
   const toggleFullscreen = () => (isFullscreen ? exitFullscreen() : enterFullscreen());
 
-  // versions id: prefer UUID, else baseSlug
+  // versions feed
   const tplAny: any = template;
   const idOrSlug = tplAny?.id || baseSlug(tplAny?.slug) || template.template_name || '';
   const { versions, reloadVersions, publishedVersionId } =
@@ -322,163 +363,106 @@ export function TemplateActionToolbar({
     return `${msg} · ${rel} ago`;
   }, [versions]);
 
-  const handleDuplicateSite = async () => {
-    try {
-      setOverlayMsg('Creating your site…');
-      setOverlayOpen(true);
-      const normalized = normalizeForSnapshot(tplRef.current);
-      const created = await saveAsTemplate(normalized, 'site');
-      if (!created) return toast.error('Failed to duplicate');
-      const slug = created.slug ?? null;
-      router.push(slug ? `/template/${slug}/edit` : '/admin/templates');
-      toast.success('Duplicated as site');
-    } catch (e) {
-      console.error('[Duplicate] failed:', e);
-      toast.error('Failed to duplicate');
-    } finally {
-      setOverlayOpen(false);
-    }
-  };
-
-  const handleShare = async () => {
-    try {
-      const { normalized, templateData } = buildSharedSnapshotPayload(tplRef.current);
-      const id = await createSharedPreview({
-        templateId: normalized.id,
-        templateName: normalized.template_name,
-        templateData,
-      });
-      if (!id) return toast.error('Share failed');
-      toast.success('Preview shared!');
-      router.push(`/shared/${id}`);
-    } catch (e) {
-      console.error('[Share] failed', e);
-      toast.error('Share failed');
-    }
-  };
-
+  /* ---------- Save (commit) ---------- */
   const handleSaveClick = async () => {
     try {
-      const source = tplRef.current as any;
+      const src = tplRef.current as any;
 
-      // snapshot fields
-      const srcPages = getTemplatePagesLoose(source);
-      const srcHeader = source.headerBlock ?? source?.data?.headerBlock ?? null;
-      const srcFooter = source.footerBlock ?? source?.data?.footerBlock ?? null;
-      const srcColor  = source.color_mode;
-      const srcSlug   = source.slug;              // 🔒 lock
-      const srcName   = source.template_name;     // 🔒 lock
+      // Validate without stripping fields; keep as close to UI state as possible.
+      const check: ValidateResult = validateTemplateAndFix
+        ? validateTemplateAndFix(src)
+        : { valid: true, data: src as any, warnings: [] as Warning[] };
 
-      const preppedDbShape = prepareTemplateForSave
-        ? prepareTemplateForSave(
-            normalizeForSnapshot(source, {
-              stripChrome: true,
-              preserveIds: true,
-              preserveSlug: true,
-              preserveTemplateName: true,
-            })
-          )
-        : source;
-
-      const check = validateTemplateAndFix(preppedDbShape);
-      if (!check?.valid) {
-        return toast.error('Validation failed — see console for details.');
+      if (!check.valid) {
+        // optional: log details for debugging
+        console.error('[validateTemplateAndFix] failed:', check.errors);
+        toast.error('Validation failed — see console for details.');
+        return;
       }
 
-      const nextTemplate = (check.data ?? {}) as any;
+      // From here, TS knows `check` is the valid branch:
+      const nextTemplate = (check.data ?? src) as Template;
 
-      // re-hydrate pages + theme + header/footer
+      // Keep pages consistent with UI (defensive)
+      const srcPages = getTemplatePagesLoose(src);
       const outPages = getTemplatePagesLoose(nextTemplate);
       if (!Array.isArray(outPages) || !outPages.length) {
-        nextTemplate.data = { ...(nextTemplate.data ?? {}), pages: srcPages };
-        nextTemplate.pages = srcPages;
+        (nextTemplate as any).data = { ...(nextTemplate as any).data, pages: srcPages };
+        (nextTemplate as any).pages = srcPages;
       } else {
-        nextTemplate.data = { ...(nextTemplate.data ?? {}), pages: outPages };
-        if (!Array.isArray(nextTemplate.pages) || !nextTemplate.pages.length) {
-          nextTemplate.pages = outPages;
+        (nextTemplate as any).data = { ...(nextTemplate as any).data, pages: outPages };
+        if (!Array.isArray((nextTemplate as any).pages) || !(nextTemplate as any).pages.length) {
+          (nextTemplate as any).pages = outPages;
         }
       }
-      if (srcColor && nextTemplate.color_mode !== srcColor) nextTemplate.color_mode = srcColor;
-      if (!nextTemplate.headerBlock && srcHeader) nextTemplate.headerBlock = srcHeader;
-      if (!nextTemplate.footerBlock && srcFooter) nextTemplate.footerBlock = srcFooter;
-      if (srcHeader && !nextTemplate?.data?.headerBlock) {
-        nextTemplate.data = { ...(nextTemplate.data ?? {}), headerBlock: srcHeader };
-      }
-      if (srcFooter && !nextTemplate?.data?.footerBlock) {
-        nextTemplate.data = { ...(nextTemplate.data ?? {}), footerBlock: srcFooter };
-      }
 
-      // 🔒 NEVER rename on Save
-      nextTemplate.slug = srcSlug;
-      nextTemplate.template_name = srcName;
-
-      const nextSig = templateSig(nextTemplate as Template);
+      const nextSig = templateSig(nextTemplate);
       if (nextSig === savedSigRef.current) {
         toast('No changes to save');
         setDirty(false);
         return;
       }
 
+      // Show warnings (now strongly typed)
       if (check.warnings?.length) {
-        setSaveWarnings(check.warnings as any);
-        check.warnings.forEach((w: any) =>
+        setSaveWarnings(check.warnings);
+        check.warnings.forEach((w) =>
           toast((t) => <span className="text-yellow-500">⚠️ {w.message}</span>)
         );
-        setTimeout(() => setSaveWarnings([]), 5000);
       } else {
         setSaveWarnings([]);
       }
 
-      onSaveDraft?.(nextTemplate as Template);
-      onSetRawJson?.(pretty(nextTemplate as Template));
-      const ok = await persist(nextTemplate as Template);
-      if (ok) {
-        savedSigRef.current = templateSig(nextTemplate as Template);
-        setDirty(false);
+      onSaveDraft?.(nextTemplate);
+      onSetRawJson?.(pretty(nextTemplate));
 
-        // 🔁 Update cache from saved state
-        try {
-          dispatchTemplateCacheUpdate(toCacheRow(nextTemplate));
-        } catch {}
-      }
+      // COMMIT canonical JSON (data) with optimistic concurrency
+      await loadRev();
+      const res = await commit((nextTemplate as any).data, 'save');
+
+      savedSigRef.current = nextSig;
+      setDirty(false);
+
+      try { dispatchTemplateCacheUpdate(toCacheRow(nextTemplate)); } catch {}
       toast.success('Saved!');
     } catch (err) {
-      console.error('❌ Exception during validation:', err);
-      toast.error('Validation crashed — see console.');
+      console.error('❌ Save/commit crashed:', err);
+      toast.error('Save failed — see console.');
     }
   };
 
+  /* ---------- Snapshot (server-built) ---------- */
   async function onCreateSnapshot() {
     try {
-      const res = await fetch(`/api/templates/${template.id}/snapshots`, {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ label: undefined }), // optional label
-      });
+      const url = `/api/admin/snapshots/create?templateId=${(template as any).id}`;
+      const res = await fetch(url, { method: 'GET' });
       const json = await res.json();
       if (!res.ok) throw new Error(json?.error || 'Snapshot failed');
       toast.success('Snapshot created');
-      // optionally refresh versions list here
+      window.dispatchEvent(new CustomEvent('qs:truth:refresh'));
+      await reloadVersions();
+      return json?.snapshotId as string | undefined;
     } catch (e) {
-      console.error('[Snapshot] insert failed', e);
+      console.error('[Snapshot] failed', e);
       toast.error('Failed to create snapshot');
+      return undefined;
     }
   }
 
+  /* ---------- Restore version (write to draft via commit) ---------- */
   const onRestore = async (id: string) => {
     const trace = `restore:${id}:${Date.now()}`;
     console.time(`QSITES[versions] restore time ${trace}`);
     try {
       console.info(`QSITES[versions] begin restore trace=${trace}`, { id });
-  
+
       const data = await loadVersionRow(id);
-  
+
       if (!confirm('Restore this version? This will overwrite the current draft.')) {
         console.info(`QSITES[versions] cancelled by user trace=${trace}`);
         return;
       }
-  
-      // data.data may be stringified JSON or object, normalize it:
+
       const payload = (() => {
         try {
           return typeof (data as any).data === 'string'
@@ -489,8 +473,8 @@ export function TemplateActionToolbar({
           return (data as any).data ?? {};
         }
       })();
-  
-      // Defensive block validator
+
+      // lightweight block sanity
       const blockErrs: string[] = [];
       for (const page of payload?.pages ?? []) {
         for (const b of page?.content_blocks ?? []) {
@@ -501,45 +485,31 @@ export function TemplateActionToolbar({
       }
       if (blockErrs.length) {
         console.warn(`QSITES[versions] ${blockErrs.length} invalid block(s)`, blockErrs);
-        toast((t) => (
-          <span>
-            Restored with warnings — {blockErrs.length} invalid block
-            {blockErrs.length === 1 ? '' : 's'} (see console).
-          </span>
-        ));
+        toast((t) => <span>Restored with warnings — {blockErrs.length} invalid block{blockErrs.length === 1 ? '' : 's'} (see console).</span>);
       }
-  
+
       const restored: Template = {
         ...tplRef.current,
         ...(data.header_block ? { headerBlock: data.header_block } : {}),
         ...(data.footer_block ? { footerBlock: data.footer_block } : {}),
         data: payload,
-        color_mode:
-          (data as any).color_mode ??
-          (tplRef.current as any).color_mode,
+        color_mode: (data as any).color_mode ?? (tplRef.current as any).color_mode,
       };
-  
-      const normalized = normalizeForSnapshot(restored);
-      onSaveDraft?.(normalized);
-      onSetRawJson?.(pretty(normalized));
-  
-      const ok = await persist(normalized);
-      if (ok) {
-        savedSigRef.current = templateSig(normalized);
-        setDirty(false);
 
-        // 🔁 Update cache with restored version
-        try {
-          dispatchTemplateCacheUpdate(toCacheRow(normalized));
-        } catch {}
-      }
+      onSaveDraft?.(restored);
+      onSetRawJson?.(pretty(restored));
+
+      await loadRev();
+      await commit((restored as any).data, 'save');
+
+      savedSigRef.current = templateSig(restored);
+      setDirty(false);
+
+      try { dispatchTemplateCacheUpdate(toCacheRow(restored)); } catch {}
       toast.success('Version restored!');
+      window.dispatchEvent(new CustomEvent('qs:truth:refresh'));
     } catch (e: any) {
-      console.error('QSITES[versions] restore failed', {
-        trace,
-        message: e?.message,
-        stack: e?.stack,
-      });
+      console.error('QSITES[versions] restore failed', { trace, message: e?.message, stack: e?.stack });
       const hint = e?.message?.toLowerCase?.().includes('permission') ? ' (RLS?)' : '';
       toast.error(`Failed to load version: ${e?.message || 'Unknown error'}${hint}`);
     } finally {
@@ -547,14 +517,26 @@ export function TemplateActionToolbar({
     }
   };
 
-  const onPublish = async (_id?: string) => {
+  /* ---------- Publish (via snapshot) ---------- */
+  const onPublish = async (snapshotId?: string) => {
     try {
-      const slugOrName = (tplRef.current as any).slug || tplRef.current.template_name || '';
-      await fetch(`/api/templates/${encodeURIComponent(slugOrName)}/publish`, { method: 'POST' });
+      let sid = snapshotId;
+      if (!sid) {
+        // ensure latest draft is committed, then snapshot
+        await handleSaveClick();
+        sid = await onCreateSnapshot();
+      }
+      if (!sid) throw new Error('No snapshot to publish');
+
+      const url = `/api/admin/sites/publish?templateId=${(template as any).id}&snapshotId=${sid}`;
+      const res = await fetch(url, { method: 'GET' });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json?.error || 'Publish failed');
+
       await reloadVersions();
       toast.success('Published!');
+      window.dispatchEvent(new CustomEvent('qs:truth:refresh'));
 
-      // 🧹 Invalidate cache after publish (or replace with update if your publish mutates local state)
       try {
         const key = (tplRef.current as any)?.id || (tplRef.current as any)?.slug;
         if (key) dispatchTemplateCacheInvalidate(String(key));
@@ -565,7 +547,7 @@ export function TemplateActionToolbar({
     }
   };
 
-  // Undo/Redo button handlers with toast + stats refresh
+  // Undo/Redo handlers
   const handleUndo = () => {
     onUndo();
     window.dispatchEvent(new CustomEvent('qs:history:request-stats'));
@@ -577,7 +559,7 @@ export function TemplateActionToolbar({
     toast('Redo', { icon: '↪️' });
   };
 
-  // ===== DEV: cache controls & hotkeys =====
+  // Dev cache helpers (unchanged)
   const invalidateCache = () => {
     const cur = tplRef.current as any;
     const key = cur?.id || cur?.slug;
@@ -585,14 +567,12 @@ export function TemplateActionToolbar({
     dispatchTemplateCacheInvalidate(String(key));
     toast('Template cache invalidated', { icon: '🗑️' });
   };
-
   const updateCacheFromEditor = () => {
     const cur = tplRef.current as any;
     if (!cur?.id) return toast.error('No template loaded');
     dispatchTemplateCacheUpdate(toCacheRow(cur));
     toast.success('Cache updated from editor state');
   };
-
   const showCacheInfo = () => {
     const cur = tplRef.current as any;
     const key = cur?.id || cur?.slug;
@@ -602,20 +582,6 @@ export function TemplateActionToolbar({
     console.log('[Template Cache]', cached);
     toast(`Cache: ${cached?.updated_at?.slice(0,19).replace('T',' ')}`, { icon: '🗄️' });
   };
-
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      const mod = e.metaKey || e.ctrlKey;
-      if (!mod || !e.altKey) return;
-      const k = e.key.toLowerCase();
-      if (k === 'i') { e.preventDefault(); invalidateCache(); }
-      if (k === 'u') { e.preventDefault(); updateCacheFromEditor(); }
-      if (k === 'c') { e.preventDefault(); showCacheInfo(); }
-    };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
 
   if (!mounted) return null;
 
@@ -628,21 +594,16 @@ export function TemplateActionToolbar({
     <>
       <div
         id="template-action-toolbar"
-        className="fixed bottom-4 left-1/2 -translate-x-1/2 z-[2147483647] w-[95%] max-w-5xl rounded-2xl border border-zinc-700 bg-zinc-900/95 backdrop-blur px-4 sm:px-6 py-3 shadow-lg text-zinc-100 hover:border-purple-500 opacity-90 hover:opacity-100 transition pointer-events-auto"        style={{ WebkitTapHighlightColor: 'transparent', pointerEvents: toolbarEnabled ? 'auto' : 'none' }}
+        className="fixed bottom-4 left-1/2 -translate-x-1/2 z-[2147483647] w-[95%] max-w-5xl rounded-2xl border border-zinc-700 bg-zinc-900/95 backdrop-blur px-4 sm:px-6 py-3 shadow-lg text-zinc-100 hover:border-purple-500 opacity-90 hover:opacity-100 transition pointer-events-auto"
+        style={{ WebkitTapHighlightColor: 'transparent', pointerEvents: toolbarEnabled ? 'auto' : 'none' }}
       >
         <div className="w-full flex justify-between items-center gap-3">
-          {/* Buttons to the left of page manager */}
-          <Button
-            size="icon"
-            variant={settingsOpenState ? 'secondary' : 'ghost'}
-            title="Template Settings Sidebar"
-            aria-pressed={settingsOpenState}
-            onClick={toggleTemplateSettings}
-          >
+          {/* Settings */}
+          <Button size="icon" variant={settingsOpenState ? 'secondary' : 'ghost'} title="Template Settings Sidebar" aria-pressed={settingsOpenState} onClick={toggleTemplateSettings}>
             <SettingsIcon className="w-4 h-4" />
           </Button>
 
-          {/* Center: Page manager */}
+          {/* Page manager */}
           <PageManagerToolbar
             pages={getTemplatePagesLoose(template)}
             currentSlug={currentSlug}
@@ -656,7 +617,7 @@ export function TemplateActionToolbar({
               const pages = [...getTemplatePagesLoose(tplRef.current), newPage];
               const next = withPages(tplRef.current, pages);
               apply(next);
-              persistSoon(next);
+              try { commitSoon((next as any).data); } catch {}
             }}
             onRename={(oldSlug, nextVals) => {
               fireCapture();
@@ -665,14 +626,14 @@ export function TemplateActionToolbar({
               );
               const next = withPages(tplRef.current, pages);
               apply(next);
-              persistSoon(next);
+              try { commitSoon((next as any).data); } catch {}
             }}
             onDelete={(slug) => {
               fireCapture();
               const pages = getTemplatePagesLoose(tplRef.current).filter((p: any) => p.slug !== slug);
               const next = withPages(tplRef.current, pages);
               apply(next);
-              persistSoon(next);
+              try { commitSoon((next as any).data); } catch {}
             }}
             onReorder={(from, to) => {
               fireCapture();
@@ -681,7 +642,7 @@ export function TemplateActionToolbar({
               pages.splice(to, 0, moved);
               const next = withPages(tplRef.current, pages);
               apply(next);
-              persistSoon(next);
+              try { commitSoon((next as any).data); } catch {}
             }}
             siteId={(tplRef.current as any).site_id}
           />
@@ -690,17 +651,10 @@ export function TemplateActionToolbar({
             <SlidersHorizontal className="w-4 h-4" />
           </Button>
 
-          <Button
-            size="icon"
-            variant="ghost"
-            title={colorPref === 'dark' ? 'Light mode' : 'Dark mode'}
-            onClick={toggleColor}
-            aria-pressed={colorPref === 'dark'}
-          >
+          <Button size="icon" variant="ghost" title={colorPref === 'dark' ? 'Light mode' : 'Dark mode'} onClick={toggleColor} aria-pressed={colorPref === 'dark'}>
             {colorPref === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
           </Button>
 
-          {/* <AiCostPreview template={template} /> */}
           <Button size="icon" variant="ghost" title="Full screen (F)" onClick={toggleFullscreen} aria-pressed={isFullscreen}>
             {isFullscreen ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
           </Button>
@@ -735,28 +689,13 @@ export function TemplateActionToolbar({
           {/* DEV cache buttons */}
           {process.env.NODE_ENV !== 'production' && (
             <div className="flex items-center gap-1 mr-1">
-              <Button
-                size="icon"
-                variant="ghost"
-                title="Dev: Show cache info (⌥⌘C)"
-                onClick={showCacheInfo}
-              >
+              <Button size="icon" variant="ghost" title="Dev: Show cache info (⌥⌘C)" onClick={showCacheInfo}>
                 <Database className="w-4 h-4" />
               </Button>
-              <Button
-                size="icon"
-                variant="ghost"
-                title="Dev: Update cache from editor (⌥⌘U)"
-                onClick={updateCacheFromEditor}
-              >
+              <Button size="icon" variant="ghost" title="Dev: Update cache from editor (⌥⌘U)" onClick={updateCacheFromEditor}>
                 <Database className="w-4 h-4" />
               </Button>
-              <Button
-                size="icon"
-                variant="ghost"
-                title="Dev: Invalidate cache (⌥⌘I)"
-                onClick={invalidateCache}
-              >
+              <Button size="icon" variant="ghost" title="Dev: Invalidate cache (⌥⌘I)" onClick={invalidateCache}>
                 <Trash2 className="w-4 h-4" />
               </Button>
             </div>

@@ -68,33 +68,32 @@ export default function TemplateSettingsPanel({ template, onChange }: Props) {
     <div className="space-y-4 px-4 pt-2 w-1/4 min-w-[280px] max-w-[320px] flex-shrink-0" id="sidebar-settings">
       <ThemePanel
         template={template}
-        onChange={(patch) => applyPatch(patch)}
+        onChange={(patch: any) => applyPatch(patch)}
       />
 
       <IdentityPanel
         template={template}
-        onChange={(patch) => applyPatch(patch)}
+        onChange={(patch: any) => applyPatch(patch)}
       />
 
       <ServicesPanel
         template={template}
-        onChange={(patch) => applyPatch(patch)}
+        onChange={(patch: any) => applyPatch(patch)}
       />
 
       <SlugPanel
         template={template}
-        onChange={(patch) => applyPatch(patch)}
+        onChange={(patch: any) => applyPatch(patch)}
       />
 
       <DomainPanel
         template={template}
         isSite={template.is_site ?? false}
-        onChange={(patch) => applyPatch(patch)}
       />
 
       <SeoPanel
         template={template}
-        onChange={(patch) => applyPatch(patch)}
+        onChange={(patch: any) => applyPatch(patch)}
       />
 
       <PaymentSettingsPanel

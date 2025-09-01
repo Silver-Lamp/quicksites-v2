@@ -6,7 +6,6 @@ import Collapsible from '@/components/ui/collapsible-panel';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import type { Template } from '@/types/template';
-import { persistServices } from '@/lib/templates/persistServices';
 import { Sparkles } from 'lucide-react';
 
 type Row = { id: string; value: string };
@@ -15,45 +14,58 @@ const makeId = () =>
     ? crypto.randomUUID()
     : `row_${Math.random().toString(36).slice(2)}`;
 
+function rowsFrom(vals: string[]): Row[] {
+  return (vals || []).map((v) => ({ id: makeId(), value: String(v || '') }));
+}
+function clean(vals: string[]) {
+  return Array.from(new Set(vals.map((s) => s.trim()).filter(Boolean)));
+}
+
 export default function ServicesPanel({
   template,
   onChange,
 }: {
   template: Template;
-  onChange: (updated: Template) => void;
+  onChange: (patch: Partial<Template>) => void; // PATCH, parent autosaves via commit
 }) {
-  const persisted = (template.services ?? template.data?.services ?? []) as string[];
-  const toRows = (vals: string[]): Row[] => vals.map((v) => ({ id: makeId(), value: v }));
+  // meta-first source of truth
+  const meta = (template?.data as any)?.meta ?? {};
+  const contact = meta?.contact ?? {};
+  const persisted = (template?.data as any)?.services ?? template.services ?? [];
 
-  const [draft, setDraft] = React.useState<Row[]>(toRows(persisted));
+  const [draft, setDraft] = React.useState<Row[]>(rowsFrom(persisted));
   const [touched, setTouched] = React.useState(false);
   const [saving, setSaving] = React.useState(false);
 
   // AI state
-  const canSuggest = Boolean(template.industry);
+  const industry = String(meta?.industry || '');
+  const city = String(contact?.city || '');
+  const state = String(contact?.state || '');
+  const canSuggest = Boolean(industry);
   const [aiBusy, setAiBusy] = React.useState(false);
   const [aiError, setAiError] = React.useState<string | null>(null);
 
+  // Sync when template changes
   React.useEffect(() => {
-    setDraft(toRows(persisted));
+    setDraft(rowsFrom(persisted as string[]));
     setTouched(false);
   }, [JSON.stringify(persisted)]);
-
-  const clean = (vals: string[]) =>
-    Array.from(new Set(vals.map((s) => s.trim()).filter(Boolean)));
 
   const isDirty =
     touched &&
     JSON.stringify(clean(draft.map((r) => r.value))) !==
-      JSON.stringify(clean(persisted));
+      JSON.stringify(clean(persisted as string[]));
 
   const save = async () => {
     const cleaned = clean(draft.map((r) => r.value));
     setSaving(true);
     try {
-      const saved = await persistServices(template.id as string, cleaned);
-      onChange({ ...template, services: saved });
-      setDraft(toRows(saved));
+      // Emit a data-only patch; keep a top-level mirror if you still read it anywhere
+      onChange({
+        data: { ...(template.data as any), services: cleaned },
+        services: cleaned,
+      });
+      setDraft(rowsFrom(cleaned));
       setTouched(false);
     } finally {
       setSaving(false);
@@ -61,11 +73,12 @@ export default function ServicesPanel({
   };
 
   const cancel = () => {
-    setDraft(toRows(persisted));
+    setDraft(rowsFrom(persisted as string[]));
     setTouched(false);
+    setAiError(null);
   };
 
-  // AI suggest helpers
+  // AI Suggest helpers — reads meta.industry/city/state
   const suggest = async (mode: 'append' | 'replace' = 'append', count = 6) => {
     if (!canSuggest || aiBusy) return;
     setAiBusy(true);
@@ -76,9 +89,9 @@ export default function ServicesPanel({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           template_id: template.id,
-          industry: template.industry,
-          city: (template as any)?.city,
-          state: (template as any)?.state,
+          industry,
+          city,
+          state,
           count,
         }),
       });
@@ -87,7 +100,7 @@ export default function ServicesPanel({
       const suggested: string[] = Array.isArray(json?.services) ? json.services : [];
       const current = draft.map((r) => r.value);
       const merged = clean(mode === 'replace' ? suggested : [...current, ...suggested]);
-      setDraft(toRows(merged));
+      setDraft(rowsFrom(merged));
       setTouched(true);
     } catch (e: any) {
       setAiError(e?.message || 'AI suggestion failed');
@@ -100,7 +113,8 @@ export default function ServicesPanel({
     <Collapsible title="Available Services" id="template-services">
       <div className="space-y-3">
         <div className="flex items-center gap-2">
-          {/* <Label>Service Options (used by contact forms)</Label> */}
+          {/* Left space for future label/help */}
+          <div className="text-xs text-white/60">Used by Services blocks and forms</div>
           {canSuggest && (
             <div className="ml-auto flex items-center gap-2">
               <Button
@@ -127,9 +141,7 @@ export default function ServicesPanel({
             </div>
           )}
         </div>
-        {aiError && (
-          <div className="text-xs text-red-300">AI error: {aiError}</div>
-        )}
+        {aiError && <div className="text-xs text-red-300">AI error: {aiError}</div>}
 
         {draft.map((row) => (
           <div key={row.id} className="flex gap-2 items-center">
@@ -159,7 +171,10 @@ export default function ServicesPanel({
 
         <button
           type="button"
-          onClick={() => { setDraft((p) => [...p, { id: makeId(), value: '' }]); setTouched(true); }}
+          onClick={() => {
+            setDraft((p) => [...p, { id: makeId(), value: '' }]);
+            setTouched(true);
+          }}
           className="text-sm text-green-400 underline"
         >
           + Add Service

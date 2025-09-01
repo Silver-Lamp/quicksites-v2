@@ -181,7 +181,7 @@ async function run() {
       if (!needIndustry && !needServices) continue;
 
       const serviceNames = needServices
-        ? generateServices({ templateId: slug || id, industry: wantIndustry }).map(s => s.name)
+        ? generateServices({ template: { slug, id }, industryLabel: wantIndustry }).map(s => s.name)
         : [];
 
       await patchIndustryServices(id, needIndustry ? wantIndustry : null, serviceNames);

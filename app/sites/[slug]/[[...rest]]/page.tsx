@@ -2,33 +2,47 @@
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
-import { notFound, redirect } from 'next/navigation';
+import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
 import { headers } from 'next/headers';
 import { getServerSupabase } from '@/lib/supabase/server';
+import { supabaseAdmin } from '@/lib/supabase/admin';
 import SiteRenderer from '@/components/sites/site-renderer';
 import { TemplateEditorProvider } from '@/context/template-editor-context';
 import { generatePageMetadata } from '@/lib/seo/generateMetadata';
 
-type PublicSiteRow = {
+/* -------------------- Types -------------------- */
+type SiteRow = {
+  id: string;
+  slug: string | null;
+  domain: string | null;
+  default_subdomain: string | null;
+  template_id: string | null;
+  published_snapshot_id: string | null;
+};
+
+type SnapshotRow = {
+  id: string;
+  template_id: string;
+  data: any;  // canonical JSON
+  hash?: string | null;
+  created_at?: string | null;
+};
+
+type RenderSite = {
   id: string;
   slug: string | null;
   template_name: string | null;
-  data: any;
-  header_block: any | null;
-  footer_block: any | null;
-  color_mode: 'light' | 'dark' | null;
-  meta: any | null;
+  domain: string | null;
   default_subdomain: string | null;
-  domain_lc: string | null;
-  published: boolean | null;
-  is_site: boolean | null;
-  archived: boolean | null;
+  color_mode: 'light' | 'dark';
+  pages: any[];
+  headerBlock: any | null;
+  footerBlock: any | null;
+  data: any;
 };
 
-const SELECT: string =
-  'id, slug, template_name, data, header_block, footer_block, color_mode, meta, default_subdomain, domain_lc, published, is_site, archived, template_name'; // TODO: fix this
-
+/* -------------------- Helpers -------------------- */
 async function originFromHeaders() {
   const h = await headers();
   const host = (h.get('x-forwarded-host') ?? h.get('host') ?? 'localhost:3000')
@@ -38,30 +52,92 @@ async function originFromHeaders() {
   return `${proto}://${host}`;
 }
 
-function firstPageSlug(site: PublicSiteRow): string {
-  const pages = (site?.data as any)?.pages ?? [];
+function firstPageSlug(site: { data?: any; pages?: any[] }) {
+  const pages = Array.isArray((site as any)?.pages)
+    ? (site as any).pages
+    : ((site as any)?.data?.pages ?? []);
   const first = Array.isArray(pages) ? pages.find((p: any) => p?.slug) ?? pages[0] : null;
   return (first?.slug as string) || 'home';
 }
 
-async function loadSiteBySlug(slug: string | null, opts: { allowDraft: boolean }): Promise<PublicSiteRow | null> {
-  const supabase = await getServerSupabase();
+function normalizeForRenderer(snapshotData: any, siteFields: Pick<SiteRow, 'id'|'slug'|'domain'|'default_subdomain'>): RenderSite {
+  const data = snapshotData ?? {};
+  const pages = Array.isArray(data?.pages) ? data.pages : [];
+  const headerBlock = data?.headerBlock ?? data?.header ?? null;
+  const footerBlock = data?.footerBlock ?? data?.footer ?? null;
+  const color_mode = (data?.meta?.theme === 'dark' ? 'dark' : data?.color_mode) ?? 'light';
+  const template_name = data?.meta?.siteTitle ?? siteFields.slug ?? null;
 
-  let q = supabase
-    .from('templates')
-    .select(SELECT)
+  return {
+    id: siteFields.id,
+    slug: siteFields.slug,
+    template_name,
+    domain: siteFields.domain,
+    default_subdomain: siteFields.default_subdomain,
+    color_mode,
+    pages,
+    headerBlock,
+    footerBlock,
+    data,
+  };
+}
+
+function safeParse(x: any) {
+  if (typeof x !== 'string') return x ?? {};
+  try { return JSON.parse(x); } catch { return {}; }
+}
+
+/* ----------------- Data access ------------------ */
+async function loadSiteRowBySlug(slug: string): Promise<SiteRow | null> {
+  const { data, error } = await supabaseAdmin
+    .from('sites')
+    .select('id, slug, domain, default_subdomain, template_id, published_snapshot_id')
     .eq('slug', slug)
-    .eq('is_site', true)
-    .limit(1);
-
-  if (!opts.allowDraft) {
-    // Public preview path: only show published, non-archived
-    q = q.eq('published', true).eq('archived', false);
+    .maybeSingle();
+  if (error) {
+    console.warn('[sites] lookup by slug failed:', error.message);
+    return null;
   }
+  return (data as SiteRow) ?? null;
+}
 
-  const { data, error } = await q.returns<PublicSiteRow>().maybeSingle();
-  if (error) throw new Error(error.message);
-  return data ?? null;
+async function loadSnapshotById(id: string): Promise<SnapshotRow | null> {
+  const { data, error } = await supabaseAdmin
+    .from('snapshots')
+    .select('id, template_id, data, hash, created_at')
+    .eq('id', id)
+    .maybeSingle();
+  if (error) {
+    console.warn('[snapshots] lookup failed:', error.message);
+    return null;
+  }
+  return (data as SnapshotRow) ?? null;
+}
+
+async function loadDraftTemplate(templateId: string): Promise<{ data: any; siteFields: any } | null> {
+  const { data, error } = await supabaseAdmin
+    .from('templates')
+    .select('id, slug, template_name, data, header_block, footer_block, color_mode, domain, default_subdomain')
+    .eq('id', templateId)
+    .maybeSingle();
+  if (error) {
+    console.warn('[templates] draft meta lookup failed:', error.message);
+    return null;
+  }
+  const d = safeParse(data?.data) ?? {};
+  if (data?.header_block && !d?.headerBlock) d.headerBlock = data.header_block;
+  if (data?.footer_block && !d?.footerBlock) d.footerBlock = data.footer_block;
+  if (data?.color_mode && !d?.color_mode) d.color_mode = data.color_mode;
+
+  return {
+    data: d,
+    siteFields: {
+      id: data!.id,
+      slug: data!.slug,
+      domain: data!.domain,
+      default_subdomain: data!.default_subdomain,
+    },
+  };
 }
 
 async function isAdminUser(userId: string | null) {
@@ -78,52 +154,88 @@ async function isAdminUser(userId: string | null) {
 /* -------------------- Metadata -------------------- */
 export async function generateMetadata({
   params,
-  searchParams,
 }: {
   params: { slug: string; rest?: string[] };
-  searchParams?: { preview?: string };
 }): Promise<Metadata> {
   const supabase = await getServerSupabase();
   const { data: { user } } = await supabase.auth.getUser();
   const admin = await isAdminUser(user?.id ?? null);
 
-  // Only admins/owners should see drafts here (owner check happens via RLS)
-  const site = await loadSiteBySlug(params.slug, { allowDraft: admin });
-  if (!site) return {};
+  const siteRow = await loadSiteRowBySlug(params.slug);
+  if (!siteRow) return {};
 
-  const pageSlug = params.rest?.[0] ?? firstPageSlug(site);
-  // Keep your existing SEO generator contract: it likely builds /sites/{slug}/{page}
-  return generatePageMetadata({ site: site as any, pageSlug, baseUrl: `${await originFromHeaders()}/sites` }); // TODO: fix this
+  // choose snapshot (preferred) or draft (admin backstop)
+  let snapshotData: any | null = null;
+  if (siteRow.published_snapshot_id) {
+    const snap = await loadSnapshotById(siteRow.published_snapshot_id);
+    snapshotData = snap?.data ?? null;
+  } else if (admin && siteRow.template_id) {
+    const draft = await loadDraftTemplate(siteRow.template_id);
+    snapshotData = draft?.data ?? null;
+  }
+  if (!snapshotData) return {};
+
+  const normalized = normalizeForRenderer(snapshotData, {
+    id: siteRow.id, slug: siteRow.slug, domain: siteRow.domain, default_subdomain: siteRow.default_subdomain,
+  });
+
+  const pageSlug = params.rest?.[0] ?? firstPageSlug(normalized);
+  return generatePageMetadata({
+    site: normalized as any,
+    pageSlug,
+    baseUrl: `${await originFromHeaders()}/sites`,
+  });
 }
 
 /* ---------------------- Page ---------------------- */
 export default async function SitePreviewPage({
   params,
-  searchParams,
 }: {
   params: { slug: string; rest?: string[] };
-  searchParams?: { preview?: string };
 }) {
   const supabase = await getServerSupabase();
   const { data: { user } } = await supabase.auth.getUser();
   const admin = await isAdminUser(user?.id ?? null);
 
-  // Published path for the public; draft/archived visible only to admin/owner via RLS
-  const site = await loadSiteBySlug(params?.slug ?? '', { allowDraft: admin });
-  if (!site) return notFound();
+  const siteRow = await loadSiteRowBySlug(params.slug);
+  if (!siteRow) return notFound();
 
-  const pageSlug = params.rest?.[0] ?? firstPageSlug(site);
-  const colorMode = (site.color_mode ?? 'light') as 'light' | 'dark'; // TODO: fix this
+  // Prefer published snapshot, else (admins only) fall back to live draft
+  let normalized: RenderSite | null = null;
+
+  if (siteRow.published_snapshot_id) {
+    const snap = await loadSnapshotById(siteRow.published_snapshot_id);
+    if (snap?.data) {
+      normalized = normalizeForRenderer(snap.data, {
+        id: siteRow.id,
+        slug: siteRow.slug,
+        domain: siteRow.domain,
+        default_subdomain: siteRow.default_subdomain,
+      });
+    }
+  }
+
+  if (!normalized && admin && siteRow.template_id) {
+    const draft = await loadDraftTemplate(siteRow.template_id);
+    if (draft?.data) {
+      normalized = normalizeForRenderer(draft.data, draft.siteFields);
+    }
+  }
+
+  if (!normalized) return notFound();
+
+  const pageSlug = params.rest?.[0] ?? firstPageSlug(normalized);
+  const colorMode = (normalized.color_mode ?? 'light') as 'light' | 'dark';
   const baseUrl = `${await originFromHeaders()}/sites`;
 
   return (
     <TemplateEditorProvider
-      templateName={site.template_name ?? site.slug ?? String(site.id)} // TODO: fix this
+      templateName={normalized.template_name ?? normalized.slug ?? String(normalized.id)}
       colorMode={colorMode}
-      initialData={site as any}
+      initialData={normalized as any}
     >
       <SiteRenderer
-        site={site as any}
+        site={normalized as any}
         page={pageSlug}
         baseUrl={baseUrl}
         id="site-renderer-page"

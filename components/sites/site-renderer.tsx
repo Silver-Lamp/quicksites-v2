@@ -16,11 +16,12 @@ import {
 type SiteRendererProps = {
   site: Template;
   page?: string;                 // page slug (optional; will default to first page)
-  baseUrl?: string;
+  baseUrl?: string;              // optional, for absolute links/canonicals
   id?: string;
   className?: string;
   colorMode?: 'light' | 'dark';
   enableThemeWrapper?: boolean;
+  editorChrome?: boolean;        // ← NEW: allow editor chrome flag
 };
 
 export default function SiteRenderer({
@@ -30,6 +31,8 @@ export default function SiteRenderer({
   className,
   colorMode = (site?.color_mode as 'light' | 'dark') ?? 'light',
   enableThemeWrapper = true,
+  baseUrl,                       // ← NEW (already typed)
+  editorChrome,                  // ← NEW
 }: SiteRendererProps) {
   const selectedPage = React.useMemo(
     () => getPageBySlug(site, pageSlug),
@@ -52,21 +55,53 @@ export default function SiteRenderer({
   );
 
   const body = (
-    <div id={id ?? 'site-renderer'} className={clsx('w-full', className)}>
-      {header && <RenderBlock block={header} showDebug={false} colorMode={colorMode} template={site} />}
+    <div
+      id={id ?? 'site-renderer'}
+      className={clsx('w-full', className)}
+      data-editor-chrome={editorChrome ? '1' : undefined} // ← NEW
+      data-base-url={baseUrl || undefined}                // ← NEW
+    >
+      {header && (
+        <RenderBlock
+          block={header}
+          showDebug={false}
+          colorMode={colorMode}
+          template={site}
+        />
+      )}
 
       {bodyBlocks.map((block: any, i: number) => (
         <div key={block?._id ?? i}>
-          <RenderBlock block={block} showDebug={false} colorMode={colorMode} template={site} />
+          <RenderBlock
+            block={block}
+            showDebug={false}
+            colorMode={colorMode}
+            template={site}
+          />
         </div>
       ))}
 
-      {footer && <RenderBlock block={footer} showDebug={false} colorMode={colorMode} template={site} />}
+      {footer && (
+        <RenderBlock
+          block={footer}
+          showDebug={false}
+          colorMode={colorMode}
+          template={site}
+        />
+      )}
     </div>
   );
 
   if (!enableThemeWrapper) return body;
 
-  return <TemplateThemeWrapper mode="site" renderHeader={false} renderFooter={false} template={site}>{body}</TemplateThemeWrapper>;
+  return (
+    <TemplateThemeWrapper
+      mode="site"
+      renderHeader={false}
+      renderFooter={false}
+      template={site}
+    >
+      {body}
+    </TemplateThemeWrapper>
+  );
 }
-    

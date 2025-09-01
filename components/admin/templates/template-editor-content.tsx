@@ -43,7 +43,7 @@ export function getTemplatePages(t: Template): any[] {
 function firstPageSlug(t: Template): string {
   const pages = getTemplatePages(t);
   if (pages.length) return pages.find(p => p?.slug)?.slug ?? pages[0]?.slug ?? 'index';
-  return 'index'; // default aligns with /preview/index
+  return 'index';
 }
 function getPageBlocks(p: any): Block[] {
   if (!p) return [];
@@ -89,9 +89,7 @@ function findBlockByPath(t: Template, path?: string | null) {
 }
 
 function openHoursSettingsPanel(setShowSettings: (open: boolean) => void) {
-  // ensure the sidebar is visible
   setShowSettings(true);
-  // let the sidebar panel open/scroll/spotlight itself
   requestAnimationFrame(() => {
     window.dispatchEvent(
       new CustomEvent('qs:open-settings-panel', {
@@ -99,6 +97,13 @@ function openHoursSettingsPanel(setShowSettings: (open: boolean) => void) {
       })
     );
   });
+}
+
+/** Emit a patch so the toolbar's commit autosave can kick in. */
+function emitPatch(patch: Partial<Template>) {
+  try {
+    window.dispatchEvent(new CustomEvent('qs:template:apply-patch', { detail: patch as any }));
+  } catch {}
 }
 
 /* ---------- component ---------- */
@@ -131,7 +136,6 @@ export default function EditorContent({
   mode,
   onChange,
 }: Props) {
-
   // --- Undo/Redo history (template-level) ---
   const deepClone = (o: any) => JSON.parse(JSON.stringify(o));
   const pastRef = useRef<Template[]>([]);
@@ -148,6 +152,7 @@ export default function EditorContent({
     applyingRef.current = true;
     setTemplate(snap);
     onChange(snap);
+    emitPatch({ data: (snap as any).data, headerBlock: (snap as any).headerBlock, footerBlock: (snap as any).footerBlock });
     applyingRef.current = false;
   };
 
@@ -186,7 +191,7 @@ export default function EditorContent({
     };
   }, [captureHistory, undo, redo]);
 
-  // Keyboard: ⌘Z / ⇧⌘Z (when not typing in an input/editor)
+  // Keyboard: ⌘Z / ⇧⌘Z (when not typing)
   useEffect(() => {
     const isTyping = (n: EventTarget | null) => {
       const el = n as HTMLElement | null;
@@ -207,7 +212,6 @@ export default function EditorContent({
   }, [undo, redo]);
 
   const searchParams = useSearchParams();
-  const pathname = usePathname();
   const previewVersionId = searchParams.get('preview_version_id');
   const tab = ((searchParams.get('tab') ?? 'blocks') as 'blocks' | 'live');
   const currentPageSlug = useMemo(
@@ -286,9 +290,10 @@ export default function EditorContent({
       headerBlock: updatedHeader as any,
       data: nextData as Template['data'],
     };
-    setTemplate(next);       // iframe/inline updates instantly
-    onChange(next);          // persist
-    setEditingHeader(null);  // close panel
+    setTemplate(next);
+    onChange(next);
+    emitPatch({ data: { ...(next.data ?? {}), headerBlock: updatedHeader }, headerBlock: updatedHeader as any });
+    setEditingHeader(null);
   };
 
   /* block ops */
@@ -298,16 +303,16 @@ export default function EditorContent({
       findBlockByPath(template, blockPath);
     if (!ref && blockId) ref = findBlockById(template, String(blockId));
     if (!ref) return;
-  
+
     const t = (ref.block as any)?.type;
     if (t === 'hours') {
-      openHoursSettingsPanel(setShowSettings);   // ← no modal
+      openHoursSettingsPanel(setShowSettings);
       return;
     }
-  
+
     setEditingBlock({ ref });
   }
-  
+
   function openAdder(blockId?: string | null, blockPath?: string | null) {
     const byPath = findBlockByPath(template, blockPath ?? null);
     const byId = blockId ? findBlockById(template, blockId) : null;
@@ -315,6 +320,7 @@ export default function EditorContent({
     if (!ref) return;
     setAdderTarget({ pageIdx: ref.pageIdx, insertAt: ref.blockIdx + 1 });
   }
+
   function handleInsertBlockAt(
     pageIdx: number,
     insertAt: number,
@@ -340,16 +346,17 @@ export default function EditorContent({
 
     setTemplate(nextTemplate);
     onChange(nextTemplate);
+    emitPatch({ data: { ...(nextTemplate as any).data, pages }, pages });
+
     setAdderTarget(null);
 
     if (opts?.openEditor) {
       if ((newBlock as any).type === 'hours') {
-        openHoursSettingsPanel(setShowSettings);  // ← route to sidebar
+        openHoursSettingsPanel(setShowSettings);
       } else {
         setEditingBlock({ ref: { pageIdx, blockIdx: insertAt, block: newBlock } });
       }
     }
-    
   }
 
   function deleteBlock(blockId?: string | null, blockPath?: string | null) {
@@ -369,7 +376,9 @@ export default function EditorContent({
       : { ...template, pages };
     setTemplate(nextTemplate);
     onChange(nextTemplate);
+    emitPatch({ data: { ...(nextTemplate as any).data, pages }, pages });
   }
+
   function saveEditedBlock(updated: Block) {
     captureHistory();
     const ref = editingBlock?.ref as { pageIdx: number; blockIdx: number; block: Block } | null;
@@ -385,6 +394,7 @@ export default function EditorContent({
       : { ...template, pages };
     setTemplate(nextTemplate);
     onChange(nextTemplate);
+    emitPatch({ data: { ...(nextTemplate as any).data, pages }, pages });
     setEditingBlock(null);
   }
 
@@ -396,6 +406,13 @@ export default function EditorContent({
       const next: any = { ...template, ...detail, meta: { ...(template as any)?.meta, ...(detail.meta ?? {}) } };
       setTemplate(next);
       onChange(next);
+      // Emit only the changed bits we expect (meta + any top-level chrome passed)
+      const patch: Partial<Template> = {
+        ...(detail.headerBlock ? { headerBlock: detail.headerBlock } : {}),
+        ...(detail.footerBlock ? { footerBlock: detail.footerBlock } : {}),
+        data: { ...(next.data ?? {}), ...(detail.meta ? { meta: detail.meta } : {}) } as any,
+      };
+      emitPatch(patch);
     };
     window.addEventListener('qs:template:merge', handler as any);
     return () => window.removeEventListener('qs:template:merge', handler as any);
@@ -433,21 +450,20 @@ export default function EditorContent({
       ? { ...template, data: { ...(template as any).data, pages } }
       : { ...template, pages };
 
-    setTemplate(nextTemplate);  // instant preview update
-    onChange(nextTemplate);     // persist
+    setTemplate(nextTemplate);
+    onChange(nextTemplate);
+    emitPatch({ data: { ...(nextTemplate as any).data, pages }, pages });
   };
 
   /* ---------- Tabs: Blocks (default) | Live (iframe) ---------- */
+  const pathname = usePathname();
   const buildTabHref = (which: 'blocks' | 'live') => {
     const qp = new URLSearchParams(searchParams ?? undefined);
     qp.set('tab', which);
     return `${pathname}?${qp.toString()}`;
   };
 
-  // Force "blocks" to render inline (no iframe). Force "live" to show iframe.
-  const preferInlinePreview = useMemo(() => {
-    return tab !== 'live'; // blocks => true (inline), live => false (iframe)
-  }, [tab]);
+  const preferInlinePreview = useMemo(() => tab !== 'live', [tab]);
 
   return (
     <div className="flex min-w-0">
@@ -525,13 +541,13 @@ export default function EditorContent({
           </div>
         )}
 
-        {/* Preview/Editor surface:
-            - tab === 'blocks'  -> preferInlinePreview = true  (blocks mode)
-            - tab === 'live'    -> preferInlinePreview = false (iframe mode)
-         */}
         <LiveEditorPreviewFrame
           template={template}
-          onChange={(t) => onChange(t)}
+          onChange={(t) => {
+            setTemplate(t);
+            onChange(t);
+            emitPatch({ data: (t as any).data, headerBlock: (t as any).headerBlock, footerBlock: (t as any).footerBlock });
+          }}
           errors={blockErrors}
           industry={template.industry}
           templateId={template.id}
@@ -603,15 +619,15 @@ export default function EditorContent({
         </div>
       )}
 
-      {/* Bottom toolbar — portal renders above iframe/inline preview */}
+      {/* Bottom toolbar */}
       <TemplateActionToolbar
         template={template}
         autosaveStatus={autosaveStatus}
-        onSaveDraft={(t) => { setTemplate(t!); onChange(t!); }}
+        onSaveDraft={(t) => { setTemplate(t!); onChange(t!); emitPatch({ data: (t as any).data }); }}
         onUndo={undo}
         onRedo={redo}
         onOpenPageSettings={() => setPageSettingsOpen(true)}
-        onApplyTemplate={(next) => { setTemplate(next); onChange(next); }}
+        onApplyTemplate={(next) => { setTemplate(next); onChange(next); emitPatch({ data: (next as any).data }); }}
         onSetRawJson={(json) => setRawJson(json)}
       />
 

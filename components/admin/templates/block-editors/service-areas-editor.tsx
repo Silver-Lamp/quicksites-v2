@@ -1,7 +1,7 @@
 // components/admin/templates/block-editors/service-areas-editor.tsx
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, useCallback } from 'react';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Button } from '@/components/ui/button';
@@ -9,6 +9,7 @@ import type { BlockEditorProps } from '@/components/admin/templates/block-editor
 import { useNearbyCities } from '@/hooks/useNearbyCities';
 import { MapWrapper } from './map-wrapper';
 import type { Template } from '@/types/template';
+import { MapPin, Compass } from 'lucide-react';
 
 type GeoHit = {
   display_name: string;
@@ -16,53 +17,71 @@ type GeoHit = {
   lon: string;
 };
 
-export default function ServiceAreasEditor({
-  block,
-  onSave,
-  onClose,
-  template, // ✅ use DB defaults
-}: BlockEditorProps & { template: Template }) {
-  const content = (block as any).content ?? {};
+/* ------------------------------- helpers ------------------------------- */
 
-  // --- DB identity defaults ---
-  const db = (template as any) || {};
-  const dbLat =
-    typeof db.latitude === 'number'
-      ? db.latitude
-      : db.latitude != null
-      ? Number(db.latitude)
-      : null;
-  const dbLng =
-    typeof db.longitude === 'number'
-      ? db.longitude
-      : db.longitude != null
-      ? Number(db.longitude)
-      : null;
+function pickIdentity(template?: Template) {
+  const t: any = template || {};
+  const meta = (t.data?.meta as any) ?? {};
+  const c = meta.contact ?? {};
 
-  const dbCity = (db.city ?? '').toString().trim();
-  const dbState = (db.state ?? '').toString().trim();
-  const dbAddr1 = (db.address_line1 ?? '').toString().trim();
+  const latMeta = c?.latitude;
+  const lonMeta = c?.longitude;
+  const latDb = typeof t.latitude === 'number' ? t.latitude : (t.latitude != null ? Number(t.latitude) : null);
+  const lonDb = typeof t.longitude === 'number' ? t.longitude : (t.longitude != null ? Number(t.longitude) : null);
 
-  // Build a sensible default place query from DB address
-  const dbPlaceQuery = [dbAddr1, [dbCity, dbState].filter(Boolean).join(', ')]
+  const lat = Number.isFinite(latMeta) ? latMeta : latDb;
+  const lng = Number.isFinite(lonMeta) ? lonMeta : lonDb;
+
+  const address1 =
+    (typeof c.address === 'string' && c.address.trim()) ||
+    (t.address_line1 ? String(t.address_line1).trim() : '');
+
+  const address2 =
+    (typeof c.address2 === 'string' && c.address2.trim()) ||
+    (t.address_line2 ? String(t.address_line2).trim() : '');
+
+  const city  = (c.city  ?? t.city  ?? '').toString().trim();
+  const state = (c.state ?? t.state ?? '').toString().trim();
+  const postal = (c.postal ?? t.postal_code ?? '').toString().trim();
+
+  const placeQuery = [address1, address2, [city, state].filter(Boolean).join(', '), postal]
     .filter(Boolean)
     .join(', ')
     .trim();
 
-  // --- Editor state (prefer block content; else DB defaults) ---
+  return {
+    lat: Number.isFinite(lat) ? String(lat) : '',
+    lng: Number.isFinite(lng) ? String(lng) : '',
+    placeQuery,
+    city,
+    state,
+    postal,
+    address1,
+    address2,
+  };
+}
+
+export default function ServiceAreasEditor({
+  block,
+  onSave,
+  onClose,
+  template, // meta-first defaults
+}: BlockEditorProps & { template: Template }) {
+  const content = (block as any).content ?? {};
+
+  // Identity defaults (meta.contact first, then legacy top-level)
+  const idDefaults = useMemo(() => pickIdentity(template), [template]);
+
+  // --- Editor state (prefer block content; else identity defaults) ---
   const [lat, setLat] = useState<string>(() =>
     content.sourceLat != null && content.sourceLat !== ''
       ? String(content.sourceLat)
-      : dbLat != null && Number.isFinite(dbLat)
-      ? String(dbLat)
-      : ''
+      : idDefaults.lat
   );
   const [lng, setLng] = useState<string>(() =>
     content.sourceLng != null && content.sourceLng !== ''
       ? String(content.sourceLng)
-      : dbLng != null && Number.isFinite(dbLng)
-      ? String(dbLng)
-      : ''
+      : idDefaults.lng
   );
   const [radius, setRadius] = useState(content.radiusMiles?.toString() || '30');
   const [selected, setSelected] = useState<string[]>(content.cities || []);
@@ -71,27 +90,25 @@ export default function ServiceAreasEditor({
   const [showAllPins, setShowAllPins] = useState(false);
   const [citySearch, setCitySearch] = useState('');
 
-  // NEW: place lookup
-  const [placeQuery, setPlaceQuery] = useState<string>(() =>
-    content.placeQuery || dbPlaceQuery
-  );
+  // Place lookup (shown at top, seeded from identity)
+  const [placeQuery, setPlaceQuery] = useState<string>(() => content.placeQuery || idDefaults.placeQuery);
   const [placeResults, setPlaceResults] = useState<GeoHit[] | null>(null);
   const [placeLoading, setPlaceLoading] = useState(false);
   const [placeError, setPlaceError] = useState<string | null>(null);
 
   const { cities, loading, error, fetchCities } = useNearbyCities();
 
-  const runFetchCities = async () => {
+  const runFetchCities = useCallback(async () => {
     if (!lat || !lng || !radius) return;
     const now = new Date().toISOString();
     await fetchCities(Number(lat), Number(lng), Number(radius));
     setLastFetched(now);
-  };
+  }, [lat, lng, radius, fetchCities]);
 
-  // On mount: if we have no cached list, attempt a fetch using current center
+  // On mount: seed cities if none cached
   useEffect(() => {
     if (!Array.isArray(content.allCities) || content.allCities.length === 0) {
-      runFetchCities();
+      void runFetchCities();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -112,6 +129,61 @@ export default function ServiceAreasEditor({
     );
     return base;
   }, [cities, citySearch, sortBy]);
+
+  const selectedMarkers = cities.filter((c) => selected.includes(c.name));
+  const unselectedMarkers = cities.filter((c) => !selected.includes(c.name));
+
+  // Client-side geocoding via Nominatim
+  async function lookupPlace() {
+    const q = placeQuery.trim();
+    if (!q) return;
+    setPlaceLoading(true);
+    setPlaceError(null);
+    setPlaceResults(null);
+    try {
+      const url = `https://nominatim.openstreetmap.org/search?format=json&limit=5&q=${encodeURIComponent(q)}`;
+      const res = await fetch(url, { headers: { Accept: 'application/json' } });
+      if (!res.ok) throw new Error(`Lookup failed (${res.status})`);
+      const data = (await res.json()) as GeoHit[];
+      setPlaceResults(data);
+      if (data.length === 1) {
+        const hit = data[0];
+        setLat(hit.lat);
+        setLng(hit.lon);
+      }
+    } catch (e: any) {
+      setPlaceError(e?.message || 'Lookup failed');
+    } finally {
+      setPlaceLoading(false);
+    }
+  }
+
+  function applyHit(hit: GeoHit) {
+    setLat(hit.lat);
+    setLng(hit.lon);
+    setPlaceQuery(hit.display_name);
+    setPlaceResults(null);
+  }
+
+  // Open Identity panel (if the address is wrong, nudge editors there)
+  const openIdentityPanel = useCallback(() => {
+    try {
+      window.dispatchEvent(new CustomEvent('qs:settings:set-open', { detail: true }));
+      window.dispatchEvent(
+        new CustomEvent('qs:open-settings-panel', {
+          detail: { panel: 'identity', openEditor: true, scroll: true, spotlightMs: 900 } as any,
+        })
+      );
+    } catch {}
+  }, []);
+
+  // Reapply identity defaults
+  const useIdentityLocation = () => {
+    const id = pickIdentity(template);
+    setLat(id.lat);
+    setLng(id.lng);
+    setPlaceQuery(id.placeQuery);
+  };
 
   const save = () => {
     const included = cities.filter((c) => selected.includes(c.name));
@@ -136,49 +208,23 @@ export default function ServiceAreasEditor({
     });
   };
 
-  const selectedMarkers = cities.filter((c) => selected.includes(c.name));
-  const unselectedMarkers = cities.filter((c) => !selected.includes(c.name));
-
-  // NEW: client-side geocoding via Nominatim
-  async function lookupPlace() {
-    const q = placeQuery.trim();
-    if (!q) return;
-    setPlaceLoading(true);
-    setPlaceError(null);
-    setPlaceResults(null);
-    try {
-      const url = `https://nominatim.openstreetmap.org/search?format=json&limit=5&q=${encodeURIComponent(
-        q
-      )}`;
-      const res = await fetch(url, {
-        headers: { Accept: 'application/json' },
-      });
-      if (!res.ok) throw new Error(`Lookup failed (${res.status})`);
-      const data = (await res.json()) as GeoHit[];
-      setPlaceResults(data);
-      if (data.length === 1) {
-        const hit = data[0];
-        setLat(hit.lat);
-        setLng(hit.lon);
-      }
-    } catch (e: any) {
-      setPlaceError(e?.message || 'Lookup failed');
-    } finally {
-      setPlaceLoading(false);
-    }
-  }
-
-  function applyHit(hit: GeoHit) {
-    setLat(hit.lat);
-    setLng(hit.lon);
-    setPlaceResults(null);
-  }
-
   return (
     <div className="space-y-5">
       {/* Controls */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="rounded-xl border border-white/10 bg-zinc-900/60 p-4 shadow-sm">
+          {/* Identity + shortcuts */}
+          <div className="flex flex-wrap items-center gap-2 mb-2">
+            <Button variant="outline" size="sm" onClick={useIdentityLocation} className="h-8 gap-1">
+              <Compass className="h-4 w-4" />
+              Use Identity Location
+            </Button>
+            <Button variant="ghost" size="sm" onClick={openIdentityPanel} className="h-8 gap-1">
+              <MapPin className="h-4 w-4" />
+              Edit Address in Identity
+            </Button>
+          </div>
+
           {/* City/State or Address lookup */}
           <div className="flex flex-col gap-2">
             <label className="text-sm text-zinc-300">City, State or Address</label>

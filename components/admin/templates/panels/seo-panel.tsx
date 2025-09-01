@@ -1,113 +1,201 @@
-// File: panels/SeoPanel.tsx
+// panels/SeoPanel.tsx
+'use client';
 
 import Collapsible from '@/components/ui/collapsible-panel';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import type { Template } from '@/types/template';
-// import {  } from '@/types/blocks';
+import * as React from 'react';
 
-export default function SeoPanel({ template, onChange }: { template: Template; onChange: (updated: Template) => void }) {
-  const heroBlock = template.data?.pages?.[0]?.content_blocks?.find((b) => b.type === 'hero');
-  const businessName = template.data?.pages
-    ?.flatMap((p) => p.content_blocks || [])
-    .find((b) => b.type === 'footer')?.content;
-  const heroBlockContent = heroBlock?.content;
+type Props = { template: Template; onChange: (patch: Partial<Template>) => void };
+
+function getPages(t: Template) {
+  const anyT: any = t ?? {};
+  if (Array.isArray(anyT?.data?.pages)) return anyT.data.pages;
+  if (Array.isArray(anyT?.pages)) return anyT.pages;
+  return [];
+}
+
+function findHero(t: Template) {
+  const pages = getPages(t);
+  for (const p of pages) {
+    const blocks = (p?.content_blocks || p?.blocks || []);
+    const hero = (blocks || []).find((b: any) => b?.type === 'hero');
+    if (hero) return hero;
+  }
+  return null;
+}
+
+export default function SeoPanel({ template, onChange }: Props) {
+  const meta = (template?.data as any)?.meta ?? {};
+  const pages = getPages(template);
+  const hero = findHero(template);
+  const heroContent: any = hero?.content ?? {};
+  const siteTitle = String(meta?.siteTitle ?? template.template_name ?? pages[0]?.title ?? ''); // display name
+  const business = String(meta?.business ?? siteTitle ?? '');
+
+  const title = String(meta?.title ?? siteTitle ?? '');
+  const description = String(meta?.description ?? heroContent?.subheadline ?? heroContent?.headline ?? '');
+  const ogImage = String(meta?.ogImage ?? heroContent?.image_url ?? '');
+
+  const setMeta = (patch: Partial<typeof meta>) => {
+    onChange({
+      // write canonical meta
+      data: { ...(template.data as any), meta: { ...(meta ?? {}), ...patch } },
+    });
+  };
+
+  const setVerified = (v: boolean) => {
+    onChange({
+      verified: v, // tiny mirror for back-compat, safe to keep
+      data: { ...(template.data as any), meta: { ...(meta ?? {}), verified: v } },
+    });
+  };
+
+  const charColor = (n: number, max: number) =>
+    n <= max ? 'text-white/70' : 'text-amber-300';
+
+  const regenFromHero = () => {
+    const nextTitle = title || siteTitle || pages[0]?.title || '';
+    const nextDesc =
+      description || heroContent?.subheadline || heroContent?.headline || '';
+    const nextImg = ogImage || heroContent?.image_url || '';
+    setMeta({ title: nextTitle, description: nextDesc, ogImage: nextImg });
+  };
+
   return (
     <Collapsible title="Verification & SEO Meta" id="verification-seo-meta">
+      {/* Verified */}
       <div className="flex items-center justify-between py-2 border-t border-white/10 mt-2">
-        <Label>Verified</Label>
+        <Label className="text-white">Verified</Label>
         <input
           type="checkbox"
-          checked={!!template.verified}
-          onChange={(e) => onChange({ ...template, verified: e.target.checked })}
+          checked={Boolean(meta?.verified ?? (template as any)?.verified)}
+          onChange={(e) => setVerified(e.target.checked)}
         />
       </div>
 
-      <div className="space-y-3 mt-4">
-        <div>
-          <Label>OG Image URL</Label>
-          <Input
-            type="url"
-            placeholder="https://example.com/og.jpg"
-            value={template.meta?.ogImage || ''}
-            onChange={(e) => onChange({ ...template, meta: { ...template.meta, ogImage: e.target.value } })}
-            className="bg-gray-800 text-white border border-gray-700"
+      {/* Guidance */}
+      <div className="mt-3 rounded border border-white/10 bg-neutral-900/40 p-3 text-xs text-white/70 leading-relaxed">
+        <ul className="list-disc list-inside space-y-1">
+          <li><strong>Title</strong>: aim for ~60 characters, include your primary keyword & city if local.</li>
+          <li><strong>Description</strong>: aim for ~155 characters; summarize benefits, include a call to action.</li>
+          <li><strong>OG Image</strong>: 1200×630 recommended; you can pull from the hero’s main image.</li>
+        </ul>
+      </div>
+
+      {/* OG Image */}
+      <div className="space-y-2 mt-4">
+        <Label className="text-white">OG Image URL</Label>
+        <Input
+          type="url"
+          placeholder="https://example.com/og.jpg"
+          value={ogImage}
+          onChange={(e) => setMeta({ ogImage: e.target.value })}
+          className="bg-gray-800 text-white border border-gray-700"
+        />
+        {ogImage && (
+          <img
+            src={ogImage}
+            alt="OG Preview"
+            className="mt-2 rounded border border-gray-600 w-full max-w-md"
           />
-          {template.meta?.ogImage && (
-            <img
-              src={template.meta.ogImage}
-              alt="OG Preview"
-              className="mt-2 rounded border border-gray-600 w-full max-w-md"
-            />
-          )}
+        )}
+        <div className="flex gap-2 pt-1">
           <Button
-            onClick={() => {
-              const ogImage = (heroBlockContent as unknown as any)?.image_url || '';
-              const description = (heroBlockContent as unknown as any)?.subheadline || (heroBlockContent as unknown as any)?.headline || '';
-              const title = template.template_name || template.data?.pages?.[0]?.title || '';
-              onChange({
-                ...template,
-                meta: {
-                  ...template.meta,
-                  ogImage,
-                  description,
-                  title,
-                },
-              });
-            }}
-            className="mt-2 bg-blue-800 hover:bg-blue-700 text-white px-3 py-1 rounded text-sm"
+            onClick={() => setMeta({ ogImage: heroContent?.image_url || '' })}
+            className="bg-blue-800 hover:bg-blue-700 text-white px-3 py-1 rounded text-sm"
           >
-            Regenerate from Hero
+            Use Hero Image
+          </Button>
+          <Button
+            variant="outline"
+            onClick={() => setMeta({ ogImage: '' })}
+            className="text-sm"
+          >
+            Clear
           </Button>
         </div>
+      </div>
 
-        <div className="flex items-center gap-2">
-          <Input
-            placeholder="Page Title for Social Media"
-            value={template.meta?.title || ''}
-            onChange={(e) => onChange({ ...template, meta: { ...template.meta, title: e.target.value } })}
-            onBlur={(e) => {
-              if (!e.target.value.trim()) {
-                const fallbackTitle = businessName || template.template_name || template.data?.pages?.[0]?.title || (heroBlockContent as unknown as any)?.headline || '';
-                onChange({ ...template, meta: { ...template.meta, title: fallbackTitle } });
-              }
-            }}
-            className="bg-gray-800 text-white border border-gray-700 flex-1"
-          />
+      {/* Title */}
+      <div className="mt-4">
+        <div className="flex items-center justify-between">
+          <Label className="text-white">SEO Title</Label>
+          <span className={`text-xs ${charColor((meta?.title ?? title).length, 60)}`}>
+            {(meta?.title ?? title).length}/60
+          </span>
+        </div>
+        <Input
+          placeholder="Page Title for Search/Social (≈60 chars)"
+          value={meta?.title ?? title}
+          onChange={(e) => setMeta({ title: e.target.value })}
+          onBlur={(e) => {
+            if (!e.target.value.trim()) {
+              setMeta({ title: siteTitle || business });
+            }
+          }}
+          className="bg-gray-800 text-white border border-gray-700"
+        />
+        <div className="flex gap-2 mt-2">
           <Button
-            onClick={() => {
-              if (businessName) {
-                onChange({ ...template, meta: { ...template.meta, title: businessName as unknown as string } });
-              }
-            }}
-            className="text-sm bg-gray-700 text-white px-2 py-1 rounded hover:bg-gray-600"
+            size="sm"
+            variant="outline"
+            onClick={() => setMeta({ title: business || siteTitle })}
+            className="text-sm"
           >
             Use Business Name
           </Button>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <Input
-            placeholder="A short description for previews"
-            value={template.meta?.description || ''}
-            onChange={(e) => onChange({ ...template, meta: { ...template.meta, description: e.target.value } })}
-            onBlur={(e) => {
-              if (!e.target.value.trim()) {
-                const fallbackDesc = (heroBlockContent as unknown as any)?.subheadline || (heroBlockContent as unknown as any)?.headline || '';
-                onChange({ ...template, meta: { ...template.meta, description: fallbackDesc } });
-              }
-            }}
-            className="bg-gray-800 text-white border border-gray-700 flex-1"
-          />
           <Button
-            onClick={() => {
-              const fallbackDesc = (heroBlockContent as unknown as any)?.subheadline || (heroBlockContent as unknown as any)?.headline || '';
-              onChange({ ...template, meta: { ...template.meta, description: fallbackDesc } });
-            }}
-            className="text-sm bg-gray-700 text-white px-2 py-1 rounded hover:bg-gray-600"
+            size="sm"
+            variant="ghost"
+            onClick={() => setMeta({ title: siteTitle || pages[0]?.title || '' })}
+            className="text-sm"
           >
-            Use Hero Subheadline
+            Use Site Title
+          </Button>
+        </div>
+      </div>
+
+      {/* Description */}
+      <div className="mt-4">
+        <div className="flex items-center justify-between">
+          <Label className="text-white">SEO Description</Label>
+          <span className={`text-xs ${charColor((meta?.description ?? description).length, 155)}`}>
+            {(meta?.description ?? description).length}/155
+          </span>
+        </div>
+        <Input
+          placeholder="A short description for previews (≈155 chars)"
+          value={meta?.description ?? description}
+          onChange={(e) => setMeta({ description: e.target.value })}
+          onBlur={(e) => {
+            if (!e.target.value.trim()) {
+              const fallback = heroContent?.subheadline || heroContent?.headline || '';
+              setMeta({ description: fallback });
+            }
+          }}
+          className="bg-gray-800 text-white border border-gray-700"
+        />
+        <div className="flex gap-2 mt-2">
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() =>
+              setMeta({ description: heroContent?.subheadline || heroContent?.headline || '' })
+            }
+            className="text-sm"
+          >
+            Use Hero Copy
+          </Button>
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={regenFromHero}
+            className="text-sm"
+          >
+            Regenerate from Hero
           </Button>
         </div>
       </div>

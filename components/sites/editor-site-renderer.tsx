@@ -15,6 +15,8 @@ type Props = {
   colorMode?: 'light' | 'dark';
   className?: string;
   editorChrome?: boolean;     // set to true when embedded in editor (adds data-editor-chrome="1")
+  /** used in preview so links render correctly (absolute URLs, canonical tags, etc.) */
+  baseUrl?: string;
 };
 
 function qlog(msg: string, extra?: any) {
@@ -72,6 +74,7 @@ export default function EditorSiteRenderer({
   colorMode = 'light',
   className,
   editorChrome,
+  baseUrl,
 }: Props) {
   const pages = React.useMemo(() => getPages(site), [site]);
 
@@ -87,15 +90,24 @@ export default function EditorSiteRenderer({
     [current]
   );
 
+  // Prefer prop, fallback to window origin if available (preview runtime)
+  const resolvedBaseUrl = React.useMemo(() => {
+    if (baseUrl) return baseUrl;
+    if (typeof window !== 'undefined') return window.location.origin;
+    return '';
+  }, [baseUrl]);
+
   if (!current) {
     qlog('No current page; falling back to public SiteRenderer', { page });
     return (
       <SiteRenderer
-        site={site}
+        site={site as any}
         page={page}
         id={id ?? 'site-renderer-page'}
         colorMode={colorMode}
         className={className}
+        baseUrl={resolvedBaseUrl}   // ← forward for absolute links/canonicals
+        editorChrome={editorChrome}  // ← NEW: used in preview so links render correctly
       />
     );
   }
@@ -114,15 +126,16 @@ export default function EditorSiteRenderer({
       className={className}
       data-color-mode={colorMode}
       data-editor-chrome={editorChrome ? '1' : '0'}
-      data-site-domain={(site?.domain ?? '').toString()}                 // ⬅️ NEW
-      data-site-subdomain={(site?.default_subdomain ?? '').toString()}   // ⬅️ NEW
+      data-site-domain={(site?.domain ?? '').toString()}
+      data-site-subdomain={(site?.default_subdomain ?? '').toString()}
+      data-base-url={resolvedBaseUrl}
     >
       {/* Header (if enabled and present) */}
       {showHeader && headerBlock && (
         <div data-site-header="">
           <RenderBlock
             block={headerBlock}
-            template={site}
+            template={site as any}
             mode="preview"
             colorMode={colorMode}
             previewOnly
@@ -142,7 +155,7 @@ export default function EditorSiteRenderer({
           <div key={key} data-block-path={path}>
             <RenderBlock
               block={block}
-              template={site}
+              template={site as any}
               mode="preview"
               colorMode={colorMode}
               previewOnly
@@ -157,7 +170,7 @@ export default function EditorSiteRenderer({
         <div data-site-footer="">
           <RenderBlock
             block={footerBlock}
-            template={site}
+            template={site as any}
             mode="preview"
             colorMode={colorMode}
             previewOnly

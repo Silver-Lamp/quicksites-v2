@@ -4,13 +4,14 @@
 import * as React from 'react';
 import EditorSiteRenderer from '@/components/sites/editor-site-renderer';
 
-type Props = {
+export type PreviewStateProps = {
   initialSite: any;
   page: string;
   colorMode: 'light' | 'dark';
   className?: string;
   id?: string;
   editorChrome?: boolean;
+  baseUrl?: string;   // ← keep this here
 };
 
 export default function PreviewState({
@@ -20,20 +21,23 @@ export default function PreviewState({
   className,
   id = 'site-renderer-page',
   editorChrome,
-}: Props) {
+  baseUrl,
+}: PreviewStateProps) {
   const [site, setSite] = React.useState<any>(initialSite);
+
+  const resolvedBaseUrl = React.useMemo(() => {
+    if (baseUrl) return baseUrl;
+    if (typeof window !== 'undefined') return window.location.origin;
+    return '';
+  }, [baseUrl]);
 
   React.useEffect(() => {
     function onMessage(e: MessageEvent) {
       const d = e.data as any;
       if (!d || typeof d !== 'object') return;
-
-      // Both messages may carry { template } or { template: { data: ... } }
       if ((d.type === 'preview:init' || d.type === 'preview:change') && d.template) {
-        // shallow-merge, prefer incoming data/pages/header/footer if present
         setSite((prev: any) => {
           const next = { ...prev, ...d.template };
-          // keep the pages under whichever field you use
           if (d.template?.data?.pages || d.template?.pages) {
             next.data = { ...(prev?.data ?? {}), ...(d.template?.data ?? {}) };
           }
@@ -45,14 +49,18 @@ export default function PreviewState({
     return () => window.removeEventListener('message', onMessage);
   }, []);
 
+  const renderColorMode: 'light' | 'dark' =
+    colorMode ?? (site?.color_mode === 'light' ? 'light' : 'dark');
+
   return (
     <EditorSiteRenderer
       site={site}
       page={page}
       id={id}
-      colorMode={site?.color_mode === 'light' ? 'light' : 'dark'}
+      colorMode={renderColorMode}
       className={className}
       editorChrome={editorChrome}
+      baseUrl={resolvedBaseUrl}
     />
   );
 }

@@ -2,7 +2,6 @@
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
-// import Image from 'next/image';
 import NextImage from 'next/image';
 import { useDropzone } from 'react-dropzone';
 import imageCompression from 'browser-image-compression';
@@ -27,6 +26,8 @@ type Props = {
   isSaving?: boolean;
 };
 
+type FavBg = 'transparent' | 'accent' | 'white' | 'black';
+
 function normalizeHeaderContent(input: any, fallbackLogo?: string) {
   const c = input ?? {};
   const logo_url: string = c.logo_url ?? c.logoUrl ?? c.url ?? fallbackLogo ?? '';
@@ -44,7 +45,15 @@ function normalizeHeaderContent(input: any, fallbackLogo?: string) {
   return { logo_url, nav_items };
 }
 
-// tiny helper for AI → File
+/* ------------------- helpers ------------------- */
+
+function emitPatch(patch: Partial<Template>) {
+  try {
+    window.dispatchEvent(new CustomEvent('qs:template:apply-patch', { detail: patch as any }));
+  } catch {}
+}
+
+// AI → File
 function b64ToFile(b64: string, filename: string, mime = 'image/png'): File {
   const byteStr = atob(b64);
   const len = byteStr.length;
@@ -53,26 +62,18 @@ function b64ToFile(b64: string, filename: string, mime = 'image/png'): File {
   return new File([bytes], filename, { type: mime });
 }
 
-// --- helpers inside header editor component file ---
-
-
 // draw to 32x32 PNG (cover)
 async function rasterizeSquareFromBlob(srcBlob: Blob, size = 32) {
   if (typeof window === 'undefined') throw new Error('rasterizeSquareFromBlob must run in the browser');
   const url = URL.createObjectURL(srcBlob);
   try {
-    // Use DOM image constructor, not next/image component
-    const img = new window.Image(); // or: document.createElement('img')
+    const img = new window.Image();
     img.decoding = 'async';
     img.src = url;
-    await new Promise<void>((res, rej) => {
-      img.onload = () => res();
-      img.onerror = (e) => rej(e);
-    });
+    await new Promise<void>((res, rej) => { img.onload = () => res(); img.onerror = rej; });
 
     const canvas = document.createElement('canvas');
-    canvas.width = size;
-    canvas.height = size;
+    canvas.width = size; canvas.height = size;
     const ctx = canvas.getContext('2d')!;
     ctx.clearRect(0, 0, size, size);
 
@@ -87,7 +88,6 @@ async function rasterizeSquareFromBlob(srcBlob: Blob, size = 32) {
     ctx.imageSmoothingQuality = 'high';
     ctx.drawImage(img, dx, dy, dw, dh);
 
-    // convert to Blob
     const dataUrl = canvas.toDataURL('image/png');
     return await (await fetch(dataUrl)).blob();
   } finally {
@@ -95,30 +95,24 @@ async function rasterizeSquareFromBlob(srcBlob: Blob, size = 32) {
   }
 }
 
-// Build a 32x32 favicon, optionally with a background before drawing the icon.
-type FavBg = 'transparent' | 'accent' | 'white' | 'black';
-
 function hexToRGB(hex: string) {
   const m = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
-  if (!m) return [109,40,217] as const; // default #6D28D9
+  if (!m) return [109,40,217] as const; // #6D28D9 default
   return [parseInt(m[1],16), parseInt(m[2],16), parseInt(m[3],16)] as const;
 }
 
-// Draw a background (circle) if requested
 function fillFaviconBg(ctx: CanvasRenderingContext2D, bg: FavBg, accentHex: string) {
   if (bg === 'transparent') return;
   const [r,g,b] = bg === 'accent' ? hexToRGB(accentHex) :
                   bg === 'white'  ? [255,255,255] :
-                                    [0,0,0]; // black
+                                    [0,0,0];
   ctx.clearRect(0,0,32,32);
-  // nice circle background
   ctx.fillStyle = `rgb(${r},${g},${b})`;
   ctx.beginPath();
   ctx.arc(16,16,16,0,Math.PI*2);
   ctx.fill();
 }
 
-// Draw a blob onto a 32x32 canvas with 'cover' and optional background
 async function downscaleToFavicon(srcBlob: Blob, bg: FavBg, accentHex: string) {
   const url = URL.createObjectURL(srcBlob);
   try {
@@ -130,11 +124,8 @@ async function downscaleToFavicon(srcBlob: Blob, bg: FavBg, accentHex: string) {
     const canvas = document.createElement('canvas');
     canvas.width = 32; canvas.height = 32;
     const ctx = canvas.getContext('2d')!;
-
-    // background first (if any)
     fillFaviconBg(ctx, bg, accentHex);
 
-    // cover draw
     const iw = img.naturalWidth || 1, ih = img.naturalHeight || 1;
     const scale = Math.max(32 / iw, 32 / ih);
     const dw = iw * scale, dh = ih * scale;
@@ -149,7 +140,6 @@ async function downscaleToFavicon(srcBlob: Blob, bg: FavBg, accentHex: string) {
   }
 }
 
-// Convert Blob → raw base64 (no data: prefix)
 async function blobToBase64(blob: Blob) {
   const buf = await blob.arrayBuffer();
   let binary = '';
@@ -158,7 +148,6 @@ async function blobToBase64(blob: Blob) {
   return btoa(binary);
 }
 
-// Upload to our server helper (sets meta.favicon_url)
 async function uploadFaviconViaAPI(templateId: string, pngBlob: Blob) {
   const png_base64 = await blobToBase64(pngBlob);
   const res = await fetch('/api/favicon/upload', {
@@ -171,12 +160,13 @@ async function uploadFaviconViaAPI(templateId: string, pngBlob: Blob) {
   return j.url as string;
 }
 
-// Simple fetch to blob (avoids taint)
 async function fetchAsBlob(url: string) {
   const r = await fetch(url, { credentials: 'omit' });
   if (!r.ok) throw new Error(`Fetch failed (${r.status})`);
   return await r.blob();
 }
+
+/* ------------------- component ------------------- */
 
 export default function PageHeaderEditor({
   block,
@@ -189,12 +179,18 @@ export default function PageHeaderEditor({
     return <div className="text-red-500">Invalid block type</div>;
   }
 
+  // meta-first template normalization
   const normalizedTemplate = {
     ...template,
     pages: template?.pages ?? template?.data?.pages ?? [],
   };
+  const meta = (template?.data as any)?.meta ?? {};
+  const fallbackLogo =
+    (typeof meta.logo_url === 'string' && meta.logo_url) ||
+    (template as any)?.logo_url ||
+    '';
 
-  const initial = normalizeHeaderContent(block.content, (template as any)?.logo_url);
+  const initial = normalizeHeaderContent(block.content, fallbackLogo);
   const [logoUrl, setLogoUrl] = useState<string>(initial.logo_url);
   const [navItems, setNavItems] = useState<Array<{ label: string; href: string; appearance?: string }>>(
     initial.nav_items
@@ -202,44 +198,44 @@ export default function PageHeaderEditor({
   const [isUploading, setIsUploading] = useState(false);
   const [isSavingLocal, setIsSavingLocal] = useState(false);
 
-  // === New: AI Logo generator state ===
-  const businessName = useMemo(() => (template as any)?.business_name || '', [template]);
-  const industry = useMemo(() => template?.industry || '', [template]);
-  const initials = useMemo(
-    () => (businessName ? businessName.split(/\s+/).map((w: string) => w[0]).join('').slice(0, 3).toUpperCase() : ''),
-    [businessName]
+  // Business + industry (meta-first)
+  const businessName = useMemo(
+    () => String(meta?.business ?? meta?.siteTitle ?? (template as any)?.business_name ?? ''),
+    [meta, template]
+  );
+  const industry = useMemo(
+    () => String(meta?.industry ?? (template as any)?.industry ?? ''),
+    [meta, template]
   );
 
+  // favicon state
   const [genBusy, setGenBusy] = useState(false);
   const [genError, setGenError] = useState<string | null>(null);
   const [useInitials, setUseInitials] = useState(false);
   const [style, setStyle] = useState<'flat' | 'badge' | 'monogram' | 'emblem'>('flat');
-  const [accentHex, setAccentHex] = useState('#6D28D9'); // default purple
+  const [accentHex, setAccentHex] = useState('#6D28D9');
   const [transparentBG, setTransparentBG] = useState(true);
 
-  const [faviconUrl, setFaviconUrl] = useState<string>((template as any)?.meta?.favicon_url || '');
-  const [favBg, setFavBg] = useState<FavBg>('transparent'); // preview + generation background
+  const [faviconUrl, setFaviconUrl] = useState<string>(String(meta?.favicon_url ?? ''));
+  const [favBg, setFavBg] = useState<FavBg>('transparent');
   useEffect(() => {
-    setFaviconUrl((template as any)?.meta?.favicon_url || '');
-  }, [template]);
+    setFaviconUrl(String(((template as any)?.data?.meta ?? {})?.favicon_url ?? ''));
+  }, [template?.id]);
 
   const saving = Boolean(isSavingProp) || isSavingLocal;
 
   const areLinksValid =
     navItems.length === 0 || navItems.every((link) => link?.label?.trim?.() && link?.href?.trim?.());
 
+  // storage upload
   const handleFileUpload = async (file: File): Promise<string> => {
     const isSvg = file.type === 'image/svg+xml' || /\.svg$/i.test(file.name);
     const toUpload = isSvg
       ? file
-      : await imageCompression(file, {
-          maxSizeMB: 5.0,
-          maxWidthOrHeight: 500,
-          useWebWorker: true,
-        });
+      : await imageCompression(file, { maxSizeMB: 5.0, maxWidthOrHeight: 500, useWebWorker: true });
 
-    const fileExt = (toUpload.name.split('.').pop() || 'png').toLowerCase();
-    const fileName = `${Date.now()}-${Math.random().toString(36).slice(2)}.${fileExt}`;
+    const ext = (toUpload.name.split('.').pop() || 'png').toLowerCase();
+    const fileName = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
 
     const { error } = await supabase.storage.from('logos').upload(fileName, toUpload, {
       cacheControl: '3600',
@@ -252,29 +248,36 @@ export default function PageHeaderEditor({
     return data.publicUrl;
   };
 
-  const onDrop = async (acceptedFiles: File[]) => {
-    if (acceptedFiles.length === 0) return;
-    setIsUploading(true);
-    try {
-      const url = await handleFileUpload(acceptedFiles[0]);
-      setLogoUrl(url);
-      toast.success('Logo uploaded!');
-    } catch (err) {
-      console.error(err);
-      toast.error('Upload failed');
-    } finally {
-      setIsUploading(false);
-    }
-  };
-
+  // onDrop
   const { getRootProps, getInputProps } = useDropzone({
-    onDrop,
+    onDrop: async (acceptedFiles: File[]) => {
+      if (acceptedFiles.length === 0) return;
+      setIsUploading(true);
+      try {
+        const url = await handleFileUpload(acceptedFiles[0]);
+        setLogoUrl(url);
+        // patch meta.logo_url immediately so the site can reuse the logo elsewhere
+        emitPatch({ data: { ...(template?.data as any), meta: { ...(meta ?? {}), logo_url: url } }, logo_url: url });
+        toast.success('Logo uploaded!');
+      } catch (err) {
+        console.error(err);
+        toast.error('Upload failed');
+      } finally {
+        setIsUploading(false);
+      }
+    },
     accept: { 'image/png': [], 'image/jpeg': [], 'image/webp': [], 'image/svg+xml': [] },
     multiple: false,
     maxSize: 5 * 1024 * 1024,
   });
 
-  // === New: generate icon via AI ===
+  // AI logo generator
+  const initials = useMemo(
+    () =>
+      (businessName ? businessName.split(/\s+/).map((w: string) => w[0]).join('').slice(0, 3).toUpperCase() : ''),
+    [businessName]
+  );
+
   const generateIcon = async () => {
     setGenBusy(true);
     setGenError(null);
@@ -303,6 +306,7 @@ export default function PageHeaderEditor({
       const file = b64ToFile(image_base64, `icon-${Date.now()}.png`, 'image/png');
       const url = await handleFileUpload(file);
       setLogoUrl(url);
+      emitPatch({ data: { ...(template?.data as any), meta: { ...(meta ?? {}), logo_url: url } }, logo_url: url });
       toast.success('Icon generated!');
     } catch (e: any) {
       console.error(e);
@@ -316,6 +320,7 @@ export default function PageHeaderEditor({
   const saveBlock = async () => {
     setIsSavingLocal(true);
     try {
+      // keep block content minimal: logo_url + nav_items
       await onSave({
         ...block,
         content: {
@@ -335,16 +340,17 @@ export default function PageHeaderEditor({
 
   const canSave = areLinksValid && !saving;
 
-  // 🔹 Make favicon from current logo
+  // Favicon from current logo
   const makeFaviconFromLogoHere = async () => {
     try {
-      const logo = (template as any)?.logo_url || logoUrl;
+      const logo = (meta?.logo_url as string) || logoUrl;
       if (!logo) { toast.error('Add a logo first'); return; }
       const logoBlob = await fetchAsBlob(logo);
       const ico32 = await downscaleToFavicon(logoBlob, favBg, accentHex);
       const url = await uploadFaviconViaAPI(template!.id as string, ico32);
       setFaviconUrl(url);
-      window.dispatchEvent(new CustomEvent('qs:template:merge', { detail: { meta: { favicon_url: url } } }));
+      // push into meta
+      emitPatch({ data: { ...(template?.data as any), meta: { ...(meta ?? {}), favicon_url: url } } });
       toast.success('Favicon updated');
     } catch (e: any) {
       console.error(e);
@@ -352,38 +358,38 @@ export default function PageHeaderEditor({
     }
   };
 
-// AI 1024 → 32 → upload (uses favBg)
-const generateFaviconAIHere = async () => {
-  setGenBusy(true);
-  try {
-    const res = await fetch('/api/favicon/generate', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        template_id: template?.id,
-        business_name: businessName,
-        industry,
-        size: '1024x1024',
-        transparent: true, // request transparent; we'll composite if desired
-      }),
-    });
-    const json = await res.json();
-    if (!res.ok) throw new Error(json?.error || `Generate failed (${res.status})`);
-    const b64 = json.image_base64 as string;
-    const big = new Blob([Uint8Array.from(atob(b64), c => c.charCodeAt(0))], { type: 'image/png' });
+  // AI 1024 → 32 → upload
+  const generateFaviconAIHere = async () => {
+    setGenBusy(true);
+    try {
+      const res = await fetch('/api/favicon/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          template_id: template?.id,
+          business_name: businessName,
+          industry,
+          size: '1024x1024',
+          transparent: true,
+        }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json?.error || `Generate failed (${res.status})`);
+      const b64 = json.image_base64 as string;
+      const big = new Blob([Uint8Array.from(atob(b64), c => c.charCodeAt(0))], { type: 'image/png' });
 
-    const ico32 = await downscaleToFavicon(big, favBg, accentHex);
-    const url = await uploadFaviconViaAPI(template!.id as string, ico32);
-    setFaviconUrl(url);
-    window.dispatchEvent(new CustomEvent('qs:template:merge', { detail: { meta: { favicon_url: url } } }));
-    toast.success('Favicon generated');
-  } catch (e: any) {
-    console.error(e);
-    toast.error(e?.message || 'AI favicon failed');
-  } finally {
-    setGenBusy(false);
-  }
-};
+      const ico32 = await downscaleToFavicon(big, favBg, accentHex);
+      const url = await uploadFaviconViaAPI(template!.id as string, ico32);
+      setFaviconUrl(url);
+      emitPatch({ data: { ...(template?.data as any), meta: { ...(meta ?? {}), favicon_url: url } } });
+      toast.success('Favicon generated');
+    } catch (e: any) {
+      console.error(e);
+      toast.error(e?.message || 'AI favicon failed');
+    } finally {
+      setGenBusy(false);
+    }
+  };
 
   return (
     <div className="relative flex max-h-[calc(100vh-8rem)] min-h-0 flex-col text-white">
@@ -421,12 +427,14 @@ const generateFaviconAIHere = async () => {
                 </div>
               ) : logoUrl ? (
                 <div className="flex flex-col items-center gap-2">
-                  <NextImage src={logoUrl} alt="Logo" width={100} height={100} className="h-16 w-auto object-contain" />                  <Button
+                  <NextImage src={logoUrl} alt="Logo" width={100} height={100} className="h-16 w-auto object-contain" />
+                  <Button
                     variant="ghost"
                     size="sm"
                     onClick={(e) => {
                       e.stopPropagation();
                       setLogoUrl('');
+                      emitPatch({ data: { ...(template?.data as any), meta: { ...(meta ?? {}), logo_url: '' } }, logo_url: '' });
                     }}
                   >
                     Remove Logo
@@ -440,7 +448,7 @@ const generateFaviconAIHere = async () => {
               )}
             </div>
 
-            {/* NEW: AI Logo Generator */}
+            {/* AI Logo Generator */}
             <div className="rounded-lg border border-white/10 p-3 bg-neutral-900/70">
               <div className="text-sm font-medium mb-2">AI Logo Generator</div>
               <div className="space-y-2 text-sm">
@@ -495,11 +503,7 @@ const generateFaviconAIHere = async () => {
                   Transparent background (PNG)
                 </label>
 
-                <Button
-                  className="mt-2 w-full"
-                  onClick={generateIcon}
-                  disabled={genBusy}
-                >
+                <Button className="mt-2 w-full" onClick={generateIcon} disabled={genBusy}>
                   {genBusy ? 'Generating…' : 'Generate Logo'}
                 </Button>
 
@@ -510,6 +514,8 @@ const generateFaviconAIHere = async () => {
                 )}
               </div>
             </div>
+
+            {/* Favicon tools */}
             <div className="flex gap-2">
               <Button size="sm" onClick={generateFaviconAIHere} disabled={genBusy}>
                 {genBusy ? 'Generating…' : 'AI Favicon'}
@@ -517,91 +523,19 @@ const generateFaviconAIHere = async () => {
               <Button size="sm" variant="outline" onClick={makeFaviconFromLogoHere} disabled={!logoUrl} className="bg-neutral-900">
                 From Logo
               </Button>
-              {/* Favicon preview + controls */}
-              <div className="rounded-lg border border-white/10 p-3 bg-neutral-900/70">
-                <FaviconUploader
-                  templateId={template?.id as string}
-                  currentUrl={faviconUrl}
-                  onUpload={(url: string) => setFaviconUrl(url)}
-                  bucket="favicons"
-                  folder={`template-${template?.id as string}`}
-                />
-
-                <div className="flex items-center justify-between mb-2">
-                  <div className="text-sm font-medium">Favicon</div>
-                  {faviconUrl ? <a href={faviconUrl} target="_blank" className="text-xs underline">Open</a> : null}
-                </div>
-
-                <div className="flex items-center gap-4">
-                  {/* Preview squares with checker/white/black bg */}
-                  <div className="flex items-center gap-3">
-                    <div className="flex flex-col items-center gap-1">
-                      <div
-                        className="w-8 h-8 rounded"
-                        style={{
-                          background:
-                            favBg === 'transparent'
-                              ? 'conic-gradient(#666 25%, transparent 0) 0 0/8px 8px, conic-gradient(#666 25%, transparent 0) 4px 4px/8px 8px, #fff'
-                              : favBg === 'white'
-                              ? '#fff'
-                              : favBg === 'black'
-                              ? '#000'
-                              : '#6D28D9',
-                        }}
-                      >
-                        {faviconUrl ? (
-                          // 32 preview
-                          <img src={faviconUrl} alt="favicon 32" className="w-8 h-8 object-contain mix-blend-normal" />
-                        ) : null}
-                      </div>
-                      <span className="text-[10px] text-white/70">32px</span>
-                    </div>
-
-                    <div className="flex flex-col items-center gap-1">
-                      <div
-                        className="w-4 h-4 rounded"
-                        style={{
-                          background:
-                            favBg === 'transparent'
-                              ? 'conic-gradient(#666 25%, transparent 0) 0 0/8px 8px, conic-gradient(#666 25%, transparent 0) 4px 4px/8px 8px, #fff'
-                              : favBg === 'white'
-                              ? '#fff'
-                              : favBg === 'black'
-                              ? '#000'
-                              : '#6D28D9',
-                        }}
-                      >
-                        {faviconUrl ? (
-                          // visually scaled 16 preview
-                          <img src={faviconUrl} alt="favicon 16" className="w-4 h-4 object-contain mix-blend-normal" />
-                        ) : null}
-                      </div>
-                      <span className="text-[10px] text-white/70">16px</span>
-                    </div>
-                  </div>
-
-                  <div className="ml-auto flex items-center gap-2">
-                    <label className="text-xs">Preview BG</label>
-                    <select
-                      className="rounded border border-white/10 bg-neutral-950 px-2 py-1 text-xs"
-                      value={favBg}
-                      onChange={e => setFavBg(e.target.value as FavBg)}
-                    >
-                      <option value="transparent">Checker</option>
-                      <option value="accent">Accent</option>
-                      <option value="white">White</option>
-                      <option value="black">Black</option>
-                    </select>
-                  </div>
-                </div>
-              </div>
-              {faviconUrl ? (
-                <p className="mt-1 text-[10px] text-white/60 break-all">
-                  {faviconUrl}
-                </p>
-              ) : <p className="mt-1 text-[10px] text-white/60">No favicon set</p>}
             </div>
-
+            <div className="rounded-lg border border-white/10 p-3 bg-neutral-900/70">
+              <FaviconUploader
+                templateId={template?.id as string}
+                currentUrl={faviconUrl}
+                onUpload={(url: string) => {
+                  setFaviconUrl(url);
+                  emitPatch({ data: { ...(template?.data as any), meta: { ...(meta ?? {}), favicon_url: url } } });
+                }}
+                bucket="favicons"
+                folder={`template-${template?.id as string}`}
+              />
+            </div>
           </section>
 
           {/* RIGHT: Links */}

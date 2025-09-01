@@ -1,3 +1,4 @@
+// components/admin/dev/seeder/SeedAllPanel.tsx
 'use client';
 
 import * as React from 'react';

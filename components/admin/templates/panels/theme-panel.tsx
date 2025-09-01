@@ -1,4 +1,4 @@
-// panels/ThemePanel.tsx
+// components/admin/templates/panels/theme-panel.tsx
 'use client';
 
 import { useEffect, useState } from 'react';
@@ -8,7 +8,6 @@ import { Input } from '@/components/ui/input';
 import Collapsible from '@/components/ui/collapsible-panel';
 import { ThemePreviewCard } from '@/components/admin/theme-preview-card';
 import type { Template } from '@/types/template';
-import { saveTemplate } from '@/admin/lib/saveTemplate';
 
 const fonts = ['sans', 'serif', 'mono', 'cursive'];
 const radii = ['sm', 'md', 'lg', 'xl', 'full'];
@@ -19,11 +18,11 @@ export default function ThemePanel({
   onChange,
 }: {
   template: Template;
-  onChange: (updated: Template) => void;
+  onChange: (patch: Partial<Template>) => void; // emit partials, parent will autosave data
 }) {
   const { setTheme, theme: ctxTheme } = useTheme();
 
-  // Local mirror for the preview card (derive mode, don't hardcode)
+  // Local mirror for preview card, derive color mode from template or context
   const [localTpl, setLocalTpl] = useState<Template>(() => ({
     ...template,
     color_mode:
@@ -45,38 +44,57 @@ export default function ThemePanel({
 
   const handleResetTheme = () => {
     setTheme({ ...ctxTheme, glow: [], fontFamily: 'sans' });
-    onChange({ ...template, theme: 'sans' });
+    // Mirror into data so commit API persists it
+    onChange({
+      theme: 'sans',
+      data: { ...(template.data ?? {}), theme: 'sans' } as any,
+    });
   };
 
   return (
     <Collapsible id="theme" title="Theme">
       <div className="space-y-4">
         <div className="grid grid-cols-2 gap-4">
+          {/* Font family */}
           <div>
             <Label>Font</Label>
             <select
               value={template.theme || ''}
               onChange={(e) => {
                 const font = e.target.value;
-                onChange({ ...template, theme: font });
+                // Update parent (mirror into data) and ThemeProvider
+                onChange({
+                  theme: font,
+                  data: { ...(template.data ?? {}), theme: font } as any,
+                });
                 setTheme({ ...ctxTheme, glow: [], fontFamily: font });
+                setLocalTpl((t) => ({ ...t, theme: font }));
               }}
               className="w-full bg-gray-800 text-white border border-gray-700 px-2 py-1 rounded mt-1"
             >
               <option value="">Default</option>
               {fonts.map((f) => (
                 <option key={f} value={f}>
-                  {f === 'sans' ? 'Inter' : f === 'serif' ? 'Roboto Slab' : f === 'mono' ? 'Fira Code' : 'Pacifico'}
+                  {f === 'sans'
+                    ? 'Inter'
+                    : f === 'serif'
+                    ? 'Roboto Slab'
+                    : f === 'mono'
+                    ? 'Fira Code'
+                    : 'Pacifico'}
                 </option>
               ))}
             </select>
           </div>
 
+          {/* Border radius (kept in UI theme; optionally mirror to data.meta if desired) */}
           <div>
             <Label>Border Radius</Label>
             <select
               value={ctxTheme.borderRadius || 'lg'}
-              onChange={(e) => setTheme({ ...ctxTheme, glow: [], borderRadius: e.target.value })}
+              onChange={(e) =>
+                setTheme({ ...ctxTheme, glow: [], borderRadius: e.target.value })
+              }
               className="w-full bg-gray-800 text-white border border-gray-700 px-2 py-1 rounded mt-1"
             >
               {radii.map((r) => (
@@ -87,25 +105,33 @@ export default function ThemePanel({
             </select>
           </div>
 
+          {/* Accent color (kept in UI theme; optionally mirror to data.meta if desired) */}
           <div>
             <Label>Accent Color</Label>
             <Input
               placeholder="e.g. indigo-600"
               defaultValue={ctxTheme.accentColor || ''}
-              onBlur={(e) => setTheme({ ...ctxTheme, glow: [], accentColor: e.target.value })}
+              onBlur={(e) =>
+                setTheme({ ...ctxTheme, glow: [], accentColor: e.target.value })
+              }
               className="bg-gray-800 text-white border border-gray-700"
             />
           </div>
 
+          {/* Light/Dark mode */}
           <div>
             <Label>Mode</Label>
             <select
               value={template.color_mode || 'light'}
               onChange={(e) => {
                 const mode = e.target.value as 'light' | 'dark';
-                // Update parent template and ThemeProvider to match
-                onChange({ ...template, color_mode: mode });
+                // Mirror into data so the commit API persists the change
+                onChange({
+                  color_mode: mode,
+                  data: { ...(template.data ?? {}), color_mode: mode },
+                });
                 setTheme({ ...ctxTheme, glow: [], darkMode: mode });
+                setLocalTpl((t) => ({ ...t, color_mode: mode }));
               }}
               className="w-full bg-gray-800 text-white border border-gray-700 px-2 py-1 rounded mt-1"
             >
@@ -121,17 +147,21 @@ export default function ThemePanel({
         <ThemePreviewCard
           theme={localTpl.theme}
           colorMode={localTpl.color_mode as 'light' | 'dark'}
-          onToggleColorMode={async () => {
-            const next = (localTpl.color_mode as 'light' | 'dark') === 'dark' ? 'light' : 'dark';
+          onToggleColorMode={() => {
+            const next =
+              (localTpl.color_mode as 'light' | 'dark') === 'dark' ? 'light' : 'dark';
             // Sync context & parent first for immediate UI consistency
             setTheme({ ...ctxTheme, darkMode: next });
-            onChange({ ...template, color_mode: next });
-            // Persist
-            await saveTemplate({ ...template, color_mode: next }, template.id);
+            onChange({
+              color_mode: next,
+              data: { ...(template.data ?? {}), color_mode: next },
+            });
             // Keep local preview in step
             setLocalTpl((t) => ({ ...t, color_mode: next }));
           }}
-          onSelectFont={(font: string) => setLocalTpl((t) => ({ ...t, theme: font }))}
+          onSelectFont={(font: string) =>
+            setLocalTpl((t) => ({ ...t, theme: font }))
+          }
         />
 
         <div className="flex gap-4 pt-2">

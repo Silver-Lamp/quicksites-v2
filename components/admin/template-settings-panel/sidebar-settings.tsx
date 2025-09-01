@@ -10,11 +10,19 @@ import SeoPanel from '../templates/panels/seo-panel';
 import ThemePanel from '../templates/panels/theme-panel';
 import TemplateJsonEditor from '../templates/template-json-editor';
 import PaymentSettingsPanel from '../payments/payment-settings-panel';
-
 import HoursPanel from '../templates/panels/hours-panel';
+import { Button } from '@/components/ui/button';
+import { Save, Loader2 } from 'lucide-react';
 
 import type { Template, Page } from '@/types/template';
-import { usePersistTemplate, useTemplateRef } from '@/hooks/usePersistTemplate';
+import { Collapsible } from '@/components/ui/collapsible';
+
+// simple live ref
+function useLiveRef<T>(value: T) {
+  const ref = useRef(value);
+  useEffect(() => { ref.current = value; }, [value]);
+  return ref;
+}
 
 /* ===================== Resizable settings ===================== */
 const STORAGE_KEY = 'qs:sidebar:width';
@@ -43,7 +51,6 @@ function mergeTemplate(current: Template, patch: Partial<Template>): Template {
     data: { ...(current as any).data, ...(patch as any).data },
   };
 
-  // If patch contains pages either at root or under data, mirror them to both places.
   const patchedPages =
     (patch as any)?.pages ??
     (patch as any)?.data?.pages ??
@@ -53,7 +60,6 @@ function mergeTemplate(current: Template, patch: Partial<Template>): Template {
     next.pages = patchedPages;
     next.data = { ...(next.data ?? {}), pages: patchedPages };
   } else {
-    // Ensure pages remain present at both levels for UI stability
     const pages = getPages(next);
     next.pages = pages;
     next.data = { ...(next.data ?? {}), pages };
@@ -62,24 +68,68 @@ function mergeTemplate(current: Template, patch: Partial<Template>): Template {
   return next as Template;
 }
 
+/* ======= Commit API (autosave of data only) ======= */
+function useCommitApi(templateId?: string) {
+  const [pending, setPending] = useState(false);
+  const revRef = useRef<number | null>(null);
+
+  const loadRev = useCallback(async () => {
+    if (!templateId) return null;
+    const res = await fetch(`/api/templates/state?id=${templateId}`, { cache: 'no-store' });
+    const json = await res.json();
+    if (!res.ok) throw new Error(json?.error || 'Failed to load state');
+    const rev = json?.infra?.template?.rev ?? 0;
+    revRef.current = rev;
+    return rev;
+  }, [templateId]);
+
+  useEffect(() => { void loadRev(); }, [loadRev]);
+
+  const commit = useCallback(
+    async (dataPatch: any, kind: 'save' | 'autosave' = 'autosave') => {
+      if (!templateId) return;
+      const baseRev = revRef.current ?? (await loadRev()) ?? 0;
+      setPending(true);
+      const res = await fetch('/api/templates/commit', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ id: templateId, baseRev, patch: { data: dataPatch }, kind }),
+      });
+      const json = await res.json();
+      setPending(false);
+      if (!res.ok) throw new Error(json?.error || 'Commit failed');
+      if (typeof json?.rev === 'number') revRef.current = json.rev;
+      try { window.dispatchEvent(new CustomEvent('qs:truth:refresh')); } catch {}
+      return json;
+    },
+    [templateId, loadRev]
+  );
+
+  // simple debounce
+  const tRef = useRef<any>(null);
+  const commitSoon = useCallback((dataPatch: any) => {
+    if (tRef.current) clearTimeout(tRef.current);
+    tRef.current = setTimeout(() => { void commit(dataPatch, 'autosave').catch(() => {}); }, 400);
+  }, [commit]);
+
+  return { pending, commit, commitSoon };
+}
+
 type Props = {
   template: Template;
-  /** Accept partials to avoid clobbering state upstream (we'll pass full next template) */
   onChange: (patch: Partial<Template>) => void;
 };
 
 export default function SidebarSettings({ template, onChange }: Props) {
   // ====== Resizable state ======
   const [width, setWidth] = useState<number>(DEFAULT_WIDTH);
-  const draggingRef = useRef(false);
-  const startXRef = useRef(0);
-  const startWRef = useRef(0);
+  const draggingRef = useRef<boolean>(false);
+  const startXRef = useRef<number>(0);
+  const startWRef = useRef<number>(0);
   const [forceOpenHours, setForceOpenHours] = useState(false);
-  const hoursPanelRef = useRef<HTMLDivElement>(null);
+  const hoursPanelRef = useRef<HTMLDivElement | null>(null);
   const [spotlightHours, setSpotlightHours] = useState(false);
 
-
-  // Load persisted width
   useEffect(() => {
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
@@ -93,7 +143,7 @@ export default function SidebarSettings({ template, onChange }: Props) {
     function onOpenPanel(ev: Event) {
       const e = ev as CustomEvent<{ panel: string; openEditor?: boolean; scroll?: boolean; spotlightMs?: number }>;
       if (!e.detail || e.detail.panel !== 'hours') return;
-  
+
       setForceOpenHours(!!e.detail.openEditor);
       if (e.detail.scroll !== false) hoursPanelRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
       setSpotlightHours(true);
@@ -103,16 +153,14 @@ export default function SidebarSettings({ template, onChange }: Props) {
     window.addEventListener('qs:open-settings-panel' as any, onOpenPanel as any);
     return () => window.removeEventListener('qs:open-settings-panel' as any, onOpenPanel as any);
   }, []);
-  
+
   const persistWidth = useCallback((w: number) => {
-    try {
-      localStorage.setItem(STORAGE_KEY, String(w));
-    } catch {}
+    try { localStorage.setItem(STORAGE_KEY, String(w)); } catch {}
   }, []);
 
   const onPointerMove = useCallback((e: PointerEvent) => {
     if (!draggingRef.current) return;
-    const delta = e.clientX - startXRef.current; // handle on the right edge
+    const delta = e.clientX - startXRef.current;
     const next = clamp(startWRef.current + delta, MIN_WIDTH, MAX_WIDTH);
     setWidth(next);
   }, []);
@@ -139,7 +187,6 @@ export default function SidebarSettings({ template, onChange }: Props) {
   }, [endDrag, onPointerMove, width]);
 
   const onHandleDoubleClick = useCallback(() => {
-    // Toggle between default and expanded width
     const next = Math.abs(width - EXPAND_WIDTH) < 8 ? DEFAULT_WIDTH : EXPAND_WIDTH;
     setWidth(clamp(next, MIN_WIDTH, MAX_WIDTH));
     persistWidth(next);
@@ -149,45 +196,28 @@ export default function SidebarSettings({ template, onChange }: Props) {
     const step = e.shiftKey ? 20 : 10;
     if (e.key === 'ArrowLeft') {
       const next = clamp(width - step, MIN_WIDTH, MAX_WIDTH);
-      setWidth(next);
-      persistWidth(next);
-      e.preventDefault();
+      setWidth(next); persistWidth(next); e.preventDefault();
     } else if (e.key === 'ArrowRight') {
       const next = clamp(width + step, MIN_WIDTH, MAX_WIDTH);
-      setWidth(next);
-      persistWidth(next);
-      e.preventDefault();
+      setWidth(next); persistWidth(next); e.preventDefault();
     } else if (e.key.toLowerCase() === 'r') {
-      setWidth(DEFAULT_WIDTH);
-      persistWidth(DEFAULT_WIDTH);
-      e.preventDefault();
+      setWidth(DEFAULT_WIDTH); persistWidth(DEFAULT_WIDTH); e.preventDefault();
     }
   }, [persistWidth, width]);
 
-  // ====== Persist template helpers ======
-  const tplRef = useTemplateRef(template);
+  // ====== Commit autosave helpers ======
+  const tplRef = useLiveRef(template);
+  const { pending, commit, commitSoon } = useCommitApi((template as any)?.id);
 
-  // Persist (debounced) to /api/templates/:id/edit
-  const { persistSoon } = usePersistTemplate(
-    (template as any).id,
-    () => tplRef.current,
-    {
-      debounceMs: 350,
-      onError: (e) => console.error('[sidebar persist] failed:', e),
-    }
-  );
-
-  /** Apply a patch: merge → set state (parent) → persist soon */
   const applyPatch = useCallback(
     (patch: Partial<Template>) => {
       const next = mergeTemplate(tplRef.current, patch);
-      onChange(next as Partial<Template>); // parent does setTemplate+onChange downstream
-      persistSoon(next);
+      onChange(next as Partial<Template>);
+      try { commitSoon((next as any).data); } catch {}
     },
-    [onChange, persistSoon, tplRef]
+    [onChange, commitSoon, tplRef]
   );
 
-  /** Helper so we always update canon + legacy in one go */
   const applyPages = useCallback(
     (pages: Page[]) => {
       applyPatch({ pages, data: { ...(template.data ?? {}), pages } as any });
@@ -195,70 +225,68 @@ export default function SidebarSettings({ template, onChange }: Props) {
     [applyPatch, template.data]
   );
 
+  // explicit save (non-debounced)
+  const saveNow = useCallback(async () => {
+    try {
+      await commit((tplRef.current as any).data, 'save');
+    } catch (e) {
+      console.error('[sidebar saveNow] failed', e);
+    }
+  }, [commit, tplRef]);
+
   // ====== Content ======
   const content = useMemo(() => (
-    <div
-      className="space-y-4 px-4 pt-2 h-full overflow-y-auto"
-      id="sidebar-settings-inner"
-    >
-      {/* Theme updates color_mode; apply + persistSoon */}
-      <ThemePanel
-        template={template}
-        onChange={(patch) => applyPatch(patch)}
-      />
+    <div className="space-y-4 px-4 pt-2 h-full overflow-y-auto" id="sidebar-settings-inner">
+      {/* Sticky save bar */}
+      <div className="sticky top-0 z-10 -mx-4 mb-2 border-b bg-background/95 px-4 py-2 backdrop-blur flex items-center gap-2">
+        <Button size="sm" className="gap-2" onClick={saveNow} disabled={pending}>
+          {pending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
+          {pending ? 'Saving…' : 'Save now'}
+        </Button>
+        <span className="text-xs text-muted-foreground">Autosaves on change</span>
+      </div>
 
-      {/* Identity, Services, Slug, Domain all emit partials; we merge + persist */}
-      <IdentityPanel
-        template={template}
-        onChange={(patch) => applyPatch(patch)}
-      />
+      {/* Theme, Identity, Services, Slug, Domain, SEO */}
+      <ThemePanel template={template} onChange={(patch) => applyPatch(patch)} />
 
-      <ServicesPanel
-        template={template}
-        onChange={(patch) => applyPatch(patch)}
-      />
+      <IdentityPanel template={template} onChange={(patch) => applyPatch(patch)} />
 
-      <SlugPanel
-        template={template}
-        onChange={(patch) => applyPatch(patch)}
-      />
+      <ServicesPanel template={template} onChange={(patch) => applyPatch(patch)} />
 
-      <DomainPanel
-        template={template}
-        isSite={template.is_site ?? false}
-        onChange={(patch) => applyPatch(patch)}
-      />
+      <SlugPanel template={template} onChange={(patch) => applyPatch(patch)} />
 
-      <SeoPanel
-        template={template}
-        onChange={(patch) => applyPatch(patch)}
-      />
+      <DomainPanel template={template} isSite={template.is_site ?? false} />
 
-      {/* New top-level Hours panel (reuses block editor internally) */}
-      <HoursPanel
-        template={template}
-        onChange={(patch) => applyPatch(patch)}
-        panelRef={hoursPanelRef as any}
-        forceOpenEditor={forceOpenHours}
-        spotlight={spotlightHours}
-      />
+      <SeoPanel template={template} onChange={(patch) => applyPatch(patch)} />
 
+      {/* Hours */}
+      <Collapsible title="Hours" id="hours" defaultOpen={false} ref={hoursPanelRef}>  
+        <HoursPanel
+          template={template}
+          onChange={(patch) => applyPatch(patch)}
+          panelRef={hoursPanelRef as any}
+          forceOpenEditor={forceOpenHours}
+          spotlight={spotlightHours}
+        />
+      </Collapsible>
+
+      {/* Payments (separate flow) */}
       <PaymentSettingsPanel
         siteId={template.id}
         merchantId={'00001'}
         initialPlatformFeeBps={75}
       />
 
-      {/* Optional: JSON viewer (read-only here) */}
-      <TemplateJsonEditor
+      {/* Optional read-only JSON viewer */}
+      {/* <TemplateJsonEditor
         rawJson={JSON.stringify(template, null, 2)}
         setRawJson={() => {}}
         sidebarValues={template}
         setSidebarValues={() => {}}
         colorMode={(template.color_mode as 'light' | 'dark') ?? 'light'}
-      />
+      /> */}
     </div>
-  ), [applyPatch, template]);
+  ), [applyPatch, forceOpenHours, pending, saveNow, spotlightHours, template]);
 
   return (
     <aside
@@ -266,10 +294,9 @@ export default function SidebarSettings({ template, onChange }: Props) {
       style={{ width: `${width}px`, minWidth: MIN_WIDTH, maxWidth: MAX_WIDTH }}
       aria-label="Template settings sidebar"
     >
-      {/* Content */}
       {content}
 
-      {/* Resize handle on the right edge */}
+      {/* Resize handle */}
       <div
         role="separator"
         aria-orientation="vertical"

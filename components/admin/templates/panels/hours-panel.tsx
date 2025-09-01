@@ -12,7 +12,7 @@ import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 
-import { Clock, Copy } from 'lucide-react';
+import { Clock, Copy, Globe2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 import {
@@ -34,6 +34,13 @@ type Props = {
   /** If true, show a quick spotlight ring */
   spotlight?: boolean;
 };
+
+function coalesceHours(t: Template): HoursOfOperationContent {
+  const meta = (t.data as any)?.meta ?? {};
+  const m = meta?.hours as HoursOfOperationContent | undefined;
+  const top = (t as any).hours as HoursOfOperationContent | undefined;
+  return (m ?? top ?? defaultHoursContent());
+}
 
 export default function HoursPanel({
   template,
@@ -58,21 +65,36 @@ export default function HoursPanel({
     if (forceOpenEditor) setOpen(true);
   }, [forceOpenEditor]);
 
+  // canonical site-wide hours
   const hours: HoursOfOperationContent = useMemo(
-    () => (template.hours ?? defaultHoursContent()),
-    [template.hours]
+    () => coalesceHours(template),
+    [template]
   );
 
-  // Toggle 24/7 quickly
-  const toggle247 = (on: boolean) => {
-    const next = { ...hours, alwaysOpen: on };
-    onChange({ hours: next });
+  // Utility to patch meta.hours + mirror top-level hours (for back-compat)
+  const setHours = (next: HoursOfOperationContent) => {
+    onChange({
+      hours: next, // tiny mirror
+      data: {
+        ...(template.data as any),
+        meta: { ...((template.data as any)?.meta ?? {}), hours: next },
+      },
+    });
   };
 
-  // Toggle display style
+  // Quick toggles
+  const toggle247 = (on: boolean) => {
+    const next = { ...hours, alwaysOpen: on };
+    setHours(next);
+  };
   const setDisplayStyle = (style: 'table' | 'stack') => {
     if (hours.display_style === style) return;
-    onChange({ hours: { ...hours, display_style: style } });
+    setHours({ ...hours, display_style: style });
+  };
+  const useBrowserTz = () => {
+    const tz = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
+    if (tz && tz !== hours.tz) setHours({ ...hours, tz });
+    toast.success(`Timezone set to ${tz}`);
   };
 
   const title = hours.title ?? 'Business Hours';
@@ -86,6 +108,32 @@ export default function HoursPanel({
     const exToday = matchExceptionForYMD(hours.exceptions, nowParts.ymd);
     return { openNow, text, hasCarry, exTodayLabel: exToday?.label ?? '' };
   }, [hours]);
+
+  // Copy helpers
+  const copyToday = () => {
+    const t = `Today: ${preview.text}${preview.openNow ? ' (Open now)' : ' (Closed now)'}`;
+    navigator.clipboard?.writeText(t)
+      .then(() => toast.success('Copied today’s hours'))
+      .catch(() => toast.error('Copy failed'));
+  };
+  const copyWeek = () => {
+    try {
+      const lines = [
+        `${title}${hours.tz ? ` (${hours.tz})` : ''}`,
+        ...hours.days.map((d) => {
+          const open = d.periods[0]?.open?.trim() ?? '';
+          const close = d.periods[0]?.close?.trim() ?? '';
+          const label = d.label ?? d.key;
+          return open && close ? `${label}: ${open}–${close}` : `${label}: Closed`;
+        }),
+      ];
+      navigator.clipboard?.writeText(lines.join('\n'))
+        .then(() => toast.success('Copied weekly hours'))
+        .catch(() => toast.error('Copy failed'));
+    } catch {
+      toast.error('Copy failed');
+    }
+  };
 
   return (
     <div
@@ -101,6 +149,15 @@ export default function HoursPanel({
         <div className="ml-auto text-xs opacity-70">
           {title} · {tz}
         </div>
+      </div>
+
+      {/* Guidance */}
+      <div className="rounded-lg border border-white/10 bg-neutral-900/50 p-3 text-xs text-white/70 leading-relaxed">
+        <ul className="list-disc list-inside space-y-1">
+          <li>These hours are <strong>site-wide</strong> and live in <code>data.meta.hours</code>.</li>
+          <li>Supports <em>exceptions</em> (holidays) and overnight carry (e.g., 8pm–2am).</li>
+          <li>Blocks and the footer/contact areas read from these values automatically.</li>
+        </ul>
       </div>
 
       {/* Today preview row */}
@@ -127,31 +184,28 @@ export default function HoursPanel({
         >
           {preview.openNow ? 'Open now' : 'Closed now'}
         </Badge>
-        <Button
-          variant="ghost"
-          size="icon"
-          className="ml-auto"
-          onClick={() => {
-            const t = `Today: ${preview.text}${preview.openNow ? ' (Open now)' : ' (Closed now)'}`;
-            if (navigator.clipboard?.writeText) {
-              navigator.clipboard
-                .writeText(t)
-                .then(() => toast.success('Copied today’s hours'))
-                .catch(() => toast.error('Copy failed'));
-            } else {
-              toast('Copy unavailable on this browser', { icon: '📋' });
-            }
-          }}
-          title="Copy today’s hours"
-        >
-          <Copy className="w-4 h-4" />
-        </Button>
+
+        <div className="ml-auto flex gap-2">
+          <Button variant="ghost" size="icon" onClick={copyToday} title="Copy today’s hours">
+            <Copy className="w-4 h-4" />
+          </Button>
+          <Button variant="ghost" size="sm" onClick={copyWeek} title="Copy weekly hours">
+            Copy week
+          </Button>
+        </div>
       </div>
 
       {/* Quick toggles */}
       <div className="flex items-center gap-3">
         <Switch id="hours-247" checked={!!hours.alwaysOpen} onCheckedChange={toggle247} />
         <Label htmlFor="hours-247">Open 24/7</Label>
+
+        <div className="ml-auto flex items-center gap-2">
+          <Button size="sm" variant="outline" onClick={useBrowserTz} className="gap-1">
+            <Globe2 className="h-4 w-4" />
+            Use my timezone
+          </Button>
+        </div>
       </div>
 
       <div className="flex items-center justify-between">
@@ -190,7 +244,7 @@ export default function HoursPanel({
               content: hours,
             }}
             onSave={(updated: any) => {
-              onChange({ hours: updated.content });
+              setHours(updated.content as HoursOfOperationContent);
             }}
             onClose={() => setOpen(false)}
             // // @ts-expect-error depends on your local BlockEditorProps definition

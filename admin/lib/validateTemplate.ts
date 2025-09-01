@@ -1,3 +1,4 @@
+// admin/lib/validateTemplate.ts
 'use client';
 
 import { ZodError } from 'zod';
@@ -9,7 +10,7 @@ import { upgradeLegacyBlocksDeep } from '@/lib/blocks/upgradeLegacy';
 
 /* ----------------------------- small helpers ----------------------------- */
 
-type Warning = { field: 'headerBlock' | 'footerBlock'; message: string };
+export type Warning = { field: 'headerBlock' | 'footerBlock'; message: string };
 
 function getAtPath(obj: unknown, pathSegments: (string | number)[]) {
   try {

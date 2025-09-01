@@ -28,7 +28,8 @@ import { buildTemplateFromOptions } from '@/lib/seeding/templateBuilder';
 import type { SeedTemplateOptions } from '@/lib/seeding/types';
 
 // industry/services helpers
-import { resolveIndustry, generateServices } from '@/lib/generateServices';
+import { generateServices } from '@/lib/generateServices';
+import { resolveIndustry } from '@/lib/industries';
 
 // server-safe normalize
 import { normalizeTemplate as normalizeTemplateServer } from '@/admin/utils/normalizeTemplate';
@@ -195,10 +196,7 @@ export async function POST(req: NextRequest) {
           let previewData;
           const picks: SeedTemplateOptions | undefined = body?.templateBlocks;
           if (picks && picks.order) {
-            const { key: industryKey, label: industryLabel } = resolveIndustry({
-              industryLabel: body.industry,
-              templateIdOrSlug: undefined,
-            });
+            const { key: industryKey, label: industryLabel } = resolveIndustry(body.industry, undefined);
             const serviceNames = generateServices({ industryKey }).map((s) => s.name);
             previewData = buildTemplateFromOptions({
               ...picks,
@@ -338,10 +336,7 @@ export async function POST(req: NextRequest) {
         const picks: SeedTemplateOptions | undefined = body?.templateBlocks;
         let customBuild;
         if (picks && picks.order) {
-          const { key: industryKey, label: industryLabel } = resolveIndustry({
-            industryLabel: body.industry,
-            templateIdOrSlug: undefined,
-          });
+          const { key: industryKey, label: industryLabel } = resolveIndustry(body.industry, undefined);
           const serviceNames = generateServices({ industryKey }).map((s) => s.name);
           customBuild = buildTemplateFromOptions({
             ...picks,
@@ -415,10 +410,7 @@ export async function POST(req: NextRequest) {
         normalizedData = upgradeLegacyBlocksDeep(normalizedData);
 
         // Resolve industry (label for DB; key for generators)
-        const { label: industryLabel, key: industryKey } = resolveIndustry({
-          industryLabel: body.industry,
-          templateIdOrSlug: tplPrev.slug,
-        });
+        const { label: industryLabel, key: industryKey } = resolveIndustry(body.industry, tplPrev.slug);
 
         // Insert version with industry at INSERT time
         const tplRes = await upsertTemplateAdaptive(

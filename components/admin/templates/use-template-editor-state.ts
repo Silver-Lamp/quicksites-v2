@@ -1,3 +1,4 @@
+// components/admin/templates/use-template-editor-state.ts
 'use client';
 
 import { useState, useEffect, useRef, useMemo } from 'react';
@@ -14,9 +15,7 @@ import { prepareTemplateForSave } from '@/admin/lib/prepareTemplateForSave';
 import { saveTemplate } from '@/admin/lib/saveTemplate';
 
 import type { Snapshot, Template } from '@/types/template';
-import type { Block } from '@/types/blocks';
-import { validateBlock } from '@/lib/validateBlock';
-import { BlockValidationError } from '@/hooks/validateTemplateBlocks';
+import { type BlockValidationError, validateTemplateBlocks, normalizeBlockErrors } from '@/hooks/validateTemplateBlocks';
 import { fixTemplatePages } from '@/lib/fixBlockDefaults';
 import { ZodError } from 'zod';
 
@@ -49,16 +48,15 @@ function withSyncedPages<T extends Partial<Template>>(tpl: T): Template {
   } as Template;
 }
 
-/** Validate blocks once on load and keep an error map. */
-function collectBlockErrors(tpl: Template): Record<string, BlockValidationError[]> {
-  const errs: Record<string, BlockValidationError[]> = {};
-  for (const page of tpl?.data?.pages ?? []) {
-    for (const block of page.content_blocks ?? []) {
-      const problems = validateBlock(block as Block);
-      if (problems.length) errs[block._id || crypto.randomUUID()] = problems as any;
-    }
+/** Centralized, rich block validation -> normalized UI shape. */
+function computeBlockErrors(tpl: Template): Record<string, BlockValidationError[]> {
+  try {
+    const raw = validateTemplateBlocks(tpl);
+    return normalizeBlockErrors(raw);
+  } catch (e) {
+    console.warn('[useTemplateEditorState] validateTemplateBlocks failed', e);
+    return {};
   }
-  return errs;
 }
 
 /**
@@ -171,7 +169,7 @@ export function useTemplateEditorState({
   // 2) State
   const [template, _setTemplate] = useState<Template>(initialSnapshot);
   const [blockErrors, setBlockErrors] = useState<Record<string, BlockValidationError[]>>(
-    collectBlockErrors(initialSnapshot),
+    computeBlockErrors(initialSnapshot),
   );
   const [isCreating] = useState(!initialData);
   const [isRenaming, setIsRenaming] = useState(false);
@@ -224,7 +222,7 @@ export function useTemplateEditorState({
 
     const synced = withSyncedPages(next);
     _setTemplate(synced);
-    setBlockErrors(collectBlockErrors(synced));
+    setBlockErrors(computeBlockErrors(synced));
   }
 
   // 6.5) One-shot saver + auto-create on mount for new templates
@@ -358,7 +356,7 @@ export function useTemplateEditorState({
           });
         }
         const synced = withSyncedPages(next);
-        setBlockErrors(collectBlockErrors(synced));
+        setBlockErrors(computeBlockErrors(synced));
         return synced;
       });
     } else {

@@ -16,7 +16,7 @@ type Props = {
   onUndo?: (index: number) => void;
   onViewDiff?: (index: number) => void;
   undoAvailable?: boolean;
-  children: React.ReactNode;
+  children?: React.ReactNode;
 };
 
 export default function SortableBlock({
@@ -49,7 +49,7 @@ export default function SortableBlock({
       id={`block-${block._id}`}
       className={`flex flex-col gap-2 border rounded p-3 ${
         invalid
-          ? 'border-red-500 bg-red-500/10 animate-pulse shadow-red-500/30 shadow-md'
+          ? 'border-red-500 bg-red-500/10 shadow-red-500/30 shadow-md'
           : 'bg-white/5 border-white/10'
       }`}
     >
@@ -62,6 +62,7 @@ export default function SortableBlock({
             {...listeners}
           />
           <span className="text-sm font-medium text-white">{block.type}</span>
+
           {wasAutofixed && (
             <Tooltip>
               <TooltipTrigger>
@@ -72,11 +73,13 @@ export default function SortableBlock({
               </TooltipContent>
             </Tooltip>
           )}
+
           {isAI && <span className="text-xs text-purple-400 ml-2">🔮 AI</span>}
+
           {invalid && (
             <span className="flex items-center gap-1 text-xs text-red-400 ml-2">
               <AlertTriangle className="w-3 h-3" />
-              Invalid block
+              Invalid ({errors.length})
             </span>
           )}
         </div>
@@ -106,7 +109,15 @@ export default function SortableBlock({
         <ul className="text-xs text-red-300 list-disc list-inside pl-1 pt-1 space-y-1">
           {errors.map((err, i) => (
             <li key={i}>
-              <code>{err.field}</code>: {err.message}
+              <div className="flex flex-wrap items-baseline gap-2">
+                <span>{err.message}</span>
+                {err.field && <code className="text-white">{err.field}</code>}
+                {err.code && (
+                  <span className="px-1.5 py-0.5 rounded bg-amber-900/30 border border-amber-700/40 text-amber-100 text-[10px]">
+                    {err.code}
+                  </span>
+                )}
+              </div>
             </li>
           ))}
         </ul>

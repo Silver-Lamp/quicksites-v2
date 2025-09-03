@@ -1,28 +1,37 @@
+// hooks/useTruthTrackerState.ts
 'use client';
+import * as React from 'react';
 
-import { useEffect, useState, useCallback } from 'react';
+export function useTruthTrackerState(templateId?: string) {
+  const [state, setState] = React.useState<any>(null);
+  const [loading, setLoading] = React.useState(false);
+  const [error, setError] = React.useState<string | null>(null);
 
-export function useTruthTrackerState(templateId: string) {
-  const [data, setData] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
-  const [err, setErr] = useState<string | null>(null);
-
-  const load = useCallback(async () => {
+  const reload = React.useCallback(async () => {
+    if (!templateId) return;
     setLoading(true);
-    setErr(null);
+    setError(null);
     try {
-      const res = await fetch(`/api/templates/state?id=${templateId}`, { cache: 'no-store' });
-      const json = await res.json();
-      if (!res.ok) throw new Error(json?.error || 'Failed to load');
-      setData(json);
+      const r = await fetch(`/api/templates/state?id=${encodeURIComponent(templateId)}`, { cache: 'no-store' });
+      const j = await r.json();
+      if (!r.ok) throw new Error(j?.error || `state ${r.status}`);
+      setState(j);
     } catch (e: any) {
-      setErr(e?.message ?? 'Failed to load');
+      setError(e?.message || 'failed to load state');
+      setState(null);
     } finally {
       setLoading(false);
     }
   }, [templateId]);
 
-  useEffect(() => { if (templateId) load(); }, [templateId, load]);
+  React.useEffect(() => { void reload(); }, [reload]);
 
-  return { state: data, loading, error: err, refresh: load };
+  // auto-refresh when commits/snapshots/publish fire
+  React.useEffect(() => {
+    const onTruth = () => { void reload(); };
+    window.addEventListener('qs:truth:refresh', onTruth as any);
+    return () => window.removeEventListener('qs:truth:refresh', onTruth as any);
+  }, [reload]);
+
+  return { state, loading, error, reload };
 }

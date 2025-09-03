@@ -8,7 +8,7 @@ import SlugPanel from '../templates/panels/slug-panel';
 import DomainPanel from '../templates/panels/domain-panel';
 import SeoPanel from '../templates/panels/seo-panel';
 import ThemePanel from '../templates/panels/theme-panel';
-import TemplateJsonEditor from '../templates/template-json-editor';
+// import TemplateJsonEditor from '../templates/template-json-editor';
 import PaymentSettingsPanel from '../payments/payment-settings-panel';
 import HoursPanel from '../templates/panels/hours-panel';
 import { Button } from '@/components/ui/button';
@@ -16,8 +16,44 @@ import { Save, Loader2 } from 'lucide-react';
 
 import type { Template, Page } from '@/types/template';
 import { Collapsible } from '@/components/ui/collapsible';
+import TemplateTruthTracker from '@/components/admin/templates/sidebar/TemplateTruthTracker';
+import { useTruthTrackerState } from '@/components/admin/templates/hooks/useTruthTrackerState';
 
-// simple live ref
+/* ---------- tracker helpers ---------- */
+async function createSnapshot(templateId: string) {
+  const r = await fetch(`/api/admin/snapshots/create?templateId=${encodeURIComponent(templateId)}`, { method: 'GET' });
+  const j = await r.json(); if (!r.ok) throw new Error(j?.error || 'snapshot failed');
+  return j.snapshotId as string;
+}
+async function publishSnapshot(templateId: string, snapshotId: string) {
+  const r = await fetch(`/api/admin/sites/publish?templateId=${encodeURIComponent(templateId)}&snapshotId=${encodeURIComponent(snapshotId)}`, { method: 'GET' });
+  const j = await r.json(); if (!r.ok) throw new Error(j?.error || 'publish failed');
+  return j;
+}
+
+// export function TruthTrackerPanel({ templateId }: { templateId: string }) {
+//   const { state, loading, error, reload } = useTruthTrackerState(templateId);
+//   if (loading || !state) return null;
+//   const { infra, snapshots, versions, events, adminMeta } = state;
+
+//   return (
+//     <TemplateTruthTracker
+//       templateId={templateId}
+//       infra={infra}
+//       snapshots={snapshots}
+//       versions={versions}
+//       events={events}
+//       selectedSnapshotId={infra?.lastSnapshot?.id}
+//       adminMeta={adminMeta}
+//       onRefresh={reload}
+//       onCreateSnapshot={async () => { await createSnapshot(templateId); await reload(); }}
+//       onPublish={async (sid) => { await publishSnapshot(templateId, sid); await reload(); }}
+//       onViewDiff={() => {}}
+//     />
+//   );
+// }
+
+/* ---------- small util ---------- */
 function useLiveRef<T>(value: T) {
   const ref = useRef(value);
   useEffect(() => { ref.current = value; }, [value]);
@@ -26,10 +62,10 @@ function useLiveRef<T>(value: T) {
 
 /* ===================== Resizable settings ===================== */
 const STORAGE_KEY = 'qs:sidebar:width';
-const DEFAULT_WIDTH = 320;   // px
-const MIN_WIDTH = 280;       // px
-const MAX_WIDTH = 640;       // px
-const EXPAND_WIDTH = 440;    // px (double-click target)
+const DEFAULT_WIDTH = 320;
+const MIN_WIDTH = 280;
+const MAX_WIDTH = 640;
+const EXPAND_WIDTH = 440;
 
 function clamp(n: number, min: number, max: number) {
   return Math.max(min, Math.min(max, n));
@@ -51,6 +87,7 @@ function mergeTemplate(current: Template, patch: Partial<Template>): Template {
     data: { ...(current as any).data, ...(patch as any).data },
   };
 
+  // If patch contains pages either at root or under data, mirror them to both places.
   const patchedPages =
     (patch as any)?.pages ??
     (patch as any)?.data?.pages ??
@@ -60,6 +97,7 @@ function mergeTemplate(current: Template, patch: Partial<Template>): Template {
     next.pages = patchedPages;
     next.data = { ...(next.data ?? {}), pages: patchedPages };
   } else {
+    // Ensure pages remain present at both levels for UI stability
     const pages = getPages(next);
     next.pages = pages;
     next.data = { ...(next.data ?? {}), pages };
@@ -71,48 +109,74 @@ function mergeTemplate(current: Template, patch: Partial<Template>): Template {
 /* ======= Commit API (autosave of data only) ======= */
 function useCommitApi(templateId?: string) {
   const [pending, setPending] = useState(false);
-  const revRef = useRef<number | null>(null);
+  const revRef = useRef<number>(0);
+  const queue = useRef<Promise<any>>(Promise.resolve());
 
   const loadRev = useCallback(async () => {
-    if (!templateId) return null;
-    const res = await fetch(`/api/templates/state?id=${templateId}`, { cache: 'no-store' });
-    const json = await res.json();
-    if (!res.ok) throw new Error(json?.error || 'Failed to load state');
-    const rev = json?.infra?.template?.rev ?? 0;
-    revRef.current = rev;
-    return rev;
+    if (!templateId) { revRef.current = 0; return 0; }
+    try {
+      const res = await fetch(`/api/templates/state?id=${encodeURIComponent(templateId)}`, { cache: 'no-store' });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(json?.error || 'state failed');
+      const r = Number(json?.infra?.template?.rev ?? 0);
+      revRef.current = Number.isFinite(r) ? r : 0;
+      return revRef.current;
+    } catch (e) {
+      console.warn('[commitApi] loadRev fallback to 0:', e);
+      revRef.current = 0;
+      return 0;
+    }
   }, [templateId]);
 
   useEffect(() => { void loadRev(); }, [loadRev]);
 
-  const commit = useCallback(
-    async (dataPatch: any, kind: 'save' | 'autosave' = 'autosave') => {
-      if (!templateId) return;
-      const baseRev = revRef.current ?? (await loadRev()) ?? 0;
-      setPending(true);
-      const res = await fetch('/api/templates/commit', {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ id: templateId, baseRev, patch: { data: dataPatch }, kind }),
-      });
-      const json = await res.json();
-      setPending(false);
-      if (!res.ok) throw new Error(json?.error || 'Commit failed');
-      if (typeof json?.rev === 'number') revRef.current = json.rev;
-      try { window.dispatchEvent(new CustomEvent('qs:truth:refresh')); } catch {}
-      return json;
-    },
-    [templateId, loadRev]
-  );
+  const _commitOnce = useCallback(async (dataPatch: any, kind: 'save' | 'autosave') => {
+    if (!templateId) return;
+    const baseRev = revRef.current ?? (await loadRev());
 
-  // simple debounce
-  const tRef = useRef<any>(null);
+    const res = await fetch('/api/templates/commit', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ id: templateId, baseRev, patch: { data: dataPatch }, kind }),
+    });
+    const json = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      if (res.status === 409) throw new Error('merge_conflict');
+      throw new Error(json?.error || 'commit failed');
+    }
+    if (typeof json?.rev === 'number') revRef.current = json.rev;
+    return json;
+  }, [templateId, loadRev]);
+
+  const commit = useCallback((dataPatch: any, kind: 'save' | 'autosave' = 'autosave') => {
+    if (!templateId) return Promise.resolve();
+    queue.current = queue.current.then(async () => {
+      setPending(true);
+      try {
+        try {
+          return await _commitOnce(dataPatch, kind);
+        } catch (e: any) {
+          if (e?.message === 'merge_conflict') {
+            await loadRev();                 // refresh rev, then retry once
+            return await _commitOnce(dataPatch, kind);
+          }
+          throw e;
+        }
+      } finally {
+        setPending(false);
+        try { window.dispatchEvent(new CustomEvent('qs:truth:refresh')); } catch {}
+      }
+    });
+    return queue.current;
+  }, [_commitOnce, loadRev, templateId]);
+
+  const tRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const commitSoon = useCallback((dataPatch: any) => {
     if (tRef.current) clearTimeout(tRef.current);
-    tRef.current = setTimeout(() => { void commit(dataPatch, 'autosave').catch(() => {}); }, 400);
+    tRef.current = setTimeout(() => { void commit(dataPatch, 'autosave'); }, 350);
   }, [commit]);
 
-  return { pending, commit, commitSoon };
+  return { pending, commit, commitSoon, loadRev, revRef };
 }
 
 type Props = {
@@ -130,6 +194,7 @@ export default function SidebarSettings({ template, onChange }: Props) {
   const hoursPanelRef = useRef<HTMLDivElement | null>(null);
   const [spotlightHours, setSpotlightHours] = useState(false);
 
+  // width bootstrap
   useEffect(() => {
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
@@ -139,19 +204,27 @@ export default function SidebarSettings({ template, onChange }: Props) {
       setWidth(DEFAULT_WIDTH);
     }
   }, []);
+
+  // spotlight + scroll into Hours panel
   useEffect(() => {
+    let timeoutId: ReturnType<typeof setTimeout> | null = null;
     function onOpenPanel(ev: Event) {
       const e = ev as CustomEvent<{ panel: string; openEditor?: boolean; scroll?: boolean; spotlightMs?: number }>;
       if (!e.detail || e.detail.panel !== 'hours') return;
 
       setForceOpenHours(!!e.detail.openEditor);
-      if (e.detail.scroll !== false) hoursPanelRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      if (e.detail.scroll !== false) {
+        hoursPanelRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
       setSpotlightHours(true);
-      const id = setTimeout(() => setSpotlightHours(false), e.detail.spotlightMs ?? 900);
-      return () => clearTimeout(id);
+      if (timeoutId) clearTimeout(timeoutId);
+      timeoutId = setTimeout(() => setSpotlightHours(false), e.detail.spotlightMs ?? 900);
     }
     window.addEventListener('qs:open-settings-panel' as any, onOpenPanel as any);
-    return () => window.removeEventListener('qs:open-settings-panel' as any, onOpenPanel as any);
+    return () => {
+      window.removeEventListener('qs:open-settings-panel' as any, onOpenPanel as any);
+      if (timeoutId) clearTimeout(timeoutId);
+    };
   }, []);
 
   const persistWidth = useCallback((w: number) => {
@@ -213,7 +286,10 @@ export default function SidebarSettings({ template, onChange }: Props) {
     (patch: Partial<Template>) => {
       const next = mergeTemplate(tplRef.current, patch);
       onChange(next as Partial<Template>);
-      try { commitSoon((next as any).data); } catch {}
+      // Only autosave when we have a valid id
+      if ((tplRef.current as any)?.id) {
+        try { commitSoon((next as any).data); } catch {}
+      }
     },
     [onChange, commitSoon, tplRef]
   );
@@ -227,6 +303,7 @@ export default function SidebarSettings({ template, onChange }: Props) {
 
   // explicit save (non-debounced)
   const saveNow = useCallback(async () => {
+    if (!(tplRef.current as any)?.id) return;
     try {
       await commit((tplRef.current as any).data, 'save');
     } catch (e) {
@@ -239,7 +316,7 @@ export default function SidebarSettings({ template, onChange }: Props) {
     <div className="space-y-4 px-4 pt-2 h-full overflow-y-auto" id="sidebar-settings-inner">
       {/* Sticky save bar */}
       <div className="sticky top-0 z-10 -mx-4 mb-2 border-b bg-background/95 px-4 py-2 backdrop-blur flex items-center gap-2">
-        <Button size="sm" className="gap-2" onClick={saveNow} disabled={pending}>
+        <Button size="sm" className="gap-2" onClick={saveNow} disabled={pending || !(template as any)?.id}>
           {pending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
           {pending ? 'Saving…' : 'Save now'}
         </Button>
@@ -248,19 +325,17 @@ export default function SidebarSettings({ template, onChange }: Props) {
 
       {/* Theme, Identity, Services, Slug, Domain, SEO */}
       <ThemePanel template={template} onChange={(patch) => applyPatch(patch)} />
-
       <IdentityPanel template={template} onChange={(patch) => applyPatch(patch)} />
-
       <ServicesPanel template={template} onChange={(patch) => applyPatch(patch)} />
-
       <SlugPanel template={template} onChange={(patch) => applyPatch(patch)} />
 
+      {/* Domain is read-only/informational; no onChange */}
       <DomainPanel template={template} isSite={template.is_site ?? false} />
 
       <SeoPanel template={template} onChange={(patch) => applyPatch(patch)} />
 
       {/* Hours */}
-      <Collapsible title="Hours" id="hours" defaultOpen={false} ref={hoursPanelRef}>  
+      <Collapsible title="Hours" id="hours" defaultOpen={false} ref={hoursPanelRef as any}>
         <HoursPanel
           template={template}
           onChange={(patch) => applyPatch(patch)}
@@ -269,6 +344,9 @@ export default function SidebarSettings({ template, onChange }: Props) {
           spotlight={spotlightHours}
         />
       </Collapsible>
+
+      {/* Truth tracker */}
+      {/* {(template as any)?.id && <TruthTrackerPanel templateId={(template as any).id} />} */}
 
       {/* Payments (separate flow) */}
       <PaymentSettingsPanel

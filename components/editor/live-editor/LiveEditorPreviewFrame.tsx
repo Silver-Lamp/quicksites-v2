@@ -28,8 +28,13 @@ type Props = {
 
   showEditorChrome?: boolean;
   onEditHeader?: () => void;
+
+  /** Open the editor for a specific block id */
   onRequestEditBlock?: (blockId: string) => void;
+  /** Add block after a specific block id (or special "__ADD_AT_START__") */
   onRequestAddAfter?: (blockId: string) => void;
+  /** NEW: Delete a block by id */
+  onRequestDeleteBlock?: (blockId: string) => void;
 
   className?: string;
   style?: React.CSSProperties;
@@ -67,6 +72,7 @@ export default function LiveEditorPreviewFrame({
   onEditHeader,
   onRequestEditBlock,
   onRequestAddAfter,
+  onRequestDeleteBlock, // NEW
   previewVersionId,
   pageSlug,
   className,
@@ -196,11 +202,13 @@ export default function LiveEditorPreviewFrame({
         onRequestEditBlock?.(String(data.blockId));
       } else if (data.type === 'preview:add-after' && data.blockId) {
         onRequestAddAfter?.(String(data.blockId));
+      } else if (data.type === 'preview:delete-block' && data.blockId) {
+        onRequestDeleteBlock?.(String(data.blockId));
       }
     }
     window.addEventListener('message', onMessage);
     return () => window.removeEventListener('message', onMessage);
-  }, [onChange, setRawJson, setTemplate, onEditHeader, onRequestEditBlock, onRequestAddAfter, useInline]);
+  }, [onChange, setRawJson, setTemplate, onEditHeader, onRequestEditBlock, onRequestAddAfter, onRequestDeleteBlock, useInline]);
 
   /* ---------------- Optional: force reload on explicit "save" event ---------------- */
   React.useEffect(() => {
@@ -309,8 +317,8 @@ export default function LiveEditorPreviewFrame({
 
                   return (
                     <div key={id} className="group relative rounded-lg ring-1 ring-white/5 hover:ring-white/15">
-                      {/* hover chrome */}
-                      <div className="pointer-events-none absolute -top-3 left-0 right-0 z-10 hidden justify-center group-hover:flex">
+                      {/* hover chrome (centered tiny toolbar) */}
+                      <div className="pointer-events-none absolute -top-3 left-0 right-0 z-10 hidden justify-center gap-2 group-hover:flex">
                         <button
                           type="button"
                           className="pointer-events-auto rounded-md border border-white/20 bg-black/60 px-2 py-0.5 text-xs text-white hover:bg-black/80"
@@ -318,7 +326,20 @@ export default function LiveEditorPreviewFrame({
                         >
                           Edit
                         </button>
+                        <button
+                          type="button"
+                          className="pointer-events-auto rounded-md border border-red-600 bg-red-600/80 px-2 py-0.5 text-xs text-white hover:bg-red-700"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (!onRequestDeleteBlock) return;
+                            if (confirm('Delete this block?')) onRequestDeleteBlock(id);
+                          }}
+                        >
+                          🗑 Delete
+                        </button>
                       </div>
+
+                      {/* top-right quick Edit button (kept) */}
                       <button
                         type="button"
                         className="absolute right-2 top-2 z-10 hidden rounded-md border border-white/20 bg-black/60 px-2 py-0.5 text-xs text-white hover:bg-black/80 group-hover:block"

@@ -68,6 +68,10 @@ export type TemplateData = {
   hours?: HoursOfOperationContent | null;
 };
 
+export type TemplateInsert = Omit<Template,
+  'id' | 'rev' | 'base_slug' | 'is_version' | 'created_at' | 'updated_at'
+>;
+
 // Represents the persisted state (matches DB + zod schema)
 export type Snapshot = {
   id: string;

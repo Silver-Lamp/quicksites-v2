@@ -42,25 +42,28 @@ function withSyncedPages<T extends { data?: any; pages?: any[] }>(tpl: T): T {
  * Insert a new draft template row and return the inserted id (or null).
  * Expects canonical data in `initial.data` (headerBlock/footerBlock inside data if present).
  */
-async function insertDraft(initial: Template): Promise<string | null> {
+async function insertDraft(initial: any): Promise<string | null> {
+  // Canonical minimal payload — omit generated/derived cols
   const payload: any = {
     template_name: initial.template_name ?? initial.slug ?? 'Untitled',
-    slug: initial.slug,
-    base_slug: initial.slug,              // adjust if you use a different base logic
-    data: initial.data ?? {},
-    is_version: false,
-    is_site: initial.is_site ?? false,
-    published: false,
+    slug: initial.slug,                              // ✔️ let the DB compute base_slug
+    data: initial.data ?? {},                        // ✔️ canonical JSON
     color_mode: initial.color_mode ?? initial.data?.color_mode ?? 'light',
+    // Optional mirrors if you store them:
     header_block: initial.data?.headerBlock ?? null,
     footer_block: initial.data?.footerBlock ?? null,
-    domain: initial.domain ?? null,
-    default_subdomain: initial.default_subdomain ?? null,
+    // You can include is_site if it’s a real column (not generated):
+    ...(typeof initial.is_site === 'boolean' ? { is_site: initial.is_site } : {}),
+    // DO NOT include base_slug or is_version here:
+    // base_slug: initial.slug,      // ❌ generated
+    // is_version: false,            // ❌ generated
+    // published: false,             // ⚠️ omit if published is generated/derived in your schema
+    // domain/default_subdomain: include only if you’re actually setting them
   };
 
   const { data, error } = await supabase
     .from('templates')
-    .insert(payload)
+    .insert(payload, { count: 'exact' })
     .select('id')
     .single();
 

@@ -17,6 +17,14 @@ import type { BlockValidationError } from '@/hooks/validateTemplateBlocks';
 import QuickLinksEditor from '@/components/admin/fields/quick-links-editor';
 import FaviconUploader from '@/components/admin/favicon-uploader';
 
+// Industry helpers (canonical key as the source of truth)
+import {
+  getIndustryOptions,
+  resolveIndustryKey,
+  toIndustryLabel,
+  INDUSTRY_HINTS,
+} from '@/lib/industries';
+
 type Props = {
   block: Block;
   onSave: (updated: Block) => void | Promise<void>;
@@ -45,13 +53,19 @@ function normalizeHeaderContent(input: any, fallbackLogo?: string) {
   return { logo_url, nav_items };
 }
 
-/* ------------------- helpers ------------------- */
-
-function emitPatch(patch: Partial<Template>) {
+/* ------------------- event helpers ------------------- */
+function emitApplyPatch(patch: Partial<Template>) {
   try {
     window.dispatchEvent(new CustomEvent('qs:template:apply-patch', { detail: patch as any }));
   } catch {}
 }
+function emitMerge(detail: Partial<Template>['data'] | { meta?: any } | any) {
+  try {
+    window.dispatchEvent(new CustomEvent('qs:template:merge', { detail }));
+  } catch {}
+}
+
+/* ------------------- AI helpers / favicon ------------------- */
 
 // AI → File
 function b64ToFile(b64: string, filename: string, mime = 'image/png'): File {
@@ -62,7 +76,6 @@ function b64ToFile(b64: string, filename: string, mime = 'image/png'): File {
   return new File([bytes], filename, { type: mime });
 }
 
-// draw to 32x32 PNG (cover)
 async function rasterizeSquareFromBlob(srcBlob: Blob, size = 32) {
   if (typeof window === 'undefined') throw new Error('rasterizeSquareFromBlob must run in the browser');
   const url = URL.createObjectURL(srcBlob);
@@ -198,17 +211,34 @@ export default function PageHeaderEditor({
   const [isUploading, setIsUploading] = useState(false);
   const [isSavingLocal, setIsSavingLocal] = useState(false);
 
-  // Business + industry (meta-first)
+  // Business name
   const businessName = useMemo(
     () => String(meta?.business ?? meta?.siteTitle ?? (template as any)?.business_name ?? ''),
     [meta, template]
   );
-  const industry = useMemo(
-    () => String(meta?.industry ?? (template as any)?.industry ?? ''),
-    [meta, template]
-  );
 
-  // favicon state
+  // Current industry as CANONICAL KEY
+  const currentIndustryKey = useMemo(() => {
+    const raw =
+      (typeof meta?.industry === 'string' ? meta.industry : '') ||
+      ((template as any)?.industry ?? '');
+    return resolveIndustryKey(raw);
+  }, [meta?.industry, (template as any)?.industry]);
+
+  // Controlled industry key state
+  const [industryKey, setIndustryKey] = useState<string>(currentIndustryKey);
+  useEffect(() => { setIndustryKey(currentIndustryKey); }, [currentIndustryKey]);
+
+  // Options (value === key, label is display)
+  const industryOptions = useMemo(() => getIndustryOptions(), []);
+
+  // Hint by label
+  const industryHint = useMemo(() => {
+    const label = toIndustryLabel(resolveIndustryKey(industryKey));
+    return INDUSTRY_HINTS[label];
+  }, [industryKey]);
+
+  // favicon & icon settings
   const [genBusy, setGenBusy] = useState(false);
   const [genError, setGenError] = useState<string | null>(null);
   const [useInitials, setUseInitials] = useState(false);
@@ -257,7 +287,8 @@ export default function PageHeaderEditor({
         const url = await handleFileUpload(acceptedFiles[0]);
         setLogoUrl(url);
         // patch meta.logo_url immediately so the site can reuse the logo elsewhere
-        emitPatch({ data: { ...(template?.data as any), meta: { ...(meta ?? {}), logo_url: url } }, logo_url: url });
+        emitMerge({ meta: { ...(meta ?? {}), logo_url: url } }); // instant local update
+        emitApplyPatch({ data: { ...(template?.data as any), meta: { ...(meta ?? {}), logo_url: url } }, logo_url: url });
         toast.success('Logo uploaded!');
       } catch (err) {
         console.error(err);
@@ -288,7 +319,8 @@ export default function PageHeaderEditor({
         body: JSON.stringify({
           template_id: template?.id,
           business_name: businessName,
-          industry,
+          // Pass label to the AI for nicer prompts
+          industry: toIndustryLabel(resolveIndustryKey(industryKey)),
           style,
           accent: accentHex,
           initials: useInitials ? initials : null,
@@ -306,7 +338,8 @@ export default function PageHeaderEditor({
       const file = b64ToFile(image_base64, `icon-${Date.now()}.png`, 'image/png');
       const url = await handleFileUpload(file);
       setLogoUrl(url);
-      emitPatch({ data: { ...(template?.data as any), meta: { ...(meta ?? {}), logo_url: url } }, logo_url: url });
+      emitMerge({ meta: { ...(meta ?? {}), logo_url: url } });
+      emitApplyPatch({ data: { ...(template?.data as any), meta: { ...(meta ?? {}), logo_url: url } }, logo_url: url });
       toast.success('Icon generated!');
     } catch (e: any) {
       console.error(e);
@@ -346,11 +379,11 @@ export default function PageHeaderEditor({
       const logo = (meta?.logo_url as string) || logoUrl;
       if (!logo) { toast.error('Add a logo first'); return; }
       const logoBlob = await fetchAsBlob(logo);
-      const ico32 = await downscaleToFavicon(logoBlob, favBg, accentHex);
+      const ico32 = await rasterizeSquareFromBlob(logoBlob, 32);
       const url = await uploadFaviconViaAPI(template!.id as string, ico32);
+      emitMerge({ meta: { ...(meta ?? {}), favicon_url: url } });
+      emitApplyPatch({ data: { ...(template?.data as any), meta: { ...(meta ?? {}), favicon_url: url } } });
       setFaviconUrl(url);
-      // push into meta
-      emitPatch({ data: { ...(template?.data as any), meta: { ...(meta ?? {}), favicon_url: url } } });
       toast.success('Favicon updated');
     } catch (e: any) {
       console.error(e);
@@ -368,7 +401,7 @@ export default function PageHeaderEditor({
         body: JSON.stringify({
           template_id: template?.id,
           business_name: businessName,
-          industry,
+          industry: toIndustryLabel(resolveIndustryKey(industryKey)),
           size: '1024x1024',
           transparent: true,
         }),
@@ -378,10 +411,11 @@ export default function PageHeaderEditor({
       const b64 = json.image_base64 as string;
       const big = new Blob([Uint8Array.from(atob(b64), c => c.charCodeAt(0))], { type: 'image/png' });
 
-      const ico32 = await downscaleToFavicon(big, favBg, accentHex);
+      const ico32 = await rasterizeSquareFromBlob(big, 32);
       const url = await uploadFaviconViaAPI(template!.id as string, ico32);
+      emitMerge({ meta: { ...(meta ?? {}), favicon_url: url } });
+      emitApplyPatch({ data: { ...(template?.data as any), meta: { ...(meta ?? {}), favicon_url: url } } });
       setFaviconUrl(url);
-      emitPatch({ data: { ...(template?.data as any), meta: { ...(meta ?? {}), favicon_url: url } } });
       toast.success('Favicon generated');
     } catch (e: any) {
       console.error(e);
@@ -409,7 +443,7 @@ export default function PageHeaderEditor({
       {/* Scrollable content */}
       <div className="flex-1 overflow-y-auto px-6 py-5 overscroll-contain">
         <div className="grid grid-cols-1 lg:grid-cols-3 items-start gap-6">
-          {/* LEFT: Logo */}
+          {/* LEFT: Logo + Industry */}
           <section className="lg:col-span-1 max-w-full space-y-3">
             <Label className="text-white">Logo</Label>
             <div
@@ -434,7 +468,8 @@ export default function PageHeaderEditor({
                     onClick={(e) => {
                       e.stopPropagation();
                       setLogoUrl('');
-                      emitPatch({ data: { ...(template?.data as any), meta: { ...(meta ?? {}), logo_url: '' } }, logo_url: '' });
+                      emitMerge({ meta: { ...(meta ?? {}), logo_url: '' } });
+                      emitApplyPatch({ data: { ...(template?.data as any), meta: { ...(meta ?? {}), logo_url: '' } }, logo_url: '' });
                     }}
                   >
                     Remove Logo
@@ -446,6 +481,44 @@ export default function PageHeaderEditor({
                   <br />(PNG, JPG, SVG, WebP — Max 5MB)
                 </p>
               )}
+            </div>
+
+            {/* Industry (writes canonical KEY to meta) */}
+            <div className="rounded-lg border border-white/10 p-3 bg-neutral-900/70">
+              <Label className="text-white/80">Industry (updates Identity)</Label>
+              <select
+                className="mt-1 w-full rounded border border-white/10 bg-neutral-950 px-2 py-1.5 text-sm"
+                value={industryKey}
+                onChange={(e) => {
+                  const nextKey = resolveIndustryKey(e.target.value);
+                  setIndustryKey(nextKey);
+
+                  // 1) Merge immediately so UI reflects
+                  emitMerge({ meta: { ...(meta ?? {}), industry: nextKey } });
+
+                  // 2) Persist via toolbar/commit path
+                  emitApplyPatch({
+                    data: { ...(template?.data as any), meta: { ...(meta ?? {}), industry: nextKey } } as any,
+                    industry: nextKey as any, // legacy mirror if anything reads top-level
+                  });
+
+                  toast.success('Industry updated');
+                }}
+              >
+                {!industryKey && <option value="">Select industry</option>}
+                {industryOptions.map((opt) => (
+                  <option key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </option>
+                ))}
+              </select>
+              {/* helpful hint */}
+              {industryHint && (
+                <p className="mt-1 text-xs text-white/60">{industryHint}</p>
+              )}
+              <p className="mt-1 text-[11px] text-white/40">
+                Stored as key <code>{industryKey || '—'}</code> (<span className="italic">{toIndustryLabel(resolveIndustryKey(industryKey))}</span>)
+              </p>
             </div>
 
             {/* AI Logo Generator */}
@@ -490,7 +563,7 @@ export default function PageHeaderEditor({
                     onChange={(e) => setUseInitials(e.target.checked)}
                     className="accent-purple-600"
                   />
-                  Use initials {initials ? `(${initials})` : ''}
+                  Use initials
                 </label>
 
                 <label className="flex items-center gap-2">
@@ -530,7 +603,8 @@ export default function PageHeaderEditor({
                 currentUrl={faviconUrl}
                 onUpload={(url: string) => {
                   setFaviconUrl(url);
-                  emitPatch({ data: { ...(template?.data as any), meta: { ...(meta ?? {}), favicon_url: url } } });
+                  emitMerge({ meta: { ...(meta ?? {}), favicon_url: url } });
+                  emitApplyPatch({ data: { ...(template?.data as any), meta: { ...(meta ?? {}), favicon_url: url } } });
                 }}
                 bucket="favicons"
                 folder={`template-${template?.id as string}`}

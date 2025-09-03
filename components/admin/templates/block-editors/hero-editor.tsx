@@ -12,8 +12,12 @@ import clsx from 'clsx';
 import { Sparkles, Image as ImageIcon, Loader2 } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
 
-// 🔗 single source of truth for industries
-import { getIndustryOptions, resolveIndustry } from '@/lib/industries';
+// ✅ canonical industry helpers (key-first)
+import {
+  getIndustryOptions,
+  resolveIndustryKey,
+  toIndustryLabel,
+} from '@/lib/industries';
 
 const previewSizes = { desktop: 'max-w-full', tablet: 'max-w-xl', mobile: 'max-w-xs' };
 const positionStyles = { top: 'bg-top', center: 'bg-center', bottom: 'bg-bottom' };
@@ -48,8 +52,8 @@ function formatPhone(d: string) {
 }
 
 /** Subject presets that bias toward service outcome/equipment (not people) */
-function presetSubjectFor(industry: string, services: string[] = []) {
-  const s = (industry || '').toLowerCase();
+function presetSubjectFor(industryLabel: string, services: string[] = []) {
+  const s = (industryLabel || '').toLowerCase();
   if (s.includes('landscap'))
     return 'lush green lawn with mowing stripes, tidy garden beds and stone edging, fresh mulch, tools or mower nearby, clean background';
   if (s.includes('window'))
@@ -61,15 +65,19 @@ function presetSubjectFor(industry: string, services: string[] = []) {
   if (s.includes('hvac'))
     return 'modern HVAC condenser unit next to a home with neat landscaping, subtle depth of field';
   const first = services?.[0];
-  return `clean, modern banner depicting ${first || industry} results and equipment, wide exterior scene`;
+  return `clean, modern banner depicting ${first || industryLabel} results and equipment, wide exterior scene`;
 }
 
-/** Normalize a display label → slug we store in DB (sidebar/template.industry). */
-function toIndustrySlug(label: string) {
-  return (label || 'general')
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '_')
-    .replace(/^_+|_+$/g, '') || 'general';
+/* ------------------- template patch events ------------------- */
+function emitApplyPatch(patch: Partial<Template>) {
+  try {
+    window.dispatchEvent(new CustomEvent('qs:template:apply-patch', { detail: patch as any }));
+  } catch {}
+}
+function emitMerge(detail: Partial<Template>['data'] | { meta?: any } | any) {
+  try {
+    window.dispatchEvent(new CustomEvent('qs:template:merge', { detail }));
+  } catch {}
 }
 
 export default function HeroEditor({
@@ -85,34 +93,28 @@ export default function HeroEditor({
   const [previewSize, setPreviewSize] = useState<'desktop' | 'tablet' | 'mobile'>('desktop');
   const [forceMobilePreview, setForceMobilePreview] = useState(false);
 
-  // Centralized options
+  // Centralized options (value === key, label for UI)
   const industryOptions = useMemo(() => getIndustryOptions(), []);
 
-  // Kickoff context (used by AI) — normalize whatever’s in template.industry
-  const initialDisplayLabel = useMemo(
-    () => resolveIndustry((template as any)?.industry || '', (template as any)?.slug).label,
-    [template]
-  );
+  // Pull canonical key from data.meta.industry first, then legacy top-level
+  const currentIndustryKey = useMemo(() => {
+    const meta = (template?.data as any)?.meta ?? {};
+    const raw = meta?.industry ?? (template as any)?.industry ?? '';
+    return resolveIndustryKey(raw);
+  }, [template]);
 
-  // Local industry state for AI assist controls (display label, not slug)
-  const [aiIndustry, setAiIndustry] = useState<string>(initialDisplayLabel || 'General');
-  const [aiIndustryOther, setAiIndustryOther] = useState<string>(
-    initialDisplayLabel &&
-    !industryOptions.some((o) => o.label.toLowerCase() === initialDisplayLabel.toLowerCase())
-      ? initialDisplayLabel
-      : ''
-  );
+  // Local industry state: **key** for persistence; optional “Other text” for AI prompt only
+  const [industryKey, setIndustryKey] = useState<string>(currentIndustryKey);
+  useEffect(() => setIndustryKey(currentIndustryKey), [currentIndustryKey]);
 
-  /** Human-facing label we use for prompts */
-  const effectiveIndustryLabel = useMemo(
-    () => (aiIndustry === 'Other' ? aiIndustryOther : aiIndustry) || initialDisplayLabel || 'General',
-    [aiIndustry, aiIndustryOther, initialDisplayLabel]
-  );
-
-  /** Slug we persist to DB/sidebar */
-  const effectiveIndustrySlug = useMemo(
-    () => toIndustrySlug(effectiveIndustryLabel),
-    [effectiveIndustryLabel]
+  // When user selects 'other', allow custom prompt label
+  const [aiIndustryOther, setAiIndustryOther] = useState<string>('');
+  const promptIndustryLabel = useMemo(
+    () =>
+      industryKey === 'other' && aiIndustryOther.trim()
+        ? aiIndustryOther.trim()
+        : toIndustryLabel(resolveIndustryKey(industryKey)),
+    [industryKey, aiIndustryOther]
   );
 
   // AI (copy) state
@@ -127,7 +129,7 @@ export default function HeroEditor({
   const [imgIncludePeople, setImgIncludePeople] = useState(false);
   const [imgSubjectTouched, setImgSubjectTouched] = useState(false);
   const [imgSubject, setImgSubject] = useState(
-    local?.image_subject || `${effectiveIndustryLabel} website hero banner`
+    local?.image_subject || `${promptIndustryLabel} website hero banner`
   );
   const [imgStyle, setImgStyle] = useState<'photo' | 'illustration' | '3d' | 'minimal'>('photo');
 
@@ -135,8 +137,8 @@ export default function HeroEditor({
     setLocal((prev: any) => ({ ...prev, [key]: value as (typeof local)[K] }));
 
   const handleSave = () => {
-    // persist the normalized industry slug on the block as well
-    const nextBlock: Block = { ...(block as any), industry: effectiveIndustrySlug, content: local };
+    // Store key on the block (contextual), but **canonical** lives in data.meta.industry
+    const nextBlock: Block = { ...(block as any), industry: industryKey, content: local };
     onSave(nextBlock);
     onClose();
   };
@@ -151,28 +153,35 @@ export default function HeroEditor({
     update('image_y', undefined as any);
   };
 
-  // Auto-seed subject when industry changes (unless user already edited it)
+  // Auto-seed subject when prompt label changes (unless user already edited it)
   useEffect(() => {
     if (!imgSubjectTouched) {
-      const preset = presetSubjectFor(effectiveIndustryLabel, (template?.services as any) || []);
+      const preset = presetSubjectFor(promptIndustryLabel, (template as any)?.services || []);
       setImgSubject(preset);
       update('image_subject', preset as any);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [effectiveIndustryLabel]);
+  }, [promptIndustryLabel]);
 
   // 🔁 Keep template/sidebar/DB in sync when the editor’s Industry changes
   useEffect(() => {
-    // store on the block (so subsequent prompts have context even before save)
-    (block as any).industry = effectiveIndustrySlug;
-    // push to template (EditorContent listens for this and persists to DB)
-    window.dispatchEvent(
-      new CustomEvent('qs:template:merge', {
-        detail: { industry: effectiveIndustrySlug },
-      })
-    );
+    // write onto the block object (so prompts see latest even before Save)
+    (block as any).industry = industryKey;
+
+    // fast local merge (for any listeners that reflect meta immediately)
+    const meta = ((template?.data as any)?.meta ?? {});
+    emitMerge({ meta: { ...meta, industry: industryKey } });
+
+    // persistence patch (TemplateActionToolbar listens for this and commits)
+    emitApplyPatch({
+      data: {
+        ...(template?.data as any),
+        meta: { ...meta, industry: industryKey },
+      } as any,
+      industry: industryKey as any, // legacy mirror if something still reads top-level
+    });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [effectiveIndustrySlug]);
+  }, [industryKey]);
 
   async function requestSuggestions() {
     const res = await fetch('/api/hero/suggest', {
@@ -181,8 +190,8 @@ export default function HeroEditor({
       body: JSON.stringify({
         template_id: template?.id,
         // Use human label for better prompting
-        industry: effectiveIndustryLabel,
-        services: template?.services ?? [],
+        industry: promptIndustryLabel,
+        services: (template as any)?.services ?? [],
         business_name: (template as any)?.business_name,
         city: (template as any)?.city,
         state: (template as any)?.state,
@@ -232,9 +241,8 @@ export default function HeroEditor({
     setImgLoading(true);
     setImgError(null);
     try {
-      // Compose a precise, banner-oriented prompt for the API
       const base =
-        `website hero (header/banner) image for a ${effectiveIndustryLabel} small business. ` +
+        `website hero (header/banner) image for a ${promptIndustryLabel} small business. ` +
         `${imgSubject}. ` +
         `wide 16:9 composition with clear copy space for headline, clean modern background, high detail, no text, no watermarks, no logos.`;
 
@@ -247,13 +255,12 @@ export default function HeroEditor({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           template_id: template?.id,
-          // Use human label in the image prompt too
-          industry: effectiveIndustryLabel,
-          services: template?.services ?? [],
+          industry: promptIndustryLabel, // human label for gen
+          services: (template as any)?.services ?? [],
           business_name: (template as any)?.business_name,
           city: (template as any)?.city,
           state: (template as any)?.state,
-          subject: imgSubject,      // keep for backward compat
+          subject: imgSubject,
           style: imgStyle,
           aspect: 'wide',
           prompt: base,
@@ -283,12 +290,12 @@ export default function HeroEditor({
   }
 
   // derive phone for CTA call override hint
-  const dbPhoneDigits = (template?.phone || '').replace(/\D/g, '');
+  const dbPhoneDigits = ((template as any)?.phone || '').replace(/\D/g, '');
 
   return (
     <div
       className="space-y-4 bg-black text-white border border-black p-4 rounded max-h-[90vh] overflow-y-auto"
-      onKeyDownCapture={(e) => e.stopPropagation()} // keep global hotkeys from firing in modal
+      onKeyDownCapture={(e) => e.stopPropagation()}
     >
       {/* Kickoff: industry intent */}
       <div className="rounded border border-white/10 bg-neutral-900 p-3 space-y-3">
@@ -298,11 +305,13 @@ export default function HeroEditor({
             <label className="text-xs text-neutral-300">Industry</label>
             <select
               className={selectDark}
-              value={aiIndustry}
-              onChange={(e) => setAiIndustry(e.target.value)}
+              value={industryKey}
+              onChange={(e) => setIndustryKey(e.target.value)}
             >
               {industryOptions.map((opt) => (
-                <option key={opt.value} value={opt.label}>{opt.label}</option>
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </option>
               ))}
             </select>
           </div>
@@ -313,10 +322,10 @@ export default function HeroEditor({
               value={aiIndustryOther}
               onChange={(e) => setAiIndustryOther(e.target.value)}
               placeholder="e.g., Mobile Windshield Repair"
-              disabled={aiIndustry !== 'Other'}
+              disabled={industryKey !== 'other'}
             />
             <p className="mt-1 text-xs text-neutral-400">
-              AI suggestions & images use this immediately. The template’s industry is also kept in sync.
+              AI suggestions & images use this immediately. The template’s industry is persisted as a key.
             </p>
           </div>
         </div>
@@ -468,7 +477,7 @@ export default function HeroEditor({
                 onChange={(e) => update('cta_phone', e.target.value as any)}
                 placeholder={dbPhoneDigits ? `defaults to ${dbPhoneDigits}` : 'enter 10-digit phone'}
               />
-              <p className="text-xs text-neutral-400 mt-1">
+              <p className="text-xs text-neutral-400">
                 If empty, we’ll use the business phone from Template Identity.
               </p>
             </div>
@@ -485,9 +494,7 @@ export default function HeroEditor({
           </div>
           <p className="text-xs text-neutral-400">
             Uses the phone from Template Identity
-            {(template?.phone || '').replace(/\D/g, '')
-              ? ` (${formatPhone((template?.phone || '').replace(/\D/g, ''))})`
-              : ''}.
+            {dbPhoneDigits ? ` (${formatPhone(dbPhoneDigits)})` : ''}.
           </p>
         </div>
       </div>
@@ -519,7 +526,7 @@ export default function HeroEditor({
               setImgSubjectTouched(true);
               update('image_subject', e.target.value as any);
             }}
-            placeholder={`${effectiveIndustryLabel} website hero banner`}
+            placeholder={`${promptIndustryLabel} website hero banner`}
           />
         </div>
         <div>

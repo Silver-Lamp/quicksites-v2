@@ -1,4 +1,3 @@
-// components/admin/templates/template-action-toolbar.tsx
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -14,19 +13,19 @@ import toast from 'react-hot-toast';
 
 import type { Template } from '@/types/template';
 import { validateTemplateAndFix } from '@/admin/lib/validateTemplate';
-import { saveAsTemplate } from '@/admin/lib/saveAsTemplate'; // kept for duplicate site flow
+import type { ValidateResult, Warning } from '@/admin/lib/validateTemplate';
+import { saveAsTemplate } from '@/admin/lib/saveAsTemplate';
 import { createSharedPreview } from '@/admin/lib/createSharedPreview';
 
 import AsyncGifOverlay from '@/components/ui/async-gif-overlay';
 import VersionsDropdown from '@/components/admin/templates/versions-dropdown';
 import { useTemplateVersions } from '@/hooks/useTemplateVersions';
 import { templateSig } from '@/lib/editor/saveGuard';
-import { buildSharedSnapshotPayload } from '@/lib/editor/templateUtils'; // NOTE: no normalizeForSnapshot import anymore
+import { buildSharedSnapshotPayload } from '@/lib/editor/templateUtils';
 import { loadVersionRow } from '@/admin/lib/templateSnapshots';
 import PageManagerToolbar from '@/components/admin/templates/page-manager-toolbar';
-import { useTemplateRef } from '@/hooks/usePersistTemplate'; // only the ref helper
-// import { AiCostPreview } from '@/components/admin/templates/AiCostPreview'; // optional
-import type { ValidateResult, Warning } from '@/admin/lib/validateTemplate';
+import { useTemplateRef } from '@/hooks/usePersistTemplate';
+import { useCommitApi } from './hooks/useCommitApi';
 
 import {
   dispatchTemplateCacheInvalidate,
@@ -55,7 +54,6 @@ function baseSlug(slug?: string | null) {
   if (!slug) return '';
   return slug.replace(/(-[a-z0-9]{2,12})+$/i, '');
 }
-// Shape a Template into a cache row
 function toCacheRow(t: any): TemplateCacheRow {
   return {
     id: t?.id,
@@ -79,6 +77,7 @@ function useDebounced<T extends (...args: any[]) => void>(fn: T, delay = 350) {
   }, [fn, delay]);
 }
 
+/* ---------- component ---------- */
 type SaveWarning = { field: string; message: string };
 
 type Props = {
@@ -88,62 +87,9 @@ type Props = {
   onUndo: () => void;
   onRedo: () => void;
   onOpenPageSettings?: () => void;
-  onApplyTemplate: (next: Template) => void;
+  onApplyTemplate: (next: Template) => void; // parent suppresses re-broadcasts
   onSetRawJson?: (json: string) => void;
 };
-
-/* ---------- Commit API hook (new system) ---------- */
-function useCommitApi(templateId: string | undefined) {
-  const [pending, setPending] = useState(false);
-  const revRef = useRef<number | null>(null);
-
-  const loadRev = useCallback(async () => {
-    if (!templateId) return null;
-    const res = await fetch(`/api/templates/state?id=${templateId}`, { cache: 'no-store' });
-    const json = await res.json();
-    if (!res.ok) throw new Error(json?.error || 'Failed to load state');
-    const rev = json?.infra?.template?.rev ?? 0;
-    revRef.current = rev;
-    return rev;
-  }, [templateId]);
-
-  useEffect(() => {
-    void loadRev();
-  }, [loadRev]);
-
-  const commit = useCallback(async (patchData: any, kind: 'save' | 'autosave' = 'save') => {
-    if (!templateId) throw new Error('No template id');
-    const baseRev = revRef.current ?? (await loadRev()) ?? 0;
-
-    setPending(true);
-    const res = await fetch('/api/templates/commit', {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({
-        id: templateId,
-        baseRev,
-        patch: { data: patchData }, // ONLY send canonical JSON
-        kind,
-      }),
-    });
-    const json = await res.json();
-    setPending(false);
-    if (!res.ok) throw new Error(json?.error || 'Commit failed');
-    // keep rev in sync for subsequent commits
-    if (typeof json?.rev === 'number') revRef.current = json.rev;
-    // ping truth tracker to refresh
-    try { window.dispatchEvent(new CustomEvent('qs:truth:refresh')); } catch {}
-    return json;
-  }, [templateId, loadRev]);
-
-  const commitSoon = useDebounced((data: any) => {
-    commit(data, 'autosave').catch((e) => {
-      console.warn('[autosave/commit] failed:', e);
-    });
-  }, 400);
-
-  return { pending, commit, commitSoon, loadRev, revRef };
-}
 
 export function TemplateActionToolbar({
   template,
@@ -183,16 +129,14 @@ export function TemplateActionToolbar({
 
   const tplRef = useTemplateRef(template);
 
-  // Track LAST PERSISTED signature (logical dirty check)
+  // Track LAST PERSISTED signature (logical dirty)
   const savedSigRef = useRef<string>('');
   useEffect(() => { savedSigRef.current = templateSig(template); }, []); // initial mount
-  useEffect(() => { /* reset on id change if desired */ }, [(template as any)?.id]);
-
   const [dirty, setDirty] = useState(false);
   useEffect(() => { setDirty(templateSig(template) !== savedSigRef.current); }, [template]);
 
-  // New commit API
-  const { pending, commit, commitSoon, loadRev } = useCommitApi((template as any)?.id);
+  // New commit API (full patch support)
+  const { pending, commitPatch, commitPatchSoon, loadRev } = useCommitApi((template as any)?.id);
 
   // keyboard save
   useEffect(() => {
@@ -204,7 +148,7 @@ export function TemplateActionToolbar({
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [dirty]); // eslint-disable-line
+  }, [dirty]);
 
   // undo/redo keyboard (unchanged)
   useEffect(() => {
@@ -237,10 +181,13 @@ export function TemplateActionToolbar({
     return () => window.removeEventListener('qs:history:stats', onStats as any);
   }, []);
 
-  // apply helper
-  const apply = (next: Template) => { onApplyTemplate(next); onSetRawJson?.(pretty(next)); };
+  // apply helper (parent handles suppression)
+  const apply = (next: Template) => {
+    onApplyTemplate(next);
+    onSetRawJson?.(pretty(next));
+  };
 
-  // portal guard
+  // portal
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
 
@@ -262,32 +209,42 @@ export function TemplateActionToolbar({
     window.dispatchEvent(new CustomEvent('qs:preview:set-viewport', { detail: v }));
   };
 
-  // Patch bus → apply + autosave (commitSoon with data only)
+  /* ---------- Patch bus → apply + autosave ---------- */
   useEffect(() => {
     const onPatch = (e: Event) => {
       const patch = (e as CustomEvent).detail || {};
-      if (!patch) return;
-      const next: any = {
-        ...tplRef.current,
-        ...('footerBlock' in patch ? { footerBlock: patch.footerBlock } : {}),
-      };
-      if (patch.data) {
-        next.data = { ...(tplRef.current as any)?.data, ...patch.data };
+      if (!patch || typeof patch !== 'object') return;
+
+      const cur: any = tplRef.current;
+      const next: any = { ...cur };
+
+      // 1) merge top-level keys (industry, headerBlock/footerBlock, color_mode, etc.)
+      if (patch && typeof patch === 'object') {
+        for (const k of Object.keys(patch)) {
+          if (k === 'data') continue;
+          next[k] = (patch as any)[k];
+        }
       }
+
+      // 2) shallow-merge data (canonical payload persists via /commit)
+      if (patch.data && typeof patch.data === 'object') {
+        next.data = { ...(cur?.data ?? {}), ...(patch.data as any) };
+      }
+
       apply(next);
-      // autosave canonical JSON (data)
-      try { commitSoon(next.data); } catch {}
+      try { commitPatchSoon({ ...patch, data: next.data }); } catch {}
     };
+
     window.addEventListener('qs:template:apply-patch', onPatch as any);
     return () => window.removeEventListener('qs:template:apply-patch', onPatch as any);
-  }, [apply, commitSoon, tplRef]);
+  }, [apply, commitPatchSoon, tplRef]);
 
   // Settings sidebar control
   const emitSettingsOpen = (open: boolean) => {
     window.dispatchEvent(new CustomEvent('qs:settings:set-open', { detail: open }));
     try { window.localStorage.setItem('qs:settingsOpen', open ? '1' : '0'); } catch {}
-    setSettingsOpenState(open);
   };
+
   const toggleTemplateSettings = () => emitSettingsOpen(!settingsOpenState);
   const fireCapture = () => window.dispatchEvent(new CustomEvent('qs:history:capture'));
 
@@ -296,9 +253,13 @@ export function TemplateActionToolbar({
     const nextMode: 'light'|'dark' = colorPref === 'dark' ? 'light' : 'dark';
     setColorPref(nextMode);
     try { localStorage.setItem('qs:preview:color', nextMode); } catch {}
+
     const next = { ...tplRef.current, color_mode: nextMode } as Template;
     apply(next);
-    try { commitSoon(next.data); } catch {}
+
+    // persist top-level color_mode + data
+    try { commitPatchSoon({ color_mode: nextMode, data: (next as any).data }); } catch {}
+
     window.dispatchEvent(new CustomEvent('qs:preview:set-color-mode', { detail: nextMode }));
   };
 
@@ -340,11 +301,19 @@ export function TemplateActionToolbar({
   };
   const toggleFullscreen = () => (isFullscreen ? exitFullscreen() : enterFullscreen());
 
-  // versions feed
+  // versions feed — pass an object so the hook can prefer canonical_id
   const tplAny: any = template;
-  const idOrSlug = tplAny?.id || baseSlug(tplAny?.slug) || template.template_name || '';
+  const versionsKey = useMemo(
+    () => ({
+      id: tplAny?.id ?? null,
+      canonical_id: (tplAny as any)?.canonical_id ?? null,
+      slug: baseSlug(tplAny?.slug) || template.template_name || null,
+    }),
+    [tplAny?.id, (tplAny as any)?.canonical_id, tplAny?.slug, template.template_name]
+  );
+
   const { versions, reloadVersions, publishedVersionId } =
-    useTemplateVersions(idOrSlug, tplAny?.id ?? null);
+    useTemplateVersions(versionsKey, tplAny?.id ?? null);
 
   const lastSigRef = useRef<string>('');
   useEffect(() => {
@@ -374,16 +343,14 @@ export function TemplateActionToolbar({
         : { valid: true, data: src as any, warnings: [] as Warning[] };
 
       if (!check.valid) {
-        // optional: log details for debugging
         console.error('[validateTemplateAndFix] failed:', check.errors);
         toast.error('Validation failed — see console for details.');
         return;
       }
 
-      // From here, TS knows `check` is the valid branch:
       const nextTemplate = (check.data ?? src) as Template;
 
-      // Keep pages consistent with UI (defensive)
+      // Keep pages consistent (defensive)
       const srcPages = getTemplatePagesLoose(src);
       const outPages = getTemplatePagesLoose(nextTemplate);
       if (!Array.isArray(outPages) || !outPages.length) {
@@ -403,7 +370,6 @@ export function TemplateActionToolbar({
         return;
       }
 
-      // Show warnings (now strongly typed)
       if (check.warnings?.length) {
         setSaveWarnings(check.warnings);
         check.warnings.forEach((w) =>
@@ -416,15 +382,36 @@ export function TemplateActionToolbar({
       onSaveDraft?.(nextTemplate);
       onSetRawJson?.(pretty(nextTemplate));
 
-      // COMMIT canonical JSON (data) with optimistic concurrency
       await loadRev();
-      const res = await commit((nextTemplate as any).data, 'save');
+      const commitRes: any = await commitPatch(
+        { data: (nextTemplate as any).data, color_mode: nextTemplate.color_mode },
+        'save'
+      );
 
       savedSigRef.current = nextSig;
       setDirty(false);
 
       try { dispatchTemplateCacheUpdate(toCacheRow(nextTemplate)); } catch {}
       toast.success('Saved!');
+
+      // First-save canonical id bounce
+      const canonicalId: string | undefined =
+        commitRes?.canonicalId ?? commitRes?.canonical_id ?? undefined;
+
+      if (canonicalId && !(tplRef.current as any)?.canonical_id) {
+        const patched: Template = { ...(tplRef.current as any), canonical_id: canonicalId };
+        apply(patched);
+        try { dispatchTemplateCacheUpdate(toCacheRow(patched)); } catch {}
+
+        savedSigRef.current = templateSig(patched);
+        setDirty(false);
+
+        try {
+          if (typeof window !== 'undefined' && window.location.pathname.startsWith('/admin/templates/new')) {
+            router.replace(`/template/${canonicalId}/edit`);
+          }
+        } catch {}
+      }
     } catch (err) {
       console.error('❌ Save/commit crashed:', err);
       toast.error('Save failed — see console.');
@@ -449,32 +436,24 @@ export function TemplateActionToolbar({
     }
   }
 
-  /* ---------- Restore version (write to draft via commit) ---------- */
+  /* ---------- Restore (write to draft) ---------- */
   const onRestore = async (id: string) => {
     const trace = `restore:${id}:${Date.now()}`;
     console.time(`QSITES[versions] restore time ${trace}`);
     try {
-      console.info(`QSITES[versions] begin restore trace=${trace}`, { id });
-
       const data = await loadVersionRow(id);
-
-      if (!confirm('Restore this version? This will overwrite the current draft.')) {
-        console.info(`QSITES[versions] cancelled by user trace=${trace}`);
-        return;
-      }
+      if (!confirm('Restore this version? This will overwrite the current draft.')) return;
 
       const payload = (() => {
         try {
           return typeof (data as any).data === 'string'
             ? JSON.parse((data as any).data)
             : (data as any).data ?? {};
-        } catch (e) {
-          console.warn('JSON parse failed for version.data, using raw', e);
+        } catch {
           return (data as any).data ?? {};
         }
       })();
 
-      // lightweight block sanity
       const blockErrs: string[] = [];
       for (const page of payload?.pages ?? []) {
         for (const b of page?.content_blocks ?? []) {
@@ -485,7 +464,9 @@ export function TemplateActionToolbar({
       }
       if (blockErrs.length) {
         console.warn(`QSITES[versions] ${blockErrs.length} invalid block(s)`, blockErrs);
-        toast((t) => <span>Restored with warnings — {blockErrs.length} invalid block{blockErrs.length === 1 ? '' : 's'} (see console).</span>);
+        toast((t) => (
+          <span>Restored with warnings — {blockErrs.length} invalid block{blockErrs.length === 1 ? '' : 's'} (see console).</span>
+        ));
       }
 
       const restored: Template = {
@@ -498,9 +479,8 @@ export function TemplateActionToolbar({
 
       onSaveDraft?.(restored);
       onSetRawJson?.(pretty(restored));
-
       await loadRev();
-      await commit((restored as any).data, 'save');
+      await commitPatch({ data: (restored as any).data, color_mode: restored.color_mode }, 'save');
 
       savedSigRef.current = templateSig(restored);
       setDirty(false);
@@ -510,8 +490,7 @@ export function TemplateActionToolbar({
       window.dispatchEvent(new CustomEvent('qs:truth:refresh'));
     } catch (e: any) {
       console.error('QSITES[versions] restore failed', { trace, message: e?.message, stack: e?.stack });
-      const hint = e?.message?.toLowerCase?.().includes('permission') ? ' (RLS?)' : '';
-      toast.error(`Failed to load version: ${e?.message || 'Unknown error'}${hint}`);
+      toast.error(`Failed to load version: ${e?.message || 'Unknown error'}`);
     } finally {
       console.timeEnd(`QSITES[versions] restore time ${trace}`);
     }
@@ -522,7 +501,6 @@ export function TemplateActionToolbar({
     try {
       let sid = snapshotId;
       if (!sid) {
-        // ensure latest draft is committed, then snapshot
         await handleSaveClick();
         sid = await onCreateSnapshot();
       }
@@ -559,7 +537,7 @@ export function TemplateActionToolbar({
     toast('Redo', { icon: '↪️' });
   };
 
-  // Dev cache helpers (unchanged)
+  // Dev cache helpers
   const invalidateCache = () => {
     const cur = tplRef.current as any;
     const key = cur?.id || cur?.slug;
@@ -586,7 +564,8 @@ export function TemplateActionToolbar({
   if (!mounted) return null;
 
   const currentSlug =
-    (typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('page')) ||
+    (typeof window !== 'undefined' &&
+      new URLSearchParams(window.location.search).get('page')) ||
     getTemplatePagesLoose(template)[0]?.slug ||
     'home';
 
@@ -617,7 +596,7 @@ export function TemplateActionToolbar({
               const pages = [...getTemplatePagesLoose(tplRef.current), newPage];
               const next = withPages(tplRef.current, pages);
               apply(next);
-              try { commitSoon((next as any).data); } catch {}
+              try { commitPatchSoon({ data: (next as any).data }); } catch {}
             }}
             onRename={(oldSlug, nextVals) => {
               fireCapture();
@@ -626,14 +605,14 @@ export function TemplateActionToolbar({
               );
               const next = withPages(tplRef.current, pages);
               apply(next);
-              try { commitSoon((next as any).data); } catch {}
+              try { commitPatchSoon({ data: (next as any).data }); } catch {}
             }}
             onDelete={(slug) => {
               fireCapture();
               const pages = getTemplatePagesLoose(tplRef.current).filter((p: any) => p.slug !== slug);
               const next = withPages(tplRef.current, pages);
               apply(next);
-              try { commitSoon((next as any).data); } catch {}
+              try { commitPatchSoon({ data: (next as any).data }); } catch {}
             }}
             onReorder={(from, to) => {
               fireCapture();
@@ -642,7 +621,7 @@ export function TemplateActionToolbar({
               pages.splice(to, 0, moved);
               const next = withPages(tplRef.current, pages);
               apply(next);
-              try { commitSoon((next as any).data); } catch {}
+              try { commitPatchSoon({ data: (next as any).data }); } catch {}
             }}
             siteId={(tplRef.current as any).site_id}
           />
@@ -723,7 +702,7 @@ export function TemplateActionToolbar({
                 <RotateCcw className="w-4 h-4" />
               </Button>
               {hist.past > 0 && (
-                <span className="absolute -right-1 -top-1 min-w-[16px] px-1 rounded-full text-[10px] bg-zinc-200 text-zinc-900 dark:bg-white dark:text-black text-center">
+                <span className="absolute -right-1 -top-1 min-w-[16px] px-1 rounded-full text-[10px] bg-zinc-200 text-zinc-900 dark:bg白 dark:text-black text-center">
                   {hist.past}
                 </span>
               )}
@@ -734,7 +713,7 @@ export function TemplateActionToolbar({
                 <RotateCw className="w-4 h-4" />
               </Button>
               {hist.future > 0 && (
-                <span className="absolute -right-1 -top-1 min-w-[16px] px-1 rounded-full text-[10px] bg-zinc-200 text-zinc-900 dark:bg-white dark:text-black text-center">
+                <span className="absolute -right-1 -top-1 min-w-[16px] px-1 rounded-full text-[10px] bg-zinc-200 text-zinc-900 dark:bg白 dark:text-black text-center">
                   {hist.future}
                 </span>
               )}

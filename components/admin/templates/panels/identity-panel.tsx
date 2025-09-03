@@ -7,7 +7,13 @@ import Collapsible from '@/components/ui/collapsible-panel';
 import type { Template } from '@/types/template';
 import { Button } from '@/components/ui';
 import { RefreshCw, Save } from 'lucide-react';
-import { getIndustryOptions, INDUSTRY_HINTS, resolveIndustry } from '@/lib/industries';
+import {
+  getIndustryOptions,
+  INDUSTRY_HINTS,
+  resolveIndustry,         // returns { key, label } – used for draft init
+  resolveIndustryKey,       // canonical key resolver (label/key/synonym → key)
+  toIndustryLabel,
+} from '@/lib/industries';
 
 function isValidEmail(v: string) { return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v); }
 const inputGhost =
@@ -28,11 +34,11 @@ function formatPhoneLive(digits: string) {
 function digitsOnly(v?: string | null) { return (v || '').replace(/\D/g, ''); }
 
 type Draft = {
-  template_name: string;   // → data.meta.siteTitle
-  business_name: string;   // → data.meta.business (footer render uses this)
-  industry: string;
+  template_name: string;
+  business_name: string;
+  industry: string;        // store CANONICAL KEY here
   contact_email: string;
-  phone: string;           // live formatted
+  phone: string;
   address_line1: string;
   address_line2: string;
   city: string;
@@ -45,7 +51,8 @@ type Draft = {
 function toDraft(t: Template): Draft {
   const meta = (t.data as any)?.meta ?? {};
   const contact = meta?.contact ?? {};
-  const norm = resolveIndustry(meta?.industry || (t as any).industry || '', t.slug);
+  // Normalize to canonical key from whatever is stored
+  const normKey = resolveIndustryKey(meta?.industry ?? (t as any).industry ?? '');
 
   const siteTitle =
     (meta?.siteTitle as string) ??
@@ -66,7 +73,7 @@ function toDraft(t: Template): Draft {
   return {
     template_name: siteTitle,
     business_name: business,
-    industry: norm.label,
+    industry: normKey,
     contact_email: String(contact?.email ?? (t as any).contact_email ?? ''),
     phone: formatPhoneLive(digitsOnly(rawPhone)),
     address_line1: addr1,
@@ -74,8 +81,14 @@ function toDraft(t: Template): Draft {
     city: String(contact?.city ?? (t as any).city ?? ''),
     state: String(contact?.state ?? (t as any).state ?? ''),
     postal_code: String(contact?.postal ?? (t as any).postal_code ?? ''),
-    latitude: (contact?.latitude ?? (t as any).latitude ?? '') !== '' ? String(contact?.latitude ?? (t as any).latitude ?? '') : '',
-    longitude: (contact?.longitude ?? (t as any).longitude ?? '') !== '' ? String(contact?.longitude ?? (t as any).longitude ?? '') : '',
+    latitude:
+      (contact?.latitude ?? (t as any).latitude ?? '') !== ''
+        ? String(contact?.latitude ?? (t as any).latitude ?? '')
+        : '',
+    longitude:
+      (contact?.longitude ?? (t as any).longitude ?? '') !== ''
+        ? String(contact?.longitude ?? (t as any).longitude ?? '')
+        : '',
   };
 }
 
@@ -90,11 +103,14 @@ function buildDataPatch(d: Draft, tmpl: Template): Partial<Template> {
   const lon = d.longitude.trim() === '' ? null : clampLon(Number(d.longitude));
   const address = [d.address_line1, d.address_line2].filter(Boolean).join(', ').trim() || '';
 
+  // Always re-normalize industry to the canonical key
+  const normKey = resolveIndustryKey(d.industry || prevMeta?.industry || (tmpl as any).industry || '');
+
   const meta = {
     ...prevMeta,
     siteTitle: d.template_name || prevMeta?.siteTitle || '',
     business: d.business_name || prevMeta?.business || '',
-    industry: d.industry || prevMeta?.industry || '',
+    industry: normKey, // ← IMPORTANT: save key
     contact: {
       ...prevContact,
       email: email || null,
@@ -135,8 +151,27 @@ export default function IdentityPanel({
   const [autoApply, setAutoApply] = React.useState(false);
   const debounceRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // Controlled industry options: value === canonical key
   const industryOptions = React.useMemo(() => getIndustryOptions(), []);
 
+  const industryHint = React.useMemo(() => {
+    const opt = industryOptions.find((o) => o.value === draft.industry);
+    return opt ? INDUSTRY_HINTS[opt.label] : undefined;
+  }, [draft.industry, industryOptions]);
+
+  // Build a small “signature” that updates whenever relevant template fields change,
+  // even if the parent keeps the same object reference.
+  const templateSig = React.useMemo(() => {
+    const meta = (template.data as any)?.meta ?? {};
+    return JSON.stringify([
+      meta?.industry ?? (template as any).industry ?? '',
+      meta?.siteTitle ?? template.template_name ?? '',
+      meta?.business ?? (template as any).business_name ?? '',
+      (template as any).updated_at ?? '',
+    ]);
+  }, [template]);
+
+  // Re-sync the draft whenever the template signature changes.
   React.useEffect(() => {
     setDraft(toDraft(template));
     setDirty(false);
@@ -144,7 +179,7 @@ export default function IdentityPanel({
     setEmailError(null);
     setLatError(null);
     setLonError(null);
-  }, [template]);
+  }, [templateSig, template]);
 
   const scheduleAutoApply = React.useCallback(
     (nextDraft: Draft) => {
@@ -171,6 +206,12 @@ export default function IdentityPanel({
   const setField = <K extends keyof Draft>(key: K, value: Draft[K]) => {
     setDraft((d) => {
       const next = { ...d, [key]: value };
+
+      // industry is controlled & canonicalized; re-normalize immediately
+      if (key === 'industry') {
+        next.industry = resolveIndustryKey(String(value)) as Draft['industry'];
+      }
+
       setDirty(true);
 
       if (key === 'phone') {
@@ -194,11 +235,6 @@ export default function IdentityPanel({
       return next;
     });
   };
-
-  const industryHint = React.useMemo(() => {
-    const label = draft.industry?.trim();
-    return label ? INDUSTRY_HINTS[label] : undefined;
-  }, [draft.industry]);
 
   return (
     <Collapsible title="Template Identity" id="template-identity">
@@ -252,7 +288,7 @@ export default function IdentityPanel({
           />
         </div>
 
-        {/* Business Name → data.meta.business (used in footer render) */}
+        {/* Business Name → data.meta.business */}
         <div>
           <Label>Business Name</Label>
           <Input
@@ -263,7 +299,7 @@ export default function IdentityPanel({
           />
         </div>
 
-        {/* Industry */}
+        {/* Industry (controlled; value is canonical key) */}
         <div>
           <Label>Industry</Label>
           <select
@@ -271,11 +307,18 @@ export default function IdentityPanel({
             onChange={(e) => setField('industry', e.target.value)}
             className="w-full px-2 py-1 rounded bg-gray-800 border text-white border-gray-700 focus:border-gray-600"
           >
-            <option value="">Select industry</option>
+            {/* Show placeholder only if unset */}
+            {draft.industry ? null : <option value="">Select industry</option>}
             {industryOptions.map((opt) => (
-              <option key={opt.value} value={opt.value}>{opt.label}</option>
+              <option key={opt.value} value={opt.value}>
+                {opt.label}
+              </option>
             ))}
           </select>
+          {/* friendly “resolved to” echo for debugging – optional */}
+          <p className="text-[11px] text-white/40 mt-1">
+            Resolved: {toIndustryLabel(resolveIndustryKey(draft.industry))}
+          </p>
           {industryHint && <p className="text-xs text-white/60 mt-1">{industryHint}</p>}
         </div>
 

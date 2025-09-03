@@ -1,7 +1,7 @@
 // components/admin/templates/blocks-editor.tsx
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { DndContext, closestCenter } from '@dnd-kit/core';
 import {
   arrayMove,
@@ -23,7 +23,8 @@ import BlockSidebar from './block-sidebar';
 import type { Block, BlockWithId } from '@/types/blocks';
 import { normalizeBlock } from '@/types/blocks';
 import type { BlockValidationError } from '@/hooks/validateTemplateBlocks';
-import { Template } from '@/types/template';
+import { validateBlockRich } from '@/hooks/validateTemplateBlocks';
+import type { Template } from '@/types/template';
 
 interface BlocksEditorPropsExtended {
   blocks: Block[];
@@ -43,7 +44,6 @@ interface SortableBlockProps {
   onReplaceWithAI?: (index: number) => void;
   onDelete: (index: number) => void;
   colorMode?: 'light' | 'dark';
-  template: Template;
 }
 
 function SortableBlock({
@@ -54,7 +54,6 @@ function SortableBlock({
   onReplaceWithAI,
   onDelete,
   colorMode = 'dark',
-  template,
 }: SortableBlockProps) {
   const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id: block._id });
   const style = {
@@ -73,7 +72,7 @@ function SortableBlock({
       id={`block-${block._id}`}
       className={`flex flex-col gap-2 border rounded p-3 ${
         invalid
-          ? 'border-red-500 bg-red-500/10 animate-pulse shadow-red-500/30 shadow-md'
+          ? 'border-red-500 bg-red-500/10 shadow-red-500/30 shadow-md'
           : colorMode === 'dark'
             ? 'bg-black/5 border-black/10 text-white'
             : 'bg-white/5 border-white/10 text-black'
@@ -87,25 +86,30 @@ function SortableBlock({
             {...listeners}
           />
           <span className="text-sm font-medium">{block.type}</span>
+
           {wasAutofixed && (
             <Tooltip>
               <TooltipTrigger>
                 <span className="text-xs text-yellow-300 ml-1 italic">🛠 Autofixed</span>
               </TooltipTrigger>
-              <TooltipContent>This block was automatically repaired to pass validation.</TooltipContent>
+              <TooltipContent>
+                This block was automatically repaired to pass validation.
+              </TooltipContent>
             </Tooltip>
           )}
+
           {isAI && <span className="text-xs text-purple-400 ml-2">🔮 AI</span>}
+
           {invalid && (
-            <span className="flex items-center gap-1 text-xs text-red-400 ml-2">
+            <span className="flex items-center gap-1 text-xs text-red-400 ml-2" title={errors[0]?.message}>
               <AlertTriangle className="w-3 h-3" />
-              Invalid block
+              Invalid ({errors.length})
             </span>
           )}
         </div>
 
         <div className="flex gap-1">
-          <Button size="sm" variant="ghost" onClick={() => onEdit(index)}>
+          <Button size="sm" variant="ghost" onClick={() => onEdit(index)} title="Edit">
             <Pencil className="w-4 h-4" />
           </Button>
           {onReplaceWithAI && (
@@ -117,6 +121,7 @@ function SortableBlock({
                   onReplaceWithAI(index);
                 }
               }}
+              title="Replace with AI"
             >
               <Sparkles className="w-4 h-4 text-purple-400" />
             </Button>
@@ -126,10 +131,9 @@ function SortableBlock({
             variant="ghost"
             className="text-red-500 hover:text-red-700"
             onClick={() => {
-              if (confirm('Delete this block?')) {
-                onDelete(index);
-              }
+              if (confirm('Delete this block?')) onDelete(index);
             }}
+            title="Delete"
           >
             <Trash2 className="w-4 h-4" />
           </Button>
@@ -140,7 +144,19 @@ function SortableBlock({
         <ul className="text-xs text-red-300 list-disc list-inside pl-1 pt-1 space-y-1">
           {errors.map((err, i) => (
             <li key={i}>
-              <code className={colorMode === 'dark' ? 'text-white' : 'text-black'}>{err.field}</code>: {err.message}
+              <div className="flex flex-wrap items-baseline gap-2">
+                <span>{err.message}</span>
+                {err.field && (
+                  <code className={colorMode === 'dark' ? 'text-white' : 'text-black'}>
+                    {err.field}
+                  </code>
+                )}
+                {err.code && (
+                  <span className="px-1.5 py-0.5 rounded bg-amber-900/30 border border-amber-700/40 text-amber-100 text-[10px]">
+                    {err.code}
+                  </span>
+                )}
+              </div>
             </li>
           ))}
         </ul>
@@ -168,31 +184,47 @@ export const BlocksEditor = ({
 
   const blocksWithIds = ensureIds(blocks);
 
+  // 🔎 Compute rich validation errors per block (id → errors[])
+  const errorsMap: Record<string, BlockValidationError[]> = useMemo(() => {
+    const m: Record<string, BlockValidationError[]> = {};
+    for (const b of blocksWithIds) {
+      m[b._id] = validateBlockRich(b as Block);
+    }
+    return m;
+  }, [blocksWithIds]);
+
   const handleUpdate = (index: number, updatedBlock: Block) => {
     const updatedBlocks = [...blocksWithIds];
     updatedBlocks[index] = normalizeBlock(updatedBlock);
     onChange(updatedBlocks);
   };
 
+  // Scroll to first invalid block
   useEffect(() => {
-    const first = blocksWithIds.find((b) => (b as any)._meta?.errorMessages?.length > 0);
-    if (first) {
-      const el = document.getElementById(`block-${first._id}`);
+    const firstInvalid = blocksWithIds.find((b) => (errorsMap[b._id] || []).length > 0);
+    if (firstInvalid) {
+      const el = document.getElementById(`block-${firstInvalid._id}`);
       if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
-  }, [blocksWithIds]);
+  }, [blocksWithIds, errorsMap]);
 
   return (
-    <div className={`space-y-4 rounded p-3 ${colorMode === 'dark' ? 'bg-black/5 border-black/10 text-white' : 'bg-white/5 border-white/10 text-black'}`}>
+    <div
+      className={`space-y-4 rounded p-3 ${
+        colorMode === 'dark'
+          ? 'bg-black/5 border-black/10 text-white'
+          : 'bg-white/5 border-white/10 text-black'
+      }`}
+    >
       <DndContext
         collisionDetection={closestCenter}
         onDragEnd={({ active, over }) => {
-          if (active.id !== over?.id) {
-            const oldIndex = blocksWithIds.findIndex((b) => b._id === active.id);
-            const newIndex = blocksWithIds.findIndex((b) => b._id === over?.id);
-            const reordered = arrayMove(blocksWithIds, oldIndex, newIndex);
-            onChange(reordered);
-          }
+          if (!over || active.id === over.id) return;
+          const oldIndex = blocksWithIds.findIndex((b) => b._id === active.id);
+          const newIndex = blocksWithIds.findIndex((b) => b._id === over.id);
+          if (oldIndex === -1 || newIndex === -1) return;
+          const reordered = arrayMove(blocksWithIds, oldIndex, newIndex);
+          onChange(reordered);
         }}
       >
         <SortableContext items={blocksWithIds.map((b) => b._id)} strategy={verticalListSortingStrategy}>
@@ -201,7 +233,7 @@ export const BlocksEditor = ({
               key={block._id}
               block={block}
               index={index}
-              errors={(block as any)._meta?.errorMessages as BlockValidationError[] || []}
+              errors={errorsMap[block._id] || []}
               onReplaceWithAI={onReplaceWithAI}
               onEdit={setSelectedIndex}
               onDelete={(deleteIndex) => {
@@ -210,7 +242,6 @@ export const BlocksEditor = ({
                 onChange(updated);
               }}
               colorMode={colorMode}
-              template={template as unknown as Template}
             />
           ))}
         </SortableContext>
@@ -219,7 +250,7 @@ export const BlocksEditor = ({
       {selectedIndex !== null && (
         <BlockSidebar
           block={blocksWithIds[selectedIndex]}
-          errors={(blocksWithIds[selectedIndex] as any)._meta?.errorMessages || []}
+          errors={errorsMap[blocksWithIds[selectedIndex]._id] || []}
           onSave={(updatedBlock) => {
             handleUpdate(selectedIndex, updatedBlock);
             setSelectedIndex(null);

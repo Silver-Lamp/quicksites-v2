@@ -4,10 +4,10 @@ import { useState } from 'react';
 import type { Block } from '@/types/blocks';
 import type { BlockEditorProps } from './index';
 import BlockField from './block-field';
-import CtaBlockRender from '@/components/admin/templates/render-blocks/cta'; // Live preview
+import CtaBlockRender from '@/components/admin/templates/render-blocks/cta';
 import { cn } from '@/admin/lib/utils';
 import { extractFieldErrors } from '../utils/extractFieldErrors';
-import { BlockValidationError } from '@/hooks/validateTemplateBlocks';
+import type { BlockValidationError } from '@/hooks/validateTemplateBlocks';
 
 const SUGGESTED_URLS = ['/contact', '/get-quote', '/services', '/book-now'];
 
@@ -21,37 +21,61 @@ export default function CtaEditor({
   if (!('content' in block)) {
     throw new Error('Invalid block: missing content');
   }
-  const ctaBlock = block as unknown as Block;
-  const [content, setContent] = useState<typeof ctaBlock.content>(ctaBlock.content as unknown as typeof ctaBlock.content);
-  const [errorsContent, setErrorsContent] = useState<{ label?: BlockValidationError[]; link?: BlockValidationError[] }>({});
+  const ctaBlock = block as Block;
+  const [content, setContent] = useState(ctaBlock.content);
+  const [errorsContent, setErrorsContent] = useState<{
+    label?: BlockValidationError[];
+    link?: BlockValidationError[];
+  }>({});
+
+  // Global errors from upstream (template-level validation, etc.)
   const fieldErrors = extractFieldErrors(errors as unknown as string[]);
-  const update = <K extends keyof typeof ctaBlock.content>(key: K, value: typeof ctaBlock.content[K]) => {
-    setContent((prev: typeof ctaBlock.content) => ({ ...prev, [key]: value }));
+
+  const update = <K extends keyof typeof ctaBlock.content>(
+    key: K,
+    value: typeof ctaBlock.content[K]
+  ) => {
+    setContent((prev: any) => ({ ...prev, [key]: value }));
+    // clear inline errors when editing that field
     setErrorsContent((prev) => ({ ...prev, [key]: undefined }));
   };
 
   const validate = (): boolean => {
     const nextErrors: typeof errorsContent = {};
-    if (!content.label?.trim()) nextErrors.label = [{ message: 'Label is required', field: 'label' }];
+
+    if (!content.label?.trim()) {
+      nextErrors.label = [{ message: 'Label is required', field: 'label' }];
+    }
+
     if (!content.link?.trim()) {
       nextErrors.link = [{ message: 'Link URL is required', field: 'link' }];
     } else if (!/^\/|^https?:\/\//.test(content.link)) {
-      nextErrors.link = [{ message: 'Must start with / or http(s)://', field: 'link' }];
+      nextErrors.link = [
+        { message: 'Must start with "/" or "http(s)://"', field: 'link' },
+      ];
     }
+
     setErrorsContent(nextErrors);
     return Object.keys(nextErrors).length === 0;
   };
 
   const handleSave = () => {
     if (!validate()) return;
-    onSave({ ...ctaBlock, content: content as unknown as typeof ctaBlock.content });
+    onSave({ ...ctaBlock, content });
     onClose();
   };
 
   const isExternalLink = content.link?.startsWith('http');
+  const hasErrors = Object.keys(errorsContent).length > 0;
 
   return (
-    <div className="space-y-4 bg-black text-white border border-black p-4 rounded">
+    <form
+      onSubmit={(e) => {
+        e.preventDefault();
+        handleSave();
+      }}
+      className="space-y-4 bg-black text-white border border-black p-4 rounded"
+    >
       <h3 className="text-lg font-semibold">Edit Call to Action</h3>
 
       <BlockField
@@ -80,6 +104,7 @@ export default function CtaEditor({
         Suggested Links:{' '}
         {SUGGESTED_URLS.map((url) => (
           <button
+            type="button"
             key={url}
             onClick={() => update('link', url)}
             className="px-2 py-0.5 bg-white text-black rounded-full text-xs font-mono mr-2 mb-1 hover:bg-gray-200"
@@ -92,25 +117,42 @@ export default function CtaEditor({
       {/* 🔍 Live Preview */}
       <div className="mt-6 border-t border-white/10 pt-4">
         <p className="text-sm text-white/70 mb-1">Live Preview:</p>
-        <div className={cn('p-4 rounded bg-neutral-900 border border-white/10')}>
-          <CtaBlockRender block={{ ...block, type: 'cta', content: content as unknown as typeof block.content }} />
+        <div
+          className={cn(
+            'p-4 rounded bg-neutral-900 border border-white/10'
+          )}
+        >
+          <CtaBlockRender
+            block={{
+              ...block,
+              type: 'cta',
+              content,
+            }}
+          />
         </div>
       </div>
 
       <div className="flex justify-end gap-2 pt-4">
         <button
+          type="button"
           onClick={onClose}
           className="text-sm px-4 py-2 border border-gray-500 rounded hover:bg-neutral-800"
         >
           Cancel
         </button>
         <button
-          onClick={handleSave}
-          className="text-sm px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700"
+          type="submit"
+          disabled={hasErrors}
+          className={cn(
+            'text-sm px-4 py-2 rounded text-white',
+            hasErrors
+              ? 'bg-gray-600 cursor-not-allowed'
+              : 'bg-purple-600 hover:bg-purple-700'
+          )}
         >
           Save
         </button>
       </div>
-    </div>
+    </form>
   );
 }

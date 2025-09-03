@@ -1,7 +1,14 @@
 // components/admin/templates/template-editor-content.tsx
 'use client';
 
-import { useEffect, useMemo, useState, type Dispatch, type SetStateAction, useRef } from 'react';
+import {
+  useEffect,
+  useMemo,
+  useState,
+  type Dispatch,
+  type SetStateAction,
+  useRef,
+} from 'react';
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { usePathname, useSearchParams } from 'next/navigation';
@@ -17,18 +24,28 @@ import BlockAdderGrouped from '@/components/admin/block-adder-grouped';
 import PageHeaderEditor from '@/components/admin/templates/block-editors/header-editor';
 import { TemplateActionToolbar } from '@/components/admin/templates/template-action-toolbar';
 import PageSettingsModal from '@/components/admin/templates/page-settings-modal';
+import { useTruthTrackerState } from './hooks/useTruthTrackerState';
+import TemplateTruthTracker from './sidebar/TemplateTruthTracker';
 
 const SidebarSettings = dynamic(
   () => import('@/components/admin/template-settings-panel/sidebar-settings'),
   { ssr: false }
 );
 
-type TemplateDataWithChrome = TemplateData & { headerBlock?: Block | null; footerBlock?: Block | null };
+type TemplateDataWithChrome = TemplateData & {
+  headerBlock?: Block | null;
+  footerBlock?: Block | null;
+};
 
 // global.d.ts
 declare global {
   interface WindowEventMap {
-    'qs:open-settings-panel': CustomEvent<{ panel: 'hours'; openEditor?: boolean; scroll?: boolean; spotlightMs?: number }>;
+    'qs:open-settings-panel': CustomEvent<{
+      panel: 'hours';
+      openEditor?: boolean;
+      scroll?: boolean;
+      spotlightMs?: number;
+    }>;
   }
 }
 export {};
@@ -42,7 +59,8 @@ export function getTemplatePages(t: Template): any[] {
 }
 function firstPageSlug(t: Template): string {
   const pages = getTemplatePages(t);
-  if (pages.length) return pages.find(p => p?.slug)?.slug ?? pages[0]?.slug ?? 'index';
+  if (pages.length)
+    return pages.find((p) => p?.slug)?.slug ?? pages[0]?.slug ?? 'index';
   return 'index';
 }
 function getPageBlocks(p: any): Block[] {
@@ -67,7 +85,8 @@ function findBlockById(
     for (let b = 0; b < blocks.length; b++) {
       const blk: any = blocks[b];
       const bid = blk?._id || blk?.id;
-      if (String(bid) === String(id)) return { pageIdx: p, blockIdx: b, block: blocks[b] };
+      if (String(bid) === String(id))
+        return { pageIdx: p, blockIdx: b, block: blocks[b] };
     }
   }
   return null;
@@ -85,7 +104,11 @@ function findBlockByPath(t: Template, path?: string | null) {
   const page = pages[parsed.pageIdx];
   const blocks = getPageBlocks(page);
   if (parsed.blockIdx < 0 || parsed.blockIdx >= blocks.length) return null;
-  return { pageIdx: parsed.pageIdx, blockIdx: parsed.blockIdx, block: blocks[parsed.blockIdx] };
+  return {
+    pageIdx: parsed.pageIdx,
+    blockIdx: parsed.blockIdx,
+    block: blocks[parsed.blockIdx],
+  };
 }
 
 function openHoursSettingsPanel(setShowSettings: (open: boolean) => void) {
@@ -93,17 +116,15 @@ function openHoursSettingsPanel(setShowSettings: (open: boolean) => void) {
   requestAnimationFrame(() => {
     window.dispatchEvent(
       new CustomEvent('qs:open-settings-panel', {
-        detail: { panel: 'hours', openEditor: true, scroll: true, spotlightMs: 900 } as any,
+        detail: {
+          panel: 'hours',
+          openEditor: true,
+          scroll: true,
+          spotlightMs: 900,
+        } as any,
       })
     );
   });
-}
-
-/** Emit a patch so the toolbar's commit autosave can kick in. */
-function emitPatch(patch: Partial<Template>) {
-  try {
-    window.dispatchEvent(new CustomEvent('qs:template:apply-patch', { detail: patch as any }));
-  } catch {}
 }
 
 /* ---------- component ---------- */
@@ -111,11 +132,11 @@ type Props = {
   template: Template;
   rawJson: string;
   setRawJson: Dispatch<SetStateAction<string>>;
-  livePreviewData: TemplateData;
+  livePreviewData: TemplateData; // (not used here, keep for API parity)
   setTemplate: Dispatch<SetStateAction<Template>>;
   autosaveStatus?: string;
   setShowPublishModal?: (open: boolean) => void;
-  recentlyInsertedBlockId?: string | null;
+  recentlyInsertedBlockId?: string | null; // (not used)
   setBlockErrors: (errors: Record<string, BlockValidationError[]>) => void;
   blockErrors: Record<string, BlockValidationError[]>;
   mode: 'template' | 'site';
@@ -126,11 +147,11 @@ export default function EditorContent({
   template,
   rawJson,
   setRawJson,
-  livePreviewData,
+  livePreviewData, // eslint-disable-line @typescript-eslint/no-unused-vars
   setTemplate,
   autosaveStatus,
   setShowPublishModal,
-  recentlyInsertedBlockId,
+  recentlyInsertedBlockId, // eslint-disable-line @typescript-eslint/no-unused-vars
   setBlockErrors,
   blockErrors,
   mode,
@@ -142,33 +163,74 @@ export default function EditorContent({
   const futureRef = useRef<Template[]>([]);
   const applyingRef = useRef(false);
 
-  const captureHistory = useMemo(() => () => {
-    if (applyingRef.current) return;
-    pastRef.current.push(deepClone(template));
-    futureRef.current = [];
-  }, [template]);
+  // Re-emit suppression to prevent toolbar↔editor loops
+  const suppressEmitRef = useRef(false);
+  const emitIfAllowed = (patch: Partial<Template>) =>
+    emitPatch(patch, suppressEmitRef.current);
+
+
+  /** Broadcast a patch so the toolbar autosave can persist. */
+  function emitPatch(patch: Partial<Template>, suppress?: boolean) {
+    if (suppress) return;
+    try {
+      emitIfAllowed(patch);
+    } catch {}
+  }
+
+  const editMuteRef = useRef(false); // prevent re-entrant block editor openings
+  const editingKeyRef = useRef<string | null>(null);
+  const lastEditEvtRef = useRef<{ key: string; ts: number } | null>(null);
+
+  // apply invoked by toolbar (do not re-broadcast)
+  const applyFromToolbar = (next: Template) => {
+    suppressEmitRef.current = true;
+    setTemplate(next);
+    onChange(next);
+    setTimeout(() => {
+      suppressEmitRef.current = false;
+    }, 0);
+  };
+
+  const captureHistory = useMemo(
+    () => () => {
+      if (applyingRef.current) return;
+      pastRef.current.push(deepClone(template));
+      futureRef.current = [];
+    },
+    [template]
+  );
 
   const applySnapshot = (snap: Template) => {
     applyingRef.current = true;
     setTemplate(snap);
     onChange(snap);
-    emitPatch({ data: (snap as any).data, headerBlock: (snap as any).headerBlock, footerBlock: (snap as any).footerBlock });
+    emitIfAllowed({
+      data: (snap as any).data,
+      headerBlock: (snap as any).headerBlock,
+      footerBlock: (snap as any).footerBlock,
+    });
     applyingRef.current = false;
   };
 
-  const undo = useMemo(() => () => {
-    if (!pastRef.current.length) return;
-    futureRef.current.push(deepClone(template));
-    const prev = pastRef.current.pop()!;
-    applySnapshot(prev);
-  }, [template]);
+  const undo = useMemo(
+    () => () => {
+      if (!pastRef.current.length) return;
+      futureRef.current.push(deepClone(template));
+      const prev = pastRef.current.pop()!;
+      applySnapshot(prev);
+    },
+    [template]
+  );
 
-  const redo = useMemo(() => () => {
-    if (!futureRef.current.length) return;
-    pastRef.current.push(deepClone(template));
-    const next = futureRef.current.pop()!;
-    applySnapshot(next);
-  }, [template]);
+  const redo = useMemo(
+    () => () => {
+      if (!futureRef.current.length) return;
+      pastRef.current.push(deepClone(template));
+      const next = futureRef.current.pop()!;
+      applySnapshot(next);
+    },
+    [template]
+  );
 
   useEffect(() => {
     const h = (e: Event) => setShowSettings(!!(e as CustomEvent).detail);
@@ -198,7 +260,12 @@ export default function EditorContent({
       if (!el) return false;
       if (el.isContentEditable) return true;
       const tag = (el.tagName || '').toLowerCase();
-      return tag === 'input' || tag === 'textarea' || tag === 'select' || !!el.closest?.('.cm-editor,.ProseMirror');
+      return (
+        tag === 'input' ||
+        tag === 'textarea' ||
+        tag === 'select' ||
+        !!el.closest?.('.cm-editor,.ProseMirror')
+      );
     };
     const onKey = (e: KeyboardEvent) => {
       const k = (e.key || '').toLowerCase();
@@ -213,7 +280,7 @@ export default function EditorContent({
 
   const searchParams = useSearchParams();
   const previewVersionId = searchParams.get('preview_version_id');
-  const tab = ((searchParams.get('tab') ?? 'blocks') as 'blocks' | 'live');
+  const tab = (searchParams.get('tab') ?? 'blocks') as 'blocks' | 'live';
   const currentPageSlug = useMemo(
     () => searchParams.get('page') ?? firstPageSlug(template),
     [searchParams, template]
@@ -226,10 +293,18 @@ export default function EditorContent({
   const [editingHeader, setEditingHeader] = useState<Block | null>(null);
 
   // non-header block modal
-  const [editingBlock, setEditingBlock] = useState<{ ref: ReturnType<typeof findBlockById> | ReturnType<typeof findBlockByPath> } | null>(null);
+  const [editingBlock, setEditingBlock] = useState<{
+    ref:
+      | ReturnType<typeof findBlockById>
+      | ReturnType<typeof findBlockByPath>
+      | null;
+  } | null>(null);
 
   // block adder
-  const [adderTarget, setAdderTarget] = useState<null | { pageIdx: number; insertAt: number }>(null);
+  const [adderTarget, setAdderTarget] = useState<null | {
+    pageIdx: number;
+    insertAt: number;
+  }>(null);
 
   /* keyboard: S toggles settings */
   useEffect(() => {
@@ -241,7 +316,10 @@ export default function EditorContent({
         n.closest?.('[contenteditable="true"]');
       const tag = (n.tagName || '').toLowerCase();
       const isForm =
-        tag === 'input' || tag === 'textarea' || tag === 'select' || (n as HTMLInputElement).type === 'text';
+        tag === 'input' ||
+        tag === 'textarea' ||
+        tag === 'select' ||
+        (n as HTMLInputElement).type === 'text';
       const isEditors = n.closest?.('.cm-editor, .CodeMirror, .ProseMirror');
       return !!(editable || isForm || isEditors);
     };
@@ -252,13 +330,21 @@ export default function EditorContent({
         if (key === 's' || code === 'keys') {
           if (isTypingTarget(e.target)) return;
           e.preventDefault();
-          setShowSettings(prev => !prev);
+          setShowSettings((prev) => !prev);
         }
       }
     };
     window.addEventListener('keydown', onKey, { capture: true, passive: false });
     return () => window.removeEventListener('keydown', onKey as any, { capture: true } as any);
   }, []);
+
+  // keep a ref to the currently-edited block and last edit event
+  useEffect(() => {
+    const k = editingBlock?.ref
+      ? `${editingBlock.ref.pageIdx}:${editingBlock.ref.blockIdx}`
+      : null;
+    editingKeyRef.current = k;
+  }, [editingBlock]);
 
   /* header editor wiring */
   const resolveHeader = (): Block => {
@@ -270,10 +356,14 @@ export default function EditorContent({
 
     const seeded = createDefaultBlock('header') as Block;
     const navItems =
-      getTemplatePages(template).slice(0, 5).map((p: any) => ({ label: p.title || p.slug, href: `/${p.slug}` })) ?? [];
+      getTemplatePages(template)
+        .slice(0, 5)
+        .map((p: any) => ({ label: p.title || p.slug, href: `/${p.slug}` })) ?? [];
     (seeded as any).content = {
       ...(seeded as any).content,
-      nav_items: (seeded as any).content?.nav_items?.length ? (seeded as any).content.nav_items : navItems,
+      nav_items: (seeded as any).content?.nav_items?.length
+        ? (seeded as any).content.nav_items
+        : navItems,
     };
     return seeded;
   };
@@ -292,12 +382,13 @@ export default function EditorContent({
     };
     setTemplate(next);
     onChange(next);
-    emitPatch({ data: { ...(next.data ?? {}), headerBlock: updatedHeader }, headerBlock: updatedHeader as any });
+    // do not emit patch here — toolbar will handle persistence via other broadcasts
     setEditingHeader(null);
   };
 
   /* block ops */
   function openBlockEditor(blockId?: string | null, blockPath?: string | null) {
+    if (editMuteRef.current) return; // already editing
     let ref =
       (blockId ? findBlockById(template, blockId) : null) ||
       findBlockByPath(template, blockPath);
@@ -310,6 +401,7 @@ export default function EditorContent({
       return;
     }
 
+    editMuteRef.current = true; // mute further edit intents
     setEditingBlock({ ref });
   }
 
@@ -334,7 +426,9 @@ export default function EditorContent({
 
     const newBlock = createDefaultBlock(type as any) as Block;
     (newBlock as any)._id =
-      (newBlock as any)._id || (newBlock as any).id || (globalThis.crypto?.randomUUID?.() ?? String(Date.now()));
+      (newBlock as any)._id ||
+      (newBlock as any).id ||
+      (globalThis.crypto?.randomUUID?.() ?? String(Date.now()));
 
     blocks.splice(insertAt, 0, newBlock);
     setPageBlocks(page, blocks);
@@ -346,7 +440,7 @@ export default function EditorContent({
 
     setTemplate(nextTemplate);
     onChange(nextTemplate);
-    emitPatch({ data: { ...(nextTemplate as any).data, pages }, pages });
+    emitIfAllowed({ data: { ...(nextTemplate as any).data, pages }, pages });
 
     setAdderTarget(null);
 
@@ -376,12 +470,16 @@ export default function EditorContent({
       : { ...template, pages };
     setTemplate(nextTemplate);
     onChange(nextTemplate);
-    emitPatch({ data: { ...(nextTemplate as any).data, pages }, pages });
+    emitIfAllowed({ data: { ...(nextTemplate as any).data, pages }, pages });
   }
 
   function saveEditedBlock(updated: Block) {
     captureHistory();
-    const ref = editingBlock?.ref as { pageIdx: number; blockIdx: number; block: Block } | null;
+    const ref = editingBlock?.ref as {
+      pageIdx: number;
+      blockIdx: number;
+      block: Block;
+    } | null;
     if (!ref) return;
     const pages = [...getTemplatePages(template)];
     const page = { ...pages[ref.pageIdx] };
@@ -394,8 +492,9 @@ export default function EditorContent({
       : { ...template, pages };
     setTemplate(nextTemplate);
     onChange(nextTemplate);
-    emitPatch({ data: { ...(nextTemplate as any).data, pages }, pages });
+    emitIfAllowed({ data: { ...(nextTemplate as any).data, pages }, pages });
     setEditingBlock(null);
+    editMuteRef.current = false; // unmute
   }
 
   /* merge events (favicon/meta) */
@@ -403,16 +502,23 @@ export default function EditorContent({
     const handler = (e: Event) => {
       const detail = (e as CustomEvent).detail as any;
       if (!detail || typeof detail !== 'object') return;
-      const next: any = { ...template, ...detail, meta: { ...(template as any)?.meta, ...(detail.meta ?? {}) } };
+      const next: any = {
+        ...template,
+        ...detail,
+        meta: { ...(template as any)?.meta, ...(detail.meta ?? {}) },
+      };
       setTemplate(next);
       onChange(next);
-      // Emit only the changed bits we expect (meta + any top-level chrome passed)
+      // broadcast only specific bits (meta + any chrome)
       const patch: Partial<Template> = {
         ...(detail.headerBlock ? { headerBlock: detail.headerBlock } : {}),
         ...(detail.footerBlock ? { footerBlock: detail.footerBlock } : {}),
-        data: { ...(next.data ?? {}), ...(detail.meta ? { meta: detail.meta } : {}) } as any,
+        data: {
+          ...(next.data ?? {}),
+          ...(detail.meta ? { meta: detail.meta } : {}),
+        } as any,
       };
-      emitPatch(patch);
+      emitIfAllowed(patch);
     };
     window.addEventListener('qs:template:merge', handler as any);
     return () => window.removeEventListener('qs:template:merge', handler as any);
@@ -421,16 +527,60 @@ export default function EditorContent({
   /* iframe -> parent bus */
   useEffect(() => {
     function onMessage(e: MessageEvent) {
-      const d = e.data as { type?: string; blockId?: string | null; blockPath?: string | null } | null;
+      const d = e.data as {
+        type?: string;
+        blockId?: string | null;
+        blockPath?: string | null;
+      } | null;
       if (!d || typeof d !== 'object') return;
-      if (d.type === 'preview:edit-header') openHeaderEditor();
-      else if (d.type === 'preview:edit-block') openBlockEditor(d.blockId ?? null, d.blockPath ?? null);
-      else if (d.type === 'preview:add-after') openAdder(d.blockId ?? null, d.blockPath ?? null);
-      else if (d.type === 'preview:delete-block') deleteBlock(d.blockId ?? null, d.blockPath ?? null);
+
+      // ignore edit intents while a modal is open
+      if (
+        editMuteRef.current &&
+        (d.type === 'preview:edit-block' || d.type === 'preview:edit-header')
+      ) {
+        return;
+      }
+
+      if (d.type === 'preview:edit-header') {
+        openHeaderEditor();
+        return;
+      }
+
+      if (d.type === 'preview:edit-block') {
+        // dedupe + debounce
+        const key = `${d.blockId ?? ''}|${d.blockPath ?? ''}`;
+        const now = performance.now();
+        const last = lastEditEvtRef.current;
+
+        if (editingKeyRef.current) {
+          const samePath =
+            typeof d.blockPath === 'string' &&
+            d.blockPath === editingKeyRef.current;
+          const sameId =
+            typeof d.blockId === 'string' &&
+            (editingBlock?.ref?.block as any)?._id === d.blockId;
+          if (samePath || sameId) return;
+        }
+        if (last && last.key === key && now - last.ts < 500) return;
+        lastEditEvtRef.current = { key, ts: now };
+
+        openBlockEditor(d.blockId ?? null, d.blockPath ?? null);
+        return;
+      }
+
+      if (d.type === 'preview:add-after') {
+        openAdder(d.blockId ?? null, d.blockPath ?? null);
+        return;
+      }
+      if (d.type === 'preview:delete-block') {
+        deleteBlock(d.blockId ?? null, d.blockPath ?? null);
+        return;
+      }
     }
     window.addEventListener('message', onMessage);
     return () => window.removeEventListener('message', onMessage);
-  }, [template]);
+  }, [openHeaderEditor, openBlockEditor, openAdder, deleteBlock, editingBlock]);
 
   /* current page + save handler for page settings */
   const currentPage = useMemo(() => {
@@ -443,7 +593,6 @@ export default function EditorContent({
     const pages = [...getTemplatePages(template)];
     const idx = pages.findIndex((p: any) => p?.slug === currentPageSlug);
     const targetIdx = idx >= 0 ? idx : 0;
-
     pages[targetIdx] = { ...pages[targetIdx], ...updatedPage };
 
     const nextTemplate: any = Array.isArray((template as any)?.data?.pages)
@@ -452,7 +601,7 @@ export default function EditorContent({
 
     setTemplate(nextTemplate);
     onChange(nextTemplate);
-    emitPatch({ data: { ...(nextTemplate as any).data, pages }, pages });
+    emitIfAllowed({ data: { ...(nextTemplate as any).data, pages }, pages });
   };
 
   /* ---------- Tabs: Blocks (default) | Live (iframe) ---------- */
@@ -464,6 +613,30 @@ export default function EditorContent({
   };
 
   const preferInlinePreview = useMemo(() => tab !== 'live', [tab]);
+
+
+  function TruthTrackerPanel({ templateId }: { templateId: string }) {
+    const { state, loading, error, reload } = useTruthTrackerState(templateId);
+    if (loading || !state) return null;
+    const { infra, snapshots, versions, events, adminMeta } = state;
+  
+    return (
+      <TemplateTruthTracker
+        templateId={templateId}
+        infra={infra}
+        snapshots={snapshots}
+        versions={versions}
+        events={events}
+        selectedSnapshotId={infra?.lastSnapshot?.id}
+        adminMeta={adminMeta}
+        onRefresh={reload}
+        // onCreateSnapshot={async () => { await createSnapshot(templateId); await reload(); }}
+        // onPublish={async (sid) => { await publishSnapshot(templateId, sid); await reload(); }}
+        onViewDiff={() => {}}
+      />
+    );
+  }
+  
 
   return (
     <div className="flex min-w-0">
@@ -477,15 +650,20 @@ export default function EditorContent({
       >
         <div className="h-full overflow-auto">
           {SidebarSettings ? (
-            <SidebarSettings template={template} onChange={(p: any) => onChange(p)} />
-          ) : (<div className="p-4 text-sm text-white/70">Loading settings…</div>)}
+            <SidebarSettings
+              template={template}
+              onChange={(p: any) => onChange(p)}
+            />
+          ) : (
+            <div className="p-4 text-sm text-white/70">Loading settings…</div>
+          )}
         </div>
         <div className="absolute bottom-2 left-1/2 -translate-x-1/2 text-[10px] text-white/40">
-          Press <kbd className="px-1 py-0.5 bg-white/10 rounded">S</kbd> to toggle
+          Press <kbd className="px-1 py-0.5 bg白/10 rounded">S</kbd> to toggle
         </div>
         <button
           className="fixed bottom-4 left-4 z-[1400] rounded-full p-2 border border-white/10 bg-zinc-900/90 text-white/85 shadow-lg hover:bg-zinc-800"
-          onClick={() => setShowSettings(prev => !prev)}
+          onClick={() => setShowSettings((prev) => !prev)}
           title={`${showSettings ? 'Hide' : 'Show'} settings (S)`}
         >
           <SettingsIcon size={18} />
@@ -502,14 +680,14 @@ export default function EditorContent({
       {/* Right: header editor panel + preview */}
       <div className="flex-1 min-w-0 xl:ml-0 ml-0 px-0 lg:px-2">
         {/* Tabs */}
-        <div className="flex gap-2 border-b border-white/10 mb-3 px-2 pt-2">
+        <div className="flex gap-2 border-b border白/10 mb-3 px-2 pt-2">
           <Link
             href={buildTabHref('blocks')}
             className={[
               'px-4 py-2 text-sm rounded-t-md border-b-2 transition-colors',
               tab === 'blocks'
                 ? 'border-white/80 text-white'
-                : 'border-transparent text-white/60 hover:text-white'
+                : 'border-transparent text-white/60 hover:text-white',
             ].join(' ')}
             prefetch={false}
           >
@@ -521,7 +699,7 @@ export default function EditorContent({
               'px-4 py-2 text-sm rounded-t-md border-b-2 transition-colors',
               tab === 'live'
                 ? 'border-white/80 text-white'
-                : 'border-transparent text-white/60 hover:text-white'
+                : 'border-transparent text-white/60 hover:text-white',
             ].join(' ')}
             prefetch={false}
           >
@@ -546,7 +724,11 @@ export default function EditorContent({
           onChange={(t) => {
             setTemplate(t);
             onChange(t);
-            emitPatch({ data: (t as any).data, headerBlock: (t as any).headerBlock, footerBlock: (t as any).footerBlock });
+            emitIfAllowed({
+              data: (t as any).data,
+              headerBlock: (t as any).headerBlock,
+              footerBlock: (t as any).footerBlock,
+            });
           }}
           errors={blockErrors}
           industry={template.industry}
@@ -560,6 +742,7 @@ export default function EditorContent({
           onEditHeader={openHeaderEditor}
           onRequestEditBlock={(id) => openBlockEditor(id, null)}
           onRequestAddAfter={(id) => openAdder(id, null)}
+          onRequestDeleteBlock={(id) => deleteBlock(id, null)}  // ← NEW: wire delete
           previewVersionId={previewVersionId}
           pageSlug={currentPageSlug}
         />
@@ -571,8 +754,14 @@ export default function EditorContent({
           <div className="w-full max-w-4xl bg-neutral-900 border border-white/10 rounded-xl shadow-xl overflow-hidden">
             <DynamicBlockEditor
               block={editingBlock.ref!.block}
-              onSave={(b: any) => saveEditedBlock(b as Block)}
-              onClose={() => setEditingBlock(null)}
+              onSave={(b: any) => {
+                saveEditedBlock(b as Block);
+                editMuteRef.current = false;
+              }}
+              onClose={() => {
+                setEditingBlock(null);
+                editMuteRef.current = false;
+              }}
               errors={blockErrors}
               template={template}
               colorMode={template?.color_mode || 'dark'}
@@ -595,12 +784,23 @@ export default function EditorContent({
                   inline
                   showOnlyQuickPicks
                   startCollapsed
-                  existingBlocks={getPageBlocks(getTemplatePages(template)[adderTarget.pageIdx])}
+                  existingBlocks={
+                    getPageBlocks(getTemplatePages(template)[adderTarget.pageIdx])
+                  }
                   onAdd={(type: string) =>
-                    handleInsertBlockAt(adderTarget.pageIdx, adderTarget.insertAt, type)
+                    handleInsertBlockAt(
+                      adderTarget.pageIdx,
+                      adderTarget.insertAt,
+                      type
+                    )
                   }
                   onAddAndEdit={(type: string) =>
-                    handleInsertBlockAt(adderTarget.pageIdx, adderTarget.insertAt, type, { openEditor: true })
+                    handleInsertBlockAt(
+                      adderTarget.pageIdx,
+                      adderTarget.insertAt,
+                      type,
+                      { openEditor: true }
+                    )
                   }
                   template={template as any}
                 />
@@ -619,15 +819,21 @@ export default function EditorContent({
         </div>
       )}
 
+      {template.id && <TruthTrackerPanel templateId={template.id} />}
+
       {/* Bottom toolbar */}
       <TemplateActionToolbar
         template={template}
         autosaveStatus={autosaveStatus}
-        onSaveDraft={(t) => { setTemplate(t!); onChange(t!); emitPatch({ data: (t as any).data }); }}
+        onSaveDraft={(t) => {
+          setTemplate(t!);
+          onChange(t!);
+          emitIfAllowed({ data: (t as any).data });
+        }}
         onUndo={undo}
         onRedo={redo}
         onOpenPageSettings={() => setPageSettingsOpen(true)}
-        onApplyTemplate={(next) => { setTemplate(next); onChange(next); emitPatch({ data: (next as any).data }); }}
+        onApplyTemplate={applyFromToolbar} // ← prevents re-emit loop
         onSetRawJson={(json) => setRawJson(json)}
       />
 

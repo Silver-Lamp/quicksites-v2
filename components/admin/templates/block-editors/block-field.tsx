@@ -2,7 +2,7 @@
 
 import { useId } from 'react';
 import { cn } from '@/admin/lib/utils';
-import { BlockValidationError } from '@/hooks/validateTemplateBlocks';
+import type { BlockValidationError } from '@/hooks/validateTemplateBlocks';
 
 type FieldBaseProps = {
   label?: string;
@@ -41,14 +41,23 @@ type BlockFieldProps =
 export default function BlockField(props: BlockFieldProps) {
   const id = useId();
 
+  const hasErrors = Array.isArray(props.error)
+    ? props.error.length > 0
+    : Boolean(props.error);
+
   const baseInputClass =
-    'w-full px-3 py-1.5 bg-gray-800 border border-gray-600 rounded text-white';
+    'w-full px-3 py-1.5 rounded text-white bg-gray-800 border focus:outline-none focus:ring-2 focus:ring-purple-500';
+
+  const errorInputClass = 'border-red-500 focus:ring-red-500';
 
   return (
     <div className={cn('mb-4', props.className)}>
       {/* ✅ Label */}
       {props.label && props.type !== 'boolean' && (
-        <label htmlFor={id} className="block text-sm font-medium text-white mb-1">
+        <label
+          htmlFor={id}
+          className="block text-sm font-medium text-white mb-1"
+        >
           {props.label}
         </label>
       )}
@@ -61,7 +70,7 @@ export default function BlockField(props: BlockFieldProps) {
           value={props.value}
           onChange={(e) => props.onChange(e.target.value)}
           placeholder={props.placeholder}
-          className={baseInputClass}
+          className={cn(baseInputClass, hasErrors && errorInputClass)}
         />
       )}
 
@@ -74,7 +83,7 @@ export default function BlockField(props: BlockFieldProps) {
           min={props.min}
           max={props.max}
           step={props.step}
-          className={baseInputClass}
+          className={cn(baseInputClass, hasErrors && errorInputClass)}
         />
       )}
 
@@ -83,7 +92,7 @@ export default function BlockField(props: BlockFieldProps) {
           id={id}
           value={props.value as string}
           onChange={(e) => props.onChange(e.target.value)}
-          className={baseInputClass}
+          className={cn(baseInputClass, hasErrors && errorInputClass)}
         >
           {props.options.map((opt) => (
             <option key={opt} value={opt}>
@@ -108,12 +117,33 @@ export default function BlockField(props: BlockFieldProps) {
         </div>
       )}
 
-      {/* ✅ Optional helpers */}
+      {/* ✅ Description */}
       {props.description && (
         <p className="text-xs text-gray-400 mt-1">{props.description}</p>
       )}
-      {props.error && (
-        <p className="text-xs text-red-400 mt-1">{Array.isArray(props.error) ? props.error.map((err: any) => err.message).join(', ') : props.error}</p>
+
+      {/* ✅ Errors */}
+      {hasErrors && (
+        <div className="mt-1 space-y-1">
+          {Array.isArray(props.error) ? (
+            props.error.map((err, i) => (
+              <div
+                key={i}
+                className="text-xs text-red-400 flex flex-wrap items-center gap-2"
+              >
+                <span>{err.message}</span>
+                {err.field && <code className="text-white">{err.field}</code>}
+                {err.code && (
+                  <span className="px-1 py-0.5 rounded bg-red-900/40 border border-red-700/50 text-red-200 text-[10px]">
+                    {err.code}
+                  </span>
+                )}
+              </div>
+            ))
+          ) : (
+            <p className="text-xs text-red-400">{props.error}</p>
+          )}
+        </div>
       )}
     </div>
   );

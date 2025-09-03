@@ -1,12 +1,12 @@
-// components/editor/sortable-block-wrapper.tsx
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { GripVertical } from 'lucide-react';
+import { GripVertical, AlertTriangle } from 'lucide-react';
 import { Block } from '@/types/blocks';
 import BlockAdderGrouped from '@/components/admin/block-adder-grouped';
 import { useClickAway } from 'react-use';
 import { Template } from '@/types/template';
+import type { BlockValidationError } from '@/hooks/validateTemplateBlocks';
 
 type Props = {
   block: Block;
@@ -22,6 +22,7 @@ type Props = {
   insertedId: string | null;
   page: any;
   template: Template;
+  errors?: BlockValidationError[];
 };
 
 export default function SortableBlockWrapper({
@@ -38,6 +39,7 @@ export default function SortableBlockWrapper({
   insertedId,
   page,
   template,
+  errors = [],
 }: Props) {
   const ref = useRef<HTMLDivElement | null>(null);
   const adderRef = useRef<HTMLDivElement | null>(null);
@@ -55,6 +57,8 @@ export default function SortableBlockWrapper({
     }
   }, [insertedId, block._id]);
 
+  const invalid = errors.length > 0;
+
   return (
     <div
       ref={(el) => {
@@ -63,35 +67,36 @@ export default function SortableBlockWrapper({
       }}
       style={style}
       className={[
-        // hover scope
         'group/outer relative rounded-lg p-2',
-        // hide border until hover
-        'border border-transparent transition-colors',
-        'group-hover/outer:border-white/15',
-        // dark bg tint (optional; keep if desired)
-        'bg-neutral-900 text-neutral-100',
+        invalid
+          ? 'border border-red-500 bg-red-500/10 shadow-md shadow-red-500/30'
+          : 'border border-transparent group-hover/outer:border-white/15',
+        'transition-colors bg-neutral-900 text-neutral-100',
       ].join(' ')}
     >
-      {/* Top chrome: handle + block name + (existing) edit/delete */}
+      {/* Top chrome: handle + block name + edit/delete */}
       <div
         className={[
           'flex justify-between items-center mb-1 text-xs',
-          // hide until hover
           'opacity-0 group-hover/outer:opacity-100 transition-opacity',
-          'text-white/80',
+          invalid ? 'text-red-400' : 'text-white/80',
         ].join(' ')}
       >
         <div className="flex items-center gap-1">
-          {/* Drag handle only visible on hover */}
           <GripVertical
             className="w-3 h-3 text-gray-500 cursor-grab active:cursor-grabbing"
             {...attributes}
             {...listeners}
           />
           <span className="uppercase tracking-wide">{block.type}</span>
+          {invalid && (
+            <span className="flex items-center gap-1 ml-2">
+              <AlertTriangle className="w-3 h-3" />
+              Invalid ({errors.length})
+            </span>
+          )}
         </div>
 
-        {/* Your existing buttons: already hidden until hover before, keep explicit */}
         <div className="flex gap-2">
           <button
             onClick={() => setEditing(block)}
@@ -110,7 +115,26 @@ export default function SortableBlockWrapper({
 
       {children}
 
-      {/* Adder: hidden until hover */}
+      {/* Validation Errors */}
+      {invalid && (
+        <ul className="mt-2 text-xs text-red-300 list-disc list-inside pl-1 space-y-1">
+          {errors.map((err, i) => (
+            <li key={i}>
+              <div className="flex flex-wrap items-baseline gap-2">
+                <span>{err.message}</span>
+                {err.field && <code className="text-white">{err.field}</code>}
+                {err.code && (
+                  <span className="px-1.5 py-0.5 rounded bg-amber-900/30 border border-amber-700/40 text-amber-100 text-[10px]">
+                    {err.code}
+                  </span>
+                )}
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      {/* Adder */}
       <div className="mt-2" ref={adderRef}>
         <div className="opacity-0 group-hover/outer:opacity-100 transition-opacity">
           {showAdder ? (

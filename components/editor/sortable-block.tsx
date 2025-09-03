@@ -1,4 +1,3 @@
-// components/editor/sortable-block.tsx
 'use client';
 
 import { useSortable } from '@dnd-kit/sortable';
@@ -8,6 +7,7 @@ import SortableBlockWrapper from './sortable-block-wrapper';
 import RenderBlock from '@/components/admin/templates/render-block';
 import { createDefaultBlock } from '@/lib/createDefaultBlock';
 import { Template } from '@/types/template';
+import type { BlockValidationError } from '@/hooks/validateTemplateBlocks';
 
 export function SortableBlock({
   block,
@@ -19,6 +19,7 @@ export function SortableBlock({
   insertedId,
   onChange,
   setLastInsertedId,
+  errors = [],
 }: {
   block: any;
   blockIndex: number;
@@ -29,14 +30,9 @@ export function SortableBlock({
   insertedId: string | null;
   onChange: (updated: any) => void;
   setLastInsertedId: (id: string | null) => void;
+  errors?: BlockValidationError[];
 }) {
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-  } = useSortable({ id: block._id });
+  const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id: block._id });
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -78,13 +74,14 @@ export function SortableBlock({
       insertedId={insertedId}
       page={page}
       template={template as Template}
+      errors={errors} // pass rich validation errors into wrapper
     >
       <RenderBlock
         block={block}
         showDebug={false}
-        mode="editor"                 // enable hover-to-reveal controls
-        onEdit={(b) => setEditing(b)} // wire Edit
-        onDelete={handleDelete}       // wire Delete
+        mode="editor"
+        onEdit={(b) => setEditing(b)}
+        onDelete={handleDelete}
         template={template}
       />
     </SortableBlockWrapper>

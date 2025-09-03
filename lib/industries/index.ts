@@ -1,6 +1,6 @@
 // lib/industries/index.ts
 
-/** Internal keys we use in code & generators */
+/** Internal keys we use in code & generators (canonical storage) */
 export type IndustryKey =
   | 'towing'
   | 'window_washing'
@@ -45,7 +45,7 @@ export type IndustryKey =
   | 'custom_apparel'
   | 'other';
 
-/** Key → Label (what we display / store in templates.industry) */
+/** Key → Label (display only; we store the key in DB) */
 export const INDUSTRIES: ReadonlyArray<{ key: IndustryKey; label: string }> = [
   { key: 'towing',               label: 'Towing' },
   { key: 'window_washing',       label: 'Window Washing' },
@@ -68,7 +68,7 @@ export const INDUSTRIES: ReadonlyArray<{ key: IndustryKey; label: string }> = [
   { key: 'legal',                label: 'Legal' },
   { key: 'medical_dental',       label: 'Medical / Dental' },
 
-  // legacy/additional synonyms that share the same key
+  // aliases/synonyms (same key, different label)
   { key: 'window_washing',       label: 'Window Cleaning' },
   { key: 'pressure_washing',     label: 'Pressure Washing' },
   { key: 'junk_removal',         label: 'Junk Removal' },
@@ -98,19 +98,24 @@ export const INDUSTRIES: ReadonlyArray<{ key: IndustryKey; label: string }> = [
 
 /* ---------------------------- derived maps/arrays --------------------------- */
 
-/** First label per key (preserves order of INDUSTRIES) */
+/** First label per key (preserves order) */
 const _KEY_TO_LABEL: Partial<Record<IndustryKey, string>> = {};
 for (const { key, label } of INDUSTRIES) {
   if (_KEY_TO_LABEL[key] == null) _KEY_TO_LABEL[key] = label;
 }
 export const KEY_TO_LABEL = _KEY_TO_LABEL as Record<IndustryKey, string>;
 
-/** All labels → key (lowercased) */
-export const LABEL_TO_KEY = Object.fromEntries(
-  INDUSTRIES.map(i => [i.label.toLowerCase(), i.key])
-) as Record<string, IndustryKey>;
+/** Labels → key (case-insensitive), plus add direct key lookups */
+const labelPairs: Array<[string, IndustryKey]> = INDUSTRIES.map(i => [
+  i.label.toLowerCase(),
+  i.key,
+]);
+for (const { key } of INDUSTRIES) {
+  labelPairs.push([key.toLowerCase(), key]); // allow passing the key as “label”
+}
+export const LABEL_TO_KEY = Object.fromEntries(labelPairs) as Record<string, IndustryKey>;
 
-/** A simple labels list (de-duped by key) for selects */
+/** A simple labels list (deduped by key) for display */
 export const INDUSTRY_LABELS: ReadonlyArray<string> = Object.values(KEY_TO_LABEL);
 
 /* ---------------------------------- hints ---------------------------------- */
@@ -142,9 +147,17 @@ export const INDUSTRY_HINTS: Partial<Record<string, string>> = {
 
 /* ----------------------------- key/label helpers ---------------------------- */
 
+/** Canonical resolver: label OR key OR synonym → key */
+export function resolveIndustryKey(input?: string | null): IndustryKey {
+  const x = (input || '').toLowerCase().trim();
+  if (!x) return 'other';
+  return LABEL_TO_KEY[x] ?? toIndustryKey(x);
+}
+
 export function toIndustryKey(input?: string | null): IndustryKey {
   const x = (input || '').toLowerCase().trim();
   if (!x) return 'other';
+  // If it’s an exact key or exact label we’ll have it in LABEL_TO_KEY
   const direct = LABEL_TO_KEY[x];
   if (direct) return direct;
 
@@ -194,22 +207,24 @@ export function toIndustryLabel(key: IndustryKey): string {
   return KEY_TO_LABEL[key] || 'Other';
 }
 
-/** Resolve both (label→key preferred; fallback to slug detection) */
+/** Resolve both (label/key preferred; fallback to slug detection) */
 export function resolveIndustry(input?: string | null, slugOrId?: string | null) {
-  const key = toIndustryKey(input || slugOrId || '');
-  const label = input?.trim() || toIndustryLabel(key);
+  const key = resolveIndustryKey(input || slugOrId || '');
+  const label = toIndustryLabel(key);
   return { key, label };
 }
 
-/** Options ready for a <select /> (deduped by key, preserves order) */
-export function getIndustryOptions(): ReadonlyArray<{ value: string; label: string }> {
-  const seen = new Set<string>();
-  const opts: { value: string; label: string }[] = [];
+/**
+ * Options for a <Select />.
+ * IMPORTANT: value === canonical key (so controlled selects bind correctly).
+ */
+export function getIndustryOptions(): ReadonlyArray<{ value: IndustryKey; label: string }> {
+  const seen = new Set<IndustryKey>();
+  const opts: Array<{ value: IndustryKey; label: string }> = [];
   for (const { key, label } of INDUSTRIES) {
     if (seen.has(key)) continue;
     seen.add(key);
-    opts.push({ value: label, label });
+    opts.push({ value: key, label });
   }
-  // NOTE: do NOT use `as const` here (it’s a variable, not a literal).
   return opts;
 }

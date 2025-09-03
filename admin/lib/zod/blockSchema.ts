@@ -304,12 +304,38 @@ export const blockContentSchemaMap = {
   hero: {
     label: 'Hero',
     icon: '🎯',
-    schema: z.object({
-      headline: z.string().min(1),
-      subheadline: z.string().optional(),
-      cta_text: z.string().optional(),
-      cta_link: z.string().optional(),
-      image_url: z.union([z.string().url(), z.literal('')]).optional(),
+    schema: z.preprocess((raw) => {
+      // Coerce legacy / alternate field names to canonical keys
+      const c = raw && typeof raw === 'object' ? { ...(raw as any) } : {};
+  
+      // Legacy → canonical
+      if (c.heading != null && c.headline == null) c.headline = c.heading;
+      if (c.subheading != null && c.subheadline == null) c.subheadline = c.subheading;
+      if (c.ctaLabel != null && c.cta_text == null) c.cta_text = c.ctaLabel;
+      if (c.ctaHref != null && c.cta_link == null) c.cta_link = c.ctaHref;
+      if (c.imageUrl != null && c.image_url == null) c.image_url = c.imageUrl;
+  
+      // Provide safe defaults on first save so validator doesn't fail
+      if (c.headline == null || String(c.headline).trim() === '') c.headline = 'Welcome';
+      if (c.subheadline == null) c.subheadline = '';
+      if (c.cta_text == null) c.cta_text = '';
+      if (c.cta_link == null) c.cta_link = '/';
+      if (c.image_url == null) c.image_url = '';
+  
+      // Normalize layout defaults
+      if (c.layout_mode == null) c.layout_mode = 'inline';
+      if (c.mobile_layout_mode == null) c.mobile_layout_mode = 'inline';
+      if (c.mobile_crop_behavior == null) c.mobile_crop_behavior = 'cover';
+      if (c.image_position == null) c.image_position = 'center';
+  
+      return c;
+    }, z.object({
+      // Now schema validates the canonical + defaulted content
+      headline: z.string().min(1).default('Welcome'),
+      subheadline: z.string().optional().default(''),
+      cta_text: z.string().optional().default(''),
+      cta_link: z.string().optional().default('/'),
+      image_url: z.union([z.string().url(), z.literal('')]).optional().default(''),
       layout_mode: z.enum([
         'inline','background','full_bleed','natural_height','full_width','full_height','full_width_height','cover'
       ]).default('inline'),
@@ -322,25 +348,62 @@ export const blockContentSchemaMap = {
       image_position: z.enum(['top','center','bottom']).default('center'),
       image_x: z.number().min(0).max(100).optional(),
       image_y: z.number().min(0).max(100).optional(),
-    }),
+    })),
   },
 
   /* UPDATED: services matches seeded props (objects), plus optional title/columns */
   services: {
     label: 'Services',
     icon: '🧰',
-    schema: z.object({
+    schema: z.preprocess((raw) => {
+      const c = raw && typeof raw === 'object' ? { ...(raw as any) } : {};
+  
+      // Accept legacy "items" as strings or objects; coerce strings to objects.
+      if (Array.isArray(c.items)) {
+        c.items = c.items
+          .map((it: any) => {
+            if (typeof it === 'string') {
+              return { name: it, description: '', price: undefined, href: undefined, icon: undefined };
+            }
+            if (it && typeof it === 'object') {
+              // normalize common alt keys
+              const o: any = { ...it };
+              if (o.title && !o.name) o.name = o.title;
+              if (o.link && !o.href) o.href = o.link;
+              return {
+                name: String(o.name ?? '').trim(),
+                description: typeof o.description === 'string' ? o.description : '',
+                price: typeof o.price === 'string' ? o.price : undefined,
+                href: typeof o.href === 'string' ? o.href : undefined,
+                icon: typeof o.icon === 'string' ? o.icon : undefined,
+              };
+            }
+            return null;
+          })
+          .filter(Boolean);
+      }
+  
+      // Provide a minimal default if items are missing (avoid first-save failure)
+      if (!Array.isArray(c.items) || c.items.length === 0) {
+        c.items = [{ name: 'Service A', description: '' }];
+      }
+  
+      // Reasonable defaults
+      if (c.columns == null) c.columns = 3;
+      if (typeof c.title !== 'string') c.title = undefined;
+  
+      return c;
+    }, z.object({
       title: z.string().optional(),
       columns: z.number().int().min(1).max(6).default(3),
       items: z.array(z.object({
         name: z.string().min(1),
         description: z.string().default(''),
-        // allow "$123", "From $99", or omit entirely
         price: z.string().optional(),
         href: z.string().optional(),
         icon: z.string().optional(),
       })).min(1),
-    }),
+    })),
   },
 
   cta: {
@@ -574,9 +637,87 @@ export const blockPreviewFallback: Record<Block['type'], string> = Object.entrie
 
 export { blockMeta };
 
-/* ───────────────────────────── Convenience helper ─────────────────────────── */
+/* ───────────────────────────── Convenience defaults ────────────────────────── */
+/** Minimal defaults for blocks that often appear first and can be empty on seed. */
+const HERO_DEFAULT_CONTENT = {
+  headline: 'Welcome',
+  subheadline: '',
+  cta_text: '',
+  cta_link: '/',
+  image_url: '',
+  layout_mode: 'inline',
+  mobile_layout_mode: 'inline',
+  mobile_crop_behavior: 'cover',
+  image_position: 'center',
+} as const;
+
+/* ──────────────────────────── Full-schema helpers ─────────────────────────── */
+
+/**
+ * Build a full-block schema from a content schema + type literal (matches editor/validator shape).
+ * This version:
+ *  - accepts legacy { props } blocks by mapping props → content
+ *  - injects sensible defaults when content is missing (e.g., hero)
+ */
+function makeFullBlockSchema(type: string, content: z.ZodTypeAny) {
+  return z.preprocess((raw) => {
+    const b = (raw && typeof raw === 'object') ? { ...(raw as any) } : raw as any;
+
+    if (!b || typeof b !== 'object') return raw;
+
+    // Coerce legacy shape
+    if (b.content == null && b.props && typeof b.props === 'object') {
+      b.content = b.props;
+    }
+
+    // Inject safe defaults for blocks that might be empty at seed time
+    if (b.content == null) {
+      if (type === 'hero') {
+        b.content = { ...HERO_DEFAULT_CONTENT, ...(b.content ?? {}) };
+      }
+      // Add other types here in the future if needed:
+      // if (type === 'cta') b.content = { label: 'Learn more', href: '/' };
+    }
+
+    return b;
+  }, z.object({
+    type: z.literal(type),
+    content,
+    _id: z.string().optional(),
+    tone: z.string().optional(),
+    industry: z.string().optional(),
+    tags: z.array(z.string()).optional(),
+    meta: z.record(z.any()).optional(),
+  }));
+}
+
+/** Map of canonical type → full block schema (with .safeParse on the whole block). */
+export const blockFullSchemaMap: Record<string, z.ZodTypeAny> = Object.fromEntries(
+  Object.entries(blockContentSchemaMap).map(([type, cfg]) => [type, makeFullBlockSchema(type, cfg.schema)])
+);
+
+/**
+ * Augment each entry in blockContentSchemaMap with:
+ *  - fullSchema: the full block schema
+ *  - safeParse: a direct alias to fullSchema.safeParse
+ *
+ * This lets callers do: blockContentSchemaMap[type].safeParse(block)
+ * while preserving label/icon/schema for UI & union building.
+ */
+for (const [type, cfg] of Object.entries(blockContentSchemaMap)) {
+  const full = blockFullSchemaMap[type];
+  // @ts-expect-error augment at runtime for convenience
+  cfg.fullSchema = full;
+  // @ts-expect-error allow validator-style usage
+  cfg.safeParse = full.safeParse.bind(full);
+}
 
 /** Return the content/props Zod schema for a given block type (or null). */
 export function schemaForBlockType(type: string): z.ZodTypeAny | null {
   return (blockContentSchemaMap as any)[type]?.schema ?? null;
+}
+
+/** Return the full Zod schema (type+content+meta) for a given block type (or null). */
+export function schemaForBlockTypeFull(type: string): z.ZodTypeAny | null {
+  return blockFullSchemaMap[type] ?? null;
 }

@@ -2,7 +2,7 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { useState, Dispatch, SetStateAction } from 'react';
+import { useMemo, useState, Dispatch, SetStateAction, useEffect } from 'react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { TemplateEditorToolbar } from './template-editor-toolbar';
 import { useTemplateEditorState } from './use-template-editor-state';
@@ -31,6 +31,7 @@ function withSyncedPages<T extends { data?: any; pages?: any[] }>(tpl: T): T {
   return { ...tpl, pages, data: { ...(tpl.data ?? {}), pages } } as T;
 }
 
+// patch bus (for wrapper-originated changes only)
 function emitPatch(patch: Partial<Template>) {
   try {
     window.dispatchEvent(new CustomEvent('qs:template:apply-patch', { detail: patch as any }));
@@ -56,7 +57,7 @@ async function commitNow(templateId: string, data: any) {
   try { window.dispatchEvent(new CustomEvent('qs:truth:refresh')); } catch {}
   return j;
 }
-// ⬇️ put these near commitNow() helpers
+
 async function createSnapshot(templateId: string) {
   const res = await fetch(`/api/admin/snapshots/create?templateId=${templateId}`, { method: 'GET' });
   const json = await res.json();
@@ -68,6 +69,30 @@ async function publishSnapshot(templateId: string, snapshotId: string) {
   const json = await res.json();
   if (!res.ok) throw new Error(json?.error || 'Publish failed');
   return json;
+}
+
+// Small util for safe JSON preview
+function preview(val: unknown, max = 160) {
+  try {
+    const s = typeof val === 'string' ? val : JSON.stringify(val);
+    return s.length > max ? s.slice(0, max) + '…' : s;
+  } catch {
+    return String(val);
+  }
+}
+
+// Highlight + scroll to a block in the preview
+function revealBlock(blockId: string) {
+  const esc = (globalThis as any).CSS?.escape ?? ((s: string) => s.replace(/"/g, '\\"'));
+  const sel = `[data-block-id="${esc(blockId)}"]`;
+  const el = document.querySelector<HTMLElement>(sel);
+  if (!el) return false;
+  el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  el.classList.add('ring-2', 'ring-red-500', 'ring-offset-2', 'ring-offset-zinc-900');
+  setTimeout(() => {
+    el.classList.remove('ring-2', 'ring-red-500', 'ring-offset-2', 'ring-offset-zinc-900');
+  }, 1400);
+  return true;
 }
 
 // -----------------------------
@@ -97,16 +122,9 @@ export default function TemplateEditor({
     try {
       if (!(template as any)?.id) return toast.error('Missing template id');
       setSaveAndPublishBusy(true);
-  
-      // 1) Save (commit)
-      await commitNow((template as any).id, (template as any).data);
-  
-      // 2) Snapshot
-      const sid = await createSnapshot((template as any).id);
-  
-      // 3) Publish
-      await publishSnapshot((template as any).id, sid);
-  
+      await commitNow((template as any).id, (template as any).data);            // save
+      const sid = await createSnapshot((template as any).id);                   // snapshot
+      await publishSnapshot((template as any).id, sid);                         // publish
       toast.success('Saved & Published!');
     } catch (e: any) {
       console.error('[save & publish] failed', e);
@@ -115,7 +133,7 @@ export default function TemplateEditor({
       setSaveAndPublishBusy(false);
     }
   };
-  
+
   const {
     template,
     setTemplate,
@@ -147,12 +165,12 @@ export default function TemplateEditor({
     }
   };
 
-  // ✅ EditorContent requires onChange — merge patches safely + let autosave run
+  /** ✅ EditorContent calls this when the user edits.
+   *  Update in-memory template ONLY — do **NOT** re-broadcast, or you’ll loop with the toolbar.
+   */
   const handleEditorPatch = (patch: Partial<Template>) => {
     setTemplateSynced((prev) => withSyncedPages({ ...prev, ...patch }));
-    // Emit only what the commit API needs (data + optional chrome if included)
-    const outgoing: Partial<Template> = { ...(patch.headerBlock ? { headerBlock: patch.headerBlock } : {}), ...(patch.footerBlock ? { footerBlock: patch.footerBlock } : {}), ...(patch.data ? { data: patch.data } : {}) };
-    if (Object.keys(outgoing).length) emitPatch(outgoing);
+    // IMPORTANT: do NOT emit here — toolbar is the single subscriber to apply-patch.
   };
 
   const { insertBlock } =
@@ -169,18 +187,156 @@ export default function TemplateEditor({
     selectedIndex !== null ? template.data?.pages?.[0]?.content_blocks?.[selectedIndex] : null;
   const selectedId = selectedBlock?._id ?? '';
 
-  const validationSummary = Object.entries(blockErrors).map(([blockId, errors]) => (
-    <div key={blockId} className="text-sm text-red-300 border-b border-zinc-700 pb-2 mb-2">
-      <strong className="text-red-400">Block {blockId}:</strong>
-      <ul className="list-disc list-inside">
-        {errors.map((e, i) => (
-          <li key={i}>
-            <code>{e.field}</code>: {e.message}
-          </li>
-        ))}
-      </ul>
-    </div>
-  ));
+  // 🔎 Build a quick lookup for block meta (type, page, index, page title/slug)
+  const blockMetaById = useMemo(() => {
+    const meta: Record<
+      string,
+      { type?: string; pageIndex: number; blockIndex: number; pageTitle?: string; slug?: string }
+    > = {};
+    const pages = getPages(template);
+    pages.forEach((p: any, pi: number) => {
+      const list = p?.content_blocks ?? p?.blocks ?? [];
+      list?.forEach((b: any, bi: number) => {
+        const id = b?._id ?? b?.id;
+        if (!id) return;
+        meta[id] = {
+          type: b?.type,
+          pageIndex: pi,
+          blockIndex: bi,
+          pageTitle: p?.title,
+          slug: p?.slug ?? p?.path,
+        };
+      });
+    });
+    return meta;
+  }, [template]);
+
+  // 📋 Console diagnostics for easier debugging
+  useEffect(() => {
+    const entries = Object.entries(blockErrors);
+    if (!entries.length) return;
+
+    const rows = entries.flatMap(([blockId, errs]) => {
+      const m = blockMetaById[blockId];
+      return errs.map((e) => ({
+        blockId,
+        type: m?.type ?? '(unknown)',
+        page: m ? `${m.pageIndex + 1}${m.slug ? ` (${m.slug})` : ''}` : '',
+        index: m?.blockIndex ?? '',
+        field: (e as any).field ?? '',
+        message: (e as any).message ?? '',
+        code: (e as any).code ?? '',
+        expected: (e as any).expected ?? '',
+        received: (e as any).received ?? '',
+      }));
+    });
+
+    // eslint-disable-next-line no-console
+    console.groupCollapsed('%cBlock validation errors', 'color:#ff8080');
+    // eslint-disable-next-line no-console
+    console.table(rows);
+    // eslint-disable-next-line no-console
+    console.groupEnd();
+  }, [blockErrors, blockMetaById]);
+
+  // 🧾 Render richer error summary with type + page context and extra fields
+  const validationSummary = Object.entries(blockErrors).map(([blockId, errors]) => {
+    const m = blockMetaById[blockId];
+    const label =
+      `Block ${m?.type ?? 'unknown'} `
+      + `(${blockId})`
+      + (m ? ` • page ${m.pageIndex + 1}${m.slug ? ` • ${m.slug}` : ''} • #${m.blockIndex + 1}` : '');
+
+    const onReveal = () => {
+      const ok = revealBlock(blockId);
+      if (ok && m && m.pageIndex === 0) {
+        setSelectedIndex(m.blockIndex);
+      }
+    };
+
+    const copyDetails = async () => {
+      try {
+        const payload = { blockId, meta: m, errors };
+        await navigator.clipboard?.writeText(JSON.stringify(payload, null, 2));
+        toast('Copied details', { icon: '📋' });
+      } catch {
+        // ignore
+      }
+    };
+
+    return (
+      <div key={blockId} className="text-sm text-red-300 border-b border-zinc-700 pb-2 mb-2">
+        <div className="flex items-center justify-between gap-2">
+          <strong className="text-red-200">{label}</strong>
+          <div className="flex items-center gap-2">
+            <Button size="sm" variant="ghost" onClick={onReveal} title="Reveal block">
+              Reveal
+            </Button>
+            <Button size="sm" variant="ghost" onClick={copyDetails} title="Copy details">
+              Copy
+            </Button>
+          </div>
+        </div>
+        <ul className="mt-1 space-y-1">
+          {errors.map((e, i) => {
+            const code = (e as any).code as string | undefined;
+            const hint = (e as any).hint as string | undefined;
+            const expected = (e as any).expected as unknown;
+            const received = (e as any).received as unknown;
+            const path =
+              (e as any).path && Array.isArray((e as any).path)
+                ? (e as any).path.join('.')
+                : undefined;
+
+            return (
+              <li key={i} className="pl-1">
+                <div className="flex flex-wrap items-baseline gap-2">
+                  <span className="text-red-100">{(e as any).message ?? 'Invalid'}</span>
+                  {(e as any).field && (
+                    <code className="px-1.5 py-0.5 rounded bg-red-950/40 border border-red-800/50 text-red-200 text-[11px]">
+                      {(e as any).field}
+                    </code>
+                  )}
+                  {path && (
+                    <code className="px-1.5 py-0.5 rounded bg-zinc-800/60 border border-zinc-700 text-zinc-200 text-[11px]">
+                      {path}
+                    </code>
+                  )}
+                  {code && (
+                    <span className="px-1.5 py-0.5 rounded bg-amber-900/30 border border-amber-700/40 text-amber-200 text-[11px]">
+                      {code}
+                    </span>
+                  )}
+                </div>
+
+                {(expected !== undefined || received !== undefined || hint) && (
+                  <div className="mt-1 ml-1 space-y-0.5 text-[12px] text-zinc-300">
+                    {expected !== undefined && (
+                      <div>
+                        <span className="text-zinc-400">expected:</span>{' '}
+                        <code className="text-zinc-200">{preview(expected)}</code>
+                      </div>
+                    )}
+                    {received !== undefined && (
+                      <div>
+                        <span className="text-zinc-400">received:</span>{' '}
+                        <code className="text-zinc-200">{preview(received)}</code>
+                      </div>
+                    )}
+                    {hint && (
+                      <div>
+                        <span className="text-zinc-400">hint:</span> {hint}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </li>
+            );
+          })}
+        </ul>
+      </div>
+    );
+  });
 
   const handleCleanSaveDraft = async () => {
     try {
@@ -208,7 +364,7 @@ export default function TemplateEditor({
           handleRename={handleRename as () => void}
           handleSaveDraft={handleCleanSaveDraft}
           onBack={() =>
-            router.push(initialMode === 'site' ? '/admin/sites' : '/admin/templates') as unknown as () => void
+            router.push(initialMode === 'site' ? '/admin/sites' : '/admin/templates/list') as unknown as () => void
           }
           nameExists={nameExists}
           setShowNameError={() => {}}
@@ -225,7 +381,7 @@ export default function TemplateEditor({
 
         <EditorContent
           template={withSyncedPages(template as Template)} // always feed synced shape
-          onChange={handleEditorPatch}
+          onChange={handleEditorPatch}                      // ← no emit here
           mode={initialMode}
           blockErrors={blockErrors as Record<string, BlockValidationError[]>}
           rawJson={rawJson}
@@ -250,7 +406,7 @@ export default function TemplateEditor({
                 }
                 return updated;
               });
-              // emit data-only patch so autosave can commit
+              // wrapper-originated change → emit data-only patch so toolbar persists
               const pages = getPages({ data: template.data });
               emitPatch({ data: { ...(template.data ?? {}), pages } as any });
             }}
@@ -306,11 +462,10 @@ export default function TemplateEditor({
                   }
                   return updated;
                 });
-                // commit autosave (data only)
+                // wrapper-originated change → emit data-only patch
                 const pages = getPages({ data: template.data });
                 emitPatch({ data: { ...(template.data ?? {}), pages } as any });
               } else {
-                // use your helper for insert and then emit a patch
                 insertBlock(pendingText);
                 const pages = getPages({ data: template.data });
                 emitPatch({ data: { ...(template.data ?? {}), pages } as any });

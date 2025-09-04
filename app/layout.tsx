@@ -3,6 +3,8 @@ export const dynamic = 'force-dynamic';
 export const preferredRegion = 'iad1';
 
 import '@/styles/globals.css';
+import '@/styles/qs-typography.css';
+
 import type { Database } from '@/types/supabase';
 import { cookies } from 'next/headers';
 import { createServerClient } from '@supabase/ssr';

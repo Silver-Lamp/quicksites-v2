@@ -48,11 +48,26 @@ export default function TemplatesIndexTable({
         if (archiveFilter === 'active') return !isArchived;
         return true; // 'all'
       })
-      .filter((t) => {
+      .filter((t: any) => {
         const term = search.toLowerCase();
+
+        const name = (t.template_name || '').toLowerCase();
+        const slug = (t.slug || '').toLowerCase();
+
+        // Pull industry & city from either top-level columns or JSON data.meta fallback
+        const industry =
+          (t.industry || t.data?.meta?.industry || '').toLowerCase();
+        const city =
+          (t.city ||
+            t.data?.meta?.city ||
+            t.data?.meta?.location?.city ||
+            '').toLowerCase();
+
         return (
-          (t.template_name || '').toLowerCase().includes(term) ||
-          (t.slug || '').toLowerCase().includes(term)
+          name.includes(term) ||
+          slug.includes(term) ||
+          industry.includes(term) ||
+          city.includes(term)
         );
       })
       .filter((t) => {
@@ -61,7 +76,6 @@ export default function TemplatesIndexTable({
         return true;
       });
   }, [templates, search, viewMode, archiveFilter, archivedIds]);
-
   // Reset the anchor if the filtered list changes
   useEffect(() => {
     setLastSelectedIndex(null);
@@ -167,6 +181,8 @@ export default function TemplatesIndexTable({
               <th className="p-2 text-right">Type</th>
               <th className="p-2">Published</th>
               <th className="p-2">Name</th>
+              <th className="p-2">Industry</th>
+              <th className="p-2">City</th>
               <th className="p-2">Phone</th>
               <th className="p-2">Updated</th>
               <th className="p-2">GSC</th>
@@ -176,6 +192,16 @@ export default function TemplatesIndexTable({
           <tbody>
             {filtered.map((t: any, index: number) => {
               const updated = t.effective_updated_at ?? t.updated_at;
+
+              // Resolve display values with graceful fallbacks
+              const displayIndustry =
+                t.industry ?? t.data?.meta?.industry ?? '—';
+              const displayCity =
+                t.city ??
+                t.data?.meta?.city ??
+                t.data?.meta?.location?.city ??
+                '—';
+
               return (
                 <tr
                   key={t.id}
@@ -253,6 +279,9 @@ export default function TemplatesIndexTable({
                     </Link>
                   </td>
 
+                  <td className="p-2 text-zinc-200">{displayIndustry}</td>
+                  <td className="p-2 text-zinc-400">{displayCity}</td>
+                  
                   <td className="p-2 text-zinc-400">
                     {t.phone && <div className="text-xs text-zinc-400">{t.phone}</div>}
                   </td>

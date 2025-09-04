@@ -1,3 +1,4 @@
+// components/admin/templates/block-editors/hours-editor.tsx
 'use client';
 
 import { useMemo, useState } from 'react';

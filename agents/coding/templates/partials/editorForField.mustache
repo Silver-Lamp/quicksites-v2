@@ -1,0 +1,28 @@
+{{#is type 'string'}}
+<Input value={c['{{name}}'] ?? ''} onChange={e => set('{{name}}', e.target.value)} />
+{{/is}}
+{{#is type 'text'}}
+<Textarea value={c['{{name}}'] ?? ''} onChange={e => set('{{name}}', e.target.value)} />
+{{/is}}
+{{#is type 'number'}}
+<Input type="number" value={c['{{name}}'] ?? ''} onChange={e => set('{{name}}', Number(e.target.value))} />
+{{/is}}
+{{#is type 'boolean'}}
+<div className="flex items-center gap-3"><Switch checked={!!c['{{name}}']} onCheckedChange={(v) => set('{{name}}', v)} /></div>
+{{/is}}
+{{#startsWith type 'url'}}
+<Input type="url" value={c['{{name}}'] ?? ''} onChange={e => set('{{name}}', e.target.value)} />
+{{/startsWith}}
+{{#is type 'color'}}
+<Input type="color" value={c['{{name}}'] ?? '#6366F1'} onChange={e => set('{{name}}', e.target.value)} />
+{{/is}}
+{{#startsWith type 'enum'}}
+<select className="qs-select" value={c['{{name}}'] ?? ''} onChange={e => set('{{name}}', e.target.value)}>
+<option value="">— Select —</option>
+{{#options}}<option value="{{.}}">{{.}}</option>{{/options}}
+</select>
+{{/startsWith}}
+{{#startsWith type 'array('}}
+{/* TODO: simple CSV editor for arrays */}
+<Input placeholder="Comma-separated" value={(c['{{name}}'] || []).join(', ')} onChange={e => set('{{name}}', e.target.value.split(/\s*,\s*/).filter(Boolean))} />
+{{/startsWith}}

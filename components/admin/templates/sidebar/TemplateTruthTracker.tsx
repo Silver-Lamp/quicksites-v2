@@ -9,7 +9,7 @@
 
 "use client";
 
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useState, useEffect } from "react"; // NEW: add useEffect
 import clsx from "clsx";
 import { motion } from "framer-motion";
 
@@ -63,6 +63,25 @@ import {
 
 import { diffBlocks, type BlockDiff } from "@/lib/diff/blocks"; // ⬅️ modular diff
 import CollapsiblePanel from "@/components/ui/collapsible-panel";
+
+/* ====================== NEW: de-dupe helpers ====================== */
+function eventKey(e: TemplateEvent) {
+    // ignore time; collapse identical actions at same rev with same diff/fields
+    const rev = e.revAfter ?? e.revBefore ?? "";
+    return JSON.stringify([e.type, rev, e.fieldsTouched ?? [], e.diff ?? {}, (e.meta as any)?.k ?? ""]);
+  }
+  function dedupeEvents(list: TemplateEvent[]) {
+    const seen = new Set<string>();
+    const out: TemplateEvent[] = [];
+    for (const e of list ?? []) {
+      const k = eventKey(e);
+      if (seen.has(k)) continue;
+      seen.add(k);
+      out.push(e);
+    }
+    return out;
+  }
+  /* ====================== END: de-dupe helpers ====================== */
 
 /** Types **/
 
@@ -480,7 +499,7 @@ function InfoDropdown({
   );
 }
 
-function InfraMap({
+export function InfraMap({
   draft,
   latestSnapshot,
   publishedSnapshotId,
@@ -966,6 +985,32 @@ export default function TemplateTruthTracker({
     
     const [infoOpen, setInfoOpen] = useState(false);
     
+    /* ---------------- NEW: lazy load + de-dupe timeline --------------- */
+    const [timelineOpen, setTimelineOpen] = useState(false);
+    const [lazyEvents, setLazyEvents] = useState<TemplateEvent[] | null>(null);
+
+    // If parent didn't pass events (or passed empty), fetch once on first open
+    useEffect(() => {
+    if (!timelineOpen) return;
+    if ((events && events.length > 0) || lazyEvents) return;
+    (async () => {
+        try {
+        const res = await fetch(`/api/templates/${templateId}/history`, { cache: "no-store" });
+        const data: TemplateEvent[] = await res.json();
+        setLazyEvents(Array.isArray(data) ? data : []);
+        } catch {
+        setLazyEvents([]);
+        }
+    })();
+    }, [timelineOpen, events, lazyEvents, templateId]);
+
+    const effectiveEvents = useMemo(
+    () => dedupeEvents((lazyEvents ?? events) ?? []),
+    [lazyEvents, events]
+    );
+    /* ------------------------------------------------------------------ */
+
+
     const deprecatedFiles = adminMeta?.deprecated_files ?? [];
     const deprecatedCount = deprecatedFiles.length;
     
@@ -1027,75 +1072,105 @@ export default function TemplateTruthTracker({
     
     return (
         <TooltipProvider>
-        <div className={clsx("flex h-full flex-col gap-3 p-2", className)}>
+          <div className={clsx("flex h-full flex-col gap-3 p-2", className)}>
             {/* Header / State chip */}
             <StateHeader
-            rev={infra.template.rev}
-            hash={infra.template.hash}
-            isPublishedFromDraft={publishedId === undefined}
-            onRefresh={onRefresh}
-            info={info}
-            templateId={templateId}
-            infoOpen={infoOpen}
-            setInfoOpen={setInfoOpen}
+              rev={infra.template.rev}
+              hash={infra.template.hash}
+              isPublishedFromDraft={publishedId === undefined}
+              onRefresh={onRefresh}
+              info={info}
+              templateId={templateId}
+              infoOpen={infoOpen}
+              setInfoOpen={setInfoOpen}
             />
     
             {deprecatedCount > 0 && (
-            <DeprecatedBanner count={deprecatedCount} onReview={() => setInfoOpen(true)} />
+              <DeprecatedBanner count={deprecatedCount} onReview={() => setInfoOpen(true)} />
             )}
-        
-            {/* Timeline */}
-            <CollapsiblePanel id="timeline" title="Timeline" defaultOpen={false}>
-                <Card className="flex h-full min-h-40 flex-col border-neutral-200">
-                <CardHeader className="py-3">
-                    <CardTitle className="text-sm">History</CardTitle>
-                </CardHeader>
-                <CardContent className="h-full p-0">
-                    <ScrollArea className="h-[42vh] w-full">
-                    <ul className="relative mx-3 my-2">
-                        {/* vertical line */}
-                        <div className="absolute left-4 top-0 h-full w-px bg-border" />
-                        {events.length === 0 && (
-                        <li className="px-3 py-2 text-xs text-muted-foreground">No events yet.</li>
-                        )}
-                        {events.map((evt, idx) => (
-                        <TimelineItem
-                            key={evt.id}
-                            evt={evt}
-                            prevEvt={events[idx + 1]}   // ⬅️ pass previous event (older)
-                            isFirst={idx === 0}
-                            onViewDiff={onViewDiff}
-                        />
-                        ))}
-                    </ul>
-                    </ScrollArea>
-                </CardContent>
-                </Card>            
-            </CollapsiblePanel>
     
-                {/* Infra Map */}
-                <CollapsiblePanel id="infra-map" title="Infra Map" defaultOpen={false}>
-                <InfraMap
-                draft={{ rev: infra.template.rev, hash: infra.template.hash }}
-                latestSnapshot={
-                    infra.lastSnapshot ?? {
-                    id: latestSnapshot?.id,
-                    rev: latestSnapshot?.rev,
-                    hash: latestSnapshot?.hash,
-                    createdAt: latestSnapshot?.createdAt,
-                    }
-                }
-                publishedSnapshotId={publishedId}
-                siteSlug={infra.site?.slug}
-                cacheInfo={infra.cache}
-                />
+            {/* ================= Timeline (collapsed + lazy) ================= */}
+            <CollapsiblePanel
+              id="timeline"
+              title="Timeline"
+              defaultOpen={false}
+              lazyMount  // <-- don’t mount until opened
+              onOpenChange={setTimelineOpen}
+            >
+              {({ open }) => (
+                !open ? null : (
+                  <Card className="flex h-full min-h-40 flex-col border-neutral-200">
+                    <CardHeader className="py-3">
+                      <CardTitle className="text-sm">History</CardTitle>
+                    </CardHeader>
+                    <CardContent className="h-full p-0">
+                      <ScrollArea className="h-[42vh] w-full">
+                        <ul className="relative mx-3 my-2">
+                          {/* vertical line */}
+                          <div className="absolute left-4 top-0 h-full w-px bg-border" />
+                          {effectiveEvents.length === 0 && (
+                            <li className="px-3 py-2 text-xs text-muted-foreground">
+                              {lazyEvents === null && (!events || events.length === 0)
+                                ? "Open to load history…"
+                                : "No events yet."}
+                            </li>
+                          )}
+                          {effectiveEvents.map((evt, idx) => (
+                            <TimelineItem
+                              key={evt.id ?? `${evt.type}-${idx}`}
+                              evt={evt}
+                              prevEvt={effectiveEvents[idx + 1]} // pass previous (older) after de-dupe
+                              isFirst={idx === 0}
+                              onViewDiff={onViewDiff}
+                            />
+                          ))}
+                        </ul>
+                      </ScrollArea>
+                    </CardContent>
+                  </Card>
+                )
+              )}
             </CollapsiblePanel>
-
-            {/* Snapshot Picker + Actions */}
-            <CollapsiblePanel id="snapshot-picker" title="Snapshot Picker + Actions" defaultOpen={false}>   
-                <Card className="border-neutral-200">
+            {/* =============================================================== */}
+    
+            {/* ============== Infra Map (collapsed + lazy-mount) ============= */}
+            <CollapsiblePanel
+              id="infra-map"
+              title="Infra Map"
+              defaultOpen={false}
+              lazyMount
+            >
+              {({ open }) =>
+                !open ? null : (
+                  <InfraMap
+                    draft={{ rev: infra.template.rev, hash: infra.template.hash }}
+                    latestSnapshot={
+                      infra.lastSnapshot ?? {
+                        id: latestSnapshot?.id,
+                        rev: latestSnapshot?.rev,
+                        hash: latestSnapshot?.hash,
+                        createdAt: latestSnapshot?.createdAt,
+                      }
+                    }
+                    publishedSnapshotId={publishedId}
+                    siteSlug={infra.site?.slug}
+                    cacheInfo={infra.cache}
+                  />
+                )
+              }
+            </CollapsiblePanel>
+            {/* =============================================================== */}
+    
+            {/* Snapshot Picker + Actions (leave as-is, optionally lazy too) */}
+            <CollapsiblePanel
+              id="snapshot-picker"
+              title="Snapshot Picker + Actions"
+              defaultOpen={false}
+              lazyMount
+            >
+              <Card className="border-neutral-200">
                 <CardHeader className="py-3">
-                    <CardTitle className="text-sm">Snapshots & Actions</CardTitle>
+                  <CardTitle className="text-sm">Snapshots & Actions</CardTitle>
                 </CardHeader>
                 <CardContent className="flex flex-col gap-2">
                     <div className="flex items-center gap-2">

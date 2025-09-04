@@ -1,0 +1,10 @@
+{{! maps Field → zod schema }}
+{{#is type 'string'}}z.string(){{/is}}
+{{#is type 'text'}}z.string().min(0){{/is}}
+{{#is type 'number'}}z.number(){{/is}}
+{{#is type 'boolean'}}z.boolean(){{/is}}
+{{#startsWith type 'url'}}z.string().url(){{/startsWith}}
+{{#is type 'color'}}z.string().regex(/^#([0-9a-fA-F]{3}){1,2}$/){{/is}}
+{{#startsWith type 'enum'}}z.enum([{{#options}}'{{.}}', {{/options}}]){{/startsWith}}
+{{#startsWith type 'array('}}z.array({{innerType}}){{/startsWith}}
+{{#is type 'object'}}z.record(z.any()){{/is}}

@@ -1,4 +1,3 @@
-// components/editor/live-editor/LiveEditorPreviewFrame.tsx
 'use client';
 
 import * as React from 'react';
@@ -33,7 +32,7 @@ type Props = {
   onRequestEditBlock?: (blockId: string) => void;
   /** Add block after a specific block id (or special "__ADD_AT_START__") */
   onRequestAddAfter?: (blockId: string) => void;
-  /** NEW: Delete a block by id */
+  /** Delete a block by id */
   onRequestDeleteBlock?: (blockId: string) => void;
 
   className?: string;
@@ -72,13 +71,13 @@ export default function LiveEditorPreviewFrame({
   onEditHeader,
   onRequestEditBlock,
   onRequestAddAfter,
-  onRequestDeleteBlock, // NEW
+  onRequestDeleteBlock,
   previewVersionId,
   pageSlug,
   className,
   style,
   reloadOnSave = false,
-  preferInlinePreview = false, // NEW
+  preferInlinePreview = false,
 }: Props) {
   const iframeRef = React.useRef<HTMLIFrameElement | null>(null);
   const [loaded, setLoaded] = React.useState(false);
@@ -117,25 +116,54 @@ export default function LiveEditorPreviewFrame({
     undefined; // desktop full
 
   /* ---------------- Decide whether to inline or iframe ---------------- */
-  const firstPage = React.useMemo(() => getFirstRenderablePage(template), [template]);
-  const hasBlocks = React.useMemo(() => !!firstPage && pageBlocks(firstPage).length > 0, [firstPage]);
-
-  // Auto-fallback for new templates: not a site and no saved preview version yet.
   const preferInlineAuto = !template?.is_site && !previewVersionId;
   const useInline = preferInlinePreview || preferInlineAuto;
+
+  /* ---------------- Local slug (follows prop + listens to events) ---------------- */
+  const [localSlug, setLocalSlug] = React.useState<string | null>(pageSlug ?? null);
+  React.useEffect(() => setLocalSlug(pageSlug ?? null), [pageSlug]);
+
+  React.useEffect(() => {
+    const onSelect = (e: Event) => {
+      const slug = (e as CustomEvent).detail?.slug as string | undefined;
+      if (slug) setLocalSlug(slug);
+    };
+    window.addEventListener('qs:page:select', onSelect as any);
+    return () => window.removeEventListener('qs:page:select', onSelect as any);
+  }, []);
+
+  const slugForView = localSlug ?? pageSlug ?? null;
+
+  /* ---------------- Page selection for inline mode ---------------- */
+  const selectedPage = React.useMemo(() => {
+    const pages = getPages(template);
+    if (!Array.isArray(pages) || pages.length === 0) return null;
+    if (slugForView) {
+      const found =
+        pages.find((p: any) => p.slug === slugForView) ||
+        pages.find((p: any) => p.path === `/${slugForView}`);
+      if (found) return found;
+    }
+    return getFirstRenderablePage(template);
+  }, [template, slugForView]);
+
+  const inlineBlocks = React.useMemo(
+    () => (selectedPage ? pageBlocks(selectedPage) : []),
+    [selectedPage]
+  );
 
   /* ---------------- Build a STABLE iframe src (identifiers only) ---------------- */
   const buildSrc = React.useCallback(() => {
     const qs = new URLSearchParams();
     if (previewVersionId) qs.set('preview_version_id', previewVersionId);
-    if (pageSlug) qs.set('page', pageSlug);
+    if (slugForView) qs.set('page', slugForView);
     if (templateId) qs.set('template_id', String(templateId));
     if (mode) qs.set('mode', String(mode));
     qs.set('editor', '1');
 
-    const path = pageSlug ? `/preview/${encodeURIComponent(pageSlug)}` : `/preview`;
+    const path = slugForView ? `/preview/${encodeURIComponent(slugForView)}` : `/preview`;
     return qs.toString() ? `${path}?${qs.toString()}` : path;
-  }, [previewVersionId, pageSlug, templateId, mode]);
+  }, [previewVersionId, slugForView, templateId, mode]);
 
   const [stableSrc, setStableSrc] = React.useState<string>(() => buildSrc());
 
@@ -157,7 +185,7 @@ export default function LiveEditorPreviewFrame({
           type: 'preview:init',
           template,
           mode,
-          pageSlug: pageSlug ?? null,
+          pageSlug: slugForView ?? null,
           templateId: templateId ?? null,
           rawJson: rawJson ?? null,
           industry: industry ?? null,
@@ -172,7 +200,7 @@ export default function LiveEditorPreviewFrame({
       })();
       iframe.contentWindow.postMessage({ type: 'preview:set-color-mode', mode: stored }, '*');
     } catch {}
-  }, [template, mode, pageSlug, templateId, rawJson, industry, useInline]);
+  }, [template, mode, slugForView, templateId, rawJson, industry, useInline]);
 
   // Init after the iframe finishes loading
   React.useEffect(() => { if (!useInline && loaded) postInit(); }, [loaded, postInit, useInline]);
@@ -233,9 +261,6 @@ export default function LiveEditorPreviewFrame({
     return 0;
   }, [errors]);
 
-  /* ---------------- Inline content blocks ---------------- */
-  const inlineBlocks = React.useMemo(() => (firstPage ? pageBlocks(firstPage) : []), [firstPage]);
-
   function blockIdOf(b: any, fallback: string) {
     return String(b?._id || b?.id || fallback);
   }
@@ -270,7 +295,7 @@ export default function LiveEditorPreviewFrame({
               <button
                 type="button"
                 onClick={onEditHeader}
-                className="rounded-md bg-white/90 px-2 py-1 text-xs font-medium text-gray-900 shadow hover:bg-white dark:bg-white/10 dark:text-white dark:hover:bg-white/20"
+                className="rounded-md bg-white/90 px-2 py-1 text-xs font-medium text-gray-900 shadow hover:bg-white dark:bg白/10 dark:text-white dark:hover:bg-white/20"
               >
                 Edit Global Header, Logo and Favicon
               </button>
@@ -292,11 +317,8 @@ export default function LiveEditorPreviewFrame({
                   <div className="text-sm text-neutral-400">This page is empty.</div>
                   <button
                     type="button"
-                    className="rounded-md border border-white/15 bg-white/5 px-3 py-1.5 text-sm hover:bg-white/10"
-                    onClick={() => {
-                      // add the first block to the first page
-                      onRequestAddAfter?.('__ADD_AT_START__'); // EditorContent will treat this specially
-                    }}
+                    className="rounded-md border border-white/15 bg-white/5 px-3 py-1.5 text-sm hover:bg白/10"
+                    onClick={() => onRequestAddAfter?.('__ADD_AT_START__')}
                   >
                     + Add your first block
                   </button>
@@ -304,9 +326,6 @@ export default function LiveEditorPreviewFrame({
               ) : (
                 inlineBlocks.map((b: any, i: number) => {
                   const id = blockIdOf(b, `0:${i}`);
-
-                  // Clicking anywhere in the block opens its editor. We also block default
-                  // navigation on <a>, <button>, etc. so the click goes to the editor.
                   const onAnyClick: React.MouseEventHandler = (e) => {
                     const t = e.target as HTMLElement | null;
                     if (!t) return;
@@ -314,10 +333,8 @@ export default function LiveEditorPreviewFrame({
                     e.stopPropagation();
                     onRequestEditBlock?.(id);
                   };
-
                   return (
                     <div key={id} className="group relative rounded-lg ring-1 ring-white/5 hover:ring-white/15">
-                      {/* hover chrome (centered tiny toolbar) */}
                       <div className="pointer-events-none absolute -top-3 left-0 right-0 z-10 hidden justify-center gap-2 group-hover:flex">
                         <button
                           type="button"
@@ -339,7 +356,6 @@ export default function LiveEditorPreviewFrame({
                         </button>
                       </div>
 
-                      {/* top-right quick Edit button (kept) */}
                       <button
                         type="button"
                         className="absolute right-2 top-2 z-10 hidden rounded-md border border-white/20 bg-black/60 px-2 py-0.5 text-xs text-white hover:bg-black/80 group-hover:block"
@@ -348,16 +364,14 @@ export default function LiveEditorPreviewFrame({
                         Edit
                       </button>
 
-                      {/* block content */}
                       <div onClickCapture={onAnyClick}>
                         <RenderBlock block={b} previewOnly template={template} />
                       </div>
 
-                      {/* add-below affordance */}
                       <div className="mt-2 flex justify-center">
                         <button
                           type="button"
-                          className="invisible group-hover:visible rounded-md border border-white/15 bg-white/5 px-2 py-1 text-xs hover:bg-white/10"
+                          className="invisible group-hover:visible rounded-md border border-white/15 bg白/5 px-2 py-1 text-xs hover:bg白/10"
                           onClick={(e) => { e.stopPropagation(); onRequestAddAfter?.(id); }}
                         >
                           + Add block below
@@ -373,7 +387,7 @@ export default function LiveEditorPreviewFrame({
           <iframe
             ref={iframeRef}
             src={stableSrc}
-            className="h-[70vh] w-full rounded-lg border border-black/10 bg-white dark:border-white/10 dark:bg-black"
+            className="h-[70vh] w-full rounded-lg border border黑/10 bg-white dark:border白/10 dark:bg-black"
             style={{ minHeight: 600 }}
             onLoad={() => setLoaded(true)}
             loading="eager"
@@ -383,7 +397,7 @@ export default function LiveEditorPreviewFrame({
       </div>
 
       {!useInline && !loaded && (
-        <div className="absolute inset-0 z-10 flex items-center justify-center rounded-lg bg-black/5 dark:bg-white/5">
+        <div className="absolute inset-0 z-10 flex items-center justify-center rounded-lg bg黑/5 dark:bg白/5">
           <div className="animate-pulse text-sm text-gray-600 dark:text-gray-300">Loading preview…</div>
         </div>
       )}

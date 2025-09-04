@@ -1,0 +1,26 @@
+/* styles/qs-typography.css */
+:root {
+    --qs-fs-h1: clamp(32px, 5vw, 60px);
+    --qs-fs-sub: clamp(16px, 2.2vw, 22px);
+    --qs-lh-tight: 1.15;
+    --qs-lh-normal: 1.4;
+    --qs-track-tight: -0.01em;
+    }
+    
+    
+    /* Headline (H1) */
+    .qs-h1 { font-size: var(--qs-fs-h1); line-height: var(--qs-lh-tight); font-weight: 800; letter-spacing: var(--qs-track-tight); }
+    
+    
+    /* Subheadline */
+    .qs-subhead { font-size: var(--qs-fs-sub); line-height: var(--qs-lh-normal); }
+    
+    
+    /* CTA text sizing helper (leave button colors to Tailwind) */
+    .qs-cta { font-size: 16px; font-weight: 700; }
+    
+    
+    /* Focus ring utilities (hover + focus-visible) */
+    .qs-focusable { position: relative; outline: none; }
+    .dark .qs-focusable:hover, .dark .qs-focusable:focus-visible { box-shadow: 0 0 0 2px rgba(255,255,255,.35); border-radius: 12px; }
+    :not(.dark) .qs-focusable:hover, :not(.dark) .qs-focusable:focus-visible { box-shadow: 0 0 0 2px rgba(15,23,42,.35); border-radius: 12px; }

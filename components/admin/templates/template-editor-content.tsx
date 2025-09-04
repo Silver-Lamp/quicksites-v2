@@ -19,7 +19,7 @@ import type { BlockValidationError } from '@/hooks/validateTemplateBlocks';
 import { createDefaultBlock } from '@/lib/createDefaultBlock';
 import { DynamicBlockEditor } from '@/components/editor/dynamic-block-editor';
 import LiveEditorPreviewFrame from '@/components/editor/live-editor/LiveEditorPreviewFrame';
-import { Settings as SettingsIcon } from 'lucide-react';
+// import { Settings as SettingsIcon } from 'lucide-react';
 import BlockAdderGrouped from '@/components/admin/block-adder-grouped';
 import PageHeaderEditor from '@/components/admin/templates/block-editors/header-editor';
 import { TemplateActionToolbar } from '@/components/admin/templates/template-action-toolbar';
@@ -27,6 +27,7 @@ import PageSettingsModal from '@/components/admin/templates/page-settings-modal'
 import { useTruthTrackerState } from './hooks/useTruthTrackerState';
 import TemplateTruthTracker from './sidebar/TemplateTruthTracker';
 import NewTemplateWelcome from '@/components/admin/templates/NewTemplateWelcome';
+import CollapsiblePanel from '@/components/ui/collapsible-panel';
 
 // ✅ centralized block ops
 import {
@@ -503,12 +504,26 @@ export default function EditorContent({
   }
 
   function openAdder(blockId?: string | null, blockPath?: string | null) {
+    // Special case: empty page CTA from LiveEditorPreviewFrame
+    if (blockId === '__ADD_AT_START__') {
+      // Use current page if possible; otherwise the first renderable page
+      const pages = getTemplatePages(template);
+      let pageIdx = pages.findIndex((p: any) => p?.slug === currentPageSlug);
+      if (pageIdx < 0) pageIdx = 0; // safe fallback
+  
+      // Insert at the very beginning of the page
+      setAdderTarget({ pageIdx, insertAt: 0 });
+      return;
+    }
+  
+    // Existing behavior: add below an existing block
     const byPath = findBlockByPath(template, blockPath ?? null);
     const byId = blockId ? findBlockById(template, blockId) : null;
     const ref = byPath ?? byId;
     if (!ref) return;
     setAdderTarget({ pageIdx: ref.pageIdx, insertAt: ref.blockIdx + 1 });
   }
+  
 
   function handleInsertBlockAt(
     pageIdx: number,
@@ -789,43 +804,6 @@ export default function EditorContent({
   return (
     <div className="flex min-w-0">
       {showWelcome && <NewTemplateWelcome onStart={dismissWelcome} />}
-      
-      {/* Left settings */}
-      <aside
-        className={[
-          'fixed z-[1100] inset-y-0 left-0 w-[300px] bg-neutral-950 border-r border-white/10',
-          'transform transition-transform duration-200 ease-out',
-          showSettings ? 'translate-x-0' : '-translate-x-full',
-        ].join(' ')}
-      >
-        <div className="h-full overflow-auto">
-          {SidebarSettings ? (
-            <SidebarSettings
-              template={template}
-              onChange={(p: any) => onChange(p)}
-            />
-          ) : (
-            <div className="p-4 text-sm text-white/70">Loading settings…</div>
-          )}
-        </div>
-        <div className="absolute bottom-2 left-1/2 -translate-x-1/2 text-[10px] text-white/40">
-          Press <kbd className="px-1 py-0.5 bg白/10 rounded">S</kbd> to toggle
-        </div>
-        <button
-          className="fixed bottom-4 left-4 z-[1400] rounded-full p-2 border border-white/10 bg-zinc-900/90 text-white/85 shadow-lg hover:bg-zinc-800"
-          onClick={() => setShowSettings((prev) => !prev)}
-          title={`${showSettings ? 'Hide' : 'Show'} settings (S)`}
-        >
-          <SettingsIcon size={18} />
-        </button>
-        <button
-          className="xl:hidden absolute top-2 right-2 text-white/70 hover:text-white"
-          onClick={() => setShowSettings(false)}
-          aria-label="Close"
-        >
-          ✕
-        </button>
-      </aside>
 
       {/* Right: header editor panel + preview */}
       <div className="flex-1 min-w-0 xl:ml-0 ml-0 px-0 lg:px-2">
@@ -969,7 +947,54 @@ export default function EditorContent({
         </div>
       )}
 
-      {template.id && <TruthTrackerPanel templateId={template.id} />}
+    {template.id && (
+    <>
+      <div className="mt-3">
+        <CollapsiblePanel
+          id="truth-tracker"
+          key={`truth-tracker-${true ? 'open' : 'closed'}`}
+          title={
+            <span className="flex items-center gap-2">
+              <span>History</span>
+              {/* <span className="text-[10px] text-white/40">(press <kbd className="px-1 py-0.5 rounded bg-white/10">S</kbd> to toggle)</span> */}
+            </span>
+          }
+          defaultOpen={false}
+          lazyMount
+          onOpenChange={() => {}}
+       >
+        {({ open }) => (
+          !open ? null : (
+        <TruthTrackerPanel templateId={template.id} />
+          )
+        )}
+       </CollapsiblePanel>
+        <CollapsiblePanel
+          id="editor-settings"
+          /* key forces the panel to re-init with defaultOpen on S toggle */
+          key={`settings-${showSettings ? 'open' : 'closed'}`}
+          title={
+            <span className="flex items-center gap-2">
+              <span>Template Settings</span>
+              <span className="text-[10px] text-white/40">(press <kbd className="px-1 py-0.5 rounded bg-white/10">S</kbd> to toggle)</span>
+            </span>
+          }
+          defaultOpen={showSettings}
+          lazyMount
+          onOpenChange={setShowSettings}
+       >
+         {SidebarSettings ? (
+           <SidebarSettings
+             template={template}
+             onChange={(p: any) => onChange(p)}
+             />
+           ) : (
+             <div className="p-4 text-sm text-white/70">Loading settings…</div>
+           )}
+         </CollapsiblePanel>
+         </div>
+       </>
+    )}
 
       {/* Bottom toolbar */}
       <TemplateActionToolbar

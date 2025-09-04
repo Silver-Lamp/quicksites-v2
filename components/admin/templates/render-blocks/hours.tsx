@@ -1,3 +1,4 @@
+// components/admin/templates/render-blocks/hours.tsx
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';

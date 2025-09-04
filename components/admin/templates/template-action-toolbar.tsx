@@ -26,6 +26,7 @@ import { loadVersionRow } from '@/admin/lib/templateSnapshots';
 import PageManagerToolbar from '@/components/admin/templates/page-manager-toolbar';
 import { useTemplateRef } from '@/hooks/usePersistTemplate';
 import { useCommitApi } from './hooks/useCommitApi';
+import { resolveIndustryKey } from '@/lib/industries';
 
 import {
   dispatchTemplateCacheInvalidate,
@@ -33,6 +34,8 @@ import {
   readTemplateCache,
   type TemplateCacheRow,
 } from '@/lib/templateCache';
+import { heroLog, heroDbgOn, pickHeroSnapshots } from '@/lib/debug/hero';
+
 
 /* ---------- local helpers ---------- */
 function getTemplatePagesLoose(t: Template): any[] {
@@ -41,19 +44,23 @@ function getTemplatePagesLoose(t: Template): any[] {
   if (Array.isArray(d?.pages)) return d.pages;
   return [];
 }
+
 function withPages(t: Template, pages: any[]): Template {
   const anyT: any = t ?? {};
   if (Array.isArray(anyT?.data?.pages)) return { ...anyT, data: { ...anyT.data, pages } } as Template;
   return { ...anyT, pages } as Template;
 }
+
 function pretty(next: Template) {
   try { return JSON.stringify(next?.data ?? next, null, 2); }
   catch { return JSON.stringify(next, null, 2); }
 }
+
 function baseSlug(slug?: string | null) {
   if (!slug) return '';
   return slug.replace(/(-[a-z0-9]{2,12})+$/i, '');
 }
+
 function toCacheRow(t: any): TemplateCacheRow {
   return {
     id: t?.id,
@@ -67,6 +74,145 @@ function toCacheRow(t: any): TemplateCacheRow {
   };
 }
 
+function normalizePageBlocksShape(pages: any[]): any[] {
+  const isStr = (v: any) => typeof v === 'string' && v.trim().length > 0;
+
+  const getCanon = (b: any) => ({
+    heading: b?.props?.heading ?? b?.content?.headline ?? '',
+    subheading: b?.props?.subheading ?? b?.content?.subheadline ?? '',
+    cta: b?.props?.ctaLabel ?? b?.content?.cta_text ?? '',
+  });
+
+  const isDefaultHeading = (s: string) =>
+    !isStr(s) || /^welcome to your new site$/i.test(s.trim());
+
+  const heroScore = (b: any) => {
+    if (!b || b.type !== 'hero') return 0;
+    const c = getCanon(b);
+    let s = 0;
+    if (!isDefaultHeading(c.heading)) s += 3;
+    if (isStr(c.subheading)) s += 1;
+    if (isStr(c.cta)) s += 1;
+    // prefer blocks that already carry both shapes
+    if (b?.props && b?.content) s += 1;
+    return s;
+  };
+
+  // Ensure both props/content carry same canonical values
+  const unifyHero = (b: any) => {
+    if (!b || b.type !== 'hero') return b;
+    const out: any = { ...b, props: { ...(b.props ?? {}) }, content: { ...(b.content ?? {}) } };
+
+    const heading     = out.props.heading     ?? out.content.headline;
+    const subheading  = out.props.subheading  ?? out.content.subheadline;
+    const ctaLabel    = out.props.ctaLabel    ?? out.content.cta_text;
+
+    // derive ctaHref from content.* when needed
+    let ctaHref = out.props.ctaHref;
+    if (!ctaHref) {
+      const act = out.content.cta_action ?? 'go_to_page';
+      if (act === 'go_to_page') ctaHref = out.content.cta_link || '/contact';
+      else if (act === 'jump_to_contact') ctaHref = `#${String(out.content.contact_anchor_id || 'contact').replace(/^#/, '')}`;
+      else if (act === 'call_phone') ctaHref = `tel:${(out.content.cta_phone || '').replace(/\D/g, '')}`;
+      else ctaHref = '/contact';
+    }
+
+    const heroImage   = out.props.heroImage   ?? out.content.image_url;
+    const blur        = (typeof out.props.blur_amount === 'number' ? out.props.blur_amount : out.content.blur_amount) ?? 0;
+    const pos         = out.props.image_position ?? out.content.image_position ?? 'center';
+    const layout      = out.props.layout_mode ?? out.content.layout_mode ?? 'inline';
+
+    out.props = {
+      ...out.props,
+      heading, subheading, ctaLabel, ctaHref,
+      heroImage,
+      blur_amount: blur,
+      image_position: pos,
+      layout_mode: layout,
+    };
+
+    out.content = {
+      ...out.content,
+      headline: heading,
+      subheadline: subheading,
+      cta_text: ctaLabel,
+      // keep whatever action fields were present (we won't invent them here)
+      image_url: heroImage,
+      blur_amount: blur,
+      image_position: pos,
+      layout_mode: layout,
+    };
+
+    return out;
+  };
+
+  // choose "winner" between two variants of the same block
+  const chooseById = (a: any, b: any) => {
+    if (!a) return b;
+    if (!b) return a;
+    if (a.type === 'hero' || b.type === 'hero') {
+      const sa = heroScore(a), sb = heroScore(b);
+      if (sa !== sb) return sa > sb ? a : b;
+    }
+    return b; // later source wins by default
+  };
+
+  return (pages || []).map((p: any) => {
+    // Gather all shapes
+    const all: any[] = [
+      ...(Array.isArray(p?.blocks) ? p.blocks : []),
+      ...(Array.isArray(p?.content_blocks) ? p.content_blocks : []),
+      ...(Array.isArray(p?.content?.blocks) ? p.content.blocks : []),
+    ];
+    if (all.length === 0) return p;
+
+    // 1) Collapse non-hero by ID
+    const byId = new Map<string, any>();
+    for (const b of all) {
+      if (!b) continue;
+      const id = String(b?._id ?? b?.id ?? '');
+      if (!id) continue;
+      const cur = byId.get(id);
+      byId.set(id, chooseById(cur, b));
+    }
+    let keep: any[] = Array.from(byId.values());
+
+    // 2) Collapse hero across *different IDs*: keep only the best single hero
+    const heroIdxs: number[] = [];
+    let heroWinner: any = null;
+    let bestScore = -1;
+    let earliest = Infinity;
+    all.forEach((b, idx) => {
+      if (b?.type === 'hero') {
+        heroIdxs.push(idx);
+        const s = heroScore(b);
+        if (s > bestScore) { bestScore = s; heroWinner = b; }
+        if (idx < earliest) earliest = idx;
+      }
+    });
+
+    if (heroWinner) {
+      // Remove all existing heros from 'keep'
+      keep = keep.filter((b) => b?.type !== 'hero');
+      // Put unified winner back at the earliest hero position (best approximation)
+      const unifiedHero = unifyHero(heroWinner);
+      const insertAt = Math.min(earliest, keep.length);
+      keep.splice(insertAt, 0, unifiedHero);
+    }
+
+    // 3) Unify canonical fields for any hero left (guards against missed paths)
+    keep = keep.map((b) => (b?.type === 'hero' ? unifyHero(b) : b));
+
+    // 4) Mirror to all shapes
+    const next: any = { ...p };
+    next.blocks = keep;
+    if (Array.isArray(p?.content_blocks)) next.content_blocks = keep;
+    if (p?.content && typeof p.content === 'object') next.content = { ...p.content, blocks: keep };
+    return next;
+  });
+}
+
+
 /* ---------- debounced helper ---------- */
 function useDebounced<T extends (...args: any[]) => void>(fn: T, delay = 350) {
   const tRef = useRef<any>(null);
@@ -75,6 +221,45 @@ function useDebounced<T extends (...args: any[]) => void>(fn: T, delay = 350) {
     if (tRef.current) clearTimeout(tRef.current);
     tRef.current = setTimeout(() => fn(...args), delay);
   }, [fn, delay]);
+}
+
+// --- helper: conflict-tolerant commit (one-shot rebase) ---
+async function commitWithRebase({
+  id,
+  baseRev,
+  patch,
+  kind = 'save' as 'save' | 'autosave',
+}: {
+  id: string;
+  baseRev: number;
+  patch: Record<string, any>;
+  kind?: 'save' | 'autosave';
+}) {
+  const send = async (rev: number) => {
+    const res = await fetch('/api/templates/commit', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ id, baseRev: rev, patch, kind }),
+    });
+    if (res.status === 409) {
+      const j = await res.json().catch(() => ({}));
+      const latest = typeof j?.rev === 'number' ? j.rev : rev;
+      return { conflict: true as const, latest };
+    }
+    if (!res.ok) {
+      const j = await res.json().catch(() => ({}));
+      throw new Error(j?.error || `commit failed (${res.status})`);
+    }
+    return { conflict: false as const, json: await res.json() };
+  };
+
+  let first = await send(baseRev);
+  if (first.conflict) {
+    const second = await send(first.latest);
+    if ('json' in second) return second.json;
+    throw new Error('commit rebase failed');
+  }
+  return (first as any).json;
 }
 
 /* ---------- component ---------- */
@@ -226,12 +411,43 @@ export function TemplateActionToolbar({
         }
       }
 
-      // 2) shallow-merge data (canonical payload persists via /commit)
+      // 2) shallow-merge data, then normalize block array shapes per page
+      // new: merge then normalize per-page block arrays
       if (patch.data && typeof patch.data === 'object') {
-        next.data = { ...(cur?.data ?? {}), ...(patch.data as any) };
+        const merged = { ...(cur?.data ?? {}), ...(patch.data as any) };
+        const pages = Array.isArray(merged.pages) ? merged.pages : [];
+        const normalizedPages = normalizePageBlocksShape(pages);
+        next.data = { ...merged, pages: normalizedPages };
+        if (heroDbgOn()) {
+          heroLog('onPatch → incoming hero snapshots', pickHeroSnapshots(patch?.data));
+          heroLog('onPatch → outgoing (normalized) hero snapshots', pickHeroSnapshots(next?.data));
+        }
       }
 
       apply(next);
+      if (heroDbgOn()) {
+        heroLog('commitPatchSoon payload hero snapshots', pickHeroSnapshots({ pages: next.data?.pages }));
+      }      
+      if (localStorage.getItem('qs:debug:hero') === '1') {
+        const snap = (data: any) => {
+          const pages = Array.isArray(data?.pages) ? data.pages : [];
+          const heroes = pages.flatMap((pg: any, i: number) =>
+            (pg?.blocks || []).filter((b: any) => b?.type === 'hero').map((b: any) => ({
+              pageIndex: i,
+              id: b?._id ?? b?.id,
+              heading: b?.props?.heading,
+              subheading: b?.props?.subheading,
+              ctaLabel: b?.props?.ctaLabel,
+            }))
+          );
+          console.log('%cQS/HERO%c commitPatchSoon (autosave) heroes', 'background:#7c3aed;color:#fff;padding:2px 6px;border-radius:4px;', 'color:#e5e7eb;', heroes);
+        };
+        snap({ pages: next.data?.pages });
+      }
+      if (heroDbgOn()) {
+        heroLog('commitPatchSoon payload hero snapshots', pickHeroSnapshots({ pages: next.data?.pages }));
+      }
+            
       try { commitPatchSoon({ ...patch, data: next.data }); } catch {}
     };
 
@@ -348,9 +564,10 @@ export function TemplateActionToolbar({
         return;
       }
 
+      // Start from the validated template (or the raw src)
       const nextTemplate = (check.data ?? src) as Template;
 
-      // Keep pages consistent (defensive)
+      // Ensure pages are present in both places (defensive parity)
       const srcPages = getTemplatePagesLoose(src);
       const outPages = getTemplatePagesLoose(nextTemplate);
       if (!Array.isArray(outPages) || !outPages.length) {
@@ -363,7 +580,38 @@ export function TemplateActionToolbar({
         }
       }
 
-      const nextSig = templateSig(nextTemplate);
+      // 👉 NEW: keep all block array shapes in sync per page (blocks/content_blocks/content.blocks)
+      const normalizedPages = normalizePageBlocksShape(getTemplatePagesLoose(nextTemplate));
+      (nextTemplate as any).data = { ...(nextTemplate as any).data, pages: normalizedPages };
+      (nextTemplate as any).pages = normalizedPages;
+
+      // Canonicalize industry/services in the DATA tree so they persist even if blocks-only changed
+      const dataIn = ((nextTemplate as any).data ?? {}) as any;
+      const metaIn = (dataIn.meta ?? {}) as any;
+
+      const canonicalIndustryKey = resolveIndustryKey(
+        metaIn.industry ?? (nextTemplate as any).industry ?? 'other'
+      );
+
+      // Prefer a top-level data.services array; mirror into meta to satisfy older readers
+      const canonicalServices =
+        Array.isArray(dataIn.services) ? dataIn.services :
+        Array.isArray(metaIn.services) ? metaIn.services :
+        Array.isArray((nextTemplate as any).services) ? (nextTemplate as any).services :
+        [];
+
+      const canonicalData = {
+        ...dataIn,
+        meta: {
+          ...metaIn,
+          industry: canonicalIndustryKey,
+          services: canonicalServices,
+        },
+        services: canonicalServices,
+        pages: normalizedPages, // ← use the normalized pages
+      };
+
+      const nextSig = templateSig({ ...(nextTemplate as any), data: canonicalData });
       if (nextSig === savedSigRef.current) {
         toast('No changes to save');
         setDirty(false);
@@ -379,27 +627,53 @@ export function TemplateActionToolbar({
         setSaveWarnings([]);
       }
 
-      onSaveDraft?.(nextTemplate);
-      onSetRawJson?.(pretty(nextTemplate));
+      onSaveDraft?.({ ...(nextTemplate as any), data: canonicalData });
+      onSetRawJson?.(pretty({ ...(nextTemplate as any), data: canonicalData }));
 
-      await loadRev();
-      const commitRes: any = await commitPatch(
-        { data: (nextTemplate as any).data, color_mode: nextTemplate.color_mode },
-        'save'
-      );
+      // (Optional) refresh local rev tracking if you keep one
+      await loadRev?.();
+
+      // Build a FULL data overlay patch (idempotent) + legacy mirrors
+      const patch = {
+        data: canonicalData,
+        color_mode: (nextTemplate as any).color_mode,
+        // legacy mirrors for any old readers still looking at top-level
+        industry: canonicalIndustryKey,
+        services: canonicalServices,
+      };
+      if (heroDbgOn()) {
+        heroLog('HANDLE SAVE → canonical hero snapshots', pickHeroSnapshots(canonicalData));
+      }
+      
+    const maybeRev =
+      Number.isFinite((src as any)?.rev) ? (src as any).rev :
+      Number.isFinite((nextTemplate as any)?.rev) ? (nextTemplate as any).rev :
+      undefined;
+      
+    // Commit with a one-shot rebase on 409
+    const commitRes = await commitWithRebase({
+      id: (nextTemplate as any).id,
+      baseRev: (maybeRev as number) ?? (NaN as any), // API will infer if NaN/undefined
+      patch,
+      kind: 'save',
+    });
 
       savedSigRef.current = nextSig;
       setDirty(false);
 
-      try { dispatchTemplateCacheUpdate(toCacheRow(nextTemplate)); } catch {}
+      try { dispatchTemplateCacheUpdate(toCacheRow({ ...(nextTemplate as any), data: canonicalData })); } catch {}
       toast.success('Saved!');
 
-      // First-save canonical id bounce
+      // First-save canonical id bounce (unchanged)
       const canonicalId: string | undefined =
         commitRes?.canonicalId ?? commitRes?.canonical_id ?? undefined;
 
       if (canonicalId && !(tplRef.current as any)?.canonical_id) {
-        const patched: Template = { ...(tplRef.current as any), canonical_id: canonicalId };
+        const patched: Template = {
+          ...(tplRef.current as any),
+          canonical_id: canonicalId,
+          data: canonicalData,
+        };
         apply(patched);
         try { dispatchTemplateCacheUpdate(toCacheRow(patched)); } catch {}
 
@@ -407,7 +681,10 @@ export function TemplateActionToolbar({
         setDirty(false);
 
         try {
-          if (typeof window !== 'undefined' && window.location.pathname.startsWith('/admin/templates/new')) {
+          if (
+            typeof window !== 'undefined' &&
+            window.location.pathname.startsWith('/admin/templates/new')
+          ) {
             router.replace(`/template/${canonicalId}/edit`);
           }
         } catch {}
@@ -418,6 +695,53 @@ export function TemplateActionToolbar({
     }
   };
 
+  // run a full save when a block editor asks for it
+  useEffect(() => {
+    const onSaveNow = () => { void handleSaveClick(); };
+    window.addEventListener('qs:toolbar:save-now', onSaveNow as any);
+    return () => window.removeEventListener('qs:toolbar:save-now', onSaveNow as any);
+  }, [handleSaveClick]);
+  
+  function heroDbgOn() {
+    try { return localStorage.getItem('qs:debug:hero') === '1'; } catch { return false; }
+  }
+  function heroLog(label: string, obj?: any) {
+    if (!heroDbgOn()) return;
+    console.log('%cQS/HERO%c ' + label,
+      'background:#7c3aed;color:#fff;padding:2px 6px;border-radius:4px;',
+      'color:#e5e7eb;', obj ?? '');
+  }
+  function pickHeroSnapshots(data: any) {
+    const pages: any[] = Array.isArray(data?.pages) ? data.pages : [];
+    const out: any[] = [];
+    pages.forEach((p, i) => {
+      const combos = [
+        ...(Array.isArray(p?.blocks) ? p.blocks : []),
+        ...(Array.isArray(p?.content_blocks) ? p.content_blocks : []),
+        ...(Array.isArray(p?.content?.blocks) ? p.content.blocks : []),
+      ];
+      combos.filter((b: any) => b?.type === 'hero').forEach((b: any) => {
+        const props = b?.props ?? {};
+        const content = b?.content ?? {};
+        out.push({
+          pageIndex: i,
+          id: b?._id ?? b?.id,
+          industry: b?.industry,
+          props: {
+            heading: props?.heading, subheading: props?.subheading,
+            ctaLabel: props?.ctaLabel, ctaHref: props?.ctaHref,
+            heroImage: props?.heroImage
+          },
+          content: {
+            headline: content?.headline, subheadline: content?.subheadline,
+            cta_text: content?.cta_text, image_url: content?.image_url
+          }
+        });
+      });
+    });
+    return out;
+  }
+  
   /* ---------- Snapshot (server-built) ---------- */
   async function onCreateSnapshot() {
     try {

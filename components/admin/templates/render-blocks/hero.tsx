@@ -3,7 +3,7 @@
 import type { Block } from '@/types/blocks';
 import type { Template } from '@/types/template';
 import SectionShell from '@/components/ui/section-shell';
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { motion, type MotionValue } from 'framer-motion';
 import { useSafeScroll } from '@/hooks/useSafeScroll';
 import DebugOverlay from '@/components/ui/debug-overlay';
@@ -18,12 +18,14 @@ type Props = {
   colorMode?: 'light' | 'dark';
   scrollRef?: React.RefObject<HTMLElement | null>;
   template?: Template;
+  previewOnly?: boolean; // ← if true, no real navigation
 };
 
-/** Normalize legacy hero props -> modern content shape */
+/* --------------------------- helpers --------------------------- */
+
+// legacy → new shape
 function normalizeHeroContent(raw: any | null | undefined) {
   if (!raw || typeof raw !== 'object') return null;
-  // Already in new shape?
   const looksNew =
     'headline' in raw ||
     'subheadline' in raw ||
@@ -32,8 +34,7 @@ function normalizeHeroContent(raw: any | null | undefined) {
     'image_url' in raw;
   if (looksNew) return raw;
 
-  // Legacy -> New mapping
-  const mapped: any = {
+  const m: any = {
     headline: raw.heading ?? '',
     subheadline: raw.subheading ?? '',
     cta_text: raw.ctaLabel ?? '',
@@ -47,14 +48,55 @@ function normalizeHeroContent(raw: any | null | undefined) {
     image_position: raw.image_position ?? 'center',
     image_x: raw.image_x,
     image_y: raw.image_y,
-    // optional legacy extras:
+    // optional extras passed through:
     cta_action: raw.cta_action,
     cta_phone: raw.cta_phone,
     contact_anchor_id: raw.contact_anchor_id,
     cta_show_phone_below: raw.cta_show_phone_below,
   };
+  return m;
+}
 
-  return mapped;
+/** Prefer the “most edited” hero between props vs content, then fill blanks from the other */
+function selectHeroContent(propsRaw: any, contentRaw: any) {
+  const fromProps = normalizeHeroContent(propsRaw) || {};
+  const fromContent = normalizeHeroContent(contentRaw) || {};
+
+  const isStr = (v: any) => typeof v === 'string' && v.trim().length > 0;
+  const isDefault = (s: string) =>
+    !isStr(s) || /^welcome to your new site$/i.test((s || '').trim());
+
+  const score = (c: any) => {
+    let s = 0;
+    if (!isDefault(c.headline ?? '')) s += 3;
+    if (isStr(c.subheadline)) s += 1;
+    if (isStr(c.cta_text)) s += 1;
+    return s;
+  };
+
+  const sP = score(fromProps);
+  const sC = score(fromContent);
+
+  const base = sC >= sP ? fromContent : fromProps;
+  const other = sC >= sP ? fromProps : fromContent;
+
+  const merged: any = { ...base };
+  for (const [k, v] of Object.entries(other)) {
+    const cur = (merged as any)[k];
+    if (cur == null || cur === '' || (typeof cur === 'number' && Number.isNaN(cur))) {
+      (merged as any)[k] = v;
+    }
+  }
+
+  // derive action if missing (from cta_link)
+  if (!merged.cta_action && typeof merged.cta_link === 'string') {
+    const link = merged.cta_link;
+    if (link.startsWith('#')) merged.cta_action = 'jump_to_contact';
+    else if (link.startsWith('tel:')) merged.cta_action = 'call_phone';
+    else merged.cta_action = 'go_to_page';
+  }
+
+  return merged;
 }
 
 function formatPhoneDisplay(digits: string) {
@@ -63,6 +105,8 @@ function formatPhoneDisplay(digits: string) {
   return `(${d.slice(0, 3)}) ${d.slice(3, 6)}-${d.slice(6)}`;
 }
 
+/* --------------------------- component --------------------------- */
+
 export default function HeroRender({
   block,
   content,
@@ -70,14 +114,25 @@ export default function HeroRender({
   showDebug = false,
   colorMode,
   scrollRef,
-  template,
+  template, 
+  previewOnly = false,
 }: Props) {
-  const localRef = useRef<HTMLDivElement | null>(null);
-  const targetRef = (scrollRef as React.RefObject<HTMLElement | null>) ?? (localRef as any);
+  // Choose best of props/content and merge
+  const rawProps = (block as any)?.props;
+  const rawContent = content ?? (block as any)?.content;
+  const safeContent = useMemo(() => selectHeroContent(rawProps, rawContent), [rawProps, rawContent]);
 
-  // --- Accept new OR legacy data sources ---
-  const rawFromBlock = (block as any)?.content ?? (block as any)?.props;
-  const safeContent = normalizeHeroContent(content ?? rawFromBlock);
+  // 🔑 Force a re-mount when meaningful text changes (covers stubborn memoization higher up)
+  const renderKey = useMemo(
+    () =>
+      [
+        (block as any)?._id ?? (block as any)?.id ?? 'hero',
+        safeContent?.headline ?? '',
+        safeContent?.subheadline ?? '',
+        safeContent?.cta_text ?? '',
+      ].join('|'),
+    [block, safeContent?.headline, safeContent?.subheadline, safeContent?.cta_text]
+  );
 
   const [detectedMode, setDetectedMode] = useState<'light' | 'dark'>('light');
   useEffect(() => {
@@ -92,7 +147,7 @@ export default function HeroRender({
   if (!block || !safeContent) {
     if (showDebug) console.warn('[⚠️ HeroRender] Missing block content; got:', { block, content });
     return (
-      <div className="text-red-500 text-sm p-2 bg-red-50 dark:bg-red-900/20 rounded">
+      <div className="text-red-500 text-sm p-2 bg-red-50 dark:bg-red-900/20 rounded" key={renderKey}>
         Invalid hero block
       </div>
     );
@@ -102,11 +157,11 @@ export default function HeroRender({
     headline,
     subheadline,
     cta_text,
-    cta_link,          // legacy / go_to_page url
-    cta_action,        // 'jump_to_contact' | 'go_to_page' | 'call_phone'
-    cta_phone,         // optional override
-    contact_anchor_id, // for jump
-    cta_show_phone_below, // boolean to print phone beneath button
+    cta_link,
+    cta_action,
+    cta_phone,
+    contact_anchor_id,
+    cta_show_phone_below,
     image_url,
     layout_mode = 'inline',
     mobile_layout_mode = 'inline',
@@ -134,22 +189,21 @@ export default function HeroRender({
   const resolvedPhoneDigits = (cta_phone || dbPhoneDigits || '').replace(/\D/g, '');
   const resolvedPhoneDisplay = formatPhoneDisplay(resolvedPhoneDigits);
 
+  // Respect previewOnly: do not navigate in editors
   const action: 'jump_to_contact' | 'go_to_page' | 'call_phone' =
     (cta_action as any) || 'go_to_page';
-
   let href: string | undefined;
   let onClick: React.MouseEventHandler<HTMLAnchorElement> | undefined;
 
-  if (action === 'jump_to_contact') {
-    href = `#${contactAnchor}`;
-    onClick = handleJumpClick;
-  } else if (action === 'call_phone') {
-    href = resolvedPhoneDigits ? `tel:${resolvedPhoneDigits}` : undefined;
+  if (previewOnly) {
+    href = undefined; onClick = (e) => e.preventDefault();
   } else {
-    href = cta_link || '/contact';
+    if (action === 'jump_to_contact') { href = `#${contactAnchor}`; onClick = handleJumpClick; }
+    else if (action === 'call_phone') { href = resolvedPhoneDigits ? `tel:${resolvedPhoneDigits}` : undefined; }
+    else { href = cta_link || '/contact'; }
   }
 
-  const canShowCTA = !!cta_text && !!href;
+  const canShowCTA = !!cta_text && (!!href || previewOnly);
 
   // ---- layout + parallax ----
   const isMobile = useIsMobile();
@@ -161,22 +215,12 @@ export default function HeroRender({
   const backgroundPosition =
     image_x && image_y ? `${image_x} ${image_y}` : image_position || 'center';
 
-  const [refReady, setRefReady] = useState(false);
-  useEffect(() => {
-    const id = requestAnimationFrame(() => setRefReady(!!targetRef?.current));
-    return () => cancelAnimationFrame(id);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  const scroll = useSafeScroll({
-    target: targetRef as any,
-    offset: ['start start', 'end start'] as any,
-  });
+  // SAFE scroll target: pass undefined until scrollRef is mounted
+  const target = (scrollRef && scrollRef.current) ? scrollRef : undefined;
+  const { y: parallaxY } = useSafeScroll({ target: target as any, offset: ['start start', 'end start'] as any });
 
   let y: string | MotionValue<string> = '0%';
-  if (activeLayoutMode === 'full_bleed' && hasImage && (scroll as any)?.y) {
-    y = (scroll as any).y;
-  }
+  if (activeLayoutMode === 'full_bleed' && hasImage && parallaxY) y = parallaxY;
 
   // theme tokens
   const textPrimary = isDark ? 'text-white' : 'text-black';
@@ -185,29 +229,67 @@ export default function HeroRender({
   const fullBleedBrightness = isDark ? 'brightness(0.6)' : 'brightness(0.9)';
   const bgBlurBrightness = isDark ? 'brightness(0.5)' : 'brightness(0.95)';
 
+  // CTA element (preview-safe)
+  const CtaEl = canShowCTA ? (
+    previewOnly ? (
+      <span
+        className={`inline-block ${isDark ? 'bg-yellow-400 text-black' : 'bg-purple-600 text-white'} font-bold py-3 px-6 rounded-full opacity-80 cursor-default select-none`}
+        aria-disabled="true"
+        role="button"
+        tabIndex={-1}
+      >
+        {cta_text}
+      </span>
+    ) : (
+      <a
+        href={href}
+        onClick={onClick}
+        className={`inline-block ${isDark ? 'bg-yellow-400 hover:bg-yellow-500 text-black' : 'bg-purple-600 hover:bg-purple-700 text-white'} font-bold py-3 px-6 rounded-full transition`}
+        aria-label={
+          action === 'call_phone'
+            ? 'Call us now'
+            : action === 'jump_to_contact'
+            ? 'Jump to contact form'
+            : 'Go to contact page'
+        }
+      >
+        {cta_text}
+      </a>
+    )
+  ) : null;
+
   const PhoneLine = () =>
     cta_show_phone_below && resolvedPhoneDigits ? (
-      <div className={`mt-2 text-sm ${isDark ? 'text-white/85' : 'text-neutral-700'}`}>
-        <a href={`tel:${resolvedPhoneDigits}`} className="underline-offset-2 hover:underline">
-          {resolvedPhoneDisplay}
-        </a>
-      </div>
+      previewOnly ? (
+        <div className={`mt-2 text-sm ${isDark ? 'text-white/85' : 'text-neutral-700'}`}>{resolvedPhoneDisplay}</div>
+      ) : (
+        <div className={`mt-2 text-sm ${isDark ? 'text-white/85' : 'text-neutral-700'}`}>
+          <a href={`tel:${resolvedPhoneDigits}`} className="underline-offset-2 hover:underline">
+            {resolvedPhoneDisplay}
+          </a>
+        </div>
+      )
     ) : null;
 
   // 📸 Natural height layout
   if (activeLayoutMode === 'natural_height' && hasImage) {
     return (
       <HeroNaturalHeight
+        key={renderKey}
         block={{ ...block, content: safeContent as any }}
         cropBehavior={mobile_crop_behavior}
       />
     );
   }
 
-  // 🧱 Full-bleed layout
+  // 🧱 Full-bleed
   if (activeLayoutMode === 'full_bleed' && hasImage) {
     return (
-      <div ref={targetRef as any} className={`relative w-full ${textPrimary} max-h-[90vh] overflow-hidden`}>
+      <div
+        key={renderKey}
+        ref={(scrollRef && scrollRef.current) ? (scrollRef as any) : undefined}
+        className={`relative w-full ${textPrimary} max-h-[90vh] overflow-hidden`}
+      >
         {showDebug && (
           <DebugOverlay>
             {`[HeroBlock]
@@ -230,39 +312,19 @@ CTA: ${action}${action === 'call_phone' ? ` (${resolvedPhoneDigits || 'no-phone'
         <div className={`absolute inset-0 ${overlayTint}`} />
         <div className="relative z-10 max-w-6xl mx-auto px-4 pt-32 pb-20 text-center sm:pt-24 sm:pb-16">
           <h1 className={`text-4xl md:text-5xl font-bold mb-4 drop-shadow ${textPrimary}`}>{headline}</h1>
-          {subheadline && (
-            <p className={`text-lg md:text-2xl mb-6 drop-shadow ${textPrimary}`}>{subheadline}</p>
-          )}
-          {canShowCTA && (
-            <>
-              <a
-                href={href}
-                onClick={onClick}
-                className={`inline-block ${
-                  isDark ? 'bg-yellow-400 hover:bg-yellow-500 text-black' : 'bg-purple-600 hover:bg-purple-700 text-white'
-                } font-bold py-3 px-6 rounded-full transition`}
-                aria-label={
-                  action === 'call_phone'
-                    ? 'Call us now'
-                    : action === 'jump_to_contact'
-                    ? 'Jump to contact form'
-                    : 'Go to contact page'
-                }
-              >
-                {cta_text}
-              </a>
-              <PhoneLine />
-            </>
-          )}
+          {subheadline && <p className={`text-lg md:text-2xl mb-6 drop-shadow ${textPrimary}`}>{subheadline}</p>}
+          {CtaEl}
+          <PhoneLine />
         </div>
       </div>
     );
   }
 
-  // 🖼️ Background image layout
+  // 🖼️ Background
   if (activeLayoutMode === 'background' && hasImage) {
     return (
       <SectionShell
+        key={renderKey}
         compact={compact}
         className={`relative rounded-lg overflow-hidden ${textPrimary}`}
         textAlign="center"
@@ -288,38 +350,21 @@ CTA: ${action}${action === 'call_phone' ? ` (${resolvedPhoneDigits || 'no-phone'
         <div className={`absolute inset-0 ${overlayTint}`} />
         <div className="relative z-10 py-16 px-4">
           <h1 className={`text-3xl md:text-5xl font-bold mb-4 drop-shadow ${textPrimary}`}>{headline}</h1>
-          {subheadline && (
-            <p className={`text-lg md:text-xl mb-6 drop-shadow ${textPrimary}`}>{subheadline}</p>
-          )}
-          {canShowCTA && (
-            <>
-              <a
-                href={href}
-                onClick={onClick}
-                className="inline-block bg-purple-600 hover:bg-purple-700 text-white font-semibold py-3 px-6 rounded-full transition"
-                aria-label={
-                  action === 'call_phone'
-                    ? 'Call us now'
-                    : 'Jump to contact form'
-                }
-              >
-                {cta_text}
-              </a>
-              <PhoneLine />
-            </>
-          )}
+          {subheadline && <p className={`text-lg md:text-xl mb-6 drop-shadow ${textPrimary}`}>{subheadline}</p>}
+          {CtaEl}
+          <PhoneLine />
         </div>
       </SectionShell>
     );
   }
 
-  // 🧱 Inline layout (image optional)
+  // 🧱 Inline
   const inlineBg = isDark
     ? 'bg-neutral-900 text-white rounded-lg shadow dark:bg-neutral-950 dark:text-white'
     : 'bg-white text-black rounded-lg shadow';
 
   return (
-    <SectionShell compact={compact} bg={inlineBg} textAlign="center">
+    <SectionShell key={renderKey} compact={compact} bg={inlineBg} textAlign="center">
       {showDebug && (
         <DebugOverlay>
           {`[HeroBlock]
@@ -338,25 +383,8 @@ CTA: ${action}${action === 'call_phone' ? ` (${resolvedPhoneDigits || 'no-phone'
       )}
       <h1 className={`text-3xl md:text-5xl font-bold mb-4 ${textPrimary}`}>{headline}</h1>
       {subheadline && <p className={`text-lg md:text-xl mb-6 ${textSecondary}`}>{subheadline}</p>}
-      {canShowCTA && (
-        <>
-          <a
-            href={href}
-            onClick={onClick}
-            className="inline-block bg-purple-600 hover:bg-purple-700 text-white font-semibold py-3 px-6 rounded-full transition"
-            aria-label={
-              action === 'call_phone'
-                ? 'Call us now'
-                : action === 'jump_to_contact'
-                ? 'Jump to contact form'
-                : 'Go to contact page'
-            }
-          >
-            {cta_text}
-          </a>
-          <PhoneLine />
-        </>
-      )}
+      {CtaEl}
+      <PhoneLine />
     </SectionShell>
   );
 }

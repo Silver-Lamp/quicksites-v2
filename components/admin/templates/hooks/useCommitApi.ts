@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { heroLog, heroDbgOn, pickHeroSnapshots } from '@/lib/debug/hero';
 
 export function useCommitApi(templateId?: string) {
   const [pending, setPending] = useState(false);
@@ -46,6 +47,39 @@ export function useCommitApi(templateId?: string) {
     void loadRev();
   }, [loadRev]);
 
+  /** Try to fetch server state that actually contains data.pages */
+  const fetchStateWithData = useCallback(async (): Promise<any | null> => {
+    if (!templateId) return null;
+
+    // Try /state2 (your logs show this exists in your app)
+    const attempts = [
+      `/api/templates/state2?id=${encodeURIComponent(templateId)}`,
+      `/api/templates/state?id=${encodeURIComponent(templateId)}&full=1`,
+      `/api/templates/state?id=${encodeURIComponent(templateId)}`,
+    ];
+
+    for (const url of attempts) {
+      try {
+        const res = await fetch(url, { cache: 'no-store' });
+        const json = await res.json().catch(() => ({}));
+        if (!res.ok) continue;
+
+        // Look for data in common shapes
+        const data =
+          json?.data ??
+          json?.template?.data ??
+          json?.infra?.data ??
+          json?.state?.data ??
+          null;
+
+        if (data && Array.isArray(data?.pages)) return json;
+      } catch {
+        /* ignore and fall through */
+      }
+    }
+    return null;
+  }, [templateId]);
+
   /** Accept a full patch object (e.g., { data: {...} } or { color_mode, data }) */
   const _commitOnce = useCallback(
     async (patch: any, kind: 'save' | 'autosave') => {
@@ -53,13 +87,26 @@ export function useCommitApi(templateId?: string) {
       if (!haveRevRef.current) await loadRev();
       const baseRev = revRef.current ?? 0;
 
+      // --- DEBUG: about to send ---
+      if (heroDbgOn()) {
+        heroLog(`[commit] sending ${kind} (baseRev=${baseRev})`, {
+          templateId,
+          heroes: pickHeroSnapshots(patch?.data),
+        });
+      }
+
       const res = await fetch('/api/templates/commit', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({ id: templateId, baseRev, patch, kind }),
       });
+
       const json = await res.json().catch(() => ({}));
+
       if (!res.ok) {
+        if (heroDbgOn()) {
+          heroLog('[commit] error response', { status: res.status, json });
+        }
         if (res.status === 409) {
           const serverRev = parseRev(json);
           if (serverRev) revRef.current = serverRev;
@@ -67,15 +114,50 @@ export function useCommitApi(templateId?: string) {
         }
         throw new Error(json?.error || 'commit failed');
       }
+
       if (typeof json?.rev === 'number') revRef.current = json.rev;
+
+      // --- DEBUG: fetch server state after commit (so we see what stuck) ---
+      if (heroDbgOn()) {
+        try {
+          const stateJson = await fetchStateWithData();
+          if (stateJson) {
+            const data =
+              stateJson?.data ??
+              stateJson?.template?.data ??
+              stateJson?.state?.data ??
+              stateJson?.infra?.data ??
+              {};
+            const serverHeroes = pickHeroSnapshots(data);
+            heroLog('[commit] server state hero snapshots', serverHeroes);
+          } else {
+            heroLog(
+              '[commit] server state hero snapshots',
+              '(no data.pages returned by /state endpoints)'
+            );
+          }
+        } catch (e: any) {
+          heroLog('[commit] server state fetch failed', { err: e?.message });
+        }
+      }
+
       return json;
     },
-    [templateId, loadRev]
+    [templateId, loadRev, fetchStateWithData]
   );
 
   const commitPatch = useCallback(
     (patch: any, kind: 'save' | 'autosave' = 'autosave') => {
       if (!templateId) return Promise.resolve();
+
+      // --- DEBUG: enqueueing a commit ---
+      if (heroDbgOn()) {
+        heroLog(`commitPatch enqueue (${kind})`, {
+          templateId,
+          heroes: pickHeroSnapshots(patch?.data),
+        });
+      }
+
       queue.current = queue.current.then(async () => {
         setPending(true);
         try {
@@ -104,12 +186,21 @@ export function useCommitApi(templateId?: string) {
   const commitPatchSoon = useCallback(
     (patch: any) => {
       if (soonRef.current) clearTimeout(soonRef.current);
+
+      // --- DEBUG: schedule autosave with current payload snapshot ---
+      if (heroDbgOn()) {
+        heroLog('commitPatchSoon scheduled (autosave)', {
+          templateId,
+          heroes: pickHeroSnapshots(patch?.data),
+        });
+      }
+
       soonRef.current = setTimeout(async () => {
         if (!haveRevRef.current) await loadRev();
         void commitPatch(patch, 'autosave');
       }, 350);
     },
-    [commitPatch, loadRev]
+    [commitPatch, loadRev, templateId]
   );
 
   return { pending, commitPatch, commitPatchSoon, loadRev, revRef };

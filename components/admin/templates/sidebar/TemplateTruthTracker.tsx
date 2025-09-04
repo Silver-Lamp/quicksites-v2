@@ -62,15 +62,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 
 import { diffBlocks, type BlockDiff } from "@/lib/diff/blocks"; // ⬅️ modular diff
-
-/**
- * TemplateTruthTracker — a visual Single Source of Truth tracker for the sidebar.
- *
- * Draft (templates.data) → Save → Snapshot → Version tag → Publish (sites.published_snapshot_id)
- *
- * Info dropdown includes TL;DR, terms, relevant filenames, hide-deprecated toggle,
- * and bulk actions. Also generates a shell script to prune deprecated files.
- */
+import CollapsiblePanel from "@/components/ui/collapsible-panel";
 
 /** Types **/
 
@@ -80,311 +72,101 @@ export type SnapshotInfo = {
     hash?: string;
     createdAt: string; // ISO
     note?: string;
-  };
+};
   
-  export type VersionTagInfo = {
-    tag: string; // e.g., v2025.09
-    snapshotId: string;
-    notes?: string;
-    createdAt?: string; // ISO
-  };
-  
-  export type TemplateEvent = {
-    id: string;
-    type: "open" | "autosave" | "save" | "snapshot" | "publish";
-    at: string; // ISO
-    revBefore?: number;
-    revAfter?: number;
-    actor?: { id?: string; name?: string; email?: string };
-    fieldsTouched?: string[]; // dot-paths
-    diff?: { added?: number; changed?: number; removed?: number };
-    meta?: Record<string, unknown>; // may include blockDiff OR before/after data
-  };
-  
-  export type InfraState = {
-    template: { id: string; rev: number; hash?: string };
-    site?: { id: string; slug: string; publishedSnapshotId?: string };
-    lastSnapshot?: { id?: string; rev?: number; hash?: string; createdAt?: string };
-    cache?: { tags?: string[]; lastRevalidatedAt?: string };
-  };
-  
-  export type TemplateTruthTrackerProps = {
-    templateId: string;
-    infra: InfraState;
-    snapshots: SnapshotInfo[];
-    versions?: VersionTagInfo[];
-    events: TemplateEvent[];
-    selectedSnapshotId?: string;
-    onCreateSnapshot?: () => void;
-    onPublish?: (snapshotId: string) => void;
-    onRefresh?: () => void;
-    onViewDiff?: (eventIdOrSnapshotId: string) => void;
-    fileRefs?: string[];
-    terms?: { term: string; def: string }[];
-    readmeSummary?: string;
-    adminMeta?: { deprecated_files?: string[] };
-    className?: string;
-  };
-  
-  export default function TemplateTruthTracker({
-    templateId,
-    infra,
-    snapshots,
-    versions = [],
-    events,
-    selectedSnapshotId,
-    onCreateSnapshot,
-    onPublish,
-    onRefresh,
-    onViewDiff,
-    fileRefs,
-    terms,
-    readmeSummary,
-    adminMeta,
-    className,
-  }: TemplateTruthTrackerProps) {
-    const [selectedSnap, setSelectedSnap] = useState<string | undefined>(
-      selectedSnapshotId
-    );
-  
-    const publishedId = infra.site?.publishedSnapshotId;
-    const latestSnapshot = useMemo(() => snapshots[0], [snapshots]); // may be undefined
-  
-    const selectedSnapshot = useMemo(
-      () =>
-        snapshots.find((s) => s.id === (selectedSnap || selectedSnapshotId)) ??
-        latestSnapshot,
-      [snapshots, selectedSnap, selectedSnapshotId, latestSnapshot]
-    );
-  
-    const selectedVersionTag = useMemo(
-      () => versions.find((v) => v.snapshotId === selectedSnapshot?.id),
-      [versions, selectedSnapshot]
-    );
-  
-    const [infoOpen, setInfoOpen] = useState(false);
-  
-    const deprecatedFiles = adminMeta?.deprecated_files ?? [];
-    const deprecatedCount = deprecatedFiles.length;
-  
-    const defaultTerms: { term: string; def: string }[] = [
-      { term: "Draft (Template)", def: "Editable source of truth at templates.data (with rev)." },
-      { term: "Save", def: "Server action that deep-merges patch, validates, bumps rev." },
-      { term: "Snapshot", def: "Immutable capture of a draft at a given rev; used for preview/publish." },
-      { term: "Version", def: "Human tag (vX.Y) that points to a snapshot for cataloging." },
-      { term: "Publish", def: "Sites read from sites.published_snapshot_id → snapshot; never draft." },
-    ];
-  
-    const defaultFiles: string[] = [
-      "components/admin/templates/TemplateTruthTracker.tsx",
-      "components/admin/templates/TemplateDiffModal.tsx",
-      "components/admin/templates/hooks/useTruthTrackerState.ts",
-      "app/api/templates/state/route.ts",
-      "app/api/templates/diff/route.ts",
-      "app/api/templates/commit/route.ts",
-      "app/api/admin/snapshots/create/route.ts",
-      "app/api/admin/sites/publish/route.ts",
-      "app/api/templates/deprecations/route.ts",
-      "lib/server/supabaseAdmin.ts",
-      "lib/server/logTemplateEvent.ts",
-      "lib/server/templateUtils.ts",
-      "(SQL) template_admin_meta table",
-    ];
-  
-    const defaultSummary =
-      readmeSummary ||
-      "Draft = templates.data; Save = deep-merge + validate + rev++; Snapshot = immutable capture; Version = tag → snapshot; Publish = site reads snapshot only.";
-  
-    const info = {
-      fileRefs: fileRefs && fileRefs.length ? fileRefs : defaultFiles,
-      terms: terms && terms.length ? terms : defaultTerms,
-      readmeSummary: defaultSummary,
-    };
-  
-    const diagnostics = useMemo(
-      () => ({
-        templateId,
-        draft: infra.template,
-        site: infra.site,
-        publishedSnapshotId: publishedId,
-        selectedSnapshot,
-        versions,
-        lastSnapshot: infra.lastSnapshot,
-        cache: infra.cache,
-      }),
-      [templateId, infra, publishedId, selectedSnapshot, versions]
-    );
-  
-    const copyDiagnostics = async () => {
-      try {
-        await navigator.clipboard.writeText(JSON.stringify(diagnostics, null, 2));
-      } catch {}
-    };
-  
-    const hasSnapshots = snapshots.length > 0;
-  
-    return (
-      <TooltipProvider>
-        <div className={clsx("flex h-full flex-col gap-3 p-2", className)}>
-          {/* Header / State chip */}
-          <StateHeader
-            rev={infra.template.rev}
-            hash={infra.template.hash}
-            isPublishedFromDraft={publishedId === undefined}
-            onRefresh={onRefresh}
-            info={info}
-            templateId={templateId}
-            infoOpen={infoOpen}
-            setInfoOpen={setInfoOpen}
-          />
-  
-          {deprecatedCount > 0 && (
-            <DeprecatedBanner count={deprecatedCount} onReview={() => setInfoOpen(true)} />
-          )}
-  
-          {/* Infra Map */}
-          <InfraMap
-            draft={{ rev: infra.template.rev, hash: infra.template.hash }}
-            latestSnapshot={
-              infra.lastSnapshot ?? {
-                id: latestSnapshot?.id,
-                rev: latestSnapshot?.rev,
-                hash: latestSnapshot?.hash,
-                createdAt: latestSnapshot?.createdAt,
-              }
-            }
-            publishedSnapshotId={publishedId}
-            siteSlug={infra.site?.slug}
-            cacheInfo={infra.cache}
-          />
-  
-          {/* Snapshot Picker + Actions */}
-          <Card className="border-neutral-200">
-            <CardHeader className="py-3">
-              <CardTitle className="text-sm">Snapshots & Actions</CardTitle>
-            </CardHeader>
-            <CardContent className="flex flex-col gap-2">
-              <div className="flex items-center gap-2">
-                <select
-                  className="w-full rounded-md border bg-background px-2 py-1 text-sm"
-                  value={selectedSnapshot?.id ?? ""}
-                  onChange={(e) => setSelectedSnap(e.target.value)}
-                  disabled={!hasSnapshots}
-                >
-                  {snapshots.map((s) => (
-                    <option key={s.id} value={s.id}>
-                      {shortHash(s.hash)} · rev {s.rev} · {shortTime(s.createdAt)}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className="flex items-center gap-2">
-                <Button size="sm" variant="default" onClick={onCreateSnapshot} className="gap-1">
-                  <PlusCircle className="h-4 w-4" /> Snapshot
-                </Button>
-                <Button
-                  size="sm"
-                  variant={selectedSnapshot?.id && selectedSnapshot?.id === publishedId ? "secondary" : "default"}
-                  disabled={!selectedSnapshot?.id}
-                  className="gap-1"
-                  onClick={() => selectedSnapshot?.id && onPublish?.(selectedSnapshot.id)}
-                >
-                  <Rocket className="h-4 w-4" />
-                  {selectedSnapshot?.id === publishedId ? "Published" : "Publish"}
-                </Button>
-                <Button size="sm" variant="outline" className="gap-1" onClick={copyDiagnostics}>
-                  <Share className="h-4 w-4" /> Copy diagnostics
-                </Button>
-              </div>
-              {selectedVersionTag && (
-                <div className="text-xs text-muted-foreground">
-                  Tagged <Badge variant="secondary">{selectedVersionTag.tag}</Badge>
-                  {selectedVersionTag.notes ? ` · ${selectedVersionTag.notes}` : ""}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-  
-          {/* Timeline */}
-          <Card className="flex h-full min-h-40 flex-col border-neutral-200">
-            <CardHeader className="py-3">
-              <CardTitle className="text-sm">History</CardTitle>
-            </CardHeader>
-            <CardContent className="h-full p-0">
-              <ScrollArea className="h-[42vh] w-full">
-                <ul className="relative mx-3 my-2">
-                  {/* vertical line */}
-                  <div className="absolute left-4 top-0 h-full w-px bg-border" />
-                  {events.length === 0 && (
-                    <li className="px-3 py-2 text-xs text-muted-foreground">No events yet.</li>
-                  )}
-                  {events.map((evt, idx) => (
-                    <TimelineItem
-                      key={evt.id}
-                      evt={evt}
-                      prevEvt={events[idx + 1]}   // ⬅️ pass previous event (older)
-                      isFirst={idx === 0}
-                      onViewDiff={onViewDiff}
-                    />
-                  ))}
-                </ul>
-              </ScrollArea>
-            </CardContent>
-          </Card>
-        </div>
-      </TooltipProvider>
-    );
-  }
-  
-  /** Subcomponents **/
-  function StateHeader({
-    rev,
-    hash,
-    isPublishedFromDraft,
-    onRefresh,
-    info,
-    templateId,
-    infoOpen,
-    setInfoOpen,
-  }: {
-    rev: number;
-    hash?: string;
-    isPublishedFromDraft?: boolean;
-    onRefresh?: () => void;
-    info: {
-      fileRefs: string[];
-      terms: { term: string; def: string }[];
-      readmeSummary: string;
-    };
-    templateId: string;
-    infoOpen: boolean;
-    setInfoOpen: (v: boolean) => void;
-  }) {
-    return (
-      <div className="flex items-center justify-between gap-2">
-        <div className="flex items-center gap-2">
-          <Badge variant="outline" className="text-[11px]">DRAFT · rev {rev}</Badge>
-          {hash && <Badge variant="secondary" className="text-[11px]">{shortHash(hash)}</Badge>}
-        </div>
-        <div className="flex items-center gap-1">
-          <InfoDropdown {...info} templateId={templateId} open={infoOpen} setOpen={setInfoOpen} />
-          {isPublishedFromDraft && (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Badge variant="destructive" className="text-[11px]">Warning: draft live</Badge>
-              </TooltipTrigger>
-              <TooltipContent className="max-w-[240px] text-xs">
-                Live site should point to a snapshot. Check publish settings.
-              </TooltipContent>
-            </Tooltip>
-          )}
-          <Button size="icon" variant="ghost" onClick={onRefresh} aria-label="Refresh">
-            <RefreshCw className="h-4 w-4" />
-          </Button>
-        </div>
-      </div>
-    );
-  }
+export type VersionTagInfo = {
+tag: string; // e.g., v2025.09
+snapshotId: string;
+notes?: string;
+createdAt?: string; // ISO
+};
+
+export type TemplateEvent = {
+id: string;
+type: "open" | "autosave" | "save" | "snapshot" | "publish";
+at: string; // ISO
+revBefore?: number;
+revAfter?: number;
+actor?: { id?: string; name?: string; email?: string };
+fieldsTouched?: string[]; // dot-paths
+diff?: { added?: number; changed?: number; removed?: number };
+meta?: Record<string, unknown>; // may include blockDiff OR before/after data
+};
+
+export type InfraState = {
+template: { id: string; rev: number; hash?: string };
+site?: { id: string; slug: string; publishedSnapshotId?: string };
+lastSnapshot?: { id?: string; rev?: number; hash?: string; createdAt?: string };
+cache?: { tags?: string[]; lastRevalidatedAt?: string };
+};
+
+export type TemplateTruthTrackerProps = {
+templateId: string;
+infra: InfraState;
+snapshots: SnapshotInfo[];
+versions?: VersionTagInfo[];
+events: TemplateEvent[];
+selectedSnapshotId?: string;
+onCreateSnapshot?: () => void;
+onPublish?: (snapshotId: string) => void;
+onRefresh?: () => void;
+onViewDiff?: (eventIdOrSnapshotId: string) => void;
+fileRefs?: string[];
+terms?: { term: string; def: string }[];
+readmeSummary?: string;
+adminMeta?: { deprecated_files?: string[] };
+className?: string;
+};
+
+/** Subcomponents **/
+function StateHeader({
+rev,
+hash,
+isPublishedFromDraft,
+onRefresh,
+info,
+templateId,
+infoOpen,
+setInfoOpen,
+}: {
+rev: number;
+hash?: string;
+isPublishedFromDraft?: boolean;
+onRefresh?: () => void;
+info: {
+    fileRefs: string[];
+    terms: { term: string; def: string }[];
+    readmeSummary: string;
+};
+templateId: string;
+infoOpen: boolean;
+setInfoOpen: (v: boolean) => void;
+}) {
+return (
+    <div className="flex items-center justify-between gap-2">
+    <div className="flex items-center gap-2">
+        <Badge variant="outline" className="text-[11px]">DRAFT · rev {rev}</Badge>
+        {hash && <Badge variant="secondary" className="text-[11px]">{shortHash(hash)}</Badge>}
+    </div>
+    <div className="flex items-center gap-1">
+        <InfoDropdown {...info} templateId={templateId} open={infoOpen} setOpen={setInfoOpen} />
+        {isPublishedFromDraft && (
+        <Tooltip>
+            <TooltipTrigger asChild>
+            <Badge variant="destructive" className="text-[11px]">Warning: draft live</Badge>
+            </TooltipTrigger>
+            <TooltipContent className="max-w-[240px] text-xs">
+            Live site should point to a snapshot. Check publish settings.
+            </TooltipContent>
+        </Tooltip>
+        )}
+        <Button size="icon" variant="ghost" onClick={onRefresh} aria-label="Refresh">
+        <RefreshCw className="h-4 w-4" />
+        </Button>
+    </div>
+    </div>
+);
+}
 
 
 function InfoDropdown({
@@ -978,94 +760,95 @@ function TimelineItem({
         </div>
       </li>
     );
-  }
+}
   
-  function BlockChangeChips({ diff }: { diff?: BlockDiff }) {
-    if (!diff) {
-      return <div className="mt-1 text-[11px] text-muted-foreground/70">No block changes</div>;
-    }
-  
-    const top = (obj: Record<string, number>, max = 4) =>
-      Object.entries(obj)
-        .sort((a, b) => b[1] - a[1])
-        .slice(0, max);
-  
-    const addedTop = top(diff.addedByType);
-    const modTop = top(diff.modifiedByType);
-    const remTop = top(diff.removedByType);
-  
-    const none =
-      addedTop.length === 0 && modTop.length === 0 && remTop.length === 0;
-  
-    if (none) {
-      return <div className="mt-1 text-[11px] text-muted-foreground/70">No block changes</div>;
-    }
-  
-    return (
-      <div className="mt-1 flex flex-wrap items-center gap-1.5 text-[11px]">
-        {addedTop.map(([type, cnt]) => (
-          <span
-            key={`a-${type}`}
-            className="inline-flex items-center gap-1 rounded-full border border-emerald-500/30 bg-emerald-500/12 px-2 py-0.5 text-emerald-300"
-            title={`Added: ${type} ×${cnt}`}
-          >
-            <PlusCircle className="h-3 w-3" /> {type} ×{cnt}
-          </span>
-        ))}
-        {modTop.map(([type, cnt]) => (
-          <span
-            key={`m-${type}`}
-            className="inline-flex items-center gap-1 rounded-full border border-amber-500/30 bg-amber-500/12 px-2 py-0.5 text-amber-300"
-            title={`Modified: ${type} ×${cnt}`}
-          >
-            <Pencil className="h-3 w-3" /> {type} ×{cnt}
-          </span>
-        ))}
-        {remTop.map(([type, cnt]) => (
-          <span
-            key={`r-${type}`}
-            className="inline-flex items-center gap-1 rounded-full border border-rose-500/30 bg-rose-500/12 px-2 py-0.5 text-rose-300"
-            title={`Removed: ${type} ×${cnt}`}
-          >
-            <MinusCircle className="h-3 w-3" /> {type} ×{cnt}
-          </span>
-        ))}
-      </div>
-    );
-  }
-  
-  function DiffBadge({
-    added = 0,
-    changed = 0,
-    removed = 0,
-  }: {
-    added?: number;
-    changed?: number;
-    removed?: number;
-  }) {
-    const hasAny = (added ?? 0) + (changed ?? 0) + (removed ?? 0) > 0;
-    return (
-      <div
-        className={clsx(
-          "flex items-center gap-1 rounded-md border px-2 py-1 text-[11px]",
-          !hasAny && "opacity-60"
-        )}
-      >
-        <span className="inline-flex items-center gap-0.5">
-          <span>+</span>
-          {added ?? 0}
+function BlockChangeChips({ diff }: { diff?: BlockDiff }) {
+if (!diff) {
+    return <div className="mt-1 text-[11px] text-muted-foreground/70">No block changes</div>;
+}
+
+const top = (obj: Record<string, number>, max = 4) =>
+    Object.entries(obj)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, max);
+
+const addedTop = top(diff.addedByType);
+const modTop = top(diff.modifiedByType);
+const remTop = top(diff.removedByType);
+
+const none =
+    addedTop.length === 0 && modTop.length === 0 && remTop.length === 0;
+
+if (none) {
+    return <div className="mt-1 text-[11px] text-muted-foreground/70">No block changes</div>;
+}
+
+return (
+    <div className="mt-1 flex flex-wrap items-center gap-1.5 text-[11px]">
+    {addedTop.map(([type, cnt]) => (
+        <span
+        key={`a-${type}`}
+        className="inline-flex items-center gap-1 rounded-full border border-emerald-500/30 bg-emerald-500/12 px-2 py-0.5 text-emerald-300"
+        title={`Added: ${type} ×${cnt}`}
+        >
+        <PlusCircle className="h-3 w-3" /> {type} ×{cnt}
         </span>
-        <span className="inline-flex items-center gap-0.5">
-          <span>~</span>
-          {changed ?? 0}
+    ))}
+    {modTop.map(([type, cnt]) => (
+        <span
+        key={`m-${type}`}
+        className="inline-flex items-center gap-1 rounded-full border border-amber-500/30 bg-amber-500/12 px-2 py-0.5 text-amber-300"
+        title={`Modified: ${type} ×${cnt}`}
+        >
+        <Pencil className="h-3 w-3" /> {type} ×{cnt}
         </span>
-        <span className="inline-flex items-center gap-0.5">
-          <span>-</span>
-          {removed ?? 0}
+    ))}
+    {remTop.map(([type, cnt]) => (
+        <span
+        key={`r-${type}`}
+        className="inline-flex items-center gap-1 rounded-full border border-rose-500/30 bg-rose-500/12 px-2 py-0.5 text-rose-300"
+        title={`Removed: ${type} ×${cnt}`}
+        >
+        <MinusCircle className="h-3 w-3" /> {type} ×{cnt}
         </span>
-      </div>
-    );
-  }
+    ))}
+    </div>
+);
+}
+
+function DiffBadge({
+added = 0,
+changed = 0,
+removed = 0,
+}: {
+added?: number;
+changed?: number;
+removed?: number;
+}) {
+const hasAny = (added ?? 0) + (changed ?? 0) + (removed ?? 0) > 0;
+return (
+    <div
+    className={clsx(
+        "flex items-center gap-1 rounded-md border px-2 py-1 text-[11px]",
+        !hasAny && "opacity-60"
+    )}
+    >
+    <span className="inline-flex items-center gap-0.5">
+        <span>+</span>
+        {added ?? 0}
+    </span>
+    <span className="inline-flex items-center gap-0.5">
+        <span>~</span>
+        {changed ?? 0}
+    </span>
+    <span className="inline-flex items-center gap-0.5">
+        <span>-</span>
+        {removed ?? 0}
+    </span>
+    </div>
+);
+}
+
 function DeprecatedBanner({
   count,
   onReview,
@@ -1143,3 +926,222 @@ function iconForEvent(t: TemplateEvent["type"]) {
       } as const;
   }
 }
+
+
+export default function TemplateTruthTracker({
+    templateId,
+    infra,
+    snapshots,
+    versions = [],
+    events,
+    selectedSnapshotId,
+    onCreateSnapshot,
+    onPublish,
+    onRefresh,
+    onViewDiff,
+    fileRefs,
+    terms,
+    readmeSummary,
+    adminMeta,
+    className,
+    }: TemplateTruthTrackerProps) {
+    const [selectedSnap, setSelectedSnap] = useState<string | undefined>(
+        selectedSnapshotId
+    );
+    
+    const publishedId = infra.site?.publishedSnapshotId;
+    const latestSnapshot = useMemo(() => snapshots[0], [snapshots]); // may be undefined
+    
+    const selectedSnapshot = useMemo(
+        () =>
+        snapshots.find((s) => s.id === (selectedSnap || selectedSnapshotId)) ??
+        latestSnapshot,
+        [snapshots, selectedSnap, selectedSnapshotId, latestSnapshot]
+    );
+    
+    const selectedVersionTag = useMemo(
+        () => versions.find((v) => v.snapshotId === selectedSnapshot?.id),
+        [versions, selectedSnapshot]
+    );
+    
+    const [infoOpen, setInfoOpen] = useState(false);
+    
+    const deprecatedFiles = adminMeta?.deprecated_files ?? [];
+    const deprecatedCount = deprecatedFiles.length;
+    
+    const defaultTerms: { term: string; def: string }[] = [
+        { term: "Draft (Template)", def: "Editable source of truth at templates.data (with rev)." },
+        { term: "Save", def: "Server action that deep-merges patch, validates, bumps rev." },
+        { term: "Snapshot", def: "Immutable capture of a draft at a given rev; used for preview/publish." },
+        { term: "Version", def: "Human tag (vX.Y) that points to a snapshot for cataloging." },
+        { term: "Publish", def: "Sites read from sites.published_snapshot_id → snapshot; never draft." },
+    ];
+    
+    const defaultFiles: string[] = [
+        "components/admin/templates/TemplateTruthTracker.tsx",
+        "components/admin/templates/TemplateDiffModal.tsx",
+        "components/admin/templates/hooks/useTruthTrackerState.ts",
+        "app/api/templates/state/route.ts",
+        "app/api/templates/diff/route.ts",
+        "app/api/templates/commit/route.ts",
+        "app/api/admin/snapshots/create/route.ts",
+        "app/api/admin/sites/publish/route.ts",
+        "app/api/templates/deprecations/route.ts",
+        "lib/server/supabaseAdmin.ts",
+        "lib/server/logTemplateEvent.ts",
+        "lib/server/templateUtils.ts",
+        "(SQL) template_admin_meta table",
+    ];
+    
+    const defaultSummary =
+        readmeSummary ||
+        "Draft = templates.data; Save = deep-merge + validate + rev++; Snapshot = immutable capture; Version = tag → snapshot; Publish = site reads snapshot only.";
+    
+    const info = {
+        fileRefs: fileRefs && fileRefs.length ? fileRefs : defaultFiles,
+        terms: terms && terms.length ? terms : defaultTerms,
+        readmeSummary: defaultSummary,
+    };
+    
+    const diagnostics = useMemo(
+        () => ({
+        templateId,
+        draft: infra.template,
+        site: infra.site,
+        publishedSnapshotId: publishedId,
+        selectedSnapshot,
+        versions,
+        lastSnapshot: infra.lastSnapshot,
+        cache: infra.cache,
+        }),
+        [templateId, infra, publishedId, selectedSnapshot, versions]
+    );
+    
+    const copyDiagnostics = async () => {
+        try {
+        await navigator.clipboard.writeText(JSON.stringify(diagnostics, null, 2));
+        } catch {}
+    };
+    
+    const hasSnapshots = snapshots.length > 0;
+    
+    return (
+        <TooltipProvider>
+        <div className={clsx("flex h-full flex-col gap-3 p-2", className)}>
+            {/* Header / State chip */}
+            <StateHeader
+            rev={infra.template.rev}
+            hash={infra.template.hash}
+            isPublishedFromDraft={publishedId === undefined}
+            onRefresh={onRefresh}
+            info={info}
+            templateId={templateId}
+            infoOpen={infoOpen}
+            setInfoOpen={setInfoOpen}
+            />
+    
+            {deprecatedCount > 0 && (
+            <DeprecatedBanner count={deprecatedCount} onReview={() => setInfoOpen(true)} />
+            )}
+        
+            {/* Timeline */}
+            <CollapsiblePanel id="timeline" title="Timeline" defaultOpen={false}>
+                <Card className="flex h-full min-h-40 flex-col border-neutral-200">
+                <CardHeader className="py-3">
+                    <CardTitle className="text-sm">History</CardTitle>
+                </CardHeader>
+                <CardContent className="h-full p-0">
+                    <ScrollArea className="h-[42vh] w-full">
+                    <ul className="relative mx-3 my-2">
+                        {/* vertical line */}
+                        <div className="absolute left-4 top-0 h-full w-px bg-border" />
+                        {events.length === 0 && (
+                        <li className="px-3 py-2 text-xs text-muted-foreground">No events yet.</li>
+                        )}
+                        {events.map((evt, idx) => (
+                        <TimelineItem
+                            key={evt.id}
+                            evt={evt}
+                            prevEvt={events[idx + 1]}   // ⬅️ pass previous event (older)
+                            isFirst={idx === 0}
+                            onViewDiff={onViewDiff}
+                        />
+                        ))}
+                    </ul>
+                    </ScrollArea>
+                </CardContent>
+                </Card>            
+            </CollapsiblePanel>
+    
+                {/* Infra Map */}
+                <CollapsiblePanel id="infra-map" title="Infra Map" defaultOpen={false}>
+                <InfraMap
+                draft={{ rev: infra.template.rev, hash: infra.template.hash }}
+                latestSnapshot={
+                    infra.lastSnapshot ?? {
+                    id: latestSnapshot?.id,
+                    rev: latestSnapshot?.rev,
+                    hash: latestSnapshot?.hash,
+                    createdAt: latestSnapshot?.createdAt,
+                    }
+                }
+                publishedSnapshotId={publishedId}
+                siteSlug={infra.site?.slug}
+                cacheInfo={infra.cache}
+                />
+            </CollapsiblePanel>
+
+            {/* Snapshot Picker + Actions */}
+            <CollapsiblePanel id="snapshot-picker" title="Snapshot Picker + Actions" defaultOpen={false}>   
+                <Card className="border-neutral-200">
+                <CardHeader className="py-3">
+                    <CardTitle className="text-sm">Snapshots & Actions</CardTitle>
+                </CardHeader>
+                <CardContent className="flex flex-col gap-2">
+                    <div className="flex items-center gap-2">
+                    <select
+                        className="w-full rounded-md border bg-background px-2 py-1 text-sm"
+                        value={selectedSnapshot?.id ?? ""}
+                        onChange={(e) => setSelectedSnap(e.target.value)}
+                        disabled={!hasSnapshots}
+                    >
+                        {snapshots.map((s) => (
+                        <option key={s.id} value={s.id}>
+                            {shortHash(s.hash)} · rev {s.rev} · {shortTime(s.createdAt)}
+                        </option>
+                        ))}
+                    </select>
+                    </div>
+                    <div className="flex items-center gap-2">
+                    <Button size="sm" variant="default" onClick={onCreateSnapshot} className="gap-1">
+                        <PlusCircle className="h-4 w-4" /> Snapshot
+                    </Button>
+                    <Button
+                        size="sm"
+                        variant={selectedSnapshot?.id && selectedSnapshot?.id === publishedId ? "secondary" : "default"}
+                        disabled={!selectedSnapshot?.id}
+                        className="gap-1"
+                        onClick={() => selectedSnapshot?.id && onPublish?.(selectedSnapshot.id)}
+                    >
+                        <Rocket className="h-4 w-4" />
+                        {selectedSnapshot?.id === publishedId ? "Published" : "Publish"}
+                    </Button>
+                    <Button size="sm" variant="outline" className="gap-1" onClick={copyDiagnostics}>
+                        <Share className="h-4 w-4" /> Copy diagnostics
+                    </Button>
+                    </div>
+                    {selectedVersionTag && (
+                    <div className="text-xs text-muted-foreground">
+                        Tagged <Badge variant="secondary">{selectedVersionTag.tag}</Badge>
+                        {selectedVersionTag.notes ? ` · ${selectedVersionTag.notes}` : ""}
+                    </div>
+                    )}
+                </CardContent>
+                </Card>            
+            </CollapsiblePanel>
+
+        </div>
+        </TooltipProvider>
+    );
+    }
+    

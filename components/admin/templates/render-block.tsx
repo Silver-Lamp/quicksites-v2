@@ -75,6 +75,16 @@ function getSafeContent(block: any, override: Record<string, any>) {
   return { ...base, ...override };
 }
 
+/** Build a small signature for hero text so we can force remounts when it changes. */
+function heroTextSig(block: any, safeContent: any) {
+  const p = (block?.props ?? {}) as any;
+  const c = (safeContent ?? block?.content ?? {}) as any;
+  const heading = p.heading ?? c.headline ?? '';
+  const sub = p.subheading ?? c.subheadline ?? '';
+  const cta = p.ctaLabel ?? c.cta_text ?? '';
+  return `${heading}|${sub}|${cta}`;
+}
+
 /** Local error boundary to prevent a bad block from blanking the page. */
 class BlockBoundary extends React.Component<
   React.PropsWithChildren<{ fallback?: React.ReactNode }>,
@@ -194,6 +204,25 @@ export default function RenderBlock({
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [safeContent, (block as any).type, (block as any)._id, (block as any).id]
   );
+
+  // 🔑 compute a render key that changes when hero text changes (forces remount on autosave)
+  const componentKey = React.useMemo(() => {
+    const t = (block as any).type;
+    if (t === 'hero') {
+      return `${blockId}|hero|${heroTextSig(block, safeContent)}`;
+    }
+    return `${blockId}|${t}`;
+  }, [
+    blockId,
+    (block as any).type,
+    // deps for hero text; safeContent covers content.* and props fallback via heroTextSig
+    safeContent?.headline,
+    safeContent?.subheadline,
+    safeContent?.cta_text,
+    (block as any)?.props?.heading,
+    (block as any)?.props?.subheading,
+    (block as any)?.props?.ctaLabel,
+  ]);
 
   // hydration + ref ready
   const [hydrated, setHydrated] = React.useState(false);
@@ -361,6 +390,9 @@ ID: ${blockId || 'n/a'}`}
           <Suspense fallback={<span />}>
             {mounted ? (
               <Component
+                // {/* ⬅️ force remount when hero text changes */}
+                key={componentKey}       
+                previewOnly={mode === 'editor' || previewOnly}   
                 {...(commonProps as any)}
                 {...(refReady ? ({ scrollRef: blockRef } as any) : {})}
                 {...((block as any).type === 'grid' && handleNestedBlockUpdate

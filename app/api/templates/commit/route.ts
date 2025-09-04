@@ -4,14 +4,12 @@ export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/server/supabaseAdmin';
 import { sha256 } from '@/lib/server/templateUtils';
-
-// NEW: block-level diff + event logger
 import { diffBlocks } from '@/lib/diff/blocks';
 import { logTemplateEvent } from '@/lib/server/logTemplateEvent';
 
 /**
  * POST /api/templates/commit
- * Body: { id: string, baseRev: number, patch: object, kind?: 'save' | 'autosave' }
+ * Body: { id: string, baseRev?: number, patch: object, kind?: 'save' | 'autosave' }
  *
  * Behavior:
  * - On success: { id, rev, hash, kind }
@@ -21,19 +19,16 @@ import { logTemplateEvent } from '@/lib/server/logTemplateEvent';
 export async function POST(req: Request) {
   try {
     const body = await req.json().catch(() => ({}));
-    const { id, baseRev, patch, kind } = body as {
+    let { id, baseRev, patch, kind } = body as {
       id: string;
-      baseRev: number;
+      baseRev?: number;
       patch: Record<string, any>;
       kind?: 'save' | 'autosave';
     };
 
-    // Input verification
+    // Input verification (id + patch only; baseRev can be inferred)
     if (!id || typeof id !== 'string') {
       return NextResponse.json({ error: 'id required' }, { status: 400 });
-    }
-    if (!Number.isFinite(baseRev)) {
-      return NextResponse.json({ error: 'baseRev required (number)' }, { status: 400 });
     }
     if (!patch || typeof patch !== 'object') {
       return NextResponse.json({ error: 'patch required (object)' }, { status: 400 });
@@ -53,24 +48,30 @@ export async function POST(req: Request) {
     // Keep actor null unless you wire a real user id
     const actor: string | null = null;
 
-    // --- BEFORE: load the current draft so we can compute block diffs later
-    let beforeRev: number | undefined;
-    let beforeData: any = {};
-    try {
-      const { data: beforeRow } = await supabaseAdmin
-        .from('templates')
-        .select('rev, data')
-        .eq('id', id)
-        .single();
-      beforeRev = (beforeRow as any)?.rev;
-      beforeData = (beforeRow as any)?.data ?? {};
-    } catch {
-      beforeData = {};
+    // ----- Load BEFORE draft and infer baseRev if needed -----
+    const { data: beforeRow, error: beforeErr } = await supabaseAdmin
+      .from('templates')
+      .select('rev, data')
+      .eq('id', id)
+      .single();
+
+    if (beforeErr || !beforeRow) {
+      return NextResponse.json({ error: beforeErr?.message || 'template not found' }, { status: 404 });
     }
 
-    // RPC — commit with optimistic concurrency
+    const beforeRev = typeof (beforeRow as any).rev === 'number' ? (beforeRow as any).rev : 0;
+    const beforeData = (beforeRow as any).data ?? {};
+
+    // If caller didn’t pass a number, fall back to the current DB rev
+    const effectiveBaseRev = Number.isFinite(baseRev as number) ? (baseRev as number) : beforeRev;
+
+    // ----- RPC — commit with optimistic concurrency -----
     const { data: rpc, error: rpcErr } = await supabaseAdmin.rpc('commit_template', {
-      p_id: id, p_base_rev: baseRev, p_patch: patch, p_actor: actor, p_kind: kind ?? 'save'
+      p_id: id,
+      p_base_rev: effectiveBaseRev,
+      p_patch: patch,
+      p_actor: actor,
+      p_kind: kind ?? 'save',
     });
 
     // Handle merge conflicts & other RPC errors
@@ -87,7 +88,7 @@ export async function POST(req: Request) {
           .maybeSingle();
 
         const currentRev =
-          (curRow && typeof (curRow as any).rev === 'number' && (curRow as any).rev) || baseRev;
+          (curRow && typeof (curRow as any).rev === 'number' && (curRow as any).rev) || beforeRev;
 
         return NextResponse.json(
           { error: 'merge_conflict', rev: currentRev },
@@ -95,16 +96,13 @@ export async function POST(req: Request) {
         );
       }
 
-      const status =
-        msg.toLowerCase().includes('not found') ? 404 :
-        500;
-
+      const status = msg.toLowerCase().includes('not found') ? 404 : 500;
       return NextResponse.json({ error: msg || 'commit failed' }, { status });
     }
 
-    // Success path — get next revision from RPC (preferred), fallback to baseRev+1
+    // Success path — get next revision from RPC (preferred), fallback to base+1
     const row = Array.isArray(rpc) ? rpc[0] : rpc;
-    const nextRev = typeof row?.rev === 'number' ? row.rev : baseRev + 1;
+    const nextRev = typeof row?.rev === 'number' ? row.rev : effectiveBaseRev + 1;
 
     // Reload current data to compute content hash (and to diff blocks)
     const { data: cur, error: selErr } = await supabaseAdmin
@@ -121,37 +119,23 @@ export async function POST(req: Request) {
     const afterData = (cur as any)?.data ?? {};
     const hash = sha256(afterData);
 
-    // --- Block diff (BEFORE vs AFTER)
-    let blockDiff:
-      | {
-          addedByType: Record<string, number>;
-          modifiedByType: Record<string, number>;
-          removedByType: Record<string, number>;
-          added: any[];
-          modified: any[];
-          removed: any[];
-        }
-      | undefined;
-
+    // ----- Block diff & event log (non-blocking semantics) -----
     try {
       const bd = diffBlocks({ data: beforeData }, { data: afterData });
-      blockDiff = {
+      const blockDiff = {
         addedByType: bd.addedByType,
         modifiedByType: bd.modifiedByType,
         removedByType: bd.removedByType,
-        // keep small samples for UI drill-ins (avoid huge rows)
         added: bd.added.slice(0, 3),
         modified: bd.modified.slice(0, 3),
         removed: bd.removed.slice(0, 3),
       };
 
-      // Fire-and-forget event log so TemplateTruthTracker can show chips
-      const type: 'save' | 'autosave' = kind === 'autosave' ? 'autosave' : 'save';
+      const type: 'save' | 'autosave' = (kind === 'autosave' ? 'autosave' : 'save');
       const afterMeta = (afterData as any)?.meta ?? {};
 
-      // best-effort log; do not block response
       await logTemplateEvent({
-        templateId: id,
+        templateId: id, // camelCase accepted by the logger
         type,
         revBefore: beforeRev,
         revAfter: nextRev,
@@ -162,19 +146,17 @@ export async function POST(req: Request) {
         },
         meta: {
           blockDiff,
-          // tiny snapshot so the sidebar can show quick context:
           industry: typeof afterMeta?.industry === 'string' ? afterMeta.industry : undefined,
           services:
             Array.isArray((afterData as any)?.services)
               ? (afterData as any).services
               : afterMeta?.services ?? undefined,
-          // (optional) minimal rev markers for debugging
-          beforeRev,
-          afterRev: nextRev,
+          before: { rev: beforeRev, data: beforeData },
+          after:  { rev: nextRev,  data: afterData  },
         },
       } as any);
     } catch {
-      // swallow diff/log failures — the commit itself succeeded
+      /* swallow diff/log failures — commit succeeded */
     }
 
     return NextResponse.json({ id, rev: nextRev, hash, kind: kind ?? 'save' });

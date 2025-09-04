@@ -26,6 +26,16 @@ import { TemplateActionToolbar } from '@/components/admin/templates/template-act
 import PageSettingsModal from '@/components/admin/templates/page-settings-modal';
 import { useTruthTrackerState } from './hooks/useTruthTrackerState';
 import TemplateTruthTracker from './sidebar/TemplateTruthTracker';
+import NewTemplateWelcome from '@/components/admin/templates/NewTemplateWelcome';
+
+// ✅ centralized block ops
+import {
+  insertBlockEmit,
+  removeBlockEmit,
+  replaceBlockEmit,
+  moveBlockEmit,
+  // setBlocksEmit // (import later if you wire reordering/bulk)
+} from '@/components/admin/templates/utils/blocks-patch';
 
 const SidebarSettings = dynamic(
   () => import('@/components/admin/template-settings-panel/sidebar-settings'),
@@ -71,10 +81,13 @@ function getPageBlocks(p: any): Block[] {
   return [];
 }
 function setPageBlocks(p: any, blocks: Block[]) {
-  if (Array.isArray(p?.blocks)) p.blocks = blocks;
-  else if (Array.isArray(p?.content_blocks)) p.content_blocks = blocks;
-  else p.content = { ...(p?.content ?? {}), blocks };
+  let wrote = false;
+  if (Array.isArray(p?.blocks)) { p.blocks = blocks; wrote = true; }
+  if (Array.isArray(p?.content_blocks)) { p.content_blocks = blocks; wrote = true; }
+  if (Array.isArray(p?.content?.blocks)) { p.content = { ...(p.content ?? {}), blocks }; wrote = true; }
+  if (!wrote) { p.content = { ...(p?.content ?? {}), blocks }; }
 }
+
 function findBlockById(
   t: Template,
   id: string
@@ -111,6 +124,19 @@ function findBlockByPath(t: Template, path?: string | null) {
   };
 }
 
+// 🔎 helper: find first block of a given type across pages
+function findFirstBlockOfType(tpl: Template, type: string) {
+  const pages = getTemplatePages(tpl);
+  for (let p = 0; p < pages.length; p++) {
+    const blocks = getPageBlocks(pages[p]);
+    for (let b = 0; b < blocks.length; b++) {
+      const blk: any = blocks[b];
+      if (String(blk?.type) === type) return { pageIdx: p, blockIdx: b, block: blocks[b] };
+    }
+  }
+  return null;
+}
+
 function openHoursSettingsPanel(setShowSettings: (open: boolean) => void) {
   setShowSettings(true);
   requestAnimationFrame(() => {
@@ -125,6 +151,22 @@ function openHoursSettingsPanel(setShowSettings: (open: boolean) => void) {
       })
     );
   });
+}
+
+/* ---------- event helpers (fix recursion bug) ---------- */
+function emitApplyPatch(patch: Partial<Template>) {
+  try {
+    window.dispatchEvent(
+      new CustomEvent('qs:template:apply-patch', { detail: patch as any })
+    );
+  } catch {}
+}
+function emitMerge(detail: any) {
+  try {
+    window.dispatchEvent(
+      new CustomEvent('qs:template:merge', { detail })
+    );
+  } catch {}
 }
 
 /* ---------- component ---------- */
@@ -165,17 +207,10 @@ export default function EditorContent({
 
   // Re-emit suppression to prevent toolbar↔editor loops
   const suppressEmitRef = useRef(false);
-  const emitIfAllowed = (patch: Partial<Template>) =>
-    emitPatch(patch, suppressEmitRef.current);
-
-
-  /** Broadcast a patch so the toolbar autosave can persist. */
-  function emitPatch(patch: Partial<Template>, suppress?: boolean) {
-    if (suppress) return;
-    try {
-      emitIfAllowed(patch);
-    } catch {}
-  }
+  const emitPatchIfAllowed = (patch: Partial<Template>) => {
+    if (suppressEmitRef.current) return;
+    emitApplyPatch(patch);
+  };
 
   const editMuteRef = useRef(false); // prevent re-entrant block editor openings
   const editingKeyRef = useRef<string | null>(null);
@@ -204,7 +239,7 @@ export default function EditorContent({
     applyingRef.current = true;
     setTemplate(snap);
     onChange(snap);
-    emitIfAllowed({
+    emitPatchIfAllowed({
       data: (snap as any).data,
       headerBlock: (snap as any).headerBlock,
       footerBlock: (snap as any).footerBlock,
@@ -305,6 +340,68 @@ export default function EditorContent({
     pageIdx: number;
     insertAt: number;
   }>(null);
+
+  // first-run splash (brand new templates)
+  const [showWelcome, setShowWelcome] = useState(false);
+
+  useEffect(() => {
+    // Brand-new if rev===0 OR template has no pages/blocks
+    const pages = getTemplatePages(template);
+    const first = pages[0] ?? null;
+    const firstBlocks = first ? (getPageBlocks(first) ?? []) : [];
+    const isBrandNewByRev =
+      Number(((template as any)?.rev ?? (template as any)?.data?.rev ?? 0)) === 0;
+    const isBrandNewByShape = pages.length === 0 || firstBlocks.length === 0;
+    const isBrandNew = isBrandNewByRev || isBrandNewByShape;
+
+    if (!isBrandNew) {
+      setShowWelcome(false);
+      return;
+    }
+
+    // Use id→canonical_id→slug for dismissal key (avoid the old 'new' bucket)
+    const tid =
+      (template as any)?.id ??
+      (template as any)?.canonical_id ??
+      (template as any)?.slug ??
+      'new';
+    const key = `qs:newtemplate:welcome:dismissed:${tid}`;
+
+    try {
+      const seen = localStorage.getItem(key) === '1';
+      setShowWelcome(!seen);
+    } catch {
+      setShowWelcome(true);
+    }
+  }, [(template as any)?.id, (template as any)?.canonical_id, (template as any)?.slug, (template as any)?.rev]);
+
+  const dismissWelcome = () => {
+    const tid =
+      (template as any)?.id ??
+      (template as any)?.canonical_id ??
+      (template as any)?.slug ??
+      'new';
+    const key = `qs:newtemplate:welcome:dismissed:${tid}`;
+    try {
+      localStorage.setItem(key, '1');
+      // Optional: clear old global 'new' bucket so future templates aren’t blocked
+      localStorage.removeItem('qs:newtemplate:welcome:dismissed:new');
+    } catch {}
+  
+    setShowWelcome(false);
+  
+    // Open first Hero if present; else open Header
+    setTimeout(() => {
+      const ref = findFirstBlockOfType(template, 'hero');
+      if (ref?.block) {
+        const id = (ref.block as any)?._id ?? (ref.block as any)?.id ?? '';
+        openBlockEditor(id, `${ref.pageIdx}:${ref.blockIdx}`);
+      } else {
+        openHeaderEditor();
+      }
+    }, 60);
+  };
+  
 
   /* keyboard: S toggles settings */
   useEffect(() => {
@@ -420,79 +517,125 @@ export default function EditorContent({
     opts?: { openEditor?: boolean }
   ) {
     captureHistory();
-    const pages = [...getTemplatePages(template)];
-    const page = { ...pages[pageIdx] };
-    const blocks = [...getPageBlocks(page)];
 
+    // create a block (id optional; util will ensure one)
     const newBlock = createDefaultBlock(type as any) as Block;
-    (newBlock as any)._id =
-      (newBlock as any)._id ||
-      (newBlock as any).id ||
-      (globalThis.crypto?.randomUUID?.() ?? String(Date.now()));
 
-    blocks.splice(insertAt, 0, newBlock);
-    setPageBlocks(page, blocks);
-    pages[pageIdx] = page;
+    // derive a stable page id/slug for the util
+    const pages = getTemplatePages(template);
+    const page = pages[pageIdx];
+    const pageKey = String(page?.id ?? page?.slug ?? page?.path ?? pageIdx);
 
-    const nextTemplate: any = Array.isArray((template as any)?.data?.pages)
-      ? { ...template, data: { ...(template as any).data, pages } }
-      : { ...template, pages };
+    // centralized insert + emit
+    const result = insertBlockEmit(template, pageKey, newBlock, insertAt);
 
-    setTemplate(nextTemplate);
-    onChange(nextTemplate);
-    emitIfAllowed({ data: { ...(nextTemplate as any).data, pages }, pages });
+    // reflect into local template state
+    if (result?.nextData) {
+      const nextTemplate: any = { ...template, data: result.nextData };
+      if (!Array.isArray(nextTemplate.pages)) nextTemplate.pages = result.nextData.pages;
+      setTemplate(nextTemplate);
+      onChange(nextTemplate);
+    }
 
     setAdderTarget(null);
 
-    if (opts?.openEditor) {
-      if ((newBlock as any).type === 'hours') {
+    if (opts?.openEditor && result?.block) {
+      if ((result.block as any).type === 'hours') {
         openHoursSettingsPanel(setShowSettings);
       } else {
-        setEditingBlock({ ref: { pageIdx, blockIdx: insertAt, block: newBlock } });
+        setEditingBlock({
+          ref: { pageIdx, blockIdx: insertAt, block: result.block },
+        });
       }
     }
   }
 
+  function moveBlock(blockId?: string | null, blockPath?: string | null, toIndex?: number) {
+    if (toIndex == null || Number.isNaN(Number(toIndex))) return;
+    captureHistory();
+  
+    // Find the block (by id or path)
+    const ref =
+      (blockPath ? findBlockByPath(template, blockPath) : null) ??
+      (blockId ? findBlockById(template, blockId) : null);
+    if (!ref) return;
+  
+    // Page identity for the util
+    const pages = getTemplatePages(template);
+    const page = pages[ref.pageIdx];
+    const pageKey = String(page?.id ?? page?.slug ?? page?.path ?? ref.pageIdx);
+  
+    // Centralized move + emit (updates working copy via events)
+    const nextData = moveBlockEmit(
+      template,
+      pageKey,
+      String(blockId ?? (ref.block as any)?._id),
+      Number(toIndex)
+    );
+  
+    // Reflect into local state so UI stays in lockstep
+    if (nextData) {
+      const nextTemplate: any = { ...template, data: nextData };
+      if (!Array.isArray(nextTemplate.pages)) nextTemplate.pages = nextData.pages;
+      setTemplate(nextTemplate);
+      onChange(nextTemplate);
+    }
+  }
+  
   function deleteBlock(blockId?: string | null, blockPath?: string | null) {
     captureHistory();
     const ref =
       (blockPath ? findBlockByPath(template, blockPath) : null) ??
       (blockId ? findBlockById(template, blockId) : null);
     if (!ref) return;
-    const pages = [...getTemplatePages(template)];
-    const page = { ...pages[ref.pageIdx] };
-    const blocks = [...getPageBlocks(page)];
-    blocks.splice(ref.blockIdx, 1);
-    setPageBlocks(page, blocks);
-    pages[ref.pageIdx] = page;
-    const nextTemplate: any = Array.isArray((template as any)?.data?.pages)
-      ? { ...template, data: { ...(template as any).data, pages } }
-      : { ...template, pages };
-    setTemplate(nextTemplate);
-    onChange(nextTemplate);
-    emitIfAllowed({ data: { ...(nextTemplate as any).data, pages }, pages });
+
+    const pages = getTemplatePages(template);
+    const page = pages[ref.pageIdx];
+    const pageKey = String(page?.id ?? page?.slug ?? page?.path ?? ref.pageIdx);
+
+    const nextData = removeBlockEmit(template, pageKey, String(blockId ?? (ref.block as any)?._id));
+    if (nextData) {
+      const nextTemplate: any = { ...template, data: nextData };
+      if (!Array.isArray(nextTemplate.pages)) nextTemplate.pages = nextData.pages;
+      setTemplate(nextTemplate);
+      onChange(nextTemplate);
+    }
   }
 
   function saveEditedBlock(updated: Block) {
     captureHistory();
-    const ref = editingBlock?.ref as {
-      pageIdx: number;
-      blockIdx: number;
-      block: Block;
-    } | null;
-    if (!ref) return;
-    const pages = [...getTemplatePages(template)];
-    const page = { ...pages[ref.pageIdx] };
-    const blocks = [...getPageBlocks(page)];
-    blocks[ref.blockIdx] = updated;
-    setPageBlocks(page, blocks);
-    pages[ref.pageIdx] = page;
-    const nextTemplate: any = Array.isArray((template as any)?.data?.pages)
-      ? { ...template, data: { ...(template as any).data, pages } }
-      : { ...template, pages };
-    setTemplate(nextTemplate);
-    onChange(nextTemplate);
-    emitIfAllowed({ data: { ...(nextTemplate as any).data, pages }, pages });
+
+    // centralized replace + emit
+    const nextData = replaceBlockEmit(template, updated);
+
+    if (nextData) {
+      const nextTemplate: any = { ...template, data: nextData };
+      if (!Array.isArray(nextTemplate.pages)) nextTemplate.pages = nextData.pages;
+      setTemplate(nextTemplate);
+      onChange(nextTemplate);
+    } else {
+      // fallback (shouldn't happen): manual in-place replace
+      const ref = editingBlock?.ref as {
+        pageIdx: number;
+        blockIdx: number;
+        block: Block;
+      } | null;
+      if (ref) {
+        const pages = [...getTemplatePages(template)];
+        const page = { ...pages[ref.pageIdx] };
+        const blocks = [...getPageBlocks(page)];
+        blocks[ref.blockIdx] = updated;
+        setPageBlocks(page, blocks);
+        pages[ref.pageIdx] = page;
+        const nextTemplate: any = Array.isArray((template as any)?.data?.pages)
+          ? { ...template, data: { ...(template as any).data, pages } }
+          : { ...template, pages };
+        setTemplate(nextTemplate);
+        onChange(nextTemplate);
+        emitPatchIfAllowed({ data: { ...(nextTemplate as any).data, pages }, pages });
+      }
+    }
+
     setEditingBlock(null);
     editMuteRef.current = false; // unmute
   }
@@ -518,7 +661,7 @@ export default function EditorContent({
           ...(detail.meta ? { meta: detail.meta } : {}),
         } as any,
       };
-      emitIfAllowed(patch);
+      emitPatchIfAllowed(patch);
     };
     window.addEventListener('qs:template:merge', handler as any);
     return () => window.removeEventListener('qs:template:merge', handler as any);
@@ -577,10 +720,15 @@ export default function EditorContent({
         deleteBlock(d.blockId ?? null, d.blockPath ?? null);
         return;
       }
+      if (d.type === 'preview:move-block') {
+        // expects: { type:'preview:move-block', blockId?, blockPath?, toIndex:number }
+        moveBlock(d.blockId ?? null, d.blockPath ?? null, (d as any).toIndex);
+        return;
+      }      
     }
     window.addEventListener('message', onMessage);
     return () => window.removeEventListener('message', onMessage);
-  }, [openHeaderEditor, openBlockEditor, openAdder, deleteBlock, editingBlock]);
+  }, [openHeaderEditor, openBlockEditor, openAdder, deleteBlock, editingBlock, moveBlock]);
 
   /* current page + save handler for page settings */
   const currentPage = useMemo(() => {
@@ -601,7 +749,7 @@ export default function EditorContent({
 
     setTemplate(nextTemplate);
     onChange(nextTemplate);
-    emitIfAllowed({ data: { ...(nextTemplate as any).data, pages }, pages });
+    emitPatchIfAllowed({ data: { ...(nextTemplate as any).data, pages }, pages });
   };
 
   /* ---------- Tabs: Blocks (default) | Live (iframe) ---------- */
@@ -640,6 +788,8 @@ export default function EditorContent({
 
   return (
     <div className="flex min-w-0">
+      {showWelcome && <NewTemplateWelcome onStart={dismissWelcome} />}
+      
       {/* Left settings */}
       <aside
         className={[
@@ -693,7 +843,7 @@ export default function EditorContent({
           >
             Blocks
           </Link>
-          <Link
+        <Link
             href={buildTabHref('live')}
             className={[
               'px-4 py-2 text-sm rounded-t-md border-b-2 transition-colors',
@@ -724,7 +874,7 @@ export default function EditorContent({
           onChange={(t) => {
             setTemplate(t);
             onChange(t);
-            emitIfAllowed({
+            emitPatchIfAllowed({
               data: (t as any).data,
               headerBlock: (t as any).headerBlock,
               footerBlock: (t as any).footerBlock,
@@ -742,7 +892,7 @@ export default function EditorContent({
           onEditHeader={openHeaderEditor}
           onRequestEditBlock={(id) => openBlockEditor(id, null)}
           onRequestAddAfter={(id) => openAdder(id, null)}
-          onRequestDeleteBlock={(id) => deleteBlock(id, null)}  // ← NEW: wire delete
+          onRequestDeleteBlock={(id) => deleteBlock(id, null)}  // delete wired
           previewVersionId={previewVersionId}
           pageSlug={currentPageSlug}
         />
@@ -828,12 +978,12 @@ export default function EditorContent({
         onSaveDraft={(t) => {
           setTemplate(t!);
           onChange(t!);
-          emitIfAllowed({ data: (t as any).data });
+          emitPatchIfAllowed({ data: (t as any).data });
         }}
         onUndo={undo}
         onRedo={redo}
         onOpenPageSettings={() => setPageSettingsOpen(true)}
-        onApplyTemplate={applyFromToolbar} // ← prevents re-emit loop
+        onApplyTemplate={applyFromToolbar} // prevents re-emit loop
         onSetRawJson={(json) => setRawJson(json)}
       />
 

@@ -1,4 +1,3 @@
-// components/admin/templates/block-editors/hero-editor.tsx
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
@@ -8,331 +7,291 @@ import type { Template } from '@/types/template';
 import { uploadToStorage } from '@/lib/uploadToStorage';
 import BlockPreviewToggle from '@/components/admin/ui/block-preview-toggle';
 import toast from 'react-hot-toast';
-import clsx from 'clsx';
 import { Sparkles, Image as ImageIcon, Loader2 } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
+import { getIndustryOptions, resolveIndustryKey, toIndustryLabel } from '@/lib/industries';
+import { heroLog } from '@/lib/debug/hero';
 
-// ✅ canonical industry helpers (key-first)
-import {
-  getIndustryOptions,
-  resolveIndustryKey,
-  toIndustryLabel,
-} from '@/lib/industries';
+/* ───────── helpers ───────── */
+function toCanonicalHeroProps(local: any, template?: any) {
+  const digits = (s: string) => (s || '').replace(/\D/g, '');
+  const action = local?.cta_action || 'go_to_page';
+  let ctaHref = '/contact';
+  if (action === 'go_to_page') ctaHref = local?.cta_link || '/contact';
+  else if (action === 'jump_to_contact') ctaHref = `#${String(local?.contact_anchor_id || 'contact').replace(/^#/, '')}`;
+  else if (action === 'call_phone') {
+    const d = digits(local?.cta_phone) || digits((template?.phone as string) || '');
+    ctaHref = d ? `tel:${d}` : 'tel:';
+  }
+  return {
+    heading: local?.headline ?? local?.heading ?? 'Welcome to Your New Site',
+    subheading: local?.subheadline ?? local?.subheading ?? 'Start editing, and let the magic happen.',
+    ctaLabel: local?.cta_text ?? local?.ctaLabel ?? 'Get Started',
+    ctaHref,
+    heroImage: local?.image_url ?? local?.heroImage ?? '',
+    blur_amount: typeof local?.blur_amount === 'number' ? local.blur_amount : 0,
+    image_position: local?.image_position ?? 'center',
+    layout_mode: local?.layout_mode ?? 'inline',
+    tone: local?.tone ?? 'neutral',
+    tags: Array.isArray(local?.tags) ? local.tags : [],
+  };
+}
 
-const previewSizes = { desktop: 'max-w-full', tablet: 'max-w-xl', mobile: 'max-w-xs' };
-const positionStyles = { top: 'bg-top', center: 'bg-center', bottom: 'bg-bottom' };
+function normalizeCta(local: any, template?: any) {
+  const out = { ...(local || {}) };
+  const digits = (s: string) => (s || '').replace(/\D/g, '');
+  if (!out.cta_action && typeof out.cta_link === 'string') {
+    const link = out.cta_link;
+    if (link.startsWith('#')) { out.cta_action = 'jump_to_contact'; out.contact_anchor_id = link.slice(1) || 'contact'; }
+    else if (link.startsWith('tel:')) { out.cta_action = 'call_phone'; out.cta_phone = digits(link.slice(4)); }
+    else out.cta_action = 'go_to_page';
+  }
+  if (out.cta_action === 'jump_to_contact') out.contact_anchor_id = String(out.contact_anchor_id || 'contact').replace(/^#/, '');
+  else if (out.cta_action === 'call_phone') out.cta_phone = digits(out.cta_phone || (template?.phone as string) || '');
+  else out.cta_link = out.cta_link || '/contact';
+  return out;
+}
 
-// Dark-mode standardized controls
-const inputDark =
-  'w-full rounded-md border border-white/10 bg-neutral-950 px-3 py-2 text-sm text-white ' +
-  'placeholder:text-white/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500';
-const selectDark =
-  'w-full rounded-md border border-white/10 bg-neutral-950 px-2 py-2 text-sm text-white ' +
-  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500';
+function pickMostEdited(propsRaw: any, contentRaw: any, template?: any) {
+  const toNew = (raw: any = {}) => {
+    const out: any = { ...raw };
+    if (!out.headline && raw.heading) out.headline = raw.heading;
+    if (!out.subheadline && raw.subheading) out.subheadline = raw.subheading;
+    if (!out.cta_text && raw.ctaLabel) out.cta_text = raw.ctaLabel;
+    if (!out.image_url && raw.heroImage) out.image_url = raw.heroImage;
+    if (!out.cta_link && typeof raw.ctaHref === 'string') out.cta_link = raw.ctaHref;
+    if (raw.blur_amount != null && out.blur_amount == null) out.blur_amount = raw.blur_amount;
+    if (raw.image_position && !out.image_position) out.image_position = raw.image_position;
+    if (raw.layout_mode && !out.layout_mode) out.layout_mode = raw.layout_mode;
+    return out;
+  };
+  const P = toNew(propsRaw || {});
+  const C = toNew(contentRaw || {});
+  const isStr = (v: any) => typeof v === 'string' && v.trim().length > 0;
+  const isDefault = (s: string) => !isStr(s) || /^welcome to your new site$/i.test((s || '').trim());
+  const score = (c: any) => { let s = 0; if (!isDefault(c.headline ?? '')) s += 3; if (isStr(c.subheadline)) s += 1; if (isStr(c.cta_text)) s += 1; return s; };
+  const base = score(C) >= score(P) ? C : P;
+  const other = base === C ? P : C;
+  const merged: any = { ...base };
+  for (const [k, v] of Object.entries(other)) {
+    const cur = (merged as any)[k];
+    if (cur == null || cur === '' || (typeof cur === 'number' && Number.isNaN(cur))) (merged as any)[k] = v;
+  }
+  return { merged: normalizeCta(merged, template), chosenKey: (base === C ? 'content' : 'props') as 'props' | 'content' };
+}
+
+/* ───────── styles ───────── */
+const inputDark = 'w-full rounded-md border border-white/10 bg-neutral-950 px-3 py-2 text-sm text-white placeholder:text-white/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500';
+const selectDark = 'w-full rounded-md border border-white/10 bg-neutral-950 px-2 py-2 text-sm text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500';
 const rangeDark = 'w-full accent-violet-500';
 
-const btnPrimary =
-  'inline-flex items-center gap-2 rounded bg-purple-600 hover:bg-purple-500 px-3 py-1.5 text-sm text-white disabled:opacity-60';
-const btnOutlinePurple =
-  'inline-flex items-center gap-1.5 rounded border-2 border-purple-500/70 text-purple-300 px-2 py-1 text-xs ' +
-  'hover:bg-purple-500/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-500 disabled:opacity-60';
-const btnGhost =
-  'inline-flex items-center gap-1 rounded border border-white/10 bg-neutral-900 px-2 py-1 text-xs text-white hover:bg-neutral-800 disabled:opacity-60';
-
-function b64ToFile(b64: string, filename: string, mime = 'image/png'): File {
-  const byteStr = atob(b64);
-  const bytes = new Uint8Array(byteStr.length);
-  for (let i = 0; i < byteStr.length; i++) bytes[i] = byteStr.charCodeAt(i);
-  return new File([bytes], filename, { type: mime });
-}
-
-function formatPhone(d: string) {
-  if (d.length !== 10) return d;
-  return `(${d.slice(0, 3)}) ${d.slice(3, 6)}-${d.slice(6)}`;
-}
-
-/** Subject presets that bias toward service outcome/equipment (not people) */
-function presetSubjectFor(industryLabel: string, services: string[] = []) {
-  const s = (industryLabel || '').toLowerCase();
-  if (s.includes('landscap'))
-    return 'lush green lawn with mowing stripes, tidy garden beds and stone edging, fresh mulch, tools or mower nearby, clean background';
-  if (s.includes('window'))
-    return 'close-up squeegee wiping a large house window with sparkling reflection, clean edges';
-  if (s.includes('towing'))
-    return 'tow truck assisting a sedan on roadside at dusk, hazard lights, safe shoulder, highway backdrop';
-  if (s.includes('roof'))
-    return 'freshly cleaned roof with streak-free shingles, gutter line visible, blue sky';
-  if (s.includes('hvac'))
-    return 'modern HVAC condenser unit next to a home with neat landscaping, subtle depth of field';
-  const first = services?.[0];
-  return `clean, modern banner depicting ${first || industryLabel} results and equipment, wide exterior scene`;
-}
-
-/* ------------------- template patch events ------------------- */
-function emitApplyPatch(patch: Partial<Template>) {
-  try {
-    window.dispatchEvent(new CustomEvent('qs:template:apply-patch', { detail: patch as any }));
-  } catch {}
-}
-function emitMerge(detail: Partial<Template>['data'] | { meta?: any } | any) {
-  try {
-    window.dispatchEvent(new CustomEvent('qs:template:merge', { detail }));
-  } catch {}
-}
-
 export default function HeroEditor({
-  block,
-  onSave,
-  onClose,
-  errors,
-  template,
+  block, onSave, onClose, errors, template,
 }: BlockEditorProps & { template: Template }) {
   if (block.type !== 'hero') return null;
 
-  const [local, setLocal] = useState<any>(block.content ?? {});
-  const [previewSize, setPreviewSize] = useState<'desktop' | 'tablet' | 'mobile'>('desktop');
-  const [forceMobilePreview, setForceMobilePreview] = useState(false);
+  // init from the most-edited side; merge + normalize CTA
+  const rawProps = (block as any)?.props;
+  const rawContent = (block as any)?.content;
+  const { merged: initialLocal, chosenKey } = useMemo(
+    () => pickMostEdited(rawProps, rawContent, template),
+    [(block as any)?._id, (block as any)?.id, rawProps, rawContent, template]
+  );
+  const fieldKey: 'props' | 'content' = useMemo(() => {
+    if (rawProps && rawContent) return chosenKey;
+    return rawProps ? 'props' : 'content';
+  }, [rawProps, rawContent, chosenKey]);
+  const altKey = fieldKey === 'props' ? 'content' : 'props';
 
-  // Centralized options (value === key, label for UI)
+  const [local, setLocal] = useState<any>(initialLocal);
+  useEffect(() => {
+    setLocal(initialLocal);
+    heroLog('init(editor)', { fieldKey, altKey, from: { props: rawProps, content: rawContent }, local: initialLocal });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialLocal, fieldKey, altKey]);
+
+  // industry key
   const industryOptions = useMemo(() => getIndustryOptions(), []);
-
-  // Pull canonical key from data.meta.industry first, then legacy top-level
   const currentIndustryKey = useMemo(() => {
     const meta = (template?.data as any)?.meta ?? {};
     const raw = meta?.industry ?? (template as any)?.industry ?? '';
     return resolveIndustryKey(raw);
   }, [template]);
-
-  // Local industry state: **key** for persistence; optional “Other text” for AI prompt only
   const [industryKey, setIndustryKey] = useState<string>(currentIndustryKey);
   useEffect(() => setIndustryKey(currentIndustryKey), [currentIndustryKey]);
 
-  // When user selects 'other', allow custom prompt label
   const [aiIndustryOther, setAiIndustryOther] = useState<string>('');
   const promptIndustryLabel = useMemo(
-    () =>
-      industryKey === 'other' && aiIndustryOther.trim()
-        ? aiIndustryOther.trim()
-        : toIndustryLabel(resolveIndustryKey(industryKey)),
+    () => (industryKey === 'other' && aiIndustryOther.trim()
+      ? aiIndustryOther.trim()
+      : toIndustryLabel(resolveIndustryKey(industryKey))),
     [industryKey, aiIndustryOther]
   );
 
-  // AI (copy) state
+  // AI states
   const [aiLoading, setAiLoading] = useState(false);
-  const [aiFieldLoading, setAiFieldLoading] =
-    useState<null | 'headline' | 'subheadline' | 'cta_text'>(null);
-  const [aiError, setAiError] = useState<string | null>(null);
+  const [aiFieldLoading, setAiFieldLoading] = useState<null|'headline'|'subheadline'|'cta_text'>(null);
+  const [aiError, setAiError] = useState<string|null>(null);
 
-  // AI (image) state
+  // image states
   const [imgLoading, setImgLoading] = useState(false);
-  const [imgError, setImgError] = useState<string | null>(null);
+  const [imgError, setImgError] = useState<string|null>(null);
   const [imgIncludePeople, setImgIncludePeople] = useState(false);
   const [imgSubjectTouched, setImgSubjectTouched] = useState(false);
-  const [imgSubject, setImgSubject] = useState(
-    local?.image_subject || `${promptIndustryLabel} website hero banner`
-  );
-  const [imgStyle, setImgStyle] = useState<'photo' | 'illustration' | '3d' | 'minimal'>('photo');
+  const [imgSubject, setImgSubject] = useState(local?.image_subject || `${promptIndustryLabel} website hero banner`);
+  const [imgStyle, setImgStyle] = useState<'photo'|'illustration'|'3d'|'minimal'>('photo');
 
   const update = <K extends keyof typeof local>(key: K, value: (typeof local)[K]) =>
     setLocal((prev: any) => ({ ...prev, [key]: value as (typeof local)[K] }));
 
   const handleSave = () => {
-    // Store key on the block (contextual), but **canonical** lives in data.meta.industry
-    const nextBlock: Block = { ...(block as any), industry: industryKey, content: local };
+    // merge + canon + mirror to both shapes
+    const mergedLocal = normalizeCta({ ...local }, template);
+    const canon = toCanonicalHeroProps(mergedLocal, template);
+    const finalPayload = { ...mergedLocal, ...canon };
+
+    heroLog('handleSave(editor)', {
+      fieldKey,
+      preview: { heading: finalPayload.heading, subheading: finalPayload.subheading, ctaLabel: finalPayload.ctaLabel, ctaHref: finalPayload.ctaHref },
+    });
+
+    const nextBlock: Block = {
+      ...(block as any),
+      industry: industryKey,
+      [fieldKey]: finalPayload,
+      [altKey]: finalPayload,
+    } as any;
+
     onSave(nextBlock);
     onClose();
+
+    // Ask the bottom toolbar to do a full save using the updated working copy.
+    // Use rAF to ensure the parent state has applied before commit runs.
+    requestAnimationFrame(() => {
+      window.dispatchEvent(new CustomEvent('qs:toolbar:save-now', { detail: { source: 'hero-editor' } }));
+    });
   };
 
-  const errorText = (field: string) =>
-    errors?.[field]?.length ? (
-      <p className="text-sm text-red-400 mt-1">{errors[field][0].message}</p>
-    ) : null;
+  const errorText = (path: string) =>
+    errors?.[path]?.length ? <p className="text-xs text-red-400 mt-1">{errors[path][0].message}</p> : null;
 
-  const resetImageOffsets = () => {
-    update('image_x', undefined as any);
-    update('image_y', undefined as any);
-  };
-
-  // Auto-seed subject when prompt label changes (unless user already edited it)
+  // auto-seed subject when industry label changes
   useEffect(() => {
     if (!imgSubjectTouched) {
-      const preset = presetSubjectFor(promptIndustryLabel, (template as any)?.services || []);
-      setImgSubject(preset);
-      update('image_subject', preset as any);
+      const s = `${promptIndustryLabel} website hero banner`;
+      setImgSubject(s);
+      update('image_subject', s as any);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [promptIndustryLabel]);
 
-  // 🔁 Keep template/sidebar/DB in sync when the editor’s Industry changes
+  // keep meta.industry in sync
   useEffect(() => {
-    // write onto the block object (so prompts see latest even before Save)
     (block as any).industry = industryKey;
-
-    // fast local merge (for any listeners that reflect meta immediately)
     const meta = ((template?.data as any)?.meta ?? {});
-    emitMerge({ meta: { ...meta, industry: industryKey } });
-
-    // persistence patch (TemplateActionToolbar listens for this and commits)
-    emitApplyPatch({
-      data: {
-        ...(template?.data as any),
-        meta: { ...meta, industry: industryKey },
-      } as any,
-      industry: industryKey as any, // legacy mirror if something still reads top-level
-    });
+    try {
+      window.dispatchEvent(new CustomEvent('qs:template:merge', { detail: { meta: { ...meta, industry: industryKey } } }));
+      window.dispatchEvent(new CustomEvent('qs:template:apply-patch', { detail: { data: { ...(template?.data as any), meta: { ...meta, industry: industryKey } }, industry: industryKey } as any }));
+    } catch {}
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [industryKey]);
 
+  // Suggest API
   async function requestSuggestions() {
     const res = await fetch('/api/hero/suggest', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         template_id: template?.id,
-        // Use human label for better prompting
         industry: promptIndustryLabel,
         services: (template as any)?.services ?? [],
         business_name: (template as any)?.business_name,
-        city: (template as any)?.city,
-        state: (template as any)?.state,
+        city: (template as any)?.city, state: (template as any)?.state,
       }),
     });
     if (!res.ok) throw new Error(`Suggest failed (${res.status})`);
-    return (await res.json()) as {
-      headline?: string;
-      subheadline?: string;
-      cta_text?: string;
-    };
+    return (await res.json()) as { headline?: string; subheadline?: string; cta_text?: string };
   }
-
   async function suggestAll() {
-    setAiLoading(true);
-    setAiError(null);
+    setAiLoading(true); setAiError(null);
     try {
       const data = await requestSuggestions();
+      heroLog('AI suggestAll ->', data);
       if (data.headline) update('headline', data.headline);
       if (data.subheadline) update('subheadline', data.subheadline);
       if (data.cta_text) update('cta_text', data.cta_text);
       toast.success('Suggested copy applied');
-    } catch (e: any) {
-      setAiError(e?.message || 'Failed to fetch suggestions');
-      toast.error('Could not get AI suggestions');
-    } finally {
-      setAiLoading(false);
-    }
+    } catch (e: any) { setAiError(e?.message || 'Failed to fetch suggestions'); toast.error('Could not get AI suggestions'); }
+    finally { setAiLoading(false); }
   }
-
-  async function suggestOne(which: 'headline' | 'subheadline' | 'cta_text') {
-    setAiFieldLoading(which);
-    setAiError(null);
+  async function suggestOne(which: 'headline'|'subheadline'|'cta_text') {
+    setAiFieldLoading(which); setAiError(null);
     try {
       const data = await requestSuggestions();
+      heroLog(`AI suggestOne(${which}) ->`, data);
       if (data[which]) update(which, data[which] as any);
-      toast.success(`Regenerated ${which.replace('_', ' ')}`);
-    } catch (e: any) {
-      setAiError(e?.message || 'Failed to regenerate');
-      toast.error('Could not regenerate');
-    } finally {
-      setAiFieldLoading(null);
-    }
+      toast.success(`Regenerated ${which.replace('_',' ')}`);
+    } catch (e: any) { setAiError(e?.message || 'Failed to regenerate'); toast.error('Could not regenerate'); }
+    finally { setAiFieldLoading(null); }
   }
 
   async function generateHeroImage() {
-    setImgLoading(true);
-    setImgError(null);
+    setImgLoading(true); setImgError(null);
     try {
       const base =
         `website hero (header/banner) image for a ${promptIndustryLabel} small business. ` +
         `${imgSubject}. ` +
         `wide 16:9 composition with clear copy space for headline, clean modern background, high detail, no text, no watermarks, no logos.`;
+      const negatives = imgIncludePeople ? 'no text, no watermark, no logo' :
+        'no people, no faces, no portraits, no hands, no superheroes, no text, no watermark, no logo';
 
-      const negatives = imgIncludePeople
-        ? 'no text, no watermark, no logo'
-        : 'no people, no faces, no portraits, no hands, no superheroes, no text, no watermark, no logo';
+      heroLog('image prompt', { prompt: base, negatives, industry: promptIndustryLabel });
 
       const res = await fetch('/api/hero/generate-image', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          template_id: template?.id,
-          industry: promptIndustryLabel, // human label for gen
-          services: (template as any)?.services ?? [],
-          business_name: (template as any)?.business_name,
-          city: (template as any)?.city,
-          state: (template as any)?.state,
-          subject: imgSubject,
-          style: imgStyle,
-          aspect: 'wide',
-          prompt: base,
-          negative: negatives,
-          include_people: imgIncludePeople,
-          prompt_context: {
-            purpose: 'website hero header',
-            layout: 'wide 16:9 with copy space',
-            include_people: imgIncludePeople,
-          },
+          template_id: template?.id, industry: promptIndustryLabel,
+          services: (template as any)?.services ?? [], business_name: (template as any)?.business_name,
+          city: (template as any)?.city, state: (template as any)?.state,
+          subject: imgSubject, style: imgStyle, aspect: 'wide',
+          prompt: base, negative: negatives, include_people: imgIncludePeople,
+          prompt_context: { purpose: 'website hero header', layout: 'wide 16:9 with copy space', include_people: imgIncludePeople },
         }),
       });
       if (!res.ok) throw new Error(`Image generate failed (${res.status})`);
       const { image_base64 } = await res.json();
       if (!image_base64) throw new Error('No image returned');
-
-      const file = b64ToFile(image_base64, `hero-${Date.now()}.png`, 'image/png');
+      const file = new File([Uint8Array.from(atob(image_base64), c => c.charCodeAt(0))], `hero-${Date.now()}.png`, { type: 'image/png' });
       const url = await uploadToStorage(file, `template-${template?.id}/hero`);
       update('image_url', url as any);
       toast.success('Hero image generated');
-    } catch (e: any) {
-      setImgError(e?.message || 'Failed to generate image');
-      toast.error('Could not generate image');
-    } finally {
-      setImgLoading(false);
-    }
+    } catch (e: any) { setImgError(e?.message || 'Failed to generate image'); toast.error('Could not generate image'); }
+    finally { setImgLoading(false); }
   }
 
-  // derive phone for CTA call override hint
   const dbPhoneDigits = ((template as any)?.phone || '').replace(/\D/g, '');
 
+  /* ───────── UI ───────── */
   return (
-    <div
-      className="space-y-4 bg-black text-white border border-black p-4 rounded max-h-[90vh] overflow-y-auto"
-      onKeyDownCapture={(e) => e.stopPropagation()}
-    >
-      {/* Kickoff: industry intent */}
-      <div className="rounded border border-white/10 bg-neutral-900 p-3 space-y-3">
-        <div className="text-sm font-medium mb-1">What kind of site are you building?</div>
+    <div className="space-y-3 bg-black text-white border border-black p-4 rounded max-h-[90vh] overflow-y-auto" onKeyDownCapture={(e) => e.stopPropagation()}>
+      {/* Industry */}
+      <div className="rounded border border-white/10 bg-neutral-900 p-3 space-y-2">
+        <div className="text-sm font-medium">What kind of site are you building?</div>
         <div className="grid md:grid-cols-3 gap-3">
-          <div className="md:col-span-1">
+          <div>
             <label className="text-xs text-neutral-300">Industry</label>
-            <select
-              className={selectDark}
-              value={industryKey}
-              onChange={(e) => setIndustryKey(e.target.value)}
-            >
-              {industryOptions.map((opt) => (
-                <option key={opt.value} value={opt.value}>
-                  {opt.label}
-                </option>
-              ))}
+            <select className={selectDark} value={industryKey} onChange={(e) => setIndustryKey(e.target.value)}>
+              {useMemo(() => getIndustryOptions(), [])?.map((opt) => (<option key={opt.value} value={opt.value}>{opt.label}</option>))}
             </select>
           </div>
           <div className="md:col-span-2">
             <label className="text-xs text-neutral-300">Other (if not in the list)</label>
-            <input
-              className={inputDark}
-              value={aiIndustryOther}
-              onChange={(e) => setAiIndustryOther(e.target.value)}
-              placeholder="e.g., Mobile Windshield Repair"
-              disabled={industryKey !== 'other'}
-            />
-            <p className="mt-1 text-xs text-neutral-400">
-              AI suggestions & images use this immediately. The template’s industry is persisted as a key.
-            </p>
+            <input className={selectDark} value={aiIndustryOther} onChange={(e) => setAiIndustryOther(e.target.value)} placeholder="e.g., Mobile Windshield Repair" disabled={industryKey !== 'other'} />
           </div>
         </div>
       </div>
 
-      {/* AI Assist header */}
-      <div className="rounded border border-white/10 bg-neutral-900 p-3 space-y-3">
+      {/* AI Assist */}
+      <div className="rounded border border-white/10 bg-neutral-900 p-3 space-y-2">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Sparkles className="h-4 w-4 text-purple-300" />
@@ -341,161 +300,54 @@ export default function HeroEditor({
         </div>
         {aiError && <div className="text-xs text-red-300">{aiError}</div>}
         <div className="flex items-center gap-2">
-          <button onClick={suggestAll} disabled={aiLoading} className={btnPrimary}>
+          <button onClick={suggestAll} disabled={aiLoading} className="inline-flex items-center gap-2 rounded bg-purple-600 hover:bg-purple-500 px-3 py-1.5 text-sm text-white disabled:opacity-60">
             {aiLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
             {aiLoading ? 'Working…' : 'Suggest All'}
           </button>
         </div>
       </div>
 
-      {/* Headline */}
-      <div>
-        <div className="flex items-center justify-between mb-1">
-          <label className="block text-sm font-medium">Headline</label>
-          <button
-            type="button"
-            className={btnOutlinePurple}
-            onClick={() => suggestOne('headline')}
-            disabled={aiFieldLoading === 'headline'}
-            title="Generate headline with AI"
-          >
-            {aiFieldLoading === 'headline' ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
-            AI
-          </button>
+      {/* Headline/Subheadline/CTA */}
+      <div className="grid md:grid-cols-3 gap-3">
+        <div>
+          <label className="text-xs text-neutral-300">Headline</label>
+          <input className={selectDark} value={local?.headline || ''} onChange={(e) => update('headline', e.target.value as any)} placeholder="Fast, Reliable Towing" />
+          {errorText(`${fieldKey}.headline`)}
         </div>
-        <input
-          className={inputDark}
-          value={local?.headline || ''}
-          onChange={(e) => update('headline', e.target.value as any)}
-          placeholder="Fast, Reliable Towing"
-        />
-        {errorText('content.headline')}
-      </div>
-
-      {/* Subheadline */}
-      <div>
-        <div className="flex items-center justify-between mb-1">
-          <label className="block text-sm font-medium">Subheadline</label>
-          <button
-            type="button"
-            className={btnOutlinePurple}
-            onClick={() => suggestOne('subheadline')}
-            disabled={aiFieldLoading === 'subheadline'}
-            title="Generate subheadline with AI"
-          >
-            {aiFieldLoading === 'subheadline' ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
-            AI
-          </button>
+        <div className="md:col-span-2">
+          <label className="text-xs text-neutral-300">Subheadline</label>
+          <input className={selectDark} value={local?.subheadline || ''} onChange={(e) => update('subheadline', e.target.value as any)} placeholder="24/7 local service with transparent pricing and quick arrival." />
+          {errorText(`${fieldKey}.subheadline`)}
         </div>
-        <input
-          className={inputDark}
-          value={local?.subheadline || ''}
-          onChange={(e) => update('subheadline', e.target.value as any)}
-          placeholder="24/7 local service with transparent pricing and quick arrival."
-        />
-        {errorText('content.subheadline')}
-      </div>
-
-      {/* CTA Text */}
-      <div>
-        <div className="flex items-center justify-between mb-1">
-          <label className="block text-sm font-medium">CTA Text</label>
-          <button
-            type="button"
-            className={btnOutlinePurple}
-            onClick={() => suggestOne('cta_text')}
-            disabled={aiFieldLoading === 'cta_text'}
-            title="Generate CTA text with AI"
-          >
-            {aiFieldLoading === 'cta_text' ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
-            AI
-          </button>
+        <div>
+          <label className="text-xs text-neutral-300">CTA Text</label>
+          <input className={selectDark} value={local?.cta_text || ''} onChange={(e) => update('cta_text', e.target.value as any)} placeholder="Get Started" />
+          {errorText(`${fieldKey}.cta_text`)}
         </div>
-        <input
-          className={inputDark}
-          value={local?.cta_text || ''}
-          onChange={(e) => update('cta_text', e.target.value as any)}
-          placeholder="Get Help Now"
-        />
-        {errorText('content.cta_text')}
-      </div>
-
-      {/* CTA Action */}
-      <div className="rounded border border-white/10 bg-neutral-900 p-3 space-y-3">
-        <div className="text-sm font-medium">CTA Action</div>
-
-        <div className="grid md:grid-cols-3 gap-3">
-          <div>
-            <label className="text-xs text-neutral-300">Action</label>
-            <select
-              className={selectDark}
-              value={local?.cta_action || 'go_to_page'}
-              onChange={(e) => update('cta_action', e.target.value as any)}
-            >
-              <option value="jump_to_contact">Jump to Contact (on this page)</option>
-              <option value="go_to_page">Go to /contact (or URL)</option>
-              <option value="call_phone">Call Business Phone</option>
+        <div className="md:col-span-2">
+          <label className="text-xs text-neutral-300">CTA Action</label>
+          <div className="grid grid-cols-3 gap-2">
+            <select className={selectDark} value={local?.cta_action || 'go_to_page'} onChange={(e) => update('cta_action', e.target.value as any)}>
+              <option value="jump_to_contact">Jump to Contact</option>
+              <option value="go_to_page">Go to Page</option>
+              <option value="call_phone">Call Phone</option>
             </select>
+            {(local?.cta_action || 'go_to_page') === 'go_to_page' && (
+              <input className={selectDark} value={local?.cta_link ?? '/contact'} onChange={(e) => update('cta_link', e.target.value as any)} placeholder="/contact" />
+            )}
+            {local?.cta_action === 'jump_to_contact' && (
+              <input className={selectDark} value={local?.contact_anchor_id ?? 'contact'} onChange={(e) => update('contact_anchor_id', e.target.value as any)} placeholder="contact" />
+            )}
+            {local?.cta_action === 'call_phone' && (
+              <input className={selectDark} value={local?.cta_phone ?? ''} onChange={(e) => update('cta_phone', e.target.value as any)} placeholder={((template as any)?.phone || '').replace(/\D/g,'') ? `defaults to ${(((template as any)?.phone || '').replace(/\D/g,'').replace(/(\d{3})(\d{3})(\d{4})/,'($1) $2-$3'))}` : 'enter 10-digit phone'} />
+            )}
           </div>
-
-          {/* when go_to_page */}
-          {((local?.cta_action || 'go_to_page') === 'go_to_page') && (
-            <div className="md:col-span-2">
-              <label className="text-xs text-neutral-300">Contact Page URL</label>
-              <input
-                className={inputDark}
-                value={local?.cta_link ?? '/contact'}
-                onChange={(e) => update('cta_link', e.target.value as any)}
-                placeholder="/contact"
-              />
-            </div>
-          )}
-
-          {/* when jump_to_contact */}
-          {local?.cta_action === 'jump_to_contact' && (
-            <div className="md:col-span-2">
-              <label className="text-xs text-neutral-300">Contact Anchor ID</label>
-              <input
-                className={inputDark}
-                value={local?.contact_anchor_id ?? 'contact'}
-                onChange={(e) => update('contact_anchor_id', e.target.value as any)}
-                placeholder="contact"
-              />
-              <p className="text-xs text-neutral-400 mt-1">
-                Must match the contact form section id (defaults to <code>contact</code>).
-              </p>
-            </div>
-          )}
-
-          {/* when call_phone */}
-          {local?.cta_action === 'call_phone' && (
-            <div className="md:col-span-2">
-              <label className="text-xs text-neutral-300">Phone (optional override)</label>
-              <input
-                className={inputDark}
-                value={local?.cta_phone ?? ''}
-                onChange={(e) => update('cta_phone', e.target.value as any)}
-                placeholder={dbPhoneDigits ? `defaults to ${dbPhoneDigits}` : 'enter 10-digit phone'}
-              />
-              <p className="text-xs text-neutral-400">
-                If empty, we’ll use the business phone from Template Identity.
-              </p>
-            </div>
-          )}
-          <div className="md:col-span-3 flex items-center justify-between pt-1">
-            <label htmlFor="ctaShowPhone" className="text-sm text-neutral-200">
-              Show phone number under CTA
+          <div className="mt-1">
+            <label className="inline-flex items-center gap-2 text-xs">
+              <Switch checked={!!local?.cta_show_phone_below} onCheckedChange={(v) => update('cta_show_phone_below', v as any)} />
+              <span>Show phone number under CTA</span>
             </label>
-            <Switch
-              id="ctaShowPhone"
-              checked={!!local?.cta_show_phone_below}
-              onCheckedChange={(v) => update('cta_show_phone_below', v as any)}
-            />
           </div>
-          <p className="text-xs text-neutral-400">
-            Uses the phone from Template Identity
-            {dbPhoneDigits ? ` (${formatPhone(dbPhoneDigits)})` : ''}.
-          </p>
         </div>
       </div>
 
@@ -504,247 +356,76 @@ export default function HeroEditor({
         <div className="md:col-span-2">
           <div className="flex items-center justify-between">
             <label className="text-xs text-neutral-300">Image Subject</label>
-            <button
-              onClick={generateHeroImage}
-              disabled={imgLoading}
-              className={btnOutlinePurple}
-              title="Generate hero image"
-            >
-              {imgLoading ? (
-                <Loader2 className="h-3.5 w-3.5 animate-spin" />
-              ) : (
-                <ImageIcon className="h-3.5 w-3.5" />
-              )}
-              Generate
+            <button onClick={generateHeroImage} disabled={imgLoading} className="inline-flex items-center gap-1.5 rounded border-2 border-purple-500/70 text-purple-300 px-2 py-1 text-xs hover:bg-purple-500/10">
+              {imgLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ImageIcon className="h-3.5 w-3.5" />} Generate
             </button>
           </div>
-          <input
-            className={inputDark}
-            value={imgSubject}
-            onChange={(e) => {
-              setImgSubject(e.target.value);
-              setImgSubjectTouched(true);
-              update('image_subject', e.target.value as any);
-            }}
-            placeholder={`${promptIndustryLabel} website hero banner`}
-          />
+          <input className={selectDark} value={imgSubject} onChange={(e) => { setImgSubject(e.target.value); setImgSubjectTouched(true); update('image_subject', e.target.value as any); }} placeholder={`${promptIndustryLabel} website hero banner`} />
         </div>
         <div>
           <label className="text-xs text-neutral-300">Style</label>
-          <select
-            className={selectDark}
-            value={imgStyle}
-            onChange={(e) => setImgStyle(e.target.value as any)}
-          >
-            <option value="photo">Photo</option>
-            <option value="illustration">Illustration</option>
-            <option value="3d">3D Render</option>
-            <option value="minimal">Minimal</option>
+          <select className={selectDark} value={imgStyle} onChange={(e) => setImgStyle(e.target.value as any)}>
+            <option value="photo">Photo</option><option value="illustration">Illustration</option><option value="3d">3D Render</option><option value="minimal">Minimal</option>
           </select>
         </div>
         <div className="md:col-span-3 flex items-center justify-between">
           <label className="text-xs text-neutral-300">Include people in image</label>
-          <Switch
-            checked={imgIncludePeople}
-            onCheckedChange={(v) => setImgIncludePeople(!!v)}
-          />
+          <Switch checked={imgIncludePeople} onCheckedChange={(v) => setImgIncludePeople(!!v)} />
         </div>
       </div>
-      {imgError && <div className="text-xs text-red-300">{imgError}</div>}
 
-      {/* Image Upload */}
-      <div>
-        <label className="block text-sm font-medium mb-1">Image</label>
-        {local?.image_url && (
-          <img src={local.image_url} alt="Hero" className="mb-2 rounded shadow max-w-xs" />
-        )}
-        <input
-          type="file"
-          accept="image/*"
-          className="text-sm text-gray-300 file:bg-purple-600 file:text-white file:rounded file:border-0 file:px-4 file:py-1 file:mr-2"
-          onChange={async (e) => {
-            const file = e.target.files?.[0];
-            if (!file) return;
-            try {
-              const url = await uploadToStorage(file, `template-${template?.id}/hero`);
-              update('image_url', url as any);
-              toast.success('Image uploaded');
-            } catch (err: any) {
-              toast.error(err.message || 'Upload failed');
-            }
-          }}
-        />
-        {errorText('content.image_url')}
-      </div>
-
-      {/* Image layout & effects */}
-      {local?.image_url && (
-        <>
-          <div className="pt-2">
-            <label htmlFor="layoutMode" className="block text-sm font-medium mb-1">
-              Layout Mode
-            </label>
-            <select
-              id="layoutMode"
-              value={local?.layout_mode || 'inline'}
-              onChange={(e) => update('layout_mode', e.target.value as any)}
-              className={selectDark}
-            >
+      {/* Image Upload + layout */}
+      <div className="grid md:grid-cols-3 gap-3">
+        <div>
+          <label className="text-xs text-neutral-300">Image</label>
+          {local?.image_url && <img src={local.image_url} alt="Hero" className="mb-2 rounded shadow max-w-xs" />}
+          <input
+            type="file" accept="image/*" className="text-sm text-gray-300 file:bg-purple-600 file:text-white file:rounded file:border-0 file:px-4 file:py-1 file:mr-2"
+            onChange={async (e) => {
+              const file = e.target.files?.[0]; if (!file) return;
+              try { const url = await uploadToStorage(file, `template-${template?.id}/hero`); update('image_url', url as any); toast.success('Image uploaded'); }
+              catch (err: any) { toast.error(err.message || 'Upload failed'); }
+            }}
+          />
+        </div>
+        <div className="md:col-span-2 grid grid-cols-2 gap-3">
+          <div>
+            <label className="text-xs text-neutral-300">Layout Mode</label>
+            <select value={local?.layout_mode || 'inline'} onChange={(e) => update('layout_mode', e.target.value as any)} className={selectDark}>
               <option value="inline">Inline Image</option>
               <option value="background">Image as Background</option>
               <option value="full_bleed">Full-Bleed Image</option>
-              <option value="natural_height">Use Natural Image Height</option>
+              <option value="natural_height">Natural Height</option>
             </select>
           </div>
+          <div>
+            <label className="text-xs text-neutral-300">Blur Amount (0–30px)</label>
+            <input type="range" min={0} max={30} step={1} value={local?.blur_amount ?? 8} onChange={(e) => update('blur_amount', Number(e.target.value) as any)} className={rangeDark} />
+          </div>
+          <div>
+            <label className="text-xs text-neutral-300">Image X</label>
+            <input className={selectDark} value={local?.image_x || ''} onChange={(e) => update('image_x', e.target.value as any)} placeholder="center" />
+          </div>
+          <div>
+            <label className="text-xs text-neutral-300">Image Y</label>
+            <input className={selectDark} value={local?.image_y || ''} onChange={(e) => update('image_y', e.target.value as any)} placeholder="bottom" />
+          </div>
+        </div>
+      </div>
 
-          {local?.layout_mode === 'natural_height' && (
-            <div className="pt-2 text-sm text-neutral-400">
-              This mode renders the full image using its original height. Check mobile sizes.
-            </div>
-          )}
-
-          {['background', 'full_bleed'].includes(local?.layout_mode) && (
-            <>
-              <div className="pt-4">
-                <label className="block text-sm font-medium mb-1">
-                  Blur Amount <span className="text-xs text-neutral-400">(0–30px)</span>
-                </label>
-                <input
-                  type="range"
-                  min={0}
-                  max={30}
-                  step={1}
-                  value={local?.blur_amount ?? 8}
-                  onChange={(e) => update('blur_amount', Number(e.target.value) as any)}
-                  className={rangeDark}
-                />
-                <div className="text-xs text-neutral-400 mt-1">
-                  Current: {local?.blur_amount ?? 8}px
-                </div>
-              </div>
-
-              <div className="pt-4">
-                <label htmlFor="imageX" className="block text-sm font-medium mb-1">
-                  Image X Offset (e.g., left, center, right, or 40%)
-                </label>
-                <input
-                  id="imageX"
-                  type="text"
-                  className={inputDark}
-                  value={local?.image_x || ''}
-                  onChange={(e) => update('image_x', e.target.value as any)}
-                  placeholder="center"
-                />
-              </div>
-
-              <div className="pt-2">
-                <label htmlFor="imageY" className="block text-sm font-medium mb-1">
-                  Image Y Offset (e.g., top, center, bottom, or 60%)
-                </label>
-                <input
-                  id="imageY"
-                  type="text"
-                  className={inputDark}
-                  value={local?.image_y || ''}
-                  onChange={(e) => update('image_y', e.target.value as any)}
-                  placeholder="bottom"
-                />
-              </div>
-
-              {(local?.image_x || local?.image_y) && (
-                <div className="pt-2">
-                  <button type="button" onClick={resetImageOffsets} className={btnGhost}>
-                    Reset X/Y Offsets
-                  </button>
-                </div>
-              )}
-
-              {local?.layout_mode === 'full_bleed' && (
-                <div className="flex items-center justify-between pt-2">
-                  <label htmlFor="parallaxToggle" className="text-sm">
-                    Enable parallax scroll
-                  </label>
-                  <Switch
-                    id="parallaxToggle"
-                    checked={local?.parallax_enabled ?? true}
-                    onCheckedChange={(v) => update('parallax_enabled', v as any)}
-                  />
-                </div>
-              )}
-
-              {/* Live preview */}
-              <div className="pt-4">
-                <div className="flex items-center justify-between mb-2">
-                  <label className="text-sm font-medium">Live Preview</label>
-                  <div className="flex items-center gap-2">
-                    <select
-                      value={previewSize}
-                      onChange={(e) =>
-                        setPreviewSize(e.target.value as 'desktop' | 'tablet' | 'mobile')
-                      }
-                      className={selectDark}
-                    >
-                      <option value="desktop">Desktop</option>
-                      <option value="tablet">Tablet</option>
-                      <option value="mobile">Mobile</option>
-                    </select>
-                    <label className="text-xs flex items-center gap-1">
-                      <input
-                        type="checkbox"
-                        className="form-checkbox"
-                        checked={forceMobilePreview}
-                        onChange={(e) => setForceMobilePreview(e.target.checked)}
-                      />
-                      Force Mobile Layout
-                    </label>
-                  </div>
-                </div>
-
-                <div
-                  className={clsx(
-                    'relative rounded overflow-hidden border border-neutral-700 h-40 w-full mx-auto',
-                    previewSizes[previewSize],
-                    positionStyles[
-                      (local.image_position as keyof typeof positionStyles) || 'center'
-                    ],
-                    forceMobilePreview && 'max-w-xs'
-                  )}
-                >
-                  <div
-                    className="absolute inset-0 bg-cover"
-                    style={{
-                      backgroundImage: `url(${local.image_url})`,
-                      filter: `blur(${local?.blur_amount ?? 8}px) brightness(0.5)`,
-                    }}
-                  />
-                  <div className="absolute inset-0 flex items-center justify-center text-white text-xs backdrop-blur-sm bg-black/20">
-                    {forceMobilePreview ? 'Mobile Layout Mode' : 'Preview (blur + brightness)'}
-                  </div>
-                </div>
-              </div>
-            </>
-          )}
-        </>
-      )}
-
+      {/* Live preview bridge (no navigation) */}
       <BlockPreviewToggle
-        block={{ ...block, type: 'hero', content: local as typeof block.content }}
+        block={{
+          ...block, type: 'hero',
+          [fieldKey]: { ...(block as any)[fieldKey], ...toCanonicalHeroProps(local, template) },
+          [altKey]:   { ...(block as any)[altKey],   ...toCanonicalHeroProps(local, template) },
+        }}
         template={template as Template}
       />
 
-      <div className="flex gap-2 justify-end pt-4">
-        <button
-          onClick={onClose}
-          className="text-sm px-4 py-2 border border-white/10 rounded bg-neutral-900 hover:bg-neutral-800"
-        >
-          Cancel
-        </button>
-        <button
-          onClick={handleSave}
-          className="text-sm px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700"
-        >
-          Save
-        </button>
+      <div className="flex gap-2 justify-end pt-3">
+        <button onClick={onClose} className="text-sm px-3 py-1.5 border border-white/10 rounded bg-neutral-900 hover:bg-neutral-800">Cancel</button>
+        <button onClick={handleSave} className="text-sm px-3 py-1.5 bg-purple-600 text-white rounded hover:bg-purple-700">Save</button>
       </div>
     </div>
   );

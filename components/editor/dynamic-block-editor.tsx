@@ -103,7 +103,7 @@ export function DynamicBlockEditor({
       .then((mod) => {
         if (cancelled) return;
         if (timerRef.current) clearTimeout(timerRef.current);
-        setEditorComponent(() => mod.default);
+        setEditorComponent(() => mod.default as any);
         setLoading(false);
       })
       .catch((err) => {

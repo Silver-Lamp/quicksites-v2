@@ -4,6 +4,8 @@
 import * as React from 'react';
 import AppHeader from './AppHeader/app-header';
 import ResponsiveAdminLayout from './responsive-admin-layout';
+import { useSafeScroll } from '@/hooks/useSafeScroll';
+import { useSafeTargetRef } from '@/lib/ui/safeTargetRef';
 
 const DESKTOP_BP = 1024; // lg
 
@@ -37,23 +39,34 @@ export default function AdminChrome({ children }: { children: React.ReactNode })
     };
   }, []);
 
+  /* ───────── safe scroll wiring (hydration-proof) ───────── */
+  const headerRef = React.useRef<HTMLElement | null>(null);
+  const safeHeaderRef = useSafeTargetRef(headerRef); // ← undefined until hydrated
+
+  // Even if you don't use the values, calling this is safe; it no-ops until ref exists
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const _scroll = useSafeScroll({
+    target: safeHeaderRef as any,          // can be undefined on first client render
+    offset: ['start start', 'end start'] as any,
+  });
+
   return (
     <div data-admin-root className="min-h-screen bg-background text-foreground">
       <div className="relative flex">
-        {/* Sidebar (ResponsiveAdminLayout already renders the <aside/>) */}
-        {/* {!isMobile && ( */}
-          <ResponsiveAdminLayout
-            collapsed={collapsed}
-            onToggle={(next: boolean) => {
-              setCollapsed(next);
-              try { localStorage.setItem('admin-sidebar-collapsed', String(next)); } catch {}
-            }}
-          />
-        {/* )} */}
+        <ResponsiveAdminLayout
+          collapsed={collapsed}
+          onToggle={(next: boolean) => {
+            setCollapsed(next);
+            try { localStorage.setItem('admin-sidebar-collapsed', String(next)); } catch {}
+          }}
+        />
 
         {/* Content column — NOTE: no padding-left */}
         <div className="min-w-0 flex-1">
-          <header className="sticky top-0 z-30 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+          <header
+            ref={headerRef}
+            className="sticky top-0 z-30 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60"
+          >
             <AppHeader
               collapsed={collapsed}
               onToggleCollapsed={(next: boolean) => {
@@ -63,9 +76,7 @@ export default function AdminChrome({ children }: { children: React.ReactNode })
             />
           </header>
 
-          <main className="min-w-0 pt-0">
-            {children}
-          </main>
+          <main className="min-w-0 pt-0">{children}</main>
         </div>
       </div>
 

@@ -14,14 +14,14 @@ import toast from 'react-hot-toast';
 import type { Template } from '@/types/template';
 import { validateTemplateAndFix } from '@/admin/lib/validateTemplate';
 import type { ValidateResult, Warning } from '@/admin/lib/validateTemplate';
-import { saveAsTemplate } from '@/admin/lib/saveAsTemplate';
-import { createSharedPreview } from '@/admin/lib/createSharedPreview';
+// import { saveAsTemplate } from '@/admin/lib/saveAsTemplate';
+// import { createSharedPreview } from '@/admin/lib/createSharedPreview';
 
 import AsyncGifOverlay from '@/components/ui/async-gif-overlay';
-import VersionsDropdown from '@/components/admin/templates/versions-dropdown';
+// import VersionsDropdown from '@/components/admin/templates/versions-dropdown';
 import { useTemplateVersions } from '@/hooks/useTemplateVersions';
 import { templateSig } from '@/lib/editor/saveGuard';
-import { buildSharedSnapshotPayload } from '@/lib/editor/templateUtils';
+// import { buildSharedSnapshotPayload } from '@/lib/editor/templateUtils';
 import { loadVersionRow } from '@/admin/lib/templateSnapshots';
 import PageManagerToolbar from '@/components/admin/templates/page-manager-toolbar';
 import { useTemplateRef } from '@/hooks/usePersistTemplate';
@@ -34,7 +34,7 @@ import {
   readTemplateCache,
   type TemplateCacheRow,
 } from '@/lib/templateCache';
-import { heroLog, heroDbgOn, pickHeroSnapshots } from '@/lib/debug/hero';
+// import { heroLog, heroDbgOn, pickHeroSnapshots } from '@/lib/debug/hero';
 
 
 /* ---------- local helpers ---------- */
@@ -300,8 +300,8 @@ type Props = {
   template: Template;
   autosaveStatus?: string;
   onSaveDraft?: (maybeSanitized?: Template) => void;
-  onUndo: () => void;
-  onRedo: () => void;
+  onUndo?: () => void; // ⬅️ made optional
+  onRedo?: () => void; // ⬅️ made optional
   onOpenPageSettings?: () => void;
   onApplyTemplate: (next: Template) => void; // parent suppresses re-broadcasts
   onSetRawJson?: (json: string) => void;
@@ -354,6 +354,114 @@ export function TemplateActionToolbar({
   // New commit API (full patch support)
   const { pending, commitPatch, commitPatchSoon, loadRev } = useCommitApi((template as any)?.id);
 
+  /* -------------------- Undo/Redo History (self-contained) -------------------- */
+  type TData = any;
+  const MAX_HISTORY = 120;
+  const undoStackRef = useRef<TData[]>([]);
+  const redoStackRef = useRef<TData[]>([]);
+  const prevDataRef = useRef<TData | null>(null);
+  const lastKeyRef = useRef<string>('');
+  const initRef = useRef(false);
+  const isReplayingRef = useRef(false);
+
+  const deepClone = <T,>(v: T): T => JSON.parse(JSON.stringify(v));
+
+  const publishHistoryStats = () => {
+    window.dispatchEvent(
+      new CustomEvent('qs:history:stats', {
+        detail: { past: undoStackRef.current.length, future: redoStackRef.current.length },
+      })
+    );
+  };
+
+  // Capture on any real `template.data` change
+  useEffect(() => {
+    const data = (template as any)?.data;
+    if (!data) return;
+    const key = JSON.stringify(data);
+
+    if (!initRef.current) {
+      initRef.current = true;
+      lastKeyRef.current = key;
+      prevDataRef.current = deepClone(data);
+      publishHistoryStats();
+      return;
+    }
+
+    if (isReplayingRef.current) {
+      lastKeyRef.current = key;
+      prevDataRef.current = deepClone(data);
+      publishHistoryStats();
+      return;
+    }
+
+    if (key !== lastKeyRef.current) {
+      if (prevDataRef.current) {
+        undoStackRef.current.push(deepClone(prevDataRef.current));
+        if (undoStackRef.current.length > MAX_HISTORY) undoStackRef.current.shift();
+      }
+      redoStackRef.current = [];
+      lastKeyRef.current = key;
+      prevDataRef.current = deepClone(data);
+      publishHistoryStats();
+    }
+  }, [template?.data]);
+
+  // Respond to capture and stats requests
+  useEffect(() => {
+    const onCapture = () => {
+      const data = (template as any)?.data;
+      if (!data) return;
+      const snap = deepClone(data);
+      undoStackRef.current.push(snap);
+      if (undoStackRef.current.length > MAX_HISTORY) undoStackRef.current.shift();
+      redoStackRef.current = [];
+      lastKeyRef.current = JSON.stringify(data);
+      prevDataRef.current = snap;
+      publishHistoryStats();
+    };
+    const onReq = () => publishHistoryStats();
+
+    window.addEventListener('qs:history:capture', onCapture as any);
+    window.addEventListener('qs:history:request-stats', onReq as any);
+    return () => {
+      window.removeEventListener('qs:history:capture', onCapture as any);
+      window.removeEventListener('qs:history:request-stats', onReq as any);
+    };
+  }, [template]);
+
+  const replaceDraftTransient = (nextData: any) => {
+    try {
+      isReplayingRef.current = true;
+      window.dispatchEvent(
+        new CustomEvent('qs:template:apply-patch', {
+          detail: { data: nextData, __transient: true } as any, // do NOT persist
+        })
+      );
+    } finally {
+      setTimeout(() => { isReplayingRef.current = false; }, 0);
+    }
+  };
+
+  const doUndo = () => {
+    const prev = undoStackRef.current.pop();
+    if (!prev) return;
+    const current = prevDataRef.current ?? (template as any)?.data;
+    redoStackRef.current.push(deepClone(current));
+    replaceDraftTransient(prev);
+    publishHistoryStats();
+  };
+
+  const doRedo = () => {
+    const next = redoStackRef.current.pop();
+    if (!next) return;
+    const current = prevDataRef.current ?? (template as any)?.data;
+    undoStackRef.current.push(deepClone(current));
+    replaceDraftTransient(next);
+    publishHistoryStats();
+  };
+  /* -------------------------------------------------------------------------- */
+
   // keyboard save
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -366,7 +474,7 @@ export function TemplateActionToolbar({
     return () => window.removeEventListener('keydown', onKey);
   }, [dirty]);
 
-  // undo/redo keyboard (unchanged)
+  // undo/redo keyboard
   useEffect(() => {
     const isTyping = (n: EventTarget | null) => {
       const el = n as HTMLElement | null;
@@ -934,14 +1042,16 @@ export function TemplateActionToolbar({
     }
   };
 
-  // Undo/Redo handlers
+  // Undo/Redo handlers (buttons + keyboard)
   const handleUndo = () => {
-    onUndo();
+    doUndo();               // local engine
+    onUndo?.();             // optional external hook
     window.dispatchEvent(new CustomEvent('qs:history:request-stats'));
     toast('Undo', { icon: '↩️' });
   };
   const handleRedo = () => {
-    onRedo();
+    doRedo();               // local engine
+    onRedo?.();             // optional external hook
     window.dispatchEvent(new CustomEvent('qs:history:request-stats'));
     toast('Redo', { icon: '↪️' });
   };
@@ -1059,20 +1169,7 @@ export function TemplateActionToolbar({
             </Button>
           </div>
 
-          <VersionsDropdown
-            labelTitle={template.template_name || (tplAny?.slug as string) || 'Untitled'}
-            versions={versions}
-            open={versionsOpen}
-            setOpen={setVersionsOpen}
-            onCreateSnapshot={onCreateSnapshot}
-            onRestore={onRestore}
-            onPublish={onPublish}
-            publishedVersionId={publishedVersionId ?? null}
-            baseSlug={baseSlug(tplAny?.slug)}
-            domain={tplAny?.domain}
-            defaultSubdomain={tplAny?.default_subdomain}
-            onOpenPageSettings={onOpenPageSettings}
-          />
+          {/* <VersionsDropdown …removed per consolidation/> */}
 
           {/* DEV cache buttons */}
           {process.env.NODE_ENV !== 'production' && (

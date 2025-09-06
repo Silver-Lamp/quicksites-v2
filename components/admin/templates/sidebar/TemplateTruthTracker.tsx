@@ -40,6 +40,7 @@ import {
   FileDown,
   Pencil,        // ⬅️ added
   MinusCircle,   // ⬅️ added
+  RotateCcw,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -70,7 +71,7 @@ function eventKey(e: TemplateEvent) {
     const rev = e.revAfter ?? e.revBefore ?? "";
     return JSON.stringify([e.type, rev, e.fieldsTouched ?? [], e.diff ?? {}, (e.meta as any)?.k ?? ""]);
   }
-  function dedupeEvents(list: TemplateEvent[]) {
+function dedupeEvents(list: TemplateEvent[]) {
     const seen = new Set<string>();
     const out: TemplateEvent[] = [];
     for (const e of list ?? []) {
@@ -81,9 +82,34 @@ function eventKey(e: TemplateEvent) {
     }
     return out;
   }
-  /* ====================== END: de-dupe helpers ====================== */
+/* ====================== END: de-dupe helpers ====================== */
 
-/** Types **/
+function getSnapshotIdFromEvent(evt: TemplateEvent): string | undefined {
+  const m = (evt.meta as any) || {};
+  return (
+    m?.snapshot?.id ||
+    m?.snapshotId ||
+    m?.snapshot_id ||
+    m?.id || // some backfills
+    undefined
+  );
+}
+
+function getVersionIdFromEvent(evt: TemplateEvent): string | undefined {
+  const m = (evt.meta as any) || {};
+  return m?.version?.id || m?.versionId || m?.version_id || undefined;
+}
+
+function safeTruthRefresh() {
+  try {
+    window.dispatchEvent(new CustomEvent("qs:truth:refresh"));
+  } catch {
+    /* no-op */
+  }
+}
+
+
+  /** Types **/
 
 export type SnapshotInfo = {
     id: string;
@@ -128,6 +154,7 @@ events: TemplateEvent[];
 selectedSnapshotId?: string;
 onCreateSnapshot?: () => void;
 onPublish?: (snapshotId: string) => void;
+onRestore?: (id: string) => void;
 onRefresh?: () => void;
 onViewDiff?: (eventIdOrSnapshotId: string) => void;
 fileRefs?: string[];
@@ -679,11 +706,17 @@ function TimelineItem({
     prevEvt,
     isFirst,
     onViewDiff,
+    onPublish,              // ⬅️ NEW
+    onRestore,              // ⬅️ NEW
+    publishedSnapshotId,    // ⬅️ NEW
   }: {
     evt: TemplateEvent;
     prevEvt?: TemplateEvent;
     isFirst?: boolean;
     onViewDiff?: (id: string) => void;
+    onPublish?: (snapshotId: string) => void;       // ⬅️ NEW
+    onRestore?: (id: string) => void;               // ⬅️ NEW
+    publishedSnapshotId?: string;                   // ⬅️ NEW
   }) {
     const { icon, tone, label } = iconForEvent(evt.type);
     const rev = evt.revAfter ?? evt.revBefore;
@@ -716,6 +749,35 @@ function TimelineItem({
       return undefined;
     }, [evt.meta, prevEvt?.meta]);
   
+  // NEW: snapshot+version ids for actions
+  const snapId = useMemo(() => getSnapshotIdFromEvent(evt), [evt.meta]);
+  const verId  = useMemo(() => getVersionIdFromEvent(evt), [evt.meta]);
+  const isLive = !!(publishedSnapshotId && snapId && publishedSnapshotId === snapId);
+
+  const [busy, setBusy] = React.useState(false);
+  const doPublish = async () => {
+    if (!snapId || !onPublish || busy) return;
+    setBusy(true);
+    try {
+      await Promise.resolve(onPublish(snapId));
+      safeTruthRefresh();
+    } finally {
+      setBusy(false);
+    }
+  };
+  const doRestore = async () => {
+    const id = verId || snapId;
+    if (!id || !onRestore || busy) return;
+    setBusy(true);
+    try {
+      await Promise.resolve(onRestore(id));
+      safeTruthRefresh();
+    } finally {
+      setBusy(false);
+    }
+  };
+
+
     return (
       <li className="relative flex gap-3 pl-8 pr-2 py-2">
         {/* dot */}
@@ -775,6 +837,35 @@ function TimelineItem({
                 <GitBranch className="h-4 w-4" />
               </Button>
             )}
+
+            {/* ⬇️ NEW: only show when this row corresponds to a snapshot */}
+            {snapId && (
+              <>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="h-7 px-2 gap-1"
+                  disabled={busy}
+                  onClick={doRestore}
+                  title="Restore draft to this point"
+                >
+                  <RotateCcw className="h-3.5 w-3.5" />
+                  Restore
+                </Button>
+                <Button
+                  size="sm"
+                  variant={isLive ? "secondary" : "default"}
+                  className="h-7 px-2 gap-1"
+                  disabled={busy}
+                  onClick={doPublish}
+                  title="Publish this snapshot"
+                >
+                  <Rocket className="h-3.5 w-3.5" />
+                  {isLive ? "Published" : "Publish"}
+                </Button>
+              </>
+            )}
+
           </div>
         </div>
       </li>
@@ -956,6 +1047,7 @@ export default function TemplateTruthTracker({
     selectedSnapshotId,
     onCreateSnapshot,
     onPublish,
+    onRestore,
     onRefresh,
     onViewDiff,
     fileRefs,
@@ -1122,6 +1214,9 @@ export default function TemplateTruthTracker({
                               prevEvt={effectiveEvents[idx + 1]} // pass previous (older) after de-dupe
                               isFirst={idx === 0}
                               onViewDiff={onViewDiff}
+                              onPublish={onPublish}                            // ⬅️ NEW
+                              onRestore={onRestore}                            // ⬅️ NEW
+                              publishedSnapshotId={publishedId}                // ⬅️ NEW
                             />
                           ))}
                         </ul>

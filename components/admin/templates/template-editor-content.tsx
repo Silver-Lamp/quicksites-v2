@@ -1090,7 +1090,7 @@ const applyDataAndBroadcast = (nextData: any, extra?: Partial<Template>) => {
       {/* Right: header editor panel + preview */}
       <div className="flex-1 min-w-0 xl:ml-0 ml-0 px-0 lg:px-2">
         {/* Tabs */}
-        <div className="flex gap-2 border-b border白/10 mb-3 px-2 pt-2">
+        {/* <div className="flex gap-2 border-b border白/10 mb-3 px-2 pt-2">
           <Link
             href={buildTabHref('blocks')}
             className={[
@@ -1115,7 +1115,7 @@ const applyDataAndBroadcast = (nextData: any, extra?: Partial<Template>) => {
           >
             Live
           </Link>
-        </div>
+        </div> */}
 
         {editingHeader && (
           <div className="mb-4 rounded-xl border border-white/10 bg-neutral-950/70 backdrop-blur">

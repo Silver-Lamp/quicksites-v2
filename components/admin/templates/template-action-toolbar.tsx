@@ -77,28 +77,24 @@ function toCacheRow(t: any): TemplateCacheRow {
 function normalizePageBlocksShape(pages: any[]): any[] {
   const isStr = (v: any) => typeof v === 'string' && v.trim().length > 0;
 
-  const getCanon = (b: any) => ({
+  // ---------- hero helpers (existing behavior, kept) ----------
+  const getCanonHero = (b: any) => ({
     heading: b?.props?.heading ?? b?.content?.headline ?? '',
     subheading: b?.props?.subheading ?? b?.content?.subheadline ?? '',
     cta: b?.props?.ctaLabel ?? b?.content?.cta_text ?? '',
   });
-
   const isDefaultHeading = (s: string) =>
     !isStr(s) || /^welcome to your new site$/i.test(s.trim());
-
   const heroScore = (b: any) => {
     if (!b || b.type !== 'hero') return 0;
-    const c = getCanon(b);
+    const c = getCanonHero(b);
     let s = 0;
     if (!isDefaultHeading(c.heading)) s += 3;
     if (isStr(c.subheading)) s += 1;
     if (isStr(c.cta)) s += 1;
-    // prefer blocks that already carry both shapes
     if (b?.props && b?.content) s += 1;
     return s;
   };
-
-  // Ensure both props/content carry same canonical values
   const unifyHero = (b: any) => {
     if (!b || b.type !== 'hero') return b;
     const out: any = { ...b, props: { ...(b.props ?? {}) }, content: { ...(b.content ?? {}) } };
@@ -107,7 +103,6 @@ function normalizePageBlocksShape(pages: any[]): any[] {
     const subheading  = out.props.subheading  ?? out.content.subheadline;
     const ctaLabel    = out.props.ctaLabel    ?? out.content.cta_text;
 
-    // derive ctaHref from content.* when needed
     let ctaHref = out.props.ctaHref;
     if (!ctaHref) {
       const act = out.content.cta_action ?? 'go_to_page';
@@ -130,35 +125,80 @@ function normalizePageBlocksShape(pages: any[]): any[] {
       image_position: pos,
       layout_mode: layout,
     };
-
     out.content = {
       ...out.content,
       headline: heading,
       subheadline: subheading,
       cta_text: ctaLabel,
-      // keep whatever action fields were present (we won't invent them here)
       image_url: heroImage,
       blur_amount: blur,
       image_position: pos,
       layout_mode: layout,
     };
-
     return out;
   };
 
-  // choose "winner" between two variants of the same block
+  // ---------- text helpers (new) ----------
+  const TEXT_LIKE = new Set(['text','rich_text','richtext','richText','paragraph','markdown','textarea','wysiwyg']);
+  const isTextLike = (b: any) => TEXT_LIKE.has(String(b?.type || '').toLowerCase());
+
+  const textScore = (b: any) => {
+    if (!isTextLike(b)) return -1;
+    const p = b?.props ?? {};
+    const c = b?.content ?? {};
+    const vals = [p.html, p.text, p.value, c.html, c.text, c.value];
+    return vals.reduce((s, v) => s + (typeof v === 'string' ? v.trim().length : 0), 0);
+  };
+
+  const mirrorText = (b: any) => {
+    if (!isTextLike(b)) return b;
+    const out: any = { ...b, props: { ...(b.props ?? {}) }, content: { ...(b.content ?? {}) } };
+    const p = out.props, c = out.content;
+    const chosen =
+      (typeof p.html === 'string' && p.html.trim()) ||
+      (typeof p.text === 'string' && p.text.trim()) ||
+      (typeof p.value === 'string' && p.value.trim()) ||
+      (typeof c.html === 'string' && c.html.trim()) ||
+      (typeof c.text === 'string' && c.text.trim()) ||
+      (typeof c.value === 'string' && c.value.trim()) || '';
+    // write chosen into all common fields so readers agree
+    p.html = p.html?.trim() ? p.html : chosen;
+    p.text = p.text?.trim() ? p.text : chosen.replace(/<[^>]+>/g, '');
+    p.value = p.value?.trim() ? p.value : chosen;
+
+    c.html = c.html?.trim() ? c.html : chosen;
+    c.text = c.text?.trim() ? c.text : chosen.replace(/<[^>]+>/g, '');
+    c.value = c.value?.trim() ? c.value : chosen;
+
+    if (!c.format) c.format = 'html';
+    return out;
+  };
+
+  // Choose the better duplicate by id across shapes
   const chooseById = (a: any, b: any) => {
     if (!a) return b;
     if (!b) return a;
+
+    // Prefer the version with real text for text-like blocks
+    if (isTextLike(a) || isTextLike(b)) {
+      const aa = mirrorText(a);
+      const bb = mirrorText(b);
+      const sa = textScore(aa);
+      const sb = textScore(bb);
+      return sb > sa ? bb : aa; // pick the one with more content
+    }
+
+    // Keep existing hero logic
     if (a.type === 'hero' || b.type === 'hero') {
       const sa = heroScore(a), sb = heroScore(b);
       if (sa !== sb) return sa > sb ? a : b;
     }
-    return b; // later source wins by default
+
+    // Fallback: later wins
+    return b;
   };
 
   return (pages || []).map((p: any) => {
-    // Gather all shapes
     const all: any[] = [
       ...(Array.isArray(p?.blocks) ? p.blocks : []),
       ...(Array.isArray(p?.content_blocks) ? p.content_blocks : []),
@@ -166,7 +206,7 @@ function normalizePageBlocksShape(pages: any[]): any[] {
     ];
     if (all.length === 0) return p;
 
-    // 1) Collapse non-hero by ID
+    // Collapse by id, coalescing hero/text correctly
     const byId = new Map<string, any>();
     for (const b of all) {
       if (!b) continue;
@@ -175,35 +215,25 @@ function normalizePageBlocksShape(pages: any[]): any[] {
       const cur = byId.get(id);
       byId.set(id, chooseById(cur, b));
     }
+
+    // Now we have a single winner per id
     let keep: any[] = Array.from(byId.values());
 
-    // 2) Collapse hero across *different IDs*: keep only the best single hero
-    const heroIdxs: number[] = [];
-    let heroWinner: any = null;
-    let bestScore = -1;
-    let earliest = Infinity;
-    all.forEach((b, idx) => {
-      if (b?.type === 'hero') {
-        heroIdxs.push(idx);
-        const s = heroScore(b);
-        if (s > bestScore) { bestScore = s; heroWinner = b; }
-        if (idx < earliest) earliest = idx;
-      }
-    });
-
-    if (heroWinner) {
-      // Remove all existing heros from 'keep'
+    // If multiple heroes, pick best unified winner
+    const heroCandidates = keep.filter((b) => b?.type === 'hero');
+    if (heroCandidates.length > 1) {
+      const best = heroCandidates.reduce((best, b) => (heroScore(b) > heroScore(best) ? b : best), heroCandidates[0]);
       keep = keep.filter((b) => b?.type !== 'hero');
-      // Put unified winner back at the earliest hero position (best approximation)
-      const unifiedHero = unifyHero(heroWinner);
-      const insertAt = Math.min(earliest, keep.length);
-      keep.splice(insertAt, 0, unifiedHero);
+      keep.splice(0, 0, unifyHero(best));
+    } else {
+      // still normalize a single hero if present
+      keep = keep.map((b) => (b?.type === 'hero' ? unifyHero(b) : b));
     }
 
-    // 3) Unify canonical fields for any hero left (guards against missed paths)
-    keep = keep.map((b) => (b?.type === 'hero' ? unifyHero(b) : b));
+    // Mirror text fields on winners so both shapes stay in sync
+    keep = keep.map((b) => (isTextLike(b) ? mirrorText(b) : b));
 
-    // 4) Mirror to all shapes
+    // Write back to all shapes
     const next: any = { ...p };
     next.blocks = keep;
     if (Array.isArray(p?.content_blocks)) next.content_blocks = keep;
@@ -211,6 +241,7 @@ function normalizePageBlocksShape(pages: any[]): any[] {
     return next;
   });
 }
+
 
 
 /* ---------- debounced helper ---------- */
@@ -394,66 +425,108 @@ export function TemplateActionToolbar({
     window.dispatchEvent(new CustomEvent('qs:preview:set-viewport', { detail: v }));
   };
 
-  /* ---------- Patch bus → apply + autosave ---------- */
+  /* ---------- Patch bus → apply + (persisted) commit-with-rebase ---------- */
   useEffect(() => {
     const onPatch = (e: Event) => {
-      const patch = (e as CustomEvent).detail || {};
+      const patch = ((e as CustomEvent).detail ?? {}) as any;
       if (!patch || typeof patch !== 'object') return;
+
+      const isTransient = !!patch.__transient;
 
       const cur: any = tplRef.current;
       const next: any = { ...cur };
 
-      // 1) merge top-level keys (industry, headerBlock/footerBlock, color_mode, etc.)
-      if (patch && typeof patch === 'object') {
-        for (const k of Object.keys(patch)) {
-          if (k === 'data') continue;
-          next[k] = (patch as any)[k];
-        }
+      // 1) merge top-level keys (except 'data' and internal flags)
+      for (const k of Object.keys(patch)) {
+        if (k === 'data' || k === '__transient') continue;
+        next[k] = patch[k];
       }
 
-      // 2) shallow-merge data, then normalize block array shapes per page
-      // new: merge then normalize per-page block arrays
+      // 2) shallow-merge data, then normalize per-page block array shapes
       if (patch.data && typeof patch.data === 'object') {
         const merged = { ...(cur?.data ?? {}), ...(patch.data as any) };
         const pages = Array.isArray(merged.pages) ? merged.pages : [];
         const normalizedPages = normalizePageBlocksShape(pages);
         next.data = { ...merged, pages: normalizedPages };
+
         if (heroDbgOn()) {
           heroLog('onPatch → incoming hero snapshots', pickHeroSnapshots(patch?.data));
           heroLog('onPatch → outgoing (normalized) hero snapshots', pickHeroSnapshots(next?.data));
         }
       }
 
+      // Always apply to keep UI current
       apply(next);
-      if (heroDbgOn()) {
-        heroLog('commitPatchSoon payload hero snapshots', pickHeroSnapshots({ pages: next.data?.pages }));
-      }      
+
       if (localStorage.getItem('qs:debug:hero') === '1') {
-        const snap = (data: any) => {
-          const pages = Array.isArray(data?.pages) ? data.pages : [];
-          const heroes = pages.flatMap((pg: any, i: number) =>
-            (pg?.blocks || []).filter((b: any) => b?.type === 'hero').map((b: any) => ({
+        const pages = Array.isArray(next?.data?.pages) ? next.data.pages : [];
+        const heroes = pages.flatMap((pg: any, i: number) =>
+          (pg?.blocks || pg?.content_blocks || pg?.content?.blocks || [])
+            .filter((b: any) => b?.type === 'hero')
+            .map((b: any) => ({
               pageIndex: i,
               id: b?._id ?? b?.id,
               heading: b?.props?.heading,
               subheading: b?.props?.subheading,
               ctaLabel: b?.props?.ctaLabel,
             }))
-          );
-          console.log('%cQS/HERO%c commitPatchSoon (autosave) heroes', 'background:#7c3aed;color:#fff;padding:2px 6px;border-radius:4px;', 'color:#e5e7eb;', heroes);
-        };
-        snap({ pages: next.data?.pages });
+        );
+        // eslint-disable-next-line no-console
+        console.log(
+          '%cQS/HERO%c commit payload heroes',
+          'background:#7c3aed;color:#fff;padding:2px 6px;border-radius:4px;',
+          'color:#e5e7eb;',
+          heroes
+        );
       }
-      if (heroDbgOn()) {
-        heroLog('commitPatchSoon payload hero snapshots', pickHeroSnapshots({ pages: next.data?.pages }));
-      }
-            
-      try { commitPatchSoon({ ...patch, data: next.data }); } catch {}
+
+      // Transient = preview-only; do not hit the API
+      if (isTransient) return;
+
+      // Persisted patch (e.g., Toolbar Save) → single commit with rebase
+      const id = String((tplRef.current as any)?.id || patch?.id || '');
+      const baseRev =
+        Number.isFinite((tplRef.current as any)?.rev)
+          ? (tplRef.current as any).rev
+          : Number.isFinite((next as any)?.rev)
+          ? (next as any).rev
+          : (NaN as any);
+
+      void (async () => {
+        try {
+          // ⬅️ Always carry template_name in commit
+          const commitPayload = {
+            ...patch,
+            data: next.data,
+            template_name:
+              next?.template_name ??
+              next?.data?.meta?.siteTitle ??
+              (typeof patch.template_name === 'string' ? patch.template_name : undefined),
+          };
+
+          await commitWithRebase({
+            id,
+            baseRev,
+            patch: commitPayload,
+            kind: 'save',
+          });
+
+          // mark clean & cache
+          savedSigRef.current = templateSig(next);
+          setDirty(false);
+          try { dispatchTemplateCacheUpdate(toCacheRow(next)); } catch {}
+          toast.success('Saved!');
+          try { window.dispatchEvent(new Event('qs:preview:save')); } catch {}
+        } catch (err) {
+          console.error('[toolbar/onPatch] persisted commit failed:', err);
+          toast.error('Save failed — please retry');
+        }
+      })();
     };
 
     window.addEventListener('qs:template:apply-patch', onPatch as any);
     return () => window.removeEventListener('qs:template:apply-patch', onPatch as any);
-  }, [apply, commitPatchSoon, tplRef]);
+  }, [apply, tplRef]);
 
   // Settings sidebar control
   const emitSettingsOpen = (open: boolean) => {
@@ -473,7 +546,7 @@ export function TemplateActionToolbar({
     const next = { ...tplRef.current, color_mode: nextMode } as Template;
     apply(next);
 
-    // persist top-level color_mode + data
+    // autosave (color toggle can be persisted opportunistically)
     try { commitPatchSoon({ color_mode: nextMode, data: (next as any).data }); } catch {}
 
     window.dispatchEvent(new CustomEvent('qs:preview:set-color-mode', { detail: nextMode }));
@@ -548,26 +621,30 @@ export function TemplateActionToolbar({
     return `${msg} · ${rel} ago`;
   }, [versions]);
 
-  /* ---------- Save (commit) ---------- */
+  /* ---------- Save (emit persisted patch; commit happens in onPatch) ---------- */
   const handleSaveClick = async () => {
     try {
+      // 0) ask any open block editor to flush
+      try {
+        window.dispatchEvent(new Event('qs:block-editor:save'));
+        await new Promise((r) => setTimeout(r, 0));
+      } catch {}
+
       const src = tplRef.current as any;
 
-      // Validate without stripping fields; keep as close to UI state as possible.
       const check: ValidateResult = validateTemplateAndFix
         ? validateTemplateAndFix(src)
         : { valid: true, data: src as any, warnings: [] as Warning[] };
 
       if (!check.valid) {
         console.error('[validateTemplateAndFix] failed:', check.errors);
-        toast.error('Validation failed — see console for details.');
+        toast.error('Validation failed — see console.');
         return;
       }
 
-      // Start from the validated template (or the raw src)
       const nextTemplate = (check.data ?? src) as Template;
 
-      // Ensure pages are present in both places (defensive parity)
+      // Ensure pages live in data and mirror to top-level
       const srcPages = getTemplatePagesLoose(src);
       const outPages = getTemplatePagesLoose(nextTemplate);
       if (!Array.isArray(outPages) || !outPages.length) {
@@ -580,20 +657,73 @@ export function TemplateActionToolbar({
         }
       }
 
-      // 👉 NEW: keep all block array shapes in sync per page (blocks/content_blocks/content.blocks)
+      // Normalize shapes
       const normalizedPages = normalizePageBlocksShape(getTemplatePagesLoose(nextTemplate));
-      (nextTemplate as any).data = { ...(nextTemplate as any).data, pages: normalizedPages };
-      (nextTemplate as any).pages = normalizedPages;
 
-      // Canonicalize industry/services in the DATA tree so they persist even if blocks-only changed
+      // (text rescue block unchanged for brevity)
+      const TEXT_LIKE = new Set(['text','rich_text','richtext','richText','paragraph','markdown','textarea','wysiwyg']);
+      const isTextLike = (b: any) => TEXT_LIKE.has(String(b?.type || '').toLowerCase());
+      const getStr = (v: any) => (typeof v === 'string' && v.trim().length ? v.trim() : '');
+      const pmText = (node: any): string => {
+        if (!node) return '';
+        if (typeof node.text === 'string') return node.text;
+        const kids = Array.isArray(node.content) ? node.content : Array.isArray(node.children) ? node.children : [];
+        return kids.map(pmText).join('');
+      };
+      const escapeHtml = (s: string) => s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+      const mirrorTextFields = (blk: any) => {
+        if (!isTextLike(blk)) return blk;
+        const out: any = { ...blk, props: { ...(blk.props ?? {}) }, content: { ...(blk.content ?? {}) } };
+        const p = out.props, c = out.content;
+        let html = getStr(c.html) || getStr(p.html) || getStr(c.value) || getStr(p.value);
+        let text = getStr(c.text) || getStr(p.text);
+        if (!html && !text) {
+          const json = (c.json ?? p.json) as any;
+          const fromJson = getStr(pmText(json));
+          if (fromJson) {
+            text = fromJson;
+            html = `<p>${escapeHtml(fromJson).replace(/\n/g,'<br/>')}</p>`;
+          }
+        }
+        if (!html && text) html = `<p>${escapeHtml(text).replace(/\n/g,'<br/>')}</p>`;
+        if (!text && html) text = html.replace(/<[^>]+>/g,'').trim();
+        p.html = html || ''; p.value = html || ''; p.text = text || '';
+        c.html = html || ''; c.value = html || ''; c.text = text || '';
+        if (!c.format) c.format = 'html';
+        return out;
+      };
+      const rescuedPages = (normalizedPages ?? []).map((page: any) => {
+        const pageCopy: any = { ...page };
+        const blocks =
+          (pageCopy?.blocks ??
+            pageCopy?.content_blocks ??
+            pageCopy?.content?.blocks ??
+            []) as any[];
+        if (!Array.isArray(blocks) || !blocks.length) return pageCopy;
+        const fixed = blocks.map(mirrorTextFields);
+        pageCopy.blocks = fixed;
+        if (Array.isArray(pageCopy?.content_blocks)) pageCopy.content_blocks = fixed;
+        if (pageCopy?.content && typeof pageCopy.content === 'object') {
+          pageCopy.content = { ...(pageCopy.content ?? {}), blocks: fixed };
+        }
+        return pageCopy;
+      });
+
+      (nextTemplate as any).data = { ...(nextTemplate as any).data, pages: rescuedPages };
+      (nextTemplate as any).pages = rescuedPages;
+
+      // Canonical meta/services
       const dataIn = ((nextTemplate as any).data ?? {}) as any;
       const metaIn = (dataIn.meta ?? {}) as any;
 
-      const canonicalIndustryKey = resolveIndustryKey(
-        metaIn.industry ?? (nextTemplate as any).industry ?? 'other'
-      );
+      const existingIndustry =
+        metaIn.industry ??
+        ((template as any)?.data?.meta?.industry) ??
+        ((nextTemplate as any)?.data?.meta?.industry) ??
+        (nextTemplate as any)?.industry;
 
-      // Prefer a top-level data.services array; mirror into meta to satisfy older readers
+      const canonicalIndustryKey = resolveIndustryKey(existingIndustry ?? 'other');
+
       const canonicalServices =
         Array.isArray(dataIn.services) ? dataIn.services :
         Array.isArray(metaIn.services) ? metaIn.services :
@@ -608,9 +738,20 @@ export function TemplateActionToolbar({
           services: canonicalServices,
         },
         services: canonicalServices,
-        pages: normalizedPages, // ← use the normalized pages
+        pages: rescuedPages,
       };
 
+      // ⬅️ NEW: resolve and set canonical template name top-level
+      const canonicalTemplateName =
+        (canonicalData?.meta?.siteTitle && String(canonicalData.meta.siteTitle).trim()) ||
+        (typeof (nextTemplate as any).template_name === 'string' && (nextTemplate as any).template_name.trim()) ||
+        '';
+
+      if (canonicalTemplateName) {
+        (nextTemplate as any).template_name = canonicalTemplateName;
+      }
+
+      // Dirty check
       const nextSig = templateSig({ ...(nextTemplate as any), data: canonicalData });
       if (nextSig === savedSigRef.current) {
         toast('No changes to save');
@@ -627,73 +768,17 @@ export function TemplateActionToolbar({
         setSaveWarnings([]);
       }
 
+      // Emit persisted patch (onPatch will add template_name if missing)
       onSaveDraft?.({ ...(nextTemplate as any), data: canonicalData });
       onSetRawJson?.(pretty({ ...(nextTemplate as any), data: canonicalData }));
 
-      // (Optional) refresh local rev tracking if you keep one
       await loadRev?.();
-
-      // Build a FULL data overlay patch (idempotent) + legacy mirrors
-      const patch = {
-        data: canonicalData,
-        color_mode: (nextTemplate as any).color_mode,
-        // legacy mirrors for any old readers still looking at top-level
-        industry: canonicalIndustryKey,
-        services: canonicalServices,
-      };
-      if (heroDbgOn()) {
-        heroLog('HANDLE SAVE → canonical hero snapshots', pickHeroSnapshots(canonicalData));
-      }
-      
-    const maybeRev =
-      Number.isFinite((src as any)?.rev) ? (src as any).rev :
-      Number.isFinite((nextTemplate as any)?.rev) ? (nextTemplate as any).rev :
-      undefined;
-      
-    // Commit with a one-shot rebase on 409
-    const commitRes = await commitWithRebase({
-      id: (nextTemplate as any).id,
-      baseRev: (maybeRev as number) ?? (NaN as any), // API will infer if NaN/undefined
-      patch,
-      kind: 'save',
-    });
-
-      savedSigRef.current = nextSig;
-      setDirty(false);
-
-      try { dispatchTemplateCacheUpdate(toCacheRow({ ...(nextTemplate as any), data: canonicalData })); } catch {}
-      toast.success('Saved!');
-
-      // First-save canonical id bounce (unchanged)
-      const canonicalId: string | undefined =
-        commitRes?.canonicalId ?? commitRes?.canonical_id ?? undefined;
-
-      if (canonicalId && !(tplRef.current as any)?.canonical_id) {
-        const patched: Template = {
-          ...(tplRef.current as any),
-          canonical_id: canonicalId,
-          data: canonicalData,
-        };
-        apply(patched);
-        try { dispatchTemplateCacheUpdate(toCacheRow(patched)); } catch {}
-
-        savedSigRef.current = templateSig(patched);
-        setDirty(false);
-
-        try {
-          if (
-            typeof window !== 'undefined' &&
-            window.location.pathname.startsWith('/admin/templates/new')
-          ) {
-            router.replace(`/template/${canonicalId}/edit`);
-          }
-        } catch {}
-      }
     } catch (err) {
-      console.error('❌ Save/commit crashed:', err);
+      console.error('❌ Save/commit prepare crashed:', err);
       toast.error('Save failed — see console.');
     }
   };
+
 
   // run a full save when a block editor asks for it
   useEffect(() => {
@@ -701,7 +786,7 @@ export function TemplateActionToolbar({
     window.addEventListener('qs:toolbar:save-now', onSaveNow as any);
     return () => window.removeEventListener('qs:toolbar:save-now', onSaveNow as any);
   }, [handleSaveClick]);
-  
+
   function heroDbgOn() {
     try { return localStorage.getItem('qs:debug:hero') === '1'; } catch { return false; }
   }
@@ -741,7 +826,7 @@ export function TemplateActionToolbar({
     });
     return out;
   }
-  
+
   /* ---------- Snapshot (server-built) ---------- */
   async function onCreateSnapshot() {
     try {

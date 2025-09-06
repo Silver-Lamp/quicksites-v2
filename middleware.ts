@@ -32,6 +32,24 @@ function isIgnored(pathname: string) {
   return IGNORE_PATHS.some((re) => re.test(pathname));
 }
 
+function splitHostPort(h: string) {
+  const [hostname, port] = (h || '').toLowerCase().split(':');
+  return { hostname: hostname ?? '', port: port ?? '' };
+}
+
+function subdomainFromDevHost(hostname: string): string | null {
+  if (hostname.endsWith('.localhost')) {
+    return hostname.slice(0, -'.localhost'.length);
+  }
+  if (hostname.endsWith('.lvh.me')) {
+    return hostname.slice(0, -'.lvh.me'.length);
+  }
+  if (hostname.endsWith('.127.0.0.1.nip.io')) {
+    return hostname.slice(0, -'.127.0.0.1.nip.io'.length);
+  }
+  return null;
+}
+
 // cookie settings
 const COOKIE_NAME = 'qs_ref';
 const COOKIE_MAX_AGE = 60 * 60 * 24 * 90; // 90 days
@@ -44,8 +62,6 @@ export function middleware(req: NextRequest) {
   // ---- Capture ?ref=CODE into a cookie (do this for ANY route) ----
   const ref = url.searchParams.get('ref')?.trim();
   const wantsRefCookie = !!ref && ref.length <= 64; // basic sanity cap
-
-  // Helper to attach cookie to whichever response we return
   const withRefCookie = (res: NextResponse) => {
     if (wantsRefCookie) {
       res.cookies.set(COOKIE_NAME, ref!, {
@@ -55,7 +71,6 @@ export function middleware(req: NextRequest) {
         path: '/',
         maxAge: COOKIE_MAX_AGE,
       });
-      // optional: keep a debug header
       res.headers.set('x-qsites-ref', ref!);
     }
     return res;
@@ -64,45 +79,47 @@ export function middleware(req: NextRequest) {
   // ---- Let app/internal routes pass through untouched ----
   if (
     isIgnored(pathname) ||
-    pathname.startsWith('/host') ||     // host handler
+    pathname.startsWith('/host') ||     // host handler (if you keep it)
+    pathname.startsWith('/_domains') || // ✅ allow your _domains router
     pathname.startsWith('/admin') ||
-    pathname.startsWith('/sites') ||
+    pathname.startsWith('/sites') ||    // ✅ allow path-based site preview
     pathname.startsWith('/login') ||
-    pathname.startsWith('/api')        // keep your APIs intact (webhooks, etc.)
+    pathname.startsWith('/api')         // keep your APIs intact
   ) {
     return withRefCookie(NextResponse.next());
   }
 
   // Host header
-  const hostHeader =
-    req.headers.get('x-forwarded-host') ??
-    req.headers.get('host') ??
-    '';
+  const hostHeader = req.headers.get('x-forwarded-host') ?? req.headers.get('host') ?? '';
   const host = hostHeader.toLowerCase();
+  const { hostname } = splitHostPort(hostHeader);
 
   // If this is our app host, don't rewrite (normal dashboard/app pages).
   if (APP_HOSTS.has(host) || host.endsWith('.vercel.app')) {
     return withRefCookie(NextResponse.next());
   }
 
-  // ---- Otherwise, this is a site request on a custom domain or subdomain ----
+  // ---- Dev subdomain → /sites/<sub> rewrite (e.g., foo.localhost:3000) ----
+  const devSub = subdomainFromDevHost(hostname);
+  if (devSub && !['www', 'app'].includes(devSub)) {
+    const rewriteUrl = req.nextUrl.clone();
+    rewriteUrl.pathname = `/sites/${devSub}${pathname === '/' ? '' : pathname}`;
+    const res = NextResponse.rewrite(rewriteUrl);
+    res.headers.set('x-qsites-dev-sub', devSub);
+    res.headers.set('x-qsites-rewrite', rewriteUrl.pathname + (rewriteUrl.search || ''));
+    return withRefCookie(res);
+  }
+
+  // ---- Real custom domain → _domains/<domain> router ----
   const rewriteUrl = req.nextUrl.clone();
-  // Preserve the original path under /host for your catch-all route
-  rewriteUrl.pathname = `/host${pathname === '/' ? '' : pathname}`;
-  // Keep the query string intact
-  // (ref is already captured to cookie; we still pass it through harmlessly)
-  // rewriteUrl.search remains as-is
-
+  rewriteUrl.pathname = `/_domains/${hostname}${pathname === '/' ? '' : pathname}`;
   const res = NextResponse.rewrite(rewriteUrl);
-  // helpful debug headers (visible in DevTools → Network → Response Headers)
-  res.headers.set('x-qsites-rewrite', `${rewriteUrl.pathname}${rewriteUrl.search || ''}`);
-  res.headers.set('x-qsites-host', host);
-
+  res.headers.set('x-qsites-domain', hostname);
+  res.headers.set('x-qsites-rewrite', rewriteUrl.pathname + (rewriteUrl.search || ''));
   return withRefCookie(res);
 }
 
 export const config = {
-  // Apply middleware to everything except common static buckets above.
   matcher: [
     '/((?!_next/static|_next/image|favicon\\.ico|robots\\.txt|sitemap\\.xml|manifest\\.json|.*\\.(?:js(?:\\.map)?|mjs|cjs|json|txt|xml|svg|ico|png|jpg|jpeg|gif|webp|avif|mp4|webm|css|woff2?|ttf)).*)',
   ],

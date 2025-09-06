@@ -6,7 +6,7 @@ import type { Template, Page } from '@/types/template';
 
 import IdentityPanel from './panels/identity-panel';
 import ServicesPanel from './panels/services-panel';
-import SlugPanel from './panels/slug-panel';
+// import SlugPanel from './panels/slug-panel';
 import DomainPanel from './panels/domain-panel';
 import SeoPanel from './panels/seo-panel';
 import ThemePanel from './panels/theme-panel';
@@ -81,10 +81,10 @@ export default function TemplateSettingsPanel({ template, onChange }: Props) {
         onChange={(patch: any) => applyPatch(patch)}
       />
 
-      <SlugPanel
+      {/* <SlugPanel
         template={template}
         onChange={(patch: any) => applyPatch(patch)}
-      />
+      /> */}
 
       <DomainPanel
         template={template}

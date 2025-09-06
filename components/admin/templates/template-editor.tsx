@@ -354,7 +354,7 @@ export default function TemplateEditor({
     <>
       <ScrollArea className="h-screen w-full p-10 overflow-y-auto">
         <TemplateEditorToolbar
-          templateName={template.template_name}
+          templateName={template.template_name || template.slug || 'Untitled'}
           autosaveStatus={autosave as any}
           isRenaming={isRenaming}
           setIsRenaming={setIsRenaming}

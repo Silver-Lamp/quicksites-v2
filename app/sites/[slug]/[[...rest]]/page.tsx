@@ -16,7 +16,6 @@ type SiteRow = {
   id: string;
   slug: string | null;
   domain: string | null;
-  default_subdomain: string | null;
   template_id: string | null;
   published_snapshot_id: string | null;
 };
@@ -24,8 +23,10 @@ type SiteRow = {
 type SnapshotRow = {
   id: string;
   template_id: string;
-  data: any;  // canonical JSON
+  rev: number;
+  data: Record<string, any>;
   hash?: string | null;
+  assets_resolved?: Record<string, any>;
   created_at?: string | null;
 };
 
@@ -34,7 +35,8 @@ type RenderSite = {
   slug: string | null;
   template_name: string | null;
   domain: string | null;
-  default_subdomain: string | null;
+  /** optional now */
+  default_subdomain?: string | null;
   color_mode: 'light' | 'dark';
   pages: any[];
   headerBlock: any | null;
@@ -60,7 +62,10 @@ function firstPageSlug(site: { data?: any; pages?: any[] }) {
   return (first?.slug as string) || 'home';
 }
 
-function normalizeForRenderer(snapshotData: any, siteFields: Pick<SiteRow, 'id'|'slug'|'domain'|'default_subdomain'>): RenderSite {
+function normalizeForRenderer(
+  snapshotData: any,
+  siteFields: Pick<SiteRow, 'id'|'slug'|'domain'> & { default_subdomain?: string | null }
+): RenderSite {
   const data = snapshotData ?? {};
   const pages = Array.isArray(data?.pages) ? data.pages : [];
   const headerBlock = data?.headerBlock ?? data?.header ?? null;
@@ -73,7 +78,7 @@ function normalizeForRenderer(snapshotData: any, siteFields: Pick<SiteRow, 'id'|
     slug: siteFields.slug,
     template_name,
     domain: siteFields.domain,
-    default_subdomain: siteFields.default_subdomain,
+    default_subdomain: siteFields.default_subdomain ?? null,
     color_mode,
     pages,
     headerBlock,
@@ -91,7 +96,7 @@ function safeParse(x: any) {
 async function loadSiteRowBySlug(slug: string): Promise<SiteRow | null> {
   const { data, error } = await supabaseAdmin
     .from('sites')
-    .select('id, slug, domain, default_subdomain, template_id, published_snapshot_id')
+    .select('id, slug, domain, template_id, published_snapshot_id') // ⬅️ dropped default_subdomain
     .eq('slug', slug)
     .maybeSingle();
   if (error) {
@@ -117,7 +122,7 @@ async function loadSnapshotById(id: string): Promise<SnapshotRow | null> {
 async function loadDraftTemplate(templateId: string): Promise<{ data: any; siteFields: any } | null> {
   const { data, error } = await supabaseAdmin
     .from('templates')
-    .select('id, slug, template_name, data, header_block, footer_block, color_mode, domain, default_subdomain')
+    .select('id, slug, template_name, data, header_block, footer_block, color_mode, domain') // ⬅️ dropped default_subdomain here too (if missing)
     .eq('id', templateId)
     .maybeSingle();
   if (error) {
@@ -135,7 +140,7 @@ async function loadDraftTemplate(templateId: string): Promise<{ data: any; siteF
       id: data!.id,
       slug: data!.slug,
       domain: data!.domain,
-      default_subdomain: data!.default_subdomain,
+      default_subdomain: null,
     },
   };
 }
@@ -155,13 +160,14 @@ async function isAdminUser(userId: string | null) {
 export async function generateMetadata({
   params,
 }: {
-  params: { slug: string; rest?: string[] };
+  params: Promise<{ slug: string; rest?: string[] }>; // ⬅️ Promise
 }): Promise<Metadata> {
+  const { slug, rest } = await params; // ⬅️ await it
   const supabase = await getServerSupabase();
   const { data: { user } } = await supabase.auth.getUser();
   const admin = await isAdminUser(user?.id ?? null);
 
-  const siteRow = await loadSiteRowBySlug(params.slug);
+  const siteRow = await loadSiteRowBySlug(slug);
   if (!siteRow) return {};
 
   // choose snapshot (preferred) or draft (admin backstop)
@@ -176,10 +182,10 @@ export async function generateMetadata({
   if (!snapshotData) return {};
 
   const normalized = normalizeForRenderer(snapshotData, {
-    id: siteRow.id, slug: siteRow.slug, domain: siteRow.domain, default_subdomain: siteRow.default_subdomain,
+    id: siteRow.id, slug: siteRow.slug, domain: siteRow.domain, default_subdomain: null,
   });
 
-  const pageSlug = params.rest?.[0] ?? firstPageSlug(normalized);
+  const pageSlug = rest?.[0] ?? firstPageSlug(normalized);
   return generatePageMetadata({
     site: normalized as any,
     pageSlug,
@@ -191,13 +197,15 @@ export async function generateMetadata({
 export default async function SitePreviewPage({
   params,
 }: {
-  params: { slug: string; rest?: string[] };
+  params: Promise<{ slug: string; rest?: string[] }>; // ⬅️ Promise
 }) {
+  const { slug, rest } = await params; // ⬅️ await it
+
   const supabase = await getServerSupabase();
   const { data: { user } } = await supabase.auth.getUser();
   const admin = await isAdminUser(user?.id ?? null);
 
-  const siteRow = await loadSiteRowBySlug(params.slug);
+  const siteRow = await loadSiteRowBySlug(slug);
   if (!siteRow) return notFound();
 
   // Prefer published snapshot, else (admins only) fall back to live draft
@@ -210,7 +218,7 @@ export default async function SitePreviewPage({
         id: siteRow.id,
         slug: siteRow.slug,
         domain: siteRow.domain,
-        default_subdomain: siteRow.default_subdomain,
+        default_subdomain: null,
       });
     }
   }
@@ -224,7 +232,7 @@ export default async function SitePreviewPage({
 
   if (!normalized) return notFound();
 
-  const pageSlug = params.rest?.[0] ?? firstPageSlug(normalized);
+  const pageSlug = rest?.[0] ?? firstPageSlug(normalized);
   const colorMode = (normalized.color_mode ?? 'light') as 'light' | 'dark';
   const baseUrl = `${await originFromHeaders()}/sites`;
 

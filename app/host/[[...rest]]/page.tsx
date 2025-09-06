@@ -44,8 +44,10 @@ type SiteRow = {
 type SnapshotRow = {
   id: string;
   template_id: string;
-  data: any; // canonical JSON
+  rev: number;
+  data: Record<string, any>;
   hash?: string | null;
+  assets_resolved: Record<string, any>;
   created_at?: string | null;
 };
 

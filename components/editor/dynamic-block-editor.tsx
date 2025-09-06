@@ -13,6 +13,13 @@ import { InlineBlockTypePicker } from './inline-block-type-picker';
 import RichTextEditor from '@/components/editor/rich-text-editor';
 import type { Page } from '@/types/template';
 
+function escapeHtml(s: string) {
+  return s
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+}
+
 // --- config ---
 const TIMEOUT_MS = 6000; // “a few seconds” — tweak to taste
 
@@ -130,6 +137,7 @@ export function DynamicBlockEditor({
           onSelect={(type) => {
             block.type = type as Block['type'];
             if (block.type === 'text') {
+              block.props = { html: '', text: '', value: '' };
               block.content = {
                 format: 'tiptap',
                 html: '',
@@ -145,36 +153,82 @@ export function DynamicBlockEditor({
     );
   }
 
-  // Special case for `text` block → use RichTextEditor directly (always available)
-  if (block.type === 'text') {
-    if (!block.content) {
-      block.content = {
-        format: 'tiptap',
-        html: '',
-        json: { type: 'doc', content: [{ type: 'paragraph', content: [] }] },
-        summary: '',
-        word_count: 0,
-      } as any;
-    }
-    return (
-        <div className={['p-4', colorMode === 'dark' ? 'dark' : ''].join(' ')}>
-        <div className={['bg-white text-zinc-900 dark:bg-zinc-900 dark:text-zinc-100 rounded-lg', colorMode === 'dark' ? 'dark' : ''].join(' ')}>
-          <RichTextEditor
+// Special case for `text` block → use RichTextEditor directly (always available)
+if (block.type === 'text') {
+  // Ensure shapes exist
+  if (!block.props) block.props = { html: '', text: '', value: '' } as any;
+  if (!block.content) {
+    block.content = {
+      format: 'tiptap',
+      html: '',
+      json: { type: 'doc', content: [{ type: 'paragraph', content: [] }] },
+      text: '',
+      value: '',
+      summary: '',
+      word_count: 0,
+    } as any;
+  }
+
+  // Prefer json if present, else best-available string
+  const initialHtml =
+    block.content?.html ??
+    block.props?.html ??
+    block.content?.value ??
+    block.props?.value ??
+    block.content?.text ??
+    block.props?.text ??
+    '';
+
+  // Ensure toolbar Save flushes this editor if modal is open
+  useEffect(() => {
+    const onToolbarSave = () => onSave?.(block);
+    window.addEventListener('qs:block-editor:save', onToolbarSave as any);
+    return () => window.removeEventListener('qs:block-editor:save', onToolbarSave as any);
+  }, [block, onSave]);
+
+  return (
+    <div className={['p-4', colorMode === 'dark' ? 'dark' : ''].join(' ')}>
+      <div className={['bg-white text-zinc-900 dark:bg-zinc-900 dark:text-zinc-100 rounded-lg', colorMode === 'dark' ? 'dark' : ''].join(' ')}>
+        <RichTextEditor
           value={{
-            format: block.content?.format,
+            format: block.content?.format ?? 'tiptap',
             json: block.content?.json,
-            html: block.content?.html ?? block.content?.value ?? '',
+            html: initialHtml,
+            value: initialHtml,
+            text: (initialHtml || '').replace(/<[^>]+>/g, ''),
           }}
           onChange={(next) => {
-            const safeHtml = next.html ? DOMPurify.sanitize(next.html) : '';
+            // TipTap often returns "<p></p>" for plain text edits; prefer `next.text` if html is trivial.
+            const rawHtml = (next.html ?? '').trim();
+            const isTrivialHtml = rawHtml === '' || /^<p>\s*<\/p>$/.test(rawHtml);
+            const fromText = (next.text ?? '').trim();
+
+            // build a reasonable HTML when editor provided only plain text
+            const htmlFromText = fromText ? `<p>${escapeHtml(fromText).replace(/\n/g, '<br/>')}</p>` : '';
+
+            // Sanitize chosen html; coalesce against plain text
+            const chosenHtml = DOMPurify.sanitize(isTrivialHtml ? htmlFromText : rawHtml);
+            const plain = fromText || chosenHtml.replace(/<[^>]+>/g, '').trim();
+            const wc = next.word_count ?? (plain ? plain.split(/\s+/).length : 0);
+
+            // Mirror to ALL canonical fields in BOTH shapes
+            block.props = {
+              ...(block.props ?? {}),
+              html: chosenHtml,
+              text: plain,
+              value: chosenHtml, // legacy consumers
+            } as any;
+
             block.content = {
-              ...block.content,
+              ...(block.content ?? {}),
               format: 'tiptap',
               json: next.json ?? { type: 'doc', content: [{ type: 'paragraph', content: [] }] },
-              html: safeHtml,
-              summary: (safeHtml || '').replace(/<[^>]+>/g, '').slice(0, 280),
-              word_count: next.word_count ?? 0,
-            };
+              html: chosenHtml,
+              text: plain,
+              value: chosenHtml,
+              summary: plain.slice(0, 280),
+              word_count: wc,
+            } as any;
           }}
           onUploadImage={async (file) => {
             const { publicUrl } = await uploadEditorImage(file, 'editor-images');
@@ -183,27 +237,31 @@ export function DynamicBlockEditor({
           onSave={() => onSave(block)}
           placeholder="Type ‘/’ for commands…"
           colorMode={colorMode}
-          template={template}            // ⬅️ gives AI site context
-          currentPage={currentPage}      // ⬅️ better suggestions          
+          template={template}
+          currentPage={currentPage}
         />
       </div>
-        <div className="mt-4 flex justify-end gap-2">
-          <button
-            onClick={() => onSave(block)}
-            className="px-4 py-2 rounded-md bg-primary text-white hover:bg-primary/80"
-          >
-            Save
-          </button>
-          <button
-            onClick={onClose}
-            className="px-4 py-2 rounded-md bg-muted text-muted-foreground hover:bg-muted/80"
-          >
-            Cancel
-          </button>
-        </div>
+
+      <div className="mt-4 flex justify-end gap-2">
+        <button
+          onClick={() => onSave(block)}
+          className="px-4 py-2 rounded-md bg-primary text-white hover:bg-primary/80"
+        >
+          Save
+        </button>
+        <button
+          onClick={onClose}
+          className="px-4 py-2 rounded-md bg-muted text-muted-foreground hover:bg-muted/80"
+        >
+          Cancel
+        </button>
       </div>
-    );
-  }
+    </div>
+  );
+}
+
+
+
 
   // --- Timeout / Error fallback UI ---
   if (!EditorComponent) {

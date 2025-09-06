@@ -45,7 +45,7 @@ export async function generateMetadata({
   const site = await resolveSite(params.domain);
   if (!site) return {};
   const pageSlug = params.rest?.[0] ?? 'home';
-  const baseUrl = `${await origin()}/_sites`;
+  const baseUrl = `${await origin()}/sites`;
   return generatePageMetadata({ site, pageSlug, baseUrl });
 }
 
@@ -58,7 +58,7 @@ export default async function DomainRouterPage({
   if (!site) return notFound();
 
   const colorMode = (site.color_mode as 'light' | 'dark') ?? 'light';
-  const baseUrl = `${await origin()}/_sites`;
+  const baseUrl = `${await origin()}/sites`;
   const pageSlug = params.rest?.[0] ?? 'home';
 
   return (

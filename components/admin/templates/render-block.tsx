@@ -65,14 +65,16 @@ function getClientRenderer(type: BlockType): React.ComponentType<any> {
   return fallbackRenderer(type);
 }
 
-/** Normalize a block's content so renderers always receive an object. */
+/** Normalize so renderers always get text immediately.
+ *  Merge content + props (PROPS win), then apply any override. */
 function getSafeContent(block: any, override: Record<string, any>) {
-  const raw =
-    (block && typeof block === 'object' && (block as any).content) ??
-    (block && typeof block === 'object' && (block as any).props) ??
-    {};
-  const base = raw && typeof raw === 'object' ? raw : {};
-  return { ...base, ...override };
+  const c = block && typeof block === 'object' && typeof (block as any).content === 'object'
+    ? (block as any).content
+    : {};
+  const p = block && typeof block === 'object' && typeof (block as any).props === 'object'
+    ? (block as any).props
+    : {};
+  return { ...c, ...p, ...override };
 }
 
 /** Build a small signature for hero text so we can force remounts when it changes. */
@@ -83,6 +85,15 @@ function heroTextSig(block: any, safeContent: any) {
   const sub = p.subheading ?? c.subheadline ?? '';
   const cta = p.ctaLabel ?? c.cta_text ?? '';
   return `${heading}|${sub}|${cta}`;
+}
+
+/** Build a small signature for generic text so we remount when it changes. */
+function textSig(block: any, safeContent: any) {
+  const p = (block?.props ?? {}) as any;
+  const c = (safeContent ?? block?.content ?? {}) as any;
+  const v = c.text ?? c.html ?? c.value ?? p.text ?? p.html ?? p.value ?? '';
+  const s = typeof v === 'string' ? v : JSON.stringify(v ?? '');
+  return s.slice(0, 256);
 }
 
 /** Local error boundary to prevent a bad block from blanking the page. */
@@ -103,7 +114,7 @@ class BlockBoundary extends React.Component<
       return (
         this.props.fallback ?? (
           <div className="text-red-500 text-sm p-2 bg-red-900/10 rounded">
-            ⚠️ Block crashed while rendering.
+            ⚠️ Block failed to render.
           </div>
         )
       );
@@ -198,31 +209,38 @@ export default function RenderBlock({
   const override = fixEnabled ? draftFixes[(block as any)._id || (block as any).id || ''] : {};
   const safeContent = getSafeContent(block, override);
 
-  // Ensure child renderers that read `block.content` get a value
+  // Ensure children that read either `content` OR `props` see the latest fields
   const blockForChild = React.useMemo(
-    () => ({ ...(block as any), content: safeContent }),
+    () => {
+      const original: any = block || {};
+      const mergedProps = { ...(original.props ?? {}), ...safeContent };
+      return { ...original, content: safeContent, props: mergedProps };
+    },
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [safeContent, (block as any).type, (block as any)._id, (block as any).id]
   );
 
-  // 🔑 compute a render key that changes when hero text changes (forces remount on autosave)
+  /** Build a small signature for generic text so we remount when it changes. */
+  function textSigFromContent(payload: any) {
+    try {
+      return JSON.stringify(payload ?? {}).slice(0, 400);
+    } catch {
+      return String(payload ?? '');
+    }
+  }
+
+  // 🔑 compute a render key that changes when hero/text changes (forces remount on autosave)
   const componentKey = React.useMemo(() => {
     const t = (block as any).type;
     if (t === 'hero') {
       return `${blockId}|hero|${heroTextSig(block, safeContent)}`;
     }
+    if (t === 'text' || t === 'rich_text' || t === 'paragraph' || t === 'markdown') {
+      return `${blockId}|text|${textSigFromContent(safeContent)}`;
+    }
     return `${blockId}|${t}`;
-  }, [
-    blockId,
-    (block as any).type,
-    // deps for hero text; safeContent covers content.* and props fallback via heroTextSig
-    safeContent?.headline,
-    safeContent?.subheadline,
-    safeContent?.cta_text,
-    (block as any)?.props?.heading,
-    (block as any)?.props?.subheading,
-    (block as any)?.props?.ctaLabel,
-  ]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [blockId, (block as any).type, textSigFromContent(safeContent)]);
 
   // hydration + ref ready
   const [hydrated, setHydrated] = React.useState(false);
@@ -272,21 +290,29 @@ export default function RenderBlock({
     colorMode: computedMode, // ⬅️ pass down the computed mode
   };
 
-  // wrapper — hover border only when embedded
+  // Explicit theme text color (surface is inherited)
+  const themeText = computedMode === 'dark' ? 'text-white' : 'text-zinc-950';
+
+  // Hover border per mode (no global `dark:` variant)
+  const hoverBorder =
+    isEmbedded
+      ? (computedMode === 'dark'
+          ? 'border border-transparent group-hover:border-neutral-700'
+          : 'border border-transparent group-hover:border-neutral-200')
+      : '';
+
+  // wrapper — inherits surface from parent; no global dark class
   const wrapperProps = {
     id: `block-${blockId}`,
     'data-block-id': blockId,
     'data-block-type': (block as any).type,
     'data-block-path': blockPath ?? undefined,
     className: [
-      // Put a local 'dark' class so any `dark:` utilities inside descendants activate
-      computedMode === 'dark' ? 'dark' : '',
       'qs-block',
       'relative group w-full rounded-none transition-colors',
-      computedMode === 'light' ? 'bg-white text-black' : 'bg-neutral-950 text-white',
-      isEmbedded
-        ? 'border border-transparent group-hover:border-neutral-200 dark:group-hover:border-neutral-700'
-        : '',
+      'bg-transparent',
+      themeText,
+      hoverBorder,
     ].join(' '),
     ref: setWrapperRef,
   };
@@ -309,6 +335,33 @@ ID: ${blockId || 'n/a'}`}
     return () => cancelAnimationFrame(id);
   }, [hydrated]);
 
+  // Toolbar chrome colors per mode (no global dark variant)
+  const toolbarBg = computedMode === 'light' ? 'bg-white/70' : 'bg-neutral-900/60';
+  const editBtn =
+    computedMode === 'light'
+      ? 'bg-white/95 text-neutral-900 border border-neutral-300 shadow-sm hover:bg-white'
+      : 'bg-white/10 text-white border border-white/15 hover:bg-white/10';
+
+  // Typography variables to force `.prose` colors to match site mode
+  const proseVars =
+    computedMode === 'dark'
+      ? ({
+        // dark mode (unchanged)
+        ['--tw-prose-body' as any]: 'rgb(229 231 235)',  // zinc-200
+        ['--tw-prose-headings' as any]: 'rgb(255 255 255)',
+        ['--tw-prose-links' as any]: 'rgb(147 197 253)',
+        ['--tw-prose-bold' as any]: 'rgb(255 255 255)',
+        ['--tw-prose-quotes' as any]: 'rgb(229 231 235)',
+      } as React.CSSProperties)
+    : ({
+        // light mode (make darker here)
+        ['--tw-prose-body' as any]: 'rgb(9 9 11)',        // zinc-950  ← darker
+        ['--tw-prose-headings' as any]: 'rgb(17 24 39)',  // slate-900
+        ['--tw-prose-links' as any]: 'rgb(29 78 216)',    // blue-700 (a bit deeper)
+        ['--tw-prose-bold' as any]: 'rgb(17 24 39)',
+        ['--tw-prose-quotes' as any]: 'rgb(9 9 11)',
+      } as React.CSSProperties);
+
   return (
     <div {...(wrapperProps as any)}>
       {/* Admin bar (drag + icons) — only inside editor */}
@@ -319,8 +372,8 @@ ID: ${blockId || 'n/a'}`}
             'pointer-events-auto',
             'absolute inset-x-0 -top-px',
             'opacity-0 group-hover:opacity-100 transition-opacity',
-            computedMode === 'light' ? 'bg-white/70' : 'bg-neutral-900/60',
             'flex items-center justify-between px-2 py-1 rounded-t-none',
+            toolbarBg,
           ].join(' ')}
         >
           <div className="flex items-center gap-2 min-w-0">
@@ -341,11 +394,8 @@ ID: ${blockId || 'n/a'}`}
               data-no-edit
               type="button"
               className={[
-                'inline-flex items-center justify-center h-7 w-7 rounded-md transition',
-                'bg-white/95 text-neutral-900 border border-neutral-300 shadow-sm',
-                'hover:bg-white',
-                'dark:bg-white/10 dark:text-white dark:border-white/15 dark:shadow-none',
-                'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-500/60',
+                'inline-flex items-center justify-center h-7 w-7 rounded-md transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-500/60',
+                editBtn,
               ].join(' ')}
               onClick={(e) => {
                 e.stopPropagation();
@@ -389,19 +439,21 @@ ID: ${blockId || 'n/a'}`}
         >
           <Suspense fallback={<span />}>
             {mounted ? (
-              <Component
-                // {/* ⬅️ force remount when hero text changes */}
-                key={componentKey}       
-                previewOnly={mode === 'editor' || previewOnly}   
-                {...(commonProps as any)}
-                {...(refReady ? ({ scrollRef: blockRef } as any) : {})}
-                {...((block as any).type === 'grid' && handleNestedBlockUpdate
-                  ? { handleNestedBlockUpdate, parentBlock: blockForChild }
-                  : {})}
-                {...((block as any).type === 'services'
-                  ? { services: identity?.services ?? (template as any)?.services ?? [] }
-                  : {})}
-              />
+              // Wrap renderer in a vars-scope so `.prose` colors follow site mode
+              <div style={proseVars}>
+                <Component
+                  key={componentKey}
+                  previewOnly={mode === 'editor' || previewOnly}
+                  {...(commonProps as any)}
+                  {...(refReady ? ({ scrollRef: blockRef } as any) : {})}
+                  {...((block as any).type === 'grid' && handleNestedBlockUpdate
+                    ? { handleNestedBlockUpdate, parentBlock: blockForChild }
+                    : {})}
+                  {...((block as any).type === 'services'
+                    ? { services: identity?.services ?? (template as any)?.services ?? [] }
+                    : {})}
+                />
+              </div>
             ) : null}
           </Suspense>
         </BlockBoundary>

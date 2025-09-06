@@ -92,10 +92,11 @@ function toDraft(t: Template): Draft {
   };
 }
 
-/** Build a data-only patch against canonical JSON (no top-level writes). */
+/** Build a data patch AND carry top-level template_name so the title updates immediately. */
 function buildDataPatch(d: Draft, tmpl: Template): Partial<Template> {
-  const prevMeta = (tmpl.data as any)?.meta ?? {};
-  const prevContact = prevMeta?.contact ?? {};
+  const prevData = (tmpl.data as any) ?? {};
+  const prevMeta = prevData.meta ?? {};
+  const prevContact = prevMeta.contact ?? {};
 
   const phoneDigits = digitsOnly(d.phone);
   const email = d.contact_email.trim();
@@ -108,9 +109,10 @@ function buildDataPatch(d: Draft, tmpl: Template): Partial<Template> {
 
   const meta = {
     ...prevMeta,
+    // Keep canonical name in meta
     siteTitle: d.template_name || prevMeta?.siteTitle || '',
     business: d.business_name || prevMeta?.business || '',
-    industry: normKey, // ← IMPORTANT: save key
+    industry: normKey,
     contact: {
       ...prevContact,
       email: email || null,
@@ -125,11 +127,15 @@ function buildDataPatch(d: Draft, tmpl: Template): Partial<Template> {
     },
   };
 
+  // MERGE data (do not overwrite other properties like theme, pages, etc.)
+  const data = { ...prevData, meta };
+
+  // Also update TOP-LEVEL template_name so the header/title and list can pick it up.
+  const topLevelName = d.template_name || (tmpl as any).template_name || '';
+
   return {
-    data: {
-      ...(tmpl.data as any),
-      meta,
-    },
+    template_name: topLevelName, // ⬅️ update title immediately
+    data,
   };
 }
 
@@ -138,7 +144,7 @@ export default function IdentityPanel({
   onChange,
 }: {
   template: Template;
-  onChange: (patch: Partial<Template>) => void; // parent autosaves via commit (data-only)
+  onChange: (patch: Partial<Template>) => void; // parent autosaves via commit
 }) {
   const [draft, setDraft] = React.useState<Draft>(() => toDraft(template));
   const [dirty, setDirty] = React.useState(false);
@@ -159,8 +165,6 @@ export default function IdentityPanel({
     return opt ? INDUSTRY_HINTS[opt.label] : undefined;
   }, [draft.industry, industryOptions]);
 
-  // Build a small “signature” that updates whenever relevant template fields change,
-  // even if the parent keeps the same object reference.
   const templateSig = React.useMemo(() => {
     const meta = (template.data as any)?.meta ?? {};
     return JSON.stringify([
@@ -277,7 +281,7 @@ export default function IdentityPanel({
           </div>
         </div>
 
-        {/* Template Name → data.meta.siteTitle */}
+        {/* Template Name → data.meta.siteTitle + TOP-LEVEL template_name */}
         <div>
           <Label>Template Name</Label>
           <Input

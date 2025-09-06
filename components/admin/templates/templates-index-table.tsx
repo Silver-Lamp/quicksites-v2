@@ -1,4 +1,3 @@
-// components/admin/templates/templates-index-table.tsx
 "use client";
 
 import { useState, useMemo, useEffect } from 'react';
@@ -19,11 +18,35 @@ import RowActions from '@/components/admin/templates/row-actions';
 import { Template } from '@/types/template';
 import { cn } from '@/lib/utils';
 
+/* ---------------- helpers ---------------- */
+
+function safeParse<T = any>(v: any): T | undefined {
+  if (!v) return undefined;
+  if (typeof v === 'object') return v as T;
+  if (typeof v === 'string') {
+    try { return JSON.parse(v) as T; } catch { return undefined; }
+  }
+  return undefined;
+}
+
+function getMeta(t: any): Record<string, any> | undefined {
+  // Prefer explicit meta column if you add one later; otherwise from data.meta
+  const data = safeParse<Record<string, any>>(t.data);
+  return (t.meta && typeof t.meta === 'object' ? t.meta : undefined) ?? data?.meta ?? data;
+}
+
+function titleFromKey(key?: string): string {
+  if (!key) return '';
+  return key
+    .replace(/[_-]+/g, ' ')
+    .replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
 export default function TemplatesIndexTable({
   templates,
   selectedFilter = '',
 }: {
-  templates: Template[]; // allows extra fields at runtime
+  templates: Template[];
   selectedFilter?: string;
 }) {
   const router = useRouter();
@@ -43,10 +66,9 @@ export default function TemplatesIndexTable({
       .filter((t: any) => {
         const isLocallyArchived = archivedIds.includes(t.id);
         const isArchived = t.data?.archived ?? isLocallyArchived;
-
         if (archiveFilter === 'archived') return isArchived;
         if (archiveFilter === 'active') return !isArchived;
-        return true; // 'all'
+        return true;
       })
       .filter((t: any) => {
         const term = search.toLowerCase();
@@ -54,14 +76,23 @@ export default function TemplatesIndexTable({
         const name = (t.template_name || '').toLowerCase();
         const slug = (t.slug || '').toLowerCase();
 
-        // Pull industry & city from either top-level columns or JSON data.meta fallback
-        const industry =
-          (t.industry || t.data?.meta?.industry || '').toLowerCase();
-        const city =
+        // Robust meta extraction for search
+        const meta = getMeta(t);
+        const industryKey =
+          (t.industry_gen ||
+            t.industry ||
+            meta?.industry ||
+            meta?.business?.industry ||
+            '') + '';
+        const cityVal =
           (t.city ||
-            t.data?.meta?.city ||
-            t.data?.meta?.location?.city ||
-            '').toLowerCase();
+            meta?.city ||
+            meta?.location?.city ||
+            meta?.business?.city ||
+            '') + '';
+
+        const industry = industryKey.toLowerCase();
+        const city = cityVal.toLowerCase();
 
         return (
           name.includes(term) ||
@@ -76,7 +107,7 @@ export default function TemplatesIndexTable({
         return true;
       });
   }, [templates, search, viewMode, archiveFilter, archivedIds]);
-  // Reset the anchor if the filtered list changes
+
   useEffect(() => {
     setLastSelectedIndex(null);
   }, [filtered]);
@@ -90,7 +121,6 @@ export default function TemplatesIndexTable({
       if (opts?.exclusive) {
         return willSelect ? [...rangeIds] : [];
       }
-
       if (willSelect) {
         const set = new Set(prev);
         rangeIds.forEach((id) => set.add(id));
@@ -140,13 +170,18 @@ export default function TemplatesIndexTable({
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               {['Last 7 days', 'This month', 'This year', 'All time'].map((option) => (
-                <DropdownMenuItem key={option} onClick={() => {
-                  const url = new URL(window.location.href);
-                  if (option === 'All time') url.searchParams.delete('date');
-                  else url.searchParams.set('date', option);
-                  setCurrentFilter(option);
-                  router.push(url.toString());
-                }}>{option}</DropdownMenuItem>
+                <DropdownMenuItem
+                  key={option}
+                  onClick={() => {
+                    const url = new URL(window.location.href);
+                    if (option === 'All time') url.searchParams.delete('date');
+                    else url.searchParams.set('date', option);
+                    setCurrentFilter(option);
+                    router.push(url.toString());
+                  }}
+                >
+                  {option}
+                </DropdownMenuItem>
               ))}
             </DropdownMenuContent>
           </DropdownMenu>
@@ -193,14 +228,25 @@ export default function TemplatesIndexTable({
             {filtered.map((t: any, index: number) => {
               const updated = t.effective_updated_at ?? t.updated_at;
 
-              // Resolve display values with graceful fallbacks
-              const displayIndustry =
-                t.industry ?? t.data?.meta?.industry ?? '—';
-              const displayCity =
-                t.city ??
-                t.data?.meta?.city ??
-                t.data?.meta?.location?.city ??
-                '—';
+              const meta = getMeta(t);
+
+              // Keys (search/display share the same extraction)
+              const industryKey: string =
+                (t.industry ||
+                  t.industry_gen ||
+                  meta?.industry ||
+                  meta?.business?.industry ||
+                  '') + '';
+
+              const cityVal: string =
+                (t.city ||
+                  meta?.city ||
+                  meta?.location?.city ||
+                  meta?.business?.city ||
+                  '') + '';
+
+              const displayIndustry = industryKey ? titleFromKey(industryKey) : '—';
+              const displayCity = cityVal || '—';
 
               return (
                 <tr
@@ -281,7 +327,7 @@ export default function TemplatesIndexTable({
 
                   <td className="p-2 text-zinc-200">{displayIndustry}</td>
                   <td className="p-2 text-zinc-400">{displayCity}</td>
-                  
+
                   <td className="p-2 text-zinc-400">
                     {t.phone && <div className="text-xs text-zinc-400">{t.phone}</div>}
                   </td>

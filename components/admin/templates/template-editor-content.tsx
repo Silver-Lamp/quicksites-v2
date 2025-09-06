@@ -155,19 +155,128 @@ function openHoursSettingsPanel(setShowSettings: (open: boolean) => void) {
 }
 
 /* ---------- event helpers (fix recursion bug) ---------- */
-function emitApplyPatch(patch: Partial<Template>) {
+type PatchOpts = { persist?: boolean }; // default is preview-only
+
+function emitApplyPatch(patch: Partial<Template>, opts: PatchOpts = {}) {
   try {
-    window.dispatchEvent(
-      new CustomEvent('qs:template:apply-patch', { detail: patch as any })
-    );
+    const detail = { ...(patch as any), __transient: opts.persist ? false : true };
+    window.dispatchEvent(new CustomEvent('qs:template:apply-patch', { detail }));
   } catch {}
 }
+
 function emitMerge(detail: any) {
   try {
-    window.dispatchEvent(
-      new CustomEvent('qs:template:merge', { detail })
-    );
+    window.dispatchEvent(new CustomEvent('qs:template:merge', { detail }));
   } catch {}
+}
+
+/* ---------- text helpers (props/content mirroring) ---------- */
+const TEXT_LIKE = new Set([
+  'text', 'rich_text', 'richtext', 'richText', 'paragraph', 'markdown', 'textarea', 'wysiwyg'
+]);
+function isTextLike(b: any) { return TEXT_LIKE.has(String(b?.type || '').toLowerCase()); }
+
+function firstNonEmptyString(...cands: any[]): string | undefined {
+  for (const c of cands) {
+    if (typeof c === 'string' && c.trim().length > 0) return c;
+  }
+  return undefined;
+}
+
+// Extract plain text from common rich formats (TipTap/ProseMirror, Quill Delta, arbitrary trees)
+function extractRichTextish(v: any): string | undefined {
+  if (!v) return undefined;
+  if (typeof v === 'string') return v.trim().length ? v : undefined;
+
+  // Quill delta { ops: [{ insert: '...' }, ...] }
+  if (Array.isArray(v?.ops)) {
+    const s = v.ops.map((op: any) => (typeof op?.insert === 'string' ? op.insert : '')).join('');
+    return s.trim().length ? s : undefined;
+  }
+
+  // ProseMirror/TipTap: recursively collect node.text
+  const collectPM = (node: any): string => {
+    if (!node) return '';
+    if (typeof node.text === 'string') return node.text;
+    const kids = Array.isArray(node.content) ? node.content : Array.isArray(node.children) ? node.children : [];
+    return kids.map(collectPM).join('');
+  };
+  const pm = collectPM(v);
+  if (pm.trim().length) return pm;
+
+  // Generic arrays/objects
+  if (Array.isArray(v)) {
+    const s = v.map(extractRichTextish).filter(Boolean).join(' ');
+    return s.trim().length ? s : undefined;
+  }
+  if (typeof v === 'object') {
+    const s = [v.text, v.value, v.html, v.body, v.markdown]
+      .map(extractRichTextish)
+      .filter(Boolean)
+      .join(' ');
+    return s.trim().length ? s : undefined;
+  }
+  return undefined;
+}
+
+/** Mirror text/html/value across props & content so BOTH readers are satisfied.
+ *  Coalesces from ANY of: root/props/content: html|text|value|markdown|body|json|doc|delta. */
+function mirrorTextPropsAndContent<T extends Block | any>(b: T): T {
+  if (!b || !isTextLike(b)) return b;
+
+  const root    = (b as any) ?? {};
+  const props   = { ...(b as any).props } as any;
+  const content = { ...(b as any).content } as any;
+
+  // 1) Try direct strings first
+  let chosen =
+    firstNonEmptyString(
+      root.html, root.text, typeof root.value === 'string' ? root.value : undefined,
+      props.html, props.text, typeof props.value === 'string' ? props.value : undefined,
+      content.html, content.text, typeof content.value === 'string' ? content.value : undefined,
+      // markdown/body common aliases
+      props.markdown, content.markdown, props.body, content.body
+    );
+
+  // 2) Fallback to structured text (json/doc/delta)
+  if (!chosen) {
+    chosen =
+      extractRichTextish(props.json)   || extractRichTextish(content.json)   ||
+      extractRichTextish(props.doc)    || extractRichTextish(content.doc)    ||
+      extractRichTextish(props.delta)  || extractRichTextish(content.delta)  ||
+      undefined;
+  }
+
+  // If still nothing, leave empty string (renderers handle empty gracefully)
+  const canon = (chosen ?? '').toString();
+
+  // Write back everywhere (don’t leave any consumer empty)
+  props.html = canon;  content.html = canon;
+  props.text = canon;  content.text = canon;
+  props.value = canon; content.value = canon;
+
+  if (!content.format) content.format = 'html';
+
+  // Clean stray root fields to keep shape tidy
+  const out: any = { ...(b as any), props, content };
+  delete out.html; delete out.text; delete out.value;
+
+  return out as T;
+}
+
+
+/** Normalize ALL text-like blocks in a data object: returns a new data with mirrored shapes. */
+function normalizeDataTextShapes(data: any): any {
+  const srcPages = Array.isArray(data?.pages) ? data.pages : [];
+  const pagesOut = srcPages.map((p: any) => {
+    const pageCopy: any = { ...p };
+    const blocks = getPageBlocks(pageCopy);
+    if (!Array.isArray(blocks) || blocks.length === 0) return pageCopy;
+    const mirrored = blocks.map((b: any) => mirrorTextPropsAndContent(b));
+    setPageBlocks(pageCopy, mirrored);
+    return pageCopy;
+  });
+  return { ...(data ?? {}), pages: pagesOut };
 }
 
 /* ---------- component ---------- */
@@ -208,9 +317,9 @@ export default function EditorContent({
 
   // Re-emit suppression to prevent toolbar↔editor loops
   const suppressEmitRef = useRef(false);
-  const emitPatchIfAllowed = (patch: Partial<Template>) => {
+  const emitPatchIfAllowed = (patch: Partial<Template>, opts: PatchOpts = {}) => {
     if (suppressEmitRef.current) return;
-    emitApplyPatch(patch);
+    emitApplyPatch(patch, opts);
   };
 
   const editMuteRef = useRef(false); // prevent re-entrant block editor openings
@@ -388,9 +497,9 @@ export default function EditorContent({
       // Optional: clear old global 'new' bucket so future templates aren’t blocked
       localStorage.removeItem('qs:newtemplate:welcome:dismissed:new');
     } catch {}
-  
+
     setShowWelcome(false);
-  
+
     // Open first Hero if present; else open Header
     setTimeout(() => {
       const ref = findFirstBlockOfType(template, 'hero');
@@ -402,7 +511,6 @@ export default function EditorContent({
       }
     }, 60);
   };
-  
 
   /* keyboard: S toggles settings */
   useEffect(() => {
@@ -473,24 +581,21 @@ export default function EditorContent({
       ...(template.data as TemplateDataWithChrome),
       headerBlock: updatedHeader as Block,
     };
-    const next: Template = {
-      ...template,
-      headerBlock: updatedHeader as any,
-      data: nextData as Template['data'],
-    };
-    setTemplate(next);
-    onChange(next);
-    // do not emit patch here — toolbar will handle persistence via other broadcasts
+    applyDataAndBroadcast(nextData as any, { headerBlock: updatedHeader as any });
     setEditingHeader(null);
   };
 
   /* block ops */
   function openBlockEditor(blockId?: string | null, blockPath?: string | null) {
-    if (editMuteRef.current) return; // already editing
+    if (editMuteRef.current) return;
+
+    // Try id, then explicit path, then treat id as path (e.g. "2:5")
     let ref =
-      (blockId ? findBlockById(template, blockId) : null) ||
+      (blockId ? findBlockById(template, blockId) : null) ??
       findBlockByPath(template, blockPath);
-    if (!ref && blockId) ref = findBlockById(template, String(blockId));
+    if (!ref && blockId && /^\d+:\d+$/.test(blockId)) {
+      ref = findBlockByPath(template, blockId);
+    }
     if (!ref) return;
 
     const t = (ref.block as any)?.type;
@@ -499,31 +604,185 @@ export default function EditorContent({
       return;
     }
 
-    editMuteRef.current = true; // mute further edit intents
-    setEditingBlock({ ref });
+    // Normalize text so editor fields are prefilled regardless of shape
+    const normalized = mirrorTextPropsAndContent(ref.block);
+
+    editMuteRef.current = true;
+    setEditingBlock({ ref: { ...ref, block: normalized } });
   }
 
   function openAdder(blockId?: string | null, blockPath?: string | null) {
-    // Special case: empty page CTA from LiveEditorPreviewFrame
+    // Special-case: inline preview "add first"
     if (blockId === '__ADD_AT_START__') {
-      // Use current page if possible; otherwise the first renderable page
       const pages = getTemplatePages(template);
       let pageIdx = pages.findIndex((p: any) => p?.slug === currentPageSlug);
-      if (pageIdx < 0) pageIdx = 0; // safe fallback
-  
-      // Insert at the very beginning of the page
+      if (pageIdx < 0) pageIdx = 0;
       setAdderTarget({ pageIdx, insertAt: 0 });
       return;
     }
-  
-    // Existing behavior: add below an existing block
-    const byPath = findBlockByPath(template, blockPath ?? null);
-    const byId = blockId ? findBlockById(template, blockId) : null;
-    const ref = byPath ?? byId;
+
+    // Find by path, id, or id-as-path
+    let ref =
+      (blockPath ? findBlockByPath(template, blockPath) : null) ??
+      (blockId ? findBlockById(template, blockId) : null);
+    if (!ref && blockId && /^\d+:\d+$/.test(blockId)) {
+      ref = findBlockByPath(template, blockId);
+    }
     if (!ref) return;
+
     setAdderTarget({ pageIdx: ref.pageIdx, insertAt: ref.blockIdx + 1 });
   }
-  
+
+  function moveBlock(
+    blockId?: string | null,
+    blockPath?: string | null,
+    toIndex?: number
+  ) {
+    if (toIndex == null || Number.isNaN(Number(toIndex))) return;
+    captureHistory();
+
+    // Resolve by path, id, or id-as-path "p:b"
+    let ref =
+      (blockPath ? findBlockByPath(template, blockPath) : null) ??
+      (blockId ? findBlockById(template, blockId) : null);
+    if (!ref && blockId && /^\d+:\d+$/.test(blockId)) {
+      ref = findBlockByPath(template, blockId);
+    }
+    if (!ref) return;
+
+    const pages = getTemplatePages(template);
+    const page = pages[ref.pageIdx];
+    const pageKey = String(page?.id ?? page?.slug ?? page?.path ?? ref.pageIdx);
+
+    const beforeArr =
+      (page?.blocks ??
+        page?.content_blocks ??
+        page?.content?.blocks ??
+        []) as Block[];
+
+    const realId =
+      (ref.block as any)?._id ?? (ref.block as any)?.id ?? null;
+
+    let nextData: any | undefined;
+
+    if (realId) {
+      nextData = moveBlockEmit(
+        template,
+        pageKey,
+        String(realId),
+        Number(toIndex)
+      );
+    }
+
+    const emitterNoOp =
+      !nextData ||
+      !Array.isArray(nextData?.pages) ||
+      (() => {
+        const p = nextData.pages[ref!.pageIdx];
+        const afterArr =
+          (p?.blocks ?? p?.content_blocks ?? p?.content?.blocks ?? []) as Block[];
+        // if arrays are same order/length, assume no-op
+        if (afterArr.length !== beforeArr.length) return false;
+        // shallow id signature compare
+        const sig = (a: Block[]) =>
+          a.map((b, i) => String((b as any)?._id ?? (b as any)?.id ?? `${i}`)).join('|');
+        return sig(afterArr) === sig(beforeArr);
+      })();
+
+    if (emitterNoOp) {
+      // Local reorder by index
+      const pagesOut = pages.map((p, i) => {
+        if (i !== ref!.pageIdx) return p;
+        const copy: any = { ...p };
+        const arr =
+          (copy?.blocks ??
+            copy?.content_blocks ??
+            copy?.content?.blocks ??
+            []) as Block[];
+        const next = Array.from(arr);
+        const from = ref!.blockIdx;
+        const clamped = Math.max(0, Math.min(Number(toIndex), next.length - 1));
+        const [item] = next.splice(from, 1);
+        next.splice(clamped, 0, item);
+        setPageBlocks(copy, next);
+        return copy;
+      });
+      nextData = Array.isArray((template as any)?.data?.pages)
+        ? { ...(template as any).data, pages: pagesOut }
+        : { pages: pagesOut };
+    }
+
+    if (nextData) {
+      applyDataAndBroadcast(nextData);
+    }
+  }
+
+  function deleteBlock(blockId?: string | null, blockPath?: string | null) {
+    captureHistory();
+
+    // Resolve reference: by explicit path, by id, or by id-as-path "p:b"
+    let ref =
+      (blockPath ? findBlockByPath(template, blockPath) : null) ??
+      (blockId ? findBlockById(template, blockId) : null);
+    if (!ref && blockId && /^\d+:\d+$/.test(blockId)) {
+      ref = findBlockByPath(template, blockId);
+    }
+    if (!ref) return;
+
+    const pages = getTemplatePages(template);
+    const page = pages[ref.pageIdx];
+    const pageKey = String(page?.id ?? page?.slug ?? page?.path ?? ref.pageIdx);
+
+    // Snapshot current blocks for change detection & fallback
+    const beforeArr =
+      (page?.blocks ??
+        page?.content_blocks ??
+        page?.content?.blocks ??
+        []) as Block[];
+
+    // Prefer removing by real id if present
+    const realId = (ref.block as any)?._id ?? (ref.block as any)?.id ?? null;
+    let nextData: any | undefined;
+
+    if (realId) {
+      nextData = removeBlockEmit(template, pageKey, String(realId));
+    }
+
+    // If the emitter didn’t change anything (missing id / page key mismatch), fall back to index delete
+    const noChangeViaEmitter =
+      !nextData ||
+      !Array.isArray(nextData?.pages) ||
+      (() => {
+        const p = nextData.pages[ref!.pageIdx];
+        const afterArr =
+          (p?.blocks ?? p?.content_blocks ?? p?.content?.blocks ?? []) as Block[];
+        return afterArr.length === beforeArr.length; // nothing removed
+      })();
+
+    if (noChangeViaEmitter) {
+      const pagesOut = pages.map((p, i) => {
+        if (i !== ref!.pageIdx) return p;
+        const copy: any = { ...p };
+        const arr =
+          (copy?.blocks ??
+            copy?.content_blocks ??
+            copy?.content?.blocks ??
+            []) as Block[];
+        const next = arr.filter((_, idx) => idx !== ref!.blockIdx);
+        setPageBlocks(copy, next);
+        return copy;
+      });
+
+      nextData = Array.isArray((template as any)?.data?.pages)
+        ? { ...(template as any).data, pages: pagesOut }
+        : { pages: pagesOut };
+    }
+
+    // Apply + transient broadcast (keeps preview in sync immediately)
+    if (nextData) {
+      applyDataAndBroadcast(nextData);
+    }
+  }
 
   function handleInsertBlockAt(
     pageIdx: number,
@@ -533,126 +792,132 @@ export default function EditorContent({
   ) {
     captureHistory();
 
-    // create a block (id optional; util will ensure one)
-    const newBlock = createDefaultBlock(type as any) as Block;
+    // 1) create new block with an id
+    const makeId = () =>
+      (typeof crypto !== 'undefined' && crypto.randomUUID
+        ? crypto.randomUUID()
+        : `b_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`);
 
-    // derive a stable page id/slug for the util
+    const baseBlock = createDefaultBlock(type as any) as Block;
+    const insertedId =
+      (baseBlock as any)._id ?? (baseBlock as any).id ?? makeId();
+    const withId = { ...(baseBlock as any), _id: insertedId } as Block;
+    const withIdMirrored = mirrorTextPropsAndContent(withId);
+
+    // 2) resolve page + snapshot current blocks for change detection
     const pages = getTemplatePages(template);
     const page = pages[pageIdx];
     const pageKey = String(page?.id ?? page?.slug ?? page?.path ?? pageIdx);
 
-    // centralized insert + emit
-    const result = insertBlockEmit(template, pageKey, newBlock, insertAt);
+    const beforeArr =
+      (page?.blocks ??
+        page?.content_blocks ??
+        page?.content?.blocks ??
+        []) as Block[];
 
-    // reflect into local template state
-    if (result?.nextData) {
-      const nextTemplate: any = { ...template, data: result.nextData };
-      if (!Array.isArray(nextTemplate.pages)) nextTemplate.pages = result.nextData.pages;
-      setTemplate(nextTemplate);
-      onChange(nextTemplate);
+    // 3) try centralized emitter first
+    const emitted = insertBlockEmit(template, pageKey, withIdMirrored, insertAt);
+    let nextData: any | undefined = emitted?.nextData;
+
+    const emitterNoOp =
+      !nextData ||
+      !Array.isArray(nextData?.pages) ||
+      (() => {
+        const p = nextData.pages[pageIdx];
+        const afterArr =
+          (p?.blocks ?? p?.content_blocks ?? p?.content?.blocks ?? []) as Block[];
+        return afterArr.length !== beforeArr.length + 1; // didn't actually insert
+      })();
+
+    // 4) if no-op, do a local immutable insert by index
+    if (emitterNoOp) {
+      const pagesOut = pages.map((p, i) => {
+        if (i !== pageIdx) return p;
+        const copy: any = { ...p };
+        const arr =
+          (copy?.blocks ??
+            copy?.content_blocks ??
+            copy?.content?.blocks ??
+            []) as Block[];
+        const next = Array.from(arr);
+        const at = Math.max(0, Math.min(insertAt, next.length));
+        next.splice(at, 0, withIdMirrored);
+        setPageBlocks(copy, next);
+        return copy;
+      });
+      nextData = Array.isArray((template as any)?.data?.pages)
+        ? { ...(template as any).data, pages: pagesOut }
+        : { pages: pagesOut };
     }
 
+    // 5) apply + transient broadcast so inline preview updates instantly
+    if (nextData) {
+      applyDataAndBroadcast(nextData);
+    }
     setAdderTarget(null);
 
-    if (opts?.openEditor && result?.block) {
-      if ((result.block as any).type === 'hours') {
+    // 6) optionally open the editor for the inserted block
+    if (opts?.openEditor) {
+      if ((withIdMirrored as any).type === 'hours') {
         openHoursSettingsPanel(setShowSettings);
       } else {
+        // Resolve actual index post-insert from nextData
+        const p = nextData?.pages?.[pageIdx];
+        const arr =
+          (p?.blocks ?? p?.content_blocks ?? p?.content?.blocks ?? []) as any[];
+        const idx = Math.max(
+          0,
+          arr.findIndex((b) => String(b?._id ?? b?.id) === String(insertedId))
+        );
         setEditingBlock({
-          ref: { pageIdx, blockIdx: insertAt, block: result.block },
+          ref: { pageIdx, blockIdx: idx >= 0 ? idx : insertAt, block: withIdMirrored },
         });
       }
-    }
-  }
-
-  function moveBlock(blockId?: string | null, blockPath?: string | null, toIndex?: number) {
-    if (toIndex == null || Number.isNaN(Number(toIndex))) return;
-    captureHistory();
-  
-    // Find the block (by id or path)
-    const ref =
-      (blockPath ? findBlockByPath(template, blockPath) : null) ??
-      (blockId ? findBlockById(template, blockId) : null);
-    if (!ref) return;
-  
-    // Page identity for the util
-    const pages = getTemplatePages(template);
-    const page = pages[ref.pageIdx];
-    const pageKey = String(page?.id ?? page?.slug ?? page?.path ?? ref.pageIdx);
-  
-    // Centralized move + emit (updates working copy via events)
-    const nextData = moveBlockEmit(
-      template,
-      pageKey,
-      String(blockId ?? (ref.block as any)?._id),
-      Number(toIndex)
-    );
-  
-    // Reflect into local state so UI stays in lockstep
-    if (nextData) {
-      const nextTemplate: any = { ...template, data: nextData };
-      if (!Array.isArray(nextTemplate.pages)) nextTemplate.pages = nextData.pages;
-      setTemplate(nextTemplate);
-      onChange(nextTemplate);
-    }
-  }
-  
-  function deleteBlock(blockId?: string | null, blockPath?: string | null) {
-    captureHistory();
-    const ref =
-      (blockPath ? findBlockByPath(template, blockPath) : null) ??
-      (blockId ? findBlockById(template, blockId) : null);
-    if (!ref) return;
-
-    const pages = getTemplatePages(template);
-    const page = pages[ref.pageIdx];
-    const pageKey = String(page?.id ?? page?.slug ?? page?.path ?? ref.pageIdx);
-
-    const nextData = removeBlockEmit(template, pageKey, String(blockId ?? (ref.block as any)?._id));
-    if (nextData) {
-      const nextTemplate: any = { ...template, data: nextData };
-      if (!Array.isArray(nextTemplate.pages)) nextTemplate.pages = nextData.pages;
-      setTemplate(nextTemplate);
-      onChange(nextTemplate);
     }
   }
 
   function saveEditedBlock(updated: Block) {
     captureHistory();
 
-    // centralized replace + emit
-    const nextData = replaceBlockEmit(template, updated);
+    // Keep the same id as the block being edited (some editors omit _id/id on save)
+    const ref = editingBlock?.ref as { pageIdx: number; blockIdx: number; block: Block } | null;
+    const curAny = (ref?.block ?? {}) as any;
+    const updAny = (updated as any);
 
+    const curId = curAny._id ?? curAny.id ?? null;
+    if (curId && updAny._id == null && updAny.id == null) {
+      updAny._id = curId; // preserve identity so replace-by-id works + keys stay stable
+    }
+
+    // Mirror text/html/value across shapes (renderer + editor consistency)
+    const normalizedUpdated = mirrorTextPropsAndContent(updAny as Block);
+
+    // First try centralized replace (by id across all pages)
+    let nextData = replaceBlockEmit(template, normalizedUpdated);
+
+    // If emitter didn't return anything (e.g., no id match), do local replace by index
+    const emitterNoOp = !nextData || !Array.isArray(nextData?.pages);
+    if (emitterNoOp && ref) {
+      const pages = [...getTemplatePages(template)];
+      const page = { ...pages[ref.pageIdx] };
+      const blocks = [...getPageBlocks(page)];
+      // Clamp index just in case
+      const idx = Math.max(0, Math.min(ref.blockIdx, blocks.length - 1));
+      blocks[idx] = normalizedUpdated;
+      setPageBlocks(page, blocks);
+      pages[ref.pageIdx] = page;
+      nextData = Array.isArray((template as any)?.data?.pages)
+        ? { ...(template as any).data, pages }
+        : { pages };
+    }
+
+    // Apply + transient broadcast so inline preview updates immediately
     if (nextData) {
-      const nextTemplate: any = { ...template, data: nextData };
-      if (!Array.isArray(nextTemplate.pages)) nextTemplate.pages = nextData.pages;
-      setTemplate(nextTemplate);
-      onChange(nextTemplate);
-    } else {
-      // fallback (shouldn't happen): manual in-place replace
-      const ref = editingBlock?.ref as {
-        pageIdx: number;
-        blockIdx: number;
-        block: Block;
-      } | null;
-      if (ref) {
-        const pages = [...getTemplatePages(template)];
-        const page = { ...pages[ref.pageIdx] };
-        const blocks = [...getPageBlocks(page)];
-        blocks[ref.blockIdx] = updated;
-        setPageBlocks(page, blocks);
-        pages[ref.pageIdx] = page;
-        const nextTemplate: any = Array.isArray((template as any)?.data?.pages)
-          ? { ...template, data: { ...(template as any).data, pages } }
-          : { ...template, pages };
-        setTemplate(nextTemplate);
-        onChange(nextTemplate);
-        emitPatchIfAllowed({ data: { ...(nextTemplate as any).data, pages }, pages });
-      }
+      applyDataAndBroadcast(nextData);
     }
 
     setEditingBlock(null);
-    editMuteRef.current = false; // unmute
+    editMuteRef.current = false;
   }
 
   /* merge events (favicon/meta) */
@@ -739,7 +1004,7 @@ export default function EditorContent({
         // expects: { type:'preview:move-block', blockId?, blockPath?, toIndex:number }
         moveBlock(d.blockId ?? null, d.blockPath ?? null, (d as any).toIndex);
         return;
-      }      
+      }
     }
     window.addEventListener('message', onMessage);
     return () => window.removeEventListener('message', onMessage);
@@ -777,12 +1042,11 @@ export default function EditorContent({
 
   const preferInlinePreview = useMemo(() => tab !== 'live', [tab]);
 
-
   function TruthTrackerPanel({ templateId }: { templateId: string }) {
     const { state, loading, error, reload } = useTruthTrackerState(templateId);
     if (loading || !state) return null;
     const { infra, snapshots, versions, events, adminMeta } = state;
-  
+
     return (
       <TemplateTruthTracker
         templateId={templateId}
@@ -793,13 +1057,31 @@ export default function EditorContent({
         selectedSnapshotId={infra?.lastSnapshot?.id}
         adminMeta={adminMeta}
         onRefresh={reload}
-        // onCreateSnapshot={async () => { await createSnapshot(templateId); await reload(); }}
-        // onPublish={async (sid) => { await publishSnapshot(templateId, sid); await reload(); }}
         onViewDiff={() => {}}
       />
     );
   }
-  
+
+// keep data/pages in sync + notify preview iframe (MERGE, don't overwrite)
+const applyDataAndBroadcast = (nextData: any, extra?: Partial<Template>) => {
+  const prevData = (template as any)?.data ?? {};
+  const mergedData = { ...prevData, ...(nextData ?? {}) };
+  if (Array.isArray(nextData?.pages)) mergedData.pages = nextData.pages;
+
+  const nextTemplate: any = { ...template, ...(extra ?? {}), data: mergedData };
+  nextTemplate.pages = mergedData.pages;
+
+  setTemplate(nextTemplate);
+  onChange(nextTemplate);
+  emitPatchIfAllowed({
+    data: nextTemplate.data,
+    pages: nextTemplate.pages,
+    ...(extra?.headerBlock ? { headerBlock: extra.headerBlock as any } : {}),
+    ...(extra?.footerBlock ? { footerBlock: extra.footerBlock as any } : {}),
+  });
+};
+
+
 
   return (
     <div className="flex min-w-0">
@@ -821,7 +1103,7 @@ export default function EditorContent({
           >
             Blocks
           </Link>
-        <Link
+          <Link
             href={buildTabHref('live')}
             className={[
               'px-4 py-2 text-sm rounded-t-md border-b-2 transition-colors',
@@ -850,12 +1132,17 @@ export default function EditorContent({
         <LiveEditorPreviewFrame
           template={template}
           onChange={(t) => {
-            setTemplate(t);
-            onChange(t);
+            // 🔁 normalize iframe → parent updates before applying
+            const normalized = {
+              ...t,
+              data: normalizeDataTextShapes((t as any).data ?? {}),
+            };
+            setTemplate(normalized);
+            onChange(normalized);
             emitPatchIfAllowed({
-              data: (t as any).data,
-              headerBlock: (t as any).headerBlock,
-              footerBlock: (t as any).footerBlock,
+              data: (normalized as any).data,
+              headerBlock: (normalized as any).headerBlock,
+              footerBlock: (normalized as any).footerBlock,
             });
           }}
           errors={blockErrors}
@@ -947,63 +1234,54 @@ export default function EditorContent({
         </div>
       )}
 
-    {template.id && (
-    <>
-      <div className="mt-3">
-        <CollapsiblePanel
-          id="truth-tracker"
-          key={`truth-tracker-${true ? 'open' : 'closed'}`}
-          title={
-            <span className="flex items-center gap-2">
-              <span>History</span>
-              {/* <span className="text-[10px] text-white/40">(press <kbd className="px-1 py-0.5 rounded bg-white/10">S</kbd> to toggle)</span> */}
-            </span>
-          }
-          defaultOpen={false}
-          lazyMount
-          onOpenChange={() => {}}
-       >
-        {({ open }) => (
-          !open ? null : (
-        <TruthTrackerPanel templateId={template.id} />
-          )
-        )}
-       </CollapsiblePanel>
-        <CollapsiblePanel
-          id="editor-settings"
-          /* key forces the panel to re-init with defaultOpen on S toggle */
-          key={`settings-${showSettings ? 'open' : 'closed'}`}
-          title={
-            <span className="flex items-center gap-2">
-              <span>Template Settings</span>
-              <span className="text-[10px] text-white/40">(press <kbd className="px-1 py-0.5 rounded bg-white/10">S</kbd> to toggle)</span>
-            </span>
-          }
-          defaultOpen={showSettings}
-          lazyMount
-          onOpenChange={setShowSettings}
-       >
-         {SidebarSettings ? (
-           <SidebarSettings
-             template={template}
-             onChange={(p: any) => onChange(p)}
-             />
-           ) : (
-             <div className="p-4 text-sm text-white/70">Loading settings…</div>
-           )}
-         </CollapsiblePanel>
-         </div>
-       </>
-    )}
+      {template.id && (
+        <>
+          <div className="mt-3">
+            <CollapsiblePanel
+              id="truth-tracker"
+              key={`truth-tracker-${true ? 'open' : 'closed'}`}
+              title={<span className="flex items-center gap-2"><span>History</span></span>}
+              defaultOpen={false}
+              lazyMount
+              onOpenChange={() => {}}
+            >
+              {({ open }) => (!open ? null : <TruthTrackerPanel templateId={template.id} />)}
+            </CollapsiblePanel>
+            <CollapsiblePanel
+              id="editor-settings"
+              key={`settings-${showSettings ? 'open' : 'closed'}`}
+              title={
+                <span className="flex items-center gap-2">
+                  <span>Template Settings</span>
+                  <span className="text-[10px] text-white/40">
+                    (press <kbd className="px-1 py-0.5 rounded bg-white/10">S</kbd> to toggle)
+                  </span>
+                </span>
+              }
+              defaultOpen={showSettings}
+              lazyMount
+              onOpenChange={setShowSettings}
+            >
+              {SidebarSettings ? (
+                <SidebarSettings template={template} onChange={(p: any) => onChange(p)} />
+              ) : (
+                <div className="p-4 text-sm text-white/70">Loading settings…</div>
+              )}
+            </CollapsiblePanel>
+          </div>
+        </>
+      )}
 
       {/* Bottom toolbar */}
       <TemplateActionToolbar
         template={template}
         autosaveStatus={autosaveStatus}
         onSaveDraft={(t) => {
-          setTemplate(t!);
-          onChange(t!);
-          emitPatchIfAllowed({ data: (t as any).data });
+          // ensure text shapes are mirrored before persisting
+          const normalized = { ...(t as any), data: normalizeDataTextShapes((t as any).data ?? {}) };
+          setTemplate(normalized as any);
+          onChange(normalized as any);
+          emitPatchIfAllowed({ template_name: (t as any).template_name, data: (normalized as any).data }, { persist: true }); // <-- persist
         }}
         onUndo={undo}
         onRedo={redo}

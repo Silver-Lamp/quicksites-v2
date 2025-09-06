@@ -4,7 +4,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import IdentityPanel from '../templates/panels/identity-panel';
 import ServicesPanel from '../templates/panels/services-panel';
-import SlugPanel from '../templates/panels/slug-panel';
+// import SlugPanel from '../templates/panels/slug-panel';
 import DomainPanel from '../templates/panels/domain-panel';
 import SeoPanel from '../templates/panels/seo-panel';
 import ThemePanel from '../templates/panels/theme-panel';
@@ -327,7 +327,7 @@ export default function SidebarSettings({ template, onChange }: Props) {
       <ThemePanel template={template} onChange={(patch) => applyPatch(patch)} />
       <IdentityPanel template={template} onChange={(patch) => applyPatch(patch)} />
       <ServicesPanel template={template} onChange={(patch) => applyPatch(patch)} />
-      <SlugPanel template={template} onChange={(patch) => applyPatch(patch)} />
+      {/* <SlugPanel template={template} onChange={(patch) => applyPatch(patch)} /> */}
 
       {/* Domain is read-only/informational; no onChange */}
       <DomainPanel template={template} isSite={template.is_site ?? false} />

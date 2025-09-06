@@ -19,8 +19,11 @@ import * as React from 'react';
 
 /* ---------- floating popover helpers ---------- */
 function useFloating(anchorRef: React.RefObject<HTMLElement>, open: boolean) {
-  const [pos, setPos] = React.useState<{top:number; left:number; width:number; maxH:number}>({
-    top: 0, left: 0, width: 384, maxH: 480
+  const [pos, setPos] = React.useState<{ top: number; left: number; width: number; maxH: number }>({
+    top: 0,
+    left: 0,
+    width: 384,
+    maxH: 480,
   });
   const recalc = React.useCallback(() => {
     const el = anchorRef.current;
@@ -74,7 +77,9 @@ function AiMenuPopover({
   const { top, left, width, maxH } = useFloating(anchorRef, true);
 
   React.useEffect(() => {
-    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
     document.addEventListener('keydown', onKey);
     return () => document.removeEventListener('keydown', onKey);
   }, [onClose]);
@@ -89,17 +94,18 @@ function AiMenuPopover({
         aria-label="AI assist"
         className={[
           'fixed z-[9999] rounded-lg shadow-lg border overflow-hidden',
-          isDark ? 'bg-neutral-900 border-purple-200 text-neutral-200'
-                 : 'bg-white border-purple-200 text-zinc-800',
+          isDark ? 'bg-neutral-900 border-purple-200 text-neutral-200' : 'bg-white border-purple-200 text-zinc-800',
         ].join(' ')}
         style={{ top, left, width }}
         onMouseDown={(e) => e.stopPropagation()}
       >
         <div className="flex flex-col" style={{ maxHeight: maxH }}>
-          <div className={[
-            'sticky top-0 z-10 border-b px-3 py-2 backdrop-blur',
-            isDark ? 'bg-neutral-900/95 border-neutral-800' : 'bg-white/95 border-zinc-200',
-          ].join(' ')}>
+          <div
+            className={[
+              'sticky top-0 z-10 border-b px-3 py-2 backdrop-blur',
+              isDark ? 'bg-neutral-900/95 border-neutral-800' : 'bg-white/95 border-zinc-200',
+            ].join(' ')}
+          >
             <div className="mb-2 text-xs opacity-80">
               Suggestions for <strong>{ai.pageTitle}</strong>
             </div>
@@ -113,9 +119,7 @@ function AiMenuPopover({
               className={[
                 'w-full resize-y rounded border px-2 py-1 text-sm',
                 'focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-500',
-                isDark
-                  ? 'bg-neutral-950 border-neutral-800 text-neutral-100 placeholder-neutral-500'
-                  : 'bg-white border-zinc-300 text-zinc-800 placeholder-zinc-400',
+                isDark ? 'bg-neutral-950 border-neutral-800 text-neutral-100 placeholder-neutral-500' : 'bg-white border-zinc-300 text-zinc-800 placeholder-zinc-400',
               ].join(' ')}
               placeholder="Notes, constraints, keywords…"
             />
@@ -125,25 +129,24 @@ function AiMenuPopover({
                   type="button"
                   className={isDark ? 'hover:text-white' : 'hover:text-black'}
                   onClick={() => {
-                    const sel = editor.state.doc.textBetween(
-                      editor.state.selection.from,
-                      editor.state.selection.to,
-                      ' '
-                    );
+                    const sel = editor.state.doc.textBetween(editor.state.selection.from, editor.state.selection.to, ' ');
                     ai.setBrief(sel.slice(0, 1200));
                   }}
                 >
                   Use selection
                 </button>
-                <button type="button" onClick={() => ai.setBrief('')}>Clear</button>
+                <button type="button" onClick={() => ai.setBrief('')}>
+                  Clear
+                </button>
               </div>
               <span>{ai.brief.length}/1200</span>
             </div>
           </div>
 
-          <ul role="menu" className={['overflow-y-auto divide-y',
-              isDark ? 'divide-neutral-800' : 'divide-zinc-200',
-            ].join(' ')}>
+          <ul
+            role="menu"
+            className={['overflow-y-auto divide-y', isDark ? 'divide-neutral-800' : 'divide-zinc-200'].join(' ')}
+          >
             {[
               ['write_intro', 'Write intro (2–3 short paragraphs)'],
               ['faqs', 'Add FAQ section (5 Q&A)'],
@@ -183,6 +186,9 @@ export type RichTextValue = {
   format?: 'tiptap' | 'html';
   json?: any;
   html?: string;
+  /** legacy / convenience fields that some wrappers persist directly */
+  value?: string;   // we’ll always emit the HTML here
+  text?: string;    // plain text snapshot (used for word_count etc.)
 };
 
 function buildEditorClass(tight: boolean, isDark: boolean) {
@@ -297,7 +303,7 @@ export default function RichTextEditor({
   placeholder = '',
   onUploadImage,
   colorMode,
-  template,          // ✅ DB-backed context
+  template, // ✅ DB-backed context
   currentPage,
 }: {
   value: RichTextValue;
@@ -366,8 +372,7 @@ export default function RichTextEditor({
     editorProps: {
       attributes: { class: buildEditorClass(tightSpacing, isDark) },
       handleKeyDown: (_view, event) => {
-        // IME
-        // // @ts-expect-error
+        // // @ts-expect-error IME guard
         if (event.isComposing) return false;
 
         if (event.key === 'Escape') {
@@ -397,10 +402,13 @@ export default function RichTextEditor({
       const html = editor.getHTML();
       const text = editor.getText();
       const word_count = text.trim() ? text.trim().split(/\s+/).length : 0;
-      onChange({ format: 'tiptap', json, html, word_count });
+
+      // IMPORTANT: always emit both html and value (legacy) + text
+      onChange({ format: 'tiptap', json, html, value: html, text, word_count });
     },
   });
 
+  // keep class styles in sync
   useEffect(() => {
     if (!editor) return;
     editor.setOptions({
@@ -414,13 +422,21 @@ export default function RichTextEditor({
     });
   }, [editor, tightSpacing, isDark]);
 
+  // initial / external value changes → editor content
   useEffect(() => {
     if (!editor) return;
-    if (value?.json)
+    // prefer json, then html, then value, then text → wrap in <p>
+    if (value?.json) {
       editor.commands.setContent(value.json, { parseOptions: { preserveWhitespace: 'full' } });
-    else if (value?.html)
+    } else if (value?.html) {
       editor.commands.setContent(value.html, { parseOptions: { preserveWhitespace: 'full' } });
-  }, [editor, value?.json, value?.html]);
+    } else if (value?.value) {
+      editor.commands.setContent(value.value, { parseOptions: { preserveWhitespace: 'full' } });
+    } else if (value?.text) {
+      const safe = String(value.text).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+      editor.commands.setContent(`<p>${safe}</p>`, { parseOptions: { preserveWhitespace: 'full' } });
+    }
+  }, [editor, value?.json, value?.html, value?.value, value?.text]);
 
   /* ---------- AI actions ---------- */
   const [aiOpen, setAiOpen] = useState(false);
@@ -429,11 +445,7 @@ export default function RichTextEditor({
 
   const captureSelection = () => {
     if (!editor) return '';
-    const sel = editor.state.doc.textBetween(
-      editor.state.selection.from,
-      editor.state.selection.to,
-      ' '
-    );
+    const sel = editor.state.doc.textBetween(editor.state.selection.from, editor.state.selection.to, ' ');
     return sel.trim();
   };
 
@@ -580,18 +592,50 @@ function Toolbar({
         isDark ? 'border-neutral-800 bg-neutral-900' : 'border-zinc-200 bg-white',
       ].join(' ')}
     >
-      <Btn active={editor.isActive('bold')} onClick={() => editor.chain().focus().toggleBold().run()} title="Bold">B</Btn>
-      <Btn active={editor.isActive('italic')} onClick={() => editor.chain().focus().toggleItalic().run()} title="Italic">I</Btn>
-      <Btn active={editor.isActive('underline')} onClick={() => editor.chain().focus().toggleUnderline().run()} title="Underline">U</Btn>
-      <Btn active={editor.isActive('strike')} onClick={() => editor.chain().focus().toggleStrike().run()} title="Strike">S</Btn>
-      <Btn onClick={() => editor.chain().focus().setParagraph().run()} title="Paragraph">P</Btn>
-      <Btn active={editor.isActive('heading', { level: 2 })} onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()} title="Heading 2">H2</Btn>
-      <Btn active={editor.isActive('heading', { level: 3 })} onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()} title="Heading 3">H3</Btn>
-      <Btn onClick={() => editor.chain().focus().toggleBulletList().run()} title="Bulleted list">• List</Btn>
-      <Btn onClick={() => editor.chain().focus().toggleOrderedList().run()} title="Ordered list">1. List</Btn>
-      <Btn onClick={() => editor.chain().focus().toggleBlockquote().run()} title="Blockquote">❝</Btn>
-      <Btn onClick={() => editor.chain().focus().undo().run()} title="Undo">↶</Btn>
-      <Btn onClick={() => editor.chain().focus().redo().run()} title="Redo">↷</Btn>
+      <Btn active={editor.isActive('bold')} onClick={() => editor.chain().focus().toggleBold().run()} title="Bold">
+        B
+      </Btn>
+      <Btn active={editor.isActive('italic')} onClick={() => editor.chain().focus().toggleItalic().run()} title="Italic">
+        I
+      </Btn>
+      <Btn active={editor.isActive('underline')} onClick={() => editor.chain().focus().toggleUnderline().run()} title="Underline">
+        U
+      </Btn>
+      <Btn active={editor.isActive('strike')} onClick={() => editor.chain().focus().toggleStrike().run()} title="Strike">
+        S
+      </Btn>
+      <Btn onClick={() => editor.chain().focus().setParagraph().run()} title="Paragraph">
+        P
+      </Btn>
+      <Btn
+        active={editor.isActive('heading', { level: 2 })}
+        onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
+        title="Heading 2"
+      >
+        H2
+      </Btn>
+      <Btn
+        active={editor.isActive('heading', { level: 3 })}
+        onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()}
+        title="Heading 3"
+      >
+        H3
+      </Btn>
+      <Btn onClick={() => editor.chain().focus().toggleBulletList().run()} title="Bulleted list">
+        • List
+      </Btn>
+      <Btn onClick={() => editor.chain().focus().toggleOrderedList().run()} title="Ordered list">
+        1. List
+      </Btn>
+      <Btn onClick={() => editor.chain().focus().toggleBlockquote().run()} title="Blockquote">
+        ❝
+      </Btn>
+      <Btn onClick={() => editor.chain().focus().undo().run()} title="Undo">
+        ↶
+      </Btn>
+      <Btn onClick={() => editor.chain().focus().redo().run()} title="Redo">
+        ↷
+      </Btn>
       <Btn
         onClick={() => {
           const url = window.prompt('Image URL');
@@ -610,12 +654,18 @@ function Toolbar({
       >
         🔗
       </Btn>
-      <Btn onClick={() => editor.chain().focus().unsetLink().run()} title="Remove link">⛓</Btn>
-      <Btn onClick={() => editor.chain().focus().clearNodes().unsetAllMarks().run()} title="Clear formatting">Clear</Btn>
+      <Btn onClick={() => editor.chain().focus().unsetLink().run()} title="Remove link">
+        ⛓
+      </Btn>
+      <Btn onClick={() => editor.chain().focus().clearNodes().unsetAllMarks().run()} title="Clear formatting">
+        Clear
+      </Btn>
 
       <span className={['mx-1 w-px self-stretch', isDark ? 'bg-neutral-800' : 'bg-zinc-200'].join(' ')} />
 
-      <Btn active={tightSpacing} onClick={onToggleTight} title="Toggle tight spacing">Tight Spacing</Btn>
+      <Btn active={tightSpacing} onClick={onToggleTight} title="Toggle tight spacing">
+        Tight Spacing
+      </Btn>
 
       {/* ✨ AI menu */}
       <div className="relative ml-auto">
@@ -647,3 +697,4 @@ function Toolbar({
     </div>
   );
 }
+

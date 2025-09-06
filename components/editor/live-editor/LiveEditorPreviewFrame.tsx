@@ -42,20 +42,25 @@ type Props = {
   reloadOnSave?: boolean;
 
   /** Force inline (no iframe) for fresh/remixed templates */
-  preferInlinePreview?: boolean; // NEW
+  preferInlinePreview?: boolean;
 };
 
+/* ---------------- Helpers ---------------- */
 function getPages(t: any) {
   return (t?.data?.pages ?? t?.pages ?? []) as any[];
 }
+
+function pageBlocks(p: any) {
+  return (p?.blocks ?? p?.content_blocks ?? p?.content?.blocks ?? []) as any[];
+}
+
 function getFirstRenderablePage(t: any) {
   const pages = getPages(t);
   if (!Array.isArray(pages) || pages.length === 0) return null;
   return pages.find((p: any) => p.slug === 'index' || p.path === '/') ?? pages[0];
 }
-function pageBlocks(p: any) {
-  return (p?.blocks ?? p?.content_blocks ?? []) as any[];
-}
+
+/* ======================================================================= */
 
 export default function LiveEditorPreviewFrame({
   template,
@@ -81,6 +86,27 @@ export default function LiveEditorPreviewFrame({
 }: Props) {
   const iframeRef = React.useRef<HTMLIFrameElement | null>(null);
   const [loaded, setLoaded] = React.useState(false);
+
+  // Forces recompute when editor emits any template patch (transient or persisted)
+  const [nonce, setNonce] = React.useState(0);
+  React.useEffect(() => {
+    const bump = () => setNonce((n) => n + 1);
+    window.addEventListener('qs:template:apply-patch', bump as any);
+    return () => window.removeEventListener('qs:template:apply-patch', bump as any);
+  }, []);
+
+  // Site color mode
+  const siteMode: 'light' | 'dark' = React.useMemo(() => {
+    const t: any = template || {};
+    const mode =
+      (t.color_mode ??
+        t.colorMode ??
+        t?.data?.theme?.mode ??
+        t?.data?.meta?.mode ??
+        t?.meta?.mode ??
+        'light') as string;
+    return String(mode).toLowerCase() === 'dark' ? 'dark' : 'light';
+  }, [template]);
 
   /* ---------------- Viewport wrapper (visual only; never in URL) ---------------- */
   const [viewport, setViewport] = React.useState<'mobile' | 'tablet' | 'desktop'>(() => {
@@ -134,9 +160,11 @@ export default function LiveEditorPreviewFrame({
 
   const slugForView = localSlug ?? pageSlug ?? null;
 
-  /* ---------------- Page selection for inline mode ---------------- */
+  /* ---------------- Inline selection + blocks (nonce-aware) ---------------- */
+  const pagesForIndex = React.useMemo(() => getPages(template), [template, nonce]);
+
   const selectedPage = React.useMemo(() => {
-    const pages = getPages(template);
+    const pages = pagesForIndex;
     if (!Array.isArray(pages) || pages.length === 0) return null;
     if (slugForView) {
       const found =
@@ -144,13 +172,33 @@ export default function LiveEditorPreviewFrame({
         pages.find((p: any) => p.path === `/${slugForView}`);
       if (found) return found;
     }
-    return getFirstRenderablePage(template);
-  }, [template, slugForView]);
+    return getFirstRenderablePage({ data: { pages } });
+  }, [pagesForIndex, slugForView, nonce]);
 
-  const inlineBlocks = React.useMemo(
-    () => (selectedPage ? pageBlocks(selectedPage) : []),
-    [selectedPage]
-  );
+  const pageIdx = React.useMemo(() => {
+    if (!selectedPage) return 0;
+    const bySlug = slugForView
+      ? pagesForIndex.findIndex(
+          (p: any) => p?.slug === slugForView || p?.path === `/${slugForView}`
+        )
+      : -1;
+    if (bySlug >= 0) return bySlug;
+    const byRef = pagesForIndex.indexOf(selectedPage);
+    return byRef >= 0 ? byRef : 0;
+  }, [pagesForIndex, selectedPage, slugForView, nonce]);
+
+  const blocksRef =
+    (selectedPage?.blocks ??
+      selectedPage?.content_blocks ??
+      selectedPage?.content?.blocks) || [];
+
+  const inlineBlocks = React.useMemo(() => blocksRef, [blocksRef, selectedPage, nonce]);
+
+  const inlineKey = React.useMemo(() => {
+    return inlineBlocks
+      .map((b: any, i: number) => String(b?._id ?? b?.id ?? `${pageIdx}:${i}`))
+      .join('|');
+  }, [inlineBlocks, pageIdx, nonce]);
 
   /* ---------------- Build a STABLE iframe src (identifiers only) ---------------- */
   const buildSrc = React.useCallback(() => {
@@ -167,16 +215,15 @@ export default function LiveEditorPreviewFrame({
 
   const [stableSrc, setStableSrc] = React.useState<string>(() => buildSrc());
 
-  // Only update src when identifiers change
   React.useEffect(() => {
-    if (useInline) return; // no iframe; ignore src updates
+    if (useInline) return;
     const next = buildSrc();
     if (next !== stableSrc) setStableSrc(next);
   }, [buildSrc, stableSrc, useInline]);
 
   /* ---------------- Parent → Iframe: send current state ---------------- */
   const postInit = React.useCallback(() => {
-    if (useInline) return; // nothing to init
+    if (useInline) return;
     const iframe = iframeRef.current;
     if (!iframe?.contentWindow) return;
     try {
@@ -193,7 +240,6 @@ export default function LiveEditorPreviewFrame({
         '*'
       );
 
-      // push current color preference once
       const stored = ((): 'light' | 'dark' => {
         try { return (localStorage.getItem('qs:preview:color') as any) || 'dark'; }
         catch { return 'dark'; }
@@ -202,12 +248,10 @@ export default function LiveEditorPreviewFrame({
     } catch {}
   }, [template, mode, slugForView, templateId, rawJson, industry, useInline]);
 
-  // Init after the iframe finishes loading
   React.useEffect(() => { if (!useInline && loaded) postInit(); }, [loaded, postInit, useInline]);
 
-  // When template content changes, DO NOT reload — just re-send state
   React.useEffect(() => {
-    if (useInline) return; // inline render updates via React
+    if (useInline) return;
     if (!loaded) return;
     const t = setTimeout(postInit, 50);
     return () => clearTimeout(t);
@@ -310,7 +354,16 @@ export default function LiveEditorPreviewFrame({
         style={{ width: widthPx ? `${widthPx}px` : '100%', maxWidth: '100%' }}
       >
         {useInline ? (
-          <div className="h-[70vh] w-full rounded-lg border border-black/10 bg-neutral-950 text-neutral-100 dark:border-white/10">
+          <div
+            className={[
+              // ⬇️ Use min-height so the surface grows with content
+              'min-h-[70vh] w-full rounded-lg border transition-colors overflow-visible pb-24',
+              siteMode === 'dark'
+                ? 'bg-neutral-950 text-neutral-100 border-white/10'
+                : 'bg-white text-zinc-900 border-black/10'
+            ].join(' ')}
+            key={inlineKey}
+          >
             <div className="mx-auto max-w-[1100px] p-8 space-y-6">
               {inlineBlocks.length === 0 ? (
                 <div className="flex flex-col items-center gap-3">
@@ -325,7 +378,9 @@ export default function LiveEditorPreviewFrame({
                 </div>
               ) : (
                 inlineBlocks.map((b: any, i: number) => {
-                  const id = blockIdOf(b, `0:${i}`);
+                  const fallbackPath = `${pageIdx}:${i}`;
+                  const id = blockIdOf(b, fallbackPath);
+
                   const onAnyClick: React.MouseEventHandler = (e) => {
                     const t = e.target as HTMLElement | null;
                     if (!t) return;
@@ -333,13 +388,20 @@ export default function LiveEditorPreviewFrame({
                     e.stopPropagation();
                     onRequestEditBlock?.(id);
                   };
+
                   return (
-                    <div key={id} className="group relative rounded-lg ring-1 ring-white/5 hover:ring-white/15">
+                    <div
+                      key={id}
+                      className="group relative rounded-lg ring-1 ring-white/5 hover:ring-white/15"
+                    >
                       <div className="pointer-events-none absolute -top-3 left-0 right-0 z-10 hidden justify-center gap-2 group-hover:flex">
                         <button
                           type="button"
                           className="pointer-events-auto rounded-md border border-white/20 bg-black/60 px-2 py-0.5 text-xs text-white hover:bg-black/80"
-                          onClick={(e) => { e.stopPropagation(); onRequestEditBlock?.(id); }}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onRequestEditBlock?.(id);
+                          }}
                         >
                           Edit
                         </button>
@@ -359,20 +421,31 @@ export default function LiveEditorPreviewFrame({
                       <button
                         type="button"
                         className="absolute right-2 top-2 z-10 hidden rounded-md border border-white/20 bg-black/60 px-2 py-0.5 text-xs text-white hover:bg-black/80 group-hover:block"
-                        onClick={(e) => { e.stopPropagation(); onRequestEditBlock?.(id); }}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onRequestEditBlock?.(id);
+                        }}
                       >
                         Edit
                       </button>
 
                       <div onClickCapture={onAnyClick}>
-                        <RenderBlock block={b} previewOnly template={template} />
+                        <RenderBlock
+                          block={b}
+                          blockPath={fallbackPath}
+                          previewOnly
+                          template={template}
+                        />
                       </div>
 
                       <div className="mt-2 flex justify-center">
                         <button
                           type="button"
                           className="invisible group-hover:visible rounded-md border border-white/15 bg白/5 px-2 py-1 text-xs hover:bg白/10"
-                          onClick={(e) => { e.stopPropagation(); onRequestAddAfter?.(id); }}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onRequestAddAfter?.(id);
+                          }}
                         >
                           + Add block below
                         </button>

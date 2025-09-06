@@ -197,8 +197,8 @@ export default async function TemplatesIndexPage({
   return (
     <div className="soft-borders mx-auto max-w-6xl p-6 pb-[350px] lg:pb-[420px] mt-12">
       {/* Header + Refresh */}
-      <div className="flex items-center justify-between mb-4">
-        <h1 className="text-lg font-semibold">Templates</h1>
+      <div className="flex items-center justify-between mb-4 mt-8">
+        {/* <h1 className="text-lg font-semibold">Templates</h1> */}
         <RefreshTemplatesButton />
       </div>
 

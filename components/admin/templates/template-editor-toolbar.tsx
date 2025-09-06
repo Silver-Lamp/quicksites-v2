@@ -173,7 +173,7 @@ export function TemplateEditorToolbar({
             ) : (
               <div className="flex items-center gap-2">
                 <span className="truncate text-xl font-bold text-white">
-                  {templateName || 'Untitled'}
+                  {templateName}
                 </span>
                 <Button
                   type="button"

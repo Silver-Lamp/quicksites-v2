@@ -12,7 +12,12 @@ const __dirname = path.dirname(__filename);
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   assetPrefix: '/',
-
+  experimental: {
+    serverActions: {
+      // allow up to 8 MB per request; set higher if you like
+      bodySizeLimit: '8mb',
+    },
+  },
   images: {
     domains: [
       'randomuser.me',

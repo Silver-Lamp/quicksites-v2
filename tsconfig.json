@@ -12,7 +12,8 @@
     "pages",
     "scripts",
     "types",
-    ".next/types/**/*.ts"
+    ".next/types/**/*.ts",
+    "api"
   ],
   "exclude": [
     "node_modules",

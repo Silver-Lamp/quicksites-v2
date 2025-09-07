@@ -1,1 +1,5 @@
-components/admin/dev/seeder/ui/PreviewResults.tsx
+Step 1 — Create a safe public view for branding
+-------
+
+Expose deprecations in the state aggregator
+Update app/api/templates/state/route.ts so consumers can see which files are flagged:

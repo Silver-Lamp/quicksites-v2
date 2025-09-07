@@ -7,8 +7,16 @@ const APP_HOSTS = new Set<string>([
   'localhost:3000',
   '127.0.0.1:3000',
   '::1:3000',
+
+  // QuickSites app/marketing hosts
   'quicksites.ai',
   'www.quicksites.ai',
+  'app.quicksites.ai',
+
+  // CedarSites app/marketing hosts (adjust to your real domains)
+  'cedarsites.com',
+  'www.cedarsites.com',
+  'app.cedarsites.com',
 ]);
 
 /** Paths we should never rewrite (Next internals, assets, specific APIs). */
@@ -50,28 +58,60 @@ function subdomainFromDevHost(hostname: string): string | null {
   return null;
 }
 
-// cookie settings
-const COOKIE_NAME = 'qs_ref';
-const COOKIE_MAX_AGE = 60 * 60 * 24 * 90; // 90 days
+// cookies
+const REF_COOKIE = 'qs_ref';
+const REF_MAX_AGE = 60 * 60 * 24 * 90; // 90 days
+
+// dev org override cookie (used by resolveOrg())
+const ORG_COOKIE = 'qs_org_slug';
+const ORG_MAX_AGE = 60 * 60; // 1 hour (dev convenience)
+const ORG_SLUG_RE = /^[a-z0-9][a-z0-9-]{1,63}$/i;
+
 const COOKIE_SECURE = process.env.NODE_ENV === 'production';
 
 export function middleware(req: NextRequest) {
   const url = req.nextUrl;
-  const { pathname } = url;
+  const { pathname, searchParams } = url;
 
-  // ---- Capture ?ref=CODE into a cookie (do this for ANY route) ----
-  const ref = url.searchParams.get('ref')?.trim();
-  const wantsRefCookie = !!ref && ref.length <= 64; // basic sanity cap
-  const withRefCookie = (res: NextResponse) => {
+  // --- capture ?ref=... (affiliates) ---
+  const ref = searchParams.get('ref')?.trim();
+  const wantsRefCookie = !!ref && ref.length <= 64;
+
+  // --- dev toggle: ?org=<slug> to override org; ?org=clear to remove ---
+  const orgParam = searchParams.get('org')?.trim().toLowerCase() || null;
+  const wantsOrgSet = !!orgParam && orgParam !== 'clear' && ORG_SLUG_RE.test(orgParam);
+  const wantsOrgClear = orgParam === 'clear';
+
+  const withCookies = (res: NextResponse) => {
     if (wantsRefCookie) {
-      res.cookies.set(COOKIE_NAME, ref!, {
+      // Use object overload for types-compat
+      res.cookies.set({
+        name: REF_COOKIE,
+        value: ref!,
         httpOnly: false,
         sameSite: 'lax',
         secure: COOKIE_SECURE,
         path: '/',
-        maxAge: COOKIE_MAX_AGE,
+        maxAge: REF_MAX_AGE,
       });
       res.headers.set('x-qsites-ref', ref!);
+    }
+
+    if (wantsOrgSet) {
+      res.cookies.set({
+        name: ORG_COOKIE,
+        value: orgParam!,
+        httpOnly: false,
+        sameSite: 'lax',
+        secure: COOKIE_SECURE,
+        path: '/',
+        maxAge: ORG_MAX_AGE,
+      });
+      res.headers.set('x-qsites-org', orgParam!);
+    } else if (wantsOrgClear) {
+      // Delete also uses object overload (name+path in one arg)
+      res.cookies.delete({ name: ORG_COOKIE, path: '/' });
+      res.headers.set('x-qsites-org-cleared', '1');
     }
     return res;
   };
@@ -79,14 +119,14 @@ export function middleware(req: NextRequest) {
   // ---- Let app/internal routes pass through untouched ----
   if (
     isIgnored(pathname) ||
-    pathname.startsWith('/host') ||     // host handler (if you keep it)
-    pathname.startsWith('/_domains') || // ✅ allow your _domains router
+    pathname.startsWith('/host') ||
+    pathname.startsWith('/_domains') || // ✅ your domain router
     pathname.startsWith('/admin') ||
-    pathname.startsWith('/sites') ||    // ✅ allow path-based site preview
+    pathname.startsWith('/sites') ||    // ✅ path-based site preview
     pathname.startsWith('/login') ||
-    pathname.startsWith('/api')         // keep your APIs intact
+    pathname.startsWith('/api')
   ) {
-    return withRefCookie(NextResponse.next());
+    return withCookies(NextResponse.next());
   }
 
   // Host header
@@ -96,7 +136,7 @@ export function middleware(req: NextRequest) {
 
   // If this is our app host, don't rewrite (normal dashboard/app pages).
   if (APP_HOSTS.has(host) || host.endsWith('.vercel.app')) {
-    return withRefCookie(NextResponse.next());
+    return withCookies(NextResponse.next());
   }
 
   // ---- Dev subdomain → /sites/<sub> rewrite (e.g., foo.localhost:3000) ----
@@ -107,7 +147,7 @@ export function middleware(req: NextRequest) {
     const res = NextResponse.rewrite(rewriteUrl);
     res.headers.set('x-qsites-dev-sub', devSub);
     res.headers.set('x-qsites-rewrite', rewriteUrl.pathname + (rewriteUrl.search || ''));
-    return withRefCookie(res);
+    return withCookies(res);
   }
 
   // ---- Real custom domain → _domains/<domain> router ----
@@ -116,7 +156,7 @@ export function middleware(req: NextRequest) {
   const res = NextResponse.rewrite(rewriteUrl);
   res.headers.set('x-qsites-domain', hostname);
   res.headers.set('x-qsites-rewrite', rewriteUrl.pathname + (rewriteUrl.search || ''));
-  return withRefCookie(res);
+  return withCookies(res);
 }
 
 export const config = {

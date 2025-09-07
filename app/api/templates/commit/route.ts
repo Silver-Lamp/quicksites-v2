@@ -7,15 +7,21 @@ import { sha256 } from '@/lib/server/templateUtils';
 import { diffBlocks } from '@/lib/diff/blocks';
 import { logTemplateEvent } from '@/lib/server/logTemplateEvent';
 
-/**
- * POST /api/templates/commit
- * Body: { id: string, baseRev?: number, patch: object, kind?: 'save' | 'autosave' }
- *
- * Behavior:
- * - On success: { id, rev, hash, kind }
- * - On merge conflict (409): { error: 'merge_conflict', rev }  ← includes CURRENT rev
- * - On other errors: { error }
- */
+// optional: best-effort org (keeps single-tenant working)
+let resolveOrg: undefined | (() => Promise<any>);
+try { resolveOrg = require('@/lib/org/resolveOrg').resolveOrg; } catch {}
+
+type Kind = 'save' | 'autosave';
+
+// ⬇️ helper: accept number OR ResponseInit (Next 15 no longer accepts plain number)
+function j(data: any, init?: number | ResponseInit) {
+  const resInit = typeof init === 'number' ? { status: init } : init;
+  return NextResponse.json(data, resInit);
+}
+
+const isMergeConflict = (m: string) =>
+  typeof m === 'string' && (m.includes('merge_conflict') || /conflict/i.test(m));
+
 export async function POST(req: Request) {
   try {
     const body = await req.json().catch(() => ({}));
@@ -23,32 +29,24 @@ export async function POST(req: Request) {
       id: string;
       baseRev?: number;
       patch: Record<string, any>;
-      kind?: 'save' | 'autosave';
+      kind?: Kind;
     };
 
-    // Input verification (id + patch only; baseRev can be inferred)
-    if (!id || typeof id !== 'string') {
-      return NextResponse.json({ error: 'id required' }, { status: 400 });
-    }
-    if (!patch || typeof patch !== 'object') {
-      return NextResponse.json({ error: 'patch required (object)' }, { status: 400 });
-    }
+    if (!id || typeof id !== 'string') return j({ error: 'id required' }, 400);
+    if (!patch || typeof patch !== 'object') return j({ error: 'patch required (object)' }, 400);
 
-    // Defensive: never let system columns through in the patch
+    // sanitize
     try {
       delete (patch as any).base_slug;
       delete (patch as any).is_version;
-      delete (patch as any).rev;            // client must not set rev directly
+      delete (patch as any).rev;
       delete (patch as any).updated_at;
       delete (patch as any).created_at;
       delete (patch as any).owner_id;
       delete (patch as any).published_version_id;
     } catch {}
 
-    // Keep actor null unless you wire a real user id
-    const actor: string | null = null;
-
-    // ----- Load BEFORE draft and infer baseRev if needed -----
+    // before state
     const { data: beforeRow, error: beforeErr } = await supabaseAdmin
       .from('templates')
       .select('rev, data')
@@ -56,111 +54,116 @@ export async function POST(req: Request) {
       .single();
 
     if (beforeErr || !beforeRow) {
-      return NextResponse.json({ error: beforeErr?.message || 'template not found' }, { status: 404 });
+      return j({ error: beforeErr?.message || 'template not found' }, 404);
     }
 
     const beforeRev = typeof (beforeRow as any).rev === 'number' ? (beforeRow as any).rev : 0;
     const beforeData = (beforeRow as any).data ?? {};
-
-    // If caller didn’t pass a number, fall back to the current DB rev
     const effectiveBaseRev = Number.isFinite(baseRev as number) ? (baseRev as number) : beforeRev;
 
-    // ----- RPC — commit with optimistic concurrency -----
-    const { data: rpc, error: rpcErr } = await supabaseAdmin.rpc('commit_template', {
-      p_id: id,
-      p_base_rev: effectiveBaseRev,
-      p_patch: patch,
-      p_actor: actor,
-      p_kind: kind ?? 'save',
-    });
+    // best-effort org
+    let orgId: string | undefined;
+    try {
+      if (resolveOrg) {
+        const org = await resolveOrg();
+        if (org?.id) orgId = String(org.id);
+      }
+    } catch {}
 
-    // Handle merge conflicts & other RPC errors
+    // single public RPC wrapper (see earlier SQL): public.commit_template_http(p_payload jsonb)
+    const payload = {
+      id,
+      base_rev: effectiveBaseRev,
+      patch,
+      actor: null,
+      kind: (kind ?? 'save') as Kind,
+      org_id: orgId,
+    };
+
+    const { data: rpcData, error: rpcErr } = await supabaseAdmin.rpc(
+      'commit_template_http',
+      { p_payload: payload } as any
+    );
+
     if (rpcErr) {
-      const msg = String(rpcErr.message || '');
-      const isConflict = msg.includes('merge_conflict') || /conflict/i.test(msg);
+      const msg = String(rpcErr.message || 'commit failed');
 
-      if (isConflict) {
-        // Fetch CURRENT rev so the client can retry immediately
+      if (isMergeConflict(msg)) {
         const { data: curRow } = await supabaseAdmin
           .from('templates')
           .select('rev')
           .eq('id', id)
           .maybeSingle();
-
         const currentRev =
           (curRow && typeof (curRow as any).rev === 'number' && (curRow as any).rev) || beforeRev;
-
-        return NextResponse.json(
-          { error: 'merge_conflict', rev: currentRev },
-          { status: 409 }
-        );
+        return j({ error: 'merge_conflict', rev: currentRev }, 409);
       }
 
-      const status = msg.toLowerCase().includes('not found') ? 404 : 500;
-      return NextResponse.json({ error: msg || 'commit failed' }, { status });
+      return j(
+        {
+          error: 'commit failed',
+          rpc_error: msg,
+          rpc_attempt: 'public.commit_template_http(p_payload jsonb)',
+          hint:
+            'Ensure the PUBLIC wrapper exists and delegates to app.commit_template(...).',
+        },
+        500
+      );
     }
 
-    // Success path — get next revision from RPC (preferred), fallback to base+1
-    const row = Array.isArray(rpc) ? rpc[0] : rpc;
-    const nextRev = typeof row?.rev === 'number' ? row.rev : effectiveBaseRev + 1;
+    // derive next rev; prefer DB-provided rev if present
+    const row = Array.isArray(rpcData) ? rpcData[0] : rpcData;
+    const nextRev =
+      typeof row?.rev === 'number'
+        ? row.rev
+        : Number.isFinite(effectiveBaseRev)
+        ? (effectiveBaseRev as number) + 1
+        : beforeRev + 1;
 
-    // Reload current data to compute content hash (and to diff blocks)
+    // reload to hash/diff
     const { data: cur, error: selErr } = await supabaseAdmin
       .from('templates')
       .select('data')
       .eq('id', id)
       .single();
 
-    if (selErr) {
-      // Still return the rev even if hashing/diff fails
-      return NextResponse.json({ id, rev: nextRev, hash: undefined, kind: kind ?? 'save' });
-    }
+    if (selErr) return j({ id, rev: nextRev, hash: undefined, kind: kind ?? 'save' });
 
     const afterData = (cur as any)?.data ?? {};
     const hash = sha256(afterData);
 
-    // ----- Block diff & event log (non-blocking semantics) -----
+    // diff + log (best-effort)
     try {
       const bd = diffBlocks({ data: beforeData }, { data: afterData });
-      const blockDiff = {
-        addedByType: bd.addedByType,
-        modifiedByType: bd.modifiedByType,
-        removedByType: bd.removedByType,
-        added: bd.added.slice(0, 3),
-        modified: bd.modified.slice(0, 3),
-        removed: bd.removed.slice(0, 3),
-      };
-
-      const type: 'save' | 'autosave' = (kind === 'autosave' ? 'autosave' : 'save');
       const afterMeta = (afterData as any)?.meta ?? {};
-
       await logTemplateEvent({
-        templateId: id, // camelCase accepted by the logger
-        type,
+        templateId: id,
+        type: (kind === 'autosave' ? 'autosave' : 'save') as Kind,
         revBefore: beforeRev,
         revAfter: nextRev,
-        diff: {
-          added: bd.added.length,
-          changed: bd.modified.length,
-          removed: bd.removed.length,
-        },
+        diff: { added: bd.added.length, changed: bd.modified.length, removed: bd.removed.length },
         meta: {
-          blockDiff,
+          blockDiff: {
+            addedByType: bd.addedByType,
+            modifiedByType: bd.modifiedByType,
+            removedByType: bd.removedByType,
+            added: bd.added.slice(0, 3),
+            modified: bd.modified.slice(0, 3),
+            removed: bd.removed.slice(0, 3),
+          },
           industry: typeof afterMeta?.industry === 'string' ? afterMeta.industry : undefined,
           services:
             Array.isArray((afterData as any)?.services)
               ? (afterData as any).services
               : afterMeta?.services ?? undefined,
           before: { rev: beforeRev, data: beforeData },
-          after:  { rev: nextRev,  data: afterData  },
+          after: { rev: nextRev, data: afterData },
         },
       } as any);
-    } catch {
-      /* swallow diff/log failures — commit succeeded */
-    }
+    } catch {}
 
-    return NextResponse.json({ id, rev: nextRev, hash, kind: kind ?? 'save' });
+    return j({ id, rev: nextRev, hash, kind: kind ?? 'save' });
   } catch (e: any) {
-    return NextResponse.json({ error: e?.message || 'commit failed' }, { status: 500 });
+    return j({ error: e?.message || 'commit failed' }, 500);
   }
 }

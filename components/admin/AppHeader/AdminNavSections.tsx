@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { supabase } from '@/lib/supabase/client';
 import {
   PlayCircle,
@@ -29,8 +29,10 @@ import {
   Bell,
   User,
   Printer,
+  Check,
 } from 'lucide-react';
 import clsx from 'clsx';
+import { useBrand } from '@/app/providers';
 
 /* ---------------- Safe localStorage ---------------- */
 const safeLS = {
@@ -46,7 +48,6 @@ const safeLS = {
     try {
       localStorage.setItem(k, JSON.stringify(v));
     } catch (e) {
-      // QuotaExceededError or blocked storage
       console.warn('[nav] localStorage.set failed:', e);
     }
   },
@@ -76,6 +77,8 @@ type NavItem =
 
 /* ---------------- Loading Overlay ---------------- */
 function LoadingOverlay({ show }: { show: boolean }) {
+  const { name, logoUrl } = useBrand();
+  const brandLogo = logoUrl || '/logo_v1.png';
   if (!show) return null;
   return (
     <div
@@ -84,7 +87,11 @@ function LoadingOverlay({ show }: { show: boolean }) {
       aria-busy="true"
     >
       <div className="flex flex-col items-center gap-3">
-        <img src="/logo_v1.png" alt="Loading…" className="h-12 w-auto opacity-95 drop-shadow animate-pulse" />
+        <img
+          src={brandLogo}
+          alt={`${name} logo`}
+          className="h-12 w-auto opacity-95 drop-shadow animate-pulse"
+        />
         <div className="h-8 w-8 rounded-full border-2 border-white/40 border-t-white animate-spin" />
         <div className="text-white/80 text-sm">Loading…</div>
       </div>
@@ -92,27 +99,7 @@ function LoadingOverlay({ show }: { show: boolean }) {
   );
 }
 
-/* ---------------- Nav Models ---------------- */
-/** Non-admin can only see these */
-const NAV_CORE: NavItem[] = [
-  {
-    type: 'item',
-    label: 'QuickSites',
-    href: '/',
-    icon: <img src="/logo_v1.png" alt="QuickSites" className="h-10 w-auto block pointer-events-none select-none" />,
-  },
-  {
-    type: 'item',
-    label: 'Sites & Templates',
-    icon: <FileStack size={18} />,
-    children: [
-      { label: 'Browse Sites and Templates', href: '/admin/templates/list' },
-      { label: 'Create New Site or Template', href: '/admin/templates/new' },
-    ],
-  },
-];
-
-/** Admin-only extras live here */
+/* ---------------- Admin-only extras ---------------- */
 const NAV_ADMIN: NavItem[] = [
   {
     type: 'item',
@@ -241,6 +228,190 @@ function useIsAdmin(): boolean {
   return isAdmin;
 }
 
+/* ---------------- Brand Switcher ---------------- */
+type OrgLite = { id: string; slug: string; name: string; logo_url: string | null };
+
+function BrandSwitcher({
+  collapsed,
+  onWillSwitch,
+  isPlatformAdmin, // ← NEW
+}: {
+  collapsed: boolean;
+  onWillSwitch: () => void;
+  isPlatformAdmin: boolean; // ← NEW
+}) {
+  const { name, logoUrl, slug } = useBrand();
+  const brandLogo = logoUrl || '/logo_v1.png';
+  const [open, setOpen] = useState(false);
+  const [orgs, setOrgs] = useState<OrgLite[] | null>(null);
+  const [loading, setLoading] = useState(false);
+  const ref = useRef<HTMLDivElement | null>(null);
+
+  const fetchOrgs = async () => {
+    setLoading(true);
+    try {
+      if (isPlatformAdmin) {
+        // Super admin: list ALL orgs (no membership required)
+        const { data } = await supabase
+          .from('organizations_public')
+          .select('id, slug, name, logo_url')
+          .order('name', { ascending: true });
+        setOrgs(
+          (data ?? []).map((r: any) => ({
+            id: String(r.id),
+            slug: String(r.slug),
+            name: String(r.name),
+            logo_url: r.logo_url ?? null,
+          }))
+        );
+      } else {
+        // Regular user: list orgs they belong to (fallback to current)
+        const { data: me } = await supabase.auth.getUser();
+        const uid = me?.user?.id;
+        if (!uid) {
+          setOrgs([{ id: 'current', slug, name, logo_url: brandLogo }]);
+          setLoading(false);
+          return;
+        }
+
+        const { data: mem } = await supabase
+          .from('org_members')
+          .select('org_id')
+          .eq('user_id', uid);
+
+        const ids = (mem ?? []).map((m: any) => m.org_id).filter(Boolean);
+        if (!ids.length) {
+          setOrgs([{ id: 'current', slug, name, logo_url: brandLogo }]);
+          setLoading(false);
+          return;
+        }
+
+        const { data: rows } = await supabase
+          .from('organizations_public')
+          .select('id, slug, name, logo_url')
+          .in('id', ids);
+
+        setOrgs(
+          (rows ?? []).map((r: any) => ({
+            id: String(r.id),
+            slug: String(r.slug),
+            name: String(r.name),
+            logo_url: r.logo_url ?? null,
+          }))
+        );
+      }
+    } catch {
+      setOrgs([{ id: 'current', slug, name, logo_url: brandLogo }]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    const onDown = (e: MouseEvent) => {
+      if (!open) return;
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    const onEsc = (e: KeyboardEvent) => { if (e.key === 'Escape') setOpen(false); };
+    window.addEventListener('mousedown', onDown);
+    window.addEventListener('keydown', onEsc);
+    return () => {
+      window.removeEventListener('mousedown', onDown);
+      window.removeEventListener('keydown', onEsc);
+    };
+  }, [open]);
+
+  const switchTo = (newSlug: string) => {
+    if (!newSlug || newSlug === slug) { setOpen(false); return; }
+    onWillSwitch();
+    const url = new URL(window.location.href);
+    url.searchParams.set('org', newSlug); // middleware captures and sets cookie
+    window.location.assign(url.toString());
+  };
+
+  return (
+    <div ref={ref} className="px-1 pt-1 pb-2">
+      <button
+        type="button"
+        onClick={async () => {
+          if (!open && orgs === null) await fetchOrgs();
+          setOpen((o) => !o);
+        }}
+        className={clsx(
+          'group relative w-full flex items-center gap-3 px-3 py-2 text-sm rounded transition',
+          'hover:bg-zinc-800 text-zinc-300',
+          collapsed && 'justify-center'
+        )}
+        aria-haspopup="menu"
+        aria-expanded={open}
+        title={name}
+      >
+        <div className={clsx('shrink-0 flex items-center justify-center', collapsed ? 'w-10' : 'w-10')}>
+          <img src={brandLogo} alt={`${name} logo`} className="h-10 w-auto block pointer-events-none select-none" />
+        </div>
+        <span
+          className={clsx(
+            'whitespace-nowrap transition-all duration-200 flex-1 text-left',
+            collapsed ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100 w-auto'
+          )}
+        >
+          {name}
+        </span>
+        {!collapsed && (
+          <ChevronDown size={16} className={clsx('transition-transform', open ? 'rotate-180' : 'rotate-0')} />
+        )}
+        {collapsed && (
+          <span className="absolute left-14 top-1/2 -translate-y-1/2 whitespace-nowrap rounded bg-zinc-800 px-2 py-1 text-xs text-white opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-50 shadow-md pointer-events-none">
+            Switch organization
+          </span>
+        )}
+      </button>
+
+      {open && (
+        <div
+          role="menu"
+          className={clsx(
+            'mt-1 ml-3 mr-2 rounded-lg border border-white/10 bg-zinc-900/95 shadow-xl',
+            'backdrop-blur supports-[backdrop-filter]:bg-zinc-900/70',
+            collapsed ? 'absolute left-14 top-2 z-[10000] w-56' : ''
+          )}
+        >
+          <div className="max-h-72 overflow-auto py-1">
+            {loading && <div className="px-3 py-2 text-xs text-zinc-400">Loading orgs…</div>}
+            {!loading && (orgs ?? []).map((o) => {
+              const active = o.slug === slug;
+              return (
+                <button
+                  key={o.id}
+                  type="button"
+                  onClick={() => switchTo(o.slug)}
+                  className={clsx(
+                    'w-full flex items-center gap-2 px-3 py-2 text-sm text-left hover:bg-zinc-800',
+                    active && 'bg-zinc-800'
+                  )}
+                >
+                  <img src={o.logo_url || '/logo_v1.png'} alt="" className="h-5 w-5 rounded-sm object-contain" />
+                  <span className="flex-1">{o.name}</span>
+                  {active && <Check size={14} className="text-emerald-400" />}
+                </button>
+              );
+            })}
+            {!loading && (orgs ?? []).length === 0 && (
+              <div className="px-3 py-2 text-xs text-zinc-400">No organizations.</div>
+            )}
+          </div>
+          <div className="border-t border-white/10 px-3 py-2">
+            <Link href="/admin/org" className="block text-xs text-zinc-300 hover:text-white" onClick={() => setOpen(false)}>
+              Manage organization
+            </Link>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+
 /* ---------------- Child Button/Link ---------------- */
 function NavItemButtonOrLink({
   item,
@@ -339,13 +510,32 @@ export function AdminNavSections({ collapsed = false }: { collapsed?: boolean })
   const [openMenus, setOpenMenus] = useState<Record<string, boolean>>({});
   const [navLoading, setNavLoading] = useState(false);
   const [inboxNewCount, setInboxNewCount] = useState<number | null>(null);
-  const [cleared, setCleared] = useState(false); // dev toast
+  const [cleared, setCleared] = useState(false);
   const isAdmin = useIsAdmin();
 
-  // Build the visible nav list based on role
-  const items = useMemo<NavItem[]>(() => {
-    return isAdmin ? [...NAV_CORE, ...NAV_ADMIN] : [...NAV_CORE];
-  }, [isAdmin]);
+  const { name: brandName, logoUrl } = useBrand();
+  const brandLogo = logoUrl || '/logo_v1.png';
+
+  // Core nav (without brand; brand handled by BrandSwitcher)
+  const coreItems = useMemo<NavItem[]>(
+    () => [
+      {
+        type: 'item',
+        label: 'Sites & Templates',
+        icon: <FileStack size={18} />,
+        children: [
+          { label: 'Browse Sites and Templates', href: '/admin/templates/list' },
+          { label: 'Create New Site or Template', href: '/admin/templates/new' },
+        ],
+      },
+    ],
+    []
+  );
+
+  const items = useMemo<NavItem[]>(
+    () => (isAdmin ? [...coreItems, ...NAV_ADMIN] : [...coreItems]),
+    [isAdmin, coreItems]
+  );
 
   /* -------- persist/restore open submenu state -------- */
   useEffect(() => {
@@ -369,7 +559,7 @@ export function AdminNavSections({ collapsed = false }: { collapsed?: boolean })
     setOpenMenus(merged);
   }, [pathname, items]);
 
-  /* -------- inbox "new" count — cached with TTL + BG refresh -------- */
+  /* -------- inbox "new" count -------- */
   useEffect(() => {
     let mounted = true;
     const hasInbox = items.some((i) => i.type === 'item' && i.href === '/admin/inbox');
@@ -426,7 +616,7 @@ export function AdminNavSections({ collapsed = false }: { collapsed?: boolean })
     if (href && href !== pathname) setNavLoading(true);
   };
 
-  /* -------- DEV: clear nav cache button + hotkey (⌥⌘K / Ctrl+Alt+K) -------- */
+  /* -------- DEV: clear nav cache hotkey -------- */
   const clearNavCache = () => {
     try {
       safeLS.remove(OPEN_MENUS_KEY);
@@ -458,6 +648,12 @@ export function AdminNavSections({ collapsed = false }: { collapsed?: boolean })
 
   return (
     <nav className="flex flex-col gap-1 px-1">
+      {/* Brand + org switcher at the top */}
+      <BrandSwitcher
+        collapsed={collapsed}
+        onWillSwitch={() => setNavLoading(true)}
+        isPlatformAdmin={isAdmin} // ← NEW
+      />
       {items.map((item, idx) => {
         if (item.type === 'section') {
           return !collapsed ? (

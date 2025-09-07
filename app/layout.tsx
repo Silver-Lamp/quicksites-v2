@@ -1,3 +1,4 @@
+// app/layout.tsx
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 export const preferredRegion = 'iad1';
@@ -9,11 +10,18 @@ import type { Database } from '@/types/supabase';
 import { cookies } from 'next/headers';
 import { createServerClient } from '@supabase/ssr';
 import { Providers } from './providers';
+
 import MagicLinkBridge from '@/components/auth/MagicLinkBridge';
+import RouteChangeOverlayClient from '@/components/ui/RouteChangeOverlayClient';
+import { resolveOrg } from '@/lib/org/resolveOrg';
 
 export const metadata = { /* …your existing metadata… */ };
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  // Resolve current organization (supports dev override via qs_org_slug)
+  const org = await resolveOrg();
+
+  // Get Supabase session (server-side)
   const store = await cookies();
   const supa = createServerClient<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -27,15 +35,23 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       },
     }
   );
-
   const { data: { session } } = await supa.auth.getSession();
 
   return (
     <html lang="en" suppressHydrationWarning>
-      <head><title>QuickSites | One-Click Local Websites</title></head>
+      <head>
+        <title>{`${org.name} | One-Click Local Websites`}</title>
+        <link rel="icon" href={org.favicon_url ?? '/favicon.ico'} />
+      </head>
       <body className="bg-background text-foreground min-h-screen">
+        {/* Pages Router navigations (anti-flash timing built-in) */}
+        <RouteChangeOverlayClient showDelayMs={120} minVisibleMs={350} />
+
         <MagicLinkBridge />
-        <Providers initialSession={session}>{children}</Providers>
+        {/* Pass org into Providers for white-label branding */}
+        <Providers initialSession={session} org={org}>
+          {children}
+        </Providers>
       </body>
     </html>
   );

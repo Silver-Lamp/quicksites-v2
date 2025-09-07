@@ -1,96 +1,181 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { toast } from 'react-hot-toast';
 import { supabase } from '@/admin/lib/supabaseClient';
 import { Button } from '@/components/ui';
-// import { Template } from '@/types/template';
+import { useOrg } from '@/app/providers';
+
+type Assignment = {
+  user_id: string;
+  email: string;
+  template_id: string;
+  template: string;
+};
+type TemplateOption = { id: string; name: string };
 
 export default function TemplateUserViewer() {
-  type Assignment = {
-    user_id: string;
-    email: string;
-    template_id: string;
-    template: string;
-  };
-  type TemplateOption = { id: string; name: string };
+  const org = useOrg(); // ← current org (tenant)
+  const orgId = org.id;
+
   const [templates, setTemplates] = useState<TemplateOption[]>([]);
-  const [selectedTemplate, setSelectedTemplate] = useState<string>('');
   const [assignments, setAssignments] = useState<Assignment[]>([]);
-  const [filtered, setFiltered] = useState<Assignment[]>([]);
   const [search, setSearch] = useState('');
   const [filterTemplate, setFilterTemplate] = useState('');
-  const [selected, setSelected] = useState('');
+  const [selectedTemplateForBulk, setSelectedTemplateForBulk] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  // Derived rows
+  const filtered: Assignment[] = useMemo(() => {
+    const s = search.trim().toLowerCase();
+    return assignments.filter((a) => {
+      const emailMatch = !s || a.email.toLowerCase().includes(s);
+      const tplMatch = !filterTemplate || a.template === filterTemplate;
+      return emailMatch && tplMatch;
+    });
+  }, [assignments, search, filterTemplate]);
 
   useEffect(() => {
-    loadData();
-  }, []);
+    // Reload if org changes
+    loadData().catch((e) => {
+      console.error(e);
+      toast.error('Failed to load assignments');
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [orgId]);
 
-  useEffect(() => {
-    setFiltered(
-      assignments.filter(
-        (a) =>
-          (!search || a.email.toLowerCase().includes(search.toLowerCase())) &&
-          (!filterTemplate || a.template === filterTemplate)
-      )
-    );
-  }, [search, filterTemplate, assignments]);
+  async function loadData() {
+    if (!orgId) return;
 
-  const loadData = async () => {
-    const { data: map } = await supabase
+    setLoading(true);
+
+    // 1) Fetch maps (user → template) for this org
+    const { data: map, error: mapErr } = await supabase
       .from('dashboard_user_layouts')
-      .select('user_id, template_id');
+      .select('user_id, template_id')
+      .eq('org_id', orgId);
 
-    const { data: users } = await supabase.from('auth.users').select('id, email');
+    if (mapErr) {
+      setLoading(false);
+      throw mapErr;
+    }
 
-    const { data: templates } = await supabase
+    // 2) Fetch users (id, email). If your RLS blocks auth.users from client,
+    //    swap this to a safe view (e.g., public.user_profiles).
+    const { data: users, error: usersErr } = await supabase
+      .from('auth.users' as any)
+      .select('id, email');
+
+    if (usersErr) {
+      // Don’t hard fail; show “—” for emails if blocked.
+      console.warn('auth.users not readable; using blank emails', usersErr);
+    }
+
+    // 3) Fetch templates available in this org
+    const { data: tpls, error: tplsErr } = await supabase
       .from('dashboard_layout_templates')
-      .select('id, name');
+      .select('id, name')
+      .eq('org_id', orgId)
+      .order('name', { ascending: true });
 
-    const joined =
+    if (tplsErr) {
+      setLoading(false);
+      throw tplsErr;
+    }
+
+    // Join
+    const joined: Assignment[] =
       map?.map((row) => ({
         user_id: row.user_id,
-        email: users?.find((u) => u.id === row.user_id)?.email || '—',
+        email:
+          users?.find((u: any) => u.id === row.user_id)?.email ??
+          '—',
         template_id: row.template_id,
-        template: templates?.find((t) => t.id === row.template_id)?.name || '(deleted)',
-      })) || [];
+        template:
+          tpls?.find((t) => t.id === row.template_id)?.name ??
+          '(deleted)',
+      })) ?? [];
 
     setAssignments(joined);
-    setTemplates(templates || []);
-    setFiltered(joined);
-  };
+    setTemplates(tpls ?? []);
+    setLoading(false);
+  }
 
-  const bulkAssign = async () => {
-    const { data: users } = await supabase.from('auth.users').select('id');
-    const inserts = users?.map((u) => ({
-      user_id: u.id,
-      template_id: selected,
-    }));
-    await supabase.from('dashboard_user_layouts').upsert(inserts || []);
-    loadData();
-    alert('All users assigned!');
-  };
+  async function bulkAssign() {
+    if (!orgId || !selectedTemplateForBulk) {
+      return toast.error('Choose a template first.');
+    }
+    setLoading(true);
 
-  const revertUser = async (user_id: string) => {
-    await supabase.from('dashboard_user_layouts').delete().eq('user_id', user_id);
-    loadData();
-  };
+    // Fetch all users we want to assign
+    const { data: users, error: usersErr } = await supabase
+      .from('auth.users' as any)
+      .select('id');
+
+    if (usersErr || !users) {
+      setLoading(false);
+      return toast.error('Could not read users for bulk assign.');
+    }
+
+    // Build upsert rows with org_id
+    const inserts =
+      users.map((u: any) => ({
+        org_id: orgId,
+        user_id: u.id,
+        template_id: selectedTemplateForBulk,
+      })) ?? [];
+
+    // If you have a unique index like (org_id, user_id), set onConflict accordingly
+    const { error } = await supabase
+      .from('dashboard_user_layouts')
+      .upsert(inserts, { onConflict: 'org_id,user_id' });
+
+    if (error) {
+      setLoading(false);
+      return toast.error(error.message);
+    }
+
+    await loadData();
+    toast.success('Assigned to all users in this org.');
+  }
+
+  async function revertUser(user_id: string) {
+    if (!orgId) return;
+    setLoading(true);
+    const { error } = await supabase
+      .from('dashboard_user_layouts')
+      .delete()
+      .eq('org_id', orgId)
+      .eq('user_id', user_id);
+
+    if (error) {
+      setLoading(false);
+      return toast.error(error.message);
+    }
+    await loadData();
+    toast.success('Reverted user to default.');
+  }
 
   return (
-    <div className="p-4 border rounded bg-white shadow max-w-3xl mt-8">
-      <h2 className="text-lg font-semibold mb-3">User → Template Assignments</h2>
+    <div className="mt-8 max-w-3xl rounded border bg-white p-4 shadow">
+      <div className="mb-1 text-xs text-gray-500">
+        Organization: <span className="font-medium">{org.name}</span>
+      </div>
+      <h2 className="mb-3 text-lg font-semibold">User → Template Assignments</h2>
 
-      <div className="flex flex-wrap gap-3 items-center mb-4">
+      <div className="mb-4 flex flex-wrap items-center gap-3">
         <input
           type="text"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          placeholder="Search user email..."
-          className="border p-2 text-sm"
+          placeholder="Search user email…"
+          className="rounded border p-2 text-sm"
         />
+
         <select
           value={filterTemplate}
           onChange={(e) => setFilterTemplate(e.target.value)}
-          className="border p-2 text-sm"
+          className="rounded border p-2 text-sm"
         >
           <option value="">All templates</option>
           {templates.map((tpl) => (
@@ -99,10 +184,11 @@ export default function TemplateUserViewer() {
             </option>
           ))}
         </select>
+
         <select
-          value={selected}
-          onChange={(e) => setSelected(e.target.value)}
-          className="border p-2 text-sm"
+          value={selectedTemplateForBulk}
+          onChange={(e) => setSelectedTemplateForBulk(e.target.value)}
+          className="rounded border p-2 text-sm"
         >
           <option value="">Select template to assign all</option>
           {templates.map((tpl) => (
@@ -111,31 +197,55 @@ export default function TemplateUserViewer() {
             </option>
           ))}
         </select>
-        <Button onClick={bulkAssign}>Assign to All</Button>
+
+        <Button onClick={bulkAssign} disabled={loading || !selectedTemplateForBulk}>
+          {loading ? 'Working…' : 'Assign to All'}
+        </Button>
       </div>
 
-      <table className="w-full text-sm border">
-        <thead className="bg-gray-100">
-          <tr>
-            <th className="text-left p-2">User Email</th>
-            <th className="text-left p-2">Template</th>
-            <th className="text-left p-2">Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          {filtered.map((a) => (
-            <tr key={a.user_id} className="border-b">
-              <td className="p-2">{a.email}</td>
-              <td className="p-2">{a.template}</td>
-              <td className="p-2">
-                <Button variant="ghost" size="sm" onClick={() => revertUser(a.user_id)}>
-                  Revert
-                </Button>
-              </td>
+      <div className="overflow-x-auto">
+        <table className="w-full border text-sm">
+          <thead className="bg-gray-100">
+            <tr>
+              <th className="p-2 text-left">User Email</th>
+              <th className="p-2 text-left">Template</th>
+              <th className="p-2 text-left">Actions</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {filtered.map((a) => (
+              <tr key={`${a.user_id}-${a.template_id}`} className="border-b">
+                <td className="p-2">{a.email}</td>
+                <td className="p-2">{a.template}</td>
+                <td className="p-2">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => revertUser(a.user_id)}
+                    disabled={loading}
+                  >
+                    Revert
+                  </Button>
+                </td>
+              </tr>
+            ))}
+            {!loading && filtered.length === 0 && (
+              <tr>
+                <td className="p-4 text-center text-gray-500" colSpan={3}>
+                  No assignments found.
+                </td>
+              </tr>
+            )}
+            {loading && (
+              <tr>
+                <td className="p-4 text-center text-gray-500" colSpan={3}>
+                  Loading…
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }

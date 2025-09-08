@@ -64,39 +64,60 @@ export async function POST(req: Request) {
     const { data: urlData } = userClient.storage.from(bkt).getPublicUrl(path);
     const url = urlData.publicUrl;
 
-    // --- Commit via PUBLIC wrapper (PostgREST only exposes public/graphql_public) ---
+    // --- Commit via PUBLIC wrapper (PostgREST exposes only public/graphql_public) ---
     const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
     if (!serviceKey) {
       return NextResponse.json({ error: 'Server misconfig: SUPABASE_SERVICE_ROLE_KEY not set' }, { status: 500 });
     }
-    // NOTE: no custom db schema here; the wrapper lives in "public".
     const admin = createAdminClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, serviceKey);
 
-    // Merge favicon_url into /data/meta
+    // Build ops to merge favicon_url into /data/meta
     const ops = [{ op: 'merge', path: '/data/meta', value: { favicon_url: url } }];
 
-    const { error: rpcErr } = await admin.rpc('commit_template', {
-      p_template_id: template_id,
-      p_ops: ops,
-      p_message: 'Set favicon_url',
-      p_kind: 'api/favicon',
-      p_base_rev: null,                // provide a number if you enforce optimistic concurrency
-      p_actor: auth.user.id as string, // attribute to current user
-    });
+    // Determine family latest (same base_slug) so publish uses it too
+    const targetIds = new Set<string>([template_id]);
 
-    if (rpcErr) {
-      // Helpful hint if wrapper is missing
-      const hint =
-        /function public\.commit_template/.test(rpcErr.message)
-          ? ' (did you create the public wrapper?)'
-          : '';
-      return NextResponse.json(
-        { error: `Commit via public.commit_template failed: ${rpcErr.message}${hint}` },
-        { status: 400 }
-      );
+    const { data: srcTpl, error: srcErr } = await admin
+      .from('templates')
+      .select('id, base_slug')
+      .eq('id', template_id)
+      .single();
+
+    if (!srcErr && srcTpl?.base_slug) {
+      const { data: latest, error: latestErr } = await admin
+        .from('templates')
+        .select('id')
+        .eq('base_slug', srcTpl.base_slug)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (!latestErr && latest?.id) targetIds.add(latest.id);
     }
 
-    return NextResponse.json({ url });
+    // Commit to each target id via the PUBLIC wrapper
+    const actor = auth.user.id as string;
+    for (const id of targetIds) {
+      const { error: rpcErr } = await admin.rpc('commit_template', {
+        p_template_id: id,
+        p_ops: ops,
+        p_message: 'Set favicon_url',
+        p_kind: 'api/favicon',
+        p_base_rev: null, // provide a number if you enforce optimistic concurrency
+        p_actor: actor,
+      });
+      if (rpcErr) {
+        const hint =
+          /function public\.commit_template/.test(rpcErr.message)
+            ? ' (did you create the public wrapper?)'
+            : '';
+        return NextResponse.json(
+          { error: `Commit via public.commit_template failed for ${id}: ${rpcErr.message}${hint}` },
+          { status: 400 }
+        );
+      }
+    }
+
+    return NextResponse.json({ url, committed_to: Array.from(targetIds) });
   } catch (e: any) {
     console.error('[favicon/upload] error', e);
     return NextResponse.json({ error: e?.message || 'Upload failed' }, { status: 500 });

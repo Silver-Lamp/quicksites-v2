@@ -23,6 +23,7 @@ type Props = {
   scrollRef?: React.RefObject<HTMLElement | null>;
   template?: Template;
   previewOnly?: boolean; // ← if true, no real navigation (editor/preview mode)
+  device?: 'mobile' | 'tablet' | 'desktop';
 };
 
 /* --------------------------- helpers --------------------------- */
@@ -146,6 +147,7 @@ export default function HeroRender({
   scrollRef,
   template,
   previewOnly = false,
+  device,
 }: Props) {
   const rawProps = (block as any)?.props;
   const rawContent = content ?? (block as any)?.content;
@@ -201,6 +203,16 @@ export default function HeroRender({
     overlay_level = 'soft',
   } = safeContent as any;
 
+  // ---- device / viewport forcing (editor) ----
+  const runtimeMobile = useIsMobile();
+  const isTablet = device === 'tablet';
+  const isMobileForced = device === 'mobile' || device === 'tablet';
+  const isNarrow = isMobileForced || runtimeMobile;
+
+  // force the "mobile layout" variant when device is mobile/tablet in preview
+  // (at runtime, use normal layout_mode selection)
+  const activeLayoutModeOrig = isMobileForced ? mobile_layout_mode : layout_mode;
+
   // ---- CTA resolution ----
   const contactAnchor = (contact_anchor_id || 'contact').toString();
   const handleJumpClick = useCallback<React.MouseEventHandler<HTMLAnchorElement>>(
@@ -233,13 +245,8 @@ export default function HeroRender({
   const canShowCTA = !!cta_text && (!!href || previewOnly);
 
   // ---- layout + parallax ----
-  const isMobile = useIsMobile();
-  const activeLayoutModeOrig =
-    typeof window === 'undefined' ? layout_mode : (isMobile ? mobile_layout_mode : layout_mode);
-
-  // Local preview overrides (from palette / stage controls)
-  const [previewLayoutOverride, setPreviewLayoutOverride] = useState<string | null>(null);
-  const activeLayoutMode = (previewOnly && previewLayoutOverride) ? previewLayoutOverride : activeLayoutModeOrig;
+  const activeLayoutMode =
+    (previewOnly && (isMobileForced ? mobile_layout_mode : layout_mode)) || activeLayoutModeOrig;
 
   const hasImage = (image_url as string)?.trim() !== '';
   const blurPx = `${blur_amount}px`;
@@ -274,10 +281,15 @@ export default function HeroRender({
   const textPrimary = isDark ? 'text-white' : 'text-black';
   const textSecondary = isDark ? 'text-white' : 'text-neutral-800';
 
+  // Size tokens that adapt to editor "device"
+  const titleSize = isNarrow ? 'text-3xl' : 'text-4xl md:text-5xl';
+  const subSize = isNarrow ? 'text-base' : 'text-lg md:text-2xl';
+  const ctaSize = isNarrow ? 'py-2 px-4 text-sm' : 'py-3 px-6';
+
   const CtaEl = canShowCTA ? (
     previewOnly ? (
       <span
-        className={`inline-block ${isDark ? 'bg-yellow-400 text-black' : 'bg-purple-600 text-white'} font-bold py-3 px-6 rounded-full opacity-80 cursor-default select-none`}
+        className={`inline-block ${ctaSize} ${isDark ? 'bg-yellow-400 text-black' : 'bg-purple-600 text-white'} font-bold rounded-full opacity-80 cursor-default select-none`}
         aria-disabled="true"
         role="button"
         tabIndex={-1}
@@ -288,7 +300,7 @@ export default function HeroRender({
       <a
         href={href}
         onClick={onClick}
-        className={`inline-block ${isDark ? 'bg-yellow-400 hover:bg-yellow-500 text-black' : 'bg-purple-600 hover:bg-purple-700 text-white'} font-bold py-3 px-6 rounded-full transition`}
+        className={`inline-block ${ctaSize} ${isDark ? 'bg-yellow-400 hover:bg-yellow-500 text-black' : 'bg-purple-600 hover:bg-purple-700 text-white'} font-bold rounded-full transition`}
         aria-label={
           action === 'call_phone'
             ? 'Call us now'
@@ -341,14 +353,14 @@ export default function HeroRender({
       if (next) setPreviewLayoutOverride(next);
     };
     const onOverlay = (e: any) => {
-    const step = Math.max(-1, Math.min(1, Number(e?.detail?.step) || 0));
-    const order: OverlayLevel[] = ['none','soft','strong'];
-    setOverlayLevel(prev => {
-      const next = order[Math.max(0, Math.min(order.length - 1, order.indexOf(prev) + step))];
-      dispatchOverlayPatch(next);
-      return next;
-    });
-  };
+      const step = Math.max(-1, Math.min(1, Number(e?.detail?.step) || 0));
+      const order: OverlayLevel[] = ['none','soft','strong'];
+      setOverlayLevel(prev => {
+        const next = order[Math.max(0, Math.min(order.length - 1, order.indexOf(prev) + step))];
+        dispatchOverlayPatch(next);
+        return next;
+      });
+    };
     window.addEventListener('qs:hero:set-layout', onLayout as any);
     window.addEventListener('qs:hero:set-overlay', onOverlay as any);
     return () => {
@@ -357,8 +369,13 @@ export default function HeroRender({
     };
   }, [previewOnly]);
 
+  // Local preview overrides (from palette / stage controls)
+  const [previewLayoutOverride, setPreviewLayoutOverride] = useState<string | null>(null);
+  const activeLayoutModeFinal =
+    (previewOnly && previewLayoutOverride) ? previewLayoutOverride : activeLayoutMode;
+
   // 📸 Natural height layout
-  if (activeLayoutMode === 'natural_height' && hasImage) {
+  if (activeLayoutModeFinal === 'natural_height' && hasImage) {
     return (
       <HeroNaturalHeight
         key={renderKey}
@@ -368,14 +385,16 @@ export default function HeroRender({
     );
   }
 
-  // 🧱 Full-bleed or Background with on‑canvas controls in preview mode
-  if ((activeLayoutMode === 'full_bleed' || activeLayoutMode === 'background') && hasImage) {
-    const padding = activeLayoutMode === 'full_bleed' ? 'pt-32 pb-20 sm:pt-24 sm:pb-16' : 'py-16';
+  // 🧱 Full-bleed or Background with on-canvas controls in preview mode
+  if ((activeLayoutModeFinal === 'full_bleed' || activeLayoutModeFinal === 'background') && hasImage) {
+    const padding = isNarrow
+      ? 'pt-16 pb-12'
+      : 'pt-32 pb-20 sm:pt-24 sm:pb-16';
 
     const StageInner = (
       <div className={`relative z-10 max-w-6xl mx-auto px-4 ${padding} text-center`}>
-        <h1 className={`text-4xl md:text-5xl font-bold mb-4 drop-shadow ${textPrimary}`}>{headline}</h1>
-        {subheadline && <p className={`text-lg md:text-2xl mb-6 drop-shadow ${textPrimary}`}>{subheadline}</p>}
+        <h1 className={`${titleSize} font-bold mb-4 drop-shadow ${textPrimary}`}>{headline}</h1>
+        {subheadline && <p className={`${subSize} mb-6 drop-shadow ${textPrimary}`}>{subheadline}</p>}
         {CtaEl}
         <PhoneLine />
       </div>
@@ -397,7 +416,8 @@ export default function HeroRender({
             if (next.overlay) { setOverlayLevel(next.overlay); dispatchOverlayPatch(next.overlay); }
             if (typeof next.showGrid === 'boolean') setShowGrid(next.showGrid);
           }}
-          className={`${isDark ? 'border-white/10' : 'border-neutral-300'} ${activeLayoutMode === 'full_bleed' ? 'max-h-[90vh]' : 'rounded-lg'}`}
+          className={`${isDark ? 'border-white/10' : 'border-neutral-300'} ${activeLayoutModeFinal === 'full_bleed' ? 'max-h-[90vh]' : 'rounded-lg'}`}
+          data-device={device || 'auto'}
         >
           {StageInner}
         </HeroStageControls>
@@ -406,20 +426,20 @@ export default function HeroRender({
       return (
         <>
           <HeroCommandPalette actions={makeHeroActions()} />
-          {activeLayoutMode === 'full_bleed' ? (
+          {activeLayoutModeFinal === 'full_bleed' ? (
             <motion.div key={renderKey} className={`relative w-full ${textPrimary} overflow-hidden`} style={{ y }}>
               {showDebug && (
                 <DebugOverlay>
-                  {`[HeroBlock]\nLayout: ${activeLayoutMode}\nImage: ${image_url || 'N/A'}\nMode: ${mode}\nCTA: ${action}${action === 'call_phone' ? ` (${resolvedPhoneDigits || 'no-phone'})` : ''}`}
+                  {`[HeroBlock]\nLayout: ${activeLayoutModeFinal}\nImage: ${image_url || 'N/A'}\nMode: ${mode}\nDevice: ${device || 'auto'}\nCTA: ${action}${action === 'call_phone' ? ` (${resolvedPhoneDigits || 'no-phone'})` : ''}`}
                 </DebugOverlay>
               )}
               {stage}
             </motion.div>
           ) : (
-            <SectionShell key={renderKey} compact={compact} className={`relative overflow-hidden ${textPrimary}`} textAlign="center">
+            <SectionShell key={renderKey} compact={compact} className={`relative overflow-hidden ${textPrimary}`} textAlign="center" data-device={device || 'auto'}>
               {showDebug && (
                 <DebugOverlay>
-                  {`[HeroBlock]\nLayout: ${activeLayoutMode}\nImage: ${image_url || 'N/A'}\nMode: ${mode}\nCTA: ${action}${action === 'call_phone' ? ` (${resolvedPhoneDigits || 'no-phone'})` : ''}`}
+                  {`[HeroBlock]\nLayout: ${activeLayoutModeFinal}\nImage: ${image_url || 'N/A'}\nMode: ${mode}\nDevice: ${device || 'auto'}\nCTA: ${action}${action === 'call_phone' ? ` (${resolvedPhoneDigits || 'no-phone'})` : ''}`}
                 </DebugOverlay>
               )}
               {stage}
@@ -429,13 +449,13 @@ export default function HeroRender({
       );
     }
 
-    // Public view → original backgrounds (with blur), no on‑canvas controls
-    if (activeLayoutMode === 'full_bleed') {
+    // Public view → original backgrounds (with blur), no on-canvas controls
+    if (activeLayoutModeFinal === 'full_bleed') {
       return (
-        <div key={renderKey} ref={(scrollRef && scrollRef.current) ? (scrollRef as any) : undefined} className={`relative w-full ${textPrimary} max-h-[90vh] overflow-hidden`}>
+        <div key={renderKey} ref={(scrollRef && scrollRef.current) ? (scrollRef as any) : undefined} className={`relative w-full ${textPrimary} max-h-[90vh] overflow-hidden`} data-device={device || 'auto'}>
           {showDebug && (
             <DebugOverlay>
-              {`[HeroBlock]\nLayout: full_bleed\nImage: ${image_url || 'N/A'}\nMode: ${mode}\nCTA: ${action}${action === 'call_phone' ? ` (${resolvedPhoneDigits || 'no-phone'})` : ''}`}
+              {`[HeroBlock]\nLayout: full_bleed\nImage: ${image_url || 'N/A'}\nMode: ${mode}\nDevice: ${device || 'auto'}\nCTA: ${action}${action === 'call_phone' ? ` (${resolvedPhoneDigits || 'no-phone'})` : ''}`}
             </DebugOverlay>
           )}
           <motion.div
@@ -456,10 +476,10 @@ export default function HeroRender({
 
     // background
     return (
-      <SectionShell key={renderKey} compact={compact} className={`relative rounded-lg overflow-hidden ${textPrimary}`} textAlign="center">
+      <SectionShell key={renderKey} compact={compact} className={`relative rounded-lg overflow-hidden ${textPrimary}`} textAlign="center" data-device={device || 'auto'}>
         {showDebug && (
           <DebugOverlay>
-            {`[HeroBlock]\nLayout: background\nImage: ${image_url || 'N/A'}\nMode: ${mode}\nCTA: ${action}${action === 'call_phone' ? ` (${resolvedPhoneDigits || 'no-phone'})` : ''}`}
+            {`[HeroBlock]\nLayout: background\nImage: ${image_url || 'N/A'}\nMode: ${mode}\nDevice: ${device || 'auto'}\nCTA: ${action}${action === 'call_phone' ? ` (${resolvedPhoneDigits || 'no-phone'})` : ''}`}
           </DebugOverlay>
         )}
         <div
@@ -483,22 +503,25 @@ export default function HeroRender({
     : 'bg-white text-black rounded-lg shadow';
 
   return (
-    <SectionShell key={renderKey} compact={compact} bg={inlineBg} textAlign="center">
+    <SectionShell key={renderKey} compact={compact} bg={inlineBg} textAlign="center" data-device={device || 'auto'}>
       {showDebug && (
         <DebugOverlay>
-          {`[HeroBlock]\nLayout: inline\nImage: ${hasImage ? 'yes' : 'no'}\nMode: ${mode}\nCTA: ${action}${action === 'call_phone' ? ` (${resolvedPhoneDigits || 'no-phone'})` : ''}`}
+          {`[HeroBlock]\nLayout: inline\nImage: ${hasImage ? 'yes' : 'no'}\nMode: ${mode}\nDevice: ${device || 'auto'}\nCTA: ${action}${action === 'call_phone' ? ` (${resolvedPhoneDigits || 'no-phone'})` : ''}`}
         </DebugOverlay>
       )}
       {hasImage && (
         <img
           src={image_url}
           alt={headline || 'Hero image'}
-          className="mx-auto mb-6 rounded-xl shadow max-h-96 w-full object-cover"
-          style={{ objectPosition: backgroundPosition }}
+          className="mx-auto mb-6 rounded-xl shadow w-full object-cover"
+          style={{
+            objectPosition: backgroundPosition,
+            maxHeight: isNarrow ? '16rem' : '24rem', // 64 vs 96
+          }}
         />
       )}
-      <h1 className={`text-3xl md:text-5xl font-bold mb-4 ${textPrimary}`}>{headline}</h1>
-      {subheadline && <p className={`text-lg md:text-xl mb-6 ${textSecondary}`}>{subheadline}</p>}
+      <h1 className={`${titleSize} font-bold mb-4 ${textPrimary}`}>{headline}</h1>
+      {subheadline && <p className={`${subSize} mb-6 ${textSecondary}`}>{subheadline}</p>}
       {CtaEl}
       <PhoneLine />
     </SectionShell>

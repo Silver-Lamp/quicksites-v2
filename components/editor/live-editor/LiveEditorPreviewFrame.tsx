@@ -70,6 +70,7 @@ type Props = {
 
   /** Force inline (no iframe) for fresh/remixed templates */
   preferInlinePreview?: boolean;
+  device?: 'mobile' | 'tablet' | 'desktop';
 };
 
 /* ---------------- Helpers ---------------- */
@@ -223,6 +224,7 @@ export default function LiveEditorPreviewFrame({
   style,
   reloadOnSave = false,
   preferInlinePreview = false,
+  device,
 }: Props) {
   const iframeRef = React.useRef<HTMLIFrameElement | null>(null);
   const [loaded, setLoaded] = React.useState(false);
@@ -652,6 +654,7 @@ export default function LiveEditorPreviewFrame({
                       blockPath="/header"
                       previewOnly
                       template={template}
+                      device={viewport}
                     />
                   </div>
                 )}
@@ -709,6 +712,7 @@ export default function LiveEditorPreviewFrame({
                                 blockPath={fallbackPath}
                                 previewOnly
                                 template={template}
+                                device={viewport}
                               />
                             </div>
 
@@ -739,6 +743,7 @@ export default function LiveEditorPreviewFrame({
                       blockPath="/footer"
                       previewOnly
                       template={template}
+                      device={viewport}
                     />
                   </div>
                 )}

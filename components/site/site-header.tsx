@@ -45,7 +45,7 @@ function cn(...xs: Array<string | false | null | undefined>) {
 
 export default function SiteHeader({
   sticky = true,
-  logoSrc = '/favicon.ico',
+  logoSrc = '/qs-default-favicon.ico',
   logoText = 'QuickSites',
   logoHref = '/',
   links = DEFAULT_LINKS,

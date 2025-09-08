@@ -135,6 +135,7 @@ type RenderProps = {
   showDebug?: boolean;
   /** Optional override; if omitted we infer from template JSON */
   colorMode?: 'light' | 'dark';
+  device?: 'mobile' | 'tablet' | 'desktop';
   onEdit?: (block: Block) => void;
   onDelete?: (block: Block) => void;
 };
@@ -150,6 +151,7 @@ export default function RenderBlock({
   previewOnly = false,
   showDebug = false,
   colorMode, // NOTE: no default here; we compute from template if undefined
+  device,
   onEdit,
   onDelete,
 }: RenderProps) {
@@ -335,6 +337,7 @@ export default function RenderBlock({
     previewOnly,
     showDebug,
     colorMode: computedMode, // ⬅️ pass down the computed mode
+    device,
   };
 
   // Explicit theme text color (surface is inherited)

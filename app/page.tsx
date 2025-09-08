@@ -137,7 +137,7 @@ export default function HomePage() {
         <div className="space-y-6 max-w-xl">
           <div className="flex justify-center items-center gap-3">
             <Image
-              src="/favicon.ico"
+              src="/qs-default-favicon.ico"
               width={40}
               height={40}
               alt="QuickSites Logo"

@@ -150,13 +150,25 @@ export function middleware(req: NextRequest) {
     return withCookies(res);
   }
 
-  // ---- Real custom domain → _domains/<domain> router ----
+  // ---- Real custom domain → directly to /sites/<slug>/<page> ----
+  const hostLc = hostname.toLowerCase().replace(/\.$/, '');
+  const noWww = hostLc.replace(/^www\./, '');
+  // Derive slug from apex label (e.g., www.graftontowing.com → graftontowing)
+  const parts = noWww.split('.');
+  const apexLabel = (parts.length > 1 ? parts.slice(0, -1).join('.') : parts[0]) || noWww;
+
+  // Default root "/" to "/home" (your renderer expects a page)
+  const extra = pathname === '/' ? '/home' : pathname;
+
   const rewriteUrl = req.nextUrl.clone();
-  rewriteUrl.pathname = `/_domains/${hostname}${pathname === '/' ? '' : pathname}`;
+  rewriteUrl.pathname = `/sites/${apexLabel}${extra}`;
+
   const res = NextResponse.rewrite(rewriteUrl);
-  res.headers.set('x-qsites-domain', hostname);
+  res.headers.set('x-qsites-host-in', hostname);
+  res.headers.set('x-qsites-slug', apexLabel);
   res.headers.set('x-qsites-rewrite', rewriteUrl.pathname + (rewriteUrl.search || ''));
   return withCookies(res);
+
 }
 
 export const config = {

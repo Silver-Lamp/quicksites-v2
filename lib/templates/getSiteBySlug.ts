@@ -1,30 +1,28 @@
-// lib/templates/getSiteBySlug.ts
-import { headers } from 'next/headers';
-import { supabaseAdmin } from '@/lib/supabase/admin';
-
-const norm = (s?: string | null) => (s ?? '').trim().toLowerCase();
+import { getServerSupabase } from '@/lib/supabase/server';
 
 export async function getSiteBySlug(slug: string) {
-  const s = norm(slug);
-  let { data } = await supabaseAdmin.from('templates').select('*').eq('slug', s).eq('is_site', true).limit(1).maybeSingle();
-  if (!data) {
-    const r2 = await supabaseAdmin.from('templates').select('*').eq('base_slug', s).eq('is_site', true).limit(1).maybeSingle();
-    data = r2.data ?? null;
+  const sb = await getServerSupabase();
+
+  // Prefer `sites`
+  {
+    const { data, error } = await sb
+      .from('sites')
+      .select('*')
+      .eq('slug', slug)
+      .limit(1);
+    if (!error && data?.length) return data[0];
   }
-  if (!data) {
-    try {
-      const h = await headers();
-      const host = norm(h.get('x-forwarded-host') ?? h.get('host')).replace(/^www\./, '');
-      if (host) {
-        const r3 = await supabaseAdmin.from('templates')
-          .select('*')
-          .in('domain_lc', [host, `www.${host}`])
-          .eq('is_site', true)
-          .limit(1)
-          .maybeSingle();
-        data = r3.data ?? null;
-      }
-    } catch {}
+
+  // Fallback `templates`
+  {
+    const { data, error } = await sb
+      .from('templates')
+      .select('*')
+      .eq('slug', slug)
+      .order('is_site', { ascending: false })
+      .limit(1);
+    if (!error && data?.length) return data[0];
   }
-  return data ?? null;
+
+  return null;
 }

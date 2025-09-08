@@ -1,4 +1,5 @@
-"use client";
+// components/admin/templates/templates-index-table.tsx
+'use client';
 
 import { useState, useMemo, useEffect } from 'react';
 import Link from 'next/link';
@@ -15,7 +16,7 @@ import {
 import { toast } from 'react-hot-toast';
 import { CheckCircle, FileStack, Globe, XCircle } from 'lucide-react';
 import RowActions from '@/components/admin/templates/row-actions';
-import { Template } from '@/types/template';
+import type { Template } from '@/types/template';
 import { cn } from '@/lib/utils';
 
 /* ---------------- helpers ---------------- */
@@ -29,10 +30,10 @@ function safeParse<T = any>(v: any): T | undefined {
   return undefined;
 }
 
+/** Prefer a `meta` object if present; otherwise derive it from `data`. */
 function getMeta(t: any): Record<string, any> | undefined {
-  // Prefer explicit meta column if you add one later; otherwise from data.meta
-  const data = safeParse<Record<string, any>>(t.data);
-  return (t.meta && typeof t.meta === 'object' ? t.meta : undefined) ?? data?.meta ?? data;
+  const fromData = safeParse<Record<string, any>>(t?.data);
+  return (t?.meta && typeof t.meta === 'object' ? t.meta : undefined) ?? fromData?.meta ?? fromData;
 }
 
 function titleFromKey(key?: string): string {
@@ -40,6 +41,56 @@ function titleFromKey(key?: string): string {
   return key
     .replace(/[_-]+/g, ' ')
     .replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
+/** Return the best-available industry, preferring site meta if MV is generic. */
+function resolveIndustry(t: any): string {
+  const mv = (t?.industry ?? '').toString().trim();
+  if (mv && mv.toLowerCase() !== 'general') return mv;
+
+  const meta: any = getMeta(t) ?? {};
+  const v =
+    meta?.industry ??
+    meta?.business?.industry ??
+    t?.industry_gen ??
+    '';
+  return (v ?? '').toString().trim();
+}
+
+/** City often lives in site meta at meta.contact.city. */
+function resolveCity(t: any): string {
+  if (t?.city) return String(t.city);
+  const meta: any = getMeta(t) ?? {};
+  const v =
+    meta?.contact?.city ??
+    meta?.city ??
+    meta?.location?.city ??
+    meta?.business?.city ??
+    '';
+  return (v ?? '').toString().trim();
+}
+
+/** Phone often lives in site meta at meta.contact.phone. */
+function resolvePhone(t: any): string {
+  if (t?.phone) return String(t.phone);
+  const meta: any = getMeta(t) ?? {};
+  const v =
+    meta?.contact?.phone ??
+    meta?.phone ??
+    '';
+  return (v ?? '').toString().trim();
+}
+
+/** Preview fallback: try banner_url, then any common meta image fields. */
+function resolvePreviewUrl(t: any): string | null {
+  if (t?.banner_url) return t.banner_url as string;
+  const meta: any = getMeta(t) ?? {};
+  return (
+    meta?.banner_url ??
+    meta?.ogImage ??
+    meta?.hero_url ??
+    null
+  );
 }
 
 export default function TemplatesIndexTable({
@@ -62,37 +113,23 @@ export default function TemplatesIndexTable({
   const [lastSelectedIndex, setLastSelectedIndex] = useState<number | null>(null);
 
   const filtered = useMemo(() => {
-    return templates
-      .filter((t: any) => {
+    return (templates as any[])
+      .filter((t) => {
         const isLocallyArchived = archivedIds.includes(t.id);
-        const isArchived = t.data?.archived ?? isLocallyArchived;
+        const isArchived = t?.data?.archived ?? isLocallyArchived;
         if (archiveFilter === 'archived') return isArchived;
         if (archiveFilter === 'active') return !isArchived;
         return true;
       })
-      .filter((t: any) => {
+      .filter((t) => {
         const term = search.toLowerCase();
 
         const name = (t.template_name || '').toLowerCase();
         const slug = (t.slug || '').toLowerCase();
 
-        // Robust meta extraction for search
-        const meta = getMeta(t);
-        const industryKey =
-          (t.industry_gen ||
-            t.industry ||
-            meta?.industry ||
-            meta?.business?.industry ||
-            '') + '';
-        const cityVal =
-          (t.city ||
-            meta?.city ||
-            meta?.location?.city ||
-            meta?.business?.city ||
-            '') + '';
-
-        const industry = industryKey.toLowerCase();
-        const city = cityVal.toLowerCase();
+        // Use robust resolvers for search too
+        const industry = resolveIndustry(t).toLowerCase();
+        const city = resolveCity(t).toLowerCase();
 
         return (
           name.includes(term) ||
@@ -111,6 +148,26 @@ export default function TemplatesIndexTable({
   useEffect(() => {
     setLastSelectedIndex(null);
   }, [filtered]);
+
+  // Debug helper – enable with: localStorage.setItem('QS_DEBUG_TEMPLATES', '1')
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    if (!localStorage.getItem('QS_DEBUG_TEMPLATES')) return;
+    const sample = (templates as any[])[0];
+    const meta = getMeta(sample);
+    console.debug('[TemplatesIndexTable] sample row:', {
+      id: sample?.id,
+      mvIndustry: sample?.industry,
+      resolvedIndustry: resolveIndustry(sample),
+      cityProp: sample?.city,
+      resolvedCity: resolveCity(sample),
+      phoneProp: sample?.phone,
+      resolvedPhone: resolvePhone(sample),
+      hasData: !!sample?.data,
+      metaKeys: meta ? Object.keys(meta) : null,
+      metaContact: meta?.contact ?? null,
+    });
+  }, [templates]);
 
   function toggleSelectionRange(index: number, willSelect: boolean, opts?: { exclusive?: boolean }) {
     const start = Math.min(lastSelectedIndex ?? index, index);
@@ -163,7 +220,12 @@ export default function TemplatesIndexTable({
             <Button variant={archiveFilter === 'archived' ? 'default' : 'outline'} onClick={() => setArchiveFilter('archived')}>Archived</Button>
             <Button variant={archiveFilter === 'all' ? 'default' : 'outline'} onClick={() => setArchiveFilter('all')}>All</Button>
           </div>
-          <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search name or slug..." className="text-sm w-64" />
+          <Input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search name, industry, or city…"
+            className="text-sm w-64"
+          />
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="outline" className="text-xs">{currentFilter || 'Filter by Date'}</Button>
@@ -191,7 +253,11 @@ export default function TemplatesIndexTable({
       {selectedIds.length > 0 && (
         <div className="sticky top-0 z-10 bg-zinc-950 px-4 py-2 border-b border-white/10">
           <div className="flex justify-start">
-            <Button variant="destructive" className="text-xs text-white bg-red-500 hover:bg-red-600" onClick={() => handleBulkArchive(selectedIds)}>
+            <Button
+              variant="destructive"
+              className="text-xs text-white bg-red-500 hover:bg-red-600"
+              onClick={() => handleBulkArchive(selectedIds)}
+            >
               Archive {selectedIds.length} selected
             </Button>
           </div>
@@ -228,32 +294,20 @@ export default function TemplatesIndexTable({
             {filtered.map((t: any, index: number) => {
               const updated = t.effective_updated_at ?? t.updated_at;
 
-              const meta = getMeta(t);
-
-              // Keys (search/display share the same extraction)
-              const industryKey: string =
-                (t.industry ||
-                  t.industry_gen ||
-                  meta?.industry ||
-                  meta?.business?.industry ||
-                  '') + '';
-
-              const cityVal: string =
-                (t.city ||
-                  meta?.city ||
-                  meta?.location?.city ||
-                  meta?.business?.city ||
-                  '') + '';
+              const industryKey = resolveIndustry(t);
+              const cityVal = resolveCity(t);
+              const phoneVal = resolvePhone(t);
 
               const displayIndustry = industryKey ? titleFromKey(industryKey) : '—';
               const displayCity = cityVal || '—';
+              const previewUrl = resolvePreviewUrl(t);
 
               return (
                 <tr
                   key={t.id}
                   className={cn(
                     'border-t border-white/10 hover:bg-zinc-800 transition',
-                    t.data?.archived && 'opacity-50 italic',
+                    t?.data?.archived && 'opacity-50 italic',
                     restoredIds.includes(t.id) && 'animate-fadeIn'
                   )}
                 >
@@ -288,7 +342,7 @@ export default function TemplatesIndexTable({
                     <RowActions
                       id={t.id}
                       slug={t.slug}
-                      archived={t.data?.archived ?? false}
+                      archived={t?.data?.archived ?? false}
                       onArchiveToggle={(id, archived) => {
                         fetch('/api/templates/archive', {
                           method: 'POST',
@@ -329,7 +383,7 @@ export default function TemplatesIndexTable({
                   <td className="p-2 text-zinc-400">{displayCity}</td>
 
                   <td className="p-2 text-zinc-400">
-                    {t.phone && <div className="text-xs text-zinc-400">{t.phone}</div>}
+                    {phoneVal ? <div className="text-xs text-zinc-400">{phoneVal}</div> : null}
                   </td>
 
                   <td className="p-2 text-zinc-400">
@@ -339,8 +393,8 @@ export default function TemplatesIndexTable({
                   <td className="p-2 text-zinc-400" />
 
                   <td className="p-2">
-                    {t.banner_url ? (
-                      <img src={t.banner_url} alt="preview" className="w-12 h-8 rounded object-cover" />
+                    {previewUrl ? (
+                      <img src={previewUrl} alt="preview" className="w-12 h-8 rounded object-cover" />
                     ) : (
                       <div className="w-12 h-8 bg-zinc-700 rounded flex items-center justify-center text-xs text-white/40">N/A</div>
                     )}

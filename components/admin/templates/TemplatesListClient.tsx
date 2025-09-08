@@ -1,7 +1,7 @@
 // components/admin/templates/TemplatesListClient.tsx
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import TemplatesIndexTable from '@/components/admin/templates/templates-index-table';
 
 type Props = {
@@ -14,9 +14,10 @@ type Props = {
 
 /**
  * Client list that:
- * - Uses SSR-provided `initialRows` as the single source of truth.
- * - DOES NOT auto-refetch on mount (prevents "newest → older" flip).
- * - Optional: can refetch on demand from the unified API endpoint.
+ * - Uses SSR-provided `initialRows` for instant paint.
+ * - In BASES mode (not versions), does ONE on-mount refetch from the unified API,
+ *   which enriches rows with site-derived city/phone/industry.
+ * - Supports manual refetch via the 'qs:templates:refetch' custom event.
  */
 export default function TemplatesListClient({
   initialRows,
@@ -27,41 +28,53 @@ export default function TemplatesListClient({
   const [loading, setLoading] = useState(false);
   const [errorText, setErrorText] = useState<string | null>(null);
 
-  // Keep local state in sync when SSR payload changes (e.g., after router.refresh())
+  // guard so StrictMode doesn't trigger a double refetch
+  const didInitialRefetch = useRef(false);
+
   useEffect(() => {
     setRows(initialRows);
   }, [initialRows]);
 
-  // Optional on-demand refetch using the unified API (no auto-run on mount)
-  const refetch = useCallback(async (overrides?: Record<string, string>) => {
-    try {
-      setLoading(true);
-      setErrorText(null);
+  const refetch = useCallback(
+    async (overrides?: Record<string, string>) => {
+      try {
+        setLoading(true);
+        setErrorText(null);
 
-      const sp = new URLSearchParams({
-        date: dateParam || '',
-        versions: includeVersions ? 'all' : '', // API treats anything-but-'all' as bases mode
-        ...(overrides || {}),
-      });
+        const sp = new URLSearchParams({
+          date: dateParam || '',
+          versions: includeVersions ? 'all' : '', // API treats anything-but-'all' as bases mode
+          ...(overrides || {}),
+        });
 
-      const res = await fetch(`/api/admin/templates/list?${sp.toString()}`, {
-        cache: 'no-store',
-      });
-      if (!res.ok) {
-        const j = await res.json().catch(() => ({}));
-        throw new Error(j?.error || `Fetch failed (${res.status})`);
+        const res = await fetch(`/api/admin/templates/list?${sp.toString()}`, {
+          cache: 'no-store',
+        });
+        if (!res.ok) {
+          const j = await res.json().catch(() => ({}));
+          throw new Error(j?.error || `Fetch failed (${res.status})`);
+        }
+        const data = await res.json();
+        const items = Array.isArray(data?.items) ? data.items : [];
+        setRows(items);
+      } catch (e: any) {
+        setErrorText(e?.message || 'Unable to refresh templates.');
+      } finally {
+        setLoading(false);
       }
-      const data = await res.json();
-      setRows(Array.isArray(data?.items) ? data.items : []);
-    } catch (e: any) {
-      setErrorText(e?.message || 'Unable to refresh templates.');
-    } finally {
-      setLoading(false);
-    }
-  }, [dateParam, includeVersions]);
+    },
+    [dateParam, includeVersions]
+  );
 
-  // (Optional) listen for a custom event if you ever want to trigger client refetch:
-  // window.dispatchEvent(new CustomEvent('qs:templates:refetch'))
+  // NEW: do a one-time refetch on mount in BASES mode to pull enriched rows
+  useEffect(() => {
+    if (includeVersions) return; // versions path already has full fields
+    if (didInitialRefetch.current) return;
+    didInitialRefetch.current = true;
+    void refetch();
+  }, [includeVersions, refetch]);
+
+  // Allow external "Refresh" buttons to trigger a refetch
   useEffect(() => {
     const handler = () => { void refetch(); };
     window.addEventListener('qs:templates:refetch', handler as EventListener);

@@ -16,6 +16,20 @@ function baseSlug(slug: string | null | undefined) {
 }
 const ts = (d?: string | null) => (d ? new Date(d).getTime() || 0 : 0);
 
+function safeParse<T = any>(v: any): T | undefined {
+  if (!v) return undefined;
+  if (typeof v === 'object') return v as T;
+  if (typeof v === 'string') {
+    try { return JSON.parse(v) as T; } catch { return undefined; }
+  }
+  return undefined;
+}
+function titleFromKey(s?: string | null) {
+  const v = (s ?? '').toString().trim();
+  if (!v) return '';
+  return v.replace(/[_-]+/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
 /**
  * Given a flat list of template rows (canonical + versions), compute an
  * "effective" updated_at per base and attach it to each row.
@@ -113,8 +127,9 @@ export default async function TemplatesIndexPage({
 
   if (includeVersions) {
     // Versions path → query templates directly (RLS applies)
+    // Include fields the table needs to surface industry/city/phone/preview.
     const SELECT =
-      'id,slug,template_name,updated_at,created_at,is_site,is_version,archived,industry,color_mode,base_slug,owner_id';
+      'id,slug,template_name,updated_at,created_at,is_site,is_version,archived,industry,color_mode,base_slug,owner_id,data,city,phone,banner_url';
 
     let query = supabase
       .from('templates')
@@ -141,17 +156,15 @@ export default async function TemplatesIndexPage({
 
     const rows = templates ?? [];
     const { attachEffective } = computeEffective(rows);
-
-    // includeVersions keeps all rows but attaches effective timestamps
     initialRows = rows.map(attachEffective);
   } else {
     // Fast path → secure view (owner/admin filter embedded in the view)
+    // Keep ONLY columns guaranteed in the secure view to avoid errors.
     const MV_SELECT =
       'base_slug,canonical_id,canonical_slug,canonical_template_name,canonical_updated_at,canonical_created_at,is_site,archived,industry,color_mode,effective_updated_at';
 
-    // Let DB pre-sort by effective_updated_at
     const { data: bases, error: mvErr } = await supabase
-      .from('template_bases_secure') // secure view wrapping the MV
+      .from('template_bases_secure')
       .select(MV_SELECT)
       .gte('effective_updated_at', fromIso)
       .order('effective_updated_at', { ascending: false })
@@ -169,20 +182,77 @@ export default async function TemplatesIndexPage({
       );
     }
 
-    initialRows = (bases ?? []).map((r: any) => ({
-      id: r.canonical_id,
-      slug: r.canonical_slug,
-      template_name: r.canonical_template_name,
-      updated_at: r.canonical_updated_at,
-      created_at: r.canonical_created_at,
-      is_site: r.is_site,
-      is_version: false,
-      archived: r.archived,
-      industry: r.industry,
-      color_mode: r.color_mode,
-      base_slug: r.base_slug,
-      effective_updated_at: r.effective_updated_at,
-    }));
+    const baseRows = bases ?? [];
+    const canonicalIds = baseRows.map((r: any) => r.canonical_id).filter(Boolean);
+
+    // 1) Pull a few fields from canonical templates (banner_url etc.)
+    let canonById = new Map<string, any>();
+    if (canonicalIds.length > 0) {
+      const { data: canonRows } = await supabase
+        .from('templates')
+        .select('id,banner_url,city,phone,data')
+        .in('id', canonicalIds);
+      if (Array.isArray(canonRows)) {
+        canonById = new Map(canonRows.map((r: any) => [r.id, r]));
+      }
+    }
+
+    // 2) Pull paired site rows to resolve city/phone/industry from site JSON
+    let siteByTemplateId = new Map<string, any>();
+    if (canonicalIds.length > 0) {
+      const { data: siteRows } = await supabase
+        .from('sites')
+        .select('id,template_id,data,is_published,domain')
+        .in('template_id', canonicalIds);
+      if (Array.isArray(siteRows)) {
+        siteByTemplateId = new Map(siteRows.map((r: any) => [r.template_id, r]));
+      }
+    }
+
+    // 3) Merge rows and resolve display fields
+    initialRows = baseRows.map((r: any) => {
+      const canon = canonById.get(r.canonical_id) || {};
+      const site = siteByTemplateId.get(r.canonical_id) || {};
+      const siteData = safeParse<any>(site?.data);
+      const meta = (siteData?.meta ?? {}) as any;
+      const contact = (meta?.contact ?? {}) as any;
+
+      const siteIndustry =
+        (meta?.industry ?? siteData?.industry ?? siteData?.business?.industry) ?? null;
+      const siteCity =
+        (contact?.city ?? meta?.city ?? siteData?.city ?? siteData?.location?.city) ?? null;
+      const sitePhone =
+        (contact?.phone ?? meta?.phone ?? siteData?.phone ?? siteData?.contact?.phone) ?? null;
+
+      // Prefer SITE-derived values; fall back to MV or canonical template fields.
+      const resolvedIndustry = titleFromKey(siteIndustry) || r.industry || null;
+      const resolvedCity = siteCity || r.city || canon.city || null;
+      const resolvedPhone = sitePhone || canon.phone || null;
+
+      return {
+        id: r.canonical_id,
+        slug: r.canonical_slug,
+        template_name: r.canonical_template_name,
+        updated_at: r.canonical_updated_at,
+        created_at: r.canonical_created_at,
+        is_site: r.is_site,
+        is_version: false,
+        archived: r.archived,
+        // what the table reads:
+        industry: resolvedIndustry,
+        city: resolvedCity,
+        phone: resolvedPhone,
+        color_mode: r.color_mode,
+        base_slug: r.base_slug,
+        effective_updated_at: r.effective_updated_at,
+        // extras for other columns
+        banner_url: canon.banner_url ?? null,
+        published: site?.is_published ?? null,
+        domain: site?.domain ?? null,
+        // keep a lightweight data for search if needed
+        data: siteData ?? canon.data ?? null,
+      };
+    });
   }
 
   // Final guard: sort by effective_updated_at desc for consistent ordering
@@ -198,7 +268,6 @@ export default async function TemplatesIndexPage({
     <div className="soft-borders mx-auto max-w-6xl p-6 pb-[350px] lg:pb-[420px] mt-12">
       {/* Header + Refresh */}
       <div className="flex items-center justify-between mb-4 mt-8">
-        {/* <h1 className="text-lg font-semibold">Templates</h1> */}
         <RefreshTemplatesButton />
       </div>
 

@@ -133,6 +133,73 @@ function getBlocksAccessor(template: any, pageIdx: number) {
   return { get, set, prefix, hasBlocks, hasContentBlocks, page };
 }
 
+/* ---------- NEW: header/footer resolution helpers (robust to naming) ---------- */
+
+function boolish(v: any, fallback: boolean) {
+  return typeof v === 'boolean' ? v : fallback;
+}
+
+// “Use custom header/footer on this page” — we accept a few possible keys.
+function pageWantsCustomHF(page: any) {
+  return !!(
+    page?.use_custom_header_footer ??
+    page?.useCustomHeaderFooter ??
+    page?.custom_header_footer ??
+    page?.use_custom ??
+    page?.useCustom ??
+    false
+  );
+}
+
+// Try several common keys for header/footer blocks on page and template.
+function resolveHeaderBlock(template: any, page: any) {
+  if (pageWantsCustomHF(page)) {
+    const pageHeader =
+      page?.custom_header_block ??
+      page?.page_header_block ??
+      page?.header_block ??
+      page?.customHeaderBlock ??
+      page?.pageHeaderBlock ??
+      page?.headerBlock ??
+      page?.custom_header ??
+      page?.header ??
+      null;
+    if (pageHeader) return pageHeader;
+  }
+  return (
+    template?.headerBlock ??
+    template?.header_block ??
+    template?.data?.headerBlock ??
+    template?.data?.header ??
+    template?.header ??
+    null
+  );
+}
+
+function resolveFooterBlock(template: any, page: any) {
+  if (pageWantsCustomHF(page)) {
+    const pageFooter =
+      page?.custom_footer_block ??
+      page?.page_footer_block ??
+      page?.footer_block ??
+      page?.customFooterBlock ??
+      page?.pageFooterBlock ??
+      page?.footerBlock ??
+      page?.custom_footer ??
+      page?.footer ??
+      null;
+    if (pageFooter) return pageFooter;
+  }
+  return (
+    template?.footerBlock ??
+    template?.footer_block ??
+    template?.data?.footerBlock ??
+    template?.data?.footer ??
+    template?.footer ??
+    null
+  );
+}
+
 /* ======================================================================= */
 
 export default function LiveEditorPreviewFrame({
@@ -510,6 +577,25 @@ export default function LiveEditorPreviewFrame({
     applyReorder(from, to);
   }, [ids, applyReorder]);
 
+  /* ---------------- NEW: show header/footer for the current page ---------------- */
+  const showHeader = React.useMemo(
+    () => boolish(selectedPage?.show_header ?? selectedPage?.showHeader, true),
+    [selectedPage]
+  );
+  const showFooter = React.useMemo(
+    () => boolish(selectedPage?.show_footer ?? selectedPage?.showFooter, true),
+    [selectedPage]
+  );
+
+  const headerBlock = React.useMemo(
+    () => (selectedPage && showHeader ? resolveHeaderBlock(template, selectedPage) : null),
+    [template, selectedPage, showHeader]
+  );
+  const footerBlock = React.useMemo(
+    () => (selectedPage && showFooter ? resolveFooterBlock(template, selectedPage) : null),
+    [template, selectedPage, showFooter]
+  );
+
   /* ---------------- Render ---------------- */
   return (
     <TooltipProvider delayDuration={150}>
@@ -558,6 +644,18 @@ export default function LiveEditorPreviewFrame({
               ].join(' ')}
             >
               <div className="mx-auto max-w-[1100px] p-8 space-y-6">
+                {/* NEW: Header (not draggable) */}
+                {headerBlock && (
+                  <div>
+                    <RenderBlock
+                      block={headerBlock}
+                      blockPath="/header"
+                      previewOnly
+                      template={template}
+                    />
+                  </div>
+                )}
+
                 {renderBlocks.length === 0 ? (
                   <div className="flex flex-col items-center gap-3">
                     <div className="text-sm text-neutral-400">This page is empty.</div>
@@ -631,6 +729,18 @@ export default function LiveEditorPreviewFrame({
                       })}
                     </SortableContext>
                   </DndContext>
+                )}
+
+                {/* NEW: Footer (not draggable) */}
+                {footerBlock && (
+                  <div>
+                    <RenderBlock
+                      block={footerBlock}
+                      blockPath="/footer"
+                      previewOnly
+                      template={template}
+                    />
+                  </div>
                 )}
               </div>
             </div>
@@ -714,7 +824,7 @@ function SortableRow({
             <button
               type="button"
               aria-label="Edit block"
-              className="pointer-events-auto inline-flex items-center rounded-md border border-white/20 bg-black/60 p-1.5 text-white hover:bg-black/80"
+              className="pointer-events-auto inline-flex items-center rounded-md border border-white/20 bg-black/60 p.5 text-white hover:bg-black/80 px-1.5 py-1.5"
               onClick={(e) => {
                 e.stopPropagation();
                 onEdit?.();

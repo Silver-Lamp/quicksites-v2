@@ -265,17 +265,64 @@ export default function RenderBlock({
   }, [safeContent]);
 
   const identity = React.useMemo(() => {
-    const t: any = template || {};
-    const normArr = (v: any) =>
-      Array.isArray(v) ? v.map((s) => String(s ?? '').trim()).filter(Boolean) : [];
-    const phoneDigits = String(t.phone ?? '').replace(/\D/g, '');
+    const t: any = template ?? {};
+
+    const get = (obj: any, path: string) =>
+      path.split('.').reduce((acc, k) => (acc != null ? acc[k] : undefined), obj);
+    const first = (...vals: any[]) =>
+      vals.find((v) => v !== undefined && v !== null && String(v).trim() !== '');
+
+    const email = first(
+      t.contact_email,
+      t.contactEmail,
+      get(t, 'meta.contact_email'),
+      get(t, 'meta.contact.email'),
+      get(t, 'data.meta.contact_email'),
+      get(t, 'data.meta.contact.email'),   // ← your sites row stores it here
+      get(t, 'data.contact.email'),
+      get(t, 'site.data.meta.contact.email'),
+      get(t, 'identity.contact_email'),
+      get(t, 'identity.email')
+    ) || '';
+
+    const phoneRaw = first(
+      t.phone,
+      t.contact_phone,
+      t.contactPhone,
+      get(t, 'meta.contact_phone'),
+      get(t, 'data.meta.contact_phone'),
+      get(t, 'data.meta.contact.phone'),
+      get(t, 'data.contact.phone'),
+      get(t, 'site.data.meta.contact.phone')
+    ) || '';
+
+    const business = first(
+      t.business_name,
+      t.businessName,
+      get(t, 'meta.business_name'),
+      get(t, 'data.meta.business'),
+      get(t, 'data.meta.business_name'),
+      get(t, 'site.data.meta.business'),
+      get(t, 'identity.business_name')
+    ) || '';
+
+    const services =
+      get(t, 'services') ??
+      get(t, 'data.meta.services') ??
+      get(t, 'data.services') ??
+      get(t, 'site.data.meta.services') ??
+      [];
+
     return {
-      services: normArr(t.services),
-      contact_email: (t.contact_email ?? '').toString().trim(),
-      business_name: (t.business_name ?? '').toString().trim(),
-      phone: phoneDigits,
+      contact_email: String(email).trim(),
+      phone: String(phoneRaw).replace(/\D/g, ''),
+      business_name: String(business).trim(),
+      services: Array.isArray(services)
+        ? services.map((s: any) => String(s).trim()).filter(Boolean)
+        : [],
     };
   }, [template]);
+
 
   const commonProps = {
     block: blockForChild,
@@ -361,7 +408,35 @@ ID: ${blockId || 'n/a'}`}
         ['--tw-prose-bold' as any]: 'rgb(17 24 39)',
         ['--tw-prose-quotes' as any]: 'rgb(9 9 11)',
       } as React.CSSProperties);
-
+      function resolveContainerClass(block: any) {
+        const type = String(block?.type || '');
+      
+        // Header / footer are usually full width
+        if (type === 'header' || type === 'footer') return 'w-full';
+      
+        const props = block?.props || {};
+        const content = block?.content || {};
+      
+        // Common flags that should force full-bleed
+        const full =
+          props.fullWidth ?? props.full_bleed ?? props.full ??
+          content.fullWidth ?? content.full_bleed ?? content.full ?? false;
+      
+        if (full === true) return 'w-full';
+      
+        // Optional presets: 'narrow' | 'default' | 'wide' | 'full'
+        const preset =
+          props.container ?? props.width ?? props.layout ??
+          content.container ?? content.width ?? content.layout ?? 'default';
+      
+        if (preset === 'full' || preset === 'full-bleed') return 'w-full';
+        if (preset === 'narrow') return 'mx-auto w-full max-w-3xl px-4 sm:px-6';
+        if (preset === 'wide') return 'mx-auto w-full max-w-[1280px] px-4 sm:px-8';
+      
+        // Default
+        return 'mx-auto w-full max-w-[1100px] px-4 sm:px-6 pt-8';
+      }
+      
   return (
     <div {...(wrapperProps as any)}>
       {/* Admin bar (drag + icons) — only inside editor */}
@@ -440,7 +515,7 @@ ID: ${blockId || 'n/a'}`}
           <Suspense fallback={<span />}>
             {mounted ? (
               // Wrap renderer in a vars-scope so `.prose` colors follow site mode
-              <div style={proseVars}>
+              <div className={resolveContainerClass(blockForChild)} style={proseVars}>
                 <Component
                   key={componentKey}
                   previewOnly={mode === 'editor' || previewOnly}

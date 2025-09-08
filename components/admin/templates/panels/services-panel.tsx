@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import type { Template } from '@/types/template';
 import { Sparkles } from 'lucide-react';
+import { resolveIndustry } from '@/lib/industries';
 
 type Row = { id: string; value: string };
 const makeId = () =>
@@ -25,7 +26,7 @@ export default function ServicesPanel({
   template,
   onChange,
 }: {
-  template: Template;
+  template: Template | any;
   onChange: (patch: Partial<Template>) => void; // PATCH, parent autosaves via commit
 }) {
   // meta-first source of truth
@@ -37,13 +38,42 @@ export default function ServicesPanel({
   const [touched, setTouched] = React.useState(false);
   const [saving, setSaving] = React.useState(false);
 
-  // AI state
-  const industry = String(meta?.industry || '');
+  // ---- Industry (normalized) ------------------------------------------------
+  const rawIndustry: any = meta?.industry ?? template?.industry ?? null;
+
+  let industryKey = '';
+  let industryLabel = '';
+
+  try {
+    const r: any = resolveIndustry ? resolveIndustry(rawIndustry) : rawIndustry;
+    if (typeof r === 'string') {
+      industryKey = r.toLowerCase().trim();
+      industryLabel = r.trim();
+    } else if (r && typeof r === 'object') {
+      industryKey = String(r.key ?? r.value ?? '').toLowerCase().trim();
+      industryLabel = String(r.label ?? r.name ?? r.value ?? industryKey).trim();
+    }
+  } catch {
+    // ignore and fall through to raw fallbacks
+  }
+  if (!industryKey) {
+    if (typeof rawIndustry === 'string') {
+      industryKey = rawIndustry.toLowerCase().trim();
+      industryLabel = rawIndustry.trim();
+    } else if (rawIndustry && typeof rawIndustry === 'object') {
+      industryKey = String(rawIndustry.key ?? rawIndustry.value ?? '').toLowerCase().trim();
+      industryLabel = String(rawIndustry.label ?? rawIndustry.name ?? rawIndustry.value ?? '').trim();
+    }
+  }
+
+  // Region context for better suggestions
   const city = String(contact?.city || '');
   const state = String(contact?.state || '');
-  const canSuggest = Boolean(industry);
+
+  const canSuggest = Boolean(industryKey);
   const [aiBusy, setAiBusy] = React.useState(false);
   const [aiError, setAiError] = React.useState<string | null>(null);
+  const [serverUsedIndustry, setServerUsedIndustry] = React.useState<string | null>(null);
 
   // Sync when template changes
   React.useEffect(() => {
@@ -78,7 +108,7 @@ export default function ServicesPanel({
     setAiError(null);
   };
 
-  // AI Suggest helpers — reads meta.industry/city/state
+  // AI Suggest helpers — send normalized key + label and surface server debug
   const suggest = async (mode: 'append' | 'replace' = 'append', count = 6) => {
     if (!canSuggest || aiBusy) return;
     setAiBusy(true);
@@ -89,15 +119,20 @@ export default function ServicesPanel({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           template_id: template.id,
-          industry,
+          industry: industryKey,        // canonical key (for older handlers)
+          industry_key: industryKey,    // explicit canonical key
+          industry_label: industryLabel,// human label for LLM prompt quality
           city,
           state,
           count,
+          debug: true,
         }),
       });
-      const json = await res.json();
+      const json = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(json?.error || `Suggest failed (${res.status})`);
       const suggested: string[] = Array.isArray(json?.services) ? json.services : [];
+      setServerUsedIndustry(json?.debug?.industry_used ?? null);
+
       const current = draft.map((r) => r.value);
       const merged = clean(mode === 'replace' ? suggested : [...current, ...suggested]);
       setDraft(rowsFrom(merged));
@@ -113,8 +148,19 @@ export default function ServicesPanel({
     <Collapsible title="Available Services" id="template-services">
       <div className="space-y-3">
         <div className="flex items-center gap-2">
-          {/* Left space for future label/help */}
-          <div className="text-xs text-white/60">Used by Services blocks and forms</div>
+          <div className="text-xs text-white/60">
+            Used by Services blocks and forms
+            {industryKey && (
+              <span className="ml-2 rounded bg-white/10 px-2 py-0.5 text-[10px] uppercase tracking-wide">
+                Industry: {industryKey}
+              </span>
+            )}
+            {serverUsedIndustry && (
+              <span className="ml-2 rounded bg-indigo-500/20 px-2 py-0.5 text-[10px] uppercase tracking-wide">
+                API: {serverUsedIndustry}
+              </span>
+            )}
+          </div>
           {canSuggest && (
             <div className="ml-auto flex items-center gap-2">
               <Button
@@ -141,6 +187,7 @@ export default function ServicesPanel({
             </div>
           )}
         </div>
+
         {aiError && <div className="text-xs text-red-300">AI error: {aiError}</div>}
 
         {draft.map((row) => (

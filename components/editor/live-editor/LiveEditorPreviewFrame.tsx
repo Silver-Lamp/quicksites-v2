@@ -618,7 +618,7 @@ export default function LiveEditorPreviewFrame({
                   {errorCount} error{errorCount === 1 ? '' : 's'}
                 </span>
               )}
-              {onEditHeader && (
+              {/* {onEditHeader && (
                 <button
                   type="button"
                   onClick={onEditHeader}
@@ -626,7 +626,7 @@ export default function LiveEditorPreviewFrame({
                 >
                   Edit Global Header, Logo and Favicon
                 </button>
-              )}
+              )} */}
             </div>
           </div>
         )}

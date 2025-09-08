@@ -90,11 +90,30 @@ export default function ServicesPanel({
     const cleaned = clean(draft.map((r) => r.value));
     setSaving(true);
     try {
-      // Emit a data-only patch; keep a top-level mirror if you still read it anywhere
+      // 1) Update editor state (what you already had), but also mirror into data.meta.services
       onChange({
-        data: { ...(template.data as any), services: cleaned },
-        services: cleaned,
+        data: {
+          ...(template.data as any),
+          services: cleaned,
+          meta: { ...((template.data as any)?.meta ?? {}), services: cleaned },
+        },
+        services: cleaned, // if you keep a top-level mirror anywhere
       });
+  
+      // 2) Emit canonical patches so the commit/publish pipeline can persist them
+      try {
+        window.dispatchEvent(new CustomEvent('qs:template:apply-patch', {
+          detail: { op: 'set', path: '/data/services', value: cleaned }
+        }));
+        window.dispatchEvent(new CustomEvent('qs:template:apply-patch', {
+          detail: { op: 'set', path: '/data/meta/services', value: cleaned }
+        }));
+        // Optional: if your backend still reads top-level services
+        window.dispatchEvent(new CustomEvent('qs:template:apply-patch', {
+          detail: { op: 'set', path: '/services', value: cleaned }
+        }));
+      } catch {}
+  
       setDraft(rowsFrom(cleaned));
       setTouched(false);
     } finally {

@@ -22,15 +22,81 @@ function normalizeHost(raw: string) {
 }
 
 /**
+ * Merge site identity into a template object and *unify* services so downstream
+ * renderers can reliably read:
+ *   - template.services
+ *   - template.data.services
+ *   - template.data.meta.services
+ *
+ * Also overlays site.meta (business/contact/industry/etc.) onto template.data.meta
+ * so published pages can resolve identity from the template alone.
+ */
+function unifyFromSite(site: any, tpl: any): Template {
+  const siteData = site?.data ?? {};
+  const siteMeta = siteData?.meta ?? {};
+
+  const tplData = tpl?.data ?? {};
+  const tplMeta = tplData?.meta ?? {};
+
+  // Prefer site.services/meta.services first, then template-level.
+  const serviceCandidates = [
+    siteMeta.services,
+    siteData.services,
+    tplData.services,
+    tplMeta.services,
+    tpl?.services,
+  ];
+
+  const firstArr: any[] =
+    (serviceCandidates.find((v) => Array.isArray(v) && v.length > 0) as any[]) || [];
+
+  const services = Array.from(
+    new Set(firstArr.map((s) => String(s ?? '').trim()).filter(Boolean))
+  );
+
+  const mergedMeta = {
+    ...tplMeta,
+    ...siteMeta, // site-level identity wins
+    services,
+  };
+
+  return {
+    ...(tpl || {}),
+    services,
+    data: {
+      ...tplData,
+      services,
+      meta: mergedMeta,
+    },
+  } as Template;
+}
+
+/**
  * Resolve a site by domain. Order of precedence:
  *   1) public.sites.domain ∈ {host, noWww, withWww}
- *   2) public.templates.{domain_lc|custom_domain|domain} ∈ candidates
+ *      -> If a site is found, also fetch its template by site.template_id and return a merged template.
+ *   2) public.templates.{domain_lc|custom_domain|domain} ∈ candidates (legacy)
  *   3) slug fallback (apex label) via sites then templates
  */
 export async function getSiteByDomain(domain: string): Promise<Template | null> {
   const supabase = await getServerSupabase();
   const n = normalizeHost(domain);
   const candidates = Array.from(new Set([n.host, n.noWww, n.withWww]));
+
+  // Helper to load a template by id (best-effort)
+  const loadTemplateById = async (id?: string | null) => {
+    if (!id) return null;
+    const { data, error } = await supabase
+      .from('templates')
+      .select('*')
+      .eq('id', id)
+      .limit(1)
+      .maybeSingle();
+    if (error) {
+      console.error('[getSiteByDomain] loadTemplateById:', error.message);
+    }
+    return data || null;
+  };
 
   // 1) Prefer the `sites` table (new source of truth)
   {
@@ -44,11 +110,16 @@ export async function getSiteByDomain(domain: string): Promise<Template | null> 
     if (error) {
       console.error('[getSiteByDomain] sites.domain query:', error.message);
     } else if (data && data.length) {
-      return data[0] as unknown as Template;
+      const site = data[0];
+
+      // Try to fetch the linked template; if missing, fall back to a bare object
+      const tpl = (await loadTemplateById(site.template_id)) || {};
+      const merged = unifyFromSite(site, tpl);
+      return merged;
     }
   }
 
-  // 2) Legacy fallbacks from `templates`
+  // 2) Legacy fallbacks from `templates` (domain match)
   for (const col of ['domain_lc', 'custom_domain', 'domain'] as const) {
     const { data, error } = await supabase
       .from('templates')
@@ -63,6 +134,7 @@ export async function getSiteByDomain(domain: string): Promise<Template | null> 
       continue;
     }
     if (data && data.length) {
+      // No site context; just return the template as-is
       return data[0] as Template;
     }
   }
@@ -79,7 +151,10 @@ export async function getSiteByDomain(domain: string): Promise<Template | null> 
     if (error) {
       console.error('[getSiteByDomain] sites slug fallback:', error.message);
     } else if (data && data.length) {
-      return data[0] as unknown as Template;
+      const site = data[0];
+      const tpl = (await loadTemplateById(site.template_id)) || {};
+      const merged = unifyFromSite(site, tpl);
+      return merged;
     }
   }
 

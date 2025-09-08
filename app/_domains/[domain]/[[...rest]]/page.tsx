@@ -8,22 +8,26 @@ import { generatePageMetadata } from '@/lib/seo/generateMetadata';
 import { getSiteBySlug } from '@/lib/templates/getSiteBySlug';
 import { getSiteByDomain } from '@/lib/templates/getSiteByDomain';
 
-// --- ADD THESE HELPERS ---
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+export const runtime = 'nodejs';
+
+// ---------- helpers ----------
 function stripWww(d: string) {
   const x = (d || '').toLowerCase().replace(/\.$/, '');
   return x.startsWith('www.') ? x.slice(4) : x;
 }
-function secondLevelFrom(d: string) {
+function apexLabelOf(d: string) {
   const apex = stripWww(d);
   const parts = apex.split('.');
   return parts.length > 1 ? parts.slice(0, -1).join('.') : parts[0];
 }
 function variantsForDomain(domain: string): string[] {
   const d = (domain || '').toLowerCase().replace(/\.$/, '');
-  const noWww = stripWww(d);
-  return d === noWww ? [d, `www.${d}`] : [d, noWww];
+  const apex = stripWww(d);
+  return Array.from(new Set([d, apex, `www.${apex}`]));
 }
-// --------------------------
+// -----------------------------
 
 async function origin() {
   const h = await headers();
@@ -35,23 +39,27 @@ async function origin() {
 }
 
 async function resolveSite(domain: string) {
-  // 1) Try exact and www/apex variants by domain
-  for (const candidate of variantsForDomain(domain)) {
-    const site = await getSiteByDomain(candidate);
-    if (site) return site;
+  // 1) Prefer slug from apex label (e.g., graftontowing.com -> graftontowing)
+  const slug = apexLabelOf(domain);
+  if (slug) {
+    const bySlug = await getSiteBySlug(slug);
+    if (bySlug) return bySlug;
   }
 
-  // 2) Fallback: try slug derived from *apex* (no www)
-  const slug = secondLevelFrom(domain);   // <-- FIXED (was using raw domain)
-  if (slug) {
-    const site = await getSiteBySlug(slug);
-    if (site) return site;
+  // 2) Fall back to domain lookups with normalized variants
+  for (const candidate of variantsForDomain(domain)) {
+    const byDomain = await getSiteByDomain(candidate);
+    if (byDomain) return byDomain;
   }
 
   return null;
 }
 
-export async function generateMetadata({ params }: { params: { domain: string; rest?: string[] } }): Promise<Metadata> {
+export async function generateMetadata({
+  params,
+}: {
+  params: { domain: string; rest?: string[] };
+}): Promise<Metadata> {
   const site = await resolveSite(params.domain);
   if (!site) return {};
   const pageSlug = params.rest?.[0] ?? 'home';
@@ -59,7 +67,11 @@ export async function generateMetadata({ params }: { params: { domain: string; r
   return generatePageMetadata({ site, pageSlug, baseUrl });
 }
 
-export default async function DomainRouterPage({ params }: { params: { domain: string; rest?: string[] } }) {
+export default async function DomainRouterPage({
+  params,
+}: {
+  params: { domain: string; rest?: string[] };
+}) {
   const site = await resolveSite(params.domain);
   if (!site) return notFound();
 

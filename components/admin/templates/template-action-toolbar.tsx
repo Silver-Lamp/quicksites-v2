@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import {
   RotateCcw, RotateCw, AlertTriangle, X, Maximize2, Minimize2,
   Smartphone, Tablet, Monitor, Sun, Moon, SlidersHorizontal, Check,
-  Settings as SettingsIcon, Trash2, Database,
+  Settings as SettingsIcon, Trash2, Database, Minus,
 } from 'lucide-react';
 import { Button } from '@/components/ui';
 import toast from 'react-hot-toast';
@@ -343,6 +343,24 @@ export function TemplateActionToolbar({
     return () => window.removeEventListener('qs:toolbar:set-enabled', onToggle as any);
   }, []);
 
+  // ── Toolbar collapse state (persisted + events) ──────────────────────────────
+  const [toolbarCollapsed, setToolbarCollapsed] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return false;
+    try { return (window.localStorage.getItem('qs:toolbar:collapsed') ?? '0') === '1'; } catch { return false; }
+  });
+  useEffect(() => {
+    try { window.localStorage.setItem('qs:toolbar:collapsed', toolbarCollapsed ? '1' : '0'); } catch {}
+    window.dispatchEvent(new CustomEvent('qs:toolbar:collapsed', { detail: toolbarCollapsed }));
+  }, [toolbarCollapsed]);
+  useEffect(() => {
+    const onSet = (e: Event) => setToolbarCollapsed(!!(e as CustomEvent).detail);
+    window.addEventListener('qs:toolbar:set-collapsed', onSet as any);
+    return () => window.removeEventListener('qs:toolbar:set-collapsed', onSet as any);
+  }, []);
+  const collapseToolbar = () => setToolbarCollapsed(true);
+  const expandToolbar = () => setToolbarCollapsed(false);
+  const toggleToolbarCollapse = () => setToolbarCollapsed(v => !v);
+
   const tplRef = useTemplateRef(template);
 
   // Track LAST PERSISTED signature (logical dirty)
@@ -636,13 +654,12 @@ export function TemplateActionToolbar({
     return () => window.removeEventListener('qs:template:apply-patch', onPatch as any);
   }, [apply, tplRef]);
 
-  // Settings sidebar control
+  // Settings sidebar control (handled elsewhere; gear no longer toggles this)
   const emitSettingsOpen = (open: boolean) => {
     window.dispatchEvent(new CustomEvent('qs:settings:set-open', { detail: open }));
     try { window.localStorage.setItem('qs:settingsOpen', open ? '1' : '0'); } catch {}
   };
 
-  const toggleTemplateSettings = () => emitSettingsOpen(!settingsOpenState);
   const fireCapture = () => window.dispatchEvent(new CustomEvent('qs:history:capture'));
 
   const toggleColor = () => {
@@ -1087,17 +1104,37 @@ export function TemplateActionToolbar({
       new URLSearchParams(window.location.search).get('page')) ||
     getTemplatePagesLoose(template)[0]?.slug ||
     'home';
+    
+  const centerPos = 'left-1/2 -translate-x-1/2';
 
   return createPortal(
     <>
       <div
         id="template-action-toolbar"
-        className="fixed bottom-4 left-1/2 -translate-x-1/2 z-[2147483647] w-[95%] max-w-5xl rounded-2xl border border-zinc-700 bg-zinc-900/95 backdrop-blur px-4 sm:px-6 py-3 shadow-lg text-zinc-100 hover:border-purple-500 opacity-90 hover:opacity-100 transition pointer-events-auto"
+        className={`fixed bottom-4 z-[2147483647] rounded-2xl border border-zinc-700 bg-zinc-900/95 backdrop-blur shadow-lg text-zinc-100 hover:border-purple-500 transition pointer-events-auto ${
+          toolbarCollapsed
+            ? `${centerPos} translate-x-0 w-auto px-2 py-2 opacity-80 hover:opacity-100`
+            : `${centerPos} w-[95%] max-w-5xl px-4 sm:px-6 py-3 opacity-90 hover:opacity-100`
+        }`}
         style={{ WebkitTapHighlightColor: 'transparent', pointerEvents: toolbarEnabled ? 'auto' : 'none' }}
       >
+        {toolbarCollapsed ? (
+          <div className="w-full flex items-center gap-2">
+            <Button size="icon" variant="secondary" title="Show toolbar" aria-label="Show toolbar" onClick={expandToolbar}>
+              <SettingsIcon className="w-4 h-4" />
+            </Button>
+            {/* <span className="text-xs opacity-70 hidden sm:inline">Show toolbar</span> */}
+          </div>
+        ) : (
         <div className="w-full flex justify-between items-center gap-3">
-          {/* Settings */}
-          <Button size="icon" variant={settingsOpenState ? 'secondary' : 'ghost'} title="Template Settings Sidebar" aria-pressed={settingsOpenState} onClick={toggleTemplateSettings}>
+          {/* Gear now toggles toolbar collapse/expand */}
+          <Button
+            size="icon"
+            variant="ghost"
+            title="Hide toolbar"
+            aria-pressed={!toolbarCollapsed}
+            onClick={toggleToolbarCollapse}
+          >
             <SettingsIcon className="w-4 h-4" />
           </Button>
 
@@ -1225,8 +1262,20 @@ export function TemplateActionToolbar({
               )}
             </div>
           </div>
+          {/* Right-edge Hide control */}
+          <Button
+            size="sm"
+            variant="ghost"
+            title="Hide toolbar"
+            aria-label="Hide toolbar"
+            onClick={collapseToolbar}
+            className="px-2 py-1"
+          >
+            <Minus className="w-4 h-4 mr-1" />
+            <span className="hidden sm:inline">Hide</span>
+          </Button>
         </div>
-
+        )}
         {saveWarnings.length > 0 && (
           <div className="mt-3 rounded-md border border-yellow-500/30 bg-yellow-500/10 text-yellow-200 text-xs px-3 py-2 flex items-start gap-2">
             <AlertTriangle className="w-4 h-4 mt-[2px] flex-none" />
@@ -1236,6 +1285,7 @@ export function TemplateActionToolbar({
             </button>
           </div>
         )}
+
       </div>
 
       <AsyncGifOverlay open={overlayOpen} message={overlayMsg} />

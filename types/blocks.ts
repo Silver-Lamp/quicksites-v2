@@ -41,6 +41,10 @@ export const BLOCK_CATEGORY: Record<BlockType, BlockCategory> = {
   meals_grid: 'content',
   reviews_list: 'content',
   hours: 'meta',
+
+  // ----- NEW: commerce blocks -----
+  products_grid: 'content',     // grid of purchasable items/services
+  service_offer: 'interactive', // single service/product CTA (planned)
 } as const;
 
 export type BlockMetadata = {
@@ -131,5 +135,5 @@ export interface BlockDefinition<TProps = any> {
 /** Utility: access the canonical Zod schema when you only have a string key */
 export function schemaFor(type: BlockType): z.ZodType<any> {
   const s = blockContentSchemaMap[type];
-  return typeof s === 'function' ? (s as any)() : s as unknown as z.ZodType<any>;
+  return typeof s === 'function' ? (s as any)() : (s as unknown as z.ZodType<any>);
 }

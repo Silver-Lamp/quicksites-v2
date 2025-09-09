@@ -1,3 +1,4 @@
+// app/api/ai/suggest/route.ts
 import OpenAI from 'openai';
 
 export const runtime = 'nodejs';

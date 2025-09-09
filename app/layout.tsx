@@ -15,6 +15,26 @@ import MagicLinkBridge from '@/components/auth/MagicLinkBridge';
 import RouteChangeOverlayClient from '@/components/ui/RouteChangeOverlayClient';
 import { resolveOrg } from '@/lib/org/resolveOrg';
 
+
+
+// 'use client';
+import * as React from 'react';
+
+export function CartWire({ children }: { children: React.ReactNode }) {
+  React.useEffect(() => {
+    const onAdd = (e: any) => {
+      const { id, qty } = e?.detail || {};
+      // toast, badge bump, etc.
+      console.log('Added to cart:', id, qty);
+    };
+    window.addEventListener('qs:cart:add', onAdd as EventListener);
+    return () => window.removeEventListener('qs:cart:add', onAdd as EventListener);
+  }, []);
+  return <>{children}</>;
+}
+
+
+
 export const metadata = { /* …your existing metadata… */ };
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {

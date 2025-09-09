@@ -12,6 +12,16 @@ const urlOptional = z.preprocess(
   z.string().url('Kitchen video URL must be valid').optional()
 );
 
+// Small helper for price coercion: "$19.99" | "19" | 19.99 → 1999
+const usdToCents = (v: unknown): number | null => {
+  if (typeof v === 'number' && Number.isFinite(v)) return Math.round(v * 100);
+  if (typeof v === 'string') {
+    const n = Number.parseFloat(v.replace(/[^0-9.]/g, ''));
+    return Number.isFinite(n) ? Math.round(n * 100) : null;
+  }
+  return null;
+};
+
 /* ───────────────────────────── Hours of Operation ───────────────────────────── */
 
 export const hoursOfOperationPropsSchema = z.object({
@@ -529,7 +539,123 @@ export const blockContentSchemaMap = {
   meals_grid: { label: 'Meals Grid', icon: '🍱', schema: mealsGridPropsSchema },
 
   hours: { label: 'Hours of Operation', icon: '⏰', schema: HoursOfOperationSchema },
+
+  /* ───────────────────────────── NEW: Commerce blocks ───────────────────────── */
+
+  products_grid: {
+    label: 'Products Grid',
+    icon: '🛒',
+    schema: z.preprocess((raw) => {
+      const c = raw && typeof raw === 'object' ? { ...(raw as any) } : {};
+
+      // Aliases → canonical (we use camelCase productIds internally)
+      if (Array.isArray((c as any).product_ids) && !Array.isArray((c as any).productIds)) {
+        (c as any).productIds = (c as any).product_ids;
+      }
+      if (Array.isArray((c as any).ids) && !Array.isArray((c as any).productIds)) {
+        (c as any).productIds = (c as any).ids;
+      }
+      if (Array.isArray((c as any).items) && !Array.isArray((c as any).productIds)) {
+        (c as any).productIds = (c as any).items.map((x: any) => x?.id).filter(Boolean);
+      }
+
+      // Normalize columns
+      if (typeof (c as any).columns === 'string') {
+        const n = Number((c as any).columns);
+        (c as any).columns = Number.isFinite(n) ? n : 3;
+      }
+
+      // Build products from legacy shapes (items/products)
+      const src = Array.isArray((c as any).products)
+        ? (c as any).products
+        : Array.isArray((c as any).items)
+          ? (c as any).items
+          : [];
+
+      const products = src
+        .map((p: any, i: number) => {
+          if (!p || typeof p !== 'object') return null;
+          const id = String(p.id ?? p.product_id ?? p.slug ?? p.sku ?? `p${i + 1}`);
+          const title = String(p.title ?? p.name ?? `Item ${i + 1}`);
+          const cents =
+            typeof p.price_cents === 'number'
+              ? p.price_cents
+              : usdToCents(p.price) ?? 0;
+          const image_url = p.image_url ?? p.imageUrl ?? p.image ?? '';
+          return { id, title, price_cents: Math.max(0, Math.round(cents)), image_url };
+        })
+        .filter(Boolean);
+
+      if (!Array.isArray((c as any).products) && products.length) {
+        (c as any).products = products;
+      }
+
+      // Defaults
+      if (!(c as any).title) (c as any).title = 'Featured Products';
+      if ((c as any).columns == null) (c as any).columns = 3;
+      if (!Array.isArray((c as any).productIds)) (c as any).productIds = [];
+
+      return c;
+    }, z.object({
+      title: z.string().default('Featured Products'),
+      columns: z.number().int().min(1).max(4).default(3),
+      productIds: z.array(z.string()).default([]),
+      products: z.array(z.object({
+        id: z.string().min(1),
+        title: z.string().min(1),
+        price_cents: z.number().int().min(0).default(0),
+        image_url: z.union([z.string().url(), z.literal('')]).optional(),
+      })).default([]),
+    })),
+  },
+
+  service_offer: {
+    label: 'Service Offer',
+    icon: '🛎️',
+    schema: z.preprocess((raw) => {
+      const c = raw && typeof raw === 'object' ? { ...(raw as any) } : {};
+
+      // Aliases → canonical
+      if (c.serviceId && !c.productId) c.productId = c.serviceId;
+      if (c.product_id && !c.productId) c.productId = c.product_id;
+
+      // Price coercion
+      if (c.price_cents == null && (c.price != null)) {
+        const cents = usdToCents(c.price);
+        if (cents != null) c.price_cents = cents;
+      }
+
+      // Defaults
+      if (!c.title) c.title = 'Book a Service';
+      if (c.description == null) c.description = '';
+      if (c.cta == null) c.cta = 'Book now';
+      if (typeof c.showPrice !== 'boolean') c.showPrice = true;
+
+      return c;
+    }, z.object({
+      title: z.string().default('Book a Service'),
+      description: z.string().default(''),
+      productId: z.string().min(1).optional(),
+      showPrice: z.boolean().default(true),
+      price_cents: z.number().int().min(0).optional(),
+      cta: z.string().default('Book now'),
+      href: RelativeOrAbsoluteUrl.optional(),
+    })),
+  },
 } satisfies Record<string, { label: string; icon: string; schema: z.ZodTypeAny }>;
+
+/* ─────────────── Type alias resolver (products-grid → products_grid, etc.) ─────────────── */
+
+const TYPE_ALIASES: Record<string, string> = {
+  'products-grid': 'products_grid',
+  'product-grid': 'products_grid',
+  'products': 'products_grid',
+};
+
+export function resolveCanonicalType(t: string): string {
+  const k = String(t || '').trim();
+  return TYPE_ALIASES[k] ?? k;
+}
 
 /* ─────────────────────────── Discriminated union ──────────────────────────── */
 
@@ -558,14 +684,49 @@ export function createBlockUnion<
 
 const { schemas: BasicBlockSchemas, meta: blockMeta } = createBlockUnion(blockContentSchemaMap);
 
+/**
+ * Union schema with a preprocessor that:
+ *  - maps alias types to canonical (e.g., products-grid → products_grid)
+ *  - normalizes common product ID shapes at the top level (so unknown types don't fail)
+ */
 export const BlockSchema: z.ZodTypeAny = z.lazy(() =>
+  z.preprocess((raw) => {
+    if (raw && typeof raw === 'object') {
+      const b: any = { ...(raw as any) };
+
+      if (typeof b.type === 'string') {
+        const canon = resolveCanonicalType(b.type);
+        if (canon !== b.type) b.type = canon;
+      }
+
+      // If the incoming block is (or becomes) products_grid, normalize keys early
+      if (b.type === 'products_grid') {
+        const cIn: any = b.content ?? b.props ?? {};
+        const c: any = { ...cIn };
+
+        if (Array.isArray(c.product_ids) && !Array.isArray(c.productIds)) c.productIds = c.product_ids;
+        if (Array.isArray(c.ids) && !Array.isArray(c.productIds)) c.productIds = c.ids;
+        if (Array.isArray(c.items) && !Array.isArray(c.productIds)) c.productIds = c.items.map((x: any) => x?.id).filter(Boolean);
+
+        if (typeof c.columns === 'string') {
+          const n = Number(c.columns);
+          c.columns = Number.isFinite(n) ? n : c.columns;
+        }
+
+        b.content = c;
+      }
+
+      return b;
+    }
+    return raw;
+  },
   z.discriminatedUnion(
     'type',
     BasicBlockSchemas as unknown as [
       z.ZodDiscriminatedUnionOption<'type'>,
       ...z.ZodDiscriminatedUnionOption<'type'>[]
     ]
-  )
+  ))
 );
 
 export const BlocksArraySchema = z.array(BlockSchema);
@@ -615,6 +776,20 @@ export function migrateLegacyBlock(block: any): any {
         image_url: m?.image_url ?? '',
       }));
     }
+
+    // NEW: migrate products-grid → products_grid + normalize ID keys
+    if (block.type === 'products-grid') {
+      const c = block.content ?? {};
+      const ids =
+        Array.isArray(c.product_ids) ? c.product_ids
+        : Array.isArray(c.productIds) ? c.productIds
+        : Array.isArray(c.ids) ? c.ids
+        : Array.isArray(c.items) ? c.items.map((x: any) => x?.id).filter(Boolean)
+        : [];
+      block.type = 'products_grid';
+      block.content = { ...c, productIds: ids, product_ids: ids };
+    }
+
     return block;
   }
 
@@ -675,8 +850,7 @@ function makeFullBlockSchema(type: string, content: z.ZodTypeAny) {
       if (type === 'hero') {
         b.content = { ...HERO_DEFAULT_CONTENT, ...(b.content ?? {}) };
       }
-      // Add other types here in the future if needed:
-      // if (type === 'cta') b.content = { label: 'Learn more', href: '/' };
+      // Add other types here in the future if needed
     }
 
     return b;
@@ -700,9 +874,6 @@ export const blockFullSchemaMap: Record<string, z.ZodTypeAny> = Object.fromEntri
  * Augment each entry in blockContentSchemaMap with:
  *  - fullSchema: the full block schema
  *  - safeParse: a direct alias to fullSchema.safeParse
- *
- * This lets callers do: blockContentSchemaMap[type].safeParse(block)
- * while preserving label/icon/schema for UI & union building.
  */
 for (const [type, cfg] of Object.entries(blockContentSchemaMap)) {
   const full = blockFullSchemaMap[type];

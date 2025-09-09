@@ -19,6 +19,9 @@ import { Collapsible } from '@/components/ui/collapsible';
 import TemplateTruthTracker from '@/components/admin/templates/sidebar/TemplateTruthTracker';
 import { useTruthTrackerState } from '@/components/admin/templates/hooks/useTruthTrackerState';
 
+// NEW: E-commerce panel
+import EcommercePanel from '../templates/panels/ecommerce-panel';
+
 /* ---------- tracker helpers ---------- */
 async function createSnapshot(templateId: string) {
   const r = await fetch(`/api/admin/snapshots/create?templateId=${encodeURIComponent(templateId)}`, { method: 'GET' });
@@ -30,28 +33,6 @@ async function publishSnapshot(templateId: string, snapshotId: string) {
   const j = await r.json(); if (!r.ok) throw new Error(j?.error || 'publish failed');
   return j;
 }
-
-// export function TruthTrackerPanel({ templateId }: { templateId: string }) {
-//   const { state, loading, error, reload } = useTruthTrackerState(templateId);
-//   if (loading || !state) return null;
-//   const { infra, snapshots, versions, events, adminMeta } = state;
-
-//   return (
-//     <TemplateTruthTracker
-//       templateId={templateId}
-//       infra={infra}
-//       snapshots={snapshots}
-//       versions={versions}
-//       events={events}
-//       selectedSnapshotId={infra?.lastSnapshot?.id}
-//       adminMeta={adminMeta}
-//       onRefresh={reload}
-//       onCreateSnapshot={async () => { await createSnapshot(templateId); await reload(); }}
-//       onPublish={async (sid) => { await publishSnapshot(templateId, sid); await reload(); }}
-//       onViewDiff={() => {}}
-//     />
-//   );
-// }
 
 /* ---------- small util ---------- */
 function useLiveRef<T>(value: T) {
@@ -311,6 +292,13 @@ export default function SidebarSettings({ template, onChange }: Props) {
     }
   }, [commit, tplRef]);
 
+  // ====== Derive active page for block-insertion helpers (home → first → 'home') ======
+  const activePageId = useMemo(() => {
+    const pages = getPages(template);
+    const byHome = pages.find((p) => p?.slug === 'home')?.id;
+    return byHome || pages[0]?.id || 'home';
+  }, [template]);
+
   // ====== Content ======
   const content = useMemo(() => (
     <div className="space-y-4 px-4 pt-2 h-full overflow-y-auto" id="sidebar-settings-inner">
@@ -327,6 +315,10 @@ export default function SidebarSettings({ template, onChange }: Props) {
       <ThemePanel template={template} onChange={(patch) => applyPatch(patch)} />
       <IdentityPanel template={template} onChange={(patch) => applyPatch(patch)} />
       <ServicesPanel template={template} onChange={(patch) => applyPatch(patch)} />
+
+      {/* NEW: E-commerce panel (products/services management + insert blocks) */}
+      <EcommercePanel template={template} templateId={(template as any)?.id ?? null} currentPageId={activePageId} />
+
       {/* <SlugPanel template={template} onChange={(patch) => applyPatch(patch)} /> */}
 
       {/* Domain is read-only/informational; no onChange */}
@@ -356,15 +348,9 @@ export default function SidebarSettings({ template, onChange }: Props) {
       />
 
       {/* Optional read-only JSON viewer */}
-      {/* <TemplateJsonEditor
-        rawJson={JSON.stringify(template, null, 2)}
-        setRawJson={() => {}}
-        sidebarValues={template}
-        setSidebarValues={() => {}}
-        colorMode={(template.color_mode as 'light' | 'dark') ?? 'light'}
-      /> */}
+      {/* <TemplateJsonEditor ... /> */}
     </div>
-  ), [applyPatch, forceOpenHours, pending, saveNow, spotlightHours, template]);
+  ), [activePageId, applyPatch, forceOpenHours, pending, saveNow, spotlightHours, template]);
 
   return (
     <aside

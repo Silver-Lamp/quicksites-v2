@@ -1,3 +1,4 @@
+// components/admin/block-adder-grouped.tsx
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
@@ -6,21 +7,33 @@ import type { Block } from '@/types/blocks';
 import { createDefaultBlock } from '@/lib/createDefaultBlock';
 import RenderBlockMini from '@/components/admin/templates/render-block-mini';
 import SafeTriggerButton from '@/components/ui/safe-trigger-button';
-import { Sparkles, Type as TypeIcon, Mail, Image as ImageIcon, HelpCircle, Clock } from 'lucide-react';
+import {
+  Sparkles,
+  Type as TypeIcon,
+  Mail,
+  Image as ImageIcon,
+  HelpCircle,
+  Clock,
+  ShoppingCart,            // ⬅️ NEW
+} from 'lucide-react';
 import type { Template } from '@/types/template';
 
 const blockGroups: Record<string, { label: string; types: Block['type'][] }> = {
   callToAction: { label: 'Calls to Action', types: ['hero', 'contact_form'] },
-  services: { label: 'Business Features', types: ['services', 'service_areas', 'hours'] },
-  content: { label: 'Content Blocks', types: ['text', 'quote', 'faq', 'testimonial', 'video', 'audio'] },
+  services:     { label: 'Business Features', types: ['services', 'service_areas', 'hours'] },
+  // ⬅️ NEW E-commerce group
+  ecommerce:    { label: 'E-commerce', types: ['products_grid', 'service_offer'] },
+  content:      { label: 'Content Blocks', types: ['text', 'quote', 'faq', 'testimonial', 'video', 'audio'] },
 };
 
 const QUICK_PICKS: Array<{ type: Block['type']; label: string; Icon: any }> = [
-  { type: 'text',         label: 'Text',    Icon: TypeIcon },
-  { type: 'contact_form', label: 'Contact', Icon: Mail },
-  { type: 'hero',         label: 'Hero',    Icon: ImageIcon },
-  { type: 'faq',          label: 'FAQ',     Icon: HelpCircle },
-  { type: 'hours',        label: 'Hours',   Icon: Clock },
+  { type: 'text',         label: 'Text',     Icon: TypeIcon },
+  { type: 'contact_form', label: 'Contact',  Icon: Mail },
+  { type: 'hero',         label: 'Hero',     Icon: ImageIcon },
+  { type: 'faq',          label: 'FAQ',      Icon: HelpCircle },
+  { type: 'hours',        label: 'Hours',    Icon: Clock },
+  // ⬅️ NEW quick pick
+  { type: 'products_grid', label: 'Products', Icon: ShoppingCart },
 ];
 
 const AI_ENABLED_TYPES = new Set<Block['type']>(
@@ -122,6 +135,7 @@ export default function BlockAdderGrouped({
         if (!searchActive) return true;
         const label = (blockMeta[type as keyof typeof blockMeta]?.label || '').toLowerCase();
         const t = String(type).toLowerCase();
+        // Match label/type; also surface AI-enabled if user searches "ai"
         return label.includes(q) || t.includes(q) || (wantsAi && isAiType(type));
       });
 
@@ -182,7 +196,7 @@ export default function BlockAdderGrouped({
         <input
           autoFocus
           type="text"
-          placeholder='Search block types… (try "ai")'
+          placeholder='Search block types… (try "ai", "product", "service")'
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           className="w-full px-3 py-2 rounded-md border border-gray-300 dark:border-neutral-700 bg-gray-50 dark:bg-neutral-800 text-black dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500"

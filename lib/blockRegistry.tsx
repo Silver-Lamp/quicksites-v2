@@ -37,6 +37,12 @@ export const BLOCK_ALIASES: Record<string, BlockType> = {
   services_grid: 'services',
   // TEMP: Treat 'about' as text until a dedicated 'about' schema/renderer is added.
   about: 'text',
+
+  // NEW commerce aliases
+  products: 'products_grid',
+  product_grid: 'products_grid',
+  product_list: 'products_grid',
+  service: 'service_offer',
 };
 
 // ---------- Block registry entry (UI+default content) ----------
@@ -47,9 +53,15 @@ type BlockRegistryEntry<K extends BlockType = BlockType> = {
   icon: string;
   category: BlockCategory;
   isStatic?: boolean;
-  defaultContent: DefaultContentMap[K];
+  // Allow unknown for new blocks until DEFAULT_BLOCK_CONTENT gains entries
+  defaultContent: DefaultContentMap[K] | unknown;
   render: BlockRenderer | LazyRenderer;
 };
+
+// Small helper so we don’t explode if a new key isn’t in DEFAULT_BLOCK_CONTENT yet
+function getDefaultContentSafe<T extends BlockType>(type: T, fallback: unknown) {
+  return ((DEFAULT_BLOCK_CONTENT as any)[type] ?? fallback) as DefaultContentMap[T] | unknown;
+}
 
 // ---------- Canonical UI registry (unchanged labels/icons; still lazy) ----------
 
@@ -222,6 +234,41 @@ export const BLOCK_REGISTRY: { [K in BlockType]: BlockRegistryEntry<K> } = {
     defaultContent: DEFAULT_BLOCK_CONTENT.hours,
     render: lazyRenderer(() => import('@/components/admin/templates/render-blocks/hours')),
   },
+
+  // ---------- NEW: commerce ----------
+  products_grid: {
+    label: 'Products Grid',
+    icon: '🛒',
+    category: 'content',
+    isStatic: false,
+    defaultContent: getDefaultContentSafe('products_grid' as BlockType, {
+      title: 'Featured Products',
+      columns: 3,
+      productIds: [],
+    }),
+    render: lazyRenderer(() => import('@/components/admin/templates/render-blocks/products-grid')),
+  },
+  service_offer: {
+    label: 'Service Offer',
+    icon: '🛎️',
+    category: 'interactive',
+    isStatic: false,
+    defaultContent: getDefaultContentSafe('service_offer' as BlockType, {
+      title: 'Book a Service',
+      productId: null,
+      showPrice: true,
+      description: '',
+      cta: 'Book now',
+    }),
+    // Until you add a real renderer, keep this a safe client placeholder.
+    render: (() => async () => ({
+      default: (props: any) => (
+        <div className="border rounded-md p-3 bg-amber-50 text-sm">
+          <b>Service Offer</b> — renderer coming soon.
+        </div>
+      ),
+    }))(),
+  },
 };
 
 // ---------- Client-only wrappers for the editor preview ----------
@@ -255,9 +302,12 @@ export const DYNAMIC_RENDERERS: Partial<Record<BlockType, () => Promise<{ defaul
   testimonial:   () => import('@/components/admin/templates/render-blocks/testimonial'),
   contact_form:  () => import('@/components/admin/templates/render-blocks/contact-form'),
   chef_profile:  () => import('@/components/admin/templates/render-blocks/chef-profile.client'),
+  hours:         () => import('@/components/admin/templates/render-blocks/hours'),
 
-  // hero + text are handled by STATIC_RENDERERS elsewhere if you have them
-  hours: () => import('@/components/admin/templates/render-blocks/hours'),
+  // NEW:
+  products_grid: () => import('@/components/admin/templates/render-blocks/products-grid'),
+  // Keep placeholder for now to avoid import errors until you add it:
+  service_offer: clientPlaceholder('Service Offer'),
 };
 
 // ---------- Small “API layer” on top of the registry ----------
@@ -347,8 +397,54 @@ const BLOCK_FACTORIES: Record<
       } as unknown as Block),
   },
 
+  // NEW: products_grid block (grid of purchasable items)
+  products_grid: {
+    default: (ctx) =>
+      ({
+        id: genId(),
+        type: 'products_grid',
+        version: 1,
+        props: {
+          title: 'Featured Products',
+          columns: 3,
+          productIds: [],
+          // optional embedded preview items (renderer also supports fetching by ids)
+          products: [],
+        },
+      } as unknown as Block),
+    seed: (ctx) => {
+      // If seeding, try to embed light product data for preview
+      const toCents = (v: any) => {
+        if (typeof v === 'number') return Math.round(v * 100);
+        if (typeof v === 'string') {
+          const n = Number.parseFloat(v.replace(/[^0-9.]/g, ''));
+          return Number.isFinite(n) ? Math.round(n * 100) : null;
+        }
+        return null;
+      };
+      const items =
+        (ctx.products ?? []).slice(0, 6).map((p) => ({
+          id: ctx.id(),
+          title: p.name,
+          price_cents: toCents(p.price) ?? 0,
+          image_url: (p as any).image ?? null,
+        }));
+
+      return ({
+        id: genId(),
+        type: 'products_grid',
+        version: 1,
+        props: {
+          title: 'Featured Products',
+          columns: 3,
+          productIds: [], // real ids can be filled later via the modal
+          products: items,
+        },
+      } as unknown as Block);
+    },
+  },
+
   // TEMP: 'about' alias maps to 'text' → create a nice About paragraph as text content.
-  // When you add a real 'about' block/schema, drop this and register a proper def.
   text: {
     seed: (ctx) =>
       ({
@@ -356,7 +452,6 @@ const BLOCK_FACTORIES: Record<
         type: 'text',
         version: 1,
         props: {
-          // shape should match your text schema (e.g., { html } or { markdown })
           html:
             `<h2>About ${ctx.merchant?.name ?? 'Us'}</h2>` +
             `<p>${ctx.merchant?.about ??

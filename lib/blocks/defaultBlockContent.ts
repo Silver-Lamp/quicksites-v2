@@ -164,5 +164,7 @@ export const DEFAULT_BLOCK_CONTENT = {
       { key: 'fri', label: 'Fri', closed: false, periods: [{ open: '09:00', close: '17:00' }] },
     ],
     exceptions: [],
-  }
+  },
+  products_grid: { title: 'Featured Products', columns: 3, productIds: [], products: [] },
+  service_offer: { title: 'Book a Service', productId: null, showPrice: true, description: '', cta: 'Book now' },
 } as const satisfies Record<BlockType, any>;

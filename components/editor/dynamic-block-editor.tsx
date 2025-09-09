@@ -41,6 +41,20 @@ async function uploadEditorImage(file: File, folder = 'editor-images') {
   return { publicUrl: data.publicUrl };
 }
 
+/** Local fallback loaders for editors that might not be in BLOCK_EDITORS yet. */
+type EditorLoader = () => Promise<{ default: React.FC<BlockEditorProps> }>;
+
+const LOCAL_EDITORS: Record<string, EditorLoader> = {
+  products_grid: () =>
+    import('@/components/admin/templates/block-editors/products-grid-editor')
+      .then((m) => ({ default: m.default as React.FC<BlockEditorProps> })),
+
+  // Keep optional until you add a real editor; if not present, it will fall back to JSON editor UI.
+  service_offer: () =>
+    import('@/components/admin/templates/block-editors/service-offer-editor')
+      .then((m) => ({ default: m.default as React.FC<BlockEditorProps> })),
+};
+
 export function DynamicBlockEditor({
   block,
   onSave,
@@ -88,8 +102,11 @@ export function DynamicBlockEditor({
       return;
     }
 
-    // no registered editor
-    if (!BLOCK_EDITORS[block.type]) {
+    // Choose loader: prefer registry, fallback to local known editors
+    const registry = BLOCK_EDITORS as Record<string, EditorLoader | undefined>;
+    const loader: EditorLoader | undefined = registry[block.type] ?? LOCAL_EDITORS[block.type];
+
+    if (!loader) {
       setLoading(false);
       setLoadError({ kind: 'error', err: new Error(`No editor registered for "${block.type}"`) });
       return;
@@ -106,7 +123,7 @@ export function DynamicBlockEditor({
     }, TIMEOUT_MS) as unknown as number;
 
     // Try to load the editor module
-    BLOCK_EDITORS[block.type]!()
+    loader()
       .then((mod) => {
         if (cancelled) return;
         if (timerRef.current) clearTimeout(timerRef.current);
@@ -153,115 +170,127 @@ export function DynamicBlockEditor({
     );
   }
 
-// Special case for `text` block → use RichTextEditor directly (always available)
-if (block.type === 'text') {
-  // Ensure shapes exist
-  if (!block.props) block.props = { html: '', text: '', value: '' } as any;
-  if (!block.content) {
-    block.content = {
-      format: 'tiptap',
-      html: '',
-      json: { type: 'doc', content: [{ type: 'paragraph', content: [] }] },
-      text: '',
-      value: '',
-      summary: '',
-      word_count: 0,
-    } as any;
+  // Special case for `text` block → use RichTextEditor directly (always available)
+  if (block.type === 'text') {
+    // Ensure shapes exist
+    if (!block.props) block.props = { html: '', text: '', value: '' } as any;
+    if (!block.content) {
+      block.content = {
+        format: 'tiptap',
+        html: '',
+        json: { type: 'doc', content: [{ type: 'paragraph', content: [] }] },
+        text: '',
+        value: '',
+        summary: '',
+        word_count: 0,
+      } as any;
+    }
+
+    // Prefer json if present, else best-available string
+    const initialHtml =
+      block.content?.html ??
+      (block as any).props?.html ??
+      (block as any).content?.value ??
+      (block as any).props?.value ??
+      (block as any).content?.text ??
+      (block as any).props?.text ??
+      '';
+
+    // Ensure toolbar Save flushes this editor if modal is open
+    useEffect(() => {
+      const onToolbarSave = () => onSave?.(block);
+      window.addEventListener('qs:block-editor:save', onToolbarSave as any);
+      return () => window.removeEventListener('qs:block-editor:save', onToolbarSave as any);
+    }, [block, onSave]);
+
+    return (
+      <div className={['p-4', colorMode === 'dark' ? 'dark' : ''].join(' ')}>
+        <div className={['bg-white text-zinc-900 dark:bg-zinc-900 dark:text-zinc-100 rounded-lg', colorMode === 'dark' ? 'dark' : ''].join(' ')}>
+          <RichTextEditor
+            value={{
+              format: (block.content as any)?.format ?? 'tiptap',
+              json: (block.content as any)?.json,
+              html: initialHtml,
+              value: initialHtml,
+              text: (initialHtml || '').replace(/<[^>]+>/g, ''),
+            }}
+            onChange={(next) => {
+              // TipTap often returns "<p></p>" for plain text edits; prefer `next.text` if html is trivial.
+              const rawHtml = (next.html ?? '').trim();
+              const isTrivialHtml = rawHtml === '' || /^<p>\s*<\/p>$/.test(rawHtml);
+              const fromText = (next.text ?? '').trim();
+
+              // build a reasonable HTML when editor provided only plain text
+              const htmlFromText = fromText ? `<p>${escapeHtml(fromText).replace(/\n/g, '<br/>')}</p>` : '';
+
+              // Sanitize chosen html; coalesce against plain text
+              const chosenHtml = DOMPurify.sanitize(isTrivialHtml ? htmlFromText : rawHtml);
+              const plain = fromText || chosenHtml.replace(/<[^>]+>/g, '').trim();
+              const wc = next.word_count ?? (plain ? plain.split(/\s+/).length : 0);
+
+              // Mirror to ALL canonical fields in BOTH shapes
+              (block as any).props = {
+                ...(block as any).props ?? {},
+                html: chosenHtml,
+                text: plain,
+                value: chosenHtml, // legacy consumers
+              };
+
+              (block as any).content = {
+                ...(block as any).content ?? {},
+                format: 'tiptap',
+                json: next.json ?? { type: 'doc', content: [{ type: 'paragraph', content: [] }] },
+                html: chosenHtml,
+                text: plain,
+                value: chosenHtml,
+                summary: plain.slice(0, 280),
+                word_count: wc,
+              };
+            }}
+            onUploadImage={async (file) => {
+              const { publicUrl } = await uploadEditorImage(file, 'editor-images');
+              return publicUrl;
+            }}
+            onSave={() => onSave(block)}
+            placeholder="Type ‘/’ for commands…"
+            colorMode={colorMode}
+            template={template}
+            currentPage={currentPage}
+          />
+        </div>
+
+        <div className="mt-4 flex justify-end gap-2">
+          <button
+            onClick={() => onSave(block)}
+            className="px-4 py-2 rounded-md bg-primary text-white hover:bg-primary/80"
+          >
+            Save
+          </button>
+          <button
+            onClick={onClose}
+            className="px-4 py-2 rounded-md bg-muted text-muted-foreground hover:bg-muted/80"
+          >
+            Cancel
+          </button>
+        </div>
+      </div>
+    );
   }
+// Respond to the global toolbar Save/Cancel for non-text editors
+useEffect(() => {
+  const onToolbarSave = () => onSave?.(block);
+  const onToolbarCancel = () => onClose?.();
 
-  // Prefer json if present, else best-available string
-  const initialHtml =
-    block.content?.html ??
-    block.props?.html ??
-    block.content?.value ??
-    block.props?.value ??
-    block.content?.text ??
-    block.props?.text ??
-    '';
+  window.addEventListener('qs:block-editor:save', onToolbarSave as any);
+  window.addEventListener('qs:block-editor:cancel', onToolbarCancel as any);
+  window.addEventListener('qs:block-editor:close', onToolbarCancel as any);
 
-  // Ensure toolbar Save flushes this editor if modal is open
-  useEffect(() => {
-    const onToolbarSave = () => onSave?.(block);
-    window.addEventListener('qs:block-editor:save', onToolbarSave as any);
-    return () => window.removeEventListener('qs:block-editor:save', onToolbarSave as any);
-  }, [block, onSave]);
-
-  return (
-    <div className={['p-4', colorMode === 'dark' ? 'dark' : ''].join(' ')}>
-      <div className={['bg-white text-zinc-900 dark:bg-zinc-900 dark:text-zinc-100 rounded-lg', colorMode === 'dark' ? 'dark' : ''].join(' ')}>
-        <RichTextEditor
-          value={{
-            format: block.content?.format ?? 'tiptap',
-            json: block.content?.json,
-            html: initialHtml,
-            value: initialHtml,
-            text: (initialHtml || '').replace(/<[^>]+>/g, ''),
-          }}
-          onChange={(next) => {
-            // TipTap often returns "<p></p>" for plain text edits; prefer `next.text` if html is trivial.
-            const rawHtml = (next.html ?? '').trim();
-            const isTrivialHtml = rawHtml === '' || /^<p>\s*<\/p>$/.test(rawHtml);
-            const fromText = (next.text ?? '').trim();
-
-            // build a reasonable HTML when editor provided only plain text
-            const htmlFromText = fromText ? `<p>${escapeHtml(fromText).replace(/\n/g, '<br/>')}</p>` : '';
-
-            // Sanitize chosen html; coalesce against plain text
-            const chosenHtml = DOMPurify.sanitize(isTrivialHtml ? htmlFromText : rawHtml);
-            const plain = fromText || chosenHtml.replace(/<[^>]+>/g, '').trim();
-            const wc = next.word_count ?? (plain ? plain.split(/\s+/).length : 0);
-
-            // Mirror to ALL canonical fields in BOTH shapes
-            block.props = {
-              ...(block.props ?? {}),
-              html: chosenHtml,
-              text: plain,
-              value: chosenHtml, // legacy consumers
-            } as any;
-
-            block.content = {
-              ...(block.content ?? {}),
-              format: 'tiptap',
-              json: next.json ?? { type: 'doc', content: [{ type: 'paragraph', content: [] }] },
-              html: chosenHtml,
-              text: plain,
-              value: chosenHtml,
-              summary: plain.slice(0, 280),
-              word_count: wc,
-            } as any;
-          }}
-          onUploadImage={async (file) => {
-            const { publicUrl } = await uploadEditorImage(file, 'editor-images');
-            return publicUrl;
-          }}
-          onSave={() => onSave(block)}
-          placeholder="Type ‘/’ for commands…"
-          colorMode={colorMode}
-          template={template}
-          currentPage={currentPage}
-        />
-      </div>
-
-      <div className="mt-4 flex justify-end gap-2">
-        <button
-          onClick={() => onSave(block)}
-          className="px-4 py-2 rounded-md bg-primary text-white hover:bg-primary/80"
-        >
-          Save
-        </button>
-        <button
-          onClick={onClose}
-          className="px-4 py-2 rounded-md bg-muted text-muted-foreground hover:bg-muted/80"
-        >
-          Cancel
-        </button>
-      </div>
-    </div>
-  );
-}
-
-
-
+  return () => {
+    window.removeEventListener('qs:block-editor:save', onToolbarSave as any);
+    window.removeEventListener('qs:block-editor:cancel', onToolbarCancel as any);
+    window.removeEventListener('qs:block-editor:close', onToolbarCancel as any);
+  };
+}, [block, onSave, onClose]);
 
   // --- Timeout / Error fallback UI ---
   if (!EditorComponent) {
@@ -287,10 +316,10 @@ if (block.type === 'text') {
         <details className="mt-3 rounded-md border border-zinc-700 bg-zinc-900 p-3">
           <summary className="cursor-pointer text-sm text-zinc-200">Open minimal JSON editor</summary>
           <JsonFallbackEditor
-            initialValue={block.content}
+            initialValue={(block as any).content}
             onCancel={onClose}
             onApply={(next) => {
-              block.content = next as any;
+              (block as any).content = next as any;
               onSave(block);
             }}
           />

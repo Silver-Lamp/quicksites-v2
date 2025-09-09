@@ -10,6 +10,9 @@ import { supabaseAdmin } from '@/lib/supabase/admin';
 import SiteRenderer from '@/components/sites/site-renderer';
 import { TemplateEditorProvider } from '@/context/template-editor-context';
 import { generatePageMetadata } from '@/lib/seo/generateMetadata';
+import CartPageClient from '@/components/cart/CartPageClient';
+import CheckoutPageClient from '@/components/cart/CheckoutPageClient';
+import ThankYouPageClient from '@/components/cart/ThankYouPageClient';
 
 /* -------------------- Types -------------------- */
 type SiteRow = {
@@ -35,7 +38,6 @@ type RenderSite = {
   slug: string | null;
   template_name: string | null;
   domain: string | null;
-  /** optional now */
   default_subdomain?: string | null;
   color_mode: 'light' | 'dark';
   pages: any[];
@@ -96,7 +98,7 @@ function safeParse(x: any) {
 async function loadSiteRowBySlug(slug: string): Promise<SiteRow | null> {
   const { data, error } = await supabaseAdmin
     .from('sites')
-    .select('id, slug, domain, template_id, published_snapshot_id') // ⬅️ dropped default_subdomain
+    .select('id, slug, domain, template_id, published_snapshot_id')
     .eq('slug', slug)
     .maybeSingle();
   if (error) {
@@ -122,7 +124,7 @@ async function loadSnapshotById(id: string): Promise<SnapshotRow | null> {
 async function loadDraftTemplate(templateId: string): Promise<{ data: any; siteFields: any } | null> {
   const { data, error } = await supabaseAdmin
     .from('templates')
-    .select('id, slug, template_name, data, header_block, footer_block, color_mode, domain') // ⬅️ dropped default_subdomain here too (if missing)
+    .select('id, slug, template_name, data, header_block, footer_block, color_mode, domain')
     .eq('id', templateId)
     .maybeSingle();
   if (error) {
@@ -160,9 +162,15 @@ async function isAdminUser(userId: string | null) {
 export async function generateMetadata({
   params,
 }: {
-  params: Promise<{ slug: string; rest?: string[] }>; // ⬅️ Promise
+  params: Promise<{ slug: string; rest?: string[] }>;
 }): Promise<Metadata> {
-  const { slug, rest } = await params; // ⬅️ await it
+  const { slug, rest } = await params;
+
+  // Lightweight metadata for special routes
+  if (rest?.[0] === 'cart') return { title: 'Cart' };
+  if (rest?.[0] === 'checkout') return { title: 'Checkout' };
+  if (rest?.[0] === 'thank-you') return { title: 'Thank you' };
+
   const supabase = await getServerSupabase();
   const { data: { user } } = await supabase.auth.getUser();
   const admin = await isAdminUser(user?.id ?? null);
@@ -170,7 +178,6 @@ export async function generateMetadata({
   const siteRow = await loadSiteRowBySlug(slug);
   if (!siteRow) return {};
 
-  // choose snapshot (preferred) or draft (admin backstop)
   let snapshotData: any | null = null;
   if (siteRow.published_snapshot_id) {
     const snap = await loadSnapshotById(siteRow.published_snapshot_id);
@@ -197,9 +204,16 @@ export async function generateMetadata({
 export default async function SitePreviewPage({
   params,
 }: {
-  params: Promise<{ slug: string; rest?: string[] }>; // ⬅️ Promise
+  params: Promise<{ slug: string; rest?: string[] }>;
 }) {
-  const { slug, rest } = await params; // ⬅️ await it
+  const { slug, rest } = await params;
+
+  // Special routes served directly
+  if (Array.isArray(rest)) {
+    if (rest[0] === 'cart') return <CartPageClient />;
+    if (rest[0] === 'checkout') return <CheckoutPageClient />;
+    if (rest[0] === 'thank-you') return <ThankYouPageClient />;
+  }
 
   const supabase = await getServerSupabase();
   const { data: { user } } = await supabase.auth.getUser();

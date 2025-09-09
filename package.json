@@ -213,7 +213,8 @@
     "vitest": "^3.2.4",
     "webfontloader": "^1.6.28",
     "zod": "^3.25.67",
-    "zod-to-json-schema": "^3.24.5"
+    "zod-to-json-schema": "^3.24.5",
+    "zustand": "^5.0.8"
   },
   "author": "Silver Lamp Studio",
   "license": "MIT",

@@ -5,16 +5,22 @@ import Link from 'next/link';
 import { ShoppingCart } from 'lucide-react';
 import { useCartStore } from '@/components/cart/cart-store';
 
+function clsx(...xs: Array<string | false | null | undefined>) {
+  return xs.filter(Boolean).join(' ');
+}
+
 function readEcomEnabled(): boolean {
   try {
     const snap = (window as any).__QS_ECOM__;
     if (snap?.merchantId || snap?.email) return true;
+
     const tpl =
       (window as any).__QS_TPL_REF__?.current ??
       (window as any).__QS_TEMPLATE__ ??
       null;
     const data = tpl?.data ?? {};
     const metaE = data?.meta?.ecom ?? data?.meta?.ecommerce ?? {};
+
     return Boolean(
       metaE?.merchant_id ||
       metaE?.merchant_email ||
@@ -34,15 +40,9 @@ export default function CartButton({
   className?: string;
   hideWhenEmpty?: boolean;
 }) {
-  const { items, subtotalCents } = useCartStore((s) => ({
-    items: s.items,
-    subtotalCents: s.subtotalCents,
-  }));
-
-  const count = React.useMemo(
-    () => items.reduce((n, i) => n + i.qty, 0),
-    [items]
-  );
+  // ✅ Select primitives/arrays directly to avoid getServerSnapshot loops
+  const items = useCartStore((s) => s.items);
+  const count = React.useMemo(() => items.reduce((n, i) => n + i.qty, 0), [items]);
 
   const [enabled, setEnabled] = React.useState(false);
   const [bump, setBump] = React.useState(false);
@@ -51,16 +51,16 @@ export default function CartButton({
     setEnabled(readEcomEnabled());
   }, []);
 
-  // bump animation on add
+  // Bump on add-to-cart
   React.useEffect(() => {
     const onAdd = () => {
       setBump(true);
       const t = setTimeout(() => setBump(false), 300);
       return () => clearTimeout(t);
     };
-    const handler = onAdd as EventListener;
-    window.addEventListener('qs:cart:add', handler);
-    return () => window.removeEventListener('qs:cart:add', handler);
+    const h = onAdd as EventListener;
+    window.addEventListener('qs:cart:add', h);
+    return () => window.removeEventListener('qs:cart:add', h);
   }, []);
 
   if ((!enabled && !count) || (hideWhenEmpty && !count)) return null;
@@ -68,11 +68,11 @@ export default function CartButton({
   return (
     <Link
       href="/cart"
-      className={[
+      className={clsx(
         'relative inline-flex items-center justify-center rounded-md border px-3 py-1.5 text-sm hover:bg-accent transition',
-        bump ? 'scale-105' : '',
-        className,
-      ].join(' ')}
+        bump && 'scale-105',
+        className
+      )}
       aria-label={`Cart${count ? `, ${count} item${count > 1 ? 's' : ''}` : ''}`}
     >
       <ShoppingCart className="h-4 w-4" />

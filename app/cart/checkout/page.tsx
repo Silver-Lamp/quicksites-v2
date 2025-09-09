@@ -1,3 +1,4 @@
+// app/cart/checkout/page.tsx
 import CartCouponChip from '@/components/cart/cart-coupon-chip';
 import { useCartStore } from '@/components/cart/cart-store';
 

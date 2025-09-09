@@ -14,26 +14,10 @@ import { Providers } from './providers';
 import MagicLinkBridge from '@/components/auth/MagicLinkBridge';
 import RouteChangeOverlayClient from '@/components/ui/RouteChangeOverlayClient';
 import { resolveOrg } from '@/lib/org/resolveOrg';
+import CartEventsWire from '@/components/cart/cart-events-wire';
+import CartFab from '@/components/cart/cart-fab'; // ← client component, safe to import in server layout
 
-
-
-// 'use client';
 import * as React from 'react';
-
-export function CartWire({ children }: { children: React.ReactNode }) {
-  React.useEffect(() => {
-    const onAdd = (e: any) => {
-      const { id, qty } = e?.detail || {};
-      // toast, badge bump, etc.
-      console.log('Added to cart:', id, qty);
-    };
-    window.addEventListener('qs:cart:add', onAdd as EventListener);
-    return () => window.removeEventListener('qs:cart:add', onAdd as EventListener);
-  }, []);
-  return <>{children}</>;
-}
-
-
 
 export const metadata = { /* …your existing metadata… */ };
 
@@ -55,7 +39,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       },
     }
   );
-  const { data: { session } } = await supa.auth.getSession();
+  const { data: { session } } = await supa.auth.getSession(); // ← bracket fix
 
   return (
     <html lang="en" suppressHydrationWarning>
@@ -68,9 +52,17 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         <RouteChangeOverlayClient showDelayMs={120} minVisibleMs={350} />
 
         <MagicLinkBridge />
+
         {/* Pass org into Providers for white-label branding */}
         <Providers initialSession={session} org={org}>
+          {/* Cart event bridge -> pushes qs:cart:add into Zustand */}
+          <CartEventsWire />
+
+          {/* App content */}
           {children}
+
+          {/* Mobile floating cart button (client-only) */}
+          <CartFab />
         </Providers>
       </body>
     </html>

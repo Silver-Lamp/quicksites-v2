@@ -1,27 +1,21 @@
 // app/favicon.ico/route.ts
-import { NextResponse } from 'next/server';
-import { getSiteByDomain } from '@/lib/templates/getSiteByDomain';
-
 export const runtime = 'nodejs';
-export const dynamic = 'force-dynamic';
-export const revalidate = 0;
 
 export async function GET(req: Request) {
-  try {
-    const url = new URL(req.url);
-    const host = url.host; // e.g., graftontowing.com or subdomain
-    const tpl = await getSiteByDomain(host);
-    const icon = (tpl as any)?.data?.meta?.favicon_url as string | undefined;
+  // Proxy the static icon (must exist at public/qs-default-favicon.ico)
+  const url = new URL(req.url);
+  const target = new URL('/qs-default-favicon.ico', url);
 
-    if (icon && /^https?:\/\//.test(icon)) {
-      const res = NextResponse.redirect(icon, 302); // temporary so changes take effect immediately
-      res.headers.set('Cache-Control', 'no-store, must-revalidate');
-      return res;
-    }
-
-    // fallback to a renamed default icon in /public
-    return NextResponse.rewrite(new URL('/qs-default-favicon.ico', url));
-  } catch {
-    return NextResponse.rewrite(new URL('/qs-default-favicon.ico', req.url));
+  // Fetch the static asset and stream it through
+  const res = await fetch(target.toString(), { cache: 'force-cache' });
+  if (!res.ok || !res.body) {
+    return new Response('favicon not found', { status: 404 });
   }
+
+  const headers = new Headers(res.headers);
+  // Ensure correct type + sensible caching
+  headers.set('Content-Type', 'image/x-icon');
+  headers.set('Cache-Control', 'public, max-age=86400, immutable');
+
+  return new Response(res.body, { status: 200, headers });
 }

@@ -1,3 +1,4 @@
+// components/cart/cart-coupon-chip.tsx
 'use client';
 
 import { useState } from 'react';

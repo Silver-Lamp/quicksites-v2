@@ -1,8 +1,10 @@
+// components/site/site-header.tsx
 'use client';
 
 import * as React from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
+import dynamic from 'next/dynamic';
 import { usePathname } from 'next/navigation';
 import { Menu, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -14,6 +16,9 @@ import {
   SheetTitle,
   SheetClose,
 } from '@/components/ui/sheet';
+
+// Lazy-load the client CartButton (reads Zustand + snapshot; hides itself when not needed)
+const CartButton = dynamic(() => import('@/components/cart/cart-button'), { ssr: false });
 
 type LinkItem = {
   label: string;
@@ -98,6 +103,10 @@ export default function SiteHeader({
               </Link>
             )
           )}
+
+          {/* Divider + Cart (shows only if ecom enabled or cart has items) */}
+          <span className="mx-1 h-5 w-px bg-zinc-800/50" />
+          <CartButton />
         </nav>
 
         {/* Mobile menu */}
@@ -150,6 +159,12 @@ export default function SiteHeader({
                     </SheetClose>
                   );
                 })}
+
+                {/* Cart button (always visible on mobile; it hides itself when empty & ecom off) */}
+                <div className="mt-3">
+                  <CartButton hideWhenEmpty={false} className="w-full justify-center" />
+                </div>
+
                 <SheetClose asChild>
                   <Button variant="ghost" className="mt-2 w-full gap-2" aria-label="Close menu">
                     <X className="h-4 w-4" /> Close

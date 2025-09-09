@@ -15,6 +15,16 @@ type Product = {
   qty_available?: number | null;
 };
 
+type CartAddPayload = {
+  id: string;
+  qty: number;
+  price_cents: number;
+  title: string;
+  image_url?: string | null;
+  product_type?: string | null;
+  merchantId?: string | null;
+};
+
 const clamp = (n: number, min = 1, max = 4) =>
   Math.max(min, Math.min(max, Number.isFinite(n) ? n : 0));
 
@@ -30,6 +40,7 @@ function readIds(c: any): string[] {
 function getTpl(): any {
   return (window as any).__QS_TPL_REF__?.current ?? (window as any).__QS_TEMPLATE__ ?? null;
 }
+
 function readMerchantFromTpl() {
   try {
     const tpl = getTpl();
@@ -45,24 +56,29 @@ function readMerchantFromTpl() {
       data?.ecommerce?.merchant_id ??
       '';
     return { email: String(email || ''), merchantId: String(merchantId || '') };
-  } catch { return { email: '', merchantId: '' }; }
+  } catch {
+    return { email: '', merchantId: '' };
+  }
+}
+
+function readMerchantSnapshot() {
+  try {
+    return (window as any).__QS_ECOM__ ?? {};
+  } catch {
+    return {};
+  }
 }
 
 function productHref(p: Product) {
   return p.slug ? `/p/${encodeURIComponent(p.slug)}` : `/product/${encodeURIComponent(p.id)}`;
 }
 
-function emitAddToCart(detail: { id: string; qty: number }) {
-  try { window.dispatchEvent(new CustomEvent('qs:cart:add', { detail })); } catch {}
-  // optional: naive localStorage cart for dev
+function emitAddToCart(detail: CartAddPayload) {
   try {
-    const key = 'qs_cart';
-    const current = JSON.parse(localStorage.getItem(key) || '[]') as Array<{id:string;qty:number}>;
-    const idx = current.findIndex(x => x.id === detail.id);
-    if (idx >= 0) current[idx].qty += detail.qty; else current.push({ id: detail.id, qty: detail.qty });
-    localStorage.setItem(key, JSON.stringify(current));
-    window.dispatchEvent(new CustomEvent('qs:cart:changed', { detail: { items: current }}));
-  } catch {}
+    window.dispatchEvent(new CustomEvent('qs:cart:add', { detail }));
+  } catch {
+    /* noop */
+  }
 }
 
 export default function RenderProductsGrid({ block }: { block: Block }) {
@@ -89,10 +105,17 @@ export default function RenderProductsGrid({ block }: { block: Block }) {
         const byId = new Map(got.map((p) => [p.id, p]));
         setProducts(unique.map((id) => byId.get(id)).filter(Boolean) as Product[]);
       } else {
-        const { merchantId, email } = readMerchantFromTpl();
+        const snap = readMerchantSnapshot();
+        let { merchantId, email } = snap as { merchantId?: string; email?: string };
+        if (!merchantId && !email) {
+          const fromTpl = readMerchantFromTpl();
+          merchantId = fromTpl.merchantId || undefined;
+          email = fromTpl.email || undefined;
+        }
         if (!merchantId && !email) { setProducts([]); setLoading(false); return; }
         const qs = new URLSearchParams({ limit: String(limit) });
-        if (merchantId) qs.set('merchantId', merchantId); else qs.set('email', email);
+        if (merchantId) qs.set('merchantId', merchantId);
+        else if (email) qs.set('email', email);
         const res = await fetch(`/api/public/products?${qs.toString()}`, { cache: 'no-store' });
         const json = await res.json().catch(() => ({}));
         if (!res.ok) throw new Error(json?.error || `${res.status} ${res.statusText}`);
@@ -151,7 +174,22 @@ export default function RenderProductsGrid({ block }: { block: Block }) {
                 <button
                   type="button"
                   className="inline-flex items-center rounded-md border px-3 py-1 text-sm hover:bg-accent"
-                  onClick={() => emitAddToCart({ id: p.id, qty: 1 })}
+                  onClick={() =>
+                    emitAddToCart({
+                      id: p.id,
+                      qty: 1,
+                      price_cents: p.price_cents,
+                      title: p.title,
+                      image_url: p.image_url ?? null,
+                      product_type: p.product_type ?? null,
+                      merchantId:
+                        (window as any).__QS_ECOM__?.merchantId ??
+                        ((): string | null => {
+                          const { merchantId } = readMerchantFromTpl();
+                          return merchantId && merchantId.length ? merchantId : null;
+                        })(),
+                    })
+                  }
                 >
                   Add to Cart
                 </button>

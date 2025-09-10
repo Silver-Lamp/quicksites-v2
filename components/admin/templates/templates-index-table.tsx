@@ -114,23 +114,42 @@ export default function TemplatesIndexTable({
     return (templates as any[])
       .filter((t) => {
         const isLocallyArchived = archivedIds.includes(t.id);
-        const isArchived = t?.data?.archived ?? isLocallyArchived;
+  
+        // Prefer column boolean; fallback to data flag; then local override
+        const colFlag =
+          typeof (t as any).archived === 'boolean' ? (t as any).archived : undefined;
+  
+        const dataFlagRaw =
+          (t as any)?.data && typeof (t as any).data === 'object'
+            ? (t as any).data.archived
+            : undefined;
+  
+        const dataFlag =
+          typeof dataFlagRaw === 'boolean'
+            ? dataFlagRaw
+            : typeof dataFlagRaw === 'string'
+            ? dataFlagRaw.toLowerCase() === 'true'
+            : undefined;
+  
+        const isArchived = (colFlag ?? dataFlag ?? isLocallyArchived) === true;
+  
         if (archiveFilter === 'archived') return isArchived;
         if (archiveFilter === 'active') return !isArchived;
         return true;
       })
       .filter((t) => {
         const term = search.toLowerCase();
-
-        // NEW: search display_name first, then template_name & slug
-        const name =
-          ((t.display_name || t.template_name || '') as string).toLowerCase();
-        const slug = (t.slug || '').toLowerCase();
-
+  
+        // Search display_name first, then template_name & slug
+        const name = ((t as any).display_name || (t as any).template_name || '')
+          .toString()
+          .toLowerCase();
+        const slug = ((t as any).slug || '').toString().toLowerCase();
+  
         // Use robust resolvers for search too
         const industry = resolveIndustry(t).toLowerCase();
         const city = resolveCity(t).toLowerCase();
-
+  
         return (
           name.includes(term) ||
           slug.includes(term) ||
@@ -144,7 +163,7 @@ export default function TemplatesIndexTable({
         return true;
       });
   }, [templates, search, viewMode, archiveFilter, archivedIds]);
-
+  
   useEffect(() => {
     setLastSelectedIndex(null);
   }, [filtered]);

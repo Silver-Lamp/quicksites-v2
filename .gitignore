@@ -16,7 +16,6 @@ dist/
 admin/.next/
 admin/.cache/
 outputs/
-archive/
 
 # 🧪 Test + screenshot results
 test-results/

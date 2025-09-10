@@ -42,7 +42,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   const { data: { session } } = await supa.auth.getSession(); // ← bracket fix
 
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="en" suppressHydrationWarning className="scrollbar-stable">
       <head>
         <title>{`${org.name} | One-Click Local Websites`}</title>
         <link rel="icon" href={org.favicon_url ?? '/favicon.ico'} />

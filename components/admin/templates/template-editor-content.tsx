@@ -8,6 +8,7 @@ import {
   type Dispatch,
   type SetStateAction,
   useRef,
+  useCallback,
 } from 'react';
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
@@ -29,14 +30,16 @@ import TemplateTruthTracker from './sidebar/TemplateTruthTracker';
 import NewTemplateWelcome from '@/components/admin/templates/NewTemplateWelcome';
 import CollapsiblePanel from '@/components/ui/collapsible-panel';
 
-// ✅ centralized block ops
+// ✅ centralized block ops (id-based patch helpers)
 import {
   insertBlockEmit,
   removeBlockEmit,
   replaceBlockEmit,
   moveBlockEmit,
-  // setBlocksEmit // (import later if you wire reordering/bulk)
+  // setBlocksEmit // (keep commented until you need bulk ops)
 } from '@/components/admin/templates/utils/blocks-patch';
+
+import { Save, Loader2, AlertTriangle, X } from 'lucide-react';
 
 const SidebarSettings = dynamic(
   () => import('@/components/admin/template-settings-panel/sidebar-settings'),
@@ -87,6 +90,36 @@ function setPageBlocks(p: any, blocks: Block[]) {
   if (Array.isArray(p?.content_blocks)) { p.content_blocks = blocks; wrote = true; }
   if (Array.isArray(p?.content?.blocks)) { p.content = { ...(p.content ?? {}), blocks }; wrote = true; }
   if (!wrote) { p.content = { ...(p?.content ?? {}), blocks }; }
+}
+
+// Keeps layout stable when the drawer opens/closes
+function useBodyScrollLock(locked: boolean) {
+  useEffect(() => {
+    const body = document.body;
+    const html = document.documentElement;
+
+    // Ensure the layout reserves space for the scrollbar at all times
+    // so width doesn't change when we toggle overflow.
+    html.style.setProperty('scrollbar-gutter', 'stable');
+
+    const prevOverflow = body.style.overflow;
+    const prevPadRight = body.style.paddingRight;
+
+    if (locked) {
+      // Compensate for the scrollbar width so content doesn't shift horizontally.
+      const scrollbar = window.innerWidth - html.clientWidth;
+      if (scrollbar > 0) body.style.paddingRight = `${scrollbar}px`;
+      body.style.overflow = 'hidden';
+    } else {
+      body.style.overflow = '';
+      body.style.paddingRight = '';
+    }
+
+    return () => {
+      body.style.overflow = prevOverflow;
+      body.style.paddingRight = prevPadRight;
+    };
+  }, [locked]);
 }
 
 function findBlockById(
@@ -219,8 +252,7 @@ function extractRichTextish(v: any): string | undefined {
   return undefined;
 }
 
-/** Mirror text/html/value across props & content so BOTH readers are satisfied.
- *  Coalesces from ANY of: root/props/content: html|text|value|markdown|body|json|doc|delta. */
+/** Mirror text/html/value across props & content so BOTH readers are satisfied. */
 function mirrorTextPropsAndContent<T extends Block | any>(b: T): T {
   if (!b || !isTextLike(b)) return b;
 
@@ -247,17 +279,14 @@ function mirrorTextPropsAndContent<T extends Block | any>(b: T): T {
       undefined;
   }
 
-  // If still nothing, leave empty string (renderers handle empty gracefully)
   const canon = (chosen ?? '').toString();
 
-  // Write back everywhere (don’t leave any consumer empty)
   props.html = canon;  content.html = canon;
   props.text = canon;  content.text = canon;
   props.value = canon; content.value = canon;
 
   if (!content.format) content.format = 'html';
 
-  // Clean stray root fields to keep shape tidy
   const out: any = { ...(b as any), props, content };
   delete out.html; delete out.text; delete out.value;
 
@@ -265,7 +294,7 @@ function mirrorTextPropsAndContent<T extends Block | any>(b: T): T {
 }
 
 
-/** Normalize ALL text-like blocks in a data object: returns a new data with mirrored shapes. */
+/** Normalize ALL text-like blocks in a data object */
 function normalizeDataTextShapes(data: any): any {
   const srcPages = Array.isArray(data?.pages) ? data.pages : [];
   const pagesOut = srcPages.map((p: any) => {
@@ -322,7 +351,7 @@ export default function EditorContent({
     emitApplyPatch(patch, opts);
   };
 
-  const editMuteRef = useRef(false); // prevent re-entrant block editor openings
+  const editMuteRef = useRef(false);
   const editingKeyRef = useRef<string | null>(null);
   const lastEditEvtRef = useRef<{ key: string; ts: number } | null>(null);
 
@@ -432,6 +461,9 @@ export default function EditorContent({
   );
 
   const [showSettings, setShowSettings] = useState(false);
+  // Keep body scroll locked when the settings drawer is open (no layout shift)
+  useBodyScrollLock(showSettings);
+
   const [pageSettingsOpen, setPageSettingsOpen] = useState(false);
 
   // header panel above preview
@@ -469,7 +501,6 @@ export default function EditorContent({
       return;
     }
 
-    // Use id→canonical_id→slug for dismissal key (avoid the old 'new' bucket)
     const tid =
       (template as any)?.id ??
       (template as any)?.canonical_id ??
@@ -494,13 +525,11 @@ export default function EditorContent({
     const key = `qs:newtemplate:welcome:dismissed:${tid}`;
     try {
       localStorage.setItem(key, '1');
-      // Optional: clear old global 'new' bucket so future templates aren’t blocked
       localStorage.removeItem('qs:newtemplate:welcome:dismissed:new');
     } catch {}
 
     setShowWelcome(false);
 
-    // Open first Hero if present; else open Header
     setTimeout(() => {
       const ref = findFirstBlockOfType(template, 'hero');
       if (ref?.block) {
@@ -539,10 +568,15 @@ export default function EditorContent({
           setShowSettings((prev) => !prev);
         }
       }
+      // Esc closes the modal when open
+      if (key === 'escape' && showSettings) {
+        e.preventDefault();
+        setShowSettings(false);
+      }
     };
     window.addEventListener('keydown', onKey, { capture: true, passive: false });
     return () => window.removeEventListener('keydown', onKey as any, { capture: true } as any);
-  }, []);
+  }, [showSettings]);
 
   // keep a ref to the currently-edited block and last edit event
   useEffect(() => {
@@ -589,7 +623,6 @@ export default function EditorContent({
   function openBlockEditor(blockId?: string | null, blockPath?: string | null) {
     if (editMuteRef.current) return;
 
-    // Try id, then explicit path, then treat id as path (e.g. "2:5")
     let ref =
       (blockId ? findBlockById(template, blockId) : null) ??
       findBlockByPath(template, blockPath);
@@ -604,7 +637,6 @@ export default function EditorContent({
       return;
     }
 
-    // Normalize text so editor fields are prefilled regardless of shape
     const normalized = mirrorTextPropsAndContent(ref.block);
 
     editMuteRef.current = true;
@@ -612,7 +644,6 @@ export default function EditorContent({
   }
 
   function openAdder(blockId?: string | null, blockPath?: string | null) {
-    // Special-case: inline preview "add first"
     if (blockId === '__ADD_AT_START__') {
       const pages = getTemplatePages(template);
       let pageIdx = pages.findIndex((p: any) => p?.slug === currentPageSlug);
@@ -621,7 +652,6 @@ export default function EditorContent({
       return;
     }
 
-    // Find by path, id, or id-as-path
     let ref =
       (blockPath ? findBlockByPath(template, blockPath) : null) ??
       (blockId ? findBlockById(template, blockId) : null);
@@ -641,7 +671,6 @@ export default function EditorContent({
     if (toIndex == null || Number.isNaN(Number(toIndex))) return;
     captureHistory();
 
-    // Resolve by path, id, or id-as-path "p:b"
     let ref =
       (blockPath ? findBlockByPath(template, blockPath) : null) ??
       (blockId ? findBlockById(template, blockId) : null);
@@ -681,16 +710,13 @@ export default function EditorContent({
         const p = nextData.pages[ref!.pageIdx];
         const afterArr =
           (p?.blocks ?? p?.content_blocks ?? p?.content?.blocks ?? []) as Block[];
-        // if arrays are same order/length, assume no-op
         if (afterArr.length !== beforeArr.length) return false;
-        // shallow id signature compare
         const sig = (a: Block[]) =>
           a.map((b, i) => String((b as any)?._id ?? (b as any)?.id ?? `${i}`)).join('|');
         return sig(afterArr) === sig(beforeArr);
       })();
 
     if (emitterNoOp) {
-      // Local reorder by index
       const pagesOut = pages.map((p, i) => {
         if (i !== ref!.pageIdx) return p;
         const copy: any = { ...p };
@@ -720,7 +746,6 @@ export default function EditorContent({
   function deleteBlock(blockId?: string | null, blockPath?: string | null) {
     captureHistory();
 
-    // Resolve reference: by explicit path, by id, or by id-as-path "p:b"
     let ref =
       (blockPath ? findBlockByPath(template, blockPath) : null) ??
       (blockId ? findBlockById(template, blockId) : null);
@@ -733,14 +758,12 @@ export default function EditorContent({
     const page = pages[ref.pageIdx];
     const pageKey = String(page?.id ?? page?.slug ?? page?.path ?? ref.pageIdx);
 
-    // Snapshot current blocks for change detection & fallback
     const beforeArr =
       (page?.blocks ??
         page?.content_blocks ??
         page?.content?.blocks ??
         []) as Block[];
 
-    // Prefer removing by real id if present
     const realId = (ref.block as any)?._id ?? (ref.block as any)?.id ?? null;
     let nextData: any | undefined;
 
@@ -748,7 +771,6 @@ export default function EditorContent({
       nextData = removeBlockEmit(template, pageKey, String(realId));
     }
 
-    // If the emitter didn’t change anything (missing id / page key mismatch), fall back to index delete
     const noChangeViaEmitter =
       !nextData ||
       !Array.isArray(nextData?.pages) ||
@@ -756,7 +778,7 @@ export default function EditorContent({
         const p = nextData.pages[ref!.pageIdx];
         const afterArr =
           (p?.blocks ?? p?.content_blocks ?? p?.content?.blocks ?? []) as Block[];
-        return afterArr.length === beforeArr.length; // nothing removed
+        return afterArr.length === beforeArr.length;
       })();
 
     if (noChangeViaEmitter) {
@@ -778,7 +800,6 @@ export default function EditorContent({
         : { pages: pagesOut };
     }
 
-    // Apply + transient broadcast (keeps preview in sync immediately)
     if (nextData) {
       applyDataAndBroadcast(nextData);
     }
@@ -792,7 +813,6 @@ export default function EditorContent({
   ) {
     captureHistory();
 
-    // 1) create new block with an id
     const makeId = () =>
       (typeof crypto !== 'undefined' && crypto.randomUUID
         ? crypto.randomUUID()
@@ -804,7 +824,6 @@ export default function EditorContent({
     const withId = { ...(baseBlock as any), _id: insertedId } as Block;
     const withIdMirrored = mirrorTextPropsAndContent(withId);
 
-    // 2) resolve page + snapshot current blocks for change detection
     const pages = getTemplatePages(template);
     const page = pages[pageIdx];
     const pageKey = String(page?.id ?? page?.slug ?? page?.path ?? pageIdx);
@@ -815,7 +834,6 @@ export default function EditorContent({
         page?.content?.blocks ??
         []) as Block[];
 
-    // 3) try centralized emitter first
     const emitted = insertBlockEmit(template, pageKey, withIdMirrored, insertAt);
     let nextData: any | undefined = emitted?.nextData;
 
@@ -826,10 +844,9 @@ export default function EditorContent({
         const p = nextData.pages[pageIdx];
         const afterArr =
           (p?.blocks ?? p?.content_blocks ?? p?.content?.blocks ?? []) as Block[];
-        return afterArr.length !== beforeArr.length + 1; // didn't actually insert
+        return afterArr.length !== beforeArr.length + 1;
       })();
 
-    // 4) if no-op, do a local immutable insert by index
     if (emitterNoOp) {
       const pagesOut = pages.map((p, i) => {
         if (i !== pageIdx) return p;
@@ -850,18 +867,15 @@ export default function EditorContent({
         : { pages: pagesOut };
     }
 
-    // 5) apply + transient broadcast so inline preview updates instantly
     if (nextData) {
       applyDataAndBroadcast(nextData);
     }
     setAdderTarget(null);
 
-    // 6) optionally open the editor for the inserted block
     if (opts?.openEditor) {
       if ((withIdMirrored as any).type === 'hours') {
         openHoursSettingsPanel(setShowSettings);
       } else {
-        // Resolve actual index post-insert from nextData
         const p = nextData?.pages?.[pageIdx];
         const arr =
           (p?.blocks ?? p?.content_blocks ?? p?.content?.blocks ?? []) as any[];
@@ -879,29 +893,24 @@ export default function EditorContent({
   function saveEditedBlock(updated: Block) {
     captureHistory();
 
-    // Keep the same id as the block being edited (some editors omit _id/id on save)
     const ref = editingBlock?.ref as { pageIdx: number; blockIdx: number; block: Block } | null;
     const curAny = (ref?.block ?? {}) as any;
     const updAny = (updated as any);
 
     const curId = curAny._id ?? curAny.id ?? null;
     if (curId && updAny._id == null && updAny.id == null) {
-      updAny._id = curId; // preserve identity so replace-by-id works + keys stay stable
+      updAny._id = curId;
     }
 
-    // Mirror text/html/value across shapes (renderer + editor consistency)
     const normalizedUpdated = mirrorTextPropsAndContent(updAny as Block);
 
-    // First try centralized replace (by id across all pages)
     let nextData = replaceBlockEmit(template, normalizedUpdated);
 
-    // If emitter didn't return anything (e.g., no id match), do local replace by index
     const emitterNoOp = !nextData || !Array.isArray(nextData?.pages);
     if (emitterNoOp && ref) {
       const pages = [...getTemplatePages(template)];
       const page = { ...pages[ref.pageIdx] };
       const blocks = [...getPageBlocks(page)];
-      // Clamp index just in case
       const idx = Math.max(0, Math.min(ref.blockIdx, blocks.length - 1));
       blocks[idx] = normalizedUpdated;
       setPageBlocks(page, blocks);
@@ -911,7 +920,6 @@ export default function EditorContent({
         : { pages };
     }
 
-    // Apply + transient broadcast so inline preview updates immediately
     if (nextData) {
       applyDataAndBroadcast(nextData);
     }
@@ -932,7 +940,6 @@ export default function EditorContent({
       };
       setTemplate(next);
       onChange(next);
-      // broadcast only specific bits (meta + any chrome)
       const patch: Partial<Template> = {
         ...(detail.headerBlock ? { headerBlock: detail.headerBlock } : {}),
         ...(detail.footerBlock ? { footerBlock: detail.footerBlock } : {}),
@@ -957,7 +964,6 @@ export default function EditorContent({
       } | null;
       if (!d || typeof d !== 'object') return;
 
-      // ignore edit intents while a modal is open
       if (
         editMuteRef.current &&
         (d.type === 'preview:edit-block' || d.type === 'preview:edit-header')
@@ -971,7 +977,6 @@ export default function EditorContent({
       }
 
       if (d.type === 'preview:edit-block') {
-        // dedupe + debounce
         const key = `${d.blockId ?? ''}|${d.blockPath ?? ''}`;
         const now = performance.now();
         const last = lastEditEvtRef.current;
@@ -1001,7 +1006,6 @@ export default function EditorContent({
         return;
       }
       if (d.type === 'preview:move-block') {
-        // expects: { type:'preview:move-block', blockId?, blockPath?, toIndex:number }
         moveBlock(d.blockId ?? null, d.blockPath ?? null, (d as any).toIndex);
         return;
       }
@@ -1062,61 +1066,31 @@ export default function EditorContent({
     );
   }
 
-// keep data/pages in sync + notify preview iframe (MERGE, don't overwrite)
-const applyDataAndBroadcast = (nextData: any, extra?: Partial<Template>) => {
-  const prevData = (template as any)?.data ?? {};
-  const mergedData = { ...prevData, ...(nextData ?? {}) };
-  if (Array.isArray(nextData?.pages)) mergedData.pages = nextData.pages;
+  // keep data/pages in sync + notify preview iframe (MERGE, don't overwrite)
+  const applyDataAndBroadcast = (nextData: any, extra?: Partial<Template>) => {
+    const prevData = (template as any)?.data ?? {};
+    const mergedData = { ...prevData, ...(nextData ?? {}) };
+    if (Array.isArray(nextData?.pages)) mergedData.pages = nextData.pages;
 
-  const nextTemplate: any = { ...template, ...(extra ?? {}), data: mergedData };
-  nextTemplate.pages = mergedData.pages;
+    const nextTemplate: any = { ...template, ...(extra ?? {}), data: mergedData };
+    nextTemplate.pages = mergedData.pages;
 
-  setTemplate(nextTemplate);
-  onChange(nextTemplate);
-  emitPatchIfAllowed({
-    data: nextTemplate.data,
-    pages: nextTemplate.pages,
-    ...(extra?.headerBlock ? { headerBlock: extra.headerBlock as any } : {}),
-    ...(extra?.footerBlock ? { footerBlock: extra.footerBlock as any } : {}),
-  });
-};
-
-
+    setTemplate(nextTemplate);
+    onChange(nextTemplate);
+    emitPatchIfAllowed({
+      data: nextTemplate.data,
+      pages: nextTemplate.pages,
+      ...(extra?.headerBlock ? { headerBlock: extra.headerBlock as any } : {}),
+      ...(extra?.footerBlock ? { footerBlock: extra.footerBlock as any } : {}),
+    });
+  };
 
   return (
-    <div className="flex min-w-0">
+    <div className="relative flex min-w-0 w-full [scrollbar-gutter:stable]">
       {showWelcome && <NewTemplateWelcome onStart={dismissWelcome} />}
 
       {/* Right: header editor panel + preview */}
       <div className="flex-1 min-w-0 xl:ml-0 ml-0 px-0 lg:px-2">
-        {/* Tabs */}
-        {/* <div className="flex gap-2 border-b border白/10 mb-3 px-2 pt-2">
-          <Link
-            href={buildTabHref('blocks')}
-            className={[
-              'px-4 py-2 text-sm rounded-t-md border-b-2 transition-colors',
-              tab === 'blocks'
-                ? 'border-white/80 text-white'
-                : 'border-transparent text-white/60 hover:text-white',
-            ].join(' ')}
-            prefetch={false}
-          >
-            Blocks
-          </Link>
-          <Link
-            href={buildTabHref('live')}
-            className={[
-              'px-4 py-2 text-sm rounded-t-md border-b-2 transition-colors',
-              tab === 'live'
-                ? 'border-white/80 text-white'
-                : 'border-transparent text-white/60 hover:text-white',
-            ].join(' ')}
-            prefetch={false}
-          >
-            Live
-          </Link>
-        </div> */}
-
         {editingHeader && (
           <div className="mb-4 rounded-xl border border-white/10 bg-neutral-950/70 backdrop-blur">
             <PageHeaderEditor
@@ -1132,7 +1106,6 @@ const applyDataAndBroadcast = (nextData: any, extra?: Partial<Template>) => {
         <LiveEditorPreviewFrame
           template={template}
           onChange={(t) => {
-            // 🔁 normalize iframe → parent updates before applying
             const normalized = {
               ...t,
               data: normalizeDataTextShapes((t as any).data ?? {}),
@@ -1157,7 +1130,7 @@ const applyDataAndBroadcast = (nextData: any, extra?: Partial<Template>) => {
           onEditHeader={openHeaderEditor}
           onRequestEditBlock={(id) => openBlockEditor(id, null)}
           onRequestAddAfter={(id) => openAdder(id, null)}
-          onRequestDeleteBlock={(id) => deleteBlock(id, null)}  // delete wired
+          onRequestDeleteBlock={(id) => deleteBlock(id, null)}
           previewVersionId={previewVersionId}
           pageSlug={currentPageSlug}
         />
@@ -1234,42 +1207,71 @@ const applyDataAndBroadcast = (nextData: any, extra?: Partial<Template>) => {
         </div>
       )}
 
-      {template.id && (
-        <>
-          <div className="mt-3">
-            <CollapsiblePanel
-              id="truth-tracker"
-              key={`truth-tracker-${true ? 'open' : 'closed'}`}
-              title={<span className="flex items-center gap-2"><span>History</span></span>}
-              defaultOpen={false}
-              lazyMount
-              onOpenChange={() => {}}
-            >
-              {({ open }) => (!open ? null : <TruthTrackerPanel templateId={template.id} />)}
-            </CollapsiblePanel>
-            <CollapsiblePanel
-              id="editor-settings"
-              key={`settings-${showSettings ? 'open' : 'closed'}`}
-              title={
-                <span className="flex items-center gap-2">
-                  <span>Template Settings</span>
-                  <span className="text-[10px] text-white/40">
-                    (press <kbd className="px-1 py-0.5 rounded bg-white/10">S</kbd> to toggle)
+
+      {/* SETTINGS AS MODAL DRAWER */}
+      {showSettings && (
+        <div
+          className="fixed inset-0 z-[1300] bg-black/70 backdrop-blur-sm"
+          role="dialog"
+          aria-modal="true"
+        >
+          <div className="absolute inset-y-0 right-0 w-[min(92vw,1000px)] max-w-[1000px] h-full shadow-2xl">
+            <div className="h-full bg-neutral-900 border-l border-white/10 flex flex-col">
+              <div className="sticky top-0 z-10 flex items-center justify-between gap-3 p-3 border-b border-white/10 bg-neutral-900/95 backdrop-blur">
+                <div className="text-sm text-white/80">
+                  <strong>Template Settings</strong>
+                  <span className="ml-2 text-white/40 text-[10px]">
+                    (Press <kbd className="px-1 py-0.5 rounded bg-white/10">S</kbd> to close)
                   </span>
-                </span>
-              }
-              defaultOpen={showSettings}
-              lazyMount
-              onOpenChange={setShowSettings}
-            >
-              {SidebarSettings ? (
-                <SidebarSettings template={template} onChange={(p: any) => onChange(p)} />
-              ) : (
-                <div className="p-4 text-sm text-white/70">Loading settings…</div>
-              )}
-            </CollapsiblePanel>
+                </div>
+                <button
+                  onClick={() => setShowSettings(false)}
+                  className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-sm bg-white/10 hover:bg-white/20 text-white"
+                >
+                  <X className="h-4 w-4" />
+                  Close
+                </button>
+              </div>
+
+              <div className="flex-1 min-h-0 overflow-auto p-0">
+                {SidebarSettings ? (
+                  <>
+                  {/* History panel stays inline */}
+                  {template.id && (
+                    <div className="mt-3 w-full">
+                      <CollapsiblePanel
+                        id="truth-tracker"
+                        key={`truth-tracker-${true ? 'open' : 'closed'}`}
+                        title={<span className="flex items-center gap-2"><span>History</span></span>}
+                        defaultOpen={false}
+                        lazyMount
+                        onOpenChange={() => {}}
+                      >
+                        {({ open }) => (!open ? null : <TruthTrackerPanel templateId={template.id} />)}
+                      </CollapsiblePanel>
+                    </div>
+                  )}
+
+                  <SidebarSettings
+                    template={template}
+                    onChange={(p: any) => onChange(p)}
+                    variant="drawer"           // <-- makes it fill the modal
+                  />
+                  </>
+                ) : (
+                  <div className="p-4 text-sm text-white/70">Loading settings…</div>
+                )}
+              </div>
+            </div>
           </div>
-        </>
+
+          {/* Click-away area */}
+          <button
+            aria-label="Close settings"
+            className="absolute inset-0 left-0 right-[min(92vw,1000px)]"
+            onClick={() => setShowSettings(false)}
+          />
+        </div>
       )}
 
       {/* Bottom toolbar */}
@@ -1277,16 +1279,15 @@ const applyDataAndBroadcast = (nextData: any, extra?: Partial<Template>) => {
         template={template}
         autosaveStatus={autosaveStatus}
         onSaveDraft={(t) => {
-          // ensure text shapes are mirrored before persisting
           const normalized = { ...(t as any), data: normalizeDataTextShapes((t as any).data ?? {}) };
           setTemplate(normalized as any);
           onChange(normalized as any);
-          emitPatchIfAllowed({ template_name: (t as any).template_name, data: (normalized as any).data }, { persist: true }); // <-- persist
+          emitPatchIfAllowed({ template_name: (t as any).template_name, data: (normalized as any).data }, { persist: true });
         }}
         onUndo={undo}
         onRedo={redo}
         onOpenPageSettings={() => setPageSettingsOpen(true)}
-        onApplyTemplate={applyFromToolbar} // prevents re-emit loop
+        onApplyTemplate={applyFromToolbar}
         onSetRawJson={(json) => setRawJson(json)}
       />
 

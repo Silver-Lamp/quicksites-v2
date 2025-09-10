@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import {
   RotateCcw, RotateCw, AlertTriangle, X, Maximize2, Minimize2,
   Smartphone, Tablet, Monitor, Sun, Moon, SlidersHorizontal, Check,
-  Settings as SettingsIcon, Trash2, Database, Minus,
+  Settings as SettingsIcon, Trash2, Database, Minus, Wrench,
 } from 'lucide-react';
 import { Button } from '@/components/ui';
 import toast from 'react-hot-toast';
@@ -1106,6 +1106,7 @@ export function TemplateActionToolbar({
     'home';
     
   const centerPos = 'left-1/2 -translate-x-1/2';
+  const collapsedPos = 'left-[25%]'; // ~ one-third from the left (no translate)
 
   return createPortal(
     <>
@@ -1113,7 +1114,7 @@ export function TemplateActionToolbar({
         id="template-action-toolbar"
         className={`fixed bottom-4 z-[2147483647] rounded-2xl border border-zinc-700 bg-zinc-900/95 backdrop-blur shadow-lg text-zinc-100 hover:border-purple-500 transition pointer-events-auto ${
           toolbarCollapsed
-            ? `${centerPos} translate-x-0 w-auto px-2 py-2 opacity-80 hover:opacity-100`
+            ? `${collapsedPos} translate-x-0 w-auto px-2 py-2 opacity-80 hover:opacity-100`
             : `${centerPos} w-[95%] max-w-5xl px-4 sm:px-6 py-3 opacity-90 hover:opacity-100`
         }`}
         style={{ WebkitTapHighlightColor: 'transparent', pointerEvents: toolbarEnabled ? 'auto' : 'none' }}
@@ -1136,6 +1137,19 @@ export function TemplateActionToolbar({
             onClick={toggleToolbarCollapse}
           >
             <SettingsIcon className="w-4 h-4" />
+          </Button>
+
+          <Button
+            size="icon"
+            variant="ghost"
+            title="Open Site Settings (S)"
+            aria-label="Open Site Settings"
+            onClick={() => {
+              window.dispatchEvent(new CustomEvent('qs:settings:set-open', { detail: true }));
+              try { window.localStorage.setItem('qs:settingsOpen', '1'); } catch {}
+            }}
+          >
+            <Wrench className="w-4 h-4" />
           </Button>
 
           {/* Page manager */}

@@ -1,37 +1,51 @@
-// template-settings-panel/sidebar-settings.tsx
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import IdentityPanel from '../templates/panels/identity-panel';
 import ServicesPanel from '../templates/panels/services-panel';
-// import SlugPanel from '../templates/panels/slug-panel';
 import DomainPanel from '../templates/panels/domain-panel';
 import SeoPanel from '../templates/panels/seo-panel';
 import ThemePanel from '../templates/panels/theme-panel';
-// import TemplateJsonEditor from '../templates/template-json-editor';
 import PaymentSettingsPanel from '../payments/payment-settings-panel';
 import HoursPanel from '../templates/panels/hours-panel';
 import { Button } from '@/components/ui/button';
-import { Save, Loader2 } from 'lucide-react';
-
-import type { Template, Page } from '@/types/template';
+import { Save, Loader2, AlertTriangle } from 'lucide-react';
 import { Collapsible } from '@/components/ui/collapsible';
-import TemplateTruthTracker from '@/components/admin/templates/sidebar/TemplateTruthTracker';
-import { useTruthTrackerState } from '@/components/admin/templates/hooks/useTruthTrackerState';
-
-// NEW: E-commerce panel
 import EcommercePanel from '../templates/panels/ecommerce-panel';
 
-/* ---------- tracker helpers ---------- */
-async function createSnapshot(templateId: string) {
-  const r = await fetch(`/api/admin/snapshots/create?templateId=${encodeURIComponent(templateId)}`, { method: 'GET' });
-  const j = await r.json(); if (!r.ok) throw new Error(j?.error || 'snapshot failed');
-  return j.snapshotId as string;
-}
-async function publishSnapshot(templateId: string, snapshotId: string) {
-  const r = await fetch(`/api/admin/sites/publish?templateId=${encodeURIComponent(templateId)}&snapshotId=${encodeURIComponent(snapshotId)}`, { method: 'GET' });
-  const j = await r.json(); if (!r.ok) throw new Error(j?.error || 'publish failed');
-  return j;
+type SidebarProps = {
+  template: Template;
+  onChange?: (patch: Partial<Template>) => void;
+  isSite?: boolean;
+  /** 'inline' (default) = resizable sidebar; 'drawer' = fills modal/drawer, no resize */
+  variant?: 'inline' | 'drawer';
+};
+
+/* ---------------- Error boundary so a single panel can’t crash the whole sidebar ---------------- */
+import * as ReactNS from 'react';
+class PanelBoundary extends ReactNS.Component<{ name: string; children: ReactNS.ReactNode }, { err?: any }> {
+  state = { err: undefined as any };
+  static getDerivedStateFromError(err: any) { return { err }; }
+  componentDidCatch(err: any, info: any) {
+    console.error(`[PanelBoundary:${this.props.name}]`, err, info);
+  }
+  render() {
+    if (this.state.err) {
+      const msg = typeof this.state.err?.message === 'string'
+        ? this.state.err.message
+        : JSON.stringify(this.state.err);
+      return (
+        <div className="rounded-md border border-amber-500/40 bg-amber-500/10 text-amber-200 p-3 text-sm">
+          <div className="flex items-center gap-2 font-medium">
+            <AlertTriangle className="h-4 w-4" />
+            {this.props.name} encountered an error
+          </div>
+          <pre className="mt-1 text-xs whitespace-pre-wrap break-words">{msg}</pre>
+        </div>
+      );
+    }
+    return this.props.children as any;
+  }
 }
 
 /* ---------- small util ---------- */
@@ -43,16 +57,19 @@ function useLiveRef<T>(value: T) {
 
 /* ===================== Resizable settings ===================== */
 const STORAGE_KEY = 'qs:sidebar:width';
-const DEFAULT_WIDTH = 320;
+const DEFAULT_WIDTH = 360;   // roomier by default
 const MIN_WIDTH = 280;
-const MAX_WIDTH = 640;
-const EXPAND_WIDTH = 440;
+const MAX_WIDTH = 1024;      // allow much wider
+const EXPAND_WIDTH = 720;    // quick-expand target
 
 function clamp(n: number, min: number, max: number) {
   return Math.max(min, Math.min(max, n));
 }
 
 /* ---- helpers ---- */
+import type { Template as Tpl, Page as Pg } from '@/types/template';
+type Page = Pg; type Template = Tpl;
+
 function getPages(t: Template): Page[] {
   const anyT: any = t ?? {};
   if (Array.isArray(anyT?.data?.pages)) return anyT.data.pages;
@@ -68,7 +85,6 @@ function mergeTemplate(current: Template, patch: Partial<Template>): Template {
     data: { ...(current as any).data, ...(patch as any).data },
   };
 
-  // If patch contains pages either at root or under data, mirror them to both places.
   const patchedPages =
     (patch as any)?.pages ??
     (patch as any)?.data?.pages ??
@@ -78,7 +94,6 @@ function mergeTemplate(current: Template, patch: Partial<Template>): Template {
     next.pages = patchedPages;
     next.data = { ...(next.data ?? {}), pages: patchedPages };
   } else {
-    // Ensure pages remain present at both levels for UI stability
     const pages = getPages(next);
     next.pages = pages;
     next.data = { ...(next.data ?? {}), pages };
@@ -138,7 +153,7 @@ function useCommitApi(templateId?: string) {
           return await _commitOnce(dataPatch, kind);
         } catch (e: any) {
           if (e?.message === 'merge_conflict') {
-            await loadRev();                 // refresh rev, then retry once
+            await loadRev();
             return await _commitOnce(dataPatch, kind);
           }
           throw e;
@@ -163,9 +178,10 @@ function useCommitApi(templateId?: string) {
 type Props = {
   template: Template;
   onChange: (patch: Partial<Template>) => void;
+  variant?: 'inline' | 'drawer';
 };
 
-export default function SidebarSettings({ template, onChange }: Props) {
+export default function SidebarSettings({ template, onChange, variant }: Props) {
   // ====== Resizable state ======
   const [width, setWidth] = useState<number>(DEFAULT_WIDTH);
   const draggingRef = useRef<boolean>(false);
@@ -240,11 +256,13 @@ export default function SidebarSettings({ template, onChange }: Props) {
     window.addEventListener('pointerup', endDrag);
   }, [endDrag, onPointerMove, width]);
 
-  const onHandleDoubleClick = useCallback(() => {
-    const next = Math.abs(width - EXPAND_WIDTH) < 8 ? DEFAULT_WIDTH : EXPAND_WIDTH;
+  const onHandleDoubleClick = useCallback((e: React.MouseEvent) => {
+    // Double-click -> EXPAND_WIDTH; Shift+double-click -> MAX_WIDTH
+    const target = e.shiftKey ? MAX_WIDTH : EXPAND_WIDTH;
+    const next = Math.abs(width - target) < 8 ? DEFAULT_WIDTH : target;
     setWidth(clamp(next, MIN_WIDTH, MAX_WIDTH));
     persistWidth(next);
-  }, [persistWidth, width]);
+  }, [width, persistWidth]);
 
   const onHandleKeyDown = useCallback((e: React.KeyboardEvent) => {
     const step = e.shiftKey ? 20 : 10;
@@ -267,7 +285,6 @@ export default function SidebarSettings({ template, onChange }: Props) {
     (patch: Partial<Template>) => {
       const next = mergeTemplate(tplRef.current, patch);
       onChange(next as Partial<Template>);
-      // Only autosave when we have a valid id
       if ((tplRef.current as any)?.id) {
         try { commitSoon((next as any).data); } catch {}
       }
@@ -301,7 +318,14 @@ export default function SidebarSettings({ template, onChange }: Props) {
 
   // ====== Content ======
   const content = useMemo(() => (
-    <div className="space-y-4 px-4 pt-2 h-full overflow-y-auto" id="sidebar-settings-inner">
+    <div
+      className={
+        variant === 'drawer'
+          ? "flex-1 overflow-y-auto overflow-x-auto h-full"
+          : "space-y-4 px-4 pt-2 h-full overflow-y-auto"
+      }
+      id="sidebar-settings-inner"
+    >
       {/* Sticky save bar */}
       <div className="sticky top-0 z-10 -mx-4 mb-2 border-b bg-background/95 px-4 py-2 backdrop-blur flex items-center gap-2">
         <Button size="sm" className="gap-2" onClick={saveNow} disabled={pending || !(template as any)?.id}>
@@ -311,20 +335,30 @@ export default function SidebarSettings({ template, onChange }: Props) {
         <span className="text-xs text-muted-foreground">Autosaves on change</span>
       </div>
 
-      {/* Theme, Identity, Services, Slug, Domain, SEO */}
+      {/* Theme, Identity, Services */}
       <ThemePanel template={template} onChange={(patch) => applyPatch(patch)} />
       <IdentityPanel template={template} onChange={(patch) => applyPatch(patch)} />
       <ServicesPanel template={template} onChange={(patch) => applyPatch(patch)} />
 
-      {/* NEW: E-commerce panel (products/services management + insert blocks) */}
-      <EcommercePanel template={template} templateId={(template as any)?.id ?? null} currentPageId={activePageId} />
+      {/* NEW: E-commerce panel */}
+      <PanelBoundary name="EcommercePanel">
+        <EcommercePanel templateId={(template as any)?.id ?? null} currentPageId={activePageId} />
+      </PanelBoundary>
 
-      {/* <SlugPanel template={template} onChange={(patch) => applyPatch(patch)} /> */}
+      {/* Domain (no onChange; read-only UI + programmatic connect/verify/remove) */}
+      <PanelBoundary name="DomainPanel">
+        <DomainPanel
+          key={(template as any)?.id ?? 'domain'}
+          template={template}
+          isSite={Boolean((template as any)?.is_site)}
+          variant={variant}
+        />
+      </PanelBoundary>
 
-      {/* Domain is read-only/informational; no onChange */}
-      <DomainPanel template={template} isSite={template.is_site ?? false} />
-
-      <SeoPanel template={template} onChange={(patch) => applyPatch(patch)} />
+      {/* SEO */}
+      <PanelBoundary name="SeoPanel">
+        <SeoPanel template={template} onChange={(patch) => applyPatch(patch)} />
+      </PanelBoundary>
 
       {/* Hours */}
       <Collapsible title="Hours" id="hours" defaultOpen={false} ref={hoursPanelRef as any}>
@@ -337,46 +371,50 @@ export default function SidebarSettings({ template, onChange }: Props) {
         />
       </Collapsible>
 
-      {/* Truth tracker */}
-      {/* {(template as any)?.id && <TruthTrackerPanel templateId={(template as any).id} />} */}
-
       {/* Payments (separate flow) */}
       <PaymentSettingsPanel
         siteId={template.id}
         merchantId={'00001'}
         initialPlatformFeeBps={75}
       />
-
-      {/* Optional read-only JSON viewer */}
-      {/* <TemplateJsonEditor ... /> */}
     </div>
   ), [activePageId, applyPatch, forceOpenHours, pending, saveNow, spotlightHours, template]);
 
   return (
     <aside
-      className="relative flex-shrink-0 border-r"
-      style={{ width: `${width}px`, minWidth: MIN_WIDTH, maxWidth: MAX_WIDTH }}
+      className={variant === 'drawer'
+        ? "relative flex-shrink-0 border-l flex flex-col h-full w-full max-w-full"
+        : "relative flex-shrink-0 border-r"
+      }
+      style={
+        variant === 'drawer'
+          ? undefined
+          : { width: `${width}px`, minWidth: MIN_WIDTH, maxWidth: MAX_WIDTH }
+      }
       aria-label="Template settings sidebar"
     >
       {content}
 
       {/* Resize handle */}
-      <div
-        role="separator"
-        aria-orientation="vertical"
-        aria-label="Resize sidebar"
-        tabIndex={0}
-        onPointerDown={beginDrag}
-        onDoubleClick={onHandleDoubleClick}
-        onKeyDown={onHandleKeyDown}
-        className={[
-          'absolute top-0 right-0 h-full',
-          'w-2 cursor-col-resize touch-none select-none',
-          'bg-transparent hover:bg-foreground/5 active:bg-foreground/10',
-          'transition-colors',
-        ].join(' ')}
-        title="Drag to resize • Double-click to toggle • Shift+Arrow for bigger steps • R to reset"
-      />
+      {variant !== 'drawer' && (
+        <div
+          role="separator"
+          aria-orientation="vertical"
+          aria-label="Resize sidebar"
+          tabIndex={0}
+          onPointerDown={beginDrag}
+          onDoubleClick={onHandleDoubleClick}
+          onKeyDown={onHandleKeyDown}
+          className={[
+            'absolute top-0 right-0 h-full z-30',
+            'w-3 cursor-col-resize touch-none select-none',
+            'bg-foreground/10 hover:bg-foreground/20 active:bg-foreground/30',
+            'transition-colors rounded-l',
+          ].join(' ')}
+          title="Drag to resize • Double-click to expand • Shift+Double-click for max • Shift+Arrow for bigger steps • R to reset"
+        />
+      )}
+
     </aside>
   );
 }

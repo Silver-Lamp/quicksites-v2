@@ -290,3 +290,14 @@ body {
 #site-renderer-page:not([data-editor-chrome="1"]) .qs-add-btn {
   display: none !important;
 }
+
+/* Keep layout width constant whether the scrollbar is present or not */
+html { scrollbar-gutter: stable both-edges; }
+
+/* Fallback for engines that don't support scrollbar-gutter */
+@supports not (scrollbar-gutter: stable) {
+  html { overflow-y: scroll; }
+}
+
+/* Never allow a viewport-width overflow to push the page */
+html, body, #__next { width: 100%; max-width: 100%; }

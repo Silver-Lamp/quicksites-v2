@@ -1,3 +1,4 @@
+// components/admin/templates/templates-index-table.tsx
 'use client';
 
 import { useState, useMemo, useEffect, useCallback } from 'react';
@@ -5,14 +6,8 @@ import Link from 'next/link';
 import { formatDistanceToNow } from 'date-fns';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
 import { toast } from 'react-hot-toast';
-import { CheckCircle, FileStack, Globe, XCircle } from 'lucide-react';
+import { CheckCircle, XCircle, Loader2 } from 'lucide-react';
 import RowActions from '@/components/admin/templates/row-actions';
 import type { Template } from '@/types/template';
 import { cn } from '@/lib/utils';
@@ -43,6 +38,7 @@ function titleFromKey(key?: string): string {
 function resolveIndustry(t: any): string {
   const mv = (t?.industry ?? '').toString().trim();
   if (mv && mv.toLowerCase() !== 'general') return mv;
+
   const meta: any = getMeta(t) ?? {};
   const v = meta?.industry ?? meta?.business?.industry ?? t?.industry_gen ?? '';
   return (v ?? '').toString().trim();
@@ -84,7 +80,6 @@ export default function TemplatesIndexTable({
   selectedFilter?: string;
 }) {
   const [currentFilter, setCurrentFilter] = useState(selectedFilter);
-  const [viewMode, setViewMode] = useState<'all' | 'templates' | 'sites'>('all');
   const [archiveFilter, setArchiveFilter] = useState<'active' | 'archived' | 'all'>('active');
   const [search, setSearch] = useState('');
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
@@ -92,7 +87,11 @@ export default function TemplatesIndexTable({
   const [restoredIds, setRestoredIds] = useState<string[]>([]);
   const [lastSelectedIndex, setLastSelectedIndex] = useState<number | null>(null);
 
-  // Ask the Refresh button to perform its full action (which dispatches refetch)
+  // NEW: route loading overlay
+  const [navigating, setNavigating] = useState(false);
+  const [navigatingTo, setNavigatingTo] = useState<string | null>(null);
+
+  // Ask the Refresh button to perform its full action (which dispatches list refetch)
   const dispatchRefreshButton = useCallback((reason: string) => {
     if (typeof window === 'undefined') return;
     window.dispatchEvent(new CustomEvent('qs:templates:refresh', { detail: { reason } }));
@@ -138,19 +137,14 @@ export default function TemplatesIndexTable({
         const city = resolveCity(t).toLowerCase();
 
         return name.includes(term) || slug.includes(term) || industry.includes(term) || city.includes(term);
-      })
-      .filter((t) => {
-        if (viewMode === 'sites') return (t as any).is_site === true;
-        if (viewMode === 'templates') return !(t as any).is_site;
-        return true;
       });
-  }, [templates, search, viewMode, archiveFilter, archivedIds]);
+  }, [templates, search, archiveFilter, archivedIds]);
 
   useEffect(() => {
     setLastSelectedIndex(null);
   }, [filtered]);
 
-  // Debug helper
+  // Debug helper – enable with: localStorage.setItem('QS_DEBUG_TEMPLATES', '1')
   useEffect(() => {
     if (typeof window === 'undefined') return;
     if (!localStorage.getItem('QS_DEBUG_TEMPLATES')) return;
@@ -201,7 +195,7 @@ export default function TemplatesIndexTable({
       setSelectedIds([]);
       toast.success(`${ids.length} template${ids.length > 1 ? 's' : ''} archived`);
 
-      // Ask the Refresh button to run (revalidate optional; then dispatch refetch)
+      // Run the Refresh button logic (which dispatches list refetch)
       setTimeout(() => dispatchRefreshButton('bulk-archive'), 100);
     } else {
       toast.error('Bulk archive failed');
@@ -210,18 +204,40 @@ export default function TemplatesIndexTable({
 
   return (
     <div className="space-y-6">
+      {/* Loading overlay when navigating to a template */}
+      {navigating && (
+        <div className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm flex items-center justify-center">
+          <div className="rounded-xl bg-zinc-900/85 border border-white/10 px-6 py-4 flex items-center gap-3 text-white">
+            <Loader2 className="h-5 w-5 animate-spin" />
+            <div className="text-sm">
+              Opening {navigatingTo ? <span className="font-medium">{navigatingTo}</span> : 'template'}…
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="flex flex-wrap gap-4 justify-between items-center">
         <div className="text-lg font-semibold text-white">Templates</div>
         <div className="flex items-center gap-2 flex-wrap">
           <div className="flex gap-1 text-xs">
-            <Button variant={viewMode === 'all' ? 'default' : 'outline'} onClick={() => setViewMode('all')}>All</Button>
-            <Button variant={viewMode === 'templates' ? 'default' : 'outline'} onClick={() => setViewMode('templates')}>Templates</Button>
-            <Button variant={viewMode === 'sites' ? 'default' : 'outline'} onClick={() => setViewMode('sites')}>Sites</Button>
-          </div>
-          <div className="flex gap-1 text-xs">
-            <Button variant={archiveFilter === 'active' ? 'default' : 'outline'} onClick={() => setArchiveFilter('active')}>Active</Button>
-            <Button variant={archiveFilter === 'archived' ? 'default' : 'outline'} onClick={() => setArchiveFilter('archived')}>Archived</Button>
-            <Button variant={archiveFilter === 'all' ? 'default' : 'outline'} onClick={() => setArchiveFilter('all')}>All</Button>
+            <Button
+              variant={archiveFilter === 'active' ? 'default' : 'outline'}
+              onClick={() => setArchiveFilter('active')}
+            >
+              Active
+            </Button>
+            <Button
+              variant={archiveFilter === 'archived' ? 'default' : 'outline'}
+              onClick={() => setArchiveFilter('archived')}
+            >
+              Archived
+            </Button>
+            <Button
+              variant={archiveFilter === 'all' ? 'default' : 'outline'}
+              onClick={() => setArchiveFilter('all')}
+            >
+              All
+            </Button>
           </div>
           <Input
             value={search}
@@ -261,7 +277,6 @@ export default function TemplatesIndexTable({
                 />
               </th>
               <th className="p-2 text-right">Actions</th>
-              <th className="p-2 text-right">Type</th>
               <th className="p-2">Published</th>
               <th className="p-2">Name</th>
               <th className="p-2">Industry</th>
@@ -351,7 +366,7 @@ export default function TemplatesIndexTable({
                             setRestoredIds((prev) => (archived ? prev : [...prev, id]));
                             toast.success(`Template ${archived ? 'archived' : 'restored'}`);
 
-                            // Tell refresh button to run (which triggers the list refetch)
+                            // Trigger the refresh button → list refetch
                             setTimeout(() => dispatchRefreshButton('single-archive'), 100);
                           } catch {
                             toast.error('Network error archiving template');
@@ -361,18 +376,24 @@ export default function TemplatesIndexTable({
                     />
                   </td>
 
-                  <td className="p-2 text-right">
-                    {t.is_site ? <Globe className="w-4 h-4 text-blue-400" /> : <FileStack className="w-4 h-4 text-blue-400" />}
-                  </td>
-
                   <td className="p-2 text-zinc-400">
                     {t.published ? <CheckCircle className="w-4 h-4 text-green-400" /> : <XCircle className="w-4 h-4 text-red-400" />}
                   </td>
 
                   <td className="p-2">
-                    <Link href={`/template/${t.id}/edit`} prefetch={false} className="text-white hover:underline text-left block leading-tight">
+                    <Link
+                      href={`/template/${t.id}/edit`}
+                      prefetch={false}
+                      className="text-white hover:underline text-left block leading-tight"
+                      onClick={() => {
+                        setNavigatingTo(mainName || t.slug || t.id);
+                        setNavigating(true);
+                      }}
+                    >
                       <div className="font-medium truncate">{mainName}</div>
-                      {t.slug ? <div className="text-[11px] text-white/45 mt-0.5 truncate">{t.slug}</div> : null}
+                      {t.slug ? (
+                        <div className="text-[11px] text-white/45 mt-0.5 truncate">{t.slug}</div>
+                      ) : null}
                     </Link>
                   </td>
 

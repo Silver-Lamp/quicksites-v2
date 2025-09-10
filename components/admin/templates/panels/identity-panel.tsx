@@ -11,8 +11,7 @@ import { RefreshCw, Save } from 'lucide-react';
 import {
   getIndustryOptions,
   INDUSTRY_HINTS,
-  resolveIndustry,         // returns { key, label } – used for draft init
-  resolveIndustryKey,       // canonical key resolver (label/key/synonym → key)
+  resolveIndustryKey,   // canonical key resolver (label/key/synonym → key)
   toIndustryLabel,
 } from '@/lib/industries';
 
@@ -34,7 +33,7 @@ function formatPhoneLive(digits: string) {
 }
 function digitsOnly(v?: string | null) { return (v || '').replace(/\D/g, ''); }
 
-// --- NEW: helpers for base-level display name persistence ---
+// --- helpers for base-level display name persistence ---
 function baseSlugFrom(s: string) {
   return (s || '').replace(/(-[a-z0-9]{2,12})+$/i, '');
 }
@@ -67,7 +66,6 @@ type Draft = {
 function toDraft(t: Template): Draft {
   const meta = (t.data as any)?.meta ?? {};
   const contact = meta?.contact ?? {};
-  // Normalize to canonical key from whatever is stored
   const normKey = resolveIndustryKey(meta?.industry ?? (t as any).industry ?? '');
 
   const siteTitle =
@@ -120,12 +118,10 @@ function buildDataPatch(d: Draft, tmpl: Template): Partial<Template> {
   const lon = d.longitude.trim() === '' ? null : clampLon(Number(d.longitude));
   const address = [d.address_line1, d.address_line2].filter(Boolean).join(', ').trim() || '';
 
-  // Always re-normalize industry to the canonical key
   const normKey = resolveIndustryKey(d.industry || prevMeta?.industry || (tmpl as any).industry || '');
 
   const meta = {
     ...prevMeta,
-    // Keep canonical name in meta
     siteTitle: d.template_name || prevMeta?.siteTitle || '',
     business: d.business_name || prevMeta?.business || '',
     industry: normKey,
@@ -143,14 +139,11 @@ function buildDataPatch(d: Draft, tmpl: Template): Partial<Template> {
     },
   };
 
-  // MERGE data (do not overwrite other properties like theme, pages, etc.)
   const data = { ...prevData, meta };
-
-  // Also update TOP-LEVEL template_name so the header/title and list can pick it up.
   const topLevelName = d.template_name || (tmpl as any).template_name || '';
 
   return {
-    template_name: topLevelName, // ⬅️ update title immediately
+    template_name: topLevelName,
     data,
   };
 }
@@ -173,7 +166,7 @@ export default function IdentityPanel({
   const [autoApply, setAutoApply] = React.useState(false);
   const debounceRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // NEW: debounce specifically for base display-name upsert
+  // debounce specifically for base display-name upsert
   const renameDebounce = React.useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Controlled industry options: value === canonical key
@@ -194,31 +187,33 @@ export default function IdentityPanel({
     ]);
   }, [template]);
 
-
-  // Dispatch a live title event so the top-left header updates immediately.
-  const emitTitle = React.useCallback((name: string) => {
+  // 1) Define emitTitle (ID-scoped)
+  const emitTitle = React.useCallback((nextName: string) => {
     if (typeof window === 'undefined') return;
-    window.dispatchEvent(new CustomEvent('qs:template:title', { detail: { name } }));
-  }, []);
+    window.dispatchEvent(
+      new CustomEvent('qs:template:title', {
+        detail: { name: (nextName || '').trim(), id: (template as any)?.id },
+      })
+    );
+  }, [template]);
 
-// Re-sync the draft whenever the template signature changes AND
-// broadcast the current name so the toolbar matches on first paint.
-React.useEffect(() => {
-  const d = toDraft(template);
-  setDraft(d);
-  setDirty(false);
-  setPhoneError(null);
-  setEmailError(null);
-  setLatError(null);
-  setLonError(null);
+  // 2) Re-sync the draft on template changes AND broadcast the current name so the toolbar matches on first paint.
+  React.useEffect(() => {
+    const d = toDraft(template);
+    setDraft(d);
+    setDirty(false);
+    setPhoneError(null);
+    setEmailError(null);
+    setLatError(null);
+    setLonError(null);
 
-  // NEW: tell the toolbar what the “real” name is on page load
-  const initialName =
-    (d.template_name || '').trim() ||
-    (template as any).template_name ||
-    '';
-  if (initialName) emitTitle(initialName);
-}, [templateSig, template, emitTitle]);
+    // tell the toolbar the current title + id
+    const initialName =
+      (d.template_name || '').trim() ||
+      (template as any).template_name ||
+      '';
+    if (initialName) emitTitle(initialName);
+  }, [templateSig, template, emitTitle]);
 
   const scheduleAutoApply = React.useCallback(
     (nextDraft: Draft) => {
@@ -256,7 +251,6 @@ React.useEffect(() => {
     setDraft((d) => {
       const next = { ...d, [key]: value as Draft[K] };
 
-      // industry is controlled & canonicalized; re-normalize immediately
       if (key === 'industry') {
         next.industry = resolveIndustryKey(String(value)) as Draft['industry'];
       }
@@ -267,10 +261,10 @@ React.useEffect(() => {
       if (key === 'template_name') {
         const name = String(value || '').trim();
 
-        // 1) Live reflect in header immediately
+        // Live reflect in header immediately (ID-scoped)
         emitTitle(name);
 
-        // 2) If auto-apply, debounce a base-name upsert too
+        // If auto-apply, debounce a base-name upsert too
         if (autoApply) {
           if (renameDebounce.current) clearTimeout(renameDebounce.current);
           renameDebounce.current = setTimeout(() => {
@@ -345,7 +339,7 @@ React.useEffect(() => {
           </div>
         </div>
 
-        {/* Template Name → data.meta.siteTitle + TOP-LEVEL template_name */}
+        {/* Template Name */}
         <div>
           <Label>Template Name</Label>
           <Input
@@ -356,7 +350,7 @@ React.useEffect(() => {
           />
         </div>
 
-        {/* Business Name → data.meta.business */}
+        {/* Business Name */}
         <div>
           <Label>Business Name</Label>
           <Input
@@ -375,7 +369,6 @@ React.useEffect(() => {
             onChange={(e) => setField('industry', e.target.value)}
             className="w-full px-2 py-1 rounded bg-gray-800 border text-white border-gray-700 focus:border-gray-600"
           >
-            {/* Show placeholder only if unset */}
             {draft.industry ? null : <option value="">Select industry</option>}
             {industryOptions.map((opt) => (
               <option key={opt.value} value={opt.value}>
@@ -383,7 +376,6 @@ React.useEffect(() => {
               </option>
             ))}
           </select>
-          {/* friendly “resolved to” echo for debugging – optional */}
           <p className="text-[11px] text-white/40 mt-1">
             Resolved: {toIndustryLabel(resolveIndustryKey(draft.industry))}
           </p>

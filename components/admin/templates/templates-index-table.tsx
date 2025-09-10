@@ -1,9 +1,7 @@
-// components/admin/templates/templates-index-table.tsx
 'use client';
 
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import { formatDistanceToNow } from 'date-fns';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -38,22 +36,15 @@ function getMeta(t: any): Record<string, any> | undefined {
 
 function titleFromKey(key?: string): string {
   if (!key) return '';
-  return key
-    .replace(/[_-]+/g, ' ')
-    .replace(/\b\w/g, (c) => c.toUpperCase());
+  return key.replace(/[_-]+/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
 /** Return the best-available industry, preferring site meta if MV is generic. */
 function resolveIndustry(t: any): string {
   const mv = (t?.industry ?? '').toString().trim();
   if (mv && mv.toLowerCase() !== 'general') return mv;
-
   const meta: any = getMeta(t) ?? {};
-  const v =
-    meta?.industry ??
-    meta?.business?.industry ??
-    t?.industry_gen ??
-    '';
+  const v = meta?.industry ?? meta?.business?.industry ?? t?.industry_gen ?? '';
   return (v ?? '').toString().trim();
 }
 
@@ -74,10 +65,7 @@ function resolveCity(t: any): string {
 function resolvePhone(t: any): string {
   if (t?.phone) return String(t.phone);
   const meta: any = getMeta(t) ?? {};
-  const v =
-    meta?.contact?.phone ??
-    meta?.phone ??
-    '';
+  const v = meta?.contact?.phone ?? meta?.phone ?? '';
   return (v ?? '').toString().trim();
 }
 
@@ -85,12 +73,7 @@ function resolvePhone(t: any): string {
 function resolvePreviewUrl(t: any): string | null {
   if (t?.banner_url) return t.banner_url as string;
   const meta: any = getMeta(t) ?? {};
-  return (
-    meta?.banner_url ??
-    meta?.ogImage ??
-    meta?.hero_url ??
-    null
-  );
+  return meta?.banner_url ?? meta?.ogImage ?? meta?.hero_url ?? null;
 }
 
 export default function TemplatesIndexTable({
@@ -100,7 +83,6 @@ export default function TemplatesIndexTable({
   templates: Template[];
   selectedFilter?: string;
 }) {
-  const router = useRouter();
   const [currentFilter, setCurrentFilter] = useState(selectedFilter);
   const [viewMode, setViewMode] = useState<'all' | 'templates' | 'sites'>('all');
   const [archiveFilter, setArchiveFilter] = useState<'active' | 'archived' | 'all'>('active');
@@ -110,52 +92,52 @@ export default function TemplatesIndexTable({
   const [restoredIds, setRestoredIds] = useState<string[]>([]);
   const [lastSelectedIndex, setLastSelectedIndex] = useState<number | null>(null);
 
+  // Ask the Refresh button to perform its full action (which dispatches refetch)
+  const dispatchRefreshButton = useCallback((reason: string) => {
+    if (typeof window === 'undefined') return;
+    window.dispatchEvent(new CustomEvent('qs:templates:refresh', { detail: { reason } }));
+  }, []);
+
   const filtered = useMemo(() => {
     return (templates as any[])
       .filter((t) => {
         const isLocallyArchived = archivedIds.includes(t.id);
-  
+
         // Prefer column boolean; fallback to data flag; then local override
-        const colFlag =
-          typeof (t as any).archived === 'boolean' ? (t as any).archived : undefined;
-  
+        const colFlag = typeof (t as any).archived === 'boolean' ? (t as any).archived : undefined;
+
         const dataFlagRaw =
           (t as any)?.data && typeof (t as any).data === 'object'
             ? (t as any).data.archived
             : undefined;
-  
+
         const dataFlag =
           typeof dataFlagRaw === 'boolean'
             ? dataFlagRaw
             : typeof dataFlagRaw === 'string'
             ? dataFlagRaw.toLowerCase() === 'true'
             : undefined;
-  
+
         const isArchived = (colFlag ?? dataFlag ?? isLocallyArchived) === true;
-  
+
         if (archiveFilter === 'archived') return isArchived;
         if (archiveFilter === 'active') return !isArchived;
         return true;
       })
       .filter((t) => {
         const term = search.toLowerCase();
-  
+
         // Search display_name first, then template_name & slug
         const name = ((t as any).display_name || (t as any).template_name || '')
           .toString()
           .toLowerCase();
         const slug = ((t as any).slug || '').toString().toLowerCase();
-  
+
         // Use robust resolvers for search too
         const industry = resolveIndustry(t).toLowerCase();
         const city = resolveCity(t).toLowerCase();
-  
-        return (
-          name.includes(term) ||
-          slug.includes(term) ||
-          industry.includes(term) ||
-          city.includes(term)
-        );
+
+        return name.includes(term) || slug.includes(term) || industry.includes(term) || city.includes(term);
       })
       .filter((t) => {
         if (viewMode === 'sites') return (t as any).is_site === true;
@@ -163,12 +145,12 @@ export default function TemplatesIndexTable({
         return true;
       });
   }, [templates, search, viewMode, archiveFilter, archivedIds]);
-  
+
   useEffect(() => {
     setLastSelectedIndex(null);
   }, [filtered]);
 
-  // Debug helper – enable with: localStorage.setItem('QS_DEBUG_TEMPLATES', '1')
+  // Debug helper
   useEffect(() => {
     if (typeof window === 'undefined') return;
     if (!localStorage.getItem('QS_DEBUG_TEMPLATES')) return;
@@ -195,9 +177,7 @@ export default function TemplatesIndexTable({
     const rangeIds = filtered.slice(start, end + 1).map((t: any) => t.id);
 
     setSelectedIds((prev) => {
-      if (opts?.exclusive) {
-        return willSelect ? [...rangeIds] : [];
-      }
+      if (opts?.exclusive) return willSelect ? [...rangeIds] : [];
       if (willSelect) {
         const set = new Set(prev);
         rangeIds.forEach((id) => set.add(id));
@@ -220,6 +200,9 @@ export default function TemplatesIndexTable({
       setArchivedIds((prev) => [...prev, ...ids]);
       setSelectedIds([]);
       toast.success(`${ids.length} template${ids.length > 1 ? 's' : ''} archived`);
+
+      // Ask the Refresh button to run (revalidate optional; then dispatch refetch)
+      setTimeout(() => dispatchRefreshButton('bulk-archive'), 100);
     } else {
       toast.error('Bulk archive failed');
     }
@@ -246,7 +229,6 @@ export default function TemplatesIndexTable({
             placeholder="Search name, industry, or city…"
             className="text-sm w-64"
           />
-          {/* Show/Hide Versions toggle is elsewhere (client/page) */}
         </div>
       </div>
 
@@ -304,12 +286,15 @@ export default function TemplatesIndexTable({
 
               const mainName = (t.display_name || t.template_name || t.slug || t.id) as string;
 
+              const archivedFlag =
+                typeof t.archived === 'boolean' ? t.archived : !!t?.data?.archived;
+
               return (
                 <tr
                   key={t.id}
                   className={cn(
                     'border-t border-white/10 hover:bg-zinc-800 transition',
-                    t?.data?.archived && 'opacity-50 italic',
+                    archivedFlag && 'opacity-50 italic',
                     restoredIds.includes(t.id) && 'animate-fadeIn'
                   )}
                 >
@@ -344,21 +329,34 @@ export default function TemplatesIndexTable({
                     <RowActions
                       id={t.id}
                       slug={t.slug}
-                      archived={t?.data?.archived ?? false}
+                      archived={archivedFlag}
                       onArchiveToggle={(id, archived) => {
-                        fetch('/api/templates/archive', {
-                          method: 'POST',
-                          headers: { 'Content-Type': 'application/json' },
-                          body: JSON.stringify({ ids: [id], archived }),
-                        }).then((res) => {
-                          if (res.ok) {
-                            setArchivedIds((prev) => archived ? [...prev, id] : prev.filter((x) => x !== id));
-                            setRestoredIds((prev) => archived ? prev : [...prev, id]);
+                        (async () => {
+                          try {
+                            const res = await fetch('/api/templates/archive', {
+                              method: 'POST',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify({ ids: [id], archived }),
+                            });
+
+                            if (!res.ok) {
+                              const j = await res.json().catch(() => ({}));
+                              toast.error(`Failed to ${archived ? 'archive' : 'restore'} template`);
+                              if (j?.failures) console.warn('Archive failures:', j.failures);
+                              return;
+                            }
+
+                            // optimistic UI
+                            setArchivedIds((prev) => (archived ? [...prev, id] : prev.filter((x) => x !== id)));
+                            setRestoredIds((prev) => (archived ? prev : [...prev, id]));
                             toast.success(`Template ${archived ? 'archived' : 'restored'}`);
-                          } else {
-                            toast.error(`Failed to ${archived ? 'archive' : 'restore'} template`);
+
+                            // Tell refresh button to run (which triggers the list refetch)
+                            setTimeout(() => dispatchRefreshButton('single-archive'), 100);
+                          } catch {
+                            toast.error('Network error archiving template');
                           }
-                        });
+                        })();
                       }}
                     />
                   </td>
@@ -372,15 +370,9 @@ export default function TemplatesIndexTable({
                   </td>
 
                   <td className="p-2">
-                    <Link
-                      href={`/template/${t.id}/edit`}
-                      prefetch={false}
-                      className="text-white hover:underline text-left block leading-tight"
-                    >
+                    <Link href={`/template/${t.id}/edit`} prefetch={false} className="text-white hover:underline text-left block leading-tight">
                       <div className="font-medium truncate">{mainName}</div>
-                      {t.slug ? (
-                        <div className="text-[11px] text-white/45 mt-0.5 truncate">{t.slug}</div>
-                      ) : null}
+                      {t.slug ? <div className="text-[11px] text-white/45 mt-0.5 truncate">{t.slug}</div> : null}
                     </Link>
                   </td>
 
@@ -401,7 +393,9 @@ export default function TemplatesIndexTable({
                     {previewUrl ? (
                       <img src={previewUrl} alt="preview" className="w-12 h-8 rounded object-cover" />
                     ) : (
-                      <div className="w-12 h-8 bg-zinc-700 rounded flex items-center justify-center text-xs text-white/40">N/A</div>
+                      <div className="w-12 h-8 bg-zinc-700 rounded flex items-center justify-center text-xs text-white/40">
+                        N/A
+                      </div>
                     )}
                   </td>
                 </tr>

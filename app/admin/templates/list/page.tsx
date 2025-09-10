@@ -37,7 +37,10 @@ export default async function TemplatesIndexPage({ searchParams }: { searchParam
   return (
     <div className="soft-borders mx-auto max-w-6xl p-6 pb-[350px] lg:pb-[420px] mt-12">
       <div className="flex items-center justify-between mb-4 mt-8">
-        <RefreshTemplatesButton />
+      <RefreshTemplatesButton
+        dateParam={dateParam}
+        includeVersions={includeVersions}
+      />
       </div>
       <TemplatesListClient
         initialRows={initialRows}

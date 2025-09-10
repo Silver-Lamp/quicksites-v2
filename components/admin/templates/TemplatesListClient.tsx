@@ -15,6 +15,18 @@ type Props = {
   userId: string;
 };
 
+// How many visible (non-archived) rows we want to guarantee on screen
+const MIN_ACTIVE_ROWS = 8;
+
+// prefer column boolean, fallback to data.archived
+function isRowArchived(t: any): boolean {
+  if (typeof t?.archived === 'boolean') return t.archived;
+  const raw = t?.data?.archived;
+  if (typeof raw === 'boolean') return raw;
+  if (typeof raw === 'string') return raw.toLowerCase() === 'true';
+  return false;
+}
+
 export default function TemplatesListClient({
   initialRows,
   initialOffset,
@@ -29,38 +41,62 @@ export default function TemplatesListClient({
   const [loading, setLoading] = useState(false);
   const [errorText, setErrorText] = useState<string | null>(null);
 
-  // Guard refetch loops
-  const didInitialRefetch = useRef(false);
+  // Keep immediate, synchronous references for sequencing loops
+  const rowsRef = useRef<any[]>(initialRows);
+  const offsetRef = useRef<number>(initialOffset);
+  const hasMoreRef = useRef<boolean>(initialHasMore);
+  const fillingRef = useRef<boolean>(false);
+
+  useEffect(() => { rowsRef.current = rows; }, [rows]);
+  useEffect(() => { offsetRef.current = offset; }, [offset]);
+  useEffect(() => { hasMoreRef.current = hasMore; }, [hasMore]);
 
   useEffect(() => {
     setRows(initialRows);
     setOffset(initialOffset);
     setHasMore(initialHasMore);
+    rowsRef.current = initialRows;
+    offsetRef.current = initialOffset;
+    hasMoreRef.current = initialHasMore;
   }, [initialRows, initialOffset, initialHasMore]);
 
   const fetchPage = useCallback(
-    async (nextOffset: number, replace = false) => {
-      setLoading(true);
-      setErrorText(null);
+    async (nextOffset: number, replace = false): Promise<any[] | null> => {
       try {
+        if (!replace && !hasMoreRef.current) return [];
+        setLoading(true);
+        setErrorText(null);
+
         const sp = new URLSearchParams({
           date: dateParam || '',
           versions: includeVersions ? 'all' : '',
           limit: String(pageSize),
           offset: String(nextOffset),
         });
+
         const res = await fetch(`/api/admin/templates/list?${sp.toString()}`, { cache: 'no-store' });
         if (!res.ok) {
           const j = await res.json().catch(() => ({}));
           throw new Error(j?.error || `Fetch failed (${res.status})`);
         }
+
         const j = await res.json();
-        const items = Array.isArray(j?.items) ? j.items : [];
-        setRows((prev) => (replace ? items : [...prev, ...items]));
-        setOffset(j?.page?.nextOffset ?? nextOffset + items.length);
-        setHasMore(!!j?.page?.hasMore);
+        const items: any[] = Array.isArray(j?.items) ? j.items : [];
+        const nextOff = j?.page?.nextOffset ?? nextOffset + items.length;
+        const more = !!j?.page?.hasMore;
+
+        const newRows = replace ? items : [...rowsRef.current, ...items];
+        rowsRef.current = newRows;
+        setRows(newRows);
+        offsetRef.current = nextOff;
+        setOffset(nextOff);
+        hasMoreRef.current = more;
+        setHasMore(more);
+
+        return items;
       } catch (e: any) {
         setErrorText(e?.message || 'Unable to load templates.');
+        return null;
       } finally {
         setLoading(false);
       }
@@ -68,19 +104,60 @@ export default function TemplatesListClient({
     [dateParam, includeVersions, pageSize]
   );
 
-  // One light refetch on mount to ensure server-side + client-side parity (no more 800-row pulls)
-  useEffect(() => {
-    if (didInitialRefetch.current) return;
-    didInitialRefetch.current = true;
-    // Replace with the same first page to normalize across nav
-    void fetchPage(0, true);
-  }, [fetchPage]);
+  // Count non-archived rows we’d actually show under the default filter (“Active”)
+  const countActive = useCallback((arr: any[]) => {
+    let n = 0;
+    for (const t of arr) if (!isRowArchived(t)) n++;
+    return n;
+  }, []);
 
-  // External “Refresh” buttons
+  // Load more pages until we have at least MIN_ACTIVE_ROWS (or run out)
+  const fillToMinActive = useCallback(async () => {
+    if (fillingRef.current) return;
+    fillingRef.current = true;
+    try {
+      let attempts = 0;
+      while (
+        countActive(rowsRef.current) < MIN_ACTIVE_ROWS &&
+        hasMoreRef.current &&
+        attempts < 6 // hard ceiling
+      ) {
+        const items = await fetchPage(offsetRef.current, false);
+        attempts += 1;
+        if (!items || items.length === 0) break;
+      }
+    } finally {
+      fillingRef.current = false;
+    }
+  }, [countActive, fetchPage]);
+
+  // One normalized refetch when the component mounts (first page), then auto-fill
   useEffect(() => {
-    const handler = () => { void fetchPage(0, true); };
+    let cancelled = false;
+    (async () => {
+      const got = await fetchPage(0, true);
+      if (cancelled) return;
+      await fillToMinActive();
+    })();
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // run once on mount
+
+  // External refresh requests (from Refresh button or table)
+  useEffect(() => {
+    const handler = async () => {
+      await fetchPage(0, true);
+      await fillToMinActive();
+    };
     window.addEventListener('qs:templates:refetch', handler as EventListener);
     return () => window.removeEventListener('qs:templates:refetch', handler as EventListener);
+  }, [fetchPage, fillToMinActive]);
+
+  // Manual “Load more” button
+  const onLoadMore = useCallback(async () => {
+    await fetchPage(offsetRef.current, false);
   }, [fetchPage]);
 
   return (
@@ -93,7 +170,7 @@ export default function TemplatesListClient({
       <div className="mt-4 flex justify-center">
         {hasMore ? (
           <button
-            onClick={() => fetchPage(offset)}
+            onClick={onLoadMore}
             className="px-4 py-2 rounded bg-zinc-800 text-white text-sm border border-white/10 hover:bg-zinc-700"
             disabled={loading}
           >

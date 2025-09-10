@@ -1,39 +1,63 @@
-// components/admin/templates/RefreshTemplatesButton.tsx
 'use client';
 
-import { useState } from 'react';
-import { Loader2, RefreshCw } from 'lucide-react';
-import { useRouter } from 'next/navigation';
-import { toast } from 'react-hot-toast';
+import * as React from 'react';
+import { Button } from '@/components/ui/button';
+import { RotateCcw } from 'lucide-react';
 
-export default function RefreshTemplatesButton() {
-  const [loading, setLoading] = useState(false);
-  const router = useRouter();
+type Props = {
+  dateParam?: string;
+  includeVersions?: boolean;
+  /** Leave empty/omit to avoid hitting a server-side revalidate endpoint. */
+  revalidatePath?: string;
+};
 
-  const refresh = async () => {
-    if (loading) return;
-    setLoading(true);
+export default function RefreshTemplatesButton({
+  dateParam = '',
+  includeVersions = false,
+  revalidatePath = '', // 🚫 default: no server revalidate
+}: Props) {
+  const [busy, setBusy] = React.useState(false);
+
+  const runRefresh = React.useCallback(async () => {
+    if (busy) return; // debounce re-entrancy
     try {
-      const res = await fetch('/api/templates/revalidate', { method: 'POST' });
-      if (!res.ok) throw new Error('Server refresh failed');
-      toast.success('Templates refreshed');
-      router.refresh();                // re-run server components
-    } catch (e: any) {
-      toast.error(e?.message ?? 'Refresh failed');
+      setBusy(true);
+
+      // (optional) only if you explicitly provide a path
+      if (revalidatePath) {
+        await fetch(revalidatePath, { method: 'POST', cache: 'no-store' }).catch(() => {});
+      }
+
+      // Tell the list to refetch (TemplatesListClient listens to this)
+      window.dispatchEvent(
+        new CustomEvent('qs:templates:refetch', {
+          detail: { dateParam, includeVersions, source: 'refresh-button' },
+        }),
+      );
     } finally {
-      setLoading(false);
+      setBusy(false);
     }
-  };
+  }, [busy, dateParam, includeVersions, revalidatePath]);
+
+  // ✅ Listen ONLY to `qs:templates:refresh` (never to `refetch`) to avoid loops
+  React.useEffect(() => {
+    const handler = () => { void runRefresh(); };
+    window.addEventListener('qs:templates:refresh', handler as EventListener);
+    return () => window.removeEventListener('qs:templates:refresh', handler as EventListener);
+  }, [runRefresh]);
 
   return (
-    <button
-      onClick={refresh}
-      disabled={loading}
-      className="inline-flex items-center gap-2 rounded border border-white/10 bg-neutral-900 px-3 py-1.5 text-sm text-white hover:bg-neutral-800 disabled:opacity-60"
-      title="Clear cache and pull latest"
+    <Button
+      type="button"
+      onClick={() => void runRefresh()}
+      variant="outline"
+      size="sm"
+      className="gap-2"
+      disabled={busy}
+      title="Refresh templates"
     >
-      {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
-      {loading ? 'Refreshing…' : 'Refresh'}
-    </button>
+      <RotateCcw className={busy ? 'h-4 w-4 animate-spin' : 'h-4 w-4'} />
+      {busy ? 'Refreshing…' : 'Refresh'}
+    </Button>
   );
 }

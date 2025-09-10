@@ -105,8 +105,6 @@ export default function TemplatesIndexTable({
   const [viewMode, setViewMode] = useState<'all' | 'templates' | 'sites'>('all');
   const [archiveFilter, setArchiveFilter] = useState<'active' | 'archived' | 'all'>('active');
   const [search, setSearch] = useState('');
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [renames, setRenames] = useState<Record<string, string>>({});
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [archivedIds, setArchivedIds] = useState<string[]>([]);
   const [restoredIds, setRestoredIds] = useState<string[]>([]);
@@ -124,7 +122,9 @@ export default function TemplatesIndexTable({
       .filter((t) => {
         const term = search.toLowerCase();
 
-        const name = (t.template_name || '').toLowerCase();
+        // NEW: search display_name first, then template_name & slug
+        const name =
+          ((t.display_name || t.template_name || '') as string).toLowerCase();
         const slug = (t.slug || '').toLowerCase();
 
         // Use robust resolvers for search too
@@ -157,6 +157,7 @@ export default function TemplatesIndexTable({
     const meta = getMeta(sample);
     console.debug('[TemplatesIndexTable] sample row:', {
       id: sample?.id,
+      displayName: (sample as any)?.display_name,
       mvIndustry: sample?.industry,
       resolvedIndustry: resolveIndustry(sample),
       cityProp: sample?.city,
@@ -226,27 +227,7 @@ export default function TemplatesIndexTable({
             placeholder="Search name, industry, or city…"
             className="text-sm w-64"
           />
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" className="text-xs">{currentFilter || 'Filter by Date'}</Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              {['Last 7 days', 'This month', 'This year', 'All time'].map((option) => (
-                <DropdownMenuItem
-                  key={option}
-                  onClick={() => {
-                    const url = new URL(window.location.href);
-                    if (option === 'All time') url.searchParams.delete('date');
-                    else url.searchParams.set('date', option);
-                    setCurrentFilter(option);
-                    router.push(url.toString());
-                  }}
-                >
-                  {option}
-                </DropdownMenuItem>
-              ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
+          {/* Show/Hide Versions toggle is elsewhere (client/page) */}
         </div>
       </div>
 
@@ -301,6 +282,8 @@ export default function TemplatesIndexTable({
               const displayIndustry = industryKey ? titleFromKey(industryKey) : '—';
               const displayCity = cityVal || '—';
               const previewUrl = resolvePreviewUrl(t);
+
+              const mainName = (t.display_name || t.template_name || t.slug || t.id) as string;
 
               return (
                 <tr
@@ -373,9 +356,12 @@ export default function TemplatesIndexTable({
                     <Link
                       href={`/template/${t.id}/edit`}
                       prefetch={false}
-                      className="text-white hover:underline text-left"
+                      className="text-white hover:underline text-left block leading-tight"
                     >
-                      {t.template_name || t.slug || t.id}
+                      <div className="font-medium truncate">{mainName}</div>
+                      {t.slug ? (
+                        <div className="text-[11px] text-white/45 mt-0.5 truncate">{t.slug}</div>
+                      ) : null}
                     </Link>
                   </td>
 

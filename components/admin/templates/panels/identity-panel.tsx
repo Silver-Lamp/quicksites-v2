@@ -1,3 +1,4 @@
+// components/admin/templates/panels/identity-panel.tsx
 'use client';
 
 import * as React from 'react';
@@ -32,6 +33,21 @@ function formatPhoneLive(digits: string) {
   return `(${d.slice(0, 3)}) ${d.slice(3, 6)}-${d.slice(6)}`;
 }
 function digitsOnly(v?: string | null) { return (v || '').replace(/\D/g, ''); }
+
+// --- NEW: helpers for base-level display name persistence ---
+function baseSlugFrom(s: string) {
+  return (s || '').replace(/(-[a-z0-9]{2,12})+$/i, '');
+}
+async function upsertBaseDisplayName(base_slug: string, display_name: string) {
+  if (!base_slug || !display_name) return;
+  try {
+    await fetch('/api/templates/base-name', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ base_slug, display_name }),
+    });
+  } catch { /* ignore */ }
+}
 
 type Draft = {
   template_name: string;
@@ -157,6 +173,9 @@ export default function IdentityPanel({
   const [autoApply, setAutoApply] = React.useState(false);
   const debounceRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // NEW: debounce specifically for base display-name upsert
+  const renameDebounce = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+
   // Controlled industry options: value === canonical key
   const industryOptions = React.useMemo(() => getIndustryOptions(), []);
 
@@ -175,15 +194,31 @@ export default function IdentityPanel({
     ]);
   }, [template]);
 
-  // Re-sync the draft whenever the template signature changes.
-  React.useEffect(() => {
-    setDraft(toDraft(template));
-    setDirty(false);
-    setPhoneError(null);
-    setEmailError(null);
-    setLatError(null);
-    setLonError(null);
-  }, [templateSig, template]);
+
+  // Dispatch a live title event so the top-left header updates immediately.
+  const emitTitle = React.useCallback((name: string) => {
+    if (typeof window === 'undefined') return;
+    window.dispatchEvent(new CustomEvent('qs:template:title', { detail: { name } }));
+  }, []);
+
+// Re-sync the draft whenever the template signature changes AND
+// broadcast the current name so the toolbar matches on first paint.
+React.useEffect(() => {
+  const d = toDraft(template);
+  setDraft(d);
+  setDirty(false);
+  setPhoneError(null);
+  setEmailError(null);
+  setLatError(null);
+  setLonError(null);
+
+  // NEW: tell the toolbar what the “real” name is on page load
+  const initialName =
+    (d.template_name || '').trim() ||
+    (template as any).template_name ||
+    '';
+  if (initialName) emitTitle(initialName);
+}, [templateSig, template, emitTitle]);
 
   const scheduleAutoApply = React.useCallback(
     (nextDraft: Draft) => {
@@ -203,13 +238,23 @@ export default function IdentityPanel({
     if (draft.latitude.trim() !== '' && !Number.isFinite(Number(draft.latitude))) { setLatError('Latitude must be a number'); return; }
     if (draft.longitude.trim() !== '' && !Number.isFinite(Number(draft.longitude))) { setLonError('Longitude must be a number'); return; }
 
-    onChange(buildDataPatch(draft, template));
+    const patch = buildDataPatch(draft, template);
+    onChange(patch);
     setDirty(false);
+
+    // Persist the base-level display name so reloads and version flips keep it.
+    const name = String(draft.template_name || '').trim();
+    if (name) {
+      const base =
+        (template as any).base_slug ||
+        baseSlugFrom(String((template as any).slug || template.template_name || template.id || ''));
+      void upsertBaseDisplayName(base, name);
+    }
   }, [draft, onChange, template]);
 
   const setField = <K extends keyof Draft>(key: K, value: Draft[K]) => {
     setDraft((d) => {
-      const next = { ...d, [key]: value };
+      const next = { ...d, [key]: value as Draft[K] };
 
       // industry is controlled & canonicalized; re-normalize immediately
       if (key === 'industry') {
@@ -217,6 +262,25 @@ export default function IdentityPanel({
       }
 
       setDirty(true);
+
+      // Special handling for Template Name: optimistic header + optional upsert
+      if (key === 'template_name') {
+        const name = String(value || '').trim();
+
+        // 1) Live reflect in header immediately
+        emitTitle(name);
+
+        // 2) If auto-apply, debounce a base-name upsert too
+        if (autoApply) {
+          if (renameDebounce.current) clearTimeout(renameDebounce.current);
+          renameDebounce.current = setTimeout(() => {
+            const base =
+              (template as any).base_slug ||
+              baseSlugFrom(String((template as any).slug || template.template_name || template.id || ''));
+            void upsertBaseDisplayName(base, name);
+          }, 600);
+        }
+      }
 
       if (key === 'phone') {
         const digits = digitsOnly(String(value));
@@ -254,7 +318,7 @@ export default function IdentityPanel({
                 type="checkbox"
                 className="accent-purple-500"
                 checked={autoApply}
-                onChange={(e) => setAutoApply(e.target.checked)}
+                onChange={(e) => (setAutoApply(e.target.checked))}
               />
               Auto-apply
             </label>

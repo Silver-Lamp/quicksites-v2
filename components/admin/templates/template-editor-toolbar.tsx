@@ -2,6 +2,7 @@
 'use client';
 
 import * as React from 'react';
+import { usePathname } from 'next/navigation';
 import { Button } from '@/components/ui';
 import {
   Pencil,
@@ -27,10 +28,19 @@ type Props = {
   onBack?: () => void;
   setShowNameError?: (v: boolean) => void;
 
-  // NEW (optional): one-click Save & Publish (commit → snapshot → publish)
+  // optional: one-click Save & Publish (commit → snapshot → publish)
   onSaveAndPublish?: () => void;
   busy?: boolean; // drive both buttons' disabled/loading state
 };
+
+function extractTemplateIdFromPath(pathname: string | null): string | null {
+  if (!pathname) return null;
+  // Expect /template/{id}/edit (or /template/{id})
+  const parts = pathname.split('/').filter(Boolean);
+  const i = parts.indexOf('template');
+  if (i >= 0 && parts[i + 1]) return parts[i + 1];
+  return null;
+}
 
 export function TemplateEditorToolbar({
   templateName,
@@ -49,6 +59,100 @@ export function TemplateEditorToolbar({
   busy = false,
 }: Props) {
   const inputRef = React.useRef<HTMLInputElement | null>(null);
+  const pathname = usePathname();
+
+  // Live display name shown in the top-left
+  const [displayName, setDisplayName] = React.useState<string>(templateName);
+
+  // Keep local display name in sync with server-provided prop
+  React.useEffect(() => {
+    setDisplayName(templateName);
+  }, [templateName]);
+
+  const emitTitle = (name: string) => {
+    if (typeof window === 'undefined') return;
+    window.dispatchEvent(new CustomEvent('qs:template:title', { detail: { name } }));
+  };
+
+  // 🔑 NEW: Resolve the real display name on initial load (no dependency on side panel)
+  React.useEffect(() => {
+    const id = extractTemplateIdFromPath(pathname ?? null);
+    if (!id) return;
+
+    let cancelled = false;
+
+    (async () => {
+      // 1) Try base-level display name (template_base_meta or fallback per API)
+      try {
+        const r = await fetch(`/api/templates/base-name?template_id=${encodeURIComponent(id)}`, {
+          cache: 'no-store',
+        });
+        if (r.ok) {
+          const j = await r.json().catch(() => ({} as any));
+          const apiName = (j?.display_name || '').toString().trim();
+          if (apiName && !cancelled) {
+            setDisplayName(apiName);
+            emitTitle(apiName);
+            return; // done
+          }
+        }
+      } catch {
+        // fall through to state fetch
+      }
+
+      // 2) Fallback: fetch template state and derive (meta.siteTitle → template_name → slug)
+      try {
+        const s = await fetch(`/api/templates/state?id=${encodeURIComponent(id)}`, {
+          cache: 'no-store',
+        });
+        if (!s.ok) return;
+        const j2 = await s.json().catch(() => ({} as any));
+        // tolerate different shapes
+        const t =
+          (j2?.template ??
+            j2?.item ??
+            j2?.row ??
+            j2) as any;
+
+        const data = (t?.data ?? {}) as any;
+        const siteTitle = (data?.meta?.siteTitle || '').toString().trim();
+        const derived =
+          siteTitle ||
+          (t?.template_name || '').toString().trim() ||
+          (t?.slug || '').toString().trim() ||
+          '';
+
+        if (derived && !cancelled) {
+          setDisplayName(derived);
+          emitTitle(derived);
+        }
+      } catch {
+        /* ignore */
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [pathname]);
+
+  // Optimistic updates from Identity Panel while typing
+  React.useEffect(() => {
+    const handler = (e: Event) => {
+      try {
+        const ce = e as CustomEvent<{ name?: string }>;
+        const name = (ce.detail?.name || '').trim();
+        if (name) setDisplayName(name);
+      } catch {
+        /* no-op */
+      }
+    };
+    if (typeof window !== 'undefined') {
+      window.addEventListener('qs:template:title', handler as EventListener);
+      return () =>
+        window.removeEventListener('qs:template:title', handler as EventListener);
+    }
+  }, []);
 
   React.useEffect(() => {
     if (isRenaming && inputRef.current && document.activeElement !== inputRef.current) {
@@ -67,7 +171,7 @@ export function TemplateEditorToolbar({
   };
 
   const trimmed = inputValue.trim();
-  const canRename = Boolean(trimmed) && trimmed !== templateName && !nameExists;
+  const canRename = Boolean(trimmed) && trimmed !== displayName && !nameExists;
 
   const onSubmitRename = (e?: React.SyntheticEvent) => {
     e?.preventDefault();
@@ -76,6 +180,9 @@ export function TemplateEditorToolbar({
       safeSetNameError(!trimmed || nameExists);
       return;
     }
+    // Optimistically reflect immediately
+    setDisplayName(trimmed);
+    emitTitle(trimmed);
     handleRename();
   };
 
@@ -173,7 +280,7 @@ export function TemplateEditorToolbar({
             ) : (
               <div className="flex items-center gap-2">
                 <span className="truncate text-xl font-bold text-white">
-                  {templateName}
+                  {displayName}
                 </span>
                 <Button
                   type="button"

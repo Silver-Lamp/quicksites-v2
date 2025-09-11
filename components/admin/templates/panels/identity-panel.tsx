@@ -11,7 +11,7 @@ import { RefreshCw, Save } from 'lucide-react';
 import {
   getIndustryOptions,
   INDUSTRY_HINTS,
-  resolveIndustryKey,   // canonical key resolver (label/key/synonym → key)
+  resolveIndustryKey,
   toIndustryLabel,
 } from '@/lib/industries';
 
@@ -33,7 +33,6 @@ function formatPhoneLive(digits: string) {
 }
 function digitsOnly(v?: string | null) { return (v || '').replace(/\D/g, ''); }
 
-// --- helpers for base-level display name persistence ---
 function baseSlugFrom(s: string) {
   return (s || '').replace(/(-[a-z0-9]{2,12})+$/i, '');
 }
@@ -45,13 +44,24 @@ async function upsertBaseDisplayName(base_slug: string, display_name: string) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ base_slug, display_name }),
     });
-  } catch { /* ignore */ }
+  } catch {}
 }
+
+/* ───────────────── site type options ───────────────── */
+const SITE_TYPES = [
+  { value: '', label: 'Select site type' },
+  { value: 'small_business', label: 'Small Business' },
+  { value: 'portfolio', label: 'Portfolio' },
+  { value: 'blog', label: 'Blog' },
+  { value: 'about_me', label: 'About Me' },
+] as const;
 
 type Draft = {
   template_name: string;
   business_name: string;
-  industry: string;        // store CANONICAL KEY here
+  site_type: string;
+  industry: string;
+  industry_other: string;
   contact_email: string;
   phone: string;
   address_line1: string;
@@ -66,7 +76,10 @@ type Draft = {
 function toDraft(t: Template): Draft {
   const meta = (t.data as any)?.meta ?? {};
   const contact = meta?.contact ?? {};
+  const siteType = String(meta?.site_type ?? '') || '';
+
   const normKey = resolveIndustryKey(meta?.industry ?? (t as any).industry ?? '');
+  const industryLabel = String(meta?.industry_label ?? '').trim();
 
   const siteTitle =
     (meta?.siteTitle as string) ??
@@ -87,7 +100,11 @@ function toDraft(t: Template): Draft {
   return {
     template_name: siteTitle,
     business_name: business,
+    site_type: siteType,
     industry: normKey,
+    industry_other: normKey === 'other'
+      ? (industryLabel && industryLabel.toLowerCase() !== 'other' ? industryLabel : '')
+      : '',
     contact_email: String(contact?.email ?? (t as any).contact_email ?? ''),
     phone: formatPhoneLive(digitsOnly(rawPhone)),
     address_line1: addr1,
@@ -118,13 +135,21 @@ function buildDataPatch(d: Draft, tmpl: Template): Partial<Template> {
   const lon = d.longitude.trim() === '' ? null : clampLon(Number(d.longitude));
   const address = [d.address_line1, d.address_line2].filter(Boolean).join(', ').trim() || '';
 
+  const siteType = (d.site_type || prevMeta?.site_type || '') as string;
+
   const normKey = resolveIndustryKey(d.industry || prevMeta?.industry || (tmpl as any).industry || '');
+  const industryLabel =
+    normKey === 'other'
+      ? (d.industry_other || prevMeta?.industry_label || 'Other')
+      : toIndustryLabel(normKey);
 
   const meta = {
     ...prevMeta,
     siteTitle: d.template_name || prevMeta?.siteTitle || '',
     business: d.business_name || prevMeta?.business || '',
-    industry: normKey,
+    site_type: siteType || null,
+    industry: normKey || null,
+    industry_label: industryLabel || null,
     contact: {
       ...prevContact,
       email: email || null,
@@ -142,10 +167,9 @@ function buildDataPatch(d: Draft, tmpl: Template): Partial<Template> {
   const data = { ...prevData, meta };
   const topLevelName = d.template_name || (tmpl as any).template_name || '';
 
-  return {
-    template_name: topLevelName,
-    data,
-  };
+  // ❌ Previously: emitted qs:template:merge/apply-patch events here.
+  // ✅ Now: just return the patch; the Sidebar + Toolbar queue handle apply+persist.
+  return { template_name: topLevelName, data };
 }
 
 export default function IdentityPanel({
@@ -153,7 +177,7 @@ export default function IdentityPanel({
   onChange,
 }: {
   template: Template;
-  onChange: (patch: Partial<Template>) => void; // parent autosaves via commit
+  onChange: (patch: Partial<Template>) => void;
 }) {
   const [draft, setDraft] = React.useState<Draft>(() => toDraft(template));
   const [dirty, setDirty] = React.useState(false);
@@ -165,13 +189,9 @@ export default function IdentityPanel({
 
   const [autoApply, setAutoApply] = React.useState(false);
   const debounceRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  // debounce specifically for base display-name upsert
   const renameDebounce = React.useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Controlled industry options: value === canonical key
   const industryOptions = React.useMemo(() => getIndustryOptions(), []);
-
   const industryHint = React.useMemo(() => {
     const opt = industryOptions.find((o) => o.value === draft.industry);
     return opt ? INDUSTRY_HINTS[opt.label] : undefined;
@@ -181,13 +201,13 @@ export default function IdentityPanel({
     const meta = (template.data as any)?.meta ?? {};
     return JSON.stringify([
       meta?.industry ?? (template as any).industry ?? '',
+      meta?.site_type ?? '',
       meta?.siteTitle ?? template.template_name ?? '',
       meta?.business ?? (template as any).business_name ?? '',
       (template as any).updated_at ?? '',
     ]);
   }, [template]);
 
-  // 1) Define emitTitle (ID-scoped)
   const emitTitle = React.useCallback((nextName: string) => {
     if (typeof window === 'undefined') return;
     window.dispatchEvent(
@@ -197,7 +217,6 @@ export default function IdentityPanel({
     );
   }, [template]);
 
-  // 2) Re-sync the draft on template changes AND broadcast the current name so the toolbar matches on first paint.
   React.useEffect(() => {
     const d = toDraft(template);
     setDraft(d);
@@ -206,8 +225,6 @@ export default function IdentityPanel({
     setEmailError(null);
     setLatError(null);
     setLonError(null);
-
-    // tell the toolbar the current title + id
     const initialName =
       (d.template_name || '').trim() ||
       (template as any).template_name ||
@@ -220,6 +237,7 @@ export default function IdentityPanel({
       if (!autoApply) return;
       if (debounceRef.current) clearTimeout(debounceRef.current);
       const patch = buildDataPatch(nextDraft, template);
+      // Let the Sidebar merge + toolbar queue persist
       debounceRef.current = setTimeout(() => onChange(patch), 700);
     },
     [autoApply, onChange, template]
@@ -234,10 +252,9 @@ export default function IdentityPanel({
     if (draft.longitude.trim() !== '' && !Number.isFinite(Number(draft.longitude))) { setLonError('Longitude must be a number'); return; }
 
     const patch = buildDataPatch(draft, template);
-    onChange(patch);
+    onChange(patch);          // Sidebar merges; Toolbar queue persists
     setDirty(false);
 
-    // Persist the base-level display name so reloads and version flips keep it.
     const name = String(draft.template_name || '').trim();
     if (name) {
       const base =
@@ -253,18 +270,20 @@ export default function IdentityPanel({
 
       if (key === 'industry') {
         next.industry = resolveIndustryKey(String(value)) as Draft['industry'];
+        if (next.industry !== 'other') next.industry_other = '';
+      }
+
+      if (key === 'site_type') {
+        if (String(value) && value !== 'small_business' && !next.industry) {
+          next.industry = 'other';
+        }
       }
 
       setDirty(true);
 
-      // Special handling for Template Name: optimistic header + optional upsert
       if (key === 'template_name') {
         const name = String(value || '').trim();
-
-        // Live reflect in header immediately (ID-scoped)
         emitTitle(name);
-
-        // If auto-apply, debounce a base-name upsert too
         if (autoApply) {
           if (renameDebounce.current) clearTimeout(renameDebounce.current);
           renameDebounce.current = setTimeout(() => {
@@ -284,12 +303,6 @@ export default function IdentityPanel({
         const v = String(value).trim();
         setEmailError(v && !isValidEmail(v) ? 'Enter a valid email address' : null);
         scheduleAutoApply(next);
-      } else if (key === 'latitude') {
-        const v = String(value).trim();
-        setLatError(v !== '' && !Number.isFinite(Number(v)) ? 'Latitude must be a number' : null);
-      } else if (key === 'longitude') {
-        const v = String(value).trim();
-        setLonError(v !== '' && !Number.isFinite(Number(v)) ? 'Longitude must be a number' : null);
       } else {
         scheduleAutoApply(next);
       }
@@ -352,7 +365,7 @@ export default function IdentityPanel({
 
         {/* Business Name */}
         <div>
-          <Label>Business Name</Label>
+          <Label>Business / Site Display Name</Label>
           <Input
             value={draft.business_name}
             onChange={(e) => setField('business_name', e.target.value)}
@@ -361,26 +374,60 @@ export default function IdentityPanel({
           />
         </div>
 
-        {/* Industry (controlled; value is canonical key) */}
-        <div>
-          <Label>Industry</Label>
-          <select
-            value={draft.industry}
-            onChange={(e) => setField('industry', e.target.value)}
-            className="w-full px-2 py-1 rounded bg-gray-800 border text-white border-gray-700 focus:border-gray-600"
-          >
-            {draft.industry ? null : <option value="">Select industry</option>}
-            {industryOptions.map((opt) => (
-              <option key={opt.value} value={opt.value}>
-                {opt.label}
-              </option>
-            ))}
-          </select>
-          <p className="text-[11px] text-white/40 mt-1">
-            Resolved: {toIndustryLabel(resolveIndustryKey(draft.industry))}
-          </p>
-          {industryHint && <p className="text-xs text-white/60 mt-1">{industryHint}</p>}
+        {/* Site Type + Industry */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <Label>Site Type</Label>
+            <select
+              value={draft.site_type}
+              onChange={(e) => setField('site_type', e.target.value)}
+              className="w-full px-2 py-1 rounded bg-gray-800 border text-white border-gray-700 focus:border-gray-600"
+            >
+              {SITE_TYPES.map((s) => (
+                <option key={s.value} value={s.value}>{s.label}</option>
+              ))}
+            </select>
+            <p className="text-[11px] text-white/40 mt-1">
+              Helps AI tailor defaults (Portfolio / Blog / About Me / Small Business).
+            </p>
+          </div>
+
+          <div>
+            <Label>Industry</Label>
+            <select
+              value={draft.industry}
+              onChange={(e) => setField('industry', e.target.value)}
+              className="w-full px-2 py-1 rounded bg-gray-800 border text-white border-gray-700 focus:border-gray-600"
+            >
+              {draft.industry ? null : <option value="">Select industry</option>}
+              {getIndustryOptions().map((opt) => (
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </option>
+              ))}
+            </select>
+            <p className="text-[11px] text-white/40 mt-1">
+              Resolved: {toIndustryLabel(resolveIndustryKey(draft.industry))}
+            </p>
+            {industryHint && <p className="text-xs text-white/60 mt-1">{industryHint}</p>}
+          </div>
         </div>
+
+        {/* Free-text when "Other" is selected */}
+        {draft.industry === 'other' && (
+          <div>
+            <Label>Other Industry (describe)</Label>
+            <Input
+              value={draft.industry_other}
+              onChange={(e) => setField('industry_other', e.target.value)}
+              placeholder="e.g., Mobile Windshield Repair"
+              className={inputGhost}
+            />
+            <p className="text-[11px] text-white/40 mt-1">
+              Used as <code>industry_label</code> for AI prompts and copy.
+            </p>
+          </div>
+        )}
 
         {/* Contact Email */}
         <div>

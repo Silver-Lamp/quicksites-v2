@@ -1,3 +1,4 @@
+// app/admin/templates/sidebar-settings.tsx (Sidebar Settings)
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -12,17 +13,13 @@ import { Button } from '@/components/ui/button';
 import { Save, Loader2, AlertTriangle } from 'lucide-react';
 import { Collapsible } from '@/components/ui/collapsible';
 import EcommercePanel from '../templates/panels/ecommerce-panel';
+import * as ReactNS from 'react';
+import type { Template as Tpl, Page as Pg } from '@/types/template';
 
-type SidebarProps = {
-  template: Template;
-  onChange?: (patch: Partial<Template>) => void;
-  isSite?: boolean;
-  /** 'inline' (default) = resizable sidebar; 'drawer' = fills modal/drawer, no resize */
-  variant?: 'inline' | 'drawer';
-};
+type Template = Tpl;
+type Page = Pg;
 
 /* ---------------- Error boundary so a single panel can’t crash the whole sidebar ---------------- */
-import * as ReactNS from 'react';
 class PanelBoundary extends ReactNS.Component<{ name: string; children: ReactNS.ReactNode }, { err?: any }> {
   state = { err: undefined as any };
   static getDerivedStateFromError(err: any) { return { err }; }
@@ -57,19 +54,16 @@ function useLiveRef<T>(value: T) {
 
 /* ===================== Resizable settings ===================== */
 const STORAGE_KEY = 'qs:sidebar:width';
-const DEFAULT_WIDTH = 360;   // roomier by default
+const DEFAULT_WIDTH = 360;
 const MIN_WIDTH = 280;
-const MAX_WIDTH = 1024;      // allow much wider
-const EXPAND_WIDTH = 720;    // quick-expand target
+const MAX_WIDTH = 1024;
+const EXPAND_WIDTH = 720;
 
 function clamp(n: number, min: number, max: number) {
   return Math.max(min, Math.min(max, n));
 }
 
 /* ---- helpers ---- */
-import type { Template as Tpl, Page as Pg } from '@/types/template';
-type Page = Pg; type Template = Tpl;
-
 function getPages(t: Template): Page[] {
   const anyT: any = t ?? {};
   if (Array.isArray(anyT?.data?.pages)) return anyT.data.pages;
@@ -102,82 +96,11 @@ function mergeTemplate(current: Template, patch: Partial<Template>): Template {
   return next as Template;
 }
 
-/* ======= Commit API (autosave of data only) ======= */
-function useCommitApi(templateId?: string) {
-  const [pending, setPending] = useState(false);
-  const revRef = useRef<number>(0);
-  const queue = useRef<Promise<any>>(Promise.resolve());
-
-  const loadRev = useCallback(async () => {
-    if (!templateId) { revRef.current = 0; return 0; }
-    try {
-      const res = await fetch(`/api/templates/state?id=${encodeURIComponent(templateId)}`, { cache: 'no-store' });
-      const json = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(json?.error || 'state failed');
-      const r = Number(json?.infra?.template?.rev ?? 0);
-      revRef.current = Number.isFinite(r) ? r : 0;
-      return revRef.current;
-    } catch (e) {
-      console.warn('[commitApi] loadRev fallback to 0:', e);
-      revRef.current = 0;
-      return 0;
-    }
-  }, [templateId]);
-
-  useEffect(() => { void loadRev(); }, [loadRev]);
-
-  const _commitOnce = useCallback(async (dataPatch: any, kind: 'save' | 'autosave') => {
-    if (!templateId) return;
-    const baseRev = revRef.current ?? (await loadRev());
-
-    const res = await fetch('/api/templates/commit', {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ id: templateId, baseRev, patch: { data: dataPatch }, kind }),
-    });
-    const json = await res.json().catch(() => ({}));
-    if (!res.ok) {
-      if (res.status === 409) throw new Error('merge_conflict');
-      throw new Error(json?.error || 'commit failed');
-    }
-    if (typeof json?.rev === 'number') revRef.current = json.rev;
-    return json;
-  }, [templateId, loadRev]);
-
-  const commit = useCallback((dataPatch: any, kind: 'save' | 'autosave' = 'autosave') => {
-    if (!templateId) return Promise.resolve();
-    queue.current = queue.current.then(async () => {
-      setPending(true);
-      try {
-        try {
-          return await _commitOnce(dataPatch, kind);
-        } catch (e: any) {
-          if (e?.message === 'merge_conflict') {
-            await loadRev();
-            return await _commitOnce(dataPatch, kind);
-          }
-          throw e;
-        }
-      } finally {
-        setPending(false);
-        try { window.dispatchEvent(new CustomEvent('qs:truth:refresh')); } catch {}
-      }
-    });
-    return queue.current;
-  }, [_commitOnce, loadRev, templateId]);
-
-  const tRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const commitSoon = useCallback((dataPatch: any) => {
-    if (tRef.current) clearTimeout(tRef.current);
-    tRef.current = setTimeout(() => { void commit(dataPatch, 'autosave'); }, 350);
-  }, [commit]);
-
-  return { pending, commit, commitSoon, loadRev, revRef };
-}
-
+/* ======= Sidebar (delegates persistence to toolbar queue) ======= */
 type Props = {
   template: Template;
   onChange: (patch: Partial<Template>) => void;
+  /** 'inline' (default) = resizable sidebar; 'drawer' = fills modal/drawer, no resize */
   variant?: 'inline' | 'drawer';
 };
 
@@ -257,7 +180,6 @@ export default function SidebarSettings({ template, onChange, variant }: Props) 
   }, [endDrag, onPointerMove, width]);
 
   const onHandleDoubleClick = useCallback((e: React.MouseEvent) => {
-    // Double-click -> EXPAND_WIDTH; Shift+double-click -> MAX_WIDTH
     const target = e.shiftKey ? MAX_WIDTH : EXPAND_WIDTH;
     const next = Math.abs(width - target) < 8 ? DEFAULT_WIDTH : target;
     setWidth(clamp(next, MIN_WIDTH, MAX_WIDTH));
@@ -277,19 +199,40 @@ export default function SidebarSettings({ template, onChange, variant }: Props) 
     }
   }, [persistWidth, width]);
 
-  // ====== Commit autosave helpers ======
+  // ====== Save orchestration (delegate to toolbar queue) ======
   const tplRef = useLiveRef(template);
-  const { pending, commit, commitSoon } = useCommitApi((template as any)?.id);
+  const [pending, setPending] = useState(false);
 
+  // Debounced signal to the toolbar queue
+  const saveSoonRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const requestToolbarSaveSoon = useCallback(() => {
+    if (saveSoonRef.current) clearTimeout(saveSoonRef.current);
+    saveSoonRef.current = setTimeout(() => {
+      setPending(true);
+      // Wait one frame so React state settles before the toolbar snapshots tplRef.current
+      requestAnimationFrame(() => {
+        try {
+          window.dispatchEvent(new CustomEvent('qs:toolbar:save-now', { detail: { source: 'sidebar' } }));
+        } catch {}
+      });
+    }, 350);
+  }, []);
+
+  // Clear pending when toolbar announces a successful save
+  useEffect(() => {
+    const onSaved = () => setPending(false);
+    window.addEventListener('qs:preview:save', onSaved);
+    return () => window.removeEventListener('qs:preview:save', onSaved);
+  }, []);
+
+  // Unified patch applier: update local template state, then queue a save via toolbar
   const applyPatch = useCallback(
     (patch: Partial<Template>) => {
       const next = mergeTemplate(tplRef.current, patch);
       onChange(next as Partial<Template>);
-      if ((tplRef.current as any)?.id) {
-        try { commitSoon((next as any).data); } catch {}
-      }
+      requestToolbarSaveSoon();
     },
-    [onChange, commitSoon, tplRef]
+    [onChange, requestToolbarSaveSoon, tplRef]
   );
 
   const applyPages = useCallback(
@@ -299,15 +242,14 @@ export default function SidebarSettings({ template, onChange, variant }: Props) 
     [applyPatch, template.data]
   );
 
-  // explicit save (non-debounced)
-  const saveNow = useCallback(async () => {
-    if (!(tplRef.current as any)?.id) return;
-    try {
-      await commit((tplRef.current as any).data, 'save');
-    } catch (e) {
-      console.error('[sidebar saveNow] failed', e);
-    }
-  }, [commit, tplRef]);
+  const saveNow = useCallback(() => {
+    setPending(true);
+    requestAnimationFrame(() => {
+      try {
+        window.dispatchEvent(new CustomEvent('qs:toolbar:save-now', { detail: { source: 'sidebar:button' } }));
+      } catch {}
+    });
+  }, []);
 
   // ====== Derive active page for block-insertion helpers (home → first → 'home') ======
   const activePageId = useMemo(() => {
@@ -328,7 +270,7 @@ export default function SidebarSettings({ template, onChange, variant }: Props) 
     >
       {/* Sticky save bar */}
       <div className="sticky top-0 z-10 -mx-4 mb-2 border-b bg-background/95 px-4 py-2 backdrop-blur flex items-center gap-2">
-        <Button size="sm" className="gap-2" onClick={saveNow} disabled={pending || !(template as any)?.id}>
+        <Button size="sm" className="gap-2" onClick={saveNow}>
           {pending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
           {pending ? 'Saving…' : 'Save now'}
         </Button>
@@ -366,7 +308,7 @@ export default function SidebarSettings({ template, onChange, variant }: Props) 
         />
       </Collapsible>
 
-      {/* NEW: E-commerce panel */}
+      {/* E-commerce panel */}
       <PanelBoundary name="EcommercePanel">
         <EcommercePanel templateId={(template as any)?.id ?? null} currentPageId={activePageId} />
       </PanelBoundary>
@@ -378,7 +320,7 @@ export default function SidebarSettings({ template, onChange, variant }: Props) 
         initialPlatformFeeBps={75}
       />
     </div>
-  ), [activePageId, applyPatch, forceOpenHours, pending, saveNow, spotlightHours, template]);
+  ), [activePageId, applyPatch, forceOpenHours, pending, saveNow, spotlightHours, template, variant]);
 
   return (
     <aside
@@ -414,7 +356,6 @@ export default function SidebarSettings({ template, onChange, variant }: Props) 
           title="Drag to resize • Double-click to expand • Shift+Double-click for max • Shift+Arrow for bigger steps • R to reset"
         />
       )}
-
     </aside>
   );
 }

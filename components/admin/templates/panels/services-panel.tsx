@@ -27,9 +27,8 @@ export default function ServicesPanel({
   onChange,
 }: {
   template: Template | any;
-  onChange: (patch: Partial<Template>) => void; // PATCH, parent autosaves via commit
+  onChange: (patch: Partial<Template>) => void; // parent triggers a single commit
 }) {
-  // meta-first source of truth
   const meta = (template?.data as any)?.meta ?? {};
   const contact = meta?.contact ?? {};
   const persisted = (template?.data as any)?.services ?? template.services ?? [];
@@ -37,45 +36,31 @@ export default function ServicesPanel({
   const [draft, setDraft] = React.useState<Row[]>(rowsFrom(persisted));
   const [touched, setTouched] = React.useState(false);
   const [saving, setSaving] = React.useState(false);
+  const [aiBusy, setAiBusy] = React.useState(false);
+  const [aiError, setAiError] = React.useState<string | null>(null);
+  const [serverUsed, setServerUsed] = React.useState<string | null>(null);
 
-  // ---- Industry (normalized) ------------------------------------------------
+  // ---- Industry / Site-type basis (for badges and AI) -----------------------
   const rawIndustry: any = meta?.industry ?? template?.industry ?? null;
-
-  let industryKey = '';
-  let industryLabel = '';
-
-  try {
-    const r: any = resolveIndustry ? resolveIndustry(rawIndustry) : rawIndustry;
-    if (typeof r === 'string') {
-      industryKey = r.toLowerCase().trim();
-      industryLabel = r.trim();
-    } else if (r && typeof r === 'object') {
-      industryKey = String(r.key ?? r.value ?? '').toLowerCase().trim();
-      industryLabel = String(r.label ?? r.name ?? r.value ?? industryKey).trim();
-    }
-  } catch {
-    // ignore and fall through to raw fallbacks
+  const r: any = resolveIndustry ? resolveIndustry(rawIndustry) : rawIndustry;
+  let industryKey = '', industryLabel = '';
+  if (typeof r === 'string') { industryKey = r.toLowerCase().trim(); industryLabel = r.trim(); }
+  else if (r && typeof r === 'object') {
+    industryKey = String(r.key ?? r.value ?? '').toLowerCase().trim();
+    industryLabel = String(r.label ?? r.name ?? r.value ?? industryKey).trim();
   }
-  if (!industryKey) {
-    if (typeof rawIndustry === 'string') {
-      industryKey = rawIndustry.toLowerCase().trim();
-      industryLabel = rawIndustry.trim();
-    } else if (rawIndustry && typeof rawIndustry === 'object') {
-      industryKey = String(rawIndustry.key ?? rawIndustry.value ?? '').toLowerCase().trim();
-      industryLabel = String(rawIndustry.label ?? rawIndustry.name ?? rawIndustry.value ?? '').trim();
-    }
+  if (!industryKey && typeof rawIndustry === 'string') {
+    industryKey = rawIndustry.toLowerCase().trim();
+    industryLabel = rawIndustry.trim();
   }
+  const siteType: string | null = (meta?.site_type as string) || null;
+  const effectiveKey = (!industryKey || industryKey === 'other') ? (siteType || '') : industryKey;
 
   // Region context for better suggestions
   const city = String(contact?.city || '');
   const state = String(contact?.state || '');
 
-  const canSuggest = Boolean(industryKey);
-  const [aiBusy, setAiBusy] = React.useState(false);
-  const [aiError, setAiError] = React.useState<string | null>(null);
-  const [serverUsedIndustry, setServerUsedIndustry] = React.useState<string | null>(null);
-
-  // Sync when template changes
+  // Sync UI when template changes on the outside
   React.useEffect(() => {
     setDraft(rowsFrom(persisted as string[]));
     setTouched(false);
@@ -86,34 +71,30 @@ export default function ServicesPanel({
     JSON.stringify(clean(draft.map((r) => r.value))) !==
       JSON.stringify(clean(persisted as string[]));
 
+  // ---- Save (single-path write: onChange only, then one save-now nudge) -----
   const save = async () => {
     const cleaned = clean(draft.map((r) => r.value));
     setSaving(true);
     try {
-      // 1) Update editor state (what you already had), but also mirror into data.meta.services
+      // Single in-memory update → parent will build the commit
       onChange({
         data: {
           ...(template.data as any),
           services: cleaned,
           meta: { ...((template.data as any)?.meta ?? {}), services: cleaned },
         },
-        services: cleaned, // if you keep a top-level mirror anywhere
+        services: cleaned, // if you keep a top-level mirror
       });
-  
-      // 2) Emit canonical patches so the commit/publish pipeline can persist them
-      try {
-        window.dispatchEvent(new CustomEvent('qs:template:apply-patch', {
-          detail: { op: 'set', path: '/data/services', value: cleaned }
-        }));
-        window.dispatchEvent(new CustomEvent('qs:template:apply-patch', {
-          detail: { op: 'set', path: '/data/meta/services', value: cleaned }
-        }));
-        // Optional: if your backend still reads top-level services
-        window.dispatchEvent(new CustomEvent('qs:template:apply-patch', {
-          detail: { op: 'set', path: '/services', value: cleaned }
-        }));
-      } catch {}
-  
+
+      // Nudge exactly one commit after React state settles
+      requestAnimationFrame(() => {
+        try {
+          window.dispatchEvent(
+            new CustomEvent('qs:toolbar:save-now', { detail: { source: 'services-panel' } })
+          );
+        } catch {}
+      });
+
       setDraft(rowsFrom(cleaned));
       setTouched(false);
     } finally {
@@ -127,7 +108,8 @@ export default function ServicesPanel({
     setAiError(null);
   };
 
-  // AI Suggest helpers — send normalized key + label and surface server debug
+  // ---- AI Suggest (reads site_type+industry; no local autosaves here) -------
+  const canSuggest = Boolean(effectiveKey);
   const suggest = async (mode: 'append' | 'replace' = 'append', count = 6) => {
     if (!canSuggest || aiBusy) return;
     setAiBusy(true);
@@ -138,23 +120,23 @@ export default function ServicesPanel({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           template_id: template.id,
-          industry: industryKey,        // canonical key (for older handlers)
-          industry_key: industryKey,    // explicit canonical key
-          industry_label: industryLabel,// human label for LLM prompt quality
-          city,
-          state,
-          count,
-          debug: true,
+          // legacy fields
+          industry: effectiveKey,
+          industry_key: effectiveKey,
+          industry_label: industryLabel,
+          // new
+          site_type: siteType || null,
+          city, state, count, debug: true,
         }),
       });
       const json = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(json?.error || `Suggest failed (${res.status})`);
       const suggested: string[] = Array.isArray(json?.services) ? json.services : [];
-      setServerUsedIndustry(json?.debug?.industry_used ?? null);
+      setServerUsed(json?.debug?.industry_used ?? json?.debug?.site_type_used ?? null);
 
       const current = draft.map((r) => r.value);
-      const merged = clean(mode === 'replace' ? suggested : [...current, ...suggested]);
-      setDraft(rowsFrom(merged));
+      const merged = new Set(mode === 'replace' ? suggested : [...current, ...suggested]);
+      setDraft(rowsFrom(Array.from(merged)));
       setTouched(true);
     } catch (e: any) {
       setAiError(e?.message || 'AI suggestion failed');
@@ -169,26 +151,20 @@ export default function ServicesPanel({
         <div className="flex items-center gap-2">
           <div className="text-xs text-white/60">
             Used by Services blocks and forms
-            {industryKey && (
+            {effectiveKey && (
               <span className="ml-2 rounded bg-white/10 px-2 py-0.5 text-[10px] uppercase tracking-wide">
-                Industry: {industryKey}
+                {(!industryKey || industryKey === 'other') ? `TYPE: ${effectiveKey}` : `INDUSTRY: ${effectiveKey}`}
               </span>
             )}
-            {serverUsedIndustry && (
+            {serverUsed && (
               <span className="ml-2 rounded bg-indigo-500/20 px-2 py-0.5 text-[10px] uppercase tracking-wide">
-                API: {serverUsedIndustry}
+                API: {serverUsed}
               </span>
             )}
           </div>
           {canSuggest && (
             <div className="ml-auto flex items-center gap-2">
-              <Button
-                type="button"
-                size="sm"
-                onClick={() => suggest('append', 6)}
-                disabled={aiBusy}
-                className="h-8"
-              >
+              <Button type="button" size="sm" onClick={() => suggest('append', 6)} disabled={aiBusy} className="h-8">
                 <Sparkles className="h-3.5 w-3.5 mr-1" />
                 {aiBusy ? 'Suggesting…' : '✨ Suggest'}
               </Button>
@@ -213,7 +189,13 @@ export default function ServicesPanel({
           <div key={row.id} className="flex gap-2 items-center">
             <Input
               value={row.value}
-              placeholder="e.g., Roadside Assistance"
+              placeholder={effectiveKey === 'portfolio'
+                ? 'e.g., Web Design'
+                : effectiveKey === 'blog'
+                ? 'e.g., Editorial Consulting'
+                : effectiveKey === 'about_me'
+                ? 'e.g., Speaking'
+                : 'e.g., Roadside Assistance'}
               onChange={(e) => {
                 const v = e.target.value;
                 setDraft((prev) => prev.map((r) => (r.id === row.id ? { ...r, value: v } : r)));

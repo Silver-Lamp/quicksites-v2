@@ -1,4 +1,3 @@
-// components/admin/templates/templates-index-table.tsx
 'use client';
 
 import { useState, useMemo, useEffect, useCallback } from 'react';
@@ -72,6 +71,27 @@ function resolvePreviewUrl(t: any): string | null {
   return meta?.banner_url ?? meta?.ogImage ?? meta?.hero_url ?? null;
 }
 
+/** Resolve a canonical site type key from row/meta. */
+function resolveSiteType(t: any): string {
+  // 1) Direct column or meta
+  const meta: any = getMeta(t) ?? {};
+  const direct = (t?.site_type ?? meta?.site_type ?? '').toString().trim().toLowerCase();
+  if (direct) return direct;
+
+  // 2) Infer from industry_label when industry === 'other'
+  const ind = (meta?.industry ?? t?.industry ?? '').toString().trim().toLowerCase();
+  const label = (meta?.industry_label ?? '').toString().trim().toLowerCase();
+  if (ind === 'other' && label) {
+    if (['portfolio', 'blog', 'about me', 'about_me'].includes(label)) {
+      if (label === 'about me') return 'about_me';
+      return label;
+    }
+  }
+
+  // 3) Default if nothing else
+  return '';
+}
+
 export default function TemplatesIndexTable({
   templates,
   selectedFilter = '',
@@ -136,7 +156,18 @@ export default function TemplatesIndexTable({
         const industry = resolveIndustry(t).toLowerCase();
         const city = resolveCity(t).toLowerCase();
 
-        return name.includes(term) || slug.includes(term) || industry.includes(term) || city.includes(term);
+        // NEW: search by site type too
+        const typeKey = resolveSiteType(t);
+        const typeLabel = titleFromKey(typeKey).toLowerCase();
+
+        return (
+          name.includes(term) ||
+          slug.includes(term) ||
+          industry.includes(term) ||
+          city.includes(term) ||
+          typeKey.includes(term) ||
+          typeLabel.includes(term)
+        );
       });
   }, [templates, search, archiveFilter, archivedIds]);
 
@@ -155,6 +186,7 @@ export default function TemplatesIndexTable({
       displayName: (sample as any)?.display_name,
       mvIndustry: sample?.industry,
       resolvedIndustry: resolveIndustry(sample),
+      resolvedSiteType: resolveSiteType(sample),
       cityProp: sample?.city,
       resolvedCity: resolveCity(sample),
       phoneProp: sample?.phone,
@@ -194,8 +226,6 @@ export default function TemplatesIndexTable({
       setArchivedIds((prev) => [...prev, ...ids]);
       setSelectedIds([]);
       toast.success(`${ids.length} template${ids.length > 1 ? 's' : ''} archived`);
-
-      // Run the Refresh button logic (which dispatches list refetch)
       setTimeout(() => dispatchRefreshButton('bulk-archive'), 100);
     } else {
       toast.error('Bulk archive failed');
@@ -242,7 +272,7 @@ export default function TemplatesIndexTable({
           <Input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search name, industry, or city…"
+            placeholder="Search name, type, industry, or city…"
             className="text-sm w-64"
           />
         </div>
@@ -279,6 +309,8 @@ export default function TemplatesIndexTable({
               <th className="p-2 text-right">Actions</th>
               <th className="p-2">Published</th>
               <th className="p-2">Name</th>
+              {/* NEW: Type */}
+              <th className="p-2">Type</th>
               <th className="p-2">Industry</th>
               <th className="p-2">City</th>
               <th className="p-2">Phone</th>
@@ -294,7 +326,9 @@ export default function TemplatesIndexTable({
               const industryKey = resolveIndustry(t);
               const cityVal = resolveCity(t);
               const phoneVal = resolvePhone(t);
+              const typeKey = resolveSiteType(t);
 
+              const displayType = typeKey ? titleFromKey(typeKey) : '—';
               const displayIndustry = industryKey ? titleFromKey(industryKey) : '—';
               const displayCity = cityVal || '—';
               const previewUrl = resolvePreviewUrl(t);
@@ -309,8 +343,7 @@ export default function TemplatesIndexTable({
                   key={t.id}
                   className={cn(
                     'border-t border-white/10 hover:bg-zinc-800 transition',
-                    archivedFlag && 'opacity-50 italic',
-                    restoredIds.includes(t.id) && 'animate-fadeIn'
+                    archivedFlag && 'opacity-50 italic'
                   )}
                 >
                   <td className="p-2">
@@ -325,7 +358,20 @@ export default function TemplatesIndexTable({
                         const willSelect = !isChecked;
 
                         if (withShift && lastSelectedIndex !== null) {
-                          toggleSelectionRange(index, willSelect, { exclusive: withMeta });
+                          const start = Math.min(lastSelectedIndex ?? index, index);
+                          const end = Math.max(lastSelectedIndex ?? index, index);
+                          const rangeIds = filtered.slice(start, end + 1).map((r: any) => r.id);
+                          setSelectedIds((prev) => {
+                            if (withMeta) return willSelect ? [...rangeIds] : [];
+                            if (willSelect) {
+                              const set = new Set(prev);
+                              rangeIds.forEach((id) => set.add(id));
+                              return Array.from(set);
+                            } else {
+                              const remove = new Set(rangeIds);
+                              return prev.filter((id) => !remove.has(id));
+                            }
+                          });
                         } else if (withMeta) {
                           setSelectedIds(willSelect ? [t.id] : []);
                         } else {
@@ -363,10 +409,8 @@ export default function TemplatesIndexTable({
 
                             // optimistic UI
                             setArchivedIds((prev) => (archived ? [...prev, id] : prev.filter((x) => x !== id)));
-                            setRestoredIds((prev) => (archived ? prev : [...prev, id]));
                             toast.success(`Template ${archived ? 'archived' : 'restored'}`);
 
-                            // Trigger the refresh button → list refetch
                             setTimeout(() => dispatchRefreshButton('single-archive'), 100);
                           } catch {
                             toast.error('Network error archiving template');
@@ -396,6 +440,9 @@ export default function TemplatesIndexTable({
                       ) : null}
                     </Link>
                   </td>
+
+                  {/* NEW: Type column */}
+                  <td className="p-2 text-zinc-200">{displayType}</td>
 
                   <td className="p-2 text-zinc-200">{displayIndustry}</td>
                   <td className="p-2 text-zinc-400">{displayCity}</td>

@@ -5,15 +5,26 @@ import { TemplateEditorProvider } from '@/context/template-editor-context';
 import TemplateEditor from '@/components/admin/templates/template-editor';
 import type { Template } from '@/types/template';
 
+// Ensure no caching for edits
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+export const runtime = 'nodejs';
+
 type PageProps = {
-  params: { slug?: string[] };
+  // In Next.js 15, params is async in the App Router
+  params: Promise<{ slug?: string[] | string }>;
 };
 
-const STATIC_ASSET_RE = /\.(?:js\.map|json|txt|xml|svg|ico|png|jpg|jpeg|webp|woff2?)$/i;
+const STATIC_ASSET_RE =
+  /\.(?:js\.map|json|txt|xml|svg|ico|png|jpg|jpeg|webp|woff2?)$/i;
 
 function safeParse(x: unknown) {
   if (typeof x !== 'string') return (x as any) ?? {};
-  try { return JSON.parse(x); } catch { return {}; }
+  try {
+    return JSON.parse(x);
+  } catch {
+    return {};
+  }
 }
 
 function coalescePages(obj: any): any[] {
@@ -28,26 +39,59 @@ function withSyncedPages<T extends { data?: any; pages?: any[] }>(tpl: T): T {
 }
 
 export default async function TemplateEditPage({ params }: PageProps) {
-  const key = Array.isArray(params.slug) ? params.slug.join('/') : params.slug ?? '';
+  // Await params (Next.js 15)
+  const p = await params;
+  const parts = Array.isArray(p?.slug) ? p.slug : p?.slug ? [p.slug] : [];
+
+  // Allow routes like /:key/edit or /:key/preview → strip trailing UI segment
+  const last = parts[parts.length - 1];
+  const cleaned =
+    last && ['edit', 'preview', 'view'].includes(String(last).toLowerCase())
+      ? parts.slice(0, -1)
+      : parts;
+
+  const key = cleaned.join('/');
+
   if (!key || STATIC_ASSET_RE.test(key)) return notFound();
 
-  // Load a non-version draft by id OR slug OR base_slug
+  // Try to load a non-version draft first; fall back to latest matching row.
   const select =
-    'id, template_name, slug, base_slug, data, header_block, footer_block, color_mode, domain, default_subdomain, is_version, is_site';
+    'id, template_name, slug, base_slug, data, header_block, footer_block, color_mode, domain, default_subdomain, is_version, is_site, updated_at, rev';
+  const orCond = `id.eq.${key},slug.eq.${key},base_slug.eq.${key}`;
 
-  const { data: row, error } = await supabaseAdmin
-    .from('templates')
-    .select(select)
-    .eq('is_version', false)
-    .or(`id.eq.${key},slug.eq.${key},base_slug.eq.${key}`)
-    .maybeSingle();
+  // 1) Prefer non-version
+  let row: any | null = null;
+  {
+    const { data, error } = await supabaseAdmin
+      .from('templates')
+      .select(select)
+      .eq('is_version', false)
+      .or(orCond)
+      .order('updated_at', { ascending: false })
+      .limit(1);
+    if (!error && data && data.length) row = data[0];
+  }
 
-  if (error || !row) return notFound();
+  // 2) Fallback: any matching (e.g., when a fresh create has is_version=true)
+  if (!row) {
+    const { data, error } = await supabaseAdmin
+      .from('templates')
+      .select(select)
+      .or(orCond)
+      .order('updated_at', { ascending: false })
+      .limit(1);
+    if (!error && data && data.length) row = data[0];
+  }
 
-  // Normalize row → Template the editor expects
+  if (!row) return notFound();
+
+  // Normalize DB row → Template shape expected by the editor
   const dataObj = safeParse(row.data);
-  if (row.header_block && !dataObj.headerBlock) dataObj.headerBlock = row.header_block;
-  if (row.footer_block && !dataObj.footerBlock) dataObj.footerBlock = row.footer_block;
+  const headerObj = safeParse(row.header_block);
+  const footerObj = safeParse(row.footer_block);
+
+  if (row.header_block && !dataObj.headerBlock) dataObj.headerBlock = headerObj;
+  if (row.footer_block && !dataObj.footerBlock) dataObj.footerBlock = footerObj;
   if (row.color_mode && !dataObj.color_mode) dataObj.color_mode = row.color_mode;
 
   const initialData = withSyncedPages({
@@ -55,8 +99,8 @@ export default async function TemplateEditPage({ params }: PageProps) {
     template_name: row.template_name ?? row.slug ?? 'Untitled',
     slug: row.slug ?? undefined,
     data: dataObj,
-    headerBlock: row.header_block ?? null,
-    footerBlock: row.footer_block ?? null,
+    headerBlock: headerObj ?? null,
+    footerBlock: footerObj ?? null,
     color_mode: (row.color_mode as 'light' | 'dark' | undefined) ?? 'light',
     domain: row.domain ?? undefined,
     default_subdomain: row.default_subdomain ?? undefined,

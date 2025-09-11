@@ -1,8 +1,8 @@
 // app/admin/templates/new/page.tsx
 'use client';
 
-import { useEffect, useState } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useEffect, useRef, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase/client';
 import TemplateEditor from '@/components/admin/templates/template-editor';
 import type { Template } from '@/types/template';
@@ -38,27 +38,55 @@ function withSyncedPages<T extends { data?: any; pages?: any[] }>(tpl: T): T {
   const pages = coalescePages(tpl);
   return { ...tpl, pages, data: { ...(tpl.data ?? {}), pages } } as T;
 }
+
+/** Attempt server-side create via API route (preferred). Returns id or null. */
+async function tryCreateViaApi(initial: any): Promise<string | null> {
+  try {
+    const res = await fetch('/api/templates/create', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(initial),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      console.warn('[create API] non-OK:', res.status, err?.error || res.statusText);
+      return null;
+    }
+    const { id } = (await res.json()) as { id?: string };
+    return id ?? null;
+  } catch (e: any) {
+    console.warn('[create API] error:', e?.message || e);
+    return null;
+  }
+}
+
 /**
  * Insert a new draft template row and return the inserted id (or null).
  * Expects canonical data in `initial.data` (headerBlock/footerBlock inside data if present).
+ * - Tries API route first (which can refresh MVs securely).
+ * - Falls back to client insert + RPC MV refresh (requires SECURITY DEFINER on RPC).
  */
-async function insertDraft(initial: any): Promise<string | null> {
-  // Canonical minimal payload — omit generated/derived cols
+async function insertDraft(
+  initial: any,
+  router: ReturnType<typeof useRouter>
+): Promise<string | null> {
+  // 1) Try API route
+  const apiId = await tryCreateViaApi(initial);
+  if (apiId) {
+    router.replace(`/admin/templates/${apiId}/edit`);
+    router.refresh();
+    return apiId;
+  }
+
+  // 2) Fallback: direct client insert
   const payload: any = {
     template_name: initial.template_name ?? initial.slug ?? 'Untitled',
-    slug: initial.slug,                              // ✔️ let the DB compute base_slug
-    data: initial.data ?? {},                        // ✔️ canonical JSON
+    slug: initial.slug,
+    data: initial.data ?? {},
     color_mode: initial.color_mode ?? initial.data?.color_mode ?? 'light',
-    // Optional mirrors if you store them:
     header_block: initial.data?.headerBlock ?? null,
     footer_block: initial.data?.footerBlock ?? null,
-    // You can include is_site if it’s a real column (not generated):
     ...(typeof initial.is_site === 'boolean' ? { is_site: initial.is_site } : {}),
-    // DO NOT include base_slug or is_version here:
-    // base_slug: initial.slug,      // ❌ generated
-    // is_version: false,            // ❌ generated
-    // published: false,             // ⚠️ omit if published is generated/derived in your schema
-    // domain/default_subdomain: include only if you’re actually setting them
   };
 
   const { data, error } = await supabase
@@ -71,18 +99,33 @@ async function insertDraft(initial: any): Promise<string | null> {
     console.error('[new template] insert failed:', error.message);
     return null;
   }
+
+  // Try to refresh MV so list pages pick it up immediately
+  try { await supabase.rpc('refresh_template_bases'); } catch (e) {
+    console.warn('[new template] MV refresh RPC failed (non-fatal):', (e as any)?.message || e);
+  }
+
+  router.replace(`/admin/templates/${data.id}/edit`);
+  router.refresh();
   return data?.id ?? null;
 }
 /* ---------------------------------------- */
 
 export default function NewTemplatePage() {
+  const router = useRouter();
   const searchParams = useSearchParams();
   const from = searchParams?.get('from') ?? ''; // optional snapshot id
 
   const [initialData, setInitialData] = useState<Template | null>(null);
   const [busy, setBusy] = useState(true);
 
+  // Guard: avoid double create in dev (Strict Mode)
+  const startedRef = useRef(false);
+
   useEffect(() => {
+    if (startedRef.current) return;
+    startedRef.current = true;
+
     let cancelled = false;
 
     async function initializeTemplate() {
@@ -109,10 +152,8 @@ export default function NewTemplatePage() {
             base = withSyncedPages({
               ...fresh,
               data: {
-                // keep any default meta the shell creates and layer snapshot
                 ...(fresh.data ?? {}),
                 ...(snapData ?? {}),
-                // be explicit which fields we want to carry:
                 services: Array.isArray(snapData?.services) ? snapData.services : (fresh.data?.services ?? []),
                 pages: Array.isArray(snapData?.pages) ? snapData.pages : (fresh.data?.pages ?? []),
               },
@@ -120,7 +161,7 @@ export default function NewTemplatePage() {
               color_mode: (snapData?.color_mode as 'light' | 'dark') ?? (fresh.color_mode as any) ?? 'light',
             } as Template);
 
-            // optional analytics: log a remix event if authenticated
+            // optional analytics
             try {
               const { data: auth } = await supabase.auth.getUser();
               if (auth?.user?.id) {
@@ -132,7 +173,7 @@ export default function NewTemplatePage() {
           }
         }
 
-        // Ensure chrome is mirrored inside data (renderer/editor expect it there)
+        // Ensure chrome mirrored inside data (renderer/editor expect it there)
         if (!base.data?.headerBlock && (base as any).headerBlock) {
           base.data!.headerBlock = (base as any).headerBlock;
         }
@@ -144,7 +185,7 @@ export default function NewTemplatePage() {
         }
 
         // Create the draft row so the editor has an ID for commits
-        const insertedId = await insertDraft(base);
+        const insertedId = await insertDraft(base, router);
         if (!insertedId) {
           toast.error('Failed to create draft template.');
           if (!cancelled) setInitialData(null);
@@ -160,7 +201,7 @@ export default function NewTemplatePage() {
 
     void initializeTemplate();
     return () => { cancelled = true; };
-  }, [from]);
+  }, [from, router]);
 
   if (busy || !initialData) {
     return (

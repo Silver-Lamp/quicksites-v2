@@ -1,3 +1,4 @@
+// components/admin/templates/block-editors/hero.tsx
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
@@ -5,13 +6,23 @@ import type { Block } from '@/types/blocks';
 import type { Template } from '@/types/template';
 import type { BlockEditorProps } from './index';
 import BlockPreviewToggle from '@/components/admin/ui/block-preview-toggle';
-import { Sparkles, Image as ImageIcon, Loader2, Settings2, X } from 'lucide-react';
+import {
+  Sparkles,
+  Image as ImageIcon,
+  Loader2,
+  Settings2,
+  X,
+  Briefcase,
+  Newspaper,
+  UserRound,
+  ChevronRight
+} from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
 import toast from 'react-hot-toast';
 import { getIndustryOptions, resolveIndustryKey, toIndustryLabel } from '@/lib/industries';
 import { uploadToStorage } from '@/lib/uploadToStorage';
 
-/* ───────── helpers (same as before) ───────── */
+/* ───────────────── helpers ───────────────── */
 
 function toCanonicalHeroProps(local: any, template?: any) {
   const digits = (s: string) => (s || '').replace(/\D/g, '');
@@ -24,18 +35,55 @@ function toCanonicalHeroProps(local: any, template?: any) {
     const d = digits(local?.cta_phone) || digits((template?.phone as string) || '');
     ctaHref = d ? `tel:${d}` : 'tel:';
   }
-  return {
-    heading: local?.headline ?? local?.heading ?? 'Welcome to Your New Site',
-    subheading: local?.subheadline ?? local?.subheading ?? 'Start editing, and let the magic happen.',
-    ctaLabel: local?.cta_text ?? local?.ctaLabel ?? 'Get Started',
+
+  const heading = local?.headline ?? local?.heading ?? 'Welcome to Your New Site';
+  const subheading = local?.subheadline ?? local?.subheading ?? 'Start editing, and let the magic happen.';
+  const ctaLabel = local?.cta_text ?? local?.ctaLabel ?? 'Get Started';
+
+  // Resolve image + layout forgivingly
+  const image =
+    local?.image_url ||
+    local?.heroImage ||
+    local?.image ||
+    local?.imageUrl ||
+    local?.imageURL ||
+    local?.backgroundImage ||
+    '';
+
+  const layout = (local?.layout_mode || local?.layout || 'inline') as
+    | 'inline'
+    | 'background'
+    | 'full_bleed'
+    | 'natural_height';
+
+  const overlay = local?.overlay_level ?? local?.overlay ?? 'soft';
+
+  const base = {
+    heading,
+    subheading,
+    ctaLabel,
     ctaHref,
-    heroImage: local?.image_url ?? local?.heroImage ?? '',
+    heroImage: image,
+    image_url: image,
+    image,
+    layout_mode: layout,
+    layout,
     blur_amount: typeof local?.blur_amount === 'number' ? local.blur_amount : 0,
     image_position: local?.image_position ?? 'center',
-    layout_mode: local?.layout_mode ?? 'inline',
-    overlay_level: local?.overlay_level ?? 'soft',
+    image_x: local?.image_x,
+    image_y: local?.image_y,
+    overlay_level: overlay,
+    overlay,
     tone: local?.tone ?? 'neutral',
     tags: Array.isArray(local?.tags) ? local.tags : [],
+  };
+
+  return {
+    ...base,
+    headline: base.heading,
+    subheadline: base.subheading,
+    cta_text: base.ctaLabel,
+    backgroundImage: image,
   };
 }
 
@@ -60,6 +108,21 @@ function normalizeCta(local: any, template?: any) {
   return out;
 }
 
+function normalizeSuggested(payload: any) {
+  const h = payload?.headline ?? payload?.heading ?? payload?.title ?? '';
+  const sh = payload?.subheadline ?? payload?.subheading ?? payload?.tagline ?? payload?.description ?? '';
+  const cta = payload?.cta_text ?? payload?.ctaLabel ?? payload?.cta ?? '';
+  return { headline: h, subheadline: sh, cta_text: cta };
+}
+
+function refreshPreview() {
+  requestAnimationFrame(() => {
+    try {
+      window.dispatchEvent(new CustomEvent('qs:preview:refresh', { detail: { source: 'hero-editor' } }));
+    } catch {}
+  });
+}
+
 function pickMostEdited(propsRaw: any, contentRaw: any, template?: any) {
   const toNew = (raw: any = {}) => {
     const out: any = { ...raw };
@@ -69,9 +132,9 @@ function pickMostEdited(propsRaw: any, contentRaw: any, template?: any) {
     if (!out.image_url && raw.heroImage) out.image_url = raw.heroImage;
     if (!out.cta_link && typeof raw.ctaHref === 'string') out.cta_link = raw.ctaHref;
     if (raw.blur_amount != null && out.blur_amount == null) out.blur_amount = raw.blur_amount;
-    if (raw.image_position && !out.image_position) out.image_position = raw.image_position;
-    if (raw.layout_mode && !out.layout_mode) out.layout_mode = raw.layout_mode;
-    if (raw.overlay_level && !out.overlay_level) out.overlay_level = raw.overlay_level;
+    for (const k of ['image_position', 'layout_mode', 'layout', 'overlay_level', 'overlay']) {
+      if (raw[k] != null && out[k] == null) out[k] = raw[k];
+    }
     return out;
   };
   const P = toNew(propsRaw || {});
@@ -95,12 +158,21 @@ function pickMostEdited(propsRaw: any, contentRaw: any, template?: any) {
   return { merged: normalizeCta(merged, template), chosenKey: (base === C ? 'content' : 'props') as 'props' | 'content' };
 }
 
-/* ───────── styles ───────── */
+/* ───────────────── styles ───────────────── */
 const selectDark =
   'w-full rounded-md border border-white/10 bg-neutral-950 px-2 py-2 text-sm text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500';
 const rangeDark = 'w-full accent-violet-500';
 
-/* ───────── component ───────── */
+/* ───────────────── site type quick-picks ───────────────── */
+const SITE_TYPES = [
+  { key: 'small_business', label: 'Small Business', blurb: 'Pick your industry', Icon: Briefcase as any },
+  { key: 'portfolio',      label: 'Portfolio',      blurb: 'Show your work',    Icon: ImageIcon as any },
+  { key: 'blog',           label: 'Blog',           blurb: 'Posts & updates',   Icon: Newspaper as any },
+  { key: 'about_me',       label: 'About Me',       blurb: 'Simple profile',    Icon: UserRound as any },
+] as const;
+type SiteType = typeof SITE_TYPES[number]['key'];
+
+/* ───────────────── component ───────────────── */
 export default function HeroEditor({
   block,
   onSave,
@@ -110,10 +182,9 @@ export default function HeroEditor({
 }: BlockEditorProps & { template: Template }) {
   if (block.type !== 'hero') return null;
 
-  // Express vs Advanced
   const [mode, setMode] = useState<'express' | 'advanced'>('express');
 
-  // init from most-edited side
+  // initial local
   const rawProps = (block as any)?.props;
   const rawContent = (block as any)?.content;
   const { merged: initialLocal, chosenKey } = useMemo(
@@ -129,7 +200,16 @@ export default function HeroEditor({
   const [local, setLocal] = useState<any>(initialLocal);
   useEffect(() => setLocal(initialLocal), [initialLocal]);
 
-  // industry
+  // preview nonce
+  const [previewNonce, setPreviewNonce] = useState(0);
+  const bumpPreview = () => {
+    setPreviewNonce((n) => n + 1);
+    requestAnimationFrame(() => {
+      try { window.dispatchEvent(new CustomEvent('qs:preview:refresh', { detail: { source: 'hero-editor' } })); } catch {}
+    });
+  };
+
+  // industry/site type
   const industryOptions = useMemo(() => getIndustryOptions(), []);
   const currentIndustryKey = useMemo(() => {
     const meta = (template?.data as any)?.meta ?? {};
@@ -140,25 +220,44 @@ export default function HeroEditor({
   useEffect(() => setIndustryKey(currentIndustryKey), [currentIndustryKey]);
   const [aiIndustryOther, setAiIndustryOther] = useState('');
 
-  // label used downstream (after step 2)
-  const promptIndustryLabel = useMemo(
-    () =>
-      industryKey === 'other' && aiIndustryOther.trim()
-        ? aiIndustryOther.trim()
-        : toIndustryLabel(resolveIndustryKey(industryKey)),
-    [industryKey, aiIndustryOther]
-  );
+  const initialSiteType: SiteType | null = useMemo(() => {
+    const meta = (template?.data as any)?.meta ?? {};
+    if (meta?.site_type) return meta.site_type as SiteType;
+    if (currentIndustryKey && currentIndustryKey !== 'other') return 'small_business';
+    return null;
+  }, [template, currentIndustryKey]);
 
-  // Step control: gate the rest of the form until industry is chosen
+  const [siteType, setSiteType] = useState<SiteType | null>(initialSiteType);
+  const [showMoreTypes, setShowMoreTypes] = useState(false);
+
+  const nonBusinessLabel =
+    siteType === 'portfolio' ? 'Portfolio'
+      : siteType === 'blog' ? 'Blog'
+      : siteType === 'about_me' ? 'About Me'
+      : '';
+
+  const promptIndustryLabel = useMemo(() => {
+    if (siteType && siteType !== 'small_business') return nonBusinessLabel;
+    return industryKey === 'other' && aiIndustryOther.trim()
+      ? aiIndustryOther.trim()
+      : toIndustryLabel(resolveIndustryKey(industryKey));
+  }, [siteType, nonBusinessLabel, industryKey, aiIndustryOther]);
+
+  // steps
   type Step = 1 | 2;
-  const initialStep: Step = (currentIndustryKey && currentIndustryKey !== 'other') ? 2 : 1;
+  const initialStep: Step =
+    (siteType && siteType !== 'small_business') ||
+    (currentIndustryKey && currentIndustryKey !== 'other')
+      ? 2 : 1;
   const [step, setStep] = useState<Step>(initialStep);
+
   const industryValid = useMemo(
     () => !!industryKey && (industryKey !== 'other' || aiIndustryOther.trim().length > 0),
     [industryKey, aiIndustryOther]
   );
+  const step1Valid = (siteType === 'small_business') ? industryValid : !!siteType;
 
-  // AI + image gen
+  // AI / image gen state
   const [aiLoading, setAiLoading] = useState(false);
   const [aiError, setAiError] = useState<string | null>(null);
   const [imgLoading, setImgLoading] = useState(false);
@@ -170,9 +269,82 @@ export default function HeroEditor({
   );
   const [imgStyle, setImgStyle] = useState<'photo' | 'illustration' | '3d' | 'minimal'>('photo');
 
-  const update = <K extends keyof typeof local>(key: K, value: (typeof local)[K]) =>
-    setLocal((prev: any) => ({ ...prev, [key]: value as (typeof local)[K] }));
+  const update = <K extends keyof typeof local>(key: K, value: (typeof local)[K] | ((prev: any) => any)) =>
+    setLocal((prev: any) => ({ ...prev, [key]: typeof value === 'function' ? (value as any)(prev[key]) : value }));
 
+  /* ---------- bridge: react to on-canvas chip events ---------- */
+  useEffect(() => {
+    const onGenericSet = (e: any) => {
+      const d = e?.detail || {};
+      setLocal((prev: any) => {
+        const next = { ...prev };
+        if (d.overlay_level) { next.overlay_level = d.overlay_level; next.overlay = d.overlay_level; }
+        if (d.layout) { next.layout_mode = d.layout; next.layout = d.layout; }
+        if (typeof d.blur_amount === 'number') next.blur_amount = d.blur_amount;
+        return next;
+      });
+      bumpPreview();
+    };
+    const onLayout = (e: any) => {
+      const layout = e?.detail?.layout as string | undefined;
+      if (!layout) return;
+      setLocal((p: any) => ({ ...p, layout_mode: layout, layout }));
+      bumpPreview();
+    };
+    const onOverlay = (e: any) => {
+      const step = Math.max(-1, Math.min(1, Number(e?.detail?.step) || 0));
+      const order = ['none', 'soft', 'strong'] as const;
+      setLocal((p: any) => {
+        const cur = (p?.overlay_level ?? p?.overlay ?? 'soft') as (typeof order)[number];
+        const idx = Math.max(0, Math.min(order.length - 1, order.indexOf(cur) + step));
+        const lvl = order[idx];
+        return { ...p, overlay_level: lvl, overlay: lvl };
+      });
+      bumpPreview();
+    };
+    const onAutoFix = () => {
+      setLocal((p: any) => {
+        const cur = (p?.overlay_level ?? p?.overlay ?? 'none') as 'none' | 'soft' | 'strong';
+        const lvl = cur === 'none' ? 'soft' : 'strong';
+        return { ...p, overlay_level: lvl, overlay: lvl, layout_mode: p?.layout_mode && p.layout_mode !== 'inline' ? p.layout_mode : 'background', layout: p?.layout && p.layout !== 'inline' ? p.layout : 'background' };
+      });
+      bumpPreview();
+    };
+
+    // Also reflect apply-patch from renderer (overlay/layout/image_x/y/blur)
+    const onApplyPatch = (e: any) => {
+      const patch = e?.detail;
+      const id = (block as any)?._id || (block as any)?.id;
+      const b = Array.isArray(patch?.blocks) ? patch.blocks.find((x: any) => x.id === id) : null;
+      if (!b) return;
+      const c = b.content || {};
+      setLocal((p: any) => ({
+        ...p,
+        ...(c.overlay_level ? { overlay_level: c.overlay_level, overlay: c.overlay_level } : {}),
+        ...(c.layout_mode || c.layout ? { layout_mode: c.layout_mode || c.layout, layout: c.layout || c.layout_mode } : {}),
+        ...(c.image_x ? { image_x: c.image_x } : {}),
+        ...(c.image_y ? { image_y: c.image_y } : {}),
+        ...(typeof c.blur_amount === 'number' ? { blur_amount: c.blur_amount } : {}),
+      }));
+      bumpPreview();
+    };
+
+    window.addEventListener('qs:hero:set', onGenericSet as any);
+    window.addEventListener('qs:hero:set-layout', onLayout as any);
+    window.addEventListener('qs:hero:set-overlay', onOverlay as any);
+    window.addEventListener('qs:hero:auto-fix', onAutoFix as any);
+    window.addEventListener('qs:template:apply-patch', onApplyPatch as any);
+
+    return () => {
+      window.removeEventListener('qs:hero:set', onGenericSet as any);
+      window.removeEventListener('qs:hero:set-layout', onLayout as any);
+      window.removeEventListener('qs:hero:set-overlay', onOverlay as any);
+      window.removeEventListener('qs:hero:auto-fix', onAutoFix as any);
+      window.removeEventListener('qs:template:apply-patch', onApplyPatch as any);
+    };
+  }, [block]);
+
+  /* ---------- save ---------- */
   const handleSave = () => {
     const mergedLocal = normalizeCta({ ...local }, template);
     const canon = toCanonicalHeroProps(mergedLocal, template);
@@ -205,25 +377,33 @@ export default function HeroEditor({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [promptIndustryLabel]);
 
-  // reflect industry in template meta live (works in both steps)
+  // reflect meta live
   useEffect(() => {
     (block as any).industry = industryKey;
     const meta = ((template?.data as any)?.meta ?? {});
+    const patch = {
+      ...meta,
+      industry: industryKey,
+      site_type: siteType || null,
+      industry_label: promptIndustryLabel || null,
+    };
     try {
-      window.dispatchEvent(new CustomEvent('qs:template:merge', { detail: { meta: { ...meta, industry: industryKey } } }));
+      window.dispatchEvent(new CustomEvent('qs:template:merge', { detail: { meta: patch } }));
       window.dispatchEvent(new CustomEvent('qs:template:apply-patch', {
-        detail: { data: { ...(template?.data as any), meta: { ...meta, industry: industryKey } }, industry: industryKey } as any,
+        detail: { data: { ...(template?.data as any), meta: patch }, industry: industryKey, site_type: siteType } as any,
       }));
     } catch {}
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [industryKey]);
+  }, [industryKey, siteType, promptIndustryLabel]);
 
   async function requestSuggestions() {
     const res = await fetch('/api/hero/suggest', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         template_id: template?.id,
         industry: promptIndustryLabel,
+        site_type: siteType || 'small_business',
         services: (template as any)?.services ?? [],
         business_name: (template as any)?.business_name,
         city: (template as any)?.city,
@@ -231,18 +411,38 @@ export default function HeroEditor({
       }),
     });
     if (!res.ok) throw new Error(`Suggest failed (${res.status})`);
-    return (await res.json()) as { headline?: string; subheadline?: string; cta_text?: string };
+    return (await res.json()) as any;
   }
+
   async function suggestAll() {
     setAiLoading(true); setAiError(null);
     try {
-      const data = await requestSuggestions();
-      if (data.headline) update('headline', data.headline);
-      if (data.subheadline) update('subheadline', data.subheadline);
-      if (data.cta_text) update('cta_text', data.cta_text);
+      const raw = await requestSuggestions();
+      const { headline, subheadline, cta_text } = normalizeSuggested(raw);
+
+      const defaultsByType: Record<string, { h: string; sh: string; cta: string }> = {
+        portfolio: { h: 'Work That Speaks For Itself', sh: 'A curated selection of recent projects and collaborations.', cta: 'View Portfolio' },
+        blog: { h: 'Ideas, Notes & Updates', sh: 'Writing on craft, process, and what I’m exploring next.', cta: 'Read the Blog' },
+        about_me: { h: 'Hi, I’m ___', sh: 'A simple page about who I am and what I do.', cta: 'Get In Touch' },
+        small_business: { h: 'Your Trusted Local Service', sh: 'Fast, reliable solutions tailored to your needs.', cta: 'Get Started Today' },
+      };
+      const d = defaultsByType[siteType || 'small_business'];
+
+      setLocal((prev: any) => ({
+        ...prev,
+        headline: headline || d.h,
+        subheadline: subheadline || d.sh,
+        cta_text: cta_text || d.cta,
+      }));
+
       toast.success('Suggested copy applied');
-    } catch (e: any) { setAiError(e?.message || 'Failed to fetch suggestions'); toast.error('Could not get AI suggestions'); }
-    finally { setAiLoading(false); }
+      refreshPreview();
+    } catch (e: any) {
+      setAiError(e?.message || 'Failed to fetch suggestions');
+      toast.error('Could not get AI suggestions');
+    } finally {
+      setAiLoading(false);
+    }
   }
 
   async function generateHeroImage() {
@@ -251,14 +451,17 @@ export default function HeroEditor({
       const base =
         `website hero (header/banner) image for a ${promptIndustryLabel} small business. ` +
         `${imgSubject}. wide 16:9 composition with clear copy space for headline, clean modern background, high detail, no text, no watermarks, no logos.`;
-      const negatives = imgIncludePeople ? 'no text, no watermark, no logo' :
-        'no people, no faces, no portraits, no hands, no superheroes, no text, no watermark, no logo';
+      const negatives = imgIncludePeople ? 'no text, no watermark, no logo'
+        : 'no people, no faces, no portraits, no hands, no superheroes, no text, no watermark, no logo';
 
       const res = await fetch('/api/hero/generate-image', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          template_id: template?.id, industry: promptIndustryLabel,
-          services: (template as any)?.services ?? [], business_name: (template as any)?.business_name,
+          template_id: template?.id,
+          industry: promptIndustryLabel,
+          site_type: siteType || 'small_business',
+          services: (template as any)?.services ?? [],
+          business_name: (template as any)?.business_name,
           city: (template as any)?.city, state: (template as any)?.state,
           subject: imgSubject, style: imgStyle, aspect: 'wide',
           prompt: base, negative: negatives, include_people: imgIncludePeople,
@@ -268,12 +471,45 @@ export default function HeroEditor({
       if (!res.ok) throw new Error(`Image generate failed (${res.status})`);
       const { image_base64 } = await res.json();
       if (!image_base64) throw new Error('No image returned');
-      const file = new File([Uint8Array.from(atob(image_base64), c => c.charCodeAt(0))], `hero-${Date.now()}.png`, { type: 'image/png' });
-      const url = await uploadToStorage(file, `template-${template?.id}/hero`);
-      update('image_url', url as any);
-      toast.success('Hero image generated');
-    } catch (e: any) { setImgError(e?.message || 'Failed to generate image'); toast.error('Could not generate image'); }
-    finally { setImgLoading(false); }
+
+      const clean = image_base64.replace(/^data:image\/\w+;base64,/, '');
+      const byteChars = atob(clean);
+      const byteNumbers = new Array(byteChars.length);
+      for (let i = 0; i < byteChars.length; i++) byteNumbers[i] = byteChars.charCodeAt(i);
+      const blob = new Blob([new Uint8Array(byteNumbers)], { type: 'image/png' });
+      const file = new File([blob], `hero-${Date.now()}.png`, { type: 'image/png' });
+
+      const uploaded = await uploadToStorage(file, `template-${template?.id}/hero`) as any;
+      const publicUrl =
+        typeof uploaded === 'string' ? uploaded :
+        uploaded?.publicUrl || uploaded?.publicURL || uploaded?.signedUrl ||
+        uploaded?.data?.publicUrl || uploaded?.data?.publicURL || '';
+
+      const nextUrl = publicUrl || `data:image/png;base64,${clean}`;
+
+      setLocal((prev: any) => ({
+        ...prev,
+        image_url: nextUrl,
+        image: nextUrl,
+        heroImage: nextUrl,
+        backgroundImage: nextUrl,
+        layout_mode: prev?.layout_mode && prev.layout_mode !== 'inline' ? prev.layout_mode : 'background',
+        layout: prev?.layout && prev.layout !== 'inline' ? prev.layout : 'background',
+        overlay_level: prev?.overlay_level ?? 'soft',
+        overlay: prev?.overlay ?? 'soft',
+      }));
+
+      console.log('[hero] uploaded image url →', publicUrl || '(data url fallback)');
+      toast.success(publicUrl ? 'Hero image generated' : 'Image ready (inline preview)');
+
+      bumpPreview();
+    } catch (e: any) {
+      setImgError(e?.message || 'Failed to generate image');
+      toast.error('Could not generate image');
+      console.error('generateHeroImage error', e);
+    } finally {
+      setImgLoading(false);
+    }
   }
 
   // Close on Esc
@@ -283,7 +519,7 @@ export default function HeroEditor({
     return () => window.removeEventListener('keydown', onEsc);
   }, [onClose]);
 
-  /* ───────── Modal layout: overlay + scrollable content + sticky footer ───────── */
+  /* ───────────────── UI ───────────────── */
   return (
     <div className="fixed inset-0 z-[100] flex items-start justify-center" role="dialog" aria-modal="true" aria-label="Hero Editor">
       {/* overlay */}
@@ -301,7 +537,6 @@ export default function HeroEditor({
             <Settings2 className="w-4 h-4" /> Hero Settings
           </div>
 
-          {/* Hide mode toggle until Step 2 */}
           {step === 2 && (
             <div className="inline-flex rounded-full border border-white/15 bg-neutral-900 p-1 text-xs">
               <button
@@ -330,46 +565,102 @@ export default function HeroEditor({
 
         {/* scrollable content */}
         <div className="flex-1 overflow-y-auto px-4 pb-24 [scrollbar-gutter:stable]">
-          {/* tip only visible in Step 2 */}
           {step === 2 && (
             <div className="rounded-lg border border-white/10 bg-white/5 p-2 text-xs text-white/80 mt-3 mb-3">
               Hover the hero preview to edit ✎ or use ✨ for quick rewrites. Switch to Advanced for full form controls.
             </div>
           )}
 
-          {/* Industry (Step 1 content, also shown in Step 2 at the top) */}
-          <div className="rounded border border-white/10 bg-neutral-900 p-3 space-y-2">
-            <div className="text-sm font-medium">What kind of site are you building?</div>
-            <div className="grid md:grid-cols-3 gap-3">
-              <div>
-                <label className="text-xs text-neutral-300">Industry</label>
-                <select
-                  className={selectDark}
-                  value={industryKey}
-                  onChange={(e) => setIndustryKey(e.target.value)}
-                >
-                  {industryOptions.map((opt) => (<option key={opt.value} value={opt.value}>{opt.label}</option>))}
-                </select>
+          {/* Step 1: type pick */}
+          {step === 1 && (
+            <div className="space-y-3 mt-3">
+              <div className="text-sm font-medium">What kind of site are you building?</div>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                {SITE_TYPES.map(({ key, label, blurb, Icon }) => {
+                  const active = siteType === key;
+                  return (
+                    <button
+                      key={key}
+                      onClick={() => {
+                        setSiteType(key);
+                        if (key === 'small_business') {
+                          setShowMoreTypes(true);
+                        } else {
+                          setIndustryKey('other');
+                          setAiIndustryOther(blurb === 'Show your work' ? 'Portfolio' : label);
+                          setTimeout(() => setStep(2), 0);
+                        }
+                      }}
+                      className={[
+                        'group relative rounded-xl border bg-gray-50 dark:bg-neutral-900 p-4 text-left',
+                        'hover:bg-white dark:hover:bg-neutral-800 transition',
+                        active
+                          ? 'border-purple-500 ring-2 ring-purple-500/40'
+                          : 'border-gray-300 dark:border-neutral-700 hover:border-purple-400'
+                      ].join(' ')}
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className={[
+                          'h-11 w-11 rounded-lg flex items-center justify-center',
+                          'bg-white dark:bg-neutral-950 border',
+                          active ? 'border-purple-500' : 'border-gray-200 dark:border-neutral-700'
+                        ].join(' ')}>
+                          <Icon className="h-6 w-6 text-gray-700 dark:text-gray-200" />
+                        </div>
+                        <div className="min-w-0">
+                          <div className="font-medium text-gray-900 dark:text-white truncate">{label}</div>
+                          <div className="text-xs text-gray-500 dark:text-gray-400">{blurb}</div>
+                        </div>
+                        <ChevronRight className="ml-auto h-4 w-4 text-gray-400 group-hover:text-purple-500" />
+                      </div>
+                    </button>
+                  );
+                })}
               </div>
-              <div className="md:col-span-2">
-                <label className="text-xs text-neutral-300">Other (if not in the list)</label>
-                <input
-                  className={selectDark}
-                  value={aiIndustryOther}
-                  onChange={(e) => setAiIndustryOther(e.target.value)}
-                  placeholder="e.g., Mobile Windshield Repair"
-                  disabled={industryKey !== 'other'}
-                />
-              </div>
-            </div>
-            {step === 1 && (
-              <p className="text-xs text-neutral-400 pt-1">
-                Choose an industry (or enter your own) to continue.
-              </p>
-            )}
-          </div>
 
-          {/* Everything below is hidden until Step 2 */}
+              {!showMoreTypes ? (
+                <div className="px-1">
+                  <button
+                    className="w-full rounded-md px-3 py-2 text-sm bg-white/10 hover:bg-white/20 text-white"
+                    onClick={() => setShowMoreTypes(true)}
+                  >
+                    More site types…
+                  </button>
+                </div>
+              ) : null}
+            </div>
+          )}
+
+          {/* Industry chooser */}
+          {(step === 1 && showMoreTypes) && (
+            <div className="rounded border border-white/10 bg-neutral-900 p-3 space-y-2 mt-3">
+              <div className="grid md:grid-cols-3 gap-3">
+                <div>
+                  <label className="text-xs text-neutral-300">Industry</label>
+                  <select
+                    className={selectDark}
+                    value={industryKey}
+                    onChange={(e) => setIndustryKey(e.target.value)}
+                  >
+                    {industryOptions.map((opt) => (<option key={opt.value} value={opt.value}>{opt.label}</option>))}
+                  </select>
+                </div>
+                <div className="md:col-span-2">
+                  <label className="text-xs text-neutral-300">Other (if not in the list)</label>
+                  <input
+                    className={selectDark}
+                    value={aiIndustryOther}
+                    onChange={(e) => setAiIndustryOther(e.target.value)}
+                    placeholder="e.g., Mobile Windshield Repair"
+                    disabled={industryKey !== 'other'}
+                  />
+                </div>
+              </div>
+              <p className="text-xs text-neutral-400 pt-1">Choose an industry (or enter your own) to continue.</p>
+            </div>
+          )}
+
+          {/* Step 2 */}
           {step === 2 && (
             <>
               {/* AI Assist */}
@@ -391,7 +682,7 @@ export default function HeroEditor({
                 {aiError && <div className="text-xs text-red-300">{aiError}</div>}
               </div>
 
-              {/* Express content */}
+              {/* Express */}
               {mode === 'express' && (
                 <div className="grid md:grid-cols-3 gap-3 mt-3">
                   <div className="md:col-span-2">
@@ -412,7 +703,97 @@ export default function HeroEditor({
                       placeholder={`${promptIndustryLabel} website hero banner`}
                     />
                     {imgError && <div className="text-xs text-red-300 mt-1">{imgError}</div>}
+
+                    {/* Thumb + actions */}
+                    {local?.image_url && (
+                      <div className="mt-2 flex items-start gap-3">
+                        <img
+                          src={local.image_url}
+                          alt="Hero"
+                          className="h-20 w-36 object-cover rounded border border-white/10"
+                        />
+                        <div className="flex flex-wrap gap-2">
+                          <a
+                            href={local.image_url}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="text-xs px-2 py-1 rounded border border-white/15 hover:bg-white/10"
+                          >
+                            Open
+                          </a>
+                          <button
+                            className="text-xs px-2 py-1 rounded border border-white/15 hover:bg-white/10"
+                            onClick={() => {
+                              setLocal((p: any) => ({
+                                ...p,
+                                layout_mode: 'background',
+                                layout: 'background',
+                                overlay_level: p?.overlay_level ?? 'soft',
+                                overlay: p?.overlay ?? 'soft',
+                              }));
+                              bumpPreview();
+                            }}
+                          >
+                            Use as Background
+                          </button>
+                          <button
+                            className="text-xs px-2 py-1 rounded border border-white/15 hover:bg-white/10"
+                            onClick={() => {
+                              setLocal((p: any) => ({ ...p, image_url: '', image: '', heroImage: '', backgroundImage: '' }));
+                              bumpPreview();
+                            }}
+                          >
+                            Remove
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Quick Controls (overlay) */}
+                    <div className="rounded border border-white/10 bg-neutral-900 p-3 mt-3">
+                      <div className="flex items-center justify-between">
+                        <div className="text-sm font-medium">Quick Controls</div>
+                        <button
+                          onClick={() => {
+                            setLocal((p: any) => {
+                              const cur = (p?.overlay_level ?? p?.overlay ?? 'none') as 'none'|'soft'|'strong';
+                              const next = cur === 'none' ? 'soft' : 'strong';
+                              return {
+                                ...p,
+                                overlay_level: next,
+                                overlay: next,
+                                layout_mode: p?.layout_mode && p.layout_mode !== 'inline' ? p.layout_mode : 'background',
+                                layout: p?.layout && p.layout !== 'inline' ? p.layout : 'background',
+                              };
+                            });
+                            // also notify renderer listeners
+                            window.dispatchEvent(new CustomEvent('qs:hero:auto-fix'));
+                            bumpPreview();
+                          }}
+                          className="inline-flex items-center gap-1.5 rounded border border-white/15 px-2 py-1 text-xs hover:bg-white/10"
+                          title="Increase overlay for better contrast"
+                        >
+                          Auto-fix
+                        </button>
+                      </div>
+                      <div className="mt-2 inline-flex rounded-lg border border-white/15 bg-neutral-900 p-1 text-xs">
+                        {(['none','soft','strong'] as const).map((lvl) => (
+                          <button
+                            key={lvl}
+                            onClick={() => {
+                              setLocal((p: any) => ({ ...p, overlay_level: lvl, overlay: lvl }));
+                              window.dispatchEvent(new CustomEvent('qs:hero:set', { detail: { overlay_level: lvl } }));
+                              bumpPreview();
+                            }}
+                            className={`px-3 py-1 rounded-md ${ (local?.overlay_level ?? local?.overlay ?? 'soft') === lvl ? 'bg-white text-gray-900' : 'text-white/80' }`}
+                          >
+                            {lvl}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
                   </div>
+
                   <div>
                     <label className="text-xs text-neutral-300">Style</label>
                     <select className={selectDark} value={imgStyle} onChange={(e) => setImgStyle(e.target.value as any)}>
@@ -422,6 +803,7 @@ export default function HeroEditor({
                       <option value="minimal">Minimal</option>
                     </select>
                   </div>
+
                   <div className="md:col-span-3 flex items-center justify-between">
                     <label className="text-xs text-neutral-300">Include people in image</label>
                     <Switch checked={imgIncludePeople} onCheckedChange={(v) => setImgIncludePeople(!!v)} />
@@ -429,7 +811,7 @@ export default function HeroEditor({
                 </div>
               )}
 
-              {/* Advanced content */}
+              {/* Advanced */}
               {mode === 'advanced' && (
                 <>
                   <div className="grid md:grid-cols-3 gap-3 mt-3">
@@ -475,58 +857,45 @@ export default function HeroEditor({
                     </div>
                   </div>
 
-                  <div className="grid md:grid-cols-3 gap-3 mt-3">
+                  <div className="md:col-span-2 grid grid-cols-2 gap-3 mt-3">
                     <div>
-                      <label className="text-xs text-neutral-300">Image</label>
-                      {local?.image_url && <img src={local.image_url} alt="Hero" className="mb-2 rounded shadow max-w-xs" />}
+                      <label className="text-xs text-neutral-300">Layout Mode</label>
+                      <select
+                        value={local?.layout || local?.layout_mode || 'inline'}
+                        onChange={(e) => { update('layout_mode', e.target.value as any); update('layout', e.target.value as any); bumpPreview(); }}
+                        className={selectDark}
+                      >
+                        <option value="inline">Inline Image</option>
+                        <option value="background">Image as Background</option>
+                        <option value="full_bleed">Full-Bleed Image</option>
+                        <option value="natural_height">Natural Height</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="text-xs text-neutral-300">Blur Amount (0–30px)</label>
                       <input
-                        type="file"
-                        accept="image/*"
-                        className="text-sm text-gray-300 file:bg-purple-600 file:text-white file:rounded file:border-0 file:px-4 file:py-1 file:mr-2"
-                        onChange={async (e) => {
-                          const file = e.target.files?.[0];
-                          if (!file) return;
-                          try {
-                            const url = await uploadToStorage(file, `template-${template?.id}/hero`);
-                            update('image_url', url as any);
-                            toast.success('Image uploaded');
-                          } catch (err: any) {
-                            toast.error(err.message || 'Upload failed');
-                          }
-                        }}
+                        type="range" min={0} max={30} step={1}
+                        value={local?.blur_amount ?? 8}
+                        onChange={(e) => { update('blur_amount', Number(e.target.value) as any); bumpPreview(); }}
+                        className={rangeDark}
                       />
                     </div>
-                    <div className="md:col-span-2 grid grid-cols-2 gap-3">
-                      <div>
-                        <label className="text-xs text-neutral-300">Layout Mode</label>
-                        <select value={local?.layout_mode || 'inline'} onChange={(e) => update('layout_mode', e.target.value as any)} className={selectDark}>
-                          <option value="inline">Inline Image</option>
-                          <option value="background">Image as Background</option>
-                          <option value="full_bleed">Full-Bleed Image</option>
-                          <option value="natural_height">Natural Height</option>
-                        </select>
-                      </div>
-                      <div>
-                        <label className="text-xs text-neutral-300">Blur Amount (0–30px)</label>
-                        <input type="range" min={0} max={30} step={1} value={local?.blur_amount ?? 8} onChange={(e) => update('blur_amount', Number(e.target.value) as any)} className={rangeDark} />
-                      </div>
-                      <div>
-                        <label className="text-xs text-neutral-300">Image X</label>
-                        <input className={selectDark} value={local?.image_x || ''} onChange={(e) => update('image_x', e.target.value as any)} placeholder="center" />
-                      </div>
-                      <div>
-                        <label className="text-xs text-neutral-300">Image Y</label>
-                        <input className={selectDark} value={local?.image_y || ''} onChange={(e) => update('image_y', e.target.value as any)} placeholder="bottom" />
-                      </div>
-                      <div className="col-span-2">
-                        <label className="text-xs text-neutral-300">Overlay Level</label>
-                        <div className="mt-1 inline-flex rounded-lg border border-white/15 bg-neutral-900 p-1 text-xs">
-                          {(['none', 'soft', 'strong'] as const).map((lvl) => (
-                            <button key={lvl} onClick={() => update('overlay_level', lvl as any)} className={`px-3 py-1 rounded-md ${(local?.overlay_level ?? 'soft') === lvl ? 'bg-white text-gray-900' : 'text-white/80'}`}>
-                              {lvl}
-                            </button>
-                          ))}
-                        </div>
+                    <div>
+                      <label className="text-xs text-neutral-300">Image X</label>
+                      <input className={selectDark} value={local?.image_x || ''} onChange={(e) => { update('image_x', e.target.value as any); bumpPreview(); }} placeholder="center" />
+                    </div>
+                    <div>
+                      <label className="text-xs text-neutral-300">Image Y</label>
+                      <input className={selectDark} value={local?.image_y || ''} onChange={(e) => { update('image_y', e.target.value as any); bumpPreview(); }} placeholder="bottom" />
+                    </div>
+                    <div className="col-span-2">
+                      <label className="text-xs text-neutral-300">Overlay Level</label>
+                      <div className="mt-1 inline-flex rounded-lg border border-white/15 bg-neutral-900 p-1 text-xs">
+                        {(['none', 'soft', 'strong'] as const).map((lvl) => (
+                          <button key={lvl} onClick={() => { update('overlay_level', lvl as any); update('overlay', lvl as any); bumpPreview(); }} className={`px-3 py-1 rounded-md ${(local?.overlay_level ?? local?.overlay ?? 'soft') === lvl ? 'bg-white text-gray-900' : 'text-white/80'}`}>
+                            {lvl}
+                          </button>
+                        ))}
                       </div>
                     </div>
                   </div>
@@ -536,6 +905,7 @@ export default function HeroEditor({
               {/* Live preview bridge */}
               <div className="mt-3">
                 <BlockPreviewToggle
+                  key={previewNonce}
                   block={{
                     ...block,
                     type: 'hero',
@@ -558,9 +928,9 @@ export default function HeroEditor({
           {step === 1 ? (
             <button
               onClick={() => setStep(2)}
-              disabled={!industryValid}
+              disabled={!step1Valid}
               className="text-sm px-3 py-1.5 rounded bg-purple-600 text-white hover:bg-purple-700 disabled:opacity-60"
-              title={industryValid ? 'Continue' : 'Choose an industry (or fill “Other”) to continue'}
+              title={step1Valid ? 'Continue' : 'Choose a site type (and industry if Small Business) to continue'}
             >
               Next
             </button>

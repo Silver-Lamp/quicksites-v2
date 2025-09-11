@@ -15,18 +15,13 @@ import toast from 'react-hot-toast';
 import type { Template } from '@/types/template';
 import { validateTemplateAndFix } from '@/admin/lib/validateTemplate';
 import type { ValidateResult, Warning } from '@/admin/lib/validateTemplate';
-// import { saveAsTemplate } from '@/admin/lib/saveAsTemplate';
-// import { createSharedPreview } from '@/admin/lib/createSharedPreview';
 
 import AsyncGifOverlay from '@/components/ui/async-gif-overlay';
-// import VersionsDropdown from '@/components/admin/templates/versions-dropdown';
 import { useTemplateVersions } from '@/hooks/useTemplateVersions';
 import { templateSig } from '@/lib/editor/saveGuard';
-// import { buildSharedSnapshotPayload } from '@/lib/editor/templateUtils';
 import { loadVersionRow } from '@/admin/lib/templateSnapshots';
 import PageManagerToolbar from '@/components/admin/templates/page-manager-toolbar';
 import { useTemplateRef } from '@/hooks/usePersistTemplate';
-import { useCommitApi } from './hooks/useCommitApi';
 import { resolveIndustryKey } from '@/lib/industries';
 
 import {
@@ -35,33 +30,27 @@ import {
   readTemplateCache,
   type TemplateCacheRow,
 } from '@/lib/templateCache';
-// import { heroLog, heroDbgOn, pickHeroSnapshots } from '@/lib/debug/hero';
 
-
-/* ---------- local helpers ---------- */
+/* -------------------------------- helpers --------------------------------- */
 function getTemplatePagesLoose(t: Template): any[] {
   const d: any = t ?? {};
   if (Array.isArray(d?.data?.pages)) return d.data.pages;
   if (Array.isArray(d?.pages)) return d.pages;
   return [];
 }
-
 function withPages(t: Template, pages: any[]): Template {
   const anyT: any = t ?? {};
   if (Array.isArray(anyT?.data?.pages)) return { ...anyT, data: { ...anyT.data, pages } } as Template;
   return { ...anyT, pages } as Template;
 }
-
 function pretty(next: Template) {
   try { return JSON.stringify(next?.data ?? next, null, 2); }
   catch { return JSON.stringify(next, null, 2); }
 }
-
 function baseSlug(slug?: string | null) {
   if (!slug) return '';
   return slug.replace(/(-[a-z0-9]{2,12})+$/i, '');
 }
-
 function toCacheRow(t: any): TemplateCacheRow {
   return {
     id: t?.id,
@@ -75,10 +64,11 @@ function toCacheRow(t: any): TemplateCacheRow {
   };
 }
 
+/* ----------------------------- shape normalizer --------------------------- */
 function normalizePageBlocksShape(pages: any[]): any[] {
   const isStr = (v: any) => typeof v === 'string' && v.trim().length > 0;
 
-  // ---------- hero helpers (existing behavior, kept) ----------
+  // hero helpers
   const getCanonHero = (b: any) => ({
     heading: b?.props?.heading ?? b?.content?.headline ?? '',
     subheading: b?.props?.subheading ?? b?.content?.subheadline ?? '',
@@ -139,7 +129,7 @@ function normalizePageBlocksShape(pages: any[]): any[] {
     return out;
   };
 
-  // ---------- text helpers (new) ----------
+  // text helpers
   const TEXT_LIKE = new Set(['text','rich_text','richtext','richText','paragraph','markdown','textarea','wysiwyg']);
   const isTextLike = (b: any) => TEXT_LIKE.has(String(b?.type || '').toLowerCase());
 
@@ -162,7 +152,6 @@ function normalizePageBlocksShape(pages: any[]): any[] {
       (typeof c.html === 'string' && c.html.trim()) ||
       (typeof c.text === 'string' && c.text.trim()) ||
       (typeof c.value === 'string' && c.value.trim()) || '';
-    // write chosen into all common fields so readers agree
     p.html = p.html?.trim() ? p.html : chosen;
     p.text = p.text?.trim() ? p.text : chosen.replace(/<[^>]+>/g, '');
     p.value = p.value?.trim() ? p.value : chosen;
@@ -175,27 +164,20 @@ function normalizePageBlocksShape(pages: any[]): any[] {
     return out;
   };
 
-  // Choose the better duplicate by id across shapes
   const chooseById = (a: any, b: any) => {
     if (!a) return b;
     if (!b) return a;
-
-    // Prefer the version with real text for text-like blocks
     if (isTextLike(a) || isTextLike(b)) {
       const aa = mirrorText(a);
       const bb = mirrorText(b);
       const sa = textScore(aa);
       const sb = textScore(bb);
-      return sb > sa ? bb : aa; // pick the one with more content
+      return sb > sa ? bb : aa;
     }
-
-    // Keep existing hero logic
     if (a.type === 'hero' || b.type === 'hero') {
       const sa = heroScore(a), sb = heroScore(b);
       if (sa !== sb) return sa > sb ? a : b;
     }
-
-    // Fallback: later wins
     return b;
   };
 
@@ -207,7 +189,6 @@ function normalizePageBlocksShape(pages: any[]): any[] {
     ];
     if (all.length === 0) return p;
 
-    // Collapse by id, coalescing hero/text correctly
     const byId = new Map<string, any>();
     for (const b of all) {
       if (!b) continue;
@@ -217,24 +198,19 @@ function normalizePageBlocksShape(pages: any[]): any[] {
       byId.set(id, chooseById(cur, b));
     }
 
-    // Now we have a single winner per id
     let keep: any[] = Array.from(byId.values());
 
-    // If multiple heroes, pick best unified winner
     const heroCandidates = keep.filter((b) => b?.type === 'hero');
     if (heroCandidates.length > 1) {
       const best = heroCandidates.reduce((best, b) => (heroScore(b) > heroScore(best) ? b : best), heroCandidates[0]);
       keep = keep.filter((b) => b?.type !== 'hero');
       keep.splice(0, 0, unifyHero(best));
     } else {
-      // still normalize a single hero if present
       keep = keep.map((b) => (b?.type === 'hero' ? unifyHero(b) : b));
     }
 
-    // Mirror text fields on winners so both shapes stay in sync
     keep = keep.map((b) => (isTextLike(b) ? mirrorText(b) : b));
 
-    // Write back to all shapes
     const next: any = { ...p };
     next.blocks = keep;
     if (Array.isArray(p?.content_blocks)) next.content_blocks = keep;
@@ -243,9 +219,7 @@ function normalizePageBlocksShape(pages: any[]): any[] {
   });
 }
 
-
-
-/* ---------- debounced helper ---------- */
+/* --------------------------- debounced helper ------------------------------ */
 function useDebounced<T extends (...args: any[]) => void>(fn: T, delay = 350) {
   const tRef = useRef<any>(null);
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -255,7 +229,7 @@ function useDebounced<T extends (...args: any[]) => void>(fn: T, delay = 350) {
   }, [fn, delay]);
 }
 
-// --- helper: conflict-tolerant commit (one-shot rebase) ---
+/* ----------------------- conflict-tolerant POST ---------------------------- */
 async function commitWithRebase({
   id,
   baseRev,
@@ -294,17 +268,17 @@ async function commitWithRebase({
   return (first as any).json;
 }
 
-/* ---------- component ---------- */
+/* -------------------------------- component -------------------------------- */
 type SaveWarning = { field: string; message: string };
 
 type Props = {
   template: Template;
   autosaveStatus?: string;
   onSaveDraft?: (maybeSanitized?: Template) => void;
-  onUndo?: () => void; // ⬅️ made optional
-  onRedo?: () => void; // ⬅️ made optional
+  onUndo?: () => void;
+  onRedo?: () => void;
   onOpenPageSettings?: () => void;
-  onApplyTemplate: (next: Template) => void; // parent suppresses re-broadcasts
+  onApplyTemplate: (next: Template) => void;
   onSetRawJson?: (json: string) => void;
 };
 
@@ -324,7 +298,6 @@ export function TemplateActionToolbar({
   const [overlayMsg, setOverlayMsg] = useState<string>('Working…');
   const [saveWarnings, setSaveWarnings] = useState<SaveWarning[]>([]);
   const [versionsOpen, setVersionsOpen] = useState(false);
-
   const [hist, setHist] = useState<{ past: number; future: number }>({ past: 0, future: 0 });
 
   const [settingsOpenState, setSettingsOpenState] = useState<boolean>(() => {
@@ -344,7 +317,7 @@ export function TemplateActionToolbar({
     return () => window.removeEventListener('qs:toolbar:set-enabled', onToggle as any);
   }, []);
 
-  // ── Toolbar collapse state (persisted + events) ──────────────────────────────
+  // ── Toolbar collapse state (persisted + events)
   const [toolbarCollapsed, setToolbarCollapsed] = useState<boolean>(() => {
     if (typeof window === 'undefined') return false;
     try { return (window.localStorage.getItem('qs:toolbar:collapsed') ?? '0') === '1'; } catch { return false; }
@@ -362,7 +335,7 @@ export function TemplateActionToolbar({
   const expandToolbar = () => setToolbarCollapsed(false);
   const toggleToolbarCollapse = () => setToolbarCollapsed(v => !v);
 
-  // Page Manager open/closed state (persisted)
+  // Page manager open/closed state
   const [pageMgrOpen, setPageMgrOpen] = useState<boolean>(() => {
     if (typeof window === 'undefined') return true;
     try { return (window.localStorage.getItem('qs:toolbar:pageMgrOpen') ?? '1') !== '0'; } catch { return true; }
@@ -372,17 +345,100 @@ export function TemplateActionToolbar({
     window.dispatchEvent(new CustomEvent('qs:toolbar:page-manager:open', { detail: pageMgrOpen }));
   }, [pageMgrOpen]);
 
-
   const tplRef = useTemplateRef(template);
 
-  // Track LAST PERSISTED signature (logical dirty)
+  // Track last persisted signature (dirty marker)
   const savedSigRef = useRef<string>('');
   useEffect(() => { savedSigRef.current = templateSig(template); }, []); // initial mount
   const [dirty, setDirty] = useState(false);
   useEffect(() => { setDirty(templateSig(template) !== savedSigRef.current); }, [template]);
 
-  // New commit API (full patch support)
-  const { pending, commitPatch, commitPatchSoon, loadRev } = useCommitApi((template as any)?.id);
+  /* ---------------------------- COMMIT QUEUE (NEW) ------------------------- */
+  const committingRef = useRef(false);
+  const queueRequestedRef = useRef(false);
+  const [pending, setPending] = useState(false);
+
+  const buildFullCommitPayloadFromCurrent = useCallback(() => {
+    const cur: any = tplRef.current;
+    const dataIn = (cur?.data ?? {}) as any;
+    const metaIn = (dataIn.meta ?? {}) as any;
+
+    const canonicalIndustry = resolveIndustryKey(
+      metaIn.industry ??
+      cur?.industry ??
+      'other'
+    );
+    const canonicalServices =
+      Array.isArray(dataIn.services) ? dataIn.services :
+      Array.isArray(metaIn.services) ? metaIn.services :
+      Array.isArray(cur?.services) ? cur.services : [];
+
+    const pages = getTemplatePagesLoose(cur);
+    const normalizedPages = normalizePageBlocksShape(pages);
+
+    const canonicalData = {
+      ...dataIn,
+      pages: normalizedPages,
+      services: canonicalServices,
+      meta: {
+        ...metaIn,
+        industry: canonicalIndustry,
+        services: canonicalServices,
+      },
+    };
+
+    const template_name =
+      (canonicalData?.meta?.siteTitle && String(canonicalData.meta.siteTitle).trim()) ||
+      (typeof cur?.template_name === 'string' && cur.template_name.trim()) ||
+      cur?.template_name ||
+      undefined;
+
+    return {
+      data: canonicalData,
+      color_mode: cur?.color_mode,
+      ...(template_name ? { template_name } : {}),
+    };
+  }, [tplRef]);
+
+  const runCommitLoop = useCallback(async (kind: 'save' | 'autosave' = 'save') => {
+    if (committingRef.current) return;
+    committingRef.current = true;
+    setPending(true);
+
+    try {
+      do {
+        queueRequestedRef.current = false;
+
+        const payload = buildFullCommitPayloadFromCurrent();
+        const cur: any = tplRef.current;
+        const id = String(cur?.id || '');
+        const baseRev = Number.isFinite(cur?.rev) ? cur.rev : NaN;
+
+        await commitWithRebase({ id, baseRev, patch: payload, kind });
+
+        // mark clean
+        const nextSig = templateSig({ ...(cur as any), data: payload.data });
+        savedSigRef.current = nextSig;
+        setDirty(false);
+        try { dispatchTemplateCacheUpdate(toCacheRow({ ...(cur as any), data: payload.data })); } catch {}
+      } while (queueRequestedRef.current);
+
+      toast.success('Saved!');
+      try { window.dispatchEvent(new Event('qs:preview:save')); } catch {}
+    } catch (err) {
+      console.error('[commit queue] commit failed:', err);
+      toast.error('Save failed — please retry');
+    } finally {
+      committingRef.current = false;
+      setPending(false);
+    }
+  }, [tplRef, buildFullCommitPayloadFromCurrent]);
+
+  const queueFullSave = useCallback((kind: 'save' | 'autosave' = 'save') => {
+    queueRequestedRef.current = true;
+    if (!committingRef.current) void runCommitLoop(kind);
+  }, [runCommitLoop]);
+  /* ------------------------------------------------------------------------ */
 
   /* -------------------- Undo/Redo History (self-contained) -------------------- */
   type TData = any;
@@ -404,7 +460,6 @@ export function TemplateActionToolbar({
     );
   };
 
-  // Capture on any real `template.data` change
   useEffect(() => {
     const data = (template as any)?.data;
     if (!data) return;
@@ -437,7 +492,6 @@ export function TemplateActionToolbar({
     }
   }, [template?.data]);
 
-  // Respond to capture and stats requests
   useEffect(() => {
     const onCapture = () => {
       const data = (template as any)?.data;
@@ -465,7 +519,7 @@ export function TemplateActionToolbar({
       isReplayingRef.current = true;
       window.dispatchEvent(
         new CustomEvent('qs:template:apply-patch', {
-          detail: { data: nextData, __transient: true } as any, // do NOT persist
+          detail: { data: nextData, __transient: true } as any,
         })
       );
     } finally {
@@ -525,7 +579,7 @@ export function TemplateActionToolbar({
     return () => window.removeEventListener('keydown', onKey as any, { capture: true } as any);
   }, []); // eslint-disable-line
 
-  // Keyboard: 't' → toggle toolbar, 'p' → toggle Page Manager (and expand if collapsed)
+  // keyboard toggles for toolbar + page manager
   useEffect(() => {
     const isTyping = (n: EventTarget | null) => {
       const el = n as HTMLElement | null;
@@ -536,19 +590,14 @@ export function TemplateActionToolbar({
     };
 
     const onKey = (e: KeyboardEvent) => {
-      // no modifiers
       if (e.metaKey || e.ctrlKey || e.altKey || e.shiftKey) return;
-
       const k = (e.key || '').toLowerCase();
       if (k !== 't' && k !== 'p') return;
       if (isTyping(e.target)) return;
-
       e.preventDefault();
-
       if (k === 't') {
         toggleToolbarCollapse();
       } else if (k === 'p') {
-        // ensure toolbar is visible, then toggle page manager
         if (toolbarCollapsed) expandToolbar();
         setPageMgrOpen((v) => !v);
       }
@@ -556,8 +605,7 @@ export function TemplateActionToolbar({
 
     window.addEventListener('keydown', onKey, { capture: true });
     return () => window.removeEventListener('keydown', onKey as any, { capture: true } as any);
-  }, [toolbarCollapsed, expandToolbar, toggleToolbarCollapse]);
-
+  }, [toolbarCollapsed]);
 
   useEffect(() => {
     const onStats = (e: Event) => {
@@ -569,17 +617,14 @@ export function TemplateActionToolbar({
     return () => window.removeEventListener('qs:history:stats', onStats as any);
   }, []);
 
-  // apply helper (parent handles suppression)
   const apply = (next: Template) => {
     onApplyTemplate(next);
     onSetRawJson?.(pretty(next));
   };
 
-  // portal
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
 
-  // viewport + color
   const [viewport, setViewport] = useState<'mobile'|'tablet'|'desktop'>(() => {
     try { return (localStorage.getItem('qs:preview:viewport') as any) || 'desktop'; } catch { return 'desktop'; }
   });
@@ -597,7 +642,7 @@ export function TemplateActionToolbar({
     window.dispatchEvent(new CustomEvent('qs:preview:set-viewport', { detail: v }));
   };
 
-  /* ---------- Patch bus → apply + (persisted) commit-with-rebase ---------- */
+  /* ------------------- Patch bus → apply + queue persist ------------------- */
   useEffect(() => {
     const onPatch = (e: Event) => {
       const patch = ((e as CustomEvent).detail ?? {}) as any;
@@ -608,99 +653,34 @@ export function TemplateActionToolbar({
       const cur: any = tplRef.current;
       const next: any = { ...cur };
 
-      // 1) merge top-level keys (except 'data' and internal flags)
+      // merge top-level keys (skip data & internal)
       for (const k of Object.keys(patch)) {
         if (k === 'data' || k === '__transient') continue;
         next[k] = patch[k];
       }
 
-      // 2) shallow-merge data, then normalize per-page block array shapes
+      // shallow-merge data and normalize pages
       if (patch.data && typeof patch.data === 'object') {
         const merged = { ...(cur?.data ?? {}), ...(patch.data as any) };
         const pages = Array.isArray(merged.pages) ? merged.pages : [];
         const normalizedPages = normalizePageBlocksShape(pages);
         next.data = { ...merged, pages: normalizedPages };
-
-        if (heroDbgOn()) {
-          heroLog('onPatch → incoming hero snapshots', pickHeroSnapshots(patch?.data));
-          heroLog('onPatch → outgoing (normalized) hero snapshots', pickHeroSnapshots(next?.data));
-        }
       }
 
-      // Always apply to keep UI current
+      // keep UI current
       apply(next);
 
-      if (localStorage.getItem('qs:debug:hero') === '1') {
-        const pages = Array.isArray(next?.data?.pages) ? next.data.pages : [];
-        const heroes = pages.flatMap((pg: any, i: number) =>
-          (pg?.blocks || pg?.content_blocks || pg?.content?.blocks || [])
-            .filter((b: any) => b?.type === 'hero')
-            .map((b: any) => ({
-              pageIndex: i,
-              id: b?._id ?? b?.id,
-              heading: b?.props?.heading,
-              subheading: b?.props?.subheading,
-              ctaLabel: b?.props?.ctaLabel,
-            }))
-        );
-        // eslint-disable-next-line no-console
-        console.log(
-          '%cQS/HERO%c commit payload heroes',
-          'background:#7c3aed;color:#fff;padding:2px 6px;border-radius:4px;',
-          'color:#e5e7eb;',
-          heroes
-        );
-      }
-
-      // Transient = preview-only; do not hit the API
+      // transient → preview-only
       if (isTransient) return;
 
-      // Persisted patch (e.g., Toolbar Save) → single commit with rebase
-      const id = String((tplRef.current as any)?.id || patch?.id || '');
-      const baseRev =
-        Number.isFinite((tplRef.current as any)?.rev)
-          ? (tplRef.current as any).rev
-          : Number.isFinite((next as any)?.rev)
-          ? (next as any).rev
-          : (NaN as any);
-
-      void (async () => {
-        try {
-          // ⬅️ Always carry template_name in commit
-          const commitPayload = {
-            ...patch,
-            data: next.data,
-            template_name:
-              next?.template_name ??
-              next?.data?.meta?.siteTitle ??
-              (typeof patch.template_name === 'string' ? patch.template_name : undefined),
-          };
-
-          await commitWithRebase({
-            id,
-            baseRev,
-            patch: commitPayload,
-            kind: 'save',
-          });
-
-          // mark clean & cache
-          savedSigRef.current = templateSig(next);
-          setDirty(false);
-          try { dispatchTemplateCacheUpdate(toCacheRow(next)); } catch {}
-          toast.success('Saved!');
-          try { window.dispatchEvent(new Event('qs:preview:save')); } catch {}
-        } catch (err) {
-          console.error('[toolbar/onPatch] persisted commit failed:', err);
-          toast.error('Save failed — please retry');
-        }
-      })();
+      // queue a full save built from latest state (single-path)
+      queueFullSave('save');
     };
 
     window.addEventListener('qs:template:apply-patch', onPatch as any);
     return () => window.removeEventListener('qs:template:apply-patch', onPatch as any);
-  }, [apply, tplRef]);
+  }, [apply, tplRef, queueFullSave]);
 
-  // Settings sidebar control (handled elsewhere; gear no longer toggles this)
   const emitSettingsOpen = (open: boolean) => {
     window.dispatchEvent(new CustomEvent('qs:settings:set-open', { detail: open }));
     try { window.localStorage.setItem('qs:settingsOpen', open ? '1' : '0'); } catch {}
@@ -717,13 +697,13 @@ export function TemplateActionToolbar({
     const next = { ...tplRef.current, color_mode: nextMode } as Template;
     apply(next);
 
-    // autosave (color toggle can be persisted opportunistically)
-    try { commitPatchSoon({ color_mode: nextMode, data: (next as any).data }); } catch {}
+    // queue autosave instead of immediate commit
+    queueFullSave('autosave');
 
     window.dispatchEvent(new CustomEvent('qs:preview:set-color-mode', { detail: nextMode }));
   };
 
-  // fullscreen
+  // fullscreen helpers
   const [isFullscreen, setIsFullscreen] = useState(false);
   const prevSidebarCollapsedRef = useRef<boolean | null>(null);
   const prevSettingsOpenRef = useRef<boolean | null>(null);
@@ -761,7 +741,7 @@ export function TemplateActionToolbar({
   };
   const toggleFullscreen = () => (isFullscreen ? exitFullscreen() : enterFullscreen());
 
-  // versions feed — pass an object so the hook can prefer canonical_id
+  // versions feed
   const tplAny: any = template;
   const versionsKey = useMemo(
     () => ({
@@ -792,17 +772,16 @@ export function TemplateActionToolbar({
     return `${msg} · ${rel} ago`;
   }, [versions]);
 
-  /* ---------- Save (emit persisted patch; commit happens in onPatch) ---------- */
+  /* ---------------------- Save button → queue full save --------------------- */
   const handleSaveClick = async () => {
     try {
-      // 0) ask any open block editor to flush
+      // ask any open block editor to flush (patch → queue picks up)
       try {
         window.dispatchEvent(new Event('qs:block-editor:save'));
         await new Promise((r) => setTimeout(r, 0));
       } catch {}
 
       const src = tplRef.current as any;
-
       const check: ValidateResult = validateTemplateAndFix
         ? validateTemplateAndFix(src)
         : { valid: true, data: src as any, warnings: [] as Warning[] };
@@ -813,9 +792,8 @@ export function TemplateActionToolbar({
         return;
       }
 
+      // Ensure pages are in data; normalize quickly for the local preview
       const nextTemplate = (check.data ?? src) as Template;
-
-      // Ensure pages live in data and mirror to top-level
       const srcPages = getTemplatePagesLoose(src);
       const outPages = getTemplatePagesLoose(nextTemplate);
       if (!Array.isArray(outPages) || !outPages.length) {
@@ -827,73 +805,20 @@ export function TemplateActionToolbar({
           (nextTemplate as any).pages = outPages;
         }
       }
-
-      // Normalize shapes
       const normalizedPages = normalizePageBlocksShape(getTemplatePagesLoose(nextTemplate));
+      (nextTemplate as any).data = { ...(nextTemplate as any).data, pages: normalizedPages };
+      (nextTemplate as any).pages = normalizedPages;
 
-      // (text rescue block unchanged for brevity)
-      const TEXT_LIKE = new Set(['text','rich_text','richtext','richText','paragraph','markdown','textarea','wysiwyg']);
-      const isTextLike = (b: any) => TEXT_LIKE.has(String(b?.type || '').toLowerCase());
-      const getStr = (v: any) => (typeof v === 'string' && v.trim().length ? v.trim() : '');
-      const pmText = (node: any): string => {
-        if (!node) return '';
-        if (typeof node.text === 'string') return node.text;
-        const kids = Array.isArray(node.content) ? node.content : Array.isArray(node.children) ? node.children : [];
-        return kids.map(pmText).join('');
-      };
-      const escapeHtml = (s: string) => s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-      const mirrorTextFields = (blk: any) => {
-        if (!isTextLike(blk)) return blk;
-        const out: any = { ...blk, props: { ...(blk.props ?? {}) }, content: { ...(blk.content ?? {}) } };
-        const p = out.props, c = out.content;
-        let html = getStr(c.html) || getStr(p.html) || getStr(c.value) || getStr(p.value);
-        let text = getStr(c.text) || getStr(p.text);
-        if (!html && !text) {
-          const json = (c.json ?? p.json) as any;
-          const fromJson = getStr(pmText(json));
-          if (fromJson) {
-            text = fromJson;
-            html = `<p>${escapeHtml(fromJson).replace(/\n/g,'<br/>')}</p>`;
-          }
-        }
-        if (!html && text) html = `<p>${escapeHtml(text).replace(/\n/g,'<br/>')}</p>`;
-        if (!text && html) text = html.replace(/<[^>]+>/g,'').trim();
-        p.html = html || ''; p.value = html || ''; p.text = text || '';
-        c.html = html || ''; c.value = html || ''; c.text = text || '';
-        if (!c.format) c.format = 'html';
-        return out;
-      };
-      const rescuedPages = (normalizedPages ?? []).map((page: any) => {
-        const pageCopy: any = { ...page };
-        const blocks =
-          (pageCopy?.blocks ??
-            pageCopy?.content_blocks ??
-            pageCopy?.content?.blocks ??
-            []) as any[];
-        if (!Array.isArray(blocks) || !blocks.length) return pageCopy;
-        const fixed = blocks.map(mirrorTextFields);
-        pageCopy.blocks = fixed;
-        if (Array.isArray(pageCopy?.content_blocks)) pageCopy.content_blocks = fixed;
-        if (pageCopy?.content && typeof pageCopy.content === 'object') {
-          pageCopy.content = { ...(pageCopy.content ?? {}), blocks: fixed };
-        }
-        return pageCopy;
-      });
-
-      (nextTemplate as any).data = { ...(nextTemplate as any).data, pages: rescuedPages };
-      (nextTemplate as any).pages = rescuedPages;
-
-      // Canonical meta/services
+      // canonicalize meta/services for local view; queue handles persisted state
       const dataIn = ((nextTemplate as any).data ?? {}) as any;
       const metaIn = (dataIn.meta ?? {}) as any;
 
-      const existingIndustry =
+      const canonicalIndustryKey = resolveIndustryKey(
         metaIn.industry ??
         ((template as any)?.data?.meta?.industry) ??
-        ((nextTemplate as any)?.data?.meta?.industry) ??
-        (nextTemplate as any)?.industry;
-
-      const canonicalIndustryKey = resolveIndustryKey(existingIndustry ?? 'other');
+        (nextTemplate as any)?.industry ??
+        'other'
+      );
 
       const canonicalServices =
         Array.isArray(dataIn.services) ? dataIn.services :
@@ -903,26 +828,18 @@ export function TemplateActionToolbar({
 
       const canonicalData = {
         ...dataIn,
-        meta: {
-          ...metaIn,
-          industry: canonicalIndustryKey,
-          services: canonicalServices,
-        },
+        meta: { ...metaIn, industry: canonicalIndustryKey, services: canonicalServices },
         services: canonicalServices,
-        pages: rescuedPages,
+        pages: normalizedPages,
       };
 
-      // ⬅️ NEW: resolve and set canonical template name top-level
       const canonicalTemplateName =
         (canonicalData?.meta?.siteTitle && String(canonicalData.meta.siteTitle).trim()) ||
         (typeof (nextTemplate as any).template_name === 'string' && (nextTemplate as any).template_name.trim()) ||
         '';
 
-      if (canonicalTemplateName) {
-        (nextTemplate as any).template_name = canonicalTemplateName;
-      }
+      if (canonicalTemplateName) (nextTemplate as any).template_name = canonicalTemplateName;
 
-      // Dirty check
       const nextSig = templateSig({ ...(nextTemplate as any), data: canonicalData });
       if (nextSig === savedSigRef.current) {
         toast('No changes to save');
@@ -939,19 +856,18 @@ export function TemplateActionToolbar({
         setSaveWarnings([]);
       }
 
-      // Emit persisted patch (onPatch will add template_name if missing)
       onSaveDraft?.({ ...(nextTemplate as any), data: canonicalData });
       onSetRawJson?.(pretty({ ...(nextTemplate as any), data: canonicalData }));
 
-      await loadRev?.();
+      // queue full save
+      queueFullSave('save');
     } catch (err) {
       console.error('❌ Save/commit prepare crashed:', err);
       toast.error('Save failed — see console.');
     }
   };
 
-
-  // run a full save when a block editor asks for it
+  // External requests to save now
   useEffect(() => {
     const onSaveNow = () => { void handleSaveClick(); };
     window.addEventListener('qs:toolbar:save-now', onSaveNow as any);
@@ -998,7 +914,7 @@ export function TemplateActionToolbar({
     return out;
   }
 
-  /* ---------- Snapshot (server-built) ---------- */
+  /* ------------------------------- Snapshot -------------------------------- */
   async function onCreateSnapshot() {
     try {
       const url = `/api/admin/snapshots/create?templateId=${(template as any).id}`;
@@ -1016,7 +932,7 @@ export function TemplateActionToolbar({
     }
   }
 
-  /* ---------- Restore (write to draft) ---------- */
+  /* -------------------------------- Restore -------------------------------- */
   const onRestore = async (id: string) => {
     const trace = `restore:${id}:${Date.now()}`;
     console.time(`QSITES[versions] restore time ${trace}`);
@@ -1059,15 +975,13 @@ export function TemplateActionToolbar({
 
       onSaveDraft?.(restored);
       onSetRawJson?.(pretty(restored));
-      await loadRev();
-      await commitPatch({ data: (restored as any).data, color_mode: restored.color_mode }, 'save');
 
-      savedSigRef.current = templateSig(restored);
-      setDirty(false);
+      // queue a persisted save of restored data
+      queueFullSave('save');
 
-      try { dispatchTemplateCacheUpdate(toCacheRow(restored)); } catch {}
       toast.success('Version restored!');
       window.dispatchEvent(new CustomEvent('qs:truth:refresh'));
+      await reloadVersions();
     } catch (e: any) {
       console.error('QSITES[versions] restore failed', { trace, message: e?.message, stack: e?.stack });
       toast.error(`Failed to load version: ${e?.message || 'Unknown error'}`);
@@ -1076,7 +990,7 @@ export function TemplateActionToolbar({
     }
   };
 
-  /* ---------- Publish (via snapshot) ---------- */
+  /* -------------------------------- Publish -------------------------------- */
   const onPublish = async (snapshotId?: string) => {
     try {
       let sid = snapshotId;
@@ -1105,16 +1019,16 @@ export function TemplateActionToolbar({
     }
   };
 
-  // Undo/Redo handlers (buttons + keyboard)
+  // Undo/Redo handlers
   const handleUndo = () => {
-    doUndo();               // local engine
-    onUndo?.();             // optional external hook
+    doUndo();
+    onUndo?.();
     window.dispatchEvent(new CustomEvent('qs:history:request-stats'));
     toast('Undo', { icon: '↩️' });
   };
   const handleRedo = () => {
-    doRedo();               // local engine
-    onRedo?.();             // optional external hook
+    doRedo();
+    onRedo?.();
     window.dispatchEvent(new CustomEvent('qs:history:request-stats'));
     toast('Redo', { icon: '↪️' });
   };
@@ -1150,10 +1064,11 @@ export function TemplateActionToolbar({
       new URLSearchParams(window.location.search).get('page')) ||
     getTemplatePagesLoose(template)[0]?.slug ||
     'home';
-    
-  const centerPos = 'left-1/2 -translate-x-1/2';
-  const collapsedPos = 'left-[25%]'; // ~ one-third from the left (no translate)
 
+  const centerPos = 'left-1/2 -translate-x-1/2';
+  const collapsedPos = 'left-[25%]';
+
+  /* --------------------------------- UI ------------------------------------ */
   return createPortal(
     <>
       <div
@@ -1170,177 +1085,176 @@ export function TemplateActionToolbar({
             <Button size="icon" variant="secondary" title="Show toolbar" aria-label="Show toolbar" onClick={expandToolbar}>
               <SettingsIcon className="w-4 h-4" />
             </Button>
-            {/* <span className="text-xs opacity-70 hidden sm:inline">Show toolbar</span> */}
           </div>
         ) : (
-        <div className="w-full flex justify-between items-center gap-3">
-          {/* Gear now toggles toolbar collapse/expand */}
-          <Button
-            size="icon"
-            variant="ghost"
-            title="Hide toolbar"
-            aria-pressed={!toolbarCollapsed}
-            onClick={toggleToolbarCollapse}
-          >
-            <SettingsIcon className="w-4 h-4" />
-          </Button>
-
-          <Button
-            size="icon"
-            variant="ghost"
-            title="Open Site Settings (S)"
-            aria-label="Open Site Settings"
-            onClick={() => {
-              window.dispatchEvent(new CustomEvent('qs:settings:set-open', { detail: true }));
-              try { window.localStorage.setItem('qs:settingsOpen', '1'); } catch {}
-            }}
-          >
-            <Wrench className="w-4 h-4" />
-          </Button>
-
-          {/* Page manager (toggle with 'P') */}
-          {/* Page manager selector is always visible when expanded; tray is controlled by pageMgrOpen */}
-          <PageManagerToolbar
-            pages={getTemplatePagesLoose(template)}
-            currentSlug={currentSlug}
-            open={pageMgrOpen}
-            onOpenChange={setPageMgrOpen}
-            onSelect={(slug) => {
-              const sp = new URLSearchParams(window.location.search);
-              sp.set('page', slug);
-              history.replaceState(null, '', `${location.pathname}?${sp.toString()}`);
-            }}
-            onAdd={(newPage) => {
-              fireCapture();
-              const pages = [...getTemplatePagesLoose(tplRef.current), newPage];
-              const next = withPages(tplRef.current, pages);
-              apply(next);
-              try { commitPatchSoon({ data: (next as any).data }); } catch {}
-            }}
-            onRename={(oldSlug, nextVals) => {
-              fireCapture();
-              const pages = getTemplatePagesLoose(tplRef.current).map((p: any) =>
-                p.slug === oldSlug ? { ...p, title: nextVals.title, slug: nextVals.slug } : p
-              );
-              const next = withPages(tplRef.current, pages);
-              apply(next);
-              try { commitPatchSoon({ data: (next as any).data }); } catch {}
-            }}
-            onDelete={(slug) => {
-              fireCapture();
-              const pages = getTemplatePagesLoose(tplRef.current).filter((p: any) => p.slug !== slug);
-              const next = withPages(tplRef.current, pages);
-              apply(next);
-              try { commitPatchSoon({ data: (next as any).data }); } catch {}
-            }}
-            onReorder={(from, to) => {
-              fireCapture();
-              const pages = [...getTemplatePagesLoose(tplRef.current)];
-              const [moved] = pages.splice(from, 1);
-              pages.splice(to, 0, moved);
-              const next = withPages(tplRef.current, pages);
-              apply(next);
-              try { commitPatchSoon({ data: (next as any).data }); } catch {}
-            }}
-            siteId={(tplRef.current as any).site_id}
-          />
-
-
-
-          <Button size="icon" variant="ghost" title="Page Settings" onClick={() => onOpenPageSettings?.()}>
-            <SlidersHorizontal className="w-4 h-4" />
-          </Button>
-
-          <Button size="icon" variant="ghost" title={colorPref === 'dark' ? 'Light mode' : 'Dark mode'} onClick={toggleColor} aria-pressed={colorPref === 'dark'}>
-            {colorPref === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
-          </Button>
-
-          <Button size="icon" variant="ghost" title="Full screen (F)" onClick={toggleFullscreen} aria-pressed={isFullscreen}>
-            {isFullscreen ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
-          </Button>
-
-          <div className="flex items-center gap-1">
-            <Button size="icon" variant={viewport === 'mobile' ? 'secondary' : 'ghost'} title="Mobile width" aria-pressed={viewport === 'mobile'} onClick={() => setViewportAndEmit('mobile')}>
-              <Smartphone className="w-4 h-4" />
+          <div className="w-full flex justify-between items-center gap-3">
+            {/* Hide/Show toolbar */}
+            <Button
+              size="icon"
+              variant="ghost"
+              title="Hide toolbar"
+              aria-pressed={!toolbarCollapsed}
+              onClick={toggleToolbarCollapse}
+            >
+              <SettingsIcon className="w-4 h-4" />
             </Button>
-            <Button size="icon" variant={viewport === 'tablet' ? 'secondary' : 'ghost'} title="Tablet width" aria-pressed={viewport === 'tablet'} onClick={() => setViewportAndEmit('tablet')}>
-              <Tablet className="w-4 h-4" />
+
+            {/* Open Site Settings */}
+            <Button
+              size="icon"
+              variant="ghost"
+              title="Open Site Settings (S)"
+              aria-label="Open Site Settings"
+              onClick={() => {
+                window.dispatchEvent(new CustomEvent('qs:settings:set-open', { detail: true }));
+                try { window.localStorage.setItem('qs:settingsOpen', '1'); } catch {}
+              }}
+            >
+              <Wrench className="w-4 h-4" />
             </Button>
-            <Button size="icon" variant={viewport === 'desktop' ? 'secondary' : 'ghost'} title="Desktop width" aria-pressed={viewport === 'desktop'} onClick={() => setViewportAndEmit('desktop')}>
-              <Monitor className="w-4 h-4" />
+
+            {/* Page Manager */}
+            <PageManagerToolbar
+              pages={getTemplatePagesLoose(template)}
+              currentSlug={currentSlug}
+              open={pageMgrOpen}
+              onOpenChange={setPageMgrOpen}
+              onSelect={(slug) => {
+                const sp = new URLSearchParams(window.location.search);
+                sp.set('page', slug);
+                history.replaceState(null, '', `${location.pathname}?${sp.toString()}`);
+              }}
+              onAdd={(newPage) => {
+                fireCapture();
+                const pages = [...getTemplatePagesLoose(tplRef.current), newPage];
+                const next = withPages(tplRef.current, pages);
+                apply(next);
+                queueFullSave('autosave');
+              }}
+              onRename={(oldSlug, nextVals) => {
+                fireCapture();
+                const pages = getTemplatePagesLoose(tplRef.current).map((p: any) =>
+                  p.slug === oldSlug ? { ...p, title: nextVals.title, slug: nextVals.slug } : p
+                );
+                const next = withPages(tplRef.current, pages);
+                apply(next);
+                queueFullSave('autosave');
+              }}
+              onDelete={(slug) => {
+                fireCapture();
+                const pages = getTemplatePagesLoose(tplRef.current).filter((p: any) => p.slug !== slug);
+                const next = withPages(tplRef.current, pages);
+                apply(next);
+                queueFullSave('autosave');
+              }}
+              onReorder={(from, to) => {
+                fireCapture();
+                const pages = [...getTemplatePagesLoose(tplRef.current)];
+                const [moved] = pages.splice(from, 1);
+                pages.splice(to, 0, moved);
+                const next = withPages(tplRef.current, pages);
+                apply(next);
+                queueFullSave('autosave');
+              }}
+              siteId={(tplRef.current as any).site_id}
+            />
+
+            <Button size="icon" variant="ghost" title="Page Settings" onClick={() => onOpenPageSettings?.()}>
+              <SlidersHorizontal className="w-4 h-4" />
+            </Button>
+
+            {/* Color mode + viewport */}
+            <Button size="icon" variant="ghost" title={colorPref === 'dark' ? 'Light mode' : 'Dark mode'} onClick={toggleColor} aria-pressed={colorPref === 'dark'}>
+              {colorPref === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+            </Button>
+
+            <Button size="icon" variant="ghost" title="Full screen (F)" onClick={toggleFullscreen} aria-pressed={isFullscreen}>
+              {isFullscreen ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
+            </Button>
+
+            <div className="flex items-center gap-1">
+              <Button size="icon" variant={viewport === 'mobile' ? 'secondary' : 'ghost'} title="Mobile width" aria-pressed={viewport === 'mobile'} onClick={() => setViewportAndEmit('mobile')}>
+                <Smartphone className="w-4 h-4" />
+              </Button>
+              <Button size="icon" variant={viewport === 'tablet' ? 'secondary' : 'ghost'} title="Tablet width" aria-pressed={viewport === 'tablet'} onClick={() => setViewportAndEmit('tablet')}>
+                <Tablet className="w-4 h-4" />
+              </Button>
+              <Button size="icon" variant={viewport === 'desktop' ? 'secondary' : 'ghost'} title="Desktop width" aria-pressed={viewport === 'desktop'} onClick={() => setViewportAndEmit('desktop')}>
+                <Monitor className="w-4 h-4" />
+              </Button>
+            </div>
+
+            {/* DEV cache buttons */}
+            {process.env.NODE_ENV !== 'production' && (
+              <div className="flex items-center gap-1 mr-1">
+                <Button size="icon" variant="ghost" title="Dev: Show cache info (⌥⌘C)" onClick={showCacheInfo}>
+                  <Database className="w-4 h-4" />
+                </Button>
+                <Button size="icon" variant="ghost" title="Dev: Update cache from editor (⌥⌘U)" onClick={updateCacheFromEditor}>
+                  <Database className="w-4 h-4" />
+                </Button>
+                <Button size="icon" variant="ghost" title="Dev: Invalidate cache (⌥⌘I)" onClick={invalidateCache}>
+                  <Trash2 className="w-4 h-4" />
+                </Button>
+              </div>
+            )}
+
+            {/* Save button bound to queue state */}
+            <Button
+              size="sm"
+              variant={dirty ? 'outline' : 'ghost'}
+              disabled={!dirty && !pending}
+              className={dirty ? 'bg-purple-500 hover:bg-purple-600' : ''}
+              onClick={handleSaveClick}
+              title={dirty ? 'Save changes (⌘/Ctrl+S)' : pending ? 'Saving…' : 'All changes saved'}
+            >
+              {pending ? 'Saving…' : dirty ? 'Save' : (<span className="inline-flex items-center gap-1"><Check className="w-3.5 h-3.5" />Saved</span>)}
+            </Button>
+
+            {/* Status + undo/redo */}
+            <div className="text-sm font-medium flex gap-3 items-center">
+              <span className={`text-xs px-2 py-1 rounded ${status === 'Published' ? 'bg-green-600' : 'bg-yellow-600'}`}>
+                {status}
+              </span>
+
+              <div className="relative">
+                <Button size="icon" variant="ghost" onClick={handleUndo} title={`Undo (${hist.past} step${hist.past === 1 ? '' : 's'} available) • ⌘Z`}>
+                  <RotateCcw className="w-4 h-4" />
+                </Button>
+                {hist.past > 0 && (
+                  <span className="absolute -right-1 -top-1 min-w-[16px] px-1 rounded-full text-[10px] bg-zinc-200 text-zinc-900 dark:bg白 dark:text-black text-center">
+                    {hist.past}
+                  </span>
+                )}
+              </div>
+
+              <div className="relative">
+                <Button size="icon" variant="ghost" onClick={handleRedo} title={`Redo (${hist.future} step${hist.future === 1 ? '' : 's'} available) • ⇧⌘Z`}>
+                  <RotateCw className="w-4 h-4" />
+                </Button>
+                {hist.future > 0 && (
+                  <span className="absolute -right-1 -top-1 min-w-[16px] px-1 rounded-full text-[10px] bg-zinc-200 text-zinc-900 dark:bg白 dark:text-black text-center">
+                    {hist.future}
+                  </span>
+                )}
+              </div>
+            </div>
+
+            {/* Hide control */}
+            <Button
+              size="sm"
+              variant="ghost"
+              title="Hide toolbar"
+              aria-label="Hide toolbar"
+              onClick={collapseToolbar}
+              className="px-2 py-1"
+            >
+              <Minus className="w-4 h-4 mr-1" />
+              <span className="hidden sm:inline">Hide</span>
             </Button>
           </div>
-
-          {/* <VersionsDropdown …removed per consolidation/> */}
-
-          {/* DEV cache buttons */}
-          {process.env.NODE_ENV !== 'production' && (
-            <div className="flex items-center gap-1 mr-1">
-              <Button size="icon" variant="ghost" title="Dev: Show cache info (⌥⌘C)" onClick={showCacheInfo}>
-                <Database className="w-4 h-4" />
-              </Button>
-              <Button size="icon" variant="ghost" title="Dev: Update cache from editor (⌥⌘U)" onClick={updateCacheFromEditor}>
-                <Database className="w-4 h-4" />
-              </Button>
-              <Button size="icon" variant="ghost" title="Dev: Invalidate cache (⌥⌘I)" onClick={invalidateCache}>
-                <Trash2 className="w-4 h-4" />
-              </Button>
-            </div>
-          )}
-
-          <Button
-            size="sm"
-            variant={dirty ? 'outline' : 'ghost'}
-            disabled={!dirty && !pending}
-            className={dirty ? 'bg-purple-500 hover:bg-purple-600' : ''}
-            onClick={handleSaveClick}
-            title={dirty ? 'Save changes (⌘/Ctrl+S)' : pending ? 'Saving…' : 'All changes saved'}
-          >
-            {pending ? 'Saving…' : dirty ? 'Save' : (<span className="inline-flex items-center gap-1"><Check className="w-3.5 h-3.5" />Saved</span>)}
-          </Button>
-
-          {/* Status + undo/redo */}
-          <div className="text-sm font-medium flex gap-3 items-center">
-            <span className={`text-xs px-2 py-1 rounded ${status === 'Published' ? 'bg-green-600' : 'bg-yellow-600'}`}>
-              {status}
-            </span>
-
-            <div className="relative">
-              <Button size="icon" variant="ghost" onClick={handleUndo} title={`Undo (${hist.past} step${hist.past === 1 ? '' : 's'} available) • ⌘Z`}>
-                <RotateCcw className="w-4 h-4" />
-              </Button>
-              {hist.past > 0 && (
-                <span className="absolute -right-1 -top-1 min-w-[16px] px-1 rounded-full text-[10px] bg-zinc-200 text-zinc-900 dark:bg白 dark:text-black text-center">
-                  {hist.past}
-                </span>
-              )}
-            </div>
-
-            <div className="relative">
-              <Button size="icon" variant="ghost" onClick={handleRedo} title={`Redo (${hist.future} step${hist.future === 1 ? '' : 's'} available) • ⇧⌘Z`}>
-                <RotateCw className="w-4 h-4" />
-              </Button>
-              {hist.future > 0 && (
-                <span className="absolute -right-1 -top-1 min-w-[16px] px-1 rounded-full text-[10px] bg-zinc-200 text-zinc-900 dark:bg白 dark:text-black text-center">
-                  {hist.future}
-                </span>
-              )}
-            </div>
-          </div>
-          {/* Right-edge Hide control */}
-          <Button
-            size="sm"
-            variant="ghost"
-            title="Hide toolbar"
-            aria-label="Hide toolbar"
-            onClick={collapseToolbar}
-            className="px-2 py-1"
-          >
-            <Minus className="w-4 h-4 mr-1" />
-            <span className="hidden sm:inline">Hide</span>
-          </Button>
-        </div>
         )}
+
         {saveWarnings.length > 0 && (
           <div className="mt-3 rounded-md border border-yellow-500/30 bg-yellow-500/10 text-yellow-200 text-xs px-3 py-2 flex items-start gap-2">
             <AlertTriangle className="w-4 h-4 mt-[2px] flex-none" />
@@ -1350,7 +1264,6 @@ export function TemplateActionToolbar({
             </button>
           </div>
         )}
-
       </div>
 
       <AsyncGifOverlay open={overlayOpen} message={overlayMsg} />

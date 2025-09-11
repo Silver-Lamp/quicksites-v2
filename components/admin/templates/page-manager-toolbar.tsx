@@ -57,6 +57,11 @@ type Props = {
   onReorder: (oldIndex: number, newIndex: number) => void;
 
   siteId?: string;
+
+  /** NEW: control the tray open/close from parent */
+  open?: boolean;                  // controlled value
+  defaultOpen?: boolean;           // for uncontrolled initial state
+  onOpenChange?: (open: boolean) => void; // notify parent
 };
 
 export default function PageManagerToolbar({
@@ -68,11 +73,23 @@ export default function PageManagerToolbar({
   onDelete,
   onReorder,
   siteId,
+  open: openProp,          // NEW
+  defaultOpen,             // NEW
+  onOpenChange,            // NEW
 }: Props) {
   const router = useRouter();
 
   const [mounted, setMounted] = React.useState(false);
-  const [open, setOpen] = React.useState(false);
+  const isControlled = typeof openProp !== 'undefined';
+  const [uOpen, setUOpen] = React.useState<boolean>(defaultOpen ?? false);
+  
+  const open = isControlled ? (openProp as boolean) : uOpen;
+  const setOpen = (v: boolean | ((prev: boolean) => boolean)) => {
+    const next = typeof v === 'function' ? (v as (p: boolean) => boolean)(open) : v;
+    if (!isControlled) setUOpen(next);
+    onOpenChange?.(next);
+  };
+  
   const [editingSlug, setEditingSlug] = React.useState<string | null>(null);
 
   React.useEffect(() => setMounted(true), []);
@@ -328,7 +345,7 @@ export default function PageManagerToolbar({
         'inline-flex items-center gap-2 h-8 px-3 rounded-md border border-white/10',
         'bg-neutral-900/90 text-white/90 hover:bg-neutral-800'
       )}
-      onClick={() => setOpen((v) => !v)}
+      onClick={() => setOpen(!open)}
       title="Page manager"
     >
       <span className="truncate max-w-[180px]">{currentLabel}</span>

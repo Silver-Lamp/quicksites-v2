@@ -17,7 +17,7 @@ type Props = {
 };
 
 export default function EcommercePanel({ templateId, currentPageId, template }: Props) {
-  const [open, setOpen] = React.useState(true);
+  const [open, setOpen] = React.useState(false);
   const [modalOpen, setModalOpen] = React.useState(false);
   const [merchantEmail, setMerchantEmail] = React.useState<string>(
     (typeof window !== 'undefined' && localStorage.getItem('merchant_email')) || ''

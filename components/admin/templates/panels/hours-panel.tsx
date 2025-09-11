@@ -12,7 +12,7 @@ import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 
-import { Clock, Copy, Globe2 } from 'lucide-react';
+import { Clock, Copy, Globe2, ChevronDown, ChevronRight } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 import {
@@ -51,18 +51,23 @@ export default function HoursPanel({
   spotlight,
 }: Props) {
   const containerRef = useRef<HTMLDivElement | null>(null);
-  const [open, setOpen] = useState(false);
+  const detailsRef = useRef<HTMLDetailsElement | null>(null);
+  const [sectionOpen, setSectionOpen] = useState<boolean>(false);
+  const [inlineOpen, setInlineOpen] = useState(false);
 
-  // give the sidebar a live ref to this panel
+  // give the sidebar a live ref to this panel container (outside <details> so scroll lands well)
   useEffect(() => {
     if (panelRef && 'current' in panelRef) {
       (panelRef as any).current = containerRef.current;
     }
   }, [panelRef]);
 
-  // open inline editor on demand from the event
+  // If the caller forces the editor open, open the section too
   useEffect(() => {
-    if (forceOpenEditor) setOpen(true);
+    if (forceOpenEditor) {
+      setSectionOpen(true);
+      setInlineOpen(true);
+    }
   }, [forceOpenEditor]);
 
   // canonical site-wide hours
@@ -138,120 +143,142 @@ export default function HoursPanel({
   return (
     <div
       ref={containerRef}
-      className={`rounded-xl border p-3 space-y-3 ${
-        spotlight ? 'ring-2 ring-violet-500/70' : ''
-      } ${className ?? ''}`}
+      className={`${className ?? ''} ${spotlight ? 'ring-2 ring-violet-500/70 rounded-xl' : ''}`}
     >
-      {/* Header */}
-      <div className="flex items-center gap-2">
-        <Clock className="w-4 h-4" />
-        <div className="font-medium">Hours of Operation</div>
-        <div className="ml-auto text-xs opacity-70">
-          {title} · {tz}
-        </div>
-      </div>
-
-      {/* Guidance */}
-      <div className="rounded-lg border border-white/10 bg-neutral-900/50 p-3 text-xs text-white/70 leading-relaxed">
-        <ul className="list-disc list-inside space-y-1">
-          <li>These hours are <strong>site-wide</strong> and live in <code>data.meta.hours</code>.</li>
-          <li>Supports <em>exceptions</em> (holidays) and overnight carry (e.g., 8pm–2am).</li>
-          <li>Blocks and the footer/contact areas read from these values automatically.</li>
-        </ul>
-      </div>
-
-      {/* Today preview row */}
-      <div className="flex flex-wrap items-center gap-2 text-sm">
-        <span className="opacity-70">Today:</span>
-        <span className="tabular-nums">{preview.text}</span>
-        {preview.hasCarry && (
-          <span className="text-xs inline-flex items-center rounded-full border px-2 py-0.5">
-            includes overnight carry
-          </span>
-        )}
-        {preview.exTodayLabel && (
-          <span className="text-xs inline-flex items-center rounded-full border px-2 py-0.5">
-            special hours: {preview.exTodayLabel}
-          </span>
-        )}
-        <Badge
-          variant="outline"
-          className={
-            preview.openNow
-              ? 'border-green-500 text-green-600'
-              : 'border-rose-400 text-rose-500'
-          }
+      <details
+        ref={detailsRef}
+        open={sectionOpen}
+        onToggle={(e) => setSectionOpen((e.currentTarget as HTMLDetailsElement).open)}
+        className="group rounded-xl border bg-background/60"
+      >
+        {/* Header / Summary */}
+        <summary
+          className="flex cursor-pointer list-none items-center gap-2 px-3 py-2 select-none"
+          role="button"
+          aria-expanded={sectionOpen}
         >
-          {preview.openNow ? 'Open now' : 'Closed now'}
-        </Badge>
+          <span className="inline-flex h-6 w-6 items-center justify-center rounded-md border">
+            {sectionOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+          </span>
+          <Clock className="w-4 h-4 opacity-80" />
+          <span className="font-medium">Hours of Operation</span>
+          <span className="ml-auto text-xs opacity-70">
+            {title} · {tz}
+          </span>
+        </summary>
 
-        <div className="ml-auto flex gap-2">
-          <Button variant="ghost" size="icon" onClick={copyToday} title="Copy today’s hours">
-            <Copy className="w-4 h-4" />
-          </Button>
-          <Button variant="ghost" size="sm" onClick={copyWeek} title="Copy weekly hours">
-            Copy week
-          </Button>
-        </div>
-      </div>
+        {/* Content */}
+        <div className="space-y-3 border-t p-3">
+          {/* Guidance */}
+          <div className="rounded-lg border border-white/10 bg-neutral-900/50 p-3 text-xs text-white/70 leading-relaxed">
+            <ul className="list-disc list-inside space-y-1">
+              <li>These hours are <strong>site-wide</strong> and live in <code>data.meta.hours</code>.</li>
+              <li>Supports <em>exceptions</em> (holidays) and overnight carry (e.g., 8pm–2am).</li>
+              <li>Blocks and the footer/contact areas read from these values automatically.</li>
+            </ul>
+          </div>
 
-      {/* Quick toggles */}
-      <div className="flex items-center gap-3">
-        <Switch id="hours-247" checked={!!hours.alwaysOpen} onCheckedChange={toggle247} />
-        <Label htmlFor="hours-247">Open 24/7</Label>
+          {/* Today preview row */}
+          <div className="flex flex-wrap items-center gap-2 text-sm">
+            <span className="opacity-70">Today:</span>
+            <span className="tabular-nums">{preview.text}</span>
+            {preview.hasCarry && (
+              <span className="text-xs inline-flex items-center rounded-full border px-2 py-0.5">
+                includes overnight carry
+              </span>
+            )}
+            {preview.exTodayLabel && (
+              <span className="text-xs inline-flex items-center rounded-full border px-2 py-0.5">
+                special hours: {preview.exTodayLabel}
+              </span>
+            )}
+            <Badge
+              variant="outline"
+              className={
+                preview.openNow
+                  ? 'border-green-500 text-green-600'
+                  : 'border-rose-400 text-rose-500'
+              }
+            >
+              {preview.openNow ? 'Open now' : 'Closed now'}
+            </Badge>
 
-        <div className="ml-auto flex items-center gap-2">
-          <Button size="sm" variant="outline" onClick={useBrowserTz} className="gap-1">
-            <Globe2 className="h-4 w-4" />
-            Use my timezone
-          </Button>
-        </div>
-      </div>
+          <div className="ml-auto flex gap-2">
+              <Button variant="ghost" size="icon" onClick={copyToday} title="Copy today’s hours">
+                <Copy className="w-4 h-4" />
+              </Button>
+              <Button variant="ghost" size="sm" onClick={copyWeek} title="Copy weekly hours">
+                Copy week
+              </Button>
+            </div>
+          </div>
 
-      <div className="flex items-center justify-between">
-        <div className="text-sm opacity-75">
-          Display: <span className="font-medium">{hours.display_style === 'stack' ? 'Stack' : 'Table'}</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <Button
-            size="sm"
-            variant={hours.display_style === 'table' ? 'default' : 'secondary'}
-            onClick={() => setDisplayStyle('table')}
-          >
-            Table
-          </Button>
-          <Button
-            size="sm"
-            variant={hours.display_style === 'stack' ? 'default' : 'secondary'}
-            onClick={() => setDisplayStyle('stack')}
-          >
-            Stack
-          </Button>
-          <Button size="sm" variant="secondary" onClick={() => setOpen((s) => !s)}>
-            {open ? 'Close Editor' : 'Edit Hours'}
-          </Button>
-        </div>
-      </div>
+          {/* Quick toggles */}
+          <div className="flex items-center gap-3">
+            <Switch id="hours-247" checked={!!hours.alwaysOpen} onCheckedChange={toggle247} />
+            <Label htmlFor="hours-247">Open 24/7</Label>
 
-      {/* Inline editor (reuses block editor UI) */}
-      {open && (
-        <div className="mt-2 rounded-lg border bg-muted/40 p-2">
-          <HoursOfOperationEditor
-            block={{
-              id: 'hours-settings-adapter',
-              // // @ts-expect-error adapter shape to reuse editor
-              type: 'hours',
-              content: hours,
-            }}
-            onSave={(updated: any) => {
-              setHours(updated.content as HoursOfOperationContent);
-            }}
-            onClose={() => setOpen(false)}
-            // // @ts-expect-error depends on your local BlockEditorProps definition
-            template={template}
-          />
+            <div className="ml-auto flex items-center gap-2">
+              <Button size="sm" variant="outline" onClick={useBrowserTz} className="gap-1">
+                <Globe2 className="h-4 w-4" />
+                Use my timezone
+              </Button>
+            </div>
+          </div>
+
+          <div className="flex items-center justify-between">
+            <div className="text-sm opacity-75">
+              Display:{' '}
+              <span className="font-medium">
+                {hours.display_style === 'stack' ? 'Stack' : 'Table'}
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                size="sm"
+                variant={hours.display_style === 'table' ? 'default' : 'secondary'}
+                onClick={() => setDisplayStyle('table')}
+              >
+                Table
+              </Button>
+              <Button
+                size="sm"
+                variant={hours.display_style === 'stack' ? 'default' : 'secondary'}
+                onClick={() => setDisplayStyle('stack')}
+              >
+                Stack
+              </Button>
+              <Button
+                size="sm"
+                variant="secondary"
+                onClick={() => setInlineOpen((s) => !s)}
+              >
+                {inlineOpen ? 'Close Editor' : 'Edit Hours'}
+              </Button>
+            </div>
+          </div>
+
+          {/* Inline editor (reuses block editor UI) */}
+          {inlineOpen && (
+            <div className="mt-2 rounded-lg border bg-muted/40 p-2">
+              <HoursOfOperationEditor
+                block={{
+                  id: 'hours-settings-adapter',
+                  // // @ts-expect-error adapter shape to reuse editor
+                  type: 'hours',
+                  content: hours,
+                }}
+                onSave={(updated: any) => {
+                  setHours(updated.content as HoursOfOperationContent);
+                }}
+                onClose={() => setInlineOpen(false)}
+                // // @ts-expect-error depends on your local BlockEditorProps definition
+                template={template}
+              />
+            </div>
+          )}
         </div>
-      )}
+      </details>
     </div>
   );
 }

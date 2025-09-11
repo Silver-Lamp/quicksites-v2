@@ -1219,7 +1219,7 @@ export default function EditorContent({
             <div className="h-full bg-neutral-900 border-l border-white/10 flex flex-col">
               <div className="sticky top-0 z-10 flex items-center justify-between gap-3 p-3 border-b border-white/10 bg-neutral-900/95 backdrop-blur">
                 <div className="text-sm text-white/80">
-                  <strong>Template Settings</strong>
+                  <strong>Site Settings</strong>
                   <span className="ml-2 text-white/40 text-[10px]">
                     (Press <kbd className="px-1 py-0.5 rounded bg-white/10">S</kbd> to close)
                   </span>

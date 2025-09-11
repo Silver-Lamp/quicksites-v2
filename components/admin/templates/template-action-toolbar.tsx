@@ -1,3 +1,4 @@
+// components/admin/templates/template-action-toolbar.tsx
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -361,6 +362,17 @@ export function TemplateActionToolbar({
   const expandToolbar = () => setToolbarCollapsed(false);
   const toggleToolbarCollapse = () => setToolbarCollapsed(v => !v);
 
+  // Page Manager open/closed state (persisted)
+  const [pageMgrOpen, setPageMgrOpen] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return true;
+    try { return (window.localStorage.getItem('qs:toolbar:pageMgrOpen') ?? '1') !== '0'; } catch { return true; }
+  });
+  useEffect(() => {
+    try { window.localStorage.setItem('qs:toolbar:pageMgrOpen', pageMgrOpen ? '1' : '0'); } catch {}
+    window.dispatchEvent(new CustomEvent('qs:toolbar:page-manager:open', { detail: pageMgrOpen }));
+  }, [pageMgrOpen]);
+
+
   const tplRef = useTemplateRef(template);
 
   // Track LAST PERSISTED signature (logical dirty)
@@ -512,6 +524,40 @@ export function TemplateActionToolbar({
     window.addEventListener('keydown', onKey, { capture: true });
     return () => window.removeEventListener('keydown', onKey as any, { capture: true } as any);
   }, []); // eslint-disable-line
+
+  // Keyboard: 't' → toggle toolbar, 'p' → toggle Page Manager (and expand if collapsed)
+  useEffect(() => {
+    const isTyping = (n: EventTarget | null) => {
+      const el = n as HTMLElement | null;
+      if (!el) return false;
+      if (el.isContentEditable) return true;
+      const tag = (el.tagName || '').toLowerCase();
+      return tag === 'input' || tag === 'textarea' || tag === 'select' || !!el.closest?.('.cm-editor,.ProseMirror');
+    };
+
+    const onKey = (e: KeyboardEvent) => {
+      // no modifiers
+      if (e.metaKey || e.ctrlKey || e.altKey || e.shiftKey) return;
+
+      const k = (e.key || '').toLowerCase();
+      if (k !== 't' && k !== 'p') return;
+      if (isTyping(e.target)) return;
+
+      e.preventDefault();
+
+      if (k === 't') {
+        toggleToolbarCollapse();
+      } else if (k === 'p') {
+        // ensure toolbar is visible, then toggle page manager
+        if (toolbarCollapsed) expandToolbar();
+        setPageMgrOpen((v) => !v);
+      }
+    };
+
+    window.addEventListener('keydown', onKey, { capture: true });
+    return () => window.removeEventListener('keydown', onKey as any, { capture: true } as any);
+  }, [toolbarCollapsed, expandToolbar, toggleToolbarCollapse]);
+
 
   useEffect(() => {
     const onStats = (e: Event) => {
@@ -1152,10 +1198,13 @@ export function TemplateActionToolbar({
             <Wrench className="w-4 h-4" />
           </Button>
 
-          {/* Page manager */}
+          {/* Page manager (toggle with 'P') */}
+          {/* Page manager selector is always visible when expanded; tray is controlled by pageMgrOpen */}
           <PageManagerToolbar
             pages={getTemplatePagesLoose(template)}
             currentSlug={currentSlug}
+            open={pageMgrOpen}
+            onOpenChange={setPageMgrOpen}
             onSelect={(slug) => {
               const sp = new URLSearchParams(window.location.search);
               sp.set('page', slug);
@@ -1195,6 +1244,8 @@ export function TemplateActionToolbar({
             }}
             siteId={(tplRef.current as any).site_id}
           />
+
+
 
           <Button size="icon" variant="ghost" title="Page Settings" onClick={() => onOpenPageSettings?.()}>
             <SlidersHorizontal className="w-4 h-4" />

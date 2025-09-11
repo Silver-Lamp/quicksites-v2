@@ -5,16 +5,16 @@ import { useEffect, useState } from 'react';
 import PuppyWidget from './puppy-widget';
 import AssistantWidget from './assistant-widget';
 
-type Variant = 'puppy' | 'assistant';
+export type HomepageWidgetVariant = 'puppy' | 'assistant';
 
 type Props = {
-  forceVariant?: Variant; // Optional override
+  forceVariant?: HomepageWidgetVariant; // Optional override
 };
 
 const VARIANT_KEY = 'quicksites::widget-variant';
 
 export default function QuickSitesWidget({ forceVariant }: Props) {
-  const [variant, setVariant] = useState<Variant | null>(null);
+  const [variant, setVariant] = useState<HomepageWidgetVariant | null>(null);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -25,11 +25,11 @@ export default function QuickSitesWidget({ forceVariant }: Props) {
       return;
     }
 
-    const stored = localStorage.getItem(VARIANT_KEY) as Variant | null;
+    const stored = localStorage.getItem(VARIANT_KEY) as HomepageWidgetVariant | null;
     if (stored === 'puppy' || stored === 'assistant') {
       setVariant(stored);
     } else {
-      const chosen: Variant = Math.random() < 0.5 ? 'puppy' : 'assistant';
+      const chosen: HomepageWidgetVariant = Math.random() < 0.5 ? 'puppy' : 'assistant';
       localStorage.setItem(VARIANT_KEY, chosen);
       setVariant(chosen);
     }

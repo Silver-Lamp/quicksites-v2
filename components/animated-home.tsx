@@ -1,9 +1,26 @@
+// components/animated-home.tsx
 'use client';
 
 import { motion } from 'framer-motion';
 import Image from 'next/image';
+import { useBrand } from '@/app/providers';
+
+type Branding = {
+  name?: string;
+  logoUrl?: string | null;
+  faviconUrl?: string | null;
+  hero?: { headline?: string; subhead?: string };
+  domain?: string;
+};
 
 export default function AnimatedHome() {
+  const brand = (useBrand?.() as Branding) || {};
+  const productName = brand.name || 'QuickSites';
+  const logoSrc = brand.logoUrl || brand.faviconUrl || '/favicon.ico';
+  const headline = brand.hero?.headline || 'Your Website. One Click Away.';
+  const subhead = brand.hero?.subhead || 'Turn your local business into a digital presence in minutes. No code. No hassle.';
+  const domain = brand.domain || 'QuickSites.ai';
+
   return (
     <main className="relative min-h-screen bg-zinc-950 text-white flex flex-col items-center justify-center px-6 py-12 overflow-hidden">
 
@@ -11,13 +28,13 @@ export default function AnimatedHome() {
       <div className="z-10 text-center space-y-6">
         <div className="flex items-center justify-center gap-3">
           <Image
-            src="/favicon.ico"
+            src={logoSrc}
             width={40}
             height={40}
-            alt="QuickSites Logo"
+            alt={`${productName} Logo`}
             className="rounded-full"
           />
-          <h1 className="text-3xl font-bold tracking-tight text-white">QuickSites</h1>
+          <h1 className="text-3xl font-bold tracking-tight text-white">{productName}</h1>
         </div>
 
         <motion.h2
@@ -26,11 +43,11 @@ export default function AnimatedHome() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6 }}
         >
-          Your Website. One Click Away.
+          {headline}
         </motion.h2>
 
         <p className="text-zinc-400 text-lg max-w-xl mx-auto">
-          Turn your local business into a digital presence in minutes. No code. No hassle.
+          {subhead}
         </p>
 
         <motion.a
@@ -45,7 +62,7 @@ export default function AnimatedHome() {
 
       {/* Footer */}
       <footer className="absolute bottom-6 text-xs text-zinc-600 z-10">
-        &copy; {new Date().getFullYear()} QuickSites.ai — All rights reserved.
+        &copy; {new Date().getFullYear()} {domain} — All rights reserved.
       </footer>
     </main>
   );

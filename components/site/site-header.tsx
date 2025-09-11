@@ -68,7 +68,7 @@ export default function SiteHeader({
     >
       <div className="mx-auto max-w-6xl px-6 py-3 flex items-center justify-between">
         {/* Logo */}
-        <Link href={logoHref} className="flex items-center gap-2" aria-label="QuickSites home">
+        <Link href={logoHref} className="flex items-center gap-2" aria-label={`${logoText} home`}>
           <Image src={logoSrc} alt={logoText} width={24} height={24} className="rounded" />
           <span className="text-sm text-zinc-300">{logoText}</span>
         </Link>

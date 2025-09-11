@@ -6,7 +6,27 @@ import { useOrg } from '@/app/providers';
 import { supabase } from '@/lib/supabase/client';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
+import { Switch } from '@/components/ui/switch';
 import OrgDomainPanel from '@/components/admin/org/OrgDomainPanel';
+
+type BrandingFlags = {
+  showPuppyWidget?: boolean;
+  showGlow?: boolean;
+  showMobileWidget?: boolean;
+  showMobileGradients?: boolean;
+  forceWidgetVariant?: string | null;
+};
+type Branding = {
+  name?: string; // Display brand ("QuickSites" | "CedarSites")
+  domain?: string; // Public domain for footer/title
+  logoUrl?: string | null;     // optional overrides (you already have logo fields separately too)
+  darkLogoUrl?: string | null;
+  faviconUrl?: string | null;
+  colors?: { gradient?: string[]; primary?: string };
+  hero?: { headline?: string; subhead?: string };
+  copy?: { featuresTitle?: string; featuresSubtitle?: string };
+  flags?: BrandingFlags;
+};
 
 type OrgRow = {
   id: string;
@@ -18,6 +38,14 @@ type OrgRow = {
   support_email: string | null;
   support_url: string | null;
   billing_mode: 'central' | 'reseller' | 'none' | null;
+
+  // 🔹 New: JSONB branding blob (may be null if you haven’t added it yet)
+  branding?: Branding | null;
+
+  // Optional: if your public view adds these
+  primary_domain?: string | null;
+  wildcard_enabled?: boolean | null;
+  canonical_host?: string | null;
 };
 
 type OrgStats = {
@@ -31,152 +59,149 @@ const STORAGE_BUCKET =
 
 /* ---------------- Reusable upload field ---------------- */
 function UploadField({
-    label,
-    value,
-    onChange,
-    orgId,
-    orgSlug,
-    tag, // 'logo' | 'logo-dark' | 'favicon'
-    accept = 'image/*',
-  }: {
-    label: string;
-    value?: string | null;
-    onChange: (next: string | null) => void;
-    orgId: string;
-    orgSlug: string;
-    tag: string;
-    accept?: string;
-  }) {
-    const [uploading, setUploading] = useState(false);
-    const [error, setError] = useState<string | null>(null);
-    const inputRef = useRef<HTMLInputElement | null>(null);
-  
-    const pickFile = () => inputRef.current?.click();
-  
-    const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-      const file = e.target.files?.[0] ?? null;
-      if (!file) return;
-  
-      setError(null);
-  
-      if (!file.type.startsWith('image/')) return setError('Please select an image file.');
-      if (file.size > 5 * 1024 * 1024) return setError('File too large (max 5MB).');
-  
-      setUploading(true);
-      try {
-        const fd = new FormData();
-        fd.append('file', file);
-        fd.append('org_id', orgId);
-        fd.append('org_slug', orgSlug);
-        fd.append('tag', tag);
-  
-        const res = await fetch('/api/admin/org/upload', { method: 'POST', body: fd });
-  
-        // Try JSON; if not JSON, fall back to text so we can show the real error
-        let payload: any = null;
-        let rawText: string | null = null;
-        const ct = (res.headers.get('content-type') || '').toLowerCase();
-        if (ct.includes('application/json')) {
-          payload = await res.json();
-        } else {
-          rawText = await res.text();
-          try { payload = JSON.parse(rawText); } catch {}
-        }
-  
-        if (!res.ok) {
-          if (res.status === 404) {
-            throw new Error('Upload endpoint not found. Create app/api/admin/org/upload/route.ts and restart the dev server.');
-          }
-          const msg =
-            payload?.error ||
-            payload?.message ||
-            rawText ||
-            `Upload failed (HTTP ${res.status})`;
-  
-          if (res.status === 413 || /body exceeded|too large/i.test(msg)) {
-            throw new Error('Upload too large for server setting. Increase next.config serverActions.bodySizeLimit or upload a smaller image.');
-          }
-          throw new Error(msg);
-        }
-  
-        const url: string | null =
-          payload?.url ?? payload?.signedUrl ?? payload?.data?.signedUrl ?? null;
-  
-        onChange(url);
-        if (inputRef.current) inputRef.current.value = '';
-      } catch (e: any) {
-        setError(String(e?.message || 'Upload failed'));
-      } finally {
-        setUploading(false);
+  label,
+  value,
+  onChange,
+  orgId,
+  orgSlug,
+  tag, // 'logo' | 'logo-dark' | 'favicon'
+  accept = 'image/*',
+}: {
+  label: string;
+  value?: string | null;
+  onChange: (next: string | null) => void;
+  orgId: string;
+  orgSlug: string;
+  tag: string;
+  accept?: string;
+}) {
+  const [uploading, setUploading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const inputRef = useRef<HTMLInputElement | null>(null);
+
+  const pickFile = () => inputRef.current?.click();
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0] ?? null;
+    if (!file) return;
+
+    setError(null);
+    if (!file.type.startsWith('image/')) return setError('Please select an image file.');
+    if (file.size > 5 * 1024 * 1024) return setError('File too large (max 5MB).');
+
+    setUploading(true);
+    try {
+      const fd = new FormData();
+      fd.append('file', file);
+      fd.append('org_id', orgId);
+      fd.append('org_slug', orgSlug);
+      fd.append('tag', tag);
+
+      const res = await fetch('/api/admin/org/upload', { method: 'POST', body: fd });
+
+      // Try JSON; fall back to text for clearer errors
+      let payload: any = null;
+      let rawText: string | null = null;
+      const ct = (res.headers.get('content-type') || '').toLowerCase();
+      if (ct.includes('application/json')) {
+        payload = await res.json();
+      } else {
+        rawText = await res.text();
+        try { payload = JSON.parse(rawText); } catch {}
       }
-    };
-  
-    return (
-      <div className="space-y-1.5 mt-2 mb-2 border-b border-zinc-700 pb-2 pl-10">
-        <label className="block text-sm">{label}</label>
-        <div className="flex items-start gap-3">
-          <div className="w-28 h-16 rounded border border-zinc-700 bg-zinc-900 flex items-center justify-center overflow-hidden">
-            {value ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={value} alt="" className="max-w-full max-h-full object-contain" />
-            ) : (
-              <span className="text-xs text-zinc-500">No image</span>
-            )}
+
+      if (!res.ok) {
+        if (res.status === 404) {
+          throw new Error('Upload endpoint not found. Create app/api/admin/org/upload/route.ts and restart the dev server.');
+        }
+        const msg =
+          payload?.error ||
+          payload?.message ||
+          rawText ||
+          `Upload failed (HTTP ${res.status})`;
+
+        if (res.status === 413 || /body exceeded|too large/i.test(msg)) {
+          throw new Error('Upload too large for server setting. Increase next.config serverActions.bodySizeLimit or upload a smaller image.');
+        }
+        throw new Error(msg);
+      }
+
+      const url: string | null =
+        payload?.url ?? payload?.signedUrl ?? payload?.data?.signedUrl ?? null;
+
+      onChange(url);
+      if (inputRef.current) inputRef.current.value = '';
+    } catch (e: any) {
+      setError(String(e?.message || 'Upload failed'));
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  return (
+    <div className="space-y-1.5 mt-2 mb-2 border-b border-zinc-700 pb-2 pl-10">
+      <label className="block text-sm">{label}</label>
+      <div className="flex items-start gap-3">
+        <div className="w-28 h-16 rounded border border-zinc-700 bg-zinc-900 flex items-center justify-center overflow-hidden">
+          {value ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={value} alt="" className="max-w-full max-h-full object-contain" />
+          ) : (
+            <span className="text-xs text-zinc-500">No image</span>
+          )}
+        </div>
+
+        <div className="flex-1 grid grid-cols-2 gap-2">
+          <Input
+            value={value ?? ''}
+            onChange={(e) => onChange(e.target.value || null)}
+            placeholder="https://…/logo.png"
+            className="col-span-2"
+          />
+
+          <input
+            ref={inputRef}
+            type="file"
+            accept={accept}
+            className="hidden"
+            onChange={handleFileChange}
+          />
+
+          <div className="col-span-2 flex items-center gap-2">
+            <Button type="button" onClick={pickFile} disabled={uploading}>
+              {uploading ? 'Uploading…' : 'Upload / Replace'}
+            </Button>
+
+            <Button
+              type="button"
+              variant="secondary"
+              disabled={!value}
+              onClick={() => value && window.open(value, '_blank')}
+            >
+              Open
+            </Button>
+
+            <Button
+              type="button"
+              variant="outline"
+              disabled={!value}
+              onClick={() => onChange(null)}
+            >
+              Remove
+            </Button>
           </div>
-  
-          <div className="flex-1 grid grid-cols-2 gap-2">
-            <Input
-              value={value ?? ''}
-              onChange={(e) => onChange(e.target.value || null)}
-              placeholder="https://…/logo.png"
-              className="col-span-2"
-            />
-  
-            <input
-              ref={inputRef}
-              type="file"
-              accept={accept}
-              className="hidden"
-              onChange={handleFileChange}
-            />
-  
-            <div className="col-span-2 flex items-center gap-2">
-              <Button type="button" onClick={pickFile} disabled={uploading}>
-                {uploading ? 'Uploading…' : 'Upload / Replace'}
-              </Button>
-  
-              <Button
-                type="button"
-                variant="secondary"
-                disabled={!value}
-                onClick={() => value && window.open(value, '_blank')}
-              >
-                Open
-              </Button>
-  
-              <Button
-                type="button"
-                variant="outline"
-                disabled={!value}
-                onClick={() => onChange(null)}
-              >
-                Remove
-              </Button>
-            </div>
-  
-            {error && <div className="col-span-2 text-xs text-red-400 whitespace-pre-wrap">{error}</div>}
-  
-            <div className="col-span-2 text-[11px] text-zinc-500">
-              Accepted: PNG, JPG, SVG, WebP, ICO (≤ 5MB). Uploaded securely to your Storage bucket.
-            </div>
+
+          {error && <div className="col-span-2 text-xs text-red-400 whitespace-pre-wrap">{error}</div>}
+
+          <div className="col-span-2 text-[11px] text-zinc-500">
+            Accepted: PNG, JPG, SVG, WebP, ICO (≤ 5MB). Uploaded securely to your Storage bucket.
           </div>
         </div>
       </div>
-    );
-  }
-  
-    
-  
+    </div>
+  );
+}
+
 /* ========================================================================== */
 
 export default function OrgSettings() {
@@ -207,6 +232,14 @@ export default function OrgSettings() {
         support_email: sel.support_email ?? '',
         support_url: sel.support_url ?? '',
         billing_mode: sel.billing_mode ?? 'central',
+        branding: sel.branding ?? {
+          // sensible defaults so QuickSites continues to look the same
+          name: sel.slug === 'quicksites' ? 'QuickSites' : sel.name,
+          domain: sel.slug === 'quicksites' ? 'QuickSites.ai' : undefined,
+          flags: { showPuppyWidget: sel.slug === 'quicksites', showGlow: true, showMobileWidget: true, showMobileGradients: true, forceWidgetVariant: 'puppy' },
+          hero: { headline: 'Your Website. One Click Away.', subhead: 'Turn your local business into a digital presence in minutes. No code. No hassle.' },
+          copy: { featuresTitle: 'Featured demos', featuresSubtitle: `Hand-picked highlights from what ${(sel.slug === 'quicksites' ? 'QuickSites' : 'your brand')} can do.` },
+        } as Branding,
       });
       fetchStats(sel.id);
       setConfirmSlug('');
@@ -236,10 +269,10 @@ export default function OrgSettings() {
     (async () => {
       try {
         if (isPlatformAdmin) {
-          // Platform admin can see all via public view
+          // ⚠️ Ensure your organizations_public view includes the branding column.
           const { data } = await supabase
             .from('organizations_public')
-            .select('id, slug, name, logo_url, dark_logo_url, favicon_url, support_email, support_url, billing_mode')
+            .select('id, slug, name, logo_url, dark_logo_url, favicon_url, support_email, support_url, billing_mode, branding, primary_domain, wildcard_enabled, canonical_host')
             .order('name', { ascending: true });
           setOrgs((data ?? []) as OrgRow[]);
           if (data && data.length && !data.some((o: any) => o.id === selectedId)) {
@@ -258,6 +291,10 @@ export default function OrgSettings() {
               support_email: current.support_email ?? null,
               support_url: current.support_url ?? null,
               billing_mode: (current.billing_mode ?? 'central') as OrgRow['billing_mode'],
+              branding: (current as any).branding ?? null,
+              primary_domain: (current as any).primary_domain ?? null,
+              wildcard_enabled: (current as any).wildcard_enabled ?? null,
+              canonical_host: (current as any).canonical_host ?? null,
             },
           ]);
           setSelectedId(current.id);
@@ -269,8 +306,42 @@ export default function OrgSettings() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isPlatformAdmin, current.id]);
 
-  const onField = (k: keyof OrgRow) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
-    setDraft((d) => ({ ...d, [k]: e.target.value }));
+  const onField =
+    (k: keyof OrgRow) =>
+    (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
+      setDraft((d) => ({ ...d, [k]: e.target.value }));
+
+  // Small helpers for nested branding editing
+  function setBranding<K extends keyof Branding>(key: K, value: Branding[K]) {
+    setDraft((d) => ({ ...d, branding: { ...(d.branding as Branding || {}), [key]: value } }));
+  }
+  function setBrandFlag<K extends keyof BrandingFlags>(key: K, value: BrandingFlags[K]) {
+    setDraft((d) => ({
+      ...d,
+      branding: {
+        ...(d.branding as Branding || {}),
+        flags: { ...((d.branding as Branding)?.flags || {}), [key]: value },
+      },
+    }));
+  }
+  function setBrandHero<K extends keyof NonNullable<Branding['hero']>>(key: K, value: NonNullable<Branding['hero']>[K]) {
+    setDraft((d) => ({
+      ...d,
+      branding: {
+        ...(d.branding as Branding || {}),
+        hero: { ...((d.branding as Branding)?.hero || {}), [key]: value },
+      },
+    }));
+  }
+  function setBrandCopy<K extends keyof NonNullable<Branding['copy']>>(key: K, value: NonNullable<Branding['copy']>[K]) {
+    setDraft((d) => ({
+      ...d,
+      branding: {
+        ...(d.branding as Branding || {}),
+        copy: { ...((d.branding as Branding)?.copy || {}), [key]: value },
+      },
+    }));
+  }
 
   async function fetchStats(orgId: string) {
     try {
@@ -295,6 +366,7 @@ export default function OrgSettings() {
       support_email: (draft.support_email ?? '').trim() || null,
       support_url: (draft.support_url ?? '').trim() || null,
       billing_mode: (draft.billing_mode as any) ?? 'central',
+      branding: draft.branding || null,
     };
 
     try {
@@ -310,7 +382,7 @@ export default function OrgSettings() {
       } else {
         // Regular org admin update (must pass RLS for their org)
         const { error } = await supabase.from('organizations').update(updates).eq('id', sel.id);
-        if (error) throw error;
+        if (error) throw error as any;
       }
       location.reload();
     } catch (err: any) {
@@ -354,7 +426,7 @@ export default function OrgSettings() {
     !!sel &&
     isPlatformAdmin &&
     !!stats &&
-    stats.templates === 0 && // block if templates exist
+    stats.templates === 0 &&
     confirmSlug.trim() === sel.slug &&
     confirmDeleteWord.trim().toUpperCase() === 'DELETE';
 
@@ -384,6 +456,8 @@ export default function OrgSettings() {
       setDeleting(false);
     }
   }
+
+  const b = (draft.branding || {}) as Branding;
 
   return (
     <div className="max-w-4xl mt-12">
@@ -424,6 +498,7 @@ export default function OrgSettings() {
       {sel ? (
         <>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* ---------------- General org profile ---------------- */}
             <div className="space-y-3">
               <label className="block text-sm">Display Name</label>
               <Input value={draft.name ?? ''} onChange={onField('name')} />
@@ -449,6 +524,7 @@ export default function OrgSettings() {
               </select>
             </div>
 
+            {/* ---------------- Logos / favicon ---------------- */}
             <div className="space-y-4">
               <UploadField
                 label="Logo (light UI)"
@@ -483,15 +559,114 @@ export default function OrgSettings() {
               <OrgDomainPanel
                 orgId={sel.id}
                 orgSlug={sel.slug}
-                initialDomain={(sel as any).primary_domain || ''}             // requires view to include it
+                initialDomain={(sel as any).primary_domain || ''}
                 initialWildcard={Boolean((sel as any).wildcard_enabled)}
                 initialCanonical={((sel as any).canonical_host ?? 'www')}
               />
-
             </div>
           </div>
 
-          {/* Danger Zone */}
+          {/* ---------------- Branding (white-label) ---------------- */}
+          <div className="mt-10 rounded-lg border border-zinc-700 p-4 bg-zinc-900/40">
+            <h2 className="text-lg font-semibold mb-2">Branding (White-Label)</h2>
+            <p className="text-xs text-zinc-400 mb-4">
+              Configure the public marketing experience for this organization (logo, name, hero copy, and widget/glow toggles).
+              These values power the homepage and related marketing pages when requests are served on this org’s domain.
+            </p>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-3">
+                <label className="block text-sm">Brand Display Name</label>
+                <Input
+                  value={b.name ?? ''}
+                  onChange={(e) => setBranding('name', e.target.value)}
+                  placeholder="QuickSites or CedarSites"
+                />
+
+                <label className="block text-sm">Public Domain (footer/title)</label>
+                <Input
+                  value={b.domain ?? ''}
+                  onChange={(e) => setBranding('domain', e.target.value)}
+                  placeholder="QuickSites.ai or CedarSites.com"
+                />
+
+                <label className="block text-sm">Hero Headline</label>
+                <Input
+                  value={b.hero?.headline ?? ''}
+                  onChange={(e) => setBrandHero('headline', e.target.value)}
+                  placeholder="Your Website. One Click Away."
+                />
+
+                <label className="block text-sm">Hero Subhead</label>
+                <Input
+                  value={b.hero?.subhead ?? ''}
+                  onChange={(e) => setBrandHero('subhead', e.target.value)}
+                  placeholder="Turn your local business into a digital presence in minutes…"
+                />
+              </div>
+
+              <div className="space-y-3">
+                <label className="block text-sm">Features Section Title</label>
+                <Input
+                  value={b.copy?.featuresTitle ?? ''}
+                  onChange={(e) => setBrandCopy('featuresTitle', e.target.value)}
+                  placeholder="Featured demos"
+                />
+
+                <label className="block text-sm">Features Section Subtitle</label>
+                <Input
+                  value={b.copy?.featuresSubtitle ?? ''}
+                  onChange={(e) => setBrandCopy('featuresSubtitle', e.target.value)}
+                  placeholder="Hand-picked highlights from what CedarSites can do."
+                />
+
+                <div className="mt-2 grid grid-cols-1 gap-3 rounded-md border border-zinc-700 p-3">
+                  <div className="flex items-center justify-between">
+                    <label className="text-sm">Show Glow/Gradients</label>
+                    <Switch
+                      checked={!!b.flags?.showGlow}
+                      onCheckedChange={(v) => setBrandFlag('showGlow', !!v)}
+                    />
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <label className="text-sm">Show Puppy Widget</label>
+                    <Switch
+                      checked={!!b.flags?.showPuppyWidget}
+                      onCheckedChange={(v) => setBrandFlag('showPuppyWidget', !!v)}
+                    />
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <label className="text-sm">Allow Widget on Mobile</label>
+                    <Switch
+                      checked={b.flags?.showMobileWidget ?? true}
+                      onCheckedChange={(v) => setBrandFlag('showMobileWidget', !!v)}
+                    />
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <label className="text-sm">Allow Gradients on Mobile</label>
+                    <Switch
+                      checked={b.flags?.showMobileGradients ?? true}
+                      onCheckedChange={(v) => setBrandFlag('showMobileGradients', !!v)}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm mb-1">Widget Variant (optional)</label>
+                    <Input
+                      value={b.flags?.forceWidgetVariant ?? 'puppy'}
+                      onChange={(e) => setBrandFlag('forceWidgetVariant', e.target.value || null)}
+                      placeholder="puppy"
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-4">
+              <Button onClick={save}>Save Branding</Button>
+            </div>
+          </div>
+
+          {/* ---------------- Danger Zone ---------------- */}
           {isPlatformAdmin && (
             <div className="mt-8 rounded-lg border border-red-900/40 bg-red-950/40 p-4">
               <h2 className="text-red-300 font-semibold">Danger Zone</h2>

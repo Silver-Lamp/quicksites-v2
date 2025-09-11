@@ -139,11 +139,22 @@ export default function HeroEditor({
   const [industryKey, setIndustryKey] = useState<string>(currentIndustryKey);
   useEffect(() => setIndustryKey(currentIndustryKey), [currentIndustryKey]);
   const [aiIndustryOther, setAiIndustryOther] = useState('');
+
+  // label used downstream (after step 2)
   const promptIndustryLabel = useMemo(
     () =>
       industryKey === 'other' && aiIndustryOther.trim()
         ? aiIndustryOther.trim()
         : toIndustryLabel(resolveIndustryKey(industryKey)),
+    [industryKey, aiIndustryOther]
+  );
+
+  // Step control: gate the rest of the form until industry is chosen
+  type Step = 1 | 2;
+  const initialStep: Step = (currentIndustryKey && currentIndustryKey !== 'other') ? 2 : 1;
+  const [step, setStep] = useState<Step>(initialStep);
+  const industryValid = useMemo(
+    () => !!industryKey && (industryKey !== 'other' || aiIndustryOther.trim().length > 0),
     [industryKey, aiIndustryOther]
   );
 
@@ -194,6 +205,7 @@ export default function HeroEditor({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [promptIndustryLabel]);
 
+  // reflect industry in template meta live (works in both steps)
   useEffect(() => {
     (block as any).industry = industryKey;
     const meta = ((template?.data as any)?.meta ?? {});
@@ -288,20 +300,25 @@ export default function HeroEditor({
           <div className="text-sm font-medium flex items-center gap-2">
             <Settings2 className="w-4 h-4" /> Hero Settings
           </div>
-          <div className="inline-flex rounded-full border border-white/15 bg-neutral-900 p-1 text-xs">
-            <button
-              className={`px-3 py-1 rounded-full ${mode === 'express' ? 'bg-white text-gray-900' : 'text-white/80'}`}
-              onClick={() => setMode('express')}
-            >
-              Express
-            </button>
-            <button
-              className={`px-3 py-1 rounded-full ${mode === 'advanced' ? 'bg-white text-gray-900' : 'text-white/80'}`}
-              onClick={() => setMode('advanced')}
-            >
-              Advanced
-            </button>
-          </div>
+
+          {/* Hide mode toggle until Step 2 */}
+          {step === 2 && (
+            <div className="inline-flex rounded-full border border-white/15 bg-neutral-900 p-1 text-xs">
+              <button
+                className={`px-3 py-1 rounded-full ${mode === 'express' ? 'bg-white text-gray-900' : 'text-white/80'}`}
+                onClick={() => setMode('express')}
+              >
+                Express
+              </button>
+              <button
+                className={`px-3 py-1 rounded-full ${mode === 'advanced' ? 'bg-white text-gray-900' : 'text-white/80'}`}
+                onClick={() => setMode('advanced')}
+              >
+                Advanced
+              </button>
+            </div>
+          )}
+
           <button
             aria-label="Close editor"
             onClick={() => onClose?.()}
@@ -313,188 +330,223 @@ export default function HeroEditor({
 
         {/* scrollable content */}
         <div className="flex-1 overflow-y-auto px-4 pb-24 [scrollbar-gutter:stable]">
-          {/* tip */}
-          <div className="rounded-lg border border-white/10 bg-white/5 p-2 text-xs text-white/80 mt-3 mb-3">
-            Hover the hero preview to edit ✎ or use ✨ for quick rewrites. Switch to Advanced for full form controls.
-          </div>
+          {/* tip only visible in Step 2 */}
+          {step === 2 && (
+            <div className="rounded-lg border border-white/10 bg-white/5 p-2 text-xs text-white/80 mt-3 mb-3">
+              Hover the hero preview to edit ✎ or use ✨ for quick rewrites. Switch to Advanced for full form controls.
+            </div>
+          )}
 
-          {/* Industry */}
+          {/* Industry (Step 1 content, also shown in Step 2 at the top) */}
           <div className="rounded border border-white/10 bg-neutral-900 p-3 space-y-2">
             <div className="text-sm font-medium">What kind of site are you building?</div>
             <div className="grid md:grid-cols-3 gap-3">
               <div>
                 <label className="text-xs text-neutral-300">Industry</label>
-                <select className={selectDark} value={industryKey} onChange={(e) => setIndustryKey(e.target.value)}>
+                <select
+                  className={selectDark}
+                  value={industryKey}
+                  onChange={(e) => setIndustryKey(e.target.value)}
+                >
                   {industryOptions.map((opt) => (<option key={opt.value} value={opt.value}>{opt.label}</option>))}
                 </select>
               </div>
               <div className="md:col-span-2">
                 <label className="text-xs text-neutral-300">Other (if not in the list)</label>
-                <input className={selectDark} value={aiIndustryOther} onChange={(e) => setAiIndustryOther(e.target.value)} placeholder="e.g., Mobile Windshield Repair" disabled={industryKey !== 'other'} />
+                <input
+                  className={selectDark}
+                  value={aiIndustryOther}
+                  onChange={(e) => setAiIndustryOther(e.target.value)}
+                  placeholder="e.g., Mobile Windshield Repair"
+                  disabled={industryKey !== 'other'}
+                />
               </div>
             </div>
+            {step === 1 && (
+              <p className="text-xs text-neutral-400 pt-1">
+                Choose an industry (or enter your own) to continue.
+              </p>
+            )}
           </div>
 
-          {/* AI Assist */}
-          <div className="rounded border border-white/10 bg-neutral-900 p-3 space-y-2 mt-3">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Sparkles className="h-4 w-4 text-purple-300" />
-                <div className="text-sm font-medium">AI Assist</div>
-              </div>
-              <button onClick={suggestAll} disabled={aiLoading} className="inline-flex items-center gap-2 rounded bg-purple-600 hover:bg-purple-500 px-3 py-1.5 text-sm text-white disabled:opacity-60">
-                {aiLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
-                {aiLoading ? 'Working…' : 'Suggest All'}
-              </button>
-            </div>
-            {aiError && <div className="text-xs text-red-300">{aiError}</div>}
-          </div>
-
-          {/* Express content */}
-          {mode === 'express' && (
-            <div className="grid md:grid-cols-3 gap-3 mt-3">
-              <div className="md:col-span-2">
+          {/* Everything below is hidden until Step 2 */}
+          {step === 2 && (
+            <>
+              {/* AI Assist */}
+              <div className="rounded border border-white/10 bg-neutral-900 p-3 space-y-2 mt-3">
                 <div className="flex items-center justify-between">
-                  <label className="text-xs text-neutral-300">Image Subject</label>
-                  <button onClick={generateHeroImage} disabled={imgLoading} className="inline-flex items-center gap-1.5 rounded border-2 border-purple-500/70 text-purple-300 px-2 py-1 text-xs hover:bg-purple-500/10">
-                    {imgLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ImageIcon className="h-3.5 w-3.5" />} Generate
+                  <div className="flex items-center gap-2">
+                    <Sparkles className="h-4 w-4 text-purple-300" />
+                    <div className="text-sm font-medium">AI Assist</div>
+                  </div>
+                  <button
+                    onClick={suggestAll}
+                    disabled={aiLoading}
+                    className="inline-flex items-center gap-2 rounded bg-purple-600 hover:bg-purple-500 px-3 py-1.5 text-sm text-white disabled:opacity-60"
+                  >
+                    {aiLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+                    {aiLoading ? 'Working…' : 'Suggest All'}
                   </button>
                 </div>
-                <input className={selectDark} value={imgSubject} onChange={(e) => { setImgSubject(e.target.value); setImgSubjectTouched(true); update('image_subject', e.target.value as any); }} placeholder={`${promptIndustryLabel} website hero banner`} />
-                {imgError && <div className="text-xs text-red-300 mt-1">{imgError}</div>}
-              </div>
-              <div>
-                <label className="text-xs text-neutral-300">Style</label>
-                <select className={selectDark} value={imgStyle} onChange={(e) => setImgStyle(e.target.value as any)}>
-                  <option value="photo">Photo</option>
-                  <option value="illustration">Illustration</option>
-                  <option value="3d">3D Render</option>
-                  <option value="minimal">Minimal</option>
-                </select>
-              </div>
-              <div className="md:col-span-3 flex items-center justify-between">
-                <label className="text-xs text-neutral-300">Include people in image</label>
-                <Switch checked={imgIncludePeople} onCheckedChange={(v) => setImgIncludePeople(!!v)} />
-              </div>
-            </div>
-          )}
-
-          {/* Advanced content */}
-          {mode === 'advanced' && (
-            <>
-              <div className="grid md:grid-cols-3 gap-3 mt-3">
-                <div>
-                  <label className="text-xs text-neutral-300">Headline</label>
-                  <input className={selectDark} value={local?.headline || ''} onChange={(e) => update('headline', e.target.value as any)} placeholder="Fast, Reliable Service" />
-                  {errorText(`${fieldKey}.headline`)}
-                </div>
-                <div className="md:col-span-2">
-                  <label className="text-xs text-neutral-300">Subheadline</label>
-                  <input className={selectDark} value={local?.subheadline || ''} onChange={(e) => update('subheadline', e.target.value as any)} placeholder="24/7 local help with transparent pricing." />
-                  {errorText(`${fieldKey}.subheadline`)}
-                </div>
-                <div>
-                  <label className="text-xs text-neutral-300">CTA Text</label>
-                  <input className={selectDark} value={local?.cta_text || ''} onChange={(e) => update('cta_text', e.target.value as any)} placeholder="Get Started" />
-                  {errorText(`${fieldKey}.cta_text`)}
-                </div>
-                <div className="md:col-span-2">
-                  <label className="text-xs text-neutral-300">CTA Action</label>
-                  <div className="grid grid-cols-3 gap-2">
-                    <select className={selectDark} value={local?.cta_action || 'go_to_page'} onChange={(e) => update('cta_action', e.target.value as any)}>
-                      <option value="jump_to_contact">Jump to Contact</option>
-                      <option value="go_to_page">Go to Page</option>
-                      <option value="call_phone">Call Phone</option>
-                    </select>
-                    {(local?.cta_action || 'go_to_page') === 'go_to_page' && (
-                      <input className={selectDark} value={local?.cta_link ?? '/contact'} onChange={(e) => update('cta_link', e.target.value as any)} placeholder="/contact" />
-                    )}
-                    {local?.cta_action === 'jump_to_contact' && (
-                      <input className={selectDark} value={local?.contact_anchor_id ?? 'contact'} onChange={(e) => update('contact_anchor_id', e.target.value as any)} placeholder="contact" />
-                    )}
-                    {local?.cta_action === 'call_phone' && (
-                      <input className={selectDark} value={local?.cta_phone ?? ''} onChange={(e) => update('cta_phone', e.target.value as any)} placeholder="enter 10-digit phone" />
-                    )}
-                  </div>
-                  <div className="mt-1">
-                    <label className="inline-flex items-center gap-2 text-xs">
-                      <Switch checked={!!local?.cta_show_phone_below} onCheckedChange={(v) => update('cta_show_phone_below', v as any)} />
-                      <span>Show phone number under CTA</span>
-                    </label>
-                  </div>
-                </div>
+                {aiError && <div className="text-xs text-red-300">{aiError}</div>}
               </div>
 
-              <div className="grid md:grid-cols-3 gap-3 mt-3">
-                <div>
-                  <label className="text-xs text-neutral-300">Image</label>
-                  {local?.image_url && <img src={local.image_url} alt="Hero" className="mb-2 rounded shadow max-w-xs" />}
-                  <input
-                    type="file"
-                    accept="image/*"
-                    className="text-sm text-gray-300 file:bg-purple-600 file:text-white file:rounded file:border-0 file:px-4 file:py-1 file:mr-2"
-                    onChange={async (e) => {
-                      const file = e.target.files?.[0];
-                      if (!file) return;
-                      try {
-                        const url = await uploadToStorage(file, `template-${template?.id}/hero`);
-                        update('image_url', url as any);
-                        toast.success('Image uploaded');
-                      } catch (err: any) {
-                        toast.error(err.message || 'Upload failed');
-                      }
-                    }}
-                  />
-                </div>
-                <div className="md:col-span-2 grid grid-cols-2 gap-3">
+              {/* Express content */}
+              {mode === 'express' && (
+                <div className="grid md:grid-cols-3 gap-3 mt-3">
+                  <div className="md:col-span-2">
+                    <div className="flex items-center justify-between">
+                      <label className="text-xs text-neutral-300">Image Subject</label>
+                      <button
+                        onClick={generateHeroImage}
+                        disabled={imgLoading}
+                        className="inline-flex items-center gap-1.5 rounded border-2 border-purple-500/70 text-purple-300 px-2 py-1 text-xs hover:bg-purple-500/10"
+                      >
+                        {imgLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ImageIcon className="h-3.5 w-3.5" />} Generate
+                      </button>
+                    </div>
+                    <input
+                      className={selectDark}
+                      value={imgSubject}
+                      onChange={(e) => { setImgSubject(e.target.value); setImgSubjectTouched(true); update('image_subject', e.target.value as any); }}
+                      placeholder={`${promptIndustryLabel} website hero banner`}
+                    />
+                    {imgError && <div className="text-xs text-red-300 mt-1">{imgError}</div>}
+                  </div>
                   <div>
-                    <label className="text-xs text-neutral-300">Layout Mode</label>
-                    <select value={local?.layout_mode || 'inline'} onChange={(e) => update('layout_mode', e.target.value as any)} className={selectDark}>
-                      <option value="inline">Inline Image</option>
-                      <option value="background">Image as Background</option>
-                      <option value="full_bleed">Full-Bleed Image</option>
-                      <option value="natural_height">Natural Height</option>
+                    <label className="text-xs text-neutral-300">Style</label>
+                    <select className={selectDark} value={imgStyle} onChange={(e) => setImgStyle(e.target.value as any)}>
+                      <option value="photo">Photo</option>
+                      <option value="illustration">Illustration</option>
+                      <option value="3d">3D Render</option>
+                      <option value="minimal">Minimal</option>
                     </select>
                   </div>
-                  <div>
-                    <label className="text-xs text-neutral-300">Blur Amount (0–30px)</label>
-                    <input type="range" min={0} max={30} step={1} value={local?.blur_amount ?? 8} onChange={(e) => update('blur_amount', Number(e.target.value) as any)} className={rangeDark} />
+                  <div className="md:col-span-3 flex items-center justify-between">
+                    <label className="text-xs text-neutral-300">Include people in image</label>
+                    <Switch checked={imgIncludePeople} onCheckedChange={(v) => setImgIncludePeople(!!v)} />
                   </div>
-                  <div>
-                    <label className="text-xs text-neutral-300">Image X</label>
-                    <input className={selectDark} value={local?.image_x || ''} onChange={(e) => update('image_x', e.target.value as any)} placeholder="center" />
-                  </div>
-                  <div>
-                    <label className="text-xs text-neutral-300">Image Y</label>
-                    <input className={selectDark} value={local?.image_y || ''} onChange={(e) => update('image_y', e.target.value as any)} placeholder="bottom" />
-                  </div>
-                  <div className="col-span-2">
-                    <label className="text-xs text-neutral-300">Overlay Level</label>
-                    <div className="mt-1 inline-flex rounded-lg border border-white/15 bg-neutral-900 p-1 text-xs">
-                      {(['none', 'soft', 'strong'] as const).map((lvl) => (
-                        <button key={lvl} onClick={() => update('overlay_level', lvl as any)} className={`px-3 py-1 rounded-md ${(local?.overlay_level ?? 'soft') === lvl ? 'bg-white text-gray-900' : 'text-white/80'}`}>
-                          {lvl}
-                        </button>
-                      ))}
+                </div>
+              )}
+
+              {/* Advanced content */}
+              {mode === 'advanced' && (
+                <>
+                  <div className="grid md:grid-cols-3 gap-3 mt-3">
+                    <div>
+                      <label className="text-xs text-neutral-300">Headline</label>
+                      <input className={selectDark} value={local?.headline || ''} onChange={(e) => update('headline', e.target.value as any)} placeholder="Fast, Reliable Service" />
+                      {errorText(`${fieldKey}.headline`)}
+                    </div>
+                    <div className="md:col-span-2">
+                      <label className="text-xs text-neutral-300">Subheadline</label>
+                      <input className={selectDark} value={local?.subheadline || ''} onChange={(e) => update('subheadline', e.target.value as any)} placeholder="24/7 local help with transparent pricing." />
+                      {errorText(`${fieldKey}.subheadline`)}
+                    </div>
+                    <div>
+                      <label className="text-xs text-neutral-300">CTA Text</label>
+                      <input className={selectDark} value={local?.cta_text || ''} onChange={(e) => update('cta_text', e.target.value as any)} placeholder="Get Started" />
+                      {errorText(`${fieldKey}.cta_text`)}
+                    </div>
+                    <div className="md:col-span-2">
+                      <label className="text-xs text-neutral-300">CTA Action</label>
+                      <div className="grid grid-cols-3 gap-2">
+                        <select className={selectDark} value={local?.cta_action || 'go_to_page'} onChange={(e) => update('cta_action', e.target.value as any)}>
+                          <option value="jump_to_contact">Jump to Contact</option>
+                          <option value="go_to_page">Go to Page</option>
+                          <option value="call_phone">Call Phone</option>
+                        </select>
+                        {(local?.cta_action || 'go_to_page') === 'go_to_page' && (
+                          <input className={selectDark} value={local?.cta_link ?? '/contact'} onChange={(e) => update('cta_link', e.target.value as any)} placeholder="/contact" />
+                        )}
+                        {local?.cta_action === 'jump_to_contact' && (
+                          <input className={selectDark} value={local?.contact_anchor_id ?? 'contact'} onChange={(e) => update('contact_anchor_id', e.target.value as any)} placeholder="contact" />
+                        )}
+                        {local?.cta_action === 'call_phone' && (
+                          <input className={selectDark} value={local?.cta_phone ?? ''} onChange={(e) => update('cta_phone', e.target.value as any)} placeholder="enter 10-digit phone" />
+                        )}
+                      </div>
+                      <div className="mt-1">
+                        <label className="inline-flex items-center gap-2 text-xs">
+                          <Switch checked={!!local?.cta_show_phone_below} onCheckedChange={(v) => update('cta_show_phone_below', v as any)} />
+                          <span>Show phone number under CTA</span>
+                        </label>
+                      </div>
                     </div>
                   </div>
-                </div>
+
+                  <div className="grid md:grid-cols-3 gap-3 mt-3">
+                    <div>
+                      <label className="text-xs text-neutral-300">Image</label>
+                      {local?.image_url && <img src={local.image_url} alt="Hero" className="mb-2 rounded shadow max-w-xs" />}
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="text-sm text-gray-300 file:bg-purple-600 file:text-white file:rounded file:border-0 file:px-4 file:py-1 file:mr-2"
+                        onChange={async (e) => {
+                          const file = e.target.files?.[0];
+                          if (!file) return;
+                          try {
+                            const url = await uploadToStorage(file, `template-${template?.id}/hero`);
+                            update('image_url', url as any);
+                            toast.success('Image uploaded');
+                          } catch (err: any) {
+                            toast.error(err.message || 'Upload failed');
+                          }
+                        }}
+                      />
+                    </div>
+                    <div className="md:col-span-2 grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="text-xs text-neutral-300">Layout Mode</label>
+                        <select value={local?.layout_mode || 'inline'} onChange={(e) => update('layout_mode', e.target.value as any)} className={selectDark}>
+                          <option value="inline">Inline Image</option>
+                          <option value="background">Image as Background</option>
+                          <option value="full_bleed">Full-Bleed Image</option>
+                          <option value="natural_height">Natural Height</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="text-xs text-neutral-300">Blur Amount (0–30px)</label>
+                        <input type="range" min={0} max={30} step={1} value={local?.blur_amount ?? 8} onChange={(e) => update('blur_amount', Number(e.target.value) as any)} className={rangeDark} />
+                      </div>
+                      <div>
+                        <label className="text-xs text-neutral-300">Image X</label>
+                        <input className={selectDark} value={local?.image_x || ''} onChange={(e) => update('image_x', e.target.value as any)} placeholder="center" />
+                      </div>
+                      <div>
+                        <label className="text-xs text-neutral-300">Image Y</label>
+                        <input className={selectDark} value={local?.image_y || ''} onChange={(e) => update('image_y', e.target.value as any)} placeholder="bottom" />
+                      </div>
+                      <div className="col-span-2">
+                        <label className="text-xs text-neutral-300">Overlay Level</label>
+                        <div className="mt-1 inline-flex rounded-lg border border-white/15 bg-neutral-900 p-1 text-xs">
+                          {(['none', 'soft', 'strong'] as const).map((lvl) => (
+                            <button key={lvl} onClick={() => update('overlay_level', lvl as any)} className={`px-3 py-1 rounded-md ${(local?.overlay_level ?? 'soft') === lvl ? 'bg-white text-gray-900' : 'text-white/80'}`}>
+                              {lvl}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {/* Live preview bridge */}
+              <div className="mt-3">
+                <BlockPreviewToggle
+                  block={{
+                    ...block,
+                    type: 'hero',
+                    [fieldKey]: { ...(block as any)[fieldKey], ...toCanonicalHeroProps(local, template) },
+                    [altKey]: { ...(block as any)[altKey], ...toCanonicalHeroProps(local, template) },
+                  }}
+                  template={template as Template}
+                />
               </div>
             </>
           )}
-
-          {/* Live preview bridge */}
-          <div className="mt-3">
-            <BlockPreviewToggle
-              block={{
-                ...block,
-                type: 'hero',
-                [fieldKey]: { ...(block as any)[fieldKey], ...toCanonicalHeroProps(local, template) },
-                [altKey]: { ...(block as any)[altKey], ...toCanonicalHeroProps(local, template) },
-              }}
-              template={template as Template}
-            />
-          </div>
         </div>
 
         {/* sticky footer */}
@@ -502,9 +554,21 @@ export default function HeroEditor({
           <button onClick={() => onClose?.()} className="text-sm px-3 py-1.5 border border-white/10 rounded bg-neutral-900 hover:bg-neutral-800">
             Cancel
           </button>
-          <button onClick={handleSave} className="text-sm px-3 py-1.5 bg-purple-600 text-white rounded hover:bg-purple-700">
-            Save
-          </button>
+
+          {step === 1 ? (
+            <button
+              onClick={() => setStep(2)}
+              disabled={!industryValid}
+              className="text-sm px-3 py-1.5 rounded bg-purple-600 text-white hover:bg-purple-700 disabled:opacity-60"
+              title={industryValid ? 'Continue' : 'Choose an industry (or fill “Other”) to continue'}
+            >
+              Next
+            </button>
+          ) : (
+            <button onClick={handleSave} className="text-sm px-3 py-1.5 bg-purple-600 text-white rounded hover:bg-purple-700">
+              Save
+            </button>
+          )}
         </div>
       </div>
     </div>

@@ -19,6 +19,9 @@ const APP_HOSTS = new Set<string>([
   'app.cedarsites.com',
 ]);
 
+/** Org wildcard roots we honor for subdomain → site routing. */
+const ORG_WILDCARD_ROOTS = ['quicksites.ai', 'cedarsites.com'];
+
 /** Paths we should never rewrite (Next internals, assets, specific APIs). */
 const IGNORE_PATHS: RegExp[] = [
   /^\/_next\//,
@@ -46,15 +49,9 @@ function splitHostPort(h: string) {
 }
 
 function subdomainFromDevHost(hostname: string): string | null {
-  if (hostname.endsWith('.localhost')) {
-    return hostname.slice(0, -'.localhost'.length);
-  }
-  if (hostname.endsWith('.lvh.me')) {
-    return hostname.slice(0, -'.lvh.me'.length);
-  }
-  if (hostname.endsWith('.127.0.0.1.nip.io')) {
-    return hostname.slice(0, -'.127.0.0.1.nip.io'.length);
-  }
+  if (hostname.endsWith('.localhost')) return hostname.slice(0, -'.localhost'.length);
+  if (hostname.endsWith('.lvh.me')) return hostname.slice(0, -'.lvh.me'.length);
+  if (hostname.endsWith('.127.0.0.1.nip.io')) return hostname.slice(0, -'.127.0.0.1.nip.io'.length);
   return null;
 }
 
@@ -84,7 +81,6 @@ export function middleware(req: NextRequest) {
 
   const withCookies = (res: NextResponse) => {
     if (wantsRefCookie) {
-      // Use object overload for types-compat
       res.cookies.set({
         name: REF_COOKIE,
         value: ref!,
@@ -109,7 +105,6 @@ export function middleware(req: NextRequest) {
       });
       res.headers.set('x-qsites-org', orgParam!);
     } else if (wantsOrgClear) {
-      // Delete also uses object overload (name+path in one arg)
       res.cookies.delete({ name: ORG_COOKIE, path: '/' });
       res.headers.set('x-qsites-org-cleared', '1');
     }
@@ -120,9 +115,9 @@ export function middleware(req: NextRequest) {
   if (
     isIgnored(pathname) ||
     pathname.startsWith('/host') ||
-    pathname.startsWith('/_domains') || // ✅ your domain router
+    pathname.startsWith('/_domains') || // domain router itself
     pathname.startsWith('/admin') ||
-    pathname.startsWith('/sites') ||    // ✅ path-based site preview
+    pathname.startsWith('/sites') ||    // path-based preview
     pathname.startsWith('/login') ||
     pathname.startsWith('/api')
   ) {
@@ -131,11 +126,11 @@ export function middleware(req: NextRequest) {
 
   // Host header
   const hostHeader = req.headers.get('x-forwarded-host') ?? req.headers.get('host') ?? '';
-  const host = hostHeader.toLowerCase();
+  const hostWithPort = hostHeader.toLowerCase();
   const { hostname } = splitHostPort(hostHeader);
 
   // If this is our app host, don't rewrite (normal dashboard/app pages).
-  if (APP_HOSTS.has(host) || host.endsWith('.vercel.app')) {
+  if (APP_HOSTS.has(hostWithPort) || hostWithPort.endsWith('.vercel.app')) {
     return withCookies(NextResponse.next());
   }
 
@@ -150,25 +145,32 @@ export function middleware(req: NextRequest) {
     return withCookies(res);
   }
 
-  // ---- Real custom domain → directly to /sites/<slug>/<page> ----
-  const hostLc = hostname.toLowerCase().replace(/\.$/, '');
-  const noWww = hostLc.replace(/^www\./, '');
-  // Derive slug from apex label (e.g., www.graftontowing.com → graftontowing)
-  const parts = noWww.split('.');
-  const apexLabel = (parts.length > 1 ? parts.slice(0, -1).join('.') : parts[0]) || noWww;
+  // ---- Wildcard org domains (e.g., slug.cedarsites.com / slug.quicksites.ai) ----
+  const hostLc = hostname.replace(/\.$/, '').toLowerCase();
+  const isWildcardOrg = ORG_WILDCARD_ROOTS.some((root) =>
+    hostLc.endsWith(`.${root}`)
+  );
+  if (isWildcardOrg) {
+    // Reserved subdomains still pass through as app hosts above (e.g., www/app).
+    const rewriteUrl = req.nextUrl.clone();
+    // Let the domain router resolve slug, canonical host, etc.
+    rewriteUrl.pathname = `/_domains/${hostLc}${pathname === '/' ? '' : pathname}`;
+    const res = NextResponse.rewrite(rewriteUrl);
+    res.headers.set('x-qsites-domain-router', 'org-wildcard');
+    res.headers.set('x-qsites-host-in', hostLc);
+    res.headers.set('x-qsites-rewrite', rewriteUrl.pathname + (rewriteUrl.search || ''));
+    return withCookies(res);
+  }
 
-  // Default root "/" to "/home" (your renderer expects a page)
-  const extra = pathname === '/' ? '/home' : pathname;
-
+  // ---- All other custom domains → domain router ----
+  // (Covers apex custom domains like example.com and branded subdomains.)
   const rewriteUrl = req.nextUrl.clone();
-  rewriteUrl.pathname = `/sites/${apexLabel}${extra}`;
-
+  rewriteUrl.pathname = `/_domains/${hostLc}${pathname === '/' ? '' : pathname}`;
   const res = NextResponse.rewrite(rewriteUrl);
-  res.headers.set('x-qsites-host-in', hostname);
-  res.headers.set('x-qsites-slug', apexLabel);
+  res.headers.set('x-qsites-domain-router', 'custom-domain');
+  res.headers.set('x-qsites-host-in', hostLc);
   res.headers.set('x-qsites-rewrite', rewriteUrl.pathname + (rewriteUrl.search || ''));
   return withCookies(res);
-
 }
 
 export const config = {

@@ -1,3 +1,4 @@
+// app/admin/org/page.tsx
 'use client';
 
 import { useEffect, useMemo, useState, useRef } from 'react';
@@ -5,6 +6,7 @@ import { useOrg } from '@/app/providers';
 import { supabase } from '@/lib/supabase/client';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
+import OrgDomainPanel from '@/components/admin/org/OrgDomainPanel';
 
 type OrgRow = {
   id: string;
@@ -110,7 +112,7 @@ function UploadField({
     };
   
     return (
-      <div className="space-y-1.5">
+      <div className="space-y-1.5 mt-2 mb-2 border-b border-zinc-700 pb-2 pl-10">
         <label className="block text-sm">{label}</label>
         <div className="flex items-start gap-3">
           <div className="w-28 h-16 rounded border border-zinc-700 bg-zinc-900 flex items-center justify-center overflow-hidden">
@@ -477,6 +479,15 @@ export default function OrgSettings() {
               <div className="pt-1">
                 <Button onClick={save}>Save</Button>
               </div>
+
+              <OrgDomainPanel
+                orgId={sel.id}
+                orgSlug={sel.slug}
+                initialDomain={(sel as any).primary_domain || ''}             // requires view to include it
+                initialWildcard={Boolean((sel as any).wildcard_enabled)}
+                initialCanonical={((sel as any).canonical_host ?? 'www')}
+              />
+
             </div>
           </div>
 

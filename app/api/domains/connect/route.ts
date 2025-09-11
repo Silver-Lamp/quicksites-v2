@@ -48,13 +48,12 @@ async function detectIsNamecheap(apex: string): Promise<boolean> {
     // public resolvers reduce local cache weirdness
     r.setServers(['1.1.1.1', '8.8.8.8']);
     const nss = await r.resolveNs(apex);
-    const lower = nss.map(s => s.toLowerCase());
+    const lower = nss.map((s) => s.toLowerCase());
     // Common Namecheap NS:
     // dns1.registrar-servers.com / dns2.registrar-servers.com
     // (also covers some legacy namecheaphosting domains)
-    return lower.some(ns =>
-      ns.endsWith('registrar-servers.com') ||
-      ns.includes('namecheap')
+    return lower.some(
+      (ns) => ns.endsWith('registrar-servers.com') || ns.includes('namecheap')
     );
   } catch {
     return false;
@@ -63,13 +62,20 @@ async function detectIsNamecheap(apex: string): Promise<boolean> {
 
 export async function POST(req: Request) {
   try {
-    const { domain, redirectToWWW = true, autoConfigure = false } = (await req.json()) as {
+    const {
+      domain,
+      redirectToWWW = true,
+      autoConfigure = false,
+      wildcard = false,
+    } = (await req.json()) as {
       domain: string;
       redirectToWWW?: boolean;
       autoConfigure?: boolean | 'detect';
+      wildcard?: boolean; // NEW
     };
 
-    const project = process.env.VERCEL_PROJECT_ID || process.env.VERCEL_PROJECT_NAME;
+    const project =
+      process.env.VERCEL_PROJECT_ID || process.env.VERCEL_PROJECT_NAME;
     if (!project) {
       return NextResponse.json(
         { ok: false, error: 'Missing VERCEL_PROJECT_ID or VERCEL_PROJECT_NAME env' },
@@ -77,14 +83,24 @@ export async function POST(req: Request) {
       );
     }
     if (!process.env.VERCEL_TOKEN) {
-      return NextResponse.json({ ok: false, error: 'Missing VERCEL_TOKEN env' }, { status: 500 });
+      return NextResponse.json(
+        { ok: false, error: 'Missing VERCEL_TOKEN env' },
+        { status: 500 }
+      );
     }
 
     const apex = normalizeApex(domain);
-    if (!apex) return NextResponse.json({ ok: false, error: 'Domain required' }, { status: 400 });
+    if (!apex)
+      return NextResponse.json(
+        { ok: false, error: 'Domain required' },
+        { status: 400 }
+      );
     if (!DOMAIN_RX.test(apex)) {
       return NextResponse.json(
-        { ok: false, error: 'Enter a valid apex like example.com (no https://, no paths).' },
+        {
+          ok: false,
+          error: 'Enter a valid apex like example.com (no https://, no paths).',
+        },
         { status: 400 }
       );
     }
@@ -100,7 +116,10 @@ export async function POST(req: Request) {
       body: JSON.stringify({ name: primary }),
     });
     if (!addPrimary.ok && addPrimary.status !== 409) {
-      const msg = addPrimary.data?.error?.message || addPrimary.data?.message || `Add primary failed`;
+      const msg =
+        addPrimary.data?.error?.message ||
+        addPrimary.data?.message ||
+        `Add primary failed`;
       return NextResponse.json(
         { ok: false, error: `${msg}: ${addPrimary.status}`, details: addPrimary.data },
         { status: 502 }
@@ -110,25 +129,59 @@ export async function POST(req: Request) {
     // 2) Attach redirect host (idempotent)
     const addRedirect = await vfetch(`/v10/projects/${proj}/domains${qs}`, {
       method: 'POST',
-      body: JSON.stringify({ name: redirectFrom, redirect: primary, redirectStatusCode: 307 }),
+      body: JSON.stringify({
+        name: redirectFrom,
+        redirect: primary,
+        redirectStatusCode: 307,
+      }),
     });
     if (!addRedirect.ok && addRedirect.status !== 409) {
-      const msg = addRedirect.data?.error?.message || addRedirect.data?.message || `Add redirect failed`;
+      const msg =
+        addRedirect.data?.error?.message ||
+        addRedirect.data?.message ||
+        `Add redirect failed`;
       return NextResponse.json(
         { ok: false, error: `${msg}: ${addRedirect.status}`, details: addRedirect.data },
         { status: 502 }
       );
     }
 
+    // 2.5) (NEW) Optionally attach wildcard *.apex (idempotent)
+    let wildcardAttached = false;
+    if (wildcard) {
+      const addWildcard = await vfetch(`/v10/projects/${proj}/domains${qs}`, {
+        method: 'POST',
+        body: JSON.stringify({ name: `*.${apex}` }),
+      });
+      if (addWildcard.ok || addWildcard.status === 409) {
+        wildcardAttached = true;
+      } else {
+        // Non-fatal; include diagnostics in response
+        console.warn('Wildcard attach failed', addWildcard.status, addWildcard.data);
+      }
+    }
+
     // 3) Recommendations (useful fallbacks even if API can’t provide)
-    const cfg = await vfetch(`/v6/domains/${encodeURIComponent(apex)}/config${qs}`);
+    const cfg = await vfetch(
+      `/v6/domains/${encodeURIComponent(apex)}/config${qs}`
+    );
     const recommended = {
-      ipv4: Array.isArray(cfg.data?.recommendedIPv4) && cfg.data?.recommendedIPv4.length
-        ? cfg.data.recommendedIPv4
-        : (cfg.data?.recommendedIPv4 ? [cfg.data.recommendedIPv4] : DEFAULT_A_IPS),
-      cname: Array.isArray(cfg.data?.recommendedCNAME) && cfg.data?.recommendedCNAME.length
-        ? cfg.data.recommendedCNAME
-        : (cfg.data?.recommendedCNAME ? [cfg.data.recommendedCNAME] : DEFAULT_CNAME_TARGETS),
+      ipv4:
+        Array.isArray(cfg.data?.recommendedIPv4) &&
+        cfg.data?.recommendedIPv4.length
+          ? cfg.data.recommendedIPv4
+          : cfg.data?.recommendedIPv4
+          ? [cfg.data.recommendedIPv4]
+          : DEFAULT_A_IPS,
+      cname:
+        Array.isArray(cfg.data?.recommendedCNAME) &&
+        cfg.data?.recommendedCNAME.length
+          ? cfg.data.recommendedCNAME
+          : cfg.data?.recommendedCNAME
+          ? [cfg.data.recommendedCNAME]
+          : DEFAULT_CNAME_TARGETS,
+      // Optional hint for UI when wildcard was requested
+      ...(wildcard ? { wildcardCNAME: 'cname.vercel-dns.com' } : {}),
     };
 
     // 4) Optional auto-configuration (Namecheap only; guarded)
@@ -138,9 +191,7 @@ export async function POST(req: Request) {
 
     if (autoConfigure) {
       const shouldTryNamecheap =
-        autoConfigure === true
-          ? true
-          : (await detectIsNamecheap(apex));
+        autoConfigure === true ? true : await detectIsNamecheap(apex);
 
       if (shouldTryNamecheap) {
         try {
@@ -152,6 +203,8 @@ export async function POST(req: Request) {
             cnameTarget: recommended.cname[0],
             txtToken,
             ttl: '300',
+            // NOTE: the helper you installed sets @, www and _verify.
+            // If you want it to also set "*", extend that helper accordingly.
           });
           autoConfigured = { provider: 'namecheap', applied: true };
         } catch (err: any) {
@@ -162,7 +215,7 @@ export async function POST(req: Request) {
               err?.message ||
               'Namecheap module/env not configured or API call failed',
           };
-          // Non-fatal; we still return manual instructions below
+          // Non-fatal — manual instructions below still work.
           console.warn('Namecheap auto-config error:', err);
         }
       } else {
@@ -179,15 +232,23 @@ export async function POST(req: Request) {
 
     return NextResponse.json({
       ok: true,
-      primary,                 // e.g. www.example.com
-      redirectFrom,            // e.g. example.com
+      primary, // e.g. www.example.com
+      redirectFrom, // e.g. example.com
       verified: addPrimary.data?.verified === true,
       verification,
-      recommended,             // { ipv4: string[], cname: string[] }
-      autoConfigured,          // optional diagnostics
-      next: { verifyEndpoint: '/api/domains/verify', method: 'POST', body: { domain: primary } },
+      recommended, // { ipv4: string[], cname: string[], wildcardCNAME?: string }
+      autoConfigured, // optional diagnostics
+      wildcard: { requested: !!wildcard, attached: wildcardAttached }, // NEW
+      next: {
+        verifyEndpoint: '/api/domains/verify',
+        method: 'POST',
+        body: { domain: primary },
+      },
     });
   } catch (e: any) {
-    return NextResponse.json({ ok: false, error: e?.message || 'connect failed' }, { status: 500 });
+    return NextResponse.json(
+      { ok: false, error: e?.message || 'connect failed' },
+      { status: 500 }
+    );
   }
 }

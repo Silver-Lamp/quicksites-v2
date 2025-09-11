@@ -4,10 +4,10 @@
  * Domain Panel (programmatic Vercel connect + verify + remove)
  * - Preference: www is primary; apex 307-redirects to www
  * - Requires API routes:
- *    - POST /api/domains/connect   { domain: string, redirectToWWW?: boolean }
+ *    - POST /api/domains/connect   { domain: string, redirectToWWW?: boolean, autoConfigure?: boolean | 'detect' }
  *    - POST /api/domains/verify    { domain: string }      // domain = primary (www.example.com)
  *    - POST /api/domains/remove    { domain: string }      // domain = apex (example.com)
- *    - POST /api/templates/[id]/custom-domain { custom_domain: string } // persists via RPC
+ *    - POST /api/templates/[id]/custom-domain { custom_domain: string | null } // persists via RPC
  */
 
 import * as React from 'react';
@@ -21,6 +21,7 @@ import DomainInstructions from '@/components/admin/domain-instructions';
 import type { Template } from '@/types/template';
 import { supabase } from '@/lib/supabase/client';
 import { Copy, Loader2, CheckCircle2, AlertTriangle, RefreshCcw, Trash2 } from 'lucide-react';
+import { useVerifyDomain } from '@/hooks/useVerifyDomain';
 
 /* -------------------- utils -------------------- */
 function sanitizeSlug(base: string) {
@@ -65,10 +66,8 @@ function flattenToStrings(input: any): string[] {
       return;
     }
     if (t === 'object') {
-      // Ranked object { rank, value } or similar
       if ('value' in v) { add((v as any).value); return; }
       if ('values' in v) { add((v as any).values); return; }
-      // Fallback: stringify
       const s = inlineText(v);
       if (s && !seen.has(s)) { seen.add(s); out.push(s); }
     }
@@ -121,6 +120,7 @@ type ConnectResponse = {
   recommended?: { ipv4?: any; cname?: any };
   next?: { verifyEndpoint: string; method: string; body: { domain: string } } | null;
   error?: string;
+  autoConfigured?: { provider: 'namecheap'; applied: boolean; reason?: string };
 };
 
 /* -------------------- component -------------------- */
@@ -222,20 +222,38 @@ export default function DomainPanel({
   const [connectResp, setConnectResp] = useState<ConnectResponse | null>(null);
   const [connectError, setConnectError] = useState<string | null>(null);
 
+  // NEW: auto-configure (Namecheap) toggle & last-checked display
+  const [autoConfigure, setAutoConfigure] = useState(true);
+  const [lastCheckedAt, setLastCheckedAt] = useState<number | null>(null);
+
   const apex = normalizeApex(domainInput || '');
   const primary = connectResp?.primary || (apex ? `www.${apex}` : '');
+
+  // NEW: normalize input on blur
+  const onDomainBlur = () => {
+    const n = normalizeApex(domainInput || '');
+    if (n && n !== domainInput) setDomainInput(n);
+  };
+
+  // NEW: copy all records
+  function copyAllRecords() {
+    const parts: string[] = [];
+    aValues.forEach(ip => parts.push(`A @ ${inlineText(ip)}`));
+    cnameValues.forEach(cn => parts.push(`CNAME www ${inlineText(cn)}`));
+    void copy(parts.join('\n'));
+  }
 
   /**
    * Persist the apex to the backend via server route (RPC under the hood).
    * We ALWAYS call the server; `onChange` is only used to update local UI,
    * not to persist (avoids direct UPDATE paths & RLS issues).
    */
-  async function persistApex(apexDomain: string) {
+  async function persistApex(apexDomain: string | null) {
     try {
       await postJson(`/api/templates/${template.id}/custom-domain`, {
         custom_domain: apexDomain,
       });
-      try { doChange({ custom_domain: apexDomain }); } catch {}
+      try { doChange({ custom_domain: apexDomain as any }); } catch {}
     } catch (e) {
       console.warn('persistApex failed', e);
     }
@@ -253,6 +271,7 @@ export default function DomainPanel({
       const json = await postJson<ConnectResponse>('/api/domains/connect', {
         domain: d,
         redirectToWWW: true,
+        autoConfigure: autoConfigure ? 'detect' : false, // NEW
       });
       setConnectResp(json);
       await persistApex(d);
@@ -273,6 +292,7 @@ export default function DomainPanel({
         { domain: primary },
       );
       setConnectResp((prev) => (prev ? { ...prev, verified: !!json?.verified } : prev));
+      setLastCheckedAt(Date.now()); // NEW
     } catch (e: any) {
       setConnectError(e?.message || 'Could not verify yet.');
     } finally {
@@ -303,6 +323,17 @@ export default function DomainPanel({
     }
   }
 
+  // NEW: clear saved domain (doesn't touch Vercel)
+  async function clearSavedDomain() {
+    try {
+      await persistApex(null);
+      setDomainInput('');
+      setConnectResp(null);
+    } catch (e) {
+      console.warn('clearSavedDomain failed', e);
+    }
+  }
+
   // Normalize Vercel "recommended" fields into clean lists
   const aValues = useMemo(() => {
     const raw = (connectResp?.recommended?.ipv4 ?? '76.76.21.21');
@@ -328,6 +359,20 @@ export default function DomainPanel({
   };
 
   const isPublished = Boolean((template as any)?.published);
+
+  // NEW: auto-verify polling
+  const verifyTarget = connectResp?.primary || (apex ? `www.${apex}` : null);
+  const { status: verifyStatus, verified: verifiedNow } = useVerifyDomain(verifyTarget, {
+    enabled: !!verifyTarget && !(connectResp?.verified),
+    intervalMs: 10_000,
+    maxAttempts: 18,
+    onVerified: () => {
+      setConnectResp(prev => (prev ? { ...prev, verified: true } : prev));
+    },
+  });
+  useEffect(() => {
+    if (verifyStatus === 'verifying') setLastCheckedAt(Date.now());
+  }, [verifyStatus]);
 
   return (
     <Collapsible title="URL, Publishing & Domain" id="publishing-domain">
@@ -449,6 +494,7 @@ export default function DomainPanel({
               <Input
                 value={domainInput}
                 onChange={(e) => setDomainInput(e.target.value)}
+                onBlur={onDomainBlur} // NEW
                 placeholder="yourbusiness.com"
                 className="bg-gray-800 text-white border border-gray-700"
               />
@@ -469,10 +515,13 @@ export default function DomainPanel({
                   type="button"
                   variant="secondary"
                   onClick={(e) => { e.preventDefault(); e.stopPropagation(); void verifyDomain(); }}
-                  disabled={verifyBusy}
+                  disabled={verifyBusy || verifyStatus === 'verifying'} // NEW
                   size="sm"
                 >
-                  {verifyBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : (<><RefreshCcw className="h-4 w-4 mr-1" /> Verify DNS</>)}
+                  {(verifyBusy || verifyStatus === 'verifying')
+                    ? <Loader2 className="h-4 w-4 animate-spin" />
+                    : (<><RefreshCcw className="h-4 w-4 mr-1" /> Verify DNS</>)
+                  }
                 </Button>
               )}
 
@@ -488,6 +537,37 @@ export default function DomainPanel({
                 {removeBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4 mr-1" />}
                 Remove from Vercel
               </Button>
+
+              {/* NEW: Copy all DNS records */}
+              {connectResp && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => copyAllRecords()}
+                  title="Copy A and CNAME values"
+                >
+                  <Copy className="h-4 w-4 mr-1" /> Copy all records
+                </Button>
+              )}
+
+              {/* NEW: Clear saved domain (doesn't touch Vercel) */}
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={(e) => { e.preventDefault(); e.stopPropagation(); void clearSavedDomain(); }}
+                title="Clear saved domain (does not detach in Vercel)"
+                className="text-white/70 hover:text-white"
+              >
+                Clear saved
+              </Button>
+            </div>
+
+            {/* NEW: Auto-configure toggle */}
+            <div className="flex items-center gap-2 text-xs text-white/70">
+              <Switch checked={autoConfigure} onCheckedChange={setAutoConfigure} />
+              <span>Auto-configure DNS (Namecheap)</span>
             </div>
 
             {connectError && (
@@ -520,7 +600,27 @@ export default function DomainPanel({
                   )}
                 </div>
 
-                {/* Recommended DNS (now rendered as separate value rows with separate copy buttons) */}
+                {/* NEW: auto-configure result */}
+                {connectResp?.autoConfigured && (
+                  <p className="mt-2 text-xs">
+                    Auto-configure:{' '}
+                    <span className={connectResp.autoConfigured.applied ? 'text-emerald-400' : 'text-white/70'}>
+                      {connectResp.autoConfigured.applied
+                        ? 'applied via Namecheap'
+                        : `skipped (${connectResp.autoConfigured.reason || 'not supported'})`}
+                    </span>
+                  </p>
+                )}
+
+                {/* NEW: verify polling hint */}
+                {!connectResp?.verified && verifyTarget && (
+                  <p className="mt-1 text-[11px] text-white/60">
+                    Checking DNS{verifyStatus === 'verifying' ? '…' : ''}{' '}
+                    {lastCheckedAt ? `· last check ${new Date(lastCheckedAt).toLocaleTimeString()}` : null}
+                  </p>
+                )}
+
+                {/* Recommended DNS */}
                 <div className="mt-3">
                   <Label className="text-xs text-white/70">Add these DNS records</Label>
 
@@ -587,6 +687,7 @@ export default function DomainPanel({
                   {!connectResp.verified && (
                     <p className="mt-2 text-xs text-white/60">
                       After adding the records, click <em>Verify DNS</em>. Some DNS providers update quickly; others can be slower.
+                      We’ll also auto-check every ~10s and flip this to verified once DNS is live.
                     </p>
                   )}
                 </div>

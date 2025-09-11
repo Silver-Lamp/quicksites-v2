@@ -340,11 +340,6 @@ export default function SidebarSettings({ template, onChange, variant }: Props) 
       <IdentityPanel template={template} onChange={(patch) => applyPatch(patch)} />
       <ServicesPanel template={template} onChange={(patch) => applyPatch(patch)} />
 
-      {/* NEW: E-commerce panel */}
-      <PanelBoundary name="EcommercePanel">
-        <EcommercePanel templateId={(template as any)?.id ?? null} currentPageId={activePageId} />
-      </PanelBoundary>
-
       {/* Domain (no onChange; read-only UI + programmatic connect/verify/remove) */}
       <PanelBoundary name="DomainPanel">
         <DomainPanel
@@ -370,6 +365,11 @@ export default function SidebarSettings({ template, onChange, variant }: Props) 
           spotlight={spotlightHours}
         />
       </Collapsible>
+
+      {/* NEW: E-commerce panel */}
+      <PanelBoundary name="EcommercePanel">
+        <EcommercePanel templateId={(template as any)?.id ?? null} currentPageId={activePageId} />
+      </PanelBoundary>
 
       {/* Payments (separate flow) */}
       <PaymentSettingsPanel

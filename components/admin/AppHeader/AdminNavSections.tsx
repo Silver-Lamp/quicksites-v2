@@ -63,6 +63,12 @@ const INBOX_COUNT_KEY = 'qs:nav:inbox_new_count:v1';
 const ADMIN_TTL_MS = 5 * 60_000; // 5 min
 const INBOX_TTL_MS = 60_000;     // 60 sec
 
+const slugify = (s: string) =>
+  String(s || '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+
 /* ---------------- Types ---------------- */
 type NavItem =
   | { type: 'section'; label: string; adminOnly?: boolean }
@@ -421,6 +427,8 @@ function NavItemButtonOrLink({
   toggleMenu,
   onNavigateStart,
   inboxNewCount,
+  domId,        // NEW
+  kbdSelected,  // NEW
 }: {
   item: Extract<NavItem, { type: 'item' }>;
   isActive: boolean;
@@ -429,12 +437,15 @@ function NavItemButtonOrLink({
   toggleMenu: () => void;
   onNavigateStart: (href: string) => void;
   inboxNewCount?: number | null;
+  domId?: string;        // NEW
+  kbdSelected?: boolean; // NEW
 }) {
   const pathname = usePathname();
   const baseClasses = clsx(
     'group relative w-full flex items-center gap-3 px-3 py-2 text-sm rounded transition',
     isActive ? 'bg-zinc-800 font-semibold text-white' : 'hover:bg-zinc-800 text-zinc-300',
-    collapsed && 'justify-center'
+    collapsed && 'justify-center',
+    kbdSelected && 'ring-2 ring-purple-500 ring-offset-0 ring-offset-transparent'
   );
 
   const firstChild = item.children?.[0];
@@ -475,6 +486,11 @@ function NavItemButtonOrLink({
 
   return (
     <Link
+      id={domId}
+      role="menuitem"
+      aria-selected={kbdSelected || undefined}
+      aria-current={isActive ? 'page' : undefined}
+      tabIndex={-1}
       href={defaultHref}
       title={targetLabel}
       aria-label={targetLabel}
@@ -512,6 +528,9 @@ export function AdminNavSections({ collapsed = false }: { collapsed?: boolean })
   const [inboxNewCount, setInboxNewCount] = useState<number | null>(null);
   const [cleared, setCleared] = useState(false);
   const isAdmin = useIsAdmin();
+
+  const navRef = useRef<HTMLDivElement | null>(null);           // NEW
+  const [selectedIdx, setSelectedIdx] = useState<number>(0);    // NEW
 
   const { name: brandName, logoUrl } = useBrand();
   const brandLogo = logoUrl || '/logo_v1.png';
@@ -646,14 +665,100 @@ export function AdminNavSections({ collapsed = false }: { collapsed?: boolean })
     return () => window.removeEventListener('keydown', onKey);
   }, []);
 
+  /* -------- Keyboard navigation (↑/↓/Enter) -------- */
+  type FocusRow = { id: string; kind: 'parent' | 'child'; label: string; href?: string; parentLabel?: string };
+
+  const focusRows = useMemo<FocusRow[]>(() => {
+    const rows: FocusRow[] = [];
+    items.forEach((it) => {
+      if (it.type === 'section') return;
+
+      const pid = `nav-parent-${slugify(it.label)}`;
+      rows.push({ id: pid, kind: 'parent', label: it.label, href: (it as any).href });
+
+      const open = !!openMenus[it.label];
+      if (!collapsed && open && it.children?.length) {
+        it.children.forEach((ch, ci) => {
+          const cid = `nav-child-${slugify(it.label)}-${ci}`;
+          rows.push({ id: cid, kind: 'child', label: ch.label, href: ch.href, parentLabel: it.label });
+        });
+      }
+    });
+    return rows;
+  }, [items, openMenus, collapsed]);
+
+  // keep selected index valid
+  useEffect(() => {
+    if (selectedIdx >= focusRows.length) {
+      setSelectedIdx(focusRows.length > 0 ? focusRows.length - 1 : 0);
+    }
+  }, [focusRows.length, selectedIdx]);
+
+  // choose initial selection based on current path
+  useEffect(() => {
+    if (!focusRows.length) return;
+    const current = focusRows.findIndex(r => r.href && pathname?.startsWith(r.href.split('?')[0]));
+    if (current >= 0) setSelectedIdx(current);
+  }, [pathname, focusRows]);
+
+  // scroll selected into view
+  useEffect(() => {
+    const id = focusRows[selectedIdx]?.id;
+    if (!id) return;
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.scrollIntoView({ block: 'nearest' });
+  }, [selectedIdx, focusRows]);
+
+  // handle keys when nav has focus
+  useEffect(() => {
+    const el = navRef.current;
+    if (!el) return;
+
+    const onKey = (e: KeyboardEvent) => {
+      const k = e.key;
+      if (k !== 'ArrowDown' && k !== 'ArrowUp' && k !== 'Enter') return;
+
+      const withinNav = el.contains(document.activeElement);
+      if (!withinNav) return;
+
+      if (k === 'ArrowDown') {
+        e.preventDefault();
+        if (focusRows.length) setSelectedIdx((i) => (i + 1) % focusRows.length);
+      } else if (k === 'ArrowUp') {
+        e.preventDefault();
+        if (focusRows.length) setSelectedIdx((i) => (i - 1 + focusRows.length) % focusRows.length);
+      } else if (k === 'Enter') {
+        e.preventDefault();
+        const row = focusRows[selectedIdx];
+        if (!row) return;
+        document.getElementById(row.id)?.click();
+      }
+    };
+
+    el.addEventListener('keydown', onKey);
+    return () => el.removeEventListener('keydown', onKey);
+  }, [focusRows, selectedIdx]);
+
+  // make nav focusable
+  useEffect(() => {
+    navRef.current?.setAttribute('tabindex', '0');
+  }, []);
+
   return (
-    <nav className="flex flex-col gap-1 px-1">
+    <nav
+      ref={navRef}
+      role="navigation"
+      aria-label="Sidebar"
+      className="flex flex-col gap-1 px-1 focus:outline-none"
+    >
       {/* Brand + org switcher at the top */}
       <BrandSwitcher
         collapsed={collapsed}
         onWillSwitch={() => setNavLoading(true)}
-        isPlatformAdmin={isAdmin} // ← NEW
+        isPlatformAdmin={isAdmin}
       />
+
       {items.map((item, idx) => {
         if (item.type === 'section') {
           return !collapsed ? (
@@ -672,6 +777,9 @@ export function AdminNavSections({ collapsed = false }: { collapsed?: boolean })
 
         const isOpen = openMenus[item.label];
 
+        const parentId = `nav-parent-${slugify(item.label)}`;
+        const parentSelected = focusRows[selectedIdx]?.id === parentId;
+
         return (
           <div key={`item-${item.label}`}>
             <NavItemButtonOrLink
@@ -682,6 +790,8 @@ export function AdminNavSections({ collapsed = false }: { collapsed?: boolean })
               toggleMenu={() => item.children && toggleMenu(item.label)}
               onNavigateStart={handleNavigateStart}
               inboxNewCount={inboxNewCount ?? undefined}
+              domId={parentId}              // NEW
+              kbdSelected={parentSelected}  // NEW
             />
 
             <div
@@ -691,19 +801,26 @@ export function AdminNavSections({ collapsed = false }: { collapsed?: boolean })
               )}
             >
               {!collapsed &&
-                item.children?.map((child) => {
+                item.children?.map((child, ci) => {
                   const isActiveChild = pathname?.startsWith(child.href.split('?')[0]);
                   const isNewTemplate = child.href === '/admin/templates/new';
 
+                  const rowId = `nav-child-${slugify(item.label)}-${ci}`;
+                  const kbdSelected = focusRows[selectedIdx]?.id === rowId;
+
                   const baseChild = 'block text-sm px-3 py-1 rounded transition';
+                  const ringIfSelected = kbdSelected ? 'ring-2 ring-purple-500' : '';
+
                   const newBtnClasses = clsx(
                     'mt-1 inline-flex items-center gap-2 rounded-md px-3 py-1.5 font-medium shadow-sm',
+                    ringIfSelected,
                     isActiveChild
                       ? 'bg-emerald-700 text-white ring-1 ring-emerald-300/30'
                       : 'bg-emerald-600 text-white hover:bg-emerald-500'
                   );
                   const normalClasses = clsx(
                     baseChild,
+                    ringIfSelected,
                     isActiveChild
                       ? 'bg-zinc-800 text-white font-medium'
                       : 'text-zinc-400 hover:bg-zinc-800 hover:text-white'
@@ -711,6 +828,9 @@ export function AdminNavSections({ collapsed = false }: { collapsed?: boolean })
 
                   return (
                     <Link
+                      id={rowId}
+                      role="menuitem"
+                      tabIndex={-1}
                       key={child.href}
                       href={child.href}
                       className={isNewTemplate ? newBtnClasses : normalClasses}

@@ -15,7 +15,10 @@ import {
   toIndustryLabel,
 } from '@/lib/industries';
 
+/* ---------------- utilities ---------------- */
+
 function isValidEmail(v: string) { return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v); }
+
 const inputGhost =
   'bg-gray-800 text-white border border-gray-700 ' +
   'placeholder:text-white/40 placeholder:italic placeholder-shown:border-white/20 ' +
@@ -33,6 +36,15 @@ function formatPhoneLive(digits: string) {
 }
 function digitsOnly(v?: string | null) { return (v || '').replace(/\D/g, ''); }
 
+function safeObj<T = any>(v: any): T | undefined {
+  if (!v) return undefined;
+  if (typeof v === 'object') return v as T;
+  if (typeof v === 'string') {
+    try { return JSON.parse(v) as T; } catch { return undefined; }
+  }
+  return undefined;
+}
+
 function baseSlugFrom(s: string) {
   return (s || '').replace(/(-[a-z0-9]{2,12})+$/i, '');
 }
@@ -47,6 +59,16 @@ async function upsertBaseDisplayName(base_slug: string, display_name: string) {
   } catch {}
 }
 
+/* Debug flag in localStorage */
+function isDebug() {
+  return typeof window !== 'undefined' &&
+    typeof localStorage !== 'undefined' &&
+    localStorage.getItem('debug:identity') === '1';
+}
+function dbg(...args: any[]) {
+  if (isDebug()) console.debug(...args);
+}
+
 /* ───────────────── site type options ───────────────── */
 const SITE_TYPES = [
   { value: '', label: 'Select site type' },
@@ -55,6 +77,15 @@ const SITE_TYPES = [
   { value: 'blog', label: 'Blog' },
   { value: 'about_me', label: 'About Me' },
 ] as const;
+
+/** Prefer top-level column first, then meta.site_type, then any legacy casing. */
+function resolveSiteTypeFromTemplate(t: Template): string {
+  const data = safeObj<any>((t as any).data) ?? (t as any).data ?? {};
+  const meta = safeObj<any>(data.meta) ?? data.meta ?? {};
+  return String((t as any).site_type ?? meta?.site_type ?? meta?.siteType ?? '').trim();
+}
+
+/* ---------------- draft typing ---------------- */
 
 type Draft = {
   template_name: string;
@@ -73,88 +104,91 @@ type Draft = {
   longitude: string;
 };
 
-function toDraft(t: Template): Draft {
-  const meta = (t.data as any)?.meta ?? {};
-  const contact = meta?.contact ?? {};
-  const siteType = String(meta?.site_type ?? '') || '';
+/* ---------------- derive draft from template ---------------- */
 
-  const normKey = resolveIndustryKey(meta?.industry ?? (t as any).industry ?? '');
-  const industryLabel = String(meta?.industry_label ?? '').trim();
+function toDraft(t: Template): Draft {
+  const data = safeObj<any>((t as any).data) ?? (t as any).data ?? {};
+  const meta = safeObj<any>(data.meta) ?? data.meta ?? {};
+  const contact = safeObj<any>(meta.contact) ?? meta.contact ?? {};
+
+  const siteType = resolveSiteTypeFromTemplate(t);
+  const industryKey = resolveIndustryKey((t as any).industry ?? meta?.industry ?? '');
+  const industryLabel = String((t as any).industry_label ?? meta?.industry_label ?? '').trim();
 
   const siteTitle =
-    (meta?.siteTitle as string) ??
-    (t.template_name as string) ??
-    (t as any).business_name ??
-    '';
+    String((t as any).template_name ?? meta?.siteTitle ?? (t as any).business_name ?? '') || '';
 
   const business =
-    (meta?.business as string) ??
-    (t as any).business_name ??
-    siteTitle ??
-    '';
+    String((t as any).business_name ?? meta?.business ?? siteTitle) || '';
 
-  const rawPhone = contact?.phone ?? (t as any).phone ?? '';
-  const addr1 = (contact?.address as string) || (t as any).address_line1 || '';
-  const addr2 = (contact?.address2 as string) || (t as any).address_line2 || '';
+  const rawPhone = String((t as any).phone ?? contact?.phone ?? '');
+  const addr1 = String((t as any).address_line1 ?? contact?.address ?? '');
+  const addr2 = String((t as any).address_line2 ?? contact?.address2 ?? '');
 
-  return {
+  const d: Draft = {
     template_name: siteTitle,
     business_name: business,
     site_type: siteType,
-    industry: normKey,
-    industry_other: normKey === 'other'
-      ? (industryLabel && industryLabel.toLowerCase() !== 'other' ? industryLabel : '')
-      : '',
-    contact_email: String(contact?.email ?? (t as any).contact_email ?? ''),
+    industry: industryKey,
+    industry_other:
+      industryKey === 'other'
+        ? (industryLabel && industryLabel.toLowerCase() !== 'other' ? industryLabel : '')
+        : '',
+    contact_email: String((t as any).contact_email ?? contact?.email ?? ''),
     phone: formatPhoneLive(digitsOnly(rawPhone)),
     address_line1: addr1,
     address_line2: addr2,
-    city: String(contact?.city ?? (t as any).city ?? ''),
-    state: String(contact?.state ?? (t as any).state ?? ''),
-    postal_code: String(contact?.postal ?? (t as any).postal_code ?? ''),
-    latitude:
-      (contact?.latitude ?? (t as any).latitude ?? '') !== ''
-        ? String(contact?.latitude ?? (t as any).latitude ?? '')
-        : '',
-    longitude:
-      (contact?.longitude ?? (t as any).longitude ?? '') !== ''
-        ? String(contact?.longitude ?? (t as any).longitude ?? '')
-        : '',
+    city: String((t as any).city ?? contact?.city ?? ''),
+    state: String((t as any).state ?? contact?.state ?? ''),
+    postal_code: String((t as any).postal_code ?? contact?.postal ?? ''),
+    latitude: (String((t as any).latitude ?? contact?.latitude ?? '') || ''),
+    longitude: (String((t as any).longitude ?? contact?.longitude ?? '') || ''),
   };
+
+  dbg('[IDENTITY:UI] toDraft', {
+    templateId: (t as any)?.id,
+    canonicalId: (t as any)?.canonical_id,
+    draft: d,
+  });
+
+  return d;
 }
 
-/** Build a data patch AND carry top-level template_name so the title updates immediately. */
+/* ---------------- build patch for onChange ---------------- */
+
+/**
+ * Build a patch that:
+ * - Updates canonical top-level columns (source of truth).
+ * - Mirrors identity into BOTH data.identity and meta.identity (for robust reload across readers).
+ * - Keeps legacy meta fields (siteTitle, business, contact, etc.) in sync.
+ */
 function buildDataPatch(d: Draft, tmpl: Template): Partial<Template> {
-  const prevData = (tmpl.data as any) ?? {};
-  const prevMeta = prevData.meta ?? {};
-  const prevContact = prevMeta.contact ?? {};
+  const prevData = safeObj<any>((tmpl as any).data) ?? (tmpl as any).data ?? {};
+  const prevMeta = safeObj<any>(prevData.meta) ?? prevData.meta ?? {};
+  const prevContact = safeObj<any>(prevMeta.contact) ?? prevMeta.contact ?? {};
+  const prevIdentity = safeObj<any>(prevData.identity) ?? prevData.identity ?? {};
 
   const phoneDigits = digitsOnly(d.phone);
   const email = d.contact_email.trim();
   const lat = d.latitude.trim() === '' ? null : clampLat(Number(d.latitude));
   const lon = d.longitude.trim() === '' ? null : clampLon(Number(d.longitude));
-  const address = [d.address_line1, d.address_line2].filter(Boolean).join(', ').trim() || '';
 
-  const siteType = (d.site_type || prevMeta?.site_type || '') as string;
-
-  const normKey = resolveIndustryKey(d.industry || prevMeta?.industry || (tmpl as any).industry || '');
+  const normKey = resolveIndustryKey(d.industry || (tmpl as any).industry || '');
   const industryLabel =
     normKey === 'other'
-      ? (d.industry_other || prevMeta?.industry_label || 'Other')
+      ? (d.industry_other || (prevMeta?.industry_label as string) || 'Other')
       : toIndustryLabel(normKey);
 
-  const meta = {
-    ...prevMeta,
-    siteTitle: d.template_name || prevMeta?.siteTitle || '',
-    business: d.business_name || prevMeta?.business || '',
-    site_type: siteType || null,
+  const identity = {
+    template_name: d.template_name || (tmpl as any).template_name || '',
+    business_name: d.business_name || (tmpl as any).business_name || '',
+    site_type: (d.site_type || (tmpl as any).site_type || null) as string | null,
     industry: normKey || null,
     industry_label: industryLabel || null,
     contact: {
-      ...prevContact,
       email: email || null,
       phone: phoneDigits || null,
-      address: address || null,
+      address: d.address_line1 || null,
       address2: d.address_line2 || null,
       city: d.city || null,
       state: d.state || null,
@@ -164,13 +198,81 @@ function buildDataPatch(d: Draft, tmpl: Template): Partial<Template> {
     },
   };
 
-  const data = { ...prevData, meta };
-  const topLevelName = d.template_name || (tmpl as any).template_name || '';
+  // Mirror into meta for old readers and prompt helpers
+  const nextMeta = {
+    ...prevMeta,
+    siteTitle: identity.template_name || prevMeta?.siteTitle || '',
+    business: identity.business_name || prevMeta?.business || '',
+    site_type: identity.site_type || undefined,
+    industry: identity.industry || undefined,
+    industry_label: identity.industry_label || undefined,
+    contact: {
+      ...prevContact,
+      email: identity.contact.email || undefined,
+      phone: identity.contact.phone || undefined,
+      address: identity.contact.address || undefined,
+      address2: identity.contact.address2 || undefined,
+      city: identity.contact.city || undefined,
+      state: identity.contact.state || undefined,
+      postal: identity.contact.postal || undefined,
+      latitude: identity.contact.latitude ?? undefined,
+      longitude: identity.contact.longitude ?? undefined,
+    },
+    // also keep a normalized meta.identity for any consumers
+    identity: { ...(safeObj<any>(prevMeta.identity) ?? prevMeta.identity ?? {}), ...identity },
+  };
 
-  // ❌ Previously: emitted qs:template:merge/apply-patch events here.
-  // ✅ Now: just return the patch; the Sidebar + Toolbar queue handle apply+persist.
-  return { template_name: topLevelName, data };
+  const nextData = {
+    ...prevData,
+    // non-breaking: add/merge identity snapshot at root of data
+    identity: { ...prevIdentity, ...identity },
+    meta: nextMeta,
+  };
+
+  const patch: Partial<Template> & Record<string, any> = {
+    // canonical columns (editor read path should prefer these)
+    template_name: identity.template_name,
+    business_name: identity.business_name || undefined,
+    site_type: identity.site_type || undefined,
+    industry: identity.industry || undefined,
+    industry_label: identity.industry_label || undefined,
+    contact_email: email || undefined,
+    phone: phoneDigits || undefined,
+    address_line1: d.address_line1 || undefined,
+    address_line2: d.address_line2 || undefined,
+    city: d.city || undefined,
+    state: d.state || undefined,
+    postal_code: d.postal_code || undefined,
+    latitude: identity.contact.latitude ?? undefined,
+    longitude: identity.contact.longitude ?? undefined,
+
+    // hydrated data
+    data: nextData,
+  };
+
+  dbg('[IDENTITY:UI] buildDataPatch', {
+    targetTemplateId: (tmpl as any)?.id,
+    canonicalId: (tmpl as any)?.canonical_id,
+    identity_in_data: nextData.identity,
+    identity_in_meta: nextMeta.identity,
+    columns: {
+      business_name: patch.business_name,
+      site_type: patch.site_type,
+      industry: patch.industry,
+      contact_email: patch.contact_email,
+      phone: patch.phone,
+      city: patch.city,
+      state: patch.state,
+      postal_code: patch.postal_code,
+      latitude: patch.latitude,
+      longitude: patch.longitude,
+    },
+  });
+
+  return patch;
 }
+
+/* ---------------- component ---------------- */
 
 export default function IdentityPanel({
   template,
@@ -188,6 +290,8 @@ export default function IdentityPanel({
   const [lonError, setLonError] = React.useState<string | null>(null);
 
   const [autoApply, setAutoApply] = React.useState(false);
+  const [debugOn, setDebugOn] = React.useState(false);
+
   const debounceRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
   const renameDebounce = React.useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -197,25 +301,47 @@ export default function IdentityPanel({
     return opt ? INDUSTRY_HINTS[opt.label] : undefined;
   }, [draft.industry, industryOptions]);
 
+  // Include top-level columns first so re-hydrate reflects canonical values immediately.
   const templateSig = React.useMemo(() => {
-    const meta = (template.data as any)?.meta ?? {};
+    const data = safeObj<any>((template as any).data) ?? (template as any).data ?? {};
+    const meta = safeObj<any>(data.meta) ?? data.meta ?? {};
     return JSON.stringify([
-      meta?.industry ?? (template as any).industry ?? '',
-      meta?.site_type ?? '',
-      meta?.siteTitle ?? template.template_name ?? '',
-      meta?.business ?? (template as any).business_name ?? '',
+      (template as any).industry ?? meta?.industry ?? '',
+      (template as any).business_name ?? meta?.business ?? '',
+      (template as any).site_type ?? meta?.site_type ?? '',
+      (template as any).template_name ?? meta?.siteTitle ?? '',
+      (template as any).business_name ?? meta?.business ?? '',
+      (template as any).industry ?? meta?.industry ?? '',
+      (template as any).industry_label ?? meta?.industry_label ?? '',
+      (template as any).latitude ?? (meta?.contact ?? {})?.latitude ?? '',
+      (template as any).longitude ?? (meta?.contact ?? {})?.longitude ?? '',
+      (template as any).contact_email ?? (meta?.contact ?? {})?.email ?? '',
+      (template as any).phone ?? (meta?.contact ?? {})?.phone ?? '',
+      (template as any).address_line1 ?? (meta?.contact ?? {})?.address ?? '',
+      (template as any).address_line2 ?? (meta?.contact ?? {})?.address2 ?? '',
+      (template as any).city ?? (meta?.contact ?? {})?.city ?? '',
+      (template as any).state ?? (meta?.contact ?? {})?.state ?? '',
+      (template as any).postal_code ?? (meta?.contact ?? {})?.postal ?? '',
       (template as any).updated_at ?? '',
     ]);
   }, [template]);
 
-  const emitTitle = React.useCallback((nextName: string) => {
-    if (typeof window === 'undefined') return;
-    window.dispatchEvent(
-      new CustomEvent('qs:template:title', {
-        detail: { name: (nextName || '').trim(), id: (template as any)?.id },
-      })
-    );
-  }, [template]);
+  // Initialize UI toggle from localStorage
+  React.useEffect(() => {
+    setDebugOn(isDebug());
+  }, []);
+
+  const emitTitle = React.useCallback(
+    (nextName: string) => {
+      if (typeof window === 'undefined') return;
+      window.dispatchEvent(
+        new CustomEvent('qs:template:title', {
+          detail: { name: (nextName || '').trim(), id: (template as any)?.id },
+        })
+      );
+    },
+    [template]
+  );
 
   React.useEffect(() => {
     const d = toDraft(template);
@@ -226,10 +352,18 @@ export default function IdentityPanel({
     setLatError(null);
     setLonError(null);
     const initialName =
-      (d.template_name || '').trim() ||
-      (template as any).template_name ||
-      '';
+      (d.template_name || '').trim() || (template as any).template_name || '';
     if (initialName) emitTitle(initialName);
+
+    // Render probe
+    const data = safeObj<any>((template as any).data) ?? (template as any).data ?? {};
+    dbg('[IDENTITY:UI] render', {
+      templateId: (template as any)?.id,
+      canonicalId: (template as any)?.canonical_id,
+      draft: d,
+      data_identity: safeObj<any>(data.identity) ?? data.identity ?? null,
+      meta_identity: safeObj<any>(data?.meta?.identity) ?? data?.meta?.identity ?? null,
+    });
   }, [templateSig, template, emitTitle]);
 
   const scheduleAutoApply = React.useCallback(
@@ -237,8 +371,10 @@ export default function IdentityPanel({
       if (!autoApply) return;
       if (debounceRef.current) clearTimeout(debounceRef.current);
       const patch = buildDataPatch(nextDraft, template);
-      // Let the Sidebar merge + toolbar queue persist
-      debounceRef.current = setTimeout(() => onChange(patch), 700);
+      debounceRef.current = setTimeout(() => {
+        dbg('[IDENTITY:UI] auto-apply patch', patch);
+        onChange(patch);
+      }, 700);
     },
     [autoApply, onChange, template]
   );
@@ -252,14 +388,15 @@ export default function IdentityPanel({
     if (draft.longitude.trim() !== '' && !Number.isFinite(Number(draft.longitude))) { setLonError('Longitude must be a number'); return; }
 
     const patch = buildDataPatch(draft, template);
-    onChange(patch);          // Sidebar merges; Toolbar queue persists
+    dbg('[IDENTITY:UI] commit patch', patch);
+    onChange(patch);
     setDirty(false);
 
     const name = String(draft.template_name || '').trim();
     if (name) {
       const base =
         (template as any).base_slug ||
-        baseSlugFrom(String((template as any).slug || template.template_name || template.id || ''));
+        baseSlugFrom(String((template as any).slug || (template as any).template_name || (template as any).id || ''));
       void upsertBaseDisplayName(base, name);
     }
   }, [draft, onChange, template]);
@@ -289,7 +426,7 @@ export default function IdentityPanel({
           renameDebounce.current = setTimeout(() => {
             const base =
               (template as any).base_slug ||
-              baseSlugFrom(String((template as any).slug || template.template_name || template.id || ''));
+              baseSlugFrom(String((template as any).slug || (template as any).template_name || (template as any).id || ''));
             void upsertBaseDisplayName(base, name);
           }, 600);
         }
@@ -319,7 +456,34 @@ export default function IdentityPanel({
           <div className="text-xs text-white/60">
             {dirty ? 'Unsaved changes' : 'No changes'}
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3">
+            {/* Debug toggle */}
+            <label
+              className="text-xs text-white/70 inline-flex items-center gap-1 cursor-pointer"
+              title="Write detailed identity panel logs to the browser console"
+            >
+              <input
+                type="checkbox"
+                className="accent-purple-500"
+                checked={debugOn}
+                onChange={(e) => {
+                  const enabled = e.target.checked;
+                  try {
+                    if (enabled) localStorage.setItem('debug:identity', '1');
+                    else localStorage.removeItem('debug:identity');
+                  } catch {}
+                  setDebugOn(enabled);
+                  dbg('[IDENTITY:UI] debug toggle', {
+                    enabled,
+                    templateId: (template as any)?.id,
+                    canonicalId: (template as any)?.canonical_id,
+                  });
+                }}
+              />
+              Debug logs
+            </label>
+
+            {/* Auto-apply */}
             <label className="text-xs text-white/70 inline-flex items-center gap-1 cursor-pointer">
               <input
                 type="checkbox"
@@ -329,6 +493,8 @@ export default function IdentityPanel({
               />
               Auto-apply
             </label>
+
+            {/* Apply & Reset */}
             <Button
               size="sm"
               variant={dirty ? 'secondary' : 'outline'}
@@ -343,7 +509,15 @@ export default function IdentityPanel({
             <Button
               size="sm"
               variant="ghost"
-              onClick={() => { setDraft(toDraft(template)); setDirty(false); setPhoneError(null); setEmailError(null); setLatError(null); setLonError(null); }}
+              onClick={() => {
+                dbg('[IDENTITY:UI] reset draft to template');
+                setDraft(toDraft(template));
+                setDirty(false);
+                setPhoneError(null);
+                setEmailError(null);
+                setLatError(null);
+                setLonError(null);
+              }}
               title="Discard draft changes"
             >
               <RefreshCw className="w-3.5 h-3.5 mr-1" />
@@ -409,7 +583,11 @@ export default function IdentityPanel({
             <p className="text-[11px] text-white/40 mt-1">
               Resolved: {toIndustryLabel(resolveIndustryKey(draft.industry))}
             </p>
-            {industryHint && <p className="text-xs text-white/60 mt-1">{industryHint}</p>}
+            {(() => {
+              const opt = getIndustryOptions().find(o => o.value === draft.industry);
+              const hint = opt ? INDUSTRY_HINTS[opt.label] : undefined;
+              return hint ? <p className="text-xs text-white/60 mt-1">{hint}</p> : null;
+            })()}
           </div>
         </div>
 

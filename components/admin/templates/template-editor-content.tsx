@@ -578,6 +578,9 @@ export default function EditorContent({
     return () => window.removeEventListener('keydown', onKey as any, { capture: true } as any);
   }, [showSettings]);
 
+  // const searchParams = useSearchParams();
+  const pathname = usePathname();
+
   // keep a ref to the currently-edited block and last edit event
   useEffect(() => {
     const k = editingBlock?.ref
@@ -585,6 +588,63 @@ export default function EditorContent({
       : null;
     editingKeyRef.current = k;
   }, [editingBlock]);
+
+  /* ---------- Non-looping refresh & merge guards ---------- */
+
+  // Stable id + rev guards
+  const idRef = useRef<string | null>((template as any)?.id ?? null);
+  useEffect(() => { idRef.current = (template as any)?.id ?? null; }, [(template as any)?.id]);
+
+  const lastRevRef = useRef<number>(Number((template as any)?.rev ?? 0));
+  useEffect(() => { lastRevRef.current = Number((template as any)?.rev ?? 0); }, [(template as any)?.rev]);
+
+  const refreshInFlightRef = useRef(false);
+  const refreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Authoritative refresh (no dependence on entire template object)
+  const refreshFromState = useCallback(async () => {
+    const id = idRef.current;
+    if (!id || refreshInFlightRef.current) return;
+    refreshInFlightRef.current = true;
+    try {
+      const r = await fetch(`/api/templates/state?id=${encodeURIComponent(id)}`, { cache: 'no-store' });
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok || !j?.template) return;
+
+      const next = j.template;
+      const nextRev = Number(next?.rev ?? 0);
+
+      // Skip if same rev (prevents redundant rerenders/fetch cascades)
+      if (Number.isFinite(nextRev) && nextRev === lastRevRef.current) return;
+
+      lastRevRef.current = nextRev;
+      setTemplate(next);
+      onChange(next); // single adoption, not a commit
+    } finally {
+      refreshInFlightRef.current = false;
+    }
+  }, [setTemplate, onChange]);
+
+  // Hydrate once at first paint (and when ID changes)
+  useEffect(() => { void refreshFromState(); }, [(template as any)?.id, refreshFromState]);
+
+  // Debounced listeners for invalidate/truth events
+  useEffect(() => {
+    const schedule = () => {
+      if (refreshTimerRef.current) clearTimeout(refreshTimerRef.current);
+      refreshTimerRef.current = setTimeout(() => { void refreshFromState(); }, 150);
+    };
+    const onInvalidate = () => schedule();
+    const onTruth = () => schedule();
+
+    window.addEventListener('qs:template:invalidate', onInvalidate);
+    window.addEventListener('qs:truth:refresh', onTruth);
+    return () => {
+      window.removeEventListener('qs:template:invalidate', onInvalidate);
+      window.removeEventListener('qs:truth:refresh', onTruth);
+      if (refreshTimerRef.current) clearTimeout(refreshTimerRef.current);
+    };
+  }, [refreshFromState]);
 
   /* header editor wiring */
   const resolveHeader = (): Block => {
@@ -928,31 +988,50 @@ export default function EditorContent({
     editMuteRef.current = false;
   }
 
-  /* merge events (favicon/meta) */
+  /* merge events (commit responses etc.) — pure state adoption, no re-emit for server merges */
   useEffect(() => {
     const handler = (e: Event) => {
       const detail = (e as CustomEvent).detail as any;
       if (!detail || typeof detail !== 'object') return;
-      const next: any = {
-        ...template,
-        ...detail,
-        meta: { ...(template as any)?.meta, ...(detail.meta ?? {}) },
-      };
-      setTemplate(next);
-      onChange(next);
-      const patch: Partial<Template> = {
-        ...(detail.headerBlock ? { headerBlock: detail.headerBlock } : {}),
-        ...(detail.footerBlock ? { footerBlock: detail.footerBlock } : {}),
-        data: {
-          ...(next.data ?? {}),
-          ...(detail.meta ? { meta: detail.meta } : {}),
-        } as any,
-      };
-      emitPatchIfAllowed(patch);
+
+      setTemplate((prev: any) => {
+        const prevRev = Number(prev?.rev ?? 0);
+        const nextRev = Number(detail?.rev ?? prevRev);
+
+        // If same rev, ignore
+        if (Number.isFinite(nextRev) && nextRev === prevRev) return prev;
+
+        lastRevRef.current = nextRev; // keep guard in sync
+        const next = {
+          ...(prev || {}),
+          ...(detail || {}),
+          meta: { ...(prev?.meta || {}), ...(detail?.meta || {}) },
+        };
+        return next;
+      });
+
+      // If this merge looks like a **server commit response** (has rev), DO NOT re-emit/commit.
+      // For local merges (no rev), we keep prior behavior to propagate to preview + autosave.
+      if (typeof (detail?.rev) !== 'number') {
+        const patch: Partial<Template> = {
+          ...(detail.headerBlock ? { headerBlock: detail.headerBlock } : {}),
+          ...(detail.footerBlock ? { footerBlock: detail.footerBlock } : {}),
+          data: detail.data ? { ...(detail.data ?? {}) } as any : undefined,
+        };
+        // Only emit if something meaningful is present
+        if (patch.data || patch.headerBlock || patch.footerBlock) {
+          emitPatchIfAllowed(patch);
+          onChange({
+            ...(detail || {}),
+            ...(patch as any),
+          });
+        }
+      }
     };
+
     window.addEventListener('qs:template:merge', handler as any);
     return () => window.removeEventListener('qs:template:merge', handler as any);
-  }, [template, setTemplate, onChange]);
+  }, [setTemplate, onChange]);
 
   /* iframe -> parent bus */
   useEffect(() => {
@@ -1037,7 +1116,6 @@ export default function EditorContent({
   };
 
   /* ---------- Tabs: Blocks (default) | Live (iframe) ---------- */
-  const pathname = usePathname();
   const buildTabHref = (which: 'blocks' | 'live') => {
     const qp = new URLSearchParams(searchParams ?? undefined);
     qp.set('tab', which);

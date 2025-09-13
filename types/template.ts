@@ -167,6 +167,19 @@ export type Template = Snapshot & {
   block_errors?: BlockValidationErrorMap;
   block_errors_map?: Record<string, string[]>;
   hours?: HoursOfOperationContent | null;
+
+  industry_label?: string;
+  industry_other?: string;
+  site_type?: string;
+  contact_email?: string;
+  phone?: string;
+  address_line1?: string;
+  address_line2?: string;
+  city?: string;
+  state?: string;
+  postal_code?: string;
+  latitude?: number;
+  longitude?: number;
 };
 
 export type TemplateSnapshot = Snapshot;

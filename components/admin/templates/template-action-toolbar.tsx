@@ -241,32 +241,47 @@ async function commitWithRebase({
   patch: Record<string, any>;
   kind?: 'save' | 'autosave';
 }) {
+  const mergeFromCommit = (json: any) => {
+    try {
+      if (json?.template) {
+        window.dispatchEvent(new CustomEvent('qs:template:merge', { detail: json.template }));
+      } else {
+        window.dispatchEvent(new Event('qs:template:invalidate'));
+      }
+    } catch {}
+  };
+
   const send = async (rev: number) => {
     const res = await fetch('/api/templates/commit', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ id, baseRev: rev, patch, kind }),
     });
+
+    const json = await res.json().catch(() => ({}));
+
     if (res.status === 409) {
-      const j = await res.json().catch(() => ({}));
-      const latest = typeof j?.rev === 'number' ? j.rev : rev;
+      const latest = typeof json?.rev === 'number' ? json.rev : rev;
       return { conflict: true as const, latest };
     }
     if (!res.ok) {
-      const j = await res.json().catch(() => ({}));
-      throw new Error(j?.error || `commit failed (${res.status})`);
+      throw new Error(json?.error || `commit failed (${res.status})`);
     }
-    return { conflict: false as const, json: await res.json() };
+
+    // ✅ immediately hydrate editor from the authoritative row
+    mergeFromCommit(json);
+    return { conflict: false as const, json };
   };
 
   let first = await send(baseRev);
   if (first.conflict) {
     const second = await send(first.latest);
-    if ('json' in second) return second.json;
+    if (!second.conflict) return second.json;
     throw new Error('commit rebase failed');
   }
   return (first as any).json;
 }
+
 
 /* -------------------------------- component -------------------------------- */
 type SaveWarning = { field: string; message: string };
@@ -360,6 +375,7 @@ export function TemplateActionToolbar({
 
   const buildFullCommitPayloadFromCurrent = useCallback(() => {
     const cur: any = tplRef.current;
+
     const dataIn = (cur?.data ?? {}) as any;
     const metaIn = (dataIn.meta ?? {}) as any;
 
@@ -376,16 +392,25 @@ export function TemplateActionToolbar({
     const pages = getTemplatePagesLoose(cur);
     const normalizedPages = normalizePageBlocksShape(pages);
 
-    const canonicalData = {
-      ...dataIn,
-      pages: normalizedPages,
+    const site_type =
+    metaIn.site_type ?? cur?.site_type ?? cur?.data?.meta?.site_type ?? null;
+  const industry_label =
+    metaIn.industry_label ?? cur?.data?.meta?.industry_label ?? null;
+  
+  const canonicalData = {
+    ...dataIn,
+    pages: normalizedPages,
+    services: canonicalServices,
+    meta: {
+      ...metaIn,
+      // explicitly carry these so they can’t get dropped
+      site_type,
+      industry_label,
+      // canonicalize the items we always manage
+      industry: canonicalIndustry,
       services: canonicalServices,
-      meta: {
-        ...metaIn,
-        industry: canonicalIndustry,
-        services: canonicalServices,
-      },
-    };
+    },
+  };
 
     const template_name =
       (canonicalData?.meta?.siteTitle && String(canonicalData.meta.siteTitle).trim()) ||
@@ -826,12 +851,24 @@ export function TemplateActionToolbar({
         Array.isArray((nextTemplate as any).services) ? (nextTemplate as any).services :
         [];
 
+      const site_type =
+        metaIn.site_type ?? (nextTemplate as any)?.data?.meta?.site_type ?? null;
+      const industry_label =
+        metaIn.industry_label ?? (nextTemplate as any)?.data?.meta?.industry_label ?? null;
+
       const canonicalData = {
         ...dataIn,
-        meta: { ...metaIn, industry: canonicalIndustryKey, services: canonicalServices },
+        meta: {
+          ...metaIn,
+          site_type,
+          industry_label,
+          industry: canonicalIndustryKey,
+          services: canonicalServices,
+        },
         services: canonicalServices,
         pages: normalizedPages,
       };
+
 
       const canonicalTemplateName =
         (canonicalData?.meta?.siteTitle && String(canonicalData.meta.siteTitle).trim()) ||

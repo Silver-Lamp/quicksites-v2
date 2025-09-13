@@ -52,11 +52,24 @@ async function commitNow(templateId: string, data: any) {
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify({ id: templateId, baseRev, patch: { data }, kind: 'save' }),
   });
-  const j = await r.json();
+  const j = await r.json().catch(() => ({}));
   if (!r.ok) throw new Error(j?.error || 'Commit failed');
+
+  // ✅ merge immediately so UI reflects the write before any refetch
+  try {
+    if (j?.template) {
+      window.dispatchEvent(new CustomEvent('qs:template:merge', { detail: j.template }));
+    } else {
+      window.dispatchEvent(new Event('qs:template:invalidate'));
+    }
+  } catch {}
+
+  // keep your existing signal
   try { window.dispatchEvent(new CustomEvent('qs:truth:refresh')); } catch {}
+
   return j;
 }
+
 
 async function createSnapshot(templateId: string) {
   const res = await fetch(`/api/admin/snapshots/create?templateId=${templateId}`, { method: 'GET' });

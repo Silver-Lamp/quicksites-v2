@@ -10,17 +10,43 @@ async function fetchState(id: string): Promise<TemplateState> {
   return res.json();
 }
 
-// Your POST /api/templates/commit should accept { id, base_rev, data } and return { rev }
-async function postCommit(id: string, base_rev: number, data: any): Promise<number> {
+// Your POST /api/templates/commit now accepts { id, baseRev, patch, kind } and returns { rev, template? }
+export async function postCommit(id: string, base_rev: number, data: any): Promise<number> {
   const res = await fetch('/api/templates/commit', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ id, base_rev, data }),
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({
+      id,
+      baseRev: base_rev,
+      patch: { data },     // keep callers unchanged: they pass `data`, we wrap as patch
+      kind: 'save',
+    }),
   });
-  if (res.status === 409) throw Object.assign(new Error('merge_conflict'), { code: 409 });
-  if (!res.ok) throw new Error(`commit ${res.status}`);
-  const out = await res.json();
-  return out.rev ?? base_rev + 1;
+
+  const json = await res.json().catch(() => ({}));
+
+  if (res.status === 409) {
+    const err: any = new Error('merge_conflict');
+    err.code = 409;
+    err.rev = typeof json?.rev === 'number' ? json.rev : undefined;
+    throw err;
+  }
+  if (!res.ok) {
+    const err: any = new Error(json?.error || `commit ${res.status}`);
+    err.code = res.status;
+    throw err;
+  }
+
+  // ✅ hydrate editor immediately from authoritative row
+  try {
+    if (json?.template) {
+      window.dispatchEvent(new CustomEvent('qs:template:merge', { detail: json.template }));
+    } else {
+      window.dispatchEvent(new Event('qs:template:invalidate'));
+    }
+  } catch {}
+
+  return typeof json?.rev === 'number' ? json.rev : base_rev + 1;
 }
 
 // ---- queue / single-flight ----

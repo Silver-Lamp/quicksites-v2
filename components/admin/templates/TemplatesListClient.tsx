@@ -165,8 +165,8 @@ export default function TemplatesListClient({
       {loading && <div className="mb-3 text-xs text-zinc-400">Loading…</div>}
       {errorText && <div className="mb-3 text-xs text-red-400">{errorText}</div>}
 
-      <TemplatesIndexTable templates={rows as any} selectedFilter={dateParam} />
-
+      {/* ✅ pass includeVersions so the table can default grouping appropriately */}
+      <TemplatesIndexTable templates={rows as any} selectedFilter={dateParam} includeVersions={includeVersions} />
       <div className="mt-4 flex justify-center">
         {hasMore ? (
           <button

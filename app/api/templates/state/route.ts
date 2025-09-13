@@ -1,246 +1,121 @@
-// app/api/templates/state/route.ts
+export const dynamic = 'force-dynamic';
+
 import { NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
-import { createHash } from 'crypto';
+import { supabaseAdmin } from '@/lib/server/supabaseAdmin';
 
-const url = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-const supabase = createClient(url, serviceKey, { auth: { persistSession: false } });
+function j(data: any, init?: number | ResponseInit) {
+  const resInit = typeof init === 'number' ? { status: init } : init;
+  return NextResponse.json(data, resInit);
+}
+const DEBUG = process.env.DEBUG_IDENTITY === '1';
+const dbg = (...args: any[]) => { if (DEBUG) console.log(...args); };
 
-function sha256(obj: unknown) {
-  return createHash('sha256').update(JSON.stringify(obj ?? {})).digest('hex');
+function obj(v: any) {
+  if (!v) return {};
+  if (typeof v === 'object') return v;
+  try { return JSON.parse(String(v)); } catch { return {}; }
 }
 
-// helpers to derive industry/services from a data object
-function deriveIndustryFromData(data: any): string | undefined {
-  try {
-    const v = data?.meta?.industry ?? data?.industry ?? undefined;
-    return typeof v === 'string' && v.trim() ? v.trim() : undefined;
-  } catch {
-    return undefined;
-  }
-}
-function normalizeServicesList(v: any): string[] | undefined {
-  if (!Array.isArray(v)) return undefined;
-  const out = v
-    .map((item) => {
-      if (typeof item === 'string') return item.trim();
-      if (item && typeof item === 'object') {
-        const base = String(item.name ?? item.title ?? '').trim();
-        const price =
-          item.price != null && String(item.price).trim() !== ''
-            ? ` — ${
-                typeof item.price === 'number' ? `$${item.price.toFixed(2)}` : String(item.price)
-              }`
-            : '';
-        return base ? `${base}${price}` : '';
-      }
-      return '';
-    })
-    .filter(Boolean);
-  return out.length ? Array.from(new Set(out)) : undefined;
-}
-function deriveServicesFromData(data: any): string[] | undefined {
-  try {
-    const s1 = normalizeServicesList(data?.services);
-    if (s1?.length) return s1;
-    const s2 = normalizeServicesList(data?.meta?.services);
-    if (s2?.length) return s2;
-    return undefined;
-  } catch {
-    return undefined;
-  }
+/** The editor needs these canonical columns + data */
+const TEMPLATE_EDITOR_SELECT = [
+  'id','slug','base_slug','rev','updated_at',
+  'template_name',
+  'industry','industry_label',
+  'site_type','site_type_key','site_type_label',
+  'contact_email','phone',
+  'address_line1','address_line2','city','state','postal_code',
+  'latitude','longitude',
+  'color_mode','color_scheme','layout',
+  'data',
+].join(', ');
+
+/** Normalize site_type and ensure identity is present in both data.identity and data.meta.identity */
+function normalizeForEditor(row: any) {
+  const data = obj(row?.data);
+  const meta = obj(data?.meta);
+  const metaId = obj(meta?.identity);
+  const dataId = obj(data?.identity);
+
+  // merge identity mirrors
+  const identity = { ...metaId, ...dataId };
+
+  // prefer canonical columns, then identity->contact, then meta.contact
+  const contact = obj(identity?.contact);
+  const metaContact = obj(meta?.contact);
+
+  const site_type =
+    row.site_type ?? row.site_type_key ?? meta?.site_type ?? null;
+
+  const business_name =
+    row.business_name ??
+    meta?.business ??
+    identity?.business_name ??
+    null;
+
+    const contact_email = row.contact_email ?? contact.email ?? metaContact.email ?? null;
+  const phone         = row.phone         ?? contact.phone  ?? metaContact.phone  ?? null;
+
+  const address_line1 = row.address_line1 ?? contact.address  ?? metaContact.address  ?? null;
+  const address_line2 = row.address_line2 ?? contact.address2 ?? metaContact.address2 ?? null;
+  const city          = row.city          ?? contact.city     ?? metaContact.city     ?? null;
+  const state         = row.state         ?? contact.state    ?? metaContact.state    ?? null;
+  const postal_code   = row.postal_code   ?? contact.postal   ?? metaContact.postal   ?? null;
+  const latitude      = row.latitude      ?? contact.latitude ?? metaContact.latitude ?? null;
+  const longitude     = row.longitude     ?? contact.longitude?? metaContact.longitude?? null;
+
+  return {
+    ...row,
+    site_type,
+    business_name,
+    contact_email,
+    phone,
+    address_line1,
+    address_line2,
+    city,
+    state,
+    postal_code,
+    latitude,
+    longitude,
+    data: {
+      ...data,
+      identity: { ...(data.identity || {}), ...identity },
+      meta: { ...meta, identity: { ...(meta.identity || {}), ...identity } },
+    },
+  };
 }
 
 export async function GET(req: Request) {
-  const { searchParams } = new URL(req.url);
-  const id = searchParams.get('id');
-  if (!id) return NextResponse.json({ error: 'Missing id' }, { status: 400 });
+  const url = new URL(req.url);
+  const id = url.searchParams.get('id');
+  const debugQ = url.searchParams.get('debug') === '1';
+  if (!id) return j({ error: 'id required' }, 400);
 
-  // --- 1) Template (tolerate missing rev) ---
-  let t: any = null;
-  let tErr: any = null;
+  const { data, error } = await supabaseAdmin
+    .from('templates')
+    .select(TEMPLATE_EDITOR_SELECT)
+    .eq('id', id)
+    .single();
 
-  try {
-    const r = await supabase
-      .from('templates')
-      .select('id, data, rev, site_id')
-      .eq('id', id)
-      .single();
-    t = r.data;
-    tErr = r.error;
-  } catch (e: any) {
-    tErr = e;
-  }
+  if (error || !data) return j({ error: error?.message || 'not found' }, 404);
 
-  if (
-    (!t || tErr) &&
-    String(tErr?.message || '').toLowerCase().includes('column') &&
-    String(tErr?.message || '').includes('rev')
-  ) {
-    const r2 = await supabase
-      .from('templates')
-      .select('id, data, site_id')
-      .eq('id', id)
-      .single();
-    t = r2.data;
-    tErr = r2.error;
-    if (t) t.rev = 0;
-  }
+  const normalized = normalizeForEditor(data);
 
-  if (tErr || !t) {
-    return NextResponse.json({ error: tErr?.message ?? 'Template not found' }, { status: 404 });
-  }
-
-  const revNum = Number.isFinite(t.rev) ? Number(t.rev) : 0;
-  const draftHash = sha256(t.data);
-
-  // --- 2) Snapshots (newest-first) ---
-  const { data: snaps } = await supabase
-    .from('snapshots')
-    .select('id, template_id, rev, data, hash, created_at')
-    .eq('template_id', id)
-    .order('created_at', { ascending: false });
-
-  const snapshotsByRev = new Map<number, any>();
-  for (const s of snaps ?? []) {
-    if (typeof s?.rev === 'number') snapshotsByRev.set(s.rev, s);
-  }
-
-  const snapshots = (snaps ?? []).map((s) => ({
-    id: s.id,
-    rev: s.rev ?? 0,
-    hash: s.hash || sha256(s.data),
-    createdAt: s.created_at,
-  }));
-
-  const lastSnapshot = snapshots[0];
-
-  // --- 3) Site (optional) ---
-  let site: { id: string; slug: string; published_snapshot_id?: string } | undefined;
-  try {
-    const { data: siteRow } = await supabase
-      .from('sites')
-      .select('id, slug, published_snapshot_id, template_id')
-      .eq('template_id', id)
-      .maybeSingle();
-    if (siteRow) {
-      site = {
-        id: siteRow.id,
-        slug: siteRow.slug,
-        published_snapshot_id: siteRow.published_snapshot_id ?? undefined,
-      };
-    }
-  } catch {}
-
-  // --- 4) Versions (optional) ---
-  let versions: Array<{ tag: string; snapshotId: string; notes?: string; createdAt?: string }> = [];
-  try {
-    if (snapshots.length > 0) {
-      const { data: v } = await supabase
-        .from('versions')
-        .select('tag, snapshot_id, notes, created_at')
-        .in('snapshot_id', snapshots.map((s) => s.id));
-      if (v) {
-        versions = v.map((r) => ({
-          tag: r.tag,
-          snapshotId: r.snapshot_id,
-          notes: r.notes ?? undefined,
-          createdAt: r.created_at,
-        }));
-      }
-    }
-  } catch {}
-
-  // --- 5) Events (optional) ---
-  let events: any[] = [];
-  try {
-    // Try selecting meta if present; fallback without it
-    let evSel: any = await supabase
-      .from('template_events')
-      .select('id, type, at, rev_before, rev_after, actor, fields_touched, diff, meta')
-      .eq('template_id', id)
-      .order('at', { ascending: false })
-      .limit(200);
-
-    if (evSel.error && String(evSel.error.message || '').toLowerCase().includes('column') && evSel.error.message.includes('meta')) {
-      evSel = await supabase
-        .from('template_events')
-        .select('id, type, at, rev_before, rev_after, actor, fields_touched, diff')
-        .eq('template_id', id)
-        .order('at', { ascending: false })
-        .limit(200);
-    }
-
-    const ev = evSel.data ?? [];
-    events = ev.map((e: any) => {
-      // Prefer stored meta at event time
-      let meta = e.meta ?? undefined;
-
-      // If missing, try derive from the snapshot for that event's rev (no draft fallback)
-      if (!meta) {
-        const matchRev: number | undefined =
-          (typeof e.rev_after === 'number' && e.rev_after) ||
-          (typeof e.rev_before === 'number' && e.rev_before) ||
-          undefined;
-
-        const snap = matchRev != null ? snapshotsByRev.get(matchRev) : undefined;
-        if (snap?.data) {
-          const mIndustry = deriveIndustryFromData(snap.data);
-          const mServices = deriveServicesFromData(snap.data);
-          meta = mIndustry || mServices ? { industry: mIndustry, services: mServices } : undefined;
-        }
-      }
-
-      return {
-        id: e.id,
-        type: e.type,
-        at: e.at,
-        revBefore: e.rev_before ?? undefined,
-        revAfter: e.rev_after ?? undefined,
-        actor: e.actor ?? undefined,
-        fieldsTouched: e.fields_touched ?? undefined,
-        diff: e.diff ?? undefined,
-        meta, // event-time meta only; no current-draft fallback
-      };
+  if (DEBUG || debugQ) {
+    console.log('[STATE:API] normalized', {
+      id: normalized.id,
+      site_type: normalized.site_type,
+      contact_email: normalized.contact_email,
+      phone: normalized.phone,
+      city: normalized.city,
+      state: normalized.state,
+      postal_code: normalized.postal_code,
+      meta_identity: normalized.data?.meta?.identity,
+      data_identity: normalized.data?.identity,
     });
-  } catch {}
+  }
 
-  // --- 6) Admin meta (optional) ---
-  let deprecated_files: string[] = [];
-  try {
-    const { data: meta } = await supabase
-      .from('template_admin_meta')
-      .select('deprecated_files')
-      .eq('template_id', id)
-      .maybeSingle();
-    if (meta?.deprecated_files && Array.isArray(meta.deprecated_files)) {
-      deprecated_files = meta.deprecated_files as string[];
-    }
-  } catch {}
-
-  const payload = {
-    id: t.id,
-    rev: revNum,
-    hash: draftHash,
-    infra: {
-      template: { id: t.id, rev: revNum, hash: draftHash },
-      site: site
-        ? { id: site.id, slug: site.slug, publishedSnapshotId: site.published_snapshot_id }
-        : undefined,
-      lastSnapshot: lastSnapshot
-        ? { id: lastSnapshot.id, rev: lastSnapshot.rev, hash: lastSnapshot.hash, createdAt: lastSnapshot.createdAt }
-        : undefined,
-      cache: null,
-    },
-    snapshots,
-    versions,
-    events,
-    adminMeta: {
-      deprecated_files,
-      count: deprecated_files.length,
-    },
-  };
-
-  return NextResponse.json(payload);
+  // no-store to prevent any caching weirdness
+  const res = NextResponse.json({ template: normalized });
+  res.headers.set('Cache-Control', 'no-store');
+  return res;
 }

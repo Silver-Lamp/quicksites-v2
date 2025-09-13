@@ -51,7 +51,6 @@ export function useCommitApi(templateId?: string) {
   const fetchStateWithData = useCallback(async (): Promise<any | null> => {
     if (!templateId) return null;
 
-    // Try /state2 (your logs show this exists in your app)
     const attempts = [
       `/api/templates/state2?id=${encodeURIComponent(templateId)}`,
       `/api/templates/state?id=${encodeURIComponent(templateId)}&full=1`,
@@ -64,7 +63,6 @@ export function useCommitApi(templateId?: string) {
         const json = await res.json().catch(() => ({}));
         if (!res.ok) continue;
 
-        // Look for data in common shapes
         const data =
           json?.data ??
           json?.template?.data ??
@@ -78,6 +76,25 @@ export function useCommitApi(templateId?: string) {
       }
     }
     return null;
+  }, [templateId]);
+
+  /** helper: immediately hydrate editor from commit response */
+  const mergeFromCommit = useCallback((json: any) => {
+    try {
+      if (json?.template) {
+        window.dispatchEvent(new CustomEvent('qs:template:merge', { detail: json.template }));
+        if (heroDbgOn()) {
+          heroLog('[commit] merged from response', {
+            templateId,
+            rev: json?.rev,
+            keys: Object.keys(json.template || {}),
+          });
+        }
+      } else {
+        window.dispatchEvent(new Event('qs:template:invalidate'));
+        if (heroDbgOn()) heroLog('[commit] no template in response; invalidated');
+      }
+    } catch {}
   }, [templateId]);
 
   /** Accept a full patch object (e.g., { data: {...} } or { color_mode, data }) */
@@ -117,6 +134,9 @@ export function useCommitApi(templateId?: string) {
 
       if (typeof json?.rev === 'number') revRef.current = json.rev;
 
+      // ✅ Immediately hydrate from the authoritative row we just wrote
+      mergeFromCommit(json);
+
       // --- DEBUG: fetch server state after commit (so we see what stuck) ---
       if (heroDbgOn()) {
         try {
@@ -143,7 +163,7 @@ export function useCommitApi(templateId?: string) {
 
       return json;
     },
-    [templateId, loadRev, fetchStateWithData]
+    [templateId, loadRev, fetchStateWithData, mergeFromCommit]
   );
 
   const commitPatch = useCallback(

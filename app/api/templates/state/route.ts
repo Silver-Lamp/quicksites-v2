@@ -16,10 +16,62 @@ function obj(v: any) {
   try { return JSON.parse(String(v)); } catch { return {}; }
 }
 
+/* ---------------- industry helpers ---------------- */
+
+function toSlug(s: any): string | null {
+  if (s == null) return null;
+  const raw = String(s).trim().toLowerCase();
+  if (!raw) return null;
+  const slug = raw
+    .replace(/\s+/g, '_')
+    .replace(/[^a-z0-9_-]/g, '_')
+    .replace(/_+/g, '_')
+    .replace(/^_+|_+$/g, '');
+  return slug || null;
+}
+function humanizeSlug(slug: string): string {
+  return slug
+    .split(/[_-]/g)
+    .filter(Boolean)
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+    .join(' ');
+}
+
+/** Prefer explicit key; never downgrade a specific key to "other" unless it's explicitly set or only "other" text is present. */
+function normalizeIndustryTriplet(row: any, meta: any) {
+  const rowKey = row?.industry;
+  const metaKey = meta?.industry;
+
+  const candidate = [rowKey, metaKey].find((v) => v != null && String(v).trim() !== '');
+  const keySlug = toSlug(candidate);
+
+  let industry: string | null = keySlug || null;
+  let industry_label: string | null = row?.industry_label ?? meta?.industry_label ?? null;
+  const industry_other_raw = meta?.industry_other ?? null;
+  const industry_other = typeof industry_other_raw === 'string' && industry_other_raw.trim().length
+    ? industry_other_raw.trim()
+    : null;
+
+  // If no key but we have other text, set to "other"
+  if (!industry && industry_other) {
+    industry = 'other';
+  }
+
+  // Ensure label exists
+  if (industry && (!industry_label || !industry_label.trim())) {
+    industry_label = industry === 'other' ? 'Other' : humanizeSlug(industry);
+  }
+
+  // If not "other", remove other-text
+  const final_other = industry === 'other' ? industry_other : null;
+
+  return { industry, industry_label, industry_other: final_other };
+}
+
 /** The editor needs these canonical columns + data */
 const TEMPLATE_EDITOR_SELECT = [
   'id','slug','base_slug','rev','updated_at',
-  'template_name',
+  'template_name','business_name',
   'industry','industry_label',
   'site_type','site_type_key','site_type_label',
   'contact_email','phone',
@@ -29,7 +81,9 @@ const TEMPLATE_EDITOR_SELECT = [
   'data',
 ].join(', ');
 
-/** Normalize site_type and ensure identity is present in both data.identity and data.meta.identity */
+/** Normalize site_type and ensure identity is present in both data.identity and data.meta.identity.
+ *  Also: surface industry (key/label/other) back to both columns and meta.
+ */
 function normalizeForEditor(row: any) {
   const data = obj(row?.data);
   const meta = obj(data?.meta);
@@ -52,7 +106,7 @@ function normalizeForEditor(row: any) {
     identity?.business_name ??
     null;
 
-    const contact_email = row.contact_email ?? contact.email ?? metaContact.email ?? null;
+  const contact_email = row.contact_email ?? contact.email ?? metaContact.email ?? null;
   const phone         = row.phone         ?? contact.phone  ?? metaContact.phone  ?? null;
 
   const address_line1 = row.address_line1 ?? contact.address  ?? metaContact.address  ?? null;
@@ -63,10 +117,17 @@ function normalizeForEditor(row: any) {
   const latitude      = row.latitude      ?? contact.latitude ?? metaContact.latitude ?? null;
   const longitude     = row.longitude     ?? contact.longitude?? metaContact.longitude?? null;
 
+  // ← NEW: normalize industry triplet (prefer explicit, never auto-downgrade)
+  const ind = normalizeIndustryTriplet(row, meta);
+
   return {
     ...row,
     site_type,
     business_name,
+    // surface normalized industry at the top level (columns)
+    industry: ind.industry,
+    industry_label: ind.industry_label,
+
     contact_email,
     phone,
     address_line1,
@@ -76,10 +137,19 @@ function normalizeForEditor(row: any) {
     postal_code,
     latitude,
     longitude,
+
     data: {
       ...data,
       identity: { ...(data.identity || {}), ...identity },
-      meta: { ...meta, identity: { ...(meta.identity || {}), ...identity } },
+      meta: {
+        ...meta,
+        // ensure mirrors present
+        identity: { ...(meta.identity || {}), ...identity },
+        // ensure UI can read latest values here as well
+        industry: ind.industry,
+        industry_label: ind.industry_label,
+        industry_other: ind.industry_other,
+      },
     },
   };
 }
@@ -104,6 +174,8 @@ export async function GET(req: Request) {
     console.log('[STATE:API] normalized', {
       id: normalized.id,
       site_type: normalized.site_type,
+      industry: normalized.industry,
+      industry_label: normalized.industry_label,
       contact_email: normalized.contact_email,
       phone: normalized.phone,
       city: normalized.city,
@@ -114,7 +186,6 @@ export async function GET(req: Request) {
     });
   }
 
-  // no-store to prevent any caching weirdness
   const res = NextResponse.json({ template: normalized });
   res.headers.set('Cache-Control', 'no-store');
   return res;

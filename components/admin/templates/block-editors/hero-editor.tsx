@@ -1,7 +1,7 @@
 // components/admin/templates/block-editors/hero.tsx
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { Block } from '@/types/blocks';
 import type { Template } from '@/types/template';
 import type { BlockEditorProps } from './index';
@@ -15,7 +15,7 @@ import {
   Briefcase,
   Newspaper,
   UserRound,
-  ChevronRight
+  ChevronRight,
 } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
 import toast from 'react-hot-toast';
@@ -37,10 +37,10 @@ function toCanonicalHeroProps(local: any, template?: any) {
   }
 
   const heading = local?.headline ?? local?.heading ?? 'Welcome to Your New Site';
-  const subheading = local?.subheadline ?? local?.subheading ?? 'Start editing, and let the magic happen.';
+  const subheading =
+    local?.subheadline ?? local?.subheading ?? 'Start editing, and let the magic happen.';
   const ctaLabel = local?.cta_text ?? local?.ctaLabel ?? 'Get Started';
 
-  // Resolve image + layout forgivingly
   const image =
     local?.image_url ||
     local?.heroImage ||
@@ -110,7 +110,12 @@ function normalizeCta(local: any, template?: any) {
 
 function normalizeSuggested(payload: any) {
   const h = payload?.headline ?? payload?.heading ?? payload?.title ?? '';
-  const sh = payload?.subheadline ?? payload?.subheading ?? payload?.tagline ?? payload?.description ?? '';
+  const sh =
+    payload?.subheadline ??
+    payload?.subheading ??
+    payload?.tagline ??
+    payload?.description ??
+    '';
   const cta = payload?.cta_text ?? payload?.ctaLabel ?? payload?.cta ?? '';
   return { headline: h, subheadline: sh, cta_text: cta };
 }
@@ -118,7 +123,9 @@ function normalizeSuggested(payload: any) {
 function refreshPreview() {
   requestAnimationFrame(() => {
     try {
-      window.dispatchEvent(new CustomEvent('qs:preview:refresh', { detail: { source: 'hero-editor' } }));
+      window.dispatchEvent(
+        new CustomEvent('qs:preview:refresh', { detail: { source: 'hero-editor' } }),
+      );
     } catch {}
   });
 }
@@ -140,7 +147,8 @@ function pickMostEdited(propsRaw: any, contentRaw: any, template?: any) {
   const P = toNew(propsRaw || {});
   const C = toNew(contentRaw || {});
   const isStr = (v: any) => typeof v === 'string' && v.trim().length > 0;
-  const isDefault = (s: string) => !isStr(s) || /^welcome to your new site$/i.test((s || '').trim());
+  const isDefault = (s: string) =>
+    !isStr(s) || /^welcome to your new site$/i.test((s || '').trim());
   const score = (c: any) => {
     let s = 0;
     if (!isDefault(c.headline ?? '')) s += 3;
@@ -153,9 +161,13 @@ function pickMostEdited(propsRaw: any, contentRaw: any, template?: any) {
   const merged: any = { ...base };
   for (const [k, v] of Object.entries(other)) {
     const cur = (merged as any)[k];
-    if (cur == null || cur === '' || (typeof cur === 'number' && Number.isNaN(cur))) (merged as any)[k] = v;
+    if (cur == null || cur === '' || (typeof cur === 'number' && Number.isNaN(cur)))
+      (merged as any)[k] = v;
   }
-  return { merged: normalizeCta(merged, template), chosenKey: (base === C ? 'content' : 'props') as 'props' | 'content' };
+  return {
+    merged: normalizeCta(merged, template),
+    chosenKey: (base === C ? 'content' : 'props') as 'props' | 'content',
+  };
 }
 
 /* ───────────────── styles ───────────────── */
@@ -166,11 +178,11 @@ const rangeDark = 'w-full accent-violet-500';
 /* ───────────────── site type quick-picks ───────────────── */
 const SITE_TYPES = [
   { key: 'small_business', label: 'Small Business', blurb: 'Pick your industry', Icon: Briefcase as any },
-  { key: 'portfolio',      label: 'Portfolio',      blurb: 'Show your work',    Icon: ImageIcon as any },
-  { key: 'blog',           label: 'Blog',           blurb: 'Posts & updates',   Icon: Newspaper as any },
-  { key: 'about_me',       label: 'About Me',       blurb: 'Simple profile',    Icon: UserRound as any },
+  { key: 'portfolio', label: 'Portfolio', blurb: 'Show your work', Icon: ImageIcon as any },
+  { key: 'blog', label: 'Blog', blurb: 'Posts & updates', Icon: Newspaper as any },
+  { key: 'about_me', label: 'About Me', blurb: 'Simple profile', Icon: UserRound as any },
 ] as const;
-type SiteType = typeof SITE_TYPES[number]['key'];
+type SiteType = (typeof SITE_TYPES)[number]['key'];
 
 /* ───────────────── component ───────────────── */
 export default function HeroEditor({
@@ -189,11 +201,11 @@ export default function HeroEditor({
   const rawContent = (block as any)?.content;
   const { merged: initialLocal, chosenKey } = useMemo(
     () => pickMostEdited(rawProps, rawContent, template),
-    [(block as any)?._id, (block as any)?.id, rawProps, rawContent, template]
+    [(block as any)?._id, (block as any)?.id, rawProps, rawContent, template],
   );
   const fieldKey: 'props' | 'content' = useMemo(
     () => (rawProps && rawContent ? chosenKey : rawProps ? 'props' : 'content'),
-    [rawProps, rawContent, chosenKey]
+    [rawProps, rawContent, chosenKey],
   );
   const altKey = fieldKey === 'props' ? 'content' : 'props';
 
@@ -205,57 +217,111 @@ export default function HeroEditor({
   const bumpPreview = () => {
     setPreviewNonce((n) => n + 1);
     requestAnimationFrame(() => {
-      try { window.dispatchEvent(new CustomEvent('qs:preview:refresh', { detail: { source: 'hero-editor' } })); } catch {}
+      try {
+        window.dispatchEvent(
+          new CustomEvent('qs:preview:refresh', { detail: { source: 'hero-editor' } }),
+        );
+      } catch {}
     });
   };
 
   // industry/site type
   const industryOptions = useMemo(() => getIndustryOptions(), []);
+
+  // Read current values from template meta/columns
+  const metaAll = useMemo(() => ((template?.data as any)?.meta ?? {}), [template]);
+
   const currentIndustryKey = useMemo(() => {
-    const meta = (template?.data as any)?.meta ?? {};
-    const raw = meta?.industry ?? (template as any)?.industry ?? '';
-    return resolveIndustryKey(raw);
-  }, [template]);
-  const [industryKey, setIndustryKey] = useState<string>(currentIndustryKey);
-  useEffect(() => setIndustryKey(currentIndustryKey), [currentIndustryKey]);
+    const raw = (metaAll?.industry ?? (template as any)?.industry ?? '').toString().trim();
+    return raw ? resolveIndustryKey(raw) : '';
+  }, [metaAll, template]);
+
+  // Treat server-seeded "other" without text as UNSET in the UI
+  const seededOtherByServer = useMemo(() => {
+    return (
+      currentIndustryKey === 'other' &&
+      (!metaAll.industry_other || String(metaAll.industry_other).trim() === '') &&
+      (!metaAll.site_type || metaAll.site_type === null) &&
+      (metaAll.industry_label == null || metaAll.industry_label === 'Other')
+    );
+  }, [currentIndustryKey, metaAll]);
+
+  const initialIndustryKey = useMemo(
+    () => (seededOtherByServer ? '' : currentIndustryKey),
+    [seededOtherByServer, currentIndustryKey],
+  );
+
+  // Initialize ONCE; do not re-stomp user changes
+  const [industryKey, setIndustryKey] = useState<string>('');
+  const didInitIndustry = useRef(false);
+  useEffect(() => {
+    if (didInitIndustry.current) return;
+    setIndustryKey(initialIndustryKey); // '' when seeded other; otherwise existing key
+    didInitIndustry.current = true;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialIndustryKey]);
+
   const [aiIndustryOther, setAiIndustryOther] = useState('');
 
   const initialSiteType: SiteType | null = useMemo(() => {
-    const meta = (template?.data as any)?.meta ?? {};
-    if (meta?.site_type) return meta.site_type as SiteType;
+    if (metaAll?.site_type) return metaAll.site_type as SiteType;
     if (currentIndustryKey && currentIndustryKey !== 'other') return 'small_business';
     return null;
-  }, [template, currentIndustryKey]);
+  }, [metaAll, currentIndustryKey]);
 
   const [siteType, setSiteType] = useState<SiteType | null>(initialSiteType);
   const [showMoreTypes, setShowMoreTypes] = useState(false);
 
   const nonBusinessLabel =
-    siteType === 'portfolio' ? 'Portfolio'
-      : siteType === 'blog' ? 'Blog'
-      : siteType === 'about_me' ? 'About Me'
+    siteType === 'portfolio'
+      ? 'Portfolio'
+      : siteType === 'blog'
+      ? 'Blog'
+      : siteType === 'about_me'
+      ? 'About Me'
       : '';
 
   const promptIndustryLabel = useMemo(() => {
     if (siteType && siteType !== 'small_business') return nonBusinessLabel;
+    if (!industryKey) return ''; // keep empty until the user picks
     return industryKey === 'other' && aiIndustryOther.trim()
       ? aiIndustryOther.trim()
       : toIndustryLabel(resolveIndustryKey(industryKey));
   }, [siteType, nonBusinessLabel, industryKey, aiIndustryOther]);
+
+  // Effective signals for API prompts
+  const effectiveIndustryKey = useMemo(
+    () =>
+      resolveIndustryKey(
+        industryKey || (metaAll?.industry ?? (template as any)?.industry ?? ''),
+      ),
+    [industryKey, metaAll, template],
+  );
+
+  const effectiveIndustryLabel = useMemo(() => {
+    if (promptIndustryLabel) return promptIndustryLabel;
+    const other = String(metaAll?.industry_other || '').trim();
+    if (other) return other;
+    if (effectiveIndustryKey && effectiveIndustryKey !== 'other') {
+      return toIndustryLabel(resolveIndustryKey(effectiveIndustryKey));
+    }
+    return '';
+  }, [promptIndustryLabel, metaAll, effectiveIndustryKey]);
 
   // steps
   type Step = 1 | 2;
   const initialStep: Step =
     (siteType && siteType !== 'small_business') ||
     (currentIndustryKey && currentIndustryKey !== 'other')
-      ? 2 : 1;
+      ? 2
+      : 1;
   const [step, setStep] = useState<Step>(initialStep);
 
   const industryValid = useMemo(
     () => !!industryKey && (industryKey !== 'other' || aiIndustryOther.trim().length > 0),
-    [industryKey, aiIndustryOther]
+    [industryKey, aiIndustryOther],
   );
-  const step1Valid = (siteType === 'small_business') ? industryValid : !!siteType;
+  const step1Valid = siteType === 'small_business' ? industryValid : !!siteType;
 
   // AI / image gen state
   const [aiLoading, setAiLoading] = useState(false);
@@ -265,12 +331,18 @@ export default function HeroEditor({
   const [imgIncludePeople, setImgIncludePeople] = useState(false);
   const [imgSubjectTouched, setImgSubjectTouched] = useState(false);
   const [imgSubject, setImgSubject] = useState(
-    local?.image_subject || `${promptIndustryLabel} website hero banner`
+    local?.image_subject || `${promptIndustryLabel} website hero banner`,
   );
   const [imgStyle, setImgStyle] = useState<'photo' | 'illustration' | '3d' | 'minimal'>('photo');
 
-  const update = <K extends keyof typeof local>(key: K, value: (typeof local)[K] | ((prev: any) => any)) =>
-    setLocal((prev: any) => ({ ...prev, [key]: typeof value === 'function' ? (value as any)(prev[key]) : value }));
+  const update = <K extends keyof typeof local>(
+    key: K,
+    value: (typeof local)[K] | ((prev: any) => any),
+  ) =>
+    setLocal((prev: any) => ({
+      ...prev,
+      [key]: typeof value === 'function' ? (value as any)(prev[key]) : value,
+    }));
 
   /* ---------- bridge: react to on-canvas chip events ---------- */
   useEffect(() => {
@@ -278,8 +350,14 @@ export default function HeroEditor({
       const d = e?.detail || {};
       setLocal((prev: any) => {
         const next = { ...prev };
-        if (d.overlay_level) { next.overlay_level = d.overlay_level; next.overlay = d.overlay_level; }
-        if (d.layout) { next.layout_mode = d.layout; next.layout = d.layout; }
+        if (d.overlay_level) {
+          next.overlay_level = d.overlay_level;
+          next.overlay = d.overlay_level;
+        }
+        if (d.layout) {
+          next.layout_mode = d.layout;
+          next.layout = d.layout;
+        }
         if (typeof d.blur_amount === 'number') next.blur_amount = d.blur_amount;
         return next;
       });
@@ -306,7 +384,14 @@ export default function HeroEditor({
       setLocal((p: any) => {
         const cur = (p?.overlay_level ?? p?.overlay ?? 'none') as 'none' | 'soft' | 'strong';
         const lvl = cur === 'none' ? 'soft' : 'strong';
-        return { ...p, overlay_level: lvl, overlay: lvl, layout_mode: p?.layout_mode && p.layout_mode !== 'inline' ? p.layout_mode : 'background', layout: p?.layout && p.layout !== 'inline' ? p.layout : 'background' };
+        return {
+          ...p,
+          overlay_level: lvl,
+          overlay: lvl,
+          layout_mode:
+            p?.layout_mode && p.layout_mode !== 'inline' ? p.layout_mode : 'background',
+          layout: p?.layout && p.layout !== 'inline' ? p.layout : 'background',
+        };
       });
       bumpPreview();
     };
@@ -315,13 +400,17 @@ export default function HeroEditor({
     const onApplyPatch = (e: any) => {
       const patch = e?.detail;
       const id = (block as any)?._id || (block as any)?.id;
-      const b = Array.isArray(patch?.blocks) ? patch.blocks.find((x: any) => x.id === id) : null;
+      const b = Array.isArray(patch?.blocks)
+        ? patch.blocks.find((x: any) => x.id === id)
+        : null;
       if (!b) return;
       const c = b.content || {};
       setLocal((p: any) => ({
         ...p,
         ...(c.overlay_level ? { overlay_level: c.overlay_level, overlay: c.overlay_level } : {}),
-        ...(c.layout_mode || c.layout ? { layout_mode: c.layout_mode || c.layout, layout: c.layout || c.layout_mode } : {}),
+        ...(c.layout_mode || c.layout
+          ? { layout_mode: c.layout_mode || c.layout, layout: c.layout || c.layout_mode }
+          : {}),
         ...(c.image_x ? { image_x: c.image_x } : {}),
         ...(c.image_y ? { image_y: c.image_y } : {}),
         ...(typeof c.blur_amount === 'number' ? { blur_amount: c.blur_amount } : {}),
@@ -361,12 +450,16 @@ export default function HeroEditor({
     onClose?.();
 
     requestAnimationFrame(() => {
-      window.dispatchEvent(new CustomEvent('qs:toolbar:save-now', { detail: { source: 'hero-editor' } }));
+      window.dispatchEvent(
+        new CustomEvent('qs:toolbar:save-now', { detail: { source: 'hero-editor' } }),
+      );
     });
   };
 
   const errorText = (path: string) =>
-    errors?.[path]?.length ? <p className="text-xs text-red-400 mt-1">{errors[path][0].message}</p> : null;
+    errors?.[path]?.length ? (
+      <p className="text-xs text-red-400 mt-1">{errors[path][0].message}</p>
+    ) : null;
 
   useEffect(() => {
     if (!imgSubjectTouched) {
@@ -377,32 +470,49 @@ export default function HeroEditor({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [promptIndustryLabel]);
 
-  // reflect meta live
+  // reflect meta live — build a minimal patch (do NOT clone existing meta)
   useEffect(() => {
-    (block as any).industry = industryKey;
-    const meta = ((template?.data as any)?.meta ?? {});
-    const patch = {
-      ...meta,
-      industry: industryKey,
-      site_type: siteType || null,
-      industry_label: promptIndustryLabel || null,
-    };
+    // Treat "other" without text as not chosen
+    const effIndustryKey =
+      industryKey === 'other' && !aiIndustryOther.trim() ? '' : industryKey;
+
+    const patch: any = {};
+    if (effIndustryKey) {
+      patch.industry = effIndustryKey;
+      patch.industry_label =
+        effIndustryKey === 'other'
+          ? 'Other'
+          : toIndustryLabel(resolveIndustryKey(effIndustryKey));
+      patch.industry_other = effIndustryKey === 'other' ? aiIndustryOther.trim() || null : null;
+    }
+    if (siteType) patch.site_type = siteType;
+
     try {
-      window.dispatchEvent(new CustomEvent('qs:template:merge', { detail: { meta: patch } }));
-      window.dispatchEvent(new CustomEvent('qs:template:apply-patch', {
-        detail: { data: { ...(template?.data as any), meta: patch }, industry: industryKey, site_type: siteType } as any,
-      }));
+      if (Object.keys(patch).length) {
+        window.dispatchEvent(new CustomEvent('qs:template:merge', { detail: { meta: patch } }));
+        window.dispatchEvent(
+          new CustomEvent('qs:template:apply-patch', {
+            detail: {
+              data: { ...(template?.data as any), meta: { ...(metaAll || {}), ...patch } },
+              industry: effIndustryKey || undefined,
+              site_type: siteType || undefined,
+            } as any,
+          }),
+        );
+      }
     } catch {}
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [industryKey, siteType, promptIndustryLabel]);
+  }, [industryKey, aiIndustryOther, siteType]);
 
+  // --------- API helpers (now include industry_key) ----------
   async function requestSuggestions() {
     const res = await fetch('/api/hero/suggest', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         template_id: template?.id,
-        industry: promptIndustryLabel,
+        industry: effectiveIndustryLabel,
+        industry_key: effectiveIndustryKey,
         site_type: siteType || 'small_business',
         services: (template as any)?.services ?? [],
         business_name: (template as any)?.business_name,
@@ -414,12 +524,36 @@ export default function HeroEditor({
     return (await res.json()) as any;
   }
 
+  // Put this with the other helpers (above the component)
+  function guessIndustryLabelFromCopy(headline: string, subheadline: string) {
+    const text = `${headline || ''} ${subheadline || ''}`.toLowerCase();
+
+    // quick exact/substring checks against your known labels
+    for (const opt of getIndustryOptions()) {
+      const lbl = String(opt.label || '').toLowerCase();
+      if (!lbl) continue;
+      if (text.includes(lbl)) return opt.label; // e.g., "Windshield Repair"
+    }
+
+    // minimal synonyms to cover common phrasing
+    const synonyms: Record<string, string> = {
+      'windshield repair': 'Windshield Repair',
+      'auto glass': 'Windshield Repair',
+      'auto-glass': 'Windshield Repair',
+    };
+    for (const [needle, label] of Object.entries(synonyms)) {
+      if (text.includes(needle)) return label;
+    }
+
+    return ''; // unknown
+  }
+
   async function suggestAll() {
     setAiLoading(true); setAiError(null);
     try {
       const raw = await requestSuggestions();
       const { headline, subheadline, cta_text } = normalizeSuggested(raw);
-
+  
       const defaultsByType: Record<string, { h: string; sh: string; cta: string }> = {
         portfolio: { h: 'Work That Speaks For Itself', sh: 'A curated selection of recent projects and collaborations.', cta: 'View Portfolio' },
         blog: { h: 'Ideas, Notes & Updates', sh: 'Writing on craft, process, and what I’m exploring next.', cta: 'Read the Blog' },
@@ -427,14 +561,56 @@ export default function HeroEditor({
         small_business: { h: 'Your Trusted Local Service', sh: 'Fast, reliable solutions tailored to your needs.', cta: 'Get Started Today' },
       };
       const d = defaultsByType[siteType || 'small_business'];
-
-      setLocal((prev: any) => ({
-        ...prev,
-        headline: headline || d.h,
-        subheadline: subheadline || d.sh,
-        cta_text: cta_text || d.cta,
-      }));
-
+  
+      // 1) Apply copy
+      const H = headline || d.h;
+      const SH = subheadline || d.sh;
+      const CTA = cta_text || d.cta;
+  
+      setLocal((prev: any) => ({ ...prev, headline: H, subheadline: SH, cta_text: CTA }));
+  
+      // 2) Ensure site_type defaults to small_business if unset
+      if (!siteType) {
+        setSiteType('small_business' as SiteType);
+        requestAnimationFrame(() => {
+          window.dispatchEvent(new CustomEvent('qs:template:merge', {
+            detail: { meta: { site_type: 'small_business' } }
+          }));
+        });
+      }
+  
+      // 3) If industry not chosen (''), or it's the seeded "other" w/o text, try to infer
+      const seededOther = industryKey === 'other' && !aiIndustryOther.trim();
+      if (!industryKey || seededOther) {
+        // prefer whatever label we already computed; otherwise guess from the copy
+        let label = effectiveIndustryLabel || (industryKey === 'other' ? aiIndustryOther.trim() : '');
+        if (!label) label = guessIndustryLabelFromCopy(H, SH);
+  
+        if (label) {
+          const key = resolveIndustryKey(label);
+          if (key && key !== 'other') {
+            // we have a concrete key → use canonical label
+            const canonLabel = toIndustryLabel(key);
+            setIndustryKey(key);
+            setAiIndustryOther('');
+            requestAnimationFrame(() => {
+              window.dispatchEvent(new CustomEvent('qs:template:merge', {
+                detail: { meta: { site_type: siteType || 'small_business', industry: key, industry_label: canonLabel, industry_other: null } }
+              }));
+            });
+          } else {
+            // we only have a free-text label → store as "other"
+            setIndustryKey('other');
+            setAiIndustryOther(label);
+            requestAnimationFrame(() => {
+              window.dispatchEvent(new CustomEvent('qs:template:merge', {
+                detail: { meta: { site_type: siteType || 'small_business', industry: 'other', industry_label: 'Other', industry_other: label } }
+              }));
+            });
+          }
+        }
+      }
+  
       toast.success('Suggested copy applied');
       refreshPreview();
     } catch (e: any) {
@@ -444,28 +620,41 @@ export default function HeroEditor({
       setAiLoading(false);
     }
   }
-
+  
   async function generateHeroImage() {
-    setImgLoading(true); setImgError(null);
+    setImgLoading(true);
+    setImgError(null);
     try {
       const base =
-        `website hero (header/banner) image for a ${promptIndustryLabel} small business. ` +
+        `website hero (header/banner) image for a ${effectiveIndustryLabel || 'local small business'} small business. ` +
         `${imgSubject}. wide 16:9 composition with clear copy space for headline, clean modern background, high detail, no text, no watermarks, no logos.`;
-      const negatives = imgIncludePeople ? 'no text, no watermark, no logo'
+      const negatives = imgIncludePeople
+        ? 'no text, no watermark, no logo'
         : 'no people, no faces, no portraits, no hands, no superheroes, no text, no watermark, no logo';
 
       const res = await fetch('/api/hero/generate-image', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           template_id: template?.id,
-          industry: promptIndustryLabel,
+          industry: effectiveIndustryLabel,
+          industry_key: effectiveIndustryKey,
           site_type: siteType || 'small_business',
           services: (template as any)?.services ?? [],
           business_name: (template as any)?.business_name,
-          city: (template as any)?.city, state: (template as any)?.state,
-          subject: imgSubject, style: imgStyle, aspect: 'wide',
-          prompt: base, negative: negatives, include_people: imgIncludePeople,
-          prompt_context: { purpose: 'website hero header', layout: 'wide 16:9 with copy space', include_people: imgIncludePeople },
+          city: (template as any)?.city,
+          state: (template as any)?.state,
+          subject: imgSubject,
+          style: imgStyle,
+          aspect: 'wide',
+          prompt: base,
+          negative: negatives,
+          include_people: imgIncludePeople,
+          prompt_context: {
+            purpose: 'website hero header',
+            layout: 'wide 16:9 with copy space',
+            include_people: imgIncludePeople,
+          },
         }),
       });
       if (!res.ok) throw new Error(`Image generate failed (${res.status})`);
@@ -479,11 +668,16 @@ export default function HeroEditor({
       const blob = new Blob([new Uint8Array(byteNumbers)], { type: 'image/png' });
       const file = new File([blob], `hero-${Date.now()}.png`, { type: 'image/png' });
 
-      const uploaded = await uploadToStorage(file, `template-${template?.id}/hero`) as any;
+      const uploaded = (await uploadToStorage(file, `template-${template?.id}/hero`)) as any;
       const publicUrl =
-        typeof uploaded === 'string' ? uploaded :
-        uploaded?.publicUrl || uploaded?.publicURL || uploaded?.signedUrl ||
-        uploaded?.data?.publicUrl || uploaded?.data?.publicURL || '';
+        typeof uploaded === 'string'
+          ? uploaded
+          : uploaded?.publicUrl ||
+            uploaded?.publicURL ||
+            uploaded?.signedUrl ||
+            uploaded?.data?.publicUrl ||
+            uploaded?.data?.publicURL ||
+            '';
 
       const nextUrl = publicUrl || `data:image/png;base64,${clean}`;
 
@@ -493,7 +687,8 @@ export default function HeroEditor({
         image: nextUrl,
         heroImage: nextUrl,
         backgroundImage: nextUrl,
-        layout_mode: prev?.layout_mode && prev.layout_mode !== 'inline' ? prev.layout_mode : 'background',
+        layout_mode:
+          prev?.layout_mode && prev.layout_mode !== 'inline' ? prev.layout_mode : 'background',
         layout: prev?.layout && prev.layout !== 'inline' ? prev.layout : 'background',
         overlay_level: prev?.overlay_level ?? 'soft',
         overlay: prev?.overlay ?? 'soft',
@@ -514,14 +709,21 @@ export default function HeroEditor({
 
   // Close on Esc
   useEffect(() => {
-    const onEsc = (ev: KeyboardEvent) => { if (ev.key === 'Escape') onClose?.(); };
+    const onEsc = (ev: KeyboardEvent) => {
+      if (ev.key === 'Escape') onClose?.();
+    };
     window.addEventListener('keydown', onEsc);
     return () => window.removeEventListener('keydown', onEsc);
   }, [onClose]);
 
   /* ───────────────── UI ───────────────── */
   return (
-    <div className="fixed inset-0 z-[100] flex items-start justify-center" role="dialog" aria-modal="true" aria-label="Hero Editor">
+    <div
+      className="fixed inset-0 z-[100] flex items-start justify-center"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Hero Editor"
+    >
       {/* overlay */}
       <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => onClose?.()} />
 
@@ -540,13 +742,17 @@ export default function HeroEditor({
           {step === 2 && (
             <div className="inline-flex rounded-full border border-white/15 bg-neutral-900 p-1 text-xs">
               <button
-                className={`px-3 py-1 rounded-full ${mode === 'express' ? 'bg-white text-gray-900' : 'text-white/80'}`}
+                className={`px-3 py-1 rounded-full ${
+                  mode === 'express' ? 'bg-white text-gray-900' : 'text-white/80'
+                }`}
                 onClick={() => setMode('express')}
               >
                 Express
               </button>
               <button
-                className={`px-3 py-1 rounded-full ${mode === 'advanced' ? 'bg-white text-gray-900' : 'text-white/80'}`}
+                className={`px-3 py-1 rounded-full ${
+                  mode === 'advanced' ? 'bg-white text-gray-900' : 'text-white/80'
+                }`}
                 onClick={() => setMode('advanced')}
               >
                 Advanced
@@ -567,7 +773,8 @@ export default function HeroEditor({
         <div className="flex-1 overflow-y-auto px-4 pb-24 [scrollbar-gutter:stable]">
           {step === 2 && (
             <div className="rounded-lg border border-white/10 bg-white/5 p-2 text-xs text-white/80 mt-3 mb-3">
-              Hover the hero preview to edit ✎ or use ✨ for quick rewrites. Switch to Advanced for full form controls.
+              Hover the hero preview to edit ✎ or use ✨ for quick rewrites. Switch to Advanced for
+              full form controls.
             </div>
           )}
 
@@ -583,11 +790,39 @@ export default function HeroEditor({
                       key={key}
                       onClick={() => {
                         setSiteType(key);
+                        // NEW: broadcast site_type immediately so Identity reflects fast
+                        requestAnimationFrame(() => {
+                          window.dispatchEvent(
+                            new CustomEvent('qs:template:merge', {
+                              detail: { meta: { site_type: key } },
+                            }),
+                          );
+                        });
+
                         if (key === 'small_business') {
                           setShowMoreTypes(true);
                         } else {
+                          // Non-business types: set industry to "other" with friendly label
                           setIndustryKey('other');
-                          setAiIndustryOther(blurb === 'Show your work' ? 'Portfolio' : label);
+                          const other = blurb === 'Show your work' ? 'Portfolio' : label;
+                          setAiIndustryOther(other);
+
+                          // NEW: immediate broadcast for Identity panel
+                          requestAnimationFrame(() => {
+                            window.dispatchEvent(
+                              new CustomEvent('qs:template:merge', {
+                                detail: {
+                                  meta: {
+                                    site_type: key,
+                                    industry: 'other',
+                                    industry_label: 'Other',
+                                    industry_other: other,
+                                  },
+                                },
+                              }),
+                            );
+                          });
+
                           setTimeout(() => setStep(2), 0);
                         }
                       }}
@@ -596,19 +831,23 @@ export default function HeroEditor({
                         'hover:bg-white dark:hover:bg-neutral-800 transition',
                         active
                           ? 'border-purple-500 ring-2 ring-purple-500/40'
-                          : 'border-gray-300 dark:border-neutral-700 hover:border-purple-400'
+                          : 'border-gray-300 dark:border-neutral-700 hover:border-purple-400',
                       ].join(' ')}
                     >
                       <div className="flex items-center gap-3">
-                        <div className={[
-                          'h-11 w-11 rounded-lg flex items-center justify-center',
-                          'bg-white dark:bg-neutral-950 border',
-                          active ? 'border-purple-500' : 'border-gray-200 dark:border-neutral-700'
-                        ].join(' ')}>
+                        <div
+                          className={[
+                            'h-11 w-11 rounded-lg flex items-center justify-center',
+                            'bg-white dark:bg-neutral-950 border',
+                            active ? 'border-purple-500' : 'border-gray-200 dark:border-neutral-700',
+                          ].join(' ')}
+                        >
                           <Icon className="h-6 w-6 text-gray-700 dark:text-gray-200" />
                         </div>
                         <div className="min-w-0">
-                          <div className="font-medium text-gray-900 dark:text-white truncate">{label}</div>
+                          <div className="font-medium text-gray-900 dark:text-white truncate">
+                            {label}
+                          </div>
                           <div className="text-xs text-gray-500 dark:text-gray-400">{blurb}</div>
                         </div>
                         <ChevronRight className="ml-auto h-4 w-4 text-gray-400 group-hover:text-purple-500" />
@@ -632,7 +871,7 @@ export default function HeroEditor({
           )}
 
           {/* Industry chooser */}
-          {(step === 1 && showMoreTypes) && (
+          {step === 1 && showMoreTypes && (
             <div className="rounded border border-white/10 bg-neutral-900 p-3 space-y-2 mt-3">
               <div className="grid md:grid-cols-3 gap-3">
                 <div>
@@ -640,9 +879,38 @@ export default function HeroEditor({
                   <select
                     className={selectDark}
                     value={industryKey}
-                    onChange={(e) => setIndustryKey(e.target.value)}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setIndustryKey(val);
+
+                      // NEW: immediate broadcast
+                      const k = resolveIndustryKey(val);
+                      const meta =
+                        k === 'other'
+                          ? {
+                              industry: 'other',
+                              industry_label: 'Other',
+                              industry_other: aiIndustryOther.trim() || null,
+                            }
+                          : { industry: k, industry_label: toIndustryLabel(k), industry_other: null };
+
+                      requestAnimationFrame(() => {
+                        window.dispatchEvent(
+                          new CustomEvent('qs:template:merge', {
+                            detail: {
+                              meta: { ...meta, site_type: siteType || 'small_business' },
+                            },
+                          }),
+                        );
+                      });
+                    }}
                   >
-                    {industryOptions.map((opt) => (<option key={opt.value} value={opt.value}>{opt.label}</option>))}
+                    <option value="">{'— Select —'}</option>
+                    {industryOptions.map((opt) => (
+                      <option key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </option>
+                    ))}
                   </select>
                 </div>
                 <div className="md:col-span-2">
@@ -650,13 +918,36 @@ export default function HeroEditor({
                   <input
                     className={selectDark}
                     value={aiIndustryOther}
-                    onChange={(e) => setAiIndustryOther(e.target.value)}
+                    onChange={(e) => {
+                      const v = e.target.value;
+                      setAiIndustryOther(v);
+
+                      // NEW: mirror when typing "Other"
+                      if (industryKey === 'other') {
+                        requestAnimationFrame(() => {
+                          window.dispatchEvent(
+                            new CustomEvent('qs:template:merge', {
+                              detail: {
+                                meta: {
+                                  site_type: siteType || 'small_business',
+                                  industry: 'other',
+                                  industry_label: 'Other',
+                                  industry_other: v.trim() || null,
+                                },
+                              },
+                            }),
+                          );
+                        });
+                      }
+                    }}
                     placeholder="e.g., Mobile Windshield Repair"
                     disabled={industryKey !== 'other'}
                   />
                 </div>
               </div>
-              <p className="text-xs text-neutral-400 pt-1">Choose an industry (or enter your own) to continue.</p>
+              <p className="text-xs text-neutral-400 pt-1">
+                Choose an industry (or enter your own) to continue.
+              </p>
             </div>
           )}
 
@@ -675,7 +966,11 @@ export default function HeroEditor({
                     disabled={aiLoading}
                     className="inline-flex items-center gap-2 rounded bg-purple-600 hover:bg-purple-500 px-3 py-1.5 text-sm text-white disabled:opacity-60"
                   >
-                    {aiLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+                    {aiLoading ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Sparkles className="h-4 w-4" />
+                    )}
                     {aiLoading ? 'Working…' : 'Suggest All'}
                   </button>
                 </div>
@@ -693,13 +988,22 @@ export default function HeroEditor({
                         disabled={imgLoading}
                         className="inline-flex items-center gap-1.5 rounded border-2 border-purple-500/70 text-purple-300 px-2 py-1 text-xs hover:bg-purple-500/10"
                       >
-                        {imgLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ImageIcon className="h-3.5 w-3.5" />} Generate
+                        {imgLoading ? (
+                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        ) : (
+                          <ImageIcon className="h-3.5 w-3.5" />
+                        )}{' '}
+                        Generate
                       </button>
                     </div>
                     <input
                       className={selectDark}
                       value={imgSubject}
-                      onChange={(e) => { setImgSubject(e.target.value); setImgSubjectTouched(true); update('image_subject', e.target.value as any); }}
+                      onChange={(e) => {
+                        setImgSubject(e.target.value);
+                        setImgSubjectTouched(true);
+                        update('image_subject', e.target.value as any);
+                      }}
                       placeholder={`${promptIndustryLabel} website hero banner`}
                     />
                     {imgError && <div className="text-xs text-red-300 mt-1">{imgError}</div>}
@@ -739,7 +1043,13 @@ export default function HeroEditor({
                           <button
                             className="text-xs px-2 py-1 rounded border border-white/15 hover:bg-white/10"
                             onClick={() => {
-                              setLocal((p: any) => ({ ...p, image_url: '', image: '', heroImage: '', backgroundImage: '' }));
+                              setLocal((p: any) => ({
+                                ...p,
+                                image_url: '',
+                                image: '',
+                                heroImage: '',
+                                backgroundImage: '',
+                              }));
                               bumpPreview();
                             }}
                           >
@@ -756,14 +1066,21 @@ export default function HeroEditor({
                         <button
                           onClick={() => {
                             setLocal((p: any) => {
-                              const cur = (p?.overlay_level ?? p?.overlay ?? 'none') as 'none'|'soft'|'strong';
+                              const cur = (p?.overlay_level ?? p?.overlay ?? 'none') as
+                                | 'none'
+                                | 'soft'
+                                | 'strong';
                               const next = cur === 'none' ? 'soft' : 'strong';
                               return {
                                 ...p,
                                 overlay_level: next,
                                 overlay: next,
-                                layout_mode: p?.layout_mode && p.layout_mode !== 'inline' ? p.layout_mode : 'background',
-                                layout: p?.layout && p.layout !== 'inline' ? p.layout : 'background',
+                                layout_mode:
+                                  p?.layout_mode && p.layout_mode !== 'inline'
+                                    ? p.layout_mode
+                                    : 'background',
+                                layout:
+                                  p?.layout && p.layout !== 'inline' ? p.layout : 'background',
                               };
                             });
                             // also notify renderer listeners
@@ -777,15 +1094,21 @@ export default function HeroEditor({
                         </button>
                       </div>
                       <div className="mt-2 inline-flex rounded-lg border border-white/15 bg-neutral-900 p-1 text-xs">
-                        {(['none','soft','strong'] as const).map((lvl) => (
+                        {(['none', 'soft', 'strong'] as const).map((lvl) => (
                           <button
                             key={lvl}
                             onClick={() => {
                               setLocal((p: any) => ({ ...p, overlay_level: lvl, overlay: lvl }));
-                              window.dispatchEvent(new CustomEvent('qs:hero:set', { detail: { overlay_level: lvl } }));
+                              window.dispatchEvent(
+                                new CustomEvent('qs:hero:set', { detail: { overlay_level: lvl } }),
+                              );
                               bumpPreview();
                             }}
-                            className={`px-3 py-1 rounded-md ${ (local?.overlay_level ?? local?.overlay ?? 'soft') === lvl ? 'bg-white text-gray-900' : 'text-white/80' }`}
+                            className={`px-3 py-1 rounded-md ${
+                              (local?.overlay_level ?? local?.overlay ?? 'soft') === lvl
+                                ? 'bg-white text-gray-900'
+                                : 'text-white/80'
+                            }`}
                           >
                             {lvl}
                           </button>
@@ -796,7 +1119,11 @@ export default function HeroEditor({
 
                   <div>
                     <label className="text-xs text-neutral-300">Style</label>
-                    <select className={selectDark} value={imgStyle} onChange={(e) => setImgStyle(e.target.value as any)}>
+                    <select
+                      className={selectDark}
+                      value={imgStyle}
+                      onChange={(e) => setImgStyle(e.target.value as any)}
+                    >
                       <option value="photo">Photo</option>
                       <option value="illustration">Illustration</option>
                       <option value="3d">3D Render</option>
@@ -806,7 +1133,10 @@ export default function HeroEditor({
 
                   <div className="md:col-span-3 flex items-center justify-between">
                     <label className="text-xs text-neutral-300">Include people in image</label>
-                    <Switch checked={imgIncludePeople} onCheckedChange={(v) => setImgIncludePeople(!!v)} />
+                    <Switch
+                      checked={imgIncludePeople}
+                      onCheckedChange={(v) => setImgIncludePeople(!!v)}
+                    />
                   </div>
                 </div>
               )}
@@ -817,40 +1147,77 @@ export default function HeroEditor({
                   <div className="grid md:grid-cols-3 gap-3 mt-3">
                     <div>
                       <label className="text-xs text-neutral-300">Headline</label>
-                      <input className={selectDark} value={local?.headline || ''} onChange={(e) => update('headline', e.target.value as any)} placeholder="Fast, Reliable Service" />
+                      <input
+                        className={selectDark}
+                        value={local?.headline || ''}
+                        onChange={(e) => update('headline', e.target.value as any)}
+                        placeholder="Fast, Reliable Service"
+                      />
                       {errorText(`${fieldKey}.headline`)}
                     </div>
                     <div className="md:col-span-2">
                       <label className="text-xs text-neutral-300">Subheadline</label>
-                      <input className={selectDark} value={local?.subheadline || ''} onChange={(e) => update('subheadline', e.target.value as any)} placeholder="24/7 local help with transparent pricing." />
+                      <input
+                        className={selectDark}
+                        value={local?.subheadline || ''}
+                        onChange={(e) => update('subheadline', e.target.value as any)}
+                        placeholder="24/7 local help with transparent pricing."
+                      />
                       {errorText(`${fieldKey}.subheadline`)}
                     </div>
                     <div>
                       <label className="text-xs text-neutral-300">CTA Text</label>
-                      <input className={selectDark} value={local?.cta_text || ''} onChange={(e) => update('cta_text', e.target.value as any)} placeholder="Get Started" />
+                      <input
+                        className={selectDark}
+                        value={local?.cta_text || ''}
+                        onChange={(e) => update('cta_text', e.target.value as any)}
+                        placeholder="Get Started"
+                      />
                       {errorText(`${fieldKey}.cta_text`)}
                     </div>
                     <div className="md:col-span-2">
                       <label className="text-xs text-neutral-300">CTA Action</label>
                       <div className="grid grid-cols-3 gap-2">
-                        <select className={selectDark} value={local?.cta_action || 'go_to_page'} onChange={(e) => update('cta_action', e.target.value as any)}>
+                        <select
+                          className={selectDark}
+                          value={local?.cta_action || 'go_to_page'}
+                          onChange={(e) => update('cta_action', e.target.value as any)}
+                        >
                           <option value="jump_to_contact">Jump to Contact</option>
                           <option value="go_to_page">Go to Page</option>
                           <option value="call_phone">Call Phone</option>
                         </select>
                         {(local?.cta_action || 'go_to_page') === 'go_to_page' && (
-                          <input className={selectDark} value={local?.cta_link ?? '/contact'} onChange={(e) => update('cta_link', e.target.value as any)} placeholder="/contact" />
+                          <input
+                            className={selectDark}
+                            value={local?.cta_link ?? '/contact'}
+                            onChange={(e) => update('cta_link', e.target.value as any)}
+                            placeholder="/contact"
+                          />
                         )}
                         {local?.cta_action === 'jump_to_contact' && (
-                          <input className={selectDark} value={local?.contact_anchor_id ?? 'contact'} onChange={(e) => update('contact_anchor_id', e.target.value as any)} placeholder="contact" />
+                          <input
+                            className={selectDark}
+                            value={local?.contact_anchor_id ?? 'contact'}
+                            onChange={(e) => update('contact_anchor_id', e.target.value as any)}
+                            placeholder="contact"
+                          />
                         )}
                         {local?.cta_action === 'call_phone' && (
-                          <input className={selectDark} value={local?.cta_phone ?? ''} onChange={(e) => update('cta_phone', e.target.value as any)} placeholder="enter 10-digit phone" />
+                          <input
+                            className={selectDark}
+                            value={local?.cta_phone ?? ''}
+                            onChange={(e) => update('cta_phone', e.target.value as any)}
+                            placeholder="enter 10-digit phone"
+                          />
                         )}
                       </div>
                       <div className="mt-1">
                         <label className="inline-flex items-center gap-2 text-xs">
-                          <Switch checked={!!local?.cta_show_phone_below} onCheckedChange={(v) => update('cta_show_phone_below', v as any)} />
+                          <Switch
+                            checked={!!local?.cta_show_phone_below}
+                            onCheckedChange={(v) => update('cta_show_phone_below', v as any)}
+                          />
                           <span>Show phone number under CTA</span>
                         </label>
                       </div>
@@ -862,7 +1229,11 @@ export default function HeroEditor({
                       <label className="text-xs text-neutral-300">Layout Mode</label>
                       <select
                         value={local?.layout || local?.layout_mode || 'inline'}
-                        onChange={(e) => { update('layout_mode', e.target.value as any); update('layout', e.target.value as any); bumpPreview(); }}
+                        onChange={(e) => {
+                          update('layout_mode', e.target.value as any);
+                          update('layout', e.target.value as any);
+                          bumpPreview();
+                        }}
                         className={selectDark}
                       >
                         <option value="inline">Inline Image</option>
@@ -874,25 +1245,59 @@ export default function HeroEditor({
                     <div>
                       <label className="text-xs text-neutral-300">Blur Amount (0–30px)</label>
                       <input
-                        type="range" min={0} max={30} step={1}
+                        type="range"
+                        min={0}
+                        max={30}
+                        step={1}
                         value={local?.blur_amount ?? 8}
-                        onChange={(e) => { update('blur_amount', Number(e.target.value) as any); bumpPreview(); }}
+                        onChange={(e) => {
+                          update('blur_amount', Number(e.target.value) as any);
+                          bumpPreview();
+                        }}
                         className={rangeDark}
                       />
                     </div>
                     <div>
                       <label className="text-xs text-neutral-300">Image X</label>
-                      <input className={selectDark} value={local?.image_x || ''} onChange={(e) => { update('image_x', e.target.value as any); bumpPreview(); }} placeholder="center" />
+                      <input
+                        className={selectDark}
+                        value={local?.image_x || ''}
+                        onChange={(e) => {
+                          update('image_x', e.target.value as any);
+                          bumpPreview();
+                        }}
+                        placeholder="center"
+                      />
                     </div>
                     <div>
                       <label className="text-xs text-neutral-300">Image Y</label>
-                      <input className={selectDark} value={local?.image_y || ''} onChange={(e) => { update('image_y', e.target.value as any); bumpPreview(); }} placeholder="bottom" />
+                      <input
+                        className={selectDark}
+                        value={local?.image_y || ''}
+                        onChange={(e) => {
+                          update('image_y', e.target.value as any);
+                          bumpPreview();
+                        }}
+                        placeholder="bottom"
+                      />
                     </div>
                     <div className="col-span-2">
                       <label className="text-xs text-neutral-300">Overlay Level</label>
                       <div className="mt-1 inline-flex rounded-lg border border-white/15 bg-neutral-900 p-1 text-xs">
                         {(['none', 'soft', 'strong'] as const).map((lvl) => (
-                          <button key={lvl} onClick={() => { update('overlay_level', lvl as any); update('overlay', lvl as any); bumpPreview(); }} className={`px-3 py-1 rounded-md ${(local?.overlay_level ?? local?.overlay ?? 'soft') === lvl ? 'bg-white text-gray-900' : 'text-white/80'}`}>
+                          <button
+                            key={lvl}
+                            onClick={() => {
+                              update('overlay_level', lvl as any);
+                              update('overlay', lvl as any);
+                              bumpPreview();
+                            }}
+                            className={`px-3 py-1 rounded-md ${
+                              (local?.overlay_level ?? local?.overlay ?? 'soft') === lvl
+                                ? 'bg-white text-gray-900'
+                                : 'text-white/80'
+                            }`}
+                          >
                             {lvl}
                           </button>
                         ))}
@@ -909,8 +1314,14 @@ export default function HeroEditor({
                   block={{
                     ...block,
                     type: 'hero',
-                    [fieldKey]: { ...(block as any)[fieldKey], ...toCanonicalHeroProps(local, template) },
-                    [altKey]: { ...(block as any)[altKey], ...toCanonicalHeroProps(local, template) },
+                    [fieldKey]: {
+                      ...(block as any)[fieldKey],
+                      ...toCanonicalHeroProps(local, template),
+                    },
+                    [altKey]: {
+                      ...(block as any)[altKey],
+                      ...toCanonicalHeroProps(local, template),
+                    },
                   }}
                   template={template as Template}
                 />
@@ -921,7 +1332,10 @@ export default function HeroEditor({
 
         {/* sticky footer */}
         <div className="sticky bottom-0 z-10 border-t border-white/10 bg-neutral-950/90 backdrop-blur px-4 py-3 flex justify-end gap-2">
-          <button onClick={() => onClose?.()} className="text-sm px-3 py-1.5 border border-white/10 rounded bg-neutral-900 hover:bg-neutral-800">
+          <button
+            onClick={() => onClose?.()}
+            className="text-sm px-3 py-1.5 border border-white/10 rounded bg-neutral-900 hover:bg-neutral-800"
+          >
             Cancel
           </button>
 
@@ -930,12 +1344,19 @@ export default function HeroEditor({
               onClick={() => setStep(2)}
               disabled={!step1Valid}
               className="text-sm px-3 py-1.5 rounded bg-purple-600 text-white hover:bg-purple-700 disabled:opacity-60"
-              title={step1Valid ? 'Continue' : 'Choose a site type (and industry if Small Business) to continue'}
+              title={
+                step1Valid
+                  ? 'Continue'
+                  : 'Choose a site type (and industry if Small Business) to continue'
+              }
             >
               Next
             </button>
           ) : (
-            <button onClick={handleSave} className="text-sm px-3 py-1.5 bg-purple-600 text-white rounded hover:bg-purple-700">
+            <button
+              onClick={handleSave}
+              className="text-sm px-3 py-1.5 bg-purple-600 text-white rounded hover:bg-purple-700"
+            >
               Save
             </button>
           )}

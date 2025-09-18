@@ -1,18 +1,24 @@
 // admin/lib/zod/blockSchema.ts
 import { z } from 'zod';
 
-// Allow http(s)://, /relative, #anchor, mailto:, tel:
-const RelativeOrAbsoluteUrl = z.string().min(1).refine(
-  (v) => /^(https?:\/\/|\/|#|mailto:|tel:)/i.test(v),
-  { message: 'Link must start with http(s)://, /, #, mailto:, or tel:' }
-);
+/* ───────────────────────────── URL helpers ───────────────────────────── */
+
+const RelativeOrAbsoluteUrl = z
+  .string()
+  .min(1)
+  .refine(
+    (v) => /^(https?:\/\/|\/|#|mailto:|tel:)/i.test(v),
+    { message: 'Link must start with http(s)://, /, #, mailto:, or tel:' }
+  );
 
 const urlOptional = z.preprocess(
   (v) => (typeof v === 'string' && v.trim() === '' ? undefined : v),
   z.string().url('Kitchen video URL must be valid').optional()
 );
 
-// Small helper for price coercion: "$19.99" | "19" | 19.99 → 1999
+const REL = /^(https?:\/\/|\/|#|mailto:|tel:)/i;
+
+// "$19.99" | "19" | 19.99 → 1999
 const usdToCents = (v: unknown): number | null => {
   if (typeof v === 'number' && Number.isFinite(v)) return Math.round(v * 100);
   if (typeof v === 'string') {
@@ -22,7 +28,7 @@ const usdToCents = (v: unknown): number | null => {
   return null;
 };
 
-/* ───────────────────────────── Hours of Operation ───────────────────────────── */
+/* ───────────────────────────── Hours of Operation ───────────────────────── */
 
 export const hoursOfOperationPropsSchema = z.object({
   title: z.string().optional(),
@@ -30,15 +36,23 @@ export const hoursOfOperationPropsSchema = z.object({
   alwaysOpen: z.boolean().optional(),
   note: z.string().optional(),
   display_style: z.enum(['table', 'stack']).optional(),
-  days: z.array(z.object({
-    key: z.enum(['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun']),
-    label: z.string(),
-    closed: z.boolean(),
-    periods: z.array(z.object({
-      open: z.string(),
-      close: z.string()
-    })).optional(),
-  })).optional(),
+  days: z
+    .array(
+      z.object({
+        key: z.enum(['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun']),
+        label: z.string(),
+        closed: z.boolean(),
+        periods: z
+          .array(
+            z.object({
+              open: z.string(),
+              close: z.string(),
+            })
+          )
+          .optional(),
+      })
+    )
+    .optional(),
 });
 
 export type DayKey = 'mon' | 'tue' | 'wed' | 'thu' | 'fri' | 'sat' | 'sun';
@@ -61,15 +75,17 @@ export type HoursOfOperationContent = {
   exceptions?: SpecialHours[];
 };
 
-export function defaultHoursContent(partial?: Partial<HoursOfOperationContent>): HoursOfOperationContent {
+export function defaultHoursContent(
+  partial?: Partial<HoursOfOperationContent>
+): HoursOfOperationContent {
   const baseDays: HoursOfOperationContent['days'] = [
     { key: 'mon', label: 'Mon', closed: false, periods: [{ open: '09:00', close: '17:00' }] },
     { key: 'tue', label: 'Tue', closed: false, periods: [{ open: '09:00', close: '17:00' }] },
     { key: 'wed', label: 'Wed', closed: false, periods: [{ open: '09:00', close: '17:00' }] },
     { key: 'thu', label: 'Thu', closed: false, periods: [{ open: '09:00', close: '17:00' }] },
     { key: 'fri', label: 'Fri', closed: false, periods: [{ open: '09:00', close: '17:00' }] },
-    { key: 'sat', label: 'Sat', closed: true,  periods: [] },
-    { key: 'sun', label: 'Sun', closed: true,  periods: [] },
+    { key: 'sat', label: 'Sat', closed: true, periods: [] },
+    { key: 'sun', label: 'Sun', closed: true, periods: [] },
   ];
   return {
     title: 'Business Hours',
@@ -103,16 +119,18 @@ export const HoursOfOperationSchema = z.object({
   alwaysOpen: z.boolean().optional(),
   note: z.string().optional(),
   display_style: z.enum(['table', 'stack']).optional(),
-  days: z.array(z.object({
-    key: z.enum(['mon','tue','wed','thu','fri','sat','sun']),
-    label: z.string(),
-    closed: z.boolean(),
-    periods: z.array(HoursPeriodSchema),
-  })),
+  days: z.array(
+    z.object({
+      key: z.enum(['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun']),
+      label: z.string(),
+      closed: z.boolean(),
+      periods: z.array(HoursPeriodSchema),
+    })
+  ),
   exceptions: z.array(SpecialHoursSchema).optional(),
 });
 
-/* ───────────────────────────── Shared Link schema ──────────────────────────── */
+/* ───────────────────────────── Shared Link schema ─────────────────────────── */
 
 const LinkSchema = z.object({
   label: z.string().min(1, 'Label is required'),
@@ -120,7 +138,7 @@ const LinkSchema = z.object({
   appearance: z.string().optional(),
 });
 
-/* ─────────────────────────────── Text Block ────────────────────────────────── */
+/* ─────────────────────────────── Text Block ───────────────────────────────── */
 
 export const TextBlockContent = z.preprocess((raw) => {
   const c = raw && typeof raw === 'object' ? { ...(raw as any) } : {};
@@ -145,54 +163,62 @@ export const TextBlockSchema = z.object({
   tone: z.string().default('neutral'),
 });
 
-/* ─────────────────────────── Meals/Reviews helpers ─────────────────────────── */
+/* ─────────────────────────── Meals/Reviews helpers ────────────────────────── */
 
 const emptyToUndef = <T extends z.ZodTypeAny>(schema: T) =>
-  z.preprocess(v => (typeof v === "string" && v.trim() === "" ? undefined : v), schema);
+  z.preprocess((v) => (typeof v === 'string' && v.trim() === '' ? undefined : v), schema);
 
-export const mealCardPropsSchema = z.object({
-  mealId:  emptyToUndef(z.string().uuid()).optional(),
-  mealSlug: emptyToUndef(z.string().min(1)).optional(),
-  showPrice: z.boolean().default(true),
-  showChef: z.boolean().default(false),
-  showRating: z.boolean().default(true),
-  showTags: z.boolean().default(true),
-  ctaText: z.string().default("View meal"),
-  variant: z.enum(["default","compact","hero"]).default("default"),
-}).refine(p => !!p.mealId || !!p.mealSlug, {
-  message: "Provide mealId or mealSlug",
-  path: ["mealSlug"],
-});
+export const mealCardPropsSchema = z
+  .object({
+    mealId: emptyToUndef(z.string().uuid()).optional(),
+    mealSlug: emptyToUndef(z.string().min(1)).optional(),
+    showPrice: z.boolean().default(true),
+    showChef: z.boolean().default(false),
+    showRating: z.boolean().default(true),
+    showTags: z.boolean().default(true),
+    ctaText: z.string().default('View meal'),
+    variant: z.enum(['default', 'compact', 'hero']).default('default'),
+  })
+  .refine((p) => !!p.mealId || !!p.mealSlug, {
+    message: 'Provide mealId or mealSlug',
+    path: ['mealSlug'],
+  });
 
-export const reviewsListPropsSchema = z.object({
-  mealId:  emptyToUndef(z.string().uuid()).optional(),
-  chefId:  emptyToUndef(z.string().uuid()).optional(),
-  siteId:  emptyToUndef(z.string().uuid()).optional(),
-  pageSize: z.number().int().min(1).max(50).default(6),
-  sort: z.enum(["recent","top"]).default("recent"),
-  minStars: z.preprocess(
-    v => (v === 0 || v === "0" || v === "" ? undefined : v),
-    z.number().int().min(1).max(5)
-  ).optional(),
-  showSummary: z.boolean().default(true),
-  showWriteCta: z.boolean().default(false),
-}).refine(p => !!p.mealId || !!p.chefId || !!p.siteId, {
-  message: "Provide mealId, chefId, or siteId",
-  path: ["siteId"],
-});
+export const reviewsListPropsSchema = z
+  .object({
+    mealId: emptyToUndef(z.string().uuid()).optional(),
+    chefId: emptyToUndef(z.string().uuid()).optional(),
+    siteId: emptyToUndef(z.string().uuid()).optional(),
+    pageSize: z.number().int().min(1).max(50).default(6),
+    sort: z.enum(['recent', 'top']).default('recent'),
+    minStars: z
+      .preprocess(
+        (v) => (v === 0 || v === '0' || v === '' ? undefined : v),
+        z.number().int().min(1).max(5)
+      )
+      .optional(),
+    showSummary: z.boolean().default(true),
+    showWriteCta: z.boolean().default(false),
+  })
+  .refine((p) => !!p.mealId || !!p.chefId || !!p.siteId, {
+    message: 'Provide mealId, chefId, or siteId',
+    path: ['siteId'],
+  });
 
-export const mealsGridPropsSchema = z.object({
-  siteSlug: emptyToUndef(z.string().min(1)).optional(),
-  siteId: emptyToUndef(z.string().uuid()).optional(),
-  tag: z.string().optional(),
-  q: z.string().optional(),
-  sort: z.enum(["recent","rating","price_asc","price_desc","popular"]).default("recent"),
-  limit: z.number().int().min(1).max(48).default(12),
-  columns: z.number().int().min(1).max(6).default(3),
-  ctaText: z.string().default("View meal"),
-}).refine(p => !!p.siteSlug || !!p.siteId, { message: "Provide siteSlug or siteId" });
+export const mealsGridPropsSchema = z
+  .object({
+    siteSlug: emptyToUndef(z.string().min(1)).optional(),
+    siteId: emptyToUndef(z.string().uuid()).optional(),
+    tag: z.string().optional(),
+    q: z.string().optional(),
+    sort: z.enum(['recent', 'rating', 'price_asc', 'price_desc', 'popular']).default('recent'),
+    limit: z.number().int().min(1).max(48).default(12),
+    columns: z.number().int().min(1).max(6).default(3),
+    ctaText: z.string().default('View meal'),
+  })
+  .refine((p) => !!p.siteSlug || !!p.siteId, { message: 'Provide siteSlug or siteId' });
 
-/* ─────────────────────────── Header / Footer blocks ────────────────────────── */
+/* ─────────────────────────── Header / Footer blocks ───────────────────────── */
 
 export const HeaderContent = z.preprocess((raw) => {
   const c = raw && typeof raw === 'object' ? { ...(raw as any) } : {};
@@ -219,10 +245,8 @@ const toCityString = (item: unknown): string => {
   return String(item ?? '');
 };
 
-const REL = /^(https?:\/\/|\/|#|mailto:|tel:)/i;
-
 const FooterContent = z.preprocess((raw) => {
-  const c = (raw && typeof raw === 'object') ? { ...(raw as any) } : {};
+  const c = raw && typeof raw === 'object' ? { ...(raw as any) } : {};
 
   if (Array.isArray(c.nav_items) && !Array.isArray(c.links)) c.links = c.nav_items;
   if (Array.isArray(c.navItems) && !Array.isArray(c.links)) c.links = c.navItems;
@@ -250,7 +274,7 @@ const FooterContent = z.preprocess((raw) => {
   links: z.array(LinkSchema).default([]),
 }).passthrough());
 
-/* ───────────────────── Chef profile (legacy coercion) ─────────────────────── */
+/* ───────────────────── Chef profile (legacy coercion) ────────────────────── */
 
 const ChefMealBase = z.object({
   id: z.string().optional(),
@@ -269,7 +293,7 @@ const ChefMealSchema = z.preprocess((val) => {
   return val;
 }, ChefMealBase);
 
-/* ───────────────────────────── Block schema map ────────────────────────────── */
+/* ───────────────────────────── Block schema map ───────────────────────────── */
 
 export const blockContentSchemaMap = {
   text: { label: 'Text Block', icon: '📝', schema: TextBlockContent },
@@ -315,32 +339,29 @@ export const blockContentSchemaMap = {
     label: 'Hero',
     icon: '🎯',
     schema: z.preprocess((raw) => {
-      // Coerce legacy / alternate field names to canonical keys
       const c = raw && typeof raw === 'object' ? { ...(raw as any) } : {};
-  
+
       // Legacy → canonical
       if (c.heading != null && c.headline == null) c.headline = c.heading;
       if (c.subheading != null && c.subheadline == null) c.subheadline = c.subheading;
       if (c.ctaLabel != null && c.cta_text == null) c.cta_text = c.ctaLabel;
       if (c.ctaHref != null && c.cta_link == null) c.cta_link = c.ctaHref;
       if (c.imageUrl != null && c.image_url == null) c.image_url = c.imageUrl;
-  
-      // Provide safe defaults on first save so validator doesn't fail
+
+      // Safe defaults
       if (c.headline == null || String(c.headline).trim() === '') c.headline = 'Welcome';
       if (c.subheadline == null) c.subheadline = '';
       if (c.cta_text == null) c.cta_text = '';
       if (c.cta_link == null) c.cta_link = '/';
       if (c.image_url == null) c.image_url = '';
-  
-      // Normalize layout defaults
+
       if (c.layout_mode == null) c.layout_mode = 'inline';
       if (c.mobile_layout_mode == null) c.mobile_layout_mode = 'inline';
       if (c.mobile_crop_behavior == null) c.mobile_crop_behavior = 'cover';
       if (c.image_position == null) c.image_position = 'center';
-  
+
       return c;
     }, z.object({
-      // Now schema validates the canonical + defaulted content
       headline: z.string().min(1).default('Welcome'),
       subheadline: z.string().optional().default(''),
       cta_text: z.string().optional().default(''),
@@ -361,14 +382,12 @@ export const blockContentSchemaMap = {
     })),
   },
 
-  /* UPDATED: services matches seeded props (objects), plus optional title/columns */
   services: {
     label: 'Services',
     icon: '🧰',
     schema: z.preprocess((raw) => {
       const c = raw && typeof raw === 'object' ? { ...(raw as any) } : {};
-  
-      // Accept legacy "items" as strings or objects; coerce strings to objects.
+
       if (Array.isArray(c.items)) {
         c.items = c.items
           .map((it: any) => {
@@ -376,7 +395,6 @@ export const blockContentSchemaMap = {
               return { name: it, description: '', price: undefined, href: undefined, icon: undefined };
             }
             if (it && typeof it === 'object') {
-              // normalize common alt keys
               const o: any = { ...it };
               if (o.title && !o.name) o.name = o.title;
               if (o.link && !o.href) o.href = o.link;
@@ -392,16 +410,14 @@ export const blockContentSchemaMap = {
           })
           .filter(Boolean);
       }
-  
-      // Provide a minimal default if items are missing (avoid first-save failure)
+
       if (!Array.isArray(c.items) || c.items.length === 0) {
         c.items = [{ name: 'Service A', description: '' }];
       }
-  
-      // Reasonable defaults
+
       if (c.columns == null) c.columns = 3;
       if (typeof c.title !== 'string') c.title = undefined;
-  
+
       return c;
     }, z.object({
       title: z.string().optional(),
@@ -469,7 +485,7 @@ export const blockContentSchemaMap = {
     label: 'Audio',
     icon: '🎧',
     schema: z.object({
-      provider: z.enum(['spotify','soundcloud','suno']),
+      provider: z.enum(['spotify', 'soundcloud', 'suno']),
       url: z.string().url('Audio URL must be valid'),
       title: z.string().optional(),
     }),
@@ -540,7 +556,7 @@ export const blockContentSchemaMap = {
 
   hours: { label: 'Hours of Operation', icon: '⏰', schema: HoursOfOperationSchema },
 
-  /* ───────────────────────────── NEW: Commerce blocks ───────────────────────── */
+  /* ───────────────────────────── NEW: Commerce blocks ─────────────────────── */
 
   products_grid: {
     label: 'Products Grid',
@@ -548,7 +564,7 @@ export const blockContentSchemaMap = {
     schema: z.preprocess((raw) => {
       const c = raw && typeof raw === 'object' ? { ...(raw as any) } : {};
 
-      // Aliases → canonical (we use camelCase productIds internally)
+      // Aliases → canonical
       if (Array.isArray((c as any).product_ids) && !Array.isArray((c as any).productIds)) {
         (c as any).productIds = (c as any).product_ids;
       }
@@ -569,8 +585,8 @@ export const blockContentSchemaMap = {
       const src = Array.isArray((c as any).products)
         ? (c as any).products
         : Array.isArray((c as any).items)
-          ? (c as any).items
-          : [];
+        ? (c as any).items
+        : [];
 
       const products = src
         .map((p: any, i: number) => {
@@ -578,9 +594,7 @@ export const blockContentSchemaMap = {
           const id = String(p.id ?? p.product_id ?? p.slug ?? p.sku ?? `p${i + 1}`);
           const title = String(p.title ?? p.name ?? `Item ${i + 1}`);
           const cents =
-            typeof p.price_cents === 'number'
-              ? p.price_cents
-              : usdToCents(p.price) ?? 0;
+            typeof p.price_cents === 'number' ? p.price_cents : usdToCents(p.price) ?? 0;
           const image_url = p.image_url ?? p.imageUrl ?? p.image ?? '';
           return { id, title, price_cents: Math.max(0, Math.round(cents)), image_url };
         })
@@ -598,7 +612,7 @@ export const blockContentSchemaMap = {
       return c;
     }, z.object({
       title: z.string().default('Featured Products'),
-      columns: z.number().int().min(1).max(4).default(3),
+      columns: z.number().int().min(1).max(6).default(3),
       productIds: z.array(z.string()).default([]),
       products: z.array(z.object({
         id: z.string().min(1),
@@ -619,37 +633,54 @@ export const blockContentSchemaMap = {
       if (c.serviceId && !c.productId) c.productId = c.serviceId;
       if (c.product_id && !c.productId) c.productId = c.product_id;
 
+      if (c.cta && !c.cta_text) c.cta_text = c.cta;
+      if (c.href && !c.cta_link) c.cta_link = c.href;
+      if (c.image && !c.image_url) c.image_url = c.image;
+
+      if (typeof c.description === 'string' && !c.description_html) {
+        c.description_html = c.description;
+      }
+
       // Price coercion
-      if (c.price_cents == null && (c.price != null)) {
+      if (c.price_cents == null && c.price != null) {
         const cents = usdToCents(c.price);
         if (cents != null) c.price_cents = cents;
       }
+      if (c.compare_at_cents == null && c.compareAt != null) {
+        const cents = usdToCents(c.compareAt);
+        if (cents != null) c.compare_at_cents = cents;
+      }
 
       // Defaults
-      if (!c.title) c.title = 'Book a Service';
-      if (c.description == null) c.description = '';
-      if (c.cta == null) c.cta = 'Book now';
+      if (!c.title) c.title = 'Featured Service';
+      if (c.subtitle == null) c.subtitle = '';
+      if (c.description_html == null) c.description_html = '';
       if (typeof c.showPrice !== 'boolean') c.showPrice = true;
+      if (!('cta_text' in c)) c.cta_text = 'Get Started';
+      if (!('cta_link' in c)) c.cta_link = '/contact';
 
       return c;
     }, z.object({
-      title: z.string().default('Book a Service'),
-      description: z.string().default(''),
+      title: z.string().min(1).default('Featured Service'),
+      subtitle: z.string().optional().default(''),
+      description_html: z.string().optional().default(''),
+      price_cents: z.number().int().min(0).optional(),
+      compare_at_cents: z.number().int().min(0).optional(),
+      image_url: z.union([z.string().url(), z.literal('')]).optional(),
+      cta_text: z.string().optional().default('Get Started'),
+      cta_link: RelativeOrAbsoluteUrl.optional().default('/contact'),
       productId: z.string().min(1).optional(),
       showPrice: z.boolean().default(true),
-      price_cents: z.number().int().min(0).optional(),
-      cta: z.string().default('Book now'),
-      href: RelativeOrAbsoluteUrl.optional(),
     })),
   },
 } satisfies Record<string, { label: string; icon: string; schema: z.ZodTypeAny }>;
 
-/* ─────────────── Type alias resolver (products-grid → products_grid, etc.) ─────────────── */
+/* ─────────────── Type alias resolver (products-grid → products_grid, etc.) ───────────── */
 
 const TYPE_ALIASES: Record<string, string> = {
   'products-grid': 'products_grid',
   'product-grid': 'products_grid',
-  'products': 'products_grid',
+  products: 'products_grid',
 };
 
 export function resolveCanonicalType(t: string): string {
@@ -657,7 +688,7 @@ export function resolveCanonicalType(t: string): string {
   return TYPE_ALIASES[k] ?? k;
 }
 
-/* ─────────────────────────── Discriminated union ──────────────────────────── */
+/* ─────────────────────────── Discriminated union ─────────────────────────── */
 
 export function createBlockUnion<
   T extends Record<string, { label: string; icon: string; schema: z.ZodTypeAny }>
@@ -682,7 +713,8 @@ export function createBlockUnion<
   return { schemas, meta };
 }
 
-const { schemas: BasicBlockSchemas, meta: blockMeta } = createBlockUnion(blockContentSchemaMap);
+const { schemas: BasicBlockSchemas, meta: blockMeta } =
+  createBlockUnion(blockContentSchemaMap);
 
 /**
  * Union schema with a preprocessor that:
@@ -690,43 +722,47 @@ const { schemas: BasicBlockSchemas, meta: blockMeta } = createBlockUnion(blockCo
  *  - normalizes common product ID shapes at the top level (so unknown types don't fail)
  */
 export const BlockSchema: z.ZodTypeAny = z.lazy(() =>
-  z.preprocess((raw) => {
-    if (raw && typeof raw === 'object') {
-      const b: any = { ...(raw as any) };
+  z.preprocess(
+    (raw) => {
+      if (raw && typeof raw === 'object') {
+        const b: any = { ...(raw as any) };
 
-      if (typeof b.type === 'string') {
-        const canon = resolveCanonicalType(b.type);
-        if (canon !== b.type) b.type = canon;
-      }
-
-      // If the incoming block is (or becomes) products_grid, normalize keys early
-      if (b.type === 'products_grid') {
-        const cIn: any = b.content ?? b.props ?? {};
-        const c: any = { ...cIn };
-
-        if (Array.isArray(c.product_ids) && !Array.isArray(c.productIds)) c.productIds = c.product_ids;
-        if (Array.isArray(c.ids) && !Array.isArray(c.productIds)) c.productIds = c.ids;
-        if (Array.isArray(c.items) && !Array.isArray(c.productIds)) c.productIds = c.items.map((x: any) => x?.id).filter(Boolean);
-
-        if (typeof c.columns === 'string') {
-          const n = Number(c.columns);
-          c.columns = Number.isFinite(n) ? n : c.columns;
+        if (typeof b.type === 'string') {
+          const canon = resolveCanonicalType(b.type);
+          if (canon !== b.type) b.type = canon;
         }
 
-        b.content = c;
-      }
+        // If products_grid, normalize keys early
+        if (b.type === 'products_grid') {
+          const cIn: any = b.content ?? b.props ?? {};
+          const c: any = { ...cIn };
 
-      return b;
-    }
-    return raw;
-  },
-  z.discriminatedUnion(
-    'type',
-    BasicBlockSchemas as unknown as [
-      z.ZodDiscriminatedUnionOption<'type'>,
-      ...z.ZodDiscriminatedUnionOption<'type'>[]
-    ]
-  ))
+          if (Array.isArray(c.product_ids) && !Array.isArray(c.productIds)) c.productIds = c.product_ids;
+          if (Array.isArray(c.ids) && !Array.isArray(c.productIds)) c.productIds = c.ids;
+          if (Array.isArray(c.items) && !Array.isArray(c.productIds)) {
+            c.productIds = c.items.map((x: any) => x?.id).filter(Boolean);
+          }
+
+          if (typeof c.columns === 'string') {
+            const n = Number(c.columns);
+            c.columns = Number.isFinite(n) ? n : c.columns;
+          }
+
+          b.content = c;
+        }
+
+        return b;
+      }
+      return raw;
+    },
+    z.discriminatedUnion(
+      'type',
+      BasicBlockSchemas as unknown as [
+        z.ZodDiscriminatedUnionOption<'type'>,
+        ...z.ZodDiscriminatedUnionOption<'type'>[]
+      ]
+    )
+  )
 );
 
 export const BlocksArraySchema = z.array(BlockSchema);
@@ -812,8 +848,8 @@ export const blockPreviewFallback: Record<Block['type'], string> = Object.entrie
 
 export { blockMeta };
 
-/* ───────────────────────────── Convenience defaults ────────────────────────── */
-/** Minimal defaults for blocks that often appear first and can be empty on seed. */
+/* ───────────────────────────── Convenience defaults ───────────────────────── */
+
 const HERO_DEFAULT_CONTENT = {
   headline: 'Welcome',
   subheadline: '',
@@ -828,15 +864,9 @@ const HERO_DEFAULT_CONTENT = {
 
 /* ──────────────────────────── Full-schema helpers ─────────────────────────── */
 
-/**
- * Build a full-block schema from a content schema + type literal (matches editor/validator shape).
- * This version:
- *  - accepts legacy { props } blocks by mapping props → content
- *  - injects sensible defaults when content is missing (e.g., hero)
- */
 function makeFullBlockSchema(type: string, content: z.ZodTypeAny) {
   return z.preprocess((raw) => {
-    const b = (raw && typeof raw === 'object') ? { ...(raw as any) } : raw as any;
+    const b = raw && typeof raw === 'object' ? { ...(raw as any) } : (raw as any);
 
     if (!b || typeof b !== 'object') return raw;
 
@@ -845,12 +875,11 @@ function makeFullBlockSchema(type: string, content: z.ZodTypeAny) {
       b.content = b.props;
     }
 
-    // Inject safe defaults for blocks that might be empty at seed time
+    // Inject safe defaults where it helps pass first-save
     if (b.content == null) {
       if (type === 'hero') {
         b.content = { ...HERO_DEFAULT_CONTENT, ...(b.content ?? {}) };
       }
-      // Add other types here in the future if needed
     }
 
     return b;
@@ -865,16 +894,10 @@ function makeFullBlockSchema(type: string, content: z.ZodTypeAny) {
   }));
 }
 
-/** Map of canonical type → full block schema (with .safeParse on the whole block). */
 export const blockFullSchemaMap: Record<string, z.ZodTypeAny> = Object.fromEntries(
   Object.entries(blockContentSchemaMap).map(([type, cfg]) => [type, makeFullBlockSchema(type, cfg.schema)])
 );
 
-/**
- * Augment each entry in blockContentSchemaMap with:
- *  - fullSchema: the full block schema
- *  - safeParse: a direct alias to fullSchema.safeParse
- */
 for (const [type, cfg] of Object.entries(blockContentSchemaMap)) {
   const full = blockFullSchemaMap[type];
   // @ts-expect-error augment at runtime for convenience
@@ -883,12 +906,10 @@ for (const [type, cfg] of Object.entries(blockContentSchemaMap)) {
   cfg.safeParse = full.safeParse.bind(full);
 }
 
-/** Return the content/props Zod schema for a given block type (or null). */
 export function schemaForBlockType(type: string): z.ZodTypeAny | null {
   return (blockContentSchemaMap as any)[type]?.schema ?? null;
 }
 
-/** Return the full Zod schema (type+content+meta) for a given block type (or null). */
 export function schemaForBlockTypeFull(type: string): z.ZodTypeAny | null {
   return blockFullSchemaMap[type] ?? null;
 }

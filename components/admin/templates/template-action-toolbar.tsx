@@ -713,20 +713,20 @@ export function TemplateActionToolbar({
 
   const fireCapture = () => window.dispatchEvent(new CustomEvent('qs:history:capture'));
 
-  const toggleColor = () => {
-    fireCapture();
-    const nextMode: 'light'|'dark' = colorPref === 'dark' ? 'light' : 'dark';
-    setColorPref(nextMode);
-    try { localStorage.setItem('qs:preview:color', nextMode); } catch {}
+  // const toggleColor = () => {
+  //   fireCapture();
+  //   const nextMode: 'light'|'dark' = colorPref === 'dark' ? 'light' : 'dark';
+  //   setColorPref(nextMode);
+  //   try { localStorage.setItem('qs:preview:color', nextMode); } catch {}
 
-    const next = { ...tplRef.current, color_mode: nextMode } as Template;
-    apply(next);
+  //   const next = { ...tplRef.current, color_mode: nextMode } as Template;
+  //   apply(next);
 
-    // queue autosave instead of immediate commit
-    queueFullSave('autosave');
+  //   // queue autosave instead of immediate commit
+  //   queueFullSave('autosave');
 
-    window.dispatchEvent(new CustomEvent('qs:preview:set-color-mode', { detail: nextMode }));
-  };
+  //   window.dispatchEvent(new CustomEvent('qs:preview:set-color-mode', { detail: nextMode }));
+  // };
 
   // fullscreen helpers
   const [isFullscreen, setIsFullscreen] = useState(false);
@@ -1201,9 +1201,9 @@ export function TemplateActionToolbar({
             </Button>
 
             {/* Color mode + viewport */}
-            <Button size="icon" variant="ghost" title={colorPref === 'dark' ? 'Light mode' : 'Dark mode'} onClick={toggleColor} aria-pressed={colorPref === 'dark'}>
+            {/* <Button size="icon" variant="ghost" title={colorPref === 'dark' ? 'Light mode' : 'Dark mode'} onClick={toggleColor} aria-pressed={colorPref === 'dark'}>
               {colorPref === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
-            </Button>
+            </Button> */}
 
             <Button size="icon" variant="ghost" title="Full screen (F)" onClick={toggleFullscreen} aria-pressed={isFullscreen}>
               {isFullscreen ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}

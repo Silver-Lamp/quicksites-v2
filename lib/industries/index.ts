@@ -4,6 +4,7 @@
 export type IndustryKey =
   | 'towing'
   | 'window_washing'
+  | 'windshield_repair'
   | 'roof_cleaning'
   | 'landscaping'
   | 'hvac'
@@ -49,6 +50,7 @@ export type IndustryKey =
 export const INDUSTRIES: ReadonlyArray<{ key: IndustryKey; label: string }> = [
   { key: 'towing',               label: 'Towing' },
   { key: 'window_washing',       label: 'Window Washing' },
+  { key: 'windshield_repair',    label: 'Windshield Repair' },
   { key: 'roof_cleaning',        label: 'Roof Cleaning' },
   { key: 'landscaping',          label: 'Landscaping' },
   { key: 'hvac',                 label: 'HVAC' },
@@ -123,6 +125,7 @@ export const INDUSTRY_LABELS: ReadonlyArray<string> = Object.values(KEY_TO_LABEL
 export const INDUSTRY_HINTS: Partial<Record<string, string>> = {
   'Towing': 'Emphasize 24/7 dispatch, rapid ETA, roadside services, transparent pricing.',
   'Window Washing': 'Residential & commercial, safety, streak-free, maintenance plans.',
+  'Windshield Repair': 'Safe windshield replacement, damage repair, damage detection, mobile service.',
   'Pressure Washing': 'Driveways/siding/decks, safe pressures, restoration effect, curb appeal.',
   'Landscaping': 'Seasonal maintenance, design/build, irrigation, hardscapes, HOA packages.',
   'HVAC': 'Emergency service, maintenance plans, SEER ratings, financing, IAQ.',
@@ -166,6 +169,7 @@ export function toIndustryKey(input?: string | null): IndustryKey {
   if (x.includes('plumb')) return 'plumbing';
   if (x.includes('roof')) return 'roof_cleaning';
   if (x.includes('window')) return 'window_washing';
+  if (x.includes('windshield')) return 'windshield_repair';
   if (x.includes('pressure') || x.includes('power wash')) return 'pressure_washing';
   if (x.includes('lawn') || x.includes('landsc')) return 'landscaping';
   if (x.includes('hvac')) return 'hvac';

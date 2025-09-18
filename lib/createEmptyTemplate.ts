@@ -5,7 +5,6 @@ import { createDefaultBlock } from '@/lib/createDefaultBlock';
 function generateSlug(base: string) {
   return base.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '').trim();
 }
-
 function generateUniqueSuffix() {
   return Math.random().toString(36).slice(2, 6);
 }
@@ -19,11 +18,11 @@ export function createEmptyTemplate(base = 'new-template'): Template {
   const headerBlock = createDefaultBlock('header') as any;
   const footerBlock = createDefaultBlock('footer') as any;
 
-  // Seed a single Home page (header/footer are global; not part of page body)
+  // Seed a single Home page
   const homePage = {
     id: crypto.randomUUID(),
     slug: 'index',
-    path: '/',                 // many renderers prefer a canonical path
+    path: '/',
     title: 'Home',
     show_header: true,
     show_footer: true,
@@ -32,7 +31,6 @@ export function createEmptyTemplate(base = 'new-template'): Template {
     // Canonical runtime/editor:
     blocks: [defaultHero],
   };
-
   const pages = [homePage];
 
   return {
@@ -44,7 +42,9 @@ export function createEmptyTemplate(base = 'new-template'): Template {
     theme: 'default',
     brand: 'default',
     commit: '',
-    industry: 'general',
+    // ❌ do NOT set industry of any kind here (column or meta)
+    // industry: undefined,
+
     hero_url: '',
     banner_url: '',
     logo_url: '',
@@ -58,13 +58,10 @@ export function createEmptyTemplate(base = 'new-template'): Template {
     custom_domain: '',
     services: [],
 
-    // Global site-wide chrome (single source of truth)
-    headerBlock,
-    footerBlock,
-
-    // Legacy top-level mirror (kept for backwards compatibility)
+    // Keep legacy top-level mirror for older UIs
     pages,
 
+    // Optional marketing meta (no industry)
     meta: {
       title: slug,
       description: `Website template for ${slug}`,
@@ -73,11 +70,36 @@ export function createEmptyTemplate(base = 'new-template'): Template {
       appleIcons: '',
     },
 
-    // Canonical location for editor/runtime data
+    // Canonical data bag used by editor/runtime
     data: {
+      // put header/footer here so /api/templates/create can pick them up
+      headerBlock,
+      footerBlock,
+
       services: [],
       pages, // keep in sync with top-level `pages`
-      // color_mode intentionally not defaulted; editor/runtime decides fallback
+
+      // Provide a meta object but DO NOT include industry keys.
+      meta: {
+        identity: {},
+        services: [],
+        siteTitle: null,
+        site_type: null,
+        contact: {
+          email: null, phone: null,
+          address: null, address2: null,
+          city: null, state: null, postal: null,
+          latitude: null, longitude: null,
+        },
+        // ❌ no industry / industry_label / industry_other here
+      },
+
+      // Let the UI decide the visual mode
+      // color_mode intentionally omitted
     },
-  } as Template;
+
+    // These columns are handled by the create API; included here for typing compatibility.
+    headerBlock,
+    footerBlock,
+  } as unknown as Template;
 }

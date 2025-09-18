@@ -1,14 +1,16 @@
+// app/api/hero/suggest/route.ts
 import OpenAI from 'openai';
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { createServerClient } from '@supabase/ssr';
+import { resolveIndustryKey, toIndustryLabel } from '@/lib/industries';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY! });
 
-// simple in-memory limiter
+// ───────────────────────────────── Rate limit (in-memory) ─────────────────────────────────
 type Bucket = { start: number; count: number };
 const mem = (globalThis as any).__aiHeroSuggestBucket || new Map<string, Bucket>();
 (globalThis as any).__aiHeroSuggestBucket = mem;
@@ -20,7 +22,7 @@ function limited(key: string, limit = 20, windowMs = 60_000) {
   return b.count > limit;
 }
 
-// small helpers
+// ───────────────────────────────── helpers ─────────────────────────────────
 const trim = (s: any) => String(s ?? '').trim();
 const cap = (s: string) => s.replace(/\s+/g, ' ').trim();
 
@@ -95,14 +97,69 @@ function systemFor(type: SiteType) {
 }
 
 function normalizeModelJson(obj: any) {
-  // Accept common variants the model might emit
-  const headline =
-    trim(obj?.headline) || trim(obj?.heading) || trim(obj?.title);
-  const subheadline =
-    trim(obj?.subheadline) || trim(obj?.subheading) || trim(obj?.tagline) || trim(obj?.description);
-  const cta =
-    trim(obj?.cta_text) || trim(obj?.ctaLabel) || trim(obj?.cta);
+  const headline = trim(obj?.headline) || trim(obj?.heading) || trim(obj?.title);
+  const subheadline = trim(obj?.subheadline) || trim(obj?.subheading) || trim(obj?.tagline) || trim(obj?.description);
+  const cta = trim(obj?.cta_text) || trim(obj?.ctaLabel) || trim(obj?.cta);
   return { headline, subheadline, cta_text: cta };
+}
+
+// ──────────────────────────────── industry derivation ────────────────────────────────
+type Incoming = {
+  template_id?: string;
+  industry?: string;     // human label (may be "", "Other")
+  industry_key?: string; // canonical key like "windshield_repair" | "other"
+  site_type?: SiteType;
+  services?: string[];
+  business_name?: string;
+  city?: string;
+  state?: string;
+};
+
+function labelFromKey(key: string) {
+  const k = resolveIndustryKey(key);
+  return k && k !== 'other' ? toIndustryLabel(k) : '';
+}
+
+/**
+ * Decide on a specific industry label, preferring:
+ *   1) body.industry_key (when not 'other')
+ *   2) body.industry label (when non-empty and not literally "Other")
+ *   3) template.data.meta: industry_other → label, or industry key → mapped label
+ *   4) template columns: industry_label (unless "Other")
+ * If nothing found, return '' to indicate "generic".
+ */
+function deriveIndustryLabelFrom(db: any, body: Incoming): string {
+  // #1: explicit key from request
+  const bodyKey = trim(body.industry_key);
+  if (bodyKey && bodyKey !== 'other') {
+    const lbl = labelFromKey(bodyKey);
+    if (lbl) return lbl;
+  }
+  // #2: explicit human label from request
+  const bodyLabel = trim(body.industry);
+  if (bodyLabel && bodyLabel.toLowerCase() !== 'other') return bodyLabel;
+
+  // Pull from template meta/columns
+  const meta = (db?.data as any)?.meta ?? {};
+  const metaOther = trim(meta.industry_other);
+  if (metaOther) return metaOther;
+
+  const metaKey = trim(meta.industry);
+  if (metaKey && metaKey !== 'other') {
+    const lbl = labelFromKey(metaKey);
+    if (lbl) return lbl;
+  }
+
+  const colKey = trim(db?.industry);
+  if (colKey && colKey !== 'other') {
+    const lbl = labelFromKey(colKey);
+    if (lbl) return lbl;
+  }
+
+  const colLabel = trim(meta.industry_label ?? db?.industry_label);
+  if (colLabel && colLabel.toLowerCase() !== 'other') return colLabel;
+
+  return '';
 }
 
 export async function POST(req: Request) {
@@ -128,64 +185,61 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Rate limit exceeded' }, { status: 429 });
     }
 
-    const body = await req.json();
-    const {
-      template_id,
-      industry,             // label; may be "Portfolio" / "Blog" etc when not small business
-      site_type,            // 'small_business' | 'portfolio' | 'blog' | 'about_me'
-      services = [],
-      business_name,
-      city,
-      state,
-    } = body || {};
+    const body = (await req.json()) as Incoming;
 
-    // Prefer DB lookup (also pull data.meta.site_type if available)
+    // Prefer one DB fetch that we can reuse for both meta and context
     let db: any = {};
-    if (template_id) {
+    if (body.template_id) {
       const { data } = await supabase
         .from('templates')
-        .select('industry, services, business_name, city, state, data')
-        .eq('id', template_id)
-        .single();
+        .select('industry, industry_label, services, business_name, city, state, data, site_type')
+        .eq('id', body.template_id)
+        .maybeSingle();
       db = data || {};
     }
 
+    // Determine site type (prefer request, then meta, then column, then sensible default)
     const dbSiteType: SiteType | null =
       (db?.data?.meta?.site_type as SiteType | undefined) ??
       (db?.site_type as SiteType | undefined) ??
       null;
 
     const finalSiteType: SiteType =
-      (site_type as SiteType) ||
+      (body.site_type as SiteType) ||
       dbSiteType ||
-      // if they already chose a concrete industry previously, treat as small business
-      ((db?.industry && db.industry !== 'other') ? 'small_business' : 'small_business');
+      'small_business';
 
-    // For small business, this will be a real industry label; for others, it can be "Portfolio"/etc
-    const finalIndustryLabel = cap(db?.industry ?? industry ?? (
-      finalSiteType === 'small_business' ? 'Local Services' : finalSiteType.replace('_', ' ')
-    ));
+    // 🔧 Hardened industry derivation
+    const finalIndustryLabel = deriveIndustryLabelFrom(db, body); // '' means "generic"
 
-    const finalServices = Array.isArray(db?.services) && db.services.length ? db.services : services;
-    const biz = trim(db?.business_name ?? business_name);
-    const loc = [trim(db?.city ?? city), trim(db?.state ?? state)].filter(Boolean).join(', ');
+    // Context for prompt
+    const finalServices =
+      (Array.isArray(db?.services) && db.services.length ? db.services : body.services) ?? [];
+    const biz = trim(db?.business_name ?? body.business_name);
+    const loc = [trim(db?.city ?? body.city), trim(db?.state ?? body.state)]
+      .filter(Boolean)
+      .join(', ');
 
     const sys = systemFor(finalSiteType);
 
-    const userMsg = [
+    const contextLines: string[] = [
       `Site Type: ${finalSiteType}`,
-      `Label/Industry: ${finalIndustryLabel}`,
-      biz ? `Business: ${biz}` : null,
-      finalServices?.length ? `Services: ${finalServices.join(', ')}` : null,
-      loc ? `Location: ${loc}` : null,
+    ];
+    if (finalIndustryLabel) contextLines.push(`Label/Industry: ${finalIndustryLabel}`);
+    if (biz) contextLines.push(`Business: ${biz}`);
+    if (finalServices.length) contextLines.push(`Services: ${finalServices.join(', ')}`);
+    if (loc) contextLines.push(`Location: ${loc}`);
+    contextLines.push(
       finalSiteType === 'small_business'
         ? 'Audience: local customers seeking quick, trustworthy service.'
         : finalSiteType === 'portfolio'
           ? 'Audience: prospective clients reviewing past work.'
           : finalSiteType === 'blog'
             ? 'Audience: readers interested in your ideas and updates.'
-            : 'Audience: people who want to know who you are and how to contact you.',
-    ].filter(Boolean).join('\n');
+            : 'Audience: people who want to know who you are and how to contact you.'
+    );
+
+    const userMsg = contextLines.join('\n');
 
     const completion = await openai.chat.completions.create({
       model: 'gpt-4o-mini',
@@ -204,12 +258,16 @@ export async function POST(req: Request) {
     const norm = normalizeModelJson(parsed);
     const fallbacks = defaultsFor(finalSiteType, biz || undefined);
 
-    // choose normalized or defaults; also normalize whitespace and stray punctuation
-    const headline = cap(norm.headline || fallbacks.headline).replace(/\.$/, '');
+    const headline = cap((norm.headline || fallbacks.headline)).replace(/\.$/, '');
     const subheadline = cap(norm.subheadline || fallbacks.subheadline);
     const cta_text = cap(norm.cta_text || fallbacks.cta_text);
 
-    return NextResponse.json({ headline, subheadline, cta_text });
+    return NextResponse.json({
+      headline,
+      subheadline,
+      cta_text,
+      generic: !finalIndustryLabel, // helpful flag for debugging/UX
+    });
   } catch (e: any) {
     console.error('hero/suggest error', e);
     return NextResponse.json({ error: 'Failed to suggest copy' }, { status: 500 });

@@ -96,6 +96,8 @@ const INDUSTRY_HINTS: Record<string, string> = {
     'Residential & commercial streak-free results, safety, water-fed poles, maintenance plans.',
   'Window Cleaning':
     'Residential & commercial streak-free results, safety, water-fed poles, maintenance plans.',
+  'Windshield Repair':
+    'Safe windshield replacement, damage repair, damage detection, mobile service.',
   'Roof Cleaning':
     'Soft-wash, moss/algae removal, protect shingles, before/after proof, warranties.',
   'Landscaping':

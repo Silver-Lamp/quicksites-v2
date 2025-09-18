@@ -48,48 +48,175 @@ function obj(v: any) {
   try { return JSON.parse(String(v)); } catch { return {}; }
 }
 
-/** Merge identity -> meta.identity and legacy meta fields; backfill missing columns from identity. */
+/* ---------------- meta / industry helpers ---------------- */
+
+/** lightweight slugifier (keeps ascii, numbers, underscores, hyphens) */
+function toSlug(s: any): string | null {
+  if (s == null) return null;
+  const raw = String(s).trim().toLowerCase();
+  if (!raw) return null;
+  // convert spaces to underscores and collapse
+  const slug = raw
+    .replace(/\s+/g, '_')
+    .replace(/[^a-z0-9_-]/g, '_')
+    .replace(/_+/g, '_')
+    .replace(/^_+|_+$/g, '');
+  return slug || null;
+}
+
+/** Title-ize a slug if we don't get an explicit label */
+function humanizeSlug(slug: string): string {
+  return slug
+    .split(/[_-]/g)
+    .filter(Boolean)
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+    .join(' ');
+}
+
+/**
+ * Normalize the "industry" triplet:
+ *  - Prefer an explicit incoming key (even if we don't recognize it globally).
+ *  - Never downgrade a previously specific key to "other" unless the incoming
+ *    patch explicitly asks for "other" (or provides other-text only).
+ *  - Provide a sensible label if absent.
+ */
+function normalizeIndustryTriplet(
+  incomingMeta: any,
+  beforeMeta: any
+): { industry?: string | null; industry_label?: string | null; industry_other?: string | null } {
+  const inKeyRaw = incomingMeta?.industry;
+  const inKeySlug = toSlug(inKeyRaw);
+  const inLabel = (incomingMeta?.industry_label ?? '').toString().trim() || null;
+  const inOther = (incomingMeta?.industry_other ?? '').toString().trim() || null;
+
+  const prevKeyRaw = beforeMeta?.industry;
+  const prevKeySlug = toSlug(prevKeyRaw);
+  const prevLabel = (beforeMeta?.industry_label ?? '').toString().trim() || null;
+  const prevOther = (beforeMeta?.industry_other ?? '').toString().trim() || null;
+
+  // CASE 1: Caller explicitly set a key
+  if (inKeySlug) {
+    if (inKeySlug === 'other') {
+      // Explicitly "other"
+      const otherText = inOther || null;
+      return {
+        industry: 'other',
+        industry_label: inLabel || 'Other',
+        industry_other: otherText,
+      };
+    }
+    // Any non-"other" slug is treated as a valid specific industry
+    return {
+      industry: inKeySlug,
+      industry_label: inLabel || humanizeSlug(inKeySlug),
+      industry_other: null,
+    };
+  }
+
+  // CASE 2: No incoming key, but "other" text was provided
+  if (inOther && !inKeySlug) {
+    return {
+      industry: 'other',
+      industry_label: 'Other',
+      industry_other: inOther,
+    };
+  }
+
+  // CASE 3: No incoming changes — keep previous triplet as-is
+  if (prevKeySlug) {
+    if (prevKeySlug === 'other') {
+      return {
+        industry: 'other',
+        industry_label: prevLabel || 'Other',
+        industry_other: prevOther || null,
+      };
+    }
+    return {
+      industry: prevKeySlug,
+      industry_label: prevLabel || humanizeSlug(prevKeySlug),
+      industry_other: null,
+    };
+  }
+
+  // CASE 4: No info at all; return empty so caller's merge doesn't overwrite
+  return {};
+}
+
+/** Restrict meta keys we explicitly support merging at this layer. */
+const ALLOWED_META_KEYS = new Set<string>([
+  // identity mirror container
+  'identity',
+  // industry triplet
+  'industry',
+  'industry_label',
+  'industry_other',
+  // other known knobs we tolerate at this layer (extend as needed)
+  'site_type',
+  'siteTitle',
+  'business',
+  'contact',
+  'services',
+]);
+
+/** Merge identity -> meta.identity and legacy meta fields; backfill missing columns from identity.
+ *  Additionally: normalize the industry triplet so we don't silently downgrade to "other".
+ */
 function enrichPatchWithIdentity(originalPatch: any, beforeData: any) {
   const patch = { ...(originalPatch || {}) };
   const inData = obj(patch.data);
   const inMeta = obj(inData.meta);
   const beforeMeta = obj(beforeData?.meta);
 
+  // DEBUG: show incoming meta payload to help catch drops
+  if (DEBUG_ID) {
+    dbg('[IDENTITY:API] patch.meta =', JSON.stringify(inMeta));
+  }
+
   const idFromData = obj(inData.identity);
   const idFromMeta = obj(inMeta.identity);
-  const identity = Object.keys(idFromData).length ? idFromData : (Object.keys(idFromMeta).length ? idFromMeta : null);
+  const identity =
+    Object.keys(idFromData).length ? idFromData :
+    (Object.keys(idFromMeta).length ? idFromMeta : null);
 
-  if (!identity) return patch; // nothing to enrich
-
-  const contact = obj(identity.contact);
+  // Build contact snapshot if identity present
+  const contact = obj(identity?.contact);
   const prevMetaIdentity = obj(beforeMeta.identity);
-
-  // Merge identity into meta.identity (non-destructive)
   const mergedMetaIdentity = { ...prevMetaIdentity, ...idFromMeta, ...idFromData };
 
-  // Keep legacy meta fields aligned for older readers / prompts
-  const nextMeta = {
-    ...beforeMeta,
-    ...inMeta,
-    siteTitle: identity.template_name ?? inMeta.siteTitle ?? beforeMeta.siteTitle ?? null,
-    business: identity.business_name ?? inMeta.business ?? beforeMeta.business ?? null,
-    site_type: identity.site_type ?? inMeta.site_type ?? beforeMeta.site_type ?? null,
-    industry: identity.industry ?? inMeta.industry ?? beforeMeta.industry ?? null,
-    industry_label: identity.industry_label ?? inMeta.industry_label ?? beforeMeta.industry_label ?? null,
-    contact: {
-      ...(obj(beforeMeta.contact)),
-      ...(obj(inMeta.contact)),
-      email: contact.email ?? inMeta?.contact?.email ?? beforeMeta?.contact?.email ?? null,
-      phone: contact.phone ?? inMeta?.contact?.phone ?? beforeMeta?.contact?.phone ?? null,
-      address: contact.address ?? inMeta?.contact?.address ?? beforeMeta?.contact?.address ?? null,
-      address2: contact.address2 ?? inMeta?.contact?.address2 ?? beforeMeta?.contact?.address2 ?? null,
-      city: contact.city ?? inMeta?.contact?.city ?? beforeMeta?.contact?.city ?? null,
-      state: contact.state ?? inMeta?.contact?.state ?? beforeMeta?.contact?.state ?? null,
-      postal: contact.postal ?? inMeta?.contact?.postal ?? beforeMeta?.contact?.postal ?? null,
-      latitude: contact.latitude ?? inMeta?.contact?.latitude ?? beforeMeta?.contact?.latitude ?? null,
-      longitude: contact.longitude ?? inMeta?.contact?.longitude ?? beforeMeta?.contact?.longitude ?? null,
-    },
-    identity: mergedMetaIdentity,
+  // Start with a conservative merged meta (keep previous, then incoming)
+  const metaBase: any = { ...beforeMeta, ...inMeta };
+
+  // Keep legacy meta fields aligned for older readers / prompts (fill if provided)
+  metaBase.siteTitle = identity?.template_name ?? metaBase.siteTitle ?? null;
+  metaBase.business  = identity?.business_name ?? metaBase.business ?? null;
+  metaBase.site_type = identity?.site_type ?? metaBase.site_type ?? null;
+
+  // Normalize industry triplet using both incoming and previous values
+  const normIndustry = normalizeIndustryTriplet(inMeta, beforeMeta);
+
+  // Compose nextMeta with whitelisted keys plus normalized industry
+  const nextMeta: any = {};
+  for (const k of Object.keys(metaBase)) {
+    if (ALLOWED_META_KEYS.has(k)) nextMeta[k] = metaBase[k];
+  }
+  nextMeta.identity = mergedMetaIdentity; // always keep identity mirror
+  if (normIndustry.industry !== undefined)       nextMeta.industry = normIndustry.industry;
+  if (normIndustry.industry_label !== undefined) nextMeta.industry_label = normIndustry.industry_label;
+  if (normIndustry.industry_other !== undefined) nextMeta.industry_other = normIndustry.industry_other;
+
+  // Keep contact sub-object in meta (non-destructive)
+  nextMeta.contact = {
+    ...(obj(beforeMeta.contact)),
+    ...(obj(inMeta.contact)),
+    email:     contact.email     ?? inMeta?.contact?.email     ?? beforeMeta?.contact?.email     ?? null,
+    phone:     contact.phone     ?? inMeta?.contact?.phone     ?? beforeMeta?.contact?.phone     ?? null,
+    address:   contact.address   ?? inMeta?.contact?.address   ?? beforeMeta?.contact?.address   ?? null,
+    address2:  contact.address2  ?? inMeta?.contact?.address2  ?? beforeMeta?.contact?.address2  ?? null,
+    city:      contact.city      ?? inMeta?.contact?.city      ?? beforeMeta?.contact?.city      ?? null,
+    state:     contact.state     ?? inMeta?.contact?.state     ?? beforeMeta?.contact?.state     ?? null,
+    postal:    contact.postal    ?? inMeta?.contact?.postal    ?? beforeMeta?.contact?.postal    ?? null,
+    latitude:  contact.latitude  ?? inMeta?.contact?.latitude  ?? beforeMeta?.contact?.latitude  ?? null,
+    longitude: contact.longitude ?? inMeta?.contact?.longitude ?? beforeMeta?.contact?.longitude ?? null,
   };
 
   // Also keep a data.identity snapshot (non-breaking)
@@ -106,11 +233,16 @@ function enrichPatchWithIdentity(originalPatch: any, beforeData: any) {
     }
   };
 
-  setIfUndef('template_name', identity.template_name);
-  setIfUndef('business_name', identity.business_name);
-  setIfUndef('site_type', identity.site_type);
-  setIfUndef('industry', identity.industry);
-  setIfUndef('industry_label', identity.industry_label);
+  setIfUndef('template_name', identity?.template_name);
+  setIfUndef('business_name', identity?.business_name);
+  setIfUndef('site_type', identity?.site_type);
+
+  // Prefer normalized meta industry for columns; fall back to identity
+  const colIndustry = normIndustry.industry ?? identity?.industry;
+  const colIndustryLabel = normIndustry.industry_label ?? identity?.industry_label;
+
+  setIfUndef('industry', colIndustry);
+  setIfUndef('industry_label', colIndustryLabel);
 
   setIfUndef('contact_email', contact.email);
   setIfUndef('phone', contact.phone);
@@ -148,6 +280,7 @@ function enrichPatchWithIdentity(originalPatch: any, beforeData: any) {
     },
     identity_in_data: nextData.identity,
     identity_in_meta: nextData.meta.identity,
+    normalized_industry: normIndustry,
   });
 
   return patch;

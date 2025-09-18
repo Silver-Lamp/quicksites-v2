@@ -2,6 +2,7 @@
 export const INDUSTRY_HINTS: Record<string, string> = {
   'Towing': 'Emphasize 24/7 dispatch, rapid ETA, roadside assistance (lockouts, jumpstarts), transparent pricing.',
   'Window Washing': 'Residential & commercial streak-free results, safety, water-fed poles, maintenance plans.',
+  'Windshield Repair': 'Safe windshield replacement, damage repair, damage detection, mobile service.',
   'Window Cleaning': 'Residential & commercial streak-free results, safety, water-fed poles, maintenance plans.',
   'Roof Cleaning': 'Soft-wash, moss/algae removal, protect shingles, before/after proof, warranties.',
   'Landscaping': 'Seasonal maintenance, design/build, irrigation, hardscapes, curb appeal, HOA packages.',

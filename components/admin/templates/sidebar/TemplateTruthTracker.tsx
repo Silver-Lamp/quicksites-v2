@@ -1039,279 +1039,302 @@ function iconForEvent(t: TemplateEvent["type"]) {
 
 
 export default function TemplateTruthTracker({
-    templateId,
-    infra,
-    snapshots,
-    versions = [],
-    events,
-    selectedSnapshotId,
-    onCreateSnapshot,
-    onPublish,
-    onRestore,
-    onRefresh,
-    onViewDiff,
-    fileRefs,
-    terms,
-    readmeSummary,
-    adminMeta,
-    className,
-    }: TemplateTruthTrackerProps) {
-    const [selectedSnap, setSelectedSnap] = useState<string | undefined>(
-        selectedSnapshotId
-    );
-    
-    const publishedId = infra.site?.publishedSnapshotId;
-    const latestSnapshot = useMemo(() => snapshots[0], [snapshots]); // may be undefined
-    
-    const selectedSnapshot = useMemo(
-        () =>
-        snapshots.find((s) => s.id === (selectedSnap || selectedSnapshotId)) ??
-        latestSnapshot,
-        [snapshots, selectedSnap, selectedSnapshotId, latestSnapshot]
-    );
-    
-    const selectedVersionTag = useMemo(
-        () => versions.find((v) => v.snapshotId === selectedSnapshot?.id),
-        [versions, selectedSnapshot]
-    );
-    
-    const [infoOpen, setInfoOpen] = useState(false);
-    
-    /* ---------------- NEW: lazy load + de-dupe timeline --------------- */
-    const [timelineOpen, setTimelineOpen] = useState(false);
-    const [lazyEvents, setLazyEvents] = useState<TemplateEvent[] | null>(null);
+  templateId,
+  infra,
+  snapshots,
+  versions = [],
+  events,
+  selectedSnapshotId,
+  onCreateSnapshot,
+  onPublish,
+  onRestore,
+  onRefresh,
+  onViewDiff,
+  fileRefs,
+  terms,
+  readmeSummary,
+  adminMeta,
+  className,
+}: TemplateTruthTrackerProps) {
+  const [selectedSnap, setSelectedSnap] = useState<string | undefined>(
+    selectedSnapshotId
+  );
 
-    // If parent didn't pass events (or passed empty), fetch once on first open
-    useEffect(() => {
+  /* ---------- NEW: fallback load if parent didn't pass state yet ---------- */
+  const [fallbackState, setFallbackState] = useState<{
+    infra?: InfraState;
+    snapshots?: SnapshotInfo[];
+  } | null>(null);
+
+  useEffect(() => {
+    if (infra) return; // parent provided it, nothing to do
+    let alive = true;
+    (async () => {
+      try {
+        const res = await fetch(`/api/templates/state?id=${templateId}`, { cache: 'no-store' });
+        const json = await res.json();
+        if (!alive) return;
+        setFallbackState({
+          infra: json?.infra,
+          snapshots: Array.isArray(json?.snapshots) ? json.snapshots : undefined,
+        });
+      } catch {
+        if (!alive) setFallbackState(null);
+      }
+    })();
+    return () => { alive = false; };
+  }, [templateId, infra]);
+  /* ----------------------------------------------------------------------- */
+
+  // Safe wrappers so we never crash when props are momentarily undefined
+  const safeInfra: InfraState = useMemo(() => {
+    return (
+      infra ??
+      fallbackState?.infra ?? {
+        template: { id: templateId, rev: 0 },
+        site: undefined,
+        lastSnapshot: undefined,
+        cache: undefined,
+      }
+    );
+  }, [infra, fallbackState, templateId]);
+
+  const snaps: SnapshotInfo[] = useMemo(() => {
+    if (Array.isArray(snapshots) && snapshots.length) return snapshots;
+    return fallbackState?.snapshots ?? [];
+  }, [snapshots, fallbackState]);
+
+  const publishedId = safeInfra.site?.publishedSnapshotId;
+  const latestSnapshot = useMemo(() => snaps[0], [snaps]);
+
+  const selectedSnapshot = useMemo(
+    () =>
+      snaps.find((s) => s.id === (selectedSnap || selectedSnapshotId)) ??
+      latestSnapshot,
+    [snaps, selectedSnap, selectedSnapshotId, latestSnapshot]
+  );
+
+  const selectedVersionTag = useMemo(
+    () => versions.find((v) => v.snapshotId === selectedSnapshot?.id),
+    [versions, selectedSnapshot]
+  );
+
+  const [infoOpen, setInfoOpen] = useState(false);
+
+  /* ---------------- timeline: keep your lazy loader as-is ----------------- */
+  const [timelineOpen, setTimelineOpen] = useState(false);
+  const [lazyEvents, setLazyEvents] = useState<TemplateEvent[] | null>(null);
+  useEffect(() => {
     if (!timelineOpen) return;
     if ((events && events.length > 0) || lazyEvents) return;
     (async () => {
-        try {
+      try {
         const res = await fetch(`/api/templates/${templateId}/history`, { cache: "no-store" });
         const data: TemplateEvent[] = await res.json();
         setLazyEvents(Array.isArray(data) ? data : []);
-        } catch {
+      } catch {
         setLazyEvents([]);
-        }
+      }
     })();
-    }, [timelineOpen, events, lazyEvents, templateId]);
-
-    const effectiveEvents = useMemo(
+  }, [timelineOpen, events, lazyEvents, templateId]);
+  const effectiveEvents = useMemo(
     () => dedupeEvents((lazyEvents ?? events) ?? []),
     [lazyEvents, events]
-    );
-    /* ------------------------------------------------------------------ */
+  );
+  /* ----------------------------------------------------------------------- */
 
+  const deprecatedFiles = adminMeta?.deprecated_files ?? [];
+  const deprecatedCount = deprecatedFiles.length;
 
-    const deprecatedFiles = adminMeta?.deprecated_files ?? [];
-    const deprecatedCount = deprecatedFiles.length;
-    
-    const defaultTerms: { term: string; def: string }[] = [
-        { term: "Draft (Template)", def: "Editable source of truth at templates.data (with rev)." },
-        { term: "Save", def: "Server action that deep-merges patch, validates, bumps rev." },
-        { term: "Snapshot", def: "Immutable capture of a draft at a given rev; used for preview/publish." },
-        { term: "Version", def: "Human tag (vX.Y) that points to a snapshot for cataloging." },
-        { term: "Publish", def: "Sites read from sites.published_snapshot_id → snapshot; never draft." },
-    ];
-    
-    const defaultFiles: string[] = [
-        "components/admin/templates/TemplateTruthTracker.tsx",
-        "components/admin/templates/TemplateDiffModal.tsx",
-        "components/admin/templates/hooks/useTruthTrackerState.ts",
-        "app/api/templates/state/route.ts",
-        "app/api/templates/diff/route.ts",
-        "app/api/templates/commit/route.ts",
-        "app/api/admin/snapshots/create/route.ts",
-        "app/api/admin/sites/publish/route.ts",
-        "app/api/templates/deprecations/route.ts",
-        "lib/server/supabaseAdmin.ts",
-        "lib/server/logTemplateEvent.ts",
-        "lib/server/templateUtils.ts",
-        "(SQL) template_admin_meta table",
-    ];
-    
-    const defaultSummary =
-        readmeSummary ||
-        "Draft = templates.data; Save = deep-merge + validate + rev++; Snapshot = immutable capture; Version = tag → snapshot; Publish = site reads snapshot only.";
-    
-    const info = {
-        fileRefs: fileRefs && fileRefs.length ? fileRefs : defaultFiles,
-        terms: terms && terms.length ? terms : defaultTerms,
-        readmeSummary: defaultSummary,
-    };
-    
-    const diagnostics = useMemo(
-        () => ({
-        templateId,
-        draft: infra.template,
-        site: infra.site,
-        publishedSnapshotId: publishedId,
-        selectedSnapshot,
-        versions,
-        lastSnapshot: infra.lastSnapshot,
-        cache: infra.cache,
-        }),
-        [templateId, infra, publishedId, selectedSnapshot, versions]
-    );
-    
-    const copyDiagnostics = async () => {
-        try {
-        await navigator.clipboard.writeText(JSON.stringify(diagnostics, null, 2));
-        } catch {}
-    };
-    
-    const hasSnapshots = snapshots.length > 0;
-    
-    return (
-        <TooltipProvider>
-          <div className={clsx("flex h-full flex-col gap-3 p-2", className)}>
-            {/* Header / State chip */}
-            <StateHeader
-              rev={infra.template.rev}
-              hash={infra.template.hash}
-              isPublishedFromDraft={publishedId === undefined}
-              onRefresh={onRefresh}
-              info={info}
-              templateId={templateId}
-              infoOpen={infoOpen}
-              setInfoOpen={setInfoOpen}
-            />
-    
-            {deprecatedCount > 0 && (
-              <DeprecatedBanner count={deprecatedCount} onReview={() => setInfoOpen(true)} />
-            )}
-    
-            {/* ================= Timeline (collapsed + lazy) ================= */}
-            <CollapsiblePanel
-              id="timeline"
-              title="Timeline"
-              defaultOpen={false}
-              lazyMount  // <-- don’t mount until opened
-              onOpenChange={setTimelineOpen}
-            >
-              {({ open }) => (
-                !open ? null : (
-                  <Card className="flex h-full min-h-40 flex-col border-neutral-200">
-                    <CardHeader className="py-3">
-                      <CardTitle className="text-sm">History</CardTitle>
-                    </CardHeader>
-                    <CardContent className="h-full p-0">
-                      <ScrollArea className="h-[42vh] w-full">
-                        <ul className="relative mx-3 my-2">
-                          {/* vertical line */}
-                          <div className="absolute left-4 top-0 h-full w-px bg-border" />
-                          {effectiveEvents.length === 0 && (
-                            <li className="px-3 py-2 text-xs text-muted-foreground">
-                              {lazyEvents === null && (!events || events.length === 0)
-                                ? "Open to load history…"
-                                : "No events yet."}
-                            </li>
-                          )}
-                          {effectiveEvents.map((evt, idx) => (
-                            <TimelineItem
-                              key={evt.id ?? `${evt.type}-${idx}`}
-                              evt={evt}
-                              prevEvt={effectiveEvents[idx + 1]} // pass previous (older) after de-dupe
-                              isFirst={idx === 0}
-                              onViewDiff={onViewDiff}
-                              onPublish={onPublish}                            // ⬅️ NEW
-                              onRestore={onRestore}                            // ⬅️ NEW
-                              publishedSnapshotId={publishedId}                // ⬅️ NEW
-                            />
-                          ))}
-                        </ul>
-                      </ScrollArea>
-                    </CardContent>
-                  </Card>
-                )
-              )}
-            </CollapsiblePanel>
-            {/* =============================================================== */}
-    
-            {/* ============== Infra Map (collapsed + lazy-mount) ============= */}
-            <CollapsiblePanel
-              id="infra-map"
-              title="Infra Map"
-              defaultOpen={false}
-              lazyMount
-            >
-              {({ open }) =>
-                !open ? null : (
-                  <InfraMap
-                    draft={{ rev: infra.template.rev, hash: infra.template.hash }}
-                    latestSnapshot={
-                      infra.lastSnapshot ?? {
-                        id: latestSnapshot?.id,
-                        rev: latestSnapshot?.rev,
-                        hash: latestSnapshot?.hash,
-                        createdAt: latestSnapshot?.createdAt,
-                      }
-                    }
-                    publishedSnapshotId={publishedId}
-                    siteSlug={infra.site?.slug}
-                    cacheInfo={infra.cache}
-                  />
-                )
-              }
-            </CollapsiblePanel>
-            {/* =============================================================== */}
-    
-            {/* Snapshot Picker + Actions (leave as-is, optionally lazy too) */}
-            <CollapsiblePanel
-              id="snapshot-picker"
-              title="Snapshot Picker + Actions"
-              defaultOpen={false}
-              lazyMount
-            >
-              <Card className="border-neutral-200">
+  const defaultTerms: { term: string; def: string }[] = [
+    { term: "Draft (Template)", def: "Editable source of truth at templates.data (with rev)." },
+    { term: "Save", def: "Server action that deep-merges patch, validates, bumps rev." },
+    { term: "Snapshot", def: "Immutable capture of a draft at a given rev; used for preview/publish." },
+    { term: "Version", def: "Human tag (vX.Y) that points to a snapshot for cataloging." },
+    { term: "Publish", def: "Sites read from sites.published_snapshot_id → snapshot; never draft." },
+  ];
+
+  const defaultFiles: string[] = [
+    "components/admin/templates/TemplateTruthTracker.tsx",
+    "components/admin/templates/TemplateDiffModal.tsx",
+    "components/admin/templates/hooks/useTruthTrackerState.ts",
+    "app/api/templates/state/route.ts",
+    "app/api/templates/diff/route.ts",
+    "app/api/templates/commit/route.ts",
+    "app/api/admin/snapshots/create/route.ts",
+    "app/api/admin/sites/publish/route.ts",
+    "app/api/templates/deprecations/route.ts",
+    "lib/server/supabaseAdmin.ts",
+    "lib/server/logTemplateEvent.ts",
+    "lib/server/templateUtils.ts",
+    "(SQL) template_admin_meta table",
+  ];
+
+  const defaultSummary =
+    readmeSummary ||
+    "Draft = templates.data; Save = deep-merge + validate + rev++; Snapshot = immutable capture; Version = tag → snapshot; Publish = site reads snapshot only.";
+
+  const info = {
+    fileRefs: fileRefs && fileRefs.length ? fileRefs : defaultFiles,
+    terms: terms && terms.length ? terms : defaultTerms,
+    readmeSummary: defaultSummary,
+  };
+
+  const diagnostics = useMemo(
+    () => ({
+      templateId,
+      draft: safeInfra.template,
+      site: safeInfra.site,
+      publishedSnapshotId: publishedId,
+      selectedSnapshot,
+      versions,
+      lastSnapshot: safeInfra.lastSnapshot,
+      cache: safeInfra.cache,
+    }),
+    [templateId, safeInfra, publishedId, selectedSnapshot, versions]
+  );
+
+  const copyDiagnostics = async () => {
+    try {
+      await navigator.clipboard.writeText(JSON.stringify(diagnostics, null, 2));
+    } catch {}
+  };
+
+  const hasSnapshots = snaps.length > 0;
+
+  return (
+    <TooltipProvider>
+      <div className={clsx("flex h-full flex-col gap-3 p-2", className)}>
+        <StateHeader
+          rev={safeInfra.template.rev ?? 0}
+          hash={safeInfra.template.hash}
+          isPublishedFromDraft={publishedId === undefined}
+          onRefresh={onRefresh}
+          info={info}
+          templateId={templateId}
+          infoOpen={infoOpen}
+          setInfoOpen={setInfoOpen}
+        />
+
+        {deprecatedCount > 0 && (
+          <DeprecatedBanner count={deprecatedCount} onReview={() => setInfoOpen(true)} />
+        )}
+
+        <CollapsiblePanel
+          id="timeline"
+          title="Timeline"
+          defaultOpen={false}
+          lazyMount
+          onOpenChange={setTimelineOpen}
+        >
+          {({ open }) =>
+            !open ? null : (
+              <Card className="flex h-full min-h-40 flex-col border-neutral-200">
                 <CardHeader className="py-3">
-                  <CardTitle className="text-sm">Snapshots & Actions</CardTitle>
+                  <CardTitle className="text-sm">History</CardTitle>
                 </CardHeader>
-                <CardContent className="flex flex-col gap-2">
-                    <div className="flex items-center gap-2">
-                    <select
-                        className="w-full rounded-md border bg-background px-2 py-1 text-sm"
-                        value={selectedSnapshot?.id ?? ""}
-                        onChange={(e) => setSelectedSnap(e.target.value)}
-                        disabled={!hasSnapshots}
-                    >
-                        {snapshots.map((s) => (
-                        <option key={s.id} value={s.id}>
-                            {shortHash(s.hash)} · rev {s.rev} · {shortTime(s.createdAt)}
-                        </option>
-                        ))}
-                    </select>
-                    </div>
-                    <div className="flex items-center gap-2">
-                    <Button size="sm" variant="default" onClick={onCreateSnapshot} className="gap-1">
-                        <PlusCircle className="h-4 w-4" /> Snapshot
-                    </Button>
-                    <Button
-                        size="sm"
-                        variant={selectedSnapshot?.id && selectedSnapshot?.id === publishedId ? "secondary" : "default"}
-                        disabled={!selectedSnapshot?.id}
-                        className="gap-1"
-                        onClick={() => selectedSnapshot?.id && onPublish?.(selectedSnapshot.id)}
-                    >
-                        <Rocket className="h-4 w-4" />
-                        {selectedSnapshot?.id === publishedId ? "Published" : "Publish"}
-                    </Button>
-                    <Button size="sm" variant="outline" className="gap-1" onClick={copyDiagnostics}>
-                        <Share className="h-4 w-4" /> Copy diagnostics
-                    </Button>
-                    </div>
-                    {selectedVersionTag && (
-                    <div className="text-xs text-muted-foreground">
-                        Tagged <Badge variant="secondary">{selectedVersionTag.tag}</Badge>
-                        {selectedVersionTag.notes ? ` · ${selectedVersionTag.notes}` : ""}
-                    </div>
-                    )}
+                <CardContent className="h-full p-0">
+                  <ScrollArea className="h-[42vh] w-full">
+                    <ul className="relative mx-3 my-2">
+                      <div className="absolute left-4 top-0 h-full w-px bg-border" />
+                      {effectiveEvents.length === 0 && (
+                        <li className="px-3 py-2 text-xs text-muted-foreground">
+                          {lazyEvents === null && (!events || events.length === 0)
+                            ? "Open to load history…"
+                            : "No events yet."}
+                        </li>
+                      )}
+                      {effectiveEvents.map((evt, idx) => (
+                        <TimelineItem
+                          key={evt.id ?? `${evt.type}-${idx}`}
+                          evt={evt}
+                          prevEvt={effectiveEvents[idx + 1]}
+                          isFirst={idx === 0}
+                          onViewDiff={onViewDiff}
+                          onPublish={onPublish}
+                          onRestore={onRestore}
+                          publishedSnapshotId={publishedId}
+                        />
+                      ))}
+                    </ul>
+                  </ScrollArea>
                 </CardContent>
-                </Card>            
-            </CollapsiblePanel>
+              </Card>
+            )
+          }
+        </CollapsiblePanel>
 
-        </div>
-        </TooltipProvider>
-    );
-    }
+        <CollapsiblePanel id="infra-map" title="Infra Map" defaultOpen={false} lazyMount>
+          {({ open }) =>
+            !open ? null : (
+              <InfraMap
+                draft={{ rev: safeInfra.template.rev ?? 0, hash: safeInfra.template.hash }}
+                latestSnapshot={
+                  safeInfra.lastSnapshot ?? {
+                    id: latestSnapshot?.id,
+                    rev: latestSnapshot?.rev,
+                    hash: latestSnapshot?.hash,
+                    createdAt: latestSnapshot?.createdAt,
+                  }
+                }
+                publishedSnapshotId={publishedId}
+                siteSlug={safeInfra.site?.slug}
+                cacheInfo={safeInfra.cache}
+              />
+            )
+          }
+        </CollapsiblePanel>
+
+        <CollapsiblePanel id="snapshot-picker" title="Snapshot Picker + Actions" defaultOpen={false} lazyMount>
+          <Card className="border-neutral-200">
+            <CardHeader className="py-3">
+              <CardTitle className="text-sm">Snapshots & Actions</CardTitle>
+            </CardHeader>
+            <CardContent className="flex flex-col gap-2">
+              <div className="flex items-center gap-2">
+                <select
+                  className="w-full rounded-md border bg-background px-2 py-1 text-sm"
+                  value={selectedSnapshot?.id ?? ""}
+                  onChange={(e) => setSelectedSnap(e.target.value)}
+                  disabled={!hasSnapshots}
+                >
+                  {snaps.map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {shortHash(s.hash)} · rev {s.rev} · {shortTime(s.createdAt)}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="flex items-center gap-2">
+                <Button size="sm" variant="default" onClick={onCreateSnapshot} className="gap-1">
+                  <PlusCircle className="h-4 w-4" /> Snapshot
+                </Button>
+                <Button
+                  size="sm"
+                  variant={selectedSnapshot?.id && selectedSnapshot?.id === publishedId ? "secondary" : "default"}
+                  disabled={!selectedSnapshot?.id}
+                  className="gap-1"
+                  onClick={() => selectedSnapshot?.id && onPublish?.(selectedSnapshot.id)}
+                >
+                  <Rocket className="h-4 w-4" />
+                  {selectedSnapshot?.id === publishedId ? "Published" : "Publish"}
+                </Button>
+                <Button size="sm" variant="outline" className="gap-1" onClick={copyDiagnostics}>
+                  <Share className="h-4 w-4" /> Copy diagnostics
+                </Button>
+              </div>
+              {selectedVersionTag && (
+                <div className="text-xs text-muted-foreground">
+                  Tagged <Badge variant="secondary">{selectedVersionTag.tag}</Badge>
+                  {selectedVersionTag.notes ? ` · ${selectedVersionTag.notes}` : ""}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </CollapsiblePanel>
+      </div>
+    </TooltipProvider>
+  );
+}
+
     

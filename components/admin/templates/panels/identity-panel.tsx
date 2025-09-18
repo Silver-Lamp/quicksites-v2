@@ -13,6 +13,7 @@ import {
   INDUSTRY_HINTS,
   resolveIndustryKey,
   toIndustryLabel,
+  IndustryKey,
 } from '@/lib/industries';
 
 /* ---------------- utilities ---------------- */
@@ -78,11 +79,54 @@ const SITE_TYPES = [
   { value: 'about_me', label: 'About Me' },
 ] as const;
 
-/** Prefer top-level column first, then meta.site_type, then any legacy casing. */
+/** Prefer columns → data.identity → meta.identity → meta.site_type/meta.siteType */
 function resolveSiteTypeFromTemplate(t: Template): string {
   const data = safeObj<any>((t as any).data) ?? (t as any).data ?? {};
   const meta = safeObj<any>(data.meta) ?? data.meta ?? {};
-  return String((t as any).site_type ?? meta?.site_type ?? meta?.siteType ?? '').trim();
+  const identData = safeObj<any>(data.identity) ?? data.identity ?? {};
+  const identMeta = safeObj<any>(meta.identity) ?? meta.identity ?? {};
+  return String(
+    (t as any).site_type ??
+    identData?.site_type ??
+    identMeta?.site_type ??
+    meta?.site_type ??
+    meta?.siteType ??
+    ''
+  ).trim();
+}
+
+/** Return a normalized industry key and an optional custom "other" label. */
+function resolveIndustryFromTemplate(t: Template): { key: string; otherLabel: string } {
+  const data = safeObj<any>((t as any).data) ?? (t as any).data ?? {};
+  const meta = safeObj<any>(data.meta) ?? data.meta ?? {};
+  const identData = safeObj<any>(data.identity) ?? data.identity ?? {};
+  const identMeta = safeObj<any>(meta.identity) ?? meta.identity ?? {};
+
+  const rawKey = String(
+    coalesceNonEmpty(
+      (t as any).industry,
+      identData?.industry,
+      identMeta?.industry,
+      meta?.industry
+    ) || ''
+  );
+  const key = resolveIndustryKey(rawKey);
+
+  const other = String(
+    coalesceNonEmpty(
+      // explicit meta field first
+      meta?.industry_other,
+      // sometimes consumers stash it under identity
+      identData?.industry_other,
+      identMeta?.industry_other,
+      // column label if it’s not literally "Other"
+      ((t as any).industry_label && (t as any).industry_label.toLowerCase() !== 'other')
+        ? (t as any).industry_label
+        : ''
+    ) || ''
+  ).trim();
+
+  return { key, otherLabel: key === 'other' ? other : '' };
 }
 
 /* ---------------- draft typing ---------------- */
@@ -109,49 +153,131 @@ type Draft = {
 function toDraft(t: Template): Draft {
   const data = safeObj<any>((t as any).data) ?? (t as any).data ?? {};
   const meta = safeObj<any>(data.meta) ?? data.meta ?? {};
-  const contact = safeObj<any>(meta.contact) ?? meta.contact ?? {};
+  const identData = safeObj<any>(data.identity) ?? data.identity ?? {};
+  const identMeta = safeObj<any>(meta.identity) ?? meta.identity ?? {};
+  const contactData = safeObj<any>(identData.contact) ?? identData.contact ?? {};
+  const contactMetaI = safeObj<any>(identMeta.contact) ?? identMeta.contact ?? {};
+  const contactMeta = safeObj<any>(meta.contact) ?? meta.contact ?? {};
+
+  // Prefer columns → identity.contact (data) → meta.identity.contact → meta.contact
+  const cEmail = coalesceNonEmpty(
+    (t as any).contact_email,
+    contactData?.email,
+    contactMetaI?.email,
+    contactMeta?.email,
+  );
+  const cPhone = coalesceNonEmpty(
+    (t as any).phone,
+    contactData?.phone,
+    contactMetaI?.phone,
+    contactMeta?.phone,
+  );
+  const cAddr1 = coalesceNonEmpty(
+    (t as any).address_line1,
+    contactData?.address,
+    contactMetaI?.address,
+    contactMeta?.address,
+  );
+  const cAddr2 = coalesceNonEmpty(
+    (t as any).address_line2,
+    contactData?.address2,
+    contactMetaI?.address2,
+    contactMeta?.address2,
+  );
+  const cCity = coalesceNonEmpty(
+    (t as any).city,
+    contactData?.city,
+    contactMetaI?.city,
+    contactMeta?.city,
+  );
+  const cState = coalesceNonEmpty(
+    (t as any).state,
+    contactData?.state,
+    contactMetaI?.state,
+    contactMeta?.state,
+  );
+  const cPostal = coalesceNonEmpty(
+    (t as any).postal_code,
+    contactData?.postal,
+    contactMetaI?.postal,
+    contactMeta?.postal,
+  );
+  const cLat = coalesceNonEmpty(
+    (t as any).latitude,
+    contactData?.latitude,
+    contactMetaI?.latitude,
+    contactMeta?.latitude,
+  );
+  const cLon = coalesceNonEmpty(
+    (t as any).longitude,
+    contactData?.longitude,
+    contactMetaI?.longitude,
+    contactMeta?.longitude,
+  );
 
   const siteType = resolveSiteTypeFromTemplate(t);
-  const industryKey = resolveIndustryKey((t as any).industry ?? meta?.industry ?? '');
-  const industryLabel = String((t as any).industry_label ?? meta?.industry_label ?? '').trim();
+  const { key: industryKey, otherLabel } = resolveIndustryFromTemplate(t);
 
-  const siteTitle =
-    String((t as any).template_name ?? meta?.siteTitle ?? (t as any).business_name ?? '') || '';
+  const siteTitle = String(
+    coalesceNonEmpty(
+      (t as any).template_name,
+      identData?.template_name,
+      meta?.siteTitle,
+      (t as any).business_name
+    )
+  );
 
-  const business =
-    String((t as any).business_name ?? meta?.business ?? siteTitle) || '';
-
-  const rawPhone = String((t as any).phone ?? contact?.phone ?? '');
-  const addr1 = String((t as any).address_line1 ?? contact?.address ?? '');
-  const addr2 = String((t as any).address_line2 ?? contact?.address2 ?? '');
+  const business = String(
+    coalesceNonEmpty(
+      (t as any).business_name,
+      identData?.business_name,
+      meta?.business,
+      siteTitle
+    )
+  );
 
   const d: Draft = {
-    template_name: siteTitle,
-    business_name: business,
+    template_name: siteTitle || '',
+    business_name: business || '',
     site_type: siteType,
     industry: industryKey,
-    industry_other:
-      industryKey === 'other'
-        ? (industryLabel && industryLabel.toLowerCase() !== 'other' ? industryLabel : '')
-        : '',
-    contact_email: String((t as any).contact_email ?? contact?.email ?? ''),
-    phone: formatPhoneLive(digitsOnly(rawPhone)),
-    address_line1: addr1,
-    address_line2: addr2,
-    city: String((t as any).city ?? contact?.city ?? ''),
-    state: String((t as any).state ?? contact?.state ?? ''),
-    postal_code: String((t as any).postal_code ?? contact?.postal ?? ''),
-    latitude: (String((t as any).latitude ?? contact?.latitude ?? '') || ''),
-    longitude: (String((t as any).longitude ?? contact?.longitude ?? '') || ''),
+    industry_other: industryKey === 'other' ? otherLabel : '',
+    contact_email: String(cEmail || ''),
+    phone: formatPhoneLive(digitsOnly(String(cPhone || ''))),
+    address_line1: String(cAddr1 || ''),
+    address_line2: String(cAddr2 || ''),
+    city: String(cCity || ''),
+    state: String(cState || ''),
+    postal_code: String(cPostal || ''),
+    latitude: cLat === '' ? '' : String(cLat),
+    longitude: cLon === '' ? '' : String(cLon),
   };
 
-  dbg('[IDENTITY:UI] toDraft', {
+  dbg('[IDENTITY:UI] toDraft (merged contact & identity)', {
     templateId: (t as any)?.id,
-    canonicalId: (t as any)?.canonical_id,
     draft: d,
   });
 
   return d;
+}
+
+function coalesceNonEmpty<T = any>(...vals: T[]): T | '' {
+  for (const v of vals) {
+    if (v === null || v === undefined) continue;
+    if (typeof v === 'string') {
+      if (v.trim() !== '') return v as T;
+    } else if (typeof v === 'number') {
+      if (Number.isFinite(v)) return v as T;
+    } else if (Array.isArray(v)) {
+      if (v.length) return v as T;
+    } else if (typeof v === 'object') {
+      // any object counts as present
+      return v as T;
+    } else {
+      return v as T;
+    }
+  }
+  return '' as any;
 }
 
 /* ---------------- build patch for onChange ---------------- */
@@ -161,6 +287,7 @@ function toDraft(t: Template): Draft {
  * - Updates canonical top-level columns (source of truth).
  * - Mirrors identity into BOTH data.identity and meta.identity (for robust reload across readers).
  * - Keeps legacy meta fields (siteTitle, business, contact, etc.) in sync.
+ * - IMPORTANT: Do NOT stamp industry="other" unless we have a non-empty industry_other label.
  */
 function buildDataPatch(d: Draft, tmpl: Template): Partial<Template> {
   const prevData = safeObj<any>((tmpl as any).data) ?? (tmpl as any).data ?? {};
@@ -173,18 +300,27 @@ function buildDataPatch(d: Draft, tmpl: Template): Partial<Template> {
   const lat = d.latitude.trim() === '' ? null : clampLat(Number(d.latitude));
   const lon = d.longitude.trim() === '' ? null : clampLon(Number(d.longitude));
 
-  const normKey = resolveIndustryKey(d.industry || (tmpl as any).industry || '');
-  const industryLabel =
-    normKey === 'other'
-      ? (d.industry_other || (prevMeta?.industry_label as string) || 'Other')
-      : toIndustryLabel(normKey);
+  const prevKey = resolveIndustryKey(
+    String(coalesceNonEmpty(d.industry, (tmpl as any).industry, prevMeta?.industry) || '')
+  );
+  const wantUnsetOther = prevKey === 'other' && !String(d.industry_other || '').trim();
+
+  // Final normalized key & label
+  const finalKey: string | null = wantUnsetOther ? null : (prevKey || null);
+  const finalLabel: string | null =
+    finalKey == null
+      ? null
+      : (finalKey === 'other'
+          ? (String(d.industry_other || '').trim() || 'Other') as IndustryKey
+          : toIndustryLabel(finalKey as IndustryKey));
 
   const identity = {
     template_name: d.template_name || (tmpl as any).template_name || '',
     business_name: d.business_name || (tmpl as any).business_name || '',
     site_type: (d.site_type || (tmpl as any).site_type || null) as string | null,
-    industry: normKey || null,
-    industry_label: industryLabel || null,
+    industry: finalKey,
+    industry_label: finalLabel,
+    ...(finalKey === 'other' ? { industry_other: String(d.industry_other || '').trim() || undefined } : {}),
     contact: {
       email: email || null,
       phone: phoneDigits || null,
@@ -206,6 +342,9 @@ function buildDataPatch(d: Draft, tmpl: Template): Partial<Template> {
     site_type: identity.site_type || undefined,
     industry: identity.industry || undefined,
     industry_label: identity.industry_label || undefined,
+    ...(finalKey === 'other'
+      ? { industry_other: String(d.industry_other || '').trim() || undefined }
+      : { industry_other: undefined }),
     contact: {
       ...prevContact,
       email: identity.contact.email || undefined,
@@ -218,19 +357,18 @@ function buildDataPatch(d: Draft, tmpl: Template): Partial<Template> {
       latitude: identity.contact.latitude ?? undefined,
       longitude: identity.contact.longitude ?? undefined,
     },
-    // also keep a normalized meta.identity for any consumers
+    // normalized identity snapshot
     identity: { ...(safeObj<any>(prevMeta.identity) ?? prevMeta.identity ?? {}), ...identity },
   };
 
   const nextData = {
     ...prevData,
-    // non-breaking: add/merge identity snapshot at root of data
     identity: { ...prevIdentity, ...identity },
     meta: nextMeta,
   };
 
   const patch: Partial<Template> & Record<string, any> = {
-    // canonical columns (editor read path should prefer these)
+    // canonical columns
     template_name: identity.template_name,
     business_name: identity.business_name || undefined,
     site_type: identity.site_type || undefined,
@@ -259,13 +397,7 @@ function buildDataPatch(d: Draft, tmpl: Template): Partial<Template> {
       business_name: patch.business_name,
       site_type: patch.site_type,
       industry: patch.industry,
-      contact_email: patch.contact_email,
-      phone: patch.phone,
-      city: patch.city,
-      state: patch.state,
-      postal_code: patch.postal_code,
-      latitude: patch.latitude,
-      longitude: patch.longitude,
+      industry_label: patch.industry_label,
     },
   });
 
@@ -293,7 +425,6 @@ export default function IdentityPanel({
   const [debugOn, setDebugOn] = React.useState(false);
 
   const debounceRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
-  const renameDebounce = React.useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const industryOptions = React.useMemo(() => getIndustryOptions(), []);
   const industryHint = React.useMemo(() => {
@@ -301,27 +432,41 @@ export default function IdentityPanel({
     return opt ? INDUSTRY_HINTS[opt.label] : undefined;
   }, [draft.industry, industryOptions]);
 
-  // Include top-level columns first so re-hydrate reflects canonical values immediately.
+  // Include more sources in the signature so we re-hydrate when other panels write to identity/meta.
   const templateSig = React.useMemo(() => {
     const data = safeObj<any>((template as any).data) ?? (template as any).data ?? {};
     const meta = safeObj<any>(data.meta) ?? data.meta ?? {};
+    const identData = safeObj<any>(data.identity) ?? data.identity ?? {};
+    const identMeta = safeObj<any>(meta.identity) ?? meta.identity ?? {};
+    const contactData = safeObj<any>(identData.contact) ?? identData.contact ?? {};
+    const contactMetaI = safeObj<any>(identMeta.contact) ?? identMeta.contact ?? {};
+    const contactMeta = safeObj<any>(meta.contact) ?? meta.contact ?? {};
+  
+    const gather = (k: string) =>
+      [
+        (template as any)[k],
+        contactData?.[k],
+        contactMetaI?.[k],
+        contactMeta?.[k],
+      ];
+  
     return JSON.stringify([
-      (template as any).industry ?? meta?.industry ?? '',
-      (template as any).business_name ?? meta?.business ?? '',
-      (template as any).site_type ?? meta?.site_type ?? '',
-      (template as any).template_name ?? meta?.siteTitle ?? '',
-      (template as any).business_name ?? meta?.business ?? '',
-      (template as any).industry ?? meta?.industry ?? '',
-      (template as any).industry_label ?? meta?.industry_label ?? '',
-      (template as any).latitude ?? (meta?.contact ?? {})?.latitude ?? '',
-      (template as any).longitude ?? (meta?.contact ?? {})?.longitude ?? '',
-      (template as any).contact_email ?? (meta?.contact ?? {})?.email ?? '',
-      (template as any).phone ?? (meta?.contact ?? {})?.phone ?? '',
-      (template as any).address_line1 ?? (meta?.contact ?? {})?.address ?? '',
-      (template as any).address_line2 ?? (meta?.contact ?? {})?.address2 ?? '',
-      (template as any).city ?? (meta?.contact ?? {})?.city ?? '',
-      (template as any).state ?? (meta?.contact ?? {})?.state ?? '',
-      (template as any).postal_code ?? (meta?.contact ?? {})?.postal ?? '',
+      // keys & labels across all places
+      (template as any).industry ?? identData?.industry ?? identMeta?.industry ?? meta?.industry ?? '',
+      (template as any).industry_label ?? identData?.industry_label ?? identMeta?.industry_label ?? meta?.industry_label ?? '',
+      meta?.industry_other ?? identData?.industry_other ?? identMeta?.industry_other ?? '',
+      (template as any).business_name ?? identData?.business_name ?? meta?.business ?? '',
+      (template as any).site_type ?? identData?.site_type ?? identMeta?.site_type ?? meta?.site_type ?? '',
+      (template as any).template_name ?? identData?.template_name ?? meta?.siteTitle ?? '',
+      ...gather('latitude'),
+      ...gather('longitude'),
+      ...gather('email'),
+      ...gather('phone'),
+      ...gather('address'),
+      ...gather('address2'),
+      ...gather('city'),
+      ...gather('state'),
+      ...gather('postal'),
       (template as any).updated_at ?? '',
     ]);
   }, [template]);
@@ -355,7 +500,6 @@ export default function IdentityPanel({
       (d.template_name || '').trim() || (template as any).template_name || '';
     if (initialName) emitTitle(initialName);
 
-    // Render probe
     const data = safeObj<any>((template as any).data) ?? (template as any).data ?? {};
     dbg('[IDENTITY:UI] render', {
       templateId: (template as any)?.id,
@@ -365,6 +509,44 @@ export default function IdentityPanel({
       meta_identity: safeObj<any>(data?.meta?.identity) ?? data?.meta?.identity ?? null,
     });
   }, [templateSig, template, emitTitle]);
+
+  // Live-sync when other panels dispatch merges/apply-patch (e.g., Hero editor setting site_type/industry)
+  React.useEffect(() => {
+    const onMerge = (e: any) => {
+      const meta = e?.detail?.meta ?? e?.detail?.data?.meta;
+      if (!meta) return;
+      setDraft((prev) => {
+        const next = { ...prev };
+        let changed = false;
+
+        if (meta.site_type != null && String(meta.site_type) !== prev.site_type) {
+          next.site_type = String(meta.site_type);
+          changed = true;
+        }
+        if (meta.industry != null) {
+          const k = resolveIndustryKey(String(meta.industry));
+          if (k !== prev.industry) { next.industry = k; changed = true; }
+        }
+        if (meta.industry_other != null) {
+          const other = String(meta.industry_other || '').trim();
+          if (prev.industry === 'other' && other !== prev.industry_other) {
+            next.industry_other = other;
+            changed = true;
+          }
+        }
+        if (changed) setDirty(true);
+        return next;
+      });
+    };
+    window.addEventListener('qs:template:merge', onMerge as any);
+    window.addEventListener('qs:template:apply-patch', onMerge as any);
+    return () => {
+      window.removeEventListener('qs:template:merge', onMerge as any);
+      window.removeEventListener('qs:template:apply-patch', onMerge as any);
+    };
+  }, []);
+
+  const renameDebounce = React.useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const scheduleAutoApply = React.useCallback(
     (nextDraft: Draft) => {
@@ -411,6 +593,7 @@ export default function IdentityPanel({
       }
 
       if (key === 'site_type') {
+        // If user picks a non-business type with no industry, force 'other'
         if (String(value) && value !== 'small_business' && !next.industry) {
           next.industry = 'other';
         }
@@ -447,6 +630,34 @@ export default function IdentityPanel({
       return next;
     });
   };
+
+  // Make global "Save now" also commit Identity draft
+  React.useEffect(() => {
+    const handler = () => {
+      if (dirty) {
+        dbg('[IDENTITY:UI] global save -> committing identity draft');
+        commit();
+      }
+    };
+    const events = ['qs:save-now', 'qs:template:save', 'qs:settings:save', 'qs:toolbar:save-now'];
+    events.forEach((ev) => window.addEventListener(ev, handler));
+    return () => events.forEach((ev) => window.removeEventListener(ev, handler));
+  }, [dirty, commit]);
+
+  // Cmd/Ctrl+S commits identity even if focus is in a field
+  React.useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 's') {
+        e.preventDefault();
+        if (dirty) {
+          dbg('[IDENTITY:UI] cmd/ctrl+s -> commit');
+          commit();
+        }
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [dirty, commit]);
 
   return (
     <Collapsible title="Template Identity" id="template-identity">
@@ -581,7 +792,9 @@ export default function IdentityPanel({
               ))}
             </select>
             <p className="text-[11px] text-white/40 mt-1">
-              Resolved: {toIndustryLabel(resolveIndustryKey(draft.industry))}
+              Resolved: {draft.industry === 'other'
+                ? (draft.industry_other ? `Other (${draft.industry_other})` : 'Other')
+                : toIndustryLabel(resolveIndustryKey(draft.industry))}
             </p>
             {(() => {
               const opt = getIndustryOptions().find(o => o.value === draft.industry);

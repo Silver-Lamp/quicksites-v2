@@ -48,7 +48,7 @@ export default function TemplateVersionSaveBar({
     if (error) {
       toast.error('Failed to save version');
     } else {
-      toast.success('Version saved!');
+      // toast.success('Version saved!');
       onSave?.();
     }
   };

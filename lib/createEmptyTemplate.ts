@@ -3,7 +3,11 @@ import type { Template } from '@/types/template';
 import { createDefaultBlock } from '@/lib/createDefaultBlock';
 
 function generateSlug(base: string) {
-  return base.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '').trim();
+  return base
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/(^-|-$)/g, '')
+    .trim();
 }
 function generateUniqueSuffix() {
   return Math.random().toString(36).slice(2, 6);
@@ -18,7 +22,7 @@ export function createEmptyTemplate(base = 'new-template'): Template {
   const headerBlock = createDefaultBlock('header') as any;
   const footerBlock = createDefaultBlock('footer') as any;
 
-  // Seed a single Home page
+  // Seed a single Home page (legacy + canonical)
   const homePage = {
     id: crypto.randomUUID(),
     slug: 'index',
@@ -42,8 +46,11 @@ export function createEmptyTemplate(base = 'new-template'): Template {
     theme: 'default',
     brand: 'default',
     commit: '',
-    // ❌ do NOT set industry of any kind here (column or meta)
+
+    // ❌ Do NOT set industry or site_type here (either top-level or in meta).
     // industry: undefined,
+    // industry_label: undefined,
+    // site_type: undefined,
 
     hero_url: '',
     banner_url: '',
@@ -58,10 +65,10 @@ export function createEmptyTemplate(base = 'new-template'): Template {
     custom_domain: '',
     services: [],
 
-    // Keep legacy top-level mirror for older UIs
+    // Legacy mirror for older UIs
     pages,
 
-    // Optional marketing meta (no industry)
+    // Optional marketing meta (no industry fields)
     meta: {
       title: slug,
       description: `Website template for ${slug}`,
@@ -72,33 +79,37 @@ export function createEmptyTemplate(base = 'new-template'): Template {
 
     // Canonical data bag used by editor/runtime
     data: {
-      // put header/footer here so /api/templates/create can pick them up
+      // Keep header/footer accessible in data (create API can also lift to columns)
       headerBlock,
       footerBlock,
 
       services: [],
       pages, // keep in sync with top-level `pages`
 
-      // Provide a meta object but DO NOT include industry keys.
+      // Provide meta, but DO NOT include industry keys here.
       meta: {
         identity: {},
         services: [],
         siteTitle: null,
-        site_type: null,
+        site_type: null, // let UI set this later
         contact: {
-          email: null, phone: null,
-          address: null, address2: null,
-          city: null, state: null, postal: null,
-          latitude: null, longitude: null,
+          email: null,
+          phone: null,
+          address: null,
+          address2: null,
+          city: null,
+          state: null,
+          postal: null,
+          latitude: null,
+          longitude: null,
         },
-        // ❌ no industry / industry_label / industry_other here
+        // ❌ no industry / industry_label / industry_other
       },
 
-      // Let the UI decide the visual mode
-      // color_mode intentionally omitted
+      // color_mode omitted intentionally; UI/runtime can decide
     },
 
-    // These columns are handled by the create API; included here for typing compatibility.
+    // Columns your create API may serialize (included for typing convenience)
     headerBlock,
     footerBlock,
   } as unknown as Template;

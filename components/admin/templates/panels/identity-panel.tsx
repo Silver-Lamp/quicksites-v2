@@ -11,9 +11,9 @@ import { RefreshCw, Save } from 'lucide-react';
 import {
   getIndustryOptions,
   INDUSTRY_HINTS,
+  IndustryKey,
   resolveIndustryKey,
   toIndustryLabel,
-  IndustryKey,
 } from '@/lib/industries';
 
 /* ---------------- utilities ---------------- */
@@ -46,9 +46,7 @@ function safeObj<T = any>(v: any): T | undefined {
   return undefined;
 }
 
-function baseSlugFrom(s: string) {
-  return (s || '').replace(/(-[a-z0-9]{2,12})+$/i, '');
-}
+function baseSlugFrom(s: string) { return (s || '').replace(/(-[a-z0-9]{2,12})+$/i, ''); }
 async function upsertBaseDisplayName(base_slug: string, display_name: string) {
   if (!base_slug || !display_name) return;
   try {
@@ -66,17 +64,15 @@ function isDebug() {
     typeof localStorage !== 'undefined' &&
     localStorage.getItem('debug:identity') === '1';
 }
-function dbg(...args: any[]) {
-  if (isDebug()) console.debug(...args);
-}
+function dbg(...args: any[]) { if (isDebug()) console.debug(...args); }
 
 /* ───────────────── site type options ───────────────── */
 const SITE_TYPES = [
-  { value: '', label: 'Select site type' },
-  { value: 'small_business', label: 'Small Business' },
-  { value: 'portfolio', label: 'Portfolio' },
-  { value: 'blog', label: 'Blog' },
-  { value: 'about_me', label: 'About Me' },
+  { value: '',               label: 'Select site type' },
+  { value: 'small_business', label: 'Small Business'   },
+  { value: 'portfolio',      label: 'Portfolio'        },
+  { value: 'blog',           label: 'Blog'             },
+  { value: 'about_me',       label: 'About Me'         },
 ] as const;
 
 /** Prefer columns → data.identity → meta.identity → meta.site_type/meta.siteType */
@@ -114,12 +110,9 @@ function resolveIndustryFromTemplate(t: Template): { key: string; otherLabel: st
 
   const other = String(
     coalesceNonEmpty(
-      // explicit meta field first
       meta?.industry_other,
-      // sometimes consumers stash it under identity
       identData?.industry_other,
       identMeta?.industry_other,
-      // column label if it’s not literally "Other"
       ((t as any).industry_label && (t as any).industry_label.toLowerCase() !== 'other')
         ? (t as any).industry_label
         : ''
@@ -160,81 +153,21 @@ function toDraft(t: Template): Draft {
   const contactMeta = safeObj<any>(meta.contact) ?? meta.contact ?? {};
 
   // Prefer columns → identity.contact (data) → meta.identity.contact → meta.contact
-  const cEmail = coalesceNonEmpty(
-    (t as any).contact_email,
-    contactData?.email,
-    contactMetaI?.email,
-    contactMeta?.email,
-  );
-  const cPhone = coalesceNonEmpty(
-    (t as any).phone,
-    contactData?.phone,
-    contactMetaI?.phone,
-    contactMeta?.phone,
-  );
-  const cAddr1 = coalesceNonEmpty(
-    (t as any).address_line1,
-    contactData?.address,
-    contactMetaI?.address,
-    contactMeta?.address,
-  );
-  const cAddr2 = coalesceNonEmpty(
-    (t as any).address_line2,
-    contactData?.address2,
-    contactMetaI?.address2,
-    contactMeta?.address2,
-  );
-  const cCity = coalesceNonEmpty(
-    (t as any).city,
-    contactData?.city,
-    contactMetaI?.city,
-    contactMeta?.city,
-  );
-  const cState = coalesceNonEmpty(
-    (t as any).state,
-    contactData?.state,
-    contactMetaI?.state,
-    contactMeta?.state,
-  );
-  const cPostal = coalesceNonEmpty(
-    (t as any).postal_code,
-    contactData?.postal,
-    contactMetaI?.postal,
-    contactMeta?.postal,
-  );
-  const cLat = coalesceNonEmpty(
-    (t as any).latitude,
-    contactData?.latitude,
-    contactMetaI?.latitude,
-    contactMeta?.latitude,
-  );
-  const cLon = coalesceNonEmpty(
-    (t as any).longitude,
-    contactData?.longitude,
-    contactMetaI?.longitude,
-    contactMeta?.longitude,
-  );
+  const cEmail  = coalesceNonEmpty((t as any).contact_email, contactData?.email,  contactMetaI?.email,  contactMeta?.email);
+  const cPhone  = coalesceNonEmpty((t as any).phone,         contactData?.phone,  contactMetaI?.phone,  contactMeta?.phone);
+  const cAddr1  = coalesceNonEmpty((t as any).address_line1, contactData?.address,contactMetaI?.address,contactMeta?.address);
+  const cAddr2  = coalesceNonEmpty((t as any).address_line2, contactData?.address2,contactMetaI?.address2,contactMeta?.address2);
+  const cCity   = coalesceNonEmpty((t as any).city,          contactData?.city,   contactMetaI?.city,   contactMeta?.city);
+  const cState  = coalesceNonEmpty((t as any).state,         contactData?.state,  contactMetaI?.state,  contactMeta?.state);
+  const cPostal = coalesceNonEmpty((t as any).postal_code,   contactData?.postal, contactMetaI?.postal, contactMeta?.postal);
+  const cLat    = coalesceNonEmpty((t as any).latitude,      contactData?.latitude, contactMetaI?.latitude, contactMeta?.latitude);
+  const cLon    = coalesceNonEmpty((t as any).longitude,     contactData?.longitude,contactMetaI?.longitude,contactMeta?.longitude);
 
   const siteType = resolveSiteTypeFromTemplate(t);
   const { key: industryKey, otherLabel } = resolveIndustryFromTemplate(t);
 
-  const siteTitle = String(
-    coalesceNonEmpty(
-      (t as any).template_name,
-      identData?.template_name,
-      meta?.siteTitle,
-      (t as any).business_name
-    )
-  );
-
-  const business = String(
-    coalesceNonEmpty(
-      (t as any).business_name,
-      identData?.business_name,
-      meta?.business,
-      siteTitle
-    )
-  );
+  const siteTitle = String(coalesceNonEmpty((t as any).template_name, identData?.template_name, meta?.siteTitle, (t as any).business_name));
+  const business  = String(coalesceNonEmpty((t as any).business_name, identData?.business_name, meta?.business, siteTitle));
 
   const d: Draft = {
     template_name: siteTitle || '',
@@ -253,29 +186,18 @@ function toDraft(t: Template): Draft {
     longitude: cLon === '' ? '' : String(cLon),
   };
 
-  dbg('[IDENTITY:UI] toDraft (merged contact & identity)', {
-    templateId: (t as any)?.id,
-    draft: d,
-  });
-
+  dbg('[IDENTITY:UI] toDraft (merged contact & identity)', { templateId: (t as any)?.id, draft: d });
   return d;
 }
 
 function coalesceNonEmpty<T = any>(...vals: T[]): T | '' {
   for (const v of vals) {
     if (v === null || v === undefined) continue;
-    if (typeof v === 'string') {
-      if (v.trim() !== '') return v as T;
-    } else if (typeof v === 'number') {
-      if (Number.isFinite(v)) return v as T;
-    } else if (Array.isArray(v)) {
-      if (v.length) return v as T;
-    } else if (typeof v === 'object') {
-      // any object counts as present
-      return v as T;
-    } else {
-      return v as T;
-    }
+    if (typeof v === 'string') { if (v.trim() !== '') return v as T; }
+    else if (typeof v === 'number') { if (Number.isFinite(v)) return v as T; }
+    else if (Array.isArray(v)) { if (v.length) return v as T; }
+    else if (typeof v === 'object') { return v as T; }
+    else { return v as T; }
   }
   return '' as any;
 }
@@ -285,8 +207,8 @@ function coalesceNonEmpty<T = any>(...vals: T[]): T | '' {
 /**
  * Build a patch that:
  * - Updates canonical top-level columns (source of truth).
- * - Mirrors identity into BOTH data.identity and meta.identity (for robust reload across readers).
- * - Keeps legacy meta fields (siteTitle, business, contact, etc.) in sync.
+ * - Mirrors identity into BOTH data.identity and meta.identity.
+ * - Keeps legacy meta fields in sync.
  * - IMPORTANT: Do NOT stamp industry="other" unless we have a non-empty industry_other label.
  */
 function buildDataPatch(d: Draft, tmpl: Template): Partial<Template> {
@@ -300,18 +222,15 @@ function buildDataPatch(d: Draft, tmpl: Template): Partial<Template> {
   const lat = d.latitude.trim() === '' ? null : clampLat(Number(d.latitude));
   const lon = d.longitude.trim() === '' ? null : clampLon(Number(d.longitude));
 
-  const prevKey = resolveIndustryKey(
-    String(coalesceNonEmpty(d.industry, (tmpl as any).industry, prevMeta?.industry) || '')
-  );
+  const prevKey = resolveIndustryKey(String(coalesceNonEmpty(d.industry, (tmpl as any).industry, prevMeta?.industry) || ''));
   const wantUnsetOther = prevKey === 'other' && !String(d.industry_other || '').trim();
 
-  // Final normalized key & label
   const finalKey: string | null = wantUnsetOther ? null : (prevKey || null);
   const finalLabel: string | null =
     finalKey == null
       ? null
       : (finalKey === 'other'
-          ? (String(d.industry_other || '').trim() || 'Other') as IndustryKey
+          ? (String(d.industry_other || '').trim() || 'Other')
           : toIndustryLabel(finalKey as IndustryKey));
 
   const identity = {
@@ -334,7 +253,6 @@ function buildDataPatch(d: Draft, tmpl: Template): Partial<Template> {
     },
   };
 
-  // Mirror into meta for old readers and prompt helpers
   const nextMeta = {
     ...prevMeta,
     siteTitle: identity.template_name || prevMeta?.siteTitle || '',
@@ -357,18 +275,12 @@ function buildDataPatch(d: Draft, tmpl: Template): Partial<Template> {
       latitude: identity.contact.latitude ?? undefined,
       longitude: identity.contact.longitude ?? undefined,
     },
-    // normalized identity snapshot
     identity: { ...(safeObj<any>(prevMeta.identity) ?? prevMeta.identity ?? {}), ...identity },
   };
 
-  const nextData = {
-    ...prevData,
-    identity: { ...prevIdentity, ...identity },
-    meta: nextMeta,
-  };
+  const nextData = { ...prevData, identity: { ...prevIdentity, ...identity }, meta: nextMeta };
 
   const patch: Partial<Template> & Record<string, any> = {
-    // canonical columns
     template_name: identity.template_name,
     business_name: identity.business_name || undefined,
     site_type: identity.site_type || undefined,
@@ -383,22 +295,14 @@ function buildDataPatch(d: Draft, tmpl: Template): Partial<Template> {
     postal_code: d.postal_code || undefined,
     latitude: identity.contact.latitude ?? undefined,
     longitude: identity.contact.longitude ?? undefined,
-
-    // hydrated data
     data: nextData,
   };
 
   dbg('[IDENTITY:UI] buildDataPatch', {
     targetTemplateId: (tmpl as any)?.id,
-    canonicalId: (tmpl as any)?.canonical_id,
     identity_in_data: nextData.identity,
     identity_in_meta: nextMeta.identity,
-    columns: {
-      business_name: patch.business_name,
-      site_type: patch.site_type,
-      industry: patch.industry,
-      industry_label: patch.industry_label,
-    },
+    columns: { site_type: patch.site_type, industry: patch.industry, industry_label: patch.industry_label },
   });
 
   return patch;
@@ -409,22 +313,19 @@ function buildDataPatch(d: Draft, tmpl: Template): Partial<Template> {
 export default function IdentityPanel({
   template,
   onChange,
-}: {
-  template: Template;
-  onChange: (patch: Partial<Template>) => void;
-}) {
+}: { template: Template; onChange: (patch: Partial<Template>) => void; }) {
   const [draft, setDraft] = React.useState<Draft>(() => toDraft(template));
   const [dirty, setDirty] = React.useState(false);
 
   const [phoneError, setPhoneError] = React.useState<string | null>(null);
   const [emailError, setEmailError] = React.useState<string | null>(null);
-  const [latError, setLatError] = React.useState<string | null>(null);
-  const [lonError, setLonError] = React.useState<string | null>(null);
+  const [latError, setLatError]     = React.useState<string | null>(null);
+  const [lonError, setLonError]     = React.useState<string | null>(null);
 
-  const [autoApply, setAutoApply] = React.useState(false);
-  const [debugOn, setDebugOn] = React.useState(false);
-
-  const debounceRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [autoApply, setAutoApply] = React.useState(false);          // ✅ single declaration
+  const [debugOn, setDebugOn]     = React.useState(false);
+  const debounceRef               = React.useRef<ReturnType<typeof setTimeout> | null>(null); // ✅ single
+  const renameDebounce            = React.useRef<ReturnType<typeof setTimeout> | null>(null); // ✅ single
 
   const industryOptions = React.useMemo(() => getIndustryOptions(), []);
   const industryHint = React.useMemo(() => {
@@ -432,7 +333,7 @@ export default function IdentityPanel({
     return opt ? INDUSTRY_HINTS[opt.label] : undefined;
   }, [draft.industry, industryOptions]);
 
-  // Include more sources in the signature so we re-hydrate when other panels write to identity/meta.
+  // Signature (include lots of fields so we re-hydrate when other panels write to identity/meta)
   const templateSig = React.useMemo(() => {
     const data = safeObj<any>((template as any).data) ?? (template as any).data ?? {};
     const meta = safeObj<any>(data.meta) ?? data.meta ?? {};
@@ -441,76 +342,55 @@ export default function IdentityPanel({
     const contactData = safeObj<any>(identData.contact) ?? identData.contact ?? {};
     const contactMetaI = safeObj<any>(identMeta.contact) ?? identMeta.contact ?? {};
     const contactMeta = safeObj<any>(meta.contact) ?? meta.contact ?? {};
-  
-    const gather = (k: string) =>
-      [
-        (template as any)[k],
-        contactData?.[k],
-        contactMetaI?.[k],
-        contactMeta?.[k],
-      ];
-  
+
+    const gather = (k: string) => [ (template as any)[k], contactData?.[k], contactMetaI?.[k], contactMeta?.[k] ];
+
     return JSON.stringify([
-      // keys & labels across all places
       (template as any).industry ?? identData?.industry ?? identMeta?.industry ?? meta?.industry ?? '',
       (template as any).industry_label ?? identData?.industry_label ?? identMeta?.industry_label ?? meta?.industry_label ?? '',
       meta?.industry_other ?? identData?.industry_other ?? identMeta?.industry_other ?? '',
       (template as any).business_name ?? identData?.business_name ?? meta?.business ?? '',
       (template as any).site_type ?? identData?.site_type ?? identMeta?.site_type ?? meta?.site_type ?? '',
       (template as any).template_name ?? identData?.template_name ?? meta?.siteTitle ?? '',
-      ...gather('latitude'),
-      ...gather('longitude'),
-      ...gather('email'),
-      ...gather('phone'),
-      ...gather('address'),
-      ...gather('address2'),
-      ...gather('city'),
-      ...gather('state'),
+      ...gather('latitude'), ...gather('longitude'),
+      ...gather('email'),    ...gather('phone'),
+      ...gather('address'),  ...gather('address2'),
+      ...gather('city'),     ...gather('state'),
       ...gather('postal'),
       (template as any).updated_at ?? '',
     ]);
   }, [template]);
 
   // Initialize UI toggle from localStorage
-  React.useEffect(() => {
-    setDebugOn(isDebug());
-  }, []);
+  React.useEffect(() => { setDebugOn(isDebug()); }, []);
 
-  const emitTitle = React.useCallback(
-    (nextName: string) => {
-      if (typeof window === 'undefined') return;
-      window.dispatchEvent(
-        new CustomEvent('qs:template:title', {
-          detail: { name: (nextName || '').trim(), id: (template as any)?.id },
-        })
-      );
-    },
-    [template]
-  );
+  const emitTitle = React.useCallback((nextName: string) => {
+    if (typeof window === 'undefined') return;
+    window.dispatchEvent(new CustomEvent('qs:template:title', {
+      detail: { name: (nextName || '').trim(), id: (template as any)?.id },
+    }));
+  }, [template]);
 
+  // Rehydrate when templateSig changes
   React.useEffect(() => {
     const d = toDraft(template);
     setDraft(d);
     setDirty(false);
-    setPhoneError(null);
-    setEmailError(null);
-    setLatError(null);
-    setLonError(null);
-    const initialName =
-      (d.template_name || '').trim() || (template as any).template_name || '';
+    setPhoneError(null); setEmailError(null); setLatError(null); setLonError(null);
+
+    const initialName = (d.template_name || '').trim() || (template as any).template_name || '';
     if (initialName) emitTitle(initialName);
 
     const data = safeObj<any>((template as any).data) ?? (template as any).data ?? {};
     dbg('[IDENTITY:UI] render', {
       templateId: (template as any)?.id,
-      canonicalId: (template as any)?.canonical_id,
       draft: d,
       data_identity: safeObj<any>(data.identity) ?? data.identity ?? null,
       meta_identity: safeObj<any>(data?.meta?.identity) ?? data?.meta?.identity ?? null,
     });
   }, [templateSig, template, emitTitle]);
 
-  // Live-sync when other panels dispatch merges/apply-patch (e.g., Hero editor setting site_type/industry)
+  // Live-sync from merges (Hero/editor broadcasts)
   React.useEffect(() => {
     const onMerge = (e: any) => {
       const meta = e?.detail?.meta ?? e?.detail?.data?.meta;
@@ -527,12 +407,9 @@ export default function IdentityPanel({
           const k = resolveIndustryKey(String(meta.industry));
           if (k !== prev.industry) { next.industry = k; changed = true; }
         }
-        if (meta.industry_other != null) {
+        if (meta.industry_other != null && next.industry === 'other') {
           const other = String(meta.industry_other || '').trim();
-          if (prev.industry === 'other' && other !== prev.industry_other) {
-            next.industry_other = other;
-            changed = true;
-          }
+          if (other !== prev.industry_other) { next.industry_other = other; changed = true; }
         }
         if (changed) setDirty(true);
         return next;
@@ -546,27 +423,22 @@ export default function IdentityPanel({
     };
   }, []);
 
-  const renameDebounce = React.useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  const scheduleAutoApply = React.useCallback(
-    (nextDraft: Draft) => {
-      if (!autoApply) return;
-      if (debounceRef.current) clearTimeout(debounceRef.current);
-      const patch = buildDataPatch(nextDraft, template);
-      debounceRef.current = setTimeout(() => {
-        dbg('[IDENTITY:UI] auto-apply patch', patch);
-        onChange(patch);
-      }, 700);
-    },
-    [autoApply, onChange, template]
-  );
+  const scheduleAutoApply = React.useCallback((nextDraft: Draft) => {
+    if (!autoApply) return;
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    const patch = buildDataPatch(nextDraft, template);
+    debounceRef.current = setTimeout(() => {
+      dbg('[IDENTITY:UI] auto-apply patch', patch);
+      onChange(patch);
+    }, 700);
+  }, [autoApply, onChange, template]);
 
   const commit = React.useCallback(() => {
     const pDigits = digitsOnly(draft.phone);
     if (pDigits && pDigits.length !== 10) { setPhoneError('Phone number must be exactly 10 digits'); return; }
     const em = draft.contact_email.trim();
     if (em && !isValidEmail(em)) { setEmailError('Enter a valid email address'); return; }
-    if (draft.latitude.trim() !== '' && !Number.isFinite(Number(draft.latitude))) { setLatError('Latitude must be a number'); return; }
+    if (draft.latitude.trim() !== ''  && !Number.isFinite(Number(draft.latitude)))  { setLatError('Latitude must be a number'); return; }
     if (draft.longitude.trim() !== '' && !Number.isFinite(Number(draft.longitude))) { setLonError('Longitude must be a number'); return; }
 
     const patch = buildDataPatch(draft, template);
@@ -576,9 +448,7 @@ export default function IdentityPanel({
 
     const name = String(draft.template_name || '').trim();
     if (name) {
-      const base =
-        (template as any).base_slug ||
-        baseSlugFrom(String((template as any).slug || (template as any).template_name || (template as any).id || ''));
+      const base = (template as any).base_slug || baseSlugFrom(String((template as any).slug || (template as any).template_name || (template as any).id || ''));
       void upsertBaseDisplayName(base, name);
     }
   }, [draft, onChange, template]);
@@ -593,7 +463,6 @@ export default function IdentityPanel({
       }
 
       if (key === 'site_type') {
-        // If user picks a non-business type with no industry, force 'other'
         if (String(value) && value !== 'small_business' && !next.industry) {
           next.industry = 'other';
         }
@@ -607,9 +476,7 @@ export default function IdentityPanel({
         if (autoApply) {
           if (renameDebounce.current) clearTimeout(renameDebounce.current);
           renameDebounce.current = setTimeout(() => {
-            const base =
-              (template as any).base_slug ||
-              baseSlugFrom(String((template as any).slug || (template as any).template_name || (template as any).id || ''));
+            const base = (template as any).base_slug || baseSlugFrom(String((template as any).slug || (template as any).template_name || (template as any).id || ''));
             void upsertBaseDisplayName(base, name);
           }, 600);
         }
@@ -631,28 +498,20 @@ export default function IdentityPanel({
     });
   };
 
-  // Make global "Save now" also commit Identity draft
+  // Global save hooks
   React.useEffect(() => {
-    const handler = () => {
-      if (dirty) {
-        dbg('[IDENTITY:UI] global save -> committing identity draft');
-        commit();
-      }
-    };
+    const handler = () => { if (dirty) { dbg('[IDENTITY:UI] global save -> commit'); commit(); } };
     const events = ['qs:save-now', 'qs:template:save', 'qs:settings:save', 'qs:toolbar:save-now'];
     events.forEach((ev) => window.addEventListener(ev, handler));
     return () => events.forEach((ev) => window.removeEventListener(ev, handler));
   }, [dirty, commit]);
 
-  // Cmd/Ctrl+S commits identity even if focus is in a field
+  // Cmd/Ctrl+S commits identity
   React.useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 's') {
         e.preventDefault();
-        if (dirty) {
-          dbg('[IDENTITY:UI] cmd/ctrl+s -> commit');
-          commit();
-        }
+        if (dirty) commit();
       }
     };
     window.addEventListener('keydown', onKey);
@@ -664,75 +523,38 @@ export default function IdentityPanel({
       <div className="space-y-4">
         {/* Controls */}
         <div className="flex items-center justify-between gap-2">
-          <div className="text-xs text-white/60">
-            {dirty ? 'Unsaved changes' : 'No changes'}
-          </div>
+          <div className="text-xs text-white/60">{dirty ? 'Unsaved changes' : 'No changes'}</div>
           <div className="flex items-center gap-3">
-            {/* Debug toggle */}
-            <label
-              className="text-xs text-white/70 inline-flex items-center gap-1 cursor-pointer"
-              title="Write detailed identity panel logs to the browser console"
-            >
-              <input
-                type="checkbox"
-                className="accent-purple-500"
-                checked={debugOn}
+            <label className="text-xs text-white/70 inline-flex items-center gap-1 cursor-pointer" title="Write detailed identity panel logs to the browser console">
+              <input type="checkbox" className="accent-purple-500" checked={debugOn}
                 onChange={(e) => {
                   const enabled = e.target.checked;
-                  try {
-                    if (enabled) localStorage.setItem('debug:identity', '1');
-                    else localStorage.removeItem('debug:identity');
-                  } catch {}
+                  try { enabled ? localStorage.setItem('debug:identity', '1') : localStorage.removeItem('debug:identity'); } catch {}
                   setDebugOn(enabled);
-                  dbg('[IDENTITY:UI] debug toggle', {
-                    enabled,
-                    templateId: (template as any)?.id,
-                    canonicalId: (template as any)?.canonical_id,
-                  });
-                }}
-              />
+                  dbg('[IDENTITY:UI] debug toggle', { enabled, templateId: (template as any)?.id });
+                }} />
               Debug logs
             </label>
 
-            {/* Auto-apply */}
             <label className="text-xs text-white/70 inline-flex items-center gap-1 cursor-pointer">
-              <input
-                type="checkbox"
-                className="accent-purple-500"
-                checked={autoApply}
-                onChange={(e) => (setAutoApply(e.target.checked))}
-              />
+              <input type="checkbox" className="accent-purple-500" checked={autoApply} onChange={(e) => setAutoApply(e.target.checked)} />
               Auto-apply
             </label>
 
-            {/* Apply & Reset */}
-            <Button
-              size="sm"
-              variant={dirty ? 'secondary' : 'outline'}
+            <Button size="sm" variant={dirty ? 'secondary' : 'outline'}
               className={dirty ? 'bg-purple-500 hover:bg-purple-600' : ''}
               disabled={!dirty || !!phoneError || !!emailError || !!latError || !!lonError}
-              onClick={commit}
-              title="Apply changes to the template"
-            >
-              <Save className="w-3.5 h-3.5 mr-1" />
-              Apply
+              onClick={commit} title="Apply changes to the template">
+              <Save className="w-3.5 h-3.5 mr-1" /> Apply
             </Button>
-            <Button
-              size="sm"
-              variant="ghost"
+            <Button size="sm" variant="ghost"
               onClick={() => {
                 dbg('[IDENTITY:UI] reset draft to template');
                 setDraft(toDraft(template));
                 setDirty(false);
-                setPhoneError(null);
-                setEmailError(null);
-                setLatError(null);
-                setLonError(null);
-              }}
-              title="Discard draft changes"
-            >
-              <RefreshCw className="w-3.5 h-3.5 mr-1" />
-              Reset
+                setPhoneError(null); setEmailError(null); setLatError(null); setLonError(null);
+              }} title="Discard draft changes">
+              <RefreshCw className="w-3.5 h-3.5 mr-1" /> Reset
             </Button>
           </div>
         </div>
@@ -740,56 +562,30 @@ export default function IdentityPanel({
         {/* Template Name */}
         <div>
           <Label>Template Name</Label>
-          <Input
-            value={draft.template_name}
-            onChange={(e) => setField('template_name', e.target.value)}
-            placeholder="e.g. auburnroofcleaning"
-            className={inputGhost}
-          />
+          <Input value={draft.template_name} onChange={(e) => setField('template_name', e.target.value)} placeholder="e.g. auburnroofcleaning" className={inputGhost} />
         </div>
 
         {/* Business Name */}
         <div>
           <Label>Business / Site Display Name</Label>
-          <Input
-            value={draft.business_name}
-            onChange={(e) => setField('business_name', e.target.value)}
-            placeholder="e.g. Auburn Roof Cleaning"
-            className={inputGhost}
-          />
+          <Input value={draft.business_name} onChange={(e) => setField('business_name', e.target.value)} placeholder="e.g. Auburn Roof Cleaning" className={inputGhost} />
         </div>
 
         {/* Site Type + Industry */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div>
             <Label>Site Type</Label>
-            <select
-              value={draft.site_type}
-              onChange={(e) => setField('site_type', e.target.value)}
-              className="w-full px-2 py-1 rounded bg-gray-800 border text-white border-gray-700 focus:border-gray-600"
-            >
-              {SITE_TYPES.map((s) => (
-                <option key={s.value} value={s.value}>{s.label}</option>
-              ))}
+            <select value={draft.site_type} onChange={(e) => setField('site_type', e.target.value)} className="w-full px-2 py-1 rounded bg-gray-800 border text-white border-gray-700 focus:border-gray-600">
+              {SITE_TYPES.map((s) => (<option key={s.value} value={s.value}>{s.label}</option>))}
             </select>
-            <p className="text-[11px] text-white/40 mt-1">
-              Helps AI tailor defaults (Portfolio / Blog / About Me / Small Business).
-            </p>
+            <p className="text-[11px] text-white/40 mt-1">Helps AI tailor defaults (Portfolio / Blog / About Me / Small Business).</p>
           </div>
 
           <div>
             <Label>Industry</Label>
-            <select
-              value={draft.industry}
-              onChange={(e) => setField('industry', e.target.value)}
-              className="w-full px-2 py-1 rounded bg-gray-800 border text-white border-gray-700 focus:border-gray-600"
-            >
+            <select value={draft.industry} onChange={(e) => setField('industry', e.target.value)} className="w-full px-2 py-1 rounded bg-gray-800 border text-white border-gray-700 focus:border-gray-600">
               {draft.industry ? null : <option value="">Select industry</option>}
-              {getIndustryOptions().map((opt) => (
-                <option key={opt.value} value={opt.value}>
-                  {opt.label}
-                </option>
-              ))}
+              {getIndustryOptions().map((opt) => (<option key={opt.value} value={opt.value}>{opt.label}</option>))}
             </select>
             <p className="text-[11px] text-white/40 mt-1">
               Resolved: {draft.industry === 'other'
@@ -808,94 +604,50 @@ export default function IdentityPanel({
         {draft.industry === 'other' && (
           <div>
             <Label>Other Industry (describe)</Label>
-            <Input
-              value={draft.industry_other}
-              onChange={(e) => setField('industry_other', e.target.value)}
-              placeholder="e.g., Mobile Windshield Repair"
-              className={inputGhost}
-            />
-            <p className="text-[11px] text-white/40 mt-1">
-              Used as <code>industry_label</code> for AI prompts and copy.
-            </p>
+            <Input value={draft.industry_other} onChange={(e) => setField('industry_other', e.target.value)} placeholder="e.g., Mobile Windshield Repair" className={inputGhost} />
+            <p className="text-[11px] text-white/40 mt-1">Used as <code>industry_label</code> for AI prompts and copy.</p>
           </div>
         )}
 
         {/* Contact Email */}
         <div>
           <Label>Contact Email</Label>
-          <Input
-            type="email"
-            value={draft.contact_email}
-            onChange={(e) => setField('contact_email', e.target.value)}
-            placeholder="name@yourcompany.com"
-            className={`${inputGhost} ${emailError ? 'border-red-500' : ''}`}
-          />
+          <Input type="email" value={draft.contact_email} onChange={(e) => setField('contact_email', e.target.value)} placeholder="name@yourcompany.com" className={`${inputGhost} ${emailError ? 'border-red-500' : ''}`} />
         </div>
         {emailError && <p className="text-red-500 text-xs mt-1">{emailError}</p>}
 
         {/* Phone */}
         <div>
           <Label>Phone</Label>
-          <Input
-            value={draft.phone}
-            onChange={(e) => setField('phone', e.target.value)}
-            inputMode="tel"
-            placeholder="(123) 456-7890"
-            className={`${inputGhost} ${phoneError ? 'border-red-500' : ''}`}
-          />
+          <Input value={draft.phone} onChange={(e) => setField('phone', e.target.value)} inputMode="tel" placeholder="(123) 456-7890" className={`${inputGhost} ${phoneError ? 'border-red-500' : ''}`} />
         </div>
         {phoneError && <p className="text-red-500 text-xs mt-1">{phoneError}</p>}
 
         {/* Address */}
         <div>
           <Label>Address</Label>
-          <Input
-            value={draft.address_line1}
-            onChange={(e) => setField('address_line1', e.target.value)}
-            placeholder="1600 7th Ave"
-            className={inputGhost}
-          />
+          <Input value={draft.address_line1} onChange={(e) => setField('address_line1', e.target.value)} placeholder="1600 7th Ave" className={inputGhost} />
         </div>
 
         {/* Address 2 */}
         <div>
           <Label>Address 2 (optional)</Label>
-          <Input
-            value={draft.address_line2}
-            onChange={(e) => setField('address_line2', e.target.value)}
-            placeholder="Suite / Unit"
-            className={inputGhost}
-          />
+          <Input value={draft.address_line2} onChange={(e) => setField('address_line2', e.target.value)} placeholder="Suite / Unit" className={inputGhost} />
         </div>
 
         {/* City / State / ZIP */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <div>
             <Label>City</Label>
-            <Input
-              value={draft.city}
-              onChange={(e) => setField('city', e.target.value)}
-              placeholder="Grafton"
-              className={inputGhost}
-            />
+            <Input value={draft.city} onChange={(e) => setField('city', e.target.value)} placeholder="Grafton" className={inputGhost} />
           </div>
           <div>
             <Label>State</Label>
-            <Input
-              value={draft.state}
-              onChange={(e) => setField('state', e.target.value)}
-              placeholder="WI"
-              className={inputGhost}
-            />
+            <Input value={draft.state} onChange={(e) => setField('state', e.target.value)} placeholder="WI" className={inputGhost} />
           </div>
           <div>
             <Label>ZIP</Label>
-            <Input
-              value={draft.postal_code}
-              onChange={(e) => setField('postal_code', e.target.value)}
-              placeholder="53024"
-              className={inputGhost}
-            />
+            <Input value={draft.postal_code} onChange={(e) => setField('postal_code', e.target.value)} placeholder="53024" className={inputGhost} />
           </div>
         </div>
 
@@ -903,24 +655,12 @@ export default function IdentityPanel({
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div>
             <Label>Latitude</Label>
-            <Input
-              type="text"
-              value={draft.latitude}
-              onChange={(e) => setField('latitude', e.target.value)}
-              placeholder="43.319100"
-              className={`${inputGhost} ${latError ? 'border-red-500' : ''}`}
-            />
+            <Input type="text" value={draft.latitude} onChange={(e) => setField('latitude', e.target.value)} placeholder="43.319100" className={`${inputGhost} ${latError ? 'border-red-500' : ''}`} />
             {latError && <p className="text-red-500 text-xs mt-1">{latError}</p>}
           </div>
           <div>
             <Label>Longitude</Label>
-            <Input
-              type="text"
-              value={draft.longitude}
-              onChange={(e) => setField('longitude', e.target.value)}
-              placeholder="-87.953690"
-              className={`${inputGhost} ${lonError ? 'border-red-500' : ''}`}
-            />
+            <Input type="text" value={draft.longitude} onChange={(e) => setField('longitude', e.target.value)} placeholder="-87.953690" className={`${inputGhost} ${lonError ? 'border-red-500' : ''}`} />
             {lonError && <p className="text-red-500 text-xs mt-1">{lonError}</p>}
           </div>
         </div>

@@ -184,6 +184,36 @@ const SITE_TYPES = [
 ] as const;
 type SiteType = (typeof SITE_TYPES)[number]['key'];
 
+/* —— helper: coalesced save trigger —— */
+function saveNow() {
+  requestAnimationFrame(() => {
+    try {
+      window.dispatchEvent(
+        new CustomEvent('qs:toolbar:save-now', { detail: { source: 'hero-editor' } }),
+      );
+    } catch {}
+  });
+}
+
+/* —— tiny label guesser for Suggest flow —— */
+function guessIndustryLabelFromCopy(headline: string, subheadline: string) {
+  const text = `${headline || ''} ${subheadline || ''}`.toLowerCase();
+  for (const opt of getIndustryOptions()) {
+    const lbl = String(opt.label || '').toLowerCase();
+    if (!lbl) continue;
+    if (text.includes(lbl)) return opt.label;
+  }
+  const synonyms: Record<string, string> = {
+    'windshield repair': 'Windshield Repair',
+    'auto glass': 'Windshield Repair',
+    'auto-glass': 'Windshield Repair',
+  };
+  for (const [needle, label] of Object.entries(synonyms)) {
+    if (text.includes(needle)) return label;
+  }
+  return '';
+}
+
 /* ───────────────── component ───────────────── */
 export default function HeroEditor({
   block,
@@ -524,36 +554,12 @@ export default function HeroEditor({
     return (await res.json()) as any;
   }
 
-  // Put this with the other helpers (above the component)
-  function guessIndustryLabelFromCopy(headline: string, subheadline: string) {
-    const text = `${headline || ''} ${subheadline || ''}`.toLowerCase();
-
-    // quick exact/substring checks against your known labels
-    for (const opt of getIndustryOptions()) {
-      const lbl = String(opt.label || '').toLowerCase();
-      if (!lbl) continue;
-      if (text.includes(lbl)) return opt.label; // e.g., "Windshield Repair"
-    }
-
-    // minimal synonyms to cover common phrasing
-    const synonyms: Record<string, string> = {
-      'windshield repair': 'Windshield Repair',
-      'auto glass': 'Windshield Repair',
-      'auto-glass': 'Windshield Repair',
-    };
-    for (const [needle, label] of Object.entries(synonyms)) {
-      if (text.includes(needle)) return label;
-    }
-
-    return ''; // unknown
-  }
-
   async function suggestAll() {
     setAiLoading(true); setAiError(null);
     try {
       const raw = await requestSuggestions();
       const { headline, subheadline, cta_text } = normalizeSuggested(raw);
-  
+
       const defaultsByType: Record<string, { h: string; sh: string; cta: string }> = {
         portfolio: { h: 'Work That Speaks For Itself', sh: 'A curated selection of recent projects and collaborations.', cta: 'View Portfolio' },
         blog: { h: 'Ideas, Notes & Updates', sh: 'Writing on craft, process, and what I’m exploring next.', cta: 'Read the Blog' },
@@ -561,14 +567,14 @@ export default function HeroEditor({
         small_business: { h: 'Your Trusted Local Service', sh: 'Fast, reliable solutions tailored to your needs.', cta: 'Get Started Today' },
       };
       const d = defaultsByType[siteType || 'small_business'];
-  
+
       // 1) Apply copy
       const H = headline || d.h;
       const SH = subheadline || d.sh;
       const CTA = cta_text || d.cta;
-  
+
       setLocal((prev: any) => ({ ...prev, headline: H, subheadline: SH, cta_text: CTA }));
-  
+
       // 2) Ensure site_type defaults to small_business if unset
       if (!siteType) {
         setSiteType('small_business' as SiteType);
@@ -576,20 +582,19 @@ export default function HeroEditor({
           window.dispatchEvent(new CustomEvent('qs:template:merge', {
             detail: { meta: { site_type: 'small_business' } }
           }));
+          saveNow(); // persist site_type immediately
         });
       }
-  
+
       // 3) If industry not chosen (''), or it's the seeded "other" w/o text, try to infer
       const seededOther = industryKey === 'other' && !aiIndustryOther.trim();
       if (!industryKey || seededOther) {
-        // prefer whatever label we already computed; otherwise guess from the copy
         let label = effectiveIndustryLabel || (industryKey === 'other' ? aiIndustryOther.trim() : '');
         if (!label) label = guessIndustryLabelFromCopy(H, SH);
-  
+
         if (label) {
           const key = resolveIndustryKey(label);
           if (key && key !== 'other') {
-            // we have a concrete key → use canonical label
             const canonLabel = toIndustryLabel(key);
             setIndustryKey(key);
             setAiIndustryOther('');
@@ -597,20 +602,21 @@ export default function HeroEditor({
               window.dispatchEvent(new CustomEvent('qs:template:merge', {
                 detail: { meta: { site_type: siteType || 'small_business', industry: key, industry_label: canonLabel, industry_other: null } }
               }));
+              saveNow(); // persist concrete industry
             });
           } else {
-            // we only have a free-text label → store as "other"
             setIndustryKey('other');
             setAiIndustryOther(label);
             requestAnimationFrame(() => {
               window.dispatchEvent(new CustomEvent('qs:template:merge', {
                 detail: { meta: { site_type: siteType || 'small_business', industry: 'other', industry_label: 'Other', industry_other: label } }
               }));
+              saveNow(); // persist "other" + free-text
             });
           }
         }
       }
-  
+
       toast.success('Suggested copy applied');
       refreshPreview();
     } catch (e: any) {
@@ -620,7 +626,7 @@ export default function HeroEditor({
       setAiLoading(false);
     }
   }
-  
+
   async function generateHeroImage() {
     setImgLoading(true);
     setImgError(null);
@@ -735,9 +741,9 @@ export default function HeroEditor({
       >
         {/* sticky header */}
         <div className="sticky top-0 z-10 px-4 py-3 border-b border-white/10 bg-neutral-950/90 backdrop-blur flex items-center justify-between">
-          <div className="text-sm font-medium flex items-center gap-2">
+          {/* <div className="text-sm font-medium flex items-center gap-2">
             <Settings2 className="w-4 h-4" /> Hero Settings
-          </div>
+          </div> */}
 
           {step === 2 && (
             <div className="inline-flex rounded-full border border-white/15 bg-neutral-900 p-1 text-xs">
@@ -790,13 +796,14 @@ export default function HeroEditor({
                       key={key}
                       onClick={() => {
                         setSiteType(key);
-                        // NEW: broadcast site_type immediately so Identity reflects fast
+                        // broadcast site_type immediately so Identity reflects fast
                         requestAnimationFrame(() => {
                           window.dispatchEvent(
                             new CustomEvent('qs:template:merge', {
                               detail: { meta: { site_type: key } },
                             }),
                           );
+                          saveNow();
                         });
 
                         if (key === 'small_business') {
@@ -807,7 +814,7 @@ export default function HeroEditor({
                           const other = blurb === 'Show your work' ? 'Portfolio' : label;
                           setAiIndustryOther(other);
 
-                          // NEW: immediate broadcast for Identity panel
+                          // immediate broadcast for Identity panel + save
                           requestAnimationFrame(() => {
                             window.dispatchEvent(
                               new CustomEvent('qs:template:merge', {
@@ -821,6 +828,7 @@ export default function HeroEditor({
                                 },
                               }),
                             );
+                            saveNow();
                           });
 
                           setTimeout(() => setStep(2), 0);
@@ -883,7 +891,7 @@ export default function HeroEditor({
                       const val = e.target.value;
                       setIndustryKey(val);
 
-                      // NEW: immediate broadcast
+                      // immediate broadcast
                       const k = resolveIndustryKey(val);
                       const meta =
                         k === 'other'
@@ -902,6 +910,7 @@ export default function HeroEditor({
                             },
                           }),
                         );
+                        saveNow();
                       });
                     }}
                   >
@@ -922,7 +931,7 @@ export default function HeroEditor({
                       const v = e.target.value;
                       setAiIndustryOther(v);
 
-                      // NEW: mirror when typing "Other"
+                      // mirror when typing "Other"
                       if (industryKey === 'other') {
                         requestAnimationFrame(() => {
                           window.dispatchEvent(
@@ -937,6 +946,7 @@ export default function HeroEditor({
                               },
                             }),
                           );
+                          saveNow();
                         });
                       }
                     }}
@@ -1058,63 +1068,6 @@ export default function HeroEditor({
                         </div>
                       </div>
                     )}
-
-                    {/* Quick Controls (overlay) */}
-                    <div className="rounded border border-white/10 bg-neutral-900 p-3 mt-3">
-                      <div className="flex items-center justify-between">
-                        <div className="text-sm font-medium">Quick Controls</div>
-                        <button
-                          onClick={() => {
-                            setLocal((p: any) => {
-                              const cur = (p?.overlay_level ?? p?.overlay ?? 'none') as
-                                | 'none'
-                                | 'soft'
-                                | 'strong';
-                              const next = cur === 'none' ? 'soft' : 'strong';
-                              return {
-                                ...p,
-                                overlay_level: next,
-                                overlay: next,
-                                layout_mode:
-                                  p?.layout_mode && p.layout_mode !== 'inline'
-                                    ? p.layout_mode
-                                    : 'background',
-                                layout:
-                                  p?.layout && p.layout !== 'inline' ? p.layout : 'background',
-                              };
-                            });
-                            // also notify renderer listeners
-                            window.dispatchEvent(new CustomEvent('qs:hero:auto-fix'));
-                            bumpPreview();
-                          }}
-                          className="inline-flex items-center gap-1.5 rounded border border-white/15 px-2 py-1 text-xs hover:bg-white/10"
-                          title="Increase overlay for better contrast"
-                        >
-                          Auto-fix
-                        </button>
-                      </div>
-                      <div className="mt-2 inline-flex rounded-lg border border-white/15 bg-neutral-900 p-1 text-xs">
-                        {(['none', 'soft', 'strong'] as const).map((lvl) => (
-                          <button
-                            key={lvl}
-                            onClick={() => {
-                              setLocal((p: any) => ({ ...p, overlay_level: lvl, overlay: lvl }));
-                              window.dispatchEvent(
-                                new CustomEvent('qs:hero:set', { detail: { overlay_level: lvl } }),
-                              );
-                              bumpPreview();
-                            }}
-                            className={`px-3 py-1 rounded-md ${
-                              (local?.overlay_level ?? local?.overlay ?? 'soft') === lvl
-                                ? 'bg-white text-gray-900'
-                                : 'text-white/80'
-                            }`}
-                          >
-                            {lvl}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
                   </div>
 
                   <div>
@@ -1129,14 +1082,14 @@ export default function HeroEditor({
                       <option value="3d">3D Render</option>
                       <option value="minimal">Minimal</option>
                     </select>
-                  </div>
+                  {/* </div>
 
-                  <div className="md:col-span-3 flex items-center justify-between">
-                    <label className="text-xs text-neutral-300">Include people in image</label>
+                  <div className="md:col-span-3 flex items-center justify-between"> */}
                     <Switch
                       checked={imgIncludePeople}
                       onCheckedChange={(v) => setImgIncludePeople(!!v)}
                     />
+                    <label className="text-xs text-neutral-300 pl-2">Include people in image</label>
                   </div>
                 </div>
               )}
@@ -1144,6 +1097,62 @@ export default function HeroEditor({
               {/* Advanced */}
               {mode === 'advanced' && (
                 <>
+                  {/* Quick Controls (overlay) */}
+                  <div className="rounded border border-white/10 bg-neutral-900 p-3 mt-3">
+                    <div className="flex items-center justify-between">
+                      <div className="text-sm font-medium">Quick Controls</div>
+                      <button
+                        onClick={() => {
+                          setLocal((p: any) => {
+                            const cur = (p?.overlay_level ?? p?.overlay ?? 'none') as
+                              | 'none'
+                              | 'soft'
+                              | 'strong';
+                            const next = cur === 'none' ? 'soft' : 'strong';
+                            return {
+                              ...p,
+                              overlay_level: next,
+                              overlay: next,
+                              layout_mode:
+                                p?.layout_mode && p.layout_mode !== 'inline'
+                                  ? p.layout_mode
+                                  : 'background',
+                              layout:
+                                p?.layout && p.layout !== 'inline' ? p.layout : 'background',
+                            };
+                          });
+                          // also notify renderer listeners
+                          window.dispatchEvent(new CustomEvent('qs:hero:auto-fix'));
+                          bumpPreview();
+                        }}
+                        className="inline-flex items-center gap-1.5 rounded border border-white/15 px-2 py-1 text-xs hover:bg-white/10"
+                        title="Increase overlay for better contrast"
+                      >
+                        Auto-fix
+                      </button>
+                    </div>
+                    <div className="mt-2 inline-flex rounded-lg border border-white/15 bg-neutral-900 p-1 text-xs">
+                      {(['none', 'soft', 'strong'] as const).map((lvl) => (
+                        <button
+                          key={lvl}
+                          onClick={() => {
+                            setLocal((p: any) => ({ ...p, overlay_level: lvl, overlay: lvl }));
+                            window.dispatchEvent(
+                              new CustomEvent('qs:hero:set', { detail: { overlay_level: lvl } }),
+                            );
+                            bumpPreview();
+                          }}
+                          className={`px-3 py-1 rounded-md ${
+                            (local?.overlay_level ?? local?.overlay ?? 'soft') === lvl
+                              ? 'bg-white text-gray-900'
+                              : 'text-white/80'
+                          }`}
+                        >
+                          {lvl}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
                   <div className="grid md:grid-cols-3 gap-3 mt-3">
                     <div>
                       <label className="text-xs text-neutral-300">Headline</label>

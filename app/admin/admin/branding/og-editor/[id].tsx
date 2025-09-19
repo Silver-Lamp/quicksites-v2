@@ -35,7 +35,7 @@ export default function OGLayoutEditor() {
 
   const saveLayout = async () => {
     await supabase.from('branding_profiles').update({ layout }).eq('id', id);
-    alert('Layout saved!');
+    // alert('Layout saved!');
   };
 
   const previewURL = `/api/og/snapshot?snapshotId=${id}`;

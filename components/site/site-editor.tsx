@@ -26,7 +26,7 @@ export default function SiteEditor({ site }: { site: SiteData }) {
     if (!response.ok) {
       toast.error('Failed to save site');
     } else {
-      toast.success('Site saved!');
+      // toast.success('Site saved!');
     }
 
     setIsSaving(false);

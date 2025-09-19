@@ -448,7 +448,7 @@ export function TemplateActionToolbar({
         try { dispatchTemplateCacheUpdate(toCacheRow({ ...(cur as any), data: payload.data })); } catch {}
       } while (queueRequestedRef.current);
 
-      toast.success('Saved!');
+      // toast.success('Saved!');
       try { window.dispatchEvent(new Event('qs:preview:save')); } catch {}
     } catch (err) {
       console.error('[commit queue] commit failed:', err);

@@ -92,7 +92,7 @@ export default function SiteSettingsPanel({ siteId }: { siteId: string }) {
       })
       .eq('id', siteId);
     if (error) alert('❌ Save failed.');
-    else alert('✅ Settings saved!');
+    // else alert('✅ Settings saved!');
   };
 
   const duplicateSite = async () => {

@@ -356,7 +356,7 @@ export default function TemplateEditor({
       const id = (template as any)?.id;
       if (!id) return toast.error('Missing template id');
       await commitNow(id, (template as any).data);
-      toast.success('Saved!');
+      // toast.success('Saved!');
     } catch (err: any) {
       console.error(err);
       toast.error(err?.message || 'Error saving template');

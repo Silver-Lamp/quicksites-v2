@@ -71,7 +71,7 @@ export async function commitTemplate(
     try {
       const newRev = await postCommit(id, base.rev, nextDoc);
       lastKnown = { id, rev: newRev, data: nextDoc };
-      toast.success(toastLabel);
+      // toast.success(toastLabel);
     } catch (e: any) {
       if (e?.code !== 409) throw e; // non-merge error
 
@@ -80,7 +80,7 @@ export async function commitTemplate(
       nextDoc = update(latest.data);
       const newRev = await postCommit(id, latest.rev, nextDoc);
       lastKnown = { id, rev: newRev, data: nextDoc };
-      toast.success(toastLabel);
+      // toast.success(toastLabel);
     }
   } finally {
     inFlight = false;

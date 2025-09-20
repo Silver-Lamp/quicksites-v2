@@ -262,10 +262,12 @@ export default function HeroEditor({
   const metaAll = useMemo(() => ((template?.data as any)?.meta ?? {}), [template]);
 
   const currentIndustryKey = useMemo(() => {
-    const raw = (metaAll?.industry ?? (template as any)?.industry ?? '').toString().trim();
+    const raw = (
+      (metaAll?.identity?.industry ?? metaAll?.industry ?? (template as any)?.industry ?? '')
+    ).toString().trim();
     return raw ? resolveIndustryKey(raw) : '';
   }, [metaAll, template]);
-
+  
   // Treat server-seeded "other" without text as UNSET in the UI
   const seededOtherByServer = useMemo(() => {
     return (
@@ -291,7 +293,24 @@ export default function HeroEditor({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialIndustryKey]);
 
-  const [aiIndustryOther, setAiIndustryOther] = useState('');
+  const initialOtherText = useMemo(() => {
+    const id = (metaAll?.identity ?? {}) as any;
+    const fromIdentity = (id?.industry_other ?? '') as string;
+    const fromMeta = (metaAll?.industry_other ?? '') as string;
+  
+    // If someone stored a friendly label in industry_label (not literally "Other"), use it.
+    const label = (metaAll?.industry_label ?? '') as string;
+    const fromLabel = label && label.toLowerCase() !== 'other' ? label : '';
+  
+    return (fromIdentity || fromMeta || fromLabel || '').toString().trim();
+  }, [metaAll]);
+  
+  const [aiIndustryOther, setAiIndustryOther] = useState(initialOtherText);
+useEffect(() => {
+  // if identity/meta changes underneath us (e.g., autosave), keep the UI in sync only if user hasn’t typed
+  if (!aiIndustryOther && initialOtherText) setAiIndustryOther(initialOtherText);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+}, [initialOtherText]);
 
   const initialSiteType: SiteType | null = useMemo(() => {
     if (metaAll?.site_type) return metaAll.site_type as SiteType;
@@ -340,11 +359,15 @@ export default function HeroEditor({
 
   // steps
   type Step = 1 | 2;
+  const hasOtherText = initialOtherText.length > 0;
+
   const initialStep: Step =
     (siteType && siteType !== 'small_business') ||
-    (currentIndustryKey && currentIndustryKey !== 'other')
+    (currentIndustryKey && currentIndustryKey !== 'other') ||
+    (siteType === 'small_business' && currentIndustryKey === 'other' && hasOtherText)
       ? 2
       : 1;
+
   const [step, setStep] = useState<Step>(initialStep);
 
   const industryValid = useMemo(

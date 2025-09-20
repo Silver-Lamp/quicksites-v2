@@ -42,6 +42,31 @@ function resolveIndustry(t: any): string {
   return (v ?? '').toString().trim();
 }
 
+/** Label to show in the table. If industry is "other", append the custom label. */
+function resolveIndustryDisplay(t: any): string {
+  const key = (resolveIndustry(t) || '').toString().trim().toLowerCase();
+  if (!key) return '—';
+
+  // Base label (e.g., "Windshield Repair", "General", "Other")
+  const base = titleFromKey(key);
+
+  if (key !== 'other') return base;
+
+  // Try to surface the user's custom "other" value from multiple places
+  const meta: any = getMeta(t) ?? {};
+  const id = meta?.identity ?? {};
+  const candidates = [
+    id?.industry_other,
+    meta?.industry_other,
+    id?.industry_label,
+    (t?.industry_label && String(t.industry_label).toLowerCase() !== 'other' ? t.industry_label : null),
+  ];
+
+  const custom = (candidates.find((v) => (v ?? '').toString().trim()) ?? '').toString().trim();
+
+  return custom && custom.toLowerCase() !== 'other' ? `${base} (${custom})` : base;
+}
+
 function resolveCity(t: any): string {
   if (t?.city) return String(t.city);
   const meta: any = getMeta(t) ?? {};
@@ -365,11 +390,11 @@ export default function TemplatesIndexTable({
 
   const renderPrimaryRow = (t: any, gKey: string, hasChildren: number) => {
     const updated = t.effective_updated_at ?? t.updated_at;
-    const industryKey = resolveIndustry(t);
     const typeKey = resolveSiteType(t);
 
     const displayType = typeKey ? titleFromKey(typeKey) : '—';
-    const displayIndustry = industryKey ? titleFromKey(industryKey) : '—';
+    const displayIndustry = resolveIndustryDisplay(t);
+
     const displayCity = resolveCity(t) || '—';
     const phoneVal = resolvePhone(t);
     const previewUrl = resolvePreviewUrl(t);
@@ -520,7 +545,8 @@ export default function TemplatesIndexTable({
   const renderChildRow = (c: any) => {
     const cUpdated = c.effective_updated_at ?? c.updated_at;
     const cType = resolveSiteType(c);
-    const cIndustry = resolveIndustry(c);
+    // const cIndustry = resolveIndustry(c);
+    const cIndustryDisplay = resolveIndustryDisplay(c);
     const cCity = resolveCity(c);
     const cPhone = resolvePhone(c);
     const cPreview = resolvePreviewUrl(c);
@@ -609,7 +635,7 @@ export default function TemplatesIndexTable({
         </td>
 
         <td className="p-2 text-zinc-300">{cType ? titleFromKey(cType) : '—'}</td>
-        <td className="p-2 text-zinc-300">{cIndustry ? titleFromKey(cIndustry) : '—'}</td>
+        <td className="p-2 text-zinc-300">{cIndustryDisplay}</td>
         <td className="p-2 text-zinc-400">{cCity || '—'}</td>
         <td className="p-2 text-zinc-400">{cPhone || ''}</td>
         <td className="p-2 text-zinc-400">

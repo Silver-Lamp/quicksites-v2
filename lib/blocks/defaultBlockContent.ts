@@ -1,11 +1,13 @@
 // lib/blocks/defaultBlockContent.ts
 import type { BlockType } from '@/types/blocks';
 
-const DUMMY_UUID = "00000000-0000-0000-0000-000000000000";
+const DUMMY_UUID = '00000000-0000-0000-0000-000000000000';
 
 // Keep this aligned with the block types you actually support.
 // If you add/remove a block type, update this object (or your BlockType union).
 export const DEFAULT_BLOCK_CONTENT = {
+  /* ───────── basic content ───────── */
+
   text: { value: '' },
 
   image: { url: 'https://placehold.co/800x400', alt: '' },
@@ -26,11 +28,13 @@ export const DEFAULT_BLOCK_CONTENT = {
     layout: 'grid',
   },
 
+  /* ───────── hero ───────── */
+
   hero: {
     headline: 'Welcome to Your New Site',
     subheadline: 'Start editing, and let the magic happen.',
     cta_text: 'Get Started',
-    cta_link: '#',
+    cta_link: '/',
     image_url: '',
     layout_mode: 'inline',
     blur_amount: 0,
@@ -38,6 +42,7 @@ export const DEFAULT_BLOCK_CONTENT = {
     parallax_enabled: false,
     mobile_layout_mode: 'inline',
     mobile_crop_behavior: 'cover',
+    // optional/mobile tuning fields (kept for forward-compat)
     mobile_crop_amount: 0,
     mobile_crop_position: 'center',
     mobile_crop_focal_point: { x: 0.5, y: 0.5 },
@@ -48,44 +53,66 @@ export const DEFAULT_BLOCK_CONTENT = {
     mobile_crop_focal_point_offset_y_mobile: 0,
   },
 
+  /* ───────── services ───────── */
+
   services: {
     title: 'Our Services',
     subtitle: 'What we offer',
     items: ['Towing', 'Roadside Assistance', 'Jump Starts'],
   },
 
+  /* ───────── faq ───────── */
+
   faq: {
     title: 'Frequently Asked Questions',
     subtitle: '',
     items: [
-      { question: 'How fast is your response time?', answer: 'Usually within 30 minutes.', appearance: 'default' },
+      {
+        question: 'How fast is your response time?',
+        answer: 'Usually within 30 minutes.',
+        appearance: 'default',
+      },
     ],
     layout: 'accordion',
   },
 
+  /* ───────── cta (aligned with schema: href/style) ───────── */
+
   cta: {
     label: 'Call to Action',
-    link: '#',
-    appearance: 'button',
+    href: '/',
+    style: 'primary',
   },
 
+  /* ───────── testimonial (avatar_url per schema) ───────── */
+
   testimonial: {
-    testimonials: [{ quote: 'They did a great job!', attribution: 'Happy Client', image_url: '', rating: 5 }],
+    testimonials: [
+      {
+        quote: 'They did a great job!',
+        attribution: 'Happy Client',
+        avatar_url: '',
+        rating: 5,
+      },
+    ],
     randomized: false,
     layout: 'list',
   },
 
+  /* ───────── footer/header (match schema shapes) ───────── */
+
   footer: {
-    business_name: 'Your Business',
-    address: '123 Main St',
-    cityState: 'Anytown, ST',
-    phone: '(123) 456-7890',
+    logo_url: '',
     links: [{ label: 'Home', href: '/', appearance: 'default' }],
   },
 
   service_areas: {
-    cities: [{ name: 'Downtown', address: '', radius_miles: 0 }],
-    radius_miles: 0,
+    // normalized shape the schema’s preprocessor expects
+    cities: [],
+    allCities: [],
+    sourceLat: 0,
+    sourceLng: 0,
+    radiusMiles: 0,
   },
 
   header: {
@@ -97,21 +124,26 @@ export const DEFAULT_BLOCK_CONTENT = {
     ],
   },
 
+  /* ───────── contact form ───────── */
+
   contact_form: {
     title: 'Contact Us',
+    services: [],
   },
+
+  /* ───────── meals (Delivered.Menu) ───────── */
 
   meal_card: {
     // leave mealId blank (it will be treated as undefined by the schema)
     // mealId: "",
     // placeholder ensures the refine passes on creation
-    mealSlug: "__select_meal__",   // <-- add this
+    mealSlug: '__select_meal__',
     showPrice: true,
     showChef: false,
     showRating: true,
     showTags: true,
-    ctaText: "View meal",
-    variant: "default",
+    ctaText: 'View meal',
+    variant: 'default',
   },
 
   chef_profile: {
@@ -130,26 +162,31 @@ export const DEFAULT_BLOCK_CONTENT = {
       },
     ],
   },
+
   meals_grid: {
-    siteSlug: "",        // leave blank if you'll pass siteId instead
-    siteId: "",          // UUID optional
-    tag: "featured",
-    q: "",
-    sort: "recent",
+    siteSlug: '', // leave blank if you'll pass siteId instead
+    siteId: '', // UUID optional
+    tag: 'featured',
+    q: '',
+    sort: 'recent',
     limit: 12,
     columns: 3,
-    ctaText: "View meal",
+    ctaText: 'View meal',
   },
+
   reviews_list: {
     mealId: DUMMY_UUID,
     chefId: DUMMY_UUID,
     siteId: DUMMY_UUID,
     pageSize: 6,
-    sort: "recent",
+    sort: 'recent',
     minStars: 1,
     showSummary: true,
     showWriteCta: false,
   },
+
+  /* ───────── hours (matches HoursOfOperationSchema) ───────── */
+
   hours: {
     title: 'Business Hours',
     tz: 'America/Los_Angeles',
@@ -162,9 +199,39 @@ export const DEFAULT_BLOCK_CONTENT = {
       { key: 'wed', label: 'Wed', closed: false, periods: [{ open: '09:00', close: '17:00' }] },
       { key: 'thu', label: 'Thu', closed: false, periods: [{ open: '09:00', close: '17:00' }] },
       { key: 'fri', label: 'Fri', closed: false, periods: [{ open: '09:00', close: '17:00' }] },
+      // weekend omitted by default; add if needed
     ],
     exceptions: [],
   },
+
+  /* ───────── commerce ───────── */
+
   products_grid: { title: 'Featured Products', columns: 3, productIds: [], products: [] },
-  service_offer: { title: 'Book a Service', productId: null, showPrice: true, description: '', cta: 'Book now' },
+
+  service_offer: {
+    title: 'Book a Service',
+    subtitle: '',
+    description_html: '',
+    image_url: '',
+    cta_text: 'Book now',
+    cta_link: '/contact',
+    showPrice: true,
+    // price_cents / compare_at_cents / productId are optional and omitted by default
+  },
+
+  /* ───────── NEW: scheduler ───────── */
+
+  scheduler: {
+    title: 'Book an appointment',
+    subtitle: 'Choose a time that works for you',
+    org_id: undefined,
+    service_ids: [],
+    default_service_id: undefined,
+    show_resource_picker: false,
+    timezone: 'America/Los_Angeles',
+    slot_granularity_minutes: 30,
+    lead_time_minutes: 120,
+    window_days: 14,
+    confirmation_message: 'Thanks! Your appointment is confirmed.',
+  },
 } as const satisfies Record<BlockType, any>;

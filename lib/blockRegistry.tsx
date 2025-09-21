@@ -43,6 +43,9 @@ export const BLOCK_ALIASES: Record<string, BlockType> = {
   product_grid: 'products_grid',
   product_list: 'products_grid',
   service: 'service_offer',
+
+  // NEW scheduler alias
+  'service-scheduler': 'scheduler',
 };
 
 // ---------- Block registry entry (UI+default content) ----------
@@ -269,6 +272,26 @@ export const BLOCK_REGISTRY: { [K in BlockType]: BlockRegistryEntry<K> } = {
       ),
     }))(),
   },
+
+  // ---------- NEW: scheduler ----------
+  scheduler: {
+    label: 'Service Scheduler',
+    icon: '📅',
+    category: 'interactive',
+    isStatic: false,
+    defaultContent: getDefaultContentSafe('scheduler' as BlockType, {
+      title: 'Book an appointment',
+      subtitle: 'Choose a time that works for you',
+      service_ids: [],
+      show_resource_picker: false,
+      timezone: 'America/Los_Angeles',
+      slot_granularity_minutes: 30,
+      lead_time_minutes: 120,
+      window_days: 14,
+      confirmation_message: 'Thanks! Your appointment is confirmed.',
+    }),
+    render: lazyRenderer(() => import('@/components/admin/templates/render-blocks/scheduler')),
+  },
 };
 
 // ---------- Client-only wrappers for the editor preview ----------
@@ -306,6 +329,7 @@ export const DYNAMIC_RENDERERS: Partial<Record<BlockType, () => Promise<{ defaul
 
   // NEW:
   products_grid: () => import('@/components/admin/templates/render-blocks/products-grid'),
+  scheduler:     () => import('@/components/admin/templates/render-blocks/scheduler'),
   // Keep placeholder for now to avoid import errors until you add it:
   service_offer: clientPlaceholder('Service Offer'),
 };

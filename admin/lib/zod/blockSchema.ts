@@ -673,6 +673,50 @@ export const blockContentSchemaMap = {
       showPrice: z.boolean().default(true),
     })),
   },
+
+  /* ───────────────────────────── NEW: Scheduler block ─────────────────────── */
+
+  scheduler: {
+    label: 'Service Scheduler',
+    icon: '📅',
+    schema: z.preprocess((raw) => {
+      const c = raw && typeof raw === 'object' ? { ...(raw as any) } : {};
+
+      // Aliases → canonical (just in case)
+      if (Array.isArray(c.services) && !Array.isArray(c.service_ids)) c.service_ids = c.services;
+      if (typeof c.default_service === 'string' && !c.default_service_id) {
+        c.default_service_id = c.default_service;
+      }
+
+      // Safe defaults
+      if (!Array.isArray(c.service_ids)) c.service_ids = [];
+      if (typeof c.title !== 'string' || !c.title.trim()) c.title = 'Book an appointment';
+      if (typeof c.subtitle !== 'string') c.subtitle = 'Choose a time that works for you';
+      if (typeof c.show_resource_picker !== 'boolean') c.show_resource_picker = false;
+      if (typeof c.timezone !== 'string' || !c.timezone) c.timezone = 'America/Los_Angeles';
+      if (!Number.isFinite(Number(c.slot_granularity_minutes))) c.slot_granularity_minutes = 30;
+      if (!Number.isFinite(Number(c.lead_time_minutes))) c.lead_time_minutes = 120;
+      if (!Number.isFinite(Number(c.window_days))) c.window_days = 14;
+      if (typeof c.confirmation_message !== 'string' || !c.confirmation_message) {
+        c.confirmation_message = 'Thanks! Your appointment is confirmed.';
+      }
+
+      return c;
+    }, z.object({
+      title: z.string().min(1).default('Book an appointment'),
+      subtitle: z.string().optional().default('Choose a time that works for you'),
+      org_id: z.string().uuid().optional(),
+      service_ids: z.array(z.string().uuid()).min(0).default([]),
+      default_service_id: z.string().uuid().optional(),
+      show_resource_picker: z.boolean().default(false),
+      timezone: z.string().default('America/Los_Angeles'),
+      slot_granularity_minutes: z.number().int().min(5).max(120).default(30),
+      lead_time_minutes: z.number().int().min(0).max(1440).default(120),
+      window_days: z.number().int().min(1).max(31).default(14),
+      confirmation_message: z.string().default('Thanks! Your appointment is confirmed.'),
+    })),
+  },
+
 } satisfies Record<string, { label: string; icon: string; schema: z.ZodTypeAny }>;
 
 /* ─────────────── Type alias resolver (products-grid → products_grid, etc.) ───────────── */
@@ -681,6 +725,7 @@ const TYPE_ALIASES: Record<string, string> = {
   'products-grid': 'products_grid',
   'product-grid': 'products_grid',
   products: 'products_grid',
+  'service-scheduler': 'scheduler',
 };
 
 export function resolveCanonicalType(t: string): string {
@@ -768,6 +813,9 @@ export const BlockSchema: z.ZodTypeAny = z.lazy(() =>
 export const BlocksArraySchema = z.array(BlockSchema);
 export type Block = z.infer<typeof BlockSchema>;
 
+/** Convenience export for scheduler block content type */
+export type SchedulerBlock = z.infer<typeof blockContentSchemaMap['scheduler']['schema']>;
+
 export function isValidBlock(data: unknown): data is Block {
   return BlockSchema.safeParse(data).success;
 }
@@ -826,6 +874,11 @@ export function migrateLegacyBlock(block: any): any {
       block.content = { ...c, productIds: ids, product_ids: ids };
     }
 
+    // Alias: service-scheduler → scheduler
+    if (block.type === 'service-scheduler') {
+      block.type = 'scheduler';
+    }
+
     return block;
   }
 
@@ -879,6 +932,20 @@ function makeFullBlockSchema(type: string, content: z.ZodTypeAny) {
     if (b.content == null) {
       if (type === 'hero') {
         b.content = { ...HERO_DEFAULT_CONTENT, ...(b.content ?? {}) };
+      }
+      if (type === 'scheduler') {
+        b.content = {
+          title: 'Book an appointment',
+          subtitle: 'Choose a time that works for you',
+          service_ids: [],
+          show_resource_picker: false,
+          timezone: 'America/Los_Angeles',
+          slot_granularity_minutes: 30,
+          lead_time_minutes: 120,
+          window_days: 14,
+          confirmation_message: 'Thanks! Your appointment is confirmed.',
+          ...(b.content ?? {}),
+        };
       }
     }
 

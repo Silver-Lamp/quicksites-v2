@@ -9,6 +9,7 @@ import { useBlockFix } from '@/components/ui/block-fix-context';
 import DebugOverlay from '@/components/ui/debug-overlay';
 import HeroRender from '@/components/admin/templates/render-blocks/hero';
 import TextRender from '@/components/admin/templates/render-blocks/text';
+import SchedulerRender from '@/components/admin/templates/render-blocks/scheduler';
 
 import { DYNAMIC_RENDERERS } from '@/lib/blockRegistry';
 import { blockContentSchemaMap } from '@/admin/lib/zod/blockSchema';
@@ -21,6 +22,7 @@ const isDev =
 const STATIC_RENDERERS: Partial<Record<BlockType, (props: any) => JSX.Element>> = {
   hero: HeroRender,
   text: TextRender,
+  scheduler: SchedulerRender,
 };
 
 const lazyCache = new Map<string, React.ComponentType<any>>();
@@ -411,35 +413,36 @@ ID: ${blockId || 'n/a'}`}
         ['--tw-prose-bold' as any]: 'rgb(17 24 39)',
         ['--tw-prose-quotes' as any]: 'rgb(9 9 11)',
       } as React.CSSProperties);
-      function resolveContainerClass(block: any) {
-        const type = String(block?.type || '');
-      
-        // Header / footer are usually full width
-        if (type === 'header' || type === 'footer') return 'w-full';
-      
-        const props = block?.props || {};
-        const content = block?.content || {};
-      
-        // Common flags that should force full-bleed
-        const full =
-          props.fullWidth ?? props.full_bleed ?? props.full ??
-          content.fullWidth ?? content.full_bleed ?? content.full ?? false;
-      
-        if (full === true) return 'w-full';
-      
-        // Optional presets: 'narrow' | 'default' | 'wide' | 'full'
-        const preset =
-          props.container ?? props.width ?? props.layout ??
-          content.container ?? content.width ?? content.layout ?? 'default';
-      
-        if (preset === 'full' || preset === 'full-bleed') return 'w-full';
-        if (preset === 'narrow') return 'mx-auto w-full max-w-3xl px-4 sm:px-6';
-        if (preset === 'wide') return 'mx-auto w-full max-w-[1280px] px-4 sm:px-8';
-      
-        // Default
-        return 'mx-auto w-full max-w-[1100px] px-4 sm:px-6 pt-8';
-      }
-      
+
+  function resolveContainerClass(block: any) {
+    const type = String(block?.type || '');
+
+    // Header / footer are usually full width
+    if (type === 'header' || type === 'footer') return 'w-full';
+
+    const props = block?.props || {};
+    const content = block?.content || {};
+
+    // Common flags that should force full-bleed
+    const full =
+      props.fullWidth ?? props.full_bleed ?? props.full ??
+      content.fullWidth ?? content.full_bleed ?? content.full ?? false;
+
+    if (full === true) return 'w-full';
+
+    // Optional presets: 'narrow' | 'default' | 'wide' | 'full'
+    const preset =
+      props.container ?? props.width ?? props.layout ??
+      content.container ?? content.width ?? content.layout ?? 'default';
+
+    if (preset === 'full' || preset === 'full-bleed') return 'w-full';
+    if (preset === 'narrow') return 'mx-auto w-full max-w-3xl px-4 sm:px-6';
+    if (preset === 'wide') return 'mx-auto w-full max-w-[1280px] px-4 sm:px-8';
+
+    // Default
+    return 'mx-auto w-full max-w-[1100px] px-4 sm:px-6 pt-8';
+  }
+
   return (
     <div {...(wrapperProps as any)}>
       {/* Admin bar (drag + icons) — only inside editor */}

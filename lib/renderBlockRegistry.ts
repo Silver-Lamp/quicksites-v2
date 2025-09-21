@@ -49,6 +49,9 @@ export const DYNAMIC_RENDERERS: Record<
   meals_grid:    () => import('@/components/admin/templates/render-blocks/meals-grid.client'),
   reviews_list:  () => import('@/components/admin/templates/render-blocks/reviews-list.client'),
   meal_card:     () => import('@/components/admin/templates/render-blocks/meal-card.client'),
+
+  // NEW: scheduler
+  scheduler:     () => import('@/components/admin/templates/render-blocks/scheduler'),
 } as const;
 
 // ---- Helpers: resolve aliases and load a renderer safely ----

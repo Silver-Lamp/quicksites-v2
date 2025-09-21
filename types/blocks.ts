@@ -41,6 +41,7 @@ export const BLOCK_CATEGORY: Record<BlockType, BlockCategory> = {
   meals_grid: 'content',
   reviews_list: 'content',
   hours: 'meta',
+  scheduler: 'interactive',
 
   // ----- NEW: commerce blocks -----
   products_grid: 'content',     // grid of purchasable items/services

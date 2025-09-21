@@ -161,6 +161,37 @@ export function createDefaultBlock(type: BlockType): z.infer<typeof BlockSchema>
       break;
     }
 
+    /* ---------------- NEW: Scheduler block ---------------- */
+
+    case 'scheduler': {
+      content = {
+        ...content,
+        title: typeof content.title === 'string' && content.title.trim()
+          ? content.title
+          : 'Book an appointment',
+        subtitle: typeof content.subtitle === 'string' ? content.subtitle : 'Choose a time that works for you',
+        org_id: typeof content.org_id === 'string' ? content.org_id : undefined,
+        service_ids: Array.isArray(content.service_ids) ? content.service_ids : [],
+        default_service_id:
+          typeof content.default_service_id === 'string' ? content.default_service_id : undefined,
+        show_resource_picker:
+          typeof content.show_resource_picker === 'boolean' ? content.show_resource_picker : false,
+        timezone: typeof content.timezone === 'string' && content.timezone
+          ? content.timezone
+          : 'America/Los_Angeles',
+        slot_granularity_minutes:
+          Number.isFinite(content.slot_granularity_minutes) ? content.slot_granularity_minutes : 30,
+        lead_time_minutes:
+          Number.isFinite(content.lead_time_minutes) ? content.lead_time_minutes : 120,
+        window_days: Number.isFinite(content.window_days) ? content.window_days : 14,
+        confirmation_message:
+          typeof content.confirmation_message === 'string' && content.confirmation_message
+            ? content.confirmation_message
+            : 'Thanks! Your appointment is confirmed.',
+      };
+      break;
+    }
+
     /* ---------------- Misc (leave base content as-is) ---------------- */
 
     case 'chef_profile': {

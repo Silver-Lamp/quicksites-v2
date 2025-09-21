@@ -1,6 +1,8 @@
 'use client';
 
 import { useMemo, useRef, useState } from 'react';
+import { MultiSelect } from '@/components/ui/multi-select';
+import { Input } from '@/components/ui/input';
 
 /* -------------------------------- Types --------------------------------- */
 
@@ -354,7 +356,8 @@ export default function PayoutWizardClient({
           <div className="md:col-span-2">
             <label className="block text-xs text-neutral-400">Referral codes</label>
             <MultiSelect
-              options={codes}
+              label="Referral codes"
+              options={codes.map((code) => ({ value: code, label: code }))}
               selected={selected}
               onChange={setSelected}
               placeholder="Select one or more codes…"
@@ -362,12 +365,12 @@ export default function PayoutWizardClient({
           </div>
           <div>
             <label className="block text-xs text-neutral-400">Start</label>
-            <input type="date" value={start} onChange={(e)=>setStart(e.target.value)}
+            <Input type="date" value={start} onChange={(e: any)=>setStart(e.target.value)}
                   className="mt-1 w-full rounded bg-neutral-900 px-3 py-2 text-sm ring-1 ring-neutral-800"/>
           </div>
           <div>
             <label className="block text-xs text-neutral-400">End</label>
-            <input type="date" value={end} onChange={(e)=>setEnd(e.target.value)}
+            <Input type="date" value={end} onChange={(e: any)=>setEnd(e.target.value)}
                   className="mt-1 w-full rounded bg-neutral-900 px-3 py-2 text-sm ring-1 ring-neutral-800"/>
           </div>
         </div>
@@ -455,46 +458,5 @@ export default function PayoutWizardClient({
         onConfirm={() => confirmActionRef.current?.()}
       />
     </>
-  );
-}
-
-/* --------------------------------- UI Bits -------------------------------- */
-
-function MultiSelect({ options, selected, onChange, placeholder }:{
-  options: string[];
-  selected: string[];
-  onChange: (v: string[]) => void;
-  placeholder?: string;
-}) {
-  const [query, setQuery] = useState('');
-  const filtered = options.filter(o => o.toLowerCase().includes(query.toLowerCase()));
-  function toggle(code: string) {
-    onChange(selected.includes(code) ? selected.filter(c => c !== code) : [...selected, code]);
-  }
-  return (
-    <div className="rounded border border-neutral-800">
-      <div className="flex items-center gap-2 border-b border-neutral-800 p-2">
-        <input
-          placeholder={placeholder}
-          value={query}
-          onChange={(e)=>setQuery(e.target.value)}
-          className="w-full rounded bg-neutral-900 px-3 py-2 text-sm outline-none"
-        />
-        {selected.length > 0 && (
-          <button onClick={()=>onChange([])} className="rounded bg-neutral-900 px-2 py-1 text-xs ring-1 ring-neutral-800">
-            clear
-          </button>
-        )}
-      </div>
-      <div className="max-h-48 overflow-auto">
-        {filtered.map(code => (
-          <label key={code} className="flex cursor-pointer items-center gap-2 px-3 py-2 hover:bg-neutral-900">
-            <input type="checkbox" checked={selected.includes(code)} onChange={()=>toggle(code)} />
-            <span className="font-mono text-xs">{code}</span>
-          </label>
-        ))}
-        {filtered.length === 0 && <div className="px-3 py-2 text-xs text-neutral-500">No matches</div>}
-      </div>
-    </div>
   );
 }

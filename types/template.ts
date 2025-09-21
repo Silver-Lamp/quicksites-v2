@@ -66,6 +66,7 @@ export type TemplateData = {
   headerBlock?: Block | null;
   footerBlock?: Block | null;
   hours?: HoursOfOperationContent | null;
+  org_id?: string | null; 
 };
 
 export type TemplateInsert = Omit<Template,
@@ -143,6 +144,7 @@ export type Snapshot = {
   // 🔹 Single source of truth for site-wide chrome
   headerBlock?: Block | null;
   footerBlock?: Block | null;
+  org_id?: string | null;
 };
 
 // Editor/runtime-only properties go here
@@ -180,6 +182,7 @@ export type Template = Snapshot & {
   postal_code?: string;
   latitude?: number;
   longitude?: number;
+  org_id?: string | null; 
 };
 
 export type TemplateSnapshot = Snapshot;
@@ -256,6 +259,7 @@ const TemplateDataSchema = z
     longitude: z.number().optional(),
     industry: z.string().optional(),
     hours: hoursOfOperationPropsSchema.optional(),
+    org_id: UUID, 
   })
   .passthrough(); // accept extra keys inside data
 
@@ -332,6 +336,7 @@ export const TemplateFormSchema = z
     headerBlock: BlockSchema.nullable().optional(),
     footerBlock: BlockSchema.nullable().optional(),
     hours: hoursOfOperationPropsSchema.optional(),
+    org_id: UUID, 
   })
   .passthrough(); // accept unknown top-level keys
 

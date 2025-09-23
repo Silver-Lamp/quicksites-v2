@@ -6,11 +6,18 @@ import Collapsible from '@/components/ui/collapsible-panel';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import type { Template } from '@/types/template';
-import { Sparkles, CalendarPlus, HelpCircle } from 'lucide-react';
+import { Sparkles, CalendarPlus, HelpCircle, RefreshCcw, Plus } from 'lucide-react';
 import { resolveIndustry } from '@/lib/industries';
-import { cn } from '@/admin/lib/utils';
+import {
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectItem,
+} from '@/components/ui/select';
 
 type Row = { id: string; value: string };
+
 const makeId = () =>
   typeof crypto !== 'undefined' && 'randomUUID' in crypto
     ? crypto.randomUUID()
@@ -23,48 +30,79 @@ function clean(vals: string[]) {
   return Array.from(new Set(vals.map((s) => s.trim()).filter(Boolean)));
 }
 
+function getCustomIndustry(template: any): string | null {
+  const t = template ?? {};
+  // try the canonical places first
+  const v =
+    t?.data?.identity?.industry_other ??
+    t?.data?.identity?.industry_label ??               // sometimes your UI writes the same string here
+    t?.data?.meta?.identity?.industry_other ??
+    t?.data?.meta?.identity?.industry_label ??
+    t?.identity?.industry_other ??
+    t?.identity?.industry_label ??
+    t?.data?.meta?.industry_other ??
+    t?.data?.meta?.industry_label ??
+    null;
+
+  const s = typeof v === 'string' ? v.trim() : '';
+  return s || null;
+}
+
+type CompanyOption = { id: string; name?: string | null };
+const RECENT_KEY = 'qs_company_recent_ids';
+
 export default function ServicesPanel({
   template,
   onChange,
-  orgId,
+  companyId,
 }: {
   template: Template | any;
   onChange: (patch: Partial<Template>) => void; // parent triggers a single commit
-  /** Optional override; falls back to template.org_id */
-  orgId?: string;
+  /** Optional override; falls back to template.company_id */
+  companyId?: string;
 }) {
+  // ---- Template-derived state ----
   const meta = (template?.data as any)?.meta ?? {};
   const contact = meta?.contact ?? {};
   const persisted = (template?.data as any)?.services ?? template.services ?? [];
-  const templateOrgId: string | undefined =
-    orgId ??
-    (template?.org_id as string | undefined) ??
-    (template?.data?.org_id as string | undefined);
 
+  // Initial company source of truth
+  const templateCompanyId: string | undefined =
+    companyId ??
+    (template?.company_id as string | undefined) ??
+    (template?.data?.company_id as string | undefined);
+
+  // ---- Local UI state ----
   const [draft, setDraft] = React.useState<Row[]>(rowsFrom(persisted));
   const [touched, setTouched] = React.useState(false);
   const [saving, setSaving] = React.useState(false);
+
+  // AI suggestion state
   const [aiBusy, setAiBusy] = React.useState(false);
   const [aiError, setAiError] = React.useState<string | null>(null);
   const [serverUsed, setServerUsed] = React.useState<string | null>(null);
 
-  // NEW: org helper UI state
-  const [orgField, setOrgField] = React.useState<string>(templateOrgId ?? '');
-  const [orgResolving, setOrgResolving] = React.useState(false);
-  const [orgMsg, setOrgMsg] = React.useState<string | null>(null);
-  const [orgErr, setOrgErr] = React.useState<string | null>(null);
+  // Company selector state
+  const [companyField, setCompanyField] = React.useState<string>(templateCompanyId ?? '');
+  const [companies, setCompanies] = React.useState<CompanyOption[]>([]);
+  const [companiesLoading, setCompaniesLoading] = React.useState(false);
+  const [creatingCompany, setCreatingCompany] = React.useState(false);
+  const [companyMsg, setCompanyMsg] = React.useState<string | null>(null);
+  const [companyErr, setCompanyErr] = React.useState<string | null>(null);
 
-  // NEW: scheduler import states
+  // Import-to-scheduler state
   const [importing, setImporting] = React.useState(false);
   const [importMsg, setImportMsg] = React.useState<string | null>(null);
   const [importErr, setImportErr] = React.useState<string | null>(null);
 
-  // ---- Industry / Site-type basis (for badges and AI) -----------------------
+  // ---- Industry / Site-type basis (for badges and AI) ----
   const rawIndustry: any = meta?.industry ?? template?.industry ?? null;
   const r: any = resolveIndustry ? resolveIndustry(rawIndustry) : rawIndustry;
   let industryKey = '', industryLabel = '';
-  if (typeof r === 'string') { industryKey = r.toLowerCase().trim(); industryLabel = r.trim(); }
-  else if (r && typeof r === 'object') {
+  if (typeof r === 'string') {
+    industryKey = r.toLowerCase().trim();
+    industryLabel = r.trim();
+  } else if (r && typeof r === 'object') {
     industryKey = String(r.key ?? r.value ?? '').toLowerCase().trim();
     industryLabel = String(r.label ?? r.name ?? r.value ?? industryKey).trim();
   }
@@ -79,34 +117,33 @@ export default function ServicesPanel({
   const city = String(contact?.city || '');
   const state = String(contact?.state || '');
 
-  // Sync UI when template changes on the outside
+  // ---- Sync when template changes ----
   React.useEffect(() => {
     setDraft(rowsFrom(persisted as string[]));
     setTouched(false);
   }, [JSON.stringify(persisted)]);
 
   React.useEffect(() => {
-    setOrgField(templateOrgId ?? '');
-  }, [templateOrgId]);
+    setCompanyField(templateCompanyId ?? '');
+  }, [templateCompanyId]);
 
   const isDirty =
     touched &&
     JSON.stringify(clean(draft.map((r) => r.value))) !==
       JSON.stringify(clean(persisted as string[]));
 
-  // ---- Save (single-path write: onChange only, then one save-now nudge) -----
+  // ---- Save services list ----
   const save = async () => {
     const cleaned = clean(draft.map((r) => r.value));
     setSaving(true);
     try {
-      // Single in-memory update → parent will build the commit
       onChange({
         data: {
           ...(template.data as any),
           services: cleaned,
           meta: { ...((template.data as any)?.meta ?? {}), services: cleaned },
         },
-        services: cleaned, // if you keep a top-level mirror
+        services: cleaned,
       });
 
       // Nudge exactly one commit after React state settles
@@ -131,21 +168,28 @@ export default function ServicesPanel({
     setAiError(null);
   };
 
-  // ---- AI Suggest (reads site_type+industry; no local autosaves here) -------
+  // ---- AI Suggest ----
   const canSuggest = Boolean(effectiveKey);
   const suggest = async (mode: 'append' | 'replace' = 'append', count = 6) => {
     if (!canSuggest || aiBusy) return;
     setAiBusy(true);
     setAiError(null);
+    const custom = getCustomIndustry(template);
     try {
       const res = await fetch('/api/services/suggest', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           template_id: template.id,
-          industry: effectiveKey,
+      
+          // keep keys for backwards-compat
+          industry: effectiveKey,            // e.g., "small_business" when 'other' selected
           industry_key: effectiveKey,
-          industry_label: industryLabel,
+      
+          // ⬇️ Prefer the human-typed string for the model
+          industry_other: custom || undefined,
+          industry_label:  custom || industryLabel,   // "Furniture Assembly" instead of "Other"
+      
           site_type: siteType || null,
           city, state, count, debug: true,
         }),
@@ -166,57 +210,107 @@ export default function ServicesPanel({
     }
   };
 
-  // ---- NEW: Org helpers -----------------------------------------------------
-
-  async function resolveOrg() {
-    setOrgErr(null);
-    setOrgMsg(null);
-    setOrgResolving(true);
+  // ---- Companies (dropdown) ----
+  const loadCompanies = React.useCallback(async () => {
+    setCompaniesLoading(true);
+    setCompanyErr(null);
+    setCompanyMsg(null);
     try {
-      const res = await fetch(`/api/org/resolve?template_id=${encodeURIComponent(template?.id ?? '')}`, {
-        method: 'GET',
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok || !data?.org_id) throw new Error(data?.message || 'Could not resolve organization');
-      setOrgField(data.org_id);
-      setOrgMsg('Resolved an organization for this template.');
-    } catch (e: any) {
-      setOrgErr(e?.message || 'Resolve failed.');
+      const res = await fetch('/api/company/list', { cache: 'no-store' }).catch(() => null);
+      let rows: CompanyOption[] = [];
+      if (res?.ok) {
+        const data = await res.json();
+        rows = Array.isArray(data?.companies) ? data.companies : [];
+      }
+      // merge recents + current field into the list
+      let recents: string[] = [];
+      try { recents = JSON.parse(localStorage.getItem(RECENT_KEY) || '[]'); } catch {}
+      const merged = [
+        ...rows,
+        ...recents
+          .filter((id) => !rows.some((r) => r.id === id))
+          .map((id) => ({ id })),
+        ...(companyField && !rows.some((r) => r.id === companyField) ? [{ id: companyField }] : []),
+      ];
+      const map = new Map<string, CompanyOption>();
+      merged.forEach((o) => o.id && map.set(o.id, o));
+      setCompanies(Array.from(map.values()));
     } finally {
-      setOrgResolving(false);
+      setCompaniesLoading(false);
     }
-  }
+  }, [companyField]);
 
-  function applyOrg() {
-    if (!orgField || !orgField.trim()) {
-      setOrgErr('Please enter an Organization ID');
-      return;
-    }
-    setOrgErr(null);
-    setOrgMsg(null);
+  React.useEffect(() => { loadCompanies(); }, [loadCompanies]);
+
+  function applyCompany() {
+    const id = (companyField || '').trim();
+    if (!id) { setCompanyErr('Please choose a Company'); return; }
+    setCompanyErr(null);
+    setCompanyMsg(null);
+
     // Store on both top-level and in data (so other panels can read it)
     onChange({
-      org_id: orgField.trim(),
-      data: { ...(template.data as any), org_id: orgField.trim() },
+      company_id: id,
+      data: { ...(template.data as any), company_id: id },
     });
+
+    // remember in recents
+    try {
+      const prev = JSON.parse(localStorage.getItem(RECENT_KEY) || '[]') as string[];
+      const next = Array.from(new Set([id, ...prev])).slice(0, 10);
+      localStorage.setItem(RECENT_KEY, JSON.stringify(next));
+    } catch {}
 
     // Optional: request an immediate save so Import button lights up
     requestAnimationFrame(() => {
       try {
-        window.dispatchEvent(new CustomEvent('qs:toolbar:save-now', { detail: { source: 'services-panel:org' } }));
+        window.dispatchEvent(new CustomEvent('qs:toolbar:save-now', { detail: { source: 'services-panel:company' } }));
       } catch {}
     });
 
-    setOrgMsg('Organization saved to this template.');
+    setCompanyMsg('Company saved to this template.');
   }
 
-  // ---- NEW: Import to Scheduler (app.services + default resource link) ----
+  async function handleCreateCompany() {
+    setCompanyErr(null);
+    setCompanyMsg(null);
+    setCreatingCompany(true);
+    try {
+      // try to suggest a good default name
+      const suggested =
+        (template?.data?.meta?.business as string) ||
+        (template?.business_name as string) ||
+        'New Company';
+      const name = (prompt('Company name?', suggested) || suggested).trim();
+      if (!name) return;
+
+      const res = await fetch('/api/company/create', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ name }),
+      });
+      if (!res.ok) throw new Error(await res.text());
+      const { company_id } = await res.json();
+
+      setCompanyField(company_id);
+      await loadCompanies();   // refresh dropdown list
+      applyCompany();          // persist to template
+
+      setCompanyMsg('Company created and saved to this template.');
+    } catch (e: any) {
+      setCompanyErr(e?.message || 'Create company failed.');
+    } finally {
+      setCreatingCompany(false);
+    }
+  }
+
+  // ---- Import services → booking tables (company-scoped) ----
   const importToScheduler = async () => {
     setImportMsg(null);
     setImportErr(null);
-    const effectiveOrgId = (orgField || '').trim();
-    if (!effectiveOrgId) {
-      setImportErr('Need an org_id to import services.');
+    const id = (companyField || '').trim();
+    if (!id) {
+      setImportErr('Need a company_id to import services.');
       return;
     }
     const names = clean(draft.map((r) => r.value));
@@ -230,7 +324,7 @@ export default function ServicesPanel({
         method: 'POST',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({
-          org_id: effectiveOrgId,
+          company_id: id,
           services: names,
           default_duration_minutes: 60,
           link_all_services_to_default_resource: true,
@@ -239,7 +333,7 @@ export default function ServicesPanel({
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data?.message || data || `Import failed (${res.status})`);
       setImportMsg(
-        `Imported ${data.imported_count} — total ${data.total_count}.${data.resource_id ? ' Linked to a default resource.' : ''}`
+        `Imported ${data.imported_count} — total ${data.total_count}${data.resource_id ? ' (linked to a default resource).' : '.'}`
       );
     } catch (e: any) {
       setImportErr(e?.message || 'Import failed.');
@@ -251,33 +345,79 @@ export default function ServicesPanel({
   return (
     <Collapsible title="Available Services" id="template-services">
       <div className="space-y-3">
-
-        {/* ---------- Small org guidance row ---------- */}
+        {/* ---------- Company selector ---------- */}
         <div className="rounded-md border border-neutral-700/60 p-3">
           <div className="flex items-center gap-2">
             <HelpCircle className="h-4 w-4 opacity-70" />
             <div className="text-xs opacity-80">
-              Booking requires an <b>Organization ID</b> to create services/resources.
+              Bookings are scoped to a <b>Company</b> (merchant/business).
             </div>
           </div>
-          <div className="mt-2 grid gap-2 md:grid-cols-[1fr_auto_auto]">
-            <Input
-              label="Organization ID"
-              placeholder="e.g. 3f4a47e4-…"
-              value={orgField}
-              onChange={(e) => setOrgField(e.target.value)}
-              helperText={!orgField ? 'Set this once per template.' : undefined}
-            />
-            <Button type="button" variant="ghost" className="md:ml-2" onClick={resolveOrg} disabled={orgResolving}>
-              {orgResolving ? 'Resolving…' : 'Resolve'}
+
+          <div className="mt-2 grid gap-2 md:grid-cols-[minmax(240px,1fr)_auto_auto_auto]">
+            <Select
+              label="Company"
+              value={companyField || ''}
+              onValueChange={(v) => { setCompanyField(v); setCompanyMsg(null); setCompanyErr(null); }}
+              helperText={!companyField ? 'Select a company or paste an ID below.' : undefined}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder={companiesLoading ? 'Loading…' : 'Select a company'} />
+              </SelectTrigger>
+              <SelectContent>
+                {companies.length === 0 && (
+                  <div className="px-2 py-1 text-xs text-muted-foreground">No companies</div>
+                )}
+                {companies.map((c) => (
+                  <SelectItem key={c.id} value={c.id}>
+                    {c.name ? `${c.name} (${c.id.slice(0, 8)})` : c.id}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={loadCompanies}
+              disabled={companiesLoading}
+              className="md:ml-2"
+              title="Refresh companies"
+            >
+              <RefreshCcw className="h-4 w-4 mr-1" />
+              {companiesLoading ? 'Refreshing…' : 'Refresh'}
             </Button>
-            <Button type="button" onClick={applyOrg}>Use this</Button>
+
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleCreateCompany}
+              disabled={creatingCompany}
+              title="Create a new company"
+            >
+              <Plus className="h-4 w-4 mr-1" />
+              {creatingCompany ? 'Creating…' : 'New company'}
+            </Button>
+
+            <Button type="button" onClick={applyCompany}>Use this</Button>
           </div>
-          {orgErr && <div className="mt-1 text-xs text-red-400">{orgErr}</div>}
-          {orgMsg && <div className="mt-1 text-xs text-emerald-300">{orgMsg}</div>}
+
+          {/* Manual entry fallback */}
+          <div className="mt-2 grid gap-2 md:grid-cols-[minmax(240px,1fr)_auto]">
+            <Input
+              label="Or enter Company ID"
+              placeholder="Paste a UUID"
+              value={companyField}
+              onChange={(e) => { setCompanyField(e.target.value); setCompanyMsg(null); setCompanyErr(null); }}
+            />
+            <Button type="button" variant="ghost" onClick={applyCompany}>Apply</Button>
+          </div>
+
+          {companyErr && <div className="mt-1 text-xs text-red-400">{companyErr}</div>}
+          {companyMsg && <div className="mt-1 text-xs text-emerald-300">{companyMsg}</div>}
         </div>
 
-        {/* ---------- Header badges & AI ---------- */}
+        {/* ---------- AI Suggest header & badges ---------- */}
         <div className="flex items-center gap-2">
           <div className="text-xs text-white/60">
             Used by Services blocks and forms
@@ -292,8 +432,6 @@ export default function ServicesPanel({
               </span>
             )}
           </div>
-
-          {/* AI buttons */}
           {Boolean(effectiveKey) && (
             <div className="ml-auto flex items-center gap-2">
               <Button type="button" size="sm" onClick={() => suggest('append', 6)} disabled={aiBusy} className="h-8">
@@ -315,13 +453,13 @@ export default function ServicesPanel({
           )}
         </div>
 
-        {/* ---------- Scheduler import controls ---------- */}
+        {/* ---------- Sync to booking ---------- */}
         <div className="flex items-center gap-2">
           <div className="text-xs text-white/60">
             Sync to Booking (Scheduler)
-            {!orgField && (
+            {!companyField && (
               <span className="ml-2 rounded bg-red-500/20 px-2 py-0.5 text-[10px] uppercase tracking-wide">
-                org_id required
+                company_id required
               </span>
             )}
           </div>
@@ -330,9 +468,9 @@ export default function ServicesPanel({
               type="button"
               size="sm"
               onClick={importToScheduler}
-              disabled={importing || !orgField}
+              disabled={importing || !companyField}
               className="h-8"
-              title={orgField ? 'Create app.services and link to a default resource' : 'Set an org_id first'}
+              title={companyField ? 'Create app.services and link to a default resource' : 'Set a company first'}
             >
               <CalendarPlus className="h-3.5 w-3.5 mr-1" />
               {importing ? 'Importing…' : 'Import to Scheduler'}
@@ -349,13 +487,15 @@ export default function ServicesPanel({
           <div key={row.id} className="flex gap-2 items-center">
             <Input
               value={row.value}
-              placeholder={effectiveKey === 'portfolio'
-                ? 'e.g., Web Design'
-                : effectiveKey === 'blog'
-                ? 'e.g., Editorial Consulting'
-                : effectiveKey === 'about_me'
-                ? 'e.g., Speaking'
-                : 'e.g., Roadside Assistance'}
+              placeholder={
+                effectiveKey === 'portfolio'
+                  ? 'e.g., Web Design'
+                  : effectiveKey === 'blog'
+                  ? 'e.g., Editorial Consulting'
+                  : effectiveKey === 'about_me'
+                  ? 'e.g., Speaking'
+                  : 'e.g., Roadside Assistance'
+              }
               onChange={(e) => {
                 const v = e.target.value;
                 setDraft((prev) => prev.map((r) => (r.id === row.id ? { ...r, value: v } : r)));

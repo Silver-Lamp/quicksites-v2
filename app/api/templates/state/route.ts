@@ -1,3 +1,4 @@
+// app/api/templates/state/route.ts
 export const dynamic = 'force-dynamic';
 
 import { NextResponse } from 'next/server';
@@ -37,7 +38,6 @@ function humanizeSlug(slug: string): string {
     .join(' ');
 }
 
-/** Prefer explicit key; never downgrade a specific key to "other" unless it's explicitly set or only "other" text is present. */
 function normalizeIndustryTriplet(row: any, meta: any) {
   const rowKey = row?.industry;
   const metaKey = meta?.industry;
@@ -52,23 +52,15 @@ function normalizeIndustryTriplet(row: any, meta: any) {
     ? industry_other_raw.trim()
     : null;
 
-  // If no key but we have other text, set to "other"
-  if (!industry && industry_other) {
-    industry = 'other';
-  }
-
-  // Ensure label exists
+  if (!industry && industry_other) industry = 'other';
   if (industry && (!industry_label || !industry_label.trim())) {
     industry_label = industry === 'other' ? 'Other' : humanizeSlug(industry);
   }
-
-  // If not "other", remove other-text
   const final_other = industry === 'other' ? industry_other : null;
 
   return { industry, industry_label, industry_other: final_other };
 }
 
-/** The editor needs these canonical columns + data */
 const TEMPLATE_EDITOR_SELECT = [
   'id','slug','base_slug','rev','updated_at',
   'template_name','business_name',
@@ -81,19 +73,13 @@ const TEMPLATE_EDITOR_SELECT = [
   'data',
 ].join(', ');
 
-/** Normalize site_type and ensure identity is present in both data.identity and data.meta.identity.
- *  Also: surface industry (key/label/other) back to both columns and meta.
- */
 function normalizeForEditor(row: any) {
   const data = obj(row?.data);
   const meta = obj(data?.meta);
   const metaId = obj(meta?.identity);
   const dataId = obj(data?.identity);
 
-  // merge identity mirrors
   const identity = { ...metaId, ...dataId };
-
-  // prefer canonical columns, then identity->contact, then meta.contact
   const contact = obj(identity?.contact);
   const metaContact = obj(meta?.contact);
 
@@ -101,10 +87,7 @@ function normalizeForEditor(row: any) {
     row.site_type ?? row.site_type_key ?? meta?.site_type ?? null;
 
   const business_name =
-    row.business_name ??
-    meta?.business ??
-    identity?.business_name ??
-    null;
+    row.business_name ?? meta?.business ?? identity?.business_name ?? null;
 
   const contact_email = row.contact_email ?? contact.email ?? metaContact.email ?? null;
   const phone         = row.phone         ?? contact.phone  ?? metaContact.phone  ?? null;
@@ -117,14 +100,12 @@ function normalizeForEditor(row: any) {
   const latitude      = row.latitude      ?? contact.latitude ?? metaContact.latitude ?? null;
   const longitude     = row.longitude     ?? contact.longitude?? metaContact.longitude?? null;
 
-  // ← NEW: normalize industry triplet (prefer explicit, never auto-downgrade)
   const ind = normalizeIndustryTriplet(row, meta);
 
   return {
     ...row,
     site_type,
     business_name,
-    // surface normalized industry at the top level (columns)
     industry: ind.industry,
     industry_label: ind.industry_label,
 
@@ -143,9 +124,7 @@ function normalizeForEditor(row: any) {
       identity: { ...(data.identity || {}), ...identity },
       meta: {
         ...meta,
-        // ensure mirrors present
         identity: { ...(meta.identity || {}), ...identity },
-        // ensure UI can read latest values here as well
         industry: ind.industry,
         industry_label: ind.industry_label,
         industry_other: ind.industry_other,
@@ -154,19 +133,51 @@ function normalizeForEditor(row: any) {
   };
 }
 
+// helper: only treat as "missing relation" if error text clearly says so
+function isMissingRelation(err: any) {
+  const msg = String(err?.message || err || '').toLowerCase();
+  return msg.includes('relation') && msg.includes('does not exist');
+}
+
 export async function GET(req: Request) {
   const url = new URL(req.url);
   const id = url.searchParams.get('id');
   const debugQ = url.searchParams.get('debug') === '1';
   if (!id) return j({ error: 'id required' }, 400);
 
-  const { data, error } = await supabaseAdmin
+  // Always use PUBLIC for templates (admin client may default to 'app')
+  const pub = supabaseAdmin.schema('public');
+
+  // 1) Primary: public.templates
+  let data: any = null;
+  let error: any = null;
+
+  ({ data, error } = await pub
     .from('templates')
     .select(TEMPLATE_EDITOR_SELECT)
     .eq('id', id)
-    .single();
+    .maybeSingle());
 
-  if (error || !data) return j({ error: error?.message || 'not found' }, 404);
+  // 2) Only fallback to a view if the *table* is actually missing
+  if (error && isMissingRelation(error)) {
+    try {
+      const alt = await pub
+        .from('templates_public')   // optional view; ignore if absent
+        .select(TEMPLATE_EDITOR_SELECT)
+        .eq('id', id)
+        .maybeSingle();
+      data = alt.data;
+      error = alt.error && !isMissingRelation(alt.error) ? alt.error : null;
+    } catch {
+      // ignore; we'll return the original error below
+    }
+  }
+
+  // If we still have an error (and it wasn't the quiet-missing-view case), return it
+  if (error) return j({ error: error.message }, 404);
+
+  // If no row found, do NOT try the view—return not found
+  if (!data) return j({ error: 'not found' }, 404);
 
   const normalized = normalizeForEditor(data);
 

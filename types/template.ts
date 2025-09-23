@@ -67,6 +67,7 @@ export type TemplateData = {
   footerBlock?: Block | null;
   hours?: HoursOfOperationContent | null;
   org_id?: string | null; 
+  company_id?: string | null; 
 };
 
 export type TemplateInsert = Omit<Template,
@@ -130,7 +131,6 @@ export type Snapshot = {
 
   services?: string[];
   site_id?: string | null;
-
   meta?: {
     title?: string;
     description?: string;
@@ -145,6 +145,7 @@ export type Snapshot = {
   headerBlock?: Block | null;
   footerBlock?: Block | null;
   org_id?: string | null;
+  company_id?: string | null; 
 };
 
 // Editor/runtime-only properties go here
@@ -183,6 +184,7 @@ export type Template = Snapshot & {
   latitude?: number;
   longitude?: number;
   org_id?: string | null; 
+  company_id?: string | null; 
 };
 
 export type TemplateSnapshot = Snapshot;
@@ -260,6 +262,7 @@ const TemplateDataSchema = z
     industry: z.string().optional(),
     hours: hoursOfOperationPropsSchema.optional(),
     org_id: UUID, 
+    company_id: UUID, 
   })
   .passthrough(); // accept extra keys inside data
 
@@ -337,6 +340,7 @@ export const TemplateFormSchema = z
     footerBlock: BlockSchema.nullable().optional(),
     hours: hoursOfOperationPropsSchema.optional(),
     org_id: UUID, 
+    company_id: UUID, 
   })
   .passthrough(); // accept unknown top-level keys
 

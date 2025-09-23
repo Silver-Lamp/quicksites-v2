@@ -1,12 +1,18 @@
 import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/server/supabaseAdmin';
+import { resolveCompanyId } from '@/lib/server/resolveCompanyId';
 
 export async function GET(req: Request) {
-  const { searchParams } = new URL(req.url);
-  const org_id = searchParams.get('org_id');
+  const sp = new URL(req.url).searchParams;
+  const company_id = resolveCompanyId(sp);
 
-  let q = supabaseAdmin.from('app.resources').select('id,name,active').eq('active', true);
-  if (org_id) q = q.eq('org_id', org_id);
+  const app = supabaseAdmin.schema('app');
+
+  let q = app.from('resources')
+    .select('id,name,active,company_id')
+    .eq('active', true);
+
+  if (company_id) q = q.eq('company_id', company_id);
 
   const { data, error } = await q;
   if (error) return new NextResponse(error.message, { status: 500 });

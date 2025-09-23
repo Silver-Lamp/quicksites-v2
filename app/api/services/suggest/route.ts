@@ -8,13 +8,14 @@ export const dynamic = 'force-dynamic';
 
 type Body = {
   template_id?: string;
-  industry?: string;        // canonical key or label
-  industry_key?: string;    // preferred canonical key
-  industry_label?: string;  // human label
-  site_type?: string | null; // 'portfolio' | 'blog' | 'about_me' | 'small_business'
+  industry?: string;          // canonical key or label
+  industry_key?: string;      // preferred canonical key
+  industry_label?: string;    // human label (e.g., "Furniture Assembly")
+  industry_other?: string;    // user-typed "Other" value (preferred topic)
+  site_type?: string | null;  // 'portfolio' | 'blog' | 'about_me' | 'small_business'
   city?: string;
   state?: string;
-  count?: number; // default 6
+  count?: number;             // default 6
   debug?: boolean;
 };
 
@@ -47,6 +48,24 @@ const SITE_LABEL: Record<string, string> = {
   about_me: 'About Me',
 };
 
+// Try to extract a typed "other" industry from typical template JSON shapes
+function pluckIndustryOther(tplData: any): string | null {
+  const d = tplData ?? {};
+  const candidates = [
+    d?.identity?.industry_other,
+    d?.identity?.industry_label,
+    d?.meta?.identity?.industry_other,
+    d?.meta?.identity?.industry_label,
+    d?.meta?.industry_other,
+    d?.meta?.industry_label,
+  ];
+  for (const v of candidates) {
+    const s = typeof v === 'string' ? v.trim() : '';
+    if (s) return s;
+  }
+  return null;
+}
+
 export async function POST(req: Request) {
   try {
     const body = (await req.json()) as Body;
@@ -77,11 +96,13 @@ export async function POST(req: Request) {
     }
 
     // Inputs (request)
-    const providedIndustry = norm(body.industry_key ?? body.industry ?? body.industry_label);
+    const providedIndustryKeyOrLabel = norm(body.industry_key ?? body.industry ?? body.industry_label);
     const providedSiteType = norm(body.site_type);
+    const providedTypedOther = String(body.industry_other ?? '').trim();
 
-    let industryKey = providedIndustry;
+    let industryKey = providedIndustryKeyOrLabel;
     let siteType = providedSiteType;
+    let typedOther = providedTypedOther; // preferred human topic if present
 
     let city = String(body.city ?? '').trim();
     let state = String(body.state ?? '').trim();
@@ -89,7 +110,9 @@ export async function POST(req: Request) {
     // Optional DB lookups (only if we need them)
     let dbIndustryCandidate = '';
     let dbSiteTypeCandidate = '';
-    if ((isMissingOrOther(industryKey) || !siteType) && body.template_id) {
+    let dbTypedOtherCandidate: string | null = null;
+
+    if ((isMissingOrOther(industryKey) || !siteType || !typedOther) && body.template_id) {
       const { data: tpl } = await supabase
         .from('templates')
         .select('industry, data')
@@ -98,31 +121,54 @@ export async function POST(req: Request) {
 
       dbIndustryCandidate = norm((tpl as any)?.industry ?? (tpl as any)?.data?.meta?.industry);
       dbSiteTypeCandidate = norm((tpl as any)?.data?.meta?.site_type);
+      dbTypedOtherCandidate = pluckIndustryOther((tpl as any)?.data);
 
       if (!city)  city  = String((tpl as any)?.data?.meta?.contact?.city  ?? '').trim();
       if (!state) state = String((tpl as any)?.data?.meta?.contact?.state ?? '').trim();
 
       if (isMissingOrOther(industryKey) && dbIndustryCandidate) industryKey = dbIndustryCandidate;
       if (!siteType && dbSiteTypeCandidate) siteType = dbSiteTypeCandidate;
+      if (!typedOther && dbTypedOtherCandidate) typedOther = dbTypedOtherCandidate;
     }
 
     const count = Math.max(3, Math.min(12, Number(body.count) || 6));
 
-    // Choose effective basis: prefer industry unless it's missing/"other"
-    let basis: 'industry' | 'site_type' = !isMissingOrOther(industryKey) ? 'industry' : 'site_type';
-    let effectiveKey = basis === 'industry' ? industryKey : (siteType || '');
+    // ── Choose primary topic / basis ─────────────────────────────────────────
+    // 1) Use typed "Other" string if present (best signal for specificity)
+    // 2) Else use industry label/key if not "other"
+    // 3) Else fall back to site_type
+    let basis: 'typed_other' | 'industry' | 'site_type' = 'site_type';
+    let topic = '';       // human topic the model will see (e.g., "Furniture Assembly")
+    let effectiveKey = ''; // kept for debug parity
+
+    if (typedOther) {
+      basis = 'typed_other';
+      topic = typedOther;
+      effectiveKey = norm(typedOther);
+    } else if (!isMissingOrOther(industryKey)) {
+      basis = 'industry';
+      topic = body.industry_label?.trim() || industryKey || SITE_LABEL[siteType] || 'Small Business';
+      effectiveKey = industryKey;
+    } else {
+      basis = 'site_type';
+      topic = SITE_LABEL[siteType] || 'Small Business';
+      effectiveKey = siteType;
+    }
 
     // If still empty, we have nothing to go on
-    if (!effectiveKey) {
+    if (!topic) {
       return new Response(JSON.stringify({
         services: [],
         ...(wantDebug ? { debug: {
-          industry_in: providedIndustry || null,
+          industry_in: providedIndustryKeyOrLabel || null,
           site_type_in: providedSiteType || null,
+          industry_other_in: providedTypedOther || null,
           industry_from_template: dbIndustryCandidate || null,
           site_type_from_template: dbSiteTypeCandidate || null,
+          industry_other_from_template: dbTypedOtherCandidate || null,
           basis_used: null,
           effective_key_used: null,
+          topic_used: null,
           city: city || null,
           state: state || null,
           template_id: body.template_id || null,
@@ -130,10 +176,9 @@ export async function POST(req: Request) {
       }), { status: 200 });
     }
 
-    // Build a type-aware system prompt
+    // ── Build the prompt ─────────────────────────────────────────────────────
     const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY! });
 
-    // Guidance for site types so results make sense (e.g., Portfolio ≠ towing)
     const siteTypeGuidance = (t: string) => {
       switch (t) {
         case 'portfolio':
@@ -153,18 +198,13 @@ export async function POST(req: Request) {
       'Each item is 1–4 words, Title Case, no numbering, no emojis, no duplicates. ' +
       siteTypeGuidance(siteType || '');
 
-    // Compose user message with basis + location context
+    // Compose user message with the chosen topic + location context
     const lines: string[] = [];
-    if (basis === 'industry') {
-      lines.push(`Industry: ${effectiveKey}`);
-    } else {
-      lines.push(`Site Type: ${effectiveKey}`);
-    }
-    if (!isMissingOrOther(industryKey) && basis !== 'industry') {
-      lines.push(`Industry (if helpful): ${industryKey}`);
-    }
-    const labelHint = body.industry_label?.trim();
-    if (labelHint) lines.push(`Human Label: ${labelHint}`);
+    lines.push(`Topic: ${topic}`); // ← this is the main thing the model sees
+    // Keep hints for extra specificity
+    if (basis !== 'industry' && !isMissingOrOther(industryKey)) lines.push(`Industry key: ${industryKey}`);
+    if (siteType) lines.push(`Site Type: ${siteType}`);
+    if (body.industry_label?.trim()) lines.push(`Human Label: ${body.industry_label.trim()}`);
     if (city || state) lines.push(`Locale: ${[city, state].filter(Boolean).join(', ')}`);
     lines.push(`Count: ${count}`);
 
@@ -199,14 +239,15 @@ export async function POST(req: Request) {
     return new Response(JSON.stringify({
       services: cleaned,
       ...(wantDebug ? { debug: {
-        industry_in: providedIndustry || null,
+        industry_in: providedIndustryKeyOrLabel || null,
         site_type_in: providedSiteType || null,
+        industry_other_in: providedTypedOther || null,
         industry_from_template: dbIndustryCandidate || null,
         site_type_from_template: dbSiteTypeCandidate || null,
-        basis_used: basis,                 // 'industry' | 'site_type'
-        effective_key_used: effectiveKey,  // what the model saw as primary
-        industry_used: !isMissingOrOther(industryKey) ? industryKey : null,
-        site_type_used: siteType || null,
+        industry_other_from_template: dbTypedOtherCandidate || null,
+        basis_used: basis,                // 'typed_other' | 'industry' | 'site_type'
+        effective_key_used: effectiveKey, // normalized form
+        topic_used: topic,                // human topic the model saw
         city: city || null,
         state: state || null,
         template_id: body.template_id || null,

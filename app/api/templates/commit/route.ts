@@ -11,7 +11,7 @@ import { logTemplateEvent } from '@/lib/server/logTemplateEvent';
 let resolveOrg: undefined | (() => Promise<any>);
 try { resolveOrg = require('@/lib/org/resolveOrg').resolveOrg; } catch {}
 
-/* ---------------- utilities ---------------- */
+/* ───────────────────────────── helpers ───────────────────────────── */
 
 type Kind = 'save' | 'autosave';
 
@@ -20,8 +20,8 @@ function j(data: any, init?: number | ResponseInit) {
   return NextResponse.json(data, resInit);
 }
 
-const isMergeConflict = (m: string) =>
-  typeof m === 'string' && (m.includes('merge_conflict') || /conflict/i.test(m));
+const DEBUG_ID = process.env.DEBUG_IDENTITY === '1';
+const dbg = (...args: any[]) => { if (DEBUG_ID) console.log(...args); };
 
 /** Recursively drop empty-string values, to avoid "clearing" columns by accident. */
 function stripEmpty(v: any): any {
@@ -38,24 +38,19 @@ function stripEmpty(v: any): any {
   return v;
 }
 
-const DEBUG_ID = process.env.DEBUG_IDENTITY === '1';
-const dbg = (...args: any[]) => { if (DEBUG_ID) console.log(...args); };
-
-/** Safe/forgiving JSON-ish getter */
+/** forgiving parse */
 function obj(v: any) {
   if (!v) return {};
   if (typeof v === 'object') return v;
   try { return JSON.parse(String(v)); } catch { return {}; }
 }
 
-/* ---------------- meta / industry helpers ---------------- */
+/* ─────────────── industry helpers (same semantics as your state route) ─────────────── */
 
-/** lightweight slugifier (keeps ascii, numbers, underscores, hyphens) */
 function toSlug(s: any): string | null {
   if (s == null) return null;
   const raw = String(s).trim().toLowerCase();
   if (!raw) return null;
-  // convert spaces to underscores and collapse
   const slug = raw
     .replace(/\s+/g, '_')
     .replace(/[^a-z0-9_-]/g, '_')
@@ -63,151 +58,71 @@ function toSlug(s: any): string | null {
     .replace(/^_+|_+$/g, '');
   return slug || null;
 }
-
-/** Title-ize a slug if we don't get an explicit label */
 function humanizeSlug(slug: string): string {
-  return slug
-    .split(/[_-]/g)
-    .filter(Boolean)
-    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
-    .join(' ');
+  return slug.split(/[_-]/g).filter(Boolean).map(w => w[0]?.toUpperCase() + w.slice(1)).join(' ');
 }
 
-/**
- * Normalize the "industry" triplet:
- *  - Prefer an explicit incoming key (even if we don't recognize it globally).
- *  - Never downgrade a previously specific key to "other" unless the incoming
- *    patch explicitly asks for "other" (or provides other-text only).
- *  - Provide a sensible label if absent.
- */
-function normalizeIndustryTriplet(
-  incomingMeta: any,
-  beforeMeta: any
-): { industry?: string | null; industry_label?: string | null; industry_other?: string | null } {
-  const inKeyRaw = incomingMeta?.industry;
-  const inKeySlug = toSlug(inKeyRaw);
+function normalizeIndustryTriplet(incomingMeta: any, beforeMeta: any) {
+  const inKeySlug = toSlug(incomingMeta?.industry);
   const inLabel = (incomingMeta?.industry_label ?? '').toString().trim() || null;
   const inOther = (incomingMeta?.industry_other ?? '').toString().trim() || null;
 
-  const prevKeyRaw = beforeMeta?.industry;
-  const prevKeySlug = toSlug(prevKeyRaw);
+  const prevKeySlug = toSlug(beforeMeta?.industry);
   const prevLabel = (beforeMeta?.industry_label ?? '').toString().trim() || null;
   const prevOther = (beforeMeta?.industry_other ?? '').toString().trim() || null;
 
-  // CASE 1: Caller explicitly set a key
   if (inKeySlug) {
     if (inKeySlug === 'other') {
-      // Explicitly "other"
-      const otherText = inOther || null;
-      return {
-        industry: 'other',
-        industry_label: inLabel || 'Other',
-        industry_other: otherText,
-      };
+      return { industry: 'other', industry_label: inLabel || 'Other', industry_other: inOther || null };
     }
-    // Any non-"other" slug is treated as a valid specific industry
-    return {
-      industry: inKeySlug,
-      industry_label: inLabel || humanizeSlug(inKeySlug),
-      industry_other: null,
-    };
+    return { industry: inKeySlug, industry_label: inLabel || humanizeSlug(inKeySlug), industry_other: null };
   }
-
-  // CASE 2: No incoming key, but "other" text was provided
-  if (inOther && !inKeySlug) {
-    return {
-      industry: 'other',
-      industry_label: 'Other',
-      industry_other: inOther,
-    };
-  }
-
-  // CASE 3: No incoming changes — keep previous triplet as-is
+  if (inOther && !inKeySlug) return { industry: 'other', industry_label: 'Other', industry_other: inOther };
   if (prevKeySlug) {
-    if (prevKeySlug === 'other') {
-      return {
-        industry: 'other',
-        industry_label: prevLabel || 'Other',
-        industry_other: prevOther || null,
-      };
-    }
-    return {
-      industry: prevKeySlug,
-      industry_label: prevLabel || humanizeSlug(prevKeySlug),
-      industry_other: null,
-    };
+    if (prevKeySlug === 'other') return { industry: 'other', industry_label: prevLabel || 'Other', industry_other: prevOther || null };
+    return { industry: prevKeySlug, industry_label: prevLabel || humanizeSlug(prevKeySlug), industry_other: null };
   }
-
-  // CASE 4: No info at all; return empty so caller's merge doesn't overwrite
   return {};
 }
 
-/** Restrict meta keys we explicitly support merging at this layer. */
 const ALLOWED_META_KEYS = new Set<string>([
-  // identity mirror container
-  'identity',
-  // industry triplet
-  'industry',
-  'industry_label',
-  'industry_other',
-  // other known knobs we tolerate at this layer (extend as needed)
-  'site_type',
-  'siteTitle',
-  'business',
-  'contact',
-  'services',
+  'identity', 'industry', 'industry_label', 'industry_other',
+  'site_type', 'siteTitle', 'business', 'contact', 'services',
 ]);
 
-/** Merge identity -> meta.identity and legacy meta fields; backfill missing columns from identity.
- *  Additionally: normalize the industry triplet so we don't silently downgrade to "other".
- */
+/** Merge identity mirrors + keep columns in sync; normalize industry triplet. */
 function enrichPatchWithIdentity(originalPatch: any, beforeData: any) {
   const patch = { ...(originalPatch || {}) };
   const inData = obj(patch.data);
   const inMeta = obj(inData.meta);
   const beforeMeta = obj(beforeData?.meta);
 
-  // DEBUG: show incoming meta payload to help catch drops
-  if (DEBUG_ID) {
-    dbg('[IDENTITY:API] patch.meta =', JSON.stringify(inMeta));
-  }
+  if (DEBUG_ID) dbg('[IDENTITY:API] patch.meta =', JSON.stringify(inMeta));
 
   const idFromData = obj(inData.identity);
   const idFromMeta = obj(inMeta.identity);
-  const identity =
-    Object.keys(idFromData).length ? idFromData :
-    (Object.keys(idFromMeta).length ? idFromMeta : null);
+  const identity = Object.keys(idFromData).length ? idFromData : (Object.keys(idFromMeta).length ? idFromMeta : null);
 
-  // Build contact snapshot if identity present
   const contact = obj(identity?.contact);
   const prevMetaIdentity = obj(beforeMeta.identity);
   const mergedMetaIdentity = { ...prevMetaIdentity, ...idFromMeta, ...idFromData };
 
-  // Start with a conservative merged meta (keep previous, then incoming)
   const metaBase: any = { ...beforeMeta, ...inMeta };
-
-  // Keep legacy meta fields aligned for older readers / prompts (fill if provided)
   metaBase.siteTitle = identity?.template_name ?? metaBase.siteTitle ?? null;
   metaBase.business  = identity?.business_name ?? metaBase.business ?? null;
   metaBase.site_type = identity?.site_type ?? metaBase.site_type ?? null;
 
-  // Normalize industry triplet using both incoming and previous values
   const normIndustry = normalizeIndustryTriplet(inMeta, beforeMeta);
 
-  // Compose nextMeta with whitelisted keys plus normalized industry
   const nextMeta: any = {};
-  for (const k of Object.keys(metaBase)) {
-    if (ALLOWED_META_KEYS.has(k)) nextMeta[k] = metaBase[k];
-  }
-  nextMeta.identity = mergedMetaIdentity; // always keep identity mirror
-  if (normIndustry.industry !== undefined)       nextMeta.industry = normIndustry.industry;
-  if (normIndustry.industry_label !== undefined) nextMeta.industry_label = normIndustry.industry_label;
-  if (normIndustry.industry_other !== undefined) nextMeta.industry_other = normIndustry.industry_other;
+  for (const k of Object.keys(metaBase)) if (ALLOWED_META_KEYS.has(k)) nextMeta[k] = metaBase[k];
+  nextMeta.identity = mergedMetaIdentity;
+  if (normIndustry.industry        !== undefined) nextMeta.industry        = normIndustry.industry;
+  if (normIndustry.industry_label  !== undefined) nextMeta.industry_label  = normIndustry.industry_label;
+  if (normIndustry.industry_other  !== undefined) nextMeta.industry_other  = normIndustry.industry_other;
 
-  // Keep contact sub-object in meta (non-destructive)
   nextMeta.contact = {
-    ...(obj(beforeMeta.contact)),
-    ...(obj(inMeta.contact)),
+    ...(obj(beforeMeta.contact)), ...(obj(inMeta.contact)),
     email:     contact.email     ?? inMeta?.contact?.email     ?? beforeMeta?.contact?.email     ?? null,
     phone:     contact.phone     ?? inMeta?.contact?.phone     ?? beforeMeta?.contact?.phone     ?? null,
     address:   contact.address   ?? inMeta?.contact?.address   ?? beforeMeta?.contact?.address   ?? null,
@@ -219,101 +134,62 @@ function enrichPatchWithIdentity(originalPatch: any, beforeData: any) {
     longitude: contact.longitude ?? inMeta?.contact?.longitude ?? beforeMeta?.contact?.longitude ?? null,
   };
 
-  // Also keep a data.identity snapshot (non-breaking)
-  const nextData = {
-    ...inData,
-    identity: { ...(obj(inData.identity)), ...mergedMetaIdentity },
-    meta: nextMeta,
-  };
+  const nextData = { ...inData, identity: { ...(obj(inData.identity)), ...mergedMetaIdentity }, meta: nextMeta };
 
-  // Backfill columns ONLY if caller didn't already set them in patch
-  const setIfUndef = (k: string, v: any) => {
-    if (patch[k] === undefined && v !== undefined && v !== null && v !== '') {
-      patch[k] = v;
-    }
-  };
+  const setIfUndef = (k: string, v: any) => { if ((patch as any)[k] === undefined && v !== undefined && v !== null && v !== '') (patch as any)[k] = v; };
 
   setIfUndef('template_name', identity?.template_name);
   setIfUndef('business_name', identity?.business_name);
   setIfUndef('site_type', identity?.site_type);
 
-  // Prefer normalized meta industry for columns; fall back to identity
-  const colIndustry = normIndustry.industry ?? identity?.industry;
-  const colIndustryLabel = normIndustry.industry_label ?? identity?.industry_label;
-
+  const colIndustry      = normIndustry.industry      ?? identity?.industry;
+  const colIndustryLabel = normIndustry.industry_label?? identity?.industry_label;
   setIfUndef('industry', colIndustry);
   setIfUndef('industry_label', colIndustryLabel);
 
-  setIfUndef('contact_email', contact.email);
-  setIfUndef('phone', contact.phone);
+  setIfUndef('contact_email',  contact.email);
+  setIfUndef('phone',          contact.phone);
+  setIfUndef('address_line1',  contact.address);
+  setIfUndef('address_line2',  contact.address2);
+  setIfUndef('city',           contact.city);
+  setIfUndef('state',          contact.state);
+  setIfUndef('postal_code',    contact.postal);
+  if (contact.latitude  !== undefined && contact.latitude  !== null && contact.latitude  !== '') setIfUndef('latitude',  contact.latitude);
+  if (contact.longitude !== undefined && contact.longitude !== null && contact.longitude !== '') setIfUndef('longitude', contact.longitude);
 
-  setIfUndef('address_line1', contact.address);
-  setIfUndef('address_line2', contact.address2);
-  setIfUndef('city', contact.city);
-  setIfUndef('state', contact.state);
-  setIfUndef('postal_code', contact.postal);
-
-  if (contact.latitude !== undefined && contact.latitude !== null && contact.latitude !== '') {
-    setIfUndef('latitude', contact.latitude);
-  }
-  if (contact.longitude !== undefined && contact.longitude !== null && contact.longitude !== '') {
-    setIfUndef('longitude', contact.longitude);
-  }
-
-  patch.data = nextData;
-
-  dbg('[IDENTITY:API] enriched patch from identity', {
-    columns: {
-      template_name: patch.template_name,
-      site_type: patch.site_type,
-      industry: patch.industry,
-      industry_label: patch.industry_label,
-      contact_email: patch.contact_email,
-      phone: patch.phone,
-      address_line1: patch.address_line1,
-      address_line2: patch.address_line2,
-      city: patch.city,
-      state: patch.state,
-      postal_code: patch.postal_code,
-      latitude: patch.latitude,
-      longitude: patch.longitude,
-    },
-    identity_in_data: nextData.identity,
-    identity_in_meta: nextData.meta.identity,
-    normalized_industry: normIndustry,
-  });
-
+  (patch as any).data = nextData;
   return patch;
 }
 
-/** Canonical projection (columns + data) for post-commit rehydrate. */
+/** Projection for rehydrate. */
 const TEMPLATE_EDITOR_SELECT = [
-  'id',
-  'slug',
-  'base_slug',
-  'rev',
-  'updated_at',
-  'template_name',
-  'business_name',
-  'industry',
-  'industry_label',
-  'site_type',
-  'site_type_key',
-  'site_type_label',
-  'contact_email',
-  'phone',
-  'address_line1',
-  'address_line2',
-  'city',
-  'state',
-  'postal_code',
-  'latitude',
-  'longitude',
-  'color_mode',
-  'color_scheme',
-  'layout',
-  'data',
+  'id','slug','base_slug','rev','updated_at',
+  'template_name','business_name','industry','industry_label',
+  'site_type','site_type_key','site_type_label',
+  'contact_email','phone','address_line1','address_line2','city','state','postal_code',
+  'latitude','longitude','color_mode','color_scheme','layout','data',
 ].join(', ');
+
+/* ──────────────── RPC helpers (return last error so we can inspect it) ──────────────── */
+
+type RpcResult = { ok: true } | { ok: false; error: any };
+
+async function callRpc(schema: 'public'|'app', fn: string, args: Record<string, any>): Promise<RpcResult> {
+  const cli = supabaseAdmin.schema(schema);
+  const { error } = await cli.rpc(fn, args as any);
+  return error ? { ok: false, error } : { ok: true };
+}
+
+function looksLikeConflict(e: any) {
+  const m = String(e?.message || '').toLowerCase();
+  return (
+    m.includes('merge_conflict') ||
+    (m.includes('conflict') && (m.includes('rev') || m.includes('version') || m.includes('rebase'))) ||
+    m.includes('stale') || m.includes('concurrent')
+  );
+}
+
+/* ────────────────────────────────── ROUTE ────────────────────────────────── */
 
 export async function POST(req: Request) {
   try {
@@ -329,133 +205,124 @@ export async function POST(req: Request) {
     if (!rawPatch || typeof rawPatch !== 'object') return j({ error: 'patch required (object)' }, 400);
 
     // sanitize forbidden fields
-    try {
-      delete (rawPatch as any).base_slug;
-      delete (rawPatch as any).is_version;
-      delete (rawPatch as any).rev;
-      delete (rawPatch as any).updated_at;
-      delete (rawPatch as any).created_at;
-      delete (rawPatch as any).owner_id;
-      delete (rawPatch as any).published_version_id;
-    } catch {}
+    for (const k of ['base_slug','is_version','rev','updated_at','created_at','owner_id','published_version_id']) delete (rawPatch as any)[k];
 
-    // before state for hash/diff and meta merge
-    const { data: beforeRow, error: beforeErr } = await supabaseAdmin
+    const pub = supabaseAdmin.schema('public');
+
+    // before state
+    const { data: beforeRow, error: beforeErr } = await pub
       .from('templates')
-      .select('rev, data')
+      .select('rev,data')
       .eq('id', id)
       .single();
-
-    if (beforeErr || !beforeRow) {
-      return j({ error: beforeErr?.message || 'template not found' }, 404);
-    }
+    if (beforeErr || !beforeRow) return j({ error: beforeErr?.message || 'template not found' }, 404);
 
     const beforeRev = typeof (beforeRow as any).rev === 'number' ? (beforeRow as any).rev : 0;
     const beforeData = (beforeRow as any).data ?? {};
     const effectiveBaseRev = Number.isFinite(baseRev as number) ? (baseRev as number) : beforeRev;
 
-    // optional org context
+    // optional org
     let orgId: string | undefined;
-    try {
-      if (resolveOrg) {
-        const org = await resolveOrg();
-        if (org?.id) orgId = String(org.id);
-      }
-    } catch {}
+    try { if (resolveOrg) { const org = await resolveOrg(); if (org?.id) orgId = String(org.id); } } catch {}
 
-    // Enrich patch with identity mirrors & column backfills (non-destructive)
-    if (DEBUG_ID) {
-      dbg('[IDENTITY:API] incoming patch', { id, baseRev: effectiveBaseRev, patch: rawPatch });
-    }
+    // enrich patch + strip empties
+    if (DEBUG_ID) dbg('[IDENTITY:API] incoming patch', { id, baseRev: effectiveBaseRev, patch: rawPatch });
     const enrichedPatch = enrichPatchWithIdentity(rawPatch, beforeData);
+    const strippedPatch = stripEmpty(enrichedPatch ?? {});
 
-    // Build payload for your public HTTP wrapper (delegates to app.commit_template)
     const payload = {
       id,
       base_rev: effectiveBaseRev,
-      patch: stripEmpty(enrichedPatch ?? {}),
+      patch: strippedPatch,
       actor: null,
       kind: (kind ?? 'save') as Kind,
-      org_id: orgId,
+      org_id: orgId ?? null,
     };
 
-    if (DEBUG_ID) {
-      dbg('[IDENTITY:API] payload to RPC', payload);
-    }
+    // ── RPC tries in your environment (from your catalog) ──
+    let lastErr: any = null;
 
-    const { data: rpcData, error: rpcErr } = await supabaseAdmin.rpc(
-      'commit_template_http',
-      { p_payload: payload } as any
-    );
+    // 1) public.commit_template_http(p_payload)
+    let r = await callRpc('public','commit_template_http', { p_payload: payload });
+    if (r.ok) lastErr = null; else lastErr = r.error;
 
-    if (rpcErr) {
-      const msg = String(rpcErr.message || 'commit failed');
+    // 2) app.commit_template(p_payload jsonb)
+    if (lastErr) { r = await callRpc('app','commit_template', { p_payload: payload }); lastErr = r.ok ? null : r.error; }
 
-      if (isMergeConflict(msg)) {
-        const { data: curRow } = await supabaseAdmin
-          .from('templates')
-          .select('rev')
-          .eq('id', id)
-          .maybeSingle();
-        const currentRev =
-          (curRow && typeof (curRow as any).rev === 'number' && (curRow as any).rev) || beforeRev;
+    // 3) app.commit_template(p_id,p_base_rev,p_patch,p_actor)
+    if (lastErr) { r = await callRpc('app','commit_template', { p_id: id, p_base_rev: payload.base_rev, p_patch: strippedPatch, p_actor: null }); lastErr = r.ok ? null : r.error; }
 
-        if (DEBUG_ID) dbg('[IDENTITY:API] merge conflict', { id, beforeRev, currentRev });
-        return j({ error: 'merge_conflict', rev: currentRev }, 409);
+    // 4) app.commit_template(..., p_kind)
+    if (lastErr) { r = await callRpc('app','commit_template', { p_id: id, p_base_rev: payload.base_rev, p_patch: strippedPatch, p_actor: null, p_kind: payload.kind }); lastErr = r.ok ? null : r.error; }
+
+    // 5) public.commit_template_patch(p_id, p_base_rev, p_patch, p_actor, p_kind)
+    if (lastErr) { r = await callRpc('public','commit_template_patch', { p_id: id, p_base_rev: payload.base_rev, p_patch: strippedPatch, p_actor: null, p_kind: payload.kind }); lastErr = r.ok ? null : r.error; }
+
+    // 6) legacy public.commit_template(template_id, patch, actor_id, reason)  (no base_rev)
+    if (lastErr) { r = await callRpc('public','commit_template', { template_id: id, patch: strippedPatch, actor_id: null, reason: 'editor save' }); lastErr = r.ok ? null : r.error; }
+
+    if (lastErr) {
+      // Refresh current server rev to decide rebase vs guard
+      const { data: curRow } = await pub.from('templates').select('rev').eq('id', id).maybeSingle();
+      const currentRev = (curRow && typeof (curRow as any).rev === 'number') ? (curRow as any).rev : beforeRev;
+      const revMismatch = currentRev !== effectiveBaseRev;
+
+      if (revMismatch || looksLikeConflict(lastErr)) {
+        // Tell client to retry with current rev (commitWithRebase expects "latest")
+        return j({
+          conflict: true,
+          error: 'merge_conflict',
+          rev: currentRev,
+          latest: { id, baseRev: currentRev, patch: strippedPatch, kind: kind ?? 'save' },
+        }, 409);
       }
 
-      if (DEBUG_ID) dbg('[IDENTITY:API] RPC error', { id, error: msg });
-      return j(
-        {
-          error: 'commit failed',
-          rpc_error: msg,
-          rpc_attempt: 'public.commit_template_http(p_payload jsonb)',
-          hint: 'Ensure the PUBLIC wrapper exists and delegates to app.commit_template(jsonb).',
-        },
-        500
-      );
+      // Not a rebase-able conflict → guard/exposure issue
+      return j({
+        error: 'guard_blocked',
+        message:
+          'Direct updates are blocked or RPC is not exposed. Expose one of: public.commit_template_http(p_payload), app.commit_template(p_payload) or compatible commit_template(...).',
+        detail: String(lastErr?.message || lastErr),
+      }, 409);
     }
 
-    // next rev (prefer DB-returned rev)
-    const row = Array.isArray(rpcData) ? rpcData[0] : rpcData;
-    const nextRev =
-      typeof row?.rev === 'number'
-        ? row.rev
-        : Number.isFinite(effectiveBaseRev)
-        ? (effectiveBaseRev as number) + 1
-        : beforeRev + 1;
-
-    // Re-select authoritative row for client rehydrate (columns + data)
-    const { data: fullRow, error: selErr } = await supabaseAdmin
+    // Rehydrate authoritative row
+    const { data: fullRow, error: selErr } = await pub
       .from('templates')
       .select(TEMPLATE_EDITOR_SELECT)
       .eq('id', id)
       .single();
 
-    // If selection fails, still respond with rev/hash from data-only fetch
     if (selErr || !fullRow) {
-      const { data: cur2 } = await supabaseAdmin
-        .from('templates')
-        .select('data')
-        .eq('id', id)
-        .single();
+      const { data: cur2 } = await pub.from('templates').select('data, rev').eq('id', id).single();
       const afterData2 = (cur2 as any)?.data ?? {};
       const hash2 = sha256(afterData2);
-
-      if (DEBUG_ID) dbg('[IDENTITY:API] post-commit select failed; returning fallback', { id, nextRev, hash2 });
-      return j({ id, rev: nextRev, hash: hash2, kind: kind ?? 'save' });
+      const nextRev2 =
+        typeof (cur2 as any)?.rev === 'number'
+          ? (cur2 as any).rev
+          : Number.isFinite(effectiveBaseRev)
+          ? (effectiveBaseRev as number) + 1
+          : beforeRev + 1;
+      if (DEBUG_ID) dbg('[IDENTITY:API] post-commit select failed; returning fallback', { id, nextRev2, hash2 });
+      return j({ id, rev: nextRev2, hash: hash2, kind: kind ?? 'save' });
     }
 
-    // Normalize site_type across possible fields (column/key/meta)
+    const afterData = (fullRow as any)?.data ?? {};
+    const nextRev =
+      typeof (fullRow as any)?.rev === 'number'
+        ? (fullRow as any).rev
+        : Number.isFinite(effectiveBaseRev)
+        ? (effectiveBaseRev as number) + 1
+        : beforeRev + 1;
+
+    const hash = sha256(afterData);
+
     const normalizedSiteType: string | null =
       (fullRow as any).site_type ??
       (fullRow as any).site_type_key ??
       ((fullRow as any).data?.meta?.site_type ?? null);
 
-    // Hash + diff + log
-    const afterData = (fullRow as any)?.data ?? {};
-    const hash = sha256(afterData);
-
+    // best-effort event log
     try {
       const bd = diffBlocks({ data: beforeData }, { data: afterData });
       const afterMeta = (afterData as any)?.meta ?? {};
@@ -490,31 +357,25 @@ export async function POST(req: Request) {
         },
       } as any);
     } catch (e) {
-      // best-effort logging; ignore failures
       if (DEBUG_ID) dbg('[IDENTITY:API] logTemplateEvent failed (ignored)', { error: (e as any)?.message });
     }
 
     if (DEBUG_ID) {
-      const data = (fullRow as any)?.data ?? {};
       dbg('[IDENTITY:API] success', {
         id,
         nextRev,
         site_type: normalizedSiteType,
-        meta_identity: data?.meta?.identity,
-        data_identity: data?.identity,
+        meta_identity: afterData?.meta?.identity,
+        data_identity: afterData?.identity,
       });
     }
 
-    // Return rev + normalized template so client can merge without a follow-up fetch
     return j({
       id,
       rev: nextRev,
       hash,
       kind: kind ?? 'save',
-      template: {
-        ...(fullRow as any),
-        site_type: normalizedSiteType,
-      },
+      template: { ...(fullRow as any), site_type: normalizedSiteType },
     });
   } catch (e: any) {
     if (DEBUG_ID) dbg('[IDENTITY:API] fatal error', { error: e?.message });

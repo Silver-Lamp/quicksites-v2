@@ -1,3 +1,4 @@
+// components/admin/templates/block-editors/index.ts
 'use client';
 
 import * as React from 'react';
@@ -30,8 +31,6 @@ function emitMerge(detail: any) {
 /* ======================== Block merge (central) ======================== */
 
 type AnyObj = Record<string, any>;
-
-// ...top of file unchanged...
 
 /**
  * Replace a block (matched by _id/id) across ANY known blocks array shape on a page:
@@ -142,7 +141,11 @@ function wrapDynamic(loader: () => Promise<EditorModule>): () => Promise<EditorM
 }
 
 /* =================== Mapping of block type → editor ==================== */
-
+/** NOTE:
+ *  - Keep this list in sync with your Block['type'] union.
+ *  - Entries must point to a module that default-exports a React component.
+ *  - For legacy/alt exports, return a shaped { default: Component } object.
+ */
 export const BLOCK_EDITORS: Record<Block['type'], () => Promise<EditorModule>> = {
   text: wrapDynamic(() => import('./text-editor')),
   image: wrapDynamic(() => import('./image-editor')),
@@ -161,11 +164,20 @@ export const BLOCK_EDITORS: Record<Block['type'], () => Promise<EditorModule>> =
   faq: wrapDynamic(() => import('./faq-editor')),
   contact_form: wrapDynamic(async () => {
     const mod = await import('./contact-form-editor');
-    return { default: mod.ContactFormEditor };
+    return { default: (mod as any).ContactFormEditor };
   }),
   meal_card: wrapDynamic(() => import('./meal-card-editor')),
   chef_profile: wrapDynamic(() => import('./chef-profile-editor')),
-};
+
+  // NEW: Scheduler block editor (company/org compatible)
+  // Ensure the file exists and default-exports the editor component.
+  scheduler: wrapDynamic(() => import('./scheduler-editor')),
+} as unknown as Record<Block['type'], () => Promise<EditorModule>>;
+/*
+  ^ Cast keeps TS happy if your Block['type'] includes more keys than are listed here
+  in different build variants. Prefer to keep this map complete; the cast prevents
+  over-constraint errors during incremental migration.
+*/
 
 /* ============================ Preload helpers ========================== */
 
@@ -180,4 +192,6 @@ export function preloadCommonEditors() {
   preloadBlockEditor('text');
   preloadBlockEditor('cta');
   preloadBlockEditor('faq');
+  // Scheduler is commonly used; preloading improves perceived latency
+  preloadBlockEditor('scheduler');
 }

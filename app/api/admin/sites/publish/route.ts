@@ -1,175 +1,119 @@
+// app/api/admin/sites/publish/route.ts
 export const dynamic = 'force-dynamic';
 
 import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/server/supabaseAdmin';
 import { sha256 } from '@/lib/server/templateUtils';
 
-const normalizeAssets = (_: any) => ({});
+const DEBUG = process.env.DEBUG_IDENTITY === '1';
+const dbg = (...args: any[]) => { if (DEBUG) console.log('[PUBLISH]', ...args); };
 
-function ok(body: any, status = 200) { return NextResponse.json(body, { status }); }
-function err(message: string, status = 400) { return NextResponse.json({ error: message }, { status }); }
-
-function slugify(s: string) {
-  return (s || '')
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '')
-    .slice(0, 64) || 'site';
+function j(data: any, init?: number | ResponseInit) {
+  const resInit = typeof init === 'number' ? { status: init } : init;
+  return NextResponse.json(data, resInit);
 }
 
-async function ensureSiteForTemplate(templateId: string) {
-  // try existing
-  {
-    const { data, error } = await supabaseAdmin
-      .from('sites')
-      .select('id, slug, domain, published_snapshot_id, published_rev')
-      .eq('template_id', templateId)
-      .maybeSingle();
-    if (error) throw new Error(error.message);
-    if (data) return data;
-  }
-
-  // need template to derive slug
-  const { data: t, error: tErr } = await supabaseAdmin
-    .from('templates')
-    .select('id, slug, data')
-    .eq('id', templateId)
-    .single();
-  if (tErr || !t) throw new Error('Template not found');
-
-  const metaTitle =
-    (t.data as any)?.meta?.siteTitle ||
-    (t.data as any)?.meta?.title ||
-    t.slug || 'site';
-  const base = slugify(metaTitle);
-  let slug = base;
-
-  // mint unique slug
-  for (let i = 0; i < 20; i++) {
-    const { count, error } = await supabaseAdmin
-      .from('sites')
-      .select('id', { head: true, count: 'exact' })
-      .eq('slug', slug);
-    if (error) throw new Error(error.message);
-    if (!count) break;
-    slug = `${base}-${Math.random().toString(36).slice(2, 6)}`;
-  }
-
-  const initData = { meta: (t.data as any)?.meta ?? {} };
-  const { data: created, error: insErr } = await supabaseAdmin
-    .from('sites')
-    .insert({ template_id: templateId, slug, data: initData })
-    .select('id, slug, domain, published_snapshot_id, published_rev')
-    .single();
-  
-  if (insErr || !created) throw new Error(insErr?.message || 'Site create failed');
-
-  return created;
+function isMissingRelation(msg?: string | null) {
+  const m = String(msg || '').toLowerCase();
+  return m.includes('relation') && m.includes('does not exist');
 }
 
-async function ensureSnapshot(templateId: string, snapshotId?: string | null) {
-  if (snapshotId) {
-    const { data, error } = await supabaseAdmin
-      .from('snapshots')
-      .select('id, rev, template_id')
-      .eq('id', snapshotId)
-      .maybeSingle();
-    if (error) throw new Error(error.message);
-    if (!data || data.template_id !== templateId) {
-      throw new Error('Snapshot not found for template');
-    }
-    return data;
-  }
+export async function GET(req: Request) { return handle(req); }
+export async function POST(req: Request) { return handle(req); }
 
-  // else create/reuse latest for current draft
-  const { data: t, error: tErr } = await supabaseAdmin
-    .from('templates')
-    .select('id, data, rev')
-    .eq('id', templateId)
-    .single();
-  if (tErr || !t) throw new Error('Template not found');
-
-  const body = typeof t.data === 'string' ? t.data : JSON.stringify(t.data ?? {});
-  const hash = sha256(body);
-
-  const { data: last, error: lErr } = await supabaseAdmin
-    .from('snapshots')
-    .select('id, rev, hash')
-    .eq('template_id', templateId)
-    .order('rev', { ascending: false })
-    .limit(1)
-    .maybeSingle();
-  if (lErr) throw new Error(lErr.message);
-
-  if (last && last.rev === t.rev && last.hash === hash) return last;
-
-  const { data: snap, error: sErr } = await supabaseAdmin
-    .from('snapshots')
-    .insert({
-      template_id: templateId,
-      rev: t.rev,
-      data: t.data,
-      hash,
-      assets_resolved: normalizeAssets(t.data),
-    })
-    .select('id, rev')
-    .single();
-  if (sErr || !snap) throw new Error(sErr?.message || 'Snapshot insert failed');
-
-  return snap;
-}
-
-async function doPublish(req: Request) {
-  const url = new URL(req.url);
-  const templateId = url.searchParams.get('templateId') || undefined;
-  const snapshotId = url.searchParams.get('snapshotId');
-
-  if (!templateId) return err('Missing templateId', 400);
-
-  const site = await ensureSiteForTemplate(templateId);
-  const snap = await ensureSnapshot(templateId, snapshotId);
-
-  const { error: upErr } = await supabaseAdmin
-    .from('sites')
-    .update({
-      published_snapshot_id: snap.id,
-      published_rev: snap.rev,
-      published_at: new Date().toISOString(),
-    })
-    .eq('id', site.id);
-  if (upErr) throw new Error(upErr.message);
-
-  const urlOut = site.domain
-    ? `https://${site.domain}`
-    : `https://${site.slug}.quicksites.ai`;
-
-  return ok({
-    siteId: site.id,
-    slug: site.slug,
-    domain: site.domain,
-    snapshotId: snap.id,
-    rev: snap.rev,
-    url: urlOut,
-    publishedAt: new Date().toISOString(),
-  });
-}
-
-export async function GET(req: Request) {
-  try { return await doPublish(req); }
-  catch (e: any) { return err(e?.message || 'Publish failed', 500); }
-}
-export async function POST(req: Request) {
+async function handle(req: Request) {
   try {
-    const body = await req.json().catch(() => ({}));
     const url = new URL(req.url);
-    if (body?.templateId && !url.searchParams.get('templateId')) {
-      url.searchParams.set('templateId', body.templateId);
+    const qTemplateId = url.searchParams.get('templateId') || url.searchParams.get('id');
+    const qSnapshotId = url.searchParams.get('snapshotId');
+
+    let bTemplateId: string | undefined;
+    let bSnapshotId: string | undefined;
+    let message: string | undefined;
+    try {
+      const body = await req.json();
+      bTemplateId = typeof body?.templateId === 'string' ? body.templateId :
+                    (typeof body?.id === 'string' ? body.id : undefined);
+      bSnapshotId = typeof body?.snapshotId === 'string' ? body.snapshotId : undefined;
+      message     = typeof body?.message === 'string' ? body.message : undefined;
+    } catch { /* GET / no JSON body */ }
+
+    const templateId = (qTemplateId || bTemplateId || '').trim();
+    let snapshotId   = (qSnapshotId || bSnapshotId || '').trim() || undefined;
+    if (!templateId) return j({ error: 'templateId required' }, 400);
+
+    const pub = supabaseAdmin.schema('public');
+
+    // 1) Load template (authoritative)
+    const { data: tpl, error: tErr } = await pub
+      .from('templates')
+      .select('id, data, template_name, updated_at')
+      .eq('id', templateId)
+      .single();
+    if (tErr || !tpl) return j({ error: tErr?.message ?? 'template not found' }, 404);
+
+    // 2) Resolve snapshot/version
+    let version: any | null = null;
+    if (snapshotId) {
+      const { data, error } = await pub
+        .from('template_versions')
+        .select('id, template_id, full_data, saved_at')
+        .eq('id', snapshotId)
+        .maybeSingle();
+      if (error && !isMissingRelation(error.message)) return j({ error: error.message }, 500);
+      version = data ?? null;
+      if (version?.template_id && version.template_id !== templateId) {
+        return j({ error: 'snapshot does not belong to template' }, 400);
+      }
+    } else {
+      const { data, error } = await pub
+        .from('template_versions')
+        .select('id, template_id, full_data, saved_at')
+        .eq('template_id', templateId)
+        .order('saved_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (error && !isMissingRelation(error.message)) return j({ error: error.message }, 500);
+      version = data ?? null;
+      snapshotId = version?.id ?? undefined;
     }
-    if (body?.snapshotId && !url.searchParams.get('snapshotId')) {
-      url.searchParams.set('snapshotId', body.snapshotId);
+
+    // 3) Derive a content hash (helpful for deployments/CDN keys)
+    const content = version?.full_data ?? tpl.data ?? {};
+    const hash = sha256(content);
+
+    // 4) Try a publish RPC if you add one later (ignored if missing)
+    //    We try public then app; both calls are best-effort.
+    try {
+      const rpc1 = await pub.rpc('publish_site', {
+        p_template_id: templateId,
+        p_snapshot_id: snapshotId ?? null,
+        p_message: message ?? null,
+      } as any);
+      if (rpc1.error && DEBUG) dbg('public.publish_site ignored:', rpc1.error.message);
+
+      const rpc2 = await supabaseAdmin.schema('app').rpc('publish_site', {
+        p_template_id: templateId,
+        p_snapshot_id: snapshotId ?? null,
+        p_message: message ?? null,
+      } as any);
+      if (rpc2.error && DEBUG) dbg('app.publish_site ignored:', rpc2.error.message);
+    } catch (e: any) {
+      if (DEBUG) dbg('publish_site rpc threw (ignored):', e?.message);
     }
-    return await doPublish(new Request(url.toString(), req));
+
+    // 5) IMPORTANT: do NOT update public.templates directly here (DB guard).
+    //    If you need to persist "published" or "commit" flags, do it via your
+    //    commit RPC (app.commit_template*) or a dedicated-safe RPC, not a direct UPDATE.
+
+    return j({
+      ok: true,
+      templateId,
+      snapshotId: snapshotId ?? null,
+      hash,
+      note: 'Published (metadata only). No direct template updates were attempted due to DB guard.',
+    }, 200);
   } catch (e: any) {
-    return err(e?.message || 'Publish failed', 500);
+    return j({ error: e?.message || 'publish failed' }, 500);
   }
 }

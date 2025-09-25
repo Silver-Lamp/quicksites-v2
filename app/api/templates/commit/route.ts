@@ -170,7 +170,7 @@ const TEMPLATE_EDITOR_SELECT = [
   'latitude','longitude','color_mode','color_scheme','layout','data',
 ].join(', ');
 
-/* ──────────────── RPC helpers (return last error so we can inspect it) ──────────────── */
+/* ──────────────── RPC helpers ──────────────── */
 
 type RpcResult = { ok: true } | { ok: false; error: any };
 
@@ -187,6 +187,32 @@ function looksLikeConflict(e: any) {
     (m.includes('conflict') && (m.includes('rev') || m.includes('version') || m.includes('rebase'))) ||
     m.includes('stale') || m.includes('concurrent')
   );
+}
+
+async function tryAllRpcs(id: string, payload: any): Promise<RpcResult> {
+  // 1) public.commit_template_http(p_payload)
+  let r = await callRpc('public','commit_template_http', { p_payload: payload });
+  if (r.ok) return r;
+
+  // 2) app.commit_template(p_payload jsonb)
+  r = await callRpc('app','commit_template', { p_payload: payload });
+  if (r.ok) return r;
+
+  // 3) app.commit_template(p_id,p_base_rev,p_patch,p_actor)
+  r = await callRpc('app','commit_template', { p_id: id, p_base_rev: payload.base_rev, p_patch: payload.patch, p_actor: payload.actor ?? null });
+  if (r.ok) return r;
+
+  // 4) app.commit_template(..., p_kind)
+  r = await callRpc('app','commit_template', { p_id: id, p_base_rev: payload.base_rev, p_patch: payload.patch, p_actor: payload.actor ?? null, p_kind: payload.kind ?? 'save' });
+  if (r.ok) return r;
+
+  // 5) public.commit_template_patch(p_id,p_base_rev,p_patch,p_actor,p_kind)
+  r = await callRpc('public','commit_template_patch', { p_id: id, p_base_rev: payload.base_rev, p_patch: payload.patch, p_actor: payload.actor ?? null, p_kind: payload.kind ?? 'save' });
+  if (r.ok) return r;
+
+  // 6) legacy public.commit_template(template_id,patch,actor_id,reason)  (no base_rev)
+  r = await callRpc('public','commit_template', { template_id: id, patch: payload.patch, actor_id: payload.actor ?? null, reason: 'editor save' });
+  return r;
 }
 
 /* ────────────────────────────────── ROUTE ────────────────────────────────── */
@@ -239,51 +265,41 @@ export async function POST(req: Request) {
       org_id: orgId ?? null,
     };
 
-    // ── RPC tries in your environment (from your catalog) ──
-    let lastErr: any = null;
+    // ── First RPC attempt ──
+    let r = await tryAllRpcs(id, payload);
 
-    // 1) public.commit_template_http(p_payload)
-    let r = await callRpc('public','commit_template_http', { p_payload: payload });
-    if (r.ok) lastErr = null; else lastErr = r.error;
-
-    // 2) app.commit_template(p_payload jsonb)
-    if (lastErr) { r = await callRpc('app','commit_template', { p_payload: payload }); lastErr = r.ok ? null : r.error; }
-
-    // 3) app.commit_template(p_id,p_base_rev,p_patch,p_actor)
-    if (lastErr) { r = await callRpc('app','commit_template', { p_id: id, p_base_rev: payload.base_rev, p_patch: strippedPatch, p_actor: null }); lastErr = r.ok ? null : r.error; }
-
-    // 4) app.commit_template(..., p_kind)
-    if (lastErr) { r = await callRpc('app','commit_template', { p_id: id, p_base_rev: payload.base_rev, p_patch: strippedPatch, p_actor: null, p_kind: payload.kind }); lastErr = r.ok ? null : r.error; }
-
-    // 5) public.commit_template_patch(p_id, p_base_rev, p_patch, p_actor, p_kind)
-    if (lastErr) { r = await callRpc('public','commit_template_patch', { p_id: id, p_base_rev: payload.base_rev, p_patch: strippedPatch, p_actor: null, p_kind: payload.kind }); lastErr = r.ok ? null : r.error; }
-
-    // 6) legacy public.commit_template(template_id, patch, actor_id, reason)  (no base_rev)
-    if (lastErr) { r = await callRpc('public','commit_template', { template_id: id, patch: strippedPatch, actor_id: null, reason: 'editor save' }); lastErr = r.ok ? null : r.error; }
-
-    if (lastErr) {
-      // Refresh current server rev to decide rebase vs guard
+    if (!r.ok) {
+      // refresh current rev
       const { data: curRow } = await pub.from('templates').select('rev').eq('id', id).maybeSingle();
       const currentRev = (curRow && typeof (curRow as any).rev === 'number') ? (curRow as any).rev : beforeRev;
-      const revMismatch = currentRev !== effectiveBaseRev;
 
-      if (revMismatch || looksLikeConflict(lastErr)) {
-        // Tell client to retry with current rev (commitWithRebase expects "latest")
+      const revMismatch = currentRev !== payload.base_rev;
+      const conflictish = looksLikeConflict((r as any).error);
+
+      if (revMismatch || conflictish) {
+        // ── Server-side single rebase retry ──
+        const retryPayload = { ...payload, base_rev: currentRev };
+        const retry = await tryAllRpcs(id, retryPayload);
+
+        if (!retry.ok) {
+          // still conflicting → hand a client-retry payload
+          return j({
+            conflict: true,
+            error: 'merge_conflict',
+            rev: currentRev,
+            latest: { id, baseRev: currentRev, patch: strippedPatch, kind: kind ?? 'save' },
+          }, 409);
+        }
+        // else fall-through → success path
+      } else {
+        // Not rebaseable → guard/exposure/etc.
         return j({
-          conflict: true,
-          error: 'merge_conflict',
-          rev: currentRev,
-          latest: { id, baseRev: currentRev, patch: strippedPatch, kind: kind ?? 'save' },
+          error: 'guard_blocked',
+          message:
+            'Direct updates are blocked or RPC is not exposed. Expose one of: public.commit_template_http(p_payload), app.commit_template(p_payload) or compatible commit_template(...).',
+          detail: String((r as any).error?.message || (r as any).error),
         }, 409);
       }
-
-      // Not a rebase-able conflict → guard/exposure issue
-      return j({
-        error: 'guard_blocked',
-        message:
-          'Direct updates are blocked or RPC is not exposed. Expose one of: public.commit_template_http(p_payload), app.commit_template(p_payload) or compatible commit_template(...).',
-        detail: String(lastErr?.message || lastErr),
-      }, 409);
     }
 
     // Rehydrate authoritative row

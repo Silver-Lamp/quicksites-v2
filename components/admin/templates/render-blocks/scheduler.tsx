@@ -16,8 +16,8 @@ type Props = {
   block?: any;
   content?: any;
   template?: Template;
-  companyId?: string;  // preferred owner
-  orgId?: string;      // legacy owner (compat)
+  companyId?: string;
+  orgId?: string;
   previewOnly?: boolean;
 };
 
@@ -25,7 +25,7 @@ type Service = { id: string; name: string; duration_minutes: number };
 type Resource = { id: string; name: string };
 type Slot = { starts_at: string; ends_at: string; resource_id?: string };
 
-const ANY = '__any__'; // sentinel for "Any resource"
+const ANY = '__any__';
 
 const DEFAULTS: SchedulerBlock = {
   title: 'Book an appointment',
@@ -66,6 +66,24 @@ export default function SchedulerRender(props: Props) {
   const [slots, setSlots] = useState<Slot[] | null>(null);
   const [loading, setLoading] = useState(false);
 
+  /* ---------- SOLID surfaces (no transparency) in both themes ---------- */
+  const triggerCls =
+    // force solid field surface + readable text
+    '!bg-white !text-black dark:!bg-neutral-900 dark:!text-white ' +
+    'h-9 w-full rounded-md border border-input ' +
+    'placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring';
+  const contentCls =
+    // radix portal content (menu)
+    'z-[60] !bg-white !text-black dark:!bg-neutral-900 dark:!text-white ' +
+    'border border-border shadow-xl rounded-md';
+  const itemCls =
+    'cursor-default select-none px-3 py-2 text-sm outline-none ' +
+    'focus:bg-accent focus:text-accent-foreground data-[state=checked]:bg-accent';
+  const inputCls =
+    '!bg-white !text-black dark:!bg-neutral-900 dark:!text-white ' +
+    'h-9 w-full rounded-md border border-input px-3 ' +
+    'placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring';
+
   function setOwnerParam(qs: URLSearchParams) {
     if (effectiveCompanyId) qs.set('company_id', effectiveCompanyId);
     else if (effectiveOrgId) qs.set('org_id', effectiveOrgId);
@@ -87,7 +105,6 @@ export default function SchedulerRender(props: Props) {
 
       setServices(svcRows);
       setResources(resRows);
-
       if (!serviceId && svcRows[0]?.id) setServiceId(svcRows[0].id);
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -168,12 +185,14 @@ export default function SchedulerRender(props: Props) {
           {/* Service */}
           <label className="block text-sm font-medium">Service</label>
           <Select value={serviceId ?? ''} onValueChange={setServiceId}>
-            <SelectTrigger>
+            <SelectTrigger className={triggerCls}>
               <SelectValue placeholder="Pick a service" />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent className={contentCls} position="popper" sideOffset={6}>
               {services.map(s => (
-                <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+                <SelectItem key={s.id} value={s.id} className={itemCls}>
+                  {s.name}
+                </SelectItem>
               ))}
             </SelectContent>
           </Select>
@@ -183,13 +202,15 @@ export default function SchedulerRender(props: Props) {
             <>
               <label className="block text-sm font-medium">Preferred Resource</label>
               <Select value={resourceId ?? ANY} onValueChange={(v) => setResourceId(v === ANY ? undefined : v)}>
-                <SelectTrigger>
+                <SelectTrigger className={triggerCls}>
                   <SelectValue placeholder="Any" />
                 </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value={ANY}>Any</SelectItem>
+                <SelectContent className={contentCls} position="popper" sideOffset={6}>
+                  <SelectItem value={ANY} className={itemCls}>Any</SelectItem>
                   {resources.map(r => (
-                    <SelectItem key={r.id} value={r.id}>{r.name}</SelectItem>
+                    <SelectItem key={r.id} value={r.id} className={itemCls}>
+                      {r.name}
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -199,13 +220,17 @@ export default function SchedulerRender(props: Props) {
           {/* Day */}
           <label className="block text-sm font-medium">Pick a Day</label>
           <Select value={date} onValueChange={setDate}>
-            <SelectTrigger>
+            <SelectTrigger className={triggerCls}>
               <SelectValue placeholder="Select date" />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent className={contentCls} position="popper" sideOffset={6}>
               {days.map(d => {
                 const val = format(d, 'yyyy-MM-dd');
-                return <SelectItem key={val} value={val}>{format(d, 'EEE, MMM d')}</SelectItem>;
+                return (
+                  <SelectItem key={val} value={val} className={itemCls}>
+                    {format(d, 'EEE, MMM d')}
+                  </SelectItem>
+                );
               })}
             </SelectContent>
           </Select>
@@ -213,10 +238,10 @@ export default function SchedulerRender(props: Props) {
           {/* Contact info */}
           <div className="grid gap-2">
             <label className="text-sm font-medium">Your Name *</label>
-            <input id="sched-name" placeholder="Jane Doe" className="h-9 w-full rounded border px-3" />
+            <input id="sched-name" placeholder="Jane Doe" className={inputCls} />
             <div className="grid grid-cols-2 gap-2">
-              <input id="sched-email" placeholder="you@email.com" className="h-9 w-full rounded border px-3" />
-              <input id="sched-phone" placeholder="(555) 555-5555" className="h-9 w-full rounded border px-3" />
+              <input id="sched-email" placeholder="you@email.com" className={inputCls} />
+              <input id="sched-phone" placeholder="(555) 555-5555" className={inputCls} />
             </div>
           </div>
         </div>

@@ -26,7 +26,8 @@ import PageHeaderEditor from '@/components/admin/templates/block-editors/header-
 import { TemplateActionToolbar } from '@/components/admin/templates/template-action-toolbar';
 import PageSettingsModal from '@/components/admin/templates/page-settings-modal';
 import { useTruthTrackerState } from './hooks/useTruthTrackerState';
-import TemplateTruthTracker from './sidebar/TemplateTruthTracker';
+import TemplateTruthTracker from '@/components/admin/templates/truth/TemplateTruthTracker';
+
 import NewTemplateWelcome from '@/components/admin/templates/NewTemplateWelcome';
 import CollapsiblePanel from '@/components/ui/collapsible-panel';
 

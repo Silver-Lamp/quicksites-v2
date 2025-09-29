@@ -1,4 +1,3 @@
-// middleware.ts
 import type { NextRequest } from 'next/server';
 import { NextResponse } from 'next/server';
 
@@ -18,6 +17,9 @@ const APP_HOSTS = new Set<string>([
   'www.cedarsites.com',
   'app.cedarsites.com',
 ]);
+
+/** Known platform domains where subdomain = site slug. */
+const PLATFORM_DOMAINS = ['quicksites.ai', 'cedarsites.com'];
 
 /** Paths we should never rewrite (Next internals, assets, specific APIs). */
 const IGNORE_PATHS: RegExp[] = [
@@ -58,6 +60,20 @@ function subdomainFromDevHost(hostname: string): string | null {
   return null;
 }
 
+/** If host ends with a known platform domain, return the leftmost label (site slug). */
+function platformSubdomainSlug(hostname: string): string | null {
+  const h = hostname.toLowerCase().replace(/\.$/, '');
+  for (const base of PLATFORM_DOMAINS) {
+    const suffix = `.${base}`;
+    if (h.endsWith(suffix)) {
+      const left = h.slice(0, -suffix.length);
+      if (!left || left === 'www' || left === 'app') return null;
+      return left.split('.')[0]; // ← only first label becomes your slug
+    }
+  }
+  return null;
+}
+
 // cookies
 const REF_COOKIE = 'qs_ref';
 const REF_MAX_AGE = 60 * 60 * 24 * 90; // 90 days
@@ -84,7 +100,6 @@ export function middleware(req: NextRequest) {
 
   const withCookies = (res: NextResponse) => {
     if (wantsRefCookie) {
-      // Use object overload for types-compat
       res.cookies.set({
         name: REF_COOKIE,
         value: ref!,
@@ -109,7 +124,6 @@ export function middleware(req: NextRequest) {
       });
       res.headers.set('x-qsites-org', orgParam!);
     } else if (wantsOrgClear) {
-      // Delete also uses object overload (name+path in one arg)
       res.cookies.delete({ name: ORG_COOKIE, path: '/' });
       res.headers.set('x-qsites-org-cleared', '1');
     }
@@ -120,9 +134,9 @@ export function middleware(req: NextRequest) {
   if (
     isIgnored(pathname) ||
     pathname.startsWith('/host') ||
-    pathname.startsWith('/_domains') || // ✅ your domain router
+    pathname.startsWith('/_domains') ||
     pathname.startsWith('/admin') ||
-    pathname.startsWith('/sites') ||    // ✅ path-based site preview
+    pathname.startsWith('/sites') ||
     pathname.startsWith('/login') ||
     pathname.startsWith('/api')
   ) {
@@ -150,14 +164,24 @@ export function middleware(req: NextRequest) {
     return withCookies(res);
   }
 
-  // ---- Real custom domain → directly to /sites/<slug>/<page> ----
+  // ---- Platform subdomain (*.quicksites.ai, *.cedarsites.com) → /sites/<slug> ----
+  const platSlug = platformSubdomainSlug(hostname);
+  if (platSlug) {
+    const extra = pathname === '/' ? '/home' : pathname;
+    const rewriteUrl = req.nextUrl.clone();
+    rewriteUrl.pathname = `/sites/${platSlug}${extra}`;
+    const res = NextResponse.rewrite(rewriteUrl);
+    res.headers.set('x-qsites-platform-slug', platSlug);
+    res.headers.set('x-qsites-rewrite', rewriteUrl.pathname + (rewriteUrl.search || ''));
+    return withCookies(res);
+  }
+
+  // ---- Arbitrary custom domain → derive slug from apex label (legacy behavior) ----
   const hostLc = hostname.toLowerCase().replace(/\.$/, '');
   const noWww = hostLc.replace(/^www\./, '');
-  // Derive slug from apex label (e.g., www.graftontowing.com → graftontowing)
   const parts = noWww.split('.');
   const apexLabel = (parts.length > 1 ? parts.slice(0, -1).join('.') : parts[0]) || noWww;
 
-  // Default root "/" to "/home" (your renderer expects a page)
   const extra = pathname === '/' ? '/home' : pathname;
 
   const rewriteUrl = req.nextUrl.clone();
@@ -168,7 +192,6 @@ export function middleware(req: NextRequest) {
   res.headers.set('x-qsites-slug', apexLabel);
   res.headers.set('x-qsites-rewrite', rewriteUrl.pathname + (rewriteUrl.search || ''));
   return withCookies(res);
-
 }
 
 export const config = {

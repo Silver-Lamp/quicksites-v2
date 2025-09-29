@@ -23,16 +23,6 @@ type SiteRow = {
   published_snapshot_id: string | null;
 };
 
-type SnapshotRow = {
-  id: string;
-  template_id: string;
-  rev: number;
-  data: Record<string, any>;
-  hash?: string | null;
-  assets_resolved?: Record<string, any>;
-  created_at?: string | null;
-};
-
 type RenderSite = {
   id: string;
   slug: string | null;
@@ -94,7 +84,9 @@ function safeParse(x: any) {
   try { return JSON.parse(x); } catch { return {}; }
 }
 
-/* ----------------- Data access ------------------ */
+/* ----------------- Data access (new + compat) ------------------ */
+
+/** Old path: look up in `public.sites` */
 async function loadSiteRowBySlug(slug: string): Promise<SiteRow | null> {
   const { data, error } = await supabaseAdmin
     .from('sites')
@@ -108,19 +100,80 @@ async function loadSiteRowBySlug(slug: string): Promise<SiteRow | null> {
   return (data as SiteRow) ?? null;
 }
 
-async function loadSnapshotById(id: string): Promise<SnapshotRow | null> {
-  const { data, error } = await supabaseAdmin
-    .from('snapshots')
-    .select('id, template_id, data, hash, created_at')
-    .eq('id', id)
+/** New path: templates + published_sites/template_versions */
+async function loadSiteRowBySlugOrTemplate(slug: string): Promise<SiteRow | null> {
+  // 1) try legacy sites table
+  const legacy = await loadSiteRowBySlug(slug);
+  if (legacy) return legacy;
+
+  // 2) fallback to templates
+  const tpl = await supabaseAdmin
+    .from('templates')
+    .select('id, slug, data, domain')
+    .eq('slug', slug)
     .maybeSingle();
-  if (error) {
-    console.warn('[snapshots] lookup failed:', error.message);
-    return null;
+
+  if (tpl.error || !tpl.data) return null;
+
+  const tplId: string = (tpl.data as any).id;
+  const tplDomain: string | null =
+    (tpl.data as any).domain ??
+    ((safeParse((tpl.data as any).data)?.meta?.domain as string) ?? null);
+
+  // collect all version ids for this template
+  const vers = await supabaseAdmin
+    .from('template_versions')
+    .select('id, created_at')
+    .eq('template_id', tplId);
+
+  const versionIds: string[] = Array.isArray(vers.data) ? vers.data.map((v: any) => v.id) : [];
+
+  // find most recent published_sites row that points to one of those versions
+  let published_snapshot_id: string | null = null;
+  if (versionIds.length) {
+    const pubs = await supabaseAdmin
+      .from('published_sites')
+      .select('snapshot_id, published_at')
+      .order('published_at', { ascending: false })
+      .limit(200);
+
+    if (!pubs.error && Array.isArray(pubs.data)) {
+      const hit = pubs.data.find((r: any) => versionIds.includes(r.snapshot_id));
+      if (hit) published_snapshot_id = hit.snapshot_id;
+    }
   }
-  return (data as SnapshotRow) ?? null;
+
+  return {
+    id: tplId,
+    slug: (tpl.data as any).slug ?? slug,
+    domain: tplDomain,
+    template_id: tplId,
+    published_snapshot_id,
+  };
 }
 
+/** Read snapshot data by id: first try `snapshots.data` (legacy), else `template_versions.full_data` */
+async function loadSnapshotDataById(id: string): Promise<any | null> {
+  // Legacy snapshots table
+  const snap = await supabaseAdmin
+    .from('snapshots')
+    .select('data')
+    .eq('id', id)
+    .maybeSingle();
+  if (!snap.error && snap.data) return (snap.data as any).data ?? null;
+
+  // New template_versions table
+  const ver = await supabaseAdmin
+    .from('template_versions')
+    .select('full_data')
+    .eq('id', id)
+    .maybeSingle();
+  if (!ver.error && ver.data) return (ver.data as any).full_data ?? null;
+
+  return null;
+}
+
+/** For draft fallback when admin views unpublished site */
 async function loadDraftTemplate(templateId: string): Promise<{ data: any; siteFields: any } | null> {
   const { data, error } = await supabaseAdmin
     .from('templates')
@@ -141,7 +194,7 @@ async function loadDraftTemplate(templateId: string): Promise<{ data: any; siteF
     siteFields: {
       id: data!.id,
       slug: data!.slug,
-      domain: data!.domain,
+      domain: (data as any).domain ?? d?.meta?.domain ?? null,
       default_subdomain: null,
     },
   };
@@ -166,7 +219,6 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { slug, rest } = await params;
 
-  // Lightweight metadata for special routes
   if (rest?.[0] === 'cart') return { title: 'Cart' };
   if (rest?.[0] === 'checkout') return { title: 'Checkout' };
   if (rest?.[0] === 'thank-you') return { title: 'Thank you' };
@@ -175,13 +227,12 @@ export async function generateMetadata({
   const { data: { user } } = await supabase.auth.getUser();
   const admin = await isAdminUser(user?.id ?? null);
 
-  const siteRow = await loadSiteRowBySlug(slug);
+  const siteRow = await loadSiteRowBySlugOrTemplate(slug);
   if (!siteRow) return {};
 
   let snapshotData: any | null = null;
   if (siteRow.published_snapshot_id) {
-    const snap = await loadSnapshotById(siteRow.published_snapshot_id);
-    snapshotData = snap?.data ?? null;
+    snapshotData = await loadSnapshotDataById(siteRow.published_snapshot_id);
   } else if (admin && siteRow.template_id) {
     const draft = await loadDraftTemplate(siteRow.template_id);
     snapshotData = draft?.data ?? null;
@@ -219,16 +270,16 @@ export default async function SitePreviewPage({
   const { data: { user } } = await supabase.auth.getUser();
   const admin = await isAdminUser(user?.id ?? null);
 
-  const siteRow = await loadSiteRowBySlug(slug);
+  const siteRow = await loadSiteRowBySlugOrTemplate(slug);
   if (!siteRow) return notFound();
 
   // Prefer published snapshot, else (admins only) fall back to live draft
   let normalized: RenderSite | null = null;
 
   if (siteRow.published_snapshot_id) {
-    const snap = await loadSnapshotById(siteRow.published_snapshot_id);
-    if (snap?.data) {
-      normalized = normalizeForRenderer(snap.data, {
+    const snapData = await loadSnapshotDataById(siteRow.published_snapshot_id);
+    if (snapData) {
+      normalized = normalizeForRenderer(snapData, {
         id: siteRow.id,
         slug: siteRow.slug,
         domain: siteRow.domain,

@@ -48,9 +48,10 @@ function normalizeIndustryTriplet(row: any, meta: any) {
   let industry: string | null = keySlug || null;
   let industry_label: string | null = row?.industry_label ?? meta?.industry_label ?? null;
   const industry_other_raw = meta?.industry_other ?? null;
-  const industry_other = typeof industry_other_raw === 'string' && industry_other_raw.trim().length
-    ? industry_other_raw.trim()
-    : null;
+  const industry_other =
+    typeof industry_other_raw === 'string' && industry_other_raw.trim().length
+      ? industry_other_raw.trim()
+      : null;
 
   if (!industry && industry_other) industry = 'other';
   if (industry && (!industry_label || !industry_label.trim())) {
@@ -83,11 +84,8 @@ function normalizeForEditor(row: any) {
   const contact = obj(identity?.contact);
   const metaContact = obj(meta?.contact);
 
-  const site_type =
-    row.site_type ?? row.site_type_key ?? meta?.site_type ?? null;
-
-  const business_name =
-    row.business_name ?? meta?.business ?? identity?.business_name ?? null;
+  const site_type = row.site_type ?? row.site_type_key ?? meta?.site_type ?? null;
+  const business_name = row.business_name ?? meta?.business ?? identity?.business_name ?? null;
 
   const contact_email = row.contact_email ?? contact.email ?? metaContact.email ?? null;
   const phone         = row.phone         ?? contact.phone  ?? metaContact.phone  ?? null;
@@ -133,7 +131,6 @@ function normalizeForEditor(row: any) {
   };
 }
 
-// helper: only treat as "missing relation" if error text clearly says so
 function isMissingRelation(err: any) {
   const msg = String(err?.message || err || '').toLowerCase();
   return msg.includes('relation') && msg.includes('does not exist');
@@ -145,20 +142,19 @@ export async function GET(req: Request) {
   const debugQ = url.searchParams.get('debug') === '1';
   if (!id) return j({ error: 'id required' }, 400);
 
-  // Always use PUBLIC for templates (admin client may default to 'app')
+  // Always use PUBLIC
   const pub = supabaseAdmin.schema('public');
 
-  // 1) Primary: public.templates
-  let data: any = null;
+  // 1) Primary template row
+  let tplRow: any = null;
   let error: any = null;
 
-  ({ data, error } = await pub
+  ({ data: tplRow, error } = await pub
     .from('templates')
     .select(TEMPLATE_EDITOR_SELECT)
     .eq('id', id)
     .maybeSingle());
 
-  // 2) Only fallback to a view if the *table* is actually missing
   if (error && isMissingRelation(error)) {
     try {
       const alt = await pub
@@ -166,38 +162,118 @@ export async function GET(req: Request) {
         .select(TEMPLATE_EDITOR_SELECT)
         .eq('id', id)
         .maybeSingle();
-      data = alt.data;
+      tplRow = alt.data;
       error = alt.error && !isMissingRelation(alt.error) ? alt.error : null;
-    } catch {
-      // ignore; we'll return the original error below
-    }
+    } catch {}
   }
 
-  // If we still have an error (and it wasn't the quiet-missing-view case), return it
   if (error) return j({ error: error.message }, 404);
+  if (!tplRow) return j({ error: 'not found' }, 404);
 
-  // If no row found, do NOT try the view—return not found
-  if (!data) return j({ error: 'not found' }, 404);
+  const normalized = normalizeForEditor(tplRow);
 
-  const normalized = normalizeForEditor(data);
+  // 2) Derive history-backed rev and latest snapshot from public.template_versions
+  const [{ data: latestVer }, { count: revCount }] = await Promise.all([
+    pub
+      .from('template_versions')
+      .select('id, hash, saved_at, created_at')
+      .eq('template_id', id)
+      .order('saved_at', { ascending: false })      // try saved_at first
+      .order('created_at', { ascending: false })    // then created_at
+      .limit(1)
+      .maybeSingle(),
+    pub
+      .from('template_versions')
+      .select('id', { count: 'exact', head: true })
+      .eq('template_id', id),
+  ]);
+
+  const currentRev = Number(revCount ?? 0);
+
+  const lastSnapshot = latestVer
+    ? {
+        id: latestVer.id,
+        rev: currentRev || null,
+        hash: latestVer.hash ?? null,
+        createdAt: latestVer.saved_at ?? latestVer.created_at ?? null,
+      }
+    : null;
+
+  // 3) Discover publishedSnapshotId from multiple locations
+  let publishedSnapshotId: string | null = null;
+  try {
+    // collect this template’s version ids
+    const v = await pub.from('template_versions').select('id').eq('template_id', id);
+    const versionIds = Array.isArray(v.data) ? v.data.map((r: any) => r.id) : [];
+
+    if (versionIds.length) {
+      const ps = await pub
+        .from('published_sites')
+        .select('snapshot_id, published_at')
+        .order('published_at', { ascending: false })
+        .limit(200);
+
+      if (!ps.error && Array.isArray(ps.data)) {
+        const hit = ps.data.find((r: any) => versionIds.includes(r.snapshot_id));
+        if (hit) publishedSnapshotId = hit.snapshot_id;
+      }
+    }
+  } catch {}
+
+
+  // 3b) templates.published_snapshot_id column (if present)
+  if (!publishedSnapshotId) {
+    try {
+      const tryCol = await pub
+        .from('templates')
+        .select('published_snapshot_id')
+        .eq('id', id)
+        .maybeSingle();
+      if (!tryCol.error && tryCol.data?.published_snapshot_id) {
+        publishedSnapshotId = tryCol.data.published_snapshot_id;
+      }
+    } catch {}
+  }
+
+  // 3c) templates.data.meta.publishedSnapshotId
+  if (!publishedSnapshotId) {
+    const m = (normalized?.data as any)?.meta;
+    if (m?.publishedSnapshotId) publishedSnapshotId = m.publishedSnapshotId;
+  }
+
+  // 4) Shape response (back-compat: flatten + include template:)
+  const payload = {
+    ...normalized,                   // keep old callers working
+    rev: currentRev,                 // history-derived rev
+    lastSnapshot,
+    site: {
+      slug: normalized.slug ?? null,
+      publishedSnapshotId: publishedSnapshotId ?? null,
+    },
+    template: normalized,            // new callers use template.*
+    publishedSnapshotId: publishedSnapshotId ?? null,
+  };
 
   if (DEBUG || debugQ) {
     console.log('[STATE:API] normalized', {
-      id: normalized.id,
-      site_type: normalized.site_type,
-      industry: normalized.industry,
-      industry_label: normalized.industry_label,
-      contact_email: normalized.contact_email,
-      phone: normalized.phone,
-      city: normalized.city,
-      state: normalized.state,
-      postal_code: normalized.postal_code,
-      meta_identity: normalized.data?.meta?.identity,
-      data_identity: normalized.data?.identity,
+      id: payload.id,
+      site_type: payload.site_type,
+      industry: payload.industry,
+      industry_label: payload.industry_label,
+      contact_email: payload.contact_email,
+      phone: payload.phone,
+      city: payload.city,
+      state: payload.state,
+      postal_code: payload.postal_code,
+      meta_identity: payload.template?.data?.meta?.identity,
+      data_identity: payload.template?.data?.identity,
+      rev: payload.rev,
+      lastSnapshot: payload.lastSnapshot,
+      publishedSnapshotId: payload.site?.publishedSnapshotId ?? null,
     });
   }
 
-  const res = NextResponse.json({ template: normalized });
+  const res = NextResponse.json(payload);
   res.headers.set('Cache-Control', 'no-store');
   return res;
 }

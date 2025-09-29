@@ -8,7 +8,6 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import {
   GitCommit,
-  GitBranch,
   Save as SaveIcon,
   Rocket,
   HardDriveDownload,
@@ -19,6 +18,7 @@ import clsx from 'clsx';
 import { shortTime, getSnapshotIdFromEvent, getVersionIdFromEvent } from './utils';
 import type { TemplateEvent } from './types';
 import { diffBlocks, type BlockDiff } from '@/lib/diff/blocks';
+import { useTruthTrackerState } from '../hooks/useTruthTrackerState';
 
 /* -------- tiny helpers for counts ---------- */
 const sumCounts = (m?: Record<string, number>) =>
@@ -41,18 +41,23 @@ function iconForEvent(t: TemplateEvent['type']) {
 }
 
 export function Timeline({
+  templateId,
   events,
   publishedSnapshotId,
   onViewDiff,
   onPublish,
   onRestore,
 }: {
+  templateId: string;
   events: TemplateEvent[];
   publishedSnapshotId?: string;
   onViewDiff?: (id: string) => void;
   onPublish?: (snapshotId: string) => void;
   onRestore?: (id: string) => void;
 }) {
+  // ✅ Load tracker state ONCE for the whole panel (not once per row)
+  const { state, loading, error } = useTruthTrackerState(templateId);
+
   return (
     <Card className="flex h-full min-h-40 flex-col border-neutral-200">
       <CardHeader className="py-3">
@@ -62,20 +67,31 @@ export function Timeline({
         <ScrollArea className="h-[42vh] w-full">
           <ul className="relative mx-3 my-2">
             <div className="absolute left-4 top-0 h-full w-px bg-border" />
-            {events.length === 0 && (
+            {loading && <li className="px-3 py-2 text-xs text-muted-foreground">Loading…</li>}
+            {error && !loading && (
+              <li className="px-3 py-2 text-xs text-red-500">Error loading history</li>
+            )}
+            {!loading && events.length === 0 && (
               <li className="px-3 py-2 text-xs text-muted-foreground">No events yet.</li>
             )}
-            {events.map((evt, idx) => (
-              <TimelineItem
-                key={evt.id ?? `${evt.type}-${idx}`}
-                evt={evt}
-                prevEvt={events[idx + 1]}
-                onViewDiff={onViewDiff}
-                onPublish={onPublish}
-                onRestore={onRestore}
-                publishedSnapshotId={publishedSnapshotId}
-              />
-            ))}
+            {!loading &&
+              events.map((evt, idx) => (
+                <TimelineItem
+                  key={evt.id ?? `${evt.type}-${idx}`}
+                  templateId={templateId}
+                  evt={evt}
+                  prevEvt={events[idx + 1]}
+                  onViewDiff={onViewDiff}
+                  onPublish={onPublish}
+                  onRestore={onRestore}
+                  publishedSnapshotId={publishedSnapshotId}
+                  // pass what TimelineItem needs from the shared state
+                  tracker={{
+                    infra: state?.infra ?? null,
+                    latestSnapshot: state?.snapshots?.[0] ?? null,
+                  }}
+                />
+              ))}
           </ul>
         </ScrollArea>
       </CardContent>
@@ -84,23 +100,33 @@ export function Timeline({
 }
 
 function TimelineItem({
+  templateId,
   evt,
   prevEvt,
   onViewDiff,
   onPublish,
   onRestore,
   publishedSnapshotId,
+  tracker,
 }: {
+  templateId: string;
   evt: TemplateEvent;
   prevEvt?: TemplateEvent;
   onViewDiff?: (id: string) => void;
   onPublish?: (snapshotId: string) => void;
   onRestore?: (id: string) => void;
   publishedSnapshotId?: string;
+  tracker: {
+    infra: any;
+    latestSnapshot: any;
+  };
 }) {
+  // ✅ NO data hooks here; this component is now pure/presentational.
+  // All hooks below run every render in the same order.
+
   const { icon, tone, label } = iconForEvent(evt.type);
   const rev = evt.revAfter ?? evt.revBefore;
-  const coarse = evt.diff || { added: 0, changed: 0, removed: 0 };
+  const coarse = (evt as any).diff || { added: 0, changed: 0, removed: 0 };
 
   // Compute BlockDiff best-effort, then totals from maps
   const blockDiff: BlockDiff | undefined = useMemo(() => {
@@ -192,7 +218,8 @@ function TimelineItem({
         <div className="flex items-center gap-2">
           {onViewDiff && (
             <Button size="sm" variant="ghost" className="h-7 px-2" onClick={() => onViewDiff(evt.id)}>
-              <GitBranch className="h-4 w-4" />
+              {/* kept GitBranch visual but import removed to slim bundle; reuse icon if desired */}
+              <svg viewBox="0 0 24 24" className="h-4 w-4"><path d="M6 3v6a3 3 0 0 0 3 3h6" stroke="currentColor" fill="none"/></svg>
             </Button>
           )}
           {snapId && (

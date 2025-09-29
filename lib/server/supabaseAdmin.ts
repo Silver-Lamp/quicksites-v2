@@ -6,6 +6,6 @@ export const supabaseAdmin = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!,         // ✅ service role key (never expose client-side)
   {
     auth: { autoRefreshToken: false, persistSession: false, detectSessionInUrl: false },
-    db:   { schema: 'app' },                      // make 'app' the default schema
+    db:   { schema: 'public' },                      // make 'app' the default schema
   }
 );

@@ -1037,7 +1037,7 @@ export function TemplateActionToolbar({
       }
       if (!sid) throw new Error('No snapshot to publish');
 
-      const url = `/api/admin/sites/publish?templateId=${(template as any).id}&snapshotId=${sid}`;
+      const url = `/api/admin/sites/publish?templateId=${(template as any).id}&snapshotId=${sid}&versionId=${sid}&debug=1`;
       const res = await fetch(url, { method: 'GET' });
       const json = await res.json();
       if (!res.ok) throw new Error(json?.error || 'Publish failed');

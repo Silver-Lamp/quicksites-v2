@@ -13,7 +13,7 @@ import { InfoDropdown } from './InfoDropdown';
 import { InfraMap } from './InfraMap';
 import { Timeline } from './Timeline';
 import { shortHash } from './utils';
-import type { TruthTrackerProps } from './types';
+import type { TruthTrackerProps, TemplateEvent } from './types';
 
 export default function TemplateTruthTracker({
   templateId,
@@ -37,9 +37,13 @@ export default function TemplateTruthTracker({
     infra: effInfra,
     snapshots: effSnapshots,
     effectiveEvents,
-    timelineOpen, setTimelineOpen,
-    refreshTruth, createSnapshot, publishSnapshot, restoreTo,
-  } = useTruthData(templateId, { infra, snapshots, events });
+    timelineOpen,
+    setTimelineOpen,
+    refreshTruth,
+    createSnapshot,
+    publishSnapshot,
+    restoreTo,
+  } = useTruthData(templateId);
 
   const publishedId = effInfra?.site?.publishedSnapshotId;
   const snaps = effSnapshots ?? [];
@@ -100,8 +104,9 @@ export default function TemplateTruthTracker({
       <CollapsiblePanel id="timeline" title="Timeline" defaultOpen={false} lazyMount onOpenChange={setTimelineOpen}>
         {({ open }) => (!open ? null : (
           <Timeline
-            events={effectiveEvents}
-            publishedSnapshotId={publishedId}
+            templateId={templateId}
+            events={effectiveEvents as unknown as TemplateEvent[]}
+            publishedSnapshotId={publishedId as string}
             onViewDiff={onViewDiff}
             onPublish={_publish}
             onRestore={_restore}
@@ -113,12 +118,15 @@ export default function TemplateTruthTracker({
       <CollapsiblePanel id="infra-map" title="Infra Map" defaultOpen={false} lazyMount>
         {({ open }) => (!open ? null : (
           <InfraMap
-            draft={{ rev: effInfra?.template.rev ?? 0, hash: effInfra?.template.hash }}
-            latestSnapshot={effInfra?.lastSnapshot ?? {
-              id: latestSnapshot?.id, rev: latestSnapshot?.rev, hash: latestSnapshot?.hash, createdAt: latestSnapshot?.createdAt,
+            draft={{ rev: effInfra?.template.rev ?? 0, hash: effInfra?.template.hash as string }}
+            latestSnapshot={effInfra?.lastSnapshot as { id?: string; rev?: number; hash?: string; createdAt?: string } ?? {
+              id: latestSnapshot?.id,
+              rev: latestSnapshot?.rev,
+              hash: latestSnapshot?.hash as string,
+              createdAt: latestSnapshot?.createdAt,
             }}
-            publishedSnapshotId={publishedId}
-            siteSlug={effInfra?.site?.slug}
+            publishedSnapshotId={publishedId as string}
+            siteSlug={effInfra?.site?.slug as string}
             cacheInfo={effInfra?.cache}
           />
         ))}
@@ -140,7 +148,7 @@ export default function TemplateTruthTracker({
               >
                 {snaps.map(s => (
                   <option key={s.id} value={s.id}>
-                    {shortHash(s.hash)} · rev {s.rev} · {new Date(s.createdAt).toLocaleString()}
+                    {shortHash(s.hash as string)} · rev {s.rev} · {s.createdAt ? new Date(s.createdAt).toLocaleString() : ''}
                   </option>
                 ))}
               </select>

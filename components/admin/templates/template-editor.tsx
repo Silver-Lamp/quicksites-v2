@@ -78,7 +78,7 @@ async function createSnapshot(templateId: string) {
   return json?.snapshotId as string;
 }
 async function publishSnapshot(templateId: string, snapshotId: string) {
-  const res = await fetch(`/api/admin/sites/publish?templateId=${templateId}&snapshotId=${snapshotId}`, { method: 'GET' });
+  const res = await fetch(`/api/admin/sites/publish?templateId=${templateId}&snapshotId=${snapshotId}&debug=1&versionId=${snapshotId}`, { method: 'GET' });
   const json = await res.json();
   if (!res.ok) throw new Error(json?.error || 'Publish failed');
   return json;

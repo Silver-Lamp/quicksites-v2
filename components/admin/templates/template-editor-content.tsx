@@ -30,6 +30,7 @@ import TemplateTruthTracker from '@/components/admin/templates/truth/TemplateTru
 
 import NewTemplateWelcome from '@/components/admin/templates/NewTemplateWelcome';
 import CollapsiblePanel from '@/components/ui/collapsible-panel';
+import type { InfraState, SnapshotInfo, TemplateEvent, VersionTagInfo } from '@/components/admin/templates/truth/types';
 
 // ✅ centralized block ops (id-based patch helpers)
 import {
@@ -1127,18 +1128,19 @@ export default function EditorContent({
 
   function TruthTrackerPanel({ templateId }: { templateId: string }) {
     const { state, loading, error, reload } = useTruthTrackerState(templateId);
+    const adminMeta = state?.rawState?.adminMeta ?? undefined;
     if (loading || !state) return null;
-    const { infra, snapshots, versions, events, adminMeta } = state;
+    const { infra, snapshots, versions, events } = state;
 
     return (
       <TemplateTruthTracker
         templateId={templateId}
-        infra={infra}
-        snapshots={snapshots}
-        versions={versions}
-        events={events}
+        infra={infra as InfraState}
+        snapshots={snapshots as SnapshotInfo[]}
+        versions={versions as unknown as VersionTagInfo[]}
+        events={events as TemplateEvent[]}
         selectedSnapshotId={infra?.lastSnapshot?.id}
-        adminMeta={adminMeta}
+        adminMeta={adminMeta as { deprecated_files?: string[] } | undefined}
         onRefresh={reload}
         onViewDiff={() => {}}
       />

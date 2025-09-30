@@ -24,6 +24,11 @@ function normalizeApex(input: string) {
   return apex;
 }
 
+function platformDomainForSlug(slug?: string | null) {
+  const s = String(slug || '').trim().toLowerCase();
+  return s ? `${s}.quicksites.ai` : null;
+}
+
 export async function POST(
   req: NextRequest,
   ctx: { params: Promise<{ id: string }> }
@@ -43,11 +48,11 @@ export async function POST(
       );
     }
 
-    // 1) RLS read-check to authorize actor against the template
+    // 1) RLS read-check to authorize actor against the template and fetch slug for fallback
     const supaAuthed = await getServerSupabase();
     const [{ data: userRes }, { data: tmpl, error: readErr }] = await Promise.all([
       supaAuthed.auth.getUser(),
-      supaAuthed.from('templates').select('rev').eq('id', id).single(),
+      supaAuthed.from('templates').select('rev, slug').eq('id', id).single(),
     ]);
     if (readErr || !tmpl) {
       // Do not leak existence; RLS determines access
@@ -56,6 +61,7 @@ export async function POST(
 
     // 2) Normalize/validate the requested domain (or clear it)
     let apex: string | null = null;
+    let primaryDomain: string | null = null; // www.<apex> as the canonical primary
     if (body.hasOwnProperty('custom_domain') && body.custom_domain != null) {
       const normalized = normalizeApex(String(body.custom_domain));
       if (normalized.length === 0) {
@@ -71,6 +77,7 @@ export async function POST(
         );
       } else {
         apex = normalized;
+        primaryDomain = `www.${apex}`;
       }
     } else if (body.hasOwnProperty('custom_domain')) {
       // explicit null -> clear
@@ -85,7 +92,7 @@ export async function POST(
     const base_rev = Number.isFinite(tmpl.rev as number) ? (tmpl.rev as number) : 0;
     const actor = userRes?.user?.id ?? '00000000-0000-0000-0000-000000000000';
 
-    // 3) Commit via service-role RPC (keeps audit trail + version bump)
+    // 3) Commit to template via service-role RPC (keeps audit trail + version bump)
     const admin = createClient(URL, SRK, { auth: { persistSession: false } });
     const { data, error } = await admin.rpc('commit_template_patch', {
       p_id: id,
@@ -94,17 +101,58 @@ export async function POST(
       p_actor: actor,
       p_kind: 'domain',
     });
-
     if (error) {
       return NextResponse.json({ ok: false, error: error.message }, { status: 400 });
     }
-
     const committed = Array.isArray(data) ? data[0] : data;
+
+    // 4) Reflect change into published_sites.domain (best-effort, service role)
+    //    - If a published row exists for this template: update domain
+    //    - If clearing: revert domain to <slug>.quicksites.ai (never NULL)
+    //    - If no published row yet, skip (user will publish later)
+    let appliedDomain: string | null = null;
+    let publishedRowExists = false;
+    let updated = false;
+    try {
+      // quick probe: do we have template_id on published_sites? if so, direct lookup
+      const ps = await admin
+        .from('published_sites')
+        .select('id, domain')
+        .eq('template_id', id)
+        .maybeSingle();
+
+      if (!ps.error && ps.data) {
+        publishedRowExists = true;
+        const fallback = platformDomainForSlug(tmpl.slug) || null;
+        const nextDomain = primaryDomain ?? fallback; // if clearing, revert to platform subdomain
+        if (nextDomain) {
+          const upd = await admin
+            .from('published_sites')
+            .update({ domain: nextDomain })
+            .eq('id', ps.data.id)
+            .select('domain')
+            .maybeSingle();
+          if (!upd.error && upd.data) {
+            appliedDomain = upd.data.domain ?? null;
+            updated = true;
+          }
+        }
+      } else if (ps.error?.message) {
+        // If column missing or other schema issues, we just skip silently
+        // console.warn('[custom-domain] published_sites lookup skipped:', ps.error.message);
+      }
+    } catch (e) {
+      // swallow; we don't want domain persistence to block the UX
+    }
+
     return NextResponse.json({
       ok: true,
       id: committed?.id ?? id,
       rev: committed?.rev ?? (Number.isFinite(base_rev) ? base_rev + 1 : null),
-      custom_domain: apex,
+      custom_domain: apex,                // what we stored on the template
+      published_sites: publishedRowExists // reflect whether we also updated live domain
+        ? { updated, domain: appliedDomain }
+        : { updated: false, domain: null, hint: 'No published row yet for this template' },
     });
   } catch (e: any) {
     return NextResponse.json(

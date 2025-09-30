@@ -119,72 +119,77 @@ async function handle(req: Request) {
     // Derive required domain
     const domain = deriveDomainFromTemplate(tpl);
     if (!domain) {
-      // we need *some* non-null domain; generate a safe fallback from snapshot id
       const short = String(snapshotId).slice(0, 8);
       note('no domain in template; using generated fallback', { short });
-      // keep it clearly internal
-      // adjust to your preferred dev suffix if needed
-      // e.g. `${short}.local.quicksites`
     }
-
     const finalDomain = domain ?? `${String(snapshotId).slice(0, 8)}.local.quicksites`;
 
-    // Insert into public.published_sites (columns present in your schema)
-    // Columns: id, domain (NOT NULL), branding_profile_id, published_at, status, is_public, og_image_url, snapshot_id
-    let storedVia: 'published_sites' | 'published_sites_with_id' | 'noop' = 'noop';
-    let attempt: 'first' | 'retry_with_id' = 'first';
+    // Build common payload (NEW: include template_id)
+    const payload = {
+      template_id: templateId,                 // ← canonical upsert key
+      domain: finalDomain,
+      snapshot_id: snapshotId,
+      published_at: new Date().toISOString(),
+      status: 'published',
+      is_public: true,
+    } as any;
+
+    let storedVia:
+      | 'upsert_by_template'
+      | 'insert_with_id'
+      | 'insert_simple'
+      | 'noop' = 'noop';
+    let attempt: 'upsert' | 'retry_insert_with_id' | 'retry_insert_simple' = 'upsert';
     let lastError: any = null;
 
-    // 1) try without id
-    let ins = await pub
+    // --- Preferred path: UPSERT by template_id (requires column + unique index) ---
+    let up = await pub
       .from('published_sites')
-      .insert({
-        domain: finalDomain,
-        snapshot_id: snapshotId,
-        published_at: new Date().toISOString(),
-        status: 'published',
-        is_public: true,
-      } as any)
+      .upsert(payload, { onConflict: 'template_id' }) // 1 live pointer per template
       .select('id')
       .maybeSingle();
 
-    if (!ins.error) {
-      storedVia = 'published_sites';
-      note('insert ok (no id)');
+    if (!up.error) {
+      storedVia = 'upsert_by_template';
+      note('upsert ok', { id: up.data?.id ?? null });
     } else {
-      lastError = x(ins.error);
-      console.error('[PUBLISH] insert error', lastError);
-      note('insert error', { err: lastError });
+      lastError = x(up.error);
+      note('upsert error', { err: lastError });
 
-      // 2) If id is required, retry with a generated uuid
-      const msg = (ins.error?.message || '').toLowerCase();
-      const needsId =
-        msg.includes('column "id"') ||
-        msg.includes('null value in column "id"') ||
-        msg.includes('violates not-null constraint');
+      const msg = (up.error?.message || '').toLowerCase();
+      const missingTemplateId = msg.includes('column') && msg.includes('template_id');
+      const onConflictUnsupported = msg.includes('on conflict') || msg.includes('conflict');
 
-      if (needsId) {
-        attempt = 'retry_with_id';
+      // If template_id column or onConflict path isn't available yet, fall back to INSERT
+      // 1) try insert with server-generated id
+      attempt = 'retry_insert_with_id';
+      let ins = await pub
+        .from('published_sites')
+        .insert({ id: crypto.randomUUID(), ...payload })
+        .select('id')
+        .maybeSingle();
+
+      if (!ins.error) {
+        storedVia = 'insert_with_id';
+        note('insert ok (with id)', { id: ins.data?.id ?? null });
+      } else {
+        lastError = x(ins.error);
+        note('insert with id error', { err: lastError });
+
+        // 2) final fallback: try simple insert (if id has a default now)
+        attempt = 'retry_insert_simple';
         ins = await pub
           .from('published_sites')
-          .insert({
-            id: crypto.randomUUID(),
-            domain: finalDomain,
-            snapshot_id: snapshotId,
-            published_at: new Date().toISOString(),
-            status: 'published',
-            is_public: true,
-          } as any)
+          .insert(payload)
           .select('id')
           .maybeSingle();
 
         if (!ins.error) {
-          storedVia = 'published_sites_with_id';
-          note('insert ok (with id)');
+          storedVia = 'insert_simple';
+          note('insert ok (simple)', { id: ins.data?.id ?? null });
         } else {
           lastError = x(ins.error);
-          console.error('[PUBLISH] retry insert with id error', lastError);
-          note('retry insert with id error', { err: lastError });
+          note('insert simple error', { err: lastError });
         }
       }
     }
@@ -197,7 +202,6 @@ async function handle(req: Request) {
         meta: { snapshot: { id: snapshotId }, domain: finalDomain, storedVia, attempt, lastError: debug ? lastError : undefined },
       } as any);
     } catch (e: any) {
-      console.warn('[PUBLISH] logTemplateEvent failed', e?.message);
       note('logTemplateEvent failed', { err: String(e?.message || e) });
     }
 
@@ -206,7 +210,6 @@ async function handle(req: Request) {
       200
     );
   } catch (e: any) {
-    console.error('[PUBLISH] fatal', e);
     return j({ error: e?.message || 'publish failed' }, 500);
   }
 }

@@ -7,7 +7,7 @@
  *    - POST /api/domains/connect   { domain: string, redirectToWWW?: boolean, autoConfigure?: boolean | 'detect' }
  *    - POST /api/domains/verify    { domain: string }      // domain = primary (www.example.com)
  *    - POST /api/domains/remove    { domain: string }      // domain = apex (example.com)
- *    - POST /api/templates/[id]/custom-domain { custom_domain: string | null } // persists via RPC
+ *    - POST /api/templates/[id]/custom-domain { custom_domain: string | null } // persists via RPC + syncs published_sites
  */
 
 import * as React from 'react';
@@ -124,7 +124,6 @@ type ConnectResponse = {
 };
 
 /* -------------------- component -------------------- */
-
 export default function DomainPanel({
   template,
   isSite: isSiteProp,
@@ -162,7 +161,7 @@ export default function DomainPanel({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [siteTitle, locked, manuallyEdited]);
 
-  // Validate + uniqueness check
+  // Validate + uniqueness check (checks templates.slug + published_sites.domain)
   useEffect(() => {
     const slug = template.slug || '';
     const rx = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
@@ -179,13 +178,21 @@ export default function DomainPanel({
     debounceRef.current = setTimeout(async () => {
       try {
         setChecking(true);
+        // 1) same slug on a different template?
         const { data: tHits } = await supabase
           .from('templates')
           .select('id')
           .eq('slug', slug)
           .neq('id', template.id);
-        const { data: sHits } = await supabase.from('sites').select('id').eq('slug', slug);
-        const taken = (tHits?.length ?? 0) > 0 || (sHits?.length ?? 0) > 0;
+
+        // 2) domain collision on platform subdomain?
+        const platformDomain = `${slug}.quicksites.ai`;
+        const { data: psHits } = await supabase
+          .from('published_sites')
+          .select('id')
+          .ilike('domain', platformDomain);
+
+        const taken = (tHits?.length ?? 0) > 0 || (psHits?.length ?? 0) > 0;
         setError(taken ? `Slug is taken. Suggested: ${slug}-${uniqueSuffix()}` : null);
       } catch {
         setError(null);
@@ -199,9 +206,19 @@ export default function DomainPanel({
   /* ---- URL previews ---- */
   const isSite = isSiteProp ?? !!(template as any)?.is_site;
   const slug = String(template.slug || '').trim();
+
+  // prefer live domain (from /api/templates/state) if present
+  const publishedDomain =
+    (template as any)?.site?.domain && String((template as any).site.domain).trim()
+      ? String((template as any).site.domain).trim()
+      : (template as any)?.domain && String((template as any).domain).trim()
+      ? String((template as any).domain).trim()
+      : null;
+
   const defaultSubdomain = slug ? `${slug}.quicksites.ai` : 'your-subdomain.quicksites.ai';
+
   const prodPreview = isSite
-    ? `https://${defaultSubdomain}`
+    ? `https://${publishedDomain || defaultSubdomain}`
     : `https://quicksites.ai/templates/${slug || 'slug'}`;
 
   const isDevHost =
@@ -211,10 +228,15 @@ export default function DomainPanel({
   const devSubdomain = slug ? `http://${slug}.localhost:${port}/` : '';
   const devPath = slug ? `http://localhost:${port}/sites/${slug}` : '';
 
-  const initialCustom =
-    (template as any)?.custom_domain || (template as any)?.domain || '';
+  // Published flag from state (publishedSnapshotId)
+  const isPublished = Boolean((template as any)?.publishedSnapshotId);
 
   /* ---- Domain connect state ---- */
+  const initialCustom =
+    (template as any)?.custom_domain ||
+    (template as any)?.domain ||
+    '';
+
   const [domainInput, setDomainInput] = useState(initialCustom as string);
   const [connectBusy, setConnectBusy] = useState(false);
   const [verifyBusy, setVerifyBusy] = useState(false);
@@ -222,20 +244,18 @@ export default function DomainPanel({
   const [connectResp, setConnectResp] = useState<ConnectResponse | null>(null);
   const [connectError, setConnectError] = useState<string | null>(null);
 
-  // NEW: auto-configure (Namecheap) toggle & last-checked display
+  // Auto-configure toggle & last-checked display
   const [autoConfigure, setAutoConfigure] = useState(true);
   const [lastCheckedAt, setLastCheckedAt] = useState<number | null>(null);
 
   const apex = normalizeApex(domainInput || '');
   const primary = connectResp?.primary || (apex ? `www.${apex}` : '');
 
-  // NEW: normalize input on blur
   const onDomainBlur = () => {
     const n = normalizeApex(domainInput || '');
     if (n && n !== domainInput) setDomainInput(n);
   };
 
-  // NEW: copy all records
   function copyAllRecords() {
     const parts: string[] = [];
     aValues.forEach(ip => parts.push(`A @ ${inlineText(ip)}`));
@@ -244,16 +264,26 @@ export default function DomainPanel({
   }
 
   /**
-   * Persist the apex to the backend via server route (RPC under the hood).
-   * We ALWAYS call the server; `onChange` is only used to update local UI,
-   * not to persist (avoids direct UPDATE paths & RLS issues).
+   * Persist apex via server route, then refresh /api/templates/state
+   * so UI reflects published_sites.domain & normalized state.
    */
   async function persistApex(apexDomain: string | null) {
     try {
       await postJson(`/api/templates/${template.id}/custom-domain`, {
         custom_domain: apexDomain,
       });
-      try { doChange({ custom_domain: apexDomain as any }); } catch {}
+
+      // Refresh template state
+      const res = await fetch(`/api/templates/state?id=${encodeURIComponent(template.id)}`, {
+        cache: 'no-store',
+      });
+      if (res.ok) {
+        const j = await res.json();
+        if (j?.template) {
+          // push fresh template object up to parent if possible
+          doChange(j.template as Partial<Template>);
+        }
+      }
     } catch (e) {
       console.warn('persistApex failed', e);
     }
@@ -271,10 +301,10 @@ export default function DomainPanel({
       const json = await postJson<ConnectResponse>('/api/domains/connect', {
         domain: d,
         redirectToWWW: true,
-        autoConfigure: autoConfigure ? 'detect' : false, // NEW
+        autoConfigure: autoConfigure ? 'detect' : false,
       });
       setConnectResp(json);
-      await persistApex(d);
+      await persistApex(d); // save to template + sync published_sites.domain (if published)
     } catch (e: any) {
       setConnectError(e?.message || 'Failed to connect domain.');
     } finally {
@@ -292,7 +322,7 @@ export default function DomainPanel({
         { domain: primary },
       );
       setConnectResp((prev) => (prev ? { ...prev, verified: !!json?.verified } : prev));
-      setLastCheckedAt(Date.now()); // NEW
+      setLastCheckedAt(Date.now());
     } catch (e: any) {
       setConnectError(e?.message || 'Could not verify yet.');
     } finally {
@@ -316,6 +346,10 @@ export default function DomainPanel({
       const json = await postJson<{ ok: true }>('/api/domains/remove', { domain: d });
       if (!json?.ok) throw new Error('Failed to remove domain(s).');
       setConnectResp(null);
+
+      // clear on template, refresh state
+      await persistApex(null);
+      setDomainInput('');
     } catch (e: any) {
       setConnectError(e?.message || 'Remove failed.');
     } finally {
@@ -323,7 +357,7 @@ export default function DomainPanel({
     }
   }
 
-  // NEW: clear saved domain (doesn't touch Vercel)
+  // Clear saved domain (doesn't touch Vercel)
   async function clearSavedDomain() {
     try {
       await persistApex(null);
@@ -334,7 +368,7 @@ export default function DomainPanel({
     }
   }
 
-  // Normalize Vercel "recommended" fields into clean lists
+  // Normalize recommended DNS records into clean lists
   const aValues = useMemo(() => {
     const raw = (connectResp?.recommended?.ipv4 ?? '76.76.21.21');
     const list = flattenToStrings(raw);
@@ -347,7 +381,7 @@ export default function DomainPanel({
     return list.length ? list : ['cname.vercel-dns.com'];
   }, [connectResp?.recommended?.cname]);
 
-  // Hooks for existing toolbar/panel events
+  // Toolbar/panel events
   const openVersionsMenu = () => { try { window.dispatchEvent(new CustomEvent('qs:versions:open')); } catch {} };
   const openIdentityPanel = () => {
     try {
@@ -358,9 +392,7 @@ export default function DomainPanel({
     } catch {}
   };
 
-  const isPublished = Boolean((template as any)?.published);
-
-  // NEW: auto-verify polling
+  // Auto-verify polling
   const verifyTarget = connectResp?.primary || (apex ? `www.${apex}` : null);
   const { status: verifyStatus, verified: verifiedNow } = useVerifyDomain(verifyTarget, {
     enabled: !!verifyTarget && !(connectResp?.verified),
@@ -450,7 +482,7 @@ export default function DomainPanel({
 
         {/* -------------------- URL preview & copies -------------------- */}
         <div className="rounded-lg border border-white/10 bg-neutral-900/50 p-3 text-sm text-white/90">
-          <Label className="block text-xs text-white/70 mb-1">Live URL (production style)</Label>
+          <Label className="block text-xs text-white/70 mb-1">Live URL</Label>
           <div className="flex items-center gap-2">
             <code className="rounded bg-neutral-950/70 px-2 py-1">{inlineText(prodPreview)}</code>
             <Button type="button" size="sm" variant="outline" onClick={() => copy(inlineText(prodPreview))}>
@@ -494,7 +526,7 @@ export default function DomainPanel({
               <Input
                 value={domainInput}
                 onChange={(e) => setDomainInput(e.target.value)}
-                onBlur={onDomainBlur} // NEW
+                onBlur={onDomainBlur}
                 placeholder="yourbusiness.com"
                 className="bg-gray-800 text-white border border-gray-700"
               />
@@ -515,7 +547,7 @@ export default function DomainPanel({
                   type="button"
                   variant="secondary"
                   onClick={(e) => { e.preventDefault(); e.stopPropagation(); void verifyDomain(); }}
-                  disabled={verifyBusy || verifyStatus === 'verifying'} // NEW
+                  disabled={verifyBusy || verifyStatus === 'verifying'}
                   size="sm"
                 >
                   {(verifyBusy || verifyStatus === 'verifying')
@@ -538,7 +570,7 @@ export default function DomainPanel({
                 Remove from Vercel
               </Button>
 
-              {/* NEW: Copy all DNS records */}
+              {/* Copy all DNS records */}
               {connectResp && (
                 <Button
                   type="button"
@@ -551,7 +583,7 @@ export default function DomainPanel({
                 </Button>
               )}
 
-              {/* NEW: Clear saved domain (doesn't touch Vercel) */}
+              {/* Clear saved domain (doesn't touch Vercel) */}
               <Button
                 type="button"
                 variant="ghost"
@@ -564,7 +596,7 @@ export default function DomainPanel({
               </Button>
             </div>
 
-            {/* NEW: Auto-configure toggle */}
+            {/* Auto-configure toggle */}
             <div className="flex items-center gap-2 text-xs text-white/70">
               <Switch checked={autoConfigure} onCheckedChange={setAutoConfigure} />
               <span>Auto-configure DNS (Namecheap)</span>
@@ -600,7 +632,7 @@ export default function DomainPanel({
                   )}
                 </div>
 
-                {/* NEW: auto-configure result */}
+                {/* auto-configure result (optional from /connect) */}
                 {connectResp?.autoConfigured && (
                   <p className="mt-2 text-xs">
                     Auto-configure:{' '}
@@ -612,7 +644,7 @@ export default function DomainPanel({
                   </p>
                 )}
 
-                {/* NEW: verify polling hint */}
+                {/* verify polling hint */}
                 {!connectResp?.verified && verifyTarget && (
                   <p className="mt-1 text-[11px] text-white/60">
                     Checking DNS{verifyStatus === 'verifying' ? '…' : ''}{' '}
@@ -663,11 +695,11 @@ export default function DomainPanel({
                   </div>
 
                   {/* Verification records, if any */}
-                  {(connectResp.verification?.length ?? 0) > 0 && (
+                  {(connectResp?.verification?.length ?? 0) > 0 && (
                     <div className="mt-3">
                       <Label className="text-xs text-white/70">If prompted, add these verification records</Label>
                       <div className="mt-2 space-y-2">
-                        {connectResp.verification!.map((v, i) => (
+                        {connectResp!.verification!.map((v, i) => (
                           <div key={`ver-${i}`} className="flex flex-wrap items-center gap-2 rounded border border-white/10 p-2">
                             <span className="text-xs px-1 py-0.5 rounded bg-neutral-900">Type</span>
                             <code className="px-1">{inlineText(v.type)}</code>
@@ -684,7 +716,7 @@ export default function DomainPanel({
                     </div>
                   )}
 
-                  {!connectResp.verified && (
+                  {!connectResp?.verified && verifyTarget && (
                     <p className="mt-2 text-xs text-white/60">
                       After adding the records, click <em>Verify DNS</em>. Some DNS providers update quickly; others can be slower.
                       We’ll also auto-check every ~10s and flip this to verified once DNS is live.
@@ -711,7 +743,7 @@ export default function DomainPanel({
             <li>
               Open the <strong>Versions</strong> menu (bottom toolbar) → <em>Create snapshot</em>{' '}
               <span className="text-white/60">(captures the current draft)</span>.{' '}
-              <Button type="button" size="sm" variant="ghost" className="ml-1 h-7 px-2" onClick={openVersionsMenu}>
+              <Button type="button" size="sm" variant="ghost" className="ml-1 h-7 px-2" onClick={() => { try { window.dispatchEvent(new CustomEvent('qs:versions:open')); } catch {} }}>
                 Open Versions
               </Button>
             </li>
@@ -727,12 +759,24 @@ export default function DomainPanel({
           </ol>
         </div>
 
-        {/* -------------------- Legacy/general instructions -------------------- */}
+        {/* -------------------- DNS Help -------------------- */}
         <div className="rounded-lg border border-white/10 bg-neutral-900/50 p-3">
           <Label className="block text-xs text-white/70 mb-2">DNS Help (General)</Label>
           <p className="text-sm text-white/80 mb-2">
             Point your domain to your live site. If you haven’t already set your business address, open{' '}
-            <button type="button" onClick={openIdentityPanel} className="underline text-blue-300 hover:text-blue-200" title="Open Template Identity">
+            <button
+              type="button"
+              onClick={() => {
+                try {
+                  window.dispatchEvent(new CustomEvent('qs:settings:set-open', { detail: true }));
+                  window.dispatchEvent(new CustomEvent('qs:open-settings-panel', {
+                    detail: { panel: 'identity', openEditor: true, scroll: true, spotlightMs: 900 } as any,
+                  }));
+                } catch {}
+              }}
+              className="underline text-blue-300 hover:text-blue-200"
+              title="Open Template Identity"
+            >
               Template Identity
             </button>{' '}
             to set your contact info and branding.

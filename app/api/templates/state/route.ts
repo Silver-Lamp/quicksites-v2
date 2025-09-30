@@ -142,10 +142,9 @@ export async function GET(req: Request) {
   const debugQ = url.searchParams.get('debug') === '1';
   if (!id) return j({ error: 'id required' }, 400);
 
-  // Always use PUBLIC
   const pub = supabaseAdmin.schema('public');
 
-  // 1) Primary template row
+  // 1) Load template
   let tplRow: any = null;
   let error: any = null;
 
@@ -158,7 +157,7 @@ export async function GET(req: Request) {
   if (error && isMissingRelation(error)) {
     try {
       const alt = await pub
-        .from('templates_public')   // optional view; ignore if absent
+        .from('templates_public')
         .select(TEMPLATE_EDITOR_SELECT)
         .eq('id', id)
         .maybeSingle();
@@ -172,14 +171,13 @@ export async function GET(req: Request) {
 
   const normalized = normalizeForEditor(tplRow);
 
-  // 2) Derive history-backed rev and latest snapshot from public.template_versions
+  // 2) Rev + last snapshot
   const [{ data: latestVer }, { count: revCount }] = await Promise.all([
     pub
       .from('template_versions')
       .select('id, hash, saved_at, created_at')
       .eq('template_id', id)
-      .order('saved_at', { ascending: false })      // try saved_at first
-      .order('created_at', { ascending: false })    // then created_at
+      .order('created_at', { ascending: false })
       .limit(1)
       .maybeSingle(),
     pub
@@ -187,9 +185,7 @@ export async function GET(req: Request) {
       .select('id', { count: 'exact', head: true })
       .eq('template_id', id),
   ]);
-
   const currentRev = Number(revCount ?? 0);
-
   const lastSnapshot = latestVer
     ? {
         id: latestVer.id,
@@ -199,77 +195,113 @@ export async function GET(req: Request) {
       }
     : null;
 
-  // 3) Discover publishedSnapshotId from multiple locations
+  // 3) Published snapshot + domain
   let publishedSnapshotId: string | null = null;
+  let publishedDomain: string | null = null;
+
+  // a) Fast path: published_sites by template_id
   try {
-    // collect this template’s version ids
-    const v = await pub.from('template_versions').select('id').eq('template_id', id);
-    const versionIds = Array.isArray(v.data) ? v.data.map((r: any) => r.id) : [];
-
-    if (versionIds.length) {
-      const ps = await pub
-        .from('published_sites')
-        .select('snapshot_id, published_at')
-        .order('published_at', { ascending: false })
-        .limit(200);
-
-      if (!ps.error && Array.isArray(ps.data)) {
-        const hit = ps.data.find((r: any) => versionIds.includes(r.snapshot_id));
-        if (hit) publishedSnapshotId = hit.snapshot_id;
-      }
+    const ps = await pub
+      .from('published_sites')
+      .select('snapshot_id, domain, published_at, template_id')
+      .eq('template_id', id)
+      .order('published_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (!ps.error && ps.data) {
+      publishedSnapshotId = (ps.data as any).snapshot_id ?? null;
+      publishedDomain = (ps.data as any).domain ?? null;
     }
   } catch {}
 
-
-  // 3b) templates.published_snapshot_id column (if present)
+  // b) Fallback: match snapshot_id against this template’s version ids
   if (!publishedSnapshotId) {
     try {
-      const tryCol = await pub
-        .from('templates')
-        .select('published_snapshot_id')
-        .eq('id', id)
-        .maybeSingle();
-      if (!tryCol.error && tryCol.data?.published_snapshot_id) {
-        publishedSnapshotId = tryCol.data.published_snapshot_id;
+      const v = await pub.from('template_versions').select('id').eq('template_id', id);
+      const versionIds = Array.isArray(v.data) ? v.data.map((r: any) => r.id) : [];
+      if (versionIds.length) {
+        const ps2 = await pub
+          .from('published_sites')
+          .select('snapshot_id, domain, published_at')
+          .order('published_at', { ascending: false })
+          .limit(200);
+        if (!ps2.error && Array.isArray(ps2.data)) {
+          const hit = ps2.data.find((r: any) => versionIds.includes(r.snapshot_id));
+          if (hit) {
+            publishedSnapshotId = hit.snapshot_id ?? null;
+            publishedDomain = hit.domain ?? null;
+          }
+        }
       }
     } catch {}
   }
 
-  // 3c) templates.data.meta.publishedSnapshotId
+  // c) Legacy: sites table
+  if (!publishedSnapshotId) {
+    try {
+      const s = await pub
+        .from('sites')
+        .select('published_snapshot_id, domain')
+        .eq('template_id', id)
+        .maybeSingle();
+      if (!s.error && s.data) {
+        publishedSnapshotId = (s.data as any).published_snapshot_id ?? publishedSnapshotId;
+        if (!publishedDomain) publishedDomain = (s.data as any).domain ?? null;
+      }
+    } catch {}
+  }
+
+  // d) Legacy: templates.published_snapshot_id
+  if (!publishedSnapshotId) {
+    try {
+      const t = await pub
+        .from('templates')
+        .select('published_snapshot_id')
+        .eq('id', id)
+        .maybeSingle();
+      if (!t.error && t.data?.published_snapshot_id) {
+        publishedSnapshotId = t.data.published_snapshot_id;
+      }
+    } catch {}
+  }
+
+  // e) Legacy: templates.data.meta.{publishedSnapshotId, domain}
   if (!publishedSnapshotId) {
     const m = (normalized?.data as any)?.meta;
     if (m?.publishedSnapshotId) publishedSnapshotId = m.publishedSnapshotId;
+    if (!publishedDomain && m?.domain) publishedDomain = m.domain;
   }
 
-  // 4) Shape response (back-compat: flatten + include template:)
+  // Compute effective domain: prefer publishedSites.domain, else platform subdomain
+  const platformDomain = normalized?.slug ? `${String(normalized.slug).toLowerCase()}.quicksites.ai` : null;
+  const effectiveDomain = publishedDomain ?? platformDomain ?? null;
+
+  // 4) Response (also mirror domain at root and inside template)
   const payload = {
-    ...normalized,                   // keep old callers working
-    rev: currentRev,                 // history-derived rev
+    ...normalized,
+    domain: effectiveDomain,               // root alias
+    rev: currentRev,
     lastSnapshot,
     site: {
       slug: normalized.slug ?? null,
       publishedSnapshotId: publishedSnapshotId ?? null,
+      domain: effectiveDomain,            // canonical place for UI
     },
-    template: normalized,            // new callers use template.*
-    publishedSnapshotId: publishedSnapshotId ?? null,
+    template: {
+      ...normalized,
+      domain: effectiveDomain,            // keep template.domain in sync for legacy reads
+    },
+    publishedSnapshotId: publishedSnapshotId ?? null, // root alias
   };
 
   if (DEBUG || debugQ) {
     console.log('[STATE:API] normalized', {
       id: payload.id,
-      site_type: payload.site_type,
-      industry: payload.industry,
-      industry_label: payload.industry_label,
-      contact_email: payload.contact_email,
-      phone: payload.phone,
-      city: payload.city,
-      state: payload.state,
-      postal_code: payload.postal_code,
-      meta_identity: payload.template?.data?.meta?.identity,
-      data_identity: payload.template?.data?.identity,
       rev: payload.rev,
       lastSnapshot: payload.lastSnapshot,
-      publishedSnapshotId: payload.site?.publishedSnapshotId ?? null,
+      publishedSnapshotId: payload.publishedSnapshotId,
+      domain: payload.domain,
+      site: payload.site,
     });
   }
 

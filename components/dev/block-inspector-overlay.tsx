@@ -31,9 +31,12 @@ export default function BlockInspectorOverlay() {
     return () => window.removeEventListener('mousemove', handleMouseMove);
   }, []);
 
-  if (!hover) return null;
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
 
-  return createPortal(
+  if (!hover || !mounted) return null;
+
+  return mounted ? createPortal(
     <>
       {/* 🟪 Floating tooltip */}
       <div
@@ -57,5 +60,5 @@ export default function BlockInspectorOverlay() {
       />
     </>,
     document.body
-  );
+  ) : null;
 }

@@ -1106,7 +1106,7 @@ export function TemplateActionToolbar({
   const collapsedPos = 'left-[25%]';
 
   /* --------------------------------- UI ------------------------------------ */
-  return createPortal(
+  return mounted ? createPortal(
     <>
       <div
         id="template-action-toolbar"
@@ -1306,5 +1306,5 @@ export function TemplateActionToolbar({
       <AsyncGifOverlay open={overlayOpen} message={overlayMsg} />
     </>,
     document.body
-  );
+  ) : null;
 }

@@ -84,9 +84,9 @@ function AiMenuPopover({
     return () => document.removeEventListener('keydown', onKey);
   }, [onClose]);
 
-  if (!mounted) return null;
+  // if (!mounted) return null;
 
-  return createPortal(
+  return mounted ? createPortal(
     <>
       <div className="fixed inset-0 z-[9998]" onMouseDown={onClose} />
       <div
@@ -178,7 +178,7 @@ function AiMenuPopover({
       </div>
     </>,
     document.body
-  );
+  ) : null;
 }
 
 /* ---------- RTE helpers ---------- */

@@ -9,7 +9,6 @@ function j(data: any, init?: number | ResponseInit) {
   return NextResponse.json(data, resInit);
 }
 const DEBUG = process.env.DEBUG_IDENTITY === '1';
-const dbg = (...args: any[]) => { if (DEBUG) console.log(...args); };
 
 function obj(v: any) {
   if (!v) return {};
@@ -147,7 +146,6 @@ export async function GET(req: Request) {
   // 1) Load template
   let tplRow: any = null;
   let error: any = null;
-
   ({ data: tplRow, error } = await pub
     .from('templates')
     .select(TEMPLATE_EDITOR_SELECT)
@@ -165,7 +163,6 @@ export async function GET(req: Request) {
       error = alt.error && !isMissingRelation(alt.error) ? alt.error : null;
     } catch {}
   }
-
   if (error) return j({ error: error.message }, 404);
   if (!tplRow) return j({ error: 'not found' }, 404);
 
@@ -173,15 +170,13 @@ export async function GET(req: Request) {
 
   // 2) Rev + last snapshot
   const [{ data: latestVer }, { count: revCount }] = await Promise.all([
-    pub
-      .from('template_versions')
+    pub.from('template_versions')
       .select('id, hash, saved_at, created_at')
       .eq('template_id', id)
       .order('created_at', { ascending: false })
       .limit(1)
       .maybeSingle(),
-    pub
-      .from('template_versions')
+    pub.from('template_versions')
       .select('id', { count: 'exact', head: true })
       .eq('template_id', id),
   ]);
@@ -199,63 +194,37 @@ export async function GET(req: Request) {
   let publishedSnapshotId: string | null = null;
   let publishedDomain: string | null = null;
 
-  // a) Fast path: published_sites by template_id
+  // a) Preferred: published_sites filtered by template_id
   try {
     const ps = await pub
       .from('published_sites')
-      .select('snapshot_id, domain, published_at, template_id')
-      .eq('template_id', id)
+      .select('snapshot_id, domain, published_at')
+      .eq('template_id', id)   // requires template_id column in published_sites
       .order('published_at', { ascending: false })
       .limit(1)
       .maybeSingle();
     if (!ps.error && ps.data) {
-      publishedSnapshotId = (ps.data as any).snapshot_id ?? null;
-      publishedDomain = (ps.data as any).domain ?? null;
+      publishedSnapshotId = ps.data.snapshot_id ?? null;
+      publishedDomain = ps.data.domain ?? null;
     }
   } catch {}
 
-  // b) Fallback: match snapshot_id against this template’s version ids
+  // b) Legacy fallbacks
   if (!publishedSnapshotId) {
     try {
-      const v = await pub.from('template_versions').select('id').eq('template_id', id);
-      const versionIds = Array.isArray(v.data) ? v.data.map((r: any) => r.id) : [];
-      if (versionIds.length) {
-        const ps2 = await pub
-          .from('published_sites')
-          .select('snapshot_id, domain, published_at')
-          .order('published_at', { ascending: false })
-          .limit(200);
-        if (!ps2.error && Array.isArray(ps2.data)) {
-          const hit = ps2.data.find((r: any) => versionIds.includes(r.snapshot_id));
-          if (hit) {
-            publishedSnapshotId = hit.snapshot_id ?? null;
-            publishedDomain = hit.domain ?? null;
-          }
-        }
-      }
-    } catch {}
-  }
-
-  // c) Legacy: sites table
-  if (!publishedSnapshotId) {
-    try {
-      const s = await pub
-        .from('sites')
+      const s = await pub.from('sites')
         .select('published_snapshot_id, domain')
         .eq('template_id', id)
         .maybeSingle();
       if (!s.error && s.data) {
-        publishedSnapshotId = (s.data as any).published_snapshot_id ?? publishedSnapshotId;
-        if (!publishedDomain) publishedDomain = (s.data as any).domain ?? null;
+        publishedSnapshotId = s.data.published_snapshot_id ?? null;
+        if (!publishedDomain) publishedDomain = s.data.domain ?? null;
       }
     } catch {}
   }
-
-  // d) Legacy: templates.published_snapshot_id
   if (!publishedSnapshotId) {
     try {
-      const t = await pub
-        .from('templates')
+      const t = await pub.from('templates')
         .select('published_snapshot_id')
         .eq('id', id)
         .maybeSingle();
@@ -264,34 +233,29 @@ export async function GET(req: Request) {
       }
     } catch {}
   }
-
-  // e) Legacy: templates.data.meta.{publishedSnapshotId, domain}
   if (!publishedSnapshotId) {
     const m = (normalized?.data as any)?.meta;
     if (m?.publishedSnapshotId) publishedSnapshotId = m.publishedSnapshotId;
     if (!publishedDomain && m?.domain) publishedDomain = m.domain;
   }
 
-  // Compute effective domain: prefer publishedSites.domain, else platform subdomain
+  // Domain fallback
   const platformDomain = normalized?.slug ? `${String(normalized.slug).toLowerCase()}.quicksites.ai` : null;
   const effectiveDomain = publishedDomain ?? platformDomain ?? null;
 
-  // 4) Response (also mirror domain at root and inside template)
+  // 4) Response
   const payload = {
     ...normalized,
-    domain: effectiveDomain,               // root alias
+    domain: effectiveDomain,
     rev: currentRev,
     lastSnapshot,
     site: {
       slug: normalized.slug ?? null,
       publishedSnapshotId: publishedSnapshotId ?? null,
-      domain: effectiveDomain,            // canonical place for UI
+      domain: effectiveDomain,
     },
-    template: {
-      ...normalized,
-      domain: effectiveDomain,            // keep template.domain in sync for legacy reads
-    },
-    publishedSnapshotId: publishedSnapshotId ?? null, // root alias
+    template: { ...normalized, domain: effectiveDomain },
+    publishedSnapshotId: publishedSnapshotId ?? null,
   };
 
   if (DEBUG || debugQ) {
@@ -301,7 +265,6 @@ export async function GET(req: Request) {
       lastSnapshot: payload.lastSnapshot,
       publishedSnapshotId: payload.publishedSnapshotId,
       domain: payload.domain,
-      site: payload.site,
     });
   }
 

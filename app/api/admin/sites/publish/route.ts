@@ -31,7 +31,6 @@ function canonSlug(v?: string | null) {
 }
 
 function deriveDomainFromTemplate(tpl: any) {
-  // Try common places first
   const data = (tpl?.data ?? {}) as any;
   const meta = (data?.meta ?? {}) as any;
 
@@ -71,7 +70,7 @@ async function handle(req: Request) {
 
     if (!templateId) return j({ error: 'templateId required' }, 400);
 
-    // Load template (we need slug/data to derive a domain)
+    // Load template (need slug/data to derive a domain)
     const tplRes = await pub
       .from('templates')
       .select('id, slug, template_name, data')
@@ -118,79 +117,51 @@ async function handle(req: Request) {
 
     // Derive required domain
     const domain = deriveDomainFromTemplate(tpl);
-    if (!domain) {
-      const short = String(snapshotId).slice(0, 8);
-      note('no domain in template; using generated fallback', { short });
-    }
     const finalDomain = domain ?? `${String(snapshotId).slice(0, 8)}.local.quicksites`;
+    note('domain chosen', { finalDomain });
 
-    // Build common payload (NEW: include template_id)
+    // Canonical payload — always include template_id
     const payload = {
-      template_id: templateId,                 // ← canonical upsert key
-      domain: finalDomain,
+      template_id: templateId,
       snapshot_id: snapshotId,
+      domain: finalDomain,
       published_at: new Date().toISOString(),
       status: 'published',
       is_public: true,
-    } as any;
+    } as const;
 
-    let storedVia:
-      | 'upsert_by_template'
-      | 'insert_with_id'
-      | 'insert_simple'
-      | 'noop' = 'noop';
-    let attempt: 'upsert' | 'retry_insert_with_id' | 'retry_insert_simple' = 'upsert';
+    let storedVia: 'upsert_by_template' | 'insert_with_id' | 'noop' = 'noop';
+    let attempt: 'upsert' | 'retry_insert_with_id' = 'upsert';
     let lastError: any = null;
 
-    // --- Preferred path: UPSERT by template_id (requires column + unique index) ---
-    let up = await pub
+    // Preferred path: UPSERT by template_id
+    let res = await pub
       .from('published_sites')
       .upsert(payload, { onConflict: 'template_id' }) // 1 live pointer per template
       .select('id')
       .maybeSingle();
 
-    if (!up.error) {
+    if (!res.error) {
       storedVia = 'upsert_by_template';
-      note('upsert ok', { id: up.data?.id ?? null });
+      note('upsert ok', { id: res.data?.id ?? null });
     } else {
-      lastError = x(up.error);
+      lastError = x(res.error);
       note('upsert error', { err: lastError });
 
-      const msg = (up.error?.message || '').toLowerCase();
-      const missingTemplateId = msg.includes('column') && msg.includes('template_id');
-      const onConflictUnsupported = msg.includes('on conflict') || msg.includes('conflict');
-
-      // If template_id column or onConflict path isn't available yet, fall back to INSERT
-      // 1) try insert with server-generated id
+      // Fallback: still include template_id (never write orphaned rows)
       attempt = 'retry_insert_with_id';
-      let ins = await pub
+      res = await pub
         .from('published_sites')
         .insert({ id: crypto.randomUUID(), ...payload })
         .select('id')
         .maybeSingle();
 
-      if (!ins.error) {
+      if (!res.error) {
         storedVia = 'insert_with_id';
-        note('insert ok (with id)', { id: ins.data?.id ?? null });
+        note('insert ok (with id)', { id: res.data?.id ?? null });
       } else {
-        lastError = x(ins.error);
+        lastError = x(res.error);
         note('insert with id error', { err: lastError });
-
-        // 2) final fallback: try simple insert (if id has a default now)
-        attempt = 'retry_insert_simple';
-        ins = await pub
-          .from('published_sites')
-          .insert(payload)
-          .select('id')
-          .maybeSingle();
-
-        if (!ins.error) {
-          storedVia = 'insert_simple';
-          note('insert ok (simple)', { id: ins.data?.id ?? null });
-        } else {
-          lastError = x(ins.error);
-          note('insert simple error', { err: lastError });
-        }
       }
     }
 

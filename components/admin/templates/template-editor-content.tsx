@@ -11,7 +11,7 @@ import {
   useCallback,
 } from 'react';
 import dynamic from 'next/dynamic';
-import { usePathname, useSearchParams } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 import type { Template, TemplateData } from '@/types/template';
 import type { Block } from '@/types/blocks';
 import type { BlockValidationError } from '@/hooks/validateTemplateBlocks';
@@ -21,6 +21,8 @@ import { DynamicBlockEditor } from '@/components/editor/dynamic-block-editor';
 import LiveEditorPreviewFrame from '@/components/editor/live-editor/LiveEditorPreviewFrame';
 import BlockAdderGrouped from '@/components/admin/block-adder-grouped';
 import PageHeaderEditor from '@/components/admin/templates/block-editors/header-editor';
+import PageFooterEditor from '@/components/admin/templates/block-editors/footer-editor';
+
 import TemplateActionToolbar from '@/components/admin/templates/template-action-toolbar/TemplateActionToolbar';
 import PageSettingsModal from '@/components/admin/templates/page-settings-modal';
 import { useTruthTrackerState } from './hooks/useTruthTrackerState';
@@ -36,6 +38,7 @@ import type {
 } from '@/components/admin/templates/truth/types';
 
 import {
+  // (kept imports; not strictly required with the new set/emit path)
   insertBlockEmit,
   removeBlockEmit,
   replaceBlockEmit,
@@ -92,6 +95,10 @@ function setPageBlocks(p: any, blocks: Block[]) {
     p.content = { ...(p?.content ?? {}), blocks };
   }
 }
+
+// NEW: id helpers are tolerant to _id | id (and string coerce)
+const bid = (b: any) => String(b?._id ?? b?.id ?? '');
+const eqId = (b: any, id: string) => bid(b) === String(id);
 
 function useBodyScrollLock(locked: boolean) {
   useEffect(() => {
@@ -193,12 +200,36 @@ export default function EditorContent({
     return () => window.removeEventListener('keydown', onKey as any, { capture: true } as any);
   }, [showSettings]);
 
+  // Listen for toolbar-driven settings toggles
+  useEffect(() => {
+    const onToggle = (e: Event) => {
+      const detail = (e as CustomEvent).detail;
+      // If a boolean is provided, set explicitly; otherwise toggle
+      if (typeof detail === 'boolean') setShowSettings(detail);
+      else setShowSettings((v) => !v);
+    };
+
+    // New canonical event
+    window.addEventListener('qs:settings:toggle', onToggle as any);
+    // Back-compat: allow explicit open/close via boolean detail
+    window.addEventListener('qs:settings:set-open', onToggle as any);
+
+    return () => {
+      window.removeEventListener('qs:settings:toggle', onToggle as any);
+      window.removeEventListener('qs:settings:set-open', onToggle as any);
+    };
+  }, []);
+
   useBodyScrollLock(showSettings);
 
   const [pageSettingsOpen, setPageSettingsOpen] = useState(false);
   const [editingHeader, setEditingHeader] = useState<Block | null>(null);
-  const [editingBlock, setEditingBlock] = useState<any>(null);
-  const [adderTarget, setAdderTarget] = useState<any>(null);
+  const [editingFooter, setEditingFooter] = useState<Block | null>(null);
+
+  // NEW: editor + picker state actually used below
+  const [editingBlockId, setEditingBlockId] = useState<string | null>(null);
+  const [adderTarget, setAdderTarget] = useState<string | null>(null);
+
   const [showWelcome, setShowWelcome] = useState(false);
 
   // ---------- Truth Tracker ----------
@@ -224,12 +255,125 @@ export default function EditorContent({
   }
 
   const preferInlinePreview = useMemo(() => tab !== 'live', [tab]);
+  const pages = useMemo(() => getTemplatePages(template), [template]);
   const currentPage = useMemo(() => {
-    const pages = getTemplatePages(template);
-    return (
-      pages.find((p: any) => p?.slug === currentPageSlug) ?? pages[0] ?? null
-    );
-  }, [template, currentPageSlug]);
+    return pages.find((p: any) => p?.slug === currentPageSlug) ?? pages[0] ?? null;
+  }, [pages, currentPageSlug]);
+
+  // ------- NEW: helpers to find/patch blocks on current page -------
+  const updateTemplateWithBlocks = useCallback(
+    (nextBlocks: Block[]) => {
+      const idx = pages.findIndex((p: any) => p?.slug === currentPageSlug);
+      const targetIdx = idx >= 0 ? idx : 0;
+      const nextPages = [...pages];
+      const nextPage = { ...nextPages[targetIdx] };
+      setPageBlocks(nextPage, nextBlocks);
+      nextPages[targetIdx] = nextPage;
+
+      const nextTemplate: any = Array.isArray((template as any)?.data?.pages)
+        ? { ...template, data: { ...(template as any).data, pages: nextPages } }
+        : { ...template, pages: nextPages };
+
+      setTemplate(nextTemplate);
+      onChange(nextTemplate);
+
+      // Inform any listeners (commit builder, mirrors, etc.)
+      const basePrefix = Array.isArray((template as any)?.data?.pages) ? '/data/pages' : '/pages';
+      const patchPath =
+        Array.isArray((currentPage as any)?.content_blocks)
+          ? `${basePrefix}/${targetIdx}/content_blocks`
+          : Array.isArray((currentPage as any)?.blocks)
+            ? `${basePrefix}/${targetIdx}/blocks`
+            : `${basePrefix}/${targetIdx}/content/blocks`;
+
+      try {
+        window.dispatchEvent(new CustomEvent('qs:template:apply-patch', {
+          detail: { op: 'set', path: patchPath, value: nextBlocks, data: (nextTemplate as any)?.data }
+        }));
+      } catch {}
+    },
+    [pages, currentPageSlug, template, setTemplate, onChange, currentPage]
+  );
+
+  const insertBlockAfter = useCallback(
+    (newBlock: Block, afterId: string | null) => {
+      const blocks = [...getPageBlocks(currentPage)];
+      let at = 0;
+      if (afterId && afterId !== '__ADD_AT_START__') {
+        const idx = blocks.findIndex((b) => String((b as any)._id ?? b.id) === String(afterId));
+        at = idx >= 0 ? idx + 1 : blocks.length;
+      }
+      const next = [...blocks.slice(0, at), newBlock, ...blocks.slice(at)];
+      updateTemplateWithBlocks(next);
+    },
+    [currentPage, updateTemplateWithBlocks]
+  );  
+
+  const replaceBlockById = useCallback(
+    (updated: Block) => {
+      const blocks = [...getPageBlocks(currentPage)];
+      const idx = blocks.findIndex((b) => eqId(b, bid(updated)));
+      if (idx < 0) return;
+      blocks[idx] = updated;
+      updateTemplateWithBlocks(blocks);
+    },
+    [currentPage, updateTemplateWithBlocks]
+  );
+
+  // Open the Page Header Editor when the preview (iframe) asks for it
+  useEffect(() => {
+    const onMsg = (e: MessageEvent) => {
+      if (e?.data?.type === 'qs:edit-header') {
+        const existing =
+          ((template as any)?.data?.headerBlock as Block | undefined) ??
+          (createDefaultBlock('header') as Block);
+        setEditingHeader(existing);
+      }
+    };
+    window.addEventListener('message', onMsg);
+    return () => window.removeEventListener('message', onMsg);
+  }, [template]);
+
+  // Open the Page Footer Editor when the preview (iframe) asks for it
+  useEffect(() => {
+    const onMsg = (e: MessageEvent) => {
+      if (e?.data?.type === 'qs:edit-footer') {
+        const existing =
+          ((template as any)?.data?.footerBlock as Block | undefined) ??
+          (createDefaultBlock('footer') as Block);
+        setEditingFooter(existing);
+      }
+    };
+
+    // (Optional) also support an in-page CustomEvent('qs:edit-footer')
+    const onCustom = () => {
+      const existing =
+        ((template as any)?.data?.footerBlock as Block | undefined) ??
+        (createDefaultBlock('footer') as Block);
+      setEditingFooter(existing);
+    };
+
+    window.addEventListener('message', onMsg);
+    window.addEventListener('qs:edit-footer' as any, onCustom as any);
+    return () => {
+      window.removeEventListener('message', onMsg);
+      window.removeEventListener('qs:edit-footer' as any, onCustom as any);
+    };
+  }, [template]);
+
+  // ------- NEW: render the actual editor for a selected block id -------
+  const editingBlockObj = useMemo(() => {
+    if (!editingBlockId) return null;
+    return getPageBlocks(currentPage).find((b) => eqId(b, editingBlockId)) ?? null;
+  }, [currentPage, editingBlockId]);
+
+  // ------- NEW: handlers passed to preview frame -------
+  const handleEditBlock = useCallback((id: string) => setEditingBlockId(id), []);
+  const handleAddAfter  = useCallback((id: string) => setAdderTarget(id), []);
+  const handleDelete    = useCallback((_id: string) => {
+    // Deletion is already handled optimistically inside the preview frame.
+    // You can add side-effects here if needed (analytics, toasts, etc.).
+  }, []);
 
   const savePageSettings = (updatedPage: any) => {
     const pages = [...getTemplatePages(template)];
@@ -267,6 +411,26 @@ export default function EditorContent({
             />
           </div>
         )}
+        
+        {editingFooter && (
+          <div className="mb-4 rounded-xl border border-white/10 bg-neutral-950/70 backdrop-blur">
+            <PageFooterEditor
+              block={editingFooter}
+              template={template}
+              errors={blockErrors}
+              onClose={() => setEditingFooter(null)}
+              onSave={(b) => {
+                const next = {
+                  ...template,
+                  data: { ...(template.data as any), footerBlock: b },
+                } as Template;
+                setTemplate(next);
+                onChange(next);
+                setEditingFooter(null);
+              }}
+            />
+          </div>
+        )}
 
         <LiveEditorPreviewFrame
           template={template}
@@ -283,10 +447,15 @@ export default function EditorContent({
           setRawJson={setRawJson}
           setTemplate={(t) => setTemplate(t)}
           showEditorChrome
-          onEditHeader={() => setEditingHeader(createDefaultBlock('header') as Block)}
-          onRequestEditBlock={(id) => setEditingBlock(id)}
-          onRequestAddAfter={(id) => setAdderTarget(id)}
-          onRequestDeleteBlock={(id) => {}}
+          onEditHeader={() => {
+            const existing =
+              ((template as any)?.data?.headerBlock as Block | undefined) ??
+              (createDefaultBlock('header') as Block);
+            setEditingHeader(existing);
+          }}
+          onRequestEditBlock={handleEditBlock}
+          onRequestAddAfter={handleAddAfter}
+          onRequestDeleteBlock={handleDelete}
           previewVersionId={previewVersionId}
           pageSlug={currentPageSlug}
         />
@@ -338,6 +507,67 @@ export default function EditorContent({
           </div>
         </div>
       )}
+
+      {/* NEW: Block Picker (opens when user clicks "add") */}
+      {adderTarget !== null && (
+        <div
+          className="fixed inset-0 z-[1200] flex items-center justify-center bg-black/40"
+          onClick={() => setAdderTarget(null)}
+        >
+          <div
+            className="max-h-[85vh] w-[min(92vw,1000px)] max-w-[1000px] overflow-auto rounded-lg border border-white/10 bg-neutral-950 p-2"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <BlockAdderGrouped
+              inline                              // ⬅️ important: render content now
+              template={template}
+              existingBlocks={getPageBlocks(currentPage)}
+              onClose={() => setAdderTarget(null)}
+              // Quick picks call this first if provided:
+              onAddAndEdit={(type) => {
+                const block = createDefaultBlock(type) as Block;
+                insertBlockAfter(block, adderTarget);
+                setAdderTarget(null);
+                // open the editor immediately for the newly inserted block
+                setEditingBlockId(String((block as any)._id ?? (block as any).id));
+              }}
+              // All other list items call onAdd:
+              onAdd={(type) => {
+                const block = createDefaultBlock(type) as Block;
+                insertBlockAfter(block, adderTarget);
+                setAdderTarget(null);
+                // optional: also jump into the editor
+                setEditingBlockId(String((block as any)._id ?? (block as any).id));
+              }}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* NEW: Block Editor Drawer (opens when user clicks "edit") */}
+      {editingBlockObj && (
+        <div className="fixed inset-0 z-[1250] flex">
+          <div className="flex-1 bg-black/60" onClick={() => setEditingBlockId(null)} />
+          <div className="w-[min(92vw,900px)] max-w-[900px] h-full bg-neutral-900 border-l border-white/10">
+            <DynamicBlockEditor
+              block={editingBlockObj}
+              template={template}
+              currentPage={currentPage}
+              colorMode="light" // or derive from template/site mode if you prefer
+              errors={blockErrors}
+              onClose={() => setEditingBlockId(null)}
+              onChange={(updated) => {
+                replaceBlockById(updated);
+              }}
+              onSave={(updated) => {
+                replaceBlockById(updated);
+                setEditingBlockId(null);
+              }}
+            />
+          </div>
+        </div>
+      )}
+
 
       <TemplateActionToolbar
         template={template}

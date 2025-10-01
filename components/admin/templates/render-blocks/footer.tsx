@@ -3,7 +3,7 @@
 
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
-import { useMemo, useEffect, useState } from 'react';
+import { useMemo, useEffect, useState, useCallback } from 'react';
 import type { Block } from '@/types/blocks';
 import type { Template } from '@/types/template';
 import {
@@ -11,19 +11,39 @@ import {
   Phone, Mail, MessageCircle, Send, Star,
 } from 'lucide-react';
 
-const LeafletMap = dynamic(
-  () => import('@/components/ui/leaflet-footer-map').then((m) => m.LeafletFooterMap),
-  { ssr: false }
-);
-
-// 🔧 Ensure our union includes all three device values
 type EditorDevice = 'mobile' | 'tablet' | 'desktop';
 
 type FooterLink = { href: string; label: string };
 type SocialStyle = 'icons' | 'labels' | 'both';
 
-const REL = /^(https?:\/\/|mailto:|tel:|#)/i;
+type LeafletFooterMapProps = {
+  center: [number, number];
+  zoom?: number;
+  height?: number;
+  markerTitle?: string;
+  interactive?: boolean;
+};
+
+/** Typed dynamic import so TS accepts `center`, `zoom`, etc. */
+const LeafletMap = dynamic<LeafletFooterMapProps>(
+  () =>
+    import('@/components/ui/leaflet-footer-map').then(
+      (m) => m.LeafletFooterMap as unknown as React.ComponentType<LeafletFooterMapProps>
+    ),
+  { ssr: false }
+);
+
+/** ───────────────── helpers ───────────────── */
 const geocodeCache = new Map<string, [number, number]>();
+
+function isValidLatLng(v: any): v is [number, number] {
+  return (
+    Array.isArray(v) &&
+    v.length === 2 &&
+    Number.isFinite(v[0]) &&
+    Number.isFinite(v[1])
+  );
+}
 
 function useGeocode(address: string | null | undefined) {
   const [coords, setCoords] = useState<[number, number] | null>(null);
@@ -40,14 +60,21 @@ function useGeocode(address: string | null | undefined) {
           { headers: { 'User-Agent': 'QuickSites (support@quicksites.ai)' } }
         );
         const data = await res.json();
-        if (data?.length) {
-          const { lat, lon } = data[0];
-          const parsed: [number, number] = [parseFloat(lat), parseFloat(lon)];
-          geocodeCache.set(address, parsed);
-          setCoords(parsed);
+        if (Array.isArray(data) && data.length) {
+          const lat = parseFloat(data[0].lat);
+          const lon = parseFloat(data[0].lon);
+          if (Number.isFinite(lat) && Number.isFinite(lon)) {
+            const parsed: [number, number] = [lat, lon];
+            geocodeCache.set(address, parsed);
+            setCoords(parsed);
+          } else {
+            setCoords(null);
+          }
+        } else {
+          setCoords(null);
         }
-      } catch (e) {
-        console.error('Geocoding failed:', e);
+      } catch {
+        setCoords(null);
       }
     })();
   }, [address]);
@@ -85,7 +112,6 @@ function normalizeFooterLinks(final: any): FooterLink[] {
   }
   return out;
 }
-const isInternal = (href: string) => href.startsWith('/');
 
 function fmtPhone(raw?: string | null): string {
   const digits = (raw || '').replace(/\D/g, '');
@@ -165,6 +191,7 @@ function normalizeSocial(template?: Template, final?: any) {
   });
 }
 
+/** ───────────────── component ───────────────── */
 export default function FooterRender({
   block,
   content,
@@ -180,9 +207,21 @@ export default function FooterRender({
   compact?: boolean;
   colorMode?: 'light' | 'dark';
   previewOnly?: boolean;
-  device?: EditorDevice; // ✅ include 'mobile'
+  device?: EditorDevice;
 }) {
   const final = (content || block?.content) as any;
+
+  // Detect editor/preview context (iframe OR inline editor hints OR previewOnly)
+  const inIframe =
+    typeof window !== 'undefined' && typeof window.parent !== 'undefined' && window.parent !== window;
+
+  // Allow several inline signals (any one works). You likely have one of these; if not, keep them harmless.
+  const inlineHints =
+    (typeof document !== 'undefined' && document.body?.classList?.contains?.('qs-editor')) ||
+    (typeof window !== 'undefined' && (window as any).__QS_EDITOR__ === true) ||
+    false;
+
+  const enableFooterEdit = inIframe || inlineHints || previewOnly;
 
   // Auto-compact below 420px, or when editor forces a narrow device
   const isNarrowMedia = useMediaQuery('(max-width: 420px)');
@@ -243,9 +282,8 @@ export default function FooterRender({
     .filter(Boolean)
     .join('\n');
 
-  const fullAddressForGeocode = [addressLine1, addressLine2, city, state, postal]
-    .filter(Boolean)
-    .join(', ') || null;
+  const fullAddressForGeocode =
+    [addressLine1, addressLine2, city, state, postal].filter(Boolean).join(', ') || null;
 
   const latMeta = contact.latitude;
   const lonMeta = contact.longitude;
@@ -253,9 +291,13 @@ export default function FooterRender({
   const lonDb = typeof db.longitude === 'number' ? db.longitude : Number(db.longitude);
   const lat = Number.isFinite(latMeta) ? latMeta : latDb;
   const lon = Number.isFinite(lonMeta) ? lonMeta : lonDb;
+
   const hasCoords = Number.isFinite(lat) && Number.isFinite(lon);
   const geocoded = useGeocode(hasCoords ? null : fullAddressForGeocode);
-  const coords: [number, number] | null = hasCoords ? [lat as number, lon as number] : geocoded;
+
+  // Final, strictly validated center
+  const coords = hasCoords ? [lat as number, lon as number] : geocoded;
+  const centerOk = isValidLatLng(coords);
 
   const bgColor = colorMode === 'light' ? 'bg-white' : 'bg-neutral-950';
   const textColor = colorMode === 'light' ? 'text-gray-900' : 'text-white';
@@ -293,37 +335,195 @@ export default function FooterRender({
     );
   };
 
-  const maybePrevent = previewOnly
-    ? { onClick: (e: React.MouseEvent<HTMLAnchorElement>) => e.preventDefault(), tabIndex: -1 }
-    : {};
+  // Prevent navigation + stop bubbling in editor preview
+  const maybePreventLink = enableFooterEdit
+    ? {
+        onClick: (e: any) => {
+          e.preventDefault();
+          e.stopPropagation();
+        },
+        tabIndex: -1,
+      }
+    : previewOnly
+      ? { onClick: (e: any) => e.preventDefault(), tabIndex: -1 }
+      : {};
 
+  const openFooterEditor = useCallback(
+    (e: React.MouseEvent<HTMLElement>) => {
+      if (!enableFooterEdit) return;
+      e.stopPropagation();
+      try {
+        // Inline editor support
+        window.dispatchEvent(new CustomEvent('qs:edit-footer'));
+      } catch {}
+      try {
+        // Iframe editor support
+        window.parent?.postMessage?.({ type: 'qs:edit-footer' }, '*');
+      } catch {}
+    },
+    [enableFooterEdit]
+  );
+      
   if (compactMode) {
     return (
-      <div className={`${bgColor} ${textColor} rounded p-3`} data-device={device || 'auto'}>
+      <div
+        className={`${bgColor} ${textColor} rounded p-3`}
+        data-device={device || 'auto'}
+        data-qseditor-footer={enableFooterEdit ? '1' : undefined}
+        onClick={enableFooterEdit ? openFooterEditor : undefined}
+        title={enableFooterEdit ? 'Click to edit footer' : undefined}
+        style={enableFooterEdit ? { cursor: 'pointer' } : undefined}
+      >
         <div className="flex items-center justify-between gap-3">
           <div className="text-xs">
             <p className="font-semibold leading-tight">{businessName}</p>
             <p className={subText}>{cityStatePostal}</p>
           </div>
-          {/* socials … (unchanged) */}
+          <div
+            className="flex items-center gap-3"
+            onClick={enableFooterEdit ? (e) => e.stopPropagation() : undefined}
+          >
+            {socials.slice(0, 4).map((s) => (
+              <a
+                key={s.key}
+                href={s.href}
+                aria-label={s.aria}
+                className={`${linkColor} inline-flex items-center gap-1`}
+                {...maybePreventLink}
+              >
+                {renderSocialContent({ icon: s.icon, label: s.label })}
+              </a>
+            ))}
+          </div>
         </div>
       </div>
     );
   }
 
-  // Non-compact: mobile is already handled by the compact branch
   const gridCols =
-    device === 'tablet'  ? 'grid-cols-2' :
-    device === 'desktop' ? 'grid-cols-3' :
-                          'grid-cols-1 md:grid-cols-3';
-
+    device === 'tablet'
+      ? 'grid-cols-2'
+      : device === 'desktop'
+      ? 'grid-cols-3'
+      : 'grid-cols-1 md:grid-cols-3';
 
   return (
-    <footer className={`${bgColor} ${textColor} px-6 py-10 text-sm mt-10`} data-device={device || 'auto'}>
+    <footer
+      className={`${bgColor} ${textColor} px-6 py-10 text-sm mt-10`}
+      data-device={device || 'auto'}
+      data-qseditor-footer={enableFooterEdit ? '1' : undefined}
+      onClick={enableFooterEdit ? openFooterEditor : undefined}
+      title={enableFooterEdit ? 'Click to edit footer' : undefined}
+      style={enableFooterEdit ? { cursor: 'pointer' } : undefined}
+    >
       <div className={`max-w-6xl mx-auto grid ${gridCols} gap-8`}>
-        {/* …rest of footer unchanged (links, company info, socials, map, copyright) … */}
+        {/* Quick Links */}
+        <div
+          className="space-y-3"
+          onClick={enableFooterEdit ? (e) => e.stopPropagation() : undefined}
+        >
+          <h3 className={`text-base font-semibold ${headingColor}`}>Quick Links</h3>
+          <nav className="grid gap-2">
+            {links.length ? (
+              links.map((l, i) =>
+                l.href.startsWith('/') ? (
+                  <Link
+                    key={`${l.href}-${i}`}
+                    href={previewOnly ? '#' : l.href}
+                    className={linkColor}
+                    {...maybePreventLink}
+                  >
+                    {l.label}
+                  </Link>
+                ) : (
+                  <a
+                    key={`${l.href}-${i}`}
+                    href={previewOnly ? '#' : l.href}
+                    className={linkColor}
+                    {...maybePreventLink}
+                  >
+                    {l.label}
+                  </a>
+                )
+              )
+            ) : (
+              <span className={subText}>No links configured.</span>
+            )}
+          </nav>
+        </div>
+
+        {/* Company Info (read-only) */}
+        <div
+          className="space-y-3"
+          onClick={enableFooterEdit ? (e) => e.stopPropagation() : undefined}
+        >
+          <h3 className={`text-base font-semibold ${headingColor}`}>Company Info</h3>
+          <div className="whitespace-pre-line leading-relaxed">
+            {fullAddressForDisplay || <span className={subText}>—</span>}
+          </div>
+          <div className="space-y-1">
+            <div className={subText}>Business</div>
+            <div>{businessName || <span className={subText}>—</span>}</div>
+          </div>
+          <div className="space-y-1">
+            <div className={subText}>Phone</div>
+            {phone ? (
+              <a
+                href={previewOnly ? '#' : `tel:${(phone || '').replace(/\D/g, '')}`}
+                className={linkColor}
+                {...maybePreventLink}
+              >
+                {phone}
+              </a>
+            ) : (
+              <span className={subText}>—</span>
+            )}
+          </div>
+        </div>
+
+        {/* Map + Socials */}
+        <div
+          className="space-y-3"
+          onClick={enableFooterEdit ? (e) => e.stopPropagation() : undefined}
+        >
+          <h3 className={`text-base font-semibold ${headingColor}`}>Find Us</h3>
+          <div className="rounded-md overflow-hidden border border-white/10">
+            {centerOk ? (
+              <LeafletMap
+                center={coords as [number, number]}
+                zoom={14}
+                height={180}
+                markerTitle={businessName}
+                interactive={false}
+              />
+            ) : (
+              <div className={`h-[180px] flex items-center justify-center ${subText}`}>
+                Map unavailable
+              </div>
+            )}
+          </div>
+
+          <div className="flex flex-wrap items-center gap-3 pt-2">
+            {socials.map((s) => (
+              <a
+                key={s.key}
+                href={previewOnly ? '#' : s.href}
+                aria-label={s.aria}
+                className={`${linkColor} inline-flex items-center gap-1`}
+                {...maybePreventLink}
+              >
+                {renderSocialContent({ icon: s.icon, label: s.label })}
+              </a>
+            ))}
+            {!socials.length && <span className={subText}>No social links yet.</span>}
+          </div>
+        </div>
       </div>
-      <div className={`text-center mt-8 text-xs ${subText}`}>
+
+      <div
+        className={`text-center mt-8 text-xs ${subText}`}
+        onClick={enableFooterEdit ? (e) => e.stopPropagation() : undefined}
+      >
         © {new Date().getFullYear()} {businessName}. Fast, Reliable, Local Service 24/7.
       </div>
     </footer>

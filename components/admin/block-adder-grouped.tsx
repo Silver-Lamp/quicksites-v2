@@ -74,7 +74,9 @@ function saveCollapsed(groups: Record<string, boolean>) {
 
 type Props = {
   onAdd: (type: Block['type']) => void;
+  onClose: () => void;
   onAddAndEdit?: (type: Block['type']) => void;
+  onSelect?: (type: Block['type']) => void;
   existingBlocks?: Block[];
   disallowDuplicates?: Block['type'][];
   label?: string;
@@ -89,7 +91,9 @@ type Props = {
 
 export default function BlockAdderGrouped({
   onAdd,
+  onClose,
   onAddAndEdit,
+  onSelect,
   existingBlocks = [],
   disallowDuplicates = ['footer', 'header', 'hours'],
   label = 'Add Block',
@@ -113,7 +117,7 @@ export default function BlockAdderGrouped({
   // Close modal with Esc (only relevant when not inline)
   useEffect(() => {
     if (!inline) {
-      const onKeyDown = (e: KeyboardEvent) => { if (e.key === 'Escape') setOpen(false); };
+      const onKeyDown = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
       document.addEventListener('keydown', onKeyDown);
       return () => document.removeEventListener('keydown', onKeyDown);
     }

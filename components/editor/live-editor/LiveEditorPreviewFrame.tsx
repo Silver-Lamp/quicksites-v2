@@ -30,6 +30,7 @@ import {
 import { CSS } from '@dnd-kit/utilities';
 
 import { flushSync } from 'react-dom';
+import { createDefaultBlock } from '@/lib/createDefaultBlock'; // ⬅️ fallback insert
 
 type Mode = 'view' | 'edit' | 'preview' | string;
 
@@ -598,6 +599,41 @@ export default function LiveEditorPreviewFrame({
     [template, selectedPage, showFooter]
   );
 
+  /* ---------------- helper: SAFELY add first block ---------------- */
+  const safeAddFirstBlock = React.useCallback(() => {
+    // If the host passed a handler, use it.
+    if (typeof onRequestAddAfter === 'function') {
+      onRequestAddAfter('__ADD_AT_START__');
+      return;
+    }
+
+    // Fallback: insert a default Hero block directly into page state
+    try {
+      const accessor = getBlocksAccessor(template, pageIdx);
+      const current = (optimisticBlocks ?? accessor.get()) as any[];
+      const hero = createDefaultBlock('hero') as any;
+      const nextBlocks = [hero, ...current];
+
+      setOptimisticBlocks(nextBlocks);
+      const { nextTemplate, patchPath } = accessor.set(nextBlocks);
+      flushSync(() => setTemplate?.(nextTemplate));
+
+      window.dispatchEvent(new CustomEvent('qs:template:apply-patch', {
+        detail: {
+          op: 'set',
+          path: patchPath,
+          value: nextBlocks,
+          data: nextTemplate?.data,
+          headerBlock: nextTemplate?.headerBlock,
+          footerBlock: nextTemplate?.footerBlock,
+          template_name: nextTemplate?.template_name,
+        }
+      }));
+    } catch (err) {
+      console.error('Add-first-block failed:', err);
+    }
+  }, [onRequestAddAfter, template, pageIdx, optimisticBlocks, setTemplate]);
+
   /* ---------------- Render ---------------- */
   return (
     <TooltipProvider delayDuration={150}>
@@ -618,15 +654,6 @@ export default function LiveEditorPreviewFrame({
                   {errorCount} error{errorCount === 1 ? '' : 's'}
                 </span>
               )}
-              {/* {onEditHeader && (
-                <button
-                  type="button"
-                  onClick={onEditHeader}
-                  className="rounded-md px-2 py-1 text-xs font-medium text-gray-900 shadow hover:bg-white dark:bg-white/10 dark:text-white dark:hover:bg-white/20"
-                >
-                  Edit Global Header, Logo and Favicon
-                </button>
-              )} */}
             </div>
           </div>
         )}
@@ -660,12 +687,14 @@ export default function LiveEditorPreviewFrame({
                 )}
 
                 {renderBlocks.length === 0 ? (
-                  <div className="flex flex-col items-center gap-3">
+                  <div className="flex flex-col items-center gap-3" style={{ pointerEvents: 'auto' }}>
                     <div className="text-sm text-neutral-400">This page is empty.</div>
                     <button
+                      id="qs-add-first-block"                           // ← diagnostic handle
                       type="button"
                       className="rounded-md border border-white/15 bg-white/5 px-3 py-1.5 text-sm hover:bg-white/10"
-                      onClick={() => onRequestAddAfter?.('__ADD_AT_START__')}
+                      onPointerDownCapture={(e) => { e.preventDefault(); e.stopPropagation(); }}
+                      onClick={(e) => { e.preventDefault(); e.stopPropagation(); safeAddFirstBlock(); }}
                     >
                       + Add your first block
                     </button>
@@ -682,7 +711,6 @@ export default function LiveEditorPreviewFrame({
                       key={ids.join('|')} // force clean re-render after reorder
                     >
                       {renderBlocks.map((b: any, i: number) => {
-                        const fallbackPath = `${pageIdx}:${i}`;
                         const id = ids[i];
 
                         return (
@@ -709,7 +737,7 @@ export default function LiveEditorPreviewFrame({
                             >
                               <RenderBlock
                                 block={b}
-                                blockPath={fallbackPath}
+                                blockPath={`${pageIdx}:${i}`}
                                 previewOnly
                                 template={template}
                                 device={viewport}
@@ -829,7 +857,7 @@ function SortableRow({
             <button
               type="button"
               aria-label="Edit block"
-              className="pointer-events-auto inline-flex items-center rounded-md border border-white/20 bg-black/60 p.5 text-white hover:bg-black/80 px-1.5 py-1.5"
+              className="pointer-events-auto inline-flex items-center rounded-md border border-white/20 bg-black/60 px-1.5 py-1.5 text-white hover:bg-black/80"
               onClick={(e) => {
                 e.stopPropagation();
                 onEdit?.();

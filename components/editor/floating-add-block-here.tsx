@@ -42,6 +42,7 @@ export function FloatingAddBlockHere({ onAdd, template }: { onAdd: (type: Block[
               }}
             /> */}
             <BlockAdderGrouped
+              onClose={()=>{}}
               existingBlocks={[]}
               onAdd={(type) => onAdd(type as Block['type'])}
               template={template as Template}

@@ -301,3 +301,10 @@ html { scrollbar-gutter: stable both-edges; }
 
 /* Never allow a viewport-width overflow to push the page */
 html, body, #__next { width: 100%; max-width: 100%; }
+
+.qs-canvas [data-block-chrome],
+#qs-add-first-block,
+.qs-edit,
+.qs-add-below {
+  pointer-events: auto !important;
+}

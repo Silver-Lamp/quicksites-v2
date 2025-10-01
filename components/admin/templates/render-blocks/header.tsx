@@ -14,6 +14,7 @@ type Props = {
   content?: Block['content'];
   template?: Template;
   colorMode?: 'light' | 'dark';
+  /** If true, links shouldn't navigate (used in preview/editor) */
   previewOnly?: boolean;
   device?: 'mobile' | 'tablet' | 'desktop';
 };
@@ -66,13 +67,16 @@ export default function HeaderRender({
 }: Props) {
   const meta = (template?.data as any)?.meta ?? {};
   const fallLogo = typeof meta?.logo_url === 'string' ? meta.logo_url : (template as any)?.logo_url;
-  const { logo_url, nav } = React.useMemo(
-    () => {
-      const base = normalizeContent(block, content);
-      return { logo_url: base.logo_url || fallLogo || '', nav: base.nav };
-    },
-    [block, content, fallLogo]
-  );
+
+  const { logo_url, nav } = React.useMemo(() => {
+    const base = normalizeContent(block, content);
+    return { logo_url: base.logo_url || fallLogo || '', nav: base.nav };
+  }, [block, content, fallLogo]);
+
+  // Consider ourselves "in editor" if we're inside an iframe (parent exists) or previewOnly is true
+  const inIframe =
+    typeof window !== 'undefined' && typeof window.parent !== 'undefined' && window.parent !== window;
+  const enableHeaderEdit = inIframe || previewOnly;
 
   const forceNarrow = device === 'mobile' || device === 'tablet';
   const isMdUp = useMediaQuery('(min-width: 768px)');
@@ -85,18 +89,48 @@ export default function HeaderRender({
   }, [isMdUp, menuOpen]);
 
   const bg = colorMode === 'light' ? 'bg-white text-gray-900' : 'bg-neutral-950 text-white';
-  const border = colorMode === 'light' ? 'border-gray-200' : 'border-white/10';
   const linkBase =
     colorMode === 'light'
       ? 'text-gray-900 hover:text-gray-700'
       : 'text-white/90 hover:text-white';
 
-  const maybePrevent = previewOnly
-    ? { onClick: (e: React.MouseEvent<HTMLAnchorElement>) => e.preventDefault(), tabIndex: -1 }
-    : {};
+  // Prevent normal navigation in editor preview (and stop bubbling to header click)
+  const maybePreventLink = enableHeaderEdit
+    ? {
+        onClick: (e: React.MouseEvent<HTMLAnchorElement>) => {
+          e.preventDefault();
+          e.stopPropagation();
+        },
+        tabIndex: -1,
+      }
+    : previewOnly
+      ? { onClick: (e: React.MouseEvent<HTMLAnchorElement>) => e.preventDefault(), tabIndex: -1 }
+      : {};
+
+  // Clicking the header in the editor should open the Page Header Editor
+  const openHeaderEditor = React.useCallback(
+    (e: React.MouseEvent<HTMLElement>) => {
+      if (!enableHeaderEdit) return;
+      // Avoid triggering from interactive controls explicitly stopping propagation below
+      e.stopPropagation();
+      try {
+        window.parent?.postMessage({ type: 'qs:edit-header' }, '*');
+      } catch {
+        /* no-op */
+      }
+    },
+    [enableHeaderEdit]
+  );
 
   return (
-    <header className={`${bg}`} data-device={device || 'auto'}>
+    <header
+      className={`${bg}`}
+      data-device={device || 'auto'}
+      data-qseditor-header={enableHeaderEdit ? '1' : undefined}
+      onClick={enableHeaderEdit ? openHeaderEditor : undefined}
+      title={enableHeaderEdit ? 'Click to edit header' : undefined}
+      style={enableHeaderEdit ? { cursor: 'pointer' } : undefined}
+    >
       <div className="mx-auto max-w-6xl px-4 py-3 flex items-center justify-between">
         {/* Logo */}
         <div className="flex items-center gap-3">
@@ -106,21 +140,26 @@ export default function HeaderRender({
               src={logo_url}
               alt="Logo"
               className="h-10 w-auto rounded-md bg-white/5 object-contain"
+              onClick={enableHeaderEdit ? (e) => e.stopPropagation() : undefined}
             />
           ) : (
-            <div className="h-10 w-10 rounded-md bg-white/10" aria-hidden />
+            <div
+              className="h-10 w-10 rounded-md bg-white/10"
+              aria-hidden
+              onClick={enableHeaderEdit ? (e) => e.stopPropagation() : undefined}
+            />
           )}
         </div>
 
         {/* Desktop nav (mount only when not forcing narrow) */}
         {!forceNarrow && (
-          <nav className="hidden md:flex items-center gap-6">
+          <nav className="hidden md:flex items-center gap-6" onClick={enableHeaderEdit ? (e) => e.stopPropagation() : undefined}>
             {nav.map((item, i) => (
               <Link
                 key={`${item.href}-${i}`}
                 href={previewOnly ? '#' : item.href}
                 className={linkBase + ' text-sm font-medium'}
-                {...maybePrevent}
+                {...maybePreventLink}
               >
                 {item.label}
               </Link>
@@ -133,7 +172,10 @@ export default function HeaderRender({
           <button
             type="button"
             aria-label="Toggle menu"
-            onClick={() => setMenuOpen((v) => !v)}
+            onClick={(e) => {
+              e.stopPropagation(); // don't bubble to header editor click
+              setMenuOpen((v) => !v);
+            }}
             className="inline-flex h-10 w-10 items-center justify-center rounded-md bg-white/10 hover:bg-white/15"
           >
             {menuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
@@ -142,7 +184,10 @@ export default function HeaderRender({
           <button
             type="button"
             aria-label="Toggle menu"
-            onClick={() => setMenuOpen((v) => !v)}
+            onClick={(e) => {
+              e.stopPropagation(); // don't bubble to header editor click
+              setMenuOpen((v) => !v);
+            }}
             className="inline-flex h-10 w-10 items-center justify-center rounded-md bg-white/10 hover:bg-white/15 md:hidden"
           >
             {menuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
@@ -150,9 +195,9 @@ export default function HeaderRender({
         )}
       </div>
 
-      {/* Mobile menu: show only when menuOpen; when forcing narrow, do NOT include md:hidden so desktop width can't hide it */}
+      {/* Mobile menu */}
       {menuOpen && (
-        <div className={`${forceNarrow ? '' : 'md:hidden'} border-t border-white/10`}>
+        <div className={`${forceNarrow ? '' : 'md:hidden'} border-t border-white/10`} onClick={enableHeaderEdit ? (e) => e.stopPropagation() : undefined}>
           <nav className="mx-auto max-w-6xl px-4 py-3 grid gap-2">
             {nav.length ? (
               nav.map((item, i) => (
@@ -161,10 +206,10 @@ export default function HeaderRender({
                   href={previewOnly ? '#' : item.href}
                   className={`${linkBase} block rounded px-2 py-1.5`}
                   onClick={(e) => {
-                    if (previewOnly) e.preventDefault();
+                    if (enableHeaderEdit || previewOnly) e.preventDefault();
+                    e.stopPropagation(); // keep click from opening the header editor
                     setMenuOpen(false);
                   }}
-                  {...maybePrevent}
                 >
                   {item.label}
                 </a>

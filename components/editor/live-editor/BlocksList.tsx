@@ -129,6 +129,7 @@ export default function BlocksList({
               >
                 {/* Add Above (hover) */}
                 <BlockAdderGrouped
+                  onClose={()=>{}}
                   template={template}
                   onAdd={(type) => {
                     const newBlock = createDefaultBlock(type as any);
@@ -200,6 +201,7 @@ export default function BlocksList({
 
                 {/* Add Below (hover) */}
                 <BlockAdderGrouped
+                  onClose={()=>{}}
                   template={template}
                   onAdd={(type) => {
                     const newBlock = createDefaultBlock(type as any);

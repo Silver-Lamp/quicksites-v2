@@ -254,7 +254,10 @@ export default function TemplatePageEditor({
                   existingBlocks={contentBlocks}
                   onAdd={(type) => handleInsertBlockAt(pageIndex, contentBlocks.length, type)}
                   template={template as Template}
+                  inline
+                  onClose={() => {}}
                 />
+                
               </>
             )}
           </div>

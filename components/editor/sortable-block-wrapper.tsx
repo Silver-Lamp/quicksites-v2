@@ -139,6 +139,7 @@ export default function SortableBlockWrapper({
         <div className="opacity-0 group-hover/outer:opacity-100 transition-opacity">
           {showAdder ? (
             <BlockAdderGrouped
+              onClose={()=>{}}
               onAdd={(type) => {
                 onInsertBlockAt(index + 1, type);
                 setShowAdder(false);

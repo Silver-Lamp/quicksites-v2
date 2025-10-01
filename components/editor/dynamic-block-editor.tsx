@@ -58,12 +58,13 @@ const LOCAL_EDITORS: Record<string, EditorLoader> = {
 export function DynamicBlockEditor({
   block,
   onSave,
+  onChange,
   onClose,
   errors,
   template,
   colorMode,
   currentPage,
-}: BlockEditorProps & { colorMode?: 'light' | 'dark', currentPage?: Page }) {
+}: BlockEditorProps & { colorMode?: 'light' | 'dark', currentPage?: Page, onChange?: (block: Block) => void }) {
   const [EditorComponent, setEditorComponent] =
     useState<React.FC<BlockEditorProps> | null>(null);
 
@@ -84,9 +85,12 @@ export function DynamicBlockEditor({
       );
       // close immediately
       const id = setTimeout(() => onClose?.(), 0);
+      if (onChange) {
+        onChange(block as any);
+      }
       return () => clearTimeout(id);
     }
-  }, [block?.type, onClose]);
+  }, [block?.type, onClose, onChange]);
   
   // Kick off lazy load of the block editor (except for text, which is inline)
   useEffect(() => {

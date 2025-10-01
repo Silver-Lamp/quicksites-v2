@@ -1,20 +1,21 @@
 'use client';
 
 import dynamic from 'next/dynamic';
-import { useEffect, useState } from 'react';
+import * as React from 'react';
 
-type Props = {
-  coords: [number, number];
-  businessName: string;
-  fullAddress: string;
+export type LeafletFooterMapProps = {
+  center: [number, number];     // validated by the caller (we also guard inside)
+  zoom?: number;
+  height?: number;
+  markerTitle?: string;
+  interactive?: boolean;
 };
 
-const LeafletMap = dynamic(() => import('./leaflet-map-inner'), { ssr: false });
-
-export function LeafletFooterMap({ coords, businessName, fullAddress }: Props) {
-  return (
-    <div className="mt-4 h-52 rounded overflow-hidden shadow border border-white/10 w-full md:w-80 md:mx-auto">
-      <LeafletMap coords={coords} businessName={businessName} fullAddress={fullAddress} />
-    </div>
-  );
-}
+/** Typed dynamic import to avoid prop type errors in callers */
+export const LeafletFooterMap = dynamic<LeafletFooterMapProps>(
+  () =>
+    import('./leaflet-map-inner').then(
+      (m) => m.LeafletMapInner as unknown as React.ComponentType<LeafletFooterMapProps>
+    ),
+  { ssr: false, loading: () => <div className="h-[180px] w-full bg-black/10" /> }
+);

@@ -464,11 +464,18 @@ useEffect(() => {
               <SettingsIcon className="w-4 h-4" />
             </Button>
 
-            {/* Open Site Settings */}
-            <Button size="icon" variant="ghost" title="Open Site Settings" onClick={() => {
-              window.dispatchEvent(new CustomEvent('qs:settings:set-open', { detail: true }));
-              try { window.localStorage.setItem('qs:settingsOpen', '1'); } catch {}
-            }}>
+            {/* Open Site Settings (same behavior as pressing "s") */}
+            <Button
+              size="icon"
+              variant="ghost"
+              title="Open Site Settings"
+              onClick={() => {
+                // Toggle the same drawer the "s" key controls
+                window.dispatchEvent(new CustomEvent('qs:settings:toggle'));
+                // (optional) keep the old localStorage line if you rely on it elsewhere
+                try { window.localStorage.setItem('qs:settingsOpen', '1'); } catch {}
+              }}
+            >
               <Wrench className="w-4 h-4" />
             </Button>
 

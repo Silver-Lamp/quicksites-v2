@@ -17,6 +17,7 @@ export default function EmptyAddBlock({
   return (
     <div className="relative z-10 bg-white dark:bg-neutral-900 p-4 border-t border-gray-200 dark:border-neutral-700 mt-6">
       <BlockAdderGrouped
+        onClose={()=>{}}
         onAdd={onAdd}
         existingBlocks={existingBlocks}
         triggerElement={

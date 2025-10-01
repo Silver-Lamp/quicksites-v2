@@ -1,47 +1,124 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
-import L from 'leaflet';
-import 'leaflet/dist/leaflet.css';
-import iconUrl from 'leaflet/dist/images/marker-icon.png';
-import iconShadowUrl from 'leaflet/dist/images/marker-shadow.png';
+import * as React from 'react';
+import type { LeafletFooterMapProps } from './leaflet-footer-map';
 
-type Props = {
-  coords: [number, number];
-  businessName: string;
-  fullAddress: string;
-};
-
-export default function LeafletMapInner({ coords, businessName, fullAddress }: Props) {
-  const mapRef = useRef<HTMLDivElement | null>(null);
-  const leafletInstance = useRef<L.Map | null>(null);
-
-  useEffect(() => {
-    if (!mapRef.current || leafletInstance.current) return;
-
-    const icon = L.icon({
-      iconUrl: iconUrl.src,
-      shadowUrl: iconShadowUrl.src,
-      iconAnchor: [12, 41],
+// Lazy import Leaflet only on client
+let L: typeof import('leaflet') | null = null;
+async function ensureLeaflet() {
+  if (!L) {
+    const mod = await import('leaflet');
+    // Fix default icon URLs if you use markers and haven’t set these globally
+    // (Optional; safe to remove if you already handle this elsewhere)
+    (mod as any).Icon.Default.mergeOptions?.({
+      iconRetinaUrl:
+        'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
+      iconUrl:
+        'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
+      shadowUrl:
+        'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
     });
+    L = mod;
+  }
+  return L!;
+}
 
-    const map = L.map(mapRef.current).setView(coords, 13);
-    leafletInstance.current = map;
+function isValidLatLng(v: any): v is [number, number] {
+  return Array.isArray(v) && v.length === 2 && Number.isFinite(v[0]) && Number.isFinite(v[1]);
+}
 
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '&copy; OpenStreetMap contributors',
-    }).addTo(map);
+export function LeafletMapInner(props: LeafletFooterMapProps) {
+  const { center, zoom = 14, height = 180, markerTitle, interactive = false } = props;
 
-    L.marker(coords, { icon })
-      .addTo(map)
-      .bindPopup(`${businessName}<br>${fullAddress}`)
-      .openPopup();
+  const containerRef = React.useRef<HTMLDivElement | null>(null);
+  const mapRef = React.useRef<import('leaflet').Map | null>(null);
+  const markerRef = React.useRef<import('leaflet').Marker | null>(null);
 
+  // Initialize once when we have a container + valid center
+  React.useEffect(() => {
+    let cancelled = false;
+
+    async function init() {
+      if (!containerRef.current) return;
+      if (!isValidLatLng(center)) return;
+
+      const Lx = await ensureLeaflet();
+      if (cancelled) return;
+
+      // If a map already exists on this container, remove it first
+      if (mapRef.current) {
+        try { mapRef.current.remove(); } catch {}
+        mapRef.current = null;
+      }
+
+      // Create map
+      const map = Lx.map(containerRef.current, {
+        center,
+        zoom,
+        zoomControl: interactive,
+        dragging: interactive,
+        scrollWheelZoom: interactive,
+        doubleClickZoom: interactive,
+        boxZoom: interactive,
+        keyboard: interactive,
+        tapHold: interactive as any,
+        attributionControl: false,
+        preferCanvas: true,
+      });
+
+      mapRef.current = map;
+
+      // Base tiles
+      Lx.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 20,
+      }).addTo(map);
+
+      // Marker
+      try {
+        const m = Lx.marker(center, { title: markerTitle ?? '', interactive });
+        m.addTo(map);
+        markerRef.current = m;
+      } catch {
+        markerRef.current = null;
+      }
+    }
+
+    init();
     return () => {
-      map.remove();
-      leafletInstance.current = null;
+      cancelled = true;
+      // Cleanup completely so container can be reused without "already initialized"
+      if (mapRef.current) {
+        try { mapRef.current.remove(); } catch {}
+        mapRef.current = null;
+      }
+      markerRef.current = null;
     };
-  }, [coords, businessName, fullAddress]);
+    // Only run when container mounts or center first becomes valid
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [containerRef.current, isValidLatLng(center) ? center[0] : null, isValidLatLng(center) ? center[1] : null]);
 
-  return <div ref={mapRef} className="w-full h-full z-0" />;
+  // Respond to subsequent center/zoom changes without recreating the map
+  React.useEffect(() => {
+    if (!mapRef.current) return;
+    if (!isValidLatLng(center)) return;
+    try {
+      mapRef.current.setView(center, zoom);
+      if (markerRef.current) {
+        markerRef.current.setLatLng(center as any);
+      }
+    } catch {
+      // no-op: if Leaflet throws, ignore instead of crashing editor
+    }
+  }, [center, zoom]);
+
+  return (
+    <div
+      ref={containerRef}
+      style={{ width: '100%', height }}
+      // Make it obvious that the map is decorative/non-interactive by default
+      className="relative"
+      aria-label={markerTitle || 'Map'}
+      role="img"
+    />
+  );
 }

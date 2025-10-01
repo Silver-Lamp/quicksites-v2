@@ -485,26 +485,71 @@ export default function DomainPanel({
           <Label className="block text-xs text-white/70 mb-1">Live URL</Label>
           <div className="flex items-center gap-2">
             <code className="rounded bg-neutral-950/70 px-2 py-1">{inlineText(prodPreview)}</code>
-            <Button type="button" size="sm" variant="outline" onClick={() => copy(inlineText(prodPreview))}>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={() => copy(inlineText(prodPreview))}
+            >
               <Copy className="h-4 w-4 mr-1" /> Copy
             </Button>
+            <a
+              href={inlineText(prodPreview)}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              <Button type="button" size="sm" variant="default">
+                Open
+              </Button>
+            </a>
           </div>
 
           {isDevHost && slug && (
             <div className="mt-3 grid gap-2">
+              {/* Dev subdomain */}
               <div className="flex items-center gap-2">
                 <Label className="text-xs text-white/70 w-28">Dev subdomain</Label>
                 <code className="rounded bg-neutral-950/70 px-2 py-1">{inlineText(devSubdomain)}</code>
-                <Button type="button" size="sm" variant="outline" onClick={() => copy(inlineText(devSubdomain))}>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={() => copy(inlineText(devSubdomain))}
+                >
                   <Copy className="h-4 w-4 mr-1" /> Copy
                 </Button>
+                <a
+                  href={inlineText(devSubdomain)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  <Button type="button" size="sm" variant="default">
+                    Open
+                  </Button>
+                </a>
               </div>
+
+              {/* Dev path */}
               <div className="flex items-center gap-2">
                 <Label className="text-xs text-white/70 w-28">Dev path</Label>
                 <code className="rounded bg-neutral-950/70 px-2 py-1">{inlineText(devPath)}</code>
-                <Button type="button" size="sm" variant="outline" onClick={() => copy(inlineText(devPath))}>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={() => copy(inlineText(devPath))}
+                >
                   <Copy className="h-4 w-4 mr-1" /> Copy
                 </Button>
+                <a
+                  href={inlineText(devPath)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  <Button type="button" size="sm" variant="default">
+                    Open
+                  </Button>
+                </a>
               </div>
             </div>
           )}
@@ -516,6 +561,7 @@ export default function DomainPanel({
             </p>
           )}
         </div>
+
 
         {/* -------------------- Connect Custom Domain (Programmatic) -------------------- */}
         <div className="rounded-lg border border-white/10 bg-neutral-900/50 p-3">

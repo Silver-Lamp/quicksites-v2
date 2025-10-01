@@ -16,14 +16,15 @@ type Props = {
   block?: any;
   content?: any;
   template?: Template;
+  /** Prefer passing companyId/orgId from the page if you have them */
   companyId?: string;
   orgId?: string;
   previewOnly?: boolean;
 };
 
-type Service = { id: string; name: string; duration_minutes: number };
+type Service  = { id: string; name: string; duration_minutes: number };
 type Resource = { id: string; name: string };
-type Slot = { starts_at: string; ends_at: string; resource_id?: string };
+type Slot     = { starts_at: string; ends_at: string; resource_id?: string };
 
 const ANY = '__any__';
 
@@ -53,27 +54,48 @@ export default function SchedulerRender(props: Props) {
     return { ...DEFAULTS, ...(raw as any) };
   }, [props.block, props.content]);
 
-  const effectiveCompanyId = (b as any).company_id ?? props.companyId ?? undefined;
-  const effectiveOrgId     = b.org_id ?? props.orgId ?? undefined;
+  /* ---------- Strong owner resolution (renderer must never query “all”) ---------- */
+  const templateCompanyId =
+    (props.template as any)?.company_id ??
+    (props.template as any)?.data?.company_id ??
+    undefined;
 
-  const serviceIds = Array.isArray(b.service_ids) ? b.service_ids : [];
+  const templateOrgId =
+    (props.template as any)?.org_id ??
+    (props.template as any)?.data?.org_id ??
+    undefined;
 
-  const [services, setServices] = useState<Service[]>([]);
-  const [resources, setResources] = useState<Resource[]>([]);
-  const [date, setDate] = useState<string>(format(new Date(), 'yyyy-MM-dd'));
-  const [serviceId, setServiceId] = useState<string | undefined>(b.default_service_id);
+  const effectiveCompanyId =
+    (b as any).company_id ??
+    props.companyId ??
+    templateCompanyId ??
+    undefined;
+
+  const effectiveOrgId =
+    b.org_id ??
+    props.orgId ??
+    templateOrgId ??
+    undefined;
+
+  const serviceIds = useMemo(
+    () => (Array.isArray(b.service_ids) ? b.service_ids.filter(Boolean) : []),
+    [b.service_ids]
+  );
+
+  const [services, setServices]     = useState<Service[]>([]);
+  const [resources, setResources]   = useState<Resource[]>([]);
+  const [date, setDate]             = useState<string>(format(new Date(), 'yyyy-MM-dd'));
+  const [serviceId, setServiceId]   = useState<string | undefined>(b.default_service_id);
   const [resourceId, setResourceId] = useState<string | undefined>(undefined);
-  const [slots, setSlots] = useState<Slot[] | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [slots, setSlots]           = useState<Slot[] | null>(null);
+  const [loading, setLoading]       = useState(false);
 
-  /* ---------- SOLID surfaces (no transparency) in both themes ---------- */
+  /* ---------- solid inputs in both themes ---------- */
   const triggerCls =
-    // force solid field surface + readable text
     '!bg-white !text-black dark:!bg-neutral-900 dark:!text-white ' +
     'h-9 w-full rounded-md border border-input ' +
     'placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring';
   const contentCls =
-    // radix portal content (menu)
     'z-[60] !bg-white !text-black dark:!bg-neutral-900 dark:!text-white ' +
     'border border-border shadow-xl rounded-md';
   const itemCls =
@@ -82,16 +104,26 @@ export default function SchedulerRender(props: Props) {
   const inputCls =
     '!bg-white !text-black dark:!bg-neutral-900 dark:!text-white ' +
     'h-9 w-full rounded-md border border-input px-3 ' +
-    'placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring';
-
+    'focus:outline-none focus:ring-2 focus:ring-ring';
+  
   function setOwnerParam(qs: URLSearchParams) {
     if (effectiveCompanyId) qs.set('company_id', effectiveCompanyId);
     else if (effectiveOrgId) qs.set('org_id', effectiveOrgId);
   }
 
+  /* ---------- Load services/resources (strictly scoped + client filter) ---------- */
   useEffect(() => {
     (async () => {
+      // If we can’t resolve *any* owner and there’s no explicit service filter, don’t fetch.
+      if (!effectiveCompanyId && !effectiveOrgId && serviceIds.length === 0) {
+        setServices([]);
+        setResources([]);
+        if (!serviceId) setServiceId(undefined);
+        return;
+      }
+
       const qs = new URLSearchParams();
+      // Pass the allow-list down to the API when present
       if (serviceIds.length) qs.set('service_ids', serviceIds.join(','));
       setOwnerParam(qs);
 
@@ -100,20 +132,37 @@ export default function SchedulerRender(props: Props) {
         fetch(`/api/scheduler/resources?${qs.toString()}`).then(r => r.json()).catch(() => ({ rows: [] })),
       ]);
 
-      const svcRows: Service[] = Array.isArray(svcRes?.rows) ? svcRes.rows : [];
-      const resRows: Resource[] = Array.isArray(resRes?.rows) ? resRes.rows : [];
+      let svcRows: Service[] = Array.isArray(svcRes?.rows) ? svcRes.rows : [];
+
+      // Extra safety: even if the API returns “too much,” clamp to service_ids on the client.
+      if (serviceIds.length) {
+        const allow = new Set(serviceIds);
+        svcRows = svcRows.filter(s => allow.has(s.id));
+      }
 
       setServices(svcRows);
-      setResources(resRows);
-      if (!serviceId && svcRows[0]?.id) setServiceId(svcRows[0].id);
+      setResources(Array.isArray(resRes?.rows) ? resRes.rows : []);
+
+      // Reset default if it’s not part of the new set
+      const hasDefault = svcRows.some(s => s.id === (serviceId ?? ''));
+      if (!hasDefault) {
+        setServiceId(svcRows[0]?.id);
+      }
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [JSON.stringify(serviceIds), effectiveCompanyId, effectiveOrgId]);
+  }, [
+    JSON.stringify(serviceIds),
+    effectiveCompanyId,
+    effectiveOrgId,
+    // When company_id on the block changes we want a clean reload
+    (b as any).company_id,
+  ]);
 
+  /* ---------- Availability ---------- */
   useEffect(() => {
     if (!serviceId) { setSlots([]); return; }
-    setLoading(true);
 
+    setLoading(true);
     const qs = new URLSearchParams();
     qs.set('service_id', serviceId);
     qs.set('date', date);
@@ -238,12 +287,25 @@ export default function SchedulerRender(props: Props) {
           {/* Contact info */}
           <div className="grid gap-2">
             <label className="text-sm font-medium">Your Name *</label>
-            <input id="sched-name" placeholder="Jane Doe" className={inputCls} />
+            <input
+              id="sched-name"
+              placeholder="Jane Doe"
+              className={inputCls + " placeholder:text-muted-foreground"}
+            />
             <div className="grid grid-cols-2 gap-2">
-              <input id="sched-email" placeholder="you@email.com" className={inputCls} />
-              <input id="sched-phone" placeholder="(555) 555-5555" className={inputCls} />
+              <input
+                id="sched-email"
+                placeholder="you@email.com"
+                className={inputCls + " placeholder:text-muted-foreground"}
+              />
+              <input
+                id="sched-phone"
+                placeholder="(555) 555-5555"
+                className={inputCls + " placeholder:text-muted-foreground"}
+              />
             </div>
           </div>
+          
         </div>
 
         {/* Slots */}

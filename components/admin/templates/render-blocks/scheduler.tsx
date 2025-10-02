@@ -1,4 +1,3 @@
-// components/admin/templates/render-blocks/scheduler.tsx
 'use client';
 
 import * as React from 'react';
@@ -8,18 +7,17 @@ import type { Template } from '@/types/template';
 import type { SchedulerBlock } from '@/admin/lib/zod/blockSchema';
 
 import { Button } from '@/components/ui/button';
-import {
-  Select, SelectTrigger, SelectValue, SelectContent, SelectItem,
-} from '@/components/ui/select';
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
 
 type Props = {
   block?: any;
   content?: any;
   template?: Template;
-  /** Prefer passing companyId/orgId from the page if you have them */
   companyId?: string;
   orgId?: string;
   previewOnly?: boolean;
+  /** Force light/dark for this block only (overrides template) */
+  colorMode?: 'light' | 'dark';
 };
 
 type Service  = { id: string; name: string; duration_minutes: number };
@@ -54,7 +52,11 @@ export default function SchedulerRender(props: Props) {
     return { ...DEFAULTS, ...(raw as any) };
   }, [props.block, props.content]);
 
-  /* ---------- Strong owner resolution (renderer must never query “all”) ---------- */
+  /* ---------- Theme / color mode (match ServicesRender pattern) ---------- */
+  const effectiveMode: 'light' | 'dark' =
+    props.colorMode ?? ((props.template as any)?.color_mode === 'dark' ? 'dark' : 'light');
+
+  /* ---------- Owner resolution ---------- */
   const templateCompanyId =
     (props.template as any)?.company_id ??
     (props.template as any)?.data?.company_id ??
@@ -66,16 +68,10 @@ export default function SchedulerRender(props: Props) {
     undefined;
 
   const effectiveCompanyId =
-    (b as any).company_id ??
-    props.companyId ??
-    templateCompanyId ??
-    undefined;
+    (b as any).company_id ?? props.companyId ?? templateCompanyId ?? undefined;
 
   const effectiveOrgId =
-    b.org_id ??
-    props.orgId ??
-    templateOrgId ??
-    undefined;
+    b.org_id ?? props.orgId ?? templateOrgId ?? undefined;
 
   const serviceIds = useMemo(
     () => (Array.isArray(b.service_ids) ? b.service_ids.filter(Boolean) : []),
@@ -90,31 +86,48 @@ export default function SchedulerRender(props: Props) {
   const [slots, setSlots]           = useState<Slot[] | null>(null);
   const [loading, setLoading]       = useState(false);
 
-  /* ---------- solid inputs in both themes ---------- */
+  /* ---------- Per-theme utility classes (solid inputs, readable placeholders) ---------- */
+  const shellCls =
+    effectiveMode === 'light'
+      ? 'bg-white text-black border border-neutral-200'
+      : 'bg-neutral-950 text-white border border-white/10';
+
   const triggerCls =
-    '!bg-white !text-black dark:!bg-neutral-900 dark:!text-white ' +
-    'h-9 w-full rounded-md border border-input ' +
-    'placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring';
+    (effectiveMode === 'light'
+      ? '!bg-white !text-black border-neutral-200'
+      : '!bg-neutral-900 !text-white border-white/10') +
+    ' h-11 w-full rounded-md border ' +
+    // make Radix Select placeholder muted in both modes
+    ' [&_[data-placeholder]]:text-muted-foreground/80 ' +
+    ' focus:outline-none focus:ring-2 focus:ring-ring';
+
   const contentCls =
-    'z-[60] !bg-white !text-black dark:!bg-neutral-900 dark:!text-white ' +
-    'border border-border shadow-xl rounded-md';
+    (effectiveMode === 'light'
+      ? '!bg-white !text-black border-neutral-200'
+      : '!bg-neutral-900 !text-white border-white/10') +
+    ' z-[60] rounded-md border shadow-xl';
+
   const itemCls =
-    'cursor-default select-none px-3 py-2 text-sm outline-none ' +
-    'focus:bg-accent focus:text-accent-foreground data-[state=checked]:bg-accent';
+    (effectiveMode === 'light'
+      ? 'hover:bg-neutral-100'
+      : 'hover:bg-neutral-800') +
+    ' cursor-default select-none px-3 py-2 text-sm outline-none';
+
   const inputCls =
-    '!bg-white !text-black dark:!bg-neutral-900 dark:!text-white ' +
-    'h-9 w-full rounded-md border border-input px-3 ' +
-    'focus:outline-none focus:ring-2 focus:ring-ring';
-  
+    (effectiveMode === 'light'
+      ? '!bg-white !text-black border-neutral-200'
+      : '!bg-neutral-900 !text-white border-white/10') +
+    ' h-11 w-full rounded-md border px-3 placeholder:text-muted-foreground/80 ' +
+    ' focus:outline-none focus:ring-2 focus:ring-ring';
+
   function setOwnerParam(qs: URLSearchParams) {
     if (effectiveCompanyId) qs.set('company_id', effectiveCompanyId);
     else if (effectiveOrgId) qs.set('org_id', effectiveOrgId);
   }
 
-  /* ---------- Load services/resources (strictly scoped + client filter) ---------- */
+  /* ---------- Load services/resources (scoped; clamp to service_ids) ---------- */
   useEffect(() => {
     (async () => {
-      // If we can’t resolve *any* owner and there’s no explicit service filter, don’t fetch.
       if (!effectiveCompanyId && !effectiveOrgId && serviceIds.length === 0) {
         setServices([]);
         setResources([]);
@@ -123,7 +136,6 @@ export default function SchedulerRender(props: Props) {
       }
 
       const qs = new URLSearchParams();
-      // Pass the allow-list down to the API when present
       if (serviceIds.length) qs.set('service_ids', serviceIds.join(','));
       setOwnerParam(qs);
 
@@ -133,8 +145,6 @@ export default function SchedulerRender(props: Props) {
       ]);
 
       let svcRows: Service[] = Array.isArray(svcRes?.rows) ? svcRes.rows : [];
-
-      // Extra safety: even if the API returns “too much,” clamp to service_ids on the client.
       if (serviceIds.length) {
         const allow = new Set(serviceIds);
         svcRows = svcRows.filter(s => allow.has(s.id));
@@ -143,20 +153,11 @@ export default function SchedulerRender(props: Props) {
       setServices(svcRows);
       setResources(Array.isArray(resRes?.rows) ? resRes.rows : []);
 
-      // Reset default if it’s not part of the new set
       const hasDefault = svcRows.some(s => s.id === (serviceId ?? ''));
-      if (!hasDefault) {
-        setServiceId(svcRows[0]?.id);
-      }
+      if (!hasDefault) setServiceId(svcRows[0]?.id);
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [
-    JSON.stringify(serviceIds),
-    effectiveCompanyId,
-    effectiveOrgId,
-    // When company_id on the block changes we want a clean reload
-    (b as any).company_id,
-  ]);
+  }, [JSON.stringify(serviceIds), effectiveCompanyId, effectiveOrgId, (b as any).company_id]);
 
   /* ---------- Availability ---------- */
   useEffect(() => {
@@ -178,11 +179,7 @@ export default function SchedulerRender(props: Props) {
       .then(d => setSlots(Array.isArray(d?.slots) ? d.slots : []))
       .catch(() => setSlots([]))
       .finally(() => setLoading(false));
-  }, [
-    serviceId, date, resourceId,
-    b.timezone, b.slot_granularity_minutes, b.lead_time_minutes, b.show_resource_picker,
-    effectiveCompanyId, effectiveOrgId,
-  ]);
+  }, [serviceId, date, resourceId, b.timezone, b.slot_granularity_minutes, b.lead_time_minutes, b.show_resource_picker, effectiveCompanyId, effectiveOrgId]);
 
   const days = useMemo(
     () => Array.from({ length: Math.max(1, b.window_days) }, (_, i) => addDays(new Date(), i)),
@@ -225,12 +222,12 @@ export default function SchedulerRender(props: Props) {
   }
 
   return (
-    <div className="w-full rounded-2xl border p-6">
+    <div className={`w-full rounded-2xl p-6 ${shellCls}`}>
       <h3 className="text-2xl font-semibold">{b.title}</h3>
       {b.subtitle && <p className="text-muted-foreground">{b.subtitle}</p>}
 
-      <div className="mt-4 grid gap-4 md:grid-cols-2">
-        <div className="space-y-3">
+      <div className="mt-4 grid gap-6 md:grid-cols-2">
+        <div className="space-y-4">
           {/* Service */}
           <label className="block text-sm font-medium">Service</label>
           <Select value={serviceId ?? ''} onValueChange={setServiceId}>
@@ -246,7 +243,7 @@ export default function SchedulerRender(props: Props) {
             </SelectContent>
           </Select>
 
-          {/* Resource (optional picker) */}
+          {/* Resource (optional) */}
           {b.show_resource_picker && (
             <>
               <label className="block text-sm font-medium">Preferred Resource</label>
@@ -287,39 +284,33 @@ export default function SchedulerRender(props: Props) {
           {/* Contact info */}
           <div className="grid gap-2">
             <label className="text-sm font-medium">Your Name *</label>
-            <input
-              id="sched-name"
-              placeholder="Jane Doe"
-              className={inputCls + " placeholder:text-muted-foreground"}
-            />
+            <input id="sched-name" placeholder="Jane Doe" className={inputCls} />
             <div className="grid grid-cols-2 gap-2">
-              <input
-                id="sched-email"
-                placeholder="you@email.com"
-                className={inputCls + " placeholder:text-muted-foreground"}
-              />
-              <input
-                id="sched-phone"
-                placeholder="(555) 555-5555"
-                className={inputCls + " placeholder:text-muted-foreground"}
-              />
+              <input id="sched-email" placeholder="you@email.com" className={inputCls} />
+              <input id="sched-phone" placeholder="(555) 555-5555" className={inputCls} />
             </div>
           </div>
-          
         </div>
 
         {/* Slots */}
         <div>
           <div className="mb-2 text-sm font-medium">Available Times</div>
-          {loading && <div className="text-sm">Loading...</div>}
+          {loading && <div className="text-sm text-muted-foreground">Loading…</div>}
           {!loading && (!slots || slots.length === 0) && (
             <div className="text-sm text-muted-foreground">No times available for this day. Try another date.</div>
           )}
-          <div className="flex flex-wrap gap-2">
+          <div className="mt-2 flex flex-wrap gap-2">
             {slots?.map((s) => {
               const label = new Date(s.starts_at).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
               return (
-                <Button key={`${s.starts_at}-${s.resource_id}`} size="sm" onClick={() => book(s)}>
+                <Button
+                  key={`${s.starts_at}-${s.resource_id}`}
+                  size="sm"
+                  className={effectiveMode === 'light'
+                    ? 'bg-black text-white hover:bg-black/90'
+                    : 'bg-white text-black hover:bg-white/90'}
+                  onClick={() => book(s)}
+                >
                   {label}
                 </Button>
               );

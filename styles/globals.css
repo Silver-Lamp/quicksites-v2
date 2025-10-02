@@ -1,14 +1,17 @@
+/* globals.css */
 @import 'leaflet/dist/leaflet.css';
 @import './fonts.css';
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
+/* --------------------------- */
 /* Admin Tools: soften borders */
+/* --------------------------- */
 @layer utilities {
   /* Any Tailwind .border element */
   .soft-borders :where(.border) {
-    border-color: hsl(var(--border) / 0.28) !important; /* ~28% opacity */
+    border-color: hsl(var(--border) / 0.28) !important;
   }
 
   /* Dividers from divide-x / divide-y */
@@ -23,12 +26,10 @@
   }
 }
 
-
 /* ------------------------------------------------ */
-/* ✨ Google Fonts – Self-Hosted or Variable Support */
+/* ✨ Fonts                                          */
 /* ------------------------------------------------ */
 
-/* Inter Variable (demo only — replace with static if needed) */
 @font-face {
   font-family: 'Inter';
   font-style: normal;
@@ -51,77 +52,91 @@
   font-display: swap;
 }
 
-/* @font-face {
-  font-family: 'Fira Code';
-  font-style: normal;
-  font-weight: 400;
-  src: url('/fonts/FiraCode-Regular.woff2') format('woff2');
-  font-display: swap;
-}
-@font-face {
-  font-family: 'Fira Code';
-  font-weight: 700;
-  src: url('/fonts/FiraCode-Bold.woff2') format('woff2');
-  font-display: swap;
-}
-
-@font-face {
-  font-family: 'Pacifico';
-  font-style: normal;
-  font-weight: 400;
-  src: url('/fonts/Pacifico-Regular.woff2') format('woff2');
-  font-display: swap;
-} */
-
-/* Optional global default */
 body {
   font-family: 'Inter', system-ui, sans-serif;
+  -webkit-text-size-adjust: 100%;
 }
 
 /* ------------------------------------------------ */
-/* 🌈 Theme Variables */
+/* 🌈 Theme Variables (design tokens)               */
 /* ------------------------------------------------ */
 
 :root {
   --radius: 0.625rem;
-  --background: 255 100% 100%;
+
+  /* Page background (soft light neutral) */
+  --background: 210 20% 98%;         /* #F8FAFC */
   --foreground: 222.2 47.4% 11.2%;
+
+  /* Cards (float on background) */
+  --card: 0 0% 100%;
+  --card-foreground: 222.2 47.4% 11.2%;
+
+  /* Borders/inputs/rings */
   --border: 240 5.9% 90%;
   --input: 240 5.9% 90%;
   --ring: 240 4.9% 83.9%;
+
+  /* Brand */
   --primary: 262.1 83.3% 57.8%;
   --primary-foreground: 210 40% 98%;
+
+  /* Secondary/Accent */
+  --secondary: 240 4.8% 95.9%;
+  --secondary-foreground: 222.2 47.4% 11.2%;
+
+  --accent: 240 4.8% 95.9%;
+  --accent-foreground: 222.2 47.4% 11.2%;
+
+  --destructive: 0 84.2% 60.2%;
+
+  /* Placeholder / muted tokens */
+  --muted: 240 4.8% 95.9%;
+  --muted-foreground: 240 3.8% 46.1%;
 }
 
 .dark,
 [data-theme='dark'] {
-  /* --background: 222.2 47.4% 11.2%; */
-  /* --background: white; */
+  /* Dark surfaces */
   --background: 0 0% 6%;
   --foreground: 210 40% 98%;
+
+  --card: 0 0% 8%;
+  --card-foreground: 210 40% 98%;
+
+  --secondary: 240 3.7% 15.9%;
+  --secondary-foreground: 210 40% 98%;
+
+  --accent: 240 3.7% 15.9%;
+  --accent-foreground: 210 40% 98%;
+
+  --destructive: 0 62.8% 30.6%;
+
+  /* Placeholder / muted */
+  --muted: 240 3.7% 15.9%;
+  --muted-foreground: 240 5% 64.9%;
 }
 
 /* ------------------------------------------------ */
-/* 🔁 Animations */
+/* 🔁 Animations                                     */
 /* ------------------------------------------------ */
 
 @keyframes pulse-slow {
-  0%, 100% {
-    transform: scale(1);
-    opacity: 0.2;
-  }
-  50% {
-    transform: scale(1.05);
-    opacity: 0.3;
-  }
+  0%, 100% { transform: scale(1); opacity: 0.2; }
+  50% { transform: scale(1.05); opacity: 0.3; }
 }
-
 .animate-pulse-slow {
   animation: pulse-slow 10s ease-in-out infinite;
 }
 
+@keyframes fadeIn {
+  from { opacity: 0.3; transform: scale(0.98); }
+  to   { opacity: 1;   transform: scale(1); }
+}
+.animate-fadeIn { animation: fadeIn 0.6s ease-out; }
+
 /* ------------------------------------------------ */
-/* 🧩 UI Elements */
+/* 🧩 UI Elements                                    */
 /* ------------------------------------------------ */
 
 .emoji-marker {
@@ -135,14 +150,12 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: box-shadow 0.3s ease;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+  transition: box-shadow 0.3s ease;
 }
-
 .emoji-marker.glow {
   box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.8), 0 0 10px #fff;
 }
-
 .emoji-cluster {
   background: white;
   border: 2px solid #333;
@@ -155,38 +168,23 @@ body {
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
 }
 
-.block-hover {
-  position: relative;
-  border: 1px dashed transparent;
-  transition: border-color 0.2s ease;
-}
+.block-hover { position: relative; border: 1px dashed transparent; transition: border-color 0.2s ease; }
+.block-hover:hover { border-color: #9333ea; background-color: rgba(147, 51, 234, 0.05); }
+.block-selected { border: 2px solid #9333ea; box-shadow: 0 0 0 2px rgba(147, 51, 234, 0.3); }
 
-.block-hover:hover {
-  border-color: #9333ea; /* purple-600 */
-  background-color: rgba(147, 51, 234, 0.05);
-}
-
-.block-selected {
-  border: 2px solid #9333ea;
-  box-shadow: 0 0 0 2px rgba(147, 51, 234, 0.3);
-}
-
-.glow-card {
-  box-shadow: 0 0 16px rgba(255, 255, 255, 0.06);
-}
-.glow-card-purple {
-  box-shadow: 0 0 16px rgba(147, 51, 234, 0.2);
-}
+.glow-card { box-shadow: 0 0 16px rgba(255, 255, 255, 0.06); }
+.glow-card-purple { box-shadow: 0 0 16px rgba(147, 51, 234, 0.2); }
 
 /* ------------------------------------------------ */
-/* 🧩 Component Overrides */
+/* 🧩 Component Overrides                            */
 /* ------------------------------------------------ */
 
 @layer components {
   .radix-select-content {
-    @apply bg-background/80 backdrop-blur border border-border rounded-md shadow-xl text-white;
+    @apply bg-background/80 backdrop-blur border border-border rounded-md shadow-xl text-foreground;
   }
 }
+
 .ring-red-400 {
   box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.5);
   transition: box-shadow 0.3s ease-in-out;
@@ -196,110 +194,44 @@ body {
 }
 
 /* ------------------------------------------------ */
-/* 🛠 Fix Browser Console Warnings */
+/* 🛠 Browser Fixes                                   */
 /* ------------------------------------------------ */
 
-/* Replace invalid image-rendering values */
-img,
-canvas {
-  image-rendering: auto;
-  image-rendering: crisp-edges;
-  image-rendering: pixelated;
-}
+img, canvas { image-rendering: auto; image-rendering: crisp-edges; image-rendering: pixelated; }
+html { scroll-behavior: smooth; }
+.legacy-filter { opacity: 0.5; }
+.columns { column-gap: 1.5rem; }
+.animated-custom { transition: all 0.5s ease-out; }
 
-/* Replace invalid `behavior` usage with scroll-behavior */
-html {
-  scroll-behavior: smooth;
-}
+/* ------------------------------------------------ */
+/* 🧩 Layout Helpers                                 */
+/* ------------------------------------------------ */
 
-/* Remove use of old IE filters (progid) — use modern effects */
-.legacy-filter {
-  /* legacy: filter: progid:DXImageTransform.Microsoft.Alpha(opacity=50); */
-  opacity: 0.5;
-}
-
-/* Fix -webkit-text-size-adjust to valid values */
-body {
-  -webkit-text-size-adjust: 100%;
-}
-
-/* Replace deprecated -moz-column-gap with column-gap */
-.columns {
-  column-gap: 1.5rem; /* Adjust as needed */
-}
-
-/* Remove invalid `out` and `timeout` props */
-.animated-custom {
-  /* out: ease-out; ❌ */
-  /* timeout: 500ms; ❌ */
-  transition: all 0.5s ease-out;
-}
-
-@keyframes fadeIn {
-  from {
-    opacity: 0.3;
-    transform: scale(0.98);
-  }
-  to {
-    opacity: 1;
-    transform: scale(1);
-  }
-}
-
-.animate-fadeIn {
-  animation: fadeIn 0.6s ease-out;
-}
-
-/* When a modal is open, visually/interaction-wise hide the bottom toolbar */
-.qs-modal-open .qs-toolbar {
-  opacity: 0;
-  pointer-events: none;
-}
-
-/* Reserve space below the sticky header and stop rubber-band over-scroll */
-.qs-content-scroll{
-  height: calc(100vh - 48px);       /* your header min-height */
+.qs-modal-open .qs-toolbar { opacity: 0; pointer-events: none; }
+.qs-content-scroll {
+  height: calc(100vh - 48px);
   overflow-y: auto;
-  overscroll-behavior-y: contain;   /* no “scroll past top” */
+  overscroll-behavior-y: contain;
   -webkit-overflow-scrolling: touch;
 }
-
-/* Nice-to-have: stable layout when the sidebar animates */
 :root { --qs-sidebar-w: 288px; }
-
-/* Optional: when you toggle “fullscreen” in the editor (class added elsewhere) */
 .qs-fullscreen .qs-content-scroll{ height: 100vh; }
 
 .qs-block { outline: 1px solid transparent; transition: outline-color .1s ease; }
 .qs-block:hover { outline-color: rgba(147, 197, 253, .6); }
 
-/* Hide ALL block borders/chrome unless the preview host explicitly says editor=1 */
+/* Hide block chrome unless editor=1 */
 #site-renderer-page:not([data-editor-chrome="1"]) .qs-block {
-  border: 0 !important;
-  box-shadow: none !important;
-  outline: none !important;
+  border: 0 !important; box-shadow: none !important; outline: none !important;
 }
-
-/* Also kill any nested rings/borders some shells might add in non-editor view */
 #site-renderer-page:not([data-editor-chrome="1"]) .qs-block * {
-  outline: none !important;
-  box-shadow: none !important;
+  outline: none !important; box-shadow: none !important;
 }
+#site-renderer-page:not([data-editor-chrome="1"]) .qs-add-btn { display: none !important; }
 
-/* Never show the big + unless editor=1 (extra safety) */
-#site-renderer-page:not([data-editor-chrome="1"]) .qs-add-btn {
-  display: none !important;
-}
-
-/* Keep layout width constant whether the scrollbar is present or not */
 html { scrollbar-gutter: stable both-edges; }
+@supports not (scrollbar-gutter: stable) { html { overflow-y: scroll; } }
 
-/* Fallback for engines that don't support scrollbar-gutter */
-@supports not (scrollbar-gutter: stable) {
-  html { overflow-y: scroll; }
-}
-
-/* Never allow a viewport-width overflow to push the page */
 html, body, #__next { width: 100%; max-width: 100%; }
 
 .qs-canvas [data-block-chrome],

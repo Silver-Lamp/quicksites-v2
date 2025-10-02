@@ -1,67 +1,87 @@
 // app/layout.tsx
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
+// Note: preferredRegion is only honored by the Edge runtime; harmless on Node.
 export const preferredRegion = 'iad1';
 
 import '@/styles/globals.css';
 import '@/styles/qs-typography.css';
 
+import * as React from 'react';
+import type { Metadata, Viewport } from 'next';
 import type { Database } from '@/types/supabase';
+
 import { cookies } from 'next/headers';
 import { createServerClient } from '@supabase/ssr';
 import { Providers } from './providers';
 
 import MagicLinkBridge from '@/components/auth/MagicLinkBridge';
 import RouteChangeOverlayClient from '@/components/ui/RouteChangeOverlayClient';
-import { resolveOrg } from '@/lib/org/resolveOrg';
 import CartEventsWire from '@/components/cart/cart-events-wire';
-import CartFab from '@/components/cart/cart-fab'; // ← client component, safe to import in server layout
+import CartFab from '@/components/cart/cart-fab';
+import { resolveOrg } from '@/lib/org/resolveOrg';
 
-import * as React from 'react';
+/* ---------------- Metadata / Viewport ---------------- */
 
-export const metadata = { /* …your existing metadata… */ };
+export const viewport: Viewport = {
+  themeColor: [
+    { media: '(prefers-color-scheme: light)', color: '#F8FAFC' }, // matches --background in light
+    { media: '(prefers-color-scheme: dark)', color: '#0a0a0a' },  // near-black dark bg
+  ],
+};
+
+export async function generateMetadata(): Promise<Metadata> {
+  const org = await resolveOrg();
+  const title = `${org?.name ?? 'QuickSites'} | One-Click Local Websites`;
+  return {
+    title,
+    icons: org?.favicon_url ? { icon: [{ url: org.favicon_url }] } : undefined,
+    // You can expand here with openGraph/twitter as needed.
+  };
+}
+
+/* ---------------- Root Layout ---------------- */
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
-  // Resolve current organization (supports dev override via qs_org_slug)
+  // Resolve org for white-labeling and Providers
   const org = await resolveOrg();
 
-  // Get Supabase session (server-side)
-  const store = await cookies();
-  const supa = createServerClient<Database>(
+  // Server-side Supabase session (read-only; no cookie mutations here)
+  const jar = await cookies();
+  const supabase = createServerClient<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookieEncoding: 'base64url',
       cookies: {
-        get: (name) => store.get(name)?.value,
-        set: () => {},
-        remove: () => {},
+        get: (name) => jar.get(name)?.value,
+        set: () => undefined,
+        remove: () => undefined,
       },
     }
   );
-  const { data: { session } } = await supa.auth.getSession(); // ← bracket fix
+
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
 
   return (
-    <html lang="en" suppressHydrationWarning className="scrollbar-stable">
+    <html lang="en" suppressHydrationWarning>
       <head>
-        <title>{`${org.name} | One-Click Local Websites`}</title>
-        <link rel="icon" href={org.favicon_url ?? '/favicon.ico'} />
+        {/* Allow both color schemes; components can opt into light-only when needed */}
+        <meta name="color-scheme" content="light dark" />
       </head>
-      <body className="bg-background text-foreground min-h-screen">
+      <body className="min-h-screen bg-background text-foreground antialiased selection:bg-primary/10">
         {/* Pages Router navigations (anti-flash timing built-in) */}
         <RouteChangeOverlayClient showDelayMs={120} minVisibleMs={350} />
 
+        {/* Bridges / global clients */}
         <MagicLinkBridge />
 
-        {/* Pass org into Providers for white-label branding */}
+        {/* App providers (theme, session, org, etc.) */}
         <Providers initialSession={session} org={org}>
-          {/* Cart event bridge -> pushes qs:cart:add into Zustand */}
           <CartEventsWire />
-
-          {/* App content */}
           {children}
-
-          {/* Mobile floating cart button (client-only) */}
           <CartFab />
         </Providers>
       </body>

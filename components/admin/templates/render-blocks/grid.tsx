@@ -1,17 +1,18 @@
+// components/admin/templates/render-blocks/grid.tsx
 'use client';
 
-import type { Block } from '@/types/blocks';
-import { useState } from 'react';
+import * as React from 'react';
+import type { Block, BlockWithId } from '@/types/blocks';
+import type { Template } from '@/types/template';
+
 import { normalizeBlock } from '@/lib/utils/normalizeBlock';
 import SortableGridBlock from '../sortable-grid-block';
 import RenderBlock from '../render-block';
 import BlockSidebar from '../block-sidebar';
 import PresetSelectorModal from '../block-presets/PresetSelectorModal';
-import type { BlockWithId } from '@/types/blocks';
-import type { Template } from '@/types/template';
 
 function updateGridBlock(block: Block, items: BlockWithId[]): Block {
-  const grid = block as unknown as Block;
+  const grid = block as Block;
   return {
     ...grid,
     content: {
@@ -27,10 +28,13 @@ type Props = {
   handleNestedBlockUpdate?: (updated: Block) => void;
   parentBlock?: Block;
   compact?: boolean;
+  /** Desired column count in view mode (clamped to 1..4) */
   columns?: number;
   gridLabel?: string;
   gridLabelStatic?: string;
   template: Template;
+  /** Forward site/block color mode to children (overrides template inference) */
+  colorMode?: 'light' | 'dark';
 };
 
 export default function GridRender({
@@ -43,44 +47,81 @@ export default function GridRender({
   gridLabel = 'Grid',
   gridLabelStatic = 'Grid',
   template,
+  colorMode,
 }: Props) {
-  const final = contentProp as any || block?.content || { items: [] };
-  const [editingBlockIndex, setEditingBlockIndex] = useState<number | null>(null);
-  const [showPresetModal, setShowPresetModal] = useState(false);
+  const final = (contentProp as any) || block?.content || { items: [] };
 
-  const normalizedItems = final?.items?.map(normalizeBlock) || [];
+  // Normalize once per render (items can be heterogeneous block types)
+  const normalizedItems = React.useMemo(
+    () => (final?.items?.map(normalizeBlock) as BlockWithId[]) || [],
+    // stringify is resilient to shallow changes, but if you already memoize upstream, you can swap this to [final?.items]
+    [JSON.stringify(final?.items ?? [])]
+  );
+
+  const [editingBlockIndex, setEditingBlockIndex] = React.useState<number | null>(null);
+  const [showPresetModal, setShowPresetModal] = React.useState(false);
+
+  const clampedCols = React.useMemo(() => {
+    const n = Number.isFinite(columns as any) ? Number(columns) : 1;
+    return Math.min(4, Math.max(1, n));
+  }, [columns]);
+
+  // Tailwind JIT-safe mapping for grid columns (so classes are statically discoverable)
+  const colsClass = React.useMemo(() => {
+    switch (clampedCols) {
+      case 1:
+        return 'grid-cols-1';
+      case 2:
+        return 'grid-cols-1 sm:grid-cols-2';
+      case 3:
+        return 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3';
+      default:
+        return 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4';
+    }
+  }, [clampedCols]);
 
   const handleSaveBlock = (updatedBlock: Block) => {
     if (editingBlockIndex === null || !parentBlock) return;
     const items = [...normalizedItems];
-    items[editingBlockIndex] = normalizeBlock(updatedBlock);
+    items[editingBlockIndex] = normalizeBlock(updatedBlock) as BlockWithId;
     handleNestedBlockUpdate?.(updateGridBlock(parentBlock, items));
   };
 
-  const handleInsertBlock = (block: BlockWithId) => {
+  const handleInsertBlock = (newBlock: BlockWithId) => {
     if (!parentBlock) return;
-    const items = [...normalizedItems, block];
+    const items = [...normalizedItems, newBlock];
     handleNestedBlockUpdate?.(updateGridBlock(parentBlock, items));
+    setShowPresetModal(false);
+    setEditingBlockIndex(items.length - 1);
   };
 
   if (compact) {
     return (
-      <div className="grid gap-2 grid-cols-2 text-sm border rounded p-2">
-        {normalizedItems.slice(0, 2).map((b: Block, i: number) => (
-          <RenderBlock key={i} block={b} compact showDebug={false} template={template} />
+      <div className="grid grid-cols-2 gap-2 text-sm border border-border rounded p-2">
+        {normalizedItems.slice(0, 2).map((b, i) => (
+          <RenderBlock
+            key={b._id || b.id || `${i}-${(b as any).type}`}
+            block={b}
+            compact
+            showDebug={false}
+            template={template}
+            colorMode={colorMode}
+          />
         ))}
         {normalizedItems.length === 0 && (
-          <div className="text-gray-400 italic col-span-2">No blocks in grid</div>
+          <div className="col-span-2 italic text-muted-foreground">No blocks in grid</div>
         )}
       </div>
     );
   }
 
   return (
-    <div className="mb-4 relative">
-      <div className="flex justify-between items-center mb-2">
-        <span className="text-xs italic text-gray-600 dark:text-gray-400">{gridLabel}</span>
-        <span className="text-xs text-gray-600 dark:text-gray-400">
+    <div className="relative mb-4">
+      <div className="mb-2 flex items-center justify-between">
+        <span className="text-xs italic text-muted-foreground" aria-label="Grid label">
+          {gridLabel || gridLabelStatic}
+        </span>
+        <span className="text-xs text-muted-foreground">
           {normalizedItems.length} item{normalizedItems.length !== 1 ? 's' : ''}
         </span>
       </div>
@@ -88,18 +129,23 @@ export default function GridRender({
       {handleNestedBlockUpdate ? (
         <>
           <SortableGridBlock
-            columns={columns}
+            columns={clampedCols}
             items={normalizedItems}
             onChange={(updated) =>
-              handleNestedBlockUpdate?.(
-                updateGridBlock(parentBlock!, updated as BlockWithId[])
-              )
+              handleNestedBlockUpdate?.(updateGridBlock(parentBlock!, updated as BlockWithId[]))
             }
-            onInsert={(index) => setEditingBlockIndex(index)}
+            onInsert={(index) => {
+              // Open presets to choose a block to insert; remember target index
+              setEditingBlockIndex(index);
+              setShowPresetModal(true);
+            }}
             onDelete={(index) => {
               const items = [...normalizedItems];
               items.splice(index, 1);
               handleNestedBlockUpdate?.(updateGridBlock(parentBlock!, items));
+              if (editingBlockIndex != null && index === editingBlockIndex) {
+                setEditingBlockIndex(null);
+              }
             }}
             onEdit={(index) => setEditingBlockIndex(index)}
             template={template}
@@ -108,13 +154,22 @@ export default function GridRender({
           <div className="mt-6">
             <button
               onClick={() => setShowPresetModal(true)}
-              className="px-4 py-2 text-sm bg-blue-600 text-white rounded shadow hover:bg-blue-700"
+              className="rounded bg-primary px-4 py-2 text-sm text-primary-foreground shadow hover:opacity-90"
             >
               ➕ Add Block from Presets
             </button>
           </div>
 
-          <PresetSelectorModal onSelect={handleInsertBlock} onHover={() => {}} template={template} />
+          {/* Modal is tolerant of extra props if it doesn't support controlled mode */}
+          <PresetSelectorModal
+            // @ts-expect-error allow controlled props if supported
+            open={showPresetModal}
+            // // @ts-expect-error allow controlled props if supported
+            onOpenChange={setShowPresetModal}
+            onSelect={handleInsertBlock}
+            onHover={() => {}}
+            template={template}
+          />
 
           <BlockSidebar
             onOpen={editingBlockIndex !== null}
@@ -127,14 +182,19 @@ export default function GridRender({
             onUndo={() => {}}
             onViewDiff={() => {}}
             undoAvailable={false}
-            template={template as unknown as Template}
+            template={template}
           />
         </>
       ) : (
-        <div className={`grid grid-cols-${columns} gap-4`}>
-          {normalizedItems.map((b: Block, i: number) => (
-            <div key={b._id || i}>
-              <RenderBlock block={b} showDebug={false} template={template} />
+        <div className={`grid ${colsClass} gap-4`}>
+          {normalizedItems.map((b, i) => (
+            <div key={b._id || b.id || `${i}-${(b as any).type}`}>
+              <RenderBlock
+                block={b}
+                showDebug={false}
+                template={template}
+                colorMode={colorMode}
+              />
             </div>
           ))}
         </div>

@@ -67,15 +67,16 @@ function getClientRenderer(type: BlockType): React.ComponentType<any> {
   return fallbackRenderer(type);
 }
 
-/** Normalize so renderers always get text immediately.
- *  Merge content + props (PROPS win), then apply any override. */
+/** Merge content + props (props override content), then apply override last (wins). */
 function getSafeContent(block: any, override: Record<string, any>) {
-  const c = block && typeof block === 'object' && typeof (block as any).content === 'object'
-    ? (block as any).content
-    : {};
-  const p = block && typeof block === 'object' && typeof (block as any).props === 'object'
-    ? (block as any).props
-    : {};
+  const c =
+    block && typeof block === 'object' && typeof (block as any).content === 'object'
+      ? (block as any).content
+      : {};
+  const p =
+    block && typeof block === 'object' && typeof (block as any).props === 'object'
+      ? (block as any).props
+      : {};
   return { ...c, ...p, ...override };
 }
 
@@ -90,12 +91,12 @@ function heroTextSig(block: any, safeContent: any) {
 }
 
 /** Build a small signature for generic text so we remount when it changes. */
-function textSig(block: any, safeContent: any) {
-  const p = (block?.props ?? {}) as any;
-  const c = (safeContent ?? block?.content ?? {}) as any;
-  const v = c.text ?? c.html ?? c.value ?? p.text ?? p.html ?? p.value ?? '';
-  const s = typeof v === 'string' ? v : JSON.stringify(v ?? '');
-  return s.slice(0, 256);
+function textSigFromContent(payload: any) {
+  try {
+    return JSON.stringify(payload ?? {}).slice(0, 400);
+  } catch {
+    return String(payload ?? '');
+  }
 }
 
 /** Local error boundary to prevent a bad block from blanking the page. */
@@ -152,7 +153,7 @@ export default function RenderBlock({
   compact = false,
   previewOnly = false,
   showDebug = false,
-  colorMode, // NOTE: no default here; we compute from template if undefined
+  colorMode, // NOTE: if undefined we compute from template
   device,
   onEdit,
   onDelete,
@@ -214,24 +215,11 @@ export default function RenderBlock({
   const safeContent = getSafeContent(block, override);
 
   // Ensure children that read either `content` OR `props` see the latest fields
-  const blockForChild = React.useMemo(
-    () => {
-      const original: any = block || {};
-      const mergedProps = { ...(original.props ?? {}), ...safeContent };
-      return { ...original, content: safeContent, props: mergedProps };
-    },
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [safeContent, (block as any).type, (block as any)._id, (block as any).id]
-  );
-
-  /** Build a small signature for generic text so we remount when it changes. */
-  function textSigFromContent(payload: any) {
-    try {
-      return JSON.stringify(payload ?? {}).slice(0, 400);
-    } catch {
-      return String(payload ?? '');
-    }
-  }
+  const blockForChild = React.useMemo(() => {
+    const original: any = block || {};
+    const mergedProps = { ...(original.props ?? {}), ...safeContent };
+    return { ...original, content: safeContent, props: mergedProps };
+  }, [safeContent, (block as any).type, (block as any)._id, (block as any).id]);
 
   // 🔑 compute a render key that changes when hero/text changes (forces remount on autosave)
   const componentKey = React.useMemo(() => {
@@ -243,8 +231,7 @@ export default function RenderBlock({
       return `${blockId}|text|${textSigFromContent(safeContent)}`;
     }
     return `${blockId}|${t}`;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [blockId, (block as any).type, textSigFromContent(safeContent)]);
+  }, [blockId, (block as any).type, safeContent, block]);
 
   // hydration + ref ready
   const [hydrated, setHydrated] = React.useState(false);
@@ -276,39 +263,42 @@ export default function RenderBlock({
     const first = (...vals: any[]) =>
       vals.find((v) => v !== undefined && v !== null && String(v).trim() !== '');
 
-    const email = first(
-      t.contact_email,
-      t.contactEmail,
-      get(t, 'meta.contact_email'),
-      get(t, 'meta.contact.email'),
-      get(t, 'data.meta.contact_email'),
-      get(t, 'data.meta.contact.email'),   // ← your sites row stores it here
-      get(t, 'data.contact.email'),
-      get(t, 'site.data.meta.contact.email'),
-      get(t, 'identity.contact_email'),
-      get(t, 'identity.email')
-    ) || '';
+    const email =
+      first(
+        t.contact_email,
+        t.contactEmail,
+        get(t, 'meta.contact_email'),
+        get(t, 'meta.contact.email'),
+        get(t, 'data.meta.contact_email'),
+        get(t, 'data.meta.contact.email'),
+        get(t, 'data.contact.email'),
+        get(t, 'site.data.meta.contact.email'),
+        get(t, 'identity.contact_email'),
+        get(t, 'identity.email')
+      ) || '';
 
-    const phoneRaw = first(
-      t.phone,
-      t.contact_phone,
-      t.contactPhone,
-      get(t, 'meta.contact_phone'),
-      get(t, 'data.meta.contact_phone'),
-      get(t, 'data.meta.contact.phone'),
-      get(t, 'data.contact.phone'),
-      get(t, 'site.data.meta.contact.phone')
-    ) || '';
+    const phoneRaw =
+      first(
+        t.phone,
+        t.contact_phone,
+        t.contactPhone,
+        get(t, 'meta.contact_phone'),
+        get(t, 'data.meta.contact_phone'),
+        get(t, 'data.meta.contact.phone'),
+        get(t, 'data.contact.phone'),
+        get(t, 'site.data.meta.contact.phone')
+      ) || '';
 
-    const business = first(
-      t.business_name,
-      t.businessName,
-      get(t, 'meta.business_name'),
-      get(t, 'data.meta.business'),
-      get(t, 'data.meta.business_name'),
-      get(t, 'site.data.meta.business'),
-      get(t, 'identity.business_name')
-    ) || '';
+    const business =
+      first(
+        t.business_name,
+        t.businessName,
+        get(t, 'meta.business_name'),
+        get(t, 'data.meta.business'),
+        get(t, 'data.meta.business_name'),
+        get(t, 'site.data.meta.business'),
+        get(t, 'identity.business_name')
+      ) || '';
 
     const services =
       get(t, 'services') ??
@@ -326,7 +316,6 @@ export default function RenderBlock({
         : [],
     };
   }, [template]);
-
 
   const commonProps = {
     block: blockForChild,
@@ -348,9 +337,9 @@ export default function RenderBlock({
   // Hover border per mode (no global `dark:` variant)
   const hoverBorder =
     isEmbedded
-      ? (computedMode === 'dark'
-          ? 'border border-transparent group-hover:border-neutral-700'
-          : 'border border-transparent group-hover:border-neutral-200')
+      ? computedMode === 'dark'
+        ? 'border border-transparent group-hover:border-neutral-700'
+        : 'border border-transparent group-hover:border-neutral-200'
       : '';
 
   // wrapper — inherits surface from parent; no global dark class
@@ -359,6 +348,7 @@ export default function RenderBlock({
     'data-block-id': blockId,
     'data-block-type': (block as any).type,
     'data-block-path': blockPath ?? undefined,
+    'data-color-mode': computedMode, // <-- expose for CSS hooks/testing
     className: [
       'qs-block',
       'relative group w-full rounded-none transition-colors',
@@ -377,7 +367,8 @@ ID: ${blockId || 'n/a'}`}
   ) : null;
 
   const Component = getClientRenderer((block as any).type);
-  const showControlsBar = isEmbedded && mode === 'editor' && !previewOnly && !disableInteraction;
+  const showControlsBar =
+    isEmbedded && mode === 'editor' && !previewOnly && !disableInteraction;
   const runtimeProps = hydrated && refReady ? { scrollRef: blockRef } : {};
 
   const [mounted, setMounted] = React.useState(false);
@@ -388,7 +379,8 @@ ID: ${blockId || 'n/a'}`}
   }, [hydrated]);
 
   // Toolbar chrome colors per mode (no global dark variant)
-  const toolbarBg = computedMode === 'light' ? 'bg-white/70' : 'bg-neutral-900/60';
+  const toolbarBg =
+    computedMode === 'light' ? 'bg-white/70' : 'bg-neutral-900/60';
   const editBtn =
     computedMode === 'light'
       ? 'bg-white/95 text-neutral-900 border border-neutral-300 shadow-sm hover:bg-white'
@@ -398,21 +390,19 @@ ID: ${blockId || 'n/a'}`}
   const proseVars =
     computedMode === 'dark'
       ? ({
-        // dark mode (unchanged)
-        ['--tw-prose-body' as any]: 'rgb(229 231 235)',  // zinc-200
-        ['--tw-prose-headings' as any]: 'rgb(255 255 255)',
-        ['--tw-prose-links' as any]: 'rgb(147 197 253)',
-        ['--tw-prose-bold' as any]: 'rgb(255 255 255)',
-        ['--tw-prose-quotes' as any]: 'rgb(229 231 235)',
-      } as React.CSSProperties)
-    : ({
-        // light mode (make darker here)
-        ['--tw-prose-body' as any]: 'rgb(9 9 11)',        // zinc-950  ← darker
-        ['--tw-prose-headings' as any]: 'rgb(17 24 39)',  // slate-900
-        ['--tw-prose-links' as any]: 'rgb(29 78 216)',    // blue-700 (a bit deeper)
-        ['--tw-prose-bold' as any]: 'rgb(17 24 39)',
-        ['--tw-prose-quotes' as any]: 'rgb(9 9 11)',
-      } as React.CSSProperties);
+          ['--tw-prose-body' as any]: 'rgb(229 231 235)',  // zinc-200
+          ['--tw-prose-headings' as any]: 'rgb(255 255 255)',
+          ['--tw-prose-links' as any]: 'rgb(147 197 253)',
+          ['--tw-prose-bold' as any]: 'rgb(255 255 255)',
+          ['--tw-prose-quotes' as any]: 'rgb(229 231 235)',
+        } as React.CSSProperties)
+      : ({
+          ['--tw-prose-body' as any]: 'rgb(9 9 11)',        // zinc-950
+          ['--tw-prose-headings' as any]: 'rgb(17 24 39)',  // slate-900
+          ['--tw-prose-links' as any]: 'rgb(29 78 216)',    // blue-700
+          ['--tw-prose-bold' as any]: 'rgb(17 24 39)',
+          ['--tw-prose-quotes' as any]: 'rgb(9 9 11)',
+        } as React.CSSProperties);
 
   function resolveContainerClass(block: any) {
     const type = String(block?.type || '');
@@ -425,15 +415,25 @@ ID: ${blockId || 'n/a'}`}
 
     // Common flags that should force full-bleed
     const full =
-      props.fullWidth ?? props.full_bleed ?? props.full ??
-      content.fullWidth ?? content.full_bleed ?? content.full ?? false;
+      props.fullWidth ??
+      props.full_bleed ??
+      props.full ??
+      content.fullWidth ??
+      content.full_bleed ??
+      content.full ??
+      false;
 
     if (full === true) return 'w-full';
 
     // Optional presets: 'narrow' | 'default' | 'wide' | 'full'
     const preset =
-      props.container ?? props.width ?? props.layout ??
-      content.container ?? content.width ?? content.layout ?? 'default';
+      props.container ??
+      props.width ??
+      props.layout ??
+      content.container ??
+      content.width ??
+      content.layout ??
+      'default';
 
     if (preset === 'full' || preset === 'full-bleed') return 'w-full';
     if (preset === 'narrow') return 'mx-auto w-full max-w-3xl px-4 sm:px-6';
@@ -456,6 +456,8 @@ ID: ${blockId || 'n/a'}`}
             'flex items-center justify-between px-2 py-1 rounded-t-none',
             toolbarBg,
           ].join(' ')}
+          role="toolbar"
+          aria-label="Block toolbar"
         >
           <div className="flex items-center gap-2 min-w-0">
             <span
@@ -467,7 +469,9 @@ ID: ${blockId || 'n/a'}`}
             >
               <GripVertical className="w-4 h-4 opacity-80" />
             </span>
-            <span className="text-xs font-medium truncate opacity-90">{(block as any).type}</span>
+            <span className="text-xs font-medium truncate opacity-90">
+              {(block as any).type}
+            </span>
           </div>
 
           <div className="flex items-center gap-1">
@@ -481,7 +485,10 @@ ID: ${blockId || 'n/a'}`}
               onClick={(e) => {
                 e.stopPropagation();
                 onEdit?.(blockForChild as any);
-                if (!onEdit) window.dispatchEvent(new CustomEvent('qs:block:edit', { detail: { block: blockForChild } }));
+                if (!onEdit)
+                  window.dispatchEvent(
+                    new CustomEvent('qs:block:edit', { detail: { block: blockForChild } })
+                  );
               }}
               aria-label="Edit block"
               title="Edit"
@@ -492,11 +499,14 @@ ID: ${blockId || 'n/a'}`}
             <button
               data-no-edit
               type="button"
-              className="inline-flex items-center justify-center h-7 w-7 rounded-md transition"
+              className="inline-flex items-center justify-center h-7 w-7 rounded-md transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-500/60"
               onClick={(e) => {
                 e.stopPropagation();
                 onDelete?.(blockForChild as any);
-                if (!onDelete) window.dispatchEvent(new CustomEvent('qs:block:delete', { detail: { block: blockForChild } }));
+                if (!onDelete)
+                  window.dispatchEvent(
+                    new CustomEvent('qs:block:delete', { detail: { block: blockForChild } })
+                  );
               }}
               aria-label="Delete block"
               title="Delete"

@@ -1,7 +1,7 @@
 // components/admin/block-adder-grouped.tsx
 'use client';
 
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import { blockMeta } from '@/admin/lib/zod/blockSchema';
 import type { Block } from '@/types/blocks';
 import { createDefaultBlock } from '@/lib/createDefaultBlock';
@@ -107,6 +107,7 @@ export default function BlockAdderGrouped({
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState('');
   const [showMore, setShowMore] = useState(!showOnlyQuickPicks);
+  const modalRef = useRef<HTMLDivElement | null>(null);
 
   const initialCollapsed = startCollapsed
     ? Object.fromEntries(Object.keys(blockGroups).map((k) => [k, true]))
@@ -114,14 +115,25 @@ export default function BlockAdderGrouped({
 
   const [collapsedGroups, setCollapsedGroups] = useState<Record<string, boolean>>(initialCollapsed);
 
-  // Close modal with Esc (only relevant when not inline)
+  const close = () => {
+    setOpen(false);
+    // Notify parent that the modal closed
+    try { onClose(); } catch {}
+  };
+
+  // ESC key closes (only when modal is open and not inline)
   useEffect(() => {
-    if (!inline) {
-      const onKeyDown = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
-      document.addEventListener('keydown', onKeyDown);
-      return () => document.removeEventListener('keydown', onKeyDown);
-    }
-  }, [inline]);
+    if (inline || !open) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.stopPropagation();
+        e.preventDefault();
+        close();
+      }
+    };
+    document.addEventListener('keydown', onKeyDown);
+    return () => document.removeEventListener('keydown', onKeyDown);
+  }, [inline, open]);
 
   const blocked = new Set(
     existingBlocks.filter((b) => disallowDuplicates.includes(b.type)).map((b) => b.type)
@@ -140,7 +152,6 @@ export default function BlockAdderGrouped({
         if (!searchActive) return true;
         const label = (blockMeta[type as keyof typeof blockMeta]?.label || '').toLowerCase();
         const t = String(type).toLowerCase();
-        // Match label/type; also surface AI-enabled if user searches "ai"
         return label.includes(q) || t.includes(q) || (wantsAi && isAiType(type));
       });
 
@@ -160,8 +171,6 @@ export default function BlockAdderGrouped({
   useEffect(() => {
     if (searchActive) setShowMore(true);
   }, [searchActive]);
-
-  const close = () => setOpen(false);
 
   const QuickPicks = (
     <div className="p-4">
@@ -212,7 +221,6 @@ export default function BlockAdderGrouped({
       <div className="px-4 pb-4">
         <div className="space-y-6 max-h-[60vh] overflow-y-auto pr-2">
           {groups.map(({ key, label, types, totalCount, matchedCount }) => {
-            // While searching: auto-open groups that have matches; collapse groups with 0 matches
             const collapsed = searchActive ? matchedCount === 0 : (collapsedGroups[key] ?? false);
             const displayCount = searchActive ? matchedCount : totalCount;
 
@@ -222,7 +230,7 @@ export default function BlockAdderGrouped({
                   role={searchActive ? 'region' : 'button'}
                   tabIndex={searchActive ? -1 : 0}
                   onClick={() => {
-                    if (searchActive) return; // disable manual toggle during active search
+                    if (searchActive) return;
                     const next = { ...collapsedGroups, [key]: !collapsedGroups[key] };
                     setCollapsedGroups(next); saveCollapsed(next);
                   }}
@@ -363,27 +371,56 @@ export default function BlockAdderGrouped({
       </div>
 
       {open && (
-        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-neutral-900 rounded-lg shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto border border-black/10 dark:border-white/10">
+        <div
+          className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4"
+          onMouseDown={(e) => {
+            // Close on backdrop click
+            if (e.target === e.currentTarget) close();
+          }}
+        >
+          <div
+            ref={modalRef}
+            className="bg-white dark:bg-neutral-900 rounded-lg shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden border border-black/10 dark:border-white/10"
+            // Prevent backdrop-close when clicking inside
+            onMouseDown={(e) => e.stopPropagation()}
+          >
             <div className="p-4 border-b border-gray-200 dark:border-neutral-700 flex justify-between items-center">
               <h2 className="text-lg font-semibold text-gray-800 dark:text-white">{label}</h2>
-              <button onClick={close} className="text-sm text-gray-500 hover:text-red-500 dark:text-gray-400">✕</button>
+              <button
+                onClick={close}
+                aria-label="Close"
+                className="text-sm text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white"
+              >
+                ✕
+              </button>
             </div>
 
-            {QuickPicks}
+            <div className="overflow-y-auto">
+              {QuickPicks}
 
-            {!showMore ? (
-              <div className="px-4 pb-4">
-                <button
-                  className="w-full rounded-md px-3 py-2 text-sm bg-white/10 hover:bg-white/20 text-white"
-                  onClick={() => setShowMore(true)}
-                >
-                  More block types…
-                </button>
-              </div>
-            ) : null}
+              {!showMore ? (
+                <div className="px-4 pb-4">
+                  <button
+                    className="w-full rounded-md px-3 py-2 text-sm bg-white/10 hover:bg-white/20 text-white"
+                    onClick={() => setShowMore(true)}
+                  >
+                    More block types…
+                  </button>
+                </div>
+              ) : null}
 
-            {showMore && MoreList}
+              {showMore && MoreList}
+            </div>
+
+            {/* Footer with Cancel button */}
+            <div className="p-3 border-t border-gray-200 dark:border-neutral-700 flex justify-end bg-gray-50/60 dark:bg-neutral-900/60">
+              <button
+                onClick={close}
+                className="px-3 py-2 text-sm rounded-md border border-gray-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 hover:bg-gray-100 dark:hover:bg-neutral-700 text-gray-800 dark:text-gray-100"
+              >
+                Cancel
+              </button>
+            </div>
           </div>
         </div>
       )}

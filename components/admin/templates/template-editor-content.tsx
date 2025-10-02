@@ -7,7 +7,6 @@ import {
   useState,
   type Dispatch,
   type SetStateAction,
-  useRef,
   useCallback,
 } from 'react';
 import dynamic from 'next/dynamic';
@@ -30,6 +29,8 @@ import TemplateTruthTracker from '@/components/admin/templates/truth/TemplateTru
 
 import NewTemplateWelcome from '@/components/admin/templates/NewTemplateWelcome';
 import CollapsiblePanel from '@/components/ui/collapsible-panel';
+import ModalShell from '@/components/ui/modal-shell';
+import DrawerShell from '@/components/ui/drawer-shell';
 import type {
   InfraState,
   SnapshotInfo,
@@ -37,25 +38,7 @@ import type {
   VersionTagInfo,
 } from '@/components/admin/templates/truth/types';
 
-import {
-  // (kept imports; not strictly required with the new set/emit path)
-  insertBlockEmit,
-  removeBlockEmit,
-  replaceBlockEmit,
-  moveBlockEmit,
-} from '@/components/admin/templates/utils/blocks-patch';
-
 import { X } from 'lucide-react';
-
-const SidebarSettings = dynamic(
-  () => import('@/components/admin/template-settings-panel/sidebar-settings'),
-  { ssr: false }
-);
-
-type TemplateDataWithChrome = TemplateData & {
-  headerBlock?: Block | null;
-  footerBlock?: Block | null;
-};
 
 /* ---------- helpers ---------- */
 export function getTemplatePages(t: Template): any[] {
@@ -142,6 +125,11 @@ type Props = {
   onChange: (patch: Partial<Template>) => void;
 };
 
+const SidebarSettings = dynamic(
+  () => import('@/components/admin/template-settings-panel/sidebar-settings'),
+  { ssr: false }
+);
+
 export default function EditorContent({
   template,
   rawJson,
@@ -165,70 +153,16 @@ export default function EditorContent({
   );
 
   const [showSettings, setShowSettings] = useState(false);
-  // Press 's' to toggle settings drawer (and 'Escape' to close)
-  useEffect(() => {
-    const isTypingTarget = (el: EventTarget | null) => {
-      const n = el as HTMLElement | null;
-      if (!n) return false;
-      if (n.isContentEditable) return true;
-      const tag = (n.tagName || '').toLowerCase();
-      const inEditors = !!n.closest?.('.cm-editor, .CodeMirror, .ProseMirror');
-      return tag === 'input' || tag === 'textarea' || tag === 'select' || inEditors;
-    };
-
-    const onKey = (e: KeyboardEvent) => {
-      const key = (e.key || '').toLowerCase();
-      const code = (e.code || '').toLowerCase();
-
-      // Only plain 's'
-      if (!e.metaKey && !e.ctrlKey && !e.altKey && !e.shiftKey) {
-        if (key === 's' || code === 'keys') {
-          if (isTypingTarget(e.target)) return;
-          e.preventDefault();
-          setShowSettings((prev) => !prev);
-        }
-      }
-
-      // ESC closes when open
-      if (key === 'escape' && showSettings) {
-        e.preventDefault();
-        setShowSettings(false);
-      }
-    };
-
-    window.addEventListener('keydown', onKey, { capture: true });
-    return () => window.removeEventListener('keydown', onKey as any, { capture: true } as any);
-  }, [showSettings]);
-
-  // Listen for toolbar-driven settings toggles
-  useEffect(() => {
-    const onToggle = (e: Event) => {
-      const detail = (e as CustomEvent).detail;
-      // If a boolean is provided, set explicitly; otherwise toggle
-      if (typeof detail === 'boolean') setShowSettings(detail);
-      else setShowSettings((v) => !v);
-    };
-
-    // New canonical event
-    window.addEventListener('qs:settings:toggle', onToggle as any);
-    // Back-compat: allow explicit open/close via boolean detail
-    window.addEventListener('qs:settings:set-open', onToggle as any);
-
-    return () => {
-      window.removeEventListener('qs:settings:toggle', onToggle as any);
-      window.removeEventListener('qs:settings:set-open', onToggle as any);
-    };
-  }, []);
-
-  useBodyScrollLock(showSettings);
-
   const [pageSettingsOpen, setPageSettingsOpen] = useState(false);
   const [editingHeader, setEditingHeader] = useState<Block | null>(null);
   const [editingFooter, setEditingFooter] = useState<Block | null>(null);
-
-  // NEW: editor + picker state actually used below
   const [editingBlockId, setEditingBlockId] = useState<string | null>(null);
   const [adderTarget, setAdderTarget] = useState<string | null>(null);
+
+  // Lock scroll whenever any overlay is open
+  useBodyScrollLock(
+    showSettings || !!editingHeader || !!editingFooter || adderTarget !== null || !!editingBlockId
+  );
 
   const [showWelcome, setShowWelcome] = useState(false);
 
@@ -260,7 +194,7 @@ export default function EditorContent({
     return pages.find((p: any) => p?.slug === currentPageSlug) ?? pages[0] ?? null;
   }, [pages, currentPageSlug]);
 
-  // ------- NEW: helpers to find/patch blocks on current page -------
+  // ------- helpers to find/patch blocks on current page -------
   const updateTemplateWithBlocks = useCallback(
     (nextBlocks: Block[]) => {
       const idx = pages.findIndex((p: any) => p?.slug === currentPageSlug);
@@ -307,7 +241,7 @@ export default function EditorContent({
       updateTemplateWithBlocks(next);
     },
     [currentPage, updateTemplateWithBlocks]
-  );  
+  );
 
   const replaceBlockById = useCallback(
     (updated: Block) => {
@@ -320,7 +254,63 @@ export default function EditorContent({
     [currentPage, updateTemplateWithBlocks]
   );
 
-  // Open the Page Header Editor when the preview (iframe) asks for it
+  // ===== Hotkeys & bridges =====
+
+  // 1) Local 's' hotkey (works when focus is in top window)
+  useEffect(() => {
+    const isTypingTarget = (el: EventTarget | null) => {
+      const n = el as HTMLElement | null;
+      if (!n) return false;
+      if (n.isContentEditable) return true;
+      const tag = (n.tagName || '').toLowerCase();
+      const inEditors = !!n.closest?.('.cm-editor, .CodeMirror, .ProseMirror');
+      return tag === 'input' || tag === 'textarea' || tag === 'select' || inEditors;
+    };
+
+    const onKey = (e: KeyboardEvent) => {
+      const key = (e.key || '').toLowerCase();
+      const code = (e.code || '').toLowerCase(); // 'keys' for KeyS, lowercased
+
+      if (!e.metaKey && !e.ctrlKey && !e.altKey && !e.shiftKey) {
+        if ((key === 's' || code === 'keys')) {
+          if (isTypingTarget(e.target)) return;
+          e.preventDefault();
+          setShowSettings((prev) => !prev);
+        }
+      }
+    };
+
+    window.addEventListener('keydown', onKey, { capture: true });
+    return () => window.removeEventListener('keydown', onKey as any, { capture: true } as any);
+  }, []);
+
+  // 2) Message bridge: allow iframe to forward "s" presses
+  useEffect(() => {
+    const onMsg = (e: MessageEvent) => {
+      const d = e?.data;
+      if (!d || typeof d !== 'object') return;
+      if (d.type === 'qs:hotkey' && (d.key === 's' || d.key === 'S')) {
+        setShowSettings((prev) => !prev);
+      }
+      if (d.type === 'qs:settings:set-open') {
+        const v = (d as any)?.open;
+        if (typeof v === 'boolean') setShowSettings(v);
+      }
+      if (d.type === 'qs:settings:toggle') {
+        setShowSettings((prev) => !prev);
+      }
+    };
+    window.addEventListener('message', onMsg);
+    return () => window.removeEventListener('message', onMsg);
+  }, []);
+
+  // 3) Convenience global toggler
+  useEffect(() => {
+    (window as any).qsToggleSettings = () => setShowSettings((p) => !p);
+    return () => { try { delete (window as any).qsToggleSettings; } catch {} };
+  }, []);
+
+  // Header / Footer edit triggers from preview
   useEffect(() => {
     const onMsg = (e: MessageEvent) => {
       if (e?.data?.type === 'qs:edit-header') {
@@ -334,7 +324,6 @@ export default function EditorContent({
     return () => window.removeEventListener('message', onMsg);
   }, [template]);
 
-  // Open the Page Footer Editor when the preview (iframe) asks for it
   useEffect(() => {
     const onMsg = (e: MessageEvent) => {
       if (e?.data?.type === 'qs:edit-footer') {
@@ -345,7 +334,6 @@ export default function EditorContent({
       }
     };
 
-    // (Optional) also support an in-page CustomEvent('qs:edit-footer')
     const onCustom = () => {
       const existing =
         ((template as any)?.data?.footerBlock as Block | undefined) ??
@@ -361,19 +349,16 @@ export default function EditorContent({
     };
   }, [template]);
 
-  // ------- NEW: render the actual editor for a selected block id -------
+  // render the actual editor for a selected block id
   const editingBlockObj = useMemo(() => {
     if (!editingBlockId) return null;
     return getPageBlocks(currentPage).find((b) => eqId(b, editingBlockId)) ?? null;
   }, [currentPage, editingBlockId]);
 
-  // ------- NEW: handlers passed to preview frame -------
+  // handlers passed to preview frame
   const handleEditBlock = useCallback((id: string) => setEditingBlockId(id), []);
   const handleAddAfter  = useCallback((id: string) => setAdderTarget(id), []);
-  const handleDelete    = useCallback((_id: string) => {
-    // Deletion is already handled optimistically inside the preview frame.
-    // You can add side-effects here if needed (analytics, toasts, etc.).
-  }, []);
+  const handleDelete    = useCallback((_id: string) => {}, []);
 
   const savePageSettings = (updatedPage: any) => {
     const pages = [...getTemplatePages(template)];
@@ -394,12 +379,32 @@ export default function EditorContent({
       {showWelcome && <NewTemplateWelcome onStart={() => setShowWelcome(false)} />}
 
       <div className="flex-1 min-w-0 xl:ml-0 ml-0 px-0 lg:px-2">
-        {editingHeader && (
-          <div className="mb-4 rounded-xl border border-white/10 bg-neutral-950/70 backdrop-blur">
+        {/* ===== Header Editor (ModalShell) ===== */}
+        <ModalShell
+          open={!!editingHeader}
+          onClose={() => setEditingHeader(null)}
+          title="Edit Header"
+          closeOnBackdrop
+          closeOnEsc
+          className="w-[min(96vw,900px)] max-w-[900px] h-[min(92vh,900px)]"
+          footer={
+            <button
+              onClick={() => setEditingHeader(null)}
+              className="px-3 py-2 text-sm rounded-md border border-white/15 bg-white/5 hover:bg-white/10"
+            >
+              Close
+            </button>
+          }
+        >
+          {editingHeader && (
             <PageHeaderEditor
               block={editingHeader}
               onSave={(b) => {
                 setTemplate({
+                  ...template,
+                  data: { ...(template.data as any), headerBlock: b },
+                });
+                onChange({
                   ...template,
                   data: { ...(template.data as any), headerBlock: b },
                 });
@@ -409,11 +414,27 @@ export default function EditorContent({
               template={template}
               errors={blockErrors}
             />
-          </div>
-        )}
-        
-        {editingFooter && (
-          <div className="mb-4 rounded-xl border border-white/10 bg-neutral-950/70 backdrop-blur">
+          )}
+        </ModalShell>
+
+        {/* ===== Footer Editor (ModalShell) ===== */}
+        <ModalShell
+          open={!!editingFooter}
+          onClose={() => setEditingFooter(null)}
+          title="Edit Footer"
+          closeOnBackdrop
+          closeOnEsc
+          className="w-[min(96vw,900px)] max-w-[900px] h-[min(92vh,900px)]"
+          footer={
+            <button
+              onClick={() => setEditingFooter(null)}
+              className="px-3 py-2 text-sm rounded-md border border-white/15 bg-white/5 hover:bg-white/10"
+            >
+              Close
+            </button>
+          }
+        >
+          {editingFooter && (
             <PageFooterEditor
               block={editingFooter}
               template={template}
@@ -429,8 +450,8 @@ export default function EditorContent({
                 setEditingFooter(null);
               }}
             />
-          </div>
-        )}
+          )}
+        </ModalShell>
 
         <LiveEditorPreviewFrame
           template={template}
@@ -461,7 +482,7 @@ export default function EditorContent({
         />
       </div>
 
-      {/* Settings Drawer */}
+      {/* Settings Drawer (unchanged visual, but S hotkey now works from iframe via bridge) */}
       {showSettings && (
         <div className="fixed inset-0 z-[1300] bg-black/70 backdrop-blur-sm">
           <div className="absolute inset-y-0 right-0 w-[min(92vw,1000px)] max-w-[1000px] h-full shadow-2xl">
@@ -508,66 +529,82 @@ export default function EditorContent({
         </div>
       )}
 
-      {/* NEW: Block Picker (opens when user clicks "add") */}
-      {adderTarget !== null && (
-        <div
-          className="fixed inset-0 z-[1200] flex items-center justify-center bg-black/40"
-          onClick={() => setAdderTarget(null)}
-        >
-          <div
-            className="max-h-[85vh] w-[min(92vw,1000px)] max-w-[1000px] overflow-auto rounded-lg border border-white/10 bg-neutral-950 p-2"
-            onClick={(e) => e.stopPropagation()}
+      {/* Block Picker (ModalShell) */}
+      <ModalShell
+        open={adderTarget !== null}
+        onClose={() => setAdderTarget(null)}
+        title="Add a Block"
+        closeOnBackdrop
+        closeOnEsc
+        className="w-[min(92vw,1000px)] max-w-[1000px] max-h-[85vh]"
+        footer={
+          <button
+            onClick={() => setAdderTarget(null)}
+            className="px-3 py-2 text-sm rounded-md border border-white/15 bg-white/5 hover:bg-white/10"
           >
-            <BlockAdderGrouped
-              inline                              // ⬅️ important: render content now
-              template={template}
-              existingBlocks={getPageBlocks(currentPage)}
-              onClose={() => setAdderTarget(null)}
-              // Quick picks call this first if provided:
-              onAddAndEdit={(type) => {
-                const block = createDefaultBlock(type) as Block;
-                insertBlockAfter(block, adderTarget);
-                setAdderTarget(null);
-                // open the editor immediately for the newly inserted block
-                setEditingBlockId(String((block as any)._id ?? (block as any).id));
-              }}
-              // All other list items call onAdd:
-              onAdd={(type) => {
-                const block = createDefaultBlock(type) as Block;
-                insertBlockAfter(block, adderTarget);
-                setAdderTarget(null);
-                // optional: also jump into the editor
-                setEditingBlockId(String((block as any)._id ?? (block as any).id));
-              }}
-            />
-          </div>
-        </div>
-      )}
+            Cancel
+          </button>
+        }
+      >
+        <BlockAdderGrouped
+          inline
+          template={template}
+          existingBlocks={getPageBlocks(currentPage)}
+          onClose={() => setAdderTarget(null)}
+          onAddAndEdit={(type) => {
+            const block = createDefaultBlock(type) as Block;
+            insertBlockAfter(block, adderTarget);
+            setAdderTarget(null);
+            setEditingBlockId(String((block as any)._id ?? (block as any).id));
+          }}
+          onAdd={(type) => {
+            const block = createDefaultBlock(type) as Block;
+            insertBlockAfter(block, adderTarget);
+            setAdderTarget(null);
+            setEditingBlockId(String((block as any)._id ?? (block as any).id));
+          }}
+        />
+      </ModalShell>
 
-      {/* NEW: Block Editor Drawer (opens when user clicks "edit") */}
-      {editingBlockObj && (
-        <div className="fixed inset-0 z-[1250] flex">
-          <div className="flex-1 bg-black/60" onClick={() => setEditingBlockId(null)} />
-          <div className="w-[min(92vw,900px)] max-w-[900px] h-full bg-neutral-900 border-l border-white/10">
-            <DynamicBlockEditor
-              block={editingBlockObj}
-              template={template}
-              currentPage={currentPage}
-              colorMode="light" // or derive from template/site mode if you prefer
-              errors={blockErrors}
-              onClose={() => setEditingBlockId(null)}
-              onChange={(updated) => {
-                replaceBlockById(updated);
-              }}
-              onSave={(updated) => {
-                replaceBlockById(updated);
-                setEditingBlockId(null);
-              }}
-            />
-          </div>
-        </div>
-      )}
-
+      {/* Block Editor (DrawerShell) */}
+      <DrawerShell
+        open={!!editingBlockId && !!editingBlockObj}
+        onClose={() => setEditingBlockId(null)}
+        title={
+          editingBlockObj
+            ? `Edit Block — ${String((editingBlockObj as any)?.type || 'unknown')}`
+            : 'Edit Block'
+        }
+        closeOnBackdrop
+        closeOnEsc
+        className="w-[min(96vw,900px)] max-w-[900px]"
+        footer={
+          <button
+            onClick={() => setEditingBlockId(null)}
+            className="px-3 py-2 text-sm rounded-md border border-white/15 bg-white/5 hover:bg-white/10"
+          >
+            Close
+          </button>
+        }
+      >
+        {editingBlockObj && (
+          <DynamicBlockEditor
+            block={editingBlockObj}
+            template={template}
+            currentPage={currentPage}
+            colorMode="light"
+            errors={blockErrors}
+            onClose={() => setEditingBlockId(null)}
+            onChange={(updated) => {
+              replaceBlockById(updated);
+            }}
+            onSave={(updated) => {
+              replaceBlockById(updated);
+              setEditingBlockId(null);
+            }}
+          />
+        )}
+      </DrawerShell>
 
       <TemplateActionToolbar
         template={template}

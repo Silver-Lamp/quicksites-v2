@@ -3,7 +3,7 @@
 
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
-import { useMemo, useEffect, useState, useCallback } from 'react';
+import { useMemo, useEffect, useState, useCallback, useRef } from 'react';
 import type { Block } from '@/types/blocks';
 import type { Template } from '@/types/template';
 import {
@@ -33,16 +33,11 @@ const LeafletMap = dynamic<LeafletFooterMapProps>(
   { ssr: false }
 );
 
-/** ───────────────── helpers ───────────────── */
+/* ───────────────── helpers ───────────────── */
 const geocodeCache = new Map<string, [number, number]>();
 
 function isValidLatLng(v: any): v is [number, number] {
-  return (
-    Array.isArray(v) &&
-    v.length === 2 &&
-    Number.isFinite(v[0]) &&
-    Number.isFinite(v[1])
-  );
+  return Array.isArray(v) && v.length === 2 && Number.isFinite(v[0]) && Number.isFinite(v[1]);
 }
 
 function useGeocode(address: string | null | undefined) {
@@ -191,7 +186,7 @@ function normalizeSocial(template?: Template, final?: any) {
   });
 }
 
-/** ───────────────── component ───────────────── */
+/* ───────────────── component ───────────────── */
 export default function FooterRender({
   block,
   content,
@@ -215,7 +210,6 @@ export default function FooterRender({
   const inIframe =
     typeof window !== 'undefined' && typeof window.parent !== 'undefined' && window.parent !== window;
 
-  // Allow several inline signals (any one works). You likely have one of these; if not, keep them harmless.
   const inlineHints =
     (typeof document !== 'undefined' && document.body?.classList?.contains?.('qs-editor')) ||
     (typeof window !== 'undefined' && (window as any).__QS_EDITOR__ === true) ||
@@ -310,7 +304,9 @@ export default function FooterRender({
 
   const socialStyle: SocialStyle = (() => {
     const raw = String(meta?.socialIcons || '').toLowerCase();
-    if (raw === 'icons' || raw === 'labels' || raw === 'both') return raw;
+    if (raw === 'icons' || 'labels' || 'both') {
+      if (raw === 'icons' || raw === 'labels' || raw === 'both') return raw as SocialStyle;
+    }
     if (raw === 'minimal') return 'icons';
     return 'both';
   })();
@@ -335,42 +331,44 @@ export default function FooterRender({
     );
   };
 
-  // Prevent navigation + stop bubbling in editor preview
+  // Prevent navigation in editor, but DO NOT stop propagation (let root open handler fire)
   const maybePreventLink = enableFooterEdit
     ? {
-        onClick: (e: any) => {
+        onClick: (e: React.MouseEvent<HTMLAnchorElement>) => {
           e.preventDefault();
-          e.stopPropagation();
         },
         tabIndex: -1,
       }
     : previewOnly
-      ? { onClick: (e: any) => e.preventDefault(), tabIndex: -1 }
-      : {};
+    ? { onClick: (e: React.MouseEvent<HTMLAnchorElement>) => e.preventDefault(), tabIndex: -1 }
+    : {};
 
-  const openFooterEditor = useCallback(
-    (e: React.MouseEvent<HTMLElement>) => {
+  /* ── One-click opener (capture phase) ─────────────────────────────── */
+  const openedRef = useRef(0);
+  const handleOpenCapture = useCallback(
+    (e: React.PointerEvent<HTMLElement>) => {
       if (!enableFooterEdit) return;
-      e.stopPropagation();
-      try {
-        // Inline editor support
-        window.dispatchEvent(new CustomEvent('qs:edit-footer'));
-      } catch {}
-      try {
-        // Iframe editor support
-        window.parent?.postMessage?.({ type: 'qs:edit-footer' }, '*');
-      } catch {}
+      // Debounce duplicate firings from nested elements
+      const now = Date.now();
+      if (now - openedRef.current < 250) return;
+      openedRef.current = now;
+
+      // Don't navigate; open editor instead
+      e.preventDefault();
+
+      try { window.dispatchEvent(new CustomEvent('qs:edit-footer')); } catch {}
+      try { window.parent?.postMessage?.({ type: 'qs:edit-footer' }, '*'); } catch {}
     },
     [enableFooterEdit]
   );
-      
+
   if (compactMode) {
     return (
       <div
         className={`${bgColor} ${textColor} rounded p-3`}
         data-device={device || 'auto'}
         data-qseditor-footer={enableFooterEdit ? '1' : undefined}
-        onClick={enableFooterEdit ? openFooterEditor : undefined}
+        onPointerDownCapture={enableFooterEdit ? handleOpenCapture : undefined}
         title={enableFooterEdit ? 'Click to edit footer' : undefined}
         style={enableFooterEdit ? { cursor: 'pointer' } : undefined}
       >
@@ -379,10 +377,9 @@ export default function FooterRender({
             <p className="font-semibold leading-tight">{businessName}</p>
             <p className={subText}>{cityStatePostal}</p>
           </div>
-          <div
-            className="flex items-center gap-3"
-            onClick={enableFooterEdit ? (e) => e.stopPropagation() : undefined}
-          >
+
+          {/* quick socials (links prevented above) */}
+          <div className="flex items-center gap-3">
             {socials.slice(0, 4).map((s) => (
               <a
                 key={s.key}
@@ -412,16 +409,13 @@ export default function FooterRender({
       className={`${bgColor} ${textColor} px-6 py-10 text-sm mt-10`}
       data-device={device || 'auto'}
       data-qseditor-footer={enableFooterEdit ? '1' : undefined}
-      onClick={enableFooterEdit ? openFooterEditor : undefined}
+      onPointerDownCapture={enableFooterEdit ? handleOpenCapture : undefined}
       title={enableFooterEdit ? 'Click to edit footer' : undefined}
       style={enableFooterEdit ? { cursor: 'pointer' } : undefined}
     >
       <div className={`max-w-6xl mx-auto grid ${gridCols} gap-8`}>
         {/* Quick Links */}
-        <div
-          className="space-y-3"
-          onClick={enableFooterEdit ? (e) => e.stopPropagation() : undefined}
-        >
+        <div className="space-y-3">
           <h3 className={`text-base font-semibold ${headingColor}`}>Quick Links</h3>
           <nav className="grid gap-2">
             {links.length ? (
@@ -453,10 +447,7 @@ export default function FooterRender({
         </div>
 
         {/* Company Info (read-only) */}
-        <div
-          className="space-y-3"
-          onClick={enableFooterEdit ? (e) => e.stopPropagation() : undefined}
-        >
+        <div className="space-y-3">
           <h3 className={`text-base font-semibold ${headingColor}`}>Company Info</h3>
           <div className="whitespace-pre-line leading-relaxed">
             {fullAddressForDisplay || <span className={subText}>—</span>}
@@ -482,10 +473,7 @@ export default function FooterRender({
         </div>
 
         {/* Map + Socials */}
-        <div
-          className="space-y-3"
-          onClick={enableFooterEdit ? (e) => e.stopPropagation() : undefined}
-        >
+        <div className="space-y-3">
           <h3 className={`text-base font-semibold ${headingColor}`}>Find Us</h3>
           <div className="rounded-md overflow-hidden border border-white/10">
             {centerOk ? (
@@ -520,10 +508,7 @@ export default function FooterRender({
         </div>
       </div>
 
-      <div
-        className={`text-center mt-8 text-xs ${subText}`}
-        onClick={enableFooterEdit ? (e) => e.stopPropagation() : undefined}
-      >
+      <div className={`text-center mt-8 text-xs ${subText}`}>
         © {new Date().getFullYear()} {businessName}. Fast, Reliable, Local Service 24/7.
       </div>
     </footer>

@@ -56,7 +56,7 @@ function firstPageSlug(site: { data?: any; pages?: any[] }) {
 
 function normalizeForRenderer(
   snapshotData: any,
-  siteFields: Pick<SiteRow, 'id'|'slug'|'domain'> & { default_subdomain?: string | null }
+  siteFields: Pick<SiteRow, 'id' | 'slug' | 'domain'> & { default_subdomain?: string | null }
 ): RenderSite {
   const data = snapshotData ?? {};
   const pages = Array.isArray(data?.pages) ? data.pages : [];
@@ -81,7 +81,11 @@ function normalizeForRenderer(
 
 function safeParse(x: any) {
   if (typeof x !== 'string') return x ?? {};
-  try { return JSON.parse(x); } catch { return {}; }
+  try {
+    return JSON.parse(x);
+  } catch {
+    return {};
+  }
 }
 
 /* ----------------- Data access (new + compat) ------------------ */
@@ -102,11 +106,11 @@ async function loadSiteRowBySlug(slug: string): Promise<SiteRow | null> {
 
 /** New path: templates + published_sites/template_versions */
 async function loadSiteRowBySlugOrTemplate(slug: string): Promise<SiteRow | null> {
-  // 1) try legacy sites table
+  // 1) legacy sites table
   const legacy = await loadSiteRowBySlug(slug);
   if (legacy) return legacy;
 
-  // 2) fallback to templates
+  // 2) template by slug
   const tpl = await supabaseAdmin
     .from('templates')
     .select('id, slug, data, domain')
@@ -117,10 +121,9 @@ async function loadSiteRowBySlugOrTemplate(slug: string): Promise<SiteRow | null
 
   const tplId: string = (tpl.data as any).id;
   const tplDomain: string | null =
-    (tpl.data as any).domain ??
-    ((safeParse((tpl.data as any).data)?.meta?.domain as string) ?? null);
+    (tpl.data as any).domain ?? (safeParse((tpl.data as any).data)?.meta?.domain ?? null);
 
-  // collect all version ids for this template
+  // collect version ids for this template
   const vers = await supabaseAdmin
     .from('template_versions')
     .select('id, created_at')
@@ -134,12 +137,13 @@ async function loadSiteRowBySlugOrTemplate(slug: string): Promise<SiteRow | null
     const pubs = await supabaseAdmin
       .from('published_sites')
       .select('snapshot_id, published_at')
+      .in('snapshot_id', versionIds)
       .order('published_at', { ascending: false })
-      .limit(200);
+      .limit(1)
+      .maybeSingle();
 
-    if (!pubs.error && Array.isArray(pubs.data)) {
-      const hit = pubs.data.find((r: any) => versionIds.includes(r.snapshot_id));
-      if (hit) published_snapshot_id = hit.snapshot_id;
+    if (!pubs.error && pubs.data) {
+      published_snapshot_id = (pubs.data as any).snapshot_id ?? null;
     }
   }
 
@@ -154,7 +158,6 @@ async function loadSiteRowBySlugOrTemplate(slug: string): Promise<SiteRow | null
 
 /** Read snapshot data by id: first try `snapshots.data` (legacy), else `template_versions.full_data` */
 async function loadSnapshotDataById(id: string): Promise<any | null> {
-  // Legacy snapshots table
   const snap = await supabaseAdmin
     .from('snapshots')
     .select('data')
@@ -162,7 +165,6 @@ async function loadSnapshotDataById(id: string): Promise<any | null> {
     .maybeSingle();
   if (!snap.error && snap.data) return (snap.data as any).data ?? null;
 
-  // New template_versions table
   const ver = await supabaseAdmin
     .from('template_versions')
     .select('full_data')
@@ -215,16 +217,19 @@ async function isAdminUser(userId: string | null) {
 export async function generateMetadata({
   params,
 }: {
-  params: Promise<{ slug: string; rest?: string[] }>;
+  params: { slug: string; rest?: string[] };
 }): Promise<Metadata> {
-  const { slug, rest } = await params;
+  const { slug, rest } = params;
 
+  // Special pages (client-rendered)
   if (rest?.[0] === 'cart') return { title: 'Cart' };
   if (rest?.[0] === 'checkout') return { title: 'Checkout' };
   if (rest?.[0] === 'thank-you') return { title: 'Thank you' };
 
   const supabase = await getServerSupabase();
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   const admin = await isAdminUser(user?.id ?? null);
 
   const siteRow = await loadSiteRowBySlugOrTemplate(slug);
@@ -240,14 +245,17 @@ export async function generateMetadata({
   if (!snapshotData) return {};
 
   const normalized = normalizeForRenderer(snapshotData, {
-    id: siteRow.id, slug: siteRow.slug, domain: siteRow.domain, default_subdomain: null,
+    id: siteRow.id,
+    slug: siteRow.slug,
+    domain: siteRow.domain,
+    default_subdomain: null,
   });
 
   const pageSlug = rest?.[0] ?? firstPageSlug(normalized);
   return generatePageMetadata({
     site: normalized as any,
     pageSlug,
-    baseUrl: `${await originFromHeaders()}/sites`,
+    baseUrl: `${originFromHeaders()}/sites`,
   });
 }
 
@@ -255,9 +263,9 @@ export async function generateMetadata({
 export default async function SitePreviewPage({
   params,
 }: {
-  params: Promise<{ slug: string; rest?: string[] }>;
+  params: { slug: string; rest?: string[] };
 }) {
-  const { slug, rest } = await params;
+  const { slug, rest } = params;
 
   // Special routes served directly
   if (Array.isArray(rest)) {
@@ -267,7 +275,9 @@ export default async function SitePreviewPage({
   }
 
   const supabase = await getServerSupabase();
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   const admin = await isAdminUser(user?.id ?? null);
 
   const siteRow = await loadSiteRowBySlugOrTemplate(slug);
@@ -299,7 +309,7 @@ export default async function SitePreviewPage({
 
   const pageSlug = rest?.[0] ?? firstPageSlug(normalized);
   const colorMode = (normalized.color_mode ?? 'light') as 'light' | 'dark';
-  const baseUrl = `${await originFromHeaders()}/sites`;
+  const baseUrl = `${originFromHeaders()}/sites`;
 
   return (
     <TemplateEditorProvider
@@ -313,7 +323,7 @@ export default async function SitePreviewPage({
         baseUrl={baseUrl}
         id="site-renderer-page"
         colorMode={colorMode}
-        className="bg-white text-black dark:bg-black dark:text-white"
+        className="bg-background text-foreground"
       />
     </TemplateEditorProvider>
   );

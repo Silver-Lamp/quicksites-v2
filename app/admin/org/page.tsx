@@ -7,6 +7,8 @@ import { supabase } from '@/lib/supabase/client';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import OrgDomainPanel from '@/components/admin/org/OrgDomainPanel';
 
 type BrandingFlags = {
@@ -16,16 +18,35 @@ type BrandingFlags = {
   showMobileGradients?: boolean;
   forceWidgetVariant?: string | null;
 };
+
+type BrandingOwnerLinks = {
+  website?: string | null;
+  email?: string | null;
+  github?: string | null;
+  twitter?: string | null;
+  linkedin?: string | null;
+};
+
+type BrandingOwner = {
+  name?: string | null;
+  title?: string | null;
+  photoUrl?: string | null;
+  bio?: string | null; // plain text; split on blank lines when rendering
+  links?: BrandingOwnerLinks | null;
+};
+
 type Branding = {
   name?: string; // Display brand ("QuickSites" | "CedarSites")
   domain?: string; // Public domain for footer/title
-  logoUrl?: string | null;     // optional overrides (you already have logo fields separately too)
+  logoUrl?: string | null; // optional overrides (you already have logo fields separately too)
   darkLogoUrl?: string | null;
   faviconUrl?: string | null;
   colors?: { gradient?: string[]; primary?: string };
   hero?: { headline?: string; subhead?: string };
   copy?: { featuresTitle?: string; featuresSubtitle?: string };
   flags?: BrandingFlags;
+  // NEW: optional owner bio section (rendered on org homepage if present)
+  owner?: BrandingOwner | null;
 };
 
 type OrgRow = {
@@ -39,10 +60,8 @@ type OrgRow = {
   support_url: string | null;
   billing_mode: 'central' | 'reseller' | 'none' | null;
 
-  // 🔹 New: JSONB branding blob (may be null if you haven’t added it yet)
   branding?: Branding | null;
 
-  // Optional: if your public view adds these
   primary_domain?: string | null;
   wildcard_enabled?: boolean | null;
   canonical_host?: string | null;
@@ -64,7 +83,7 @@ function UploadField({
   onChange,
   orgId,
   orgSlug,
-  tag, // 'logo' | 'logo-dark' | 'favicon'
+  tag, // 'logo' | 'logo-dark' | 'favicon' | 'owner-photo'
   accept = 'image/*',
 }: {
   label: string;
@@ -99,7 +118,6 @@ function UploadField({
 
       const res = await fetch('/api/admin/org/upload', { method: 'POST', body: fd });
 
-      // Try JSON; fall back to text for clearer errors
       let payload: any = null;
       let rawText: string | null = null;
       const ct = (res.headers.get('content-type') || '').toLowerCase();
@@ -155,7 +173,7 @@ function UploadField({
           <Input
             value={value ?? ''}
             onChange={(e) => onChange(e.target.value || null)}
-            placeholder="https://…/logo.png"
+            placeholder="https://…/image.png"
             className="col-span-2"
           />
 
@@ -221,6 +239,18 @@ export default function OrgSettings() {
   const [confirmDeleteWord, setConfirmDeleteWord] = useState('');
   const [deleting, setDeleting] = useState(false);
 
+  // 🔹 NEW: copy helper + tiny toast state
+  const [copied, setCopied] = useState<string | null>(null);
+  const copy = async (text: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(text);
+      setTimeout(() => setCopied(null), 1200);
+    } catch {
+      // no-op
+    }
+  };
+
   useEffect(() => {
     if (sel) {
       setDraft({
@@ -239,6 +269,7 @@ export default function OrgSettings() {
           flags: { showPuppyWidget: sel.slug === 'quicksites', showGlow: true, showMobileWidget: true, showMobileGradients: true, forceWidgetVariant: 'puppy' },
           hero: { headline: 'Your Website. One Click Away.', subhead: 'Turn your local business into a digital presence in minutes. No code. No hassle.' },
           copy: { featuresTitle: 'Featured demos', featuresSubtitle: `Hand-picked highlights from what ${(sel.slug === 'quicksites' ? 'QuickSites' : 'your brand')} can do.` },
+          owner: null,
         } as Branding,
       });
       fetchStats(sel.id);
@@ -343,6 +374,29 @@ export default function OrgSettings() {
     }));
   }
 
+  // NEW: owner setters
+  function setBrandOwner<K extends keyof NonNullable<Branding['owner']>>(key: K, value: NonNullable<Branding['owner']>[K]) {
+    setDraft((d) => ({
+      ...d,
+      branding: {
+        ...(d.branding as Branding || {}),
+        owner: { ...((d.branding as Branding)?.owner || {}), [key]: value },
+      },
+    }));
+  }
+  function setBrandOwnerLink<K extends keyof BrandingOwnerLinks>(key: K, value: BrandingOwnerLinks[K]) {
+    setDraft((d) => {
+      const cur = (d.branding as Branding)?.owner?.links || {};
+      return {
+        ...d,
+        branding: {
+          ...(d.branding as Branding || {}),
+          owner: { ...((d.branding as Branding)?.owner || {}), links: { ...cur, [key]: value } },
+        },
+      };
+    });
+  }
+
   async function fetchStats(orgId: string) {
     try {
       const res = await fetch(`/api/admin/org/update?org_id=${encodeURIComponent(orgId)}&stats=1`);
@@ -356,7 +410,6 @@ export default function OrgSettings() {
 
   async function save() {
     if (!sel) return;
-    // Minimal allow-list of fields we support editing
     const updates: Partial<OrgRow> = {
       name: (draft.name ?? '').trim(),
       slug: (draft.slug ?? '').trim(),
@@ -371,7 +424,6 @@ export default function OrgSettings() {
 
     try {
       if (isPlatformAdmin) {
-        // Use server route with service key to bypass RLS across orgs
         const res = await fetch('/api/admin/org/update', {
           method: 'POST',
           headers: { 'content-type': 'application/json' },
@@ -380,7 +432,6 @@ export default function OrgSettings() {
         const j = await res.json();
         if (!res.ok) throw new Error(j?.error || 'Save failed');
       } else {
-        // Regular org admin update (must pass RLS for their org)
         const { error } = await supabase.from('organizations').update(updates).eq('id', sel.id);
         if (error) throw error as any;
       }
@@ -406,7 +457,6 @@ export default function OrgSettings() {
       });
       const j = await res.json();
       if (!res.ok) throw new Error(j?.error || 'Create failed');
-      // Switch to new org in the UI (and set cookie)
       const url = new URL(window.location.href);
       url.searchParams.set('org', slug);
       window.location.assign(url.toString());
@@ -445,7 +495,6 @@ export default function OrgSettings() {
       });
       const j = await res.json();
       if (!res.ok) throw new Error(j?.error || 'Delete failed');
-      // If deleting current org, switch to a safe default
       const fallback = 'quicksites';
       const url = new URL(window.location.href);
       url.searchParams.set('org', sel.slug === current.slug ? fallback : current.slug);
@@ -458,6 +507,13 @@ export default function OrgSettings() {
   }
 
   const b = (draft.branding || {}) as Branding;
+
+  // 🔹 NEW: compute dev URLs for quick testing
+  const devHost = sel ? `${sel.slug}.localhost:3000` : '';
+  const devUrl = sel ? `http://${devHost}/` : '';
+  const devOrgRoute = sel ? `http://localhost:3000/orgs/${sel.slug}` : '';
+  const devWwwHost = sel ? `www.${sel.slug}.localhost:3000` : '';
+  const devWwwUrl = sel ? `http://${devWwwHost}/` : '';
 
   return (
     <div className="max-w-4xl mt-12">
@@ -492,6 +548,53 @@ export default function OrgSettings() {
               Refresh stats
             </Button>
           </div>
+
+          {/* 🔹 NEW: Developer Test Links */}
+          {sel && (
+            <div className="mt-4 rounded-lg border border-zinc-700 bg-zinc-900/40 p-3">
+              <div className="flex items-center justify-between">
+                <h3 className="text-sm font-medium">Developer Test Links (localhost)</h3>
+                {copied && (
+                  <span className="text-[11px] text-emerald-400">
+                    Copied: <code>{copied}</code>
+                  </span>
+                )}
+              </div>
+
+              <div className="mt-2 grid gap-2 text-sm">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="w-36 text-zinc-400">Org domain:</span>
+                  <code className="px-2 py-1 rounded bg-zinc-950/60 border border-zinc-800">{devUrl}</code>
+                  <Button size="sm" variant="outline" onClick={() => copy(devUrl)}>Copy</Button>
+                  <a href={devUrl} target="_blank" rel="noreferrer">
+                    <Button size="sm">Open</Button>
+                  </a>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="w-36 text-zinc-400">Org domain (www):</span>
+                  <code className="px-2 py-1 rounded bg-zinc-950/60 border border-zinc-800">{devWwwUrl}</code>
+                  <Button size="sm" variant="outline" onClick={() => copy(devWwwUrl)}>Copy</Button>
+                  <a href={devWwwUrl} target="_blank" rel="noreferrer">
+                    <Button size="sm">Open</Button>
+                  </a>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="w-36 text-zinc-400">Direct org route:</span>
+                  <code className="px-2 py-1 rounded bg-zinc-950/60 border border-zinc-800">{devOrgRoute}</code>
+                  <Button size="sm" variant="outline" onClick={() => copy(devOrgRoute)}>Copy</Button>
+                  <a href={devOrgRoute} target="_blank" rel="noreferrer">
+                    <Button size="sm">Open</Button>
+                  </a>
+                </div>
+              </div>
+              <p className="mt-2 text-[11px] text-zinc-500">
+                These links assume your middleware maps org domains to <code>/orgs/{'{slug}'}</code> and that
+                you’ve added <code>{'{slug}'}.localhost</code> to <code>ORG_DOMAINS</code> for dev.
+              </p>
+            </div>
+          )}
         </div>
       )}
 
@@ -663,6 +766,112 @@ export default function OrgSettings() {
 
             <div className="mt-4">
               <Button onClick={save}>Save Branding</Button>
+            </div>
+          </div>
+
+          {/* ---------------- Owner Bio (optional) ---------------- */}
+          <div className="mt-10 rounded-lg border border-zinc-700 p-4 bg-zinc-900/40">
+            <h2 className="text-lg font-semibold mb-2">Owner Bio (optional)</h2>
+            <p className="text-xs text-zinc-400 mb-4">
+              Add a founder/owner section that appears at the bottom of the org homepage. Plain text is recommended;
+              paragraphs are split on blank lines.
+            </p>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {/* Photo */}
+              <div className="md:col-span-1">
+                <UploadField
+                  label="Headshot / Photo"
+                  value={(b.owner?.photoUrl ?? '') as string}
+                  onChange={(u) => setBrandOwner('photoUrl', u ?? null)}
+                  orgId={sel.id}
+                  orgSlug={sel.slug}
+                  tag="owner-photo"
+                  accept="image/png,image/jpeg,image/webp,image/avif,image/svg+xml"
+                />
+              </div>
+
+              {/* Textual fields */}
+              <div className="md:col-span-2 space-y-3">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div>
+                    <Label className="block text-sm">Owner Name</Label>
+                    <Input
+                      value={b.owner?.name ?? ''}
+                      onChange={(e) => setBrandOwner('name', e.target.value)}
+                      placeholder="Sandon Jurowski"
+                    />
+                  </div>
+                  <div>
+                    <Label className="block text-sm">Title</Label>
+                    <Input
+                      value={b.owner?.title ?? ''}
+                      onChange={(e) => setBrandOwner('title', e.target.value)}
+                      placeholder="Founder, Point Seven Studio"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <Label className="block text-sm">Short Bio (plain text)</Label>
+                  <Textarea
+                    rows={6}
+                    value={b.owner?.bio ?? ''}
+                    onChange={(e) => setBrandOwner('bio', e.target.value)}
+                    placeholder={`I build fast, pragmatic software—SaaS, e-commerce, and AI features.\n\nPreviously @ ...`}
+                  />
+                  <p className="mt-1 text-[11px] text-zinc-500">
+                    Tip: use a blank line to start a new paragraph.
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div>
+                    <Label className="block text-sm">Website</Label>
+                    <Input
+                      value={b.owner?.links?.website ?? ''}
+                      onChange={(e) => setBrandOwnerLink('website', e.target.value || null)}
+                      placeholder="https://pixblaze.com"
+                    />
+                  </div>
+                  <div>
+                    <Label className="block text-sm">Email</Label>
+                    <Input
+                      value={b.owner?.links?.email ?? ''}
+                      onChange={(e) => setBrandOwnerLink('email', e.target.value || null)}
+                      placeholder="hello@pointsevenstudio.com"
+                    />
+                  </div>
+                  <div>
+                    <Label className="block text-sm">GitHub</Label>
+                    <Input
+                      value={b.owner?.links?.github ?? ''}
+                      onChange={(e) => setBrandOwnerLink('github', e.target.value || null)}
+                      placeholder="https://github.com/your-handle"
+                    />
+                  </div>
+                  <div>
+                    <Label className="block text-sm">LinkedIn</Label>
+                    <Input
+                      value={b.owner?.links?.linkedin ?? ''}
+                      onChange={(e) => setBrandOwnerLink('linkedin', e.target.value || null)}
+                      placeholder="https://www.linkedin.com/in/..."
+                    />
+                  </div>
+                  <div>
+                    <Label className="block text-sm">Twitter / X</Label>
+                    <Input
+                      value={b.owner?.links?.twitter ?? ''}
+                      onChange={(e) => setBrandOwnerLink('twitter', e.target.value || null)}
+                      placeholder="https://x.com/..."
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-4">
+              <Button onClick={save}>Save Owner Bio</Button>
             </div>
           </div>
 

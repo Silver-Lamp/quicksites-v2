@@ -22,11 +22,23 @@ const PLATFORM_DOMAINS = ['quicksites.ai', 'cedarsites.com', 'pointsevenstudio.c
 
 /** Known org-level domains → org slug */
 const ORG_DOMAINS: Record<string, string> = {
+  // Production
   'pointsevenstudio.com': 'pointsevenstudio',
   'www.pointsevenstudio.com': 'pointsevenstudio',
   'cedarsites.com': 'cedarsites',
   'www.cedarsites.com': 'cedarsites',
+
+  // Dev convenience
+  'pointsevenstudio.localhost': 'pointsevenstudio',
+  'www.pointsevenstudio.localhost': 'pointsevenstudio',
+  'cedarsites.localhost': 'cedarsites',
+  'www.cedarsites.localhost': 'cedarsites',
+
+  // http://pointsevenstudio.localhost:3000/ → rewrites to /orgs/pointsevenstudio
+  // http://pointsevenstudio.localhost:3000/about → rewrites to /orgs/pointsevenstudio/about
+  // http://pointsevenstudio.localhost:3000/admin → goes to the app dashboard (not rewritten)
 };
+
 
 /** Paths we should never rewrite (Next internals, assets, specific APIs). */
 const IGNORE_PATHS: RegExp[] = [
@@ -167,10 +179,9 @@ export function middleware(req: NextRequest) {
       return withCookies(NextResponse.next());
     }
 
-    // Otherwise, rewrite into org context
-    const extra = pathname === '/' ? '/home' : pathname;
+    // Root → /orgs/<slug>, otherwise preserve the rest of the path
     const rewriteUrl = req.nextUrl.clone();
-    rewriteUrl.pathname = `/orgs/${orgSlug}${extra}`;
+    rewriteUrl.pathname = `/orgs/${orgSlug}${pathname === '/' ? '' : pathname}`;
     const res = NextResponse.rewrite(rewriteUrl);
     res.headers.set('x-qsites-org-slug', orgSlug);
     res.headers.set('x-qsites-rewrite', rewriteUrl.pathname + (rewriteUrl.search || ''));

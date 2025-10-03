@@ -3,10 +3,9 @@
 // Registry wrapper that: (1) resolves aliases, (2) validates against the
 // canonical Zod schemas, (3) exposes block factories for default/seeded
 // content, and (4) keeps your lazy renderers + default content.
-//
-// Drop-in replacement for your existing file.
 
 import type { JSX } from 'react';
+import * as React from 'react';
 import { z } from 'zod';
 import type { Block, BlockType, BlockCategory, SeedContext, BlockDefinition } from '@/types/blocks';
 import { isBlockType, schemaFor } from '@/types/blocks';
@@ -16,58 +15,54 @@ import { DEFAULT_BLOCK_CONTENT } from '@/lib/blocks/defaultBlockContent';
 import { validateBlockSchemaCoverage } from '@/lib/blocks/validateBlockSchemaCoverage';
 
 // ---------- Renderer typing utilities ----------
-
 type BlockRenderer = (props: any) => JSX.Element | null;
 type LazyRenderer = () => Promise<{ default: BlockRenderer }>;
 
-function lazyRenderer<T extends { default: any }>(
-  load: () => Promise<T>
-): LazyRenderer {
-  return () =>
-    load().then((m) => ({
-      default: (m.default ?? m) as BlockRenderer,
-    }));
+function lazyRenderer<T extends { default: any }>(load: () => Promise<T>): LazyRenderer {
+  return () => load().then((m) => ({ default: (m.default ?? m) as BlockRenderer }));
+}
+
+/** Heuristic to decide if we're rendering on the public site vs editor. */
+function isLiveSite(props: any) {
+  return !!(
+    props?.renderContext === 'site' ||
+    props?.__site ||
+    props?.site ||
+    props?.publicRender ||
+    props?.isLiveSite ||
+    (props?.template && (props.template as any).is_site === true)
+  );
 }
 
 // ---------- Aliases (legacy → canonical) ----------
-//
-// Add legacy names you want to accept from older seeds.
-// Example: seeder produced `services_grid` but canonical is `services`.
 export const BLOCK_ALIASES: Record<string, BlockType> = {
   services_grid: 'services',
-  // TEMP: Treat 'about' as text until a dedicated 'about' schema/renderer is added.
   about: 'text',
-
-  // NEW commerce aliases
+  // commerce
   products: 'products_grid',
   product_grid: 'products_grid',
   product_list: 'products_grid',
   service: 'service_offer',
-
-  // NEW scheduler alias
+  // scheduler
   'service-scheduler': 'scheduler',
 };
 
-// ---------- Block registry entry (UI+default content) ----------
-
+// ---------- Block registry entry ----------
 type DefaultContentMap = typeof DEFAULT_BLOCK_CONTENT;
 type BlockRegistryEntry<K extends BlockType = BlockType> = {
   label: string;
   icon: string;
   category: BlockCategory;
   isStatic?: boolean;
-  // Allow unknown for new blocks until DEFAULT_BLOCK_CONTENT gains entries
   defaultContent: DefaultContentMap[K] | unknown;
   render: BlockRenderer | LazyRenderer;
 };
 
-// Small helper so we don’t explode if a new key isn’t in DEFAULT_BLOCK_CONTENT yet
 function getDefaultContentSafe<T extends BlockType>(type: T, fallback: unknown) {
   return ((DEFAULT_BLOCK_CONTENT as any)[type] ?? fallback) as DefaultContentMap[T] | unknown;
 }
 
-// ---------- Canonical UI registry (unchanged labels/icons; still lazy) ----------
-
+// ---------- Canonical UI registry ----------
 export const BLOCK_REGISTRY: { [K in BlockType]: BlockRegistryEntry<K> } = {
   text: {
     label: 'Text',
@@ -131,15 +126,15 @@ export const BLOCK_REGISTRY: { [K in BlockType]: BlockRegistryEntry<K> } = {
     category: 'layout',
     isStatic: true,
     defaultContent: DEFAULT_BLOCK_CONTENT.hero,
-    render: HeroRender as BlockRenderer, // eagerly loaded
+    render: HeroRender as BlockRenderer,
   },
   services: {
-    label: 'Services List',
-    icon: '🛠️',
-    category: 'content',
-    isStatic: false,
-    defaultContent: DEFAULT_BLOCK_CONTENT.services,
-    render: lazyRenderer(() => import('@/components/admin/templates/render-blocks/services')),
+      label: 'Services List',
+      icon: '🛠️',
+      category: 'content',
+      isStatic: false,
+      defaultContent: DEFAULT_BLOCK_CONTENT.services,
+      render: lazyRenderer(() => import('@/components/admin/templates/render-blocks/services')),
   },
   faq: {
     label: 'FAQs',
@@ -263,14 +258,13 @@ export const BLOCK_REGISTRY: { [K in BlockType]: BlockRegistryEntry<K> } = {
       description: '',
       cta: 'Book now',
     }),
-    // Until you add a real renderer, keep this a safe client placeholder.
-    render: (() => async () => ({
-      default: (props: any) => (
+    render: (async () => ({
+      default: () => (
         <div className="border rounded-md p-3 bg-amber-50 text-sm">
           <b>Service Offer</b> — renderer coming soon.
         </div>
       ),
-    }))(),
+    })) as unknown as LazyRenderer,
   },
 
   // ---------- NEW: scheduler ----------
@@ -290,21 +284,31 @@ export const BLOCK_REGISTRY: { [K in BlockType]: BlockRegistryEntry<K> } = {
       window_days: 14,
       confirmation_message: 'Thanks! Your appointment is confirmed.',
     }),
-    render: lazyRenderer(() => import('@/components/admin/templates/render-blocks/scheduler')),
+    render: async () => {
+      const [AdminPreview, SiteLive] = await Promise.all([
+        import('@/components/admin/templates/render-blocks/scheduler'),
+        import('@/components/sites/render-blocks/scheduler'),
+      ]);
+      return {
+        default: (props: any) => {
+          const live = isLiveSite(props);
+          const Comp: any = live ? SiteLive.default : AdminPreview.default;
+          return <Comp {...props} previewOnly={!live} />;
+        },
+      };
+    },
   },
 };
 
-// ---------- Client-only wrappers for the editor preview ----------
-
+// ---------- Client-only dynamic list (if you use it elsewhere) ----------
 const clientPlaceholder = (label: string) => async () => ({
-  default: (props: any) => (
+  default: () => (
     <div className="border rounded-md p-3 bg-amber-50 text-sm">
       <b>{label}</b> — editor preview coming soon.
     </div>
   ),
 });
 
-// Only reference *.client.tsx here.
 export const DYNAMIC_RENDERERS: Partial<Record<BlockType, () => Promise<{ default: any }>>> = {
   meal_card:    () => import('@/components/admin/templates/render-blocks/meal-card.client'),
   reviews_list: () => import('@/components/admin/templates/render-blocks/reviews-list.client'),
@@ -329,55 +333,41 @@ export const DYNAMIC_RENDERERS: Partial<Record<BlockType, () => Promise<{ defaul
 
   // NEW:
   products_grid: () => import('@/components/admin/templates/render-blocks/products-grid'),
-  scheduler:     () => import('@/components/admin/templates/render-blocks/scheduler'),
-  // Keep placeholder for now to avoid import errors until you add it:
+  scheduler:     async () => {
+    const [AdminPreview, SiteLive] = await Promise.all([
+      import('@/components/admin/templates/render-blocks/scheduler'),
+      import('@/components/sites/render-blocks/scheduler'),
+    ]);
+    return {
+      default: (props: any) => {
+        const live = isLiveSite(props);
+        const Comp: any = live ? SiteLive.default : AdminPreview.default;
+        return <Comp {...props} previewOnly={!live} />;
+      },
+    };
+  },
   service_offer: clientPlaceholder('Service Offer'),
 };
 
-// ---------- Small “API layer” on top of the registry ----------
+// ---------- Validation coverage in dev ----------
+if (process.env.NODE_ENV === 'development') {
+  validateBlockSchemaCoverage();
+}
 
-/** Create a UUID safely in browser/server */
+// ---------- Helpers (alias-safe) ----------
 function genId() {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const g: any = globalThis as any;
   return g.crypto?.randomUUID?.() ?? Math.random().toString(36).slice(2);
 }
 
-/** Resolve canonical type from an input that may be a legacy alias */
-export function resolveCanonicalType(input: string): BlockType | null {
-  if (isBlockType(input)) return input;
-  const alias = BLOCK_ALIASES[input];
-  return alias ?? null;
+function toCtx(partial?: Partial<SeedContext>): SeedContext {
+  const id = () => genId();
+  const random = () => Math.random();
+  return { id, random, ...(partial ?? {}) } as SeedContext;
 }
 
-/** Return the UI registry entry (after resolving alias). */
-export function getRegistryEntry(inputType: string) {
-  const t = resolveCanonicalType(inputType);
-  return t ? BLOCK_REGISTRY[t] : undefined;
-}
-
-/** Validate a block’s props against the canonical Zod schema (post-alias). */
-export function validateBlock(block: Block) {
-  const t = resolveCanonicalType(block.type);
-  if (!t) return { ok: false as const, error: new Error(`Unknown block type "${block.type}"`) };
-
-  const schema = schemaFor(t);
-  if (!schema) return { ok: false as const, error: new Error(`No schema for type "${t}"`) };
-
-  const res = (schema as unknown as z.ZodTypeAny).safeParse((block as any).props ?? {});
-  return res.success
-    ? { ok: true as const, value: { ...block, type: t, props: res.data } as Block }
-    : { ok: false as const, error: res.error };
-}
-
-// ---------- Per-type factory hooks (Optional, extend anytime) ----------
-//
-// If a type isn’t listed here, we’ll fall back to DEFAULT_BLOCK_CONTENT.
-const BLOCK_FACTORIES: Record<
-  string,
-  BlockDefinition['factory']
-> = {
-  // Canonical 'services' (covers legacy 'services_grid' via alias)
+// Factories (subset kept; extend as needed)
+const BLOCK_FACTORIES: Record<string, BlockDefinition['factory']> = {
   services: {
     default: (ctx) =>
       ({
@@ -396,8 +386,8 @@ const BLOCK_FACTORIES: Record<
               name: s.name,
               description: s.description ?? '',
               price: typeof s.price === 'number' ? `$${s.price}` : s.price,
-              href: s.href,
-              icon: s.icon,
+              href: (s as any).href,
+              icon: (s as any).icon,
             })),
         },
       } as unknown as Block),
@@ -420,55 +410,15 @@ const BLOCK_FACTORIES: Record<
         },
       } as unknown as Block),
   },
-
-  // NEW: products_grid block (grid of purchasable items)
   products_grid: {
-    default: (ctx) =>
+    default: () =>
       ({
         id: genId(),
         type: 'products_grid',
         version: 1,
-        props: {
-          title: 'Featured Products',
-          columns: 3,
-          productIds: [],
-          // optional embedded preview items (renderer also supports fetching by ids)
-          products: [],
-        },
+        props: { title: 'Featured Products', columns: 3, productIds: [], products: [] },
       } as unknown as Block),
-    seed: (ctx) => {
-      // If seeding, try to embed light product data for preview
-      const toCents = (v: any) => {
-        if (typeof v === 'number') return Math.round(v * 100);
-        if (typeof v === 'string') {
-          const n = Number.parseFloat(v.replace(/[^0-9.]/g, ''));
-          return Number.isFinite(n) ? Math.round(n * 100) : null;
-        }
-        return null;
-      };
-      const items =
-        (ctx.products ?? []).slice(0, 6).map((p) => ({
-          id: ctx.id(),
-          title: p.name,
-          price_cents: toCents(p.price) ?? 0,
-          image_url: (p as any).image ?? null,
-        }));
-
-      return ({
-        id: genId(),
-        type: 'products_grid',
-        version: 1,
-        props: {
-          title: 'Featured Products',
-          columns: 3,
-          productIds: [], // real ids can be filled later via the modal
-          products: items,
-        },
-      } as unknown as Block);
-    },
   },
-
-  // TEMP: 'about' alias maps to 'text' → create a nice About paragraph as text content.
   text: {
     seed: (ctx) =>
       ({
@@ -481,19 +431,38 @@ const BLOCK_FACTORIES: Record<
             `<p>${ctx.merchant?.about ??
               `${ctx.merchant?.name ?? 'We'} are your local ${ctx.industry?.toLowerCase?.() ?? 'business'} in ${
                 ctx.locale?.city ?? ''
-              }${ctx.locale?.region ? ', ' + ctx.locale.region : ctx.locale?.state ? ', ' + ctx.locale.state : ''}.`
-            }</p>`,
+              }${ctx.locale?.region ? ', ' + ctx.locale.region : ctx.locale?.state ? ', ' + ctx.locale.state : ''}.`}</p>`,
         },
       } as unknown as Block),
   },
 };
 
-/** Construct a block with default content (alias-safe). */
+export function resolveCanonicalType(input: string): BlockType | null {
+  if (isBlockType(input)) return input;
+  const alias = BLOCK_ALIASES[input];
+  return alias ?? null;
+}
+
+export function getRegistryEntry(inputType: string) {
+  const t = resolveCanonicalType(inputType);
+  return t ? BLOCK_REGISTRY[t] : undefined;
+}
+
+export function validateBlock(block: Block) {
+  const t = resolveCanonicalType(block.type);
+  if (!t) return { ok: false as const, error: new Error(`Unknown block type "${block.type}"`) };
+  const schema = schemaFor(t);
+  if (!schema) return { ok: false as const, error: new Error(`No schema for type "${t}"`) };
+  const res = (schema as unknown as z.ZodTypeAny).safeParse((block as any).props ?? {});
+  return res.success
+    ? { ok: true as const, value: { ...block, type: t, props: res.data } as Block }
+    : { ok: false as const, error: res.error };
+}
+
 export function makeDefaultBlock(inputType: string, ctx?: Partial<SeedContext>): Block | null {
   const t = resolveCanonicalType(inputType);
   if (!t) return null;
 
-  // Use a specific default factory if provided; otherwise use DEFAULT_BLOCK_CONTENT.
   const factory = BLOCK_FACTORIES[t]?.default;
   const base =
     factory?.(toCtx(ctx)) ??
@@ -505,10 +474,9 @@ export function makeDefaultBlock(inputType: string, ctx?: Partial<SeedContext>):
     } as Block);
 
   const checked = validateBlock(base);
-  return checked.ok ? checked.value : base; // return unparsed if schema complains in dev
+  return checked.ok ? checked.value : base;
 }
 
-/** Construct block(s) from merchant/services data (alias-safe). */
 export function makeSeededBlock(inputType: string, ctx: SeedContext): Block | Block[] | null {
   const t = resolveCanonicalType(inputType);
   if (!t) return null;
@@ -520,18 +488,4 @@ export function makeSeededBlock(inputType: string, ctx: SeedContext): Block | Bl
   const list = Array.isArray(res) ? res : [res];
   const validated = list.map((b) => (validateBlock(b).ok ? validateBlock(b).value : b));
   return Array.isArray(res) ? validated : validated[0];
-}
-
-// ---------- Tiny ctx helper ----------
-
-function toCtx(partial?: Partial<SeedContext>): SeedContext {
-  const id = () => genId();
-  const random = () => Math.random();
-  return { id, random, ...(partial ?? {}) } as SeedContext;
-}
-
-// ---------- Dev-time coverage check ----------
-
-if (process.env.NODE_ENV === 'development') {
-  validateBlockSchemaCoverage();
 }

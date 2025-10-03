@@ -45,6 +45,21 @@ function obj(v: any) {
   try { return JSON.parse(String(v)); } catch { return {}; }
 }
 
+/** deep get */
+function dget(o: any, path: string[]): any {
+  return path.reduce((acc, k) => (acc && typeof acc === 'object' ? acc[k] : undefined), o);
+}
+
+/** deep delete (mutates) */
+function ddel(o: any, path: string[]): void {
+  if (!o || typeof o !== 'object') return;
+  const last = path[path.length - 1];
+  const parent = path.slice(0, -1).reduce((acc, k) => (acc && typeof acc === 'object' ? acc[k] : undefined), o);
+  if (parent && typeof parent === 'object') {
+    try { delete (parent as any)[last]; } catch {}
+  }
+}
+
 /* ─────────────── industry helpers (same semantics as your state route) ─────────────── */
 
 function toSlug(s: any): string | null {
@@ -168,6 +183,7 @@ const TEMPLATE_EDITOR_SELECT = [
   'site_type','site_type_key','site_type_label',
   'contact_email','phone','address_line1','address_line2','city','state','postal_code',
   'latitude','longitude','color_mode','color_scheme','layout','data',
+  'company_id',
 ].join(', ');
 
 /* ──────────────── RPC helpers ──────────────── */
@@ -210,10 +226,88 @@ async function tryAllRpcs(id: string, payload: any): Promise<RpcResult> {
   r = await callRpc('public','commit_template_patch', { p_id: id, p_base_rev: payload.base_rev, p_patch: payload.patch, p_actor: payload.actor ?? null, p_kind: payload.kind ?? 'save' });
   if (r.ok) return r;
 
-  // 6) legacy public.commit_template(template_id,patch,actor_id,reason)  (no base_rev)
+  // 6) legacy public.commit_template(template_id,patch,actor_id,reason)
   r = await callRpc('public','commit_template', { template_id: id, patch: payload.patch, actor_id: payload.actor ?? null, reason: 'editor save' });
   return r;
 }
+
+/* ───────────────────── Company linkage & hours redirect helpers ───────────────────── */
+
+function resolveIncomingCompanyIdFromPatch(patch: any): string | null {
+  const d = obj(patch?.data);
+  return (d?.company_id && typeof d.company_id === 'string' && d.company_id) || null;
+}
+
+function resolveCompanyId(beforeRow: any, patch: any): string | null {
+  // Prefer explicit incoming; else column; else legacy JSON
+  return (
+    resolveIncomingCompanyIdFromPatch(patch) ||
+    (beforeRow?.company_id ?? null) ||
+    (beforeRow?.data?.company_id ?? null)
+  );
+}
+
+async function ensureTemplateCompanyColumn(pub: any, templateId: string, nextCompanyId: string | null) {
+  if (!nextCompanyId) return;
+  await pub.from('templates').update({ company_id: nextCompanyId }).eq('id', templateId);
+}
+
+async function upsertCompanyHours(pub: any, companyId: string, hours: any) {
+  const { error } = await pub
+    .from('companies')
+    .update({ business_hours: hours })
+    .eq('id', companyId)
+    .select('id')
+    .single();
+  if (error) throw new Error(error.message);
+}
+
+async function fetchCompanyHours(pub: any, companyId: string): Promise<any | null> {
+  const { data, error } = await pub
+    .from('companies')
+    .select('business_hours')
+    .eq('id', companyId)
+    .single();
+  if (error) return null;
+  return (data as { business_hours: any } | null)?.business_hours ?? null;
+}
+
+/* ──────────────── Types used for local narrowing (no generics on .select) ─────────────── */
+
+type BeforeRow = {
+  rev: number | null;
+  data: any;
+  company_id: string | null;
+};
+
+type TemplateRowForEditor = {
+  id: string;
+  rev: number | null;
+  data: any;
+  company_id: string | null;
+  site_type?: string | null;
+  site_type_key?: string | null;
+  site_type_label?: string | null;
+  template_name?: string | null;
+  business_name?: string | null;
+  industry?: string | null;
+  industry_label?: string | null;
+  contact_email?: string | null;
+  phone?: string | null;
+  address_line1?: string | null;
+  address_line2?: string | null;
+  city?: string | null;
+  state?: string | null;
+  postal_code?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
+  color_mode?: string | null;
+  color_scheme?: string | null;
+  layout?: string | null;
+  slug?: string | null;
+  base_slug?: string | null;
+  updated_at?: string | null;
+};
 
 /* ────────────────────────────────── ROUTE ────────────────────────────────── */
 
@@ -235,16 +329,20 @@ export async function POST(req: Request) {
 
     const pub = supabaseAdmin.schema('public');
 
-    // before state
-    const { data: beforeRow, error: beforeErr } = await pub
+    // before state (no generics; cast once)
+    const beforeRes = await pub
       .from('templates')
-      .select('rev,data')
+      .select('rev,data,company_id')
       .eq('id', id)
       .single();
+
+    const beforeErr = beforeRes.error;
+    const beforeRow = beforeRes.data as BeforeRow | null;
+
     if (beforeErr || !beforeRow) return j({ error: beforeErr?.message || 'template not found' }, 404);
 
-    const beforeRev = typeof (beforeRow as any).rev === 'number' ? (beforeRow as any).rev : 0;
-    const beforeData = (beforeRow as any).data ?? {};
+    const beforeRev = typeof beforeRow.rev === 'number' ? beforeRow.rev : 0;
+    const beforeData = beforeRow.data ?? {};
     const effectiveBaseRev = Number.isFinite(baseRev as number) ? (baseRev as number) : beforeRev;
 
     // optional org
@@ -253,7 +351,33 @@ export async function POST(req: Request) {
 
     // enrich patch + strip empties
     if (DEBUG_ID) dbg('[IDENTITY:API] incoming patch', { id, baseRev: effectiveBaseRev, patch: rawPatch });
-    const enrichedPatch = enrichPatchWithIdentity(rawPatch, beforeData);
+    let enrichedPatch = enrichPatchWithIdentity(rawPatch, beforeData);
+
+    // ── Promote company_id to column (from JSON) ─────────────────────────────
+    const incomingCompanyId = resolveIncomingCompanyIdFromPatch(enrichedPatch);
+    const resolvedCompanyId = resolveCompanyId(beforeRow, enrichedPatch);
+
+    if (incomingCompanyId && incomingCompanyId !== beforeRow.company_id) {
+      await ensureTemplateCompanyColumn(pub, id, incomingCompanyId);
+    }
+
+    // Always strip legacy JSON copy to prevent future drift
+    ddel(enrichedPatch, ['data', 'company_id']);
+
+    // ── Redirect hours writes to companies.business_hours (when company present) ─────
+    const incomingHours = dget(enrichedPatch, ['data','meta','hours']);
+    if (resolvedCompanyId && incomingHours && typeof incomingHours === 'object') {
+      try {
+        await upsertCompanyHours(pub, resolvedCompanyId, incomingHours);
+        // strip from template patch so we don't store two sources of truth
+        ddel(enrichedPatch, ['data','meta','hours']);
+        if (DEBUG_ID) dbg('[IDENTITY:API] redirected hours → companies.business_hours', { companyId: resolvedCompanyId });
+      } catch (e: any) {
+        // If company write fails, we *do not* drop the template hours (keep user data safe)
+        if (DEBUG_ID) dbg('[IDENTITY:API] company hours write failed; leaving hours in template patch', { error: e?.message });
+      }
+    }
+
     const strippedPatch = stripEmpty(enrichedPatch ?? {});
 
     const payload = {
@@ -270,8 +394,8 @@ export async function POST(req: Request) {
 
     if (!r.ok) {
       // refresh current rev
-      const { data: curRow } = await pub.from('templates').select('rev').eq('id', id).maybeSingle();
-      const currentRev = (curRow && typeof (curRow as any).rev === 'number') ? (curRow as any).rev : beforeRev;
+      const curRes = await pub.from('templates').select('rev').eq('id', id).maybeSingle();
+      const currentRev = (curRes.data as { rev: number | null } | null)?.rev ?? beforeRev;
 
       const revMismatch = currentRev !== payload.base_rev;
       const conflictish = looksLikeConflict((r as any).error);
@@ -302,20 +426,28 @@ export async function POST(req: Request) {
       }
     }
 
-    // Rehydrate authoritative row
-    const { data: fullRow, error: selErr } = await pub
+    // Rehydrate authoritative row (no generics; cast once)
+    const fullRes = await pub
       .from('templates')
       .select(TEMPLATE_EDITOR_SELECT)
       .eq('id', id)
       .single();
 
+    const selErr = fullRes.error;
+    const fullRow = fullRes.data as TemplateRowForEditor | null;
+
     if (selErr || !fullRow) {
-      const { data: cur2 } = await pub.from('templates').select('data, rev').eq('id', id).single();
-      const afterData2 = (cur2 as any)?.data ?? {};
+      const cur2 = await pub
+        .from('templates')
+        .select('data, rev')
+        .eq('id', id)
+        .single();
+      const cur2Data = cur2.data as { data: any; rev: number | null } | null;
+      const afterData2 = cur2Data?.data ?? {};
       const hash2 = sha256(afterData2);
       const nextRev2 =
-        typeof (cur2 as any)?.rev === 'number'
-          ? (cur2 as any).rev
+        typeof cur2Data?.rev === 'number'
+          ? cur2Data.rev
           : Number.isFinite(effectiveBaseRev)
           ? (effectiveBaseRev as number) + 1
           : beforeRev + 1;
@@ -323,10 +455,30 @@ export async function POST(req: Request) {
       return j({ id, rev: nextRev2, hash: hash2, kind: kind ?? 'save' });
     }
 
-    const afterData = (fullRow as any)?.data ?? {};
+    // If we have a company id (column wins; else fallback), inject company hours into the response payload
+    const finalCompanyId: string | null =
+      fullRow.company_id ??
+      resolvedCompanyId ??
+      (fullRow.data as any)?.company_id ??
+      null;
+
+    let afterData = fullRow.data ?? {};
+    if (finalCompanyId) {
+      const companyHours = await fetchCompanyHours(pub, finalCompanyId);
+      if (companyHours) {
+        afterData = {
+          ...afterData,
+          meta: {
+            ...(afterData?.meta ?? {}),
+            hours: companyHours, // inject for compatibility so existing renderers keep working
+          },
+        };
+      }
+    }
+
     const nextRev =
-      typeof (fullRow as any)?.rev === 'number'
-        ? (fullRow as any).rev
+      typeof fullRow.rev === 'number'
+        ? fullRow.rev
         : Number.isFinite(effectiveBaseRev)
         ? (effectiveBaseRev as number) + 1
         : beforeRev + 1;
@@ -336,7 +488,7 @@ export async function POST(req: Request) {
     const normalizedSiteType: string | null =
       (fullRow as any).site_type ??
       (fullRow as any).site_type_key ??
-      ((fullRow as any).data?.meta?.site_type ?? null);
+      ((afterData as any)?.meta?.site_type ?? null);
 
     // best-effort event log
     try {
@@ -383,15 +535,20 @@ export async function POST(req: Request) {
         site_type: normalizedSiteType,
         meta_identity: afterData?.meta?.identity,
         data_identity: afterData?.identity,
+        company_id: finalCompanyId,
       });
     }
+
+    // Return the template row + injected hours (compat), and surface company_id
+    const templateOut = { ...(fullRow as any), data: afterData, site_type: normalizedSiteType };
+    if (!templateOut.company_id && finalCompanyId) templateOut.company_id = finalCompanyId;
 
     return j({
       id,
       rev: nextRev,
       hash,
       kind: kind ?? 'save',
-      template: { ...(fullRow as any), site_type: normalizedSiteType },
+      template: templateOut,
     });
   } catch (e: any) {
     if (DEBUG_ID) dbg('[IDENTITY:API] fatal error', { error: e?.message });

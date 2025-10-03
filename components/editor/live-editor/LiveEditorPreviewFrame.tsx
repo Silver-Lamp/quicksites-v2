@@ -1,15 +1,11 @@
+// components/editor/live-editor/LiveEditorPreviewFrame.tsx
 'use client';
 
 import * as React from 'react';
 import { cn } from '@/lib/utils';
 import RenderBlock from '@/components/admin/templates/render-block';
 import { Pencil, Trash2, GripVertical } from 'lucide-react';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from '@/components/ui/tooltip';
+import { TooltipProvider } from '@/components/ui/tooltip';
 
 // dnd-kit
 import {
@@ -30,7 +26,7 @@ import {
 import { CSS } from '@dnd-kit/utilities';
 
 import { flushSync } from 'react-dom';
-import { createDefaultBlock } from '@/lib/createDefaultBlock'; // ⬅️ fallback insert
+import { createDefaultBlock } from '@/lib/createDefaultBlock';
 
 type Mode = 'view' | 'edit' | 'preview' | string;
 
@@ -135,13 +131,12 @@ function getBlocksAccessor(template: any, pageIdx: number) {
   return { get, set, prefix, hasBlocks, hasContentBlocks, page };
 }
 
-/* ---------- NEW: header/footer resolution helpers (robust to naming) ---------- */
+/* ---------- Header/Footer resolution helpers ---------- */
 
 function boolish(v: any, fallback: boolean) {
   return typeof v === 'boolean' ? v : fallback;
 }
 
-// “Use custom header/footer on this page” — we accept a few possible keys.
 function pageWantsCustomHF(page: any) {
   return !!(
     page?.use_custom_header_footer ??
@@ -153,7 +148,6 @@ function pageWantsCustomHF(page: any) {
   );
 }
 
-// Try several common keys for header/footer blocks on page and template.
 function resolveHeaderBlock(template: any, page: any) {
   if (pageWantsCustomHF(page)) {
     const pageHeader =
@@ -202,6 +196,82 @@ function resolveFooterBlock(template: any, page: any) {
   );
 }
 
+/* ── Robust programmatic open for Hours panel ───────────────────────────── */
+function openHoursPanel(overrides?: Partial<{
+  openEditor: boolean; scroll: boolean; spotlightMs: number; behavior: ScrollBehavior;
+}>) {
+  const detail = {
+    panel: 'hours',
+    panelId: 'hours',
+    id: 'hours',
+    slug: 'hours',
+    openEditor: true,
+    scroll: true,
+    spotlightMs: 900,
+    behavior: 'smooth' as ScrollBehavior,
+    ...(overrides || {}),
+  };
+
+  const openSettingsShell = () => {
+    try {
+      window.dispatchEvent(new CustomEvent('qs:settings:open'));
+      window.dispatchEvent(new CustomEvent('qs:open-settings'));
+      window.dispatchEvent(new CustomEvent('qs:drawer:open', { detail: { which: 'settings' } }));
+    } catch {}
+    try {
+      const btn =
+        document.querySelector<HTMLElement>('[data-action="open-settings"]') ||
+        document.querySelector<HTMLElement>('[data-action="open-site-settings"]') ||
+        document.querySelector<HTMLElement>('[data-testid="open-settings"]');
+      btn?.click?.();
+    } catch {}
+  };
+
+  const fireOpenPanel = () => {
+    try {
+      window.dispatchEvent(new CustomEvent('qs:open-settings-panel', { detail }));
+      window.dispatchEvent(new CustomEvent('qs:open-panel', { detail }));
+      window.dispatchEvent(new CustomEvent('qs:settings:open-panel', { detail }));
+      window.dispatchEvent(new CustomEvent('qs:panel:open', { detail }));
+    } catch {}
+  };
+
+  openSettingsShell();
+  fireOpenPanel();
+  requestAnimationFrame(fireOpenPanel);
+
+  let tries = 0;
+  const MAX_TRIES = 30; // ~1.5s
+  const poll = window.setInterval(() => {
+    tries++;
+
+    if (tries % 3 === 0) {
+      openSettingsShell();
+      fireOpenPanel();
+    }
+
+    const panel: HTMLElement | null =
+      document.querySelector('[data-panel-id="hours"]') ||
+      document.querySelector('#panel-hours') ||
+      document.querySelector('[data-panel="hours"]');
+
+    if (panel) {
+      try {
+        const details = panel.querySelector<HTMLDetailsElement>('details');
+        if (details && !details.open) details.open = true;
+        const btn = panel.querySelector<HTMLElement>('[data-action="open-hours-editor"]');
+        btn?.click?.();
+        panel.scrollIntoView({ behavior: detail.behavior, block: 'center' });
+        window.dispatchEvent(new CustomEvent('qs:panel-opened', { detail: { panel: 'hours' } }));
+      } catch {}
+      window.clearInterval(poll);
+      return;
+    }
+
+    if (tries >= MAX_TRIES) window.clearInterval(poll);
+  }, 50);
+}
+
 /* ======================================================================= */
 
 export default function LiveEditorPreviewFrame({
@@ -232,8 +302,18 @@ export default function LiveEditorPreviewFrame({
 
   // Forces recompute when editor emits any template patch (transient or persisted)
   const [nonce, setNonce] = React.useState(0);
+  const bumpPending = React.useRef(false);
   React.useEffect(() => {
-    const bump = () => setNonce((n) => n + 1);
+    const bump = (e: Event) => {
+      const detail = (e as CustomEvent).detail;
+      if (detail && detail._fromMirror) return; // ignore mirrored echo
+      if (bumpPending.current) return;          // throttle to one per frame
+      bumpPending.current = true;
+      requestAnimationFrame(() => {
+        setNonce((n) => n + 1);
+        bumpPending.current = false;
+      });
+    };
     window.addEventListener('qs:template:apply-patch', bump as any);
     return () => window.removeEventListener('qs:template:apply-patch', bump as any);
   }, []);
@@ -342,7 +422,7 @@ export default function LiveEditorPreviewFrame({
   // Only reset on true template/page changes (not every patch)
   React.useEffect(() => {
     setOptimisticBlocks(null);
-  }, [template, pageIdx, slugForView]); // ← deliberately no `nonce`
+  }, [template, pageIdx, slugForView]);
 
   const renderBlocks = (optimisticBlocks ?? baseBlocks) as any[];
 
@@ -601,13 +681,11 @@ export default function LiveEditorPreviewFrame({
 
   /* ---------------- helper: SAFELY add first block ---------------- */
   const safeAddFirstBlock = React.useCallback(() => {
-    // If the host passed a handler, use it.
     if (typeof onRequestAddAfter === 'function') {
       onRequestAddAfter('__ADD_AT_START__');
       return;
     }
 
-    // Fallback: insert a default Hero block directly into page state
     try {
       const accessor = getBlocksAccessor(template, pageIdx);
       const current = (optimisticBlocks ?? accessor.get()) as any[];
@@ -663,131 +741,138 @@ export default function LiveEditorPreviewFrame({
           className="mx-auto transition-all duration-150"
           style={{ width: widthPx ? `${widthPx}px` : '100%', maxWidth: '100%' }}
         >
-          {useInline ? (
-            <div
-              className={[
-                'min-h-[70vh] w-full rounded-lg border transition-colors overflow-visible pb-24',
-                siteMode === 'dark'
-                  ? 'bg-neutral-950 text-neutral-100 border-white/10'
-                  : 'bg-white text-zinc-900 border-black/10'
-              ].join(' ')}
-            >
-              <div className="mx-auto max-w-[1100px] p-8 space-y-6">
-                {/* NEW: Header (not draggable) */}
-                {headerBlock && (
-                  <div>
-                    <RenderBlock
-                      block={headerBlock}
-                      blockPath="/header"
-                      previewOnly
-                      template={template}
-                      device={viewport}
-                    />
-                  </div>
-                )}
+          {/* Always inline for stability in editor */}
+          <div
+            className={[
+              'min-h-[70vh] w-full rounded-lg border transition-colors overflow-visible pb-24',
+              siteMode === 'dark'
+                ? 'bg-neutral-950 text-neutral-100 border-white/10'
+                : 'bg-white text-zinc-900 border-black/10'
+            ].join(' ')}
+          >
+            <div className="mx-auto max-w-[1100px] p-8 space-y-6">
+              {/* Header (not draggable) */}
+              {headerBlock && (
+                <div>
+                  <RenderBlock
+                    block={headerBlock}
+                    blockPath="/header"
+                    previewOnly
+                    template={template}
+                    device={viewport}
+                  />
+                </div>
+              )}
 
-                {renderBlocks.length === 0 ? (
-                  <div className="flex flex-col items-center gap-3" style={{ pointerEvents: 'auto' }}>
-                    <div className="text-sm text-neutral-400">This page is empty.</div>
-                    <button
-                      id="qs-add-first-block"                           // ← diagnostic handle
-                      type="button"
-                      className="rounded-md border border-white/15 bg-white/5 px-3 py-1.5 text-sm hover:bg-white/10"
-                      onPointerDownCapture={(e) => { e.preventDefault(); e.stopPropagation(); }}
-                      onClick={(e) => { e.preventDefault(); e.stopPropagation(); safeAddFirstBlock(); }}
-                    >
-                      + Add your first block
-                    </button>
-                  </div>
-                ) : (
-                  <DndContext
-                    sensors={sensors}
-                    onDragStart={onDragStart}
-                    onDragEnd={onDragEnd}
+              {renderBlocks.length === 0 ? (
+                <div className="flex flex-col items-center gap-3" style={{ pointerEvents: 'auto' }}>
+                  <div className="text-sm text-neutral-400">This page is empty.</div>
+                  <button
+                    id="qs-add-first-block"
+                    type="button"
+                    className="rounded-md border border-white/15 bg-white/5 px-3 py-1.5 text-sm hover:bg-white/10"
+                    onPointerDownCapture={(e) => { e.preventDefault(); e.stopPropagation(); }}
+                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); safeAddFirstBlock(); }}
                   >
-                    <SortableContext
-                      items={ids}
-                      strategy={verticalListSortingStrategy}
-                      key={ids.join('|')} // force clean re-render after reorder
-                    >
-                      {renderBlocks.map((b: any, i: number) => {
-                        const id = ids[i];
+                    + Add your first block
+                  </button>
+                </div>
+              ) : (
+                <DndContext sensors={sensors} onDragStart={onDragStart} onDragEnd={onDragEnd}>
+                  <SortableContext
+                    items={ids}
+                    strategy={verticalListSortingStrategy}
+                    key={ids.join('|')}
+                  >
+                    {renderBlocks.map((b: any, i: number) => {
+                      const id = ids[i];
+                      const blockType =
+                        b && typeof b === 'object'
+                          ? (b.type || (b as any)?.block?.type)
+                          : undefined;
 
-                        return (
-                          <SortableRow
-                            key={id}
-                            id={id}
-                            isActive={activeId === id}
-                            onEdit={() => onRequestEditBlock?.(id)}
-                            onDelete={() => {
-                              applyDeleteAt(i);             // optimistic + patch
-                              onRequestDeleteBlock?.(id);   // keep your side-effects
+                      return (
+                        <SortableRow
+                          key={id}
+                          id={id}
+                          blockType={blockType}
+                          isActive={activeId === id}
+                          onEdit={() => {
+                            if (blockType === 'hours') {
+                              openHoursPanel();
+                              return;
+                            }
+                            onRequestEditBlock?.(id);
+                          }}
+                          onDelete={() => {
+                            applyDeleteAt(i);
+                            onRequestDeleteBlock?.(id);
+                          }}
+                        >
+                          {/* Click-anywhere-to-edit, except on interactive elements */}
+                          <div
+                            onClickCapture={(e) => {
+                              const t = e.target as HTMLElement | null;
+                              if (!t) return;
+                              if (t.closest('a,button,input,label,select,textarea,video')) {
+                                e.preventDefault();
+                                return;
+                              }
+
+                              if (blockType === 'hours') {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                openHoursPanel();
+                                return;
+                              }
+
+                              if (activeId) return;
+                              e.stopPropagation();
+                              onRequestEditBlock?.(id);
                             }}
                           >
-                            {/* Click-anywhere-to-edit, except on interactive elements */}
-                            <div
-                              onClickCapture={(e) => {
-                                if (activeId) return; // ignore while dragging
-                                const t = e.target as HTMLElement | null;
-                                if (!t) return;
-                                if (t.closest('a,button,input,label,select,textarea,video')) e.preventDefault();
+                            <RenderBlock
+                              block={b}
+                              blockPath={`${pageIdx}:${i}`}
+                              previewOnly
+                              template={template}
+                              device={viewport}
+                            />
+                          </div>
+
+                          <div className="mt-2 flex justify-center">
+                            <button
+                              type="button"
+                              className="invisible group-hover:visible rounded-md border border-white/15 bg-white/5 px-2 py-1 text-xs hover:bg-white/10"
+                              onClick={(e) => {
                                 e.stopPropagation();
-                                onRequestEditBlock?.(id);
+                                onRequestAddAfter?.(id);
                               }}
                             >
-                              <RenderBlock
-                                block={b}
-                                blockPath={`${pageIdx}:${i}`}
-                                previewOnly
-                                template={template}
-                                device={viewport}
-                              />
-                            </div>
+                              + Add block below
+                            </button>
+                          </div>
+                        </SortableRow>
+                      );
+                    })}
+                  </SortableContext>
+                </DndContext>
+              )}
 
-                            <div className="mt-2 flex justify-center">
-                              <button
-                                type="button"
-                                className="invisible group-hover:visible rounded-md border border-white/15 bg-white/5 px-2 py-1 text-xs hover:bg-white/10"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  onRequestAddAfter?.(id);
-                                }}
-                              >
-                                + Add block below
-                              </button>
-                            </div>
-                          </SortableRow>
-                        );
-                      })}
-                    </SortableContext>
-                  </DndContext>
-                )}
-
-                {/* NEW: Footer (not draggable) */}
-                {footerBlock && (
-                  <div>
-                    <RenderBlock
-                      block={footerBlock}
-                      blockPath="/footer"
-                      previewOnly
-                      template={template}
-                      device={viewport}
-                    />
-                  </div>
-                )}
-              </div>
+              {/* Footer (not draggable) */}
+              {footerBlock && (
+                <div>
+                  <RenderBlock
+                    block={footerBlock}
+                    blockPath="/footer"
+                    previewOnly
+                    template={template}
+                    device={viewport}
+                  />
+                </div>
+              )}
             </div>
-          ) : (
-            <iframe
-              ref={iframeRef}
-              src={stableSrc}
-              className="h-[70vh] w-full rounded-lg border border-black/10 bg-white dark:border-white/10 dark:bg-black"
-              style={{ minHeight: 600 }}
-              onLoad={() => setLoaded(true)}
-              loading="eager"
-              referrerPolicy="no-referrer-when-downgrade"
-            />
-          )}
+          </div>
         </div>
 
         {!useInline && !loaded && (
@@ -804,12 +889,14 @@ export default function LiveEditorPreviewFrame({
 
 function SortableRow({
   id,
+  blockType,
   isActive,
   onEdit,
   onDelete,
   children,
 }: {
   id: string;
+  blockType?: string;
   isActive?: boolean;
   onEdit?: () => void;
   onDelete?: () => void;
@@ -817,16 +904,21 @@ function SortableRow({
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
 
-  const style: React.CSSProperties = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-  };
+  const style: React.CSSProperties = React.useMemo(
+    () => ({
+      transform: CSS.Transform.toString(transform),
+      transition,
+    }),
+    [transform, transition]
+  );
+
+  const handleListeners = React.useMemo(() => listeners, [listeners]);
 
   return (
     <div
       ref={setNodeRef}
       style={style}
-      {...attributes /* role/aria; keeps keyboard semantics if you add KeyboardSensor later */}
+      {...attributes}
       className={cn(
         'group relative rounded-lg ring-1 ring-white/5 hover:ring-white/15',
         (isDragging || isActive) && 'opacity-70'
@@ -834,62 +926,50 @@ function SortableRow({
     >
       {/* Top-right controls: Drag handle + Edit + Delete */}
       <div className="pointer-events-none absolute right-2 top-2 z-10 hidden gap-1 group-hover:flex">
-        <Tooltip>
-          <TooltipTrigger asChild>
-            {/* DRAG HANDLE — listeners go ONLY here to enforce handle-only dragging */}
-            <button
-              type="button"
-              aria-label="Drag to reorder"
-              className="pointer-events-auto inline-flex items-center rounded-md border border-white/20 bg-black/60 p-1.5 text-white hover:bg-black/80 cursor-grab active:cursor-grabbing"
-              {...listeners}
-              onClick={(e) => e.stopPropagation()}
-            >
-              <GripVertical className="h-4 w-4" />
-            </button>
-          </TooltipTrigger>
-          <TooltipContent side="left" align="center">
-            Drag to reorder
-          </TooltipContent>
-        </Tooltip>
+        {/* DRAG HANDLE — plain button (no TooltipTrigger/asChild) */}
+        <button
+          type="button"
+          aria-label="Drag to reorder"
+          className="pointer-events-auto inline-flex items-center rounded-md border border-white/20 bg-black/60 p-1.5 text-white hover:bg-black/80 cursor-grab active:cursor-grabbing"
+          {...handleListeners}
+          onClick={(e) => e.stopPropagation()}
+          title="Drag to reorder"
+        >
+          <GripVertical className="h-4 w-4" />
+        </button>
 
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <button
-              type="button"
-              aria-label="Edit block"
-              className="pointer-events-auto inline-flex items-center rounded-md border border-white/20 bg-black/60 px-1.5 py-1.5 text-white hover:bg-black/80"
-              onClick={(e) => {
-                e.stopPropagation();
-                onEdit?.();
-              }}
-            >
-              <Pencil className="h-4 w-4" />
-            </button>
-          </TooltipTrigger>
-          <TooltipContent side="left" align="center">
-            Edit block
-          </TooltipContent>
-        </Tooltip>
+        {/* Edit */}
+        <button
+          type="button"
+          aria-label="Edit block"
+          className="pointer-events-auto inline-flex items-center rounded-md border border-white/20 bg-black/60 px-1.5 py-1.5 text-white hover:bg-black/80"
+          onClick={(e) => {
+            e.stopPropagation();
+            if (blockType === 'hours') {
+              openHoursPanel();
+              return;
+            }
+            onEdit?.();
+          }}
+          title="Edit block"
+        >
+          <Pencil className="h-4 w-4" />
+        </button>
 
+        {/* Delete */}
         {!!onDelete && (
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <button
-                type="button"
-                aria-label="Delete block"
-                className="pointer-events-auto inline-flex items-center rounded-md border border-red-600 bg-red-600/80 p-1.5 text-white hover:bg-red-700"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onDelete?.();
-                }}
-              >
-                <Trash2 className="h-4 w-4" />
-              </button>
-            </TooltipTrigger>
-            <TooltipContent side="left" align="center">
-              Delete block
-            </TooltipContent>
-          </Tooltip>
+          <button
+            type="button"
+            aria-label="Delete block"
+            className="pointer-events-auto inline-flex items-center rounded-md border border-red-600 bg-red-600/80 p-1.5 text-white hover:bg-red-700"
+            onClick={(e) => {
+              e.stopPropagation();
+              onDelete?.();
+            }}
+            title="Delete block"
+          >
+            <Trash2 className="h-4 w-4" />
+          </button>
         )}
       </div>
 

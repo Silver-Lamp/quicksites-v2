@@ -1,44 +1,46 @@
+// components/ui/scroll-area.tsx
+'use client';
+
 import * as React from 'react';
-import * as ScrollAreaPrimitive from '@radix-ui/react-scroll-area';
+import { cn } from '@/lib/utils';
 
-import { cn } from '@/admin/lib/utils';
+export interface ScrollAreaProps extends React.HTMLAttributes<HTMLDivElement> {
+  /** Optional class for the inner viewport */
+  viewportClassName?: string;
+}
 
-const ScrollArea = React.forwardRef<
-  React.ElementRef<typeof ScrollAreaPrimitive.Root>,
-  React.ComponentPropsWithoutRef<typeof ScrollAreaPrimitive.Root>
->(({ className, children, ...props }, ref) => (
-  <ScrollAreaPrimitive.Root
-    ref={ref}
-    className={cn('relative overflow-hidden', className)}
-    {...props}
-  >
-    <ScrollAreaPrimitive.Viewport className="h-full w-full rounded-[inherit]">
-      {children}
-    </ScrollAreaPrimitive.Viewport>
-    <ScrollBar />
-    <ScrollAreaPrimitive.Corner />
-  </ScrollAreaPrimitive.Root>
-));
-ScrollArea.displayName = ScrollAreaPrimitive.Root.displayName;
+/**
+ * Editor-safe ScrollArea
+ * - Native overflow scrolling to avoid Radix ref/setState loops.
+ * - Keeps a compatible API for common usages in your codebase.
+ */
+export const ScrollArea = React.forwardRef<HTMLDivElement, ScrollAreaProps>(
+  function ScrollArea({ className, viewportClassName, children, ...props }, ref) {
+    return (
+      <div ref={ref} className={cn('relative', className)} {...props}>
+        <div className={cn('h-full w-full overflow-auto', viewportClassName)}>
+          {children}
+        </div>
+      </div>
+    );
+  }
+);
 
-const ScrollBar = React.forwardRef<
-  React.ElementRef<typeof ScrollAreaPrimitive.ScrollAreaScrollbar>,
-  React.ComponentPropsWithoutRef<typeof ScrollAreaPrimitive.ScrollAreaScrollbar>
->(({ className, orientation = 'vertical', ...props }, ref) => (
-  <ScrollAreaPrimitive.ScrollAreaScrollbar
-    ref={ref}
-    orientation={orientation}
-    className={cn(
-      'flex touch-none select-none transition-colors',
-      orientation === 'vertical' && 'h-full w-2.5 border-l border-l-transparent p-[1px]',
-      orientation === 'horizontal' && 'h-2.5 flex-col border-t border-t-transparent p-[1px]',
-      className
-    )}
-    {...props}
-  >
-    <ScrollAreaPrimitive.ScrollAreaThumb className="relative flex-1 rounded-full bg-border" />
-  </ScrollAreaPrimitive.ScrollAreaScrollbar>
-));
-ScrollBar.displayName = ScrollAreaPrimitive.ScrollAreaScrollbar.displayName;
+/**
+ * No-op ScrollBar to satisfy existing imports/usages.
+ * (Your layouts will rely on native scrollbars instead.)
+ */
+export const ScrollBar = React.forwardRef<
+  HTMLDivElement,
+  React.HTMLAttributes<HTMLDivElement> & { orientation?: 'vertical' | 'horizontal' }
+>(function ScrollBar(_props, _ref) {
+  return null;
+});
 
-export { ScrollArea, ScrollBar };
+/** (Optional) tiny alias some codebases import */
+export const ScrollAreaViewport = React.forwardRef<
+  HTMLDivElement,
+  React.HTMLAttributes<HTMLDivElement>
+>(function ScrollAreaViewport({ className, ...props }, ref) {
+  return <div ref={ref} className={cn('h-full w-full overflow-auto', className)} {...props} />;
+});

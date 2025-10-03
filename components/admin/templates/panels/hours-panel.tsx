@@ -1,4 +1,3 @@
-// components/admin/templates/panels/hours-panel.tsx
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
@@ -52,10 +51,15 @@ export default function HoursPanel({
 }: Props) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const detailsRef = useRef<HTMLDetailsElement | null>(null);
+
   const [sectionOpen, setSectionOpen] = useState<boolean>(false);
   const [inlineOpen, setInlineOpen] = useState(false);
 
-  // give the sidebar a live ref to this panel container (outside <details> so scroll lands well)
+  // local spotlight state (so we can trigger from events)
+  const [spotlightLocal, setSpotlightLocal] = useState(false);
+  const showSpotlight = !!spotlight || spotlightLocal;
+
+  // give the sidebar a live ref to this panel container
   useEffect(() => {
     if (panelRef && 'current' in panelRef) {
       (panelRef as any).current = containerRef.current;
@@ -76,7 +80,7 @@ export default function HoursPanel({
     [template]
   );
 
-  // Utility to patch meta.hours + mirror top-level hours (for back-compat)
+  // Utility to patch meta.hours + mirror top- level hours (for back-compat)
   const setHours = (next: HoursOfOperationContent) => {
     onChange({
       hours: next, // tiny mirror
@@ -140,10 +144,54 @@ export default function HoursPanel({
     }
   };
 
+  /* ─────────────────────── Event wiring (open from HoursEditorRedirect) ─────────────────────── */
+
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const d: any = (e as CustomEvent).detail || {};
+      const target = d.panelId ?? d.panel ?? d.id ?? d.slug;
+      if (target !== 'hours') return;
+
+      // open the section + inline editor
+      setSectionOpen(true);
+      if (d.openEditor !== false) setInlineOpen(true);
+
+      // scroll & spotlight
+      if (d.scroll !== false) {
+        const node = containerRef.current ?? document.querySelector('[data-panel-id="hours"]');
+        if (node && 'scrollIntoView' in node) {
+          (node as HTMLElement).scrollIntoView({ behavior: d.behavior ?? 'smooth', block: 'center' });
+        }
+      }
+      if (typeof d.spotlightMs === 'number' && d.spotlightMs > 0) {
+        setSpotlightLocal(true);
+        setTimeout(() => setSpotlightLocal(false), d.spotlightMs);
+      }
+
+      // let the opener know we handled it
+      try {
+        window.dispatchEvent(new CustomEvent('qs:panel-opened', { detail: { panel: 'hours' } }));
+      } catch {}
+    };
+
+    window.addEventListener('qs:open-settings-panel', handler as any);
+    window.addEventListener('qs:open-panel', handler as any);
+    window.addEventListener('qs:settings:open-panel', handler as any);
+    window.addEventListener('qs:panel:open', handler as any);
+
+    return () => {
+      window.removeEventListener('qs:open-settings-panel', handler as any);
+      window.removeEventListener('qs:open-panel', handler as any);
+      window.removeEventListener('qs:settings:open-panel', handler as any);
+      window.removeEventListener('qs:panel:open', handler as any);
+    };
+  }, []);
+
   return (
     <div
       ref={containerRef}
-      className={`${className ?? ''} ${spotlight ? 'ring-2 ring-violet-500/70 rounded-xl' : ''}`}
+      data-panel-id="hours"
+      className={`${className ?? ''} ${showSpotlight ? 'ring-2 ring-violet-500/70 rounded-xl' : ''}`}
     >
       <details
         ref={detailsRef}
@@ -203,7 +251,7 @@ export default function HoursPanel({
               {preview.openNow ? 'Open now' : 'Closed now'}
             </Badge>
 
-          <div className="ml-auto flex gap-2">
+            <div className="ml-auto flex gap-2">
               <Button variant="ghost" size="icon" onClick={copyToday} title="Copy today’s hours">
                 <Copy className="w-4 h-4" />
               </Button>
@@ -252,6 +300,7 @@ export default function HoursPanel({
                 size="sm"
                 variant="secondary"
                 onClick={() => setInlineOpen((s) => !s)}
+                data-action="open-hours-editor"
               >
                 {inlineOpen ? 'Close Editor' : 'Edit Hours'}
               </Button>

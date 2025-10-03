@@ -16,10 +16,16 @@ const APP_HOSTS = new Set<string>([
   'cedarsites.com',
   'www.cedarsites.com',
   'app.cedarsites.com',
+
+  // PointSevenStudio app/marketing hosts (adjust to your real domains)
+  'pointsevenstudio.com',
+  'www.pointsevenstudio.com',
+  'app.pointsevenstudio.com',
+  
 ]);
 
 /** Known platform domains where subdomain = site slug. */
-const PLATFORM_DOMAINS = ['quicksites.ai', 'cedarsites.com'];
+const PLATFORM_DOMAINS = ['quicksites.ai', 'cedarsites.com', 'pointsevenstudio.com'];
 
 /** Paths we should never rewrite (Next internals, assets, specific APIs). */
 const IGNORE_PATHS: RegExp[] = [

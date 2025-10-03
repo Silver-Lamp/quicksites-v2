@@ -1,4 +1,3 @@
-// app/orgs/[slug]/portfolio/client-gallery.tsx
 'use client';
 
 import * as React from 'react';
@@ -16,15 +15,15 @@ import LazyVideoEmbed from '@/components/ui/lazy-video-embed';
 
 const COPY = {
   heroKicker: 'Portfolio',
-  heroTitle: 'Web and app development, built for speed and reliability.',
+  heroTitle: 'Web & app development, delivered fast.',
   heroSubtitle:
-    'Custom software, modern web applications, and scalable platforms — delivered quickly and designed to grow with you.',
-  ribbons: ['No setup fees', '14-day free trial', 'Grandfathered Founder pricing'],
+    'We design and ship custom software—modern web apps, dashboards, and integrations—built to scale on today’s cloud.',
+  ribbons: ['Iterative sprints', 'Full-stack expertise', 'Production-ready delivery'],
   ctas: {
-    primaryHref: '/login',
-    primary: 'Start free trial',
+    primaryHref: '/contact',
+    primary: 'Start a project',
     secondaryHref: '/contact',
-    secondary: 'Talk to sales',
+    secondary: 'Talk to us',
   },
 };
 
@@ -88,7 +87,6 @@ function PortfolioCard({ f }: { f: PortfolioRow }) {
       </CardHeader>
 
       <CardContent className="space-y-3">
-        {/* MEDIA */}
         {media === 'video' && (
           <div className="aspect-video rounded-lg overflow-hidden border border-zinc-800/50">
             {isDirectVideo(f.video_url) ? (
@@ -127,13 +125,6 @@ function PortfolioCard({ f }: { f: PortfolioRow }) {
             <div className="mt-1 break-all text-zinc-400">{f.external_url || f.site_url}</div>
           </div>
         )}
-
-        {/* FALLBACK */}
-        {media !== 'video' && media !== 'image' && media !== 'gallery' && media !== 'link' && (
-          <div className="aspect-video rounded-lg border border-zinc-800/50 bg-muted/40 grid place-items-center text-muted-foreground">
-            Demo coming soon
-          </div>
-        )}
       </CardContent>
 
       <CardFooter className="mt-auto flex items-center justify-between gap-3">
@@ -145,10 +136,9 @@ function PortfolioCard({ f }: { f: PortfolioRow }) {
             </Button>
           </Link>
         ) : (
-          <div className="text-xs text-muted-foreground">Tip: Ask us for a live walkthrough.</div>
+          <div className="text-xs text-muted-foreground">Tip: ask us for a walkthrough.</div>
         )}
 
-        {/* Link CTAs for portfolio items */}
         <div className="ml-auto flex items-center gap-2">
           {f.site_url ? (
             <a href={f.site_url} target="_blank" rel="noopener noreferrer" className="inline-flex">
@@ -177,7 +167,6 @@ export default function PortfolioGalleryClient({ initialRows }: { initialRows: P
   const [cat, setCat] = React.useState<'All' | string>('All');
   const [featuredOnly, setFeaturedOnly] = React.useState(false);
 
-  // Build categories from data
   const categories = React.useMemo(() => {
     const set = new Set<string>();
     initialRows.forEach((r) => r.category && set.add(r.category));
@@ -211,7 +200,7 @@ export default function PortfolioGalleryClient({ initialRows }: { initialRows: P
             <Badge variant="outline">{COPY.heroKicker}</Badge>
             <Badge variant="secondary" className="flex items-center gap-1">
               <Sparkles className="h-3.5 w-3.5" />
-              Portfolio highlights
+              Recent work
             </Badge>
           </div>
           <h1 className="text-3xl md:text-5xl font-semibold tracking-tight">
@@ -251,7 +240,7 @@ export default function PortfolioGalleryClient({ initialRows }: { initialRows: P
         <Card>
           <CardContent className="py-6 grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="md:col-span-2">
-              <Label htmlFor="q">Search portfolio</Label>
+              <Label htmlFor="q">Search projects</Label>
               <div className="mt-2 flex items-center gap-2">
                 <Search className="h-4 w-4 text-muted-foreground" />
                 <Input
@@ -300,7 +289,7 @@ export default function PortfolioGalleryClient({ initialRows }: { initialRows: P
           {filtered.length === 0 && (
             <Card className="col-span-full border-zinc-800/50">
               <CardContent className="py-10 text-center text-muted-foreground">
-                No portfolio items match your filters yet.
+                No projects match your filters yet.
               </CardContent>
             </Card>
           )}
@@ -313,16 +302,16 @@ export default function PortfolioGalleryClient({ initialRows }: { initialRows: P
           <CardContent className="py-8 flex flex-col md:flex-row items-center justify-between gap-6">
             <div>
               <h3 className="text-xl md:text-2xl font-semibold">
-                Want a guided tour?
+                Have an idea to build?
               </h3>
               <p className="text-muted-foreground">
-                Book a live walkthrough or send us your use case — we’ll record a custom demo.
+                Share your use case—We’ll walk you through a pragmatic plan to ship it.
               </p>
             </div>
             <div className="flex items-center gap-3">
-              <Link href="/book" className="inline-flex">
+              <Link href="/contact" className="inline-flex">
                 <Button size="lg">
-                  Book a demo
+                  Book a consult
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </Button>
               </Link>

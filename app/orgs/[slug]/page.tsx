@@ -7,7 +7,7 @@ import { createServerClient } from '@supabase/ssr';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { Sparkles, Rocket, Users, ArrowRight, Globe, Github, Twitter, Linkedin, Mail } from 'lucide-react';
+import { Sparkles, Rocket, Users, ArrowRight } from 'lucide-react';
 
 import PortfolioGalleryClient from '@/app/orgs/[slug]/portfolio/client-gallery';
 
@@ -45,14 +45,8 @@ type OrgBranding = {
     name?: string | null;
     title?: string | null;
     photoUrl?: string | null;
-    bio?: string | null;          // plaintext or light markdown; we render as paragraphs
-    links?: {
-      website?: string | null;
-      email?: string | null;
-      github?: string | null;
-      twitter?: string | null;
-      linkedin?: string | null;
-    } | null;
+    bio?: string | null;
+    links?: Record<string, string | null> | null;
   } | null;
 };
 
@@ -60,7 +54,7 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
   const { slug } = params;
   return {
     title: slug === 'pointsevenstudio' ? 'Point Seven Studio' : slug,
-    description: 'Custom software, fast launches, human-first AI integration.',
+    description: 'Custom web and app development. Pragmatic, fast, and production-ready.',
   };
 }
 
@@ -68,14 +62,19 @@ export default async function OrgLandingPage({ params }: { params: Params }) {
   const { slug } = params;
   const cookieStore = await cookies();
 
-  // Supabase (using only cookies.get to match your working pattern)
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    { cookies: { async get(name: string) { return cookieStore.get(name)?.value; } } as any }
+    {
+      cookies: {
+        get(name: string) {
+          return cookieStore.get(name)?.value;
+        },
+      },
+    }
   );
 
-  // Pull org branding
+  // Branding
   const { data: orgRow } = await supabase
     .from('organizations_public')
     .select('id, slug, name, branding')
@@ -85,7 +84,7 @@ export default async function OrgLandingPage({ params }: { params: Params }) {
   const branding = (orgRow?.branding || {}) as OrgBranding;
   const orgName = branding?.name || orgRow?.name || (slug === 'pointsevenstudio' ? 'Point Seven Studio' : slug);
 
-  // Pull public portfolio
+  // Portfolio
   const { data, error } = await supabase
     .from('features_public_portfolio')
     .select('*')
@@ -105,7 +104,7 @@ export default async function OrgLandingPage({ params }: { params: Params }) {
 
   const owner = branding?.owner ?? null;
   const hasOwner =
-    !!(owner?.name || owner?.title || owner?.bio || owner?.photoUrl || owner?.links?.website);
+    !!(owner?.name || owner?.title || owner?.bio || owner?.photoUrl || owner?.links);
 
   return (
     <main className="min-h-screen flex flex-col bg-zinc-950 text-white">
@@ -119,21 +118,21 @@ export default async function OrgLandingPage({ params }: { params: Params }) {
       <section className="relative border-b border-zinc-800 bg-gradient-to-b from-zinc-950 via-zinc-900/80 to-transparent">
         <div className="mx-auto max-w-6xl px-6 pt-20 pb-14 text-center">
           <h1 className="text-4xl md:text-6xl font-bold tracking-tight bg-gradient-to-r from-sky-400 to-purple-500 bg-clip-text text-transparent">
-            {orgName}
+            {branding?.hero?.headline || 'Web & app development, delivered fast.'}
           </h1>
           <p className="mt-4 text-lg md:text-xl text-zinc-300 max-w-2xl mx-auto">
-            {branding?.hero?.subhead || 'Custom software, rapid launches, and human-first AI integration.'}
+            {branding?.hero?.subhead || 'We design and ship custom software—modern web apps, dashboards, and integrations—built to scale on today’s cloud.'}
           </p>
           <div className="mt-8 flex flex-wrap justify-center gap-4">
             <Link href="/contact">
               <Button size="lg">
-                Start a Project
+                Start a project
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
             </Link>
             <a href="#portfolio" className="inline-flex">
               <Button size="lg" variant="outline">
-                View Portfolio
+                See our work
               </Button>
             </a>
           </div>
@@ -143,7 +142,7 @@ export default async function OrgLandingPage({ params }: { params: Params }) {
         <div className="mx-auto max-w-6xl px-6 pb-10">
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm">
             <div className="rounded-lg border border-zinc-800 bg-zinc-900/40 p-3">
-              <div className="text-zinc-400">Items</div>
+              <div className="text-zinc-400">Projects</div>
               <div className="mt-1 text-2xl font-medium">{total}</div>
             </div>
             <div className="rounded-lg border border-zinc-800 bg-zinc-900/40 p-3">
@@ -169,27 +168,27 @@ export default async function OrgLandingPage({ params }: { params: Params }) {
         <Card className="bg-zinc-900/40 border-zinc-800 hover:border-zinc-700 transition">
           <CardContent className="p-6 text-center">
             <Rocket className="mx-auto h-10 w-10 text-sky-400" />
-            <h3 className="mt-4 text-xl font-semibold">Fast Launches</h3>
+            <h3 className="mt-4 text-xl font-semibold">Fast, iterative launches</h3>
             <p className="mt-2 text-sm text-zinc-400">
-              MVPs and production systems in weeks, not months—without cutting corners.
+              Ship value in weeks—not months—without sacrificing quality.
             </p>
           </CardContent>
         </Card>
         <Card className="bg-zinc-900/40 border-zinc-800 hover:border-zinc-700 transition">
           <CardContent className="p-6 text-center">
             <Sparkles className="mx-auto h-10 w-10 text-purple-400" />
-            <h3 className="mt-4 text-xl font-semibold">AI-First Solutions</h3>
+            <h3 className="mt-4 text-xl font-semibold">Full-stack expertise</h3>
             <p className="mt-2 text-sm text-zinc-400">
-              Practical automation and generative AI where it demonstrably pays for itself.
+              React/Next, Node, SQL/NoSQL, and cloud—plus the integrations that tie it together.
             </p>
           </CardContent>
         </Card>
         <Card className="bg-zinc-900/40 border-zinc-800 hover:border-zinc-700 transition">
           <CardContent className="p-6 text-center">
             <Users className="mx-auto h-10 w-10 text-emerald-400" />
-            <h3 className="mt-4 text-xl font-semibold">Human-Centered</h3>
+            <h3 className="mt-4 text-xl font-semibold">Human-centered delivery</h3>
             <p className="mt-2 text-sm text-zinc-400">
-              Products that empower teams and customers, not replace them.
+              Pragmatic software that teams love to use—and can maintain.
             </p>
           </CardContent>
         </Card>
@@ -199,7 +198,7 @@ export default async function OrgLandingPage({ params }: { params: Params }) {
       <section id="portfolio" className="border-t border-zinc-900/60 bg-zinc-950/50">
         <div className="mx-auto max-w-6xl px-6 py-12">
           <div className="mb-6 flex items-center justify-between">
-            <h2 className="text-2xl md:text-3xl font-semibold">Portfolio</h2>
+            <h2 className="text-2xl md:text-3xl font-semibold">Recent work</h2>
             <Link href="/contact" className="inline-flex">
               <Button variant="outline" size="sm">Book a consult</Button>
             </Link>
@@ -208,7 +207,7 @@ export default async function OrgLandingPage({ params }: { params: Params }) {
           {error ? (
             <Card className="border-zinc-800/60 bg-zinc-900/40">
               <CardContent className="py-10 text-center text-red-400">
-                Failed to load portfolio: {error.message}
+                Failed to load portfolio.
               </CardContent>
             </Card>
           ) : rows.length === 0 ? (
@@ -216,8 +215,7 @@ export default async function OrgLandingPage({ params }: { params: Params }) {
               <CardContent className="py-12 text-center">
                 <h3 className="text-lg font-semibold">Portfolio coming soon</h3>
                 <p className="mt-2 text-zinc-300">
-                  We’re assembling recent launches and case studies. Check back shortly—or reach out and we’ll
-                  share a private deck.
+                  We’re assembling recent launches and case studies—reach out for a preview.
                 </p>
                 <div className="mt-6">
                   <Link href="/contact">
@@ -263,49 +261,33 @@ export default async function OrgLandingPage({ params }: { params: Params }) {
                 {owner?.bio ? (
                   <div className="mt-4 space-y-3 text-zinc-300 leading-relaxed">
                     {String(owner.bio)
-                      .split(/\n{2,}/) // split paragraphs on blank lines
+                      .split(/\n{2,}/)
                       .map((p, i) => (
                         <p key={i}>{p}</p>
                       ))}
                   </div>
                 ) : null}
 
-                {/* Links */}
                 {(owner?.links && Object.values(owner.links).some(Boolean)) && (
                   <div className="mt-5 flex flex-wrap items-center gap-2">
                     {owner.links?.website ? (
-                      <a href={owner.links.website} target="_blank" rel="noopener noreferrer" className="inline-flex">
-                        <Button size="sm" variant="outline">
-                          <Globe className="h-4 w-4 mr-1" /> Website
-                        </Button>
+                      <a href={owner.links.website!} target="_blank" rel="noopener noreferrer" className="inline-flex">
+                        <Button size="sm" variant="outline">Website</Button>
                       </a>
                     ) : null}
                     {owner.links?.email ? (
                       <a href={`mailto:${owner.links.email}`} className="inline-flex">
-                        <Button size="sm" variant="outline">
-                          <Mail className="h-4 w-4 mr-1" /> Email
-                        </Button>
+                        <Button size="sm" variant="outline">Email</Button>
                       </a>
                     ) : null}
                     {owner.links?.github ? (
-                      <a href={owner.links.github} target="_blank" rel="noopener noreferrer" className="inline-flex">
-                        <Button size="sm" variant="outline">
-                          <Github className="h-4 w-4 mr-1" /> GitHub
-                        </Button>
-                      </a>
-                    ) : null}
-                    {owner.links?.twitter ? (
-                      <a href={owner.links.twitter} target="_blank" rel="noopener noreferrer" className="inline-flex">
-                        <Button size="sm" variant="outline">
-                          <Twitter className="h-4 w-4 mr-1" /> Twitter
-                        </Button>
+                      <a href={owner.links.github!} target="_blank" rel="noopener noreferrer" className="inline-flex">
+                        <Button size="sm" variant="outline">GitHub</Button>
                       </a>
                     ) : null}
                     {owner.links?.linkedin ? (
-                      <a href={owner.links.linkedin} target="_blank" rel="noopener noreferrer" className="inline-flex">
-                        <Button size="sm" variant="outline">
-                          <Linkedin className="h-4 w-4 mr-1" /> LinkedIn
-                        </Button>
+                      <a href={owner.links.linkedin!} target="_blank" rel="noopener noreferrer" className="inline-flex">
+                        <Button size="sm" variant="outline">LinkedIn</Button>
                       </a>
                     ) : null}
                   </div>

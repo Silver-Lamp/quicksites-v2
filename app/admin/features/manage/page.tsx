@@ -200,7 +200,24 @@ function FeatureForm({
 
   const canSave = portfolioMode ? (canSaveBase && canSavePortfolio) : canSaveBase;
 
-  const CATS = portfolioMode ? PORTFOLIO_CATEGORIES : (LEGACY_CATEGORIES as readonly string[]);
+  // App-dev friendly categories
+  const APPDEV_CATEGORIES = [
+    'Web',
+    'Apps',
+    'Dashboards',
+    'Data & Analytics',
+    'E-commerce',
+    'Integrations',
+    'Internal Tools',
+    'Mobile',
+    'AI / Automation',
+    'Other',
+  ] as const;
+
+  // Keep a small legacy list for the old non-portfolio mode (if you still use it)
+  const LEGACY_CATEGORIES = ['Editor', 'SEO', 'Hosting', 'AI', 'Admin', 'Leads'] as const;
+
+  const CATS = portfolioMode ? APPDEV_CATEGORIES : (LEGACY_CATEGORIES as readonly string[]);
 
   return (
     <Card className="h-full">
@@ -320,6 +337,15 @@ function FeatureForm({
               placeholder="Case Study, Best practice, Core…"
             />
           </div>
+          {/* Quick-add badges (optional) */}
+          <div className="mt-2 flex flex-wrap gap-2">
+            {['Case Study','Prototype','MVP','Production','Core','Open Source','Integration','Replatform','Design Sprint'].map(b => (
+              <Button key={b} type="button" size="sm" variant="outline" onClick={() => setDraft(d => ({ ...d, badge: b }))}>
+                {b}
+              </Button>
+            ))}
+          </div>
+
         </div>
 
         {/* Links */}

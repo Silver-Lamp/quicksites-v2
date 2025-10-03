@@ -28,6 +28,7 @@ import ImageUploadCard from '@/components/admin/features/image-upload-card';
 import GalleryUploadCard, { type GalleryItem } from '@/components/admin/features/gallery-upload-card';
 
 import { Checkbox } from '@/components/ui/checkbox';
+import { useOrg } from '@/app/providers';
 
 /* ========================================================================== */
 /* Types                                                                      */
@@ -59,6 +60,8 @@ type FeatureRow = {
   tags?: string[] | null;
   is_public?: boolean | null;
 };
+
+type OrgOption = { id: string; slug: string; name: string };
 
 const LEGACY_CATEGORIES = ['Editor', 'SEO', 'Hosting', 'AI', 'Admin', 'Leads'] as const;
 const PORTFOLIO_CATEGORIES = [
@@ -297,12 +300,14 @@ function FeatureForm({
           <div>
             <Label>Category</Label>
             <Select
-              value={(draft.category as string) || CATS[0]}
+              value={(draft.category as string) || PORTFOLIO_CATEGORIES[0]}
               onValueChange={(v) => setDraft((d) => ({ ...d, category: v }))}
             >
               <SelectTrigger><SelectValue placeholder="Pick one" /></SelectTrigger>
               <SelectContent>
-                {CATS.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                {(portfolioMode ? PORTFOLIO_CATEGORIES : LEGACY_CATEGORIES).map((c) => (
+                  <SelectItem key={c} value={c}>{c}</SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
@@ -321,23 +326,12 @@ function FeatureForm({
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <Label htmlFor="doc">Docs link (optional)</Label>
-            <Input
-              id="doc"
-              value={draft.doc_href ?? ''}
-              onChange={(e) => setDraft((d) => ({ ...d, doc_href: e.target.value }))}
-              placeholder="https://docs…"
-            />
+            <Input id="doc" value={draft.doc_href ?? ''} onChange={(e) => setDraft((d) => ({ ...d, doc_href: e.target.value }))} placeholder="https://docs…" />
           </div>
-
           {portfolioMode && (
             <div>
               <Label htmlFor="site">Site URL (optional)</Label>
-              <Input
-                id="site"
-                value={draft.site_url ?? ''}
-                onChange={(e) => setDraft((d) => ({ ...d, site_url: e.target.value }))}
-                placeholder="https://clientsite.com"
-              />
+              <Input id="site" value={draft.site_url ?? ''} onChange={(e) => setDraft((d) => ({ ...d, site_url: e.target.value }))} placeholder="https://clientsite.com" />
             </div>
           )}
         </div>
@@ -406,7 +400,6 @@ function FeatureForm({
                     description="You can also delete the underlying file from Supabase Storage."
                     confirmText="Remove"
                     onConfirm={async () => {
-                      // optional storage delete
                       const parsed = (() => {
                         try {
                           const url = new URL(String(draft.video_url));
@@ -650,12 +643,20 @@ export default function ManageFeaturesPage() {
     []
   );
 
+  const currentOrg = useOrg(); // ← active org from the app
+
   // Portfolio mode + org slug
   const searchParams = useSearchParams();
-  const initialOrg = (searchParams.get('org') || '').trim().toLowerCase();
-  const [portfolioMode, setPortfolioMode] = React.useState<boolean>(!!initialOrg);
-  const [orgSlug, setOrgSlug] = React.useState<string>(initialOrg);
+  const searchOrg = (searchParams.get('org') || '').trim().toLowerCase();
 
+  // drop-down list of orgs
+  const [orgOptions, setOrgOptions] = React.useState<OrgOption[]>([]);
+
+  // default org: ?org=… → current org → first option later
+  const [orgSlug, setOrgSlug] = React.useState<string>(searchOrg || currentOrg.slug);
+  const [portfolioMode, setPortfolioMode] = React.useState<boolean>(!!(searchOrg || currentOrg.slug));
+
+  // auth state
   const [authed, setAuthed] = React.useState(false);
   const [authChecked, setAuthChecked] = React.useState(false);
 
@@ -670,6 +671,26 @@ export default function ManageFeaturesPage() {
     });
     return () => sub.subscription?.unsubscribe?.();
   }, [supabase]);
+
+  // load orgs for dropdown
+  React.useEffect(() => {
+    (async () => {
+      const { data, error } = await supabase
+        .from('organizations_public')
+        .select('id, slug, name')
+        .order('name');
+      if (!error && data) {
+        const opts = data as OrgOption[];
+        setOrgOptions(opts);
+        // if orgSlug is empty or not in list, default to current org or first
+        const slugs = new Set(opts.map(o => o.slug));
+        if (!orgSlug || !slugs.has(orgSlug)) {
+          setOrgSlug(slugs.has(currentOrg.slug) ? currentOrg.slug : (opts[0]?.slug || ''));
+        }
+      }
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const [rows, setRows] = React.useState<FeatureRow[]>([]);
   const [loading, setLoading] = React.useState(true);
@@ -687,7 +708,6 @@ export default function ManageFeaturesPage() {
   async function fetchRows() {
     setLoading(true);
     if (portfolioMode && orgSlug) {
-      // Try the public view first (org_slug column). Fall back to features.
       const { data, error } = await supabase
         .from('features_public_portfolio')
         .select('*')
@@ -701,7 +721,6 @@ export default function ManageFeaturesPage() {
         setLoading(false);
         return;
       }
-      // fallback
       const fb = await supabase
         .from('features')
         .select('*')
@@ -713,7 +732,6 @@ export default function ManageFeaturesPage() {
       return;
     }
 
-    // Legacy (global features)
     const { data, error } = await supabase
       .from('features')
       .select('*')
@@ -776,10 +794,9 @@ export default function ManageFeaturesPage() {
         alert('Title, blurb, and category are required.');
         return;
       }
-
       if (portfolioMode) {
         if (!orgSlug) {
-          alert('Enter an org slug (e.g., pointsevenstudio).');
+          alert('Select an org.');
           return;
         }
         if (!draft.slug) {
@@ -797,7 +814,7 @@ export default function ManageFeaturesPage() {
             video_url: draft.video_url || null,
             image_url: draft.image_url || null,
             thumb_url: draft.thumb_url || null,
-            gallery: (draft as any).gallery ?? [],   // array of { src, alt? }
+            gallery: (draft as any).gallery ?? [],
             site_url: draft.site_url || null,
             external_url: draft.external_url || null,
             tags: (draft.tags ?? []).join(','),
@@ -817,11 +834,9 @@ export default function ManageFeaturesPage() {
         const json = await res.json();
         if (!res.ok) throw new Error(json?.error || 'Save failed');
         await fetchRows();
-        // try to select the saved row by matching slug if id missing
         const saved = (json.data ?? {}) as FeatureRow;
         setSelectedId(saved.id ?? null);
       } else {
-        // legacy features save
         const payload = {
           title: draft.title?.trim() ?? '',
           blurb: draft.blurb?.trim() ?? '',
@@ -856,13 +871,11 @@ export default function ManageFeaturesPage() {
     if (!selectedId) return;
     try {
       if (portfolioMode) {
-        // simple delete by id (requires RLS policy permitting org member deletes)
         const { error } = await supabase.from('features').delete().eq('id', selectedId);
         if (error) throw error;
         await fetchRows();
         startNew();
       } else {
-        // legacy delete API
         const res = await fetch('/api/features/delete', {
           method: 'POST',
           headers: { 'content-type': 'application/json' },
@@ -886,7 +899,6 @@ export default function ManageFeaturesPage() {
     if (!src) return;
 
     if (portfolioMode) {
-      // Duplicate via insert to features with org context (client-side; RLS must allow)
       const dupSlug = `${(src.slug || 'copy')}-${Math.random().toString(36).slice(2, 6)}`.toLowerCase();
       const { error } = await supabase.from('features').insert({
         ...src,
@@ -901,7 +913,6 @@ export default function ManageFeaturesPage() {
       return;
     }
 
-    // Legacy duplicate
     const { error } = await supabase.from('features').insert({
       title: `${src.title} (copy)`,
       blurb: src.blurb,
@@ -958,19 +969,36 @@ export default function ManageFeaturesPage() {
             <div className="flex items-center gap-3">
               <div className="flex items-center gap-2">
                 <Label className="text-xs">Portfolio mode</Label>
-                <Switch checked={portfolioMode} onCheckedChange={(v) => setPortfolioMode(v)} />
+                <Switch
+                  checked={portfolioMode}
+                  onCheckedChange={(v) => {
+                    setPortfolioMode(v);
+                    if (v && !orgSlug) setOrgSlug(currentOrg.slug);
+                  }}
+                />
               </div>
               {portfolioMode && (
                 <div className="flex items-center gap-2">
-                  <Label htmlFor="org" className="text-xs">Org</Label>
-                  <Input id="org" value={orgSlug} onChange={(e) => setOrgSlug(e.target.value.toLowerCase())} placeholder="pointsevenstudio" className="w-48" />
+                  <Label className="text-xs">Org</Label>
+                  <Select value={orgSlug} onValueChange={setOrgSlug}>
+                    <SelectTrigger className="w-56">
+                      <SelectValue placeholder="Select org" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {orgOptions.map((o) => (
+                        <SelectItem key={o.id} value={o.slug}>
+                          {o.name} — {o.slug}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
               )}
             </div>
           </div>
           <p className="mt-2 text-muted-foreground">
             {portfolioMode
-              ? <>Org-scoped uploads (videos, images, links). Use an org slug. Public items appear on <code>/orgs/&lt;slug&gt;/portfolio</code>.</>
+              ? <>Org-scoped uploads (videos, images, links). Choose an org. Public items appear on <code>/orgs/&lt;slug&gt;/portfolio</code>.</>
               : <>Edit existing demos on the left, fill the form on the right. Mark as <b>Featured</b> to appear on the homepage.</>}
           </p>
         </motion.div>

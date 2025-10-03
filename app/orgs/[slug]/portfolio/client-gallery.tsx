@@ -16,9 +16,9 @@ import LazyVideoEmbed from '@/components/ui/lazy-video-embed';
 
 const COPY = {
   heroKicker: 'Portfolio',
-  heroTitle: 'Build faster. Rank sooner. Scale confidently.',
+  heroTitle: 'Web and app development, built for speed and reliability.',
   heroSubtitle:
-    'A focused toolkit for high-velocity local SEO sites — with optional AI assistance when it pays for itself.',
+    'Custom software, modern web applications, and scalable platforms — delivered quickly and designed to grow with you.',
   ribbons: ['No setup fees', '14-day free trial', 'Grandfathered Founder pricing'],
   ctas: {
     primaryHref: '/login',

@@ -1,7 +1,7 @@
 // app/admin/org/page.tsx
 'use client';
 
-import { useEffect, useMemo, useState, useRef } from 'react';
+import { useEffect, useMemo, useState, useRef, useCallback } from 'react';
 import { useOrg } from '@/app/providers';
 import { supabase } from '@/lib/supabase/client';
 import { Input } from '@/components/ui/input';
@@ -33,7 +33,7 @@ type BrandingOwner = {
   name?: string | null;
   title?: string | null;
   photoUrl?: string | null;
-  bio?: string | null; // plain text, render as paragraphs
+  bio?: string | null; // plain text
   links?: BrandingOwnerLinks | null;
 };
 
@@ -60,13 +60,23 @@ type OrgRow = {
   support_email: string | null;
   support_url: string | null;
   billing_mode: 'central' | 'reseller' | 'none' | null;
-  branding?: Branding | null;
+  branding?: Branding | string | null;
   primary_domain?: string | null;
   wildcard_enabled?: boolean | null;
   canonical_host?: string | null;
 };
 
 type OrgStats = { templates: number; domains: number; members: number };
+
+/* ───────────────────── Utilities ───────────────────── */
+
+function parseBranding(b: unknown): Branding | null {
+  if (!b) return null;
+  if (typeof b === 'string') {
+    try { return JSON.parse(b) as Branding; } catch { return null; }
+  }
+  return b as Branding;
+}
 
 /* ───────────────────── Upload Field ───────────────────── */
 
@@ -83,6 +93,7 @@ function UploadField({
 }) {
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [imgError, setImgError] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
   const pickFile = () => inputRef.current?.click();
 
@@ -118,6 +129,7 @@ function UploadField({
       }
       const url: string | null = payload?.url ?? payload?.signedUrl ?? payload?.data?.signedUrl ?? null;
       onChange(url);
+      setImgError(null);
       if (inputRef.current) inputRef.current.value = '';
     } catch (e: any) {
       setError(String(e?.message || 'Upload failed'));
@@ -132,7 +144,16 @@ function UploadField({
       <div className="flex items-start gap-3">
         <div className="w-28 h-16 rounded border border-zinc-700 bg-zinc-900 flex items-center justify-center overflow-hidden">
           {value
-            ? <img src={value} alt="" className="max-w-full max-h-full object-contain" />
+            ? (
+              // key forces re-render when URL changes
+              <img
+                key={value}
+                src={value}
+                alt=""
+                className="max-w-full max-h-full object-contain"
+                onError={() => setImgError('Preview failed')}
+              />
+            )
             : <span className="text-xs text-zinc-500">No image</span>}
         </div>
 
@@ -145,6 +166,7 @@ function UploadField({
             <Button type="button" variant="outline" disabled={!value} onClick={() => onChange(null)}>Remove</Button>
           </div>
           {error && <div className="col-span-2 text-xs text-red-400 whitespace-pre-wrap">{error}</div>}
+          {imgError && value && <div className="col-span-2 text-[11px] text-amber-400">Couldn’t load preview — the URL may be expired. Re-upload to refresh.</div>}
           <div className="col-span-2 text-[11px] text-zinc-500">Accepted: PNG, JPG, SVG, WebP, AVIF (≤ 5MB).</div>
         </div>
       </div>
@@ -159,17 +181,22 @@ export default function OrgSettings() {
   const [isPlatformAdmin, setIsPlatformAdmin] = useState(false);
 
   const [orgs, setOrgs] = useState<OrgRow[]>([]);
-  const [isHydrating, setIsHydrating] = useState(true);   // ← guard
+  const [isHydrating, setIsHydrating] = useState(true);
   const [selectedId, setSelectedId] = useState<string>(current.id);
 
-  const sel = useMemo(() => orgs.find((o) => o.id === selectedId), [orgs, selectedId]);
-  const [draft, setDraft] = useState<Partial<OrgRow>>({});
+  // the org record used to hydrate the form (from API GET)
+  const [selFromApi, setSelFromApi] = useState<OrgRow | null>(null);
 
+  // pick list item by id for selector labels
+  const selListItem = useMemo(() => orgs.find((o) => o.id === selectedId) || null, [orgs, selectedId]);
+
+  const [draft, setDraft] = useState<Partial<OrgRow>>({});
   const [stats, setStats] = useState<OrgStats | null>(null);
   const [confirmSlug, setConfirmSlug] = useState('');
   const [confirmDeleteWord, setConfirmDeleteWord] = useState('');
   const [deleting, setDeleting] = useState(false);
   const [saving, setSaving] = useState(false);
+  const brandingWasStringRef = useRef(false);
 
   // little clipboard helper
   const [copied, setCopied] = useState<string | null>(null);
@@ -190,61 +217,83 @@ export default function OrgSettings() {
     })();
   }, []);
 
-  /* ── Load orgs (must include branding) ── */
-  async function loadOrgs() {
-    setIsHydrating(true);
-    try {
-      if (isPlatformAdmin) {
-        const { data } = await supabase
-          .from('organizations_public')
-          .select('id, slug, name, logo_url, dark_logo_url, favicon_url, support_email, support_url, billing_mode, branding, primary_domain, wildcard_enabled, canonical_host')
-          .order('name', { ascending: true });
-
-        setOrgs((data ?? []) as OrgRow[]);
-        if (data && data.length && !data.some((o: any) => o.id === selectedId)) {
-          setSelectedId((data[0] as any).id);
-        }
-      } else {
-        setOrgs([{
-          id: current.id,
-          slug: current.slug,
-          name: current.name,
-          logo_url: current.logo_url ?? null,
-          dark_logo_url: current.dark_logo_url ?? null,
-          favicon_url: current.favicon_url ?? null,
-          support_email: current.support_email ?? null,
-          support_url: current.support_url ?? null,
-          billing_mode: (current.billing_mode ?? 'central') as OrgRow['billing_mode'],
-          branding: (current as any).branding ?? null,
-          primary_domain: (current as any).primary_domain ?? null,
-          wildcard_enabled: (current as any).wildcard_enabled ?? null,
-          canonical_host: (current as any).canonical_host ?? null,
-        }]);
-        setSelectedId(current.id);
+  /* ── Fetch org list for selector ── */
+  const loadOrgList = useCallback(async () => {
+    if (isPlatformAdmin) {
+      const { data } = await supabase
+        .from('organizations_public')
+        .select('id, slug, name, logo_url, dark_logo_url, favicon_url, support_email, support_url, billing_mode, branding, primary_domain, wildcard_enabled, canonical_host')
+        .order('name', { ascending: true });
+      setOrgs((data ?? []) as OrgRow[]);
+      if (data && data.length && !data.some((o: any) => o.id === selectedId)) {
+        setSelectedId((data[0] as any).id);
       }
-    } finally {
-      setIsHydrating(false);
+    } else {
+      setOrgs([{
+        id: current.id,
+        slug: current.slug,
+        name: current.name,
+        logo_url: current.logo_url ?? null,
+        dark_logo_url: current.dark_logo_url ?? null,
+        favicon_url: current.favicon_url ?? null,
+        support_email: current.support_email ?? null,
+        support_url: current.support_url ?? null,
+        billing_mode: (current.billing_mode ?? 'central') as OrgRow['billing_mode'],
+        branding: (current as any).branding ?? null,
+        primary_domain: (current as any).primary_domain ?? null,
+        wildcard_enabled: (current as any).wildcard_enabled ?? null,
+        canonical_host: (current as any).canonical_host ?? null,
+      }]);
+      setSelectedId(current.id);
     }
-  }
+  }, [isPlatformAdmin, current, selectedId]);
 
-  useEffect(() => { void loadOrgs(); /* eslint-disable-next-line */ }, [isPlatformAdmin, current.id]);
+  /* ── Fetch the selected org via API (authoritative JSON) ── */
+  const hydrateSelectedFromApi = useCallback(async (orgId: string) => {
+    try {
+      const res = await fetch(`/api/admin/org/update?org_id=${encodeURIComponent(orgId)}&stats=1`);
+      const j = await res.json();
+      if (!res.ok) throw new Error(j?.error || 'Failed to load org');
+      // j is the row (plus stats); keep them separate
+      const { stats: s, ...row } = j;
+      setSelFromApi(row as OrgRow);
+      setStats(s as OrgStats ?? null);
+    } catch {
+      setSelFromApi(null);
+      setStats(null);
+    }
+  }, []);
 
-  /* ── Rehydrate draft whenever `sel` changes ── */
+  /* ── Initial load and when admin-state changes ── */
+  useEffect(() => { setIsHydrating(true); (async () => { await loadOrgList(); setIsHydrating(false); })(); }, [loadOrgList]);
+
+  /* ── When selection changes, hydrate the form from API row ── */
   useEffect(() => {
+    if (!selectedId) return;
+    void hydrateSelectedFromApi(selectedId);
+  }, [selectedId, hydrateSelectedFromApi]);
+
+  /* ── Rehydrate draft whenever the API org changes ── */
+  useEffect(() => {
+    const sel = selFromApi;
     if (!sel) return;
 
-    const nextBranding: Branding =
-      (sel.branding as Branding | null) ??
-      {
-        name: sel.slug === 'quicksites' ? 'QuickSites' : sel.name,
-        domain: sel.slug === 'quicksites' ? 'QuickSites.ai' : undefined,
-        flags: { showPuppyWidget: sel.slug === 'quicksites', showGlow: true, showMobileWidget: true, showMobileGradients: true, forceWidgetVariant: 'puppy' },
-        hero: { headline: 'Your Website. One Click Away.', subhead: 'Turn your local business into a digital presence in minutes. No code. No hassle.' },
-        copy: { featuresTitle: 'Featured demos', featuresSubtitle: `Hand-picked highlights from what ${(sel.slug === 'quicksites' ? 'QuickSites' : 'your brand')} can do.` },
-        owner: null,
-      };
+    const existing = parseBranding(sel.branding);
+    brandingWasStringRef.current = typeof sel.branding === 'string';
+
+    const defaults: Branding = {
+      name: sel.slug === 'quicksites' ? 'QuickSites' : sel.name,
+      domain: sel.slug === 'quicksites' ? 'QuickSites.ai' : undefined,
+      flags: { showPuppyWidget: sel.slug === 'quicksites', showGlow: true, showMobileWidget: true, showMobileGradients: true, forceWidgetVariant: 'puppy' },
+      hero: { headline: 'Your Website. One Click Away.', subhead: 'Turn your local business into a digital presence in minutes. No code. No hassle.' },
+      copy: { featuresTitle: 'Featured demos', featuresSubtitle: `Hand-picked highlights from what ${(sel.slug === 'quicksites' ? 'QuickSites' : 'your brand')} can do.` },
+      owner: null,
+    };
+
+    const nextBranding: Branding = existing ?? defaults;
 
     setDraft({
+      id: sel.id,
       name: sel.name,
       slug: sel.slug,
       logo_url: sel.logo_url ?? '',
@@ -254,23 +303,14 @@ export default function OrgSettings() {
       support_url: sel.support_url ?? '',
       billing_mode: sel.billing_mode ?? 'central',
       branding: nextBranding,
+      primary_domain: sel.primary_domain ?? null,
+      wildcard_enabled: sel.wildcard_enabled ?? null,
+      canonical_host: sel.canonical_host ?? 'www',
     });
 
-    void fetchStats(sel.id);
     setConfirmSlug('');
     setConfirmDeleteWord('');
-  }, [sel?.id]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  async function fetchStats(orgId: string) {
-    try {
-      const res = await fetch(`/api/admin/org/update?org_id=${encodeURIComponent(orgId)}&stats=1`);
-      const j = await res.json();
-      if (res.ok) setStats(j as OrgStats);
-      else setStats(null);
-    } catch {
-      setStats(null);
-    }
-  }
+  }, [selFromApi?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   /* ── Field helpers ── */
   const onField =
@@ -278,44 +318,51 @@ export default function OrgSettings() {
     (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
       setDraft((d) => ({ ...d, [k]: e.target.value }));
 
-  function setBranding<K extends keyof Branding>(key: K, value: Branding[K]) {
-    setDraft((d) => ({ ...d, branding: { ...(d.branding as Branding || {}), [key]: value } }));
+  function setBrandingField<K extends keyof Branding>(key: K, value: Branding[K]) {
+    setDraft((d) => ({ ...d, branding: { ...(parseBranding(d.branding) || {}), [key]: value } as Branding }));
   }
   function setBrandFlag<K extends keyof BrandingFlags>(key: K, value: BrandingFlags[K]) {
     setDraft((d) => ({
       ...d,
-      branding: { ...(d.branding as Branding || {}), flags: { ...((d.branding as Branding)?.flags || {}), [key]: value } },
+      branding: { ...(parseBranding(d.branding) || {}), flags: { ...((parseBranding(d.branding)?.flags) || {}), [key]: value } },
     }));
   }
   function setBrandHero<K extends keyof NonNullable<Branding['hero']>>(key: K, value: NonNullable<Branding['hero']>[K]) {
     setDraft((d) => ({
       ...d,
-      branding: { ...(d.branding as Branding || {}), hero: { ...((d.branding as Branding)?.hero || {}), [key]: value } },
+      branding: { ...(parseBranding(d.branding) || {}), hero: { ...((parseBranding(d.branding)?.hero) || {}), [key]: value } },
     }));
   }
   function setBrandCopy<K extends keyof NonNullable<Branding['copy']>>(key: K, value: NonNullable<Branding['copy']>[K]) {
     setDraft((d) => ({
       ...d,
-      branding: { ...(d.branding as Branding || {}), copy: { ...((d.branding as Branding)?.copy || {}), [key]: value } },
+      branding: { ...(parseBranding(d.branding) || {}), copy: { ...((parseBranding(d.branding)?.copy) || {}), [key]: value } },
     }));
   }
   function setBrandOwner<K extends keyof NonNullable<Branding['owner']>>(key: K, value: NonNullable<Branding['owner']>[K]) {
     setDraft((d) => ({
       ...d,
-      branding: { ...(d.branding as Branding || {}), owner: { ...((d.branding as Branding)?.owner || {}), [key]: value } },
+      branding: { ...(parseBranding(d.branding) || {}), owner: { ...((parseBranding(d.branding)?.owner) || {}), [key]: value } },
     }));
   }
   function setBrandOwnerLink<K extends keyof BrandingOwnerLinks>(key: K, value: BrandingOwnerLinks[K]) {
     setDraft((d) => {
-      const cur = (d.branding as Branding)?.owner?.links || {};
-      return { ...d, branding: { ...(d.branding as Branding || {}), owner: { ...((d.branding as Branding)?.owner || {}), links: { ...cur, [key]: value } } } };
+      const cur = (parseBranding(d.branding)?.owner?.links) || {};
+      return { ...d, branding: { ...(parseBranding(d.branding) || {}), owner: { ...((parseBranding(d.branding)?.owner) || {}), links: { ...cur, [key]: value } } } };
     });
   }
 
   /* ── Save without hard reload ── */
   async function save() {
-    if (!sel) return; // guard
+    const sel = selFromApi;
+    if (!sel) return;
     setSaving(true);
+
+    const brandingPayload =
+      brandingWasStringRef.current
+        ? JSON.stringify(parseBranding(draft.branding) ?? null)
+        : (parseBranding(draft.branding) ?? null);
+
     const updates: Partial<OrgRow> = {
       name: (draft.name ?? '').trim(),
       slug: (draft.slug ?? '').trim(),
@@ -325,27 +372,22 @@ export default function OrgSettings() {
       support_email: (draft.support_email ?? '').trim() || null,
       support_url: (draft.support_url ?? '').trim() || null,
       billing_mode: (draft.billing_mode as any) ?? 'central',
-      branding: draft.branding || null,
+      branding: brandingPayload as any,
     };
 
     try {
-      if (isPlatformAdmin) {
-        const res = await fetch('/api/admin/org/update', {
-          method: 'POST',
-          headers: { 'content-type': 'application/json' },
-          body: JSON.stringify({ id: sel.id, updates }),
-        });
-        const j = await res.json();
-        if (!res.ok) throw new Error(j?.error || 'Save failed');
-      } else {
-        const { error } = await supabase.from('organizations').update(updates).eq('id', sel.id);
-        if (error) throw error as any;
-      }
+      const res = await fetch('/api/admin/org/update', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ id: sel.id, updates }),
+      });
+      const j = await res.json();
+      if (!res.ok) throw new Error(j?.error || 'Save failed');
 
-      // Soft refresh the selected org so the form rehydrates without flashing "No organization loaded"
-      await loadOrgs();
-      // keep the same selection
-      setSelectedId(sel.id);
+      // Re-hydrate from API so tokens/URLs (like signed image URLs) refresh
+      await hydrateSelectedFromApi(sel.id);
+      // Also refresh list (names/slugs may have changed)
+      await loadOrgList();
     } catch (err: any) {
       alert(err?.message || 'Save failed');
     } finally {
@@ -366,8 +408,7 @@ export default function OrgSettings() {
       });
       const j = await res.json();
       if (!res.ok) throw new Error(j?.error || 'Create failed');
-      // reload orgs and select the new one
-      await loadOrgs();
+      await loadOrgList();
       const created = j.data as OrgRow | undefined;
       if (created?.id) setSelectedId(created.id);
     } catch (err: any) {
@@ -376,6 +417,7 @@ export default function OrgSettings() {
   }
 
   async function deleteOrg() {
+    const sel = selFromApi;
     if (!sel) return;
     const canDelete =
       isPlatformAdmin && !!stats && stats.templates === 0 &&
@@ -393,8 +435,8 @@ export default function OrgSettings() {
       const j = await res.json();
       if (!res.ok) throw new Error(j?.error || 'Delete failed');
 
-      await loadOrgs();
-      setSelectedId(current.id); // fall back to current user org
+      await loadOrgList();
+      setSelectedId(current.id);
     } catch (e: any) {
       alert(e?.message || 'Delete failed');
     } finally {
@@ -402,15 +444,15 @@ export default function OrgSettings() {
     }
   }
 
-  const b = (draft.branding || {}) as Branding;
+  const b = parseBranding(draft.branding) || ({} as Branding);
 
-  const devHost = sel ? `${sel.slug}.localhost:3000` : '';
-  const devUrl = sel ? `http://${devHost}/` : '';
-  const devOrgRoute = sel ? `http://localhost:3000/orgs/${sel.slug}` : '';
-  const devWwwUrl = sel ? `http://www.${sel.slug}.localhost:3000/` : '';
+  const devHost = selListItem ? `${selListItem.slug}.localhost:3000` : '';
+  const devUrl = selListItem ? `http://${devHost}/` : '';
+  const devOrgRoute = selListItem ? `http://localhost:3000/orgs/${selListItem.slug}` : '';
+  const devWwwUrl = selListItem ? `http://www.${selListItem.slug}.localhost:3000/` : '';
 
   /* ── Render ── */
-  if (isHydrating) {
+  if (isHydrating || !selectedId) {
     return (
       <div className="max-w-4xl mt-12 text-sm text-zinc-400">
         Loading organization…
@@ -445,15 +487,15 @@ export default function OrgSettings() {
           </select>
 
           <div className="mt-2 flex gap-2">
-            <Button variant="outline" onClick={() => sel && setSelectedId(sel.id)}>
+            <Button variant="outline" onClick={() => selListItem && setSelectedId(selListItem.id)}>
               Switch to this org
             </Button>
-            <Button variant="outline" onClick={() => sel && fetchStats(sel.id)}>
+            <Button variant="outline" onClick={() => selectedId && hydrateSelectedFromApi(selectedId)}>
               Refresh stats
             </Button>
           </div>
 
-          {sel && (
+          {selListItem && (
             <div className="mt-4 rounded-lg border border-zinc-700 bg-zinc-900/40 p-3">
               <div className="flex items-center justify-between">
                 <h3 className="text-sm font-medium">Developer Test Links (localhost)</h3>
@@ -488,7 +530,7 @@ export default function OrgSettings() {
         </div>
       )}
 
-      {sel ? (
+      {selFromApi ? (
         <>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* General */}
@@ -515,13 +557,19 @@ export default function OrgSettings() {
 
             {/* Logos */}
             <div className="space-y-4">
-              <UploadField label="Logo (light UI)" value={draft.logo_url as string} onChange={(u) => setDraft((d) => ({ ...d, logo_url: u ?? '' }))} orgId={sel.id} orgSlug={sel.slug} tag="logo" />
-              <UploadField label="Logo (dark UI)" value={draft.dark_logo_url as string} onChange={(u) => setDraft((d) => ({ ...d, dark_logo_url: u ?? '' }))} orgId={sel.id} orgSlug={sel.slug} tag="logo-dark" />
-              <UploadField label="Favicon" value={draft.favicon_url as string} onChange={(u) => setDraft((d) => ({ ...d, favicon_url: u ?? '' }))} orgId={sel.id} orgSlug={sel.slug} tag="favicon" accept="image/png,image/x-icon,image/svg+xml,image/webp" />
+              <UploadField label="Logo (light UI)" value={draft.logo_url as string} onChange={(u) => setDraft((d) => ({ ...d, logo_url: u ?? '' }))} orgId={selFromApi.id} orgSlug={selFromApi.slug} tag="logo" />
+              <UploadField label="Logo (dark UI)" value={draft.dark_logo_url as string} onChange={(u) => setDraft((d) => ({ ...d, dark_logo_url: u ?? '' }))} orgId={selFromApi.id} orgSlug={selFromApi.slug} tag="logo-dark" />
+              <UploadField label="Favicon" value={draft.favicon_url as string} onChange={(u) => setDraft((d) => ({ ...d, favicon_url: u ?? '' }))} orgId={selFromApi.id} orgSlug={selFromApi.slug} tag="favicon" accept="image/png,image/x-icon,image/svg+xml,image/webp" />
               <div className="pt-1">
                 <Button onClick={save} disabled={saving}>{saving ? 'Saving…' : 'Save'}</Button>
               </div>
-              <OrgDomainPanel orgId={sel.id} orgSlug={sel.slug} initialDomain={(sel as any).primary_domain || ''} initialWildcard={Boolean((sel as any).wildcard_enabled)} initialCanonical={((sel as any).canonical_host ?? 'www')} />
+              <OrgDomainPanel
+                orgId={selFromApi.id}
+                orgSlug={selFromApi.slug}
+                initialDomain={(draft.primary_domain as any) || ''}
+                initialWildcard={Boolean(draft.wildcard_enabled)}
+                initialCanonical={(draft.canonical_host as any) ?? 'www'}
+              />
             </div>
           </div>
 
@@ -533,41 +581,41 @@ export default function OrgSettings() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-3">
                 <label className="block text-sm">Brand Display Name</label>
-                <Input value={(draft.branding as Branding)?.name ?? ''} onChange={(e) => setBranding('name', e.target.value)} placeholder="Point Seven Studio" />
+                <Input value={b?.name ?? ''} onChange={(e) => setBrandingField('name', e.target.value)} placeholder="Point Seven Studio" />
 
                 <label className="block text-sm">Public Domain</label>
-                <Input value={(draft.branding as Branding)?.domain ?? ''} onChange={(e) => setBranding('domain', e.target.value)} placeholder="pointsevenstudio.com" />
+                <Input value={b?.domain ?? ''} onChange={(e) => setBrandingField('domain', e.target.value)} placeholder="pointsevenstudio.com" />
 
                 <label className="block text-sm">Hero Headline</label>
-                <Input value={(draft.branding as Branding)?.hero?.headline ?? ''} onChange={(e) => setBrandHero('headline', e.target.value)} placeholder="Selected Work & Case Studies" />
+                <Input value={b?.hero?.headline ?? ''} onChange={(e) => setBrandHero('headline', e.target.value)} placeholder="Selected Work & Case Studies" />
 
                 <label className="block text-sm">Hero Subhead</label>
-                <Input value={(draft.branding as Branding)?.hero?.subhead ?? ''} onChange={(e) => setBrandHero('subhead', e.target.value)} placeholder="Custom software, rapid launches…" />
+                <Input value={b?.hero?.subhead ?? ''} onChange={(e) => setBrandHero('subhead', e.target.value)} placeholder="Custom software, rapid launches…" />
               </div>
 
               <div className="space-y-3">
                 <label className="block text-sm">Features Section Title</label>
-                <Input value={(draft.branding as Branding)?.copy?.featuresTitle ?? ''} onChange={(e) => setBrandCopy('featuresTitle', e.target.value)} placeholder="Featured demos" />
+                <Input value={b?.copy?.featuresTitle ?? ''} onChange={(e) => setBrandCopy('featuresTitle', e.target.value)} placeholder="Featured demos" />
 
                 <label className="block text-sm">Features Section Subtitle</label>
-                <Input value={(draft.branding as Branding)?.copy?.featuresSubtitle ?? ''} onChange={(e) => setBrandCopy('featuresSubtitle', e.target.value)} placeholder="Hand-picked highlights…" />
+                <Input value={b?.copy?.featuresSubtitle ?? ''} onChange={(e) => setBrandCopy('featuresSubtitle', e.target.value)} placeholder="Hand-picked highlights…" />
 
                 <div className="mt-2 grid grid-cols-1 gap-3 rounded-md border border-zinc-700 p-3">
                   <div className="flex items-center justify-between">
                     <label className="text-sm">Show Glow/Gradients</label>
-                    <Switch checked={!!(draft.branding as Branding)?.flags?.showGlow} onCheckedChange={(v) => setBrandFlag('showGlow', !!v)} />
+                    <Switch checked={!!b?.flags?.showGlow} onCheckedChange={(v) => setBrandFlag('showGlow', !!v)} />
                   </div>
                   <div className="flex items-center justify-between">
                     <label className="text-sm">Show Puppy Widget</label>
-                    <Switch checked={!!(draft.branding as Branding)?.flags?.showPuppyWidget} onCheckedChange={(v) => setBrandFlag('showPuppyWidget', !!v)} />
+                    <Switch checked={!!b?.flags?.showPuppyWidget} onCheckedChange={(v) => setBrandFlag('showPuppyWidget', !!v)} />
                   </div>
                   <div className="flex items-center justify-between">
                     <label className="text-sm">Allow Widget on Mobile</label>
-                    <Switch checked={(draft.branding as Branding)?.flags?.showMobileWidget ?? true} onCheckedChange={(v) => setBrandFlag('showMobileWidget', !!v)} />
+                    <Switch checked={b?.flags?.showMobileWidget ?? true} onCheckedChange={(v) => setBrandFlag('showMobileWidget', !!v)} />
                   </div>
                   <div className="flex items-center justify-between">
                     <label className="text-sm">Allow Gradients on Mobile</label>
-                    <Switch checked={(draft.branding as Branding)?.flags?.showMobileGradients ?? true} onCheckedChange={(v) => setBrandFlag('showMobileGradients', !!v)} />
+                    <Switch checked={b?.flags?.showMobileGradients ?? true} onCheckedChange={(v) => setBrandFlag('showMobileGradients', !!v)} />
                   </div>
                 </div>
               </div>
@@ -587,10 +635,10 @@ export default function OrgSettings() {
               <div className="md:col-span-1">
                 <UploadField
                   label="Headshot / Photo"
-                  value={((draft.branding as Branding)?.owner?.photoUrl ?? '') as string}
+                  value={b?.owner?.photoUrl ?? ''}
                   onChange={(u) => setBrandOwner('photoUrl', u ?? null)}
-                  orgId={sel.id}
-                  orgSlug={sel.slug}
+                  orgId={selFromApi.id}
+                  orgSlug={selFromApi.slug}
                   tag="owner-photo"
                   accept="image/png,image/jpeg,image/webp,image/avif,image/svg+xml"
                 />
@@ -600,11 +648,11 @@ export default function OrgSettings() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   <div>
                     <Label className="block text-sm">Owner Name</Label>
-                    <Input value={(draft.branding as Branding)?.owner?.name ?? ''} onChange={(e) => setBrandOwner('name', e.target.value)} placeholder="Sandon Jurowski" />
+                    <Input value={b?.owner?.name ?? ''} onChange={(e) => setBrandOwner('name', e.target.value)} placeholder="Sandon Jurowski" />
                   </div>
                   <div>
                     <Label className="block text-sm">Title</Label>
-                    <Input value={(draft.branding as Branding)?.owner?.title ?? ''} onChange={(e) => setBrandOwner('title', e.target.value)} placeholder="Founder, Point Seven Studio" />
+                    <Input value={b?.owner?.title ?? ''} onChange={(e) => setBrandOwner('title', e.target.value)} placeholder="Founder, Point Seven Studio" />
                   </div>
                 </div>
 
@@ -612,7 +660,7 @@ export default function OrgSettings() {
                   <Label className="block text-sm">Short Bio (plain text)</Label>
                   <Textarea
                     rows={6}
-                    value={(draft.branding as Branding)?.owner?.bio ?? ''}
+                    value={b?.owner?.bio ?? ''}
                     onChange={(e) => setBrandOwner('bio', e.target.value)}
                     placeholder={`I build fast, pragmatic software—SaaS, e-commerce, and AI features.\n\nPreviously @ ...`}
                   />
@@ -622,23 +670,23 @@ export default function OrgSettings() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   <div>
                     <Label className="block text-sm">Website</Label>
-                    <Input value={(draft.branding as Branding)?.owner?.links?.website ?? ''} onChange={(e) => setBrandOwnerLink('website', e.target.value || null)} placeholder="https://pixblaze.com" />
+                    <Input value={b?.owner?.links?.website ?? ''} onChange={(e) => setBrandOwnerLink('website', e.target.value || null)} placeholder="https://pixblaze.com" />
                   </div>
                   <div>
                     <Label className="block text-sm">Email</Label>
-                    <Input value={(draft.branding as Branding)?.owner?.links?.email ?? ''} onChange={(e) => setBrandOwnerLink('email', e.target.value || null)} placeholder="hello@pointsevenstudio.com" />
+                    <Input value={b?.owner?.links?.email ?? ''} onChange={(e) => setBrandOwnerLink('email', e.target.value || null)} placeholder="hello@pointsevenstudio.com" />
                   </div>
                   <div>
                     <Label className="block text-sm">GitHub</Label>
-                    <Input value={(draft.branding as Branding)?.owner?.links?.github ?? ''} onChange={(e) => setBrandOwnerLink('github', e.target.value || null)} placeholder="https://github.com/your-handle" />
+                    <Input value={b?.owner?.links?.github ?? ''} onChange={(e) => setBrandOwnerLink('github', e.target.value || null)} placeholder="https://github.com/your-handle" />
                   </div>
                   <div>
                     <Label className="block text-sm">LinkedIn</Label>
-                    <Input value={(draft.branding as Branding)?.owner?.links?.linkedin ?? ''} onChange={(e) => setBrandOwnerLink('linkedin', e.target.value || null)} placeholder="https://www.linkedin.com/in/..." />
+                    <Input value={b?.owner?.links?.linkedin ?? ''} onChange={(e) => setBrandOwnerLink('linkedin', e.target.value || null)} placeholder="https://www.linkedin.com/in/..." />
                   </div>
                   <div>
                     <Label className="block text-sm">Twitter / X</Label>
-                    <Input value={(draft.branding as Branding)?.owner?.links?.twitter ?? ''} onChange={(e) => setBrandOwnerLink('twitter', e.target.value || null)} placeholder="https://x.com/..." />
+                    <Input value={b?.owner?.links?.twitter ?? ''} onChange={(e) => setBrandOwnerLink('twitter', e.target.value || null)} placeholder="https://x.com/..." />
                   </div>
                 </div>
               </div>
@@ -654,7 +702,7 @@ export default function OrgSettings() {
             <div className="mt-8 rounded-lg border border-red-900/40 bg-red-950/40 p-4">
               <h2 className="text-red-300 font-semibold">Danger Zone</h2>
               <p className="text-red-200/80 text-sm mt-1">
-                Deleting <b>{sel.name}</b> (<code>{sel.slug}</code>) is permanent.
+                Deleting <b>{selFromApi.name}</b> (<code>{selFromApi.slug}</code>) is permanent.
               </p>
               <div className="mt-3 text-sm text-red-100/80">
                 <div className="flex gap-6">
@@ -667,8 +715,8 @@ export default function OrgSettings() {
 
               <div className="mt-4 grid grid-cols-1 md:grid-cols-3 gap-3">
                 <div>
-                  <label className="block text-xs text-red-200/80 mb-1">Type the slug (<code>{sel.slug}</code>)</label>
-                  <Input value={confirmSlug} onChange={(e) => setConfirmSlug(e.target.value)} placeholder={sel.slug} className="border-red-900/60 bg-red-950/40" />
+                  <label className="block text-xs text-red-200/80 mb-1">Type the slug (<code>{selFromApi.slug}</code>)</label>
+                  <Input value={confirmSlug} onChange={(e) => setConfirmSlug(e.target.value)} placeholder={selFromApi.slug} className="border-red-900/60 bg-red-950/40" />
                 </div>
                 <div>
                   <label className="block text-xs text-red-200/80 mb-1">Type <code>DELETE</code></label>

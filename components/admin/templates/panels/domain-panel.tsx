@@ -1,13 +1,12 @@
+// components/admin/templates/domain-panel.tsx
 'use client';
 
 /**
  * Domain Panel (programmatic Vercel connect + verify + remove)
- * - Preference: www is primary; apex 307-redirects to www
- * - Requires API routes:
- *    - POST /api/domains/connect   { domain: string, redirectToWWW?: boolean, autoConfigure?: boolean | 'detect' }
- *    - POST /api/domains/verify    { domain: string }      // domain = primary (www.example.com)
- *    - POST /api/domains/remove    { domain: string }      // domain = apex (example.com)
- *    - POST /api/templates/[id]/custom-domain { custom_domain: string | null } // persists via RPC + syncs published_sites
+ * - Lightweight Unpublish dialog (no shadcn AlertDialog)
+ * - Soft vs Hard unpublish
+ * - Hydrates publish state from /api/templates/state AND directly from published_sites
+ * - Slug input uses local state so it's responsive even if parent onChange is momentarily unavailable
  */
 
 import * as React from 'react';
@@ -20,26 +19,104 @@ import { Button } from '@/components/ui/button';
 import DomainInstructions from '@/components/admin/domain-instructions';
 import type { Template } from '@/types/template';
 import { supabase } from '@/lib/supabase/client';
-import { Copy, Loader2, CheckCircle2, AlertTriangle, RefreshCcw, Trash2 } from 'lucide-react';
+import {
+  Copy, Loader2, CheckCircle2, AlertTriangle, RefreshCcw, Trash2, Globe,
+} from 'lucide-react';
 import { useVerifyDomain } from '@/hooks/useVerifyDomain';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+
+/* -------------------- Lightweight dialog (no external deps) -------------------- */
+function ConfirmDialog({
+  open,
+  title,
+  description,
+  onClose,
+  onConfirm,
+  busy = false,
+  error,
+  mode,
+  setMode,
+}: {
+  open: boolean;
+  title: string;
+  description?: React.ReactNode;
+  onClose: () => void;
+  onConfirm: () => void;
+  busy?: boolean;
+  error?: string | null;
+  mode: 'soft' | 'hard';
+  setMode: (m: 'soft' | 'hard') => void;
+}) {
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [open, onClose]);
+
+  if (!open) return null;
+
+  return (
+    <div role="dialog" aria-modal="true" className="fixed inset-0 z-[1000] flex items-center justify-center">
+      <div className="absolute inset-0 bg-black/60" onClick={() => !busy && onClose()} />
+      <div className="relative w-full max-w-lg rounded-xl border border-white/10 bg-neutral-900 p-4 shadow-2xl">
+        <div className="mb-2">
+          <h3 className="text-lg font-semibold text-white">{title}</h3>
+          {description ? <p className="mt-1 text-sm text-white/70">{description}</p> : null}
+        </div>
+
+        <div className="mt-3 space-y-3">
+          <Alert className="bg-neutral-950 border-white/10">
+            <AlertTitle className="text-amber-300">Heads up</AlertTitle>
+            <AlertDescription className="text-white/80">
+              <strong>Soft</strong> keeps the <code>published_sites</code> row but clears
+              <code> domain</code> and <code> snapshot_id</code> and marks it <code>unpublished</code>.<br />
+              <strong>Hard</strong> deletes the row entirely (frees <code>*.quicksites.ai</code> immediately).
+            </AlertDescription>
+          </Alert>
+
+          <div className="grid gap-2">
+            <label className="flex items-start gap-2 rounded-md border border-white/10 p-2">
+              <input type="radio" name="unpub-mode" value="soft" checked={mode === 'soft'} onChange={() => setMode('soft')} className="mt-0.5" />
+              <div>
+                <div className="font-medium text-white">Soft (keep row, clear pointers)</div>
+                <p className="text-xs text-white/70">Safer; preserves audit history in <code>published_sites</code>.</p>
+              </div>
+            </label>
+            <label className="flex items-start gap-2 rounded-md border border-white/10 p-2">
+              <input type="radio" name="unpub-mode" value="hard" checked={mode === 'hard'} onChange={() => setMode('hard')} className="mt-0.5" />
+              <div>
+                <div className="font-medium text-white">Hard (delete row)</div>
+                <p className="text-xs text-white/70">Immediate cleanup; frees the platform subdomain now.</p>
+              </div>
+            </label>
+          </div>
+
+          {error && (
+            <div className="text-amber-300 text-sm flex items-start gap-2">
+              <AlertTriangle className="h-4 w-4 mt-0.5" /> {error}
+            </div>
+          )}
+        </div>
+
+        <div className="mt-4 flex justify-end gap-2">
+          <Button variant="ghost" onClick={onClose} disabled={busy}>Cancel</Button>
+          <Button variant="destructive" onClick={onConfirm} disabled={busy}>
+            {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Confirm unpublish'}
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 /* -------------------- utils -------------------- */
 function sanitizeSlug(base: string) {
-  return String(base || '')
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '')
-    .trim();
+  return String(base || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').trim();
 }
-function uniqueSuffix() {
-  return Math.random().toString(36).slice(2, 6);
-}
-function randomSlug(base: string) {
-  const s = sanitizeSlug(base || 'site');
-  return s ? `${s}-${uniqueSuffix()}` : `site-${uniqueSuffix()}`;
-}
-
-// Ensure anything we render inside <code>…</code> is a string (never an object)
+function uniqueSuffix() { return Math.random().toString(36).slice(2, 6); }
+function randomSlug(base: string) { const s = sanitizeSlug(base || 'site'); return s ? `${s}-${uniqueSuffix()}` : `site-${uniqueSuffix()}`; }
+async function copy(text: string) { try { await navigator.clipboard.writeText(text); } catch {} }
 function inlineText(x: any): string {
   if (x == null) return '';
   const t = typeof x;
@@ -51,35 +128,23 @@ function inlineText(x: any): string {
   }
   return String(x);
 }
-
-// Flatten Vercel responses into a string list (handles arrays, {rank,value}, nested arrays, etc.)
 function flattenToStrings(input: any): string[] {
-  const out: string[] = [];
-  const seen = new Set<string>();
+  const out: string[] = []; const seen = new Set<string>();
   const add = (v: any) => {
     if (v == null) return;
     if (Array.isArray(v)) { v.forEach(add); return; }
     const t = typeof v;
     if (t === 'string' || t === 'number' || t === 'boolean') {
-      const s = String(v).trim();
-      if (s && !seen.has(s)) { seen.add(s); out.push(s); }
+      const s = String(v).trim(); if (s && !seen.has(s)) { seen.add(s); out.push(s); }
       return;
     }
     if (t === 'object') {
       if ('value' in v) { add((v as any).value); return; }
       if ('values' in v) { add((v as any).values); return; }
-      const s = inlineText(v);
-      if (s && !seen.has(s)) { seen.add(s); out.push(s); }
+      const s = inlineText(v); if (s && !seen.has(s)) { seen.add(s); out.push(s); }
     }
   };
-  add(input);
-  return out;
-}
-
-async function copy(text: string) {
-  try {
-    await navigator.clipboard.writeText(text);
-  } catch {}
+  add(input); return out;
 }
 
 const DOMAIN_RX = /^([a-z0-9-]+\.)+[a-z]{2,}$/i;
@@ -91,26 +156,15 @@ const normalizeApex = (d: string) =>
 
 /* Tolerant POST helper that always returns JSON-shaped data */
 async function postJson<T = any>(url: string, body: any): Promise<T> {
-  const res = await fetch(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
-    cache: 'no-store',
-  });
+  const res = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body), cache: 'no-store' });
   const text = await res.text();
   let json: any;
-  try {
-    json = text ? JSON.parse(text) : {};
-  } catch {
-    json = { ok: false, error: text || `HTTP ${res.status}` };
-  }
-  if (!res.ok || json?.ok === false) {
-    throw new Error(json?.error || `HTTP ${res.status}`);
-  }
+  try { json = text ? JSON.parse(text) : {}; } catch { json = { ok: false, error: text || `HTTP ${res.status}` }; }
+  if (!res.ok || json?.ok === false) throw new Error(json?.error || `HTTP ${res.status}`);
   return json as T;
 }
 
-/* -------------------- types -------------------- */
+/* API types */
 type ConnectResponse = {
   ok: boolean;
   primary: string;
@@ -122,6 +176,17 @@ type ConnectResponse = {
   error?: string;
   autoConfigured?: { provider: 'namecheap'; applied: boolean; reason?: string };
 };
+
+/* Snapshot-only publish detector (do NOT trust domain strings) */
+function computeIsPublishedFromStateOnly(t: any): boolean {
+  const snap =
+    t?.publishedSnapshotId ??
+    t?.published_snapshot_id ??
+    t?.published_version_id ??
+    null;
+  const flag = Boolean(t?.published);
+  return Boolean(snap) || flag;
+}
 
 /* -------------------- component -------------------- */
 export default function DomainPanel({
@@ -144,56 +209,62 @@ export default function DomainPanel({
   );
 
   const [locked, setLocked] = useState(false);
-  const [manuallyEdited, setManuallyEdited] = useState(
-    () => Boolean(template.slug && template.slug !== 'untitled')
-  );
+  const [manuallyEdited, setManuallyEdited] = useState(() => Boolean(template.slug && template.slug !== 'untitled'));
   const [checking, setChecking] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Auto-suggest slug
+  // Local slug so typing always responds, even before parent propagates
+  const [slugLocal, setSlugLocal] = useState<string>(String(template.slug || ''));
   useEffect(() => {
-    if (!onChange) return;
+    // Keep in sync if template changes elsewhere (e.g., restore, load, publish/unpublish)
+    setSlugLocal(String(template.slug || ''));
+  }, [template.id, template.slug]);
+
+  // Auto-suggest slug from siteTitle when not manually edited/locked
+  useEffect(() => {
     if (!locked && !manuallyEdited) {
       const suggested = sanitizeSlug(siteTitle);
-      if (suggested && suggested !== template.slug) doChange({ slug: suggested });
+      if (suggested && suggested !== slugLocal) {
+        setSlugLocal(suggested);
+        doChange({ slug: suggested });
+      }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [siteTitle, locked, manuallyEdited]);
 
-  // Validate + uniqueness check (checks templates.slug + published_sites.domain)
+  // Validate + uniqueness against current local slug
   useEffect(() => {
-    const slug = template.slug || '';
+    const slug = slugLocal || '';
     const rx = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
-    if (!slug) {
-      setError('Slug is required');
-      return;
-    }
-    if (!rx.test(slug)) {
-      setError('Slug must be lowercase letters, numbers and dashes (e.g. roof-cleaning)');
-      return;
-    }
+
+    if (!slug) { setError('Slug is required'); return; }
+    if (!rx.test(slug)) { setError('Slug must be lowercase letters, numbers and dashes (e.g. roof-cleaning)'); return; }
 
     if (debounceRef.current) clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(async () => {
       try {
         setChecking(true);
-        // 1) same slug on a different template?
-        const { data: tHits } = await supabase
+        const { data: tHits, error: tErr } = await supabase
           .from('templates')
-          .select('id')
+          .select('id', { head: false })
           .eq('slug', slug)
           .neq('id', template.id);
+        if (tErr) throw tErr;
+        const takenByOtherTemplate = (tHits?.length ?? 0) > 0;
 
-        // 2) domain collision on platform subdomain?
         const platformDomain = `${slug}.quicksites.ai`;
-        const { data: psHits } = await supabase
+        const { data: psHits, error: psErr } = await supabase
           .from('published_sites')
-          .select('id')
-          .ilike('domain', platformDomain);
+          .select('id, template_id, site_id', { head: false })
+          .eq('domain', platformDomain)
+          .neq('template_id', template.id);
+        if (psErr) throw psErr;
+        const takenByOtherPublished = (psHits?.length ?? 0) > 0;
 
-        const taken = (tHits?.length ?? 0) > 0 || (psHits?.length ?? 0) > 0;
-        setError(taken ? `Slug is taken. Suggested: ${slug}-${uniqueSuffix()}` : null);
+        setError(takenByOtherTemplate || takenByOtherPublished
+          ? `Slug is taken. Suggested: ${slug}-${uniqueSuffix()}`
+          : null);
       } catch {
         setError(null);
       } finally {
@@ -201,13 +272,12 @@ export default function DomainPanel({
       }
     }, 450);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [template.slug, template.id]);
+  }, [slugLocal, template.id]);
 
   /* ---- URL previews ---- */
-  const isSite = isSiteProp ?? !!(template as any)?.is_site;
-  const slug = String(template.slug || '').trim();
+  const isSite = isSiteProp ?? Boolean((template as any)?.is_site);
+  const previewSlug = slugLocal || 'slug';
 
-  // prefer live domain (from /api/templates/state) if present
   const publishedDomain =
     (template as any)?.site?.domain && String((template as any).site.domain).trim()
       ? String((template as any).site.domain).trim()
@@ -215,21 +285,65 @@ export default function DomainPanel({
       ? String((template as any).domain).trim()
       : null;
 
-  const defaultSubdomain = slug ? `${slug}.quicksites.ai` : 'your-subdomain.quicksites.ai';
+  const defaultSubdomain = previewSlug ? `${previewSlug}.quicksites.ai` : 'your-subdomain.quicksites.ai';
 
   const prodPreview = isSite
     ? `https://${publishedDomain || defaultSubdomain}`
-    : `https://quicksites.ai/templates/${slug || 'slug'}`;
+    : `https://quicksites.ai/templates/${previewSlug}`;
 
   const isDevHost =
-    typeof window !== 'undefined' &&
-    /(^|\.)(localhost|127\.0\.0\.1|lvh\.me|nip\.io)$/i.test(window.location.hostname);
+    typeof window !== 'undefined' && /(^|\.)(localhost|127\.0\.0\.1|lvh\.me|nip\.io)$/i.test(window.location.hostname);
   const port = typeof window !== 'undefined' ? window.location.port || '3000' : '3000';
-  const devSubdomain = slug ? `http://${slug}.localhost:${port}/` : '';
-  const devPath = slug ? `http://localhost:${port}/sites/${slug}` : '';
+  const devSubdomain = previewSlug ? `http://${previewSlug}.localhost:${port}/` : '';
+  const devPath = previewSlug ? `http://localhost:${port}/sites/${previewSlug}` : '';
 
-  // Published flag from state (publishedSnapshotId)
-  const isPublished = Boolean((template as any)?.publishedSnapshotId);
+  /* ---- Published state (robust + hydrated) ---- */
+  const [statePublished, setStatePublished] = useState<boolean | null>(null);         // from Truth API (snapshot-only)
+  const [publishedRowExists, setPublishedRowExists] = useState<boolean | null>(null); // from published_sites
+
+  const isPublished =
+    (publishedRowExists === true)
+      ? true
+      : (publishedRowExists === false)
+        ? false
+        : (statePublished ?? computeIsPublishedFromStateOnly(template as any));
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function hydrate() {
+      try {
+        const res = await fetch(`/api/templates/state?id=${encodeURIComponent(template.id)}`, { cache: 'no-store' });
+        if (res.ok) {
+          const j = await res.json();
+          const t = j?.template ?? j;
+          if (!cancelled && t) {
+            const snapPublished = computeIsPublishedFromStateOnly(t);
+            setStatePublished(snapPublished);
+            if (onChange) onChange(t as Partial<Template>);
+          }
+        }
+      } catch {}
+
+      try {
+        const { data, error } = await supabase
+          .from('published_sites')
+          .select('id', { head: false })
+          .eq('template_id', template.id)
+          .limit(1);
+        if (!cancelled) {
+          if (error) setPublishedRowExists(null);
+          else setPublishedRowExists((data?.length ?? 0) > 0);
+        }
+      } catch {
+        if (!cancelled) setPublishedRowExists(null);
+      }
+    }
+
+    hydrate();
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [template.id]);
 
   /* ---- Domain connect state ---- */
   const initialCustom =
@@ -244,7 +358,6 @@ export default function DomainPanel({
   const [connectResp, setConnectResp] = useState<ConnectResponse | null>(null);
   const [connectError, setConnectError] = useState<string | null>(null);
 
-  // Auto-configure toggle & last-checked display
   const [autoConfigure, setAutoConfigure] = useState(true);
   const [lastCheckedAt, setLastCheckedAt] = useState<number | null>(null);
 
@@ -263,53 +376,77 @@ export default function DomainPanel({
     void copy(parts.join('\n'));
   }
 
-  /**
-   * Persist apex via server route, then refresh /api/templates/state
-   * so UI reflects published_sites.domain & normalized state.
-   */
-  async function persistApex(apexDomain: string | null) {
+  async function refreshTemplateState() {
     try {
-      await postJson(`/api/templates/${template.id}/custom-domain`, {
-        custom_domain: apexDomain,
-      });
-
-      // Refresh template state
-      const res = await fetch(`/api/templates/state?id=${encodeURIComponent(template.id)}`, {
-        cache: 'no-store',
-      });
+      const res = await fetch(`/api/templates/state?id=${encodeURIComponent(template.id)}`, { cache: 'no-store' });
       if (res.ok) {
         const j = await res.json();
-        if (j?.template) {
-          // push fresh template object up to parent if possible
-          doChange(j.template as Partial<Template>);
+        const t = j?.template ?? j;
+        if (t) {
+          setStatePublished(computeIsPublishedFromStateOnly(t));
+          if (onChange) onChange(t as Partial<Template>);
         }
       }
-    } catch (e) {
-      console.warn('persistApex failed', e);
+    } catch {}
+    try {
+      const { data, error } = await supabase
+        .from('published_sites')
+        .select('id', { head: false })
+        .eq('template_id', template.id)
+        .limit(1);
+      if (!error) setPublishedRowExists((data?.length ?? 0) > 0);
+    } catch {}
+  }
+
+  /** ---------------- Unpublish dialog state + action ---------------- */
+  const [unpubOpen, setUnpubOpen] = useState(false);
+  const [unpubBusy, setUnpubBusy] = useState(false);
+  const [unpubMode, setUnpubMode] = useState<'soft' | 'hard'>('hard');
+  const [unpubError, setUnpubError] = useState<string | null>(null);
+
+  async function doUnpublish(mode: 'soft' | 'hard') {
+    setUnpubBusy(true);
+    setUnpubError(null);
+    try {
+      const res = await fetch(`/api/admin/sites/unpublish`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        cache: 'no-store',
+        body: JSON.stringify({ templateId: template.id, mode }),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok || json?.ok === false) throw new Error(json?.error || `HTTP ${res.status}`);
+      await refreshTemplateState();
+      setUnpubOpen(false);
+    } catch (e: any) {
+      setUnpubError(e?.message || 'Unpublish failed.');
+    } finally {
+      setUnpubBusy(false);
     }
+  }
+
+  /* ---------------- Domain connect helpers ---------------- */
+  async function persistApex(apexDomain: string | null) {
+    try {
+      await postJson(`/api/templates/${template.id}/custom-domain`, { custom_domain: apexDomain });
+      await refreshTemplateState();
+    } catch (e) { console.warn('persistApex failed', e); }
   }
 
   async function connectDomain() {
     setConnectError(null);
     const d = normalizeApex(domainInput);
-    if (!d || !DOMAIN_RX.test(d)) {
-      setConnectError('Enter a valid domain like example.com (no https://).');
-      return;
-    }
+    if (!d || !DOMAIN_RX.test(d)) { setConnectError('Enter a valid domain like example.com (no https://).'); return; }
     setConnectBusy(true);
     try {
       const json = await postJson<ConnectResponse>('/api/domains/connect', {
-        domain: d,
-        redirectToWWW: true,
-        autoConfigure: autoConfigure ? 'detect' : false,
+        domain: d, redirectToWWW: true, autoConfigure: autoConfigure ? 'detect' : false,
       });
-      setConnectResp(json);
-      await persistApex(d); // save to template + sync published_sites.domain (if published)
+      setConnectResp(json as ConnectResponse);
+      await persistApex(d);
     } catch (e: any) {
       setConnectError(e?.message || 'Failed to connect domain.');
-    } finally {
-      setConnectBusy(false);
-    }
+    } finally { setConnectBusy(false); }
   }
 
   async function verifyDomain() {
@@ -317,25 +454,17 @@ export default function DomainPanel({
     setVerifyBusy(true);
     setConnectError(null);
     try {
-      const json = await postJson<{ ok: boolean; verified: boolean }>(
-        '/api/domains/verify',
-        { domain: primary },
-      );
-      setConnectResp((prev) => (prev ? { ...prev, verified: !!json?.verified } : prev));
+      const json = await postJson<{ ok: boolean; verified: boolean }>('/api/domains/verify', { domain: primary });
+      setConnectResp((prev: ConnectResponse | null) => (prev ? { ...prev, verified: !!json?.verified } : prev));
       setLastCheckedAt(Date.now());
     } catch (e: any) {
       setConnectError(e?.message || 'Could not verify yet.');
-    } finally {
-      setVerifyBusy(false);
-    }
+    } finally { setVerifyBusy(false); }
   }
 
   async function removeFromVercel() {
     const d = apex;
-    if (!d) {
-      setConnectError('Enter a domain first.');
-      return;
-    }
+    if (!d) { setConnectError('Enter a domain first.'); return; }
     const ok = window.confirm(
       `Remove ${d} and www.${d} from your Vercel project?\n\nThis only detaches them in Vercel and does not change your DNS.`,
     );
@@ -346,29 +475,18 @@ export default function DomainPanel({
       const json = await postJson<{ ok: true }>('/api/domains/remove', { domain: d });
       if (!json?.ok) throw new Error('Failed to remove domain(s).');
       setConnectResp(null);
-
-      // clear on template, refresh state
       await persistApex(null);
       setDomainInput('');
     } catch (e: any) {
       setConnectError(e?.message || 'Remove failed.');
-    } finally {
-      setRemoveBusy(false);
-    }
+    } finally { setRemoveBusy(false); }
   }
 
-  // Clear saved domain (doesn't touch Vercel)
   async function clearSavedDomain() {
-    try {
-      await persistApex(null);
-      setDomainInput('');
-      setConnectResp(null);
-    } catch (e) {
-      console.warn('clearSavedDomain failed', e);
-    }
+    try { await persistApex(null); setDomainInput(''); setConnectResp(null); } catch {}
   }
 
-  // Normalize recommended DNS records into clean lists
+  // Recommended DNS lists
   const aValues = useMemo(() => {
     const raw = (connectResp?.recommended?.ipv4 ?? '76.76.21.21');
     const list = flattenToStrings(raw);
@@ -381,50 +499,59 @@ export default function DomainPanel({
     return list.length ? list : ['cname.vercel-dns.com'];
   }, [connectResp?.recommended?.cname]);
 
-  // Toolbar/panel events
-  const openVersionsMenu = () => { try { window.dispatchEvent(new CustomEvent('qs:versions:open')); } catch {} };
-  const openIdentityPanel = () => {
-    try {
-      window.dispatchEvent(new CustomEvent('qs:settings:set-open', { detail: true }));
-      window.dispatchEvent(new CustomEvent('qs:open-settings-panel', {
-        detail: { panel: 'identity', openEditor: true, scroll: true, spotlightMs: 900 } as any,
-      }));
-    } catch {}
-  };
-
   // Auto-verify polling
   const verifyTarget = connectResp?.primary || (apex ? `www.${apex}` : null);
-  const { status: verifyStatus, verified: verifiedNow } = useVerifyDomain(verifyTarget, {
+  const { status: verifyStatus } = useVerifyDomain(verifyTarget, {
     enabled: !!verifyTarget && !(connectResp?.verified),
     intervalMs: 10_000,
     maxAttempts: 18,
-    onVerified: () => {
-      setConnectResp(prev => (prev ? { ...prev, verified: true } : prev));
-    },
+    onVerified: () => { setConnectResp(prev => (prev ? { ...prev, verified: true } : prev)); },
   });
-  useEffect(() => {
-    if (verifyStatus === 'verifying') setLastCheckedAt(Date.now());
-  }, [verifyStatus]);
+  useEffect(() => { if (verifyStatus === 'verifying') setLastCheckedAt(Date.now()); }, [verifyStatus]);
 
   return (
     <Collapsible title="URL, Publishing & Domain" id="publishing-domain">
       <div className="space-y-6">
-        {/* -------------------- Slug editor -------------------- */}
+        {/* -------------------- Slug editor + Unpublish -------------------- */}
         <div className="rounded-lg border border-white/10 bg-neutral-900/50 p-3">
-          <div className="flex justify-between items-center mb-2">
-            <Label>Slug</Label>
-            <div className="flex gap-2 items-center text-sm text-muted-foreground">
-              <span>Lock Slug</span>
-              <Switch checked={locked} onCheckedChange={(v) => setLocked(v)} disabled={isPublished || !onChange} />
+          <div className="flex flex-wrap justify-between items-center mb-2 gap-2">
+            <div className="flex items-center gap-2">
+              <Globe className="h-4 w-4 text-white/70" />
+              <Label>Slug</Label>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="flex gap-2 items-center text-sm text-muted-foreground">
+                <span>Lock Slug</span>
+                <Switch checked={locked} onCheckedChange={(v) => setLocked(v)} disabled={isPublished} />
+              </div>
+
+              {isPublished && (
+                <>
+                  <Button variant="destructive" size="sm" onClick={() => setUnpubOpen(true)}>
+                    Unpublish
+                  </Button>
+                  <ConfirmDialog
+                    open={unpubOpen}
+                    title="Unpublish this site?"
+                    description="Unpublishing removes the live pointer so you can safely change the slug and republish."
+                    onClose={() => setUnpubOpen(false)}
+                    onConfirm={() => void doUnpublish(unpubMode)}
+                    busy={unpubBusy}
+                    error={unpubError}
+                    mode={unpubMode}
+                    setMode={setUnpubMode}
+                  />
+                </>
+              )}
             </div>
           </div>
 
           <Input
-            value={template.slug || ''}
-            disabled={isPublished || !onChange}
+            value={slugLocal}
+            disabled={isPublished}
             onChange={(e) => {
-              if (!onChange) return;
               const normalized = sanitizeSlug(e.target.value);
+              setSlugLocal(normalized);
               setManuallyEdited(true);
               doChange({ slug: normalized });
             }}
@@ -436,37 +563,38 @@ export default function DomainPanel({
             <button
               type="button"
               onClick={() => {
-                if (!onChange) return;
                 const unique = randomSlug(siteTitle || 'site');
+                setSlugLocal(unique);
                 setManuallyEdited(true);
                 doChange({ slug: unique });
               }}
               className="text-xs text-blue-400 underline disabled:opacity-50"
-              disabled={!onChange}
+              disabled={isPublished}
             >
               Generate Random Slug
             </button>
             <button
               type="button"
               onClick={() => {
-                if (!onChange) return;
                 const suggested = sanitizeSlug(siteTitle || '');
                 setManuallyEdited(false);
+                setSlugLocal(suggested);
                 doChange({ slug: suggested });
               }}
               className="text-xs text-gray-400 underline disabled:opacity-50"
-              disabled={!onChange}
+              disabled={isPublished}
             >
               Reset to Suggested
             </button>
 
-            {error?.startsWith('Slug is taken') && onChange && (
+            {error?.startsWith('Slug is taken') && !isPublished && (
               <button
                 type="button"
                 onClick={() => {
                   const suggestion = error.split(':').pop()?.trim() || randomSlug(siteTitle);
-                  doChange({ slug: suggestion });
+                  setSlugLocal(suggestion);
                   setManuallyEdited(true);
+                  doChange({ slug: suggestion });
                   setError(null);
                 }}
                 className="text-xs text-amber-400 underline"
@@ -475,6 +603,16 @@ export default function DomainPanel({
               </button>
             )}
           </div>
+
+          {isPublished && (
+            <p className="text-xs text-white/60 mt-2">
+              This template is currently <strong>published</strong> to{' '}
+              <code className="bg-neutral-950/70 px-1 py-0.5 rounded">
+                {inlineText(publishedDomain || defaultSubdomain)}
+              </code>
+              . Unpublish to edit the slug.
+            </p>
+          )}
 
           {checking && <p className="text-sm text-yellow-400 mt-2">Checking slug availability…</p>}
           {error && <p className="text-sm text-red-400 mt-2">{error}</p>}
@@ -485,83 +623,46 @@ export default function DomainPanel({
           <Label className="block text-xs text-white/70 mb-1">Live URL</Label>
           <div className="flex items-center gap-2">
             <code className="rounded bg-neutral-950/70 px-2 py-1">{inlineText(prodPreview)}</code>
-            <Button
-              type="button"
-              size="sm"
-              variant="outline"
-              onClick={() => copy(inlineText(prodPreview))}
-            >
+            <Button type="button" size="sm" variant="outline" onClick={() => copy(inlineText(prodPreview))}>
               <Copy className="h-4 w-4 mr-1" /> Copy
             </Button>
-            <a
-              href={inlineText(prodPreview)}
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              <Button type="button" size="sm" variant="default">
-                Open
-              </Button>
+            <a href={inlineText(prodPreview)} target="_blank" rel="noopener noreferrer">
+              <Button type="button" size="sm" variant="default">Open</Button>
             </a>
           </div>
 
-          {isDevHost && slug && (
+          {isDevHost && previewSlug && (
             <div className="mt-3 grid gap-2">
-              {/* Dev subdomain */}
               <div className="flex items-center gap-2">
                 <Label className="text-xs text-white/70 w-28">Dev subdomain</Label>
                 <code className="rounded bg-neutral-950/70 px-2 py-1">{inlineText(devSubdomain)}</code>
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="outline"
-                  onClick={() => copy(inlineText(devSubdomain))}
-                >
+                <Button type="button" size="sm" variant="outline" onClick={() => copy(inlineText(devSubdomain))}>
                   <Copy className="h-4 w-4 mr-1" /> Copy
                 </Button>
-                <a
-                  href={inlineText(devSubdomain)}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  <Button type="button" size="sm" variant="default">
-                    Open
-                  </Button>
+                <a href={inlineText(devSubdomain)} target="_blank" rel="noopener noreferrer">
+                  <Button type="button" size="sm" variant="default">Open</Button>
                 </a>
               </div>
 
-              {/* Dev path */}
               <div className="flex items-center gap-2">
                 <Label className="text-xs text-white/70 w-28">Dev path</Label>
                 <code className="rounded bg-neutral-950/70 px-2 py-1">{inlineText(devPath)}</code>
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="outline"
-                  onClick={() => copy(inlineText(devPath))}
-                >
+                <Button type="button" size="sm" variant="outline" onClick={() => copy(inlineText(devPath))}>
                   <Copy className="h-4 w-4 mr-1" /> Copy
                 </Button>
-                <a
-                  href={inlineText(devPath)}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  <Button type="button" size="sm" variant="default">
-                    Open
-                  </Button>
+                <a href={inlineText(devPath)} target="_blank" rel="noopener noreferrer">
+                  <Button type="button" size="sm" variant="default">Open</Button>
                 </a>
               </div>
             </div>
           )}
 
-          {!isSite && (
+          {!isPublished && (
             <p className="mt-2 text-xs text-white/60">
-              This template isn’t published as a site yet. Use the <strong>Versions</strong> menu (bottom toolbar) to
-              create a snapshot and publish.
+              This template isn’t published yet. Use the <strong>Versions</strong> menu (bottom toolbar) to create a snapshot and publish.
             </p>
           )}
         </div>
-
 
         {/* -------------------- Connect Custom Domain (Programmatic) -------------------- */}
         <div className="rounded-lg border border-white/10 bg-neutral-900/50 p-3">
@@ -577,17 +678,10 @@ export default function DomainPanel({
                 className="bg-gray-800 text-white border border-gray-700"
               />
 
-              {/* CONNECT */}
-              <Button
-                type="button"
-                onClick={(e) => { e.preventDefault(); e.stopPropagation(); void connectDomain(); }}
-                disabled={connectBusy}
-                size="sm"
-              >
+              <Button type="button" onClick={(e) => { e.preventDefault(); e.stopPropagation(); void connectDomain(); }} disabled={connectBusy} size="sm">
                 {connectBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Connect'}
               </Button>
 
-              {/* VERIFY */}
               {connectResp && (
                 <Button
                   type="button"
@@ -596,14 +690,10 @@ export default function DomainPanel({
                   disabled={verifyBusy || verifyStatus === 'verifying'}
                   size="sm"
                 >
-                  {(verifyBusy || verifyStatus === 'verifying')
-                    ? <Loader2 className="h-4 w-4 animate-spin" />
-                    : (<><RefreshCcw className="h-4 w-4 mr-1" /> Verify DNS</>)
-                  }
+                  {(verifyBusy || verifyStatus === 'verifying') ? <Loader2 className="h-4 w-4 animate-spin" /> : (<><RefreshCcw className="h-4 w-4 mr-1" /> Verify DNS</>)}
                 </Button>
               )}
 
-              {/* REMOVE */}
               <Button
                 type="button"
                 onClick={(e) => { e.preventDefault(); e.stopPropagation(); void removeFromVercel(); }}
@@ -616,20 +706,12 @@ export default function DomainPanel({
                 Remove from Vercel
               </Button>
 
-              {/* Copy all DNS records */}
               {connectResp && (
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => copyAllRecords()}
-                  title="Copy A and CNAME values"
-                >
+                <Button type="button" variant="outline" size="sm" onClick={() => copyAllRecords()} title="Copy A and CNAME values">
                   <Copy className="h-4 w-4 mr-1" /> Copy all records
                 </Button>
               )}
 
-              {/* Clear saved domain (doesn't touch Vercel) */}
               <Button
                 type="button"
                 variant="ghost"
@@ -642,7 +724,6 @@ export default function DomainPanel({
               </Button>
             </div>
 
-            {/* Auto-configure toggle */}
             <div className="flex items-center gap-2 text-xs text-white/70">
               <Switch checked={autoConfigure} onCheckedChange={setAutoConfigure} />
               <span>Auto-configure DNS (Namecheap)</span>
@@ -657,8 +738,7 @@ export default function DomainPanel({
 
             {apex && (
               <p className="text-xs text-white/60">
-                Preference: <code>www.{inlineText(apex)}</code> serves the site. <code>{inlineText(apex)}</code> 307-redirects to{' '}
-                <code>www.{inlineText(apex)}</code>.
+                Preference: <code>www.{inlineText(apex)}</code> serves the site. <code>{inlineText(apex)}</code> 307-redirects to <code>www.{inlineText(apex)}</code>.
               </p>
             )}
 
@@ -678,19 +758,15 @@ export default function DomainPanel({
                   )}
                 </div>
 
-                {/* auto-configure result (optional from /connect) */}
                 {connectResp?.autoConfigured && (
                   <p className="mt-2 text-xs">
                     Auto-configure:{' '}
                     <span className={connectResp.autoConfigured.applied ? 'text-emerald-400' : 'text-white/70'}>
-                      {connectResp.autoConfigured.applied
-                        ? 'applied via Namecheap'
-                        : `skipped (${connectResp.autoConfigured.reason || 'not supported'})`}
+                      {connectResp.autoConfigured.applied ? 'applied via Namecheap' : `skipped (${connectResp.autoConfigured.reason || 'not supported'})`}
                     </span>
                   </p>
                 )}
 
-                {/* verify polling hint */}
                 {!connectResp?.verified && verifyTarget && (
                   <p className="mt-1 text-[11px] text-white/60">
                     Checking DNS{verifyStatus === 'verifying' ? '…' : ''}{' '}
@@ -698,11 +774,9 @@ export default function DomainPanel({
                   </p>
                 )}
 
-                {/* Recommended DNS */}
                 <div className="mt-3">
                   <Label className="text-xs text-white/70">Add these DNS records</Label>
 
-                  {/* A records */}
                   <div className="mt-2 overflow-hidden rounded border border-white/10">
                     <div className="grid grid-cols-[auto_auto_auto_1fr_auto] items-center gap-2 p-2 border-b border-white/10">
                       <span className="text-xs px-1 py-0.5 rounded bg-neutral-900">Type</span><code className="px-1">A</code>
@@ -721,7 +795,6 @@ export default function DomainPanel({
                     ))}
                   </div>
 
-                  {/* CNAME records */}
                   <div className="mt-3 overflow-hidden rounded border border-white/10">
                     <div className="grid grid-cols-[auto_auto_auto_1fr_auto] items-center gap-2 p-2 border-b border-white/10">
                       <span className="text-xs px-1 py-0.5 rounded bg-neutral-900">Type</span><code className="px-1">CNAME</code>
@@ -740,7 +813,6 @@ export default function DomainPanel({
                     ))}
                   </div>
 
-                  {/* Verification records, if any */}
                   {(connectResp?.verification?.length ?? 0) > 0 && (
                     <div className="mt-3">
                       <Label className="text-xs text-white/70">If prompted, add these verification records</Label>
@@ -764,8 +836,8 @@ export default function DomainPanel({
 
                   {!connectResp?.verified && verifyTarget && (
                     <p className="mt-2 text-xs text-white/60">
-                      After adding the records, click <em>Verify DNS</em>. Some DNS providers update quickly; others can be slower.
-                      We’ll also auto-check every ~10s and flip this to verified once DNS is live.
+                      After adding the records, click <em>Verify DNS</em>. Some providers update quickly; others are slower.
+                      We also auto-check every ~10s and flip this to verified once DNS is live.
                     </p>
                   )}
                 </div>

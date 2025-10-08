@@ -195,6 +195,27 @@ function saveNow() {
   });
 }
 
+/** Debounced “soft” save to avoid focus loss while typing in free-text fields */
+const DEBOUNCE_MS = 700;
+function useDebouncedSave() {
+  const t = useRef<number | null>(null);
+  const saveSoon = (ms = DEBOUNCE_MS) => {
+    if (t.current) window.clearTimeout(t.current);
+    t.current = window.setTimeout(() => {
+      saveNow();
+      t.current = null;
+    }, ms) as unknown as number;
+  };
+  const flushSave = () => {
+    if (t.current) {
+      window.clearTimeout(t.current);
+      t.current = null;
+    }
+    saveNow();
+  };
+  return { saveSoon, flushSave };
+}
+
 /* —— tiny label guesser for Suggest flow —— */
 function guessIndustryLabelFromCopy(headline: string, subheadline: string) {
   const text = `${headline || ''} ${subheadline || ''}`.toLowerCase();
@@ -225,6 +246,8 @@ export default function HeroEditor({
   if (block.type !== 'hero') return null;
 
   const [mode, setMode] = useState<'express' | 'advanced'>('express');
+  const { saveSoon, flushSave } = useDebouncedSave();
+  const isTypingOther = useRef(false);
 
   // initial local
   const rawProps = (block as any)?.props;
@@ -306,11 +329,11 @@ export default function HeroEditor({
   }, [metaAll]);
   
   const [aiIndustryOther, setAiIndustryOther] = useState(initialOtherText);
-useEffect(() => {
-  // if identity/meta changes underneath us (e.g., autosave), keep the UI in sync only if user hasn’t typed
-  if (!aiIndustryOther && initialOtherText) setAiIndustryOther(initialOtherText);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-}, [initialOtherText]);
+  useEffect(() => {
+    // if identity/meta changes underneath us (e.g., autosave), keep the UI in sync only if user hasn’t typed
+    if (!aiIndustryOther && initialOtherText) setAiIndustryOther(initialOtherText);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialOtherText]);
 
   const initialSiteType: SiteType | null = useMemo(() => {
     if (metaAll?.site_type) return metaAll.site_type as SiteType;
@@ -400,6 +423,7 @@ useEffect(() => {
   /* ---------- bridge: react to on-canvas chip events ---------- */
   useEffect(() => {
     const onGenericSet = (e: any) => {
+      if (isTypingOther.current) return; // don’t stomp while typing free text
       const d = e?.detail || {};
       setLocal((prev: any) => {
         const next = { ...prev };
@@ -417,12 +441,14 @@ useEffect(() => {
       bumpPreview();
     };
     const onLayout = (e: any) => {
+      if (isTypingOther.current) return;
       const layout = e?.detail?.layout as string | undefined;
       if (!layout) return;
       setLocal((p: any) => ({ ...p, layout_mode: layout, layout }));
       bumpPreview();
     };
     const onOverlay = (e: any) => {
+      if (isTypingOther.current) return;
       const step = Math.max(-1, Math.min(1, Number(e?.detail?.step) || 0));
       const order = ['none', 'soft', 'strong'] as const;
       setLocal((p: any) => {
@@ -434,6 +460,7 @@ useEffect(() => {
       bumpPreview();
     };
     const onAutoFix = () => {
+      if (isTypingOther.current) return;
       setLocal((p: any) => {
         const cur = (p?.overlay_level ?? p?.overlay ?? 'none') as 'none' | 'soft' | 'strong';
         const lvl = cur === 'none' ? 'soft' : 'strong';
@@ -441,16 +468,16 @@ useEffect(() => {
           ...p,
           overlay_level: lvl,
           overlay: lvl,
-          layout_mode:
-            p?.layout_mode && p.layout_mode !== 'inline' ? p.layout_mode : 'background',
+          layout_mode: p?.layout_mode && p.layout_mode !== 'inline' ? p.layout_mode : 'background',
           layout: p?.layout && p.layout !== 'inline' ? p.layout : 'background',
         };
       });
       bumpPreview();
     };
 
-    // Also reflect apply-patch from renderer (overlay/layout/image_x/y/blur)
+    // Reflect apply-patch from renderer (overlay/layout/image_x/y/blur)
     const onApplyPatch = (e: any) => {
+      if (isTypingOther.current) return;
       const patch = e?.detail;
       const id = (block as any)?._id || (block as any)?.id;
       const b = Array.isArray(patch?.blocks)
@@ -950,6 +977,7 @@ useEffect(() => {
                   <input
                     className={selectDark}
                     value={aiIndustryOther}
+                    onFocus={() => { isTypingOther.current = true; }}
                     onChange={(e) => {
                       const v = e.target.value;
                       setAiIndustryOther(v);
@@ -969,8 +997,22 @@ useEffect(() => {
                               },
                             }),
                           );
-                          saveNow();
                         });
+                        // Debounce commit to avoid focus loss while typing
+                        saveSoon();
+                      }
+                    }}
+                    onBlur={() => {
+                      if (industryKey === 'other') {
+                        isTypingOther.current = false;
+                        flushSave();
+                      }
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && industryKey === 'other') {
+                        e.preventDefault();
+                        isTypingOther.current = false;
+                        flushSave();
                       }
                     }}
                     placeholder="e.g., Mobile Windshield Repair"
@@ -1105,9 +1147,6 @@ useEffect(() => {
                       <option value="3d">3D Render</option>
                       <option value="minimal">Minimal</option>
                     </select>
-                  {/* </div>
-
-                  <div className="md:col-span-3 flex items-center justify-between"> */}
                     <Switch
                       checked={imgIncludePeople}
                       onCheckedChange={(v) => setImgIncludePeople(!!v)}

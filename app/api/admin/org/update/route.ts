@@ -32,11 +32,50 @@ type UpdateBody =
       };
     };
 
-export async function GET(req: NextRequest) {
-  // You use GET for ?stats=1; keep your existing implementation
-  // (left as-is, since your frontend relies on it).
-  return NextResponse.json({ ok: true });
-}
+  export async function GET(req: NextRequest) {
+    const url = new URL(req.url);
+    const orgId = url.searchParams.get('org_id');
+    const withStats = url.searchParams.get('stats') === '1' || url.searchParams.has('stats');
+  
+    if (!orgId) {
+      return NextResponse.json({ error: 'Missing org_id' }, { status: 400 });
+    }
+  
+    const supaAdmin = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    );
+  
+    const { data: org, error } = await supaAdmin
+      .from('organizations')
+      .select('*')
+      .eq('id', orgId)
+      .maybeSingle();
+  
+    if (error) return NextResponse.json({ error: error.message }, { status: 400 });
+    if (!org) return NextResponse.json({ error: 'Org not found' }, { status: 404 });
+  
+    // Optional stats (templates/domains/members)
+    let stats = null;
+    if (withStats) {
+      const { count: templates } = await supaAdmin
+        .from('templates')
+        .select('*', { count: 'exact', head: true })
+        .eq('org_id', orgId);
+      const { count: domains } = await supaAdmin
+        .from('domains')
+        .select('*', { count: 'exact', head: true })
+        .eq('org_id', orgId);
+      const { count: members } = await supaAdmin
+        .from('org_members')
+        .select('*', { count: 'exact', head: true })
+        .eq('org_id', orgId);
+      stats = { templates: templates ?? 0, domains: domains ?? 0, members: members ?? 0 };
+    }
+  
+    return NextResponse.json({ ...org, stats });
+  }
+    
 
 export async function POST(req: NextRequest) {
   let body: UpdateBody;

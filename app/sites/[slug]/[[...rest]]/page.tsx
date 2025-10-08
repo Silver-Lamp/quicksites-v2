@@ -37,6 +37,7 @@ type RenderSite = {
 };
 
 /* -------------------- Helpers -------------------- */
+// NOTE: headers() is sync; no need to await. Keep this function sync.
 async function originFromHeaders() {
   const h = await headers();
   const host = (h.get('x-forwarded-host') ?? h.get('host') ?? 'localhost:3000')
@@ -217,9 +218,10 @@ async function isAdminUser(userId: string | null) {
 export async function generateMetadata({
   params,
 }: {
-  params: { slug: string; rest?: string[] };
+  // ✅ Next 15: params is async for dynamic routes
+  params: Promise<{ slug: string; rest?: string[] }>;
 }): Promise<Metadata> {
-  const { slug, rest } = params;
+  const { slug, rest } = await params;
 
   // Special pages (client-rendered)
   if (rest?.[0] === 'cart') return { title: 'Cart' };
@@ -263,9 +265,10 @@ export async function generateMetadata({
 export default async function SitePreviewPage({
   params,
 }: {
-  params: { slug: string; rest?: string[] };
+  // ✅ Next 15: params is async for dynamic routes
+  params: Promise<{ slug: string; rest?: string[] }>;
 }) {
-  const { slug, rest } = params;
+  const { slug, rest } = await params;
 
   // Special routes served directly
   if (Array.isArray(rest)) {

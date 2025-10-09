@@ -82,7 +82,8 @@ export default async function OrgLandingPage({ params }: { params: Params }) {
     .maybeSingle();
 
   const branding = (orgRow?.branding || {}) as OrgBranding;
-  const orgName = branding?.name || orgRow?.name || (slug === 'pointsevenstudio' ? 'Point Seven Studio' : slug);
+  const orgName =
+    branding?.name || orgRow?.name || (slug === 'pointsevenstudio' ? 'Point Seven Studio' : slug);
 
   // Portfolio
   const { data, error } = await supabase
@@ -103,13 +104,13 @@ export default async function OrgLandingPage({ params }: { params: Params }) {
   const lastUpdated = lastUpdatedIso ? new Date(lastUpdatedIso) : null;
 
   const owner = branding?.owner ?? null;
-  const hasOwner =
-    !!(owner?.name || owner?.title || owner?.bio || owner?.photoUrl || owner?.links);
+  const hasOwner = !!(owner?.name || owner?.title || owner?.bio || owner?.photoUrl || owner?.links);
 
   return (
     <main className="min-h-screen flex flex-col bg-zinc-950 text-white">
       {/* Decorative background */}
       <div className="pointer-events-none fixed inset-0 -z-10">
+        {/* Already blue-toned radial */}
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_rgba(73,100,255,0.06),transparent_60%)]" />
         <div className="absolute inset-0 bg-[linear-gradient(to_bottom,transparent,rgba(0,0,0,0.3))]" />
       </div>
@@ -117,21 +118,32 @@ export default async function OrgLandingPage({ params }: { params: Params }) {
       {/* Hero */}
       <section className="relative border-b border-zinc-800 bg-gradient-to-b from-zinc-950 via-zinc-900/80 to-transparent">
         <div className="mx-auto max-w-6xl px-6 pt-20 pb-14 text-center">
-          <h1 className="text-4xl md:text-6xl font-bold tracking-tight bg-gradient-to-r from-sky-400 to-purple-500 bg-clip-text text-transparent">
+          {/* Remove purple; unify to blue */}
+          <h1 className="text-4xl md:text-6xl font-bold tracking-tight bg-gradient-to-r from-sky-400 to-sky-300 bg-clip-text text-transparent">
             {branding?.hero?.headline || 'Web & app development, delivered fast.'}
           </h1>
           <p className="mt-4 text-lg md:text-xl text-zinc-300 max-w-2xl mx-auto">
-            {branding?.hero?.subhead || 'We design and ship custom software—modern web apps, dashboards, and integrations—built to scale on today’s cloud.'}
+            {branding?.hero?.subhead ||
+              'We design and ship custom software—modern web apps, dashboards, and integrations—built to scale on today’s cloud.'}
           </p>
           <div className="mt-8 flex flex-wrap justify-center gap-4">
             <Link href="/contact">
-              <Button size="lg">
+              {/* Primary (filled) → sky */}
+              <Button
+                size="lg"
+                className="bg-sky-500 text-zinc-950 hover:bg-sky-400 focus-visible:ring-sky-500"
+              >
                 Start a project
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
             </Link>
             <a href="#portfolio" className="inline-flex">
-              <Button size="lg" variant="outline">
+              {/* Outline → sky border/text/hover */}
+              <Button
+                size="lg"
+                variant="outline"
+                className="border-sky-500 text-sky-300 hover:bg-sky-500/10 hover:text-sky-200"
+              >
                 See our work
               </Button>
             </a>
@@ -176,7 +188,8 @@ export default async function OrgLandingPage({ params }: { params: Params }) {
         </Card>
         <Card className="bg-zinc-900/40 border-zinc-800 hover:border-zinc-700 transition">
           <CardContent className="p-6 text-center">
-            <Sparkles className="mx-auto h-10 w-10 text-purple-400" />
+            {/* Purple → sky */}
+            <Sparkles className="mx-auto h-10 w-10 text-sky-400" />
             <h3 className="mt-4 text-xl font-semibold">Full-stack expertise</h3>
             <p className="mt-2 text-sm text-zinc-400">
               React/Next, Node, SQL/NoSQL, and cloud—plus the integrations that tie it together.
@@ -200,7 +213,13 @@ export default async function OrgLandingPage({ params }: { params: Params }) {
           <div className="mb-6 flex items-center justify-between">
             <h2 className="text-2xl md:text-3xl font-semibold">Recent work</h2>
             <Link href="/contact" className="inline-flex">
-              <Button variant="outline" size="sm">Book a consult</Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="border-sky-500 text-sky-300 hover:bg-sky-500/10 hover:text-sky-200"
+              >
+                Book a consult
+              </Button>
             </Link>
           </div>
 
@@ -219,7 +238,9 @@ export default async function OrgLandingPage({ params }: { params: Params }) {
                 </p>
                 <div className="mt-6">
                   <Link href="/contact">
-                    <Button>Contact us</Button>
+                    <Button className="bg-sky-500 text-zinc-950 hover:bg-sky-400 focus-visible:ring-sky-500">
+                      Contact us
+                    </Button>
                   </Link>
                 </div>
               </CardContent>
@@ -254,9 +275,7 @@ export default async function OrgLandingPage({ params }: { params: Params }) {
 
               <div>
                 <h3 className="text-2xl font-semibold">{owner?.name ?? 'Owner'}</h3>
-                {owner?.title ? (
-                  <p className="mt-1 text-zinc-400">{owner.title}</p>
-                ) : null}
+                {owner?.title ? <p className="mt-1 text-zinc-400">{owner.title}</p> : null}
 
                 {owner?.bio ? (
                   <div className="mt-4 space-y-3 text-zinc-300 leading-relaxed">
@@ -268,26 +287,65 @@ export default async function OrgLandingPage({ params }: { params: Params }) {
                   </div>
                 ) : null}
 
-                {(owner?.links && Object.values(owner.links).some(Boolean)) && (
+                {owner?.links && Object.values(owner.links).some(Boolean) && (
                   <div className="mt-5 flex flex-wrap items-center gap-2">
                     {owner.links?.website ? (
-                      <a href={owner.links.website!} target="_blank" rel="noopener noreferrer" className="inline-flex">
-                        <Button size="sm" variant="outline">Website</Button>
+                      <a
+                        href={owner.links.website!}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex"
+                      >
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="border-sky-500 text-sky-300 hover:bg-sky-500/10 hover:text-sky-200"
+                        >
+                          Website
+                        </Button>
                       </a>
                     ) : null}
                     {owner.links?.email ? (
                       <a href={`mailto:${owner.links.email}`} className="inline-flex">
-                        <Button size="sm" variant="outline">Email</Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="border-sky-500 text-sky-300 hover:bg-sky-500/10 hover:text-sky-200"
+                        >
+                          Email
+                        </Button>
                       </a>
                     ) : null}
                     {owner.links?.github ? (
-                      <a href={owner.links.github!} target="_blank" rel="noopener noreferrer" className="inline-flex">
-                        <Button size="sm" variant="outline">GitHub</Button>
+                      <a
+                        href={owner.links.github!}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex"
+                      >
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="border-sky-500 text-sky-300 hover:bg-sky-500/10 hover:text-sky-200"
+                        >
+                          GitHub
+                        </Button>
                       </a>
                     ) : null}
                     {owner.links?.linkedin ? (
-                      <a href={owner.links.linkedin!} target="_blank" rel="noopener noreferrer" className="inline-flex">
-                        <Button size="sm" variant="outline">LinkedIn</Button>
+                      <a
+                        href={owner.links.linkedin!}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex"
+                      >
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="border-sky-500 text-sky-300 hover:bg-sky-500/10 hover:text-sky-200"
+                        >
+                          LinkedIn
+                        </Button>
                       </a>
                     ) : null}
                   </div>

@@ -36,8 +36,8 @@ type FeatureRow = {
 
 // Minimal brand shape we care about here
 type Branding = {
-  name?: string;                // "QuickSites" | "CedarSites"
-  domain?: string;              // "QuickSites.ai" | "CedarSites.com"
+  name?: string;
+  domain?: string;
   logoUrl?: string | null;
   darkLogoUrl?: string | null;
   faviconUrl?: string | null;
@@ -45,18 +45,19 @@ type Branding = {
   hero?: { headline?: string; subhead?: string };
   copy?: { featuresTitle?: string; featuresSubtitle?: string };
   flags?: {
-    showPuppyWidget?: boolean;      // default true for QuickSites, likely false for CedarSites
-    showGlow?: boolean;             // force-enable/disable gradient/glow
-    showMobileWidget?: boolean;     // whether widget is allowed on small screens
-    showMobileGradients?: boolean;  // whether gradients are allowed on small screens
-    forceWidgetVariant?: string | null; // e.g. 'puppy'
+    showPuppyWidget?: boolean;
+    showGlow?: boolean;
+    showMobileWidget?: boolean;
+    showMobileGradients?: boolean;
+    forceWidgetVariant?: string | null;
   };
 };
 
+// keep if you later enable GlowConfigurator
 const defaultGlowConfig = {
   size: 'xl',
   intensity: 0.2,
-  colors: ['from-indigo-600', 'via-blue-400', 'to-fuchsia-500'],
+  colors: ['from-sky-600', 'via-sky-400', 'to-sky-300'], // ⬅️ blue-only
 } satisfies GlowConfig;
 
 export default function HomePage() {
@@ -64,26 +65,20 @@ export default function HomePage() {
   const { user, role, isLoggedIn } = useSafeAuth();
   const isMobile = useMediaQuery('(max-width: 768px)');
 
-  // 🔹 Pull brand from provider and compute safe fallbacks
   const brand = (useBrand?.() as Branding) || {};
   const productName = brand.name || 'QuickSites';
   const siteDomain = brand.domain || 'QuickSites.ai';
-  const logoSrc =
-    brand.logoUrl ||
-    brand.faviconUrl ||
-    '/qs-default-favicon.ico';
+  const logoSrc = brand.logoUrl || brand.faviconUrl || '/qs-default-favicon.ico';
 
-  const heroHeadline =
-    brand.hero?.headline || 'Your Website. One Click Away.';
+  const heroHeadline = brand.hero?.headline || 'Your Website. One Click Away.';
   const heroSubhead =
-    brand.hero?.subhead || 'Turn your local business into a digital presence in minutes. No code. No hassle.';
+    brand.hero?.subhead ||
+    'Turn your local business into a digital presence in minutes. No code. No hassle.';
 
-  const featuresTitle =
-    brand.copy?.featuresTitle || 'Featured demos';
+  const featuresTitle = brand.copy?.featuresTitle || 'Featured demos';
   const featuresSubtitle =
     brand.copy?.featuresSubtitle || `Hand-picked highlights from what ${productName} can do.`;
 
-  // Decide on widget/glow behavior with brand overrides
   const allowMobileWidget = brand.flags?.showMobileWidget ?? SiteFlags.showMobileWidget;
   const allowMobileGlow = brand.flags?.showMobileGradients ?? SiteFlags.showMobileGradients;
 
@@ -108,7 +103,6 @@ export default function HomePage() {
     (async () => {
       try {
         setFeatLoading(true);
-        // Pull up to 6 latest entries
         const { data } = await supabase
           .from('features')
           .select('*')
@@ -180,8 +174,9 @@ export default function HomePage() {
               <h1 className="text-3xl font-bold tracking-tight text-white">{productName}</h1>
             </div>
 
+            {/* Indigo/Purple ➜ Sky gradient */}
             <motion.h2
-              className="text-4xl md:text-5xl font-extrabold bg-clip-text text-transparent bg-gradient-to-r from-indigo-400 to-purple-500"
+              className="text-4xl md:text-5xl font-extrabold bg-clip-text text-transparent bg-gradient-to-r from-sky-400 to-sky-300"
               initial={{ opacity: 0, y: -10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6 }}
@@ -189,9 +184,7 @@ export default function HomePage() {
               {heroHeadline}
             </motion.h2>
 
-            <p className="text-zinc-400 text-lg">
-              {heroSubhead}
-            </p>
+            <p className="text-zinc-400 text-lg">{heroSubhead}</p>
 
             {/* CTAs */}
             {isLoggedIn && role !== 'guest' ? (
@@ -200,7 +193,7 @@ export default function HomePage() {
                   href="/admin/templates/list"
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.97 }}
-                  className="inline-block px-6 py-3 bg-green-600 hover:bg-green-700 text-white text-base font-medium rounded-lg shadow-lg transition-all"
+                  className="inline-block px-6 py-3 bg-sky-500 hover:bg-sky-400 text-zinc-950 text-base font-medium rounded-lg shadow-lg transition-all"
                 >
                   Go to Templates
                 </motion.a>
@@ -208,7 +201,7 @@ export default function HomePage() {
                   href="/pricing"
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.97 }}
-                  className="inline-block px-6 py-3 border border-zinc-700 hover:bg-zinc-800 text-white text-base font-medium rounded-lg transition-all"
+                  className="inline-block px-6 py-3 border border-sky-500 text-sky-300 hover:bg-sky-500/10 hover:text-sky-200 text-base font-medium rounded-lg transition-all"
                 >
                   See Pricing
                 </motion.a>
@@ -222,7 +215,7 @@ export default function HomePage() {
                   href="/pricing"
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.97 }}
-                  className="inline-block px-6 py-3 border border-zinc-700 hover:bg-zinc-800 text-white text-base font-medium rounded-lg transition-all"
+                  className="inline-block px-6 py-3 border border-sky-500 text-sky-300 hover:bg-sky-500/10 hover:text-sky-200 text-base font-medium rounded-lg transition-all"
                 >
                   See Pricing
                 </motion.a>
@@ -233,7 +226,7 @@ export default function HomePage() {
                   href="/login"
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.97 }}
-                  className="inline-block px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white text-base font-medium rounded-lg shadow-lg transition-all"
+                  className="inline-block px-6 py-3 bg-sky-500 hover:bg-sky-400 text-zinc-950 text-base font-medium rounded-lg shadow-lg transition-all"
                 >
                   Log In to Get Started
                 </motion.a>
@@ -241,7 +234,7 @@ export default function HomePage() {
                   href="/pricing"
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.97 }}
-                  className="inline-block px-6 py-3 border border-zinc-700 hover:bg-zinc-800 text-white text-base font-medium rounded-lg transition-all"
+                  className="inline-block px-6 py-3 border border-sky-500 text-sky-300 hover:bg-sky-500/10 hover:text-sky-200 text-base font-medium rounded-lg transition-all"
                 >
                   See Pricing
                 </motion.a>
@@ -256,12 +249,10 @@ export default function HomePage() {
             <div className="flex items-end justify-between gap-3 mb-6">
               <div className="text-left">
                 <h3 className="text-2xl font-semibold">{featuresTitle}</h3>
-                <p className="text-sm text-zinc-400">
-                  {featuresSubtitle}
-                </p>
+                <p className="text-sm text-zinc-400">{featuresSubtitle}</p>
               </div>
               <Link href="/features" className="inline-flex">
-                <button className="inline-flex h-9 items-center rounded-md border border-zinc-700 px-3 text-sm hover:bg-zinc-800">
+                <button className="inline-flex h-9 items-center rounded-md border border-sky-500 px-3 text-sm text-sky-300 hover:bg-sky-500/10 hover:text-sky-200">
                   See all features
                 </button>
               </Link>
@@ -307,7 +298,7 @@ export default function HomePage() {
                       {f.blurb}
                       <div className="mt-4">
                         <Link href={`/features?q=${encodeURIComponent(f.title)}`} className="inline-flex">
-                          <button className="inline-flex h-8 items-center rounded-md border border-zinc-700 px-3 text-xs hover:bg-zinc-800">
+                          <button className="inline-flex h-8 items-center rounded-md border border-sky-500 px-3 text-xs text-sky-300 hover:bg-sky-500/10 hover:text-sky-200">
                             {f.video_url ? 'Watch demo' : 'Learn more'}
                           </button>
                         </Link>
@@ -336,7 +327,6 @@ export default function HomePage() {
           <span className="mx-1">•</span>
           <a href="/legal/terms" className="underline hover:text-zinc-800 dark:hover:text-zinc-200">Terms</a>
 
-          {/* 🔹 Only include the widget if the org wants it */}
           {showWidget && <QuickSitesWidget forceVariant={widgetVariant as HomepageWidgetVariant} />}
         </footer>
       </div>

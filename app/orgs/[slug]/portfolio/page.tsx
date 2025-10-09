@@ -92,7 +92,9 @@ export default async function PortfoliosPage({ params }: { params: { slug: strin
               <span className="text-sm text-zinc-300">Back to Home</span>
             </Link>
             <Link href="/" className="inline-flex">
-              <Button variant="ghost" size="sm">← Back home</Button>
+              <Button variant="ghost" size="sm" className="text-sky-300 hover:bg-sky-500/10">
+                ← Back home
+              </Button>
             </Link>
           </div>
         </header>
@@ -119,7 +121,7 @@ export default async function PortfoliosPage({ params }: { params: { slug: strin
     <>
       <SiteHeader sticky={true} />
 
-      {/* Decorative background */}
+      {/* Decorative background (already blue-toned) */}
       <div className="pointer-events-none fixed inset-0 -z-10">
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_rgba(73,100,255,0.06),transparent_60%)]" />
         <div className="absolute inset-0 bg-[linear-gradient(to_bottom,transparent,rgba(0,0,0,0.3))]" />
@@ -151,10 +153,21 @@ export default async function PortfoliosPage({ params }: { params: { slug: strin
               </div>
               <div className="flex items-center gap-2">
                 <Link href="/contact" className="inline-flex">
-                  <Button size="lg">Book a consult</Button>
+                  <Button
+                    size="lg"
+                    className="bg-sky-500 text-zinc-950 hover:bg-sky-400 focus-visible:ring-sky-500"
+                  >
+                    Book a consult
+                  </Button>
                 </Link>
                 <Link href="/login" className="inline-flex">
-                  <Button size="lg" variant="outline">Client login</Button>
+                  <Button
+                    size="lg"
+                    variant="outline"
+                    className="border-sky-500 text-sky-300 hover:bg-sky-500/10 hover:text-sky-200"
+                  >
+                    Client login
+                  </Button>
                 </Link>
               </div>
             </div>
@@ -195,10 +208,17 @@ export default async function PortfoliosPage({ params }: { params: { slug: strin
                 </p>
                 <div className="mt-6 flex items-center justify-center gap-3">
                   <Link href="/contact" className="inline-flex">
-                    <Button>Contact us</Button>
+                    <Button className="bg-sky-500 text-zinc-950 hover:bg-sky-400 focus-visible:ring-sky-500">
+                      Contact us
+                    </Button>
                   </Link>
                   <Link href="/" className="inline-flex">
-                    <Button variant="outline">Back to home</Button>
+                    <Button
+                      variant="outline"
+                      className="border-sky-500 text-sky-300 hover:bg-sky-500/10 hover:text-sky-200"
+                    >
+                      Back to home
+                    </Button>
                   </Link>
                 </div>
               </CardContent>
@@ -207,9 +227,7 @@ export default async function PortfoliosPage({ params }: { params: { slug: strin
         ) : null}
 
         {/* Main gallery client (filters, grid, CTAs) */}
-        {rows.length > 0 && (
-          <PortfolioGalleryClient initialRows={rows as PortfolioRow[]} />
-        )}
+        {rows.length > 0 && <PortfolioGalleryClient initialRows={rows as PortfolioRow[]} />}
       </div>
     </>
   );

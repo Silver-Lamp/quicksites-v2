@@ -62,9 +62,10 @@ function isDirectVideo(u?: string | null) {
 /* ────────────────────────────── Card renderer ───────────────────────────── */
 
 function PortfolioCard({ f }: { f: PortfolioRow }) {
+  // Purple ➜ Sky
   const featuredGlow =
-    'ring-1 ring-purple-500/25 bg-gradient-to-br from-purple-500/10 via-purple-500/5 to-transparent ' +
-    'shadow-[0_10px_40px_-12px_rgba(168,85,247,0.45)]';
+    'ring-1 ring-sky-500/25 bg-gradient-to-br from-sky-500/10 via-sky-500/5 to-transparent ' +
+    'shadow-[0_10px_40px_-12px_rgba(56,189,248,0.45)]';
 
   const media = (f.media_type ?? (f.video_url ? 'video' : f.image_url ? 'image' : 'link')) as
     | 'video' | 'image' | 'link' | 'gallery';
@@ -79,9 +80,26 @@ function PortfolioCard({ f }: { f: PortfolioRow }) {
       <CardHeader className="space-y-1">
         <div className="flex items-center gap-2">
           <CardTitle className="text-lg">{f.title}</CardTitle>
-          {f.badge ? <Badge variant="secondary">{f.badge}</Badge> : null}
-          {f.featured ? <Badge variant="default">Featured</Badge> : null}
-          <Badge variant="outline" className="ml-auto">{media}</Badge>
+
+          {/* Secondary badge → soft sky */}
+          {f.badge ? (
+            <Badge
+              variant="secondary"
+              className="bg-sky-500/15 text-sky-200 border border-sky-500/30"
+            >
+              {f.badge}
+            </Badge>
+          ) : null}
+
+          {/* Default badge → filled sky */}
+          {f.featured ? (
+            <Badge className="bg-sky-500 text-zinc-950 hover:bg-sky-400">Featured</Badge>
+          ) : null}
+
+          {/* Outline badge → sky outline */}
+          <Badge variant="outline" className="ml-auto border-sky-500 text-sky-300">
+            {media}
+          </Badge>
         </div>
         <CardDescription>{f.blurb}</CardDescription>
       </CardHeader>
@@ -130,7 +148,8 @@ function PortfolioCard({ f }: { f: PortfolioRow }) {
       <CardFooter className="mt-auto flex items-center justify-between gap-3">
         {f.doc_href ? (
           <Link href={f.doc_href} className="inline-flex">
-            <Button variant="ghost" size="sm">
+            {/* Ghost → sky text + hover */}
+            <Button variant="ghost" size="sm" className="text-sky-300 hover:bg-sky-500/10">
               Read docs
               <ArrowRight className="ml-2 h-4 w-4" />
             </Button>
@@ -142,14 +161,15 @@ function PortfolioCard({ f }: { f: PortfolioRow }) {
         <div className="ml-auto flex items-center gap-2">
           {f.site_url ? (
             <a href={f.site_url} target="_blank" rel="noopener noreferrer" className="inline-flex">
-              <Button size="sm" variant="outline">
+              {/* Outline → sky */}
+              <Button size="sm" variant="outline" className="border-sky-500 text-sky-300 hover:bg-sky-500/10 hover:text-sky-200">
                 Visit site <ExternalLink className="ml-1 h-4 w-4" />
               </Button>
             </a>
           ) : null}
           {f.external_url ? (
             <a href={f.external_url} target="_blank" rel="noopener noreferrer" className="inline-flex">
-              <Button size="sm" variant="outline">
+              <Button size="sm" variant="outline" className="border-sky-500 text-sky-300 hover:bg-sky-500/10 hover:text-sky-200">
                 Open link <ExternalLink className="ml-1 h-4 w-4" />
               </Button>
             </a>
@@ -197,27 +217,36 @@ export default function PortfolioGalleryClient({ initialRows }: { initialRows: P
           className="mx-auto max-w-6xl px-6 pt-14 pb-6"
         >
           <div className="mb-4 flex flex-wrap items-center gap-3">
-            <Badge variant="outline">{COPY.heroKicker}</Badge>
-            <Badge variant="secondary" className="flex items-center gap-1">
-              <Sparkles className="h-3.5 w-3.5" />
+            {/* Outline badge → sky */}
+            <Badge variant="outline" className="border-sky-500 text-sky-300">
+              {COPY.heroKicker}
+            </Badge>
+
+            {/* Secondary badge → sky + icon accent */}
+            <Badge className="flex items-center gap-1 bg-sky-500/15 text-sky-200 border border-sky-500/30">
+              <Sparkles className="h-3.5 w-3.5 text-sky-300" />
               Recent work
             </Badge>
           </div>
+
           <h1 className="text-3xl md:text-5xl font-semibold tracking-tight">
             {COPY.heroTitle}
           </h1>
           <p className="mt-3 max-w-2xl text-muted-foreground">
             {COPY.heroSubtitle}
           </p>
+
           <div className="mt-6 flex flex-wrap items-center gap-3">
             <Link href={COPY.ctas.primaryHref} className="inline-flex">
-              <Button size="lg">
+              {/* Filled → sky */}
+              <Button size="lg" className="bg-sky-500 text-zinc-950 hover:bg-sky-400 focus-visible:ring-sky-500">
                 {COPY.ctas.primary}
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
             </Link>
             <Link href={COPY.ctas.secondaryHref} className="inline-flex">
-              <Button size="lg" variant="ghost">
+              {/* Ghost → sky */}
+              <Button size="lg" variant="ghost" className="text-sky-300 hover:bg-sky-500/10">
                 {COPY.ctas.secondary}
               </Button>
             </Link>
@@ -225,14 +254,15 @@ export default function PortfolioGalleryClient({ initialRows }: { initialRows: P
 
           <div className="mt-6 flex flex-wrap gap-2">
             {COPY.ribbons.map((r) => (
-              <Badge key={r} variant="secondary">
+              <Badge key={r} className="bg-sky-500/15 text-sky-200 border border-sky-500/30">
                 {r}
               </Badge>
             ))}
           </div>
         </motion.div>
 
-        <div className="pointer-events-none absolute inset-0 -z-10 bg-gradient-to-b from-transparent via-primary/5 to-transparent" />
+        {/* Gradient overlay: primary ➜ sky */}
+        <div className="pointer-events-none absolute inset-0 -z-10 bg-gradient-to-b from-transparent via-sky-500/5 to-transparent" />
       </section>
 
       {/* Controls */}
@@ -255,22 +285,35 @@ export default function PortfolioGalleryClient({ initialRows }: { initialRows: P
             <div className="flex flex-col gap-2">
               <Label>Category</Label>
               <div className="mt-2 flex flex-wrap gap-2">
-                {categories.map((c) => (
-                  <Button
-                    key={c}
-                    type="button"
-                    variant={c === cat ? 'default' : 'outline'}
-                    size="sm"
-                    onClick={() => setCat(c)}
-                  >
-                    {c}
-                  </Button>
-                ))}
+                {categories.map((c) => {
+                  const selected = c === cat;
+                  return (
+                    <Button
+                      key={c}
+                      type="button"
+                      variant={selected ? 'default' : 'outline'}
+                      size="sm"
+                      onClick={() => setCat(c)}
+                      className={
+                        selected
+                          ? 'bg-sky-500 text-zinc-950 hover:bg-sky-400'
+                          : 'border-sky-500 text-sky-300 hover:bg-sky-500/10 hover:text-sky-200'
+                      }
+                    >
+                      {c}
+                    </Button>
+                  );
+                })}
                 <Button
                   type="button"
                   variant={featuredOnly ? 'default' : 'outline'}
                   size="sm"
                   onClick={() => setFeaturedOnly((v) => !v)}
+                  className={
+                    featuredOnly
+                      ? 'bg-sky-500 text-zinc-950 hover:bg-sky-400'
+                      : 'border-sky-500 text-sky-300 hover:bg-sky-500/10 hover:text-sky-200'
+                  }
                 >
                   {featuredOnly ? 'Showing Featured' : 'Featured only'}
                 </Button>
@@ -298,7 +341,8 @@ export default function PortfolioGalleryClient({ initialRows }: { initialRows: P
 
       {/* CTA footer */}
       <section className="mx-auto max-w-6xl px-6 pb-12">
-        <Card className="bg-gradient-to-br from-primary/5 to-transparent border-zinc-800/50">
+        {/* Background tint: primary ➜ sky */}
+        <Card className="bg-gradient-to-br from-sky-500/5 to-transparent border-zinc-800/50">
           <CardContent className="py-8 flex flex-col md:flex-row items-center justify-between gap-6">
             <div>
               <h3 className="text-xl md:text-2xl font-semibold">
@@ -310,13 +354,13 @@ export default function PortfolioGalleryClient({ initialRows }: { initialRows: P
             </div>
             <div className="flex items-center gap-3">
               <Link href="/contact" className="inline-flex">
-                <Button size="lg">
+                <Button size="lg" className="bg-sky-500 text-zinc-950 hover:bg-sky-400 focus-visible:ring-sky-500">
                   Book a consult
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </Button>
               </Link>
               <Link href="/contact" className="inline-flex">
-                <Button size="lg" variant="outline">
+                <Button size="lg" variant="outline" className="border-sky-500 text-sky-300 hover:bg-sky-500/10 hover:text-sky-200">
                   Contact sales
                 </Button>
               </Link>

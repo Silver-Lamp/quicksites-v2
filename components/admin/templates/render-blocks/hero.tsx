@@ -304,9 +304,9 @@ export default function HeroRender({
   const PhoneLine = () =>
     cta_show_phone_below && resolvedPhoneDigits ? (
       previewOnly ? (
-        <div className={`mt-2 text-sm ${isDark ? 'text-white/85' : 'text-neutral-700'}`}>{resolvedPhoneDisplay}</div>
+        <div className={`mt-2 text-lg ${isDark ? 'text-white/85' : 'text-neutral-700'}`}>{resolvedPhoneDisplay}</div>
       ) : (
-        <div className={`mt-2 text-sm ${isDark ? 'text-white/85' : 'text-neutral-700'}`}>
+        <div className={`mt-2 text-lg ${isDark ? 'text-white/85' : 'text-neutral-700'}`}>
           <a href={`tel:${resolvedPhoneDigits}`} className="underline-offset-2 hover:underline">
             {resolvedPhoneDisplay}
           </a>

@@ -77,7 +77,7 @@ function getSafeContent(block: any, override: Record<string, any>) {
     block && typeof block === 'object' && typeof (block as any).props === 'object'
       ? (block as any).props
       : {};
-  return { ...c, ...p, ...override };
+  return { ...p, ...c, ...override };
 }
 
 /** Build a small signature for hero text so we can force remounts when it changes. */

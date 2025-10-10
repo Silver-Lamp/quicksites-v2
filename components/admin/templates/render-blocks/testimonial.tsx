@@ -3,7 +3,7 @@
 
 import ThemeScope from '@/components/ui/theme-scope';
 import type { Block } from '@/types/blocks';
-import { Template } from '@/types/template';
+import type { Template } from '@/types/template';
 import { Star } from 'lucide-react';
 import Image from 'next/image';
 
@@ -11,52 +11,73 @@ type TestimonialItem = {
   quote: string;
   attribution?: string;
   avatar_url?: string;
-  rating?: number;
+  rating?: number; // 1..5
+};
+
+type TestimonialContent = {
+  title?: string;
+  randomized?: boolean;
+  testimonials?: TestimonialItem[];
 };
 
 function renderStars(rating?: number) {
-  if (!rating) return null;
+  const n = Math.max(0, Math.min(5, Number(rating ?? 0)));
+  if (!n) return null;
   return (
     <div className="flex gap-1 text-yellow-500 mt-1">
-      {Array.from({ length: rating }).map((_, i) => (
+      {Array.from({ length: n }).map((_, i) => (
         <Star key={i} className="w-4 h-4 fill-yellow-500" />
       ))}
     </div>
   );
 }
 
+// Prefer explicit override, then block.content, then block.props
+function pickContent(block?: Block, override?: Block['content']): TestimonialContent {
+  const c = (override as TestimonialContent) ?? (block?.content as TestimonialContent);
+  const p = (block as any)?.props as TestimonialContent | undefined;
+
+  const title = c?.title ?? p?.title ?? 'Testimonials';
+  const randomized = c?.randomized ?? p?.randomized ?? false;
+  const testimonials =
+    (Array.isArray(c?.testimonials) && c!.testimonials!.length ? c!.testimonials! :
+     Array.isArray(p?.testimonials) ? p!.testimonials! : []);
+
+  return { title, randomized, testimonials };
+}
+
 export default function TestimonialBlock({
   block,
   compact = false,
-  colorMode = 'dark', // <-- now accepts colorMode from props
-  template,
+  colorMode = 'dark',
+  template, // (unused here, but kept for parity with your API)
+  content,  // allow optional override like other renderers
 }: {
   block: Block;
   compact?: boolean;
   colorMode?: 'light' | 'dark';
   template: Template;
+  content?: Block['content'];
 }) {
-  const content = block?.content as { testimonials: TestimonialItem[]; randomized?: boolean; title?: string } | undefined;
-  const testimonials: TestimonialItem[] = content?.testimonials ?? [];
-  const randomized = content?.randomized;
-  const list = randomized ? [...testimonials].sort(() => 0.5 - Math.random()) : testimonials;
+  const final = pickContent(block, content);
+  const list: TestimonialItem[] = final.randomized
+  ? [...(final.testimonials ?? [])].sort(() => 0.5 - Math.random())
+  : (final.testimonials ?? []);
 
   return (
     <ThemeScope mode={colorMode} className={`p-6 rounded-md ${colorMode === 'light' ? 'bg-white' : 'bg-neutral-950'}`}>
       <h2
         className={`text-2xl font-bold mb-6 p-4 rounded-md ${
-          colorMode === 'light'
-            ? 'text-blue-900 bg-white'
-            : 'text-white bg-neutral-950'
+          colorMode === 'light' ? 'text-blue-900 bg-white' : 'text-white bg-neutral-950'
         }`}
       >
-        {content?.title || 'Testimonials'}
+        {final.title}
       </h2>
 
       <div className={`grid gap-4 ${compact ? 'text-sm' : 'text-base'}`}>
-        {list.map((t: TestimonialItem, i: number) => (
+        {list.map((t, i) => (
           <div
-            key={i}
+            key={`${t.attribution ?? 'anon'}-${t.quote?.slice(0, 24)}-${i}`}
             className={`relative border-l-4 pl-4 italic rounded ${
               compact
                 ? colorMode === 'light'
@@ -80,11 +101,7 @@ export default function TestimonialBlock({
             )}
             <p>“{t.quote}”</p>
             {t.attribution && (
-              <footer
-                className={`mt-1 text-sm ${
-                  colorMode === 'light' ? 'text-blue-600' : 'text-blue-300'
-                }`}
-              >
+              <footer className={`mt-1 text-sm ${colorMode === 'light' ? 'text-blue-600' : 'text-blue-300'}`}>
                 — {t.attribution}
               </footer>
             )}
@@ -93,13 +110,7 @@ export default function TestimonialBlock({
         ))}
 
         {list.length === 0 && (
-          <p
-            className={`italic p-4 rounded-md ${
-              colorMode === 'light'
-                ? 'text-zinc-400 bg-zinc-50'
-                : 'text-zinc-600 bg-neutral-900'
-            }`}
-          >
+          <p className={`italic p-4 rounded-md ${colorMode === 'light' ? 'text-zinc-400 bg-zinc-50' : 'text-zinc-600 bg-neutral-900'}`}>
             No testimonials yet.
           </p>
         )}

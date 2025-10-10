@@ -1,3 +1,4 @@
+// components/admin/templates/render-blocks/faq.tsx
 'use client';
 
 import type { Block } from '@/types/blocks';
@@ -10,15 +11,35 @@ type Props = {
   colorMode?: 'light' | 'dark';
 };
 
+type FaqContent = {
+  title?: string;
+  items?: Array<{ question: string; answer: string }>;
+};
+
+function pickFaq(block?: Block, override?: Block['content']): FaqContent {
+  // Prefer explicit override, then block.content, then block.props
+  const c = (override as FaqContent) ?? (block?.content as FaqContent);
+  const p = (block as any)?.props as FaqContent | undefined;
+
+  if (c?.items?.length) return { title: c.title, items: c.items };
+  if (p?.items?.length) return { title: p.title, items: p.items };
+
+  // Merge titles if only one has it
+  return {
+    title: c?.title ?? p?.title ?? 'Frequently Asked Questions',
+    items: [],
+  };
+}
+
 export default function FaqRender({
   block,
   content,
   compact = false,
   colorMode = 'light',
 }: Props) {
-  const final = content || block?.content || { items: [] };
+  const final = pickFaq(block, content);
 
-  if (!final || !final.items?.length) {
+  if (!final.items?.length) {
     return (
       <div className="text-red-500 italic text-sm p-2 bg-red-50 dark:bg-red-900/20 rounded">
         ⚠️ Missing FAQ block content.
@@ -42,8 +63,8 @@ export default function FaqRender({
           </h3>
           <hr className="my-4" />
           <dl className="space-y-4">
-            {final.items.map((item: { question: string; answer: string }, i: number) => (
-              <div key={i}>
+            {final.items.map((item, i) => (
+              <div key={`${item.question}-${i}`}>
                 <dt className="font-semibold">{item.question}</dt>
                 <dd className={`ml-4 mt-1 text-sm ${answerText}`}>{item.answer}</dd>
               </div>

@@ -1,8 +1,6 @@
-// tailwind.config.ts
 import type { Config } from 'tailwindcss';
 
 const config: Config = {
-  // Use class-based dark mode (optionally also support [data-theme="dark"] in your app shell)
   darkMode: ['class'],
   content: [
     './app/**/*.{ts,tsx}',
@@ -12,17 +10,16 @@ const config: Config = {
     './lib/**/*.{ts,tsx}',
   ],
   safelist: [
-    { pattern: /bg-(indigo|cyan|fuchsia|red|green|blue|yellow)-(100|200|300|400|500|600|700)/ },
-    { pattern: /text-(indigo|cyan|fuchsia|red|green|blue|yellow)-(500|600|700)/ },
-    { pattern: /border-(indigo|cyan|fuchsia|red|green|blue|yellow)-(100|200|300|400|500|600|700)/ },
+    // keep common palettes; blue/sky will be used instead of purple
+    { pattern: /bg-(sky|cyan|red|green|blue|yellow)-(100|200|300|400|500|600|700)/ },
+    { pattern: /text-(sky|cyan|red|green|blue|yellow)-(500|600|700)/ },
+    { pattern: /border-(sky|cyan|red|green|blue|yellow)-(100|200|300|400|500|600|700)/ },
     { pattern: /rounded-(none|sm|md|lg|xl|2xl|3xl|full)/ },
     { pattern: /font-(sans|serif|mono|custom)/ },
   ],
   theme: {
     extend: {
-      spacing: {
-        '64': '16rem', // Ensures sidebar width matches `ml-64`
-      },
+      spacing: { '64': '16rem' },
       fontFamily: {
         sans: ['Inter', 'system-ui', 'sans-serif'],
         serif: ['Roboto Slab', 'serif'],
@@ -31,7 +28,6 @@ const config: Config = {
         custom: ['var(--custom-font)', 'sans-serif'],
       },
       colors: {
-        // Map to CSS variables set in globals.css
         border: 'hsl(var(--border))',
         input: 'hsl(var(--input))',
         ring: 'hsl(var(--ring))',
@@ -39,14 +35,13 @@ const config: Config = {
         background: 'hsl(var(--background))',
         foreground: 'hsl(var(--foreground))',
 
-        // New: card tokens so sections can "float" above background
         card: {
           DEFAULT: 'hsl(var(--card))',
           foreground: 'hsl(var(--card-foreground))',
         },
 
         primary: {
-          DEFAULT: 'hsl(var(--primary))',
+          DEFAULT: 'hsl(var(--primary))',              // now blue in globals.css
           foreground: 'hsl(var(--primary-foreground))',
         },
         secondary: {
@@ -55,7 +50,7 @@ const config: Config = {
         },
         muted: {
           DEFAULT: 'hsl(var(--muted))',
-          foreground: 'hsl(var(--muted-foreground))', // great for placeholders
+          foreground: 'hsl(var(--muted-foreground))',
         },
         accent: {
           DEFAULT: 'hsl(var(--accent))',
@@ -112,10 +107,7 @@ const config: Config = {
       },
     },
   },
-  plugins: [
-    require('tailwindcss-animate'),
-    require('@tailwindcss/typography'),
-  ],
+  plugins: [require('tailwindcss-animate'), require('@tailwindcss/typography')],
 };
 
 export default config;

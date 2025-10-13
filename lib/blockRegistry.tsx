@@ -45,6 +45,11 @@ export const BLOCK_ALIASES: Record<string, BlockType> = {
   service: 'service_offer',
   // scheduler
   'service-scheduler': 'scheduler',
+  // prestige/exterior aliases
+  exterior_agency: 'exterior_agency',
+  exterior_cleaning_agency: 'exterior_agency',
+  'exterior-cleaning-agency': 'exterior_agency',
+  pnw_prestige: 'exterior_agency',
 };
 
 // ---------- Block registry entry ----------
@@ -61,6 +66,15 @@ type BlockRegistryEntry<K extends BlockType = BlockType> = {
 function getDefaultContentSafe<T extends BlockType>(type: T, fallback: unknown) {
   return ((DEFAULT_BLOCK_CONTENT as any)[type] ?? fallback) as DefaultContentMap[T] | unknown;
 }
+
+// Shared loader for the exterior-agency family
+const loadExteriorAgency: LazyRenderer = () =>
+  import('@/components/sites/render-blocks/exterior-cleaning-agency').then((mod) => ({
+    default: (props: any) =>
+      React.createElement((mod as any).default, {
+        content: props?.content ?? props, // tolerate either props shape
+      }),
+  }));
 
 // ---------- Canonical UI registry ----------
 export const BLOCK_REGISTRY: { [K in BlockType]: BlockRegistryEntry<K> } = {
@@ -128,13 +142,49 @@ export const BLOCK_REGISTRY: { [K in BlockType]: BlockRegistryEntry<K> } = {
     defaultContent: DEFAULT_BLOCK_CONTENT.hero,
     render: HeroRender as BlockRenderer,
   },
+
+  // 🔹 NEW: exterior-agency family (canonical + two aliases)
+  exterior_agency: {
+    label: 'Exterior Agency',
+    icon: '🏠',
+    category: 'content',
+    isStatic: false,
+    defaultContent: getDefaultContentSafe('exterior_agency' as BlockType, {
+      brand: 'Your Company',
+      tagline: 'Exterior Cleaning • Roof & Gutter • Pressure & Soft Wash',
+    }),
+    render: loadExteriorAgency,
+  },
+  exterior_cleaning_agency: {
+    label: 'Exterior Cleaning Agency',
+    icon: '🏠',
+    category: 'content',
+    isStatic: false,
+    defaultContent: getDefaultContentSafe('exterior_agency' as BlockType, {
+      brand: 'Your Company',
+      tagline: 'Exterior Cleaning • Roof & Gutter • Pressure & Soft Wash',
+    }),
+    render: loadExteriorAgency,
+  },
+  pnw_prestige: {
+    label: 'PNW Prestige',
+    icon: '🏠',
+    category: 'content',
+    isStatic: false,
+    defaultContent: getDefaultContentSafe('exterior_agency' as BlockType, {
+      brand: 'PNW On Demand Services',
+      tagline: 'Exterior Cleaning • Roof & Gutter • Pressure & Soft Wash',
+    }),
+    render: loadExteriorAgency,
+  },
+
   services: {
-      label: 'Services List',
-      icon: '🛠️',
-      category: 'content',
-      isStatic: false,
-      defaultContent: DEFAULT_BLOCK_CONTENT.services,
-      render: lazyRenderer(() => import('@/components/admin/templates/render-blocks/services')),
+    label: 'Services List',
+    icon: '🛠️',
+    category: 'content',
+    isStatic: false,
+    defaultContent: DEFAULT_BLOCK_CONTENT.services,
+    render: lazyRenderer(() => import('@/components/admin/templates/render-blocks/services')),
   },
   faq: {
     label: 'FAQs',

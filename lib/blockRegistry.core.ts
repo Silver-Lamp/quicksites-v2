@@ -7,8 +7,12 @@ import { DEFAULT_BLOCK_CONTENT } from '@/lib/blocks/defaultBlockContent';
 /* ---------------------------------- Aliases --------------------------------- */
 // Aliases for legacy/alternate types → canonical BlockType
 export const BLOCK_ALIASES: Record<string, BlockType> = {
+  exterior_agency: 'exterior_agency',
+  exterior_cleaning_agency: 'exterior_agency',
+  'exterior-cleaning-agency': 'exterior_agency', // ← add this line
+  pnw_prestige: 'exterior_agency',
   services_grid: 'services',
-  about: 'text', // legacy "about" maps to your "text" block with HTML
+  about: 'text',
 };
 
 /* -------------------------------- Utilities --------------------------------- */
@@ -65,8 +69,14 @@ function normalizeToZodSchema(raw: unknown): z.ZodTypeAny | null {
 
 /* ---------------------------- Canonical type swap ---------------------------- */
 export function resolveCanonicalType(input: string): BlockType | null {
-  if (isBlockType(input)) return input;
-  return BLOCK_ALIASES[input] ?? null;
+  const norm = String(input ?? '')
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, '_')
+    .replace(/-/g, '_');               // normalize dashes → underscores
+
+  if (isBlockType(norm)) return norm;  // already a known canonical type
+  return BLOCK_ALIASES[norm] ?? null;  // try aliases
 }
 
 /* ----------------------------- Schema validation ---------------------------- */

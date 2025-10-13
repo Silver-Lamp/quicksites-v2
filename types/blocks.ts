@@ -20,6 +20,9 @@ export type BlockWithId = Block & { _id: string };
 export type BlockCategory = 'layout' | 'content' | 'interactive' | 'meta';
 
 export const BLOCK_CATEGORY: Record<BlockType, BlockCategory> = {
+  exterior_agency: 'content',
+  exterior_cleaning_agency: 'content',
+  pnw_prestige: 'content',
   text: 'content',
   image: 'content',
   video: 'content',

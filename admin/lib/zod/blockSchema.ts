@@ -140,6 +140,18 @@ const LinkSchema = z.object({
 
 /* ─────────────────────────────── Text Block ───────────────────────────────── */
 
+export const ExteriorCleaningContent = z.object({
+  brand: z.string().min(1, 'Brand is required'),
+  tagline: z.string().min(1, 'Tagline is required'),
+  subTagline: z.string().optional(),
+});
+
+export const ExteriorCleaningContentSchema = z.object({
+  brand: z.string().min(1, 'Brand is required'),
+  tagline: z.string().min(1, 'Tagline is required'),
+  subTagline: z.string().optional(),
+}).passthrough();
+
 export const TextBlockContent = z.preprocess((raw) => {
   const c = raw && typeof raw === 'object' ? { ...(raw as any) } : {};
   if (typeof (c as any).value === 'string' && !c.html && !c.json) {
@@ -296,6 +308,9 @@ const ChefMealSchema = z.preprocess((val) => {
 /* ───────────────────────────── Block schema map ───────────────────────────── */
 
 export const blockContentSchemaMap = {
+  exterior_agency: { label: 'Exterior Agency', icon: '🏠', schema: ExteriorCleaningContentSchema },
+  exterior_cleaning_agency: { label: 'Exterior Cleaning Agency', icon: '🏠', schema: ExteriorCleaningContentSchema },
+  pnw_prestige: { label: 'PNW Prestige', icon: '🏠', schema: ExteriorCleaningContentSchema },
   text: { label: 'Text Block', icon: '📝', schema: TextBlockContent },
 
   image: {
@@ -726,6 +741,11 @@ const TYPE_ALIASES: Record<string, string> = {
   'product-grid': 'products_grid',
   products: 'products_grid',
   'service-scheduler': 'scheduler',
+  // Prestige/exterior aliases → canonical renderer
+  exterior_agency: 'exterior_agency',
+  'exterior-cleaning-agency': 'exterior_agency',
+  exterior_cleaning_agency: 'exterior_agency',
+  pnw_prestige: 'exterior_agency',
 };
 
 export function resolveCanonicalType(t: string): string {
@@ -925,7 +945,9 @@ function makeFullBlockSchema(type: string, content: z.ZodTypeAny) {
 
     // Coerce legacy shape
     if (b.content == null && b.props && typeof b.props === 'object') {
-      b.content = b.props;
+      const p: any = b.props;
+      // If props already wraps the payload under "content", unwrap it.
+      b.content = (p && typeof p.content === 'object') ? p.content : p;
     }
 
     // Inject safe defaults where it helps pass first-save

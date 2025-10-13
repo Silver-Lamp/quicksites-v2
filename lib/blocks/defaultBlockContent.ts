@@ -7,7 +7,23 @@ const DUMMY_UUID = '00000000-0000-0000-0000-000000000000';
 // If you add/remove a block type, update this object (or your BlockType union).
 export const DEFAULT_BLOCK_CONTENT = {
   /* ───────── basic content ───────── */
-
+  pnw_prestige: {
+    content: {
+      brand: 'Your Company',
+      tagline: 'Exterior Cleaning • Roof & Gutter • Pressure & Soft Wash',
+      ctaLabel: 'Get a Free Quote',
+      phone: '',
+      email: '',
+      address: '',
+      badges: ['Licensed','Insured','Eco-Safe'],
+      services: [],
+      packages: [],
+      portfolio: [],
+      testimonials: [],
+      serviceAreas: [],
+      footerNote: `© ${new Date().getFullYear()} Your Company. All rights reserved.`,
+    },
+  },
   text: { value: '' },
 
   image: { url: 'https://placehold.co/800x400', alt: '' },
@@ -233,5 +249,39 @@ export const DEFAULT_BLOCK_CONTENT = {
     lead_time_minutes: 120,
     window_days: 14,
     confirmation_message: 'Thanks! Your appointment is confirmed.',
+  },
+  exterior_agency: {
+    content: {
+      brand: 'Your Company',
+      tagline: 'Exterior Cleaning • Roof & Gutter • Pressure & Soft Wash',
+      ctaLabel: 'Get a Free Quote',
+      phone: '',
+      email: '',
+      address: '',
+      badges: ['Licensed','Insured','Eco-Safe'],
+      services: [],
+      packages: [],
+      portfolio: [],
+      testimonials: [],
+      serviceAreas: [],
+      footerNote: `© ${new Date().getFullYear()} Your Company. All rights reserved.`,
+    },
+  },
+  exterior_cleaning_agency: {
+    content: {
+      brand: 'Your Company',
+      tagline: 'Exterior Cleaning • Roof & Gutter • Pressure & Soft Wash',
+      ctaLabel: 'Get a Free Quote',
+      phone: '',
+      email: '',
+      address: '',
+      badges: ['Licensed','Insured','Eco-Safe'],
+      services: [],
+      packages: [],
+      portfolio: [],
+      testimonials: [],
+      serviceAreas: [],
+      footerNote: `© ${new Date().getFullYear()} Your Company. All rights reserved.`,
+    },
   },
 } as const satisfies Record<BlockType, any>;

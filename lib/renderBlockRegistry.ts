@@ -7,7 +7,13 @@ import { resolveCanonicalType } from '@/lib/blockRegistry.core';
 
 type BlockRenderer = (props: any) => JSX.Element | null;
 
-/** Heuristic to decide if we're rendering on the public site vs editor. */
+const LOCAL_ALIASES: Record<string, BlockType | string> = {
+  exterior_agency: 'exterior_agency',
+  exterior_cleaning_agency: 'exterior_agency',
+  'exterior-cleaning-agency': 'exterior_agency',
+  pnw_prestige: 'exterior_agency',
+};
+
 function isLiveSite(props: any) {
   return !!(
     props?.renderContext === 'site' ||
@@ -19,16 +25,28 @@ function isLiveSite(props: any) {
   );
 }
 
-// ---- Static renderers (keep eager for critical-above-the-fold) ----
 export const STATIC_RENDERERS: Partial<Record<BlockType, BlockRenderer>> = {
   hero: HeroRender,
 };
 
-// ---- Dynamic renderers (code-split the rest) ----
+/** one loader reused for all three keys */
+const loadExteriorAgency = () =>
+  import('@/components/sites/render-blocks/exterior-cleaning-agency').then((mod) => ({
+    default: (props: any) =>
+      React.createElement((mod as any).default, {
+        content: props?.content ?? props,
+      }),
+  }));
+
 export const DYNAMIC_RENDERERS: Record<
   Exclude<BlockType, keyof typeof STATIC_RENDERERS>,
   () => Promise<{ default: BlockRenderer }>
 > = {
+  /** 🔑 register canonical + aliases */
+  exterior_agency: loadExteriorAgency,
+  exterior_cleaning_agency: loadExteriorAgency,
+  pnw_prestige: loadExteriorAgency,
+
   text:   () => import('@/components/admin/templates/render-blocks/text'),
   image:  () => import('@/components/admin/templates/render-blocks/image'),
   video:  () => import('@/components/admin/templates/render-blocks/video'),
@@ -36,8 +54,6 @@ export const DYNAMIC_RENDERERS: Record<
   quote:  () => import('@/components/admin/templates/render-blocks/quote'),
   button: () => import('@/components/admin/templates/render-blocks/button'),
   grid:   () => import('@/components/admin/templates/render-blocks/grid'),
-
-  // ✅ Inject template.services here (fallback path for older data)
   services: () =>
     import('@/components/admin/templates/render-blocks/services').then((mod) => ({
       default: (props: any) =>
@@ -46,7 +62,6 @@ export const DYNAMIC_RENDERERS: Record<
           services: props?.services ?? props?.template?.services ?? [],
         }),
     })),
-
   cta:          () => import('@/components/admin/templates/render-blocks/cta'),
   testimonial:  () => import('@/components/admin/templates/render-blocks/testimonial'),
   footer:       () => import('@/components/admin/templates/render-blocks/footer'),
@@ -55,19 +70,13 @@ export const DYNAMIC_RENDERERS: Record<
   faq:          () => import('@/components/admin/templates/render-blocks/faq'),
   contact_form: () => import('@/components/admin/templates/render-blocks/contact-form'),
   hours:        () => import('@/components/admin/templates/render-blocks/hours'),
-
-  // Optional extras
   chef_profile:  () => import('@/components/admin/templates/render-blocks/chef-profile.client'),
   meals_grid:    () => import('@/components/admin/templates/render-blocks/meals-grid.client'),
   reviews_list:  () => import('@/components/admin/templates/render-blocks/reviews-list.client'),
   meal_card:     () => import('@/components/admin/templates/render-blocks/meal-card.client'),
-
-  // NEW commerce
   products_grid: () => import('@/components/admin/templates/render-blocks/products-grid'),
-
-  // Placeholder without JSX (this file is .ts)
   service_offer: async () => ({
-    default: (_props: any) =>
+    default: () =>
       React.createElement(
         'div',
         { className: 'border rounded-md p-3 bg-amber-50 text-sm' },
@@ -75,12 +84,10 @@ export const DYNAMIC_RENDERERS: Record<
         ' — renderer coming soon.'
       ),
   }),
-
-  // NEW: scheduler → choose editor-preview vs live-site at render time (no JSX)
   scheduler: async () => {
     const [AdminPreview, SiteLive] = await Promise.all([
-      import('@/components/admin/templates/render-blocks/scheduler'), // editor-safe preview
-      import('@/components/sites/render-blocks/scheduler'),           // live interactive
+      import('@/components/admin/templates/render-blocks/scheduler'),
+      import('@/components/sites/render-blocks/scheduler'),
     ]);
     return {
       default: (props: any) => {
@@ -92,20 +99,17 @@ export const DYNAMIC_RENDERERS: Record<
   },
 } as const;
 
-// ---- Helpers: resolve aliases and load a renderer safely ----
-
-/** Resolve alias → canonical (e.g., "services_grid" → "services", "about" → "text"). */
+/** Resolve alias → canonical */
 export function resolveRendererType(input: string): BlockType | null {
-  return resolveCanonicalType(input);
+  const pre = (LOCAL_ALIASES[input] as string) ?? input;
+  const t = resolveCanonicalType(pre);
+  return t ?? (pre === 'exterior_agency' ? ('exterior_agency' as BlockType) : null);
 }
 
-/** Get a static renderer if one exists (after alias resolution). */
 export function getStaticRenderer(input: string): BlockRenderer | undefined {
   const t = resolveRendererType(input);
   return t ? STATIC_RENDERERS[t] : undefined;
 }
-
-/** Get a dynamic loader if one exists (after alias resolution). */
 export function getDynamicRenderer(
   input: string
 ): (() => Promise<{ default: BlockRenderer }>) | undefined {
@@ -114,8 +118,6 @@ export function getDynamicRenderer(
   if (t in STATIC_RENDERERS) return undefined;
   return (DYNAMIC_RENDERERS as any)[t];
 }
-
-/** Load a renderer (static or dynamic). Returns null if not registered. */
 export async function loadRenderer(
   input: string
 ): Promise<{ default: BlockRenderer } | null> {

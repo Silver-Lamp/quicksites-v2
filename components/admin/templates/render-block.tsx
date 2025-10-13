@@ -2,28 +2,31 @@
 'use client';
 
 import type { Block, BlockType } from '@/types/blocks';
-import type { JSX } from 'react';
+// import type { JSX } from 'react';
 import React, { Suspense } from 'react';
 
 import { useBlockFix } from '@/components/ui/block-fix-context';
 import DebugOverlay from '@/components/ui/debug-overlay';
-import HeroRender from '@/components/admin/templates/render-blocks/hero';
-import TextRender from '@/components/admin/templates/render-blocks/text';
-import SchedulerRender from '@/components/admin/templates/render-blocks/scheduler';
 
-import { DYNAMIC_RENDERERS } from '@/lib/blockRegistry';
+// import HeroRender from '@/components/admin/templates/render-blocks/hero';
+// import TextRender from '@/components/admin/templates/render-blocks/text';
+// import SchedulerRender from '@/components/admin/templates/render-blocks/scheduler';
+
 import { blockContentSchemaMap } from '@/admin/lib/zod/blockSchema';
 import { GripVertical, Pencil, Trash2 } from 'lucide-react';
 import type { Template } from '@/types/template';
 
 const isDev =
-  typeof process !== 'undefined' && process.env.NODE_ENV === 'development';
+typeof process !== 'undefined' && process.env.NODE_ENV === 'development';
 
-const STATIC_RENDERERS: Partial<Record<BlockType, (props: any) => JSX.Element>> = {
-  hero: HeroRender,
-  text: TextRender,
-  scheduler: SchedulerRender,
-};
+// import { DYNAMIC_RENDERERS } from '@/lib/blockRegistry';
+// const STATIC_RENDERERS: Partial<Record<BlockType, (props: any) => JSX.Element>> = {
+//   hero: HeroRender,
+//   text: TextRender,
+//   scheduler: SchedulerRender,
+// };
+// import { STATIC_RENDERERS, DYNAMIC_RENDERERS } from '@/lib/renderBlockRegistry';
+import { STATIC_RENDERERS, DYNAMIC_RENDERERS } from '@/components/admin/templates/render-blocks';
 
 const lazyCache = new Map<string, React.ComponentType<any>>();
 
@@ -41,6 +44,8 @@ function assertAllRenderersCovered() {
     else console.warn(msg);
   }
 }
+console.log('[renderers]', Object.keys(STATIC_RENDERERS), Object.keys(DYNAMIC_RENDERERS));
+
 assertAllRenderersCovered();
 
 function fallbackRenderer(type: string): React.ComponentType<any> {

@@ -3,6 +3,8 @@ import { BlockSchema, migrateLegacyBlock } from '@/admin/lib/zod/blockSchema';
 import { canonicalizeUrlKeysDeep } from '@/admin/lib/migrations/canonicalizeUrls';
 import type { Block } from '@/types/blocks';
 
+/* ───────────────────────── helpers ───────────────────────── */
+
 // Grab a nested value for error logs
 function getAtPath(obj: unknown, path: (string | number)[]) {
   try {
@@ -28,17 +30,43 @@ function ensureId(id: unknown): string {
   return crypto.randomUUID();
 }
 
-/** props → content (legacy) */
+/** props → content (legacy + nested-unwrap) */
 function propsToContent(block: any): any {
-  if (block && typeof block === 'object' && 'props' in block && !('content' in block)) {
-    const { props, ...rest } = block;
-    return { ...rest, content: props };
+  if (!block || typeof block !== 'object' || !('props' in block)) return block;
+
+  const { props, ...rest } = block as any;
+
+  // If block already has content, only fix obvious nested wrapper cases.
+  // Prefer props.content when present; otherwise treat props itself as content.
+  const propsContent =
+    props && typeof props === 'object' && props.content && typeof props.content === 'object'
+      ? props.content
+      : props;
+
+  if (!('content' in block) || block.content == null) {
+    return { ...rest, content: propsContent };
   }
+
+  // If content exists but is empty or clearly the wrong wrapper, merge/replace safely.
+  if (
+    block.content == null ||
+    (typeof block.content === 'object' && Object.keys(block.content).length === 0) ||
+    (block.content && typeof block.content === 'object' && 'content' in block.content)
+  ) {
+    return { ...rest, content: propsContent };
+  }
+
   return block;
 }
 
 function isLikelyValidBlockShape(b: any): b is { type: string; content: Record<string, any> } {
-  return b && typeof b === 'object' && typeof b.type === 'string' && typeof b.content === 'object' && b.content !== null;
+  return (
+    b &&
+    typeof b === 'object' &&
+    typeof b.type === 'string' &&
+    typeof b.content === 'object' &&
+    b.content !== null
+  );
 }
 
 /** Per-type harmonization before Zod parse */
@@ -47,10 +75,10 @@ function harmonizeContentByType(type: string, c0: Record<string, any> | undefine
 
   // header aliases
   if (type === 'header') {
-    if ('logoUrl' in c && !('logo_url' in c)) c.logo_url = c.logoUrl;
-    if ('navItems' in c && !('nav_items' in c)) c.nav_items = c.navItems;
-    if ('url' in c && !('logo_url' in c)) c.logo_url = c.url;
-    if ('links' in c && !('nav_items' in c)) c.nav_items = c.links;
+    if ('logoUrl' in c && !('logo_url' in c)) c.logo_url = (c as any).logoUrl;
+    if ('navItems' in c && !('nav_items' in c)) c.nav_items = (c as any).navItems;
+    if ('url' in c && !('logo_url' in c)) c.logo_url = (c as any).url;
+    if ('links' in c && !('nav_items' in c)) c.nav_items = (c as any).links;
     delete (c as any).logoUrl;
     delete (c as any).navItems;
     delete (c as any).url;
@@ -71,40 +99,40 @@ function harmonizeContentByType(type: string, c0: Record<string, any> | undefine
   if (type === 'text') {
     if (typeof (c as any).value === 'string' && !c.html && !c.json) {
       c.html = (c as any).value;
-      c.format = c.format ?? 'html';
+      (c as any).format = (c as any).format ?? 'html';
     }
   }
 
   // HERO: map legacy keys to schema fields
   if (type === 'hero') {
-    if ('heading' in c && !('headline' in c)) c.headline = c.heading;
-    if ('subheading' in c && !('subheadline' in c)) c.subheadline = c.subheading;
-    if ('ctaLabel' in c && !('cta_text' in c)) c.cta_text = c.ctaLabel;
-    if ('ctaHref' in c && !('cta_link' in c)) c.cta_link = c.ctaHref;
-    if ('heroImage' in c && !('image_url' in c)) c.image_url = c.heroImage;
+    if ('heading' in c && !('headline' in c)) c.headline = (c as any).heading;
+    if ('subheading' in c && !('subheadline' in c)) c.subheadline = (c as any).subheading;
+    if ('ctaLabel' in c && !('cta_text' in c)) c.cta_text = (c as any).ctaLabel;
+    if ('ctaHref' in c && !('cta_link' in c)) c.cta_link = (c as any).ctaHref;
+    if ('heroImage' in c && !('image_url' in c)) c.image_url = (c as any).heroImage;
 
-    // normalize some commonly seen variants
-    if ('imagePosition' in c && !('image_position' in c)) c.image_position = c.imagePosition;
-    if ('layoutMode' in c && !('layout_mode' in c)) c.layout_mode = c.layoutMode;
+    if ('imagePosition' in c && !('image_position' in c)) c.image_position = (c as any).imagePosition;
+    if ('layoutMode' in c && !('layout_mode' in c)) c.layout_mode = (c as any).layoutMode;
 
-    // clean legacy keys
-    delete c.heading;
-    delete c.subheading;
-    delete c.ctaLabel;
-    delete c.ctaHref;
-    delete c.heroImage;
-    delete c.imagePosition;
-    delete c.layoutMode;
+    delete (c as any).heading;
+    delete (c as any).subheading;
+    delete (c as any).ctaLabel;
+    delete (c as any).ctaHref;
+    delete (c as any).heroImage;
+    delete (c as any).imagePosition;
+    delete (c as any).layoutMode;
   }
 
   return c;
 }
 
+/* ───────────────────────── main ───────────────────────── */
+
 export function normalizeBlock(block: Partial<Block>): z.infer<typeof BlockSchema> {
   // 1) ensure id and migrate legacy shapes
   let candidate: any = migrateLegacyBlock({ ...block, _id: ensureId(block?._id) });
 
-  // 2) alias type + props→content early
+  // 2) alias type + props→content early (and unwrap nested props.content)
   candidate = propsToContent(candidate);
   candidate.content ??= {};
   candidate.type = String(candidate.type || '').trim();
@@ -117,7 +145,7 @@ export function normalizeBlock(block: Partial<Block>): z.infer<typeof BlockSchem
 
   // 5) special: hero safe defaults to pass Zod even if AI/hydration is off
   if (candidate.type === 'hero') {
-    const c = candidate.content ??= {};
+    const c = (candidate.content ??= {});
     if (!c.headline) c.headline = 'Welcome';
     if (!('subheadline' in c)) c.subheadline = '';
     if (!('cta_text' in c)) c.cta_text = 'Get Started';
@@ -145,7 +173,7 @@ export function normalizeBlock(block: Partial<Block>): z.infer<typeof BlockSchem
               typeof item === 'string'
                 ? item
                 : item && typeof item === 'object' && 'question' in item && 'answer' in item
-                ? `${item.question} — ${item.answer}`
+                ? `${(item as any).question} — ${(item as any).answer}`
                 : JSON.stringify(item ?? {});
             return { type: 'text', _id: crypto.randomUUID(), content: { value } };
           }
@@ -168,7 +196,11 @@ export function normalizeBlock(block: Partial<Block>): z.infer<typeof BlockSchem
       value: getAtPath(candidate, e.path),
     }));
     console.groupCollapsed(`❌ normalizeBlock: Invalid block "${String(block?.type)}"`);
-    try { console.table(rows); } catch { console.log(rows); }
+    try {
+      console.table(rows);
+    } catch {
+      console.log(rows);
+    }
     console.groupEnd();
     throw new Error(`Invalid block: ${String(block?.type)}`);
   }

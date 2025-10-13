@@ -1,3 +1,4 @@
+// admin/lib/saveTemplate.ts
 'use server';
 
 import { getSupabaseForAction } from '@/lib/supabase/serverClient';
@@ -85,35 +86,35 @@ function mergeDataWithIdentity(beforeData: any, inputData: any, columns: Record<
 
   // merged identity (prefer input, then existing, then columns)
   const mergedIdentity = stripUndefined({
-    ...bm.identity,        // legacy stored
-    ...bi,                 // data.identity old snapshot
-    ...imi,                // input meta.identity
-    ...ii,                 // input data.identity
-    ...identityFromColumns // last — only fills blanks
+    ...bm.identity,
+    ...bi,
+    ...imi,
+    ...ii,
+    ...identityFromColumns,
   });
 
   // next meta.contact (keep legacy in sync)
   const nextMetaContact = stripUndefined({
     ...(obj(bm.contact)),
     ...(obj(im.contact)),
-    email: firstDef(colContact.email, im?.contact?.email, bm?.contact?.email),
-    phone: firstDef(colContact.phone, im?.contact?.phone, bm?.contact?.phone),
-    address: firstDef(colContact.address, im?.contact?.address, bm?.contact?.address),
-    address2: firstDef(colContact.address2, im?.contact?.address2, bm?.contact?.address2),
-    city: firstDef(colContact.city, im?.contact?.city, bm?.contact?.city),
-    state: firstDef(colContact.state, im?.contact?.state, bm?.contact?.state),
-    postal: firstDef(colContact.postal, im?.contact?.postal, bm?.contact?.postal),
-    latitude: firstDef(colContact.latitude, im?.contact?.latitude, bm?.contact?.latitude),
+    email:     firstDef(colContact.email, im?.contact?.email, bm?.contact?.email),
+    phone:     firstDef(colContact.phone, im?.contact?.phone, bm?.contact?.phone),
+    address:   firstDef(colContact.address, im?.contact?.address, bm?.contact?.address),
+    address2:  firstDef(colContact.address2, im?.contact?.address2, bm?.contact?.address2),
+    city:      firstDef(colContact.city, im?.contact?.city, bm?.contact?.city),
+    state:     firstDef(colContact.state, im?.contact?.state, bm?.contact?.state),
+    postal:    firstDef(colContact.postal, im?.contact?.postal, bm?.contact?.postal),
+    latitude:  firstDef(colContact.latitude, im?.contact?.latitude, bm?.contact?.latitude),
     longitude: firstDef(colContact.longitude, im?.contact?.longitude, bm?.contact?.longitude),
   });
 
   const nextMeta = stripUndefined({
     ...bm,
     ...im,
-    siteTitle: firstDef(columns.template_name, im.siteTitle, bm.siteTitle),
-    business: firstDef(columns.business_name, im.business, bm.business),
-    site_type: firstDef(columns.site_type, im.site_type, bm.site_type),
-    industry: firstDef(columns.industry, im.industry, bm.industry),
+    siteTitle:      firstDef(columns.template_name, im.siteTitle, bm.siteTitle),
+    business:       firstDef(columns.business_name, im.business, bm.business),
+    site_type:      firstDef(columns.site_type, im.site_type, bm.site_type),
+    industry:       firstDef(columns.industry, im.industry, bm.industry),
     industry_label: firstDef(columns.industry_label, im.industry_label, bm.industry_label),
     contact: nextMetaContact,
     identity: { ...(obj(bm.identity)), ...(obj(im.identity)), ...mergedIdentity },
@@ -123,7 +124,7 @@ function mergeDataWithIdentity(beforeData: any, inputData: any, columns: Record<
     ...b,
     ...i,
     meta: nextMeta,
-    identity: { ...bi, ...ii, ...mergedIdentity }, // keep a snapshot at data.identity as well
+    identity: { ...bi, ...ii, ...mergedIdentity },
   });
 
   dbg('[IDENTITY:SAVE] mergeDataWithIdentity', {
@@ -172,11 +173,13 @@ export async function saveTemplate(input: any, id?: string): Promise<Template> {
   const colLat   = numberOrNull(src?.latitude);
   const colLon   = numberOrNull(src?.longitude);
 
-  // common payload base (we'll attach merged data below)
+  // NOTE: We **intentionally do NOT accept `slug` here**.
+  // Slug writes are handled by the dedicated endpoint: PATCH /api/templates/[id]/slug
+  // to avoid guard conflicts and “revert” loops.
   const basePayload: Record<string, any> = {
     id: rowId,
     template_name: colTemplateName,
-    slug: trimOrNull(src?.slug),
+    // slug: (write-protected; do not include)
 
     layout: trimOrNull(src?.layout),
     color_scheme: trimOrNull(src?.color_scheme),
@@ -200,13 +203,10 @@ export async function saveTemplate(input: any, id?: string): Promise<Template> {
     latitude: colLat,
     longitude: colLon,
 
-    // header/footer (keep your existing keys normalization)
     header_block: (input?.header_block ?? src?.header_block ?? src?.headerBlock) ?? null,
     footer_block: (input?.footer_block ?? src?.footer_block ?? src?.footerBlock) ?? null,
 
-    // ✅ write to the JSONB column used by prod/view
     services_jsonb: normalizedServices,
-    // NOTE: DO NOT set owner_id here; we decide per branch below
   };
 
   stripUndefined(basePayload);
@@ -252,6 +252,7 @@ export async function saveTemplate(input: any, id?: string): Promise<Template> {
   if (!exists) {
     // CREATE: include owner_id from session (write-once)
     const payload = { ...basePayload, owner_id: user.id, data: mergedData };
+    // ❗ No slug on insert either. Seed via slug endpoint if desired.
     const { data, error } = await supabase
       .from('templates')
       .insert(payload)
@@ -260,8 +261,8 @@ export async function saveTemplate(input: any, id?: string): Promise<Template> {
     if (error) throw new Error(JSON.stringify(error));
     return data as Template;
   } else {
-    // UPDATE: never send owner_id; DB trigger prevents changes too
-    const payload = omit({ ...basePayload, data: mergedData });
+    // UPDATE: never send owner_id; never send slug
+    const payload = omit({ ...basePayload, data: mergedData }, 'slug' as any, 'owner_id' as any);
     const { data, error } = await supabase
       .from('templates')
       .update(payload)

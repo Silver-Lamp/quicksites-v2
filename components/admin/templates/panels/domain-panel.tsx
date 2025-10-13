@@ -201,6 +201,14 @@ export default function DomainPanel({
   variant?: 'inline' | 'drawer';
 }) {
   const doChange = onChange ?? (() => {});
+  const lastPushedSlugRef = useRef<string>(String(template.slug || ''));
+  const lastLocalSaveAtRef = useRef<number>(0);
+
+  // --- base/authority detection ---
+  const isVersion = Boolean((template as any)?.is_version);
+  const baseSlugKey = ((template as any)?.base_slug ?? null) as string | null;
+  const [baseInfo, setBaseInfo] = useState<{ id: string; slug: string } | null>(null);
+  const authSlugIdRef = useRef<string | null>(null); // authority (base) id when known
 
   /* ---- Slug editor state ---- */
   const siteTitle = useMemo(
@@ -210,73 +218,74 @@ export default function DomainPanel({
 
   const [locked, setLocked] = useState(false);
   const [manuallyEdited, setManuallyEdited] = useState(() => Boolean(template.slug && template.slug !== 'untitled'));
-  const [checking, setChecking] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Local slug so typing always responds, even before parent propagates
+  // in-flight save guard to avoid repeated PATCH spam
+  const saveBusyRef = useRef(false);
+  const lastRequestedSlugRef = useRef<string | null>(null);
+
+  // Fetch authority/base row when editing a version; prefer its slug for display
+  useEffect(() => {
+    let cancelled = false;
+    async function loadBase() {
+      if (!isVersion || !baseSlugKey) {
+        setBaseInfo(null);
+        authSlugIdRef.current = null;
+        return;
+      }
+      const { data, error } = await supabase
+        .from('templates')
+        .select('id, slug')
+        .eq('base_slug', baseSlugKey)
+        .eq('is_version', false)
+        .limit(1)
+        .maybeSingle();
+      if (!cancelled && !error && data) {
+        const baseSlug = String(data.slug || '');
+        setBaseInfo({ id: data.id, slug: baseSlug });
+        authSlugIdRef.current = data.id;
+        setSlugLocal(baseSlug);
+        lastPushedSlugRef.current = baseSlug;
+      }
+    }
+    void loadBase();
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isVersion, baseSlugKey, template.id]);
+
+  // Local slug so typing always responds; when version, prefer authority/base slug if known
   const [slugLocal, setSlugLocal] = useState<string>(String(template.slug || ''));
   useEffect(() => {
-    // Keep in sync if template changes elsewhere (e.g., restore, load, publish/unpublish)
-    setSlugLocal(String(template.slug || ''));
-  }, [template.id, template.slug]);
+    const incoming = String(template.slug || '');
+    lastPushedSlugRef.current = incoming;
+    if (isVersion) {
+      setSlugLocal(baseInfo?.slug ?? incoming);
+    } else {
+      setSlugLocal(incoming);
+      authSlugIdRef.current = String((template as any)?.id || null);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [template.id, template.slug, isVersion, baseInfo?.slug]);
 
-  // Auto-suggest slug from siteTitle when not manually edited/locked
+  // Auto-suggest slug only when empty and not locked/manual
   useEffect(() => {
-    if (!locked && !manuallyEdited) {
+    if (!locked && !manuallyEdited && !slugLocal) {
       const suggested = sanitizeSlug(siteTitle);
       if (suggested && suggested !== slugLocal) {
         setSlugLocal(suggested);
+        lastPushedSlugRef.current = suggested;
         doChange({ slug: suggested });
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [siteTitle, locked, manuallyEdited]);
 
-  // Validate + uniqueness against current local slug
-  useEffect(() => {
-    const slug = slugLocal || '';
-    const rx = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
-
-    if (!slug) { setError('Slug is required'); return; }
-    if (!rx.test(slug)) { setError('Slug must be lowercase letters, numbers and dashes (e.g. roof-cleaning)'); return; }
-
-    if (debounceRef.current) clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(async () => {
-      try {
-        setChecking(true);
-        const { data: tHits, error: tErr } = await supabase
-          .from('templates')
-          .select('id', { head: false })
-          .eq('slug', slug)
-          .neq('id', template.id);
-        if (tErr) throw tErr;
-        const takenByOtherTemplate = (tHits?.length ?? 0) > 0;
-
-        const platformDomain = `${slug}.quicksites.ai`;
-        const { data: psHits, error: psErr } = await supabase
-          .from('published_sites')
-          .select('id, template_id, site_id', { head: false })
-          .eq('domain', platformDomain)
-          .neq('template_id', template.id);
-        if (psErr) throw psErr;
-        const takenByOtherPublished = (psHits?.length ?? 0) > 0;
-
-        setError(takenByOtherTemplate || takenByOtherPublished
-          ? `Slug is taken. Suggested: ${slug}-${uniqueSuffix()}`
-          : null);
-      } catch {
-        setError(null);
-      } finally {
-        setChecking(false);
-      }
-    }, 450);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [slugLocal, template.id]);
-
+  const [verifyPollingEnabled, setVerifyPollingEnabled] = useState(false);
+  
   /* ---- URL previews ---- */
   const isSite = isSiteProp ?? Boolean((template as any)?.is_site);
-  const previewSlug = slugLocal || 'slug';
+  const previewSlug = (isVersion && baseInfo?.slug) ? baseInfo.slug : (slugLocal || 'slug');
 
   const publishedDomain =
     (template as any)?.site?.domain && String((template as any).site.domain).trim()
@@ -320,7 +329,29 @@ export default function DomainPanel({
           if (!cancelled && t) {
             const snapPublished = computeIsPublishedFromStateOnly(t);
             setStatePublished(snapPublished);
-            if (onChange) onChange(t as Partial<Template>);
+
+            // Client-wins for a short window after save; if we are on a version and know the base, prefer base slug.
+            const tId = String((t as any).id);
+            const incomingSlug = String((t as any).slug || '');
+            const justSaved = Date.now() - lastLocalSaveAtRef.current < 5000;
+            const editingAuthorityElsewhere = authSlugIdRef.current && tId !== authSlugIdRef.current;
+
+            if (!justSaved) {
+              if (editingAuthorityElsewhere) {
+                if (baseInfo?.slug) {
+                  setSlugLocal(baseInfo.slug);
+                  lastPushedSlugRef.current = baseInfo.slug;
+                }
+              } else {
+                setSlugLocal(incomingSlug);
+                lastPushedSlugRef.current = incomingSlug;
+              }
+            }
+
+            // Avoid bubbling slug back up
+            const safePatch: Partial<Template> = { ...(t as any) };
+            delete (safePatch as any).slug;
+            if (onChange) onChange(safePatch);
           }
         }
       } catch {}
@@ -340,10 +371,10 @@ export default function DomainPanel({
       }
     }
 
-    hydrate();
+    void hydrate();
     return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [template.id]);
+  }, [template.id, baseInfo?.slug]);
 
   /* ---- Domain connect state ---- */
   const initialCustom =
@@ -362,7 +393,6 @@ export default function DomainPanel({
   const [lastCheckedAt, setLastCheckedAt] = useState<number | null>(null);
 
   const apex = normalizeApex(domainInput || '');
-  const primary = connectResp?.primary || (apex ? `www.${apex}` : '');
 
   const onDomainBlur = () => {
     const n = normalizeApex(domainInput || '');
@@ -376,6 +406,52 @@ export default function DomainPanel({
     void copy(parts.join('\n'));
   }
 
+  const rxSlug = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+
+  async function checkAndSaveSlug(current: string) {
+    const slug = (current || '').trim();
+    if (!slug) { setError('Slug is required'); return; }
+    if (!rxSlug.test(slug)) { setError('Slug must be lowercase letters, numbers and dashes'); return; }
+
+    // in-flight & duplicate guards
+    if (saveBusyRef.current) return;
+    if (slug === lastPushedSlugRef.current) return;
+    if (slug === lastRequestedSlugRef.current) return;
+
+    saveBusyRef.current = true;
+    lastRequestedSlugRef.current = slug;
+
+    setSaving(true);
+    setError(null);
+    try {
+      const res = await fetch(`/api/templates/${template.id}/slug`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ slug }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json?.error || 'Failed to save slug');
+
+      lastPushedSlugRef.current = json.slug;
+      lastLocalSaveAtRef.current = Date.now();
+      // Keep local + base in sync
+      setSlugLocal(json.slug);
+      if (json?.targetId) authSlugIdRef.current = json.targetId as string;
+      setBaseInfo(prev => prev ? { ...prev, slug: json.slug } : prev);
+
+      // Optional: reflect to parent
+      doChange?.({ slug: json.slug });
+    } catch (e: any) {
+      setError(e?.message || 'Failed to save slug');
+    } finally {
+      setSaving(false);
+      saveBusyRef.current = false;
+      // keep lastRequestedSlugRef so subsequent identical clicks are ignored briefly
+      setTimeout(() => { if (lastRequestedSlugRef.current === slug) lastRequestedSlugRef.current = null; }, 2000);
+    }
+  }
+  
+
   async function refreshTemplateState() {
     try {
       const res = await fetch(`/api/templates/state?id=${encodeURIComponent(template.id)}`, { cache: 'no-store' });
@@ -384,10 +460,32 @@ export default function DomainPanel({
         const t = j?.template ?? j;
         if (t) {
           setStatePublished(computeIsPublishedFromStateOnly(t));
-          if (onChange) onChange(t as Partial<Template>);
+
+          // Client-wins window & base-preference when editing version
+          const tId = String((t as any).id);
+          const incomingSlug = String((t as any).slug || '');
+          const justSaved = Date.now() - lastLocalSaveAtRef.current < 5000;
+          const editingAuthorityElsewhere = authSlugIdRef.current && tId !== authSlugIdRef.current;
+
+          if (!justSaved) {
+            if (editingAuthorityElsewhere) {
+              if (baseInfo?.slug) {
+                setSlugLocal(baseInfo.slug);
+                lastPushedSlugRef.current = baseInfo.slug;
+              }
+            } else {
+              setSlugLocal(incomingSlug);
+              lastPushedSlugRef.current = incomingSlug;
+            }
+          }
+
+          const safePatch: Partial<Template> = { ...(t as any) };
+          delete (safePatch as any).slug;
+          if (onChange) onChange(safePatch);
         }
       }
     } catch {}
+    
     try {
       const { data, error } = await supabase
         .from('published_sites')
@@ -443,25 +541,27 @@ export default function DomainPanel({
         domain: d, redirectToWWW: true, autoConfigure: autoConfigure ? 'detect' : false,
       });
       setConnectResp(json as ConnectResponse);
+      setVerifyPollingEnabled(true); // <- arm polling only after a real connect
       await persistApex(d);
     } catch (e: any) {
       setConnectError(e?.message || 'Failed to connect domain.');
     } finally { setConnectBusy(false); }
   }
-
+  
   async function verifyDomain() {
-    if (!primary) return;
+    if (!connectResp?.primary) return;
     setVerifyBusy(true);
     setConnectError(null);
     try {
-      const json = await postJson<{ ok: boolean; verified: boolean }>('/api/domains/verify', { domain: primary });
-      setConnectResp((prev: ConnectResponse | null) => (prev ? { ...prev, verified: !!json?.verified } : prev));
+      const json = await postJson<{ ok: boolean; verified: boolean }>('/api/domains/verify', { domain: connectResp.primary });
+      setConnectResp((prev) => (prev ? { ...prev, verified: !!json?.verified } : prev));
       setLastCheckedAt(Date.now());
+      setVerifyPollingEnabled(true); // ensure polling is armed after manual verify click too
     } catch (e: any) {
       setConnectError(e?.message || 'Could not verify yet.');
     } finally { setVerifyBusy(false); }
   }
-
+  
   async function removeFromVercel() {
     const d = apex;
     if (!d) { setConnectError('Enter a domain first.'); return; }
@@ -500,15 +600,23 @@ export default function DomainPanel({
   }, [connectResp?.recommended?.cname]);
 
   // Auto-verify polling
-  const verifyTarget = connectResp?.primary || (apex ? `www.${apex}` : null);
+  const verifyTarget = connectResp?.primary ?? null;
+
   const { status: verifyStatus } = useVerifyDomain(verifyTarget, {
-    enabled: !!verifyTarget && !(connectResp?.verified),
+    enabled: verifyPollingEnabled && !!verifyTarget && !(connectResp?.verified),
     intervalMs: 10_000,
     maxAttempts: 18,
-    onVerified: () => { setConnectResp(prev => (prev ? { ...prev, verified: true } : prev)); },
+    onVerified: () => {
+      setConnectResp(prev => (prev ? { ...prev, verified: true } : prev));
+      setVerifyPollingEnabled(false);
+    },
   });
   useEffect(() => { if (verifyStatus === 'verifying') setLastCheckedAt(Date.now()); }, [verifyStatus]);
-
+  useEffect(() => {
+    // If user starts typing a different domain, stop background checks until they connect again
+    setVerifyPollingEnabled(false);
+  }, [domainInput]);
+  
   return (
     <Collapsible title="URL, Publishing & Domain" id="publishing-domain">
       <div className="space-y-6">
@@ -553,11 +661,29 @@ export default function DomainPanel({
               const normalized = sanitizeSlug(e.target.value);
               setSlugLocal(normalized);
               setManuallyEdited(true);
-              doChange({ slug: normalized });
+            }}
+            // ❌ No onBlur save — we only save on Enter or the button
+            onKeyDown={(e) => {
+              if (!isPublished && e.key === 'Enter') {
+                e.preventDefault();
+                void checkAndSaveSlug(slugLocal);
+              }
             }}
             placeholder="e.g. roof-cleaning"
             className={`bg-gray-800 text-white border ${error ? 'border-red-500' : 'border-gray-700'}`}
           />
+          <div className="mt-2 flex items-center gap-2">
+            <Button
+              type="button"
+              size="sm"
+              variant="secondary"
+              onClick={() => checkAndSaveSlug(slugLocal)}
+              disabled={isPublished || saving}
+            >
+              {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Check & Save'}
+            </Button>
+            {error && <span className="text-sm text-red-400">{error}</span>}
+          </div>
 
           <div className="flex flex-wrap gap-3 pt-2">
             <button
@@ -566,6 +692,7 @@ export default function DomainPanel({
                 const unique = randomSlug(siteTitle || 'site');
                 setSlugLocal(unique);
                 setManuallyEdited(true);
+                lastPushedSlugRef.current = unique;
                 doChange({ slug: unique });
               }}
               className="text-xs text-blue-400 underline disabled:opacity-50"
@@ -579,6 +706,7 @@ export default function DomainPanel({
                 const suggested = sanitizeSlug(siteTitle || '');
                 setManuallyEdited(false);
                 setSlugLocal(suggested);
+                lastPushedSlugRef.current = suggested;
                 doChange({ slug: suggested });
               }}
               className="text-xs text-gray-400 underline disabled:opacity-50"
@@ -586,22 +714,6 @@ export default function DomainPanel({
             >
               Reset to Suggested
             </button>
-
-            {error?.startsWith('Slug is taken') && !isPublished && (
-              <button
-                type="button"
-                onClick={() => {
-                  const suggestion = error.split(':').pop()?.trim() || randomSlug(siteTitle);
-                  setSlugLocal(suggestion);
-                  setManuallyEdited(true);
-                  doChange({ slug: suggestion });
-                  setError(null);
-                }}
-                className="text-xs text-amber-400 underline"
-              >
-                Use Suggestion
-              </button>
-            )}
           </div>
 
           {isPublished && (
@@ -613,9 +725,6 @@ export default function DomainPanel({
               . Unpublish to edit the slug.
             </p>
           )}
-
-          {checking && <p className="text-sm text-yellow-400 mt-2">Checking slug availability…</p>}
-          {error && <p className="text-sm text-red-400 mt-2">{error}</p>}
         </div>
 
         {/* -------------------- URL preview & copies -------------------- */}

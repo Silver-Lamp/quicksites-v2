@@ -12,18 +12,25 @@ const UUID_V4 =
 const SELECT =
   'id,slug,template_name,updated_at,created_at,owner_id,is_site,is_version,archived,industry,color_mode,data,header_block,footer_block,base_slug';
 
+function buildQueryString(sp: SearchParams) {
+  const q = new URLSearchParams();
+  if (sp.page) q.set('page', sp.page);
+  if (sp.preview_version_id) q.set('preview_version_id', sp.preview_version_id);
+  if (sp.mode) q.set('mode', sp.mode);
+  const s = q.toString();
+  return s ? `?${s}` : '';
+}
+
 export default async function TemplateEditPage({
   params,
   searchParams,
 }: {
   params: { key: string };
-  searchParams: Promise<{ page?: string; preview_version_id?: string; mode?: string }>;
+  searchParams: Promise<SearchParams>;
 }) {
   const { key } = await params;
   const sp = await searchParams;
-  const initialPageSlug = sp.page ?? null;
-  const initialPreviewVersionId = sp.preview_version_id ?? null;
-  const initialMode = (sp.mode as string | undefined) ?? undefined;
+  const qs = buildQueryString(sp);
 
   const supabase = await getServerSupabase();
   const {
@@ -32,10 +39,11 @@ export default async function TemplateEditPage({
   } = await supabase.auth.getUser();
 
   if (userErr || !user) {
-    const next = `/template/${key}/edit${initialPageSlug ? `?page=${encodeURIComponent(initialPageSlug)}` : ''}`;
+    const next = `/template/${key}/edit${qs}`;
     redirect(`/login?next=${encodeURIComponent(next)}`);
   }
 
+  // Only admins can open non-owned templates
   const { data: adminRow } = await supabase
     .from('admin_users')
     .select('user_id')
@@ -51,16 +59,33 @@ export default async function TemplateEditPage({
   if (error) throw new Error(error.message);
   if (!template) return notFound();
 
+  // If opened by slug, canonicalize to the ID route so
+  // all subsequent edits post to /template/{id}/edit (not slug).
+  if (!isId) {
+    redirect(`/template/${template.id}/edit${qs}`);
+  }
+
+  // Optional: if editing a version, canonicalize to base template id
+  // so slug edits hit the base authority consistently.
+  if (template.is_version && template.base_slug) {
+    const { data: base } = await supabase
+      .from('templates')
+      .select('id')
+      .eq('base_slug', template.base_slug)
+      .eq('is_version', false)
+      .limit(1)
+      .maybeSingle();
+    if (base?.id && base.id !== template.id) {
+      redirect(`/template/${base.id}/edit${qs}`);
+    }
+  }
+
   const shared = {
     initialTemplate: template,
-    initialPageSlug,
-    initialPreviewVersionId,
-    initialMode,
+    initialPageSlug: sp.page ?? null,
+    initialPreviewVersionId: sp.preview_version_id ?? null,
+    initialMode: (sp.mode as string | undefined) ?? undefined,
   };
 
-  return isId ? (
-    <CachedEditWrapper id={template.id} {...shared} />
-  ) : (
-    <CachedEditWrapper slug={template.slug} {...shared} />
-  );
+  return <CachedEditWrapper id={template.id} {...shared} />;
 }

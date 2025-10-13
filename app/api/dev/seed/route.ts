@@ -1,389 +1,154 @@
+// app/api/templates/duplicate/route.ts
 import { NextRequest, NextResponse } from 'next/server';
-import { randomUUID } from 'crypto';
+import { supabaseAdmin } from '@/lib/supabase/admin';
+import { getServerSupabase } from '@/lib/supabase/server';
 
-import { supabaseAdmin } from './_lib/clients';
-import { assertAdmin } from './_lib/auth';
-import { buildIndustryPrompt } from './_lib/industries';
-import { ideateBrandAndProducts, generateDataUrlPNG } from './_lib/openaiIdeation';
-import { uploadDataUrlPNG } from './_lib/storage';
-import { slugify, ensureUniqueBatchSlugs } from './_lib/slugs';
-import { ensureChefForUser, ensureMerchantForUser } from './_lib/dbEnsure';
-import { buildTemplatePreview, swapHeroInTemplate } from './_lib/templates';
-import { ensureUniqueSubdomain, upsertSite } from './_lib/_deprecated_sites';
-import type { Body, SeedMode } from './_lib/types';
+const UUID_V4 =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
-async function findOrCreateUser(seedTag: string, isPreview: boolean, targetEmail?: string) {
-  const email = (targetEmail || `seed+${seedTag}@demo.local`).toLowerCase();
-  if (isPreview) return { id: randomUUID(), email } as any;
-  const { data, error } = await supabaseAdmin.auth.admin.listUsers({ page: 1, perPage: 200 });
-  if (error) throw new Error(error.message);
-  const u = (data.users || []).find(x => x.email?.toLowerCase() === email);
-  if (u) return u;
-  const created = await supabaseAdmin.auth.admin.createUser({
-    email,
-    email_confirm: true,
-    user_metadata: { name: 'Seed Merchant' },
-  });
-  if (created.error) throw new Error(created.error.message);
-  return created.data.user!;
+const slugify = (s: string) =>
+  (s || '')
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/(^-|-$)/g, '');
+
+const baseSlug = (s: string) => slugify(s).replace(/(-copy-\w+)+$/i, '');
+
+async function uniqueSlugCandidate(base: string, bump: number) {
+  const candidate = bump === 0 ? base : `${base}-${bump + 1}`;
+  // optional cheap existence check (not strictly needed since RPC will 409 on conflict)
+  const { data, error } = await supabaseAdmin
+    .from('templates')
+    .select('id')
+    .eq('slug', candidate)
+    .maybeSingle();
+  if (!data && !error) return candidate;
+  return null;
 }
 
-export const runtime = 'nodejs';
-export const dynamic = 'force-dynamic';
+async function trySetSlugViaCommit(templateId: string, desired: string) {
+  const root = slugify(desired) || 'untitled';
+  for (let i = 0; i < 8; i++) {
+    const candidate = i === 0 ? root : `${root}-${i + 1}`;
+    const r = await supabaseAdmin
+      .schema('app')
+      .rpc('set_template_slug', { p_id: templateId, p_slug: candidate });
+
+    if (!r.error) {
+      const row = Array.isArray(r.data) ? r.data[0] : r.data;
+      return { ok: true as const, slug: (row?.slug as string) ?? candidate };
+    }
+
+    const code = String(r.error.code || '').toUpperCase();
+    const msg = r.error.message || '';
+
+    // Published/base locked
+    if (code === 'P0001' && /publish/i.test(msg)) {
+      return { ok: false as const, status: 409, error: 'Unpublish the base template to change the slug.' };
+    }
+
+    // Uniqueness conflicts → next candidate
+    if (code === '23505' || /slug.*taken|domain.*conflict/i.test(msg)) {
+      continue;
+    }
+
+    // Unknown error → stop
+    return { ok: false as const, status: 500, error: msg || 'Slug update failed.' };
+  }
+  return { ok: false as const, status: 409, error: 'Could not allocate a unique slug.' };
+}
 
 export async function POST(req: NextRequest) {
   try {
-    const gate = await assertAdmin();
-    if (!gate.ok) return NextResponse.json({ error: gate.error }, { status: gate.status });
+    // (optional) user-scoped auth; keep existing behavior
+    const supabase = await getServerSupabase();
 
-    const body = (await req.json()) as Body;
-    const seedMode: SeedMode = body.seedMode ?? 'merchant_products';
-    const isPreview = !!body.dryRun;
-    const seedTag = slugify(body.seed || '') || Math.random().toString(36).slice(2, 10);
+    const url = new URL(req.url);
+    const srcSlug = url.searchParams.get('slug');
+    if (!srcSlug) return NextResponse.json({ error: 'Missing slug' }, { status: 400 });
 
-    // Target user
-    const authUser = await findOrCreateUser(seedTag, isPreview, body.targetEmail);
-    const userId = authUser.id as string;
+    // 1) Load source by slug
+    const { data: src, error: loadErr } = await supabase
+      .from('templates')
+      .select('*')
+      .eq('slug', srcSlug)
+      .maybeSingle();
 
-    // Ensure merchant/chef
-    const merchantNameBase = 'Seed ' + ((body.aiPrompt || '').split(/\W+/)?.[0] || 'Merchant');
-    const merchantId = isPreview ? randomUUID() : await ensureMerchantForUser(supabaseAdmin, userId, merchantNameBase);
-    const chefId =
-      !isPreview && seedMode !== 'merchant_products'
-        ? await ensureChefForUser(
-            supabaseAdmin,
-            userId,
-            merchantId,
-            merchantNameBase.replace(/^Seed\s+/, 'Chef ')
-          )
-        : null;
+    if (loadErr) return NextResponse.json({ error: loadErr.message }, { status: 500 });
+    if (!src) return NextResponse.json({ error: 'Template not found' }, { status: 404 });
 
-    // PREVIEW re-use vs IDEATE vs STRUCTURED INPUTS
-    const effectivePrompt = buildIndustryPrompt(body.industry, body.aiPrompt, body.productsProductType ?? 'meal');
-    const count = Math.max(1, Math.min(48, Number(body.productsCount ?? body.mealsCount ?? 8)));
-    const productType = body.productsProductType ?? 'meal';
+    // 2) Build name and desired new slug
+    const base = baseSlug(src.slug || src.template_name || 'copy');
+    const displaySuffix = Math.random().toString(36).slice(-4);
+    const newName = `${src.template_name ?? base} (copy ${displaySuffix})`;
+    const desiredSlug = `${base}-copy-${displaySuffix}`;
 
-    let brand: any;
-    let products: any[];
+    // 3) Copy JSON safely
+    const dataObj: any = { ...(src.data ?? {}) };
+    if (!dataObj.pages && Array.isArray((src as any).pages)) dataObj.pages = (src as any).pages;
+    dataObj.archived = false;
+    delete (dataObj as any).custom_domain;
 
-    const hasStructured =
-      !!body.merchant || (Array.isArray(body.products) && body.products.length > 0);
+    // 4) Insert the duplicate WITHOUT slug (guard-friendly)
+    const insertRow: any = {
+      template_name: newName,
+      // slug: (set via RPC below)
+      is_site: src.is_site ?? false,
+      published: false,
+      archived: false,
+      data: dataObj,
 
-    if (hasStructured) {
-      // Map structured fields to the preview/legacy shape used downstream
-      const m = body.merchant ?? {};
-      brand = {
-        name: m?.name ?? merchantNameBase,
-        tagline: m?.tagline ?? null,
-        about: m?.about ?? null,
-        logo_url: m?.logo_url ?? null,
-        city: m?.city ?? null,
-        state: m?.state ?? null,
-        hero_data_url: m?.images?.hero ?? null,
-      };
-      products = (body.products ?? []).map((p) => ({
-        title: p.name,
-        type: 'physical',
-        price_usd:
-          typeof p.price === 'number'
-            ? p.price
-            : typeof p.price === 'string'
-            ? Number(p.price)
-            : undefined,
-        blurb: p.description ?? null,
-        slug: p.href ? String(p.href).replace(/^\//, '') : null,
-        image_url: p.image ?? null,
-        image_data_url: null,
-      }));
-    } else if (!isPreview && Array.isArray(body.previewItems) && body.previewItems.length) {
-      // SAVE: reuse the preview payload
-      brand = body.previewBrand ?? null;
-      products = body.previewItems.map((p) => ({ ...p }));
-    } else {
-      // PREVIEW: ask the model to ideate
-      const ideated = await ideateBrandAndProducts({
-        aiPrompt: effectivePrompt,
-        count,
-        productType,
-        seed: seedTag,
-        industry: body.industry,
-      });
-      brand = ideated.brand;
-      products = ideated.products;
+      layout: src.layout ?? null,
+      color_scheme: src.color_scheme ?? null,
+      theme: src.theme ?? null,
+      brand: src.brand ?? null,
+      industry: src.industry ?? null,
+      phone: src.phone ?? null,
+
+      hero_url: src.hero_url ?? null,
+      banner_url: src.banner_url ?? null,
+      logo_url: src.logo_url ?? null,
+      team_url: src.team_url ?? null,
+
+      site_id: null,
+      commit: null,
+      domain: null,
+      custom_domain: null,
+    };
+
+    const { data: inserted, error: insErr } = await supabaseAdmin
+      .from('templates')
+      .insert(insertRow)
+      .select('id')
+      .single();
+
+    if (insErr || !inserted?.id) {
+      return NextResponse.json(
+        { error: insErr?.message || 'Insert failed', details: insErr?.details, code: insErr?.code },
+        { status: 500 }
+      );
     }
 
-    // IMAGES
-    let logoUrl: string | null = null;
-    let logoDataUrl: string | null = null;
+    const newId = inserted.id as string;
 
-    if (body.merchantAvatar) {
-      if (!isPreview && body.previewLogoDataUrl) {
-        const path = `seed/${seedTag}/logo_${Date.now()}.png`;
-        logoUrl = await uploadDataUrlPNG(body.previewLogoDataUrl, path);
-      } else if (isPreview) {
-        const styleAdj =
-          body.merchantAvatarStyle === 'illustration'
-            ? 'flat vector logo, clean, simple, high contrast'
-            : 'professional brand photo logo, minimal';
-        const logoPrompt = `Logo for ${brand?.name || merchantNameBase}, ${styleAdj}. Minimal, legible.`;
-        logoDataUrl = await generateDataUrlPNG(
-          logoPrompt,
-          body.merchantAvatarSize || '1024x1024'
-        );
-      }
+    // 5) Set slug via commit pipeline RPC
+    const set = await trySetSlugViaCommit(newId, desiredSlug);
+    if (!set.ok) {
+      return NextResponse.json(
+        { error: set.error, template_id: newId, code: set.status },
+        { status: set.status ?? 500 }
+      );
     }
 
-    if (body.productsGenerateImages) {
-      for (const p of products) {
-        if (!isPreview && p.image_data_url) {
-          const path = `seed/${seedTag}/products/${slugify(p.title || 'item')}_${Math.random()
-            .toString(36)
-            .slice(2, 7)}.png`;
-          p.image_url = await uploadDataUrlPNG(p.image_data_url, path);
-          delete p.image_data_url;
-        } else if (isPreview) {
-          const base = p.image_prompt || `${p.type || 'product'} display, studio lighting`;
-          const style =
-            body.productsImageStyle === 'illustration' ? 'vector illustration' : 'photo';
-          const prompt = `${base}; ${style}; ${brand?.name ? `brand: ${brand.name}` : ''}${
-            body.industry ? `; industry: ${body.industry}` : ''
-          }`;
-          p.image_data_url = await generateDataUrlPNG(
-            prompt,
-            body.productsImageSize || '1024x1024'
-          );
-          p.image_url = null;
-        }
-      }
-    } else {
-      for (const p of products) {
-        p.image_url = null;
-        if (isPreview) delete p.image_data_url;
-      }
-    }
-
-    // TEMPLATE (preview vs save)
-    const templateGenerate = body.templateGenerate ?? true;
-    const templateLayout = body.templateLayout ?? 'standard';
-    const templateTheme = body.templateTheme ?? 'light';
-    const templateAttachToMerchant = body.templateAttachToMerchant ?? true;
-    const templatePublishSite = body.templatePublishSite ?? true;
-    const siteSubdomainReq = (body.siteSubdomain || '').toString();
-
-    let templatePreview = body.previewTemplate ?? null;
-
-    if (!templatePreview && templateGenerate) {
-      // Prefer provided hero; else generate one for preview
-      if (!brand.hero_data_url) {
-        const heroDataUrl = await generateDataUrlPNG(
-          `${brand?.name || merchantNameBase} hero, lifestyle product flatlay, soft studio light`,
-          '1024x1024'
-        );
-        brand.hero_data_url = heroDataUrl || null;
-      }
-
-      // NOTE: buildTemplatePreview now uses the Blocks API internally (aliases + validation)
-      templatePreview = buildTemplatePreview({
-        brand,
-        products,
-        industry: body.industry,
-        layout: templateLayout,
-        theme: templateTheme,
-        nameSeed: merchantNameBase,
-      });
-    }
-
-    // RESPONSE SKELETON
-    const result: any = { ok: true, mode: isPreview ? 'preview' : 'saved' };
-
-    // MERCHANT RESP
-    if (seedMode !== 'chef_meals') {
-      if (isPreview) {
-        result.merchant = {
-          ok: true,
-          preview: {
-            merchant_id: merchantId,
-            brand,
-            logo_url: logoUrl,
-            logo_data_url: logoDataUrl,
-          },
-        };
-      } else {
-        if (body.merchantOverwrite) {
-          const basePatch: any = {
-            name: brand?.name || merchantNameBase,
-            display_name: brand?.name || merchantNameBase,
-          };
-
-          // First try including logo_url; if the column doesn't exist, retry without it.
-          const withLogo = logoUrl ? { ...basePatch, logo_url: logoUrl } : basePatch;
-          let up = await supabaseAdmin.from('merchants').update(withLogo).eq('id', merchantId);
-
-          if (
-            up.error &&
-            /could not find the 'logo_url' column/i.test(
-              `${up.error.message} ${up.error.details ?? ''}`
-            )
-          ) {
-            up = await supabaseAdmin.from('merchants').update(basePatch).eq('id', merchantId);
-          }
-          if (up.error) {
-            return NextResponse.json(
-              { error: up.error.message, details: up.error.details, code: up.error.code },
-              { status: 500 }
-            );
-          }
-        }
-
-        result.merchant = {
-          ok: true,
-          merchant_id: merchantId,
-          name: brand?.name || merchantNameBase,
-          logo_url: logoUrl ?? null,
-        };
-      }
-    }
-
-    // PRODUCTS RESP (include upsert path on save)
-    if (seedMode !== 'chef_meals') {
-      if (isPreview) {
-        result.products = {
-          ok: true,
-          count: products.length,
-          items: products.map((p: any) => ({
-            title: p.title,
-            type: p.type,
-            price_usd: p.price_usd,
-            image_url: p.image_url ?? null,
-            image_data_url: p.image_data_url ?? null,
-            blurb: p.blurb ?? null,
-          })),
-        };
-      } else {
-        const titles = products.map((p: any) => p.title || 'Item');
-        const slugs = await ensureUniqueBatchSlugs(titles, new Set());
-        const rows = products.map((p: any, i: number) => ({
-          id: randomUUID(),
-          merchant_id: merchantId,
-          title: p.title || 'Item',
-          price_cents: Math.round(Number(p.price_usd || 0) * 100),
-          qty_available: 10,
-          image_url: p.image_url ?? null,
-          product_type: p.type || 'physical',
-          slug: p.slug || slugs[i],
-          blurb: p.blurb ?? null,
-          status: 'active',
-        }));
-
-        const up = await supabaseAdmin
-          .from('products')
-          .upsert(rows, { onConflict: 'merchant_id,slug' })
-          .select('id');
-        if (up.error) {
-          return NextResponse.json(
-            { error: up.error.message, details: up.error.details, code: up.error.code },
-            { status: 500 }
-          );
-        }
-        result.products = { ok: true, count: up.data?.length ?? rows.length };
-      }
-    }
-
-    // TEMPLATE SAVE + SITE PUBLISH
-    if (templateGenerate) {
-      if (isPreview) {
-        result.template = { ok: true, preview: templatePreview };
-        if (isPreview && templatePreview) {
-          // Prefer the template slug; fall back to brand name
-          result.suggestedSiteSlug = templatePreview.slug || slugify(brand?.name || merchantNameBase);
-        }
-      } else {
-        let tpl = templatePreview!;
-        let heroUrl: string | null = null;
-        if (tpl.hero_data_url) {
-          const path = `seed/${seedTag}/templates/${tpl.slug}_hero_${Date.now()}.png`;
-          heroUrl = await uploadDataUrlPNG(tpl.hero_data_url, path);
-          tpl = swapHeroInTemplate(tpl, heroUrl);
-        }
-
-        const tplRow = {
-          id: randomUUID(),
-          merchant_id: merchantId,
-          name: tpl.name,
-          slug: tpl.slug,
-          data: tpl.data,
-          is_site: true,
-          industry: body.industry ?? null,
-        };
-
-        const upTpl = await supabaseAdmin
-          .from('templates')
-          .upsert(tplRow, { onConflict: 'slug' })
-          .select('id')
-          .single();
-        if (upTpl.error) {
-          return NextResponse.json(
-            { error: upTpl.error.message, details: upTpl.error.details, code: upTpl.error.code },
-            { status: 500 }
-          );
-        }
-
-        const templateId = upTpl.data.id;
-        if (templateAttachToMerchant) {
-          const att = await supabaseAdmin
-            .from('merchants')
-            .update({ template_id: templateId })
-            .eq('id', merchantId);
-          // if the column doesn't exist, ignore and continue (some schemas use a join table instead)
-          if (
-            att.error &&
-            !/could not find the 'template_id' column/i.test(
-              `${att.error.message} ${att.error.details ?? ''}`
-            )
-          ) {
-            return NextResponse.json(
-              { error: att.error.message, details: att.error.details, code: att.error.code },
-              { status: 500 }
-            );
-          }
-        }
-
-        result.template = { ok: true, template_id: templateId, name: tpl.name, slug: tpl.slug };
-
-        if (templatePublishSite) {
-          const baseSub = siteSubdomainReq || tpl.slug || (brand?.name || 'demo');
-          const unique = await ensureUniqueSubdomain(baseSub);
-          const site = await upsertSite({
-            merchantId,
-            templateId,
-            slug: unique,
-            published: true,
-            data: null,
-          });
-          // attach to merchant if column exists (ignore failure)
-          const siteAttach = await supabaseAdmin
-            .from('merchants')
-            .update({ site_id: site.id })
-            .eq('id', merchantId);
-          if (
-            siteAttach.error &&
-            !/could not find the 'site_id' column/i.test(
-              `${siteAttach.error.message} ${siteAttach.error.details ?? ''}`
-            )
-          ) {
-            return NextResponse.json(
-              { error: siteAttach.error.message, details: siteAttach.error.details, code: siteAttach.error.code },
-              { status: 500 }
-            );
-          }
-          result.site = { ok: true, site_id: site.id, slug: site.slug };
-        }
-      }
-    }
-
-    return NextResponse.json(result);
+    // 6) Done
+    return NextResponse.json({
+      ok: true,
+      id: newId,
+      template_name: newName,
+      slug: set.slug,
+    });
   } catch (e: any) {
-    console.error('[seed/all] error:', e);
     return NextResponse.json({ error: e?.message || 'Server error' }, { status: 500 });
   }
 }

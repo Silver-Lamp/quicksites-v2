@@ -7,7 +7,6 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
 import type { Template } from '@/types/template';
-import { supabase } from '@/lib/supabase/client';
 
 function sanitizeSlug(base: string) {
   return String(base || '')
@@ -23,13 +22,14 @@ function randomSlug(base: string) {
   const s = sanitizeSlug(base || 'site');
   return s ? `${s}-${uniqueSuffix()}` : `site-${uniqueSuffix()}`;
 }
+const rxSlug = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
 export default function SlugPanel({
   template,
   onChange,
 }: {
   template: Template;
-  onChange: (patch: Partial<Template>) => void; // PATCH (parent autosaves via commit)
+  onChange: (patch: Partial<Template>) => void;
 }) {
   // Meta-first title for slug suggestion
   const siteTitle = useMemo(
@@ -38,75 +38,83 @@ export default function SlugPanel({
   );
 
   const [locked, setLocked] = useState(false);
-  const [manuallyEdited, setManuallyEdited] = useState(() => Boolean(template.slug && template.slug !== 'untitled'));
-  const [checking, setChecking] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [manuallyEdited, setManuallyEdited] = useState(
+    () => Boolean(template.slug && template.slug !== 'untitled')
+  );
 
-  // Suggest slug from siteTitle when not locked or manually edited
+  const [slugLocal, setSlugLocal] = useState<string>(String(template.slug || ''));
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const lastSavedAtRef = useRef<number>(0);
+  const lastRequestedSlugRef = useRef<string | null>(null);
+  const inFlightRef = useRef(false);
+
+  // Keep local field in sync with server unless we *just* saved
   useEffect(() => {
-    if (!locked && !manuallyEdited) {
+    const justSaved = Date.now() - lastSavedAtRef.current < 5000;
+    if (!justSaved) setSlugLocal(String(template.slug || ''));
+  }, [template.id, template.slug]);
+
+  // Suggest slug from siteTitle when not locked or manually edited and field empty
+  useEffect(() => {
+    if (!locked && !manuallyEdited && !slugLocal) {
       const suggested = sanitizeSlug(siteTitle);
       if (suggested && suggested !== template.slug) {
-        onChange({ slug: suggested });
+        setSlugLocal(suggested);
+        onChange({ slug: suggested }); // local reflect only; server save happens via PATCH below
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [siteTitle, locked, manuallyEdited]);
 
-  // Validate + check uniqueness (debounced)
-  useEffect(() => {
-    const slug = template.slug || '';
-    const rx = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
-
-    if (!slug) {
-      setError('Slug is required');
-      return;
-    }
-    if (!rx.test(slug)) {
-      setError('Slug must be lowercase letters, numbers and dashes (e.g. roof-cleaning)');
-      return;
-    }
-
-    // Debounce: check both templates and sites (best-effort hint)
-    if (debounceRef.current) clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(async () => {
-      try {
-        setChecking(true);
-        // Check in templates (excluding current id)
-        const { data: tHits } = await supabase
-          .from('templates')
-          .select('id')
-          .eq('slug', slug)
-          .neq('id', template.id);
-
-        // Check in sites (slug uniqueness for live sites)
-        const { data: sHits } = await supabase
-          .from('sites')
-          .select('id')
-          .eq('slug', slug);
-
-        const taken = (tHits?.length ?? 0) > 0 || (sHits?.length ?? 0) > 0;
-        if (taken) {
-          const fix = `${slug}-${uniqueSuffix()}`;
-          setError(`Slug is taken. Suggested: ${fix}`);
-        } else {
-          setError(null);
-        }
-      } catch {
-        // Best-effort only; ignore errors (RLS may hide rows)
-        setError(null);
-      } finally {
-        setChecking(false);
-      }
-    }, 450);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [template.slug, template.id]);
-
-  const isSite = !!template.is_site;
+  const isSite = !!(template as any)?.is_site;
   const urlPreview = isSite
-    ? `https://${template.slug || 'your-subdomain'}.quicksites.ai`
-    : `https://quicksites.ai/templates/${template.slug || 'slug'}`;
+    ? `https://${(slugLocal || 'your-subdomain')}.quicksites.ai`
+    : `https://quicksites.ai/templates/${slugLocal || 'slug'}`;
+
+  async function saveSlug(current: string) {
+    const slug = (current || '').trim();
+
+    if (!slug) return setError('Slug is required');
+    if (!rxSlug.test(slug)) {
+      return setError('Slug must be lowercase letters, numbers and dashes (e.g. roof-cleaning)');
+    }
+    if (inFlightRef.current) return;
+    if (slug === lastRequestedSlugRef.current) return; // ignore duplicates
+
+    setError(null);
+    setSaving(true);
+    inFlightRef.current = true;
+    lastRequestedSlugRef.current = slug;
+
+    try {
+      const res = await fetch(`/api/templates/${template.id}/slug`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ slug }),
+      });
+      const json = await res.json();
+      if (!res.ok) {
+        // surface precise server message (uniqueness, published, guard, etc.)
+        setError(json?.error || 'Failed to save slug');
+        return;
+      }
+
+      // Success — keep local authoritative for a short window to avoid hydrate flicker
+      lastSavedAtRef.current = Date.now();
+      setSlugLocal(json.slug);
+      onChange({ slug: json.slug }); // reflect upwards (other fields ignore slug on commit)
+    } catch (e: any) {
+      setError(e?.message || 'Failed to save slug');
+    } finally {
+      setSaving(false);
+      inFlightRef.current = false;
+      // allow another identical click a moment later
+      setTimeout(() => {
+        if (lastRequestedSlugRef.current === slug) lastRequestedSlugRef.current = null;
+      }, 1500);
+    }
+  }
 
   return (
     <Collapsible title="URL & Slug Settings" id="url-slug-settings">
@@ -124,17 +132,21 @@ export default function SlugPanel({
         </div>
 
         <Input
-          value={template.slug || ''}
+          value={slugLocal}
           disabled={template.published}
           onChange={(e) => {
             const normalized = sanitizeSlug(e.target.value);
             setManuallyEdited(true);
-            onChange({ slug: normalized });
+            setSlugLocal(normalized); // local only; no network while typing
+          }}
+          onKeyDown={(e) => {
+            if (!template.published && e.key === 'Enter') {
+              e.preventDefault();
+              void saveSlug(slugLocal);
+            }
           }}
           placeholder="e.g. roof-cleaning"
-          className={`bg-gray-800 text-white border ${
-            error ? 'border-red-500' : 'border-gray-700'
-          }`}
+          className={`bg-gray-800 text-white border ${error ? 'border-red-500' : 'border-gray-700'}`}
         />
 
         <div className="flex flex-wrap gap-3 pt-1">
@@ -143,9 +155,10 @@ export default function SlugPanel({
             onClick={() => {
               const unique = randomSlug(siteTitle || 'site');
               setManuallyEdited(true);
-              onChange({ slug: unique });
+              setSlugLocal(unique);
             }}
             className="text-xs text-blue-400 underline"
+            disabled={template.published}
           >
             Generate Random Slug
           </button>
@@ -154,32 +167,28 @@ export default function SlugPanel({
             onClick={() => {
               const suggested = sanitizeSlug(siteTitle || '');
               setManuallyEdited(false);
-              onChange({ slug: suggested });
+              setSlugLocal(suggested);
             }}
             className="text-xs text-gray-400 underline"
+            disabled={template.published}
           >
             Reset to Suggested
           </button>
-          {error?.startsWith('Slug is taken') && (
-            <button
-              type="button"
-              onClick={() => {
-                const suggestion = error.split(':').pop()?.trim() || randomSlug(siteTitle);
-                onChange({ slug: suggestion });
-                setManuallyEdited(true);
-                setError(null);
-              }}
-              className="text-xs text-amber-400 underline"
-            >
-              Use Suggestion
+
+          <button
+            type="button"
+            onClick={() => void saveSlug(slugLocal)}
+            className="text-xs underline"
+            disabled={template.published || saving}
+            title="Validate & save slug"
+          >
+            {saving ? 'Saving…' : 'Check & Save'}
           </button>
-          )}
         </div>
 
-        {checking && <p className="text-sm text-yellow-400">Checking slug availability…</p>}
         {error && <p className="text-sm text-red-400">{error}</p>}
 
-        {template.slug && !error && (
+        {slugLocal && !error && (
           <p className="text-sm text-muted-foreground pt-1">
             URL Preview: <code>{urlPreview}</code>
           </p>

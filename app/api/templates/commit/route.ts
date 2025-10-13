@@ -20,6 +20,11 @@ function j(data: any, init?: number | ResponseInit) {
   return NextResponse.json(data, resInit);
 }
 
+const FORBIDDEN_COLS = new Set([
+  'slug',               // <- never let commit change slug
+  'base_slug','is_version','rev','updated_at','created_at','owner_id','published_version_id',
+]);
+
 const DEBUG_ID = process.env.DEBUG_IDENTITY === '1';
 const dbg = (...args: any[]) => { if (DEBUG_ID) console.log(...args); };
 
@@ -315,17 +320,29 @@ export async function POST(req: Request) {
   try {
     const body = await req.json().catch(() => ({}));
     let { id, baseRev, patch: rawPatch, kind } = body as {
-      id: string;
-      baseRev?: number;
-      patch: Record<string, any>;
-      kind?: Kind;
+      id: string; baseRev?: number; patch: Record<string, any>; kind?: Kind;
     };
 
     if (!id || typeof id !== 'string') return j({ error: 'id required' }, 400);
     if (!rawPatch || typeof rawPatch !== 'object') return j({ error: 'patch required (object)' }, 400);
 
-    // sanitize forbidden fields
-    for (const k of ['base_slug','is_version','rev','updated_at','created_at','owner_id','published_version_id']) delete (rawPatch as any)[k];
+    // forbid slug updates here
+    for (const k of Object.keys(rawPatch)) {
+      if (k === 'slug' || k === 'base_slug' || k === 'is_version' || k === 'rev' || k === 'updated_at' || k === 'created_at' || k === 'owner_id' || k === 'published_version_id') {
+        delete (rawPatch as any)[k];
+      }
+    }
+    // also drop stray nested 'slug'
+    if (rawPatch.data) {
+      try {
+        const d = typeof rawPatch.data === 'object' ? rawPatch.data : JSON.parse(String(rawPatch.data));
+        if (d && typeof d === 'object') {
+          if ('slug' in d) delete (d as any).slug;
+          if (d.meta && typeof d.meta === 'object' && 'slug' in d.meta) delete (d.meta as any).slug;
+          rawPatch.data = d;
+        }
+      } catch {}
+    }
 
     const pub = supabaseAdmin.schema('public');
 

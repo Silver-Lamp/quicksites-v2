@@ -1,3 +1,4 @@
+// app/api/templates/[id]/edit/route.ts
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
@@ -69,7 +70,7 @@ export async function POST(
   req: NextRequest,
   ctx: { params: Promise<{ id: string }> }
 ) {
-  const { id } = await ctx.params;
+  const { id } = await ctx.params; // Next 15: params is a Promise
   if (!id) return NextResponse.json({ error: 'Missing id' }, { status: 400 });
 
   const supa = await getServerSupabase();
@@ -82,7 +83,12 @@ export async function POST(
 
   const { tpl, headerBlock, footerBlock, colorMode } = normalizeForSave(body.template);
 
+  // 🔒 Absolute defense-in-depth: never let an incoming slug leak into updates
+  if ('slug' in tpl) delete (tpl as any).slug;
+  if (tpl?.data && 'slug' in tpl.data) delete (tpl.data as any).slug;
+
   const now = new Date().toISOString();
+
   const update: any = {
     data: tpl.data ?? null,
     header_block: headerBlock,
@@ -101,16 +107,14 @@ export async function POST(
   ];
   for (const k of idCols) if (k in tpl && tpl[k] !== undefined) update[k] = tpl[k];
 
-  // sanitize numeric columns to avoid "" → double precision error
   update.latitude  = num((tpl as any).latitude);
   update.longitude = num((tpl as any).longitude);
 
-  // array-safe services
   if (Array.isArray(tpl?.services_jsonb)) update.services_jsonb = tpl.services_jsonb;
   else if (Array.isArray(tpl?.services))  update.services_jsonb = tpl.services;
   else if (update.services_jsonb === undefined) update.services_jsonb = [];
 
-  // Try update first
+  // UPDATE: (no slug)
   const { data: upd, error: updErr } = await supabaseAdmin
     .from('templates')
     .update(update)
@@ -121,13 +125,15 @@ export async function POST(
   if (updErr) return NextResponse.json({ error: updErr.message }, { status: 400 });
   if (upd)   return NextResponse.json({ ok: true, template: upd });
 
-  // Not found → create (with owner_id)
-  const baseName = (tpl.template_name as string) || (tpl.slug as string) || 'untitled';
+  // CREATE: seed slug once from template_name; later changes must use slug endpoint
+  const baseName = (tpl.template_name as string) || 'untitled';
+  const seededSlug = safeSlug(baseName);
+
   const insertable = {
     id,
     owner_id: (tpl as any).owner_id || userId,
     template_name: baseName,
-    slug: safeSlug(tpl.slug || baseName),
+    slug: seededSlug, // seed only at creation
     verified: false,
     created_at: tpl.created_at || now,
     updated_at: now,

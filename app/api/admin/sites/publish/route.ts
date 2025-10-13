@@ -38,6 +38,7 @@ function deriveDomainFromTemplate(tpl: any) {
   const metaDomain = meta?.domain ?? null;
   const rootDomain = (data as any)?.domain ?? null;
 
+  // NOTE: slug is only a fallback for *.quicksites.ai, never written here.
   const slug = canonSlug(tpl?.slug) || canonSlug(tpl?.template_name);
   const fallback = slug ? `${slug}.quicksites.ai` : null;
 
@@ -70,7 +71,7 @@ async function handle(req: Request) {
 
     if (!templateId) return j({ error: 'templateId required' }, 400);
 
-    // Load template (need slug/data to derive a domain)
+    // Load template (need slug/data to derive a default domain)
     const tplRes = await pub
       .from('templates')
       .select('id, slug, template_name, data')
@@ -115,10 +116,17 @@ async function handle(req: Request) {
       note('version lookup failed (continuing)', { err: x(ver.error) });
     }
 
-    // Derive required domain
-    const domain = deriveDomainFromTemplate(tpl);
-    const finalDomain = domain ?? `${String(snapshotId).slice(0, 8)}.local.quicksites`;
-    note('domain chosen', { finalDomain });
+    // Prefer existing published domain for continuity (never mutate templates.slug here)
+    const existingPub = await pub
+      .from('published_sites')
+      .select('domain')
+      .eq('template_id', templateId)
+      .maybeSingle();
+
+    const domainFromTpl = deriveDomainFromTemplate(tpl);
+    const chosenDomain = existingPub.data?.domain || domainFromTpl;
+    const finalDomain = chosenDomain ?? `${String(snapshotId).slice(0, 8)}.local.quicksites`;
+    note('domain chosen', { finalDomain, usedExisting: !!existingPub.data?.domain });
 
     // Canonical payload — always include template_id
     const payload = {
@@ -134,10 +142,10 @@ async function handle(req: Request) {
     let attempt: 'upsert' | 'retry_insert_with_id' = 'upsert';
     let lastError: any = null;
 
-    // Preferred path: UPSERT by template_id
+    // Preferred path: UPSERT by template_id (1 live pointer per template)
     let res = await pub
       .from('published_sites')
-      .upsert(payload, { onConflict: 'template_id' }) // 1 live pointer per template
+      .upsert(payload, { onConflict: 'template_id' })
       .select('id')
       .maybeSingle();
 

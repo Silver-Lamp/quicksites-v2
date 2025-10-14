@@ -221,6 +221,15 @@ function Hero({ content }: { content: ExteriorCleaningContent }) {
       <div className="absolute inset-0 bg-gradient-to-b from-slate-900/60 via-black/60 to-black" aria-hidden />
       <Container className="relative py-20 sm:py-28 lg:py-36">
         <div className="max-w-3xl">
+            <TypewriterGlow
+                words={animatedWords}
+                pauseAfterWordMs={2000}
+                mode="clear"           // or remove for backspace style
+                className="text-lg sm:ml-2 text-center"
+                gradientClassName="bg-gradient-to-r from-emerald-300 via-teal-300 to-sky-300 bg-clip-text text-transparent"
+                glowClassName="drop-shadow-[0_0_16px_rgba(16,185,129,0.35)]"
+            />       
+            <br />   
           <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-white/80">
             <span>Exterior Cleaning Professionals</span>
             <span className="h-1 w-1 rounded-full bg-emerald-300" />
@@ -253,15 +262,6 @@ function Hero({ content }: { content: ExteriorCleaningContent }) {
                 See Results
               </a>
             </div>
-
-            <TypewriterGlow
-                words={animatedWords}
-                pauseAfterWordMs={2000}   // 2s hold after finishing
-                mode="clear"              // jump to next word instead of backspacing
-                className="text-lg sm:ml-2"
-                gradientClassName="bg-gradient-to-r from-emerald-300 via-teal-300 to-sky-300 bg-clip-text text-transparent"
-                glowClassName="drop-shadow-[0_0_16px_rgba(16,185,129,0.35)]"
-            />          
           </div>
         </div>
       </Container>

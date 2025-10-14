@@ -7,15 +7,16 @@ type Mode = 'delete' | 'clear';
 
 type Props = {
   words: string[];
-  typingMsPerChar?: number;    // default 70
-  deletingMsPerChar?: number;  // default 40
-  pauseAfterWordMs?: number;   // default 900
+  typingMsPerChar?: number;
+  deletingMsPerChar?: number;
+  pauseAfterWordMs?: number;
   className?: string;
   gradientClassName?: string;
   glowClassName?: string;
   ariaLabel?: string;
   loop?: boolean;
-  mode?: Mode;                  // NEW: 'delete' (backspace) | 'clear' (jump)
+  mode?: Mode;                 // 'delete' backspaces; 'clear' jumps to next word
+  reserve?: 'max' | 'none';    // NEW: 'max' = reserve width/height with ghost
 };
 
 export default function TypewriterGlow({
@@ -29,60 +30,58 @@ export default function TypewriterGlow({
   ariaLabel = 'highlighted service',
   loop = true,
   mode = 'delete',
+  reserve = 'max',
 }: Props) {
-  const [i, setI] = React.useState(0);         // which word index
-  const [sub, setSub] = React.useState(0);     // visible characters
-  const [del, setDel] = React.useState(false); // deleting stage?
-  const [hold, setHold] = React.useState(false);
+  const list = (words ?? []).filter(Boolean);
+  const [index, setIndex] = React.useState(0);
+  const [sub, setSub] = React.useState(0);
+  const [phase, setPhase] = React.useState<'typing' | 'pause' | 'deleting'>('typing');
 
-  const wordsSafe = words?.filter(Boolean) ?? [];
-  const word = wordsSafe[i] ?? '';
+  const word = list[index] ?? '';
+  const longest = React.useMemo(() => list.reduce((a, b) => (b.length > a.length ? b : a), ''), [list]);
 
   React.useEffect(() => {
-    if (wordsSafe.length === 0) return;
+    if (index >= list.length) setIndex(0);
+  }, [list.length, index]);
 
-    // reached full word → pause
-    if (!del && sub === word.length && !hold) {
-      setHold(true);
-      const t = setTimeout(() => setHold(false), pauseAfterWordMs);
-      return () => clearTimeout(t);
+  React.useEffect(() => {
+    if (!list.length) return;
+    let t: ReturnType<typeof setTimeout> | undefined;
+
+    if (phase === 'typing') {
+      if (sub < word.length) {
+        t = setTimeout(() => setSub((n) => n + 1), typingMsPerChar);
+      } else {
+        setPhase('pause');
+      }
+    } else if (phase === 'pause') {
+      t = setTimeout(() => {
+        if (mode === 'delete') {
+          setPhase('deleting');
+        } else {
+          const next = index + 1;
+          setIndex(next < list.length ? next : loop ? 0 : index);
+          setSub(0);
+          setPhase('typing');
+        }
+      }, pauseAfterWordMs);
+    } else if (phase === 'deleting') {
+      if (sub > 0) {
+        t = setTimeout(() => setSub((n) => n - 1), deletingMsPerChar);
+      } else {
+        const next = index + 1;
+        setIndex(next < list.length ? next : loop ? 0 : index);
+        setPhase('typing');
+      }
     }
 
-    // while paused, do nothing
-    if (hold) return;
-
-    // choose interval based on stage
-    const ms = del ? deletingMsPerChar : typingMsPerChar;
-    const t = setTimeout(() => {
-      if (!del) {
-        // typing forward
-        if (sub < word.length) return setSub(sub + 1);
-        // finished typing → either start delete, or jump (clear mode)
-        if (mode === 'delete') return setDel(true);
-        // clear mode: instantly move to next word
-        setSub(0);
-        const next = i + 1;
-        if (next < wordsSafe.length) setI(next);
-        else if (loop) setI(0);
-      } else {
-        // deleting backwards
-        if (sub > 0) return setSub(sub - 1);
-        // move to next word
-        setDel(false);
-        const next = i + 1;
-        if (next < wordsSafe.length) setI(next);
-        else if (loop) setI(0);
-      }
-    }, ms);
-
-    return () => clearTimeout(t);
+    return () => t && clearTimeout(t);
   }, [
-    i,
-    sub,
-    del,
-    hold,
+    list.length,
     word,
-    wordsSafe.length,
+    index,
+    sub,
+    phase,
     typingMsPerChar,
     deletingMsPerChar,
     pauseAfterWordMs,
@@ -92,21 +91,38 @@ export default function TypewriterGlow({
 
   const visible = word.slice(0, sub);
 
+  // Wrapper reserves the size of the LONGEST word so no layout shift occurs.
   return (
     <span
-      className={`inline-flex items-baseline font-semibold ${className}`}
+      className={`relative inline-block align-baseline ${className}`}
       aria-live="polite"
       aria-atomic="true"
       role="status"
     >
-      <span className={`${gradientClassName} ${glowClassName}`}>{visible}</span>
-      <span className="tw-cursor ml-[2px]" aria-hidden="true" />
+      {reserve === 'max' && (
+        <span
+          aria-hidden="true"
+          className="invisible select-none whitespace-nowrap"
+        >
+          {longest || ' '}
+        </span>
+      )}
+
+      <span
+        className={`absolute inset-0 ${reserve === 'none' ? '' : 'whitespace-nowrap'}`}
+        // ensure the overlay sits exactly atop the reserved box
+      >
+        <span className={`${gradientClassName} ${glowClassName}`}>{visible}</span>
+        <span className="tw-cursor ml-[2px]" aria-hidden="true" />
+      </span>
+
       <style jsx>{`
         .tw-cursor {
           display: inline-block;
-          width: 1ch;
+          width: 1ch;                  /* fixed caret width → no width jitter */
           border-right: 2px solid rgba(240, 253, 244, 0.9);
           animation: tw-blink 1s steps(2, start) infinite;
+          vertical-align: baseline;
         }
         @keyframes tw-blink { to { border-right-color: transparent; } }
       `}</style>

@@ -93,7 +93,6 @@ function replaceBlockInTemplateData(template: Template, updated: Block): AnyObj 
   return { ...data, pages: pagesOut, meta, ...(services ? { services } : {}) };
 }
 
-
 /**
  * Wrap an editor so its onSave centrally merges the updated block into the
  * working template and emits a canonical data patch.
@@ -108,7 +107,6 @@ function wrapEditorComponent(EditorComp: React.ComponentType<BlockEditorProps>):
           const nextData = replaceBlockInTemplateData(template, updated);
           if (nextData) {
             const patch: Partial<Template> = { data: nextData };
-            // Fast local reflection and working copy update
             emitMerge({ data: nextData });
             emitApplyPatch(patch);
           }
@@ -116,13 +114,11 @@ function wrapEditorComponent(EditorComp: React.ComponentType<BlockEditorProps>):
           // eslint-disable-next-line no-console
           console.warn('[block-editor wrapper] merge/apply failed:', e);
         }
-        // Allow upstream handlers (modal close, etc.) to proceed
         onSave(updated);
       },
       [template, onSave]
     );
 
-    // No JSX here (file is .ts) → avoid ts(2749)
     return React.createElement(EditorComp, { ...(props as any), onSave: wrappedSave });
   };
 
@@ -147,30 +143,34 @@ function wrapDynamic(loader: () => Promise<EditorModule>): () => Promise<EditorM
  *  - For legacy/alt exports, return a shaped { default: Component } object.
  */
 export const BLOCK_EDITORS: Record<Block['type'], () => Promise<EditorModule>> = {
-  text: wrapDynamic(() => import('./text-editor')),
-  image: wrapDynamic(() => import('./image-editor')),
-  video: wrapDynamic(() => import('./video-editor')),
-  audio: wrapDynamic(() => import('./audio-editor')),
-  quote: wrapDynamic(() => import('./quote-editor')),
+  // Exterior Agency family (all map to the same editor UI)
+  exterior_agency:          wrapDynamic(() => import('./exterior-agency-editor')),
+  exterior_cleaning_agency: wrapDynamic(() => import('./exterior-agency-editor')),
+  pnw_prestige:             wrapDynamic(() => import('./exterior-agency-editor')),
+
+  text:   wrapDynamic(() => import('./text-editor')),
+  image:  wrapDynamic(() => import('./image-editor')),
+  video:  wrapDynamic(() => import('./video-editor')),
+  audio:  wrapDynamic(() => import('./audio-editor')),
+  quote:  wrapDynamic(() => import('./quote-editor')),
   button: wrapDynamic(() => import('./button-editor')),
-  grid: wrapDynamic(() => import('./json-fallback-editor')), // uses JSON fallback
-  hero: wrapDynamic(() => import('./hero-editor')),
-  services: wrapDynamic(() => import('./services-editor')),
-  testimonial: wrapDynamic(() => import('./testimonial-editor')),
-  cta: wrapDynamic(() => import('./cta-editor')),
-  footer: wrapDynamic(() => import('./footer-editor')),
-  service_areas: wrapDynamic(() => import('./service-areas-editor')),
-  header: wrapDynamic(() => import('./header-editor')),
-  faq: wrapDynamic(() => import('./faq-editor')),
+  grid:   wrapDynamic(() => import('./json-fallback-editor')), // uses JSON fallback
+  hero:   wrapDynamic(() => import('./hero-editor')),
+  services:     wrapDynamic(() => import('./services-editor')),
+  testimonial:  wrapDynamic(() => import('./testimonial-editor')),
+  cta:          wrapDynamic(() => import('./cta-editor')),
+  footer:       wrapDynamic(() => import('./footer-editor')),
+  service_areas:wrapDynamic(() => import('./service-areas-editor')),
+  header:       wrapDynamic(() => import('./header-editor')),
+  faq:          wrapDynamic(() => import('./faq-editor')),
   contact_form: wrapDynamic(async () => {
     const mod = await import('./contact-form-editor');
     return { default: (mod as any).ContactFormEditor };
   }),
-  meal_card: wrapDynamic(() => import('./meal-card-editor')),
-  chef_profile: wrapDynamic(() => import('./chef-profile-editor')),
+  meal_card:     wrapDynamic(() => import('./meal-card-editor')),
+  chef_profile:  wrapDynamic(() => import('./chef-profile-editor')),
 
   // NEW: Scheduler block editor (company/org compatible)
-  // Ensure the file exists and default-exports the editor component.
   scheduler: wrapDynamic(() => import('./scheduler-editor')),
 } as unknown as Record<Block['type'], () => Promise<EditorModule>>;
 /*
@@ -192,6 +192,8 @@ export function preloadCommonEditors() {
   preloadBlockEditor('text');
   preloadBlockEditor('cta');
   preloadBlockEditor('faq');
+  // Exterior agency UI is common for this template:
+  preloadBlockEditor('exterior_agency');
   // Scheduler is commonly used; preloading improves perceived latency
   preloadBlockEditor('scheduler');
 }

@@ -138,14 +138,61 @@ const LinkSchema = z.object({
   appearance: z.string().optional(),
 });
 
-/* ─────────────────────────────── Text Block ───────────────────────────────── */
+/* ─────────────────────────────── Text / Exterior ─────────────────────────── */
 
+// legacy minimal type (kept)
 export const ExteriorCleaningContent = z.object({
   brand: z.string().min(1, 'Brand is required'),
   tagline: z.string().min(1, 'Tagline is required'),
   subTagline: z.string().optional(),
 });
 
+// richer, editor-friendly schema used by exterior_* blocks
+export const ExteriorAgencyPropsSchema = z.object({
+  brand: z.string().min(1, 'Brand is required'),
+  tagline: z.string().min(1, 'Tagline is required'),
+  subTagline: z.string().optional(),
+
+  ctaLabel: z.string().default('Get a Free Quote').optional(),
+  phone: z.string().optional(),
+  email: z.string().optional(),
+  address: z.string().optional(),
+  heroImage: z.string().url().optional(),
+  badges: z.array(z.string()).default([]).optional(),
+
+  services: z.array(z.object({
+    title: z.string(),
+    blurb: z.string().default(''),
+    bullets: z.array(z.string()).default([]).optional(),
+    icon: z.string().optional(),
+  })).default([]),
+
+  packages: z.array(z.object({
+    name: z.string(),
+    price: z.string().optional(),
+    description: z.string().optional(),
+    bullets: z.array(z.string()).default([]).optional(),
+    featured: z.boolean().default(false).optional(),
+  })).default([]),
+
+  portfolio: z.array(z.object({
+    title: z.string(),
+    subtitle: z.string().optional(),
+    before: z.string().url(),
+    after: z.string().url(),
+  })).default([]),
+
+  testimonials: z.array(z.object({
+    quote: z.string(),
+    author: z.string(),
+    role: z.string().optional(),
+  })).default([]),
+
+  serviceAreas: z.array(z.string()).default([]).optional(),
+  footerNote: z.string().optional(),
+}).passthrough();
+
+// legacy minimal schema (kept for compatibility; not used by new blocks)
 export const ExteriorCleaningContentSchema = z.object({
   brand: z.string().min(1, 'Brand is required'),
   tagline: z.string().min(1, 'Tagline is required'),
@@ -308,9 +355,11 @@ const ChefMealSchema = z.preprocess((val) => {
 /* ───────────────────────────── Block schema map ───────────────────────────── */
 
 export const blockContentSchemaMap = {
-  exterior_agency: { label: 'Exterior Agency', icon: '🏠', schema: ExteriorCleaningContentSchema },
-  exterior_cleaning_agency: { label: 'Exterior Cleaning Agency', icon: '🏠', schema: ExteriorCleaningContentSchema },
-  pnw_prestige: { label: 'PNW Prestige', icon: '🏠', schema: ExteriorCleaningContentSchema },
+  // exterior-agency family → richer schema
+  exterior_agency:            { label: 'Exterior Agency',          icon: '🏠', schema: ExteriorAgencyPropsSchema },
+  exterior_cleaning_agency:   { label: 'Exterior Cleaning Agency', icon: '🏠', schema: ExteriorAgencyPropsSchema },
+  pnw_prestige:               { label: 'PNW Prestige',             icon: '🏠', schema: ExteriorAgencyPropsSchema },
+
   text: { label: 'Text Block', icon: '📝', schema: TextBlockContent },
 
   image: {
@@ -652,6 +701,7 @@ export const blockContentSchemaMap = {
       if (c.href && !c.cta_link) c.cta_link = c.href;
       if (c.image && !c.image_url) c.image_url = c.image;
 
+      // Plain-text to HTML
       if (typeof c.description === 'string' && !c.description_html) {
         c.description_html = c.description;
       }
@@ -943,10 +993,9 @@ function makeFullBlockSchema(type: string, content: z.ZodTypeAny) {
 
     if (!b || typeof b !== 'object') return raw;
 
-    // Coerce legacy shape
+    // Coerce legacy/seeded shape: props → content (also unwrap props.content if present)
     if (b.content == null && b.props && typeof b.props === 'object') {
       const p: any = b.props;
-      // If props already wraps the payload under "content", unwrap it.
       b.content = (p && typeof p.content === 'object') ? p.content : p;
     }
 

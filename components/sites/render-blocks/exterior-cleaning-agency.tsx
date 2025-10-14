@@ -1,11 +1,12 @@
 // apps/web/components/templates/ExteriorCleaningAgency.tsx
-// QuickSites "PNW Prestige" — a dark, high‑end agency template for exterior cleaning brands
-// Goal: visually parallel the client's fancy site while staying conversion‑focused for services
+// QuickSites "PNW Prestige" — a dark, high-end agency template for exterior cleaning brands
+// Goal: visually parallel the client's fancy site while staying conversion-focused for services
 // Drop-in: import and render inside your block renderer or a dedicated landing route
 // Tailwind + (optional) lucide-react icons. No runtime deps.
 
 import * as React from "react";
 // import { Phone, Mail, MapPin, CheckCircle2, Sparkles, Shield, Droplet, Leaf } from "lucide-react";
+import TypewriterGlow from "@/components/ui/typewriter-glow";
 
 export type ExteriorCleaningContent = {
   brand: string;
@@ -17,7 +18,7 @@ export type ExteriorCleaningContent = {
   address?: string;
   heroImage?: string; // optional background photo
   social?: { label: string; href: string }[];
-  badges?: string[]; // e.g. ["Licensed", "Insured", "Eco‑Safe", "5★ Rated"]
+  badges?: string[]; // e.g. ["Licensed", "Insured", "Eco-Safe", "5★ Rated"]
   services: { title: string; blurb: string; bullets?: string[]; icon?: string }[];
   packages?: { name: string; price?: string; description?: string; bullets?: string[]; featured?: boolean }[];
   portfolio?: { title: string; subtitle?: string; before?: string; after?: string }[];
@@ -31,7 +32,7 @@ const DEFAULT_CONTENT: ExteriorCleaningContent = {
   tagline: "Exterior Cleaning • Roof & Gutter • Pressure & Soft Wash",
   subTagline: "Premium care for homes & businesses across the Pacific Northwest.",
   ctaLabel: "Get a Free Quote",
-  phone: "(253) 204‑1960",
+  phone: "(253) 204-1960",
   email: "team@nweliteconsultants.com", // placeholder — swap to owner email
   address: "Puget Sound, WA",
   heroImage:
@@ -40,7 +41,7 @@ const DEFAULT_CONTENT: ExteriorCleaningContent = {
     { label: "Instagram", href: "#" },
     { label: "Facebook", href: "#" },
   ],
-  badges: ["Licensed", "Insured", "Eco‑Safe", "5★ Rated"],
+  badges: ["Licensed", "Insured", "Eco-Safe", "5★ Rated"],
   services: [
     {
       title: "Roof & Gutter Cleaning",
@@ -51,41 +52,41 @@ const DEFAULT_CONTENT: ExteriorCleaningContent = {
     {
       title: "Exterior House Washing",
       blurb:
-        "Restore curb appeal with low‑pressure soft washing that’s safe for siding.",
-      bullets: ["Soft‑wash safe", "Mildew & algae removal", "Rinse‑to‑shine finish"],
+        "Restore curb appeal with low-pressure soft washing that’s safe for siding.",
+      bullets: ["Soft-wash safe", "Mildew & algae removal", "Rinse-to-shine finish"],
     },
     {
       title: "Pressure Washing",
       blurb:
-        "Deep clean driveways, sidewalks, decks, and patios for a like‑new look.",
-      bullets: ["Oil & rust reduction", "Stripe lines revealed", "Slip‑safe clean"],
+        "Deep clean driveways, sidewalks, decks, and patios for a like-new look.",
+      bullets: ["Oil & rust reduction", "Stripe lines revealed", "Slip-safe clean"],
     },
     {
       title: "Commercial & Residential",
       blurb:
         "Reliable scheduling and professional results for properties of any size.",
-      bullets: ["After‑hours options", "Multi‑site capable", "Maintenance plans"],
+      bullets: ["After-hours options", "Multi-site capable", "Maintenance plans"],
     },
   ],
   packages: [
     {
       name: "Refresh",
       price: "$349+",
-      description: "Entry package for small homes — siding soft‑wash + front walk.",
-      bullets: ["Soft‑wash siding", "Front walk & entry", "Spot rinse windows"],
+      description: "Entry package for small homes — siding soft-wash + front walk.",
+      bullets: ["Soft-wash siding", "Front walk & entry", "Spot rinse windows"],
     },
     {
       name: "Signature",
       price: "$799+",
       description: "Most popular — roof & gutter clean + house wash + driveway.",
-      bullets: ["Roof & gutters", "Full exterior soft‑wash", "Driveway/sidewalks"],
+      bullets: ["Roof & gutters", "Full exterior soft-wash", "Driveway/sidewalks"],
       featured: true,
     },
     {
       name: "Pro Care",
       price: "Custom",
       description: "Commercial or estates — scheduled maintenance with custom scope.",
-      bullets: ["Multi‑site plans", "Night/Weekend windows", "Dedicated PM"],
+      bullets: ["Multi-site plans", "Night/Weekend windows", "Dedicated PM"],
     },
   ],
   portfolio: [
@@ -99,7 +100,7 @@ const DEFAULT_CONTENT: ExteriorCleaningContent = {
     },
     {
       title: "Siding • Before/After",
-      subtitle: "Low‑pressure soft‑wash",
+      subtitle: "Low-pressure soft-wash",
       before:
         "https://images.unsplash.com/photo-1580584128409-11b92d71f28b?q=80&w=1200&auto=format&fit=crop",
       after:
@@ -114,7 +115,7 @@ const DEFAULT_CONTENT: ExteriorCleaningContent = {
       role: "Homeowner, Maple Valley",
     },
     {
-      quote: "Night‑and‑day difference on our storefront. Booking quarterly from now on.",
+      quote: "Night-and-day difference on our storefront. Booking quarterly from now on.",
       author: "Evan D.",
       role: "Retail Manager",
     },
@@ -132,7 +133,7 @@ export default function ExteriorCleaningAgency({
       <Header brand={c.brand} ctaLabel={c.ctaLabel!} phone={c.phone} />
       <Hero content={c} />
       <Badges items={c.badges || []} />
-      <Section id="services" title="Services" subtitle="High‑quality, safe, and reliable">
+      <Section id="services" title="Services" subtitle="High-quality, safe, and reliable">
         <Services items={c.services} />
       </Section>
       <Section id="packages" title="Packages" subtitle="Clear options. Honest pricing.">
@@ -195,6 +196,21 @@ function Header({ brand, ctaLabel, phone }: { brand: string; ctaLabel: string; p
 }
 
 function Hero({ content }: { content: ExteriorCleaningContent }) {
+  // Use service titles as animated words (fallback if empty)
+  const animatedWords = React.useMemo(
+    () =>
+      (content.services?.map((s) => s.title) ?? []).length
+        ? content.services.map((s) => s.title)
+        : [
+            "Roof & Gutter Cleaning",
+            "Soft-Wash Exterior",
+            "Pressure Washing",
+            "Driveways & Sidewalks",
+            "Decks & Patios",
+          ],
+    [content.services]
+  );
+
   return (
     <section className="relative overflow-hidden">
       <div
@@ -211,20 +227,47 @@ function Hero({ content }: { content: ExteriorCleaningContent }) {
             <span>Puget Sound</span>
           </div>
           <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight leading-tight">
-            High‑End <span className="bg-gradient-to-r from-emerald-300 via-teal-300 to-sky-300 bg-clip-text text-transparent">Exterior Cleaning</span>
+            High-End{" "}
+            <span className="bg-gradient-to-r from-emerald-300 via-teal-300 to-sky-300 bg-clip-text text-transparent">
+              Exterior Cleaning
+            </span>
             <br className="hidden sm:block" /> for Homes & Businesses
           </h1>
           <p className="mt-6 max-w-2xl text-lg text-white/80">
             {content.subTagline}
           </p>
-          <div className="mt-8 flex flex-wrap gap-3">
-            <a href="#contact" className="rounded-xl bg-emerald-400 px-5 py-3 text-sm font-semibold text-black shadow-lg shadow-emerald-400/30 hover:bg-emerald-300">{content.ctaLabel || "Get a Quote"}</a>
-            <a href="#portfolio" className="rounded-xl border border-white/15 bg-white/5 px-5 py-3 text-sm font-semibold text-white hover:bg-white/10">See Results</a>
+
+          {/* CTA row with animated typewriter to the right on larger screens */}
+          <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
+            <div className="flex gap-3">
+              <a
+                href="#contact"
+                className="rounded-xl bg-emerald-400 px-5 py-3 text-sm font-semibold text-black shadow-lg shadow-emerald-400/30 hover:bg-emerald-300"
+              >
+                {content.ctaLabel || "Get a Quote"}
+              </a>
+              <a
+                href="#portfolio"
+                className="rounded-xl border border-white/15 bg-white/5 px-5 py-3 text-sm font-semibold text-white hover:bg-white/10"
+              >
+                See Results
+              </a>
+            </div>
+
+            <TypewriterGlow
+              words={animatedWords}
+              className="text-lg sm:ml-2"
+              gradientClassName="bg-gradient-to-r from-emerald-300 via-teal-300 to-sky-300 bg-clip-text text-transparent"
+              glowClassName="drop-shadow-[0_0_16px_rgba(16,185,129,0.35)]"
+            />
           </div>
         </div>
       </Container>
       {/* soft grid effect */}
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_1px_1px,rgba(255,255,255,0.08)_1px,transparent_1px)] [background-size:36px_36px]" aria-hidden />
+      <div
+        className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_1px_1px,rgba(255,255,255,0.08)_1px,transparent_1px)] [background-size:36px_36px]"
+        aria-hidden
+      />
     </section>
   );
 }

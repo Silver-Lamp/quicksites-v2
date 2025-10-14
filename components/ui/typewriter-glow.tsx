@@ -1,17 +1,21 @@
+// components/ui/typewriter-glow.tsx
 'use client';
 
 import * as React from 'react';
+
+type Mode = 'delete' | 'clear';
 
 type Props = {
   words: string[];
   typingMsPerChar?: number;    // default 70
   deletingMsPerChar?: number;  // default 40
   pauseAfterWordMs?: number;   // default 900
-  className?: string;          // tailwind classes for positioning/size
-  gradientClassName?: string;  // tailwind gradient (bg-clip-text text-transparent)
-  glowClassName?: string;      // drop-shadow glow
-  ariaLabel?: string;          // screen-reader label
+  className?: string;
+  gradientClassName?: string;
+  glowClassName?: string;
+  ariaLabel?: string;
   loop?: boolean;
+  mode?: Mode;                  // NEW: 'delete' (backspace) | 'clear' (jump)
 };
 
 export default function TypewriterGlow({
@@ -24,45 +28,67 @@ export default function TypewriterGlow({
   glowClassName = 'drop-shadow-[0_0_20px_rgba(16,185,129,0.35)]',
   ariaLabel = 'highlighted service',
   loop = true,
+  mode = 'delete',
 }: Props) {
-  const [i, setI] = React.useState(0);           // which word
-  const [sub, setSub] = React.useState(0);       // how many chars are shown
-  const [del, setDel] = React.useState(false);   // deleting?
-  const [hold, setHold] = React.useState(false); // pausing at full word?
+  const [i, setI] = React.useState(0);         // which word index
+  const [sub, setSub] = React.useState(0);     // visible characters
+  const [del, setDel] = React.useState(false); // deleting stage?
+  const [hold, setHold] = React.useState(false);
 
-  const word = words[i] ?? '';
+  const wordsSafe = words?.filter(Boolean) ?? [];
+  const word = wordsSafe[i] ?? '';
 
   React.useEffect(() => {
-    if (!words.length) return;
+    if (wordsSafe.length === 0) return;
 
+    // reached full word → pause
     if (!del && sub === word.length && !hold) {
       setHold(true);
       const t = setTimeout(() => setHold(false), pauseAfterWordMs);
       return () => clearTimeout(t);
     }
 
+    // while paused, do nothing
+    if (hold) return;
+
+    // choose interval based on stage
     const ms = del ? deletingMsPerChar : typingMsPerChar;
     const t = setTimeout(() => {
-      if (hold) return;
-
       if (!del) {
-        // typing
-        if (sub < word.length) setSub(sub + 1);
-        else setDel(true);
+        // typing forward
+        if (sub < word.length) return setSub(sub + 1);
+        // finished typing → either start delete, or jump (clear mode)
+        if (mode === 'delete') return setDel(true);
+        // clear mode: instantly move to next word
+        setSub(0);
+        const next = i + 1;
+        if (next < wordsSafe.length) setI(next);
+        else if (loop) setI(0);
       } else {
-        // deleting
-        if (sub > 0) setSub(sub - 1);
-        else {
-          setDel(false);
-          const next = i + 1;
-          if (next < words.length) setI(next);
-          else if (loop) setI(0);
-        }
+        // deleting backwards
+        if (sub > 0) return setSub(sub - 1);
+        // move to next word
+        setDel(false);
+        const next = i + 1;
+        if (next < wordsSafe.length) setI(next);
+        else if (loop) setI(0);
       }
     }, ms);
 
     return () => clearTimeout(t);
-  }, [sub, del, hold, i, word, words.length, typingMsPerChar, deletingMsPerChar, pauseAfterWordMs, loop]);
+  }, [
+    i,
+    sub,
+    del,
+    hold,
+    word,
+    wordsSafe.length,
+    typingMsPerChar,
+    deletingMsPerChar,
+    pauseAfterWordMs,
+    loop,
+    mode,
+  ]);
 
   const visible = word.slice(0, sub);
 
@@ -75,7 +101,6 @@ export default function TypewriterGlow({
     >
       <span className={`${gradientClassName} ${glowClassName}`}>{visible}</span>
       <span className="tw-cursor ml-[2px]" aria-hidden="true" />
-      {/* component-scoped cursor keyframes */}
       <style jsx>{`
         .tw-cursor {
           display: inline-block;
@@ -83,9 +108,7 @@ export default function TypewriterGlow({
           border-right: 2px solid rgba(240, 253, 244, 0.9);
           animation: tw-blink 1s steps(2, start) infinite;
         }
-        @keyframes tw-blink {
-          to { border-right-color: transparent; }
-        }
+        @keyframes tw-blink { to { border-right-color: transparent; } }
       `}</style>
     </span>
   );

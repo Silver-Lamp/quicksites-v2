@@ -255,11 +255,13 @@ function Hero({ content }: { content: ExteriorCleaningContent }) {
             </div>
 
             <TypewriterGlow
-              words={animatedWords}
-              className="text-lg sm:ml-2"
-              gradientClassName="bg-gradient-to-r from-emerald-300 via-teal-300 to-sky-300 bg-clip-text text-transparent"
-              glowClassName="drop-shadow-[0_0_16px_rgba(16,185,129,0.35)]"
-            />
+                words={animatedWords}
+                pauseAfterWordMs={2000}   // 2s hold after finishing
+                mode="clear"              // jump to next word instead of backspacing
+                className="text-lg sm:ml-2"
+                gradientClassName="bg-gradient-to-r from-emerald-300 via-teal-300 to-sky-300 bg-clip-text text-transparent"
+                glowClassName="drop-shadow-[0_0_16px_rgba(16,185,129,0.35)]"
+            />          
           </div>
         </div>
       </Container>

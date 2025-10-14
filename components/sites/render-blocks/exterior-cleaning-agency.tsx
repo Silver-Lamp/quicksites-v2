@@ -10,6 +10,7 @@ import TypewriterGlow from "@/components/ui/typewriter-glow";
 
 export type ExteriorCleaningContent = {
   brand: string;
+  logoUrl?: string;
   tagline: string;
   subTagline?: string;
   ctaLabel?: string;
@@ -30,6 +31,7 @@ export type ExteriorCleaningContent = {
 const DEFAULT_CONTENT: ExteriorCleaningContent = {
   brand: "PNW On Demand Services",
   tagline: "Exterior Cleaning • Roof & Gutter • Pressure & Soft Wash",
+  logoUrl: "/logos/pnw-logo.png",
   subTagline: "Premium care for homes & businesses across the Pacific Northwest.",
   ctaLabel: "Get a Free Quote",
   phone: "(253) 204-1960",
@@ -130,7 +132,7 @@ export default function ExteriorCleaningAgency({
   const c = { ...DEFAULT_CONTENT, ...content };
   return (
     <main className="bg-[#0b0f14] text-white">
-      <Header brand={c.brand} ctaLabel={c.ctaLabel!} phone={c.phone} />
+      <Header brand={c.brand} ctaLabel={c.ctaLabel!} phone={c.phone} logoUrl={c.logoUrl} />
       <Hero content={c} />
       <Badges items={c.badges || []} />
       <Section id="services" title="Services" subtitle="High-quality, safe, and reliable">
@@ -162,10 +164,13 @@ function Container({ children, className = "" }: React.PropsWithChildren<{ class
   );
 }
 
-function Header({ brand, ctaLabel, phone }: { brand: string; ctaLabel: string; phone?: string }) {
+function Header({ brand, ctaLabel, phone, logoUrl }: { brand: string; ctaLabel: string; phone?: string; logoUrl?: string }) {
   return (
     <header className="sticky top-0 z-50 backdrop-blur supports-[backdrop-filter]:bg-black/40 bg-black/30 border-b border-white/10">
       <Container className="flex items-center justify-between py-4">
+        {logoUrl && (
+          <img src={logoUrl} alt={brand} className="h-8 w-8" />
+        )}
         <a href="#" className="text-xl font-semibold tracking-tight">
           <span className="bg-gradient-to-r from-emerald-300 via-teal-300 to-sky-300 bg-clip-text text-transparent">
             {brand}

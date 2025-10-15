@@ -190,6 +190,45 @@ const NAV_ADMIN: NavItem[] = [
   { type: 'item', label: 'Chefs', href: '/chef/dashboard', icon: <ChefHat size={18} />, adminOnly: true },
 ];
 
+/* ---------------- Elect Info (Campaign Tools) ---------------- */
+const NAV_ELECTINFO: NavItem[] = [
+  { type: 'section', label: 'Elect Info', adminOnly: true },
+
+  {
+    type: 'item',
+    label: 'Candidate Pages',
+    icon: <Users size={18} />,
+    adminOnly: true,
+    children: [
+      { label: 'New Candidate', href: '/admin/candidates/new', adminOnly: true },
+      { label: 'Demo Page',     href: '/candidate/demo',       adminOnly: false },
+    ],
+  },
+
+  {
+    type: 'item',
+    label: 'QR & Short Links',
+    icon: <Printer size={18} />,
+    adminOnly: true,
+    children: [
+      { label: 'Short Links', href: '/admin/short-links', adminOnly: true },
+      // The “quick jump” will render inline below via a custom slot.
+      { label: '__quick_slug_jump__', href: '#', adminOnly: true },
+    ],
+  },
+
+  {
+    type: 'item',
+    label: 'Docs & Setup',
+    icon: <FileText size={18} />,
+    adminOnly: true,
+    children: [
+      { label: 'Setup Guide', href: '/docs/setup.md', adminOnly: true },
+    ],
+  },
+];
+
+
 /* ---------------- Role helper (cached) ---------------- */
 function useIsAdmin(): boolean {
   const [isAdmin, setIsAdmin] = useState(false);
@@ -520,6 +559,76 @@ function NavItemButtonOrLink({
   );
 }
 
+function QuickSlugJump({
+  collapsed,
+  onNavigateStart,
+}: {
+  collapsed: boolean;
+  onNavigateStart: (href: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [slug, setSlug] = useState('');
+
+  useEffect(() => {
+    if (!open) setSlug('');
+  }, [open]);
+
+  const go = () => {
+    const s = (slug || '').trim().toLowerCase().replace(/[^a-z0-9-]+/g, '-').replace(/^-+|-+$/g, '');
+    if (!s) return;
+    setOpen(false);
+    const href = `/admin/candidate/${s}/print`;
+    onNavigateStart(href);
+    window.location.assign(href);
+  };
+
+  return (
+    <div className="px-3 py-2">
+      {!open ? (
+        <button
+          type="button"
+          onClick={() => setOpen(true)}
+          className="w-full rounded-md border border-zinc-700/80 bg-zinc-900/50 px-3 py-1.5 text-left text-sm text-zinc-300 hover:text-white hover:border-zinc-500"
+          title="Open quick jump"
+        >
+          Go to Print & QR by slug…
+        </button>
+      ) : (
+        <div className="rounded-md border border-zinc-700/80 bg-zinc-900/70 p-2">
+          <div className="text-xs text-zinc-400 mb-1">Candidate slug</div>
+          <input
+            autoFocus
+            value={slug}
+            onChange={(e) => setSlug(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') go();
+              if (e.key === 'Escape') setOpen(false);
+            }}
+            placeholder="e.g. alex-rivera"
+            className="w-full rounded border border-zinc-700 bg-zinc-950 px-2 py-1 text-sm text-white outline-none focus:border-zinc-500"
+          />
+          <div className="mt-2 flex gap-2">
+            <button
+              type="button"
+              onClick={go}
+              className="rounded bg-emerald-600 px-3 py-1.5 text-sm text-white hover:bg-emerald-500"
+            >
+              Go
+            </button>
+            <button
+              type="button"
+              onClick={() => setOpen(false)}
+              className="rounded border border-zinc-700 px-3 py-1.5 text-sm text-zinc-300 hover:text-white hover:border-zinc-500"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 /* ---------------- Main Component ---------------- */
 export function AdminNavSections({ collapsed = false }: { collapsed?: boolean }) {
   const pathname = usePathname();
@@ -552,9 +661,9 @@ export function AdminNavSections({ collapsed = false }: { collapsed?: boolean })
   );
 
   const items = useMemo<NavItem[]>(
-    () => (isAdmin ? [...coreItems, ...NAV_ADMIN] : [...coreItems]),
+    () => (isAdmin ? [...coreItems, ...NAV_ELECTINFO, ...NAV_ADMIN] : [...coreItems]),
     [isAdmin, coreItems]
-  );
+  );  
 
   /* -------- persist/restore open submenu state -------- */
   useEffect(() => {
@@ -802,6 +911,18 @@ export function AdminNavSections({ collapsed = false }: { collapsed?: boolean })
             >
               {!collapsed &&
                 item.children?.map((child, ci) => {
+                  // Special inline tool for Elect Info quick jump
+                  if (child.label === '__quick_slug_jump__') {
+                    return (
+                      <div key={`quick-jump-${ci}`} className="mt-1">
+                        <QuickSlugJump
+                          collapsed={collapsed}
+                          onNavigateStart={handleNavigateStart}
+                        />
+                      </div>
+                    );
+                  }
+
                   const isActiveChild = pathname?.startsWith(child.href.split('?')[0]);
                   const isNewTemplate = child.href === '/admin/templates/new';
 
@@ -844,6 +965,7 @@ export function AdminNavSections({ collapsed = false }: { collapsed?: boolean })
                     </Link>
                   );
                 })}
+
             </div>
           </div>
         );

@@ -1,19 +1,28 @@
+// app/admin/inbox/page.tsx
 import { revalidatePath } from 'next/cache';
 import Link from 'next/link';
+import { format } from 'date-fns';
+import {
+  ArrowLeft, ArrowRight, Check, Mail, Search, Archive, Undo, ExternalLink,
+} from 'lucide-react';
+
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Card, CardContent, CardDescription, CardHeader, CardTitle,
+} from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import {
+  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
+} from '@/components/ui/table';
 import { getServerSupabase } from '@/lib/supabase/server';
-import { format } from 'date-fns';
-import { ArrowLeft, ArrowRight, Check, Mail, Search, Archive, Undo, ExternalLink } from 'lucide-react';
 
 export const dynamic = 'force-dynamic';
 
-// Types matching contact_messages
+/* ───────────────────────────── Types ───────────────────────────── */
+
 export type ContactMessage = {
   id: string;
   created_at: string;
@@ -34,24 +43,24 @@ export type ContactMessage = {
 
 function statusBadge(s?: string) {
   const map: Record<string, { variant: 'default' | 'secondary' | 'outline'; label: string }> = {
-    new: { variant: 'default', label: 'New' },
+    new: { variant: 'default',   label: 'New' },
     contacted: { variant: 'secondary', label: 'Contacted' },
-    archived: { variant: 'outline', label: 'Archived' },
+    archived: { variant: 'outline',  label: 'Archived' },
   };
   const x = s && map[s] ? map[s] : map['new'];
   return <Badge variant={x.variant}>{x.label}</Badge>;
 }
 
-// ------- Server actions -------
+/* ───────────────────────── Server actions ───────────────────────── */
+
 export async function updateMessage(formData: FormData) {
   'use server';
   const id = String(formData.get('id') || '');
   const status = String(formData.get('status') || 'new') as ContactMessage['status'];
   const admin_notes = (formData.get('admin_notes')?.toString() || '').trim() || null;
-
   if (!id) return;
 
-  const supabase = await getServerSupabase();
+  const supabase = await getServerSupabase({ serviceRole: true });
   const payload: Partial<ContactMessage> = { status, admin_notes };
   if (status === 'contacted') payload.responded_at = new Date().toISOString();
 
@@ -62,7 +71,7 @@ export async function updateMessage(formData: FormData) {
 
 export async function bulkUpdateMessages(formData: FormData) {
   'use server';
-  const supabase = await getServerSupabase();
+  const supabase = await getServerSupabase({ serviceRole: true });
 
   const bulk_status = String(formData.get('bulk_status') || '');
   if (!['new', 'contacted', 'archived'].includes(bulk_status)) return;
@@ -75,6 +84,7 @@ export async function bulkUpdateMessages(formData: FormData) {
   const from = (page - 1) * pageSize;
   const to = from + pageSize - 1;
 
+  // IDs checked in the table (for "selected" scope)
   let targetIds = (formData.getAll('ids') as string[]).filter(Boolean);
 
   if (scope === 'page') {
@@ -84,8 +94,10 @@ export async function bulkUpdateMessages(formData: FormData) {
       .select('id')
       .order('created_at', { ascending: false })
       .range(from, to);
+
     if (status && status !== 'all') qy = qy.eq('status', status);
     if (q) qy = qy.or(`name.ilike.%${q}%,email.ilike.%${q}%,company.ilike.%${q}%,message.ilike.%${q}%`);
+
     const { data } = await qy;
     targetIds = (data || []).map((r: any) => r.id);
   }
@@ -100,13 +112,14 @@ export async function bulkUpdateMessages(formData: FormData) {
   revalidatePath('/admin/inbox');
 }
 
-// ------- Page -------
+/* ───────────────────────────── Page ───────────────────────────── */
+
 export default async function AdminInboxPage({
   searchParams,
 }: {
   searchParams: { q?: string; status?: 'all' | 'new' | 'contacted' | 'archived'; page?: string };
 }) {
-  const supabase = await getServerSupabase();
+  const supabase = await getServerSupabase({ serviceRole: true });
 
   const q = (searchParams.q || '').trim();
   const status = (searchParams.status as ContactMessage['status'] | 'all') || 'new';
@@ -121,9 +134,7 @@ export default async function AdminInboxPage({
     .order('created_at', { ascending: false });
 
   if (status && status !== 'all') query = query.eq('status', status);
-  if (q) query = query.or(
-    `name.ilike.%${q}%,email.ilike.%${q}%,company.ilike.%${q}%,message.ilike.%${q}%`
-  );
+  if (q) query = query.or(`name.ilike.%${q}%,email.ilike.%${q}%,company.ilike.%${q}%,message.ilike.%${q}%`);
 
   const { data: rows, count, error } = await query.range(from, to);
   if (error) throw new Error(error.message);
@@ -133,7 +144,9 @@ export default async function AdminInboxPage({
       <div className="flex items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-semibold">Inbox</h1>
-          <p className="text-sm text-muted-foreground">Leads from the /contact form. Filter by status, search by name, email, company, or message.</p>
+          <p className="text-sm text-muted-foreground">
+            Leads from the /contact form. Filter by status, search by name, email, company, or message.
+          </p>
         </div>
         <div className="flex gap-2">
           <Link href="/pricing"><Button variant="outline">Pricing</Button></Link>
@@ -141,6 +154,7 @@ export default async function AdminInboxPage({
         </div>
       </div>
 
+      {/* Filters */}
       <Card>
         <CardHeader className="pb-3">
           <CardTitle className="text-base">Filters</CardTitle>
@@ -152,12 +166,19 @@ export default async function AdminInboxPage({
               <Label htmlFor="q">Search</Label>
               <div className="mt-1 flex items-center gap-2">
                 <Input id="q" name="q" placeholder="name, email, company, or message" defaultValue={q} />
-                <Button type="submit" variant="secondary" className="inline-flex items-center gap-2"><Search className="h-4 w-4"/>Search</Button>
+                <Button type="submit" variant="secondary" className="inline-flex items-center gap-2">
+                  <Search className="h-4 w-4" />Search
+                </Button>
               </div>
             </div>
             <div>
               <Label htmlFor="status">Status</Label>
-              <select id="status" name="status" defaultValue={status} className="mt-1 w-full rounded-md border border-border bg-background p-2 text-sm">
+              <select
+                id="status"
+                name="status"
+                defaultValue={status}
+                className="mt-1 w-full rounded-md border border-border bg-background p-2 text-sm"
+              >
                 <option value="all">All</option>
                 <option value="new">New</option>
                 <option value="contacted">Contacted</option>
@@ -171,18 +192,20 @@ export default async function AdminInboxPage({
         </CardContent>
       </Card>
 
-      {/* Bulk actions */}
+      {/* Messages + Bulk actions */}
       <Card>
         <CardHeader className="pb-3">
           <CardTitle className="text-base">Messages</CardTitle>
           <CardDescription>{count ?? 0} total{status !== 'all' ? ` • ${status}` : ''}</CardDescription>
         </CardHeader>
         <CardContent>
-          <form action={bulkUpdateMessages}>
+          {/* OUTER BULK FORM (wraps table + pagination) */}
+          <form id="bulk-form" action={bulkUpdateMessages}>
             <input type="hidden" name="q" value={q} />
             <input type="hidden" name="status" value={status} />
             <input type="hidden" name="page" value={page} />
 
+            {/* Bulk controls */}
             <div className="mb-3 flex flex-wrap items-center gap-3">
               <div className="flex items-center gap-2 text-sm">
                 <Label className="text-xs">Apply to</Label>
@@ -195,17 +218,18 @@ export default async function AdminInboxPage({
               </div>
               <div className="flex items-center gap-2">
                 <Button type="submit" name="bulk_status" value="contacted" variant="secondary" className="inline-flex items-center gap-2">
-                  <Check className="h-4 w-4"/> Mark Contacted
+                  <Check className="h-4 w-4" /> Mark Contacted
                 </Button>
                 <Button type="submit" name="bulk_status" value="archived" variant="outline" className="inline-flex items-center gap-2">
-                  <Archive className="h-4 w-4"/> Archive
+                  <Archive className="h-4 w-4" /> Archive
                 </Button>
                 <Button type="submit" name="bulk_status" value="new" variant="outline" className="inline-flex items-center gap-2">
-                  <Undo className="h-4 w-4"/> Restore to New
+                  <Undo className="h-4 w-4" /> Restore to New
                 </Button>
               </div>
             </div>
 
+            {/* Table */}
             <Table>
               <TableHeader>
                 <TableRow>
@@ -234,21 +258,34 @@ export default async function AdminInboxPage({
             {/* Pagination */}
             {count && count > pageSize ? (
               <div className="mt-4 flex items-center justify-between">
-                <Link href={{ pathname: '/admin/inbox', query: { q, status, page: Math.max(1, page - 1) } }}>
-                  <Button variant="outline" disabled={page <= 1} className="inline-flex items-center gap-2"><ArrowLeft className="h-4 w-4"/>Prev</Button>
+                <Link
+                  href={{ pathname: '/admin/inbox', query: { q, status, page: Math.max(1, page - 1) } }}
+                >
+                  <Button variant="outline" disabled={page <= 1} className="inline-flex items-center gap-2">
+                    <ArrowLeft className="h-4 w-4" />Prev
+                  </Button>
                 </Link>
-                <div className="text-sm text-muted-foreground">{from + 1}–{Math.min(to + 1, count)} of {count}</div>
-                <Link href={{ pathname: '/admin/inbox', query: { q, status, page: page + 1 } }}>
-                  <Button variant="outline" disabled={to + 1 >= count} className="inline-flex items-center gap-2">Next<ArrowRight className="h-4 w-4"/></Button>
+                <div className="text-sm text-muted-foreground">
+                  {from + 1}–{Math.min(to + 1, count)} of {count}
+                </div>
+                <Link
+                  href={{ pathname: '/admin/inbox', query: { q, status, page: page + 1 } }}
+                >
+                  <Button variant="outline" disabled={to + 1 >= count} className="inline-flex items-center gap-2">
+                    Next<ArrowRight className="h-4 w-4" />
+                  </Button>
                 </Link>
               </div>
             ) : null}
           </form>
+          {/* OUTER BULK FORM END */}
         </CardContent>
       </Card>
     </div>
   );
 }
+
+/* ───────────────────── Row helpers (no nested forms) ───────────────────── */
 
 function Flags({ m }: { m: ContactMessage }) {
   return (
@@ -265,18 +302,18 @@ function MessageRow({ m }: { m: ContactMessage }) {
   return (
     <TableRow className="align-top">
       <TableCell>
-        <input type="checkbox" name="ids" value={m.id} aria-label={`Select ${m.name}`} />
+        <input type="checkbox" name="ids" value={m.id} aria-label={`Select ${m.name}`} form="bulk-form" />
       </TableCell>
       <TableCell className="whitespace-nowrap text-xs text-muted-foreground">{created}</TableCell>
       <TableCell>
         <div className="font-medium flex items-center gap-2">
           <Link href={`/admin/inbox/${m.id}`} className="hover:underline inline-flex items-center gap-1">
             {m.name}
-            <ExternalLink className="h-3.5 w-3.5"/>
+            <ExternalLink className="h-3.5 w-3.5" />
           </Link>
         </div>
         <a href={`mailto:${m.email}`} className="inline-flex items-center gap-1 text-sm text-primary hover:underline">
-          <Mail className="h-3.5 w-3.5"/> {m.email}
+          <Mail className="h-3.5 w-3.5" /> {m.email}
         </a>
       </TableCell>
       <TableCell className="max-w-[18rem] truncate">{m.company || '—'}</TableCell>
@@ -292,34 +329,63 @@ function MessageRow({ m }: { m: ContactMessage }) {
 
 function MessageActions({ m }: { m: ContactMessage }) {
   const noteDefault = m.admin_notes || '';
+  const formId = `update-msg-${m.id}`;
+
   return (
     <div className="space-y-2">
       <div className="rounded-md border p-2 text-sm max-h-28 overflow-auto whitespace-pre-wrap">{m.message}</div>
-      <form action={updateMessage} className="flex flex-col gap-2">
-        <input type="hidden" name="id" value={m.id} />
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
-          <div className="md:col-span-2">
-            <Label htmlFor={`notes-${m.id}`}>Admin notes</Label>
-            <Textarea id={`notes-${m.id}`} name="admin_notes" defaultValue={noteDefault} rows={2} placeholder="Follow-up details, next steps, etc." />
-          </div>
-          <div className="flex md:flex-col gap-2 items-stretch justify-end pt-5 md:pt-7">
-            {m.status !== 'contacted' && (
-              <Button type="submit" name="status" value="contacted" variant="secondary" className="inline-flex items-center gap-2">
-                <Check className="h-4 w-4"/> Contacted
-              </Button>
-            )}
-            {m.status !== 'archived' ? (
-              <Button type="submit" name="status" value="archived" variant="outline" className="inline-flex items-center gap-2">
-                <Archive className="h-4 w-4"/> Archive
-              </Button>
-            ) : (
-              <Button type="submit" name="status" value="new" variant="outline" className="inline-flex items-center gap-2">
-                <Undo className="h-4 w-4"/> Restore
-              </Button>
-            )}
-          </div>
+
+      {/* Row controls reference a detached hidden form via form={formId} */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+        <div className="md:col-span-2">
+          <Label htmlFor={`notes-${m.id}`}>Admin notes</Label>
+          <Textarea
+            id={`notes-${m.id}`}
+            name="admin_notes"
+            defaultValue={noteDefault}
+            rows={2}
+            placeholder="Follow-up details, next steps, etc."
+            form={formId}
+          />
         </div>
-      </form>
+        <div className="flex md:flex-col gap-2 items-stretch justify-end pt-5 md:pt-7">
+          {m.status !== 'contacted' && (
+            <Button type="submit" form={formId} name="status" value="contacted" variant="secondary" className="inline-flex items-center gap-2">
+              <Check className="h-4 w-4" /> Contacted
+            </Button>
+          )}
+          {m.status !== 'archived' ? (
+            <Button type="submit" form={formId} name="status" value="archived" variant="outline" className="inline-flex items-center gap-2">
+              <Archive className="h-4 w-4" /> Archive
+            </Button>
+          ) : (
+            <Button type="submit" form={formId} name="status" value="new" variant="outline" className="inline-flex items-center gap-2">
+              <Undo className="h-4 w-4" /> Restore
+            </Button>
+          )}
+        </div>
+      </div>
+
+      {/* Hidden detached form placed AFTER the bulk form (so no nesting) */}
+      <DetachedRowForm id={formId} action={updateMessage} payload={{ id: m.id }} />
     </div>
+  );
+}
+
+/** Hidden form that pairs with row controls via form={id} */
+function DetachedRowForm({
+  id,
+  action,
+  payload,
+}: {
+  id: string;
+  action: (fd: FormData) => Promise<void>;
+  payload: { id: string };
+}) {
+  return (
+    <form id={id} action={action} style={{ display: 'none' }}>
+      <input type="hidden" name="id" value={payload.id} />
+      {/* admin_notes + status come from controls using form={id} */}
+    </form>
   );
 }

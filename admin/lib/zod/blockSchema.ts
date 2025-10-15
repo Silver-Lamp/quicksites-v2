@@ -782,6 +782,127 @@ export const blockContentSchemaMap = {
     })),
   },
 
+  /* ───────────────────── ElectInfo: Candidate blocks ───────────────────── */
+
+  candidate_hero: {
+    label: 'Candidate Hero',
+    icon: '🗳️',
+    schema: z.object({
+      photoUrl: z.string().url().nullish(),
+      name: z.string().min(1),
+      office: z.string().min(1),
+      city: z.string().min(1),
+      tagline: z.string().optional(),
+      url: z.string().url(),               // canonical long URL
+      shortUrl: z.string().url().optional(), // preferred for QR if present
+      ctaDonateHref: z.string().url().optional(),
+      ctaVolunteerHref: z.string().url().optional(),
+      showDownloadQR: z.boolean().default(false),
+    }),
+  },
+
+  candidate_about: {
+    label: 'About Candidate',
+    icon: '👤',
+    schema: z.object({
+      markdown: z.string(),                // plain markdown/HTML string
+    }),
+  },
+
+  candidate_issues_grid: {
+    label: 'Key Priorities',
+    icon: '✅',
+    schema: z.object({
+      items: z.array(z.object({
+        title: z.string(),
+        desc: z.string(),
+      })).min(1).max(12),
+    }),
+  },
+
+  candidate_endorsements: {
+    label: 'Endorsements',
+    icon: '🗒️',
+    schema: z.object({
+      items: z.array(z.object({
+        org: z.string(),
+        quote: z.string(),
+      })),
+    }),
+  },
+
+  candidate_events: {
+    label: 'Events',
+    icon: '📅',
+    schema: z.object({
+      items: z.array(z.object({
+        title: z.string(),
+        dateISO: z.string(),               // ISO string; render can format
+        venue: z.string(),
+        blurb: z.string().optional(),
+      })),
+    }),
+  },
+
+  candidate_stay_connected: {
+    label: 'Stay Connected',
+    icon: '📬',
+    schema: z.object({
+      headline: z.string().default('Stay Connected'),
+      showZip: z.boolean().default(true),
+      candidateSlug: z.string(),           // passed to /api/subscribe
+    }),
+  },
+
+  /* Admin-only utility block (self-hides on public routes) */
+  candidate_print_qr: {
+    label: 'Print & QR (Admin)',
+    icon: '🖨️',
+    schema: z.object({
+      candidateSlug: z.string().min(1),
+      name: z.string().default(''),
+      longUrl: z.string().url(),
+      shortUrl: z.string().url().optional(),
+      captionMode: z.enum(['none','fromShort','custom']).default('fromShort'),
+      customCaption: z.string().optional(),
+      showStickerSheet: z.boolean().default(true),
+      defaultPresetId: z.string().default('avery-5160'),
+      showCutGuides: z.boolean().default(true),
+      adminOnly: z.boolean().default(true),
+    }),
+  },
+
+  /* Public-facing QR helpers */
+  public_qr_info: {
+    label: 'QR Info (Public)',
+    icon: '🔗',
+    schema: z.object({
+      longUrl: z.string().url(),
+      shortUrl: z.string().url().optional(),
+      caption: z.string().optional(),
+      size: z.number().min(64).max(512).default(112),
+      align: z.enum(['left','center','right']).default('center'),
+      showLinkText: z.boolean().default(true),
+    }),
+  },
+
+  public_qr_sidebar: {
+    label: 'QR Sidebar (Public)',
+    icon: '🧲',
+    schema: z.object({
+      longUrl: z.string().url(),
+      shortUrl: z.string().url().optional(),
+      caption: z.string().optional(),
+      size: z.number().min(80).max(220).default(128),
+      side: z.enum(['left','right']).default('right'),
+      sticky: z.boolean().default(true),
+      topOffsetPx: z.number().min(0).max(200).default(24),
+      hideOnMobile: z.boolean().default(true),
+      breakpoint: z.enum(['md','lg','xl']).default('lg'),
+      widthPx: z.number().min(160).max(420).default(260),
+    }),
+  },
+
 } satisfies Record<string, { label: string; icon: string; schema: z.ZodTypeAny }>;
 
 /* ─────────────── Type alias resolver (products-grid → products_grid, etc.) ───────────── */
@@ -789,13 +910,32 @@ export const blockContentSchemaMap = {
 const TYPE_ALIASES: Record<string, string> = {
   'products-grid': 'products_grid',
   'product-grid': 'products_grid',
-  products: 'products_grid',
+  'products': 'products_grid',
   'service-scheduler': 'scheduler',
   // Prestige/exterior aliases → canonical renderer
-  exterior_agency: 'exterior_agency',
+  'exterior-agency': 'exterior_agency',
   'exterior-cleaning-agency': 'exterior_agency',
-  exterior_cleaning_agency: 'exterior_agency',
-  pnw_prestige: 'exterior_agency',
+  'exterior_cleaning_agency': 'exterior_agency',
+  'pnw_prestige': 'exterior_agency',
+
+
+  // ElectInfo aliases
+  'candidate-hero': 'candidate_hero',
+  'candidate-about': 'candidate_about',
+  'candidate-issues-grid': 'candidate_issues_grid',
+  'candidate-endorsements': 'candidate_endorsements',
+  'candidate-events': 'candidate_events',
+  'candidate-stay-connected': 'candidate_stay_connected',
+  'candidate-print-qr': 'candidate_print_qr',
+  'public-qr-info': 'public_qr_info',
+  'public-qr-sidebar': 'public_qr_sidebar',
+  'candidate-qr-sidebar': 'public_qr_sidebar',
+  'candidate-qr-info': 'public_qr_info',
+  'candidate-qr-download': 'candidate_print_qr',
+  'candidate-qr-sticker-sheet': 'candidate_print_qr',
+  'candidate-qr-sticker-sheet-vector': 'candidate_print_qr',
+  'candidate-qr-sticker-sheet-raster': 'candidate_print_qr',
+  'candidate-qr-sticker-sheet-raster-vector': 'candidate_print_qr',
 };
 
 export function resolveCanonicalType(t: string): string {

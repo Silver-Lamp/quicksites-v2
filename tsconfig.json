@@ -20,6 +20,7 @@
     ".next"
   ],
   "compilerOptions": {
+    "lib": ["ES2021", "DOM"],
     "jsx": "preserve",
     "tsBuildInfoFile": "./.tsbuildinfo",
     "outDir": ".lint-tmp",

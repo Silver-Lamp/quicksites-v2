@@ -280,4 +280,97 @@ export const DEFAULT_BLOCK_CONTENT = {
     window_days: 14,
     confirmation_message: 'Thanks! Your appointment is confirmed.',
   },
+
+  /* ───────── candidate blocks ───────── */
+
+  candidate_hero: {
+    name: 'John Doe',
+    title: 'Mayor Candidate',
+    tagline: 'Building a Better Future Together',
+    image_url: '',
+    cta_text: 'Learn More',
+    cta_link: '/about',
+  },
+
+  candidate_about: {
+    title: 'About John',
+    content: 'John has been serving our community for over 10 years...',
+    image_url: '',
+  },
+
+  candidate_issues_grid: {
+    title: 'Key Issues',
+    subtitle: 'My priorities for our community',
+    issues: [
+      {
+        title: 'Economic Growth',
+        description: 'Creating jobs and supporting local businesses',
+        icon: '💼',
+      },
+    ],
+  },
+
+  candidate_endorsements: {
+    title: 'Endorsements',
+    subtitle: 'Trusted by community leaders',
+    endorsements: [
+      {
+        name: 'Jane Smith',
+        title: 'Former Mayor',
+        quote: 'John has the experience and vision we need.',
+        image_url: '',
+      },
+    ],
+  },
+
+  candidate_events: {
+    title: 'Upcoming Events',
+    subtitle: 'Join me at these community events',
+    events: [
+      {
+        title: 'Town Hall Meeting',
+        date: '2024-01-15',
+        time: '7:00 PM',
+        location: 'Community Center',
+        description: 'Discussing local issues',
+      },
+    ],
+  },
+
+  candidate_stay_connected: {
+    title: 'Stay Connected',
+    subtitle: 'Get updates on the campaign',
+    email_placeholder: 'Enter your email',
+    cta_text: 'Subscribe',
+    social_links: {
+      facebook: '',
+      twitter: '',
+      instagram: '',
+    },
+  },
+
+  candidate_print_qr: {
+    title: 'Print QR Code',
+    subtitle: 'Share this QR code to help spread the word',
+    qr_size: 'medium',
+    include_text: true,
+    text: 'Vote for John Doe',
+  },
+
+  public_qr_info: {
+    title: 'Scan for More Info',
+    subtitle: 'Get instant access to candidate information',
+    qr_size: 'large',
+    show_candidate_info: true,
+  },
+
+  public_qr_sidebar: {
+    title: 'Quick Access',
+    qr_size: 'small',
+    show_links: true,
+    links: [
+      { label: 'Platform', href: '/platform' },
+      { label: 'Events', href: '/events' },
+    ],
+  },
 } as const satisfies Record<BlockType, any>;

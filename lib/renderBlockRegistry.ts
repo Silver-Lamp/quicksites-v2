@@ -7,11 +7,36 @@ import { resolveCanonicalType } from '@/lib/blockRegistry.core';
 
 type BlockRenderer = (props: any) => JSX.Element | null;
 
+// helper: wrap named exports into a default BlockRenderer
+const wrap = (Comp: any) => (props: any) =>
+  React.createElement(Comp, { content: props?.content ?? props, ...props });
+
+// ElectInfo loaders
+const loadCandidateHero         = () => import('@/components/blocks/candidate/hero')                .then(m => ({ default: wrap(m.CandidateHeroBlock) }));
+const loadCandidateAbout        = () => import('@/components/blocks/candidate/about')               .then(m => ({ default: wrap(m.CandidateAboutBlock) }));
+const loadCandidateIssues       = () => import('@/components/blocks/candidate/issues-grid')         .then(m => ({ default: wrap(m.CandidateIssuesGridBlock) }));
+const loadCandidateEndorsements = () => import('@/components/blocks/candidate/endorsements')        .then(m => ({ default: wrap(m.CandidateEndorsementsBlock) }));
+const loadCandidateEvents       = () => import('@/components/blocks/candidate/events')              .then(m => ({ default: wrap(m.CandidateEventsBlock) }));
+const loadCandidateStay         = () => import('@/components/blocks/candidate/stay-connected')      .then(m => ({ default: wrap(m.CandidateStayConnectedBlock) }));
+const loadCandidatePrintQR      = () => import('@/components/blocks/candidate/print-qr')            .then(m => ({ default: wrap(m.CandidatePrintQRBlock) }));
+const loadPublicQrInfo          = () => import('@/components/blocks/candidate/public-qr-info')      .then(m => ({ default: wrap(m.PublicQrInfoBlock) }));
+const loadPublicQrSidebar       = () => import('@/components/blocks/candidate/public-qr-sidebar')   .then(m => ({ default: wrap(m.PublicQrSidebarBlock) }));
+
 const LOCAL_ALIASES: Record<string, BlockType | string> = {
-  exterior_agency: 'exterior_agency',
-  exterior_cleaning_agency: 'exterior_agency',
+  'exterior_agency': 'exterior_agency',
+  'exterior_cleaning_agency': 'exterior_agency',
   'exterior-cleaning-agency': 'exterior_agency',
-  pnw_prestige: 'exterior_agency',
+  'pnw_prestige': 'exterior_agency',
+  // ElectInfo (optional)
+  'candidate-hero': 'candidate_hero',
+  'candidate-about': 'candidate_about',
+  'candidate-issues-grid': 'candidate_issues_grid',
+  'candidate-endorsements': 'candidate_endorsements',
+  'candidate-events': 'candidate_events',
+  'candidate-stay-connected': 'candidate_stay_connected',
+  'candidate-print-qr': 'candidate_print_qr',
+  'public-qr-info': 'public_qr_info',
+  'public-qr-sidebar': 'public_qr_sidebar',
 };
 
 function isLiveSite(props: any) {
@@ -97,6 +122,21 @@ export const DYNAMIC_RENDERERS: Record<
       },
     };
   },
+
+  // ElectInfo
+  candidate_hero: loadCandidateHero,
+  candidate_about: loadCandidateAbout,
+  candidate_issues_grid: loadCandidateIssues,
+  candidate_endorsements: loadCandidateEndorsements,
+  candidate_events: loadCandidateEvents,
+  candidate_stay_connected: loadCandidateStay,
+
+  // Admin-only (self-hides on public via its own prop/route check)
+  candidate_print_qr: loadCandidatePrintQR,
+
+  // Public QR helpers
+  public_qr_info: loadPublicQrInfo,
+  public_qr_sidebar: loadPublicQrSidebar,
 } as const;
 
 /** Resolve alias → canonical */

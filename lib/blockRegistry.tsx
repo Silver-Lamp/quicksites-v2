@@ -8,7 +8,8 @@ import type { JSX } from 'react';
 import * as React from 'react';
 import { z } from 'zod';
 import type { Block, BlockType, BlockCategory, SeedContext, BlockDefinition } from '@/types/blocks';
-import { isBlockType, schemaFor } from '@/types/blocks';
+import { BLOCK_CATEGORY, isBlockType, schemaFor } from '@/types/blocks';
+import { blockMeta } from '@/admin/lib/zod/blockSchema';
 
 import HeroRender from '@/components/admin/templates/render-blocks/hero';
 import { DEFAULT_BLOCK_CONTENT } from '@/lib/blocks/defaultBlockContent';
@@ -62,11 +63,25 @@ type BlockRegistryEntry<K extends BlockType = BlockType> = {
   defaultContent: DefaultContentMap[K] | unknown;
   render: BlockRenderer | LazyRenderer;
 };
+export type BlockRegistryMap = Partial<{ [K in BlockType]: BlockRegistryEntry<any> }>;
 
 function getDefaultContentSafe<T extends BlockType>(type: T, fallback: unknown) {
   return ((DEFAULT_BLOCK_CONTENT as any)[type] ?? fallback) as DefaultContentMap[T] | unknown;
 }
-
+function getFallbackEntry(type: BlockType): BlockRegistryEntry<any> {
+  return {
+    label: blockMeta[type]?.label ?? type,
+    icon: blockMeta[type]?.icon ?? '🧩',
+    category: BLOCK_CATEGORY[type] ?? 'content',
+    isStatic: false,
+    defaultContent: getDefaultContentSafe(type, {}),
+    render: () => (
+      <div className="rounded-md border border-dashed border-yellow-500/30 bg-yellow-500/10 p-3 text-xs text-yellow-300">
+        Block <b>{type}</b> isn’t registered yet.
+      </div>
+    ),
+  };
+}
 // Shared loader for the exterior-agency family
 const loadExteriorAgency: LazyRenderer = () =>
   import('@/components/sites/render-blocks/exterior-cleaning-agency').then((mod) => ({
@@ -77,8 +92,8 @@ const loadExteriorAgency: LazyRenderer = () =>
   }));
 
 // ---------- Canonical UI registry ----------
-export const BLOCK_REGISTRY: { [K in BlockType]: BlockRegistryEntry<K> } = {
-  text: {
+export const BLOCK_REGISTRY: BlockRegistryMap = {
+    text: {
     label: 'Text',
     icon: '📝',
     category: 'content',
@@ -495,7 +510,8 @@ export function resolveCanonicalType(input: string): BlockType | null {
 
 export function getRegistryEntry(inputType: string) {
   const t = resolveCanonicalType(inputType);
-  return t ? BLOCK_REGISTRY[t] : undefined;
+  if (!t) return undefined;
+  return (BLOCK_REGISTRY[t] as BlockRegistryEntry<any>) ?? getFallbackEntry(t);
 }
 
 export function validateBlock(block: Block) {

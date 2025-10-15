@@ -373,4 +373,12 @@ export const DEFAULT_BLOCK_CONTENT = {
       { label: 'Events', href: '/events' },
     ],
   },
+  candidate_donate: {
+    headline: 'Donate to the Campaign',
+    description: 'Every contribution helps us reach more voters.',
+  },
+  candidate_volunteer: {
+    headline: 'Volunteer for the Campaign',
+    description: 'Join the team to canvass, phone bank, or host a yard sign.',
+  },
 } as const satisfies Record<BlockType, any>;

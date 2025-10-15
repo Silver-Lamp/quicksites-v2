@@ -34,7 +34,9 @@ export default function StickerSheet({
   defaultPresetId = 'avery-5160',
   initialQrSize = 512,
 }: Props) {
-  const svgRef = React.useRef<SVGSVGElement | null>(null);
+  // We avoid attaching ref to <QRCode /> due to library typing quirks.
+  // Instead, keep a wrapper ref and query the inner <svg>.
+  const wrapRef = React.useRef<HTMLDivElement | null>(null);
 
   // Layout / preset controls
   const [presetId, setPresetId] = React.useState(defaultPresetId);
@@ -62,11 +64,17 @@ export default function StickerSheet({
   const [working, setWorking] = React.useState<'raster' | 'vector' | null>(null);
   const name = sanitizeFilename(fileBaseName || 'qr-stickers');
 
+  // Helper to get the live SVG element
+  const getSvgEl = React.useCallback(() => {
+    return (wrapRef.current?.querySelector('svg') as SVGSVGElement | null) ?? null;
+  }, []);
+
   async function onDownloadRaster() {
-    if (!svgRef.current) return;
+    const svgEl = getSvgEl();
+    if (!svgEl) return;
     setWorking('raster');
     try {
-      const svgString = getSvgStringFromNode(svgRef.current);
+      const svgString = getSvgStringFromNode(svgEl);
       const pngDataUrl = await (withCenterIcon
         ? svgStringToPngDataUrlWithOverlay(
             svgString,
@@ -89,7 +97,6 @@ export default function StickerSheet({
       });
       downloadPdf(`${name}-${preset.id}.pdf`, pdfBytes);
     } catch (e) {
-      // eslint-disable-next-line no-alert
       alert('Raster PDF export failed. See console for details.');
       // eslint-disable-next-line no-console
       console.error(e);
@@ -119,7 +126,6 @@ export default function StickerSheet({
         }),
       });
       if (!res.ok) {
-        // eslint-disable-next-line no-alert
         alert('Vector PDF export failed.');
         return;
       }
@@ -133,7 +139,6 @@ export default function StickerSheet({
       a.remove();
       URL.revokeObjectURL(url);
     } catch (e) {
-      // eslint-disable-next-line no-alert
       alert('Vector PDF export failed. See console for details.');
       // eslint-disable-next-line no-console
       console.error(e);
@@ -147,8 +152,11 @@ export default function StickerSheet({
       <div className="text-sm font-semibold mb-3">Sticker Sheet (PDF)</div>
 
       {/* QR preview (SVG) */}
-      <div className="inline-block rounded-xl border bg-white p-3 dark:border-gray-700 dark:bg-gray-900">
-        <QRCode value={value} size={qrSize} ref={(node: any) => (svgRef.current = node)} />
+      <div
+        ref={wrapRef}
+        className="inline-block rounded-xl border bg-white p-3 dark:border-gray-700 dark:bg-gray-900"
+      >
+        <QRCode value={value} size={qrSize} />
       </div>
 
       <div className="mt-4 grid gap-3 md:grid-cols-3">
@@ -283,7 +291,7 @@ export default function StickerSheet({
           Caption safe margin (0–0.3)
           <input
             type="number"
-            step={0.01}
+            step="0.01"
             min={0}
             max={0.3}
             className="mt-1 w-full rounded border px-2 py-1 dark:border-gray-700"
@@ -297,6 +305,7 @@ export default function StickerSheet({
 
       <div className="mt-4 flex flex-wrap gap-2">
         <button
+          type="button"
           onClick={onDownloadRaster}
           disabled={working !== null}
           className="rounded-xl bg-gray-900 px-4 py-2 text-sm font-semibold text-white hover:bg-black disabled:opacity-60 dark:bg-white dark:text-gray-900"
@@ -304,6 +313,7 @@ export default function StickerSheet({
           {working === 'raster' ? 'Building…' : 'Download PDF'}
         </button>
         <button
+          type="button"
           onClick={onDownloadVector}
           disabled={working !== null}
           className="rounded-xl border px-4 py-2 text-sm font-semibold hover:bg-gray-50 disabled:opacity-60 dark:border-gray-700 dark:hover:bg-gray-800"

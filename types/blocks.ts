@@ -45,7 +45,11 @@ export const BLOCK_CATEGORY: Record<BlockType, BlockCategory> = {
   reviews_list: 'content',
   hours: 'meta',
   scheduler: 'interactive',
-
+  candidate_donate: 'interactive',
+  candidate_volunteer: 'interactive',
+  candidate_print_qr: 'interactive',
+  public_qr_info: 'interactive',
+  public_qr_sidebar: 'interactive',
   // ----- NEW: commerce blocks -----
   products_grid: 'content',     // grid of purchasable items/services
   service_offer: 'interactive', // single service/product CTA (planned)
@@ -57,10 +61,6 @@ export const BLOCK_CATEGORY: Record<BlockType, BlockCategory> = {
   candidate_endorsements: 'content',
   candidate_events: 'content',
   candidate_stay_connected: 'interactive',
-  candidate_print_qr: 'interactive',   // admin-only but “interactive” fits best
-  public_qr_info: 'interactive',
-  public_qr_sidebar: 'interactive',
-    
 } as const;
 
 export type BlockMetadata = {

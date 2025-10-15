@@ -871,7 +871,22 @@ export const blockContentSchemaMap = {
       adminOnly: z.boolean().default(true),
     }),
   },
-
+  candidate_donate: {
+    label: 'Donate',
+    icon: '💰',
+    schema: z.object({
+      headline: z.string().default('Donate to the Campaign'),
+      description: z.string().optional(),
+    }),
+  },
+  candidate_volunteer: {
+    label: 'Volunteer',
+    icon: '👥',
+    schema: z.object({
+      headline: z.string().default('Volunteer for the Campaign'),
+      description: z.string().optional(),
+    }),
+  },
   /* Public-facing QR helpers */
   public_qr_info: {
     label: 'QR Info (Public)',
@@ -885,7 +900,7 @@ export const blockContentSchemaMap = {
       showLinkText: z.boolean().default(true),
     }),
   },
-
+  
   public_qr_sidebar: {
     label: 'QR Sidebar (Public)',
     icon: '🧲',

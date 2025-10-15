@@ -19,6 +19,8 @@ const loadCandidateEndorsements = () => import('@/components/blocks/candidate/en
 const loadCandidateEvents       = () => import('@/components/blocks/candidate/events')              .then(m => ({ default: wrap(m.CandidateEventsBlock) }));
 const loadCandidateStay         = () => import('@/components/blocks/candidate/stay-connected')      .then(m => ({ default: wrap(m.CandidateStayConnectedBlock) }));
 const loadCandidatePrintQR      = () => import('@/components/blocks/candidate/print-qr')            .then(m => ({ default: wrap(m.CandidatePrintQRBlock) }));
+const loadCandidateDonate       = () => import('@/components/blocks/candidate/donate')              .then(m => ({ default: wrap(m.CandidateDonateBlock) }));
+const loadCandidateVolunteer    = () => import('@/components/blocks/candidate/volunteer')           .then(m => ({ default: wrap(m.CandidateVolunteerBlock) }));
 const loadPublicQrInfo          = () => import('@/components/blocks/candidate/public-qr-info')      .then(m => ({ default: wrap(m.PublicQrInfoBlock) }));
 const loadPublicQrSidebar       = () => import('@/components/blocks/candidate/public-qr-sidebar')   .then(m => ({ default: wrap(m.PublicQrSidebarBlock) }));
 
@@ -35,6 +37,8 @@ const LOCAL_ALIASES: Record<string, BlockType | string> = {
   'candidate-events': 'candidate_events',
   'candidate-stay-connected': 'candidate_stay_connected',
   'candidate-print-qr': 'candidate_print_qr',
+  'candidate-donate': 'candidate_donate',
+  'candidate-volunteer': 'candidate_volunteer',
   'public-qr-info': 'public_qr_info',
   'public-qr-sidebar': 'public_qr_sidebar',
 };
@@ -135,6 +139,8 @@ export const DYNAMIC_RENDERERS: Record<
   candidate_print_qr: loadCandidatePrintQR,
 
   // Public QR helpers
+  candidate_donate: loadCandidateDonate,
+  candidate_volunteer: loadCandidateVolunteer,
   public_qr_info: loadPublicQrInfo,
   public_qr_sidebar: loadPublicQrSidebar,
 } as const;

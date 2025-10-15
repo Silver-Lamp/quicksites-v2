@@ -1,3 +1,4 @@
+// components/qr/DownloadQR.tsx
 'use client';
 
 import * as React from 'react';
@@ -23,25 +24,33 @@ type Props = {
 
 export default function DownloadQR({
   value,
-  previewSize = 128,     // ⬅️ small on-page preview
-  exportSize = 1024,      // ⬅️ large crisp export
+  previewSize = 128,   // small on-page preview
+  exportSize = 1024,    // large crisp export
   bg = '#ffffff',
   fileBaseName = 'qr',
   className,
 }: Props) {
-  const svgRef = React.useRef<SVGSVGElement | null>(null);
+  // Wrapper ref; we'll query its inner <svg> to avoid react-qr-code ref typing issues
+  const wrapRef = React.useRef<HTMLDivElement | null>(null);
   const base = sanitizeFilename(fileBaseName, 'qr');
 
+  const getSvgEl = React.useCallback(
+    () => (wrapRef.current?.querySelector('svg') as SVGSVGElement | null) ?? null,
+    []
+  );
+
   async function handleDownloadSvg() {
-    if (!svgRef.current) return;
-    const svgString = getSvgStringFromNode(svgRef.current);
+    const svgEl = getSvgEl();
+    if (!svgEl) return;
+    const svgString = getSvgStringFromNode(svgEl);
     downloadTextAsFile(`${base}.svg`, svgString);
   }
 
   async function handleDownloadPng() {
-    if (!svgRef.current) return;
-    const svgString = getSvgStringFromNode(svgRef.current);
-    // ⬇️ generate high-res PNG regardless of the preview size
+    const svgEl = getSvgEl();
+    if (!svgEl) return;
+    const svgString = getSvgStringFromNode(svgEl);
+    // generate high-res PNG regardless of the preview size
     const dataUrl = await svgStringToPngDataUrl(svgString, exportSize, bg);
     downloadDataUrl(`${base}.png`, dataUrl);
   }
@@ -50,16 +59,13 @@ export default function DownloadQR({
     <div className={className}>
       <div className="inline-flex flex-col items-center gap-3">
         <div
+          ref={wrapRef}
           className="rounded-xl border bg-white p-3 dark:border-gray-700 dark:bg-gray-900"
           style={{ width: previewSize, height: previewSize }}
         >
-          <QRCode
-            value={value}
-            size={previewSize}
-            ref={(node: SVGSVGElement | null) => (svgRef.current = node)}
-            style={{ width: '100%', height: '100%' }}
-          />
+          <QRCode value={value} size={previewSize} style={{ width: '100%', height: '100%' }} />
         </div>
+
         <div className="flex w-full flex-wrap justify-center gap-2">
           <button
             type="button"

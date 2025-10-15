@@ -198,7 +198,7 @@ export function downloadPdf(filename: string, bytes: ArrayBuffer | Uint8Array): 
   if (typeof window === "undefined") return; // SSR/Node guard
 
   // Normalize and build the blob as a BufferSource (ArrayBufferView is OK)
-  const data = toUint8(bytes);
+  const data = toUint8(bytes) as unknown as BlobPart;
   const blob = new Blob([data], { type: "application/pdf" });
   const url = URL.createObjectURL(blob);
 

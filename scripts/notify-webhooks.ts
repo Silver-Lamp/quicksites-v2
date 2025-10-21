@@ -10,7 +10,7 @@ const supabase = createClient(
 
 const logPath = './reports/activity.log';
 const contents = fs.readFileSync(logPath, 'utf-8').trim().split('\n');
-const lastLine = contents.at(-1) || '';
+const lastLine = contents[contents.length - 1] ?? '';
 
 if (!lastLine.includes('Exported')) {
   console.log('No export event found, skipping webhook');

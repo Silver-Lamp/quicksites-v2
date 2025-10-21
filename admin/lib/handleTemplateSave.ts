@@ -263,7 +263,7 @@ export async function handleTemplateSave({
         : saveSiteWithClient;
 
     // Single promise for both toast + await
-    const savePromise = saveWithDb(supabase as SupabaseClient<Database>, payload);
+    const savePromise = saveWithDb(supabase as unknown as SupabaseClient<Database>, payload);
 
     toast.promise(savePromise, {
       loading: 'Saving...',

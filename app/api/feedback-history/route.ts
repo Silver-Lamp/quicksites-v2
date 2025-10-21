@@ -1,71 +1,71 @@
-export const runtime = 'nodejs';
+// export const runtime = 'nodejs';
 
-import { createClient } from '@supabase/supabase-js';
-import { json } from '@/lib/api/json';
-import { NextRequest } from 'next/server';
+// import { createClient } from '@supabase/supabase-js';
+// import { json } from '@/lib/api/json';
+// import { NextRequest } from 'next/server';
 
-import type { Database } from '@/types/supabase';
+// import type { Database } from '@/types/supabase';
 
-const supabase = createClient<Database>(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+// const supabase = createClient<Database>(
+//   process.env.NEXT_PUBLIC_SUPABASE_URL!,
+//   process.env.SUPABASE_SERVICE_ROLE_KEY!
+// );
 
-// GET: Fetch feedback (sent or received) for authenticated user
-export async function GET(req: NextRequest) {
-  const token = req.headers.get('Authorization')?.replace('Bearer ', '');
-  if (!token) return json({ error: 'Missing token' }, { status: 401 });
+// // GET: Fetch feedback (sent or received) for authenticated user
+// export async function GET(req: NextRequest) {
+//   const token = req.headers.get('Authorization')?.replace('Bearer ', '');
+//   if (!token) return json({ error: 'Missing token' }, { status: 401 });
 
-  const {
-    data: { user },
-    error: authError,
-  } = await supabase.auth.getUser(token);
+//   const {
+//     data: { user },
+//     error: authError,
+//   } = await supabase.auth.getUser(token);
 
-  if (authError || !user) return json({ error: 'Unauthorized' }, { status: 401 });
+//   if (authError || !user) return json({ error: 'Unauthorized' }, { status: 401 });
 
-  const { searchParams } = new URL(req.url);
-  const type = searchParams.get('type') || 'sent';
-  const limit = parseInt(searchParams.get('limit') || '50');
-  const offset = parseInt(searchParams.get('offset') || '0');
+//   const { searchParams } = new URL(req.url);
+//   const type = searchParams.get('type') || 'sent';
+//   const limit = parseInt(searchParams.get('limit') || '50');
+//   const offset = parseInt(searchParams.get('offset') || '0');
 
-  const column = type === 'sent' ? 'user_id' : 'block_owner_id';
+//   const column = type === 'sent' ? 'user_id' : 'block_owner_id';
 
-  const { data, error } = await supabase
-    .from('block_feedback')
-    .select('*')
-    .eq(column, user.id)
-    .order('created_at', { ascending: false })
-    .range(offset, offset + limit - 1);
+//   const { data, error } = await supabase
+//     .from('block_feedback')
+//     .select('*')
+//     .eq(column, user.id)
+//     .order('created_at', { ascending: false })
+//     .range(offset, offset + limit - 1);
 
-  if (error) return json({ error: error.message }, { status: 500 });
+//   if (error) return json({ error: error.message }, { status: 500 });
 
-  return json(data);
-}
+//   return json(data);
+// }
 
-// POST: Add new feedback
-export async function POST(req: NextRequest) {
-  const token = req.headers.get('Authorization')?.replace('Bearer ', '');
-  if (!token) return json({ error: 'Missing token' }, { status: 401 });
+// // POST: Add new feedback
+// export async function POST(req: NextRequest) {
+//   const token = req.headers.get('Authorization')?.replace('Bearer ', '');
+//   if (!token) return json({ error: 'Missing token' }, { status: 401 });
 
-  const {
-    data: { user },
-    error: authError,
-  } = await supabase.auth.getUser(token);
+//   const {
+//     data: { user },
+//     error: authError,
+//   } = await supabase.auth.getUser(token);
 
-  if (authError || !user) return json({ error: 'Unauthorized' }, { status: 401 });
+//   if (authError || !user) return json({ error: 'Unauthorized' }, { status: 401 });
 
-  const { block_id, action = 'echo', message = '' } = await req.json();
+//   const { block_id, action = 'echo', message = '' } = await req.json();
 
-  if (!block_id) return json({ error: 'Missing block_id' }, { status: 400 });
+//   if (!block_id) return json({ error: 'Missing block_id' }, { status: 400 });
 
-  const { error } = await supabase.from('block_feedback').insert({
-    block_id,
-    user_id: user.id,
-    action,
-    message,
-  });
+//   const { error } = await supabase.from('block_feedback').insert({
+//     block_id,
+//     user_id: user.id,
+//     action,
+//     message,
+//   });
 
-  if (error) return json({ error: error.message }, { status: 500 });
+//   if (error) return json({ error: error.message }, { status: 500 });
 
-  return json({ success: true });
-}
+//   return json({ success: true });
+// }

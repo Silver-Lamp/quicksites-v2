@@ -15,24 +15,16 @@ export async function lookupSlugByHost(host: string): Promise<string | null> {
 
   const subdomain = host.split('.')?.[0];
 
-  const { data: subMatch } = await supabaseAdmin
+  const { data: subMatch }: { data: { slug: string } | null } = await supabaseAdmin
     .from('public_sites')
     .select('slug')
     .eq('subdomain', subdomain)
-    .maybeSingle();
+    .single();
 
-  if (subMatch?.slug) {
+  if (subMatch && typeof subMatch.slug === 'string') {
     _slugCache.set(host, subMatch.slug);
-    return subMatch.slug;
+    return subMatch.slug as string;
   }
 
-  const { data: domainMatch } = await supabaseAdmin
-    .from('public_sites')
-    .select('slug')
-    .eq('domain', host)
-    .maybeSingle();
-
-  const resolved = domainMatch?.slug ?? null;
-  _slugCache.set(host, resolved);
-  return resolved;
+  return null;
 }

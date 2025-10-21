@@ -19,7 +19,7 @@ export async function GET() {
     return NextResponse.json({ error: 'Failed to fetch industries' }, { status: 500 });
   }
 
-  const industryNames = data.map((row) => row.name).filter(Boolean);
+  const industryNames = (data || []).map((row: any) => row.name).filter(Boolean);
 
   return NextResponse.json(industryNames, {
     status: 200,

@@ -47,7 +47,7 @@ export async function getServerUserProfile(): Promise<{
       id: user.id,
       email: user.email ?? null,
     },
-    role: profile?.role ?? 'viewer',
+    role: (profile as unknown as { role: string } | null)?.role ?? 'viewer',
     headers: await headers,
     cookies,
   };

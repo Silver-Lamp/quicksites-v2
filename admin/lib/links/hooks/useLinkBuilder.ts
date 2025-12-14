@@ -24,9 +24,10 @@ export function useLinkBuilder() {
 
     const { theme: _t, href: _h, prefetch: _p, target: _tg, ...rest } = linkProps || {};
     const target = _tg as '_blank' | '_self' | '_parent' | '_top' | undefined;
+    const prefetch = typeof _p === 'boolean' ? _p : undefined;
     return buildSafeLink(id, href.toString(), 'templateLink', children, {
       className: resolved,
-      prefetch: _p === 'auto' ? undefined : _p ?? undefined,
+      prefetch,
       target,
       ...rest,
     });
@@ -44,9 +45,10 @@ export function useLinkBuilder() {
     const resolved = linkProps?.theme ? linkThemeMap[linkProps.theme] : linkThemeMap.primary;
 
     const { theme: _t, href: _h, prefetch: _p, ...rest } = linkProps || {};
+    const prefetch = typeof _p === 'boolean' ? _p : undefined;
     return buildSafeLink(id, href.toString(), 'snapshotLink', children, {
       className: resolved,
-      prefetch: _p === 'auto' ? undefined : _p ?? undefined,
+      prefetch,
       target: undefined as any,
       ...rest,
     });

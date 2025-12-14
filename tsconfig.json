@@ -1,71 +1,31 @@
 {
   "extends": "./tsconfig.base.json",
-  "include": [
-    ".next/types",
-    "_pages-legacy",
-    "admin",
-    "app",
-    "components",
-    "hooks",
-    "lib",
-    "next-env.d.ts",
-    "pages",
-    "scripts",
-    "types",
-    ".next/types/**/*.ts",
-    "api"
-  ],
-  "exclude": [
-    "node_modules",
-    ".next"
-  ],
   "compilerOptions": {
     "lib": ["ES2021", "DOM"],
     "jsx": "preserve",
     "tsBuildInfoFile": "./.tsbuildinfo",
     "outDir": ".lint-tmp",
-    "typeRoots": [
-      "./types",
-      "./node_modules/@types"
-    ],
-    "types": [
-      "next",
-      "next/image-types/global",
-      "node"
-    ],
-    "plugins": [
-      {
-        "name": "next"
-      }
-    ],
+    "typeRoots": ["./types", "./node_modules/@types"],
+    "types": ["next", "next/image-types/global", "node"],
+    "plugins": [{ "name": "next" }],
     "allowJs": true,
-    "isolatedModules": true,
-    "baseUrl": ".",
-    "paths": {
-      "@/*": [
-        "./*"
-      ],
-      "@/admin/*": [
-        "admin/*"
-      ],
-      "@/app/*": [
-        "app/*"
-      ],
-      "@/components/*": [
-        "components/*"
-      ],
-      "@/hooks/*": [
-        "hooks/*"
-      ],
-      "@/lib/*": [
-        "lib/*"
-      ],
-      "@/types/*": [
-        "types/*"
-      ],
-      "@/pages/*": [
-        "pages/*"
-      ]
-    }
-  }
+    "isolatedModules": true
+    /* no baseUrl/paths here; inherited from tsconfig.base.json */
+  },
+  "include": [
+    ".next/types",
+    ".next/types/**/*.ts",
+    "admin",
+    "app",
+    "components",
+    "hooks",
+    "lib",
+    "types",
+    "pages",
+    "scripts",
+    "next-env.d.ts",
+    "api",
+    "_pages-legacy"
+  ],
+  "exclude": ["node_modules", ".next", "dist"]
 }

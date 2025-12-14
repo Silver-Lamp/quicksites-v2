@@ -1,10 +1,17 @@
 // types/supabase.ts
-import { ReadonlyRequestCookies } from 'next/dist/server/web/spec-extension/adapters/request-cookies';
-export type SupabaseCookieAdapter = () => Promise<ReadonlyRequestCookies>;
+// AUTO-GENERATED: Supabase types for QuickSites (framework-agnostic)
+// Do not import Next.js or other runtime-specific types in this file.
 
-export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[];
+// Json helper type used by Supabase generated definitions.
+export type Json =
+  | string
+  | number
+  | boolean
+  | null
+  | { [key: string]: Json | undefined }
+  | Json[];
 
-
+// Root database interface. Extend/replace with output from `supabase gen types`.
 export type Database = {
   graphql_public: {
     Tables: {
@@ -18,6 +25,7 @@ export type Database = {
         Args: {
           operationName?: string;
           query?: string;
+
           variables?: Json;
           extensions?: Json;
         };

@@ -31,9 +31,10 @@ export async function logWithSlack(profileId: string, event: string, details: st
     event,
     details: details || null,
   };
-  const { error: insertError } = await (supabase
+  // @ts-ignore - Supabase type inference issue with branding_logs table
+  const { error: insertError } = await supabase
     .from('branding_logs')
-    .insert([logData]) as any);
+    .insert([logData]);
 
   if (insertError) {
     console.error('[logWithSlack] Failed to insert branding log:', insertError.message);

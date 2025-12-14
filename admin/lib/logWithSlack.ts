@@ -31,7 +31,9 @@ export async function logWithSlack(profileId: string, event: string, details: st
     event,
     details: details || null,
   };
-  const { error: insertError } = await supabase.from('branding_logs').insert(logData);
+  const { error: insertError } = await supabase
+    .from('branding_logs')
+    .insert([logData] as BrandingLogInsert[]);
 
   if (insertError) {
     console.error('[logWithSlack] Failed to insert branding log:', insertError.message);

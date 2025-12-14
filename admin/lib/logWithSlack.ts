@@ -4,8 +4,11 @@
 
 import { supabase } from '@/admin/lib/supabaseClient';
 import { sendToSlack } from './sendToSlack';
+import type { Database } from '@/types/supabase';
 
 const SLACK_WEBHOOK_URL = process.env.NEXT_PUBLIC_SLACK_WEBHOOK_URL;
+
+type BrandingLogInsert = Database['public']['Tables']['branding_logs']['Insert'];
 
 export async function logWithSlack(profileId: string, event: string, details: string = '') {
   const {
@@ -22,12 +25,13 @@ export async function logWithSlack(profileId: string, event: string, details: st
   }
 
   // ✅ Save to Supabase
-  const { error: insertError } = await supabase.from('branding_logs').insert({
+  const logData: BrandingLogInsert = {
     profile_id: profileId,
     user_id: userId,
     event,
-    details,
-  });
+    details: details || null,
+  };
+  const { error: insertError } = await supabase.from('branding_logs').insert(logData);
 
   if (insertError) {
     console.error('[logWithSlack] Failed to insert branding log:', insertError.message);

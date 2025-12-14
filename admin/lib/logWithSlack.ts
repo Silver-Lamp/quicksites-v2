@@ -31,9 +31,9 @@ export async function logWithSlack(profileId: string, event: string, details: st
     event,
     details: details || null,
   };
-  // @ts-ignore - Supabase type inference issue with branding_logs table
   const { error: insertError } = await supabase
     .from('branding_logs')
+    // @ts-ignore - Supabase type inference issue with branding_logs table
     .insert([logData]);
 
   if (insertError) {

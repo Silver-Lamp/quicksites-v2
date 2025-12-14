@@ -3,7 +3,9 @@
   "version": "1.2.0",
   "private": true,
   "type": "module",
-  "engines": { "node": "20.x" },
+  "engines": {
+    "node": "20.x"
+  },
   "scripts": {
     "dev": "next dev",
     "build": "next build",
@@ -27,13 +29,11 @@
     "@radix-ui/react-switch": "^1.2.5",
     "@radix-ui/react-tabs": "^1.1.12",
     "@radix-ui/react-tooltip": "^1.2.7",
-
     "@supabase/auth-helpers-nextjs": "^0.10.0",
     "@supabase/auth-helpers-react": "^0.5.0",
     "@supabase/functions-js": "^2.4.4",
     "@supabase/ssr": "^0.6.1",
     "@supabase/supabase-js": "^2.55.0",
-
     "@vercel/og": "^0.6.8",
     "archiver": "^7.0.1",
     "chart.js": "^4.4.9",
@@ -48,7 +48,7 @@
     "lodash.isequal": "^4.5.0",
     "lucide-react": "^0.513.0",
     "marked": "^15.0.12",
-    "next": "^15.2.4",
+    "next": "15.2.8",
     "nodemailer": "^7.0.3",
     "papaparse": "^5.5.3",
     "qrcode": "^1.5.4",

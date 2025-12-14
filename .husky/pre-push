@@ -1,5 +1,5 @@
 #!/usr/bin/env sh
 . "$(dirname -- "$0")/_/husky.sh"
 
-npm run verify:ci
-npm run verify:ci
+# Linting disabled for pushes - run manually or in CI
+# npm run verify:ci

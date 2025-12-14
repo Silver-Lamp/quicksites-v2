@@ -6,6 +6,7 @@ const screenshotDir = `tests/__screenshots__/${branch}`;
 
 export default defineConfig({
   testDir: './tests',
+  testMatch: /.*\.spec\.ts$/, // Only run Playwright tests (.spec.ts), ignore Vitest tests (.test.ts)
   use: {
     baseURL: 'http://localhost:3000',
     screenshot: 'only-on-failure', // ✅ valid

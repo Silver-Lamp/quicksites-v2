@@ -1,4 +1,5 @@
 require('@rushstack/eslint-patch/modern-module-resolution');
+const path = require('path');
 
 module.exports = {
   root: true,
@@ -13,12 +14,26 @@ module.exports = {
     sourceType: 'module',
     ecmaFeatures: { jsx: true },
   },
-  plugins: ['@typescript-eslint', 'prettier', 'markdown'],
+  plugins: ['@typescript-eslint', 'prettier', 'markdown', 'import'],
   extends: [
     'next/core-web-vitals',
     'plugin:@typescript-eslint/recommended',
     'plugin:prettier/recommended',
   ],
+  settings: {
+    'import/parsers': {
+      '@typescript-eslint/parser': ['.ts', '.tsx'],
+    },
+    'import/resolver': {
+      // Reads "baseUrl" + "paths" from tsconfig.json
+      typescript: {
+        project: path.resolve(__dirname, 'tsconfig.json'),
+        alwaysTryTypes: true,
+      },
+      // Fallback resolution
+      node: { extensions: ['.js', '.jsx', '.ts', '.tsx'] },
+    },
+  },
   ignorePatterns: [
     '**/node_modules/**',
     '**/.next/**',
@@ -155,6 +170,48 @@ module.exports = {
       rules: {
         '@typescript-eslint/no-var-requires': 'off',
         '@typescript-eslint/no-explicit-any': 'off',
+      },
+    },
+    // RSC (pages/layouts) must NOT import the write-enabled client
+    {
+      files: ['app/**/{page,layout}.@(ts|tsx)'],
+      rules: {
+        'no-restricted-imports': [
+          'error',
+          {
+            paths: [
+              {
+                name: '@/lib/supabase/serverClient',
+                importNames: ['getSupabaseForAction'],
+                message:
+                  'Do not use getSupabaseForAction in RSC (pages/layouts). Use getSupabaseRSC instead.',
+              },
+            ],
+          },
+        ],
+      },
+    },
+    // Server Actions / Route Handlers must NOT import the read-only client
+    {
+      files: [
+        'app/**/route.@(ts|tsx)',
+        'app/**/actions.@(ts|tsx)',
+        'app/**/server/**/*.@(ts|tsx)',
+      ],
+      rules: {
+        'no-restricted-imports': [
+          'error',
+          {
+            paths: [
+              {
+                name: '@/lib/supabase/serverClient',
+                importNames: ['getSupabaseRSC', 'getServerSupabaseClient'],
+                message:
+                  'Do not use getSupabaseRSC in actions/routes. Use getSupabaseForAction so cookies can be written.',
+              },
+            ],
+          },
+        ],
       },
     },
     {

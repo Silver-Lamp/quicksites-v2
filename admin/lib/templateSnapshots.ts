@@ -47,14 +47,32 @@ export async function createSnapshotFromTemplate(
     console.group(`QSITES[snapshot] create trace=${trace}`);
     console.log('insert row.slug', row.slug);
 
-    const { data, error, status } = await supabase
+    const { data, error, status } = (await supabase
       .from('templates')
       // @ts-ignore - Supabase type inference issue with templates table
       .insert(row)
       .select(
         'id, slug, commit, created_at, updated_at, archived, is_version, owner_id, last_editor, data, header_block, footer_block, color_mode'
       )
-      .single();
+      .single()) as {
+      data: {
+        id: string;
+        slug: string;
+        commit: string | null;
+        created_at: string;
+        updated_at: string;
+        archived: boolean;
+        is_version: boolean;
+        owner_id: string | null;
+        last_editor: string | null;
+        data: any;
+        header_block: any;
+        footer_block: any;
+        color_mode: string | null;
+      } | null;
+      error: any;
+      status: number;
+    };
 
     console.log('status', status);
     if (error) {

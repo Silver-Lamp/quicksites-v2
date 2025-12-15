@@ -44,7 +44,9 @@ export async function publishSite({
   };
 
   const operation = isUpdateMode
+    // @ts-ignore - Supabase type inference issue with published_sites table
     ? supabase.from('published_sites').update(publishData).eq('slug', slug)
+    // @ts-ignore - Supabase type inference issue with published_sites table
     : supabase.from('published_sites').insert([publishData]);
 
   const { error } = await operation;

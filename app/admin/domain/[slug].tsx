@@ -45,9 +45,9 @@ export default function DomainDetail() {
 
     const newClaimed = !domain.is_claimed;
 
-    // @ts-ignore - Supabase type inference issue with domains table
     const { error: updateError } = await supabase
       .from('domains')
+      // @ts-ignore - Supabase type inference issue with domains table
       .update({ is_claimed: newClaimed })
       .eq('id', domain.id);
 

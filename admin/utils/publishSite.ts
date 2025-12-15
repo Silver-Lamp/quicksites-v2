@@ -54,6 +54,7 @@ export async function publishSite({
 
   const url = `${window.location.origin}/sites/${slug}`;
   const qrUrl = await uploadQRCodeImage(slug, url);
+  // @ts-ignore - Supabase type inference issue with published_sites table
   await supabase.from('published_sites').update({ qr_url: qrUrl }).eq('slug', slug);
 
   return url;

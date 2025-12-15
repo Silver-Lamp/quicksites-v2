@@ -9,11 +9,13 @@ set -euo pipefail
 DEBUG=false
 FORCE_PUSH=false
 SKIP_BUILD=false
+SKIP_TYPECHECK=false
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --debug) DEBUG=true ;;
     --force) FORCE_PUSH=true ;;
     --skip-build) SKIP_BUILD=true ;;
+    --skip-typecheck) SKIP_TYPECHECK=true ;;
     *) echo "Unknown flag: $1"; exit 1 ;;
   esac
   shift
@@ -67,6 +69,19 @@ esac
 final_msg="$emoji $msg"
 
 $DEBUG && echo "🔍 Debug ON"
+
+# -------- fast typecheck (catches Supabase type issues) ------
+if [[ "$SKIP_TYPECHECK" == false ]]; then
+  echo "🔍 Running TypeScript typecheck…"
+  if npm run typecheck; then
+    echo "✅ Typecheck passed"
+  else
+    echo
+    echo "❌ Typecheck failed! Fix the errors above before pushing."
+    echo "   Use --skip-typecheck to bypass (not recommended)"
+    exit 1
+  fi
+fi
 
 # -------- local preflight (CI-parity typecheck) ------
 if [[ "$SKIP_BUILD" == false ]]; then

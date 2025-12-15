@@ -116,7 +116,21 @@ export async function loadVersionRow(versionId: string) {
     .limit(1);
 
   console.log('executing supabase query…');
-  const { data, error, status, count } = await query.maybeSingle();
+  const { data, error, status, count } = (await query.maybeSingle()) as {
+    data: {
+      id: string;
+      slug: string;
+      is_version: boolean;
+      archived: boolean;
+      data: any;
+      header_block: any;
+      footer_block: any;
+      color_mode: string | null;
+    } | null;
+    error: any;
+    status: number;
+    count: number | null;
+  };
 
   console.log('status', status, 'count', count, 'hasData', !!data, 'hasError', !!error);
 

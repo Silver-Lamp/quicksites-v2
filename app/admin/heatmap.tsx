@@ -48,10 +48,12 @@ export default function HeatmapPage() {
   useEffect(() => {
     const load = async () => {
       const { data } = await supabase.from('user_action_logs').select('*');
-      setLogs(data || []);
+      // @ts-ignore - Supabase type inference issue with user_action_logs table
+      const typedData = (data || []) as Array<{ domain_id: string | null; action_type: string | null; timestamp: string }>;
+      setLogs(typedData);
 
-      const domains = [...new Set((data || []).map((d) => d.domain_id || '—'))];
-      const types = [...new Set((data || []).map((d) => d.action_type || ''))];
+      const domains = [...new Set(typedData.map((d) => d.domain_id || '—'))];
+      const types = [...new Set(typedData.map((d) => d.action_type || ''))];
       setDomainOptions(domains);
       setActionOptions(types);
     };

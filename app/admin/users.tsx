@@ -80,8 +80,10 @@ export default function UsersPage() {
         .from('user_profiles')
         .select('user_id, role');
       if (!profErr && profileList) {
+        // @ts-ignore - Supabase type inference issue with user_profiles table
+        const typedProfileList = profileList as Array<{ user_id: string; role: string | null }>;
         const map: ProfilesMap = {};
-        for (const p of profileList) map[p.user_id] = p.role;
+        for (const p of typedProfileList) map[p.user_id] = p.role || 'viewer';
         setProfiles(map);
       }
 

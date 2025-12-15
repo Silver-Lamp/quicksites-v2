@@ -99,6 +99,7 @@ export default function UsersPage() {
   /* ================== actions ================== */
   async function updateRole(userId: string, newRole: string) {
     try {
+      // @ts-ignore - Supabase type inference issue with user_profiles table
       await supabase
         .from('user_profiles')
         .upsert({ user_id: userId, role: newRole }, { onConflict: 'user_id' });

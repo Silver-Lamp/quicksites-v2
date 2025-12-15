@@ -49,6 +49,7 @@ export async function createSnapshotFromTemplate(
 
     const { data, error, status } = await supabase
       .from('templates')
+      // @ts-ignore - Supabase type inference issue with templates table
       .insert(row)
       .select(
         'id, slug, commit, created_at, updated_at, archived, is_version, owner_id, last_editor, data, header_block, footer_block, color_mode'

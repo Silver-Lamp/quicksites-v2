@@ -37,8 +37,10 @@ export default function ReferralsPage() {
         .from('user_profiles')
         .select('user_id, role, referrer_id');
 
+      // @ts-ignore - Supabase type inference issue with user_profiles table
+      const typedProfileData = (profileData || []) as Array<{ user_id: string; role: string | null; referrer_id: string | null }>;
       const profileMap: Record<string, any> = {};
-      profileData?.forEach((p) => {
+      typedProfileData.forEach((p) => {
         profileMap[p.user_id] = { role: p.role, referrer_id: p.referrer_id };
       });
       setProfiles(profileMap);

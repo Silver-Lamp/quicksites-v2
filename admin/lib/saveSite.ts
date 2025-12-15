@@ -22,6 +22,7 @@ export async function saveSiteWithClient(
 
   const { data, error } = await db
     .from('sites')
+    // @ts-ignore - Supabase type inference issue with sites table
     .upsert(payload, { onConflict: 'id' }) // 👈 handles insert or update
     .select()
     .single();

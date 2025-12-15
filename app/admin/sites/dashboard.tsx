@@ -28,6 +28,7 @@ export default function DashboardPage() {
         console.warn('🌍❌ [Geo Lookup Failed]', e);
       }
 
+      // @ts-ignore - Supabase type inference issue with dashboard_access_log table
       await supabase.from('dashboard_access_log').insert({
         user_id: user.id,
         email: user.email,

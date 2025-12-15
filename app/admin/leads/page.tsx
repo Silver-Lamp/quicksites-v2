@@ -63,7 +63,9 @@ export default function LeadsPage() {
       return;
     }
 
-    const enriched = (data || []).map((lead) => ({
+    // @ts-ignore - Supabase type inference issue with leads table
+    const typedData = (data || []) as Lead[];
+    const enriched = typedData.map((lead) => ({
       ...lead,
       inCampaign: !!lead.current_campaign_id,
     }));
@@ -76,7 +78,7 @@ export default function LeadsPage() {
       currentPageRef.current += 1;
     }
 
-    if (!data || data.length < LEADS_PER_PAGE) setHasMore(false);
+    if (!typedData || typedData.length < LEADS_PER_PAGE) setHasMore(false);
     setLoading(false);
   }, [filterSource, filterStatus, filterIndustry, hasMore]);
 

@@ -135,12 +135,12 @@ export async function saveAsTemplate(
   };
 
   // 1) Insert the copy WITHOUT slug
-  const { data: inserted, error: insErr } = await supabase
+  const { data: inserted, error: insErr } = (await supabase
     .from('templates')
     // @ts-ignore - Supabase type inference issue with templates table
     .insert([commonPayload])
     .select('id, slug')
-    .single();
+    .single()) as { data: { id: string; slug: string } | null; error: any };
 
   if (insErr || !inserted?.id) {
     console.error('Failed to insert copy:', insErr);

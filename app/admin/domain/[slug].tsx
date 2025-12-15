@@ -56,6 +56,7 @@ export default function DomainDetail() {
       return;
     }
 
+    // @ts-ignore - Supabase type inference issue with user_action_logs table
     const { error: logError } = await supabase.from('user_action_logs').insert([
       {
         domain_id: domain.id,

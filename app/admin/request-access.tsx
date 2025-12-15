@@ -32,6 +32,7 @@ export default function RequestAccessPage() {
     e.preventDefault();
     setSubmitting(true);
 
+    // @ts-ignore - Supabase type inference issue with access_requests table
     const { error } = await supabase.from('access_requests').insert({
       org: profile?.org || null,
       role: role || null,

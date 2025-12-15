@@ -31,9 +31,11 @@ export default function AdminAuditPage() {
     if (since) query = query.gte('deleted_at', since);
     query.order('deleted_at', { ascending: false }).then(({ data }) => {
       if (data) {
+        // @ts-ignore - Supabase type inference issue with user_deletion_logs table
+        const typedData = data as Array<{ id: string; user_id: string; email: string | null; deleted_at: string }>;
         const filtered = search
-          ? data.filter((d) => d.email?.toLowerCase().includes(search.toLowerCase()))
-          : data;
+          ? typedData.filter((d) => d.email?.toLowerCase().includes(search.toLowerCase()))
+          : typedData;
         setLogs(filtered);
       }
     });

@@ -26,6 +26,7 @@ export async function publishSite({
     if (existing) throw new Error('Slug already exists.');
   }
 
+  // @ts-ignore - Supabase type inference issue with published_versions table
   await supabase.from('published_versions').insert({
     label: versionLabel || `Version ${Date.now()}`,
     slug,

@@ -74,7 +74,7 @@ export async function POST(req: NextRequest) {
   mkdirSync(dir, { recursive: true });
   const filename = `${blockId}.${format}`;
   const filepath = path.join(dir, filename);
-  await fs.writeFile(filepath, buffer);
+  await fs.writeFile(filepath, buffer as Uint8Array);
 
   const publicUrl = `/generated-qr/${handle}/${filename}`;
   return new Response(JSON.stringify({ ok: true, path: publicUrl }), {

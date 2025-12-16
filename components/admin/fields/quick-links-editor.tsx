@@ -54,7 +54,6 @@ function SortableLinkItem({
   };
 
   const labelRef = useRef<HTMLInputElement>(null);
-  const blockRef = useRef<HTMLDivElement>(null);
   const isLabelMissing = !link.label.trim();
   const isHrefMissing = !link.href.trim();
 
@@ -68,10 +67,7 @@ function SortableLinkItem({
 
   return (
     <div
-      ref={(el) => {
-        setNodeRef(el);
-        blockRef.current = el;
-      }}
+      ref={setNodeRef}
       style={style}
       className="relative bg-neutral-800 border border-neutral-700 rounded p-4 space-y-2"
     >

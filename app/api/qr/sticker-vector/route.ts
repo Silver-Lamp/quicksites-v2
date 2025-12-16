@@ -191,7 +191,7 @@ export async function POST(req: Request) {
     const chunks: Buffer[] = [];
     stream.on("data", (c: Buffer) => chunks.push(c));
     const finished = new Promise<Buffer>((resolve) =>
-      stream.on("end", () => resolve(Buffer.concat(chunks)))
+      stream.on("end", () => resolve(Buffer.concat(chunks as readonly Uint8Array[])))
     );
 
     const pad = Math.max(0, Math.min(paddingPct, 0.45));

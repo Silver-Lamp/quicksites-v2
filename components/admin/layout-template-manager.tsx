@@ -28,42 +28,50 @@ export default function LayoutTemplateManager({
 
   useEffect(() => {
     (async () => {
-      const { data } = await supabase
+      const { data: templatesData } = await supabase
         .from('dashboard_layout_templates')
         .select('*')
         .order('created_at', { ascending: false });
 
-      setTemplates(data || []);
+      // @ts-ignore - Supabase type inference issue with dashboard_layout_templates table
+      setTemplates((templatesData || []) as Template[]);
     })();
   }, []);
 
   const saveTemplate = async () => {
     if (!name.trim()) return;
 
-    await supabase.from('dashboard_layout_templates').insert({
-      name,
-      description: desc,
-      layout: currentLayout,
-      hidden: currentHidden,
-    });
+    await supabase
+      .from('dashboard_layout_templates')
+      // @ts-ignore - Supabase type inference issue with dashboard_layout_templates table
+      .insert({
+        name,
+        description: desc,
+        layout: currentLayout,
+        hidden: currentHidden,
+      });
 
     setName('');
     setDesc('');
 
-    const { data } = await supabase
+    const { data: templatesData } = await supabase
       .from('dashboard_layout_templates')
       .select('*')
       .order('created_at', { ascending: false });
 
-    setTemplates(data || []);
+    // @ts-ignore - Supabase type inference issue with dashboard_layout_templates table
+    setTemplates((templatesData || []) as Template[]);
   };
 
   const applyTemplate = async (id: string) => {
-    const { data } = await supabase
+    const { data: templateData } = await supabase
       .from('dashboard_layout_templates')
       .select('layout, hidden')
       .eq('id', id)
       .single();
+
+    // @ts-ignore - Supabase type inference issue with dashboard_layout_templates table
+    const data = templateData as { layout: { id: string }[]; hidden?: string[] } | null;
     if (data) {
       onApply(data.layout, data.hidden || []);
     }

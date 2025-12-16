@@ -132,7 +132,6 @@
     "body-scroll-lock": "^4.0.0-beta.0",
     "browser-image-compression": "^2.0.2",
     "buffer": "^6.0.3",
-    "canvas": "^2.11.2",
     "canvas-confetti": "^1.9.3",
     "chart.js": "^4.4.9",
     "cheerio": "^1.1.2",
@@ -225,6 +224,9 @@
     "zod": "^3.25.76",
     "zod-to-json-schema": "^3.24.5",
     "zustand": "^5.0.8"
+  },
+  "optionalDependencies": {
+    "canvas": "^2.11.2"
   },
   "author": "Silver Lamp Studio",
   "license": "MIT",

@@ -29,6 +29,6 @@ export async function POST(req: NextRequest) {
   const match = /filename="(.+?)"/.exec(boundary.toString());
   const filename = match?.[1] || 'upload.png';
   const path = join(process.cwd(), 'public', filename);
-  await writeFile(path, boundary);
+  await writeFile(path, boundary as Uint8Array);
   return json({ success: true });
 }

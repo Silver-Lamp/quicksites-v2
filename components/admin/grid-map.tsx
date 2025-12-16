@@ -31,24 +31,33 @@ export default function GridMap() {
         setPoints(_cache.points);
         return;
       }
-      const { data: campaignLinks } = await supabase
+      const { data: campaignLinksData } = await supabase
         .from('campaign_leads')
         .select('campaign_id, lead_id');
 
-      const { data: campaigns } = await supabase
+      const { data: campaignsData } = await supabase
         .from('campaigns')
         .select('id, name, city, state');
-      const { data: leads } = await supabase
+      const { data: leadsData } = await supabase
         .from('leads')
         .select('id, business_name, address_city, address_state, industry');
 
-      const { data: domains } = await supabase
+      const { data: domainsData } = await supabase
         .from('domains')
         .select('city, state, domain');
 
+      // @ts-ignore - Supabase type inference issue with campaign_leads table
+      const campaignLinks = (campaignLinksData || []) as Array<{ campaign_id: string; lead_id: string }>;
+      // @ts-ignore - Supabase type inference issue with campaigns table
+      const campaigns = (campaignsData || []) as Array<{ id: string; name: string | null; city: string | null; state: string | null }>;
+      // @ts-ignore - Supabase type inference issue with leads table
+      const leads = (leadsData || []) as Array<{ id: string; business_name: string | null; address_city: string | null; address_state: string | null; industry: string | null }>;
+      // @ts-ignore - Supabase type inference issue with domains table
+      const domains = (domainsData || []) as Array<{ city: string | null; state: string | null; domain: string | null }>;
+
       const geo: Record<string, CityPoint> = {};
 
-      for (const l of leads || []) {
+      for (const l of leads) {
         const key = `${l.address_city}, ${l.address_state}`;
         geo[key] = geo[key] || {
           city: l.address_city,
@@ -61,14 +70,14 @@ export default function GridMap() {
           industryCounts: {},
         };
         geo[key].leadsQty += 1;
-        const isUnclaimed = !campaignLinks?.some((cl) => cl.lead_id === l.id);
+        const isUnclaimed = !campaignLinks.some((cl) => cl.lead_id === l.id);
         if (l.business_name) geo[key].leads.push({ id: l.id, name: l.business_name, isClaimed: !isUnclaimed, campaignId: '', industry: l.industry || '' });
         geo[key].leadIds.push(l.id);
         const indKey = (l.industry || '').trim().toLowerCase();
         geo[key].industryCounts![indKey] = (geo[key].industryCounts![indKey] || 0) + 1;
       }
 
-      for (const d of domains || []) {
+      for (const d of domains) {
         const key = `${d.city}, ${d.state}`;
         geo[key] = geo[key] || {
           city: d.city,
@@ -95,16 +104,17 @@ export default function GridMap() {
 
           const campaignIds = new Set(
             campaignLinks
-              ?.filter((cl) => entry.leadIds.includes(cl.lead_id))
+              .filter((cl) => entry.leadIds.includes(cl.lead_id))
               .map((cl) => cl.campaign_id)
           );
 
           const campaignNames = campaigns
-            ?.filter((c) => campaignIds.has(c.id))
-            .map((c) => c.name) ?? [];
+            .filter((c) => campaignIds.has(c.id))
+            .map((c) => c.name)
+            .filter((name): name is string => name !== null);
 
           const unclaimed = entry.leadIds.filter(
-            (id) => !campaignLinks?.some((cl) => cl.lead_id === id)
+            (id) => !campaignLinks.some((cl) => cl.lead_id === id)
           ).length;
           const unclaimedByIndustry: Record<string, number> = {};
 

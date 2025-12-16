@@ -6,12 +6,15 @@ import { NextRequest } from 'next/server';
 export async function GET(_req: NextRequest) {
   const baseUrl = 'https://quicksites.ai';
 
-  const { data: domains } = await supabase
+  const { data: domainsData } = await supabase
     .from('domains')
     .select('domain, lang')
     .eq('is_claimed', true);
 
-  const langGroups = (domains || []).reduce<
+  // @ts-ignore - Supabase type inference issue with domains table
+  const domains = (domainsData || []) as Array<{ domain: string; lang: string | null }>;
+
+  const langGroups = domains.reduce<
     Record<string, Array<{ domain: string; lang: string }>>
   >((acc, d) => {
     const base = d.domain.replace(/\.[a-z]+$/, '');

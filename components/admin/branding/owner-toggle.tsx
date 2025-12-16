@@ -22,6 +22,7 @@ export default function OwnerToggle({ profileId }: OwnerToggleProps) {
     setLoading(true);
     await supabase
       .from('branding_profiles')
+      // @ts-ignore - Supabase type inference issue with branding_profiles table
       .update({ owner_id: userId })
       .eq('id', profileId);
     location.reload();

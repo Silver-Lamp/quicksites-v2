@@ -31,12 +31,14 @@ export default function LayoutEditor({ role = 'user' }) {
 
   useEffect(() => {
     (async () => {
-      const { data: current } = await supabase
+      const { data: currentData } = await supabase
         .from('dashboard_layouts')
         .select('layout, hidden')
         .eq('role', role)
         .single();
 
+      // @ts-ignore - Supabase type inference issue with dashboard_layouts table
+      const current = currentData as { layout: LayoutBlock[]; hidden?: string[] } | null;
       if (current?.layout) setLayout(current.layout);
       if (current?.hidden) setHidden(current.hidden);
 
@@ -47,28 +49,35 @@ export default function LayoutEditor({ role = 'user' }) {
         .order('created_at', { ascending: false })
         .limit(5);
 
-      setVersions(versionData || []);
+      // @ts-ignore - Supabase type inference issue with dashboard_layout_versions table
+      setVersions((versionData || []) as LayoutVersion[]);
     })();
   }, [role]);
 
   const save = async () => {
     await supabase
       .from('dashboard_layouts')
+      // @ts-ignore - Supabase type inference issue with dashboard_layouts table
       .upsert({ role, layout, hidden }, { onConflict: 'role' });
 
-    await supabase.from('dashboard_layout_versions').insert({ role, layout, hidden });
+    await supabase
+      .from('dashboard_layout_versions')
+      // @ts-ignore - Supabase type inference issue with dashboard_layout_versions table
+      .insert({ role, layout, hidden });
 
     localStorage.setItem('dashboard-order', JSON.stringify(layout));
     localStorage.setItem('dashboard-hidden', JSON.stringify(hidden));
   };
 
   const restore = async (versionId: string) => {
-    const { data } = await supabase
+    const { data: restoreData } = await supabase
       .from('dashboard_layout_versions')
       .select('layout, hidden')
       .eq('id', versionId)
       .single();
 
+    // @ts-ignore - Supabase type inference issue with dashboard_layout_versions table
+    const data = restoreData as { layout: LayoutBlock[]; hidden?: string[] } | null;
     if (data) {
       setLayout(data.layout);
       setHidden(data.hidden || []);

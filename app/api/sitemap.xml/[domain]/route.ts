@@ -31,12 +31,15 @@ ${urlEntries}
 export async function GET(req: NextRequest, { params }: { params: { domain: string } }) {
   const domain = params.domain;
 
-  const { data: site } = await supabase
+  const { data: siteData } = await supabase
     .from('templates')
     .select('slug, data')
     .in('custom_domain', [domain, `www.${domain}`])
     .eq('published', true)
     .maybeSingle();
+
+  // @ts-ignore - Supabase type inference issue with templates table
+  const site = siteData as { slug: string; data: any } | null;
 
     if (!site) {
       return NextResponse.redirect(`${NEXT_PUBLIC_BASE_URL}/not-found-trigger`, 307);

@@ -113,7 +113,7 @@ export async function POST(req: NextRequest) {
   if (mode === 'save') {
     await ensureDir(handle);
     const outputPath = getOutputPath(handle, filename);
-    await fs.writeFile(outputPath, nodeBuffer);
+    await fs.writeFile(outputPath, nodeBuffer as Uint8Array);
 
     let zipPath: string | undefined;
     if (zip) {

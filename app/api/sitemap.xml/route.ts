@@ -34,14 +34,17 @@ export async function GET(req: NextRequest) {
   const page = parseInt(pageParam || '1', 10);
   const offset = (page - 1) * MAX_URLS_PER_SITEMAP;
 
-  const { data: domains } = await supabase
+  const { data: domainsData } = await supabase
     .from('domains')
     .select('domain, lang, role')
     .eq('is_claimed', true)
     .order('domain', { ascending: true })
     .range(offset, offset + MAX_URLS_PER_SITEMAP - 1);
 
-  const dynamicPages = (domains || []).map((d) => ({
+  // @ts-ignore - Supabase type inference issue with domains table
+  const domains = (domainsData || []) as Array<{ domain: string; lang: string | null; role: string | null }>;
+
+  const dynamicPages = domains.map((d) => ({
     loc: `${BASE_URL}/${d.lang ?? 'en'}/site/${d.domain}`,
     changefreq: d.role === 'admin' ? 'monthly' : 'weekly',
     priority: d.role === 'admin' ? 0.3 : 0.8,

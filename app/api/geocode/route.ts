@@ -17,12 +17,15 @@ export async function GET(req: NextRequest) {
   const cleanState = state.trim();
 
   // 1. Try cache
-  const { data: cached, error: fetchError } = await supabase
+  const { data: cachedData, error: fetchError } = await supabase
     .from('geo_cache')
     .select('lat, lon')
     .eq('city', cleanCity)
     .eq('state', cleanState)
     .maybeSingle();
+
+  // @ts-ignore - Supabase type inference issue with geo_cache table
+  const cached = cachedData as { lat: number | string; lon: number | string } | null;
 
   if (cached) {
     console.log(`🌍 Cache hit for ${cleanCity}, ${cleanState}`);
@@ -51,6 +54,7 @@ export async function GET(req: NextRequest) {
     const parsedLon = parseFloat(lon);
 
     // 3. Cache result
+    // @ts-ignore - Supabase type inference issue with geo_cache table
     await supabase.from('geo_cache').insert([
       {
         city: cleanCity,

@@ -7,13 +7,16 @@ export async function GET(_req: NextRequest) {
   const baseUrl = 'https://quicksites.ai';
   const pageSize = 1000;
 
-  const { count, data: latest } = await supabase
+  const { count, data: latestData } = await supabase
     .from('domains')
     .select('created_at', { count: 'exact', head: false })
     .eq('is_claimed', true)
     .order('created_at', { ascending: false })
     .limit(1)
     .maybeSingle();
+
+  // @ts-ignore - Supabase type inference issue with domains table
+  const latest = latestData as { created_at: string } | null;
 
   const totalPages = Math.ceil((count || 0) / pageSize);
   const lastmod = latest?.created_at || new Date().toISOString();

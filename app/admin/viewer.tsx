@@ -50,6 +50,7 @@ export default function ViewerDashboard() {
   }, []);
 
   const logClick = async (domain_id: string, action_type: string) => {
+    // @ts-ignore - Supabase type inference issue with user_action_logs table
     await supabase.from('user_action_logs').insert([
       {
         domain_id,

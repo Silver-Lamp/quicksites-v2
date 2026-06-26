@@ -1,5 +1,6 @@
 // app/merchant/payments/page.tsx
 import { getServerSupabase } from '@/lib/supabase/server';
+import { clampPlatformFeePercent, MAX_PLATFORM_FEE_PERCENT } from '@/lib/commerce/partner-terms';
 
 export const dynamic = 'force-dynamic';
 
@@ -37,7 +38,7 @@ export default async function MerchantPaymentsPage({ searchParams }: { searchPar
                 account_ref: String(fd.get('account_ref') || ''),
                 status: String(fd.get('status') || 'active'),
                 collect_platform_fee: String(fd.get('collect_platform_fee') || 'off') === 'on',
-                platform_fee_percent: Number(fd.get('platform_fee_percent') || 0) / 100,  // input is %
+                platform_fee_percent: clampPlatformFeePercent(Number(fd.get('platform_fee_percent') || 0) / 100),  // input is %; capped
                 platform_fee_min_cents: Math.round(Number(fd.get('platform_fee_min') || 0) * 100), // input is $
             }).eq('id', acct.id);
             if (error) throw error;
@@ -66,8 +67,8 @@ export default async function MerchantPaymentsPage({ searchParams }: { searchPar
                 <label htmlFor="cpf" className="text-sm">Collect platform fee</label>
             </div>
             <div>
-                <label className="block text-xs text-neutral-400">Percent (%)</label>
-                <input name="platform_fee_percent" type="number" min={0} max={100}
+                <label className="block text-xs text-neutral-400">Percent (%) — max {Math.round(MAX_PLATFORM_FEE_PERCENT * 100)}</label>
+                <input name="platform_fee_percent" type="number" min={0} max={Math.round(MAX_PLATFORM_FEE_PERCENT * 100)} step={0.25}
                 defaultValue={Math.round((acct.platform_fee_percent || 0) * 100)}
                 className="mt-1 w-full rounded bg-neutral-900 px-3 py-2 text-sm ring-1 ring-neutral-800" />
             </div>

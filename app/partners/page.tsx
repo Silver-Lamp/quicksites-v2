@@ -3,6 +3,19 @@
 // no invented pricing — partner terms are a "talk to us" conversation.
 import Link from 'next/link';
 import SiteHeader from '@/components/site/site-header';
+import { MAX_PLATFORM_FEE_PERCENT, PARTNER_FEE_SHARE, QS_FEE_SHARE, RESIDUAL_MONTHS } from '@/lib/commerce/partner-terms';
+
+const maxFeePct = Math.round(MAX_PLATFORM_FEE_PERCENT * 100);
+const keepPct = Math.round(PARTNER_FEE_SHARE * 100);
+const qsPct = Math.round(QS_FEE_SHARE * 100);
+const residualLabel = RESIDUAL_MONTHS > 0 ? `${RESIDUAL_MONTHS}-month` : 'lifetime';
+// Worked example
+const exOrder = 100;
+const exFeePct = Math.min(8, maxFeePct);
+const exFee = (exOrder * exFeePct) / 100;
+const exPartner = exFee * PARTNER_FEE_SHARE;
+const exQs = exFee - exPartner;
+const usd = (n: number) => `$${n.toFixed(2)}`;
 
 export const metadata = {
   title: 'QuickSites for Partners — white-label & resell',
@@ -36,8 +49,9 @@ export default function PartnersPage() {
           </h1>
           <p className="mx-auto mt-5 max-w-2xl text-lg text-zinc-400">
             Bring a powerful site builder with e-commerce built in to your network — under your own
-            brand. Onboard merchants through your whitelisted payment processor, set your platform
-            fee, and earn on every order they process.
+            brand. Hosting is free. Set your merchants' order fee up to {maxFeePct}%, keep{' '}
+            <span className="font-semibold text-zinc-200">{keepPct}%</span> of every fee as a{' '}
+            {residualLabel} residual, and onboard through your whitelisted payment processor.
           </p>
           <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
             <a href={MAILTO} className="rounded-lg bg-sky-500 px-6 py-3 text-base font-medium text-zinc-950 shadow-lg transition hover:bg-sky-400">
@@ -54,21 +68,33 @@ export default function PartnersPage() {
           <div className="mx-auto max-w-6xl px-6 py-14">
             <h2 className="text-2xl md:text-3xl font-semibold">How partners earn</h2>
             <p className="mt-2 max-w-2xl text-sm text-zinc-400">
-              Near-free hosting brings merchants in. The economics on top are yours.
+              Free hosting brings merchants in. The order economics on top are yours.
             </p>
             <div className="mt-8 grid grid-cols-1 gap-5 md:grid-cols-3">
-              <Card title="Your take-rate, per order">
-                Collect a percentage of every order your merchants process via Stripe Connect — you
-                set the fee, it’s applied automatically, and refunds reverse it cleanly.
+              <Card title={`Set the fee — up to ${maxFeePct}%`}>
+                You set each merchant's per-order platform fee (anything up to {maxFeePct}%). It's
+                collected automatically via Stripe Connect, and refunds reverse it cleanly.
               </Card>
-              <Card title="Residual commissions">
-                Earn recurring on the merchants you bring on, tracked in a commission ledger with
-                payout runs — built for ongoing partner revenue, not one-off referrals.
+              <Card title={`Keep ${keepPct}% of every fee`}>
+                On every order, you keep {keepPct}% of the fee and QuickSites keeps {qsPct}% — tracked
+                in a commission ledger with payout runs. No per-site charge; hosting is free.
               </Card>
-              <Card title="Hosting upsell">
-                Offer free or near-free hosting to win merchants, then upsell plans — the platform
-                handles billing and plan limits.
+              <Card title={`${residualLabel.replace(/^./, (c) => c.toUpperCase())} residual`}>
+                {RESIDUAL_MONTHS > 0
+                  ? `Earn for ${RESIDUAL_MONTHS} months on every merchant you bring on.`
+                  : 'Earn on every order your merchants process, ongoing — for the life of the relationship.'}
               </Card>
+            </div>
+
+            {/* Worked example */}
+            <div className="mt-8 max-w-xl rounded-xl border border-sky-500/30 bg-sky-500/5 p-5">
+              <div className="text-sm font-semibold text-zinc-200">The math, on a {usd(exOrder)} order</div>
+              <dl className="mt-3 space-y-1.5 text-sm">
+                <div className="flex justify-between"><dt className="text-zinc-400">Your fee ({exFeePct}%)</dt><dd>{usd(exFee)}</dd></div>
+                <div className="flex justify-between"><dt className="text-zinc-400">You keep ({keepPct}%)</dt><dd className="font-semibold text-sky-300">{usd(exPartner)}</dd></div>
+                <div className="flex justify-between"><dt className="text-zinc-400">QuickSites ({qsPct}%)</dt><dd>{usd(exQs)}</dd></div>
+              </dl>
+              <p className="mt-3 text-xs text-zinc-500">…on every order, {residualLabel}. The merchant keeps the rest of the sale.</p>
             </div>
           </div>
         </section>

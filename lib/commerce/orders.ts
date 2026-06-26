@@ -3,6 +3,7 @@ import type { LineItemInput } from './types';
 import { getMerchantPaymentConfigSafe } from './paymentRouter';
 import { captureServer } from '@/lib/analytics/posthog-server';
 import { EVENTS } from '@/lib/analytics/events';
+import { partnerCommissionCents, PARTNER_FEE_SHARE } from './partner-terms';
 
 /** Create a pending order and its line items. Returns order id and totals. */
 export async function createDraftOrder(opts: {
@@ -135,15 +136,22 @@ export async function markOrderPaid(
         .maybeSingle();
 
       if (attr?.referral_code) {
+        // Partner residual = their share of the order's platform fee (QuickSites
+        // keeps the rest). See lib/commerce/partner-terms.ts + /partners.
+        const partnerCents = partnerCommissionCents(orderRow.platform_fee_cents);
         const up = await supabase.from('commission_ledger').upsert(
           {
             referral_code: attr.referral_code,
             subject: 'order_platform_fee',
             subject_id: orderId,
-            amount_cents: orderRow.platform_fee_cents,
+            amount_cents: partnerCents,
             currency: orderRow.currency || 'USD',
             status: 'pending',
-            adjustments: { note: 'auto from platform fee' },
+            adjustments: {
+              note: 'partner residual',
+              platform_fee_cents: orderRow.platform_fee_cents,
+              partner_share: PARTNER_FEE_SHARE,
+            },
           },
           { onConflict: 'referral_code,subject,subject_id' }
         );

@@ -88,3 +88,24 @@ S ≈ ≤1 day · M ≈ 2–5 days · L ≈ 1–2 weeks. Estimates assume one fo
 - **Pragmatic sequence most likely correct:** finish **Model A settlement + demo** (it also exercises the ledger that Model B rides on), then layer **Model B disbursement + partner onboarding** on the now-proven money path. Model A de-risks Model B.
 
 > Next concrete artifact when you pick a lead: a ticketed checklist from the relevant "To first dollar/payout" list above, wired to PostHog funnel events so we can watch activation → first order → attributed payout.
+
+---
+
+## Partner offer — locked terms (2026-06-26)
+The reseller offer (page: `/partners`; config: `lib/commerce/partner-terms.ts`):
+
+- **Free hosting** for merchants — no per-site charge.
+- Partner sets each merchant's **per-order fee, up to 10%** (`QS_MAX_PLATFORM_FEE_PERCENT`,
+  enforced in `app/merchant/payments` + clampable everywhere via `clampPlatformFeePercent`).
+- On every order, the **partner keeps 80%** of that fee; **QuickSites keeps 20%**
+  (`QS_PARTNER_FEE_SHARE`).
+- **Lifetime residual** (`QS_RESIDUAL_MONTHS=0`) — earned on every order their merchants
+  process, ongoing.
+
+**Wiring:** `markOrderPaid` writes the partner's 80% share to `commission_ledger`
+(`partnerCommissionCents`), tagged with the order's `platform_fee_cents` and share for
+audit. QuickSites' 20% is the platform's net (the difference). All three values are
+env-overridable, so the offer can be tuned without code.
+
+**Worked example:** a $100 order with an 8% partner fee → $8.00 platform fee →
+partner $6.40, QuickSites $1.60 — on every order, for the life of the merchant.

@@ -1,5 +1,10 @@
 # 🧠 QuickSites
 
+> ⚠️ **New here? Start with [`CLAUDE.md`](CLAUDE.md)** — the central brain (what this is, how to run it, where everything lives).
+> Deeper docs: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) · [`docs/MONETIZATION.md`](docs/MONETIZATION.md) · [`docs/LLM_METERING.md`](docs/LLM_METERING.md) · [`docs/REVIVAL_PLAN.md`](docs/REVIVAL_PLAN.md)
+>
+> ⛔ **The rest of this README is stale** (it describes the old Pages Router; the app migrated to the App Router). It's kept for reference pending a rewrite — trust `CLAUDE.md` over anything below.
+
 Modern template engine + affiliate funnel automation, now powered by clean architecture and developer-friendly tooling.
 
 ---

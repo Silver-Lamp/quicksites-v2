@@ -50,3 +50,17 @@ logs/
 # 🔧 Linting
 .lint-tmp/
 .vercel
+
+# 🧹 Build artifacts / junk (added during revival cleanup 2026-06-26)
+*.tsbuildinfo
+*.bak
+lint-report.json
+filtered-lint-report.json
+lint-summary.txt
+lint-summary.md
+build.log
+get-pip.py
+*.zip
+
+# Supabase CLI temp
+supabase/.temp/

@@ -11,6 +11,7 @@ import DevToolsWidget from '@/components/dev-tools-widget';
 import SquatBotPanel from '@/components/dev/squat-bot-panel';
 import BlockInspectorOverlay from '@/components/dev/block-inspector-overlay';
 import { CurrentUserProvider } from '@/components/admin/context/current-user-provider';
+import { PostHogProvider } from '@/components/analytics/posthog-provider';
 
 const isProd = process.env.NODE_ENV === 'production';
 
@@ -91,7 +92,7 @@ export function Providers({
   org?: Org | null;
 }) {
   return (
-    <>
+    <PostHogProvider>
       <Toaster position="top-center" />
       <SessionProvider>
         <PanelProvider>
@@ -111,6 +112,6 @@ export function Providers({
           </TooltipProvider>
         </PanelProvider>
       </SessionProvider>
-    </>
+    </PostHogProvider>
   );
 }

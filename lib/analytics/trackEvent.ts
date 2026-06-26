@@ -2,6 +2,7 @@
 import event from '@vercel/analytics';
 import { getRequestContext } from '../request/getRequestContext';
 import { cookies } from 'next/headers';
+import { captureServer } from './posthog-server';
 
 export async function trackEvent(
   name: string,
@@ -21,6 +22,10 @@ export async function trackEvent(
   };
 
   event.track(name, fullData as any);
+
+  // Mirror to PostHog (no-ops if POSTHOG_KEY is unset). Use userId as the distinct
+  // id when known so server events stitch to the client-side identity.
+  await captureServer(name, fullData, userId ?? sessionId ?? null);
 
   if (options.debug || process.env.NODE_ENV === 'development') {
     console.debug('[📊 Tracked Event]', name, fullData);

@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "supabase-quicksites": {
+      "type": "http",
+      "url": "https://mcp.supabase.com/mcp?project_ref=kcwruliugwidsdgsrthy&read_only=true"
+    }
+  }
+}

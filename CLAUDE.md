@@ -2,7 +2,7 @@
 
 > The single orientation doc for humans and AI agents working in this repo.
 > If you read one file before touching code, read this one.
-> Companion docs: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) · [`docs/MONETIZATION.md`](docs/MONETIZATION.md) · [`docs/LLM_METERING.md`](docs/LLM_METERING.md) · [`docs/REVIVAL_PLAN.md`](docs/REVIVAL_PLAN.md)
+> Companion docs: [`docs/DEVELOPMENT.md`](docs/DEVELOPMENT.md) (run it locally) · [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) · [`docs/COMMERCE_RUNBOOK.md`](docs/COMMERCE_RUNBOOK.md) · [`docs/MONETIZATION.md`](docs/MONETIZATION.md) · [`docs/LLM_METERING.md`](docs/LLM_METERING.md) · [`docs/REVIVAL_PLAN.md`](docs/REVIVAL_PLAN.md)
 
 Last verified: 2026-06-26 · `tsc --noEmit` passes clean (0 errors).
 
@@ -35,12 +35,15 @@ Node **20.x**, npm **10.x** (see `.nvmrc` / `engines`). `@` path alias = repo ro
 
 ## 3. Run it locally
 
+> Full setup, env, and gotchas: **[`docs/DEVELOPMENT.md`](docs/DEVELOPMENT.md)**. Quick version:
+
 ```bash
 nvm use                       # Node 20
 npm install
-cp .env.example .env.local    # fill Supabase + Stripe (test) + OpenAI keys at minimum
+cp .env.example .env.local    # minimum to boot: Supabase URL + anon + service-role keys
 npm run dev                   # http://localhost:3000
 ```
+If `npm run build` fails on `canvas.node … NODE_MODULE_VERSION`, run `npm rebuild canvas`.
 
 Health/quality gates:
 ```bash

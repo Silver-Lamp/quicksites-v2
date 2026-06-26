@@ -1,60 +1,51 @@
 # 🛠 Contributing to QuickSites
 
-Thanks for your interest in contributing! This project is modular, test-covered, and built with long-term maintainability in mind.
+Thanks for contributing! QuickSites is a Next.js 15 (App Router) + Supabase app — a
+schema-driven site builder with a generic e-commerce layer.
 
----
+> **New here?** Read [`CLAUDE.md`](CLAUDE.md) (architecture brain) and
+> [`docs/DEVELOPMENT.md`](docs/DEVELOPMENT.md) (full local-dev setup) first.
 
-## 📦 Setup
-
+## 📦 Setup (short version)
 ```bash
-git clone https://github.com/Silver-Lamp/quicksites-core.git
-cd quicksites-core
+git clone git@github.com:Silver-Lamp/quicksites-v2.git
+cd quicksites-v2
+nvm use                       # Node 20.x
 npm install
-cp .env.example .env.local  # configure Supabase keys
+cp .env.example .env.local    # fill in Supabase keys (minimum to boot)
+npm run dev                   # → http://localhost:3000
 ```
+Full env list, feature keys, and gotchas: [`docs/DEVELOPMENT.md`](docs/DEVELOPMENT.md).
 
----
-
-## 🧪 Run the App
-
+## 🧪 Commands
 ```bash
-npm run dev      # Starts the Next.js dev server
-npm run lint     # Lints the codebase
-npm run test     # Jest + Playwright tests
+npm run dev         # dev server (localhost:3000)
+npm run typecheck   # tsc --noEmit — keep it green
+npm run lint:fix    # ESLint (+ Prettier)
+npm run test        # Playwright e2e
+npm run build       # production build
 ```
 
----
+## ✅ Conventions
+- **Conventional commits** (Husky + commitlint). A pre-commit hook runs `lint:links`.
+- **TypeScript, no `any` in new code.** Keep `npm run typecheck` green.
+- **New business logic → `lib/<domain>/`** as pure functions; keep route handlers thin
+  (this is how we earn the planned backend split — see [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)).
+- Money in integer **cents**; gate every non-public API route explicitly (don't rely on RLS
+  inside service-role routes).
+- PRs to `main` (or a branch) with clear messages.
 
-## ✅ Commit Conventions
+## 🧩 Where things live
+- `app/` — App Router pages + `app/api/**` (the backend today)
+- `components/` — React UI · `lib/` — data access, integrations, domain logic
+- `lib/supabase/*` — Supabase client factories · `lib/commerce/*`, `lib/payments/*` — money path
+- `supabase/migrations/` — the canonical data model
+- `docs/` — architecture, dev setup, commerce, monetization, plans
 
-This project uses Husky + custom linting rules to enforce:
+(Full map in [`CLAUDE.md`](CLAUDE.md) §4.)
 
-- No `<Link><a>` misuse (via `npm run lint:links`)
-- Prettier formatting
-- Git pre-commit hook
-
-Run all:
-
-```bash
-npm run lint:fix
-```
-
----
-
-## 🧩 Folder Notes
-
-- `components/analytics/` — heatmaps, charts, tiles
-- `pages/admin/` — dashboard, logs, profile
-- `scripts/` — SQL patches, link check, automation
-- `lib/supabase.ts` — shared db client
-- `tests/` — Playwright + mocks
-
----
-
-## 🧠 Want to Contribute?
-
-- Check [Discussions](https://github.com/Silver-Lamp/quicksites-core/discussions)
-- Submit a feature via [Issues](https://github.com/Silver-Lamp/quicksites-core/issues)
-- Submit PRs to `main` with clear commit messages
-
-Thanks for helping grow the ecosystem!
+## 🧠 Before a non-trivial change
+- Run `npm run typecheck`.
+- If you change a subsystem's shape, update the relevant doc in `docs/`.
+- Check the "Gotchas" in [`docs/DEVELOPMENT.md`](docs/DEVELOPMENT.md) (canvas rebuild, the
+  `types/supabase.ts` regen trap).

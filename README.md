@@ -1,7 +1,10 @@
 # 🧠 QuickSites
 
-> ⚠️ **New here? Start with [`CLAUDE.md`](CLAUDE.md)** — the central brain (what this is, how to run it, where everything lives).
-> Deeper docs: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) · [`docs/MONETIZATION.md`](docs/MONETIZATION.md) · [`docs/LLM_METERING.md`](docs/LLM_METERING.md) · [`docs/REVIVAL_PLAN.md`](docs/REVIVAL_PLAN.md)
+> ⚠️ **New here? Start with [`CLAUDE.md`](CLAUDE.md)** — the central brain (what this is, where everything lives).
+> 🚀 **Running it locally → [`docs/DEVELOPMENT.md`](docs/DEVELOPMENT.md)** (setup, env, commands, gotchas).
+> Deeper docs: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) · [`docs/COMMERCE_RUNBOOK.md`](docs/COMMERCE_RUNBOOK.md) · [`docs/MONETIZATION.md`](docs/MONETIZATION.md) · [`docs/LLM_METERING.md`](docs/LLM_METERING.md) · [`docs/REVIVAL_PLAN.md`](docs/REVIVAL_PLAN.md)
+>
+> **Quick start:** `nvm use && npm install && cp .env.example .env.local && npm run dev` → http://localhost:3000
 >
 > ⛔ **The rest of this README is stale** (it describes the old Pages Router; the app migrated to the App Router). It's kept for reference pending a rewrite — trust `CLAUDE.md` over anything below.
 

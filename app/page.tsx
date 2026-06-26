@@ -100,7 +100,7 @@ export default function HomePage() {
               {primaryLabel}
             </Link>
             <Link
-              href="/pricing#partners"
+              href="/partners"
               className="inline-block rounded-lg border border-sky-500 px-6 py-3 text-base font-medium text-sky-300 transition hover:bg-sky-500/10 hover:text-sky-200"
             >
               Become a partner
@@ -167,7 +167,7 @@ export default function HomePage() {
                 </p>
                 <div className="mt-6 flex flex-wrap gap-3">
                   <Link
-                    href="/pricing#partners"
+                    href="/partners"
                     className="inline-block rounded-lg bg-sky-500 px-6 py-3 text-base font-medium text-zinc-950 shadow-lg transition hover:bg-sky-400"
                   >
                     Become a partner

@@ -30,12 +30,10 @@ export async function GET(req: NextRequest, { params }: { params: { merchantId: 
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
     if (!m || m.is_public === false) return NextResponse.json({ error: 'Not found' }, { status: 404 });
 
-    // Count active meals (optionally for the site)
-    let q = db.from('meals').select('id', { count: 'exact', head: true })
+    // Count active catalog items (products/services/etc.)
+    const { count } = await db.from('catalog_items').select('id', { count: 'exact', head: true })
       .eq('merchant_id', params.merchantId)
-      .eq('is_active', true);
-    if (siteUUID) q = q.eq('site_id', siteUUID);
-    const { count } = await q;
+      .eq('status', 'active');
 
     return NextResponse.json({
       merchant: {
@@ -48,7 +46,7 @@ export async function GET(req: NextRequest, { params }: { params: { merchantId: 
         website_url: m.website_url || null,
         social_links: m.social_links || {},
       },
-      stats: { active_meals: count ?? 0 }
+      stats: { active_items: count ?? 0, active_meals: count ?? 0 }
     });
   } catch (e: any) {
     console.error(e);

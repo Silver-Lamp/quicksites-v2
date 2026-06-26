@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { stripe } from '@/lib/stripe/server';
+import { captureServer } from '@/lib/analytics/posthog-server';
+import { EVENTS } from '@/lib/analytics/events';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -41,6 +43,9 @@ export async function GET(req: NextRequest) {
       .update({ status: newStatus })
       .eq('merchant_id', merchantId)
       .eq('provider', 'stripe');
+    if (newStatus === 'active') {
+      await captureServer(EVENTS.MERCHANT_CONNECTED, { merchant_id: merchantId }, merchantId);
+    }
   }
 
   return NextResponse.json({

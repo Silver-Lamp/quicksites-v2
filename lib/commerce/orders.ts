@@ -1,6 +1,8 @@
 import { getServerSupabase } from '@/lib/supabase/server';
 import type { LineItemInput } from './types';
 import { getMerchantPaymentConfigSafe } from './paymentRouter';
+import { captureServer } from '@/lib/analytics/posthog-server';
+import { EVENTS } from '@/lib/analytics/events';
 
 /** Create a pending order and its line items. Returns order id and totals. */
 export async function createDraftOrder(opts: {
@@ -69,6 +71,12 @@ export async function createDraftOrder(opts: {
     await supabase.from('orders').delete().eq('id', order.id);
     throw oiErr;
   }
+
+  await captureServer(
+    EVENTS.ORDER_CREATED,
+    { merchant_id: opts.merchantId, order_id: order.id, total_cents: total, platform_fee_cents: platformFeeCents },
+    opts.merchantId
+  );
 
   return { orderId: order.id, totalCents: total, platformFeeCents };
 }
@@ -148,6 +156,19 @@ export async function markOrderPaid(
   } catch (e) {
     console.warn('Platform-fee commission step failed:', (e as any)?.message || e);
   }
+
+  await captureServer(
+    EVENTS.ORDER_PAID,
+    { merchant_id: orderRow.merchant_id, order_id: orderId, amount_cents: amountCents, provider },
+    orderRow.merchant_id
+  );
+  if (orderRow.platform_fee_cents && orderRow.platform_fee_cents > 0) {
+    await captureServer(
+      EVENTS.PLATFORM_FEE_COLLECTED,
+      { merchant_id: orderRow.merchant_id, order_id: orderId, platform_fee_cents: orderRow.platform_fee_cents },
+      orderRow.merchant_id
+    );
+  }
 }
 
 /**
@@ -191,4 +212,7 @@ export async function markOrderRefunded(
     .eq('subject_id', orderId)
     .neq('status', 'paid');
   if (cErr) console.warn('commission void on refund failed:', cErr.message);
+
+  await captureServer(EVENTS.ORDER_REFUNDED, { order_id: orderId, amount_cents: refundedCents, provider });
+  await captureServer(EVENTS.PLATFORM_FEE_REVERSED, { order_id: orderId });
 }

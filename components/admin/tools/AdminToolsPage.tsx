@@ -12,9 +12,6 @@ import {
   CreateUserCard, PromoteChefCard, EnableComplianceCard, CreateMealCard,
 } from '@/components/admin/tools/cards/basic';
 import {
-  CreateDemoReviewsCard, RestockMealCard, SendRestockEmailsCard,
-} from '@/components/admin/tools/cards/meals';
-import {
   MarkComplianceDocCard, SeedComplianceSetCard, DeactivateMealCard,
   CreateAiEndorsementCard, ApproveAllRequirementsCard,
 } from '@/components/admin/tools/cards/compliance';
@@ -152,15 +149,6 @@ export function AdminToolsPage() {
             <CreateMealCard run={run} isBusy={!!busy} emailState={sharedEmail} setEmailState={setSharedEmail} />
           </section>
 
-          <section id="tool-5" data-tool-section="true" className="scroll-mt-24">
-            <CreateDemoReviewsCard run={run} isBusy={!!busy} emailState={sharedEmail} setEmailState={setSharedEmail} />
-          </section>
-          <section id="tool-6" data-tool-section="true" className="scroll-mt-24">
-            <RestockMealCard run={run} isBusy={!!busy} emailState={sharedEmail} setEmailState={setSharedEmail} />
-          </section>
-          <section id="tool-7" data-tool-section="true" className="scroll-mt-24">
-            <SendRestockEmailsCard run={run} isBusy={!!busy} emailState={sharedEmail} setEmailState={setSharedEmail} />
-          </section>
 
           <section id="tool-8" data-tool-section="true" className="scroll-mt-24">
             <MarkComplianceDocCard run={run} isBusy={!!busy} emailState={sharedEmail} setEmailState={setSharedEmail} />

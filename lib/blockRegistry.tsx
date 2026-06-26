@@ -257,22 +257,6 @@ export const BLOCK_REGISTRY: BlockRegistryMap = {
     defaultContent: DEFAULT_BLOCK_CONTENT.contact_form,
     render: lazyRenderer(() => import('@/components/admin/templates/render-blocks/contact-form')),
   },
-  chef_profile: {
-    label: 'Chef Profile',
-    icon: '👨‍🍳',
-    category: 'content',
-    isStatic: false,
-    defaultContent: DEFAULT_BLOCK_CONTENT.chef_profile,
-    render: lazyRenderer(() => import('@/components/admin/templates/render-blocks/chef-profile.client')),
-  },
-  meals_grid: {
-    label: 'Meals Grid',
-    icon: '🍱',
-    category: 'content',
-    isStatic: false,
-    defaultContent: DEFAULT_BLOCK_CONTENT.meals_grid,
-    render: lazyRenderer(() => import('@/components/admin/templates/render-blocks/meals-grid')),
-  },
   reviews_list: {
     label: 'Reviews List',
     icon: '⭐',
@@ -280,14 +264,6 @@ export const BLOCK_REGISTRY: BlockRegistryMap = {
     isStatic: false,
     defaultContent: DEFAULT_BLOCK_CONTENT.reviews_list,
     render: lazyRenderer(() => import('@/components/admin/templates/render-blocks/reviews-list')),
-  },
-  meal_card: {
-    label: 'Meal Card',
-    icon: '🍽️',
-    category: 'content',
-    isStatic: false,
-    defaultContent: DEFAULT_BLOCK_CONTENT.meal_card,
-    render: lazyRenderer(() => import('@/components/admin/templates/render-blocks/meal-card')),
   },
   hours: {
     label: 'Hours of Operation',
@@ -375,9 +351,7 @@ const clientPlaceholder = (label: string) => async () => ({
 });
 
 export const DYNAMIC_RENDERERS: Partial<Record<BlockType, () => Promise<{ default: any }>>> = {
-  meal_card:    () => import('@/components/admin/templates/render-blocks/meal-card.client'),
   reviews_list: () => import('@/components/admin/templates/render-blocks/reviews-list.client'),
-  meals_grid:   () => import('@/components/admin/templates/render-blocks/meals-grid.client'),
 
   image:         () => import('@/components/admin/templates/render-blocks/image'),
   grid:          () => import('@/components/admin/templates/render-blocks/grid'),
@@ -393,7 +367,6 @@ export const DYNAMIC_RENDERERS: Partial<Record<BlockType, () => Promise<{ defaul
   faq:           () => import('@/components/admin/templates/render-blocks/faq'),
   testimonial:   () => import('@/components/admin/templates/render-blocks/testimonial'),
   contact_form:  () => import('@/components/admin/templates/render-blocks/contact-form'),
-  chef_profile:  () => import('@/components/admin/templates/render-blocks/chef-profile.client'),
   hours:         () => import('@/components/admin/templates/render-blocks/hours'),
 
   // NEW:

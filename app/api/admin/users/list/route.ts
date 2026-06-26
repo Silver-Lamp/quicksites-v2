@@ -112,22 +112,10 @@ export async function GET(req: NextRequest) {
       priceById = new Map((prices ?? []).map((p: any) => [p.id, p]));
     } catch {}
 
-    // NOTE: this queries a table named "products" that you were already using
-    // for billing display. If you also have a merchant "products" table,
-    // consider renaming the billing one (e.g., stripe_products) to avoid confusion.
-    let productById = new Map<string, any>();
-    try {
-      const { data: billingProducts } = await (admin as any)
-        .from('products')
-        .select('id, name');
-      productById = new Map((billingProducts ?? []).map((p: any) => [p.id, p]));
-    } catch {}
-
     for (const [uid, p] of Array.from(planByUser.entries())) {
       if (p.source === 'user_plans') continue; // already labeled
       const price = p?.price_id ? priceById.get(p.price_id) : null;
-      const product = price?.product_id ? productById.get(price.product_id) : null;
-      const label = price?.nickname ?? price?.lookup_key ?? product?.name ?? null;
+      const label = price?.nickname ?? price?.lookup_key ?? null;
       planByUser.set(uid, { ...p, plan: label ?? null, label });
     }
   }

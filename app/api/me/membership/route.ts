@@ -171,14 +171,6 @@ export async function GET(_req: NextRequest) {
               .maybeSingle();
             if (price) {
               label = price.nickname ?? price.lookup_key ?? null;
-              if (!label && price.product_id) {
-                const { data: product } = await supa
-                  .from('products')
-                  .select('name')
-                  .eq('id', price.product_id)
-                  .maybeSingle();
-                label = product?.name ?? null;
-              }
             }
           } catch {}
         }

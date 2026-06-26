@@ -3,65 +3,39 @@
 
 import { motion } from 'framer-motion';
 import Image from 'next/image';
-import Head from 'next/head';
 import Link from 'next/link';
+import { useEffect } from 'react';
 import BackgroundGlow from '@/components/background-glow';
-import GlowConfigurator, { GlowConfig } from '@/components/glow-configurator';
-import { useState, useEffect, useMemo } from 'react';
-import QuickSitesWidget from '@/components/quick-sites-widget';
+import QuickSitesWidget, { HomepageWidgetVariant } from '@/components/quick-sites-widget';
 import event from '@vercel/analytics';
 import { useSafeAuth } from '../hooks/useSafeAuth';
 import { SiteFlags } from '@/lib/site-config';
 import useMediaQuery from '@/hooks/useMediaQuery';
 import SiteHeader from '@/components/site/site-header';
-import { createClient as createBrowserClient } from '@supabase/supabase-js';
-import LazyVideoEmbed from '@/components/ui/lazy-video-embed';
-
-// 🔹 New: brand hook (already exists elsewhere in your app)
 import { useBrand } from '@/app/providers';
-import { HomepageWidgetVariant } from '@/components/quick-sites-widget';
 
 const isProd = process.env.NODE_ENV === 'production';
 
-type FeatureRow = {
-  id: string;
-  title: string;
-  blurb: string;
-  category?: string | null;
-  video_url?: string | null;
-  doc_href?: string | null;
-  badge?: string | null;
-  created_at?: string | null;
-};
-
-// Minimal brand shape we care about here
+// White-label-overridable brand shape (orgs can theme the homepage).
 type Branding = {
   name?: string;
   domain?: string;
   logoUrl?: string | null;
-  darkLogoUrl?: string | null;
   faviconUrl?: string | null;
-  colors?: { gradient?: string[]; primary?: string };
   hero?: { headline?: string; subhead?: string };
-  copy?: { featuresTitle?: string; featuresSubtitle?: string };
-  flags?: {
-    showPuppyWidget?: boolean;
-    showGlow?: boolean;
-    showMobileWidget?: boolean;
-    showMobileGradients?: boolean;
-    forceWidgetVariant?: string | null;
-  };
+  flags?: { showPuppyWidget?: boolean; showGlow?: boolean; showMobileWidget?: boolean; showMobileGradients?: boolean; forceWidgetVariant?: string | null };
 };
 
-// keep if you later enable GlowConfigurator
-const defaultGlowConfig = {
-  size: 'xl',
-  intensity: 0.2,
-  colors: ['from-sky-600', 'via-sky-400', 'to-sky-300'], // ⬅️ blue-only
-} satisfies GlowConfig;
+function Card({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <div className="rounded-xl border border-zinc-800 bg-zinc-900/40 p-5 text-left">
+      <h4 className="text-base font-semibold text-white">{title}</h4>
+      <p className="mt-2 text-sm text-zinc-400">{children}</p>
+    </div>
+  );
+}
 
 export default function HomePage() {
-  const [currentFeatureIndex, setCurrentFeatureIndex] = useState(0);
   const { user, role, isLoggedIn } = useSafeAuth();
   const isMobile = useMediaQuery('(max-width: 768px)');
 
@@ -70,263 +44,192 @@ export default function HomePage() {
   const siteDomain = brand.domain || 'QuickSites.ai';
   const logoSrc = brand.logoUrl || brand.faviconUrl || '/qs-default-favicon.ico';
 
-  const heroHeadline = brand.hero?.headline || 'Your Website. One Click Away.';
+  const heroHeadline = brand.hero?.headline || 'A site and a store. Built in.';
   const heroSubhead =
     brand.hero?.subhead ||
-    'Turn your local business into a digital presence in minutes. No code. No hassle.';
-
-  const featuresTitle = brand.copy?.featuresTitle || 'Featured demos';
-  const featuresSubtitle =
-    brand.copy?.featuresSubtitle || `Hand-picked highlights from what ${productName} can do.`;
+    'A powerful, efficient website builder with e-commerce built in — drag-and-drop pages, a product catalog, and Stripe-powered checkout, published to your own domain.';
 
   const allowMobileWidget = brand.flags?.showMobileWidget ?? SiteFlags.showMobileWidget;
   const allowMobileGlow = brand.flags?.showMobileGradients ?? SiteFlags.showMobileGradients;
-
   const showWidget = (brand.flags?.showPuppyWidget ?? true) && (allowMobileWidget || !isMobile);
   const showGlow = (brand.flags?.showGlow ?? true) && (allowMobileGlow || !isMobile);
   const widgetVariant = brand.flags?.forceWidgetVariant || 'puppy';
 
-  // --- Featured demos (from Supabase) ---
-  const supabase = useMemo(
-    () =>
-      createBrowserClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-      ),
-    []
-  );
-  const [featured, setFeatured] = useState<FeatureRow[]>([]);
-  const [featLoading, setFeatLoading] = useState(true);
-
   useEffect(() => {
-    let mounted = true;
-    (async () => {
-      try {
-        setFeatLoading(true);
-        const { data } = await supabase
-          .from('features')
-          .select('*')
-          .eq('featured', true)
-          .order('feature_order', { ascending: true, nullsFirst: false })
-          .order('created_at', { ascending: false })
-          .limit(6);
-        if (mounted) setFeatured((data || []) as FeatureRow[]);
-      } finally {
-        if (mounted) setFeatLoading(false);
-      }
-    })();
-    return () => {
-      mounted = false;
-    };
-  }, [supabase]);
+    if (typeof window === 'undefined') return;
+    event.track('landing_page_viewed', {
+      user: user?.id || user?.email || 'guest',
+      role,
+      isLoggedIn,
+      brand: productName,
+    });
+  }, [user?.id, user?.email, role, isLoggedIn, productName]);
 
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setCurrentFeatureIndex((i) => (i + 1) % 5);
-    }, 3000);
-    return () => clearInterval(interval);
-  }, []);
-
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const traceId = (document?.body as any)?.dataset?.traceId ?? '';
-      const sessionId = (document?.body as any)?.dataset?.sessionId ?? '';
-
-      event.track('landing_page_viewed', {
-        user: user?.id || user?.email || 'guest',
-        role,
-        isLoggedIn,
-        featureIndex: currentFeatureIndex,
-        traceId,
-        sessionId,
-        brand: productName,
-      });
-    }
-  }, [user?.id, user?.email, role, isLoggedIn, currentFeatureIndex, productName]);
+  const primaryHref = isLoggedIn && role !== 'guest' ? '/admin/templates/list' : isProd ? '/pricing' : '/login';
+  const primaryLabel = isLoggedIn && role !== 'guest' ? 'Go to Templates' : isProd ? 'See Pricing' : 'Start building';
 
   return (
     <>
-      <SiteHeader sticky={true} />
+      <SiteHeader sticky />
       <div className="relative min-h-screen flex flex-col bg-zinc-950 text-white overflow-hidden">
-        <Head>
-          <title>{productName} | One Click Websites</title>
-          <meta name="description" content={heroSubhead} />
-        </Head>
+        {showGlow && <BackgroundGlow />}
 
-        {showGlow && (
-          <>
-            <BackgroundGlow />
-            {/* <GlowConfigurator defaultGlowConfig={defaultGlowConfig} /> */}
-          </>
-        )}
-
-        {/* Main Content */}
-        <main className="relative z-10 flex-1 flex flex-col items-center justify-center px-6 py-12 text-center">
-          <div className="space-y-6 max-w-xl">
-            <div className="flex justify-center items-center gap-3">
-              <Image
-                src={logoSrc}
-                width={40}
-                height={40}
-                alt={`${productName} Logo`}
-                className="rounded-full"
-              />
-              <h1 className="text-3xl font-bold tracking-tight text-white">{productName}</h1>
-            </div>
-
-            {/* Indigo/Purple ➜ Sky gradient */}
-            <motion.h2
-              className="text-4xl md:text-5xl font-extrabold bg-clip-text text-transparent bg-gradient-to-r from-sky-400 to-sky-300"
-              initial={{ opacity: 0, y: -10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6 }}
-            >
-              {heroHeadline}
-            </motion.h2>
-
-            <p className="text-zinc-400 text-lg">{heroSubhead}</p>
-
-            {/* CTAs */}
-            {isLoggedIn && role !== 'guest' ? (
-              <div className="mt-4 flex flex-wrap items-center justify-center gap-3">
-                <motion.a
-                  href="/admin/templates/list"
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.97 }}
-                  className="inline-block px-6 py-3 bg-sky-500 hover:bg-sky-400 text-zinc-950 text-base font-medium rounded-lg shadow-lg transition-all"
-                >
-                  Go to Templates
-                </motion.a>
-                <motion.a
-                  href="/pricing"
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.97 }}
-                  className="inline-block px-6 py-3 border border-sky-500 text-sky-300 hover:bg-sky-500/10 hover:text-sky-200 text-base font-medium rounded-lg transition-all"
-                >
-                  See Pricing
-                </motion.a>
-              </div>
-            ) : isProd ? (
-              <div className="mt-4 flex flex-wrap items-center justify-center gap-3">
-                <div className="px-6 py-3 bg-zinc-700 text-white text-base font-medium rounded-lg shadow-lg opacity-70 cursor-not-allowed">
-                  Log In (Coming Soon)
-                </div>
-                <motion.a
-                  href="/pricing"
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.97 }}
-                  className="inline-block px-6 py-3 border border-sky-500 text-sky-300 hover:bg-sky-500/10 hover:text-sky-200 text-base font-medium rounded-lg transition-all"
-                >
-                  See Pricing
-                </motion.a>
-              </div>
-            ) : (
-              <div className="mt-4 flex flex-wrap items-center justify-center gap-3">
-                <motion.a
-                  href="/login"
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.97 }}
-                  className="inline-block px-6 py-3 bg-sky-500 hover:bg-sky-400 text-zinc-950 text-base font-medium rounded-lg shadow-lg transition-all"
-                >
-                  Log In to Get Started
-                </motion.a>
-                <motion.a
-                  href="/pricing"
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.97 }}
-                  className="inline-block px-6 py-3 border border-sky-500 text-sky-300 hover:bg-sky-500/10 hover:text-sky-200 text-base font-medium rounded-lg transition-all"
-                >
-                  See Pricing
-                </motion.a>
-              </div>
-            )}
+        {/* ───────── Hero ───────── */}
+        <main className="relative z-10 flex flex-col items-center px-6 pt-16 pb-12 text-center">
+          <div className="flex items-center gap-3">
+            <Image src={logoSrc} width={40} height={40} alt={`${productName} logo`} className="rounded-full" />
+            <span className="text-2xl font-bold tracking-tight">{productName}</span>
           </div>
+
+          <motion.h1
+            className="mt-8 max-w-3xl text-4xl md:text-6xl font-extrabold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-sky-400 to-sky-200"
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6 }}
+          >
+            {heroHeadline}
+          </motion.h1>
+
+          <p className="mt-5 max-w-2xl text-lg text-zinc-400">{heroSubhead}</p>
+
+          <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
+            <Link
+              href={primaryHref}
+              className="inline-block rounded-lg bg-sky-500 px-6 py-3 text-base font-medium text-zinc-950 shadow-lg transition hover:bg-sky-400"
+            >
+              {primaryLabel}
+            </Link>
+            <Link
+              href="/pricing#partners"
+              className="inline-block rounded-lg border border-sky-500 px-6 py-3 text-base font-medium text-sky-300 transition hover:bg-sky-500/10 hover:text-sky-200"
+            >
+              Become a partner
+            </Link>
+          </div>
+          <p className="mt-3 text-xs text-zinc-500">No code. Your domain. Your storefront. Your margin.</p>
         </main>
 
-        {/* --- Featured demos row --- */}
+        {/* ───────── Build ───────── */}
         <section className="relative z-10 w-full border-t border-zinc-800/70 bg-zinc-950/60">
-          <div className="mx-auto max-w-6xl px-6 py-10">
-            <div className="flex items-end justify-between gap-3 mb-6">
-              <div className="text-left">
-                <h3 className="text-2xl font-semibold">{featuresTitle}</h3>
-                <p className="text-sm text-zinc-400">{featuresSubtitle}</p>
-              </div>
-              <Link href="/features" className="inline-flex">
-                <button className="inline-flex h-9 items-center rounded-md border border-sky-500 px-3 text-sm text-sky-300 hover:bg-sky-500/10 hover:text-sky-200">
-                  See all features
-                </button>
-              </Link>
+          <div className="mx-auto max-w-6xl px-6 py-14">
+            <h2 className="text-2xl md:text-3xl font-semibold">A builder that gets out of your way</h2>
+            <p className="mt-2 max-w-2xl text-sm text-zinc-400">
+              Schema-driven, drag-and-drop pages — fast to build, easy to hand off.
+            </p>
+            <div className="mt-8 grid grid-cols-1 gap-5 md:grid-cols-3">
+              <Card title="Drag-and-drop blocks">
+                Compose pages from typed, reusable blocks. Validated content, live preview, versioned snapshots.
+              </Card>
+              <Card title="AI-assisted">
+                Generate hero copy, services, FAQs, and images in a click — metered so costs never surprise you.
+              </Card>
+              <Card title="One-click publish">
+                Go live on a subdomain or a custom domain you provision automatically. SEO and sitemaps included.
+              </Card>
             </div>
-
-            {featLoading ? (
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 border-zinc-500/30">
-                {[...Array(3)].map((_, i) => (
-                  <div key={i} className="h-full overflow-hidden rounded-md border border-zinc-700/60">
-                    <div className="animate-pulse aspect-video bg-zinc-800/50" />
-                    <div className="p-4">
-                      <div className="h-4 w-1/2 bg-zinc-800/70 rounded animate-pulse mb-2" />
-                      <div className="h-3 w-full bg-zinc-800/50 rounded mb-2 animate-pulse" />
-                      <div className="h-3 w-3/4 bg-zinc-800/50 rounded animate-pulse" />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-3 xl:grid-cols-3 gap-6 border-zinc-500/30">
-                {featured.map((f) => (
-                  <div key={f.id} className="h-full flex flex-col overflow-hidden rounded-md border border-zinc-700/60">
-                    <div className="aspect-video w-full border-b border-zinc-700/60 overflow-hidden">
-                      {f.video_url ? (
-                        <LazyVideoEmbed url={f.video_url} title={f.title} className="h-full w-full" />
-                      ) : (
-                        <div className="h-full w-full grid place-items-center text-zinc-400 text-sm bg-zinc-900/60">
-                          Demo coming soon
-                        </div>
-                      )}
-                    </div>
-                    <div className="p-4 pb-2">
-                      <div className="flex items-center gap-2">
-                        <div className="text-base font-medium">{f.title}</div>
-                        {f.badge ? (
-                          <span className="rounded bg-zinc-800 px-2 py-0.5 text-xs text-zinc-200">
-                            {f.badge}
-                          </span>
-                        ) : null}
-                      </div>
-                    </div>
-                    <div className="px-4 pb-4 text-sm text-zinc-400">
-                      {f.blurb}
-                      <div className="mt-4">
-                        <Link href={`/features?q=${encodeURIComponent(f.title)}`} className="inline-flex">
-                          <button className="inline-flex h-8 items-center rounded-md border border-sky-500 px-3 text-xs text-sky-300 hover:bg-sky-500/10 hover:text-sky-200">
-                            {f.video_url ? 'Watch demo' : 'Learn more'}
-                          </button>
-                        </Link>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-                {featured.length === 0 && (
-                  <div className="col-span-full rounded-md border border-zinc-700/60">
-                    <div className="py-10 text-center text-zinc-400">
-                      No featured items yet. Mark some features as “Featured” in Admin.
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
           </div>
         </section>
 
-        <footer className="relative z-10 text-center text-xs text-zinc-600 py-4 border-t border-zinc-700/50">
+        {/* ───────── Sell ───────── */}
+        <section className="relative z-10 w-full border-t border-zinc-800/70">
+          <div className="mx-auto max-w-6xl px-6 py-14">
+            <h2 className="text-2xl md:text-3xl font-semibold">Commerce, built in — not bolted on</h2>
+            <p className="mt-2 max-w-2xl text-sm text-zinc-400">
+              Every site can sell. Products, services, or digital goods — with a real checkout and a real ledger.
+            </p>
+            <div className="mt-8 grid grid-cols-1 gap-5 md:grid-cols-3">
+              <Card title="Catalog → cart → checkout">
+                A product catalog and storefront on every site, with cart and Stripe-powered checkout out of the box.
+              </Card>
+              <Card title="You take a platform fee">
+                Collect a percentage of every order via Stripe Connect — your take-rate, set per merchant.
+              </Card>
+              <Card title="Refunds & revenue, tracked">
+                Refunds reverse the fee automatically; a revenue dashboard reconciles what you’ve earned.
+              </Card>
+            </div>
+          </div>
+        </section>
+
+        {/* ───────── Earn (partners / resellers) ───────── */}
+        <section className="relative z-10 w-full border-t border-zinc-800/70 bg-gradient-to-b from-sky-950/30 to-transparent">
+          <div className="mx-auto max-w-6xl px-6 py-16">
+            <div className="grid grid-cols-1 items-center gap-10 md:grid-cols-2">
+              <div className="text-left">
+                <span className="rounded-full border border-sky-500/40 bg-sky-500/10 px-3 py-1 text-xs font-medium text-sky-300">
+                  For partners &amp; resellers
+                </span>
+                <h2 className="mt-4 text-3xl md:text-4xl font-bold">White-label it. Resell it. Earn the slice.</h2>
+                <p className="mt-4 text-zinc-400">
+                  Bring {productName} to your network under your own brand. Onboard merchants through your
+                  whitelisted payment processor, set your platform fee, and earn on every order they process —
+                  plus recurring on hosting. Free or near-free hosting brings them in; the take-rate is yours.
+                </p>
+                <div className="mt-6 flex flex-wrap gap-3">
+                  <Link
+                    href="/pricing#partners"
+                    className="inline-block rounded-lg bg-sky-500 px-6 py-3 text-base font-medium text-zinc-950 shadow-lg transition hover:bg-sky-400"
+                  >
+                    Become a partner
+                  </Link>
+                  <a
+                    href="mailto:partners@quicksites.ai?subject=QuickSites%20reseller%20partnership"
+                    className="inline-block rounded-lg border border-zinc-700 px-6 py-3 text-base font-medium text-zinc-300 transition hover:bg-zinc-800"
+                  >
+                    Talk to us
+                  </a>
+                </div>
+              </div>
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <Card title="Your brand">White-label theming per partner — your logo, your domain, your customers.</Card>
+                <Card title="Whitelisted processors">Onboard merchants through approved payment processors via Stripe Connect.</Card>
+                <Card title="Your take-rate">Set the platform fee; collect on every order automatically.</Card>
+                <Card title="Residual commissions">Earn recurring on referred merchants — tracked in a commission ledger.</Card>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* ───────── How it works ───────── */}
+        <section className="relative z-10 w-full border-t border-zinc-800/70 bg-zinc-950/60">
+          <div className="mx-auto max-w-6xl px-6 py-14 text-center">
+            <h2 className="text-2xl md:text-3xl font-semibold">Build → Sell → Earn</h2>
+            <div className="mt-8 grid grid-cols-1 gap-6 md:grid-cols-3">
+              <div>
+                <div className="mx-auto flex h-9 w-9 items-center justify-center rounded-full bg-sky-500 font-bold text-zinc-950">1</div>
+                <h4 className="mt-3 font-semibold">Build the site</h4>
+                <p className="mt-1 text-sm text-zinc-400">Drag-and-drop pages, add a catalog, publish to a domain.</p>
+              </div>
+              <div>
+                <div className="mx-auto flex h-9 w-9 items-center justify-center rounded-full bg-sky-500 font-bold text-zinc-950">2</div>
+                <h4 className="mt-3 font-semibold">Sell with checkout</h4>
+                <p className="mt-1 text-sm text-zinc-400">Customers buy via Stripe; merchants get paid, you take the fee.</p>
+              </div>
+              <div>
+                <div className="mx-auto flex h-9 w-9 items-center justify-center rounded-full bg-sky-500 font-bold text-zinc-950">3</div>
+                <h4 className="mt-3 font-semibold">Earn the margin</h4>
+                <p className="mt-1 text-sm text-zinc-400">Per-order take-rate + residual commissions, reconciled for you.</p>
+              </div>
+            </div>
+            <div className="mt-10">
+              <Link
+                href={primaryHref}
+                className="inline-block rounded-lg bg-sky-500 px-7 py-3 text-base font-medium text-zinc-950 shadow-lg transition hover:bg-sky-400"
+              >
+                {primaryLabel}
+              </Link>
+            </div>
+          </div>
+        </section>
+
+        <footer className="relative z-10 border-t border-zinc-800/70 py-6 text-center text-xs text-zinc-600">
           &copy; {new Date().getFullYear()} {siteDomain} — All rights reserved.
           <span className="mx-2">|</span>
-          <a href="/pricing" className="underline hover:text-zinc-800 dark:hover:text-zinc-200">Pricing</a>
+          <a href="/pricing" className="underline hover:text-zinc-300">Pricing</a>
           <span className="mx-1">•</span>
-          <a href="/legal/privacy" className="underline hover:text-zinc-800 dark:hover:text-zinc-200">Privacy</a>
+          <a href="/legal/privacy" className="underline hover:text-zinc-300">Privacy</a>
           <span className="mx-1">•</span>
-          <a href="/legal/terms" className="underline hover:text-zinc-800 dark:hover:text-zinc-200">Terms</a>
-
+          <a href="/legal/terms" className="underline hover:text-zinc-300">Terms</a>
           {showWidget && <QuickSitesWidget forceVariant={widgetVariant as HomepageWidgetVariant} />}
         </footer>
       </div>

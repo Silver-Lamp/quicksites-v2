@@ -149,3 +149,46 @@ export async function markOrderPaid(
     console.warn('Platform-fee commission step failed:', (e as any)?.message || e);
   }
 }
+
+/**
+ * Mark an order refunded: record the refund, flip the order, and void the
+ * platform-fee commission (unless it was already paid out to the rep — that's a
+ * clawback, handled separately). The actual money/fee reversal happens on the
+ * provider (Stripe refund with reverse_transfer + refund_application_fee); this
+ * keeps our ledger consistent. Idempotent on the refund id.
+ */
+export async function markOrderRefunded(
+  orderId: string,
+  refundedCents: number | undefined,
+  provider: string,
+  providerRefundId: string,
+  raw: any
+) {
+  const supabase = await getServerSupabase({ serviceRole: true });
+
+  // 1) Record the refund as a payment row (state='refunded'), idempotent
+  if (providerRefundId) {
+    const { error: pErr } = await supabase.from('payments').insert({
+      order_id: orderId,
+      provider,
+      provider_payment_id: providerRefundId,
+      amount_cents: Math.abs(Number(refundedCents ?? 0)),
+      state: 'refunded',
+      raw,
+    });
+    if (pErr && `${pErr.code}` !== '23505') throw pErr;
+  }
+
+  // 2) Flip the order
+  const { error: oErr } = await supabase.from('orders').update({ status: 'refunded' }).eq('id', orderId);
+  if (oErr) throw oErr;
+
+  // 3) Void the platform-fee commission for this order (skip already-paid-out)
+  const { error: cErr } = await supabase
+    .from('commission_ledger')
+    .update({ status: 'void', adjustments: { note: 'voided on refund' } })
+    .eq('subject', 'order_platform_fee')
+    .eq('subject_id', orderId)
+    .neq('status', 'paid');
+  if (cErr) console.warn('commission void on refund failed:', cErr.message);
+}

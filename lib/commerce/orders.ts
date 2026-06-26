@@ -1,6 +1,6 @@
 import { getServerSupabase } from '@/lib/supabase/server';
 import type { LineItemInput } from './types';
-import { getMerchantPaymentConfig } from './paymentRouter';
+import { getMerchantPaymentConfigSafe } from './paymentRouter';
 
 /** Create a pending order and its line items. Returns order id and totals. */
 export async function createDraftOrder(opts: {
@@ -22,7 +22,7 @@ export async function createDraftOrder(opts: {
   }, 0);
   const total = subtotal; // tax/shipping can be added later
 
-  const cfg = await getMerchantPaymentConfig(opts.merchantId);
+  const cfg = await getMerchantPaymentConfigSafe(opts.merchantId);
   const platformFeeCents = cfg.collect_platform_fee
     ? Math.max(Math.floor(total * (cfg.platform_fee_percent || 0)), cfg.platform_fee_min_cents || 0)
     : 0;
@@ -36,6 +36,7 @@ export async function createDraftOrder(opts: {
       merchant_id: opts.merchantId,
       site_slug: opts.siteSlug,
       currency,
+      amount_cents: total, // legacy column back-compat
       subtotal_cents: subtotal,
       total_cents: total,
       platform_fee_cents: platformFeeCents,
@@ -52,6 +53,7 @@ export async function createDraftOrder(opts: {
     const unit = Math.max(0, Number(li.unitAmount || 0));
     return {
       order_id: order.id,
+      merchant_id: opts.merchantId, // live order_items requires merchant_id (NOT NULL)
       catalog_item_id: li.catalogItemId ?? null,
       title: li.title,
       quantity: qty,

@@ -102,3 +102,23 @@ Recommended first PR: **A1 + A7 scaffolding** (unblocks everything and makes pro
 
 ## Billing tiers (the "near-free hosting" upsell — after first dollar)
 `merchant_billing` already exists. Once A3 works, define plans (free / pro) and gate limits (e.g. `LLM_PER_USER_DAILY_CENTS`, custom-domain count) by plan. This is also where per-merchant LLM caps plug in — see [`LLM_METERING.md`](LLM_METERING.md).
+
+---
+
+## Progress (2026-06-26)
+Built and verified end-to-end in **test mode** (real Stripe needs keys + a connected account):
+
+| Ticket | Status | Notes |
+|---|---|---|
+| A1 reconcile on `catalog_items` | ✅ | storefront read repointed; live schema reconciled (site_slug, fee cols, order_items metadata/merchant_id, meal_id nullable) |
+| A2 one checkout entry | ✅ | `/checkout` → `/api/commerce/checkout` → `createDraftOrder` |
+| A3 first dollar | ✅ test / ⏳ real | test order → paid, platform_fee 320 ($3.20). Real = add Stripe keys + Connect onboarding |
+| A4 refund → fee reversal | ✅ | `/api/commerce/refund` (Stripe `reverse_transfer`+`refund_application_fee`); webhook `charge.refunded`; commission void |
+| A5 revenue reconciliation | ✅ | `/api/admin/revenue` + `/admin/revenue` page |
+| A6 storefront | ✅ | `/store/[merchant]`, `/p/[slug]`, `products_grid` block, seed script |
+| A7 funnel events | ⏳ | event constants exist (`lib/analytics/events.ts`); not yet emitted at each step |
+| Connect onboarding | ✅ | `/api/connect/{onboard,status,login-link}` on `payment_accounts`; `/merchant/connect` UI. Runbook: [`COMMERCE_RUNBOOK.md`](COMMERCE_RUNBOOK.md) |
+
+**Remaining:** A7 funnel emission; real Stripe test charge (user step); retire legacy
+`products` table (entangled with membership — needs care); drop `meals`/`order_items.meal_id`
++ dead admin card fns (cosmetic).

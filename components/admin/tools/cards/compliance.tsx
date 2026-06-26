@@ -174,63 +174,6 @@ export function SeedComplianceSetCard({
   );
 }
 
-/* 10) Deactivate a meal */
-export function DeactivateMealCard({
-  run, isBusy, emailState, setEmailState,
-}: {
-  run:(label:string, fn:()=>Promise<any>)=>void;
-  isBusy:boolean;
-  emailState:string;
-  setEmailState:(v:string)=>void;
-}) {
-  const [mealId, setMealId] = React.useState('');
-  const [mealSlug, setMealSlug] = React.useState('');
-  const [email, setEmail] = React.useState(emailState || 'chef.demo@example.com');
-  const [qty, setQty] = React.useState('');
-
-  React.useEffect(() => setEmailState(email), [email, setEmailState]);
-
-  const haveTarget = !!mealId.trim() || !!mealSlug.trim() || (email.trim() && isEmail(email));
-  const qtyOk = !qty.trim() || (!isNaN(Number(qty)) && Number(qty) >= 0);
-  const valid = haveTarget && qtyOk;
-  const qtyNum = qty.trim() ? Number(qty) : undefined;
-
-  const handleDeactivate = () =>
-    run('deactivate-meal', () => {
-      const normalized = email.trim() ? email.trim().toLowerCase() : '';
-      return postJSON('/api/admin/meals/deactivate', {
-        meal_id: mealId || undefined,
-        meal_slug: mealSlug || undefined,
-        email: normalized || undefined,
-        qty: typeof qtyNum === 'number' ? qtyNum : undefined,
-      });
-    });
-
-  return (
-    <ToolCard title="10) Deactivate a meal" subtitle="Marks the meal inactive. Optionally force-set a specific quantity.">
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
-        <Field id="dm-meal-id" label="meal_id (optional)" value={mealId} onChange={setMealId} placeholder="uuid"/>
-        <Field id="dm-meal-slug" label="meal_slug (optional)" value={mealSlug} onChange={setMealSlug} placeholder="slug"/>
-        <Field id="dm-email" label="Chef email (fallback)" value={email} onChange={setEmail} placeholder="used if ID/slug omitted" validate={(v)=> (v && !isEmail(v)? 'Invalid email' : null)}/>
-        <Field id="dm-qty" label="set qty to (optional)" value={qty} onChange={setQty} placeholder="leave blank to keep as-is" validate={(v)=> (!v || Number(v) >= 0 ? null : 'Must be ≥ 0')}/>
-      </div>
-      <div className="mt-3 flex items-center gap-2">
-        <PrimaryButton busy={isBusy} disabled={!valid || isBusy} onClick={handleDeactivate}>
-          Deactivate meal
-        </PrimaryButton>
-        <SecondaryButton onClick={() => { setMealId(''); setMealSlug(''); setEmail('chef.demo@example.com'); setQty(''); }}>
-          Fill demo values
-        </SecondaryButton>
-      </div>
-      <div className="mt-4">
-        <HelpRow items={[
-          'Provide ID/slug; with only email, backend may target the most recent meal.',
-          'Leaving qty blank keeps current inventory unchanged.',
-        ]}/>
-      </div>
-    </ToolCard>
-  );
-}
 
 /* 11) Create AI Endorsement */
 export function CreateAiEndorsementCard({

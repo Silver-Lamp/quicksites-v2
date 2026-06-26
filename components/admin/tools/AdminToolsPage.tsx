@@ -9,14 +9,14 @@ import { useRunner } from '@/components/admin/tools/useRunner';
 import { LeftNav, type ToolGroup } from '@/components/admin/tools/LeftNav';
 
 import {
-  CreateUserCard, PromoteChefCard, EnableComplianceCard, CreateMealCard,
+  CreateUserCard, EnableComplianceCard,
 } from '@/components/admin/tools/cards/basic';
 import {
-  MarkComplianceDocCard, SeedComplianceSetCard, DeactivateMealCard,
+  MarkComplianceDocCard, SeedComplianceSetCard,
   CreateAiEndorsementCard, ApproveAllRequirementsCard,
 } from '@/components/admin/tools/cards/compliance';
 import {
-  CloneMealCard, BulkGenerateMealsCard, NukeDemoDataCard,
+  NukeDemoDataCard,
   GenerateQrInvitesCard, StickerSheetCard,
 } from '@/components/admin/tools/cards/advanced';
 import { PromoteMerchantCard, CreateProductCard } from '@/components/admin/tools/cards/commerce';
@@ -25,7 +25,6 @@ import { PromoteMerchantCard, CreateProductCard } from '@/components/admin/tools
 const GROUPS: ToolGroup[] = [
   { title: 'Users', items: [
     { id: 'tool-1', label: '1) Create new user' },
-    { id: 'tool-2', label: '2) Promote to chef' },
   ]},
   { title: 'Merchants & Products', items: [
     { id: 'tool-18', label: '18) Promote to merchant' },
@@ -38,14 +37,7 @@ const GROUPS: ToolGroup[] = [
     { id: 'tool-11', label: '11) Create AI Endorsement' },
     { id: 'tool-12', label: '12) Approve ALL requirements' },
   ]},
-  { title: 'Meals (legacy)', items: [
-    { id: 'tool-4', label: '4) Make a meal' },
-    { id: 'tool-5', label: '5) Create demo reviews' },
-    { id: 'tool-6', label: '6) Restock & waitlist' },
-    { id: 'tool-7', label: '7) Send restock emails' },
-    { id: 'tool-10', label: '10) Deactivate a meal' },
-    { id: 'tool-13', label: '13) Clone a meal' },
-    { id: 'tool-14', label: '14) Bulk-generate meals' },
+  { title: 'Maintenance', items: [
     { id: 'tool-15', label: '15) Nuke demo data' },
   ]},
   { title: 'QR / Print', items: [
@@ -139,25 +131,14 @@ export function AdminToolsPage() {
           <section id="tool-19" data-tool-section="true" className="scroll-mt-24">
             <CreateProductCard run={run} isBusy={!!busy} emailState={sharedEmail} setEmailState={setSharedEmail} />
           </section>
-          <section id="tool-2" data-tool-section="true" className="scroll-mt-24">
-            <PromoteChefCard run={run} isBusy={!!busy} emailState={sharedEmail} setEmailState={setSharedEmail} />
-          </section>
           <section id="tool-3" data-tool-section="true" className="scroll-mt-24">
             <EnableComplianceCard run={run} isBusy={!!busy} emailState={sharedEmail} setEmailState={setSharedEmail} />
           </section>
-          <section id="tool-4" data-tool-section="true" className="scroll-mt-24">
-            <CreateMealCard run={run} isBusy={!!busy} emailState={sharedEmail} setEmailState={setSharedEmail} />
-          </section>
-
-
           <section id="tool-8" data-tool-section="true" className="scroll-mt-24">
             <MarkComplianceDocCard run={run} isBusy={!!busy} emailState={sharedEmail} setEmailState={setSharedEmail} />
           </section>
           <section id="tool-9" data-tool-section="true" className="scroll-mt-24">
             <SeedComplianceSetCard run={run} isBusy={!!busy} emailState={sharedEmail} setEmailState={setSharedEmail} />
-          </section>
-          <section id="tool-10" data-tool-section="true" className="scroll-mt-24">
-            <DeactivateMealCard run={run} isBusy={!!busy} emailState={sharedEmail} setEmailState={setSharedEmail} />
           </section>
           <section id="tool-11" data-tool-section="true" className="scroll-mt-24">
             <CreateAiEndorsementCard run={run} isBusy={!!busy} emailState={sharedEmail} setEmailState={setSharedEmail} />
@@ -166,12 +147,6 @@ export function AdminToolsPage() {
             <ApproveAllRequirementsCard run={run} isBusy={!!busy} emailState={sharedEmail} setEmailState={setSharedEmail} />
           </section>
 
-          <section id="tool-13" data-tool-section="true" className="scroll-mt-24">
-            <CloneMealCard run={run} isBusy={!!busy} />
-          </section>
-          <section id="tool-14" data-tool-section="true" className="scroll-mt-24">
-            <BulkGenerateMealsCard run={run} isBusy={!!busy} emailState={sharedEmail} setEmailState={setSharedEmail} />
-          </section>
           <section id="tool-15" data-tool-section="true" className="scroll-mt-24">
             <NukeDemoDataCard run={run} isBusy={!!busy} emailState={sharedEmail} setEmailState={setSharedEmail} />
           </section>

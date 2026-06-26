@@ -257,14 +257,6 @@ export const BLOCK_REGISTRY: BlockRegistryMap = {
     defaultContent: DEFAULT_BLOCK_CONTENT.contact_form,
     render: lazyRenderer(() => import('@/components/admin/templates/render-blocks/contact-form')),
   },
-  reviews_list: {
-    label: 'Reviews List',
-    icon: '⭐',
-    category: 'content',
-    isStatic: false,
-    defaultContent: DEFAULT_BLOCK_CONTENT.reviews_list,
-    render: lazyRenderer(() => import('@/components/admin/templates/render-blocks/reviews-list')),
-  },
   hours: {
     label: 'Hours of Operation',
     icon: '⏰',
@@ -351,7 +343,6 @@ const clientPlaceholder = (label: string) => async () => ({
 });
 
 export const DYNAMIC_RENDERERS: Partial<Record<BlockType, () => Promise<{ default: any }>>> = {
-  reviews_list: () => import('@/components/admin/templates/render-blocks/reviews-list.client'),
 
   image:         () => import('@/components/admin/templates/render-blocks/image'),
   grid:          () => import('@/components/admin/templates/render-blocks/grid'),

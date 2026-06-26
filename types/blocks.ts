@@ -39,7 +39,6 @@ export const BLOCK_CATEGORY: Record<BlockType, BlockCategory> = {
   header: 'meta',
   contact_form: 'interactive',
   cta: 'interactive',
-  reviews_list: 'content',
   hours: 'meta',
   scheduler: 'interactive',
   candidate_donate: 'interactive',

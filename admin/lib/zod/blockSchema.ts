@@ -227,27 +227,6 @@ export const TextBlockSchema = z.object({
 const emptyToUndef = <T extends z.ZodTypeAny>(schema: T) =>
   z.preprocess((v) => (typeof v === 'string' && v.trim() === '' ? undefined : v), schema);
 
-export const reviewsListPropsSchema = z
-  .object({
-    mealId: emptyToUndef(z.string().uuid()).optional(),
-    chefId: emptyToUndef(z.string().uuid()).optional(),
-    siteId: emptyToUndef(z.string().uuid()).optional(),
-    pageSize: z.number().int().min(1).max(50).default(6),
-    sort: z.enum(['recent', 'top']).default('recent'),
-    minStars: z
-      .preprocess(
-        (v) => (v === 0 || v === '0' || v === '' ? undefined : v),
-        z.number().int().min(1).max(5)
-      )
-      .optional(),
-    showSummary: z.boolean().default(true),
-    showWriteCta: z.boolean().default(false),
-  })
-  .refine((p) => !!p.mealId || !!p.chefId || !!p.siteId, {
-    message: 'Provide mealId, chefId, or siteId',
-    path: ['siteId'],
-  });
-
 /* ─────────────────────────── Header / Footer blocks ───────────────────────── */
 
 export const HeaderContent = z.preprocess((raw) => {
@@ -551,7 +530,6 @@ export const blockContentSchemaMap = {
     }),
   },
 
-  reviews_list: { label: 'Reviews List', icon: '⭐', schema: reviewsListPropsSchema },
 
   hours: { label: 'Hours of Operation', icon: '⏰', schema: HoursOfOperationSchema },
 

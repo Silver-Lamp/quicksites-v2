@@ -17,7 +17,6 @@ import {
 } from '@/components/admin/tools/cards/compliance';
 import {
   NukeDemoDataCard,
-  GenerateQrInvitesCard, StickerSheetCard,
 } from '@/components/admin/tools/cards/advanced';
 import { PromoteMerchantCard, CreateProductCard } from '@/components/admin/tools/cards/commerce';
 
@@ -39,10 +38,6 @@ const GROUPS: ToolGroup[] = [
   ]},
   { title: 'Maintenance', items: [
     { id: 'tool-15', label: '15) Nuke demo data' },
-  ]},
-  { title: 'QR / Print', items: [
-    { id: 'tool-16', label: '16) Generate QR invites' },
-    { id: 'tool-17', label: '17) Sticker Sheet (PDF)' },
   ]},
 ];
 
@@ -149,12 +144,6 @@ export function AdminToolsPage() {
 
           <section id="tool-15" data-tool-section="true" className="scroll-mt-24">
             <NukeDemoDataCard run={run} isBusy={!!busy} emailState={sharedEmail} setEmailState={setSharedEmail} />
-          </section>
-          <section id="tool-16" data-tool-section="true" className="scroll-mt-24">
-            <GenerateQrInvitesCard run={run} isBusy={!!busy} emailState={sharedEmail} setEmailState={setSharedEmail} />
-          </section>
-          <section id="tool-17" data-tool-section="true" className="scroll-mt-24">
-            <StickerSheetCard isBusy={!!busy} />
           </section>
 
           <StickyOutput busyLabel={busy} err={err} out={out} />

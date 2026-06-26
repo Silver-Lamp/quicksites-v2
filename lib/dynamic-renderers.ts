@@ -18,5 +18,4 @@ export const DYNAMIC_RENDERERS: Record<string, any> = {
   quote: dynamic(() => import('@/components/admin/templates/render-blocks/quote'), { ssr: false }),
   button: dynamic(() => import('@/components/admin/templates/render-blocks/button'), { ssr: false }),
   grid: dynamic(() => import('@/components/admin/templates/render-blocks/grid'), { ssr: false }),
-  reviews_list: dynamic(() => import('@/components/admin/templates/render-blocks/reviews-list.client'), { ssr: false }),
 };

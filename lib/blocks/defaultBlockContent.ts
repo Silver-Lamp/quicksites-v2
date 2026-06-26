@@ -178,16 +178,6 @@ export const DEFAULT_BLOCK_CONTENT = {
   },
 
 
-  reviews_list: {
-    mealId: DUMMY_UUID,
-    chefId: DUMMY_UUID,
-    siteId: DUMMY_UUID,
-    pageSize: 6,
-    sort: 'recent',
-    minStars: 1,
-    showSummary: true,
-    showWriteCta: false,
-  },
 
   /* ───────── hours (matches HoursOfOperationSchema) ───────── */
 

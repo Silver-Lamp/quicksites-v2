@@ -1,5 +1,13 @@
 import type { NextRequest } from 'next/server';
 import { NextResponse } from 'next/server';
+import { GUEST_BUILD_ENABLED } from '@/lib/flags/guestBuild';
+
+/** Guests (anonymous users) may only reach the template editor under /admin. */
+function isGuestAllowedAdminPath(pathname: string): boolean {
+  return /^\/admin\/templates\/(?!list(?:$|\/)|new(?:$|\/)|gsc-bulk-stats(?:$|\/))[^/]+/.test(
+    pathname,
+  );
+}
 
 /** Hosts that should NOT be rewritten (your app itself). */
 const APP_HOSTS = new Set<string>([
@@ -103,7 +111,7 @@ const ORG_SLUG_RE = /^[a-z0-9][a-z0-9-]{1,63}$/i;
 
 const COOKIE_SECURE = process.env.NODE_ENV === 'production';
 
-export function middleware(req: NextRequest) {
+export async function middleware(req: NextRequest) {
   const url = req.nextUrl;
   const { pathname, searchParams } = url;
 
@@ -164,9 +172,36 @@ export function middleware(req: NextRequest) {
   const host = hostHeader.toLowerCase();
   const { hostname } = splitHostPort(hostHeader);
 
-  // If this is our app host, don't rewrite
+  // If this is our app host, don't rewrite. Forward the current pathname as a
+  // request header so server components (e.g. the admin layout) can see which
+  // route is rendering.
   if (APP_HOSTS.has(host) || host.endsWith('.vercel.app')) {
-    return withCookies(NextResponse.next());
+    const requestHeaders = new Headers(req.headers);
+    requestHeaders.set('x-pathname', pathname);
+    const res = NextResponse.next({ request: { headers: requestHeaders } });
+
+    // Authoritative guest gate: anonymous users may reach ONLY the template
+    // editor — never the rest of /admin (those pages carry browser-client writes
+    // gated only by getUser(), which anonymous users pass). Only runs when the
+    // flag is on and only for the at-risk (non-editor) admin paths.
+    if (
+      GUEST_BUILD_ENABLED &&
+      pathname.startsWith('/admin') &&
+      !isGuestAllowedAdminPath(pathname)
+    ) {
+      // Loaded lazily so the Supabase client (and its Node-detection code) never
+      // enters the Edge hot path unless the gate actually runs.
+      const { createMiddlewareSupabaseClient } = await import(
+        '@/lib/supabase/middlewareClient'
+      );
+      const supabase = createMiddlewareSupabaseClient(req, res);
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user?.is_anonymous) {
+        return withCookies(NextResponse.redirect(new URL('/', req.url)));
+      }
+    }
+
+    return withCookies(res);
   }
 
   // --- Org-level domains ---

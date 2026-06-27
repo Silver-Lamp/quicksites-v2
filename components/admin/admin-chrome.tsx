@@ -2,14 +2,47 @@
 'use client';
 
 import * as React from 'react';
+import Image from 'next/image';
 import AppHeader from './AppHeader/app-header';
 import ResponsiveAdminLayout from './responsive-admin-layout';
+import GuestPublishBanner from './guest-publish-banner';
 import { useSafeScroll } from '@/hooks/useSafeScroll';
 import { useSafeTargetRef } from '@/lib/ui/safeTargetRef';
 
 const DESKTOP_BP = 1024; // lg
 
-export default function AdminChrome({ children }: { children: React.ReactNode }) {
+/**
+ * Minimal chrome for guests (anonymous users): no admin sidebar/nav — just a
+ * slim brand bar and the "sign up to publish" banner above the editor. Guests
+ * are confined to the editor by the admin layout's path gate.
+ */
+function GuestChrome({ children }: { children: React.ReactNode }) {
+  return (
+    <div data-admin-root data-guest className="min-h-screen bg-background text-foreground">
+      <header className="sticky top-0 z-30 border-b bg-background/95 backdrop-blur">
+        <div className="mx-auto flex max-w-6xl items-center gap-2 px-4 py-2">
+          <Image src="/qs-default-favicon.ico" width={24} height={24} alt="QuickSites" className="rounded" />
+          <span className="text-sm font-semibold">QuickSites</span>
+        </div>
+      </header>
+      <GuestPublishBanner />
+      <main className="min-w-0 pt-0">{children}</main>
+    </div>
+  );
+}
+
+export default function AdminChrome({
+  children,
+  isGuest = false,
+}: {
+  children: React.ReactNode;
+  isGuest?: boolean;
+}) {
+  if (isGuest) return <GuestChrome>{children}</GuestChrome>;
+  return <FullAdminChrome>{children}</FullAdminChrome>;
+}
+
+function FullAdminChrome({ children }: { children: React.ReactNode }) {
   const [collapsed, setCollapsed] = React.useState(false);
   const [isMobile, setIsMobile] = React.useState(false);
 

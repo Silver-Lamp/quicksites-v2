@@ -20,6 +20,14 @@ export async function POST(
   const { data: { user }, error: userErr } = await supa.auth.getUser();
   if (userErr || !user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
+  // Guests (anonymous users) can build but must sign up before going live.
+  if (user.is_anonymous) {
+    return NextResponse.json(
+      { error: 'Sign up to publish your site.', code: 'needs_signup' },
+      { status: 403 },
+    );
+  }
+
   // Resolve base_slug from id (UUID) or use value as base_slug
   let base_slug = id;
   if (UUID_V4.test(id)) {

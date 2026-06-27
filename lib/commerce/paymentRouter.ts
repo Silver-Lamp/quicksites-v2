@@ -2,6 +2,7 @@ import { StripeAdapter } from './adapters/stripeAdapter';
 import { PaymentsAdapter } from './paymentAdapter';
 import { CreateCheckoutParams } from './types';
 import { getServerSupabase } from '@/lib/supabase/server'; // your helper
+import { clampPlatformFeePercent } from './partner-terms';
 
 
 
@@ -40,7 +41,9 @@ export async function getMerchantPaymentConfig(merchantId: string): Promise<Paym
       provider: data.provider as PaymentConfig['provider'],
       account_ref: data.account_ref,
       collect_platform_fee: !!data.collect_platform_fee,
-      platform_fee_percent: Number(data.platform_fee_percent || 0),
+      // Clamp to the partner cap here so no downstream fee math (checkout or
+      // createDraftOrder) can ever charge above policy, whatever the stored value.
+      platform_fee_percent: clampPlatformFeePercent(Number(data.platform_fee_percent || 0)),
       platform_fee_min_cents: Number(data.platform_fee_min_cents || 0),
     };
   }
@@ -60,7 +63,7 @@ export async function getMerchantPaymentConfig(merchantId: string): Promise<Paym
         provider: 'custom',
         account_ref: null,
         collect_platform_fee: testFee > 0,
-        platform_fee_percent: testFee,
+        platform_fee_percent: clampPlatformFeePercent(testFee),
         platform_fee_min_cents: 0,
       };
     }

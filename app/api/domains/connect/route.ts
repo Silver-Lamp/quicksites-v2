@@ -1,8 +1,10 @@
 // app/api/domains/connect/route.ts
 export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
 
 import { NextResponse } from 'next/server';
 import { Resolver } from 'dns/promises';
+import { getAdminUser } from '@/lib/auth/getAdminUser';
 
 const API = 'https://api.vercel.com';
 const DEFAULT_A_IPS = ['76.76.21.21'];
@@ -62,6 +64,10 @@ async function detectIsNamecheap(apex: string): Promise<boolean> {
 
 export async function POST(req: Request) {
   try {
+    if (!(await getAdminUser())) {
+      return NextResponse.json({ ok: false, error: 'forbidden' }, { status: 403 });
+    }
+
     const {
       domain,
       redirectToWWW = true,

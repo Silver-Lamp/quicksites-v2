@@ -104,26 +104,19 @@ export function ThemeProvider({
 
       // 1) Supabase (user-specific)
       if (userId) {
+        // NOTE: user_site_settings only has (user_id, site_slug, glow_config).
+        // The theme_* columns this used to select don't exist in the DB, so they
+        // always failed silently and the theme fell back to defaults — preserved here.
         const { data } = await supabase
           .from('user_site_settings')
-          .select(
-            'glow_config, theme_font, theme_radius, theme_accent, theme_mode, theme_font_url, theme_name, theme_description'
-          )
+          .select('glow_config')
           .eq('user_id', userId)
           .eq('site_slug', siteSlug)
           .single();
 
         if (data) {
-          foundTheme = {
-            glow: Array.isArray(data.glow_config) ? data.glow_config : [data.glow_config],
-            fontFamily: data.theme_font || defaultTheme.fontFamily,
-            borderRadius: data.theme_radius || defaultTheme.borderRadius,
-            accentColor: data.theme_accent || defaultTheme.accentColor,
-            darkMode: (data.theme_mode as 'light' | 'dark') || defaultTheme.darkMode,
-            fontUrl: data.theme_font_url || fontMap[data.theme_font as keyof typeof fontMap]?.googleUrl,
-            name: data.theme_name || '',
-            description: data.theme_description || '',
-          };
+          const glow = (Array.isArray(data.glow_config) ? data.glow_config : [data.glow_config]) as GlowConfig[];
+          foundTheme = { ...defaultTheme, glow };
         }
       }
 
@@ -168,19 +161,10 @@ export function ThemeProvider({
       // Backfill user settings if authenticated and nothing cached before
       const userIdAgain = (window as any).__DEV_MOCK_USER__?.id;
       if (userIdAgain && !cached) {
-        const fontKey = (foundTheme.fontFamily as keyof typeof fontMap) ?? 'sans';
-        const fontUrl = fontMap[fontKey]?.googleUrl ?? '';
         await supabase.from('user_site_settings').upsert({
           user_id: userIdAgain,
           site_slug: siteSlug,
           glow_config: foundTheme.glow,
-          theme_font: foundTheme.fontFamily,
-          theme_radius: foundTheme.borderRadius,
-          theme_accent: foundTheme.accentColor,
-          theme_mode: foundTheme.darkMode,
-          theme_font_url: fontUrl,
-          theme_name: foundTheme.name,
-          theme_description: foundTheme.description,
         });
       }
     };
@@ -198,23 +182,15 @@ export function ThemeProvider({
 
     const userId = (window as any).__DEV_MOCK_USER__?.id;
     const key = `theme-config::${siteSlug}`;
-    const fontKey = (value.fontFamily as keyof typeof fontMap) ?? 'sans';
-    const fontUrl = fontMap[fontKey]?.googleUrl ?? '';
 
     try {
       localStorage.setItem(key, JSON.stringify(value));
       if (userId) {
+        // Only glow_config exists on user_site_settings (see loadTheme note).
         await supabase.from('user_site_settings').upsert({
           user_id: userId,
           site_slug: siteSlug,
           glow_config: value.glow,
-          theme_font: value.fontFamily,
-          theme_radius: value.borderRadius,
-          theme_accent: value.accentColor,
-          theme_mode: value.darkMode,
-          theme_font_url: fontUrl,
-          theme_name: value.name,
-          theme_description: value.description,
         });
       }
     } catch (err) {

@@ -1,6 +1,7 @@
 // /app/api/cron/weekly-compliance-digest/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { runCron } from '@/lib/cron/record';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -21,6 +22,7 @@ type County = { state: string; county: string; active: boolean; created_at: stri
 export async function POST(req: NextRequest) {
   if (!ok(req)) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
+  return runCron('weekly-compliance-digest', async () => {
   const now = new Date();
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   const last7 = new Date(today.getTime() - 7*24*3600e3);
@@ -124,4 +126,5 @@ export async function POST(req: NextRequest) {
   }
 
   return NextResponse.json({ ok: true });
+  });
 }

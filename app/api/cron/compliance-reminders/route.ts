@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { runCron } from '@/lib/cron/record';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -26,6 +27,7 @@ type DocRow = {
 export async function POST(req: NextRequest) {
   if (!authorize(req)) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
+  return runCron('compliance-reminders', async () => {
   const today = new Date();
   today.setHours(0,0,0,0);
 
@@ -132,4 +134,5 @@ export async function POST(req: NextRequest) {
   }
 
   return NextResponse.json({ ok: true, sent: sentCount });
+  });
 }

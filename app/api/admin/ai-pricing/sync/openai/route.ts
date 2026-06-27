@@ -1,7 +1,9 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { createServerClient, type CookieOptions } from '@supabase/ssr';
 import { syncOpenAIPrices } from '@/lib/ai/pricing-sync/openaiSync';
+import { runCron } from '@/lib/cron/record';
+import { isCronAuthorized } from '@/lib/cron/auth';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -33,14 +35,25 @@ async function requireAdmin() {
   return adminRow?.[0] ? user : null;
 }
 
-export async function POST() {
-  const me = await requireAdmin();
-  if (!me) return NextResponse.json({ error: 'forbidden' }, { status: 403 });
-
-  try {
-    const result = await syncOpenAIPrices(); // { applied, queued, status }
-    return NextResponse.json(result);
-  } catch (e: any) {
-    return NextResponse.json({ error: e?.message || 'sync failed' }, { status: 500 });
+export async function POST(req: NextRequest) {
+  // Schedulers authenticate with the cron secret; interactive callers need admin.
+  if (!isCronAuthorized(req)) {
+    const me = await requireAdmin();
+    if (!me) return NextResponse.json({ error: 'forbidden' }, { status: 403 });
   }
+
+  return runCron('ai-pricing-sync', async () => {
+    try {
+      const result = await syncOpenAIPrices(); // { applied, queued, status }
+      return NextResponse.json(result);
+    } catch (e: any) {
+      return NextResponse.json({ error: e?.message || 'sync failed' }, { status: 500 });
+    }
+  });
+}
+
+// Vercel native cron invokes via GET — allow it for authorized cron requests only.
+export async function GET(req: NextRequest) {
+  if (!isCronAuthorized(req)) return NextResponse.json({ error: 'forbidden' }, { status: 403 });
+  return POST(req);
 }

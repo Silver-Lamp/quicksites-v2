@@ -28,5 +28,5 @@ export async function saveSiteWithClient(
     .single();
 
   if (error) throw error;
-  return data as Template;
+  return data as unknown as Template;
 }

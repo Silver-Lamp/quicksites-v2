@@ -85,7 +85,7 @@ export default function GlowConfigurator({ defaultGlowConfig, siteSlug = 'defaul
             const parsed = Array.isArray(data.glow_config)
               ? data.glow_config
               : [data.glow_config];
-            setGlowLayers(parsed);
+            setGlowLayers(parsed as GlowConfig[]);
             resolved = true;
           } else {
             console.log('[GlowConfigurator] No glow_config found for user — seeding with fallback');

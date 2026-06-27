@@ -42,7 +42,8 @@ export async function POST(req: Request) {
   }
 
   // ⏳ Rate limiting: one site every 10 minutes per user
-  const recent = await supabase
+  // sites table has no created_by column — cast to any; was failing silently; see types migration
+  const recent = await (supabase as any)
     .from('sites')
     .select('created_at')
     .eq('created_by', user.id)
@@ -73,6 +74,8 @@ export async function POST(req: Request) {
   }
 
   try {
+    // sites has no created_by, content, or claimed_email columns — removed; see types migration
+    // full_data maps to the `data` Json column
     const { data: newSite, error: insertError } = await supabase
       .from('sites')
       .insert([
@@ -82,9 +85,7 @@ export async function POST(req: Request) {
           business_name,
           location,
           template_version_id,
-          content: full_data,
-          created_by: user.id,
-          claimed_email: email || null,
+          data: full_data,
         },
       ])
       .select()

@@ -23,7 +23,7 @@ export default async function Page({ params }: { params: { slug: string } }) {
     <div className="min-h-screen bg-white text-black p-8">
       <div className="max-w-4xl mx-auto space-y-6">
         <h1 className="text-3xl font-bold">{campaign.headline}</h1>
-        <p className="text-zinc-700">{campaign.description}</p>
+        <p className="text-zinc-700">{(campaign as any).description}</p>
 
         <div className="border rounded overflow-hidden shadow">
           <img

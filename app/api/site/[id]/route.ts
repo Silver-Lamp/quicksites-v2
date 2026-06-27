@@ -20,12 +20,26 @@ export async function POST(
 
   const supabase = await getServerSupabase();
 
+  // sites has no top-level `pages` column — site content lives in the `data` jsonb.
+  // Merge pages into the existing blob rather than overwriting it (the old code wrote to a
+  // non-existent `pages` column and always 500'd). See Supabase types migration.
+  const { data: existing } = await supabase
+    .from('sites')
+    .select('data')
+    .eq('id', siteId)
+    .maybeSingle();
+
+  const mergedData = {
+    ...(((existing?.data as Record<string, any> | null)) ?? {}),
+    pages: body.pages as Page[],
+  };
+
   const { error } = await supabase
     .from('sites')
     .update({
-      pages: body.pages as Page[], // assumes Supabase column `pages` is a `jsonb` column
+      data: mergedData as any,
       updated_at: new Date().toISOString(),
-    })
+    } as any)
     .eq('id', siteId);
 
   if (error) {

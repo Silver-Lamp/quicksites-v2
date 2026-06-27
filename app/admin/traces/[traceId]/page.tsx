@@ -8,7 +8,8 @@ export const dynamic = 'force-dynamic';
 export default async function TracePage({ params }: { params: { traceId: string } }) {
   const supabase = await getSupabaseRSC(); // ✅ RSC-safe (no cookie writes)
 
-  const { data, error } = await supabase
+  // trace_id col not in live DB client_errors schema — cast to any (was failing silently); see types migration
+  const { data, error } = await (supabase as any)
     .from('client_errors')
     .select('*')
     .eq('trace_id', params.traceId)

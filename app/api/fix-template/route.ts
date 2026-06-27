@@ -40,7 +40,9 @@ export async function POST(req: Request) {
     }
 
     // Be defensive: ensure pages array exists
-    const beforePages: any[] = Array.isArray(site?.data?.pages) ? site.data.pages : [];
+    // site.data is Json — cast to any to access .pages (Pattern E)
+    const siteData = site?.data as any;
+    const beforePages: any[] = Array.isArray(siteData?.pages) ? siteData.pages : [];
     if (!beforePages.length) {
       return NextResponse.json<FixResult>({
         success: false,

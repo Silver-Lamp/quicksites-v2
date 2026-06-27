@@ -250,10 +250,12 @@ async function recordCommissionForSubscriptionInvoice(invoice: Stripe.Invoice) {
   if (amountCents <= 0) return;
 
   // Upsert to ledger (idempotent by unique index referral_code+subject+subject_id)
+  // subject_id must be string (not undefined); invoice.id is always set for payment_succeeded — pattern B
+  const subjectId: string = invoice.id ?? '';
   const payload = {
     referral_code: code.code,
     subject: 'qs_subscription',
-    subject_id: invoice.id,
+    subject_id: subjectId,
     amount_cents: amountCents,
     currency: (invoice.currency || 'usd').toUpperCase(),
     status: 'pending',

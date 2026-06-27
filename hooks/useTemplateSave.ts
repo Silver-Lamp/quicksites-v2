@@ -21,7 +21,7 @@ export async function useTemplateSave(template: ValidatedTemplate): Promise<bool
 
   const { data, error } = await supabase
     .from('templates')
-    .update(validated.data)
+    .update(validated.data as any)
     .eq('id', template.id);
 
   if (error) {

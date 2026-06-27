@@ -32,7 +32,8 @@ export async function PUT(
       );
     }
 
-    const nextData = { ...(row.data ?? {}), services: cleaned };
+    // row.data is Json (not plain object) — cast to spread; pattern F
+    const nextData = { ...((row.data ?? {}) as object), services: cleaned };
     const nextRev = (row.rev ?? 0) + 1;
 
     const { error: updErr } = await supabase

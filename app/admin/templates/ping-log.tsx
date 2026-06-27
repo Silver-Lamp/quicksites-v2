@@ -23,7 +23,8 @@ export default function PingLogViewer() {
         .order('created_at', { ascending: false })
         .limit(10);
 
-      if (!error && data) setLogs(data);
+      // DB has nullable created_at/status/sitemap_url/error; cast to local Log[] (non-null fields always populated in practice)
+      if (!error && data) setLogs(data as Log[]);
     };
 
     fetchLogs();

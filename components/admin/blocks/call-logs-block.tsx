@@ -31,7 +31,7 @@ export default async function CallLogsBlock() {
         .order('timestamp', { ascending: false })
         .limit(25);
 
-      if (!error && data) setLogs(data);
+      if (!error && data) setLogs(data as CallLog[]);
       setLoading(false);
     };
 

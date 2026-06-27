@@ -65,16 +65,17 @@ export async function POST(req: NextRequest) {
     .select('id, code, juris_county')
     .eq('active', true)
     .eq('juris_country', prof.country || 'US')
-    .eq('juris_state', prof.state)
-    .eq('operation_type', prof.operation_type);
+    .eq('juris_state', prof.state ?? '')
+    .eq('operation_type', prof.operation_type ?? '');
 
   if (!reqs?.length) return NextResponse.json({ ok: true, note: 'no requirements for jurisdiction' });
 
   // keep one per code (prefer county)
   const byCode = new Map<string, any>();
   for (const r of reqs) {
-    const cur = byCode.get(r.code);
-    if (!cur || (cur.juris_county == null && r.juris_county != null)) byCode.set(r.code, r);
+    const key = r.code ?? '';
+    const cur = byCode.get(key);
+    if (!cur || (cur.juris_county == null && r.juris_county != null)) byCode.set(key, r);
   }
   const chosen = Array.from(byCode.values());
 

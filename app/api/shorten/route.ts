@@ -52,11 +52,12 @@ export async function POST(req: Request) {
     // Try preferred code first, then exponential length growth on collision
     let code = prefer_code || randomBase62(3);
     for (let i = 0; i < 6; i++) {
+      // Insert shape omits required `id` and `long_url` — cast to any to preserve runtime behavior; see types migration
       const { error } = await supabase.from("short_links").insert({
         code,
         target_url,
         candidate_slug,
-      });
+      } as any);
       if (!error) {
         return NextResponse.json({
           ok: true,

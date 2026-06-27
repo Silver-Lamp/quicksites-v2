@@ -51,7 +51,7 @@ export async function POST(req: NextRequest) {
   }
 
   const supabase = await getServerSupabase({ serviceRole: true });
-  const { error } = await supabase.from('candidate_pages').update(patch).eq('slug', slug);
+  const { error } = await supabase.from('candidate_pages').update(patch as any).eq('slug', slug);
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json({ ok: true });

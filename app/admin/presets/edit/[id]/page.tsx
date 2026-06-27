@@ -33,7 +33,7 @@ export default function AdminPresetsEditPage() {
         if (data) {
           setName(data.name);
           setColumns(data.columns);
-          setBlocks(data.items || []);
+          setBlocks((data.items as Block[]) || []);
         }
         if (error) console.error("Failed to load preset:", error.message);
       });

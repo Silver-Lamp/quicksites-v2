@@ -85,12 +85,13 @@ export async function POST(req: NextRequest) {
     catalog_items: 0, orders: 0, compliance_docs: 0, compliance_status: 0, compliance_profile: 0,
   };
 
+  // dynamic table name — cast to any (typed client requires literal table names); see types migration
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   async function del(table: string, filter: (b: any) => any, countKey: keyof typeof r) {
-    const { data: ids } = await filter(supa.from(table).select('id'));
+    const { data: ids } = await filter((supa as any).from(table).select('id'));
     const n = (ids ?? []).length;
     if (n) {
-      const { error } = await filter(supa.from(table).delete());
+      const { error } = await filter((supa as any).from(table).delete());
       if (error) throw new Error(`${table} delete failed: ${error.message}`);
     }
     r[countKey] += n;

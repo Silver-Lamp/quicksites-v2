@@ -40,11 +40,12 @@ export default function EmbedViewsDashboard() {
         });
       }
     }
-    supabase
+    // table not in live DB — cast to any (was failing silently); see types migration
+    (supabase as any)
       .from('embed_views')
       .select('*')
       .order('created_at', { ascending: false })
-      .then(({ data }) => {
+      .then(({ data }: { data: any[] | null }) => {
         setViews(data || []);
         const locs: Record<string, number> = {};
         (data || []).forEach((v) => {

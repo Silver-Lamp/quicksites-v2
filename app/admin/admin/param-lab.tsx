@@ -57,12 +57,13 @@ export default function ParamLabPage() {
 
   useEffect(() => {
     if (!user?.id) return;
-    supabase
+    // user_id col not in live DB — cast to any (was failing silently); see types migration
+    (supabase as any)
       .from('param_presets')
       .select('*')
       .eq('slug', slug)
       .eq('user_id', user.id)
-      .then(({ data }) => {
+      .then(({ data }: { data: any[] | null }) => {
         const fromCloud = data?.reduce(
           (acc, curr) => {
             acc[`☁️ ${curr.name}`] = curr.query;
@@ -95,7 +96,8 @@ export default function ParamLabPage() {
     setPresets(updated);
     localStorage.setItem('param-presets', JSON.stringify(updated));
     if (user?.id) {
-      await supabase.from('param_presets').upsert({
+      // user_id col not in live DB — cast to any (was failing silently); see types migration
+      await (supabase as any).from('param_presets').upsert({
         slug,
         name: presetName,
         query: paramsString,

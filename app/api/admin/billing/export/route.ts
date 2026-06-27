@@ -32,7 +32,7 @@ export async function GET(_req: NextRequest) {
 
     for (const r of (rows || [])) {
       const m = mById.get(r.merchant_id);
-      const o = m ? oById.get(m.owner_id) : undefined;
+      const o = m?.owner_id ? oById.get(m.owner_id) : undefined;
       const row = [
         r.merchant_id,
         (m?.display_name || ''),

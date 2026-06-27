@@ -33,10 +33,10 @@ export default function CampaignsPage() {
         const cid = lead.current_campaign_id;
         if (!cid) continue;
         if (!grouped[cid]) grouped[cid] = [];
-        grouped[cid].push(lead);
+        grouped[cid].push(lead as Lead);
       }
 
-      setCampaigns(campaignData || []);
+      setCampaigns((campaignData || []) as CampaignType[]);
       setLeadsByCampaign(grouped);
     }
 

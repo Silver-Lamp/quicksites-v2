@@ -32,7 +32,7 @@ export async function GET(req: Request, { params }: { params: { domain: string }
   }
 
   const base = site.custom_domain ? `https://${site.custom_domain}` : `https://quicksites.ai`;
-  const pages = site.data?.pages || [];
+  const pages = (site.data as any)?.pages || [];
 
   const urls = pages.map((page: any) => {
     const path = page.slug === 'home' || page.slug === '' ? '' : `/${page.slug}`;

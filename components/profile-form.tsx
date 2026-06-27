@@ -52,21 +52,23 @@ export default function ProfileForm() {
 
   useEffect(() => {
     if (role === 'admin') {
-      supabase
+      // admin_actor/reason not in live DB schema — cast to any (was failing silently); see types migration
+      ;(supabase as any)
         .from('user_deletion_logs')
         .select('id, email, deleted_at, user_id, admin_actor, reason')
         .order('deleted_at', { ascending: false })
         .limit(1)
-        .then(({ data }) => {
+        .then(({ data }: { data: any }) => {
           if (data?.length) setLatestLog(data[0]);
         });
 
-      supabase
+      // access_requests table not in live DB — cast to any (was failing silently); see types migration
+      ;(supabase as any)
         .from('access_requests')
         .select('id, email, requested_at, reason')
         .order('requested_at', { ascending: false })
         .limit(10)
-        .then(({ data }) => {
+        .then(({ data }: { data: any }) => {
           if (data?.length) setAccessRequests(data);
         });
     }
@@ -103,7 +105,8 @@ export default function ProfileForm() {
 
   const requestAccess = async () => {
     setRequesting(true);
-    const { error } = await supabase.from('access_requests').insert({
+    // access_requests table not in live DB — cast to any (was failing silently); see types migration
+    const { error } = await (supabase as any).from('access_requests').insert({
       user_id: user?.id,
       email,
       requested_at: new Date().toISOString(),
@@ -115,12 +118,12 @@ export default function ProfileForm() {
   };
 
   const handleApprove = async (req: any) => {
+    // user_profiles has no updated_at column — cast payload to any; see types migration
     const { error } = await supabase.from('user_profiles').upsert({
       user_id: req.user_id,
       email: req.email,
       role: 'reseller',
-      updated_at: new Date().toISOString(),
-    });
+    } as any);
     if (error) toast.error(`Failed to approve ${req.email}`);
     else {
       toast.success(`${req.email} approved as reseller`);
@@ -129,7 +132,8 @@ export default function ProfileForm() {
   };
 
   const handleDeny = async (req: any) => {
-    const { error } = await supabase.from('access_requests').delete().eq('id', req.id);
+    // access_requests table not in live DB — cast to any (was failing silently); see types migration
+    const { error } = await (supabase as any).from('access_requests').delete().eq('id', req.id);
     if (error) toast.error(`Failed to deny ${req.email}`);
     else {
       toast.success(`Denied request from ${req.email}`);

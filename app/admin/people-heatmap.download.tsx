@@ -52,7 +52,8 @@ export default function UserHeatmapDownloadable() {
 
       const userMap: Record<string, UserMapEntry> = {};
 
-      raw?.forEach((entry: UserEntry) => {
+      // .not('last_seen_at','is',null) ensures non-null at runtime; cast to satisfy local type
+      (raw as UserEntry[] | null)?.forEach((entry: UserEntry) => {
         const id = entry.user_id;
         const day = getDayKey(entry.last_seen_at);
         if (!userMap[id]) {

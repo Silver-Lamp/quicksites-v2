@@ -96,19 +96,29 @@ export function useOrgBranding(opts?: { tryApi?: boolean; tryDb?: boolean }) {
       // 3) DB by slug (only if we truly have one)
       if (tryDb && slug) {
         try {
-          let { data: row } = await supabase
+          // orgs table not in live DB — cast to any (was failing silently); see types migration
+          let row: { name?: string | null; logo_url?: string | null; logo_dark_url?: string | null } | null = null;
+          const orgsResult = await (supabase as any)
             .from('orgs')
             .select('name, logo_url, logo_dark_url')
             .eq('slug', slug)
             .single();
+          row = orgsResult.data ?? null;
 
           if (!row) {
+            // organizations uses dark_logo_url (not logo_dark_url)
             const alt = await supabase
               .from('organizations')
-              .select('name, logo_url, logo_dark_url')
+              .select('name, logo_url, dark_logo_url')
               .eq('slug', slug)
               .single();
-            row = alt.data ?? null;
+            if (alt.data) {
+              row = {
+                name: alt.data.name,
+                logo_url: alt.data.logo_url,
+                logo_dark_url: alt.data.dark_logo_url,
+              };
+            }
           }
 
           if (!cancelled && row) {

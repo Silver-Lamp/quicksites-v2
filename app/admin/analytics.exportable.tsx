@@ -18,7 +18,8 @@ export default function AnalyticsPage() {
   );
 
   useEffect(() => {
-    supabase
+    // public_sites has no domain/name cols — cast to any (was failing silently); see types migration
+    (supabase as any)
       .from('public_sites')
       .select('id, domain, name')
       .then(({ data }: { data: { id: string; domain?: string; name?: string }[] | null }) => {

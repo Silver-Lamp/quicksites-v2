@@ -42,13 +42,13 @@ export async function POST(req: Request) {
 
   const userAgent = (await headerStore).get('user-agent') || 'unknown';
 
+  // `type` is not a column in nav_events in the live DB — omit it (was stored in meta if needed)
   const { data: inserted, error } = await supabase
     .from('nav_events')
     .insert({
       user_id: user?.id ?? null,
       href,
-      type,
-      meta,
+      meta: { ...((meta ?? {}) as object), type },
       ip,
       user_agent: userAgent,
       timestamp: new Date().toISOString(),

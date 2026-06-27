@@ -52,8 +52,10 @@ async function ensureMerchantForUser(supa: ReturnType<typeof getServerSupabase> 
   // Insert via session (RLS allows owner to insert)
   const display = user.user_metadata?.name || user.email?.split('@')[0] || 'My Account';
   const slug = `acct-${user.id.slice(0, 8)}`;
+  // merchants requires user_id (non-nullable); include it alongside owner_id — pattern D
   const { data: created, error } = await supa.from('merchants').insert({
     owner_id: user.id,
+    user_id: user.id,
     display_name: display,
     site_slug: slug,
     default_currency: 'USD',

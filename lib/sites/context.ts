@@ -44,16 +44,16 @@ export async function getActiveSiteId(
   // 4) host → domains map
   const host = normalizeHost(req.headers.get('x-forwarded-host') || req.headers.get('host'));
   if (host) {
-    // try `domains` table
-    const { data: d1 } = await supabase
+    // try `domains` table — live DB has no site_id/hostname cols; cast to any (was failing silently); see types migration
+    const { data: d1 } = await (supabase as any)
       .from('domains')
       .select('site_id, hostname')
       .eq('hostname', host)
       .maybeSingle();
     if (d1?.site_id) return d1.site_id;
 
-    // try `site_domains` table
-    const { data: d2 } = await supabase
+    // try `site_domains` table — table does not exist in live DB; cast to any (was failing silently); see types migration
+    const { data: d2 } = await (supabase as any)
       .from('site_domains')
       .select('site_id, domain')
       .eq('domain', host)

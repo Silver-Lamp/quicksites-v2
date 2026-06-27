@@ -15,7 +15,8 @@ export async function lookupSlugByHost(host: string): Promise<string | null> {
 
   const subdomain = host.split('.')?.[0];
 
-  const { data: subMatch }: { data: { slug: string } | null } = await supabaseAdmin
+  // public_sites has no subdomain column in live DB — cast to any (was failing silently); see types migration
+  const { data: subMatch }: { data: { slug: string } | null } = await (supabaseAdmin as any)
     .from('public_sites')
     .select('slug')
     .eq('subdomain', subdomain)

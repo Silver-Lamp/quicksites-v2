@@ -36,13 +36,14 @@ export function useDashboardLayout(userId: string | null, dashboardId?: string) 
   useEffect(() => {
     if (!userId || !activeDashboardId) return;
     setLoading(true);
-    supabase
+    // layout/hidden cols not in live DB — cast to any (was failing silently); see types migration
+    (supabase as any)
       .from('dashboard_user_layouts')
       .select('layout, hidden, settings')
       .eq('user_id', userId)
       .eq('dashboard_id', activeDashboardId)
       .single()
-      .then(({ data }) => {
+      .then(({ data }: { data: any }) => {
         if (data?.layout) setOrder(data.layout);
         if (data?.hidden) setHidden(data.hidden);
         if (data?.settings) setSettings(data.settings);
@@ -79,7 +80,8 @@ export function useDashboardLayout(userId: string | null, dashboardId?: string) 
   const save = async (layout: Block[], hiddenList: string[], newSettings = settings) => {
     if (!userId || !activeDashboardId) return;
     setLoading(true);
-    await supabase.from('dashboard_user_layouts').upsert({
+    // layout/hidden/updated_at cols not in live DB — cast to any (was failing silently); see types migration
+    await (supabase as any).from('dashboard_user_layouts').upsert({
       user_id: userId,
       dashboard_id: activeDashboardId,
       layout,
@@ -106,7 +108,8 @@ export function useDashboardLayout(userId: string | null, dashboardId?: string) 
   const createDashboard = async (name: string) => {
     if (!userId) return;
     setLoading(true);
-    const { data } = await supabase
+    // layout/hidden cols not in live DB — cast to any (was failing silently); see types migration
+    const { data } = await (supabase as any)
       .from('dashboard_user_layouts')
       .insert({
         user_id: userId,

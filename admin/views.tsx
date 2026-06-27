@@ -28,10 +28,11 @@ export default function ViewsDashboard() {
         else console.error(error);
       });
 
-    supabase
+    // tags col not in live DB — cast to any (was failing silently); see types migration
+    ;(supabase as any)
       .from('templates')
       .select('template_name, tags')
-      .then(({ data }) => {
+      .then(({ data }: { data: any[] | null }) => {
         if (data) {
           const tagMap: Record<string, string[]> = {};
           data.forEach((t) => {

@@ -31,7 +31,7 @@ export default function NotFoundLogsPage() {
       .then(({ data, error }) => {
         if (!mounted) return;
         if (error) console.error('Error loading logs', error);
-        else setLogs(data || []);
+        else setLogs((data || []) as LogEntry[]);
         setLoading(false);
       });
 

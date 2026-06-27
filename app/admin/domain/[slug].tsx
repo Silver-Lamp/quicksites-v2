@@ -34,7 +34,7 @@ export default function DomainDetail() {
           console.error('Failed to fetch domain:', error);
           setDomain(null);
         } else {
-          setDomain(data);
+          setDomain(data as unknown as Domain);
         }
         setLoading(false);
       });
@@ -49,7 +49,7 @@ export default function DomainDetail() {
       .from('domains')
       // @ts-ignore - Supabase type inference issue with domains table
       .update({ is_claimed: newClaimed })
-      .eq('id', domain.id);
+      .eq('id', String(domain.id));
 
     if (updateError) {
       console.error('Failed to update claim status:', updateError);

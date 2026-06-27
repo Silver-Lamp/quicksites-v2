@@ -40,7 +40,7 @@ export default function GuestUpgradeDashboard() {
         .select('*')
         .order('created_at', { ascending: false })
         .limit(1000);
-      if (!error) setEvents(data);
+      if (!error) setEvents((data ?? []) as unknown as UpgradeEvent[]);
     };
     const loadUserLogs = async () => {
       const { data, error } = await supabase

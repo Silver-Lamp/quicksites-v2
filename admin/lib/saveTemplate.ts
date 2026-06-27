@@ -255,7 +255,7 @@ export async function saveTemplate(input: any, id?: string): Promise<Template> {
     // ❗ No slug on insert either. Seed via slug endpoint if desired.
     const { data, error } = await supabase
       .from('templates')
-      .insert(payload)
+      .insert(payload as any)
       .select()
       .single();
     if (error) throw new Error(JSON.stringify(error));

@@ -31,7 +31,7 @@ export default async function MyTax() {
       backup_withholding: String(fd.get('backup_withholding') || 'off') === 'on',
       signed_at: new Date().toISOString(),
     };
-    await svc.from('affiliate_tax_profiles').upsert(payload, { onConflict: 'user_id' });
+    await svc.from('affiliate_tax_profiles').upsert(payload as any, { onConflict: 'user_id' });
   }
 
   return (

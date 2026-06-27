@@ -85,7 +85,8 @@ export async function POST(req: NextRequest) {
     const desiredSlug = `${base}-copy-${displaySuffix}`;
 
     // 3) Copy JSON safely
-    const dataObj: any = { ...(src.data ?? {}) };
+    // src.data is Json — spread requires object cast (Pattern F)
+    const dataObj: any = { ...(src.data as Record<string, any> ?? {}) };
     if (!dataObj.pages && Array.isArray((src as any).pages)) dataObj.pages = (src as any).pages;
     dataObj.archived = false;
     delete (dataObj as any).custom_domain;

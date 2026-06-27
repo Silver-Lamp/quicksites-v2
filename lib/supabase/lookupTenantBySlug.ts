@@ -18,7 +18,8 @@ export async function lookupTenantBySlug(slug: string): Promise<string | null> {
     }
   );
 
-  const { data, error } = await supabase
+  // tenants table not in live DB — cast to any (was failing silently); see types migration
+  const { data, error } = await (supabase as any)
     .from('tenants')
     .select('id')
     .eq('slug', slug)

@@ -29,7 +29,8 @@ export default function TemplateUserViewer() {
       .from('dashboard_user_layouts')
       .select('user_id, template_id');
 
-    const { data: users } = await supabase.from('auth.users').select('id, email');
+    // auth.users is not accessible via typed client — cast to any; see types migration
+    const { data: users } = await (supabase as any).from('auth.users').select('id, email');
 
     const { data: templateRows } = await supabase
       .from('dashboard_layout_templates')
@@ -38,7 +39,7 @@ export default function TemplateUserViewer() {
     const joined: Assignment[] =
       map?.map((row) => ({
         user_id: row.user_id,
-        email: users?.find((u) => u.id === row.user_id)?.email || '—',
+        email: users?.find((u: any) => u.id === row.user_id)?.email || '—',
         template: templateRows?.find((t) => t.id === row.template_id)?.name || '(deleted)',
       })) || [];
 
@@ -47,8 +48,9 @@ export default function TemplateUserViewer() {
   };
 
   const bulkAssign = async () => {
-    const { data: users } = await supabase.from('auth.users').select('id');
-    const inserts = users?.map((u) => ({
+    // auth.users is not accessible via typed client — cast to any; see types migration
+    const { data: users } = await (supabase as any).from('auth.users').select('id');
+    const inserts = users?.map((u: any) => ({
       user_id: u.id,
       template_id: selected,
     }));

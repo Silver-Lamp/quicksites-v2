@@ -79,6 +79,7 @@ export function useCampaignForm(city: string, state: string, initialLeadIds: str
 
     const status = mode === 'draft' ? 'draft' : 'active';
 
+    // lead_ids col not in live DB schema — cast to any (was failing silently); see types migration
     const { data, error: insertError } = await supabase
       .from('campaigns')
       .insert([
@@ -92,7 +93,7 @@ export function useCampaignForm(city: string, state: string, initialLeadIds: str
           alt_domains: [alt1, alt2],
           created_by: email,
           status,
-        },
+        } as any,
       ])
       .select()
       .single();

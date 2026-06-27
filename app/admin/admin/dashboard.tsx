@@ -29,10 +29,11 @@ export default function AdminDashboard() {
           { count: emailsCount },
           { count: logsCount },
         ] = await Promise.all([
-          supabase.from('embed_views').select('*', { count: 'exact', head: true }),
-          supabase.from('schema_links').select('*', { count: 'exact', head: true }),
-          supabase.from('email_summaries').select('*', { count: 'exact', head: true }),
-          supabase.from('log_events').select('*', { count: 'exact', head: true }),
+          // tables not in live DB — cast to any (was failing silently); see types migration
+          (supabase as any).from('embed_views').select('*', { count: 'exact', head: true }),
+          (supabase as any).from('schema_links').select('*', { count: 'exact', head: true }),
+          (supabase as any).from('email_summaries').select('*', { count: 'exact', head: true }),
+          (supabase as any).from('log_events').select('*', { count: 'exact', head: true }),
         ]);
 
         setEmbedViews(viewsCount || 0);
@@ -41,7 +42,8 @@ export default function AdminDashboard() {
         setLogs(logsCount || 0);
 
         const dayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-        const { count: viewsToday, error } = await supabase
+        // table not in live DB — cast to any (was failing silently); see types migration
+        const { count: viewsToday, error } = await (supabase as any)
           .from('embed_views')
           .select('*', { count: 'exact', head: true })
           .gt('created_at', dayAgo);

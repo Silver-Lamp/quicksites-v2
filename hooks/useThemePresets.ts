@@ -15,7 +15,7 @@ export function useThemePresets(userId?: string) {
       .select('*')
       .eq('user_id', userId)
       .order('created_at', { ascending: false });
-    setPresets(data || []);
+    setPresets((data ?? []) as unknown as SiteTheme[]);
     setLoading(false);
   };
 

@@ -12,8 +12,8 @@ export default async function TemplatesIndexPage() {
         <p className="text-sm text-muted-foreground">No templates found.</p>
       ) : (
         <div className="grid gap-3">
-          {templates.map((t) => (
-            <TemplateListCard key={t.id} template={t} />
+          {templates.filter((t) => t.slug != null && t.updated_at != null).map((t) => (
+            <TemplateListCard key={t.id} template={t as { id: string; slug: string; template_name: string; updated_at: string; industry?: string }} />
           ))}
         </div>
       )}

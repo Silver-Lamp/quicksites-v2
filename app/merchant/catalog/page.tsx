@@ -30,18 +30,18 @@ export default async function MerchantCatalogPage({ searchParams }: { searchPara
           <h1 className="text-2xl font-semibold">Catalog</h1>
           <p className="mt-1 text-sm text-neutral-400">{merchant.display_name} • {merchant.site_slug} • {merchant.default_currency}</p>
         </div>
-        <CreateItemDrawer merchantId={merchant.id} siteSlug={merchant.site_slug} />
+        <CreateItemDrawer merchantId={merchant.id} siteSlug={merchant.site_slug ?? ''} />
       </div>
 
       <div className="mt-6">
         <CatalogListClient
           merchantId={merchant.id}
-          siteSlug={merchant.site_slug}
+          siteSlug={merchant.site_slug ?? ''}
           currency={merchant.default_currency}
           items={(items || []).map(i => ({
             id: i.id, type: i.type, title: i.title, slug: i.slug,
-            priceCents: i.price_cents, image: (Array.isArray(i.images) && i.images[0]) || ''
-          }))}
+            priceCents: i.price_cents, image: (Array.isArray(i.images) && i.images[0] != null ? String(i.images[0]) : '')
+          })) as any}
         />
       </div>
     </div>

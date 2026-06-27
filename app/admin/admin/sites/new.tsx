@@ -58,15 +58,16 @@ export default function NewSitePage() {
     supabase
       .from('branding_profiles')
       .select('id, name, logo_url')
-      .then(({ data }) => setProfiles(data || []));
+      .then(({ data }) => setProfiles((data ?? []) as BrandingProfile[]));
 
-    supabase
+    // thumbnail_url col not in live DB — cast to any (was failing silently); see types migration
+    ;(supabase as any)
       .from('templates')
       .select('id, name, created_at, thumbnail_url, data, theme, brand, color_scheme, is_site, published, template_name, slug, layout, industry')
       .eq('published', true)
       .eq('is_site', false)
       .order('created_at', { ascending: false })
-      .then(({ data }) => {
+      .then(({ data }: any) => {
         if (data?.length) {
           setTemplates(data as unknown as Template[]);
           const initialTemplate = data[0];

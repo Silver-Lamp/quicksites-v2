@@ -54,7 +54,8 @@ export default function UpgradeModal({ open, onClose, context, triggerReason }: 
 
   useEffect(() => {
     if (open && inferredContext) {
-      supabase.from('guest_upgrade_events').insert([
+      // context/user_id/email/event_type cols not in live DB schema — cast to any; see types migration
+      ;(supabase as any).from('guest_upgrade_events').insert([
         {
           context: inferredContext,
           user_id: user?.id || null,
@@ -69,7 +70,8 @@ export default function UpgradeModal({ open, onClose, context, triggerReason }: 
 
   const handleUpgrade = async () => {
     setLoading(true);
-    await supabase.from('guest_upgrade_events').insert([
+    // context/user_id/email/event_type cols not in live DB schema — cast to any; see types migration
+    await (supabase as any).from('guest_upgrade_events').insert([
       {
         context: inferredContext,
         user_id: user?.id || null,

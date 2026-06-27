@@ -244,7 +244,8 @@ export default async function AdminInboxPage({
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {rows?.map((m: ContactMessage) => (
+                {/* ip is `unknown` in DB row; cast rows to ContactMessage[] — behavior-preserving */}
+                {(rows as unknown as ContactMessage[])?.map((m: ContactMessage) => (
                   <MessageRow key={m.id} m={m} />
                 ))}
                 {!rows?.length && (

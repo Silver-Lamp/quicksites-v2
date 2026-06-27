@@ -14,5 +14,5 @@ export default async function EditSitePage({ params }: { params: { slug: string 
 
   if (error || !site) return notFound();
 
-  return <SiteEditor site={site} />;
+  return <SiteEditor site={site as any} />;
 }

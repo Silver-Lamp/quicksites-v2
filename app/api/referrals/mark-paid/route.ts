@@ -1,14 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSupabase } from '@/lib/supabase/server';
+import { getAdminUser } from '@/lib/auth/getAdminUser';
 
 async function requireAdmin() {
-  const supa = await getServerSupabase();
-  const { data: u } = await supa.auth.getUser();
-  if (!u?.user) throw new Error('unauthorized');
-  const { data: profile } = await supa.from('profiles').select('role').eq('id', u.user.id).maybeSingle();
-  const isAdmin = (u.user.user_metadata?.role === 'admin') || profile?.role === 'admin';
-  if (!isAdmin) throw new Error('forbidden');
-  return u.user.id;
+  const admin = await getAdminUser();
+  if (!admin) throw new Error('forbidden');
+  return admin.id;
 }
 
 export async function POST(req: NextRequest) {

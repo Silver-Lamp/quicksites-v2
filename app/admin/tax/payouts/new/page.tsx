@@ -1,6 +1,7 @@
 // app/admin/tax/payouts/new/page.tsx
 import { getServerSupabase } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
+import { getAdminUser } from '@/lib/auth/getAdminUser';
 
 function fmt(c:number, cur='USD'){ return new Intl.NumberFormat('en-US',{style:'currency',currency:cur}).format((c||0)/100); }
 
@@ -13,20 +14,18 @@ export default async function AdminNewPayout({ searchParams }:{
   const supa = await getServerSupabase();
   const { data: u } = await supa.auth.getUser();
   if (!u?.user) return <div className="p-8">Please sign in.</div>;
-  const { data: profile } = await supa.from('profiles').select('role').eq('id', u.user.id).maybeSingle();
-  const isAdmin = (u.user.user_metadata?.role === 'admin') || profile?.role === 'admin';
-  if (!isAdmin) return <div className="p-8">Forbidden.</div>;
+  if (!(await getAdminUser())) return <div className="p-8">Forbidden.</div>;
 
   const q = (searchParams.q || '').trim();
-  // Search affiliates (by email or display_name)
+  // Search affiliates (by email or name) — user_profiles uses user_id/name
   const svc = await getServerSupabase({ serviceRole: true });
   let users: { id: string; email: string | null; display_name: string | null }[] = [];
   if (q) {
-    const { data } = await svc.from('profiles')
-      .select('id,email,display_name')
-      .or(`email.ilike.%${q}%,display_name.ilike.%${q}%`)
+    const { data } = await svc.from('user_profiles')
+      .select('user_id,email,name')
+      .or(`email.ilike.%${q}%,name.ilike.%${q}%`)
       .limit(25);
-    users = data || [];
+    users = (data || []).map((d: any) => ({ id: d.user_id, email: d.email, display_name: d.name }));
   }
 
   // Recent payouts (last 25)
@@ -40,8 +39,8 @@ export default async function AdminNewPayout({ searchParams }:{
   const ids = Array.from(new Set((recent||[]).map(r => r.affiliate_user_id)));
   let emails = new Map<string,string>();
   if (ids.length) {
-    const { data: profs } = await svc.from('profiles').select('id,email').in('id', ids);
-    emails = new Map((profs||[]).map(p => [p.id, p.email || '']));
+    const { data: profs } = await svc.from('user_profiles').select('user_id,email').in('user_id', ids);
+    emails = new Map((profs||[]).map((p: any) => [p.user_id, p.email || '']));
   }
 
   return (
@@ -128,9 +127,9 @@ async function NewPayoutForm({ users }:{
     // resolve by email if no id provided
     let affiliateId = userId;
     if (!affiliateId && emailFallback) {
-      const { data: prof } = await svc.from('profiles').select('id').eq('email', emailFallback).maybeSingle();
-      if (!prof?.id) throw new Error('Email not found');
-      affiliateId = prof.id;
+      const { data: prof } = await svc.from('user_profiles').select('user_id').eq('email', emailFallback).maybeSingle();
+      if (!prof?.user_id) throw new Error('Email not found');
+      affiliateId = prof.user_id;
     }
 
     const tpsos = new Set(['stripe','paypal','venmo','card']);

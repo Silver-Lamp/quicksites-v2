@@ -33,12 +33,12 @@ const notNullViolation = (e?: { code?: string }) => e?.code === '23502';
 /* Resolve profile user id by email (or null if none / table missing) */
 async function resolveUserIdByEmail(email: string): Promise<string | null> {
   const { data, error } = await supabaseAdmin
-    .from('profiles')
-    .select('id,user_id,email')
+    .from('user_profiles')
+    .select('user_id,email')
     .eq('email', email)
     .maybeSingle();
   if (error) return null;
-  return (data as any)?.user_id || (data as any)?.id || null;
+  return (data as any)?.user_id || null;
 }
 
 async function assertAuth() {
@@ -47,21 +47,14 @@ async function assertAuth() {
   const user = data?.user ?? null;
   if (!user) return { ok: false as const, status: 401, message: 'Not signed in' };
 
-  // admin allow
-  let profileAdmin = false;
-  try {
-    const { data: profile } = await sb.from('profiles').select('role,is_admin').eq('id', user.id).maybeSingle();
-    if (profile) {
-      const role = String((profile as any).role || '').toLowerCase();
-      profileAdmin = (profile as any).is_admin === true || role === 'admin' || role === 'superadmin';
-    }
-  } catch {}
+  // admin allow (ADMIN_EMAILS + metadata role — matches getAdminUser; the former
+  // profiles.role/is_admin source no longer exists in the schema)
   const allowlistAdmin = ADMIN_EMAILS.includes(lower(user.email));
   const metaAdmin =
     String((user.user_metadata as any)?.role || '').toLowerCase() === 'admin' ||
     String((user.app_metadata as any)?.role || '').toLowerCase() === 'admin';
 
-  return { ok: true as const, user, isAdmin: profileAdmin || allowlistAdmin || metaAdmin };
+  return { ok: true as const, user, isAdmin: allowlistAdmin || metaAdmin };
 }
 
 /* POST: { email } → { id, created } */

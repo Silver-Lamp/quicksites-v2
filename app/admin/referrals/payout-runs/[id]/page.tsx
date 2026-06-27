@@ -1,5 +1,6 @@
 // app/admin/referrals/payout-runs/[id]/page.tsx
 import { getServerSupabase } from '@/lib/supabase/server';
+import { getAdminUser } from '@/lib/auth/getAdminUser';
 
 function fmt(cents = 0, cur = 'USD') {
   return new Intl.NumberFormat('en-US', { style: 'currency', currency: cur }).format(cents / 100);
@@ -12,9 +13,7 @@ export default async function PayoutRunDetail({ params }: { params: { id: string
   const supa = await getServerSupabase();
   const { data: u } = await supa.auth.getUser();
   if (!u?.user) return <div className="p-8">Please sign in.</div>;
-  const { data: profile } = await supa.from('profiles').select('role').eq('id', u.user.id).maybeSingle();
-  const isAdmin = (u.user.user_metadata?.role === 'admin') || profile?.role === 'admin';
-  if (!isAdmin) return <div className="p-8">Forbidden.</div>;
+  if (!(await getAdminUser())) return <div className="p-8">Forbidden.</div>;
 
   const svc = await getServerSupabase({ serviceRole: true });
   const [{ data: run }, { data: items }] = await Promise.all([

@@ -1,5 +1,6 @@
 import { NextRequest } from 'next/server';
 import { getServerSupabase } from '@/lib/supabase/server';
+import { getAdminUser } from '@/lib/auth/getAdminUser';
 // import Stripe from 'stripe';
 // import { STRIPE_API_VERSION } from '@/lib/stripe/server';
 import { stripe } from '@/lib/stripe/server';
@@ -11,13 +12,10 @@ function looksLikeUUID(s: string) { return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-
 function looksLikeEmail(s: string) { return /@/.test(s) && !/\s/.test(s); }
 
 async function requireAdmin() {
+  const admin = await getAdminUser();
+  if (!admin) throw new Error('forbidden');
   const supa = await getServerSupabase();
-  const { data: u } = await supa.auth.getUser();
-  if (!u?.user) throw new Error('unauthorized');
-  const { data: profile } = await supa.from('profiles').select('role').eq('id', u.user.id).maybeSingle();
-  const isAdmin = (u.user.user_metadata?.role === 'admin') || profile?.role === 'admin';
-  if (!isAdmin) throw new Error('forbidden');
-  return { supa, user: u.user };
+  return { supa, user: admin };
 }
 
 function parseLines(text: string): { left: string; customer: string }[] {
@@ -85,9 +83,9 @@ export async function POST(req: NextRequest) {
     async function resolveMerchantId(tok: { merchant_id?: string; email?: string; site_slug?: string }): Promise<string | null> {
       if (tok.merchant_id && looksLikeUUID(tok.merchant_id)) return tok.merchant_id;
       if (tok.email) {
-        const { data: owner } = await svc.from('profiles').select('id').ilike('email', tok.email).maybeSingle();
-        if (!owner?.id) return null;
-        const { data: merchants } = await svc.from('merchants').select('id').eq('owner_id', owner.id).order('created_at', { ascending: false }).limit(1);
+        const { data: owner } = await svc.from('user_profiles').select('user_id').ilike('email', tok.email).maybeSingle();
+        if (!owner?.user_id) return null;
+        const { data: merchants } = await svc.from('merchants').select('id').eq('owner_id', owner.user_id).order('created_at', { ascending: false }).limit(1);
         return merchants?.[0]?.id || null;
       }
       if (tok.site_slug) {

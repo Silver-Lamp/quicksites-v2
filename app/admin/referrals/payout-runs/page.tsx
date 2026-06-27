@@ -1,6 +1,7 @@
 // app/admin/referrals/payout-runs/page.tsx
 import { getServerSupabase } from '@/lib/supabase/server';
 import Link from 'next/link';
+import { getAdminUser } from '@/lib/auth/getAdminUser';
 
 function fmt(cents = 0, cur = 'USD') {
   return new Intl.NumberFormat('en-US', { style: 'currency', currency: cur }).format(cents / 100);
@@ -17,9 +18,7 @@ export default async function PayoutRunsIndex({
   const userClient = await getServerSupabase();
   const { data: u } = await userClient.auth.getUser();
   if (!u?.user) return <div className="p-8">Please sign in.</div>;
-  const { data: profile } = await userClient.from('profiles').select('role').eq('id', u.user.id).maybeSingle();
-  const isAdmin = (u.user.user_metadata?.role === 'admin') || profile?.role === 'admin';
-  if (!isAdmin) return <div className="p-8">Forbidden.</div>;
+  if (!(await getAdminUser())) return <div className="p-8">Forbidden.</div>;
 
   const start = searchParams.start || '';
   const end = searchParams.end || '';

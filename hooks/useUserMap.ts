@@ -8,13 +8,13 @@ export function useUserMap() {
 
   useEffect(() => {
     async function fetchUsers() {
-      const { data, error } = await supabase.from('profiles').select('id, name');
+      const { data, error } = await supabase.from('user_profiles').select('user_id, name');
       if (error) {
         console.warn('Failed to load user profiles:', error.message);
         return;
       }
 
-      const map = Object.fromEntries((data || []).map((user) => [user.id, { name: user.name }]));
+      const map = Object.fromEntries((data || []).map((user) => [user.user_id, { name: user.name ?? undefined }]));
       setUserMap(map);
     }
 

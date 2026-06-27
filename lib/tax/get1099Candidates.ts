@@ -51,13 +51,13 @@ export async function get1099Candidates(taxYear: number, {
     svc.from('affiliate_tax_profiles')
        .select('user_id, entity_type, tin_status, backup_withholding, legal_name, business_name, address1,address2,city,region,postal_code,country')
        .in('user_id', userIds),
-    svc.from('profiles')
-       .select('id, email, display_name')
-       .in('id', userIds),
+    svc.from('user_profiles')
+       .select('user_id, email, name')
+       .in('user_id', userIds),
   ]);
 
   const profileByUser = new Map((profiles || []).map(p => [p.user_id, p]));
-  const accountByUser = new Map((accounts || []).map(a => [a.id, a]));
+  const accountByUser = new Map((accounts || []).map(a => [a.user_id, a]));
 
   const out: Candidate[] = [];
   for (const uid of userIds) {
@@ -73,7 +73,7 @@ export async function get1099Candidates(taxYear: number, {
     out.push({
       user_id: uid,
       email: (acct as any).email ?? null,
-      display_name: (acct as any).display_name ?? null,
+      display_name: (acct as any).name ?? null,
       total_cents: t.amount,
       methods: Array.from(t.methods),
       entity_type: entity ?? null,

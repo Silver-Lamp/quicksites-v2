@@ -33,7 +33,7 @@ function firstImage(images: any): string | null {
 
 /* ── helpers ── */
 async function getUserIdByEmail(email: string): Promise<string | null> {
-  const { data: p } = await db.from('profiles').select('user_id').ilike('email', email).maybeSingle();
+  const { data: p } = await db.from('user_profiles').select('user_id').ilike('email', email).maybeSingle();
   if (p?.user_id) return p.user_id as string;
   const { data: au } = await db.from('auth.users' as any).select('id').ilike('email', email).maybeSingle();
   return au?.id ?? null;

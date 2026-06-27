@@ -1,16 +1,12 @@
 import { NextRequest } from 'next/server';
 import { getServerSupabase } from '@/lib/supabase/server';
 import { get1099Candidates } from '@/lib/tax/get1099Candidates';
+import { getAdminUser } from '@/lib/auth/getAdminUser';
 
 function dollars(cents:number){ return (cents/100).toFixed(2); }
 
 async function requireAdmin() {
-  const supa = await getServerSupabase();
-  const { data: u } = await supa.auth.getUser();
-  if (!u?.user) throw new Error('unauthorized');
-  const { data: profile } = await supa.from('profiles').select('role').eq('id', u.user.id).maybeSingle();
-  const isAdmin = (u.user.user_metadata?.role === 'admin') || profile?.role === 'admin';
-  if (!isAdmin) throw new Error('forbidden');
+  if (!(await getAdminUser())) throw new Error('forbidden');
 }
 
 export async function GET(req: NextRequest) {

@@ -1,6 +1,7 @@
 // app/admin/referrals/payout-wizard/page.tsx
 import { getServerSupabase } from '@/lib/supabase/server';
 import PayoutWizardClient from '@/components/admin/referrals/PayoutWizardClient';
+import { getAdminUser } from '@/lib/auth/getAdminUser';
 
 export const dynamic = 'force-dynamic';
 
@@ -9,9 +10,7 @@ export default async function PayoutWizardPage() {
   const supa = await getServerSupabase();
   const { data: u } = await supa.auth.getUser();
   if (!u?.user) return <div className="p-8">Please sign in.</div>;
-  const { data: profile } = await supa.from('profiles').select('role').eq('id', u.user.id).maybeSingle();
-  const isAdmin = (u.user.user_metadata?.role === 'admin') || profile?.role === 'admin';
-  if (!isAdmin) return <div className="p-8">Forbidden.</div>;
+  if (!(await getAdminUser())) return <div className="p-8">Forbidden.</div>;
 
   // Load all codes to choose from
   const svc = await getServerSupabase({ serviceRole: true });

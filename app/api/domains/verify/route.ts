@@ -1,4 +1,7 @@
+import { getAdminUser } from '@/lib/auth/getAdminUser';
+
 export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
 
 const API = 'https://api.vercel.com';
 const DOMAIN_RX = /^([a-z0-9-]+\.)+[a-z]{2,}$/i;
@@ -36,6 +39,10 @@ function sanitizeHost(input: string) {
 
 export async function POST(req: Request) {
   try {
+    if (!(await getAdminUser())) {
+      return Response.json({ ok: false, error: 'forbidden' }, { status: 403 });
+    }
+
     const { domain } = (await req.json()) as { domain: string }; // e.g. "www.example.com"
     const project = process.env.VERCEL_PROJECT_ID || process.env.VERCEL_PROJECT_NAME;
 

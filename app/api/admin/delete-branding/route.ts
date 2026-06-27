@@ -1,7 +1,20 @@
 import { NextRequest } from 'next/server';
 import { serviceClient as supabase } from '@/lib/supabase/service';
+import { getAdminUser } from '@/lib/auth/getAdminUser';
+
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
+
+function forbidden() {
+  return new Response(JSON.stringify({ error: 'forbidden' }), {
+    status: 403,
+    headers: { 'Content-Type': 'application/json' },
+  });
+}
 
 export async function DELETE(req: NextRequest) {
+  if (!(await getAdminUser())) return forbidden();
+
   const { searchParams } = new URL(req.url);
   const id = searchParams.get('id');
 

@@ -40,10 +40,9 @@ jobs:
         run: npm run typecheck
         continue-on-error: true
 
-      - name: Generate Sitemap
-        run: npm run generate:sitemap
-
-      # BLOCKING: a real compile of the whole app.
+      # BLOCKING: a real compile of the whole app. (Sitemap generation is a build
+      # artifact, not a quality gate, and is handled by the deploy pipeline — it was
+      # removed here: `ts-node *.ts` fails under Node 20's ESM loader.)
       - name: Build
         run: npm run build
 

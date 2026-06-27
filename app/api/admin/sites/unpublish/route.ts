@@ -4,6 +4,7 @@ export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/server/supabaseAdmin';
 import { logTemplateEvent } from '@/lib/server/logTemplateEvent';
+import { getAdminUser } from '@/lib/auth/getAdminUser';
 
 function j(data: any, init?: number | ResponseInit) {
   const resInit = typeof init === 'number' ? { status: init } : init;
@@ -21,6 +22,8 @@ function x(err: any) {
 }
 
 async function handle(req: Request, verb: 'GET' | 'POST' | 'DELETE') {
+  if (!(await getAdminUser())) return j({ error: 'forbidden' }, 403);
+
   const url = new URL(req.url);
   const debug = url.searchParams.get('debug') === '1';
 

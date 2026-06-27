@@ -1,5 +1,9 @@
 import { createClient } from '@supabase/supabase-js';
 import { NextRequest } from 'next/server';
+import { getAdminUser } from '@/lib/auth/getAdminUser';
+
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!, // ✅ Fix here
@@ -7,6 +11,13 @@ const supabase = createClient(
 );
 
 export async function DELETE(req: NextRequest) {
+  if (!(await getAdminUser())) {
+    return new Response(JSON.stringify({ error: 'forbidden' }), {
+      status: 403,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
+
   const { searchParams } = new URL(req.url);
   const id = searchParams.get('id');
 

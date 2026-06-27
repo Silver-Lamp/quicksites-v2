@@ -1,4 +1,7 @@
+import { getAdminUser } from '@/lib/auth/getAdminUser';
+
 export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
 
 const API = 'https://api.vercel.com';
 const DOMAIN_RX = /^([a-z0-9-]+\.)+[a-z]{2,}$/i;
@@ -39,6 +42,10 @@ async function delDomain(project: string, host: string, qs: string) {
 
 export async function POST(req: Request) {
   try {
+    if (!(await getAdminUser())) {
+      return Response.json({ ok: false, error: 'forbidden' }, { status: 403 });
+    }
+
     const { domain } = (await req.json()) as { domain: string }; // expects apex (e.g., example.com)
 
     if (!process.env.VERCEL_TOKEN) {

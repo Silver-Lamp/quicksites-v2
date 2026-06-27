@@ -45,6 +45,27 @@ export async function getMerchantPaymentConfig(merchantId: string): Promise<Paym
     };
   }
   
+  /**
+   * Like getMerchantPaymentConfig, but never throws when a merchant has no active
+   * payment account (unconfigured / test merchant). Returns a 'custom' provider
+   * config so an order can still be drafted. Set QS_TEST_PLATFORM_FEE_PERCENT
+   * (e.g. 0.05) to exercise platform-fee math without a configured Stripe account.
+   */
+  export async function getMerchantPaymentConfigSafe(merchantId: string): Promise<PaymentConfig> {
+    try {
+      return await getMerchantPaymentConfig(merchantId);
+    } catch {
+      const testFee = Number(process.env.QS_TEST_PLATFORM_FEE_PERCENT ?? '0') || 0;
+      return {
+        provider: 'custom',
+        account_ref: null,
+        collect_platform_fee: testFee > 0,
+        platform_fee_percent: testFee,
+        platform_fee_min_cents: 0,
+      };
+    }
+  }
+
   function computePlatformFee(totalCents: number, cfg: PaymentConfig) {
     if (!cfg.collect_platform_fee) return 0;
     const pct = Math.floor(totalCents * (cfg.platform_fee_percent || 0));

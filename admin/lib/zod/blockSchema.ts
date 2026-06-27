@@ -227,56 +227,6 @@ export const TextBlockSchema = z.object({
 const emptyToUndef = <T extends z.ZodTypeAny>(schema: T) =>
   z.preprocess((v) => (typeof v === 'string' && v.trim() === '' ? undefined : v), schema);
 
-export const mealCardPropsSchema = z
-  .object({
-    mealId: emptyToUndef(z.string().uuid()).optional(),
-    mealSlug: emptyToUndef(z.string().min(1)).optional(),
-    showPrice: z.boolean().default(true),
-    showChef: z.boolean().default(false),
-    showRating: z.boolean().default(true),
-    showTags: z.boolean().default(true),
-    ctaText: z.string().default('View meal'),
-    variant: z.enum(['default', 'compact', 'hero']).default('default'),
-  })
-  .refine((p) => !!p.mealId || !!p.mealSlug, {
-    message: 'Provide mealId or mealSlug',
-    path: ['mealSlug'],
-  });
-
-export const reviewsListPropsSchema = z
-  .object({
-    mealId: emptyToUndef(z.string().uuid()).optional(),
-    chefId: emptyToUndef(z.string().uuid()).optional(),
-    siteId: emptyToUndef(z.string().uuid()).optional(),
-    pageSize: z.number().int().min(1).max(50).default(6),
-    sort: z.enum(['recent', 'top']).default('recent'),
-    minStars: z
-      .preprocess(
-        (v) => (v === 0 || v === '0' || v === '' ? undefined : v),
-        z.number().int().min(1).max(5)
-      )
-      .optional(),
-    showSummary: z.boolean().default(true),
-    showWriteCta: z.boolean().default(false),
-  })
-  .refine((p) => !!p.mealId || !!p.chefId || !!p.siteId, {
-    message: 'Provide mealId, chefId, or siteId',
-    path: ['siteId'],
-  });
-
-export const mealsGridPropsSchema = z
-  .object({
-    siteSlug: emptyToUndef(z.string().min(1)).optional(),
-    siteId: emptyToUndef(z.string().uuid()).optional(),
-    tag: z.string().optional(),
-    q: z.string().optional(),
-    sort: z.enum(['recent', 'rating', 'price_asc', 'price_desc', 'popular']).default('recent'),
-    limit: z.number().int().min(1).max(48).default(12),
-    columns: z.number().int().min(1).max(6).default(3),
-    ctaText: z.string().default('View meal'),
-  })
-  .refine((p) => !!p.siteSlug || !!p.siteId, { message: 'Provide siteSlug or siteId' });
-
 /* ─────────────────────────── Header / Footer blocks ───────────────────────── */
 
 export const HeaderContent = z.preprocess((raw) => {
@@ -332,25 +282,6 @@ const FooterContent = z.preprocess((raw) => {
   logo_url: z.string().optional(),
   links: z.array(LinkSchema).default([]),
 }).passthrough());
-
-/* ───────────────────── Chef profile (legacy coercion) ────────────────────── */
-
-const ChefMealBase = z.object({
-  id: z.string().optional(),
-  name: z.string().min(1, 'Meal name is required'),
-  description: z.string().optional().default(''),
-  price: z.string().min(1, 'Meal price is required'),
-  availability: z.string().min(1, 'Meal availability is required'),
-  image_url: z.string().url('Meal image URL must be valid'),
-});
-
-const ChefMealSchema = z.preprocess((val) => {
-  if (val && typeof val === 'object' && !('name' in (val as any)) && 'title' in (val as any)) {
-    const v = val as any;
-    return { ...v, name: v.title };
-  }
-  return val;
-}, ChefMealBase);
 
 /* ───────────────────────────── Block schema map ───────────────────────────── */
 
@@ -599,24 +530,6 @@ export const blockContentSchemaMap = {
     }),
   },
 
-  meal_card: { label: 'Meal Card', icon: '🍽️', schema: mealCardPropsSchema },
-  reviews_list: { label: 'Reviews List', icon: '⭐', schema: reviewsListPropsSchema },
-
-  chef_profile: {
-    label: 'Chef Profile',
-    icon: '👨‍🍳',
-    schema: z.object({
-      name: z.string().min(1),
-      location: z.string().min(1),
-      profile_image_url: z.string().url('Profile image URL must be valid'),
-      kitchen_video_url: urlOptional,
-      bio: z.string().min(1),
-      certifications: z.array(z.string().min(1)).min(1),
-      meals: z.array(ChefMealSchema).min(1),
-    }),
-  },
-
-  meals_grid: { label: 'Meals Grid', icon: '🍱', schema: mealsGridPropsSchema },
 
   hours: { label: 'Hours of Operation', icon: '⏰', schema: HoursOfOperationSchema },
 
@@ -1074,16 +987,6 @@ export function migrateLegacyBlock(block: any): any {
           copyright: c.copyright,
         };
       }
-    }
-    if (block.type === 'chef_profile' && Array.isArray(block.content?.meals)) {
-      block.content.meals = block.content.meals.map((m: any, idx: number) => ({
-        id: m?.id,
-        name: m?.name ?? m?.title ?? `Meal ${idx + 1}`,
-        description: typeof m?.description === 'string' ? m.description : '',
-        price: m?.price ?? '',
-        availability: m?.availability ?? '',
-        image_url: m?.image_url ?? '',
-      }));
     }
 
     // NEW: migrate products-grid → products_grid + normalize ID keys

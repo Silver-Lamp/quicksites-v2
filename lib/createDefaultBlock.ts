@@ -194,23 +194,6 @@ export function createDefaultBlock(type: BlockType): z.infer<typeof BlockSchema>
 
     /* ---------------- Misc (leave base content as-is) ---------------- */
 
-    case 'chef_profile': {
-      content = {
-        ...content,
-        certifications: content.certifications ?? ['Certification A', 'Certification B'],
-        meals: content.meals ?? [
-          {
-            id: newId(),
-            name: 'Meal A',
-            description: 'This is a description',
-            price: '$10',
-            availability: 'Available',
-            image_url: 'https://placehold.co/800x400',
-          },
-        ],
-      };
-      break;
-    }
 
     default:
       // keep `content` as the cloned base or {}

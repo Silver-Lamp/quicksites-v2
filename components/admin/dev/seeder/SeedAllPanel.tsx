@@ -240,7 +240,7 @@ export default function SeedAllPanel() {
           <p className="text-xs text-muted-foreground">Generate merchant, products, template and publish a demo site.</p>
         </div>
         <div className="inline-flex rounded-lg border bg-background p-0.5">
-          {(['merchant_products','chef_meals','both'] as SeedMode[]).map(opt => (
+          {(['merchant_products'] as SeedMode[]).map(opt => (
             <button
               key={opt}
               onClick={() => setSeedMode(opt)}

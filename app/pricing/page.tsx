@@ -21,9 +21,9 @@ import SiteHeader from '@/components/site/site-header';
 // ---- Config ----
 const COPY = {
   heroKicker: 'Pricing',
-  heroTitle: 'Simple, predictable pricing for SEO builders',
+  heroTitle: 'Simple, predictable pricing for sites that sell',
   heroSubtitle:
-    "Start lean, scale fast. Founder pricing undercuts the market while you grow — and it's grandfathered for 12 months.",
+    "Start lean, scale fast. Every plan includes the full builder and e-commerce — Founder pricing is grandfathered for 12 months.",
   ctas: {
     primaryHref: '/login',
     primary: 'Start free trial',
@@ -412,6 +412,15 @@ export default function PricingPage() {
             </Link>
             <Link href={COPY.ctas.secondaryHref} className="inline-flex">
               <Button size="lg" variant="ghost">{COPY.ctas.secondary}</Button>
+            </Link>
+          </div>
+
+          <div className="mt-6 max-w-2xl rounded-xl border border-sky-500/30 bg-sky-500/5 p-4 text-sm">
+            <span className="font-medium text-foreground">E-commerce is included</span>{' '}
+            <span className="text-muted-foreground">— a storefront and Stripe checkout on every site. </span>
+            <span className="text-muted-foreground">Reselling to your own network? </span>
+            <Link href="/partners" className="font-medium text-sky-500 underline underline-offset-4">
+              See the partner program →
             </Link>
           </div>
 

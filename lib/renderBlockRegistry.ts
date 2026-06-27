@@ -99,10 +99,6 @@ export const DYNAMIC_RENDERERS: Record<
   faq:          () => import('@/components/admin/templates/render-blocks/faq'),
   contact_form: () => import('@/components/admin/templates/render-blocks/contact-form'),
   hours:        () => import('@/components/admin/templates/render-blocks/hours'),
-  chef_profile:  () => import('@/components/admin/templates/render-blocks/chef-profile.client'),
-  meals_grid:    () => import('@/components/admin/templates/render-blocks/meals-grid.client'),
-  reviews_list:  () => import('@/components/admin/templates/render-blocks/reviews-list.client'),
-  meal_card:     () => import('@/components/admin/templates/render-blocks/meal-card.client'),
   products_grid: () => import('@/components/admin/templates/render-blocks/products-grid'),
   service_offer: async () => ({
     default: () =>

@@ -1,5 +1,6 @@
 // app/api/ai/suggest/route.ts
 import OpenAI from 'openai';
+import { meterLLMCall, LLMBudgetExceededError } from '@/lib/ai/meter';
 
 export const runtime = 'nodejs';
 
@@ -57,15 +58,36 @@ export async function POST(req: Request) {
       },
     ];
 
-    const resp = await client.chat.completions.create({
-      model: process.env.OPENAI_MODEL || 'gpt-4o-mini',
-      temperature,
-      messages: messages as any,
-    });
+    const model = process.env.OPENAI_MODEL || 'gpt-4o-mini';
 
-    const html = resp.choices?.[0]?.message?.content?.trim() || '';
+    // Metered call: budget guard (pre) + cost logging + PostHog mirror (post).
+    // To enable per-user caps, resolve the session here and pass `user_id`.
+    const html = await meterLLMCall(
+      { provider: 'openai', model_code: model, modality: 'chat', route: '/api/ai/suggest' },
+      async () => {
+        const resp = await client.chat.completions.create({
+          model,
+          temperature,
+          messages: messages as any,
+        });
+        return {
+          value: resp.choices?.[0]?.message?.content?.trim() || '',
+          usage: {
+            input_tokens: resp.usage?.prompt_tokens,
+            output_tokens: resp.usage?.completion_tokens,
+          },
+        };
+      }
+    );
+
     return Response.json({ html });
   } catch (err: any) {
+    if (err instanceof LLMBudgetExceededError) {
+      console.warn('[ai/suggest] budget exceeded', err.message);
+      return new Response(JSON.stringify({ error: 'AI usage limit reached. Try again later.' }), {
+        status: 429,
+      });
+    }
     console.error('[ai/suggest] error', err);
     return new Response(JSON.stringify({ error: err?.message || 'AI error' }), { status: 500 });
   }

@@ -167,8 +167,6 @@ export const BLOCK_EDITORS: Record<Block['type'], () => Promise<EditorModule>> =
     const mod = await import('./contact-form-editor');
     return { default: (mod as any).ContactFormEditor };
   }),
-  meal_card:     wrapDynamic(() => import('./meal-card-editor')),
-  chef_profile:  wrapDynamic(() => import('./chef-profile-editor')),
 
   // NEW: Scheduler block editor (company/org compatible)
   scheduler: wrapDynamic(() => import('./scheduler-editor')),

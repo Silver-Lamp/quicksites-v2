@@ -177,59 +177,7 @@ export const DEFAULT_BLOCK_CONTENT = {
     services: [],
   },
 
-  /* ───────── meals (Delivered.Menu) ───────── */
 
-  meal_card: {
-    // leave mealId blank (it will be treated as undefined by the schema)
-    // mealId: "",
-    // placeholder ensures the refine passes on creation
-    mealSlug: '__select_meal__',
-    showPrice: true,
-    showChef: false,
-    showRating: true,
-    showTags: true,
-    ctaText: 'View meal',
-    variant: 'default',
-  },
-
-  chef_profile: {
-    name: 'John Doe',
-    location: 'New York, NY',
-    profile_image_url: 'https://placehold.co/200x200',
-    bio: 'This is a bio',
-    certifications: ['Certification A'],
-    meals: [
-      {
-        name: 'Meal A',
-        description: '',
-        price: '$10',
-        availability: 'Available',
-        image_url: 'https://placehold.co/800x400',
-      },
-    ],
-  },
-
-  meals_grid: {
-    siteSlug: '', // leave blank if you'll pass siteId instead
-    siteId: '', // UUID optional
-    tag: 'featured',
-    q: '',
-    sort: 'recent',
-    limit: 12,
-    columns: 3,
-    ctaText: 'View meal',
-  },
-
-  reviews_list: {
-    mealId: DUMMY_UUID,
-    chefId: DUMMY_UUID,
-    siteId: DUMMY_UUID,
-    pageSize: 6,
-    sort: 'recent',
-    minStars: 1,
-    showSummary: true,
-    showWriteCta: false,
-  },
 
   /* ───────── hours (matches HoursOfOperationSchema) ───────── */
 

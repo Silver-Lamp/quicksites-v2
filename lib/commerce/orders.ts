@@ -1,6 +1,9 @@
 import { getServerSupabase } from '@/lib/supabase/server';
 import type { LineItemInput } from './types';
-import { getMerchantPaymentConfig } from './paymentRouter';
+import { getMerchantPaymentConfigSafe } from './paymentRouter';
+import { captureServer } from '@/lib/analytics/posthog-server';
+import { EVENTS } from '@/lib/analytics/events';
+import { partnerCommissionCents, PARTNER_FEE_SHARE } from './partner-terms';
 
 /** Create a pending order and its line items. Returns order id and totals. */
 export async function createDraftOrder(opts: {
@@ -22,7 +25,7 @@ export async function createDraftOrder(opts: {
   }, 0);
   const total = subtotal; // tax/shipping can be added later
 
-  const cfg = await getMerchantPaymentConfig(opts.merchantId);
+  const cfg = await getMerchantPaymentConfigSafe(opts.merchantId);
   const platformFeeCents = cfg.collect_platform_fee
     ? Math.max(Math.floor(total * (cfg.platform_fee_percent || 0)), cfg.platform_fee_min_cents || 0)
     : 0;
@@ -36,6 +39,7 @@ export async function createDraftOrder(opts: {
       merchant_id: opts.merchantId,
       site_slug: opts.siteSlug,
       currency,
+      amount_cents: total, // legacy column back-compat
       subtotal_cents: subtotal,
       total_cents: total,
       platform_fee_cents: platformFeeCents,
@@ -52,6 +56,7 @@ export async function createDraftOrder(opts: {
     const unit = Math.max(0, Number(li.unitAmount || 0));
     return {
       order_id: order.id,
+      merchant_id: opts.merchantId, // live order_items requires merchant_id (NOT NULL)
       catalog_item_id: li.catalogItemId ?? null,
       title: li.title,
       quantity: qty,
@@ -67,6 +72,12 @@ export async function createDraftOrder(opts: {
     await supabase.from('orders').delete().eq('id', order.id);
     throw oiErr;
   }
+
+  await captureServer(
+    EVENTS.ORDER_CREATED,
+    { merchant_id: opts.merchantId, order_id: order.id, total_cents: total, platform_fee_cents: platformFeeCents },
+    opts.merchantId
+  );
 
   return { orderId: order.id, totalCents: total, platformFeeCents };
 }
@@ -125,15 +136,22 @@ export async function markOrderPaid(
         .maybeSingle();
 
       if (attr?.referral_code) {
+        // Partner residual = their share of the order's platform fee (QuickSites
+        // keeps the rest). See lib/commerce/partner-terms.ts + /partners.
+        const partnerCents = partnerCommissionCents(orderRow.platform_fee_cents);
         const up = await supabase.from('commission_ledger').upsert(
           {
             referral_code: attr.referral_code,
             subject: 'order_platform_fee',
             subject_id: orderId,
-            amount_cents: orderRow.platform_fee_cents,
+            amount_cents: partnerCents,
             currency: orderRow.currency || 'USD',
             status: 'pending',
-            adjustments: { note: 'auto from platform fee' },
+            adjustments: {
+              note: 'partner residual',
+              platform_fee_cents: orderRow.platform_fee_cents,
+              partner_share: PARTNER_FEE_SHARE,
+            },
           },
           { onConflict: 'referral_code,subject,subject_id' }
         );
@@ -146,4 +164,63 @@ export async function markOrderPaid(
   } catch (e) {
     console.warn('Platform-fee commission step failed:', (e as any)?.message || e);
   }
+
+  await captureServer(
+    EVENTS.ORDER_PAID,
+    { merchant_id: orderRow.merchant_id, order_id: orderId, amount_cents: amountCents, provider },
+    orderRow.merchant_id
+  );
+  if (orderRow.platform_fee_cents && orderRow.platform_fee_cents > 0) {
+    await captureServer(
+      EVENTS.PLATFORM_FEE_COLLECTED,
+      { merchant_id: orderRow.merchant_id, order_id: orderId, platform_fee_cents: orderRow.platform_fee_cents },
+      orderRow.merchant_id
+    );
+  }
+}
+
+/**
+ * Mark an order refunded: record the refund, flip the order, and void the
+ * platform-fee commission (unless it was already paid out to the rep — that's a
+ * clawback, handled separately). The actual money/fee reversal happens on the
+ * provider (Stripe refund with reverse_transfer + refund_application_fee); this
+ * keeps our ledger consistent. Idempotent on the refund id.
+ */
+export async function markOrderRefunded(
+  orderId: string,
+  refundedCents: number | undefined,
+  provider: string,
+  providerRefundId: string,
+  raw: any
+) {
+  const supabase = await getServerSupabase({ serviceRole: true });
+
+  // 1) Record the refund as a payment row (state='refunded'), idempotent
+  if (providerRefundId) {
+    const { error: pErr } = await supabase.from('payments').insert({
+      order_id: orderId,
+      provider,
+      provider_payment_id: providerRefundId,
+      amount_cents: Math.abs(Number(refundedCents ?? 0)),
+      state: 'refunded',
+      raw,
+    });
+    if (pErr && `${pErr.code}` !== '23505') throw pErr;
+  }
+
+  // 2) Flip the order
+  const { error: oErr } = await supabase.from('orders').update({ status: 'refunded' }).eq('id', orderId);
+  if (oErr) throw oErr;
+
+  // 3) Void the platform-fee commission for this order (skip already-paid-out)
+  const { error: cErr } = await supabase
+    .from('commission_ledger')
+    .update({ status: 'void', adjustments: { note: 'voided on refund' } })
+    .eq('subject', 'order_platform_fee')
+    .eq('subject_id', orderId)
+    .neq('status', 'paid');
+  if (cErr) console.warn('commission void on refund failed:', cErr.message);
+
+  await captureServer(EVENTS.ORDER_REFUNDED, { order_id: orderId, amount_cents: refundedCents, provider });
+  await captureServer(EVENTS.PLATFORM_FEE_REVERSED, { order_id: orderId });
 }

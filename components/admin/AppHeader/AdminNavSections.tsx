@@ -176,6 +176,7 @@ const NAV_ADMIN: NavItem[] = [
   { type: 'item', label: 'Admin Taxes', href: '/admin/tax', icon: <DollarSign size={18} />, adminOnly: true },
   { type: 'item', label: 'View Payout Runs', href: '/admin/referrals/payout-runs', icon: <DollarSign size={18} />, adminOnly: true },
   { type: 'item', label: 'Referrals Payout Wizard', href: '/admin/referrals/payout-wizard', icon: <DollarSign size={18} />, adminOnly: true },
+  { type: 'item', label: 'Partner Payouts', href: '/admin/partners/payouts', icon: <DollarSign size={18} />, adminOnly: true },
   { type: 'item', label: 'Billing Map', href: 'admin/billing/map', icon: <DollarSign size={18} />, adminOnly: true },
   { type: 'item', label: 'Merchants', href: '/admin/merchants', icon: <User size={18} />, adminOnly: true },
   { type: 'item', label: 'Referrals', href: '/admin/referrals', icon: <User size={18} />, adminOnly: true },
@@ -184,10 +185,6 @@ const NAV_ADMIN: NavItem[] = [
   { type: 'item', label: 'Payments', href: '/admin/payments', icon: <FileStack size={18} />, adminOnly: true },
   { type: 'item', label: 'Payment Accounts', href: '/admin/payment-accounts', icon: <FileStack size={18} />, adminOnly: true },
   { type: 'item', label: 'Payment Transactions', href: '/admin/payment-transactions', icon: <FileStack size={18} />, adminOnly: true },
-
-  { type: 'section', label: 'Delivered Menu', adminOnly: true },
-  { type: 'item', label: 'Meals', href: '/admin/meals', icon: <ChefHat size={18} />, adminOnly: true },
-  { type: 'item', label: 'Chefs', href: '/chef/dashboard', icon: <ChefHat size={18} />, adminOnly: true },
 ];
 
 /* ---------------- Elect Info (Campaign Tools) ---------------- */

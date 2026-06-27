@@ -79,66 +79,35 @@ export async function POST(req: NextRequest) {
   }
   if (!mid) return NextResponse.json({ error: 'merchant_id or email required' }, { status: 400 });
 
-  // Fetch meals for merchant
-  const { data: meals } = await supa
-    .from('meals')
-    .select('id, tags, description')
-    .eq('merchant_id', mid);
-
-  let mealIds = (meals ?? []).map(m => m.id as string);
-
-  // Only demo meals (seeded or admin-tagged)
-  if (only_demo) {
-    const filtered = (meals ?? []).filter(m =>
-      Array.isArray(m.tags) && (m.tags as string[]).includes('admin') ||
-      String(m.description || '').includes('Seeded via Admin Tools') ||
-      String(m.description || '').includes('Bulk seeded meal')
-    );
-    mealIds = filtered.map(m => m.id as string);
-  }
-
+  // Nukes a merchant's generic commerce demo data. (The meals/reviews vertical
+  // was removed; this now targets catalog_items + orders.)
   const r: Record<string, number> = {
-    meals: 0, reviews: 0, waitlist: 0, outbox: 0, invites: 0, compliance_docs: 0, compliance_status: 0, compliance_profile: 0
+    catalog_items: 0, orders: 0, compliance_docs: 0, compliance_status: 0, compliance_profile: 0,
   };
 
-  // Helpers
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   async function del(table: string, filter: (b: any) => any, countKey: keyof typeof r) {
-    // count first (so we can report)
-    const { data: ids } = await filter(
-      supa.from(table).select('id')
-    );
+    const { data: ids } = await filter(supa.from(table).select('id'));
     const n = (ids ?? []).length;
     if (n) {
-      const { error } = await filter(
-        supa.from(table).delete()
-      );
+      const { error } = await filter(supa.from(table).delete());
       if (error) throw new Error(`${table} delete failed: ${error.message}`);
     }
     r[countKey] += n;
   }
 
-  // Child tables by meal
-  if (mealIds.length) {
-    if (scope.reviews)  await del('reviews',  (q:any)=> q.in('meal_id', mealIds), 'reviews');
-    if (scope.waitlist) await del('waitlist_subscriptions', (q:any)=> q.in('meal_id', mealIds), 'waitlist');
-    if (scope.outbox)   await del('email_outbox', (q:any)=> q.in('meal_id', mealIds), 'outbox');
-    if (scope.invites) {
-      try {
-        await del('review_invites', (q:any)=> q.in('meal_id', mealIds), 'invites');
-      } catch { /* table may not exist — ignore */ }
-    }
-    if (scope.meals)    await del('meals',    (q:any)=> q.in('id', mealIds), 'meals');
-  }
+  // Commerce demo data for this merchant (orders cascades order_items + payments).
+  await del('catalog_items', (q: any) => q.eq('merchant_id', mid), 'catalog_items');
+  await del('orders', (q: any) => q.eq('merchant_id', mid), 'orders');
 
   // Compliance (per merchant)
   if (scope.compliance_docs) {
-    await del('compliance_docs', (q:any)=> q.eq('merchant_id', mid), 'compliance_docs');
+    await del('compliance_docs', (q: any) => q.eq('merchant_id', mid), 'compliance_docs');
   }
   if (scope.compliance_profile) {
-    await del('compliance_status', (q:any)=> q.eq('merchant_id', mid), 'compliance_status');
-    await del('merchant_compliance_profiles', (q:any)=> q.eq('merchant_id', mid), 'compliance_profile');
+    await del('compliance_status', (q: any) => q.eq('merchant_id', mid), 'compliance_status');
+    await del('merchant_compliance_profiles', (q: any) => q.eq('merchant_id', mid), 'compliance_profile');
   }
 
-  return NextResponse.json({ ok: true, merchant_id: mid, meal_count_considered: mealIds.length, deleted: r });
+  return NextResponse.json({ ok: true, merchant_id: mid, deleted: r });
 }

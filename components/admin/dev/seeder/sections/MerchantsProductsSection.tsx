@@ -96,7 +96,6 @@ export function MerchantsProductsSection({
             value={productsProductType}
             onChange={(e) => setProductsProductType(e.target.value as ProductType)}
           >
-            <option value="meal">meal</option>
             <option value="physical">physical</option>
             <option value="digital">digital</option>
             <option value="service">service</option>

@@ -226,7 +226,9 @@ export async function markOrderRefunded(
   if (oErr) throw oErr;
   if (!flipped || flipped.length === 0) return;
 
-  // 3) Void the platform-fee commission for this order (skip already-paid-out)
+  // 3) Void the platform-fee commission for this order — but only the rows that
+  //    haven't been paid out yet (pending/approved). A paid row already left the
+  //    building, so it can't simply be voided.
   const { error: cErr } = await supabase
     .from('commission_ledger')
     .update({ status: 'void', adjustments: { note: 'voided on refund' } })
@@ -234,6 +236,34 @@ export async function markOrderRefunded(
     .eq('subject_id', orderId)
     .neq('status', 'paid');
   if (cErr) console.warn('commission void on refund failed:', cErr.message);
+
+  // 3b) For commissions ALREADY paid out, record a clawback so the residual can
+  //     be reversed/deducted out of band (admin-resolved). Idempotent per
+  //     commission via the unique (commission_ledger_id) constraint.
+  try {
+    const { data: paidComms } = await supabase
+      .from('commission_ledger')
+      .select('id, amount_cents, payout_id')
+      .eq('subject', 'order_platform_fee')
+      .eq('subject_id', orderId)
+      .eq('status', 'paid');
+    if (paidComms?.length) {
+      const rows = (paidComms as any[]).map((c) => ({
+        commission_ledger_id: c.id,
+        affiliate_payout_id: c.payout_id ?? null,
+        order_id: orderId,
+        amount_cents: c.amount_cents,
+        reason: 'order_refund',
+        status: 'pending',
+      }));
+      const { error: clawErr } = await supabase
+        .from('commission_clawbacks')
+        .upsert(rows, { onConflict: 'commission_ledger_id' });
+      if (clawErr) console.warn('clawback record failed:', clawErr.message);
+    }
+  } catch (e: any) {
+    console.warn('clawback step failed:', e?.message || e);
+  }
 
   await captureServer(EVENTS.ORDER_REFUNDED, { order_id: orderId, amount_cents: refundedCents, provider });
   await captureServer(EVENTS.PLATFORM_FEE_REVERSED, { order_id: orderId });

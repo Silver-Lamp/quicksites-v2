@@ -44,6 +44,12 @@ export default function PayoutsPanel() {
     try {
       const r = await call('/api/admin/partners/payouts/run', { dryRun: false });
       setMsg(`Paid ${usd(r.totalCents)} to ${r.partners.length} partner(s).`);
+      if (r.failures?.length) {
+        setError(
+          `${r.failures.length} payout(s) failed and were left approved for retry: ` +
+            r.failures.map((f: any) => `${String(f.affiliateUserId).slice(0, 8)}… (${f.error})`).join('; '),
+        );
+      }
       setPreview(null);
       router.refresh();
     } catch (e: any) { setError(e.message); } finally { setBusy(null); }

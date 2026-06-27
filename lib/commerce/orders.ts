@@ -104,12 +104,18 @@ export async function markOrderPaid(
   // Ignore unique violation if webhook retried
   if (pErr && `${pErr.code}` !== '23505') throw pErr;
 
-  // 2) Update order status + provider refs
-  const { error: oErr } = await supabase
+  // 2) Transition the order pending -> paid, guarded so a duplicate or a
+  //    payment/refund race can't flip an order that isn't pending. If nothing
+  //    transitioned, the order was already paid (duplicate) or refunded/cancelled
+  //    — stop here without (re)locking attribution or (re)logging the commission.
+  const { data: transitioned, error: oErr } = await supabase
     .from('orders')
     .update({ status: 'paid', provider_payment_id: providerPaymentId, provider })
-    .eq('id', orderId);
+    .eq('id', orderId)
+    .eq('status', 'pending')
+    .select('id');
   if (oErr) throw oErr;
+  if (!transitioned || transitioned.length === 0) return;
 
   // 3) Fetch order context once
   const { data: orderRow, error: ordErr } = await supabase
@@ -208,9 +214,17 @@ export async function markOrderRefunded(
     if (pErr && `${pErr.code}` !== '23505') throw pErr;
   }
 
-  // 2) Flip the order
-  const { error: oErr } = await supabase.from('orders').update({ status: 'refunded' }).eq('id', orderId);
+  // 2) Flip the order -> refunded, guarded so a duplicate refund event doesn't
+  //    re-void the commission or re-fire analytics. The refund payment row above
+  //    is recorded regardless (idempotent on the refund id).
+  const { data: flipped, error: oErr } = await supabase
+    .from('orders')
+    .update({ status: 'refunded' })
+    .eq('id', orderId)
+    .neq('status', 'refunded')
+    .select('id');
   if (oErr) throw oErr;
+  if (!flipped || flipped.length === 0) return;
 
   // 3) Void the platform-fee commission for this order (skip already-paid-out)
   const { error: cErr } = await supabase

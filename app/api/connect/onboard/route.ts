@@ -1,12 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { stripe } from '@/lib/stripe/server';
+import { clampPlatformFeePercent } from '@/lib/commerce/partner-terms';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
-const DEFAULT_FEE = Number(process.env.QS_DEFAULT_PLATFORM_FEE_PERCENT ?? '0.05') || 0;
+const DEFAULT_FEE = clampPlatformFeePercent(Number(process.env.QS_DEFAULT_PLATFORM_FEE_PERCENT ?? '0.05') || 0);
 
 /**
  * Start Stripe Connect (Express) onboarding for a merchant and write the canonical

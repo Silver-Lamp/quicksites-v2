@@ -1,6 +1,7 @@
 // app/api/templates/create/route.ts
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { getServerSupabase } from '@/lib/supabase/server';
 
 export const runtime = 'nodejs';
 
@@ -49,6 +50,20 @@ export async function POST(req: Request) {
   const headerBlock = initial.headerBlock ?? dataIn.headerBlock ?? null;
   const footerBlock = initial.footerBlock ?? dataIn.footerBlock ?? null;
 
+  // Stamp ownership from the caller's session (works for both real and
+  // anonymous/guest users). Setting owner_id = the anon uid is what lets the
+  // draft auto-claim when the guest later upgrades their account (same uid).
+  let ownerId: string | null = null;
+  let isAnonymous = false;
+  try {
+    const ssr = await getServerSupabase();
+    const { data: { user } } = await ssr.auth.getUser();
+    ownerId = user?.id ?? null;
+    isAnonymous = !!user?.is_anonymous;
+  } catch {
+    // no session (e.g. legacy callers) — leave owner_id null as before
+  }
+
   // Build minimal, canonical payload (don’t send generated cols)
   const payload: any = {
     template_name: initial.template_name ?? initial.slug ?? 'Untitled',
@@ -58,6 +73,8 @@ export async function POST(req: Request) {
     header_block: headerBlock ?? null,
     footer_block: footerBlock ?? null,
     ...(typeof initial.is_site === 'boolean' ? { is_site: initial.is_site } : {}),
+    ...(ownerId ? { owner_id: ownerId } : {}),
+    ...(isAnonymous ? { claim_source: 'guest_build' } : {}),
     // ❌ never set industry/industry_label columns at creation
   };
 

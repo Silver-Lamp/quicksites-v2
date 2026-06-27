@@ -101,7 +101,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         if (data?.userPresent && data.user) {
           const u: SessionUser = {
             id: data.user.id,
-            email: data.user.email,
+            email: data.user.email ?? '', // anonymous (guest) users have no email
             avatar_url: data.user.avatar_url ?? undefined,
           };
           const r: string = data.role ?? (data.isAdmin ? 'admin' : 'viewer');

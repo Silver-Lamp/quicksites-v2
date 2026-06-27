@@ -12,7 +12,8 @@ export function useSafeAuth() {
           id: user.id,
           email: user.email,
           avatar_url: user.avatar_url ?? '',
-          name: user.email.split('@')[0], // or pull from metadata if needed
+          // anonymous (guest) users have no email
+          name: user.email ? user.email.split('@')[0] : 'Guest',
         }
       : null,
     role,

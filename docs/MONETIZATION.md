@@ -124,3 +124,13 @@ Verified: 2 approved commissions → one $5.04 payout, commissions `paid`,
 `affiliate_payouts` + `payout_runs` written. **Remaining for real cash:** partner
 Stripe Connect onboarding (write `partner_payout_accounts.account_ref` so transfers
 go to the partner's account instead of a manual record).
+
+### Partner Stripe Connect onboarding (built 2026-06-26) — closes the loop
+- `POST /api/partners/connect/onboard` — partner connects a Stripe Express account
+  (writes `partner_payout_accounts`, status 'pending').
+- `GET /api/partners/connect/status` — flips to 'active' once `payouts_enabled`.
+- Surfaced on `/partners/dashboard` (Connect payouts / connected ✓).
+
+Once a partner is **active**, `runPayouts` makes a real Stripe **Transfer** to their
+account (method `stripe`) instead of a manual record. The partner money loop —
+join → connect → earn 80% residual → approve → real payout — is end-to-end complete.

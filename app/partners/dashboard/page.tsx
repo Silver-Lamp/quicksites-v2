@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { getServerSupabase } from '@/lib/supabase/server';
 import SiteHeader from '@/components/site/site-header';
 import { PARTNER_FEE_SHARE, MAX_PLATFORM_FEE_PERCENT, RESIDUAL_MONTHS } from '@/lib/commerce/partner-terms';
-import { JoinButton, CopyLink } from './client';
+import { JoinButton, CopyLink, ConnectPayouts } from './client';
 
 export const dynamic = 'force-dynamic';
 
@@ -61,10 +61,12 @@ export default async function PartnerDashboard() {
     );
   }
 
-  const [{ data: attrs }, { data: ledger }] = await Promise.all([
+  const [{ data: attrs }, { data: ledger }, { data: payoutAcct }] = await Promise.all([
     admin.from('attributions').select('merchant_id').in('referral_code', myCodes),
     admin.from('commission_ledger').select('amount_cents, status, currency').in('referral_code', myCodes),
+    admin.from('partner_payout_accounts').select('status').eq('user_id', user.id).eq('provider', 'stripe').maybeSingle(),
   ]);
+  const payoutStatus = (payoutAcct as any)?.status ?? null;
 
   const totals = { pending: 0, approved: 0, paid: 0 };
   let cur = 'USD';
@@ -105,6 +107,17 @@ export default async function PartnerDashboard() {
           <Stat label="Lifetime earned" value={usd(lifetime, cur)} highlight />
           <Stat label="Pending" value={usd(totals.pending, cur)} />
           <Stat label="Paid out" value={usd(totals.paid, cur)} />
+        </div>
+
+        {/* Payouts connection */}
+        <div className="mt-6 rounded-xl border border-zinc-800 bg-zinc-900/40 p-5">
+          <div className="text-sm font-medium">Payouts</div>
+          <p className="mb-3 mt-1 text-xs text-zinc-400">
+            {payoutStatus === 'active'
+              ? 'Your residual commissions are transferred to your connected Stripe account.'
+              : 'Connect a Stripe account to receive your residuals. Until then, approved payouts are recorded for manual processing.'}
+          </p>
+          <ConnectPayouts status={payoutStatus} />
         </div>
 
         <p className="mt-6 text-sm text-zinc-400">

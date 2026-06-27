@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { runCron } from '@/lib/cron/record';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -12,6 +13,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
+  return runCron('email-drain', async () => {
   const MAX = 200;
 
   // Pull PENDING first, then FAILED with few attempts
@@ -50,4 +52,5 @@ export async function POST(req: NextRequest) {
   }
 
   return NextResponse.json({ ok: true, sent });
+  });
 }

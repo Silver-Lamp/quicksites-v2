@@ -3,6 +3,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { createServerClient, type CookieOptions } from '@supabase/ssr';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
+import { runCron } from '@/lib/cron/record';
+import { isCronAuthorized } from '@/lib/cron/auth';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -34,9 +36,16 @@ async function assertAdmin() {
 }
 
 export async function POST(req: NextRequest) {
-  const gate = await assertAdmin();
-  if (gate.code !== 200) return NextResponse.json({ error: gate.error }, { status: gate.code });
+  // Schedulers (Vercel cron / external) authenticate with the cron secret and
+  // skip the admin-cookie gate; interactive callers still need admin.
+  let actorId: string | null = null;
+  if (!isCronAuthorized(req)) {
+    const gate = await assertAdmin();
+    if (gate.code !== 200) return NextResponse.json({ error: gate.error }, { status: gate.code });
+    actorId = gate.actorId;
+  }
 
+  return runCron('expire-trials', async () => {
   const admin = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY!
@@ -65,7 +74,7 @@ export async function POST(req: NextRequest) {
   // best-effort logging
   try {
     const logs = expiring.map((r: any) => ({
-      actor_id: gate.actorId,
+      actor_id: actorId,
       target_user_id: r.user_id,
       action: 'expire_trial_auto',
       meta: { prev: r },
@@ -75,4 +84,11 @@ export async function POST(req: NextRequest) {
   } catch {}
 
   return NextResponse.json({ ok: true, updated: updates.length });
+  });
+}
+
+// Vercel native cron invokes via GET — allow it for authorized cron requests only.
+export async function GET(req: NextRequest) {
+  if (!isCronAuthorized(req)) return NextResponse.json({ error: 'forbidden' }, { status: 403 });
+  return POST(req);
 }

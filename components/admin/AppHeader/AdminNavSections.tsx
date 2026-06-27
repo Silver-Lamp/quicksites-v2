@@ -29,6 +29,7 @@ import {
   Bell,
   User,
   Printer,
+  Activity,
   Check,
 } from 'lucide-react';
 import clsx from 'clsx';
@@ -169,6 +170,7 @@ const NAV_ADMIN: NavItem[] = [
   { type: 'item', label: 'Checkout Cancel', href: '/checkout/cancel', icon: <FileStack size={18} />, adminOnly: false },
 
   { type: 'item', label: 'Admin Tools', href: '/admin/tools', icon: <Wrench size={18} />, adminOnly: true },
+  { type: 'item', label: 'Cron Health', href: '/admin/cron', icon: <Activity size={18} />, adminOnly: true },
   { type: 'item', label: 'Agent Runner', href: '/admin/agents/block', icon: <Wrench size={18} />, adminOnly: true },
   { type: 'item', label: 'Dev', href: '/admin/dev', icon: <Wrench size={18} />, adminOnly: true },
   { type: 'item', label: 'AI Pricing', href: '/admin/settings/ai-pricing', icon: <Wrench />, adminOnly: true },

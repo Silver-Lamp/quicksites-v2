@@ -54,12 +54,12 @@ export default function PartnersPage() {
             {residualLabel} residual, and onboard through your whitelisted payment processor.
           </p>
           <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
-            <a href={MAILTO} className="rounded-lg bg-sky-500 px-6 py-3 text-base font-medium text-zinc-950 shadow-lg transition hover:bg-sky-400">
+            <Link href="/partners/dashboard" className="rounded-lg bg-sky-500 px-6 py-3 text-base font-medium text-zinc-950 shadow-lg transition hover:bg-sky-400">
+              Get your partner link
+            </Link>
+            <a href={MAILTO} className="rounded-lg border border-sky-500 px-6 py-3 text-base font-medium text-sky-300 transition hover:bg-sky-500/10 hover:text-sky-200">
               Talk to us
             </a>
-            <Link href="/features" className="rounded-lg border border-sky-500 px-6 py-3 text-base font-medium text-sky-300 transition hover:bg-sky-500/10 hover:text-sky-200">
-              See features
-            </Link>
           </div>
         </section>
 
@@ -130,9 +130,9 @@ export default function PartnersPage() {
               ))}
             </div>
             <div className="mt-10">
-              <a href={MAILTO} className="rounded-lg bg-sky-500 px-7 py-3 text-base font-medium text-zinc-950 shadow-lg transition hover:bg-sky-400">
+              <Link href="/partners/dashboard" className="rounded-lg bg-sky-500 px-7 py-3 text-base font-medium text-zinc-950 shadow-lg transition hover:bg-sky-400">
                 Become a partner
-              </a>
+              </Link>
             </div>
           </div>
         </section>

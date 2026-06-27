@@ -58,19 +58,19 @@ export function ThemeProvider({ children, siteSlug = 'default' }: { children: Re
 
       const userId = (window as any).__DEV_MOCK_USER__?.id;
       if (userId) {
+        // user_site_settings only has (user_id, site_slug, glow_config); the
+        // theme_* columns don't exist, so they always failed → defaults used.
         const { data } = await supabase
           .from('user_site_settings')
-          .select('glow_config, theme_font, theme_radius, theme_accent')
+          .select('glow_config')
           .eq('user_id', userId)
           .eq('site_slug', siteSlug)
           .single();
 
         if (data) {
           setThemeState({
-            glow: Array.isArray(data.glow_config) ? data.glow_config : [data.glow_config],
-            fontFamily: data.theme_font || defaultTheme.fontFamily,
-            borderRadius: data.theme_radius || defaultTheme.borderRadius,
-            accentColor: data.theme_accent || defaultTheme.accentColor,
+            ...defaultTheme,
+            glow: (Array.isArray(data.glow_config) ? data.glow_config : [data.glow_config]) as SiteTheme['glow'],
           });
           return;
         }
@@ -96,9 +96,6 @@ export function ThemeProvider({ children, siteSlug = 'default' }: { children: Re
             user_id: userId,
             site_slug: siteSlug,
             glow_config: value.glow,
-            theme_font: value.fontFamily,
-            theme_radius: value.borderRadius,
-            theme_accent: value.accentColor,
           });
         }
       } catch (err) {

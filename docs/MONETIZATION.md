@@ -109,3 +109,18 @@ env-overridable, so the offer can be tuned without code.
 
 **Worked example:** a $100 order with an 8% partner fee → $8.00 platform fee →
 partner $6.40, QuickSites $1.60 — on every order, for the life of the merchant.
+
+### Partner payout pipeline (built + verified 2026-06-26)
+Completes the money loop (`lib/commerce/payouts.ts`):
+1. **Approve** — `POST /api/admin/partners/payouts/approve` moves commissions
+   `pending → approved` once older than `QS_REFUND_WINDOW_DAYS` (14).
+2. **Run** — `POST /api/admin/partners/payouts/run` ({dryRun?}) groups approved
+   commissions per partner, transfers their residual (real Stripe Connect transfer
+   when the partner is connected via `partner_payout_accounts`, else a `manual`
+   record), writes `affiliate_payouts`, marks commissions `paid`, and audits a
+   `payout_runs` + `payout_run_items`. Admin-gated (`lib/auth/getAdminUser.ts`).
+
+Verified: 2 approved commissions → one $5.04 payout, commissions `paid`,
+`affiliate_payouts` + `payout_runs` written. **Remaining for real cash:** partner
+Stripe Connect onboarding (write `partner_payout_accounts.account_ref` so transfers
+go to the partner's account instead of a manual record).

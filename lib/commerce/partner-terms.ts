@@ -17,6 +17,8 @@ export const PARTNER_FEE_SHARE = Number(process.env.QS_PARTNER_FEE_SHARE ?? '0.8
 export const QS_FEE_SHARE = Math.max(0, 1 - PARTNER_FEE_SHARE);
 /** 0 = lifetime (no time limit). */
 export const RESIDUAL_MONTHS = Number(process.env.QS_RESIDUAL_MONTHS ?? '0') || 0;
+/** Days a commission stays 'pending' before it can be approved for payout (refund window). */
+export const REFUND_WINDOW_DAYS = Number(process.env.QS_REFUND_WINDOW_DAYS ?? '14') || 14;
 
 /** The partner's residual on one order's platform fee (their share, in cents). */
 export function partnerCommissionCents(platformFeeCents: number): number {

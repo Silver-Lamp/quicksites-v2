@@ -1,5 +1,6 @@
 // app/api/services/suggest/route.ts
 import OpenAI from 'openai';
+import { enforceGuestAiLimit, guestLimitBody } from '@/lib/ai/guestGuard';
 import { cookies } from 'next/headers';
 import { createServerClient } from '@supabase/ssr';
 
@@ -93,6 +94,14 @@ export async function POST(req: Request) {
     const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || '0.0.0.0';
     if (limited(`svc:${auth.user.id}:${ip}`)) {
       return new Response(JSON.stringify({ error: 'Rate limit exceeded' }), { status: 429 });
+    }
+
+    const guard = await enforceGuestAiLimit(auth.user, 'services');
+    if (!guard.ok) {
+      return new Response(JSON.stringify(guestLimitBody(guard.limit)), {
+        status: 429,
+        headers: { 'content-type': 'application/json' },
+      });
     }
 
     // Inputs (request)

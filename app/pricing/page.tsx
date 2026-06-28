@@ -28,7 +28,8 @@ const PUBLIC_PLAN = { platform: 19, perSite: 6 };
 const PARTNER_FEE_SHARE = 0.8;     // partners keep 80% of the order fee
 
 const CTA = {
-  buildHref: '/login',   // create a free site (publish requires an account)
+  buildHref: '/build',     // guest builder (no-signup); /build redirects to /login if the flag is off
+  signupHref: '/login',    // account signup (agency trial)
   contactHref: '/contact',
   partnersHref: '/partners',
 };
@@ -186,7 +187,7 @@ function AgencyPlanCard({ mode }: { mode: 'founder' | 'public' }) {
       </CardContent>
       <CardFooter className="justify-between">
         <Link href={CTA.contactHref}><Button>Talk to us<ArrowRight className="ml-2 h-4 w-4" /></Button></Link>
-        <Link href={CTA.buildHref}><Button variant="ghost">Start a free trial</Button></Link>
+        <Link href={CTA.signupHref}><Button variant="ghost">Start a free trial</Button></Link>
       </CardFooter>
     </Card>
   );

@@ -31,31 +31,51 @@ export async function approveCommissions(refundWindowDays = REFUND_WINDOW_DAYS):
   return data?.length ?? 0;
 }
 
+// Discriminated outcome so the caller can tell an intentional manual payout
+// (partner not connected) apart from a real transfer FAILURE — the old code
+// collapsed both into a 'manual' record, hiding Stripe errors.
+type TransferOutcome =
+  | { kind: 'stripe'; txRef: string }
+  | { kind: 'manual'; txRef: string }
+  | { kind: 'error'; error: string };
+
 async function attemptStripeTransfer(
   db: any,
   partnerUserId: string,
   amountCents: number,
-  currency: string
-): Promise<{ method: string; txRef: string }> {
+  currency: string,
+  idempotencyKey: string
+): Promise<TransferOutcome> {
+  let pa: any = null;
   try {
-    const { data: pa } = await db
+    const r = await db
       .from('partner_payout_accounts')
       .select('account_ref, status')
       .eq('user_id', partnerUserId)
       .eq('provider', 'stripe')
       .maybeSingle();
-    if (process.env.STRIPE_SECRET_KEY && pa?.account_ref && pa.status === 'active') {
-      const transfer = await stripe.transfers.create({
-        amount: amountCents,
-        currency: currency.toLowerCase(),
-        destination: pa.account_ref,
-      });
-      return { method: 'stripe', txRef: transfer.id };
-    }
+    pa = r.data;
   } catch {
-    // fall through to a manual record (partner not connected / Stripe unconfigured)
+    // treat as not-connected below
   }
-  return { method: 'other', txRef: `manual_${Date.now()}` };
+
+  const connected = !!process.env.STRIPE_SECRET_KEY && pa?.account_ref && pa.status === 'active';
+  if (!connected) {
+    // Not a failure: partner isn't Stripe-connected (or Stripe unconfigured) →
+    // record a manual payout for offline processing.
+    return { kind: 'manual', txRef: `manual_${idempotencyKey}` };
+  }
+
+  try {
+    const transfer = await stripe.transfers.create(
+      { amount: amountCents, currency: currency.toLowerCase(), destination: pa.account_ref },
+      // Idempotency key keyed to the payout row → a retry can't double-send.
+      { idempotencyKey: `payout_${idempotencyKey}` }
+    );
+    return { kind: 'stripe', txRef: transfer.id };
+  } catch (e: any) {
+    return { kind: 'error', error: String(e?.message || e).slice(0, 500) };
+  }
 }
 
 export type PayoutResult = {
@@ -69,6 +89,9 @@ export type PayoutResult = {
     txRef?: string;
     payoutId?: string;
   }>;
+  /** Partners whose transfer was attempted but failed; their commissions were
+   * reverted to 'approved' for retry. Empty on a fully clean run. */
+  failures?: Array<{ affiliateUserId: string; amountCents: number; error: string }>;
 };
 
 /** Pay out all currently-approved commissions, grouped per partner. */
@@ -104,31 +127,84 @@ export async function runPayouts(opts: {
   }
 
   const partners: PayoutResult['partners'] = [];
-  let totalCents = 0;
+  const failures: NonNullable<PayoutResult['failures']> = [];
+  let totalAttempted = 0;
+  let totalPaid = 0;
+  let rowsMarkedPaid = 0;
 
   for (const [owner, g] of byOwner) {
-    totalCents += g.amountCents;
+    totalAttempted += g.amountCents;
     if (opts.dryRun) {
       partners.push({ affiliateUserId: owner, amountCents: g.amountCents, codes: [...g.codes] });
       continue;
     }
-    const { method, txRef } = await attemptStripeTransfer(db, owner, g.amountCents, g.currency);
-    const { data: payout } = await db
+
+    // 1) Record the payout row BEFORE moving money (status 'processing'). If this
+    //    fails, no transfer is attempted — nothing to orphan.
+    const { data: payout, error: insErr } = await db
       .from('affiliate_payouts')
       .insert({
         affiliate_user_id: owner,
         paid_at: new Date().toISOString(),
         amount_cents: g.amountCents,
         currency: g.currency,
-        method,
-        tx_ref: txRef,
-        is_tpso: method === 'stripe',
+        method: 'other', // tentative; finalized after the transfer outcome
+        is_tpso: false,
+        status: 'processing',
       })
       .select('id')
       .single();
-    await db.from('commission_ledger').update({ status: 'paid' }).in('id', g.rowIds);
-    partners.push({ affiliateUserId: owner, amountCents: g.amountCents, codes: [...g.codes], method, txRef, payoutId: payout?.id });
+    if (insErr || !payout?.id) {
+      failures.push({ affiliateUserId: owner, amountCents: g.amountCents, error: insErr?.message || 'payout insert failed' });
+      continue;
+    }
+    const payoutId = payout.id as string;
+
+    // 2) Atomically CLAIM the approved commissions for this payout. The
+    //    .eq('status','approved') filter means a concurrent/retried run can't
+    //    re-claim already-paid rows — this is the double-pay guard.
+    const { data: claimed } = await db
+      .from('commission_ledger')
+      .update({ status: 'paid', payout_id: payoutId })
+      .in('id', g.rowIds)
+      .eq('status', 'approved')
+      .select('id, amount_cents');
+    const claimedRows = (claimed ?? []) as Array<{ id: string; amount_cents: number }>;
+    const claimedAmount = claimedRows.reduce((s, r) => s + (r.amount_cents || 0), 0);
+
+    if (claimedAmount <= 0) {
+      // Nothing actually claimed (already paid elsewhere) — void the empty payout.
+      await db.from('affiliate_payouts').update({ status: 'cancelled', amount_cents: 0 }).eq('id', payoutId);
+      continue;
+    }
+    if (claimedAmount !== g.amountCents) {
+      await db.from('affiliate_payouts').update({ amount_cents: claimedAmount }).eq('id', payoutId);
+    }
+
+    // 3) Move the money (idempotency keyed to payoutId), then finalize the row.
+    const outcome = await attemptStripeTransfer(db, owner, claimedAmount, g.currency, payoutId);
+    if (outcome.kind === 'error') {
+      // Transfer failed → revert the claim so it retries next run, mark failed.
+      await db
+        .from('commission_ledger')
+        .update({ status: 'approved', payout_id: null })
+        .in('id', claimedRows.map((r) => r.id));
+      await db.from('affiliate_payouts').update({ status: 'failed', error: outcome.error }).eq('id', payoutId);
+      failures.push({ affiliateUserId: owner, amountCents: claimedAmount, error: outcome.error });
+      continue;
+    }
+
+    const method = outcome.kind === 'stripe' ? 'stripe' : 'other';
+    await db
+      .from('affiliate_payouts')
+      .update({ status: 'paid', method, tx_ref: outcome.txRef, is_tpso: outcome.kind === 'stripe' })
+      .eq('id', payoutId);
+    totalPaid += claimedAmount;
+    rowsMarkedPaid += claimedRows.length;
+    partners.push({ affiliateUserId: owner, amountCents: claimedAmount, codes: [...g.codes], method, txRef: outcome.txRef, payoutId });
   }
+
+  const totalCents = opts.dryRun ? totalAttempted : totalPaid;
 
   // Audit the run
   if (!opts.dryRun && partners.length) {
@@ -141,16 +217,18 @@ export async function runPayouts(opts: {
         range_start: today,
         range_end: today,
         codes,
-        total_approved_cents_before: totalCents,
-        total_marked_paid_cents: totalCents,
+        total_approved_cents_before: totalAttempted,
+        total_marked_paid_cents: totalPaid,
         count_codes: codes.length,
-        count_rows_marked: approved.length,
-        meta: { partners: partners.length },
+        count_rows_marked: rowsMarkedPaid,
+        meta: { partners: partners.length, failures: failures.length },
       })
       .select('id')
       .single();
 
     if (run?.id) {
+      // Only codes belonging to a successfully-paid partner count as paid.
+      const paidCodes = new Set<string>(partners.flatMap((p) => p.codes));
       const itemsByCode = new Map<string, { approved: number; rows: number }>();
       for (const a of approved) {
         const it = itemsByCode.get(a.referral_code) ?? { approved: 0, rows: 0 };
@@ -162,12 +240,12 @@ export async function runPayouts(opts: {
         payout_run_id: run.id,
         referral_code: code,
         approved_cents_before: it.approved,
-        rows_marked: it.rows,
-        marked_paid_cents: it.approved,
+        rows_marked: paidCodes.has(code) ? it.rows : 0,
+        marked_paid_cents: paidCodes.has(code) ? it.approved : 0,
       }));
       if (items.length) await db.from('payout_run_items').insert(items);
     }
   }
 
-  return { dryRun: !!opts.dryRun, totalCents, partners };
+  return { dryRun: !!opts.dryRun, totalCents, partners, failures };
 }

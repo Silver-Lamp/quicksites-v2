@@ -21,7 +21,7 @@ The commercial thesis (see [`docs/MONETIZATION.md`](docs/MONETIZATION.md)): **ne
 
 | Layer | Choice |
 |---|---|
-| Framework | **Next.js 15.4.6, App Router** (`app/`), React 18, TypeScript |
+| Framework | **Next.js 15.2.6, App Router** (`app/`), React 18, TypeScript |
 | Hosting | Vercel (single deploy today; cron via `vercel.json`) |
 | Data / Auth | **Supabase** (Postgres + Auth + Storage), RLS on commerce tables |
 | Payments | **Stripe** (+ Stripe Connect for merchant payouts), platform fees |

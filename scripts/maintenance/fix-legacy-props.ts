@@ -2,8 +2,8 @@
 import { createClient } from '@supabase/supabase-js';
 import { upgradeLegacyBlocksDeep } from '@/app/api/dev/seed/_lib/upgradeLegacyBlocks';
 
-const URL  = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://kcwruliugwidsdgsrthy.supabase.co';
-const KEY  = process.env.SUPABASE_SERVICE_ROLE_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imtjd3J1bGl1Z3dpZHNkZ3NydGh5Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc0Nzg5NzQ3MiwiZXhwIjoyMDYzNDczNDcyfQ.FEkCeVDvPay56cVlWCltQcsS7V9Cx5I-Q-yI9QuGSLU';
+const URL  = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const KEY  = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
 if (!URL || !KEY) {
   console.error('Missing NEXT_PUBLIC_SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY');

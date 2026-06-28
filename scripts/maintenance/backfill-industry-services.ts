@@ -16,8 +16,8 @@
 import { createClient } from '@supabase/supabase-js';
 import { generateServices } from '@/lib/generateServices';
 
-const URL  = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://kcwruliugwidsdgsrthy.supabase.co';
-const KEY  = process.env.SUPABASE_SERVICE_ROLE_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imtjd3J1bGl1Z3dpZHNkZ3NydGh5Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc0Nzg5NzQ3MiwiZXhwIjoyMDYzNDczNDcyfQ.FEkCeVDvPay56cVlWCltQcsS7V9Cx5I-Q-yI9QuGSLU';
+const URL  = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const KEY  = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const TBL  = process.env.TEMPLATES_TABLE || 'templates';
 const DRY       = process.env.DRY === '1';
 const LIMIT     = Number(process.env.LIMIT || '0');         // 0 = no cap

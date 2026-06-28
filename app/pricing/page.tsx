@@ -3,7 +3,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
-import { Check, ArrowRight, Sparkles } from 'lucide-react';
+import { Check, ArrowRight, Sparkles, Store, Users, Handshake, Globe, BadgeCheck } from 'lucide-react';
 
 // shadcn/ui — adjust imports if your paths differ
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
@@ -11,293 +11,144 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Switch } from '@/components/ui/switch';
 import SiteHeader from '@/components/site/site-header';
 
 /**
- * QuickSites Pricing Page
+ * QuickSites Pricing — hybrid model (see docs/PRICING_REDESIGN.md)
+ *  A) Build my own  → free build/host/publish, 5% per order when you sell
+ *  B) Run for clients → flat agency subscription (no per-order fee)
+ *  C) Resell (partner) → 80% lifetime residual → /partners
  */
 
 // ---- Config ----
-const COPY = {
-  heroKicker: 'Pricing',
-  heroTitle: 'Simple, predictable pricing for sites that sell',
-  heroSubtitle:
-    "Start lean, scale fast. Every plan includes the full builder and e-commerce — Founder pricing is grandfathered for 12 months.",
-  ctas: {
-    primaryHref: '/login',
-    primary: 'Start free trial',
-    secondaryHref: '/contact',
-    secondary: 'Talk to sales',
-  },
-  ribbons: [
-    'No setup fees',
-    '14-day free trial',
-    'Free month of per-site fees on first-30-day migrations',
-  ],
-  competitorNote:
-    "Switching from another platform? We'll honor Founder pricing for 12 months.",
-};
+const ORDER_FEE_PCT = 0.05;        // Path A: take-rate on orders
+const AI_ADDON_PER_USER = 10;      // $/user/mo
+const FOUNDER_PLAN = { platform: 15, perSite: 5 }; // Path B (agency) — beta
+const PUBLIC_PLAN = { platform: 19, perSite: 6 };
+const PARTNER_FEE_SHARE = 0.8;     // partners keep 80% of the order fee
 
-// Pricing numbers
-type PlanNumbers = {
-  platform: number; // per user / month
-  perSite: number;  // flat per site / month
+const CTA = {
+  buildHref: '/login',   // create a free site (publish requires an account)
+  contactHref: '/contact',
+  partnersHref: '/partners',
 };
-
-const FOUNDER_PLAN: PlanNumbers = { platform: 15, perSite: 5 };
-const PUBLIC_PLAN: PlanNumbers = { platform: 19, perSite: 6 };
-const AI_ADDON_PER_USER = 10; // $10/user/mo
 
 // ---- Utilities ----
 const usd = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 2 });
+const usd0 = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 });
+const pct = (n: number) => `${Math.round(n * 100)}%`;
 function classNames(...xs: (string | false | null | undefined)[]) { return xs.filter(Boolean).join(' '); }
 
-// ---- Toggle component ----
-function PlanToggle({ value, onChange }: { value: 'founder' | 'public'; onChange: (v: 'founder' | 'public') => void }) {
+function Feature({ text }: { text: string }) {
   return (
-    <div className="inline-flex items-center rounded-full bg-muted p-1 shadow-inner">
-      <button
-        type="button"
-        onClick={() => onChange('founder')}
-        className={classNames('px-4 py-2 rounded-full text-sm font-medium transition',
-          value === 'founder' ? 'bg-background shadow text-foreground' : 'text-muted-foreground hover:text-foreground')}
-      >
-        Founder / Beta
-      </button>
-      <button
-        type="button"
-        onClick={() => onChange('public')}
-        className={classNames('px-4 py-2 rounded-full text-sm font-medium transition',
-          value === 'public' ? 'bg-background shadow text-foreground' : 'text-muted-foreground hover:text-foreground')}
-      >
-        Public
-      </button>
+    <div className="flex items-start gap-2">
+      <Check className="h-4 w-4 mt-0.5 shrink-0 text-sky-400" />
+      <span>{text}</span>
     </div>
   );
 }
 
-// ---- Calculator card ----
-function Calculator({
-  plan, includeAI, onToggleAI,
-}: { plan: 'founder' | 'public'; includeAI: boolean; onToggleAI: (v: boolean) => void; }) {
-  const PRICE_MIN = 10;
-  const PRICE_MAX = 2000;
-
-  const [sites, setSites] = React.useState(25);
-  const [pricePerSite, setPricePerSite] = React.useState(49); // what you charge your clients
-
-  const numbers = plan === 'founder' ? FOUNDER_PLAN : PUBLIC_PLAN;
-  const clamp = (n: number, min: number, max: number) => Math.min(max, Math.max(min, n));
-
-  // Costs (your costs)
-  const platformCost = numbers.platform;                // per user
-  const perSiteFlat = numbers.perSite;                  // flat per-site cost to you
-  const siteCost = perSiteFlat * sites;                 // per-site cost total
-  const aiCost = includeAI ? AI_ADDON_PER_USER : 0;     // per user
-  const perUserTotal = platformCost + aiCost;           // merged: platform + AI (if enabled)
-  const monthlyCost = perUserTotal + siteCost;
-
-  // Revenue & margin (what you charge)
-  const monthlyRevenue = pricePerSite * sites;
-  const grossMargin = monthlyRevenue - monthlyCost;
-
+// ---- Top-of-page path chooser ----
+function PathChooser() {
+  const paths = [
+    { icon: Store, title: 'Build my own site', blurb: 'Free to build & host. Pay only when you sell.', href: '#merchant', tag: 'Most popular' },
+    { icon: Users, title: 'Run sites for clients', blurb: 'Flat, predictable pricing for agencies.', href: '#agency', tag: 'Agencies' },
+    { icon: Handshake, title: 'Resell under my brand', blurb: 'White-label and earn 80% on every order, for life.', href: '#partner', tag: 'Partners' },
+  ];
   return (
-    <Card className="w-full border-zinc-800/50">
-      <CardHeader>
-        <CardTitle>Estimate your monthly cost</CardTitle>
-        <CardDescription>Quick napkin math — adjust sites and what you charge.</CardDescription>
-      </CardHeader>
-
-      <CardContent className="space-y-6 overflow-hidden">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {/* Sites slider + input */}
-          <div>
-            <Label htmlFor="sites">Sites</Label>
-            <div className="mt-2 flex items-center gap-3">
-              <input
-                id="sites"
-                type="range"
-                min={0}
-                max={500}
-                step={1}
-                value={sites}
-                onChange={(e) => setSites(parseInt(e.target.value || '0', 10))}
-                className="w-full"
-              />
-              <Input
-                type="number"
-                min={0}
-                value={sites}
-                onChange={(e) => setSites(Math.max(0, Number(e.target.value || 0)))}
-                className="w-24"
-              />
-            </div>
-          </div>
-
-          {/* Price you charge slider + input */}
-          <div>
-            <Label htmlFor="pps">Price you charge to resell to your clients</Label>
-            <div className="mt-2 space-y-2">
-              <div className="flex items-center gap-2">
-                <span className="text-sm text-muted-foreground">USD</span>
-                <Input
-                  id="pps"
-                  type="number"
-                  min={PRICE_MIN}
-                  max={PRICE_MAX}
-                  step={1}
-                  value={pricePerSite}
-                  onChange={(e) => setPricePerSite(clamp(Number(e.target.value || 0), PRICE_MIN, PRICE_MAX))}
-                  className="w-32"
-                />
-                <span className="text-xs text-muted-foreground">
-                  {usd.format(PRICE_MIN)}–{usd.format(PRICE_MAX)}
-                </span>
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      {paths.map((p) => (
+        <Link key={p.title} href={p.href} className="group">
+          <Card className="h-full border-zinc-800/60 transition hover:border-sky-500/50 hover:bg-sky-500/[0.03]">
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <p.icon className="h-6 w-6 text-sky-400" />
+                <Badge variant="secondary">{p.tag}</Badge>
               </div>
-              <input
-                aria-label="Price you charge slider"
-                type="range"
-                min={PRICE_MIN}
-                max={PRICE_MAX}
-                step={1}
-                value={pricePerSite}
-                onChange={(e) => setPricePerSite(clamp(parseInt(e.target.value || '0', 10), PRICE_MIN, PRICE_MAX))}
-                className="w-full"
-              />
-            </div>
+              <CardTitle className="mt-2 text-lg">{p.title}</CardTitle>
+              <CardDescription>{p.blurb}</CardDescription>
+            </CardHeader>
+            <CardFooter>
+              <span className="inline-flex items-center text-sm font-medium text-sky-400">
+                See details <ArrowRight className="ml-1 h-4 w-4 transition group-hover:translate-x-0.5" />
+              </span>
+            </CardFooter>
+          </Card>
+        </Link>
+      ))}
+    </div>
+  );
+}
+
+// ---- Path A: Merchant order-fee calculator ----
+function OrderFeeCalc() {
+  const [gmv, setGmv] = React.useState(2000); // monthly sales
+  const fee = gmv * ORDER_FEE_PCT;
+  const keep = gmv - fee;
+  return (
+    <Card className="border-zinc-800/60">
+      <CardHeader>
+        <CardTitle>What “pay when you sell” looks like</CardTitle>
+        <CardDescription>We take {pct(ORDER_FEE_PCT)} of each order. No monthly fee on the free plan.</CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-5">
+        <div>
+          <Label htmlFor="gmv">Your monthly sales</Label>
+          <div className="mt-2 flex items-center gap-3">
+            <input
+              id="gmv" type="range" min={0} max={50000} step={100}
+              value={gmv} onChange={(e) => setGmv(parseInt(e.target.value || '0', 10))}
+              className="w-full"
+            />
+            <Input
+              type="number" min={0} value={gmv}
+              onChange={(e) => setGmv(Math.max(0, Number(e.target.value || 0)))}
+              className="w-28"
+            />
           </div>
-
-          {/* AI toggle (wrapping safe) */}
-          <div className="flex items-end md:items-center justify-between md:justify-start gap-3 flex-wrap">
-            <div className="flex items-center gap-3 min-w-0">
-              <Switch id="ai" checked={includeAI} onCheckedChange={onToggleAI} />
-              <Label htmlFor="ai" className="flex items-center gap-1 cursor-pointer min-w-0 break-words whitespace-normal">
-                <Sparkles className="h-4 w-4 shrink-0" />
-                <span className="min-w-0 break-words">
-                  Include AI Assist Pack <span className="text-muted-foreground">(+{usd.format(AI_ADDON_PER_USER)}/user/mo)</span>
-                </span>
-              </Label>
-            </div>
-          </div>
         </div>
-
-        {/* Merged tiles (Platform + AI) and Per-site */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <SummaryTile
-            label="Per user total"
-            value={usd.format(perUserTotal)}
-            sub={
-              includeAI
-                ? `${usd.format(platformCost)} platform + ${usd.format(AI_ADDON_PER_USER)} AI`
-                : `${usd.format(platformCost)} platform (AI optional)`
-            }
-          />
-          <SummaryTile
-            label={`Per-site cost × ${sites}`}
-            value={usd.format(siteCost)}
-            sub={`${usd.format(perSiteFlat)} each`}
-          />
+        <div className="grid grid-cols-3 gap-3">
+          <Stat label="You sell" value={usd0.format(gmv)} />
+          <Stat label={`QuickSites (${pct(ORDER_FEE_PCT)})`} value={usd0.format(fee)} />
+          <Stat label="You keep" value={usd0.format(keep)} highlight />
         </div>
-
-        {/* Revenue & margin (react to price slider) */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <SummaryTile
-            label="Your revenue"
-            value={usd.format(monthlyRevenue)}
-            sub={`${usd.format(pricePerSite)} × ${sites}`}
-            highlight
-          />
-          <SummaryTile
-            label="Gross margin"
-            value={usd.format(grossMargin)}
-            sub="before payment processing"
-            highlight
-            subtle
-          />
-        </div>
-
-        {/* Live breakdown */}
-        <p className="text-xs text-muted-foreground" aria-live="polite">
-          {sites} site{sites === 1 ? '' : 's'} × {usd.format(pricePerSite)} billed ={' '}
-          <span className="font-medium text-foreground">{usd.format(monthlyRevenue)}</span> revenue. Your per-user total{' '}
-          <span className="font-medium text-foreground">{usd.format(perUserTotal)}</span> + per-site costs{' '}
-          <span className="font-medium text-foreground">{usd.format(siteCost)}</span> ={' '}
-          <span className="font-medium text-foreground">{usd.format(monthlyCost)}</span>. Estimated gross margin:{' '}
-          <span className="font-medium text-foreground">{usd.format(grossMargin)}</span>.
+        <p className="text-xs text-muted-foreground">
+          Collected automatically via Stripe at checkout. Plus standard Stripe processing fees. No sales, no fee.
         </p>
       </CardContent>
     </Card>
   );
 }
 
-
-
-function SummaryTile({ label, value, sub, highlight = false, subtle = false }:{
-  label: string; value: string; sub?: string; highlight?: boolean; subtle?: boolean;
-}) {
+function Stat({ label, value, highlight = false }: { label: string; value: string; highlight?: boolean }) {
   return (
-    <Card className={classNames('overflow-hidden border-zinc-800/50', highlight && 'border-primary/40')}>
-      <CardHeader className="pb-2">
-        <CardDescription>{label}</CardDescription>
-        <CardTitle className={classNames('text-2xl', highlight && 'text-primary')}>{value}</CardTitle>
-      </CardHeader>
-      {sub && <CardContent className={classNames('pt-0 text-sm', subtle ? 'text-muted-foreground' : '')}>{sub}</CardContent>}
-    </Card>
+    <div className={classNames('rounded-xl border border-zinc-800/60 p-4', highlight && 'border-sky-500/40 bg-sky-500/[0.04]')}>
+      <div className="text-xs text-muted-foreground">{label}</div>
+      <div className={classNames('mt-1 text-xl font-semibold', highlight && 'text-sky-400')}>{value}</div>
+    </div>
   );
 }
 
-// ---- Plan details card ----
-function PlanCard({ plan, kind }: { plan: PlanNumbers; kind: 'founder' | 'public' }) {
-  const title = kind === 'founder' ? 'Founder / Beta' : 'Public';
-  const blurb = kind === 'founder'
-    ? 'Grandfathered for 12 months. Limited time while we scale early partners.'
-    : 'Standard pricing once the beta window closes — still simple and fair.';
-
+// ---- Path B: Agency tier card + reseller calculator ----
+function PlanToggle({ value, onChange }: { value: 'founder' | 'public'; onChange: (v: 'founder' | 'public') => void }) {
   return (
-    <Card className="h-full border-zinc-800/50">
-      <CardHeader>
-        <div className="flex items-center justify-between">
-          <CardTitle className="text-xl">{title}</CardTitle>
-          {kind === 'founder' ? <Badge variant="secondary">Grandfathered</Badge> : <Badge variant="outline">Standard</Badge>}
-        </div>
-        <CardDescription>{blurb}</CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="grid grid-cols-2 gap-4">
-          <NumberTile label="Platform" value={usd.format(plan.platform)} suffix="/user/mo" />
-          <NumberTile label="Per-site (flat)" value={usd.format(plan.perSite)} suffix="/site/mo" />
-        </div>
-
-        <div className="rounded-lg bg-muted/40 p-3 text-xs text-muted-foreground">
-          No volume tiers. Founder plan is a flat ${FOUNDER_PLAN.perSite.toFixed(2)}/site/mo for 12 months from signup.
-        </div>
-
-        <ul className="space-y-2 text-sm">
-          <li className="flex items-start gap-2"><Check className="h-4 w-4 mt-0.5" /> Unlimited pages, templates, and editors</li>
-          <li className="flex items-start gap-2"><Check className="h-4 w-4 mt-0.5" /> Multi-tenant routing & SEO-ready sitemaps</li>
-          <li className="flex items-start gap-2"><Check className="h-4 w-4 mt-0.5" /> API + webhooks (rollout during beta)</li>
-          <li className="flex items-start gap-2"><Check className="h-4 w-4 mt-0.5" /> Email support; Slack access for high-volume partners</li>
-        </ul>
-      </CardContent>
-      <CardFooter className="justify-between">
-        <Link href={COPY.ctas.primaryHref} className="inline-flex">
-          <Button>
-            {COPY.ctas.primary}
-            <ArrowRight className="ml-2 h-4 w-4" />
-          </Button>
-        </Link>
-        <Link href={COPY.ctas.secondaryHref} className="inline-flex">
-          <Button variant="ghost">{COPY.ctas.secondary}</Button>
-        </Link>
-      </CardFooter>
-    </Card>
+    <div className="inline-flex items-center rounded-full bg-muted p-1 shadow-inner">
+      {(['founder', 'public'] as const).map((v) => (
+        <button
+          key={v} type="button" onClick={() => onChange(v)}
+          className={classNames('px-4 py-1.5 rounded-full text-sm font-medium transition',
+            value === v ? 'bg-background shadow text-foreground' : 'text-muted-foreground hover:text-foreground')}
+        >
+          {v === 'founder' ? 'Founder / Beta' : 'Public'}
+        </button>
+      ))}
+    </div>
   );
 }
 
 function NumberTile({ label, value, suffix }: { label: string; value: string; suffix?: string }) {
   return (
-    <div className="rounded-xl border border-zinc-800/50 p-4 overflow-hidden">
+    <div className="rounded-xl border border-zinc-800/60 p-4 overflow-hidden">
       <div className="text-sm text-muted-foreground">{label}</div>
       <div className="text-2xl font-semibold">
         {value}{suffix ? <span className="ml-1 text-base font-normal text-muted-foreground">{suffix}</span> : null}
@@ -306,218 +157,272 @@ function NumberTile({ label, value, suffix }: { label: string; value: string; su
   );
 }
 
-// ---- AI Add-on explainer (with purple glow) ----
-function AiAddOn() {
+function AgencyPlanCard({ mode }: { mode: 'founder' | 'public' }) {
+  const plan = mode === 'founder' ? FOUNDER_PLAN : PUBLIC_PLAN;
   return (
-    <Card
-      className={classNames(
-        'h-full relative border-zinc-800/50 ring-1 ring-purple-500/25',
-        'bg-gradient-to-br from-purple-500/10 via-purple-500/5 to-transparent',
-        'shadow-[0_10px_40px_-12px_rgba(168,85,247,0.55)]'
-      )}
-    >
+    <Card className="h-full border-zinc-800/60">
       <CardHeader>
-        <div className="flex items-center gap-2">
-          <Sparkles className="h-5 w-5 text-purple-400" />
-          <CardTitle>AI Assist Pack</CardTitle>
-          <Badge className="ml-auto" variant="secondary">+{usd.format(AI_ADDON_PER_USER)}/user/mo</Badge>
+        <div className="flex items-center justify-between">
+          <CardTitle className="text-xl">{mode === 'founder' ? 'Founder / Beta' : 'Public'}</CardTitle>
+          {mode === 'founder' ? <Badge variant="secondary">Grandfathered 12 mo</Badge> : <Badge variant="outline">Standard</Badge>}
         </div>
-        <CardDescription>Speed up content and on-page SEO. Keep it optional at first; add it when it pays for itself.</CardDescription>
+        <CardDescription>Flat, predictable pricing for agencies who’d rather not share order revenue. No per-order fee on this plan.</CardDescription>
       </CardHeader>
-      <CardContent className="space-y-3 text-sm">
-        <Feature text="AI page briefs & outlines" />
-        <Feature text="Meta, schema & FAQ suggestions" />
-        <Feature text="Content drafts with tone controls" />
-        <Feature text="Hero image prompts & alt-text" />
-        <Feature text="One-click internal linking hints" />
-        <div className="rounded-lg bg-muted p-3 text-xs text-muted-foreground">
-          Fair-use during beta; we may introduce soft usage caps later. You’ll always see costs before you opt in.
+      <CardContent className="space-y-4">
+        <div className="grid grid-cols-2 gap-4">
+          <NumberTile label="Platform" value={usd.format(plan.platform)} suffix="/user/mo" />
+          <NumberTile label="Per site (flat)" value={usd.format(plan.perSite)} suffix="/site/mo" />
+        </div>
+        <ul className="space-y-2 text-sm">
+          <Feature text="Unlimited pages, templates, and editors" />
+          <Feature text="Multi-tenant routing & SEO-ready sitemaps" />
+          <Feature text="Custom domains included" />
+          <Feature text="No watermark on published sites" />
+          <Feature text="Email support; Slack for high-volume partners" />
+        </ul>
+        <div className="rounded-lg bg-amber-500/10 border border-amber-500/30 p-3 text-xs text-amber-200">
+          Flat per-site billing is rolling out in beta — we’ll set your account up directly. Talk to us to get started.
         </div>
       </CardContent>
-      <CardFooter>
-        <Link href={COPY.ctas.primaryHref} className="inline-flex">
-          <Button variant="outline">
-            Enable AI Add-on
-            <ArrowRight className="ml-2 h-4 w-4" />
-          </Button>
-        </Link>
+      <CardFooter className="justify-between">
+        <Link href={CTA.contactHref}><Button>Talk to us<ArrowRight className="ml-2 h-4 w-4" /></Button></Link>
+        <Link href={CTA.buildHref}><Button variant="ghost">Start a free trial</Button></Link>
       </CardFooter>
     </Card>
   );
 }
 
-function Feature({ text }: { text: string }) {
+function AgencyCalculator({ mode }: { mode: 'founder' | 'public' }) {
+  const numbers = mode === 'founder' ? FOUNDER_PLAN : PUBLIC_PLAN;
+  const [sites, setSites] = React.useState(25);
+  const [pricePerSite, setPricePerSite] = React.useState(49);
+  const clamp = (n: number, min: number, max: number) => Math.min(max, Math.max(min, n));
+
+  const siteCost = numbers.perSite * sites;
+  const monthlyCost = numbers.platform + siteCost;
+  const revenue = pricePerSite * sites;
+  const margin = revenue - monthlyCost;
+
   return (
-    <div className="flex items-start gap-2">
-      <Check className="h-4 w-4 mt-0.5" />
-      <span>{text}</span>
-    </div>
+    <Card className="w-full border-zinc-800/60">
+      <CardHeader>
+        <CardTitle>Agency margin calculator</CardTitle>
+        <CardDescription>What you’d pay us vs. what you charge your clients.</CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div>
+            <Label htmlFor="sites">Client sites</Label>
+            <div className="mt-2 flex items-center gap-3">
+              <input id="sites" type="range" min={0} max={500} step={1} value={sites}
+                onChange={(e) => setSites(parseInt(e.target.value || '0', 10))} className="w-full" />
+              <Input type="number" min={0} value={sites}
+                onChange={(e) => setSites(Math.max(0, Number(e.target.value || 0)))} className="w-24" />
+            </div>
+          </div>
+          <div>
+            <Label htmlFor="pps">Price you charge each client / mo</Label>
+            <div className="mt-2 flex items-center gap-3">
+              <input id="pps" type="range" min={10} max={500} step={1} value={pricePerSite}
+                onChange={(e) => setPricePerSite(clamp(parseInt(e.target.value || '0', 10), 10, 500))} className="w-full" />
+              <Input type="number" min={10} value={pricePerSite}
+                onChange={(e) => setPricePerSite(clamp(Number(e.target.value || 0), 10, 5000))} className="w-24" />
+            </div>
+          </div>
+        </div>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <Stat label={`Platform`} value={usd.format(numbers.platform)} />
+          <Stat label={`${sites} sites × ${usd.format(numbers.perSite)}`} value={usd.format(siteCost)} />
+          <Stat label="Your revenue" value={usd.format(revenue)} />
+          <Stat label="Gross margin" value={usd.format(margin)} highlight />
+        </div>
+        <p className="text-xs text-muted-foreground" aria-live="polite">
+          {sites} site{sites === 1 ? '' : 's'} → you pay <span className="font-medium text-foreground">{usd.format(monthlyCost)}</span>/mo,
+          bill clients <span className="font-medium text-foreground">{usd.format(revenue)}</span>/mo →
+          margin <span className="font-medium text-foreground">{usd.format(margin)}</span>/mo (before payment processing).
+        </p>
+      </CardContent>
+    </Card>
   );
 }
 
-// ---- FAQs ----
-const FAQS: { q: string; a: string }[] = [
-  { q: 'Can I lock in Founder pricing?', a: 'Yes. Accounts created during the beta window are grandfathered at a flat $5/site/mo for 12 months from signup.' },
-  { q: 'Do you offer volume discounts?', a: 'Not during beta. Founder pricing is already a reduced flat rate designed to be simple and predictable.' },
-  { q: 'What if I only need the platform for myself?', a: 'Pricing is per user. Many agencies run a single owner account; you can add more seats later as you scale operations.' },
-  { q: 'What’s included without the AI add-on?', a: 'Everything you need to build and host sites: templates, editor, routing, sitemaps, and support. The AI pack layers content and on-page accelerators on top.' },
-];
-
-function FaqList() {
+// ---- Add-ons ----
+function AddOns() {
+  const items = [
+    { icon: Sparkles, title: 'AI Assist Pack', price: `+${usd.format(AI_ADDON_PER_USER)}/user/mo`, blurb: 'Hero/services/FAQ copy, meta & schema, image prompts. The free plan includes a starter AI allowance.' },
+    { icon: Globe, title: 'Custom domain', price: 'Paid plans', blurb: 'Publish to your own domain (free sites use a quicksites.ai subdomain). Auto DNS + SSL.' },
+    { icon: BadgeCheck, title: 'Remove branding', price: 'Paid plans', blurb: 'Drop the “Made with QuickSites” badge for a fully white-labeled site.' },
+  ];
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-      {FAQS.map((item, i) => (
-        <Card key={i} className="border-zinc-800/50">
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      {items.map((it) => (
+        <Card key={it.title} className="border-zinc-800/60">
           <CardHeader>
-            <CardTitle className="text-base">{item.q}</CardTitle>
+            <div className="flex items-center gap-2">
+              <it.icon className="h-5 w-5 text-sky-400" />
+              <CardTitle className="text-base">{it.title}</CardTitle>
+              <Badge className="ml-auto" variant="secondary">{it.price}</Badge>
+            </div>
           </CardHeader>
-          <CardContent className="text-sm text-muted-foreground">{item.a}</CardContent>
+          <CardContent className="text-sm text-muted-foreground">{it.blurb}</CardContent>
         </Card>
       ))}
     </div>
   );
 }
 
+// ---- FAQs ----
+const FAQS: { q: string; a: string }[] = [
+  { q: 'Is it really free to start?', a: 'Yes — building, hosting, and publishing to a quicksites.ai subdomain are free. On the free (merchant) plan we only take a 5% fee on orders you actually sell. No sales, no fee.' },
+  { q: 'When would I pay a subscription instead?', a: 'If you’re an agency running many client sites and prefer flat, predictable costs over a per-order fee, the Agency plan bills per user + per site with no order fee. Talk to us to get set up during the beta.' },
+  { q: 'How do partners make money?', a: 'Partners white-label QuickSites, set their merchants’ order fee (up to 10%), and keep 80% of every fee as a lifetime residual. See the partner program for details.' },
+  { q: 'What about payment processing fees?', a: 'Standard Stripe processing fees apply on top of our platform fee, the same as any checkout. You’ll always see fees before you publish.' },
+];
+
 // ---- Page ----
 export default function PricingPage() {
   const [mode, setMode] = React.useState<'founder' | 'public'>('founder');
-  const [includeAI, setIncludeAI] = React.useState(false);
-  const numbers = mode === 'founder' ? FOUNDER_PLAN : PUBLIC_PLAN;
 
   return (
     <>
-    <SiteHeader sticky={true} />
-    <div className="relative min-h-screen flex flex-col bg-zinc-950 text-white overflow-hidden">
+      <SiteHeader sticky />
+      <div className="relative min-h-screen flex flex-col bg-zinc-950 text-white overflow-hidden">
+        {/* hero */}
+        <section className="relative overflow-hidden">
+          <motion.div
+            initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}
+            className="mx-auto max-w-6xl px-6 pt-14 pb-8"
+          >
+            <Badge variant="outline" className="mb-4">Pricing</Badge>
+            <h1 className="text-3xl md:text-5xl font-semibold tracking-tight">Start free. Pay when you sell.</h1>
+            <p className="mt-3 max-w-2xl text-muted-foreground">
+              Build and host your site for free — including a storefront and Stripe checkout. We take a small {pct(ORDER_FEE_PCT)} fee
+              only on the orders you actually sell. Running sites for clients or reselling under your brand? There’s a path for that too.
+            </p>
+            <div className="mt-6 flex flex-wrap items-center gap-3">
+              <Link href={CTA.buildHref}><Button size="lg">Create your free site<ArrowRight className="ml-2 h-4 w-4" /></Button></Link>
+              <Link href={CTA.contactHref}><Button size="lg" variant="ghost">Talk to us</Button></Link>
+            </div>
+            <div className="mt-6 flex flex-wrap gap-2">
+              {['Free to build & host', 'No card to start', `${pct(ORDER_FEE_PCT)} per order — that’s it on free`].map((r) => (
+                <Badge key={r} variant="secondary">{r}</Badge>
+              ))}
+            </div>
+          </motion.div>
+          <div className="pointer-events-none absolute inset-0 -z-10 bg-gradient-to-b from-transparent via-sky-500/5 to-transparent" />
+        </section>
 
-      {/* hero */}
-      <section className="relative overflow-hidden">
-        <motion.div
-          initial={{ opacity: 0, y: 8 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-          className="mx-auto max-w-6xl px-6 pt-14 pb-6"
-        >
-          <div className="mb-4 flex flex-wrap items-center gap-3">
-            <Badge variant="outline">{COPY.heroKicker}</Badge>
+        {/* path chooser */}
+        <section className="mx-auto w-full max-w-6xl px-6 py-4">
+          <PathChooser />
+        </section>
+
+        {/* Path A — Merchant */}
+        <section id="merchant" className="mx-auto w-full max-w-6xl px-6 py-10 scroll-mt-24">
+          <div className="mb-6 flex items-center gap-2">
+            <Store className="h-6 w-6 text-sky-400" />
+            <h2 className="text-2xl font-semibold">Build my own site</h2>
+            <Badge variant="secondary" className="ml-2">Free</Badge>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <Card className="border-zinc-800/60">
+              <CardHeader>
+                <CardTitle>Free</CardTitle>
+                <CardDescription>Everything you need to launch and sell.</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-2 text-sm">
+                <Feature text="Drag-and-drop builder, unlimited pages" />
+                <Feature text="Free hosting on a quicksites.ai subdomain" />
+                <Feature text="Storefront + Stripe checkout on every site" />
+                <Feature text="Starter AI allowance (copy, images)" />
+                <Feature text={`We take ${pct(ORDER_FEE_PCT)} per order — nothing until you sell`} />
+                <div className="rounded-lg bg-muted/40 p-3 text-xs text-muted-foreground">
+                  Want your own domain or to remove the QuickSites badge? Those are paid add-ons below.
+                </div>
+              </CardContent>
+              <CardFooter>
+                <Link href={CTA.buildHref}><Button>Create your free site<ArrowRight className="ml-2 h-4 w-4" /></Button></Link>
+              </CardFooter>
+            </Card>
+            <OrderFeeCalc />
+          </div>
+        </section>
+
+        {/* Path B — Agency */}
+        <section id="agency" className="mx-auto w-full max-w-6xl px-6 py-10 scroll-mt-24 border-t border-zinc-800/60">
+          <div className="mb-6 flex flex-wrap items-center gap-3">
+            <Users className="h-6 w-6 text-sky-400" />
+            <h2 className="text-2xl font-semibold">Run sites for clients</h2>
             <PlanToggle value={mode} onChange={setMode} />
           </div>
-          <h1 className="text-3xl md:text-5xl font-semibold tracking-tight">{COPY.heroTitle}</h1>
-          <p className="mt-3 max-w-2xl text-muted-foreground">{COPY.heroSubtitle}</p>
-          <div className="mt-6 flex flex-wrap items-center gap-3">
-            <Link href={COPY.ctas.primaryHref} className="inline-flex">
-              <Button size="lg">
-                {COPY.ctas.primary}
-                <ArrowRight className="ml-2 h-4 w-4" />
-              </Button>
-            </Link>
-            <Link href={COPY.ctas.secondaryHref} className="inline-flex">
-              <Button size="lg" variant="ghost">{COPY.ctas.secondary}</Button>
-            </Link>
+          <p className="mb-6 max-w-2xl text-sm text-muted-foreground">
+            Prefer flat, predictable costs to a per-order fee? The Agency plan bills per user + per site with{' '}
+            <span className="text-foreground font-medium">no platform fee on orders</span>.
+          </p>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <AgencyPlanCard mode={mode} />
+            <AgencyCalculator mode={mode} />
           </div>
+        </section>
 
-          <div className="mt-6 max-w-2xl rounded-xl border border-sky-500/30 bg-sky-500/5 p-4 text-sm">
-            <span className="font-medium text-foreground">E-commerce is included</span>{' '}
-            <span className="text-muted-foreground">— a storefront and Stripe checkout on every site. </span>
-            <span className="text-muted-foreground">Reselling to your own network? </span>
-            <Link href="/partners" className="font-medium text-sky-500 underline underline-offset-4">
-              See the partner program →
-            </Link>
+        {/* Path C — Partner */}
+        <section id="partner" className="mx-auto w-full max-w-6xl px-6 py-10 scroll-mt-24 border-t border-zinc-800/60">
+          <Card className="border-zinc-800/60 bg-gradient-to-br from-sky-500/10 to-transparent">
+            <CardContent className="py-8 flex flex-col md:flex-row items-center justify-between gap-6">
+              <div className="max-w-2xl">
+                <div className="flex items-center gap-2">
+                  <Handshake className="h-6 w-6 text-sky-400" />
+                  <h2 className="text-2xl font-semibold">Resell under my brand</h2>
+                </div>
+                <p className="mt-2 text-muted-foreground">
+                  White-label QuickSites for your network. Set each merchant’s order fee (up to 10%), keep{' '}
+                  <span className="text-foreground font-medium">{pct(PARTNER_FEE_SHARE)} of every fee as a lifetime residual</span>.
+                  Hosting is free for your merchants.
+                </p>
+              </div>
+              <Link href={CTA.partnersHref}><Button size="lg">See the partner program<ArrowRight className="ml-2 h-4 w-4" /></Button></Link>
+            </CardContent>
+          </Card>
+        </section>
+
+        {/* Add-ons */}
+        <section id="addons" className="mx-auto w-full max-w-6xl px-6 py-10 scroll-mt-24 border-t border-zinc-800/60">
+          <h2 className="mb-6 text-2xl font-semibold">Add-ons</h2>
+          <AddOns />
+        </section>
+
+        {/* FAQ */}
+        <section className="mx-auto w-full max-w-6xl px-6 py-10 border-t border-zinc-800/60">
+          <h2 className="mb-6 text-2xl font-semibold">Frequently asked</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {FAQS.map((item, i) => (
+              <Card key={i} className="border-zinc-800/60">
+                <CardHeader><CardTitle className="text-base">{item.q}</CardTitle></CardHeader>
+                <CardContent className="text-sm text-muted-foreground">{item.a}</CardContent>
+              </Card>
+            ))}
           </div>
+        </section>
 
-          <div className="mt-6 flex flex-wrap gap-2">
-            {COPY.ribbons.map((r) => (<Badge key={r} variant="secondary">{r}</Badge>))}
+        {/* CTA footer */}
+        <section className="mx-auto w-full max-w-6xl px-6 py-12">
+          <Card className="bg-gradient-to-br from-sky-500/5 to-transparent border-zinc-800/60">
+            <CardContent className="py-8 flex flex-col md:flex-row items-center justify-between gap-6">
+              <div>
+                <h3 className="text-xl md:text-2xl font-semibold">Launch your site in minutes — free.</h3>
+                <p className="text-muted-foreground">No card required. You only pay when you make a sale.</p>
+              </div>
+              <div className="flex items-center gap-3">
+                <Link href={CTA.buildHref}><Button size="lg">Create your free site<ArrowRight className="ml-2 h-4 w-4" /></Button></Link>
+                <Link href={CTA.contactHref}><Button size="lg" variant="outline">Talk to us</Button></Link>
+              </div>
+            </CardContent>
+          </Card>
+          <div className="mt-6 text-center">
+            <Link href="/"><Button variant="ghost" size="sm">← Back home</Button></Link>
           </div>
-          <p className="mt-2 text-xs text-muted-foreground">{COPY.competitorNote}</p>
-        </motion.div>
-
-        {/* soft gradient bg */}
-        <div className="pointer-events-none absolute inset-0 -z-10 bg-gradient-to-b from-transparent via-primary/5 to-transparent" />
-      </section>
-
-      {/* pricing cards + AI + calculator */}
-      <section className="mx-auto max-w-6xl px-6 py-8 grid grid-cols-1 md:grid-cols-2 gap-6">
-        <PlanCard plan={numbers} kind={mode} />
-        <AiAddOn />
-        <div className="md:col-span-2">
-          <Calculator plan={mode} includeAI={includeAI} onToggleAI={setIncludeAI} />
-        </div>
-      </section>
-
-      {/* comparison table */}
-      <section className="mx-auto max-w-6xl px-6 py-8">
-        <Card className="border-zinc-800/50">
-          <CardHeader>
-            <CardTitle>Side-by-side</CardTitle>
-            <CardDescription>Flip the toggle to see numbers change. Flat per-site — no volume tiers.</CardDescription>
-          </CardHeader>
-          <CardContent className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="text-left text-muted-foreground">
-                  <th className="py-2 pr-4">Plan</th>
-                  <th className="py-2 pr-4">Platform (per user)</th>
-                  <th className="py-2 pr-4">Per-site (flat)</th>
-                  <th className="py-2 pr-4">AI Pack (optional)</th>
-                </tr>
-              </thead>
-              <tbody>
-                <Row planName="Founder / Beta" p={FOUNDER_PLAN} />
-                <Row planName="Public" p={PUBLIC_PLAN} dim />
-              </tbody>
-            </table>
-          </CardContent>
-        </Card>
-      </section>
-
-      {/* FAQs */}
-      <section className="mx-auto max-w-6xl px-6 py-10">
-        <div className="mb-6">
-          <h2 className="text-2xl font-semibold">Frequently asked</h2>
-          <p className="text-muted-foreground">Details on billing and the beta window.</p>
-        </div>
-        <FaqList />
-      </section>
-
-      {/* CTA footer */}
-      <section className="mx-auto max-w-6xl px-6 py-12">
-        <Card className="bg-gradient-to-br from-primary/5 to-transparent border-zinc-800/50">
-          <CardContent className="py-8 flex flex-col md:flex-row items-center justify-between gap-6">
-            <div>
-              <h3 className="text-xl md:text-2xl font-semibold">Ready to launch your next 10 sites?</h3>
-              <p className="text-muted-foreground">Start on Founder pricing today — we&apos;ll grandfather it for 12 months.</p>
-            </div>
-            <div className="flex items-center gap-3">
-              <Link href={COPY.ctas.primaryHref} className="inline-flex">
-                <Button size="lg">
-                  {COPY.ctas.primary}
-                  <ArrowRight className="ml-2 h-4 w-4" />
-                </Button>
-              </Link>
-              <Link href={COPY.ctas.secondaryHref} className="inline-flex">
-                <Button size="lg" variant="outline">{COPY.ctas.secondary}</Button>
-              </Link>
-            </div>
-          </CardContent>
-        </Card>
-        {/* another home link at bottom for good measure */}
-        <div className="mt-6 text-center">
-          <Link href="/" className="inline-flex">
-            <Button variant="ghost" size="sm">← Back home</Button>
-          </Link>
-        </div>
-      </section>
-    </div>
+        </section>
+      </div>
     </>
-  );
-}
-
-function Row({ planName, p, dim = false }: { planName: string; p: PlanNumbers; dim?: boolean }) {
-  return (
-    <tr className={classNames('border-t border-zinc-800/50', dim && 'opacity-80')}>
-      <td className="py-3 pr-4 font-medium">{planName}</td>
-      <td className="py-3 pr-4">{usd.format(p.platform)}/mo</td>
-      <td className="py-3 pr-4">{usd.format(p.perSite)}/site/mo</td>
-      <td className="py-3 pr-4">+{usd.format(AI_ADDON_PER_USER)}/user/mo</td>
-    </tr>
   );
 }

@@ -3,3 +3,17 @@
 
 # Linting disabled - run manually or in CI
 # npm run lint
+
+# Secret scan on staged changes. Skips gracefully when gitleaks isn't installed
+# (CI still scans every push/PR via .github/workflows/secret-scan.yml).
+if command -v gitleaks >/dev/null 2>&1; then
+  if ! gitleaks protect --staged --redact --no-banner; then
+    echo "✖ gitleaks found a potential secret in staged changes — commit aborted."
+    echo "  Remove the secret (use env vars), or if it's a false positive add a"
+    echo "  .gitleaksignore fingerprint. Never commit real keys."
+    exit 1
+  fi
+else
+  echo "ℹ gitleaks not installed — skipping local secret scan (CI will still scan)."
+  echo "  Install it: brew install gitleaks"
+fi

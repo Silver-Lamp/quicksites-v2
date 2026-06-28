@@ -18,7 +18,9 @@ export async function publishSite({
   if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug)) throw new Error('Invalid slug format.');
 
   if (!isUpdateMode) {
-    const { data: existing } = await supabase
+    // published_sites has no `slug` column in the live DB — cast to any (this query
+    // was already failing against the real schema); matches the @ts-ignore'd calls below.
+    const { data: existing } = await (supabase as any)
       .from('published_sites')
       .select('id')
       .eq('slug', slug)

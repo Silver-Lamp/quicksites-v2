@@ -55,14 +55,13 @@ export default function LayoutEditor({ role = 'user' }) {
   }, [role]);
 
   const save = async () => {
-    await supabase
+    // dashboard_layouts / dashboard_layout_versions not in typed schema — cast to any
+    await (supabase as any)
       .from('dashboard_layouts')
-      // @ts-ignore - Supabase type inference issue with dashboard_layouts table
       .upsert({ role, layout, hidden }, { onConflict: 'role' });
 
-    await supabase
+    await (supabase as any)
       .from('dashboard_layout_versions')
-      // @ts-ignore - Supabase type inference issue with dashboard_layout_versions table
       .insert({ role, layout, hidden });
 
     localStorage.setItem('dashboard-order', JSON.stringify(layout));

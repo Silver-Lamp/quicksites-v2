@@ -53,9 +53,8 @@ export async function GET(req: NextRequest) {
     const parsedLat = parseFloat(lat);
     const parsedLon = parseFloat(lon);
 
-    // 3. Cache result
-    // @ts-ignore - Supabase type inference issue with geo_cache table
-    await supabase.from('geo_cache').insert([
+    // 3. Cache result (geo_cache cols not in typed schema — cast to any; robust vs @ts-ignore)
+    await (supabase as any).from('geo_cache').insert([
       {
         city: cleanCity,
         state: cleanState,

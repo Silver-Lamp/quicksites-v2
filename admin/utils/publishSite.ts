@@ -28,8 +28,9 @@ export async function publishSite({
     if (existing) throw new Error('Slug already exists.');
   }
 
-  // @ts-ignore - Supabase type inference issue with published_versions table
-  await supabase.from('published_versions').insert({
+  // published_versions / published_sites columns don't match the live DB — cast to
+  // any (robust to TS line-attribution; @ts-ignore was fragile and broke the build).
+  await (supabase as any).from('published_versions').insert({
     label: versionLabel || `Version ${Date.now()}`,
     slug,
     snapshot_id: snapshotId,
@@ -46,18 +47,15 @@ export async function publishSite({
   };
 
   const operation = isUpdateMode
-    // @ts-ignore - Supabase type inference issue with published_sites table
-    ? supabase.from('published_sites').update(publishData).eq('slug', slug)
-    // @ts-ignore - Supabase type inference issue with published_sites table
-    : supabase.from('published_sites').insert([publishData]);
+    ? (supabase as any).from('published_sites').update(publishData).eq('slug', slug)
+    : (supabase as any).from('published_sites').insert([publishData]);
 
   const { error } = await operation;
   if (error) throw new Error(error.message);
 
   const url = `${window.location.origin}/sites/${slug}`;
   const qrUrl = await uploadQRCodeImage(slug, url);
-  // @ts-ignore - Supabase type inference issue with published_sites table
-  await supabase.from('published_sites').update({ qr_url: qrUrl }).eq('slug', slug);
+  await (supabase as any).from('published_sites').update({ qr_url: qrUrl }).eq('slug', slug);
 
   return url;
 }

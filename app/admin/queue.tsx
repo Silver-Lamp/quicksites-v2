@@ -58,8 +58,8 @@ export default function QueuePage() {
   };
 
   const toggleRetryEnabled = async (id: string, current: boolean) => {
-    // @ts-ignore - Supabase type inference issue with regeneration_queue table
-    await supabase.from('regeneration_queue').update({ retry_enabled: !current }).eq('id', id);
+    // regeneration_queue cols not in typed schema — cast to any; robust vs @ts-ignore
+    await (supabase as any).from('regeneration_queue').update({ retry_enabled: !current }).eq('id', id);
     load();
   };
 

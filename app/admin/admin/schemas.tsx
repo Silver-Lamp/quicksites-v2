@@ -8,11 +8,12 @@ export default function SupabaseSchemaDashboard() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    supabase
+    // table not in live DB — cast to any (was failing silently); see types migration
+    (supabase as any)
       .from('saved_schemas')
       .select('*')
       .order('created_at', { ascending: false })
-      .then(({ data }) => {
+      .then(({ data }: { data: any[] | null }) => {
         setSchemas(data || []);
         setLoading(false);
       });

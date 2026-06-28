@@ -11,7 +11,9 @@ export default async function Page({
 }) {
   const { slug } = await params;
 
-  const { data: site } = await supabase
+  // published_sites has no 'slug' col, and 'snapshots' relation doesn't exist in live DB
+  // — cast to any (was failing silently); see types migration
+  const { data: site } = await (supabase as any)
     .from('published_sites')
     .select(
       '*, snapshots(data), branding_profiles(name, theme, brand, accent_color, logo_url)'

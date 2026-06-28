@@ -25,7 +25,8 @@ export default function TemplateAssigner() {
   }, []);
 
   const fetchUserId = async () => {
-    const { data: user, error } = await supabase
+    // users table not in live DB — cast to any (was failing silently); see types migration
+    const { data: user, error } = await (supabase as any)
       .from('users')
       .select('id')
       .eq('email', email)

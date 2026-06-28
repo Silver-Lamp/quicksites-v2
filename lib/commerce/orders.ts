@@ -126,11 +126,13 @@ export async function markOrderPaid(
   if (ordErr) throw ordErr;
 
   // 4) Lock attribution on first revenue
-  await supabase
-    .from('attributions')
-    .update({ locked_at: new Date().toISOString() })
-    .eq('merchant_id', orderRow.merchant_id)
-    .is('locked_at', null);
+  if (orderRow.merchant_id) {
+    await supabase
+      .from('attributions')
+      .update({ locked_at: new Date().toISOString() })
+      .eq('merchant_id', orderRow.merchant_id)
+      .is('locked_at', null);
+  }
 
   // 5) Auto-log platform-fee commission for reps (optional, idempotent)
   try {
@@ -138,7 +140,7 @@ export async function markOrderPaid(
       const { data: attr } = await supabase
         .from('attributions')
         .select('referral_code')
-        .eq('merchant_id', orderRow.merchant_id)
+        .eq('merchant_id', orderRow.merchant_id ?? '')
         .maybeSingle();
 
       if (attr?.referral_code) {

@@ -39,7 +39,7 @@ export default async function PeoplePage() {
           {(profiles ?? []).map((p) => (
             <tr key={p.user_id} className="border-b">
               <td className="p-2 text-xs text-gray-600">{p.user_id}</td>
-              <td className="p-2">{new Date(p.last_seen_at).toLocaleString()}</td>
+              <td className="p-2">{p.last_seen_at ? new Date(p.last_seen_at).toLocaleString() : '—'}</td>
               <td className="p-2 text-xs">{p.last_seen_ip ?? '-'}</td>
               <td className="p-2 text-xs truncate">{p.last_seen_agent?.slice(0, 40) ?? '-'}</td>
               <td className="p-2">

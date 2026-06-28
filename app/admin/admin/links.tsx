@@ -11,12 +11,13 @@ export default function SchemaLinksDashboard() {
 
   useEffect(() => {
     if (!user?.id) return;
-    supabase
+    // table not in live DB — cast to any (was failing silently); see types migration
+    (supabase as any)
       .from('schema_links')
       .select('*')
       .eq('user_id', user.id)
       .order('created_at', { ascending: false })
-      .then(({ data }) => {
+      .then(({ data }: { data: any[] | null }) => {
         setLinks(data || []);
         setLoading(false);
       });

@@ -1,8 +1,6 @@
 // app/api/session-log/route.ts
 import { getServerSupabase } from '@/lib/supabase/server';
-import { cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
-import type { Database } from '@/types/supabase';
 
 export async function POST(req: Request) {
   const supabase = await getServerSupabase();
@@ -13,20 +11,17 @@ export async function POST(req: Request) {
   }
 
   const now = new Date().toISOString();
-  const userAgent = req.headers.get('user-agent') ?? 'unknown';
-  const ip = req.headers.get('x-forwarded-for')?.split(',')[0].trim() ?? 'unknown';
 
   await supabase
     .from('user_profiles')
     .update({ last_seen_at: now })
     .eq('user_id', user.id);
 
+  // user_agent and ip are not in session_logs Insert type (not live DB cols) — omit them
   await supabase.from('session_logs').insert({
     type: 'login_callback',
     email: user.email,
     user_id: user.id,
-    user_agent: userAgent,
-    ip,
     timestamp: now,
   });
 

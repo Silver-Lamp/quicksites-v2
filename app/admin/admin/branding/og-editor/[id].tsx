@@ -24,7 +24,14 @@ export default function OGLayoutEditor() {
       .eq('id', id)
       .single()
       .then(({ data }) => {
-        if (data?.layout) setLayout(data.layout);
+        // layout col is string | null in the DB; parse the JSON string into the array shape
+        if (data?.layout) {
+          try {
+            setLayout(JSON.parse(data.layout as string));
+          } catch {
+            // ignore malformed layout; keep default
+          }
+        }
         setProfile(data);
       });
   }, [id]);
@@ -34,7 +41,8 @@ export default function OGLayoutEditor() {
   };
 
   const saveLayout = async () => {
-    await supabase.from('branding_profiles').update({ layout }).eq('id', id);
+    // layout col is string | null in the DB; serialize array to JSON string on save
+    await supabase.from('branding_profiles').update({ layout: JSON.stringify(layout) }).eq('id', id);
     // alert('Layout saved!');
   };
 

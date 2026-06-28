@@ -36,8 +36,8 @@ export async function GET(req: NextRequest) {
 
   // UUID straight through
   if (UUID.test(hint)) {
-    const { data, error } = await supabase.from('sites').select('id, slug, hostname').eq('id', hint).maybeSingle();
-    if (data?.id) return NextResponse.json({ ok: true, site_id: data.id, slug: data.slug, hostname: data.hostname });
+    const { data, error } = await supabase.from('sites').select('id, slug, domain').eq('id', hint).maybeSingle();
+    if (data?.id) return NextResponse.json({ ok: true, site_id: data.id, slug: data.slug, hostname: data.domain });
     return NextResponse.json({ ok: false, error: error?.message || 'not found' }, { status: 404 });
   }
 
@@ -45,16 +45,16 @@ export async function GET(req: NextRequest) {
   const host = normalizeHostLike(hint);
   const noDots = host.replace(/\./g, '');
 
-  // Try slug, then hostname
+  // Try slug, then domain (the sites table column is `domain`, not `hostname`)
   for (const [col, val] of [
     ['slug', hint],
     ['slug', host],
     ['slug', noDots],
-    ['hostname', host],
+    ['domain', host],
   ] as const) {
     if (!val) continue;
-    const { data } = await supabase.from('sites').select('id, slug, hostname').eq(col, val).maybeSingle();
-    if (data?.id) return NextResponse.json({ ok: true, site_id: data.id, slug: data.slug, hostname: data.hostname });
+    const { data } = await supabase.from('sites').select('id, slug, domain').eq(col, val).maybeSingle();
+    if (data?.id) return NextResponse.json({ ok: true, site_id: data.id, slug: data.slug, hostname: data.domain });
   }
 
   return NextResponse.json({ ok: false, error: 'site not found' }, { status: 404 });

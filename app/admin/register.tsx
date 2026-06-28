@@ -109,13 +109,14 @@ export default function RegisterPage() {
 
       try {
         // Try orgs (modern) with url fields
+        // orgs table not in live DB — cast to any (was failing silently); see types migration
         let sel = 'name,logo_url,logo_dark_url';
-        let q = await supabase.from('orgs').select(sel).eq('slug', slug).single();
+        let q = await (supabase as any).from('orgs').select(sel).eq('slug', slug).single();
 
         // If table/columns missing, try fallbacks
         if (q.error) {
           sel = 'name,logo_url,logo_dark';
-          q = await supabase.from('orgs').select(sel).eq('slug', slug).single();
+          q = await (supabase as any).from('orgs').select(sel).eq('slug', slug).single();
         }
         if (q.error) {
           sel = 'name,logo_url,logo_dark_url';

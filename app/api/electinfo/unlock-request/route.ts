@@ -13,7 +13,8 @@ export async function POST(req: NextRequest) {
   if (!siteId) return NextResponse.json({ error: 'no site' }, { status: 400 });
 
   const supabase = await getServerSupabase();
-  const { error } = await supabase.from('unlock_requests').insert({
+  // table/col not in live DB — cast to any (was failing silently); see types migration
+  const { error } = await (supabase as any).from('unlock_requests').insert({
     site_id: siteId,
     feature_code: feature,
     from_email: from_email ?? null,

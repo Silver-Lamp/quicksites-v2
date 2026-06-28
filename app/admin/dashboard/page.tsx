@@ -62,11 +62,12 @@ function Dashboard() {
     }
 
     import('@/admin/lib/supabaseClient').then(({ supabase }) => {
-      supabase
+      // domains table has created_at (not date_created); DomainEntry shape differs from DB row — cast to any (was failing silently); see types migration
+      (supabase as any)
         .from('domains')
         .select('*')
-        .order('date_created', { ascending: false })
-        .then(({ data }) => setDomains(data || []));
+        .order('created_at', { ascending: false })
+        .then(({ data }: { data: any[] | null }) => setDomains((data || []) as DomainEntry[]));
     });
   }, [role]);
 

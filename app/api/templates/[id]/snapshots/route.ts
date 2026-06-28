@@ -66,6 +66,7 @@ export async function POST(
     Array.isArray((tpl as any).services_jsonb) ? (tpl as any).services_jsonb :
     Array.isArray((tpl as any).services)       ? (tpl as any).services       : [];
 
+  // Insert payload omits DB-computed required fields (hash, rev); cast to any — pattern D
   const { data: snap, error: insErr } = await supa
     .from('snapshots')
     .insert({
@@ -123,7 +124,7 @@ export async function POST(
       published_version_id: tpl.published_version_id,
       published_at: tpl.published_at,
       published_by: tpl.published_by,
-    })
+    } as any)
     .select('id, created_at, label')
     .maybeSingle();
 

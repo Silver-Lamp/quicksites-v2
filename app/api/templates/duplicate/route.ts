@@ -59,7 +59,8 @@ export async function POST(req: NextRequest) {
     const newName = `${src.template_name ?? base} (copy ${displaySuffix})`;
 
     // 3) Copy JSON safely
-    const dataObj: any = { ...(src.data ?? {}) };
+    // src.data is Json (not plain object) — cast to spread; pattern F
+    const dataObj: any = { ...((src.data ?? {}) as object) };
     if (!dataObj.pages && Array.isArray((src as any).pages)) dataObj.pages = (src as any).pages;
     dataObj.archived = false;
     delete (dataObj as any).custom_domain;

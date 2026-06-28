@@ -25,7 +25,8 @@ export default function RoleManager() {
         .from('user_roles')
         .select('user_email, role, updated_at')
         .order('updated_at', { ascending: false });
-      if (!error) setRoles(data);
+      // updated_at is nullable in DB but RoleEntry expects string — cast to match local type
+      if (!error) setRoles((data ?? []) as RoleEntry[]);
       setLoading(false);
     };
 

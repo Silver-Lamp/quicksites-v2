@@ -100,10 +100,11 @@ export default async function InboxDetailPage({ params }: { params: { id: string
           {statusBadge(msg.status)}
         </div>
         <div className="flex items-center gap-2">
-          <a href={mailtoTemplate(msg, 'intro')}><Button variant="secondary" className="inline-flex items-center gap-2"><Mail className="h-4 w-4"/>Intro</Button></a>
-          <a href={mailtoTemplate(msg, 'pricing')}><Button variant="outline" className="inline-flex items-center gap-2"><Mail className="h-4 w-4"/>Pricing</Button></a>
-          <a href={mailtoTemplate(msg, 'migration')}><Button variant="outline" className="inline-flex items-center gap-2"><Mail className="h-4 w-4"/>Migration</Button></a>
-          <a href={mailtoTemplate(msg, 'followup')}><Button variant="outline" className="inline-flex items-center gap-2"><Mail className="h-4 w-4"/>Follow‑up</Button></a>
+          {/* ip is `unknown` in DB row; cast to ContactMessage for template helpers */}
+          <a href={mailtoTemplate(msg as unknown as ContactMessage, 'intro')}><Button variant="secondary" className="inline-flex items-center gap-2"><Mail className="h-4 w-4"/>Intro</Button></a>
+          <a href={mailtoTemplate(msg as unknown as ContactMessage, 'pricing')}><Button variant="outline" className="inline-flex items-center gap-2"><Mail className="h-4 w-4"/>Pricing</Button></a>
+          <a href={mailtoTemplate(msg as unknown as ContactMessage, 'migration')}><Button variant="outline" className="inline-flex items-center gap-2"><Mail className="h-4 w-4"/>Migration</Button></a>
+          <a href={mailtoTemplate(msg as unknown as ContactMessage, 'followup')}><Button variant="outline" className="inline-flex items-center gap-2"><Mail className="h-4 w-4"/>Follow‑up</Button></a>
         </div>
       </div>
 
@@ -147,7 +148,7 @@ export default async function InboxDetailPage({ params }: { params: { id: string
               <div><span className="text-muted-foreground">Email:</span> <a className="text-primary hover:underline" href={`mailto:${msg.email}`}>{msg.email}</a></div>
               <div><span className="text-muted-foreground">Created:</span> {created}</div>
               <div><span className="text-muted-foreground">Company:</span> {msg.company || '—'}</div>
-              <div><span className="text-muted-foreground">IP:</span> {msg.ip || '—'}</div>
+              <div><span className="text-muted-foreground">IP:</span> {(msg.ip as string | null) || '—'}</div>
               <div className="truncate"><span className="text-muted-foreground">UA:</span> {msg.user_agent || '—'}</div>
             </CardContent>
           </Card>

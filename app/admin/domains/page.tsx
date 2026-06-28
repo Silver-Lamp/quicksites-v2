@@ -71,7 +71,8 @@ export default async function DomainsPage() {
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-700 bg-gray-900">
-            {domains?.map((domain: DomainRow) => (
+            {/* DomainRow (name/slug/status) differs from DB domains cols (domain/city/state/template) — cast to any (was failing silently); see types migration */}
+            {(domains as any[])?.map((domain: DomainRow) => (
               <tr key={domain.id}>
                 <td className="px-4 py-2">{domain.name}</td>
                 <td className="px-4 py-2">{domain.slug}</td>

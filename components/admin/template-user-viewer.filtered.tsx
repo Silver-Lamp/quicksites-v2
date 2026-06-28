@@ -62,8 +62,9 @@ export default function TemplateUserViewer() {
 
     // 2) Fetch users (id, email). If your RLS blocks auth.users from client,
     //    swap this to a safe view (e.g., public.user_profiles).
-    const { data: users, error: usersErr } = await supabase
-      .from('auth.users' as any)
+    // auth.users not accessible via typed client — cast client to any; see types migration
+    const { data: users, error: usersErr } = await (supabase as any)
+      .from('auth.users')
       .select('id, email');
 
     if (usersErr) {
@@ -84,7 +85,7 @@ export default function TemplateUserViewer() {
     }
 
     // Join
-    const joined: Assignment[] =
+    const joined: Assignment[] = (
       map?.map((row) => ({
         user_id: row.user_id,
         email:
@@ -94,9 +95,10 @@ export default function TemplateUserViewer() {
         template:
           tpls?.find((t) => t.id === row.template_id)?.name ??
           '(deleted)',
-      })) ?? [];
+      })) ?? []
+    ) as unknown as Assignment[];
 
-    setAssignments(joined);
+    setAssignments(joined as Assignment[]);
     setTemplates(tpls ?? []);
     setLoading(false);
   }

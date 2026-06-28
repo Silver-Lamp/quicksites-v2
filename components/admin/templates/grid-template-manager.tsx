@@ -30,7 +30,7 @@ export default function GridTemplateManager({
       .from("grid_presets")
       .select("*")
       .then(({ data, error }) => {
-        if (data) setPresets(data);
+        if (data) setPresets(data as GridPreset[]);
         if (error) console.error("Error loading presets:", error.message);
       });
   }, [supabase]);

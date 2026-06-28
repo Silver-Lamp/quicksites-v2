@@ -18,20 +18,12 @@ export async function GET(req: Request) {
       if (t?.org_id) return NextResponse.json({ org_id: t.org_id, source: 'template' });
     }
 
-    // 2) Current user's default org (profiles.default_org_id)
+    // 2) Current user's org membership (the former profiles.default_org_id source
+    //    no longer exists in the schema, so we resolve straight from org_members).
     const { data: me } = await supabaseAdmin.auth.getUser(); // if you have service role, swap to server client w/ cookies
     const uid = me?.user?.id;
     if (uid) {
-      const { data: prof } = await supabaseAdmin
-        .from('profiles')
-        .select('default_org_id')
-        .eq('id', uid)
-        .single();
-      if (prof?.default_org_id) {
-        return NextResponse.json({ org_id: prof.default_org_id, source: 'profile' });
-      }
-
-      // 3) First org membership
+      // First org membership
       const { data: mem } = await supabaseAdmin
         .from('org_members')
         .select('org_id')

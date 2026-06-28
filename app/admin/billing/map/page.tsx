@@ -4,6 +4,7 @@ import Stripe from 'stripe';
 import { revalidatePath } from 'next/cache';
 import Link from 'next/link';
 import { stripe } from '@/lib/stripe/server';
+import { getAdminUser } from '@/lib/auth/getAdminUser';
 
 export const dynamic = 'force-dynamic';
 
@@ -21,13 +22,10 @@ function stripeUrl(kind: 'customer' | 'subscription', id?: string | null) {
 
 // -------- Admin gate --------
 async function requireAdmin() {
+  const admin = await getAdminUser();
+  if (!admin) throw new Error('forbidden');
   const supa = await getServerSupabase();
-  const { data: u } = await supa.auth.getUser();
-  if (!u?.user) throw new Error('unauthorized');
-  const { data: profile } = await supa.from('profiles').select('role').eq('id', u.user.id).maybeSingle();
-  const isAdmin = (u.user.user_metadata?.role === 'admin') || profile?.role === 'admin';
-  if (!isAdmin) throw new Error('forbidden');
-  return { supa, user: u.user };
+  return { supa, user: admin };
 }
 
 /* ===================== Server Actions ===================== */
@@ -201,20 +199,20 @@ export default async function BillingMap({ searchParams }: { searchParams: { q?:
     .select('id, display_name, site_slug, owner_id')
     .in('id', merchantIds);
 
-  const ownerIds = Array.from(new Set((merchants || []).map(m => m.owner_id)));
+  const ownerIds = Array.from(new Set((merchants || []).map(m => m.owner_id))).filter((x): x is string => !!x);
   const { data: owners } = await svc
-    .from('profiles')
-    .select('id, email, display_name')
-    .in('id', ownerIds);
+    .from('user_profiles')
+    .select('user_id, email, name')
+    .in('user_id', ownerIds);
 
   const mById = new Map((merchants || []).map(m => [m.id, m]));
-  const oById = new Map((owners || []).map(o => [o.id, o]));
+  const oById = new Map((owners || []).map(o => [o.user_id, o]));
 
   const q = (searchParams.q || '').toLowerCase();
   const filtered = (rows || []).filter(r => {
     if (!q) return true;
     const m = mById.get(r.merchant_id);
-    const o = m ? oById.get(m.owner_id) : undefined;
+    const o = m?.owner_id ? oById.get(m.owner_id) : undefined;
     const hay = [
       r.merchant_id,
       r.stripe_customer_id,
@@ -223,7 +221,7 @@ export default async function BillingMap({ searchParams }: { searchParams: { q?:
       m?.display_name,
       m?.site_slug,
       o?.email,
-      o?.display_name,
+      o?.name,
     ].filter(Boolean).join(' ').toLowerCase();
     return hay.includes(q);
   });
@@ -318,7 +316,7 @@ export default async function BillingMap({ searchParams }: { searchParams: { q?:
           <tbody className="divide-y divide-neutral-800">
             {filtered.map((r) => {
               const m = mById.get(r.merchant_id);
-              const o = m ? oById.get(m.owner_id) : undefined;
+              const o = m?.owner_id ? oById.get(m.owner_id) : undefined;
               return (
                 <tr key={r.merchant_id} className="[&>td]:px-4 [&>td]:py-3 align-top">
                   <td className="text-xs">
@@ -333,7 +331,7 @@ export default async function BillingMap({ searchParams }: { searchParams: { q?:
                   </td>
                   <td className="text-xs">
                     <div>{o?.email || '—'}</div>
-                    {o?.display_name && <div className="text-neutral-400">{o.display_name}</div>}
+                    {o?.name && <div className="text-neutral-400">{o.name}</div>}
                   </td>
                   <td className="text-xs">{r.plan || '—'}</td>
                   <td className="text-xs">{fmtCents(r.price_cents)}</td>
@@ -421,7 +419,7 @@ export default async function BillingMap({ searchParams }: { searchParams: { q?:
             </thead>
             <tbody className="divide-y divide-neutral-800">
               {unmapped.map((m) => {
-                const o = oById.get(m.owner_id);
+                const o = m.owner_id ? oById.get(m.owner_id) : undefined;
                 return (
                   <tr key={m.id} className="[&>td]:px-4 [&>td]:py-3">
                     <td className="text-xs">
@@ -431,9 +429,9 @@ export default async function BillingMap({ searchParams }: { searchParams: { q?:
                     </td>
                     <td className="text-xs">
                       <div>{o?.email || '—'}</div>
-                      {o?.display_name && <div className="text-neutral-400">{o.display_name}</div>}
+                      {o?.name && <div className="text-neutral-400">{o.name}</div>}
                     </td>
-                    <td className="text-xs text-neutral-400">{new Date(m.created_at).toLocaleString()}</td>
+                    <td className="text-xs text-neutral-400">{m.created_at ? new Date(m.created_at).toLocaleString() : '—'}</td>
                     <td className="text-xs">
                       <form action={createMapping} className="flex items-end gap-2">
                         <input type="hidden" name="merchant_id" value={m.id} />

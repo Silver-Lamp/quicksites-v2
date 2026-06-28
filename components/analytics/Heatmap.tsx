@@ -29,7 +29,7 @@ export default function Heatmap({ daysBack = 180 }: { daysBack?: number }) {
 
       const grouped: Record<string, { user: number; ips: Set<string> }> = {};
       data?.forEach((entry) => {
-        const day = new Date(entry.last_seen_at).toISOString().split('T')[0];
+        const day = new Date(entry.last_seen_at ?? '').toISOString().split('T')[0];
         if (!grouped[day]) grouped[day] = { user: 0, ips: new Set() };
         grouped[day].user += 1;
         if (entry.last_seen_ip) grouped[day].ips.add(entry.last_seen_ip);

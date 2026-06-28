@@ -11,11 +11,12 @@ export default function AccessRequestDashboard() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    supabase
+    // table not in live DB — cast to any (was failing silently); see types migration
+    (supabase as any)
       .from('access_requests')
       .select('*')
       .order('created_at', { ascending: false })
-      .then(({ data }) => {
+      .then(({ data }: { data: any[] | null }) => {
         setRequests(data || []);
         setLoading(false);
       });
@@ -35,7 +36,8 @@ export default function AccessRequestDashboard() {
         id: target?.id,
       }),
     });
-    await supabase.from('access_requests').update({ status }).eq('id', id);
+    // table not in live DB — cast to any (was failing silently); see types migration
+    await (supabase as any).from('access_requests').update({ status }).eq('id', id);
     setRequests((prev) => prev.map((r) => (r.id === id ? { ...r, status } : r)));
   };
 

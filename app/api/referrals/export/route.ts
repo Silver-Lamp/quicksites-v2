@@ -1,5 +1,6 @@
 import { NextRequest } from 'next/server';
 import { getServerSupabase } from '@/lib/supabase/server';
+import { getAdminUser } from '@/lib/auth/getAdminUser';
 
 export async function GET(req: NextRequest) {
   const supa = await getServerSupabase();
@@ -24,9 +25,7 @@ export async function GET(req: NextRequest) {
     codes = (myCodes || []).map((c: any) => c.code);
   } else {
     // admin-only full export
-    const { data: profile } = await supa.from('profiles').select('role').eq('id', userId).maybeSingle();
-    const isAdmin = (u.user.user_metadata?.role === 'admin') || profile?.role === 'admin';
-    if (!isAdmin) return new Response('forbidden', { status: 403 });
+    if (!(await getAdminUser())) return new Response('forbidden', { status: 403 });
     const svc = await getServerSupabase({ serviceRole: true });
     const { data: all } = await svc.from('referral_codes').select('code');
     codes = (all || []).map((c: any) => c.code);

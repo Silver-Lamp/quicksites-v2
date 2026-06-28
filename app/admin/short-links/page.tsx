@@ -29,12 +29,13 @@ async function getData() {
     })) };
   }
   const svc = await getServerSupabase({ serviceRole: true });
-  const { data: links } = await svc
+  // schema-prefixed table names not in live DB types — cast to any; see types migration
+  const { data: links } = await (svc as any)
     .from("public.short_links")
     .select("id, code, target_url, long_url, candidate_slug, created_at")
     .order("created_at", { ascending: false })
     .limit(500);
-  const { data: scans } = await svc
+  const { data: scans } = await (svc as any)
     .from("public.short_link_clicks").select("code, ts").gte("ts", sinceIso);
   const counts = new Map<string, number>();
   for (const s of scans || []) counts.set(s.code, (counts.get(s.code) || 0) + 1);
@@ -82,7 +83,7 @@ export default async function ShortLinksAdminPage() {
   const base = isLocal && currentOrigin ? currentOrigin : configuredBase;
 
   // plan/gates per slug
-  const slugs = Array.from(new Set(rows.map((r) => r.candidate_slug).filter(Boolean)));
+  const slugs = Array.from(new Set(rows.map((r: any) => r.candidate_slug).filter(Boolean))) as string[];
   const svc = await getServerSupabase({ serviceRole: true });
   const { data: pages } = await svc
     .from("candidate_pages")
@@ -121,7 +122,7 @@ export default async function ShortLinksAdminPage() {
           </thead>
 
           <tbody className="divide-y divide-gray-200 dark:divide-gray-800">
-            {rows.map((l) => {
+            {rows.map((l: any) => {
               const shortUrl = `${base}/c/${l.code}`;
               const targetHref = isLocal ? rewriteOrigin(l.target_url, base) : l.target_url;
               const flags = l.candidate_slug ? pageBySlug.get(l.candidate_slug) : undefined;

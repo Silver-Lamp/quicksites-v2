@@ -67,7 +67,7 @@ const SELECT = 'id,slug,title,price_cents,type,images,status,merchant_id';
 async function getMerchantIdByEmail(email: string): Promise<string | null> {
   const { data: m1 } = await db.from('merchants').select('id').ilike('email', email).maybeSingle();
   if (m1?.id) return m1.id as string;
-  const { data: prof } = await db.from('profiles').select('user_id').ilike('email', email).maybeSingle();
+  const { data: prof } = await db.from('user_profiles').select('user_id').ilike('email', email).maybeSingle();
   const uid = prof?.user_id as string | undefined;
   if (!uid) return null;
   const { data: m2 } = await db.from('merchants').select('id').eq('user_id', uid).maybeSingle();

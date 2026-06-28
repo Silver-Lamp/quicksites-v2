@@ -44,12 +44,13 @@ export function useZodPlaygroundState() {
   useEffect(() => {
     const schemaId = params?.get('schema_id');
     if (schemaId) {
-      supabase
+      // table/col not in live DB — cast to any (was failing silently); see types migration
+      (supabase as any)
         .from('schema_links')
         .select('*')
         .eq('id', schemaId)
         .single()
-        .then(({ data, error }) => {
+        .then(({ data, error }: { data: any; error: any }) => {
           if (error || !data) {
             router.push('/admin/links?error=schema_id_not_found');
             return;
@@ -94,7 +95,8 @@ export function useZodPlaygroundState() {
   const handleCreateShortLink = async () => {
     if (!user || !jsonExport) return;
 
-    const { data, error } = await supabase
+    // table/col not in live DB — cast to any (was failing silently); see types migration
+    const { data, error } = await (supabase as any)
       .from('schema_links')
       .insert({
         user_id: user.id,

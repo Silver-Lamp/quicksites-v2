@@ -15,7 +15,10 @@ export function useLiveTable<T extends { id: string | number }>(
     let mounted = true;
 
     const fetchInitial = async () => {
-      let query = supabase.from(table).select('*');
+      // Dynamic table name (runtime string) → cast to any; a typed client would
+      // resolve `.from(string)` over the union of all tables and blow tsc's
+      // instantiation depth (TS2589). Strong typing isn't possible here anyway.
+      let query = (supabase as any).from(table).select('*');
 
       if (filter) {
         query = query.filter(filter.column as string, filter.operator, filter.value);

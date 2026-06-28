@@ -6,7 +6,8 @@ export async function getEntitlementsBySiteId(siteId: string | null): Promise<En
   if (!siteId) return DEFAULT_FREE;
 
   const supabase = await getServerSupabase({ serviceRole: true });
-  const { data, error } = await supabase
+  // site_entitlements table not in live DB — cast to any (was failing silently); see types migration
+  const { data, error } = await (supabase as any)
     .from('site_entitlements')
     .select('feature_code, is_unlocked')
     .eq('site_id', siteId);

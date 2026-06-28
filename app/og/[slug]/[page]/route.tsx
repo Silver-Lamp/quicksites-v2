@@ -16,7 +16,7 @@ export async function GET(_: Request, { params }: { params: { slug: string; page
     .eq('is_site', true)
     .maybeSingle();
 
-  const pages = site?.data?.pages || [];
+  const pages = (site?.data as any)?.pages || [];
   const pageData = pages.find((p: any) => p.slug === page);
   const title = pageData?.meta?.title || pageData?.title || site?.template_name;
   const heroImg = pageData?.content_blocks?.find((b: any) => b.type === 'hero')?.content?.image_url;

@@ -111,8 +111,8 @@
     "@supabase/auth-helpers-nextjs": "^0.10.0",
     "@supabase/auth-helpers-react": "^0.5.0",
     "@supabase/functions-js": "^2.4.4",
-    "@supabase/ssr": "0.6.1",
-    "@supabase/supabase-js": "2.75.0",
+    "@supabase/ssr": "0.12.0",
+    "@supabase/supabase-js": "2.108.2",
     "@tailwindcss/typography": "^0.5.16",
     "@testing-library/react": "^16.3.0",
     "@tiptap/extension-character-count": "^3.1.0",
@@ -306,9 +306,7 @@
     "@types/react": "19.1.10",
     "@types/react-dom": "19.1.7",
     "@types/node": "24.3.0",
-    "typescript": "5.9.2",
-    "@supabase/supabase-js": "2.75.0",
-    "@supabase/ssr": "0.6.1"
+    "typescript": "5.9.2"
   },
   "husky": {
     "hooks": {

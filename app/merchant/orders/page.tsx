@@ -34,7 +34,7 @@ export default async function MerchantOrdersPage({ searchParams }: { searchParam
           <tbody className="divide-y divide-neutral-800">
             {(orders || []).map(o => (
               <tr key={o.id} className="[&>td]:px-4 [&>td]:py-3">
-                <td className="whitespace-nowrap text-neutral-400">{new Date(o.created_at).toLocaleString()}</td>
+                <td className="whitespace-nowrap text-neutral-400">{new Date(o.created_at ?? '').toLocaleString()}</td>
                 <td className="font-mono">{o.id.slice(0,8)}…</td>
                 <td>{o.site_slug}</td>
                 <td><span className="rounded bg-neutral-800 px-2 py-1 text-xs">{o.status}</span></td>

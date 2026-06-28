@@ -34,6 +34,33 @@ const CTA = {
   partnersHref: '/partners',
 };
 
+// Self-serve agency checkout is gated behind a flag until the Stripe agency
+// prices/coupons are configured in the environment. Off → "Talk to us" (beta).
+const AGENCY_BILLING_ENABLED = process.env.NEXT_PUBLIC_AGENCY_BILLING_ENABLED === 'true';
+
+/** Start a Stripe subscription checkout for the agency plan, or bounce to login. */
+async function startAgencyCheckout(tier: 'founder' | 'public') {
+  try {
+    const res = await fetch('/api/billing/checkout', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ tier }),
+    });
+    if (res.status === 401) {
+      window.location.href = `/login?next=${encodeURIComponent('/pricing#agency')}`;
+      return;
+    }
+    const data = await res.json().catch(() => ({}));
+    if (data?.url) {
+      window.location.href = data.url;
+    } else {
+      window.alert(data?.error || 'Could not start checkout. Please try again or contact us.');
+    }
+  } catch {
+    window.alert('Could not start checkout. Please try again or contact us.');
+  }
+}
+
 // ---- Utilities ----
 const usd = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 2 });
 const usd0 = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 });
@@ -181,13 +208,29 @@ function AgencyPlanCard({ mode }: { mode: 'founder' | 'public' }) {
           <Feature text="No watermark on published sites" />
           <Feature text="Email support; Slack for high-volume partners" />
         </ul>
-        <div className="rounded-lg bg-amber-500/10 border border-amber-500/30 p-3 text-xs text-amber-200">
-          Flat per-site billing is rolling out in beta — we’ll set your account up directly. Talk to us to get started.
-        </div>
+        {AGENCY_BILLING_ENABLED ? (
+          <div className="rounded-lg bg-sky-500/10 border border-sky-500/30 p-3 text-xs text-sky-200">
+            Self-serve checkout: you’ll pay the platform fee plus {usd.format(plan.perSite)}/site for your current live sites.
+            Per-site billing tracks your published sites automatically.
+          </div>
+        ) : (
+          <div className="rounded-lg bg-amber-500/10 border border-amber-500/30 p-3 text-xs text-amber-200">
+            Flat per-site billing is rolling out in beta — we’ll set your account up directly. Talk to us to get started.
+          </div>
+        )}
       </CardContent>
       <CardFooter className="justify-between">
-        <Link href={CTA.contactHref}><Button>Talk to us<ArrowRight className="ml-2 h-4 w-4" /></Button></Link>
-        <Link href={CTA.signupHref}><Button variant="ghost">Start a free trial</Button></Link>
+        {AGENCY_BILLING_ENABLED ? (
+          <>
+            <Button onClick={() => startAgencyCheckout(mode)}>Start agency plan<ArrowRight className="ml-2 h-4 w-4" /></Button>
+            <Link href={CTA.contactHref}><Button variant="ghost">Talk to us</Button></Link>
+          </>
+        ) : (
+          <>
+            <Link href={CTA.contactHref}><Button>Talk to us<ArrowRight className="ml-2 h-4 w-4" /></Button></Link>
+            <Link href={CTA.signupHref}><Button variant="ghost">Start a free trial</Button></Link>
+          </>
+        )}
       </CardFooter>
     </Card>
   );

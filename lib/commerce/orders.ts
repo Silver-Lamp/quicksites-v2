@@ -4,6 +4,7 @@ import { getMerchantPaymentConfigSafe } from './paymentRouter';
 import { captureServer } from '@/lib/analytics/posthog-server';
 import { EVENTS } from '@/lib/analytics/events';
 import { partnerCommissionCents, PARTNER_FEE_SHARE } from './partner-terms';
+import { isAgencyPlanMerchant } from '@/lib/billing/plans';
 
 /** Create a pending order and its line items. Returns order id and totals. */
 export async function createDraftOrder(opts: {
@@ -26,7 +27,11 @@ export async function createDraftOrder(opts: {
   const total = subtotal; // tax/shipping can be added later
 
   const cfg = await getMerchantPaymentConfigSafe(opts.merchantId);
-  const platformFeeCents = cfg.collect_platform_fee
+  // Agency-plan merchants pay a flat subscription instead of a per-order fee, so
+  // their orders are exempt from the take-rate (Path B). Derive from the plan at
+  // order time so it's a single source of truth regardless of payment_accounts.
+  const feeExempt = await isAgencyPlanMerchant(opts.merchantId);
+  const platformFeeCents = cfg.collect_platform_fee && !feeExempt
     ? Math.max(Math.floor(total * (cfg.platform_fee_percent || 0)), cfg.platform_fee_min_cents || 0)
     : 0;
 

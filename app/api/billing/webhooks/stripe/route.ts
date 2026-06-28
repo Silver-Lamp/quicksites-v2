@@ -33,10 +33,11 @@ export async function POST(req: NextRequest) {
         const s = event.data.object as Stripe.Checkout.Session;
         if (s.mode === 'subscription') {
           const merchantId = (s.metadata as any)?.merchant_id as string | undefined;
+          const userId = (s.metadata as any)?.user_id as string | undefined;
           const customerId = typeof s.customer === 'string' ? s.customer : s.customer?.id;
           const subscriptionId =
             typeof s.subscription === 'string' ? s.subscription : s.subscription?.id;
-          await upsertMerchantBillingFromStripe({ merchantId, customerId, subscriptionId });
+          await upsertMerchantBillingFromStripe({ merchantId, userId, customerId, subscriptionId });
         }
         break;
       }
@@ -46,9 +47,11 @@ export async function POST(req: NextRequest) {
       case 'customer.subscription.updated': {
         const sub = event.data.object as Stripe.Subscription;
         const merchantId = (sub.metadata as any)?.merchant_id as string | undefined;
+        const userId = (sub.metadata as any)?.user_id as string | undefined;
         const customerId = typeof sub.customer === 'string' ? sub.customer : sub.customer?.id;
         await upsertMerchantBillingFromStripe({
           merchantId,
+          userId,
           customerId,
           subscriptionId: sub.id,
           subscription: sub,
@@ -59,8 +62,9 @@ export async function POST(req: NextRequest) {
       case 'customer.subscription.deleted': {
         const sub = event.data.object as Stripe.Subscription;
         const merchantId = (sub.metadata as any)?.merchant_id as string | undefined;
+        const userId = (sub.metadata as any)?.user_id as string | undefined;
         const customerId = typeof sub.customer === 'string' ? sub.customer : sub.customer?.id;
-        await clearSubscriptionFromMapping({ merchantId, customerId, subscriptionId: sub.id });
+        await clearSubscriptionFromMapping({ merchantId, userId, customerId, subscriptionId: sub.id });
         break;
       }
 
@@ -87,6 +91,7 @@ export async function POST(req: NextRequest) {
 
 async function upsertMerchantBillingFromStripe(opts: {
   merchantId?: string;
+  userId?: string;
   customerId?: string | null;
   subscriptionId?: string | null;
   subscription?: Stripe.Subscription | null;
@@ -99,22 +104,32 @@ async function upsertMerchantBillingFromStripe(opts: {
     opts.subscription ||
     (subscriptionId ? await stripe.subscriptions.retrieve(subscriptionId) : null);
 
-  // Build label + price
-  let planLabel: string | null = null;
+  // Build label + price. The canonical plan label (e.g. 'agency'/'agency_founder')
+  // is set in subscription metadata at checkout; fall back to the price
+  // nickname/product name for legacy single-price subscriptions.
+  let planLabel: string | null = (sub?.metadata as any)?.plan || null;
   let priceCents: number | null = null;
 
   const price = sub?.items.data?.[0]?.price;
   if (price) {
     priceCents = typeof price.unit_amount === 'number' ? price.unit_amount : null;
-    planLabel = price.nickname || (price.lookup_key as string | null) || null;
-    if (!planLabel && typeof price.product === 'string') {
-      try {
-        const prod = await stripe.products.retrieve(price.product);
-        planLabel = prod.name || null;
-      } catch {
-        /* ignore */
+    if (!planLabel) {
+      planLabel = price.nickname || (price.lookup_key as string | null) || null;
+      if (!planLabel && typeof price.product === 'string') {
+        try {
+          const prod = await stripe.products.retrieve(price.product);
+          planLabel = prod.name || null;
+        } catch {
+          /* ignore */
+        }
       }
     }
+  }
+
+  // Keep user_plans (authoritative for membership + fee exemption) in sync.
+  const userId = opts.userId || ((sub?.metadata as any)?.user_id as string | undefined);
+  if (userId && sub) {
+    await upsertUserPlanFromStripe({ supa, userId, sub, planLabel, priceId: price?.id ?? null });
   }
 
   // If we know the merchant, upsert directly on key merchant_id.
@@ -159,13 +174,45 @@ async function upsertMerchantBillingFromStripe(opts: {
   }
 }
 
+/** Upsert the authoritative per-user plan row from a live Stripe subscription. */
+async function upsertUserPlanFromStripe(opts: {
+  supa: any;
+  userId: string;
+  sub: Stripe.Subscription;
+  planLabel: string | null;
+  priceId: string | null;
+}) {
+  const { supa, userId, sub, planLabel, priceId } = opts;
+  const unix = (n: unknown) => (typeof n === 'number' ? new Date(n * 1000).toISOString() : null);
+  const patch = {
+    user_id: userId,
+    plan: planLabel || 'pro',
+    status: sub.status,
+    price_id: priceId,
+    current_period_end: unix((sub as any).current_period_end),
+    trial_end: unix((sub as any).trial_end),
+    updated_at: new Date().toISOString(),
+  };
+  const { error } = await supa.from('user_plans').upsert(patch as any, { onConflict: 'user_id' });
+  if (error) throw error;
+}
+
 async function clearSubscriptionFromMapping(opts: {
   merchantId?: string;
+  userId?: string;
   customerId?: string | null;
   subscriptionId?: string | null;
 }) {
-  const { merchantId, customerId } = opts;
+  const { merchantId, userId, customerId } = opts;
   const supa = await getServerSupabase({ serviceRole: true });
+
+  // Downgrade the authoritative plan row so membership + fee exemption revert.
+  if (userId) {
+    await supa
+      .from('user_plans')
+      .update({ plan: 'free', status: 'canceled', updated_at: new Date().toISOString() } as any)
+      .eq('user_id', userId);
+  }
 
   if (merchantId) {
     await supa

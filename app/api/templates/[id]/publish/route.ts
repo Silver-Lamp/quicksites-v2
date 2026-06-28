@@ -71,5 +71,18 @@ export async function POST(
     .eq('id', c.id);
 
   if (upErr) return NextResponse.json({ error: upErr.message }, { status: 400 });
+
+  // Best-effort: if the owner is on an agency plan, reconcile their per-site
+  // subscription quantity now that a site went live. Never blocks publish;
+  // the nightly cron is the source of truth.
+  if (c.owner_id) {
+    try {
+      const { syncAgencySiteQuantity } = await import('@/lib/billing/agency');
+      await syncAgencySiteQuantity(c.owner_id);
+    } catch (e: any) {
+      console.warn('agency site-quantity sync after publish failed:', e?.message || e);
+    }
+  }
+
   return NextResponse.json({ ok: true, published_version_id: version_id ?? null });
 }

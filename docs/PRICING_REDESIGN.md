@@ -1,6 +1,6 @@
 # Pricing redesign — hybrid model
 
-> Status: Phase 1 (page redesign) in progress. Decision: **hybrid** monetization.
+> Status: Phase 1 shipped. **Phase 2 billing code complete** (agency subscription + take-rate finish); awaiting owner Stripe setup + test-mode E2E to go live — see `docs/PRICING_PHASE2_HANDOFF.md`. Decision: **hybrid** monetization.
 > Last updated: 2026-06-28.
 
 ## Why we're redesigning

@@ -1,45 +1,99 @@
 import { NextRequest, NextResponse } from 'next/server';
-// import Stripe from 'stripe';
+import type Stripe from 'stripe';
 import { getServerSupabase } from '@/lib/supabase/server';
 import { stripe } from '@/lib/stripe/server';
+import { buildAgencyLineItems, agencyDiscountConfig } from '@/lib/billing/agency';
+import { countBillableSites, planForTier, type AgencyTier } from '@/lib/billing/plans';
 
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
+
+/**
+ * Creates a Stripe subscription Checkout session.
+ *
+ * Two shapes:
+ *  - Agency (Path B): body `{ tier: 'founder'|'public', sites?: number }` →
+ *    per-user platform line + per-site line (quantity = sites). Founder applies
+ *    the configured grandfather coupon(s).
+ *  - Legacy: body `{ priceId }` (or STRIPE_PRICE_PRO_MONTHLY) → single price.
+ */
 export async function POST(req: NextRequest) {
   const supa = await getServerSupabase();
   const { data: u } = await supa.auth.getUser();
   if (!u?.user) return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
 
-  const body = await req.json().catch(() => ({}));
-  const priceId = body?.priceId || process.env.STRIPE_PRICE_PRO_MONTHLY;
-  if (!priceId) return NextResponse.json({ error: 'missing price id' }, { status: 400 });
+  const body = await req.json().catch(() => ({} as any));
+  const tierRaw = typeof body?.tier === 'string' ? body.tier.toLowerCase() : null;
+  const isAgency = tierRaw === 'founder' || tierRaw === 'public';
 
-  // Ensure the user has a Merchant (used for commissions + mapping)
+  // Ensure the user has a Merchant (used for commissions + billing mapping)
   const merchantId = await ensureMerchantForUser(supa, u.user);
 
-  // Success/cancel URLs
   const origin = process.env.QS_PUBLIC_URL || req.headers.get('origin') || 'http://localhost:3000';
   const success_url = `${origin}/profile?upgraded=1`;
   const cancel_url = `${origin}/profile?canceled=1`;
 
-  // Create subscription checkout; let webhook persist mapping afterward
-  const session = await stripe.checkout.sessions.create({
+  const baseParams: Stripe.Checkout.SessionCreateParams = {
     mode: 'subscription',
     success_url,
     cancel_url,
-    line_items: [{ price: priceId, quantity: 1 }],
     customer_email: u.user.email ?? undefined,
-    allow_promotion_codes: true,
-    // make sure merchant_id flows through to invoices -> our billing webhook can attribute
     metadata: { merchant_id: merchantId, user_id: u.user.id },
-    subscription_data: {
-      metadata: { merchant_id: merchantId, user_id: u.user.id },
-    },
-  });
+  };
 
+  let params: Stripe.Checkout.SessionCreateParams;
+
+  if (isAgency) {
+    const tier = tierRaw as AgencyTier;
+    // Default the per-site quantity to the user's current published-site count;
+    // accept an explicit `sites` override; never below 1. Nightly sync corrects it.
+    let sites = Number.isFinite(body?.sites) ? Math.floor(Number(body.sites)) : 0;
+    if (sites <= 0) {
+      try {
+        sites = await countBillableSites(supa as any, u.user.id);
+      } catch {
+        sites = 0;
+      }
+    }
+
+    let line_items: Stripe.Checkout.SessionCreateParams.LineItem[];
+    try {
+      line_items = buildAgencyLineItems(sites);
+    } catch (e: any) {
+      return NextResponse.json({ error: e?.message || 'agency prices not configured' }, { status: 400 });
+    }
+
+    params = {
+      ...baseParams,
+      line_items,
+      ...agencyDiscountConfig(tier),
+      metadata: { ...baseParams.metadata!, tier, plan: planForTier(tier) },
+      subscription_data: {
+        metadata: { merchant_id: merchantId, user_id: u.user.id, tier, plan: planForTier(tier) },
+      },
+    };
+  } else {
+    const priceId = body?.priceId || process.env.STRIPE_PRICE_PRO_MONTHLY;
+    if (!priceId) return NextResponse.json({ error: 'missing price id' }, { status: 400 });
+    params = {
+      ...baseParams,
+      line_items: [{ price: priceId, quantity: 1 }],
+      allow_promotion_codes: true,
+      subscription_data: {
+        metadata: { merchant_id: merchantId, user_id: u.user.id },
+      },
+    };
+  }
+
+  const session = await stripe.checkout.sessions.create(params);
   return NextResponse.json({ url: session.url });
 }
 
 /** Finds or creates a Merchant for this user. */
-async function ensureMerchantForUser(supa: ReturnType<typeof getServerSupabase> extends Promise<infer T> ? T : any, user: any) {
+async function ensureMerchantForUser(
+  supa: ReturnType<typeof getServerSupabase> extends Promise<infer T> ? T : any,
+  user: any
+) {
   const { data: existing } = await supa
     .from('merchants')
     .select('id')

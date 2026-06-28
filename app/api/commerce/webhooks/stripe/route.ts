@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { adapterFor } from '@/lib/commerce/paymentRouter';
 import { markOrderPaid, markOrderRefunded } from '@/lib/commerce/orders';
 import { claimWebhookEvent, releaseWebhookEvent } from '@/lib/commerce/webhookDedup';
+import { reverseApplicationFeeForCharge } from '@/lib/commerce/refunds';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -29,6 +30,10 @@ export async function POST(req: NextRequest) {
     if (e.type === 'payment_succeeded' && e.orderId && typeof e.amountCents === 'number') {
       await markOrderPaid(e.orderId, e.amountCents, 'stripe', e.raw.data.object.id, e.raw);
     } else if (e.type === 'refund_succeeded' && e.orderId) {
+      // Reverse the platform application fee proportionally on Stripe (idempotent),
+      // then keep our ledger consistent (void/clawback). Fee reversal is
+      // best-effort so it can't block the ledger update.
+      await reverseApplicationFeeForCharge(e.raw);
       await markOrderRefunded(e.orderId, e.amountCents, 'stripe', e.raw.data.object.id, e.raw);
     }
     return new NextResponse('ok', { status: 200 });

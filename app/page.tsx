@@ -15,6 +15,7 @@ import SiteHeader from '@/components/site/site-header';
 import { useBrand } from '@/app/providers';
 import { guestBuildEnabled } from '@/lib/flags/guestBuild';
 import GuestStart from '@/components/home/guest-start';
+import SiteShowcase from '@/components/home/site-showcase';
 
 const isProd = process.env.NODE_ENV === 'production';
 
@@ -167,6 +168,9 @@ export default function HomePage() {
             </div>
           </div>
         </section>
+
+        {/* ───────── Showcase (real published sites) ───────── */}
+        <SiteShowcase />
 
         {/* ───────── Earn (partners / resellers) ───────── */}
         <section className="relative z-10 w-full border-t border-zinc-800/70 bg-gradient-to-b from-sky-950/30 to-transparent">

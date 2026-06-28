@@ -14,7 +14,6 @@ export default function ClaimPage({ domain }: { domain: string }) {
   const [isClaimed, setIsClaimed] = useState(false);
   const [loading, setLoading] = useState(false);
   const [templateId, setTemplateId] = useState<string | null>(null);
-  const [leadId, setLeadId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const session = useSession();
@@ -39,16 +38,6 @@ export default function ClaimPage({ domain }: { domain: string }) {
 
       if (template?.id) {
         setTemplateId(template.id);
-
-        // Try to match existing lead
-        const { data: leads } = await supabase
-          .from('leads')
-          .select('id')
-          .eq('domain_id', template.id)
-          .eq('email', email)
-          .limit(1);
-
-        if (leads?.length) setLeadId(leads[0].id);
       }
     };
 
@@ -64,51 +53,13 @@ export default function ClaimPage({ domain }: { domain: string }) {
     setLoading(true);
     setError(null);
 
-    let currentLeadId = leadId;
-
-    // Insert or update lead
+    // Record the lead + action server-side (leads is RLS-locked; no anon access).
     if (templateId) {
-      if (!currentLeadId) {
-        const { data: existingLeads } = await supabase
-          .from('leads')
-          .select('id')
-          .eq('domain_id', templateId)
-          .eq('email', email)
-          .limit(1);
-
-        if (existingLeads?.length) {
-          currentLeadId = existingLeads[0].id;
-          await supabase
-            .from('leads')
-            .update({
-              outreach_status: 'claimed',
-              notes: 'Claimed via /claim flow',
-            })
-            .eq('id', currentLeadId);
-        } else {
-          const { data: inserted, error } = await supabase
-            .from('leads')
-            .insert({
-              email,
-              domain_id: templateId,
-              outreach_status: 'claimed',
-              source: 'claim_flow',
-              notes: 'New lead from /claim',
-            })
-            .select()
-            .single();
-
-          if (!error && inserted?.id) currentLeadId = inserted.id;
-        }
-      }
-
-      // Log action
-      await supabase.from('user_action_logs').insert({
-        lead_id: currentLeadId,
-        domain_id: templateId,
-        action_type: 'claim_checkout_started',
-        triggered_by: email,
-      });
+      await fetch('/api/claim/lead', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ templateId, email }),
+      }).catch(() => {});
     }
 
     const res = await createCheckoutSession({ domain, email, coupon });

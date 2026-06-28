@@ -1,5 +1,6 @@
 // app/api/hero/suggest/route.ts
 import OpenAI from 'openai';
+import { enforceGuestAiLimit, guestLimitBody } from '@/lib/ai/guestGuard';
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { createServerClient } from '@supabase/ssr';
@@ -184,6 +185,9 @@ export async function POST(req: Request) {
     if (limited(`hero-suggest:${auth.user.id}:${ip}`)) {
       return NextResponse.json({ error: 'Rate limit exceeded' }, { status: 429 });
     }
+
+    const guard = await enforceGuestAiLimit(auth.user, 'hero');
+    if (!guard.ok) return NextResponse.json(guestLimitBody(guard.limit), { status: 429 });
 
     const body = (await req.json()) as Incoming;
 

@@ -13,6 +13,8 @@ import { SiteFlags } from '@/lib/site-config';
 import useMediaQuery from '@/hooks/useMediaQuery';
 import SiteHeader from '@/components/site/site-header';
 import { useBrand } from '@/app/providers';
+import { guestBuildEnabled } from '@/lib/flags/guestBuild';
+import GuestStart from '@/components/home/guest-start';
 
 const isProd = process.env.NODE_ENV === 'production';
 
@@ -65,8 +67,13 @@ export default function HomePage() {
     });
   }, [user?.id, user?.email, role, isLoggedIn, productName]);
 
-  const primaryHref = isLoggedIn && role !== 'guest' ? '/admin/templates/list' : isProd ? '/pricing' : '/login';
-  const primaryLabel = isLoggedIn && role !== 'guest' ? 'Go to Templates' : isProd ? 'See Pricing' : 'Start building';
+  const isRealUser = isLoggedIn && role !== 'guest';
+  // Guest quick-start: show the in-hero builder to anyone who isn't a signed-in
+  // real user, when the feature flag is on. Otherwise fall back to the old CTAs.
+  const showGuestStart = guestBuildEnabled() && !isRealUser;
+
+  const primaryHref = isRealUser ? '/admin/templates/list' : isProd ? '/pricing' : '/login';
+  const primaryLabel = isRealUser ? 'Go to Templates' : isProd ? 'See Pricing' : 'Start building';
 
   return (
     <>
@@ -75,7 +82,7 @@ export default function HomePage() {
         {showGlow && <BackgroundGlow />}
 
         {/* ───────── Hero ───────── */}
-        <main className="relative z-10 flex flex-col items-center px-6 pt-16 pb-12 text-center">
+        <main id="start" className="relative z-10 flex flex-col items-center px-6 pt-16 pb-12 text-center">
           <div className="flex items-center gap-3">
             <Image src={logoSrc} width={40} height={40} alt={`${productName} logo`} className="rounded-full" />
             <span className="text-2xl font-bold tracking-tight">{productName}</span>
@@ -90,23 +97,33 @@ export default function HomePage() {
             {heroHeadline}
           </motion.h1>
 
-          <p className="mt-5 max-w-2xl text-lg text-zinc-400">{heroSubhead}</p>
+          <p className="mt-5 max-w-2xl text-lg text-zinc-400">
+            {showGuestStart
+              ? 'Describe your business and watch a real site appear — edit it live, publish when you sign up.'
+              : heroSubhead}
+          </p>
 
-          <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
-            <Link
-              href={primaryHref}
-              className="inline-block rounded-lg bg-sky-500 px-6 py-3 text-base font-medium text-zinc-950 shadow-lg transition hover:bg-sky-400"
-            >
-              {primaryLabel}
-            </Link>
-            <Link
-              href="/partners"
-              className="inline-block rounded-lg border border-sky-500 px-6 py-3 text-base font-medium text-sky-300 transition hover:bg-sky-500/10 hover:text-sky-200"
-            >
-              Become a partner
-            </Link>
-          </div>
-          <p className="mt-3 text-xs text-zinc-500">No code. Your domain. Your storefront. Your margin.</p>
+          {showGuestStart ? (
+            <GuestStart />
+          ) : (
+            <>
+              <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
+                <Link
+                  href={primaryHref}
+                  className="inline-block rounded-lg bg-sky-500 px-6 py-3 text-base font-medium text-zinc-950 shadow-lg transition hover:bg-sky-400"
+                >
+                  {primaryLabel}
+                </Link>
+                <Link
+                  href="/partners"
+                  className="inline-block rounded-lg border border-sky-500 px-6 py-3 text-base font-medium text-sky-300 transition hover:bg-sky-500/10 hover:text-sky-200"
+                >
+                  Become a partner
+                </Link>
+              </div>
+              <p className="mt-3 text-xs text-zinc-500">No code. Your domain. Your storefront. Your margin.</p>
+            </>
+          )}
         </main>
 
         {/* ───────── Build ───────── */}
@@ -213,10 +230,10 @@ export default function HomePage() {
             </div>
             <div className="mt-10">
               <Link
-                href={primaryHref}
+                href={showGuestStart ? '#start' : primaryHref}
                 className="inline-block rounded-lg bg-sky-500 px-7 py-3 text-base font-medium text-zinc-950 shadow-lg transition hover:bg-sky-400"
               >
-                {primaryLabel}
+                {showGuestStart ? 'Start building — free' : primaryLabel}
               </Link>
             </div>
           </div>

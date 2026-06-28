@@ -1,5 +1,14 @@
-import { supabase } from "@/admin/lib/supabaseClient";
+import { createClient } from '@supabase/supabase-js';
 import { refreshGSC } from "./refreshToken";
+
+// Service-role client: gsc_tokens holds OAuth tokens and is RLS-locked (no anon
+// access). This is a server-only module, so use the service role like the rest of
+// lib/gsc/*. (Was using the public anon client, which only worked while RLS was off.)
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!,
+  { auth: { persistSession: false } },
+);
 
 // lib/gsc/refreshToken.ts (append or split to getAllTokens.ts)
 export async function getAllValidGscTokens(): Promise<Record<string, string>> {

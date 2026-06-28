@@ -12,6 +12,7 @@ import { supabaseAdmin } from '@/lib/supabase/admin';
 import { getServerSupabase } from '@/lib/supabase/server';
 import PreviewBridge from '@/app/preview/preview-bridge';
 import PreviewState from '@/app/preview/PreviewState';
+import PreviewWatermark from '@/components/sites/preview-watermark';
 
 const QS_DEBUG = process.env.QSITES_DEBUG === '1';
 const BASE_DOMAIN = process.env.NEXT_PUBLIC_BASE_DOMAIN ?? 'quicksites.ai';
@@ -390,11 +391,13 @@ export async function generateMetadata({
   const pageParam = sp.page;
   const pageSlug = pathSlug ?? (Array.isArray(pageParam) ? pageParam[0] : pageParam) ?? firstPageSlug(site);
 
-  return generatePageMetadata({
+  const md = generatePageMetadata({
     site: site as any,
     pageSlug: String(pageSlug),
     baseUrl: await originFromHeaders(),
   });
+  // Preview pages must never be indexed (drafts / unpublished content).
+  return { ...md, robots: { index: false, follow: false } };
 }
 
 /* ---------- page ---------- */
@@ -430,6 +433,11 @@ export default async function PreviewPage({
     (Array.isArray(sp.editor) ? sp.editor[0] : sp.editor) === '1' ||
     (Array.isArray(sp.chrome) ? sp.chrome[0] : sp.chrome) === '1';
 
+  // Shareable guest preview: show the "not yet published" watermark.
+  const showWatermark =
+    (Array.isArray(sp.watermark) ? sp.watermark[0] : sp.watermark) === '1' ||
+    (Array.isArray(sp.guest) ? sp.guest[0] : sp.guest) === '1';
+
   return (
     <TemplateEditorProvider
       templateName={normalized.template_name ?? normalized.slug ?? String(normalized.id)}
@@ -446,6 +454,7 @@ export default async function PreviewPage({
         editorChrome={editorChrome}
         baseUrl={baseUrl}
       />
+      {showWatermark && <PreviewWatermark />}
     </TemplateEditorProvider>
   );
 }

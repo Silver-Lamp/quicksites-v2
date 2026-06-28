@@ -1,8 +1,17 @@
 // components/admin/guest-publish-banner.tsx
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase/client';
+
+/** Build a shareable, watermarked preview URL from the current editor path. */
+function buildPreviewUrl(): string | null {
+  if (typeof window === 'undefined') return null;
+  const m = window.location.pathname.match(/\/admin\/templates\/([^/]+)/);
+  const id = m?.[1];
+  if (!id || ['list', 'new', 'gsc-bulk-stats'].includes(id)) return null;
+  return `${window.location.origin}/preview?template_id=${encodeURIComponent(id)}&watermark=1`;
+}
 
 /**
  * Persistent banner shown while building as a guest (anonymous user).
@@ -20,6 +29,23 @@ export default function GuestPublishBanner() {
   const [email, setEmail] = useState('');
   const [status, setStatus] = useState<'idle' | 'sending' | 'sent' | 'error'>('idle');
   const [message, setMessage] = useState<string | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
+
+  useEffect(() => {
+    setPreviewUrl(buildPreviewUrl());
+  }, []);
+
+  const copyPreview = async () => {
+    if (!previewUrl) return;
+    try {
+      await navigator.clipboard.writeText(previewUrl);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      /* clipboard blocked — the Preview link still works */
+    }
+  };
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -53,13 +79,34 @@ export default function GuestPublishBanner() {
         {status === 'sent' ? (
           <span className="text-emerald-300">{message}</span>
         ) : !open ? (
-          <button
-            type="button"
-            onClick={() => setOpen(true)}
-            className="shrink-0 rounded-md bg-sky-500 px-4 py-1.5 font-medium text-zinc-950 transition hover:bg-sky-400"
-          >
-            Sign up to publish
-          </button>
+          <div className="flex shrink-0 items-center gap-2">
+            {previewUrl && (
+              <>
+                <a
+                  href={previewUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="rounded-md border border-sky-500/40 px-3 py-1.5 font-medium text-sky-200 transition hover:bg-sky-500/10"
+                >
+                  Preview
+                </a>
+                <button
+                  type="button"
+                  onClick={copyPreview}
+                  className="rounded-md border border-sky-500/40 px-3 py-1.5 font-medium text-sky-200 transition hover:bg-sky-500/10"
+                >
+                  {copied ? 'Copied!' : 'Copy link'}
+                </button>
+              </>
+            )}
+            <button
+              type="button"
+              onClick={() => setOpen(true)}
+              className="rounded-md bg-sky-500 px-4 py-1.5 font-medium text-zinc-950 transition hover:bg-sky-400"
+            >
+              Sign up to publish
+            </button>
+          </div>
         ) : (
           <form onSubmit={submit} className="flex shrink-0 items-center gap-2">
             <input

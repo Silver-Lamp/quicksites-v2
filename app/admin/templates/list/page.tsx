@@ -6,6 +6,7 @@ import { headers } from 'next/headers';
 import { getServerSupabase } from '@/lib/supabase/server';
 import TemplatesListClient from '@/components/admin/templates/TemplatesListClient';
 import RefreshTemplatesButton from '@/components/admin/templates/RefreshTemplatesButton';
+import GenerateDemosButton from '@/components/admin/templates/generate-demos-button';
 
 type SearchParams = { date?: string; versions?: string };
 
@@ -53,6 +54,7 @@ export default async function TemplatesIndexPage({ searchParams }: { searchParam
         dateParam={dateParam}
         includeVersions={includeVersions}
       />
+      <GenerateDemosButton />
       </div>
       <TemplatesListClient
         initialRows={initialRows}

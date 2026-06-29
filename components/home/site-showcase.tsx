@@ -1,7 +1,22 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { ArrowUpRight, Eye, EyeOff } from 'lucide-react';
+import {
+  DndContext,
+  closestCenter,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from '@dnd-kit/core';
+import {
+  SortableContext,
+  horizontalListSortingStrategy,
+  useSortable,
+  arrayMove,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
+import { ArrowUpRight, Eye, EyeOff, GripVertical } from 'lucide-react';
 import { useIsAdmin } from '@/hooks/useIsAdmin';
 import {
   type ShowcaseDisplayMode,
@@ -21,51 +36,106 @@ type ShowcaseSite = {
   hidden: boolean;
 };
 
+type FeedData = { sites: ShowcaseSite[]; displayMode: ShowcaseDisplayMode };
+
+const CACHE_KEY = 'qs_showcase_cache_v2';
+
+function readCache(): FeedData | null {
+  try {
+    const raw = localStorage.getItem(CACHE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (!parsed || !Array.isArray(parsed.sites)) return null;
+    return {
+      sites: parsed.sites,
+      displayMode: isShowcaseMode(parsed.displayMode) ? parsed.displayMode : DEFAULT_SHOWCASE_MODE,
+    };
+  } catch {
+    return null;
+  }
+}
+
+function writeCache(data: FeedData) {
+  try {
+    localStorage.setItem(CACHE_KEY, JSON.stringify(data));
+  } catch {
+    /* quota/private mode — non-fatal */
+  }
+}
+
 /**
  * "Built with QuickSites" — a single horizontally-scrolling row of real
- * published sites. The card visual follows the admin-chosen display mode
- * (thumbnail / OG / hero / logo). Admins can hide/unhide individual sites
- * (persisted site-wide); visitors never see hidden ones.
+ * published sites. Hydrates instantly from a local cache (then revalidates),
+ * shows a loading skeleton on the very first visit, follows the admin-chosen
+ * display mode, and lets admins drag to reorder + hide/unhide (all persisted).
  */
 export default function SiteShowcase() {
-  const [sites, setSites] = useState<ShowcaseSite[] | null>(null);
-  const [mode, setMode] = useState<ShowcaseDisplayMode>(DEFAULT_SHOWCASE_MODE);
+  const [data, setData] = useState<FeedData | null>(null);
+  const [loading, setLoading] = useState(true);
   const isAdmin = useIsAdmin();
+
+  const sites = data?.sites ?? [];
+  const mode = data?.displayMode ?? DEFAULT_SHOWCASE_MODE;
 
   useEffect(() => {
     let active = true;
+
+    // 1) instant paint from cache (if any)
+    const cached = readCache();
+    if (cached && active) {
+      setData(cached);
+      setLoading(false);
+    }
+
+    // 2) revalidate in the background
     fetch('/api/public/showcase')
       .then((r) => r.json())
       .then((d) => {
         if (!active) return;
-        setSites(Array.isArray(d?.sites) ? d.sites : []);
-        if (isShowcaseMode(d?.displayMode)) setMode(d.displayMode);
+        const fresh: FeedData = {
+          sites: Array.isArray(d?.sites) ? d.sites : [],
+          displayMode: isShowcaseMode(d?.displayMode) ? d.displayMode : DEFAULT_SHOWCASE_MODE,
+        };
+        setData(fresh);
+        writeCache(fresh);
       })
       .catch(() => {
-        if (active) setSites([]);
+        /* keep cache / skeleton */
+      })
+      .finally(() => {
+        if (active) setLoading(false);
       });
+
     return () => {
       active = false;
     };
   }, []);
 
-  async function changeMode(next: ShowcaseDisplayMode) {
-    const prev = mode;
-    setMode(next);
+  function update(next: FeedData) {
+    setData(next);
+    writeCache(next);
+  }
+
+  async function changeMode(nextMode: ShowcaseDisplayMode) {
+    if (!data) return;
+    const prev = data;
+    update({ ...data, displayMode: nextMode });
     try {
       const res = await fetch('/api/admin/site-settings/showcase-mode', {
         method: 'PUT',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ mode: next }),
+        body: JSON.stringify({ mode: nextMode }),
       });
-      if (!res.ok) setMode(prev);
+      if (!res.ok) update(prev);
     } catch {
-      setMode(prev);
+      update(prev);
     }
   }
 
   async function toggleHide(slug: string, hidden: boolean) {
-    setSites((prev) => (prev ? prev.map((s) => (s.slug === slug ? { ...s, hidden } : s)) : prev));
+    if (!data) return;
+    const prev = data;
+    update({ ...data, sites: data.sites.map((s) => (s.slug === slug ? { ...s, hidden } : s)) });
     try {
       const res = await fetch('/api/admin/site-settings/showcase-hidden', {
         method: 'PUT',
@@ -74,13 +144,82 @@ export default function SiteShowcase() {
       });
       if (!res.ok) throw new Error('failed');
     } catch {
-      setSites((prev) => (prev ? prev.map((s) => (s.slug === slug ? { ...s, hidden: !hidden } : s)) : prev));
+      update(prev);
     }
   }
 
-  if (!sites) return null;
-  const visible = isAdmin ? sites : sites.filter((s) => !s.hidden);
-  if (visible.length === 0) return null;
+  async function persistOrder(orderedSlugs: string[]) {
+    try {
+      await fetch('/api/admin/site-settings/showcase-order', {
+        method: 'PUT',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ order: orderedSlugs }),
+      });
+    } catch {
+      /* best-effort; next load revalidates */
+    }
+  }
+
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
+
+  function onDragEnd(e: DragEndEvent) {
+    if (!data) return;
+    const { active, over } = e;
+    if (!over || active.id === over.id) return;
+    const from = data.sites.findIndex((s) => s.slug === active.id);
+    const to = data.sites.findIndex((s) => s.slug === over.id);
+    if (from < 0 || to < 0) return;
+    const nextSites = arrayMove(data.sites, from, to);
+    update({ ...data, sites: nextSites });
+    persistOrder(nextSites.map((s) => s.slug));
+  }
+
+  // ---- loading skeleton (first visit, no cache yet) ----
+  if (loading && sites.length === 0) {
+    return (
+      <section className="relative z-10 w-full border-t border-zinc-800/70">
+        <div className="mx-auto max-w-6xl px-6 py-14">
+          <h2 className="text-2xl md:text-3xl font-semibold">Built with QuickSites</h2>
+          <p className="mt-2 max-w-2xl text-sm text-zinc-400">Loading live sites…</p>
+          <div className="mt-8 -mx-6 flex gap-5 overflow-hidden px-6 pb-4" aria-hidden>
+            {Array.from({ length: 6 }).map((_, i) => (
+              <div key={i} className="w-72 shrink-0">
+                <div className="overflow-hidden rounded-xl border border-zinc-800 bg-zinc-900/40">
+                  <div className="aspect-[16/10] w-full animate-pulse bg-zinc-800/70" />
+                  <div className="space-y-2 p-4">
+                    <div className="h-3.5 w-2/3 animate-pulse rounded bg-zinc-800" />
+                    <div className="h-3 w-1/3 animate-pulse rounded bg-zinc-800/70" />
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+    );
+  }
+
+  const rowSites = isAdmin ? sites : sites.filter((s) => !s.hidden);
+  if (rowSites.length === 0) return null;
+
+  const Row = (
+    <div className="mt-8 -mx-6 flex snap-x snap-mandatory gap-5 overflow-x-auto px-6 pb-4">
+      {rowSites.map((s) =>
+        isAdmin ? (
+          <SortableShowcaseCard
+            key={`${s.slug}-${mode}`}
+            site={s}
+            mode={mode}
+            onToggleHide={() => toggleHide(s.slug, !s.hidden)}
+          />
+        ) : (
+          <div key={`${s.slug}-${mode}`} className="w-72 shrink-0 snap-start">
+            <ShowcaseCard site={s} mode={mode} />
+          </div>
+        )
+      )}
+    </div>
+  );
 
   return (
     <section className="relative z-10 w-full border-t border-zinc-800/70">
@@ -95,7 +234,7 @@ export default function SiteShowcase() {
 
           {isAdmin && (
             <div className="flex flex-col items-end gap-1">
-              <span className="text-[11px] uppercase tracking-wide text-zinc-500">Display (admin)</span>
+              <span className="text-[11px] uppercase tracking-wide text-zinc-500">Display (admin) · drag to reorder</span>
               <div className="inline-flex rounded-lg border border-zinc-800 bg-zinc-900/60 p-0.5">
                 {SHOWCASE_DISPLAY_MODES.map((m) => (
                   <button
@@ -113,29 +252,58 @@ export default function SiteShowcase() {
           )}
         </div>
 
-        {/* single horizontally-scrolling row */}
-        <div className="mt-8 -mx-6 flex snap-x snap-mandatory gap-5 overflow-x-auto px-6 pb-4">
-          {visible.map((s) => (
-            <div
-              key={`${s.slug}-${mode}`}
-              className={`relative w-72 shrink-0 snap-start ${s.hidden ? 'opacity-45' : ''}`}
-            >
-              <ShowcaseCard site={s} mode={mode} />
-              {isAdmin && (
-                <button
-                  onClick={() => toggleHide(s.slug, !s.hidden)}
-                  title={s.hidden ? 'Show in showcase' : 'Hide from showcase'}
-                  className="absolute left-2 top-2 z-10 inline-flex items-center gap-1 rounded-md bg-zinc-950/80 px-2 py-1 text-[11px] font-medium text-white backdrop-blur transition hover:bg-zinc-800"
-                >
-                  {s.hidden ? <Eye className="h-3 w-3" /> : <EyeOff className="h-3 w-3" />}
-                  {s.hidden ? 'Hidden' : 'Hide'}
-                </button>
-              )}
-            </div>
-          ))}
-        </div>
+        {isAdmin ? (
+          <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
+            <SortableContext items={rowSites.map((s) => s.slug)} strategy={horizontalListSortingStrategy}>
+              {Row}
+            </SortableContext>
+          </DndContext>
+        ) : (
+          Row
+        )}
       </div>
     </section>
+  );
+}
+
+function SortableShowcaseCard({
+  site: s,
+  mode,
+  onToggleHide,
+}: {
+  site: ShowcaseSite;
+  mode: ShowcaseDisplayMode;
+  onToggleHide: () => void;
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: s.slug });
+  const style = { transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.6 : undefined };
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={`relative w-72 shrink-0 snap-start ${s.hidden ? 'opacity-45' : ''}`}
+    >
+      <ShowcaseCard site={s} mode={mode} />
+
+      <button
+        onClick={onToggleHide}
+        title={s.hidden ? 'Show in showcase' : 'Hide from showcase'}
+        className="absolute left-2 top-2 z-10 inline-flex items-center gap-1 rounded-md bg-zinc-950/80 px-2 py-1 text-[11px] font-medium text-white backdrop-blur transition hover:bg-zinc-800"
+      >
+        {s.hidden ? <Eye className="h-3 w-3" /> : <EyeOff className="h-3 w-3" />}
+        {s.hidden ? 'Hidden' : 'Hide'}
+      </button>
+
+      <button
+        {...attributes}
+        {...listeners}
+        title="Drag to reorder"
+        className="absolute right-2 top-2 z-10 inline-flex cursor-grab items-center rounded-md bg-zinc-950/80 px-1.5 py-1 text-white backdrop-blur transition hover:bg-zinc-800 active:cursor-grabbing"
+      >
+        <GripVertical className="h-3.5 w-3.5" />
+      </button>
+    </div>
   );
 }
 

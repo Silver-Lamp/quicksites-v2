@@ -2,7 +2,11 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { LayoutGrid, Table2 } from 'lucide-react';
 import TemplatesIndexTable from '@/components/admin/templates/templates-index-table';
+import TemplatesCardGrid from '@/components/admin/templates/templates-card-grid';
+
+type ViewMode = 'cards' | 'table';
 
 type Props = {
   initialRows: any[];
@@ -38,6 +42,19 @@ export default function TemplatesListClient({
   const [rows, setRows] = useState<any[]>(initialRows);
   const [offset, setOffset] = useState<number>(initialOffset);
   const [hasMore, setHasMore] = useState<boolean>(initialHasMore);
+  const [view, setView] = useState<ViewMode>('cards');
+
+  // Remember the admin's preferred view across visits.
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem('qs_templates_view');
+      if (saved === 'cards' || saved === 'table') setView(saved);
+    } catch {}
+  }, []);
+  const chooseView = (v: ViewMode) => {
+    setView(v);
+    try { localStorage.setItem('qs_templates_view', v); } catch {}
+  };
   const [loading, setLoading] = useState(false);
   const [errorText, setErrorText] = useState<string | null>(null);
 
@@ -165,8 +182,33 @@ export default function TemplatesListClient({
       {loading && <div className="mb-3 text-xs text-zinc-400">Loading…</div>}
       {errorText && <div className="mb-3 text-xs text-red-400">{errorText}</div>}
 
-      {/* ✅ pass includeVersions so the table can default grouping appropriately */}
-      <TemplatesIndexTable templates={rows as any} selectedFilter={dateParam} includeVersions={includeVersions} />
+      <div className="mb-4 flex justify-end">
+        <div className="inline-flex rounded-lg border border-zinc-800 bg-zinc-900/60 p-0.5">
+          <button
+            onClick={() => chooseView('cards')}
+            className={`inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition ${
+              view === 'cards' ? 'bg-sky-500 text-zinc-950' : 'text-zinc-300 hover:text-white'
+            }`}
+          >
+            <LayoutGrid className="h-3.5 w-3.5" /> Cards
+          </button>
+          <button
+            onClick={() => chooseView('table')}
+            className={`inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition ${
+              view === 'table' ? 'bg-sky-500 text-zinc-950' : 'text-zinc-300 hover:text-white'
+            }`}
+          >
+            <Table2 className="h-3.5 w-3.5" /> Table
+          </button>
+        </div>
+      </div>
+
+      {view === 'cards' ? (
+        <TemplatesCardGrid rows={rows as any} />
+      ) : (
+        /* ✅ pass includeVersions so the table can default grouping appropriately */
+        <TemplatesIndexTable templates={rows as any} selectedFilter={dateParam} includeVersions={includeVersions} />
+      )}
       <div className="mt-4 flex justify-center">
         {hasMore ? (
           <button

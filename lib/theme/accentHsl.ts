@@ -32,9 +32,11 @@ export const ACCENT_HSL: Record<string, string> = {
   'emerald-700': '163 94% 24%',
   'green-600': '142 76% 36%',
   'lime-500': '84 81% 44%',
+  'lime-600': '86 78% 35%',
   'slate-700': '215 25% 27%',
   'gray-700': '217 19% 27%',
   'zinc-300': '240 5% 84%',
+  'zinc-700': '240 5% 26%',
 };
 
 /** Tailwind accent token → "H S% L%", or null if unknown. */

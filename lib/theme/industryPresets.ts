@@ -24,7 +24,7 @@ const rugged = (accentColor: string): SiteTheme => ({
   accentColor,
   borderRadius: 'md',
   glow: [],
-  darkMode: 'dark',
+  darkMode: 'light',
 });
 
 /** Clean, restrained — legal / medical / real estate. */
@@ -74,8 +74,8 @@ export const industryPresets: Record<string, SiteTheme> = {
   // --- Food / wellness ---
   restaurant: warm('amber-600', 'serif'),
   salon_spa: warm('rose-500'),
-  fitness: { fontFamily: 'sans', accentColor: 'lime-500', borderRadius: 'lg', glow: [], darkMode: 'dark' },
-  photography: { fontFamily: 'sans', accentColor: 'zinc-300', borderRadius: 'sm', glow: [], darkMode: 'dark' },
+  fitness: { fontFamily: 'sans', accentColor: 'lime-600', borderRadius: 'lg', glow: [], darkMode: 'light' },
+  photography: { fontFamily: 'sans', accentColor: 'zinc-700', borderRadius: 'sm', glow: [], darkMode: 'light' },
 
   // --- Retail / maker / resale (warm, playful) ---
   retail_boutique: warm('fuchsia-500'),

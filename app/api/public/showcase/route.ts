@@ -17,6 +17,7 @@ import {
   DEFAULT_SHOWCASE_MODE,
   SHOWCASE_MODE_KEY,
   SHOWCASE_HIDDEN_KEY,
+  SHOWCASE_ORDER_KEY,
 } from '@/lib/home/showcase-helpers';
 import { getSiteSetting } from '@/lib/settings/siteSettings';
 
@@ -28,6 +29,8 @@ export async function GET() {
   const displayMode = isShowcaseMode(rawMode) ? rawMode : DEFAULT_SHOWCASE_MODE;
   const hiddenList = await getSiteSetting<string[]>(SHOWCASE_HIDDEN_KEY, []);
   const hidden = new Set(Array.isArray(hiddenList) ? hiddenList : []);
+  const orderList = await getSiteSetting<string[]>(SHOWCASE_ORDER_KEY, []);
+  const orderIdx = new Map((Array.isArray(orderList) ? orderList : []).map((s, i) => [s, i]));
 
   try {
     const supa = await getServerSupabase({ serviceRole: true });
@@ -69,6 +72,13 @@ export async function GET() {
       })
       .filter((s: any) => s._publishable)
       .sort((a: any, b: any) => {
+        // 1) explicit admin order wins
+        const oa = orderIdx.has(a.slug) ? (orderIdx.get(a.slug) as number) : null;
+        const ob = orderIdx.has(b.slug) ? (orderIdx.get(b.slug) as number) : null;
+        if (oa != null && ob != null) return oa - ob;
+        if (oa != null) return -1;
+        if (ob != null) return 1;
+        // 2) then the curated priority list, 3) then name
         const pa = priority.has(a.slug) ? (priority.get(a.slug) as number) : Number.MAX_SAFE_INTEGER;
         const pb = priority.has(b.slug) ? (priority.get(b.slug) as number) : Number.MAX_SAFE_INTEGER;
         if (pa !== pb) return pa - pb;

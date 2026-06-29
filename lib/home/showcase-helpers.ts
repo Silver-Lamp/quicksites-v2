@@ -15,6 +15,9 @@ export const SHOWCASE_MODE_KEY = 'showcase_display_mode';
 /** site_settings key holding the list of admin-hidden showcase slugs. */
 export const SHOWCASE_HIDDEN_KEY = 'showcase_hidden_slugs';
 
+/** site_settings key holding the admin-defined showcase order (array of slugs). */
+export const SHOWCASE_ORDER_KEY = 'showcase_order';
+
 export const SHOWCASE_MODE_LABELS: Record<ShowcaseDisplayMode, string> = {
   thumbnail: 'Thumbnail',
   og: 'OG image',

@@ -3,48 +3,12 @@
 // Read (public) / set (admin-only) the homepage showcase display mode.
 
 import { NextRequest, NextResponse } from 'next/server';
-import { cookies } from 'next/headers';
-import { createServerClient, type CookieOptions } from '@supabase/ssr';
 import { getSiteSetting, setSiteSetting } from '@/lib/settings/siteSettings';
 import { SHOWCASE_MODE_KEY, DEFAULT_SHOWCASE_MODE, isShowcaseMode } from '@/lib/home/showcase-helpers';
+import { adminUserId } from '@/lib/auth/adminUser';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
-
-/** Returns the admin user id, or null if the caller isn't an admin/owner. */
-async function adminUserId(): Promise<string | null> {
-  const store = await cookies();
-  const supa = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookieEncoding: 'base64url',
-      cookies: {
-        getAll: () => store.getAll().map(({ name, value }) => ({ name, value })),
-        setAll: (cks) => cks.forEach((c) => store.set(c.name, c.value, c.options as CookieOptions | undefined)),
-      },
-    }
-  );
-  const { data: auth } = await (supa as any).auth.getUser();
-  const user = auth?.user;
-  if (!user) return null;
-
-  const { data: au } = await (supa as any)
-    .from('admin_users')
-    .select('user_id')
-    .eq('user_id', user.id)
-    .limit(1);
-  if (au?.[0]) return user.id;
-
-  const { data: prof } = await (supa as any)
-    .from('user_profiles')
-    .select('role')
-    .eq('user_id', user.id)
-    .maybeSingle();
-  if (prof && (prof.role === 'admin' || prof.role === 'owner')) return user.id;
-
-  return null;
-}
 
 export async function GET() {
   const mode = await getSiteSetting<string>(SHOWCASE_MODE_KEY, DEFAULT_SHOWCASE_MODE);

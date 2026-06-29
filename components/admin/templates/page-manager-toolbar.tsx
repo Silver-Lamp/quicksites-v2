@@ -363,7 +363,7 @@ export default function PageManagerToolbar({
       role="dialog"
       aria-modal="true"
     >
-      <div className="w-screen max-w-5xl rounded-2xl border border-white/10 bg-neutral-950/95 backdrop-blur shadow-lg">
+      <div className="w-screen max-w-5xl rounded-2xl border border-white/10 bg-neutral-950/95 text-white/90 backdrop-blur shadow-lg">
         {/* header */}
         <div className="flex items-center justify-between gap-3 px-3 py-2 border-b border-white/10">
           <div className="text-sm font-medium opacity-90">Pages</div>

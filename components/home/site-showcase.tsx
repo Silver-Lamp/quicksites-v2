@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { ArrowUpRight } from 'lucide-react';
+import { ArrowUpRight, Eye, EyeOff } from 'lucide-react';
 import { useIsAdmin } from '@/hooks/useIsAdmin';
 import {
   type ShowcaseDisplayMode,
@@ -18,12 +18,14 @@ type ShowcaseSite = {
   heroUrl: string | null;
   logoUrl: string | null;
   href: string;
+  hidden: boolean;
 };
 
 /**
- * "Built with QuickSites" — a curated gallery of real published sites. The card
- * visual follows the admin-chosen display mode (thumbnail / OG / hero / logo),
- * persisted site-wide. Renders nothing until loaded and nothing if empty.
+ * "Built with QuickSites" — a single horizontally-scrolling row of real
+ * published sites. The card visual follows the admin-chosen display mode
+ * (thumbnail / OG / hero / logo). Admins can hide/unhide individual sites
+ * (persisted site-wide); visitors never see hidden ones.
  */
 export default function SiteShowcase() {
   const [sites, setSites] = useState<ShowcaseSite[] | null>(null);
@@ -49,20 +51,36 @@ export default function SiteShowcase() {
 
   async function changeMode(next: ShowcaseDisplayMode) {
     const prev = mode;
-    setMode(next); // optimistic
+    setMode(next);
     try {
       const res = await fetch('/api/admin/site-settings/showcase-mode', {
         method: 'PUT',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({ mode: next }),
       });
-      if (!res.ok) setMode(prev); // revert on failure
+      if (!res.ok) setMode(prev);
     } catch {
       setMode(prev);
     }
   }
 
-  if (!sites || sites.length === 0) return null;
+  async function toggleHide(slug: string, hidden: boolean) {
+    setSites((prev) => (prev ? prev.map((s) => (s.slug === slug ? { ...s, hidden } : s)) : prev));
+    try {
+      const res = await fetch('/api/admin/site-settings/showcase-hidden', {
+        method: 'PUT',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ slug, hidden }),
+      });
+      if (!res.ok) throw new Error('failed');
+    } catch {
+      setSites((prev) => (prev ? prev.map((s) => (s.slug === slug ? { ...s, hidden: !hidden } : s)) : prev));
+    }
+  }
+
+  if (!sites) return null;
+  const visible = isAdmin ? sites : sites.filter((s) => !s.hidden);
+  if (visible.length === 0) return null;
 
   return (
     <section className="relative z-10 w-full border-t border-zinc-800/70">
@@ -71,7 +89,7 @@ export default function SiteShowcase() {
           <div>
             <h2 className="text-2xl md:text-3xl font-semibold">Built with QuickSites</h2>
             <p className="mt-2 max-w-2xl text-sm text-zinc-400">
-              Real businesses, live on QuickSites. Click through to see the published sites.
+              Real businesses, live on QuickSites. Scroll to explore — click any site to view it live.
             </p>
           </div>
 
@@ -95,9 +113,25 @@ export default function SiteShowcase() {
           )}
         </div>
 
-        <div className="mt-8 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
-          {sites.map((s) => (
-            <ShowcaseCard key={`${s.slug}-${mode}`} site={s} mode={mode} />
+        {/* single horizontally-scrolling row */}
+        <div className="mt-8 -mx-6 flex snap-x snap-mandatory gap-5 overflow-x-auto px-6 pb-4">
+          {visible.map((s) => (
+            <div
+              key={`${s.slug}-${mode}`}
+              className={`relative w-72 shrink-0 snap-start ${s.hidden ? 'opacity-45' : ''}`}
+            >
+              <ShowcaseCard site={s} mode={mode} />
+              {isAdmin && (
+                <button
+                  onClick={() => toggleHide(s.slug, !s.hidden)}
+                  title={s.hidden ? 'Show in showcase' : 'Hide from showcase'}
+                  className="absolute left-2 top-2 z-10 inline-flex items-center gap-1 rounded-md bg-zinc-950/80 px-2 py-1 text-[11px] font-medium text-white backdrop-blur transition hover:bg-zinc-800"
+                >
+                  {s.hidden ? <Eye className="h-3 w-3" /> : <EyeOff className="h-3 w-3" />}
+                  {s.hidden ? 'Hidden' : 'Hide'}
+                </button>
+              )}
+            </div>
           ))}
         </div>
       </div>
@@ -109,8 +143,6 @@ function ShowcaseCard({ site: s, mode }: { site: ShowcaseSite; mode: ShowcaseDis
   const [imgOk, setImgOk] = useState(true);
   const [logoOk, setLogoOk] = useState(Boolean(s.logoUrl));
 
-  // Generated modes (thumbnail/OG) bake the name onto the image; raw modes
-  // (hero/logo) show a text footer below the visual.
   const generated = mode === 'thumbnail' || mode === 'og';
   const imageSrc =
     mode === 'thumbnail'
@@ -119,22 +151,20 @@ function ShowcaseCard({ site: s, mode }: { site: ShowcaseSite; mode: ShowcaseDis
       ? `/og/${encodeURIComponent(s.slug)}`
       : mode === 'hero'
       ? s.heroUrl
-      : null; // 'logo' handled separately
+      : null;
 
-  // Re-key on mode so a new <img> mounts (resets onError state) when switching.
   return (
     <a
       href={s.href}
       target="_blank"
       rel="noopener noreferrer"
-      className="group overflow-hidden rounded-xl border border-zinc-800 bg-zinc-900/40 transition hover:border-sky-500/50 hover:bg-sky-500/[0.03]"
+      className="group block overflow-hidden rounded-xl border border-zinc-800 bg-zinc-900/40 transition hover:border-sky-500/50 hover:bg-sky-500/[0.03]"
     >
       <div className="relative aspect-[16/10] w-full overflow-hidden bg-zinc-800/60">
         {mode === 'logo' ? (
           s.logoUrl && logoOk ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
-              key={`logo-${s.slug}`}
               src={s.logoUrl}
               alt={s.name}
               loading="lazy"
@@ -147,7 +177,6 @@ function ShowcaseCard({ site: s, mode }: { site: ShowcaseSite; mode: ShowcaseDis
         ) : imageSrc && imgOk ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
-            key={`${mode}-${s.slug}`}
             src={imageSrc}
             alt={`${s.name} — built with QuickSites`}
             loading="lazy"

@@ -15,7 +15,7 @@ const homeService = (accentColor: string): SiteTheme => ({
   accentColor,
   borderRadius: 'lg',
   glow: [],
-  darkMode: 'light',
+  darkMode: 'dark',
 });
 
 /** Dark, rugged — automotive / after-hours / heavy trades. */
@@ -24,7 +24,7 @@ const rugged = (accentColor: string): SiteTheme => ({
   accentColor,
   borderRadius: 'md',
   glow: [],
-  darkMode: 'light',
+  darkMode: 'dark',
 });
 
 /** Clean, restrained — legal / medical / real estate. */
@@ -33,7 +33,7 @@ const professional = (accentColor: string): SiteTheme => ({
   accentColor,
   borderRadius: 'sm',
   glow: [],
-  darkMode: 'light',
+  darkMode: 'dark',
 });
 
 /** Warm, friendly — playful retail / maker / food / wellness. */
@@ -42,7 +42,7 @@ const warm = (accentColor: string, fontFamily: SiteTheme['fontFamily'] = 'sans')
   accentColor,
   borderRadius: 'xl',
   glow: [],
-  darkMode: 'light',
+  darkMode: 'dark',
 });
 
 export const industryPresets: Record<string, SiteTheme> = {
@@ -74,8 +74,8 @@ export const industryPresets: Record<string, SiteTheme> = {
   // --- Food / wellness ---
   restaurant: warm('amber-600', 'serif'),
   salon_spa: warm('rose-500'),
-  fitness: { fontFamily: 'sans', accentColor: 'lime-600', borderRadius: 'lg', glow: [], darkMode: 'light' },
-  photography: { fontFamily: 'sans', accentColor: 'zinc-700', borderRadius: 'sm', glow: [], darkMode: 'light' },
+  fitness: { fontFamily: 'sans', accentColor: 'lime-500', borderRadius: 'lg', glow: [], darkMode: 'dark' },
+  photography: { fontFamily: 'sans', accentColor: 'zinc-300', borderRadius: 'sm', glow: [], darkMode: 'dark' },
 
   // --- Retail / maker / resale (warm, playful) ---
   retail_boutique: warm('fuchsia-500'),
@@ -102,7 +102,7 @@ export const industryPresets: Record<string, SiteTheme> = {
 
   // --- Legacy aliases (kept for back-compat with older callers) ---
   bakery: warm('yellow-500', 'cursive'),
-  agency: { fontFamily: 'sans', accentColor: 'sky-500', borderRadius: 'sm', glow: [], darkMode: 'light' },
+  agency: { fontFamily: 'sans', accentColor: 'sky-500', borderRadius: 'sm', glow: [], darkMode: 'dark' },
   default: homeService('indigo-600'),
 };
 

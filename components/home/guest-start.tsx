@@ -69,7 +69,7 @@ export default function GuestStart() {
           template_name: name,
           slug: `${slugify(name) || 'site'}-${randSuffix()}`,
           is_site: true,
-          color_mode: 'light',
+          color_mode: 'dark',
           data: {
             meta: {
               business_name: name,

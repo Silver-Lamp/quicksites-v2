@@ -57,7 +57,13 @@ export default async function TemplateEditPage({ params }: PageProps) {
   // Try to load a non-version draft first; fall back to latest matching row.
   const select =
     'id, template_name, slug, base_slug, data, header_block, footer_block, color_mode, domain, default_subdomain, is_version, is_site, updated_at, rev';
-  const orCond = `id.eq.${key},slug.eq.${key},base_slug.eq.${key}`;
+  // Only match on `id` when the key is a real UUID — otherwise PostgREST sends
+  // `id=eq.<slug>` which errors ("invalid input syntax for type uuid"), failing
+  // the whole OR query and 404-ing valid slug URLs.
+  const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(key);
+  const orCond = [isUuid ? `id.eq.${key}` : null, `slug.eq.${key}`, `base_slug.eq.${key}`]
+    .filter(Boolean)
+    .join(',');
 
   // 1) Prefer non-version
   let row: any | null = null;

@@ -43,6 +43,12 @@ export async function POST(req: NextRequest) {
     const slug = url.searchParams.get('slug');
     if (!slug) return NextResponse.json({ error: 'Missing slug' }, { status: 400 });
 
+    // The copy must belong to the caller (so it lists/edits as theirs, and a
+    // guest's copy auto-claims on signup via matching uid).
+    const { data: { user } } = await supabase.auth.getUser();
+    const ownerId = user?.id ?? null;
+    const isAnonymous = !!user?.is_anonymous;
+
     // 1) Load source by slug
     const { data: src, error: loadErr } = await supabase
       .from('templates')
@@ -90,6 +96,9 @@ export async function POST(req: NextRequest) {
       commit: null,
       domain: null,
       custom_domain: null,
+
+      ...(ownerId ? { owner_id: ownerId } : {}),
+      ...(isAnonymous ? { claim_source: 'guest_build' } : {}),
     };
 
     const { data: inserted, error: insErr } = await supabase

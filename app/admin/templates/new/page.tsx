@@ -8,6 +8,7 @@ import TemplateEditor from '@/components/admin/templates/template-editor';
 import type { Template } from '@/types/template';
 import { createEmptyTemplate } from '@/lib/createEmptyTemplate';
 import { toast } from 'react-hot-toast';
+import StartYourSite from '@/components/admin/templates/start/start-your-site';
 
 /** Fallback local slug generator */
 function generateLocalSlug(base = 'new-template') {
@@ -115,6 +116,11 @@ export default function NewTemplatePage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const from = searchParams?.get('from') ?? ''; // optional snapshot id
+  const mode = searchParams?.get('mode') ?? '';
+
+  // First-run chooser is the default. Auto-create only when remixing a snapshot
+  // (?from=) or explicitly choosing a blank site (?mode=blank).
+  const autoCreate = !!from || mode === 'blank';
 
   const [initialData, setInitialData] = useState<Template | null>(null);
   const [busy, setBusy] = useState(true);
@@ -123,6 +129,10 @@ export default function NewTemplatePage() {
   const startedRef = useRef(false);
 
   useEffect(() => {
+    if (!autoCreate) {
+      setBusy(false);
+      return;
+    }
     if (startedRef.current) return;
     startedRef.current = true;
 
@@ -201,7 +211,12 @@ export default function NewTemplatePage() {
 
     void initializeTemplate();
     return () => { cancelled = true; };
-  }, [from, router]);
+  }, [from, router, autoCreate]);
+
+  // Default entry: show the "Start your site" chooser (industry / template / blank).
+  if (!autoCreate) {
+    return <StartYourSite />;
+  }
 
   if (busy || !initialData) {
     return (

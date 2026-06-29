@@ -177,7 +177,7 @@ async function generateHero(spec: DemoSpec, userId: string | null): Promise<stri
   const dataUrl = await meterLLMCall<string | null>(
     { provider: 'openai', model_code: 'gpt-image-1', modality: 'image', user_id: userId, route: ROUTE },
     async () => {
-      const gen = await openai().images.generate({ model: 'gpt-image-1', prompt, size: '1536x1024' });
+      const gen = await openai().images.generate({ model: 'gpt-image-1', prompt, size: '1536x1024', quality: 'medium' });
       const b64 = gen.data?.[0]?.b64_json;
       return { value: b64 ? `data:image/png;base64,${b64}` : null, usage: { images: 1 } };
     }

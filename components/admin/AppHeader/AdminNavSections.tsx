@@ -154,6 +154,8 @@ const NAV_ADMIN: NavItem[] = [
   { type: 'section', label: 'Workflow', adminOnly: true },
   { type: 'item', label: 'Tasks', href: '/admin/tasks', icon: <Check size={18} />, adminOnly: true },
   { type: 'item', label: 'Users', href: '/admin/users', icon: <Users size={18} />, adminOnly: true },
+  { type: 'item', label: 'AI Spend', href: '/admin/ai-costs', icon: <DollarSign size={18} />, adminOnly: true },
+  { type: 'item', label: 'Cron Runs', href: '/admin/cron', icon: <Check size={18} />, adminOnly: true },
   { type: 'item', label: 'Feature Video Manager', href: '/admin/features/manage', icon: <Video size={18} />, adminOnly: true },
   { type: 'item', label: 'Features', href: '/features', icon: <PlayCircle size={18} />, adminOnly: true },
   { type: 'item', label: 'Platform Pricing', href: '/pricing', icon: <DollarSign size={18} />, adminOnly: true },

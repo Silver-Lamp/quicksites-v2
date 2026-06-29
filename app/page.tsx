@@ -12,7 +12,10 @@ export const dynamic = 'force-dynamic';
 export default async function Page() {
   let initial;
   try {
-    initial = await getShowcaseData();
+    const data = await getShowcaseData();
+    // SSR payload is the public view — drop admin-hidden sites. Admins still get
+    // the full set (incl. hidden, for management) via the client revalidation fetch.
+    initial = { ...data, sites: data.sites.filter((s) => !s.hidden) };
   } catch {
     initial = undefined; // client component will fetch/cache as a fallback
   }

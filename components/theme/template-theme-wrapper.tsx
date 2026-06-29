@@ -1,8 +1,10 @@
 'use client';
+import * as React from 'react';
 import type { Template } from '@/types/template';
 import type { Block } from '@/types/blocks';
 import PageHeader from '../admin/templates/render-blocks/header';
 import PageFooter from '../admin/templates/render-blocks/footer';
+import { resolveSiteTheme } from '@/lib/theme/resolveSiteTheme';
 
 type Props = {
   template: Template;
@@ -26,8 +28,16 @@ export function TemplateThemeWrapper({
   const headerBlock = template?.headerBlock ?? null;
   const footerBlock = template?.footerBlock ?? null;
 
+  // Scope the site's industry theme (accent/font/radius) onto this wrapper via
+  // CSS vars, so shadcn-token blocks (bg-primary, ring, radius) pick it up.
+  // Returns null when the site has no themable identity → defaults untouched.
+  const resolved = React.useMemo(() => resolveSiteTheme(template), [template]);
+  const wrapperStyle = resolved
+    ? ({ ...resolved.vars, ...(resolved.fontFamily ? { fontFamily: resolved.fontFamily } : {}) } as React.CSSProperties)
+    : undefined;
+
   return (
-    <div /* your wrapper */>
+    <div style={wrapperStyle} data-qs-themed={resolved ? '1' : undefined}>
       {renderHeader && headerBlock ? (
         <div data-editor-section="global-header">
           <PageHeader

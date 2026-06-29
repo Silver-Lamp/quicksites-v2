@@ -38,14 +38,15 @@ type ShowcaseSite = {
 
 type FeedData = { sites: ShowcaseSite[]; displayMode: ShowcaseDisplayMode };
 
-const CACHE_KEY = 'qs_showcase_cache_v2';
+const CACHE_KEY = 'qs_showcase_cache_v3';
 
 function readCache(): FeedData | null {
   try {
     const raw = localStorage.getItem(CACHE_KEY);
     if (!raw) return null;
     const parsed = JSON.parse(raw);
-    if (!parsed || !Array.isArray(parsed.sites)) return null;
+    // Ignore empty caches so a bad/transient empty result can't suppress the row.
+    if (!parsed || !Array.isArray(parsed.sites) || parsed.sites.length === 0) return null;
     return {
       sites: parsed.sites,
       displayMode: isShowcaseMode(parsed.displayMode) ? parsed.displayMode : DEFAULT_SHOWCASE_MODE,
@@ -57,6 +58,8 @@ function readCache(): FeedData | null {
 
 function writeCache(data: FeedData) {
   try {
+    // Never cache an empty list (would suppress the row on the next load).
+    if (!data.sites.length) return;
     localStorage.setItem(CACHE_KEY, JSON.stringify(data));
   } catch {
     /* quota/private mode — non-fatal */
@@ -69,9 +72,11 @@ function writeCache(data: FeedData) {
  * shows a loading skeleton on the very first visit, follows the admin-chosen
  * display mode, and lets admins drag to reorder + hide/unhide (all persisted).
  */
-export default function SiteShowcase() {
-  const [data, setData] = useState<FeedData | null>(null);
-  const [loading, setLoading] = useState(true);
+export default function SiteShowcase({ initialData }: { initialData?: FeedData }) {
+  // Seed from server-rendered data when available, so the row is in the initial
+  // HTML for everyone (incl. unauthenticated users) without a client fetch.
+  const [data, setData] = useState<FeedData | null>(initialData ?? null);
+  const [loading, setLoading] = useState(!initialData);
   const isAdmin = useIsAdmin();
 
   const sites = data?.sites ?? [];
@@ -80,14 +85,18 @@ export default function SiteShowcase() {
   useEffect(() => {
     let active = true;
 
-    // 1) instant paint from cache (if any)
-    const cached = readCache();
-    if (cached && active) {
-      setData(cached);
-      setLoading(false);
+    if (initialData) {
+      writeCache(initialData); // keep the local cache warm
+    } else {
+      // no SSR data → instant paint from cache (if any)
+      const cached = readCache();
+      if (cached && active) {
+        setData(cached);
+        setLoading(false);
+      }
     }
 
-    // 2) revalidate in the background
+    // revalidate in the background
     fetch('/api/public/showcase')
       .then((r) => r.json())
       .then((d) => {
@@ -96,11 +105,16 @@ export default function SiteShowcase() {
           sites: Array.isArray(d?.sites) ? d.sites : [],
           displayMode: isShowcaseMode(d?.displayMode) ? d.displayMode : DEFAULT_SHOWCASE_MODE,
         };
-        setData(fresh);
+        // Don't blank a good list with an empty refresh (transient/server hiccup).
+        setData((prev) =>
+          fresh.sites.length === 0 && prev && prev.sites.length > 0
+            ? { ...prev, displayMode: fresh.displayMode }
+            : fresh
+        );
         writeCache(fresh);
       })
       .catch(() => {
-        /* keep cache / skeleton */
+        /* keep SSR data / cache */
       })
       .finally(() => {
         if (active) setLoading(false);

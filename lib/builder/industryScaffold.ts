@@ -9,23 +9,25 @@ import { createEmptyTemplate } from '@/lib/createEmptyTemplate';
 import { createDefaultBlock } from '@/lib/createDefaultBlock';
 import { KEY_TO_LABEL, type IndustryKey } from '@/lib/industries';
 import { generateServices } from '@/lib/generateServices';
+import { getIndustryPreset } from '@/lib/theme/industryPresets';
 
-/** Industries that read better dark (rugged/automotive/after-hours trades). */
-const DARK_INDUSTRIES = new Set<IndustryKey>([
-  'towing',
-  'auto_repair',
-  'windshield_repair',
-  'electrical',
-  'general_contractor',
-  'junk_removal',
-]);
+export type StarterTheme = {
+  colorMode: 'light' | 'dark';
+  accentColor?: string;
+  fontFamily?: string;
+  borderRadius?: string;
+};
 
-export type StarterTheme = { colorMode: 'light' | 'dark' };
-
-/** Conservative theming: vary light/dark by industry (a safe, visible default;
- *  palette/typography presets can be layered on later). */
+/** Per-industry theme derived from the canonical industry presets (accent,
+ *  font, radius, light/dark). See lib/theme/industryPresets.ts. */
 export function themeForIndustry(key: IndustryKey): StarterTheme {
-  return { colorMode: DARK_INDUSTRIES.has(key) ? 'dark' : 'light' };
+  const p = getIndustryPreset(key);
+  return {
+    colorMode: p.darkMode === 'dark' ? 'dark' : 'light',
+    accentColor: p.accentColor,
+    fontFamily: p.fontFamily,
+    borderRadius: p.borderRadius,
+  };
 }
 
 function uid(): string {
@@ -113,6 +115,13 @@ export function buildIndustryStarter(opts: { businessName: string; industryKey: 
         industry: industryKey,
         industry_label: label,
         services: serviceNames,
+        // Persist the industry theme so the renderer/editor theme layer can read it.
+        theme: {
+          accentColor: theme.accentColor,
+          fontFamily: theme.fontFamily,
+          borderRadius: theme.borderRadius,
+          darkMode: theme.colorMode,
+        },
       },
     },
   };

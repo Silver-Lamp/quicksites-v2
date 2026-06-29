@@ -55,7 +55,9 @@ export async function GET(req: Request) {
   const isAdmin = !!adminRow;
 
   const fallbackStart = (() => { const d = new Date(); d.setDate(d.getDate() - 120); return d; })();
-  const fromIso = (getFromDate(dateParam) ?? fallbackStart).toISOString();
+  // Admins browsing without an explicit date see the full history (no 120-day cutoff).
+  const explicitFrom = dateParam ? getFromDate(dateParam) : null;
+  const fromIso = (explicitFrom ?? (isAdmin ? new Date(0) : fallbackStart)).toISOString();
 
   let items: any[] = [];
   let total = 0;
@@ -107,14 +109,24 @@ export async function GET(req: Request) {
         'color_mode','effective_updated_at'
       ].join(',');
 
-    // Prefer secure MV; fallback to raw MV (owner filter applied here)
-    let baseQ = supabase
-      .from('template_bases_secure')
-      .select(MV_SELECT, { count: 'exact' })
-      .gte('effective_updated_at', fromIso)
-      .order('effective_updated_at', { ascending: false });
-
-    let res: any = await baseQ.range(offset, offset + limit - 1);
+    // Admins: full base list (template_bases, no owner scoping). Non-admins: the
+    // RLS-scoped secure MV. Fallback to raw MV with a manual owner filter.
+    let res: any;
+    if (isAdmin) {
+      res = await supabase
+        .from('template_bases')
+        .select(MV_SELECT + ',owner_id', { count: 'exact' })
+        .gte('effective_updated_at', fromIso)
+        .order('effective_updated_at', { ascending: false })
+        .range(offset, offset + limit - 1);
+    } else {
+      res = await supabase
+        .from('template_bases_secure')
+        .select(MV_SELECT, { count: 'exact' })
+        .gte('effective_updated_at', fromIso)
+        .order('effective_updated_at', { ascending: false })
+        .range(offset, offset + limit - 1);
+    }
     if (res.error) {
       let q2 = supabase
         .from('template_bases')

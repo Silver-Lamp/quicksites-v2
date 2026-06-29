@@ -12,6 +12,9 @@ export const DEFAULT_SHOWCASE_MODE: ShowcaseDisplayMode = 'thumbnail';
 /** site_settings key holding the chosen showcase display mode. */
 export const SHOWCASE_MODE_KEY = 'showcase_display_mode';
 
+/** site_settings key holding the list of admin-hidden showcase slugs. */
+export const SHOWCASE_HIDDEN_KEY = 'showcase_hidden_slugs';
+
 export const SHOWCASE_MODE_LABELS: Record<ShowcaseDisplayMode, string> = {
   thumbnail: 'Thumbnail',
   og: 'OG image',

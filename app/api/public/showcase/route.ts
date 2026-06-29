@@ -1,48 +1,31 @@
 // app/api/public/showcase/route.ts
 //
 // Public, read-only feed of the hand-picked published sites shown on the
-// homepage ("Built with QuickSites"). Returns only safe display fields for the
-// curated allowlist (lib/home/featured-sites.ts), in allowlist order.
+// homepage ("Built with QuickSites"). Returns safe display fields for the
+// curated allowlist (lib/home/featured-sites.ts), in allowlist order, plus the
+// admin-chosen display mode.
 
 import { NextResponse } from 'next/server';
 import { getServerSupabase } from '@/lib/supabase/server';
 import { FEATURED_SITE_SLUGS } from '@/lib/home/featured-sites';
+import {
+  prettifySlug,
+  firstNonEmpty,
+  extractHeroImage,
+  isShowcaseMode,
+  DEFAULT_SHOWCASE_MODE,
+  SHOWCASE_MODE_KEY,
+} from '@/lib/home/showcase-helpers';
+import { getSiteSetting } from '@/lib/settings/siteSettings';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-/** Fallback display name from a slug, e.g. "graftontowing" → "Graftontowing". */
-function prettifySlug(slug: string): string {
-  const s = slug.replace(/[-_]+/g, ' ').trim();
-  return s ? s.charAt(0).toUpperCase() + s.slice(1) : slug;
-}
-
-/**
- * Pull a hero image from a site's `data` JSON (the real hero lives in the
- * content blocks, not the top-level hero_url column). Scans for image URLs and
- * prefers one under a `/hero/` path. Returns null if none found.
- */
-function extractHeroImage(data: unknown): string | null {
-  if (!data) return null;
-  let text: string;
-  try {
-    text = typeof data === 'string' ? data : JSON.stringify(data);
-  } catch {
-    return null;
-  }
-  const urls = text.match(/https?:\/\/[^"'\\\s]+\.(?:png|jpe?g|webp)/gi);
-  if (!urls?.length) return null;
-  return urls.find((u) => /\/hero\//i.test(u)) || urls[0];
-}
-
-/** First non-empty string, treating '' as absent. */
-function firstNonEmpty(...vals: Array<string | null | undefined>): string | null {
-  for (const v of vals) if (v && v.trim()) return v;
-  return null;
-}
-
 export async function GET() {
-  if (!FEATURED_SITE_SLUGS.length) return NextResponse.json({ sites: [] });
+  const rawMode = await getSiteSetting<string>(SHOWCASE_MODE_KEY, DEFAULT_SHOWCASE_MODE);
+  const displayMode = isShowcaseMode(rawMode) ? rawMode : DEFAULT_SHOWCASE_MODE;
+
+  if (!FEATURED_SITE_SLUGS.length) return NextResponse.json({ sites: [], displayMode });
 
   try {
     const supa = await getServerSupabase({ serviceRole: true });
@@ -54,7 +37,7 @@ export async function GET() {
       .eq('published', true)
       .eq('archived', false)
       .eq('is_version', false);
-    if (error) return NextResponse.json({ sites: [] });
+    if (error) return NextResponse.json({ sites: [], displayMode });
 
     const bySlug = new Map<string, any>((data || []).map((r: any) => [r.slug, r]));
     const sites = FEATURED_SITE_SLUGS
@@ -69,8 +52,8 @@ export async function GET() {
         href: `/sites/${r.slug}`,
       }));
 
-    return NextResponse.json({ sites });
+    return NextResponse.json({ sites, displayMode });
   } catch {
-    return NextResponse.json({ sites: [] });
+    return NextResponse.json({ sites: [], displayMode });
   }
 }

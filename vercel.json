@@ -27,6 +27,10 @@
     {
       "path": "/api/cron/agency-site-sync",
       "schedule": "30 3 * * *"
+    },
+    {
+      "path": "/api/cron/demo-refresh",
+      "schedule": "0 12 * * *"
     }
   ]
 }

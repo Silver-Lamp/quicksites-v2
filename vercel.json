@@ -31,6 +31,10 @@
     {
       "path": "/api/cron/demo-refresh",
       "schedule": "0 12 * * *"
+    },
+    {
+      "path": "/api/cron/print-order-sync",
+      "schedule": "15 */6 * * *"
     }
   ]
 }

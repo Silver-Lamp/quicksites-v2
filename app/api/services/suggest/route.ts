@@ -5,6 +5,7 @@ import { enforceGuestAiLimit, guestLimitBody } from '@/lib/ai/guestGuard';
 import { cookies } from 'next/headers';
 import { createServerClient } from '@supabase/ssr';
 import { parseJsonBody } from '@/lib/api/parseJson';
+import { meterLLMCall, LLMBudgetExceededError } from '@/lib/ai/meter';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -240,17 +241,39 @@ export async function POST(req: Request) {
 
     const userMsg = lines.join('\n');
 
-    const resp = await openai.chat.completions.create({
-      model: process.env.OPENAI_MODEL || 'gpt-4o-mini',
-      response_format: { type: 'json_object' },
-      temperature: 0.4,
-      messages: [
-        { role: 'system', content: sys },
-        { role: 'user', content: userMsg },
-      ],
-    });
-
-    const raw = resp.choices?.[0]?.message?.content || '{}';
+    const model = process.env.OPENAI_MODEL || 'gpt-4o-mini';
+    let raw: string;
+    try {
+      raw = await meterLLMCall(
+        { provider: 'openai', model_code: model, modality: 'chat', route: '/api/services/suggest' },
+        async () => {
+          const resp = await openai.chat.completions.create({
+            model,
+            response_format: { type: 'json_object' },
+            temperature: 0.4,
+            messages: [
+              { role: 'system', content: sys },
+              { role: 'user', content: userMsg },
+            ],
+          });
+          return {
+            value: resp.choices?.[0]?.message?.content || '{}',
+            usage: {
+              input_tokens: resp.usage?.prompt_tokens,
+              output_tokens: resp.usage?.completion_tokens,
+            },
+          };
+        },
+      );
+    } catch (e) {
+      if (e instanceof LLMBudgetExceededError) {
+        return new Response(JSON.stringify({ error: 'AI budget reached, please try again later.' }), {
+          status: 429,
+          headers: { 'content-type': 'application/json' },
+        });
+      }
+      throw e;
+    }
     let parsed: any;
     try { parsed = JSON.parse(raw); } catch { parsed = {}; }
 

@@ -1,11 +1,13 @@
 # Secret rotation runbook — leaked Supabase service-role key
 
-> Created 2026-06-28. **Re-verified 2026-06-30** (tree still clean of the JWT; the
-> three scripts still env-only; supabase-js 2.108.2; the boot shim + a new
-> `lib/env` accessor both resolve the secret-key fallback; gitleaks pre-commit +
-> CI scan are live). **Priority 1 / urgent — the dashboard rotation below is still
-> pending and is owner-only; the leaked key stays valid until then.** Companion to
-> the RLS exposure work (PR #12).
+> Created 2026-06-28. **✅ ROTATED 2026-06-30 (owner-confirmed).** The leaked
+> legacy `service_role` key has been rotated/disabled in the Supabase dashboard,
+> so the committed value is now **dead** — no git-history rewrite required. Code
+> side was already complete (scripts env-only; boot shim + `lib/env` accessor
+> resolve the new `sb_secret_…` key; gitleaks pre-commit + CI scan live).
+> Remaining is owner smoke-test verification (checklist at the bottom). Kept as a
+> record + the procedure for any future rotation. Companion to the RLS exposure
+> work (PR #12).
 
 ## What leaked
 The **Supabase `service_role` key** for the live project `kcwruliugwidsdgsrthy`
@@ -88,9 +90,9 @@ active `main`) and forces everyone to re-clone:
   then force-push and have collaborators re-clone. Coordinate first.
 
 ## Verification checklist
-- [ ] New `service_role` (and anon, if JWT-secret rotated) live in Vercel + local.
-- [ ] Old key 401s against the REST API (`curl` with the old key → 401).
-- [ ] App + login + an authed route + a cron route all green post-rotate.
+- [x] New key live in Vercel + local; legacy key rotated/disabled (owner, 2026-06-30).
+- [ ] Old key 401s against the REST API (`curl` with the old key → 401). ← owner spot-check
+- [ ] App + login + an authed route + a cron route all green post-rotate. ← owner spot-check
 - [x] GSC tokens — risk explicitly accepted 2026-06-29 (mostly test data).
 - [x] `git grep -E 'eyJhbGciOiJ'` returns nothing in tracked files (re-verified 2026-06-30).
 - [x] Pre-commit secret scan in place — gitleaks via `.husky/pre-commit` + CI

@@ -78,7 +78,7 @@
 //   // Service-role client for admin operations
 //   const admin = createClient(
 //     process.env.NEXT_PUBLIC_SUPABASE_URL!,
-//     process.env.SUPABASE_SERVICE_ROLE_KEY!
+//     (process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SECRET_KEY)!
 //   );
 
 //   const { data: list, error: listErr } = await admin.auth.admin.listUsers({

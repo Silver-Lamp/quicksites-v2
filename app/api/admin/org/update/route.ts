@@ -43,7 +43,7 @@ type UpdateBody =
   
     const supaAdmin = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!
+      (process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SECRET_KEY)!
     );
   
     const { data: org, error } = await supaAdmin
@@ -106,7 +106,7 @@ export async function POST(req: NextRequest) {
   // Service role client for privileged writes
   const supaAdmin = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY! // keep on server only
+    (process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SECRET_KEY)! // keep on server only
   );
 
   // Handle actions

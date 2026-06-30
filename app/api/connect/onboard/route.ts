@@ -6,7 +6,7 @@ import { clampPlatformFeePercent } from '@/lib/commerce/partner-terms';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
+const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, (process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SECRET_KEY)!);
 const DEFAULT_FEE = clampPlatformFeePercent(Number(process.env.QS_DEFAULT_PLATFORM_FEE_PERCENT ?? '0.05') || 0);
 
 /**

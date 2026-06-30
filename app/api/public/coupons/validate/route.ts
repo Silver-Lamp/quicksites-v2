@@ -6,7 +6,7 @@ import { createServerClient, type CookieOptions } from '@supabase/ssr';
 import { Database } from '@/types/supabase';
 
 export const runtime='nodejs'; export const dynamic='force-dynamic';
-const db = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
+const db = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, (process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SECRET_KEY)!);
 
 export async function POST(req: NextRequest) {
     const { code, merchantId, subtotalCents } = await req.json();

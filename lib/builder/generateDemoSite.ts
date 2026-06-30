@@ -18,7 +18,7 @@ const ROUTE = '/api/admin/demos/generate';
 const HERO_BUCKET = process.env.SUPABASE_STORAGE_BUCKET || 'templates';
 
 function admin() {
-  return createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!, {
+  return createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, (process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SECRET_KEY)!, {
     auth: { persistSession: false },
   });
 }

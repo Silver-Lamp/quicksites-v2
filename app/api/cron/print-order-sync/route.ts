@@ -25,7 +25,7 @@ async function handle(req: NextRequest) {
   return runCron('print-order-sync', async () => {
     if (!isPodEnabled()) return NextResponse.json({ ok: true, skipped: 'POD_ENABLED!=true' });
 
-    const db = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!, {
+    const db = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, (process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SECRET_KEY)!, {
       auth: { persistSession: false },
     });
     const { data: rows } = await db

@@ -37,7 +37,7 @@ export default async function PrintOrdersPage() {
   const admin = await adminUserId();
   if (!admin) return <div className="mx-auto max-w-6xl p-6 mt-12 text-sm text-zinc-400">Admins only.</div>;
 
-  const db = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!, {
+  const db = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, (process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SECRET_KEY)!, {
     auth: { persistSession: false },
   });
   const { data } = await db

@@ -31,7 +31,7 @@ function extractShipping(raw: any): {
   };
 }
 
-export async function fulfillOrderPodItems(orderId: string): Promise<{ created: number; queued: number }> {
+export async function fulfillOrderPodItems(orderId: string, eventRaw?: any): Promise<{ created: number; queued: number }> {
   let created = 0, queued = 0;
   if (!isPodEnabled()) return { created, queued };
 
@@ -45,7 +45,9 @@ export async function fulfillOrderPodItems(orderId: string): Promise<{ created: 
       .from('order_items').select('id, catalog_item_id, title, quantity, metadata').eq('order_id', orderId);
     if (!items?.length) return { created, queued };
 
-    const ship = extractShipping(order.raw);
+    // Shipping comes from the payment event (Stripe session shipping_details);
+    // fall back to whatever's on the order row.
+    const ship = extractShipping(eventRaw) || extractShipping(order.raw);
 
     for (const it of items) {
       // POD spec: prefer the line-item metadata, else the catalog item's metadata.

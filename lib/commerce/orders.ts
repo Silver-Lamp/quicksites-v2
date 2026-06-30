@@ -196,7 +196,7 @@ export async function markOrderPaid(
   if (process.env.POD_ENABLED === 'true') {
     try {
       const { fulfillOrderPodItems } = await import('@/lib/commerce/pod/fulfillment');
-      await fulfillOrderPodItems(orderId);
+      await fulfillOrderPodItems(orderId, raw);
     } catch (e: any) {
       console.warn('POD fulfillment step failed:', e?.message || e);
     }

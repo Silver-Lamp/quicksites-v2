@@ -1,7 +1,11 @@
 # Secret rotation runbook — leaked Supabase service-role key
 
-> Created 2026-06-28. **Priority 1 / urgent.** Companion to the RLS exposure work
-> (PR #12). The code-side fix is done; the dashboard rotations below are owner-only.
+> Created 2026-06-28. **Re-verified 2026-06-30** (tree still clean of the JWT; the
+> three scripts still env-only; supabase-js 2.108.2; the boot shim + a new
+> `lib/env` accessor both resolve the secret-key fallback; gitleaks pre-commit +
+> CI scan are live). **Priority 1 / urgent — the dashboard rotation below is still
+> pending and is owner-only; the leaked key stays valid until then.** Companion to
+> the RLS exposure work (PR #12).
 
 ## What leaked
 The **Supabase `service_role` key** for the live project `kcwruliugwidsdgsrthy`
@@ -36,8 +40,10 @@ independently** — no session drop, no publishable-key invalidation — which i
 exactly what the leaked-key rotation needs. User auth is unaffected because session
 JWTs are still signed by `SUPABASE_JWT_SECRET`, separate from the API keys.
 
-The codebase already supports this with **zero refactor** (see `instrumentation.ts`,
-which maps `SUPABASE_SECRET_KEY` → `SUPABASE_SERVICE_ROLE_KEY` at boot):
+The codebase already supports this with **zero refactor**: `instrumentation.ts`
+maps `SUPABASE_SECRET_KEY` → `SUPABASE_SERVICE_ROLE_KEY` at boot, and the
+`supabaseServiceRoleKey()` accessor in `lib/env.ts` independently falls back to
+`SUPABASE_SECRET_KEY` — so either name works at runtime:
 
 1. Dashboard → project `kcwruliugwidsdgsrthy` → **Settings → API Keys** → create
    (or reveal) the **Publishable** and **Secret** keys. If the leaked legacy key is
@@ -85,6 +91,7 @@ active `main`) and forces everyone to re-clone:
 - [ ] New `service_role` (and anon, if JWT-secret rotated) live in Vercel + local.
 - [ ] Old key 401s against the REST API (`curl` with the old key → 401).
 - [ ] App + login + an authed route + a cron route all green post-rotate.
-- [ ] GSC tokens revoked/re-authed (or risk explicitly accepted).
-- [ ] `git grep -E 'eyJhbGciOiJ'` returns nothing in tracked files (already true).
-- [ ] Add a pre-commit secret scan (gitleaks/trufflehog) so this can't recur.
+- [x] GSC tokens — risk explicitly accepted 2026-06-29 (mostly test data).
+- [x] `git grep -E 'eyJhbGciOiJ'` returns nothing in tracked files (re-verified 2026-06-30).
+- [x] Pre-commit secret scan in place — gitleaks via `.husky/pre-commit` + CI
+      `.github/workflows/secret-scan.yml` (so a key can't be re-committed).

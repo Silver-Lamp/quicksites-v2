@@ -1,6 +1,7 @@
 // app/api/icon/generate/route.ts
 import OpenAI from 'openai';
 import { enforceGuestAiLimit, guestLimitBody } from '@/lib/ai/guestGuard';
+import { meterLLMCall, LLMBudgetExceededError } from '@/lib/ai/meter';
 import { cookies } from 'next/headers';
 import { createServerClient } from '@supabase/ssr';
 
@@ -97,13 +98,30 @@ export async function POST(req: Request) {
     ].filter(Boolean).join(' ');
 
     const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY! });
-    const resp = await openai.images.generate({
-      model: 'gpt-image-1',
-      prompt,
-      size,
-    //   response_format: 'b64_json',
-      ...(transparent ? { background: 'transparent' as const } : {}),
-    });
+    let resp;
+    try {
+      resp = await meterLLMCall(
+        { provider: 'openai', model_code: 'gpt-image-1', modality: 'image', route: '/api/icon/generate' },
+        async () => {
+          const result = await openai.images.generate({
+            model: 'gpt-image-1',
+            prompt,
+            size,
+            //   response_format: 'b64_json',
+            ...(transparent ? { background: 'transparent' as const } : {}),
+          });
+          return { value: result, usage: { images: result.data?.length ?? 1, metadata: { size: String(size) } } };
+        },
+      );
+    } catch (e) {
+      if (e instanceof LLMBudgetExceededError) {
+        return new Response(JSON.stringify({ error: 'AI budget reached, please try again later.' }), {
+          status: 429,
+          headers: { 'content-type': 'application/json' },
+        });
+      }
+      throw e;
+    }
 
     const b64 = resp.data?.[0]?.b64_json;
     if (!b64) return new Response(JSON.stringify({ error: 'No image returned' }), { status: 500 });

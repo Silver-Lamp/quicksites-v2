@@ -2,6 +2,7 @@
 import { cookies } from 'next/headers';
 import { createServerClient } from '@supabase/ssr';
 import OpenAI from 'openai';
+import { meterLLMCall, LLMBudgetExceededError } from '@/lib/ai/meter';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -207,18 +208,42 @@ export async function POST(req: Request) {
         break;
     }
 
-    const resp = await openai.chat.completions.create({
-      model: process.env.OPENAI_MODEL || 'gpt-4o-mini',
-      response_format: { type: 'json_object' },
-      temperature: 0.3,
-      messages: [
-        { role: 'system', content: sys },
-        { role: 'user', content: lines.join('\n') },
-      ],
-    });
+    const model = process.env.OPENAI_MODEL || 'gpt-4o-mini';
+    let raw: string;
+    try {
+      raw = await meterLLMCall(
+        { provider: 'openai', model_code: model, modality: 'chat', route: '/api/admin/products/suggest' },
+        async () => {
+          const resp = await openai.chat.completions.create({
+            model,
+            response_format: { type: 'json_object' },
+            temperature: 0.3,
+            messages: [
+              { role: 'system', content: sys },
+              { role: 'user', content: lines.join('\n') },
+            ],
+          });
+          return {
+            value: resp.choices?.[0]?.message?.content || '{}',
+            usage: {
+              input_tokens: resp.usage?.prompt_tokens,
+              output_tokens: resp.usage?.completion_tokens,
+            },
+          };
+        },
+      );
+    } catch (e) {
+      if (e instanceof LLMBudgetExceededError) {
+        return new Response(JSON.stringify({ error: 'AI budget reached, please try again later.' }), {
+          status: 429,
+          headers: { 'content-type': 'application/json' },
+        });
+      }
+      throw e;
+    }
 
     let out: any = {};
-    try { out = JSON.parse(resp.choices?.[0]?.message?.content || '{}'); } catch {}
+    try { out = JSON.parse(raw); } catch {}
 
     // Defensive fill
     const title = norm(out.title) || seedTitle || (productType === 'service' ? 'Service' : 'Product');

@@ -1,6 +1,7 @@
 import OpenAI from 'openai';
 import { lazyClient } from '@/lib/lazyClient';
 import { enforceGuestAiLimit, guestLimitBody } from '@/lib/ai/guestGuard';
+import { meterLLMCall, LLMBudgetExceededError } from '@/lib/ai/meter';
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { createServerClient } from '@supabase/ssr';
@@ -137,13 +138,27 @@ export async function POST(req: Request) {
     ].filter(Boolean).join(' ');
 
     // Generate image
-    const img = await openai.images.generate({
-      model: 'gpt-image-1',
-      prompt: base,
-      size,
-      quality: 'high',
-      // response_format: 'b64_json',
-    });
+    let img;
+    try {
+      img = await meterLLMCall(
+        { provider: 'openai', model_code: 'gpt-image-1', modality: 'image', route: '/api/hero/generate-image' },
+        async () => {
+          const result = await openai.images.generate({
+            model: 'gpt-image-1',
+            prompt: base,
+            size,
+            quality: 'high',
+            // response_format: 'b64_json',
+          });
+          return { value: result, usage: { images: result.data?.length ?? 1, metadata: { size: String(size) } } };
+        },
+      );
+    } catch (e) {
+      if (e instanceof LLMBudgetExceededError) {
+        return NextResponse.json({ error: 'AI budget reached, please try again later.' }, { status: 429 });
+      }
+      throw e;
+    }
 
     const b64 = img.data?.[0]?.b64_json;
     if (!b64) return NextResponse.json({ error: 'No image returned' }, { status: 500 });

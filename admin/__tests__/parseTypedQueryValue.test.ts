@@ -1,9 +1,8 @@
 import { parseTypedQueryValue } from '@/admin/lib/query/parseTypedQueryValue';
-import { expect, describe, it, vi } from 'vitest';
 import { z } from 'zod';
 
 const mockRouter = {
-  replace: vi.fn(),
+  replace: jest.fn(),
 } as any;
 
 describe('parseTypedQueryValue', () => {

@@ -99,7 +99,7 @@ export default function EditTemplatePage() {
         return null;
       };
 
-      let row: DraftRow | null = (await tryById()) ?? (await tryBySlugOrBase());
+      const row: DraftRow | null = (await tryById()) ?? (await tryBySlugOrBase());
 
       if (!row) {
         if (!cancelled) setError('Template not found or you do not have access.');

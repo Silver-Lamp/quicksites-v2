@@ -126,7 +126,7 @@ export async function hydrateHeroBlocks(args: {
   state?: string;
 }) {
   // 1) ensure plain defaults so normalization passes
-  let d = ensureHeroDefaults(args.data, args.siteName);
+  const d = ensureHeroDefaults(args.data, args.siteName);
 
   // 2) optionally AI-fill copy for the first hero on the first page missing fields
   if (args.autoCopy) {

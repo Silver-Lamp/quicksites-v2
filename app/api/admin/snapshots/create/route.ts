@@ -112,7 +112,7 @@ async function handle(req: Request) {
       thumbnail_url: null,
     };
 
-    let ins = await pub
+    const ins = await pub
       .from('template_versions')
       .insert(record)
       .select('id, saved_at, created_at');

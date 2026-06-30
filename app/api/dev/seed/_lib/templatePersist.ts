@@ -77,7 +77,7 @@ export async function upsertTemplateAdaptive(
   for (const nameCol of NAME_COLS) {
     for (const slugCol of SLUG_COLS) {
       for (const dataCol of DATA_COLS) {
-        let row: any = {
+        const row: any = {
           id: randomUUID(),
           merchant_id: merchantId,
           [nameCol]: tpl.name,
@@ -138,7 +138,7 @@ export async function patchTemplateIndustryServices(templateId: string, {
       return;
     }
     if (/column .*industry.* does not exist/i.test(s) && services && services.length) {
-      let up2 = await supabaseAdmin.from(T_TEMPLATES).update({ services }).eq('id', templateId);
+      const up2 = await supabaseAdmin.from(T_TEMPLATES).update({ services }).eq('id', templateId);
       if (up2.error) {
         const s2 = `${up2.error.message} ${up2.error.details ?? ''}`.toLowerCase();
         if (/invalid input.*json/i.test(s2)) {

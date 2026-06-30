@@ -366,7 +366,7 @@ export async function POST(req: NextRequest) {
         }
 
         // 0) FIRST: upgrade legacy -> content so we never save props-shape
-        let upgraded = upgradeLegacyBlocksDeep(tplPrev.data);
+        const upgraded = upgradeLegacyBlocksDeep(tplPrev.data);
 
         // 1) normalize once to make sure pages/blocks are in modern shape
         let normalizedData = upgraded;

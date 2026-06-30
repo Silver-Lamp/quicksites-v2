@@ -26,7 +26,7 @@ function explainIssue(issue: ZodIssue): BlockValidationError {
 
   let message = issue.message || 'Invalid';
   let expected: unknown = (issue as any).expected;
-  let received: unknown = (issue as any).received;
+  const received: unknown = (issue as any).received;
   let hint: string | undefined;
 
   switch (code) {

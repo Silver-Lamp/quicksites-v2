@@ -26,16 +26,36 @@ export async function createDraftOrder(opts: {
   }, 0);
   const total = subtotal; // tax/shipping can be added later
 
+  const supabase = await getServerSupabase({ serviceRole: true });
+
   const cfg = await getMerchantPaymentConfigSafe(opts.merchantId);
   // Agency-plan merchants pay a flat subscription instead of a per-order fee, so
   // their orders are exempt from the take-rate (Path B). Derive from the plan at
   // order time so it's a single source of truth regardless of payment_accounts.
   const feeExempt = await isAgencyPlanMerchant(opts.merchantId);
-  const platformFeeCents = cfg.collect_platform_fee && !feeExempt
-    ? Math.max(Math.floor(total * (cfg.platform_fee_percent || 0)), cfg.platform_fee_min_cents || 0)
-    : 0;
 
-  const supabase = await getServerSupabase({ serviceRole: true });
+  // Don't take the platform fee on a print-on-demand item's base print cost — we
+  // only take our cut of the merchant's margin. base_cost_cents lives on the
+  // catalog item's pod_spec; subtract (base × qty) for POD line items.
+  let podBaseCents = 0;
+  const catIds = opts.items.map((li) => li.catalogItemId).filter(Boolean) as string[];
+  if (catIds.length) {
+    try {
+      const { data: cis } = await (supabase as any)
+        .from('catalog_items').select('id, metadata').in('id', catIds);
+      const baseById = new Map<string, number>(
+        (cis ?? []).map((c: any) => [c.id, Number(c?.metadata?.pod_spec?.base_cost_cents) || 0])
+      );
+      for (const li of opts.items) {
+        const base = li.catalogItemId ? baseById.get(li.catalogItemId) || 0 : 0;
+        podBaseCents += base * Math.max(1, Number(li.quantity || 1));
+      }
+    } catch { /* fee falls back to full total */ }
+  }
+  const feeBasis = Math.max(0, total - podBaseCents);
+  const platformFeeCents = cfg.collect_platform_fee && !feeExempt
+    ? Math.max(Math.floor(feeBasis * (cfg.platform_fee_percent || 0)), feeBasis > 0 ? (cfg.platform_fee_min_cents || 0) : 0)
+    : 0;
 
   // Create order
   const { data: order, error } = await supabase

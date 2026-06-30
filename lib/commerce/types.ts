@@ -1,7 +1,10 @@
 export type Money = number; // cents
 
 export type LineItemInput = {
-  catalogItemId: string;
+  // Optional: synthetic/ad-hoc line items (e.g. an admin test order) have no
+  // catalog item. createDraftOrder + checkout already guard for its absence; the
+  // public checkout route's Zod schema keeps it required for real merchant orders.
+  catalogItemId?: string | null;
   title: string;
   quantity: number;
   unitAmount: Money;

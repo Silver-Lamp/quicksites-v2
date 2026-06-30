@@ -15,8 +15,22 @@ export default function CreateItemDrawer({ merchantId, siteSlug, onCreated }:{
   const [desc, setDesc] = useState('');
   const [saving, setSaving] = useState(false);
 
+  // Print-on-demand (Lulu book / Gelato merch)
+  const [pod, setPod] = useState<'none' | 'lulu' | 'gelato'>('none');
+  const [interiorUrl, setInteriorUrl] = useState('');
+  const [coverUrl, setCoverUrl] = useState('');
+  const [pageCount, setPageCount] = useState<number>(0);
+  const [productUid, setProductUid] = useState('');
+  const [fileUrl, setFileUrl] = useState('');
+
   async function submit() {
     setSaving(true);
+    const podSpec =
+      pod === 'lulu'
+        ? { interiorUrl, coverUrl, pageCount: Number(pageCount) || 0 }
+        : pod === 'gelato'
+        ? { productUid, fileUrl }
+        : undefined;
     const res = await fetch('/api/catalog/items', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
@@ -24,7 +38,8 @@ export default function CreateItemDrawer({ merchantId, siteSlug, onCreated }:{
         merchantId, siteSlug,
         type, title, slug, description: desc,
         priceCents: Math.round((price || 0) * 100),
-        availability: { kind: 'always' }
+        availability: { kind: 'always' },
+        ...(pod !== 'none' ? { fulfillmentProvider: pod, podSpec } : {}),
       })
     });
     setSaving(false);
@@ -32,6 +47,7 @@ export default function CreateItemDrawer({ merchantId, siteSlug, onCreated }:{
       const { id } = await res.json();
       setOpen(false);
       setTitle(''); setSlug(''); setDesc(''); setPrice(0);
+      setPod('none'); setInteriorUrl(''); setCoverUrl(''); setPageCount(0); setProductUid(''); setFileUrl('');
       onCreated?.(id);
     } else {
       const { error } = await res.json();
@@ -81,6 +97,33 @@ export default function CreateItemDrawer({ merchantId, siteSlug, onCreated }:{
               <label className="mt-2 text-xs text-neutral-400">Description</label>
               <textarea value={desc} onChange={(e)=>setDesc(e.target.value)}
                 className="min-h-24 rounded bg-neutral-900 px-3 py-2 text-sm ring-1 ring-neutral-800" />
+
+              <label className="mt-2 text-xs text-neutral-400">Fulfillment (print-on-demand)</label>
+              <select value={pod} onChange={(e)=>setPod(e.target.value as 'none'|'lulu'|'gelato')}
+                className="rounded bg-neutral-900 px-3 py-2 text-sm ring-1 ring-neutral-800">
+                <option value="none">None (digital / handled yourself)</option>
+                <option value="lulu">Lulu — book / paperback</option>
+                <option value="gelato">Gelato — poster / apparel</option>
+              </select>
+
+              {pod === 'lulu' && (
+                <div className="grid grid-cols-1 gap-2 rounded-lg bg-neutral-900/60 p-3 ring-1 ring-neutral-800">
+                  <input value={interiorUrl} onChange={(e)=>setInteriorUrl(e.target.value)} placeholder="Interior PDF URL"
+                    className="rounded bg-neutral-900 px-3 py-2 text-sm ring-1 ring-neutral-800" />
+                  <input value={coverUrl} onChange={(e)=>setCoverUrl(e.target.value)} placeholder="Cover PDF URL"
+                    className="rounded bg-neutral-900 px-3 py-2 text-sm ring-1 ring-neutral-800" />
+                  <input type="number" min={1} value={pageCount} onChange={(e)=>setPageCount(Number(e.target.value))} placeholder="Page count"
+                    className="rounded bg-neutral-900 px-3 py-2 text-sm ring-1 ring-neutral-800" />
+                </div>
+              )}
+              {pod === 'gelato' && (
+                <div className="grid grid-cols-1 gap-2 rounded-lg bg-neutral-900/60 p-3 ring-1 ring-neutral-800">
+                  <input value={productUid} onChange={(e)=>setProductUid(e.target.value)} placeholder="Gelato product UID"
+                    className="rounded bg-neutral-900 px-3 py-2 text-sm ring-1 ring-neutral-800" />
+                  <input value={fileUrl} onChange={(e)=>setFileUrl(e.target.value)} placeholder="Print file URL"
+                    className="rounded bg-neutral-900 px-3 py-2 text-sm ring-1 ring-neutral-800" />
+                </div>
+              )}
             </div>
 
             <div className="mt-6 flex items-center justify-end gap-3">

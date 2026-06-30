@@ -8,6 +8,9 @@ export async function POST(req: NextRequest) {
     type: 'meal'|'product'|'service'|'digital';
     title: string; slug: string; description?: string; priceCents: number;
     availability?: { kind: 'always'|'window'|'calendar'; startsAt?: string; endsAt?: string; quantity?: number };
+    // Print-on-demand: when set, this item fulfills via Lulu (book) / Gelato (merch).
+    fulfillmentProvider?: 'lulu' | 'gelato' | 'none';
+    podSpec?: Record<string, any>;
   };
 
   if (!body.merchantId || !body.type || !body.title || !body.slug) {
@@ -16,6 +19,12 @@ export async function POST(req: NextRequest) {
 
   // RLS protects owner: use normal client (no service role)
   const supa = await getServerSupabase();
+
+  const metadata: Record<string, any> = { site_slug: body.siteSlug };
+  if (body.fulfillmentProvider === 'lulu' || body.fulfillmentProvider === 'gelato') {
+    metadata.fulfillment_provider = body.fulfillmentProvider;
+    metadata.pod_spec = body.podSpec ?? {};
+  }
 
   // Insert catalog item
   const { data: item, error } = await supa.from('catalog_items').insert({
@@ -26,7 +35,7 @@ export async function POST(req: NextRequest) {
     description: body.description || null,
     price_cents: body.priceCents,
     status: 'active',
-    metadata: { site_slug: body.siteSlug }
+    metadata,
   }).select('id').single();
 
   if (error) return NextResponse.json({ error: error.message }, { status: 400 });

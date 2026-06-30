@@ -64,6 +64,12 @@ jobs:
       - name: Lint
         run: npm run lint
 
+      # BLOCKING. Jest unit tests (jsdom). Currently the money-path fee math
+      # (lib/commerce/__tests__) — the highest-value pure logic. The legacy
+      # admin/__tests__ suite is quarantined in jest.config.mjs pending revival.
+      - name: Unit tests
+        run: npm run test:unit
+
 # e2e (Playwright) runs in its own workflow (.github/workflows/playwright.yml),
 # which sets up a server properly. It intentionally isn't duplicated here as a
 # swallowed `|| echo` step that could never actually fail the build.

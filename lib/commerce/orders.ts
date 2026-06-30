@@ -5,6 +5,7 @@ import { captureServer } from '@/lib/analytics/posthog-server';
 import { EVENTS } from '@/lib/analytics/events';
 import { partnerCommissionCents, PARTNER_FEE_SHARE } from './partner-terms';
 import { isAgencyPlanMerchant } from '@/lib/billing/plans';
+import { computeSubtotalCents, computePlatformFeeCents } from './fees';
 
 /** Create a pending order and its line items. Returns order id and totals. */
 export async function createDraftOrder(opts: {
@@ -19,11 +20,7 @@ export async function createDraftOrder(opts: {
 
   const currency = (opts.currency || 'USD').toUpperCase();
 
-  const subtotal = opts.items.reduce((s, li) => {
-    const qty = Math.max(1, Number(li.quantity || 1));
-    const unit = Math.max(0, Number(li.unitAmount || 0));
-    return s + unit * qty;
-  }, 0);
+  const subtotal = computeSubtotalCents(opts.items);
   const total = subtotal; // tax/shipping can be added later
 
   const supabase = await getServerSupabase({ serviceRole: true });
@@ -52,10 +49,14 @@ export async function createDraftOrder(opts: {
       }
     } catch { /* fee falls back to full total */ }
   }
-  const feeBasis = Math.max(0, total - podBaseCents);
-  const platformFeeCents = cfg.collect_platform_fee && !feeExempt
-    ? Math.max(Math.floor(feeBasis * (cfg.platform_fee_percent || 0)), feeBasis > 0 ? (cfg.platform_fee_min_cents || 0) : 0)
-    : 0;
+  const platformFeeCents = computePlatformFeeCents({
+    totalCents: total,
+    podBaseCents,
+    collectFee: cfg.collect_platform_fee,
+    feeExempt,
+    feePercent: cfg.platform_fee_percent || 0,
+    feeMinCents: cfg.platform_fee_min_cents || 0,
+  });
 
   // Create order
   const { data: order, error } = await supabase

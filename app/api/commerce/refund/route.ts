@@ -22,14 +22,40 @@ export async function POST(req: NextRequest) {
   if (!parsedBody.ok) return parsedBody.response;
   const { orderId } = parsedBody.data;
 
+  // Authn: refunds reverse money (incl. the platform fee), so require a signed-in
+  // user. Authorization is enforced below once we know the order's merchant.
+  const userClient = await getServerSupabase();
+  const {
+    data: { user },
+  } = await userClient.auth.getUser();
+  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
   const supabase = await getServerSupabase({ serviceRole: true });
   const { data: order } = await supabase
     .from('orders')
-    .select('id, provider, provider_payment_id, status, total_cents')
+    .select('id, merchant_id, provider, provider_payment_id, status, total_cents')
     .eq('id', orderId)
     .maybeSingle();
 
-  if (!order) return NextResponse.json({ error: 'order not found' }, { status: 404 });
+  if (!order || !order.merchant_id) return NextResponse.json({ error: 'order not found' }, { status: 404 });
+
+  // Authz: a platform admin, or the owner of the order's merchant, may refund it.
+  const { data: adminRow } = await supabase
+    .from('admin_users')
+    .select('user_id')
+    .eq('user_id', user.id)
+    .maybeSingle();
+  if (!adminRow) {
+    const { data: merchant } = await supabase
+      .from('merchants')
+      .select('owner_id')
+      .eq('id', order.merchant_id)
+      .maybeSingle();
+    if (!merchant || merchant.owner_id !== user.id) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+  }
+
   if (order.status !== 'paid') {
     return NextResponse.json({ error: `order is '${order.status}', not 'paid'` }, { status: 400 });
   }

@@ -20,6 +20,8 @@ export default function GenerateDemosButton() {
 
     setBusy(true);
     const t = toast.loading(`Generating ${count} demo site(s)… this can take ~30s each`);
+    // Tell the list to show shimmer placeholders + poll while we generate.
+    window.dispatchEvent(new CustomEvent('qs:demos:generating', { detail: { count } }));
     try {
       const res = await fetch('/api/admin/demos/generate', {
         method: 'POST',
@@ -29,11 +31,11 @@ export default function GenerateDemosButton() {
       const j = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(j?.error || 'Generation failed');
       toast.success(`Created ${j.created ?? 0}/${count} demo site(s)`, { id: t });
-      window.dispatchEvent(new Event('qs:templates:refetch'));
     } catch (e: any) {
       toast.error(e?.message || 'Generation failed', { id: t });
     } finally {
       setBusy(false);
+      window.dispatchEvent(new Event('qs:demos:done'));
     }
   }
 

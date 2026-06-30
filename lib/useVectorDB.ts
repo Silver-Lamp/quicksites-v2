@@ -1,8 +1,9 @@
 // lib/useVectorDB.ts
 import { QdrantClient } from '@qdrant/js-client-rest';
+import { lazyClient } from '@/lib/lazyClient';
 import OpenAI from 'openai';
 
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+const openai = lazyClient(() => new OpenAI({ apiKey: process.env.OPENAI_API_KEY }));
 
 // Embedder wrapper
 export async function embedText(texts: string[]): Promise<number[][]> {

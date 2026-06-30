@@ -1,10 +1,11 @@
 // app/api/ask-assistant/route.ts (Next.js 13+ app router)
 import { OpenAI } from 'openai';
+import { lazyClient } from '@/lib/lazyClient';
 import { NextRequest, NextResponse } from 'next/server';
 
-const openai = new OpenAI({
+const openai = lazyClient(() => new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
-});
+}));
 
 export async function POST(req: NextRequest) {
   const { messages } = await req.json();

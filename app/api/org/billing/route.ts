@@ -1,9 +1,10 @@
 // app/api/org/billing/route.ts
 import { NextResponse } from 'next/server';
+import { lazyClient } from '@/lib/lazyClient';
 import Stripe from 'stripe';
 import { resolveOrg } from '@/lib/org/resolveOrg';
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
+const stripe = lazyClient(() => new Stripe(process.env.STRIPE_SECRET_KEY!));
 
 // Narrow/augment the org shape locally for billing fields
 type OrgWithBilling = Awaited<ReturnType<typeof resolveOrg>> & {

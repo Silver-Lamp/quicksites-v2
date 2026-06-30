@@ -1,5 +1,6 @@
 // app/api/testimonials/generate/route.ts
 import OpenAI from 'openai';
+import { lazyClient } from '@/lib/lazyClient';
 import { z } from 'zod';
 import { enforceGuestAiLimit, guestLimitBody } from '@/lib/ai/guestGuard';
 import { NextResponse } from 'next/server';
@@ -10,7 +11,7 @@ import { parseJsonBody } from '@/lib/api/parseJson';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY! });
+const openai = lazyClient(() => new OpenAI({ apiKey: process.env.OPENAI_API_KEY! }));
 
 // --- simple in-memory limiter (per instance) ---
 type Bucket = { start: number; count: number };

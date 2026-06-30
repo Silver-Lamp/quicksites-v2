@@ -1,5 +1,6 @@
 // app/api/dev/seed/all/route.ts
 import { NextRequest, NextResponse } from 'next/server';
+import { lazyClient } from '@/lib/lazyClient';
 import { cookies } from 'next/headers';
 import { createServerClient, type CookieOptions } from '@supabase/ssr';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
@@ -200,7 +201,7 @@ function buildIndustryPrompt(
 }
 
 /* ============================== OpenAI =============================== */
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+const openai = lazyClient(() => new OpenAI({ apiKey: process.env.OPENAI_API_KEY }));
 
 async function ideateBrandAndProducts(params: {
   aiPrompt?: string;

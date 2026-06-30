@@ -1,4 +1,5 @@
 import { cookies } from 'next/headers';
+import { lazyClient } from '@/lib/lazyClient';
 import { createServerClient, type CookieOptions } from '@supabase/ssr';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import OpenAI from 'openai';
@@ -21,4 +22,4 @@ export async function getCookieBoundClient() {
   }) as AnyClient;
 }
 
-export const openai = new OpenAI({ apiKey: OPENAI_API_KEY });
+export const openai = lazyClient(() => new OpenAI({ apiKey: OPENAI_API_KEY }));

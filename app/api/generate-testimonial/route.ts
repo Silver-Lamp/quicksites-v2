@@ -1,9 +1,10 @@
 import { NextResponse } from 'next/server';
+import { lazyClient } from '@/lib/lazyClient';
 import { OpenAI } from 'openai';
 
-const openai = new OpenAI({
+const openai = lazyClient(() => new OpenAI({
   apiKey: process.env.OPENAI_API_KEY, // NOT the public one!
-});
+}));
 
 export async function POST(req: Request) {
   const { prompt, industry } = await req.json();

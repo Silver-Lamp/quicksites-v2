@@ -4,6 +4,7 @@ import { createClient } from '@supabase/supabase-js';
 import { lazyClient } from '@/lib/lazyClient';
 import { NextRequest } from 'next/server';
 import OpenAI from 'openai';
+import { meterLLMCall, LLMBudgetExceededError } from '@/lib/ai/meter';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -38,14 +39,33 @@ Feedback:
 ${summary.received_feedback.map((f: any) => `• ${f.action} on ${f.block_id.slice(0, 8)}: ${f.message || ''}`).join('\n')}
 `;
 
-  const chat = await openai.chat.completions.create({
-    model: 'gpt-4',
-    messages: [
-      { role: 'system', content: 'You generate weekly coaching summaries from activity logs.' },
-      { role: 'user', content: prompt },
-    ],
-  });
+  let digest: string | null;
+  try {
+    digest = await meterLLMCall(
+      { provider: 'openai', model_code: 'gpt-4', modality: 'chat', route: '/api/weekly-digest-live' },
+      async () => {
+        const chat = await openai.chat.completions.create({
+          model: 'gpt-4',
+          messages: [
+            { role: 'system', content: 'You generate weekly coaching summaries from activity logs.' },
+            { role: 'user', content: prompt },
+          ],
+        });
+        return {
+          value: chat.choices[0].message.content,
+          usage: {
+            input_tokens: chat.usage?.prompt_tokens,
+            output_tokens: chat.usage?.completion_tokens,
+          },
+        };
+      },
+    );
+  } catch (e) {
+    if (e instanceof LLMBudgetExceededError) {
+      return Response.json({ error: 'AI budget reached, please try again later.' }, { status: 429 });
+    }
+    throw e;
+  }
 
-  const digest = chat.choices[0].message.content;
   return Response.json({ digest });
 }

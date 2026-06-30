@@ -2,6 +2,7 @@ import { createClient } from '@supabase/supabase-js';
 import { lazyClient } from '@/lib/lazyClient';
 import { json } from '@/lib/api/json';
 import { OpenAI } from 'openai';
+import { meterLLMCall } from '@/lib/ai/meter';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -26,18 +27,30 @@ Feedback:
 ${summary.received_feedback.map((f: any) => `• ${f.action} on ${f.block_id.slice(0, 8)}: ${f.message || ''}`).join('\n')}
 `;
 
-  const chat = await openai.chat.completions.create({
-    model: 'gpt-4',
-    messages: [
-      {
-        role: 'system',
-        content: 'You generate weekly coaching summaries from activity logs.',
-      },
-      { role: 'user', content: prompt },
-    ],
-  });
-
-  return chat.choices[0].message.content;
+  // Cron helper (no HTTP response here) — meter for cost logging; let any
+  // LLMBudgetExceededError propagate to the GET handler.
+  return await meterLLMCall(
+    { provider: 'openai', model_code: 'gpt-4', modality: 'chat', route: '/api/send-weekly-digest' },
+    async () => {
+      const chat = await openai.chat.completions.create({
+        model: 'gpt-4',
+        messages: [
+          {
+            role: 'system',
+            content: 'You generate weekly coaching summaries from activity logs.',
+          },
+          { role: 'user', content: prompt },
+        ],
+      });
+      return {
+        value: chat.choices[0].message.content,
+        usage: {
+          input_tokens: chat.usage?.prompt_tokens,
+          output_tokens: chat.usage?.completion_tokens,
+        },
+      };
+    },
+  );
 }
 
 export async function GET() {

@@ -18,4 +18,13 @@ export async function register() {
   if (secret && !process.env.SUPABASE_SERVICE_ROLE_KEY) {
     process.env.SUPABASE_SERVICE_ROLE_KEY = secret;
   }
+
+  // Fail-soft env check: log a clear signal at boot if a required server var is
+  // missing, instead of failing deep inside a request. Non-throwing on purpose so
+  // it can't break a build/preview that intentionally runs with partial env.
+  const { validateServerEnv } = await import('@/lib/env');
+  const { ok, problems } = validateServerEnv();
+  if (!ok) {
+    console.warn('[env] server environment incomplete:\n' + problems.map((p) => '  - ' + p).join('\n'));
+  }
 }

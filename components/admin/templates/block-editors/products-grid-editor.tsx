@@ -48,7 +48,6 @@ function hydrateFromStorage() {
 
 export default function ProductsGridEditor({ block, onSave, onClose }: Props) {
   const isProductsGrid = block?.type === 'products-grid' || block?.type === 'products_grid';
-  if (!isProductsGrid) return null;
 
   const content: any = block?.content ?? {};
   const [local, setLocal] = React.useState({
@@ -282,6 +281,9 @@ export default function ProductsGridEditor({ block, onSave, onClose }: Props) {
     (merchantId ? `Merchant: ${merchantId.slice(0,8)}…` :
      merchantEmail ? `Merchant: ${merchantEmail}` :
      'Merchant not set (open Manage products & services)');
+
+  // Defensive guard runs AFTER all hooks (rules-of-hooks).
+  if (!isProductsGrid) return null;
 
   return (
     <div className="space-y-5">

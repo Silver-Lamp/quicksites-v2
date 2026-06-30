@@ -18,8 +18,6 @@ function usdToCents(v: string | number | null | undefined): number | null {
 }
 
 export default function ServiceOfferEditor({ block, onSave, onClose }: Props) {
-  if (block.type !== 'service_offer') return null;
-
   const c: any = block.content ?? {};
   const [local, setLocal] = React.useState({
     title: c.title ?? 'Book a Service',
@@ -66,6 +64,9 @@ export default function ServiceOfferEditor({ block, onSave, onClose }: Props) {
     };
     window.dispatchEvent(new CustomEvent('qs:template:apply-patch', { detail: patch as any }));
   }
+
+  // Defensive type guard runs AFTER all hooks (rules-of-hooks).
+  if (block.type !== 'service_offer') return null;
 
   return (
     <div className="space-y-4">

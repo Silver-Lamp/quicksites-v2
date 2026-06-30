@@ -17,7 +17,7 @@ function requireEnv(name: string): string {
   return v;
 }
 const SUPABASE_URL = requireEnv('NEXT_PUBLIC_SUPABASE_URL');
-const SERVICE_ROLE = requireEnv('SUPABASE_SERVICE_ROLE_KEY');
+const SERVICE_ROLE = (process.env.SUPABASE_SERVICE_ROLE_KEY || requireEnv('SUPABASE_SECRET_KEY'));
 
 const db = createClient(SUPABASE_URL, SERVICE_ROLE, {
   auth: { persistSession: false, autoRefreshToken: false },

@@ -6,7 +6,7 @@ export function envOrThrow(k: string): string {
 
 export const SUPABASE_URL   = envOrThrow('NEXT_PUBLIC_SUPABASE_URL');
 export const SUPABASE_ANON_KEY = envOrThrow('NEXT_PUBLIC_SUPABASE_ANON_KEY');
-export const SERVICE_ROLE   = envOrThrow('SUPABASE_SERVICE_ROLE_KEY');
+export const SERVICE_ROLE   = (process.env.SUPABASE_SERVICE_ROLE_KEY || envOrThrow('SUPABASE_SECRET_KEY'));
 export const STORAGE_BUCKET = process.env.SUPABASE_STORAGE_BUCKET || 'site-images';
 export const OPENAI_API_KEY = envOrThrow('OPENAI_API_KEY');
 

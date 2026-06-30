@@ -444,7 +444,7 @@ export const blockContentSchemaMap = {
       const c = (raw && typeof raw === 'object') ? { ...(raw as any) } : {};
 
       const cities = Array.isArray(c.cities) ? c.cities.map(toCityString).filter(Boolean) : [];
-      let allCities = Array.isArray(c.allCities)
+      const allCities = Array.isArray(c.allCities)
         ? c.allCities.map(toCityString).filter(Boolean)
         : [...cities];
 

@@ -146,7 +146,7 @@ export async function GET(req: Request) {
     const baseSlugs = baseRows.map((r) => r.base_slug).filter(Boolean);
 
     // base-level display name (optional)
-    let nameByBase = new Map<string, string>();
+    const nameByBase = new Map<string, string>();
     if (baseSlugs.length) {
       const { data: nameRows } = await supabase
         .from('template_base_meta')

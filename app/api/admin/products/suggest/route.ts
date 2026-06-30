@@ -221,7 +221,7 @@ export async function POST(req: Request) {
     try { out = JSON.parse(resp.choices?.[0]?.message?.content || '{}'); } catch {}
 
     // Defensive fill
-    let title = norm(out.title) || seedTitle || (productType === 'service' ? 'Service' : 'Product');
+    const title = norm(out.title) || seedTitle || (productType === 'service' ? 'Service' : 'Product');
     let price_cents = Number(out.price_cents);
     if (!Number.isFinite(price_cents) || price_cents < 0) {
       price_cents = Math.round((soft.min + soft.max) / 2);

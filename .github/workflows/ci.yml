@@ -56,12 +56,13 @@ jobs:
           STRIPE_WEBHOOK_SECRET: placeholder-stripe-webhook-secret
           OPENAI_API_KEY: placeholder-openai-key
 
-      # NON-BLOCKING: the repo currently has ~293 eslint errors (mostly auto-fixable —
-      # @ts-ignore→@ts-expect-error, prefer-const). Surfaced as annotations; flip to
-      # blocking once the backlog is cleared (tracked separately).
+      # BLOCKING. eslint reports 0 errors: a stale Next-14 no-restricted-syntax rule
+      # (forbidding required Next 15 `await headers()`) was removed, prefer-const was
+      # fixed, and the remaining backlog (rules-of-hooks, ban-ts-comment, etc.) was
+      # baselined to 'warn' in .eslintrc.cjs. Lint now blocks NEW errors; the warn'd
+      # rules are tracked to ratchet back to 'error' as the debt is burned down.
       - name: Lint
         run: npm run lint
-        continue-on-error: true
 
 # e2e (Playwright) runs in its own workflow (.github/workflows/playwright.yml),
 # which sets up a server properly. It intentionally isn't duplicated here as a

@@ -111,7 +111,7 @@ function SortableLinkItem({
           onChange={(e) => {
             const value = e.target.value; // e.g. "/contact" or ""
             // Base update
-            let next: Link = { ...link, href: value };
+            const next: Link = { ...link, href: value };
 
             // If user selected an internal page AND label is empty, auto-fill label
             if (value) {

@@ -147,7 +147,7 @@ async function findSiteByHost(hostNoPort: string): Promise<SiteRow | null> {
     : [hostNoPort, `www.${hostNoPort}`];
 
   // 1) Direct domain
-  let { data: site, error } = await supabaseAdmin
+  const { data: site, error } = await supabaseAdmin
     .from('sites')
     .select('id, slug, domain, default_subdomain, template_id, published_snapshot_id')
     .in('domain', variants)

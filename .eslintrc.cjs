@@ -59,21 +59,33 @@ module.exports = {
   ],
   rules: {
     'prettier/prettier': 'warn',
-    'no-restricted-syntax': [
-      'error',
-      {
-        selector: "AwaitExpression > CallExpression[callee.name='headers']",
-        message: "❌ Do not use `await headers()`. This function is synchronous in App Router.",
-      },
-      {
-        selector: "AwaitExpression > CallExpression[callee.name='cookies']",
-        message: "❌ Do not use `await cookies()`. This function is synchronous in App Router.",
-      },
-    ],
+    // NOTE: the former no-restricted-syntax rule forbidding `await headers()` /
+    // `await cookies()` was removed — it was written for Next 14 (where those were
+    // sync). In Next 15 (this repo is on 15.2.6) `headers()`/`cookies()` are ASYNC
+    // and MUST be awaited, so the rule flagged correct code as an error (81 false
+    // positives) and pushed devs to write broken code. See the Next 15 async
+    // request APIs: https://nextjs.org/docs/app/building-your-application/upgrading/version-15
     '@typescript-eslint/no-unused-vars': ['warn', { argsIgnorePattern: '^_' }],
     '@typescript-eslint/no-explicit-any': 'off',
     '@typescript-eslint/no-empty-interface': 'off',
     '@typescript-eslint/no-empty-object-type': 'off',
+
+    // --- Ratchet (2026-06-30) ---------------------------------------------
+    // These rules have a backlog of pre-existing violations. To make the CI
+    // Lint step a BLOCKING gate now (so it catches NEW errors), the existing
+    // debt is baselined to 'warn' — still surfaced, just non-fatal. Burn each
+    // down and flip back to 'error' over time. Counts at time of ratchet:
+    'react-hooks/rules-of-hooks': 'warn',                          // 113 — real: async components calling hooks, conditional hooks
+    '@typescript-eslint/ban-ts-comment': 'warn',                   // 37 — prefer @ts-expect-error over @ts-ignore
+    'react/no-unescaped-entities': 'warn',                         // 15
+    '@typescript-eslint/no-unused-expressions': 'warn',            // 5
+    'prefer-const': 'warn',                                        // 2 mixed-destructure edge cases (33 others fixed in this PR)
+    '@next/next/no-html-link-for-pages': 'warn',                   // 2
+    'react/display-name': 'warn',                                  // 2
+    '@typescript-eslint/no-namespace': 'warn',                     // 1 — `declare module` augmentation
+    '@typescript-eslint/no-require-imports': 'warn',               // 1 — intentional optional require in try/catch
+    '@typescript-eslint/no-non-null-asserted-optional-chain': 'warn', // 1
+    // ----------------------------------------------------------------------
     'no-restricted-imports': [
       'warn',
       {

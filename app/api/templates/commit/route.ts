@@ -319,7 +319,7 @@ type TemplateRowForEditor = {
 export async function POST(req: Request) {
   try {
     const body = await req.json().catch(() => ({}));
-    let { id, baseRev, patch: rawPatch, kind } = body as {
+    const { id, baseRev, patch: rawPatch, kind } = body as {
       id: string; baseRev?: number; patch: Record<string, any>; kind?: Kind;
     };
 
@@ -368,7 +368,7 @@ export async function POST(req: Request) {
 
     // enrich patch + strip empties
     if (DEBUG_ID) dbg('[IDENTITY:API] incoming patch', { id, baseRev: effectiveBaseRev, patch: rawPatch });
-    let enrichedPatch = enrichPatchWithIdentity(rawPatch, beforeData);
+    const enrichedPatch = enrichPatchWithIdentity(rawPatch, beforeData);
 
     // ── Promote company_id to column (from JSON) ─────────────────────────────
     const incomingCompanyId = resolveIncomingCompanyIdFromPatch(enrichedPatch);
@@ -407,7 +407,7 @@ export async function POST(req: Request) {
     };
 
     // ── First RPC attempt ──
-    let r = await tryAllRpcs(id, payload);
+    const r = await tryAllRpcs(id, payload);
 
     if (!r.ok) {
       // refresh current rev

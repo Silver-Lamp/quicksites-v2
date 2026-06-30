@@ -50,7 +50,7 @@ async function createCandidate(formData: FormData) {
   }
 
   // 2) Build page (without shortUrl)
-  let pageJson = buildCandidateBlocks({
+  const pageJson = buildCandidateBlocks({
     name, office, city, photoUrl, baseUrl: PUBLIC_BASE_URL, slug,
   });
 

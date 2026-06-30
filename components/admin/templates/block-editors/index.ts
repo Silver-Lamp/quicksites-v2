@@ -74,7 +74,7 @@ function replaceBlockInTemplateData(template: Template, updated: Block): AnyObj 
 
     if (!pageChanged) return p;
 
-    let nextPage: AnyObj = { ...p };
+    const nextPage: AnyObj = { ...p };
     if (nextByKind['blocks']) nextPage.blocks = nextByKind['blocks'];
     if (nextByKind['content_blocks']) nextPage.content_blocks = nextByKind['content_blocks'];
     if (nextByKind['content.blocks']) nextPage.content = { ...(nextPage.content ?? {}), blocks: nextByKind['content.blocks'] };

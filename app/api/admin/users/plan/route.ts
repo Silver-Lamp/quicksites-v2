@@ -62,7 +62,7 @@ export async function PATCH(req: NextRequest) {
   const user_id = String(body?.user_id ?? '').trim();
   const plan_key_raw = body?.plan_key;
   const plan_key = typeof plan_key_raw === 'string' ? plan_key_raw.trim() : undefined;
-  let status = (body?.status ?? 'active') as string;
+  const status = (body?.status ?? 'active') as string;
   const trial_days_raw = body?.trial_days;
   const trial_end_raw = body?.trial_end as string | undefined;
   const extend_days_raw = body?.extend_days;
@@ -96,7 +96,7 @@ export async function PATCH(req: NextRequest) {
     .eq('user_id', user_id)
     .maybeSingle();
 
-  let payload: any = {
+  const payload: any = {
     user_id,
     plan: plan_key ?? existing?.plan ?? 'free',
     status,

@@ -10,7 +10,7 @@ export async function ensureUniqueBatchSlugs(titles: string[], exists: Set<strin
   const slugs: string[] = [];
   const used = new Set<string>(exists);
   for (const t of titles) {
-    let base = slugify(t) || 'item';
+    const base = slugify(t) || 'item';
     let candidate = base;
     let i = 2;
     while (used.has(candidate)) candidate = `${base}-${i++}`;

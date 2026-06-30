@@ -109,7 +109,7 @@ export async function middleware(req: NextRequest) {
   }
 
   // Always pass the same response instance so Supabase cookies stick
-  let res = NextResponse.next();
+  const res = NextResponse.next();
 
   // Keep Supabase session cookies fresh (no manual cookie parsing!)
   try {
@@ -191,7 +191,7 @@ export async function middleware(req: NextRequest) {
   // ---------- Custom domain root: /  ->  /_sites/{slug}/{firstPage} ----------
   if (isCustom && pathname === '/') {
     const now = Date.now();
-    let cached = customDomainCache.get(baseHost);
+    const cached = customDomainCache.get(baseHost);
     let slug = cached?.slug;
 
     if (!slug || now - (cached?.timestamp || 0) >= CACHE_TTL || isPreview) {
@@ -241,7 +241,7 @@ export async function middleware(req: NextRequest) {
   // ---------- Custom domain inner routes ----------
   if (isCustom) {
     const now = Date.now();
-    let cached = customDomainCache.get(baseHost);
+    const cached = customDomainCache.get(baseHost);
     let slug = cached?.slug;
 
     if (!slug || now - (cached?.timestamp || 0) >= CACHE_TTL) {

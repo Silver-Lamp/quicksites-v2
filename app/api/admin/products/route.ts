@@ -126,7 +126,7 @@ export async function POST(req: NextRequest) {
     }
 
     // slug unique within merchant (catalog_items unique on merchant_id,slug)
-    let slug = slugify(title) || `prod-${Date.now().toString(36)}`;
+    const slug = slugify(title) || `prod-${Date.now().toString(36)}`;
     let uniqueSlug = slug;
     let i = 1;
     while (true) {

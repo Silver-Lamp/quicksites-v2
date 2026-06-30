@@ -173,7 +173,7 @@ export function useTemplateVersions(input: IdInput, currentId?: string | null) {
       }
 
       // Prefer server “versions”, fallback to “snapshots”
-      let raw = (json.versions && json.versions.length ? json.versions : json.snapshots) ?? [];
+      const raw = (json.versions && json.versions.length ? json.versions : json.snapshots) ?? [];
       let rows = normalize(raw);
 
       // Optional: filter out current template row if server echoed it

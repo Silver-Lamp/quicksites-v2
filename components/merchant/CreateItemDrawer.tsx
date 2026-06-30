@@ -22,14 +22,16 @@ export default function CreateItemDrawer({ merchantId, siteSlug, onCreated }:{
   const [pageCount, setPageCount] = useState<number>(0);
   const [productUid, setProductUid] = useState('');
   const [fileUrl, setFileUrl] = useState('');
+  const [baseCost, setBaseCost] = useState<number>(0); // provider print cost (USD)
 
   async function submit() {
     setSaving(true);
+    const baseCostCents = Math.round((baseCost || 0) * 100);
     const podSpec =
       pod === 'lulu'
-        ? { interiorUrl, coverUrl, pageCount: Number(pageCount) || 0 }
+        ? { interiorUrl, coverUrl, pageCount: Number(pageCount) || 0, base_cost_cents: baseCostCents }
         : pod === 'gelato'
-        ? { productUid, fileUrl }
+        ? { productUid, fileUrl, base_cost_cents: baseCostCents }
         : undefined;
     const res = await fetch('/api/catalog/items', {
       method: 'POST',
@@ -47,7 +49,7 @@ export default function CreateItemDrawer({ merchantId, siteSlug, onCreated }:{
       const { id } = await res.json();
       setOpen(false);
       setTitle(''); setSlug(''); setDesc(''); setPrice(0);
-      setPod('none'); setInteriorUrl(''); setCoverUrl(''); setPageCount(0); setProductUid(''); setFileUrl('');
+      setPod('none'); setInteriorUrl(''); setCoverUrl(''); setPageCount(0); setProductUid(''); setFileUrl(''); setBaseCost(0);
       onCreated?.(id);
     } else {
       const { error } = await res.json();
@@ -122,6 +124,18 @@ export default function CreateItemDrawer({ merchantId, siteSlug, onCreated }:{
                     className="rounded bg-neutral-900 px-3 py-2 text-sm ring-1 ring-neutral-800" />
                   <input value={fileUrl} onChange={(e)=>setFileUrl(e.target.value)} placeholder="Print file URL"
                     className="rounded bg-neutral-900 px-3 py-2 text-sm ring-1 ring-neutral-800" />
+                </div>
+              )}
+
+              {pod !== 'none' && (
+                <div className="grid grid-cols-1 gap-1 rounded-lg bg-neutral-900/60 p-3 ring-1 ring-neutral-800">
+                  <label className="text-xs text-neutral-400">Print cost (USD, your provider cost per unit)</label>
+                  <input type="number" step="0.01" min="0" value={baseCost} onChange={(e)=>setBaseCost(Number(e.target.value))}
+                    className="rounded bg-neutral-900 px-3 py-2 text-sm ring-1 ring-neutral-800" />
+                  <p className="text-[11px] text-neutral-500">
+                    We only take our platform fee on your margin, not this print cost.
+                    {baseCost > 0 && <> Suggested retail ≈ <span className="text-neutral-300">${(baseCost * 1.3).toFixed(2)}</span> (cost + ~30% margin).</>}
+                  </p>
                 </div>
               )}
             </div>

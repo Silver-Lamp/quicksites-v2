@@ -4,7 +4,7 @@ import { Resolver } from 'dns/promises';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
+  (process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SECRET_KEY)!
 );
 
 const DEFAULT_TOKEN = process.env.QS_DOMAIN_TXT_TOKEN || 'quicksites';

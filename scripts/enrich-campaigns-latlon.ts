@@ -14,7 +14,7 @@ dotenv.config();
 
 const supabase = createClient(
   process.env.SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
+  (process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SECRET_KEY)!
 );
 
 const DRY_RUN = process.env.DRY_RUN === 'true';

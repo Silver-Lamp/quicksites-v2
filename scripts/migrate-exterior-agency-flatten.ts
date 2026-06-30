@@ -5,7 +5,7 @@ process.on('unhandledRejection', (e) => { console.error('UNHANDLED REJECTION:', 
 process.on('uncaughtException', (e) => { console.error('UNCAUGHT EXCEPTION:', e); process.exit(1); });
 
 const SUPABASE_URL = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+const SUPABASE_SERVICE_ROLE_KEY = (process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SECRET_KEY)!;
 const TARGET_SLUG = process.env.TEMPLATE_SLUG || 'pnw-prestige-cleaning';
 
 if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {

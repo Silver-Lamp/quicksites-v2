@@ -77,6 +77,7 @@ const SERVICE_NAMES: Partial<Record<IndustryKey, string[]>> = {
   online_reseller: ['New Drops', 'Bundle Deals', 'Order Tracking', 'Returns', 'Customer Support'],
   print_on_demand: ['Design Templates', 'No Minimums', 'Bulk Discounts', 'Mockups & Proofs', 'Dropshipping'],
   custom_apparel: ['Design Consult', 'Embroidery', 'Screen Printing', 'Bulk Orders', 'Rush Services'],
+  author: ['Signed Paperbacks', 'eBooks', 'Audiobooks', 'Poster Prints', 'Apparel & Merch'],
 
   other: ['Consulting', 'Installation', 'Support', 'Upgrades', 'Maintenance'],
 };

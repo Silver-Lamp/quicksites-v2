@@ -47,6 +47,7 @@ const INDUSTRIES: Array<{ label: string; noun: string; type: DemoSpec['productTy
   { label: 'Gifts & Stationery', noun: 'Gift Shop', type: 'physical' },
   { label: 'Custom Apparel', noun: 'Apparel', type: 'physical' },
   { label: 'Antiques & Vintage', noun: 'Vintage', type: 'physical' },
+  { label: 'Author', noun: 'Books', type: 'mixed' },
 ];
 
 /** All categories the generator can pick from (for coverage checks). */

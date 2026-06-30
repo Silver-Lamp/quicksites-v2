@@ -44,6 +44,7 @@ export type IndustryKey =
   | 'online_reseller'
   | 'print_on_demand'
   | 'custom_apparel'
+  | 'author'
   | 'other';
 
 /** Key → Label (display only; we store the key in DB) */
@@ -94,6 +95,7 @@ export const INDUSTRIES: ReadonlyArray<{ key: IndustryKey; label: string }> = [
   { key: 'online_reseller',      label: 'Online Reseller' },
   { key: 'print_on_demand',      label: 'Print-on-Demand' },
   { key: 'custom_apparel',       label: 'Custom Apparel' },
+  { key: 'author',               label: 'Author' },
 
   { key: 'other',                label: 'Other' },
 ] as const;

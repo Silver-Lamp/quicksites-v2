@@ -6,7 +6,7 @@ import { Button } from '@/components/ui';
 import toast from 'react-hot-toast';
 import {
   RotateCcw, RotateCw, AlertTriangle, X, Maximize2, Minimize2,
-  Smartphone, Tablet, Monitor, SlidersHorizontal, Check,
+  Smartphone, Tablet, Monitor, SlidersHorizontal, Check, Sun, Moon,
   Settings as SettingsIcon, Trash2, Database, Minus, Wrench,
 } from 'lucide-react';
 
@@ -252,6 +252,16 @@ useEffect(() => {
   const apply = (next: Template) => {
     onApplyTemplate(next);
     onSetRawJson?.(pretty(next));
+  };
+
+  // Persisted light/dark for this template (drives the inline preview + the live site).
+  const colorMode: 'light' | 'dark' =
+    (((template as any)?.color_mode ?? (template as any)?.data?.color_mode ?? 'dark') === 'light') ? 'light' : 'dark';
+  const setColorModeAndEmit = (m: 'light' | 'dark') => {
+    const cur: any = (tplRef.current ?? template) || {};
+    apply({ ...cur, color_mode: m, data: { ...(cur.data ?? {}), color_mode: m } } as Template);
+    try { localStorage.setItem('qs:preview:color', m); } catch {}
+    window.dispatchEvent(new CustomEvent('qs:preview:set-color-mode', { detail: m }));
   };
 
   /* patch bus: apply + queue save */
@@ -539,6 +549,16 @@ useEffect(() => {
               </Button>
               <Button size="icon" variant={viewport === 'desktop' ? 'secondary' : 'ghost'} title="Desktop width" aria-pressed={viewport === 'desktop'} onClick={() => setViewportAndEmit('desktop')}>
                 <Monitor className="w-4 h-4" />
+              </Button>
+            </div>
+
+            {/* Light / Dark (persists to the template) */}
+            <div className="flex items-center gap-1">
+              <Button size="icon" variant={colorMode === 'light' ? 'secondary' : 'ghost'} title="Light mode" aria-pressed={colorMode === 'light'} onClick={() => setColorModeAndEmit('light')}>
+                <Sun className="w-4 h-4" />
+              </Button>
+              <Button size="icon" variant={colorMode === 'dark' ? 'secondary' : 'ghost'} title="Dark mode" aria-pressed={colorMode === 'dark'} onClick={() => setColorModeAndEmit('dark')}>
+                <Moon className="w-4 h-4" />
               </Button>
             </div>
 

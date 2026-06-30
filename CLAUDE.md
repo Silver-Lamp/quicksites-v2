@@ -2,9 +2,9 @@
 
 > The single orientation doc for humans and AI agents working in this repo.
 > If you read one file before touching code, read this one.
-> Companion docs: [`docs/DEVELOPMENT.md`](docs/DEVELOPMENT.md) (run it locally) · [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) · [`docs/COMMERCE_RUNBOOK.md`](docs/COMMERCE_RUNBOOK.md) · [`docs/MONETIZATION.md`](docs/MONETIZATION.md) · [`docs/LLM_METERING.md`](docs/LLM_METERING.md) · [`docs/REVIVAL_PLAN.md`](docs/REVIVAL_PLAN.md)
+> Companion docs: [`docs/DEVELOPMENT.md`](docs/DEVELOPMENT.md) (run it locally) · [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) · [`docs/COMMERCE_RUNBOOK.md`](docs/COMMERCE_RUNBOOK.md) · [`docs/MONETIZATION.md`](docs/MONETIZATION.md) · [`docs/PRICING_REDESIGN.md`](docs/PRICING_REDESIGN.md) · [`docs/LLM_METERING.md`](docs/LLM_METERING.md) · [`docs/POD_AUTHOR_PLAN.md`](docs/POD_AUTHOR_PLAN.md) · [`docs/SECRET_ROTATION_RUNBOOK.md`](docs/SECRET_ROTATION_RUNBOOK.md) · [`docs/REVIVAL_PLAN.md`](docs/REVIVAL_PLAN.md)
 
-Last verified: 2026-06-26 · `tsc --noEmit` passes clean (0 errors).
+Last verified: 2026-06-29 · `tsc --noEmit` + `next build` pass clean.
 
 ---
 
@@ -95,6 +95,19 @@ admin/               # NOTE: a second top-level dir (legacy/parallel admin tooli
 3. Webhook `app/api/commerce/webhooks/stripe` → `markOrderPaid()` → writes `payments` + a `commission_ledger` entry for any attributed referral.
 4. Partner/affiliate payouts: `app/api/referrals/*` (manual today; automation is a known gap).
 
+## 5b. Newer subsystems (added 2026-06)
+
+- **Homepage showcase** ("Built with QuickSites"): an SSR'd row of curated published sites. `app/page.tsx` is now a **server component** that calls `getShowcaseData()` (`lib/home/getShowcaseData.ts`) and passes data into the client homepage (`components/home/home-client.tsx`) + `components/home/site-showcase.tsx` (localStorage cache; admin display-mode/hide/drag-reorder). Feed: `app/api/public/showcase`; generated thumbnails: `app/api/public/showcase/[slug]/thumb`. Curated list: `lib/home/featured-sites.ts`.
+- **Builder first-run chooser**: `/admin/templates/new` shows industry / duplicate-template / blank (`components/admin/templates/start/start-your-site.tsx`). Industry scaffold seeds services + theme (`lib/builder/industryScaffold.ts`); industry themes (`lib/theme/industryPresets.ts`) are wired through the public render via `lib/theme/resolveSiteTheme.ts` + `TemplateThemeWrapper`. **`color_mode` defaults to `dark` everywhere**; the editor action toolbar has a light/dark toggle (persists to the template).
+- **AI demo generation**: "Generate demos" admin button → `app/api/admin/demos/generate` (admin+cron) → `lib/builder/generateDemoSite.ts` (metered OpenAI copy+hero → insert → publish via `public.publish_template_demo` RPC). Random, category-diversifying spec: `lib/builder/randomDemoSpec.ts`. Nightly top-up cron `app/api/cron/demo-refresh` (OFF unless `DEMO_AUTOGEN_ENABLED=true`). Generated sites are tagged `claim_source='demo_seed'` + `data.meta.is_demo`.
+- **Templates admin**: card view (`components/admin/templates/templates-card-grid.tsx`) with a Cards/Table toggle + shimmer placeholders during generation; admins see **all** templates (the list API + secure-MV gating in `app/api/admin/templates/list`).
+- **Agency billing + finished take-rate (Pricing Phase 2)**: per-user + per-site tiers in `lib/billing/*` (`plans`, `agency`, `entitlements`) + `app/api/billing/*`; refund fee-reversal (`lib/commerce/refunds.ts`), agency fee-exemption + margin-aware fee in `createDraftOrder`, reconciliation `app/api/admin/commerce/reconcile`. See [`docs/PRICING_REDESIGN.md`](docs/PRICING_REDESIGN.md).
+- **Print-on-demand + Author sites**: Lulu (books) + Gelato (posters/apparel) under `lib/commerce/pod/*`; fulfillment fires from `markOrderPaid` (gated by `POD_ENABLED`), records `print_orders`, syncs via `app/api/cron/print-order-sync` + `app/api/commerce/webhooks/lulu`. Catalog authoring in `components/merchant/CreateItemDrawer.tsx` (spec on `catalog_items.metadata.pod_spec`); admin view `/admin/print-orders`; `author` is a first-class industry. See [`docs/POD_AUTHOR_PLAN.md`](docs/POD_AUTHOR_PLAN.md).
+- **Admin dashboards**: AI spend `/admin/ai-costs`, cron health `/admin/cron`, print orders `/admin/print-orders` (links in the admin nav).
+- **Global settings**: `public.site_settings` (key/value jsonb, **service-role only**, RLS-denied) holds showcase mode/hidden/order. Helpers: `lib/settings/siteSettings.ts`.
+- **New crons** (`vercel.json`): `agency-site-sync`, `demo-refresh`, `print-order-sync` (all cron-secret auth'd; the latter two are flag-gated).
+- **Secrets**: a leaked service-role key was removed + a gitleaks scan added (CI `.github/workflows/secret-scan.yml` + pre-commit). Rotation still pending owner — see [`docs/SECRET_ROTATION_RUNBOOK.md`](docs/SECRET_ROTATION_RUNBOOK.md).
+
 ## 6. Architecture facts that will surprise you
 
 - **The backend = Next API routes.** ~349 `route.ts` files; ~70% of business logic is *inline in routes*, not in a service layer. A thin service layer exists only for commerce (`lib/commerce/*`, `lib/payments/*`). Extracting a standalone backend is the planned north star — see [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md). **When writing new logic, put it in `lib/<domain>/` as a pure function and call it from the route** — this is how we incrementally earn the split.
@@ -110,13 +123,15 @@ admin/               # NOTE: a second top-level dir (legacy/parallel admin tooli
 - **API routes**: `runtime = 'nodejs'`, `dynamic = 'force-dynamic'` is the norm (Supabase service role needs Node). Use the response helpers in `lib/api/json.ts` and prefer the Zod validation wrappers in `lib/api/withInputOutputValidation.ts` for new endpoints.
 - **New business logic → `lib/<domain>/`** (pure, testable), thin route on top.
 - **Money in integer cents**, never floats. Match the schema (`*_cents`).
-- **Cron** endpoints live under `app/api/cron/*`, registered in `vercel.json`, auth'd by the `x-cron-secret` header (`CRON_SECRET`).
+- **Cron** endpoints live under `app/api/cron/*`, registered in `vercel.json`, auth'd by `isCronAuthorized` (`x-cron-secret`/`CRON_SECRET` or Vercel's `Authorization: Bearer`). Wrap the body in `runCron(job, …)` for `cron_runs` logging.
+- **New sites/templates default to `color_mode: 'dark'`.** Creation + render fallbacks all default dark; set `color_mode: 'light'` explicitly to override.
 - **Conventional commits** (`npm run commit` / commitlint). NOTE: current history is squashed to `📦 g` placeholders — start writing real messages.
 
 ## 8. Known debt / traps (don't trip on these)
 
 - Duplicate/legacy files: `lib/create-default-block-RESOLVE-DUP.ts`, `lib/blocks/_likely-remove_*`, `vercel.json.bak`, `page-v0.tsx`. Don't import them.
 - `app/api/deploy-webhook/route.ts` is effectively disabled (commented).
+- **Direct `UPDATE`s to `templates` are blocked** by the `app.guard_templates_update` trigger ("Use app.commit_template()"). Go through the sanctioned RPCs (`app.commit_template`, `app.set_template_slug`, `app.publish_site`, or the `public.publish_template_demo` helper), or `set_config('app.bypass_template_guard','on', true)` inside a txn for one-off SECURITY DEFINER work. INSERTs are fine.
 - Stripe Connect onboarding has two code paths; the older one writes a deprecated `merchant_payment_accounts` table. Use the `payment_accounts` path. See [`docs/MONETIZATION.md`](docs/MONETIZATION.md).
 - Large artifacts were committed to git (`quicksites-export.zip`, `get-pip.py`, `.tsbuildinfo`, lint reports) — being purged in the cleanup milestone.
 - Two `admin/` locations: `app/admin/` (UI) and a top-level `admin/` (libs/tooling, incl. the master block schema). Don't confuse them.

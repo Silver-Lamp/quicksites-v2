@@ -4,6 +4,14 @@
 > into QuickSites' Open Commerce, and add an "Author" site type. Working doc for execution.
 > Created 2026-06-29.
 
+## STATUS — built (gated behind POD_ENABLED; needs Lulu/Gelato creds to go live)
+- ✅ Phase 1: providers (`lib/commerce/pod/{lulu,gelato}.ts`), `print_orders` table, flag, env (PR #37).
+- ✅ Phase 3: Author site type (industry/theme/services/demo) (#38) + `products_grid` storefront in commerce scaffolds (#39).
+- ✅ Phase 2: gated fulfillment in `markOrderPaid` → Lulu/Gelato; `print-order-sync` cron; Lulu webhook (#39). Shipping captured at checkout for POD carts (#41).
+- ✅ Phase 4: `/admin/print-orders` dashboard (#41) + catalog POD product authoring (book/merch) in `CreateItemDrawer` (#42).
+
+**Go-live checklist:** (1) create Lulu + Gelato sandbox accounts, set `LULU_*` / `GELATO_API_KEY`; (2) `POD_ENABLED=true`; (3) add a POD catalog item (Merchant Catalog → New Item → Fulfillment); (4) test order in sandbox → verify `print_orders` + `/admin/print-orders`; (5) switch `LULU_API_BASE` to prod + set `LULU_WEBHOOK_SECRET`, point Lulu's webhook at `/api/commerce/webhooks/lulu`. Remaining polish: per-merchant BYO creds UI; pricing that adds print cost + margin into the listed price; tax/returns for physical goods.
+
 ## Decisions (locked)
 - **Scope (first cut):** Books **and** merch — Lulu + Gelato both.
 - **Surface:** an **Author/Writer site type** AND POD as a **generic catalog capability** any merchant can enable.

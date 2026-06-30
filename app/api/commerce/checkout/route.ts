@@ -1,25 +1,38 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
 import { createDraftOrder, markOrderPaid } from '@/lib/commerce/orders';
 import { createCheckout } from '@/lib/commerce/paymentRouter';
 import { getServerSupabase } from '@/lib/supabase/server';
+import { parseJsonBody } from '@/lib/api/parseJson';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-type Body = {
-  merchantId: string;
-  siteSlug?: string;
-  currency?: string;
-  items: { catalogItemId: string; title: string; quantity: number; unitAmount: number }[];
-  successUrl?: string;
-  cancelUrl?: string;
-};
+// Money path: client-supplied amounts feed createDraftOrder (fee math) and
+// Stripe, so validate strictly. Amounts are integer cents (CLAUDE.md §7).
+const CheckoutSchema = z.object({
+  merchantId: z.string().min(1),
+  siteSlug: z.string().optional(),
+  currency: z.string().length(3).optional(),
+  items: z
+    .array(
+      z.object({
+        catalogItemId: z.string().min(1),
+        title: z.string().min(1),
+        quantity: z.number().int().positive(),
+        unitAmount: z.number().int().nonnegative(), // cents
+      }),
+    )
+    .min(1),
+  successUrl: z.string().url().optional(),
+  cancelUrl: z.string().url().optional(),
+});
+type Body = z.infer<typeof CheckoutSchema>;
 
 export async function POST(req: NextRequest) {
-  const body = (await req.json()) as Body;
-  if (!body?.merchantId || !Array.isArray(body.items) || body.items.length === 0) {
-    return NextResponse.json({ error: 'merchantId and items[] required' }, { status: 400 });
-  }
+  const parsed = await parseJsonBody(req, CheckoutSchema);
+  if (!parsed.ok) return parsed.response;
+  const body: Body = parsed.data;
 
   const supabase = await getServerSupabase({ serviceRole: true });
 

@@ -1,9 +1,11 @@
 // app/api/testimonials/generate/route.ts
 import OpenAI from 'openai';
+import { z } from 'zod';
 import { enforceGuestAiLimit, guestLimitBody } from '@/lib/ai/guestGuard';
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { createServerClient } from '@supabase/ssr';
+import { parseJsonBody } from '@/lib/api/parseJson';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -25,15 +27,21 @@ function limited(key: string, limit = 30, windowMs = 60_000) {
   return b.count > limit;
 }
 
-type ReqBody = {
-  prompt?: string;
-  industry?: string; // optional fallback
-  services?: string[]; // optional fallback
-  tone?: 'friendly' | 'professional' | 'enthusiastic' | 'matter-of-fact';
-  count?: number;
-  template_id?: string; // ✅ prefer this to fetch DB row
-  site_slug?: string;   // optional alternate lookup
-};
+// Permissive by design: every field is optional and the handler defaults/coerces
+// each one, so this only rejects a non-object body or grossly wrong field types
+// (e.g. services that isn't an array) — it won't break existing flexible callers.
+const ReqSchema = z
+  .object({
+    prompt: z.string().optional(),
+    industry: z.string().optional(),
+    services: z.array(z.string()).optional(),
+    tone: z.string().optional(),
+    count: z.union([z.number(), z.string()]).optional(),
+    template_id: z.string().optional(),
+    site_slug: z.string().optional(),
+  })
+  .passthrough();
+type ReqBody = z.infer<typeof ReqSchema>;
 
 function normServices(v: unknown): string[] {
   if (!Array.isArray(v)) return [];
@@ -77,7 +85,9 @@ export async function POST(req: Request) {
     const guard = await enforceGuestAiLimit(user, 'testimonials');
     if (!guard.ok) return NextResponse.json(guestLimitBody(guard.limit), { status: 429 });
 
-    const body = (await req.json()) as ReqBody;
+    const parsedBody = await parseJsonBody(req, ReqSchema);
+    if (!parsedBody.ok) return parsedBody.response;
+    const body: ReqBody = parsedBody.data;
     const { prompt = '', tone = 'friendly' } = body;
     const safeCount = Math.max(1, Math.min(6, Number(body.count) || 1));
 

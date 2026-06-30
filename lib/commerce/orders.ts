@@ -190,6 +190,17 @@ export async function markOrderPaid(
       orderRow.merchant_id
     );
   }
+
+  // Print-on-demand fulfillment (Lulu/Gelato). Fully gated by POD_ENABLED and
+  // best-effort — never let it affect the payment path.
+  if (process.env.POD_ENABLED === 'true') {
+    try {
+      const { fulfillOrderPodItems } = await import('@/lib/commerce/pod/fulfillment');
+      await fulfillOrderPodItems(orderId);
+    } catch (e: any) {
+      console.warn('POD fulfillment step failed:', e?.message || e);
+    }
+  }
 }
 
 /**

@@ -75,7 +75,14 @@ export function buildIndustryStarter(opts: { businessName: string; industryKey: 
   const faq: any = createDefaultBlock('faq');
   const contact: any = createDefaultBlock('contact_form');
 
-  const blocks = [hero, services, faq, contact];
+  // Commerce-forward industries get a storefront grid up top (e.g. authors selling
+  // books + merch). Reuses the existing products_grid block.
+  const STOREFRONT_INDUSTRIES = new Set<IndustryKey>([
+    'author', 'retail_boutique', 'retail_home_goods', 'handmade', 'etsy_style', 'print_on_demand', 'custom_apparel',
+  ]);
+  const blocks = STOREFRONT_INDUSTRIES.has(industryKey)
+    ? [hero, createDefaultBlock('products_grid') as any, services, faq, contact]
+    : [hero, services, faq, contact];
   const homePage = {
     id: uid(),
     slug: 'index',

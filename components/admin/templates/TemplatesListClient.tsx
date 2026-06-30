@@ -58,6 +58,13 @@ export default function TemplatesListClient({
   const [loading, setLoading] = useState(false);
   const [errorText, setErrorText] = useState<string | null>(null);
 
+  // Demo-generation shimmer: show N placeholder cards while demos are minted,
+  // and replace them as freshly-generated rows appear.
+  const [pendingDemos, setPendingDemos] = useState(0);
+  const demoPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const demoBaselineIds = useRef<Set<string>>(new Set());
+  const demoTargetRef = useRef(0);
+
   // Keep immediate, synchronous references for sequencing loops
   const rowsRef = useRef<any[]>(initialRows);
   const offsetRef = useRef<number>(initialOffset);
@@ -172,6 +179,39 @@ export default function TemplatesListClient({
     return () => window.removeEventListener('qs:templates:refetch', handler as EventListener);
   }, [fetchPage, fillToMinActive]);
 
+  // Demo generation: shimmer placeholders + poll, decrementing as new rows land.
+  useEffect(() => {
+    const stopPoll = () => {
+      if (demoPollRef.current) { clearInterval(demoPollRef.current); demoPollRef.current = null; }
+    };
+    const onGen = (e: Event) => {
+      const count = Math.max(1, Number((e as CustomEvent).detail?.count) || 1);
+      demoTargetRef.current = count;
+      demoBaselineIds.current = new Set(rowsRef.current.map((r: any) => r.id));
+      setPendingDemos(count);
+      stopPoll();
+      demoPollRef.current = setInterval(async () => {
+        await fetchPage(0, true);
+        const appeared = rowsRef.current.filter((r: any) => !demoBaselineIds.current.has(r.id)).length;
+        const remaining = Math.max(0, demoTargetRef.current - appeared);
+        setPendingDemos(remaining);
+        if (remaining <= 0) stopPoll();
+      }, 4000);
+    };
+    const onDone = async () => {
+      stopPoll();
+      await fetchPage(0, true);
+      setPendingDemos(0);
+    };
+    window.addEventListener('qs:demos:generating', onGen as EventListener);
+    window.addEventListener('qs:demos:done', onDone as EventListener);
+    return () => {
+      window.removeEventListener('qs:demos:generating', onGen as EventListener);
+      window.removeEventListener('qs:demos:done', onDone as EventListener);
+      stopPoll();
+    };
+  }, [fetchPage]);
+
   // Manual “Load more” button
   const onLoadMore = useCallback(async () => {
     await fetchPage(offsetRef.current, false);
@@ -204,7 +244,7 @@ export default function TemplatesListClient({
       </div>
 
       {view === 'cards' ? (
-        <TemplatesCardGrid rows={rows as any} />
+        <TemplatesCardGrid rows={rows as any} pending={pendingDemos} />
       ) : (
         /* ✅ pass includeVersions so the table can default grouping appropriately */
         <TemplatesIndexTable templates={rows as any} selectedFilter={dateParam} includeVersions={includeVersions} />

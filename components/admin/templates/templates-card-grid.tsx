@@ -4,7 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { toast } from 'react-hot-toast';
-import { Copy, ExternalLink, Pencil, CheckCircle2, CircleDashed } from 'lucide-react';
+import { Copy, ExternalLink, Pencil, CheckCircle2, CircleDashed, Sparkles } from 'lucide-react';
 import { prettifySlug } from '@/lib/home/showcase-helpers';
 
 type Row = {
@@ -68,11 +68,26 @@ function timeAgo(iso?: string | null): string {
   return `${v} ${label}${v === 1 ? '' : 's'} ago`;
 }
 
-export default function TemplatesCardGrid({ rows }: { rows: Row[] }) {
+function ShimmerCard() {
+  return (
+    <div className="flex flex-col overflow-hidden rounded-xl border border-zinc-800 bg-zinc-900/40">
+      <div className="aspect-[16/10] w-full animate-pulse bg-zinc-800/70" />
+      <div className="space-y-2 p-4">
+        <div className="h-3.5 w-2/3 animate-pulse rounded bg-zinc-800" />
+        <div className="h-3 w-1/3 animate-pulse rounded bg-zinc-800/70" />
+        <div className="mt-3 inline-flex items-center gap-1.5 text-xs font-medium text-sky-400/80">
+          <Sparkles className="h-3.5 w-3.5 animate-pulse" /> Generating…
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export default function TemplatesCardGrid({ rows, pending = 0 }: { rows: Row[]; pending?: number }) {
   const router = useRouter();
   const [dupBusy, setDupBusy] = useState<string | null>(null);
 
-  if (!rows?.length) {
+  if (!rows?.length && pending <= 0) {
     return <div className="py-16 text-center text-sm text-zinc-500">No templates yet.</div>;
   }
 
@@ -93,6 +108,9 @@ export default function TemplatesCardGrid({ rows }: { rows: Row[] }) {
 
   return (
     <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+      {Array.from({ length: Math.max(0, pending) }).map((_, i) => (
+        <ShimmerCard key={`pending-${i}`} />
+      ))}
       {rows.map((r) => {
         const name = r.display_name || r.template_name || prettifySlug(r.slug);
         const industry = r.industry_label || r.industry || null;

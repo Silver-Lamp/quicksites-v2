@@ -2,6 +2,7 @@
 import { ensureBlockId } from '@/admin/lib/ensureBlockId';
 import { getServerSupabase } from '@/lib/supabase/server';
 import { supabaseAdmin } from '@/lib/supabase/admin';
+import { requireTemplateOwner } from '@/lib/auth/requireTemplateOwner';
 import { NextResponse } from 'next/server';
 
 type FixResult = {
@@ -24,6 +25,10 @@ export async function POST(req: Request) {
     if (!templateId) {
       return NextResponse.json<FixResult>({ success: false, error: 'Missing templateId' }, { status: 400 });
     }
+
+    // Authorize: only the template owner (or a platform admin) may patch it.
+    const gate = await requireTemplateOwner(templateId);
+    if (!gate.ok) return gate.response;
 
     // Auth’d user client (for row lookup / RLS)
     const supabase = await getServerSupabase();

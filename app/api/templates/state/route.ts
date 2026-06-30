@@ -3,6 +3,7 @@ export const dynamic = 'force-dynamic';
 
 import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/server/supabaseAdmin';
+import { requireTemplateOwner } from '@/lib/auth/requireTemplateOwner';
 
 function j(data: any, init?: number | ResponseInit) {
   const resInit = typeof init === 'number' ? { status: init } : init;
@@ -140,6 +141,11 @@ export async function GET(req: Request) {
   const id = url.searchParams.get('id');
   const debugQ = url.searchParams.get('debug') === '1';
   if (!id) return j({ error: 'id required' }, 400);
+
+  // Returns full editor state (template `data`) via the service-role client,
+  // bypassing RLS — so authorize at the route. Owner or admin only.
+  const gate = await requireTemplateOwner(id);
+  if (!gate.ok) return gate.response;
 
   const pub = supabaseAdmin.schema('public');
 

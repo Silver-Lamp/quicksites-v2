@@ -1,6 +1,7 @@
 // app/api/templates/rename/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase/admin';
+import { requireTemplateOwner } from '@/lib/auth/requireTemplateOwner';
 
 function slugify(input: string) {
   return input
@@ -56,6 +57,10 @@ export async function POST(req: NextRequest) {
   if (!template_id || newName.length < 3) {
     return NextResponse.json({ error: 'Invalid input' }, { status: 400 });
   }
+
+  // Authorize: only the template owner (or a platform admin) may rename/re-slug it.
+  const gate = await requireTemplateOwner(template_id);
+  if (!gate.ok) return gate.response;
 
   // Ensure template exists
   const { data: currentTemplate, error: fetchError } = await supabaseAdmin

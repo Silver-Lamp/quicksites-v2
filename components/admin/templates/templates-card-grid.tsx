@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { toast } from 'react-hot-toast';
 import { Copy, ExternalLink, Pencil, CheckCircle2, CircleDashed } from 'lucide-react';
-import { extractHeroImage, prettifySlug } from '@/lib/home/showcase-helpers';
+import { prettifySlug } from '@/lib/home/showcase-helpers';
 
 type Row = {
   id: string;
@@ -23,8 +23,29 @@ type Row = {
   data?: any;
 };
 
-function heroFor(r: Row): string | null {
-  return extractHeroImage(r.data) || (r.banner_url && r.banner_url.trim() ? r.banner_url : null);
+// Use the generated thumbnail (reads each template's OWN data) — reliable, unlike
+// the list API's canonical/MV data. Falls back to a lettered card on error.
+function CardThumb({ slug, name }: { slug: string; name: string }) {
+  const [ok, setOk] = useState(true);
+  if (!ok) return <Placeholder name={name} />;
+  return (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src={`/api/public/showcase/${encodeURIComponent(slug)}/thumb`}
+      alt={name}
+      loading="lazy"
+      onError={() => setOk(false)}
+      className="h-full w-full object-cover transition duration-300 group-hover:scale-[1.03]"
+    />
+  );
+}
+
+function Placeholder({ name }: { name: string }) {
+  return (
+    <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-zinc-800 to-zinc-900 text-3xl font-bold text-zinc-600">
+      {name.charAt(0).toUpperCase()}
+    </div>
+  );
 }
 
 function liveHref(r: Row): string | null {
@@ -75,7 +96,6 @@ export default function TemplatesCardGrid({ rows }: { rows: Row[] }) {
       {rows.map((r) => {
         const name = r.display_name || r.template_name || prettifySlug(r.slug);
         const industry = r.industry_label || r.industry || null;
-        const hero = heroFor(r);
         const live = liveHref(r);
         const published = !!r.published;
 
@@ -85,19 +105,7 @@ export default function TemplatesCardGrid({ rows }: { rows: Row[] }) {
             className="group flex flex-col overflow-hidden rounded-xl border border-zinc-800 bg-zinc-900/40 transition hover:border-zinc-600"
           >
             <Link href={`/admin/templates/${r.slug}`} className="relative block aspect-[16/10] w-full overflow-hidden bg-zinc-800/60">
-              {hero ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={hero}
-                  alt={name}
-                  loading="lazy"
-                  className="h-full w-full object-cover transition duration-300 group-hover:scale-[1.03]"
-                />
-              ) : (
-                <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-zinc-800 to-zinc-900 text-3xl font-bold text-zinc-600">
-                  {name.charAt(0).toUpperCase()}
-                </div>
-              )}
+              <CardThumb slug={r.slug} name={name} />
               <span
                 className={`absolute left-2 top-2 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium backdrop-blur ${
                   published ? 'bg-emerald-500/20 text-emerald-300' : 'bg-zinc-950/70 text-zinc-300'

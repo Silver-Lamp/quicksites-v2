@@ -82,6 +82,7 @@ export async function POST(req: NextRequest) {
 
       layout: src.layout ?? null,
       color_scheme: src.color_scheme ?? null,
+      color_mode: src.color_mode ?? 'dark', // inherit source mode; default dark
       theme: src.theme ?? null,
       brand: src.brand ?? null,
       industry: src.industry ?? null,

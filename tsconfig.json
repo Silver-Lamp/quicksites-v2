@@ -6,7 +6,7 @@
     "tsBuildInfoFile": "./.tsbuildinfo",
     "outDir": ".lint-tmp",
     "typeRoots": ["./types", "./node_modules/@types"],
-    "types": ["next", "next/image-types/global", "node"],
+    "types": ["next", "next/image-types/global", "node", "jest"],
     "plugins": [{ "name": "next" }],
     "allowJs": true,
     "isolatedModules": true

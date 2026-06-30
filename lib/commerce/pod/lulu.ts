@@ -178,6 +178,19 @@ export async function getPrintJob(id: number | string): Promise<LuluPrintJob> {
   return { id: r.id, status: r.status?.name || r.status || 'UNKNOWN', raw: r };
 }
 
+/** Best-effort cancel — only works before the job enters production. */
+export async function cancelPrintJob(id: number | string): Promise<{ ok: boolean; status?: string }> {
+  try {
+    const r = await luluFetch<any>(`/print-jobs/${id}/status/`, {
+      method: 'PUT',
+      body: JSON.stringify({ name: 'CANCELED' }),
+    });
+    return { ok: true, status: r?.name || r?.status?.name || 'CANCELED' };
+  } catch {
+    return { ok: false };
+  }
+}
+
 /** Verify a Lulu webhook HMAC-SHA256 over the raw body. No secret set → accept (sandbox). */
 export function verifyLuluWebhook(rawBody: Buffer, signatureHeader?: string): boolean {
   const secret = process.env.LULU_WEBHOOK_SECRET;

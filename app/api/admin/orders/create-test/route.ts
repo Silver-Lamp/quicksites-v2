@@ -1,61 +1,108 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
-import { getProvider } from '@/lib/payments';
+import { createDraftOrder, markOrderPaid } from '@/lib/commerce/orders';
+import { createCheckout } from '@/lib/commerce/paymentRouter';
+import { getServerSupabase } from '@/lib/supabase/server';
+import { getAdminUser } from '@/lib/auth/getAdminUser';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-const db = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, (process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SECRET_KEY)!);
-
+/**
+ * Admin "create a test order" tool. Mirrors the canonical public checkout
+ * (app/api/commerce/checkout) so it exercises the real money path —
+ * createDraftOrder (platform-fee math from payment_accounts) → Stripe Connect
+ * checkout, falling back to a simulated paid order (markOrderPaid) when Stripe
+ * is unconfigured or QS_TEST_CHECKOUT=1. That fallback is what proves
+ * order → platform_fee → commission_ledger end-to-end without real Stripe.
+ *
+ * Replaces the old legacy path that read the deprecated merchant_payment_accounts
+ * table + bps fees via @/lib/payments. payment_accounts is now the single source.
+ */
 export async function POST(req: NextRequest) {
+  const admin = await getAdminUser();
+  if (!admin) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+
   try {
-    const { merchantId, siteId, amountCents, currency = 'usd' } = await req.json();
+    const { merchantId, siteId, amountCents, currency } = await req.json();
 
     if (!merchantId || !Number.isFinite(amountCents) || amountCents <= 0) {
-      return NextResponse.json({ error: 'merchantId and positive amountCents required' }, { status: 400 });
+      return NextResponse.json(
+        { error: 'merchantId and positive amountCents required' },
+        { status: 400 },
+      );
     }
 
-    // Insert order
-    const { data: orderRow, error: e1 } = await db
-      .from('orders')
-      .insert({ merchant_id: merchantId, site_id: siteId ?? null, amount_cents: amountCents, currency })
-      .select('*')
-      .single();
-    if (e1) return NextResponse.json({ error: e1.message }, { status: 500 });
+    const supabase = await getServerSupabase({ serviceRole: true });
 
-    // Load merchant + account + fee
-    const { data: merchant } = await db.from('merchants').select('*').eq('id', merchantId).single();
-    if (!merchant) return NextResponse.json({ error: 'Merchant not found' }, { status: 404 });
-
-    const { data: acct } = await db.from('merchant_payment_accounts')
-      .select('*')
-      .eq('merchant_id', merchantId)
-      .eq('provider', merchant.provider)
-      .maybeSingle();
-
-    let applicationFeeBps = merchant.default_platform_fee_bps;
-    if (siteId) {
-      const { data: site } = await db.from('sites').select('platform_fee_bps').eq('id', siteId).maybeSingle();
-      if (site?.platform_fee_bps != null) applicationFeeBps = site.platform_fee_bps;
+    let cur: string | undefined = currency;
+    if (!cur) {
+      const { data } = await supabase
+        .from('merchants')
+        .select('default_currency')
+        .eq('id', merchantId)
+        .single();
+      cur = data?.default_currency ?? 'usd';
     }
 
-    const provider = getProvider(merchant.provider);
-    const successUrl = `${process.env.APP_BASE_URL}/checkout/success`;
-    const cancelUrl  = `${process.env.APP_BASE_URL}/checkout/cancel`;
+    // A synthetic single line item for the requested amount (no catalog item).
+    const items = [
+      { catalogItemId: null, title: 'Admin test order', quantity: 1, unitAmount: amountCents },
+    ];
 
-    const res = await provider.createCheckout({
-      orderId: orderRow.id,
-      amountCents,
-      currency,
-      successUrl,
-      cancelUrl,
-      connectedAccountId: acct?.provider_account_id ?? undefined,
-      applicationFeeBps
+    const { orderId, totalCents, platformFeeCents } = await createDraftOrder({
+      merchantId,
+      siteSlug: siteId ?? '',
+      currency: cur ?? 'usd',
+      items,
     });
 
-    return NextResponse.json({ url: res.url, orderId: orderRow.id });
-  } catch (e:any) {
+    const base = process.env.QS_PUBLIC_URL ?? '';
+    const successUrl = `${base}/checkout/success?order=${orderId}`;
+    const cancelUrl = `${base}/checkout/cancel?order=${orderId}`;
+    const forceTest = process.env.QS_TEST_CHECKOUT === '1';
+
+    try {
+      if (forceTest) throw new Error('QS_TEST_CHECKOUT');
+
+      const checkout = await createCheckout(merchantId, {
+        orderId,
+        currency: cur ?? 'usd',
+        lineItems: items,
+        successUrl,
+        cancelUrl,
+        metadata: { siteSlug: siteId ?? '', source: 'admin_test_order' },
+      });
+      await supabase
+        .from('orders')
+        .update({ provider_checkout_id: checkout.providerRef })
+        .eq('id', orderId);
+
+      return NextResponse.json({ url: checkout.url, orderId, totalCents, platformFeeCents, test: false });
+    } catch (e: any) {
+      const msg = String(e?.message || '');
+      const unconfigured = forceTest || /no active payment account/i.test(msg);
+      if (!unconfigured) {
+        return NextResponse.json({ error: msg || 'Checkout failed' }, { status: 502 });
+      }
+
+      // Test-mode fallback: simulate a successful payment so the full
+      // order → platform_fee → commission_ledger path runs without real Stripe.
+      await markOrderPaid(orderId, totalCents, 'test', `test_${orderId}`, {
+        test: true,
+        reason: forceTest ? 'forced' : 'no-payment-account',
+        source: 'admin_test_order',
+      });
+
+      return NextResponse.json({
+        url: `${base}/checkout/success?order=${orderId}&test=1`,
+        orderId,
+        totalCents,
+        platformFeeCents,
+        test: true,
+      });
+    }
+  } catch (e: any) {
     console.error(e);
-    return NextResponse.json({ error: e.message }, { status: 500 });
+    return NextResponse.json({ error: e?.message || 'Error' }, { status: 500 });
   }
 }

@@ -1,25 +1,40 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
+import { getServerSupabase } from '@/lib/supabase/server';
+import { getAdminUser } from '@/lib/auth/getAdminUser';
 
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
+
+/**
+ * Connection + fee status for the admin payments panel. Reads the canonical
+ * payment_accounts table (account_ref + platform_fee_percent), replacing the
+ * deprecated merchant_payment_accounts / merchants.default_platform_fee_bps path.
+ * Converts the stored 0..1 percent to basis points for the existing bps-based UI.
+ */
 export async function GET(req: NextRequest) {
+  const admin = await getAdminUser();
+  if (!admin) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+
   const url = new URL(req.url);
-  const merchantId = url.searchParams.get('merchantId')!;
-  const siteId = url.searchParams.get('siteId') || null;
-
-  const db = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, (process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SECRET_KEY)!);
-
-  const { data: acct } = await db.from('merchant_payment_accounts')
-    .select('provider_account_id').eq('merchant_id', merchantId).eq('provider','stripe').maybeSingle();
-
-  let platformFeeBps: number | null = null;
-  if (siteId) {
-    const { data: s } = await db.from('sites').select('platform_fee_bps').eq('id', siteId).maybeSingle();
-    platformFeeBps = s?.platform_fee_bps ?? null;
-  }
-  if (platformFeeBps == null) {
-    const { data: m } = await db.from('merchants').select('default_platform_fee_bps').eq('id', merchantId).single();
-    platformFeeBps = m?.default_platform_fee_bps ?? 75;
+  const merchantId = url.searchParams.get('merchantId');
+  if (!merchantId) {
+    return NextResponse.json({ error: 'merchantId required' }, { status: 400 });
   }
 
-  return NextResponse.json({ stripeAccountId: acct?.provider_account_id ?? null, platformFeeBps });
+  const db = await getServerSupabase({ serviceRole: true });
+
+  const { data: acct } = await db
+    .from('payment_accounts')
+    .select('account_ref, provider, platform_fee_percent, status')
+    .eq('merchant_id', merchantId)
+    .eq('provider', 'stripe')
+    .order('status', { ascending: true }) // 'active' sorts before 'pending'
+    .limit(1)
+    .maybeSingle();
+
+  const stripeAccountId = acct?.status === 'active' ? acct?.account_ref ?? null : null;
+  const platformFeeBps =
+    acct?.platform_fee_percent != null ? Math.round(Number(acct.platform_fee_percent) * 10000) : null;
+
+  return NextResponse.json({ stripeAccountId, platformFeeBps });
 }

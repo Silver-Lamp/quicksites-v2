@@ -27,6 +27,10 @@ export class StripeAdapter implements PaymentsAdapter {
     const SHIP_COUNTRIES = (process.env.QS_SHIP_COUNTRIES || 'US,CA,GB,AU,IE,NZ')
       .split(',').map((c) => c.trim().toUpperCase()).filter(Boolean) as any[];
 
+    // Stripe Tax for physical/POD orders — off unless QS_STRIPE_TAX_ENABLED=true
+    // (requires Stripe Tax to be set up on the account).
+    const taxOn = p.collectShipping && process.env.QS_STRIPE_TAX_ENABLED === 'true';
+
     const session = await stripe.checkout.sessions.create({
       mode: 'payment',
       success_url: p.successUrl,
@@ -35,12 +39,14 @@ export class StripeAdapter implements PaymentsAdapter {
       ...(p.collectShipping
         ? { shipping_address_collection: { allowed_countries: SHIP_COUNTRIES }, phone_number_collection: { enabled: true } }
         : {}),
+      ...(taxOn ? { automatic_tax: { enabled: true } } : {}),
       line_items: p.lineItems.map(li => ({
         quantity: li.quantity,
         price_data: {
           currency: p.currency.toLowerCase(),
           unit_amount: li.unitAmount,
           product_data: { name: li.title },
+          ...(taxOn ? { tax_behavior: 'exclusive' as const } : {}),
         },
       })),
       // Keep a copy on the session too

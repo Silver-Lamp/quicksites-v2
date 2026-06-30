@@ -74,6 +74,19 @@ export async function createGelatoOrder(input: CreateGelatoOrderInput): Promise<
   return (await res.json()) as GelatoOrder;
 }
 
+/** Best-effort cancel — only works before the order is in production/shipped. */
+export async function cancelGelatoOrder(orderId: string): Promise<{ ok: boolean }> {
+  try {
+    const res = await fetch(`${GELATO_ORDER_BASE}/orders/${encodeURIComponent(orderId)}:cancel`, {
+      method: 'POST',
+      headers: { 'X-API-KEY': apiKey() },
+    });
+    return { ok: res.ok };
+  } catch {
+    return { ok: false };
+  }
+}
+
 export async function getGelatoOrder(orderId: string): Promise<GelatoOrder> {
   const res = await fetch(`${GELATO_ORDER_BASE}/orders/${encodeURIComponent(orderId)}`, {
     headers: { 'X-API-KEY': apiKey() },

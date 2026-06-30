@@ -8,9 +8,41 @@
 // can't complete yet (no shipping captured, or provider not configured).
 
 import { getServerSupabase } from '@/lib/supabase/server';
-import { isPodEnabled, isProviderConfigured, recordPrintOrder, type PodProvider } from './index';
+import { isPodEnabled, isProviderConfigured, recordPrintOrder, updatePrintOrder, type PodProvider } from './index';
 import * as lulu from './lulu';
 import * as gelato from './gelato';
+
+/** On refund: cancel each cancelable print job for an order (best-effort, gated). */
+export async function cancelOrderPodItems(orderId: string): Promise<{ canceled: number }> {
+  let canceled = 0;
+  if (!isPodEnabled()) return { canceled };
+  try {
+    const supa = await getServerSupabase({ serviceRole: true });
+    const { data: rows } = await (supa as any)
+      .from('print_orders')
+      .select('id, provider, provider_job_id, status')
+      .eq('order_id', orderId)
+      .not('provider_job_id', 'is', null);
+    for (const r of rows || []) {
+      // Already terminal (shipped/canceled/etc.) → can't cancel.
+      if (/ship|deliver|cancel|reject|error|refund/i.test(r.status || '')) continue;
+      const provider = r.provider as PodProvider;
+      if (!isProviderConfigured(provider)) continue;
+      try {
+        const res = provider === 'lulu'
+          ? await lulu.cancelPrintJob(r.provider_job_id)
+          : await gelato.cancelGelatoOrder(r.provider_job_id);
+        await updatePrintOrder(r.id, { status: res.ok ? 'canceled' : 'cancel_failed' });
+        if (res.ok) canceled++;
+      } catch {
+        await updatePrintOrder(r.id, { status: 'cancel_failed' });
+      }
+    }
+  } catch (e: any) {
+    console.warn('[pod] cancelOrderPodItems failed:', e?.message || e);
+  }
+  return { canceled };
+}
 
 /** Best-effort: extract a shipping address from the Stripe session/PI raw on the order. */
 function extractShipping(raw: any): {

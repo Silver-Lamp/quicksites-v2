@@ -305,4 +305,14 @@ export async function markOrderRefunded(
 
   await captureServer(EVENTS.ORDER_REFUNDED, { order_id: orderId, amount_cents: refundedCents, provider });
   await captureServer(EVENTS.PLATFORM_FEE_REVERSED, { order_id: orderId });
+
+  // Cancel any cancelable print-on-demand jobs for this order (gated, best-effort).
+  if (process.env.POD_ENABLED === 'true') {
+    try {
+      const { cancelOrderPodItems } = await import('@/lib/commerce/pod/fulfillment');
+      await cancelOrderPodItems(orderId);
+    } catch (e: any) {
+      console.warn('POD cancel-on-refund failed:', e?.message || e);
+    }
+  }
 }

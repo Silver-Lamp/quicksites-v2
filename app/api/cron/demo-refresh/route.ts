@@ -8,7 +8,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { runCron } from '@/lib/cron/record';
 import { isCronAuthorized } from '@/lib/cron/auth';
-import { generateDemoSite } from '@/lib/builder/generateDemoSite';
+import { generateDemoSite, usedDemoIndustryLabels } from '@/lib/builder/generateDemoSite';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -36,11 +36,15 @@ async function handle(req: NextRequest) {
     const count = Math.max(1, Math.min(5, Number(process.env.DEMO_AUTOGEN_PER_RUN || '1')));
     const ownerId = await firstAdminOwner();
 
+    const avoid = new Set<string>(await usedDemoIndustryLabels());
     const results = [];
     for (let i = 0; i < count; i++) {
       const seed = `cron-${Date.now()}-${i}`;
       // eslint-disable-next-line no-await-in-loop
-      results.push(await generateDemoSite({ ownerId, seed }));
+      const r = await generateDemoSite({ ownerId, seed, avoidIndustries: [...avoid] });
+      results.push(r);
+      const label = (r as any)?.industryLabel ?? (r as any)?.spec?.industryLabel;
+      if (label) avoid.add(label);
     }
     return NextResponse.json({
       ok: true,

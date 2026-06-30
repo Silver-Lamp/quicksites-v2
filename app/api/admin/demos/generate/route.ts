@@ -7,7 +7,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { adminUserId } from '@/lib/auth/adminUser';
 import { isCronAuthorized } from '@/lib/cron/auth';
-import { generateDemoSite } from '@/lib/builder/generateDemoSite';
+import { generateDemoSite, usedDemoIndustryLabels } from '@/lib/builder/generateDemoSite';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -37,11 +37,17 @@ async function handle(req: NextRequest) {
   const dryRun = body?.dryRun === true || url.searchParams.get('dryRun') === '1';
   const withHeroImage = !(body?.withHeroImage === false || url.searchParams.get('noImage') === '1');
 
+  // Diversify: avoid categories already used by existing demos, and don't repeat
+  // within this batch.
+  const avoid = new Set<string>(await usedDemoIndustryLabels());
   const results = [];
   for (let i = 0; i < count; i++) {
     const seed = `${Date.now()}-${i}-${Math.random().toString(36).slice(2, 8)}`;
     // eslint-disable-next-line no-await-in-loop
-    results.push(await generateDemoSite({ ownerId, withHeroImage, dryRun, seed }));
+    const r = await generateDemoSite({ ownerId, withHeroImage, dryRun, seed, avoidIndustries: [...avoid] });
+    results.push(r);
+    const label = (r as any)?.industryLabel ?? (r as any)?.spec?.industryLabel;
+    if (label) avoid.add(label);
   }
 
   const created = results.filter((r: any) => r.ok && !r.dryRun).length;

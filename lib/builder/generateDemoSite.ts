@@ -12,7 +12,7 @@ import { createClient } from '@supabase/supabase-js';
 import { meterLLMCall } from '@/lib/ai/meter';
 import { randomDemoSpec, type DemoSpec } from '@/lib/builder/randomDemoSpec';
 import { buildIndustryStarter } from '@/lib/builder/industryScaffold';
-import { LABEL_TO_KEY, type IndustryKey } from '@/lib/industries';
+import { LABEL_TO_KEY, KEY_TO_LABEL, type IndustryKey } from '@/lib/industries';
 
 const ROUTE = '/api/admin/demos/generate';
 const HERO_BUCKET = process.env.SUPABASE_STORAGE_BUCKET || 'templates';
@@ -36,13 +36,29 @@ export type GenerateResult =
   | { ok: true; dryRun: false; id: string; slug: string; businessName: string; industryLabel: string; heroUrl: string | null }
   | { ok: false; error: string };
 
+/** Industry labels already used by existing demo sites (for diversity). */
+export async function usedDemoIndustryLabels(): Promise<string[]> {
+  try {
+    const { data } = await admin().from('templates').select('industry').eq('claim_source', 'demo_seed');
+    const labels = new Set<string>();
+    for (const r of data ?? []) {
+      const k = (r as any).industry as IndustryKey | null;
+      if (k && KEY_TO_LABEL[k]) labels.add(KEY_TO_LABEL[k]);
+    }
+    return [...labels];
+  } catch {
+    return [];
+  }
+}
+
 export async function generateDemoSite(opts: {
   ownerId?: string | null;
   seed?: string;
   withHeroImage?: boolean;
   dryRun?: boolean;
+  avoidIndustries?: string[];
 }): Promise<GenerateResult> {
-  const spec = randomDemoSpec(opts.seed);
+  const spec = randomDemoSpec(opts.seed, opts.avoidIndustries);
 
   if (opts.dryRun) return { ok: true, dryRun: true, spec };
 

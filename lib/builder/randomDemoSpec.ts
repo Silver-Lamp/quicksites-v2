@@ -35,7 +35,22 @@ const INDUSTRIES: Array<{ label: string; noun: string; type: DemoSpec['productTy
   { label: 'Retail - Boutique', noun: 'Boutique', type: 'physical' },
   { label: 'Handmade', noun: 'Makers', type: 'physical' },
   { label: 'Pet Boutique', noun: 'Pet Co.', type: 'physical' },
+  { label: 'Real Estate', noun: 'Realty', type: 'service' },
+  { label: 'Legal', noun: 'Law', type: 'service' },
+  { label: 'Medical / Dental', noun: 'Dental', type: 'service' },
+  { label: 'Photography', noun: 'Photography', type: 'service' },
+  { label: 'Fitness', noun: 'Fitness', type: 'service' },
+  { label: 'Moving', noun: 'Movers', type: 'service' },
+  { label: 'General Contractor', noun: 'Contracting', type: 'service' },
+  { label: 'Windshield Repair', noun: 'Auto Glass', type: 'service' },
+  { label: 'Retail - Home Goods', noun: 'Home Goods', type: 'physical' },
+  { label: 'Gifts & Stationery', noun: 'Gift Shop', type: 'physical' },
+  { label: 'Custom Apparel', noun: 'Apparel', type: 'physical' },
+  { label: 'Antiques & Vintage', noun: 'Vintage', type: 'physical' },
 ];
+
+/** All categories the generator can pick from (for coverage checks). */
+export const DEMO_INDUSTRY_LABELS: string[] = INDUSTRIES.map((i) => i.label);
 
 const CITIES: Array<[string, string]> = [
   ['Tacoma', 'WA'], ['Boise', 'ID'], ['Bend', 'OR'], ['Spokane', 'WA'], ['Reno', 'NV'],
@@ -63,12 +78,16 @@ function rngFromSeed(seed: string) {
   };
 }
 
-export function randomDemoSpec(seed?: string): DemoSpec {
+export function randomDemoSpec(seed?: string, avoidLabels?: string[]): DemoSpec {
   const s = seed ?? `${Math.floor(Math.random() * 1e9)}`;
   const rnd = rngFromSeed(s);
   const pick = <T,>(arr: T[]): T => arr[Math.floor(rnd() * arr.length)];
 
-  const ind = pick(INDUSTRIES);
+  // Prefer a category not yet used, so each demo broadens coverage. Fall back to
+  // the full list once every category has been used.
+  const avoid = new Set((avoidLabels ?? []).map((l) => l.toLowerCase()));
+  const pool = INDUSTRIES.filter((i) => !avoid.has(i.label.toLowerCase()));
+  const ind = pick(pool.length ? pool : INDUSTRIES);
   const [city, state] = pick(CITIES);
 
   const pattern = Math.floor(rnd() * 4);

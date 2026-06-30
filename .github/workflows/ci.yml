@@ -26,31 +26,34 @@ jobs:
           cache: npm
 
       # `npm ci` (not `npm install`): installs the EXACT locked tree for reproducible
-      # runs. NOTE: even with the locked versions, a fresh CI install still surfaces
-      # the stale generated DB types as `never` errors (these don't reproduce in the
-      # dev's local node_modules) — see the Typecheck/Build steps below.
+      # runs. The lockfile pins @supabase/supabase-js 2.108.2 (matching the 2.108 CLI),
+      # which resolved the old generated-DB-types `never` collapse — see Typecheck.
       - name: Install dependencies
         run: npm ci
 
-      # NON-BLOCKING for now: a clean-install typecheck surfaces the stale generated
-      # DB types collapsing to `never` (~hundreds of TS2339). This passes locally but
-      # not in a fresh CI env — entangled with the supabase-types regen (tracked).
-      # Flip to blocking once that's resolved.
+      # BLOCKING. The generated DB types no longer collapse to `never`: once the SDK
+      # was aligned with the CLI (both 2.108), a clean-install `tsc --noEmit` is green
+      # in CI (verified — 0 TS errors). This is now an enforced gate; keep it green.
       - name: Typecheck
         run: npm run typecheck
-        continue-on-error: true
 
-      # NON-BLOCKING for now: `next build` type-checks (only eslint is ignored in
-      # next.config), so it hits the same stale-DB-types `never` errors as Typecheck
-      # on a clean install. Reported as an annotation until the types regen lands.
-      # (Sitemap generation was removed — a build artifact, not a gate, and
-      # `ts-node *.ts` breaks under Node 20's ESM loader.)
+      # NON-BLOCKING (pending one green run): `next build` previously failed in CI not
+      # on types but on env — several routes construct a Supabase client at MODULE load
+      # (e.g. app/api/admin/ai-pricing/audit), so `createClient()` runs during page-data
+      # collection and threw `supabaseUrl is required` with no env. The placeholder env
+      # below satisfies that (these routes are force-dynamic and don't query at build).
+      # Flip to blocking once a CI run confirms green end-to-end.
       - name: Build
         run: npm run build
         continue-on-error: true
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: https://placeholder.supabase.co
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: placeholder-anon-key
+          SUPABASE_SERVICE_ROLE_KEY: placeholder-service-role-key
 
-      # NON-BLOCKING for now: the repo currently has ~300 eslint errors. Surfaced as
-      # an annotation here; flip to blocking once the backlog is at zero (tracked).
+      # NON-BLOCKING: the repo currently has ~293 eslint errors (mostly auto-fixable —
+      # @ts-ignore→@ts-expect-error, prefer-const). Surfaced as annotations; flip to
+      # blocking once the backlog is cleared (tracked separately).
       - name: Lint
         run: npm run lint
         continue-on-error: true

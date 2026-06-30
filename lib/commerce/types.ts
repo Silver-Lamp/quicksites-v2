@@ -17,6 +17,7 @@ export type CreateCheckoutParams = {
     platformFeeCents?: Money;       // computed per config
     connectAccountId?: string | null; // Stripe Connect destination (acct_...)
     metadata?: Record<string, string>;
+    collectShipping?: boolean;      // POD/physical carts → collect a shipping address
   };
   
 export type CheckoutResult = { url: string; providerRef: string };

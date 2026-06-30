@@ -36,6 +36,15 @@ export async function POST(req: NextRequest) {
     items: body.items,
   });
 
+  // If any line item is a print-on-demand product, collect a shipping address at
+  // checkout so fulfillment (Lulu/Gelato) has somewhere to ship.
+  let collectShipping = false;
+  const catIds = body.items.map((i) => i.catalogItemId).filter(Boolean);
+  if (catIds.length) {
+    const { data: cis } = await supabase.from('catalog_items').select('metadata').in('id', catIds);
+    collectShipping = (cis ?? []).some((c: any) => ['lulu', 'gelato'].includes(c?.metadata?.fulfillment_provider));
+  }
+
   const base = process.env.QS_PUBLIC_URL ?? '';
   const successUrl = body.successUrl ?? `${base}/checkout/success?order=${orderId}`;
   const cancelUrl = body.cancelUrl ?? `${base}/checkout/cancel?order=${orderId}`;
@@ -50,6 +59,7 @@ export async function POST(req: NextRequest) {
       lineItems: body.items,
       successUrl,
       cancelUrl,
+      collectShipping,
       metadata: { siteSlug: body.siteSlug ?? '' },
     });
     await supabase.from('orders').update({ provider_checkout_id: checkout.providerRef }).eq('id', orderId);

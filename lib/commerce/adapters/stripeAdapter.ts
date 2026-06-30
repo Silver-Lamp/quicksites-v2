@@ -23,11 +23,18 @@ export class StripeAdapter implements PaymentsAdapter {
       piData.transfer_data = { destination: p.connectAccountId };
     }
 
+    // Physical/POD carts need a shipping address for fulfillment (Lulu/Gelato).
+    const SHIP_COUNTRIES = (process.env.QS_SHIP_COUNTRIES || 'US,CA,GB,AU,IE,NZ')
+      .split(',').map((c) => c.trim().toUpperCase()).filter(Boolean) as any[];
+
     const session = await stripe.checkout.sessions.create({
       mode: 'payment',
       success_url: p.successUrl,
       cancel_url: p.cancelUrl,
       allow_promotion_codes: true,
+      ...(p.collectShipping
+        ? { shipping_address_collection: { allowed_countries: SHIP_COUNTRIES }, phone_number_collection: { enabled: true } }
+        : {}),
       line_items: p.lineItems.map(li => ({
         quantity: li.quantity,
         price_data: {

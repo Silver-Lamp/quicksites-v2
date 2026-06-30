@@ -17,7 +17,7 @@ import { createClient } from '@supabase/supabase-js';
 import { generateServices } from '@/lib/generateServices';
 
 const URL  = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const KEY  = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const KEY  = (process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SECRET_KEY);
 const TBL  = process.env.TEMPLATES_TABLE || 'templates';
 const DRY       = process.env.DRY === '1';
 const LIMIT     = Number(process.env.LIMIT || '0');         // 0 = no cap

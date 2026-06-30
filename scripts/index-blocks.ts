@@ -6,7 +6,7 @@ dotenv.config();
 
 const supabase = createClient(
   process.env.SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
+  (process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SECRET_KEY)!
 );
 
 const API_ENDPOINT = 'http://localhost:3000/api/blocks/index'; // ✅ Use your local or deployed endpoint

@@ -243,8 +243,6 @@ export default function HeroEditor({
   errors,
   template,
 }: BlockEditorProps & { template: Template }) {
-  if (block.type !== 'hero') return null;
-
   const [mode, setMode] = useState<'express' | 'advanced'>('express');
   const { saveSoon, flushSave } = useDebouncedSave();
   const isTypingOther = useRef(false);
@@ -773,6 +771,10 @@ export default function HeroEditor({
   }, [onClose]);
 
   /* ───────────────── UI ───────────────── */
+  // Defensive type guard runs AFTER all hooks (rules-of-hooks: hooks must be
+  // unconditional). In practice this editor is only mounted for hero blocks.
+  if (block.type !== 'hero') return null;
+
   return (
     <div
       className="fixed inset-0 z-[100] flex items-start justify-center"

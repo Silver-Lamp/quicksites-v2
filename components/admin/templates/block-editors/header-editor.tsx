@@ -188,10 +188,6 @@ export default function PageHeaderEditor({
   template,
   isSaving: isSavingProp,
 }: Props) {
-  if (block.type !== 'header') {
-    return <div className="text-red-500">Invalid block type</div>;
-  }
-
   // meta-first template normalization
   const normalizedTemplate = {
     ...template,
@@ -424,6 +420,11 @@ export default function PageHeaderEditor({
       setGenBusy(false);
     }
   };
+
+  // Defensive type guard runs AFTER all hooks (rules-of-hooks).
+  if (block.type !== 'header') {
+    return <div className="text-red-500">Invalid block type</div>;
+  }
 
   return (
     <div className="relative flex max-h-[calc(100vh-8rem)] min-h-0 flex-col text-white">

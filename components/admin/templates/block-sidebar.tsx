@@ -48,8 +48,6 @@ export default function BlockSidebar({
   colorMode = 'dark',
   template,
 }: Props) {
-  if (!block || typeof block._id !== 'string') return null;
-
   // Group incoming errors by field to make the panel easier to scan
   const grouped = useMemo(() => {
     const g: Record<string, BlockValidationError[]> = {};
@@ -68,6 +66,9 @@ export default function BlockSidebar({
       /* noop */
     }
   };
+
+  // Defensive guard runs AFTER all hooks (rules-of-hooks).
+  if (!block || typeof block._id !== 'string') return null;
 
   return (
     <Dialog open={onOpen} onOpenChange={(open) => !open && onClose()}>

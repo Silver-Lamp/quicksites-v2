@@ -7,7 +7,7 @@ export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 const URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const SRK = process.env.SUPABASE_SERVICE_ROLE_KEY!; // server-only
+const SRK = (process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SECRET_KEY)!; // server-only
 
 // Strict-ish domain check: labels a-z0-9- (no leading/trailing -), dot-separated, TLD >= 2
 const DOMAIN_RX =

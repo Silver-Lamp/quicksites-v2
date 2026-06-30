@@ -65,7 +65,7 @@ export async function POST(req: Request) {
     const url = urlData.publicUrl;
 
     // --- Commit via PUBLIC wrapper (PostgREST exposes only public/graphql_public) ---
-    const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    const serviceKey = (process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SECRET_KEY);
     if (!serviceKey) {
       return NextResponse.json({ error: 'Server misconfig: SUPABASE_SERVICE_ROLE_KEY not set' }, { status: 500 });
     }

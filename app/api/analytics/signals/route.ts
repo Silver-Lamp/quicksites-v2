@@ -4,7 +4,7 @@ import { NextApiRequest, NextApiResponse } from 'next';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
+  (process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SECRET_KEY)!
 );
 
 function groupByDate(data: any[], field: string) {

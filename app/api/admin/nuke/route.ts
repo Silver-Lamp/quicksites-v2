@@ -68,7 +68,7 @@ export async function POST(req: NextRequest) {
   // Resolve merchant_id from email if needed
   let mid: string | undefined = merchant_id;
   if (!mid && email) {
-    const admin = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
+    const admin = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, (process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SECRET_KEY)!);
     const { data: list, error: listErr } = await admin.auth.admin.listUsers({ page: 1, perPage: 200 });
     if (listErr) return NextResponse.json({ error: listErr.message }, { status: 500 });
     const u = list?.users?.find(x => x.email?.toLowerCase() === String(email).toLowerCase());

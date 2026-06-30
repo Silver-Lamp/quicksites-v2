@@ -6,7 +6,7 @@ export const dynamic = 'force-dynamic';
 
 const db = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY! // server-only
+  (process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SECRET_KEY)! // server-only
 );
 
 export async function GET(req: NextRequest, { params }: { params: { merchantId: string } }) {

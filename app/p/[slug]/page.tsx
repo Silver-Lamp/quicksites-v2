@@ -10,7 +10,7 @@ import AddToCartButton from './add-to-cart';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-const db = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!, {
+const db = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, (process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SECRET_KEY)!, {
   auth: { persistSession: false },
 });
 

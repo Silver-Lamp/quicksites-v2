@@ -12,7 +12,7 @@ import { REFUND_WINDOW_DAYS } from './partner-terms';
 // `any` client: the trimmed types/supabase.ts omits the commerce tables, so the
 // typed client resolves them to `never`. The rest of lib/commerce does the same.
 function admin(): any {
-  return createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!, {
+  return createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, (process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SECRET_KEY)!, {
     auth: { persistSession: false },
   });
 }

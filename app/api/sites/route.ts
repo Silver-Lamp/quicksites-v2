@@ -6,7 +6,7 @@ import { json } from '@/lib/api/json';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY! // consider anon if safe
+  (process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SECRET_KEY)! // consider anon if safe
 );
 
 export async function GET() {

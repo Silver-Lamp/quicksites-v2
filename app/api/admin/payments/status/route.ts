@@ -6,7 +6,7 @@ export async function GET(req: NextRequest) {
   const merchantId = url.searchParams.get('merchantId')!;
   const siteId = url.searchParams.get('siteId') || null;
 
-  const db = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
+  const db = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, (process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SECRET_KEY)!);
 
   const { data: acct } = await db.from('merchant_payment_accounts')
     .select('provider_account_id').eq('merchant_id', merchantId).eq('provider','stripe').maybeSingle();

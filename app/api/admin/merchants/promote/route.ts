@@ -122,7 +122,7 @@ export async function POST(req: NextRequest) {
   // service role only for auth admin calls
   const admin = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
+    (process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SECRET_KEY)!
   );
 
   // find auth user

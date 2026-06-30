@@ -28,15 +28,35 @@ hardcoded in tracked files — verified by pattern scan. Only `.env.example`
 Rotating neutralizes the leaked value everywhere, including git history, so a
 history rewrite is **not required** afterward.
 
+### ✅ Recommended: migrate to the new API key system (and rotate as you go)
+The new keys (`sb_publishable_…` / `sb_secret_…`) are **drop-in replacements** —
+supabase-js (2.108) sends them to the API gateway unchanged, and nothing in this
+repo decodes them as JWTs (verified). The big win: the **secret key rolls
+independently** — no session drop, no publishable-key invalidation — which is
+exactly what the leaked-key rotation needs. User auth is unaffected because session
+JWTs are still signed by `SUPABASE_JWT_SECRET`, separate from the API keys.
+
+The codebase already supports this with **zero refactor** (see `instrumentation.ts`,
+which maps `SUPABASE_SECRET_KEY` → `SUPABASE_SERVICE_ROLE_KEY` at boot):
+
+1. Dashboard → project `kcwruliugwidsdgsrthy` → **Settings → API Keys** → create
+   (or reveal) the **Publishable** and **Secret** keys. If the leaked legacy key is
+   still active, disable/delete it here once the new keys are live.
+2. Set env (Vercel Production + Preview, then local `.env.local`), redeploy:
+   - `NEXT_PUBLIC_SUPABASE_ANON_KEY` = the **publishable** key (`sb_publishable_…`).
+     It's build-time inlined and public by design, so the var name stays as-is.
+   - `SUPABASE_SECRET_KEY` = the **secret** key (`sb_secret_…`). You can leave the
+     old `SUPABASE_SERVICE_ROLE_KEY` unset; `instrumentation.ts` fills it from the
+     secret key. (If both are set, the legacy var wins — clear it to fully cut over.)
+3. Smoke-test (below). From now on, rotating the leaked/compromised secret is a
+   one-click "roll secret key" in the dashboard with **no maintenance window**.
+
+### Alternative: rotate the legacy JWT secret (heavier, only if not migrating)
 1. Supabase Dashboard → project `kcwruliugwidsdgsrthy` → **Project Settings → API**.
-2. Rotate keys:
-   - **Legacy JWT-secret projects (this one):** regenerating the JWT secret
-     reissues **both** `anon` and `service_role`. ⚠️ This invalidates the old anon
-     key too — every signed-in session (incl. guest anonymous sign-ins) is
-     dropped and any cached anon key 401s until redeploy. Do it in a short
-     maintenance window.
-   - If the project has been migrated to the new **API keys** model, roll the
-     **secret key** independently (no anon impact).
+2. Regenerating the JWT secret reissues **both** `anon` and `service_role`. ⚠️ This
+   invalidates the old anon key too — every signed-in session (incl. guest
+   anonymous sign-ins) is dropped and any cached anon key 401s until redeploy. Do
+   it in a short maintenance window.
 3. Update env everywhere the old values live, then redeploy:
    - **Vercel** (Production + Preview): `SUPABASE_SERVICE_ROLE_KEY`, and if the
      JWT secret was rotated also `NEXT_PUBLIC_SUPABASE_ANON_KEY` +
@@ -46,13 +66,12 @@ history rewrite is **not required** afterward.
 4. Redeploy and smoke-test: site loads, login works, an authed API route works,
    a service-role route (e.g. a cron) works.
 
-## Priority 2 — treat exposed OAuth tokens as compromised (owner)
+## Priority 2 — exposed OAuth tokens (owner) — RISK ACCEPTED 2026-06-29
 While RLS was disabled, the public anon key could read token tables (now locked,
 PR #12). Current contents:
-- `gsc_tokens` — **22 rows** (Google Search Console OAuth tokens). Safest path:
-  revoke + force re-auth for affected accounts (or rotate the Google OAuth client
-  secret and re-consent). At minimum, review GSC access logs for the exposure
-  window.
+- `gsc_tokens` — **22 rows** (Google Search Console OAuth tokens). **Owner decision
+  2026-06-29: leave as-is — mostly test data, risk accepted.** (Original guidance:
+  revoke + force re-auth, or rotate the Google OAuth client secret and re-consent.)
 - `social_accounts` — **0 rows**, nothing to revoke.
 
 ## Priority 3 — git history (optional, low value after rotation)

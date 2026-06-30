@@ -13,7 +13,7 @@ function requireEnv(name: string): string {
   return v;
 }
 const SUPABASE_URL = requireEnv('NEXT_PUBLIC_SUPABASE_URL');
-const SERVICE_ROLE = requireEnv('SUPABASE_SERVICE_ROLE_KEY');
+const SERVICE_ROLE = (process.env.SUPABASE_SERVICE_ROLE_KEY || requireEnv('SUPABASE_SECRET_KEY'));
 const ADMIN_EMAILS = String(process.env.ADMIN_EMAILS || '')
   .split(',').map(s => s.trim().toLowerCase()).filter(Boolean);
 

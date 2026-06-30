@@ -66,7 +66,7 @@ function envOrThrow(k: string) {
 /* =============================== Config =============================== */
 const SUPABASE_URL = envOrThrow('NEXT_PUBLIC_SUPABASE_URL');
 const SUPABASE_ANON_KEY = envOrThrow('NEXT_PUBLIC_SUPABASE_ANON_KEY');
-const SERVICE_ROLE = envOrThrow('SUPABASE_SERVICE_ROLE_KEY');
+const SERVICE_ROLE = (process.env.SUPABASE_SERVICE_ROLE_KEY || envOrThrow('SUPABASE_SECRET_KEY'));
 const STORAGE_BUCKET = process.env.SUPABASE_STORAGE_BUCKET || 'site-images';
 
 const supabaseAdmin = createClient(SUPABASE_URL, SERVICE_ROLE, {

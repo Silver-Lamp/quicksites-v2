@@ -10,7 +10,7 @@ function env(name: string) {
   if (!v) throw new Error(`Missing env: ${name}`);
   return v;
 }
-const db = createClient(env('NEXT_PUBLIC_SUPABASE_URL'), env('SUPABASE_SERVICE_ROLE_KEY'));
+const db = createClient(env('NEXT_PUBLIC_SUPABASE_URL'), (process.env.SUPABASE_SERVICE_ROLE_KEY || env('SUPABASE_SECRET_KEY')));
 
 
 export async function GET(req: NextRequest) {

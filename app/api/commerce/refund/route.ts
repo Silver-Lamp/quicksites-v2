@@ -1,10 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
 import { getServerSupabase } from '@/lib/supabase/server';
 import { markOrderRefunded } from '@/lib/commerce/orders';
 import { stripe } from '@/lib/stripe/server';
+import { parseJsonBody } from '@/lib/api/parseJson';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
+
+const RefundSchema = z.object({ orderId: z.string().min(1) });
 
 /**
  * POST /api/commerce/refund { orderId }
@@ -14,8 +18,9 @@ export const dynamic = 'force-dynamic';
  * it updates the DB directly (order → refunded, commission voided).
  */
 export async function POST(req: NextRequest) {
-  const { orderId } = await req.json();
-  if (!orderId) return NextResponse.json({ error: 'orderId required' }, { status: 400 });
+  const parsedBody = await parseJsonBody(req, RefundSchema);
+  if (!parsedBody.ok) return parsedBody.response;
+  const { orderId } = parsedBody.data;
 
   const supabase = await getServerSupabase({ serviceRole: true });
   const { data: order } = await supabase

@@ -59,17 +59,12 @@ module.exports = {
   ],
   rules: {
     'prettier/prettier': 'warn',
-    'no-restricted-syntax': [
-      'error',
-      {
-        selector: "AwaitExpression > CallExpression[callee.name='headers']",
-        message: "❌ Do not use `await headers()`. This function is synchronous in App Router.",
-      },
-      {
-        selector: "AwaitExpression > CallExpression[callee.name='cookies']",
-        message: "❌ Do not use `await cookies()`. This function is synchronous in App Router.",
-      },
-    ],
+    // NOTE: the former no-restricted-syntax rule forbidding `await headers()` /
+    // `await cookies()` was removed — it was written for Next 14 (where those were
+    // sync). In Next 15 (this repo is on 15.2.6) `headers()`/`cookies()` are ASYNC
+    // and MUST be awaited, so the rule flagged correct code as an error (81 false
+    // positives) and pushed devs to write broken code. See the Next 15 async
+    // request APIs: https://nextjs.org/docs/app/building-your-application/upgrading/version-15
     '@typescript-eslint/no-unused-vars': ['warn', { argsIgnorePattern: '^_' }],
     '@typescript-eslint/no-explicit-any': 'off',
     '@typescript-eslint/no-empty-interface': 'off',

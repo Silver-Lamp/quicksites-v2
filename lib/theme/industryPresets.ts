@@ -97,6 +97,9 @@ export const industryPresets: Record<string, SiteTheme> = {
   print_on_demand: warm('purple-500'),
   custom_apparel: warm('rose-600'),
 
+  // --- Author / writer (literary, book-forward) ---
+  author: { fontFamily: 'serif', accentColor: 'indigo-600', borderRadius: 'sm', glow: [], darkMode: 'dark' },
+
   // --- Fallback ---
   other: homeService('indigo-600'),
 

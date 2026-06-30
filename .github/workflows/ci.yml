@@ -37,11 +37,13 @@ jobs:
       - name: Typecheck
         run: npm run typecheck
 
-      # NON-BLOCKING (pending one green run): `next build` previously failed in CI not
-      # on types but on env — several routes construct a Supabase client at MODULE load
-      # (e.g. app/api/admin/ai-pricing/audit), so `createClient()` runs during page-data
-      # collection and threw `supabaseUrl is required` with no env. The placeholder env
-      # below satisfies that (these routes are force-dynamic and don't query at build).
+      # NON-BLOCKING (pending one green run): `next build` fails in CI not on types but
+      # on env. ~86 routes construct an external client at MODULE load (Supabase via
+      # createClient, Stripe via `new Stripe(process.env.STRIPE_SECRET_KEY!)` in
+      # lib/stripe/server, etc.), so importing the module during page-data collection
+      # throws when the env is absent. The placeholder env below lets those constructors
+      # succeed (the routes are force-dynamic and don't actually call out at build time).
+      # The real fix is lazy client init; until then this unblocks the build in CI.
       # Flip to blocking once a CI run confirms green end-to-end.
       - name: Build
         run: npm run build
@@ -50,6 +52,11 @@ jobs:
           NEXT_PUBLIC_SUPABASE_URL: https://placeholder.supabase.co
           NEXT_PUBLIC_SUPABASE_ANON_KEY: placeholder-anon-key
           SUPABASE_SERVICE_ROLE_KEY: placeholder-service-role-key
+          # Non-secret-looking placeholders on purpose: the constructors accept any
+          # non-empty string, and real-key prefixes (sk_, whsec_) trip the gitleaks hook.
+          STRIPE_SECRET_KEY: placeholder-stripe-secret-key
+          STRIPE_WEBHOOK_SECRET: placeholder-stripe-webhook-secret
+          OPENAI_API_KEY: placeholder-openai-key
 
       # NON-BLOCKING: the repo currently has ~293 eslint errors (mostly auto-fixable —
       # @ts-ignore→@ts-expect-error, prefer-const). Surfaced as annotations; flip to

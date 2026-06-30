@@ -1,10 +1,12 @@
 // app/api/hero/suggest/route.ts
 import OpenAI from 'openai';
+import { z } from 'zod';
 import { enforceGuestAiLimit, guestLimitBody } from '@/lib/ai/guestGuard';
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { createServerClient } from '@supabase/ssr';
 import { resolveIndustryKey, toIndustryLabel } from '@/lib/industries';
+import { parseJsonBody } from '@/lib/api/parseJson';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -116,6 +118,21 @@ type Incoming = {
   state?: string;
 };
 
+// Permissive: all-optional, passthrough. Parsed result is cast to Incoming
+// (site_type is validated as a string and narrowed by the handler).
+const IncomingSchema = z
+  .object({
+    template_id: z.string().optional(),
+    industry: z.string().optional(),
+    industry_key: z.string().optional(),
+    site_type: z.string().optional(),
+    services: z.array(z.string()).optional(),
+    business_name: z.string().optional(),
+    city: z.string().optional(),
+    state: z.string().optional(),
+  })
+  .passthrough();
+
 function labelFromKey(key: string) {
   const k = resolveIndustryKey(key);
   return k && k !== 'other' ? toIndustryLabel(k) : '';
@@ -189,7 +206,9 @@ export async function POST(req: Request) {
     const guard = await enforceGuestAiLimit(auth.user, 'hero');
     if (!guard.ok) return NextResponse.json(guestLimitBody(guard.limit), { status: 429 });
 
-    const body = (await req.json()) as Incoming;
+    const parsedBody = await parseJsonBody(req, IncomingSchema);
+    if (!parsedBody.ok) return parsedBody.response;
+    const body = parsedBody.data as Incoming;
 
     // Prefer one DB fetch that we can reuse for both meta and context
     let db: any = {};

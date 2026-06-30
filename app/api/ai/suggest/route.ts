@@ -1,6 +1,8 @@
 // app/api/ai/suggest/route.ts
 import OpenAI from 'openai';
+import { z } from 'zod';
 import { meterLLMCall, LLMBudgetExceededError } from '@/lib/ai/meter';
+import { parseJsonBody } from '@/lib/api/parseJson';
 
 export const runtime = 'nodejs';
 
@@ -15,10 +17,24 @@ type SiteSummary = {
   services?: string[];
 };
 
+// Permissive: editor-facing, all fields optional. `site` stays loosely typed
+// (z.any) and is treated as SiteSummary downstream; temperature is bounded.
+const SuggestSchema = z
+  .object({
+    instruction: z.string().optional(),
+    selection: z.string().optional(),
+    brief: z.string().optional(),
+    site: z.any().optional(),
+    temperature: z.number().min(0).max(2).optional(),
+  })
+  .passthrough();
+
 export async function POST(req: Request) {
   try {
-    const { instruction, selection, brief, site, temperature = 0.7 } = (await req.json()) as {
-      instruction: string;
+    const parsedBody = await parseJsonBody(req, SuggestSchema);
+    if (!parsedBody.ok) return parsedBody.response;
+    const { instruction, selection, brief, site, temperature = 0.7 } = parsedBody.data as {
+      instruction?: string;
       selection?: string;
       brief?: string;
       site?: SiteSummary;

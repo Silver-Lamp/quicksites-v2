@@ -1,8 +1,10 @@
 // app/api/services/suggest/route.ts
 import OpenAI from 'openai';
+import { z } from 'zod';
 import { enforceGuestAiLimit, guestLimitBody } from '@/lib/ai/guestGuard';
 import { cookies } from 'next/headers';
 import { createServerClient } from '@supabase/ssr';
+import { parseJsonBody } from '@/lib/api/parseJson';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -19,6 +21,23 @@ type Body = {
   count?: number;             // default 6
   debug?: boolean;
 };
+
+// Permissive: all-optional, passthrough. Parsed result is cast to Body; the
+// handler coerces count (Number) and debug (Boolean) defensively.
+const BodySchema = z
+  .object({
+    template_id: z.string().optional(),
+    industry: z.string().optional(),
+    industry_key: z.string().optional(),
+    industry_label: z.string().optional(),
+    industry_other: z.string().optional(),
+    site_type: z.string().nullable().optional(),
+    city: z.string().optional(),
+    state: z.string().optional(),
+    count: z.union([z.number(), z.string()]).optional(),
+    debug: z.boolean().optional(),
+  })
+  .passthrough();
 
 // simple per-instance limiter
 type Bucket = { start: number; count: number };
@@ -69,7 +88,9 @@ function pluckIndustryOther(tplData: any): string | null {
 
 export async function POST(req: Request) {
   try {
-    const body = (await req.json()) as Body;
+    const parsedBody = await parseJsonBody(req, BodySchema);
+    if (!parsedBody.ok) return parsedBody.response;
+    const body = parsedBody.data as Body;
     const wantDebug = Boolean(body.debug);
 
     // Auth + rate limit

@@ -2,11 +2,17 @@ import { NextResponse } from 'next/server';
 import { headers } from 'next/headers';
 import { supabaseAdmin } from '@/lib/supabase/admin';
 import { getServerSupabase } from '@/lib/supabase/server';
+import { getAdminUser } from '@/lib/auth/getAdminUser';
 
 const SELECT =
   'id, slug, template_name, domain_lc, published, is_site, archived';
 
 export async function GET() {
+  // Diagnostic endpoint: exposes RLS-bypassing (service-role) query results and
+  // env values. Admins only.
+  const adminUser = await getAdminUser();
+  if (!adminUser) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+
   const h = await headers();
   const host = (h.get('x-forwarded-host') ?? h.get('host') ?? '')
     .toLowerCase()

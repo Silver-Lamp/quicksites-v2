@@ -2,11 +2,15 @@ export const dynamic = 'force-dynamic';
 
 import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/server/supabaseAdmin';
+import { requireTemplateOwner } from '@/lib/auth/requireTemplateOwner';
 
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
   const id = searchParams.get('id');
   if (!id) return NextResponse.json({ error: 'missing id' }, { status: 400 });
+
+  const gate = await requireTemplateOwner(id);
+  if (!gate.ok) return gate.response;
 
   const { data, error } = await supabaseAdmin
     .from('template_admin_meta')
@@ -24,6 +28,9 @@ export async function POST(req: Request) {
   if (!id || !Array.isArray(deprecated_files)) {
     return NextResponse.json({ error: 'id and deprecated_files[] required' }, { status: 400 });
   }
+
+  const gate = await requireTemplateOwner(id);
+  if (!gate.ok) return gate.response;
 
   const { error } = await supabaseAdmin
     .from('template_admin_meta')

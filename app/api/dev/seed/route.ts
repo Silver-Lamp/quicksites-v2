@@ -61,8 +61,14 @@ async function trySetSlugViaCommit(templateId: string, desired: string) {
 
 export async function POST(req: NextRequest) {
   try {
-    // (optional) user-scoped auth; keep existing behavior
+    // Require a signed-in user: the duplicate is written with the service-role
+    // client below (bypassing RLS), so without this gate anyone could mint
+    // orphan templates from any readable source. The new row is owned by them.
     const supabase = await getServerSupabase();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
     const url = new URL(req.url);
     const srcSlug = url.searchParams.get('slug');
@@ -95,6 +101,7 @@ export async function POST(req: NextRequest) {
     const insertRow: any = {
       template_name: newName,
       // slug: (set via RPC below)
+      owner_id: user.id,
       is_site: src.is_site ?? false,
       published: false,
       archived: false,

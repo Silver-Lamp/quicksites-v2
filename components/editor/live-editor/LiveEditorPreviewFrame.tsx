@@ -324,10 +324,11 @@ export default function LiveEditorPreviewFrame({
     const m =
       (t.color_mode ??
         t.colorMode ??
+        t?.data?.color_mode ??
         t?.data?.theme?.mode ??
         t?.data?.meta?.mode ??
         t?.meta?.mode ??
-        'light') as string;
+        'dark') as string;
     return String(m).toLowerCase() === 'dark' ? 'dark' : 'light';
   }, [template]);
 

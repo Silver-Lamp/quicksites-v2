@@ -1,4 +1,5 @@
 import OpenAI from 'openai';
+import { lazyClient } from '@/lib/lazyClient';
 import { enforceGuestAiLimit, guestLimitBody } from '@/lib/ai/guestGuard';
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
@@ -7,7 +8,7 @@ import { createServerClient } from '@supabase/ssr';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY! });
+const openai = lazyClient(() => new OpenAI({ apiKey: process.env.OPENAI_API_KEY! }));
 
 // simple in-memory limiter
 type Bucket = { start: number; count: number };

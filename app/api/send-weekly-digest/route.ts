@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
+import { lazyClient } from '@/lib/lazyClient';
 import { json } from '@/lib/api/json';
 import { OpenAI } from 'openai';
 
@@ -7,9 +8,9 @@ const supabase = createClient(
   (process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SECRET_KEY)!
 );
 
-const openai = new OpenAI({
+const openai = lazyClient(() => new OpenAI({
   apiKey: process.env.OPENAI_API_KEY!,
-});
+}));
 
 async function generateDigest(user_id: string) {
   const res = await fetch(`http://localhost:3000/api/feedback-summary?user_id=${user_id}`);

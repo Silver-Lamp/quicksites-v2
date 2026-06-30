@@ -37,17 +37,15 @@ jobs:
       - name: Typecheck
         run: npm run typecheck
 
-      # NON-BLOCKING (pending one green run): `next build` fails in CI not on types but
-      # on env. ~86 routes construct an external client at MODULE load (Supabase via
-      # createClient, Stripe via `new Stripe(process.env.STRIPE_SECRET_KEY!)` in
-      # lib/stripe/server, etc.), so importing the module during page-data collection
-      # throws when the env is absent. The placeholder env below lets those constructors
-      # succeed (the routes are force-dynamic and don't actually call out at build time).
-      # The real fix is lazy client init; until then this unblocks the build in CI.
-      # Flip to blocking once a CI run confirms green end-to-end.
+      # BLOCKING. The SDK clients that used to throw at MODULE load with no env
+      # (Stripe/OpenAI/Resend constructors) are now lazy (lib/lazyClient.ts), so
+      # importing route modules during page-data collection no longer fails. The
+      # remaining placeholder env just satisfies benign module-level `createClient()`
+      # calls (which only need a non-empty URL) and a couple of envOrThrow reads in
+      # the seed helpers. Verified green in a CI-equivalent build (placeholder env
+      # only, no .env.local). Keep it green.
       - name: Build
         run: npm run build
-        continue-on-error: true
         env:
           NEXT_PUBLIC_SUPABASE_URL: https://placeholder.supabase.co
           NEXT_PUBLIC_SUPABASE_ANON_KEY: placeholder-anon-key

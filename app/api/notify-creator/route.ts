@@ -1,6 +1,7 @@
 export const runtime = 'nodejs';
 
 import { createClient } from '@supabase/supabase-js';
+import { lazyClient } from '@/lib/lazyClient';
 import { json } from '@/lib/api/json';
 import { Resend } from 'resend';
 import { NextRequest } from 'next/server';
@@ -10,7 +11,7 @@ const supabase = createClient(
   (process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SECRET_KEY)!
 );
 
-const resend = new Resend(process.env.RESEND_API_KEY!);
+const resend = lazyClient(() => new Resend(process.env.RESEND_API_KEY!));
 
 export async function POST(req: NextRequest) {
   const { slug } = await req.json();

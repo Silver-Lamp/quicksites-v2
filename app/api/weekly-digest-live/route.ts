@@ -1,6 +1,7 @@
 // app/api/weekly-digest-live/route.ts
 
 import { createClient } from '@supabase/supabase-js';
+import { lazyClient } from '@/lib/lazyClient';
 import { NextRequest } from 'next/server';
 import OpenAI from 'openai';
 
@@ -9,9 +10,9 @@ const supabase = createClient(
   (process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SECRET_KEY)!
 );
 
-const openai = new OpenAI({
+const openai = lazyClient(() => new OpenAI({
   apiKey: process.env.OPENAI_API_KEY!,
-});
+}));
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);

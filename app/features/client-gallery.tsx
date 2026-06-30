@@ -3,7 +3,10 @@
 import * as React from 'react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
-import { PlayCircle, Search, Sparkles, ArrowRight } from 'lucide-react';
+import {
+  Search, ArrowRight, Layers, Sparkles, Palette, ShoppingCart,
+  Blocks, Globe, TrendingUp, BarChart3, PhoneCall,
+} from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -23,6 +26,18 @@ const COPY = {
     secondaryHref: '/contact',
     secondary: 'Talk to sales',
   },
+};
+
+// Per-category icon so each card reads as complete (replaces the old video frames).
+const CATEGORY_ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
+  AI: Sparkles,
+  Brand: Palette,
+  'E-Commerce': ShoppingCart,
+  Editor: Blocks,
+  Hosting: Globe,
+  SEO: TrendingUp,
+  Admin: BarChart3,
+  Leads: PhoneCall,
 };
 
 type FeatureRow = {
@@ -45,35 +60,41 @@ function FeatureCard({ f }: { f: FeatureRow }) {
   const featuredGlow =
     'ring-1 ring-purple-500/25 bg-gradient-to-br from-purple-500/10 via-purple-500/5 to-transparent ' +
     'shadow-[0_10px_40px_-12px_rgba(168,85,247,0.45)]';
+  const Icon = CATEGORY_ICONS[f.category] ?? Layers;
 
   return (
     <Card
       className={classNames(
-        'h-full flex flex-col overflow-hidden border-zinc-800/50',
+        'h-full flex flex-col overflow-hidden border-zinc-800/50 transition-colors hover:border-zinc-700',
         f.featured && featuredGlow
       )}
     >
-      <CardHeader className="space-y-1">
-        <div className="flex items-center gap-2">
-          <CardTitle className="text-lg">{f.title}</CardTitle>
-          {f.badge ? <Badge variant="secondary">{f.badge}</Badge> : null}
-          {f.featured ? <Badge variant="default">Featured</Badge> : null}
+      <CardHeader className="space-y-3">
+        <div className="flex items-start justify-between gap-3">
+          <div className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-purple-500/20 to-purple-500/5 text-purple-300 ring-1 ring-purple-500/20">
+            <Icon className="h-5 w-5" />
+          </div>
+          <div className="flex flex-wrap items-center justify-end gap-2">
+            {f.badge ? <Badge variant="secondary">{f.badge}</Badge> : null}
+            {f.featured ? <Badge variant="default">Featured</Badge> : null}
+          </div>
         </div>
-        <CardDescription>{f.blurb}</CardDescription>
+        <div className="space-y-1">
+          <CardTitle className="text-lg">{f.title}</CardTitle>
+          <CardDescription>{f.blurb}</CardDescription>
+        </div>
       </CardHeader>
-      <CardContent className="space-y-3">
-        {f.video_url ? (
+
+      {f.video_url ? (
+        <CardContent>
           <div className="aspect-video rounded-lg overflow-hidden border border-zinc-800/50">
-            {/* keep your existing LazyVideoEmbed or iframe/video here */}
             <LazyVideoEmbed url={f.video_url} title={f.title} className="h-full w-full" />
           </div>
-        ) : (
-          <div className="aspect-video rounded-lg border border-zinc-800/50 bg-muted/40 grid place-items-center text-muted-foreground">
-            Demo coming soon
-          </div>
-        )}
-      </CardContent>
-      <CardFooter className="mt-auto">
+        </CardContent>
+      ) : null}
+
+      <CardFooter className="mt-auto items-center justify-between pt-2">
+        <span className="text-xs uppercase tracking-wide text-muted-foreground">{f.category}</span>
         {f.doc_href ? (
           <Link href={f.doc_href} className="inline-flex">
             <Button variant="ghost" size="sm">
@@ -81,9 +102,7 @@ function FeatureCard({ f }: { f: FeatureRow }) {
               <ArrowRight className="ml-2 h-4 w-4" />
             </Button>
           </Link>
-        ) : (
-          <div className="text-xs text-muted-foreground">Tip: Ask us for a live walkthrough.</div>
-        )}
+        ) : null}
       </CardFooter>
     </Card>
   );
@@ -129,7 +148,7 @@ export default function FeatureGalleryClient({ initialRows }: { initialRows: Fea
             <Badge variant="outline">{COPY.heroKicker}</Badge>
             <Badge variant="secondary" className="flex items-center gap-1">
               <Sparkles className="h-3.5 w-3.5" />
-              Video demos
+              Everything in every plan
             </Badge>
           </div>
           <h1 className="text-3xl md:text-5xl font-semibold tracking-tight">
@@ -231,22 +250,22 @@ export default function FeatureGalleryClient({ initialRows }: { initialRows: Fea
           <CardContent className="py-8 flex flex-col md:flex-row items-center justify-between gap-6">
             <div>
               <h3 className="text-xl md:text-2xl font-semibold">
-                Want a guided tour?
+                See it on your own site
               </h3>
               <p className="text-muted-foreground">
-                Book a live walkthrough or send us your use case — we’ll record a custom demo.
+                Spin up a free trial and build a real page in minutes — or book a live walkthrough and we’ll show you around.
               </p>
             </div>
             <div className="flex items-center gap-3">
-              <Link href="/book" className="inline-flex">
+              <Link href="/login" className="inline-flex">
                 <Button size="lg">
-                  Book a demo
+                  Start free trial
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </Button>
               </Link>
-              <Link href="/contact" className="inline-flex">
+              <Link href="/book" className="inline-flex">
                 <Button size="lg" variant="outline">
-                  Contact sales
+                  Book a walkthrough
                 </Button>
               </Link>
             </div>

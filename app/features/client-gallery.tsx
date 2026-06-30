@@ -4,14 +4,12 @@ import * as React from 'react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import {
-  Search, ArrowRight, Layers, Sparkles, Palette, ShoppingCart,
-  Blocks, Globe, TrendingUp, BarChart3, PhoneCall,
+  ArrowRight, Layers, Sparkles, Palette, ShoppingCart,
+  Blocks, Globe, TrendingUp, BarChart3, PhoneCall, LayoutTemplate, Rocket,
 } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import LazyVideoEmbed from '@/components/ui/lazy-video-embed';
 
 const COPY = {
@@ -39,6 +37,12 @@ const CATEGORY_ICONS: Record<string, React.ComponentType<{ className?: string }>
   Admin: BarChart3,
   Leads: PhoneCall,
 };
+
+const STEPS = [
+  { icon: LayoutTemplate, title: 'Pick a starting point', body: 'Start from an industry scaffold, duplicate a template, or open a blank canvas.' },
+  { icon: Blocks, title: 'Edit with blocks', body: 'Drag, drop, and tweak reusable blocks — with optional AI to draft the copy.' },
+  { icon: Rocket, title: 'Publish & sell', body: 'Ship to a subdomain or custom domain, then take orders with Stripe built in.' },
+];
 
 type FeatureRow = {
   id: string;
@@ -110,9 +114,7 @@ function FeatureCard({ f }: { f: FeatureRow }) {
 
 
 export default function FeatureGalleryClient({ initialRows }: { initialRows: FeatureRow[] }) {
-  const [q, setQ] = React.useState('');
   const [cat, setCat] = React.useState<'All' | string>('All');
-  const [featuredOnly, setFeaturedOnly] = React.useState(false);
 
   // Build categories from data
   const categories = React.useMemo(() => {
@@ -122,17 +124,8 @@ export default function FeatureGalleryClient({ initialRows }: { initialRows: Fea
   }, [initialRows]);
 
   const filtered = React.useMemo(() => {
-    const needle = q.trim().toLowerCase();
-    return initialRows.filter((f) => {
-      const inCat = cat === 'All' || f.category === cat;
-      const inText =
-        !needle ||
-        f.title.toLowerCase().includes(needle) ||
-        f.blurb.toLowerCase().includes(needle);
-      const inFeatured = !featuredOnly || !!f.featured;
-      return inCat && inText && inFeatured;
-    });
-  }, [q, cat, featuredOnly, initialRows]);
+    return initialRows.filter((f) => cat === 'All' || f.category === cat);
+  }, [cat, initialRows]);
 
   return (
     <div className="relative">
@@ -183,49 +176,46 @@ export default function FeatureGalleryClient({ initialRows }: { initialRows: Fea
         <div className="pointer-events-none absolute inset-0 -z-10 bg-gradient-to-b from-transparent via-primary/5 to-transparent" />
       </section>
 
-      {/* Controls */}
-      <section className="mx-auto max-w-6xl px-6 py-6">
-        <Card>
-          <CardContent className="py-6 grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="md:col-span-2">
-              <Label htmlFor="q">Search features</Label>
-              <div className="mt-2 flex items-center gap-2">
-                <Search className="h-4 w-4 text-muted-foreground" />
-                <Input
-                  id="q"
-                  placeholder="Type to filter titles and blurbs…"
-                  value={q}
-                  onChange={(e) => setQ(e.target.value)}
-                />
-              </div>
-            </div>
+      {/* How it works */}
+      <section className="mx-auto max-w-6xl px-6 py-8">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+          {STEPS.map((s, i) => {
+            const Icon = s.icon;
+            return (
+              <Card key={s.title} className="border-zinc-800/50">
+                <CardContent className="flex gap-4 py-6">
+                  <div className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-purple-500/20 to-purple-500/5 text-purple-300 ring-1 ring-purple-500/20">
+                    <Icon className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-semibold text-purple-300/80">{`0${i + 1}`}</span>
+                      <h3 className="font-medium">{s.title}</h3>
+                    </div>
+                    <p className="mt-1 text-sm text-muted-foreground">{s.body}</p>
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
+      </section>
 
-            <div className="flex flex-col gap-2">
-              <Label>Category</Label>
-              <div className="mt-2 flex flex-wrap gap-2">
-                {categories.map((c) => (
-                  <Button
-                    key={c}
-                    type="button"
-                    variant={c === cat ? 'default' : 'outline'}
-                    size="sm"
-                    onClick={() => setCat(c)}
-                  >
-                    {c}
-                  </Button>
-                ))}
-                <Button
-                  type="button"
-                  variant={featuredOnly ? 'default' : 'outline'}
-                  size="sm"
-                  onClick={() => setFeaturedOnly((v) => !v)}
-                >
-                  {featuredOnly ? 'Showing Featured' : 'Featured only'}
-                </Button>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+      {/* Category filter */}
+      <section className="mx-auto max-w-6xl px-6 pt-2 pb-4">
+        <div className="flex flex-wrap items-center gap-2">
+          {categories.map((c) => (
+            <Button
+              key={c}
+              type="button"
+              variant={c === cat ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setCat(c)}
+            >
+              {c}
+            </Button>
+          ))}
+        </div>
       </section>
 
       {/* Grid */}
@@ -237,7 +227,7 @@ export default function FeatureGalleryClient({ initialRows }: { initialRows: Fea
           {filtered.length === 0 && (
             <Card className="col-span-full border-zinc-800/50">
               <CardContent className="py-10 text-center text-muted-foreground">
-                No features match your filters yet.
+                No features in this category yet.
               </CardContent>
             </Card>
           )}

@@ -7,6 +7,7 @@ import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { createServerClient } from '@supabase/ssr';
 import { parseJsonBody } from '@/lib/api/parseJson';
+import { meterLLMCall, LLMBudgetExceededError } from '@/lib/ai/meter';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -136,17 +137,35 @@ export async function POST(req: Request) {
       `Count: ${safeCount}`,
     ].filter(Boolean).join('\n');
 
-    const completion = await openai.chat.completions.create({
-      model: 'gpt-4o-mini',
-      // response_format: { type: 'json_object' },
-      messages: [
-        { role: 'system', content: sys },
-        { role: 'user', content: userMsg },
-      ],
-      temperature: 0.8,
-    });
-
-    const raw = completion.choices?.[0]?.message?.content || '{}';
+    let raw: string;
+    try {
+      raw = await meterLLMCall(
+        { provider: 'openai', model_code: 'gpt-4o-mini', modality: 'chat', route: '/api/testimonials/generate' },
+        async () => {
+          const completion = await openai.chat.completions.create({
+            model: 'gpt-4o-mini',
+            // response_format: { type: 'json_object' },
+            messages: [
+              { role: 'system', content: sys },
+              { role: 'user', content: userMsg },
+            ],
+            temperature: 0.8,
+          });
+          return {
+            value: completion.choices?.[0]?.message?.content || '{}',
+            usage: {
+              input_tokens: completion.usage?.prompt_tokens,
+              output_tokens: completion.usage?.completion_tokens,
+            },
+          };
+        },
+      );
+    } catch (e) {
+      if (e instanceof LLMBudgetExceededError) {
+        return NextResponse.json({ error: 'AI budget reached, please try again later.' }, { status: 429 });
+      }
+      throw e;
+    }
     let parsed: any;
     try { parsed = JSON.parse(raw); } catch {
       parsed = { testimonials: [{ quote: raw.trim().replace(/\s+/g, ' '), attribution: 'Customer', rating: 5, avatar_url: null }] };

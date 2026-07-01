@@ -27,7 +27,7 @@ export default async function Success({
   if (orderId) {
     const { data: o } = await db
       .from('orders')
-      .select('id,status,currency,subtotal_cents,platform_fee_cents,total_cents')
+      .select('id,status,currency,subtotal_cents,shipping_cents,platform_fee_cents,total_cents')
       .eq('id', orderId)
       .maybeSingle();
     order = o;
@@ -67,6 +67,12 @@ export default async function Success({
               <span>Subtotal</span>
               <span>{fmt(order.subtotal_cents, cur)}</span>
             </div>
+            {Number(order.shipping_cents) > 0 && (
+              <div className="flex justify-between text-muted-foreground">
+                <span>Shipping</span>
+                <span>{fmt(order.shipping_cents, cur)}</span>
+              </div>
+            )}
             {Number(order.platform_fee_cents) > 0 && (
               <div className="flex justify-between text-muted-foreground">
                 <span>Platform fee</span>

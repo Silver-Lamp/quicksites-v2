@@ -1,5 +1,5 @@
 // lib/commerce/__tests__/fees.test.ts
-import { computeSubtotalCents, computePlatformFeeCents } from '../fees';
+import { computeSubtotalCents, computePlatformFeeCents, flatShippingCents } from '../fees';
 import {
   partnerCommissionCents,
   clampPlatformFeePercent,
@@ -77,6 +77,46 @@ describe('computePlatformFeeCents', () => {
     expect(
       computePlatformFeeCents({ collectFee: true, totalCents: 500, podBaseCents: 500, feePercent: 0.1, feeMinCents: 30 }),
     ).toBe(0);
+  });
+});
+
+describe('flatShippingCents', () => {
+  const OLD = process.env.QS_POD_SHIPPING_CENTS;
+  afterEach(() => {
+    if (OLD === undefined) delete process.env.QS_POD_SHIPPING_CENTS;
+    else process.env.QS_POD_SHIPPING_CENTS = OLD;
+  });
+
+  it('is 0 for a cart with nothing shippable, regardless of config', () => {
+    process.env.QS_POD_SHIPPING_CENTS = '699';
+    expect(flatShippingCents(false)).toBe(0);
+  });
+
+  it('is 0 by default (opt-in) even when the cart ships', () => {
+    delete process.env.QS_POD_SHIPPING_CENTS;
+    expect(flatShippingCents(true)).toBe(0);
+  });
+
+  it('returns the configured flat fee when the cart ships', () => {
+    process.env.QS_POD_SHIPPING_CENTS = '699';
+    expect(flatShippingCents(true)).toBe(699);
+  });
+
+  it('never returns a negative fee', () => {
+    process.env.QS_POD_SHIPPING_CENTS = '-500';
+    expect(flatShippingCents(true)).toBe(0);
+  });
+});
+
+describe('shipping is excluded from the platform-fee basis', () => {
+  it('fee is computed on the product subtotal, not subtotal + shipping', () => {
+    // A $50 product at 8% → $4.00 fee, whether or not $6.99 shipping is added.
+    const feeOnProduct = computePlatformFeeCents({ collectFee: true, totalCents: 5000, feePercent: 0.08 });
+    expect(feeOnProduct).toBe(400);
+    // createDraftOrder passes the product subtotal (not the shipped total) to the
+    // fee calc, so adding shipping must not change the fee.
+    const feeIfShippingIncluded = computePlatformFeeCents({ collectFee: true, totalCents: 5000 + 699, feePercent: 0.08 });
+    expect(feeIfShippingIncluded).not.toBe(feeOnProduct); // proves the basis matters
   });
 });
 

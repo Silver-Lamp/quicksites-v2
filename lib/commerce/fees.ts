@@ -48,3 +48,16 @@ export function computePlatformFeeCents(input: {
   const floor = feeBasis > 0 ? feeMinCents || 0 : 0;
   return Math.max(pctFee, floor);
 }
+
+/**
+ * Flat per-order shipping fee, in cents, for a cart that contains a physical /
+ * print-on-demand item that has to ship. Off (returns 0) unless
+ * QS_POD_SHIPPING_CENTS is set — so this is inert until a merchant/operator
+ * opts in. Shipping is deliberately excluded from the platform-fee basis (we
+ * take our cut of the merchant's product margin, not the carrier's fee).
+ */
+export function flatShippingCents(hasShippable: boolean): number {
+  if (!hasShippable) return 0;
+  const c = Math.floor(Number(process.env.QS_POD_SHIPPING_CENTS ?? '0')) || 0;
+  return Math.max(0, c);
+}

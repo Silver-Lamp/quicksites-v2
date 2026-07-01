@@ -1,5 +1,6 @@
 // app/merchant/orders/page.tsx
 import { getServerSupabase } from '@/lib/supabase/server';
+import RefundButton from './refund-button';
 
 function fmtCents(c: number, cur = 'USD') {
   return new Intl.NumberFormat('en-US', { style: 'currency', currency: cur }).format((c || 0) / 100);
@@ -28,7 +29,7 @@ export default async function MerchantOrdersPage({ searchParams }: { searchParam
         <table className="min-w-full text-sm">
           <thead className="bg-neutral-900">
             <tr className="[&>th]:px-4 [&>th]:py-3 text-left">
-              <th>When</th><th>Order</th><th>Site</th><th>Status</th><th>Provider</th><th>Total</th>
+              <th>When</th><th>Order</th><th>Site</th><th>Status</th><th>Provider</th><th>Total</th><th></th>
             </tr>
           </thead>
           <tbody className="divide-y divide-neutral-800">
@@ -40,10 +41,11 @@ export default async function MerchantOrdersPage({ searchParams }: { searchParam
                 <td><span className="rounded bg-neutral-800 px-2 py-1 text-xs">{o.status}</span></td>
                 <td className="uppercase text-xs text-neutral-400">{o.provider || '-'}</td>
                 <td>{fmtCents(o.total_cents, o.currency)}</td>
+                <td className="text-right">{o.status === 'paid' && <RefundButton orderId={o.id} />}</td>
               </tr>
             ))}
             {(!orders || orders.length === 0) && (
-              <tr><td className="px-4 py-6 text-neutral-500" colSpan={6}>No orders yet.</td></tr>
+              <tr><td className="px-4 py-6 text-neutral-500" colSpan={7}>No orders yet.</td></tr>
             )}
           </tbody>
         </table>

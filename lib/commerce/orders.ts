@@ -5,7 +5,7 @@ import { captureServer } from '@/lib/analytics/posthog-server';
 import { EVENTS } from '@/lib/analytics/events';
 import { partnerCommissionCents, PARTNER_FEE_SHARE } from './partner-terms';
 import { isAgencyPlanMerchant } from '@/lib/billing/plans';
-import { computeSubtotalCents, computePlatformFeeCents } from './fees';
+import { computeSubtotalCents, computePlatformFeeCents, flatShippingCents } from './fees';
 
 /** Create a pending order and its line items. Returns order id and totals. */
 export async function createDraftOrder(opts: {
@@ -21,7 +21,6 @@ export async function createDraftOrder(opts: {
   const currency = (opts.currency || 'USD').toUpperCase();
 
   const subtotal = computeSubtotalCents(opts.items);
-  const total = subtotal; // tax/shipping can be added later
 
   const supabase = await getServerSupabase({ serviceRole: true });
 
@@ -35,6 +34,7 @@ export async function createDraftOrder(opts: {
   // only take our cut of the merchant's margin. base_cost_cents lives on the
   // catalog item's pod_spec; subtract (base × qty) for POD line items.
   let podBaseCents = 0;
+  let hasShippable = false;
   const catIds = opts.items.map((li) => li.catalogItemId).filter(Boolean) as string[];
   if (catIds.length) {
     try {
@@ -43,20 +43,27 @@ export async function createDraftOrder(opts: {
       const baseById = new Map<string, number>(
         (cis ?? []).map((c: any) => [c.id, Number(c?.metadata?.pod_spec?.base_cost_cents) || 0])
       );
+      hasShippable = (cis ?? []).some((c: any) => ['lulu', 'gelato'].includes(c?.metadata?.fulfillment_provider));
       for (const li of opts.items) {
         const base = li.catalogItemId ? baseById.get(li.catalogItemId) || 0 : 0;
         podBaseCents += base * Math.max(1, Number(li.quantity || 1));
       }
     } catch { /* fee falls back to full total */ }
   }
+
+  // The platform fee is computed on the product subtotal (excluding shipping, and
+  // excluding POD base cost). Shipping is added to the order total afterwards.
   const platformFeeCents = computePlatformFeeCents({
-    totalCents: total,
+    totalCents: subtotal,
     podBaseCents,
     collectFee: cfg.collect_platform_fee,
     feeExempt,
     feePercent: cfg.platform_fee_percent || 0,
     feeMinCents: cfg.platform_fee_min_cents || 0,
   });
+
+  const shippingCents = flatShippingCents(hasShippable);
+  const total = subtotal + shippingCents;
 
   // Create order
   const { data: order, error } = await supabase
@@ -67,6 +74,7 @@ export async function createDraftOrder(opts: {
       currency,
       amount_cents: total, // legacy column back-compat
       subtotal_cents: subtotal,
+      shipping_cents: shippingCents,
       total_cents: total,
       platform_fee_cents: platformFeeCents,
       status: 'pending',
@@ -105,7 +113,7 @@ export async function createDraftOrder(opts: {
     opts.merchantId
   );
 
-  return { orderId: order.id, totalCents: total, platformFeeCents };
+  return { orderId: order.id, totalCents: total, platformFeeCents, shippingCents };
 }
 
 /** Mark an order paid; record payment; lock attribution; log platform-fee commission if applicable. */

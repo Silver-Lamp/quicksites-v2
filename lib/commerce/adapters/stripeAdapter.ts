@@ -40,15 +40,29 @@ export class StripeAdapter implements PaymentsAdapter {
         ? { shipping_address_collection: { allowed_countries: SHIP_COUNTRIES }, phone_number_collection: { enabled: true } }
         : {}),
       ...(taxOn ? { automatic_tax: { enabled: true } } : {}),
-      line_items: p.lineItems.map(li => ({
-        quantity: li.quantity,
-        price_data: {
-          currency: p.currency.toLowerCase(),
-          unit_amount: li.unitAmount,
-          product_data: { name: li.title },
-          ...(taxOn ? { tax_behavior: 'exclusive' as const } : {}),
-        },
-      })),
+      line_items: [
+        ...p.lineItems.map(li => ({
+          quantity: li.quantity,
+          price_data: {
+            currency: p.currency.toLowerCase(),
+            unit_amount: li.unitAmount,
+            product_data: { name: li.title },
+            ...(taxOn ? { tax_behavior: 'exclusive' as const } : {}),
+          },
+        })),
+        // Flat shipping as its own line item (not part of the platform-fee basis).
+        ...(p.shippingCents && p.shippingCents > 0
+          ? [{
+              quantity: 1,
+              price_data: {
+                currency: p.currency.toLowerCase(),
+                unit_amount: p.shippingCents,
+                product_data: { name: 'Shipping' },
+                ...(taxOn ? { tax_behavior: 'exclusive' as const } : {}),
+              },
+            }]
+          : []),
+      ],
       // Keep a copy on the session too
       metadata: { orderId: p.orderId, ...(p.metadata ?? {}) },
       payment_intent_data: Object.keys(piData).length ? piData : undefined,

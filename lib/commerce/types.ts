@@ -21,6 +21,7 @@ export type CreateCheckoutParams = {
     connectAccountId?: string | null; // Stripe Connect destination (acct_...)
     metadata?: Record<string, string>;
     collectShipping?: boolean;      // POD/physical carts → collect a shipping address
+    shippingCents?: Money;          // flat shipping fee, charged as its own line item
   };
   
 export type CheckoutResult = { url: string; providerRef: string };

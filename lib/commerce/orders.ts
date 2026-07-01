@@ -200,6 +200,20 @@ export async function markOrderPaid(
         // Ignore idempotent/duplicate errors; warn on others
         if (up.error && `${up.error.code}` !== '23505') {
           console.warn('commission_ledger upsert error:', up.error.message);
+        } else {
+          // Funnel (Model B): partner residual accrued. This block only runs once
+          // per order (guarded by the pending→paid transition above).
+          await captureServer(
+            EVENTS.COMMISSION_ACCRUED,
+            {
+              order_id: orderId,
+              merchant_id: orderRow.merchant_id,
+              referral_code: attr.referral_code,
+              amount_cents: partnerCents,
+              platform_fee_cents: orderRow.platform_fee_cents,
+            },
+            orderRow.merchant_id
+          );
         }
       }
     }

@@ -1,6 +1,8 @@
 // app/api/catalog/items/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSupabase } from '@/lib/supabase/server';
+import { captureServer } from '@/lib/analytics/posthog-server';
+import { EVENTS } from '@/lib/analytics/events';
 
 export async function POST(req: NextRequest) {
   const body = await req.json() as {
@@ -39,6 +41,16 @@ export async function POST(req: NextRequest) {
   }).select('id').single();
 
   if (error) return NextResponse.json({ error: error.message }, { status: 400 });
+
+  // Funnel: merchant listed a catalog item (docs/MODEL_A_PLAN.md A7). Best-effort;
+  // keyed to the merchant.
+  try {
+    await captureServer(
+      EVENTS.CATALOG_ITEM_CREATED,
+      { merchant_id: body.merchantId, item_id: item.id, type: body.type, site_slug: body.siteSlug },
+      body.merchantId
+    );
+  } catch {}
 
   // Optional availability
   if (body.availability) {

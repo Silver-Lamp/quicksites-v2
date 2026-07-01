@@ -116,9 +116,24 @@ Built and verified end-to-end in **test mode** (real Stripe needs keys + a conne
 | A4 refund → fee reversal | ✅ | `/api/commerce/refund` (Stripe `reverse_transfer`+`refund_application_fee`); webhook `charge.refunded`; commission void |
 | A5 revenue reconciliation | ✅ | `/api/admin/revenue` + `/admin/revenue` page |
 | A6 storefront | ✅ | `/store/[merchant]`, `/p/[slug]`, `products_grid` block, seed script |
-| A7 funnel events | ⏳ | event constants exist (`lib/analytics/events.ts`); not yet emitted at each step |
+| A7 funnel events | ✅ | all 8 money-funnel steps + Model-B commission events now emitted server-side at their authoritative transitions (see below). PostHog funnel/insight = a dashboard build in PostHog itself |
 | Connect onboarding | ✅ | `/api/connect/{onboard,status,login-link}` on `payment_accounts`; `/merchant/connect` UI. Runbook: [`COMMERCE_RUNBOOK.md`](COMMERCE_RUNBOOK.md) |
 
-**Remaining:** A7 funnel emission; real Stripe test charge (user step); retire legacy
+**A7 emit map (all server-side via `captureServer`, keyed to user/merchant for funnel stitching):**
+| Event | Where emitted |
+|---|---|
+| `signup` | `app/auth/callback` + `app/api/auth/set-session` (new-user heuristic in `lib/analytics/funnel.ts`) |
+| `builder_activated` | `app/api/templates/commit` (first save: template was at rev 0) |
+| `site_published` | `app/api/templates/[id]/publish` |
+| `merchant_connected` | `app/api/connect/status` (on Stripe `charges_enabled`) |
+| `catalog_item_created` | `app/api/catalog/items` |
+| `order_created` / `order_paid` / `platform_fee_collected` | `lib/commerce/orders.ts` (`createDraftOrder`, `markOrderPaid`) |
+| `order_refunded` / `platform_fee_reversed` | `lib/commerce/orders.ts` (`markOrderRefunded`) |
+| `commission_accrued` | `lib/commerce/orders.ts` `markOrderPaid` (on ledger upsert) |
+| `commission_paid` | `lib/commerce/payouts.ts` `runPayouts` (per partner, post-transfer) |
+
+All emits are best-effort and no-op without `POSTHOG_KEY`. Building the actual funnel/revenue insight is now a PostHog-dashboard task, not a code task.
+
+**Remaining:** real Stripe test charge (user step); retire legacy
 `products` table (entangled with membership — needs care); drop `meals`/`order_items.meal_id`
 + dead admin card fns (cosmetic).

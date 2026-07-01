@@ -2,6 +2,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { createServerClient } from '@supabase/ssr';
+import { captureSignupIfNew } from '@/lib/analytics/funnel';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -27,10 +28,14 @@ export async function POST(req: NextRequest) {
   );
 
   // Set the session using the tokens from the fragment
-  const { error } = await supabase.auth.setSession({ access_token, refresh_token });
+  const { data, error } = await supabase.auth.setSession({ access_token, refresh_token });
   if (error) {
     return NextResponse.json({ ok: false, error: error.message }, { status: 400 });
   }
+
+  // Best-effort funnel: fire SIGNUP for a brand-new account (magic-link is the
+  // primary signup path). Never blocks the session write.
+  try { await captureSignupIfNew(data.user); } catch {}
 
   return NextResponse.json({ ok: true }, { headers: { 'cache-control': 'no-store' } });
 }

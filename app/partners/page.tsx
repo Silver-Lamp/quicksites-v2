@@ -61,6 +61,11 @@ export default function PartnersPage() {
               Talk to us
             </a>
           </div>
+          <p className="mt-4 text-center text-sm">
+            <Link href="/partners/calculator" className="text-sky-400 underline underline-offset-4 hover:text-sky-300">
+              Estimate your earnings vs. a flat-markup builder →
+            </Link>
+          </p>
         </section>
 
         {/* The model */}

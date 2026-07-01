@@ -2,9 +2,9 @@
 
 > The single orientation doc for humans and AI agents working in this repo.
 > If you read one file before touching code, read this one.
-> Companion docs: [`docs/DEVELOPMENT.md`](docs/DEVELOPMENT.md) (run it locally) · [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) · [`docs/COMMERCE_RUNBOOK.md`](docs/COMMERCE_RUNBOOK.md) · [`docs/MONETIZATION.md`](docs/MONETIZATION.md) · [`docs/PRICING_REDESIGN.md`](docs/PRICING_REDESIGN.md) · [`docs/LLM_METERING.md`](docs/LLM_METERING.md) · [`docs/POD_AUTHOR_PLAN.md`](docs/POD_AUTHOR_PLAN.md) · [`docs/SECRET_ROTATION_RUNBOOK.md`](docs/SECRET_ROTATION_RUNBOOK.md) · [`docs/REVIVAL_PLAN.md`](docs/REVIVAL_PLAN.md) · [`docs/COMPETITIVE_LANDSCAPE.md`](docs/COMPETITIVE_LANDSCAPE.md)
+> Companion docs: [`docs/DEVELOPMENT.md`](docs/DEVELOPMENT.md) (run it locally) · [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) · [`docs/COMMERCE_RUNBOOK.md`](docs/COMMERCE_RUNBOOK.md) · [`docs/MONETIZATION.md`](docs/MONETIZATION.md) · [`docs/PRICING_REDESIGN.md`](docs/PRICING_REDESIGN.md) · [`docs/LLM_METERING.md`](docs/LLM_METERING.md) · [`docs/POD_AUTHOR_PLAN.md`](docs/POD_AUTHOR_PLAN.md) · [`docs/SECRET_ROTATION_RUNBOOK.md`](docs/SECRET_ROTATION_RUNBOOK.md) · [`docs/REVIVAL_PLAN.md`](docs/REVIVAL_PLAN.md) · [`docs/MODEL_A_PLAN.md`](docs/MODEL_A_PLAN.md) · [`docs/COMPETITIVE_LANDSCAPE.md`](docs/COMPETITIVE_LANDSCAPE.md) · [`docs/WHITE_LABEL_PLAN.md`](docs/WHITE_LABEL_PLAN.md)
 
-Last verified: 2026-06-29 · `tsc --noEmit` + `next build` pass clean.
+Last verified: 2026-07-01 · `tsc --noEmit` + `next build` pass clean.
 
 ---
 
@@ -95,7 +95,7 @@ admin/               # NOTE: a second top-level dir (legacy/parallel admin tooli
 3. Webhook `app/api/commerce/webhooks/stripe` → `markOrderPaid()` → writes `payments` + a `commission_ledger` entry for any attributed referral.
 4. Partner/affiliate payouts: `app/api/referrals/*` (manual today; automation is a known gap).
 
-## 5b. Newer subsystems (added 2026-06)
+## 5b. Newer subsystems (added 2026-06 – 07)
 
 - **Homepage showcase** ("Built with QuickSites"): an SSR'd row of curated published sites. `app/page.tsx` is now a **server component** that calls `getShowcaseData()` (`lib/home/getShowcaseData.ts`) and passes data into the client homepage (`components/home/home-client.tsx`) + `components/home/site-showcase.tsx` (localStorage cache; admin display-mode/hide/drag-reorder). Feed: `app/api/public/showcase`; generated thumbnails: `app/api/public/showcase/[slug]/thumb`. Curated list: `lib/home/featured-sites.ts`.
 - **Builder first-run chooser**: `/admin/templates/new` shows industry / duplicate-template / blank (`components/admin/templates/start/start-your-site.tsx`). Industry scaffold seeds services + theme (`lib/builder/industryScaffold.ts`); industry themes (`lib/theme/industryPresets.ts`) are wired through the public render via `lib/theme/resolveSiteTheme.ts` + `TemplateThemeWrapper`. **`color_mode` defaults to `dark` everywhere**; the editor action toolbar has a light/dark toggle (persists to the template).
@@ -106,7 +106,12 @@ admin/               # NOTE: a second top-level dir (legacy/parallel admin tooli
 - **Admin dashboards**: AI spend `/admin/ai-costs`, cron health `/admin/cron`, print orders `/admin/print-orders` (links in the admin nav).
 - **Global settings**: `public.site_settings` (key/value jsonb, **service-role only**, RLS-denied) holds showcase mode/hidden/order. Helpers: `lib/settings/siteSettings.ts`.
 - **New crons** (`vercel.json`): `agency-site-sync`, `demo-refresh`, `print-order-sync` (all cron-secret auth'd; the latter two are flag-gated).
-- **Secrets**: a leaked service-role key was removed + a gitleaks scan added (CI `.github/workflows/secret-scan.yml` + pre-commit). Rotation still pending owner — see [`docs/SECRET_ROTATION_RUNBOOK.md`](docs/SECRET_ROTATION_RUNBOOK.md).
+- **Secrets**: a leaked service-role key was removed + a gitleaks scan added (CI `.github/workflows/secret-scan.yml` + pre-commit). Rotated 2026-06-30 — see [`docs/SECRET_ROTATION_RUNBOOK.md`](docs/SECRET_ROTATION_RUNBOOK.md).
+- **White-label / agency branding (Tier 1.5)**: reseller orgs (`organizations_public.billing_mode === 'reseller'`) rebrand the client-facing surface. Brand data = `organizations_public` (a **view** over `organizations`; exposes `name`/`logo_url`/`dark_logo_url`/`theme_json`/`email_from`), resolved host→org by `lib/org/resolveOrg.ts` and served to the client via `OrgProvider`/`useOrg()`/`useBrand()` (`app/providers.tsx`) and `GET /api/org/branding` (`lib/org/branding.ts`, reseller-gated → 404 else). Branded surfaces: login/join pages, admin chrome wordmark+logo (`components/admin/admin-chrome.tsx`, `AppHeader/app-header.tsx`), transactional emails (`orgEmailBrand()` in `lib/email.ts` → per-org `email_from` sender + display-name/footer; **inert until a Resend domain is verified**), and `theme_json` accents (`lib/org/theme.ts#pickAccentColor`, validated hex). See [`docs/WHITE_LABEL_PLAN.md`](docs/WHITE_LABEL_PLAN.md).
+- **Money-funnel instrumentation (Model A / A7)**: all 8 funnel steps + partner commission events emit server-side via `captureServer` at their authoritative transitions (`signup`→`platform_fee_collected`, `commission_accrued`/`_paid`). Event constants: `lib/analytics/events.ts`; signup heuristic: `lib/analytics/funnel.ts`. Building the PostHog funnel/insight is now a dashboard task. See [`docs/MODEL_A_PLAN.md`](docs/MODEL_A_PLAN.md).
+- **Green-path money-path proofs** (admin-gated, in-app, no real Stripe): `POST /api/admin/commerce/e2e-demo` (seed merchant → order → paid → platform fee + partner residual, asserts the numbers) and `POST /api/admin/commerce/pod-demo` (author/POD flagship: Lulu book + Gelato poster, asserts the fee is taken on **margin** with the printer base cost carved out + a print job is queued). Both idempotent; `{cleanup:true}` tears down.
+- **Sales tax**: when `QS_STRIPE_TAX_ENABLED=true`, Stripe `automatic_tax` runs at checkout and `markOrderPaid` records the computed tax to `orders.tax_cents` + reconciles `total_cents` (`parseStripeTaxTotals` in `lib/commerce/fees.ts`). Tax is **excluded from the platform-fee basis** (fee is locked at draft on the pre-tax subtotal); surfaced on the receipt.
+- **Public marketing surfaces**: `/partners` (reseller landing), `/partners/calculator` (interactive GMV earnings vs flat-markup), and `/compare` (features-vs-Duda/GoHighLevel chart with sourced pricing + an honest "where they lead" section). Positioning source: [`docs/COMPETITIVE_LANDSCAPE.md`](docs/COMPETITIVE_LANDSCAPE.md).
 
 ## 6. Architecture facts that will surprise you
 

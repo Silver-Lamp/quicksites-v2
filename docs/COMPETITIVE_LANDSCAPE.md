@@ -110,7 +110,7 @@ Ordered by leverage. Effort: S ≈ ≤1 day · M ≈ 2–5 days · L ≈ 1–2 w
 
 ### Tier 1 — Close the white-label gap vs Duda/GHL (the reseller motion)
 4. **Partner self-serve onboarding** *(L)* — partner signs up → auto-issued `referral_code` → branded signup link → branded dashboard, no admin in the loop. This is GHL's SaaS Mode bar and our biggest Model B gap.
-5. **Full white-label surface** *(M–L)* — agency branding on client login, editor chrome, transactional emails, support touchpoints. Match Duda's "brand front-and-center" baseline (`organizations_public` theming → extend to auth + emails).
+5. **Full white-label surface** *(M–L)* — agency branding on client login, editor chrome, transactional emails, support touchpoints. Match Duda's "brand front-and-center" baseline (`organizations_public` theming → extend to auth + emails). **Scoped** into ordered, shippable slices in [`WHITE_LABEL_PLAN.md`](WHITE_LABEL_PLAN.md) — the org/brand plumbing already exists (`resolveOrg`/`OrgProvider`/`useOrgBranding`); the foundation is a missing `GET /api/org/branding` route (referenced by 4 callers) + an `orgEmailBrand()` helper, then emails → login/join → admin chrome, all gated on `billing_mode==='reseller'`.
 6. **Partner-facing residual dashboard** *(M)* — live "you've earned $X across N merchants, $Y pending payout," riding `commission_ledger` + `payout_runs`. Turns the residual from backend fact into a sales weapon.
 
 ### Tier 2 — Match table-stakes storefront depth (where Duda is ahead)

@@ -40,7 +40,17 @@ Foundation effort: **S**. It unblocks Slices 1 + 2 at once.
 - Note: `useOrgBranding` skips the API on localhost unless `NEXT_PUBLIC_ORG_BRANDING_TRY_API=1`.
 - **Done:** the already-wired login/register pages now light up from the live endpoint for reseller hosts; central hosts get 404 → QuickSites default (no regression).
 
-### Slice 1 — Branded transactional emails *(M)*
+### Slice 1 — Branded transactional emails *(M)* · ✅ **shipped**
+The central helper [`../lib/email.ts`](../lib/email.ts) defaulted to `'delivered.menu <noreply@your-domain.com>'` (stale) and every sender hardcoded "QuickSites" / `*.quicksites.ai`. Now routed through `orgEmailBrand()`.
+
+- ✅ `lib/email.ts`: added pure `buildEmailBrand()` + `extractEmailAddress()` and async `orgEmailBrand()` (resolveOrg → reseller ? org brand : QuickSites); fixed the stale `delivered.menu` defaults. Unit-tested (`lib/__tests__/emailBrand.test.ts`, 8 cases).
+- ✅ Wired the customer-facing senders: welcome (`resend-welcome-email`), invite (`admin/invite`), badge (`notify-creator`), contact confirmation + owner notify (`send-contact-email`) — each now sends under `brand.from` with `brand.footer`/name.
+- **Decision applied:** central verified sender address (from `EMAIL_FROM`), org name in the display-name + subject + footer. A true per-domain sender is a later additive `organizations_public.email_from` column.
+- Deliberately left: `app/api/contact/route.ts` (internal sales notification *to us*, not customer-facing) and `cron/email-drain` (sends pre-composed queued HTML; its `from` default is now QuickSites, not `delivered.menu`).
+- **Done:** a reseller org's welcome/invite/badge/contact emails show that org's name + footer; central orgs unchanged. tsc + jest green.
+
+<details><summary>Original touch-point table (for reference)</summary>
+
 The central helper [`../lib/email.ts`](../lib/email.ts) defaults to `'delivered.menu <noreply@your-domain.com>'` (stale) and every sender hardcodes "QuickSites" / `*.quicksites.ai`. Route all through `orgEmailBrand()`.
 
 | File | Touch |
@@ -56,6 +66,8 @@ The central helper [`../lib/email.ts`](../lib/email.ts) defaults to `'delivered.
 
 - **Decision:** per-partner sender identity needs a verified sending domain in Resend. First cut = **central sender, org name in the display-name + subject + footer** (`"{org.name} <noreply@quicksites.ai>"`); add an optional `organizations_public.email_from` + `email_signature` column later for true per-domain senders.
 - **Accept:** a reseller org's welcome/invite/contact emails show that org's name + logo + support address; central orgs unchanged. `htmlToText` still clean.
+
+</details>
 
 ### Slice 2 — Branded client login / join / auth *(S–M)* · ✅ **shipped**
 Unlocked by Slice 0.

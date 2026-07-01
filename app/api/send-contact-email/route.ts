@@ -2,6 +2,7 @@ import { Resend } from 'resend';
 import { lazyClient } from '@/lib/lazyClient';
 import { createClient } from '@supabase/supabase-js';
 import { NextResponse } from 'next/server';
+import { orgEmailBrand } from '@/lib/email';
 
 const resend = lazyClient(() => new Resend(process.env.RESEND_API_KEY));
 const supabase = createClient(
@@ -31,8 +32,9 @@ export async function POST(req: Request) {
   let error: string | null = null;
 
   try {
+    const brand = await orgEmailBrand();
     const response = await resend.emails.send({
-      from: 'QuickSites Contact <sandon@contact.quicksites.ai>',
+      from: brand.from,
       to: uniqueRecipients as string[],
       subject,
       text: message,
@@ -44,10 +46,10 @@ export async function POST(req: Request) {
     // Send confirmation to the user if applicable
     if (user_email && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(user_email)) {
       await resend.emails.send({
-        from: 'QuickSites <sandon@contact.quicksites.ai>',
+        from: brand.from,
         to: [user_email],
         subject: 'Thanks for contacting us!',
-        text: `Hi there,\n\nThanks for reaching out. We’ve received your message and will get back to you shortly.\n\n— The QuickSites Team`,
+        text: `Hi there,\n\nThanks for reaching out. We’ve received your message and will get back to you shortly.\n\n${brand.footer}`,
       });
     }
   } catch (err: any) {

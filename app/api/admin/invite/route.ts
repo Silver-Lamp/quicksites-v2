@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSupabase } from '@/lib/supabase/server';
+import { orgEmailBrand, type EmailBrand } from '@/lib/email';
 
 type InvitePayload = {
   emails: string[];         // required
@@ -26,6 +27,8 @@ export async function POST(req: NextRequest) {
     if (!u?.user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
     const base = process.env.QS_PUBLIC_URL || process.env.APP_BASE_URL || 'http://localhost:3000';
+    // White-label: send the invite under the reseller org's brand when applicable.
+    const brand = await orgEmailBrand();
     const results: Array<{ email: string, status: 'invited'|'link'|'exists'|'error', message?: string, userId?: string, inviteUrl?: string }> = [];
 
     for (const email of emails) {
@@ -73,10 +76,10 @@ export async function POST(req: NextRequest) {
             const { Resend } = await import('resend');
             const resend = new Resend(process.env.RESEND_API_KEY);
             await resend.emails.send({
-              from: process.env.INVITE_FROM || 'QuickSites <noreply@quicksites.ai>',
+              from: process.env.INVITE_FROM || brand.from,
               to: email,
-              subject: 'You’re invited to QuickSites',
-              html: inviteEmailHtml(inviteLink, base),
+              subject: `You’re invited to ${brand.name}`,
+              html: inviteEmailHtml(inviteLink, base, brand),
             });
             results.push({ email, status: 'link', userId: invitedUserId || undefined, inviteUrl: inviteLink, message: 'Invite link sent via email.' });
           } catch (e: any) {
@@ -98,10 +101,10 @@ export async function POST(req: NextRequest) {
   }
 }
 
-function inviteEmailHtml(link: string, base: string) {
+function inviteEmailHtml(link: string, base: string, brand: EmailBrand) {
   return `
   <div style="font-family:Inter,system-ui,Segoe UI,sans-serif;max-width:560px;margin:24px auto;padding:24px;border:1px solid #eee;border-radius:12px">
-    <h2 style="margin:0 0 12px;color:#111">You’re invited to QuickSites</h2>
+    <h2 style="margin:0 0 12px;color:#111">You’re invited to ${brand.name}</h2>
     <p style="color:#444;line-height:1.6">Click the button below to accept your invite and finish setting up your account.</p>
     <p style="margin:20px 0"><a href="${link}" style="background:#6b46ff;color:#fff;text-decoration:none;padding:10px 16px;border-radius:8px;display:inline-block">Accept invite</a></p>
     <p style="color:#666;font-size:12px">If the button doesn’t work, copy & paste this URL into your browser: <br/><a href="${link}">${link}</a></p>

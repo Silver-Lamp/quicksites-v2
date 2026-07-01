@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { getServerSupabase } from '@/lib/supabase/server';
 import SiteHeader from '@/components/site/site-header';
 import { PARTNER_FEE_SHARE, MAX_PLATFORM_FEE_PERCENT, RESIDUAL_MONTHS } from '@/lib/commerce/partner-terms';
+import { getPartnerStats } from '@/lib/commerce/partnerStats';
 import { JoinButton, CopyLink, ConnectPayouts } from './client';
 
 export const dynamic = 'force-dynamic';
@@ -61,24 +62,15 @@ export default async function PartnerDashboard() {
     );
   }
 
-  const [{ data: attrs }, { data: ledger }, { data: payoutAcct }] = await Promise.all([
-    admin.from('attributions').select('merchant_id').in('referral_code', myCodes),
-    admin.from('commission_ledger').select('amount_cents, status, currency').in('referral_code', myCodes),
+  const [stats, { data: payoutAcct }] = await Promise.all([
+    getPartnerStats(admin, myCodes, user.id),
     admin.from('partner_payout_accounts').select('status').eq('user_id', user.id).eq('provider', 'stripe').maybeSingle(),
   ]);
   const payoutStatus = (payoutAcct as any)?.status ?? null;
 
-  const totals = { pending: 0, approved: 0, paid: 0 };
-  let cur = 'USD';
-  for (const r of ledger ?? []) {
-    cur = r.currency || cur;
-    if (r.status === 'pending') totals.pending += r.amount_cents;
-    else if (r.status === 'approved') totals.approved += r.amount_cents;
-    else if (r.status === 'paid') totals.paid += r.amount_cents;
-  }
-  const lifetime = totals.pending + totals.approved + totals.paid;
+  const { totals, lifetime, referredCount, perMerchant, payouts, currency: cur } = stats;
   const primaryCode = myCodes[0];
-  const shareLink = `${base}/?ref=${encodeURIComponent(primaryCode)}`;
+  const shareLink = `${base}/join/${encodeURIComponent(primaryCode)}`;
 
   return (
     <>
@@ -103,7 +95,7 @@ export default async function PartnerDashboard() {
 
         {/* Numbers */}
         <div className="mt-6 grid grid-cols-2 gap-4 md:grid-cols-4">
-          <Stat label="Referred merchants" value={String((attrs ?? []).length)} />
+          <Stat label="Referred merchants" value={String(referredCount)} />
           <Stat label="Lifetime earned" value={usd(lifetime, cur)} highlight />
           <Stat label="Pending" value={usd(totals.pending, cur)} />
           <Stat label="Paid out" value={usd(totals.paid, cur)} />
@@ -119,6 +111,75 @@ export default async function PartnerDashboard() {
           </p>
           <ConnectPayouts status={payoutStatus} />
         </div>
+
+        {/* Per-merchant earnings */}
+        <div className="mt-8">
+          <div className="mb-2 text-sm font-medium">Earnings by merchant</div>
+          {perMerchant.length === 0 ? (
+            <p className="rounded-xl border border-zinc-800 bg-zinc-900/40 p-5 text-sm text-zinc-400">
+              No referred merchants yet. Share your link above — you earn on every order they process.
+            </p>
+          ) : (
+            <div className="overflow-hidden rounded-xl border border-zinc-800">
+              <table className="w-full text-sm">
+                <thead className="bg-zinc-900/60 text-xs text-zinc-400">
+                  <tr>
+                    <th className="px-4 py-2 text-left font-medium">Merchant</th>
+                    <th className="px-4 py-2 text-right font-medium">Orders</th>
+                    <th className="px-4 py-2 text-right font-medium">Earned</th>
+                    <th className="px-4 py-2 text-right font-medium">Pending</th>
+                    <th className="px-4 py-2 text-right font-medium">Paid</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {perMerchant.map((m) => (
+                    <tr key={m.merchantId} className="border-t border-zinc-800/80">
+                      <td className="px-4 py-2">{m.name}</td>
+                      <td className="px-4 py-2 text-right tabular-nums text-zinc-400">{m.orderCount}</td>
+                      <td className="px-4 py-2 text-right tabular-nums font-medium">{usd(m.earned, cur)}</td>
+                      <td className="px-4 py-2 text-right tabular-nums text-zinc-400">{usd(m.pending, cur)}</td>
+                      <td className="px-4 py-2 text-right tabular-nums text-zinc-400">{usd(m.paid, cur)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+
+        {/* Payout history */}
+        {payouts.length > 0 && (
+          <div className="mt-8">
+            <div className="mb-2 flex items-end justify-between">
+              <div className="text-sm font-medium">Payout history</div>
+              <Link href="/rep/payouts" className="text-xs text-zinc-400 underline underline-offset-4 hover:text-zinc-200">
+                Full history &amp; tax
+              </Link>
+            </div>
+            <div className="overflow-hidden rounded-xl border border-zinc-800">
+              <table className="w-full text-sm">
+                <thead className="bg-zinc-900/60 text-xs text-zinc-400">
+                  <tr>
+                    <th className="px-4 py-2 text-left font-medium">Date</th>
+                    <th className="px-4 py-2 text-left font-medium">Method</th>
+                    <th className="px-4 py-2 text-left font-medium">Status</th>
+                    <th className="px-4 py-2 text-right font-medium">Amount</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {payouts.map((p, i) => (
+                    <tr key={i} className="border-t border-zinc-800/80">
+                      <td className="px-4 py-2 text-zinc-300">{p.paidAt ? new Date(p.paidAt).toLocaleDateString() : '—'}</td>
+                      <td className="px-4 py-2 text-zinc-400 capitalize">{p.method ?? '—'}</td>
+                      <td className="px-4 py-2 text-zinc-400 capitalize">{p.status ?? '—'}</td>
+                      <td className="px-4 py-2 text-right tabular-nums font-medium">{usd(p.amountCents, p.currency)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
 
         <p className="mt-6 text-sm text-zinc-400">
           You keep {Math.round(PARTNER_FEE_SHARE * 100)}% of every order fee (set up to{' '}

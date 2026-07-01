@@ -4,6 +4,7 @@ import { getServerSupabase } from '@/lib/supabase/server';
 import { stripe } from '@/lib/stripe/server';
 import { buildAgencyLineItems, agencyDiscountConfig } from '@/lib/billing/agency';
 import { countBillableSites, planForTier, type AgencyTier } from '@/lib/billing/plans';
+import { ensureAttributionForMerchant } from '@/lib/commerce/attribution';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -115,5 +116,14 @@ async function ensureMerchantForUser(
     default_currency: 'USD',
   }).select('id').single();
   if (error) throw error;
+
+  // Bind the referred visitor's qs_ref cookie to their new merchant so residual
+  // commissions accrue to the partner. This is the self-serve path (the user IS
+  // the merchant, so the cookie is theirs); idempotent + no-ops without a cookie.
+  try {
+    await ensureAttributionForMerchant(created.id);
+  } catch {
+    /* attribution is best-effort — never block merchant creation */
+  }
   return created.id;
 }

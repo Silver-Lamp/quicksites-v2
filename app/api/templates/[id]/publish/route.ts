@@ -5,6 +5,8 @@ export const dynamic = 'force-dynamic';
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSupabase } from '@/lib/supabase/server';
 import { supabaseAdmin } from '@/lib/supabase/admin';
+import { captureServer } from '@/lib/analytics/posthog-server';
+import { EVENTS } from '@/lib/analytics/events';
 
 const UUID_V4 =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -71,6 +73,16 @@ export async function POST(
     .eq('id', c.id);
 
   if (upErr) return NextResponse.json({ error: upErr.message }, { status: 400 });
+
+  // Funnel: a site went live (docs/MODEL_A_PLAN.md A7). Best-effort; keyed to the
+  // publisher so it stitches to their signup/builder-activated steps.
+  try {
+    await captureServer(
+      EVENTS.SITE_PUBLISHED,
+      { template_id: c.id, base_slug, owner_id: c.owner_id ?? null },
+      user.id
+    );
+  } catch {}
 
   // Best-effort: if the owner is on an agency plan, reconcile their per-site
   // subscription quantity now that a site went live. Never blocks publish;

@@ -8,6 +8,8 @@
 import { createClient } from '@supabase/supabase-js';
 import { stripe } from '@/lib/stripe/server';
 import { REFUND_WINDOW_DAYS } from './partner-terms';
+import { captureServer } from '@/lib/analytics/posthog-server';
+import { EVENTS } from '@/lib/analytics/events';
 
 // `any` client: the trimmed types/supabase.ts omits the commerce tables, so the
 // typed client resolves them to `never`. The rest of lib/commerce does the same.
@@ -202,6 +204,16 @@ export async function runPayouts(opts: {
     totalPaid += claimedAmount;
     rowsMarkedPaid += claimedRows.length;
     partners.push({ affiliateUserId: owner, amountCents: claimedAmount, codes: [...g.codes], method, txRef: outcome.txRef, payoutId });
+
+    // Funnel (Model B): partner residual paid out. Best-effort; keyed to the
+    // affiliate so it stitches to their accrued commissions. (MODEL_A_PLAN A7)
+    try {
+      await captureServer(
+        EVENTS.COMMISSION_PAID,
+        { affiliate_user_id: owner, payout_id: payoutId, amount_cents: claimedAmount, currency: g.currency, method, codes: [...g.codes] },
+        owner
+      );
+    } catch { /* analytics never blocks a payout */ }
   }
 
   const totalCents = opts.dryRun ? totalAttempted : totalPaid;

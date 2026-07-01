@@ -56,7 +56,7 @@
 - [ ] **A3** first live test-mode order → platform fee collected. ← *first dollar*
 - [ ] **A4/A5** refund fee-reversal + revenue reconciliation.
 - [ ] **A6** seeded demo storefront (finish chefs/meals checkout).
-- [ ] **A7** PostHog funnel + platform-revenue insight.
+- [x] **A7** funnel events emitted server-side at all 8 money steps + commission accrue/pay (see [`MODEL_A_PLAN.md`](MODEL_A_PLAN.md) A7 emit map). Building the PostHog funnel/insight dashboard is now a PostHog-side task.
 
 ## Milestone 4 — Backend extraction to Supabase Edge Functions (phased)
 Execute ARCHITECTURE §6.4: Phase 0 (Deno-safe `packages/db`+`contracts`+env) → Phase 1 (**stripe-webhook** Edge Function) → Phase 2 (**commerce-checkout**) → Phase 3 (cron via `pg_cron`) → Phase 4 (payouts/domains/AI) → Phase 5 (admin/public). Phases 1–2 are shared with Model A (A3/A4/A2) — the monetization work *is* the first backend extraction. Each phase reversible behind a flag.

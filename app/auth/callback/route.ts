@@ -2,6 +2,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { createServerClient } from '@supabase/ssr';
+import { captureSignupIfNew } from '@/lib/analytics/funnel';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -30,12 +31,14 @@ export async function GET(req: NextRequest) {
       }
     );
 
-    const { error } = await supabase.auth.exchangeCodeForSession(code);
+    const { data, error } = await supabase.auth.exchangeCodeForSession(code);
     if (error) {
       return NextResponse.redirect(
         new URL(`/login?error=callback&msg=${encodeURIComponent(error.message)}&next=${encodeURIComponent(next)}`, url.origin)
       );
     }
+    // Best-effort funnel: fire SIGNUP for a brand-new account (never blocks auth).
+    try { await captureSignupIfNew(data.user); } catch {}
     return NextResponse.redirect(new URL(next, url.origin));
   }
 

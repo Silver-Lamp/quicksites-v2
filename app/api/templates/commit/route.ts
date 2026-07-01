@@ -7,6 +7,8 @@ import { sha256 } from '@/lib/server/templateUtils';
 import { diffBlocks } from '@/lib/diff/blocks';
 import { logTemplateEvent } from '@/lib/server/logTemplateEvent';
 import { stripEmpty, obj, dget, ddel, enrichPatchWithIdentity } from '@/lib/templates/identity';
+import { captureServer } from '@/lib/analytics/posthog-server';
+import { EVENTS } from '@/lib/analytics/events';
 
 // optional org (keeps single-tenant working)
 let resolveOrg: undefined | (() => Promise<any>);
@@ -132,6 +134,7 @@ type BeforeRow = {
   rev: number | null;
   data: any;
   company_id: string | null;
+  owner_id: string | null;
 };
 
 type TemplateRowForEditor = {
@@ -198,7 +201,7 @@ export async function POST(req: Request) {
     // before state (no generics; cast once)
     const beforeRes = await pub
       .from('templates')
-      .select('rev,data,company_id')
+      .select('rev,data,company_id,owner_id')
       .eq('id', id)
       .single();
 
@@ -290,6 +293,19 @@ export async function POST(req: Request) {
           detail: String((r as any).error?.message || (r as any).error),
         }, 409);
       }
+    }
+
+    // Funnel: the first successful commit on a fresh template (rev 0 → 1) is the
+    // "builder activated" signal. Fire once, best-effort; keyed to the owner so it
+    // stitches to their signup. (docs/MODEL_A_PLAN.md A7)
+    if (beforeRev === 0) {
+      try {
+        await captureServer(
+          EVENTS.BUILDER_ACTIVATED,
+          { template_id: id, org_id: orgId ?? null, kind: kind ?? 'save' },
+          beforeRow.owner_id ?? undefined
+        );
+      } catch {}
     }
 
     // Rehydrate authoritative row (no generics; cast once)

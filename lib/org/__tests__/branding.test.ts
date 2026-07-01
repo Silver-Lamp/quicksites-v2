@@ -13,6 +13,7 @@ const baseOrg: Org = {
   support_email: 'help@acme.example',
   support_url: null,
   billing_mode: 'reseller',
+  email_from: null,
 };
 
 describe('buildOrgBranding', () => {

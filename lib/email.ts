@@ -97,7 +97,10 @@ export async function orgEmailBrand(): Promise<EmailBrand> {
     branded: org.billing_mode === 'reseller',
     logoUrl: org.dark_logo_url || org.logo_url,
     supportEmail: org.support_email,
-    envFrom: process.env.EMAIL_FROM,
+    // A reseller org can set its own sender address (organizations.email_from) —
+    // this only actually sends once that domain is verified in Resend; until then
+    // it's null and we fall back to the platform's EMAIL_FROM. See WHITE_LABEL_PLAN.
+    envFrom: org.email_from || process.env.EMAIL_FROM,
   });
 }
 

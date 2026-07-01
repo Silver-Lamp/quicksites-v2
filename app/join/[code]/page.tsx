@@ -9,6 +9,7 @@ import { getServerSupabase } from '@/lib/supabase/server';
 import SiteHeader from '@/components/site/site-header';
 import { PARTNER_FEE_SHARE } from '@/lib/commerce/partner-terms';
 import { resolveOrg } from '@/lib/org/resolveOrg';
+import { pickAccentColor } from '@/lib/org/theme';
 
 export const dynamic = 'force-dynamic';
 
@@ -34,6 +35,9 @@ export default async function JoinByCode({ params }: { params: Promise<{ code: s
   const isReseller = org.billing_mode === 'reseller';
   const brandName = isReseller ? org.name : 'QuickSites';
   const brandLogo = isReseller ? (org.dark_logo_url || org.logo_url || null) : null;
+  // White-label accent from the org theme (docs/WHITE_LABEL_PLAN.md). Falls back
+  // to the default sky styling when unset/invalid.
+  const accent = isReseller ? pickAccentColor(org.theme_json) : null;
 
   // Best-effort partner name (never block on it).
   let partnerName = `A ${brandName} partner`;
@@ -66,7 +70,7 @@ export default async function JoinByCode({ params }: { params: Promise<{ code: s
             // eslint-disable-next-line @next/next/no-img-element
             <img src={brandLogo} alt={brandName} className="mx-auto mb-4 h-10 w-auto object-contain" />
           )}
-          <div className="text-xs uppercase tracking-wide text-sky-400">You've been invited</div>
+          <div className="text-xs uppercase tracking-wide text-sky-400" style={accent ? { color: accent } : undefined}>You've been invited</div>
           <h1 className="mt-2 text-3xl font-bold">Build your site with {brandName}</h1>
           <p className="mx-auto mt-3 max-w-md text-zinc-400">
             <span className="text-zinc-200">{partnerName}</span> invited you. Get a website and an online store,
@@ -76,7 +80,8 @@ export default async function JoinByCode({ params }: { params: Promise<{ code: s
           <div className="mt-8 flex justify-center">
             <Link
               href={start}
-              className="rounded-lg bg-sky-500 px-6 py-3 text-base font-medium text-zinc-950 shadow-lg transition hover:bg-sky-400"
+              className={`rounded-lg px-6 py-3 text-base font-medium text-zinc-950 shadow-lg transition ${accent ? '' : 'bg-sky-500 hover:bg-sky-400'}`}
+              style={accent ? { backgroundColor: accent } : undefined}
             >
               Get started free
             </Link>

@@ -14,6 +14,8 @@ export type Org = {
   support_email: string | null;
   support_url: string | null;
   billing_mode: 'central' | 'reseller' | 'none' | null;
+  /** Per-org email sender ("Name <addr>" or "addr"); requires a verified Resend domain. */
+  email_from: string | null;
 };
 
 const DEFAULT_FALLBACK: Org = {
@@ -27,6 +29,7 @@ const DEFAULT_FALLBACK: Org = {
   support_email: null,
   support_url: null,
   billing_mode: 'central',
+  email_from: null,
 };
 
 export async function resolveOrg(): Promise<Org> {
@@ -93,5 +96,6 @@ function normalize(row: any): Org {
     support_email: row.support_email ?? null,
     support_url: row.support_url ?? null,
     billing_mode: (row.billing_mode ?? 'central') as Org['billing_mode'],
+    email_from: row.email_from ?? null,
   };
 }

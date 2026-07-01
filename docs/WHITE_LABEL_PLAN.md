@@ -87,10 +87,15 @@ Unlocked by Slice 0.
 ---
 
 ## Status: Tier 1.5 slices 0–3 all shipped ✅
-Foundation + login/join + emails + admin wordmark/logo are live. Remaining follow-ups are infra/ops-gated, not code:
-- **Per-domain email sender** — needs a verified sending domain in Resend + an `organizations_public.email_from` column (schema decision). Today: central verified domain, org display-name/footer.
-- **Supabase-Auth magic-link email body** — branded via a Supabase project email template (ops), not app code.
-- **`theme_json` color accents** — optional cross-cutting polish (CTA/header accent from the org theme).
+Foundation + login/join + emails + admin wordmark/logo are live.
+
+**Follow-ups shipped:**
+- ✅ **Per-domain email sender** — migration `20260701_org_public_email_theme.sql` adds `organizations.email_from` and exposes it (+ `theme_json`, which the view was silently dropping) on `organizations_public`. `orgEmailBrand()` now prefers `org.email_from` over the platform `EMAIL_FROM`. **Inert until set**: `email_from` is null for every org today, and it only actually sends once that domain is verified in Resend — so it's ready the moment ops verifies a domain, with no code change.
+- ✅ **`theme_json` accents** — `pickAccentColor()` (`lib/org/theme.ts`, validated hex from `primary`/`accent`/`colors.primary`) drives the `/join/[code]` CTA + eyebrow for reseller orgs; falls back to the default sky styling. `theme_json` is now actually populated on `Org` (the view fix above).
+
+**Still ops-only (not code):**
+- **Supabase-Auth magic-link email body** — branded via a Supabase project email template (dashboard), not app code.
+- Broader accent application (admin chrome / login theming) — the helper + data are ready; extend surface-by-surface as desired.
 
 ---
 

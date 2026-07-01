@@ -34,10 +34,11 @@ Foundation effort: **S**. It unblocks Slices 1 + 2 at once.
 
 ## Slices (ordered, each independently shippable)
 
-### Slice 0 — Foundation *(S)* · **do first**
-- Implement `GET /api/org/branding` (org-aware; mirror `app/api/org/resolve`). Note: `useOrgBranding` skips the API on localhost unless `NEXT_PUBLIC_ORG_BRANDING_TRY_API=1`.
-- Add `orgEmailBrand()` server helper.
-- **Accept:** login/register render the org logo/name from the live endpoint; a unit test covers the branding route's default fallback.
+### Slice 0 — Foundation *(S)* · ✅ **shipped (branding endpoint)**
+- ✅ `GET /api/org/branding` (`app/api/org/branding/route.ts`) — `resolveOrg()` → pure `buildOrgBranding()` (`lib/org/branding.ts`), gated on `billing_mode === 'reseller'`, 404 otherwise so central orgs fall through unchanged. Emits both `logo_dark_url` + `dark_logo_url` (callers disagree on the key). Unit-tested (`lib/org/__tests__/branding.test.ts`).
+- ⏳ `orgEmailBrand()` server helper — deferred to **Slice 1** (where the email senders that consume it live), to avoid shipping an unused export.
+- Note: `useOrgBranding` skips the API on localhost unless `NEXT_PUBLIC_ORG_BRANDING_TRY_API=1`.
+- **Done:** the already-wired login/register pages now light up from the live endpoint for reseller hosts; central hosts get 404 → QuickSites default (no regression).
 
 ### Slice 1 — Branded transactional emails *(M)*
 The central helper [`../lib/email.ts`](../lib/email.ts) defaults to `'delivered.menu <noreply@your-domain.com>'` (stale) and every sender hardcodes "QuickSites" / `*.quicksites.ai`. Route all through `orgEmailBrand()`.
@@ -56,12 +57,13 @@ The central helper [`../lib/email.ts`](../lib/email.ts) defaults to `'delivered.
 - **Decision:** per-partner sender identity needs a verified sending domain in Resend. First cut = **central sender, org name in the display-name + subject + footer** (`"{org.name} <noreply@quicksites.ai>"`); add an optional `organizations_public.email_from` + `email_signature` column later for true per-domain senders.
 - **Accept:** a reseller org's welcome/invite/contact emails show that org's name + logo + support address; central orgs unchanged. `htmlToText` still clean.
 
-### Slice 2 — Branded client login / join / auth *(S–M)*
-Mostly unlocked by Slice 0.
-- `app/login/LoginForm.tsx` + `login-client.tsx`: already consume `/api/org/branding` — verify dark/light logo + name render once the route exists; drop the hardcoded dev email at `LoginForm.tsx:127`.
-- `app/join/[code]/page.tsx:52`: replace "Build your site with **QuickSites**" with the org/partner name; optionally theme the CTA from `theme_json`.
-- `app/api/login/route.ts`: the magic-link OTP email is sent by **Supabase Auth**, not us — to brand it, customize the Supabase email template per project (ops task) or note the limitation.
-- **Accept:** on a reseller host, `/login` + `/join/[code]` show the partner brand end-to-end; central host shows QuickSites.
+### Slice 2 — Branded client login / join / auth *(S–M)* · ✅ **shipped**
+Unlocked by Slice 0.
+- ✅ `app/login/LoginForm.tsx` + `login-client.tsx`: already consumed `/api/org/branding`; now that the route exists, reseller hosts render the org logo/name. (The hardcoded dev-email prefill at `LoginForm.tsx:127` is dev-only — left as-is.)
+- ✅ `app/join/[code]/page.tsx`: headline + partner-default name now use the resolved brand (`org.name` when `billing_mode==='reseller'`, else "QuickSites"); the platform reseller-recruitment CTA is hidden on white-labeled sites so it can't leak "become a QuickSites reseller" under a partner's brand.
+- ⏳ `app/api/login/route.ts`: the magic-link OTP email is sent by **Supabase Auth**, not us — branding its body is a Supabase-side template task (ops), out of scope here.
+- ⏳ Optional: theme the join CTA from `theme_json` (deferred; colors are a cross-cutting v2 item).
+- **Done:** on a reseller host, `/login` + `/join/[code]` show the partner brand; central host shows QuickSites (verified via the 404 fallback + build).
 
 ### Slice 3 — Branded editor / admin chrome *(M)*
 - `components/admin/admin-chrome.tsx:24–25` (GuestChrome) and `components/admin/AppHeader/app-header.tsx:174,182`: replace hardcoded "QuickSites" with `useOrg().name` / logo (client) — org already flows via `OrgProvider`, so this is prop-free.

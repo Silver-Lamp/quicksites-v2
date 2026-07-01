@@ -8,6 +8,7 @@ import Link from 'next/link';
 import { getServerSupabase } from '@/lib/supabase/server';
 import SiteHeader from '@/components/site/site-header';
 import { PARTNER_FEE_SHARE } from '@/lib/commerce/partner-terms';
+import { resolveOrg } from '@/lib/org/resolveOrg';
 
 export const dynamic = 'force-dynamic';
 
@@ -27,8 +28,14 @@ export default async function JoinByCode({ params }: { params: Promise<{ code: s
   // Unknown/invalid invite → fall back to the normal front door.
   if (!rc) redirect('/');
 
+  // White-label: on a reseller host the page carries the agency's brand, not
+  // ours. Central/default orgs keep "QuickSites". (docs/WHITE_LABEL_PLAN.md Slice 2)
+  const org = await resolveOrg();
+  const isReseller = org.billing_mode === 'reseller';
+  const brandName = isReseller ? org.name : 'QuickSites';
+
   // Best-effort partner name (never block on it).
-  let partnerName = 'A QuickSites partner';
+  let partnerName = `A ${brandName} partner`;
   try {
     const { data: prof } = await admin
       .from('user_profiles')
@@ -55,7 +62,7 @@ export default async function JoinByCode({ params }: { params: Promise<{ code: s
       <main className="mx-auto max-w-2xl px-6 py-16 text-white">
         <div className="rounded-2xl border border-zinc-800 bg-zinc-900/40 p-8 text-center">
           <div className="text-xs uppercase tracking-wide text-sky-400">You've been invited</div>
-          <h1 className="mt-2 text-3xl font-bold">Build your site with QuickSites</h1>
+          <h1 className="mt-2 text-3xl font-bold">Build your site with {brandName}</h1>
           <p className="mx-auto mt-3 max-w-md text-zinc-400">
             <span className="text-zinc-200">{partnerName}</span> invited you. Get a website and an online store,
             and only pay when you make a sale.
@@ -83,12 +90,17 @@ export default async function JoinByCode({ params }: { params: Promise<{ code: s
           ))}
         </ul>
 
-        <p className="mt-8 text-center text-sm text-zinc-500">
-          Are you an agency or reseller?{' '}
-          <Link href="/partners" className="text-sky-400 underline underline-offset-4">
-            Earn {Math.round(PARTNER_FEE_SHARE * 100)}% on every order your merchants process →
-          </Link>
-        </p>
+        {/* Platform reseller-recruitment CTA — hidden on white-labeled (reseller)
+            sites so we don't advertise "become a QuickSites reseller" under a
+            partner's own brand. */}
+        {!isReseller && (
+          <p className="mt-8 text-center text-sm text-zinc-500">
+            Are you an agency or reseller?{' '}
+            <Link href="/partners" className="text-sky-400 underline underline-offset-4">
+              Earn {Math.round(PARTNER_FEE_SHARE * 100)}% on every order your merchants process →
+            </Link>
+          </p>
+        )}
       </main>
     </>
   );

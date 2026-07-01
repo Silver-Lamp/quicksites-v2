@@ -79,7 +79,7 @@ Unlocked by Slice 0.
 
 ### Slice 3 — Branded editor / admin chrome *(M)* · ✅ **shipped**
 - ✅ `components/admin/admin-chrome.tsx` (GuestChrome) and `components/admin/AppHeader/app-header.tsx` (skeleton + guest header): the hardcoded "QuickSites" wordmark now comes from `useBrand()` (the purpose-built hook in `app/providers.tsx`), gated on `billingMode === 'reseller'`. Org flows via `OrgProvider` from `app/layout.tsx`, so it's prop-free and hydration-stable (context-derived → identical SSR + CSR).
-- ⏳ Logo image swap deferred: a reseller's remote logo host isn't in `next.config` `images.domains`, so swapping the 24px favicon to an arbitrary remote logo needs image-domain allowlisting first. The wordmark (the actual brand leak) is done; the default favicon stays.
+- ✅ Logo image: the admin guest chrome + `/join/[code]` now render the reseller's logo (`dark_logo_url || logo_url`) via a plain `<img>` (avoids the next/image host allowlist; the login page already did this). Falls back to the default favicon/text when no logo is set.
 - ⏳ Optional: header accent from `theme_json` (deferred, cross-cutting v2).
 - **Decision applied:** first cut = **header wordmark + login**, not deep editor internals (Duda-parity baseline is "brand front-and-center," not every pixel).
 - **Done:** a reseller admin sees their name in the chrome; central admin unchanged; no layout change (text swap only).
@@ -87,7 +87,10 @@ Unlocked by Slice 0.
 ---
 
 ## Status: Tier 1.5 slices 0–3 all shipped ✅
-Foundation + login/join + emails + admin wordmark are live. Remaining follow-ups are the deferred items above (per-domain email sender, remote logo allowlisting, `theme_json` accents) — additive, not blockers.
+Foundation + login/join + emails + admin wordmark/logo are live. Remaining follow-ups are infra/ops-gated, not code:
+- **Per-domain email sender** — needs a verified sending domain in Resend + an `organizations_public.email_from` column (schema decision). Today: central verified domain, org display-name/footer.
+- **Supabase-Auth magic-link email body** — branded via a Supabase project email template (ops), not app code.
+- **`theme_json` color accents** — optional cross-cutting polish (CTA/header accent from the org theme).
 
 ---
 

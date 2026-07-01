@@ -33,6 +33,7 @@ export default async function JoinByCode({ params }: { params: Promise<{ code: s
   const org = await resolveOrg();
   const isReseller = org.billing_mode === 'reseller';
   const brandName = isReseller ? org.name : 'QuickSites';
+  const brandLogo = isReseller ? (org.dark_logo_url || org.logo_url || null) : null;
 
   // Best-effort partner name (never block on it).
   let partnerName = `A ${brandName} partner`;
@@ -61,6 +62,10 @@ export default async function JoinByCode({ params }: { params: Promise<{ code: s
       <SiteHeader sticky />
       <main className="mx-auto max-w-2xl px-6 py-16 text-white">
         <div className="rounded-2xl border border-zinc-800 bg-zinc-900/40 p-8 text-center">
+          {brandLogo && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={brandLogo} alt={brandName} className="mx-auto mb-4 h-10 w-auto object-contain" />
+          )}
           <div className="text-xs uppercase tracking-wide text-sky-400">You've been invited</div>
           <h1 className="mt-2 text-3xl font-bold">Build your site with {brandName}</h1>
           <p className="mx-auto mt-3 max-w-md text-zinc-400">

@@ -77,11 +77,17 @@ Unlocked by Slice 0.
 - ⏳ Optional: theme the join CTA from `theme_json` (deferred; colors are a cross-cutting v2 item).
 - **Done:** on a reseller host, `/login` + `/join/[code]` show the partner brand; central host shows QuickSites (verified via the 404 fallback + build).
 
-### Slice 3 — Branded editor / admin chrome *(M)*
-- `components/admin/admin-chrome.tsx:24–25` (GuestChrome) and `components/admin/AppHeader/app-header.tsx:174,182`: replace hardcoded "QuickSites" with `useOrg().name` / logo (client) — org already flows via `OrgProvider`, so this is prop-free.
-- Optional: header accent from `useOrg().theme_json`.
-- **Decision (scope):** how far do we white-label the *builder itself*? Recommended first cut — brand the **header logo/name + login only**; leave deep editor internals QuickSites-branded (Duda-parity baseline is "brand front-and-center," not every pixel). Gate on `billing_mode === 'reseller'`.
-- **Accept:** a reseller admin sees their logo/name in the header; central admin unchanged; no layout regressions.
+### Slice 3 — Branded editor / admin chrome *(M)* · ✅ **shipped**
+- ✅ `components/admin/admin-chrome.tsx` (GuestChrome) and `components/admin/AppHeader/app-header.tsx` (skeleton + guest header): the hardcoded "QuickSites" wordmark now comes from `useBrand()` (the purpose-built hook in `app/providers.tsx`), gated on `billingMode === 'reseller'`. Org flows via `OrgProvider` from `app/layout.tsx`, so it's prop-free and hydration-stable (context-derived → identical SSR + CSR).
+- ⏳ Logo image swap deferred: a reseller's remote logo host isn't in `next.config` `images.domains`, so swapping the 24px favicon to an arbitrary remote logo needs image-domain allowlisting first. The wordmark (the actual brand leak) is done; the default favicon stays.
+- ⏳ Optional: header accent from `theme_json` (deferred, cross-cutting v2).
+- **Decision applied:** first cut = **header wordmark + login**, not deep editor internals (Duda-parity baseline is "brand front-and-center," not every pixel).
+- **Done:** a reseller admin sees their name in the chrome; central admin unchanged; no layout change (text swap only).
+
+---
+
+## Status: Tier 1.5 slices 0–3 all shipped ✅
+Foundation + login/join + emails + admin wordmark are live. Remaining follow-ups are the deferred items above (per-domain email sender, remote logo allowlisting, `theme_json` accents) — additive, not blockers.
 
 ---
 

@@ -61,3 +61,24 @@ export function flatShippingCents(hasShippable: boolean): number {
   const c = Math.floor(Number(process.env.QS_POD_SHIPPING_CENTS ?? '0')) || 0;
   return Math.max(0, c);
 }
+
+/**
+ * Pull the sales tax + charged total from a Stripe event. Only Checkout Session
+ * events (`checkout.session.*`) carry a `total_details.amount_tax` breakdown when
+ * Stripe `automatic_tax` is on; PaymentIntent events don't, so both fields come
+ * back null and the caller skips. Amounts are integer cents.
+ *
+ * Tax is charged on top of the merchant's subtotal and is deliberately NOT part
+ * of the platform-fee basis (we take a cut of the merchant's margin, not the
+ * government's tax) — this helper only surfaces what the buyer actually paid so
+ * the order row, receipt, and reconciliation stay truthful.
+ */
+export function parseStripeTaxTotals(rawEvent: any): { taxCents: number | null; totalCents: number | null } {
+  const obj = rawEvent?.data?.object ?? null;
+  const amountTax = obj?.total_details?.amount_tax;
+  const amountTotal = obj?.amount_total;
+  return {
+    taxCents: Number.isFinite(amountTax) ? Math.max(0, Math.floor(amountTax)) : null,
+    totalCents: Number.isFinite(amountTotal) ? Math.max(0, Math.floor(amountTotal)) : null,
+  };
+}

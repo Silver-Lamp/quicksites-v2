@@ -1,5 +1,5 @@
 // lib/commerce/__tests__/fees.test.ts
-import { computeSubtotalCents, computePlatformFeeCents, flatShippingCents } from '../fees';
+import { computeSubtotalCents, computePlatformFeeCents, flatShippingCents, parseStripeTaxTotals } from '../fees';
 import {
   partnerCommissionCents,
   clampPlatformFeePercent,
@@ -117,6 +117,47 @@ describe('shipping is excluded from the platform-fee basis', () => {
     // fee calc, so adding shipping must not change the fee.
     const feeIfShippingIncluded = computePlatformFeeCents({ collectFee: true, totalCents: 5000 + 699, feePercent: 0.08 });
     expect(feeIfShippingIncluded).not.toBe(feeOnProduct); // proves the basis matters
+  });
+});
+
+describe('parseStripeTaxTotals', () => {
+  it('extracts tax + total from a checkout.session event with automatic_tax', () => {
+    const event = { data: { object: { amount_total: 5750, total_details: { amount_tax: 350 } } } };
+    expect(parseStripeTaxTotals(event)).toEqual({ taxCents: 350, totalCents: 5750 });
+  });
+
+  it('reports zero tax (but a real total) when automatic_tax is off', () => {
+    const event = { data: { object: { amount_total: 5400, total_details: { amount_tax: 0 } } } };
+    expect(parseStripeTaxTotals(event)).toEqual({ taxCents: 0, totalCents: 5400 });
+  });
+
+  it('returns null tax for a PaymentIntent event (no total_details breakdown)', () => {
+    const event = { data: { object: { amount: 5400 } } };
+    expect(parseStripeTaxTotals(event)).toEqual({ taxCents: null, totalCents: null });
+  });
+
+  it('is null-safe for malformed/empty input', () => {
+    expect(parseStripeTaxTotals(undefined)).toEqual({ taxCents: null, totalCents: null });
+    expect(parseStripeTaxTotals({})).toEqual({ taxCents: null, totalCents: null });
+    expect(parseStripeTaxTotals({ data: { object: null } })).toEqual({ taxCents: null, totalCents: null });
+  });
+
+  it('floors and clamps to non-negative integer cents', () => {
+    const event = { data: { object: { amount_total: 5750.9, total_details: { amount_tax: -5 } } } };
+    expect(parseStripeTaxTotals(event)).toEqual({ taxCents: 0, totalCents: 5750 });
+  });
+});
+
+describe('tax is excluded from the platform-fee basis', () => {
+  it('the fee is locked at draft on the pre-tax subtotal; recording tax later never changes it', () => {
+    // $54 subtotal at 8% → $4.32, regardless of any tax Stripe adds on top.
+    const fee = computePlatformFeeCents({ collectFee: true, totalCents: 5400, feePercent: 0.08 });
+    expect(fee).toBe(432);
+    // The tax parsed from the event is only recorded on the order — it is not fed
+    // back into computePlatformFeeCents, so the take-rate stays on margin.
+    const { taxCents } = parseStripeTaxTotals({ data: { object: { amount_total: 5750, total_details: { amount_tax: 350 } } } });
+    expect(taxCents).toBe(350);
+    expect(fee).toBe(432); // unchanged by the presence of tax
   });
 });
 

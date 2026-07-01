@@ -5,7 +5,7 @@ import { captureServer } from '@/lib/analytics/posthog-server';
 import { EVENTS } from '@/lib/analytics/events';
 import { partnerCommissionCents, PARTNER_FEE_SHARE } from './partner-terms';
 import { isAgencyPlanMerchant } from '@/lib/billing/plans';
-import { computeSubtotalCents, computePlatformFeeCents, flatShippingCents } from './fees';
+import { computeSubtotalCents, computePlatformFeeCents, flatShippingCents, parseStripeTaxTotals } from './fees';
 
 /** Create a pending order and its line items. Returns order id and totals. */
 export async function createDraftOrder(opts: {
@@ -150,6 +150,23 @@ export async function markOrderPaid(
     .select('id');
   if (oErr) throw oErr;
   if (!transitioned || transitioned.length === 0) return;
+
+  // 2b) Record any sales tax Stripe computed at checkout (automatic_tax). Tax is
+  //     charged on top of our subtotal and is NOT part of the platform-fee basis
+  //     (the fee was already locked at draft on the pre-tax subtotal). We just
+  //     store it + reconcile total_cents to what the buyer actually paid so the
+  //     receipt and reconciliation are truthful. Best-effort; never blocks payment.
+  try {
+    const { taxCents, totalCents: chargedTotal } = parseStripeTaxTotals(raw);
+    if (taxCents && taxCents > 0) {
+      await supabase
+        .from('orders')
+        .update({ tax_cents: taxCents, ...(chargedTotal ? { total_cents: chargedTotal } : {}) })
+        .eq('id', orderId);
+    }
+  } catch (e) {
+    console.warn('Tax record step failed:', (e as any)?.message || e);
+  }
 
   // 3) Fetch order context once
   const { data: orderRow, error: ordErr } = await supabase

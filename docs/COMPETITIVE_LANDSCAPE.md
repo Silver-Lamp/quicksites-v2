@@ -2,7 +2,8 @@
 
 > Where QuickSites sits against the market, who actually threatens us, and the gap punch-list to win our niche.
 > Companion to [`../CLAUDE.md`](../CLAUDE.md), [`MONETIZATION.md`](MONETIZATION.md), and [`PRICING_REDESIGN.md`](PRICING_REDESIGN.md).
-> Reviewed: 2026-06-30 · grounded in a code audit of the money path + market research (links inline).
+> Reviewed: 2026-07-01 · grounded in a code audit of the money path + market research (links inline).
+> **Punch-list status (§8): all tiers shipped** — Tier 0–3 items are ✅ below; the full white-label surface (Tier 1.5) is scoped + built in [`WHITE_LABEL_PLAN.md`](WHITE_LABEL_PLAN.md).
 
 ---
 

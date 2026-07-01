@@ -42,7 +42,7 @@ export async function POST(req: NextRequest) {
     currency = data?.default_currency ?? 'USD';
   }
 
-  const { orderId, totalCents, platformFeeCents } = await createDraftOrder({
+  const { orderId, totalCents, platformFeeCents, shippingCents } = await createDraftOrder({
     merchantId: body.merchantId,
     siteSlug: body.siteSlug ?? '',
     currency: currency ?? 'USD',
@@ -73,6 +73,7 @@ export async function POST(req: NextRequest) {
       successUrl,
       cancelUrl,
       collectShipping,
+      shippingCents,
       metadata: { siteSlug: body.siteSlug ?? '' },
     });
     await supabase.from('orders').update({ provider_checkout_id: checkout.providerRef }).eq('id', orderId);

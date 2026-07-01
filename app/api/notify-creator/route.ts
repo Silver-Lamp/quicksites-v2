@@ -5,6 +5,7 @@ import { lazyClient } from '@/lib/lazyClient';
 import { json } from '@/lib/api/json';
 import { Resend } from 'resend';
 import { NextRequest } from 'next/server';
+import { orgEmailBrand } from '@/lib/email';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -36,8 +37,9 @@ export async function POST(req: NextRequest) {
 
   if (!user || !user.email) return json({ error: 'Creator email not found' }, { status: 404 });
 
+  const brand = await orgEmailBrand();
   await resend.emails.send({
-    from: 'awards@quicksites.ai',
+    from: brand.from,
     to: user.email,
     subject: '🏆 Your Campaign Just Earned a Badge!',
     html: `
@@ -45,6 +47,8 @@ export async function POST(req: NextRequest) {
       <p>Your campaign "<strong>${campaign.headline}</strong>" has been recognized as a weekly top campaign.</p>
       <p>You can view and share your badge here:</p>
       <a href="https://quicksites.ai/support/${slug}?badge=done">View My Badge</a>
+      <hr />
+      <p>${brand.footer}</p>
     `,
   });
 

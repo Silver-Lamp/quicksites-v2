@@ -16,7 +16,7 @@ export async function sendEmail({ to, subject, html, from, headers }: SendEmailP
   const sender =
     from ??
     process.env.EMAIL_FROM ??
-    'delivered.menu <noreply@your-domain.com>';
+    'QuickSites <noreply@quicksites.ai>';
 
   if (!RESEND) {
     // Dev fallback: don't send, just log
@@ -35,6 +35,70 @@ export async function sendEmail({ to, subject, html, from, headers }: SendEmailP
 
   if (error) return { ok: false as const, error };
   return { ok: true as const, id: data?.id };
+}
+
+/* ------------------------------- WHITE-LABEL -------------------------------- */
+// Org-aware email branding (docs/WHITE_LABEL_PLAN.md Slice 1). Reseller orgs send
+// under their own display name + support/footer; central orgs stay QuickSites.
+// The sending *address* stays on the platform's verified domain for now — only
+// the display name changes (per-domain senders are a later additive column).
+
+export type EmailBrand = {
+  name: string;         // "Acme Agency" or "QuickSites"
+  from: string;         // "Acme Agency <noreply@quicksites.ai>"
+  fromAddress: string;  // "noreply@quicksites.ai"
+  supportEmail: string; // reply-to / support address
+  logoUrl: string | null;
+  footer: string;       // "— The Acme Agency Team"
+  branded: boolean;
+};
+
+/** Pull the bare address out of a "Name <addr>" (or plain "addr") string. */
+export function extractEmailAddress(fromLike: string | null | undefined, fallback: string): string {
+  if (!fromLike) return fallback;
+  const angle = fromLike.match(/<([^>]+)>/);
+  if (angle?.[1]) return angle[1].trim();
+  return fromLike.includes('@') ? fromLike.trim() : fallback;
+}
+
+/** Pure brand assembly (no I/O) so the from-string + footer are unit-testable. */
+export function buildEmailBrand(input: {
+  orgName?: string | null;
+  branded: boolean;
+  logoUrl?: string | null;
+  supportEmail?: string | null;
+  envFrom?: string | null;      // process.env.EMAIL_FROM ("Name <addr>" or "addr")
+  defaultAddress?: string;      // platform sender address
+}): EmailBrand {
+  const defaultAddress = input.defaultAddress || 'noreply@quicksites.ai';
+  const name = input.branded && input.orgName ? input.orgName : 'QuickSites';
+  const fromAddress = extractEmailAddress(input.envFrom, defaultAddress);
+  return {
+    name,
+    from: `${name} <${fromAddress}>`,
+    fromAddress,
+    supportEmail: input.supportEmail || 'support@quicksites.ai',
+    logoUrl: input.branded ? input.logoUrl ?? null : null,
+    footer: `— The ${name} Team`,
+    branded: input.branded,
+  };
+}
+
+/**
+ * Resolve the current request's org and return its email brand. Reseller orgs
+ * (organizations_public.billing_mode === 'reseller') get their own name/support;
+ * everyone else stays QuickSites. Server-only (uses resolveOrg → next/headers).
+ */
+export async function orgEmailBrand(): Promise<EmailBrand> {
+  const { resolveOrg } = await import('@/lib/org/resolveOrg');
+  const org = await resolveOrg();
+  return buildEmailBrand({
+    orgName: org.name,
+    branded: org.billing_mode === 'reseller',
+    logoUrl: org.dark_logo_url || org.logo_url,
+    supportEmail: org.support_email,
+    envFrom: process.env.EMAIL_FROM,
+  });
 }
 
 /* --------------------------------- TEMPLATES -------------------------------- */
@@ -104,7 +168,7 @@ export function deliveryEmailTemplate(args: {
 } 
 
 export function restockTemplate(args: RestockArgs) {
-  const site = escapeHtml(args.siteName ?? 'delivered.menu');
+  const site = escapeHtml(args.siteName ?? 'QuickSites');
 
   const mealUrl =
     'mealUrl' in args

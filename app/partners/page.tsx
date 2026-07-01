@@ -61,9 +61,12 @@ export default function PartnersPage() {
               Talk to us
             </a>
           </div>
-          <p className="mt-4 text-center text-sm">
+          <p className="mt-4 flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-center text-sm">
             <Link href="/partners/calculator" className="text-sky-400 underline underline-offset-4 hover:text-sky-300">
               Estimate your earnings vs. a flat-markup builder →
+            </Link>
+            <Link href="/compare" className="text-sky-400 underline underline-offset-4 hover:text-sky-300">
+              How we compare vs Duda &amp; GoHighLevel →
             </Link>
           </p>
         </section>
@@ -149,6 +152,8 @@ export default function PartnersPage() {
           <Link href="/pricing" className="underline hover:text-zinc-300">Pricing</Link>
           <span className="mx-1">•</span>
           <Link href="/features" className="underline hover:text-zinc-300">Features</Link>
+          <span className="mx-1">•</span>
+          <Link href="/compare" className="underline hover:text-zinc-300">Compare</Link>
         </footer>
       </div>
     </>

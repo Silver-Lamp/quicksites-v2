@@ -10,6 +10,7 @@ import clsx from 'clsx';
 import { supabase } from '@/lib/supabase/client';
 import { useSafeScroll } from '@/hooks/useSafeScroll';
 import { useSafeTargetRef } from '@/lib/ui/safeTargetRef';
+import { useBrand } from '@/app/providers';
 
 // client-only to avoid SSR/CSR randomness
 const InspirationalQuote = dynamic(
@@ -41,6 +42,11 @@ export default function AppHeader(
   const router = useRouter();
   const { user, role, isLoggedIn } = useSafeAuth();
   const { traceId, sessionId } = useRequestMeta();
+
+  // White-label wordmark: reseller orgs show their own name (docs/WHITE_LABEL_PLAN
+  // Slice 3). Context-derived, so it's identical on SSR + CSR (no hydration drift).
+  const brand = useBrand();
+  const brandName = brand.billingMode === 'reseller' ? brand.name : 'QuickSites';
 
   // ── Hydration guard: render a stable skeleton on first client pass
   const [hydrated, setHydrated] = React.useState(false);
@@ -171,7 +177,7 @@ export default function AppHeader(
       {!hydrated ? (
         <div className="max-w-screen-lg mx-auto flex justify-between items-center">
           <div className="flex items-center gap-4">
-            <span>QuickSites</span>
+            <span>{brandName}</span>
             <div className="text-xs text-cyan-300 max-w-xs" />
           </div>
           <a href="/login" className="text-blue-400 hover:underline">Log In</a>
@@ -179,7 +185,7 @@ export default function AppHeader(
       ) : guest ? (
         <div className="max-w-screen-lg mx-auto flex justify-between items-center">
           <div className="flex items-center gap-4">
-            <span>QuickSites</span>
+            <span>{brandName}</span>
             <div className="text-xs text-cyan-300 max-w-xs" suppressHydrationWarning>
               <InspirationalQuote tags={quoteTags} />
             </div>

@@ -8,6 +8,7 @@ import ResponsiveAdminLayout from './responsive-admin-layout';
 import GuestPublishBanner from './guest-publish-banner';
 import { useSafeScroll } from '@/hooks/useSafeScroll';
 import { useSafeTargetRef } from '@/lib/ui/safeTargetRef';
+import { useBrand } from '@/app/providers';
 
 const DESKTOP_BP = 1024; // lg
 
@@ -17,12 +18,17 @@ const DESKTOP_BP = 1024; // lg
  * are confined to the editor by the admin layout's path gate.
  */
 function GuestChrome({ children }: { children: React.ReactNode }) {
+  const brand = useBrand();
+  // White-label: reseller orgs show their own name. Keep the default favicon for
+  // now — swapping to an arbitrary remote reseller logo needs image-domain
+  // allowlisting (next.config `images.domains`). (docs/WHITE_LABEL_PLAN.md Slice 3)
+  const brandName = brand.billingMode === 'reseller' ? brand.name : 'QuickSites';
   return (
     <div data-admin-root data-guest className="min-h-screen bg-background text-foreground">
       <header className="sticky top-0 z-30 border-b bg-background/95 backdrop-blur">
         <div className="mx-auto flex max-w-6xl items-center gap-2 px-4 py-2">
-          <Image src="/qs-default-favicon.ico" width={24} height={24} alt="QuickSites" className="rounded" />
-          <span className="text-sm font-semibold">QuickSites</span>
+          <Image src="/qs-default-favicon.ico" width={24} height={24} alt={brandName} className="rounded" />
+          <span className="text-sm font-semibold">{brandName}</span>
         </div>
       </header>
       <GuestPublishBanner />

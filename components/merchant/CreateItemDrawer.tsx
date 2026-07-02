@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import VariantsEditor, { type VariantsPayload } from './VariantsEditor';
+import ImageUploadField from './ImageUploadField';
 
 type ItemType = 'meal' | 'product' | 'service' | 'digital';
 
@@ -19,6 +20,7 @@ export default function CreateItemDrawer({ merchantId, siteSlug, onCreated }:{
   // Optional variants (size/color grid, each its own price). Generic products only.
   const [variantsPayload, setVariantsPayload] = useState<VariantsPayload>({ variantOptions: [], variants: [] });
   const [stock, setStock] = useState<string>(''); // plain-item stock; '' = unlimited
+  const [image, setImage] = useState<string>(''); // main product image URL
 
   // Print-on-demand (Lulu book / Gelato merch)
   const [pod, setPod] = useState<'none' | 'lulu' | 'gelato'>('none');
@@ -47,6 +49,7 @@ export default function CreateItemDrawer({ merchantId, siteSlug, onCreated }:{
         type, title, slug, description: desc,
         priceCents: Math.round((price || 0) * 100),
         availability: { kind: 'always' },
+        ...(image.trim() ? { imageUrl: image.trim() } : {}),
         ...(useVariants ? { variantOptions: variantsPayload.variantOptions, variants: variantsPayload.variants } : {}),
         ...(!useVariants && stock !== '' ? { stock: Math.max(0, Math.floor(Number(stock) || 0)) } : {}),
         ...(pod !== 'none' ? { fulfillmentProvider: pod, podSpec } : {}),
@@ -56,7 +59,7 @@ export default function CreateItemDrawer({ merchantId, siteSlug, onCreated }:{
     if (res.ok) {
       const { id } = await res.json();
       setOpen(false);
-      setTitle(''); setSlug(''); setDesc(''); setPrice(0); setStock(''); setVariantsPayload({ variantOptions: [], variants: [] });
+      setTitle(''); setSlug(''); setDesc(''); setPrice(0); setStock(''); setImage(''); setVariantsPayload({ variantOptions: [], variants: [] });
       setPod('none'); setInteriorUrl(''); setCoverUrl(''); setPageCount(0); setProductUid(''); setFileUrl(''); setBaseCost(0);
       onCreated?.(id);
     } else {
@@ -103,6 +106,9 @@ export default function CreateItemDrawer({ merchantId, siteSlug, onCreated }:{
               <input type="number" step="0.01" min="0" value={price}
                 onChange={(e)=>setPrice(Number(e.target.value))}
                 className="rounded bg-neutral-900 px-3 py-2 text-sm ring-1 ring-neutral-800" />
+
+              <label className="mt-2 text-xs text-neutral-400">Image</label>
+              <ImageUploadField value={image} onChange={setImage} folder="catalog/items" />
 
               {pod === 'none' && variantsPayload.variants.length === 0 && (
                 <>

@@ -116,7 +116,7 @@ Ordered by leverage. Effort: S ≈ ≤1 day · M ≈ 2–5 days · L ≈ 1–2 w
 
 ### Tier 2 — Match table-stakes storefront depth (where Duda is ahead)
 7. **Storefront hardening** *(M–L)* — wire the chefs/meals checkout end-to-end (currently ~20%), add product/variant management parity for the common cases. Doesn't need Duda's 20k-product depth — needs *one credible vertical that visibly works*.
-8. **Refund fee-reversal verification** *(S)* — confirm `charge.refunded` reverses `platform_fee_cents` cleanly (built in `lib/commerce/refunds.ts`; add the E2E test).
+8. ~~**Refund fee-reversal verification** *(S)*~~ ✅ — confirm `charge.refunded` reverses the platform application fee cleanly. **Shipped**: the proportional-reversal math is extracted to a pure `computeFeeReversalDeltaCents()` in `lib/commerce/refunds.ts` and covered by `lib/commerce/__tests__/refunds.test.ts` (17 cases) — full/partial/floored reversals, idempotency on retried webhooks, incremental-slice math across successive partials, cooperation with `refund_application_fee:true`, the fee-cap guard, and the best-effort swallow-don't-throw contract (mocked Stripe, no network).
 9. ~~**Tax/shipping basics** *(M)*~~ ✅ — automated tax + flat/zoned shipping for physical/POD orders, so author/apparel merchants aren't blocked. **Shipped**: opt-in flat shipping (#72) + Stripe `automatic_tax` on POD/physical checkouts (`QS_STRIPE_TAX_ENABLED`), with the computed tax recorded to `orders.tax_cents` in `markOrderPaid` (`parseStripeTaxTotals`, unit-tested), surfaced on the receipt, and deliberately excluded from the platform-fee basis (we take a cut of margin, not tax).
 
 ### Tier 3 — Lean into what neither competitor has

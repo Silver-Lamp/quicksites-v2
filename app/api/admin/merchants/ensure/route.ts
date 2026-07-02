@@ -113,7 +113,7 @@ export async function POST(req: Request) {
     const payload: any = {
       email,
       user_id: userIdForMerchant, // REQUIRED by your schema
-      // name/provider/default_platform_fee_bps have defaults in your table
+      // name/provider have defaults in your table; fee config now lives on payment_accounts
     };
 
     const ins = await supabaseAdmin.from('merchants').insert(payload).select('id').single();

@@ -51,7 +51,7 @@
 **Goal:** first real (test-mode) dollar through the e-commerce slice. Full ticketed plan: [`MODEL_A_PLAN.md`](MODEL_A_PLAN.md).
 - [x] **Lead model chosen: Model A.**
 - [x] Canonical funnel events defined (`lib/analytics/events.ts`).
-- [ ] **A1** consolidate on `payment_accounts` (kill `merchant_payment_accounts`).
+- [x] **A1** consolidate on `payment_accounts` (killed `merchant_payment_accounts` + bps fee columns; migration `20260701_retire_legacy_connect_bps.sql`).
 - [ ] **A2** one checkout entry point (`app/api/commerce/checkout`).
 - [ ] **A3** first live test-mode order → platform fee collected. ← *first dollar*
 - [ ] **A4/A5** refund fee-reversal + revenue reconciliation.

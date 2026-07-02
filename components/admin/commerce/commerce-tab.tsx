@@ -86,7 +86,6 @@ export default function CommerceTab({ merchantId, siteId = null }: Props) {
           Connect a payout account and set your platform fee (applied via Stripe Connect).
         </p>
         <PaymentSettingsPanel
-          siteId={siteId ?? undefined}
           merchantId={merchantId}
           initialPlatformFeeBps={75}
         />

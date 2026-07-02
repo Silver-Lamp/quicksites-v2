@@ -97,7 +97,6 @@ export default function TemplateSettingsPanel({ template, onChange }: Props) {
       />
 
       <PaymentSettingsPanel
-        siteId={template.id}
         merchantId={'00001'}
         initialPlatformFeeBps={75}
       />

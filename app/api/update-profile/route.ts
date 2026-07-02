@@ -49,6 +49,10 @@ export async function POST(req: Request) {
   } = await userSupabase.auth.getUser();
 
   if (!user) return json({ error: 'Unauthorized' }, { status: 401 });
+  // Anonymous guests can't own a public profile handle.
+  if (user.is_anonymous) {
+    return json({ error: 'sign up to continue', code: 'needs_signup' }, { status: 401 });
+  }
 
   // Ensure no other user is using this handle
   const { data: handleConflict } = await supabase

@@ -40,6 +40,11 @@ export async function POST(req: Request) {
   if (authError || !user) {
     return json({ error: 'Unauthorized' }, { status: 401 });
   }
+  // Guests (anonymous sessions) build draft *templates*, not sites — a real
+  // account is required to create a site.
+  if (user.is_anonymous) {
+    return json({ error: 'sign up to continue', code: 'needs_signup' }, { status: 401 });
+  }
 
   // ⏳ Rate limiting: one site every 10 minutes per user
   // sites table has no created_by column — cast to any; was failing silently; see types migration

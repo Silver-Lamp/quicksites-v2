@@ -3,6 +3,7 @@ export const dynamic = 'force-dynamic';
 
 import { NextResponse } from 'next/server';
 import { getServerSupabase } from '@/lib/supabase/server';
+import { requireUser } from '@/lib/auth/requireUser';
 
 function safeParse<T = any>(v: any): T | undefined {
   if (!v) return undefined;
@@ -65,6 +66,12 @@ export async function GET(req: Request) {
 }
 
 export async function POST(req: Request) {
+  // Reject unauthenticated / anonymous callers (was fully open). NOTE: base_slug
+  // is shared across duplicated templates so per-owner scoping is ambiguous; this
+  // is display-name-only metadata — a stricter owner-of-base check is a follow-up.
+  const gate = await requireUser();
+  if (gate instanceof NextResponse) return gate;
+
   const payload = await req.json().catch(() => ({} as any));
   const base_slug = sanitizeBaseSlug(payload?.base_slug || '');
   const display_name = sanitizeDisplayName(payload?.display_name || '');

@@ -60,6 +60,29 @@ export async function requireMerchantOwner(merchantId: string): Promise<{ user: 
 }
 
 /**
+ * Require the caller to own or be a member of `companyId` (companies.created_by
+ * or a public.company_members row) or be a platform admin → { user } or
+ * 401/403/404. Scheduler/company-config routes take a company_id in the body/query
+ * and write via the service role (RLS bypass), so this is the gate.
+ */
+export async function requireCompanyMember(companyId: string): Promise<{ user: User } | NextResponse> {
+  const gate = await requireUser();
+  if (gate instanceof NextResponse) return gate;
+  if (await isPlatformAdmin(gate.user.id)) return gate;
+
+  const { data: co } = await (supabaseAdmin as any)
+    .from('companies').select('created_by').eq('id', companyId).maybeSingle();
+  if (!co) return NextResponse.json({ error: 'Not found' }, { status: 404 });
+  if (co.created_by === gate.user.id) return gate;
+
+  const { data: mem } = await (supabaseAdmin as any)
+    .from('company_members').select('user_id')
+    .eq('company_id', companyId).eq('user_id', gate.user.id).maybeSingle();
+  if (!mem) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  return gate;
+}
+
+/**
  * Require the caller to be an admin of `orgId` (app.is_org_admin) or a platform
  * admin → { user } or 401/403.
  */

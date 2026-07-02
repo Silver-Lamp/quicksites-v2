@@ -31,42 +31,8 @@ export function checkStock(available: number | null, requested: number): { ok: b
   return { ok: true };
 }
 
-export type StockDecrement = { variantId?: string | null; quantity: number };
-
-/**
- * Apply order-line decrements to a catalog item's metadata, clamping at 0 and only
- * touching TRACKED stock (untracked lines are left alone). Returns the new metadata
- * and whether anything changed (so the caller can skip a no-op write). Never
- * mutates the input.
- */
-export function applyStockDecrements(
-  metadata: unknown,
-  decrements: StockDecrement[],
-): { metadata: Record<string, unknown>; changed: boolean } {
-  const meta: Record<string, any> = metadata && typeof metadata === 'object' ? { ...(metadata as any) } : {};
-  let changed = false;
-
-  const variants: any[] | null = Array.isArray(meta.variants) ? meta.variants.map((v: any) => ({ ...v })) : null;
-
-  for (const d of decrements ?? []) {
-    const qty = Math.max(0, Math.floor(Number(d.quantity) || 0));
-    if (qty <= 0) continue;
-
-    if (d.variantId && variants) {
-      const v = variants.find((x) => x.id === d.variantId);
-      if (v && normalizeStock(v.stock) !== null) {
-        v.stock = Math.max(0, normalizeStock(v.stock)! - qty);
-        changed = true;
-      }
-    } else if (!d.variantId) {
-      const cur = normalizeStock(meta.stock);
-      if (cur !== null) {
-        meta.stock = Math.max(0, cur - qty);
-        changed = true;
-      }
-    }
-  }
-
-  if (variants && changed) meta.variants = variants;
-  return { metadata: meta, changed };
-}
+// NOTE: the paid-order decrement is done atomically in the DB via the
+// decrement_catalog_stock RPC (supabase/migrations/20260702_atomic_stock_decrement.sql)
+// so concurrent orders serialize on the row lock and can't oversell — a JS
+// read-modify-write here would race. These pure helpers cover the read-side gate
+// (checkStock) + authoring/normalization only.

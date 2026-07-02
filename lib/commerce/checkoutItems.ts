@@ -9,10 +9,18 @@
 export type RequestedItem = {
   catalogItemId: string;
   quantity: number;
+  variantId?: string | null; // selected variant, when the item has variants
   // title / unitAmount may be sent by the client but are IGNORED — derived below.
   title?: string;
   unitAmount?: number;
   metadata?: unknown;
+};
+
+export type CatalogVariant = {
+  id: string;
+  label: string;
+  price_cents: number | null;
+  status?: string | null;
 };
 
 export type CatalogRow = {
@@ -23,6 +31,13 @@ export type CatalogRow = {
   status: string | null;
   metadata?: unknown;
 };
+
+/** Pull the variant list off a catalog row's metadata, if any (defensive). */
+export function readVariants(metadata: unknown): CatalogVariant[] {
+  const v = (metadata as any)?.variants;
+  if (!Array.isArray(v)) return [];
+  return v.filter((x) => x && typeof x.id === 'string');
+}
 
 export type PricedItem = {
   catalogItemId: string;
@@ -67,13 +82,33 @@ export function authorizeCheckoutItems(input: {
     if (row.status !== PURCHASABLE_STATUS) {
       return { ok: false, error: `"${row.title ?? 'An item'}" is not available for purchase.`, badItemId: req.catalogItemId };
     }
-    // Distinguish an unset price (null/undefined → not for sale) from a legit $0.
-    if (row.price_cents == null) {
-      return { ok: false, error: `"${row.title ?? 'An item'}" has no price set.`, badItemId: req.catalogItemId };
+
+    // Resolve the priced entity: a selected variant if the item has any, else the
+    // item itself. Either way the PRICE and title come from the DB, not the client.
+    const variants = readVariants(row.metadata);
+    let title = row.title ?? 'Item';
+    let priceSource: number | null = row.price_cents;
+    let variant: CatalogVariant | undefined;
+
+    if (variants.length) {
+      variant = req.variantId ? variants.find((v) => v.id === req.variantId) : undefined;
+      if (!variant) {
+        return { ok: false, error: `Please choose an option for "${row.title ?? 'an item'}".`, badItemId: req.catalogItemId };
+      }
+      if ((variant.status ?? 'active') !== PURCHASABLE_STATUS) {
+        return { ok: false, error: `"${variant.label}" is not available.`, badItemId: req.catalogItemId };
+      }
+      priceSource = variant.price_cents;
+      title = `${row.title ?? 'Item'} — ${variant.label}`;
     }
-    const price = Number(row.price_cents);
+
+    // Distinguish an unset price (null/undefined → not for sale) from a legit $0.
+    if (priceSource == null) {
+      return { ok: false, error: `"${title}" has no price set.`, badItemId: req.catalogItemId };
+    }
+    const price = Number(priceSource);
     if (!Number.isFinite(price) || price < 0) {
-      return { ok: false, error: `"${row.title ?? 'An item'}" has no valid price.`, badItemId: req.catalogItemId };
+      return { ok: false, error: `"${title}" has no valid price.`, badItemId: req.catalogItemId };
     }
 
     const quantity = Math.floor(Number(req.quantity));
@@ -81,15 +116,21 @@ export function authorizeCheckoutItems(input: {
       return { ok: false, error: 'Invalid quantity.', badItemId: req.catalogItemId };
     }
     if (quantity > MAX_QUANTITY_PER_LINE) {
-      return { ok: false, error: `Quantity for "${row.title ?? 'an item'}" exceeds the per-order limit.`, badItemId: req.catalogItemId };
+      return { ok: false, error: `Quantity for "${title}" exceeds the per-order limit.`, badItemId: req.catalogItemId };
+    }
+
+    const baseMeta = row.metadata && typeof row.metadata === 'object' ? { ...(row.metadata as Record<string, unknown>) } : {};
+    if (variant) {
+      baseMeta.variant_id = variant.id;
+      baseMeta.variant_label = variant.label;
     }
 
     items.push({
       catalogItemId: row.id,
-      title: row.title ?? 'Item',
+      title,
       quantity,
       unitAmount: price, // authoritative — client-sent unitAmount is discarded
-      metadata: (row.metadata && typeof row.metadata === 'object' ? (row.metadata as Record<string, unknown>) : {}),
+      metadata: baseMeta,
     });
   }
 

@@ -21,6 +21,7 @@ const CheckoutSchema = z.object({
     .array(
       z.object({
         catalogItemId: z.string().min(1),
+        variantId: z.string().optional(), // selected variant, when the item has variants
         title: z.string().optional(), // ignored — derived from catalog_items
         quantity: z.number().int().positive(),
         unitAmount: z.number().int().nonnegative().optional(), // ignored — repriced server-side

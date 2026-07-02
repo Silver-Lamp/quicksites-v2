@@ -6,7 +6,10 @@ import { persist, createJSONStorage } from 'zustand/middleware';
 
 /* ---------- types ---------- */
 export type CartItem = {
-  id: string;
+  id: string; // line identity — composite (`<catalogItemId>::<variantId>`) when a variant is chosen
+  catalog_item_id?: string; // the underlying catalog item (for the checkout payload)
+  variant_id?: string | null;
+  variant_label?: string | null;
   title: string;
   price_cents: number;
   qty: number;
@@ -25,7 +28,9 @@ type State = {
 
 type Actions = {
   addItem: (p: {
-    id: string;
+    id: string; // catalog item id
+    variant_id?: string | null;
+    variant_label?: string | null;
     title: string;
     price_cents: number;
     qty?: number;
@@ -77,7 +82,11 @@ export const useCartStore = create<State & Actions>()(
           }
 
           const qty = Math.max(1, Math.floor(p.qty ?? 1));
-          const idx = items.findIndex((i) => i.id === p.id);
+          // Line identity is composite when a variant is chosen, so red-M and
+          // blue-L of the same product are distinct lines (setQty/removeItem and
+          // React keys all key off `id`).
+          const lineId = p.variant_id ? `${p.id}::${p.variant_id}` : p.id;
+          const idx = items.findIndex((i) => i.id === lineId);
 
           const nextItems =
             idx >= 0
@@ -85,7 +94,10 @@ export const useCartStore = create<State & Actions>()(
               : [
                   ...items,
                   {
-                    id: p.id,
+                    id: lineId,
+                    catalog_item_id: p.id,
+                    variant_id: p.variant_id ?? null,
+                    variant_label: p.variant_label ?? null,
                     title: p.title,
                     price_cents: p.price_cents,
                     qty,

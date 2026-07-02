@@ -15,7 +15,7 @@
 import { normalizeStock } from './inventory';
 
 export type InputAxis = { name?: string; values?: unknown };
-export type InputVariant = { label?: string; priceCents?: number; status?: string; options?: Record<string, unknown> | null; stock?: number | null };
+export type InputVariant = { label?: string; priceCents?: number; status?: string; options?: Record<string, unknown> | null; stock?: number | null; image?: string | null };
 
 export type NormalizedVariant = {
   id: string;
@@ -24,6 +24,7 @@ export type NormalizedVariant = {
   status: 'active' | 'inactive';
   options?: Record<string, string>;
   stock?: number; // units available; omitted = untracked
+  image?: string; // per-variant image URL; omitted = use the item's main image
 };
 export type NormalizedAxis = { name: string; values: string[] };
 
@@ -94,6 +95,7 @@ export function normalizeVariants(input: {
     seenIds.add(id);
 
     const stock = normalizeStock(v?.stock);
+    const image = String(v?.image ?? '').trim();
     variants.push({
       id,
       label,
@@ -101,6 +103,7 @@ export function normalizeVariants(input: {
       status: v?.status === 'inactive' ? 'inactive' : 'active',
       ...(options ? { options } : {}),
       ...(stock !== null ? { stock } : {}),
+      ...(image ? { image } : {}),
     });
   }
 

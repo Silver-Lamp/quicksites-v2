@@ -77,6 +77,18 @@ describe('normalizeVariants', () => {
     const r = normalizeVariants({ variants: [{ priceCents: 100 }] });
     expect(r.variants).toEqual([]);
   });
+
+  it('carries a per-variant image (trimmed) and omits it when blank', () => {
+    const r = normalizeVariants({
+      variantOptions: [{ name: 'Color', values: ['Red', 'Blue'] }],
+      variants: [
+        { priceCents: 100, options: { Color: 'Red' }, image: '  https://cdn/red.jpg  ' },
+        { priceCents: 100, options: { Color: 'Blue' }, image: '' },
+      ],
+    });
+    expect(r.variants[0].image).toBe('https://cdn/red.jpg');
+    expect(r.variants[1].image).toBeUndefined();
+  });
 });
 
 describe('mergeVariantMetadata (edit)', () => {

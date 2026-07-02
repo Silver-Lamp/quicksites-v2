@@ -24,6 +24,7 @@ export type CatalogVariant = {
   status?: string | null;
   options?: Record<string, string> | null; // axis → value, e.g. { Size: 'M', Color: 'Red' } (multi-axis)
   stock?: number | null; // units available; null/absent = untracked (unlimited)
+  image?: string | null; // per-variant image URL; absent = use the item's main image
 };
 
 export type VariantAxis = { name: string; values: string[] };

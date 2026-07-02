@@ -2,6 +2,7 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { getServerSupabase } from '@/lib/supabase/server';
+import { checkRateLimit, clientIp } from '@/lib/rateLimit';
 
 export const runtime = 'nodejs';
 
@@ -62,6 +63,20 @@ export async function POST(req: Request) {
     isAnonymous = !!user?.is_anonymous;
   } catch {
     // no session (e.g. legacy callers) — leave owner_id null as before
+  }
+
+  // Abuse guard: cap how many drafts a single IP can spin up as a guest, so a bot
+  // can't mint thousands of anon users + template rows. Real (signed-in) users are
+  // exempt. GUEST_DRAFT_HOURLY_LIMIT_PER_IP=0 disables.
+  if (isAnonymous) {
+    const limit = Number(process.env.GUEST_DRAFT_HOURLY_LIMIT_PER_IP ?? '10') || 0;
+    const rl = await checkRateLimit(`guest_draft:${clientIp(req)}`, limit, 3600);
+    if (!rl.ok) {
+      return NextResponse.json(
+        { error: 'Too many draft sites from this network. Sign up to keep building.', code: 'rate_limited' },
+        { status: 429 },
+      );
+    }
   }
 
   // Build minimal, canonical payload (don’t send generated cols)

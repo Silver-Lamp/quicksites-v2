@@ -14,7 +14,7 @@ import * as React from 'react';
 import Link from 'next/link';
 import { resolveVariantByOptions, type CatalogVariant } from '@/lib/commerce/checkoutItems';
 
-type Variant = { id: string; label: string; priceCents: number; options?: Record<string, string> | null; stock?: number | null };
+type Variant = { id: string; label: string; priceCents: number; options?: Record<string, string> | null; stock?: number | null; image?: string | null };
 type Axis = { name: string; values: string[] };
 
 type Props = {
@@ -27,12 +27,14 @@ type Props = {
   imageUrl: string | null;
   productType: string | null;
   merchantId: string | null;
+  /** Notified with the selected variant's image (or null) so the gallery can swap. */
+  onActiveImage?: (url: string | null) => void;
 };
 
 const fmt = (c: number) => `$${((Number(c) || 0) / 100).toFixed(2)}`;
 const toCatalogVariant = (v: Variant): CatalogVariant => ({ id: v.id, label: v.label, price_cents: v.priceCents, options: v.options ?? null });
 
-export default function AddToCartButton({ id, title, priceCents, variants = [], axes = [], itemStock = null, imageUrl, productType, merchantId }: Props) {
+export default function AddToCartButton({ id, title, priceCents, variants = [], axes = [], itemStock = null, imageUrl, productType, merchantId, onActiveImage }: Props) {
   const multiAxis = axes.length > 0 && variants.length > 0;
   const singleList = !multiAxis && variants.length > 0;
 
@@ -44,6 +46,17 @@ export default function AddToCartButton({ id, title, priceCents, variants = [], 
   );
 
   const [added, setAdded] = React.useState(false);
+
+  // Notify the gallery of the selected variant's image whenever the selection changes.
+  const activeImage = React.useMemo(() => {
+    const found = multiAxis
+      ? variants.find((v) => v.id === (resolveVariantByOptions(variants.map(toCatalogVariant), selected)?.id))
+      : singleList
+        ? variants.find((v) => v.id === variantId)
+        : undefined;
+    return found?.image ?? null;
+  }, [multiAxis, singleList, variants, selected, variantId]);
+  React.useEffect(() => { onActiveImage?.(activeImage); }, [activeImage, onActiveImage]);
 
   // Resolve the chosen SKU for whichever mode we're in. For multi-axis we resolve
   // the combination → an id, then look up our original Variant by that id.

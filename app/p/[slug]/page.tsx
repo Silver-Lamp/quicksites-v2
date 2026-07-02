@@ -5,7 +5,7 @@
 // via /p/{slug}. Add-to-cart integrates with the existing global cart.
 import { notFound } from 'next/navigation';
 import { createClient } from '@supabase/supabase-js';
-import AddToCartButton from './add-to-cart';
+import ProductDetail from './product-detail';
 import { readVariants, readVariantOptions } from '@/lib/commerce/checkoutItems';
 import { readItemStock } from '@/lib/commerce/inventory';
 
@@ -23,8 +23,6 @@ function firstImage(images: any): string | null {
   if (f && typeof f === 'object') return f.url ?? f.src ?? null;
   return null;
 }
-const fmtPrice = (cents: number) => `$${((Number(cents) || 0) / 100).toFixed(2)}`;
-
 export default async function ProductPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
 
@@ -47,7 +45,7 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
   // selector(s) + effective price live in the button.
   const variants = readVariants(item.metadata)
     .filter((v) => (v.status ?? 'active') === 'active')
-    .map((v) => ({ id: v.id, label: v.label, priceCents: Number(v.price_cents) || 0, options: v.options ?? null, stock: v.stock ?? null }));
+    .map((v) => ({ id: v.id, label: v.label, priceCents: Number(v.price_cents) || 0, options: v.options ?? null, stock: v.stock ?? null, image: v.image ?? null }));
   const axes = readVariantOptions(item.metadata);
   const itemStock = readItemStock(item.metadata);
   const hasVariants = variants.length > 0;
@@ -55,47 +53,20 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
 
   return (
     <main className="mx-auto max-w-4xl px-4 py-10">
-      <div className="grid gap-8 md:grid-cols-2">
-        <div className="aspect-square overflow-hidden rounded-xl border bg-muted">
-          {img ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={img} alt={item.title} className="h-full w-full object-cover" />
-          ) : (
-            <div className="flex h-full w-full items-center justify-center text-sm text-muted-foreground">
-              No image
-            </div>
-          )}
-        </div>
-
-        <div className="flex flex-col gap-4">
-          {item.type && item.type !== 'product' && (
-            <span className="w-fit rounded-full border px-2 py-0.5 text-xs capitalize text-muted-foreground">
-              {item.type}
-            </span>
-          )}
-          <h1 className="text-3xl font-bold tracking-tight">{item.title}</h1>
-          <div className="text-2xl font-semibold">
-            {hasVariants && <span className="mr-1 text-sm font-normal text-muted-foreground">from</span>}
-            {fmtPrice(fromPrice)}
-          </div>
-          {item.description && (
-            <p className="whitespace-pre-line text-sm leading-relaxed text-muted-foreground">{item.description}</p>
-          )}
-          <div className="pt-2">
-            <AddToCartButton
-              id={item.id}
-              title={item.title}
-              priceCents={Number(item.price_cents) || 0}
-              variants={variants}
-              axes={axes}
-              itemStock={itemStock}
-              imageUrl={img}
-              productType={item.type}
-              merchantId={item.merchant_id}
-            />
-          </div>
-        </div>
-      </div>
+      <ProductDetail
+        id={item.id}
+        title={item.title}
+        description={item.description ?? null}
+        productType={item.type}
+        priceCents={Number(item.price_cents) || 0}
+        fromPrice={fromPrice}
+        hasVariants={hasVariants}
+        mainImage={img}
+        variants={variants}
+        axes={axes}
+        itemStock={itemStock}
+        merchantId={item.merchant_id}
+      />
     </main>
   );
 }

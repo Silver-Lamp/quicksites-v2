@@ -3,11 +3,15 @@ export const runtime = 'nodejs';
 
 import { exec } from 'child_process';
 import { promisify } from 'util';
-import { NextRequest } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
+import { requireAdmin } from '@/lib/auth/requireUser';
 
 const execAsync = promisify(exec);
 
 export async function POST(req: NextRequest) {
+  const gate = await requireAdmin();
+  if (gate instanceof NextResponse) return gate;
+
   try {
     const { command } = await req.json();
 

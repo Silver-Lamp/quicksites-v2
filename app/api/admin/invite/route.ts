@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSupabase } from '@/lib/supabase/server';
 import { orgEmailBrand, type EmailBrand } from '@/lib/email';
+import { requireAdmin } from '@/lib/auth/requireUser';
 
 type InvitePayload = {
   emails: string[];         // required
@@ -12,6 +13,9 @@ type InvitePayload = {
 export const dynamic = 'force-dynamic';
 
 export async function POST(req: NextRequest) {
+  const gate = await requireAdmin();
+  if (gate instanceof NextResponse) return gate;
+
   try {
     const body = (await req.json()) as InvitePayload;
     const emails = Array.from(new Set((body.emails || []).map(e => String(e).trim()).filter(Boolean)));

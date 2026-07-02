@@ -4,6 +4,7 @@ export const runtime = 'nodejs';
 
 import { NextResponse } from 'next/server';
 import sharp from 'sharp';
+import { requireAdmin } from '@/lib/auth/requireUser';
 import { supabaseAdmin } from '@/lib/server/supabaseAdmin';
 
 const BUCKET = (process.env.NEXT_PUBLIC_ORG_ASSETS_BUCKET || '').trim() || 'logos';
@@ -73,6 +74,9 @@ if ((meta.width ?? 0) > maxWidth) {
 }
 
 export async function POST(req: Request) {
+  const gate = await requireAdmin();
+  if (gate instanceof NextResponse) return gate;
+
   try {
     const form = await req.formData();
     const file = form.get('file') as File | null;

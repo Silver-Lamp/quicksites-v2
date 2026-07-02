@@ -1,7 +1,8 @@
 import { writeFile } from 'fs/promises';
 import { json } from '@/lib/api/json';
 import { join } from 'path';
-import { NextRequest } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
+import { requireAdmin } from '@/lib/auth/requireUser';
 
 export const config = {
   api: {
@@ -10,6 +11,9 @@ export const config = {
 };
 
 export async function POST(req: NextRequest) {
+  const gate = await requireAdmin();
+  if (gate instanceof NextResponse) return gate;
+
   if (!req.body) {
     throw new Error('Request body is null');
   }

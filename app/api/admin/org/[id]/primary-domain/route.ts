@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import { getServerSupabase } from '@/lib/supabase/server';
+import { requireUser } from '@/lib/auth/requireUser';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -20,19 +20,25 @@ export async function POST(req: NextRequest, { params }: { params:{ id:string } 
 
     if (!URL || !SRK) return NextResponse.json({ ok:false, error:'Missing SUPABASE env' }, { status:500 });
 
-    // RLS auth: ensure caller belongs to this org (or is platform admin)
-    const supa = await getServerSupabase();
-    const [{ data: me }, { data: org, error: orgErr }] = await Promise.all([
-      supa.auth.getUser(),
-      supa.from('organizations').select('id').eq('id', params.id).single()
-    ]);
-    if (orgErr || !org) return NextResponse.json({ ok:false, error:'Forbidden' }, { status:403 });
-
     if (apex !== null && apex !== '' && !DOMAIN_RX.test(apex)) {
       return NextResponse.json({ ok:false, error:'Enter a valid apex like example.com' }, { status:400 });
     }
 
+    // AuthZ: the caller must be an admin of THIS org (or a platform admin). The
+    // update below uses the service role (RLS bypass), so this is the real gate —
+    // the previous version read the org via the user client but never checked
+    // membership, letting anyone hijack any org's primary domain.
+    const gate = await requireUser();
+    if (gate instanceof NextResponse) return gate;
+
     const admin = createClient(URL, SRK, { auth:{ persistSession:false }});
+    const [{ data: isOrgAdmin }, { data: platformAdmin }] = await Promise.all([
+      (admin as any).schema('app').rpc('is_org_admin', { p_org: params.id, p_user: gate.user.id }),
+      admin.from('admin_users').select('user_id').eq('user_id', gate.user.id).maybeSingle(),
+    ]);
+    if (!isOrgAdmin && !platformAdmin) {
+      return NextResponse.json({ ok:false, error:'Forbidden' }, { status:403 });
+    }
     const { data, error } = await admin
       .from('organizations')
       .update({

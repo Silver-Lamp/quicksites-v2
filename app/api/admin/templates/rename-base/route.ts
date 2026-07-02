@@ -2,8 +2,12 @@
 import { NextResponse } from 'next/server';
 import { getServerSupabase } from '@/lib/supabase/server';
 import { revalidatePath } from 'next/cache';
+import { requireAdmin } from '@/lib/auth/requireUser';
 
 export async function POST(req: Request) {
+  const gate = await requireAdmin();
+  if (gate instanceof NextResponse) return gate;
+
   try {
     const { old_base, new_base, rename_slugs = false } = await req.json();
     if (!old_base || !new_base) {

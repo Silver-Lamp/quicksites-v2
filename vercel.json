@@ -35,6 +35,10 @@
     {
       "path": "/api/cron/print-order-sync",
       "schedule": "15 */6 * * *"
+    },
+    {
+      "path": "/api/cron/release-stock-reservations",
+      "schedule": "*/15 * * * *"
     }
   ]
 }

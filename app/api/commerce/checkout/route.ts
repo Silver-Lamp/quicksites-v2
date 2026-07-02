@@ -70,6 +70,27 @@ export async function POST(req: NextRequest) {
     items,
   });
 
+  // Reserve stock atomically (holds it for ~30 min) so a concurrent buyer can't
+  // take the last unit mid-checkout. A shortfall here means it sold out DURING
+  // checkout — cancel the draft and tell the buyer BEFORE any payment. Infra
+  // errors fail open (the paid-time atomic decrement still guards).
+  const soldOut: Array<{ title: string; variant_label: string | null; remaining: number | null }> = [];
+  for (const it of items) {
+    const variantId = (it.metadata as any)?.variant_id ?? null;
+    const { data: r, error: rErr } = await (supabase as any).rpc('reserve_catalog_stock', {
+      p_order: orderId, p_item: it.catalogItemId, p_variant: variantId, p_qty: it.quantity, p_ttl_minutes: 30,
+    });
+    if (rErr) { console.warn('reserve_catalog_stock failed:', rErr.message); continue; }
+    if (r && r.ok === false && r.reason === 'insufficient') {
+      soldOut.push({ title: it.title, variant_label: (it.metadata as any)?.variant_label ?? null, remaining: r.remaining ?? 0 });
+    }
+  }
+  if (soldOut.length) {
+    await (supabase as any).rpc('release_order_reservations', { p_order: orderId });
+    await supabase.from('orders').update({ status: 'cancelled' }).eq('id', orderId);
+    return NextResponse.json({ error: 'Some items just sold out.', soldOut }, { status: 409 });
+  }
+
   // If any line item is a print-on-demand product, collect a shipping address at
   // checkout so fulfillment (Lulu/Gelato) has somewhere to ship.
   const collectShipping = (catalogRows ?? []).some(
@@ -101,7 +122,9 @@ export async function POST(req: NextRequest) {
     const msg = String(e?.message || '');
     const unconfigured = forceTest || /no active payment account/i.test(msg);
     if (!unconfigured) {
-      // A genuine Stripe error — never silently mark paid in production.
+      // A genuine Stripe error — never silently mark paid in production. Release
+      // the stock we reserved: no payment will follow.
+      await (supabase as any).rpc('release_order_reservations', { p_order: orderId });
       return NextResponse.json({ error: msg || 'Checkout failed' }, { status: 502 });
     }
 

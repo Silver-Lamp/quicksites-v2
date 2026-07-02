@@ -29,6 +29,48 @@ export type RevenueSummary = {
 
 const cents = (v: unknown) => Number(v) || 0;
 
+export type StripeFeeObject = { amount?: number | null; amount_refunded?: number | null };
+
+export type StripeFeeReconciliation = {
+  stripe_fee_gross_cents: number; // sum of application_fee.amount
+  stripe_fee_refunded_cents: number; // sum of application_fee.amount_refunded
+  stripe_fee_net_cents: number; // gross − refunded (what Stripe says QS actually kept in fees)
+  db_fee_gross_cents: number; // our recorded platform_fee_cents on paid orders
+  delta_cents: number; // stripe_net − db_gross (0 = perfectly reconciled)
+  matched: boolean;
+  fee_count: number;
+};
+
+/**
+ * Cross-check the platform fees Stripe actually collected against what we recorded.
+ * Pure: the caller lists the window's application_fee objects and passes them in
+ * with the DB gross (platform_fee_cents on paid orders).
+ *
+ * Expected to reconcile: a refunded order leaves the DB paid-gross AND has its
+ * application fee reversed on Stripe (amount_refunded), so Stripe *net* ≈ DB gross.
+ * A small nonzero delta can come from proportional refund-reversal flooring; a
+ * large one means real drift worth investigating.
+ */
+export function reconcileStripeFees(fees: StripeFeeObject[], dbGrossFeeCents: number): StripeFeeReconciliation {
+  let gross = 0;
+  let refunded = 0;
+  for (const f of fees ?? []) {
+    gross += cents(f?.amount);
+    refunded += cents(f?.amount_refunded);
+  }
+  const net = gross - refunded;
+  const dbGross = cents(dbGrossFeeCents);
+  return {
+    stripe_fee_gross_cents: gross,
+    stripe_fee_refunded_cents: refunded,
+    stripe_fee_net_cents: net,
+    db_fee_gross_cents: dbGross,
+    delta_cents: net - dbGross,
+    matched: net - dbGross === 0,
+    fee_count: (fees ?? []).length,
+  };
+}
+
 /**
  * Reduce orders + fee-subject commission rows to the reconciliation summary.
  * Callers should pass only commission_ledger rows with subject 'order_platform_fee'

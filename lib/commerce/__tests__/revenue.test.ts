@@ -5,7 +5,7 @@
 // take-rate model keeps 20% of the fee and owes 80% to attributed partners, so
 // net take = gross fees on paid orders − the non-void residual against them.
 
-import { summarizePlatformRevenue } from '../revenue';
+import { summarizePlatformRevenue, reconcileStripeFees } from '../revenue';
 
 const order = (status: string, total: number, fee: number) => ({
   status,
@@ -103,5 +103,52 @@ describe('summarizePlatformRevenue', () => {
     expect(s.platform_fee_cents).toBe(0);
     expect(s.partner_residual_cents.owed).toBe(0);
     expect(s.qs_net_cents).toBe(0);
+  });
+});
+
+describe('reconcileStripeFees', () => {
+  it('matches when Stripe net equals our recorded gross', () => {
+    const r = reconcileStripeFees(
+      [{ amount: 500, amount_refunded: 0 }, { amount: 300, amount_refunded: 0 }],
+      800,
+    );
+    expect(r.stripe_fee_gross_cents).toBe(800);
+    expect(r.stripe_fee_net_cents).toBe(800);
+    expect(r.db_fee_gross_cents).toBe(800);
+    expect(r.delta_cents).toBe(0);
+    expect(r.matched).toBe(true);
+    expect(r.fee_count).toBe(2);
+  });
+
+  it('nets out reversed fees so a refunded order reconciles against DB paid-gross', () => {
+    // One $5 fee still live, one $3 fee fully reversed → Stripe net 500; DB paid
+    // gross excludes the refunded order → 500. Reconciled.
+    const r = reconcileStripeFees(
+      [{ amount: 500, amount_refunded: 0 }, { amount: 300, amount_refunded: 300 }],
+      500,
+    );
+    expect(r.stripe_fee_gross_cents).toBe(800);
+    expect(r.stripe_fee_refunded_cents).toBe(300);
+    expect(r.stripe_fee_net_cents).toBe(500);
+    expect(r.matched).toBe(true);
+  });
+
+  it('flags drift with a signed delta (Stripe net − DB gross)', () => {
+    const r = reconcileStripeFees([{ amount: 800, amount_refunded: 0 }], 750);
+    expect(r.delta_cents).toBe(50); // Stripe collected 50¢ more than we recorded
+    expect(r.matched).toBe(false);
+
+    const under = reconcileStripeFees([{ amount: 700, amount_refunded: 0 }], 750);
+    expect(under.delta_cents).toBe(-50);
+    expect(under.matched).toBe(false);
+  });
+
+  it('is null-safe for empty input and missing fields', () => {
+    const r = reconcileStripeFees([], 0);
+    expect(r).toMatchObject({ stripe_fee_gross_cents: 0, stripe_fee_net_cents: 0, delta_cents: 0, matched: true, fee_count: 0 });
+    const r2 = reconcileStripeFees([{}, { amount: 100 }] as any, 100);
+    expect(r2.stripe_fee_gross_cents).toBe(100);
+    expect(r2.stripe_fee_refunded_cents).toBe(0);
+    expect(r2.matched).toBe(true);
   });
 });

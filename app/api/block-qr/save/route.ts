@@ -4,9 +4,13 @@ import crypto from 'node:crypto';
 import path from 'node:path';
 import fs from 'node:fs/promises';
 import { mkdirSync } from 'node:fs';
-import { NextRequest } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
+import { requireUser } from '@/lib/auth/requireUser';
 
 export const runtime = 'nodejs';
+
+// Only allow safe filename atoms — blocks path traversal via handle/blockId.
+const safe = (s: unknown) => /^[A-Za-z0-9._-]+$/.test(String(s ?? ''));
 
 // Load fonts if present
 try {
@@ -21,6 +25,9 @@ function hash(input: string): string {
 }
 
 export async function POST(req: NextRequest) {
+  const gate = await requireUser();
+  if (gate instanceof NextResponse) return gate;
+
   const {
     blockId,
     handle,
@@ -35,6 +42,13 @@ export async function POST(req: NextRequest) {
 
   if (!blockId || !handle) {
     return new Response(JSON.stringify({ error: 'Missing blockId or handle' }), {
+      status: 400,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
+  // Path components go into a filesystem path — reject traversal / separators.
+  if (!safe(blockId) || !safe(handle) || !safe(format)) {
+    return new Response(JSON.stringify({ error: 'Invalid blockId, handle, or format' }), {
       status: 400,
       headers: { 'Content-Type': 'application/json' },
     });

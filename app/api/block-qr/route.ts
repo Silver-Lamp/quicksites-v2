@@ -5,9 +5,13 @@ import crypto from 'node:crypto';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import archiver from 'archiver';
-import { NextRequest } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
+import { requireUser } from '@/lib/auth/requireUser';
 
 export const runtime = 'nodejs';
+
+// Only allow safe filename atoms — blocks path traversal via handle/blockId.
+const safe = (s: unknown) => /^[A-Za-z0-9._-]+$/.test(String(s ?? ''));
 
 try {
   registerFont(path.resolve('./public/fonts/Inter.ttf'), { family: 'Inter' });
@@ -56,6 +60,9 @@ function bufferToArrayBuffer(buf: Buffer): ArrayBuffer {
 }
 
 export async function POST(req: NextRequest) {
+  const gate = await requireUser();
+  if (gate instanceof NextResponse) return gate;
+
   const {
     blockId,
     handle,
@@ -73,6 +80,10 @@ export async function POST(req: NextRequest) {
 
   if (!blockId || !handle) {
     return Response.json({ error: 'Missing blockId or handle' }, { status: 400 });
+  }
+  // handle/blockId become filesystem path components — reject traversal.
+  if (!safe(blockId) || !safe(handle) || !safe(format)) {
+    return Response.json({ error: 'Invalid blockId, handle, or format' }, { status: 400 });
   }
 
   const url = `https://quicksites.ai/world/${handle}#block-${blockId}`;

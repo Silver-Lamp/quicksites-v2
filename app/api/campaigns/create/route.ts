@@ -1,8 +1,9 @@
 // app/api/campaigns/create/route.ts
 export const runtime = 'nodejs';
 
-import { NextRequest } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { requireUser } from '@/lib/auth/requireUser';
 
 function getSupabaseClient() {
   return createClient(
@@ -12,6 +13,11 @@ function getSupabaseClient() {
 }
 
 export async function POST(req: NextRequest): Promise<Response> {
+  // Require a signed-in (non-anonymous) user; ownership comes from the session,
+  // never a client-supplied header (the old x-user-id was spoofable).
+  const gate = await requireUser();
+  if (gate instanceof NextResponse) return gate;
+
   const supabase = getSupabaseClient();
   const body = await req.json();
 
@@ -35,8 +41,7 @@ export async function POST(req: NextRequest): Promise<Response> {
     return Response.json({ error: 'Missing required fields' }, { status: 400 });
   }
 
-  // Try to extract user info from headers if present
-  const userId = req.headers.get('x-user-id') || null;
+  const userId = gate.user.id;
 
   // Step 1: Create campaign
   const { data: campaign, error: campaignError } = await supabase

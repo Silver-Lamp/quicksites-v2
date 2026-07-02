@@ -9,6 +9,7 @@ import { logTemplateEvent } from '@/lib/server/logTemplateEvent';
 import { stripEmpty, obj, dget, ddel, enrichPatchWithIdentity } from '@/lib/templates/identity';
 import { captureServer } from '@/lib/analytics/posthog-server';
 import { EVENTS } from '@/lib/analytics/events';
+import { requireTemplateOwner } from '@/lib/auth/requireTemplateOwner';
 
 // optional org (keeps single-tenant working)
 let resolveOrg: undefined | (() => Promise<any>);
@@ -177,6 +178,13 @@ export async function POST(req: Request) {
 
     if (!id || typeof id !== 'string') return j({ error: 'id required' }, 400);
     if (!rawPatch || typeof rawPatch !== 'object') return j({ error: 'patch required (object)' }, 400);
+
+    // AuthZ: the caller must own this template (an anonymous guest who owns their
+    // draft is allowed — editing is open to guests; only publishing needs sign-up)
+    // or be a platform admin. Without this, anyone could commit edits to ANY
+    // template via the service-role RPC.
+    const gate = await requireTemplateOwner(id);
+    if (!gate.ok) return gate.response;
 
     // forbid slug updates here
     for (const k of Object.keys(rawPatch)) {

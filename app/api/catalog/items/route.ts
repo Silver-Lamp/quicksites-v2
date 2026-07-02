@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSupabase } from '@/lib/supabase/server';
 import { captureServer } from '@/lib/analytics/posthog-server';
 import { EVENTS } from '@/lib/analytics/events';
+import { normalizeVariants, type InputAxis, type InputVariant } from '@/lib/commerce/variants';
 
 export async function POST(req: NextRequest) {
   const body = await req.json() as {
@@ -13,9 +14,10 @@ export async function POST(req: NextRequest) {
     // Print-on-demand: when set, this item fulfills via Lulu (book) / Gelato (merch).
     fulfillmentProvider?: 'lulu' | 'gelato' | 'none';
     podSpec?: Record<string, any>;
-    // Optional variants (size/color, each its own price). When present, the base
-    // price_cents becomes the cheapest variant and pricing is resolved per-variant.
-    variants?: Array<{ label: string; priceCents: number }>;
+    // Optional variants. Single- or multi-axis (Size × Color); when present, the
+    // base price becomes the cheapest SKU and pricing is resolved per-variant.
+    variantOptions?: InputAxis[];
+    variants?: InputVariant[];
   };
 
   if (!body.merchantId || !body.type || !body.title || !body.slug) {
@@ -31,23 +33,18 @@ export async function POST(req: NextRequest) {
     metadata.pod_spec = body.podSpec ?? {};
   }
 
-  // Normalize variants: stable slug ids (deduped), non-negative integer prices,
-  // active by default. Blank rows are dropped. Base price = cheapest variant.
-  let basePriceCents = Math.max(0, Math.round(Number(body.priceCents) || 0));
-  const rawVariants = (body.variants ?? []).filter((v) => v && String(v.label ?? '').trim());
-  if (rawVariants.length) {
-    const seen = new Set<string>();
-    const variants = rawVariants.map((v) => {
-      const label = String(v.label).trim();
-      const base = label.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 40) || 'opt';
-      let id = base;
-      for (let i = 2; seen.has(id); i++) id = `${base}-${i}`;
-      seen.add(id);
-      return { id, label, price_cents: Math.max(0, Math.round(Number(v.priceCents) || 0)), status: 'active' };
-    });
-    metadata.variants = variants;
-    basePriceCents = Math.min(...variants.map((v) => v.price_cents));
+  // Normalize variants (single- or multi-axis) into stored metadata. Base price =
+  // cheapest SKU when variants exist, else the plain price.
+  const norm = normalizeVariants({
+    variantOptions: body.variantOptions,
+    variants: body.variants,
+    fallbackBaseCents: Number(body.priceCents) || 0,
+  });
+  if (norm.variants.length) {
+    metadata.variants = norm.variants;
+    if (norm.variant_options.length) metadata.variant_options = norm.variant_options;
   }
+  const basePriceCents = norm.basePriceCents;
 
   // Insert catalog item
   const { data: item, error } = await supa.from('catalog_items').insert({

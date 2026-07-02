@@ -21,6 +21,7 @@ export async function POST(req: NextRequest) {
     variants?: InputVariant[];
     // Item-level stock for a plain (variant-less) product. null/absent = untracked.
     stock?: number | null;
+    imageUrl?: string; // main product image (stored in the images array)
   };
 
   if (!body.merchantId || !body.type || !body.title || !body.slug) {
@@ -53,6 +54,8 @@ export async function POST(req: NextRequest) {
   }
   const basePriceCents = norm.basePriceCents;
 
+  const imageUrl = String(body.imageUrl ?? '').trim();
+
   // Insert catalog item
   const { data: item, error } = await supa.from('catalog_items').insert({
     merchant_id: body.merchantId,
@@ -62,6 +65,7 @@ export async function POST(req: NextRequest) {
     description: body.description || null,
     price_cents: basePriceCents,
     status: 'active',
+    images: imageUrl ? [imageUrl] : [],
     metadata,
   }).select('id').single();
 

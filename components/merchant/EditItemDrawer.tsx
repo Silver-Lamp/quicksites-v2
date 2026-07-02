@@ -6,6 +6,7 @@
 // metadata). Fetches the full item on open; PATCHes /api/catalog/items/[id].
 import { useState } from 'react';
 import VariantsEditor, { type VariantsPayload } from './VariantsEditor';
+import ImageUploadField from './ImageUploadField';
 
 export default function EditItemDrawer({ itemId, onSaved }: { itemId: string; onSaved?: () => void }) {
   const [open, setOpen] = useState(false);
@@ -18,6 +19,7 @@ export default function EditItemDrawer({ itemId, onSaved }: { itemId: string; on
   const [price, setPrice] = useState(0); // dollars
   const [status, setStatus] = useState<'active' | 'inactive'>('active');
   const [stock, setStock] = useState<string>(''); // plain-item stock; '' = unlimited
+  const [image, setImage] = useState<string>(''); // main product image URL
   const [variantsPayload, setVariantsPayload] = useState<VariantsPayload>({ variantOptions: [], variants: [] });
 
   async function openAndLoad() {
@@ -35,6 +37,8 @@ export default function EditItemDrawer({ itemId, onSaved }: { itemId: string; on
       setStatus(it.status === 'inactive' ? 'inactive' : 'active');
       const s = it.metadata?.stock;
       setStock(typeof s === 'number' ? String(s) : '');
+      const first = Array.isArray(it.images) ? it.images[0] : null;
+      setImage(typeof first === 'string' ? first : (first?.url ?? first?.src ?? ''));
       setVariantsPayload({ variantOptions: [], variants: [] });
       setLoaded(true);
     } catch (e: any) {
@@ -50,7 +54,7 @@ export default function EditItemDrawer({ itemId, onSaved }: { itemId: string; on
   async function save() {
     setSaving(true);
     try {
-      const body: any = { title, description: desc, status, priceCents: Math.round((price || 0) * 100) };
+      const body: any = { title, description: desc, status, priceCents: Math.round((price || 0) * 100), imageUrl: image.trim() };
       // Generic items always send their full variant authoring state (replace
       // wholesale — empty clears variants). POD items don't manage variants here.
       if (!isPod) {
@@ -105,6 +109,9 @@ export default function EditItemDrawer({ itemId, onSaved }: { itemId: string; on
                   <input type="number" step="0.01" min="0" value={price}
                     onChange={(e) => setPrice(Number(e.target.value))}
                     className="rounded bg-neutral-900 px-3 py-2 text-sm ring-1 ring-neutral-800" />
+
+                  <label className="mt-2 text-xs text-neutral-400">Image</label>
+                  <ImageUploadField value={image} onChange={setImage} folder="catalog/items" />
 
                   <label className="mt-2 text-xs text-neutral-400">Status</label>
                   <select value={status} onChange={(e) => setStatus(e.target.value as 'active' | 'inactive')}

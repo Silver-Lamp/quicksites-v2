@@ -9,6 +9,7 @@
 // where the server normalizes it (lib/commerce/variants.ts). Reused by the create
 // drawer and the edit drawer.
 import * as React from 'react';
+import ImageUploadField from './ImageUploadField';
 
 export type EditorAxis = { name: string; values: string[] };
 export type EditorVariant = { label: string; priceCents: number; options: Record<string, string>; stock?: number | null; image?: string | null };
@@ -199,11 +200,11 @@ export default function VariantsEditor({ defaultPriceDollars = 0, initialAxes, i
                     className="w-20 rounded bg-neutral-900 px-3 py-2 text-sm ring-1 ring-neutral-800"
                   />
                 </div>
-                <input
-                  type="url" placeholder="Image URL for this option (optional)"
+                <ImageUploadField
                   value={images[key] ?? ''}
-                  onChange={(e) => setImages((im) => ({ ...im, [key]: e.target.value }))}
-                  className="rounded bg-neutral-900 px-3 py-2 text-xs ring-1 ring-neutral-800"
+                  onChange={(url) => setImages((im) => ({ ...im, [key]: url }))}
+                  folder="catalog/variants"
+                  placeholder="Image for this option (optional)"
                 />
               </div>
             );

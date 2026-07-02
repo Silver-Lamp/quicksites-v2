@@ -37,6 +37,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     variants?: InputVariant[];
     // Item-level stock for a plain (variant-less) product. null clears tracking.
     stock?: number | null;
+    imageUrl?: string; // main product image (empty string clears it)
   };
 
   const supa = await getServerSupabase();
@@ -54,6 +55,10 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   if (typeof body.title === 'string') patch.title = body.title;
   if ('description' in body) patch.description = body.description || null;
   if (body.status) patch.status = body.status;
+  if ('imageUrl' in body) {
+    const url = String(body.imageUrl ?? '').trim();
+    patch.images = url ? [url] : [];
+  }
 
   // Variants: replace wholesale when the key is present. Merge into existing
   // metadata so site_slug / fulfillment_provider / pod_spec are preserved.

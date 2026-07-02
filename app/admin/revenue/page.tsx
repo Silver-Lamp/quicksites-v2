@@ -37,6 +37,7 @@ export default function RevenuePage() {
   }, [load]);
 
   const comm = data?.commission_ledger_cents ?? {};
+  const residual = data?.partner_residual_cents ?? {};
 
   return (
     <main className="mx-auto max-w-2xl px-4 py-10">
@@ -59,18 +60,29 @@ export default function RevenuePage() {
 
       {data && (
         <>
+          {/* The headline money story: what QuickSites keeps, what it owes partners. */}
           <div className="grid grid-cols-2 gap-3">
-            <Stat label="Platform revenue (fees)" value={fmt(data.platform_fee_cents)} highlight />
+            <Stat label="QuickSites net take" value={fmt(data.qs_net_cents)} highlight />
+            <Stat label="Partners owed (unpaid)" value={fmt(residual.owed)} highlight />
+          </div>
+
+          <div className="mt-3 grid grid-cols-2 gap-3">
+            <Stat label="Platform fees (gross)" value={fmt(data.platform_fee_cents)} />
+            <Stat label="Partner residual paid" value={fmt(residual.paid)} />
             <Stat label="GMV (paid)" value={fmt(data.gmv_cents)} />
             <Stat label="Paid orders" value={String(data.orders.paid)} />
             <Stat label="Refunded orders" value={String(data.orders.refunded)} />
-            <Stat label="Refunded GMV" value={fmt(data.refunded_gmv_cents)} />
             <Stat label="Refunded fees" value={fmt(data.refunded_fee_cents)} />
           </div>
 
+          <p className="mt-3 text-xs text-muted-foreground">
+            Net take = gross platform fees on paid orders minus the partner share (owed + paid) accrued
+            against them. Unattributed orders have no residual, so QuickSites keeps the full fee.
+          </p>
+
           {Object.keys(comm).length > 0 && (
             <div className="mt-6">
-              <h2 className="mb-2 text-sm font-semibold">Commission ledger (rep payouts)</h2>
+              <h2 className="mb-2 text-sm font-semibold">Commission ledger by status</h2>
               <ul className="text-sm">
                 {Object.entries(comm).map(([k, v]: any) => (
                   <li key={k} className="flex justify-between border-b py-1">

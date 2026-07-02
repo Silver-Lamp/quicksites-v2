@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { stripe } from '@/lib/stripe/server';
 import { clampPlatformFeePercent } from '@/lib/commerce/partner-terms';
+import { requireMerchantOwner } from '@/lib/auth/requireUser';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -20,6 +21,9 @@ export async function POST(req: NextRequest) {
   }
   const { merchantId } = await req.json();
   if (!merchantId) return NextResponse.json({ error: 'merchantId required' }, { status: 400 });
+
+  const gate = await requireMerchantOwner(merchantId);
+  if (gate instanceof NextResponse) return gate;
 
   // Reuse an existing connected account if we already started one
   const { data: existing } = await supabase

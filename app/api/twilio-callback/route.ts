@@ -1,6 +1,7 @@
 // app/api/twilio-callback/route.ts
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import twilio from 'twilio';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -13,6 +14,18 @@ export async function POST(req: Request) {
   const text = await req.text();
   const params = new URLSearchParams(text);
   const callData = Object.fromEntries(params.entries());
+
+  // Verify this really came from Twilio before trusting the body. Twilio signs
+  // over the exact webhook URL + sorted POST params (HMAC-SHA1 with the account
+  // auth token). Without this, anyone can POST spoofed call_logs rows.
+  const authToken = process.env.TWILIO_AUTH_TOKEN || '';
+  const signature = req.headers.get('x-twilio-signature') || '';
+  const proto = req.headers.get('x-forwarded-proto') || 'https';
+  const host = req.headers.get('host') || '';
+  const url = `${proto}://${host}${new URL(req.url).pathname}`;
+  if (!authToken || !twilio.validateRequest(authToken, signature, url, callData)) {
+    return NextResponse.json({ error: 'invalid signature' }, { status: 403 });
+  }
 
   const {
     CallSid,

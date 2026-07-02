@@ -3,6 +3,10 @@ import { lazyClient } from '@/lib/lazyClient';
 import { createClient } from '@supabase/supabase-js';
 import { NextResponse } from 'next/server';
 import { orgEmailBrand } from '@/lib/email';
+import { rateLimitOr429 } from '@/lib/api/rateLimitGuard';
+
+const isEmail = (x: unknown): x is string =>
+  typeof x === 'string' && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(x);
 
 const resend = lazyClient(() => new Resend(process.env.RESEND_API_KEY));
 const supabase = createClient(
@@ -11,6 +15,13 @@ const supabase = createClient(
 );
 
 export async function POST(req: Request) {
+  // Public site contact form → throttle per IP. NOTE: `to` is still client-
+  // supplied; deriving the recipient from `site_slug` server-side (so it can't be
+  // used as an open relay) is a tracked follow-up. Interim: rate limit + cap the
+  // recipient count + require well-formed addresses.
+  const limited = await rateLimitOr429(req, 'contact_email', 10, 3600);
+  if (limited) return limited;
+
   const {
     to,
     subject,
@@ -25,7 +36,10 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
   }
 
-  const uniqueRecipients = Array.from(new Set(to)).filter(Boolean);
+  const uniqueRecipients = Array.from(new Set(to)).filter(isEmail);
+  if (uniqueRecipients.length === 0 || uniqueRecipients.length > 5) {
+    return NextResponse.json({ error: 'Invalid recipient list' }, { status: 400 });
+  }
 
   let status = 'pending';
   let response_id: string | null = null;

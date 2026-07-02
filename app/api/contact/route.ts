@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { Resend } from 'resend';
 import { createClient } from '@supabase/supabase-js';
+import { rateLimitOr429 } from '@/lib/api/rateLimitGuard';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -27,6 +28,10 @@ function asInt(x: unknown, d = 0) {
 }
 
 export async function POST(req: NextRequest) {
+  // Public form → cap spam / unbounded inserts at 5 messages per IP per hour.
+  const limited = await rateLimitOr429(req, 'contact', 5, 3600);
+  if (limited) return limited;
+
   let payload: any;
   try {
     payload = await req.json();

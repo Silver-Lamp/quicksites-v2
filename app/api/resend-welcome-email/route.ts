@@ -8,6 +8,14 @@ import { orgEmailBrand } from '@/lib/email';
 const resend = lazyClient(() => new Resend(process.env.RESEND_API_KEY));
 
 export async function POST(req: Request) {
+  // Sends to a caller-supplied recipient — internal-only. The single caller
+  // (/api/sites/create, server-to-server) forwards the shared secret. Reject any
+  // direct/public POST so this can't be abused as an open relay.
+  const secret = process.env.CRON_SECRET || '';
+  if (!secret || req.headers.get('x-internal-secret') !== secret) {
+    return json({ error: 'unauthorized' }, { status: 401 });
+  }
+
   const { email, name, slug, templateName } = await req.json();
 
   const dashboardLink = `https://quicksites.ai/edit/${slug}`;

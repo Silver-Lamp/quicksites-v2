@@ -105,7 +105,11 @@ export async function POST(req: Request) {
       try {
         const res = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/api/resend-welcome-email`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json',
+            // Shared secret — resend-welcome-email is internal-only (open relay otherwise).
+            'x-internal-secret': process.env.CRON_SECRET || '',
+          },
           body: JSON.stringify({
             email,
             name: business_name,

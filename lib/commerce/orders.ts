@@ -168,12 +168,22 @@ export async function markOrderPaid(
     console.warn('Tax record step failed:', (e as any)?.message || e);
   }
 
-  // 2c) Decrement tracked inventory for each line (once — guarded by the paid
-  //     transition above). Uses the atomic decrement_catalog_stock RPC so
-  //     concurrent paid orders serialize on the row lock and can't oversell past
-  //     what exists (the DB is the arbiter, not a read-modify-write here).
-  //     Best-effort: a stock hiccup must never block a completed payment.
+  // 2c) Settle inventory for this order (once — guarded by the paid transition).
+  //     If the order reserved stock at checkout (reserve-then-confirm), the units
+  //     are already decremented — just consume the holds. Otherwise (demo/test/
+  //     non-reserved paths) fall back to the atomic per-line decrement, which also
+  //     surfaces any oversell. Best-effort: never block a completed payment.
   try {
+    const { data: heldRes } = await (supabase as any)
+      .from('stock_reservations')
+      .select('id')
+      .eq('order_id', orderId)
+      .eq('status', 'held')
+      .limit(1);
+
+    if (heldRes && heldRes.length) {
+      await (supabase as any).rpc('consume_order_reservations', { p_order: orderId });
+    } else {
     const { data: lines } = await supabase
       .from('order_items')
       .select('catalog_item_id, title, quantity, metadata')
@@ -205,8 +215,9 @@ export async function markOrderPaid(
       console.warn(`Order ${orderId} oversold — paid beyond available stock:`, JSON.stringify(oversold));
       await supabase.from('orders').update({ oversold_lines: oversold } as any).eq('id', orderId);
     }
+    }
   } catch (e) {
-    console.warn('Stock decrement step failed:', (e as any)?.message || e);
+    console.warn('Stock settle step failed:', (e as any)?.message || e);
   }
 
   // 3) Fetch order context once

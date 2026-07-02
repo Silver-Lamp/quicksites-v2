@@ -18,17 +18,24 @@ export default function RevenuePage() {
   const [data, setData] = React.useState<any>(null);
   const [error, setError] = React.useState<string | null>(null);
   const [since, setSince] = React.useState('');
+  const [checking, setChecking] = React.useState(false);
 
-  const load = React.useCallback(async () => {
+  const load = React.useCallback(async (withStripe = false) => {
     setError(null);
+    if (withStripe) setChecking(true);
     try {
-      const qs = since ? `?since=${encodeURIComponent(since)}` : '';
+      const params = new URLSearchParams();
+      if (since) params.set('since', since);
+      if (withStripe) params.set('stripe', '1');
+      const qs = params.toString() ? `?${params.toString()}` : '';
       const res = await fetch(`/api/admin/revenue${qs}`, { cache: 'no-store' });
       const json = await res.json();
       if (!res.ok) throw new Error(json?.error || `failed (${res.status})`);
       setData(json);
     } catch (e: any) {
       setError(e?.message || 'failed');
+    } finally {
+      setChecking(false);
     }
   }, [since]);
 
@@ -38,6 +45,7 @@ export default function RevenuePage() {
 
   const comm = data?.commission_ledger_cents ?? {};
   const residual = data?.partner_residual_cents ?? {};
+  const stripeRec = data?.stripe_reconciliation ?? null;
 
   return (
     <main className="mx-auto max-w-2xl px-4 py-10">
@@ -53,6 +61,14 @@ export default function RevenuePage() {
         />
         <button onClick={() => void load()} className="rounded border px-3 py-1 text-sm">
           Refresh
+        </button>
+        <button
+          onClick={() => void load(true)}
+          disabled={checking}
+          className="rounded border px-3 py-1 text-sm disabled:opacity-50"
+          title="Sum the live Stripe application_fee objects for this window and compare to our recorded fees"
+        >
+          {checking ? 'Checking Stripe…' : 'Cross-check with Stripe'}
         </button>
       </div>
 
@@ -79,6 +95,50 @@ export default function RevenuePage() {
             Net take = gross platform fees on paid orders minus the partner share (owed + paid) accrued
             against them. Unattributed orders have no residual, so QuickSites keeps the full fee.
           </p>
+
+          {stripeRec && (
+            <div className="mt-6">
+              <h2 className="mb-2 text-sm font-semibold">Stripe cross-check</h2>
+              {stripeRec.error ? (
+                <div className="rounded-xl border p-4 text-sm text-red-500">Stripe lookup failed: {stripeRec.error}</div>
+              ) : (
+                <div
+                  className={`rounded-xl border p-4 ${stripeRec.matched ? 'border-green-600/40' : 'border-amber-500/50'}`}
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium">
+                      {stripeRec.matched ? '✓ Reconciled' : '⚠ Drift detected'}
+                    </span>
+                    <span className="text-sm tabular-nums">Δ {fmt(stripeRec.delta_cents)}</span>
+                  </div>
+                  <ul className="mt-3 space-y-1 text-sm">
+                    <li className="flex justify-between border-b py-1">
+                      <span className="text-muted-foreground">Stripe fees collected (gross)</span>
+                      <span className="tabular-nums">{fmt(stripeRec.stripe_fee_gross_cents)}</span>
+                    </li>
+                    <li className="flex justify-between border-b py-1">
+                      <span className="text-muted-foreground">Stripe fees reversed (refunds)</span>
+                      <span className="tabular-nums">−{fmt(stripeRec.stripe_fee_refunded_cents)}</span>
+                    </li>
+                    <li className="flex justify-between border-b py-1">
+                      <span className="font-medium">Stripe fees net</span>
+                      <span className="tabular-nums font-medium">{fmt(stripeRec.stripe_fee_net_cents)}</span>
+                    </li>
+                    <li className="flex justify-between border-b py-1">
+                      <span className="text-muted-foreground">Our recorded gross (paid orders)</span>
+                      <span className="tabular-nums">{fmt(stripeRec.db_fee_gross_cents)}</span>
+                    </li>
+                  </ul>
+                  <p className="mt-2 text-xs text-muted-foreground">
+                    Compares {stripeRec.fee_count} Stripe application_fee object(s) for this window against our
+                    ledger. Stripe net should ≈ our recorded gross (a refunded order drops from both). Small deltas
+                    can come from proportional refund-reversal rounding; a large Δ warrants a per-order look via{' '}
+                    <code className="rounded bg-muted px-1">/api/admin/commerce/reconcile?stripe=1</code>.
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
 
           {Object.keys(comm).length > 0 && (
             <div className="mt-6">

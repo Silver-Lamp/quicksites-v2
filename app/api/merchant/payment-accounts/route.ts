@@ -1,9 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSupabase } from '@/lib/supabase/server';
+import { requireMerchantOwner } from '@/lib/auth/requireUser';
 
 export async function POST(req: NextRequest) {
   const { merchantId, provider, accountRef } = await req.json();
   if (!merchantId || !provider) return NextResponse.json({ error: 'missing fields' }, { status: 400 });
+
+  const gate = await requireMerchantOwner(merchantId);
+  if (gate instanceof NextResponse) return gate;
 
   const supabase = await getServerSupabase(); // regular session; RLS checks owner
   const { error } = await supabase.from('payment_accounts').upsert({

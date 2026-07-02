@@ -2,6 +2,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { createServerClient } from '@supabase/ssr';
+import { requireOrgAdmin } from '@/lib/auth/requireUser';
 
 function normalizeSlug(input: unknown): string {
   return String(input ?? '')
@@ -47,6 +48,11 @@ export async function POST(
   if (!org) {
     return NextResponse.json({ error: `Org not found for slug "${orgSlug}"` }, { status: 404 });
   }
+
+  // AuthZ: only an admin of this org (or a platform admin) may upsert its
+  // portfolio — the SECURITY DEFINER RPC below trusts p_org_id.
+  const gate = await requireOrgAdmin((org as any).id);
+  if (gate instanceof NextResponse) return gate;
 
   // parse body
   let body: any = {};

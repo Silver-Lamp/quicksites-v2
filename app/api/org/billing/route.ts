@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server';
 import { lazyClient } from '@/lib/lazyClient';
 import Stripe from 'stripe';
 import { resolveOrg } from '@/lib/org/resolveOrg';
+import { requireOrgAdmin } from '@/lib/auth/requireUser';
 
 const stripe = lazyClient(() => new Stripe(process.env.STRIPE_SECRET_KEY!));
 
@@ -25,6 +26,11 @@ export async function POST() {
     }
 
     const org = (await resolveOrg()) as OrgWithBilling;
+
+    // AuthZ: opening a Stripe billing portal for this org is limited to its admins
+    // (or a platform admin) — otherwise anyone could manage the org's subscription.
+    const gate = await requireOrgAdmin((org as any).id);
+    if (gate instanceof NextResponse) return gate;
 
     // Decide whether this org is billed centrally or via a Connect account
     const mode = org.billing_mode ?? 'central';

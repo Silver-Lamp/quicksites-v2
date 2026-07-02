@@ -3,7 +3,7 @@
 // Normalization of authored variants → stored metadata (multi-axis feature).
 // The stored `variants` is always a flat SKU list, so checkout stays axis-blind.
 
-import { normalizeVariants } from '../variants';
+import { normalizeVariants, mergeVariantMetadata } from '../variants';
 
 describe('normalizeVariants', () => {
   it('returns the fallback base and no variants for a plain product', () => {
@@ -76,5 +76,54 @@ describe('normalizeVariants', () => {
   it('skips a variant with neither a label nor resolvable options', () => {
     const r = normalizeVariants({ variants: [{ priceCents: 100 }] });
     expect(r.variants).toEqual([]);
+  });
+});
+
+describe('mergeVariantMetadata (edit)', () => {
+  it('sets variants + options and base price while preserving unrelated metadata', () => {
+    const norm = normalizeVariants({
+      variantOptions: [{ name: 'Size', values: ['S', 'L'] }],
+      variants: [
+        { priceCents: 1000, options: { Size: 'S' } },
+        { priceCents: 1500, options: { Size: 'L' } },
+      ],
+    });
+    const { metadata, priceCents } = mergeVariantMetadata(
+      { site_slug: 'shop', fulfillment_provider: 'lulu', pod_spec: { x: 1 } },
+      norm,
+    );
+    expect(metadata.site_slug).toBe('shop');
+    expect(metadata.fulfillment_provider).toBe('lulu'); // untouched
+    expect(metadata.variants).toHaveLength(2);
+    expect(metadata.variant_options).toEqual([{ name: 'Size', values: ['S', 'L'] }]);
+    expect(priceCents).toBe(1000);
+  });
+
+  it('CLEARS variants AND variant_options when the edit removes all variants', () => {
+    const existing = {
+      site_slug: 'shop',
+      variants: [{ id: 's', label: 'S', price_cents: 1000, status: 'active', options: { Size: 'S' } }],
+      variant_options: [{ name: 'Size', values: ['S'] }],
+    };
+    const norm = normalizeVariants({ variants: [], fallbackBaseCents: 2500 });
+    const { metadata, priceCents } = mergeVariantMetadata(existing, norm);
+    expect(metadata.variants).toBeUndefined();
+    expect(metadata.variant_options).toBeUndefined(); // the easy-to-miss part
+    expect(metadata.site_slug).toBe('shop'); // preserved
+    expect(priceCents).toBe(2500);
+  });
+
+  it('drops variant_options but keeps variants when reverting multi-axis to a flat list', () => {
+    const norm = normalizeVariants({
+      variants: [{ label: 'Deluxe', priceCents: 3000 }], // no axes
+    });
+    const { metadata } = mergeVariantMetadata({ variant_options: [{ name: 'Size', values: ['S'] }] }, norm);
+    expect(metadata.variants).toHaveLength(1);
+    expect(metadata.variant_options).toBeUndefined();
+  });
+
+  it('tolerates null/undefined existing metadata', () => {
+    const norm = normalizeVariants({ variants: [], fallbackBaseCents: 500 });
+    expect(mergeVariantMetadata(null, norm).metadata).toEqual({});
   });
 });

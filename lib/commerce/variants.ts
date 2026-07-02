@@ -105,3 +105,26 @@ export function normalizeVariants(input: {
 
   return { variant_options: axes, variants, basePriceCents };
 }
+
+/**
+ * Merge a normalized variant set into an item's existing metadata for an edit,
+ * preserving unrelated keys (site_slug, fulfillment_provider, pod_spec) and — the
+ * bit that's easy to get wrong — CLEARING both `variants` and `variant_options`
+ * when the edit leaves no variants (so a product reverted to plain doesn't keep
+ * stale axes). Returns the new metadata + the item's base price.
+ */
+export function mergeVariantMetadata(
+  existing: Record<string, any> | null | undefined,
+  norm: NormalizedVariants,
+): { metadata: Record<string, any>; priceCents: number } {
+  const metadata: Record<string, any> = { ...(existing || {}) };
+  if (norm.variants.length) {
+    metadata.variants = norm.variants;
+    if (norm.variant_options.length) metadata.variant_options = norm.variant_options;
+    else delete metadata.variant_options;
+  } else {
+    delete metadata.variants;
+    delete metadata.variant_options;
+  }
+  return { metadata, priceCents: norm.basePriceCents };
+}

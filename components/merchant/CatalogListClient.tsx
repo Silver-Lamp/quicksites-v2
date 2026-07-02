@@ -1,6 +1,8 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import EditItemDrawer from './EditItemDrawer';
 
 type Item = {
   id: string;
@@ -18,6 +20,7 @@ export default function CatalogListClient({
 }) {
   const [loadingId, setLoadingId] = useState<string | null>(null);
   const [qty, setQty] = useState<Record<string, number>>({});
+  const router = useRouter();
 
   const fmt = (c:number) => new Intl.NumberFormat('en-US', { style:'currency', currency }).format(c/100);
 
@@ -60,6 +63,7 @@ export default function CatalogListClient({
           </div>
 
           <div className="mt-4 flex items-center justify-end gap-3">
+            <EditItemDrawer itemId={it.id} onSaved={() => router.refresh()} />
             <label className="text-xs text-neutral-400">Qty</label>
             <input
               type="number" min={1} value={qty[it.id] ?? 1}

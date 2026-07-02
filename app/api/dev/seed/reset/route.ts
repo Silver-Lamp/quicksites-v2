@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { createServerClient, type CookieOptions } from '@supabase/ssr';
 import { createClient as createAdminClient } from '@supabase/supabase-js';
+import { requireAdmin } from '@/lib/auth/requireUser';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -569,6 +570,9 @@ function parseCsv(q: URLSearchParams, key: string): string[] {
 }
 
 export async function DELETE(req: NextRequest) {
+  const gate = await requireAdmin();
+  if (gate instanceof NextResponse) return gate;
+
   const u = new URL(req.url);
   const q = u.searchParams;
 
@@ -608,6 +612,9 @@ export async function DELETE(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
+  const gate = await requireAdmin();
+  if (gate instanceof NextResponse) return gate;
+
   const body = await req.json().catch(() => ({} as Any));
   const purgeMode: 'prefix' | 'targeted' | 'orphans' =
     body?.purgeMode === 'targeted' ? 'targeted' : body?.purgeMode === 'orphans' ? 'orphans' : 'prefix';

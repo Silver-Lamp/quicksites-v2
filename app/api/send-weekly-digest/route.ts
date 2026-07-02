@@ -1,8 +1,10 @@
+import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { lazyClient } from '@/lib/lazyClient';
 import { json } from '@/lib/api/json';
 import { OpenAI } from 'openai';
 import { meterLLMCall } from '@/lib/ai/meter';
+import { requireAdmin } from '@/lib/auth/requireUser';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -54,6 +56,9 @@ ${summary.received_feedback.map((f: any) => `• ${f.action} on ${f.block_id.sli
 }
 
 export async function GET() {
+  const gate = await requireAdmin();
+  if (gate instanceof NextResponse) return gate;
+
   const { data: users, error } = await supabase.auth.admin.listUsers();
   if (error) return json({ error: error.message });
 

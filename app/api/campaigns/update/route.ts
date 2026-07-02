@@ -1,8 +1,9 @@
 // app/api/campaigns/update/route.ts
 export const runtime = 'nodejs';
 
-import { NextRequest } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { requireUser } from '@/lib/auth/requireUser';
 
 function getSupabaseClient() {
   return createClient(
@@ -12,6 +13,11 @@ function getSupabaseClient() {
 }
 
 export async function POST(req: NextRequest): Promise<Response> {
+  // Was open to anyone (service-role, no auth). Require a signed-in user, then
+  // enforce that they own the campaign (or are a platform admin) below.
+  const gate = await requireUser();
+  if (gate instanceof NextResponse) return gate;
+
   const supabase = getSupabaseClient();
   const body = await req.json();
 
@@ -31,6 +37,16 @@ export async function POST(req: NextRequest): Promise<Response> {
 
   if (!id || !name || !city || !state || !industry || !starts_at || !ends_at) {
     return Response.json({ error: 'Missing required fields' }, { status: 400 });
+  }
+
+  // AuthZ: the caller must own this campaign or be a platform admin.
+  const [{ data: existing }, { data: adminRow }] = await Promise.all([
+    supabase.from('campaigns').select('owner_id').eq('id', id).maybeSingle(),
+    supabase.from('admin_users').select('user_id').eq('user_id', gate.user.id).maybeSingle(),
+  ]);
+  if (!existing) return Response.json({ error: 'Not found' }, { status: 404 });
+  if (!adminRow && (existing as any).owner_id !== gate.user.id) {
+    return Response.json({ error: 'Forbidden' }, { status: 403 });
   }
 
   // Step 1: Update the campaign

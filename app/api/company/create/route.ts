@@ -5,6 +5,8 @@ export async function POST(req: Request) {
   const supa = await getSupabaseForAction();
   const { data: { user } } = await supa.auth.getUser();
   if (!user) return new NextResponse('Unauthorized', { status: 401 });
+  // A guest (anonymous session) must register before creating a company.
+  if (user.is_anonymous) return new NextResponse('sign up to continue', { status: 401 });
 
   const body = await req.json().catch(() => ({}));
   const name = (body?.name || 'New Company').toString().slice(0, 120);

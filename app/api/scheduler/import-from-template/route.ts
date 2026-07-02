@@ -1,18 +1,23 @@
 import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/server/supabaseAdmin';
 import { resolveCompanyId } from '@/lib/server/resolveCompanyId';
+import { requireCompanyMember } from '@/lib/auth/requireUser';
 
 export async function POST(req: Request) {
   try {
     const body = await req.json().catch(() => ({}));
     const company_id = resolveCompanyId(new URL(req.url).searchParams, body);
+
+    if (!company_id) return new NextResponse('Missing company_id', { status: 400 });
+    // Writes services/resources config via the service role (RLS bypass) — the
+    // caller must own or be a member of this company, not just pass its id.
+    const gate = await requireCompanyMember(company_id);
+    if (gate instanceof NextResponse) return gate;
     const namesIn = Array.isArray(body?.services) ? body.services : [];
     const duration = Number.isFinite(body?.default_duration_minutes) ? body.default_duration_minutes : 60;
     const linkAll = typeof body?.link_all_services_to_default_resource === 'boolean'
       ? body.link_all_services_to_default_resource
       : true;
-
-    if (!company_id) return new NextResponse('Missing company_id', { status: 400 });
 
     const names = Array.from(
       new Map(

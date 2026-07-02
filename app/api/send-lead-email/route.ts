@@ -1,9 +1,16 @@
 export const runtime = 'nodejs';
 
-import { NextRequest } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import nodemailer from 'nodemailer';
+import { requireAdmin } from '@/lib/auth/requireUser';
 
 export async function POST(req: NextRequest) {
+  // This sends an email to an arbitrary caller-supplied recipient from the
+  // platform mailbox — it was fully unauthenticated (an open relay). Restrict to
+  // platform admins.
+  const gate = await requireAdmin();
+  if (gate instanceof NextResponse) return gate;
+
   try {
     const { to, subject, text } = await req.json();
 

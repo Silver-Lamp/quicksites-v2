@@ -6,6 +6,7 @@ import { json } from '@/lib/api/json';
 import { Resend } from 'resend';
 import { NextRequest } from 'next/server';
 import { orgEmailBrand } from '@/lib/email';
+import { rateLimitOr429 } from '@/lib/api/rateLimitGuard';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -15,6 +16,10 @@ const supabase = createClient(
 const resend = lazyClient(() => new Resend(process.env.RESEND_API_KEY!));
 
 export async function POST(req: NextRequest) {
+  // Unauthenticated → throttle so it can't be used to spam a creator's inbox.
+  const limited = await rateLimitOr429(req, 'notify_creator', 10, 3600);
+  if (limited) return limited;
+
   const { slug } = await req.json();
 
   if (!slug) {

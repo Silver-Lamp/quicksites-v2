@@ -7,6 +7,7 @@ export const dynamic = 'force-dynamic';
 
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { rateLimitOr429 } from '@/lib/api/rateLimitGuard';
 
 const admin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -15,6 +16,11 @@ const admin = createClient(
 );
 
 export async function POST(req: Request) {
+  // Public claim flow (service-role, body-derived) → throttle unbounded lead /
+  // user_action_logs inserts per IP. Verification-token redesign is a follow-up.
+  const limited = await rateLimitOr429(req, 'claim_lead', 15, 3600);
+  if (limited) return limited;
+
   const { templateId, email } = await req.json().catch(() => ({} as any));
   if (!templateId || !email) {
     return NextResponse.json({ error: 'Missing templateId or email' }, { status: 400 });

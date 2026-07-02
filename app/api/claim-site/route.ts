@@ -3,6 +3,7 @@ export const runtime = 'nodejs';
 
 import { createClient } from '@supabase/supabase-js';
 import { NextRequest } from 'next/server';
+import { rateLimitOr429 } from '@/lib/api/rateLimitGuard';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -10,6 +11,13 @@ const supabase = createClient(
 );
 
 export async function POST(req: NextRequest) {
+  // Public claim flow (service-role, body-derived) → throttle to blunt domain-
+  // claim / steward_rewards / screenshot_queue spam. A verification-token
+  // redesign (so the claimer must prove control of the email) is a tracked
+  // follow-up; this is the interim abuse guard.
+  const limited = await rateLimitOr429(req, 'claim_site', 10, 3600);
+  if (limited) return limited;
+
   const { slug, email, anon } = await req.json();
 
   const { data: domain } = await supabase

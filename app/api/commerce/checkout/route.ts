@@ -4,12 +4,15 @@ import { createDraftOrder, markOrderPaid } from '@/lib/commerce/orders';
 import { createCheckout } from '@/lib/commerce/paymentRouter';
 import { getServerSupabase } from '@/lib/supabase/server';
 import { parseJsonBody } from '@/lib/api/parseJson';
+import { authorizeCheckoutItems } from '@/lib/commerce/checkoutItems';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-// Money path: client-supplied amounts feed createDraftOrder (fee math) and
-// Stripe, so validate strictly. Amounts are integer cents (CLAUDE.md §7).
+// Money path. The client posts catalog item ids + quantities; PRICES are resolved
+// server-side from catalog_items (see authorizeCheckoutItems) — a client-sent
+// title/unitAmount is accepted for back-compat but ignored, so nobody can set
+// their own price. Amounts are integer cents (CLAUDE.md §7).
 const CheckoutSchema = z.object({
   merchantId: z.string().min(1),
   siteSlug: z.string().optional(),
@@ -18,9 +21,9 @@ const CheckoutSchema = z.object({
     .array(
       z.object({
         catalogItemId: z.string().min(1),
-        title: z.string().min(1),
+        title: z.string().optional(), // ignored — derived from catalog_items
         quantity: z.number().int().positive(),
-        unitAmount: z.number().int().nonnegative(), // cents
+        unitAmount: z.number().int().nonnegative().optional(), // ignored — repriced server-side
       }),
     )
     .min(1),
@@ -42,21 +45,35 @@ export async function POST(req: NextRequest) {
     currency = data?.default_currency ?? 'USD';
   }
 
+  // Resolve authoritative prices from the catalog — never trust client amounts.
+  const catIds = Array.from(new Set(body.items.map((i) => i.catalogItemId).filter(Boolean)));
+  const { data: catalogRows } = await supabase
+    .from('catalog_items')
+    .select('id, merchant_id, title, price_cents, status, metadata')
+    .in('id', catIds);
+
+  const priced = authorizeCheckoutItems({
+    merchantId: body.merchantId,
+    requested: body.items,
+    catalogRows: (catalogRows ?? []) as any,
+  });
+  if (!priced.ok) {
+    return NextResponse.json({ error: priced.error, itemId: priced.badItemId }, { status: 400 });
+  }
+  const items = priced.items;
+
   const { orderId, totalCents, platformFeeCents, shippingCents } = await createDraftOrder({
     merchantId: body.merchantId,
     siteSlug: body.siteSlug ?? '',
     currency: currency ?? 'USD',
-    items: body.items,
+    items,
   });
 
   // If any line item is a print-on-demand product, collect a shipping address at
   // checkout so fulfillment (Lulu/Gelato) has somewhere to ship.
-  let collectShipping = false;
-  const catIds = body.items.map((i) => i.catalogItemId).filter(Boolean);
-  if (catIds.length) {
-    const { data: cis } = await supabase.from('catalog_items').select('metadata').in('id', catIds);
-    collectShipping = (cis ?? []).some((c: any) => ['lulu', 'gelato'].includes(c?.metadata?.fulfillment_provider));
-  }
+  const collectShipping = (catalogRows ?? []).some(
+    (c: any) => ['lulu', 'gelato'].includes(c?.metadata?.fulfillment_provider),
+  );
 
   const base = process.env.QS_PUBLIC_URL ?? '';
   const successUrl = body.successUrl ?? `${base}/checkout/success?order=${orderId}`;
@@ -69,7 +86,7 @@ export async function POST(req: NextRequest) {
     const checkout = await createCheckout(body.merchantId, {
       orderId,
       currency: currency ?? 'USD',
-      lineItems: body.items,
+      lineItems: items,
       successUrl,
       cancelUrl,
       collectShipping,

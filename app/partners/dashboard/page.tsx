@@ -68,7 +68,7 @@ export default async function PartnerDashboard() {
   ]);
   const payoutStatus = (payoutAcct as any)?.status ?? null;
 
-  const { totals, lifetime, referredCount, perMerchant, payouts, currency: cur } = stats;
+  const { owed, totals, lifetime, referredCount, perMerchant, payouts, currency: cur } = stats;
   const primaryCode = myCodes[0];
   const shareLink = `${base}/join/${encodeURIComponent(primaryCode)}`;
 
@@ -97,9 +97,13 @@ export default async function PartnerDashboard() {
         <div className="mt-6 grid grid-cols-2 gap-4 md:grid-cols-4">
           <Stat label="Referred merchants" value={String(referredCount)} />
           <Stat label="Lifetime earned" value={usd(lifetime, cur)} highlight />
-          <Stat label="Pending" value={usd(totals.pending, cur)} />
+          <Stat label="Pending payout" value={usd(owed, cur)} highlight />
           <Stat label="Paid out" value={usd(totals.paid, cur)} />
         </div>
+        <p className="mt-2 text-xs text-zinc-500">
+          Pending payout is everything accrued but not yet paid — {usd(totals.pending, cur)} awaiting the refund
+          window plus {usd(totals.approved, cur)} approved and queued for the next payout run.
+        </p>
 
         {/* Payouts connection */}
         <div className="mt-6 rounded-xl border border-zinc-800 bg-zinc-900/40 p-5">
@@ -127,7 +131,7 @@ export default async function PartnerDashboard() {
                     <th className="px-4 py-2 text-left font-medium">Merchant</th>
                     <th className="px-4 py-2 text-right font-medium">Orders</th>
                     <th className="px-4 py-2 text-right font-medium">Earned</th>
-                    <th className="px-4 py-2 text-right font-medium">Pending</th>
+                    <th className="px-4 py-2 text-right font-medium">Unpaid</th>
                     <th className="px-4 py-2 text-right font-medium">Paid</th>
                   </tr>
                 </thead>
@@ -137,7 +141,7 @@ export default async function PartnerDashboard() {
                       <td className="px-4 py-2">{m.name}</td>
                       <td className="px-4 py-2 text-right tabular-nums text-zinc-400">{m.orderCount}</td>
                       <td className="px-4 py-2 text-right tabular-nums font-medium">{usd(m.earned, cur)}</td>
-                      <td className="px-4 py-2 text-right tabular-nums text-zinc-400">{usd(m.pending, cur)}</td>
+                      <td className="px-4 py-2 text-right tabular-nums text-zinc-400">{usd(m.owed, cur)}</td>
                       <td className="px-4 py-2 text-right tabular-nums text-zinc-400">{usd(m.paid, cur)}</td>
                     </tr>
                   ))}

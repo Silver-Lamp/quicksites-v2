@@ -17,8 +17,64 @@ export type PartnerMerchantRow = {
   orderCount: number;
   earned: number; // pending + approved + paid
   pending: number;
+  approved: number;
+  owed: number; // pending + approved — accrued but not yet paid out
   paid: number;
 };
+
+type LedgerRow = { amount_cents?: number | null; status?: string | null; currency?: string | null; subject_id?: string | null };
+
+/**
+ * Pure reducer: fold a partner's commission_ledger rows into totals + per-merchant
+ * earnings. Kept separate from the DB fetch so the money math is unit-testable.
+ *
+ * "owed" = pending + approved (accrued but not yet paid out). This is the number
+ * the dashboard surfaces as "pending payout" — crucially it includes `approved`,
+ * which the auto-approval cron moves rows into before a payout run; counting only
+ * `pending` would make a partner's balance appear to shrink the moment their
+ * commissions are approved.
+ */
+export function aggregatePartnerLedger(input: {
+  ledgerRows: LedgerRow[];
+  orderToMerchant: Map<string, string>;
+  attributedMerchantIds: string[];
+  nameFor?: (merchantId: string) => string;
+}): { currency: string; totals: PartnerTotals; perMerchant: PartnerMerchantRow[] } {
+  const { ledgerRows, orderToMerchant, attributedMerchantIds } = input;
+  const nameFor = input.nameFor ?? ((id: string) => id.slice(0, 8));
+
+  const rows = new Map<string, PartnerMerchantRow>();
+  const seed = (id: string) => {
+    if (!rows.has(id)) {
+      rows.set(id, { merchantId: id, name: nameFor(id), orderCount: 0, earned: 0, pending: 0, approved: 0, owed: 0, paid: 0 });
+    }
+    return rows.get(id)!;
+  };
+  // Seed every attributed merchant so zero-earning referrals still show.
+  for (const id of new Set<string>(attributedMerchantIds)) seed(id);
+
+  const totals: PartnerTotals = { pending: 0, approved: 0, paid: 0 };
+  let currency = 'USD';
+  for (const r of ledgerRows) {
+    currency = r.currency || currency;
+    const amt = Number(r.amount_cents) || 0;
+    if (r.status === 'pending') totals.pending += amt;
+    else if (r.status === 'approved') totals.approved += amt;
+    else if (r.status === 'paid') totals.paid += amt;
+
+    const merchantId = r.subject_id ? orderToMerchant.get(r.subject_id) : undefined;
+    if (!merchantId) continue;
+    const row = seed(merchantId);
+    row.orderCount += 1;
+    row.earned += amt;
+    if (r.status === 'pending') { row.pending += amt; row.owed += amt; }
+    else if (r.status === 'approved') { row.approved += amt; row.owed += amt; }
+    else if (r.status === 'paid') row.paid += amt;
+  }
+
+  const perMerchant = Array.from(rows.values()).sort((a, b) => b.earned - a.earned);
+  return { currency, totals, perMerchant };
+}
 
 export type PartnerPayoutRow = {
   paidAt: string | null;
@@ -32,7 +88,8 @@ export type PartnerPayoutRow = {
 export type PartnerStats = {
   currency: string;
   totals: PartnerTotals;
-  lifetime: number;
+  lifetime: number; // pending + approved + paid
+  owed: number; // pending + approved — the "pending payout" headline
   referredCount: number;
   perMerchant: PartnerMerchantRow[];
   payouts: PartnerPayoutRow[];
@@ -41,7 +98,7 @@ export type PartnerStats = {
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export async function getPartnerStats(db: any, codes: string[], userId: string): Promise<PartnerStats> {
   if (!codes.length) {
-    return { currency: 'USD', totals: { pending: 0, approved: 0, paid: 0 }, lifetime: 0, referredCount: 0, perMerchant: [], payouts: [] };
+    return { currency: 'USD', totals: { pending: 0, approved: 0, paid: 0 }, lifetime: 0, owed: 0, referredCount: 0, perMerchant: [], payouts: [] };
   }
 
   const [{ data: attrs }, { data: ledger }, { data: payouts }] = await Promise.all([
@@ -76,33 +133,13 @@ export async function getPartnerStats(db: any, codes: string[], userId: string):
     }
   }
 
-  // Seed every attributed merchant (so zero-earning referrals still show)
-  const rows = new Map<string, PartnerMerchantRow>();
-  const seed = (id: string) => {
-    if (!rows.has(id)) rows.set(id, { merchantId: id, name: nameById.get(id) || id.slice(0, 8), orderCount: 0, earned: 0, pending: 0, paid: 0 });
-    return rows.get(id)!;
-  };
-  for (const id of new Set<string>(attrMerchantIds)) seed(id);
+  const { currency, totals, perMerchant } = aggregatePartnerLedger({
+    ledgerRows,
+    orderToMerchant,
+    attributedMerchantIds: attrMerchantIds,
+    nameFor: (id) => nameById.get(id) || id.slice(0, 8),
+  });
 
-  const totals: PartnerTotals = { pending: 0, approved: 0, paid: 0 };
-  let currency = 'USD';
-  for (const r of ledgerRows) {
-    currency = r.currency || currency;
-    const amt = Number(r.amount_cents) || 0;
-    if (r.status === 'pending') totals.pending += amt;
-    else if (r.status === 'approved') totals.approved += amt;
-    else if (r.status === 'paid') totals.paid += amt;
-
-    const merchantId = orderToMerchant.get(r.subject_id);
-    if (!merchantId) continue;
-    const row = seed(merchantId);
-    row.orderCount += 1;
-    row.earned += amt;
-    if (r.status === 'pending') row.pending += amt;
-    else if (r.status === 'paid') row.paid += amt;
-  }
-
-  const perMerchant = Array.from(rows.values()).sort((a, b) => b.earned - a.earned);
   const payoutRows: PartnerPayoutRow[] = (payouts ?? []).map((p: any) => ({
     paidAt: p.paid_at ?? null,
     amountCents: Number(p.amount_cents) || 0,
@@ -116,6 +153,7 @@ export async function getPartnerStats(db: any, codes: string[], userId: string):
     currency,
     totals,
     lifetime: totals.pending + totals.approved + totals.paid,
+    owed: totals.pending + totals.approved,
     referredCount: new Set<string>(attrMerchantIds).size,
     perMerchant,
     payouts: payoutRows,

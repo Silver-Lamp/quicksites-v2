@@ -1,7 +1,8 @@
 // app/api/agents/presets/route.ts
 // CRUD for presets in Supabase (table: agent_block_presets)
 // ===============================
-import { NextRequest as NextRequestPresets } from 'next/server';
+import { NextRequest as NextRequestPresets, NextResponse } from 'next/server';
+import { requireAdmin } from '@/lib/auth/requireUser';
 
 export const dynamicPresets = 'force-dynamic';
 
@@ -51,6 +52,8 @@ export async function GET(req: NextRequestPresets) {
 }
 
 export async function POST(req: NextRequestPresets) {
+  const gate = await requireAdmin();
+  if (gate instanceof NextResponse) return gate;
   try {
     const body = await req.json();
     const sb = await getSupabase();
@@ -66,6 +69,8 @@ export async function POST(req: NextRequestPresets) {
 }
 
 export async function DELETE(req: NextRequestPresets) {
+  const gate = await requireAdmin();
+  if (gate instanceof NextResponse) return gate;
   try {
     const id = new URL(req.url).searchParams.get('id');
     if (!id) return new Response(JSON.stringify({ error: 'missing id' }), { status: 400 });

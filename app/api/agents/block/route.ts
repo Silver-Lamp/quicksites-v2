@@ -1,12 +1,18 @@
 // app/api/agents/block/route.ts
 // Runs qs-block-agent.ts with provided args
 // ===============================
-import { NextRequest } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { spawn } from 'child_process';
+import { requireAdmin } from '@/lib/auth/requireUser';
 
 export const dynamic = 'force-dynamic';
 
 export async function POST(req: NextRequest) {
+  // This spawns the block-agent dev tool (can --commit / --open-pr) — platform
+  // admins only; it must never be reachable unauthenticated.
+  const gate = await requireAdmin();
+  if (gate instanceof NextResponse) return gate;
+
   try {
     const { name, title, group, fields, dryRun, noFiles, commit, openPr, prTitle, outPrefix, registry, schemaMap } = await req.json();
 

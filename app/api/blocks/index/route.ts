@@ -1,7 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { COLLECTION, embedText, qdrant, ensureCollection } from '@/lib/useVectorDB';
+import { requireUser } from '@/lib/auth/requireUser';
 
 export async function POST(req: NextRequest) {
+  // Runs OpenAI embeddings + writes the vector index — require a signed-in user
+  // so anonymous callers can't pollute the index or run up embedding cost.
+  const gate = await requireUser();
+  if (gate instanceof NextResponse) return gate;
+
   try {
     const { blocks } = await req.json();
     if (!Array.isArray(blocks)) {

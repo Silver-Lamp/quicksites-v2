@@ -1,8 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { createServerClient, type CookieOptions } from '@supabase/ssr';
+import { requireAdmin } from '@/lib/auth/requireUser';
 
 export async function POST(req: NextRequest) {
+  // features is the public marketing catalog — platform admins only. The
+  // features_admin_write RLS policy backstops the user-client write below.
+  const adminGate = await requireAdmin();
+  if (adminGate instanceof NextResponse) return adminGate;
+
   const body = await req.json();
   const { id, ...payload } = body as Record<string, any>;
 

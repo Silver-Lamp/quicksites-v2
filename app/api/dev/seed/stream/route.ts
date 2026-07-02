@@ -1,5 +1,6 @@
-import { NextRequest } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { randomUUID } from 'crypto';
+import { requireAdmin } from '@/lib/auth/requireUser';
 
 import { assertAdmin } from '../_lib/auth';
 import { supabaseAdmin } from '../_lib/clients';
@@ -71,6 +72,9 @@ export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 export async function POST(req: NextRequest) {
+  const gate = await requireAdmin();
+  if (gate instanceof NextResponse) return gate;
+
   const encoder = new TextEncoder();
 
   const stream = new ReadableStream<Uint8Array>({

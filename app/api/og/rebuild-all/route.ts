@@ -1,6 +1,11 @@
+import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { requireAdmin } from '@/lib/auth/requireUser';
 
 export async function POST(req: Request) {
+  const gate = await requireAdmin();
+  if (gate instanceof NextResponse) return gate;
+
   const { slug } = await req.json();
   if (!slug) return new Response('Missing slug', { status: 400 });
 

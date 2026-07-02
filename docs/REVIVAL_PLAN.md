@@ -54,7 +54,7 @@
 - [x] **A1** consolidate on `payment_accounts` (killed `merchant_payment_accounts` + bps fee columns; migration `20260701_retire_legacy_connect_bps.sql`).
 - [ ] **A2** one checkout entry point (`app/api/commerce/checkout`).
 - [ ] **A3** first live test-mode order → platform fee collected. ← *first dollar*
-- [ ] **A4/A5** refund fee-reversal + revenue reconciliation.
+- [x] **A4/A5** refund fee-reversal + revenue reconciliation (net-take + partners-owed on `/admin/revenue`, `lib/commerce/revenue.ts`).
 - [ ] **A6** seeded demo storefront (finish chefs/meals checkout).
 - [x] **A7** funnel events emitted server-side at all 8 money steps + commission accrue/pay (see [`MODEL_A_PLAN.md`](MODEL_A_PLAN.md) A7 emit map). Building the PostHog funnel/insight dashboard is now a PostHog-side task.
 

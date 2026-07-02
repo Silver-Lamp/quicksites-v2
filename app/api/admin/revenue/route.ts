@@ -1,14 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { getServerSupabase } from '@/lib/supabase/server';
+import { summarizePlatformRevenue } from '@/lib/commerce/revenue';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 // Platform revenue reconciliation (Model A, A5).
-// "QS earned $X": GMV, platform fees collected, refunds, and rep-commission
-// obligations against those fees. Admin-gated. Stripe-side cross-check (compare
-// to application_fee objects) is a future add — this is the DB source of truth.
+// The real "QuickSites earned $X" number: GMV, gross platform fees, refunds, and
+// the net take after partner residuals (see lib/commerce/revenue.ts). Admin-gated.
+// Stripe-side cross-check (compare to application_fee objects) is a future add —
+// this is the DB source of truth.
 
 const ADMIN_EMAILS = String(process.env.ADMIN_EMAILS || '')
   .split(',')
@@ -18,8 +20,6 @@ const ADMIN_EMAILS = String(process.env.ADMIN_EMAILS || '')
 const db = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, (process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SECRET_KEY)!, {
   auth: { persistSession: false, autoRefreshToken: false },
 });
-
-const sum = (rows: any[], col: string) => rows.reduce((s, r) => s + (Number(r[col]) || 0), 0);
 
 export async function GET(req: NextRequest) {
   // Admin gate (mirrors the codebase's ADMIN_EMAILS + role check)
@@ -41,25 +41,20 @@ export async function GET(req: NextRequest) {
   const { data: orders, error } = await q;
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
-  const paid = (orders ?? []).filter((o) => o.status === 'paid');
-  const refunded = (orders ?? []).filter((o) => o.status === 'refunded');
+  // Partner residuals against those fees. Scope to the fee subject (not other
+  // ledger subjects) and to the same window as the orders so the totals reconcile.
+  let cq = db
+    .from('commission_ledger')
+    .select('amount_cents, status')
+    .eq('subject', 'order_platform_fee');
+  if (since) cq = cq.gte('created_at', since);
+  const { data: comm } = await cq;
 
-  const { data: comm } = await db.from('commission_ledger').select('amount_cents, status');
-  const commissionByStatus: Record<string, number> = {};
-  for (const c of comm ?? []) {
-    commissionByStatus[c.status] = (commissionByStatus[c.status] || 0) + (Number(c.amount_cents) || 0);
-  }
-
-  const platformFeeCents = sum(paid, 'platform_fee_cents');
+  const summary = summarizePlatformRevenue({ orders: orders ?? [], commissions: comm ?? [] });
 
   return NextResponse.json({
     since: since || null,
-    orders: { paid: paid.length, refunded: refunded.length },
-    gmv_cents: sum(paid, 'total_cents'),
-    platform_fee_cents: platformFeeCents, // QS gross revenue from order fees
-    refunded_gmv_cents: sum(refunded, 'total_cents'),
-    refunded_fee_cents: sum(refunded, 'platform_fee_cents'),
-    net_platform_cents: platformFeeCents, // refunded orders already excluded from paid
-    commission_ledger_cents: commissionByStatus, // rep payouts owed/paid against fees
+    ...summary,
+    net_platform_cents: summary.qs_net_cents, // back-compat alias (was gross; now correctly net)
   });
 }

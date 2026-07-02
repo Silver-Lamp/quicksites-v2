@@ -1,8 +1,12 @@
 import { NextResponse } from 'next/server';
 import { pingSearchEngines } from '@/lib/pingSearchEngines';
 import { getServerSupabase } from '@/lib/supabase/server';
+import { requireAdmin } from '@/lib/auth/requireUser';
 
 export async function POST(req: Request) {
+  const gate = await requireAdmin();
+  if (gate instanceof NextResponse) return gate;
+
   const { searchParams } = new URL(req.url);
   const slug = searchParams.get('slug');
 

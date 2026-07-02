@@ -1,8 +1,10 @@
 // app/api/admin/products/suggest/route.ts
+import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { createServerClient } from '@supabase/ssr';
 import OpenAI from 'openai';
 import { meterLLMCall, LLMBudgetExceededError } from '@/lib/ai/meter';
+import { requireAdmin } from '@/lib/auth/requireUser';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -91,6 +93,9 @@ function applyIndustrySoftRange(
 }
 
 export async function POST(req: Request) {
+  const gate = await requireAdmin();
+  if (gate instanceof NextResponse) return gate;
+
   try {
     const body = (await req.json()) as Body;
     const wantDebug = !!body.debug;

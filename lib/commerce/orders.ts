@@ -176,9 +176,9 @@ export async function markOrderPaid(
   try {
     const { data: lines } = await supabase
       .from('order_items')
-      .select('catalog_item_id, quantity, metadata')
+      .select('catalog_item_id, title, quantity, metadata')
       .eq('order_id', orderId);
-    const oversold: Array<{ catalog_item_id: string; variant_id: string | null; requested: number; remaining: number | null }> = [];
+    const oversold: Array<{ title: string; variant_label: string | null; requested: number; remaining: number | null }> = [];
     for (const li of lines ?? []) {
       if (!li.catalog_item_id) continue;
       const qty = Number(li.quantity) || 0;
@@ -191,13 +191,19 @@ export async function markOrderPaid(
       });
       if (error) { console.warn('decrement_catalog_stock failed:', error.message); continue; }
       if (res && (res as any).ok === false && (res as any).reason === 'insufficient') {
-        oversold.push({ catalog_item_id: li.catalog_item_id, variant_id: variantId, requested: qty, remaining: (res as any).remaining ?? null });
+        oversold.push({
+          title: li.title ?? 'Item',
+          variant_label: (li.metadata as any)?.variant_label ?? null,
+          requested: qty,
+          remaining: (res as any).remaining ?? null,
+        });
       }
     }
     if (oversold.length) {
-      // The order was paid but couldn't be fully fulfilled from stock (a race won
-      // by another order). Surface it loudly for reconciliation (refund/backorder).
+      // Paid but couldn't be fully fulfilled from stock (a race won by another
+      // order). Record it on the order + log so the merchant can reconcile.
       console.warn(`Order ${orderId} oversold — paid beyond available stock:`, JSON.stringify(oversold));
+      await supabase.from('orders').update({ oversold_lines: oversold } as any).eq('id', orderId);
     }
   } catch (e) {
     console.warn('Stock decrement step failed:', (e as any)?.message || e);

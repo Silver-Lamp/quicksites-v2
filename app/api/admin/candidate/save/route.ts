@@ -1,10 +1,14 @@
 // app/api/admin/candidate/save/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSupabase } from '@/lib/supabase/server';
+import { requireAdmin } from '@/lib/auth/requireUser';
 
 export const runtime = 'nodejs';
 
 export async function POST(req: NextRequest) {
+  const gate = await requireAdmin();
+  if (gate instanceof NextResponse) return gate;
+
   let body: any;
   try {
     body = await req.json();

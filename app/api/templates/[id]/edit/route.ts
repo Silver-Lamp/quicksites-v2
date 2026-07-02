@@ -3,6 +3,7 @@ export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 import { NextRequest, NextResponse } from 'next/server';
+import { requireTemplateOwner } from '@/lib/auth/requireTemplateOwner';
 import { supabaseAdmin } from '@/lib/supabase/admin';
 import { getServerSupabase } from '@/lib/supabase/server';
 
@@ -73,10 +74,13 @@ export async function POST(
   const { id } = await ctx.params; // Next 15: params is a Promise
   if (!id) return NextResponse.json({ error: 'Missing id' }, { status: 400 });
 
+  // AuthZ: only the template's owner (incl. a guest who owns their draft) or a
+  // platform admin may edit it — the previous check merely required *any* user.
+  const gate = await requireTemplateOwner(id);
+  if (!gate.ok) return gate.response;
+  const userId = gate.userId;
+
   const supa = await getServerSupabase();
-  const { data: authData, error: authErr } = await supa.auth.getUser();
-  if (authErr || !authData?.user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  const userId = authData.user.id;
 
   const body = (await req.json().catch(() => null)) as { template?: any } | null;
   if (!body?.template) return NextResponse.json({ error: 'Missing template' }, { status: 400 });

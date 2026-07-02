@@ -2,9 +2,13 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { createTemplateFromPresetWithBlocks, templatePresets } from '@/lib/createTemplateFromPreset';
+import { requireAdmin } from '@/lib/auth/requireUser';
 //  import type { Database } from '@/types/supabase';
 
 export async function POST() {
+  const gate = await requireAdmin();
+  if (gate instanceof NextResponse) return gate;
+
   const supabase = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     (process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SECRET_KEY)!

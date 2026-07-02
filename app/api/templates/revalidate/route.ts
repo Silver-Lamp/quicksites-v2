@@ -2,13 +2,14 @@
 import { NextResponse } from 'next/server';
 import { revalidatePath, revalidateTag } from 'next/cache';
 import { getServerSupabase } from '@/lib/supabase/server';
+import { requireUser } from '@/lib/auth/requireUser';
 
 export async function POST() {
   try {
-    const supabase = await getServerSupabase();
+    const gate = await requireUser();
+    if (gate instanceof NextResponse) return gate;
 
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return NextResponse.json({ ok: false, error: 'unauthorized' }, { status: 401 });
+    const supabase = await getServerSupabase();
 
     // 1) refresh the MV
     const { data: ok, error } = await supabase.rpc('admin_refresh_template_bases');

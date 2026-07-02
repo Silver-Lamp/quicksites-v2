@@ -4,6 +4,7 @@ export const dynamic = 'force-dynamic';
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSupabase } from '@/lib/supabase/server';
+import { requireTemplateOwner } from '@/lib/auth/requireTemplateOwner';
 
 const ALLOWED_THEME = new Set(['dark', 'light']);
 const ALLOWED_BRAND = new Set(['green', 'blue', 'red']);
@@ -27,10 +28,12 @@ export async function POST(
   const { id } = await ctx.params;
   if (!id) return NextResponse.json({ error: 'Missing id' }, { status: 400 });
 
+  // AuthZ: owner (incl. guest owner) or platform admin only.
+  const gate = await requireTemplateOwner(id);
+  if (!gate.ok) return gate.response;
+  const userId = gate.userId;
+
   const supa = await getServerSupabase();
-  const { data: auth } = await supa.auth.getUser();
-  if (!auth?.user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  const userId = auth.user.id;
 
   const body = await req.json().catch(() => ({}));
   const label: string | null = body?.label ?? null;

@@ -3,6 +3,7 @@ export const dynamic = 'force-dynamic';
 
 import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/server/supabaseAdmin';
+import { requireTemplateOwner } from '@/lib/auth/requireTemplateOwner';
 
 const normalize = (s: string) =>
   String(s || '').toLowerCase().trim()
@@ -25,6 +26,9 @@ export async function PATCH(req: Request, ctx: { params: Promise<Params> }) {
 
     if (!id) return j({ error: 'id required' }, 400);
     if (!wanted) return j({ error: 'slug required' }, 400);
+
+    const gate = await requireTemplateOwner(id);
+    if (!gate.ok) return gate.response;
 
     console.log('[SLUG:PATCH:CALL]', { id, wanted });
     const r = await supabaseAdmin.schema('app').rpc('set_template_slug', {

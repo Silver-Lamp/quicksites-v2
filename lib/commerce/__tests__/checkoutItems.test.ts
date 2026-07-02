@@ -108,4 +108,61 @@ describe('authorizeCheckoutItems', () => {
   it('fails closed on an empty cart', () => {
     expect(authorizeCheckoutItems({ merchantId: M, requested: [], catalogRows: [row()] }).ok).toBe(false);
   });
+
+  describe('variants', () => {
+    const withVariants = (variants: any[]) =>
+      row({ price_cents: null, metadata: { variants } });
+
+    it('prices from the selected variant, not the base item or the client', () => {
+      const res = authorizeCheckoutItems({
+        merchantId: M,
+        requested: [{ catalogItemId: 'ci-1', quantity: 1, variantId: 'lg', unitAmount: 1 }],
+        catalogRows: [withVariants([
+          { id: 'sm', label: 'Small', price_cents: 1000 },
+          { id: 'lg', label: 'Large', price_cents: 1500 },
+        ])],
+      });
+      expect(res.ok).toBe(true);
+      if (!res.ok) return;
+      expect(res.items[0].unitAmount).toBe(1500);
+      expect(res.items[0].title).toBe('Widget — Large');
+      expect(res.items[0].metadata).toMatchObject({ variant_id: 'lg', variant_label: 'Large' });
+    });
+
+    it('requires a variant selection when the item has variants', () => {
+      const res = authorizeCheckoutItems({
+        merchantId: M,
+        requested: [{ catalogItemId: 'ci-1', quantity: 1 }], // no variantId
+        catalogRows: [withVariants([{ id: 'sm', label: 'Small', price_cents: 1000 }])],
+      });
+      expect(res.ok).toBe(false);
+    });
+
+    it('rejects an unknown or inactive variant id', () => {
+      const unknown = authorizeCheckoutItems({
+        merchantId: M,
+        requested: [{ catalogItemId: 'ci-1', quantity: 1, variantId: 'ghost' }],
+        catalogRows: [withVariants([{ id: 'sm', label: 'Small', price_cents: 1000 }])],
+      });
+      expect(unknown.ok).toBe(false);
+
+      const inactive = authorizeCheckoutItems({
+        merchantId: M,
+        requested: [{ catalogItemId: 'ci-1', quantity: 1, variantId: 'sm' }],
+        catalogRows: [withVariants([{ id: 'sm', label: 'Small', price_cents: 1000, status: 'inactive' }])],
+      });
+      expect(inactive.ok).toBe(false);
+    });
+
+    it('ignores a stray variantId on an item that has no variants', () => {
+      const res = authorizeCheckoutItems({
+        merchantId: M,
+        requested: [{ catalogItemId: 'ci-1', quantity: 1, variantId: 'stale' }],
+        catalogRows: [row()], // no variants, price 5000
+      });
+      expect(res.ok).toBe(true);
+      if (!res.ok) return;
+      expect(res.items[0].unitAmount).toBe(5000);
+    });
+  });
 });

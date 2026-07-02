@@ -6,6 +6,7 @@
 import { notFound } from 'next/navigation';
 import { createClient } from '@supabase/supabase-js';
 import AddToCartButton from './add-to-cart';
+import { readVariants } from '@/lib/commerce/checkoutItems';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -29,7 +30,7 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
   // slug is unique per merchant (not globally) — take the most recent active match.
   const { data: rows } = await db
     .from('catalog_items')
-    .select('id,slug,title,description,price_cents,images,type,status,merchant_id')
+    .select('id,slug,title,description,price_cents,images,type,status,merchant_id,metadata')
     .eq('slug', slug)
     .eq('status', 'active')
     .order('created_at', { ascending: false })
@@ -39,6 +40,14 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
   if (!item) notFound();
 
   const img = firstImage(item.images);
+
+  // Purchasable variants (size/color, each its own price). Price shown becomes a
+  // "from" when there are variants; the selector + effective price live in the button.
+  const variants = readVariants(item.metadata)
+    .filter((v) => (v.status ?? 'active') === 'active')
+    .map((v) => ({ id: v.id, label: v.label, priceCents: Number(v.price_cents) || 0 }));
+  const hasVariants = variants.length > 0;
+  const fromPrice = hasVariants ? Math.min(...variants.map((v) => v.priceCents)) : Number(item.price_cents) || 0;
 
   return (
     <main className="mx-auto max-w-4xl px-4 py-10">
@@ -61,7 +70,10 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
             </span>
           )}
           <h1 className="text-3xl font-bold tracking-tight">{item.title}</h1>
-          <div className="text-2xl font-semibold">{fmtPrice(item.price_cents)}</div>
+          <div className="text-2xl font-semibold">
+            {hasVariants && <span className="mr-1 text-sm font-normal text-muted-foreground">from</span>}
+            {fmtPrice(fromPrice)}
+          </div>
           {item.description && (
             <p className="whitespace-pre-line text-sm leading-relaxed text-muted-foreground">{item.description}</p>
           )}
@@ -69,7 +81,8 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
             <AddToCartButton
               id={item.id}
               title={item.title}
-              priceCents={item.price_cents}
+              priceCents={Number(item.price_cents) || 0}
+              variants={variants}
               imageUrl={img}
               productType={item.type}
               merchantId={item.merchant_id}

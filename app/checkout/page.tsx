@@ -30,7 +30,8 @@ export default function CheckoutPage() {
         body: JSON.stringify({
           merchantId,
           items: items.map((it) => ({
-            catalogItemId: it.id,
+            catalogItemId: it.catalog_item_id ?? it.id,
+            variantId: it.variant_id ?? undefined,
             title: it.title,
             quantity: it.qty,
             unitAmount: it.price_cents,
@@ -69,7 +70,9 @@ export default function CheckoutPage() {
         {items.map((it) => (
           <li key={it.id} className="flex items-center justify-between p-3 text-sm">
             <span className="truncate">
-              {it.title} <span className="text-muted-foreground">× {it.qty}</span>
+              {it.title}
+              {it.variant_label && <span className="text-muted-foreground"> ({it.variant_label})</span>}{' '}
+              <span className="text-muted-foreground">× {it.qty}</span>
             </span>
             <span>{fmt((it.price_cents || 0) * (it.qty || 0))}</span>
           </li>

@@ -6,6 +6,8 @@ import { useCartStore } from './cart-store';
 
 type CartAddPayload = {
   id: string;
+  variant_id?: string | null;
+  variant_label?: string | null;
   qty: number;
   price_cents: number;
   title: string;
@@ -81,6 +83,8 @@ export default function CartEventsWire() {
       // No conflict → add immediately
       addItem({
         id: d.id,
+        variant_id: d.variant_id ?? null,
+        variant_label: d.variant_label ?? null,
         title: d.title,
         price_cents: d.price_cents,
         qty: Math.max(1, d.qty ?? 1),
@@ -110,6 +114,8 @@ export default function CartEventsWire() {
     clearCart();
     addItem({
       id: pending.id,
+      variant_id: pending.variant_id ?? null,
+      variant_label: pending.variant_label ?? null,
       title: pending.title,
       price_cents: pending.price_cents,
       qty: Math.max(1, pending.qty ?? 1),

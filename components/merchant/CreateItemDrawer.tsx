@@ -15,6 +15,13 @@ export default function CreateItemDrawer({ merchantId, siteSlug, onCreated }:{
   const [desc, setDesc] = useState('');
   const [saving, setSaving] = useState(false);
 
+  // Optional variants (size/color, each its own price). Generic products only.
+  const [variants, setVariants] = useState<Array<{ label: string; price: number }>>([]);
+  const addVariant = () => setVariants((v) => [...v, { label: '', price: 0 }]);
+  const updateVariant = (i: number, patch: Partial<{ label: string; price: number }>) =>
+    setVariants((v) => v.map((row, k) => (k === i ? { ...row, ...patch } : row)));
+  const removeVariant = (i: number) => setVariants((v) => v.filter((_, k) => k !== i));
+
   // Print-on-demand (Lulu book / Gelato merch)
   const [pod, setPod] = useState<'none' | 'lulu' | 'gelato'>('none');
   const [interiorUrl, setInteriorUrl] = useState('');
@@ -33,6 +40,10 @@ export default function CreateItemDrawer({ merchantId, siteSlug, onCreated }:{
         : pod === 'gelato'
         ? { productUid, fileUrl, base_cost_cents: baseCostCents }
         : undefined;
+    const cleanVariants =
+      pod === 'none'
+        ? variants.filter((v) => v.label.trim()).map((v) => ({ label: v.label.trim(), priceCents: Math.round((v.price || 0) * 100) }))
+        : [];
     const res = await fetch('/api/catalog/items', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
@@ -41,6 +52,7 @@ export default function CreateItemDrawer({ merchantId, siteSlug, onCreated }:{
         type, title, slug, description: desc,
         priceCents: Math.round((price || 0) * 100),
         availability: { kind: 'always' },
+        ...(cleanVariants.length ? { variants: cleanVariants } : {}),
         ...(pod !== 'none' ? { fulfillmentProvider: pod, podSpec } : {}),
       })
     });
@@ -48,7 +60,7 @@ export default function CreateItemDrawer({ merchantId, siteSlug, onCreated }:{
     if (res.ok) {
       const { id } = await res.json();
       setOpen(false);
-      setTitle(''); setSlug(''); setDesc(''); setPrice(0);
+      setTitle(''); setSlug(''); setDesc(''); setPrice(0); setVariants([]);
       setPod('none'); setInteriorUrl(''); setCoverUrl(''); setPageCount(0); setProductUid(''); setFileUrl(''); setBaseCost(0);
       onCreated?.(id);
     } else {
@@ -95,6 +107,28 @@ export default function CreateItemDrawer({ merchantId, siteSlug, onCreated }:{
               <input type="number" step="0.01" min="0" value={price}
                 onChange={(e)=>setPrice(Number(e.target.value))}
                 className="rounded bg-neutral-900 px-3 py-2 text-sm ring-1 ring-neutral-800" />
+
+              {pod === 'none' && (
+                <div className="mt-2 grid grid-cols-1 gap-2 rounded-lg bg-neutral-900/60 p-3 ring-1 ring-neutral-800">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs text-neutral-400">Options / variants (each its own price)</label>
+                    <button type="button" onClick={addVariant} className="rounded px-2 py-0.5 text-xs text-purple-300 hover:bg-neutral-900">+ Add option</button>
+                  </div>
+                  {variants.length === 0 ? (
+                    <p className="text-[11px] text-neutral-500">Optional. Add e.g. Small / Medium / Large. When set, the base price above is ignored and the cheapest option shows as the “from” price.</p>
+                  ) : (
+                    variants.map((v, i) => (
+                      <div key={i} className="flex items-center gap-2">
+                        <input value={v.label} onChange={(e)=>updateVariant(i, { label: e.target.value })} placeholder="Option label (e.g. Large)"
+                          className="flex-1 rounded bg-neutral-900 px-3 py-2 text-sm ring-1 ring-neutral-800" />
+                        <input type="number" step="0.01" min="0" value={v.price} onChange={(e)=>updateVariant(i, { price: Number(e.target.value) })} placeholder="USD"
+                          className="w-24 rounded bg-neutral-900 px-3 py-2 text-sm ring-1 ring-neutral-800" />
+                        <button type="button" onClick={()=>removeVariant(i)} className="rounded px-2 py-1 text-neutral-500 hover:bg-neutral-900" aria-label="Remove option">✕</button>
+                      </div>
+                    ))
+                  )}
+                </div>
+              )}
 
               <label className="mt-2 text-xs text-neutral-400">Description</label>
               <textarea value={desc} onChange={(e)=>setDesc(e.target.value)}

@@ -129,6 +129,7 @@ admin/               # NOTE: a second top-level dir (legacy/parallel admin tooli
 - **New business logic → `lib/<domain>/`** (pure, testable), thin route on top.
 - **Money in integer cents**, never floats. Match the schema (`*_cents`).
 - **Cron** endpoints live under `app/api/cron/*`, registered in `vercel.json`, auth'd by `isCronAuthorized` (`x-cron-secret`/`CRON_SECRET` or Vercel's `Authorization: Bearer`). Wrap the body in `runCron(job, …)` for `cron_runs` logging.
+- **DB migrations are tracked** in `public.schema_migrations` via `scripts/db-migrate.mjs`. Add a `supabase/migrations/<ts>_name.sql` file (idempotent DDL: `if [not] exists`), then `npm run db:migrate:status` to see pending and `npm run db:migrate:up` to apply (each runs in one transaction and is recorded on success — never hand-apply with `psql -f` or the ledger drifts). `status` also flags checksum drift + orphaned records. Needs `SUPABASE_DB_URL`.
 - **New sites/templates default to `color_mode: 'dark'`.** Creation + render fallbacks all default dark; set `color_mode: 'light'` explicitly to override.
 - **Conventional commits** (`npm run commit` / commitlint). NOTE: current history is squashed to `📦 g` placeholders — start writing real messages.
 

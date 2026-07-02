@@ -1,4 +1,5 @@
 // lib/commerce/checkoutItems.ts
+import { readItemStock, checkStock, normalizeStock } from './inventory';
 //
 // Server-side price authority for the public storefront checkout. The client
 // posts catalog item ids + quantities, but the PRICE must come from the DB, never
@@ -22,6 +23,7 @@ export type CatalogVariant = {
   price_cents: number | null;
   status?: string | null;
   options?: Record<string, string> | null; // axis → value, e.g. { Size: 'M', Color: 'Red' } (multi-axis)
+  stock?: number | null; // units available; null/absent = untracked (unlimited)
 };
 
 export type VariantAxis = { name: string; values: string[] };
@@ -152,6 +154,17 @@ export function authorizeCheckoutItems(input: {
     }
     if (quantity > MAX_QUANTITY_PER_LINE) {
       return { ok: false, error: `Quantity for "${title}" exceeds the per-order limit.`, badItemId: req.catalogItemId };
+    }
+
+    // Stock gate: reject overselling a tracked item/variant (untracked ⇒ unlimited).
+    const available = variant ? normalizeStock(variant.stock) : readItemStock(row.metadata);
+    const stock = checkStock(available, quantity);
+    if (!stock.ok) {
+      return {
+        ok: false,
+        error: stock.reason === 'sold_out' ? `"${title}" is sold out.` : `Only ${available} of "${title}" left.`,
+        badItemId: req.catalogItemId,
+      };
     }
 
     const baseMeta = row.metadata && typeof row.metadata === 'object' ? { ...(row.metadata as Record<string, unknown>) } : {};

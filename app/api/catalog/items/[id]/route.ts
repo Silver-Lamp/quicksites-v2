@@ -7,6 +7,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSupabase } from '@/lib/supabase/server';
 import { normalizeVariants, mergeVariantMetadata, type InputAxis, type InputVariant } from '@/lib/commerce/variants';
+import { normalizeStock } from '@/lib/commerce/inventory';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -34,6 +35,8 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     // When present (even empty), variants are fully replaced with this authoring state.
     variantOptions?: InputAxis[];
     variants?: InputVariant[];
+    // Item-level stock for a plain (variant-less) product. null clears tracking.
+    stock?: number | null;
   };
 
   const supa = await getServerSupabase();
@@ -61,6 +64,15 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       fallbackBaseCents: body.priceCents ?? existing.price_cents ?? 0,
     });
     const merged = mergeVariantMetadata(existing.metadata as any, norm);
+    // Item-level stock applies only to a plain result; per-variant stock governs
+    // otherwise. Set/clear it explicitly so a reverted product tracks correctly.
+    if (norm.variants.length === 0) {
+      const s = normalizeStock(body.stock);
+      if (s !== null) merged.metadata.stock = s;
+      else delete merged.metadata.stock;
+    } else {
+      delete merged.metadata.stock;
+    }
     patch.metadata = merged.metadata;
     patch.price_cents = merged.priceCents;
   } else if (typeof body.priceCents === 'number') {

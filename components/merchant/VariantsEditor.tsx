@@ -11,7 +11,7 @@
 import * as React from 'react';
 
 export type EditorAxis = { name: string; values: string[] };
-export type EditorVariant = { label: string; priceCents: number; options: Record<string, string> };
+export type EditorVariant = { label: string; priceCents: number; options: Record<string, string>; stock?: number | null };
 export type VariantsPayload = { variantOptions: EditorAxis[]; variants: EditorVariant[] };
 
 type Props = {
@@ -19,7 +19,7 @@ type Props = {
   defaultPriceDollars?: number;
   /** Seed for edit mode. */
   initialAxes?: EditorAxis[];
-  initialVariants?: Array<{ price_cents: number; options?: Record<string, string> | null }>;
+  initialVariants?: Array<{ price_cents: number; options?: Record<string, string> | null; stock?: number | null }>;
   onChange: (payload: VariantsPayload) => void;
 };
 
@@ -77,6 +77,16 @@ export default function VariantsEditor({ defaultPriceDollars = 0, initialAxes, i
     }
     return seed;
   });
+  // Per-combo stock (units); '' = untracked/unlimited.
+  const [stocks, setStocks] = React.useState<Record<string, number | ''>>(() => {
+    const seed: Record<string, number | ''> = {};
+    if (initialAxes && initialVariants) {
+      for (const v of initialVariants) {
+        if (v.options) seed[comboKey(initialAxes, v.options)] = typeof v.stock === 'number' ? v.stock : '';
+      }
+    }
+    return seed;
+  });
 
   const parsedAxes: EditorAxis[] = React.useMemo(
     () => axes.map((a) => ({ name: a.name.trim(), values: parseValues(a.valuesText) })),
@@ -90,7 +100,13 @@ export default function VariantsEditor({ defaultPriceDollars = 0, initialAxes, i
     const variants: EditorVariant[] = grid.map((opts) => {
       const key = comboKey(parsedAxes, opts);
       const dollars = prices[key] ?? defaultPriceDollars;
-      return { label: comboLabel(parsedAxes, opts), priceCents: Math.max(0, Math.round((Number(dollars) || 0) * 100)), options: opts };
+      const s = stocks[key];
+      return {
+        label: comboLabel(parsedAxes, opts),
+        priceCents: Math.max(0, Math.round((Number(dollars) || 0) * 100)),
+        options: opts,
+        stock: s === '' || s === undefined ? null : Math.max(0, Math.floor(Number(s) || 0)),
+      };
     });
     const payload: VariantsPayload = {
       variantOptions: enabled ? parsedAxes.filter((a) => a.name && a.values.length) : [],
@@ -98,7 +114,7 @@ export default function VariantsEditor({ defaultPriceDollars = 0, initialAxes, i
     };
     const sig = JSON.stringify(payload);
     if (sig !== emitSig.current) { emitSig.current = sig; onChange(payload); }
-  }, [grid, prices, parsedAxes, enabled, defaultPriceDollars, onChange]);
+  }, [grid, prices, stocks, parsedAxes, enabled, defaultPriceDollars, onChange]);
 
   if (!enabled) {
     return (
@@ -147,18 +163,28 @@ export default function VariantsEditor({ defaultPriceDollars = 0, initialAxes, i
 
       {grid.length > 0 && (
         <div className="mt-1 grid gap-1">
-          <div className="text-[11px] text-neutral-500">{grid.length} combination{grid.length === 1 ? '' : 's'} — set a price for each (defaults to the base price):</div>
+          <div className="text-[11px] text-neutral-500">{grid.length} combination{grid.length === 1 ? '' : 's'} — price each (defaults to base) and optional stock (blank = unlimited):</div>
+          <div className="flex items-center gap-2 text-[11px] text-neutral-500">
+            <span className="flex-1" />
+            <span className="w-24 text-right">Price</span>
+            <span className="w-20 text-right">Stock</span>
+          </div>
           {grid.map((opts) => {
             const key = comboKey(parsedAxes, opts);
             return (
               <div key={key} className="flex items-center gap-2">
                 <span className="flex-1 truncate text-sm">{comboLabel(parsedAxes, opts)}</span>
-                <span className="text-xs text-neutral-500">$</span>
                 <input
-                  type="number" step="0.01" min="0"
+                  type="number" step="0.01" min="0" placeholder="$"
                   value={prices[key] ?? defaultPriceDollars}
                   onChange={(e) => setPrices((p) => ({ ...p, [key]: Number(e.target.value) }))}
                   className="w-24 rounded bg-neutral-900 px-3 py-2 text-sm ring-1 ring-neutral-800"
+                />
+                <input
+                  type="number" step="1" min="0" placeholder="∞"
+                  value={stocks[key] ?? ''}
+                  onChange={(e) => setStocks((s) => ({ ...s, [key]: e.target.value === '' ? '' : Math.max(0, Math.floor(Number(e.target.value))) }))}
+                  className="w-20 rounded bg-neutral-900 px-3 py-2 text-sm ring-1 ring-neutral-800"
                 />
               </div>
             );

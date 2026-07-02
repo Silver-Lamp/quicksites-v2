@@ -17,6 +17,7 @@ export default function EditItemDrawer({ itemId, onSaved }: { itemId: string; on
   const [desc, setDesc] = useState('');
   const [price, setPrice] = useState(0); // dollars
   const [status, setStatus] = useState<'active' | 'inactive'>('active');
+  const [stock, setStock] = useState<string>(''); // plain-item stock; '' = unlimited
   const [variantsPayload, setVariantsPayload] = useState<VariantsPayload>({ variantOptions: [], variants: [] });
 
   async function openAndLoad() {
@@ -32,6 +33,8 @@ export default function EditItemDrawer({ itemId, onSaved }: { itemId: string; on
       setDesc(it.description || '');
       setPrice((it.price_cents || 0) / 100);
       setStatus(it.status === 'inactive' ? 'inactive' : 'active');
+      const s = it.metadata?.stock;
+      setStock(typeof s === 'number' ? String(s) : '');
       setVariantsPayload({ variantOptions: [], variants: [] });
       setLoaded(true);
     } catch (e: any) {
@@ -53,6 +56,7 @@ export default function EditItemDrawer({ itemId, onSaved }: { itemId: string; on
       if (!isPod) {
         body.variantOptions = variantsPayload.variantOptions;
         body.variants = variantsPayload.variants;
+        if (variantsPayload.variants.length === 0) body.stock = stock === '' ? null : Math.max(0, Math.floor(Number(stock) || 0));
       }
       const res = await fetch(`/api/catalog/items/${itemId}`, {
         method: 'PATCH',
@@ -108,6 +112,15 @@ export default function EditItemDrawer({ itemId, onSaved }: { itemId: string; on
                     <option value="active">active (visible & purchasable)</option>
                     <option value="inactive">inactive (hidden)</option>
                   </select>
+
+                  {!isPod && variantsPayload.variants.length === 0 && (
+                    <>
+                      <label className="mt-2 text-xs text-neutral-400">Stock (blank = unlimited)</label>
+                      <input type="number" step="1" min="0" value={stock} placeholder="∞"
+                        onChange={(e) => setStock(e.target.value)}
+                        className="rounded bg-neutral-900 px-3 py-2 text-sm ring-1 ring-neutral-800" />
+                    </>
+                  )}
 
                   {isPod ? (
                     <p className="mt-2 text-[11px] text-neutral-500">This is a print-on-demand item; its options aren’t edited here.</p>

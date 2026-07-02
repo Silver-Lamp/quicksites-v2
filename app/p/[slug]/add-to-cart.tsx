@@ -14,7 +14,7 @@ import * as React from 'react';
 import Link from 'next/link';
 import { resolveVariantByOptions, type CatalogVariant } from '@/lib/commerce/checkoutItems';
 
-type Variant = { id: string; label: string; priceCents: number; options?: Record<string, string> | null };
+type Variant = { id: string; label: string; priceCents: number; options?: Record<string, string> | null; stock?: number | null };
 type Axis = { name: string; values: string[] };
 
 type Props = {
@@ -23,6 +23,7 @@ type Props = {
   priceCents: number;
   variants?: Variant[];
   axes?: Axis[];
+  itemStock?: number | null;
   imageUrl: string | null;
   productType: string | null;
   merchantId: string | null;
@@ -31,7 +32,7 @@ type Props = {
 const fmt = (c: number) => `$${((Number(c) || 0) / 100).toFixed(2)}`;
 const toCatalogVariant = (v: Variant): CatalogVariant => ({ id: v.id, label: v.label, price_cents: v.priceCents, options: v.options ?? null });
 
-export default function AddToCartButton({ id, title, priceCents, variants = [], axes = [], imageUrl, productType, merchantId }: Props) {
+export default function AddToCartButton({ id, title, priceCents, variants = [], axes = [], itemStock = null, imageUrl, productType, merchantId }: Props) {
   const multiAxis = axes.length > 0 && variants.length > 0;
   const singleList = !multiAxis && variants.length > 0;
 
@@ -57,8 +58,13 @@ export default function AddToCartButton({ id, title, priceCents, variants = [], 
   const effectivePrice = sku ? sku.priceCents : hasVariants ? 0 : priceCents;
   const unavailable = hasVariants && !sku; // a combination that isn't offered
 
+  // Sold out when the tracked stock for the current selection (or the plain item) is 0.
+  const stockForSelection = hasVariants ? (sku ? sku.stock ?? null : null) : itemStock;
+  const soldOut = typeof stockForSelection === 'number' && stockForSelection <= 0;
+  const blocked = unavailable || soldOut;
+
   const add = React.useCallback(() => {
-    if (hasVariants && !sku) return;
+    if (blocked || (hasVariants && !sku)) return;
     try {
       window.dispatchEvent(
         new CustomEvent('qs:cart:add', {
@@ -80,7 +86,7 @@ export default function AddToCartButton({ id, title, priceCents, variants = [], 
     } catch {
       /* noop */
     }
-  }, [hasVariants, sku, id, effectivePrice, title, imageUrl, productType, merchantId]);
+  }, [blocked, hasVariants, sku, id, effectivePrice, title, imageUrl, productType, merchantId]);
 
   return (
     <div className="flex flex-col gap-3">
@@ -116,14 +122,18 @@ export default function AddToCartButton({ id, title, priceCents, variants = [], 
       )}
 
       {unavailable && <p className="text-sm text-muted-foreground">That combination isn’t available.</p>}
+      {soldOut && !unavailable && <p className="text-sm text-muted-foreground">Sold out.</p>}
+      {!blocked && typeof stockForSelection === 'number' && stockForSelection <= 5 && (
+        <p className="text-sm text-amber-600">Only {stockForSelection} left.</p>
+      )}
 
       <div className="flex items-center gap-3">
         <button
           onClick={add}
-          disabled={unavailable}
+          disabled={blocked}
           className="rounded-md bg-primary px-5 py-2.5 text-sm font-medium text-primary-foreground transition hover:opacity-90 disabled:opacity-50"
         >
-          {added ? 'Added ✓' : unavailable ? 'Unavailable' : `Add to cart — ${fmt(effectivePrice)}`}
+          {added ? 'Added ✓' : unavailable ? 'Unavailable' : soldOut ? 'Sold out' : `Add to cart — ${fmt(effectivePrice)}`}
         </button>
         <Link href="/cart" className="text-sm underline underline-offset-4 text-muted-foreground hover:text-foreground">
           View cart

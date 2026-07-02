@@ -6,6 +6,7 @@ import { EVENTS } from '@/lib/analytics/events';
 import { partnerCommissionCents, PARTNER_FEE_SHARE } from './partner-terms';
 import { isAgencyPlanMerchant } from '@/lib/billing/plans';
 import { computeSubtotalCents, computePlatformFeeCents, flatShippingCents, parseStripeTaxTotals } from './fees';
+import { applyStockDecrements } from './inventory';
 
 /** Create a pending order and its line items. Returns order id and totals. */
 export async function createDraftOrder(opts: {
@@ -166,6 +167,31 @@ export async function markOrderPaid(
     }
   } catch (e) {
     console.warn('Tax record step failed:', (e as any)?.message || e);
+  }
+
+  // 2c) Decrement tracked inventory for each line (once — guarded by the paid
+  //     transition above). Best-effort: an oversell or a JSON hiccup must never
+  //     block a completed payment. Untracked items/variants are left alone.
+  try {
+    const { data: lines } = await supabase
+      .from('order_items')
+      .select('catalog_item_id, quantity, metadata')
+      .eq('order_id', orderId);
+    // Group decrements by catalog item, tagged with the ordered variant (if any).
+    const byItem = new Map<string, Array<{ variantId?: string | null; quantity: number }>>();
+    for (const li of lines ?? []) {
+      if (!li.catalog_item_id) continue;
+      const arr = byItem.get(li.catalog_item_id) ?? [];
+      arr.push({ variantId: (li.metadata as any)?.variant_id ?? null, quantity: Number(li.quantity) || 0 });
+      byItem.set(li.catalog_item_id, arr);
+    }
+    for (const [catalogItemId, decrements] of byItem) {
+      const { data: ci } = await supabase.from('catalog_items').select('metadata').eq('id', catalogItemId).maybeSingle();
+      const { metadata, changed } = applyStockDecrements(ci?.metadata, decrements);
+      if (changed) await supabase.from('catalog_items').update({ metadata } as any).eq('id', catalogItemId);
+    }
+  } catch (e) {
+    console.warn('Stock decrement step failed:', (e as any)?.message || e);
   }
 
   // 3) Fetch order context once

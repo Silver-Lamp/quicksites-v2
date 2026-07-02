@@ -115,6 +115,22 @@ describe('authorizeCheckoutItems', () => {
     expect(authorizeCheckoutItems({ merchantId: M, requested: [], catalogRows: [row()] }).ok).toBe(false);
   });
 
+  it('enforces item-level stock on a plain (variant-less) item', () => {
+    const soldOut = authorizeCheckoutItems({
+      merchantId: M,
+      requested: [{ catalogItemId: 'ci-1', quantity: 1 }],
+      catalogRows: [row({ metadata: { stock: 0 } })],
+    });
+    expect(soldOut.ok).toBe(false);
+
+    const ok = authorizeCheckoutItems({
+      merchantId: M,
+      requested: [{ catalogItemId: 'ci-1', quantity: 2 }],
+      catalogRows: [row({ metadata: { stock: 2 } })],
+    });
+    expect(ok.ok).toBe(true);
+  });
+
   describe('variants', () => {
     const withVariants = (variants: any[]) =>
       row({ price_cents: null, metadata: { variants } });
@@ -169,6 +185,39 @@ describe('authorizeCheckoutItems', () => {
       expect(res.ok).toBe(true);
       if (!res.ok) return;
       expect(res.items[0].unitAmount).toBe(5000);
+    });
+
+    it('rejects a sold-out (stock 0) variant', () => {
+      const res = authorizeCheckoutItems({
+        merchantId: M,
+        requested: [{ catalogItemId: 'ci-1', quantity: 1, variantId: 'sm' }],
+        catalogRows: [withVariants([{ id: 'sm', label: 'Small', price_cents: 1000, stock: 0 }])],
+      });
+      expect(res.ok).toBe(false);
+    });
+
+    it('rejects ordering more than a variant has in stock', () => {
+      const res = authorizeCheckoutItems({
+        merchantId: M,
+        requested: [{ catalogItemId: 'ci-1', quantity: 5, variantId: 'sm' }],
+        catalogRows: [withVariants([{ id: 'sm', label: 'Small', price_cents: 1000, stock: 3 }])],
+      });
+      expect(res.ok).toBe(false);
+    });
+
+    it('allows up to the tracked stock, and unlimited when untracked', () => {
+      const exact = authorizeCheckoutItems({
+        merchantId: M,
+        requested: [{ catalogItemId: 'ci-1', quantity: 3, variantId: 'sm' }],
+        catalogRows: [withVariants([{ id: 'sm', label: 'Small', price_cents: 1000, stock: 3 }])],
+      });
+      expect(exact.ok).toBe(true);
+      const untracked = authorizeCheckoutItems({
+        merchantId: M,
+        requested: [{ catalogItemId: 'ci-1', quantity: 999, variantId: 'sm' }],
+        catalogRows: [withVariants([{ id: 'sm', label: 'Small', price_cents: 1000 }])],
+      });
+      expect(untracked.ok).toBe(true);
     });
 
     it('prices a multi-axis SKU by its id (checkout is unchanged for grids)', () => {

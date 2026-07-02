@@ -7,6 +7,7 @@ import { notFound } from 'next/navigation';
 import { createClient } from '@supabase/supabase-js';
 import AddToCartButton from './add-to-cart';
 import { readVariants, readVariantOptions } from '@/lib/commerce/checkoutItems';
+import { readItemStock } from '@/lib/commerce/inventory';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -46,8 +47,9 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
   // selector(s) + effective price live in the button.
   const variants = readVariants(item.metadata)
     .filter((v) => (v.status ?? 'active') === 'active')
-    .map((v) => ({ id: v.id, label: v.label, priceCents: Number(v.price_cents) || 0, options: v.options ?? null }));
+    .map((v) => ({ id: v.id, label: v.label, priceCents: Number(v.price_cents) || 0, options: v.options ?? null, stock: v.stock ?? null }));
   const axes = readVariantOptions(item.metadata);
+  const itemStock = readItemStock(item.metadata);
   const hasVariants = variants.length > 0;
   const fromPrice = hasVariants ? Math.min(...variants.map((v) => v.priceCents)) : Number(item.price_cents) || 0;
 
@@ -86,6 +88,7 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
               priceCents={Number(item.price_cents) || 0}
               variants={variants}
               axes={axes}
+              itemStock={itemStock}
               imageUrl={img}
               productType={item.type}
               merchantId={item.merchant_id}

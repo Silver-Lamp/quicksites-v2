@@ -18,6 +18,7 @@ export default function CreateItemDrawer({ merchantId, siteSlug, onCreated }:{
 
   // Optional variants (size/color grid, each its own price). Generic products only.
   const [variantsPayload, setVariantsPayload] = useState<VariantsPayload>({ variantOptions: [], variants: [] });
+  const [stock, setStock] = useState<string>(''); // plain-item stock; '' = unlimited
 
   // Print-on-demand (Lulu book / Gelato merch)
   const [pod, setPod] = useState<'none' | 'lulu' | 'gelato'>('none');
@@ -47,6 +48,7 @@ export default function CreateItemDrawer({ merchantId, siteSlug, onCreated }:{
         priceCents: Math.round((price || 0) * 100),
         availability: { kind: 'always' },
         ...(useVariants ? { variantOptions: variantsPayload.variantOptions, variants: variantsPayload.variants } : {}),
+        ...(!useVariants && stock !== '' ? { stock: Math.max(0, Math.floor(Number(stock) || 0)) } : {}),
         ...(pod !== 'none' ? { fulfillmentProvider: pod, podSpec } : {}),
       })
     });
@@ -54,7 +56,7 @@ export default function CreateItemDrawer({ merchantId, siteSlug, onCreated }:{
     if (res.ok) {
       const { id } = await res.json();
       setOpen(false);
-      setTitle(''); setSlug(''); setDesc(''); setPrice(0); setVariantsPayload({ variantOptions: [], variants: [] });
+      setTitle(''); setSlug(''); setDesc(''); setPrice(0); setStock(''); setVariantsPayload({ variantOptions: [], variants: [] });
       setPod('none'); setInteriorUrl(''); setCoverUrl(''); setPageCount(0); setProductUid(''); setFileUrl(''); setBaseCost(0);
       onCreated?.(id);
     } else {
@@ -101,6 +103,15 @@ export default function CreateItemDrawer({ merchantId, siteSlug, onCreated }:{
               <input type="number" step="0.01" min="0" value={price}
                 onChange={(e)=>setPrice(Number(e.target.value))}
                 className="rounded bg-neutral-900 px-3 py-2 text-sm ring-1 ring-neutral-800" />
+
+              {pod === 'none' && variantsPayload.variants.length === 0 && (
+                <>
+                  <label className="mt-2 text-xs text-neutral-400">Stock (blank = unlimited)</label>
+                  <input type="number" step="1" min="0" value={stock} placeholder="∞"
+                    onChange={(e)=>setStock(e.target.value)}
+                    className="rounded bg-neutral-900 px-3 py-2 text-sm ring-1 ring-neutral-800" />
+                </>
+              )}
 
               {pod === 'none' && (
                 <VariantsEditor defaultPriceDollars={price} onChange={setVariantsPayload} />

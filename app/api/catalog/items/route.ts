@@ -4,6 +4,7 @@ import { getServerSupabase } from '@/lib/supabase/server';
 import { captureServer } from '@/lib/analytics/posthog-server';
 import { EVENTS } from '@/lib/analytics/events';
 import { normalizeVariants, type InputAxis, type InputVariant } from '@/lib/commerce/variants';
+import { normalizeStock } from '@/lib/commerce/inventory';
 
 export async function POST(req: NextRequest) {
   const body = await req.json() as {
@@ -18,6 +19,8 @@ export async function POST(req: NextRequest) {
     // base price becomes the cheapest SKU and pricing is resolved per-variant.
     variantOptions?: InputAxis[];
     variants?: InputVariant[];
+    // Item-level stock for a plain (variant-less) product. null/absent = untracked.
+    stock?: number | null;
   };
 
   if (!body.merchantId || !body.type || !body.title || !body.slug) {
@@ -43,6 +46,10 @@ export async function POST(req: NextRequest) {
   if (norm.variants.length) {
     metadata.variants = norm.variants;
     if (norm.variant_options.length) metadata.variant_options = norm.variant_options;
+  } else {
+    // Plain item: item-level stock (per-variant stock governs when variants exist).
+    const s = normalizeStock(body.stock);
+    if (s !== null) metadata.stock = s;
   }
   const basePriceCents = norm.basePriceCents;
 

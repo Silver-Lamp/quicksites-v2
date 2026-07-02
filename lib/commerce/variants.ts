@@ -12,8 +12,10 @@
 // so pricing/checkout never needs to know about axes; `variant_options` just lets
 // the storefront render one selector per axis.
 
+import { normalizeStock } from './inventory';
+
 export type InputAxis = { name?: string; values?: unknown };
-export type InputVariant = { label?: string; priceCents?: number; status?: string; options?: Record<string, unknown> | null };
+export type InputVariant = { label?: string; priceCents?: number; status?: string; options?: Record<string, unknown> | null; stock?: number | null };
 
 export type NormalizedVariant = {
   id: string;
@@ -21,6 +23,7 @@ export type NormalizedVariant = {
   price_cents: number;
   status: 'active' | 'inactive';
   options?: Record<string, string>;
+  stock?: number; // units available; omitted = untracked
 };
 export type NormalizedAxis = { name: string; values: string[] };
 
@@ -90,12 +93,14 @@ export function normalizeVariants(input: {
     for (let i = 2; seenIds.has(id); i++) id = `${idBase}-${i}`;
     seenIds.add(id);
 
+    const stock = normalizeStock(v?.stock);
     variants.push({
       id,
       label,
       price_cents: centsOf(v?.priceCents),
       status: v?.status === 'inactive' ? 'inactive' : 'active',
       ...(options ? { options } : {}),
+      ...(stock !== null ? { stock } : {}),
     });
   }
 

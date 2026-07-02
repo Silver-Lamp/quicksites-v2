@@ -6,7 +6,7 @@
 import { notFound } from 'next/navigation';
 import { createClient } from '@supabase/supabase-js';
 import AddToCartButton from './add-to-cart';
-import { readVariants } from '@/lib/commerce/checkoutItems';
+import { readVariants, readVariantOptions } from '@/lib/commerce/checkoutItems';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -41,11 +41,13 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
 
   const img = firstImage(item.images);
 
-  // Purchasable variants (size/color, each its own price). Price shown becomes a
-  // "from" when there are variants; the selector + effective price live in the button.
+  // Purchasable variants — single-axis (a flat list) or multi-axis (Size × Color).
+  // Each is a SKU with its own price; price shown becomes a "from" minimum, and the
+  // selector(s) + effective price live in the button.
   const variants = readVariants(item.metadata)
     .filter((v) => (v.status ?? 'active') === 'active')
-    .map((v) => ({ id: v.id, label: v.label, priceCents: Number(v.price_cents) || 0 }));
+    .map((v) => ({ id: v.id, label: v.label, priceCents: Number(v.price_cents) || 0, options: v.options ?? null }));
+  const axes = readVariantOptions(item.metadata);
   const hasVariants = variants.length > 0;
   const fromPrice = hasVariants ? Math.min(...variants.map((v) => v.priceCents)) : Number(item.price_cents) || 0;
 
@@ -83,6 +85,7 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
               title={item.title}
               priceCents={Number(item.price_cents) || 0}
               variants={variants}
+              axes={axes}
               imageUrl={img}
               productType={item.type}
               merchantId={item.merchant_id}

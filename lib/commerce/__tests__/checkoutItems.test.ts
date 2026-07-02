@@ -4,7 +4,13 @@
 // property: the price charged comes from catalog_items, never from the request —
 // so a tampered unitAmount can't turn a $50 product into a $0.01 purchase.
 
-import { authorizeCheckoutItems, type CatalogRow } from '../checkoutItems';
+import {
+  authorizeCheckoutItems,
+  readVariantOptions,
+  resolveVariantByOptions,
+  type CatalogRow,
+  type CatalogVariant,
+} from '../checkoutItems';
 
 const M = 'merchant-1';
 const row = (over: Partial<CatalogRow> = {}): CatalogRow => ({
@@ -164,5 +170,69 @@ describe('authorizeCheckoutItems', () => {
       if (!res.ok) return;
       expect(res.items[0].unitAmount).toBe(5000);
     });
+
+    it('prices a multi-axis SKU by its id (checkout is unchanged for grids)', () => {
+      // A 2-axis product (Size × Color) is still a flat list of SKUs, each an id.
+      const res = authorizeCheckoutItems({
+        merchantId: M,
+        requested: [{ catalogItemId: 'ci-1', quantity: 1, variantId: 'm-red', unitAmount: 1 }],
+        catalogRows: [row({
+          price_cents: null,
+          metadata: {
+            variant_options: [{ name: 'Size', values: ['S', 'M'] }, { name: 'Color', values: ['Red', 'Blue'] }],
+            variants: [
+              { id: 'm-red', label: 'M / Red', price_cents: 2200, options: { Size: 'M', Color: 'Red' } },
+              { id: 'm-blue', label: 'M / Blue', price_cents: 2000, options: { Size: 'M', Color: 'Blue' } },
+            ],
+          },
+        })],
+      });
+      expect(res.ok).toBe(true);
+      if (!res.ok) return;
+      expect(res.items[0].unitAmount).toBe(2200);
+      expect(res.items[0].title).toBe('Widget — M / Red');
+    });
+  });
+});
+
+describe('readVariantOptions', () => {
+  it('reads well-formed axes and drops malformed ones', () => {
+    const axes = readVariantOptions({
+      variant_options: [
+        { name: 'Size', values: ['S', 'M', 'L'] },
+        { name: 'Color', values: ['Red'] },
+        { name: 'Bad', values: [] }, // dropped: no values
+        { name: 'AlsoBad' }, // dropped: no values array
+      ],
+    });
+    expect(axes).toEqual([
+      { name: 'Size', values: ['S', 'M', 'L'] },
+      { name: 'Color', values: ['Red'] },
+    ]);
+  });
+
+  it('returns [] when there are no axes (flat / legacy variants)', () => {
+    expect(readVariantOptions({ variants: [{ id: 'a' }] })).toEqual([]);
+    expect(readVariantOptions(null)).toEqual([]);
+  });
+});
+
+describe('resolveVariantByOptions', () => {
+  const variants: CatalogVariant[] = [
+    { id: 's-red', label: 'S / Red', price_cents: 1000, options: { Size: 'S', Color: 'Red' } },
+    { id: 'm-red', label: 'M / Red', price_cents: 1200, options: { Size: 'M', Color: 'Red' } },
+    { id: 'm-blue', label: 'M / Blue', price_cents: 1300, options: { Size: 'M', Color: 'Blue' } },
+  ];
+
+  it('maps a full axis selection to the matching SKU', () => {
+    expect(resolveVariantByOptions(variants, { Size: 'M', Color: 'Blue' })?.id).toBe('m-blue');
+  });
+
+  it('returns undefined for an unoffered combination (e.g. S / Blue)', () => {
+    expect(resolveVariantByOptions(variants, { Size: 'S', Color: 'Blue' })).toBeUndefined();
+  });
+
+  it('returns undefined for an empty selection', () => {
+    expect(resolveVariantByOptions(variants, {})).toBeUndefined();
   });
 });

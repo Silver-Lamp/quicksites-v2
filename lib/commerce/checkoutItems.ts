@@ -21,7 +21,10 @@ export type CatalogVariant = {
   label: string;
   price_cents: number | null;
   status?: string | null;
+  options?: Record<string, string> | null; // axis → value, e.g. { Size: 'M', Color: 'Red' } (multi-axis)
 };
+
+export type VariantAxis = { name: string; values: string[] };
 
 export type CatalogRow = {
   id: string;
@@ -37,6 +40,38 @@ export function readVariants(metadata: unknown): CatalogVariant[] {
   const v = (metadata as any)?.variants;
   if (!Array.isArray(v)) return [];
   return v.filter((x) => x && typeof x.id === 'string');
+}
+
+/**
+ * Pull the variant axes (Size, Color, …) off metadata, if the item is multi-axis.
+ * Absent/empty ⇒ the item is a flat single-list of variants (or has none).
+ */
+export function readVariantOptions(metadata: unknown): VariantAxis[] {
+  const a = (metadata as any)?.variant_options;
+  if (!Array.isArray(a)) return [];
+  return a
+    .filter((x) => x && typeof x.name === 'string' && Array.isArray(x.values))
+    .map((x) => ({ name: String(x.name), values: x.values.map((v: unknown) => String(v)) }))
+    .filter((x) => x.values.length > 0);
+}
+
+/**
+ * Resolve the variant SKU matching a full selection of axis values (e.g.
+ * { Size: 'M', Color: 'Red' }). Returns undefined if no variant matches every
+ * chosen axis — i.e. that combination isn't offered. Pure, so the storefront and
+ * any server caller agree on which SKU a selection maps to.
+ */
+export function resolveVariantByOptions(
+  variants: CatalogVariant[],
+  selected: Record<string, string>,
+): CatalogVariant | undefined {
+  const axes = Object.keys(selected);
+  if (!axes.length) return undefined;
+  return (variants ?? []).find((v) => {
+    const opts = v.options;
+    if (!opts) return false;
+    return axes.every((axis) => opts[axis] === selected[axis]);
+  });
 }
 
 export type PricedItem = {

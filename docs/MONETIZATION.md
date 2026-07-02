@@ -33,7 +33,7 @@ Recommendation rationale at the bottom (§4) — but the decision on which to *l
 - **Attribution capture.** `middleware.ts` writes `qs_ref`; `lib/commerce/attribution.ts#ensureAttributionForMerchant` binds it.
 
 ### Missing / stubbed ⛔
-1. **Connect onboarding is split-brained.** A newer path writes `payment_accounts`; an older `app/api/connect/onboard` writes a deprecated `merchant_payment_accounts` table. **Pick one (`payment_accounts`), delete the other.** *(S)*
+1. ~~**Connect onboarding is split-brained.**~~ ✅ **Resolved** — consolidated on `payment_accounts`. `connect/onboard` + `admin/payments/{status,save-settings}` all read/write `payment_accounts.platform_fee_percent`; the deprecated `merchant_payment_accounts` table + bps fee columns were dropped in `supabase/migrations/20260701_retire_legacy_connect_bps.sql`. *(S)*
 2. **Fee settlement/reconciliation.** `application_fee_amount` is sent to Stripe, but there's no job that reconciles platform revenue (Stripe `application_fee` objects ↔ our `orders.platform_fee_cents`) or surfaces "QS earned $X." *(M)*
 3. **Refund → fee reversal.** `charge.refunded` is received but platform-fee reversal isn't implemented. *(S–M)*
 4. **No green-path E2E demo** proving create-item → buy → merchant-paid → QS-fee-collected with test keys. *(M)*

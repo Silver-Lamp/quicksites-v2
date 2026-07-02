@@ -315,7 +315,6 @@ export default function SidebarSettings({ template, onChange, variant }: Props) 
 
       {/* Payments (separate flow) */}
       <PaymentSettingsPanel
-        siteId={template.id}
         merchantId={'00001'}
         initialPlatformFeeBps={75}
       />

@@ -9,9 +9,8 @@ import { Slider } from '@/components/ui/slider';
 import toast from 'react-hot-toast';
 
 type Props = {
-  siteId?: string | null;          // optional per-site override
-  merchantId: string;              // required
-  initialPlatformFeeBps?: number;  // show current value (site or merchant)
+  merchantId: string;              // required — fee config lives on the merchant's payment account
+  initialPlatformFeeBps?: number;  // show current value
 };
 
 type StatusResp = {
@@ -43,8 +42,10 @@ async function jsonFetch<T = any>(url: string, init?: RequestInit): Promise<T> {
   return data as T;
 }
 
+// Platform fee cap: 10% == 1000 bps (mirrors MAX_PLATFORM_FEE_PERCENT).
+const MAX_FEE_BPS = 1000;
+
 export default function PaymentSettingsPanel({
-  siteId,
   merchantId,
   initialPlatformFeeBps = 75,
 }: Props) {
@@ -53,8 +54,8 @@ export default function PaymentSettingsPanel({
   const [hasAccount, setHasAccount] = useState<boolean>(false);
   const [loading, setLoading] = useState(false);
 
-  // clamp helper (0..100 bps)
-  const clampBps = (n: number) => Math.max(0, Math.min(100, Math.round(n)));
+  // clamp helper (0..1000 bps == 0..10%, matching the platform cap and the read side)
+  const clampBps = (n: number) => Math.max(0, Math.min(MAX_FEE_BPS, Math.round(n)));
 
   useEffect(() => {
     let alive = true;
@@ -83,7 +84,7 @@ export default function PaymentSettingsPanel({
     try {
       await jsonFetch('/api/admin/payments/save-settings', {
         method: 'POST',
-        body: JSON.stringify({ siteId: siteId ?? undefined, merchantId, platformFeeBps: fee }),
+        body: JSON.stringify({ merchantId, platformFeeBps: fee }),
       });
       setInitialFee(fee);
       toast.success('Payment settings saved');
@@ -139,8 +140,8 @@ export default function PaymentSettingsPanel({
             <Slider
               id="platform-fee-slider"
               min={0}
-              max={100}
-              step={5}
+              max={MAX_FEE_BPS}
+              step={25}
               value={[fee]}
               onValueChange={(v: number[]) => setFee(clampBps(v?.[0] ?? fee))}
               className="flex-1"

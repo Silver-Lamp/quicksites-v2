@@ -44,16 +44,29 @@ export async function getShowcaseData(): Promise<ShowcaseData> {
     const supa = await getServerSupabase({ serviceRole: true });
     const { data, error } = await (supa as any)
       .from('templates')
-      .select('slug, business_name, industry_label, industry, hero_url, logo_url, data, domain, custom_domain')
+      .select('slug, business_name, industry_label, industry, hero_url, logo_url, data, domain, custom_domain, owner_id, claim_source')
       .eq('is_site', true)
       .eq('published', true)
       .eq('archived', false)
       .eq('is_version', false);
     if (error) return { sites: [], displayMode };
 
+    // Defense-in-depth: never surface a guest-built site still owned by an
+    // anonymous (unclaimed) user. Anon users can't publish, so this should always
+    // be empty — but it guarantees abuse/junk can't leak onto the homepage.
+    let anonOwned = new Set<string>();
+    const guestOwnerIds = Array.from(
+      new Set((data || []).filter((r: any) => r.claim_source === 'guest_build' && r.owner_id).map((r: any) => r.owner_id)),
+    );
+    if (guestOwnerIds.length) {
+      const { data: anon } = await (supa as any).rpc('anonymous_user_ids', { p_ids: guestOwnerIds });
+      anonOwned = new Set((anon || []).map((row: any) => (typeof row === 'string' ? row : row.anonymous_user_ids ?? row.id)));
+    }
+    const rows = (data || []).filter((r: any) => !(r.owner_id && anonOwned.has(r.owner_id)));
+
     const priority = new Map(FEATURED_SITE_SLUGS.map((s, i) => [s, i]));
 
-    const sites: ShowcaseSite[] = (data || [])
+    const sites: ShowcaseSite[] = rows
       .map((r: any) => {
         const heroUrl = firstNonEmpty(r.hero_url) || extractHeroImage(r.data);
         const industryRaw = firstNonEmpty(r.industry_label, r.industry);

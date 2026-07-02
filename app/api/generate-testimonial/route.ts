@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import { lazyClient } from '@/lib/lazyClient';
 import { OpenAI } from 'openai';
 import { meterLLMCall, LLMBudgetExceededError } from '@/lib/ai/meter';
+import { getServerSupabase } from '@/lib/supabase/server';
+import { enforceGuestAiLimit, guestLimitBody } from '@/lib/ai/guestGuard';
 
 const openai = lazyClient(() => new OpenAI({
   apiKey: process.env.OPENAI_API_KEY, // NOT the public one!
@@ -10,10 +12,15 @@ const openai = lazyClient(() => new OpenAI({
 export async function POST(req: Request) {
   const { prompt, industry } = await req.json();
 
+  // Cap anonymous (guest) users; real users pass.
+  const { data: auth } = await (await getServerSupabase()).auth.getUser();
+  const guard = await enforceGuestAiLimit(auth?.user, 'testimonial');
+  if (!guard.ok) return NextResponse.json(guestLimitBody(guard.limit), { status: 429 });
+
   let quote: string;
   try {
     quote = await meterLLMCall(
-      { provider: 'openai', model_code: 'gpt-4o-mini', modality: 'chat', route: '/api/generate-testimonial' },
+      { provider: 'openai', model_code: 'gpt-4o-mini', modality: 'chat', route: '/api/generate-testimonial', user_id: auth?.user?.id ?? null },
       async () => {
         const completion = await openai.chat.completions.create({
           model: 'gpt-4o-mini',

@@ -65,7 +65,10 @@ function startOfMonthUTC(): string {
 
 /** Sum cost_usd since a timestamp, optionally scoped to a user. */
 async function spendSince(sinceISO: string, userId?: string | null): Promise<number> {
-  let q = supabaseAdmin.from('ai_usage_events').select('cost_usd').gte('created_at', sinceISO);
+  // The live table timestamps with `occurred_at` (NOT `created_at`). Filtering on
+  // a non-existent column errored → spendSince fell back to 0 → the whole dollar
+  // budget guard was silently inert. Use the real column.
+  let q = supabaseAdmin.from('ai_usage_events').select('cost_usd').gte('occurred_at', sinceISO);
   if (userId) q = q.eq('user_id', userId);
   const { data, error } = await q;
   if (error) {

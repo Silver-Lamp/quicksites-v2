@@ -3,6 +3,8 @@ import OpenAI from 'openai';
 import { z } from 'zod';
 import { meterLLMCall, LLMBudgetExceededError } from '@/lib/ai/meter';
 import { parseJsonBody } from '@/lib/api/parseJson';
+import { getServerSupabase } from '@/lib/supabase/server';
+import { enforceGuestAiLimit, guestLimitBody } from '@/lib/ai/guestGuard';
 
 export const runtime = 'nodejs';
 
@@ -41,6 +43,11 @@ export async function POST(req: Request) {
       temperature?: number;
     };
 
+    // Cap anonymous (guest) users; real users pass. Also attributes spend below.
+    const { data: auth } = await (await getServerSupabase()).auth.getUser();
+    const guard = await enforceGuestAiLimit(auth?.user, 'suggest');
+    if (!guard.ok) return Response.json(guestLimitBody(guard.limit), { status: 429 });
+
     const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
     const messages = [
@@ -77,9 +84,9 @@ export async function POST(req: Request) {
     const model = process.env.OPENAI_MODEL || 'gpt-4o-mini';
 
     // Metered call: budget guard (pre) + cost logging + PostHog mirror (post).
-    // To enable per-user caps, resolve the session here and pass `user_id`.
+    // user_id enables the per-user daily cap + attribution.
     const html = await meterLLMCall(
-      { provider: 'openai', model_code: model, modality: 'chat', route: '/api/ai/suggest' },
+      { provider: 'openai', model_code: model, modality: 'chat', route: '/api/ai/suggest', user_id: auth?.user?.id ?? null },
       async () => {
         const resp = await client.chat.completions.create({
           model,

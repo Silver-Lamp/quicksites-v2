@@ -2,6 +2,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSupabase } from '@/lib/supabase/server';
 import { randomBytes } from 'crypto';
+import { checkRateLimit, clientIp } from '@/lib/rateLimit';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -48,6 +49,18 @@ export async function POST(req: NextRequest) {
     const { data: { user } } = await supabase.auth.getUser();
     const ownerId = user?.id ?? null;
     const isAnonymous = !!user?.is_anonymous;
+
+    // Abuse guard: cap guest draft creation per IP (real users exempt).
+    if (isAnonymous) {
+      const limit = Number(process.env.GUEST_DRAFT_HOURLY_LIMIT_PER_IP ?? '10') || 0;
+      const rl = await checkRateLimit(`guest_draft:${clientIp(req)}`, limit, 3600);
+      if (!rl.ok) {
+        return NextResponse.json(
+          { error: 'Too many draft sites from this network. Sign up to keep building.', code: 'rate_limited' },
+          { status: 429 },
+        );
+      }
+    }
 
     // 1) Load source by slug
     const { data: src, error: loadErr } = await supabase

@@ -1,6 +1,7 @@
 // app/api/templates/[id]/services/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSupabase } from '@/lib/supabase/server';
+import { requireTemplateOwner } from '@/lib/auth/requireTemplateOwner';
 
 const normalizeServices = (v: unknown): string[] => {
   if (!Array.isArray(v)) return [];
@@ -13,6 +14,9 @@ export async function PUT(
 ) {
   try {
     const { id } = context.params;
+    const gate = await requireTemplateOwner(id);
+    if (!gate.ok) return gate.response;
+
     const body = await req.json().catch(() => ({}));
     const cleaned = normalizeServices(body?.services ?? body);
 

@@ -2,6 +2,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { getServerSupabase } from '@/lib/supabase/server';
+import { requireTemplateOwner } from '@/lib/auth/requireTemplateOwner';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -35,6 +36,12 @@ export async function POST(
 ) {
   try {
     const { id } = await ctx.params; // Next 15: params is a Promise
+
+    // AuthZ: only the template owner (incl. guest owner) or a platform admin may
+    // set a custom domain. The RLS read below is permissive for public templates,
+    // so it is NOT an authorization gate on its own.
+    const gate = await requireTemplateOwner(id);
+    if (!gate.ok) return gate.response;
 
     // Parse body; allow clearing domain by sending null or empty string.
     const body = (await req.json().catch(() => ({}))) as {

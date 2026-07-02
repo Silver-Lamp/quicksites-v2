@@ -4,6 +4,7 @@ export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/server/supabaseAdmin';
 import { logTemplateEvent } from '@/lib/server/logTemplateEvent';
+import { requireAdmin } from '@/lib/auth/requireUser';
 
 function j(data: any, init?: number | ResponseInit) {
   const resInit = typeof init === 'number' ? { status: init } : init;
@@ -23,6 +24,9 @@ const isMissingColumn = (msg?: string) =>
   String(msg || '').toLowerCase().includes('does not exist');
 
 export async function POST(req: Request) {
+  const gate = await requireAdmin();
+  if (gate instanceof NextResponse) return gate;
+
   try {
     const url = new URL(req.url);
     let body: any = {};

@@ -6,6 +6,7 @@ import { supabaseAdmin } from '@/lib/server/supabaseAdmin';
 import { sha256 } from '@/lib/server/templateUtils';
 import { logTemplateEvent } from '@/lib/server/logTemplateEvent';
 import { diffBlocks } from '@/lib/diff/blocks';
+import { requireAdmin } from '@/lib/auth/requireUser';
 
 const DEBUG = process.env.DEBUG_IDENTITY === '1';
 const dbg = (...args: any[]) => { if (DEBUG) console.log('[SNAPSHOT]', ...args); };
@@ -42,6 +43,9 @@ export async function GET(req: Request) { return handle(req); }
 export async function POST(req: Request) { return handle(req); }
 
 async function handle(req: Request) {
+  const gate = await requireAdmin();
+  if (gate instanceof NextResponse) return gate;
+
   try {
     const url = new URL(req.url);
     const qId = url.searchParams.get('templateId') || url.searchParams.get('id');

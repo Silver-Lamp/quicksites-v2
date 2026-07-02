@@ -2,13 +2,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { issueRefund } from '@/lib/refunds';
+import { requireAdmin } from '@/lib/auth/requireUser';
 
 export const runtime='nodejs'; export const dynamic='force-dynamic';
 const db = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, (process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SECRET_KEY)!);
 
-// Assume you have your own auth middleware to assert admin/merchant ownership.
-
 export async function PATCH(req: NextRequest, { params }:{ params:{ refundId:string } }) {
+  const gate = await requireAdmin();
+  if (gate instanceof NextResponse) return gate;
+
   const body = await req.json();
   const { action, approvedCents, note } = body; // 'approve'|'deny'|'execute'
   const { data: r } = await db.from('refunds').select('*').eq('id', params.refundId).maybeSingle();

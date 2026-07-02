@@ -4,6 +4,7 @@ export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/server/supabaseAdmin';
 import { logTemplateEvent } from '@/lib/server/logTemplateEvent';
+import { requireAdmin } from '@/lib/auth/requireUser';
 
 function j(data: any, init?: number | ResponseInit) {
   const resInit = typeof init === 'number' ? { status: init } : init;
@@ -46,6 +47,9 @@ function deriveDomainFromTemplate(tpl: any) {
 }
 
 async function handle(req: Request) {
+  const gate = await requireAdmin();
+  if (gate instanceof NextResponse) return gate;
+
   const url = new URL(req.url);
   const debug = url.searchParams.get('debug') === '1';
 

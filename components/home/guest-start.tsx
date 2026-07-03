@@ -94,11 +94,12 @@ export default function GuestStart() {
 
   return (
     <motion.form
+      id="start"
       onSubmit={onSubmit}
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5, delay: 0.15 }}
-      className="mt-8 w-full max-w-xl"
+      className="mt-8 w-full max-w-xl scroll-mt-24 rounded-2xl border border-sky-500/25 bg-gradient-to-b from-sky-950/40 to-zinc-900/70 p-6 shadow-2xl shadow-sky-950/50 ring-1 ring-inset ring-white/5 backdrop-blur-sm sm:p-7"
     >
       <div className="flex flex-col gap-3 sm:flex-row">
         <input

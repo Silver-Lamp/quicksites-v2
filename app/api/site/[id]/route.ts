@@ -1,12 +1,18 @@
 // app/api/site/[id]/route.ts
 import { NextResponse } from 'next/server';
 import { getServerSupabase } from '@/lib/supabase/server';
+import { requireUser } from '@/lib/auth/requireUser';
 import type { SiteData, Page } from '@/types/site';
 
 export async function POST(
   req: Request,
   { params }: { params: { id: string } }
 ): Promise<Response> {
+  // Reject anon; ownership itself is enforced by the sites_update_own RLS policy
+  // (the update below runs on the caller's user client).
+  const gate = await requireUser();
+  if (gate instanceof NextResponse) return gate;
+
   const siteId = params.id;
   const body = await req.json();
 
@@ -50,6 +56,9 @@ export async function POST(
   return NextResponse.json({ success: true });
 }
 export async function PATCH(req: Request, { params }: { params: { id: string } }) {
+    const gate = await requireUser();
+    if (gate instanceof NextResponse) return gate;
+
     const siteId = params.id;
     const body = await req.json();
   

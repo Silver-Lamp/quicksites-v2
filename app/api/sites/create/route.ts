@@ -47,11 +47,10 @@ export async function POST(req: Request) {
   }
 
   // ⏳ Rate limiting: one site every 10 minutes per user
-  // sites table has no created_by column — cast to any; was failing silently; see types migration
   const recent = await (supabase as any)
     .from('sites')
     .select('created_at')
-    .eq('created_by', user.id)
+    .eq('owner_id', user.id)
     .order('created_at', { ascending: false })
     .limit(1)
     .maybeSingle();
@@ -79,9 +78,10 @@ export async function POST(req: Request) {
   }
 
   try {
-    // sites has no created_by, content, or claimed_email columns — removed; see types migration
-    // full_data maps to the `data` Json column
-    const { data: newSite, error: insertError } = await supabase
+    // full_data maps to the `data` Json column; owner_id must equal the caller
+    // (the sites_insert_own RLS check requires it). Cast: owner_id is not yet in
+    // the stale generated types/supabase.ts.
+    const { data: newSite, error: insertError } = await (supabase as any)
       .from('sites')
       .insert([
         {
@@ -91,6 +91,7 @@ export async function POST(req: Request) {
           location,
           template_version_id,
           data: full_data,
+          owner_id: user.id,
         },
       ])
       .select()

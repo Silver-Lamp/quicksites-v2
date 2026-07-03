@@ -250,13 +250,23 @@ async function manualById(
   id: string,
   forcedVersionId?: string | null
 ): Promise<PublicSiteRow | null> {
-  const { data: c } = await supabaseAdmin
+  let { data: c } = await supabaseAdmin
     .from('templates')
     .select('*')
     .eq('archived', false)
     .eq('is_version', false)
     .eq('id', id)
     .maybeSingle();
+  // Explicit template preview by id: a freshly-created draft (e.g. a guest-build
+  // site) is is_version=true, so the is_version=false filter above misses it and
+  // Preview 404'd. The id is unique — fall back to loading the row directly.
+  if (!c) {
+    ({ data: c } = await supabaseAdmin
+      .from('templates')
+      .select('*')
+      .eq('id', id)
+      .maybeSingle());
+  }
   if (!c) return null;
 
   let v: any = null;

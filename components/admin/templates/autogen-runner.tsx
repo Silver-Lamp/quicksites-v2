@@ -23,6 +23,8 @@ export default function AutogenRunner({ templateId }: { templateId: string }) {
     } catch {}
     ran.current = true;
     setStatus('running');
+    // Signal the hero renderer to show a shimmer over the (still-empty) hero.
+    document.documentElement.dataset.qsAutogen = 'running';
 
     (async () => {
       try {
@@ -32,8 +34,14 @@ export default function AutogenRunner({ templateId }: { templateId: string }) {
       } catch (e) {
         console.error('[autogen]', e);
         setStatus('error');
+      } finally {
+        delete document.documentElement.dataset.qsAutogen;
       }
     })();
+
+    return () => {
+      delete document.documentElement.dataset.qsAutogen;
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [templateId]);
 

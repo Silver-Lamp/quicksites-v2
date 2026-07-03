@@ -203,3 +203,36 @@ html, body, #__next { width: 100%; max-width: 100%; }
 .qs-add-below {
   pointer-events: auto !important;
 }
+
+/* ── Hero "generating" shimmer ──────────────────────────────────────────────
+   Shown over the empty hero area while a guest site auto-generates its copy +
+   hero image (AutogenRunner sets html[data-qs-autogen="running"]). Hidden
+   otherwise, so it costs nothing on normal renders. */
+.qs-hero-shimmer {
+  display: none;
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  z-index: 0;
+  background:
+    linear-gradient(
+      100deg,
+      rgba(255, 255, 255, 0) 30%,
+      rgba(255, 255, 255, 0.10) 50%,
+      rgba(255, 255, 255, 0) 70%
+    ),
+    rgba(255, 255, 255, 0.04);
+  background-size: 200% 100%, 100% 100%;
+}
+:root[data-qs-autogen='running'] .qs-hero-shimmer {
+  display: block;
+  animation: qs-hero-shimmer 1.6s ease-in-out infinite;
+}
+@keyframes qs-hero-shimmer {
+  0% { background-position: -150% 0, 0 0; }
+  100% { background-position: 250% 0, 0 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  :root[data-qs-autogen='running'] .qs-hero-shimmer { animation: none; }
+}

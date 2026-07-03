@@ -15,6 +15,7 @@ import SiteHeader from '@/components/site/site-header';
 import { useBrand } from '@/app/providers';
 import { guestBuildEnabled } from '@/lib/flags/guestBuild';
 import GuestStart from '@/components/home/guest-start';
+import HomeColorLab from '@/components/home/home-color-lab';
 
 const isProd = process.env.NODE_ENV === 'production';
 
@@ -78,6 +79,7 @@ export default function HomeClient({ showcase }: { showcase?: React.ReactNode })
   return (
     <>
       <SiteHeader sticky />
+      <HomeColorLab />
       <div className="relative min-h-screen flex flex-col bg-zinc-950 text-white overflow-hidden">
         {showGlow && <BackgroundGlow />}
 
@@ -89,7 +91,13 @@ export default function HomeClient({ showcase }: { showcase?: React.ReactNode })
           </div>
 
           <motion.h1
-            className="mt-8 max-w-3xl text-4xl md:text-6xl font-extrabold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-sky-400 to-sky-200"
+            className="mt-8 max-w-3xl text-4xl md:text-6xl font-extrabold tracking-tight bg-clip-text text-transparent"
+            // Accent-driven so the homepage color lab recolors the title live;
+            // fallbacks match the original sky gradient.
+            style={{
+              backgroundImage:
+                'linear-gradient(to right, var(--qs-accent, #38bdf8), var(--qs-accent-2, #bae6fd))',
+            }}
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6 }}

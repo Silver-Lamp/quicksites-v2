@@ -443,10 +443,17 @@ export default async function PreviewPage({
     (Array.isArray(sp.editor) ? sp.editor[0] : sp.editor) === '1' ||
     (Array.isArray(sp.chrome) ? sp.chrome[0] : sp.chrome) === '1';
 
-  // Shareable guest preview: show the "not yet published" watermark.
-  const showWatermark =
+  // Watermark is now DB-driven: any preview of a template that isn't published
+  // yet shows the "not yet published" mark. (The ?watermark=1 / ?guest=1 params
+  // are still honored as a manual force-on override, but are no longer required —
+  // the guest Preview link no longer needs to pass them.)
+  const isPublished = (site as any).published === true;
+  const paramForced =
     (Array.isArray(sp.watermark) ? sp.watermark[0] : sp.watermark) === '1' ||
     (Array.isArray(sp.guest) ? sp.guest[0] : sp.guest) === '1';
+  const paramOff =
+    (Array.isArray(sp.watermark) ? sp.watermark[0] : sp.watermark) === '0';
+  const showWatermark = paramForced || (!isPublished && !paramOff);
 
   return (
     <TemplateEditorProvider

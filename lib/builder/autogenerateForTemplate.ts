@@ -5,13 +5,19 @@
 // data.meta.autogen_pending, and this fills in AI copy + a hero image once so the
 // visitor doesn't have to open the hero editor and click the buttons.
 //
-// Reuses the metered generators from generateDemoSite (ideateCopy / generateHero),
-// injects the result into the hero block + services block + meta, and persists via
-// the sanctioned commit RPC (direct UPDATEs to templates are trigger-blocked).
+// Reuses ideateCopy (metered chat) from generateDemoSite for copy, and generates
+// the hero image inline (with a retry + logging + the proven public storage path)
+// — the demo generator's generateHero swallowed failures silently, which left some
+// guest sites with no hero. Injects into the hero + services blocks + meta and
+// persists via the sanctioned commit RPC (direct UPDATEs to templates are blocked).
 import { createClient } from '@supabase/supabase-js';
-import { ideateCopy, generateHero } from '@/lib/builder/generateDemoSite';
+import OpenAI from 'openai';
+import { ideateCopy } from '@/lib/builder/generateDemoSite';
+import { meterLLMCall } from '@/lib/ai/meter';
 import { KEY_TO_LABEL, type IndustryKey } from '@/lib/industries';
 import type { DemoSpec } from '@/lib/builder/randomDemoSpec';
+
+const HERO_BUCKET = process.env.SUPABASE_STORAGE_BUCKET || 'templates';
 
 function admin() {
   return createClient(
@@ -19,6 +25,62 @@ function admin() {
     (process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SECRET_KEY)!,
     { auth: { persistSession: false } },
   );
+}
+
+function uid() {
+  return globalThis.crypto?.randomUUID?.() ?? `id_${Math.random().toString(36).slice(2)}${Date.now()}`;
+}
+
+/**
+ * Generate a hero image and upload it to the public templates bucket at the same
+ * path the editor's manual "Generate" uses (template-<id>/hero/...). Retries once
+ * (gpt-image-1 can intermittently fail/moderate), logs failures, and returns null
+ * only if it genuinely can't produce one — the site still works without an image.
+ */
+async function generateAndUploadHero(
+  db: ReturnType<typeof admin>,
+  templateId: string,
+  spec: DemoSpec,
+  ownerId: string | null,
+): Promise<string | null> {
+  const label =
+    spec.industryLabel && spec.industryLabel.toLowerCase() !== 'other'
+      ? spec.industryLabel
+      : spec.businessName || 'local business';
+  const prompt =
+    `Professional website hero/banner photo for "${spec.businessName}" — a ${label} business` +
+    `${spec.city ? ` in ${spec.city}${spec.state ? `, ${spec.state}` : ''}` : ''}. ` +
+    `Wide 16:9 composition with clear copy space, real-world, high quality, clean modern background. ` +
+    `No people, no faces, no text, no watermark, no logo.`;
+  const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      const b64 = await meterLLMCall<string | null>(
+        { provider: 'openai', model_code: 'gpt-image-1', modality: 'image', user_id: ownerId, route: '/api/templates/[id]/autogenerate' },
+        async () => {
+          const gen = await openai.images.generate({ model: 'gpt-image-1', prompt, size: '1536x1024', quality: 'medium' });
+          return { value: gen.data?.[0]?.b64_json ?? null, usage: { images: 1 } };
+        },
+      );
+      if (!b64) {
+        console.error(`[autogen] hero image returned empty (attempt ${attempt + 1})`);
+        continue;
+      }
+      const buffer = Buffer.from(b64, 'base64');
+      const path = `template-${templateId}/hero/${uid()}.png`;
+      const { error: upErr } = await db.storage.from(HERO_BUCKET).upload(path, buffer, { contentType: 'image/png', upsert: true });
+      if (upErr) {
+        console.error('[autogen] hero image upload failed:', upErr.message);
+        return null;
+      }
+      const { data } = db.storage.from(HERO_BUCKET).getPublicUrl(path);
+      return data?.publicUrl ?? null;
+    } catch (e: any) {
+      console.error(`[autogen] hero image generation failed (attempt ${attempt + 1}):`, e?.message || e);
+    }
+  }
+  return null;
 }
 
 type Result = { ok: true; heroUrl: string | null } | { ok: false; error: string };
@@ -55,7 +117,7 @@ export async function autogenerateForTemplate(templateId: string, ownerId: strin
   // Copy + hero in parallel; the image is best-effort (site still works without it).
   const [copy, heroUrl] = await Promise.all([
     ideateCopy(spec, ownerId),
-    generateHero(spec, ownerId).catch(() => null),
+    generateAndUploadHero(db, templateId, spec, ownerId),
   ]);
 
   // ── Inject into the first page's blocks ──────────────────────────────────────

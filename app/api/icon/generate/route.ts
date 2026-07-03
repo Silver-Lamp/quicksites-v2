@@ -7,6 +7,9 @@ import { createServerClient } from '@supabase/ssr';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
+// gpt-image-1 generation can take 20–55s; without this the default serverless
+// timeout kills the request → 500. 60s is the max on Hobby, fine on Pro.
+export const maxDuration = 60;
 
 type Body = {
   template_id?: string;

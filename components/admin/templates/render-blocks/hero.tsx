@@ -407,20 +407,26 @@ export default function HeroRender({
       bg={inlineBg}
       textAlign="center"
       data-device={device || 'auto'}
+      className="relative"
     >
-      {showDebug && <DebugOverlay>{`[HeroBlock]\nLayout: inline`}</DebugOverlay>}
-      {hasImage && (
-        <img
-          src={image_url}
-          alt={headline || 'Hero image'}
-          className="mx-auto mb-6 rounded-xl shadow w-full object-cover"
-          style={{ objectPosition: backgroundPosition, maxHeight: isNarrow ? '16rem' : '24rem' }}
-        />
-      )}
-      <h1 className={`${titleSize} font-bold mb-4 ${textPrimary}`}>{headline}</h1>
-      {subheadline && <p className={`${subSize} mb-6 ${textSecondary}`}>{subheadline}</p>}
-      {CtaEl}
-      <PhoneLine />
+      {/* Shimmer while a guest site auto-generates its hero image (CSS-gated on
+          html[data-qs-autogen] — invisible on normal renders). */}
+      {!hasImage && <div className="qs-hero-shimmer" aria-hidden />}
+      <div className="relative z-10">
+        {showDebug && <DebugOverlay>{`[HeroBlock]\nLayout: inline`}</DebugOverlay>}
+        {hasImage && (
+          <img
+            src={image_url}
+            alt={headline || 'Hero image'}
+            className="mx-auto mb-6 rounded-xl shadow w-full object-cover"
+            style={{ objectPosition: backgroundPosition, maxHeight: isNarrow ? '16rem' : '24rem' }}
+          />
+        )}
+        <h1 className={`${titleSize} font-bold mb-4 ${textPrimary}`}>{headline}</h1>
+        {subheadline && <p className={`${subSize} mb-6 ${textSecondary}`}>{subheadline}</p>}
+        {CtaEl}
+        <PhoneLine />
+      </div>
     </SectionShell>
   );
 }

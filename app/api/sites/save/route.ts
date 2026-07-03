@@ -22,10 +22,12 @@ export async function POST(req: Request) {
     return json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  // Confirm ownership of site before writing
+  // Confirm ownership of site before writing. (This route previously referenced a
+  // non-existent `created_by`/`content` column and always errored; it now uses the
+  // real `owner_id`/`data` columns added by the sites owner-column migration.)
   const { data: site, error: fetchError } = await supabaseAdmin
     .from('sites')
-    .select('id, created_by')
+    .select('id, owner_id')
     .eq('id', id)
     .maybeSingle();
 
@@ -33,14 +35,14 @@ export async function POST(req: Request) {
     return json({ error: 'Site not found' }, { status: 404 });
   }
 
-  if (site.created_by !== user.id) {
+  if ((site as any).owner_id !== user.id) {
     return json({ error: 'Forbidden' }, { status: 403 });
   }
 
   const { error: updateError } = await supabaseAdmin
     .from('sites')
     .update({
-      content: data,
+      data,
       updated_at: new Date().toISOString(),
     })
     .eq('id', id);

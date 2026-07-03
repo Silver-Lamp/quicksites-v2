@@ -8,6 +8,10 @@ import { createServerClient } from '@supabase/ssr';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
+// gpt-image-1 generation is slow (measured ~20s at 'medium', ~55s at 'high'). The
+// default serverless timeout (~10–15s) was killing every request → 500. Give the
+// function room; 60s is the max on Hobby and well within Pro.
+export const maxDuration = 60;
 
 const openai = lazyClient(() => new OpenAI({ apiKey: process.env.OPENAI_API_KEY! }));
 
@@ -147,7 +151,9 @@ export async function POST(req: Request) {
             model: 'gpt-image-1',
             prompt: base,
             size,
-            quality: 'high',
+            // 'medium' finishes in ~20s (vs ~55s for 'high') — keeps us safely
+            // under maxDuration and still looks great as a hero background.
+            quality: 'medium',
             // response_format: 'b64_json',
           });
           return { value: result, usage: { images: result.data?.length ?? 1, metadata: { size: String(size) } } };
@@ -166,6 +172,16 @@ export async function POST(req: Request) {
     return NextResponse.json({ image_base64: b64 });
   } catch (e: any) {
     console.error('hero/generate-image error', e);
+    // OpenAI's safety system can reject a prompt (intermittently). Surface a clear,
+    // actionable message instead of a generic 500 so the user knows to retry/reword.
+    const code = e?.code ?? e?.error?.code;
+    const msg = String(e?.message ?? e?.error?.message ?? '');
+    if (code === 'moderation_blocked' || /safety system|content policy/i.test(msg)) {
+      return NextResponse.json(
+        { error: 'That image request was blocked by the safety system — try a different subject or wording.', code: 'moderation_blocked' },
+        { status: 422 },
+      );
+    }
     return NextResponse.json({ error: 'Failed to generate image' }, { status: 500 });
   }
 }

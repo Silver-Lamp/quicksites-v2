@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation';
 import { supabaseAdmin } from '@/lib/supabase/admin';
 import { TemplateEditorProvider } from '@/context/template-editor-context';
 import TemplateEditor from '@/components/admin/templates/template-editor';
+import AutogenRunner from '@/components/admin/templates/autogen-runner';
 import type { Template } from '@/types/template';
 
 // Ensure no caching for edits
@@ -114,19 +115,24 @@ export default async function TemplateEditPage({ params }: PageProps) {
   } as Template);
 
   const colorMode = (initialData.color_mode as 'light' | 'dark') ?? 'light';
+  // Guest-build sites are stamped autogen_pending — auto-run copy + hero on first open.
+  const autogenPending = !!(dataObj as any)?.meta?.autogen_pending;
 
   return (
-    <TemplateEditorProvider
-      templateName={initialData.template_name}
-      colorMode={colorMode}
-      initialData={initialData}
-    >
-      <TemplateEditor
+    <>
+      {autogenPending && <AutogenRunner templateId={row.id} />}
+      <TemplateEditorProvider
         templateName={initialData.template_name}
-        initialData={initialData}
-        initialMode={initialData.is_site ? 'site' : 'template'}
         colorMode={colorMode}
-      />
-    </TemplateEditorProvider>
+        initialData={initialData}
+      >
+        <TemplateEditor
+          templateName={initialData.template_name}
+          initialData={initialData}
+          initialMode={initialData.is_site ? 'site' : 'template'}
+          colorMode={colorMode}
+        />
+      </TemplateEditorProvider>
+    </>
   );
 }

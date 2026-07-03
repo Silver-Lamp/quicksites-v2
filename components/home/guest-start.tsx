@@ -70,6 +70,11 @@ export default function GuestStart() {
       const initial: any = buildIndustryStarter({ businessName: name, industryKey });
       // Collision-safe slug (the templates table doesn't enforce uniqueness).
       initial.slug = `${slugify(name) || 'site'}-${randSuffix()}`;
+      // One-shot flag: the hero editor auto-runs "Suggest All" + "Generate" once
+      // when it first opens for this site, so the guest gets AI copy + a hero image
+      // without manually clicking. Cleared after it runs.
+      initial.data = initial.data || {};
+      initial.data.meta = { ...(initial.data.meta || {}), autogen_pending: true };
 
       const res = await fetch('/api/templates/create', {
         method: 'POST',

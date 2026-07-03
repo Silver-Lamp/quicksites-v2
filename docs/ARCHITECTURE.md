@@ -105,7 +105,7 @@ The split is cheap *if and only if* business logic isn't trapped in route handle
 Concretely:
 1. **Extract a service layer** from the hottest routes into `packages/core` candidates: start with `lib/commerce/*` and `lib/payments/*` (already partly there).
 2. **Centralize env access** behind a validated loader (`packages/core/env.ts` with Zod) — removes the scattered `process.env.*` fallbacks and makes the backend portable.
-3. **Centralize auth/tenancy** into a single `requireUser(req)` / `resolveOrg(req)` pair that takes plain headers/cookies (no `next/headers` dependency) so it works in both Next and a standalone server.
+3. **Centralize auth/tenancy** into a single `requireUser(req)` / `resolveOrg(req)` pair that takes plain headers/cookies (no `next/headers` dependency) so it works in both Next and a standalone server. *(Partial: `lib/auth/requireUser.ts` now provides `requireAdmin`/`requireUser`/`requireMerchantOwner`/`requireOrgAdmin`/`requireCompanyMember` gates used across the routes — but still coupled to `next/headers` via `getServerSupabase`. Decoupling from `next/headers` is the remaining step.)*
 4. **Adopt the Zod request/response wrappers** (`lib/api/withInputOutputValidation.ts`) everywhere new — this *is* the contract.
 
 ### 6.4 Sequenced extraction (low→high coupling)

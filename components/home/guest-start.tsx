@@ -5,7 +5,8 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { ensureGuestSession } from '@/lib/auth/guestSession';
-import { INDUSTRIES } from '@/lib/industries';
+import { INDUSTRIES, type IndustryKey } from '@/lib/industries';
+import { buildIndustryStarter } from '@/lib/builder/industryScaffold';
 
 function slugify(s: string): string {
   return s
@@ -58,26 +59,22 @@ export default function GuestStart() {
         return;
       }
 
-      // 2) create a draft site/template owned by this session
-      const industryLabel =
-        INDUSTRIES.find((i) => i.key === industry)?.label ?? undefined;
+      // 2) create a draft site/template owned by this session, seeded with a real
+      //    industry starter (hero / services / faq / contact + services + theme) —
+      //    the SAME scaffold the /admin/templates/new industry path uses. Without
+      //    this the template is created with only meta (no pages/blocks) and the
+      //    editor falls back to empty placeholder blocks (one of them typeless →
+      //    "Invalid block: missing or undefined type"). Industry is optional in the
+      //    guest form; fall back to 'other' (buildIndustryStarter handles it).
+      const industryKey = (industry || 'other') as IndustryKey;
+      const initial: any = buildIndustryStarter({ businessName: name, industryKey });
+      // Collision-safe slug (the templates table doesn't enforce uniqueness).
+      initial.slug = `${slugify(name) || 'site'}-${randSuffix()}`;
 
       const res = await fetch('/api/templates/create', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          template_name: name,
-          slug: `${slugify(name) || 'site'}-${randSuffix()}`,
-          is_site: true,
-          color_mode: 'dark',
-          data: {
-            meta: {
-              business_name: name,
-              ...(industry ? { industry } : {}),
-              ...(industryLabel ? { industry_label: industryLabel } : {}),
-            },
-          },
-        }),
+        body: JSON.stringify(initial),
       });
 
       const json = await res.json().catch(() => ({}));

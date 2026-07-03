@@ -10,7 +10,9 @@ function buildPreviewUrl(): string | null {
   const m = window.location.pathname.match(/\/admin\/templates\/([^/]+)/);
   const id = m?.[1];
   if (!id || ['list', 'new', 'gsc-bulk-stats'].includes(id)) return null;
-  return `${window.location.origin}/preview?template_id=${encodeURIComponent(id)}&watermark=1`;
+  // No &watermark=1 needed — the preview shows the "not yet published" mark based
+  // on the template's published state (DB-driven).
+  return `${window.location.origin}/preview?template_id=${encodeURIComponent(id)}`;
 }
 
 /**

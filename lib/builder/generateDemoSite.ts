@@ -143,7 +143,8 @@ export async function generateDemoSite(opts: {
   }
 }
 
-async function ideateCopy(spec: DemoSpec, userId: string | null): Promise<Copy> {
+export type SiteCopy = Copy;
+export async function ideateCopy(spec: DemoSpec, userId: string | null): Promise<Copy> {
   const sys =
     'You write concise, conversion-oriented website copy for local businesses. Return JSON ONLY ' +
     'with keys: headline (<=8 words), subheadline (<=18 words), about (2-3 sentences), ' +
@@ -185,7 +186,7 @@ async function ideateCopy(spec: DemoSpec, userId: string | null): Promise<Copy> 
   );
 }
 
-async function generateHero(spec: DemoSpec, userId: string | null): Promise<string | null> {
+export async function generateHero(spec: DemoSpec, userId: string | null): Promise<string | null> {
   const prompt =
     `Professional hero photo for a ${spec.industryLabel} business named "${spec.businessName}" in ${spec.city}, ${spec.state}. ` +
     `Real-world, high quality, on-brand, no text, no logos.`;

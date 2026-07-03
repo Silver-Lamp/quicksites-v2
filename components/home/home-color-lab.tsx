@@ -21,16 +21,23 @@ const PRESETS: Scheme[] = [
   { name: 'Cyan', accent: '#06b6d4', accent2: '#67e8f9', fg: '#083344' },
 ];
 
-export default function HomeColorLab() {
-  const [enabled, setEnabled] = useState(false);
-  const [open, setOpen] = useState(true);
+/**
+ * @param show  Surface the tool for this visitor (e.g. anonymous/guest users on
+ *              the homepage) even without the ?colorlab=1 URL param. The panel
+ *              starts collapsed as a small 🎨 button so it isn't intrusive.
+ */
+export default function HomeColorLab({ show = false }: { show?: boolean }) {
+  const [paramEnabled, setParamEnabled] = useState(false);
+  const [open, setOpen] = useState(false);
   const [accent, setAccent] = useState(PRESETS[0].accent);
   const [accent2, setAccent2] = useState(PRESETS[0].accent2);
   const [fg, setFg] = useState(PRESETS[0].fg);
 
+  const enabled = show || paramEnabled;
+
   useEffect(() => {
     const p = new URLSearchParams(window.location.search);
-    if (p.has('colorlab') || p.has('colors')) setEnabled(true);
+    if (p.has('colorlab') || p.has('colors')) setParamEnabled(true);
   }, []);
 
   useEffect(() => {

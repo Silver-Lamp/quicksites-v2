@@ -197,6 +197,7 @@ function saveNow() {
 
 /** Debounced “soft” save to avoid focus loss while typing in free-text fields */
 const DEBOUNCE_MS = 700;
+const MERGE_DEBOUNCE_MS = 300;
 function useDebouncedSave() {
   const t = useRef<number | null>(null);
   const saveSoon = (ms = DEBOUNCE_MS) => {
@@ -213,7 +214,38 @@ function useDebouncedSave() {
     }
     saveNow();
   };
-  return { saveSoon, flushSave };
+
+  // Debounced template merge. Dispatching `qs:template:merge` on every keystroke
+  // re-renders the editor/preview and makes free-text fields (e.g. the "Other
+  // industry" box) janky. Coalesce to the last value; flushMerge() commits the
+  // pending value immediately (on blur / Enter / continue).
+  const m = useRef<number | null>(null);
+  const mDetail = useRef<any>(null);
+  const dispatchMerge = (detail: any) => {
+    try {
+      window.dispatchEvent(new CustomEvent('qs:template:merge', { detail }));
+    } catch {}
+  };
+  const mergeSoon = (detail: any, ms = MERGE_DEBOUNCE_MS) => {
+    mDetail.current = detail;
+    if (m.current) window.clearTimeout(m.current);
+    m.current = window.setTimeout(() => {
+      dispatchMerge(mDetail.current);
+      mDetail.current = null;
+      m.current = null;
+    }, ms) as unknown as number;
+  };
+  const flushMerge = () => {
+    if (m.current) {
+      window.clearTimeout(m.current);
+      m.current = null;
+    }
+    if (mDetail.current != null) {
+      dispatchMerge(mDetail.current);
+      mDetail.current = null;
+    }
+  };
+  return { saveSoon, flushSave, mergeSoon, flushMerge };
 }
 
 /* —— tiny label guesser for Suggest flow —— */
@@ -244,7 +276,7 @@ export default function HeroEditor({
   template,
 }: BlockEditorProps & { template: Template }) {
   const [mode, setMode] = useState<'express' | 'advanced'>('express');
-  const { saveSoon, flushSave } = useDebouncedSave();
+  const { saveSoon, flushSave, mergeSoon, flushMerge } = useDebouncedSave();
   const isTypingOther = useRef(false);
 
   // initial local
@@ -982,31 +1014,26 @@ export default function HeroEditor({
                     onFocus={() => { isTypingOther.current = true; }}
                     onChange={(e) => {
                       const v = e.target.value;
-                      setAiIndustryOther(v);
+                      setAiIndustryOther(v); // keep the input responsive
 
-                      // mirror when typing "Other"
+                      // mirror when typing "Other" — debounced so we don't
+                      // re-render the editor/preview on every keystroke
                       if (industryKey === 'other') {
-                        requestAnimationFrame(() => {
-                          window.dispatchEvent(
-                            new CustomEvent('qs:template:merge', {
-                              detail: {
-                                meta: {
-                                  site_type: siteType || 'small_business',
-                                  industry: 'other',
-                                  industry_label: 'Other',
-                                  industry_other: v.trim() || null,
-                                },
-                              },
-                            }),
-                          );
+                        mergeSoon({
+                          meta: {
+                            site_type: siteType || 'small_business',
+                            industry: 'other',
+                            industry_label: 'Other',
+                            industry_other: v.trim() || null,
+                          },
                         });
-                        // Debounce commit to avoid focus loss while typing
                         saveSoon();
                       }
                     }}
                     onBlur={() => {
                       if (industryKey === 'other') {
                         isTypingOther.current = false;
+                        flushMerge();
                         flushSave();
                       }
                     }}
@@ -1014,6 +1041,7 @@ export default function HeroEditor({
                       if (e.key === 'Enter' && industryKey === 'other') {
                         e.preventDefault();
                         isTypingOther.current = false;
+                        flushMerge();
                         flushSave();
                       }
                     }}

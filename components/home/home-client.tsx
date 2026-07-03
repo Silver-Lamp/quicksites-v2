@@ -79,7 +79,9 @@ export default function HomeClient({ showcase }: { showcase?: React.ReactNode })
   return (
     <>
       <SiteHeader sticky />
-      <HomeColorLab />
+      {/* Color playground surfaced for anon/guest visitors (temporary — until we
+          pick a default palette); also available to anyone via ?colorlab=1. */}
+      <HomeColorLab show={!isRealUser} />
       <div className="relative min-h-screen flex flex-col bg-zinc-950 text-white overflow-hidden">
         {showGlow && <BackgroundGlow />}
 

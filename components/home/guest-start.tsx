@@ -94,14 +94,22 @@ export default function GuestStart() {
 
   return (
     <motion.form
-      id="start"
       onSubmit={onSubmit}
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5, delay: 0.15 }}
-      className="mt-8 w-full max-w-xl scroll-mt-24 rounded-2xl border border-sky-500/25 bg-gradient-to-b from-sky-950/40 to-zinc-900/70 p-6 shadow-2xl shadow-sky-950/50 ring-1 ring-inset ring-white/5 backdrop-blur-sm sm:p-7"
+      // Sizes are ~2x the previous card. Accent-driven colors read from CSS vars
+      // (--qs-accent / --qs-accent-2 / --qs-accent-fg) so the homepage color lab
+      // can recolor this live; the fallbacks are the original sky palette.
+      className="mt-12 w-full max-w-3xl scroll-mt-24 rounded-[2rem] border p-12 shadow-2xl ring-1 ring-inset ring-white/5 backdrop-blur-sm sm:p-14"
+      style={{
+        borderColor: 'color-mix(in srgb, var(--qs-accent, #0ea5e9) 30%, transparent)',
+        background:
+          'linear-gradient(to bottom, color-mix(in srgb, var(--qs-accent, #0ea5e9) 16%, rgba(9,12,20,0.9)), rgba(24,24,27,0.72))',
+        boxShadow: '0 30px 80px -20px color-mix(in srgb, var(--qs-accent, #0ea5e9) 35%, transparent)',
+      }}
     >
-      <div className="flex flex-col gap-3 sm:flex-row">
+      <div className="flex flex-col gap-6 sm:flex-row">
         <input
           type="text"
           value={businessName}
@@ -109,14 +117,14 @@ export default function GuestStart() {
           placeholder="Your business name"
           aria-label="Business name"
           disabled={loading}
-          className="flex-1 rounded-lg border border-zinc-700 bg-zinc-900/70 px-4 py-3 text-base text-white placeholder:text-zinc-500 focus:border-sky-500 focus:outline-none"
+          className="flex-1 rounded-2xl border border-zinc-700 bg-zinc-900/70 px-8 py-6 text-2xl text-white placeholder:text-zinc-500 focus:border-white/40 focus:outline-none"
         />
         <select
           value={industry}
           onChange={(e) => setIndustry(e.target.value)}
           aria-label="Industry"
           disabled={loading}
-          className="rounded-lg border border-zinc-700 bg-zinc-900/70 px-4 py-3 text-base text-white focus:border-sky-500 focus:outline-none sm:w-52"
+          className="rounded-2xl border border-zinc-700 bg-zinc-900/70 px-8 py-6 text-2xl text-white focus:border-white/40 focus:outline-none sm:w-80"
         >
           <option value="">Industry (optional)</option>
           {INDUSTRIES.map((i, idx) => (
@@ -130,17 +138,21 @@ export default function GuestStart() {
       <button
         type="submit"
         disabled={loading}
-        className="mt-3 inline-flex w-full items-center justify-center rounded-lg bg-sky-500 px-6 py-3 text-base font-semibold text-zinc-950 shadow-lg transition hover:bg-sky-400 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
+        className="mt-6 inline-flex w-full items-center justify-center rounded-2xl px-12 py-6 text-2xl font-semibold shadow-lg transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
+        style={{
+          backgroundColor: 'var(--qs-accent, #0ea5e9)',
+          color: 'var(--qs-accent-fg, #09090b)',
+        }}
       >
         {loading ? 'Building your site…' : '✨ Build my site — free, no signup'}
       </button>
 
-      <p className="mt-3 text-xs text-zinc-500">
+      <p className="mt-6 text-base text-zinc-400">
         No credit card. Sign up only when you’re ready to go live.
       </p>
 
       {error && (
-        <p className="mt-2 text-sm text-red-400" role="alert">
+        <p className="mt-4 text-lg text-red-400" role="alert">
           {error}
         </p>
       )}

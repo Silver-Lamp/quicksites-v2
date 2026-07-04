@@ -6,10 +6,8 @@
 // autogenerate (AI copy + hero image), then refreshes the editor to show the
 // result — so the visitor gets a populated site without opening the hero editor.
 import { useEffect, useRef, useState } from 'react';
-import { useRouter } from 'next/navigation';
 
 export default function AutogenRunner({ templateId }: { templateId: string }) {
-  const router = useRouter();
   const ran = useRef(false);
   const [status, setStatus] = useState<'idle' | 'running' | 'error'>('idle');
 
@@ -33,7 +31,13 @@ export default function AutogenRunner({ templateId }: { templateId: string }) {
       try {
         const res = await fetch(`/api/templates/${templateId}/autogenerate`, { method: 'POST' });
         if (!res.ok) throw new Error(`autogenerate failed (${res.status})`);
-        router.refresh(); // reload the editor with the generated copy + hero
+        // Hard reload (not router.refresh): the editor keeps its own React state
+        // from the initial mount, so a soft refresh re-fetches the server data but
+        // the client editor never re-syncs the generated copy + hero image. A full
+        // reload re-mounts the editor with the committed data. Safe here — autogen
+        // runs on first open before the guest has edited, and autogen_pending is now
+        // false so this won't re-trigger.
+        window.location.reload();
       } catch (e) {
         console.error('[autogen]', e);
         setStatus('error');

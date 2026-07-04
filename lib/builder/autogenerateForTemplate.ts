@@ -12,6 +12,7 @@
 // persists via the sanctioned commit RPC (direct UPDATEs to templates are blocked).
 import { createClient } from '@supabase/supabase-js';
 import OpenAI from 'openai';
+import sharp from 'sharp';
 import { ideateCopy } from '@/lib/builder/generateDemoSite';
 import { inferIndustry } from '@/lib/builder/inferIndustry';
 import { meterLLMCall } from '@/lib/ai/meter';
@@ -19,6 +20,7 @@ import { KEY_TO_LABEL, type IndustryKey } from '@/lib/industries';
 import type { DemoSpec } from '@/lib/builder/randomDemoSpec';
 
 const HERO_BUCKET = process.env.SUPABASE_STORAGE_BUCKET || 'templates';
+const FAVICON_BUCKET = 'favicons';
 
 function admin() {
   return createClient(
@@ -84,7 +86,112 @@ async function generateAndUploadHero(
   return null;
 }
 
-type Result = { ok: true; heroUrl: string | null } | { ok: false; error: string };
+/**
+ * Generate a logo/icon mark (gpt-image-1, transparent background) and upload it to
+ * the templates bucket at template-<id>/logo/... — mirrors the editor's manual
+ * "/api/icon/generate" prompt so the auto-generated logo matches what the header
+ * editor produces. Returns both the public URL (for meta.logo_url) and the raw PNG
+ * buffer (so the favicon can be derived from it without a second AI call). Retries
+ * once and is best-effort: the site still works without a logo.
+ */
+async function generateAndUploadLogo(
+  db: ReturnType<typeof admin>,
+  templateId: string,
+  spec: DemoSpec,
+  accent: string | null,
+  ownerId: string | null,
+): Promise<{ url: string; buffer: Buffer } | null> {
+  const label =
+    spec.industryLabel && spec.industryLabel.toLowerCase() !== 'other'
+      ? spec.industryLabel
+      : 'local services';
+  const prompt = [
+    `${spec.businessName ? `${spec.businessName} ` : ''}${label} logo icon.`,
+    'flat minimal icon mark, vector, crisp edges.',
+    'Centered, symmetric if appropriate, legible at 64px, good for favicon.',
+    'No text or letters in the mark.',
+    accent ? `Primary accent color ${accent}.` : '',
+    'High quality, clean background.',
+  ].filter(Boolean).join(' ');
+  const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      const b64 = await meterLLMCall<string | null>(
+        { provider: 'openai', model_code: 'gpt-image-1', modality: 'image', user_id: ownerId, route: '/api/templates/[id]/autogenerate' },
+        async () => {
+          const gen = await openai.images.generate({
+            model: 'gpt-image-1',
+            prompt,
+            size: '1024x1024',
+            background: 'transparent',
+          });
+          return { value: gen.data?.[0]?.b64_json ?? null, usage: { images: 1 } };
+        },
+      );
+      if (!b64) {
+        console.error(`[autogen] logo image returned empty (attempt ${attempt + 1})`);
+        continue;
+      }
+      const buffer = Buffer.from(b64, 'base64');
+      const path = `template-${templateId}/logo/${uid()}.png`;
+      const { error: upErr } = await db.storage.from(HERO_BUCKET).upload(path, buffer, { contentType: 'image/png', upsert: true });
+      if (upErr) {
+        console.error('[autogen] logo image upload failed:', upErr.message);
+        return null;
+      }
+      const { data } = db.storage.from(HERO_BUCKET).getPublicUrl(path);
+      const url = data?.publicUrl;
+      return url ? { url, buffer } : null;
+    } catch (e: any) {
+      console.error(`[autogen] logo image generation failed (attempt ${attempt + 1}):`, e?.message || e);
+    }
+  }
+  return null;
+}
+
+/**
+ * Derive a 32px favicon from the generated logo PNG — a sharp resize, no AI call,
+ * so it's free and visually matches the logo. Uploads to the favicons bucket at
+ * the same path convention the editor's manual favicon upload uses. Best-effort.
+ */
+async function deriveAndUploadFavicon(
+  db: ReturnType<typeof admin>,
+  templateId: string,
+  logoBuffer: Buffer,
+): Promise<string | null> {
+  try {
+    // Trim uniform borders first — transparent padding OR the soft solid background
+    // gpt-image-1 sometimes bakes into a "transparent" mark — so the icon fills the
+    // 32px favicon instead of floating in empty space. trim() throws if the image is
+    // entirely uniform; fall back to the untrimmed logo in that case.
+    let base = logoBuffer;
+    try {
+      base = await sharp(logoBuffer).trim().png().toBuffer();
+    } catch {
+      base = logoBuffer;
+    }
+    const png = await sharp(base)
+      .resize(32, 32, { fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 0 } })
+      .png()
+      .toBuffer();
+    const path = `template-${templateId}/favicon-32-${uid()}.png`;
+    const { error: upErr } = await db.storage.from(FAVICON_BUCKET).upload(path, png, { contentType: 'image/png', upsert: true });
+    if (upErr) {
+      console.error('[autogen] favicon upload failed:', upErr.message);
+      return null;
+    }
+    const { data } = db.storage.from(FAVICON_BUCKET).getPublicUrl(path);
+    return data?.publicUrl ?? null;
+  } catch (e: any) {
+    console.error('[autogen] favicon derivation failed:', e?.message || e);
+    return null;
+  }
+}
+
+type Result =
+  | { ok: true; heroUrl: string | null; logoUrl: string | null; faviconUrl: string | null }
+  | { ok: false; error: string };
 
 export async function autogenerateForTemplate(templateId: string, ownerId: string | null): Promise<Result> {
   const db = admin();
@@ -104,7 +211,7 @@ export async function autogenerateForTemplate(templateId: string, ownerId: strin
   // editor tab or a refresh — no-ops instead of regenerating (which would burn AI
   // calls and fire concurrent gpt-image-1 requests that OpenAI rate-limits).
   if (meta.autogen_pending !== true) {
-    return { ok: true, heroUrl: null };
+    return { ok: true, heroUrl: null, logoUrl: null, faviconUrl: null };
   }
 
   let industryKey = ((row as any).industry ?? meta.industry ?? 'other') as IndustryKey;
@@ -135,11 +242,25 @@ export async function autogenerateForTemplate(templateId: string, ownerId: strin
     aiPrompt: `Write website copy for "${businessName}", a ${industryLabel} business${city ? ` in ${city}${state ? `, ${state}` : ''}` : ''}.`,
   };
 
-  // Copy + hero in parallel; the image is best-effort (site still works without it).
-  const [copy, heroUrl] = await Promise.all([
+  // A theme accent, if the scaffold seeded one, makes the logo mark match the site.
+  const accent =
+    (typeof (data as any)?.theme?.accentColor === 'string' && (data as any).theme.accentColor) ||
+    (typeof (data as any)?.theme?.accent_color === 'string' && (data as any).theme.accent_color) ||
+    (typeof meta.accentColor === 'string' && meta.accentColor) ||
+    null;
+
+  // Copy + hero + logo in parallel; all images are best-effort (the site still works
+  // without them) and run concurrently to stay inside the create route's time budget.
+  const [copy, heroUrl, logo] = await Promise.all([
     ideateCopy(spec, ownerId),
     generateAndUploadHero(db, templateId, spec, ownerId),
+    generateAndUploadLogo(db, templateId, spec, accent, ownerId),
   ]);
+
+  // Derive the favicon from the generated logo (free sharp resize, no extra AI call)
+  // so the two marks stay visually consistent ("favicon based on the logo").
+  const logoUrl = logo?.url ?? null;
+  const faviconUrl = logo ? await deriveAndUploadFavicon(db, templateId, logo.buffer) : null;
 
   // ── Inject into the first page's blocks ──────────────────────────────────────
   const pages: any[] = Array.isArray(data.pages) ? data.pages : [];
@@ -170,6 +291,17 @@ export async function autogenerateForTemplate(templateId: string, ownerId: strin
     hero.props = hero.props ?? {};
     applyHero(hero.content);
     applyHero(hero.props);
+  }
+
+  // If the scaffold included a header block, write the logo onto it too. The public
+  // header also falls back to meta.logo_url (header render), so meta is the source of
+  // truth — but keeping the block in sync matches the manual editor's behavior.
+  if (logoUrl) {
+    const header = blocks.find((b) => b?.type === 'header');
+    if (header) {
+      header.content = header.content ?? {};
+      header.content.logo_url = logoUrl;
+    }
   }
 
   const services = blocks.find((b) => b?.type === 'services');
@@ -203,6 +335,10 @@ export async function autogenerateForTemplate(templateId: string, ownerId: strin
       // chooser reads as answered (industry=other + industry_other → step 2).
       industry_other: industryKey === 'other' ? industryLabel : null,
       site_type: meta.site_type || 'small_business',
+      // Auto-generated brand marks; the header/SEO metadata read these, and the
+      // owner can regenerate or replace them in the header editor.
+      logo_url: logoUrl ?? meta.logo_url ?? null,
+      favicon_url: faviconUrl ?? meta.favicon_url ?? null,
       about: copy.about ?? meta.about ?? null,
       faqs: copy.faqs ?? meta.faqs ?? [],
       services: copy.services?.length ? copy.services : meta.services,
@@ -239,5 +375,5 @@ export async function autogenerateForTemplate(templateId: string, ownerId: strin
   }
   if (rpcErr) return { ok: false, error: rpcErr.message || 'commit failed' };
 
-  return { ok: true, heroUrl };
+  return { ok: true, heroUrl, logoUrl, faviconUrl };
 }

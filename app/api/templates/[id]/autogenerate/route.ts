@@ -25,5 +25,5 @@ export async function POST(_req: Request, { params }: { params: { id: string } }
   const result = await autogenerateForTemplate(id, gate.userId);
   if (!result.ok) return NextResponse.json({ error: result.error }, { status: 500 });
 
-  return NextResponse.json({ ok: true, heroUrl: result.heroUrl });
+  return NextResponse.json({ ok: true, heroUrl: result.heroUrl, logoUrl: result.logoUrl, faviconUrl: result.faviconUrl });
 }

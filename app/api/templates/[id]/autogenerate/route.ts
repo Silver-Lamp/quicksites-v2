@@ -5,8 +5,6 @@
 // (anon guests who own their draft are allowed) and subject to the guest AI cap.
 import { NextResponse } from 'next/server';
 import { requireTemplateOwner } from '@/lib/auth/requireTemplateOwner';
-import { getServerSupabase } from '@/lib/supabase/server';
-import { enforceGuestAiLimit, guestLimitBody } from '@/lib/ai/guestGuard';
 import { autogenerateForTemplate } from '@/lib/builder/autogenerateForTemplate';
 
 export const runtime = 'nodejs';
@@ -20,12 +18,10 @@ export async function POST(_req: Request, { params }: { params: { id: string } }
   const gate = await requireTemplateOwner(id);
   if (!gate.ok) return gate.response;
 
-  // Guest AI cap (anonymous users only; no-op for real users / admins).
-  const supa = await getServerSupabase();
-  const { data: { user } } = await supa.auth.getUser();
-  const guard = await enforceGuestAiLimit(user ?? undefined, 'autogenerate');
-  if (!guard.ok) return NextResponse.json(guestLimitBody(guard.limit), { status: 429 });
-
+  // NOTE: intentionally NOT counted against the per-guest manual AI cap. This is a
+  // one-time, system-initiated build (bounded by the per-IP guest-draft creation
+  // limit + the autogen_pending idempotency guard), so it shouldn't eat the calls a
+  // guest has for manually editing (Suggest All / Generate) afterwards.
   const result = await autogenerateForTemplate(id, gate.userId);
   if (!result.ok) return NextResponse.json({ error: result.error }, { status: 500 });
 

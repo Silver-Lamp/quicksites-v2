@@ -15,11 +15,14 @@ export default function AutogenRunner({ templateId }: { templateId: string }) {
 
   useEffect(() => {
     if (ran.current) return;
-    // Guard against refresh / StrictMode re-mounts firing a second generation.
+    // Guard against a second generation from refresh / StrictMode re-mounts AND
+    // from a second browser tab. localStorage is shared across tabs (sessionStorage
+    // is per-tab), so opening the editor in two tabs no longer fires autogenerate
+    // twice. Set before the fetch so a near-simultaneous second mount bails.
     const key = `qs:autogen:${templateId}`;
     try {
-      if (sessionStorage.getItem(key)) return;
-      sessionStorage.setItem(key, '1');
+      if (localStorage.getItem(key)) return;
+      localStorage.setItem(key, '1');
     } catch {}
     ran.current = true;
     setStatus('running');

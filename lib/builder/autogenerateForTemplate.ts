@@ -99,19 +99,26 @@ async function generateAndUploadLogo(
   templateId: string,
   spec: DemoSpec,
   accent: string | null,
+  darkSite: boolean,
   ownerId: string | null,
 ): Promise<{ url: string; buffer: Buffer } | null> {
   const label =
     spec.industryLabel && spec.industryLabel.toLowerCase() !== 'other'
       ? spec.industryLabel
       : 'local services';
+  // The mark must contrast the header it sits on: white on the (default) dark
+  // header, near-black on a light header. Keep it monochrome for maximum contrast
+  // rather than an accent tint that can wash out on a dark background.
+  const contrastRule = darkSite
+    ? 'Render the mark in solid pure WHITE (#ffffff) with crisp clean edges — it will be placed on a DARK/near-black header, so it must read as bright white and clearly visible.'
+    : 'Render the mark in a single solid near-black color with crisp clean edges — it will be placed on a LIGHT/white header.';
   const prompt = [
     `${spec.businessName ? `${spec.businessName} ` : ''}${label} logo icon.`,
-    'flat minimal icon mark, vector, crisp edges.',
+    'flat minimal MONOCHROME icon mark, vector, crisp edges, single color.',
     'Centered, symmetric if appropriate, legible at 64px, good for favicon.',
     'No text or letters in the mark.',
-    accent ? `Primary accent color ${accent}.` : '',
-    'High quality, clean background.',
+    contrastRule,
+    'Fully transparent background, no background fill, no card, no shadow, no gradient.',
   ].filter(Boolean).join(' ');
   const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
@@ -150,29 +157,51 @@ async function generateAndUploadLogo(
   return null;
 }
 
+/** Parse a #rrggbb / #rgb hex string to an {r,g,b}, or null. */
+function parseHex(hex: string | null): { r: number; g: number; b: number } | null {
+  if (!hex) return null;
+  let h = hex.trim().replace(/^#/, '');
+  if (h.length === 3) h = h.split('').map((c) => c + c).join('');
+  if (!/^[0-9a-fA-F]{6}$/.test(h)) return null;
+  return { r: parseInt(h.slice(0, 2), 16), g: parseInt(h.slice(2, 4), 16), b: parseInt(h.slice(4, 6), 16) };
+}
+
 /**
- * Derive a 32px favicon from the generated logo PNG — a sharp resize, no AI call,
- * so it's free and visually matches the logo. Uploads to the favicons bucket at
- * the same path convention the editor's manual favicon upload uses. Best-effort.
+ * Derive a 32px favicon from the generated logo PNG — a sharp composite, no AI call,
+ * so it's free and visually matches the logo. The mark is placed on a SOLID tile
+ * (not left transparent) so the favicon stays visible on any browser tab regardless
+ * of the tab-strip color: dark sites get a white mark → accent tile; light sites get
+ * a dark mark → white tile. Uploads to the favicons bucket. Best-effort.
  */
 async function deriveAndUploadFavicon(
   db: ReturnType<typeof admin>,
   templateId: string,
   logoBuffer: Buffer,
+  darkSite: boolean,
+  accent: string | null,
 ): Promise<string | null> {
   try {
     // Trim uniform borders first — transparent padding OR the soft solid background
     // gpt-image-1 sometimes bakes into a "transparent" mark — so the icon fills the
-    // 32px favicon instead of floating in empty space. trim() throws if the image is
-    // entirely uniform; fall back to the untrimmed logo in that case.
+    // tile instead of floating in empty space. trim() throws if the image is entirely
+    // uniform; fall back to the untrimmed logo in that case.
     let base = logoBuffer;
     try {
       base = await sharp(logoBuffer).trim().png().toBuffer();
     } catch {
       base = logoBuffer;
     }
-    const png = await sharp(base)
-      .resize(32, 32, { fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 0 } })
+    // Tile chosen to contrast the (prompted) mark color: accent behind a white mark
+    // on dark sites; white behind a dark mark on light sites.
+    const tile = darkSite ? (parseHex(accent) ?? { r: 109, g: 40, b: 217 }) : { r: 255, g: 255, b: 255 };
+    const mark = await sharp(base)
+      .resize(26, 26, { fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 0 } })
+      .png()
+      .toBuffer();
+    const png = await sharp({
+      create: { width: 32, height: 32, channels: 4, background: { ...tile, alpha: 1 } },
+    })
+      .composite([{ input: mark, gravity: 'center' }])
       .png()
       .toBuffer();
     const path = `template-${templateId}/favicon-32-${uid()}.png`;
@@ -198,7 +227,7 @@ export async function autogenerateForTemplate(templateId: string, ownerId: strin
 
   const { data: row, error } = await db
     .from('templates')
-    .select('id, rev, data, business_name, industry, city, state, template_name')
+    .select('id, rev, data, business_name, industry, city, state, template_name, color_mode')
     .eq('id', templateId)
     .maybeSingle();
   if (error || !row) return { ok: false, error: error?.message || 'template not found' };
@@ -249,18 +278,22 @@ export async function autogenerateForTemplate(templateId: string, ownerId: strin
     (typeof meta.accentColor === 'string' && meta.accentColor) ||
     null;
 
+  // The header background follows color_mode (dark everywhere by default). Generate a
+  // logo mark that CONTRASTS it — a dark mark on the default dark header is invisible.
+  const darkSite = String((row as any).color_mode ?? data.color_mode ?? 'dark') !== 'light';
+
   // Copy + hero + logo in parallel; all images are best-effort (the site still works
   // without them) and run concurrently to stay inside the create route's time budget.
   const [copy, heroUrl, logo] = await Promise.all([
     ideateCopy(spec, ownerId),
     generateAndUploadHero(db, templateId, spec, ownerId),
-    generateAndUploadLogo(db, templateId, spec, accent, ownerId),
+    generateAndUploadLogo(db, templateId, spec, accent, darkSite, ownerId),
   ]);
 
   // Derive the favicon from the generated logo (free sharp resize, no extra AI call)
   // so the two marks stay visually consistent ("favicon based on the logo").
   const logoUrl = logo?.url ?? null;
-  const faviconUrl = logo ? await deriveAndUploadFavicon(db, templateId, logo.buffer) : null;
+  const faviconUrl = logo ? await deriveAndUploadFavicon(db, templateId, logo.buffer, darkSite, accent) : null;
 
   // ── Inject into the first page's blocks ──────────────────────────────────────
   const pages: any[] = Array.isArray(data.pages) ? data.pages : [];

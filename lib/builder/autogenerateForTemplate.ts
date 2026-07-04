@@ -180,6 +180,14 @@ export async function autogenerateForTemplate(templateId: string, ownerId: strin
     else services.content.items = items;
   }
 
+  // Keep the legacy `content_blocks` mirror in sync with `blocks`. The scaffold
+  // writes both, and after a JSON round-trip they're separate arrays — the editor
+  // canvas renders from content_blocks while the public renderer uses blocks, so a
+  // blocks-only update showed the AI hero in preview but NOT in the editor.
+  if (page0 && Array.isArray((page0 as any).content_blocks)) {
+    (page0 as any).content_blocks = blocks;
+  }
+
   // ── New data blob: mirror copy into meta (about/faqs/services), clear the flag ─
   const newData = {
     ...data,

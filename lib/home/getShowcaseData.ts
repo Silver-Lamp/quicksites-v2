@@ -42,13 +42,23 @@ export async function getShowcaseData(): Promise<ShowcaseData> {
 
   try {
     const supa = await getServerSupabase({ serviceRole: true });
-    const { data, error } = await (supa as any)
-      .from('templates')
-      .select('slug, business_name, industry_label, industry, hero_url, logo_url, data, domain, custom_domain, owner_id, claim_source')
-      .eq('is_site', true)
-      .eq('published', true)
-      .eq('archived', false)
-      .eq('is_version', false);
+    // The showcase query intermittently failed on SSR (transient DB/connection
+    // hiccup), which blanked the "Built with QuickSites" row. Retry once before
+    // giving up so a single transient error doesn't drop the whole row.
+    let data: any = null;
+    let error: any = null;
+    for (let attempt = 0; attempt < 2; attempt++) {
+      const res = await (supa as any)
+        .from('templates')
+        .select('slug, business_name, industry_label, industry, hero_url, logo_url, data, domain, custom_domain, owner_id, claim_source')
+        .eq('is_site', true)
+        .eq('published', true)
+        .eq('archived', false)
+        .eq('is_version', false);
+      data = res.data;
+      error = res.error;
+      if (!error && data) break;
+    }
     if (error) return { sites: [], displayMode };
 
     // Defense-in-depth: never surface a guest-built site still owned by an

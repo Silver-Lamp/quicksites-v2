@@ -149,7 +149,7 @@ export default function GuestStart() {
           color: 'var(--qs-accent-fg, #09090b)',
         }}
       >
-        {loading ? 'Building your site…' : '✨ Build my site — free, no signup'}
+        {loading ? '✨ Generating your site — copy + hero image (~25s)…' : '✨ Build my site — free, no signup'}
       </button>
 
       <p className="mt-6 text-base text-zinc-400">

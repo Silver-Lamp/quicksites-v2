@@ -56,11 +56,18 @@ export default function ContactFormRender({
   } = (block?.content as any) || {};
 
   // ---- Resolve identity from template/site (with fallbacks to block) -------
-  const dbServices = norm(
-    deepGet(t, 'services') ??
-      deepGet(t, 'data.meta.services') ??
-      deepGet(t, 'data.services')
-  );
+  // Pick the first NON-EMPTY source. `??` alone was wrong: in the preview/site
+  // renderer `t.services` is an empty array (unset services_jsonb column), and
+  // `[] ?? x` returns `[]` — short-circuiting before the populated
+  // data.meta.services / data.services (where autogenerate writes them).
+  const dbServices =
+    [
+      deepGet(t, 'services'),
+      deepGet(t, 'data.meta.services'),
+      deepGet(t, 'data.services'),
+    ]
+      .map(norm)
+      .find((arr) => arr.length > 0) ?? [];
 
   const blockServices = norm(
     (block as any)?.content?.services ?? (block as any)?.content?.items

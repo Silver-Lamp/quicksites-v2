@@ -206,6 +206,11 @@ export async function autogenerateForTemplate(templateId: string, ownerId: strin
       about: copy.about ?? meta.about ?? null,
       faqs: copy.faqs ?? meta.faqs ?? [],
       services: copy.services?.length ? copy.services : meta.services,
+      // Default contact email so the contact form is functional out of the box
+      // (a placeholder the owner replaces on sign-up/publish). Only set if unset.
+      contact_email:
+        meta.contact_email ||
+        `hello@${(businessName || 'your-business').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '').slice(0, 40) || 'your-business'}.com`,
       autogen_pending: false,
       autogen_done_at_rev: (row as any).rev ?? 0,
     },

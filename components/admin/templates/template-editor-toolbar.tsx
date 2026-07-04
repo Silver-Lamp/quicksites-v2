@@ -232,8 +232,9 @@ export function TemplateEditorToolbar({
 
   return (
     <>
-      {/* Top bar */}
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+      {/* Top bar — hidden for guests (see globals.css [data-guest]); they have the
+          "building as a guest" banner + the bottom editor toolbar instead. */}
+      <div className="qs-editor-actionbar mb-4 flex flex-wrap items-center justify-between gap-3">
         {/* Left: Back + Title/Rename */}
         <div className="flex min-w-0 items-center gap-2">
           {onBack && (

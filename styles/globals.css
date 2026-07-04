@@ -236,3 +236,11 @@ html, body, #__next { width: 100%; max-width: 100%; }
 @media (prefers-reduced-motion: reduce) {
   :root[data-qs-autogen='running'] .qs-hero-shimmer { animation: none; }
 }
+
+/* Guests don't need the editor's top action bar (template name + Save / Save &
+   Publish / Archive): they can't publish, autosave keeps their work, and they
+   already have the "building as a guest" banner + the bottom editor toolbar. The
+   guest chrome sets data-guest on its root (components/admin/admin-chrome.tsx). */
+[data-guest] .qs-editor-actionbar {
+  display: none;
+}

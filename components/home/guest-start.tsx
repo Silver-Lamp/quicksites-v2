@@ -106,7 +106,7 @@ export default function GuestStart() {
       // Sizes are ~2x the previous card. Accent-driven colors read from CSS vars
       // (--qs-accent / --qs-accent-2 / --qs-accent-fg) so the homepage color lab
       // can recolor this live; the fallbacks are the original sky palette.
-      className="mt-12 w-full max-w-3xl scroll-mt-24 rounded-[2rem] border p-12 shadow-2xl ring-1 ring-inset ring-white/5 backdrop-blur-sm sm:p-14"
+      className="mt-8 w-full max-w-3xl scroll-mt-24 rounded-3xl border p-5 shadow-2xl ring-1 ring-inset ring-white/5 backdrop-blur-sm sm:mt-12 sm:rounded-[2rem] sm:p-14"
       style={{
         borderColor: 'color-mix(in srgb, var(--qs-accent, #0ea5e9) 30%, transparent)',
         background:
@@ -114,7 +114,7 @@ export default function GuestStart() {
         boxShadow: '0 30px 80px -20px color-mix(in srgb, var(--qs-accent, #0ea5e9) 35%, transparent)',
       }}
     >
-      <div className="flex flex-col gap-6 sm:flex-row">
+      <div className="flex flex-col gap-3 sm:flex-row sm:gap-6">
         <input
           type="text"
           value={businessName}
@@ -122,14 +122,14 @@ export default function GuestStart() {
           placeholder="Your business name"
           aria-label="Business name"
           disabled={loading}
-          className="flex-1 rounded-2xl border border-zinc-700 bg-zinc-900/70 px-8 py-6 text-2xl text-white placeholder:text-zinc-500 focus:border-white/40 focus:outline-none"
+          className="flex-1 rounded-2xl border border-zinc-700 bg-zinc-900/70 px-5 py-3.5 text-base text-white placeholder:text-zinc-500 focus:border-white/40 focus:outline-none sm:px-8 sm:py-6 sm:text-2xl"
         />
         <select
           value={industry}
           onChange={(e) => setIndustry(e.target.value)}
           aria-label="Industry"
           disabled={loading}
-          className="rounded-2xl border border-zinc-700 bg-zinc-900/70 px-8 py-6 text-2xl text-white focus:border-white/40 focus:outline-none sm:w-80"
+          className="rounded-2xl border border-zinc-700 bg-zinc-900/70 px-5 py-3.5 text-base text-white focus:border-white/40 focus:outline-none sm:w-80 sm:px-8 sm:py-6 sm:text-2xl"
         >
           <option value="">Industry (optional)</option>
           {INDUSTRIES.map((i, idx) => (
@@ -143,21 +143,21 @@ export default function GuestStart() {
       <button
         type="submit"
         disabled={loading}
-        className="mt-6 inline-flex w-full items-center justify-center rounded-2xl px-12 py-6 text-2xl font-semibold shadow-lg transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
+        className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-2xl px-6 py-3.5 text-center text-base font-semibold shadow-lg transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60 sm:mt-6 sm:px-12 sm:py-6 sm:text-2xl sm:w-auto"
         style={{
           backgroundColor: 'var(--qs-accent, #0ea5e9)',
           color: 'var(--qs-accent-fg, #09090b)',
         }}
       >
-        {loading ? '✨ Generating your site — copy + hero image (~25s)…' : '✨ Build my site — free, no signup'}
+        {loading ? '✨ Generating your site… (~25s)' : '✨ Build my site — free, no signup'}
       </button>
 
-      <p className="mt-6 text-base text-zinc-400">
+      <p className="mt-4 text-sm text-zinc-400 sm:mt-6 sm:text-base">
         No credit card. Sign up only when you’re ready to go live.
       </p>
 
       {error && (
-        <p className="mt-4 text-lg text-red-400" role="alert">
+        <p className="mt-4 text-sm text-red-400 sm:text-lg" role="alert">
           {error}
         </p>
       )}

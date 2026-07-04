@@ -4,6 +4,7 @@
 import {
   useEffect,
   useMemo,
+  useRef,
   useState,
   type Dispatch,
   type SetStateAction,
@@ -348,6 +349,38 @@ export default function EditorContent({
       window.removeEventListener('qs:edit-footer' as any, onCustom as any);
     };
   }, [template]);
+
+  // Deep-link entry: the standalone preview's "Click to edit header/footer"
+  // navigates here with ?edit=header|footer (there's no editor in that tab to open
+  // the panel directly). Open the matching editor once the template is loaded, then
+  // strip the param so a refresh doesn't reopen it.
+  const autoOpenedEditRef = useRef(false);
+  useEffect(() => {
+    if (autoOpenedEditRef.current) return;
+    if (!template) return;
+    const edit = searchParams?.get('edit');
+    if (edit !== 'header' && edit !== 'footer') return;
+    autoOpenedEditRef.current = true;
+    if (edit === 'header') {
+      setEditingHeader(
+        ((template as any)?.data?.headerBlock as Block | undefined) ??
+          (createDefaultBlock('header') as Block),
+      );
+    } else {
+      setEditingFooter(
+        ((template as any)?.data?.footerBlock as Block | undefined) ??
+          (createDefaultBlock('footer') as Block),
+      );
+    }
+    try {
+      const sp = new URLSearchParams(window.location.search);
+      sp.delete('edit');
+      const qs = sp.toString();
+      window.history.replaceState(null, '', window.location.pathname + (qs ? `?${qs}` : ''));
+    } catch {
+      /* no-op */
+    }
+  }, [template, searchParams]);
 
   // render the actual editor for a selected block id
   const editingBlockObj = useMemo(() => {

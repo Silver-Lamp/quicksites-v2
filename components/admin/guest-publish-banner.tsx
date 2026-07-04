@@ -29,8 +29,18 @@ function buildPreviewUrl(): string | null {
 export default function GuestPublishBanner() {
   const [open, setOpen] = useState(false);
   const [email, setEmail] = useState('');
-  const [status, setStatus] = useState<'idle' | 'sending' | 'sent' | 'error'>('idle');
+  const [status, setStatus] = useState<'idle' | 'sending' | 'sent' | 'error' | 'exists'>('idle');
   const [message, setMessage] = useState<string | null>(null);
+
+  /** Login URL that returns to the current editor and prefills the typed email. */
+  const loginHref = () => {
+    const path =
+      typeof window !== 'undefined' ? window.location.pathname : '/admin/templates/list';
+    const addr = email.trim();
+    const q = new URLSearchParams({ next: path });
+    if (addr) q.set('email', addr);
+    return `/login?${q.toString()}`;
+  };
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
 
@@ -58,6 +68,16 @@ export default function GuestPublishBanner() {
     try {
       const { error } = await supabase.auth.updateUser({ email: addr });
       if (error) {
+        // Email already has an account: they can't upgrade this guest session into
+        // it, so point them at login instead of showing a dead-end error.
+        const already =
+          (error as any)?.code === 'email_exists' ||
+          /already.*(registered|exists|in use)/i.test(error.message || '');
+        if (already) {
+          setStatus('exists');
+          setMessage('You already have an account with this email.');
+          return;
+        }
         setStatus('error');
         setMessage(error.message || 'Could not start signup. Please try again.');
         return;
@@ -139,6 +159,17 @@ export default function GuestPublishBanner() {
           </form>
         )}
       </div>
+      {status === 'exists' && (
+        <p className="mx-auto mt-1 max-w-6xl text-sky-200" role="status">
+          {message}{' '}
+          <a
+            href={loginHref()}
+            className="font-medium text-sky-300 underline underline-offset-2 transition hover:text-sky-100"
+          >
+            Log in instead →
+          </a>
+        </p>
+      )}
       {status === 'error' && message && (
         <p className="mx-auto mt-1 max-w-6xl text-red-300" role="alert">
           {message}

@@ -13,8 +13,9 @@
 import { createClient } from '@supabase/supabase-js';
 import OpenAI from 'openai';
 import { ideateCopy } from '@/lib/builder/generateDemoSite';
+import { inferIndustry } from '@/lib/builder/inferIndustry';
 import { meterLLMCall } from '@/lib/ai/meter';
-import { KEY_TO_LABEL, LABEL_TO_KEY, type IndustryKey } from '@/lib/industries';
+import { KEY_TO_LABEL, type IndustryKey } from '@/lib/industries';
 import type { DemoSpec } from '@/lib/builder/randomDemoSpec';
 
 const HERO_BUCKET = process.env.SUPABASE_STORAGE_BUCKET || 'templates';
@@ -84,52 +85,6 @@ async function generateAndUploadHero(
 }
 
 type Result = { ok: true; heroUrl: string | null } | { ok: false; error: string };
-
-/**
- * Guess the business's industry from its name via a cheap chat call, so a guest who
- * skipped the industry picker still gets relevant copy + imagery (and the editor's
- * "what kind of site" chooser is pre-answered). Prefers a known industry label/key
- * when one fits; otherwise returns a concise free-text label with key 'other'.
- */
-async function inferIndustry(
-  businessName: string,
-  ownerId: string | null,
-): Promise<{ label: string; key: IndustryKey } | null> {
-  const known = Object.values(KEY_TO_LABEL).join(', ');
-  const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-  try {
-    const label = await meterLLMCall<string>(
-      { provider: 'openai', model_code: 'gpt-4o-mini', modality: 'chat', user_id: ownerId, route: '/api/templates/[id]/autogenerate' },
-      async () => {
-        const r = await openai.chat.completions.create({
-          model: 'gpt-4o-mini',
-          temperature: 0.2,
-          response_format: { type: 'json_object' },
-          messages: [
-            {
-              role: 'system',
-              content:
-                `Infer the most likely industry for a small business from its name. ` +
-                `Prefer one of these labels when it clearly fits: ${known}. ` +
-                `Otherwise return a concise 1-3 word industry label. ` +
-                `Return JSON: {"industry":"<label>"}.`,
-            },
-            { role: 'user', content: `Business name: "${businessName}"` },
-          ],
-        });
-        let out = '';
-        try { out = String(JSON.parse(r.choices[0]?.message?.content || '{}').industry || ''); } catch {}
-        return { value: out.trim(), usage: { input_tokens: r.usage?.prompt_tokens, output_tokens: r.usage?.completion_tokens } };
-      },
-    );
-    if (!label || label.toLowerCase() === 'other') return null;
-    const key = (LABEL_TO_KEY[label.toLowerCase()] ?? 'other') as IndustryKey;
-    return { label, key };
-  } catch (e: any) {
-    console.error('[autogen] industry inference failed:', e?.message || e);
-    return null;
-  }
-}
 
 export async function autogenerateForTemplate(templateId: string, ownerId: string | null): Promise<Result> {
   const db = admin();

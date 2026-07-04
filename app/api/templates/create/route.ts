@@ -5,12 +5,13 @@ import { getServerSupabase } from '@/lib/supabase/server';
 import { checkRateLimit, clientIp } from '@/lib/rateLimit';
 import { inferIndustry } from '@/lib/builder/inferIndustry';
 import { buildIndustryStarter } from '@/lib/builder/industryScaffold';
+import { autogenerateForTemplate } from '@/lib/builder/autogenerateForTemplate';
 import type { IndustryKey } from '@/lib/industries';
 
 export const runtime = 'nodejs';
-// A guest with no industry triggers one cheap gpt-4o-mini inference (~2s); give the
-// handler headroom over the default serverless timeout.
-export const maxDuration = 30;
+// Guest builds run industry inference (~2s) + AI copy + a hero image (~20s) server-
+// side before returning, so the editor opens already-populated (no client re-sync).
+export const maxDuration = 60;
 
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const serviceKey = (process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SECRET_KEY)!; // service role (NOT exposed to client)
@@ -137,6 +138,24 @@ export async function POST(req: Request) {
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 400 });
+  }
+
+  // Guest sites: generate AI copy + hero image NOW (server-side), so the editor
+  // opens fully populated. This replaces the fragile editor-side re-sync — the
+  // committed template already has the hero. Best-effort: if it fails/times out,
+  // data.meta.autogen_pending stays true and the editor-side AutogenRunner retries.
+  if (isAnonymous) {
+    try {
+      // Cap the wait so the create request can't hit the function timeout — if
+      // generation runs long, we return and the editor-side AutogenRunner finishes
+      // it (autogen_pending is still true until autogenerate commits).
+      await Promise.race([
+        autogenerateForTemplate(inserted.id, ownerId),
+        new Promise((_, reject) => setTimeout(() => reject(new Error('autogen timeout')), 45_000)),
+      ]);
+    } catch (e) {
+      console.error('[create] autogenerate deferred to editor:', (e as any)?.message || e);
+    }
   }
 
   // refresh the materialized view; don’t crash the request if this fails

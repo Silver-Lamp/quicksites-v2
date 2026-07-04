@@ -31,6 +31,12 @@ export default function AutogenRunner({ templateId }: { templateId: string }) {
       try {
         const res = await fetch(`/api/templates/${templateId}/autogenerate`, { method: 'POST' });
         if (!res.ok) throw new Error(`autogenerate failed (${res.status})`);
+        // Drop any stale editor draft cached before autogen so the reload loads the
+        // freshly-committed template (with the generated hero) from the DB.
+        try {
+          localStorage.removeItem(`draft-${templateId}`);
+          sessionStorage.removeItem(`draft-${templateId}`);
+        } catch {}
         // Hard reload (not router.refresh): the editor keeps its own React state
         // from the initial mount, so a soft refresh re-fetches the server data but
         // the client editor never re-syncs the generated copy + hero image. A full

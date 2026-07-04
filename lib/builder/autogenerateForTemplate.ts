@@ -148,19 +148,28 @@ export async function autogenerateForTemplate(templateId: string, ownerId: strin
 
   const hero = blocks.find((b) => b?.type === 'hero');
   if (hero) {
+    // Write the hero copy + image onto BOTH content and props. The editor's manual
+    // "Generate" writes both (hero-editor.tsx fieldKey/altKey) and renders, whereas
+    // a content-only write showed in the public preview but NOT in the editor
+    // canvas — so mirror the working manual pattern.
+    const applyHero = (target: any) => {
+      if (copy.headline) target.headline = copy.headline;
+      if (copy.subheadline) target.subheadline = copy.subheadline;
+      if (heroUrl) {
+        target.image_url = heroUrl;
+        target.image = heroUrl;
+        target.heroImage = heroUrl;
+        target.backgroundImage = heroUrl;
+        target.layout_mode = target.layout_mode && target.layout_mode !== 'inline' ? target.layout_mode : 'background';
+        target.layout = target.layout && target.layout !== 'inline' ? target.layout : 'background';
+        target.overlay_level = target.overlay_level ?? 'soft';
+        target.overlay = target.overlay ?? 'soft';
+      }
+    };
     hero.content = hero.content ?? {};
-    if (copy.headline) hero.content.headline = copy.headline;
-    if (copy.subheadline) hero.content.subheadline = copy.subheadline;
-    if (heroUrl) {
-      hero.content.image_url = heroUrl;
-      hero.content.image = heroUrl;
-      hero.content.heroImage = heroUrl;
-      hero.content.backgroundImage = heroUrl;
-      hero.content.layout_mode = hero.content.layout_mode && hero.content.layout_mode !== 'inline' ? hero.content.layout_mode : 'background';
-      hero.content.layout = hero.content.layout && hero.content.layout !== 'inline' ? hero.content.layout : 'background';
-      hero.content.overlay_level = hero.content.overlay_level ?? 'soft';
-      hero.content.overlay = hero.content.overlay ?? 'soft';
-    }
+    hero.props = hero.props ?? {};
+    applyHero(hero.content);
+    applyHero(hero.props);
   }
 
   const services = blocks.find((b) => b?.type === 'services');

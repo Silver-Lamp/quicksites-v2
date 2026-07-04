@@ -32,7 +32,25 @@ export type ShowcaseSite = {
 
 export type ShowcaseData = { sites: ShowcaseSite[]; displayMode: ShowcaseDisplayMode };
 
+// Per-instance last-good cache. The templates query intermittently fails on SSR
+// (transient DB/connection blip) and would otherwise blank the row. When a query
+// succeeds we stash the site list here; when a later one fails or comes back empty
+// we serve the last-good sites (with the current display mode) instead of nothing.
+// Serverless memory is per-instance and short-lived, so this only ever serves
+// genuinely recent data — it's a blip cushion, not a real cache.
+const FALLBACK_TTL_MS = 30 * 60 * 1000; // 30 min
+let lastGood: { sites: ShowcaseSite[]; at: number } | null = null;
+
+/** On a failed/empty fetch, serve recent last-good sites if we have them. */
+function fallbackData(displayMode: ShowcaseDisplayMode, now: number): ShowcaseData {
+  if (lastGood && now - lastGood.at < FALLBACK_TTL_MS) {
+    return { sites: lastGood.sites, displayMode };
+  }
+  return { sites: [], displayMode };
+}
+
 export async function getShowcaseData(): Promise<ShowcaseData> {
+  const now = Date.now();
   const rawMode = await getSiteSetting<string>(SHOWCASE_MODE_KEY, DEFAULT_SHOWCASE_MODE);
   const displayMode = isShowcaseMode(rawMode) ? rawMode : DEFAULT_SHOWCASE_MODE;
   const hiddenList = await getSiteSetting<string[]>(SHOWCASE_HIDDEN_KEY, []);
@@ -59,7 +77,7 @@ export async function getShowcaseData(): Promise<ShowcaseData> {
       error = res.error;
       if (!error && data) break;
     }
-    if (error) return { sites: [], displayMode };
+    if (error) return fallbackData(displayMode, now);
 
     // Defense-in-depth: never surface a guest-built site still owned by an
     // anonymous (unclaimed) user. Anon users can't publish, so this should always
@@ -110,8 +128,15 @@ export async function getShowcaseData(): Promise<ShowcaseData> {
       })
       .map(({ _publishable, ...s }: any) => s);
 
-    return { sites, displayMode };
+    // A successful, non-empty fetch becomes the new last-good snapshot. An empty
+    // result (e.g. query returned nothing) falls back to the previous snapshot
+    // rather than blanking the row.
+    if (sites.length > 0) {
+      lastGood = { sites, at: now };
+      return { sites, displayMode };
+    }
+    return fallbackData(displayMode, now);
   } catch {
-    return { sites: [], displayMode };
+    return fallbackData(displayMode, now);
   }
 }

@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { createServerClient } from '@supabase/ssr';
 import { captureSignupIfNew } from '@/lib/analytics/funnel';
+import { claimPendingGuestDraft } from '@/lib/auth/claimGuestDraft';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -36,6 +37,10 @@ export async function POST(req: NextRequest) {
   // Best-effort funnel: fire SIGNUP for a brand-new account (magic-link is the
   // primary signup path). Never blocks the session write.
   try { await captureSignupIfNew(data.user); } catch {}
+
+  // If a guest handed off a draft before logging in, transfer it now (before the
+  // client redirects to the editor), so they land owning their work.
+  await claimPendingGuestDraft(data.user, store);
 
   return NextResponse.json({ ok: true }, { headers: { 'cache-control': 'no-store' } });
 }

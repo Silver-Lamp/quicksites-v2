@@ -41,6 +41,30 @@ export default function GuestPublishBanner() {
     if (addr) q.set('email', addr);
     return `/login?${q.toString()}`;
   };
+
+  /** Current template id from the editor path (null on non-template routes). */
+  const currentTemplateId = (): string | null => {
+    if (typeof window === 'undefined') return null;
+    const id = window.location.pathname.match(/\/admin\/templates\/([^/]+)/)?.[1];
+    return id && !['list', 'new', 'gsc-bulk-stats'].includes(id) ? id : null;
+  };
+
+  /**
+   * Go to login, but first mint a claim token (sets an httpOnly cookie) so the draft
+   * this guest built follows them into the account they log into. Best-effort — if
+   * minting fails, login still works, the draft just won't transfer.
+   */
+  const goLogin = async () => {
+    const id = currentTemplateId();
+    if (id) {
+      try {
+        await fetch(`/api/templates/${id}/claim-token`, { method: 'POST' });
+      } catch {
+        /* best-effort */
+      }
+    }
+    window.location.href = loginHref();
+  };
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
 
@@ -162,12 +186,13 @@ export default function GuestPublishBanner() {
       {status === 'exists' && (
         <p className="mx-auto mt-1 max-w-6xl text-sky-200" role="status">
           {message}{' '}
-          <a
-            href={loginHref()}
+          <button
+            type="button"
+            onClick={goLogin}
             className="font-medium text-sky-300 underline underline-offset-2 transition hover:text-sky-100"
           >
             Log in instead →
-          </a>
+          </button>
         </p>
       )}
       {status === 'error' && message && (

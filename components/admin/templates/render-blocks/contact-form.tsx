@@ -5,7 +5,7 @@ import type { Block } from '@/types/blocks';
 import type { Template } from '@/types/template';
 import SectionShell from '@/components/ui/section-shell';
 import ThemeScope from '@/components/ui/theme-scope';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase/client';
 
 type ThemeMode = 'light' | 'dark';
@@ -90,6 +90,16 @@ export default function ContactFormRender({
   const effectiveEmail = dbEmail || String(legacyBlockEmail || '').trim();
   const hasValidEmail = isValidEmail(effectiveEmail);
   const showEmailNudge = !isValidEmail(dbEmail); // nudge if site-level email is missing
+
+  // The "configure contact_email / services" hints open the editor's Template
+  // Identity panel via a client event — meaningless in the shareable preview and
+  // on published sites. Only surface them inside the editor (/admin/templates/*).
+  const [isEditor, setIsEditor] = useState(false);
+  useEffect(() => {
+    try {
+      setIsEditor(window.location.pathname.startsWith('/admin/templates'));
+    } catch {}
+  }, []);
 
   const businessName = String(
     firstNonEmpty(
@@ -302,7 +312,7 @@ Service: ${formData.service || 'N/A'}
             )}
           </div>
 
-          {showEmailNudge && (
+          {showEmailNudge && isEditor && (
             <div className="mx-4 mb-4 rounded border border-yellow-500/40 bg-yellow-500/10 p-3 text-sm text-yellow-200">
               No valid <code>contact_email</code> is configured on the site.{' '}
               <button
@@ -392,11 +402,13 @@ Service: ${formData.service || 'N/A'}
                   I&apos;m Interested In:
                 </label>
                 {services.length === 0 ? (
-                  <div className="text-red-500 text-sm italic bg-red-900/10 border border-red-500/30 rounded px-3 py-2">
-                    No services configured. This form prefers{' '}
-                    <code>template.services</code> and falls back to the block’s
-                    own items.
-                  </div>
+                  isEditor ? (
+                    <div className="text-red-500 text-sm italic bg-red-900/10 border border-red-500/30 rounded px-3 py-2">
+                      No services configured. This form prefers{' '}
+                      <code>template.services</code> and falls back to the block’s
+                      own items.
+                    </div>
+                  ) : null
                 ) : (
                   <select
                     name="service"

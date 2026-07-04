@@ -121,12 +121,16 @@ export default function LoginForm({ build }: { build?: BuildInfo }) {
     };
   }, [sb]);
 
-  // optional: prefill during local dev
+  // Prefill the email from ?email= (e.g. the guest banner sends users here when
+  // their address already has an account), falling back to a dev convenience value.
   useEffect(() => {
-    if (process.env.NODE_ENV === 'development') {
+    const fromParam = sp.get('email');
+    if (fromParam && /@/.test(fromParam)) {
+      setEmail(fromParam);
+    } else if (process.env.NODE_ENV === 'development') {
       setEmail('sandon@pointsevenstudio.com');
     }
-  }, []);
+  }, [sp]);
 
   const onSubmit = async (e?: React.FormEvent) => {
     e?.preventDefault();

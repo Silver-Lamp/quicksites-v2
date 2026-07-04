@@ -99,6 +99,14 @@ export async function autogenerateForTemplate(templateId: string, ownerId: strin
   const data: any = (row as any).data ?? {};
   const meta: any = data.meta ?? {};
 
+  // Idempotency backstop: only run while autogen_pending is set. Once the first
+  // run commits (clearing the flag), any duplicate call — e.g. from a second
+  // editor tab or a refresh — no-ops instead of regenerating (which would burn AI
+  // calls and fire concurrent gpt-image-1 requests that OpenAI rate-limits).
+  if (meta.autogen_pending !== true) {
+    return { ok: true, heroUrl: null };
+  }
+
   let industryKey = ((row as any).industry ?? meta.industry ?? 'other') as IndustryKey;
   let industryLabel = String(meta.industry_label || KEY_TO_LABEL[industryKey] || '');
   const businessName = String((row as any).business_name || meta.business_name || (row as any).template_name || 'My Business');

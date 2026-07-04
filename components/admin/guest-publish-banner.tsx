@@ -75,7 +75,14 @@ export default function GuestPublishBanner() {
       <div className="mx-auto flex max-w-6xl flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <span className="text-sky-100">
           👋 You’re building as a guest.{' '}
-          <span className="text-sky-300">Sign up to publish your site</span> — your work is saved.
+          <button
+            type="button"
+            onClick={() => setOpen(true)}
+            className="font-medium text-sky-300 underline-offset-2 transition hover:text-sky-200 hover:underline"
+          >
+            Sign up to publish your site
+          </button>{' '}
+          — your work is saved.
         </span>
 
         {status === 'sent' ? (

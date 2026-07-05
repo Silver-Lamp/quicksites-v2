@@ -16,7 +16,10 @@ export async function POST(req: NextRequest) {
 
     await ensureCollection();
 
-    const embeddings = await embedText(blocks.map((b: any) => b.text));
+    const embeddings = await embedText(blocks.map((b: any) => b.text), {
+      user_id: gate.user.id,
+      route: '/api/blocks/index',
+    });
 
     const points = blocks.map((b: any, i: number) => ({
       id: b.id,

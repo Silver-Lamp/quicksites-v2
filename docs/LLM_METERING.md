@@ -1,7 +1,7 @@
 # QuickSites — LLM Metering
 
 > How AI/LLM calls are measured and limited. Companion to [`../CLAUDE.md`](../CLAUDE.md).
-> Status as of 2026-06-26: primitive built, rollout pending.
+> Status as of 2026-07-04: **rollout complete** — every OpenAI inference call-site (chat, image, and embeddings) now routes through `meterLLMCall`. The last gaps closed 2026-07-04: the shared embedder (`lib/useVectorDB.ts#embedText`, used by `/api/blocks/search` + `/api/blocks/index`) and the admin dev-seed tooling (`app/api/dev/seed/*`). `/api/blocks/search` was **unauthenticated** and ran an embedding on an attacker-supplied query with no throttle — it now has a per-IP rate limit (`rateLimitOr429`, 30/hr) in addition to the budget guard.
 
 ## Why this exists
 There are **~21 API routes calling OpenAI directly**. A cost-logging helper existed

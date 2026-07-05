@@ -5,6 +5,7 @@ import { cookies } from 'next/headers';
 import { createServerClient, type CookieOptions } from '@supabase/ssr';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import OpenAI from 'openai';
+import { meterLLMCall } from '@/lib/ai/meter';
 import { randomUUID } from 'crypto';
 import { T_MERCHANTS, T_PRODUCTS, T_TEMPLATES } from '../_lib/env';
 
@@ -258,18 +259,30 @@ Keep copy tight, marketable, and price outputs in USD dollars (not cents).`;
     },
   };
 
-  const completion = await openai.chat.completions.create({
-    model: 'gpt-4o-mini',
-    temperature: 0.7,
-    messages: [
-      { role: 'system', content: sys },
-      { role: 'system', content: sysGuard },
-      { role: 'user', content: JSON.stringify(user) },
-    ],
-    // response_format: { type: 'json_object' }, // << ensure JSON
-  });
+  const content = await meterLLMCall(
+    { provider: 'openai', model_code: 'gpt-4o-mini', modality: 'chat', route: 'dev/seed/all:ideate' },
+    async () => {
+      const completion = await openai.chat.completions.create({
+        model: 'gpt-4o-mini',
+        temperature: 0.7,
+        messages: [
+          { role: 'system', content: sys },
+          { role: 'system', content: sysGuard },
+          { role: 'user', content: JSON.stringify(user) },
+        ],
+        // response_format: { type: 'json_object' }, // << ensure JSON
+      });
+      return {
+        value: completion.choices[0]?.message?.content || '{}',
+        usage: {
+          input_tokens: completion.usage?.prompt_tokens,
+          output_tokens: completion.usage?.completion_tokens,
+        },
+      };
+    },
+  );
 
-  const json = JSON.parse(completion.choices[0]?.message?.content || '{}');
+  const json = JSON.parse(content);
   const products = Array.isArray(json.products) ? json.products.slice(0, count) : [];
   const brand = json.brand || {};
 
@@ -289,13 +302,18 @@ async function generateAndUploadPNG(params: {
 }): Promise<string | null> {
   const { prompt, size, path } = params;
   try {
-    const gen = await openai.images.generate({
-      model: 'gpt-image-1',
-      prompt,
-      size,
-      // response_format: 'b64_json', // << needed for uploads
-    });
-    const b64 = gen.data?.[0]?.b64_json;
+    const b64 = await meterLLMCall(
+      { provider: 'openai', model_code: 'gpt-image-1', modality: 'image', route: 'dev/seed/all:uploadPNG' },
+      async () => {
+        const gen = await openai.images.generate({
+          model: 'gpt-image-1',
+          prompt,
+          size,
+          // response_format: 'b64_json', // << needed for uploads
+        });
+        return { value: gen.data?.[0]?.b64_json, usage: { images: 1 } };
+      },
+    );
     if (!b64) return null;
 
     const buffer = Buffer.from(b64, 'base64');
@@ -340,13 +358,18 @@ async function generateDataUrlPNG(
   prompt: string,
   size: '256x256' | '512x512' | '1024x1024' = '1024x1024'
 ): Promise<string | null> {
-  const gen = await openai.images.generate({
-    model: 'gpt-image-1',
-    prompt,
-    size,
-    // response_format: 'b64_json', // << needed for previews
-  });
-  const b64 = gen.data?.[0]?.b64_json;
+  const b64 = await meterLLMCall(
+    { provider: 'openai', model_code: 'gpt-image-1', modality: 'image', route: 'dev/seed/all:dataUrlPNG' },
+    async () => {
+      const gen = await openai.images.generate({
+        model: 'gpt-image-1',
+        prompt,
+        size,
+        // response_format: 'b64_json', // << needed for previews
+      });
+      return { value: gen.data?.[0]?.b64_json, usage: { images: 1 } };
+    },
+  );
   return b64 ? `data:image/png;base64,${b64}` : null;
 }
 

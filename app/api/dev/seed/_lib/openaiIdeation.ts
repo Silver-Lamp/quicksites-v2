@@ -1,4 +1,5 @@
 import { openai } from './clients';
+import { meterLLMCall } from '@/lib/ai/meter';
 import { INDUSTRY_HINTS } from './industries';
 
 /**
@@ -62,21 +63,33 @@ Keep copy tight, marketable, and price outputs in USD dollars (not cents).`;
     },
   };
 
-  const completion = await openai.chat.completions.create({
-    model: process.env.OPENAI_MODEL || 'gpt-4o-mini',
-    temperature: 0.7,
-    messages: [
-      { role: 'system', content: sys },
-      { role: 'system', content: sysGuard },
-      { role: 'user', content: JSON.stringify(user) },
-    ],
-    // response_format: { type: 'json_object' },
-    seed: seed ? Number(seed) : undefined,
-  });
+  const model = process.env.OPENAI_MODEL || 'gpt-4o-mini';
+  const raw = await meterLLMCall(
+    { provider: 'openai', model_code: model, modality: 'chat', route: 'dev/seed:ideateBrandAndProducts' },
+    async () => {
+      const completion = await openai.chat.completions.create({
+        model,
+        temperature: 0.7,
+        messages: [
+          { role: 'system', content: sys },
+          { role: 'system', content: sysGuard },
+          { role: 'user', content: JSON.stringify(user) },
+        ],
+        // response_format: { type: 'json_object' },
+        seed: seed ? Number(seed) : undefined,
+      });
+      return {
+        value: completion.choices?.[0]?.message?.content || '{}',
+        usage: {
+          input_tokens: completion.usage?.prompt_tokens,
+          output_tokens: completion.usage?.completion_tokens,
+        },
+      };
+    },
+  );
 
   // Robust parse with fallback
   let parsed: any = {};
-  const raw = completion.choices?.[0]?.message?.content || '{}';
   try {
     parsed = JSON.parse(raw);
   } catch {
@@ -115,15 +128,20 @@ export async function generateDataUrlPNG(
 ): Promise<string | null> {
   const negativePrompt = (negative || '').trim();
   const finalPrompt = negativePrompt ? `${prompt}\n\nExclude: ${negativePrompt}.` : prompt;
+  const model = process.env.OPENAI_IMAGE_MODEL || 'gpt-image-1';
 
-  const res = await openai.images.generate({
-    model: process.env.OPENAI_IMAGE_MODEL || 'gpt-image-1',
-    prompt: finalPrompt,
-    size,
-    n: 1,
-    // response_format: 'b64_json',
-  });
-
-  const b64 = res.data?.[0]?.b64_json || null;
+  const b64 = await meterLLMCall(
+    { provider: 'openai', model_code: model, modality: 'image', route: 'dev/seed:generateDataUrlPNG' },
+    async () => {
+      const res = await openai.images.generate({
+        model,
+        prompt: finalPrompt,
+        size,
+        n: 1,
+        // response_format: 'b64_json',
+      });
+      return { value: res.data?.[0]?.b64_json || null, usage: { images: 1 } };
+    },
+  );
   return b64 ? `data:image/png;base64,${b64}` : null;
 }

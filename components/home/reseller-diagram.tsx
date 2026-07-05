@@ -41,6 +41,9 @@ export default function ResellerDiagram() {
           <marker id="rd-arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
             <path d="M 0 0 L 10 5 L 0 10 z" fill={SKY} />
           </marker>
+          <clipPath id="rd-cs-logo">
+            <rect x="150" y="230" width="44" height="44" rx="10" />
+          </clipPath>
         </defs>
 
         {/* ── connectors (drawn first, under the nodes) ── */}
@@ -64,13 +67,26 @@ export default function ResellerDiagram() {
           <text x="470" y="108" textAnchor="middle" fill="#7dd3fc" fontSize="14" fontFamily="sans-serif">the platform + commerce engine</text>
         </g>
 
-        {/* ── CedarSites (live reseller) ── */}
+        {/* ── CedarSites (live reseller) — real logo tile + brand lockup ── */}
         <g>
           <rect x="130" y="204" width="240" height="96" rx="14" fill="#18181b" stroke="#3f3f46" strokeWidth="2" />
-          <rect x="146" y="218" width="52" height="22" rx="11" fill="#0ea5e9" />
-          <text x="172" y="234" textAnchor="middle" fill="#0a0a0a" fontSize="12" fontWeight="700" fontFamily="sans-serif">LIVE</text>
-          <text x="250" y="270" textAnchor="middle" fill="#f4f4f5" fontSize="23" fontWeight="700" fontFamily="sans-serif">CedarSites</text>
-          <text x="250" y="290" textAnchor="middle" fill="#a1a1aa" fontSize="13" fontFamily="sans-serif">a reseller — own brand &amp; domain</text>
+          {/* brand tile (cream pinecone on cedar green) */}
+          <rect x="150" y="230" width="44" height="44" rx="10" fill="#123524" />
+          <image
+            href="/logo_cedarsites_v2_96.png"
+            x="150"
+            y="230"
+            width="44"
+            height="44"
+            clipPath="url(#rd-cs-logo)"
+            preserveAspectRatio="xMidYMid slice"
+          />
+          {/* LIVE pill, top-right */}
+          <rect x="300" y="216" width="54" height="20" rx="10" fill="#0ea5e9" />
+          <text x="327" y="230" textAnchor="middle" fill="#0a0a0a" fontSize="11" fontWeight="700" fontFamily="sans-serif">LIVE</text>
+          {/* name + tagline, left-anchored beside the tile */}
+          <text x="206" y="254" textAnchor="start" fill="#f4f4f5" fontSize="22" fontWeight="700" fontFamily="sans-serif">CedarSites</text>
+          <text x="206" y="276" textAnchor="start" fill="#a1a1aa" fontSize="12.5" fontFamily="sans-serif">reseller · own brand &amp; domain</text>
         </g>
 
         {/* ── Your brand here (placeholder reseller) ── */}

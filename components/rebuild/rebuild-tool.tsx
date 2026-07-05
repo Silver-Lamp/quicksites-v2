@@ -112,7 +112,15 @@ export default function RebuildTool({ initialUrl = '' }: { initialUrl?: string }
     return (
       <div className="mt-8 w-full max-w-2xl rounded-3xl border border-emerald-500/30 bg-emerald-500/5 p-6 sm:p-10">
         <p className="text-sm font-medium uppercase tracking-wide text-emerald-400">Rebuilt ✓</p>
-        <h2 className="mt-2 text-2xl font-bold text-white sm:text-3xl">{s.businessName}</h2>
+        {s.heroImage && (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={s.heroImage}
+            alt={`${s.businessName} hero`}
+            className="mt-4 aspect-[3/2] w-full rounded-2xl border border-zinc-800 object-cover"
+          />
+        )}
+        <h2 className="mt-4 text-2xl font-bold text-white sm:text-3xl">{s.businessName}</h2>
         <p className="mt-1 text-zinc-400">
           {s.industryLabel} · rebuilt from{' '}
           <span className="text-zinc-300">{hostOf(s.sourceUrl)}</span>

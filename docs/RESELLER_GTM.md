@@ -81,8 +81,9 @@ Personalize `{{first_name}}`, `{{agency}}`, `{{client_url}}` (a real client site
 - **"What you'd have earned" overlay** — the rebuild result card has an interactive GMV slider showing the partner's monthly/annual residual, via the shared pure estimator `estimatePartnerResidual()` (`lib/commerce/partnerEarnings.ts`, unit-tested), which now also backs `/partners/calculator` (constants de-duplicated).
 - **Analytics funnel** — `rebuild_started` (scrape succeeded) + `rebuild_completed` (draft generated) emit server-side via `captureServer` (`app/api/rebuild/route.ts`); host-only (no full prospect URL). Event constants in `lib/analytics/events.ts`.
 
+- **Fresh hero image on rebuild** — flag-gated (`REBUILD_HERO_ENABLED`, off by default; image gen is the priciest call). When on, a clean on-brand hero is generated + stored (`lib/rebuild/generateHero.ts`, metered image call) instead of reusing the old site's og:image; best-effort, falls back to the scraped image. The result card previews the hero. Pure bits unit-tested (`generateHero.test.ts`).
+
 ## 6. Open follow-ups (not built yet)
 
-- **Fresh hero image regen on rebuild** — today we reuse the scraped og:image; optionally generate a fresh hero (metered) for a cleaner result.
 - **Outreach automation** — the sequence above is copy; wiring it to a sender/CRM is ops.
 - **PostHog funnel/insight** — build the `rebuild_started → rebuild_completed → signup` funnel in the dashboard (instrumentation is live).

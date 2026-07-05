@@ -84,6 +84,13 @@ const ROWS: Row[] = [
     ghl: { mark: 'partial', note: 'Copy / voice assistants' },
   },
   {
+    feature: 'Rebuild an existing site from a URL',
+    detail: 'Paste a client’s live site → an editable draft, for painless migration',
+    qs: { mark: 'yes', note: 'AI rebuild: paste a URL, get a draft in seconds' },
+    duda: { mark: 'no', note: 'Manual rebuild' },
+    ghl: { mark: 'no', note: 'Manual rebuild' },
+  },
+  {
     feature: 'White-label & resell under your brand',
     detail: 'Your logo, domain, login, and emails — not ours',
     qs: { mark: 'yes', note: 'Brand the builder, login, and emails' },
@@ -243,6 +250,25 @@ export default function ComparePage() {
           </div>
         </section>
 
+        {/* Switching / migration — the #1 objection for resellers leaving a flat-fee tool */}
+        <section className="border-t border-zinc-800/70">
+          <div className="mx-auto max-w-4xl px-6 py-12 text-center">
+            <h2 className="text-2xl md:text-3xl font-semibold">Switching from Duda or GoHighLevel?</h2>
+            <p className="mx-auto mt-3 max-w-2xl text-zinc-400">
+              You don’t rebuild your clients by hand. Paste a client’s current site and our AI regenerates it as an
+              editable QuickSites draft in seconds — a migration and a live sales demo in one.
+            </p>
+            <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
+              <Link href="/rebuild" className="rounded-lg bg-sky-500 px-6 py-3 text-base font-medium text-zinc-950 shadow-lg transition hover:bg-sky-400">
+                Rebuild a client’s site — free
+              </Link>
+              <Link href="/partners/resellers" className="rounded-lg border border-sky-500 px-6 py-3 text-base font-medium text-sky-300 transition hover:bg-sky-500/10 hover:text-sky-200">
+                For Duda / GoHighLevel resellers →
+              </Link>
+            </div>
+          </div>
+        </section>
+
         {/* Honesty section — where they lead */}
         <section className="border-t border-zinc-800/70">
           <div className="mx-auto max-w-6xl px-6 py-14">
@@ -309,6 +335,8 @@ export default function ComparePage() {
             <Link href="/pricing" className="underline hover:text-zinc-300">Pricing</Link>
             <span className="mx-1">•</span>
             <Link href="/partners" className="underline hover:text-zinc-300">Partners</Link>
+            <span className="mx-1">•</span>
+            <Link href="/rebuild" className="underline hover:text-zinc-300">Rebuild tool</Link>
           </p>
         </footer>
       </div>

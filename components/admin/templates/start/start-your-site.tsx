@@ -1,12 +1,12 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, ArrowRight, Layers, Sparkles, FilePlus2, Search, Check } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Layers, Sparkles, FilePlus2, Search, Check, Globe } from 'lucide-react';
 import { KEY_TO_LABEL, type IndustryKey } from '@/lib/industries';
 import { buildIndustryStarter } from '@/lib/builder/industryScaffold';
 
-type Step = 'choose' | 'industry' | 'template';
+type Step = 'choose' | 'industry' | 'template' | 'convert';
 type Starter = { slug: string; name: string; industry: string | null; heroUrl: string | null };
 
 /** Deduped, alphabetized industry options ('other' kept last). */
@@ -47,6 +47,7 @@ export default function StartYourSite() {
         {step === 'choose' && <ChooseStep onPick={setStep} router={router} />}
         {step === 'industry' && <IndustryStep router={router} />}
         {step === 'template' && <TemplateStep router={router} />}
+        {step === 'convert' && <ConvertStep router={router} />}
       </div>
     </div>
   );
@@ -72,6 +73,15 @@ function ChooseStep({
       highlight: true,
     },
     {
+      key: 'convert' as const,
+      icon: Globe,
+      title: 'Convert an existing site',
+      blurb: 'Already have a site? Paste its address and our AI rebuilds it here as an editable draft in seconds.',
+      cta: 'Paste a URL',
+      onClick: () => onPick('convert'),
+      highlight: true,
+    },
+    {
       key: 'template' as const,
       icon: Layers,
       title: 'Duplicate a template',
@@ -94,7 +104,7 @@ function ChooseStep({
       <h1 className="text-3xl font-semibold tracking-tight">Let’s build your site</h1>
       <p className="mt-2 text-zinc-400">Choose how you’d like to start. You can change anything later.</p>
 
-      <div className="mt-8 grid grid-cols-1 gap-5 md:grid-cols-3">
+      <div className="mt-8 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
         {cards.map((c) => (
           <button
             key={c.key}
@@ -226,6 +236,118 @@ function IndustryStep({ router }: { router: ReturnType<typeof useRouter> }) {
           {!busy && <ArrowRight className="ml-2 h-4 w-4" />}
         </button>
       </div>
+    </div>
+  );
+}
+
+/* ----------------------------- Step: convert ------------------------------ */
+
+// Staged status copy while the rebuild is in flight (one round-trip; these just
+// make the ~10-20s wait read as progress). Mirrors components/rebuild/rebuild-tool.
+const CONVERT_STAGES = [
+  'Reading your current site…',
+  'Understanding your business…',
+  'Writing fresh copy…',
+  'Assembling your new site…',
+];
+
+/** Onboarding path: paste an existing site URL → POST /api/rebuild → editor.
+ *  Reuses the same AI-rebuild backend as the public /rebuild lead magnet, but
+ *  lands the (already signed-in) user straight in the editor like the other steps. */
+function ConvertStep({ router }: { router: ReturnType<typeof useRouter> }) {
+  const [url, setUrl] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [stage, setStage] = useState(0);
+  const [error, setError] = useState<string | null>(null);
+  const stageTimer = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (stageTimer.current) clearInterval(stageTimer.current);
+    };
+  }, []);
+
+  const normalizeUrl = (raw: string): string => {
+    const t = raw.trim();
+    if (!t) return '';
+    return /^https?:\/\//i.test(t) ? t : `https://${t}`;
+  };
+
+  async function convert() {
+    if (busy) return;
+    setError(null);
+    const target = normalizeUrl(url);
+    if (!target) return setError('Paste the address of the site you want to convert.');
+
+    setBusy(true);
+    setStage(0);
+    stageTimer.current = setInterval(() => {
+      setStage((s) => (s < CONVERT_STAGES.length - 1 ? s + 1 : s));
+    }, 3500);
+
+    try {
+      const res = await fetch('/api/rebuild', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url: target }),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok || !json?.ok || !json?.id) {
+        throw new Error(json?.error || 'Could not convert that site. Try another URL.');
+      }
+      toEditor(router, json.id);
+    } catch (e: any) {
+      setError(e?.message || 'Something went wrong. Please try again.');
+      setBusy(false);
+    } finally {
+      if (stageTimer.current) clearInterval(stageTimer.current);
+    }
+  }
+
+  return (
+    <div>
+      <h1 className="text-2xl font-semibold tracking-tight">Convert your existing site</h1>
+      <p className="mt-2 text-zinc-400">
+        Paste the address of a site you already have. Our AI reads it and rebuilds it here as a fresh,
+        fully-editable draft — copy, services, and layout included.
+      </p>
+
+      <div className="mt-6 max-w-lg">
+        <label className="text-sm text-zinc-300" htmlFor="convert-url">Current website address</label>
+        <div className="mt-1.5 flex flex-col gap-3 sm:flex-row">
+          <input
+            id="convert-url"
+            type="text"
+            inputMode="url"
+            value={url}
+            onChange={(e) => setUrl(e.target.value)}
+            onKeyDown={(e) => { if (e.key === 'Enter') convert(); }}
+            placeholder="yourbusiness.com"
+            disabled={busy}
+            className="flex-1 rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-2 text-white outline-none focus:border-sky-500"
+          />
+          <button
+            onClick={convert}
+            disabled={busy}
+            className="inline-flex items-center justify-center rounded-lg bg-sky-500 px-5 py-2.5 font-medium text-zinc-950 transition hover:bg-sky-400 disabled:opacity-60"
+          >
+            {busy ? 'Converting…' : 'Convert my site'}
+            {!busy && <ArrowRight className="ml-2 h-4 w-4" />}
+          </button>
+        </div>
+      </div>
+
+      {busy && (
+        <p className="mt-4 text-sm text-sky-300" role="status" aria-live="polite">
+          {CONVERT_STAGES[stage]}
+        </p>
+      )}
+      {error && <p className="mt-4 text-sm text-red-400">{error}</p>}
+      {!busy && !error && (
+        <p className="mt-4 max-w-lg text-xs text-zinc-500">
+          Works with most business sites (Wix, WordPress, Squarespace, and more). You can edit everything after.
+        </p>
+      )}
     </div>
   );
 }

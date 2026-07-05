@@ -18,6 +18,9 @@ export default {
   },
   moduleNameMapper: {
     '\\.(css|less|scss|sass)$': 'identity-obj-proxy',
+    // cheerio 1.x resolves to its ESM/browser build under the jsdom env, which Jest
+    // won't transform (node_modules is ignored). Pin its CommonJS entry for tests.
+    '^cheerio$': '<rootDir>/node_modules/cheerio/dist/commonjs/index.js',
     '^@/(.*)$': '<rootDir>/$1',
   },
 };

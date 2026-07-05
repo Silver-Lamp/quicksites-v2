@@ -10,11 +10,9 @@
 import * as React from 'react';
 import Link from 'next/link';
 import SiteHeader from '@/components/site/site-header';
-
-// Defaults mirror lib/commerce/partner-terms.ts (which reads QS_* env, not
-// available in a client bundle). Kept local like app/pricing/page.tsx does.
-const PARTNER_FEE_SHARE = 0.8; // partner keeps 80% of the order fee
-const MAX_FEE_PCT = 0.1; // fee capped at 10% per order
+// Client-safe defaults mirroring lib/commerce/partner-terms.ts (which reads QS_*
+// env, not available in a client bundle). Shared with the /rebuild earnings overlay.
+import { PARTNER_FEE_SHARE, MAX_FEE_PCT, estimatePartnerResidual } from '@/lib/commerce/partnerEarnings';
 
 // Duda reference point (docs/COMPETITIVE_LANDSCAPE.md §3): White Label is
 // $149/mo for 4 sites, ~$17/extra site. The agency's own margin is whatever
@@ -73,10 +71,9 @@ export default function PartnerCalculator() {
   const [dudaMarkupPerSite, setDudaMarkupPerSite] = React.useState(40); // $/site/mo markup
 
   // QuickSites: partner residual = GMV × fee% × partner share, on every order,
-  // recurring for the life of the merchant.
+  // recurring for the life of the merchant. (Shared estimator — see /rebuild overlay.)
   const totalGmv = merchants * gmvPerMerchant;
-  const qsMonthly = totalGmv * feePct * PARTNER_FEE_SHARE;
-  const qsAnnual = qsMonthly * 12;
+  const { monthly: qsMonthly, annual: qsAnnual } = estimatePartnerResidual({ monthlyGmv: totalGmv, feePct });
 
   // Duda-style: agency pays the white-label base (+ extra sites) and keeps a
   // fixed markup per site. Earnings are flat — independent of merchant sales.

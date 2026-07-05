@@ -1,7 +1,7 @@
 // components/home/guest-start.tsx
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { ensureGuestSession } from '@/lib/auth/guestSession';
@@ -22,23 +22,60 @@ function randSuffix(): string {
   return Math.random().toString(36).slice(2, 7);
 }
 
+function normalizeUrl(raw: string): string {
+  const t = raw.trim();
+  if (!t) return '';
+  return /^https?:\/\//i.test(t) ? t : `https://${t}`;
+}
+
+type Mode = 'fresh' | 'convert';
+
+// Staged status copy for the convert path (~10-20s single round-trip).
+const CONVERT_STAGES = [
+  'Reading your current site…',
+  'Understanding your business…',
+  'Writing fresh copy…',
+  'Assembling your new site…',
+];
+
 /**
- * Homepage quick-start: business name + industry → mint an anonymous Supabase
- * session → create a draft template owned by that session → open the editor.
+ * Homepage quick-start with two on-ramps, both minting an anonymous Supabase
+ * session and dropping the visitor into the editor (publish stays gated until
+ * signup, where the draft auto-claims via the same uid):
+ *   - "Start fresh": business name + industry → industry-scaffold draft.
+ *   - "I already have a site": paste a URL → AI rebuild draft (POST /api/rebuild).
  *
- * Gated by the guest-build feature flag at the call site (app/page.tsx).
+ * Gated by the guest-build feature flag at the call site (components/home/home-client.tsx).
  */
 export default function GuestStart() {
   const router = useRouter();
+  const [mode, setMode] = useState<Mode>('fresh');
   const [businessName, setBusinessName] = useState('');
   const [industry, setIndustry] = useState<string>('');
+  const [url, setUrl] = useState('');
   const [loading, setLoading] = useState(false);
+  const [stage, setStage] = useState(0);
   const [error, setError] = useState<string | null>(null);
+  const stageTimer = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (stageTimer.current) clearInterval(stageTimer.current);
+    };
+  }, []);
+
+  const switchMode = (m: Mode) => {
+    if (loading) return;
+    setMode(m);
+    setError(null);
+  };
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (loading) return;
     setError(null);
+
+    if (mode === 'convert') return convert();
 
     const name = businessName.trim();
     if (!name) {
@@ -97,6 +134,56 @@ export default function GuestStart() {
     }
   };
 
+  // Convert an existing site: mint a guest session, then POST the URL to the same
+  // AI-rebuild backend the onboarding chooser + /rebuild page use.
+  const convert = async () => {
+    const target = normalizeUrl(url);
+    if (!target) {
+      setError('Paste the address of the site you want to convert.');
+      return;
+    }
+
+    setLoading(true);
+    setStage(0);
+    stageTimer.current = setInterval(() => {
+      setStage((s) => (s < CONVERT_STAGES.length - 1 ? s + 1 : s));
+    }, 3500);
+
+    try {
+      const sess = await ensureGuestSession();
+      if (!sess.user) {
+        setError(sess.error || 'Could not start a free session. Sign in to convert instead.');
+        setLoading(false);
+        return;
+      }
+
+      const res = await fetch('/api/rebuild', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url: target }),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok || !json?.ok || !json?.id) {
+        setError(json?.error || 'Could not convert that site. Try another URL.');
+        setLoading(false);
+        return;
+      }
+      router.push(`/admin/templates/${json.id}`);
+    } catch (err: any) {
+      setError(err?.message || 'Something went wrong. Please try again.');
+      setLoading(false);
+    } finally {
+      if (stageTimer.current) clearInterval(stageTimer.current);
+    }
+  };
+
+  const tabClass = (active: boolean) =>
+    `rounded-xl px-4 py-2 text-sm font-medium transition sm:text-base ${
+      active
+        ? 'bg-white/10 text-white ring-1 ring-inset ring-white/20'
+        : 'text-zinc-400 hover:text-zinc-200'
+    }`;
+
   return (
     <motion.form
       onSubmit={onSubmit}
@@ -114,31 +201,54 @@ export default function GuestStart() {
         boxShadow: '0 30px 80px -20px color-mix(in srgb, var(--qs-accent, #0ea5e9) 35%, transparent)',
       }}
     >
-      <div className="flex flex-col gap-3 sm:flex-row sm:gap-6">
+      {/* Mode toggle */}
+      <div className="mb-5 inline-flex gap-1 rounded-2xl bg-black/20 p-1 sm:mb-8">
+        <button type="button" onClick={() => switchMode('fresh')} className={tabClass(mode === 'fresh')}>
+          Start fresh
+        </button>
+        <button type="button" onClick={() => switchMode('convert')} className={tabClass(mode === 'convert')}>
+          I already have a site
+        </button>
+      </div>
+
+      {mode === 'fresh' ? (
+        <div className="flex flex-col gap-3 sm:flex-row sm:gap-6">
+          <input
+            type="text"
+            value={businessName}
+            onChange={(e) => setBusinessName(e.target.value)}
+            placeholder="Your business name"
+            aria-label="Business name"
+            disabled={loading}
+            className="flex-1 rounded-2xl border border-zinc-700 bg-zinc-900/70 px-5 py-3.5 text-base text-white placeholder:text-zinc-500 focus:border-white/40 focus:outline-none sm:px-8 sm:py-6 sm:text-2xl"
+          />
+          <select
+            value={industry}
+            onChange={(e) => setIndustry(e.target.value)}
+            aria-label="Industry"
+            disabled={loading}
+            className="rounded-2xl border border-zinc-700 bg-zinc-900/70 px-5 py-3.5 text-base text-white focus:border-white/40 focus:outline-none sm:w-80 sm:px-8 sm:py-6 sm:text-2xl"
+          >
+            <option value="">Industry (optional)</option>
+            {INDUSTRIES.map((i, idx) => (
+              <option key={`${i.key}-${idx}`} value={i.key}>
+                {i.label}
+              </option>
+            ))}
+          </select>
+        </div>
+      ) : (
         <input
           type="text"
-          value={businessName}
-          onChange={(e) => setBusinessName(e.target.value)}
-          placeholder="Your business name"
-          aria-label="Business name"
+          inputMode="url"
+          value={url}
+          onChange={(e) => setUrl(e.target.value)}
+          placeholder="yourbusiness.com"
+          aria-label="Existing website address"
           disabled={loading}
-          className="flex-1 rounded-2xl border border-zinc-700 bg-zinc-900/70 px-5 py-3.5 text-base text-white placeholder:text-zinc-500 focus:border-white/40 focus:outline-none sm:px-8 sm:py-6 sm:text-2xl"
+          className="w-full rounded-2xl border border-zinc-700 bg-zinc-900/70 px-5 py-3.5 text-base text-white placeholder:text-zinc-500 focus:border-white/40 focus:outline-none sm:px-8 sm:py-6 sm:text-2xl"
         />
-        <select
-          value={industry}
-          onChange={(e) => setIndustry(e.target.value)}
-          aria-label="Industry"
-          disabled={loading}
-          className="rounded-2xl border border-zinc-700 bg-zinc-900/70 px-5 py-3.5 text-base text-white focus:border-white/40 focus:outline-none sm:w-80 sm:px-8 sm:py-6 sm:text-2xl"
-        >
-          <option value="">Industry (optional)</option>
-          {INDUSTRIES.map((i, idx) => (
-            <option key={`${i.key}-${idx}`} value={i.key}>
-              {i.label}
-            </option>
-          ))}
-        </select>
-      </div>
+      )}
 
       <button
         type="submit"
@@ -149,12 +259,26 @@ export default function GuestStart() {
           color: 'var(--qs-accent-fg, #09090b)',
         }}
       >
-        {loading ? '✨ Generating your site… (~25s)' : '✨ Build my site — free, no signup'}
+        {loading
+          ? mode === 'convert'
+            ? '✨ Rebuilding your site… (~20s)'
+            : '✨ Generating your site… (~25s)'
+          : mode === 'convert'
+            ? '✨ Convert my site — free, no signup'
+            : '✨ Build my site — free, no signup'}
       </button>
 
-      <p className="mt-4 text-sm text-zinc-400 sm:mt-6 sm:text-base">
-        No credit card. Sign up only when you’re ready to go live.
-      </p>
+      {loading && mode === 'convert' ? (
+        <p className="mt-4 text-sm text-zinc-300 sm:mt-6 sm:text-base" role="status" aria-live="polite">
+          {CONVERT_STAGES[stage]}
+        </p>
+      ) : (
+        <p className="mt-4 text-sm text-zinc-400 sm:mt-6 sm:text-base">
+          {mode === 'convert'
+            ? 'Paste any business site (Wix, WordPress, Squarespace…). We rebuild it here — edit everything after.'
+            : 'No credit card. Sign up only when you’re ready to go live.'}
+        </p>
+      )}
 
       {error && (
         <p className="mt-4 text-sm text-red-400 sm:text-lg" role="alert">

@@ -166,6 +166,7 @@ const NAV_ADMIN: NavItem[] = [
   { type: 'item', label: 'Platform Revenue', href: '/admin/revenue', icon: <DollarSign size={18} />, adminOnly: true },
   { type: 'item', label: 'Rep My Payouts', href: '/rep/payouts', icon: <DollarSign size={18} />, adminOnly: false },
   { type: 'item', label: 'Rep My Taxes', href: '/rep/tax', icon: <DollarSign size={18} />, adminOnly: false },
+  { type: 'item', label: 'Getting Started', href: '/merchant', icon: <Rocket size={18} />, adminOnly: false },
   { type: 'item', label: 'Merchant Payments', href: '/merchant/payments', icon: <FileStack size={18} />, adminOnly: false },
   { type: 'item', label: 'Merchant Orders', href: '/merchant/orders', icon: <FileStack size={18} />, adminOnly: false },
   { type: 'item', label: 'Merchant Catalog', href: '/merchant/catalog', icon: <FileStack size={18} />, adminOnly: false },

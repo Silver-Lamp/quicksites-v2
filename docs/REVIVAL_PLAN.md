@@ -29,7 +29,7 @@
 - [x] **Dependency conflict fixed**: package.json `overrides`/pins for `@types/node|react|react-dom` were forcing versions incompatible with TS 5.9 (the "green" build relied on un-committed `node_modules` drift). Aligned to the known-good `24.3.0 / 19.1.10 / 19.1.7`; `tsc --noEmit` green on the committed deps.
 - [x] **LLM metering** primitive: `ai_usage_events` migration + `lib/ai/meter.ts` (budget guard + cost logging + PostHog `llm_call` mirror) + `docs/LLM_METERING.md`; first route wired (`/api/ai/suggest`). ~20 OpenAI routes remain to convert (follow-on).
 - [ ] **Security: bump Next off CVE-2025-66478** — currently pinned `next@15.2.4` (+ `eslint-config-next@15.2.4`). Move to a patched 15.4.x. Own PR (verify build).
-- [ ] **Repo cleanup**: purge large committed artifacts (`quicksites-export.zip`, `get-pip.py`, `.tsbuildinfo`, lint reports, `*.bak`) and dead dirs (`_pages-legacy/`, `_deprecated__domains/`, `_deprecating_sites/`, `page-v0.tsx`); fix `.gitignore`.
+- [x] **Repo cleanup**: large committed artifacts (`quicksites-export.zip`, `get-pip.py`, `.tsbuildinfo`, lint reports, `*.bak`) and dead dirs (`_pages-legacy/`, `_deprecated__domains/`, `_deprecating_sites/`, `page-v0.tsx`) are purged; the last dead-code island (`lib/blocks/_likely-remove_*` + its `app/examples/blocks-demo` consumer) was removed 2026-07-04 with `tsc` green.
 - [ ] **Refresh stale docs**: retire/replace `README.md` + `ROUTER_STRATEGY.md` (they describe the old Pages Router); make `README.md` point at `CLAUDE.md`.
 - [ ] **CONTRIBUTING + dev setup**: confirm `.env.example` is complete; document the minimum-boot env set.
 - [ ] **Green `next build`** verified once (typecheck already green).

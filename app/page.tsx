@@ -6,6 +6,7 @@
 import HomeClient from '@/components/home/home-client';
 import SiteShowcase from '@/components/home/site-showcase';
 import { getShowcaseData } from '@/lib/home/getShowcaseData';
+import { getResellers } from '@/lib/home/getResellers';
 import { marketingOg } from '@/lib/marketingOg';
 
 export const dynamic = 'force-dynamic';
@@ -39,5 +40,9 @@ export default async function Page() {
   } catch {
     initial = undefined; // client component will fetch/cache as a fallback
   }
-  return <HomeClient showcase={<SiteShowcase initialData={initial} />} />;
+
+  // Featured reseller orgs for the reseller diagram (name/domain/accent from DB).
+  const resellers = await getResellers();
+
+  return <HomeClient showcase={<SiteShowcase initialData={initial} />} resellers={resellers} />;
 }

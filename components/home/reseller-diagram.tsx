@@ -18,9 +18,31 @@
 // The 1→many fan-out is the point: one engine (us), many white-labeled
 // resellers (CedarSites is the live example), each serving their own merchants.
 
+import type { ResellerBrand } from '@/lib/home/getResellers';
+
 const SKY = '#38bdf8';
 
-export default function ResellerDiagram() {
+// Curated local logo assets per reseller slug (the DB only stores an expiring
+// signed logo URL, unfit for the homepage). Resellers without one fall back to
+// an accent-colored initial tile.
+const LOGO_BY_SLUG: Record<string, string> = {
+  cedarsites: '/logo_cedarsites_v2_96.png',
+};
+
+// Sensible default so the diagram never renders blank on an SSR/query miss.
+const DEFAULT_RESELLER: ResellerBrand = {
+  slug: 'cedarsites',
+  name: 'CedarSites',
+  domain: 'cedarsites.com',
+  accent: '#3aa76a',
+};
+
+export default function ResellerDiagram({ resellers }: { resellers?: ResellerBrand[] }) {
+  const primary = resellers?.[0] ?? DEFAULT_RESELLER;
+  const accent = primary.accent ?? '#0ea5e9';
+  const logo = LOGO_BY_SLUG[primary.slug];
+  const subtitle = primary.domain ? `reseller · ${primary.domain}` : 'reseller · own brand & domain';
+
   return (
     <div className="overflow-x-auto">
       <svg
@@ -32,9 +54,9 @@ export default function ResellerDiagram() {
       >
         <title id="reseller-diagram-title">How reselling QuickSites works</title>
         <desc id="reseller-diagram-desc">
-          QuickSites is the platform. Many resellers — including CedarSites, a live example, plus your
-          own brand — build on it and serve their own merchants and end users. Resellers can migrate
-          their existing client sites in.
+          QuickSites is the platform. Many resellers — including {primary.name}, a live example, plus
+          your own brand — build on it and serve their own merchants and end users. Resellers can
+          migrate their existing client sites in.
         </desc>
 
         <defs>
@@ -67,26 +89,32 @@ export default function ResellerDiagram() {
           <text x="470" y="108" textAnchor="middle" fill="#7dd3fc" fontSize="14" fontFamily="sans-serif">the platform + commerce engine</text>
         </g>
 
-        {/* ── CedarSites (live reseller) — real logo tile + brand lockup ── */}
+        {/* ── primary reseller (live) — real logo tile + brand lockup, from DB ── */}
         <g>
           <rect x="130" y="204" width="240" height="96" rx="14" fill="#18181b" stroke="#3f3f46" strokeWidth="2" />
-          {/* brand tile (cream pinecone on cedar green) */}
-          <rect x="150" y="230" width="44" height="44" rx="10" fill="#123524" />
-          <image
-            href="/logo_cedarsites_v2_96.png"
-            x="150"
-            y="230"
-            width="44"
-            height="44"
-            clipPath="url(#rd-cs-logo)"
-            preserveAspectRatio="xMidYMid slice"
-          />
-          {/* LIVE pill, top-right */}
-          <rect x="300" y="216" width="54" height="20" rx="10" fill="#0ea5e9" />
+          {/* brand tile: the reseller's logo, or an accent initial when none is curated */}
+          <rect x="150" y="230" width="44" height="44" rx="10" fill={logo ? '#123524' : accent} />
+          {logo ? (
+            <image
+              href={logo}
+              x="150"
+              y="230"
+              width="44"
+              height="44"
+              clipPath="url(#rd-cs-logo)"
+              preserveAspectRatio="xMidYMid slice"
+            />
+          ) : (
+            <text x="172" y="261" textAnchor="middle" fill="#0a0a0a" fontSize="24" fontWeight="800" fontFamily="sans-serif">
+              {primary.name.charAt(0).toUpperCase()}
+            </text>
+          )}
+          {/* LIVE pill, top-right (reseller accent) */}
+          <rect x="300" y="216" width="54" height="20" rx="10" fill={accent} />
           <text x="327" y="230" textAnchor="middle" fill="#0a0a0a" fontSize="11" fontWeight="700" fontFamily="sans-serif">LIVE</text>
           {/* name + tagline, left-anchored beside the tile */}
-          <text x="206" y="254" textAnchor="start" fill="#f4f4f5" fontSize="22" fontWeight="700" fontFamily="sans-serif">CedarSites</text>
-          <text x="206" y="276" textAnchor="start" fill="#a1a1aa" fontSize="12.5" fontFamily="sans-serif">reseller · own brand &amp; domain</text>
+          <text x="206" y="254" textAnchor="start" fill="#f4f4f5" fontSize="22" fontWeight="700" fontFamily="sans-serif">{primary.name}</text>
+          <text x="206" y="276" textAnchor="start" fill="#a1a1aa" fontSize="12.5" fontFamily="sans-serif">{subtitle}</text>
         </g>
 
         {/* ── Your brand here (placeholder reseller) ── */}

@@ -1,7 +1,8 @@
 import OpenAI from 'openai';
+import { meterLLMCall } from '@/lib/ai/meter';
 import { normalizeTemplate as normalizeTemplateServer } from '@/admin/utils/normalizeTemplate';
-import { generateDataUrlPNG } from './openaiIdeation'; 
-import { uploadDataUrlPNG } from './storage';          
+import { generateDataUrlPNG } from './openaiIdeation';
+import { uploadDataUrlPNG } from './storage';
 
 const openaiApiKey = process.env.OPENAI_API_KEY;
 
@@ -64,14 +65,26 @@ async function aiSuggestHeroCopy(args: {
     (args.city || args.state) ? `Locale: ${[args.city, args.state].filter(Boolean).join(', ')}` : null,
   ].filter(Boolean).join('\n') || 'Small business website';
 
+  const model = process.env.OPENAI_MODEL || 'gpt-4o-mini';
   try {
-    const resp = await openai.chat.completions.create({
-      model: process.env.OPENAI_MODEL || 'gpt-4o-mini',
-    //   response_format: { type: 'json_object' },
-      temperature: 0.5,
-      messages: [{ role: 'system', content: sys }, { role: 'user', content: parts }],
-    });
-    const raw = resp.choices?.[0]?.message?.content || '{}';
+    const raw = await meterLLMCall(
+      { provider: 'openai', model_code: model, modality: 'chat', route: 'dev/seed:heroCopy' },
+      async () => {
+        const resp = await openai.chat.completions.create({
+          model,
+        //   response_format: { type: 'json_object' },
+          temperature: 0.5,
+          messages: [{ role: 'system', content: sys }, { role: 'user', content: parts }],
+        });
+        return {
+          value: resp.choices?.[0]?.message?.content || '{}',
+          usage: {
+            input_tokens: resp.usage?.prompt_tokens,
+            output_tokens: resp.usage?.completion_tokens,
+          },
+        };
+      },
+    );
     const j = JSON.parse(raw);
     const out: Partial<Record<'headline'|'subheadline'|'cta_text', string>> = {};
     if (typeof j.headline === 'string') out.headline = j.headline;

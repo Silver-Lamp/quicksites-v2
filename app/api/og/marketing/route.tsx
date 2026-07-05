@@ -1,9 +1,10 @@
-// app/api/og/home/route.tsx
+// app/api/og/marketing/route.tsx
 //
 // Branded Open Graph / Twitter card for QuickSites marketing pages (1200x630).
-// Wired to the homepage via app/page.tsx metadata. Reusable for other marketing
-// pages via ?title= / ?subtitle= / ?eyebrow= overrides — defaults to the
-// homepage message. Text-only (no image fetch) so it always renders.
+// Wired via lib/marketingOg.ts from the homepage, /partners, /compare,
+// /pricing, etc. Customize per page with ?eyebrow= / ?title= / ?subtitle= —
+// defaults to the homepage message. Text-only (no image fetch) so it always
+// renders.
 import { ImageResponse } from 'next/og';
 
 export const runtime = 'edge';

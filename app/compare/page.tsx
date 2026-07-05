@@ -7,15 +7,20 @@
 import Link from 'next/link';
 import SiteHeader from '@/components/site/site-header';
 import { MAX_PLATFORM_FEE_PERCENT, PARTNER_FEE_SHARE } from '@/lib/commerce/partner-terms';
+import { marketingOg } from '@/lib/marketingOg';
 
 const maxFeePct = Math.round(MAX_PLATFORM_FEE_PERCENT * 100);
 const keepPct = Math.round(PARTNER_FEE_SHARE * 100);
 
-export const metadata = {
+export const metadata = marketingOg({
   title: 'QuickSites vs Duda vs GoHighLevel — how we compare',
   description:
     'An honest side-by-side: QuickSites monetizes commerce with a take-rate + lifetime reseller residual on GMV, plus print-on-demand — the model Duda and GoHighLevel structurally chose not to build.',
-};
+  path: '/compare',
+  ogEyebrow: 'Compare',
+  ogTitle: 'QuickSites vs Duda vs GoHighLevel',
+  ogSubtitle: 'The commerce take-rate + lifetime reseller residual — the model they structurally chose not to build.',
+});
 
 type Mark = 'yes' | 'no' | 'partial';
 type Row = {

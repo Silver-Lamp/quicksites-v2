@@ -4,6 +4,7 @@
 import Link from 'next/link';
 import SiteHeader from '@/components/site/site-header';
 import { MAX_PLATFORM_FEE_PERCENT, PARTNER_FEE_SHARE, QS_FEE_SHARE, RESIDUAL_MONTHS } from '@/lib/commerce/partner-terms';
+import { marketingOg } from '@/lib/marketingOg';
 
 const maxFeePct = Math.round(MAX_PLATFORM_FEE_PERCENT * 100);
 const keepPct = Math.round(PARTNER_FEE_SHARE * 100);
@@ -17,11 +18,15 @@ const exPartner = exFee * PARTNER_FEE_SHARE;
 const exQs = exFee - exPartner;
 const usd = (n: number) => `$${n.toFixed(2)}`;
 
-export const metadata = {
+export const metadata = marketingOg({
   title: 'QuickSites for Partners — white-label & resell',
   description:
     'White-label the QuickSites builder + commerce to your network. Onboard merchants through whitelisted payment processors, set your platform fee, and earn on every order.',
-};
+  path: '/partners',
+  ogEyebrow: 'For agencies & resellers',
+  ogTitle: 'Resell websites. Earn on every sale.',
+  ogSubtitle: `White-label the builder + commerce and keep ${keepPct}% of the platform fee — ${residualLabel}, on every order your merchants process.`,
+});
 
 function Card({ title, children }: { title: string; children: React.ReactNode }) {
   return (

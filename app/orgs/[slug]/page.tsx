@@ -2,8 +2,10 @@
 import { Metadata } from 'next';
 import Link from 'next/link';
 import Image from 'next/image';
-import { cookies } from 'next/headers';
+import { cookies, headers } from 'next/headers';
 import { createServerClient } from '@supabase/ssr';
+import { createClient } from '@supabase/supabase-js';
+import { marketingOg } from '@/lib/marketingOg';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -52,10 +54,46 @@ type OrgBranding = {
 
 export async function generateMetadata({ params }: { params: Params }): Promise<Metadata> {
   const { slug } = params;
-  return {
-    title: slug === 'pointsevenstudio' ? 'Point Seven Studio' : slug,
-    description: 'Custom web and app development. Pragmatic, fast, and production-ready.',
-  };
+
+  // Public org branding drives the share card, so a reseller (e.g. CedarSites)
+  // sharing their own landing page gets their own name / accent / domain.
+  const supabase = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    { auth: { persistSession: false } },
+  );
+  const { data: orgRow } = await supabase
+    .from('organizations_public')
+    .select('slug, name, branding')
+    .eq('slug', slug)
+    .maybeSingle();
+
+  const branding = (orgRow?.branding || {}) as OrgBranding;
+  const name =
+    branding?.name || orgRow?.name || (slug === 'pointsevenstudio' ? 'Point Seven Studio' : slug);
+  const accent = branding?.colors?.primary || undefined; // route validates the hex
+  // Domain shown on the card: prefer the org's configured domain, else the host
+  // the page is actually served on (e.g. cedarsites.com), else omit.
+  const h = await headers();
+  const host = (h.get('x-forwarded-host') || h.get('host') || '').split(':')[0];
+  const domain =
+    branding?.domain || (host && !/(^|\.)quicksites\.ai$/.test(host) && host !== 'localhost' ? host : undefined);
+  const headline = branding?.hero?.headline || `${name}`;
+  const subhead =
+    branding?.hero?.subhead || 'Websites & online stores, built and hosted for you.';
+
+  return marketingOg({
+    title: `${name} — websites & online stores`,
+    description: subhead,
+    path: `/orgs/${slug}`,
+    siteName: name,
+    brand: name,
+    accent,
+    domain,
+    ogEyebrow: domain || name,
+    ogTitle: headline,
+    ogSubtitle: subhead,
+  });
 }
 
 export default async function OrgLandingPage({ params }: { params: Params }) {

@@ -20,6 +20,7 @@
     "verify:ci": "vercel pull --yes --environment=production && CI=1 vercel build",
     "prepush": "npm run verify:ci",
     "check:paths": "tsc --noEmit --traceResolution | grep \"types/supabase\" || true",
+    "smoke:rebuild": "tsx scripts/rebuild-smoke.ts",
     "fonts": "ts-node scripts/download-google-fonts.ts",
     "hosts:add": "ts-node scripts/manage-hosts-from-supabase.ts add",
     "hosts:remove": "ts-node scripts/manage-hosts-from-supabase.ts remove",

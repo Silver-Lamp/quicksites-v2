@@ -19,6 +19,7 @@ import { guestBuildEnabled } from '@/lib/flags/guestBuild';
 import { scrapeSite, ScrapeError } from '@/lib/rebuild/scrapeSite';
 import { inferSiteSpec } from '@/lib/rebuild/inferSiteSpec';
 import { buildRebuildTemplate } from '@/lib/rebuild/assembleDraft';
+import { generateRebuildHero, rebuildHeroEnabled } from '@/lib/rebuild/generateHero';
 import { captureServer } from '@/lib/analytics/posthog-server';
 import { EVENTS } from '@/lib/analytics/events';
 
@@ -129,9 +130,17 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: msg, code: 'ai_failed' }, { status: 503 });
   }
 
+  // 2b) Optionally generate a fresh, on-brand hero (flag-gated; best-effort). Falls
+  //     back to the scraped og:image so a failure never breaks the rebuild.
+  let heroImage = scraped.heroImage;
+  if (rebuildHeroEnabled()) {
+    const fresh = await generateRebuildHero(spec, ownerId);
+    if (fresh) heroImage = fresh;
+  }
+
   // 3) Assemble + insert the draft (service role; INSERT isn't guarded). Stamp
   //    ownership so it auto-claims when a guest upgrades (same uid → owner_id).
-  const tpl = buildRebuildTemplate({ spec, heroImage: scraped.heroImage, sourceUrl: scraped.finalUrl });
+  const tpl = buildRebuildTemplate({ spec, heroImage, sourceUrl: scraped.finalUrl });
 
   let insertedId: string | null = null;
   let slug = tpl.slug;
@@ -183,7 +192,7 @@ export async function POST(req: Request) {
       industryLabel: spec.industryLabel,
       services: spec.services,
       sourceUrl: scraped.finalUrl,
-      heroImage: scraped.heroImage,
+      heroImage,
     },
   });
 }

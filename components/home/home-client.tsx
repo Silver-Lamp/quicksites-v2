@@ -16,6 +16,7 @@ import { useBrand } from '@/app/providers';
 import { guestBuildEnabled } from '@/lib/flags/guestBuild';
 import GuestStart from '@/components/home/guest-start';
 import HomeColorLab from '@/components/home/home-color-lab';
+import ResellerDiagram from '@/components/home/reseller-diagram';
 
 const isProd = process.env.NODE_ENV === 'production';
 
@@ -216,6 +217,50 @@ export default function HomeClient({ showcase }: { showcase?: React.ReactNode })
                 <Card title="Your take-rate">Set the platform fee; collect on every order automatically.</Card>
                 <Card title="Residual commissions">Earn recurring on referred merchants — tracked in a commission ledger.</Card>
               </div>
+            </div>
+          </div>
+        </section>
+
+        {/* ───────── Reseller model (1 platform → many resellers) ───────── */}
+        <section className="relative z-10 w-full border-t border-zinc-800/70">
+          <div className="mx-auto max-w-6xl px-6 py-16">
+            <div className="mx-auto max-w-2xl text-center">
+              <span className="rounded-full border border-sky-500/40 bg-sky-500/10 px-3 py-1 text-xs font-medium text-sky-300">
+                One platform · many brands
+              </span>
+              <h2 className="mt-4 text-2xl md:text-3xl font-semibold">
+                We power the platform. You resell it as your own.
+              </h2>
+              <p className="mt-3 text-sm text-zinc-400">
+                {productName} is the engine. Resellers put their own brand and domain on top and serve
+                their own merchants — one platform behind many businesses.{' '}
+                <span className="text-zinc-300">CedarSites</span> is a live example; your brand can be the next.
+              </p>
+            </div>
+
+            <div className="mt-10">
+              <ResellerDiagram />
+            </div>
+
+            <div className="mx-auto mt-8 grid max-w-4xl grid-cols-1 gap-4 sm:grid-cols-3">
+              <Card title="Your brand, your domain">
+                White-label theming per reseller — logo, colors, and domain (e.g. cedarsites.com). Your customers never see us.
+              </Card>
+              <Card title="Bring your existing sites">
+                Already run client sites? Migrate them onto the platform and manage them all in one place.
+              </Card>
+              <Card title="Earn on every order">
+                Set your platform fee; collect on every sale your merchants process, with residual commissions tracked for you.
+              </Card>
+            </div>
+
+            <div className="mt-8 text-center">
+              <Link
+                href="/partners"
+                className="inline-block rounded-lg bg-sky-500 px-6 py-3 text-base font-medium text-zinc-950 shadow-lg transition hover:bg-sky-400"
+              >
+                Become a reseller
+              </Link>
             </div>
           </div>
         </section>

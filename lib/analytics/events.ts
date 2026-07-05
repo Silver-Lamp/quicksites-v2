@@ -9,6 +9,8 @@
 export const EVENTS = {
   // Acquisition / activation
   SIGNUP: 'signup',
+  REBUILD_STARTED: 'rebuild_started', // /rebuild: a URL was submitted for AI rebuild
+  REBUILD_COMPLETED: 'rebuild_completed', // /rebuild: a draft was generated from that URL
   BUILDER_ACTIVATED: 'builder_activated', // first meaningful template edit/save
   SITE_PUBLISHED: 'site_published',
 

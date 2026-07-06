@@ -340,6 +340,18 @@ export const LocationBlockSchema = z.object({
   directions_url: z.string().optional().default(''),
 });
 
+/* ───────────────────────────── Sticky order bar ───────────────────────────── */
+// A mobile-only sticky bottom bar (the ChowNow/Toast pattern): a tap-to-call action
+// + a primary CTA that jumps to the menu (or links out to an ordering URL). Hidden
+// on desktop. `cta_href` starting with '#' smooth-scrolls to the on-page menu.
+export const OrderBarSchema = z.object({
+  phone: z.string().optional().default(''),
+  call_label: z.string().optional().default('Call'),
+  cta_label: z.string().optional().default('View Menu'),
+  cta_href: z.string().optional().default('#menu'),
+  enabled: z.boolean().optional().default(true),
+});
+
 /* ───────────────────────────── Block schema map ───────────────────────────── */
 
 export const blockContentSchemaMap = {
@@ -593,6 +605,8 @@ export const blockContentSchemaMap = {
   menu: { label: 'Menu', icon: '🍽️', schema: MenuBlockSchema },
 
   location: { label: 'Location & Map', icon: '📍', schema: LocationBlockSchema },
+
+  order_bar: { label: 'Sticky Order Bar', icon: '🛎️', schema: OrderBarSchema },
 
   /* ───────────────────────────── NEW: Commerce blocks ─────────────────────── */
 

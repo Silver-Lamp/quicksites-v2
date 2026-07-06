@@ -42,6 +42,7 @@ export const BLOCK_CATEGORY: Record<BlockType, BlockCategory> = {
   hours: 'meta',
   menu: 'content',
   location: 'meta',
+  order_bar: 'interactive',
   scheduler: 'interactive',
   candidate_donate: 'interactive',
   candidate_volunteer: 'interactive',

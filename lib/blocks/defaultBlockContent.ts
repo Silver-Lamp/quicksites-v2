@@ -228,6 +228,10 @@ export const DEFAULT_BLOCK_CONTENT = {
     directions_url: '',
   },
 
+  /* ───────── order bar (restaurant) ───────── */
+
+  order_bar: { phone: '', call_label: 'Call', cta_label: 'View Menu', cta_href: '#menu', enabled: true },
+
   /* ───────── commerce ───────── */
 
   products_grid: { title: 'Featured Products', columns: 3, productIds: [], products: [] },

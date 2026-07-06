@@ -98,6 +98,30 @@ export function buildSpecFromListing(
 }
 
 /**
+ * Resolve a free-text business query ("Hawkers Bar & Grill, Auburn WA") to a Google
+ * Place ID, so batch import can work from names instead of hand-looked-up ids.
+ * Gated behind GOOGLE_PLACES_API_KEY.
+ */
+export async function findPlace(query: string, fetchImpl: typeof fetch = fetch): Promise<{ placeId: string; name: string }> {
+  const key = process.env.GOOGLE_PLACES_API_KEY;
+  if (!key) throw new ListingImportError('not_configured', 'GOOGLE_PLACES_API_KEY is not set.');
+  const q = (query ?? '').trim();
+  if (!q) throw new ListingImportError('invalid', 'A search query is required.');
+
+  const url = `https://maps.googleapis.com/maps/api/place/findplacefromtext/json?input=${encodeURIComponent(q)}&inputtype=textquery&fields=place_id,name&key=${key}`;
+  let json: any;
+  try {
+    const res = await fetchImpl(url);
+    json = await res.json();
+  } catch (e: any) {
+    throw new ListingImportError('fetch_failed', e?.message || 'Places search failed.');
+  }
+  const c = Array.isArray(json?.candidates) ? json.candidates[0] : null;
+  if (!c?.place_id) throw new ListingImportError('not_found', `No place matched "${q}".`);
+  return { placeId: String(c.place_id), name: String(c.name ?? q) };
+}
+
+/**
  * Fetch a Google Place's details into a Listing. Gated behind GOOGLE_PLACES_API_KEY
  * — throws ListingImportError('not_configured') until it's set, so the route can
  * fall back to a pasted listing JSON. `fetchImpl` is injectable for tests.

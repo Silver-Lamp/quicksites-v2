@@ -12,7 +12,7 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { getAdminUser } from '@/lib/auth/getAdminUser';
-import { fetchGooglePlace, buildSpecFromListing, ListingImportError, type Listing } from '@/lib/rebuild/importListing';
+import { fetchGooglePlace, findPlace, buildSpecFromListing, ListingImportError, type Listing } from '@/lib/rebuild/importListing';
 import { menuFromPhotos } from '@/lib/rebuild/menuFromPhotos';
 import { buildRebuildTemplate } from '@/lib/rebuild/assembleDraft';
 
@@ -44,10 +44,13 @@ export async function POST(req: Request) {
   try {
     if (body.placeId) {
       listing = await fetchGooglePlace(String(body.placeId));
+    } else if (body.query) {
+      const { placeId } = await findPlace(String(body.query));
+      listing = await fetchGooglePlace(placeId);
     } else if (body.listing && typeof body.listing === 'object' && body.listing.name) {
       listing = body.listing as Listing;
     } else {
-      return NextResponse.json({ error: 'Provide a placeId or a listing object with a name.' }, { status: 400 });
+      return NextResponse.json({ error: 'Provide a query, placeId, or a listing object with a name.' }, { status: 400 });
     }
   } catch (e) {
     if (e instanceof ListingImportError) {

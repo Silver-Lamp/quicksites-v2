@@ -7,7 +7,7 @@
 // → categories, and listing (+ photo-extracted menu) → RebuildSpec. Pure, so they
 // pin the shape assembleDraft downstream depends on.
 
-import { mapPlacesHours, mapTypes, buildSpecFromListing, type Listing } from '@/lib/rebuild/importListing';
+import { mapPlacesHours, mapTypes, buildSpecFromListing, findPlace, ListingImportError, type Listing } from '@/lib/rebuild/importListing';
 
 describe('mapPlacesHours', () => {
   it('maps Google periods (0=Sunday) to validated day/HH:MM entries', () => {
@@ -64,5 +64,30 @@ describe('buildSpecFromListing', () => {
     expect(spec.menu).toBeUndefined();
     expect(spec.contact).toBeUndefined();
     expect(spec.hours).toBeUndefined();
+  });
+});
+
+describe('findPlace', () => {
+  const OLD = process.env.GOOGLE_PLACES_API_KEY;
+  afterEach(() => {
+    if (OLD === undefined) delete process.env.GOOGLE_PLACES_API_KEY;
+    else process.env.GOOGLE_PLACES_API_KEY = OLD;
+  });
+
+  it('throws not_configured without an API key', async () => {
+    delete process.env.GOOGLE_PLACES_API_KEY;
+    await expect(findPlace('anything')).rejects.toMatchObject({ code: 'not_configured' });
+  });
+
+  it('returns the first candidate place id', async () => {
+    process.env.GOOGLE_PLACES_API_KEY = 'test-key';
+    const fakeFetch = async () => ({ json: async () => ({ candidates: [{ place_id: 'ChIJ123', name: 'Hawkers' }] }) }) as any;
+    await expect(findPlace('Hawkers Auburn', fakeFetch as any)).resolves.toEqual({ placeId: 'ChIJ123', name: 'Hawkers' });
+  });
+
+  it('throws not_found when no candidate matches', async () => {
+    process.env.GOOGLE_PLACES_API_KEY = 'test-key';
+    const fakeFetch = async () => ({ json: async () => ({ candidates: [] }) }) as any;
+    await expect(findPlace('nope', fakeFetch as any)).rejects.toMatchObject({ code: 'not_found' });
   });
 });

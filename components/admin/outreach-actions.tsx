@@ -8,6 +8,31 @@ export default function OutreachActions({ id, claimPath }: { id: string; claimPa
   const router = useRouter();
   const [busy, setBusy] = React.useState(false);
   const [copied, setCopied] = React.useState(false);
+  const [verifying, setVerifying] = React.useState(false);
+  const [verified, setVerified] = React.useState(false);
+
+  const verifyManually = async () => {
+    if (verifying) return;
+    if (!window.confirm('Mark this business verified by phone? The next claim will skip the OTP.')) return;
+    setVerifying(true);
+    try {
+      const res = await fetch('/api/admin/claim/verify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ templateId: id }),
+      });
+      if (!res.ok) {
+        const j = await res.json().catch(() => ({}));
+        alert(j?.error || 'Verify failed.');
+      } else {
+        setVerified(true);
+      }
+    } catch {
+      /* ignore */
+    } finally {
+      setVerifying(false);
+    }
+  };
 
   const copy = async () => {
     try {
@@ -49,6 +74,14 @@ export default function OutreachActions({ id, claimPath }: { id: string; claimPa
         className="rounded-md border border-neutral-700 px-2 py-1 text-xs text-neutral-300 transition hover:bg-neutral-800"
       >
         {copied ? 'Copied ✓' : 'Copy claim link'}
+      </button>
+      <button
+        onClick={verifyManually}
+        disabled={verifying || verified}
+        title="Mark verified by phone — the next claim skips the OTP"
+        className="rounded-md border border-emerald-700/60 px-2 py-1 text-xs text-emerald-300 transition hover:bg-emerald-900/30 disabled:opacity-50"
+      >
+        {verified ? 'Verified ✓' : verifying ? '…' : 'Verify by phone'}
       </button>
       <button
         onClick={del}

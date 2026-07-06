@@ -68,6 +68,24 @@ describe('buildCatalogRowsFromMenu', () => {
     expect(rows.map((r) => r.slug)).toEqual(['specials-combo', 'specials-combo-2']);
   });
 
+  it('turns choose-one options into row variants (base = cheapest); ignores unpriced options', () => {
+    const rows = buildCatalogRowsFromMenu([
+      { name: 'Mains', items: [
+        { name: 'Wings', price_cents: 0, options: [
+          { label: 'Small', price_cents: 800 },
+          { label: 'Large', price_cents: 1200 },
+          { label: 'MP', price_cents: null }, // unpriced option → dropped
+        ] },
+      ] },
+    ]);
+    expect(rows).toHaveLength(1);
+    expect(rows[0].price_cents).toBe(800); // cheapest option
+    expect(rows[0].variants).toEqual([
+      { label: 'Small', price_cents: 800 },
+      { label: 'Large', price_cents: 1200 },
+    ]);
+  });
+
   it('carries an item image_url through to the row', () => {
     const rows = buildCatalogRowsFromMenu([
       { name: 'Mains', items: [{ name: 'Steak', price_cents: 2500, image_url: 'https://x/steak.jpg' }] },
@@ -105,5 +123,28 @@ describe('applyCatalogLinks', () => {
     const content = { sections: [{ name: 'A', items: [{ name: 'X' }] }] };
     applyCatalogLinks(content, [{ section: 'A', name: 'X', catalog_item_id: 'c', price_cents: 500 }]);
     expect((content.sections[0].items[0] as any).catalog_item_id).toBeUndefined();
+  });
+
+  it('maps option labels to their created variant ids', () => {
+    const content = {
+      sections: [{ name: 'Mains', items: [{ name: 'Wings', options: [{ label: 'Small' }, { label: 'Large' }] }] }],
+    };
+    const out = applyCatalogLinks(content, [
+      {
+        section: 'Mains',
+        name: 'Wings',
+        catalog_item_id: 'cat_1',
+        price_cents: 800,
+        variants: [
+          { label: 'Small', variant_id: 'v_s', price_cents: 800 },
+          { label: 'Large', variant_id: 'v_l', price_cents: 1200 },
+        ],
+      },
+    ]);
+    expect(out.sections[0].items[0].options).toEqual([
+      { label: 'Small', variant_id: 'v_s', price_cents: 800 },
+      { label: 'Large', variant_id: 'v_l', price_cents: 1200 },
+    ]);
+    expect(out.sections[0].items[0].catalog_item_id).toBe('cat_1');
   });
 });

@@ -8,7 +8,8 @@ import { parsePriceToCents, centsToDisplay } from '@/lib/commerce/menuPrice';
 import { applyCatalogLinks } from '@/lib/commerce/menuCatalog';
 import ImageUploadField from '@/components/merchant/ImageUploadField';
 
-type Item = { name: string; description?: string; price?: string; image_url?: string; catalog_item_id?: string; price_cents?: number; tags?: string[] };
+type Option = { label: string; price?: string; price_cents?: number; variant_id?: string };
+type Item = { name: string; description?: string; price?: string; image_url?: string; options?: Option[]; catalog_item_id?: string; price_cents?: number; tags?: string[] };
 type Section = { name: string; description?: string; items: Item[] };
 
 function cloneSections(raw: any): Section[] {
@@ -22,6 +23,14 @@ function cloneSections(raw: any): Section[] {
           description: it?.description ?? '',
           price: it?.price ?? '',
           image_url: it?.image_url ?? '',
+          options: Array.isArray(it?.options)
+            ? it.options.map((o: any) => ({
+                label: String(o?.label ?? ''),
+                price: o?.price ?? '',
+                price_cents: o?.price_cents,
+                variant_id: o?.variant_id,
+              }))
+            : [],
           catalog_item_id: it?.catalog_item_id,
           price_cents: it?.price_cents,
           tags: Array.isArray(it?.tags) ? it.tags : [],
@@ -88,16 +97,34 @@ export default function MenuEditor({ block, onSave, onClose, template }: BlockEd
   const addSection = () => setSections((prev) => [...prev, { name: 'New Section', items: [{ name: '', price: '' }] }]);
   const removeSection = (si: number) => setSections((prev) => prev.filter((_, i) => i !== si));
 
+  // option (choose-one) helpers
+  const setOption = (si: number, ii: number, oi: number, patch: Partial<Option>) =>
+    setItem(si, ii, {
+      options: (sections[si].items[ii].options ?? []).map((o, j) => (j === oi ? { ...o, ...patch } : o)),
+    });
+  const addOption = (si: number, ii: number) =>
+    setItem(si, ii, { options: [...(sections[si].items[ii].options ?? []), { label: '', price: '' }] });
+  const removeOption = (si: number, ii: number, oi: number) =>
+    setItem(si, ii, { options: (sections[si].items[ii].options ?? []).filter((_, j) => j !== oi) });
+
   // ---- price confirmation model ----
   // Each item's confirmable cents, prefilled from its display price.
   const [confirmCents, setConfirmCents] = React.useState<Record<string, number | null>>({});
   const keyOf = (si: number, ii: number) => `${si}:${ii}`;
 
+  const optKey = (si: number, ii: number, oi: number) => `${si}:${ii}:${oi}`;
+
   const openConfirm = () => {
     const seed: Record<string, number | null> = {};
     sections.forEach((s, si) =>
       s.items.forEach((it, ii) => {
-        seed[keyOf(si, ii)] = it.price_cents ?? parsePriceToCents(it.price);
+        if (it.options?.length) {
+          it.options.forEach((o, oi) => {
+            seed[optKey(si, ii, oi)] = o.price_cents ?? parsePriceToCents(o.price);
+          });
+        } else {
+          seed[keyOf(si, ii)] = it.price_cents ?? parsePriceToCents(it.price);
+        }
       }),
     );
     setConfirmCents(seed);
@@ -118,12 +145,21 @@ export default function MenuEditor({ block, onSave, onClose, template }: BlockEd
     try {
       const payloadSections = sections.map((s, si) => ({
         name: s.name,
-        items: s.items.map((it, ii) => ({
-          name: it.name,
-          description: it.description ?? '',
-          image_url: it.image_url ?? '',
-          price_cents: confirmCents[keyOf(si, ii)] ?? null,
-        })),
+        items: s.items.map((it, ii) =>
+          it.options?.length
+            ? {
+                name: it.name,
+                description: it.description ?? '',
+                image_url: it.image_url ?? '',
+                options: it.options.map((o, oi) => ({ label: o.label, price_cents: confirmCents[optKey(si, ii, oi)] ?? null })),
+              }
+            : {
+                name: it.name,
+                description: it.description ?? '',
+                image_url: it.image_url ?? '',
+                price_cents: confirmCents[keyOf(si, ii)] ?? null,
+              },
+        ),
       }));
 
       const res = await fetch('/api/menu/publish-catalog', {
@@ -210,6 +246,20 @@ export default function MenuEditor({ block, onSave, onClose, template }: BlockEd
                       placeholder="Photo URL, or upload →"
                     />
                   </div>
+
+                  {/* Choose-one options (sizes / half-full). When present they set the price. */}
+                  <div className="mt-2 border-l border-zinc-800 pl-2">
+                    <div className="text-[11px] text-zinc-500">Options — choose one (e.g. Small / Large). Overrides the price above.</div>
+                    {(it.options ?? []).map((o, oi) => (
+                      <div key={oi} className="mt-1 grid grid-cols-[1fr,72px,auto] gap-2">
+                        <input className={inputCls} value={o.label} onChange={(e) => setOption(si, ii, oi, { label: e.target.value })} placeholder="Option (e.g. Large)" />
+                        <input className={inputCls} value={o.price ?? ''} onChange={(e) => setOption(si, ii, oi, { price: e.target.value })} placeholder="$14" />
+                        <button onClick={() => removeOption(si, ii, oi)} className="rounded-md border border-zinc-700 px-2 text-xs text-zinc-400 hover:text-red-300">✕</button>
+                      </div>
+                    ))}
+                    <button onClick={() => addOption(si, ii)} className="mt-1 text-[11px] text-sky-400 hover:text-sky-300">+ Add option</button>
+                  </div>
+
                   {it.catalog_item_id && <span className="mt-1 block text-[11px] text-emerald-400">✓ Orderable</span>}
                 </div>
               ))}
@@ -245,25 +295,35 @@ export default function MenuEditor({ block, onSave, onClose, template }: BlockEd
               {sections.map((s, si) =>
                 s.items.map((it, ii) => {
                   if (!it.name.trim()) return null;
-                  const k = keyOf(si, ii);
-                  const cents = confirmCents[k];
-                  return (
-                    <div key={k} className="flex items-center gap-2 text-sm">
-                      <span className="flex-1 truncate text-zinc-300">
-                        <span className="text-zinc-500">{s.name} · </span>{it.name}
-                      </span>
-                      <span className="text-zinc-500">$</span>
-                      <input
-                        className="w-20 rounded-md border border-zinc-700 bg-zinc-900 px-2 py-1 text-right text-sm text-white outline-none focus:border-emerald-500"
-                        value={cents != null ? (cents / 100).toString() : ''}
-                        onChange={(e) => {
-                          const v = e.target.value.trim();
-                          setConfirmCents((prev) => ({ ...prev, [k]: v === '' ? null : parsePriceToCents(v) }));
-                        }}
-                        placeholder="—"
-                      />
-                    </div>
-                  );
+                  const rows: { k: string; label: React.ReactNode }[] =
+                    it.options?.length
+                      ? it.options
+                          .filter((o) => o.label.trim())
+                          .map((o, oi) => ({
+                            k: optKey(si, ii, oi),
+                            label: (
+                              <><span className="text-zinc-500">{s.name} · </span>{it.name} <span className="text-zinc-500">— {o.label}</span></>
+                            ),
+                          }))
+                      : [{ k: keyOf(si, ii), label: <><span className="text-zinc-500">{s.name} · </span>{it.name}</> }];
+                  return rows.map(({ k, label }) => {
+                    const cents = confirmCents[k];
+                    return (
+                      <div key={k} className="flex items-center gap-2 text-sm">
+                        <span className="flex-1 truncate text-zinc-300">{label}</span>
+                        <span className="text-zinc-500">$</span>
+                        <input
+                          className="w-20 rounded-md border border-zinc-700 bg-zinc-900 px-2 py-1 text-right text-sm text-white outline-none focus:border-emerald-500"
+                          value={cents != null ? (cents / 100).toString() : ''}
+                          onChange={(e) => {
+                            const v = e.target.value.trim();
+                            setConfirmCents((prev) => ({ ...prev, [k]: v === '' ? null : parsePriceToCents(v) }));
+                          }}
+                          placeholder="—"
+                        />
+                      </div>
+                    );
+                  });
                 }),
               )}
             </div>

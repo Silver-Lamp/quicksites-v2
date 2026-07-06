@@ -15,6 +15,7 @@ import { createClient } from '@supabase/supabase-js';
 import type { User } from '@supabase/supabase-js';
 import { requireUser } from '@/lib/auth/requireUser';
 import { buildCatalogRowsFromMenu } from '@/lib/commerce/menuCatalog';
+import { normalizeVariants } from '@/lib/commerce/variants';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -77,9 +78,24 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: e?.message || 'Could not set up your merchant account.' }, { status: 500 });
   }
 
-  const items: { section: string; name: string; slug: string; catalog_item_id: string; price_cents: number }[] = [];
+  const items: {
+    section: string; name: string; slug: string; catalog_item_id: string; price_cents: number;
+    variants?: { label: string; variant_id: string; price_cents: number }[];
+  }[] = [];
   for (const r of rows) {
-    const metadata = { site_slug: siteSlug || null, category: r.section || null };
+    // "Choose one" options → catalog variants (flat SKUs; base price = cheapest).
+    const norm = r.variants?.length
+      ? normalizeVariants({
+          variants: r.variants.map((v) => ({ label: v.label, priceCents: v.price_cents })),
+          fallbackBaseCents: r.price_cents,
+        })
+      : null;
+    const itemPrice = norm ? norm.basePriceCents : r.price_cents;
+    const metadata: Record<string, any> = { site_slug: siteSlug || null, category: r.section || null };
+    if (norm) { metadata.variants = norm.variants; metadata.variant_options = norm.variant_options; }
+    const respVariants = norm
+      ? norm.variants.map((v) => ({ label: v.label, variant_id: v.id, price_cents: v.price_cents }))
+      : undefined;
     const images = r.image_url ? [r.image_url] : [];
     // Upsert by (merchant_id, slug) — the table's unique key — so re-publishing updates.
     const { data: existing } = await admin
@@ -92,10 +108,10 @@ export async function POST(req: Request) {
     if (existing?.id) {
       const { error } = await admin
         .from('catalog_items')
-        .update({ title: r.name, description: r.description || null, price_cents: r.price_cents, status: 'active', metadata, ...(images.length ? { images } : {}) })
+        .update({ title: r.name, description: r.description || null, price_cents: itemPrice, status: 'active', metadata, ...(images.length ? { images } : {}) })
         .eq('id', existing.id);
       if (error) return NextResponse.json({ error: error.message }, { status: 400 });
-      items.push({ section: r.section, name: r.name, slug: r.slug, catalog_item_id: existing.id as string, price_cents: r.price_cents });
+      items.push({ section: r.section, name: r.name, slug: r.slug, catalog_item_id: existing.id as string, price_cents: itemPrice, ...(respVariants ? { variants: respVariants } : {}) });
     } else {
       const { data: created, error } = await admin
         .from('catalog_items')
@@ -105,7 +121,7 @@ export async function POST(req: Request) {
           title: r.name,
           slug: r.slug,
           description: r.description || null,
-          price_cents: r.price_cents,
+          price_cents: itemPrice,
           status: 'active',
           images,
           metadata,
@@ -113,7 +129,7 @@ export async function POST(req: Request) {
         .select('id')
         .single();
       if (error || !created) return NextResponse.json({ error: error?.message || 'Could not create an item.' }, { status: 400 });
-      items.push({ section: r.section, name: r.name, slug: r.slug, catalog_item_id: created.id as string, price_cents: r.price_cents });
+      items.push({ section: r.section, name: r.name, slug: r.slug, catalog_item_id: created.id as string, price_cents: itemPrice, ...(respVariants ? { variants: respVariants } : {}) });
     }
   }
 

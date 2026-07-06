@@ -8,12 +8,14 @@ import * as React from 'react';
 // + tags). Display-only until a menu item carries `catalog_item_id` — then it shows
 // an "Add" button wired to the shared cart event (qs:cart:add), same as products_grid.
 
+type MenuOption = { label: string; price?: string; price_cents?: number; variant_id?: string };
 type MenuItem = {
   name: string;
   description?: string;
   price?: string;
   image_url?: string;
   tags?: string[];
+  options?: MenuOption[];
   catalog_item_id?: string;
   price_cents?: number;
 };
@@ -43,15 +45,24 @@ function priceLabel(it: MenuItem): string {
   return '';
 }
 
-function addToOrder(it: MenuItem) {
+/** Options that are actually orderable (published → have a variant id). */
+function orderableOptions(it: MenuItem): MenuOption[] {
+  return (Array.isArray(it.options) ? it.options : []).filter((o) => o?.label && o?.variant_id);
+}
+
+function addToOrder(it: MenuItem, option?: MenuOption) {
   if (!it.catalog_item_id) return;
   try {
     window.dispatchEvent(
       new CustomEvent('qs:cart:add', {
         detail: {
           id: it.catalog_item_id,
+          variant_id: option?.variant_id ?? null,
+          variant_label: option?.label ?? null,
           qty: 1,
-          price_cents: typeof it.price_cents === 'number' ? it.price_cents : 0,
+          price_cents: option
+            ? (typeof option.price_cents === 'number' ? option.price_cents : 0)
+            : (typeof it.price_cents === 'number' ? it.price_cents : 0),
           title: it.name,
           image_url: it.image_url ?? null,
           product_type: 'meal',
@@ -62,6 +73,78 @@ function addToOrder(it: MenuItem) {
   } catch {
     /* noop */
   }
+}
+
+/** One menu item row — holds its own selected-option state for "choose one" items. */
+function MenuItemRow({ item, rowKey }: { item: MenuItem; rowKey: string }) {
+  const options = orderableOptions(item);
+  const hasOptions = options.length > 0;
+  const [sel, setSel] = React.useState(0);
+  const selected = hasOptions ? options[Math.min(sel, options.length - 1)] : undefined;
+
+  const price = selected
+    ? centsDisplay(selected.price_cents)
+    : priceLabel(item);
+
+  return (
+    <li className="flex gap-4 py-4">
+      {item.image_url ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={item.image_url} alt={item.name} loading="lazy" className="h-16 w-16 shrink-0 rounded-lg object-cover sm:h-20 sm:w-20" />
+      ) : null}
+
+      <div className="min-w-0 flex-1">
+        <div className="flex items-baseline justify-between gap-3">
+          <span className="font-medium">{item.name}</span>
+          {price && <span className="shrink-0 tabular-nums text-zinc-700 dark:text-zinc-300">{price}</span>}
+        </div>
+        {item.description && <p className="mt-1 text-sm text-muted-foreground">{item.description}</p>}
+
+        {Array.isArray(item.tags) && item.tags.length > 0 && (
+          <div className="mt-2 flex flex-wrap gap-1.5">
+            {item.tags.map((t, ti) => (
+              <span key={ti} className="rounded-full bg-black/5 px-2 py-0.5 text-[11px] font-medium uppercase tracking-wide text-zinc-600 dark:bg-white/10 dark:text-zinc-300">{t}</span>
+            ))}
+          </div>
+        )}
+
+        {/* Choose-one option selector */}
+        {hasOptions && (
+          <div className="mt-2 flex flex-wrap gap-1.5">
+            {options.map((o, oi) => (
+              <button
+                key={oi}
+                type="button"
+                onClick={() => setSel(oi)}
+                className={`rounded-full border px-2.5 py-1 text-xs font-medium transition ${
+                  oi === sel
+                    ? 'border-transparent bg-zinc-900 text-white dark:bg-white dark:text-zinc-950'
+                    : 'border-black/15 text-zinc-600 hover:bg-black/5 dark:border-white/20 dark:text-zinc-300 dark:hover:bg-white/10'
+                }`}
+              >
+                {o.label}{typeof o.price_cents === 'number' ? ` · ${centsDisplay(o.price_cents)}` : ''}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {item.catalog_item_id && (hasOptions ? selected != null : true) && (
+          <button
+            type="button"
+            onClick={() => addToOrder(item, selected)}
+            className="mt-3 inline-flex items-center rounded-md border border-black/15 px-3 py-1 text-sm font-medium transition hover:bg-black/5 dark:border-white/20 dark:hover:bg-white/10"
+          >
+            Add to order
+          </button>
+        )}
+      </div>
+    </li>
+  );
+}
+
+function centsDisplay(cents: number | undefined): string {
+  if (typeof cents !== 'number') return '';
+  return cents % 100 === 0 ? `$${cents / 100}` : `$${(cents / 100).toFixed(2)}`;
 }
 
 export default function RenderMenu(props: any) {
@@ -124,55 +207,9 @@ export default function RenderMenu(props: any) {
             </div>
 
             <ul className="mt-4 divide-y divide-black/5 dark:divide-white/5">
-              {(section.items ?? []).map((it, ii) => {
-                const price = priceLabel(it);
-                return (
-                  <li key={`${slugId(section.name, si)}-${ii}`} className="flex gap-4 py-4">
-                    {it.image_url ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        src={it.image_url}
-                        alt={it.name}
-                        loading="lazy"
-                        className="h-16 w-16 shrink-0 rounded-lg object-cover sm:h-20 sm:w-20"
-                      />
-                    ) : null}
-
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-baseline justify-between gap-3">
-                        <span className="font-medium">{it.name}</span>
-                        {price && (
-                          <span className="shrink-0 tabular-nums text-zinc-700 dark:text-zinc-300">{price}</span>
-                        )}
-                      </div>
-                      {it.description && (
-                        <p className="mt-1 text-sm text-muted-foreground">{it.description}</p>
-                      )}
-                      {Array.isArray(it.tags) && it.tags.length > 0 && (
-                        <div className="mt-2 flex flex-wrap gap-1.5">
-                          {it.tags.map((t, ti) => (
-                            <span
-                              key={ti}
-                              className="rounded-full bg-black/5 px-2 py-0.5 text-[11px] font-medium uppercase tracking-wide text-zinc-600 dark:bg-white/10 dark:text-zinc-300"
-                            >
-                              {t}
-                            </span>
-                          ))}
-                        </div>
-                      )}
-                      {it.catalog_item_id && (
-                        <button
-                          type="button"
-                          onClick={() => addToOrder(it)}
-                          className="mt-3 inline-flex items-center rounded-md border border-black/15 px-3 py-1 text-sm font-medium transition hover:bg-black/5 dark:border-white/20 dark:hover:bg-white/10"
-                        >
-                          Add to order
-                        </button>
-                      )}
-                    </div>
-                  </li>
-                );
-              })}
+              {(section.items ?? []).map((it, ii) => (
+                <MenuItemRow key={`${slugId(section.name, si)}-${ii}`} item={it} rowKey={`${slugId(section.name, si)}-${ii}`} />
+              ))}
             </ul>
           </div>
         ))}

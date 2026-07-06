@@ -102,6 +102,7 @@ The **same URL spans the lifecycle**: an unclaimed outreach draft renders with t
 ## 8. Env flags
 
 - `NEXT_PUBLIC_MENU_BASE_DOMAIN` — the restaurant "menu" base domain (e.g. `delivered.menu`); blank keeps the surface + links dormant. See §7b.
+- `CLAIM_VERIFICATION_ENABLED` — when `1`/`true`, claiming a `listing_import` draft requires an OTP to the listing phone (or an operator manual verify) before ownership transfers. Needs the `claim_verifications` migration + Twilio env (`TWILIO_ACCOUNT_SID`/`TWILIO_AUTH_TOKEN` + `TWILIO_FROM` or `TWILIO_MESSAGING_SERVICE_SID`). Off by default. See [`CLAIM_VERIFICATION_PLAN.md`](CLAIM_VERIFICATION_PLAN.md).
 - `NEXT_PUBLIC_GUEST_BUILD_ENABLED=1` — gates the anonymous convert/rebuild path (prod ON).
 - `REBUILD_HERO_ENABLED` — off by default; when on, conversion generates a fresh hero instead of reusing the source `og:image`.
 - `STRIPE_SECRET_KEY` + `APP_BASE_URL`/`QS_PUBLIC_URL` — required for the Connect button (`/api/connect/onboard`).

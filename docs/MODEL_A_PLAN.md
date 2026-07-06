@@ -8,6 +8,8 @@ A real merchant processes a real (test-mode) order → QuickSites collects `plat
 
 ## Scope reset (2026-06-26): generic product commerce, NOT food
 **delivered.menu (the chef/meals food marketplace) moved to its own platform** and is being removed from this repo. QuickSites commerce = the **generic e-commerce slice** for builder sites: `catalog_items.type` ∈ {`product`, `service`, `digital`} — e.g. an **arts-&-crafts** vertical. Verified the generic stack already exists and is NOT chef-dependent:
+
+> **Note (2026-07):** the `delivered.menu` *domain* has since been **repurposed** as the default deliverable URL for the restaurant-ordering vertical (`<slug>.delivered.menu` / `delivered.menu/<slug>` → `/sites/<slug>`) — see [`RESTAURANT_VERTICAL.md`](RESTAURANT_VERTICAL.md) §7b + [`CLAUDE.md`](../CLAUDE.md) §5b. That's the domain reused for a new purpose; the old chef/meals *marketplace product* is still gone. Don't confuse the two.
 - `app/api/catalog/items` (generic CRUD, all 4 types) · `app/merchant/catalog` (merchant UI)
 - `components/cart` (generic `product_type`) · `app/api/commerce/checkout` → `lib/commerce/orders.ts` (writes `order_items.catalog_item_id`)
 - `payment_accounts` + platform fee

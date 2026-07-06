@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
+import { cookies } from 'next/headers';
 import { getServerSupabase } from '@/lib/supabase/server';
-import { PARTNER_FEE_SHARE, RESIDUAL_MONTHS, MAX_PLATFORM_FEE_PERCENT } from '@/lib/commerce/partner-terms';
+import { PARTNER_FEE_SHARE, RESIDUAL_MONTHS, MAX_PLATFORM_FEE_PERCENT, clampOverrideShare } from '@/lib/commerce/partner-terms';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -54,5 +55,27 @@ export async function POST() {
     .insert({ code, owner_type: 'provider_rep', owner_id: user.id, plan });
   if (error) return NextResponse.json({ error: error.message }, { status: 400 });
 
-  return NextResponse.json({ code, existing: false });
+  // Hub recruit: if they arrived via a hub's link (?hub=<code> → qs_hub cookie) and
+  // that code is a valid, different code with a default override rate, link this new
+  // reseller to it so the hub earns a lifetime override on their orders. Best-effort.
+  let hub: string | null = null;
+  try {
+    const hubCode = (await cookies()).get('qs_hub')?.value?.trim();
+    if (hubCode && hubCode !== code) {
+      // types/supabase.ts is stale for the new hub columns — use the untyped client.
+      const db = admin as any;
+      const { data: hubRow } = await db
+        .from('referral_codes')
+        .select('code, default_override_share')
+        .eq('code', hubCode)
+        .maybeSingle();
+      const rate = clampOverrideShare(Number(hubRow?.default_override_share));
+      if (hubRow?.code && rate > 0) {
+        await db.from('referral_codes').update({ parent_code: hubRow.code, override_share: rate }).eq('code', code);
+        hub = hubRow.code as string;
+      }
+    }
+  } catch { /* recruit linking is a nicety — never fail the join over it */ }
+
+  return NextResponse.json({ code, existing: false, ...(hub ? { hub } : {}) });
 }

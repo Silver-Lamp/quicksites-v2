@@ -228,6 +228,34 @@ export default function HomeClient({
           </div>
         </section>
 
+        {/* ───────── Hub referral (refer resellers → lifetime override) ───────── */}
+        <section className="relative z-10 w-full border-t border-zinc-800/70 bg-gradient-to-b from-amber-950/20 to-transparent">
+          <div className="mx-auto max-w-4xl px-6 py-16 text-center">
+            <span className="rounded-full border border-amber-500/40 bg-amber-500/10 px-3 py-1 text-xs font-medium text-amber-300">
+              Refer resellers
+            </span>
+            <h2 className="mt-4 text-3xl md:text-4xl font-bold">Grow the network. Earn on all of it.</h2>
+            <p className="mx-auto mt-4 max-w-2xl text-zinc-400">
+              Know people who&apos;d resell {productName}? Bring them on and earn a{' '}
+              <span className="font-semibold text-zinc-200">lifetime override</span> on every order their merchants
+              process — on top of your own residual. Their resellers, your income, ongoing.
+            </p>
+            <div className="mt-8 grid grid-cols-1 gap-4 text-left sm:grid-cols-3">
+              <Card title="Share one link">Send your recruit link. Anyone who signs up to resell through it becomes your downline.</Card>
+              <Card title="Earn an override">You keep a lifetime cut of their sales — funded from the platform&apos;s share, so your resellers keep 100% of theirs.</Card>
+              <Card title="Paid automatically">Overrides accrue to your commission ledger and pay out with the rest — nothing to chase.</Card>
+            </div>
+            <div className="mt-8">
+              <Link
+                href="/partners/resellers"
+                className="inline-block rounded-lg bg-amber-500 px-6 py-3 text-base font-medium text-zinc-950 shadow-lg transition hover:bg-amber-400"
+              >
+                Become a hub
+              </Link>
+            </div>
+          </div>
+        </section>
+
         {/* ───────── Reseller model (1 platform → many resellers) ───────── */}
         <section className="relative z-10 w-full border-t border-zinc-800/70">
           <div className="mx-auto max-w-6xl px-6 py-16">

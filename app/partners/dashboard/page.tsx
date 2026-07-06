@@ -68,9 +68,10 @@ export default async function PartnerDashboard() {
   ]);
   const payoutStatus = (payoutAcct as any)?.status ?? null;
 
-  const { owed, totals, lifetime, referredCount, perMerchant, payouts, currency: cur } = stats;
+  const { owed, totals, lifetime, referredCount, overrideEarned, downlineCount, perMerchant, payouts, currency: cur } = stats;
   const primaryCode = myCodes[0];
   const shareLink = `${base}/join/${encodeURIComponent(primaryCode)}`;
+  const recruitLink = `${base}/partners/resellers?hub=${encodeURIComponent(primaryCode)}`;
 
   return (
     <>
@@ -93,6 +94,20 @@ export default async function PartnerDashboard() {
           <CopyLink link={shareLink} />
         </div>
 
+        {/* Recruit resellers (hub) */}
+        <div className="mt-4 rounded-xl border border-amber-500/30 bg-amber-500/[0.06] p-5">
+          <div className="text-sm font-medium text-amber-200">Recruit resellers — earn on their sales too</div>
+          <p className="mb-3 mt-1 text-xs text-zinc-400">
+            Share this with anyone who'd resell QuickSites. When they sign up through it, you earn a lifetime
+            override on every order their merchants process — on top of your own residual.
+            {downlineCount > 0 && (
+              <> You've recruited <span className="text-zinc-200">{downlineCount}</span> reseller{downlineCount === 1 ? '' : 's'}, earning{' '}
+              <span className="text-zinc-200">{usd(overrideEarned, cur)}</span> in overrides so far.</>
+            )}
+          </p>
+          <CopyLink link={recruitLink} />
+        </div>
+
         {/* Numbers */}
         <div className="mt-6 grid grid-cols-2 gap-4 md:grid-cols-4">
           <Stat label="Referred merchants" value={String(referredCount)} />
@@ -100,6 +115,12 @@ export default async function PartnerDashboard() {
           <Stat label="Pending payout" value={usd(owed, cur)} highlight />
           <Stat label="Paid out" value={usd(totals.paid, cur)} />
         </div>
+        {(downlineCount > 0 || overrideEarned > 0) && (
+          <div className="mt-4 grid grid-cols-2 gap-4 md:grid-cols-4">
+            <Stat label="Downline resellers" value={String(downlineCount)} />
+            <Stat label="Override earnings" value={usd(overrideEarned, cur)} />
+          </div>
+        )}
         <p className="mt-2 text-xs text-zinc-500">
           Pending payout is everything accrued but not yet paid — {usd(totals.pending, cur)} awaiting the refund
           window plus {usd(totals.approved, cur)} approved and queued for the next payout run.

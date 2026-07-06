@@ -105,6 +105,10 @@ function platformSubdomainSlug(hostname: string): string | null {
 const REF_COOKIE = 'qs_ref';
 const REF_MAX_AGE = 60 * 60 * 24 * 90; // 90 days
 
+// hub recruit link (?hub=<code>) → sets a reseller's upline when they join
+const HUB_COOKIE = 'qs_hub';
+const HUB_MAX_AGE = 60 * 60 * 24 * 90; // 90 days
+
 const ORG_COOKIE = 'qs_org_slug';
 const ORG_MAX_AGE = 60 * 60; // 1 hour
 const ORG_SLUG_RE = /^[a-z0-9][a-z0-9-]{1,63}$/i;
@@ -118,6 +122,10 @@ export async function middleware(req: NextRequest) {
   // --- capture ?ref=... (affiliates) ---
   const ref = searchParams.get('ref')?.trim();
   const wantsRefCookie = !!ref && ref.length <= 64;
+
+  // --- capture ?hub=... (hub recruits a reseller) ---
+  const hub = searchParams.get('hub')?.trim();
+  const wantsHubCookie = !!hub && hub.length <= 64;
 
   // --- dev toggle: ?org=<slug> to override org; ?org=clear to remove ---
   const orgParam = searchParams.get('org')?.trim().toLowerCase() || null;
@@ -136,6 +144,18 @@ export async function middleware(req: NextRequest) {
         maxAge: REF_MAX_AGE,
       });
       res.headers.set('x-qsites-ref', ref!);
+    }
+
+    if (wantsHubCookie) {
+      res.cookies.set({
+        name: HUB_COOKIE,
+        value: hub!,
+        httpOnly: false,
+        sameSite: 'lax',
+        secure: COOKIE_SECURE,
+        path: '/',
+        maxAge: HUB_MAX_AGE,
+      });
     }
 
     if (wantsOrgSet) {

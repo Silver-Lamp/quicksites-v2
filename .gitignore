@@ -64,3 +64,8 @@ get-pip.py
 
 # Supabase CLI temp
 supabase/.temp/
+
+# CedarSites listing-import operator working files (contain claim tokens — never commit)
+leads*.json
+*-results.json
+*-qr/

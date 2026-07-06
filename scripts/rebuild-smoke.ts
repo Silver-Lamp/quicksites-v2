@@ -93,6 +93,8 @@ async function main() {
     about: spec.about,
     services: spec.services,
     faqs: spec.faqs,
+    contact: spec.contact ?? null,
+    hours: spec.hours ?? null,
   });
   if (spec.menu?.sections?.length) {
     hr('2b) EXTRACTED MENU');
@@ -108,6 +110,7 @@ async function main() {
   const tpl = buildRebuildTemplate({ spec, heroImage: scraped.heroImage, sourceUrl: scraped.finalUrl });
   const blocks: any[] = tpl.data?.pages?.[0]?.blocks ?? [];
   const menuBlock = blocks.find((b) => b?.type === 'menu');
+  const locBlock = blocks.find((b) => b?.type === 'location');
   console.log({
     template_name: tpl.template_name,
     slug: tpl.slug,
@@ -118,6 +121,9 @@ async function main() {
     heroImage: blocks[0]?.content?.image_url ?? null,
     menuSections: menuBlock
       ? (menuBlock.content?.sections ?? []).map((s: any) => `${s.name} (${s.items?.length ?? 0})`)
+      : null,
+    location: locBlock
+      ? { address: locBlock.content?.address, phone: locBlock.content?.phone }
       : null,
     services: tpl.data?.services,
   });

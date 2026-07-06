@@ -10,7 +10,7 @@
 
 jest.mock('@/lib/ai/meter', () => ({ meterLLMCall: jest.fn() }));
 
-import { parseMenu } from '@/lib/rebuild/inferSiteSpec';
+import { parseMenu, parseContact, parseHours } from '@/lib/rebuild/inferSiteSpec';
 
 describe('parseMenu', () => {
   it('parses sections + items with optional description/price', () => {
@@ -49,5 +49,56 @@ describe('parseMenu', () => {
     expect(parseMenu({})).toBeUndefined();
     expect(parseMenu({ sections: [] })).toBeUndefined();
     expect(parseMenu({ sections: [{ name: 'X', items: [] }] })).toBeUndefined();
+  });
+});
+
+describe('parseContact', () => {
+  it('keeps found fields and validates email', () => {
+    expect(parseContact({ phone: '425-271-1817', address: '16341 Renton Rd', email: 'a@b.com' })).toEqual({
+      phone: '425-271-1817',
+      address: '16341 Renton Rd',
+      email: 'a@b.com',
+    });
+  });
+
+  it('drops an invalid email but keeps phone/address', () => {
+    expect(parseContact({ phone: '555', email: 'not-an-email' })).toEqual({ phone: '555' });
+  });
+
+  it('returns undefined when nothing usable is present', () => {
+    expect(parseContact(undefined)).toBeUndefined();
+    expect(parseContact({})).toBeUndefined();
+    expect(parseContact({ phone: '   ' })).toBeUndefined();
+  });
+});
+
+describe('parseHours', () => {
+  it('validates day keys + HH:MM and preserves closed days', () => {
+    expect(
+      parseHours([
+        { day: 'mon', open: '08:00', close: '21:00' },
+        { day: 'sun', closed: true },
+      ]),
+    ).toEqual([
+      { day: 'mon', open: '08:00', close: '21:00' },
+      { day: 'sun', closed: true },
+    ]);
+  });
+
+  it('drops bad days, bad times, and duplicate days', () => {
+    expect(
+      parseHours([
+        { day: 'funday', open: '08:00', close: '21:00' }, // bad day
+        { day: 'tue', open: '25:00', close: '21:00' }, // bad time
+        { day: 'wed', open: '08:00', close: '17:00' },
+        { day: 'wed', open: '09:00', close: '18:00' }, // duplicate → dropped
+      ]),
+    ).toEqual([{ day: 'wed', open: '08:00', close: '17:00' }]);
+  });
+
+  it('returns undefined when not an array or nothing usable', () => {
+    expect(parseHours(undefined)).toBeUndefined();
+    expect(parseHours('mon 9-5' as any)).toBeUndefined();
+    expect(parseHours([{ day: 'xx' }])).toBeUndefined();
   });
 });

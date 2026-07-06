@@ -14,6 +14,8 @@ import CartPageClient from '@/components/cart/CartPageClient';
 import CheckoutPageClient from '@/components/cart/CheckoutPageClient';
 import ThankYouPageClient from '@/components/cart/ThankYouPageClient';
 import PreviewWatermark from '@/components/sites/preview-watermark';
+import MenuClaimBar from '@/components/sites/menu-claim-bar';
+import { mintSiteClaimToken } from '@/lib/auth/siteClaimToken';
 
 /* -------------------- Types -------------------- */
 type SiteRow = {
@@ -189,10 +191,12 @@ async function loadSnapshotDataById(id: string): Promise<any | null> {
 }
 
 /** For draft fallback when admin views unpublished site */
-async function loadDraftTemplate(templateId: string): Promise<{ data: any; siteFields: any } | null> {
+async function loadDraftTemplate(
+  templateId: string,
+): Promise<{ data: any; siteFields: any; claimSource: string | null } | null> {
   const { data, error } = await supabaseAdmin
     .from('templates')
-    .select('id, slug, template_name, data, header_block, footer_block, color_mode, domain')
+    .select('id, slug, template_name, data, header_block, footer_block, color_mode, domain, claim_source')
     .eq('id', templateId)
     .maybeSingle();
   if (error) {
@@ -212,6 +216,7 @@ async function loadDraftTemplate(templateId: string): Promise<{ data: any; siteF
       domain: (data as any).domain ?? d?.meta?.domain ?? null,
       default_subdomain: null,
     },
+    claimSource: (data as any)?.claim_source ?? null,
   };
 }
 
@@ -309,6 +314,7 @@ export default async function SitePreviewPage({
   // works pre-claim) — the latter renders with a "not published yet" watermark.
   let normalized: RenderSite | null = null;
   let isDraft = false;
+  let claimSource: string | null = null;
 
   if (siteRow.published_snapshot_id) {
     const snapData = await loadSnapshotDataById(siteRow.published_snapshot_id);
@@ -327,6 +333,7 @@ export default async function SitePreviewPage({
     if (draft?.data) {
       normalized = normalizeForRenderer(draft.data, draft.siteFields);
       isDraft = true;
+      claimSource = draft.claimSource;
     }
   }
 
@@ -339,6 +346,10 @@ export default async function SitePreviewPage({
   // Watermark only the public draft on the menu surface; a claimed+published site
   // (published_snapshot_id present) renders clean and indexable.
   const showWatermark = isDraft && menuHost;
+  // Show the "claim your site" bar only for a still-claimable outreach draft on the
+  // menu surface — mirrors the gate the claim page itself enforces.
+  const showClaimBar = isDraft && menuHost && claimSource === 'listing_import';
+  const claimToken = showClaimBar ? mintSiteClaimToken(siteRow.id) : null;
 
   return (
     <TemplateEditorProvider
@@ -355,6 +366,7 @@ export default async function SitePreviewPage({
         className="bg-background text-foreground"
       />
       {showWatermark && <PreviewWatermark />}
+      {showClaimBar && claimToken && <MenuClaimBar templateId={siteRow.id} token={claimToken} />}
     </TemplateEditorProvider>
   );
 }

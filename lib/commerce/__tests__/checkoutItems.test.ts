@@ -48,6 +48,69 @@ describe('authorizeCheckoutItems', () => {
     expect(res.badItemId).toBe('ghost');
   });
 
+  it('adds selected add-on prices to the unit amount (server-priced by id)', () => {
+    const res = authorizeCheckoutItems({
+      merchantId: M,
+      requested: [{ catalogItemId: 'ci-1', quantity: 1, addonIds: ['cheese', 'bacon'] }],
+      catalogRows: [
+        row({
+          metadata: {
+            addons: [
+              { id: 'cheese', label: 'Extra cheese', price_cents: 100 },
+              { id: 'bacon', label: 'Bacon', price_cents: 200 },
+              { id: 'avo', label: 'Avocado', price_cents: 250 },
+            ],
+          },
+        }),
+      ],
+    });
+    expect(res.ok).toBe(true);
+    if (!res.ok) return;
+    expect(res.items[0].unitAmount).toBe(5300); // 5000 base + 100 + 200
+    expect((res.items[0].metadata as any).addon_ids).toEqual(['cheese', 'bacon']);
+    expect(res.items[0].title).toContain('Extra cheese');
+  });
+
+  it('adds add-ons on top of the selected variant price', () => {
+    const res = authorizeCheckoutItems({
+      merchantId: M,
+      requested: [{ catalogItemId: 'ci-1', quantity: 1, variantId: 'lg', addonIds: ['cheese'] }],
+      catalogRows: [
+        row({
+          price_cents: 800,
+          metadata: {
+            variants: [{ id: 'lg', label: 'Large', price_cents: 1200, status: 'active' }],
+            addons: [{ id: 'cheese', label: 'Extra cheese', price_cents: 150 }],
+          },
+        }),
+      ],
+    });
+    expect(res.ok).toBe(true);
+    if (!res.ok) return;
+    expect(res.items[0].unitAmount).toBe(1350); // 1200 variant + 150 add-on (not the 800 base)
+  });
+
+  it('rejects an unknown add-on id (tamper guard)', () => {
+    const res = authorizeCheckoutItems({
+      merchantId: M,
+      requested: [{ catalogItemId: 'ci-1', quantity: 1, addonIds: ['not-a-real-addon'] }],
+      catalogRows: [row({ metadata: { addons: [{ id: 'cheese', label: 'Extra cheese', price_cents: 100 }] } })],
+    });
+    expect(res.ok).toBe(false);
+  });
+
+  it('is unchanged when no add-ons are requested', () => {
+    const res = authorizeCheckoutItems({
+      merchantId: M,
+      requested: [{ catalogItemId: 'ci-1', quantity: 1 }],
+      catalogRows: [row({ metadata: { addons: [{ id: 'cheese', label: 'Extra cheese', price_cents: 100 }] } })],
+    });
+    expect(res.ok).toBe(true);
+    if (!res.ok) return;
+    expect(res.items[0].unitAmount).toBe(5000);
+    expect((res.items[0].metadata as any).addon_ids).toBeUndefined();
+  });
+
   it('rejects an item belonging to a different merchant (cross-store tampering)', () => {
     const res = authorizeCheckoutItems({
       merchantId: M,

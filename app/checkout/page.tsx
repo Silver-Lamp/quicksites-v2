@@ -32,6 +32,7 @@ export default function CheckoutPage() {
           items: items.map((it) => ({
             catalogItemId: it.catalog_item_id ?? it.id,
             variantId: it.variant_id ?? undefined,
+            addonIds: it.addon_ids ?? undefined,
             title: it.title,
             quantity: it.qty,
             unitAmount: it.price_cents,

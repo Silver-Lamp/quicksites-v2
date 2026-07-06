@@ -13,6 +13,7 @@ import { generatePageMetadata } from '@/lib/seo/generateMetadata';
 import CartPageClient from '@/components/cart/CartPageClient';
 import CheckoutPageClient from '@/components/cart/CheckoutPageClient';
 import ThankYouPageClient from '@/components/cart/ThankYouPageClient';
+import PreviewWatermark from '@/components/sites/preview-watermark';
 
 /* -------------------- Types -------------------- */
 type SiteRow = {
@@ -45,6 +46,17 @@ async function originFromHeaders() {
     .replace(/\.$/, '');
   const proto = h.get('x-forwarded-proto') ?? (host.includes('localhost') ? 'http' : 'https');
   return `${proto}://${host}`;
+}
+
+/**
+ * True when this request arrived via the delivered.menu surface (set by middleware).
+ * On that host we serve an unclaimed draft to the public — watermarked + noindex —
+ * so an outreach link works before the restaurant claims it. Every other host keeps
+ * the published-only behavior (draft render stays admin-gated).
+ */
+async function isMenuHostRequest() {
+  const h = await headers();
+  return h.get('x-qsites-menu-host') === '1';
 }
 
 function firstPageSlug(site: { data?: any; pages?: any[] }) {
@@ -234,15 +246,18 @@ export async function generateMetadata({
   } = await supabase.auth.getUser();
   const admin = await isAdminUser(user?.id ?? null);
 
+  const menuHost = await isMenuHostRequest();
   const siteRow = await loadSiteRowBySlugOrTemplate(slug);
   if (!siteRow) return {};
 
   let snapshotData: any | null = null;
+  let isDraft = false;
   if (siteRow.published_snapshot_id) {
     snapshotData = await loadSnapshotDataById(siteRow.published_snapshot_id);
-  } else if (admin && siteRow.template_id) {
+  } else if ((admin || menuHost) && siteRow.template_id) {
     const draft = await loadDraftTemplate(siteRow.template_id);
     snapshotData = draft?.data ?? null;
+    isDraft = !!snapshotData;
   }
   if (!snapshotData) return {};
 
@@ -254,11 +269,13 @@ export async function generateMetadata({
   });
 
   const pageSlug = rest?.[0] ?? firstPageSlug(normalized);
-  return generatePageMetadata({
+  const md = generatePageMetadata({
     site: normalized as any,
     pageSlug,
     baseUrl: `${originFromHeaders()}/sites`,
   });
+  // An unpublished draft served on the menu surface must never be indexed.
+  return isDraft ? { ...md, robots: { index: false, follow: false } } : md;
 }
 
 /* ---------------------- Page ---------------------- */
@@ -282,12 +299,16 @@ export default async function SitePreviewPage({
     data: { user },
   } = await supabase.auth.getUser();
   const admin = await isAdminUser(user?.id ?? null);
+  const menuHost = await isMenuHostRequest();
 
   const siteRow = await loadSiteRowBySlugOrTemplate(slug);
   if (!siteRow) return notFound();
 
-  // Prefer published snapshot, else (admins only) fall back to live draft
+  // Prefer the published snapshot. Otherwise fall back to the live draft for admins
+  // (as before) OR the public on the delivered.menu surface (so an outreach link
+  // works pre-claim) — the latter renders with a "not published yet" watermark.
   let normalized: RenderSite | null = null;
+  let isDraft = false;
 
   if (siteRow.published_snapshot_id) {
     const snapData = await loadSnapshotDataById(siteRow.published_snapshot_id);
@@ -301,10 +322,11 @@ export default async function SitePreviewPage({
     }
   }
 
-  if (!normalized && admin && siteRow.template_id) {
+  if (!normalized && (admin || menuHost) && siteRow.template_id) {
     const draft = await loadDraftTemplate(siteRow.template_id);
     if (draft?.data) {
       normalized = normalizeForRenderer(draft.data, draft.siteFields);
+      isDraft = true;
     }
   }
 
@@ -312,7 +334,11 @@ export default async function SitePreviewPage({
 
   const pageSlug = rest?.[0] ?? firstPageSlug(normalized);
   const colorMode = (normalized.color_mode ?? 'light') as 'light' | 'dark';
-  const baseUrl = `${originFromHeaders()}/sites`;
+  const baseUrl = `${await originFromHeaders()}/sites`;
+
+  // Watermark only the public draft on the menu surface; a claimed+published site
+  // (published_snapshot_id present) renders clean and indexable.
+  const showWatermark = isDraft && menuHost;
 
   return (
     <TemplateEditorProvider
@@ -328,6 +354,7 @@ export default async function SitePreviewPage({
         colorMode={colorMode}
         className="bg-background text-foreground"
       />
+      {showWatermark && <PreviewWatermark />}
     </TemplateEditorProvider>
   );
 }

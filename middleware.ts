@@ -1,6 +1,13 @@
 import type { NextRequest } from 'next/server';
 import { NextResponse } from 'next/server';
 import { GUEST_BUILD_ENABLED } from '@/lib/flags/guestBuild';
+import {
+  menuEnabled,
+  isMenuHost,
+  isMenuApexHost,
+  menuSubdomainSlug,
+  menuPathSlug,
+} from '@/lib/menu/deliveredMenu';
 
 /** Guests (anonymous users) may only reach the template editor under /admin. */
 function isGuestAllowedAdminPath(pathname: string): boolean {
@@ -222,6 +229,48 @@ export async function middleware(req: NextRequest) {
     }
 
     return withCookies(res);
+  }
+
+  // --- delivered.menu restaurant surface ---
+  // Both `<slug>.delivered.menu` and `delivered.menu/<slug>` resolve to /sites/<slug>;
+  // an `x-qsites-menu-host` request header lets the renderer serve an unclaimed draft
+  // (watermarked, noindex) to the public and drop the watermark once published.
+  if (menuEnabled() && isMenuHost(host)) {
+    const menuHeaders = () => {
+      const h = new Headers(req.headers);
+      h.set('x-qsites-menu-host', '1');
+      return h;
+    };
+    const toSite = (slug: string, restPath: string) => {
+      const rewriteUrl = req.nextUrl.clone();
+      rewriteUrl.pathname = `/sites/${slug}${restPath}`;
+      const res = NextResponse.rewrite(rewriteUrl, { request: { headers: menuHeaders() } });
+      res.headers.set('x-qsites-menu-slug', slug);
+      res.headers.set('x-qsites-rewrite', rewriteUrl.pathname + (rewriteUrl.search || ''));
+      return withCookies(res);
+    };
+
+    // Subdomain form: <slug>.delivered.menu/<path> → /sites/<slug>/<path>
+    const subSlug = menuSubdomainSlug(host);
+    if (subSlug) {
+      return toSite(subSlug, pathname === '/' ? '' : pathname);
+    }
+
+    // Apex form: delivered.menu/<slug>/<path> → /sites/<slug>/<path>
+    if (isMenuApexHost(host)) {
+      const slug = menuPathSlug(pathname);
+      if (slug) {
+        const rest = pathname.replace(/^\/[^/]+/, ''); // strip the /<slug> segment
+        return toSite(slug, rest);
+      }
+      // Bare apex root → the restaurants landing; reserved app paths pass through.
+      if (pathname === '/') {
+        const rewriteUrl = req.nextUrl.clone();
+        rewriteUrl.pathname = '/restaurants';
+        return withCookies(NextResponse.rewrite(rewriteUrl));
+      }
+      return withCookies(NextResponse.next());
+    }
   }
 
   // --- Org-level domains ---

@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { createClient } from '@supabase/supabase-js';
 import { getAdminUser } from '@/lib/auth/getAdminUser';
 import { mintSiteClaimToken } from '@/lib/auth/siteClaimToken';
+import { menuSiteUrl } from '@/lib/menu/deliveredMenu';
 import OutreachActions from '@/components/admin/outreach-actions';
 
 export const dynamic = 'force-dynamic';
@@ -100,7 +101,8 @@ export default async function OutreachPage() {
               const items = menuItemCount(r.data);
               const isClaimed = r.claim_source === 'listing_claimed';
               const name = r.business_name || r.template_name || r.slug || r.id.slice(0, 8);
-              const previewPath = `/preview/${encodeURIComponent(r.slug ?? r.id)}`;
+              // delivered.menu URL when the surface is live, else the relative preview.
+              const previewPath = menuSiteUrl(r.slug ?? r.id);
               const claimPath = `/claim-site/${r.id}?token=${encodeURIComponent(mintSiteClaimToken(r.id))}`;
               return (
                 <tr key={r.id} className="align-middle [&>td]:px-4 [&>td]:py-3">

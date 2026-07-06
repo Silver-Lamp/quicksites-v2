@@ -22,6 +22,7 @@
     "check:paths": "tsc --noEmit --traceResolution | grep \"types/supabase\" || true",
     "smoke:rebuild": "tsx scripts/rebuild-smoke.ts",
     "smoke:menu-photo": "tsx scripts/menu-photo-smoke.ts",
+    "smoke:listing": "tsx scripts/listing-smoke.ts",
     "import:listings": "tsx scripts/import-listings-batch.ts",
     "fonts": "ts-node scripts/download-google-fonts.ts",
     "hosts:add": "ts-node scripts/manage-hosts-from-supabase.ts add",

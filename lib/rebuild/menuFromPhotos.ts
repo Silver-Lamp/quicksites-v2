@@ -15,6 +15,56 @@ import { parseMenu, type MenuSectionSpec } from '@/lib/rebuild/inferSiteSpec';
 
 const ROUTE = '/api/import-listing';
 const MAX_IMAGES = 6;
+const MAX_CANDIDATES = 12;
+
+/**
+ * From a listing's photos, pick the ones that are actually MENUS — a cheap low-detail
+ * vision pass so we don't need the operator to hand-supply menu photo URLs, and don't
+ * waste high-detail OCR tokens on storefront/food shots. Returns the menu-image URLs
+ * (empty if none look like menus). Metered.
+ */
+export async function pickMenuPhotos(imageUrls: string[], userId: string | null): Promise<string[]> {
+  const urls = (imageUrls ?? []).filter((u) => typeof u === 'string' && u.trim()).slice(0, MAX_CANDIDATES);
+  if (urls.length <= 1) return urls; // nothing to choose between
+
+  const sys =
+    'You are shown photos from a restaurant listing. Identify which images are MENUS — ' +
+    'a readable list of dishes and/or prices (printed menu, menu board, chalkboard, menu ' +
+    'page). Storefronts, plated food, interiors and people are NOT menus. Return JSON: ' +
+    '{"menu":[<0-based indexes of the menu images>]}. Empty array if none.';
+  const content: any[] = [
+    { type: 'text', text: 'Which of these images are menus? Return their indexes.' },
+    ...urls.map((url) => ({ type: 'image_url', image_url: { url, detail: 'low' } })),
+  ];
+
+  const parsed = await meterLLMCall<any>(
+    { provider: 'openai', model_code: 'gpt-4o', modality: 'chat', user_id: userId, route: ROUTE },
+    async () => {
+      const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+      const r = await openai.chat.completions.create({
+        model: 'gpt-4o',
+        temperature: 0,
+        response_format: { type: 'json_object' },
+        messages: [
+          { role: 'system', content: sys },
+          { role: 'user', content: content as any },
+        ],
+      });
+      let out: any = {};
+      try {
+        out = JSON.parse(r.choices[0]?.message?.content || '{}');
+      } catch {
+        /* keep {} */
+      }
+      return { value: out, usage: { input_tokens: r.usage?.prompt_tokens, output_tokens: r.usage?.completion_tokens } };
+    },
+  );
+
+  const idx = Array.isArray(parsed?.menu) ? parsed.menu : [];
+  return idx
+    .filter((i: unknown) => Number.isInteger(i) && (i as number) >= 0 && (i as number) < urls.length)
+    .map((i: number) => urls[i]);
+}
 
 /**
  * Extract a structured menu from one or more menu images (public URLs or data: URLs
@@ -38,7 +88,7 @@ export async function menuFromPhotos(
 
   const content: any[] = [
     { type: 'text', text: 'Extract the complete menu from these photo(s). Prices as short strings like "$14".' },
-    ...urls.map((url) => ({ type: 'image_url', image_url: { url } })),
+    ...urls.map((url) => ({ type: 'image_url', image_url: { url, detail: 'high' } })),
   ];
 
   const parsed = await meterLLMCall<any>(

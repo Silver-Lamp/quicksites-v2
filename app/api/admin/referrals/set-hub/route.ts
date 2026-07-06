@@ -34,44 +34,50 @@ export async function POST(req: Request) {
   try { body = await req.json(); } catch { return NextResponse.json({ error: 'Invalid body.' }, { status: 400 }); }
 
   const code = String(body?.code || '').trim();
-  const parentCode = body?.parentCode == null ? null : String(body.parentCode).trim();
-  if (!code) return NextResponse.json({ error: 'code (the reseller code) is required.' }, { status: 400 });
-  if (parentCode && parentCode === code) {
-    return NextResponse.json({ error: 'A code cannot be its own hub.' }, { status: 400 });
+  if (!code) return NextResponse.json({ error: 'code is required.' }, { status: 400 });
+
+  const hasParent = Object.prototype.hasOwnProperty.call(body ?? {}, 'parentCode');
+  const hasDefault = body?.defaultOverrideShare != null;
+  if (!hasParent && !hasDefault) {
+    return NextResponse.json({ error: 'Provide parentCode (link a reseller to a hub) and/or defaultOverrideShare (set a hub\'s default rate).' }, { status: 400 });
   }
 
   const db = admin();
+  const { data: subject } = await db.from('referral_codes').select('code').eq('code', code).maybeSingle();
+  if (!subject) return NextResponse.json({ error: `Referral code "${code}" not found.` }, { status: 404 });
 
-  // The reseller code must exist.
-  const { data: reseller } = await db.from('referral_codes').select('code').eq('code', code).maybeSingle();
-  if (!reseller) return NextResponse.json({ error: `Referral code "${code}" not found.` }, { status: 404 });
+  const result: Record<string, any> = { ok: true, code };
 
-  // Unlink: clear the override.
-  if (!parentCode) {
-    const { error } = await db.from('referral_codes').update({ parent_code: null, override_share: 0 }).eq('code', code);
+  // Set a hub's DEFAULT rate — applied to resellers who sign up via its recruit link.
+  if (hasDefault) {
+    const def = clampOverrideShare(Number(body.defaultOverrideShare));
+    const { error } = await db.from('referral_codes').update({ default_override_share: def }).eq('code', code);
     if (error) return NextResponse.json({ error: error.message }, { status: 400 });
-    return NextResponse.json({ ok: true, code, parentCode: null, overrideShare: 0 });
+    result.defaultOverrideShare = def;
   }
 
-  // The hub code must exist too.
-  const { data: hub } = await db.from('referral_codes').select('code').eq('code', parentCode).maybeSingle();
-  if (!hub) return NextResponse.json({ error: `Hub code "${parentCode}" not found.` }, { status: 404 });
+  // Link (or unlink) this reseller code to an upline hub.
+  if (hasParent) {
+    const parentCode = body.parentCode == null ? null : String(body.parentCode).trim();
+    if (parentCode && parentCode === code) {
+      return NextResponse.json({ error: 'A code cannot be its own hub.' }, { status: 400 });
+    }
+    if (!parentCode) {
+      const { error } = await db.from('referral_codes').update({ parent_code: null, override_share: 0 }).eq('code', code);
+      if (error) return NextResponse.json({ error: error.message }, { status: 400 });
+      result.parentCode = null;
+      result.overrideShare = 0;
+    } else {
+      const { data: hub } = await db.from('referral_codes').select('code').eq('code', parentCode).maybeSingle();
+      if (!hub) return NextResponse.json({ error: `Hub code "${parentCode}" not found.` }, { status: 404 });
+      const overrideShare = clampOverrideShare(Number(body?.overrideShare));
+      const { error } = await db.from('referral_codes').update({ parent_code: parentCode, override_share: overrideShare }).eq('code', code);
+      if (error) return NextResponse.json({ error: error.message }, { status: 400 });
+      result.parentCode = parentCode;
+      result.overrideShare = overrideShare;
+      result.note = `${parentCode} now earns ${(overrideShare * 100).toFixed(1)}% of ${code}'s order fees, lifetime (max ${Math.round(QS_FEE_SHARE * 100)}%).`;
+    }
+  }
 
-  const overrideShare = clampOverrideShare(Number(body?.overrideShare));
-  const { error } = await db
-    .from('referral_codes')
-    .update({ parent_code: parentCode, override_share: overrideShare })
-    .eq('code', code);
-  if (error) return NextResponse.json({ error: error.message }, { status: 400 });
-
-  return NextResponse.json({
-    ok: true,
-    code,
-    parentCode,
-    overrideShare,
-    note:
-      overrideShare < Number(body?.overrideShare)
-        ? `Clamped to the max ${Math.round(QS_FEE_SHARE * 100)}% (the override comes out of QuickSites' share).`
-        : `${parentCode} now earns ${(overrideShare * 100).toFixed(1)}% of ${code}'s order fees, lifetime.`,
-  });
+  return NextResponse.json(result);
 }

@@ -288,12 +288,23 @@ const FooterContent = z.preprocess((raw) => {
 // freeform display strings (scraped/AI menu prices are messy — "$14", "MP", "14/18"),
 // while `catalog_item_id` + `price_cents` are the optional ordering linkage (set when
 // a menu item is wired to a catalog_item so "Add to order" can hit checkout).
+// A "choose one" option (Small/Large, 6pc/12pc, Half/Full). Each carries its own
+// price; `variant_id` is the ordering linkage (set when published to a catalog item's
+// variants) so "Add to order" can pick the right priced SKU.
+export const MenuItemOptionSchema = z.object({
+  label: z.string(),
+  price: z.string().optional().default(''),
+  price_cents: z.number().int().min(0).optional(),
+  variant_id: z.string().optional(),
+});
+
 export const MenuItemSchema = z.object({
   name: z.string().min(1),
   description: z.string().optional().default(''),
   price: z.string().optional().default(''),
   image_url: z.string().optional().default(''),
   tags: z.array(z.string()).optional().default([]),
+  options: z.array(MenuItemOptionSchema).optional().default([]),
   catalog_item_id: z.string().optional(),
   price_cents: z.number().int().min(0).optional(),
 });

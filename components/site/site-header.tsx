@@ -39,6 +39,7 @@ type Props = {
 
 const DEFAULT_LINKS: LinkItem[] = [
   { label: 'Features', href: '/features' },
+  { label: 'Restaurants', href: '/restaurants' },
   { label: 'Partners', href: '/partners' },
   { label: 'Pricing', href: '/pricing' },
   { label: 'Book', href: '/book' },

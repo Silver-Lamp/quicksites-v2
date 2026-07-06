@@ -86,6 +86,21 @@ describe('buildCatalogRowsFromMenu', () => {
     ]);
   });
 
+  it('builds add-ons with unique ids (free add-ons allowed)', () => {
+    const rows = buildCatalogRowsFromMenu([
+      { name: 'Mains', items: [
+        { name: 'Burger', price_cents: 1400, addons: [
+          { label: 'Extra cheese', price_cents: 100 },
+          { label: 'No onions' }, // free add-on (no price) → 0
+        ] },
+      ] },
+    ]);
+    expect(rows[0].addons).toEqual([
+      { id: 'extra-cheese', label: 'Extra cheese', price_cents: 100 },
+      { id: 'no-onions', label: 'No onions', price_cents: 0 },
+    ]);
+  });
+
   it('carries an item image_url through to the row', () => {
     const rows = buildCatalogRowsFromMenu([
       { name: 'Mains', items: [{ name: 'Steak', price_cents: 2500, image_url: 'https://x/steak.jpg' }] },
@@ -146,5 +161,13 @@ describe('applyCatalogLinks', () => {
       { label: 'Large', variant_id: 'v_l', price_cents: 1200 },
     ]);
     expect(out.sections[0].items[0].catalog_item_id).toBe('cat_1');
+  });
+
+  it('replaces item add-ons with the published set (stable ids for the renderer)', () => {
+    const content = { sections: [{ name: 'Mains', items: [{ name: 'Burger', addons: [{ label: 'Extra cheese' }] }] }] };
+    const out = applyCatalogLinks(content, [
+      { section: 'Mains', name: 'Burger', catalog_item_id: 'cat_1', price_cents: 1400, addons: [{ id: 'extra-cheese', label: 'Extra cheese', price_cents: 100 }] },
+    ]);
+    expect(out.sections[0].items[0].addons).toEqual([{ id: 'extra-cheese', label: 'Extra cheese', price_cents: 100 }]);
   });
 });

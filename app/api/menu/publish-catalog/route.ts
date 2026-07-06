@@ -81,6 +81,7 @@ export async function POST(req: Request) {
   const items: {
     section: string; name: string; slug: string; catalog_item_id: string; price_cents: number;
     variants?: { label: string; variant_id: string; price_cents: number }[];
+    addons?: { id: string; label: string; price_cents: number }[];
   }[] = [];
   for (const r of rows) {
     // "Choose one" options → catalog variants (flat SKUs; base price = cheapest).
@@ -93,6 +94,7 @@ export async function POST(req: Request) {
     const itemPrice = norm ? norm.basePriceCents : r.price_cents;
     const metadata: Record<string, any> = { site_slug: siteSlug || null, category: r.section || null };
     if (norm) { metadata.variants = norm.variants; metadata.variant_options = norm.variant_options; }
+    if (r.addons?.length) metadata.addons = r.addons;
     const respVariants = norm
       ? norm.variants.map((v) => ({ label: v.label, variant_id: v.id, price_cents: v.price_cents }))
       : undefined;
@@ -111,7 +113,7 @@ export async function POST(req: Request) {
         .update({ title: r.name, description: r.description || null, price_cents: itemPrice, status: 'active', metadata, ...(images.length ? { images } : {}) })
         .eq('id', existing.id);
       if (error) return NextResponse.json({ error: error.message }, { status: 400 });
-      items.push({ section: r.section, name: r.name, slug: r.slug, catalog_item_id: existing.id as string, price_cents: itemPrice, ...(respVariants ? { variants: respVariants } : {}) });
+      items.push({ section: r.section, name: r.name, slug: r.slug, catalog_item_id: existing.id as string, price_cents: itemPrice, ...(respVariants ? { variants: respVariants } : {}), ...(r.addons?.length ? { addons: r.addons } : {}) });
     } else {
       const { data: created, error } = await admin
         .from('catalog_items')
@@ -129,7 +131,7 @@ export async function POST(req: Request) {
         .select('id')
         .single();
       if (error || !created) return NextResponse.json({ error: error?.message || 'Could not create an item.' }, { status: 400 });
-      items.push({ section: r.section, name: r.name, slug: r.slug, catalog_item_id: created.id as string, price_cents: itemPrice, ...(respVariants ? { variants: respVariants } : {}) });
+      items.push({ section: r.section, name: r.name, slug: r.slug, catalog_item_id: created.id as string, price_cents: itemPrice, ...(respVariants ? { variants: respVariants } : {}), ...(r.addons?.length ? { addons: r.addons } : {}) });
     }
   }
 

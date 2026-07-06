@@ -298,6 +298,15 @@ export const MenuItemOptionSchema = z.object({
   variant_id: z.string().optional(),
 });
 
+// A multi-select add-on (extra cheese, bacon, no onions). `id` is the ordering
+// linkage (set when published to the catalog item's metadata.addons).
+export const MenuItemAddonSchema = z.object({
+  id: z.string().optional(),
+  label: z.string(),
+  price: z.string().optional().default(''),
+  price_cents: z.number().int().min(0).optional(),
+});
+
 export const MenuItemSchema = z.object({
   name: z.string().min(1),
   description: z.string().optional().default(''),
@@ -305,6 +314,7 @@ export const MenuItemSchema = z.object({
   image_url: z.string().optional().default(''),
   tags: z.array(z.string()).optional().default([]),
   options: z.array(MenuItemOptionSchema).optional().default([]),
+  addons: z.array(MenuItemAddonSchema).optional().default([]),
   catalog_item_id: z.string().optional(),
   price_cents: z.number().int().min(0).optional(),
 });

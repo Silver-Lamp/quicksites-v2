@@ -4,6 +4,7 @@ import { cookies } from 'next/headers';
 import { createServerClient } from '@supabase/ssr';
 import { captureSignupIfNew } from '@/lib/analytics/funnel';
 import { claimPendingGuestDraft } from '@/lib/auth/claimGuestDraft';
+import { claimPendingSiteDraft } from '@/lib/auth/claimPendingSiteDraft';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -41,6 +42,7 @@ export async function POST(req: NextRequest) {
   // If a guest handed off a draft before logging in, transfer it now (before the
   // client redirects to the editor), so they land owning their work.
   await claimPendingGuestDraft(data.user, store);
+  await claimPendingSiteDraft(data.user, store);
 
   return NextResponse.json({ ok: true }, { headers: { 'cache-control': 'no-store' } });
 }

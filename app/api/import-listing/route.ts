@@ -15,6 +15,7 @@ import { getAdminUser } from '@/lib/auth/getAdminUser';
 import { fetchGooglePlace, findPlace, buildSpecFromListing, ListingImportError, type Listing } from '@/lib/rebuild/importListing';
 import { menuFromPhotos } from '@/lib/rebuild/menuFromPhotos';
 import { buildRebuildTemplate } from '@/lib/rebuild/assembleDraft';
+import { mintSiteClaimToken } from '@/lib/auth/siteClaimToken';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -112,11 +113,14 @@ export async function POST(req: Request) {
   }
 
   const menuItemCount = (menu?.sections ?? []).reduce((n, s) => n + s.items.length, 0);
+  const claimToken = mintSiteClaimToken(insertedId);
   return NextResponse.json({
     ok: true,
     id: insertedId,
     slug,
     editorUrl: `/admin/templates/${insertedId}`,
+    previewUrl: `/preview/${slug}`,
+    claimUrl: `/claim-site/${insertedId}?token=${encodeURIComponent(claimToken)}`,
     summary: {
       businessName: spec.businessName,
       phone: spec.contact?.phone ?? null,

@@ -4,6 +4,7 @@ import { cookies } from 'next/headers';
 import { createServerClient } from '@supabase/ssr';
 import { captureSignupIfNew } from '@/lib/analytics/funnel';
 import { claimPendingGuestDraft } from '@/lib/auth/claimGuestDraft';
+import { claimPendingSiteDraft } from '@/lib/auth/claimPendingSiteDraft';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -42,6 +43,8 @@ export async function GET(req: NextRequest) {
     try { await captureSignupIfNew(data.user); } catch {}
     // Transfer a handed-off guest draft into this account before redirecting.
     await claimPendingGuestDraft(data.user, store);
+    // Transfer an operator-assembled outreach draft (CedarSites) if one was armed.
+    await claimPendingSiteDraft(data.user, store);
     return NextResponse.redirect(new URL(next, url.origin));
   }
 

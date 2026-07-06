@@ -25,6 +25,7 @@ export type ScrapedSite = {
   description: string | null;
   headings: string[]; // h1/h2 text, de-duped, in document order
   navLabels: string[]; // nav/header link text — strong hint at services/pages
+  links: { label: string; href: string }[]; // all in-page links (absolute) — used to find menu subpages
   bodyText: string; // cleaned visible text, truncated (the AI's main input)
   heroImage: string | null; // absolute URL, best-effort
   images: string[]; // other prominent absolute image URLs
@@ -197,6 +198,20 @@ export function parseHtml(html: string, sourceUrl: string, finalUrl: string): Sc
     }
   });
 
+  // All in-page links (absolute, deduped) — the raw material for finding menu
+  // subpages (restaurant menus usually live on /menus/breakfast etc.).
+  const links: { label: string; href: string }[] = [];
+  const seenL = new Set<string>();
+  $('a[href]').each((_, el) => {
+    if (links.length >= 80) return;
+    const label = collapse($(el).text());
+    const href = absolutize($(el).attr('href'), base);
+    if (!href || !label || label.length > 60) return;
+    if (seenL.has(href)) return;
+    seenL.add(href);
+    links.push({ label, href });
+  });
+
   // Body text — drop non-content nodes, collapse whitespace, truncate.
   $('script, style, noscript, svg, template, iframe').remove();
   const bodyText = collapse($('body').text()).slice(0, MAX_BODY_CHARS);
@@ -226,6 +241,7 @@ export function parseHtml(html: string, sourceUrl: string, finalUrl: string): Sc
     description,
     headings: headings.slice(0, 12),
     navLabels: navLabels.slice(0, 16),
+    links: links.slice(0, 80),
     bodyText,
     heroImage: heroImage ?? (images[0] ?? null),
     images: images.slice(0, 8),
@@ -268,6 +284,68 @@ function absolutize(src: string | null | undefined, base: URL | null): string | 
   } catch {
     return null;
   }
+}
+
+/** Links whose label or path smells like a menu / food section. */
+const MENU_LINK_RE =
+  /menu|breakfast|brunch|lunch|dinner|dessert|drink|wine|beer|cocktail|food|pizza|entree|entrée|appetizer|starter|special|catering/i;
+
+export type MenuPage = { label: string; text: string };
+
+/**
+ * Follow up to `maxPages` same-origin menu/food links from a scraped page and
+ * return their visible text, so the AI can reconstruct the actual menu (which
+ * usually lives on subpages, not the homepage). SSRF-guarded + capped like the
+ * primary scrape; best-effort (a failed subpage is skipped, never thrown).
+ */
+export async function scrapeMenuPages(
+  scraped: ScrapedSite,
+  fetchImpl: typeof fetch = fetch,
+  maxPages = 6,
+): Promise<MenuPage[]> {
+  const base = safeUrl(scraped.finalUrl) ?? safeUrl(scraped.sourceUrl);
+  if (!base) return [];
+  const baseHost = base.hostname.replace(/^www\./, '');
+
+  const seenPath = new Set<string>([base.pathname.toLowerCase(), '/']);
+  const candidates = scraped.links.filter((l) => {
+    let u: URL;
+    try { u = new URL(l.href); } catch { return false; }
+    if (u.hostname.replace(/^www\./, '') !== baseHost) return false; // same-origin only
+    if (!MENU_LINK_RE.test(l.label) && !MENU_LINK_RE.test(u.pathname)) return false;
+    const key = u.pathname.toLowerCase();
+    if (seenPath.has(key)) return false;
+    seenPath.add(key);
+    return true;
+  }).slice(0, maxPages);
+
+  const out: MenuPage[] = [];
+  for (const c of candidates) {
+    try {
+      const u = assertPublicHttpUrl(c.href);
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+      let res: Response;
+      try {
+        res = await fetchImpl(u.toString(), {
+          redirect: 'follow',
+          signal: controller.signal,
+          headers: { 'user-agent': UA, accept: 'text/html,application/xhtml+xml' },
+        });
+      } finally {
+        clearTimeout(timer);
+      }
+      if (!res.ok) continue;
+      const ctype = res.headers.get('content-type') || '';
+      if (ctype && !/text\/html|application\/xhtml/i.test(ctype)) continue;
+      const html = await readCapped(res, MAX_BYTES);
+      const page = parseHtml(html, c.href, res.url || c.href);
+      if (page.bodyText) out.push({ label: c.label, text: page.bodyText });
+    } catch {
+      continue; // skip a bad subpage
+    }
+  }
+  return out;
 }
 
 function normalizeHex(v: string | null | undefined): string | null {

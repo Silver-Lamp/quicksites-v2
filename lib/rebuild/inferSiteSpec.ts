@@ -13,9 +13,12 @@
 import OpenAI from 'openai';
 import { meterLLMCall } from '@/lib/ai/meter';
 import { LABEL_TO_KEY, KEY_TO_LABEL, type IndustryKey } from '@/lib/industries';
-import type { ScrapedSite } from '@/lib/rebuild/scrapeSite';
+import type { ScrapedSite, MenuPage } from '@/lib/rebuild/scrapeSite';
 
 const ROUTE = '/api/rebuild';
+
+export type MenuItemSpec = { name: string; description?: string; price?: string };
+export type MenuSectionSpec = { name: string; items: MenuItemSpec[] };
 
 export type RebuildSpec = {
   businessName: string;
@@ -26,11 +29,19 @@ export type RebuildSpec = {
   about: string;
   services: string[];
   faqs: { q: string; a: string }[];
+  menu?: { sections: MenuSectionSpec[] };
 };
 
-/** Infer a full QuickSites draft spec from scraped site signals (one metered call). */
-export async function inferSiteSpec(scraped: ScrapedSite, userId: string | null): Promise<RebuildSpec> {
+/** Infer a full QuickSites draft spec from scraped site signals (one metered call).
+ *  `menuPages` (from scrapeMenuPages) lets the model reconstruct a real restaurant
+ *  menu; it's ignored for non-food businesses. */
+export async function inferSiteSpec(
+  scraped: ScrapedSite,
+  userId: string | null,
+  menuPages: MenuPage[] = [],
+): Promise<RebuildSpec> {
   const knownLabels = Object.values(KEY_TO_LABEL).join(', ');
+  const hasMenuPages = menuPages.length > 0;
 
   const sys =
     'You are rebuilding a small business website. From the scraped signals of their ' +
@@ -40,7 +51,18 @@ export async function inferSiteSpec(scraped: ScrapedSite, userId: string | null)
     'else a concise 1-3 word label), headline (<=8 words), subheadline (<=18 words), ' +
     'about (2-3 sentences), services (array of 5 short service names), ' +
     'faqs (array of 3 objects {q,a}). ' +
+    'If this is a restaurant/cafe/bar/bakery or any food business AND menu content is ' +
+    'provided below, ALSO return menu: an object with sections (array of ' +
+    '{name, items:[{name, description, price}]}). Use the real dish names and prices ' +
+    'from the MENU PAGES; keep price as a short display string (e.g. "$14"); group into ' +
+    'sensible sections (Breakfast, Lunch, Dinner, Drinks, …). Omit menu entirely if this ' +
+    'is not a food business or no menu items are present. ' +
     `Known industry labels: ${knownLabels}.`;
+
+  const menuBlock = hasMenuPages
+    ? '\n\nMENU PAGES (extract the menu from these):\n' +
+      menuPages.map((p) => `## ${p.label}\n${p.text.slice(0, 2500)}`).join('\n\n')
+    : '';
 
   const user = [
     scraped.businessName ? `Current name/title: ${scraped.businessName}` : null,
@@ -51,7 +73,7 @@ export async function inferSiteSpec(scraped: ScrapedSite, userId: string | null)
     `Source URL: ${scraped.sourceUrl}`,
   ]
     .filter(Boolean)
-    .join('\n');
+    .join('\n') + menuBlock;
 
   const fallbackName = scraped.businessName || hostFromUrl(scraped.sourceUrl) || 'Your Business';
 
@@ -93,6 +115,7 @@ export async function inferSiteSpec(scraped: ScrapedSite, userId: string | null)
               .filter((f: { q: string }) => f.q)
               .slice(0, 3)
           : [],
+        menu: parseMenu(parsed.menu),
       };
 
       return {
@@ -101,6 +124,27 @@ export async function inferSiteSpec(scraped: ScrapedSite, userId: string | null)
       };
     },
   );
+}
+
+/** Coerce the model's `menu` into a clean {sections:[{name,items:[…]}]} or undefined.
+ *  Drops empty sections/items so a half-hallucinated menu never reaches the block. */
+export function parseMenu(raw: any): { sections: MenuSectionSpec[] } | undefined {
+  const rawSections = Array.isArray(raw?.sections) ? raw.sections : Array.isArray(raw) ? raw : [];
+  const sections: MenuSectionSpec[] = [];
+  for (const s of rawSections.slice(0, 12)) {
+    const name = String(s?.name ?? '').trim().slice(0, 60);
+    const rawItems = Array.isArray(s?.items) ? s.items : [];
+    const items: MenuItemSpec[] = [];
+    for (const it of rawItems.slice(0, 40)) {
+      const itemName = String(it?.name ?? '').trim().slice(0, 120);
+      if (!itemName) continue;
+      const description = String(it?.description ?? '').trim().slice(0, 300);
+      const price = String(it?.price ?? '').trim().slice(0, 24);
+      items.push({ name: itemName, ...(description ? { description } : {}), ...(price ? { price } : {}) });
+    }
+    if (name && items.length) sections.push({ name, items });
+  }
+  return sections.length ? { sections } : undefined;
 }
 
 /** Map a free-text industry label onto a known IndustryKey, defaulting to 'other'. */

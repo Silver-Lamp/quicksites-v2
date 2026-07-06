@@ -12,6 +12,7 @@ import {
   assertPublicHttpUrl,
   cleanBusinessName,
   parseHtml,
+  scrapeMenuPages,
   ScrapeError,
 } from '@/lib/rebuild/scrapeSite';
 
@@ -124,5 +125,49 @@ describe('parseHtml', () => {
 
   it('normalizes the theme-color to a lowercase hex', () => {
     expect(out.accentColor).toBe('#f59e0b');
+  });
+
+  it('collects in-page links (label + absolute href)', () => {
+    expect(out.links).toEqual(
+      expect.arrayContaining([
+        { label: 'Menu', href: 'https://sunrise.example.com/menu' },
+        { label: 'Catering', href: 'https://sunrise.example.com/catering' },
+      ]),
+    );
+  });
+});
+
+describe('scrapeMenuPages', () => {
+  const scraped: any = {
+    sourceUrl: 'https://cafe.example.com/',
+    finalUrl: 'https://cafe.example.com/',
+    links: [
+      { label: 'Home', href: 'https://cafe.example.com/' },
+      { label: 'Breakfast', href: 'https://cafe.example.com/menus/breakfast' },
+      { label: 'Lunch', href: 'https://cafe.example.com/menus/lunch' },
+      { label: 'Facebook', href: 'https://facebook.com/cafe' }, // cross-origin → skip
+      { label: 'About Us', href: 'https://cafe.example.com/about' }, // not menu-ish → skip
+    ],
+  };
+
+  const fakeFetch = async (url: string) =>
+    ({
+      ok: true,
+      status: 200,
+      url,
+      headers: { get: () => 'text/html' },
+      body: null,
+      text: async () => `<html><body><h1>Menu</h1><p>Pancakes $10. Eggs $8.</p></body></html>`,
+    }) as any;
+
+  it('follows only same-origin, menu-like links and returns their text', async () => {
+    const pages = await scrapeMenuPages(scraped, fakeFetch as any, 6);
+    expect(pages.map((p) => p.label).sort()).toEqual(['Breakfast', 'Lunch']);
+    expect(pages[0].text).toContain('Pancakes');
+  });
+
+  it('respects the maxPages cap', async () => {
+    const pages = await scrapeMenuPages(scraped, fakeFetch as any, 1);
+    expect(pages).toHaveLength(1);
   });
 });

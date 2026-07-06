@@ -9,6 +9,7 @@ import * as React from 'react';
 // an "Add" button wired to the shared cart event (qs:cart:add), same as products_grid.
 
 type MenuOption = { label: string; price?: string; price_cents?: number; variant_id?: string };
+type MenuAddon = { id?: string; label: string; price_cents?: number };
 type MenuItem = {
   name: string;
   description?: string;
@@ -16,6 +17,7 @@ type MenuItem = {
   image_url?: string;
   tags?: string[];
   options?: MenuOption[];
+  addons?: MenuAddon[];
   catalog_item_id?: string;
   price_cents?: number;
 };
@@ -49,9 +51,17 @@ function priceLabel(it: MenuItem): string {
 function orderableOptions(it: MenuItem): MenuOption[] {
   return (Array.isArray(it.options) ? it.options : []).filter((o) => o?.label && o?.variant_id);
 }
+/** Add-ons that are orderable (published → have an id). */
+function orderableAddons(it: MenuItem): MenuAddon[] {
+  return (Array.isArray(it.addons) ? it.addons : []).filter((a) => a?.label && a?.id);
+}
 
-function addToOrder(it: MenuItem, option?: MenuOption) {
+function addToOrder(it: MenuItem, option?: MenuOption, addons: MenuAddon[] = []) {
   if (!it.catalog_item_id) return;
+  const base = option
+    ? (typeof option.price_cents === 'number' ? option.price_cents : 0)
+    : (typeof it.price_cents === 'number' ? it.price_cents : 0);
+  const addonTotal = addons.reduce((s, a) => s + (typeof a.price_cents === 'number' ? a.price_cents : 0), 0);
   try {
     window.dispatchEvent(
       new CustomEvent('qs:cart:add', {
@@ -59,10 +69,10 @@ function addToOrder(it: MenuItem, option?: MenuOption) {
           id: it.catalog_item_id,
           variant_id: option?.variant_id ?? null,
           variant_label: option?.label ?? null,
+          addon_ids: addons.map((a) => a.id),
+          addons: addons.map((a) => ({ id: a.id, label: a.label, price_cents: a.price_cents ?? 0 })),
           qty: 1,
-          price_cents: option
-            ? (typeof option.price_cents === 'number' ? option.price_cents : 0)
-            : (typeof it.price_cents === 'number' ? it.price_cents : 0),
+          price_cents: base + addonTotal,
           title: it.name,
           image_url: it.image_url ?? null,
           product_type: 'meal',
@@ -79,12 +89,23 @@ function addToOrder(it: MenuItem, option?: MenuOption) {
 function MenuItemRow({ item, rowKey }: { item: MenuItem; rowKey: string }) {
   const options = orderableOptions(item);
   const hasOptions = options.length > 0;
+  const addons = orderableAddons(item);
   const [sel, setSel] = React.useState(0);
+  const [selAddonIds, setSelAddonIds] = React.useState<string[]>([]);
   const selected = hasOptions ? options[Math.min(sel, options.length - 1)] : undefined;
+  const chosenAddons = addons.filter((a) => a.id && selAddonIds.includes(a.id));
+  const addonTotal = chosenAddons.reduce((s, a) => s + (a.price_cents ?? 0), 0);
 
-  const price = selected
-    ? centsDisplay(selected.price_cents)
-    : priceLabel(item);
+  const baseCents = selected
+    ? (typeof selected.price_cents === 'number' ? selected.price_cents : undefined)
+    : (typeof item.price_cents === 'number' ? item.price_cents : undefined);
+  const price =
+    typeof baseCents === 'number'
+      ? centsDisplay(baseCents + addonTotal)
+      : priceLabel(item);
+
+  const toggleAddon = (id: string) =>
+    setSelAddonIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
 
   return (
     <li className="flex gap-4 py-4">
@@ -128,13 +149,33 @@ function MenuItemRow({ item, rowKey }: { item: MenuItem; rowKey: string }) {
           </div>
         )}
 
+        {/* Add-on multi-select */}
+        {addons.length > 0 && item.catalog_item_id && (
+          <div className="mt-2 flex flex-col gap-1.5">
+            {addons.map((a) => (
+              <label key={a.id} className="flex cursor-pointer items-center gap-2 text-sm text-zinc-600 dark:text-zinc-300">
+                <input
+                  type="checkbox"
+                  checked={!!a.id && selAddonIds.includes(a.id)}
+                  onChange={() => a.id && toggleAddon(a.id)}
+                  className="h-4 w-4 accent-zinc-900 dark:accent-white"
+                />
+                <span>{a.label}</span>
+                {typeof a.price_cents === 'number' && a.price_cents > 0 && (
+                  <span className="text-zinc-500">+{centsDisplay(a.price_cents)}</span>
+                )}
+              </label>
+            ))}
+          </div>
+        )}
+
         {item.catalog_item_id && (hasOptions ? selected != null : true) && (
           <button
             type="button"
-            onClick={() => addToOrder(item, selected)}
+            onClick={() => addToOrder(item, selected, chosenAddons)}
             className="mt-3 inline-flex items-center rounded-md border border-black/15 px-3 py-1 text-sm font-medium transition hover:bg-black/5 dark:border-white/20 dark:hover:bg-white/10"
           >
-            Add to order
+            Add to order{addonTotal > 0 ? ` · ${centsDisplay((baseCents ?? 0) + addonTotal)}` : ''}
           </button>
         )}
       </div>

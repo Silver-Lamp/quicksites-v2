@@ -9,7 +9,8 @@ import { applyCatalogLinks } from '@/lib/commerce/menuCatalog';
 import ImageUploadField from '@/components/merchant/ImageUploadField';
 
 type Option = { label: string; price?: string; price_cents?: number; variant_id?: string };
-type Item = { name: string; description?: string; price?: string; image_url?: string; options?: Option[]; catalog_item_id?: string; price_cents?: number; tags?: string[] };
+type Addon = { id?: string; label: string; price?: string; price_cents?: number };
+type Item = { name: string; description?: string; price?: string; image_url?: string; options?: Option[]; addons?: Addon[]; catalog_item_id?: string; price_cents?: number; tags?: string[] };
 type Section = { name: string; description?: string; items: Item[] };
 
 function cloneSections(raw: any): Section[] {
@@ -30,6 +31,9 @@ function cloneSections(raw: any): Section[] {
                 price_cents: o?.price_cents,
                 variant_id: o?.variant_id,
               }))
+            : [],
+          addons: Array.isArray(it?.addons)
+            ? it.addons.map((a: any) => ({ id: a?.id, label: String(a?.label ?? ''), price: a?.price ?? '', price_cents: a?.price_cents }))
             : [],
           catalog_item_id: it?.catalog_item_id,
           price_cents: it?.price_cents,
@@ -139,12 +143,21 @@ export default function MenuEditor({ block, onSave, onClose, template }: BlockEd
   const removeOption = (si: number, ii: number, oi: number) =>
     setItem(si, ii, { options: (sections[si].items[ii].options ?? []).filter((_, j) => j !== oi) });
 
+  // add-on (multi-select) helpers
+  const setAddon = (si: number, ii: number, ai: number, patch: Partial<Addon>) =>
+    setItem(si, ii, { addons: (sections[si].items[ii].addons ?? []).map((a, j) => (j === ai ? { ...a, ...patch } : a)) });
+  const addAddon = (si: number, ii: number) =>
+    setItem(si, ii, { addons: [...(sections[si].items[ii].addons ?? []), { label: '', price: '' }] });
+  const removeAddon = (si: number, ii: number, ai: number) =>
+    setItem(si, ii, { addons: (sections[si].items[ii].addons ?? []).filter((_, j) => j !== ai) });
+
   // ---- price confirmation model ----
   // Each item's confirmable cents, prefilled from its display price.
   const [confirmCents, setConfirmCents] = React.useState<Record<string, number | null>>({});
   const keyOf = (si: number, ii: number) => `${si}:${ii}`;
 
   const optKey = (si: number, ii: number, oi: number) => `${si}:${ii}:${oi}`;
+  const addonKey = (si: number, ii: number, ai: number) => `${si}:${ii}:a${ai}`;
 
   const openConfirm = () => {
     const seed: Record<string, number | null> = {};
@@ -157,6 +170,9 @@ export default function MenuEditor({ block, onSave, onClose, template }: BlockEd
         } else {
           seed[keyOf(si, ii)] = it.price_cents ?? parsePriceToCents(it.price);
         }
+        (it.addons ?? []).forEach((a, ai) => {
+          seed[addonKey(si, ii, ai)] = a.price_cents ?? parsePriceToCents(a.price) ?? 0;
+        });
       }),
     );
     setConfirmCents(seed);
@@ -177,8 +193,11 @@ export default function MenuEditor({ block, onSave, onClose, template }: BlockEd
     try {
       const payloadSections = sections.map((s, si) => ({
         name: s.name,
-        items: s.items.map((it, ii) =>
-          it.options?.length
+        items: s.items.map((it, ii) => {
+          const addons = (it.addons ?? [])
+            .filter((a) => a.label.trim())
+            .map((a, ai) => ({ label: a.label, price_cents: confirmCents[addonKey(si, ii, ai)] ?? 0 }));
+          const base = it.options?.length
             ? {
                 name: it.name,
                 description: it.description ?? '',
@@ -190,8 +209,9 @@ export default function MenuEditor({ block, onSave, onClose, template }: BlockEd
                 description: it.description ?? '',
                 image_url: it.image_url ?? '',
                 price_cents: confirmCents[keyOf(si, ii)] ?? null,
-              },
-        ),
+              };
+          return addons.length ? { ...base, addons } : base;
+        }),
       }));
 
       const res = await fetch('/api/menu/publish-catalog', {
@@ -292,6 +312,19 @@ export default function MenuEditor({ block, onSave, onClose, template }: BlockEd
                     <button onClick={() => addOption(si, ii)} className="mt-1 text-[11px] text-sky-400 hover:text-sky-300">+ Add option</button>
                   </div>
 
+                  {/* Multi-select add-ons (extra cheese, bacon). Add to the price. */}
+                  <div className="mt-2 border-l border-zinc-800 pl-2">
+                    <div className="text-[11px] text-zinc-500">Add-ons — optional extras (e.g. Extra cheese). Each adds to the price.</div>
+                    {(it.addons ?? []).map((a, ai) => (
+                      <div key={ai} className="mt-1 grid grid-cols-[1fr,72px,auto] gap-2">
+                        <input className={inputCls} value={a.label} onChange={(e) => setAddon(si, ii, ai, { label: e.target.value })} placeholder="Add-on (e.g. Bacon)" />
+                        <input className={inputCls} value={a.price ?? ''} onChange={(e) => setAddon(si, ii, ai, { price: e.target.value })} placeholder="$2" />
+                        <button onClick={() => removeAddon(si, ii, ai)} className="rounded-md border border-zinc-700 px-2 text-xs text-zinc-400 hover:text-red-300">✕</button>
+                      </div>
+                    ))}
+                    <button onClick={() => addAddon(si, ii)} className="mt-1 text-[11px] text-sky-400 hover:text-sky-300">+ Add add-on</button>
+                  </div>
+
                   {it.catalog_item_id && <span className="mt-1 block text-[11px] text-emerald-400">✓ Orderable</span>}
                 </div>
               ))}
@@ -349,6 +382,13 @@ export default function MenuEditor({ block, onSave, onClose, template }: BlockEd
                             ),
                           }))
                       : [{ k: keyOf(si, ii), label: <><span className="text-zinc-500">{s.name} · </span>{it.name}</> }];
+                  (it.addons ?? []).forEach((a, ai) => {
+                    if (!a.label.trim()) return;
+                    rows.push({
+                      k: addonKey(si, ii, ai),
+                      label: <><span className="text-zinc-500">{it.name} + </span>{a.label} <span className="text-zinc-500">(add-on)</span></>,
+                    });
+                  });
                   return rows.map(({ k, label }) => {
                     const cents = confirmCents[k];
                     return (

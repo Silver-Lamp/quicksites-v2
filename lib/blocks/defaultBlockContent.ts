@@ -215,6 +215,19 @@ export const DEFAULT_BLOCK_CONTENT = {
     ],
   },
 
+  /* ───────── location ───────── */
+
+  location: {
+    title: 'Find Us',
+    business_name: '',
+    address: '',
+    phone: '',
+    email: '',
+    map_query: '',
+    show_map: true,
+    directions_url: '',
+  },
+
   /* ───────── commerce ───────── */
 
   products_grid: { title: 'Featured Products', columns: 3, productIds: [], products: [] },

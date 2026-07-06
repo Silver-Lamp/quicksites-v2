@@ -19,6 +19,8 @@ const ROUTE = '/api/rebuild';
 
 export type MenuItemSpec = { name: string; description?: string; price?: string };
 export type MenuSectionSpec = { name: string; items: MenuItemSpec[] };
+export type ContactSpec = { phone?: string; address?: string; email?: string };
+export type HoursDaySpec = { day: string; open?: string; close?: string; closed?: boolean };
 
 export type RebuildSpec = {
   businessName: string;
@@ -30,6 +32,8 @@ export type RebuildSpec = {
   services: string[];
   faqs: { q: string; a: string }[];
   menu?: { sections: MenuSectionSpec[] };
+  contact?: ContactSpec;
+  hours?: HoursDaySpec[];
 };
 
 /** Infer a full QuickSites draft spec from scraped site signals (one metered call).
@@ -57,6 +61,11 @@ export async function inferSiteSpec(
     'from the MENU PAGES; keep price as a short display string (e.g. "$14"); group into ' +
     'sensible sections (Breakfast, Lunch, Dinner, Drinks, …). Omit menu entirely if this ' +
     'is not a food business or no menu items are present. ' +
+    'Also return contact: an object {phone, address, email} using the REAL values found ' +
+    'on the site (omit any field you cannot find). If business hours are stated, return ' +
+    'hours: an array with one entry per day {day: one of mon,tue,wed,thu,fri,sat,sun, ' +
+    "open: 'HH:MM' 24-hour, close: 'HH:MM'}, or {day, closed:true} for closed days; omit " +
+    'hours if not stated. ' +
     `Known industry labels: ${knownLabels}.`;
 
   const menuBlock = hasMenuPages
@@ -116,6 +125,8 @@ export async function inferSiteSpec(
               .slice(0, 3)
           : [],
         menu: parseMenu(parsed.menu),
+        contact: parseContact(parsed.contact),
+        hours: parseHours(parsed.hours),
       };
 
       return {
@@ -145,6 +156,44 @@ export function parseMenu(raw: any): { sections: MenuSectionSpec[] } | undefined
     if (name && items.length) sections.push({ name, items });
   }
   return sections.length ? { sections } : undefined;
+}
+
+/** Pick the string contact fields the model found; undefined if none. */
+export function parseContact(raw: any): ContactSpec | undefined {
+  if (!raw || typeof raw !== 'object') return undefined;
+  const phone = String(raw.phone ?? '').trim().slice(0, 40);
+  const address = String(raw.address ?? '').trim().slice(0, 200);
+  const email = String(raw.email ?? '').trim().slice(0, 120);
+  const out: ContactSpec = {};
+  if (phone) out.phone = phone;
+  if (address) out.address = address;
+  if (/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) out.email = email;
+  return Object.keys(out).length ? out : undefined;
+}
+
+const DAY_KEYS = new Set(['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun']);
+const HHMM = /^([01]?\d|2[0-3]):[0-5]\d$/;
+
+/** Normalize model hours into validated day entries; undefined if none usable. */
+export function parseHours(raw: any): HoursDaySpec[] | undefined {
+  if (!Array.isArray(raw)) return undefined;
+  const out: HoursDaySpec[] = [];
+  const seen = new Set<string>();
+  for (const h of raw) {
+    const day = String(h?.day ?? '').trim().toLowerCase().slice(0, 3);
+    if (!DAY_KEYS.has(day) || seen.has(day)) continue;
+    if (h?.closed === true) {
+      seen.add(day);
+      out.push({ day, closed: true });
+      continue;
+    }
+    const open = String(h?.open ?? '').trim();
+    const close = String(h?.close ?? '').trim();
+    if (!HHMM.test(open) || !HHMM.test(close)) continue;
+    seen.add(day);
+    out.push({ day, open, close });
+  }
+  return out.length ? out : undefined;
 }
 
 /** Map a free-text industry label onto a known IndustryKey, defaulting to 'other'. */

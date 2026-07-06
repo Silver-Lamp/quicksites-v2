@@ -55,10 +55,11 @@ export function buildRebuildTemplate(opts: {
     }
   }
 
+  const blocks: any[] = tpl.data?.pages?.[0]?.blocks ?? [];
+
   // If the AI reconstructed a real menu (restaurant conversion), replace the
   // scaffold's placeholder menu with it.
   if (spec.menu?.sections?.length) {
-    const blocks: any[] = tpl.data?.pages?.[0]?.blocks ?? [];
     const menuBlock = blocks.find((b) => b?.type === 'menu');
     if (menuBlock?.content) {
       menuBlock.content.title = menuBlock.content.title || 'Our Menu';
@@ -71,6 +72,36 @@ export function buildRebuildTemplate(opts: {
           price: it.price ?? '',
           tags: [],
         })),
+      }));
+    }
+  }
+
+  // Real contact info → the location block (address + tap-to-call + map).
+  if (spec.contact) {
+    const loc = blocks.find((b) => b?.type === 'location');
+    if (loc?.content) {
+      loc.content.business_name = loc.content.business_name || spec.businessName;
+      if (spec.contact.address) {
+        loc.content.address = spec.contact.address;
+        loc.content.map_query = spec.contact.address;
+      }
+      if (spec.contact.phone) loc.content.phone = spec.contact.phone;
+      if (spec.contact.email) loc.content.email = spec.contact.email;
+    }
+  }
+
+  // Real hours → the hours block days.
+  if (spec.hours?.length) {
+    const hoursBlock = blocks.find((b) => b?.type === 'hours');
+    if (hoursBlock?.content) {
+      const LABEL: Record<string, string> = {
+        mon: 'Mon', tue: 'Tue', wed: 'Wed', thu: 'Thu', fri: 'Fri', sat: 'Sat', sun: 'Sun',
+      };
+      hoursBlock.content.days = spec.hours.map((h) => ({
+        key: h.day,
+        label: LABEL[h.day] ?? h.day,
+        closed: !!h.closed,
+        periods: h.closed || !h.open || !h.close ? [] : [{ open: h.open, close: h.close }],
       }));
     }
   }

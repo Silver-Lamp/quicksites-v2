@@ -360,6 +360,7 @@ export const DYNAMIC_RENDERERS: Partial<Record<BlockType, () => Promise<{ defaul
   contact_form:  () => import('@/components/admin/templates/render-blocks/contact-form'),
   hours:         () => import('@/components/admin/templates/render-blocks/hours'),
   menu:          () => import('@/components/admin/templates/render-blocks/menu'),
+  location:      () => import('@/components/admin/templates/render-blocks/location'),
 
   // NEW:
   products_grid: () => import('@/components/admin/templates/render-blocks/products-grid'),

@@ -155,6 +155,23 @@ export function createDefaultBlock(type: BlockType): z.infer<typeof BlockSchema>
       break;
     }
 
+    /* ---------------- Location & Map ---------------- */
+
+    case 'location': {
+      content = {
+        ...content,
+        title: content.title ?? 'Find Us',
+        business_name: typeof content.business_name === 'string' ? content.business_name : '',
+        address: typeof content.address === 'string' ? content.address : '',
+        phone: typeof content.phone === 'string' ? content.phone : '',
+        email: typeof content.email === 'string' ? content.email : '',
+        map_query: typeof content.map_query === 'string' ? content.map_query : '',
+        show_map: content.show_map !== false,
+        directions_url: typeof content.directions_url === 'string' ? content.directions_url : '',
+      };
+      break;
+    }
+
     /* ---------------- NEW: Commerce blocks ---------------- */
 
     case 'products_grid': {

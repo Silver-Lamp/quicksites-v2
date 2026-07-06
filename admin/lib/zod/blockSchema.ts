@@ -326,6 +326,20 @@ export const MenuBlockSchema = z.preprocess((raw) => {
   sections: z.array(MenuSectionSchema).default([]),
 }));
 
+/* ───────────────────────────── Location & Map ─────────────────────────────── */
+// A location card: address + tap-to-call phone + "Get Directions" + an optional
+// keyless map embed. `map_query`/`directions_url` fall back to the address.
+export const LocationBlockSchema = z.object({
+  title: z.string().default('Find Us'),
+  business_name: z.string().optional().default(''),
+  address: z.string().optional().default(''),
+  phone: z.string().optional().default(''),
+  email: z.string().optional().default(''),
+  map_query: z.string().optional().default(''),
+  show_map: z.boolean().optional().default(true),
+  directions_url: z.string().optional().default(''),
+});
+
 /* ───────────────────────────── Block schema map ───────────────────────────── */
 
 export const blockContentSchemaMap = {
@@ -577,6 +591,8 @@ export const blockContentSchemaMap = {
   hours: { label: 'Hours of Operation', icon: '⏰', schema: HoursOfOperationSchema },
 
   menu: { label: 'Menu', icon: '🍽️', schema: MenuBlockSchema },
+
+  location: { label: 'Location & Map', icon: '📍', schema: LocationBlockSchema },
 
   /* ───────────────────────────── NEW: Commerce blocks ─────────────────────── */
 

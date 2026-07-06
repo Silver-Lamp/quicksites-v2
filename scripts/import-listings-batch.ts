@@ -15,7 +15,8 @@
 //
 // photoUrls (menu images) are optional but STRONGLY recommended — a Place's generic
 // photos rarely include the menu. Needs GOOGLE_PLACES_API_KEY (for query/placeId)
-// and OPENAI_API_KEY (menu vision). Writes <leads>-results.json.
+// and OPENAI_API_KEY (menu vision). Writes <leads>-results.json AND a print-ready
+// QR per lead (encoding the claim link) into <leads>-qr/<slug>.png for the cards.
 
 import dotenv from 'dotenv';
 dotenv.config({ path: '.env.local' });
@@ -31,8 +32,9 @@ if (typeof (globalThis as any).WebSocket === 'undefined') {
   }
 }
 
-import { readFileSync, writeFileSync } from 'node:fs';
+import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { createClient } from '@supabase/supabase-js';
+import QRCode from 'qrcode';
 
 const PUBLIC_BASE = process.env.NEXT_PUBLIC_APP_URL || process.env.APP_BASE_URL || process.env.QS_PUBLIC_URL || '';
 
@@ -67,6 +69,10 @@ async function main() {
     { auth: { persistSession: false } },
   );
   const ownerId = process.env.CEDARSITES_OPERATOR_ID || null;
+
+  // Print-ready QR per lead (points at the claim link) for the leave-behind cards.
+  const qrDir = file.replace(/\.json$/i, '') + '-qr';
+  mkdirSync(qrDir, { recursive: true });
 
   const results: any[] = [];
   console.log(`\n▶ Importing ${leads.length} lead(s)…\n`);
@@ -138,6 +144,13 @@ async function main() {
       const menuSource = explicit ? 'manual' : menuItems > 0 ? 'auto' : 'none';
       const previewUrl = `${PUBLIC_BASE}/preview/${slug}`;
       const claimUrl = `${PUBLIC_BASE}/claim-site/${insertedId}?token=${encodeURIComponent(mintSiteClaimToken(insertedId))}`;
+
+      // Ready-to-print QR (encodes the claim link → preview + one-tap claim).
+      const qrPath = `${qrDir}/${slug}.png`;
+      try {
+        await QRCode.toFile(qrPath, claimUrl, { width: 600, margin: 2, errorCorrectionLevel: 'M' });
+      } catch { /* QR is a nicety — never fail the import over it */ }
+
       const rec = {
         ok: true,
         businessName: spec.businessName,
@@ -146,6 +159,7 @@ async function main() {
         editorUrl: `${PUBLIC_BASE}/admin/templates/${insertedId}`,
         previewUrl,
         claimUrl,
+        qrPath,
         phone: spec.contact?.phone ?? null,
         menuSections: menu?.sections?.length ?? 0,
         menuItems,
@@ -176,6 +190,7 @@ async function main() {
   const hitRate = autoEligible ? Math.round((auto / autoEligible) * 100) : 0;
 
   console.log(`\n✅ ${ok}/${leads.length} imported. Results → ${out}`);
+  console.log(`🔳 Print-ready QR codes (claim links) → ${qrDir}/`);
   console.log(`🍽  Menu: ${auto} auto-detected · ${manual} from a supplied photo · ${none} need a menu photo`);
   if (autoEligible) console.log(`   Auto-detect hit rate: ${hitRate}% (${auto}/${autoEligible} without a supplied photo)`);
   if (none > 0) console.log(`   → ${none} would benefit from more photo access (Yelp Premium) or a supplied menu photo.`);

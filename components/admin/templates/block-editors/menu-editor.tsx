@@ -68,8 +68,40 @@ export default function MenuEditor({ block, onSave, onClose, template }: BlockEd
 
   const [confirming, setConfirming] = React.useState(false);
   const [publishing, setPublishing] = React.useState(false);
+  const [connecting, setConnecting] = React.useState(false);
   const [result, setResult] = React.useState<{ count: number; merchantId: string } | null>(null);
   const [error, setError] = React.useState<string | null>(null);
+
+  // A merchant from a prior "Enable ordering" run (so returning owners can connect
+  // Stripe without re-publishing).
+  const existingMerchantId: string =
+    (template as any)?.data?.meta?.ecom?.merchant_id ??
+    (template as any)?.data?.meta?.ecommerce?.merchant_id ??
+    '';
+
+  /** Start Stripe Connect onboarding for this merchant and hand off to Stripe. */
+  const connectStripe = async (merchantId: string) => {
+    if (!merchantId || connecting) return;
+    setConnecting(true);
+    setError(null);
+    try {
+      const res = await fetch('/api/connect/onboard', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ merchantId }),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok || !json?.url) {
+        setError(json?.error || 'Could not start Stripe setup. Please try again.');
+        setConnecting(false);
+        return;
+      }
+      window.location.href = json.url; // hand off to Stripe onboarding
+    } catch (e: any) {
+      setError(e?.message || 'Something went wrong.');
+      setConnecting(false);
+    }
+  };
 
   const buildContent = React.useCallback(
     (secs: Section[]) => ({ ...initial, title, note, sections: secs }),
@@ -279,9 +311,20 @@ export default function MenuEditor({ block, onSave, onClose, template }: BlockEd
               Turn these dishes into orderable products. You'll confirm each price first — nothing is charged from a
               guessed value.
             </p>
-            <button onClick={openConfirm} className="mt-3 rounded-md bg-emerald-500 px-4 py-2 text-sm font-semibold text-emerald-950 hover:opacity-90">
-              Enable online ordering →
-            </button>
+            <div className="mt-3 flex flex-wrap items-center gap-3">
+              <button onClick={openConfirm} className="rounded-md bg-emerald-500 px-4 py-2 text-sm font-semibold text-emerald-950 hover:opacity-90">
+                Enable online ordering →
+              </button>
+              {existingMerchantId && (
+                <button
+                  onClick={() => connectStripe(existingMerchantId)}
+                  disabled={connecting}
+                  className="rounded-md border border-indigo-400/50 px-4 py-2 text-sm font-semibold text-indigo-300 hover:bg-indigo-500/10 disabled:opacity-50"
+                >
+                  {connecting ? 'Opening Stripe…' : 'Connect Stripe to get paid →'}
+                </button>
+              )}
+            </div>
           </>
         )}
 
@@ -346,9 +389,15 @@ export default function MenuEditor({ block, onSave, onClose, template }: BlockEd
           <div className="text-sm">
             <div className="font-semibold text-emerald-300">✓ Ordering enabled — {result.count} item{result.count === 1 ? '' : 's'} are now sellable.</div>
             <p className="mt-1 text-zinc-400">
-              The menu's "Add to order" buttons are live. To accept card payments, finish Stripe Connect in your
-              Payments settings.
+              The menu's "Add to order" buttons are live. Connect Stripe to actually collect payment.
             </p>
+            <button
+              onClick={() => connectStripe(result.merchantId)}
+              disabled={connecting}
+              className="mt-3 rounded-md bg-indigo-500 px-4 py-2 text-sm font-semibold text-white hover:opacity-90 disabled:opacity-50"
+            >
+              {connecting ? 'Opening Stripe…' : 'Connect Stripe to get paid →'}
+            </button>
           </div>
         )}
 

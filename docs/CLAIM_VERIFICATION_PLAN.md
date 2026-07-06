@@ -6,7 +6,7 @@
 > from the 2026-07 anon-token hardening sweep (see [`CLAUDE.md`](../CLAUDE.md) §5b and
 > the `security-remediation-followups` memory).
 
-Last updated: 2026-07-06 · Status: **spec (not built)**
+Last updated: 2026-07-06 · Status: **P1 built behind `CLAIM_VERIFICATION_ENABLED` (dormant)** — gated at **claim** (the chosen decision, §12.1). SMS OTP to the listing phone + operator manual override are implemented; needs the `claim_verifications` migration applied + Twilio env + the flag flipped to activate. Voice/email (P2) still open.
 
 ---
 

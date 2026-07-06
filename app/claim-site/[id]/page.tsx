@@ -7,6 +7,7 @@
 import Link from 'next/link';
 import { verifySiteClaimToken } from '@/lib/auth/siteClaimToken';
 import { supabaseAdmin } from '@/lib/supabase/admin';
+import { CLAIM_VERIFICATION_ENABLED } from '@/lib/flags/claimVerification';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -33,6 +34,12 @@ export default async function ClaimSitePage({
 
   const claimable = tokenOk && tpl && (tpl as any).claim_source === 'listing_import';
   const name = (tpl as any)?.business_name || (tpl as any)?.template_name || 'your business';
+
+  // With verification on, "Claim it free" first proves control of the business (OTP to
+  // the listing phone); otherwise it arms the claim cookie directly (legacy).
+  const claimHref = CLAIM_VERIFICATION_ENABLED
+    ? `/claim-site/${params.id}/verify?token=${encodeURIComponent(token)}`
+    : `/api/claim-draft/${params.id}?token=${encodeURIComponent(token)}`;
 
   return (
     <main className="mx-auto flex min-h-screen max-w-2xl flex-col items-center justify-center px-6 py-16 text-center">
@@ -67,7 +74,7 @@ export default async function ClaimSitePage({
               Preview your site ↗
             </a>
             <a
-              href={`/api/claim-draft/${params.id}?token=${encodeURIComponent(token)}`}
+              href={claimHref}
               className="inline-flex items-center justify-center rounded-2xl bg-emerald-500 px-6 py-3 text-base font-semibold text-emerald-950 transition hover:opacity-90"
             >
               Claim it free →

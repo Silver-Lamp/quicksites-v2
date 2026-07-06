@@ -163,6 +163,7 @@ export const BLOCK_EDITORS: Record<Block['type'], () => Promise<EditorModule>> =
   service_areas:wrapDynamic(() => import('./service-areas-editor')),
   header:       wrapDynamic(() => import('./header-editor')),
   faq:          wrapDynamic(() => import('./faq-editor')),
+  menu:         wrapDynamic(() => import('./menu-editor')),
   contact_form: wrapDynamic(async () => {
     const mod = await import('./contact-form-editor');
     return { default: (mod as any).ContactFormEditor };

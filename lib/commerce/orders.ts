@@ -3,7 +3,7 @@ import type { LineItemInput } from './types';
 import { getMerchantPaymentConfigSafe } from './paymentRouter';
 import { captureServer } from '@/lib/analytics/posthog-server';
 import { EVENTS } from '@/lib/analytics/events';
-import { partnerCommissionCents, PARTNER_FEE_SHARE } from './partner-terms';
+import { partnerCommissionCents, PARTNER_FEE_SHARE, hubOverrideCents } from './partner-terms';
 import { isAgencyPlanMerchant } from '@/lib/billing/plans';
 import { computeSubtotalCents, computePlatformFeeCents, flatShippingCents, parseStripeTaxTotals } from './fees';
 
@@ -293,6 +293,52 @@ export async function markOrderPaid(
             orderRow.merchant_id
           );
         }
+
+        // 5b) Hub override: if this reseller was recruited by an upline (parent_code),
+        //     pay the hub a configurable cut — funded OUT OF QuickSites' share
+        //     (clamped to QS_FEE_SHARE), so the reseller residual above is untouched.
+        const { data: codeRow } = await supabase
+          .from('referral_codes')
+          .select('parent_code, override_share')
+          .eq('code', attr.referral_code)
+          .maybeSingle();
+        if ((codeRow as any)?.parent_code && Number((codeRow as any).override_share) > 0) {
+          const overrideCents = hubOverrideCents(orderRow.platform_fee_cents, Number((codeRow as any).override_share));
+          if (overrideCents > 0) {
+            const ov = await supabase.from('commission_ledger').upsert(
+              {
+                referral_code: (codeRow as any).parent_code,
+                subject: 'order_platform_fee_override',
+                subject_id: orderId,
+                amount_cents: overrideCents,
+                currency: orderRow.currency || 'USD',
+                status: 'pending',
+                adjustments: {
+                  note: 'hub override',
+                  downline_code: attr.referral_code,
+                  override_share: Number((codeRow as any).override_share),
+                  platform_fee_cents: orderRow.platform_fee_cents,
+                },
+              },
+              { onConflict: 'referral_code,subject,subject_id' }
+            );
+            if (ov.error && `${ov.error.code}` !== '23505') {
+              console.warn('hub override upsert error:', ov.error.message);
+            } else {
+              await captureServer(
+                EVENTS.COMMISSION_ACCRUED,
+                {
+                  order_id: orderId,
+                  referral_code: (codeRow as any).parent_code,
+                  amount_cents: overrideCents,
+                  kind: 'hub_override',
+                  downline_code: attr.referral_code,
+                },
+                orderRow.merchant_id
+              );
+            }
+          }
+        }
       }
     }
   } catch (e) {
@@ -371,7 +417,7 @@ export async function markOrderRefunded(
   const { error: cErr } = await supabase
     .from('commission_ledger')
     .update({ status: 'void', adjustments: { note: 'voided on refund' } })
-    .eq('subject', 'order_platform_fee')
+    .in('subject', ['order_platform_fee', 'order_platform_fee_override'])
     .eq('subject_id', orderId)
     .neq('status', 'paid');
   if (cErr) console.warn('commission void on refund failed:', cErr.message);
@@ -383,7 +429,7 @@ export async function markOrderRefunded(
     const { data: paidComms } = await supabase
       .from('commission_ledger')
       .select('id, amount_cents, payout_id')
-      .eq('subject', 'order_platform_fee')
+      .in('subject', ['order_platform_fee', 'order_platform_fee_override'])
       .eq('subject_id', orderId)
       .eq('status', 'paid');
     if (paidComms?.length) {

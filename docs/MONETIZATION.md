@@ -110,6 +110,18 @@ env-overridable, so the offer can be tuned without code.
 **Worked example:** a $100 order with an 8% partner fee → $8.00 platform fee →
 partner $6.40, QuickSites $1.60 — on every order, for the life of the merchant.
 
+**Hub override (two-tier referral, added 2026-07-06):** a "hub" recruits *resellers*
+and earns a configurable, lifetime override on their orders — funded **out of
+QuickSites' 20%**, so the reseller's 80% is untouched. `referral_codes` gains
+`parent_code` (the reseller's hub) + `override_share` (the hub's cut, clamped to
+`QS_FEE_SHARE=0.20` by `clampOverrideShare`). `markOrderPaid` writes a second
+`commission_ledger` row (subject `order_platform_fee_override`) crediting the hub via
+`hubOverrideCents`; `runPayouts` pays it automatically (groups by code owner);
+refunds void/clawback both subjects. Configure per relationship with `POST
+/api/admin/referrals/set-hub {code, parentCode, overrideShare}`. On the $8 fee above,
+a 5% hub override = $0.40 to the hub, dropping QuickSites' net to $1.20 (15%); the
+reseller still keeps $6.40.
+
 ### Partner payout pipeline (built + verified 2026-06-26)
 Completes the money loop (`lib/commerce/payouts.ts`):
 1. **Approve** — `POST /api/admin/partners/payouts/approve` moves commissions

@@ -80,6 +80,7 @@ export async function POST(req: Request) {
   const items: { section: string; name: string; slug: string; catalog_item_id: string; price_cents: number }[] = [];
   for (const r of rows) {
     const metadata = { site_slug: siteSlug || null, category: r.section || null };
+    const images = r.image_url ? [r.image_url] : [];
     // Upsert by (merchant_id, slug) — the table's unique key — so re-publishing updates.
     const { data: existing } = await admin
       .from('catalog_items')
@@ -91,7 +92,7 @@ export async function POST(req: Request) {
     if (existing?.id) {
       const { error } = await admin
         .from('catalog_items')
-        .update({ title: r.name, description: r.description || null, price_cents: r.price_cents, status: 'active', metadata })
+        .update({ title: r.name, description: r.description || null, price_cents: r.price_cents, status: 'active', metadata, ...(images.length ? { images } : {}) })
         .eq('id', existing.id);
       if (error) return NextResponse.json({ error: error.message }, { status: 400 });
       items.push({ section: r.section, name: r.name, slug: r.slug, catalog_item_id: existing.id as string, price_cents: r.price_cents });
@@ -106,7 +107,7 @@ export async function POST(req: Request) {
           description: r.description || null,
           price_cents: r.price_cents,
           status: 'active',
-          images: [],
+          images,
           metadata,
         })
         .select('id')

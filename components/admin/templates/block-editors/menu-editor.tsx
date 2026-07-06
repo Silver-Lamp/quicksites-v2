@@ -6,8 +6,9 @@ import type { Block } from '@/types/blocks';
 import type { BlockEditorProps } from '@/components/admin/templates/block-editors';
 import { parsePriceToCents, centsToDisplay } from '@/lib/commerce/menuPrice';
 import { applyCatalogLinks } from '@/lib/commerce/menuCatalog';
+import ImageUploadField from '@/components/merchant/ImageUploadField';
 
-type Item = { name: string; description?: string; price?: string; catalog_item_id?: string; price_cents?: number; tags?: string[] };
+type Item = { name: string; description?: string; price?: string; image_url?: string; catalog_item_id?: string; price_cents?: number; tags?: string[] };
 type Section = { name: string; description?: string; items: Item[] };
 
 function cloneSections(raw: any): Section[] {
@@ -20,6 +21,7 @@ function cloneSections(raw: any): Section[] {
           name: String(it?.name ?? ''),
           description: it?.description ?? '',
           price: it?.price ?? '',
+          image_url: it?.image_url ?? '',
           catalog_item_id: it?.catalog_item_id,
           price_cents: it?.price_cents,
           tags: Array.isArray(it?.tags) ? it.tags : [],
@@ -119,6 +121,7 @@ export default function MenuEditor({ block, onSave, onClose, template }: BlockEd
         items: s.items.map((it, ii) => ({
           name: it.name,
           description: it.description ?? '',
+          image_url: it.image_url ?? '',
           price_cents: confirmCents[keyOf(si, ii)] ?? null,
         })),
       }));
@@ -185,15 +188,29 @@ export default function MenuEditor({ block, onSave, onClose, template }: BlockEd
 
             <div className="mt-3 space-y-2">
               {section.items.map((it, ii) => (
-                <div key={ii} className="grid grid-cols-[1fr,88px,auto] gap-2">
-                  <input className={inputCls} value={it.name} onChange={(e) => setItem(si, ii, { name: e.target.value })} placeholder="Dish name" />
-                  <input className={inputCls} value={it.price ?? ''} onChange={(e) => setItem(si, ii, { price: e.target.value })} placeholder="$12" />
-                  <button onClick={() => removeItem(si, ii)} className="rounded-md border border-zinc-700 px-2 text-xs text-zinc-400 hover:text-red-300">
-                    ✕
-                  </button>
-                  {it.catalog_item_id && (
-                    <span className="col-span-3 -mt-1 text-[11px] text-emerald-400">✓ Orderable</span>
-                  )}
+                <div key={ii} className="rounded-md border border-zinc-800/70 p-2">
+                  <div className="grid grid-cols-[1fr,88px,auto] gap-2">
+                    <input className={inputCls} value={it.name} onChange={(e) => setItem(si, ii, { name: e.target.value })} placeholder="Dish name" />
+                    <input className={inputCls} value={it.price ?? ''} onChange={(e) => setItem(si, ii, { price: e.target.value })} placeholder="$12" />
+                    <button onClick={() => removeItem(si, ii)} className="rounded-md border border-zinc-700 px-2 text-xs text-zinc-400 hover:text-red-300">
+                      ✕
+                    </button>
+                  </div>
+                  <input
+                    className={`${inputCls} mt-2`}
+                    value={it.description ?? ''}
+                    onChange={(e) => setItem(si, ii, { description: e.target.value })}
+                    placeholder="Description (optional)"
+                  />
+                  <div className="mt-2">
+                    <ImageUploadField
+                      value={it.image_url ?? ''}
+                      onChange={(url) => setItem(si, ii, { image_url: url })}
+                      folder="menu"
+                      placeholder="Photo URL, or upload →"
+                    />
+                  </div>
+                  {it.catalog_item_id && <span className="mt-1 block text-[11px] text-emerald-400">✓ Orderable</span>}
                 </div>
               ))}
               <button onClick={() => addItem(si)} className="text-xs text-sky-400 hover:text-sky-300">+ Add item</button>

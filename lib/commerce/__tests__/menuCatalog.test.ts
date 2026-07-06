@@ -68,6 +68,13 @@ describe('buildCatalogRowsFromMenu', () => {
     expect(rows.map((r) => r.slug)).toEqual(['specials-combo', 'specials-combo-2']);
   });
 
+  it('carries an item image_url through to the row', () => {
+    const rows = buildCatalogRowsFromMenu([
+      { name: 'Mains', items: [{ name: 'Steak', price_cents: 2500, image_url: 'https://x/steak.jpg' }] },
+    ]);
+    expect(rows[0].image_url).toBe('https://x/steak.jpg');
+  });
+
   it('returns [] for empty / undefined', () => {
     expect(buildCatalogRowsFromMenu(undefined)).toEqual([]);
     expect(buildCatalogRowsFromMenu([])).toEqual([]);

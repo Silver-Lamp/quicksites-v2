@@ -95,6 +95,50 @@ export default function ResellersPage() {
           </div>
         </section>
 
+        {/* Ready-made vertical: restaurants */}
+        <section className="border-t border-zinc-800/70">
+          <div className="mx-auto max-w-6xl px-6 py-14">
+            <span className="rounded-full border border-amber-500/40 bg-amber-500/10 px-3 py-1 text-xs font-medium text-amber-300">
+              A vertical that's already built
+            </span>
+            <h2 className="mt-5 text-2xl font-semibold md:text-3xl">Run the restaurant motion under your brand.</h2>
+            <p className="mt-3 max-w-2xl text-zinc-400">
+              Restaurants are the easiest local business to win: most don't have a real website, and the ones that
+              do can't take orders on a phone. We turned that into a repeatable, white-labeled play — you supply
+              the relationships, we supply the machine.
+            </p>
+            <div className="mt-8 grid grid-cols-1 gap-5 md:grid-cols-3">
+              <div className="rounded-xl border border-zinc-800 bg-zinc-900/40 p-6">
+                <h3 className="font-semibold text-white">Auto-built from a listing</h3>
+                <p className="mt-2 text-sm text-zinc-400">
+                  Feed a "no website" restaurant's Google/Yelp listing and the site assembles itself — menu read
+                  from their photos, hours, location, and online ordering. A claimable draft in seconds.
+                </p>
+              </div>
+              <div className="rounded-xl border border-zinc-800 bg-zinc-900/40 p-6">
+                <h3 className="font-semibold text-white">"We already built it" beats a pitch</h3>
+                <p className="mt-2 text-sm text-zinc-400">
+                  Send the owner a preview link. They see their real menu on a phone, taking orders, before you say
+                  a word — then claim it in one tap. The product does the selling.
+                </p>
+              </div>
+              <div className="rounded-xl border border-zinc-800 bg-zinc-900/40 p-6">
+                <h3 className="font-semibold text-white">You earn on every order</h3>
+                <p className="mt-2 text-sm text-zinc-400">
+                  Free hosting brings them in; you keep {keepPct}% of the fee on every order they process — {residualLabel}.
+                  A restaurant's order volume compounds in a way a flat markup never will.
+                </p>
+              </div>
+            </div>
+            <p className="mt-6 text-sm text-zinc-500">
+              See the owner-facing pitch at{' '}
+              <Link href="/restaurants" className="text-sky-400 underline underline-offset-2 hover:text-sky-300">/restaurants</Link>
+              {' '}· or try the builder at{' '}
+              <Link href="/rebuild" className="text-sky-400 underline underline-offset-2 hover:text-sky-300">/rebuild</Link>.
+            </p>
+          </div>
+        </section>
+
         {/* Why us over them */}
         <section className="border-t border-zinc-800/70">
           <div className="mx-auto max-w-6xl px-6 py-14">

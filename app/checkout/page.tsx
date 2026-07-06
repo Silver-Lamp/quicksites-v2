@@ -17,6 +17,7 @@ export default function CheckoutPage() {
 
   const [busy, setBusy] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
+  const [note, setNote] = React.useState('');
 
   const placeOrder = React.useCallback(async () => {
     setError(null);
@@ -29,6 +30,7 @@ export default function CheckoutPage() {
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({
           merchantId,
+          customerNote: note.trim() || undefined,
           items: items.map((it) => ({
             catalogItemId: it.catalog_item_id ?? it.id,
             variantId: it.variant_id ?? undefined,
@@ -50,7 +52,7 @@ export default function CheckoutPage() {
       setError(e?.message || 'Checkout failed');
       setBusy(false);
     }
-  }, [merchantId, items]);
+  }, [merchantId, items, note]);
 
   if (!items.length) {
     return (
@@ -80,10 +82,22 @@ export default function CheckoutPage() {
         ))}
       </ul>
 
-      <div className="mb-6 flex justify-between text-base font-semibold">
+      <div className="mb-4 flex justify-between text-base font-semibold">
         <span>Total</span>
         <span>{fmt(subtotalCents)}</span>
       </div>
+
+      <label className="mb-6 block">
+        <span className="text-sm font-medium">Special instructions <span className="font-normal text-muted-foreground">(optional)</span></span>
+        <textarea
+          value={note}
+          onChange={(e) => setNote(e.target.value)}
+          maxLength={500}
+          rows={3}
+          placeholder="Allergies, no cilantro, leave at door…"
+          className="mt-1.5 w-full rounded-md border bg-transparent px-3 py-2 text-sm outline-none focus:border-primary"
+        />
+      </label>
 
       {error && <div className="mb-3 text-sm text-red-500">{error}</div>}
 

@@ -85,8 +85,23 @@ So a tampered `unitAmount`, a fabricated add-on price, or a cross-store item id 
 - **Green-path proof route** (admin-gated, no real Stripe): `POST /api/admin/commerce/menu-demo` — builds a menu with a plain item + a choose-one item → `buildCatalogRowsFromMenu` + `normalizeVariants` → `catalog_items` → orders the plain item **and the Large variant** through the real `authorizeCheckoutItems` → `createDraftOrder` → `markOrderPaid`, and **asserts** the Large variant repriced to $12 (not the $8 base) and the platform fee is taken on the real prices. `{cleanup:true}` tears down. Mirrors `e2e-demo` / `pod-demo`.
 - **CI unit tests** (all pure): `checkoutItems.test.ts` (variant + add-on repricing, tamper/unknown-id rejects — 27 cases), `menuCatalog.test.ts` (rows/variants/add-ons/links — 14), `menuOrderChain.test.ts` (the reprice assertion without a DB), `menuPrice` (via menuCatalog), `restaurant-menu.test.ts` (scaffold), `scrapeSite`/`parseMenu` (conversion).
 
+## 7b. The `delivered.menu` surface (default deliverable URL)
+
+A restaurant's zero-setup home is **`delivered.menu`**, reachable two ways that both resolve to the same site (`/sites/<slug>`):
+- **Subdomain:** `hawkers.delivered.menu` (the form the outreach/QR links use).
+- **Path:** `delivered.menu/hawkers`.
+
+Restaurants may still attach their **own custom domain** (unchanged `domain` column + the generic custom-domain path in `middleware.ts`); delivered.menu is just the default.
+
+The **same URL spans the lifecycle**: an unclaimed outreach draft renders with the "not published yet" watermark and `robots: noindex`; once the owner claims + publishes, it becomes the live, indexable ordering site and the watermark drops automatically (keyed on `published_snapshot_id`). Mechanics:
+- `middleware.ts` (menu branch) rewrites both host forms to `/sites/<slug>` and sets an `x-qsites-menu-host` request header; bare apex `/` → `/restaurants`; reserved app paths (`/api`, `/admin`, `/claim-site`, `/preview`, …) pass through so ordering + claim work on the branded host.
+- `app/sites/[slug]/[[...rest]]/page.tsx` reads that header: with no published snapshot it serves the **public** draft (watermark + noindex) instead of 404'ing; published sites are unaffected.
+- Helpers: `lib/menu/deliveredMenu.ts` (`menuSubdomainSlug` / `menuPathSlug` / `menuSiteUrl`). Outreach dashboard + `scripts/import-listings-batch.ts` emit `menuSiteUrl(slug)`.
+- **Flag:** `NEXT_PUBLIC_MENU_BASE_DOMAIN` (blank = dormant). Set to `delivered.menu` **after** the apex + `www` + a `*.delivered.menu` wildcard are pointed at this Vercel project.
+
 ## 8. Env flags
 
+- `NEXT_PUBLIC_MENU_BASE_DOMAIN` — the restaurant "menu" base domain (e.g. `delivered.menu`); blank keeps the surface + links dormant. See §7b.
 - `NEXT_PUBLIC_GUEST_BUILD_ENABLED=1` — gates the anonymous convert/rebuild path (prod ON).
 - `REBUILD_HERO_ENABLED` — off by default; when on, conversion generates a fresh hero instead of reusing the source `og:image`.
 - `STRIPE_SECRET_KEY` + `APP_BASE_URL`/`QS_PUBLIC_URL` — required for the Connect button (`/api/connect/onboard`).

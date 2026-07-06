@@ -62,6 +62,7 @@ async function main() {
   const { augmentListingWithYelp } = await import('@/lib/rebuild/importListingYelp');
   const { buildRebuildTemplate } = await import('@/lib/rebuild/assembleDraft');
   const { mintSiteClaimToken } = await import('@/lib/auth/siteClaimToken');
+  const { menuSiteUrl, MENU_BASE_DOMAIN } = await import('@/lib/menu/deliveredMenu');
 
   const db = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -142,7 +143,8 @@ async function main() {
       // menuSource measures the auto-detection: 'auto' = read from listing photos,
       // 'manual' = operator supplied a menu photo, 'none' = no menu found (needs one).
       const menuSource = explicit ? 'manual' : menuItems > 0 ? 'auto' : 'none';
-      const previewUrl = `${PUBLIC_BASE}/preview/${slug}`;
+      // Prefer the branded delivered.menu URL when the surface is live; else relative preview.
+      const previewUrl = MENU_BASE_DOMAIN ? menuSiteUrl(slug) : `${PUBLIC_BASE}/preview/${slug}`;
       const claimUrl = `${PUBLIC_BASE}/claim-site/${insertedId}?token=${encodeURIComponent(mintSiteClaimToken(insertedId))}`;
 
       // Ready-to-print QR (encodes the claim link → preview + one-tap claim).

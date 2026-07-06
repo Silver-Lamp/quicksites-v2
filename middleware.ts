@@ -263,10 +263,10 @@ export async function middleware(req: NextRequest) {
         const rest = pathname.replace(/^\/[^/]+/, ''); // strip the /<slug> segment
         return toSite(slug, rest);
       }
-      // Bare apex root → the restaurants landing; reserved app paths pass through.
+      // Bare apex root → the live-restaurants directory; reserved app paths pass through.
       if (pathname === '/') {
         const rewriteUrl = req.nextUrl.clone();
-        rewriteUrl.pathname = '/restaurants';
+        rewriteUrl.pathname = '/delivered';
         return withCookies(NextResponse.rewrite(rewriteUrl));
       }
       return withCookies(NextResponse.next());

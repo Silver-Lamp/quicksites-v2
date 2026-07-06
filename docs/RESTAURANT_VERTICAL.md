@@ -94,8 +94,8 @@ A restaurant's zero-setup home is **`delivered.menu`**, reachable two ways that 
 Restaurants may still attach their **own custom domain** (unchanged `domain` column + the generic custom-domain path in `middleware.ts`); delivered.menu is just the default.
 
 The **same URL spans the lifecycle**: an unclaimed outreach draft renders with the "not published yet" watermark and `robots: noindex`; once the owner claims + publishes, it becomes the live, indexable ordering site and the watermark drops automatically (keyed on `published_snapshot_id`). Mechanics:
-- `middleware.ts` (menu branch) rewrites both host forms to `/sites/<slug>` and sets an `x-qsites-menu-host` request header; bare apex `/` → `/restaurants`; reserved app paths (`/api`, `/admin`, `/claim-site`, `/preview`, …) pass through so ordering + claim work on the branded host.
-- `app/sites/[slug]/[[...rest]]/page.tsx` reads that header: with no published snapshot it serves the **public** draft (watermark + noindex) instead of 404'ing; published sites are unaffected.
+- `middleware.ts` (menu branch) rewrites both host forms to `/sites/<slug>` and sets an `x-qsites-menu-host` request header; bare apex `/` → `/delivered` (a directory of live restaurants, `app/delivered/page.tsx`); reserved app paths (`/api`, `/admin`, `/claim-site`, `/preview`, …) pass through so ordering + claim work on the branded host.
+- `app/sites/[slug]/[[...rest]]/page.tsx` reads that header: with no published snapshot it serves the **public** draft (watermark + noindex) instead of 404'ing; published sites are unaffected. An unclaimed `listing_import` draft also gets a **"Claim this site" bar** (`components/sites/menu-claim-bar.tsx`) linking to the token-gated `/claim-site/<id>` flow.
 - Helpers: `lib/menu/deliveredMenu.ts` (`menuSubdomainSlug` / `menuPathSlug` / `menuSiteUrl`). Outreach dashboard + `scripts/import-listings-batch.ts` emit `menuSiteUrl(slug)`.
 - **Flag:** `NEXT_PUBLIC_MENU_BASE_DOMAIN` (blank = dormant). Set to `delivered.menu` **after** the apex + `www` + a `*.delivered.menu` wildcard are pointed at this Vercel project.
 

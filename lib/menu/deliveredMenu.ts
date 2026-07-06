@@ -26,8 +26,8 @@ export const MENU_BASE_DOMAIN = (process.env.NEXT_PUBLIC_MENU_BASE_DOMAIN || '')
  */
 const RESERVED_APEX_SEGMENTS = new Set([
   '', 'api', 'admin', 'login', 'logout', 'signup', 'claim-site', 'preview',
-  'sites', 'orgs', 'restaurants', 'partners', 'compare', 'build', 'cart',
-  'checkout', 'orders', 'host', '_domains', '_next',
+  'sites', 'orgs', 'restaurants', 'delivered', 'partners', 'compare', 'build',
+  'cart', 'checkout', 'orders', 'host', '_domains', '_next',
   'favicon.ico', 'robots.txt', 'sitemap.xml', 'manifest.json',
 ]);
 

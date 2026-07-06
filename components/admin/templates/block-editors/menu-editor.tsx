@@ -8,6 +8,10 @@ import { parsePriceToCents, centsToDisplay } from '@/lib/commerce/menuPrice';
 import { applyCatalogLinks } from '@/lib/commerce/menuCatalog';
 import ImageUploadField from '@/components/merchant/ImageUploadField';
 
+// Owner-asserted tags (badges on the rendered menu). Kept short + fixed so dietary
+// claims are the owner's assertion, never an AI guess.
+const PRESET_TAGS = ['Popular', 'New', 'Vegetarian', 'Vegan', 'GF', 'Spicy'];
+
 type Option = { label: string; price?: string; price_cents?: number; variant_id?: string };
 type Addon = { id?: string; label: string; price?: string; price_cents?: number };
 type Item = { name: string; description?: string; price?: string; image_url?: string; options?: Option[]; addons?: Addon[]; catalog_item_id?: string; price_cents?: number; tags?: string[] };
@@ -142,6 +146,12 @@ export default function MenuEditor({ block, onSave, onClose, template }: BlockEd
     setItem(si, ii, { options: [...(sections[si].items[ii].options ?? []), { label: '', price: '' }] });
   const removeOption = (si: number, ii: number, oi: number) =>
     setItem(si, ii, { options: (sections[si].items[ii].options ?? []).filter((_, j) => j !== oi) });
+
+  // tag helpers (owner-asserted labels; the renderer shows them as badges)
+  const toggleTag = (si: number, ii: number, tag: string) => {
+    const cur = sections[si].items[ii].tags ?? [];
+    setItem(si, ii, { tags: cur.includes(tag) ? cur.filter((t) => t !== tag) : [...cur, tag] });
+  };
 
   // add-on (multi-select) helpers
   const setAddon = (si: number, ii: number, ai: number, patch: Partial<Addon>) =>
@@ -290,6 +300,28 @@ export default function MenuEditor({ block, onSave, onClose, template }: BlockEd
                     onChange={(e) => setItem(si, ii, { description: e.target.value })}
                     placeholder="Description (optional)"
                   />
+
+                  {/* Tags — owner-asserted badges shown on the menu. */}
+                  <div className="mt-2 flex flex-wrap gap-1.5">
+                    {PRESET_TAGS.map((tag) => {
+                      const active = (it.tags ?? []).includes(tag);
+                      return (
+                        <button
+                          key={tag}
+                          type="button"
+                          onClick={() => toggleTag(si, ii, tag)}
+                          className={`rounded-full border px-2.5 py-0.5 text-[11px] font-medium transition ${
+                            active
+                              ? 'border-transparent bg-sky-500 text-zinc-950'
+                              : 'border-zinc-700 text-zinc-400 hover:border-zinc-500'
+                          }`}
+                        >
+                          {tag}
+                        </button>
+                      );
+                    })}
+                  </div>
+
                   <div className="mt-2">
                     <ImageUploadField
                       value={it.image_url ?? ''}

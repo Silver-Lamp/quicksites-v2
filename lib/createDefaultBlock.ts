@@ -124,6 +124,37 @@ export function createDefaultBlock(type: BlockType): z.infer<typeof BlockSchema>
       break;
     }
 
+    /* ---------------- Menu (restaurant) ---------------- */
+
+    case 'menu': {
+      content = {
+        ...content,
+        title: content.title ?? 'Menu',
+        note: typeof content.note === 'string' ? content.note : '',
+        currency: typeof content.currency === 'string' ? content.currency : 'USD',
+        sections: Array.isArray(content.sections) && content.sections.length
+          ? content.sections
+          : [
+              {
+                name: 'Starters',
+                description: '',
+                items: [
+                  { name: 'Soup of the Day', description: 'Ask your server.', price: '$7', tags: [] },
+                  { name: 'House Salad', description: 'Greens, seasonal vegetables, house dressing.', price: '$9', tags: ['V'] },
+                ],
+              },
+              {
+                name: 'Mains',
+                description: '',
+                items: [
+                  { name: 'Signature Dish', description: 'Describe your best seller here.', price: '$18', tags: ['Popular'] },
+                ],
+              },
+            ],
+      };
+      break;
+    }
+
     /* ---------------- NEW: Commerce blocks ---------------- */
 
     case 'products_grid': {

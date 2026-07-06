@@ -17,12 +17,15 @@ export default async function MerchantOrdersPage({ searchParams }: { searchParam
 
   // Cast: types/supabase.ts is stale (no oversold_lines), which would poison the
   // whole select's return type. See CLAUDE.md §8.
-  const { data: orders } = await (supabase as any)
-    .from('orders')
-    .select('id, created_at, site_slug, status, total_cents, currency, provider, oversold_lines')
-    .eq('merchant_id', merchantId)
-    .order('created_at', { ascending: false })
-    .limit(200);
+  const BASE_COLS = 'id, created_at, site_slug, status, total_cents, currency, provider, oversold_lines';
+  const q = (cols: string) =>
+    (supabase as any).from('orders').select(cols).eq('merchant_id', merchantId).order('created_at', { ascending: false }).limit(200);
+  // Forward-safe: customer_note may not exist yet (migration not applied) — fall
+  // back to the base columns so the page never 500s over an optional column.
+  let { data: orders, error: ordErr } = await q(`${BASE_COLS}, customer_note`);
+  if (ordErr && (ordErr.code === '42703' || /customer_note/i.test(ordErr.message || ''))) {
+    ({ data: orders } = await q(BASE_COLS));
+  }
 
   const oversoldCount = (orders || []).filter((o: any) => Array.isArray(o.oversold_lines) && o.oversold_lines.length).length;
 
@@ -46,7 +49,12 @@ export default async function MerchantOrdersPage({ searchParams }: { searchParam
               <tr key={o.id} className="[&>td]:px-4 [&>td]:py-3 align-top">
                 <td className="whitespace-nowrap text-neutral-400">{new Date(o.created_at ?? '').toLocaleString()}</td>
                 <td className="font-mono">{o.id.slice(0,8)}…</td>
-                <td>{o.site_slug}</td>
+                <td>
+                  {o.site_slug}
+                  {o.customer_note && (
+                    <div className="mt-1 max-w-xs whitespace-pre-line text-xs text-neutral-400">📝 {o.customer_note}</div>
+                  )}
+                </td>
                 <td>
                   <span className="rounded bg-neutral-800 px-2 py-1 text-xs">{o.status}</span>
                   {Array.isArray((o as any).oversold_lines) && (o as any).oversold_lines.length > 0 && (

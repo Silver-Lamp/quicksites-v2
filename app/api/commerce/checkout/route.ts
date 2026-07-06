@@ -17,6 +17,7 @@ const CheckoutSchema = z.object({
   merchantId: z.string().min(1),
   siteSlug: z.string().optional(),
   currency: z.string().length(3).optional(),
+  customerNote: z.string().max(500).optional(), // buyer special instructions
   items: z
     .array(
       z.object({
@@ -69,6 +70,7 @@ export async function POST(req: NextRequest) {
     siteSlug: body.siteSlug ?? '',
     currency: currency ?? 'USD',
     items,
+    customerNote: body.customerNote,
   });
 
   // Reserve stock atomically (holds it for ~30 min) so a concurrent buyer can't

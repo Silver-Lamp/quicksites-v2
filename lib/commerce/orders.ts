@@ -15,6 +15,8 @@ export async function createDraftOrder(opts: {
   items: LineItemInput[];
   /** Optional: surface the chosen provider for visibility on the order row */
   provider?: string;
+  /** Optional buyer special instructions ("no cilantro", "leave at door"). */
+  customerNote?: string;
 }) {
   if (!opts.items?.length) throw new Error('Order must contain at least one line item.');
 
@@ -66,23 +68,30 @@ export async function createDraftOrder(opts: {
   const total = subtotal + shippingCents;
 
   // Create order
-  const { data: order, error } = await supabase
-    .from('orders')
-    .insert({
-      merchant_id: opts.merchantId,
-      site_slug: opts.siteSlug,
-      currency,
-      amount_cents: total, // legacy column back-compat
-      subtotal_cents: subtotal,
-      shipping_cents: shippingCents,
-      total_cents: total,
-      platform_fee_cents: platformFeeCents,
-      status: 'pending',
-      provider: opts.provider ?? null,
-    })
-    .select('id')
-    .single();
+  const orderRow: Record<string, any> = {
+    merchant_id: opts.merchantId,
+    site_slug: opts.siteSlug,
+    currency,
+    amount_cents: total, // legacy column back-compat
+    subtotal_cents: subtotal,
+    shipping_cents: shippingCents,
+    total_cents: total,
+    platform_fee_cents: platformFeeCents,
+    status: 'pending',
+    provider: opts.provider ?? null,
+  };
+  const customerNote = (opts.customerNote ?? '').trim().slice(0, 500);
+  if (customerNote) orderRow.customer_note = customerNote;
+
+  let { data: order, error } = await supabase.from('orders').insert(orderRow).select('id').single();
+  // Forward-safe: if the customer_note column isn't present yet (migration not
+  // applied), drop it and retry — an order is never lost over an optional note.
+  if (error && customerNote && (error.code === '42703' || /customer_note/i.test(error.message || ''))) {
+    delete orderRow.customer_note;
+    ({ data: order, error } = await supabase.from('orders').insert(orderRow).select('id').single());
+  }
   if (error) throw error;
+  if (!order) throw new Error('Order could not be created.');
 
   // Create items (best-effort cleanup on failure)
   const orderItems = opts.items.map((li) => {

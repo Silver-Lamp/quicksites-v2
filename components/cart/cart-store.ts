@@ -5,11 +5,14 @@ import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 
 /* ---------- types ---------- */
+export type CartAddon = { id: string; label: string; price_cents: number };
 export type CartItem = {
-  id: string; // line identity — composite (`<catalogItemId>::<variantId>`) when a variant is chosen
+  id: string; // line identity — composite (`<catalogItemId>::<variantId>::<addonIds>`) when a variant/add-ons are chosen
   catalog_item_id?: string; // the underlying catalog item (for the checkout payload)
   variant_id?: string | null;
   variant_label?: string | null;
+  addon_ids?: string[]; // selected add-on ids (for the checkout payload)
+  addons?: CartAddon[]; // display copy of the chosen add-ons
   title: string;
   price_cents: number;
   qty: number;
@@ -31,6 +34,8 @@ type Actions = {
     id: string; // catalog item id
     variant_id?: string | null;
     variant_label?: string | null;
+    addon_ids?: string[];
+    addons?: CartAddon[];
     title: string;
     price_cents: number;
     qty?: number;
@@ -82,10 +87,17 @@ export const useCartStore = create<State & Actions>()(
           }
 
           const qty = Math.max(1, Math.floor(p.qty ?? 1));
-          // Line identity is composite when a variant is chosen, so red-M and
-          // blue-L of the same product are distinct lines (setQty/removeItem and
-          // React keys all key off `id`).
-          const lineId = p.variant_id ? `${p.id}::${p.variant_id}` : p.id;
+          // Line identity is composite when a variant and/or add-ons are chosen, so
+          // "burger + cheese" and "burger + bacon" are distinct lines with their own
+          // prices (setQty/removeItem and React keys all key off `id`). Plain and
+          // variant-only lines keep their exact prior ids (add-on segment only when
+          // add-ons are present) so existing carts are unaffected.
+          const addonKey = p.addon_ids && p.addon_ids.length ? p.addon_ids.slice().sort().join(',') : '';
+          const lineId = addonKey
+            ? `${p.id}::${p.variant_id ?? ''}::${addonKey}`
+            : p.variant_id
+            ? `${p.id}::${p.variant_id}`
+            : p.id;
           const idx = items.findIndex((i) => i.id === lineId);
 
           const nextItems =
@@ -98,6 +110,8 @@ export const useCartStore = create<State & Actions>()(
                     catalog_item_id: p.id,
                     variant_id: p.variant_id ?? null,
                     variant_label: p.variant_label ?? null,
+                    addon_ids: p.addon_ids && p.addon_ids.length ? p.addon_ids : undefined,
+                    addons: p.addons && p.addons.length ? p.addons : undefined,
                     title: p.title,
                     price_cents: p.price_cents,
                     qty,

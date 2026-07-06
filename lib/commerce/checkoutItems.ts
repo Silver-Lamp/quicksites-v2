@@ -11,11 +11,14 @@ export type RequestedItem = {
   catalogItemId: string;
   quantity: number;
   variantId?: string | null; // selected variant, when the item has variants
+  addonIds?: string[]; // selected multi-select add-ons (extra cheese, …), priced server-side
   // title / unitAmount may be sent by the client but are IGNORED — derived below.
   title?: string;
   unitAmount?: number;
   metadata?: unknown;
 };
+
+export type CatalogAddon = { id: string; label: string; price_cents: number };
 
 export type CatalogVariant = {
   id: string;
@@ -43,6 +46,15 @@ export function readVariants(metadata: unknown): CatalogVariant[] {
   const v = (metadata as any)?.variants;
   if (!Array.isArray(v)) return [];
   return v.filter((x) => x && typeof x.id === 'string');
+}
+
+/** Pull the multi-select add-ons off a catalog row's metadata, if any. */
+export function readAddons(metadata: unknown): CatalogAddon[] {
+  const a = (metadata as any)?.addons;
+  if (!Array.isArray(a)) return [];
+  return a
+    .filter((x) => x && typeof x.id === 'string' && Number.isFinite(Number(x.price_cents)))
+    .map((x) => ({ id: String(x.id), label: String(x.label ?? ''), price_cents: Math.max(0, Math.round(Number(x.price_cents))) }));
 }
 
 /**
@@ -168,17 +180,37 @@ export function authorizeCheckoutItems(input: {
       };
     }
 
+    // Multi-select add-ons (extra cheese, make it a combo, …): validate every
+    // requested id against the item's own add-on list and price them server-side.
+    // The client sends ids only — never prices — so this stays tamper-proof.
+    const availableAddons = readAddons(row.metadata);
+    const chosenAddons: CatalogAddon[] = [];
+    for (const id of Array.isArray(req.addonIds) ? req.addonIds : []) {
+      const a = availableAddons.find((x) => x.id === id);
+      if (!a) {
+        return { ok: false, error: `An add-on for "${title}" is unavailable.`, badItemId: req.catalogItemId };
+      }
+      chosenAddons.push(a);
+    }
+    const addonsTotal = chosenAddons.reduce((s, a) => s + a.price_cents, 0);
+    const unitAmount = price + addonsTotal;
+    if (chosenAddons.length) title = `${title} (+ ${chosenAddons.map((a) => a.label).join(', ')})`;
+
     const baseMeta = row.metadata && typeof row.metadata === 'object' ? { ...(row.metadata as Record<string, unknown>) } : {};
     if (variant) {
       baseMeta.variant_id = variant.id;
       baseMeta.variant_label = variant.label;
+    }
+    if (chosenAddons.length) {
+      baseMeta.addons = chosenAddons;
+      baseMeta.addon_ids = chosenAddons.map((a) => a.id);
     }
 
     items.push({
       catalogItemId: row.id,
       title,
       quantity,
-      unitAmount: price, // authoritative — client-sent unitAmount is discarded
+      unitAmount, // authoritative — base/variant + validated add-ons; client-sent unitAmount is discarded
       metadata: baseMeta,
     });
   }

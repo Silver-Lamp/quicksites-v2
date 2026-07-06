@@ -14,7 +14,11 @@
 //   void                -> reversed on refund (excluded from what QS owes/keeps)
 
 export type OrderRow = { status?: string | null; total_cents?: number | null; platform_fee_cents?: number | null };
-export type CommissionRow = { status?: string | null; amount_cents?: number | null };
+// `subject` distinguishes a partner residual ('order_platform_fee') from a hub
+// override ('order_platform_fee_override'). Absent = treated as a partner residual.
+export type CommissionRow = { status?: string | null; amount_cents?: number | null; subject?: string | null };
+
+const OVERRIDE_SUBJECT = 'order_platform_fee_override';
 
 export type RevenueSummary = {
   orders: { paid: number; refunded: number };
@@ -22,9 +26,10 @@ export type RevenueSummary = {
   platform_fee_cents: number; // gross fees on paid orders
   refunded_gmv_cents: number;
   refunded_fee_cents: number;
-  qs_net_cents: number; // gross fees minus the partner share owed/paid against them
+  qs_net_cents: number; // gross fees minus BOTH the partner residual and hub overrides owed/paid against them
   partner_residual_cents: { owed: number; paid: number; void: number };
-  commission_ledger_cents: Record<string, number>; // per-status breakdown
+  hub_override_cents: { owed: number; paid: number; void: number }; // second-tier hub cut, also out of QS's share
+  commission_ledger_cents: Record<string, number>; // partner-residual per-status breakdown
 };
 
 const cents = (v: unknown) => Number(v) || 0;
@@ -73,8 +78,10 @@ export function reconcileStripeFees(fees: StripeFeeObject[], dbGrossFeeCents: nu
 
 /**
  * Reduce orders + fee-subject commission rows to the reconciliation summary.
- * Callers should pass only commission_ledger rows with subject 'order_platform_fee'
- * (residuals against fees), scoped to the same time window as `orders`.
+ * Pass commission_ledger rows for BOTH fee subjects — 'order_platform_fee' (partner
+ * residual) and 'order_platform_fee_override' (hub override) — scoped to the same
+ * time window as `orders`. Both come out of QuickSites' share, so both are deducted
+ * from qs_net; the function splits them by `subject`.
  */
 export function summarizePlatformRevenue(input: {
   orders: OrderRow[];
@@ -84,16 +91,27 @@ export function summarizePlatformRevenue(input: {
   const paid = orders.filter((o) => o.status === 'paid');
   const refunded = orders.filter((o) => o.status === 'refunded');
 
-  const commissionByStatus: Record<string, number> = {};
-  for (const c of input.commissions ?? []) {
-    const k = c.status || 'unknown';
-    commissionByStatus[k] = (commissionByStatus[k] || 0) + cents(c.amount_cents);
-  }
+  const byStatus = (rows: CommissionRow[]): Record<string, number> => {
+    const m: Record<string, number> = {};
+    for (const c of rows) {
+      const k = c.status || 'unknown';
+      m[k] = (m[k] || 0) + cents(c.amount_cents);
+    }
+    return m;
+  };
+  const all = input.commissions ?? [];
+  const partnerByStatus = byStatus(all.filter((c) => c.subject !== OVERRIDE_SUBJECT));
+  const overrideByStatus = byStatus(all.filter((c) => c.subject === OVERRIDE_SUBJECT));
 
-  const owed = (commissionByStatus.pending || 0) + (commissionByStatus.approved || 0);
-  const paidResidual = commissionByStatus.paid || 0;
-  const voidResidual = commissionByStatus.void || 0;
+  const owed = (partnerByStatus.pending || 0) + (partnerByStatus.approved || 0);
+  const paidResidual = partnerByStatus.paid || 0;
+  const voidResidual = partnerByStatus.void || 0;
   const liveResidual = owed + paidResidual; // non-void
+
+  const ovOwed = (overrideByStatus.pending || 0) + (overrideByStatus.approved || 0);
+  const ovPaid = overrideByStatus.paid || 0;
+  const ovVoid = overrideByStatus.void || 0;
+  const liveOverride = ovOwed + ovPaid; // non-void
 
   const platformFeeCents = paid.reduce((s, o) => s + cents(o.platform_fee_cents), 0);
 
@@ -103,8 +121,9 @@ export function summarizePlatformRevenue(input: {
     platform_fee_cents: platformFeeCents,
     refunded_gmv_cents: refunded.reduce((s, o) => s + cents(o.total_cents), 0),
     refunded_fee_cents: refunded.reduce((s, o) => s + cents(o.platform_fee_cents), 0),
-    qs_net_cents: platformFeeCents - liveResidual,
+    qs_net_cents: platformFeeCents - liveResidual - liveOverride, // both come out of QS's share
     partner_residual_cents: { owed, paid: paidResidual, void: voidResidual },
-    commission_ledger_cents: commissionByStatus,
+    hub_override_cents: { owed: ovOwed, paid: ovPaid, void: ovVoid },
+    commission_ledger_cents: partnerByStatus,
   };
 }

@@ -42,12 +42,13 @@ export async function GET(req: NextRequest) {
   const { data: orders, error } = await q;
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
-  // Partner residuals against those fees. Scope to the fee subject (not other
-  // ledger subjects) and to the same window as the orders so the totals reconcile.
+  // Residuals + hub overrides against those fees — both come out of QS's share, so
+  // both must be deducted from net. Scope to the two fee subjects and the same window
+  // as the orders so the totals reconcile.
   let cq = db
     .from('commission_ledger')
-    .select('amount_cents, status')
-    .eq('subject', 'order_platform_fee');
+    .select('amount_cents, status, subject')
+    .in('subject', ['order_platform_fee', 'order_platform_fee_override']);
   if (since) cq = cq.gte('created_at', since);
   const { data: comm } = await cq;
 

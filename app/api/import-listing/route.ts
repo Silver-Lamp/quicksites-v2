@@ -13,7 +13,7 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { getAdminUser } from '@/lib/auth/getAdminUser';
 import { fetchGooglePlace, findPlace, buildSpecFromListing, ListingImportError, type Listing } from '@/lib/rebuild/importListing';
-import { menuFromPhotos } from '@/lib/rebuild/menuFromPhotos';
+import { menuFromPhotos, pickMenuPhotos } from '@/lib/rebuild/menuFromPhotos';
 import { buildRebuildTemplate } from '@/lib/rebuild/assembleDraft';
 import { mintSiteClaimToken } from '@/lib/auth/siteClaimToken';
 
@@ -61,14 +61,18 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Could not load that listing.' }, { status: 500 });
   }
 
-  // 2) Read the menu from photos (explicit photoUrls, else the listing's photos).
-  const photoUrls: string[] = Array.isArray(body.photoUrls) && body.photoUrls.length
-    ? body.photoUrls.map(String)
-    : (listing.photos ?? []);
+  // 2) Read the menu from photos. If the operator supplied explicit menu photos, use
+  //    them; otherwise auto-detect which of the listing's photos are menus first.
+  const explicit = Array.isArray(body.photoUrls) && body.photoUrls.length > 0;
+  let photoUrls: string[] = explicit ? body.photoUrls.map(String) : (listing.photos ?? []);
   let menu;
   try {
+    if (!explicit && photoUrls.length > 1) {
+      const picked = await pickMenuPhotos(photoUrls, operator.id).catch(() => []);
+      if (picked.length) photoUrls = picked; // else fall back to all photos below
+    }
     menu = photoUrls.length ? await menuFromPhotos(photoUrls, operator.id) : undefined;
-  } catch (e: any) {
+  } catch {
     // Menu is best-effort — a vision failure shouldn't block the site assembly.
     menu = undefined;
   }

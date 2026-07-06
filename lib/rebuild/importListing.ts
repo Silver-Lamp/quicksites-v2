@@ -146,7 +146,7 @@ export async function fetchGooglePlace(placeId: string, fetchImpl: typeof fetch 
   }
   const r = json.result;
   const photos = (Array.isArray(r.photos) ? r.photos : [])
-    .slice(0, 6)
+    .slice(0, 10) // more candidates so the menu-photo classifier has options
     .map((p: any) => `https://maps.googleapis.com/maps/api/place/photo?maxwidth=1600&photo_reference=${p.photo_reference}&key=${key}`);
 
   return {

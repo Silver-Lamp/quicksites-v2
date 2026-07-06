@@ -101,6 +101,7 @@ export const DYNAMIC_RENDERERS: Record<
   hours:        () => import('@/components/admin/templates/render-blocks/hours'),
   menu:         () => import('@/components/admin/templates/render-blocks/menu'),
   location:     () => import('@/components/admin/templates/render-blocks/location'),
+  order_bar:    () => import('@/components/admin/templates/render-blocks/order-bar'),
   products_grid: () => import('@/components/admin/templates/render-blocks/products-grid'),
   service_offer: async () => ({
     default: () =>

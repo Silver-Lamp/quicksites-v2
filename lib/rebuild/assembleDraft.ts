@@ -88,6 +88,11 @@ export function buildRebuildTemplate(opts: {
       if (spec.contact.phone) loc.content.phone = spec.contact.phone;
       if (spec.contact.email) loc.content.email = spec.contact.email;
     }
+    // The sticky mobile bar's tap-to-call uses the same number.
+    if (spec.contact.phone) {
+      const bar = blocks.find((b) => b?.type === 'order_bar');
+      if (bar?.content) bar.content.phone = spec.contact.phone;
+    }
   }
 
   // Real hours → the hours block days.

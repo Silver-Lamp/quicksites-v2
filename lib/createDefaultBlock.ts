@@ -172,6 +172,20 @@ export function createDefaultBlock(type: BlockType): z.infer<typeof BlockSchema>
       break;
     }
 
+    /* ---------------- Sticky order bar ---------------- */
+
+    case 'order_bar': {
+      content = {
+        ...content,
+        phone: typeof content.phone === 'string' ? content.phone : '',
+        call_label: typeof content.call_label === 'string' ? content.call_label : 'Call',
+        cta_label: typeof content.cta_label === 'string' ? content.cta_label : 'View Menu',
+        cta_href: typeof content.cta_href === 'string' ? content.cta_href : '#menu',
+        enabled: content.enabled !== false,
+      };
+      break;
+    }
+
     /* ---------------- NEW: Commerce blocks ---------------- */
 
     case 'products_grid': {

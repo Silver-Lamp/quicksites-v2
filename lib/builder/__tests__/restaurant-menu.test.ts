@@ -52,7 +52,7 @@ describe('buildIndustryStarter — food vs non-food', () => {
   it('restaurant gets a menu-forward layout (menu + location + hours, no services)', () => {
     const tpl = buildIndustryStarter({ businessName: "Jay's Cafe", industryKey: 'restaurant' });
     const types = blockTypes(tpl);
-    expect(types).toEqual(['hero', 'menu', 'location', 'hours', 'faq', 'contact_form']);
+    expect(types).toEqual(['hero', 'menu', 'location', 'hours', 'faq', 'contact_form', 'order_bar']);
     const menu = tpl.data.pages[0].blocks.find((b: any) => b.type === 'menu');
     expect(menu.content.sections.length).toBeGreaterThan(0);
     const loc = tpl.data.pages[0].blocks.find((b: any) => b.type === 'location');

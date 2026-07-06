@@ -124,7 +124,8 @@ export function buildIndustryStarter(opts: { businessName: string; industryKey: 
     const location: any = createDefaultBlock('location');
     location.content = { ...location.content, business_name: businessName || label };
     const hours: any = createDefaultBlock('hours');
-    blocks = [hero, menu, location, hours, faq, contact];
+    const orderBar: any = createDefaultBlock('order_bar');
+    blocks = [hero, menu, location, hours, faq, contact, orderBar];
   } else if (STOREFRONT_INDUSTRIES.has(industryKey)) {
     blocks = [hero, createDefaultBlock('products_grid') as any, services, faq, contact];
   } else {

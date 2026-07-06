@@ -30,3 +30,18 @@ export function clampPlatformFeePercent(pct: number): number {
   const v = Number(pct) || 0;
   return Math.min(Math.max(v, 0), MAX_PLATFORM_FEE_PERCENT);
 }
+
+/**
+ * A "hub" recruits resellers and earns a configurable, lifetime override on their
+ * orders. The override is funded OUT OF QuickSites' share: clamp it to
+ * [0, QS_FEE_SHARE] so the reseller's 80% residual is never touched and QS's net
+ * can't go negative. Returns the hub's cut of one order's platform fee, in cents.
+ */
+export function clampOverrideShare(share: number): number {
+  const v = Number(share) || 0;
+  return Math.min(Math.max(v, 0), QS_FEE_SHARE);
+}
+export function hubOverrideCents(platformFeeCents: number, overrideShare: number): number {
+  const fee = Math.max(0, Number(platformFeeCents) || 0);
+  return Math.floor(fee * clampOverrideShare(overrideShare));
+}

@@ -57,6 +57,7 @@ async function main() {
 
   const { fetchGooglePlace, findPlace, buildSpecFromListing, ListingImportError } = await import('@/lib/rebuild/importListing');
   const { menuFromPhotos, pickMenuPhotos } = await import('@/lib/rebuild/menuFromPhotos');
+  const { augmentListingWithYelp } = await import('@/lib/rebuild/importListingYelp');
   const { buildRebuildTemplate } = await import('@/lib/rebuild/assembleDraft');
   const { mintSiteClaimToken } = await import('@/lib/auth/siteClaimToken');
 
@@ -87,9 +88,10 @@ async function main() {
         throw new Error('lead needs one of: query, placeId, or listing.name');
       }
 
-      // 2) Menu from photos. Explicit menu photos win; otherwise auto-detect which of
-      //    the listing's photos are menus before the (costlier) high-detail read.
+      // 2) Menu from photos. Explicit menu photos win; otherwise augment with Yelp's
+      //    photos (more menu candidates) and auto-detect which are menus.
       const explicit = Array.isArray(lead.photoUrls) && lead.photoUrls.length > 0;
+      if (!explicit) listing = await augmentListingWithYelp(listing).catch(() => listing);
       let photoUrls: string[] = explicit ? lead.photoUrls.map(String) : (listing.photos ?? []);
       let menu;
       try {

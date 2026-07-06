@@ -283,6 +283,49 @@ const FooterContent = z.preprocess((raw) => {
   links: z.array(LinkSchema).default([]),
 }).passthrough());
 
+/* ───────────────────────────── Menu (restaurant) ──────────────────────────── */
+// A display menu grouped into sections (Breakfast / Lunch / …). Prices are kept as
+// freeform display strings (scraped/AI menu prices are messy — "$14", "MP", "14/18"),
+// while `catalog_item_id` + `price_cents` are the optional ordering linkage (set when
+// a menu item is wired to a catalog_item so "Add to order" can hit checkout).
+export const MenuItemSchema = z.object({
+  name: z.string().min(1),
+  description: z.string().optional().default(''),
+  price: z.string().optional().default(''),
+  image_url: z.string().optional().default(''),
+  tags: z.array(z.string()).optional().default([]),
+  catalog_item_id: z.string().optional(),
+  price_cents: z.number().int().min(0).optional(),
+});
+
+export const MenuSectionSchema = z.object({
+  name: z.string().min(1),
+  description: z.string().optional().default(''),
+  items: z.array(MenuItemSchema).default([]),
+});
+
+export const MenuBlockSchema = z.preprocess((raw) => {
+  const c = raw && typeof raw === 'object' ? { ...(raw as any) } : {};
+  if (!c.title) c.title = 'Menu';
+  if (!Array.isArray(c.sections)) c.sections = [];
+  // Coerce numeric item prices → display strings so scraped/AI numbers don't drop.
+  c.sections = c.sections.map((s: any) => ({
+    ...s,
+    items: Array.isArray(s?.items)
+      ? s.items.map((it: any) => ({
+          ...it,
+          price: typeof it?.price === 'number' ? `$${it.price}` : it?.price,
+        }))
+      : [],
+  }));
+  return c;
+}, z.object({
+  title: z.string().default('Menu'),
+  note: z.string().optional().default(''),
+  currency: z.string().optional().default('USD'),
+  sections: z.array(MenuSectionSchema).default([]),
+}));
+
 /* ───────────────────────────── Block schema map ───────────────────────────── */
 
 export const blockContentSchemaMap = {
@@ -532,6 +575,8 @@ export const blockContentSchemaMap = {
 
 
   hours: { label: 'Hours of Operation', icon: '⏰', schema: HoursOfOperationSchema },
+
+  menu: { label: 'Menu', icon: '🍽️', schema: MenuBlockSchema },
 
   /* ───────────────────────────── NEW: Commerce blocks ─────────────────────── */
 

@@ -198,6 +198,23 @@ export const DEFAULT_BLOCK_CONTENT = {
     exceptions: [],
   },
 
+  /* ───────── menu (restaurant) ───────── */
+
+  menu: {
+    title: 'Menu',
+    note: '',
+    currency: 'USD',
+    sections: [
+      {
+        name: 'Popular',
+        description: '',
+        items: [
+          { name: 'House Favorite', description: 'A short, appetizing description.', price: '$12', tags: [] },
+        ],
+      },
+    ],
+  },
+
   /* ───────── commerce ───────── */
 
   products_grid: { title: 'Featured Products', columns: 3, productIds: [], products: [] },

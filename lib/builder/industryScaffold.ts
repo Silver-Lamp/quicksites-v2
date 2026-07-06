@@ -80,9 +80,54 @@ export function buildIndustryStarter(opts: { businessName: string; industryKey: 
   const STOREFRONT_INDUSTRIES = new Set<IndustryKey>([
     'author', 'retail_boutique', 'retail_home_goods', 'handmade', 'etsy_style', 'print_on_demand', 'custom_apparel',
   ]);
-  const blocks = STOREFRONT_INDUSTRIES.has(industryKey)
-    ? [hero, createDefaultBlock('products_grid') as any, services, faq, contact]
-    : [hero, services, faq, contact];
+  // Food industries get a menu-forward layout (menu + hours) instead of a services
+  // list — this is what makes a restaurant site read like an ordering site.
+  const FOOD_INDUSTRIES = new Set<IndustryKey>(['restaurant']);
+
+  let blocks: any[];
+  if (FOOD_INDUSTRIES.has(industryKey)) {
+    // Restaurant: menu + hours; the hero points at the menu rather than a quote.
+    setIfPresent(hero.content, 'headline', businessName || label);
+    setIfPresent(hero.content, 'subheadline', 'Fresh food, made daily — order online or stop by.');
+    setIfPresent(hero.content, 'cta_text', 'View Menu');
+
+    const menu: any = createDefaultBlock('menu');
+    menu.content = {
+      ...menu.content,
+      title: 'Our Menu',
+      sections: [
+        {
+          name: 'Breakfast',
+          description: '',
+          items: [
+            { name: 'Two Eggs Any Style', description: 'With toast and breakfast potatoes.', price: '$11', tags: [] },
+            { name: 'Buttermilk Pancakes', description: 'Stack of three, real maple syrup.', price: '$10', tags: [] },
+          ],
+        },
+        {
+          name: 'Lunch',
+          description: '',
+          items: [
+            { name: 'House Burger', description: 'Cheddar, lettuce, tomato, house sauce, fries.', price: '$14', tags: ['Popular'] },
+            { name: 'Garden Salad', description: 'Seasonal greens and vegetables.', price: '$9', tags: ['V'] },
+          ],
+        },
+        {
+          name: 'Dinner',
+          description: '',
+          items: [
+            { name: 'Signature Entrée', description: 'Describe your best seller here.', price: '$19', tags: [] },
+          ],
+        },
+      ],
+    };
+    const hours: any = createDefaultBlock('hours');
+    blocks = [hero, menu, hours, faq, contact];
+  } else if (STOREFRONT_INDUSTRIES.has(industryKey)) {
+    blocks = [hero, createDefaultBlock('products_grid') as any, services, faq, contact];
+  } else {
+    blocks = [hero, services, faq, contact];
+  }
   const homePage = {
     id: uid(),
     slug: 'index',

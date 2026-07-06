@@ -99,6 +99,7 @@ export const DYNAMIC_RENDERERS: Record<
   faq:          () => import('@/components/admin/templates/render-blocks/faq'),
   contact_form: () => import('@/components/admin/templates/render-blocks/contact-form'),
   hours:        () => import('@/components/admin/templates/render-blocks/hours'),
+  menu:         () => import('@/components/admin/templates/render-blocks/menu'),
   products_grid: () => import('@/components/admin/templates/render-blocks/products-grid'),
   service_offer: async () => ({
     default: () =>

@@ -94,6 +94,8 @@ export default async function RebuildPage({
           &copy; {new Date().getFullYear()} QuickSites.ai —{' '}
           <Link href="/" className="underline hover:text-zinc-300">Home</Link>
           <span className="mx-1">•</span>
+          <Link href="/restaurants" className="underline hover:text-zinc-300">Restaurants</Link>
+          <span className="mx-1">•</span>
           <Link href="/partners" className="underline hover:text-zinc-300">Partners</Link>
           <span className="mx-1">•</span>
           <Link href="/compare" className="underline hover:text-zinc-300">Compare</Link>

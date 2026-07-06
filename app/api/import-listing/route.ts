@@ -13,6 +13,7 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { getAdminUser } from '@/lib/auth/getAdminUser';
 import { fetchGooglePlace, findPlace, buildSpecFromListing, ListingImportError, type Listing } from '@/lib/rebuild/importListing';
+import { augmentListingWithYelp } from '@/lib/rebuild/importListingYelp';
 import { menuFromPhotos, pickMenuPhotos } from '@/lib/rebuild/menuFromPhotos';
 import { buildRebuildTemplate } from '@/lib/rebuild/assembleDraft';
 import { mintSiteClaimToken } from '@/lib/auth/siteClaimToken';
@@ -59,6 +60,11 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: e.message, code: e.code }, { status });
     }
     return NextResponse.json({ error: 'Could not load that listing.' }, { status: 500 });
+  }
+
+  // 1c) Augment with Yelp photos (its top shots skew toward menus) + fill gaps.
+  if (!(Array.isArray(body.photoUrls) && body.photoUrls.length)) {
+    listing = await augmentListingWithYelp(listing).catch(() => listing);
   }
 
   // 2) Read the menu from photos. If the operator supplied explicit menu photos, use

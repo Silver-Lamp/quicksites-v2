@@ -41,10 +41,14 @@ async function main() {
 
   const { fetchGooglePlace, findPlace, buildSpecFromListing } = await import('@/lib/rebuild/importListing');
   const { pickMenuPhotos, menuFromPhotos } = await import('@/lib/rebuild/menuFromPhotos');
+  const { augmentListingWithYelp } = await import('@/lib/rebuild/importListingYelp');
 
   hr('1) RESOLVE LISTING');
   const looksLikePlaceId = /^ChI[\w-]{10,}/.test(arg);
-  const listing = looksLikePlaceId ? await fetchGooglePlace(arg) : await fetchGooglePlace((await findPlace(arg)).placeId);
+  let listing = looksLikePlaceId ? await fetchGooglePlace(arg) : await fetchGooglePlace((await findPlace(arg)).placeId);
+  const googlePhotoCount = listing.photos?.length ?? 0;
+  listing = await augmentListingWithYelp(listing);
+  const addedByYelp = (listing.photos?.length ?? 0) - googlePhotoCount;
   console.log({
     name: listing.name,
     phone: listing.phone,
@@ -57,7 +61,10 @@ async function main() {
 
   hr('2) AUTO-DETECT MENU PHOTOS');
   const menuPhotos = listing.photos?.length ? await pickMenuPhotos(listing.photos, null) : [];
-  console.log(`Detected ${menuPhotos.length} menu photo(s) out of ${listing.photos?.length ?? 0}.`);
+  console.log(
+    `Detected ${menuPhotos.length} menu photo(s) out of ${listing.photos?.length ?? 0}` +
+      (addedByYelp > 0 ? ` (+${addedByYelp} from Yelp).` : '.'),
+  );
 
   hr('3) READ MENU (vision)');
   const source = menuPhotos.length ? menuPhotos : (listing.photos ?? []);

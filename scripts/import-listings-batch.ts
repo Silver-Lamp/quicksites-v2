@@ -58,6 +58,7 @@ async function main() {
   const { fetchGooglePlace, findPlace, buildSpecFromListing, ListingImportError } = await import('@/lib/rebuild/importListing');
   const { menuFromPhotos } = await import('@/lib/rebuild/menuFromPhotos');
   const { buildRebuildTemplate } = await import('@/lib/rebuild/assembleDraft');
+  const { mintSiteClaimToken } = await import('@/lib/auth/siteClaimToken');
 
   const db = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -127,6 +128,7 @@ async function main() {
 
       const menuItems = (menu?.sections ?? []).reduce((n: number, s: any) => n + s.items.length, 0);
       const previewUrl = `${PUBLIC_BASE}/preview/${slug}`;
+      const claimUrl = `${PUBLIC_BASE}/claim-site/${insertedId}?token=${encodeURIComponent(mintSiteClaimToken(insertedId))}`;
       const rec = {
         ok: true,
         businessName: spec.businessName,
@@ -134,12 +136,13 @@ async function main() {
         slug,
         editorUrl: `${PUBLIC_BASE}/admin/templates/${insertedId}`,
         previewUrl,
+        claimUrl,
         phone: spec.contact?.phone ?? null,
         menuSections: menu?.sections?.length ?? 0,
         menuItems,
       };
       results.push(rec);
-      console.log(`  ✓ ${rec.businessName} — ${menuItems} menu item(s) → ${previewUrl}`);
+      console.log(`  ✓ ${rec.businessName} — ${menuItems} item(s) · claim: ${claimUrl}`);
     } catch (e: any) {
       const msg = e instanceof (ListingImportError as any) ? `[${(e as any).code}] ${e.message}` : e?.message || String(e);
       results.push({ ok: false, label, error: msg });

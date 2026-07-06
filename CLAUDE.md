@@ -2,7 +2,7 @@
 
 > The single orientation doc for humans and AI agents working in this repo.
 > If you read one file before touching code, read this one.
-> Companion docs: [`docs/DEVELOPMENT.md`](docs/DEVELOPMENT.md) (run it locally) · [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) · [`docs/COMMERCE_RUNBOOK.md`](docs/COMMERCE_RUNBOOK.md) · [`docs/MONETIZATION.md`](docs/MONETIZATION.md) · [`docs/PRICING_REDESIGN.md`](docs/PRICING_REDESIGN.md) · [`docs/LLM_METERING.md`](docs/LLM_METERING.md) · [`docs/POD_AUTHOR_PLAN.md`](docs/POD_AUTHOR_PLAN.md) · [`docs/SECRET_ROTATION_RUNBOOK.md`](docs/SECRET_ROTATION_RUNBOOK.md) · [`docs/REVIVAL_PLAN.md`](docs/REVIVAL_PLAN.md) · [`docs/MODEL_A_PLAN.md`](docs/MODEL_A_PLAN.md) · [`docs/COMPETITIVE_LANDSCAPE.md`](docs/COMPETITIVE_LANDSCAPE.md) · [`docs/WHITE_LABEL_PLAN.md`](docs/WHITE_LABEL_PLAN.md)
+> Companion docs: [`docs/DEVELOPMENT.md`](docs/DEVELOPMENT.md) (run it locally) · [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) · [`docs/COMMERCE_RUNBOOK.md`](docs/COMMERCE_RUNBOOK.md) · [`docs/MONETIZATION.md`](docs/MONETIZATION.md) · [`docs/PRICING_REDESIGN.md`](docs/PRICING_REDESIGN.md) · [`docs/LLM_METERING.md`](docs/LLM_METERING.md) · [`docs/POD_AUTHOR_PLAN.md`](docs/POD_AUTHOR_PLAN.md) · [`docs/SECRET_ROTATION_RUNBOOK.md`](docs/SECRET_ROTATION_RUNBOOK.md) · [`docs/REVIVAL_PLAN.md`](docs/REVIVAL_PLAN.md) · [`docs/MODEL_A_PLAN.md`](docs/MODEL_A_PLAN.md) · [`docs/COMPETITIVE_LANDSCAPE.md`](docs/COMPETITIVE_LANDSCAPE.md) · [`docs/WHITE_LABEL_PLAN.md`](docs/WHITE_LABEL_PLAN.md) · [`docs/CLAIM_VERIFICATION_PLAN.md`](docs/CLAIM_VERIFICATION_PLAN.md)
 
 Last verified: 2026-07-03 · `tsc --noEmit` + `next build` pass clean.
 

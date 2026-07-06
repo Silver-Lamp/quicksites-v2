@@ -133,6 +133,9 @@ async function main() {
       if (!insertedId) throw new Error('could not allocate a unique draft');
 
       const menuItems = (menu?.sections ?? []).reduce((n: number, s: any) => n + s.items.length, 0);
+      // menuSource measures the auto-detection: 'auto' = read from listing photos,
+      // 'manual' = operator supplied a menu photo, 'none' = no menu found (needs one).
+      const menuSource = explicit ? 'manual' : menuItems > 0 ? 'auto' : 'none';
       const previewUrl = `${PUBLIC_BASE}/preview/${slug}`;
       const claimUrl = `${PUBLIC_BASE}/claim-site/${insertedId}?token=${encodeURIComponent(mintSiteClaimToken(insertedId))}`;
       const rec = {
@@ -146,9 +149,11 @@ async function main() {
         phone: spec.contact?.phone ?? null,
         menuSections: menu?.sections?.length ?? 0,
         menuItems,
+        menuSource,
       };
       results.push(rec);
-      console.log(`  ✓ ${rec.businessName} — ${menuItems} item(s) · claim: ${claimUrl}`);
+      const tag = menuSource === 'auto' ? '🍽 auto' : menuSource === 'manual' ? '🍽 manual' : '— no menu';
+      console.log(`  ✓ ${rec.businessName} — ${menuItems} item(s) [${tag}] · claim: ${claimUrl}`);
     } catch (e: any) {
       const msg = e instanceof (ListingImportError as any) ? `[${(e as any).code}] ${e.message}` : e?.message || String(e);
       results.push({ ok: false, label, error: msg });
@@ -159,7 +164,21 @@ async function main() {
   const out = file.replace(/\.json$/i, '') + '-results.json';
   writeFileSync(out, JSON.stringify(results, null, 2));
   const ok = results.filter((r) => r.ok).length;
+
+  // Menu hit-rate — the signal for whether paying for more photo access (Yelp
+  // Premium) is worth it: a high "needs a photo" count means auto-detection is
+  // missing menus, so more photos might help; a low count means don't bother.
+  const okRecs = results.filter((r) => r.ok);
+  const auto = okRecs.filter((r) => r.menuSource === 'auto').length;
+  const manual = okRecs.filter((r) => r.menuSource === 'manual').length;
+  const none = okRecs.filter((r) => r.menuSource === 'none').length;
+  const autoEligible = auto + none; // leads relying on auto-detection (no supplied photo)
+  const hitRate = autoEligible ? Math.round((auto / autoEligible) * 100) : 0;
+
   console.log(`\n✅ ${ok}/${leads.length} imported. Results → ${out}`);
+  console.log(`🍽  Menu: ${auto} auto-detected · ${manual} from a supplied photo · ${none} need a menu photo`);
+  if (autoEligible) console.log(`   Auto-detect hit rate: ${hitRate}% (${auto}/${autoEligible} without a supplied photo)`);
+  if (none > 0) console.log(`   → ${none} would benefit from more photo access (Yelp Premium) or a supplied menu photo.`);
   if (!PUBLIC_BASE) console.log('   (set NEXT_PUBLIC_APP_URL for absolute preview URLs)');
 }
 

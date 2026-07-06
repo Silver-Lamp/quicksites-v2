@@ -45,6 +45,15 @@ The rebuild pipeline (`lib/rebuild/*`, driven by `POST /api/rebuild`):
 
 **Smoke test**: `npm run smoke:rebuild -- <url>` (`scripts/rebuild-smoke.ts`) prints every stage incl. the extracted menu, no DB write. See [`REBUILD_SMOKE_TEST.md`](REBUILD_SMOKE_TEST.md).
 
+## 4b. No-website ingestion (listing import / CedarSites)
+
+Many target restaurants have **no website** — only a Google/Yelp listing (surfaced by "no website" lead tools). They can't be converted from a URL, but the *rest* of the pipeline is identical: only the ingestion source changes.
+
+- **Listing → spec** (`lib/rebuild/importListing.ts`): `fetchGooglePlace(placeId)` (Google Places Details, gated behind `GOOGLE_PLACES_API_KEY`) → name/phone/address/hours/categories/photos; `mapPlacesHours` converts `opening_hours.periods` (0 = Sunday) to our `HoursDaySpec`; `buildSpecFromListing` maps it (+ menu) into the same `RebuildSpec`. Accepts a **pasted listing JSON** when no key is configured. **Do not scrape Yelp/Google HTML** (Cloudflare + ToS) — use the API.
+- **Menu from photos** (`lib/rebuild/menuFromPhotos.ts`): a **vision** model (`gpt-4o`, metered) reads the menu-board / menu-page photos diners upload to the listing into the same `parseMenu` shape. This replaces the menu-subpage crawl for no-website businesses. Prices are OCR **guesses** → the owner still confirms them in "Enable ordering."
+- **Route**: `POST /api/import-listing` (operator/admin-gated) — resolve listing → `menuFromPhotos` → `buildSpecFromListing` → `assembleDraft` → a **claimable** draft (`claim_source='listing_import'`). The business claims it on sign-up. Ideal cold-outreach engine: auto-assemble a real site from a listing, then pitch "it's already built — claim it" under the CedarSites reseller brand.
+- **Smoke**: `npm run smoke:menu-photo -- <menu-image-url>` prints the extracted menu (no DB write). Verified live against a real menu-board photo (3 sections, 23 items, exact prices).
+
 ## 5. Ordering — "Enable ordering" (owner-confirmed prices)
 
 Conversion produces a **display** menu with approximate prices. You can't charge customers off AI-guessed prices, so ordering routes through an explicit **owner price-confirmation gate**:

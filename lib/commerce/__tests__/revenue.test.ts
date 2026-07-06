@@ -88,11 +88,42 @@ describe('summarizePlatformRevenue', () => {
     expect(s.qs_net_cents).toBe(160); // 800 − 640; the void 320 is ignored
   });
 
+  it('subtracts hub overrides (also out of QS share) from net, split from residual', () => {
+    // $10 fee: 80% reseller residual = 800, plus a hub override of 100 out of QS's
+    // 200 share. QS net = 1000 − 800 − 100 = 100.
+    const s = summarizePlatformRevenue({
+      orders: [order('paid', 12000, 1000)],
+      commissions: [
+        { status: 'pending', amount_cents: 800, subject: 'order_platform_fee' },
+        { status: 'pending', amount_cents: 100, subject: 'order_platform_fee_override' },
+      ],
+    });
+    expect(s.partner_residual_cents).toEqual({ owed: 800, paid: 0, void: 0 });
+    expect(s.hub_override_cents).toEqual({ owed: 100, paid: 0, void: 0 });
+    expect(s.qs_net_cents).toBe(100); // 1000 − 800 − 100
+    // the override must NOT leak into the partner-residual ledger breakdown
+    expect(s.commission_ledger_cents.pending).toBe(800);
+  });
+
+  it('excludes void hub overrides (reversed on refund) from net', () => {
+    const s = summarizePlatformRevenue({
+      orders: [order('paid', 12000, 1000)],
+      commissions: [
+        { status: 'pending', amount_cents: 800, subject: 'order_platform_fee' },
+        { status: 'paid', amount_cents: 100, subject: 'order_platform_fee_override' },
+        { status: 'void', amount_cents: 100, subject: 'order_platform_fee_override' },
+      ],
+    });
+    expect(s.hub_override_cents).toEqual({ owed: 0, paid: 100, void: 100 });
+    expect(s.qs_net_cents).toBe(100); // 1000 − 800 − 100 (paid override); void ignored
+  });
+
   it('is null-safe for missing/empty inputs', () => {
     const s = summarizePlatformRevenue({ orders: [], commissions: [] });
     expect(s.qs_net_cents).toBe(0);
     expect(s.gmv_cents).toBe(0);
     expect(s.partner_residual_cents).toEqual({ owed: 0, paid: 0, void: 0 });
+    expect(s.hub_override_cents).toEqual({ owed: 0, paid: 0, void: 0 });
   });
 
   it('coerces missing numeric fields to 0', () => {

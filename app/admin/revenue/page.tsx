@@ -45,6 +45,8 @@ export default function RevenuePage() {
 
   const comm = data?.commission_ledger_cents ?? {};
   const residual = data?.partner_residual_cents ?? {};
+  const override = data?.hub_override_cents ?? { owed: 0, paid: 0, void: 0 };
+  const hasOverride = (override.owed || 0) + (override.paid || 0) > 0;
   const stripeRec = data?.stripe_reconciliation ?? null;
 
   return (
@@ -85,6 +87,8 @@ export default function RevenuePage() {
           <div className="mt-3 grid grid-cols-2 gap-3">
             <Stat label="Platform fees (gross)" value={fmt(data.platform_fee_cents)} />
             <Stat label="Partner residual paid" value={fmt(residual.paid)} />
+            {hasOverride && <Stat label="Hub overrides (owed)" value={fmt(override.owed)} />}
+            {hasOverride && <Stat label="Hub overrides (paid)" value={fmt(override.paid)} />}
             <Stat label="GMV (paid)" value={fmt(data.gmv_cents)} />
             <Stat label="Paid orders" value={String(data.orders.paid)} />
             <Stat label="Refunded orders" value={String(data.orders.refunded)} />
@@ -92,8 +96,8 @@ export default function RevenuePage() {
           </div>
 
           <p className="mt-3 text-xs text-muted-foreground">
-            Net take = gross platform fees on paid orders minus the partner share (owed + paid) accrued
-            against them. Unattributed orders have no residual, so QuickSites keeps the full fee.
+            Net take = gross platform fees on paid orders minus the partner share (owed + paid){hasOverride ? ' and any hub override (owed + paid)' : ''} accrued
+            against them{hasOverride ? '. Both the partner residual and the hub override come out of QuickSites’ share.' : '. Unattributed orders have no residual, so QuickSites keeps the full fee.'}
           </p>
 
           {stripeRec && (

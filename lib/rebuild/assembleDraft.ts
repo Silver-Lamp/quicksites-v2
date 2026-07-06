@@ -55,6 +55,26 @@ export function buildRebuildTemplate(opts: {
     }
   }
 
+  // If the AI reconstructed a real menu (restaurant conversion), replace the
+  // scaffold's placeholder menu with it.
+  if (spec.menu?.sections?.length) {
+    const blocks: any[] = tpl.data?.pages?.[0]?.blocks ?? [];
+    const menuBlock = blocks.find((b) => b?.type === 'menu');
+    if (menuBlock?.content) {
+      menuBlock.content.title = menuBlock.content.title || 'Our Menu';
+      menuBlock.content.sections = spec.menu.sections.map((s) => ({
+        name: s.name,
+        description: '',
+        items: s.items.map((it) => ({
+          name: it.name,
+          description: it.description ?? '',
+          price: it.price ?? '',
+          tags: [],
+        })),
+      }));
+    }
+  }
+
   const services = spec.services.length ? spec.services : tpl.services;
   tpl.services = services;
   tpl.data.services = services;

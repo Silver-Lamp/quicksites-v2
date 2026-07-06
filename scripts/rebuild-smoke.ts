@@ -27,7 +27,7 @@ if (typeof (globalThis as any).WebSocket === 'undefined') {
   }
 }
 
-import { scrapeSite, ScrapeError } from '@/lib/rebuild/scrapeSite';
+import { scrapeSite, scrapeMenuPages, ScrapeError } from '@/lib/rebuild/scrapeSite';
 // NOTE: inferSiteSpec + assembleDraft are imported *dynamically* below — their
 // module chain (meterLLMCall) constructs a Supabase client at import time, so we
 // only pull them in when OPENAI_API_KEY is set (i.e. when we'll actually use them).
@@ -76,11 +76,15 @@ async function main() {
     return;
   }
 
+  hr('1b) MENU SUBPAGES');
+  const menuPages = await scrapeMenuPages(scraped).catch(() => []);
+  console.log(`Followed ${menuPages.length} menu page(s): ${menuPages.map((p) => p.label).join(', ') || '(none)'}`);
+
   const { inferSiteSpec } = await import('@/lib/rebuild/inferSiteSpec');
   const { buildRebuildTemplate } = await import('@/lib/rebuild/assembleDraft');
 
   hr('2) INFER SPEC (AI)');
-  const spec = await inferSiteSpec(scraped, null);
+  const spec = await inferSiteSpec(scraped, null, menuPages);
   console.log({
     businessName: spec.businessName,
     industry: `${spec.industryLabel} (${spec.industryKey})`,
@@ -90,10 +94,20 @@ async function main() {
     services: spec.services,
     faqs: spec.faqs,
   });
+  if (spec.menu?.sections?.length) {
+    hr('2b) EXTRACTED MENU');
+    for (const s of spec.menu.sections) {
+      console.log(`\n▸ ${s.name}`);
+      for (const it of s.items) {
+        console.log(`   • ${it.name}${it.price ? `  ${it.price}` : ''}${it.description ? `\n     ${it.description}` : ''}`);
+      }
+    }
+  }
 
   hr('3) ASSEMBLE DRAFT (no DB write)');
   const tpl = buildRebuildTemplate({ spec, heroImage: scraped.heroImage, sourceUrl: scraped.finalUrl });
   const blocks: any[] = tpl.data?.pages?.[0]?.blocks ?? [];
+  const menuBlock = blocks.find((b) => b?.type === 'menu');
   console.log({
     template_name: tpl.template_name,
     slug: tpl.slug,
@@ -102,6 +116,9 @@ async function main() {
     blockTypes: blocks.map((b) => b?.type),
     heroHeadline: blocks[0]?.content?.headline ?? null,
     heroImage: blocks[0]?.content?.image_url ?? null,
+    menuSections: menuBlock
+      ? (menuBlock.content?.sections ?? []).map((s: any) => `${s.name} (${s.items?.length ?? 0})`)
+      : null,
     services: tpl.data?.services,
   });
 

@@ -16,7 +16,7 @@ import { getServerSupabase } from '@/lib/supabase/server';
 import { checkRateLimit, clientIp } from '@/lib/rateLimit';
 import { enforceGuestAiLimit, guestLimitBody } from '@/lib/ai/guestGuard';
 import { guestBuildEnabled } from '@/lib/flags/guestBuild';
-import { scrapeSite, ScrapeError } from '@/lib/rebuild/scrapeSite';
+import { scrapeSite, scrapeMenuPages, ScrapeError } from '@/lib/rebuild/scrapeSite';
 import { inferSiteSpec } from '@/lib/rebuild/inferSiteSpec';
 import { buildRebuildTemplate } from '@/lib/rebuild/assembleDraft';
 import { generateRebuildHero, rebuildHeroEnabled } from '@/lib/rebuild/generateHero';
@@ -120,10 +120,14 @@ export async function POST(req: Request) {
   // Funnel: a real rebuild attempt began (scrape succeeded → we'll spend an AI call).
   void captureServer(EVENTS.REBUILD_STARTED, { host: hostOnly(scraped.finalUrl), is_anonymous: isAnonymous }, ownerId);
 
-  // 2) One metered AI call → structured rebuild spec.
+  // 1b) If the site looks like it has a menu (restaurant), follow a few menu
+  //     subpages so the AI can reconstruct the real menu. Best-effort.
+  const menuPages = await scrapeMenuPages(scraped).catch(() => []);
+
+  // 2) One metered AI call → structured rebuild spec (incl. a menu when food).
   let spec;
   try {
-    spec = await inferSiteSpec(scraped, ownerId);
+    spec = await inferSiteSpec(scraped, ownerId, menuPages);
   } catch (e: any) {
     // meterLLMCall throws LLMBudgetExceededError when the budget guard trips.
     const msg = e?.name === 'LLMBudgetExceededError' ? 'AI is busy right now — try again shortly.' : 'Could not generate the site.';

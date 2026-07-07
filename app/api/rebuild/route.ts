@@ -20,6 +20,7 @@ import { scrapeSite, scrapeMenuPages, ScrapeError } from '@/lib/rebuild/scrapeSi
 import { inferSiteSpec } from '@/lib/rebuild/inferSiteSpec';
 import { buildRebuildTemplate, wireCatalogIntoTemplate } from '@/lib/rebuild/assembleDraft';
 import { importShopifyProducts } from '@/lib/rebuild/importShopify';
+import { productsFromScrape } from '@/lib/rebuild/importJsonLd';
 import { provisionShopifyCatalog } from '@/lib/commerce/shopifyCatalog';
 import { generateRebuildHero, rebuildHeroEnabled } from '@/lib/rebuild/generateHero';
 import { captureServer } from '@/lib/analytics/posthog-server';
@@ -141,7 +142,10 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: msg, code: 'ai_failed' }, { status: 503 });
   }
   // Real products override the AI's generic services brochure with a live storefront.
-  if (products.length) spec.products = products;
+  // Shopify (/products.json) is exact; for every other cart we fall back to schema.org
+  // Product JSON-LD / OpenGraph product meta parsed from the page.
+  const importedProducts = products.length ? products : productsFromScrape(scraped);
+  if (importedProducts.length) spec.products = importedProducts;
 
   // 2b) Optionally generate a fresh, on-brand hero (flag-gated; best-effort). Falls
   //     back to the scraped og:image so a failure never breaks the rebuild.

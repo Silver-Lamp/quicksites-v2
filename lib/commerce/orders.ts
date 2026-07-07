@@ -7,6 +7,7 @@ import { partnerCommissionCents, PARTNER_FEE_SHARE, hubOverrideCents } from './p
 import { isAgencyPlanMerchant } from '@/lib/billing/plans';
 import { computeSubtotalCents, computePlatformFeeCents, flatShippingCents, computePhysicalShippingCents, parseStripeTaxTotals } from './fees';
 import { recordAdjustment } from './inventoryLedger';
+import { recordCustomerForPaidOrder } from './customers';
 
 /** Create a pending order and its line items. Returns order id and totals. */
 export async function createDraftOrder(opts: {
@@ -256,6 +257,19 @@ export async function markOrderPaid(
     .eq('id', orderId)
     .single();
   if (ordErr) throw ordErr;
+
+  // 3b) Customer identity spine (CRM): upsert the buyer from the Stripe event into
+  //     the per-merchant customers table + link the order. Best-effort — never blocks
+  //     the paid transition. (No-op when the event carries no buyer email.)
+  if (orderRow.merchant_id) {
+    await recordCustomerForPaidOrder(supabase, {
+      orderId,
+      merchantId: orderRow.merchant_id,
+      totalCents: amountCents,
+      raw,
+      occurredAtIso: new Date().toISOString(),
+    });
+  }
 
   // 4) Lock attribution on first revenue
   if (orderRow.merchant_id) {

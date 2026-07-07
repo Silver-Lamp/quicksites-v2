@@ -9,6 +9,7 @@ type Product = {
   id: string;
   title: string;
   price_cents: number;
+  compare_at_cents?: number | null;
   image_url?: string | null;
   product_type?: string | null;
   slug?: string | null;
@@ -168,7 +169,15 @@ export default function RenderProductsGrid({ block }: { block: Block }) {
                 <h3 className="font-medium">{p.title}</h3>
               </Link>
               <div className="mt-1 text-sm text-muted-foreground">
-                ${(p.price_cents / 100).toFixed(2)}{p.product_type ? ` • ${p.product_type}` : ''}
+                <span className={p.compare_at_cents ? 'font-medium text-foreground' : undefined}>
+                  ${(p.price_cents / 100).toFixed(2)}
+                </span>
+                {p.compare_at_cents ? (
+                  <span className="ml-1.5 line-through opacity-70">
+                    ${(p.compare_at_cents / 100).toFixed(2)}
+                  </span>
+                ) : null}
+                {p.product_type ? ` • ${p.product_type}` : ''}
               </div>
               <div className="mt-3">
                 <button

@@ -58,6 +58,8 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
   const itemStock = readItemStock(item.metadata);
   const hasVariants = variants.length > 0;
   const fromPrice = hasVariants ? Math.min(...variants.map((v) => v.priceCents)) : Number(item.price_cents) || 0;
+  const compareAtRaw = Number((item.metadata as any)?.compare_at_cents) || 0;
+  const compareAtCents = compareAtRaw > fromPrice ? compareAtRaw : null;
 
   return (
     <main className="mx-auto max-w-4xl px-4 py-10">
@@ -68,6 +70,7 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
         productType={item.type}
         priceCents={Number(item.price_cents) || 0}
         fromPrice={fromPrice}
+        compareAtCents={compareAtCents}
         hasVariants={hasVariants}
         mainImage={img}
         images={images}

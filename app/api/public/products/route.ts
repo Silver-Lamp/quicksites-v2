@@ -50,18 +50,21 @@ function firstImage(images: any): string | null {
 
 /** Map a catalog_items row to the shape the storefront block/cart expect. */
 function toProduct(ci: any) {
+  const compareAt = Number(ci?.metadata?.compare_at_cents) || null;
   return {
     id: ci.id,
     slug: ci.slug,
     title: ci.title,
     price_cents: ci.price_cents,
+    // "Was $X" strike-through, only when it's actually higher than the sale price.
+    compare_at_cents: compareAt && compareAt > ci.price_cents ? compareAt : null,
     image_url: firstImage(ci.images),
     product_type: ci.type, // 'product' | 'service' | 'digital' | 'meal'
     qty_available: null as number | null, // availability table is the source if/when enforced
   };
 }
 
-const SELECT = 'id,slug,title,price_cents,type,images,status,merchant_id';
+const SELECT = 'id,slug,title,price_cents,type,images,status,merchant_id,metadata';
 
 // resolve merchantId from email if needed
 async function getMerchantIdByEmail(email: string): Promise<string | null> {

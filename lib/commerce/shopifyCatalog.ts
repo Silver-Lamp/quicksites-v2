@@ -139,6 +139,10 @@ export async function provisionShopifyCatalog(opts: {
       category: product.productType ?? null,
       source: 'shopify_import',
       ...(product.productUrl ? { source_url: product.productUrl } : {}),
+      // "Was $X" strike-through price — display only; checkout reprices from price_cents.
+      ...(product.compareAtCents && product.compareAtCents > vmeta.priceCents
+        ? { compare_at_cents: product.compareAtCents }
+        : {}),
       ...(vmeta.variants ? { variants: vmeta.variants } : {}),
       ...(vmeta.variantOptions ? { variant_options: vmeta.variantOptions } : {}),
       // Physical-goods shipping: weight (for weight-based rates) + a flag the fee

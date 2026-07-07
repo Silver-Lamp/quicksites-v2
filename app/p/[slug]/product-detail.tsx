@@ -19,6 +19,7 @@ type Props = {
   productType: string | null;
   priceCents: number;
   fromPrice: number;
+  compareAtCents?: number | null;
   hasVariants: boolean;
   mainImage: string | null;
   images?: string[];
@@ -31,7 +32,8 @@ type Props = {
 const fmtPrice = (cents: number) => `$${((Number(cents) || 0) / 100).toFixed(2)}`;
 
 export default function ProductDetail(props: Props) {
-  const { id, title, description, productType, priceCents, fromPrice, hasVariants, mainImage, variants, axes, itemStock, merchantId } = props;
+  const { id, title, description, productType, priceCents, fromPrice, compareAtCents, hasVariants, mainImage, variants, axes, itemStock, merchantId } = props;
+  const onSale = !!compareAtCents && compareAtCents > fromPrice;
   const gallery = props.images && props.images.length ? props.images : mainImage ? [mainImage] : [];
   // Selecting a variant with its own image wins; otherwise show the browsed thumbnail.
   const [variantImage, setVariantImage] = React.useState<string | null>(null);
@@ -78,9 +80,12 @@ export default function ProductDetail(props: Props) {
           <span className="w-fit rounded-full border px-2 py-0.5 text-xs capitalize text-muted-foreground">{productType}</span>
         )}
         <h1 className="text-3xl font-bold tracking-tight">{title}</h1>
-        <div className="text-2xl font-semibold">
+        <div className="flex items-baseline gap-2 text-2xl font-semibold">
           {hasVariants && <span className="mr-1 text-sm font-normal text-muted-foreground">from</span>}
-          {fmtPrice(fromPrice)}
+          <span className={onSale ? 'text-red-600 dark:text-red-400' : undefined}>{fmtPrice(fromPrice)}</span>
+          {onSale && (
+            <span className="text-lg font-normal text-muted-foreground line-through">{fmtPrice(compareAtCents!)}</span>
+          )}
         </div>
         {description && (
           <p className="whitespace-pre-line text-sm leading-relaxed text-muted-foreground">{description}</p>

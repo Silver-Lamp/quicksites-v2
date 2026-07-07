@@ -14,6 +14,7 @@ import OpenAI from 'openai';
 import { meterLLMCall } from '@/lib/ai/meter';
 import { LABEL_TO_KEY, KEY_TO_LABEL, type IndustryKey } from '@/lib/industries';
 import type { ScrapedSite, MenuPage } from '@/lib/rebuild/scrapeSite';
+import type { ProductSpec } from '@/lib/rebuild/importShopify';
 
 const ROUTE = '/api/rebuild';
 
@@ -34,6 +35,10 @@ export type RebuildSpec = {
   menu?: { sections: MenuSectionSpec[] };
   contact?: ContactSpec;
   hours?: HoursDaySpec[];
+  // Real e-commerce products, imported deterministically (e.g. Shopify /products.json)
+  // — NOT AI-generated. When present, assembleDraft builds a real storefront (products
+  // become catalog_items wired into cart/checkout) instead of a services brochure.
+  products?: ProductSpec[];
 };
 
 /** Infer a full QuickSites draft spec from scraped site signals (one metered call).

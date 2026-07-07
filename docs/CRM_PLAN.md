@@ -1,7 +1,37 @@
 # CRM Plan
 
-> Status: **planning** (2026-07-07). Grounded in an audit of the current customer/contact/comms code.
+> Status: **Phase 0 shipped** (2026-07-07). Grounded in an audit of the current customer/contact/comms code.
 > Companion to [`docs/MONETIZATION.md`](MONETIZATION.md), [`docs/RESELLER_GTM.md`](RESELLER_GTM.md), and the commerce money-path in [`CLAUDE.md`](../CLAUDE.md) §5.
+
+---
+
+## ⭐ Status & new-session kickoff (read this first)
+
+**Phase 0 (identity spine) is DONE in code** — PR #220. **Phase 1 (customer surfaces) is the next work.**
+
+### What Phase 0 delivered (already merged)
+- **`customers` table** — `supabase/migrations/20260707_customers_identity_spine.sql`. Per-merchant, deduped by `email_normalized`. Columns: `id, merchant_id, email, email_normalized, name, phone, stripe_customer_id, marketing_consent, first_order_at, last_order_at, orders_count, lifetime_cents, tags jsonb, created_at, updated_at`, `unique(merchant_id, email_normalized)`. **RLS:** deny-default; policy `customers_owner_read` lets a merchant owner `SELECT` their own customers (join → `merchants.owner_id = auth.uid()`); **service-role writes only**.
+- **`orders.customer_email`** column added (denormalized) + `orders.customer_id` now populated.
+- **Atomic RPC** `upsert_customer_from_order(p_merchant, p_email, p_name, p_phone, p_stripe, p_total, p_at) → uuid` — insert-or-bump (`orders_count+1`, `lifetime_cents += total`, `last_order_at`, coalesce name/phone/stripe). Service-role only.
+- **Wiring** — `lib/commerce/customers.ts`: `normalizeEmail`, `extractBuyerFromStripeEvent` (pure, tested), `recordCustomerForPaidOrder` (best-effort). Called from `markOrderPaid` (`lib/commerce/orders.ts`, step "3b") — records the buyer from the Stripe event, links the order. Never blocks the paid transition.
+
+### ⚠️ Before building Phase 1 — prerequisites
+1. **Apply the migration:** `npm run db:migrate:up` (needs `SUPABASE_DB_URL`). Until then the `customers` table doesn't exist and every new order silently no-ops the customer write. See the `pending-migrations-2026-07` memory.
+2. **`types/supabase.ts` is stale** — it does NOT include `customers`. Read from it with the **service-role `createClient(...)` untyped** (no `<Database>` generic) or cast, exactly like `lib/commerce/orders.ts` does for other new tables. Don't fight the generated types.
+
+### Where to start Phase 1 (concrete)
+1. **`/merchant/customers` list + profile** — mirror the pattern I just built for inventory: a server page (`app/merchant/inventory/page.tsx`) that resolves the merchant via `getServerSupabase()` (RLS-scoped — `customers_owner_read` means a plain authed query returns only the owner's rows) + a client list component (`components/merchant/InventoryListClient.tsx`). Add a "Merchant Customers" nav item in `components/admin/AppHeader/AdminNavSections.tsx` (near "Merchant Inventory", line ~173 — **not** `admin-chrome.tsx`/`responsive-admin-layout.tsx`, which have uncommitted user edits). Profile = one customer's `orders` (join on `customer_id`) + LTV/contact.
+2. **Add buyer identity to the merchant order view** — `app/merchant/orders/page.tsx` currently shows no buyer; now it can show `customer_email` / join `customers`.
+3. **Backfill** — a one-off script parsing existing `payments.raw` → `upsert_customer_from_order` + set `orders.customer_email`, so historical orders get customers too. (`scripts/` dir; deduped by normalized email.)
+
+### Decisions already made (don't relitigate)
+- **Per-merchant** customer identity (a buyer of two merchants = two rows). No platform-wide identity graph.
+- Phase 0 relies on the **Stripe session** for buyer email (paid orders only). Optional pre-Stripe email capture for abandoned-cart is a later, separate call.
+- Customer PII is sensitive → keep RLS deny-default + owner-scoped; never expose cross-merchant.
+
+Full phased plan below (P1 → P4).
+
+---
 
 ## TL;DR
 
@@ -24,7 +54,7 @@ QuickSites today has **no buyer/customer entity**. Orders don't store who bought
 
 ## 3. Phased plan
 
-### Phase 0 — Identity spine (prerequisite for everything)
+### Phase 0 — Identity spine (prerequisite for everything) ✅ SHIPPED (PR #220)
 1. **`customers` table** — `(id, merchant_id, email_normalized, email, name, phone, marketing_consent bool, stripe_customer_id?, first_order_at, last_order_at, orders_count int, lifetime_cents bigint, tags jsonb, created_at, updated_at)`, `unique(merchant_id, email_normalized)`. Deny-default RLS; merchant-owner read; service-role writes. (Email is PII — treat like the crown-jewel tables already locked in the RLS sweep.)
 2. **Populate from Stripe** — in `markOrderPaid`, pull `customer_details.{email,name,phone}` + `shipping` from the session; upsert the `customers` row (increment `orders_count`, add to `lifetime_cents`, set `last_order_at`); set `orders.customer_id` and **denormalize `orders.customer_email`** for querying. Collect shipping on all orders (Stripe already gathers it when `shipping_address_collection` is on).
 3. **Optional email at checkout** — QuickSites' own checkout collects no buyer fields today; consider a lightweight email capture pre-Stripe so abandoned/test orders still have identity (decision below).

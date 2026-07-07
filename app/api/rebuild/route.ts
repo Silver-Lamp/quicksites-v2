@@ -18,7 +18,9 @@ import { enforceGuestAiLimit, guestLimitBody } from '@/lib/ai/guestGuard';
 import { guestBuildEnabled } from '@/lib/flags/guestBuild';
 import { scrapeSite, scrapeMenuPages, ScrapeError } from '@/lib/rebuild/scrapeSite';
 import { inferSiteSpec } from '@/lib/rebuild/inferSiteSpec';
-import { buildRebuildTemplate } from '@/lib/rebuild/assembleDraft';
+import { buildRebuildTemplate, wireCatalogIntoTemplate } from '@/lib/rebuild/assembleDraft';
+import { importShopifyProducts } from '@/lib/rebuild/importShopify';
+import { provisionShopifyCatalog } from '@/lib/commerce/shopifyCatalog';
 import { generateRebuildHero, rebuildHeroEnabled } from '@/lib/rebuild/generateHero';
 import { captureServer } from '@/lib/analytics/posthog-server';
 import { EVENTS } from '@/lib/analytics/events';
@@ -122,7 +124,12 @@ export async function POST(req: Request) {
 
   // 1b) If the site looks like it has a menu (restaurant), follow a few menu
   //     subpages so the AI can reconstruct the real menu. Best-effort.
-  const menuPages = await scrapeMenuPages(scraped).catch(() => []);
+  // 1c) If it's a Shopify store, pull the REAL catalog (title/price/images/variants)
+  //     straight from /products.json — deterministic, no AI. Both best-effort.
+  const [menuPages, products] = await Promise.all([
+    scrapeMenuPages(scraped).catch(() => []),
+    importShopifyProducts(scraped.finalUrl).catch(() => []),
+  ]);
 
   // 2) One metered AI call → structured rebuild spec (incl. a menu when food).
   let spec;
@@ -133,6 +140,8 @@ export async function POST(req: Request) {
     const msg = e?.name === 'LLMBudgetExceededError' ? 'AI is busy right now — try again shortly.' : 'Could not generate the site.';
     return NextResponse.json({ error: msg, code: 'ai_failed' }, { status: 503 });
   }
+  // Real products override the AI's generic services brochure with a live storefront.
+  if (products.length) spec.products = products;
 
   // 2b) Optionally generate a fresh, on-brand hero (flag-gated; best-effort). Falls
   //     back to the scraped og:image so a failure never breaks the rebuild.
@@ -145,6 +154,28 @@ export async function POST(req: Request) {
   // 3) Assemble + insert the draft (service role; INSERT isn't guarded). Stamp
   //    ownership so it auto-claims when a guest upgrades (same uid → owner_id).
   const tpl = buildRebuildTemplate({ spec, heroImage, sourceUrl: scraped.finalUrl });
+
+  // 3a) Real products → create catalog_items under the owner's merchant and wire the
+  //     storefront (productIds + meta.ecom.merchant_id) so "Add to Cart" → checkout
+  //     works. Done pre-insert so the wired data lands in one write (templates UPDATEs
+  //     are trigger-guarded). Non-fatal: on failure we ship a display-only draft.
+  let commerce: { merchantId: string; productsImported: number } | null = null;
+  if (spec.products?.length) {
+    try {
+      const res = await provisionShopifyCatalog({
+        ownerId,
+        businessName: spec.businessName,
+        siteSlug: tpl.slug,
+        products: spec.products,
+      });
+      if (res.created > 0) {
+        wireCatalogIntoTemplate(tpl.data, res.merchantId, res.idByHandle);
+        commerce = { merchantId: res.merchantId, productsImported: res.created };
+      }
+    } catch (e) {
+      console.error('[rebuild] shopify catalog provisioning failed', e);
+    }
+  }
 
   let insertedId: string | null = null;
   let slug = tpl.slug;
@@ -197,6 +228,16 @@ export async function POST(req: Request) {
       services: spec.services,
       sourceUrl: scraped.finalUrl,
       heroImage,
+      // When a real storefront was imported: how many products, the merchant, and
+      // whether the owner still needs to connect Stripe to accept payouts. The client
+      // can deep-link the owner into Connect onboarding (POST /api/connect/onboard).
+      ...(commerce
+        ? {
+            productsImported: commerce.productsImported,
+            merchantId: commerce.merchantId,
+            needsPayoutSetup: !isAnonymous, // anon can't onboard until they sign up
+          }
+        : {}),
     },
   });
 }

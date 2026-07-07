@@ -6,6 +6,7 @@ import { EVENTS } from '@/lib/analytics/events';
 import { partnerCommissionCents, PARTNER_FEE_SHARE, hubOverrideCents } from './partner-terms';
 import { isAgencyPlanMerchant } from '@/lib/billing/plans';
 import { computeSubtotalCents, computePlatformFeeCents, flatShippingCents, computePhysicalShippingCents, parseStripeTaxTotals } from './fees';
+import { recordAdjustment } from './inventoryLedger';
 
 /** Create a pending order and its line items. Returns order id and totals. */
 export async function createDraftOrder(opts: {
@@ -220,6 +221,14 @@ export async function markOrderPaid(
         p_qty: qty,
       });
       if (error) { console.warn('decrement_catalog_stock failed:', error.message); continue; }
+      // History: record the sale draw-down (only when the line was actually tracked —
+      // remaining is null for untracked/unlimited items).
+      if (res && (res as any).ok !== false && (res as any).remaining !== null && (res as any).remaining !== undefined) {
+        await recordAdjustment(supabase, {
+          catalogItemId: li.catalog_item_id, variantId, delta: -qty,
+          newOnHand: (res as any).remaining, reason: 'sale', orderId,
+        });
+      }
       if (res && (res as any).ok === false && (res as any).reason === 'insufficient') {
         oversold.push({
           title: li.title ?? 'Item',
@@ -437,12 +446,18 @@ export async function markOrderRefunded(
         const qty = Number(li.quantity) || 0;
         if (qty <= 0) continue;
         const variantId = (li.metadata as any)?.variant_id ?? null;
-        const { error } = await (supabase as any).rpc('increment_catalog_stock', {
+        const { data: res, error } = await (supabase as any).rpc('increment_catalog_stock', {
           p_item: li.catalog_item_id,
           p_variant: variantId,
           p_qty: qty,
         });
-        if (error) console.warn('increment_catalog_stock (restock) failed:', error.message);
+        if (error) { console.warn('increment_catalog_stock (restock) failed:', error.message); continue; }
+        if (res && (res as any).remaining !== null && (res as any).remaining !== undefined) {
+          await recordAdjustment(supabase, {
+            catalogItemId: li.catalog_item_id, variantId, delta: qty,
+            newOnHand: (res as any).remaining, reason: 'refund', orderId,
+          });
+        }
       }
     } catch (e) {
       console.warn('Restock-on-refund step failed:', (e as any)?.message || e);

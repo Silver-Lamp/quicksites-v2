@@ -314,6 +314,13 @@ export default function HeroEditor({
   // Read current values from template meta/columns
   const metaAll = useMemo(() => ((template?.data as any)?.meta ?? {}), [template]);
 
+  // Copy versions captured at auto-conversion (data.meta.copy = { original, generated }).
+  // Lets the merchant one-click revert the hero copy to their original site's wording.
+  const copyVersions = useMemo(() => (metaAll as any)?.copy ?? null, [metaAll]);
+  const heroCopyOriginal = copyVersions?.original;
+  const heroCopyGenerated = copyVersions?.generated;
+  const hasHeroCopyVersions = !!(heroCopyOriginal && (heroCopyOriginal.headline || heroCopyOriginal.subheadline));
+
   const currentIndustryKey = useMemo(() => {
     const raw = (
       (metaAll?.identity?.industry ?? metaAll?.industry ?? (template as any)?.industry ?? '')
@@ -542,6 +549,19 @@ export default function HeroEditor({
       window.removeEventListener('qs:template:apply-patch', onApplyPatch as any);
     };
   }, [block]);
+
+  /* ---------- copy version revert (v0/v1) ---------- */
+  const applyCopyVersion = (which: 'original' | 'generated') => {
+    const v = which === 'original' ? heroCopyOriginal : heroCopyGenerated;
+    if (!v) return;
+    setLocal((prev: any) => ({
+      ...prev,
+      ...(typeof v.headline === 'string' && v.headline ? { headline: v.headline } : {}),
+      ...(typeof v.subheadline === 'string' && v.subheadline ? { subheadline: v.subheadline } : {}),
+    }));
+    toast.success(which === 'original' ? 'Restored your original copy' : 'Restored AI copy');
+    bumpPreview();
+  };
 
   /* ---------- save ---------- */
   const handleSave = () => {
@@ -1080,6 +1100,27 @@ export default function HeroEditor({
                   </button>
                 </div>
                 {aiError && <div className="text-xs text-red-300">{aiError}</div>}
+
+                {/* Revert to the original site's copy (captured at conversion). */}
+                {hasHeroCopyVersions && (
+                  <div className="flex items-center gap-2 border-t border-white/10 pt-2 text-xs">
+                    <span className="text-neutral-400">Copy:</span>
+                    <button
+                      onClick={() => applyCopyVersion('original')}
+                      className="inline-flex items-center gap-1 rounded border border-white/15 px-2 py-1 text-white/90 hover:bg-white/10"
+                      title="Revert this block to your original site's wording"
+                    >
+                      ↺ Original
+                    </button>
+                    <button
+                      onClick={() => applyCopyVersion('generated')}
+                      className="inline-flex items-center gap-1 rounded border border-white/15 px-2 py-1 text-white/90 hover:bg-white/10"
+                      title="Restore the AI-generated copy"
+                    >
+                      AI
+                    </button>
+                  </div>
+                )}
               </div>
 
               {/* Express */}

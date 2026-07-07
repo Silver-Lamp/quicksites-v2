@@ -19,6 +19,8 @@ export default function EditItemDrawer({ itemId, onSaved }: { itemId: string; on
   const [price, setPrice] = useState(0); // dollars
   const [status, setStatus] = useState<'active' | 'inactive'>('active');
   const [stock, setStock] = useState<string>(''); // plain-item stock; '' = unlimited
+  const [sku, setSku] = useState<string>(''); // plain-item SKU
+  const [barcode, setBarcode] = useState<string>(''); // plain-item UPC/EAN/ISBN
   const [image, setImage] = useState<string>(''); // main product image URL
   const [variantsPayload, setVariantsPayload] = useState<VariantsPayload>({ variantOptions: [], variants: [] });
 
@@ -37,6 +39,8 @@ export default function EditItemDrawer({ itemId, onSaved }: { itemId: string; on
       setStatus(it.status === 'inactive' ? 'inactive' : 'active');
       const s = it.metadata?.stock;
       setStock(typeof s === 'number' ? String(s) : '');
+      setSku(typeof it.metadata?.sku === 'string' ? it.metadata.sku : '');
+      setBarcode(typeof it.metadata?.barcode === 'string' ? it.metadata.barcode : '');
       const first = Array.isArray(it.images) ? it.images[0] : null;
       setImage(typeof first === 'string' ? first : (first?.url ?? first?.src ?? ''));
       setVariantsPayload({ variantOptions: [], variants: [] });
@@ -60,7 +64,11 @@ export default function EditItemDrawer({ itemId, onSaved }: { itemId: string; on
       if (!isPod) {
         body.variantOptions = variantsPayload.variantOptions;
         body.variants = variantsPayload.variants;
-        if (variantsPayload.variants.length === 0) body.stock = stock === '' ? null : Math.max(0, Math.floor(Number(stock) || 0));
+        if (variantsPayload.variants.length === 0) {
+          body.stock = stock === '' ? null : Math.max(0, Math.floor(Number(stock) || 0));
+          body.sku = sku.trim();
+          body.barcode = barcode.trim();
+        }
       }
       const res = await fetch(`/api/catalog/items/${itemId}`, {
         method: 'PATCH',
@@ -126,6 +134,18 @@ export default function EditItemDrawer({ itemId, onSaved }: { itemId: string; on
                       <input type="number" step="1" min="0" value={stock} placeholder="∞"
                         onChange={(e) => setStock(e.target.value)}
                         className="rounded bg-neutral-900 px-3 py-2 text-sm ring-1 ring-neutral-800" />
+                      <div className="mt-2 grid grid-cols-2 gap-2">
+                        <div className="flex flex-col">
+                          <label className="text-xs text-neutral-400">SKU (optional)</label>
+                          <input type="text" value={sku} onChange={(e) => setSku(e.target.value)}
+                            className="rounded bg-neutral-900 px-3 py-2 text-sm ring-1 ring-neutral-800" />
+                        </div>
+                        <div className="flex flex-col">
+                          <label className="text-xs text-neutral-400">Barcode (optional)</label>
+                          <input type="text" value={barcode} onChange={(e) => setBarcode(e.target.value)}
+                            className="rounded bg-neutral-900 px-3 py-2 text-sm ring-1 ring-neutral-800" />
+                        </div>
+                      </div>
                     </>
                   )}
 

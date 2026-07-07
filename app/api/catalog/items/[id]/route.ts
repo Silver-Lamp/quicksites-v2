@@ -37,6 +37,8 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     variants?: InputVariant[];
     // Item-level stock for a plain (variant-less) product. null clears tracking.
     stock?: number | null;
+    sku?: string | null; // plain-item SKU (variant SKUs ride in variants[])
+    barcode?: string | null; // plain-item UPC/EAN/ISBN
     imageUrl?: string; // main product image (empty string clears it)
   };
 
@@ -75,8 +77,20 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       const s = normalizeStock(body.stock);
       if (s !== null) merged.metadata.stock = s;
       else delete merged.metadata.stock;
+      // Plain-item SKU/barcode: set when non-empty, clear when explicitly blanked.
+      if ('sku' in body) {
+        const sku = String(body.sku ?? '').trim().slice(0, 64);
+        if (sku) merged.metadata.sku = sku; else delete merged.metadata.sku;
+      }
+      if ('barcode' in body) {
+        const barcode = String(body.barcode ?? '').trim().slice(0, 64);
+        if (barcode) merged.metadata.barcode = barcode; else delete merged.metadata.barcode;
+      }
     } else {
       delete merged.metadata.stock;
+      // Variant items carry SKU per-variant; drop any stale plain-item SKU/barcode.
+      delete merged.metadata.sku;
+      delete merged.metadata.barcode;
     }
     patch.metadata = merged.metadata;
     patch.price_cents = merged.priceCents;

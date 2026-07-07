@@ -21,6 +21,8 @@ export async function POST(req: NextRequest) {
     variants?: InputVariant[];
     // Item-level stock for a plain (variant-less) product. null/absent = untracked.
     stock?: number | null;
+    sku?: string | null; // plain-item SKU (variant SKUs ride in variants[])
+    barcode?: string | null; // plain-item UPC/EAN/ISBN
     imageUrl?: string; // main product image (stored in the images array)
   };
 
@@ -51,6 +53,10 @@ export async function POST(req: NextRequest) {
     // Plain item: item-level stock (per-variant stock governs when variants exist).
     const s = normalizeStock(body.stock);
     if (s !== null) metadata.stock = s;
+    const sku = String(body.sku ?? '').trim().slice(0, 64);
+    if (sku) metadata.sku = sku;
+    const barcode = String(body.barcode ?? '').trim().slice(0, 64);
+    if (barcode) metadata.barcode = barcode;
   }
   const basePriceCents = norm.basePriceCents;
 

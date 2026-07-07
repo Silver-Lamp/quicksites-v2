@@ -30,6 +30,8 @@ export type ScrapedSite = {
   heroImage: string | null; // absolute URL, best-effort
   images: string[]; // other prominent absolute image URLs
   accentColor: string | null; // meta theme-color / obvious brand hex, if any
+  structuredData: any[]; // parsed application/ld+json blocks (for product extraction)
+  productMeta: { priceAmount?: string; priceCurrency?: string; availability?: string } | null; // og product:* tags
 };
 
 export class ScrapeError extends Error {
@@ -212,6 +214,30 @@ export function parseHtml(html: string, sourceUrl: string, finalUrl: string): Sc
     links.push({ label, href });
   });
 
+  // Structured data (JSON-LD) — parse BEFORE we strip <script>s below. This is how
+  // non-Shopify stores (WooCommerce, Squarespace, custom carts) expose Product/Offer
+  // data; lib/rebuild/importJsonLd.ts maps it to the same ProductSpec shape.
+  const structuredData: any[] = [];
+  $('script[type="application/ld+json"]').each((_, el) => {
+    if (structuredData.length >= 20) return;
+    const txt = ($(el).text() || '').trim();
+    if (!txt || txt.length > 200_000) return;
+    try {
+      structuredData.push(JSON.parse(txt));
+    } catch {
+      /* skip malformed JSON-LD */
+    }
+  });
+
+  // OpenGraph product meta — a single-product fallback when there's no JSON-LD Product.
+  const ogType = (meta('og:type') || '').toLowerCase();
+  const priceAmount = meta('product:price:amount') || meta('og:price:amount') || undefined;
+  const priceCurrency = meta('product:price:currency') || meta('og:price:currency') || undefined;
+  const productMeta =
+    ogType.includes('product') || priceAmount
+      ? { priceAmount, priceCurrency, availability: meta('product:availability') || undefined }
+      : null;
+
   // Body text — drop non-content nodes, collapse whitespace, truncate.
   $('script, style, noscript, svg, template, iframe').remove();
   const bodyText = collapse($('body').text()).slice(0, MAX_BODY_CHARS);
@@ -246,6 +272,8 @@ export function parseHtml(html: string, sourceUrl: string, finalUrl: string): Sc
     heroImage: heroImage ?? (images[0] ?? null),
     images: images.slice(0, 8),
     accentColor,
+    structuredData,
+    productMeta,
   };
 }
 

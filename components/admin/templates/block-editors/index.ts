@@ -159,6 +159,7 @@ export const BLOCK_EDITORS: Record<Block['type'], () => Promise<EditorModule>> =
   services:     wrapDynamic(() => import('./services-editor')),
   testimonial:  wrapDynamic(() => import('./testimonial-editor')),
   cta:          wrapDynamic(() => import('./cta-editor')),
+  story:        wrapDynamic(() => import('./story-editor')),
   footer:       wrapDynamic(() => import('./footer-editor')),
   service_areas:wrapDynamic(() => import('./service-areas-editor')),
   header:       wrapDynamic(() => import('./header-editor')),

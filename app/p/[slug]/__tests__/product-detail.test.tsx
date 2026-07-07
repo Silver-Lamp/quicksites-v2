@@ -19,7 +19,7 @@ const IMAGES = [
   'https://cdn.shopify.com/3.png',
 ];
 
-function renderDetail(images: string[]) {
+function renderDetail(images: string[], extra: Partial<React.ComponentProps<typeof ProductDetail>> = {}) {
   return render(
     <ProductDetail
       id="cat_1"
@@ -35,6 +35,7 @@ function renderDetail(images: string[]) {
       axes={[]}
       itemStock={null}
       merchantId="merch_1"
+      {...extra}
     />,
   );
 }
@@ -67,5 +68,20 @@ describe('ProductDetail gallery', () => {
     expect(mainImg().src).toBe('https://cdn.shopify.com/variant.png');
     fireEvent.click(screen.getByLabelText('View image 2'));
     expect(mainImg().src).toBe('https://cdn.shopify.com/2.png');
+  });
+});
+
+describe('ProductDetail sale price', () => {
+  it('shows a struck-through compare-at price when on sale', () => {
+    renderDetail(IMAGES, { compareAtCents: 4999 });
+    expect(screen.getByText('$29.99')).toBeTruthy();
+    const was = screen.getByText('$49.99');
+    expect(was.className).toContain('line-through');
+  });
+
+  it('hides compare-at when it is not higher than the price', () => {
+    renderDetail(IMAGES, { compareAtCents: 2999 });
+    expect(screen.queryByText('$49.99')).toBeNull();
+    expect(screen.getAllByText('$29.99')).toHaveLength(1);
   });
 });

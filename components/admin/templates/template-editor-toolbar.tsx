@@ -42,7 +42,7 @@ function extractTemplateIdFromPath(pathname: string | null): string | null {
 }
 
 export function TemplateEditorToolbar({
-  templateName, // intentionally not used for initial paint
+  templateName, // known name from the server row; used as an instant placeholder while we reconcile
   autosaveStatus = '',
   isRenaming,
   setIsRenaming,
@@ -66,8 +66,8 @@ export function TemplateEditorToolbar({
   const idRef = React.useRef<string | null>(currentId);
   React.useEffect(() => { idRef.current = currentId; }, [currentId]);
 
-  // Title state
-  const [displayName, setDisplayName] = React.useState<string>('');
+  // Title state — seed from the server-provided name so we never paint a bare "Loading…".
+  const [displayName, setDisplayName] = React.useState<string>(() => (templateName || '').trim());
   const [nameLoading, setNameLoading] = React.useState<boolean>(true);
   const nameLoadingRef = React.useRef<boolean>(true);
   React.useEffect(() => { nameLoadingRef.current = nameLoading; }, [nameLoading]);
@@ -82,12 +82,12 @@ export function TemplateEditorToolbar({
     );
   };
 
-  // Reset title on id change
+  // Reset title on id change — re-seed from the (fresh) server name instead of blanking to "Loading…"
   React.useEffect(() => {
-    setDisplayName('');
+    setDisplayName((templateName || '').trim());
     setNameLoading(true);
     nameLoadingRef.current = true;
-  }, [currentId]);
+  }, [currentId, templateName]);
 
   // Resolve name (base display -> template state)
   React.useEffect(() => {
@@ -267,7 +267,11 @@ export function TemplateEditorToolbar({
             ) : (
               <div className="flex items-center gap-2">
                 <span className="truncate text-xl font-bold text-white">
-                  {nameLoading ? <span className="text-white/60 italic">Loading…</span> : (displayName || 'Untitled')}
+                  {displayName
+                    ? displayName
+                    : nameLoading
+                      ? <span className="text-white/60 italic">Loading…</span>
+                      : 'Untitled'}
                 </span>
                 <Button
                   type="button"
@@ -276,7 +280,7 @@ export function TemplateEditorToolbar({
                   className="w-7 h-7"
                   onClick={(e) => { e.preventDefault(); e.stopPropagation(); setIsRenaming(true); }}
                   title="Rename template"
-                  disabled={nameLoading}
+                  disabled={nameLoading && !displayName}
                 >
                   <Pencil className="w-4 h-4" />
                 </Button>
@@ -303,14 +307,17 @@ export function TemplateEditorToolbar({
             </Button>
           )}
 
+          {/* Divider keeps the destructive action from sitting flush against the primary CTA */}
+          <div className="mx-1 h-6 w-px self-center bg-white/10" aria-hidden />
+
           <Button
             type="button"
             size="sm"
-            variant="destructive"
+            variant="ghost"
             onClick={() => void handleArchive()}
             disabled={archiving || busy}
             title="Archive this template"
-            className="gap-2"
+            className="gap-2 text-red-400 hover:bg-red-500/10 hover:text-red-300"
           >
             {archiving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
             {archiving ? 'Archiving…' : 'Archive'}

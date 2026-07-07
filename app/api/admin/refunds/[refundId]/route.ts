@@ -45,7 +45,9 @@ export async function PATCH(req: NextRequest, { params }:{ params:{ refundId:str
       await db.from('refund_events').insert({ refund_id: r.id, actor_role: 'system', action: 'execute', detail: providerRefundId });
       // Optionally: mark support ticket resolved
       await db.from('support_tickets').update({ status: 'refunded' }).eq('order_id', r.order_id);
-      // Optionally: increment stock back (restock_on_refund flag)
+      // Restock-on-refund is handled centrally in markOrderRefunded (fired by the
+      // Stripe refund webhook), gated by QS_RESTOCK_ON_REFUND — so it runs for every
+      // refund source, not just this admin path.
       return NextResponse.json({ ok: true, providerRefundId });
     } catch (e:any) {
       await db.from('refunds').update({ status: 'failed', notes: String(e?.message || e) }).eq('id', r.id);

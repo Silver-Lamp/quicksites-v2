@@ -59,3 +59,22 @@ export function summarizeInventoryRow(item: any): InventoryRow {
     out,
   };
 }
+
+/**
+ * Decide low-stock alert transitions for a batch of catalog rows. Alerts an item only
+ * on ENTERING low/out (not already flagged via metadata.low_stock_alerted), and clears
+ * the flag once it's restocked — so a daily cron never re-spams a persistently-low
+ * item. Pure; exported for tests. Returns rows to alert + item ids whose flag to clear.
+ */
+export function lowStockTransitions(items: any[]): { alert: InventoryRow[]; clearIds: string[] } {
+  const alert: InventoryRow[] = [];
+  const clearIds: string[] = [];
+  for (const item of items ?? []) {
+    const row = summarizeInventoryRow(item);
+    const flagged = !!item?.metadata?.low_stock_alerted;
+    const isLow = row.tracked && (row.low || row.out);
+    if (isLow && !flagged) alert.push(row);
+    else if (!isLow && flagged) clearIds.push(row.id);
+  }
+  return { alert, clearIds };
+}

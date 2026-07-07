@@ -1,5 +1,5 @@
 // lib/commerce/__tests__/inventorySummary.test.ts
-import { summarizeInventoryRow, DEFAULT_LOW_STOCK } from '../inventorySummary';
+import { summarizeInventoryRow, DEFAULT_LOW_STOCK, lowStockTransitions } from '../inventorySummary';
 
 const item = (metadata: any) => ({ id: 'i1', title: 'Widget', type: 'product', status: 'active', metadata });
 
@@ -31,3 +31,25 @@ describe('summarizeInventoryRow', () => {
     expect(r.tracked).toBe(true);
   });
 });
+
+describe('lowStockTransitions', () => {
+  const item = (id: string, metadata: any) => ({ id, title: id, type: 'product', status: 'active', metadata });
+
+  it('alerts newly-low/out items and skips already-flagged ones', () => {
+    const { alert } = lowStockTransitions([
+      item('a', { stock: 2 }),                        // low → alert
+      item('b', { stock: 0 }),                        // out → alert
+      item('c', { stock: 1, low_stock_alerted: true }), // already alerted → skip
+      item('d', { stock: 100 }),                      // healthy → skip
+    ]);
+    expect(alert.map((r) => r.id).sort()).toEqual(['a', 'b']);
+  });
+
+  it('clears the flag on restocked items', () => {
+    const { clearIds } = lowStockTransitions([
+      item('a', { stock: 100, low_stock_alerted: true }), // restocked → clear
+      item('b', { stock: 1, low_stock_alerted: true }),   // still low → keep
+    ]);
+    expect(clearIds).toEqual(['a']);
+  });
+})

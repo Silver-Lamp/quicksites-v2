@@ -63,6 +63,15 @@ describe('buildRebuildTemplate', () => {
     expect(loc?.content?.phone).toBe('253-555-0100');
   });
 
+  it('matches the source site color mode when provided (overrides the default)', () => {
+    const light = buildRebuildTemplate({ spec: baseSpec(), colorMode: 'light' });
+    expect(light.color_mode).toBe('light');
+    expect(light.data.color_mode).toBe('light');
+    const dark = buildRebuildTemplate({ spec: baseSpec(), colorMode: 'dark' });
+    expect(dark.color_mode).toBe('dark');
+    expect(dark.data.color_mode).toBe('dark');
+  });
+
   it('leaves meta.contact fields empty when the spec has no contact', () => {
     const tpl = buildRebuildTemplate({ spec: baseSpec({ contact: undefined }) });
     expect(tpl.data.meta.contact?.address ?? null).toBeNull();

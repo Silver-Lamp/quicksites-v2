@@ -30,6 +30,7 @@ export type ScrapedSite = {
   heroImage: string | null; // absolute URL, best-effort
   images: string[]; // other prominent absolute image URLs
   accentColor: string | null; // meta theme-color / obvious brand hex, if any
+  colorMode: 'light' | 'dark'; // the original site's scheme (best guess; defaults light)
   structuredData: any[]; // parsed application/ld+json blocks (for product extraction)
   productMeta: { priceAmount?: string; priceCurrency?: string; availability?: string } | null; // og product:* tags
 };
@@ -258,6 +259,7 @@ export function parseHtml(html: string, sourceUrl: string, finalUrl: string): Sc
   });
 
   const accentColor = normalizeHex(meta('theme-color'));
+  const colorMode = detectColorMode($, meta);
 
   return {
     sourceUrl,
@@ -272,9 +274,70 @@ export function parseHtml(html: string, sourceUrl: string, finalUrl: string): Sc
     heroImage: heroImage ?? (images[0] ?? null),
     images: images.slice(0, 8),
     accentColor,
+    colorMode,
     structuredData,
     productMeta,
   };
+}
+
+/** Relative luminance (0=black..1=white) of a CSS hex/rgb color, or null if unparsable. */
+function cssLuminance(raw: string): number | null {
+  const c = raw.trim().toLowerCase();
+  let r: number, g: number, b: number;
+  const hex = c.match(/^#?([0-9a-f]{6}|[0-9a-f]{3})$/i);
+  if (hex) {
+    let h = hex[1];
+    if (h.length === 3) h = h.split('').map((x) => x + x).join('');
+    r = parseInt(h.slice(0, 2), 16); g = parseInt(h.slice(2, 4), 16); b = parseInt(h.slice(4, 6), 16);
+  } else {
+    const m = c.match(/rgba?\(([^)]+)\)/i);
+    if (!m) return null;
+    const p = m[1].split(',').map((s) => parseFloat(s));
+    [r, g, b] = p;
+    if (![r, g, b].every(Number.isFinite)) return null;
+  }
+  return (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255;
+}
+
+/**
+ * Best-effort guess of a site's color scheme from static HTML. Defaults to **light**
+ * (the overwhelming majority of small-business / storefront sites), and only returns
+ * 'dark' on a positive dark signal: an explicit `color-scheme: dark`, a dark theme
+ * class/attribute on <html>/<body>, or a dark inline body background. Exported for tests.
+ */
+export function detectColorMode(
+  $: cheerio.CheerioAPI,
+  meta: (name: string) => string | null,
+): 'light' | 'dark' {
+  // 1) Explicit color-scheme meta — the first token is the preferred scheme.
+  const cs = (meta('color-scheme') || '').toLowerCase().trim();
+  if (cs) {
+    const first = cs.split(/\s+/)[0];
+    if (first === 'dark') return 'dark';
+    if (first === 'light') return 'light';
+    if (cs.includes('dark') && !cs.includes('light')) return 'dark';
+    if (cs.includes('light')) return 'light';
+  }
+
+  // 2) Theme class / attribute on <html> or <body>.
+  const attrs = ['class', 'data-theme', 'data-bs-theme', 'data-color-mode', 'data-mode'];
+  const themeStr = ['html', 'body']
+    .flatMap((sel) => attrs.map((a) => $(sel).attr(a) || ''))
+    .join(' ')
+    .toLowerCase();
+  if (/(^|[\s-])dark([\s-]|$)|dark-?mode|dark-?theme|theme-?dark/.test(themeStr)) return 'dark';
+  if (/(^|[\s-])light([\s-]|$)|light-?mode|light-?theme|theme-?light/.test(themeStr)) return 'light';
+
+  // 3) Inline body/html background color → luminance.
+  for (const sel of ['body', 'html']) {
+    const style = ($(sel).attr('style') || '').toLowerCase();
+    const bg = style.match(/background(?:-color)?\s*:\s*([^;]+)/)?.[1];
+    const lum = bg ? cssLuminance(bg) : null;
+    if (lum !== null) return lum < 0.4 ? 'dark' : 'light';
+  }
+
+  // Default: light.
+  return 'light';
 }
 
 // ---- small pure helpers ----

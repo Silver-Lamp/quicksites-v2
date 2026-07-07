@@ -41,6 +41,9 @@ export function buildRebuildTemplate(opts: {
   /** Extra images (product photos beyond the hero, scraped images) to illustrate
    *  the story sections. Ordered by preference. */
   galleryImages?: string[];
+  /** The original site's detected color scheme — the rebuilt site matches it (so a
+   *  light source site yields a light draft) instead of the industry default. */
+  colorMode?: 'light' | 'dark';
 }): RebuildTemplate {
   const { spec, heroImage, sourceUrl } = opts;
 
@@ -48,6 +51,17 @@ export function buildRebuildTemplate(opts: {
     businessName: spec.businessName,
     industryKey: spec.industryKey,
   });
+
+  // Match the source site's light/dark scheme when we detected one, overriding the
+  // industry scaffold's default (which is dark). Keeps data.color_mode + the theme's
+  // darkMode in sync so the render + editor agree.
+  if (opts.colorMode) {
+    tpl.color_mode = opts.colorMode;
+    if (tpl.data) {
+      tpl.data.color_mode = opts.colorMode;
+      if (tpl.data.meta?.theme) tpl.data.meta.theme.darkMode = opts.colorMode;
+    }
+  }
 
   // Inject AI copy + hero into the first (hero) block. For a store we lead the hero
   // with the real product photo when we didn't get a better (scraped/generated) one.

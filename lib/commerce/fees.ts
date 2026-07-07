@@ -62,6 +62,43 @@ export function flatShippingCents(hasShippable: boolean): number {
   return Math.max(0, c);
 }
 
+export type ShippableLine = { catalogItemId?: string | null; quantity?: number | null };
+export type ItemShipping = { requires_shipping?: boolean; grams?: number };
+
+/**
+ * Per-order shipping for PHYSICAL (non-POD) goods — e.g. a Shopify-imported product
+ * the merchant fulfills themselves. Reads each line's `catalog_items.metadata.shipping`
+ * ({ requires_shipping, grams }). Cost model (all env-configured, off by default):
+ *   base  = QS_SHIPPING_BASE_CENTS      (once per order, if any physical item ships)
+ *   + weight = QS_SHIPPING_CENTS_PER_KG × Σ(grams × qty) / 1000
+ * Returns 0 when nothing ships OR no rate is configured, so this is inert until an
+ * operator opts in and existing carts are unaffected. Kept separate from POD's flat
+ * shipping (fulfillment_provider path) so the two never double-count. Shipping is
+ * excluded from the platform-fee basis, same as flatShippingCents.
+ */
+export function computePhysicalShippingCents(
+  items: ShippableLine[],
+  shippingByItem: Map<string, ItemShipping>,
+): number {
+  const perKg = Math.floor(Number(process.env.QS_SHIPPING_CENTS_PER_KG ?? '0')) || 0;
+  const baseCents = Math.floor(Number(process.env.QS_SHIPPING_BASE_CENTS ?? '0')) || 0;
+  if (perKg <= 0 && baseCents <= 0) return 0; // no physical-shipping rate configured
+
+  let hasShippable = false;
+  let totalGrams = 0;
+  for (const li of items ?? []) {
+    const meta = li.catalogItemId ? shippingByItem.get(li.catalogItemId) : undefined;
+    if (!meta?.requires_shipping) continue;
+    hasShippable = true;
+    const qty = Math.max(1, Number(li.quantity || 1));
+    if (meta.grams && meta.grams > 0) totalGrams += meta.grams * qty;
+  }
+  if (!hasShippable) return 0;
+
+  const weightCents = perKg > 0 ? Math.ceil((totalGrams / 1000) * perKg) : 0;
+  return Math.max(0, baseCents + weightCents);
+}
+
 /**
  * Pull the sales tax + charged total from a Stripe event. Only Checkout Session
  * events (`checkout.session.*`) carry a `total_details.amount_tax` breakdown when

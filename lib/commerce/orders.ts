@@ -5,7 +5,7 @@ import { captureServer } from '@/lib/analytics/posthog-server';
 import { EVENTS } from '@/lib/analytics/events';
 import { partnerCommissionCents, PARTNER_FEE_SHARE, hubOverrideCents } from './partner-terms';
 import { isAgencyPlanMerchant } from '@/lib/billing/plans';
-import { computeSubtotalCents, computePlatformFeeCents, flatShippingCents, parseStripeTaxTotals } from './fees';
+import { computeSubtotalCents, computePlatformFeeCents, flatShippingCents, computePhysicalShippingCents, parseStripeTaxTotals } from './fees';
 
 /** Create a pending order and its line items. Returns order id and totals. */
 export async function createDraftOrder(opts: {
@@ -37,6 +37,7 @@ export async function createDraftOrder(opts: {
   // catalog item's pod_spec; subtract (base × qty) for POD line items.
   let podBaseCents = 0;
   let hasShippable = false;
+  const shippingByItem = new Map<string, { requires_shipping?: boolean; grams?: number }>();
   const catIds = opts.items.map((li) => li.catalogItemId).filter(Boolean) as string[];
   if (catIds.length) {
     try {
@@ -46,6 +47,12 @@ export async function createDraftOrder(opts: {
         (cis ?? []).map((c: any) => [c.id, Number(c?.metadata?.pod_spec?.base_cost_cents) || 0])
       );
       hasShippable = (cis ?? []).some((c: any) => ['lulu', 'gelato'].includes(c?.metadata?.fulfillment_provider));
+      for (const c of cis ?? []) {
+        const s = c?.metadata?.shipping;
+        if (s?.requires_shipping) {
+          shippingByItem.set(c.id, { requires_shipping: true, grams: Number(s.grams) || undefined });
+        }
+      }
       for (const li of opts.items) {
         const base = li.catalogItemId ? baseById.get(li.catalogItemId) || 0 : 0;
         podBaseCents += base * Math.max(1, Number(li.quantity || 1));
@@ -64,7 +71,11 @@ export async function createDraftOrder(opts: {
     feeMinCents: cfg.platform_fee_min_cents || 0,
   });
 
-  const shippingCents = flatShippingCents(hasShippable);
+  // POD flat shipping (unchanged) + physical-goods shipping (Shopify-imported items;
+  // env-gated, 0 by default). The two paths are mutually exclusive per item, so they
+  // never double-count. Shipping is added after the fee is computed (fee excludes it).
+  const shippingCents =
+    flatShippingCents(hasShippable) + computePhysicalShippingCents(opts.items, shippingByItem);
   const total = subtotal + shippingCents;
 
   // Create order

@@ -141,6 +141,11 @@ export async function provisionShopifyCatalog(opts: {
       ...(product.productUrl ? { source_url: product.productUrl } : {}),
       ...(vmeta.variants ? { variants: vmeta.variants } : {}),
       ...(vmeta.variantOptions ? { variant_options: vmeta.variantOptions } : {}),
+      // Physical-goods shipping: weight (for weight-based rates) + a flag the fee
+      // computation reads. Inert until an operator opts into shipping rates.
+      ...(product.requiresShipping
+        ? { shipping: { requires_shipping: true, ...(product.grams ? { grams: product.grams } : {}) } }
+        : {}),
     };
 
     const row = {

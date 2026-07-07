@@ -1,5 +1,5 @@
 // lib/commerce/__tests__/fees.test.ts
-import { computeSubtotalCents, computePlatformFeeCents, flatShippingCents, parseStripeTaxTotals } from '../fees';
+import { computeSubtotalCents, computePlatformFeeCents, flatShippingCents, computePhysicalShippingCents, parseStripeTaxTotals } from '../fees';
 import {
   partnerCommissionCents,
   clampPlatformFeePercent,
@@ -105,6 +105,43 @@ describe('flatShippingCents', () => {
   it('never returns a negative fee', () => {
     process.env.QS_POD_SHIPPING_CENTS = '-500';
     expect(flatShippingCents(true)).toBe(0);
+  });
+});
+
+describe('computePhysicalShippingCents', () => {
+  const KEYS = ['QS_SHIPPING_CENTS_PER_KG', 'QS_SHIPPING_BASE_CENTS'] as const;
+  const OLD: Record<string, string | undefined> = {};
+  beforeEach(() => { for (const k of KEYS) { OLD[k] = process.env[k]; delete process.env[k]; } });
+  afterEach(() => { for (const k of KEYS) { if (OLD[k] === undefined) delete process.env[k]; else process.env[k] = OLD[k]!; } });
+
+  const ship = (grams?: number) => new Map([['cat_1', { requires_shipping: true, ...(grams ? { grams } : {}) }]]);
+  const line = (qty = 1) => [{ catalogItemId: 'cat_1', quantity: qty }];
+
+  it('is 0 by default (no rate configured), even for a shippable cart', () => {
+    expect(computePhysicalShippingCents(line(), ship(544))).toBe(0);
+  });
+
+  it('is 0 when nothing in the cart requires shipping', () => {
+    process.env.QS_SHIPPING_CENTS_PER_KG = '500';
+    expect(computePhysicalShippingCents([{ catalogItemId: 'other', quantity: 1 }], ship(544))).toBe(0);
+  });
+
+  it('charges base + weight × per-kg rate, scaled by quantity', () => {
+    process.env.QS_SHIPPING_BASE_CENTS = '300';
+    process.env.QS_SHIPPING_CENTS_PER_KG = '500'; // $5.00/kg
+    // 544g × 2 = 1088g = 1.088kg → ceil(1.088 × 500) = 544; + 300 base = 844.
+    expect(computePhysicalShippingCents(line(2), ship(544))).toBe(844);
+  });
+
+  it('charges base only when items have no weight', () => {
+    process.env.QS_SHIPPING_BASE_CENTS = '499';
+    process.env.QS_SHIPPING_CENTS_PER_KG = '500';
+    expect(computePhysicalShippingCents(line(), ship(undefined))).toBe(499);
+  });
+
+  it('supports a flat per-order fee via base with no per-kg rate', () => {
+    process.env.QS_SHIPPING_BASE_CENTS = '699';
+    expect(computePhysicalShippingCents(line(3), ship(1000))).toBe(699);
   });
 });
 

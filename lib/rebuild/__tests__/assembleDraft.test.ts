@@ -63,6 +63,18 @@ describe('buildRebuildTemplate', () => {
     expect(loc?.content?.phone).toBe('253-555-0100');
   });
 
+  it('pre-picks site type + industry so the editor does not re-ask', () => {
+    const concrete = buildRebuildTemplate({ spec: baseSpec({ industryKey: 'restaurant' as any, industryLabel: 'Restaurant' }) });
+    expect(concrete.data.meta.site_type).toBe('small_business');
+    expect(concrete.data.meta.industry).toBe('restaurant');
+    expect(concrete.data.meta.industry_other).toBeUndefined();
+
+    // "Other" industries seed the free-text category so the picker treats it as chosen.
+    const other = buildRebuildTemplate({ spec: baseSpec({ industryKey: 'other' as any, industryLabel: 'Card Game' }) });
+    expect(other.data.meta.industry).toBe('other');
+    expect(other.data.meta.industry_other).toBe('Card Game');
+  });
+
   it('matches the source site color mode when provided (overrides the default)', () => {
     const light = buildRebuildTemplate({ spec: baseSpec(), colorMode: 'light' });
     expect(light.color_mode).toBe('light');

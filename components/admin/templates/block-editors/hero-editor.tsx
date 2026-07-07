@@ -602,6 +602,11 @@ export default function HeroEditor({
 
   // reflect meta live — build a minimal patch (do NOT clone existing meta)
   useEffect(() => {
+    // While actively typing the free-text "Other" field (esp. on mobile), skip the
+    // apply-patch broadcast below — it re-renders the preview on every keystroke and
+    // causes focus loss / jank. The onChange handler's debounced mergeSoon already
+    // reflects the value, and blur/Enter flush it. (Guards a value-change render only.)
+    if (isTypingOther.current) return;
     // Treat "other" without text as not chosen
     const effIndustryKey =
       industryKey === 'other' && !aiIndustryOther.trim() ? '' : industryKey;

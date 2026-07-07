@@ -422,6 +422,33 @@ export async function markOrderRefunded(
   if (oErr) throw oErr;
   if (!flipped || flipped.length === 0) return;
 
+  // 2b) Restock the refunded line items (opt-in via QS_RESTOCK_ON_REFUND; default off
+  //     to preserve existing behavior). Runs inside the once-only flip guard so a
+  //     duplicate refund event can't double-restock. Best-effort + atomic per line;
+  //     the increment RPC no-ops untracked items so this never starts tracking.
+  if (/^(1|true|yes)$/i.test(String(process.env.QS_RESTOCK_ON_REFUND ?? ''))) {
+    try {
+      const { data: lines } = await supabase
+        .from('order_items')
+        .select('catalog_item_id, quantity, metadata')
+        .eq('order_id', orderId);
+      for (const li of lines ?? []) {
+        if (!li.catalog_item_id) continue;
+        const qty = Number(li.quantity) || 0;
+        if (qty <= 0) continue;
+        const variantId = (li.metadata as any)?.variant_id ?? null;
+        const { error } = await (supabase as any).rpc('increment_catalog_stock', {
+          p_item: li.catalog_item_id,
+          p_variant: variantId,
+          p_qty: qty,
+        });
+        if (error) console.warn('increment_catalog_stock (restock) failed:', error.message);
+      }
+    } catch (e) {
+      console.warn('Restock-on-refund step failed:', (e as any)?.message || e);
+    }
+  }
+
   // 3) Void the platform-fee commission for this order — but only the rows that
   //    haven't been paid out yet (pending/approved). A paid row already left the
   //    building, so it can't simply be voided.

@@ -363,4 +363,9 @@ export const DEFAULT_BLOCK_CONTENT = {
     headline: 'Volunteer for the Campaign',
     description: 'Join the team to canvass, phone bank, or host a yard sign.',
   },
+  story: {
+    sections: [
+      { heading: 'Our Story', body: 'Tell your story here.', image_url: '', cta_text: '', cta_link: '' },
+    ],
+  },
 } as const satisfies Record<BlockType, any>;

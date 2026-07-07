@@ -52,6 +52,7 @@ export const BLOCK_CATEGORY: Record<BlockType, BlockCategory> = {
   // ----- NEW: commerce blocks -----
   products_grid: 'content',     // grid of purchasable items/services
   service_offer: 'interactive', // single service/product CTA (planned)
+  story: 'content',             // alternating image+text brand storytelling
 
   /* ───────── ElectInfo (candidate) blocks ───────── */
   candidate_hero: 'layout',

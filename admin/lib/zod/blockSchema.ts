@@ -620,6 +620,28 @@ export const blockContentSchemaMap = {
     }),
   },
 
+  // Alternating image + text "story" sections (brand storytelling — e.g. a converted
+  // Shopify site's "Created by…" / "How it works" panels). Rendered image-left/right,
+  // stacking on mobile.
+  story: {
+    label: 'Story Sections',
+    icon: '📖',
+    schema: z.object({
+      title: z.string().optional(),
+      sections: z.array(z.object({
+        heading: z.string().min(1),
+        body: z.string().default(''),
+        image_url: z.union([z.string().url(), z.literal('')]).optional(),
+        cta_text: z.string().optional(),
+        // Empty string → undefined so a section with no CTA validates cleanly.
+        cta_link: z.preprocess(
+          (v) => (typeof v === 'string' && v.trim() === '' ? undefined : v),
+          RelativeOrAbsoluteUrl.optional(),
+        ),
+      })).min(1),
+    }),
+  },
+
 
   hours: { label: 'Hours of Operation', icon: '⏰', schema: HoursOfOperationSchema },
 

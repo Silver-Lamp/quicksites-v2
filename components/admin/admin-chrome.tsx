@@ -6,6 +6,7 @@ import Image from 'next/image';
 import AppHeader from './AppHeader/app-header';
 import ResponsiveAdminLayout from './responsive-admin-layout';
 import GuestPublishBanner from './guest-publish-banner';
+import WorkSurfaceBackground from './work-surface-background';
 import { useSafeScroll } from '@/hooks/useSafeScroll';
 import { useSafeTargetRef } from '@/lib/ui/safeTargetRef';
 import { useOrg } from '@/app/providers';
@@ -75,6 +76,18 @@ function FullAdminChrome({ children }: { children: React.ReactNode }) {
     return () => window.removeEventListener('resize', onResize);
   }, []);
 
+  // Mirror the sidebar's live collapsed state (incl. the editor's default-collapsed
+  // rail) so the header toggle icon stays in sync. Visual only — persistence is
+  // owned by the sidebar's explicit-toggle path.
+  React.useEffect(() => {
+    const onChanged = (e: Event) => {
+      const v = (e as CustomEvent<boolean>).detail;
+      if (typeof v === 'boolean') setCollapsed(v);
+    };
+    window.addEventListener('qs:sidebar:changed', onChanged as EventListener);
+    return () => window.removeEventListener('qs:sidebar:changed', onChanged as EventListener);
+  }, []);
+
   // Kill any global fixed-header spacer set earlier
   React.useEffect(() => {
     const root = document.documentElement;
@@ -99,6 +112,7 @@ function FullAdminChrome({ children }: { children: React.ReactNode }) {
 
   return (
     <div data-admin-root className="min-h-screen bg-background text-foreground">
+      <WorkSurfaceBackground />
       <div className="relative flex">
         <ResponsiveAdminLayout
           collapsed={collapsed}
@@ -114,13 +128,7 @@ function FullAdminChrome({ children }: { children: React.ReactNode }) {
             ref={headerRef}
             className="sticky top-0 z-30 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60"
           >
-            <AppHeader
-              collapsed={collapsed}
-              onToggleCollapsed={(next: boolean) => {
-                setCollapsed(next);
-                try { localStorage.setItem('admin-sidebar-collapsed', String(next)); } catch {}
-              }}
-            />
+            <AppHeader />
           </header>
 
           <main className="min-w-0 pt-0">{children}</main>

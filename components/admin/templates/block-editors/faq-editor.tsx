@@ -53,6 +53,16 @@ export default function FaqEditor({
 
   const removeLast = () => setItems((prev) => prev.slice(0, -1));
 
+  // ---------- Copy versions (revert to the original site's FAQs) ----------
+  // Captured at auto-conversion in data.meta.copy = { original, generated }.
+  const copyVersions = (template?.data as any)?.meta?.copy ?? null;
+  const hasFaqCopyVersions = !!(copyVersions?.original?.faqs?.length);
+  const applyCopyVersion = (which: 'original' | 'generated') => {
+    const faqs = which === 'original' ? copyVersions?.original?.faqs : copyVersions?.generated?.faqs;
+    if (!Array.isArray(faqs) || !faqs.length) return;
+    setItems(faqs.map((f: any) => ({ question: String(f?.q ?? ''), answer: String(f?.a ?? '') })).filter((f: FaqItem) => f.question));
+  };
+
   // ---------- AI state ----------
   const [aiPrompt, setAiPrompt] = useState('');
   const [tone, setTone] = useState<'friendly' | 'professional' | 'enthusiastic' | 'matter-of-fact'>(
@@ -207,6 +217,27 @@ export default function FaqEditor({
         </div>
         {aiError ? <div className="text-xs text-red-300">{aiError}</div> : null}
       </div>
+
+      {/* Revert to the original site's FAQs (captured at conversion). */}
+      {hasFaqCopyVersions && (
+        <div className="flex items-center gap-2 text-xs">
+          <span className="text-neutral-400">Copy:</span>
+          <button
+            onClick={() => applyCopyVersion('original')}
+            className="inline-flex items-center gap-1 rounded border border-white/15 px-2 py-1 hover:bg-white/10"
+            title="Revert to your original site's FAQs"
+          >
+            ↺ Original
+          </button>
+          <button
+            onClick={() => applyCopyVersion('generated')}
+            className="inline-flex items-center gap-1 rounded border border-white/15 px-2 py-1 hover:bg-white/10"
+            title="Restore the AI-generated FAQs"
+          >
+            AI
+          </button>
+        </div>
+      )}
 
       {/* Manual editor */}
       <BlockField

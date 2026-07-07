@@ -172,6 +172,13 @@ export function buildRebuildTemplate(opts: {
     about: spec.about || null,
     services,
     faqs: spec.faqs ?? [],
+    // Pre-pick the site type + industry so the editor's hero setup opens ready (no
+    // "what kind of site?" re-ask). For an unmatched industry, seed the "Other" text
+    // with the AI's label (e.g. "Card Game") so it's the appropriate category.
+    site_type: 'small_business',
+    industry: spec.industryKey,
+    industry_label: spec.industryLabel,
+    ...(spec.industryKey === 'other' && spec.industryLabel ? { industry_other: spec.industryLabel } : {}),
     ...(Object.keys(metaContact).length ? { contact: metaContact } : {}),
     ...(copyVersions ? { copy: copyVersions } : {}),
     // Provenance: mark this as a rebuild + where it came from (useful for the

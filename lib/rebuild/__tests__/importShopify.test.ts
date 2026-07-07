@@ -106,6 +106,16 @@ describe('mapShopifyProduct', () => {
     expect(p.compareAtCents).toBeUndefined();
   });
 
+  it('captures shipping weight (grams) from the cheapest variant', () => {
+    const p = mapShopifyProduct(
+      { ...PRODUCT, variants: [{ title: 'x', price: '29.99', grams: 544, requires_shipping: true }] },
+      null,
+    )!;
+    expect(p.grams).toBe(544);
+    expect(p.requiresShipping).toBe(true);
+    expect(p.variants[0].grams).toBe(544);
+  });
+
   it('returns null for a product with no priced variant', () => {
     expect(mapShopifyProduct({ title: 'X', variants: [] }, null)).toBeNull();
     expect(mapShopifyProduct({ title: '', variants: [{ price: '1' }] }, null)).toBeNull();

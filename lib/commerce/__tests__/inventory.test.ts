@@ -1,5 +1,5 @@
 // lib/commerce/__tests__/inventory.test.ts
-import { normalizeStock, readItemStock, checkStock } from '../inventory';
+import { normalizeStock, readItemStock, readItemStockCompat, checkStock } from '../inventory';
 
 describe('normalizeStock', () => {
   it('treats null/undefined/empty as untracked (null)', () => {
@@ -22,6 +22,20 @@ describe('readItemStock', () => {
     expect(readItemStock({ stock: 7 })).toBe(7);
     expect(readItemStock({})).toBeNull();
     expect(readItemStock(null)).toBeNull();
+  });
+});
+
+describe('readItemStockCompat (display, honors legacy qty_available)', () => {
+  it('prefers the enforced stock field', () => {
+    expect(readItemStockCompat({ stock: 7, qty_available: 3 })).toBe(7);
+    expect(readItemStockCompat({ stock: 0, qty_available: 9 })).toBe(0); // enforced 0 wins
+  });
+  it('falls back to legacy qty_available when stock is absent', () => {
+    expect(readItemStockCompat({ qty_available: 4 })).toBe(4);
+  });
+  it('is untracked when neither is present', () => {
+    expect(readItemStockCompat({})).toBeNull();
+    expect(readItemStockCompat(null)).toBeNull();
   });
 });
 

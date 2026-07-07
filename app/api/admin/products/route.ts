@@ -2,14 +2,19 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { z } from 'zod';
 import { requireAdmin } from '@/lib/auth/requireUser';
+import { readItemStockCompat } from '@/lib/commerce/inventory';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-// Admin product management — now reads/writes the canonical `catalog_items`
+// Admin product management — reads/writes the canonical `catalog_items`
 // (open_commerce), same table as the storefront + order path. The admin UI's
-// product_type 'physical' maps to catalog_items.type 'product'; qty_available is
-// stored in metadata. (Legacy: this used a separate `products` table — retired.)
+// product_type 'physical' maps to catalog_items.type 'product'. The API contract
+// still calls the quantity `qty_available`, but it is now stored in `metadata.stock`
+// — the field checkout actually ENFORCES — so admin-set stock is honored at checkout.
+// Reads fall back to the legacy `metadata.qty_available` for pre-unification rows
+// (a migration backfills stock ← qty_available). (Legacy: a separate `products`
+// table — retired.)
 
 /* ── env & client ── */
 function env(name: string) {
@@ -87,7 +92,7 @@ export async function GET(req: NextRequest) {
     price_cents: ci.price_cents,
     image_url: firstImage(ci.images),
     product_type: toAdminType(ci.type),
-    qty_available: Number(ci?.metadata?.qty_available ?? 0),
+    qty_available: readItemStockCompat(ci?.metadata) ?? 0,
   }));
   return NextResponse.json({ products }, { status: 200 });
 }
@@ -154,7 +159,8 @@ export async function POST(req: NextRequest) {
         price_cents,
         images: image_url ? [image_url] : [],
         status: 'active',
-        metadata: { qty_available },
+        // Write the ENFORCED field so admin-set stock is honored at checkout.
+        metadata: { stock: qty_available },
       })
       .select('id, title, slug, price_cents, images, type, metadata')
       .single();
@@ -170,7 +176,7 @@ export async function POST(req: NextRequest) {
           price_cents: data.price_cents,
           image_url: firstImage(data.images),
           product_type: toAdminType(data.type),
-          qty_available: Number((data as any)?.metadata?.qty_available ?? qty_available),
+          qty_available: readItemStockCompat((data as any)?.metadata) ?? qty_available,
         },
       },
       { status: 201 }

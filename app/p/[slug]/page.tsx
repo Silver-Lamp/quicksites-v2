@@ -16,12 +16,19 @@ const db = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, (process.env.SUPA
   auth: { persistSession: false },
 });
 
-function firstImage(images: any): string | null {
-  if (!Array.isArray(images) || images.length === 0) return null;
-  const f = images[0];
-  if (typeof f === 'string') return f;
-  if (f && typeof f === 'object') return f.url ?? f.src ?? null;
-  return null;
+/** catalog_items.images is jsonb: array of url strings or {url|src} objects. */
+function normalizeImages(images: any): string[] {
+  if (!Array.isArray(images)) return [];
+  const out: string[] = [];
+  const seen = new Set<string>();
+  for (const entry of images) {
+    const url = typeof entry === 'string' ? entry : entry?.url ?? entry?.src ?? null;
+    if (typeof url === 'string' && url && !seen.has(url)) {
+      seen.add(url);
+      out.push(url);
+    }
+  }
+  return out;
 }
 export default async function ProductPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
@@ -38,7 +45,8 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
   const item = rows?.[0];
   if (!item) notFound();
 
-  const img = firstImage(item.images);
+  const images = normalizeImages(item.images);
+  const img = images[0] ?? null;
 
   // Purchasable variants — single-axis (a flat list) or multi-axis (Size × Color).
   // Each is a SKU with its own price; price shown becomes a "from" minimum, and the
@@ -62,6 +70,7 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
         fromPrice={fromPrice}
         hasVariants={hasVariants}
         mainImage={img}
+        images={images}
         variants={variants}
         axes={axes}
         itemStock={itemStock}

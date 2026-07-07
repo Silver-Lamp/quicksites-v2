@@ -342,6 +342,17 @@ export default function ServicesPanel({
     }
   };
 
+  // Copy versions captured at auto-conversion (data.meta.copy). Lets the merchant
+  // revert the services list to their original site's wording.
+  const copyVersions = (template.data as any)?.meta?.copy ?? null;
+  const hasServicesCopy = Array.isArray(copyVersions?.original?.services) && copyVersions.original.services.length > 0;
+  const applyServicesVersion = (which: 'original' | 'generated') => {
+    const s = which === 'original' ? copyVersions?.original?.services : copyVersions?.generated?.services;
+    if (!Array.isArray(s) || !s.length) return;
+    setDraft(rowsFrom(s.map((x: any) => String(x))));
+    setTouched(true);
+  };
+
   return (
     <Collapsible title="Available Services" id="template-services">
       <div className="space-y-3">
@@ -482,6 +493,29 @@ export default function ServicesPanel({
 
         {/* ---------- Services editor ---------- */}
         {aiError && <div className="text-xs text-red-300">AI error: {aiError}</div>}
+
+        {/* Revert to the original site's services (captured at conversion). */}
+        {hasServicesCopy && (
+          <div className="flex items-center gap-2 text-xs">
+            <span className="text-neutral-400">Copy:</span>
+            <button
+              type="button"
+              onClick={() => applyServicesVersion('original')}
+              className="inline-flex items-center gap-1 rounded border border-white/15 px-2 py-1 hover:bg-white/10"
+              title="Revert to your original site's services (then Save)"
+            >
+              ↺ Original
+            </button>
+            <button
+              type="button"
+              onClick={() => applyServicesVersion('generated')}
+              className="inline-flex items-center gap-1 rounded border border-white/15 px-2 py-1 hover:bg-white/10"
+              title="Restore the AI-generated services"
+            >
+              AI
+            </button>
+          </div>
+        )}
 
         {draft.map((row) => (
           <div key={row.id} className="flex gap-2 items-center">

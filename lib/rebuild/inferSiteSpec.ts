@@ -37,6 +37,15 @@ export type RebuildSpec = {
   hours?: HoursDaySpec[];
   // Brand storytelling — 2-4 image+text panels ("Created by…", "How it works").
   story?: { heading: string; body: string }[];
+  // The VERBATIM existing copy from the source site (not rewritten), so the user can
+  // revert per block to their original wording. Each field omitted if not found.
+  original?: {
+    headline?: string;
+    subheadline?: string;
+    about?: string;
+    services?: string[];
+    faqs?: { q: string; a: string }[];
+  };
   // Real e-commerce products, imported deterministically (e.g. Shopify /products.json)
   // — NOT AI-generated. When present, assembleDraft builds a real storefront (products
   // become catalog_items wired into cart/checkout) instead of a services brochure.
@@ -68,6 +77,11 @@ export async function inferSiteSpec(
     'from the MENU PAGES; keep price as a short display string (e.g. "$14"); group into ' +
     'sensible sections (Breakfast, Lunch, Dinner, Drinks, …). Omit menu entirely if this ' +
     'is not a food business or no menu items are present. ' +
+    'Also return original: an object with the VERBATIM existing copy from the source ' +
+    'site (do NOT rewrite it) for the same keys where the site has them — headline, ' +
+    'subheadline, about, services (array of names), faqs (array of {q,a}). Use the real ' +
+    'headline/tagline/about/services/FAQ text found on their CURRENT site so the user ' +
+    'can revert to their original wording; omit any key the site does not have. ' +
     'Also return story: an array of 2-4 objects {heading (<=6 words), body (2-3 ' +
     'sentences)} capturing the brand story / key selling points / how-it-works, ' +
     'grounded in the real page content (e.g. who made it, what makes it special, how ' +
@@ -139,6 +153,7 @@ export async function inferSiteSpec(
         contact: parseContact(parsed.contact),
         hours: parseHours(parsed.hours),
         story: parseStory(parsed.story),
+        original: parseOriginal(parsed.original),
       };
 
       return {
@@ -168,6 +183,30 @@ export function parseMenu(raw: any): { sections: MenuSectionSpec[] } | undefined
     if (name && items.length) sections.push({ name, items });
   }
   return sections.length ? { sections } : undefined;
+}
+
+/** Coerce the model's verbatim `original` copy into a clean snapshot, or undefined. */
+export function parseOriginal(raw: any): RebuildSpec['original'] | undefined {
+  if (!raw || typeof raw !== 'object') return undefined;
+  const out: NonNullable<RebuildSpec['original']> = {};
+  const headline = String(raw.headline ?? '').trim().slice(0, 200);
+  const subheadline = String(raw.subheadline ?? '').trim().slice(0, 300);
+  const about = String(raw.about ?? '').trim().slice(0, 1000);
+  if (headline) out.headline = headline;
+  if (subheadline) out.subheadline = subheadline;
+  if (about) out.about = about;
+  if (Array.isArray(raw.services)) {
+    const services = raw.services.map((s: any) => String(s ?? '').trim().slice(0, 80)).filter(Boolean).slice(0, 12);
+    if (services.length) out.services = services;
+  }
+  if (Array.isArray(raw.faqs)) {
+    const faqs = raw.faqs
+      .map((f: any) => ({ q: String(f?.q ?? '').trim().slice(0, 200), a: String(f?.a ?? '').trim().slice(0, 600) }))
+      .filter((f: { q: string }) => f.q)
+      .slice(0, 8);
+    if (faqs.length) out.faqs = faqs;
+  }
+  return Object.keys(out).length ? out : undefined;
 }
 
 /** Coerce the model's `story` into 2-4 clean {heading, body} panels, or undefined. */

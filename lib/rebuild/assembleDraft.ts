@@ -159,6 +159,13 @@ export function buildRebuildTemplate(opts: {
   if (spec.contact?.address) metaContact.address = spec.contact.address;
   if (spec.contact?.phone) metaContact.phone = spec.contact.phone;
   if (spec.contact?.email) metaContact.email = spec.contact.email;
+
+  // Copy versions: keep the source site's VERBATIM original copy alongside the applied
+  // AI copy so the editor can offer a per-block "revert to original" (v0 ↔ v1). Stored
+  // in meta (a loose object that survives block-schema validation), not on block
+  // content (which Zod may strip). Only present when we captured a real original.
+  const copyVersions = buildCopyVersions(spec, services);
+
   tpl.data.meta = {
     ...(tpl.data.meta ?? {}),
     business_name: spec.businessName,
@@ -166,6 +173,7 @@ export function buildRebuildTemplate(opts: {
     services,
     faqs: spec.faqs ?? [],
     ...(Object.keys(metaContact).length ? { contact: metaContact } : {}),
+    ...(copyVersions ? { copy: copyVersions } : {}),
     // Provenance: mark this as a rebuild + where it came from (useful for the
     // editor banner + analytics; harmless to the renderer).
     rebuilt_from: sourceUrl || null,
@@ -182,6 +190,34 @@ export function buildRebuildTemplate(opts: {
     industry: spec.industryKey,
     business_name: spec.businessName,
   };
+}
+
+export type CopyField = { headline?: string; subheadline?: string; about?: string; services?: string[]; faqs?: { q: string; a: string }[] };
+export type CopyVersions = { original: CopyField; generated: CopyField };
+
+/**
+ * Snapshot the original (source-site verbatim) vs generated (applied AI) copy so the
+ * editor can revert per block. Returns null when there's no captured original — no
+ * point offering a revert to nothing.
+ */
+export function buildCopyVersions(spec: RebuildSpec, services: string[]): CopyVersions | null {
+  const o = spec.original;
+  if (!o || !(o.headline || o.subheadline || o.about || o.services?.length || o.faqs?.length)) return null;
+  const original: CopyField = {
+    ...(o.headline ? { headline: o.headline } : {}),
+    ...(o.subheadline ? { subheadline: o.subheadline } : {}),
+    ...(o.about ? { about: o.about } : {}),
+    ...(o.services?.length ? { services: o.services } : {}),
+    ...(o.faqs?.length ? { faqs: o.faqs } : {}),
+  };
+  const generated: CopyField = {
+    ...(spec.headline ? { headline: spec.headline } : {}),
+    ...(spec.subheadline ? { subheadline: spec.subheadline } : {}),
+    ...(spec.about ? { about: spec.about } : {}),
+    ...(services.length ? { services } : {}),
+    ...(spec.faqs?.length ? { faqs: spec.faqs } : {}),
+  };
+  return { original, generated };
 }
 
 /**

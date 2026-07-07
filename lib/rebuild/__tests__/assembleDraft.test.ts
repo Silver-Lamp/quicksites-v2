@@ -139,6 +139,25 @@ describe('story sections', () => {
   });
 });
 
+describe('copy versions (original vs generated)', () => {
+  it('snapshots original + generated copy into meta.copy for per-block revert', () => {
+    const tpl = buildRebuildTemplate({
+      spec: baseSpec({
+        headline: 'AI Headline',
+        services: ['A', 'B'],
+        original: { headline: 'Old Headline', subheadline: 'Old tagline', services: ['X', 'Y'] },
+      }),
+    });
+    expect(tpl.data.meta.copy.original).toMatchObject({ headline: 'Old Headline', services: ['X', 'Y'] });
+    expect(tpl.data.meta.copy.generated).toMatchObject({ headline: 'AI Headline', services: ['A', 'B'] });
+  });
+
+  it('omits meta.copy when no original was captured', () => {
+    const tpl = buildRebuildTemplate({ spec: baseSpec({ original: undefined }) });
+    expect(tpl.data.meta.copy).toBeUndefined();
+  });
+});
+
 describe('wireCatalogIntoTemplate', () => {
   it('wires real catalog ids + merchant into the grid and meta.ecom', () => {
     const tpl = buildRebuildTemplate({ spec: baseSpec({ products: [product(), product({ handle: 'tee', title: 'Tee' })] }) });

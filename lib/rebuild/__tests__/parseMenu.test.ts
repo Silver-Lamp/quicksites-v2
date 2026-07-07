@@ -10,7 +10,26 @@
 
 jest.mock('@/lib/ai/meter', () => ({ meterLLMCall: jest.fn() }));
 
-import { parseMenu, parseContact, parseHours, parseStory } from '@/lib/rebuild/inferSiteSpec';
+import { parseMenu, parseContact, parseHours, parseStory, parseOriginal } from '@/lib/rebuild/inferSiteSpec';
+
+describe('parseOriginal', () => {
+  it('keeps the verbatim original copy fields present on the source', () => {
+    const out = parseOriginal({
+      headline: '  Old Headline ',
+      subheadline: 'Old tagline',
+      about: 'We have been around since 1990.',
+      services: ['Plumbing', 'Heating', ''],
+      faqs: [{ q: 'Hours?', a: '9-5' }, { q: '', a: 'x' }],
+    })!;
+    expect(out.headline).toBe('Old Headline');
+    expect(out.services).toEqual(['Plumbing', 'Heating']);
+    expect(out.faqs).toEqual([{ q: 'Hours?', a: '9-5' }]);
+  });
+  it('returns undefined when nothing usable is present', () => {
+    expect(parseOriginal(undefined)).toBeUndefined();
+    expect(parseOriginal({ headline: '', services: [] })).toBeUndefined();
+  });
+});
 
 describe('parseStory', () => {
   it('keeps up to 4 {heading, body} panels', () => {

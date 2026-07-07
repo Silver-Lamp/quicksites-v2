@@ -552,13 +552,34 @@ useEffect(() => {
               </Button>
             </div>
 
-            {/* Light / Dark (persists to the template) */}
-            <div className="flex items-center gap-1">
-              <Button size="icon" variant={colorMode === 'light' ? 'secondary' : 'ghost'} title="Light mode" aria-pressed={colorMode === 'light'} onClick={() => setColorModeAndEmit('light')}>
+            {/* Light / Dark (persists to the template) — labeled segmented control so
+                it reads clearly as a theme switch, not two loose icons. */}
+            <div
+              role="group"
+              aria-label="Theme"
+              className="flex items-center gap-0.5 rounded-md border bg-muted/40 p-0.5"
+            >
+              <Button
+                size="sm"
+                variant={colorMode === 'light' ? 'secondary' : 'ghost'}
+                className="h-7 gap-1.5 px-2"
+                title="Light mode"
+                aria-pressed={colorMode === 'light'}
+                onClick={() => setColorModeAndEmit('light')}
+              >
                 <Sun className="w-4 h-4" />
+                <span className="text-xs font-medium">Light</span>
               </Button>
-              <Button size="icon" variant={colorMode === 'dark' ? 'secondary' : 'ghost'} title="Dark mode" aria-pressed={colorMode === 'dark'} onClick={() => setColorModeAndEmit('dark')}>
+              <Button
+                size="sm"
+                variant={colorMode === 'dark' ? 'secondary' : 'ghost'}
+                className="h-7 gap-1.5 px-2"
+                title="Dark mode"
+                aria-pressed={colorMode === 'dark'}
+                onClick={() => setColorModeAndEmit('dark')}
+              >
                 <Moon className="w-4 h-4" />
+                <span className="text-xs font-medium">Dark</span>
               </Button>
             </div>
 

@@ -36,12 +36,34 @@ export function readItemStockCompat(metadata: unknown): number | null {
   return normalizeStock(m.qty_available);
 }
 
+export type InventoryPolicy = 'deny' | 'continue';
+
+/** How an item behaves when it runs out: 'deny' (default, block the sale) or
+ *  'continue' (backorder — keep selling past zero). Read from metadata.inventory_policy. */
+export function readInventoryPolicy(metadata: unknown): InventoryPolicy {
+  return (metadata as any)?.inventory_policy === 'continue' ? 'continue' : 'deny';
+}
+
+/** Whether a plain item's stock is tracked. Explicit `track_inventory:false` forces
+ *  untracked (unlimited) even if a stock number lingers; otherwise a numeric stock
+ *  means tracked. Returns the effective on-hand (null = untracked/unlimited). */
+export function effectiveItemStock(metadata: unknown): number | null {
+  if ((metadata as any)?.track_inventory === false) return null;
+  return readItemStock(metadata);
+}
+
 /**
  * Is `requested` units available given `available` (null = untracked/unlimited)?
- * Returns a machine reason when not, so callers can message "sold out" vs "only N".
+ * With policy 'continue' (backorder), the sale is always allowed. Returns a machine
+ * reason when not, so callers can message "sold out" vs "only N".
  */
-export function checkStock(available: number | null, requested: number): { ok: boolean; reason?: 'sold_out' | 'insufficient' } {
+export function checkStock(
+  available: number | null,
+  requested: number,
+  policy: InventoryPolicy = 'deny',
+): { ok: boolean; reason?: 'sold_out' | 'insufficient' } {
   if (available === null) return { ok: true };
+  if (policy === 'continue') return { ok: true }; // backorder: sell past zero
   if (available <= 0) return { ok: false, reason: 'sold_out' };
   if (requested > available) return { ok: false, reason: 'insufficient' };
   return { ok: true };

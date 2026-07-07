@@ -1,5 +1,5 @@
 // lib/commerce/checkoutItems.ts
-import { readItemStock, checkStock, normalizeStock } from './inventory';
+import { readItemStock, checkStock, normalizeStock, readInventoryPolicy, effectiveItemStock } from './inventory';
 //
 // Server-side price authority for the public storefront checkout. The client
 // posts catalog item ids + quantities, but the PRICE must come from the DB, never
@@ -169,9 +169,12 @@ export function authorizeCheckoutItems(input: {
       return { ok: false, error: `Quantity for "${title}" exceeds the per-order limit.`, badItemId: req.catalogItemId };
     }
 
-    // Stock gate: reject overselling a tracked item/variant (untracked ⇒ unlimited).
-    const available = variant ? normalizeStock(variant.stock) : readItemStock(row.metadata);
-    const stock = checkStock(available, quantity);
+    // Stock gate: reject overselling a tracked item/variant (untracked ⇒ unlimited),
+    // unless the item's policy is 'continue' (backorder). track_inventory:false forces
+    // untracked. Policy is item-level and applies to its variants too.
+    const policy = readInventoryPolicy(row.metadata);
+    const available = variant ? normalizeStock(variant.stock) : effectiveItemStock(row.metadata);
+    const stock = checkStock(available, quantity, policy);
     if (!stock.ok) {
       return {
         ok: false,

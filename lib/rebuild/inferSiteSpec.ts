@@ -35,6 +35,8 @@ export type RebuildSpec = {
   menu?: { sections: MenuSectionSpec[] };
   contact?: ContactSpec;
   hours?: HoursDaySpec[];
+  // Brand storytelling — 2-4 image+text panels ("Created by…", "How it works").
+  story?: { heading: string; body: string }[];
   // Real e-commerce products, imported deterministically (e.g. Shopify /products.json)
   // — NOT AI-generated. When present, assembleDraft builds a real storefront (products
   // become catalog_items wired into cart/checkout) instead of a services brochure.
@@ -66,6 +68,10 @@ export async function inferSiteSpec(
     'from the MENU PAGES; keep price as a short display string (e.g. "$14"); group into ' +
     'sensible sections (Breakfast, Lunch, Dinner, Drinks, …). Omit menu entirely if this ' +
     'is not a food business or no menu items are present. ' +
+    'Also return story: an array of 2-4 objects {heading (<=6 words), body (2-3 ' +
+    'sentences)} capturing the brand story / key selling points / how-it-works, ' +
+    'grounded in the real page content (e.g. who made it, what makes it special, how ' +
+    'it works). Omit story if the page has nothing substantive to say. ' +
     'Also return contact: an object {phone, address, email} using the REAL values found ' +
     'on the site (omit any field you cannot find). If business hours are stated, return ' +
     'hours: an array with one entry per day {day: one of mon,tue,wed,thu,fri,sat,sun, ' +
@@ -132,6 +138,7 @@ export async function inferSiteSpec(
         menu: parseMenu(parsed.menu),
         contact: parseContact(parsed.contact),
         hours: parseHours(parsed.hours),
+        story: parseStory(parsed.story),
       };
 
       return {
@@ -161,6 +168,18 @@ export function parseMenu(raw: any): { sections: MenuSectionSpec[] } | undefined
     if (name && items.length) sections.push({ name, items });
   }
   return sections.length ? { sections } : undefined;
+}
+
+/** Coerce the model's `story` into 2-4 clean {heading, body} panels, or undefined. */
+export function parseStory(raw: any): { heading: string; body: string }[] | undefined {
+  if (!Array.isArray(raw)) return undefined;
+  const out: { heading: string; body: string }[] = [];
+  for (const s of raw.slice(0, 4)) {
+    const heading = String(s?.heading ?? '').trim().slice(0, 80);
+    const body = String(s?.body ?? '').trim().slice(0, 500);
+    if (heading || body) out.push({ heading: heading || 'Our Story', body });
+  }
+  return out.length ? out : undefined;
 }
 
 /** Pick the string contact fields the model found; undefined if none. */

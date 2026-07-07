@@ -92,6 +92,7 @@ export const DYNAMIC_RENDERERS: Record<
         }),
     })),
   cta:          () => import('@/components/admin/templates/render-blocks/cta'),
+  story:        () => import('@/components/admin/templates/render-blocks/story'),
   testimonial:  () => import('@/components/admin/templates/render-blocks/testimonial'),
   footer:       () => import('@/components/admin/templates/render-blocks/footer'),
   service_areas:() => import('@/components/admin/templates/render-blocks/service-areas'),

@@ -91,6 +91,45 @@ describe('buildRebuildTemplate', () => {
   });
 });
 
+describe('story sections', () => {
+  const story = [
+    { heading: 'Created by 2 NPs', body: 'From Texas.' },
+    { heading: 'Play your shift', body: 'Day, swing, night.' },
+    { heading: 'For every player', body: 'PATIENT cards too.' },
+  ];
+
+  it('builds a story block, pairing each section with a gallery image (in order)', () => {
+    const tpl = buildRebuildTemplate({
+      spec: baseSpec({ story }),
+      galleryImages: ['https://cdn/a.png', 'https://cdn/b.png'],
+    });
+    const block = tpl.data.pages[0].blocks.find((b: any) => b?.type === 'story');
+    expect(block).toBeTruthy();
+    expect(block.content.sections).toHaveLength(3);
+    expect(block.content.sections[0]).toMatchObject({ heading: 'Created by 2 NPs', image_url: 'https://cdn/a.png' });
+    expect(block.content.sections[1].image_url).toBe('https://cdn/b.png');
+    // Third section has no image left → renders text-only.
+    expect(block.content.sections[2].image_url).toBe('');
+  });
+
+  it('places the story block before the FAQ', () => {
+    const tpl = buildRebuildTemplate({ spec: baseSpec({ story }) });
+    const types = tpl.data.pages[0].blocks.map((b: any) => b?.type);
+    expect(types.indexOf('story')).toBeGreaterThanOrEqual(0);
+    expect(types.indexOf('story')).toBeLessThan(types.indexOf('faq'));
+  });
+
+  it('excludes the hero image from story images (no duplication)', () => {
+    const tpl = buildRebuildTemplate({
+      spec: baseSpec({ story: [story[0]], products: [product()] }),
+      heroImage: 'https://cdn.shopify.com/a.png', // same as product's first image
+      galleryImages: ['https://cdn.shopify.com/a.png', 'https://cdn.shopify.com/b.png'],
+    });
+    const block = tpl.data.pages[0].blocks.find((b: any) => b?.type === 'story');
+    expect(block.content.sections[0].image_url).toBe('https://cdn.shopify.com/b.png');
+  });
+});
+
 describe('wireCatalogIntoTemplate', () => {
   it('wires real catalog ids + merchant into the grid and meta.ecom', () => {
     const tpl = buildRebuildTemplate({ spec: baseSpec({ products: [product(), product({ handle: 'tee', title: 'Tee' })] }) });

@@ -186,6 +186,21 @@ export function createDefaultBlock(type: BlockType): z.infer<typeof BlockSchema>
       break;
     }
 
+    /* ---------------- Story sections (image + text) ---------------- */
+
+    case 'story': {
+      content = {
+        ...content,
+        ...(typeof content.title === 'string' ? { title: content.title } : {}),
+        sections: Array.isArray(content.sections) && content.sections.length
+          ? content.sections
+          : [
+              { heading: 'Our Story', body: 'Tell your story here.', image_url: '', cta_text: '', cta_link: '' },
+            ],
+      };
+      break;
+    }
+
     /* ---------------- NEW: Commerce blocks ---------------- */
 
     case 'products_grid': {

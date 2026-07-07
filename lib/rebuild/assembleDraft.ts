@@ -38,6 +38,9 @@ export function buildRebuildTemplate(opts: {
   spec: RebuildSpec;
   heroImage?: string | null;
   sourceUrl?: string | null;
+  /** Extra images (product photos beyond the hero, scraped images) to illustrate
+   *  the story sections. Ordered by preference. */
+  galleryImages?: string[];
 }): RebuildTemplate {
   const { spec, heroImage, sourceUrl } = opts;
 
@@ -67,6 +70,15 @@ export function buildRebuildTemplate(opts: {
   // wireCatalogIntoTemplate() once the catalog_items rows exist.
   if (spec.products?.length) {
     applyProductBlocks(blocks, spec.products);
+  }
+
+  // Brand storytelling → an alternating image+text `story` block. Pairs each AI story
+  // point with a real image (product photos beyond the hero, or scraped images) so a
+  // converted store reads like the original brand site, not just hero + grid.
+  if (spec.story?.length) {
+    const heroUrl = effectiveHero || undefined;
+    const storyImages = (opts.galleryImages ?? []).filter((u) => u && u !== heroUrl);
+    applyStoryBlock(blocks, spec.story, storyImages);
   }
 
   // If the AI reconstructed a real menu (restaurant conversion), replace the
@@ -188,6 +200,34 @@ function applyProductBlocks(blocks: any[], products: ProductSpec[]): void {
   if (gridIdx >= 0) blocks[gridIdx] = grid;
   else if (servicesIdx >= 0) blocks[servicesIdx] = grid;
   else blocks.splice(1, 0, grid);
+}
+
+/**
+ * Build a `story` block from AI story points, illustrated with real images (one per
+ * section, in order; sections past the image count render text-only), and insert it
+ * just before the FAQ/contact so the page flows hero → shop → story → faq → contact.
+ */
+function applyStoryBlock(blocks: any[], story: { heading: string; body: string }[], images: string[]): void {
+  const block: any = createDefaultBlock('story');
+  block.content = {
+    sections: story.map((s, i) => ({
+      heading: s.heading,
+      body: s.body,
+      image_url: images[i] ?? '',
+      cta_text: '',
+      cta_link: '',
+    })),
+  };
+
+  // Land before the FAQ, else before the contact form, else near the end (but keep it
+  // above a trailing sticky order_bar).
+  let idx = blocks.findIndex((b) => b?.type === 'faq');
+  if (idx < 0) idx = blocks.findIndex((b) => b?.type === 'contact_form');
+  if (idx < 0) {
+    const barIdx = blocks.findIndex((b) => b?.type === 'order_bar');
+    idx = barIdx >= 0 ? barIdx : blocks.length;
+  }
+  blocks.splice(idx, 0, block);
 }
 
 /**

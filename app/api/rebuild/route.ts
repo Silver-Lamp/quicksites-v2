@@ -157,7 +157,12 @@ export async function POST(req: Request) {
 
   // 3) Assemble + insert the draft (service role; INSERT isn't guarded). Stamp
   //    ownership so it auto-claims when a guest upgrades (same uid → owner_id).
-  const tpl = buildRebuildTemplate({ spec, heroImage, sourceUrl: scraped.finalUrl });
+  //    Extra images (product photos beyond the hero + scraped images) illustrate the
+  //    story sections.
+  const galleryImages = Array.from(
+    new Set([...(spec.products ?? []).flatMap((p) => p.images), ...scraped.images]),
+  );
+  const tpl = buildRebuildTemplate({ spec, heroImage, sourceUrl: scraped.finalUrl, galleryImages });
 
   // 3a) Real products → create catalog_items under the owner's merchant and wire the
   //     storefront (productIds + meta.ecom.merchant_id) so "Add to Cart" → checkout

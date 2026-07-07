@@ -10,7 +10,31 @@
 
 jest.mock('@/lib/ai/meter', () => ({ meterLLMCall: jest.fn() }));
 
-import { parseMenu, parseContact, parseHours } from '@/lib/rebuild/inferSiteSpec';
+import { parseMenu, parseContact, parseHours, parseStory } from '@/lib/rebuild/inferSiteSpec';
+
+describe('parseStory', () => {
+  it('keeps up to 4 {heading, body} panels', () => {
+    const out = parseStory([
+      { heading: 'Created by 2 NPs', body: 'From Texas.' },
+      { heading: 'Play your shift', body: 'Day, swing, night.' },
+    ]);
+    expect(out).toEqual([
+      { heading: 'Created by 2 NPs', body: 'From Texas.' },
+      { heading: 'Play your shift', body: 'Day, swing, night.' },
+    ]);
+  });
+
+  it('caps at 4 panels and defaults a missing heading', () => {
+    const out = parseStory(Array.from({ length: 6 }, (_, i) => ({ body: `b${i}` })))!;
+    expect(out).toHaveLength(4);
+    expect(out[0].heading).toBe('Our Story');
+  });
+
+  it('returns undefined for non-arrays or all-empty entries', () => {
+    expect(parseStory(undefined)).toBeUndefined();
+    expect(parseStory([{ heading: '', body: '' }])).toBeUndefined();
+  });
+});
 
 describe('parseMenu', () => {
   it('parses sections + items with optional description/price', () => {

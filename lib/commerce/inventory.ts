@@ -15,9 +15,25 @@ export function normalizeStock(v: unknown): number | null {
   return Math.max(0, Math.floor(n));
 }
 
-/** Item-level stock off a catalog row's metadata (for a plain, variant-less item). */
+/** Item-level stock off a catalog row's metadata (for a plain, variant-less item).
+ *  This is the ENFORCED field — checkout + the decrement RPC read `metadata.stock`. */
 export function readItemStock(metadata: unknown): number | null {
   return normalizeStock((metadata as any)?.stock);
+}
+
+/**
+ * Display-only read that also honors the legacy `metadata.qty_available` alias.
+ *
+ * Before the stock-field unification, the admin product tools wrote an un-enforced
+ * `metadata.qty_available`; `metadata.stock` is now the single source of truth (and a
+ * backfill copies qty_available → stock where stock is absent). Use this ONLY for
+ * showing a number in admin UIs so pre-backfill rows still display — never for the
+ * checkout gate, which must read `readItemStock` (the enforced field) alone.
+ */
+export function readItemStockCompat(metadata: unknown): number | null {
+  const m = (metadata ?? {}) as any;
+  if (m.stock !== null && m.stock !== undefined && m.stock !== '') return normalizeStock(m.stock);
+  return normalizeStock(m.qty_available);
 }
 
 /**

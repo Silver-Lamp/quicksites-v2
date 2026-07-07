@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { render, screen, fireEvent, act } from '@testing-library/react';
+import { render, screen, fireEvent, act, waitFor } from '@testing-library/react';
 import PreviewState from '../PreviewState';
 
 // Capture what colorMode / className the renderer receives.
@@ -54,5 +54,43 @@ describe('PreviewState color toggle', () => {
       window.dispatchEvent(new CustomEvent('qs:preview:set-color-mode', { detail: 'dark' }));
     });
     expect(renderer().getAttribute('data-mode')).toBe('dark');
+  });
+});
+
+describe('PreviewState persistence (owner)', () => {
+  const realFetch = global.fetch;
+  afterEach(() => { global.fetch = realFetch; });
+
+  it('does not persist when no persistTemplateId (non-owner / view-only)', () => {
+    const fetchMock = jest.fn(() => Promise.resolve({ ok: true } as any));
+    global.fetch = fetchMock as any;
+    setup();
+    fireEvent.click(screen.getByRole('button', { name: /dark/i }));
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it('commits the color mode for an owner and shows a saved note', async () => {
+    const fetchMock = jest.fn(() => Promise.resolve({ ok: true } as any));
+    global.fetch = fetchMock as any;
+    setup({ persistTemplateId: 't1' });
+
+    fireEvent.click(screen.getByRole('button', { name: /dark/i }));
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    const [url, opts] = fetchMock.mock.calls[0] as unknown as [string, any];
+    expect(url).toBe('/api/templates/commit');
+    expect(opts.method).toBe('POST');
+    expect(JSON.parse(opts.body)).toEqual({ id: 't1', patch: { color_mode: 'dark' }, kind: 'save' });
+
+    await waitFor(() => expect(screen.getByText('Saved to your site')).toBeTruthy());
+  });
+
+  it('does not claim saved when the commit fails', async () => {
+    const fetchMock = jest.fn(() => Promise.resolve({ ok: false } as any));
+    global.fetch = fetchMock as any;
+    setup({ persistTemplateId: 't1' });
+    fireEvent.click(screen.getByRole('button', { name: /dark/i }));
+    await waitFor(() => expect(fetchMock).toHaveBeenCalled());
+    expect(screen.queryByText('Saved to your site')).toBeNull();
   });
 });

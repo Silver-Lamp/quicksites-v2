@@ -8,34 +8,49 @@ import EditorSiteRenderer from '@/components/sites/editor-site-renderer';
 /** Floating light/dark switch for the standalone preview. View-only — it changes how
  *  the preview looks without saving to the template (that's the editor's job). Fixed
  *  bottom-right, high z-index, legible on either background. */
-function PreviewColorToggle({ mode, onChange }: { mode: 'light' | 'dark'; onChange: (m: 'light' | 'dark') => void }) {
+function PreviewColorToggle({
+  mode,
+  onChange,
+  note,
+}: {
+  mode: 'light' | 'dark';
+  onChange: (m: 'light' | 'dark') => void;
+  note?: string;
+}) {
   return (
-    <div
-      role="group"
-      aria-label="Preview color mode"
-      className="fixed bottom-4 right-4 z-[9999] flex items-center gap-0.5 rounded-full border border-black/10 bg-white/90 p-1 shadow-lg backdrop-blur dark:border-white/15 dark:bg-neutral-900/90"
-    >
-      {(['light', 'dark'] as const).map((m) => {
-        const active = mode === m;
-        const Icon = m === 'light' ? Sun : Moon;
-        return (
-          <button
-            key={m}
-            type="button"
-            onClick={() => onChange(m)}
-            aria-pressed={active}
-            title={`${m === 'light' ? 'Light' : 'Dark'} mode`}
-            className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-medium transition ${
-              active
-                ? 'bg-neutral-900 text-white dark:bg-white dark:text-neutral-900'
-                : 'text-neutral-600 hover:text-neutral-900 dark:text-neutral-300 dark:hover:text-white'
-            }`}
-          >
-            <Icon className="h-4 w-4" />
-            <span className="capitalize">{m}</span>
-          </button>
-        );
-      })}
+    <div className="fixed bottom-4 right-4 z-[9999] flex flex-col items-end gap-1">
+      {note && (
+        <span className="rounded-full bg-black/70 px-2 py-0.5 text-[11px] font-medium text-white shadow-sm backdrop-blur">
+          {note}
+        </span>
+      )}
+      <div
+        role="group"
+        aria-label="Preview color mode"
+        className="flex items-center gap-0.5 rounded-full border border-black/10 bg-white/90 p-1 shadow-lg backdrop-blur dark:border-white/15 dark:bg-neutral-900/90"
+      >
+        {(['light', 'dark'] as const).map((m) => {
+          const active = mode === m;
+          const Icon = m === 'light' ? Sun : Moon;
+          return (
+            <button
+              key={m}
+              type="button"
+              onClick={() => onChange(m)}
+              aria-pressed={active}
+              title={`${m === 'light' ? 'Light' : 'Dark'} mode`}
+              className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-medium transition ${
+                active
+                  ? 'bg-neutral-900 text-white dark:bg-white dark:text-neutral-900'
+                  : 'text-neutral-600 hover:text-neutral-900 dark:text-neutral-300 dark:hover:text-white'
+              }`}
+            >
+              <Icon className="h-4 w-4" />
+              <span className="capitalize">{m}</span>
+            </button>
+          );
+        })}
+      </div>
     </div>
   );
 }
@@ -48,6 +63,10 @@ export type PreviewStateProps = {
   id?: string;
   editorChrome?: boolean;
   baseUrl?: string;   // ← keep this here
+  /** When the viewer owns this template, its id — the standalone toggle then SAVES
+   *  the chosen color mode back to the template (via /api/templates/commit). Null/
+   *  absent for non-owners → the toggle is view-only. */
+  persistTemplateId?: string | null;
 };
 
 export default function PreviewState({
@@ -58,17 +77,29 @@ export default function PreviewState({
   id = 'site-renderer-page',
   editorChrome,
   baseUrl,
+  persistTemplateId,
 }: PreviewStateProps) {
   const [site, setSite] = React.useState<any>(initialSite);
-  // Local, view-only color mode so the preview can be flipped without saving. Seeded
-  // from the template's saved mode; stays in sync with editor-driven changes below.
+  // Local color mode so the preview flips instantly. Seeded from the template's saved
+  // mode; stays in sync with editor-driven changes below.
   const [mode, setMode] = React.useState<'light' | 'dark'>(colorMode);
+  const [saveState, setSaveState] = React.useState<'idle' | 'saving' | 'saved'>('idle');
   React.useEffect(() => { setMode(colorMode); }, [colorMode]);
 
   const setModeAndRemember = React.useCallback((m: 'light' | 'dark') => {
     setMode(m);
     try { localStorage.setItem('qs:preview:color', m); } catch {}
-  }, []);
+    // Owners persist the choice back to the template (sanctioned commit RPC path).
+    if (!persistTemplateId) return;
+    setSaveState('saving');
+    fetch('/api/templates/commit', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ id: persistTemplateId, patch: { color_mode: m }, kind: 'save' }),
+    })
+      .then((r) => setSaveState(r.ok ? 'saved' : 'idle'))
+      .catch(() => setSaveState('idle'));
+  }, [persistTemplateId]);
 
   const resolvedBaseUrl = React.useMemo(() => {
     if (baseUrl) return baseUrl;
@@ -152,7 +183,13 @@ export default function PreviewState({
         editorChrome={editorChrome}
         baseUrl={resolvedBaseUrl}
       />
-      {showToggle && <PreviewColorToggle mode={mode} onChange={setModeAndRemember} />}
+      {showToggle && (
+        <PreviewColorToggle
+          mode={mode}
+          onChange={setModeAndRemember}
+          note={saveState === 'saving' ? 'Saving…' : saveState === 'saved' ? 'Saved to your site' : undefined}
+        />
+      )}
     </>
   );
 }

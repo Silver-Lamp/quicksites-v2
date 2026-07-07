@@ -439,6 +439,28 @@ export default async function PreviewPage({
   const baseUrl = await originFromHeaders();
   const normalized = normalizeForRenderer(site);
 
+  // Can the current viewer SAVE a color-mode change back to this template? Only when
+  // they own it (or are a platform admin) and we're previewing a specific template id.
+  // Non-owners keep a view-only toggle.
+  let persistTemplateId: string | null = null;
+  if (explicitTemplateId) {
+    try {
+      const supa = await getServerSupabase();
+      const { data: { user } } = await supa.auth.getUser();
+      if (user) {
+        const { data: adminRow } = await supabaseAdmin
+          .from('admin_users').select('user_id').eq('user_id', user.id).maybeSingle();
+        if (adminRow) {
+          persistTemplateId = explicitTemplateId;
+        } else {
+          const { data: owned } = await supabaseAdmin
+            .from('templates').select('owner_id').eq('id', explicitTemplateId).maybeSingle();
+          if (owned && (owned as any).owner_id === user.id) persistTemplateId = explicitTemplateId;
+        }
+      }
+    } catch { /* view-only on any failure */ }
+  }
+
   const editorChrome =
     (Array.isArray(sp.editor) ? sp.editor[0] : sp.editor) === '1' ||
     (Array.isArray(sp.chrome) ? sp.chrome[0] : sp.chrome) === '1';
@@ -470,6 +492,7 @@ export default async function PreviewPage({
         id="site-renderer-page"
         editorChrome={editorChrome}
         baseUrl={baseUrl}
+        persistTemplateId={persistTemplateId}
       />
       {showWatermark && <PreviewWatermark />}
     </TemplateEditorProvider>

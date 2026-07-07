@@ -137,6 +137,29 @@ describe('parseHtml', () => {
   });
 });
 
+describe('color-mode detection', () => {
+  const detect = (head: string, bodyAttrs = '') =>
+    parseHtml(`<html><head>${head}</head><body ${bodyAttrs}>x</body></html>`, 'https://x.example/', 'https://x.example/').colorMode;
+
+  it('defaults to light (most sites) when there is no signal', () => {
+    expect(detect('')).toBe('light');
+  });
+  it('honors an explicit color-scheme meta', () => {
+    expect(detect('<meta name="color-scheme" content="dark">')).toBe('dark');
+    expect(detect('<meta name="color-scheme" content="dark light">')).toBe('dark'); // first = preferred
+    expect(detect('<meta name="color-scheme" content="light dark">')).toBe('light');
+  });
+  it('detects a dark theme class/attribute on html/body', () => {
+    expect(parseHtml('<html class="dark"><body>x</body></html>', 'https://x/', 'https://x/').colorMode).toBe('dark');
+    expect(detect('', 'data-bs-theme="dark"')).toBe('dark');
+    expect(detect('', 'class="theme-dark"')).toBe('dark');
+  });
+  it('infers from an inline body background luminance', () => {
+    expect(detect('', 'style="background:#111"')).toBe('dark');
+    expect(detect('', 'style="background-color: rgb(255,255,255)"')).toBe('light');
+  });
+});
+
 describe('scrapeMenuPages', () => {
   const scraped: any = {
     sourceUrl: 'https://cafe.example.com/',

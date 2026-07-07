@@ -162,7 +162,13 @@ export async function POST(req: Request) {
   const galleryImages = Array.from(
     new Set([...(spec.products ?? []).flatMap((p) => p.images), ...scraped.images]),
   );
-  const tpl = buildRebuildTemplate({ spec, heroImage, sourceUrl: scraped.finalUrl, galleryImages });
+  const tpl = buildRebuildTemplate({
+    spec,
+    heroImage,
+    sourceUrl: scraped.finalUrl,
+    galleryImages,
+    colorMode: scraped.colorMode, // match the original site's light/dark scheme
+  });
 
   // 3a) Real products → create catalog_items under the owner's merchant and wire the
   //     storefront (productIds + meta.ecom.merchant_id) so "Add to Cart" → checkout

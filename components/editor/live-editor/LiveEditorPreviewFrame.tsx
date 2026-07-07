@@ -737,6 +737,12 @@ export default function LiveEditorPreviewFrame({
           </div>
         )}
 
+        {renderBlocks.length > 0 && (
+          <div className="mx-auto max-w-[1100px] px-8">
+            <EditorCoachHint />
+          </div>
+        )}
+
         {/* Width wrapper centers the preview and controls width without reloading */}
         <div
           className="mx-auto transition-all duration-150"
@@ -888,6 +894,56 @@ export default function LiveEditorPreviewFrame({
 
 /* ===================== Sortable Row ===================== */
 
+/** One-time hint that teaches the hover-to-edit / drag-to-reorder model. Dismissal persists. */
+function EditorCoachHint() {
+  const STORAGE_KEY = 'qs:editor:coachHintDismissed';
+  const [dismissed, setDismissed] = React.useState(true);
+
+  React.useEffect(() => {
+    try {
+      setDismissed(window.localStorage.getItem(STORAGE_KEY) === '1');
+    } catch {
+      setDismissed(false);
+    }
+  }, []);
+
+  if (dismissed) return null;
+
+  const dismiss = () => {
+    setDismissed(true);
+    try { window.localStorage.setItem(STORAGE_KEY, '1'); } catch {}
+  };
+
+  return (
+    <div className="mb-4 flex items-center justify-between gap-3 rounded-lg border border-sky-400/30 bg-sky-500/10 px-4 py-2.5 text-sm text-sky-100">
+      <span className="flex items-center gap-2">
+        <Pencil className="h-4 w-4 shrink-0" />
+        Hover any section to <strong className="font-semibold">edit</strong> or{' '}
+        <strong className="font-semibold">delete</strong> it, and drag the{' '}
+        <GripVertical className="inline h-4 w-4 align-text-bottom" /> handle to reorder.
+      </span>
+      <button
+        type="button"
+        onClick={dismiss}
+        className="shrink-0 rounded-md px-2 py-1 text-xs font-medium text-sky-200 hover:bg-white/10"
+      >
+        Got it
+      </button>
+    </div>
+  );
+}
+
+/** Turn a raw block type ("services_grid", "order_bar") into a friendly section label ("Services Grid"). */
+function humanizeBlockType(type?: string): string {
+  if (!type) return 'Section';
+  const pretty = type
+    .replace(/[_-]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .replace(/\b\w/g, (c) => c.toUpperCase());
+  return pretty || 'Section';
+}
+
 function SortableRow({
   id,
   blockType,
@@ -921,10 +977,19 @@ function SortableRow({
       style={style}
       {...attributes}
       className={cn(
-        'group relative rounded-lg ring-1 ring-white/5 hover:ring-white/15',
+        'group relative cursor-pointer rounded-lg ring-1 ring-white/5 transition-shadow',
+        'hover:ring-2 hover:ring-sky-400/50 hover:ring-offset-2 hover:ring-offset-transparent',
+        (isActive || isDragging) && 'ring-2 ring-sky-400/60',
         (isDragging || isActive) && 'opacity-70'
       )}
     >
+      {/* Top-left: section name label — orients the user + signals the row is an editable section */}
+      <div className="pointer-events-none absolute left-2 top-2 z-10 hidden group-hover:flex">
+        <span className="inline-flex items-center gap-1 rounded-md border border-white/20 bg-black/70 px-2 py-1 text-[11px] font-medium uppercase tracking-wide text-white/90">
+          {humanizeBlockType(blockType)}
+        </span>
+      </div>
+
       {/* Top-right controls: Drag handle + Edit + Delete */}
       <div className="pointer-events-none absolute right-2 top-2 z-10 hidden gap-1 group-hover:flex">
         {/* DRAG HANDLE — plain button (no TooltipTrigger/asChild) */}
@@ -965,6 +1030,10 @@ function SortableRow({
             className="pointer-events-auto inline-flex items-center rounded-md border border-red-600 bg-red-600/80 p-1.5 text-white hover:bg-red-700"
             onClick={(e) => {
               e.stopPropagation();
+              const label = blockType ? `the "${blockType}" section` : 'this section';
+              if (typeof window !== 'undefined' && !window.confirm(`Delete ${label}? You can undo this from the bottom toolbar.`)) {
+                return;
+              }
               onDelete?.();
             }}
             title="Delete block"

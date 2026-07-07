@@ -21,6 +21,7 @@ export default function InventoryListClient({
   const router = useRouter();
   const [busyId, setBusyId] = React.useState<string | null>(null);
   const [error, setError] = React.useState<string | null>(null);
+  const [openHistory, setOpenHistory] = React.useState<string | null>(null);
   const active = (['all', 'low', 'out'].includes(filter) ? filter : 'all') as Filter;
 
   const shown = rows.filter((r) => (active === 'low' ? r.low : active === 'out' ? r.out : true));
@@ -84,35 +85,105 @@ export default function InventoryListClient({
               <tr><td colSpan={5} className="px-4 py-8 text-center text-neutral-500">No items.</td></tr>
             )}
             {shown.map((r) => (
-              <tr key={r.id} className="border-t border-white/5">
-                <td className="px-4 py-3">
-                  <div className="font-medium">{r.title}</div>
-                  {r.variantCount > 0 && <div className="text-xs text-neutral-500">{r.variantCount} variants</div>}
-                </td>
-                <td className="px-4 py-3 text-neutral-400">{r.sku || '—'}</td>
-                <td className="px-4 py-3 text-right tabular-nums">
-                  {r.onHand === null ? <span className="text-neutral-500">∞</span> : r.onHand}
-                </td>
-                <td className="px-4 py-3">
-                  {r.out && <span className="rounded bg-red-500/15 px-2 py-0.5 text-xs text-red-300">Out</span>}
-                  {r.low && <span className="rounded bg-amber-500/15 px-2 py-0.5 text-xs text-amber-300">Low</span>}
-                  {r.backorder && <span className="ml-1 rounded bg-blue-500/15 px-2 py-0.5 text-xs text-blue-300">Backorder</span>}
-                  {!r.out && !r.low && !r.backorder && <span className="text-xs text-neutral-500">{r.tracked ? 'In stock' : 'Untracked'}</span>}
-                </td>
-                <td className="px-4 py-3 text-right">
-                  {r.variantCount > 0 ? (
-                    <span className="text-xs text-neutral-500">edit item</span>
-                  ) : !r.tracked ? (
-                    <span className="text-xs text-neutral-500">enable tracking</span>
-                  ) : (
-                    <AdjustControls disabled={busyId === r.id} onReceive={(n) => adjust(r, { delta: n, reason: 'receive' })} onSet={(n) => adjust(r, { setTo: n, reason: 'correction' })} />
-                  )}
-                </td>
-              </tr>
+              <React.Fragment key={r.id}>
+                <tr className="border-t border-white/5">
+                  <td className="px-4 py-3">
+                    <div className="font-medium">{r.title}</div>
+                    {r.variantCount > 0 && <div className="text-xs text-neutral-500">{r.variantCount} variants</div>}
+                  </td>
+                  <td className="px-4 py-3 text-neutral-400">{r.sku || '—'}</td>
+                  <td className="px-4 py-3 text-right tabular-nums">
+                    {r.onHand === null ? <span className="text-neutral-500">∞</span> : r.onHand}
+                  </td>
+                  <td className="px-4 py-3">
+                    {r.out && <span className="rounded bg-red-500/15 px-2 py-0.5 text-xs text-red-300">Out</span>}
+                    {r.low && <span className="rounded bg-amber-500/15 px-2 py-0.5 text-xs text-amber-300">Low</span>}
+                    {r.backorder && <span className="ml-1 rounded bg-blue-500/15 px-2 py-0.5 text-xs text-blue-300">Backorder</span>}
+                    {!r.out && !r.low && !r.backorder && <span className="text-xs text-neutral-500">{r.tracked ? 'In stock' : 'Untracked'}</span>}
+                  </td>
+                  <td className="px-4 py-3">
+                    <div className="flex items-center justify-end gap-2">
+                      {r.variantCount > 0 ? (
+                        <span className="text-xs text-neutral-500">edit item</span>
+                      ) : !r.tracked ? (
+                        <span className="text-xs text-neutral-500">enable tracking</span>
+                      ) : (
+                        <AdjustControls disabled={busyId === r.id} onReceive={(n) => adjust(r, { delta: n, reason: 'receive' })} onSet={(n) => adjust(r, { setTo: n, reason: 'correction' })} />
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => setOpenHistory((cur) => (cur === r.id ? null : r.id))}
+                        className="rounded border border-white/10 px-2 py-1 text-xs text-neutral-400 hover:bg-white/10 hover:text-white"
+                      >
+                        {openHistory === r.id ? 'Hide' : 'History'}
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+                {openHistory === r.id && (
+                  <tr className="bg-white/[0.02]">
+                    <td colSpan={5} className="px-4 py-3">
+                      <HistoryPanel itemId={r.id} />
+                    </td>
+                  </tr>
+                )}
+              </React.Fragment>
             ))}
           </tbody>
         </table>
       </div>
+    </div>
+  );
+}
+
+type Adjustment = {
+  id: string;
+  variant_id: string | null;
+  delta: number;
+  new_on_hand: number | null;
+  reason: string;
+  note: string | null;
+  created_at: string;
+};
+
+function HistoryPanel({ itemId }: { itemId: string }) {
+  const [rows, setRows] = React.useState<Adjustment[] | null>(null);
+  const [err, setErr] = React.useState<string | null>(null);
+
+  React.useEffect(() => {
+    let alive = true;
+    (async () => {
+      try {
+        const res = await fetch(`/api/catalog/items/${itemId}/history`);
+        const json = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(json?.error || `Failed (${res.status})`);
+        if (alive) setRows(json.adjustments ?? []);
+      } catch (e: any) {
+        if (alive) setErr(e?.message || 'Failed to load history');
+      }
+    })();
+    return () => { alive = false; };
+  }, [itemId]);
+
+  if (err) return <div className="text-xs text-red-300">{err}</div>;
+  if (rows === null) return <div className="text-xs text-neutral-500">Loading history…</div>;
+  if (!rows.length) return <div className="text-xs text-neutral-500">No adjustments recorded yet.</div>;
+
+  return (
+    <div className="space-y-1">
+      <div className="mb-1 text-xs font-medium text-neutral-400">Adjustment history</div>
+      {rows.map((a) => (
+        <div key={a.id} className="flex items-center gap-3 text-xs">
+          <span className="w-32 shrink-0 text-neutral-500">{new Date(a.created_at).toLocaleString()}</span>
+          <span className={`w-14 shrink-0 text-right tabular-nums ${a.delta < 0 ? 'text-red-300' : 'text-emerald-300'}`}>
+            {a.delta > 0 ? `+${a.delta}` : a.delta}
+          </span>
+          <span className="w-24 shrink-0 capitalize text-neutral-400">{a.reason}</span>
+          <span className="text-neutral-500">
+            {a.new_on_hand !== null ? `→ ${a.new_on_hand} on hand` : ''}{a.variant_id ? ` · ${a.variant_id}` : ''}{a.note ? ` · ${a.note}` : ''}
+          </span>
+        </div>
+      ))}
     </div>
   );
 }

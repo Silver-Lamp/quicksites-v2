@@ -15,7 +15,7 @@
 import { normalizeStock } from './inventory';
 
 export type InputAxis = { name?: string; values?: unknown };
-export type InputVariant = { label?: string; priceCents?: number; status?: string; options?: Record<string, unknown> | null; stock?: number | null; image?: string | null };
+export type InputVariant = { label?: string; priceCents?: number; status?: string; options?: Record<string, unknown> | null; stock?: number | null; image?: string | null; sku?: string | null; barcode?: string | null };
 
 export type NormalizedVariant = {
   id: string;
@@ -25,6 +25,8 @@ export type NormalizedVariant = {
   options?: Record<string, string>;
   stock?: number; // units available; omitted = untracked
   image?: string; // per-variant image URL; omitted = use the item's main image
+  sku?: string; // stock-keeping unit; omitted = none
+  barcode?: string; // UPC/EAN/ISBN; omitted = none
 };
 export type NormalizedAxis = { name: string; values: string[] };
 
@@ -96,6 +98,8 @@ export function normalizeVariants(input: {
 
     const stock = normalizeStock(v?.stock);
     const image = String(v?.image ?? '').trim();
+    const sku = String(v?.sku ?? '').trim().slice(0, 64);
+    const barcode = String(v?.barcode ?? '').trim().slice(0, 64);
     variants.push({
       id,
       label,
@@ -104,6 +108,8 @@ export function normalizeVariants(input: {
       ...(options ? { options } : {}),
       ...(stock !== null ? { stock } : {}),
       ...(image ? { image } : {}),
+      ...(sku ? { sku } : {}),
+      ...(barcode ? { barcode } : {}),
     });
   }
 

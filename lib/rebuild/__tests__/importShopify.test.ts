@@ -116,6 +116,17 @@ describe('mapShopifyProduct', () => {
     expect(p.variants[0].grams).toBe(544);
   });
 
+  it('captures SKU + barcode (variant-level and representative for a plain item)', () => {
+    const p = mapShopifyProduct(
+      { ...PRODUCT, variants: [{ title: 'x', price: '29.99', sku: 'WCTS-1', barcode: '012345678905' }] },
+      null,
+    )!;
+    expect(p.variants[0].sku).toBe('WCTS-1');
+    expect(p.variants[0].barcode).toBe('012345678905');
+    expect(p.sku).toBe('WCTS-1'); // representative (plain item)
+    expect(p.barcode).toBe('012345678905');
+  });
+
   it('returns null for a product with no priced variant', () => {
     expect(mapShopifyProduct({ title: 'X', variants: [] }, null)).toBeNull();
     expect(mapShopifyProduct({ title: '', variants: [{ price: '1' }] }, null)).toBeNull();

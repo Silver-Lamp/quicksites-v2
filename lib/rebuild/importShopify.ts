@@ -29,6 +29,7 @@ export type ProductVariantSpec = {
   priceCents: number;
   compareAtCents?: number;
   sku?: string;
+  barcode?: string; // UPC/EAN/ISBN, when the store exposes it
   available?: boolean;
   grams?: number; // shipping weight, for weight-based shipping
   options?: string[]; // option1/2/3 values, blanks dropped
@@ -48,6 +49,8 @@ export type ProductSpec = {
   options: { name: string; values: string[] }[];
   requiresShipping: boolean;
   grams?: number; // representative shipping weight (cheapest variant)
+  sku?: string; // representative SKU (for a plain, variant-less item)
+  barcode?: string; // representative barcode (for a plain item)
   productUrl: string | null; // <origin>/products/<handle>
 };
 
@@ -115,6 +118,8 @@ export function mapShopifyProduct(raw: any, origin: string | null): ProductSpec 
     if (compareAt != null && compareAt > priceCents) vspec.compareAtCents = compareAt;
     const sku = String(v?.sku ?? '').trim();
     if (sku) vspec.sku = sku;
+    const barcode = String(v?.barcode ?? '').trim();
+    if (barcode) vspec.barcode = barcode;
     if (typeof v?.available === 'boolean') vspec.available = v.available;
     const grams = Number(v?.grams);
     if (Number.isFinite(grams) && grams > 0) vspec.grams = Math.round(grams);
@@ -159,6 +164,8 @@ export function mapShopifyProduct(raw: any, origin: string | null): ProductSpec 
     options,
     requiresShipping: rawVariants.some((v) => v?.requires_shipping !== false),
     ...(cheapest.grams ? { grams: cheapest.grams } : {}),
+    ...(cheapest.sku ? { sku: cheapest.sku } : {}),
+    ...(cheapest.barcode ? { barcode: cheapest.barcode } : {}),
     productUrl: origin && handle ? `${origin}/products/${handle}` : null,
   };
 }

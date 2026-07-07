@@ -56,6 +56,20 @@ describe('normalizeVariants', () => {
     expect(r.variants[0].options).toEqual({ Size: 'M' }); // Bogus dropped
   });
 
+  it('carries SKU and barcode through (trimmed), omitting empties', () => {
+    const r = normalizeVariants({
+      variantOptions: [{ name: 'Size', values: ['S', 'M'] }],
+      variants: [
+        { label: 'S', priceCents: 100, options: { Size: 'S' }, sku: ' SKU-S ', barcode: '012345678905' },
+        { label: 'M', priceCents: 200, options: { Size: 'M' } }, // no sku/barcode
+      ],
+    });
+    expect(r.variants[0].sku).toBe('SKU-S');
+    expect(r.variants[0].barcode).toBe('012345678905');
+    expect(r.variants[1].sku).toBeUndefined();
+    expect(r.variants[1].barcode).toBeUndefined();
+  });
+
   it('cleans axis values (trim, drop empties, dedupe)', () => {
     const r = normalizeVariants({
       variantOptions: [{ name: ' Size ', values: [' S ', 'S', '', 'M'] }],

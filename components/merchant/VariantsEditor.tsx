@@ -12,7 +12,7 @@ import * as React from 'react';
 import ImageUploadField from './ImageUploadField';
 
 export type EditorAxis = { name: string; values: string[] };
-export type EditorVariant = { label: string; priceCents: number; options: Record<string, string>; stock?: number | null; image?: string | null };
+export type EditorVariant = { label: string; priceCents: number; options: Record<string, string>; stock?: number | null; image?: string | null; sku?: string | null };
 export type VariantsPayload = { variantOptions: EditorAxis[]; variants: EditorVariant[] };
 
 type Props = {
@@ -20,7 +20,7 @@ type Props = {
   defaultPriceDollars?: number;
   /** Seed for edit mode. */
   initialAxes?: EditorAxis[];
-  initialVariants?: Array<{ price_cents: number; options?: Record<string, string> | null; stock?: number | null; image?: string | null }>;
+  initialVariants?: Array<{ price_cents: number; options?: Record<string, string> | null; stock?: number | null; image?: string | null; sku?: string | null }>;
   onChange: (payload: VariantsPayload) => void;
 };
 
@@ -98,6 +98,16 @@ export default function VariantsEditor({ defaultPriceDollars = 0, initialAxes, i
     }
     return seed;
   });
+  // Per-combo SKU (optional); '' = none.
+  const [skus, setSkus] = React.useState<Record<string, string>>(() => {
+    const seed: Record<string, string> = {};
+    if (initialAxes && initialVariants) {
+      for (const v of initialVariants) {
+        if (v.options && v.sku) seed[comboKey(initialAxes, v.options)] = v.sku;
+      }
+    }
+    return seed;
+  });
 
   const parsedAxes: EditorAxis[] = React.useMemo(
     () => axes.map((a) => ({ name: a.name.trim(), values: parseValues(a.valuesText) })),
@@ -118,6 +128,7 @@ export default function VariantsEditor({ defaultPriceDollars = 0, initialAxes, i
         options: opts,
         stock: s === '' || s === undefined ? null : Math.max(0, Math.floor(Number(s) || 0)),
         image: (images[key] ?? '').trim() || null,
+        sku: (skus[key] ?? '').trim() || null,
       };
     });
     const payload: VariantsPayload = {
@@ -126,7 +137,7 @@ export default function VariantsEditor({ defaultPriceDollars = 0, initialAxes, i
     };
     const sig = JSON.stringify(payload);
     if (sig !== emitSig.current) { emitSig.current = sig; onChange(payload); }
-  }, [grid, prices, stocks, images, parsedAxes, enabled, defaultPriceDollars, onChange]);
+  }, [grid, prices, stocks, images, skus, parsedAxes, enabled, defaultPriceDollars, onChange]);
 
   if (!enabled) {
     return (
@@ -200,6 +211,13 @@ export default function VariantsEditor({ defaultPriceDollars = 0, initialAxes, i
                     className="w-20 rounded bg-neutral-900 px-3 py-2 text-sm ring-1 ring-neutral-800"
                   />
                 </div>
+                <input
+                  type="text"
+                  value={skus[key] ?? ''}
+                  onChange={(e) => setSkus((sk) => ({ ...sk, [key]: e.target.value }))}
+                  placeholder="SKU (optional)"
+                  className="w-full rounded bg-neutral-900 px-3 py-2 text-sm ring-1 ring-neutral-800"
+                />
                 <ImageUploadField
                   value={images[key] ?? ''}
                   onChange={(url) => setImages((im) => ({ ...im, [key]: url }))}

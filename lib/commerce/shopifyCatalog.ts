@@ -80,6 +80,7 @@ function buildVariantMetadata(product: ProductSpec): {
       label: v.title,
       priceCents: v.priceCents,
       status: v.available === false ? 'inactive' : 'active',
+      sku: v.sku,
       options: axisNames.length
         ? Object.fromEntries(
             axisNames
@@ -139,6 +140,10 @@ export async function provisionShopifyCatalog(opts: {
       category: product.productType ?? null,
       source: 'shopify_import',
       ...(product.productUrl ? { source_url: product.productUrl } : {}),
+      // Plain-item SKU/barcode (variant SKUs ride in metadata.variants). Only meaningful
+      // for a variant-less product; harmless otherwise.
+      ...(!product.options.length && product.sku ? { sku: product.sku } : {}),
+      ...(!product.options.length && product.barcode ? { barcode: product.barcode } : {}),
       // "Was $X" strike-through price — display only; checkout reprices from price_cents.
       ...(product.compareAtCents && product.compareAtCents > vmeta.priceCents
         ? { compare_at_cents: product.compareAtCents }

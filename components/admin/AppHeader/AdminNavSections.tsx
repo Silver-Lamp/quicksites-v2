@@ -171,6 +171,7 @@ const NAV_ADMIN: NavItem[] = [
   { type: 'item', label: 'Merchant Orders', href: '/merchant/orders', icon: <FileStack size={18} />, adminOnly: false },
   { type: 'item', label: 'Merchant Catalog', href: '/merchant/catalog', icon: <FileStack size={18} />, adminOnly: false },
   { type: 'item', label: 'Merchant Inventory', href: '/merchant/inventory', icon: <FileStack size={18} />, adminOnly: false },
+  { type: 'item', label: 'Merchant Customers', href: '/merchant/customers', icon: <Users size={18} />, adminOnly: false },
   { type: 'item', label: 'Print Orders', href: '/admin/print-orders', icon: <FileStack size={18} />, adminOnly: true },
   { type: 'item', label: 'Outreach Pipeline', href: '/admin/outreach', icon: <Rocket size={18} />, adminOnly: true },
   { type: 'item', label: 'Rep Referral Dashboard', href: '/rep/referrals', icon: <User size={18} />, adminOnly: false },

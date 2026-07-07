@@ -12,6 +12,7 @@ import { RewardTally } from '@/components/reward-tally';
 import { Badge } from '@/components/ui/badge';
 import { Loader, Rocket, ChartBar, Mail, Map, Phone, ImageIcon, Star, Shield, Link2, Sparkles } from 'lucide-react';
 import AiCostEstimatorCard from '@/components/admin/billing/AiCostEstimatorCard';
+import WorkBackgroundPicker from '@/components/profile/work-background-picker';
 
 export default function ProfileForm() {
   const { user, role } = useCurrentUser();
@@ -309,6 +310,7 @@ export default function ProfileForm() {
         </div>
       </div>
 
+      <WorkBackgroundPicker />
 
       <AiCostEstimatorCard />
       {role !== 'admin' && (

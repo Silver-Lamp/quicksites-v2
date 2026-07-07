@@ -36,9 +36,7 @@ const safeLS = {
   remove(k: string) { try { localStorage.removeItem(k); } catch {} },
 };
 
-export default function AppHeader(
-  { collapsed = false, onToggleCollapsed }: { collapsed?: boolean; onToggleCollapsed?: (c: boolean) => void } = {}
-) {
+export default function AppHeader() {
   const router = useRouter();
   const { user, role, isLoggedIn } = useSafeAuth();
   const { traceId, sessionId } = useRequestMeta();

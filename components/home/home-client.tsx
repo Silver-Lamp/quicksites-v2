@@ -17,6 +17,7 @@ import { guestBuildEnabled } from '@/lib/flags/guestBuild';
 import GuestStart from '@/components/home/guest-start';
 import HomeColorLab from '@/components/home/home-color-lab';
 import ResellerDiagram from '@/components/home/reseller-diagram';
+import SectionBackdrop from '@/components/home/section-backdrop';
 import type { ResellerBrand } from '@/lib/home/getResellers';
 
 const isProd = process.env.NODE_ENV === 'production';
@@ -146,6 +147,7 @@ export default function HomeClient({
 
         {/* ───────── Build ───────── */}
         <section className="relative z-10 w-full border-t border-zinc-800/70 bg-zinc-950/60">
+          <SectionBackdrop image="meadow" />
           <div className="mx-auto max-w-6xl px-6 py-14">
             <h2 className="text-2xl md:text-3xl font-semibold">A builder that gets out of your way</h2>
             <p className="mt-2 max-w-2xl text-sm text-zinc-400">
@@ -167,6 +169,7 @@ export default function HomeClient({
 
         {/* ───────── Sell ───────── */}
         <section className="relative z-10 w-full border-t border-zinc-800/70">
+          <SectionBackdrop image="bokeh" />
           <div className="mx-auto max-w-6xl px-6 py-14">
             <h2 className="text-2xl md:text-3xl font-semibold">Commerce, built in — not bolted on</h2>
             <p className="mt-2 max-w-2xl text-sm text-zinc-400">
@@ -302,6 +305,7 @@ export default function HomeClient({
 
         {/* ───────── How it works ───────── */}
         <section className="relative z-10 w-full border-t border-zinc-800/70 bg-zinc-950/60">
+          <SectionBackdrop image="meadow" />
           <div className="mx-auto max-w-6xl px-6 py-14 text-center">
             <h2 className="text-2xl md:text-3xl font-semibold">Build → Sell → Earn</h2>
             <div className="mt-8 grid grid-cols-1 gap-6 md:grid-cols-3">

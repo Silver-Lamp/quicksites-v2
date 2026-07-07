@@ -20,10 +20,11 @@ export default async function MerchantOrdersPage({ searchParams }: { searchParam
   const BASE_COLS = 'id, created_at, site_slug, status, total_cents, currency, provider, oversold_lines';
   const q = (cols: string) =>
     (supabase as any).from('orders').select(cols).eq('merchant_id', merchantId).order('created_at', { ascending: false }).limit(200);
-  // Forward-safe: customer_note may not exist yet (migration not applied) — fall
-  // back to the base columns so the page never 500s over an optional column.
-  let { data: orders, error: ordErr } = await q(`${BASE_COLS}, customer_note`);
-  if (ordErr && (ordErr.code === '42703' || /customer_note/i.test(ordErr.message || ''))) {
+  // Forward-safe: customer_note / customer_email may not exist yet (migration not
+  // applied) — fall back to the base columns so the page never 500s over an
+  // optional column.
+  let { data: orders, error: ordErr } = await q(`${BASE_COLS}, customer_note, customer_email`);
+  if (ordErr && (ordErr.code === '42703' || /customer_note|customer_email/i.test(ordErr.message || ''))) {
     ({ data: orders } = await q(BASE_COLS));
   }
 
@@ -41,7 +42,7 @@ export default async function MerchantOrdersPage({ searchParams }: { searchParam
         <table className="min-w-full text-sm">
           <thead className="bg-neutral-900">
             <tr className="[&>th]:px-4 [&>th]:py-3 text-left">
-              <th>When</th><th>Order</th><th>Site</th><th>Status</th><th>Provider</th><th>Total</th><th></th>
+              <th>When</th><th>Order</th><th>Customer</th><th>Site</th><th>Status</th><th>Provider</th><th>Total</th><th></th>
             </tr>
           </thead>
           <tbody className="divide-y divide-neutral-800">
@@ -49,6 +50,7 @@ export default async function MerchantOrdersPage({ searchParams }: { searchParam
               <tr key={o.id} className="[&>td]:px-4 [&>td]:py-3 align-top">
                 <td className="whitespace-nowrap text-neutral-400">{new Date(o.created_at ?? '').toLocaleString()}</td>
                 <td className="font-mono">{o.id.slice(0,8)}…</td>
+                <td className="text-neutral-300">{o.customer_email || <span className="text-neutral-600">—</span>}</td>
                 <td>
                   {o.site_slug}
                   {o.customer_note && (
@@ -76,7 +78,7 @@ export default async function MerchantOrdersPage({ searchParams }: { searchParam
               </tr>
             ))}
             {(!orders || orders.length === 0) && (
-              <tr><td className="px-4 py-6 text-neutral-500" colSpan={7}>No orders yet.</td></tr>
+              <tr><td className="px-4 py-6 text-neutral-500" colSpan={8}>No orders yet.</td></tr>
             )}
           </tbody>
         </table>

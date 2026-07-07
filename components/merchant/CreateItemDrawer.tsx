@@ -20,6 +20,8 @@ export default function CreateItemDrawer({ merchantId, siteSlug, onCreated }:{
   // Optional variants (size/color grid, each its own price). Generic products only.
   const [variantsPayload, setVariantsPayload] = useState<VariantsPayload>({ variantOptions: [], variants: [] });
   const [stock, setStock] = useState<string>(''); // plain-item stock; '' = unlimited
+  const [trackInventory, setTrackInventory] = useState(true); // false = don't track quantity
+  const [continueSelling, setContinueSelling] = useState(false); // true = backorder past zero
   const [sku, setSku] = useState<string>(''); // plain-item SKU
   const [barcode, setBarcode] = useState<string>(''); // plain-item UPC/EAN/ISBN
   const [image, setImage] = useState<string>(''); // main product image URL
@@ -56,6 +58,8 @@ export default function CreateItemDrawer({ merchantId, siteSlug, onCreated }:{
         ...(!useVariants && stock !== '' ? { stock: Math.max(0, Math.floor(Number(stock) || 0)) } : {}),
         ...(!useVariants && sku.trim() ? { sku: sku.trim() } : {}),
         ...(!useVariants && barcode.trim() ? { barcode: barcode.trim() } : {}),
+        ...(!trackInventory ? { trackInventory: false } : {}),
+        ...(continueSelling ? { inventoryPolicy: 'continue' as const } : {}),
         ...(pod !== 'none' ? { fulfillmentProvider: pod, podSpec } : {}),
       })
     });
@@ -116,10 +120,22 @@ export default function CreateItemDrawer({ merchantId, siteSlug, onCreated }:{
 
               {pod === 'none' && variantsPayload.variants.length === 0 && (
                 <>
-                  <label className="mt-2 text-xs text-neutral-400">Stock (blank = unlimited)</label>
-                  <input type="number" step="1" min="0" value={stock} placeholder="∞"
-                    onChange={(e)=>setStock(e.target.value)}
-                    className="rounded bg-neutral-900 px-3 py-2 text-sm ring-1 ring-neutral-800" />
+                  <label className="mt-2 flex items-center gap-2 text-xs text-neutral-400">
+                    <input type="checkbox" checked={trackInventory} onChange={(e)=>setTrackInventory(e.target.checked)} />
+                    Track quantity
+                  </label>
+                  {trackInventory && (
+                    <>
+                      <label className="mt-1 text-xs text-neutral-400">Stock (blank = unlimited)</label>
+                      <input type="number" step="1" min="0" value={stock} placeholder="∞"
+                        onChange={(e)=>setStock(e.target.value)}
+                        className="rounded bg-neutral-900 px-3 py-2 text-sm ring-1 ring-neutral-800" />
+                      <label className="mt-1 flex items-center gap-2 text-xs text-neutral-400">
+                        <input type="checkbox" checked={continueSelling} onChange={(e)=>setContinueSelling(e.target.checked)} />
+                        Continue selling when out of stock (backorder)
+                      </label>
+                    </>
+                  )}
                   <div className="mt-2 grid grid-cols-2 gap-2">
                     <div className="flex flex-col">
                       <label className="text-xs text-neutral-400">SKU (optional)</label>

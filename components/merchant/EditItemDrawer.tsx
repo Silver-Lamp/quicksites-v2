@@ -19,6 +19,8 @@ export default function EditItemDrawer({ itemId, onSaved }: { itemId: string; on
   const [price, setPrice] = useState(0); // dollars
   const [status, setStatus] = useState<'active' | 'inactive'>('active');
   const [stock, setStock] = useState<string>(''); // plain-item stock; '' = unlimited
+  const [trackInventory, setTrackInventory] = useState(true);
+  const [continueSelling, setContinueSelling] = useState(false);
   const [sku, setSku] = useState<string>(''); // plain-item SKU
   const [barcode, setBarcode] = useState<string>(''); // plain-item UPC/EAN/ISBN
   const [image, setImage] = useState<string>(''); // main product image URL
@@ -41,6 +43,8 @@ export default function EditItemDrawer({ itemId, onSaved }: { itemId: string; on
       setStock(typeof s === 'number' ? String(s) : '');
       setSku(typeof it.metadata?.sku === 'string' ? it.metadata.sku : '');
       setBarcode(typeof it.metadata?.barcode === 'string' ? it.metadata.barcode : '');
+      setTrackInventory(it.metadata?.track_inventory !== false);
+      setContinueSelling(it.metadata?.inventory_policy === 'continue');
       const first = Array.isArray(it.images) ? it.images[0] : null;
       setImage(typeof first === 'string' ? first : (first?.url ?? first?.src ?? ''));
       setVariantsPayload({ variantOptions: [], variants: [] });
@@ -68,6 +72,8 @@ export default function EditItemDrawer({ itemId, onSaved }: { itemId: string; on
           body.stock = stock === '' ? null : Math.max(0, Math.floor(Number(stock) || 0));
           body.sku = sku.trim();
           body.barcode = barcode.trim();
+          body.trackInventory = trackInventory;
+          body.inventoryPolicy = continueSelling ? 'continue' : 'deny';
         }
       }
       const res = await fetch(`/api/catalog/items/${itemId}`, {
@@ -130,10 +136,22 @@ export default function EditItemDrawer({ itemId, onSaved }: { itemId: string; on
 
                   {!isPod && variantsPayload.variants.length === 0 && (
                     <>
-                      <label className="mt-2 text-xs text-neutral-400">Stock (blank = unlimited)</label>
-                      <input type="number" step="1" min="0" value={stock} placeholder="∞"
-                        onChange={(e) => setStock(e.target.value)}
-                        className="rounded bg-neutral-900 px-3 py-2 text-sm ring-1 ring-neutral-800" />
+                      <label className="mt-2 flex items-center gap-2 text-xs text-neutral-400">
+                        <input type="checkbox" checked={trackInventory} onChange={(e) => setTrackInventory(e.target.checked)} />
+                        Track quantity
+                      </label>
+                      {trackInventory && (
+                        <>
+                          <label className="mt-1 text-xs text-neutral-400">Stock (blank = unlimited)</label>
+                          <input type="number" step="1" min="0" value={stock} placeholder="∞"
+                            onChange={(e) => setStock(e.target.value)}
+                            className="rounded bg-neutral-900 px-3 py-2 text-sm ring-1 ring-neutral-800" />
+                          <label className="mt-1 flex items-center gap-2 text-xs text-neutral-400">
+                            <input type="checkbox" checked={continueSelling} onChange={(e) => setContinueSelling(e.target.checked)} />
+                            Continue selling when out of stock (backorder)
+                          </label>
+                        </>
+                      )}
                       <div className="mt-2 grid grid-cols-2 gap-2">
                         <div className="flex flex-col">
                           <label className="text-xs text-neutral-400">SKU (optional)</label>

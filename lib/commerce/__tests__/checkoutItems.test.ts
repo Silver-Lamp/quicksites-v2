@@ -37,6 +37,31 @@ describe('authorizeCheckoutItems', () => {
     expect(res.items[0].quantity).toBe(2);
   });
 
+  it('rejects an out-of-stock item, but allows it under the continue (backorder) policy', () => {
+    const soldOut = authorizeCheckoutItems({
+      merchantId: M,
+      requested: [{ catalogItemId: 'ci-1', quantity: 1 }],
+      catalogRows: [row({ metadata: { stock: 0 } })],
+    });
+    expect(soldOut.ok).toBe(false);
+
+    const backorder = authorizeCheckoutItems({
+      merchantId: M,
+      requested: [{ catalogItemId: 'ci-1', quantity: 3 }],
+      catalogRows: [row({ metadata: { stock: 0, inventory_policy: 'continue' } })],
+    });
+    expect(backorder.ok).toBe(true);
+  });
+
+  it('treats track_inventory:false as unlimited even with a stock number', () => {
+    const res = authorizeCheckoutItems({
+      merchantId: M,
+      requested: [{ catalogItemId: 'ci-1', quantity: 99 }],
+      catalogRows: [row({ metadata: { stock: 1, track_inventory: false } })],
+    });
+    expect(res.ok).toBe(true);
+  });
+
   it('rejects an item id that is not in the catalog', () => {
     const res = authorizeCheckoutItems({
       merchantId: M,

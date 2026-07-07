@@ -23,6 +23,8 @@ export async function POST(req: NextRequest) {
     stock?: number | null;
     sku?: string | null; // plain-item SKU (variant SKUs ride in variants[])
     barcode?: string | null; // plain-item UPC/EAN/ISBN
+    trackInventory?: boolean; // false = untracked/unlimited even if a stock exists
+    inventoryPolicy?: 'deny' | 'continue'; // 'continue' = backorder (sell past zero)
     imageUrl?: string; // main product image (stored in the images array)
   };
 
@@ -59,6 +61,10 @@ export async function POST(req: NextRequest) {
     if (barcode) metadata.barcode = barcode;
   }
   const basePriceCents = norm.basePriceCents;
+
+  // Inventory policy (item-level; applies to variants too).
+  if (body.trackInventory === false) metadata.track_inventory = false;
+  if (body.inventoryPolicy === 'continue') metadata.inventory_policy = 'continue';
 
   const imageUrl = String(body.imageUrl ?? '').trim();
 

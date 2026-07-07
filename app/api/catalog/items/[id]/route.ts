@@ -39,6 +39,8 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     stock?: number | null;
     sku?: string | null; // plain-item SKU (variant SKUs ride in variants[])
     barcode?: string | null; // plain-item UPC/EAN/ISBN
+    trackInventory?: boolean; // false = untracked/unlimited even if a stock exists
+    inventoryPolicy?: 'deny' | 'continue'; // 'continue' = backorder (sell past zero)
     imageUrl?: string; // main product image (empty string clears it)
   };
 
@@ -96,6 +98,19 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     patch.price_cents = merged.priceCents;
   } else if (typeof body.priceCents === 'number') {
     patch.price_cents = Math.max(0, Math.round(body.priceCents));
+  }
+
+  // Inventory policy/track flags are item-level (apply to variants too). Set/clear on
+  // metadata independently of the variant replace above.
+  if ('trackInventory' in body || 'inventoryPolicy' in body) {
+    const meta: Record<string, any> = { ...(patch.metadata ?? (existing.metadata as any) ?? {}) };
+    if ('trackInventory' in body) {
+      if (body.trackInventory === false) meta.track_inventory = false; else delete meta.track_inventory;
+    }
+    if ('inventoryPolicy' in body) {
+      if (body.inventoryPolicy === 'continue') meta.inventory_policy = 'continue'; else delete meta.inventory_policy;
+    }
+    patch.metadata = meta;
   }
 
   if (Object.keys(patch).length === 0) {

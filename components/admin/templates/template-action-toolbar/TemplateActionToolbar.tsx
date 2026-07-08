@@ -463,14 +463,14 @@ useEffect(() => {
       >
         {toolbarCollapsed ? (
           <div className="w-full flex items-center gap-2">
-            <Button size="icon" variant="secondary" title="Show toolbar" aria-label="Show toolbar" onClick={() => setToolbarCollapsed(false)}>
+            <Button size="icon" variant="secondary" title="Show toolbar (T)" aria-label="Show toolbar (T)" onClick={() => setToolbarCollapsed(false)}>
               <SettingsIcon className="w-4 h-4" />
             </Button>
           </div>
         ) : (
           <div className="w-full flex justify-between items-center gap-3">
             {/* Hide/Show toolbar */}
-            <Button size="icon" variant="ghost" title="Hide toolbar" onClick={() => setToolbarCollapsed(true)}>
+            <Button size="icon" variant="ghost" title="Hide toolbar (T)" aria-label="Hide toolbar (T)" onClick={() => setToolbarCollapsed(true)}>
               <SettingsIcon className="w-4 h-4" />
             </Button>
 
@@ -478,7 +478,8 @@ useEffect(() => {
             <Button
               size="icon"
               variant="ghost"
-              title="Open Site Settings"
+              title="Open Site Settings (S)"
+              aria-label="Open Site Settings (S)"
               onClick={() => {
                 // Toggle the same drawer the "s" key controls
                 window.dispatchEvent(new CustomEvent('qs:settings:toggle'));
@@ -645,7 +646,7 @@ useEffect(() => {
             </div>
 
             {/* Hide control */}
-            <Button size="sm" variant="ghost" title="Hide toolbar" onClick={() => setToolbarCollapsed(true)} className="px-2 py-1">
+            <Button size="sm" variant="ghost" title="Hide toolbar (T)" aria-label="Hide toolbar (T)" onClick={() => setToolbarCollapsed(true)} className="px-2 py-1">
               <Minus className="w-4 h-4 mr-1" />
               <span className="hidden sm:inline">Hide</span>
             </Button>

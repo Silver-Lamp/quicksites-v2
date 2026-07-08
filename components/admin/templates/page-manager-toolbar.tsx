@@ -346,7 +346,8 @@ export default function PageManagerToolbar({
         'bg-neutral-900/90 text-white/90 hover:bg-neutral-800'
       )}
       onClick={() => setOpen(!open)}
-      title="Page manager"
+      title="Page manager (P)"
+      aria-label="Page manager (P)"
     >
       <span className="truncate max-w-[180px]">{currentLabel}</span>
       <ChevronsUpDown className="w-4 h-4 opacity-70" />

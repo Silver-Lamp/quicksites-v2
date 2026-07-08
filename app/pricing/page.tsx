@@ -333,27 +333,37 @@ export default function PricingPage() {
       <div className="relative min-h-screen flex flex-col bg-zinc-950 text-white overflow-hidden">
         {/* hero */}
         <section className="relative overflow-hidden">
-          <motion.div
-            initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}
-            className="mx-auto max-w-6xl px-6 pt-14 pb-8"
-          >
-            <Badge variant="outline" className="mb-4">Pricing</Badge>
-            <h1 className="text-3xl md:text-5xl font-semibold tracking-tight">Start free. Pay when you sell.</h1>
-            <p className="mt-3 max-w-2xl text-muted-foreground">
-              Build and host your site for free — including a storefront and Stripe checkout. We take a small {pct(ORDER_FEE_PCT)} fee
-              only on the orders you actually sell. Running sites for clients or reselling under your brand? There’s a path for that too.
-            </p>
-            <div className="mt-6 flex flex-wrap items-center gap-3">
-              <Link href={CTA.buildHref}><Button size="lg">Create your free site<ArrowRight className="ml-2 h-4 w-4" /></Button></Link>
-              <Link href={CTA.contactHref}><Button size="lg" variant="ghost">Talk to us</Button></Link>
-            </div>
-            <div className="mt-6 flex flex-wrap gap-2">
-              {['Free to build & host', 'No card to start', `${pct(ORDER_FEE_PCT)} per order — that’s it on free`].map((r) => (
-                <Badge key={r} variant="secondary">{r}</Badge>
-              ))}
-            </div>
-          </motion.div>
-          <div className="pointer-events-none absolute inset-0 -z-10 bg-gradient-to-b from-transparent via-sky-500/5 to-transparent" />
+          <div aria-hidden className="pointer-events-none absolute inset-0 -z-10">
+            <div className="absolute -top-24 left-[15%] h-72 w-72 rounded-full bg-sky-500/20 blur-3xl" />
+            <div className="absolute top-0 right-[10%] h-64 w-64 rounded-full bg-fuchsia-500/10 blur-3xl" />
+          </div>
+          <div className="mx-auto grid max-w-6xl gap-10 px-6 pt-14 pb-8 lg:grid-cols-2 lg:items-center">
+            <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
+              <Badge variant="outline" className="mb-4">Pricing</Badge>
+              <h1 className="text-3xl md:text-5xl font-semibold tracking-tight">Start free. Pay when you sell.</h1>
+              <p className="mt-3 max-w-2xl text-muted-foreground">
+                Build and host your site for free — including a storefront, Stripe checkout, and a customer CRM. We take a small {pct(ORDER_FEE_PCT)} fee
+                only on the orders you actually sell. Running sites for clients or reselling under your brand? There’s a path for that too.
+              </p>
+              <div className="mt-6 flex flex-wrap items-center gap-3">
+                <Link href={CTA.buildHref}><Button size="lg">Create your free site<ArrowRight className="ml-2 h-4 w-4" /></Button></Link>
+                <Link href={CTA.contactHref}><Button size="lg" variant="ghost">Talk to us</Button></Link>
+              </div>
+              <div className="mt-6 flex flex-wrap gap-2">
+                {['Free to build & host', 'No card to start', `${pct(ORDER_FEE_PCT)} per order — that’s it on free`].map((r) => (
+                  <Badge key={r} variant="secondary">{r}</Badge>
+                ))}
+              </div>
+            </motion.div>
+            <motion.div
+              initial={{ opacity: 0, scale: 0.96 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.6, delay: 0.1 }}
+              className="hidden lg:block"
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/brand/qs-hero-bg.jpg" alt="" aria-hidden
+                className="ml-auto w-full max-w-md rounded-2xl object-cover ring-1 ring-white/10 shadow-[0_0_90px_-24px_rgba(56,189,248,0.55)]" />
+            </motion.div>
+          </div>
         </section>
 
         {/* path chooser */}

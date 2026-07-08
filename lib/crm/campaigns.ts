@@ -89,6 +89,7 @@ export async function sendToRecipients(
     const html = renderCampaignHtml({ body: opts.body, unsubscribeUrl, footer: brand.footer, recipientName: r.name });
     let ok = false;
     let error: string | null = null;
+    let providerMessageId: string | null = null;
     try {
       const res = await sendEmail({
         to: r.email,
@@ -98,6 +99,8 @@ export async function sendToRecipients(
         headers: { 'List-Unsubscribe': `<${unsubscribeUrl}>` },
       });
       ok = (res as any)?.ok !== false;
+      // Resend's email id — correlates this send to its open/click webhook events.
+      providerMessageId = (res as any)?.id ?? null;
       if (!ok) error = JSON.stringify((res as any)?.error ?? 'send failed').slice(0, 500);
     } catch (e: any) {
       error = String(e?.message || e).slice(0, 500);
@@ -110,6 +113,7 @@ export async function sendToRecipients(
       email: r.email,
       status: ok ? 'sent' : 'failed',
       error,
+      provider_message_id: providerMessageId,
     }).then(() => {}, () => {});
   }
   return { sent, failed };

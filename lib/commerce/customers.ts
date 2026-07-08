@@ -5,6 +5,10 @@
 // email), so orders roll up into order history + lifetime value. Best-effort: a
 // failure here never blocks marking the order paid.
 
+import { captureServer } from '@/lib/analytics/posthog-server';
+import { EVENTS } from '@/lib/analytics/events';
+import { ATTRIBUTION_WINDOW_DAYS } from '@/lib/crm/attribution';
+
 /** Lowercased/trimmed email if it looks valid, else null. */
 export function normalizeEmail(email: unknown): string | null {
   const s = String(email ?? '').trim().toLowerCase();
@@ -57,7 +61,61 @@ export async function recordCustomerForPaidOrder(
     });
     if (error) { console.warn('[customers] upsert failed:', error.message); return; }
     await supabase.from('orders').update({ customer_id: customerId ?? null, customer_email: buyer.email }).eq('id', opts.orderId);
+
+    // Buyer-level analytics (best-effort; distinctId = customer, so events stitch to
+    // the buyer rather than the merchant). Never let instrumentation break the path.
+    if (customerId) {
+      await emitBuyerEvents(supabase, {
+        customerId,
+        merchantId: opts.merchantId,
+        totalCents: opts.totalCents,
+      }).catch(() => {});
+    }
   } catch (e: any) {
     console.warn('[customers] recordCustomerForPaidOrder threw:', e?.message || e);
+  }
+}
+
+/**
+ * After a paid order rolls into a customer, emit the buyer-level PostHog events:
+ * `customer_created` (their first order) or `repeat_purchase` (a returning buyer),
+ * and `campaign_order_attributed` when a campaign reached them within the attribution
+ * window before this order (last-touch). Read-only + best-effort.
+ */
+async function emitBuyerEvents(
+  supabase: any,
+  opts: { customerId: string; merchantId: string; totalCents: number },
+): Promise<void> {
+  const { data: cust } = await supabase
+    .from('customers')
+    .select('orders_count, lifetime_cents')
+    .eq('id', opts.customerId)
+    .maybeSingle();
+  const ordersCount = Number(cust?.orders_count ?? 0);
+
+  if (ordersCount <= 1) {
+    await captureServer(EVENTS.CUSTOMER_CREATED, { merchant_id: opts.merchantId, customer_id: opts.customerId, first_order_cents: opts.totalCents }, opts.customerId);
+  } else {
+    await captureServer(EVENTS.REPEAT_PURCHASE, { merchant_id: opts.merchantId, customer_id: opts.customerId, orders_count: ordersCount, lifetime_cents: Number(cust?.lifetime_cents ?? 0) }, opts.customerId);
+  }
+
+  // Last-touch attribution: the most recent campaign that reached this customer
+  // within the window before now. Matches lib/crm/attribution's read-time logic.
+  const sinceIso = new Date(Date.now() - ATTRIBUTION_WINDOW_DAYS * 86_400_000).toISOString();
+  const { data: sends } = await supabase
+    .from('crm_campaign_sends')
+    .select('campaign_id, created_at')
+    .eq('customer_id', opts.customerId)
+    .eq('status', 'sent')
+    .gte('created_at', sinceIso)
+    .order('created_at', { ascending: false })
+    .limit(1);
+  const send = (sends ?? [])[0];
+  if (send?.campaign_id) {
+    await captureServer(
+      EVENTS.CAMPAIGN_ORDER_ATTRIBUTED,
+      { merchant_id: opts.merchantId, customer_id: opts.customerId, campaign_id: send.campaign_id, order_cents: opts.totalCents },
+      opts.customerId,
+    );
   }
 }

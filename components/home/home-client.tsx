@@ -26,6 +26,7 @@ const isProd = process.env.NODE_ENV === 'production';
 type Branding = {
   name?: string;
   domain?: string;
+  billingMode?: 'central' | 'reseller' | 'none';
   logoUrl?: string | null;
   faviconUrl?: string | null;
   hero?: { headline?: string; subhead?: string };
@@ -55,6 +56,9 @@ export default function HomeClient({
   const productName = brand.name || 'QuickSites';
   const siteDomain = brand.domain || 'QuickSites.ai';
   const logoSrc = brand.logoUrl || brand.faviconUrl || '/qs-default-favicon.ico';
+
+  // The QuickSites motif character — never on a white-labeled reseller homepage.
+  const showCharacter = (brand.billingMode ?? 'central') !== 'reseller';
 
   const heroHeadline = brand.hero?.headline || 'A site and a store. Built in.';
   const heroSubhead =
@@ -102,6 +106,18 @@ export default function HomeClient({
             <Image src={logoSrc} width={40} height={40} alt={`${productName} logo`} className="rounded-full" />
             <span className="text-2xl font-bold tracking-tight">{productName}</span>
           </div>
+
+          {showCharacter && (
+            <motion.img
+              src="/brand/qs-character.jpg"
+              alt=""
+              aria-hidden="true"
+              initial={{ opacity: 0, scale: 0.92, y: 8 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 0.1 }}
+              className="mt-6 h-28 w-28 rounded-2xl object-cover ring-1 ring-white/15 shadow-[0_0_60px_-12px_rgba(236,72,153,0.6)] sm:h-36 sm:w-36"
+            />
+          )}
 
           <motion.h1
             className="mt-8 max-w-3xl text-4xl md:text-6xl font-extrabold tracking-tight bg-clip-text text-transparent"

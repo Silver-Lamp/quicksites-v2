@@ -5,8 +5,13 @@
 // the owner's campaigns. Sending goes through the owner-gated POST route.
 import { getServerSupabase } from '@/lib/supabase/server';
 import CampaignComposer from '@/components/merchant/CampaignComposer';
+import { attributeOrders, ATTRIBUTION_WINDOW_DAYS } from '@/lib/crm/attribution';
 
 export const dynamic = 'force-dynamic';
+
+function fmtCents(c: number) {
+  return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format((c || 0) / 100);
+}
 
 export default async function MerchantCampaignsPage({ searchParams }: { searchParams: { merchant?: string } }) {
   const supabase = await getServerSupabase();
@@ -32,6 +37,38 @@ export default async function MerchantCampaignsPage({ searchParams }: { searchPa
     .order('created_at', { ascending: false })
     .limit(100);
 
+  // Attributed orders/revenue per campaign (read-time, last-touch within the window).
+  // Two bounded queries → compute in JS, no per-campaign N+1.
+  const campaignIds = ((campaigns ?? []) as any[]).map((c) => c.id);
+  const sendsByCampaign = new Map<string, Set<string>>();
+  const attribution = new Map<string, { orders: number; revenueCents: number }>();
+  if (campaignIds.length) {
+    const { data: sends } = await (supabase as any)
+      .from('crm_campaign_sends')
+      .select('campaign_id, customer_id')
+      .in('campaign_id', campaignIds)
+      .eq('status', 'sent');
+    for (const s of (sends ?? []) as any[]) {
+      if (!s.customer_id) continue;
+      if (!sendsByCampaign.has(s.campaign_id)) sendsByCampaign.set(s.campaign_id, new Set());
+      sendsByCampaign.get(s.campaign_id)!.add(s.customer_id);
+    }
+    const { data: paidOrders } = await (supabase as any)
+      .from('orders')
+      .select('customer_id, created_at, total_cents')
+      .eq('merchant_id', merchant.id)
+      .eq('status', 'paid')
+      .not('customer_id', 'is', null)
+      .order('created_at', { ascending: false })
+      .limit(5000);
+    const attr = attributeOrders({
+      campaigns: (campaigns ?? []) as any[],
+      sendsByCampaign,
+      orders: (paidOrders ?? []) as any[],
+    });
+    for (const [k, v] of attr) attribution.set(k, v);
+  }
+
   return (
     <div className="mx-auto max-w-4xl px-6 py-10">
       <h1 className="text-2xl font-semibold">Campaigns</h1>
@@ -39,12 +76,15 @@ export default async function MerchantCampaignsPage({ searchParams }: { searchPa
 
       <CampaignComposer merchantId={merchant.id} tags={tags} />
 
-      <h2 className="mt-10 text-lg font-semibold">History</h2>
+      <div className="mt-10 flex items-baseline justify-between">
+        <h2 className="text-lg font-semibold">History</h2>
+        <span className="text-xs text-neutral-500">Orders/revenue attributed within {ATTRIBUTION_WINDOW_DAYS} days of send</span>
+      </div>
       <div className="mt-3 overflow-x-auto rounded-xl border border-neutral-800">
         <table className="min-w-full text-sm">
           <thead className="bg-neutral-900">
             <tr className="[&>th]:px-4 [&>th]:py-3 text-left">
-              <th>When</th><th>Subject</th><th>Segment</th><th>Status</th><th className="text-right">Sent</th><th className="text-right">Failed</th>
+              <th>When</th><th>Subject</th><th>Segment</th><th>Status</th><th className="text-right">Sent</th><th className="text-right">Failed</th><th className="text-right">Orders</th><th className="text-right">Revenue</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-neutral-800">
@@ -64,10 +104,12 @@ export default async function MerchantCampaignsPage({ searchParams }: { searchPa
                 </td>
                 <td className="text-right tabular-nums">{c.sent_count}/{c.recipient_count}</td>
                 <td className="text-right tabular-nums">{c.failed_count || 0}</td>
+                <td className="text-right tabular-nums">{attribution.get(c.id)?.orders || 0}</td>
+                <td className="text-right tabular-nums">{attribution.get(c.id)?.revenueCents ? fmtCents(attribution.get(c.id)!.revenueCents) : '—'}</td>
               </tr>
             ))}
             {(!campaigns || campaigns.length === 0) && (
-              <tr><td className="px-4 py-6 text-neutral-500" colSpan={6}>No campaigns sent yet.</td></tr>
+              <tr><td className="px-4 py-6 text-neutral-500" colSpan={8}>No campaigns sent yet.</td></tr>
             )}
           </tbody>
         </table>

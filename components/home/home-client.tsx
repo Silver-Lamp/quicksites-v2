@@ -207,6 +207,27 @@ export default function HomeClient({
           </div>
         </section>
 
+        {/* ───────── Keep (customer CRM) ───────── */}
+        <section className="relative z-10 w-full border-t border-zinc-800/70 bg-zinc-950/60">
+          <div className="mx-auto max-w-6xl px-6 py-14">
+            <h2 className="text-2xl md:text-3xl font-semibold">A CRM that fills itself</h2>
+            <p className="mt-2 max-w-2xl text-sm text-zinc-400">
+              Every paid order becomes a customer record — so you can bring buyers back, not just chase new ones.
+            </p>
+            <div className="mt-8 grid grid-cols-1 gap-5 md:grid-cols-3">
+              <Card title="Customers, automatically">
+                Every sale builds a deduplicated customer with lifetime value, order history, and an activity timeline — no data entry.
+              </Card>
+              <Card title="Segment in a click">
+                Filter by opted-in, repeat, recent, or lapsed buyers plus your own tags. Add private notes and manage marketing consent.
+              </Card>
+              <Card title="Email that pays for itself">
+                Send a consent-gated campaign to a segment and see the orders + revenue it drove — attribution built in, one-click unsubscribe included.
+              </Card>
+            </div>
+          </div>
+        </section>
+
         {/* ───────── Showcase (real published sites) — SSR'd via server page ───────── */}
         {showcase}
 

@@ -6,6 +6,7 @@ import { motion } from 'framer-motion';
 import {
   ArrowRight, Layers, Sparkles, Palette, ShoppingCart,
   Blocks, Globe, TrendingUp, BarChart3, PhoneCall, LayoutTemplate, Rocket,
+  Users, Mail,
 } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -36,6 +37,8 @@ const CATEGORY_ICONS: Record<string, React.ComponentType<{ className?: string }>
   SEO: TrendingUp,
   Admin: BarChart3,
   Leads: PhoneCall,
+  CRM: Users,
+  Marketing: Mail,
 };
 
 const STEPS = [

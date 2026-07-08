@@ -32,6 +32,8 @@ export default function HomeColorLab({ show = false }: { show?: boolean }) {
   const [accent, setAccent] = useState(PRESETS[0].accent);
   const [accent2, setAccent2] = useState(PRESETS[0].accent2);
   const [fg, setFg] = useState(PRESETS[0].fg);
+  // Background glow opacity (0–1). Default 0 so the section backgrounds show through.
+  const [glow, setGlow] = useState(0);
 
   const enabled = show || paramEnabled;
 
@@ -46,7 +48,8 @@ export default function HomeColorLab({ show = false }: { show?: boolean }) {
     s.setProperty('--qs-accent', accent);
     s.setProperty('--qs-accent-2', accent2);
     s.setProperty('--qs-accent-fg', fg);
-  }, [enabled, accent, accent2, fg]);
+    s.setProperty('--qs-glow-opacity', String(glow));
+  }, [enabled, accent, accent2, fg, glow]);
 
   if (!enabled) return null;
 
@@ -105,8 +108,25 @@ export default function HomeColorLab({ show = false }: { show?: boolean }) {
         <SwatchRow label="Button text" value={fg} onChange={setFg} />
       </div>
 
+      <div className="mt-4">
+        <label className="flex items-center justify-between text-xs text-zinc-300">
+          <span>Background glow</span>
+          <span className="tabular-nums text-zinc-400">{Math.round(glow * 100)}%</span>
+        </label>
+        <input
+          type="range"
+          min={0}
+          max={100}
+          value={Math.round(glow * 100)}
+          onChange={(e) => setGlow(Number(e.target.value) / 100)}
+          className="mt-1.5 w-full cursor-pointer accent-white"
+          aria-label="Background glow opacity"
+        />
+        <p className="mt-1 text-[11px] text-zinc-500">0% keeps the section background images crisp.</p>
+      </div>
+
       <p className="mt-3 text-[11px] leading-snug text-zinc-500">
-        Live preview only — not saved. Drives the hero title, the build card, and the CTA.
+        Live preview only — not saved. Drives the hero title, the build card, the CTA, and the glow.
       </p>
     </div>
   );

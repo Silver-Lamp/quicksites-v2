@@ -7,6 +7,8 @@
 
 export const WORK_BG_STORAGE_KEY = 'qs:work-bg';
 export const WORK_BG_CHANGED_EVENT = 'qs:work-bg:changed';
+/** Special selection: auto-rotate through all backgrounds instead of a fixed one. */
+export const WORK_BG_ROTATE_ID = 'rotate';
 
 export type WorkBackground = {
   id: string;

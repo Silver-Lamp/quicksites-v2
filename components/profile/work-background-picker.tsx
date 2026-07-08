@@ -8,6 +8,7 @@ import * as React from 'react';
 import {
   WORK_BACKGROUNDS,
   WORK_BG_CHANGED_EVENT,
+  WORK_BG_ROTATE_ID,
   readWorkBackgroundId,
   writeWorkBackgroundId,
 } from '@/lib/ui/workBackgrounds';
@@ -27,8 +28,9 @@ export default function WorkBackgroundPicker() {
     writeWorkBackgroundId(id);
   };
 
-  const options: { id: string; label: string; src?: string }[] = [
+  const options: { id: string; label: string; src?: string; rotate?: boolean }[] = [
     { id: 'none', label: 'None' },
+    { id: WORK_BG_ROTATE_ID, label: 'Rotate all', rotate: true },
     ...WORK_BACKGROUNDS.map((b) => ({ id: b.id, label: b.label, src: b.src })),
   ];
 
@@ -52,7 +54,16 @@ export default function WorkBackgroundPicker() {
               aria-pressed={active}
             >
               <div className="aspect-video w-full bg-zinc-900">
-                {o.src ? (
+                {o.rotate ? (
+                  // Rotate: a mini collage of the first backgrounds + a shuffle glyph.
+                  <div className="relative grid h-full w-full grid-cols-2">
+                    {WORK_BACKGROUNDS.slice(0, 4).map((b) => (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img key={b.id} src={b.src} alt="" className="h-full w-full object-cover" loading="lazy" />
+                    ))}
+                    <div className="absolute inset-0 grid place-items-center bg-black/40 text-lg text-white">⟳</div>
+                  </div>
+                ) : o.src ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img src={o.src} alt={o.label} className="h-full w-full object-cover" loading="lazy" />
                 ) : (

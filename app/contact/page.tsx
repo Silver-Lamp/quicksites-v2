@@ -73,6 +73,10 @@ export default function ContactPage() {
     <div className="relative min-h-screen flex flex-col bg-zinc-950 text-white overflow-hidden">
       {/* Hero */}
       <section className="relative overflow-hidden">
+        <div aria-hidden className="pointer-events-none absolute inset-0 -z-10">
+          <div className="absolute -top-24 left-[15%] h-72 w-72 rounded-full bg-sky-500/20 blur-3xl" />
+          <div className="absolute top-0 right-[10%] h-64 w-64 rounded-full bg-fuchsia-500/10 blur-3xl" />
+        </div>
         <motion.div
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}

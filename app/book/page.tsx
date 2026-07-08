@@ -56,7 +56,10 @@ export default function BookPage() {
             </Link>
           </div>
         </motion.div>
-        <div className="pointer-events-none absolute inset-0 -z-10 bg-gradient-to-b from-transparent via-primary/5 to-transparent" />
+        <div aria-hidden className="pointer-events-none absolute inset-0 -z-10">
+          <div className="absolute -top-24 left-[15%] h-72 w-72 rounded-full bg-sky-500/20 blur-3xl" />
+          <div className="absolute top-0 right-[10%] h-64 w-64 rounded-full bg-fuchsia-500/10 blur-3xl" />
+        </div>
       </section>
 
       {/* body */}
@@ -65,14 +68,14 @@ export default function BookPage() {
         <Card
           className={[
             'h-full border-zinc-800/50',
-            'ring-1 ring-purple-500/25',
-            'bg-gradient-to-br from-purple-500/10 via-purple-500/5 to-transparent',
-            'shadow-[0_10px_40px_-12px_rgba(168,85,247,0.45)]',
+            'ring-1 ring-sky-500/25',
+            'bg-gradient-to-br from-sky-500/10 via-sky-500/5 to-transparent',
+            'shadow-[0_10px_40px_-12px_rgba(56,189,248,0.4)]',
           ].join(' ')}
         >
           <CardHeader>
             <div className="flex items-center gap-2">
-              <Calendar className="h-5 w-5 text-purple-400" />
+              <Calendar className="h-5 w-5 text-sky-400" />
               <CardTitle>Pick a time</CardTitle>
             </div>
             <CardDescription>Connect on Zoom and get answers fast.</CardDescription>

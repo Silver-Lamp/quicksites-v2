@@ -15,9 +15,9 @@ import LazyVideoEmbed from '@/components/ui/lazy-video-embed';
 
 const COPY = {
   heroKicker: 'Features',
-  heroTitle: 'Build faster. Rank sooner. Scale confidently.',
+  heroTitle: 'A site, a store, and a CRM. Built in.',
   heroSubtitle:
-    'A focused toolkit for high-velocity local SEO sites — with optional AI assistance when it pays for itself.',
+    'A drag-and-drop builder with e-commerce, a customer CRM, and email campaigns — every feature in every plan. AI assists when it pays for itself.',
   ribbons: ['No setup fees', '14-day free trial', 'Grandfathered Founder pricing'],
   ctas: {
     primaryHref: '/login',
@@ -65,8 +65,8 @@ function classNames(...xs: (string | false | null | undefined)[]) {
 
 function FeatureCard({ f }: { f: FeatureRow }) {
   const featuredGlow =
-    'ring-1 ring-purple-500/25 bg-gradient-to-br from-purple-500/10 via-purple-500/5 to-transparent ' +
-    'shadow-[0_10px_40px_-12px_rgba(168,85,247,0.45)]';
+    'ring-1 ring-sky-500/25 bg-gradient-to-br from-sky-500/10 via-sky-500/5 to-transparent ' +
+    'shadow-[0_10px_40px_-12px_rgba(56,189,248,0.4)]';
   const Icon = CATEGORY_ICONS[f.category] ?? Layers;
 
   return (
@@ -78,7 +78,7 @@ function FeatureCard({ f }: { f: FeatureRow }) {
     >
       <CardHeader className="space-y-3">
         <div className="flex items-start justify-between gap-3">
-          <div className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-purple-500/20 to-purple-500/5 text-purple-300 ring-1 ring-purple-500/20">
+          <div className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-sky-500/20 to-sky-500/5 text-sky-300 ring-1 ring-sky-500/20">
             <Icon className="h-5 w-5" />
           </div>
           <div className="flex flex-wrap items-center justify-end gap-2">
@@ -134,49 +134,70 @@ export default function FeatureGalleryClient({ initialRows }: { initialRows: Fea
     <div className="relative">
       {/* Hero */}
       <section className="relative overflow-hidden">
-        <motion.div
-          initial={{ opacity: 0, y: 8 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-          className="mx-auto max-w-6xl px-6 pt-14 pb-6"
-        >
-          <div className="mb-4 flex flex-wrap items-center gap-3">
-            <Badge variant="outline">{COPY.heroKicker}</Badge>
-            <Badge variant="secondary" className="flex items-center gap-1">
-              <Sparkles className="h-3.5 w-3.5" />
-              Everything in every plan
-            </Badge>
-          </div>
-          <h1 className="text-3xl md:text-5xl font-semibold tracking-tight">
-            {COPY.heroTitle}
-          </h1>
-          <p className="mt-3 max-w-2xl text-muted-foreground">
-            {COPY.heroSubtitle}
-          </p>
-          <div className="mt-6 flex flex-wrap items-center gap-3">
-            <Link href={COPY.ctas.primaryHref} className="inline-flex">
-              <Button size="lg">
-                {COPY.ctas.primary}
-                <ArrowRight className="ml-2 h-4 w-4" />
-              </Button>
-            </Link>
-            <Link href={COPY.ctas.secondaryHref} className="inline-flex">
-              <Button size="lg" variant="ghost">
-                {COPY.ctas.secondary}
-              </Button>
-            </Link>
-          </div>
+        {/* Sky-toned glow behind the hero (brand accent). */}
+        <div aria-hidden className="pointer-events-none absolute inset-0 -z-10">
+          <div className="absolute -top-24 left-[15%] h-72 w-72 rounded-full bg-sky-500/20 blur-3xl" />
+          <div className="absolute top-0 right-[10%] h-64 w-64 rounded-full bg-fuchsia-500/10 blur-3xl" />
+        </div>
 
-          <div className="mt-6 flex flex-wrap gap-2">
-            {COPY.ribbons.map((r) => (
-              <Badge key={r} variant="secondary">
-                {r}
+        <div className="mx-auto grid max-w-6xl gap-10 px-6 pt-14 pb-8 lg:grid-cols-2 lg:items-center">
+          <motion.div
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+          >
+            <div className="mb-4 flex flex-wrap items-center gap-3">
+              <Badge variant="outline">{COPY.heroKicker}</Badge>
+              <Badge variant="secondary" className="flex items-center gap-1">
+                <Sparkles className="h-3.5 w-3.5" />
+                Everything in every plan
               </Badge>
-            ))}
-          </div>
-        </motion.div>
+            </div>
+            <h1 className="text-3xl md:text-5xl font-semibold tracking-tight">
+              {COPY.heroTitle}
+            </h1>
+            <p className="mt-3 max-w-2xl text-muted-foreground">
+              {COPY.heroSubtitle}
+            </p>
+            <div className="mt-6 flex flex-wrap items-center gap-3">
+              <Link href={COPY.ctas.primaryHref} className="inline-flex">
+                <Button size="lg">
+                  {COPY.ctas.primary}
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </Button>
+              </Link>
+              <Link href={COPY.ctas.secondaryHref} className="inline-flex">
+                <Button size="lg" variant="ghost">
+                  {COPY.ctas.secondary}
+                </Button>
+              </Link>
+            </div>
 
-        <div className="pointer-events-none absolute inset-0 -z-10 bg-gradient-to-b from-transparent via-primary/5 to-transparent" />
+            <div className="mt-6 flex flex-wrap gap-2">
+              {COPY.ribbons.map((r) => (
+                <Badge key={r} variant="secondary">
+                  {r}
+                </Badge>
+              ))}
+            </div>
+          </motion.div>
+
+          {/* Motif visual — hidden on small screens so the copy leads on mobile. */}
+          <motion.div
+            initial={{ opacity: 0, scale: 0.96 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.6, delay: 0.1 }}
+            className="hidden lg:block"
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/brand/qs-hero-bg.jpg"
+              alt=""
+              aria-hidden
+              className="ml-auto w-full max-w-md rounded-2xl object-cover ring-1 ring-white/10 shadow-[0_0_90px_-24px_rgba(56,189,248,0.55)]"
+            />
+          </motion.div>
+        </div>
       </section>
 
       {/* How it works */}
@@ -187,12 +208,12 @@ export default function FeatureGalleryClient({ initialRows }: { initialRows: Fea
             return (
               <Card key={s.title} className="border-zinc-800/50">
                 <CardContent className="flex gap-4 py-6">
-                  <div className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-purple-500/20 to-purple-500/5 text-purple-300 ring-1 ring-purple-500/20">
+                  <div className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-sky-500/20 to-sky-500/5 text-sky-300 ring-1 ring-sky-500/20">
                     <Icon className="h-5 w-5" />
                   </div>
                   <div>
                     <div className="flex items-center gap-2">
-                      <span className="text-xs font-semibold text-purple-300/80">{`0${i + 1}`}</span>
+                      <span className="text-xs font-semibold text-sky-300/80">{`0${i + 1}`}</span>
                       <h3 className="font-medium">{s.title}</h3>
                     </div>
                     <p className="mt-1 text-sm text-muted-foreground">{s.body}</p>

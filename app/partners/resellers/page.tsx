@@ -39,7 +39,10 @@ export default function ResellersPage() {
       <SiteHeader sticky />
       <div className="relative min-h-screen bg-zinc-950 text-white">
         {/* Hero */}
-        <section className="mx-auto max-w-5xl px-6 pt-16 pb-12 text-center">
+        <section className="relative mx-auto max-w-5xl px-6 pt-16 pb-12 text-center">
+          <div aria-hidden className="pointer-events-none absolute inset-0 -z-10 overflow-hidden">
+            <div className="absolute -top-20 left-1/2 h-72 w-[36rem] -translate-x-1/2 rounded-full bg-sky-500/15 blur-3xl" />
+          </div>
           <span className="rounded-full border border-sky-500/40 bg-sky-500/10 px-3 py-1 text-xs font-medium text-sky-300">
             Already reselling Duda, GoHighLevel, or hosting?
           </span>

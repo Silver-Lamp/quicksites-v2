@@ -86,7 +86,10 @@ export default function PartnerCalculator() {
   return (
     <>
       <SiteHeader sticky />
-      <main className="mx-auto max-w-4xl px-6 py-14 text-white">
+      <main className="relative mx-auto max-w-4xl px-6 py-14 text-white">
+        <div aria-hidden className="pointer-events-none absolute inset-x-0 top-0 -z-10 overflow-hidden">
+          <div className="absolute -top-16 left-1/2 h-64 w-[32rem] -translate-x-1/2 rounded-full bg-sky-500/15 blur-3xl" />
+        </div>
         <div className="text-center">
           <div className="text-xs uppercase tracking-wide text-sky-400">Partner earnings</div>
           <h1 className="mt-2 text-3xl font-bold sm:text-4xl">You earn on every sale — not a flat markup</h1>

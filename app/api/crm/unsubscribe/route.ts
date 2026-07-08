@@ -7,6 +7,8 @@
 import { NextRequest } from 'next/server';
 import { getServerSupabase } from '@/lib/supabase/server';
 import { verifyUnsubToken } from '@/lib/crm/unsubToken';
+import { captureServer } from '@/lib/analytics/posthog-server';
+import { EVENTS } from '@/lib/analytics/events';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -32,6 +34,8 @@ export async function GET(req: NextRequest) {
   const svc = (await getServerSupabase({ serviceRole: true })) as any;
   const { error } = await svc.from('customers').update({ marketing_consent: false, updated_at: new Date().toISOString() }).eq('id', v.customerId);
   if (error) return page('Something went wrong', 'We could not process your request. Please try again later.', false);
+
+  await captureServer(EVENTS.CUSTOMER_UNSUBSCRIBED, { customer_id: v.customerId }, v.customerId).catch(() => {});
 
   return page('Unsubscribed', 'You’ve been removed from marketing emails. You’ll still get transactional messages about your orders.', true);
 }

@@ -25,6 +25,15 @@ export const EVENTS = {
   ORDER_REFUNDED: 'order_refunded',
   PLATFORM_FEE_REVERSED: 'platform_fee_reversed',
 
+  // Customer CRM (buyer-level — distinctId is the customer_id, not the merchant)
+  CUSTOMER_CREATED: 'customer_created', // first paid order builds a new customer
+  REPEAT_PURCHASE: 'repeat_purchase', // an existing customer orders again (orders_count ≥ 2)
+  CUSTOMER_UNSUBSCRIBED: 'customer_unsubscribed', // one-click marketing opt-out
+
+  // Marketing campaigns
+  CAMPAIGN_SENT: 'campaign_sent', // an email blast went out to a segment
+  CAMPAIGN_ORDER_ATTRIBUTED: 'campaign_order_attributed', // a paid order credited to a recent campaign (last-touch)
+
   // Partner / affiliate (Model B — same ledger, instrument now so it's ready)
   COMMISSION_ACCRUED: 'commission_accrued',
   COMMISSION_PAID: 'commission_paid',

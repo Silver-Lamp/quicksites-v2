@@ -10,6 +10,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSupabase } from '@/lib/supabase/server';
 import { requireMerchantOwner } from '@/lib/auth/requireUser';
 import { orgEmailBrand, sendEmail } from '@/lib/email';
+import { captureServer } from '@/lib/analytics/posthog-server';
+import { EVENTS } from '@/lib/analytics/events';
 import { isSegment, type Segment } from '@/lib/crm/segments';
 import {
   resolveAudience,
@@ -103,6 +105,12 @@ export async function POST(req: NextRequest) {
     .from('crm_campaigns')
     .update({ status: failed && !sent ? 'failed' : 'sent', sent_count: sent, failed_count: failed, sent_at: new Date().toISOString() })
     .eq('id', campaign.id);
+
+  await captureServer(
+    EVENTS.CAMPAIGN_SENT,
+    { merchant_id: merchantId, campaign_id: campaign.id, recipients: audience.length, sent, failed, segment: seg, tag },
+    merchantId,
+  ).catch(() => {});
 
   return NextResponse.json({ ok: true, campaignId: campaign.id, sent, failed });
 }

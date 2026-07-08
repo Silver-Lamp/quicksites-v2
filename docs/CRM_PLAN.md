@@ -17,7 +17,7 @@
 
 ### What's next (open)
 - **Phase 4** (optional) — unify prospects (`leads`) + buyers into one contacts model. Only if the two-model split becomes friction.
-- **Enrichment follow-ups** (not blocking): ~~buyer/campaign PostHog events~~ **DONE** — `customer_created`/`repeat_purchase`/`campaign_sent`/`campaign_order_attributed`/`customer_unsubscribed` emit via `captureServer` (`lib/analytics/events.ts`, distinctId = the customer). Still open: campaign **open/click** metrics (Resend webhooks); **SMS** campaigns (`sendSms` rails exist); an **outbox/drain** path for sends above the 250 cap; **dedup/merge** UI for duplicate customers.
+- **Enrichment follow-ups** (not blocking): ~~buyer/campaign PostHog events~~ **DONE** — `customer_created`/`repeat_purchase`/`campaign_sent`/`campaign_order_attributed`/`customer_unsubscribed` emit via `captureServer` (`lib/analytics/events.ts`, distinctId = the customer). campaign **open/click** metrics — endpoint built (`POST /api/crm/webhooks/resend`, Svix-verified; stamps `opened_at`/`clicked_at`/`complained_at` on `crm_campaign_sends`, shown in the history table), pending Resend dashboard webhook config + `RESEND_WEBHOOK_SECRET`. Still open: **SMS** campaigns (`sendSms` rails exist); an **outbox/drain** path for sends above the 250 cap; **dedup/merge** UI for duplicate customers.
 
 ### Still-true caveat
 - **`types/supabase.ts` does NOT include** `customers`/`crm_campaigns`/`crm_campaign_sends`. Read via the service-role `createClient(...)` untyped or cast `(supabase as any)`, as the shipped routes do. Don't fight the generated types.

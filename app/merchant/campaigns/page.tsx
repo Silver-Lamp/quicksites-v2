@@ -13,6 +13,14 @@ function fmtCents(c: number) {
   return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format((c || 0) / 100);
 }
 
+// Opens/clicks: show count + rate once any engagement is recorded, else "—" (no
+// webhook data yet — Resend tracking may be off or the send is too fresh).
+function engagementCell(count: number | undefined, sent: number): string {
+  if (!count) return '—';
+  const rate = sent > 0 ? Math.round((count / sent) * 100) : 0;
+  return `${count} (${rate}%)`;
+}
+
 export default async function MerchantCampaignsPage({ searchParams }: { searchParams: { merchant?: string } }) {
   const supabase = await getServerSupabase();
   const { data: userRes } = await supabase.auth.getUser();
@@ -42,16 +50,23 @@ export default async function MerchantCampaignsPage({ searchParams }: { searchPa
   const campaignIds = ((campaigns ?? []) as any[]).map((c) => c.id);
   const sendsByCampaign = new Map<string, Set<string>>();
   const attribution = new Map<string, { orders: number; revenueCents: number }>();
+  // Engagement per campaign (opens/clicks) from Resend webhooks.
+  const engagement = new Map<string, { opens: number; clicks: number }>();
   if (campaignIds.length) {
     const { data: sends } = await (supabase as any)
       .from('crm_campaign_sends')
-      .select('campaign_id, customer_id')
+      .select('campaign_id, customer_id, opened_at, clicked_at')
       .in('campaign_id', campaignIds)
       .eq('status', 'sent');
     for (const s of (sends ?? []) as any[]) {
-      if (!s.customer_id) continue;
-      if (!sendsByCampaign.has(s.campaign_id)) sendsByCampaign.set(s.campaign_id, new Set());
-      sendsByCampaign.get(s.campaign_id)!.add(s.customer_id);
+      if (s.customer_id) {
+        if (!sendsByCampaign.has(s.campaign_id)) sendsByCampaign.set(s.campaign_id, new Set());
+        sendsByCampaign.get(s.campaign_id)!.add(s.customer_id);
+      }
+      const e = engagement.get(s.campaign_id) ?? { opens: 0, clicks: 0 };
+      if (s.opened_at) e.opens++;
+      if (s.clicked_at) e.clicks++;
+      engagement.set(s.campaign_id, e);
     }
     const { data: paidOrders } = await (supabase as any)
       .from('orders')
@@ -84,7 +99,7 @@ export default async function MerchantCampaignsPage({ searchParams }: { searchPa
         <table className="min-w-full text-sm">
           <thead className="bg-neutral-900">
             <tr className="[&>th]:px-4 [&>th]:py-3 text-left">
-              <th>When</th><th>Subject</th><th>Segment</th><th>Status</th><th className="text-right">Sent</th><th className="text-right">Failed</th><th className="text-right">Orders</th><th className="text-right">Revenue</th>
+              <th>When</th><th>Subject</th><th>Segment</th><th>Status</th><th className="text-right">Sent</th><th className="text-right">Opens</th><th className="text-right">Clicks</th><th className="text-right">Orders</th><th className="text-right">Revenue</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-neutral-800">
@@ -103,13 +118,14 @@ export default async function MerchantCampaignsPage({ searchParams }: { searchPa
                   }`}>{c.status}</span>
                 </td>
                 <td className="text-right tabular-nums">{c.sent_count}/{c.recipient_count}</td>
-                <td className="text-right tabular-nums">{c.failed_count || 0}</td>
+                <td className="text-right tabular-nums">{engagementCell(engagement.get(c.id)?.opens, c.sent_count)}</td>
+                <td className="text-right tabular-nums">{engagementCell(engagement.get(c.id)?.clicks, c.sent_count)}</td>
                 <td className="text-right tabular-nums">{attribution.get(c.id)?.orders || 0}</td>
                 <td className="text-right tabular-nums">{attribution.get(c.id)?.revenueCents ? fmtCents(attribution.get(c.id)!.revenueCents) : '—'}</td>
               </tr>
             ))}
             {(!campaigns || campaigns.length === 0) && (
-              <tr><td className="px-4 py-6 text-neutral-500" colSpan={8}>No campaigns sent yet.</td></tr>
+              <tr><td className="px-4 py-6 text-neutral-500" colSpan={9}>No campaigns sent yet.</td></tr>
             )}
           </tbody>
         </table>

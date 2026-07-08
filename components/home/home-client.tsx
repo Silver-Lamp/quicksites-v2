@@ -102,22 +102,22 @@ export default function HomeClient({
 
         {/* ───────── Hero ───────── */}
         <main id="start" className="relative z-10 flex flex-col items-center px-6 pt-16 pb-12 text-center">
+          {/* QuickSites motif hero background (default brand only). Scrimmed so the
+              headline stays readable; fades into the page top + bottom. */}
+          {showCharacter && (
+            <div aria-hidden className="pointer-events-none absolute inset-0 -z-10 overflow-hidden">
+              <div
+                className="absolute inset-0 bg-cover bg-center"
+                style={{ backgroundImage: 'url(/brand/qs-hero-bg.jpg)', opacity: 0.45 }}
+              />
+              <div className="absolute inset-0 bg-gradient-to-b from-zinc-950 via-zinc-950/20 to-zinc-950" />
+            </div>
+          )}
+
           <div className="flex items-center gap-3">
             <Image src={logoSrc} width={40} height={40} alt={`${productName} logo`} className="rounded-full" />
             <span className="text-2xl font-bold tracking-tight">{productName}</span>
           </div>
-
-          {showCharacter && (
-            <motion.img
-              src="/brand/qs-character.jpg"
-              alt=""
-              aria-hidden="true"
-              initial={{ opacity: 0, scale: 0.92, y: 8 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.1 }}
-              className="mt-6 h-28 w-28 rounded-2xl object-cover ring-1 ring-white/15 shadow-[0_0_60px_-12px_rgba(236,72,153,0.6)] sm:h-36 sm:w-36"
-            />
-          )}
 
           <motion.h1
             className="mt-8 max-w-3xl text-4xl md:text-6xl font-extrabold tracking-tight bg-clip-text text-transparent"

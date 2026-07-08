@@ -15,6 +15,7 @@ Welcome to the QuickSites internal documentation hub. Start with the
 - [Pricing Redesign](./PRICING_REDESIGN.md) — agency billing + finished take-rate
 - [White-Label Plan](./WHITE_LABEL_PLAN.md) — agency branding across login/emails/admin (Tier 1.5)
 - [POD + Author Sites](./POD_AUTHOR_PLAN.md) — Lulu/Gelato print-on-demand
+- [CRM Plan](./CRM_PLAN.md) — customer identity spine → segments, notes/tags/consent, email campaigns + attribution (Phases 0–3 shipped)
 - [Revival Plan](./REVIVAL_PLAN.md) — the phased plan back to active development
 
 ## Runbooks & reference

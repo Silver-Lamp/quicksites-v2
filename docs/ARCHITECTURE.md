@@ -47,6 +47,7 @@ QuickSites is a **Next.js 15 App-Router monolith** on Vercel, backed by Supabase
 | **Public sites** | `app/sites/[slug]/[[...rest]]` | — | `components/sites/site-renderer.tsx`, `lib/site-chrome.ts` | Catch-all renders published template by slug/domain. |
 | **Domains** | settings panels | `app/api/domains/*` | `lib/domains/{vercel,namecheap,dns}.ts` | Programmatic register + DNS + attach-to-Vercel. |
 | **Commerce** | `app/{merchant,chef,meals,cart,checkout,orders}` | `app/api/{commerce,chef,merchant,orders,payments}/*` | `lib/commerce/*`, `lib/payments/*`, `lib/stripe/*` | Open Commerce schema; Stripe Connect; platform fee. |
+| **Customer CRM** | `app/merchant/{customers,campaigns}` | `app/api/merchant/{customers,campaigns}/*`, `app/api/crm/unsubscribe` | `lib/crm/*` (`segments`, `campaigns`, `attribution`, `activity`, `unsubToken`), `lib/commerce/customers.ts` | Buyer identity spine (built from paid orders) → segments, notes/tags/consent, consent-gated email campaigns w/ order attribution. |
 | **Billing/subscriptions** | — | `app/api/billing/*` | — | QS platform subscriptions → `merchant_billing`, commission ledger. |
 | **Referrals/affiliates** | `app/admin/referrals/*` | `app/api/referrals/*`, `app/api/rep/*` | `lib/commerce/attribution.ts` | Commission ledger + payout runs (manual). |
 | **AI** | inline in editors | `app/api/ai/*`, `app/api/{hero,faq,testimonials,icon,favicon}/*` (≈15) | `lib/ai/*` (incl. cost logging) | Copy/image generation. |
@@ -59,6 +60,7 @@ The **authoritative schema is `supabase/migrations/*` + generated `types/supabas
 
 - **Builder**: `templates` (JSON `data` column = pages/blocks; denormalized `industry`, `custom_domain`, `published`), snapshots/history, `domains`, `org_domains_public`, `organizations_public`.
 - **Open Commerce** (`20250827_open_commerce.sql`): `merchants`, `catalog_items`, `availability`, `carts`/`cart_items`, `orders`/`order_items`, `payment_accounts`, `payments`, `referral_codes`, `attributions`, `commission_ledger`. RLS enabled; `is_owner()` helper.
+- **Customer CRM** (`20260707_{customers_identity_spine,orders_customer_id,customers_notes,crm_campaigns}.sql`): `customers` (per-merchant buyer, `notes`/`tags`/`marketing_consent`), `orders.customer_id`/`customer_email` (links a paid order to its buyer), `crm_campaigns`/`crm_campaign_sends` (email blasts). Deny-default RLS, owner read, service-role writes.
 - **Fees/billing** (`20250827_platform_fees_and_billing.sql`): per-merchant `collect_platform_fee` / `platform_fee_percent` / `platform_fee_min_cents`; `merchant_billing`.
 - **Payouts/tax** (`20250827_payout_runs.sql`, `20250827_affiliate_tax.sql`): `payout_runs`, `affiliate_tax_profiles`, `affiliate_payouts`, `affiliate_1099_filings`.
 

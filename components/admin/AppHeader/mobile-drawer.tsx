@@ -71,11 +71,10 @@ export function MobileDrawer({
                 </div>
               </details>
               <details>
-                <summary className="cursor-pointer font-semibold text-yellow-300">Templates</summary>
+                <summary className="cursor-pointer font-semibold text-yellow-300">Sites</summary>
                 <div className="ml-4 flex flex-col gap-1">
-                  <SafeLink href="/admin/templates/list">All Templates</SafeLink>
-                  {/* <SafeLink href="/admin/templates-new">+ New Template</SafeLink> */}
-                  <SafeLink href="/admin/templates/new">+ New Template</SafeLink>
+                  <SafeLink href="/admin/templates/list">All sites</SafeLink>
+                  <SafeLink href="/admin/templates/new">+ New site</SafeLink>
                 </div>
               </details>
               <details>

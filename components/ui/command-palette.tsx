@@ -3,9 +3,9 @@ import { useRouter } from 'next/navigation';
 
 const routes = [
   { label: 'Dashboard', path: '/dashboard' },
-  { label: 'Sites', path: '/admin/sites' },
+  { label: 'Sites', path: '/admin/templates' },
   { label: 'Themes', path: '/admin/branding' },
-  { label: 'Templates', path: '/admin/templates' },
+  { label: 'Sites (legacy table)', path: '/admin/sites' },
   { label: 'Docs', path: '/admin/docs' },
   { label: 'Gallery', path: '/gallery' },
 ];

@@ -7,6 +7,7 @@
 
 import * as React from 'react';
 import Link from 'next/link';
+import { RECENT_DAYS, LAPSED_DAYS, matchesSegment, type Segment } from '@/lib/crm/segments';
 
 export type CustomerRow = {
   id: string;
@@ -21,10 +22,6 @@ export type CustomerRow = {
   tags: string[];
 };
 
-const RECENT_DAYS = 30;   // "Recent" = ordered within this window
-const LAPSED_DAYS = 90;   // "Lapsed" = has ordered, but not within this window
-
-type Segment = 'all' | 'opted_in' | 'repeat' | 'recent' | 'lapsed';
 type SortKey = 'recent' | 'ltv' | 'orders' | 'name';
 
 function fmtCents(c: number) {
@@ -32,27 +29,6 @@ function fmtCents(c: number) {
 }
 function fmtDate(iso: string | null) {
   return iso ? new Date(iso).toLocaleDateString() : '—';
-}
-function daysSince(iso: string | null): number | null {
-  if (!iso) return null;
-  const ms = Date.now() - new Date(iso).getTime();
-  return ms < 0 ? 0 : Math.floor(ms / 86_400_000);
-}
-
-function matchesSegment(r: CustomerRow, seg: Segment): boolean {
-  switch (seg) {
-    case 'opted_in': return r.marketing_consent;
-    case 'repeat': return (r.orders_count || 0) >= 2;
-    case 'recent': {
-      const d = daysSince(r.last_order_at);
-      return d !== null && d <= RECENT_DAYS;
-    }
-    case 'lapsed': {
-      const d = daysSince(r.last_order_at);
-      return d !== null && d > LAPSED_DAYS;
-    }
-    default: return true;
-  }
 }
 
 export default function CustomersListClient({

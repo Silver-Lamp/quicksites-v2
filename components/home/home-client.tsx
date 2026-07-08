@@ -60,10 +60,10 @@ export default function HomeClient({
   // The QuickSites motif character — never on a white-labeled reseller homepage.
   const showCharacter = (brand.billingMode ?? 'central') !== 'reseller';
 
-  const heroHeadline = brand.hero?.headline || 'A site and a store. Built in.';
+  const heroHeadline = brand.hero?.headline || 'A site, a store, and a CRM. Built in.';
   const heroSubhead =
     brand.hero?.subhead ||
-    'A powerful, efficient website builder with e-commerce built in — drag-and-drop pages, a product catalog, and Stripe-powered checkout, published to your own domain.';
+    'A powerful, efficient website builder with e-commerce built in — drag-and-drop pages, a product catalog, and Stripe-powered checkout. Every paid order builds a customer you can segment and email — all published to your own domain.';
 
   const allowMobileWidget = brand.flags?.showMobileWidget ?? SiteFlags.showMobileWidget;
   const allowMobileGlow = brand.flags?.showMobileGradients ?? SiteFlags.showMobileGradients;

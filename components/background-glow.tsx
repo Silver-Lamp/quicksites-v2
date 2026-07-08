@@ -41,6 +41,11 @@ export default function BackgroundGlow({
     <div
       className={clsx('absolute inset-0 z-0 pointer-events-none', className)}
       aria-hidden="true"
+      // Base opacity lives on the wrapper (overridable live via the --qs-glow-opacity
+      // CSS var the homepage color lab sets; falls back to the intensity prop). It sits
+      // OUTSIDE the pulse so a 0 value truly hides the glow — the inner pulse animates
+      // its own opacity and would otherwise override an inline value here.
+      style={{ opacity: `var(--qs-glow-opacity, ${opacity})` }}
     >
       <div
         className={clsx(
@@ -48,7 +53,6 @@ export default function BackgroundGlow({
           sizeMap[size],
           gradientClass
         )}
-        style={{ opacity }}
       />
     </div>
   );

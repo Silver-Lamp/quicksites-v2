@@ -92,7 +92,9 @@ export default function HomeClient({
           pick a default palette); also available to anyone via ?colorlab=1. */}
       <HomeColorLab show={!isRealUser} />
       <div className="relative min-h-screen flex flex-col bg-zinc-950 text-white overflow-hidden">
-        {showGlow && <BackgroundGlow />}
+        {/* Glow defaults to 0 opacity so the section backgrounds read clearly; the
+            homepage color lab exposes a slider (--qs-glow-opacity) to dial it up. */}
+        {showGlow && <BackgroundGlow intensity={0} />}
 
         {/* ───────── Hero ───────── */}
         <main id="start" className="relative z-10 flex flex-col items-center px-6 pt-16 pb-12 text-center">

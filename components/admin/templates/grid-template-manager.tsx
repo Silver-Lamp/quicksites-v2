@@ -139,7 +139,7 @@ export default function GridTemplateManager({
           href="/admin/presets"
           className="text-xs text-white/80 hover:text-white underline underline-offset-2 ml-auto"
         >
-          Manage All Templates →
+          Manage all sites →
         </Link>
       </div>
     </div>

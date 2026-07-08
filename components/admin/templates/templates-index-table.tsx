@@ -671,7 +671,7 @@ export default function TemplatesIndexTable({
       )}
 
       <div className="flex flex-wrap gap-4 justify-between items-center">
-        <div className="text-lg font-semibold text-white">Templates</div>
+        <div className="text-lg font-semibold text-white">Sites</div>
         <div className="flex items-center gap-2 flex-wrap">
           <div className="flex gap-1 text-xs">
             <Button

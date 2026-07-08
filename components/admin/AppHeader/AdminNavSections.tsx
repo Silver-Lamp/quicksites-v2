@@ -31,6 +31,13 @@ import {
   Printer,
   Activity,
   Check,
+  ShoppingCart,
+  Package,
+  Boxes,
+  CreditCard,
+  Megaphone,
+  LayoutGrid,
+  Globe,
 } from 'lucide-react';
 import clsx from 'clsx';
 import { useBrand } from '@/app/providers';
@@ -106,6 +113,27 @@ function LoadingOverlay({ show }: { show: boolean }) {
   );
 }
 
+/* ---------------- Merchant nav (shown to everyone, not just admins) ----------------
+   These used to live inside NAV_ADMIN (gated by isAdmin), so real merchants never saw
+   them. They're the day-to-day surfaces for anyone running a store. */
+const NAV_MERCHANT: NavItem[] = [
+  { type: 'section', label: 'Commerce' },
+  { type: 'item', label: 'Getting started', href: '/merchant', icon: <Rocket size={18} /> },
+  { type: 'item', label: 'Orders', href: '/merchant/orders', icon: <ShoppingCart size={18} /> },
+  { type: 'item', label: 'Catalog', href: '/merchant/catalog', icon: <Package size={18} /> },
+  { type: 'item', label: 'Inventory', href: '/merchant/inventory', icon: <Boxes size={18} /> },
+  { type: 'item', label: 'Payments', href: '/merchant/payments', icon: <CreditCard size={18} /> },
+
+  { type: 'section', label: 'Customers' },
+  { type: 'item', label: 'Customers', href: '/merchant/customers', icon: <Users size={18} /> },
+  { type: 'item', label: 'Campaigns', href: '/merchant/campaigns', icon: <Megaphone size={18} /> },
+
+  { type: 'section', label: 'Partner' },
+  { type: 'item', label: 'Referrals', href: '/rep/referrals', icon: <User size={18} /> },
+  { type: 'item', label: 'Payouts', href: '/rep/payouts', icon: <DollarSign size={18} /> },
+  { type: 'item', label: 'Taxes', href: '/rep/tax', icon: <FileText size={18} /> },
+];
+
 /* ---------------- Admin-only extras ---------------- */
 const NAV_ADMIN: NavItem[] = [
   {
@@ -162,22 +190,10 @@ const NAV_ADMIN: NavItem[] = [
   { type: 'item', label: 'Book a demo', href: '/book', icon: <Book size={18} />, adminOnly: true },
   { type: 'item', label: 'Contact', href: '/contact', icon: <Mail size={18} />, adminOnly: true },
 
-  { type: 'section', label: 'eCommerce Platform', adminOnly: false },
+  { type: 'section', label: 'eCommerce Platform', adminOnly: true },
   { type: 'item', label: 'Platform Revenue', href: '/admin/revenue', icon: <DollarSign size={18} />, adminOnly: true },
-  { type: 'item', label: 'Rep My Payouts', href: '/rep/payouts', icon: <DollarSign size={18} />, adminOnly: false },
-  { type: 'item', label: 'Rep My Taxes', href: '/rep/tax', icon: <DollarSign size={18} />, adminOnly: false },
-  { type: 'item', label: 'Getting Started', href: '/merchant', icon: <Rocket size={18} />, adminOnly: false },
-  { type: 'item', label: 'Merchant Payments', href: '/merchant/payments', icon: <FileStack size={18} />, adminOnly: false },
-  { type: 'item', label: 'Merchant Orders', href: '/merchant/orders', icon: <FileStack size={18} />, adminOnly: false },
-  { type: 'item', label: 'Merchant Catalog', href: '/merchant/catalog', icon: <FileStack size={18} />, adminOnly: false },
-  { type: 'item', label: 'Merchant Inventory', href: '/merchant/inventory', icon: <FileStack size={18} />, adminOnly: false },
-  { type: 'item', label: 'Merchant Customers', href: '/merchant/customers', icon: <Users size={18} />, adminOnly: false },
-  { type: 'item', label: 'Merchant Campaigns', href: '/merchant/campaigns', icon: <Mail size={18} />, adminOnly: false },
-  { type: 'item', label: 'Print Orders', href: '/admin/print-orders', icon: <FileStack size={18} />, adminOnly: true },
+  { type: 'item', label: 'Print Orders', href: '/admin/print-orders', icon: <Printer size={18} />, adminOnly: true },
   { type: 'item', label: 'Outreach Pipeline', href: '/admin/outreach', icon: <Rocket size={18} />, adminOnly: true },
-  { type: 'item', label: 'Rep Referral Dashboard', href: '/rep/referrals', icon: <User size={18} />, adminOnly: false },
-  { type: 'item', label: 'Checkout Success', href: '/checkout/success', icon: <FileStack size={18} />, adminOnly: false },
-  { type: 'item', label: 'Checkout Cancel', href: '/checkout/cancel', icon: <FileStack size={18} />, adminOnly: false },
 
   { type: 'item', label: 'Admin Tools', href: '/admin/tools', icon: <Wrench size={18} />, adminOnly: true },
   { type: 'item', label: 'Cron Health', href: '/admin/cron', icon: <Activity size={18} />, adminOnly: true },
@@ -490,8 +506,12 @@ function NavItemButtonOrLink({
 }) {
   const pathname = usePathname();
   const baseClasses = clsx(
-    'group relative w-full flex items-center gap-3 px-3 py-2 text-sm rounded transition',
-    isActive ? 'bg-zinc-800 font-semibold text-white' : 'hover:bg-zinc-800 text-zinc-300',
+    'group relative w-full flex items-center gap-3 px-3 py-2 text-sm rounded-lg transition-colors',
+    // Active gets a subtle fill + a sky accent bar on the left; inactive stays quiet
+    // and brightens on hover.
+    isActive
+      ? 'bg-white/[0.07] font-medium text-white before:absolute before:left-0 before:top-1/2 before:h-5 before:w-0.5 before:-translate-y-1/2 before:rounded-full before:bg-sky-400'
+      : 'text-zinc-400 hover:bg-white/[0.04] hover:text-white',
     collapsed && 'justify-center',
     kbdSelected && 'ring-2 ring-purple-500 ring-offset-0 ring-offset-transparent'
   );
@@ -501,7 +521,7 @@ function NavItemButtonOrLink({
   const targetLabel = collapsed && firstChild ? firstChild.label : item.label;
 
   const icon = (
-    <div className={clsx('text-white shrink-0 flex items-center justify-center', collapsed ? 'w-10' : 'w-10')}>
+    <div className="shrink-0 flex w-10 items-center justify-center [&_svg]:h-[18px] [&_svg]:w-[18px]">
       {item.icon}
     </div>
   );
@@ -656,23 +676,28 @@ export function AdminNavSections({ collapsed = false }: { collapsed?: boolean })
   // Core nav (without brand; brand handled by BrandSwitcher)
   const coreItems = useMemo<NavItem[]>(
     () => [
+      { type: 'section', label: 'Sites' },
       {
         type: 'item',
-        label: 'Sites & Templates',
-        icon: <FileStack size={18} />,
+        label: 'Sites',
+        icon: <LayoutGrid size={18} />,
         children: [
-          { label: 'Browse Sites and Templates', href: '/admin/templates/list' },
-          { label: 'Create New Site or Template', href: '/admin/templates/new' },
+          { label: 'Browse sites', href: '/admin/templates/list' },
+          { label: 'New site', href: '/admin/templates/new' },
         ],
       },
     ],
     []
   );
 
+  // Merchant nav is for everyone; the admin sections layer on top for platform admins.
   const items = useMemo<NavItem[]>(
-    () => (isAdmin ? [...coreItems, ...NAV_ELECTINFO, ...NAV_ADMIN] : [...coreItems]),
+    () =>
+      isAdmin
+        ? [...coreItems, ...NAV_MERCHANT, ...NAV_ELECTINFO, ...NAV_ADMIN]
+        : [...coreItems, ...NAV_MERCHANT],
     [isAdmin, coreItems]
-  );  
+  );
 
   /* -------- persist/restore open submenu state -------- */
   useEffect(() => {
@@ -882,11 +907,14 @@ export function AdminNavSections({ collapsed = false }: { collapsed?: boolean })
           return !collapsed ? (
             <div
               key={`section-${item.label}-${idx}`}
-              className="text-xs uppercase text-zinc-500 px-3 pt-4 pb-1 tracking-wide"
+              className="px-3 pt-5 pb-1.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-zinc-500"
             >
-              — {item.label}
+              {item.label}
             </div>
-          ) : null;
+          ) : (
+            // Collapsed rail: a thin divider stands in for the section label.
+            <div key={`section-${item.label}-${idx}`} className="mx-auto my-2 h-px w-6 bg-white/10" />
+          );
         }
 
         const isActive =
@@ -964,13 +992,13 @@ export function AdminNavSections({ collapsed = false }: { collapsed?: boolean })
                       key={child.href}
                       href={child.href}
                       className={isNewTemplate ? newBtnClasses : normalClasses}
-                      title={isNewTemplate ? 'Create a new template or site' : child.label}
+                      title={isNewTemplate ? 'Create a new site' : child.label}
                       onClick={() => {
                         if (child.href && child.href !== pathname) handleNavigateStart(child.href);
                       }}
                     >
                       {isNewTemplate && <Plus size={14} />}
-                      {isNewTemplate ? 'New Template' : child.label}
+                      {child.label}
                     </Link>
                   );
                 })}

@@ -5,6 +5,7 @@
 // scope on the orders join) guarantee a merchant only sees their own customer.
 import Link from 'next/link';
 import { getServerSupabase } from '@/lib/supabase/server';
+import CustomerAdminPanel from '@/components/merchant/CustomerAdminPanel';
 
 export const dynamic = 'force-dynamic';
 
@@ -26,7 +27,7 @@ export default async function CustomerProfilePage({
   // Cast: types/supabase.ts is stale (no `customers`). See CLAUDE.md §8.
   const { data: customer } = await (supabase as any)
     .from('customers')
-    .select('id, merchant_id, email, name, phone, stripe_customer_id, marketing_consent, orders_count, lifetime_cents, first_order_at, last_order_at, tags')
+    .select('id, merchant_id, email, name, phone, stripe_customer_id, marketing_consent, orders_count, lifetime_cents, first_order_at, last_order_at, tags, notes')
     .eq('id', params.id)
     .maybeSingle();
 
@@ -68,20 +69,19 @@ export default async function CustomerProfilePage({
         </div>
       </div>
 
-      {tags.length > 0 && (
-        <div className="mt-3 flex flex-wrap gap-1.5">
-          {tags.map((t) => (
-            <span key={t} className="rounded-full bg-white/10 px-2 py-0.5 text-xs text-neutral-300">{t}</span>
-          ))}
-        </div>
-      )}
-
       <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
         <Stat label="Lifetime value" value={fmtCents(customer.lifetime_cents)} />
         <Stat label="Orders" value={String(customer.orders_count)} />
         <Stat label="First order" value={customer.first_order_at ? new Date(customer.first_order_at).toLocaleDateString() : '—'} />
         <Stat label="Last order" value={customer.last_order_at ? new Date(customer.last_order_at).toLocaleDateString() : '—'} />
       </div>
+
+      <CustomerAdminPanel
+        customerId={customer.id}
+        initialNotes={customer.notes ?? ''}
+        initialTags={tags}
+        initialConsent={!!customer.marketing_consent}
+      />
 
       <h2 className="mt-8 text-lg font-semibold">Order history</h2>
       <div className="mt-3 overflow-x-auto rounded-xl border border-neutral-800">

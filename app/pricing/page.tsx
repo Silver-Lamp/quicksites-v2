@@ -378,6 +378,7 @@ export default function PricingPage() {
                 <Feature text="Drag-and-drop builder, unlimited pages" />
                 <Feature text="Free hosting on a quicksites.ai subdomain" />
                 <Feature text="Storefront + Stripe checkout on every site" />
+                <Feature text="Customer CRM + email campaigns — built in, free" />
                 <Feature text="Starter AI allowance (copy, images)" />
                 <Feature text={`We take ${pct(ORDER_FEE_PCT)} per order — nothing until you sell`} />
                 <div className="rounded-lg bg-muted/40 p-3 text-xs text-muted-foreground">

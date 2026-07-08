@@ -3,9 +3,11 @@
 // Customer profile (CRM_PLAN.md Phase 1). Contact + lifetime value + order history
 // for one customer. RLS-scoped: `customers_owner_read` (and the merchant-owner
 // scope on the orders join) guarantee a merchant only sees their own customer.
+import type { ReactNode } from 'react';
 import Link from 'next/link';
 import { getServerSupabase } from '@/lib/supabase/server';
 import CustomerAdminPanel from '@/components/merchant/CustomerAdminPanel';
+import { buildCustomerActivity, type ActivityEvent } from '@/lib/crm/activity';
 
 export const dynamic = 'force-dynamic';
 
@@ -27,7 +29,7 @@ export default async function CustomerProfilePage({
   // Cast: types/supabase.ts is stale (no `customers`). See CLAUDE.md §8.
   const { data: customer } = await (supabase as any)
     .from('customers')
-    .select('id, merchant_id, email, name, phone, stripe_customer_id, marketing_consent, orders_count, lifetime_cents, first_order_at, last_order_at, tags, notes')
+    .select('id, merchant_id, email, name, phone, stripe_customer_id, marketing_consent, orders_count, lifetime_cents, first_order_at, last_order_at, tags, notes, created_at')
     .eq('id', params.id)
     .maybeSingle();
 
@@ -47,6 +49,23 @@ export default async function CustomerProfilePage({
     .eq('merchant_id', customer.merchant_id)
     .order('created_at', { ascending: false })
     .limit(200);
+
+  // Campaign receipts (RLS: crm_campaign_sends_owner_read). Embed the campaign subject.
+  const { data: sends } = await (supabase as any)
+    .from('crm_campaign_sends')
+    .select('id, created_at, status, crm_campaigns(subject)')
+    .eq('customer_id', customer.id)
+    .order('created_at', { ascending: false })
+    .limit(200);
+
+  const activity = buildCustomerActivity({
+    orders: (orders ?? []) as any[],
+    campaignSends: ((sends ?? []) as any[]).map((s) => ({
+      id: s.id, created_at: s.created_at, status: s.status, subject: s.crm_campaigns?.subject ?? null,
+    })),
+    createdAt: customer.created_at ?? null,
+    firstOrderAt: customer.first_order_at ?? null,
+  });
 
   const tags: string[] = Array.isArray(customer.tags) ? customer.tags : [];
 
@@ -83,32 +102,45 @@ export default async function CustomerProfilePage({
         initialConsent={!!customer.marketing_consent}
       />
 
-      <h2 className="mt-8 text-lg font-semibold">Order history</h2>
-      <div className="mt-3 overflow-x-auto rounded-xl border border-neutral-800">
-        <table className="min-w-full text-sm">
-          <thead className="bg-neutral-900">
-            <tr className="[&>th]:px-4 [&>th]:py-3 text-left">
-              <th>When</th><th>Order</th><th>Site</th><th>Status</th><th>Provider</th><th className="text-right">Total</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-neutral-800">
-            {(orders || []).map((o: any) => (
-              <tr key={o.id} className="[&>td]:px-4 [&>td]:py-3">
-                <td className="whitespace-nowrap text-neutral-400">{new Date(o.created_at ?? '').toLocaleString()}</td>
-                <td className="font-mono">{o.id.slice(0, 8)}…</td>
-                <td>{o.site_slug}</td>
-                <td><span className="rounded bg-neutral-800 px-2 py-1 text-xs">{o.status}</span></td>
-                <td className="text-xs uppercase text-neutral-400">{o.provider || '-'}</td>
-                <td className="text-right tabular-nums">{fmtCents(o.total_cents, o.currency)}</td>
-              </tr>
-            ))}
-            {(!orders || orders.length === 0) && (
-              <tr><td className="px-4 py-6 text-neutral-500" colSpan={6}>No orders linked to this customer.</td></tr>
-            )}
-          </tbody>
-        </table>
+      <h2 className="mt-8 text-lg font-semibold">Activity</h2>
+      <div className="mt-3 rounded-xl border border-neutral-800 p-2">
+        {activity.length === 0 ? (
+          <div className="px-3 py-6 text-sm text-neutral-500">No activity yet.</div>
+        ) : (
+          <ol className="relative">
+            {activity.map((e) => <ActivityRow key={e.id} e={e} />)}
+          </ol>
+        )}
       </div>
     </div>
+  );
+}
+
+function ActivityRow({ e }: { e: ActivityEvent }) {
+  const when = new Date(e.at).toLocaleString();
+  let icon = '•';
+  let title: ReactNode = '';
+  let tone = 'text-neutral-300';
+  if (e.kind === 'order') {
+    icon = '🧾';
+    title = <>Order · <span className="tabular-nums">{fmtCents(e.totalCents, e.currency)}</span>{e.siteSlug ? <span className="text-neutral-500"> · {e.siteSlug}</span> : null}</>;
+    tone = e.status === 'refunded' ? 'text-amber-300' : 'text-neutral-200';
+  } else if (e.kind === 'campaign') {
+    icon = '✉️';
+    title = <>Received: <span className="text-neutral-200">{e.subject}</span></>;
+    tone = e.status === 'failed' ? 'text-red-300' : 'text-neutral-300';
+  } else {
+    icon = '⭐';
+    title = 'Became a customer';
+  }
+  return (
+    <li className="flex items-start gap-3 px-3 py-2.5 border-b border-white/5 last:border-0">
+      <span className="mt-0.5 w-5 shrink-0 text-center">{icon}</span>
+      <div className="min-w-0 flex-1">
+        <div className={`text-sm ${tone}`}>{title}</div>
+        <div className="text-xs text-neutral-500">{when}{e.kind === 'order' ? ` · ${e.status}` : ''}</div>
+      </div>
+    </li>
   );
 }
 

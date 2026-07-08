@@ -3,6 +3,10 @@
 
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase/client';
+import CharacterAvatar from '@/components/brand/CharacterAvatar';
+import Typewriter from '@/components/ui/typewriter';
+
+const GUEST_LINE = 'You’re building as a guest. Sign up to publish your site — your work is saved.';
 
 /** Build a shareable, watermarked preview URL from the current editor path. */
 function buildPreviewUrl(): string | null {
@@ -67,6 +71,8 @@ export default function GuestPublishBanner() {
   };
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  // The guide "types" the intro once, then it settles into the interactive version.
+  const [typed, setTyped] = useState(false);
 
   useEffect(() => {
     setPreviewUrl(buildPreviewUrl());
@@ -117,17 +123,24 @@ export default function GuestPublishBanner() {
   return (
     <div className="w-full border-b border-sky-500/30 bg-sky-500/10 px-4 py-2 text-sm">
       <div className="mx-auto flex max-w-6xl flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-        <span className="text-sky-100">
-          👋 You’re building as a guest.{' '}
-          <button
-            type="button"
-            onClick={() => setOpen(true)}
-            className="font-medium text-sky-300 underline-offset-2 transition hover:text-sky-200 hover:underline"
-          >
-            Sign up to publish your site
-          </button>{' '}
-          — your work is saved.
-        </span>
+        <div className="flex items-center gap-2.5">
+          <CharacterAvatar size={30} />
+          {typed ? (
+            <span className="text-sky-100">
+              You’re building as a guest.{' '}
+              <button
+                type="button"
+                onClick={() => setOpen(true)}
+                className="font-medium text-sky-300 underline-offset-2 transition hover:text-sky-200 hover:underline"
+              >
+                Sign up to publish your site
+              </button>{' '}
+              — your work is saved.
+            </span>
+          ) : (
+            <Typewriter text={GUEST_LINE} className="text-sky-100" onDone={() => setTyped(true)} />
+          )}
+        </div>
 
         {status === 'sent' ? (
           <span className="text-emerald-300">{message}</span>

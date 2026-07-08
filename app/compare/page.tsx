@@ -159,7 +159,10 @@ export default function ComparePage() {
       <SiteHeader sticky />
       <div className="relative min-h-screen bg-zinc-950 text-white">
         {/* Hero */}
-        <section className="mx-auto max-w-5xl px-6 pt-16 pb-10 text-center">
+        <section className="relative mx-auto max-w-5xl px-6 pt-16 pb-10 text-center">
+          <div aria-hidden className="pointer-events-none absolute inset-0 -z-10 overflow-hidden">
+            <div className="absolute -top-20 left-1/2 h-72 w-[36rem] -translate-x-1/2 rounded-full bg-sky-500/15 blur-3xl" />
+          </div>
           <span className="rounded-full border border-sky-500/40 bg-sky-500/10 px-3 py-1 text-xs font-medium text-sky-300">
             How we compare
           </span>
@@ -199,7 +202,7 @@ export default function ComparePage() {
               </thead>
               <tbody>
                 {ROWS.map((r) => (
-                  <tr key={r.feature} className="border-b border-zinc-800/70 last:border-0">
+                  <tr key={r.feature} className="border-b border-zinc-800/70 transition-colors last:border-0 hover:bg-white/[0.02]">
                     <th className="px-4 py-4 align-top text-left font-normal">
                       <div className="text-sm font-semibold text-zinc-100">{r.feature}</div>
                       {r.detail && <div className="mt-1 text-xs text-zinc-500">{r.detail}</div>}
@@ -296,8 +299,9 @@ export default function ComparePage() {
               <div className="rounded-xl border border-zinc-800 bg-zinc-900/40 p-5">
                 <h4 className="text-base font-semibold text-white">Choose GoHighLevel if…</h4>
                 <p className="mt-2 text-sm text-zinc-400">
-                  Your job is <span className="text-zinc-200">marketing</span>: CRM, pipelines, two-way SMS, a
-                  unified inbox, and campaign automation. That’s GHL’s moat and we don’t try to compete with it.
+                  Your job is <span className="text-zinc-200">heavy marketing automation</span>: sales pipelines,
+                  two-way SMS, a unified inbox, and multi-step campaign builders. We ship a customer CRM + email
+                  campaigns now, but GHL’s automation stack runs deeper — and we don’t try to match all of it.
                 </p>
               </div>
             </div>

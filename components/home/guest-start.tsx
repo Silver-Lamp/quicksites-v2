@@ -7,6 +7,7 @@ import { motion } from 'framer-motion';
 import { ensureGuestSession } from '@/lib/auth/guestSession';
 import { INDUSTRIES, type IndustryKey } from '@/lib/industries';
 import { buildIndustryStarter } from '@/lib/builder/industryScaffold';
+import BrandLoader from '@/components/brand/BrandLoader';
 
 function slugify(s: string): string {
   return s
@@ -285,6 +286,11 @@ export default function GuestStart() {
           {error}
         </p>
       )}
+
+      <BrandLoader
+        open={loading}
+        message={mode === 'convert' ? 'Rebuilding your site' : 'Building your site'}
+      />
     </motion.form>
   );
 }

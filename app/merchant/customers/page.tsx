@@ -22,12 +22,15 @@ export default async function MerchantCustomersPage({ searchParams }: { searchPa
   // Cast: types/supabase.ts is stale (no `customers`). See CLAUDE.md §8.
   const { data: customers } = await (supabase as any)
     .from('customers')
-    .select('id, email, name, phone, orders_count, lifetime_cents, first_order_at, last_order_at, marketing_consent')
+    .select('id, email, name, phone, orders_count, lifetime_cents, first_order_at, last_order_at, marketing_consent, tags')
     .eq('merchant_id', merchant.id)
     .order('last_order_at', { ascending: false, nullsFirst: false })
     .limit(1000);
 
-  const rows: CustomerRow[] = (customers ?? []) as CustomerRow[];
+  const rows: CustomerRow[] = ((customers ?? []) as any[]).map((c) => ({
+    ...c,
+    tags: Array.isArray(c.tags) ? c.tags : [],
+  })) as CustomerRow[];
   const totalLtv = rows.reduce((s, r) => s + (r.lifetime_cents || 0), 0);
 
   return (

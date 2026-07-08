@@ -98,10 +98,17 @@ const ROWS: Row[] = [
     ghl: { mark: 'yes', note: 'Good — $497 SaaS mode' },
   },
   {
-    feature: 'CRM / SMS / marketing automation',
-    detail: 'Pipelines, unified inbox, campaigns',
-    qs: { mark: 'no', note: 'Out of scope by design' },
+    feature: 'Customer CRM + email marketing',
+    detail: 'Customer records, segments, campaigns',
+    qs: { mark: 'partial', note: 'Built-in: CRM + consent-gated email campaigns w/ revenue attribution' },
     duda: { mark: 'partial', note: 'Light' },
+    ghl: { mark: 'yes', note: 'Deeper — adds SMS, pipelines, unified inbox' },
+  },
+  {
+    feature: 'SMS / pipelines / unified inbox',
+    detail: 'Two-way SMS, deal pipelines, automations',
+    qs: { mark: 'no', note: 'Not yet (email campaigns only today)' },
+    duda: { mark: 'no', note: '—' },
     ghl: { mark: 'yes', note: 'Dominant — their core strength' },
   },
   {

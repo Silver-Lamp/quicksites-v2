@@ -1,28 +1,26 @@
 # CRM Plan
 
-> Status: **Phase 0 shipped** (2026-07-07). Grounded in an audit of the current customer/contact/comms code.
+> Status: **Phases 0–3 shipped** (2026-07-07). Only Phase 4 (unify prospects & customers) remains, and it's optional. Grounded in an audit of the current customer/contact/comms code.
 > Companion to [`docs/MONETIZATION.md`](MONETIZATION.md), [`docs/RESELLER_GTM.md`](RESELLER_GTM.md), and the commerce money-path in [`CLAUDE.md`](../CLAUDE.md) §5.
 
 ---
 
 ## ⭐ Status & new-session kickoff (read this first)
 
-**Phase 0 (identity spine) is DONE in code** — PR #220. **Phase 1 (customer surfaces) is the next work.**
+**Phases 0–3 are SHIPPED** (2026-07-07, PRs #220, #222–#229). The CRM is a complete loop: capture → see → annotate → segment → email → attribute. What's live:
 
-### What Phase 0 delivered (already merged)
-- **`customers` table** — `supabase/migrations/20260707_customers_identity_spine.sql`. Per-merchant, deduped by `email_normalized`. Columns: `id, merchant_id, email, email_normalized, name, phone, stripe_customer_id, marketing_consent, first_order_at, last_order_at, orders_count, lifetime_cents, tags jsonb, created_at, updated_at`, `unique(merchant_id, email_normalized)`. **RLS:** deny-default; policy `customers_owner_read` lets a merchant owner `SELECT` their own customers (join → `merchants.owner_id = auth.uid()`); **service-role writes only**.
-- **`orders.customer_email`** column added (denormalized) + `orders.customer_id` now populated.
-- **Atomic RPC** `upsert_customer_from_order(p_merchant, p_email, p_name, p_phone, p_stripe, p_total, p_at) → uuid` — insert-or-bump (`orders_count+1`, `lifetime_cents += total`, `last_order_at`, coalesce name/phone/stripe). Service-role only.
-- **Wiring** — `lib/commerce/customers.ts`: `normalizeEmail`, `extractBuyerFromStripeEvent` (pure, tested), `recordCustomerForPaidOrder` (best-effort). Called from `markOrderPaid` (`lib/commerce/orders.ts`, step "3b") — records the buyer from the Stripe event, links the order. Never blocks the paid transition.
+### What shipped (all merged, all migrations applied)
+- **Identity spine (Phase 0)** — `customers` table (`20260707_customers_identity_spine.sql`, per-merchant, deduped by `email_normalized`, deny-default RLS + `customers_owner_read`) + `upsert_customer_from_order` RPC. `markOrderPaid` step "3b" (`lib/commerce/customers.ts#recordCustomerForPaidOrder`) upserts the buyer + links `orders.customer_id`/`customer_email`. **NB:** `orders.customer_id` was missing from the live schema (a latent Phase-0 bug) and added by `20260707_orders_customer_id.sql`. Historical backfill: `npm run backfill:customers` (`scripts/backfill-customers.ts`, dry-run default; parses `payments.raw`).
+- **Customer surfaces (Phase 1)** — `/merchant/customers` (list, `components/merchant/CustomersListClient.tsx`) + `/merchant/customers/[id]` profile (LTV, activity timeline); buyer email on `/merchant/orders`; "Merchant Customers" nav item.
+- **Organize & engage (Phase 2)** — segments/filters/sort/tags (`lib/crm/segments.ts`), editable notes/tags/`marketing_consent` (`CustomerAdminPanel` → owner-gated `PATCH /api/merchant/customers/[id]`, `customers.notes` col via `20260707_customers_notes.sql`), and a unified **activity timeline** (`lib/crm/activity.ts` — orders + campaign receipts, keyed to `customer_id`).
+- **Marketing (Phase 3)** — email campaigns to a segment: `crm_campaigns`/`crm_campaign_sends` (`20260707_crm_campaigns.sql`, **not** the geo-lead `campaigns` table), `/merchant/campaigns` composer, `POST /api/merchant/campaigns` (preview/test/send, owner-gated, consent-**always**-enforced, 250/send cap), one-click unsubscribe (`lib/crm/unsubToken.ts` + `GET /api/crm/unsubscribe`, `List-Unsubscribe` header), and last-touch 7-day **order attribution** (`lib/crm/attribution.ts`, revenue per campaign shown in the history table).
 
-### ⚠️ Before building Phase 1 — prerequisites
-1. **Apply the migration:** `npm run db:migrate:up` (needs `SUPABASE_DB_URL`). Until then the `customers` table doesn't exist and every new order silently no-ops the customer write. See the `pending-migrations-2026-07` memory.
-2. **`types/supabase.ts` is stale** — it does NOT include `customers`. Read from it with the **service-role `createClient(...)` untyped** (no `<Database>` generic) or cast, exactly like `lib/commerce/orders.ts` does for other new tables. Don't fight the generated types.
+### What's next (open)
+- **Phase 4** (optional) — unify prospects (`leads`) + buyers into one contacts model. Only if the two-model split becomes friction.
+- **Enrichment follow-ups** (not blocking): buyer/campaign **PostHog events** (`lib/analytics/events.ts` is still merchant-keyed — no `customer_created`/`campaign_sent`/`campaign_order_attributed`); campaign **open/click** metrics (Resend webhooks); **SMS** campaigns (`sendSms` rails exist); an **outbox/drain** path for sends above the 250 cap; **dedup/merge** UI for duplicate customers.
 
-### Where to start Phase 1 (concrete)
-1. **`/merchant/customers` list + profile** — mirror the pattern I just built for inventory: a server page (`app/merchant/inventory/page.tsx`) that resolves the merchant via `getServerSupabase()` (RLS-scoped — `customers_owner_read` means a plain authed query returns only the owner's rows) + a client list component (`components/merchant/InventoryListClient.tsx`). Add a "Merchant Customers" nav item in `components/admin/AppHeader/AdminNavSections.tsx` (near "Merchant Inventory", line ~173 — **not** `admin-chrome.tsx`/`responsive-admin-layout.tsx`, which have uncommitted user edits). Profile = one customer's `orders` (join on `customer_id`) + LTV/contact.
-2. **Add buyer identity to the merchant order view** — `app/merchant/orders/page.tsx` currently shows no buyer; now it can show `customer_email` / join `customers`.
-3. **Backfill** — a one-off script parsing existing `payments.raw` → `upsert_customer_from_order` + set `orders.customer_email`, so historical orders get customers too. (`scripts/` dir; deduped by normalized email.)
+### Still-true caveat
+- **`types/supabase.ts` does NOT include** `customers`/`crm_campaigns`/`crm_campaign_sends`. Read via the service-role `createClient(...)` untyped or cast `(supabase as any)`, as the shipped routes do. Don't fight the generated types.
 
 ### Decisions already made (don't relitigate)
 - **Per-merchant** customer identity (a buyer of two merchants = two rows). No platform-wide identity graph.
@@ -62,27 +60,27 @@ QuickSites today has **no buyer/customer entity**. Orders don't store who bought
 
 *Deliverable:* every paid order is tied to a deduplicated customer. ~2–3 PRs.
 
-### Phase 1 — Customer surfaces
-1. **Merchant customer list + profile** — `/merchant/customers`: searchable list (name/email), and a profile with order history, LTV, contact, shipping. 
-2. **Add buyer identity to the merchant order view** (currently blank).
-3. **Dedup + merge** by normalized email; manual merge for stragglers.
+### Phase 1 — Customer surfaces ✅ SHIPPED (PR #222)
+1. **Merchant customer list + profile** — `/merchant/customers`: searchable list, and a profile with order history + LTV. ✅
+2. **Add buyer identity to the merchant order view.** ✅
+3. **Dedup + merge** by normalized email — *still open* (a follow-up; no duplicate data yet).
 
-*Deliverable:* merchants can see who their customers are. ~2 PRs.
+*Deliverable:* merchants can see who their customers are. Shipped.
 
-### Phase 2 — Organize & engage
-1. **Tags & segments** — `customers.tags jsonb` + saved segments defined by filters (has ordered, spend > X, last order > N days, product bought, city). A `customer_segments` definition table; segments resolve to a live query.
-2. **Activity timeline** — unify per-customer events (orders, `email_logs`, SMS, `form_submissions`) into a `customer_activity` view/table keyed to `customer_id`. Add buyer-level analytics events (`customer_created`, `repeat_purchase`) to `lib/analytics/events.ts`.
-3. **Notes** — free-text notes on a customer (reuse the `leads.notes` pattern).
-4. **Consent** — wire `marketing_consent` + reuse `/admin/unsubscribe/[token]` so marketing is opt-in and one-click-out (CAN-SPAM/GDPR hygiene).
+### Phase 2 — Organize & engage ✅ SHIPPED (PRs #224, #226, #228)
+1. **Tags & segments** — `customers.tags jsonb` + segment filters (opted-in, repeat, recent, lapsed, tag), shared by the list + the campaign audience resolver (`lib/crm/segments.ts`). Shipped as **live client/server predicates**, not a `customer_segments` definition table (saved segments are a later add if needed). ✅
+2. **Activity timeline** — `lib/crm/activity.ts` merges orders + campaign receipts (keyed to `customer_id`). ✅ (`email_logs`/`form_submissions`/SMS sources not yet folded in; buyer-level PostHog events still TODO.)
+3. **Notes** — `customers.notes` + the profile editor. ✅
+4. **Consent** — `marketing_consent` editable on the profile + one-click unsubscribe (`/api/crm/unsubscribe`, purpose-built rather than reusing `/admin/unsubscribe/[token]`). ✅
 
-*Deliverable:* segmentable, annotated customer records with history + consent. ~3 PRs.
+*Deliverable:* segmentable, annotated customer records with history + consent. Shipped.
 
-### Phase 3 — Marketing (email/SMS campaigns)
-1. **Audience builder** over segments → **campaigns** — a `campaigns` + `campaign_sends` table (distinct from the existing geographic *lead* campaigns), sending via the existing `sendEmail`/`sendSms` + `email_outbox` drain, with scheduling and per-send logging keyed to `customer_id`.
-2. **Templates** — reuse the org-branded email builder in `lib/email.ts`; add a few campaign templates (new-product, win-back, restock).
-3. **Metrics** — opens/clicks (Resend webhooks) + attributed orders.
+### Phase 3 — Marketing (email/SMS campaigns) ✅ SHIPPED, email (PRs #227, #229)
+1. **Audience builder** over segments → **campaigns** — `crm_campaigns` + `crm_campaign_sends` (named `crm_*` to stay distinct from the geo *lead* `campaigns` table), sending via `sendEmail`, per-send logging keyed to `customer_id`, consent-always-enforced, 250/send cap. ✅ (Synchronous send; `email_outbox` drain for larger blasts + scheduling are TODO.)
+2. **Templates** — org-branded HTML via `renderCampaignHtml` + `orgEmailBrand()`. ✅ (Preset templates — new-product/win-back/restock — TODO.)
+3. **Metrics** — **attributed orders** shipped (`lib/crm/attribution.ts`, last-touch 7-day, revenue per campaign). ✅ Opens/clicks (Resend webhooks) — TODO. **SMS** channel — TODO.
 
-*Deliverable:* consented email/SMS marketing to real customers. ~3–4 PRs.
+*Deliverable:* consented email marketing to real customers, with revenue attribution. Shipped.
 
 ### Phase 4 — Unify prospects & customers (optional)
 Generalize the mature `leads` pipeline (stages, notes, campaigns) into a single **contacts** abstraction spanning cold prospects → buyers, so one funnel view covers acquisition → retention. Large; only if the two-model split becomes friction.

@@ -14,7 +14,7 @@ Companion to [`MODEL_A_PLAN.md`](MODEL_A_PLAN.md).
    → customer pays → webhook /api/commerce/webhooks/stripe → markOrderPaid
         → payments row + commission_ledger (if referral-attributed)
 ```
-Canonical tables: `catalog_items` (products), `orders`/`order_items`, `payment_accounts`, `payments`, `commission_ledger`.
+Canonical tables: `catalog_items` (products), `orders`/`order_items`, `payment_accounts`, `payments`, `commission_ledger`. `markOrderPaid` also upserts the buyer into `customers` + links `orders.customer_id` (CRM spine — see [`CRM_PLAN.md`](CRM_PLAN.md)).
 
 ## Test mode (no Stripe) — already proven
 Set in `.env.local`:

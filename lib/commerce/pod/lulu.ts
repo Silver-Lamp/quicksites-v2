@@ -191,10 +191,20 @@ export async function cancelPrintJob(id: number | string): Promise<{ ok: boolean
   }
 }
 
-/** Verify a Lulu webhook HMAC-SHA256 over the raw body. No secret set → accept (sandbox). */
+/**
+ * Verify a Lulu webhook HMAC-SHA256 over the raw body.
+ * No secret set → fail CLOSED in production (reject), accept only in
+ * non-production so the sandbox flow can run without the secret configured.
+ */
 export function verifyLuluWebhook(rawBody: Buffer, signatureHeader?: string): boolean {
   const secret = process.env.LULU_WEBHOOK_SECRET;
-  if (!secret) return true;
+  if (!secret) {
+    if (process.env.NODE_ENV === 'production') {
+      console.error('[lulu webhook] LULU_WEBHOOK_SECRET is not set — rejecting webhook');
+      return false;
+    }
+    return true;
+  }
   if (!signatureHeader) return false;
   const computed = crypto.createHmac('sha256', secret).update(rawBody).digest('base64');
   const a = Buffer.from(computed);

@@ -84,6 +84,14 @@ body { font-family: 'Inter', system-ui, sans-serif; -webkit-text-size-adjust: 10
   --card: 0 0% 8%;
   --card-foreground: 210 40% 98%;
 
+  /* Dark-mode border/input/ring. Without these the light-scope values
+     (240 5.9% 90% — near-white) leaked into dark surfaces, giving inputs and
+     cards a harsh white outline on near-black. Soften to sit just above the
+     card so borders read as subtle hairlines, matching the rest of the UI. */
+  --border: 240 3.7% 16%;
+  --input: 240 3.7% 18%;
+  --ring: 240 4.9% 45%;
+
   --secondary: 240 3.7% 15.9%;
   --secondary-foreground: 210 40% 98%;
 

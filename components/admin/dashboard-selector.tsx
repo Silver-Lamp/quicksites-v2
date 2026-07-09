@@ -40,7 +40,7 @@ export function DashboardSelector({
             value={newName}
             onChange={(e) => setNewName(e.target.value)}
             placeholder="Dashboard name"
-            className="flex-1 px-2 py-1 border rounded"
+            className="flex-1 h-9 rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
           />
           <button
             onClick={() => {

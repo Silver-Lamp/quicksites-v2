@@ -33,28 +33,28 @@ export function ThemeControlPanel() {
 
       <div>
         <label className="block mb-1 font-medium">Font</label>
-        <select value={theme.fontFamily} onChange={(e) => update('fontFamily', e.target.value)} className="w-full p-2 border rounded">
+        <select value={theme.fontFamily} onChange={(e) => update('fontFamily', e.target.value)} className="w-full h-9 rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring">
           {FONTS.map((f) => <option key={f} value={f}>{f}</option>)}
         </select>
       </div>
 
       <div>
         <label className="block mb-1 font-medium">Border Radius</label>
-        <select value={theme.borderRadius} onChange={(e) => update('borderRadius', e.target.value)} className="w-full p-2 border rounded">
+        <select value={theme.borderRadius} onChange={(e) => update('borderRadius', e.target.value)} className="w-full h-9 rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring">
           {RADII.map((r) => <option key={r} value={r}>{r}</option>)}
         </select>
       </div>
 
       <div>
         <label className="block mb-1 font-medium">Accent Color</label>
-        <select value={theme.accentColor} onChange={(e) => update('accentColor', e.target.value)} className="w-full p-2 border rounded">
+        <select value={theme.accentColor} onChange={(e) => update('accentColor', e.target.value)} className="w-full h-9 rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring">
           {ACCENTS.map((a) => <option key={a} value={a}>{a}</option>)}
         </select>
       </div>
 
       <div>
         <label className="block mb-1 font-medium">Dark Mode</label>
-        <select value={theme.darkMode} onChange={(e) => update('darkMode', e.target.value)} className="w-full p-2 border rounded">
+        <select value={theme.darkMode} onChange={(e) => update('darkMode', e.target.value)} className="w-full h-9 rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring">
           <option value="light">light</option>
           <option value="dark">dark</option>
         </select>

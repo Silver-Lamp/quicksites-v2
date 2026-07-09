@@ -160,7 +160,7 @@ export default function AiPricingPage() {
                   <td className="p-2 min-w-[140px]"><Input value={row.provider||''} onChange={e=>setRows(rs=>{ const c=[...rs]; c[i] = { ...row, provider: e.target.value }; return c; })} placeholder="openai"/></td>
                   <td className="p-2 min-w-[180px]"><Input value={row.model_code||''} onChange={e=>setRows(rs=>{ const c=[...rs]; c[i] = { ...row, model_code: e.target.value }; return c; })} placeholder="gpt-4o-mini"/></td>
                   <td className="p-2 min-w-[140px]">
-                    <select className="border rounded px-2 py-1 w-full" value={row.modality} onChange={e=>setRows(rs=>{ const c=[...rs]; c[i] = { ...row, modality: e.target.value as any }; return c; })}>
+                    <select className="w-full h-9 rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring" value={row.modality} onChange={e=>setRows(rs=>{ const c=[...rs]; c[i] = { ...row, modality: e.target.value as any }; return c; })}>
                       {MODALITIES.map(m => <option key={m} value={m}>{m}</option>)}
                     </select>
                   </td>

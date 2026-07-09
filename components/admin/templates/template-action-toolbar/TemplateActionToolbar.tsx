@@ -7,7 +7,7 @@ import toast from 'react-hot-toast';
 import {
   RotateCcw, RotateCw, AlertTriangle, X, Maximize2, Minimize2,
   Smartphone, Tablet, Monitor, SlidersHorizontal, Check, Sun, Moon,
-  Settings as SettingsIcon, Trash2, Database, Minus, Wrench, Palette,
+  Settings as SettingsIcon, Trash2, Database, Minus, Wrench, Palette, Shuffle,
 } from 'lucide-react';
 import { ThemeShufflePanel } from '@/components/admin/templates/theme-shuffle-panel';
 import { pickCuratedTheme } from '@/lib/theme/pickTheme';
@@ -297,6 +297,7 @@ useEffect(() => {
       avoidAccent: cur?.data?.meta?.theme?.accentColor ?? null,
     });
     applyCuratedTheme(theme);
+    try { toast.success(`Theme: ${theme.name}`, { icon: '🎲' }); } catch { /* no-op */ }
   };
 
   /* patch bus: apply + queue save */
@@ -487,6 +488,19 @@ useEffect(() => {
 
   return mounted ? createPortal(
     <>
+      {/* Always-visible Shuffle-theme FAB — restyle the whole site in one click,
+          even when the toolbar is collapsed. Sits above the centered toolbar. */}
+      <button
+        type="button"
+        onClick={shuffleTheme}
+        title="Shuffle theme — restyle this site (keeps your content)"
+        aria-label="Shuffle theme"
+        className="fixed bottom-24 right-6 z-[2147483647] inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-purple-600 to-fuchsia-600 px-5 py-3 text-sm font-semibold text-white shadow-2xl ring-1 ring-white/20 transition hover:scale-[1.03] hover:from-purple-500 hover:to-fuchsia-500 active:scale-95 pointer-events-auto"
+      >
+        <Shuffle className="h-5 w-5" />
+        Shuffle theme
+      </button>
+
       <div
         id="template-action-toolbar"
         className={`fixed bottom-4 z-[2147483647] rounded-2xl border border-zinc-700 bg-zinc-900/95 backdrop-blur shadow-lg text-zinc-100 hover:border-purple-500 transition pointer-events-auto ${

@@ -8,6 +8,7 @@
 import * as React from 'react';
 import Link from 'next/link';
 import { RECENT_DAYS, LAPSED_DAYS, matchesSegment, type Segment } from '@/lib/crm/segments';
+import CustomerDedupPanel from '@/components/merchant/CustomerDedupPanel';
 
 export type CustomerRow = {
   id: string;
@@ -94,6 +95,9 @@ export default function CustomersListClient({
 
   return (
     <div>
+      {/* Possible duplicates (same phone / name across different emails) */}
+      <CustomerDedupPanel rows={rows} />
+
       {/* Segment chips */}
       <div className="mb-3 flex flex-wrap items-center gap-2 text-sm">
         {tabs.map((t) => (

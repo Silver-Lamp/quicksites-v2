@@ -1,6 +1,6 @@
 import {
   findBlockById, replaceBlockById, hasBlockId, blockId,
-  removeBlockById, moveChildById, insertIntoColumn,
+  removeBlockById, moveChildById, insertIntoColumn, moveChildAcrossColumns,
 } from '@/lib/blocks/tree';
 
 const tree = (): any[] => [
@@ -119,5 +119,24 @@ describe('insertIntoColumn', () => {
     const sec = findBlockById(next, 'sec');
     expect(sec.content.columns[0].items.map(blockId)).toEqual(['t1', 'new']);
     expect(sec.content.columns[1].items.map(blockId)).toEqual(['t2']);
+  });
+});
+
+describe('moveChildAcrossColumns', () => {
+  it('moves a child from column 0 to the next column (appends)', () => {
+    const next = moveChildAcrossColumns(tree(), 't1', 'next');
+    const sec = findBlockById(next, 'sec');
+    expect(sec.content.columns[0].items.map(blockId)).toEqual([]);
+    expect(sec.content.columns[1].items.map(blockId)).toEqual(['t2', 't1']);
+  });
+  it('wraps from the last column back to the first', () => {
+    const next = moveChildAcrossColumns(tree(), 't2', 'next');
+    const sec = findBlockById(next, 'sec');
+    expect(sec.content.columns[0].items.map(blockId)).toEqual(['t1', 't2']);
+    expect(sec.content.columns[1].items.map(blockId)).toEqual([]);
+  });
+  it('is a no-op for a top-level block (not in a section)', () => {
+    const next = moveChildAcrossColumns(tree(), 'hero', 'next');
+    expect(next.map(blockId)).toEqual(tree().map(blockId));
   });
 });

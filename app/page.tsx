@@ -3,8 +3,10 @@
 // users), independent of any client fetch/cache. The rest of the homepage is the
 // client component HomeClient.
 
+import { Suspense } from 'react';
 import HomeClient from '@/components/home/home-client';
 import SiteShowcase from '@/components/home/site-showcase';
+import ResellerDiagram from '@/components/home/reseller-diagram';
 import { getShowcaseData } from '@/lib/home/getShowcaseData';
 import { getResellers } from '@/lib/home/getResellers';
 import { marketingOg } from '@/lib/marketingOg';
@@ -23,26 +25,42 @@ export const metadata = marketingOg({
     'Launch a professional site for your local business in minutes — AI-assisted, with built-in commerce.',
 });
 
-export default async function Page() {
+// SSR the showcase inside a Suspense boundary so the homepage SHELL (hero) streams
+// immediately instead of blocking on ~5 sequential DB round-trips. The fallback is
+// the client SiteShowcase (paints from localStorage cache + /api/public/showcase),
+// so returning visitors see the row instantly and it upgrades to SSR data when ready.
+async function ShowcaseSSR() {
   let initial;
   try {
     const data = await getShowcaseData();
-    // SSR payload is the public view — drop admin-hidden sites. Admins still get
-    // the full set (incl. hidden, for management) via the client revalidation fetch.
     const visible = data.sites.filter((s) => !s.hidden);
-    // Only seed the client with SSR data when we actually have sites. If the query
-    // hiccuped and returned empty, passing a truthy-but-empty object would make the
-    // client treat it as "loaded, just empty" and render nothing — skipping the
-    // localStorage cache + /api/public/showcase fallback. Passing undefined lets the
-    // client paint from cache (returning visitors) and revalidate, so a transient
-    // SSR miss never blanks the row.
     initial = visible.length > 0 ? { ...data, sites: visible } : undefined;
   } catch {
-    initial = undefined; // client component will fetch/cache as a fallback
+    initial = undefined;
   }
+  return <SiteShowcase initialData={initial} />;
+}
 
-  // Featured reseller orgs for the reseller diagram (name/domain/accent from DB).
+// The reseller diagram is far below the fold — stream it too so getResellers never
+// blocks the shell.
+async function ResellersSSR() {
   const resellers = await getResellers();
+  return <ResellerDiagram resellers={resellers} />;
+}
 
-  return <HomeClient showcase={<SiteShowcase initialData={initial} />} resellers={resellers} />;
+export default function Page() {
+  return (
+    <HomeClient
+      showcase={
+        <Suspense fallback={<SiteShowcase initialData={undefined} />}>
+          <ShowcaseSSR />
+        </Suspense>
+      }
+      resellerSlot={
+        <Suspense fallback={<ResellerDiagram resellers={[]} />}>
+          <ResellersSSR />
+        </Suspense>
+      }
+    />
+  );
 }

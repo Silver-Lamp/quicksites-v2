@@ -51,11 +51,14 @@ function fallbackData(displayMode: ShowcaseDisplayMode, now: number): ShowcaseDa
 
 export async function getShowcaseData(): Promise<ShowcaseData> {
   const now = Date.now();
-  const rawMode = await getSiteSetting<string>(SHOWCASE_MODE_KEY, DEFAULT_SHOWCASE_MODE);
+  // Fetch the three showcase settings in parallel (was 3 sequential round-trips).
+  const [rawMode, hiddenList, orderList] = await Promise.all([
+    getSiteSetting<string>(SHOWCASE_MODE_KEY, DEFAULT_SHOWCASE_MODE),
+    getSiteSetting<string[]>(SHOWCASE_HIDDEN_KEY, []),
+    getSiteSetting<string[]>(SHOWCASE_ORDER_KEY, []),
+  ]);
   const displayMode = isShowcaseMode(rawMode) ? rawMode : DEFAULT_SHOWCASE_MODE;
-  const hiddenList = await getSiteSetting<string[]>(SHOWCASE_HIDDEN_KEY, []);
   const hidden = new Set(Array.isArray(hiddenList) ? hiddenList : []);
-  const orderList = await getSiteSetting<string[]>(SHOWCASE_ORDER_KEY, []);
   const orderIdx = new Map((Array.isArray(orderList) ? orderList : []).map((s, i) => [s, i]));
 
   try {

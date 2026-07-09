@@ -11,41 +11,34 @@ const supabase = createClient(
 );
 
 export async function POST(req: NextRequest) {
-  // Public claim flow (service-role, body-derived) → throttle to blunt domain-
-  // claim / steward_rewards / screenshot_queue spam. A verification-token
-  // redesign (so the claimer must prove control of the email) is a tracked
-  // follow-up; this is the interim abuse guard.
+  // Public claim endpoint (service-role) → throttle per IP.
   const limited = await rateLimitOr429(req, 'claim_site', 10, 3600);
   if (limited) return limited;
 
-  const { slug, email, anon } = await req.json();
+  const body = await req.json().catch(() => ({} as any));
+  const slug = typeof body?.slug === 'string' ? body.slug.trim() : '';
+  if (!slug) return Response.json({ error: 'Missing slug' }, { status: 400 });
 
   const { data: domain } = await supabase
     .from('domains')
-    .select('*')
+    .select('domain, is_claimed')
     .eq('domain', slug)
     .maybeSingle();
 
-  if (!domain || domain.is_claimed) {
+  if (!domain) return Response.json({ error: 'Not found' }, { status: 404 });
+  if (domain.is_claimed) {
     return Response.json({ error: 'Already claimed' }, { status: 400 });
   }
 
-  const updates = {
-    is_claimed: true,
-    ...(anon ? {} : { claimed_email: email }),
-  };
-
-  await supabase.from('domains').update(updates).eq('domain', slug);
-  await supabase.from('screenshot_queue').insert({ domain: slug });
-
-  if (!anon) {
-    await supabase.from('steward_rewards').insert({
-      user_id: null, // future link to email/user
-      site_domain: slug,
-      reason: 'initial_claim',
-      points: 5,
-    });
-  }
-
-  return Response.json({ success: true });
+  // HARDENED (interim): this endpoint previously flipped `domains.is_claimed`,
+  // wrote an arbitrary `claimed_email`, queued a screenshot, and granted
+  // `steward_rewards` — all straight from an unverified request body. That is a
+  // griefing (real-owner lockout), arbitrary-email, and points-farming vector.
+  // Until the email proof-of-control flow lands, perform NONE of those
+  // privileged writes: the claim stays PENDING and must be completed by a
+  // verified flow. (No current caller depends on the old side effects.)
+  return Response.json({
+    pending: true,
+    message: 'Claim requires email verification before it can be completed.',
+  });
 }

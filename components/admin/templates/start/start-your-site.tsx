@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { ArrowLeft, ArrowRight, Layers, Sparkles, FilePlus2, Search, Check, Globe } from 'lucide-react';
 import { KEY_TO_LABEL, type IndustryKey } from '@/lib/industries';
 import { buildIndustryStarter } from '@/lib/builder/industryScaffold';
+import BrandLoader from '@/components/brand/BrandLoader';
 
 type Step = 'choose' | 'industry' | 'template' | 'convert';
 type Starter = { slug: string; name: string; industry: string | null; heroUrl: string | null };
@@ -172,6 +173,7 @@ function IndustryStep({ router }: { router: ReturnType<typeof useRouter> }) {
 
   return (
     <div>
+      <BrandLoader open={busy} message="Building your site…" />
       <h1 className="text-2xl font-semibold tracking-tight">Tell us about your business</h1>
       <p className="mt-2 text-zinc-400">We’ll scaffold a starter site for your industry.</p>
 
@@ -306,6 +308,7 @@ function ConvertStep({ router }: { router: ReturnType<typeof useRouter> }) {
 
   return (
     <div>
+      <BrandLoader open={busy} message="Rebuilding your site…" />
       <h1 className="text-2xl font-semibold tracking-tight">Convert your existing site</h1>
       <p className="mt-2 text-zinc-400">
         Paste the address of a site you already have. Our AI reads it and rebuilds it here as a fresh,
@@ -395,6 +398,7 @@ function TemplateStep({ router }: { router: ReturnType<typeof useRouter> }) {
 
   return (
     <div>
+      <BrandLoader open={!!busySlug} message="Duplicating…" />
       <h1 className="text-2xl font-semibold tracking-tight">Start from a template</h1>
       <p className="mt-2 text-zinc-400">Duplicate a polished site and make it yours.</p>
 

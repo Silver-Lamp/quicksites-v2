@@ -4,6 +4,7 @@ export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
 import { getServerSupabase } from '@/lib/supabase/server';
 import { requireUser } from '@/lib/auth/requireUser';
+import { getAdminUser } from '@/lib/auth/getAdminUser';
 
 function safeParse<T = any>(v: any): T | undefined {
   if (!v) return undefined;
@@ -66,11 +67,10 @@ export async function GET(req: Request) {
 }
 
 export async function POST(req: Request) {
-  // Reject unauthenticated / anonymous callers (was fully open). NOTE: base_slug
-  // is shared across duplicated templates so per-owner scoping is ambiguous; this
-  // is display-name-only metadata — a stricter owner-of-base check is a follow-up.
+  // Reject unauthenticated / anonymous callers.
   const gate = await requireUser();
   if (gate instanceof NextResponse) return gate;
+  const { user } = gate;
 
   const payload = await req.json().catch(() => ({} as any));
   const base_slug = sanitizeBaseSlug(payload?.base_slug || '');
@@ -81,6 +81,23 @@ export async function POST(req: Request) {
   }
 
   const supabase = await getServerSupabase();
+
+  // Owner-of-base check: base_slug is shared across duplicated templates, so
+  // without this any signed-in user could overwrite another user's base display
+  // name. Require the caller to own at least one template on this base (platform
+  // admins bypass).
+  const admin = await getAdminUser();
+  if (!admin) {
+    const { data: owned, error: ownErr } = await supabase
+      .from('templates')
+      .select('id')
+      .eq('base_slug', base_slug)
+      .eq('owner_id', user.id)
+      .limit(1)
+      .maybeSingle();
+    if (ownErr) return NextResponse.json({ error: ownErr.message }, { status: 500 });
+    if (!owned) return NextResponse.json({ error: 'forbidden' }, { status: 403 });
+  }
 
   // Upsert display name for this base (no slug writes anywhere)
   const { error, data } = await supabase

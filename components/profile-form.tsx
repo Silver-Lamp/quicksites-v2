@@ -76,7 +76,6 @@ export default function ProfileForm() {
   const [membership, setMembership] = useState<any | null>(null);
   const [loadingMembership, setLoadingMembership] = useState(true);
   const [sendingTrialReq, setSendingTrialReq] = useState(false);
-  const [upgrading, setUpgrading] = useState(false);
   const [managing, setManaging] = useState(false);
 
   const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
@@ -208,28 +207,6 @@ export default function ProfileForm() {
     }
   };
 
-  const handleUpgradeToPro = async () => {
-    setUpgrading(true);
-    try {
-      const r = await fetch('/api/billing/checkout', {
-        method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ plan: 'pro' }),
-      });
-      const j = await r.json().catch(() => ({}));
-      if (r.ok && j?.url) {
-        window.location.href = j.url;
-        return;
-      }
-      // Self-serve Stripe checkout isn't available yet (e.g. STRIPE_PRICE_PRO_MONTHLY
-      // isn't configured → "missing price id"). Don't dead-end on a raw error —
-      // capture the intent via the contact/trial flow instead.
-      await requestProTrial();
-    } catch {
-      await requestProTrial();
-    } finally {
-      setUpgrading(false);
-    }
-  };
-
   const handleManageBilling = async () => {
     try {
       setManaging(true);
@@ -311,31 +288,25 @@ export default function ProfileForm() {
                 </Button>
               </div>
             ) : (
-              // Free: upgrade CTA + inline benefits + soft trial option.
+              // Free: Pro is contact-gated for now — the CTA sends a request and we
+              // reach out (no self-serve Stripe checkout yet).
               <div className="space-y-4">
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                   <p className="text-sm text-zinc-300">
-                    You&apos;re on the <span className="font-medium text-white">Free</span> plan. Upgrade to Pro for
-                    faster builds, advanced blocks, and priority features.
+                    You&apos;re on the <span className="font-medium text-white">Free</span> plan. Pro adds faster
+                    builds, advanced blocks, and priority features — tell us and we&apos;ll get you set up.
                   </p>
                   <div className="flex shrink-0 items-center gap-3">
                     <Button
-                      onClick={handleUpgradeToPro}
-                      disabled={upgrading}
+                      onClick={requestProTrial}
+                      disabled={sendingTrialReq || !!trialActive}
                       className="bg-purple-600 hover:bg-purple-500"
                     >
                       <Crown className="mr-1.5 h-4 w-4" />
-                      {upgrading ? 'Redirecting…' : 'Upgrade to Pro'}
+                      {sendingTrialReq ? 'Sending…' : trialActive ? 'Trial active' : 'Get Pro access'}
                     </Button>
                   </div>
                 </div>
-                <button
-                  onClick={requestProTrial}
-                  disabled={sendingTrialReq || !!trialActive}
-                  className="text-xs font-medium text-purple-300 hover:text-purple-200 disabled:opacity-50"
-                >
-                  {sendingTrialReq ? 'Sending…' : 'Prefer to try first? Request a free Pro trial →'}
-                </button>
 
                 {/* Inline benefits (was an orphaned scroller at the bottom) */}
                 <div className="grid grid-cols-1 gap-2 pt-1 sm:grid-cols-2">

@@ -41,10 +41,6 @@ export default function HoursOfOperation({
 
   if (!content || !Array.isArray(content.days)) return null;
 
-  /* ---------- Theme / color mode (match ServicesRender) ---------- */
-  const effectiveMode: 'light' | 'dark' =
-    colorMode ?? (template?.color_mode === 'dark' ? 'dark' : 'light');
-
   const exToday = useMemo(() => {
     const now = partsInTz(new Date(), content.tz);
     return matchExceptionForYMD(content.exceptions, now.ymd);
@@ -70,19 +66,15 @@ export default function HoursOfOperation({
         ? 'Open 24 hours'
         : todayWins.map((w) => formatRangeFromMinutes(w.start, w.end, content.tz)).join(' · ');
 
-  /* ---------- Per-theme classes ---------- */
-  const shellCls =
-    effectiveMode === 'light'
-      ? 'bg-white text-black border border-neutral-200'
-      : 'bg-neutral-950 text-white border border-white/10';
-
-  const iconCls = effectiveMode === 'light' ? 'text-neutral-700' : 'text-neutral-300';
-  const labelCls = effectiveMode === 'light' ? 'text-neutral-900' : 'text-white';
-  const subTextCls = effectiveMode === 'light' ? 'text-neutral-700' : 'text-neutral-300';
-  const zebraRow = effectiveMode === 'light' ? 'bg-neutral-100/70' : 'bg-neutral-900/50';
-  const tableBorder = effectiveMode === 'light' ? 'border-neutral-200' : 'border-white/10';
-  const pillBorder = effectiveMode === 'light' ? 'border-neutral-300' : 'border-white/20';
-  const noteCls = effectiveMode === 'light' ? 'text-neutral-600' : 'text-neutral-300';
+  /* ---------- Semantic-token classes (theme-driven) ---------- */
+  const shellCls = 'bg-card text-card-foreground border border-border';
+  const iconCls = 'text-muted-foreground';
+  const labelCls = 'text-foreground';
+  const subTextCls = 'text-muted-foreground';
+  const zebraRow = 'bg-muted/50';
+  const tableBorder = 'border-border';
+  const pillBorder = 'border-border';
+  const noteCls = 'text-muted-foreground';
 
   const statusPill =
     content.alwaysOpen && !exToday ? (

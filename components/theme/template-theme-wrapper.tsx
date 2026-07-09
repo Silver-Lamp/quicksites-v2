@@ -33,11 +33,35 @@ export function TemplateThemeWrapper({
   // Returns null when the site has no themable identity → defaults untouched.
   const resolved = React.useMemo(() => resolveSiteTheme(template), [template]);
   const wrapperStyle = resolved
-    ? ({ ...resolved.vars, ...(resolved.fontFamily ? { fontFamily: resolved.fontFamily } : {}) } as React.CSSProperties)
+    ? ({
+        ...resolved.vars,
+        // Default text color to the theme foreground so blocks that don't set an
+        // explicit text token (e.g. menu headings) stay readable in dark themes.
+        color: 'hsl(var(--foreground))',
+        ...(resolved.fontFamily ? { fontFamily: resolved.fontFamily } : {}),
+      } as React.CSSProperties)
     : undefined;
 
+  // Establish the site's light/dark baseline locally (not on <html>): [data-theme]
+  // activates the matching shadcn var set for every descendant block using
+  // semantic tokens. For curated themes the inline palette vars above sit on the
+  // SAME element and win over this baseline, so the neutral tint applies.
+  const colorMode: 'light' | 'dark' =
+    (template?.color_mode ?? (template as any)?.data?.color_mode) === 'dark' ? 'dark' : 'light';
+
   return (
-    <div style={wrapperStyle} data-qs-themed={resolved ? '1' : undefined}>
+    <div style={wrapperStyle} data-theme={colorMode} data-qs-themed={resolved ? '1' : undefined}>
+      {/* Load the curated font pairing (Google Fonts). Next hoists & dedupes the
+          stylesheet link; display=swap avoids blocking on the webfont. Headings
+          pick up var(--font-heading) via the [data-qs-themed] rule in globals.css. */}
+      {resolved?.fontHref ? (
+        <>
+          <link rel="preconnect" href="https://fonts.googleapis.com" />
+          <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+          <link rel="stylesheet" href={resolved.fontHref} />
+        </>
+      ) : null}
+
       {renderHeader && headerBlock ? (
         <div data-editor-section="global-header">
           <PageHeader

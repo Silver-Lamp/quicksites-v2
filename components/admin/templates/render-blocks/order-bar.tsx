@@ -40,12 +40,12 @@ export default function RenderOrderBar(props: any) {
     <>
       {/* spacer so fixed bar never hides the last bit of content on mobile */}
       <div className="h-16 md:hidden" aria-hidden />
-      <div className="fixed inset-x-0 bottom-0 z-40 border-t border-black/10 bg-white/95 p-3 backdrop-blur md:hidden dark:border-white/10 dark:bg-zinc-950/95">
+      <div className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-background/95 text-foreground p-3 backdrop-blur md:hidden">
         <div className="mx-auto flex max-w-3xl gap-3">
           {tel && (
             <a
               href={tel}
-              className="flex flex-1 items-center justify-center rounded-xl border border-zinc-300 py-3 text-base font-semibold dark:border-zinc-700"
+              className="flex flex-1 items-center justify-center rounded-xl border border-border py-3 text-base font-semibold"
             >
               📞 {callLabel}
             </a>
@@ -54,7 +54,7 @@ export default function RenderOrderBar(props: any) {
             <a
               href={ctaHref}
               onClick={onCta}
-              className="flex flex-[1.4] items-center justify-center rounded-xl bg-zinc-900 py-3 text-base font-semibold text-white dark:bg-white dark:text-zinc-950"
+              className="flex flex-[1.4] items-center justify-center rounded-xl bg-primary py-3 text-base font-semibold text-primary-foreground"
             >
               {ctaLabel}
             </a>

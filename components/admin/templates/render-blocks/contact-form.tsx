@@ -4,7 +4,6 @@
 import type { Block } from '@/types/blocks';
 import type { Template } from '@/types/template';
 import SectionShell from '@/components/ui/section-shell';
-import ThemeScope from '@/components/ui/theme-scope';
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase/client';
 
@@ -45,7 +44,6 @@ export default function ContactFormRender({
   colorMode?: ThemeMode;
 }) {
   const t: any = template ?? {};
-  const isLight = colorMode === 'light';
   const anchorId = (block?.content as any)?.anchor_id || 'contact';
 
   // Presentational bits from block
@@ -278,34 +276,23 @@ Service: ${formData.service || 'N/A'}
   };
 
   const inputClass = (error?: boolean) =>
-    `w-full rounded px-3 py-2 transition-colors bg-white text-black dark:bg-neutral-800 dark:text-white ${
-      error ? 'border border-red-500' : 'border border-zinc-300 dark:border-zinc-700'
+    `w-full rounded px-3 py-2 transition-colors bg-background text-foreground border ${
+      error ? 'border-red-500' : 'border-input'
     }`;
 
   return (
-    <ThemeScope
-      mode={colorMode}
-      className={`${isLight ? 'bg-white' : 'dark:bg-neutral-950'} rounded-lg p-4`}
-    >
-      <section id={anchorId} data-contact-anchor className="contents">
-        <SectionShell compact className="rounded-lg p-0">
-          <h2
-            className={`text-center text-2xl font-bold mb-2 p-4 rounded-md ${
-              isLight ? 'text-blue-900 bg-white' : 'text-white dark:bg-neutral-950'
-            }`}
-          >
+    <section id={anchorId} data-contact-anchor>
+      <SectionShell compact className="bg-transparent">
+        <div className="mx-auto w-full max-w-xl bg-card text-card-foreground border border-border rounded-lg p-6 shadow-sm">
+          <h2 className="text-center text-2xl font-bold mb-2 text-foreground">
             {title}
           </h2>
 
           {/* Identity surface: show what we’ll use */}
-          <div className="text-center text-sm mb-4 px-4">
-            {businessName && (
-              <div className={isLight ? 'text-gray-700' : 'text-gray-300'}>
-                {businessName}
-              </div>
-            )}
+          <div className="text-center text-sm mb-4">
+            {businessName && <div className="text-muted-foreground">{businessName}</div>}
             {displayPhone && (
-              <div className={isLight ? 'text-gray-700' : 'text-gray-300'}>
+              <div className="text-muted-foreground">
                 Or call us at{' '}
                 <a href={`tel:${phoneDigits}`} className="underline">
                   {displayPhone}
@@ -313,9 +300,7 @@ Service: ${formData.service || 'N/A'}
               </div>
             )}
             {hasValidEmail && (
-              <div className={isLight ? 'text-gray-600' : 'text-gray-400'}>
-                We’ll reply from {effectiveEmail}
-              </div>
+              <div className="text-muted-foreground">We’ll reply from {effectiveEmail}</div>
             )}
           </div>
 
@@ -343,18 +328,11 @@ Service: ${formData.service || 'N/A'}
           )}
 
           {submitted ? (
-            <p
-              className={
-                isLight ? 'text-green-600 text-center' : 'text-green-500 text-center'
-              }
-            >
+            <p className="text-green-600 text-center">
               Thank you! Your submission has been received.
             </p>
           ) : (
-            <form
-              onSubmit={handleSubmit}
-              className={`space-y-4 p-4 ${isLight ? 'text-black' : 'text-white'}`}
-            >
+            <form onSubmit={handleSubmit} className="space-y-4 text-foreground">
               <div>
                 <label className="block font-semibold mb-1">Name:</label>
                 <input
@@ -438,15 +416,15 @@ Service: ${formData.service || 'N/A'}
                 <button
                   type="submit"
                   disabled={submitting || services.length === 0 || !hasValidEmail}
-                  className="bg-blue-900 hover:bg-blue-800 text-white px-6 py-2 rounded transition disabled:opacity-50"
+                  className="bg-primary text-primary-foreground hover:opacity-90 px-6 py-2 rounded transition disabled:opacity-50"
                 >
                   {submitting ? 'Submitting...' : 'Submit'}
                 </button>
               </div>
             </form>
           )}
-        </SectionShell>
-      </section>
-    </ThemeScope>
+        </div>
+      </SectionShell>
+    </section>
   );
 }

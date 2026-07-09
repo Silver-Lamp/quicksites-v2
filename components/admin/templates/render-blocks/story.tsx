@@ -49,12 +49,9 @@ export default function StoryBlock({
   const sections = (final.sections ?? []).filter((s) => s?.heading || s?.body || s?.image_url);
   if (!sections.length) return null;
 
-  const headingColor = colorMode === 'light' ? 'text-gray-900' : 'text-white';
-  const bodyColor = colorMode === 'light' ? 'text-gray-600' : 'text-gray-300';
-  const ctaColor =
-    colorMode === 'light'
-      ? 'bg-gray-900 text-white hover:bg-gray-800'
-      : 'bg-white text-gray-900 hover:bg-gray-200';
+  const headingColor = 'text-foreground';
+  const bodyColor = 'text-muted-foreground';
+  const ctaColor = 'bg-primary text-primary-foreground hover:opacity-90';
 
   return (
     <section className="px-6 py-12">

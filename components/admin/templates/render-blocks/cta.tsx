@@ -27,10 +27,8 @@ export default function CtaRender({ block, content, compact = false }: Props) {
     >
       <a
         href={final.link}
-        className={`inline-block font-medium transition ${
-          compact
-            ? 'text-sm px-3 py-1 bg-green-600 text-white rounded hover:bg-green-700'
-            : 'px-6 py-2 bg-green-600 text-white rounded hover:bg-green-700'
+        className={`inline-block font-medium transition bg-primary text-primary-foreground rounded hover:opacity-90 ${
+          compact ? 'text-sm px-3 py-1' : 'px-6 py-2'
         }`}
       >
         {final.label}

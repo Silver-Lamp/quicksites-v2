@@ -117,14 +117,14 @@ function MenuItemRow({ item, rowKey }: { item: MenuItem; rowKey: string }) {
       <div className="min-w-0 flex-1">
         <div className="flex items-baseline justify-between gap-3">
           <span className="font-medium">{item.name}</span>
-          {price && <span className="shrink-0 tabular-nums text-zinc-700 dark:text-zinc-300">{price}</span>}
+          {price && <span className="shrink-0 tabular-nums text-muted-foreground">{price}</span>}
         </div>
         {item.description && <p className="mt-1 text-sm text-muted-foreground">{item.description}</p>}
 
         {Array.isArray(item.tags) && item.tags.length > 0 && (
           <div className="mt-2 flex flex-wrap gap-1.5">
             {item.tags.map((t, ti) => (
-              <span key={ti} className="rounded-full bg-black/5 px-2 py-0.5 text-[11px] font-medium uppercase tracking-wide text-zinc-600 dark:bg-white/10 dark:text-zinc-300">{t}</span>
+              <span key={ti} className="rounded-full bg-muted px-2 py-0.5 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">{t}</span>
             ))}
           </div>
         )}
@@ -139,8 +139,8 @@ function MenuItemRow({ item, rowKey }: { item: MenuItem; rowKey: string }) {
                 onClick={() => setSel(oi)}
                 className={`rounded-full border px-2.5 py-1 text-xs font-medium transition ${
                   oi === sel
-                    ? 'border-transparent bg-zinc-900 text-white dark:bg-white dark:text-zinc-950'
-                    : 'border-black/15 text-zinc-600 hover:bg-black/5 dark:border-white/20 dark:text-zinc-300 dark:hover:bg-white/10'
+                    ? 'border-transparent bg-primary text-primary-foreground'
+                    : 'border-border text-muted-foreground hover:bg-muted'
                 }`}
               >
                 {o.label}{typeof o.price_cents === 'number' ? ` · ${centsDisplay(o.price_cents)}` : ''}
@@ -153,16 +153,17 @@ function MenuItemRow({ item, rowKey }: { item: MenuItem; rowKey: string }) {
         {addons.length > 0 && item.catalog_item_id && (
           <div className="mt-2 flex flex-col gap-1.5">
             {addons.map((a) => (
-              <label key={a.id} className="flex cursor-pointer items-center gap-2 text-sm text-zinc-600 dark:text-zinc-300">
+              <label key={a.id} className="flex cursor-pointer items-center gap-2 text-sm text-muted-foreground">
                 <input
                   type="checkbox"
                   checked={!!a.id && selAddonIds.includes(a.id)}
                   onChange={() => a.id && toggleAddon(a.id)}
-                  className="h-4 w-4 accent-zinc-900 dark:accent-white"
+                  className="h-4 w-4"
+                  style={{ accentColor: 'hsl(var(--primary))' }}
                 />
                 <span>{a.label}</span>
                 {typeof a.price_cents === 'number' && a.price_cents > 0 && (
-                  <span className="text-zinc-500">+{centsDisplay(a.price_cents)}</span>
+                  <span className="text-muted-foreground">+{centsDisplay(a.price_cents)}</span>
                 )}
               </label>
             ))}
@@ -173,7 +174,7 @@ function MenuItemRow({ item, rowKey }: { item: MenuItem; rowKey: string }) {
           <button
             type="button"
             onClick={() => addToOrder(item, selected, chosenAddons)}
-            className="mt-3 inline-flex items-center rounded-md border border-black/15 px-3 py-1 text-sm font-medium transition hover:bg-black/5 dark:border-white/20 dark:hover:bg-white/10"
+            className="mt-3 inline-flex items-center rounded-md border border-border px-3 py-1 text-sm font-medium transition hover:bg-muted"
           >
             Add to order{addonTotal > 0 ? ` · ${centsDisplay((baseCents ?? 0) + addonTotal)}` : ''}
           </button>
@@ -218,7 +219,7 @@ export default function RenderMenu(props: any) {
       {/* Sticky category chip-bar — jump to a section (great on mobile). */}
       {nonEmpty.length > 1 && (
         <nav
-          className="sticky top-0 z-10 -mx-4 mt-6 overflow-x-auto border-b border-black/5 bg-white/70 px-4 py-3 backdrop-blur supports-[backdrop-filter]:bg-white/60 dark:border-white/10 dark:bg-zinc-950/70"
+          className="sticky top-0 z-10 -mx-4 mt-6 overflow-x-auto border-b border-border bg-background/80 px-4 py-3 backdrop-blur"
           aria-label="Menu sections"
         >
           <ul className="flex gap-2 whitespace-nowrap">
@@ -227,7 +228,7 @@ export default function RenderMenu(props: any) {
                 <button
                   type="button"
                   onClick={() => jump(slugId(s.name, i))}
-                  className="rounded-full border border-black/10 px-3 py-1.5 text-sm font-medium text-zinc-700 transition hover:border-black/30 hover:bg-black/5 dark:border-white/15 dark:text-zinc-200 dark:hover:bg-white/10"
+                  className="rounded-full border border-border px-3 py-1.5 text-sm font-medium text-muted-foreground transition hover:bg-muted"
                 >
                   {s.name}
                 </button>
@@ -240,14 +241,14 @@ export default function RenderMenu(props: any) {
       <div className="mt-8 space-y-12">
         {nonEmpty.map((section, si) => (
           <div key={slugId(section.name, si)} id={slugId(section.name, si)} className="scroll-mt-20">
-            <div className="border-b border-black/10 pb-2 dark:border-white/10">
+            <div className="border-b border-border pb-2">
               <h3 className="text-xl font-semibold tracking-tight sm:text-2xl">{section.name}</h3>
               {section.description && (
                 <p className="mt-1 text-sm text-muted-foreground">{section.description}</p>
               )}
             </div>
 
-            <ul className="mt-4 divide-y divide-black/5 dark:divide-white/5">
+            <ul className="mt-4 divide-y divide-border">
               {(section.items ?? []).map((it, ii) => (
                 <MenuItemRow key={`${slugId(section.name, si)}-${ii}`} item={it} rowKey={`${slugId(section.name, si)}-${ii}`} />
               ))}

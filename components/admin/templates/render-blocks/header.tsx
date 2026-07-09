@@ -90,11 +90,8 @@ export default function HeaderRender({
     if (isMdUp && menuOpen) setMenuOpen(false);
   }, [isMdUp, menuOpen]);
 
-  const bg = colorMode === 'light' ? 'bg-white text-gray-900' : 'bg-neutral-950 text-white';
-  const linkBase =
-    colorMode === 'light'
-      ? 'text-gray-900 hover:text-gray-700'
-      : 'text-white/90 hover:text-white';
+  const bg = 'bg-card text-card-foreground border-b border-border';
+  const linkBase = 'text-foreground/80 hover:text-foreground';
 
   const maybePreventLink = enableHeaderEdit
     ? {
@@ -143,7 +140,7 @@ export default function HeaderRender({
               <img
                 src={logo_url}
                 alt="Logo"
-                className="h-10 w-auto rounded-md bg-white/5 object-contain"
+                className="h-10 w-auto rounded-md bg-muted object-contain"
               />
             ) : (
               <Link href={homeHref} aria-label="Home" prefetch={false}>
@@ -151,16 +148,16 @@ export default function HeaderRender({
                 <img
                   src={logo_url}
                   alt="Logo"
-                  className="h-10 w-auto rounded-md bg-white/5 object-contain"
+                  className="h-10 w-auto rounded-md bg-muted object-contain"
                 />
               </Link>
             )
           ) : (
             enableHeaderEdit ? (
-              <div className="h-10 w-10 rounded-md bg-white/10" aria-hidden />
+              <div className="h-10 w-10 rounded-md bg-muted" aria-hidden />
             ) : (
               <Link href={homeHref} aria-label="Home" prefetch={false}>
-                <div className="h-10 w-10 rounded-md bg-white/10" aria-hidden />
+                <div className="h-10 w-10 rounded-md bg-muted" aria-hidden />
               </Link>
             )
           )}
@@ -194,7 +191,7 @@ export default function HeaderRender({
               e.stopPropagation();
               setMenuOpen((v) => !v);
             }}
-            className="inline-flex h-10 w-10 items-center justify-center rounded-md bg-white/10 hover:bg-white/15"
+            className="inline-flex h-10 w-10 items-center justify-center rounded-md bg-muted hover:bg-muted/70"
           >
             {menuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
           </button>
@@ -206,7 +203,7 @@ export default function HeaderRender({
               e.stopPropagation();
               setMenuOpen((v) => !v);
             }}
-            className="inline-flex h-10 w-10 items-center justify-center rounded-md bg-white/10 hover:bg-white/15 md:hidden"
+            className="inline-flex h-10 w-10 items-center justify-center rounded-md bg-muted hover:bg-muted/70 md:hidden"
           >
             {menuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
           </button>
@@ -216,7 +213,7 @@ export default function HeaderRender({
       {/* Mobile menu */}
       {menuOpen && (
         <div
-          className={`${forceNarrow ? '' : 'md:hidden'} border-t border-white/10`}
+          className={`${forceNarrow ? '' : 'md:hidden'} border-t border-border`}
           onClick={enableHeaderEdit ? (e) => e.stopPropagation() : undefined}
         >
           <nav className="mx-auto max-w-6xl px-4 py-3 grid gap-2">
@@ -236,7 +233,7 @@ export default function HeaderRender({
                 </a>
               ))
             ) : (
-              <span className="text-white/60 text-sm">No links configured.</span>
+              <span className="text-muted-foreground text-sm">No links configured.</span>
             )}
           </nav>
         </div>

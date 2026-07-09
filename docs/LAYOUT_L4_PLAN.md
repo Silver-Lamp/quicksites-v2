@@ -110,7 +110,15 @@ CustomEvent; iframe → `preview:child-op` bridge → re-dispatched). You can fu
 build out and rearrange columns — the only thing left is *drag* between columns
 (L4.2b), a UX nicety on top of the ⇄ button.
 
-### L4.2b — Cross-container drag-and-drop (the hard part)
+### L4.2b — Drag between columns ✅ (native HTML5 DnD, not the dnd-kit rewrite)
+Shipped via **native HTML5 drag-and-drop scoped inside the section** — sidesteps the
+risky dnd-kit multi-container rewrite entirely and doesn't touch the top-level
+dnd-kit reorder. Children are `draggable`; dropping on another child inserts before
+it, dropping on a column appends (`moveChildToColumn`, unit-tested; verified with a
+Playwright drag). The section shows a drop-target ring on the hovered column. The
+original dnd-kit approach below is no longer needed for the core UX.
+
+### L4.2b (original plan) — Cross-container drag-and-drop via dnd-kit
 - Multi-container dnd-kit in `LiveEditorPreviewFrame`: per-container droppables, custom
   collision detection, `onDragOver` to move between containers, tree reconstruction on drop.
 - Drag blocks between columns, into/out of sections, and at the top level.

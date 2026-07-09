@@ -40,7 +40,10 @@ function requestEditBlock(id: string) {
 }
 
 /** Container child ops (move/delete/add): inline → CustomEvent; iframe → bridge. */
-function emitChildOp(op: 'qs:move-child' | 'qs:move-child-col' | 'qs:delete-child' | 'qs:add-child', detail: any) {
+function emitChildOp(
+  op: 'qs:move-child' | 'qs:move-child-col' | 'qs:move-child-to' | 'qs:delete-child' | 'qs:add-child',
+  detail: any,
+) {
   try {
     if (window.parent && window.parent !== window) {
       window.parent.postMessage({ type: 'preview:child-op', op, detail }, '*');
@@ -70,6 +73,11 @@ export default function SectionRender(props: any) {
   const { block, content, template, colorMode, previewOnly, device } = props ?? {};
   const c = pickContent(block, content);
   const editorCtx = useEditorContext();
+  // Native drag-and-drop state (editor only): the id being dragged + the column
+  // currently hovered, for the drop highlight. Scoped to this section — does not
+  // touch the top-level dnd-kit reorder.
+  const [draggingId, setDraggingId] = React.useState<string | null>(null);
+  const [dragOverCol, setDragOverCol] = React.useState<number | null>(null);
 
   const columns: Col[] = (Array.isArray(c.columns) ? c.columns : []).filter(
     (col: any) => col && Array.isArray(col.items),
@@ -96,7 +104,17 @@ export default function SectionRender(props: any) {
           const items = (Array.isArray(col.items) ? col.items : []).map((b: any) => normalizeBlock(b));
           const sectionId = String(block?._id ?? block?.id ?? '');
           return (
-            <div key={i} className="min-w-0">
+            <div
+              key={i}
+              className={`min-w-0 rounded-md transition ${editorCtx && dragOverCol === i ? 'ring-2 ring-primary/60' : ''}`}
+              onDragOver={editorCtx ? (e) => { if (draggingId) { e.preventDefault(); setDragOverCol(i); } } : undefined}
+              onDrop={editorCtx ? (e) => {
+                e.preventDefault();
+                if (draggingId) emitChildOp('qs:move-child-to', { id: draggingId, sectionId, colIdx: i });
+                setDraggingId(null);
+                setDragOverCol(null);
+              } : undefined}
+            >
               {items.map((b: any, j: number) => {
                 const cid = String(b?._id ?? b?.id ?? '');
                 const child = (
@@ -113,7 +131,29 @@ export default function SectionRender(props: any) {
                 // edited / reordered / removed in place (L4.1 + L4.2).
                 if (!editorCtx || !cid) return <div key={cid || j}>{child}</div>;
                 return (
-                  <div key={cid} className="group/qsb relative">
+                  <div
+                    key={cid}
+                    className="group/qsb relative cursor-move rounded-md"
+                    draggable
+                    onDragStart={(e) => {
+                      setDraggingId(cid);
+                      try { e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', cid); } catch { /* no-op */ }
+                    }}
+                    onDragEnd={() => { setDraggingId(null); setDragOverCol(null); }}
+                    onDragOver={(e) => {
+                      if (draggingId && draggingId !== cid) { e.preventDefault(); e.stopPropagation(); setDragOverCol(i); }
+                    }}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      if (draggingId && draggingId !== cid) {
+                        emitChildOp('qs:move-child-to', { id: draggingId, sectionId, colIdx: i, beforeId: cid });
+                      }
+                      setDraggingId(null);
+                      setDragOverCol(null);
+                    }}
+                    style={draggingId === cid ? { opacity: 0.4 } : undefined}
+                  >
                     <div className="absolute right-1.5 top-1.5 z-20 hidden items-center gap-0.5 rounded-md bg-black/75 p-0.5 text-white shadow group-hover/qsb:flex">
                       <button type="button" title="Edit" onClick={stop(() => requestEditBlock(cid))} className="rounded px-1.5 py-0.5 text-[11px] font-medium hover:bg-white/20">Edit</button>
                       <button type="button" title="Move up" onClick={stop(() => emitChildOp('qs:move-child', { id: cid, dir: 'up' }))} className="rounded px-1 py-0.5 text-xs hover:bg-white/20">↑</button>

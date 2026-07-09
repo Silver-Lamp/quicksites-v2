@@ -26,6 +26,20 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Missing templateId or email' }, { status: 400 });
   }
 
+  // Interim hardening: validate inputs before any service-role write so this
+  // can't be used to spray arbitrary emails against arbitrary domain_ids.
+  if (typeof email !== 'string' || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    return NextResponse.json({ error: 'Invalid email' }, { status: 400 });
+  }
+  const { data: tmpl } = await admin
+    .from('templates')
+    .select('id')
+    .eq('id', templateId)
+    .maybeSingle();
+  if (!tmpl) {
+    return NextResponse.json({ error: 'Unknown template' }, { status: 404 });
+  }
+
   // find existing lead for this domain + email
   const { data: existing } = await admin
     .from('leads')

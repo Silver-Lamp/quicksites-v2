@@ -96,6 +96,27 @@ body { font-family: 'Inter', system-ui, sans-serif; -webkit-text-size-adjust: 10
   --muted-foreground: 240 5% 64.9%;
 }
 
+/* Symmetric light scope: re-declare the light palette so an element marked
+   [data-theme='light'] resets back to light even when nested inside a dark
+   (html.dark or [data-theme='dark']) ancestor. Without this, a light scope
+   could not override an ancestor dark scope → light/dark mixes. */
+[data-theme='light'] {
+  --background: 210 20% 98%;
+  --foreground: 222.2 47.4% 11.2%;
+  --card: 0 0% 100%;
+  --card-foreground: 222.2 47.4% 11.2%;
+  --border: 240 5.9% 90%;
+  --input: 240 5.9% 90%;
+  --ring: 240 4.9% 83.9%;
+  --secondary: 240 4.8% 95.9%;
+  --secondary-foreground: 222.2 47.4% 11.2%;
+  --accent: 240 4.8% 95.9%;
+  --accent-foreground: 222.2 47.4% 11.2%;
+  --destructive: 0 84.2% 60.2%;
+  --muted: 240 4.8% 95.9%;
+  --muted-foreground: 240 3.8% 46.1%;
+}
+
 /* 🔁 Animations */
 @keyframes pulse-slow {
   0%, 100% { transform: scale(1); opacity: 0.2; }

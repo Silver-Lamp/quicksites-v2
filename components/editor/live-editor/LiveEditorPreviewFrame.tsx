@@ -4,6 +4,7 @@
 import * as React from 'react';
 import { cn } from '@/lib/utils';
 import RenderBlock from '@/components/admin/templates/render-block';
+import { resolveSiteTheme } from '@/lib/theme/resolveSiteTheme';
 import { Pencil, Trash2, GripVertical } from 'lucide-react';
 import { TooltipProvider } from '@/components/ui/tooltip';
 
@@ -331,6 +332,14 @@ export default function LiveEditorPreviewFrame({
         'dark') as string;
     return String(m).toLowerCase() === 'dark' ? 'dark' : 'light';
   }, [template]);
+
+  // Scope the site's theme (accent/neutral palette/font) onto the editor canvas so
+  // it matches the public render. Paired with data-theme={siteMode} + the canvas's
+  // semantic bg, this keeps the canvas and its blocks on ONE surface (no mix).
+  const resolvedTheme = React.useMemo(() => resolveSiteTheme(template), [template]);
+  const canvasThemeStyle = resolvedTheme
+    ? ({ ...resolvedTheme.vars, ...(resolvedTheme.fontFamily ? { fontFamily: resolvedTheme.fontFamily } : {}) } as React.CSSProperties)
+    : undefined;
 
   /* ---------------- Viewport wrapper (visual only; never in URL) ---------------- */
   const [viewport, setViewport] = React.useState<'mobile' | 'tablet' | 'desktop'>(() => {
@@ -748,14 +757,13 @@ export default function LiveEditorPreviewFrame({
           className="mx-auto transition-all duration-150"
           style={{ width: widthPx ? `${widthPx}px` : '100%', maxWidth: '100%' }}
         >
-          {/* Always inline for stability in editor */}
+          {/* Always inline for stability in editor. The theme scope lives HERE so
+              the canvas surface and its blocks resolve from one source — no mix. */}
           <div
-            className={[
-              'min-h-[70vh] w-full rounded-lg border transition-colors overflow-visible pb-24',
-              siteMode === 'dark'
-                ? 'bg-neutral-950 text-neutral-100 border-white/10'
-                : 'bg-white text-zinc-900 border-black/10'
-            ].join(' ')}
+            data-theme={siteMode}
+            data-qs-themed={resolvedTheme ? '1' : undefined}
+            style={canvasThemeStyle}
+            className="min-h-[70vh] w-full rounded-lg border border-border bg-background text-foreground transition-colors overflow-visible pb-24"
           >
             <div className="mx-auto max-w-[1100px] p-8 space-y-6">
               {/* Header (not draggable) */}

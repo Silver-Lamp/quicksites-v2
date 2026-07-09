@@ -488,7 +488,7 @@ export default async function PreviewPage({
         initialSite={normalized}
         page={String(pageSlug)}
         colorMode={colorMode}
-        className="bg-white text-black dark:bg-black dark:text-white"
+        className="bg-background text-foreground"
         id="site-renderer-page"
         editorChrome={editorChrome}
         baseUrl={baseUrl}

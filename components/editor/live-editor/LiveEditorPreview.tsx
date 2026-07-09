@@ -293,7 +293,9 @@ export default async function HostSitePage({
         baseUrl={baseUrl}
         id="site-renderer-page"
         colorMode={colorMode}
-        className="bg-white text-black dark:bg-black dark:text-white"
+        // Don't force bg-white here — it pins the page light while data-theme
+        // driven bg-card blocks go dark (a light/dark mix). SiteRenderer paints
+        // the themed bg-background/text-foreground itself.
       />
     </TemplateEditorProvider>
   );

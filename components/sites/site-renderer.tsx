@@ -60,6 +60,11 @@ export default function SiteRenderer({
       className={clsx('w-full', className)}
       data-editor-chrome={editorChrome ? '1' : undefined} // ← NEW
       data-base-url={baseUrl || undefined}                // ← NEW
+      // When the theme wrapper is disabled, still establish the light/dark
+      // baseline here so semantic-token blocks resolve correctly. When the
+      // wrapper IS used, it owns data-theme (+ palette) — don't double-set it,
+      // or this inner scope would clobber the wrapper's neutral tint.
+      data-theme={enableThemeWrapper ? undefined : colorMode}
     >
       {header && (
         <RenderBlock

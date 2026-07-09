@@ -272,9 +272,7 @@ export default function HeroRender({
   const CtaEl = canShowCTA ? (
     previewOnly ? (
       <span
-        className={`inline-block ${ctaSize} ${
-          isDark ? 'bg-yellow-400 text-black' : 'bg-purple-600 text-white'
-        } font-bold rounded-full opacity-80 cursor-default select-none`}
+        className={`inline-block ${ctaSize} bg-primary text-primary-foreground font-bold rounded-full opacity-80 cursor-default select-none`}
         aria-disabled="true"
         role="button"
         tabIndex={-1}
@@ -285,9 +283,7 @@ export default function HeroRender({
       <a
         href={href}
         onClick={onClick}
-        className={`inline-block ${ctaSize} ${
-          isDark ? 'bg-yellow-400 hover:bg-yellow-500 text-black' : 'bg-purple-600 hover:bg-purple-700 text-white'
-        } font-bold rounded-full transition`}
+        className={`inline-block ${ctaSize} bg-primary hover:opacity-90 text-primary-foreground font-bold rounded-full transition`}
         aria-label={
           action === 'call_phone'
             ? 'Call us now'
@@ -304,9 +300,9 @@ export default function HeroRender({
   const PhoneLine = () =>
     cta_show_phone_below && resolvedPhoneDigits ? (
       previewOnly ? (
-        <div className={`mt-2 text-lg ${isDark ? 'text-white/85' : 'text-neutral-700'}`}>{resolvedPhoneDisplay}</div>
+        <div className="mt-2 text-lg text-muted-foreground">{resolvedPhoneDisplay}</div>
       ) : (
-        <div className={`mt-2 text-lg ${isDark ? 'text-white/85' : 'text-neutral-700'}`}>
+        <div className="mt-2 text-lg text-muted-foreground">
           <a href={`tel:${resolvedPhoneDigits}`} className="underline-offset-2 hover:underline">
             {resolvedPhoneDisplay}
           </a>
@@ -395,10 +391,9 @@ export default function HeroRender({
     );
   }
 
-  // Inline
-  const inlineBg = isDark
-    ? 'bg-neutral-900 text-white rounded-lg shadow dark:bg-neutral-950 dark:text-white'
-    : 'bg-white text-black rounded-lg shadow';
+  // Inline — semantic surface so the site's neutral palette (or the light/dark
+  // baseline on legacy sites) drives it instead of hardcoded neutral/white.
+  const inlineBg = 'bg-card text-card-foreground rounded-lg shadow';
 
   return (
     <SectionShell
@@ -422,8 +417,8 @@ export default function HeroRender({
             style={{ objectPosition: backgroundPosition, maxHeight: isNarrow ? '16rem' : '24rem' }}
           />
         )}
-        <h1 className={`${titleSize} font-bold mb-4 ${textPrimary}`}>{headline}</h1>
-        {subheadline && <p className={`${subSize} mb-6 ${textSecondary}`}>{subheadline}</p>}
+        <h1 className={`${titleSize} font-bold mb-4 text-card-foreground`}>{headline}</h1>
+        {subheadline && <p className={`${subSize} mb-6 text-muted-foreground`}>{subheadline}</p>}
         {CtaEl}
         <PhoneLine />
       </div>

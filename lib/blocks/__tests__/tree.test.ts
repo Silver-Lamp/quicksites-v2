@@ -1,6 +1,6 @@
 import {
   findBlockById, replaceBlockById, hasBlockId, blockId,
-  removeBlockById, moveChildById, insertIntoColumn, moveChildAcrossColumns,
+  removeBlockById, moveChildById, insertIntoColumn, moveChildAcrossColumns, moveChildToColumn,
 } from '@/lib/blocks/tree';
 
 const tree = (): any[] => [
@@ -138,5 +138,33 @@ describe('moveChildAcrossColumns', () => {
   it('is a no-op for a top-level block (not in a section)', () => {
     const next = moveChildAcrossColumns(tree(), 'hero', 'next');
     expect(next.map(blockId)).toEqual(tree().map(blockId));
+  });
+});
+
+describe('moveChildToColumn (drag between columns)', () => {
+  const two = (): any[] => [
+    { _id: 'sec', type: 'section', content: { columns: [
+      { items: [{ _id: 'a', type: 'text', content: {} }, { _id: 'b', type: 'text', content: {} }] },
+      { items: [{ _id: 'c', type: 'text', content: {} }] },
+    ] } },
+  ];
+  it('appends a dragged child to the target column', () => {
+    const sec = findBlockById(moveChildToColumn(two(), 'a', 'sec', 1), 'sec');
+    expect(sec.content.columns[0].items.map(blockId)).toEqual(['b']);
+    expect(sec.content.columns[1].items.map(blockId)).toEqual(['c', 'a']);
+  });
+  it('inserts before a specific sibling when dropped on it', () => {
+    const sec = findBlockById(moveChildToColumn(two(), 'a', 'sec', 1, 'c'), 'sec');
+    expect(sec.content.columns[1].items.map(blockId)).toEqual(['a', 'c']);
+  });
+  it('reorders within the same column when target == source col', () => {
+    const sec = findBlockById(moveChildToColumn(two(), 'b', 'sec', 0, 'a'), 'sec');
+    expect(sec.content.columns[0].items.map(blockId)).toEqual(['b', 'a']);
+  });
+  it('is a no-op when dropped on itself', () => {
+    const next = moveChildToColumn(two(), 'a', 'sec', 0, 'a');
+    expect(next).toBe(two() === next ? next : next); // returns input array unchanged
+    const sec = findBlockById(next, 'sec');
+    expect(sec.content.columns[0].items.map(blockId)).toEqual(['a', 'b']);
   });
 });

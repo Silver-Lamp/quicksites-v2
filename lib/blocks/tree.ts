@@ -166,6 +166,41 @@ export function moveChildAcrossColumns(blocks: AnyBlock[], id: string, dir: 'nex
   });
 }
 
+/**
+ * Move a child within a section to a target column, optionally before a specific
+ * sibling (`beforeId`); appends when `beforeId` is absent/not found. Removes it
+ * from its source column first. Powers drag-and-drop between columns (L4.2b).
+ */
+export function moveChildToColumn(
+  blocks: AnyBlock[],
+  id: string,
+  sectionId: string,
+  targetColIdx: number,
+  beforeId?: string,
+): AnyBlock[] {
+  if (!Array.isArray(blocks) || !id || !sectionId || beforeId === id) return blocks;
+  return blocks.map((b) => {
+    if (blockId(b) !== sectionId || b?.type !== 'section' || !Array.isArray(b?.content?.columns)) return b;
+    const cols: AnyBlock[] = b.content.columns;
+    let child: AnyBlock | null = null;
+    for (const col of cols) {
+      const f = Array.isArray(col?.items) ? col.items.find((it: AnyBlock) => blockId(it) === id) : undefined;
+      if (f) { child = f; break; }
+    }
+    if (!child) return b;
+    const columns = cols.map((col, i) => {
+      let items: AnyBlock[] = Array.isArray(col?.items) ? col.items.filter((it: AnyBlock) => blockId(it) !== id) : [];
+      if (i === targetColIdx) {
+        const at = beforeId ? items.findIndex((it) => blockId(it) === beforeId) : -1;
+        if (at >= 0) items = [...items.slice(0, at), child, ...items.slice(at)];
+        else items = [...items, child];
+      }
+      return { ...col, items };
+    });
+    return { ...b, content: { ...b.content, columns } };
+  });
+}
+
 /** Insert a block into a section's column (by section id + column index). */
 export function insertIntoColumn(
   blocks: AnyBlock[],

@@ -16,9 +16,7 @@ import { useBrand } from '@/app/providers';
 import { guestBuildEnabled } from '@/lib/flags/guestBuild';
 import GuestStart from '@/components/home/guest-start';
 import HomeColorLab from '@/components/home/home-color-lab';
-import ResellerDiagram from '@/components/home/reseller-diagram';
 import SectionBackdrop from '@/components/home/section-backdrop';
-import type { ResellerBrand } from '@/lib/home/getResellers';
 
 const isProd = process.env.NODE_ENV === 'production';
 
@@ -44,10 +42,10 @@ function Card({ title, children }: { title: string; children: React.ReactNode })
 
 export default function HomeClient({
   showcase,
-  resellers,
+  resellerSlot,
 }: {
   showcase?: React.ReactNode;
-  resellers?: ResellerBrand[];
+  resellerSlot?: React.ReactNode;
 }) {
   const { user, role, isLoggedIn } = useSafeAuth();
   const isMobile = useMediaQuery('(max-width: 768px)');
@@ -316,7 +314,7 @@ export default function HomeClient({
             </div>
 
             <div className="mt-10">
-              <ResellerDiagram resellers={resellers} />
+              {resellerSlot}
             </div>
 
             <div className="mx-auto mt-8 grid max-w-4xl grid-cols-1 gap-4 sm:grid-cols-3">

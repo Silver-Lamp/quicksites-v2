@@ -53,10 +53,10 @@ export function generatePageMetadata({
     (site as any)?.description ||
     'A site built with QuickSites.';
 
-  const ogImage = joinUrl(
-    'https://quicksites.ai/storage/v1/object/public/og-cache',
-    `og-${(site as any)?.slug ?? 'site'}-${pageSlug}.png`
-  );
+  // Live themed OG route (lib/og/siteOgCard) — real hero or the site's curated
+  // accent card. Always fresh + CDN-cached (s-maxage), so no separate og-cache
+  // pipeline to keep in sync. Site-level: the same card for all pages.
+  const ogImage = joinUrl('https://quicksites.ai', `/og/${(site as any)?.slug ?? 'site'}`);
 
   // --- Favicon / icons ---
   const favicon = resolveFaviconUrl(site);

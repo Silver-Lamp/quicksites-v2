@@ -2,7 +2,6 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { ensureGuestSession } from '@/lib/auth/guestSession';
 import { INDUSTRIES, type IndustryKey } from '@/lib/industries';
@@ -49,7 +48,6 @@ const CONVERT_STAGES = [
  * Gated by the guest-build feature flag at the call site (components/home/home-client.tsx).
  */
 export default function GuestStart() {
-  const router = useRouter();
   const [mode, setMode] = useState<Mode>('fresh');
   const [businessName, setBusinessName] = useState('');
   const [industry, setIndustry] = useState<string>('');
@@ -127,8 +125,12 @@ export default function GuestStart() {
         return;
       }
 
-      // 3) drop into the editor (publish stays gated until signup)
-      router.push(`/admin/templates/${json.id}`);
+      // 3) drop into the editor (publish stays gated until signup).
+      // Hard-navigate (not router.push): a soft nav briefly re-exposes the homepage
+      // while the async /admin layout auth resolves, before the editor's loading.tsx
+      // (the same BrandLoader) shows. A full navigation keeps THIS loader up until the
+      // editor paints, so there's no homepage flash between the two loaders.
+      window.location.assign(`/admin/templates/${json.id}`);
     } catch (err: any) {
       setError(err?.message || 'Something went wrong. Please try again.');
       setLoading(false);
@@ -169,7 +171,9 @@ export default function GuestStart() {
         setLoading(false);
         return;
       }
-      router.push(`/admin/templates/${json.id}`);
+      // Hard-navigate so the loader stays up until the editor paints (no homepage
+      // flash during the soft-nav layout auth). See the note in the fresh flow above.
+      window.location.assign(`/admin/templates/${json.id}`);
     } catch (err: any) {
       setError(err?.message || 'Something went wrong. Please try again.');
       setLoading(false);

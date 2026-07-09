@@ -24,9 +24,10 @@ const INDUSTRY_OPTIONS: Array<{ key: IndustryKey; label: string }> = (() => {
   return opts;
 })();
 
-function toEditor(router: ReturnType<typeof useRouter>, id: string) {
-  router.replace(`/admin/templates/${id}/edit`);
-  router.refresh();
+function toEditor(id: string) {
+  // Hard-navigate so the create loader stays up until the editor paints — a soft
+  // nav briefly re-exposes this page while the async /admin layout auth resolves.
+  window.location.assign(`/admin/templates/${id}/edit`);
 }
 
 export default function StartYourSite() {
@@ -164,7 +165,7 @@ function IndustryStep({ router }: { router: ReturnType<typeof useRouter> }) {
       }
       const { id } = (await res.json()) as { id?: string };
       if (!id) throw new Error('Could not create your site.');
-      toEditor(router, id);
+      toEditor(id);
     } catch (e: any) {
       setError(e?.message || 'Something went wrong. Please try again.');
       setBusy(false);
@@ -297,7 +298,7 @@ function ConvertStep({ router }: { router: ReturnType<typeof useRouter> }) {
       if (!res.ok || !json?.ok || !json?.id) {
         throw new Error(json?.error || 'Could not convert that site. Try another URL.');
       }
-      toEditor(router, json.id);
+      toEditor(json.id);
     } catch (e: any) {
       setError(e?.message || 'Something went wrong. Please try again.');
       setBusy(false);
@@ -389,7 +390,7 @@ function TemplateStep({ router }: { router: ReturnType<typeof useRouter> }) {
       }
       const { id } = (await res.json()) as { id?: string };
       if (!id) throw new Error('Could not duplicate that template.');
-      toEditor(router, id);
+      toEditor(id);
     } catch (e: any) {
       setError(e?.message || 'Something went wrong. Please try again.');
       setBusySlug(null);

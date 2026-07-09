@@ -9,6 +9,7 @@ import {
   WORK_BACKGROUNDS,
   WORK_BG_CHANGED_EVENT,
   WORK_BG_ROTATE_ID,
+  DEFAULT_WORK_BG_ID,
   readWorkBackgroundId,
   writeWorkBackgroundId,
 } from '@/lib/ui/workBackgrounds';
@@ -42,7 +43,7 @@ export default function WorkBackgroundPicker() {
       </p>
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
         {options.map((o) => {
-          const active = (selected || 'none') === o.id;
+          const active = (selected || DEFAULT_WORK_BG_ID) === o.id;
           return (
             <button
               key={o.id}

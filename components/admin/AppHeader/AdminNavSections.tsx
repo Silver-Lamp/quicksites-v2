@@ -673,19 +673,14 @@ export function AdminNavSections({ collapsed = false }: { collapsed?: boolean })
   const { name: brandName, logoUrl } = useBrand();
   const brandLogo = logoUrl || '/logo_v1.png';
 
-  // Core nav (without brand; brand handled by BrandSwitcher)
+  // Core nav (without brand; brand handled by BrandSwitcher). Flat rows under the
+  // "Sites" header — consistent with every other section (Commerce/Customers/…),
+  // instead of a nested dropdown that duplicated the header + a lone green button.
   const coreItems = useMemo<NavItem[]>(
     () => [
       { type: 'section', label: 'Sites' },
-      {
-        type: 'item',
-        label: 'Sites',
-        icon: <LayoutGrid size={18} />,
-        children: [
-          { label: 'Browse sites', href: '/admin/templates/list' },
-          { label: 'New site', href: '/admin/templates/new' },
-        ],
-      },
+      { type: 'item', label: 'Browse sites', href: '/admin/templates/list', icon: <LayoutGrid size={18} /> },
+      { type: 'item', label: 'New site', href: '/admin/templates/new', icon: <Plus size={18} /> },
     ],
     []
   );

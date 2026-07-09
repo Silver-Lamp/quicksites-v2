@@ -9,6 +9,8 @@ export const WORK_BG_STORAGE_KEY = 'qs:work-bg';
 export const WORK_BG_CHANGED_EVENT = 'qs:work-bg:changed';
 /** Special selection: auto-rotate through all backgrounds instead of a fixed one. */
 export const WORK_BG_ROTATE_ID = 'rotate';
+/** Shown when the user hasn't chosen yet (unset). Explicit 'none' opts out. */
+export const DEFAULT_WORK_BG_ID = WORK_BG_ROTATE_ID;
 
 export type WorkBackground = {
   id: string;
@@ -40,11 +42,13 @@ export function readWorkBackgroundId(): string {
   }
 }
 
-/** Persist the selection + broadcast so the live background layer updates. */
+/** Persist the selection + broadcast so the live background layer updates.
+ *  '' resets to unset (→ default); 'none' is persisted so the opt-out sticks
+ *  instead of falling back to the default. */
 export function writeWorkBackgroundId(id: string): void {
   if (typeof window === 'undefined') return;
   try {
-    if (!id || id === 'none') window.localStorage.removeItem(WORK_BG_STORAGE_KEY);
+    if (!id) window.localStorage.removeItem(WORK_BG_STORAGE_KEY);
     else window.localStorage.setItem(WORK_BG_STORAGE_KEY, id);
     window.dispatchEvent(new CustomEvent(WORK_BG_CHANGED_EVENT, { detail: id || '' }));
   } catch {

@@ -43,7 +43,7 @@ export default function ComplianceQueue() {
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap items-center gap-2">
-        <select className="border rounded-md px-2 py-1 text-sm" value={status} onChange={e=>setStatus(e.target.value as any)}>
+        <select className="h-9 rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring" value={status} onChange={e=>setStatus(e.target.value as any)}>
           {['pending','approved','rejected','expired'].map(s=><option key={s} value={s}>{s}</option>)}
         </select>
         <Input placeholder="State (e.g., CA, NY)" className="w-28" value={state} onChange={e=>setState(e.target.value)} />

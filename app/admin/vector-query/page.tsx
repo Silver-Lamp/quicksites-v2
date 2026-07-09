@@ -82,20 +82,20 @@ export default function VectorQueryPage({
         />
 
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-          <select className="bg-white/5 border rounded px-2 py-1" value={type} onChange={(e) => setType(e.target.value)}>
+          <select className="h-9 rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring" value={type} onChange={(e) => setType(e.target.value)}>
             <option value="">All Types</option>
             <option value="hero">hero</option>
             <option value="cta">cta</option>
             <option value="services">services</option>
           </select>
 
-          <select className="bg-white/5 border rounded px-2 py-1" value={industry} onChange={(e) => setIndustry(e.target.value)}>
+          <select className="h-9 rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring" value={industry} onChange={(e) => setIndustry(e.target.value)}>
             <option value="">All Industries</option>
             <option value="towing">towing</option>
             <option value="bakery">bakery</option>
           </select>
 
-          <select className="bg-white/5 border rounded px-2 py-1" value={tone} onChange={(e) => setTone(e.target.value)}>
+          <select className="h-9 rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring" value={tone} onChange={(e) => setTone(e.target.value)}>
             <option value="">All Tones</option>
             <option value="confident">confident</option>
             <option value="urgent">urgent</option>

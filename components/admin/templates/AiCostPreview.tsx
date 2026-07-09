@@ -37,7 +37,7 @@ export function AiCostPreview({ template }: { template: any }) {
   return (
     <div className="rounded-xl border p-3 text-sm">
       <div className="flex items-center gap-2">
-        <select value={profile} onChange={(e)=>setProfile(e.target.value as any)} className="border rounded px-2 py-1">
+        <select value={profile} onChange={(e)=>setProfile(e.target.value as any)} className="h-9 rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring">
           {Object.values(ASSUMPTIONS).map(p=> <option key={p.code} value={p.code}>{p.label}</option>)}
         </select>
         <Button size="sm" onClick={calc} disabled={loading}>{loading ? 'Calculating…' : 'Estimate cost'}</Button>

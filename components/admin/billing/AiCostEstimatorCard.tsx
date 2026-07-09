@@ -59,7 +59,7 @@ export default function AiCostEstimatorCard({ sampleTemplate }: { sampleTemplate
         <div className="grid grid-cols-2 gap-3">
           <div>
             <Label>Assumptions</Label>
-            <select value={profile} onChange={(e)=>setProfile(e.target.value as any)} className="w-full border rounded px-2 py-1">
+            <select value={profile} onChange={(e)=>setProfile(e.target.value as any)} className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring">
               {Object.values(ASSUMPTIONS).map(p=> (<option key={p.code} value={p.code}>{p.label}</option>))}
             </select>
           </div>

@@ -47,26 +47,22 @@ export default function FaqRender({
     );
   }
 
-  const bgClass = colorMode === 'light' ? 'bg-white' : 'bg-neutral-900';
-  const textClass = colorMode === 'light' ? 'text-gray-900' : 'text-white';
-  const answerText = colorMode === 'light' ? 'text-gray-700' : 'text-white/80';
-
   return (
     <SectionShell
       compact={compact}
-      className={`${!compact ? `${bgClass} ${textClass} rounded-lg p-4 glow-card-purple mb-8` : ''}`}
+      className={`${!compact ? 'bg-card text-card-foreground border border-border rounded-lg p-4 shadow-sm mb-8' : ''}`}
     >
       <div className="flex justify-center">
-        <div className={`flex flex-col items-start text-left w-full max-w-2xl pl-6 sm:pl-12 md:pl-0 md:ml-8 ${textClass}`}>
+        <div className="flex flex-col items-start text-left w-full max-w-2xl pl-6 sm:pl-12 md:pl-0 md:ml-8 text-card-foreground">
           <h3 className={compact ? 'font-semibold mb-1' : 'text-xl font-semibold mb-4'}>
             {final.title || 'Frequently Asked Questions'}
           </h3>
-          <hr className="my-4" />
+          <hr className="my-4 border-border" />
           <dl className="space-y-4">
             {final.items.map((item, i) => (
               <div key={`${item.question}-${i}`}>
                 <dt className="font-semibold">{item.question}</dt>
-                <dd className={`ml-4 mt-1 text-sm ${answerText}`}>{item.answer}</dd>
+                <dd className="ml-4 mt-1 text-sm text-muted-foreground">{item.answer}</dd>
               </div>
             ))}
           </dl>

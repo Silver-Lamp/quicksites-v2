@@ -1,7 +1,6 @@
 // components/admin/templates/render-blocks/testimonial.tsx
 'use client';
 
-import ThemeScope from '@/components/ui/theme-scope';
 import type { Block } from '@/types/blocks';
 import type { Template } from '@/types/template';
 import { Star } from 'lucide-react';
@@ -65,56 +64,42 @@ export default function TestimonialBlock({
   : (final.testimonials ?? []);
 
   return (
-    <ThemeScope mode={colorMode} className={`p-6 rounded-md ${colorMode === 'light' ? 'bg-white' : 'bg-neutral-950'}`}>
-      <h2
-        className={`text-2xl font-bold mb-6 p-4 rounded-md ${
-          colorMode === 'light' ? 'text-blue-900 bg-white' : 'text-white bg-neutral-950'
-        }`}
-      >
-        {final.title}
-      </h2>
+    <section className="px-6 py-12">
+      <div className="mx-auto max-w-4xl">
+        <h2 className="text-2xl font-bold mb-6 text-foreground">{final.title}</h2>
 
-      <div className={`grid gap-4 ${compact ? 'text-sm' : 'text-base'}`}>
-        {list.map((t, i) => (
-          <div
-            key={`${t.attribution ?? 'anon'}-${t.quote?.slice(0, 24)}-${i}`}
-            className={`relative border-l-4 pl-4 italic rounded ${
-              compact
-                ? colorMode === 'light'
-                  ? 'border-blue-400 text-zinc-700 bg-transparent'
-                  : 'border-blue-400 text-zinc-300 bg-transparent'
-                : colorMode === 'light'
-                  ? 'border-blue-500 text-zinc-800 bg-white p-4'
-                  : 'border-blue-500 text-zinc-200 bg-neutral-900 p-4'
-            }`}
-          >
-            {t.avatar_url && (
-              <Image
-                src={t.avatar_url}
-                alt={t.attribution || 'Avatar'}
-                width={40}
-                height={40}
-                className={`rounded-full absolute -left-5 top-2 border shadow ${
-                  colorMode === 'light' ? 'border-white' : 'border-zinc-800'
-                }`}
-              />
-            )}
-            <p>“{t.quote}”</p>
-            {t.attribution && (
-              <footer className={`mt-1 text-sm ${colorMode === 'light' ? 'text-blue-600' : 'text-blue-300'}`}>
-                — {t.attribution}
-              </footer>
-            )}
-            {renderStars(t.rating)}
-          </div>
-        ))}
+        <div className={`grid gap-4 ${compact ? 'text-sm' : 'text-base'}`}>
+          {list.map((t, i) => (
+            <div
+              key={`${t.attribution ?? 'anon'}-${t.quote?.slice(0, 24)}-${i}`}
+              className={`relative border-l-4 border-primary pl-4 italic rounded ${
+                compact
+                  ? 'text-muted-foreground bg-transparent'
+                  : 'text-card-foreground bg-card p-4 shadow-sm'
+              }`}
+            >
+              {t.avatar_url && (
+                <Image
+                  src={t.avatar_url}
+                  alt={t.attribution || 'Avatar'}
+                  width={40}
+                  height={40}
+                  className="rounded-full absolute -left-5 top-2 border border-border shadow"
+                />
+              )}
+              <p>“{t.quote}”</p>
+              {t.attribution && (
+                <footer className="mt-1 text-sm text-primary not-italic font-medium">— {t.attribution}</footer>
+              )}
+              {renderStars(t.rating)}
+            </div>
+          ))}
 
-        {list.length === 0 && (
-          <p className={`italic p-4 rounded-md ${colorMode === 'light' ? 'text-zinc-400 bg-zinc-50' : 'text-zinc-600 bg-neutral-900'}`}>
-            No testimonials yet.
-          </p>
-        )}
+          {list.length === 0 && (
+            <p className="italic p-4 rounded-md text-muted-foreground bg-muted">No testimonials yet.</p>
+          )}
+        </div>
       </div>
-    </ThemeScope>
+    </section>
   );
 }

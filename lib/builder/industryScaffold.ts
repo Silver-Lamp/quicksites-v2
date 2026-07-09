@@ -10,13 +10,14 @@ import { createDefaultBlock } from '@/lib/createDefaultBlock';
 import { KEY_TO_LABEL, type IndustryKey } from '@/lib/industries';
 import { generateServices } from '@/lib/generateServices';
 import { pickCuratedTheme } from '@/lib/theme/pickTheme';
-import { getCuratedTheme, toStampedTheme, type StampedTheme } from '@/lib/theme/curatedThemes';
+import { getCuratedTheme, toStampedTheme, type StampedTheme, type ThemeCategory, type ThemeLayout } from '@/lib/theme/curatedThemes';
 
 export type StarterTheme = {
   colorMode: 'light' | 'dark';
   /** Full theme bag stamped into data.meta.theme (accent/secondary/neutral/
-   *  fontPair/radius/surface/mode). */
+   *  fontPair/radius/surface/mode/layout). */
   stamped: StampedTheme;
+  category: ThemeCategory;
 };
 
 /** Industry-weighted curated theme for a new site — random so sites don't all
@@ -24,7 +25,41 @@ export type StarterTheme = {
  *  See lib/theme/curatedThemes.ts + lib/theme/pickTheme.ts. */
 export function themeForIndustry(key: IndustryKey, themeId?: string | null): StarterTheme {
   const curated = getCuratedTheme(themeId) ?? pickCuratedTheme({ industry: key });
-  return { colorMode: curated.darkMode, stamped: toStampedTheme(curated) };
+  return { colorMode: curated.darkMode, stamped: toStampedTheme(curated), category: curated.category };
+}
+
+/**
+ * Page composition archetype for a standard service business — varies which
+ * blocks appear and in what order so generated sites aren't all the same stack.
+ * Weighted by the theme's category so structure matches the visual feel.
+ */
+export type Archetype = 'classic' | 'story_led' | 'proof_led' | 'conversion';
+
+const ARCHETYPE_WEIGHTS: Record<ThemeCategory, Partial<Record<Archetype, number>>> = {
+  editorial:    { story_led: 3, classic: 1 },
+  warm:         { story_led: 2, proof_led: 2, classic: 1 },
+  professional: { classic: 2, proof_led: 2 },
+  playful:      { conversion: 2, proof_led: 1, classic: 1 },
+  neon:         { conversion: 2, proof_led: 1 },
+  rugged:       { classic: 2, conversion: 2 },
+};
+
+export function pickArchetype(category: ThemeCategory, rng: () => number = Math.random): Archetype {
+  const weights = ARCHETYPE_WEIGHTS[category] ?? { classic: 1 };
+  const entries = Object.entries(weights) as [Archetype, number][];
+  const total = entries.reduce((a, [, w]) => a + w, 0);
+  let r = rng() * total;
+  for (const [a, w] of entries) {
+    r -= w;
+    if (r < 0) return a;
+  }
+  return entries[entries.length - 1]?.[0] ?? 'classic';
+}
+
+/** Map the theme's preferred hero shape onto the hero block's layout_mode. */
+function applyHeroLayout(hero: any, layout: ThemeLayout) {
+  const mode = layout.heroLayout === 'full_bleed' ? 'full_bleed' : 'inline';
+  if (hero?.content) hero.content.layout_mode = mode;
 }
 
 function uid(): string {
@@ -81,6 +116,9 @@ export function buildIndustryStarter(opts: { businessName: string; industryKey: 
   // list — this is what makes a restaurant site read like an ordering site.
   const FOOD_INDUSTRIES = new Set<IndustryKey>(['restaurant']);
 
+  // Hero shape follows the theme's layout personality (all paths).
+  applyHeroLayout(hero, theme.stamped.layout);
+
   let blocks: any[];
   if (FOOD_INDUSTRIES.has(industryKey)) {
     // Restaurant: menu + hours; the hero points at the menu rather than a quote.
@@ -126,7 +164,49 @@ export function buildIndustryStarter(opts: { businessName: string; industryKey: 
   } else if (STOREFRONT_INDUSTRIES.has(industryKey)) {
     blocks = [hero, createDefaultBlock('products_grid') as any, services, faq, contact];
   } else {
-    blocks = [hero, services, faq, contact];
+    // Standard service business: pick a composition archetype so sites don't all
+    // read as the same hero→services→faq→contact stack. Woven-in blocks
+    // (story/testimonial/cta) are all theme-token colored (Phase B).
+    const makeStory = () => {
+      const b: any = createDefaultBlock('story');
+      b.content = {
+        ...b.content,
+        title: `About ${businessName || label}`,
+        sections: [
+          {
+            heading: `Why choose ${businessName || label}?`,
+            body: `We're a local ${label.toLowerCase()} team dedicated to quality work and honest service. Share what makes you different here.`,
+            image_url: '',
+            cta_text: '',
+            cta_link: '',
+          },
+        ],
+      };
+      return b;
+    };
+    const makeTestimonial = () => createDefaultBlock('testimonial') as any;
+    const makeCta = () => {
+      const b: any = createDefaultBlock('cta');
+      b.content = { ...b.content, label: 'Get a Free Quote', link: '#contact' };
+      return b;
+    };
+
+    const archetype = pickArchetype(theme.category);
+    switch (archetype) {
+      case 'story_led':
+        blocks = [hero, makeStory(), services, makeTestimonial(), contact];
+        break;
+      case 'proof_led':
+        blocks = [hero, services, makeTestimonial(), faq, makeCta(), contact];
+        break;
+      case 'conversion':
+        blocks = [hero, services, makeCta(), faq, contact];
+        break;
+      case 'classic':
+      default:
+        blocks = [hero, services, faq, contact];
+        break;
+    }
   }
   const homePage = {
     id: uid(),

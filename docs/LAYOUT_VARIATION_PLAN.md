@@ -85,4 +85,12 @@ L1 foundation → L2 (services first, as the proof) → verify varied themed sit
 continue L2 sweep → L3 skeletons → L4 engine. `tsc --noEmit` + visual check per
 increment; each block gets a look before moving on.
 
-<!-- PROGRESS -->
+## Progress
+
+- ✅ **L1 + L2** (commit `242b92a`): ThemeLayout personality, `resolveSiteLayout`,
+  section banding in `site-renderer`, `services` in grid/cards/rows.
+- ✅ **L3** (commit `82400d5`): composition archetypes (classic/story_led/proof_led/
+  conversion) weighted by theme category; `faq`/`cta`/`story`/`testimonial` themed
+  (semantic tokens, ThemeScope dropped from testimonial). Food/storefront unchanged.
+- ⏳ **Backlog**: theme remaining blocks (contact_form, menu/location/hours,
+  header/footer, products_grid); **L4** true nested multi-column section engine + editor DnD.

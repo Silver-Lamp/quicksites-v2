@@ -209,16 +209,22 @@ export default function ProfileForm() {
   };
 
   const handleUpgradeToPro = async () => {
+    setUpgrading(true);
     try {
-      setUpgrading(true);
       const r = await fetch('/api/billing/checkout', {
         method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ plan: 'pro' }),
       });
-      const j = await r.json();
-      if (!r.ok || !j?.url) throw new Error(j?.error || 'Upgrade failed');
-      window.location.href = j.url;
-    } catch (e: any) {
-      toast.error(e?.message || 'Upgrade failed');
+      const j = await r.json().catch(() => ({}));
+      if (r.ok && j?.url) {
+        window.location.href = j.url;
+        return;
+      }
+      // Self-serve Stripe checkout isn't available yet (e.g. STRIPE_PRICE_PRO_MONTHLY
+      // isn't configured → "missing price id"). Don't dead-end on a raw error —
+      // capture the intent via the contact/trial flow instead.
+      await requestProTrial();
+    } catch {
+      await requestProTrial();
     } finally {
       setUpgrading(false);
     }

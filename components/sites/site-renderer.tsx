@@ -5,6 +5,7 @@ import * as React from 'react';
 import clsx from 'clsx';
 import RenderBlock from '@/components/admin/templates/render-block';
 import { TemplateThemeWrapper } from '@/components/theme/template-theme-wrapper';
+import { resolveSiteLayout } from '@/lib/theme/resolveSiteLayout';
 import type { Template } from '@/types/template';
 import {
   getPageBySlug,
@@ -54,6 +55,10 @@ export default function SiteRenderer({
     [selectedPage?.content_blocks]
   );
 
+  // Layout personality (rhythm/density/…) from the curated theme; null on legacy
+  // sites → plain stack untouched.
+  const layout = React.useMemo(() => resolveSiteLayout(site), [site]);
+
   const body = (
     <div
       id={id ?? 'site-renderer'}
@@ -75,16 +80,26 @@ export default function SiteRenderer({
         />
       )}
 
-      {bodyBlocks.map((block: any, i: number) => (
-        <div key={block?._id ?? i}>
-          <RenderBlock
-            block={block}
-            showDebug={false}
-            colorMode={colorMode}
-            template={site}
-          />
-        </div>
-      ))}
+      {bodyBlocks.map((block: any, i: number) => {
+        // Banded rhythm: alternate a muted section surface behind content blocks
+        // (never the hero at i=0). Only visible where blocks use semantic/transparent
+        // backgrounds; hardcoded-bg legacy blocks simply cover it.
+        const banded = layout?.rhythm === 'banded' && i > 0 && i % 2 === 1;
+        return (
+          <div
+            key={block?._id ?? i}
+            data-band={banded ? '1' : undefined}
+            style={banded ? { background: 'hsl(var(--muted))' } : undefined}
+          >
+            <RenderBlock
+              block={block}
+              showDebug={false}
+              colorMode={colorMode}
+              template={site}
+            />
+          </div>
+        );
+      })}
 
       {footer && (
         <RenderBlock

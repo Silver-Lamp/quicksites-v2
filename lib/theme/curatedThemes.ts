@@ -16,6 +16,27 @@ export type ThemeCategory = 'rugged' | 'warm' | 'professional' | 'playful' | 'ne
 export type NeutralTint = 'warm' | 'cool' | 'pure';
 export type SurfaceTreatment = 'flat' | 'soft' | 'glow';
 
+// Layout personality — how a theme structures a page (see LAYOUT_VARIATION_PLAN.md).
+// Tied to the theme so look + layout co-vary.
+export type ThemeLayout = {
+  rhythm: 'plain' | 'banded';                    // alternate section backgrounds
+  density: 'tight' | 'normal' | 'airy';          // vertical padding scale
+  sectionWidth: 'narrow' | 'default' | 'wide';   // default container width
+  heroLayout: 'inline' | 'full_bleed' | 'split'; // preferred hero shape
+  featureVariant: 'grid' | 'rows' | 'cards';     // services/features rendering
+};
+
+const LAYOUT_BY_CATEGORY: Record<ThemeCategory, ThemeLayout> = {
+  rugged:       { rhythm: 'banded', density: 'tight',  sectionWidth: 'wide',    heroLayout: 'full_bleed', featureVariant: 'rows' },
+  warm:         { rhythm: 'banded', density: 'normal', sectionWidth: 'default', heroLayout: 'split',      featureVariant: 'cards' },
+  professional: { rhythm: 'plain',  density: 'normal', sectionWidth: 'default', heroLayout: 'split',      featureVariant: 'grid' },
+  playful:      { rhythm: 'banded', density: 'airy',   sectionWidth: 'wide',    heroLayout: 'full_bleed', featureVariant: 'grid' },
+  neon:         { rhythm: 'banded', density: 'normal', sectionWidth: 'wide',    heroLayout: 'full_bleed', featureVariant: 'cards' },
+  editorial:    { rhythm: 'plain',  density: 'airy',   sectionWidth: 'narrow',  heroLayout: 'inline',     featureVariant: 'rows' },
+};
+
+export const DEFAULT_LAYOUT: ThemeLayout = LAYOUT_BY_CATEGORY.professional;
+
 export type CuratedTheme = {
   id: string;
   name: string;
@@ -36,7 +57,14 @@ export type CuratedTheme = {
   /** Shadow/glow treatment (Phase B). */
   surface: SurfaceTreatment;
   darkMode: 'light' | 'dark';
+  /** Layout personality override; defaults to LAYOUT_BY_CATEGORY[category]. */
+  layout?: ThemeLayout;
 };
+
+/** The layout personality for a theme (explicit override or category default). */
+export function layoutForTheme(t: Pick<CuratedTheme, 'category' | 'layout'>): ThemeLayout {
+  return t.layout ?? LAYOUT_BY_CATEGORY[t.category];
+}
 
 export const CURATED_THEMES: CuratedTheme[] = [
   // --- rugged ---
@@ -148,6 +176,7 @@ export type StampedTheme = {
   fontFamily: string;
   borderRadius: string;
   darkMode: 'light' | 'dark';
+  layout: ThemeLayout;
 };
 
 /** Flatten a CuratedTheme into the `data.meta.theme` bag. */
@@ -163,6 +192,7 @@ export function toStampedTheme(t: CuratedTheme): StampedTheme {
     fontFamily: t.fontFamily,
     borderRadius: t.borderRadius,
     darkMode: t.darkMode,
+    layout: layoutForTheme(t),
   };
 }
 

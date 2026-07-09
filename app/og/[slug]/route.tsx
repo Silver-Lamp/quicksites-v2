@@ -1,49 +1,68 @@
+// app/og/[slug]/route.tsx
+//
+// Social OG image (1200x630) for a site — the themed card shared with the admin
+// thumbnail (lib/og/siteOgCard): real hero if present, else the site's curated
+// accent card. Service-role read so it works without a session (crawlers).
+
 import { ImageResponse } from 'next/og';
-import { getServerSupabase } from '@/lib/supabase/server';
+import { createClient } from '@supabase/supabase-js';
+import { extractHeroImage, firstNonEmpty, prettifySlug } from '@/lib/home/showcase-helpers';
+import { SiteOgCard } from '@/lib/og/siteOgCard';
 
-export const runtime = 'edge';
+export const runtime = 'nodejs';
 
-export async function GET(_: Request, { params }: { params: { slug: string } }) {
-  const { slug } = params;
-  const supabase = await getServerSupabase();
+const WIDTH = 1200;
+const HEIGHT = 630;
 
-  const { data: site } = await supabase
-    .from('templates')
-    .select('*')
-    .eq('slug', slug)
-    .eq('is_site', true)
-    .maybeSingle();
+const admin = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  (process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SECRET_KEY)!,
+  { auth: { persistSession: false } }
+);
 
-  if (!site) {
-    return new ImageResponse(<div>Not Found</div>, { width: 1200, height: 630 });
+export async function GET(_req: Request, ctx: { params: Promise<{ slug: string }> }) {
+  const { slug } = await ctx.params;
+
+  let name = prettifySlug(slug);
+  let industry: string | null = null;
+  let hero: string | null = null;
+  let accentToken: string | undefined;
+  let darkMode = true;
+
+  try {
+    const { data } = await admin
+      .from('templates')
+      .select('template_name, business_name, industry_label, industry, hero_url, color_mode, data')
+      .eq('slug', slug)
+      .eq('is_version', false)
+      .maybeSingle();
+    if (data) {
+      const d: any = data;
+      name = firstNonEmpty(d.business_name, d.template_name) || prettifySlug(slug);
+      industry = d.industry_label || d.industry || null;
+      hero = firstNonEmpty(d.hero_url) || extractHeroImage(d.data);
+      const theme = d?.data?.meta?.theme;
+      accentToken = theme?.accentColor;
+      darkMode = String(theme?.darkMode ?? d.color_mode ?? 'dark').toLowerCase() !== 'light';
+    }
+  } catch {
+    /* fall through to themed card */
   }
 
-  const title = site.template_name;
-  const logo = site.logo_url || 'https://quicksites.ai/default-og.png';
-
   return new ImageResponse(
-    (
-      <div
-        style={{
-          display: 'flex',
-          flexDirection: 'column',
-          justifyContent: 'center',
-          alignItems: 'center',
-          width: '100%',
-          height: '100%',
-          backgroundColor: 'black',
-          color: 'white',
-          padding: '40px',
-          fontSize: 48,
-        }}
-      >
-        <img src={logo} alt="Logo" width={96} height={96} style={{ marginBottom: 20 }} />
-        <strong>{title}</strong>
-      </div>
-    ),
+    <SiteOgCard
+      name={name}
+      industry={industry}
+      hero={hero}
+      accentToken={accentToken}
+      darkMode={darkMode}
+      nameSize={72}
+      monogramSize={300}
+    />,
     {
-      width: 1200,
-      height: 630,
+      width: WIDTH,
+      height: HEIGHT,
+      headers: { 'Cache-Control': 'public, max-age=3600, s-maxage=86400, stale-while-revalidate=86400' },
     }
   );
 }

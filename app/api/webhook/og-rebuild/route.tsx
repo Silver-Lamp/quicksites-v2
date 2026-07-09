@@ -2,10 +2,10 @@
 import { ImageResponse } from 'next/og';
 import { createClient } from '@supabase/supabase-js';
 import { cacheOgImage } from '../../../../lib/og/cacheOgImage';
-import React from 'react';
+import { extractHeroImage, firstNonEmpty, prettifySlug } from '@/lib/home/showcase-helpers';
+import { SiteOgCard } from '@/lib/og/siteOgCard';
 
 export const runtime = 'nodejs';
-// export const runtime = 'edge';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -22,41 +22,18 @@ export async function POST(req: Request) {
     .eq('slug', slug)
     .maybeSingle();
 
-  const pageData = site?.data?.pages.find((p: any) => p.slug === page);
-  const title = pageData?.meta?.title || pageData?.title || site?.template_name;
-  const heroImg = pageData?.content_blocks?.find((b: any) => b.type === 'hero')?.content?.image_url;
-  const logo = site?.logo_url || 'https://quicksites.ai/default-og.png';
-  const isLight = site?.theme === 'light';
+  const s: any = site ?? {};
+  const pageData = s?.data?.pages?.find((p: any) => p.slug === page);
+  const name = firstNonEmpty(s.business_name, pageData?.meta?.title, pageData?.title, s.template_name) || prettifySlug(slug);
+  const industry = s.industry_label || s.industry || null;
+  const heroBlock = pageData?.content_blocks?.find((b: any) => b.type === 'hero')?.content?.image_url;
+  const hero = firstNonEmpty(heroBlock, s.hero_url) || extractHeroImage(s.data);
+  const theme = s?.data?.meta?.theme;
+  const accentToken = theme?.accentColor;
+  const darkMode = String(theme?.darkMode ?? s.color_mode ?? 'dark').toLowerCase() !== 'light';
 
   const image = new ImageResponse(
-    (
-      <div
-        style={{
-          display: 'flex',
-          flexDirection: 'column',
-          justifyContent: 'center',
-          alignItems: 'center',
-          width: '100%',
-          height: '100%',
-          backgroundColor: isLight ? '#fff' : '#000',
-          color: isLight ? '#111' : '#fff',
-          padding: '40px',
-          fontSize: 48,
-        }}
-      >
-        {heroImg && (
-          <img
-            src={heroImg}
-            alt="Hero"
-            width={1200}
-            height={630}
-            style={{ objectFit: 'cover', position: 'absolute', zIndex: -1, opacity: 0.2 }}
-          />
-        )}
-        <img src={logo} alt="Logo" width={96} height={96} style={{ marginBottom: 24 }} />
-        <strong>{title}</strong>
-      </div>
-    ),
+    <SiteOgCard name={name} industry={industry} hero={hero} accentToken={accentToken} darkMode={darkMode} nameSize={72} monogramSize={300} />,
     { width: 1200, height: 630 }
   );
 

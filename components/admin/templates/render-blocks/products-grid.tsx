@@ -156,7 +156,7 @@ export default function RenderProductsGrid({ block }: { block: Block }) {
         {products.map((p) => {
           const href = productHref(p);
           return (
-            <article key={p.id} className="rounded-lg border p-3">
+            <article key={p.id} className="rounded-lg border border-border bg-card text-card-foreground p-3">
               <Link href={href} className="block">
                 <div className="aspect-[4/3] mb-3 overflow-hidden rounded">
                   {p.image_url ? (
@@ -182,7 +182,7 @@ export default function RenderProductsGrid({ block }: { block: Block }) {
               <div className="mt-3">
                 <button
                   type="button"
-                  className="inline-flex items-center rounded-md border px-3 py-1 text-sm hover:bg-accent"
+                  className="inline-flex items-center rounded-md border border-border px-3 py-1 text-sm hover:bg-accent"
                   onClick={() =>
                     emitAddToCart({
                       id: p.id,

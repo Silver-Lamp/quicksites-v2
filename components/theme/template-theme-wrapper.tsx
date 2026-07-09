@@ -33,7 +33,13 @@ export function TemplateThemeWrapper({
   // Returns null when the site has no themable identity → defaults untouched.
   const resolved = React.useMemo(() => resolveSiteTheme(template), [template]);
   const wrapperStyle = resolved
-    ? ({ ...resolved.vars, ...(resolved.fontFamily ? { fontFamily: resolved.fontFamily } : {}) } as React.CSSProperties)
+    ? ({
+        ...resolved.vars,
+        // Default text color to the theme foreground so blocks that don't set an
+        // explicit text token (e.g. menu headings) stay readable in dark themes.
+        color: 'hsl(var(--foreground))',
+        ...(resolved.fontFamily ? { fontFamily: resolved.fontFamily } : {}),
+      } as React.CSSProperties)
     : undefined;
 
   // Establish the site's light/dark baseline locally (not on <html>): [data-theme]

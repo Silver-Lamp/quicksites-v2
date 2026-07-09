@@ -293,14 +293,11 @@ export default function FooterRender({
   const coords = hasCoords ? [lat as number, lon as number] : geocoded;
   const centerOk = isValidLatLng(coords);
 
-  const bgColor = colorMode === 'light' ? 'bg-white' : 'bg-neutral-950';
-  const textColor = colorMode === 'light' ? 'text-gray-900' : 'text-white';
-  const subText = colorMode === 'light' ? 'text-gray-600' : 'text-gray-400';
-  const linkColor =
-    colorMode === 'light'
-      ? 'text-blue-600 hover:text-blue-700'
-      : 'text-yellow-400 hover:text-yellow-500';
-  const headingColor = colorMode === 'light' ? 'text-black' : 'text-white';
+  const bgColor = 'bg-card';
+  const textColor = 'text-card-foreground';
+  const subText = 'text-muted-foreground';
+  const linkColor = 'text-primary hover:opacity-80';
+  const headingColor = 'text-foreground';
 
   const socialStyle: SocialStyle = (() => {
     const raw = String(meta?.socialIcons || '').toLowerCase();
@@ -406,7 +403,7 @@ export default function FooterRender({
 
   return (
     <footer
-      className={`${bgColor} ${textColor} px-6 py-10 text-sm mt-10`}
+      className={`${bgColor} ${textColor} border-t border-border px-6 py-10 text-sm mt-10`}
       data-device={device || 'auto'}
       data-qseditor-footer={enableFooterEdit ? '1' : undefined}
       onPointerDownCapture={enableFooterEdit ? handleOpenCapture : undefined}
@@ -475,7 +472,7 @@ export default function FooterRender({
         {/* Map + Socials */}
         <div className="space-y-3">
           <h3 className={`text-base font-semibold ${headingColor}`}>Find Us</h3>
-          <div className="rounded-md overflow-hidden border border-white/10">
+          <div className="rounded-md overflow-hidden border border-border">
             {centerOk ? (
               <LeafletMap
                 center={coords as [number, number]}

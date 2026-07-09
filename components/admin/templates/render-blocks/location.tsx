@@ -59,7 +59,7 @@ export default function RenderLocation(props: any) {
             {tel && (
               <a
                 href={tel}
-                className="inline-flex items-center justify-center rounded-lg bg-zinc-900 px-5 py-3 text-base font-semibold text-white transition hover:opacity-90 dark:bg-white dark:text-zinc-950"
+                className="inline-flex items-center justify-center rounded-lg bg-primary px-5 py-3 text-base font-semibold text-primary-foreground transition hover:opacity-90"
               >
                 📞 {phone}
               </a>
@@ -69,7 +69,7 @@ export default function RenderLocation(props: any) {
                 href={dir}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center justify-center rounded-lg border border-zinc-300 px-5 py-3 text-base font-semibold transition hover:bg-black/5 dark:border-zinc-700 dark:hover:bg-white/10"
+                className="inline-flex items-center justify-center rounded-lg border border-border px-5 py-3 text-base font-semibold transition hover:bg-muted"
               >
                 Get Directions →
               </a>
@@ -84,7 +84,7 @@ export default function RenderLocation(props: any) {
         </div>
 
         {map && (
-          <div className="min-h-[240px] overflow-hidden rounded-2xl border border-black/10 dark:border-white/10">
+          <div className="min-h-[240px] overflow-hidden rounded-2xl border border-border">
             <iframe
               title="Map"
               src={map}

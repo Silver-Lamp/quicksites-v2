@@ -12,6 +12,7 @@ import {
   WORK_BACKGROUNDS,
   WORK_BG_CHANGED_EVENT,
   WORK_BG_ROTATE_ID,
+  DEFAULT_WORK_BG_ID,
   findWorkBackground,
   readWorkBackgroundId,
 } from '@/lib/ui/workBackgrounds';
@@ -36,7 +37,10 @@ export default function WorkSurfaceBackground() {
     };
   }, []);
 
-  const rotating = id === WORK_BG_ROTATE_ID;
+  // Unset ('') → default; explicit 'none' opts out (findWorkBackground/rotate both
+  // resolve it to "render nothing" below).
+  const effectiveId = id === '' ? DEFAULT_WORK_BG_ID : id;
+  const rotating = effectiveId === WORK_BG_ROTATE_ID;
 
   // Advance the active index on an interval while rotating.
   const [idx, setIdx] = React.useState(0);
@@ -46,8 +50,8 @@ export default function WorkSurfaceBackground() {
     return () => clearInterval(t);
   }, [rotating]);
 
-  const single = findWorkBackground(id);
-  if (!rotating && !single) return null; // No selection → let the app's bg-background show.
+  const single = findWorkBackground(effectiveId);
+  if (!rotating && !single) return null; // 'none' → let the app's bg-background show.
 
   const scrim = <div className="absolute inset-0 bg-gradient-to-b from-background/40 via-transparent to-background/60" />;
 

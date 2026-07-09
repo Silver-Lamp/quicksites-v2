@@ -111,7 +111,11 @@ function FullAdminChrome({ children }: { children: React.ReactNode }) {
   });
 
   return (
-    <div data-admin-root className="min-h-screen bg-background text-foreground">
+    // `isolate` makes this a stacking context so the fixed -z-10 WorkSurfaceBackground
+    // paints ON TOP of this element's bg-background (but behind content). Without it,
+    // the -z-10 layer resolved in the root stacking context and was hidden behind the
+    // opaque bg-background → the decorative background never showed.
+    <div data-admin-root className="isolate min-h-screen bg-background text-foreground">
       <WorkSurfaceBackground />
       <div className="relative flex">
         <ResponsiveAdminLayout

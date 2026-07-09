@@ -18,6 +18,7 @@ import type { BlockValidationError } from '@/hooks/validateTemplateBlocks';
 
 import { createDefaultBlock } from '@/lib/createDefaultBlock';
 import { DynamicBlockEditor } from '@/components/editor/dynamic-block-editor';
+import { findBlockById, replaceBlockById as treeReplaceBlockById, hasBlockId } from '@/lib/blocks/tree';
 import LiveEditorPreviewFrame from '@/components/editor/live-editor/LiveEditorPreviewFrame';
 import BlockAdderGrouped from '@/components/admin/block-adder-grouped';
 import PageHeaderEditor from '@/components/admin/templates/block-editors/header-editor';
@@ -246,11 +247,11 @@ export default function EditorContent({
 
   const replaceBlockById = useCallback(
     (updated: Block) => {
-      const blocks = [...getPageBlocks(currentPage)];
-      const idx = blocks.findIndex((b) => eqId(b, bid(updated)));
-      if (idx < 0) return;
-      blocks[idx] = updated;
-      updateTemplateWithBlocks(blocks);
+      // Recursive: descends into section/grid children so editing a nested block
+      // saves back into its container (L4.1). Flat blocks behave as before.
+      const blocks = getPageBlocks(currentPage);
+      if (!hasBlockId(blocks as any[], bid(updated))) return;
+      updateTemplateWithBlocks(treeReplaceBlockById(blocks as any[], updated) as Block[]);
     },
     [currentPage, updateTemplateWithBlocks]
   );
@@ -385,11 +386,23 @@ export default function EditorContent({
   // render the actual editor for a selected block id
   const editingBlockObj = useMemo(() => {
     if (!editingBlockId) return null;
-    return getPageBlocks(currentPage).find((b) => eqId(b, editingBlockId)) ?? null;
+    // Recursive so a nested (section/grid) child resolves by _id, not just top-level.
+    return findBlockById(getPageBlocks(currentPage) as any[], editingBlockId) ?? null;
   }, [currentPage, editingBlockId]);
 
   // handlers passed to preview frame
   const handleEditBlock = useCallback((id: string) => setEditingBlockId(id), []);
+
+  // Inline preview (same window): a nested block (e.g. a section child) requests
+  // its editor via this event. Iframe previews use the postMessage bridge instead.
+  useEffect(() => {
+    const onEditBlock = (e: Event) => {
+      const id = (e as CustomEvent<{ id?: string }>).detail?.id;
+      if (id) setEditingBlockId(String(id));
+    };
+    window.addEventListener('qs:edit-block', onEditBlock as EventListener);
+    return () => window.removeEventListener('qs:edit-block', onEditBlock as EventListener);
+  }, []);
   const handleAddAfter  = useCallback((id: string) => setAdderTarget(id), []);
   const handleDelete    = useCallback((_id: string) => {}, []);
 

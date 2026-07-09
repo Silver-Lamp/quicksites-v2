@@ -341,6 +341,15 @@ export default function LiveEditorPreviewFrame({
     ? ({ ...resolvedTheme.vars, ...(resolvedTheme.fontFamily ? { fontFamily: resolvedTheme.fontFamily } : {}) } as React.CSSProperties)
     : undefined;
 
+  // Flag the editor context (same window) so nested blocks (e.g. section children)
+  // can show in-place edit affordances. Iframe previews detect via window.parent.
+  React.useEffect(() => {
+    (window as any).__QS_EDITOR__ = true;
+    return () => {
+      try { delete (window as any).__QS_EDITOR__; } catch { /* no-op */ }
+    };
+  }, []);
+
   /* ---------------- Viewport wrapper (visual only; never in URL) ---------------- */
   const [viewport, setViewport] = React.useState<'mobile' | 'tablet' | 'desktop'>(() => {
     try { return (localStorage.getItem('qs:preview:viewport') as any) || 'desktop'; }

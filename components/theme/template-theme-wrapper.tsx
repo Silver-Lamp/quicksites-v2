@@ -38,6 +38,17 @@ export function TemplateThemeWrapper({
 
   return (
     <div style={wrapperStyle} data-qs-themed={resolved ? '1' : undefined}>
+      {/* Load the curated font pairing (Google Fonts). Next hoists & dedupes the
+          stylesheet link; display=swap avoids blocking on the webfont. Headings
+          pick up var(--font-heading) via the [data-qs-themed] rule in globals.css. */}
+      {resolved?.fontHref ? (
+        <>
+          <link rel="preconnect" href="https://fonts.googleapis.com" />
+          <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+          <link rel="stylesheet" href={resolved.fontHref} />
+        </>
+      ) : null}
+
       {renderHeader && headerBlock ? (
         <div data-editor-section="global-header">
           <PageHeader

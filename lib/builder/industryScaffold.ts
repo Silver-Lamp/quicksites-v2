@@ -9,25 +9,22 @@ import { createEmptyTemplate } from '@/lib/createEmptyTemplate';
 import { createDefaultBlock } from '@/lib/createDefaultBlock';
 import { KEY_TO_LABEL, type IndustryKey } from '@/lib/industries';
 import { generateServices } from '@/lib/generateServices';
-import { getIndustryPreset } from '@/lib/theme/industryPresets';
+import { pickCuratedTheme } from '@/lib/theme/pickTheme';
+import { getCuratedTheme, toStampedTheme, type StampedTheme } from '@/lib/theme/curatedThemes';
 
 export type StarterTheme = {
   colorMode: 'light' | 'dark';
-  accentColor?: string;
-  fontFamily?: string;
-  borderRadius?: string;
+  /** Full theme bag stamped into data.meta.theme (accent/secondary/neutral/
+   *  fontPair/radius/surface/mode). */
+  stamped: StampedTheme;
 };
 
-/** Per-industry theme derived from the canonical industry presets (accent,
- *  font, radius, light/dark). See lib/theme/industryPresets.ts. */
-export function themeForIndustry(key: IndustryKey): StarterTheme {
-  const p = getIndustryPreset(key);
-  return {
-    colorMode: p.darkMode === 'dark' ? 'dark' : 'light',
-    accentColor: p.accentColor,
-    fontFamily: p.fontFamily,
-    borderRadius: p.borderRadius,
-  };
+/** Industry-weighted curated theme for a new site — random so sites don't all
+ *  look alike. Pass `themeId` to force a specific curated theme (reshuffle/tests).
+ *  See lib/theme/curatedThemes.ts + lib/theme/pickTheme.ts. */
+export function themeForIndustry(key: IndustryKey, themeId?: string | null): StarterTheme {
+  const curated = getCuratedTheme(themeId) ?? pickCuratedTheme({ industry: key });
+  return { colorMode: curated.darkMode, stamped: toStampedTheme(curated) };
 }
 
 function uid(): string {
@@ -45,11 +42,11 @@ function setIfPresent(obj: any, key: string, val: any) {
  * Build a starter site payload for /api/templates/create from an industry +
  * business name. Returns an object shaped like the create route's `initial`.
  */
-export function buildIndustryStarter(opts: { businessName: string; industryKey: IndustryKey }) {
+export function buildIndustryStarter(opts: { businessName: string; industryKey: IndustryKey; themeId?: string | null }) {
   const businessName = (opts.businessName || '').trim();
   const industryKey = opts.industryKey;
   const label = KEY_TO_LABEL[industryKey] ?? 'Other';
-  const theme = themeForIndustry(industryKey);
+  const theme = themeForIndustry(industryKey, opts.themeId);
 
   const base: any = createEmptyTemplate(businessName || label);
 
@@ -170,13 +167,8 @@ export function buildIndustryStarter(opts: { businessName: string; industryKey: 
         industry: industryKey,
         industry_label: label,
         services: serviceNames,
-        // Persist the industry theme so the renderer/editor theme layer can read it.
-        theme: {
-          accentColor: theme.accentColor,
-          fontFamily: theme.fontFamily,
-          borderRadius: theme.borderRadius,
-          darkMode: theme.colorMode,
-        },
+        // Persist the curated theme so the renderer/editor theme layer can read it.
+        theme: theme.stamped,
       },
     },
   };

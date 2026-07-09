@@ -51,6 +51,18 @@ export default function ThemePanel({
     });
   };
 
+  // Persist a change into data.meta.theme — the object the render layer reads
+  // (resolveSiteTheme). Merges onto any existing (e.g. curated) theme bag so the
+  // manual controls below actually stick, not just update the preview context.
+  const metaThemeData = (patch: Record<string, any>) => {
+    const data: any = { ...(template.data ?? {}) };
+    const meta: any = { ...(data.meta ?? {}) };
+    const theme: any =
+      meta.theme && typeof meta.theme === 'object' ? { ...meta.theme } : {};
+    data.meta = { ...meta, theme: { ...theme, ...patch } };
+    return data;
+  };
+
   return (
     <Collapsible id="theme" title="Theme">
       <div className="space-y-4">
@@ -62,11 +74,11 @@ export default function ThemePanel({
               value={template.theme || ''}
               onChange={(e) => {
                 const font = e.target.value;
-                // Update parent (mirror into data) and ThemeProvider
-                onChange({
-                  theme: font,
-                  data: { ...(template.data ?? {}), theme: font } as any,
-                });
+                // Persist into data.meta.theme (render field) + legacy data.theme.
+                // Clear fontPair so a manual font choice wins over a curated pairing.
+                const data = metaThemeData({ fontFamily: font, fontPair: null });
+                data.theme = font;
+                onChange({ theme: font, data });
                 setTheme({ ...ctxTheme, glow: [], fontFamily: font });
                 setLocalTpl((t) => ({ ...t, theme: font }));
               }}
@@ -92,9 +104,11 @@ export default function ThemePanel({
             <Label>Border Radius</Label>
             <select
               value={ctxTheme.borderRadius || 'lg'}
-              onChange={(e) =>
-                setTheme({ ...ctxTheme, glow: [], borderRadius: e.target.value })
-              }
+              onChange={(e) => {
+                const borderRadius = e.target.value;
+                setTheme({ ...ctxTheme, glow: [], borderRadius });
+                onChange({ data: metaThemeData({ borderRadius }) });
+              }}
               className="w-full bg-gray-800 text-white border border-gray-700 px-2 py-1 rounded mt-1"
             >
               {radii.map((r) => (
@@ -111,9 +125,11 @@ export default function ThemePanel({
             <Input
               placeholder="e.g. indigo-600"
               defaultValue={ctxTheme.accentColor || ''}
-              onBlur={(e) =>
-                setTheme({ ...ctxTheme, glow: [], accentColor: e.target.value })
-              }
+              onBlur={(e) => {
+                const accentColor = e.target.value;
+                setTheme({ ...ctxTheme, glow: [], accentColor });
+                onChange({ data: metaThemeData({ accentColor }) });
+              }}
               className="bg-gray-800 text-white border border-gray-700"
             />
           </div>
@@ -125,11 +141,11 @@ export default function ThemePanel({
               value={template.color_mode || 'light'}
               onChange={(e) => {
                 const mode = e.target.value as 'light' | 'dark';
-                // Mirror into data so the commit API persists the change
-                onChange({
-                  color_mode: mode,
-                  data: { ...(template.data ?? {}), color_mode: mode },
-                });
+                // Mirror into data (color_mode) + data.meta.theme.darkMode so the
+                // commit API persists the change and the render layer reads it.
+                const data = metaThemeData({ darkMode: mode });
+                data.color_mode = mode;
+                onChange({ color_mode: mode, data });
                 setTheme({ ...ctxTheme, glow: [], darkMode: mode });
                 setLocalTpl((t) => ({ ...t, color_mode: mode }));
               }}

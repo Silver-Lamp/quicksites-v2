@@ -244,3 +244,12 @@ html, body, #__next { width: 100%; max-width: 100%; }
 [data-guest] .qs-editor-actionbar {
   display: none;
 }
+
+/* Curated-theme heading font. A themed site wrapper (TemplateThemeWrapper sets
+   data-qs-themed + --font-heading from the theme's font pairing) applies the
+   display face to headings. Falls back to inherit when no pairing is set, so
+   legacy/unthemed sites are untouched. Body font comes from the wrapper's inline
+   font-family (--font-body). */
+[data-qs-themed] :is(h1, h2, h3, h4) {
+  font-family: var(--font-heading, inherit);
+}

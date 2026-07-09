@@ -7,8 +7,11 @@ import toast from 'react-hot-toast';
 import {
   RotateCcw, RotateCw, AlertTriangle, X, Maximize2, Minimize2,
   Smartphone, Tablet, Monitor, SlidersHorizontal, Check, Sun, Moon,
-  Settings as SettingsIcon, Trash2, Database, Minus, Wrench,
+  Settings as SettingsIcon, Trash2, Database, Minus, Wrench, Palette,
 } from 'lucide-react';
+import { ThemeShufflePanel } from '@/components/admin/templates/theme-shuffle-panel';
+import { pickCuratedTheme } from '@/lib/theme/pickTheme';
+import { toStampedTheme, type CuratedTheme } from '@/lib/theme/curatedThemes';
 
 import type { Template } from '@/types/template';
 import PageManagerToolbar from '@/components/admin/templates/page-manager-toolbar';
@@ -262,6 +265,38 @@ useEffect(() => {
     apply({ ...cur, color_mode: m, data: { ...(cur.data ?? {}), color_mode: m } } as Template);
     try { localStorage.setItem('qs:preview:color', m); } catch {}
     window.dispatchEvent(new CustomEvent('qs:preview:set-color-mode', { detail: m }));
+  };
+
+  // ---- Theme gallery / shuffle (non-destructive restyle) ----
+  const [themePanelOpen, setThemePanelOpen] = useState(false);
+  const currentThemeId: string | null = (template as any)?.data?.meta?.theme?.id ?? null;
+
+  const applyCuratedTheme = (theme: CuratedTheme) => {
+    const cur: any = (tplRef.current ?? template) || {};
+    const stamped = toStampedTheme(theme);
+    const mode = theme.darkMode;
+    apply({
+      ...cur,
+      color_mode: mode,
+      data: {
+        ...(cur.data ?? {}),
+        color_mode: mode,
+        meta: { ...((cur.data ?? {}).meta ?? {}), theme: stamped },
+      },
+    } as Template);
+    try { localStorage.setItem('qs:preview:color', mode); } catch {}
+    window.dispatchEvent(new CustomEvent('qs:preview:set-color-mode', { detail: mode }));
+  };
+
+  const shuffleTheme = () => {
+    const cur: any = (tplRef.current ?? template) || {};
+    const industry = cur?.data?.meta?.industry ?? cur?.industry;
+    const theme = pickCuratedTheme({
+      industry,
+      avoidId: cur?.data?.meta?.theme?.id ?? null,
+      avoidAccent: cur?.data?.meta?.theme?.accentColor ?? null,
+    });
+    applyCuratedTheme(theme);
   };
 
   /* patch bus: apply + queue save */
@@ -553,35 +588,61 @@ useEffect(() => {
               </Button>
             </div>
 
-            {/* Light / Dark (persists to the template) — labeled segmented control so
-                it reads clearly as a theme switch, not two loose icons. */}
-            <div
-              role="group"
-              aria-label="Theme"
-              className="flex items-center gap-0.5 rounded-md border bg-muted/40 p-0.5"
-            >
-              <Button
-                size="sm"
-                variant={colorMode === 'light' ? 'secondary' : 'ghost'}
-                className="h-7 gap-1.5 px-2"
-                title="Light mode"
-                aria-pressed={colorMode === 'light'}
-                onClick={() => setColorModeAndEmit('light')}
+            {/* Light / Dark + Theme gallery (persists to the template) — a labeled
+                control that reads clearly as the theme/look switcher. */}
+            <div className="relative">
+              <div
+                role="group"
+                aria-label="Theme"
+                className="flex items-center gap-0.5 rounded-md border bg-muted/40 p-0.5"
               >
-                <Sun className="w-4 h-4" />
-                <span className="text-xs font-medium">Light</span>
-              </Button>
-              <Button
-                size="sm"
-                variant={colorMode === 'dark' ? 'secondary' : 'ghost'}
-                className="h-7 gap-1.5 px-2"
-                title="Dark mode"
-                aria-pressed={colorMode === 'dark'}
-                onClick={() => setColorModeAndEmit('dark')}
-              >
-                <Moon className="w-4 h-4" />
-                <span className="text-xs font-medium">Dark</span>
-              </Button>
+                <Button
+                  size="sm"
+                  variant={colorMode === 'light' ? 'secondary' : 'ghost'}
+                  className="h-7 gap-1.5 px-2"
+                  title="Light mode"
+                  aria-pressed={colorMode === 'light'}
+                  onClick={() => setColorModeAndEmit('light')}
+                >
+                  <Sun className="w-4 h-4" />
+                  <span className="text-xs font-medium">Light</span>
+                </Button>
+                <Button
+                  size="sm"
+                  variant={colorMode === 'dark' ? 'secondary' : 'ghost'}
+                  className="h-7 gap-1.5 px-2"
+                  title="Dark mode"
+                  aria-pressed={colorMode === 'dark'}
+                  onClick={() => setColorModeAndEmit('dark')}
+                >
+                  <Moon className="w-4 h-4" />
+                  <span className="text-xs font-medium">Dark</span>
+                </Button>
+                <Button
+                  size="sm"
+                  variant={themePanelOpen ? 'secondary' : 'ghost'}
+                  className="h-7 gap-1.5 px-2"
+                  title="Browse themes / shuffle"
+                  aria-pressed={themePanelOpen}
+                  onClick={() => setThemePanelOpen((o) => !o)}
+                >
+                  <Palette className="w-4 h-4" />
+                  <span className="text-xs font-medium">Theme</span>
+                </Button>
+              </div>
+
+              {themePanelOpen ? (
+                <>
+                  <div className="fixed inset-0 z-[9999]" onClick={() => setThemePanelOpen(false)} />
+                  <div className="absolute bottom-full left-0 z-[10000] mb-2">
+                    <ThemeShufflePanel
+                      currentId={currentThemeId}
+                      onApply={applyCuratedTheme}
+                      onShuffle={shuffleTheme}
+                    />
+                  </div>
+                </>
+              ) : null}
             </div>
 
             {/* DEV cache buttons */}

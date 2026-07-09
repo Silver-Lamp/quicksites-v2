@@ -526,6 +526,10 @@ export default function LiveEditorPreviewFrame({
         onRequestAddAfter?.(String(data.blockId));
       } else if (data.type === 'preview:delete-block' && data.blockId) {
         onRequestDeleteBlock?.(String(data.blockId));
+      } else if (data.type === 'preview:child-op' && typeof data.op === 'string') {
+        // Container child ops (move/delete/add) from a section in the iframe →
+        // re-dispatch as a window CustomEvent the editor listens for.
+        try { window.dispatchEvent(new CustomEvent(data.op, { detail: data.detail })); } catch { /* no-op */ }
       }
     }
     window.addEventListener('message', onMessage);

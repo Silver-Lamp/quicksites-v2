@@ -1,4 +1,7 @@
-import { findBlockById, replaceBlockById, hasBlockId, blockId } from '@/lib/blocks/tree';
+import {
+  findBlockById, replaceBlockById, hasBlockId, blockId,
+  removeBlockById, moveChildById, insertIntoColumn,
+} from '@/lib/blocks/tree';
 
 const tree = (): any[] => [
   { _id: 'hero', type: 'hero', content: { headline: 'Hi' } },
@@ -66,5 +69,55 @@ describe('replaceBlockById', () => {
     const next = replaceBlockById(t, { _id: 'ghost', type: 'text', content: {} });
     expect(next.map(blockId)).toEqual(t.map(blockId));
     expect(hasBlockId(next, 'ghost')).toBe(false);
+  });
+});
+
+describe('removeBlockById', () => {
+  it('removes a top-level block', () => {
+    const next = removeBlockById(tree(), 'contact');
+    expect(hasBlockId(next, 'contact')).toBe(false);
+    expect(next.length).toBe(3);
+  });
+  it('removes a nested section child, leaving the section + other column', () => {
+    const next = removeBlockById(tree(), 't1');
+    expect(hasBlockId(next, 't1')).toBe(false);
+    expect(hasBlockId(next, 't2')).toBe(true);
+    expect(findBlockById(next, 'sec')).toBeTruthy();
+  });
+  it('removes a nested grid child', () => {
+    const next = removeBlockById(tree(), 'g1');
+    expect(hasBlockId(next, 'g1')).toBe(false);
+    expect(findBlockById(next, 'grd')).toBeTruthy();
+  });
+});
+
+describe('moveChildById', () => {
+  it('reorders top-level blocks', () => {
+    const next = moveChildById(tree(), 'sec', 'up'); // sec was index 1 → 0
+    expect(next.map(blockId)).toEqual(['sec', 'hero', 'grd', 'contact']);
+  });
+  it('is a no-op at the top bound', () => {
+    const next = moveChildById(tree(), 'hero', 'up');
+    expect(next.map(blockId)).toEqual(['hero', 'sec', 'grd', 'contact']);
+  });
+  it('reorders within a grid (multiple children)', () => {
+    const t: any[] = [
+      { _id: 'grd', type: 'grid', content: { items: [
+        { _id: 'a', type: 'text', content: {} },
+        { _id: 'b', type: 'text', content: {} },
+      ] } },
+    ];
+    const next = moveChildById(t, 'a', 'down');
+    expect(next[0].content.items.map(blockId)).toEqual(['b', 'a']);
+  });
+});
+
+describe('insertIntoColumn', () => {
+  it('appends a block to the given section column', () => {
+    const nb = { _id: 'new', type: 'text', content: { value: 'x' } };
+    const next = insertIntoColumn(tree(), 'sec', 0, nb);
+    const sec = findBlockById(next, 'sec');
+    expect(sec.content.columns[0].items.map(blockId)).toEqual(['t1', 'new']);
+    expect(sec.content.columns[1].items.map(blockId)).toEqual(['t2']);
   });
 });

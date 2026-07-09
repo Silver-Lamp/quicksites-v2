@@ -99,7 +99,16 @@ share one path.
 - Add child add/delete/reorder **within** a single column (one `SortableContext` per column —
   no cross-container yet). Column controls: add/remove column, span, gap.
 
-### L4.2 — Cross-container drag-and-drop (the hard part)
+### L4.2a — In-column block management (SHIPPED, no dnd-kit) ✅
+`lib/blocks/tree.ts` gains `removeBlockById` / `moveChildById` (reorder within the
+immediate parent) / `insertIntoColumn` (all unit-tested). The `section` renderer's
+per-child hover toolbar now does **Edit / ↑ / ↓ / ✕**, and each column has a
+**"+ Add block"** control (inserts a text block, opens its editor). Ops route via
+`qs:move-child` / `qs:delete-child` / `qs:add-child` (inline CustomEvent; iframe →
+`preview:child-op` bridge → re-dispatched). You can fully build out a column's
+content — just not yet drag a block *between* columns (that's L4.2b below).
+
+### L4.2b — Cross-container drag-and-drop (the hard part)
 - Multi-container dnd-kit in `LiveEditorPreviewFrame`: per-container droppables, custom
   collision detection, `onDragOver` to move between containers, tree reconstruction on drop.
 - Drag blocks between columns, into/out of sections, and at the top level.

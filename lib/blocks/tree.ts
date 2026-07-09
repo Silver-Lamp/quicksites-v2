@@ -72,3 +72,97 @@ export function replaceBlockById(blocks: AnyBlock[], updated: AnyBlock): AnyBloc
     return b;
   });
 }
+
+/** Remove a block by id anywhere in the tree (top-level or nested in a container). */
+export function removeBlockById(blocks: AnyBlock[], id: string): AnyBlock[] {
+  if (!Array.isArray(blocks) || !id) return blocks;
+  const out: AnyBlock[] = [];
+  for (const b of blocks) {
+    if (blockId(b) === id) continue; // drop it
+    if (b?.type === 'grid' && Array.isArray(b?.content?.items) && hasBlockId(b.content.items, id)) {
+      out.push({ ...b, content: { ...b.content, items: removeBlockById(b.content.items, id) } });
+    } else if (
+      b?.type === 'section' &&
+      Array.isArray(b?.content?.columns) &&
+      b.content.columns.some((col: any) => Array.isArray(col?.items) && hasBlockId(col.items, id))
+    ) {
+      out.push({
+        ...b,
+        content: {
+          ...b.content,
+          columns: b.content.columns.map((col: any) =>
+            Array.isArray(col?.items) && hasBlockId(col.items, id)
+              ? { ...col, items: removeBlockById(col.items, id) }
+              : col,
+          ),
+        },
+      });
+    } else {
+      out.push(b);
+    }
+  }
+  return out;
+}
+
+/** Swap the block with `id` toward its neighbor in the SAME array, if possible. */
+function reorderInArray(arr: AnyBlock[], id: string, dir: 'up' | 'down'): AnyBlock[] | null {
+  const i = arr.findIndex((b) => blockId(b) === id);
+  if (i < 0) return null;
+  const j = dir === 'up' ? i - 1 : i + 1;
+  if (j < 0 || j >= arr.length) return arr; // at a bound → handled, no change
+  const next = arr.slice();
+  [next[i], next[j]] = [next[j], next[i]];
+  return next;
+}
+
+/** Move a block up/down within its immediate parent array (top-level or a container column). */
+export function moveChildById(blocks: AnyBlock[], id: string, dir: 'up' | 'down'): AnyBlock[] {
+  if (!Array.isArray(blocks) || !id) return blocks;
+  const top = reorderInArray(blocks, id, dir);
+  if (top) return top;
+  return blocks.map((b) => {
+    if (b?.type === 'grid' && Array.isArray(b?.content?.items) && hasBlockId(b.content.items, id)) {
+      const r = reorderInArray(b.content.items, id, dir);
+      return r ? { ...b, content: { ...b.content, items: r } } : b;
+    }
+    if (b?.type === 'section' && Array.isArray(b?.content?.columns)) {
+      let changed = false;
+      const columns = b.content.columns.map((col: any) => {
+        if (Array.isArray(col?.items) && hasBlockId(col.items, id)) {
+          const r = reorderInArray(col.items, id, dir);
+          if (r) {
+            changed = true;
+            return { ...col, items: r };
+          }
+        }
+        return col;
+      });
+      return changed ? { ...b, content: { ...b.content, columns } } : b;
+    }
+    return b;
+  });
+}
+
+/** Insert a block into a section's column (by section id + column index). */
+export function insertIntoColumn(
+  blocks: AnyBlock[],
+  sectionId: string,
+  colIdx: number,
+  block: AnyBlock,
+  atIndex?: number,
+): AnyBlock[] {
+  if (!Array.isArray(blocks) || !sectionId) return blocks;
+  return blocks.map((b) => {
+    if (blockId(b) === sectionId && b?.type === 'section' && Array.isArray(b?.content?.columns)) {
+      const columns = b.content.columns.map((col: any, i: number) => {
+        if (i !== colIdx) return col;
+        const items = Array.isArray(col?.items) ? col.items.slice() : [];
+        const at = typeof atIndex === 'number' && atIndex >= 0 && atIndex <= items.length ? atIndex : items.length;
+        items.splice(at, 0, block);
+        return { ...col, items };
+      });
+      return { ...b, content: { ...b.content, columns } };
+    }
+    return b;
+  });
+}

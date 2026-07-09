@@ -39,6 +39,26 @@ function requestEditBlock(id: string) {
   }
 }
 
+/** Container child ops (move/delete/add): inline → CustomEvent; iframe → bridge. */
+function emitChildOp(op: 'qs:move-child' | 'qs:delete-child' | 'qs:add-child', detail: any) {
+  try {
+    if (window.parent && window.parent !== window) {
+      window.parent.postMessage({ type: 'preview:child-op', op, detail }, '*');
+    } else {
+      window.dispatchEvent(new CustomEvent(op, { detail }));
+    }
+  } catch {
+    /* no-op */
+  }
+}
+
+/** Wrap a click handler so it never bubbles to the block/section selection. */
+const stop = (fn: () => void) => (e: React.MouseEvent) => {
+  e.preventDefault();
+  e.stopPropagation();
+  fn();
+};
+
 const GAP: Record<string, string> = { sm: 'gap-4', md: 'gap-8', lg: 'gap-12' };
 const ALIGN: Record<string, string> = { start: 'items-start', center: 'items-center', stretch: 'items-stretch' };
 
@@ -74,6 +94,7 @@ export default function SectionRender(props: any) {
       >
         {columns.map((col, i) => {
           const items = (Array.isArray(col.items) ? col.items : []).map((b: any) => normalizeBlock(b));
+          const sectionId = String(block?._id ?? block?.id ?? '');
           return (
             <div key={i} className="min-w-0">
               {items.map((b: any, j: number) => {
@@ -88,26 +109,30 @@ export default function SectionRender(props: any) {
                     showDebug={false}
                   />
                 );
-                // In the editor, overlay a hover "Edit" control so nested children
-                // are editable in place (L4.1) via the preview:edit-block bridge.
+                // In the editor, overlay a hover toolbar so nested children can be
+                // edited / reordered / removed in place (L4.1 + L4.2).
                 if (!editorCtx || !cid) return <div key={cid || j}>{child}</div>;
                 return (
                   <div key={cid} className="group/qsb relative">
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        requestEditBlock(cid);
-                      }}
-                      className="absolute right-1.5 top-1.5 z-20 hidden items-center rounded-md bg-black/70 px-2 py-0.5 text-[11px] font-medium text-white shadow group-hover/qsb:inline-flex"
-                    >
-                      Edit
-                    </button>
+                    <div className="absolute right-1.5 top-1.5 z-20 hidden items-center gap-0.5 rounded-md bg-black/75 p-0.5 text-white shadow group-hover/qsb:flex">
+                      <button type="button" title="Edit" onClick={stop(() => requestEditBlock(cid))} className="rounded px-1.5 py-0.5 text-[11px] font-medium hover:bg-white/20">Edit</button>
+                      <button type="button" title="Move up" onClick={stop(() => emitChildOp('qs:move-child', { id: cid, dir: 'up' }))} className="rounded px-1 py-0.5 text-xs hover:bg-white/20">↑</button>
+                      <button type="button" title="Move down" onClick={stop(() => emitChildOp('qs:move-child', { id: cid, dir: 'down' }))} className="rounded px-1 py-0.5 text-xs hover:bg-white/20">↓</button>
+                      <button type="button" title="Delete" onClick={stop(() => emitChildOp('qs:delete-child', { id: cid }))} className="rounded px-1 py-0.5 text-xs text-red-300 hover:bg-white/20">✕</button>
+                    </div>
                     {child}
                   </div>
                 );
               })}
+              {editorCtx && sectionId ? (
+                <button
+                  type="button"
+                  onClick={stop(() => emitChildOp('qs:add-child', { sectionId, colIdx: i }))}
+                  className="mt-2 w-full rounded-md border border-dashed border-border py-1.5 text-xs text-muted-foreground transition hover:bg-muted"
+                >
+                  + Add block
+                </button>
+              ) : null}
             </div>
           );
         })}

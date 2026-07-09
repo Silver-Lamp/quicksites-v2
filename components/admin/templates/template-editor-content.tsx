@@ -18,7 +18,10 @@ import type { BlockValidationError } from '@/hooks/validateTemplateBlocks';
 
 import { createDefaultBlock } from '@/lib/createDefaultBlock';
 import { DynamicBlockEditor } from '@/components/editor/dynamic-block-editor';
-import { findBlockById, replaceBlockById as treeReplaceBlockById, hasBlockId } from '@/lib/blocks/tree';
+import {
+  findBlockById, replaceBlockById as treeReplaceBlockById, hasBlockId,
+  removeBlockById, moveChildById, insertIntoColumn,
+} from '@/lib/blocks/tree';
 import LiveEditorPreviewFrame from '@/components/editor/live-editor/LiveEditorPreviewFrame';
 import BlockAdderGrouped from '@/components/admin/block-adder-grouped';
 import PageHeaderEditor from '@/components/admin/templates/block-editors/header-editor';
@@ -393,16 +396,44 @@ export default function EditorContent({
   // handlers passed to preview frame
   const handleEditBlock = useCallback((id: string) => setEditingBlockId(id), []);
 
-  // Inline preview (same window): a nested block (e.g. a section child) requests
-  // its editor via this event. Iframe previews use the postMessage bridge instead.
+  // Nested-block ops from a container's in-place controls (section/grid children).
+  // Inline preview dispatches these as window CustomEvents directly; iframe preview
+  // posts them and LiveEditorPreviewFrame re-dispatches them here. All operate via
+  // the recursive tree helpers so they work at any depth.
   useEffect(() => {
     const onEditBlock = (e: Event) => {
       const id = (e as CustomEvent<{ id?: string }>).detail?.id;
       if (id) setEditingBlockId(String(id));
     };
+    const onMove = (e: Event) => {
+      const d = (e as CustomEvent<{ id?: string; dir?: 'up' | 'down' }>).detail;
+      if (d?.id && (d.dir === 'up' || d.dir === 'down')) {
+        updateTemplateWithBlocks(moveChildById(getPageBlocks(currentPage) as any[], d.id, d.dir) as Block[]);
+      }
+    };
+    const onDeleteChild = (e: Event) => {
+      const id = (e as CustomEvent<{ id?: string }>).detail?.id;
+      if (id) updateTemplateWithBlocks(removeBlockById(getPageBlocks(currentPage) as any[], id) as Block[]);
+    };
+    const onAddChild = (e: Event) => {
+      const d = (e as CustomEvent<{ sectionId?: string; colIdx?: number }>).detail;
+      if (!d?.sectionId || typeof d.colIdx !== 'number') return;
+      const nb: any = createDefaultBlock('text');
+      nb.content = { ...(nb.content ?? {}), value: '<p>New text — click Edit to change.</p>' };
+      updateTemplateWithBlocks(insertIntoColumn(getPageBlocks(currentPage) as any[], d.sectionId, d.colIdx, nb) as Block[]);
+      setEditingBlockId(String(nb._id ?? nb.id));
+    };
     window.addEventListener('qs:edit-block', onEditBlock as EventListener);
-    return () => window.removeEventListener('qs:edit-block', onEditBlock as EventListener);
-  }, []);
+    window.addEventListener('qs:move-child', onMove as EventListener);
+    window.addEventListener('qs:delete-child', onDeleteChild as EventListener);
+    window.addEventListener('qs:add-child', onAddChild as EventListener);
+    return () => {
+      window.removeEventListener('qs:edit-block', onEditBlock as EventListener);
+      window.removeEventListener('qs:move-child', onMove as EventListener);
+      window.removeEventListener('qs:delete-child', onDeleteChild as EventListener);
+      window.removeEventListener('qs:add-child', onAddChild as EventListener);
+    };
+  }, [currentPage, updateTemplateWithBlocks]);
   const handleAddAfter  = useCallback((id: string) => setAdderTarget(id), []);
   const handleDelete    = useCallback((_id: string) => {}, []);
 

@@ -5,6 +5,7 @@ import * as React from 'react';
 import { cn } from '@/lib/utils';
 import RenderBlock from '@/components/admin/templates/render-block';
 import { resolveSiteTheme } from '@/lib/theme/resolveSiteTheme';
+import { BLOCK_VARIANTS } from '@/lib/blocks/variants';
 import { Pencil, Trash2, GripVertical } from 'lucide-react';
 import { TooltipProvider } from '@/components/ui/tooltip';
 
@@ -819,11 +820,36 @@ export default function LiveEditorPreviewFrame({
                           ? (b.type || (b as any)?.block?.type)
                           : undefined;
 
+                      // Inline per-block layout variant control (e.g. hero layout,
+                      // services style) — sets a content field via a window event.
+                      const vspec = blockType ? BLOCK_VARIANTS[blockType] : undefined;
+                      const variantControl = vspec ? (() => {
+                        const cur = String((b as any)?.content?.[vspec.field] ?? '');
+                        const val = vspec.options.some((o) => o.value === cur) ? cur : vspec.options[0].value;
+                        return (
+                          <select
+                            value={val}
+                            title={vspec.label}
+                            onClick={(e) => e.stopPropagation()}
+                            onChange={(e) => {
+                              e.stopPropagation();
+                              window.dispatchEvent(new CustomEvent('qs:set-block-variant', { detail: { id, field: vspec.field, value: e.target.value } }));
+                            }}
+                            className="pointer-events-auto rounded-md border border-white/20 bg-black/60 px-1.5 py-1 text-[11px] text-white hover:bg-black/80"
+                          >
+                            {vspec.options.map((o) => (
+                              <option key={o.value} value={o.value}>{o.label}</option>
+                            ))}
+                          </select>
+                        );
+                      })() : null;
+
                       return (
                         <SortableRow
                           key={id}
                           id={id}
                           blockType={blockType}
+                          variantControl={variantControl}
                           isActive={activeId === id}
                           onEdit={() => {
                             if (blockType === 'hours') {
@@ -968,6 +994,7 @@ function humanizeBlockType(type?: string): string {
 function SortableRow({
   id,
   blockType,
+  variantControl,
   isActive,
   onEdit,
   onDelete,
@@ -975,6 +1002,7 @@ function SortableRow({
 }: {
   id: string;
   blockType?: string;
+  variantControl?: React.ReactNode;
   isActive?: boolean;
   onEdit?: () => void;
   onDelete?: () => void;
@@ -1011,8 +1039,9 @@ function SortableRow({
         </span>
       </div>
 
-      {/* Top-right controls: Drag handle + Edit + Delete */}
-      <div className="pointer-events-none absolute right-2 top-2 z-10 hidden gap-1 group-hover:flex">
+      {/* Top-right controls: Layout variant + Drag handle + Edit + Delete */}
+      <div className="pointer-events-none absolute right-2 top-2 z-10 hidden items-center gap-1 group-hover:flex">
+        {variantControl}
         {/* DRAG HANDLE — plain button (no TooltipTrigger/asChild) */}
         <button
           type="button"

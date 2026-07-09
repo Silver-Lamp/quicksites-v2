@@ -528,6 +528,8 @@ export const blockContentSchemaMap = {
     }, z.object({
       title: z.string().optional(),
       columns: z.number().int().min(1).max(6).default(3),
+      // Per-block layout override; falls back to the theme's featureVariant.
+      variant: z.enum(['grid', 'cards', 'rows']).optional(),
       items: z.array(z.object({
         name: z.string().min(1),
         description: z.string().default(''),

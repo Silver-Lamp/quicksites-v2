@@ -75,9 +75,10 @@ export default function ServicesRender({
     );
   }
 
-  // Layout personality from the curated theme; null on legacy sites → the
-  // classic boxed list (now semantic-token colored, so it still tracks light/dark).
-  const variant = resolveSiteLayout(template)?.featureVariant ?? null;
+  // Per-block override wins, else the curated theme's featureVariant; null on
+  // legacy sites → the classic boxed list.
+  const cfgVariant = cfg.variant === 'grid' || cfg.variant === 'cards' || cfg.variant === 'rows' ? cfg.variant : null;
+  const variant = cfgVariant ?? resolveSiteLayout(template)?.featureVariant ?? null;
 
   const colGrid =
     columns >= 3 ? 'sm:grid-cols-2 lg:grid-cols-3'

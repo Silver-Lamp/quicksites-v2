@@ -455,6 +455,15 @@ export default function EditorContent({
         );
       }
     };
+    const onSetVariant = (e: Event) => {
+      const d = (e as CustomEvent<{ id?: string; field?: string; value?: string }>).detail;
+      if (!d?.id || !d.field) return;
+      const blocks = getPageBlocks(currentPage) as any[];
+      const blk = findBlockById(blocks, d.id);
+      if (!blk) return;
+      const updated = { ...blk, content: { ...(blk.content ?? {}), [d.field]: d.value } };
+      updateTemplateWithBlocks(treeReplaceBlockById(blocks, updated) as Block[]);
+    };
     const onAddChild = (e: Event) => {
       const d = (e as CustomEvent<{ sectionId?: string; colIdx?: number }>).detail;
       if (!d?.sectionId || typeof d.colIdx !== 'number') return;
@@ -465,6 +474,7 @@ export default function EditorContent({
     window.addEventListener('qs:move-child', onMove as EventListener);
     window.addEventListener('qs:move-child-col', onMoveCol as EventListener);
     window.addEventListener('qs:move-child-to', onMoveTo as EventListener);
+    window.addEventListener('qs:set-block-variant', onSetVariant as EventListener);
     window.addEventListener('qs:delete-child', onDeleteChild as EventListener);
     window.addEventListener('qs:add-child', onAddChild as EventListener);
     return () => {
@@ -472,6 +482,7 @@ export default function EditorContent({
       window.removeEventListener('qs:move-child', onMove as EventListener);
       window.removeEventListener('qs:move-child-col', onMoveCol as EventListener);
       window.removeEventListener('qs:move-child-to', onMoveTo as EventListener);
+      window.removeEventListener('qs:set-block-variant', onSetVariant as EventListener);
       window.removeEventListener('qs:delete-child', onDeleteChild as EventListener);
       window.removeEventListener('qs:add-child', onAddChild as EventListener);
     };

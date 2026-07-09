@@ -12,6 +12,10 @@ import crypto from 'crypto';
 /** httpOnly cookie carrying the "this browser verified" grant across the login hop. */
 export const CLAIM_VERIFY_GRANT_COOKIE = 'qs_claim_verify_grant';
 
+/** Separate grant cookie for the email/domain-claim path so it can't clobber (or be
+ *  confused with) the SMS/template grant above. Bound to a domain id as its subject. */
+export const DOMAIN_CLAIM_VERIFY_GRANT_COOKIE = 'qs_domain_claim_grant';
+
 export const CODE_TTL_MS = 10 * 60 * 1000; // OTP lifetime
 export const GRANT_TTL_MS = 30 * 60 * 1000; // time to finish sign-up after verifying
 export const MAX_CONFIRM_ATTEMPTS = 5; // per active code before it's burned

@@ -74,6 +74,12 @@ export const DEFAULT_BLOCK_CONTENT = {
     layout: 'grid',
   },
 
+  section: {
+    columns: [{ items: [] }, { items: [] }],
+    gap: 'md',
+    align: 'stretch',
+  },
+
   /* ───────── hero ───────── */
 
   hero: {

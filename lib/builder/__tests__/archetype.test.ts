@@ -6,7 +6,7 @@ import { buildIndustryStarter, pickArchetype } from '@/lib/builder/industryScaff
 
 const KNOWN = new Set([
   'hero', 'services', 'faq', 'contact_form', 'story', 'testimonial', 'cta',
-  'menu', 'location', 'hours', 'order_bar', 'products_grid',
+  'menu', 'location', 'hours', 'order_bar', 'products_grid', 'section', 'text',
 ]);
 
 const types = (tpl: any): string[] => tpl.data.pages[0].blocks.map((b: any) => b.type);
@@ -53,5 +53,20 @@ describe('buildIndustryStarter composition', () => {
   it('stamps the theme layout personality so the renderer can vary structure', () => {
     const tpl = buildIndustryStarter({ businessName: 'Grafton', industryKey: 'auto_repair', themeId: 'ironworks' });
     expect(tpl.data.meta.theme.layout).toMatchObject({ rhythm: 'banded', featureVariant: 'rows' });
+  });
+
+  it('split-layout themes get a real 2-column section after the hero', () => {
+    // meridian = professional → heroLayout 'split'
+    const tpl = buildIndustryStarter({ businessName: 'Grafton', industryKey: 'legal', themeId: 'meridian' });
+    const blocks = tpl.data.pages[0].blocks;
+    const section = blocks.find((b: any) => b.type === 'section');
+    expect(section).toBeTruthy();
+    expect(Array.isArray(section.content.columns)).toBe(true);
+    expect(section.content.columns.length).toBe(2);
+    // each column holds child blocks
+    expect(section.content.columns[0].items.length).toBeGreaterThan(0);
+    // and it sits right after the hero
+    expect(blocks[0].type).toBe('hero');
+    expect(blocks[1].type).toBe('section');
   });
 });

@@ -404,6 +404,27 @@ export const blockContentSchemaMap = {
     }),
   },
 
+  // Multi-column section: each column holds its own child blocks side-by-side
+  // (stacks on mobile). The nesting foundation for L4 (see docs/LAYOUT_L4_PLAN.md).
+  section: {
+    label: 'Columns',
+    icon: '▥',
+    schema: z.object({
+      columns: z
+        .array(
+          z.object({
+            span: z.number().min(1).max(12).optional(),
+            items: z.array(z.lazy(() => BlockSchema as any)).default([]),
+          }),
+        )
+        .default([]),
+      gap: z.enum(['sm', 'md', 'lg']).default('md'),
+      align: z.enum(['start', 'center', 'stretch']).default('stretch'),
+      reverseOnMobile: z.boolean().optional(),
+      title: z.string().optional(),
+    }),
+  },
+
   quote: {
     label: 'Quote',
     icon: '❝',

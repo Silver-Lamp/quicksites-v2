@@ -208,6 +208,32 @@ export function buildIndustryStarter(opts: { businessName: string; industryKey: 
         break;
     }
   }
+
+  // Split-layout themes (heroLayout: 'split' — warm/professional) get a real
+  // side-by-side "About | Why choose us" section after the hero, so the page
+  // isn't a pure vertical stack (L4 sections; see docs/LAYOUT_L4_PLAN.md).
+  if (theme.stamped.layout?.heroLayout === 'split' && blocks.length > 1 && !FOOD_INDUSTRIES.has(industryKey)) {
+    const bn = businessName || label;
+    const aboutCol: any = createDefaultBlock('text');
+    aboutCol.content = {
+      ...aboutCol.content,
+      value: `<h3>About ${bn}</h3><p>We're a local ${label.toLowerCase()} team dedicated to quality work and honest, dependable service. Share your story and what sets you apart here.</p>`,
+    };
+    const highlightsCol: any = createDefaultBlock('text');
+    highlightsCol.content = {
+      ...highlightsCol.content,
+      value: `<h3>Why choose us</h3><ul><li>Licensed &amp; insured</li><li>Fast, friendly service</li><li>Satisfaction guaranteed</li></ul>`,
+    };
+    const splitSection: any = createDefaultBlock('section');
+    splitSection.content = {
+      ...splitSection.content,
+      columns: [{ span: 1, items: [aboutCol] }, { span: 1, items: [highlightsCol] }],
+      gap: 'lg',
+      align: 'start',
+    };
+    blocks.splice(1, 0, splitSection);
+  }
+
   const homePage = {
     id: uid(),
     slug: 'index',

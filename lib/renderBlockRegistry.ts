@@ -83,6 +83,7 @@ export const DYNAMIC_RENDERERS: Record<
   quote:  () => import('@/components/admin/templates/render-blocks/quote'),
   button: () => import('@/components/admin/templates/render-blocks/button'),
   grid:   () => import('@/components/admin/templates/render-blocks/grid'),
+  section:() => import('@/components/admin/templates/render-blocks/section'),
   services: () =>
     import('@/components/admin/templates/render-blocks/services').then((mod) => ({
       default: (props: any) =>

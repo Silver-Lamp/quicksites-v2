@@ -45,6 +45,22 @@ export function createDefaultBlock(type: BlockType): z.infer<typeof BlockSchema>
       break;
     }
 
+    case 'section': {
+      content = {
+        ...content,
+        columns:
+          Array.isArray(content.columns) && content.columns.length
+            ? content.columns
+            : [
+                { items: [{ type: 'text', _id: newId(), content: { value: '<h3>Left column</h3><p>Add blocks here.</p>' } }] },
+                { items: [{ type: 'text', _id: newId(), content: { value: '<h3>Right column</h3><p>Add blocks here.</p>' } }] },
+              ],
+        gap: content.gap ?? 'md',
+        align: content.align ?? 'center',
+      };
+      break;
+    }
+
     case 'testimonial': {
       content = {
         ...content,

@@ -125,6 +125,17 @@ share one path.
 rewritten and it *is* the core editing UX. Everything else (schema, render, persistence,
 scaffold emission) is comparatively cheap.
 
+## Progress
+
+- ✅ **L4.0** (render + scaffold, no cross-container DnD): `section` block registered
+  (schema with recursive `columns[].items`, renderer, category, default content,
+  createDefaultBlock); `section.tsx` renders columns side-by-side (fr spans) and
+  stacks on mobile, theme-aware. `industryScaffold` emits a 2-column "About | Why
+  choose us" section after the hero for split-layout themes (warm/professional).
+  Tests in `archetype.test.ts`. **Editing nested children in-place is L4.1** (the
+  section currently edits via the JSON fallback; recursive `findBlockById`/
+  `replaceBlockById` + editor affordances are the next step).
+
 ## 6. Recommendation
 
 **Do L4.0 first as its own PR after #245 lands** — it delivers the visible "blocks

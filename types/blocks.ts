@@ -30,6 +30,7 @@ export const BLOCK_CATEGORY: Record<BlockType, BlockCategory> = {
   quote: 'content',
   button: 'interactive',
   grid: 'layout',
+  section: 'layout',
   hero: 'layout',
   services: 'content',
   faq: 'interactive',

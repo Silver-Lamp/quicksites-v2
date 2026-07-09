@@ -163,10 +163,12 @@ export default function EditorContent({
   const [editingFooter, setEditingFooter] = useState<Block | null>(null);
   const [editingBlockId, setEditingBlockId] = useState<string | null>(null);
   const [adderTarget, setAdderTarget] = useState<string | null>(null);
+  // Adding a block INTO a section column (vs after a top-level block).
+  const [columnAdderTarget, setColumnAdderTarget] = useState<{ sectionId: string; colIdx: number } | null>(null);
 
   // Lock scroll whenever any overlay is open
   useBodyScrollLock(
-    showSettings || !!editingHeader || !!editingFooter || adderTarget !== null || !!editingBlockId
+    showSettings || !!editingHeader || !!editingFooter || adderTarget !== null || columnAdderTarget !== null || !!editingBlockId
   );
 
   const [showWelcome, setShowWelcome] = useState(false);
@@ -257,6 +259,30 @@ export default function EditorContent({
       updateTemplateWithBlocks(treeReplaceBlockById(blocks as any[], updated) as Block[]);
     },
     [currentPage, updateTemplateWithBlocks]
+  );
+
+  // Insert a picked block type — into a section column when the picker was opened
+  // from a column's "+ Add block", else after the top-level target. Then edit it.
+  const addPickedBlock = useCallback(
+    (type: string) => {
+      const block = createDefaultBlock(type as any) as Block;
+      if (columnAdderTarget) {
+        updateTemplateWithBlocks(
+          insertIntoColumn(
+            getPageBlocks(currentPage) as any[],
+            columnAdderTarget.sectionId,
+            columnAdderTarget.colIdx,
+            block,
+          ) as Block[],
+        );
+      } else {
+        insertBlockAfter(block, adderTarget);
+      }
+      setAdderTarget(null);
+      setColumnAdderTarget(null);
+      setEditingBlockId(String((block as any)._id ?? (block as any).id));
+    },
+    [columnAdderTarget, adderTarget, currentPage, insertBlockAfter, updateTemplateWithBlocks],
   );
 
   // ===== Hotkeys & bridges =====
@@ -424,10 +450,8 @@ export default function EditorContent({
     const onAddChild = (e: Event) => {
       const d = (e as CustomEvent<{ sectionId?: string; colIdx?: number }>).detail;
       if (!d?.sectionId || typeof d.colIdx !== 'number') return;
-      const nb: any = createDefaultBlock('text');
-      nb.content = { ...(nb.content ?? {}), value: '<p>New text — click Edit to change.</p>' };
-      updateTemplateWithBlocks(insertIntoColumn(getPageBlocks(currentPage) as any[], d.sectionId, d.colIdx, nb) as Block[]);
-      setEditingBlockId(String(nb._id ?? nb.id));
+      // Open the block picker targeting this column (see the ModalShell below).
+      setColumnAdderTarget({ sectionId: d.sectionId, colIdx: d.colIdx });
     };
     window.addEventListener('qs:edit-block', onEditBlock as EventListener);
     window.addEventListener('qs:move-child', onMove as EventListener);
@@ -614,17 +638,18 @@ export default function EditorContent({
         </div>
       )}
 
-      {/* Block Picker (ModalShell) */}
+      {/* Block Picker (ModalShell) — shared for top-level inserts (adderTarget) and
+          section-column inserts (columnAdderTarget). */}
       <ModalShell
-        open={adderTarget !== null}
-        onClose={() => setAdderTarget(null)}
-        title="Add a Block"
+        open={adderTarget !== null || columnAdderTarget !== null}
+        onClose={() => { setAdderTarget(null); setColumnAdderTarget(null); }}
+        title={columnAdderTarget ? 'Add a Block to this column' : 'Add a Block'}
         closeOnBackdrop
         closeOnEsc
         className="w-[min(92vw,1000px)] max-w-[1000px] max-h-[85vh]"
         footer={
           <button
-            onClick={() => setAdderTarget(null)}
+            onClick={() => { setAdderTarget(null); setColumnAdderTarget(null); }}
             className="px-3 py-2 text-sm rounded-md border border-white/15 bg-white/5 hover:bg-white/10"
           >
             Cancel
@@ -635,19 +660,9 @@ export default function EditorContent({
           inline
           template={template}
           existingBlocks={getPageBlocks(currentPage)}
-          onClose={() => setAdderTarget(null)}
-          onAddAndEdit={(type) => {
-            const block = createDefaultBlock(type) as Block;
-            insertBlockAfter(block, adderTarget);
-            setAdderTarget(null);
-            setEditingBlockId(String((block as any)._id ?? (block as any).id));
-          }}
-          onAdd={(type) => {
-            const block = createDefaultBlock(type) as Block;
-            insertBlockAfter(block, adderTarget);
-            setAdderTarget(null);
-            setEditingBlockId(String((block as any)._id ?? (block as any).id));
-          }}
+          onClose={() => { setAdderTarget(null); setColumnAdderTarget(null); }}
+          onAddAndEdit={(type) => addPickedBlock(type)}
+          onAdd={(type) => addPickedBlock(type)}
         />
       </ModalShell>
 

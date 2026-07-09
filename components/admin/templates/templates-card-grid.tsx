@@ -23,15 +23,17 @@ type Row = {
   data?: any;
 };
 
-// Use the generated thumbnail (reads each template's OWN data) — reliable, unlike
-// the list API's canonical/MV data. Falls back to a lettered card on error.
-function CardThumb({ slug, name }: { slug: string; name: string }) {
+// Use the generated OG thumbnail (reads each template's OWN data — hero image or
+// a themed accent card). `v` busts the CDN cache when the site changes. Falls back
+// to a lettered card only if the route itself errors.
+function CardThumb({ slug, name, version }: { slug: string; name: string; version?: string | null }) {
   const [ok, setOk] = useState(true);
   if (!ok) return <Placeholder name={name} />;
+  const v = version ? `?v=${encodeURIComponent(version)}` : '';
   return (
     // eslint-disable-next-line @next/next/no-img-element
     <img
-      src={`/api/public/showcase/${encodeURIComponent(slug)}/thumb`}
+      src={`/api/public/showcase/${encodeURIComponent(slug)}/thumb${v}`}
       alt={name}
       loading="lazy"
       onError={() => setOk(false)}
@@ -123,7 +125,7 @@ export default function TemplatesCardGrid({ rows, pending = 0 }: { rows: Row[]; 
             className="group flex flex-col overflow-hidden rounded-xl border border-zinc-800 bg-zinc-900/40 transition hover:border-zinc-600"
           >
             <Link href={`/admin/templates/${r.slug}`} className="relative block aspect-[16/10] w-full overflow-hidden bg-zinc-800/60">
-              <CardThumb slug={r.slug} name={name} />
+              <CardThumb slug={r.slug} name={name} version={r.updated_at} />
               <span
                 className={`absolute left-2 top-2 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium backdrop-blur ${
                   published ? 'bg-emerald-500/20 text-emerald-300' : 'bg-zinc-950/70 text-zinc-300'

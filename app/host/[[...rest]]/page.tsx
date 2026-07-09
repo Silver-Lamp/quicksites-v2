@@ -304,7 +304,7 @@ export default async function HostSitePage({
           baseUrl={baseUrl}
           id="site-renderer-page"
           colorMode={colorMode}
-          className="bg-white text-black dark:bg-black dark:text-white"
+          className="bg-background text-foreground"
         />
       </TemplateEditorProvider>
     </>

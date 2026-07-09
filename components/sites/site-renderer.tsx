@@ -62,7 +62,12 @@ export default function SiteRenderer({
   const body = (
     <div
       id={id ?? 'site-renderer'}
-      className={clsx('w-full', className)}
+      // Paint the themed page surface so the whole site sits on one background
+      // (--background). Without this, card blocks (bg-card) render dark on a
+      // dark-mode site while transparent sections show the unpainted page →
+      // a light/dark mix. bg-background/text-foreground resolve from the
+      // data-theme scope (this element or the theme wrapper above it).
+      className={clsx('w-full min-h-screen bg-background text-foreground', className)}
       data-editor-chrome={editorChrome ? '1' : undefined} // ← NEW
       data-base-url={baseUrl || undefined}                // ← NEW
       // When the theme wrapper is disabled, still establish the light/dark

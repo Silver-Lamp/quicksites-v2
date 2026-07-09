@@ -9,26 +9,32 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    # The branding snapshot needs a DB to deploy schema against. Skip the DB +
+    # snapshot steps gracefully when SUPABASE_DB_URL isn't configured (e.g. forks
+    # or before the secret is set) so the check doesn't red-flag every PR.
+    env:
+      SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
 
     steps:
       - name: Checkout Repo
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Setup Node.js
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
-          node-version: 18
+          node-version: 20
 
       - name: Install Dependencies
         run: npm install
 
       - name: Install Playwright Browsers
+        if: ${{ env.SUPABASE_DB_URL != '' }}
         run: npx playwright install --with-deps
 
       - name: Deploy Supabase Schema
+        if: ${{ env.SUPABASE_DB_URL != '' }}
         run: psql "$SUPABASE_DB_URL" -f branding-deploy.sql
-        env:
-          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
 
       - name: Run Branding Snapshot Test
+        if: ${{ env.SUPABASE_DB_URL != '' }}
         run: npx playwright test branding-test.ts

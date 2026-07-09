@@ -1,21 +1,41 @@
-pages:
-  - 'pages/**'
+# actions/labeler@v5 format (changed-files / any-glob-to-any-file). Globs updated
+# for the App Router layout (the old `pages/**` router was migrated to `app/**`).
+app:
+  - changed-files:
+      - any-glob-to-any-file: 'app/**'
 
-scripts:
-  - 'scripts/**'
-
-tests:
-  - 'tests/**'
-  - '**/*.spec.ts'
+api:
+  - changed-files:
+      - any-glob-to-any-file: 'app/api/**'
 
 ui:
-  - 'components/**'
-  - 'styles/**'
+  - changed-files:
+      - any-glob-to-any-file: ['components/**', 'styles/**']
+
+lib:
+  - changed-files:
+      - any-glob-to-any-file: 'lib/**'
+
+scripts:
+  - changed-files:
+      - any-glob-to-any-file: 'scripts/**'
+
+tests:
+  - changed-files:
+      - any-glob-to-any-file: ['**/__tests__/**', '**/*.test.ts', '**/*.test.tsx', '**/*.spec.ts', 'tests/**']
+
+migrations:
+  - changed-files:
+      - any-glob-to-any-file: 'supabase/migrations/**'
+
+ci:
+  - changed-files:
+      - any-glob-to-any-file: '.github/**'
 
 docs:
-  - '*.md'
-  - 'README.md'
+  - changed-files:
+      - any-glob-to-any-file: ['**/*.md', 'docs/**']
 
 security:
-  - 'pages/admin/security/**'
-  - 'scripts/*security*'
+  - changed-files:
+      - any-glob-to-any-file: ['scripts/*security*', 'lib/auth/**', 'app/api/**/webhooks/**']

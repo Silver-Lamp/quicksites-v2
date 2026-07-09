@@ -102,11 +102,13 @@ share one path.
 ### L4.2a — In-column block management (SHIPPED, no dnd-kit) ✅
 `lib/blocks/tree.ts` gains `removeBlockById` / `moveChildById` (reorder within the
 immediate parent) / `insertIntoColumn` (all unit-tested). The `section` renderer's
-per-child hover toolbar now does **Edit / ↑ / ↓ / ✕**, and each column has a
+per-child hover toolbar now does **Edit / ↑ / ↓ / ⇄ / ✕** (⇄ = move to the next
+column, wrapping, via `moveChildAcrossColumns`), and each column has a
 **"+ Add block"** control (inserts a text block, opens its editor). Ops route via
-`qs:move-child` / `qs:delete-child` / `qs:add-child` (inline CustomEvent; iframe →
-`preview:child-op` bridge → re-dispatched). You can fully build out a column's
-content — just not yet drag a block *between* columns (that's L4.2b below).
+`qs:move-child` / `qs:move-child-col` / `qs:delete-child` / `qs:add-child` (inline
+CustomEvent; iframe → `preview:child-op` bridge → re-dispatched). You can fully
+build out and rearrange columns — the only thing left is *drag* between columns
+(L4.2b), a UX nicety on top of the ⇄ button.
 
 ### L4.2b — Cross-container drag-and-drop (the hard part)
 - Multi-container dnd-kit in `LiveEditorPreviewFrame`: per-container droppables, custom

@@ -40,7 +40,7 @@ function requestEditBlock(id: string) {
 }
 
 /** Container child ops (move/delete/add): inline → CustomEvent; iframe → bridge. */
-function emitChildOp(op: 'qs:move-child' | 'qs:delete-child' | 'qs:add-child', detail: any) {
+function emitChildOp(op: 'qs:move-child' | 'qs:move-child-col' | 'qs:delete-child' | 'qs:add-child', detail: any) {
   try {
     if (window.parent && window.parent !== window) {
       window.parent.postMessage({ type: 'preview:child-op', op, detail }, '*');
@@ -118,6 +118,9 @@ export default function SectionRender(props: any) {
                       <button type="button" title="Edit" onClick={stop(() => requestEditBlock(cid))} className="rounded px-1.5 py-0.5 text-[11px] font-medium hover:bg-white/20">Edit</button>
                       <button type="button" title="Move up" onClick={stop(() => emitChildOp('qs:move-child', { id: cid, dir: 'up' }))} className="rounded px-1 py-0.5 text-xs hover:bg-white/20">↑</button>
                       <button type="button" title="Move down" onClick={stop(() => emitChildOp('qs:move-child', { id: cid, dir: 'down' }))} className="rounded px-1 py-0.5 text-xs hover:bg-white/20">↓</button>
+                      {columns.length > 1 ? (
+                        <button type="button" title="Move to next column" onClick={stop(() => emitChildOp('qs:move-child-col', { id: cid, dir: 'next' }))} className="rounded px-1 py-0.5 text-xs hover:bg-white/20">⇄</button>
+                      ) : null}
                       <button type="button" title="Delete" onClick={stop(() => emitChildOp('qs:delete-child', { id: cid }))} className="rounded px-1 py-0.5 text-xs text-red-300 hover:bg-white/20">✕</button>
                     </div>
                     {child}

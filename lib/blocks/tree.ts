@@ -143,6 +143,29 @@ export function moveChildById(blocks: AnyBlock[], id: string, dir: 'up' | 'down'
   });
 }
 
+/**
+ * Move a block to the next/prev sibling column within its section (wrapping),
+ * appending it to the target column. A non-drag alternative to cross-container DnD.
+ */
+export function moveChildAcrossColumns(blocks: AnyBlock[], id: string, dir: 'next' | 'prev'): AnyBlock[] {
+  if (!Array.isArray(blocks) || !id) return blocks;
+  return blocks.map((b) => {
+    if (b?.type !== 'section' || !Array.isArray(b?.content?.columns)) return b;
+    const cols: AnyBlock[] = b.content.columns;
+    if (cols.length < 2) return b;
+    const srcIdx = cols.findIndex((col) => Array.isArray(col?.items) && col.items.some((it: AnyBlock) => blockId(it) === id));
+    if (srcIdx < 0) return b;
+    const child = cols[srcIdx].items.find((it: AnyBlock) => blockId(it) === id);
+    const tgtIdx = dir === 'next' ? (srcIdx + 1) % cols.length : (srcIdx - 1 + cols.length) % cols.length;
+    const columns = cols.map((col, i) => {
+      if (i === srcIdx) return { ...col, items: col.items.filter((it: AnyBlock) => blockId(it) !== id) };
+      if (i === tgtIdx) return { ...col, items: [...(Array.isArray(col.items) ? col.items : []), child] };
+      return col;
+    });
+    return { ...b, content: { ...b.content, columns } };
+  });
+}
+
 /** Insert a block into a section's column (by section id + column index). */
 export function insertIntoColumn(
   blocks: AnyBlock[],

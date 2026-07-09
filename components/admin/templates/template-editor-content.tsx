@@ -20,7 +20,7 @@ import { createDefaultBlock } from '@/lib/createDefaultBlock';
 import { DynamicBlockEditor } from '@/components/editor/dynamic-block-editor';
 import {
   findBlockById, replaceBlockById as treeReplaceBlockById, hasBlockId,
-  removeBlockById, moveChildById, insertIntoColumn,
+  removeBlockById, moveChildById, insertIntoColumn, moveChildAcrossColumns,
 } from '@/lib/blocks/tree';
 import LiveEditorPreviewFrame from '@/components/editor/live-editor/LiveEditorPreviewFrame';
 import BlockAdderGrouped from '@/components/admin/block-adder-grouped';
@@ -415,6 +415,12 @@ export default function EditorContent({
       const id = (e as CustomEvent<{ id?: string }>).detail?.id;
       if (id) updateTemplateWithBlocks(removeBlockById(getPageBlocks(currentPage) as any[], id) as Block[]);
     };
+    const onMoveCol = (e: Event) => {
+      const d = (e as CustomEvent<{ id?: string; dir?: 'next' | 'prev' }>).detail;
+      if (d?.id && (d.dir === 'next' || d.dir === 'prev')) {
+        updateTemplateWithBlocks(moveChildAcrossColumns(getPageBlocks(currentPage) as any[], d.id, d.dir) as Block[]);
+      }
+    };
     const onAddChild = (e: Event) => {
       const d = (e as CustomEvent<{ sectionId?: string; colIdx?: number }>).detail;
       if (!d?.sectionId || typeof d.colIdx !== 'number') return;
@@ -425,11 +431,13 @@ export default function EditorContent({
     };
     window.addEventListener('qs:edit-block', onEditBlock as EventListener);
     window.addEventListener('qs:move-child', onMove as EventListener);
+    window.addEventListener('qs:move-child-col', onMoveCol as EventListener);
     window.addEventListener('qs:delete-child', onDeleteChild as EventListener);
     window.addEventListener('qs:add-child', onAddChild as EventListener);
     return () => {
       window.removeEventListener('qs:edit-block', onEditBlock as EventListener);
       window.removeEventListener('qs:move-child', onMove as EventListener);
+      window.removeEventListener('qs:move-child-col', onMoveCol as EventListener);
       window.removeEventListener('qs:delete-child', onDeleteChild as EventListener);
       window.removeEventListener('qs:add-child', onAddChild as EventListener);
     };

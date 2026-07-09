@@ -7,10 +7,37 @@
 // blocks (theme-token styled) rendered via RenderBlock. The nesting foundation for
 // L4 (docs/LAYOUT_L4_PLAN.md).
 
+import * as React from 'react';
 import RenderBlock from '../render-block';
 import { normalizeBlock } from '@/lib/utils/normalizeBlock';
 
 type Col = { span?: number; items?: any[] };
+
+/** In the editor (iframe or same-window flag), a nested child can request its own
+ *  editor via the existing preview:edit-block bridge (handled by LiveEditorPreviewFrame). */
+function useEditorContext(): boolean {
+  const [on, setOn] = React.useState(false);
+  React.useEffect(() => {
+    const inIframe = typeof window !== 'undefined' && window.parent !== window;
+    const flag = typeof window !== 'undefined' && (window as any).__QS_EDITOR__ === true;
+    setOn(inIframe || flag);
+  }, []);
+  return on;
+}
+
+function requestEditBlock(id: string) {
+  try {
+    if (window.parent && window.parent !== window) {
+      // Iframe preview → the frame's message bridge forwards to the editor.
+      window.parent.postMessage({ type: 'preview:edit-block', blockId: id }, '*');
+    } else {
+      // Inline preview (same window) → the editor listens for this directly.
+      window.dispatchEvent(new CustomEvent('qs:edit-block', { detail: { id } }));
+    }
+  } catch {
+    /* no-op */
+  }
+}
 
 const GAP: Record<string, string> = { sm: 'gap-4', md: 'gap-8', lg: 'gap-12' };
 const ALIGN: Record<string, string> = { start: 'items-start', center: 'items-center', stretch: 'items-stretch' };
@@ -22,6 +49,7 @@ function pickContent(block: any, override: any) {
 export default function SectionRender(props: any) {
   const { block, content, template, colorMode, previewOnly, device } = props ?? {};
   const c = pickContent(block, content);
+  const editorCtx = useEditorContext();
 
   const columns: Col[] = (Array.isArray(c.columns) ? c.columns : []).filter(
     (col: any) => col && Array.isArray(col.items),
@@ -48,17 +76,38 @@ export default function SectionRender(props: any) {
           const items = (Array.isArray(col.items) ? col.items : []).map((b: any) => normalizeBlock(b));
           return (
             <div key={i} className="min-w-0">
-              {items.map((b: any, j: number) => (
-                <RenderBlock
-                  key={b?._id ?? b?.id ?? j}
-                  block={b}
-                  template={template}
-                  colorMode={colorMode}
-                  previewOnly={previewOnly}
-                  device={device}
-                  showDebug={false}
-                />
-              ))}
+              {items.map((b: any, j: number) => {
+                const cid = String(b?._id ?? b?.id ?? '');
+                const child = (
+                  <RenderBlock
+                    block={b}
+                    template={template}
+                    colorMode={colorMode}
+                    previewOnly={previewOnly}
+                    device={device}
+                    showDebug={false}
+                  />
+                );
+                // In the editor, overlay a hover "Edit" control so nested children
+                // are editable in place (L4.1) via the preview:edit-block bridge.
+                if (!editorCtx || !cid) return <div key={cid || j}>{child}</div>;
+                return (
+                  <div key={cid} className="group/qsb relative">
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        requestEditBlock(cid);
+                      }}
+                      className="absolute right-1.5 top-1.5 z-20 hidden items-center rounded-md bg-black/70 px-2 py-0.5 text-[11px] font-medium text-white shadow group-hover/qsb:inline-flex"
+                    >
+                      Edit
+                    </button>
+                    {child}
+                  </div>
+                );
+              })}
             </div>
           );
         })}

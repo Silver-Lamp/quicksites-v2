@@ -132,9 +132,15 @@ scaffold emission) is comparatively cheap.
   createDefaultBlock); `section.tsx` renders columns side-by-side (fr spans) and
   stacks on mobile, theme-aware. `industryScaffold` emits a 2-column "About | Why
   choose us" section after the hero for split-layout themes (warm/professional).
-  Tests in `archetype.test.ts`. **Editing nested children in-place is L4.1** (the
-  section currently edits via the JSON fallback; recursive `findBlockById`/
-  `replaceBlockById` + editor affordances are the next step).
+  Tests in `archetype.test.ts`.
+- ✅ **L4.1** (nested-child in-place editing): `lib/blocks/tree.ts` — recursive
+  `findBlockById`/`replaceBlockById` that descend into `section`/`grid` children
+  (unit-tested, immutability-preserving). The editor's `editingBlockObj` +
+  `replaceBlockById` now use them, so editing/saving a nested child works. The
+  `section` renderer shows a per-child "Edit" affordance in the editor (iframe →
+  `preview:edit-block` postMessage; inline → `qs:edit-block` CustomEvent, both
+  routed to the block editor). `LiveEditorPreviewFrame` sets `__QS_EDITOR__` for
+  inline detection.
 
 ## 6. Recommendation
 

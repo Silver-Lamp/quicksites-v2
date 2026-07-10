@@ -18,10 +18,11 @@ export default function PreviewWatermark() {
         </div>
       </div>
 
-      {/* corner badge */}
+      {/* corner badge — bottom-LEFT so it never overlaps the bottom-right preview
+          color-mode toggle (PreviewColorToggle) on mobile. */}
       <Link
         href="/"
-        className="fixed bottom-3 right-3 z-[2147483646] rounded-md bg-zinc-900/85 px-2.5 py-1.5 text-[11px] font-medium text-white shadow-lg ring-1 ring-white/10 transition hover:bg-zinc-900"
+        className="fixed bottom-3 left-3 z-[2147483646] rounded-md bg-zinc-900/85 px-2.5 py-1.5 text-[11px] font-medium text-white shadow-lg ring-1 ring-white/10 transition hover:bg-zinc-900"
       >
         Made with <span className="text-sky-300">QuickSites</span>
       </Link>

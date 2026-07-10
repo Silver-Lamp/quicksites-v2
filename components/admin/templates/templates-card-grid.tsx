@@ -70,26 +70,49 @@ function timeAgo(iso?: string | null): string {
   return `${v} ${label}${v === 1 ? '' : 's'} ago`;
 }
 
-function ShimmerCard() {
+function ShimmerCard({ label }: { label?: string }) {
   return (
     <div className="flex flex-col overflow-hidden rounded-xl border border-zinc-800 bg-zinc-900/40">
       <div className="aspect-[16/10] w-full animate-pulse bg-zinc-800/70" />
       <div className="space-y-2 p-4">
         <div className="h-3.5 w-2/3 animate-pulse rounded bg-zinc-800" />
         <div className="h-3 w-1/3 animate-pulse rounded bg-zinc-800/70" />
-        <div className="mt-3 inline-flex items-center gap-1.5 text-xs font-medium text-sky-400/80">
-          <Sparkles className="h-3.5 w-3.5 animate-pulse" /> Generating…
-        </div>
+        {label ? (
+          <div className="mt-3 inline-flex items-center gap-1.5 text-xs font-medium text-sky-400/80">
+            <Sparkles className="h-3.5 w-3.5 animate-pulse" /> {label}
+          </div>
+        ) : null}
       </div>
     </div>
   );
 }
 
-export default function TemplatesCardGrid({ rows, pending = 0 }: { rows: Row[]; pending?: number }) {
+/** Skeleton grid shown while the first page is loading (no rows yet). */
+export function TemplatesCardGridSkeleton({ count = 6 }: { count?: number }) {
+  return (
+    <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+      {Array.from({ length: Math.max(1, count) }).map((_, i) => (
+        <ShimmerCard key={`skeleton-${i}`} />
+      ))}
+    </div>
+  );
+}
+
+export default function TemplatesCardGrid({
+  rows,
+  pending = 0,
+  loading = false,
+}: {
+  rows: Row[];
+  pending?: number;
+  loading?: boolean;
+}) {
   const router = useRouter();
   const [dupBusy, setDupBusy] = useState<string | null>(null);
 
   if (!rows?.length && pending <= 0) {
+    // First load (no rows yet) → skeleton instead of a flash of "No templates yet."
+    if (loading) return <TemplatesCardGridSkeleton />;
     return <div className="py-16 text-center text-sm text-zinc-500">No templates yet.</div>;
   }
 
@@ -111,7 +134,7 @@ export default function TemplatesCardGrid({ rows, pending = 0 }: { rows: Row[]; 
   return (
     <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
       {Array.from({ length: Math.max(0, pending) }).map((_, i) => (
-        <ShimmerCard key={`pending-${i}`} />
+        <ShimmerCard key={`pending-${i}`} label="Generating…" />
       ))}
       {rows.map((r) => {
         const name = r.display_name || r.template_name || prettifySlug(r.slug);

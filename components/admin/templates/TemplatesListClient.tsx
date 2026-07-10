@@ -4,7 +4,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { LayoutGrid, Table2 } from 'lucide-react';
 import TemplatesIndexTable from '@/components/admin/templates/templates-index-table';
-import TemplatesCardGrid from '@/components/admin/templates/templates-card-grid';
+import TemplatesCardGrid, { TemplatesCardGridSkeleton } from '@/components/admin/templates/templates-card-grid';
 
 type ViewMode = 'cards' | 'table';
 
@@ -217,9 +217,11 @@ export default function TemplatesListClient({
     await fetchPage(offsetRef.current, false);
   }, [fetchPage]);
 
+  // First load (nothing to show yet) → full skeleton grid, not a bare "Loading…".
+  const initialLoading = loading && rows.length === 0;
+
   return (
     <>
-      {loading && <div className="mb-3 text-xs text-zinc-400">Loading…</div>}
       {errorText && <div className="mb-3 text-xs text-red-400">{errorText}</div>}
 
       <div className="mb-4 flex justify-end">
@@ -243,25 +245,29 @@ export default function TemplatesListClient({
         </div>
       </div>
 
-      {view === 'cards' ? (
-        <TemplatesCardGrid rows={rows as any} pending={pendingDemos} />
+      {initialLoading ? (
+        <TemplatesCardGridSkeleton />
+      ) : view === 'cards' ? (
+        <TemplatesCardGrid rows={rows as any} pending={pendingDemos} loading={loading} />
       ) : (
         /* ✅ pass includeVersions so the table can default grouping appropriately */
         <TemplatesIndexTable templates={rows as any} selectedFilter={dateParam} includeVersions={includeVersions} />
       )}
-      <div className="mt-4 flex justify-center">
-        {hasMore ? (
-          <button
-            onClick={onLoadMore}
-            className="px-4 py-2 rounded bg-zinc-800 text-white text-sm border border-white/10 hover:bg-zinc-700"
-            disabled={loading}
-          >
-            {loading ? 'Loading…' : 'Load more'}
-          </button>
-        ) : (
-          <div className="text-xs text-white/40">End of results</div>
-        )}
-      </div>
+      {!initialLoading && (
+        <div className="mt-4 flex justify-center">
+          {hasMore ? (
+            <button
+              onClick={onLoadMore}
+              className="px-4 py-2 rounded bg-zinc-800 text-white text-sm border border-white/10 hover:bg-zinc-700"
+              disabled={loading}
+            >
+              {loading ? 'Loading…' : 'Load more'}
+            </button>
+          ) : rows.length > 0 ? (
+            <div className="text-xs text-white/40">End of results</div>
+          ) : null}
+        </div>
+      )}
     </>
   );
 }

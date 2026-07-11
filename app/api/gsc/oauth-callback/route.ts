@@ -3,22 +3,18 @@ import { createServerClient } from '@supabase/ssr';
 import { createClient } from '@supabase/supabase-js';
 import { cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
+import { gscClientId, gscClientSecret, gscBaseUrl, gscRedirectUri } from '@/lib/gsc/oauthConfig';
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   (process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SECRET_KEY)!
 );
 
-const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID!;
-const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET!;
-
-// Dynamically detect correct redirect URI
-const BASE_URL =
-  process.env.NODE_ENV === 'production'
-    ? 'https://www.quicksites.ai'
-    : 'http://localhost:3000';
-
-const REDIRECT_URI = `${BASE_URL}/api/gsc/oauth-callback`;
+// Shared with /api/gsc/auth-url — the client id + redirect URI MUST match.
+const GOOGLE_CLIENT_ID = gscClientId();
+const GOOGLE_CLIENT_SECRET = gscClientSecret();
+const BASE_URL = gscBaseUrl();
+const REDIRECT_URI = gscRedirectUri();
 
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);

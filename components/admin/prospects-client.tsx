@@ -50,9 +50,12 @@ function prettyIndustry(key: string | null): string {
 export default function ProspectsClient({
   initialProspects,
   initialCampaigns,
+  channels = { mail: false, sms: false },
 }: {
   initialProspects: Prospect[];
   initialCampaigns: GeoCampaign[];
+  /** Which paid outreach channels are enabled server-side (env-gated). */
+  channels?: { mail: boolean; sms: boolean };
 }) {
   const router = useRouter();
   const [city, setCity] = useState('');
@@ -62,6 +65,9 @@ export default function ProspectsClient({
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [busy, setBusy] = useState<string | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
+  // Per-campaign inline result for the Mail/Text actions (so feedback shows on the
+  // row, not just a banner at the top of the page that scrolls out of view).
+  const [rowMsg, setRowMsg] = useState<Record<string, { ok: boolean; text: string }>>({});
 
   const prospects = initialProspects;
 
@@ -143,29 +149,38 @@ export default function ProspectsClient({
     }
   }
 
-  async function mailPostcards(campaignId: string) {
-    setBusy(`mail:${campaignId}`);
-    setMsg(null);
+  const campaignCount = (campaignId: string) =>
+    prospects.filter((p) => p.geo_campaign_id === campaignId).length;
+
+  async function mailPostcards(c: GeoCampaign) {
+    if (!channels.mail) return;
+    const n = campaignCount(c.id);
+    if (!window.confirm(`Mail postcards for ${c.domain} to ${n} competing business${n === 1 ? '' : 'es'}?\n\nThis sends real physical mail (Lob) and may incur cost.`)) return;
+    setBusy(`mail:${c.id}`);
+    setRowMsg((m) => { const { [c.id]: _drop, ...rest } = m; return rest; });
     try {
-      const r = await post('/api/admin/prospects/mail-postcards', { campaignId });
-      setMsg(`Mailed ${r.mailed} postcard(s).`);
+      const r = await post('/api/admin/prospects/mail-postcards', { campaignId: c.id });
+      setRowMsg((m) => ({ ...m, [c.id]: { ok: true, text: `Mailed ${r.mailed} postcard(s)` } }));
       router.refresh();
     } catch (e: any) {
-      setMsg(e.message);
+      setRowMsg((m) => ({ ...m, [c.id]: { ok: false, text: e.message } }));
     } finally {
       setBusy(null);
     }
   }
 
-  async function textProspects(campaignId: string) {
-    setBusy(`sms:${campaignId}`);
-    setMsg(null);
+  async function textProspects(c: GeoCampaign) {
+    if (!channels.sms) return;
+    const n = campaignCount(c.id);
+    if (!window.confirm(`Text the claim link for ${c.domain} to ${n} competing business${n === 1 ? '' : 'es'}?\n\nThis sends real SMS (Twilio) and may incur cost.`)) return;
+    setBusy(`sms:${c.id}`);
+    setRowMsg((m) => { const { [c.id]: _drop, ...rest } = m; return rest; });
     try {
-      const r = await post('/api/admin/prospects/text-prospects', { campaignId });
-      setMsg(`Sent ${r.sent} text(s).`);
+      const r = await post('/api/admin/prospects/text-prospects', { campaignId: c.id });
+      setRowMsg((m) => ({ ...m, [c.id]: { ok: true, text: `Sent ${r.sent} text(s)` } }));
       router.refresh();
     } catch (e: any) {
-      setMsg(e.message);
+      setRowMsg((m) => ({ ...m, [c.id]: { ok: false, text: e.message } }));
     } finally {
       setBusy(null);
     }
@@ -338,16 +353,33 @@ export default function ProspectsClient({
                     <td className="text-xs text-neutral-400">{c.domain_status}</td>
                     <td className="text-xs text-neutral-400">{c.status}</td>
                     <td className="text-right">
-                      <div className="flex justify-end gap-3 text-xs">
-                        <a href={`/admin/prospects/poster/${c.id}`} target="_blank" rel="noopener noreferrer" className="text-emerald-400 underline">Poster</a>
-                        <button onClick={() => mailPostcards(c.id)} disabled={busy === `mail:${c.id}`} className="text-amber-400 hover:text-amber-300">
-                          {busy === `mail:${c.id}` ? '…' : 'Mail'}
-                        </button>
-                        <button onClick={() => textProspects(c.id)} disabled={busy === `sms:${c.id}`} className="text-sky-400 hover:text-sky-300">
-                          {busy === `sms:${c.id}` ? '…' : 'Text'}
-                        </button>
-                        {c.template_id && (
-                          <a href={`/admin/templates/${c.template_id}`} className="text-neutral-400 underline">Edit</a>
+                      <div className="flex flex-col items-end gap-1">
+                        <div className="flex justify-end gap-3 text-xs">
+                          <a href={`/admin/prospects/poster/${c.id}`} target="_blank" rel="noopener noreferrer" className="text-emerald-400 underline">Poster</a>
+                          <button
+                            onClick={() => mailPostcards(c)}
+                            disabled={!channels.mail || busy === `mail:${c.id}`}
+                            title={channels.mail ? 'Mail the poster to each competing business' : 'Postcard mail is off — set LOB_API_KEY + LOB_FROM_* + POSTCARD_MAIL_ENABLED=1'}
+                            className={channels.mail ? 'text-amber-400 hover:text-amber-300' : 'cursor-not-allowed text-neutral-600'}
+                          >
+                            {busy === `mail:${c.id}` ? '…' : 'Mail'}
+                          </button>
+                          <button
+                            onClick={() => textProspects(c)}
+                            disabled={!channels.sms || busy === `sms:${c.id}`}
+                            title={channels.sms ? 'Text the claim link to each business' : 'SMS is off — set PROSPECT_SMS_ENABLED=1 (requires A2P 10DLC)'}
+                            className={channels.sms ? 'text-sky-400 hover:text-sky-300' : 'cursor-not-allowed text-neutral-600'}
+                          >
+                            {busy === `sms:${c.id}` ? '…' : 'Text'}
+                          </button>
+                          {c.template_id && (
+                            <a href={`/admin/templates/${c.template_id}`} className="text-neutral-400 underline">Edit</a>
+                          )}
+                        </div>
+                        {rowMsg[c.id] && (
+                          <div className={rowMsg[c.id].ok ? 'text-xs text-emerald-400' : 'text-xs text-red-400'}>
+                            {rowMsg[c.id].text}
+                          </div>
                         )}
                       </div>
                     </td>

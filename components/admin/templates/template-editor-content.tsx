@@ -32,7 +32,6 @@ import PageSettingsModal from '@/components/admin/templates/page-settings-modal'
 import { useTruthTrackerState } from './hooks/useTruthTrackerState';
 import TemplateTruthTracker from '@/components/admin/templates/truth/TemplateTruthTracker';
 
-import NewTemplateWelcome from '@/components/admin/templates/NewTemplateWelcome';
 import CollapsiblePanel from '@/components/ui/collapsible-panel';
 import ModalShell from '@/components/ui/modal-shell';
 import DrawerShell from '@/components/ui/drawer-shell';
@@ -171,7 +170,6 @@ export default function EditorContent({
     showSettings || !!editingHeader || !!editingFooter || adderTarget !== null || columnAdderTarget !== null || !!editingBlockId
   );
 
-  const [showWelcome, setShowWelcome] = useState(false);
 
   // ---------- Truth Tracker ----------
   function TruthTrackerPanel({ templateId }: { templateId: string }) {
@@ -506,8 +504,6 @@ export default function EditorContent({
 
   return (
     <div className="relative flex min-w-0 w-full [scrollbar-gutter:stable]">
-      {showWelcome && <NewTemplateWelcome onStart={() => setShowWelcome(false)} />}
-
       <div className="flex-1 min-w-0 xl:ml-0 ml-0 px-0 lg:px-2">
         {/* ===== Header Editor (ModalShell) ===== */}
         <ModalShell

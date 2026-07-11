@@ -7,7 +7,7 @@ import toast from 'react-hot-toast';
 import {
   RotateCcw, RotateCw, AlertTriangle, X, Maximize2, Minimize2,
   Smartphone, Tablet, Monitor, SlidersHorizontal, Check, Sun, Moon,
-  Settings as SettingsIcon, Trash2, Database, Minus, Wrench, Palette, Shuffle,
+  Settings as SettingsIcon, Trash2, Database, Minus, Wrench, Palette, Shuffle, Keyboard,
 } from 'lucide-react';
 import { ThemeShufflePanel } from '@/components/admin/templates/theme-shuffle-panel';
 import { pickCuratedTheme } from '@/lib/theme/pickTheme';
@@ -186,6 +186,7 @@ export default function TemplateActionToolbar({
 
   /* commit queue */
   const { queueFullSave, pending, error: saveError } = useCommitQueue(tplRef);
+  const [showShortcuts, setShowShortcuts] = useState(false);
 
   /* history */
   const { stats, undo, redo } = useUndoRedo(template);
@@ -673,6 +674,44 @@ useEffect(() => {
                 </Button>
               </div>
             )}
+
+            {/* Keyboard shortcuts legend */}
+            <div className="relative mr-1">
+              <Button
+                size="icon"
+                variant={showShortcuts ? 'secondary' : 'ghost'}
+                className="h-7 w-7"
+                title="Keyboard shortcuts"
+                aria-label="Keyboard shortcuts"
+                aria-pressed={showShortcuts}
+                onClick={() => setShowShortcuts((v) => !v)}
+              >
+                <Keyboard className="w-4 h-4" />
+              </Button>
+              {showShortcuts ? (
+                <>
+                  <div className="fixed inset-0 z-[9999]" onClick={() => setShowShortcuts(false)} />
+                  <div className="absolute bottom-full right-0 z-[10000] mb-2 w-56 rounded-lg border border-white/10 bg-neutral-900/95 p-3 text-xs shadow-xl backdrop-blur">
+                    <div className="mb-2 font-semibold text-white">Keyboard shortcuts</div>
+                    <ul className="space-y-1.5 text-neutral-300">
+                      {([
+                        ['S', 'Toggle settings'],
+                        ['T', 'Toggle toolbar'],
+                        ['P', 'Page manager'],
+                      ] as const).map(([k, label]) => (
+                        <li key={k} className="flex items-center justify-between gap-3">
+                          <span>{label}</span>
+                          <kbd className="rounded border border-white/15 bg-white/10 px-1.5 py-0.5 font-mono text-[11px] text-white">{k}</kbd>
+                        </li>
+                      ))}
+                    </ul>
+                    <div className="mt-2 border-t border-white/10 pt-2 text-[11px] text-neutral-500">
+                      Active when you’re not typing in a field.
+                    </div>
+                  </div>
+                </>
+              ) : null}
+            </div>
 
             {/* Save + autosave status */}
             <div className="flex items-center gap-2">

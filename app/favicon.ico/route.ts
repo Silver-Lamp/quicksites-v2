@@ -30,6 +30,13 @@ async function fetchIcon(path: string, base: URL) {
 
 function withIcoHeaders(res: Response) {
   const headers = new Headers(res.headers);
+  // fetch() already decoded the upstream body, so drop any encoding/length
+  // headers copied from it. Leaving Content-Encoding (e.g. gzip/br from a
+  // CDN-served static asset) makes the browser try to decode already-decoded
+  // bytes → net::ERR_CONTENT_DECODING_FAILED. Content-Length would also mismatch.
+  headers.delete('content-encoding');
+  headers.delete('content-length');
+  headers.delete('transfer-encoding');
   headers.set('Content-Type', 'image/x-icon');
   headers.set('Cache-Control', 'public, max-age=31536000, immutable'); // 1y, safe for versioned files
   return headers;

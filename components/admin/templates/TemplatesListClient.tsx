@@ -2,7 +2,7 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { LayoutGrid, Table2 } from 'lucide-react';
+import { LayoutGrid, Table2, Loader2 } from 'lucide-react';
 import TemplatesIndexTable from '@/components/admin/templates/templates-index-table';
 import TemplatesCardGrid, { TemplatesCardGridSkeleton, type GscStat } from '@/components/admin/templates/templates-card-grid';
 
@@ -82,10 +82,13 @@ export default function TemplatesListClient({
   const offsetRef = useRef<number>(initialOffset);
   const hasMoreRef = useRef<boolean>(initialHasMore);
   const fillingRef = useRef<boolean>(false);
+  const loadingRef = useRef<boolean>(false);
+  const sentinelRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => { rowsRef.current = rows; }, [rows]);
   useEffect(() => { offsetRef.current = offset; }, [offset]);
   useEffect(() => { hasMoreRef.current = hasMore; }, [hasMore]);
+  useEffect(() => { loadingRef.current = loading; }, [loading]);
 
   useEffect(() => {
     setRows(initialRows);
@@ -224,13 +227,26 @@ export default function TemplatesListClient({
     };
   }, [fetchPage]);
 
-  // Manual “Load more” button
-  const onLoadMore = useCallback(async () => {
-    await fetchPage(offsetRef.current, false);
-  }, [fetchPage]);
-
   // First load (nothing to show yet) → full skeleton grid, not a bare "Loading…".
   const initialLoading = loading && rows.length === 0;
+
+  // Progressive loading: auto-fetch the next page when a sentinel near the bottom
+  // scrolls into view (rootMargin preloads ~a screen early), no "Load more" tap.
+  useEffect(() => {
+    const el = sentinelRef.current;
+    if (!el || typeof IntersectionObserver === 'undefined') return;
+    const io = new IntersectionObserver(
+      (entries) => {
+        if (!entries[0]?.isIntersecting) return;
+        if (hasMoreRef.current && !loadingRef.current && !fillingRef.current) {
+          void fetchPage(offsetRef.current, false);
+        }
+      },
+      { rootMargin: '800px 0px' },
+    );
+    io.observe(el);
+    return () => io.disconnect();
+  }, [fetchPage, view, initialLoading]);
 
   return (
     <>
@@ -266,19 +282,20 @@ export default function TemplatesListClient({
         <TemplatesIndexTable templates={rows as any} selectedFilter={dateParam} includeVersions={includeVersions} />
       )}
       {!initialLoading && (
-        <div className="mt-4 flex justify-center">
-          {hasMore ? (
-            <button
-              onClick={onLoadMore}
-              className="px-4 py-2 rounded bg-zinc-800 text-white text-sm border border-white/10 hover:bg-zinc-700"
-              disabled={loading}
-            >
-              {loading ? 'Loading…' : 'Load more'}
-            </button>
-          ) : rows.length > 0 ? (
-            <div className="text-xs text-white/40">End of results</div>
-          ) : null}
-        </div>
+        <>
+          {/* Auto-load sentinel — loading the next page as it scrolls into view. */}
+          <div ref={sentinelRef} aria-hidden className="h-px w-full" />
+          <div className="mt-4 flex justify-center">
+            {hasMore ? (
+              <div className="inline-flex items-center gap-2 text-xs text-white/50" role="status" aria-live="polite">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Loading more…
+              </div>
+            ) : rows.length > 0 ? (
+              <div className="text-xs text-white/40">End of results</div>
+            ) : null}
+          </div>
+        </>
       )}
     </>
   );

@@ -53,7 +53,9 @@ export function extractHeroImage(data: unknown): string | null {
   } catch {
     return null;
   }
-  const urls = text.match(/https?:\/\/[^"'\\\s]+\.(?:png|jpe?g|webp)/gi);
+  // Match absolute image URLs (allow an optional query/hash, and avif/gif) so hero
+  // images with a `?width=…` suffix or newer formats aren't missed.
+  const urls = text.match(/https?:\/\/[^"'\\\s]+\.(?:png|jpe?g|webp|avif|gif)(?:[?#][^"'\\\s]*)?/gi);
   if (!urls?.length) return null;
   return urls.find((u) => /\/hero\//i.test(u)) || urls[0];
 }

@@ -185,7 +185,7 @@ export default function TemplateActionToolbar({
   }, [template]);
 
   /* commit queue */
-  const { queueFullSave, pending } = useCommitQueue(tplRef);
+  const { queueFullSave, pending, error: saveError } = useCommitQueue(tplRef);
 
   /* history */
   const { stats, undo, redo } = useUndoRedo(template);
@@ -676,18 +676,22 @@ useEffect(() => {
 
             {/* Save + autosave status */}
             <div className="flex items-center gap-2">
-              {typeof autosaveStatus === 'string' && autosaveStatus && (
+              {saveError ? (
+                <span className="inline-flex items-center gap-1 text-[11px] font-medium text-red-400 mr-1" title={saveError}>
+                  <AlertTriangle className="w-3.5 h-3.5" /> Not saved
+                </span>
+              ) : typeof autosaveStatus === 'string' && autosaveStatus ? (
                 <span className="text-[11px] text-zinc-400 mr-1">{autosaveStatus}</span>
-              )}
+              ) : null}
               <Button
                 size="sm"
-                variant={dirty ? 'outline' : 'ghost'}
-                disabled={!dirty && !pending}
-                className={dirty ? 'bg-purple-500 hover:bg-purple-600' : ''}
+                variant={dirty || saveError ? 'outline' : 'ghost'}
+                disabled={!dirty && !pending && !saveError}
+                className={saveError ? 'bg-red-600 hover:bg-red-700 text-white' : dirty ? 'bg-purple-500 hover:bg-purple-600' : ''}
                 onClick={handleSaveClick}
-                title={dirty ? 'Save changes (⌘/Ctrl+S)' : pending ? 'Saving…' : 'All changes saved'}
+                title={saveError ? `Save failed: ${saveError}. Click to retry.` : dirty ? 'Save changes (⌘/Ctrl+S)' : pending ? 'Saving…' : 'All changes saved'}
               >
-                {pending ? 'Saving…' : dirty ? 'Save' : (<span className="inline-flex items-center gap-1"><Check className="w-3.5 h-3.5" />Saved</span>)}
+                {pending ? 'Saving…' : saveError ? 'Retry save' : dirty ? 'Save' : (<span className="inline-flex items-center gap-1"><Check className="w-3.5 h-3.5" />Saved</span>)}
               </Button>
             </div>
 

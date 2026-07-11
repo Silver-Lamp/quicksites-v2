@@ -8,6 +8,8 @@
 import { getAdminUser } from '@/lib/auth/getAdminUser';
 import { listProspects, type Prospect } from '@/lib/outreach/prospects';
 import { listGeoCampaigns, type GeoCampaign } from '@/lib/outreach/geoCampaigns';
+import { postcardMailEnabled } from '@/lib/outreach/mail/lob';
+import { prospectSmsEnabled } from '@/lib/outreach/sms/outreachSms';
 import ProspectsClient from '@/components/admin/prospects-client';
 
 export const dynamic = 'force-dynamic';
@@ -25,6 +27,7 @@ export default async function ProspectsPage() {
     // Table likely not migrated yet — the client renders a hint.
   }
   const active = prospects.filter((p) => p.status !== 'dismissed');
+  const channels = { mail: postcardMailEnabled(), sms: prospectSmsEnabled() };
 
-  return <ProspectsClient initialProspects={active} initialCampaigns={campaigns} />;
+  return <ProspectsClient initialProspects={active} initialCampaigns={campaigns} channels={channels} />;
 }

@@ -1,19 +1,27 @@
 // app/api/gsc/auth-url/route.ts
 import { NextResponse } from 'next/server';
-
-const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID!;
-const REDIRECT_URI = 'http://localhost:3000/api/gsc/oauth-callback';
+import { gscClientId, gscRedirectUri } from '@/lib/gsc/oauthConfig';
 
 export async function GET() {
-  const base = 'https://accounts.google.com/o/oauth2/v2/auth';
+  const clientId = gscClientId();
+  if (!clientId) {
+    // Fail loudly instead of building a URL with client_id=undefined.
+    return NextResponse.json(
+      { error: 'Google Search Console is not configured (missing GOOGLE_CLIENT_ID / GSC_CLIENT_ID).' },
+      { status: 500 },
+    );
+  }
+
   const params = new URLSearchParams({
-    client_id: GOOGLE_CLIENT_ID,
-    redirect_uri: REDIRECT_URI,
+    client_id: clientId,
+    redirect_uri: gscRedirectUri(),
     response_type: 'code',
     scope: 'https://www.googleapis.com/auth/webmasters.readonly',
     access_type: 'offline',
     prompt: 'consent',
   });
 
-  return NextResponse.json({ url: `${base}?${params.toString()}` });
+  return NextResponse.json({
+    url: `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`,
+  });
 }

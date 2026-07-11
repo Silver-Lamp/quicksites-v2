@@ -7,11 +7,21 @@ import toast from 'react-hot-toast';
 import {
   RotateCcw, RotateCw, AlertTriangle, X, Maximize2, Minimize2,
   Smartphone, Tablet, Monitor, SlidersHorizontal, Check, Sun, Moon,
-  Settings as SettingsIcon, Trash2, Database, Minus, Wrench, Palette, Shuffle, Keyboard,
+  Settings as SettingsIcon, Trash2, Database, Minus, Wrench, Palette, Keyboard,
 } from 'lucide-react';
 import { ThemeShufflePanel } from '@/components/admin/templates/theme-shuffle-panel';
+import ShuffleMenu from '@/components/admin/templates/template-action-toolbar/ShuffleMenu';
 import { pickCuratedTheme } from '@/lib/theme/pickTheme';
 import { toStampedTheme, type CuratedTheme } from '@/lib/theme/curatedThemes';
+import {
+  pickAccentPair,
+  pickFontPair,
+  pickDistinct,
+  heroModeFromLayout,
+  RHYTHMS,
+  HERO_MODES,
+  FEATURE_VARIANTS,
+} from '@/lib/theme/shuffleOptions';
 
 import type { Template } from '@/types/template';
 import PageManagerToolbar from '@/components/admin/templates/page-manager-toolbar';
@@ -312,6 +322,106 @@ useEffect(() => {
     try { toast.success(`Theme: ${theme.name}`, { icon: '🎲' }); } catch { /* no-op */ }
   };
 
+  // ---- Granular shuffle axes (all content-safe: touch only style/layout fields) ----
+
+  /** Set `content[field]` on every block of `type` across all pages (copy untouched). */
+  const withBlockStyles = (data: any, changes: { type: string; field: string; value: string }[]) => {
+    const setOn = (blocks: any): any => {
+      if (!Array.isArray(blocks)) return blocks;
+      return blocks.map((b: any) => {
+        let nb = b;
+        for (const c of changes) {
+          if (b?.type === c.type) nb = { ...nb, content: { ...(nb.content ?? {}), [c.field]: c.value } };
+        }
+        if (Array.isArray(nb?.blocks)) nb = { ...nb, blocks: setOn(nb.blocks) };
+        return nb;
+      });
+    };
+    const pages = Array.isArray(data.pages)
+      ? data.pages.map((p: any) => ({
+          ...p,
+          blocks: setOn(p.blocks),
+          ...(Array.isArray(p.content_blocks) ? { content_blocks: setOn(p.content_blocks) } : {}),
+        }))
+      : data.pages;
+    return { ...data, pages };
+  };
+
+  const curTheme = (): any => ((tplRef.current ?? template) as any)?.data?.meta?.theme ?? {};
+  const curIndustry = (): any => {
+    const c: any = tplRef.current ?? template;
+    return c?.data?.meta?.industry ?? c?.industry;
+  };
+  /** A complete stamped theme to patch onto — seed one if the template has none yet. */
+  const baseTheme = (): any => {
+    const t = curTheme();
+    return t?.accentColor ? t : toStampedTheme(pickCuratedTheme({ industry: curIndustry() }));
+  };
+
+  /** Merge a partial into data.meta.theme and persist. */
+  const applyThemePatch = (partial: Record<string, unknown>, toastMsg?: string) => {
+    const cur: any = (tplRef.current ?? template) || {};
+    const theme = { ...baseTheme(), ...partial };
+    apply({
+      ...cur,
+      data: { ...(cur.data ?? {}), meta: { ...((cur.data ?? {}).meta ?? {}), theme } },
+    } as Template);
+    queueFullSave('save');
+    if (toastMsg) { try { toast.success(toastMsg, { icon: '🎲' }); } catch { /* no-op */ } }
+  };
+
+  const shufflePalette = () => {
+    const pair = pickAccentPair(curTheme()?.accentColor ?? null);
+    applyThemePatch(pair, 'Palette shuffled');
+  };
+
+  const shuffleFonts = () => {
+    applyThemePatch({ fontPair: pickFontPair(curTheme()?.fontPair ?? null) }, 'Fonts shuffled');
+  };
+
+  const shuffleLayout = () => {
+    const cur: any = (tplRef.current ?? template) || {};
+    const theme = baseTheme();
+    const rhythm = pickDistinct(RHYTHMS, theme?.layout?.rhythm ?? null);
+    const featureVariant = pickDistinct(FEATURE_VARIANTS, theme?.layout?.featureVariant ?? null);
+    const heroMode = pickDistinct(HERO_MODES, null);
+    const nextTheme = { ...theme, layout: { ...(theme.layout ?? {}), rhythm, featureVariant } };
+    let data = { ...(cur.data ?? {}), meta: { ...((cur.data ?? {}).meta ?? {}), theme: nextTheme } };
+    data = withBlockStyles(data, [
+      { type: 'hero', field: 'layout_mode', value: heroMode },
+      { type: 'services', field: 'variant', value: featureVariant },
+    ]);
+    apply({ ...cur, data } as Template);
+    queueFullSave('save');
+    try { toast.success('Layout shuffled', { icon: '🎲' }); } catch { /* no-op */ }
+  };
+
+  /** One-tap: a whole new theme AND matching hero/services layout. */
+  const shuffleAll = () => {
+    const cur: any = (tplRef.current ?? template) || {};
+    const theme = pickCuratedTheme({
+      industry: curIndustry(),
+      avoidId: cur?.data?.meta?.theme?.id ?? null,
+      avoidAccent: cur?.data?.meta?.theme?.accentColor ?? null,
+    });
+    const stamped = toStampedTheme(theme);
+    const mode = theme.darkMode;
+    let data = {
+      ...(cur.data ?? {}),
+      color_mode: mode,
+      meta: { ...((cur.data ?? {}).meta ?? {}), theme: stamped },
+    };
+    data = withBlockStyles(data, [
+      { type: 'hero', field: 'layout_mode', value: heroModeFromLayout(stamped?.layout?.heroLayout) },
+      { type: 'services', field: 'variant', value: stamped?.layout?.featureVariant ?? 'grid' },
+    ]);
+    apply({ ...cur, color_mode: mode, data } as Template);
+    queueFullSave('save');
+    try { localStorage.setItem('qs:preview:color', mode); } catch {}
+    window.dispatchEvent(new CustomEvent('qs:preview:set-color-mode', { detail: mode }));
+    try { toast.success(`Shuffled — ${theme.name}`, { icon: '🎲' }); } catch { /* no-op */ }
+  };
+
   /* patch bus: apply + queue save */
   useEffect(() => {
     const onPatch = (e: Event) => {
@@ -502,18 +612,17 @@ useEffect(() => {
 
   return mounted ? createPortal(
     <>
-      {/* Always-visible Shuffle-theme FAB — restyle the whole site in one click,
-          even when the toolbar is collapsed. Sits above the centered toolbar. */}
-      <button
-        type="button"
-        onClick={shuffleTheme}
-        title="Shuffle theme — restyle this site (keeps your content)"
-        aria-label="Shuffle theme"
-        className="fixed bottom-24 right-6 z-[2147483647] inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-purple-600 to-fuchsia-600 px-5 py-3 text-sm font-semibold text-white shadow-2xl ring-1 ring-white/20 transition hover:scale-[1.03] hover:from-purple-500 hover:to-fuchsia-500 active:scale-95 pointer-events-auto"
-      >
-        <Shuffle className="h-5 w-5" />
-        Shuffle theme
-      </button>
+      {/* Always-visible Shuffle control — one-tap restyle everything, or open the menu
+          to shuffle a single axis. Content is always preserved. */}
+      <ShuffleMenu
+        onShuffleAll={shuffleAll}
+        onShuffleTheme={shuffleTheme}
+        onShuffleLayout={shuffleLayout}
+        onShufflePalette={shufflePalette}
+        onShuffleFonts={shuffleFonts}
+        onToggleMode={() => setColorModeAndEmit(colorMode === 'dark' ? 'light' : 'dark')}
+        colorMode={colorMode}
+      />
 
       <div
         id="template-action-toolbar"

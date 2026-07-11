@@ -38,6 +38,7 @@ import {
   Megaphone,
   LayoutGrid,
   Globe,
+  Search,
 } from 'lucide-react';
 import clsx from 'clsx';
 import { useBrand } from '@/app/providers';
@@ -134,29 +135,75 @@ const NAV_MERCHANT: NavItem[] = [
   { type: 'item', label: 'Taxes', href: '/rep/tax', icon: <FileText size={18} /> },
 ];
 
-/* ---------------- Admin-only extras ---------------- */
+/* ---------------- Admin-only extras ----------------
+   Grouped for discoverability: Growth (lead-gen/outreach) → Commerce → Payouts &
+   Taxes → Communications → System → Platform. Dense clusters collapse into submenus
+   so the top level stays scannable. Every link is preserved from the old flat list. */
 const NAV_ADMIN: NavItem[] = [
+  /* Growth — the lead-gen + outreach engine (surfaced first; it's what drives sales). */
+  { type: 'section', label: 'Growth', adminOnly: true },
+  { type: 'item', label: 'Businesses Near Me', href: '/admin/prospects', icon: <MapPinned size={18} />, adminOnly: true },
+  { type: 'item', label: 'Outreach Pipeline', href: '/admin/outreach', icon: <Rocket size={18} />, adminOnly: true },
+  { type: 'item', label: 'Map of Opportunities', href: '/admin/the-grid', icon: <Globe size={18} />, adminOnly: true },
+  { type: 'item', label: 'Leads', href: '/admin/leads', icon: <PhoneForwarded size={18} />, adminOnly: true },
   {
-    type: 'item',
-    label: 'Google Search Console',
-    icon: <Mail size={18} />,
-    adminOnly: true,
+    type: 'item', label: 'Campaigns', icon: <Megaphone size={18} />, adminOnly: true,
+    children: [
+      { label: 'View All Campaigns', href: '/admin/campaigns' },
+      { label: 'Start New Campaign', href: '/admin/start-campaign' },
+    ],
+  },
+  { type: 'item', label: 'Print Orders', href: '/admin/print-orders', icon: <Printer size={18} />, adminOnly: true },
+
+  /* Commerce — platform-level commerce admin. */
+  { type: 'section', label: 'Commerce', adminOnly: true },
+  { type: 'item', label: 'Platform Revenue', href: '/admin/revenue', icon: <DollarSign size={18} />, adminOnly: true },
+  { type: 'item', label: 'Merchants', href: '/admin/merchants', icon: <Users size={18} />, adminOnly: true },
+  { type: 'item', label: 'Orders', href: '/admin/orders', icon: <ShoppingCart size={18} />, adminOnly: true },
+  { type: 'item', label: 'Catalog', href: '/admin/catalog', icon: <Package size={18} />, adminOnly: true },
+  {
+    type: 'item', label: 'Payments', icon: <CreditCard size={18} />, adminOnly: true,
+    children: [
+      { label: 'Payments', href: '/admin/payments' },
+      { label: 'Payment Accounts', href: '/admin/payment-accounts' },
+      { label: 'Payment Transactions', href: '/admin/payment-transactions' },
+    ],
+  },
+
+  /* Payouts & Taxes. */
+  { type: 'section', label: 'Payouts & Taxes', adminOnly: true },
+  {
+    type: 'item', label: 'Payouts', icon: <DollarSign size={18} />, adminOnly: true,
+    children: [
+      { label: 'Partner Payouts', href: '/admin/partners/payouts' },
+      { label: 'Referral Payout Runs', href: '/admin/referrals/payout-runs' },
+      { label: 'Referral Payout Wizard', href: '/admin/referrals/payout-wizard' },
+    ],
+  },
+  {
+    type: 'item', label: 'Taxes', icon: <FileText size={18} />, adminOnly: true,
+    children: [
+      { label: 'Admin Taxes', href: '/admin/tax' },
+      { label: 'New Payout', href: '/admin/tax/payouts/new' },
+    ],
+  },
+  { type: 'item', label: 'Referrals', href: '/admin/referrals', icon: <User size={18} />, adminOnly: true },
+  { type: 'item', label: 'Billing Map', href: '/admin/billing/map', icon: <ChartBar size={18} />, adminOnly: true },
+
+  /* Communications. */
+  { type: 'section', label: 'Communications', adminOnly: true },
+  {
+    type: 'item', label: 'Google Search Console', icon: <Globe size={18} />, adminOnly: true,
     children: [
       { label: 'Stats', href: '/admin/templates/gsc-bulk-stats' },
       { label: 'Sites', href: '/admin/gsc/sites' },
       { label: '(re)Connect', href: '/api/gsc/auth-url' },
     ],
   },
-
-  { type: 'section', label: 'Communications', adminOnly: true },
-  { type: 'item', label: 'Sites Contact Form Email Logs', href: '/admin/email-logs', icon: <Mail size={18} />, adminOnly: true },
+  { type: 'item', label: 'Contact Form Email Logs', href: '/admin/email-logs', icon: <Mail size={18} />, adminOnly: true },
   { type: 'item', label: 'Twilio Call Logs', href: '/admin/call-logs', icon: <Phone size={18} />, adminOnly: true },
   {
-    type: 'item',
-    label: 'Platform Contact Form Inbox',
-    href: '/admin/inbox',
-    icon: <Mail size={18} />,
-    adminOnly: true,
+    type: 'item', label: 'Platform Inbox', href: '/admin/inbox', icon: <Mail size={18} />, adminOnly: true,
     children: [
       { label: 'All', href: '/admin/inbox?status=all' },
       { label: 'New', href: '/admin/inbox?status=new' },
@@ -165,56 +212,42 @@ const NAV_ADMIN: NavItem[] = [
     ],
   },
 
-  { type: 'section', label: 'Marketing', adminOnly: true },
-  { type: 'item', label: 'Map of Opportunities', href: '/admin/the-grid', icon: <MapPinned size={18} />, adminOnly: true },
-  { type: 'item', label: 'Leads', href: '/admin/leads', icon: <PhoneForwarded size={18} />, adminOnly: true },
-  {
-    type: 'item',
-    label: 'Campaigns',
-    icon: <Rocket size={18} />,
-    adminOnly: true,
-    children: [
-      { label: 'View All Campaigns', href: '/admin/campaigns' },
-      { label: 'Start New Campaign', href: '/admin/start-campaign' },
-    ],
-  },
-
-  { type: 'section', label: 'Workflow', adminOnly: true },
+  /* System — ops + dev tooling. */
+  { type: 'section', label: 'System', adminOnly: true },
+  { type: 'item', label: 'AI Spend', href: '/admin/ai-costs', icon: <DollarSign size={18} />, adminOnly: true },
+  { type: 'item', label: 'AI Pricing', href: '/admin/settings/ai-pricing', icon: <ChartBar size={18} />, adminOnly: true },
+  { type: 'item', label: 'Cron Health', href: '/admin/cron', icon: <Activity size={18} />, adminOnly: true },
   { type: 'item', label: 'Tasks', href: '/admin/tasks', icon: <Check size={18} />, adminOnly: true },
   { type: 'item', label: 'Users', href: '/admin/users', icon: <Users size={18} />, adminOnly: true },
-  { type: 'item', label: 'AI Spend', href: '/admin/ai-costs', icon: <DollarSign size={18} />, adminOnly: true },
-  { type: 'item', label: 'Cron Runs', href: '/admin/cron', icon: <Check size={18} />, adminOnly: true },
-  { type: 'item', label: 'Feature Video Manager', href: '/admin/features/manage', icon: <Video size={18} />, adminOnly: true },
+  { type: 'item', label: 'Admin Tools', href: '/admin/tools', icon: <Wrench size={18} />, adminOnly: true },
+  { type: 'item', label: 'Agent Runner', href: '/admin/agents/block', icon: <Wrench size={18} />, adminOnly: true },
+  { type: 'item', label: 'Dev', href: '/admin/dev', icon: <Wrench size={18} />, adminOnly: true },
+
+  /* Platform — public marketing surfaces. */
+  { type: 'section', label: 'Platform', adminOnly: true },
   { type: 'item', label: 'Features', href: '/features', icon: <PlayCircle size={18} />, adminOnly: true },
+  { type: 'item', label: 'Feature Videos', href: '/admin/features/manage', icon: <Video size={18} />, adminOnly: true },
   { type: 'item', label: 'Platform Pricing', href: '/pricing', icon: <DollarSign size={18} />, adminOnly: true },
   { type: 'item', label: 'Book a demo', href: '/book', icon: <Book size={18} />, adminOnly: true },
   { type: 'item', label: 'Contact', href: '/contact', icon: <Mail size={18} />, adminOnly: true },
-
-  { type: 'section', label: 'eCommerce Platform', adminOnly: true },
-  { type: 'item', label: 'Platform Revenue', href: '/admin/revenue', icon: <DollarSign size={18} />, adminOnly: true },
-  { type: 'item', label: 'Print Orders', href: '/admin/print-orders', icon: <Printer size={18} />, adminOnly: true },
-  { type: 'item', label: 'Outreach Pipeline', href: '/admin/outreach', icon: <Rocket size={18} />, adminOnly: true },
-  { type: 'item', label: 'Businesses Near Me', href: '/admin/prospects', icon: <MapPinned size={18} />, adminOnly: true },
-
-  { type: 'item', label: 'Admin Tools', href: '/admin/tools', icon: <Wrench size={18} />, adminOnly: true },
-  { type: 'item', label: 'Cron Health', href: '/admin/cron', icon: <Activity size={18} />, adminOnly: true },
-  { type: 'item', label: 'Agent Runner', href: '/admin/agents/block', icon: <Wrench size={18} />, adminOnly: true },
-  { type: 'item', label: 'Dev', href: '/admin/dev', icon: <Wrench size={18} />, adminOnly: true },
-  { type: 'item', label: 'AI Pricing', href: '/admin/settings/ai-pricing', icon: <Wrench />, adminOnly: true },
-  { type: 'item', label: 'Admin Taxes: New Payout', href: '/admin/tax/payouts/new', icon: <DollarSign size={18} />, adminOnly: true },
-  { type: 'item', label: 'Admin Taxes', href: '/admin/tax', icon: <DollarSign size={18} />, adminOnly: true },
-  { type: 'item', label: 'View Payout Runs', href: '/admin/referrals/payout-runs', icon: <DollarSign size={18} />, adminOnly: true },
-  { type: 'item', label: 'Referrals Payout Wizard', href: '/admin/referrals/payout-wizard', icon: <DollarSign size={18} />, adminOnly: true },
-  { type: 'item', label: 'Partner Payouts', href: '/admin/partners/payouts', icon: <DollarSign size={18} />, adminOnly: true },
-  { type: 'item', label: 'Billing Map', href: 'admin/billing/map', icon: <DollarSign size={18} />, adminOnly: true },
-  { type: 'item', label: 'Merchants', href: '/admin/merchants', icon: <User size={18} />, adminOnly: true },
-  { type: 'item', label: 'Referrals', href: '/admin/referrals', icon: <User size={18} />, adminOnly: true },
-  { type: 'item', label: 'Catalog', href: '/admin/catalog', icon: <FileStack size={18} />, adminOnly: true },
-  { type: 'item', label: 'Orders', href: '/admin/orders', icon: <FileStack size={18} />, adminOnly: true },
-  { type: 'item', label: 'Payments', href: '/admin/payments', icon: <FileStack size={18} />, adminOnly: true },
-  { type: 'item', label: 'Payment Accounts', href: '/admin/payment-accounts', icon: <FileStack size={18} />, adminOnly: true },
-  { type: 'item', label: 'Payment Transactions', href: '/admin/payment-transactions', icon: <FileStack size={18} />, adminOnly: true },
 ];
+
+/* Flatten the nav into searchable leaves (each item + each child), tagged with its
+   section, for the quick-find filter. */
+type NavLeaf = { label: string; href: string; icon: React.ReactNode; group: string };
+function flattenNavLeaves(list: NavItem[]): NavLeaf[] {
+  const out: NavLeaf[] = [];
+  let group = '';
+  for (const it of list) {
+    if (it.type === 'section') { group = it.label; continue; }
+    if (it.href) out.push({ label: it.label, href: it.href, icon: it.icon, group });
+    for (const c of it.children ?? []) {
+      if (c.label.startsWith('__')) continue; // skip inline tool slots
+      out.push({ label: `${it.label}: ${c.label}`, href: c.href, icon: it.icon, group });
+    }
+  }
+  return out;
+}
 
 /* ---------------- Elect Info (Campaign Tools) ---------------- */
 const NAV_ELECTINFO: NavItem[] = [
@@ -657,6 +690,7 @@ export function AdminNavSections({ collapsed = false }: { collapsed?: boolean })
   const [navLoading, setNavLoading] = useState(false);
   const [inboxNewCount, setInboxNewCount] = useState<number | null>(null);
   const [cleared, setCleared] = useState(false);
+  const [query, setQuery] = useState('');
   const isAdmin = useIsAdmin();
 
   const navRef = useRef<HTMLDivElement | null>(null);           // NEW
@@ -684,6 +718,14 @@ export function AdminNavSections({ collapsed = false }: { collapsed?: boolean })
         ? [...coreItems, ...NAV_MERCHANT, ...NAV_ELECTINFO, ...NAV_ADMIN]
         : [...coreItems, ...NAV_MERCHANT],
     [isAdmin, coreItems]
+  );
+
+  // Quick-find: flatten every nav destination into a searchable list.
+  const leaves = useMemo(() => flattenNavLeaves(items), [items]);
+  const q = query.trim().toLowerCase();
+  const results = useMemo(
+    () => (q ? leaves.filter((l) => l.label.toLowerCase().includes(q) || l.group.toLowerCase().includes(q)) : []),
+    [leaves, q],
   );
 
   /* -------- persist/restore open submenu state -------- */
@@ -889,7 +931,48 @@ export function AdminNavSections({ collapsed = false }: { collapsed?: boolean })
         isPlatformAdmin={isAdmin}
       />
 
-      {items.map((item, idx) => {
+      {/* Quick-find filter — type to jump to any feature. */}
+      {!collapsed && (
+        <div className="px-2 pb-2 pt-1">
+          <div className="relative">
+            <Search size={14} className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-zinc-500" />
+            <input
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Escape') setQuery('');
+                if (e.key === 'Enter' && results[0]) { handleNavigateStart(results[0].href); window.location.assign(results[0].href); }
+              }}
+              placeholder="Find a feature…"
+              aria-label="Find a feature"
+              className="w-full rounded-lg border border-zinc-700 bg-zinc-900/60 py-1.5 pl-8 pr-2 text-sm text-white outline-none placeholder:text-zinc-500 focus:border-purple-500"
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Search results (flat) when filtering; otherwise the grouped nav. */}
+      {q ? (
+        <div className="flex flex-col gap-0.5">
+          {results.length === 0 ? (
+            <div className="px-3 py-4 text-sm text-zinc-500">No matches for “{query}”.</div>
+          ) : (
+            results.map((r) => (
+              <Link
+                key={`${r.group}-${r.label}-${r.href}`}
+                href={r.href}
+                onClick={() => { if (r.href !== pathname) handleNavigateStart(r.href); }}
+                className="group flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-zinc-300 transition-colors hover:bg-white/[0.06] hover:text-white"
+              >
+                <span className="flex w-10 shrink-0 items-center justify-center [&_svg]:h-[18px] [&_svg]:w-[18px]">{r.icon}</span>
+                <span className="min-w-0 flex-1 truncate">{r.label}</span>
+                <span className="shrink-0 text-[10px] uppercase tracking-wide text-zinc-600">{r.group}</span>
+              </Link>
+            ))
+          )}
+        </div>
+      ) : (
+      items.map((item, idx) => {
         if (item.type === 'section') {
           return !collapsed ? (
             <div
@@ -993,7 +1076,8 @@ export function AdminNavSections({ collapsed = false }: { collapsed?: boolean })
             </div>
           </div>
         );
-      })}
+      })
+      )}
 
       {/* Dev-only: Clear nav cache */}
       {process.env.NODE_ENV !== 'production' && (

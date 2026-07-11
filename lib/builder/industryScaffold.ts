@@ -51,11 +51,47 @@ const ARCHETYPE_WEIGHTS: Record<ThemeCategory, Partial<Record<Archetype, number>
   rugged:       { classic: 2, conversion: 2, benefits_led: 1, trust_first: 1 },
 };
 
-export function pickArchetype(category: ThemeCategory, rng: () => number = Math.random): Archetype {
-  const weights = ARCHETYPE_WEIGHTS[category] ?? { classic: 1 };
-  const entries = Object.entries(weights) as [Archetype, number][];
+// Industry personality nudges the archetype on top of the theme-category base,
+// so a landscaper reads visual/proof-forward while a lawyer reads trust-forward —
+// independent of which theme happened to be drawn.
+const VISUAL_TRADES = new Set<IndustryKey>([
+  'landscaping', 'roof_cleaning', 'pressure_washing', 'window_washing', 'carpet_cleaning',
+  'junk_removal', 'photography', 'salon_spa', 'artisan_goods', 'handmade',
+]);
+const TRUST_PRO = new Set<IndustryKey>([
+  'legal', 'real_estate', 'medical_dental',
+]);
+const URGENCY_TRADES = new Set<IndustryKey>([
+  'towing', 'hvac', 'plumbing', 'electrical', 'auto_repair', 'pest_control', 'windshield_repair',
+]);
+
+function industryArchetypeBias(key?: IndustryKey | null): Partial<Record<Archetype, number>> {
+  if (!key) return {};
+  if (VISUAL_TRADES.has(key))  return { showcase: 2, story_led: 2, proof_led: 1 };
+  if (TRUST_PRO.has(key))      return { trust_first: 2, proof_led: 2, classic: 1 };
+  if (URGENCY_TRADES.has(key)) return { conversion: 2, proof_led: 1 };
+  return {};
+}
+
+export function pickArchetype(
+  category: ThemeCategory,
+  industryOrRng?: IndustryKey | (() => number) | null,
+  rng: () => number = Math.random,
+): Archetype {
+  // Back-compat: pickArchetype(category, rng) is still supported.
+  const industry = typeof industryOrRng === 'function' ? null : industryOrRng ?? null;
+  const rand = typeof industryOrRng === 'function' ? industryOrRng : rng;
+
+  const base = ARCHETYPE_WEIGHTS[category] ?? { classic: 1 };
+  const bias = industryArchetypeBias(industry);
+  const merged: Partial<Record<Archetype, number>> = { ...base };
+  for (const [a, w] of Object.entries(bias) as [Archetype, number][]) {
+    merged[a] = (merged[a] ?? 0) + w;
+  }
+
+  const entries = Object.entries(merged) as [Archetype, number][];
   const total = entries.reduce((a, [, w]) => a + w, 0);
-  let r = rng() * total;
+  let r = rand() * total;
   for (const [a, w] of entries) {
     r -= w;
     if (r < 0) return a;
@@ -198,7 +234,7 @@ export function buildIndustryStarter(opts: { businessName: string; industryKey: 
       return b;
     };
 
-    const archetype = pickArchetype(theme.category);
+    const archetype = pickArchetype(theme.category, industryKey);
     switch (archetype) {
       case 'story_led':
         blocks = [hero, makeStory(), services, makeTestimonial(), contact];

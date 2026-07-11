@@ -33,15 +33,22 @@ export function themeForIndustry(key: IndustryKey, themeId?: string | null): Sta
  * blocks appear and in what order so generated sites aren't all the same stack.
  * Weighted by the theme's category so structure matches the visual feel.
  */
-export type Archetype = 'classic' | 'story_led' | 'proof_led' | 'conversion';
+export type Archetype =
+  | 'classic'
+  | 'story_led'
+  | 'proof_led'
+  | 'conversion'
+  | 'showcase'      // long-form: everything, for a comprehensive brand page
+  | 'benefits_led'  // lead with the story/benefits + an early CTA, services after
+  | 'trust_first';  // social proof up top, then services
 
 const ARCHETYPE_WEIGHTS: Record<ThemeCategory, Partial<Record<Archetype, number>>> = {
-  editorial:    { story_led: 3, classic: 1 },
-  warm:         { story_led: 2, proof_led: 2, classic: 1 },
-  professional: { classic: 2, proof_led: 2 },
-  playful:      { conversion: 2, proof_led: 1, classic: 1 },
-  neon:         { conversion: 2, proof_led: 1 },
-  rugged:       { classic: 2, conversion: 2 },
+  editorial:    { story_led: 3, showcase: 2, classic: 1 },
+  warm:         { story_led: 2, proof_led: 2, benefits_led: 2, classic: 1 },
+  professional: { classic: 2, proof_led: 2, showcase: 1, trust_first: 1 },
+  playful:      { conversion: 2, proof_led: 1, benefits_led: 2, classic: 1 },
+  neon:         { conversion: 2, proof_led: 1, trust_first: 1 },
+  rugged:       { classic: 2, conversion: 2, benefits_led: 1, trust_first: 1 },
 };
 
 export function pickArchetype(category: ThemeCategory, rng: () => number = Math.random): Archetype {
@@ -201,6 +208,18 @@ export function buildIndustryStarter(opts: { businessName: string; industryKey: 
         break;
       case 'conversion':
         blocks = [hero, services, makeCta(), faq, contact];
+        break;
+      case 'showcase':
+        // Comprehensive long-form brand page — the fullest stack.
+        blocks = [hero, makeStory(), services, makeTestimonial(), faq, makeCta(), contact];
+        break;
+      case 'benefits_led':
+        // Story/benefits + an early CTA, then services and FAQ.
+        blocks = [hero, makeStory(), makeCta(), services, faq, contact];
+        break;
+      case 'trust_first':
+        // Social proof leads, then services and the brand story.
+        blocks = [hero, makeTestimonial(), services, makeStory(), makeCta(), contact];
         break;
       case 'classic':
       default:

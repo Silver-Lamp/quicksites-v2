@@ -29,6 +29,7 @@ export default function ThankYouPageClient() {
     name?: string;
     last4?: string;
   } | null>(null);
+  const [loaded, setLoaded] = React.useState(false);
 
   React.useEffect(() => {
     // Load snapshot
@@ -45,6 +46,7 @@ export default function ThankYouPageClient() {
         }
       }
     } catch {}
+    setLoaded(true);
     // Clear the cart once (in case user navigated directly)
     clearCart();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -66,6 +68,28 @@ export default function ThankYouPageClient() {
     (Number(p.price_cents) || 0) * (Number(p.qty) || 0);
 
   const when = order?.ts ? new Date(order.ts) : new Date();
+
+  // Avoid a flash of the "no order" state while the snapshot is read on mount.
+  if (!loaded) {
+    return (
+      <div className="mx-auto w-full max-w-3xl px-4 py-12 text-center text-sm text-muted-foreground">
+        Loading your receipt…
+      </div>
+    );
+  }
+
+  // Direct navigation / expired session → don't fake a confirmation.
+  if (!order) {
+    return (
+      <div className="mx-auto w-full max-w-3xl px-4 py-12 text-center space-y-4">
+        <h1 className="text-2xl font-semibold">No recent order found</h1>
+        <p className="text-sm text-muted-foreground">
+          We couldn’t find a recent order in this browser. If you just checked out, check your email for a receipt.
+        </p>
+        <Button onClick={continueShopping}>Continue shopping</Button>
+      </div>
+    );
+  }
 
   return (
     <div className="mx-auto w-full max-w-3xl px-4 py-12 space-y-6">

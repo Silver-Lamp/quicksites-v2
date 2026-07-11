@@ -194,6 +194,7 @@ const NAV_ADMIN: NavItem[] = [
   { type: 'item', label: 'Platform Revenue', href: '/admin/revenue', icon: <DollarSign size={18} />, adminOnly: true },
   { type: 'item', label: 'Print Orders', href: '/admin/print-orders', icon: <Printer size={18} />, adminOnly: true },
   { type: 'item', label: 'Outreach Pipeline', href: '/admin/outreach', icon: <Rocket size={18} />, adminOnly: true },
+  { type: 'item', label: 'Businesses Near Me', href: '/admin/prospects', icon: <MapPinned size={18} />, adminOnly: true },
 
   { type: 'item', label: 'Admin Tools', href: '/admin/tools', icon: <Wrench size={18} />, adminOnly: true },
   { type: 'item', label: 'Cron Health', href: '/admin/cron', icon: <Activity size={18} />, adminOnly: true },

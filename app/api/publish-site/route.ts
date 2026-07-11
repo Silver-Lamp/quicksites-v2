@@ -1,7 +1,9 @@
 export const runtime = 'nodejs';
 
+import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { json } from '@/lib/api/json';
+import { requireAdmin } from '@/lib/auth/requireUser';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -9,6 +11,11 @@ const supabase = createClient(
 );
 
 export async function POST(req: Request) {
+  // Was unauthenticated — anyone could publish any domain to public_sites. This
+  // is the legacy publish path (no callers); lock it to platform admins.
+  const gate = await requireAdmin();
+  if (gate instanceof NextResponse) return gate;
+
   const { domain } = await req.json();
 
   if (!domain) {

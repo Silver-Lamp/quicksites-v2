@@ -249,9 +249,10 @@ function flattenNavLeaves(list: NavItem[]): NavLeaf[] {
   return out;
 }
 
-/* ---------------- Elect Info (Campaign Tools) ---------------- */
+/* ---------------- Custom (Elect Info / campaign tools) ----------------
+   Pinned to the very bottom of the sidebar under a "Custom" header. */
 const NAV_ELECTINFO: NavItem[] = [
-  { type: 'section', label: 'Elect Info', adminOnly: true },
+  { type: 'section', label: 'Custom', adminOnly: true },
 
   {
     type: 'item',
@@ -715,7 +716,7 @@ export function AdminNavSections({ collapsed = false }: { collapsed?: boolean })
   const items = useMemo<NavItem[]>(
     () =>
       isAdmin
-        ? [...coreItems, ...NAV_MERCHANT, ...NAV_ELECTINFO, ...NAV_ADMIN]
+        ? [...coreItems, ...NAV_MERCHANT, ...NAV_ADMIN, ...NAV_ELECTINFO]
         : [...coreItems, ...NAV_MERCHANT],
     [isAdmin, coreItems]
   );
@@ -796,10 +797,30 @@ export function AdminNavSections({ collapsed = false }: { collapsed?: boolean })
     if (navLoading) setNavLoading(false);
   }, [pathname, navLoading]);
 
+  // Scroll the sidebar's scroll container back to the top (folder taps use this so an
+  // opened folder + its children land in view instead of below the fold).
+  const scrollSidebarToTop = () => {
+    const nav = navRef.current;
+    if (!nav) return;
+    let p: HTMLElement | null = nav.parentElement;
+    while (p) {
+      const oy = getComputedStyle(p).overflowY;
+      if ((oy === 'auto' || oy === 'scroll') && p.scrollHeight > p.clientHeight) {
+        p.scrollTo({ top: 0, behavior: 'smooth' });
+        return;
+      }
+      p = p.parentElement;
+    }
+    nav.scrollIntoView({ block: 'start', behavior: 'smooth' });
+  };
+
   const toggleMenu = (label: string) =>
     setOpenMenus((prev) => {
+      const willOpen = !prev[label];
       const next = { ...prev, [label]: !prev[label] };
       safeLS.set(OPEN_MENUS_KEY, next);
+      // On open, reposition the sidebar to the top.
+      if (willOpen) requestAnimationFrame(() => scrollSidebarToTop());
       return next;
     });
 

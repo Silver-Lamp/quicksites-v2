@@ -187,6 +187,9 @@ export default function TemplateActionToolbar({
   /* commit queue */
   const { queueFullSave, pending, error: saveError } = useCommitQueue(tplRef);
   const [showShortcuts, setShowShortcuts] = useState(false);
+  // Always points at the latest handleSaveClick so the mount-time ⌘/Ctrl+S
+  // key handler never fires a stale closure.
+  const saveHandlerRef = useRef<() => void>(() => {});
 
   /* history */
   const { stats, undo, redo } = useUndoRedo(template);
@@ -211,9 +214,17 @@ useEffect(() => {
     };
   
     const onKey = (e: KeyboardEvent) => {
-      // only plain key (no modifiers)
-      if (e.metaKey || e.ctrlKey || e.altKey || e.shiftKey) return;
       const k = (e.key || '').toLowerCase();
+      // Cmd/Ctrl+S → save. Previously unhandled, so the browser's "Save page"
+      // dialog opened instead — despite the Save button advertising this. Saves
+      // even while typing (the expected behavior for ⌘S).
+      if ((e.metaKey || e.ctrlKey) && !e.altKey && !e.shiftKey && k === 's') {
+        e.preventDefault();
+        void saveHandlerRef.current?.();
+        return;
+      }
+      // The remaining shortcuts are plain keys (no modifiers).
+      if (e.metaKey || e.ctrlKey || e.altKey || e.shiftKey) return;
       if (k !== 't' && k !== 'p') return;
       if (isTyping(e.target)) return;
       e.preventDefault();
@@ -385,6 +396,8 @@ useEffect(() => {
       toast.error('Save failed — see console.');
     }
   };
+  // Keep the ⌘/Ctrl+S handler pointing at the current closure.
+  saveHandlerRef.current = handleSaveClick;
 
   /* versions */
   const openVersions = () => { try { window.dispatchEvent(new CustomEvent('qs:versions:open')); } catch {} };
@@ -695,6 +708,7 @@ useEffect(() => {
                     <div className="mb-2 font-semibold text-white">Keyboard shortcuts</div>
                     <ul className="space-y-1.5 text-neutral-300">
                       {([
+                        ['⌘/Ctrl S', 'Save'],
                         ['S', 'Toggle settings'],
                         ['T', 'Toggle toolbar'],
                         ['P', 'Page manager'],

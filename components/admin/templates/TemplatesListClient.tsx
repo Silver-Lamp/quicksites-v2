@@ -4,7 +4,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { LayoutGrid, Table2 } from 'lucide-react';
 import TemplatesIndexTable from '@/components/admin/templates/templates-index-table';
-import TemplatesCardGrid, { TemplatesCardGridSkeleton } from '@/components/admin/templates/templates-card-grid';
+import TemplatesCardGrid, { TemplatesCardGridSkeleton, type GscStat } from '@/components/admin/templates/templates-card-grid';
 
 type ViewMode = 'cards' | 'table';
 
@@ -57,6 +57,18 @@ export default function TemplatesListClient({
   };
   const [loading, setLoading] = useState(false);
   const [errorText, setErrorText] = useState<string | null>(null);
+
+  // Google Search Console 28-day stats per connected domain (scoped server-side).
+  // Best-effort + lazy: the grid paints first, stats fade onto matching cards.
+  const [gscByDomain, setGscByDomain] = useState<Record<string, GscStat> | undefined>(undefined);
+  useEffect(() => {
+    let alive = true;
+    fetch('/api/gsc/summary')
+      .then((r) => (r.ok ? r.json() : null))
+      .then((j) => { if (alive && j?.ok && j.byDomain) setGscByDomain(j.byDomain); })
+      .catch(() => {});
+    return () => { alive = false; };
+  }, []);
 
   // Demo-generation shimmer: show N placeholder cards while demos are minted,
   // and replace them as freshly-generated rows appear.
@@ -248,7 +260,7 @@ export default function TemplatesListClient({
       {initialLoading ? (
         <TemplatesCardGridSkeleton />
       ) : view === 'cards' ? (
-        <TemplatesCardGrid rows={rows as any} pending={pendingDemos} loading={loading} />
+        <TemplatesCardGrid rows={rows as any} pending={pendingDemos} loading={loading} gscByDomain={gscByDomain} />
       ) : (
         /* ✅ pass includeVersions so the table can default grouping appropriately */
         <TemplatesIndexTable templates={rows as any} selectedFilter={dateParam} includeVersions={includeVersions} />

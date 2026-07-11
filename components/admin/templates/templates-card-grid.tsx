@@ -4,8 +4,20 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { toast } from 'react-hot-toast';
-import { Copy, ExternalLink, Pencil, CheckCircle2, CircleDashed, Sparkles } from 'lucide-react';
+import { Copy, ExternalLink, Pencil, CheckCircle2, CircleDashed, Sparkles, BarChart3 } from 'lucide-react';
 import { prettifySlug } from '@/lib/home/showcase-helpers';
+import { normalizeGscDomain } from '@/lib/gsc/normalizeDomain';
+
+export type GscStat = { clicks: number; impressions: number };
+
+/** Candidate GSC keys for a card: its custom domain (if any) + its quicksites subdomain. */
+function gscKeysForRow(r: Row): string[] {
+  const keys: string[] = [];
+  const custom = (r.custom_domain || r.domain || '').trim();
+  if (custom) keys.push(normalizeGscDomain(custom));
+  if (r.slug) keys.push(normalizeGscDomain(`${r.slug}.quicksites.ai`));
+  return keys.filter(Boolean);
+}
 
 type Row = {
   id: string;
@@ -102,10 +114,13 @@ export default function TemplatesCardGrid({
   rows,
   pending = 0,
   loading = false,
+  gscByDomain,
 }: {
   rows: Row[];
   pending?: number;
   loading?: boolean;
+  /** Normalized-domain → GSC 28-day totals; renders a stats line on matching cards. */
+  gscByDomain?: Record<string, GscStat>;
 }) {
   const router = useRouter();
   const [dupBusy, setDupBusy] = useState<string | null>(null);
@@ -167,6 +182,18 @@ export default function TemplatesCardGrid({
                   <span className="text-zinc-700">·</span>
                   <span>{timeAgo(r.updated_at)}</span>
                 </div>
+                {(() => {
+                  const stat = gscByDomain && gscKeysForRow(r).map((k) => gscByDomain[k]).find(Boolean);
+                  return stat ? (
+                    <div
+                      className="mt-1.5 inline-flex items-center gap-1 text-[11px] font-medium text-sky-400/90"
+                      title="Google Search Console — last 28 days"
+                    >
+                      <BarChart3 className="h-3 w-3" />
+                      {stat.clicks.toLocaleString()} clicks · {stat.impressions.toLocaleString()} impressions
+                    </div>
+                  ) : null;
+                })()}
               </div>
 
               <div className="mt-4 flex items-center gap-2">

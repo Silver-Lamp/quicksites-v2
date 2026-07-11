@@ -204,7 +204,9 @@ export async function GET(req: Request) {
         effective_updated_at: r.effective_updated_at,
         banner_url: canon?.banner_url ?? null,
         published: null,
-        domain: null,
+        // Surface the live custom domain (fixes the "View live" link + enables
+        // GSC matching); falls back to null → card uses the /sites/<slug> path.
+        domain: (meta?.domain ?? meta?.custom_domain ?? canon?.custom_domain ?? canon?.domain ?? null),
         data: canonData ?? null,
 
         // grouping/display helpers

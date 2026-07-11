@@ -12,7 +12,7 @@ import { generateServices } from '@/lib/generateServices';
 import { pickCuratedTheme } from '@/lib/theme/pickTheme';
 import { getCuratedTheme, toStampedTheme, type StampedTheme, type ThemeCategory, type ThemeLayout } from '@/lib/theme/curatedThemes';
 import { industryStyle } from '@/lib/builder/industryStyle';
-import { pickHeroCopy } from '@/lib/builder/industryCopy';
+import { pickHeroCopy, pickFaqItems, pickTestimonials } from '@/lib/builder/industryCopy';
 
 export type StarterTheme = {
   colorMode: 'light' | 'dark';
@@ -144,6 +144,9 @@ export function buildIndustryStarter(opts: { businessName: string; industryKey: 
   }
 
   const faq: any = createDefaultBlock('faq');
+  faq.content = faq.content ?? {};
+  // Seed industry-appropriate FAQ items (default is a single generic Q&A).
+  faq.content.items = pickFaqItems({ industryKey, businessName, label });
   const contact: any = createDefaultBlock('contact_form');
 
   // Commerce-forward industries get a storefront grid up top (e.g. authors selling
@@ -223,7 +226,13 @@ export function buildIndustryStarter(opts: { businessName: string; industryKey: 
       };
       return b;
     };
-    const makeTestimonial = () => createDefaultBlock('testimonial') as any;
+    const makeTestimonial = () => {
+      const b: any = createDefaultBlock('testimonial');
+      b.content = b.content ?? {};
+      // Seed industry-flavored testimonials (default is a single generic quote).
+      b.content.testimonials = pickTestimonials({ industryKey, businessName });
+      return b;
+    };
     const makeCta = () => {
       const b: any = createDefaultBlock('cta');
       b.content = { ...b.content, label: copy.ctaText, link: '#contact' };

@@ -1,9 +1,13 @@
 'use client';
 
 import { useCallback, useRef, useState } from 'react';
+import toast from 'react-hot-toast';
 import type { Template } from '@/types/template';
 import { templateSig } from '@/lib/editor/saveGuard';
 import { dispatchTemplateCacheUpdate } from '@/lib/templateCache';
+
+// Stable toast id so repeated failures update one toast instead of stacking.
+const COMMIT_ERROR_TOAST = 'qs-commit-error';
 
 async function commitWithRebase({
   id,
@@ -53,6 +57,8 @@ export function useCommitQueue(tplRef: React.RefObject<Template>) {
   const committingRef = useRef(false);
   const queueRequestedRef = useRef(false);
   const [pending, setPending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [lastSavedAt, setLastSavedAt] = useState<number | null>(null);
 
   const buildPatch = useCallback(() => {
     const cur: any = tplRef.current;
@@ -79,8 +85,24 @@ export function useCommitQueue(tplRef: React.RefObject<Template>) {
       } while (queueRequestedRef.current);
 
       try { window.dispatchEvent(new Event('qs:preview:save')); } catch {}
-    } catch (e) {
+
+      // Committed to the DB — clear any prior failure and stamp the time.
+      setError(null);
+      setLastSavedAt(Date.now());
+      try { toast.dismiss(COMMIT_ERROR_TOAST); } catch {}
+    } catch (e: any) {
+      // The DB commit failed. Previously this was swallowed with only a
+      // console.error, so the user kept editing believing their work was saved
+      // (the top badge reflects localStorage, not the DB). Surface it loudly.
+      const msg = e?.message || 'Could not save your changes.';
       console.error('[commit] failed', e);
+      setError(msg);
+      try {
+        toast.error(`Save failed — ${msg}. Your changes aren't saved yet.`, {
+          id: COMMIT_ERROR_TOAST,
+          duration: 8000,
+        });
+      } catch {}
     } finally {
       committingRef.current = false;
       setPending(false);
@@ -92,5 +114,5 @@ export function useCommitQueue(tplRef: React.RefObject<Template>) {
     if (!committingRef.current) void run(kind);
   }, [run]);
 
-  return { queueFullSave, pending };
+  return { queueFullSave, pending, error, lastSavedAt };
 }

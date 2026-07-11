@@ -6,7 +6,11 @@ import { cn } from '@/lib/utils';
 import RenderBlock from '@/components/admin/templates/render-block';
 import { resolveSiteTheme } from '@/lib/theme/resolveSiteTheme';
 import { BLOCK_VARIANTS } from '@/lib/blocks/variants';
-import { Pencil, Trash2, GripVertical, LayoutTemplate, Plus } from 'lucide-react';
+import { Pencil, Trash2, GripVertical, LayoutTemplate, Plus, Sparkles } from 'lucide-react';
+
+// Block types that expose AI copy generation in their editor — surface an AI
+// affordance on the block itself so users discover it without opening the editor.
+const AI_CAPABLE_BLOCKS = new Set(['hero', 'faq', 'services', 'testimonial', 'menu']);
 import { TooltipProvider } from '@/components/ui/tooltip';
 
 // dnd-kit
@@ -1068,6 +1072,26 @@ function SortableRow({
         >
           <GripVertical className="h-4 w-4" />
         </button>
+
+        {/* AI — visible on AI-capable blocks so the refine-with-AI capability is
+            discoverable from the canvas (opens the block editor + signals AI). */}
+        {blockType && AI_CAPABLE_BLOCKS.has(blockType) && (
+          <button
+            type="button"
+            aria-label="Rewrite this block with AI"
+            className="pointer-events-auto inline-flex items-center gap-1 rounded-md border border-purple-400/40 bg-purple-600/80 px-1.5 py-1.5 text-white hover:bg-purple-600"
+            onClick={(e) => {
+              e.stopPropagation();
+              try {
+                window.dispatchEvent(new CustomEvent('qs:block:ai', { detail: { blockId: id, blockType } }));
+              } catch {}
+              onEdit?.();
+            }}
+            title="Rewrite with AI"
+          >
+            <Sparkles className="h-4 w-4" />
+          </button>
+        )}
 
         {/* Edit */}
         <button

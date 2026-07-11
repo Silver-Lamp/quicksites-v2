@@ -155,6 +155,7 @@ export default function ContactFormRender({
   });
   const [submitted, setSubmitted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
   const [errors, setErrors] = useState<{
     name?: string;
     contact?: string;
@@ -167,6 +168,7 @@ export default function ContactFormRender({
   ) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
     setErrors({});
+    setSubmitError(null);
   };
 
   const isValidPhone = (phone: string) =>
@@ -174,10 +176,13 @@ export default function ContactFormRender({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setSubmitError(null);
 
     if (!hasValidEmail) {
-      alert(
-        'No valid contact email is configured. Please update it in Template Identity.'
+      setSubmitError(
+        isEditor
+          ? 'No valid contact email is configured. Set it in Template Identity.'
+          : 'Sorry — this form isn’t set up to receive messages right now.'
       );
       return;
     }
@@ -212,9 +217,7 @@ export default function ContactFormRender({
 
     if (insertError || !data) {
       console.error('Insert error:', insertError);
-      alert(
-        'There was a problem submitting the form. Please try again later.'
-      );
+      setSubmitError('There was a problem submitting the form. Please try again.');
       setSubmitting(false);
       return;
     }
@@ -411,6 +414,15 @@ Service: ${formData.service || 'N/A'}
                   </select>
                 )}
               </div>
+
+              {submitError && (
+                <div
+                  role="alert"
+                  className="rounded border border-red-500/40 bg-red-500/10 px-3 py-2 text-sm text-red-500"
+                >
+                  {submitError}
+                </div>
+              )}
 
               <div className="flex justify-center gap-4 pt-2">
                 <button

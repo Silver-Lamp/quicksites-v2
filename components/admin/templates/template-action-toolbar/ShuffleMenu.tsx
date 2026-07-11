@@ -45,9 +45,10 @@ export default function ShuffleMenu({
     };
   }, [open]);
 
+  // Keep the menu open after a pick so you can re-tap the same axis (e.g. keep
+  // re-shuffling Layout). It closes only via outside-click, Esc, or the caret.
   const run = (fn: () => void) => () => {
     fn();
-    setOpen(false);
   };
 
   const items: { icon: React.ReactNode; label: string; hint: string; onClick: () => void }[] = [

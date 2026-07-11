@@ -74,6 +74,12 @@ export default function CheckoutPageClient() {
     else router.push('/cart');
   }, [router]);
 
+  const continueShopping = React.useCallback(() => {
+    const path = window.location.pathname;
+    const m = path.match(/^\/sites\/([^/]+)/);
+    router.push(m ? `/sites/${m[1]}` : '/');
+  }, [router]);
+
   const routeToThankYou = React.useCallback((orderId?: string | null) => {
     const path = window.location.pathname;
     const m = path.match(/^\/sites\/([^/]+)/);
@@ -180,6 +186,29 @@ export default function CheckoutPageClient() {
     if (d.length <= 2) setExpiry(d);
     else setExpiry(`${d.slice(0, 2)}/${d.slice(2)}`);
   };
+
+  // Empty cart → don't strand the shopper on a disabled form.
+  if (isEmpty) {
+    return (
+      <div className="mx-auto w-full max-w-5xl px-4 py-6">
+        <div className="mb-4 flex items-center justify-between">
+          <Button variant="outline" onClick={backToCart} className="gap-2">
+            <ArrowLeft className="h-4 w-4" />
+            Back to cart
+          </Button>
+          <h1 className="text-xl font-semibold">Checkout</h1>
+          <div className="w-[110px]" /> {/* spacer */}
+        </div>
+
+        <div className="rounded-xl border p-10 text-center">
+          <p className="text-sm text-muted-foreground">Your cart is empty — add something to check out.</p>
+          <Button onClick={continueShopping} className="mt-4">
+            Continue shopping
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="mx-auto w-full max-w-5xl px-4 py-6">
@@ -301,7 +330,7 @@ export default function CheckoutPageClient() {
             </div>
 
             {err && (
-              <div className="rounded-md border border-red-600/40 bg-red-950/30 px-3 py-2 text-xs text-red-300">
+              <div role="alert" className="rounded-md border border-red-600/40 bg-red-950/30 px-3 py-2 text-xs text-red-300">
                 {err}
               </div>
             )}

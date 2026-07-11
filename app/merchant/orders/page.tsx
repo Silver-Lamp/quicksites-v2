@@ -25,8 +25,13 @@ export default async function MerchantOrdersPage({ searchParams }: { searchParam
   // optional column.
   let { data: orders, error: ordErr } = await q(`${BASE_COLS}, customer_note, customer_email`);
   if (ordErr && (ordErr.code === '42703' || /customer_note|customer_email/i.test(ordErr.message || ''))) {
-    ({ data: orders } = await q(BASE_COLS));
+    const retry = await q(BASE_COLS);
+    orders = retry.data;
+    ordErr = retry.error;
   }
+  // Distinguish a genuine "no orders" from a query failure, so we don't mislead
+  // a merchant into thinking they have none when the load actually errored.
+  const loadFailed = !!ordErr && (!orders || orders.length === 0);
 
   const oversoldCount = (orders || []).filter((o: any) => Array.isArray(o.oversold_lines) && o.oversold_lines.length).length;
 
@@ -78,7 +83,11 @@ export default async function MerchantOrdersPage({ searchParams }: { searchParam
               </tr>
             ))}
             {(!orders || orders.length === 0) && (
-              <tr><td className="px-4 py-6 text-neutral-500" colSpan={8}>No orders yet.</td></tr>
+              <tr>
+                <td className={`px-4 py-6 ${loadFailed ? 'text-red-400' : 'text-neutral-500'}`} colSpan={8}>
+                  {loadFailed ? 'Couldn’t load your orders — please refresh the page.' : 'No orders yet.'}
+                </td>
+              </tr>
             )}
           </tbody>
         </table>

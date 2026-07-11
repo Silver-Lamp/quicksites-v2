@@ -162,6 +162,44 @@ export const CURATED_THEMES: CuratedTheme[] = [
     accentColor: 'zinc-700', accent2Color: 'amber-600', neutral: 'warm',
     fontPair: 'fraunces-inter', fontFamily: 'sans', borderRadius: 'sm', surface: 'flat', darkMode: 'light',
   },
+
+  // --- expansion set: more brands per industry so two sites rarely match ---
+  {
+    id: 'carbon', name: 'Carbon', category: 'rugged',
+    industries: ['auto_repair', 'towing', 'moving', 'general_contractor', 'windshield_repair'],
+    accentColor: 'yellow-500', accent2Color: 'zinc-700', neutral: 'cool',
+    fontPair: 'archivo-inter', fontFamily: 'sans', borderRadius: 'sm', surface: 'flat', darkMode: 'dark',
+  },
+  {
+    id: 'sage', name: 'Sage', category: 'warm',
+    industries: ['salon_spa', 'landscaping', 'carpet_cleaning', 'pet_boutique'],
+    accentColor: 'green-600', accent2Color: 'amber-600', neutral: 'warm',
+    fontPair: 'lora-inter', fontFamily: 'serif', borderRadius: 'lg', surface: 'soft', darkMode: 'light',
+  },
+  {
+    id: 'harbor', name: 'Harbor', category: 'professional',
+    industries: ['real_estate', 'legal'],
+    accentColor: 'sky-500', accent2Color: 'indigo-500', neutral: 'cool',
+    fontPair: 'space-inter', fontFamily: 'sans', borderRadius: 'md', surface: 'flat', darkMode: 'dark',
+  },
+  {
+    id: 'cobalt', name: 'Cobalt', category: 'professional',
+    industries: ['medical_dental', 'legal', 'pest_control'],
+    accentColor: 'indigo-600', accent2Color: 'sky-500', neutral: 'cool',
+    fontPair: 'sora-inter', fontFamily: 'sans', borderRadius: 'sm', surface: 'flat', darkMode: 'light',
+  },
+  {
+    id: 'plum', name: 'Plum', category: 'playful',
+    industries: ['retail_boutique', 'salon_spa', 'gifts_stationery', 'pop_up_shop'],
+    accentColor: 'purple-500', accent2Color: 'pink-500', neutral: 'pure',
+    fontPair: 'bricolage-inter', fontFamily: 'sans', borderRadius: 'xl', surface: 'soft', darkMode: 'light',
+  },
+  {
+    id: 'atrium', name: 'Atrium', category: 'editorial',
+    industries: ['photography', 'author', 'artisan_goods', 'fitness'],
+    accentColor: 'teal-600', accent2Color: 'gray-700', neutral: 'pure',
+    fontPair: 'playfair-source', fontFamily: 'serif', borderRadius: 'sm', surface: 'flat', darkMode: 'light',
+  },
 ];
 
 /** The object shape stamped into `data.meta.theme` for the render/editor layers. */

@@ -9,6 +9,7 @@ import type { Template } from '@/types/template';
 import { createEmptyTemplate } from '@/lib/createEmptyTemplate';
 import { toast } from 'react-hot-toast';
 import StartYourSite from '@/components/admin/templates/start/start-your-site';
+import BrandLoader from '@/components/brand/BrandLoader';
 
 /** Fallback local slug generator */
 function generateLocalSlug(base = 'new-template') {
@@ -218,11 +219,24 @@ export default function NewTemplatePage() {
     return <StartYourSite />;
   }
 
-  if (busy || !initialData) {
+  // Creating the draft is a multi-second wait — use the branded loader (matches
+  // the editor route + guest builder) instead of a bare pulsing text box.
+  if (busy) {
+    return <BrandLoader open message="Preparing your new site" />;
+  }
+
+  if (!initialData) {
     return (
-      <div className="flex h-screen w-full items-center justify-center">
-        <div className="animate-pulse text-white/60 bg-neutral-800 px-6 py-4 rounded shadow border border-neutral-700">
-          {busy ? 'Preparing your new template…' : 'No template initialized.'}
+      <div className="flex h-screen w-full items-center justify-center p-6">
+        <div className="max-w-sm text-center">
+          <p className="text-sm text-white/70">We couldn’t start a new site. Please try again.</p>
+          <button
+            type="button"
+            onClick={() => router.push('/admin/templates/new')}
+            className="mt-4 inline-flex items-center gap-1.5 rounded-lg bg-sky-500 px-4 py-2 text-sm font-semibold text-white transition hover:bg-sky-400"
+          >
+            Start over
+          </button>
         </div>
       </div>
     );

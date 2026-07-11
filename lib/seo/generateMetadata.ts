@@ -76,13 +76,26 @@ export function generatePageMetadata({
     icons = { icon: '/favicon.ico' };
   }
 
+  const canonical = joinUrl(baseUrl, pageSlug);
+  const siteName = (site as any)?.template_name || title;
+
   return {
     title,
     description,
+    alternates: { canonical },
     openGraph: {
+      type: 'website',
+      siteName,
       title,
       description,
-      url: joinUrl(baseUrl, pageSlug),
+      url: canonical,
+      images: [ogImage],
+    },
+    // Rich card when a local business site is shared on X/Twitter.
+    twitter: {
+      card: 'summary_large_image',
+      title,
+      description,
       images: [ogImage],
     },
     icons,

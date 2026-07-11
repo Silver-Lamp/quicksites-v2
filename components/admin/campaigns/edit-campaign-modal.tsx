@@ -58,6 +58,13 @@ export default function EditCampaignModal(props: Props) {
   const [campaignStatus, setCampaignStatus] = useState<CampaignType['status']>(campaign.status || 'draft');
   const [cityLat, setCityLat] = useState<number | null>(campaign.city_lat ?? null);
   const [cityLon, setCityLon] = useState<number | null>(campaign.city_lon ?? null);
+  // Editable fields kept in state — the inputs previously mutated the `campaign`
+  // prop directly, which never re-rendered (typing appeared frozen).
+  const [name, setName] = useState<string>(campaign.name || '');
+  const [startsAt, setStartsAt] = useState<string>(campaign.starts_at as any);
+  const [endsAt, setEndsAt] = useState<string>(campaign.ends_at as any);
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   // fetch industries
   useEffect(() => {
@@ -97,6 +104,9 @@ export default function EditCampaignModal(props: Props) {
     setCampaignStatus(campaign.status || 'draft');
     setCityLat(campaign.city_lat ?? null);
     setCityLon(campaign.city_lon ?? null);
+    setName(campaign.name || '');
+    setStartsAt(campaign.starts_at as any);
+    setEndsAt(campaign.ends_at as any);
   }, [campaign]);
 
   // fetch linked leads
@@ -148,60 +158,40 @@ export default function EditCampaignModal(props: Props) {
         <form
           onSubmit={async (e) => {
             e.preventDefault();
+            if (submitting) return;
+            setSubmitting(true);
+            setSubmitError(null);
             try {
               const res = await fetch('/api/campaigns/update', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                id: campaign.id,
-                name: campaign.name,
-                city: campaignCity,
-                state: campaignState,
-                city_lat: cityLat,
-                city_lon: cityLon,
-                starts_at: campaign.starts_at,
-                ends_at: campaign.ends_at,
-                lead_ids: selectedLeadIds,
-                industry: campaignIndustry,
-                status: campaignStatus,
-              }),
+                  id: campaign.id,
+                  name,
+                  city: campaignCity,
+                  state: campaignState,
+                  city_lat: cityLat,
+                  city_lon: cityLon,
+                  starts_at: startsAt,
+                  ends_at: endsAt,
+                  lead_ids: selectedLeadIds,
+                  industry: campaignIndustry,
+                  status: campaignStatus,
+                }),
               });
 
-              const payload = {
-                id: campaign.id,
-                name: campaign.name,
-                city: campaignCity,
-                state: campaignState,
-                city_lat: cityLat,
-                city_lon: cityLon,
-                starts_at: campaign.starts_at,
-                ends_at: campaign.ends_at,
-                lead_ids: selectedLeadIds,
-                industry: campaignIndustry,
-                status: campaignStatus,
-              };
-
-              console.log('[📤 Saving Campaign]', payload);
-              const json = await res.json();
-              if (json.updated) {
-                console.log('[✅ Updated from server]', json.updated);
-                setCampaignState(json.updated.state || '');
-                setCampaignIndustry(json.updated.industry || '');
-                setCampaignCity(json.updated.city || '');
-                setCampaignStatus(json.updated.status || 'draft');
-                setCityLat(json.updated.city_lat ?? null);
-                setCityLon(json.updated.city_lon ?? null);
-              }
-
+              const json = await res.json().catch(() => ({}));
               if (!res.ok || json.error) {
-                console.error('❌ Update failed:', json.error || 'Unknown error');
+                setSubmitError(json.error || `Failed to save (${res.status}).`);
                 return;
               }
 
+              // Parent refetches on close (no full-page reload needed).
               setEditingCampaign(null);
-              location.reload();
-            } catch (err) {
-              console.error('❌ Network error while updating campaign:', err);
+            } catch (err: any) {
+              setSubmitError(err?.message || 'Network error while saving.');
+            } finally {
+              setSubmitting(false);
             }
           }}
         >
@@ -209,8 +199,8 @@ export default function EditCampaignModal(props: Props) {
             Name:
             <input
               className="mt-1 w-full px-2 py-1 rounded bg-zinc-800 border border-zinc-700 text-white"
-              value={campaign.name}
-              onChange={(e) => (campaign.name = e.target.value)}
+              value={name}
+              onChange={(e) => setName(e.target.value)}
             />
           </label>
           <label className="block mb-3">
@@ -224,7 +214,6 @@ export default function EditCampaignModal(props: Props) {
           </label>
           <label className="block mb-3">
             State:
-            <span className="ml-2 text-xs text-zinc-400">[DB: {campaign.state}]</span>
             <select
               className="mt-1 w-full px-2 py-1 rounded bg-zinc-800 border border-zinc-700 text-white"
               value={campaignState}
@@ -252,7 +241,6 @@ export default function EditCampaignModal(props: Props) {
 
           <label className="block mb-3">
             Industry:
-            <span className="ml-2 text-xs text-zinc-400">[DB: {campaign.industry}]</span>
             <select
               className="mt-1 w-full px-2 py-1 rounded bg-zinc-800 border border-zinc-700 text-white"
               value={campaignIndustry}
@@ -270,8 +258,8 @@ export default function EditCampaignModal(props: Props) {
             Starts At:
             <DatePicker
               className="mt-1 w-full px-2 py-1 rounded bg-zinc-800 border border-zinc-700 text-white"
-              selected={dayjs(campaign.starts_at).toDate()}
-              onChange={(date) => (campaign.starts_at = dayjs(date).toISOString())}
+              selected={startsAt ? dayjs(startsAt).toDate() : null}
+              onChange={(date) => setStartsAt(dayjs(date).toISOString())}
               showTimeSelect
               dateFormat="Pp"
             />
@@ -280,8 +268,8 @@ export default function EditCampaignModal(props: Props) {
             Ends At:
             <DatePicker
               className="mt-1 w-full px-2 py-1 rounded bg-zinc-800 border border-zinc-700 text-white"
-              selected={dayjs(campaign.ends_at).toDate()}
-              onChange={(date) => (campaign.ends_at = dayjs(date).toISOString())}
+              selected={endsAt ? dayjs(endsAt).toDate() : null}
+              onChange={(date) => setEndsAt(dayjs(date).toISOString())}
               showTimeSelect
               dateFormat="Pp"
             />
@@ -308,28 +296,28 @@ export default function EditCampaignModal(props: Props) {
             />
           </div>
 
+          {submitError && (
+            <div className="mb-3 rounded border border-red-600/50 px-2 py-1 text-sm text-red-400">⚠️ {submitError}</div>
+          )}
+
           <div className="flex justify-end gap-3 sticky bottom-0 bg-zinc-900 pt-3 pb-4 z-10">
             <button
               type="button"
-              className="text-sm text-zinc-400 hover:underline"
+              disabled={submitting}
+              className="text-sm text-zinc-400 hover:underline disabled:opacity-60"
               onClick={() => setEditingCampaign(null)}
             >
               Cancel
             </button>
             <button
               type="submit"
-              className="px-4 py-1 text-sm rounded bg-blue-600 hover:bg-blue-700 text-white"
+              disabled={submitting}
+              className="px-4 py-1 text-sm rounded bg-blue-600 hover:bg-blue-700 text-white disabled:opacity-60 disabled:cursor-not-allowed"
             >
-              Save
+              {submitting ? 'Saving…' : 'Save'}
             </button>
           </div>
-        <details className="mt-4 text-xs text-zinc-400 bg-zinc-800 p-2 rounded border border-zinc-700">
-  <summary className="cursor-pointer select-none">Debug: Loaded Campaign Object</summary>
-  <pre className="whitespace-pre-wrap text-xs mt-2">
-    {JSON.stringify(campaign, null, 2)}
-  </pre>
-</details>
-</form>
+        </form>
       </div>
     </div>
   );

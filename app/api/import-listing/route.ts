@@ -10,25 +10,14 @@
 // anything is chargeable. Do not scrape Yelp/Google HTML (ToS); use the Places API.
 
 import { NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
 import { getAdminUser } from '@/lib/auth/getAdminUser';
-import { fetchGooglePlace, findPlace, buildSpecFromListing, ListingImportError, type Listing } from '@/lib/rebuild/importListing';
-import { augmentListingWithYelp } from '@/lib/rebuild/importListingYelp';
-import { menuFromPhotos, pickMenuPhotos } from '@/lib/rebuild/menuFromPhotos';
-import { buildRebuildTemplate } from '@/lib/rebuild/assembleDraft';
+import { fetchGooglePlace, findPlace, ListingImportError, type Listing } from '@/lib/rebuild/importListing';
+import { buildDraftFromListing, BuildDraftError } from '@/lib/outreach/buildDraftFromListing';
 import { mintSiteClaimToken } from '@/lib/auth/siteClaimToken';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 export const maxDuration = 60; // vision OCR of several photos
-
-const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const SERVICE_KEY = (process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SECRET_KEY)!;
-const admin = createClient(SUPABASE_URL, SERVICE_KEY, { auth: { persistSession: false } });
-
-function uuid(): string {
-  return globalThis.crypto?.randomUUID?.() ?? `id_${Math.random().toString(36).slice(2)}${Date.now()}`;
-}
 
 export async function POST(req: Request) {
   const operator = await getAdminUser();
@@ -62,83 +51,26 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Could not load that listing.' }, { status: 500 });
   }
 
-  // 1c) Augment with Yelp photos (its top shots skew toward menus) + fill gaps.
-  if (!(Array.isArray(body.photoUrls) && body.photoUrls.length)) {
-    listing = await augmentListingWithYelp(listing).catch(() => listing);
-  }
-
-  // 2) Read the menu from photos. If the operator supplied explicit menu photos, use
-  //    them; otherwise auto-detect which of the listing's photos are menus first.
-  const explicit = Array.isArray(body.photoUrls) && body.photoUrls.length > 0;
-  let photoUrls: string[] = explicit ? body.photoUrls.map(String) : (listing.photos ?? []);
-  let menu;
+  // 2) Build + persist the claimable draft (Yelp augment → menu OCR for restaurants →
+  //    spec → assemble → insert). Shared with the prospects/build route.
+  let built;
   try {
-    if (!explicit && photoUrls.length > 1) {
-      const picked = await pickMenuPhotos(photoUrls, operator.id).catch(() => []);
-      if (picked.length) photoUrls = picked; // else fall back to all photos below
+    built = await buildDraftFromListing({ listing, photoUrls: body.photoUrls, operatorId: operator.id });
+  } catch (e) {
+    if (e instanceof BuildDraftError) {
+      return NextResponse.json({ error: e.message, code: e.code }, { status: 500 });
     }
-    menu = photoUrls.length ? await menuFromPhotos(photoUrls, operator.id) : undefined;
-  } catch {
-    // Menu is best-effort — a vision failure shouldn't block the site assembly.
-    menu = undefined;
+    return NextResponse.json({ error: 'Could not assemble the draft.' }, { status: 500 });
   }
 
-  // 3) Map → spec → assemble the draft (same blocks as URL conversion).
-  const spec = buildSpecFromListing(listing, menu);
-  const heroImage = listing.photos?.[0] ?? null;
-  const tpl = buildRebuildTemplate({ spec, heroImage, sourceUrl: listing.website ?? null });
-
-  // 4) Insert a claimable draft (operator-owned until the business claims it).
-  let insertedId: string | null = null;
-  let slug = tpl.slug;
-  for (let attempt = 0; attempt < 3 && !insertedId; attempt++) {
-    const row: any = {
-      id: uuid(),
-      template_name: attempt === 0 ? tpl.template_name : `${tpl.template_name} ${attempt + 1}`,
-      slug,
-      data: tpl.data,
-      color_mode: tpl.color_mode,
-      header_block: tpl.header_block,
-      footer_block: tpl.footer_block,
-      is_site: false,
-      industry: tpl.industry,
-      business_name: tpl.business_name,
-      owner_id: operator.id,
-      claim_source: 'listing_import',
-    };
-    const { data, error } = await admin.from('templates').insert(row).select('id, slug').single();
-    if (!error && data) {
-      insertedId = data.id;
-      slug = data.slug;
-      break;
-    }
-    if (error && `${error.code}` === '23505') {
-      slug = `${tpl.slug}-${Math.random().toString(36).slice(2, 5)}`;
-      continue;
-    }
-    return NextResponse.json({ error: error?.message || 'Could not save the draft.', code: 'insert_failed' }, { status: 500 });
-  }
-  if (!insertedId) {
-    return NextResponse.json({ error: 'Could not allocate a unique draft.', code: 'insert_failed' }, { status: 500 });
-  }
-
-  const menuItemCount = (menu?.sections ?? []).reduce((n, s) => n + s.items.length, 0);
-  const claimToken = mintSiteClaimToken(insertedId);
+  const claimToken = mintSiteClaimToken(built.id);
   return NextResponse.json({
     ok: true,
-    id: insertedId,
-    slug,
-    editorUrl: `/admin/templates/${insertedId}`,
-    previewUrl: `/preview/${slug}`,
-    claimUrl: `/claim-site/${insertedId}?token=${encodeURIComponent(claimToken)}`,
-    summary: {
-      businessName: spec.businessName,
-      phone: spec.contact?.phone ?? null,
-      address: spec.contact?.address ?? null,
-      hoursDays: spec.hours?.length ?? 0,
-      menuSections: menu?.sections?.map((s) => `${s.name} (${s.items.length})`) ?? [],
-      menuItems: menuItemCount,
-      heroImage,
-    },
+    id: built.id,
+    slug: built.slug,
+    editorUrl: `/admin/templates/${built.id}`,
+    previewUrl: `/preview/${built.slug}`,
+    claimUrl: `/claim-site/${built.id}?token=${encodeURIComponent(claimToken)}`,
+    summary: built.summary,
   });
 }

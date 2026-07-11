@@ -12,6 +12,8 @@
 // here, or accept a pasted listing JSON.
 
 import type { RebuildSpec, ContactSpec, HoursDaySpec, MenuSectionSpec } from '@/lib/rebuild/inferSiteSpec';
+import { KEY_TO_LABEL, type IndustryKey } from '@/lib/industries';
+import { typeToIndustryKey } from '@/lib/places/typeToIndustry';
 
 export type Listing = {
   name: string;
@@ -69,29 +71,50 @@ export function mapTypes(types: unknown): string[] {
     .slice(0, 5);
 }
 
-/** Map a listing (+ optional photo-extracted menu) into a full RebuildSpec. Pure. */
+/**
+ * Map a listing (+ optional photo-extracted menu) into a full RebuildSpec. Pure.
+ *
+ * `industryKey` is derived from the listing categories (Google Places types) so a
+ * non-restaurant business gets the right starter scaffold; pass an explicit override
+ * to force one. Defaults to 'restaurant' when categories don't resolve (the pipeline's
+ * historical default), and restaurant copy is only used for the restaurant key.
+ */
 export function buildSpecFromListing(
   listing: Listing,
   menu?: { sections: MenuSectionSpec[] } | undefined,
+  industryOverride?: IndustryKey,
 ): RebuildSpec {
-  const name = (listing?.name ?? '').trim() || 'Restaurant';
   const cats = (listing.categories ?? []).filter(Boolean);
+  const industryKey = industryOverride ?? typeToIndustryKey(cats);
+  const industryLabel = KEY_TO_LABEL[industryKey] ?? 'Business';
+  const isRestaurant = industryKey === 'restaurant';
+  const name = (listing?.name ?? '').trim() || (isRestaurant ? 'Restaurant' : industryLabel);
+
   const contact: ContactSpec = {};
   if (listing.phone) contact.phone = listing.phone;
   if (listing.address) contact.address = listing.address;
 
+  const catLead = cats.length ? cats.slice(0, 2).join(' · ') : industryLabel;
+  const subheadline = isRestaurant
+    ? cats.length
+      ? `${cats.slice(0, 2).join(' · ')} — order online or stop by.`
+      : 'Fresh food, made daily — order online or stop by.'
+    : `${catLead} — call or stop by today.`;
+  const about = isRestaurant
+    ? `${name}${cats.length ? ` — ${cats[0].toLowerCase()}` : ''}. Order online for pickup, or come visit us.`
+    : `${name}${cats.length ? ` — ${cats[0].toLowerCase()}` : ` — ${industryLabel.toLowerCase()}`}. Get in touch to learn more.`;
+
   return {
     businessName: name,
-    industryKey: 'restaurant',
-    industryLabel: 'Restaurant',
+    industryKey,
+    industryLabel,
     headline: name,
-    subheadline: cats.length
-      ? `${cats.slice(0, 2).join(' · ')} — order online or stop by.`
-      : 'Fresh food, made daily — order online or stop by.',
-    about: `${name}${cats.length ? ` — ${cats[0].toLowerCase()}` : ''}. Order online for pickup, or come visit us.`,
+    subheadline,
+    about,
     services: cats,
     faqs: [],
-    menu: menu?.sections?.length ? menu : undefined,
+    // Menu only rides food specs; a non-restaurant listing never carries one.
+    menu: isRestaurant && menu?.sections?.length ? menu : undefined,
     contact: Object.keys(contact).length ? contact : undefined,
     hours: listing.hours?.length ? listing.hours : undefined,
   };

@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   Table,
   TableBody,
@@ -30,9 +30,11 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
-import { Loader, Search, RefreshCcw, ChevronLeft, ChevronRight, Timer, Slash, History } from 'lucide-react';
+import { Loader, Search, RefreshCcw, ChevronLeft, ChevronRight, Timer, Slash, History, ArrowUp, ArrowDown, ArrowUpDown } from 'lucide-react';
 
 const DEFAULT_PER_PAGE = 50;
+
+type SortKey = 'joined' | 'last_active' | 'name' | 'plan' | 'status';
 const PLAN_OPTIONS = [
   { key: 'free', label: 'Free' },
   { key: 'starter', label: 'Starter' },
@@ -46,6 +48,8 @@ type AdminUserRow = {
   id: string;
   email?: string | null;
   name?: string | null;
+  created_at?: string | null;
+  last_sign_in_at?: string | null;
   is_chef?: boolean;
   chef?: AnyRec | null;
   merchant?: AnyRec | null;
@@ -168,6 +172,37 @@ export default function UsersPlansManager() {
   }, [page]);
 
   const users = res?.users ?? [];
+
+  // Client-side sort of the loaded page. Default: newest signups first.
+  const [sortKey, setSortKey] = useState<SortKey>('joined');
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
+  const toggleSort = (k: SortKey) => {
+    if (k === sortKey) {
+      setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
+    } else {
+      setSortKey(k);
+      // Dates default newest-first; text defaults A→Z.
+      setSortDir(k === 'joined' || k === 'last_active' ? 'desc' : 'asc');
+    }
+  };
+  const sorted = useMemo(() => {
+    const arr = [...(res?.users ?? [])];
+    const dir = sortDir === 'asc' ? 1 : -1;
+    const t = (s?: string | null) => (s ? new Date(s).getTime() || 0 : 0);
+    const s = (v?: string | null) => (v || '').toLowerCase();
+    arr.sort((a, b) => {
+      let c = 0;
+      switch (sortKey) {
+        case 'joined': c = t(a.created_at) - t(b.created_at); break;
+        case 'last_active': c = t(a.last_sign_in_at) - t(b.last_sign_in_at); break;
+        case 'name': c = s(a.name || a.email).localeCompare(s(b.name || b.email)); break;
+        case 'plan': c = s(a.plan?.key || a.plan?.label).localeCompare(s(b.plan?.key || b.plan?.label)); break;
+        case 'status': c = s(a.plan?.status).localeCompare(s(b.plan?.status)); break;
+      }
+      return c * dir;
+    });
+    return arr;
+  }, [res, sortKey, sortDir]);
 
   async function updatePlan(userId: string, planKey: string) {
     setSaving((s) => ({ ...s, [userId]: true }));
@@ -480,6 +515,16 @@ export default function UsersPlansManager() {
               />
               <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 opacity-60" />
             </div>
+            <select
+              value={perPage}
+              onChange={(e) => setPerPage(Number(e.target.value))}
+              className="rounded-md border bg-background px-2 py-2 text-sm"
+              title="Rows per page"
+            >
+              {[50, 100, 200].map((n) => (
+                <option key={n} value={n}>{n} / page</option>
+              ))}
+            </select>
             <Button variant="outline" onClick={() => fetchUsers()}>
               <RefreshCcw className="h-4 w-4 mr-1" /> Refresh
             </Button>
@@ -494,16 +539,18 @@ export default function UsersPlansManager() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>User</TableHead>
+                  <SortHead label="User" k="name" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
                   <TableHead>Flags</TableHead>
                   <TableHead>Compliance</TableHead>
-                  <TableHead>Plan</TableHead>
-                  <TableHead>Status</TableHead>
+                  <SortHead label="Plan" k="plan" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
+                  <SortHead label="Status" k="status" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
+                  <SortHead label="Joined" k="joined" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} className="whitespace-nowrap" />
+                  <SortHead label="Last active" k="last_active" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} className="whitespace-nowrap" />
                   <TableHead className="w-[1%] whitespace-nowrap">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {users.map((u) => {
+                {sorted.map((u) => {
                   const planSrc = u.plan?.source ?? 'unknown';
                   const editable = planSrc === 'user_plans';
                   const savingThis = !!saving[u.id];
@@ -602,6 +649,14 @@ export default function UsersPlansManager() {
                             renews {formatWhen(u.plan.current_period_end)}
                           </div>
                         )}
+                      </TableCell>
+
+                      <TableCell className="whitespace-nowrap text-sm text-muted-foreground" title={u.created_at ? formatDateTime(u.created_at) : ''}>
+                        {timeAgo(u.created_at)}
+                      </TableCell>
+
+                      <TableCell className="whitespace-nowrap text-sm text-muted-foreground" title={u.last_sign_in_at ? formatDateTime(u.last_sign_in_at) : ''}>
+                        {timeAgo(u.last_sign_in_at)}
                       </TableCell>
 
                       <TableCell className="text-right">
@@ -805,6 +860,56 @@ export default function UsersPlansManager() {
       </Dialog>
     </div>
   );
+}
+
+function SortHead({
+  label,
+  k,
+  sortKey,
+  sortDir,
+  onSort,
+  className,
+}: {
+  label: string;
+  k: SortKey;
+  sortKey: SortKey;
+  sortDir: 'asc' | 'desc';
+  onSort: (k: SortKey) => void;
+  className?: string;
+}) {
+  const active = sortKey === k;
+  return (
+    <TableHead className={className}>
+      <button
+        type="button"
+        onClick={() => onSort(k)}
+        className={`inline-flex items-center gap-1 hover:text-foreground ${active ? 'text-foreground' : ''}`}
+        title={`Sort by ${label.toLowerCase()}`}
+      >
+        {label}
+        {active ? (
+          sortDir === 'asc' ? <ArrowUp className="h-3.5 w-3.5" /> : <ArrowDown className="h-3.5 w-3.5" />
+        ) : (
+          <ArrowUpDown className="h-3.5 w-3.5 opacity-40" />
+        )}
+      </button>
+    </TableHead>
+  );
+}
+
+/** Compact relative time, e.g. "3d ago". Returns "—" when missing. */
+function timeAgo(iso?: string | null) {
+  if (!iso) return '—';
+  const d = new Date(iso).getTime();
+  if (!Number.isFinite(d)) return '—';
+  const s = Math.max(1, Math.floor((Date.now() - d) / 1000));
+  const steps: [number, string][] = [
+    [60, 's'], [60, 'm'], [24, 'h'], [7, 'd'], [4.348, 'w'], [12, 'mo'], [Number.MAX_SAFE_INTEGER, 'y'],
+  ];
+  let v = s;
+  let i = 0;
+  for (; i < steps.length && v >= steps[i][0]; i++) v = Math.floor(v / steps[i][0]);
+  return `${v}${steps[i]?.[1] ?? 's'} ago`;
 }
 
 function formatWhen(iso: string) {

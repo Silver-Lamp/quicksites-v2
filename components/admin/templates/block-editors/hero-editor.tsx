@@ -5,6 +5,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import type { Block } from '@/types/blocks';
 import type { Template } from '@/types/template';
 import type { BlockEditorProps } from './index';
+import { useBlockAiFocus } from '@/lib/editor/blockAiFocus';
 import BlockPreviewToggle from '@/components/admin/ui/block-preview-toggle';
 import {
   Sparkles,
@@ -275,6 +276,7 @@ export default function HeroEditor({
   errors,
   template,
 }: BlockEditorProps & { template: Template }) {
+  const aiRef = useBlockAiFocus<HTMLDivElement>((block as any)?._id ?? (block as any)?.id);
   const [mode, setMode] = useState<'express' | 'advanced'>('express');
   const { saveSoon, flushSave, mergeSoon, flushMerge } = useDebouncedSave();
   const isTypingOther = useRef(false);
@@ -1085,7 +1087,7 @@ export default function HeroEditor({
           {step === 2 && (
             <>
               {/* AI Assist */}
-              <div className="rounded border border-white/10 bg-neutral-900 p-3 space-y-2 mt-3">
+              <div ref={aiRef} className="rounded border border-white/10 bg-neutral-900 p-3 space-y-2 mt-3">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <Sparkles className="h-4 w-4 text-purple-300" />

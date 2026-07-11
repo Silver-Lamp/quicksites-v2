@@ -19,6 +19,7 @@ import type { Block } from '@/types/blocks';
 import type { Template } from '@/types/template';
 import type { BlockEditorProps } from './index';
 import BlockField from './block-field';
+import { useBlockAiFocus } from '@/lib/editor/blockAiFocus';
 import TestimonialBlockComponent from '@/components/admin/templates/render-blocks/testimonial';
 import { extractFieldErrors } from '../utils/extractFieldErrors';
 
@@ -184,6 +185,7 @@ export default function TestimonialEditor({
   errors = {},
   template,
 }: BlockEditorProps & { template: Template }) {
+  const aiRef = useBlockAiFocus<HTMLDivElement>((block as any)?._id ?? (block as any)?.id);
   // Prefer DB values
   const templateId = (template?.id as string) || undefined;
   const siteSlug = (template as any)?.slug as string | undefined;
@@ -871,7 +873,7 @@ export default function TestimonialEditor({
       </div>
 
       {/* AI generator */}
-      <div className="rounded border border-white/10 bg-neutral-900 p-3 space-y-3">
+      <div ref={aiRef} className="rounded border border-white/10 bg-neutral-900 p-3 space-y-3">
         <div className="text-sm font-medium">AI generator</div>
 
         {/* DB context summary */}

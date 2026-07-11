@@ -9,6 +9,7 @@ import BlockField from './block-field';
 import { extractFieldErrors } from '../utils/extractFieldErrors';
 import type { Template } from '@/types/template';
 import { Sparkles } from 'lucide-react';
+import { useBlockAiFocus } from '@/lib/editor/blockAiFocus';
 
 type FaqItem = { question: string; answer: string };
 
@@ -25,6 +26,7 @@ export default function FaqEditor({
   template,
 }: BlockEditorProps & { template: Template }) {
   const faqBlock = block as unknown as Block;
+  const aiRef = useBlockAiFocus<HTMLDivElement>((block as any)?._id ?? (block as any)?.id);
   const [title, setTitle] = useState<string>(
     (faqBlock.content as any)?.title || 'Frequently Asked Questions'
   );
@@ -144,7 +146,7 @@ export default function FaqEditor({
       <h3 className="text-lg font-semibold">Edit FAQ</h3>
 
       {/* AI Assist */}
-      <div className="rounded border border-white/10 bg-neutral-900 text-white p-3 space-y-3">
+      <div ref={aiRef} className="rounded border border-white/10 bg-neutral-900 text-white p-3 space-y-3">
         <div className="flex items-center gap-2">
           <Sparkles className="h-4 w-4 text-purple-300" />
           <div className="text-sm font-medium">AI Assist</div>

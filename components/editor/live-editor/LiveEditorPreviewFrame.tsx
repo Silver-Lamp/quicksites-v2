@@ -7,11 +7,13 @@ import RenderBlock from '@/components/admin/templates/render-block';
 import { resolveSiteTheme } from '@/lib/theme/resolveSiteTheme';
 import { BLOCK_VARIANTS } from '@/lib/blocks/variants';
 import { Pencil, Trash2, GripVertical, LayoutTemplate, Plus, Sparkles } from 'lucide-react';
-
-// Block types that expose AI copy generation in their editor — surface an AI
-// affordance on the block itself so users discover it without opening the editor.
-const AI_CAPABLE_BLOCKS = new Set(['hero', 'faq', 'services', 'testimonial', 'menu']);
+import { requestBlockAiFocus } from '@/lib/editor/blockAiFocus';
 import { TooltipProvider } from '@/components/ui/tooltip';
+
+// Block types whose editor has an inline AI panel we can jump straight to —
+// surface an AI affordance on the block itself so users discover it without
+// opening the editor first.
+const AI_CAPABLE_BLOCKS = new Set(['hero', 'faq', 'testimonial']);
 
 // dnd-kit
 import {
@@ -1082,10 +1084,8 @@ function SortableRow({
             className="pointer-events-auto inline-flex items-center gap-1 rounded-md border border-purple-400/40 bg-purple-600/80 px-1.5 py-1.5 text-white hover:bg-purple-600"
             onClick={(e) => {
               e.stopPropagation();
-              try {
-                window.dispatchEvent(new CustomEvent('qs:block:ai', { detail: { blockId: id, blockType } }));
-              } catch {}
-              onEdit?.();
+              onEdit?.();           // open the block editor
+              requestBlockAiFocus(id); // then jump to its AI panel
             }}
             title="Rewrite with AI"
           >

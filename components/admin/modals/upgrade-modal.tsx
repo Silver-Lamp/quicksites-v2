@@ -70,17 +70,24 @@ export default function UpgradeModal({ open, onClose, context, triggerReason }: 
 
   const handleUpgrade = async () => {
     setLoading(true);
-    // context/user_id/email/event_type cols not in live DB schema — cast to any; see types migration
-    await (supabase as any).from('guest_upgrade_events').insert([
-      {
-        context: inferredContext,
-        user_id: user?.id || null,
-        email: user?.email || null,
-        event_type: 'click',
-        trigger_reason: finalTrigger,
-        ...metadata,
-      },
-    ]);
+    // Record the click, but never let a slow/failed analytics write block the
+    // sign-up redirect (the conversion action). Bound the wait and swallow errors.
+    try {
+      // context/user_id/event_type cols not in live DB schema — cast to any; see types migration
+      await Promise.race([
+        (supabase as any).from('guest_upgrade_events').insert([
+          {
+            context: inferredContext,
+            user_id: user?.id || null,
+            email: user?.email || null,
+            event_type: 'click',
+            trigger_reason: finalTrigger,
+            ...metadata,
+          },
+        ]),
+        new Promise((r) => setTimeout(r, 1200)),
+      ]);
+    } catch {}
     window.location.href = '/sign-up?redirect_url=' + encodeURIComponent(window.location.href);
   };
 

@@ -30,12 +30,26 @@ export async function GET(_req: Request, ctx: { params: Promise<{ slug: string }
   let darkMode = true;
 
   try {
-    const { data } = await admin
+    const FIELDS = 'template_name, business_name, industry_label, industry, hero_url, color_mode, data';
+    // Prefer the canonical (non-version) row, but many live templates are flagged
+    // is_version=true / null; fall back to the most-recent row for this slug so their
+    // real hero image still resolves instead of dropping to the monogram card.
+    let { data } = await admin
       .from('templates')
-      .select('template_name, business_name, industry_label, industry, hero_url, color_mode, data')
+      .select(FIELDS)
       .eq('slug', slug)
       .eq('is_version', false)
       .maybeSingle();
+    if (!data) {
+      const fb = await admin
+        .from('templates')
+        .select(FIELDS)
+        .eq('slug', slug)
+        .order('updated_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      data = fb.data;
+    }
     if (data) {
       const d: any = data;
       name = firstNonEmpty(d.business_name, d.template_name) || prettifySlug(slug);

@@ -85,6 +85,9 @@ export default function LeadSelectorWithRadius({
     { label: '0–10 mi', min: 0, max: 10 },
     { label: '10–25 mi', min: 10, max: 25 },
     { label: '25–50 mi', min: 25, max: 50 },
+    // Catch-all for leads within the radius but beyond 50 mi — previously these
+    // were in sortedLeads yet fell through every bucket and never rendered.
+    { label: '50+ mi', min: 50, max: Infinity },
   ];
 
   const renderLeadLine = (lead: Lead, distanceLabel: string) => {
@@ -133,7 +136,10 @@ export default function LeadSelectorWithRadius({
 
   return (
     <div className="mb-4">
-      <label className="text-sm font-semibold block mb-1">Radius Filter:</label>
+      <div className="mb-1 flex items-center justify-between">
+        <label className="text-sm font-semibold">Radius Filter:</label>
+        <span className="text-xs text-zinc-400">{selectedLeadIds.length} selected</span>
+      </div>
       <select
         className="bg-zinc-800 text-white border border-zinc-700 rounded px-2 py-1 mb-3"
         value={radius}
@@ -147,13 +153,19 @@ export default function LeadSelectorWithRadius({
       </select>
 
       <div className="rounded border border-zinc-700 p-3 bg-zinc-800 divide-y divide-zinc-700 max-h-[320px] overflow-y-auto">
-        {groupByRange.map(({ label, min, max }) => renderGroup(label, min, max))}
+        {sortedLeads.length === 0 && outsideRadius.length === 0 ? (
+          <div className="py-6 text-center text-sm text-zinc-400">No leads found for this area.</div>
+        ) : (
+          <>
+            {groupByRange.map(({ label, min, max }) => renderGroup(label, min, max))}
 
-        {outsideRadius.length > 0 && (
-          <div className="pt-4">
-            <div className="text-xs font-semibold text-zinc-400 mb-1">Other Leads</div>
-            {outsideRadius.map((lead) => renderLeadLine(lead, 'outside radius'))}
-          </div>
+            {outsideRadius.length > 0 && (
+              <div className="pt-4">
+                <div className="text-xs font-semibold text-zinc-400 mb-1">Other Leads</div>
+                {outsideRadius.map((lead) => renderLeadLine(lead, 'outside radius'))}
+              </div>
+            )}
+          </>
         )}
       </div>
     </div>

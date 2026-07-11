@@ -3,7 +3,8 @@
 import { CampaignType } from '@/types/campaign.types';
 import { Lead } from '@/types/lead.types';
 import dayjs, { Dayjs } from 'dayjs';
-import { Suspense, useMemo, useState } from 'react';
+import { Suspense, useState } from 'react';
+import { ChevronDown, ChevronRight } from 'lucide-react';
 import ClaimPoster from './claim-poster';
 import TowTruckLogo from 'public/images/campaigns/tow-truck-logo.png'; // adjust path as needed
 
@@ -58,13 +59,6 @@ export default function CampaignPanel({
 
   const topTwoLeads = leads.slice(0, 2);
 
-  const handlePanelClick = () => {
-    if (!posterEditing) {
-      setEditingCampaign(campaign);
-      setSelectedLeadIds(campaign.lead_ids ?? []);
-    }
-  };
-
   return (
     <div
       className={`border p-4 rounded shadow mb-4 transition hover:opacity-90 text-white ${
@@ -72,17 +66,28 @@ export default function CampaignPanel({
       }`}
     >
       <div className="flex items-center justify-between mb-1 gap-3">
-        <button
-          className="text-xs bg-zinc-700 hover:bg-zinc-600 px-2 py-1 rounded text-white"
-          onClick={() => {
-            if (!posterEditing) {
-              setEditingCampaign(campaign);
-              setSelectedLeadIds(campaign.lead_ids ?? []);
-            }
-          }}
-        >
-          Edit
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setExpanded(!expanded)}
+            aria-label={expanded ? 'Collapse campaign' : 'Expand campaign'}
+            aria-expanded={expanded}
+            className="rounded p-1 text-zinc-300 hover:bg-zinc-700"
+          >
+            {expanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+          </button>
+          <button
+            className="text-xs bg-zinc-700 hover:bg-zinc-600 px-2 py-1 rounded text-white"
+            onClick={() => {
+              if (!posterEditing) {
+                setEditingCampaign(campaign);
+                setSelectedLeadIds(campaign.lead_ids ?? []);
+              }
+            }}
+          >
+            Edit
+          </button>
+        </div>
         <div className="font-semibold text-lg">{campaign.name} — {campaign.city}</div>
         <div
           className="text-sm text-zinc-300"

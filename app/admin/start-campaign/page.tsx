@@ -33,6 +33,8 @@ export default function StartCampaign() {
   const [cityLat, setCityLat] = useState<number | null>(null);
   const [cityLon, setCityLon] = useState<number | null>(null);
   const [availableIndustries, setAvailableIndustries] = useState<string[]>([]);
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   const {
     name,
@@ -101,10 +103,6 @@ export default function StartCampaign() {
     : leads) as Lead[];
 
   useEffect(() => {
-    console.log('[🔍 Leads Debug]', { industry, allLeads: leads, filteredLeads });
-  }, [industry, leads]);
-
-  useEffect(() => {
     if (filteredLeads.length > 0 && cityLat && cityLon && selectedLeads.length === 0) {
       const inRadius = filteredLeads.find(
         (l) =>
@@ -129,14 +127,21 @@ export default function StartCampaign() {
     }
   }, [leads]);
 
-  const user_id = supabase.auth.getUser().then(({ data: { user } }) => user?.id || '');
   return (
     <div className="p-6 max-w-3xl mx-auto text-white">
       <h1 className="text-2xl font-bold mb-4">Start Campaign</h1>
       <form
         onSubmit={async (e) => {
           e.preventDefault();
+          if (submitting) return;
+          setSubmitting(true);
+          setSubmitError(null);
           try {
+            // Resolve the real user id (previously a Promise was serialized into
+            // created_by/owner_id as {} — breaking campaign ownership).
+            const { data: { user } } = await supabase.auth.getUser();
+            const uid = user?.id ?? null;
+
             const res = await fetch('/api/campaigns/create', {
               method: 'POST',
               body: JSON.stringify({
@@ -152,21 +157,23 @@ export default function StartCampaign() {
                 city_lon: cityLon,
                 silent_mode: silentMode,
                 status: published ? 'published' : 'draft',
-                created_by: user_id,
-                owner_id: user_id,
+                created_by: uid,
+                owner_id: uid,
               }),
             });
 
-            const json = await res.json();
+            const json = await res.json().catch(() => ({}));
 
             if (!res.ok || json.error) {
-              console.error('❌ Launch failed:', json.error || 'Unknown error');
+              setSubmitError(json.error || `Failed to launch campaign (${res.status}).`);
               return;
             }
 
             window.location.href = '/admin/campaigns';
-          } catch (err) {
-            console.error('❌ Network error while launching campaign:', err);
+          } catch (err: any) {
+            setSubmitError(err?.message || 'Network error while launching campaign.');
+          } finally {
+            setSubmitting(false);
           }
         }}
         className="space-y-4"
@@ -307,16 +314,17 @@ export default function StartCampaign() {
         </label>
 
         {/* // error */}
-        {error && (
-          <div className="text-red-400 text-sm border border-red-600 p-2 rounded">⚠️ {error}</div>
+        {(error || submitError) && (
+          <div className="text-red-400 text-sm border border-red-600 p-2 rounded">⚠️ {submitError || error}</div>
         )}
 
         {/* // launch campaign */}
         <button
           type="submit"
-          className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+          disabled={submitting}
+          className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 disabled:opacity-60 disabled:cursor-not-allowed"
         >
-          Launch Campaign
+          {submitting ? 'Launching…' : 'Launch Campaign'}
         </button>
       </form>
     </div>

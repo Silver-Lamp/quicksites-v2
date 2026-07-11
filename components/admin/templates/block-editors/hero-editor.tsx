@@ -890,8 +890,7 @@ export default function HeroEditor({
         <div className="flex-1 overflow-y-auto px-4 pb-24 [scrollbar-gutter:stable]">
           {step === 2 && (
             <div className="rounded-lg border border-white/10 bg-white/5 p-2 text-xs text-white/80 mt-3 mb-3">
-              Hover the hero preview to edit ✎ or use ✨ for quick rewrites. Switch to Advanced for
-              full form controls.
+              Edit your hero’s text and image below. Switch to <b>Advanced</b> for layout &amp; framing.
             </div>
           )}
 
@@ -1130,7 +1129,87 @@ export default function HeroEditor({
                 )}
               </div>
 
-              {/* Express */}
+              {/* Content — the everyday edit (always visible in both modes) */}
+              <div className="grid md:grid-cols-3 gap-3 mt-3 rounded border border-white/10 bg-neutral-900 p-3">
+                <div className="md:col-span-3 text-sm font-medium">Content</div>
+                <div>
+                  <label className="text-xs text-neutral-300">Headline</label>
+                  <input
+                    className={selectDark}
+                    value={local?.headline || ''}
+                    onChange={(e) => update('headline', e.target.value as any)}
+                    placeholder="Fast, Reliable Service"
+                  />
+                  {errorText(`${fieldKey}.headline`)}
+                </div>
+                <div className="md:col-span-2">
+                  <label className="text-xs text-neutral-300">Subheadline</label>
+                  <input
+                    className={selectDark}
+                    value={local?.subheadline || ''}
+                    onChange={(e) => update('subheadline', e.target.value as any)}
+                    placeholder="24/7 local help with transparent pricing."
+                  />
+                  {errorText(`${fieldKey}.subheadline`)}
+                </div>
+                <div>
+                  <label className="text-xs text-neutral-300">CTA Text</label>
+                  <input
+                    className={selectDark}
+                    value={local?.cta_text || ''}
+                    onChange={(e) => update('cta_text', e.target.value as any)}
+                    placeholder="Get Started"
+                  />
+                  {errorText(`${fieldKey}.cta_text`)}
+                </div>
+                <div className="md:col-span-2">
+                  <label className="text-xs text-neutral-300">CTA Action</label>
+                  <div className="grid grid-cols-3 gap-2">
+                    <select
+                      className={selectDark}
+                      value={local?.cta_action || 'go_to_page'}
+                      onChange={(e) => update('cta_action', e.target.value as any)}
+                    >
+                      <option value="jump_to_contact">Jump to Contact</option>
+                      <option value="go_to_page">Go to Page</option>
+                      <option value="call_phone">Call Phone</option>
+                    </select>
+                    {(local?.cta_action || 'go_to_page') === 'go_to_page' && (
+                      <input
+                        className={selectDark}
+                        value={local?.cta_link ?? '/contact'}
+                        onChange={(e) => update('cta_link', e.target.value as any)}
+                        placeholder="/contact"
+                      />
+                    )}
+                    {local?.cta_action === 'jump_to_contact' && (
+                      <input
+                        className={selectDark}
+                        value={local?.contact_anchor_id ?? 'contact'}
+                        onChange={(e) => update('contact_anchor_id', e.target.value as any)}
+                        placeholder="contact"
+                      />
+                    )}
+                    {local?.cta_action === 'call_phone' && (
+                      <input
+                        className={selectDark}
+                        value={local?.cta_phone ?? ''}
+                        onChange={(e) => update('cta_phone', e.target.value as any)}
+                        placeholder="enter 10-digit phone"
+                      />
+                    )}
+                  </div>
+                  <label className="mt-2 inline-flex items-center gap-2 text-xs">
+                    <Switch
+                      checked={!!local?.cta_show_phone_below}
+                      onCheckedChange={(v) => update('cta_show_phone_below', v as any)}
+                    />
+                    <span>Show phone number under CTA</span>
+                  </label>
+                </div>
+              </div>
+
+              {/* Image */}
               {mode === 'express' && (
                 <div className="grid md:grid-cols-3 gap-3 mt-3">
                   <div className="md:col-span-2">
@@ -1234,148 +1313,37 @@ export default function HeroEditor({
                 </div>
               )}
 
-              {/* Advanced */}
+              {/* Advanced: layout & framing (content is the always-visible section above) */}
               {mode === 'advanced' && (
-                <>
-                  {/* Quick Controls (overlay) */}
-                  <div className="rounded border border-white/10 bg-neutral-900 p-3 mt-3">
-                    <div className="flex items-center justify-between">
-                      <div className="text-sm font-medium">Quick Controls</div>
-                      <button
-                        onClick={() => {
-                          setLocal((p: any) => {
-                            const cur = (p?.overlay_level ?? p?.overlay ?? 'none') as
-                              | 'none'
-                              | 'soft'
-                              | 'strong';
-                            const next = cur === 'none' ? 'soft' : 'strong';
-                            return {
-                              ...p,
-                              overlay_level: next,
-                              overlay: next,
-                              layout_mode:
-                                p?.layout_mode && p.layout_mode !== 'inline'
-                                  ? p.layout_mode
-                                  : 'background',
-                              layout:
-                                p?.layout && p.layout !== 'inline' ? p.layout : 'background',
-                            };
-                          });
-                          // also notify renderer listeners
-                          window.dispatchEvent(new CustomEvent('qs:hero:auto-fix'));
-                          bumpPreview();
-                        }}
-                        className="inline-flex items-center gap-1.5 rounded border border-white/15 px-2 py-1 text-xs hover:bg-white/10"
-                        title="Increase overlay for better contrast"
-                      >
-                        Auto-fix
-                      </button>
-                    </div>
-                    <div className="mt-2 inline-flex rounded-lg border border-white/15 bg-neutral-900 p-1 text-xs">
-                      {(['none', 'soft', 'strong'] as const).map((lvl) => (
-                        <button
-                          key={lvl}
-                          onClick={() => {
-                            setLocal((p: any) => ({ ...p, overlay_level: lvl, overlay: lvl }));
-                            window.dispatchEvent(
-                              new CustomEvent('qs:hero:set', { detail: { overlay_level: lvl } }),
-                            );
-                            bumpPreview();
-                          }}
-                          className={`px-3 py-1 rounded-md ${
-                            (local?.overlay_level ?? local?.overlay ?? 'soft') === lvl
-                              ? 'bg-white text-gray-900'
-                              : 'text-white/80'
-                          }`}
-                        >
-                          {lvl}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                  <div className="grid md:grid-cols-3 gap-3 mt-3">
-                    <div>
-                      <label className="text-xs text-neutral-300">Headline</label>
-                      <input
-                        className={selectDark}
-                        value={local?.headline || ''}
-                        onChange={(e) => update('headline', e.target.value as any)}
-                        placeholder="Fast, Reliable Service"
-                      />
-                      {errorText(`${fieldKey}.headline`)}
-                    </div>
-                    <div className="md:col-span-2">
-                      <label className="text-xs text-neutral-300">Subheadline</label>
-                      <input
-                        className={selectDark}
-                        value={local?.subheadline || ''}
-                        onChange={(e) => update('subheadline', e.target.value as any)}
-                        placeholder="24/7 local help with transparent pricing."
-                      />
-                      {errorText(`${fieldKey}.subheadline`)}
-                    </div>
-                    <div>
-                      <label className="text-xs text-neutral-300">CTA Text</label>
-                      <input
-                        className={selectDark}
-                        value={local?.cta_text || ''}
-                        onChange={(e) => update('cta_text', e.target.value as any)}
-                        placeholder="Get Started"
-                      />
-                      {errorText(`${fieldKey}.cta_text`)}
-                    </div>
-                    <div className="md:col-span-2">
-                      <label className="text-xs text-neutral-300">CTA Action</label>
-                      <div className="grid grid-cols-3 gap-2">
-                        <select
-                          className={selectDark}
-                          value={local?.cta_action || 'go_to_page'}
-                          onChange={(e) => update('cta_action', e.target.value as any)}
-                        >
-                          <option value="jump_to_contact">Jump to Contact</option>
-                          <option value="go_to_page">Go to Page</option>
-                          <option value="call_phone">Call Phone</option>
-                        </select>
-                        {(local?.cta_action || 'go_to_page') === 'go_to_page' && (
-                          <input
-                            className={selectDark}
-                            value={local?.cta_link ?? '/contact'}
-                            onChange={(e) => update('cta_link', e.target.value as any)}
-                            placeholder="/contact"
-                          />
-                        )}
-                        {local?.cta_action === 'jump_to_contact' && (
-                          <input
-                            className={selectDark}
-                            value={local?.contact_anchor_id ?? 'contact'}
-                            onChange={(e) => update('contact_anchor_id', e.target.value as any)}
-                            placeholder="contact"
-                          />
-                        )}
-                        {local?.cta_action === 'call_phone' && (
-                          <input
-                            className={selectDark}
-                            value={local?.cta_phone ?? ''}
-                            onChange={(e) => update('cta_phone', e.target.value as any)}
-                            placeholder="enter 10-digit phone"
-                          />
-                        )}
-                      </div>
-                      <div className="mt-1">
-                        <label className="inline-flex items-center gap-2 text-xs">
-                          <Switch
-                            checked={!!local?.cta_show_phone_below}
-                            onCheckedChange={(v) => update('cta_show_phone_below', v as any)}
-                          />
-                          <span>Show phone number under CTA</span>
-                        </label>
-                      </div>
-                    </div>
+                <div className="rounded border border-white/10 bg-neutral-900 p-3 mt-3 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="text-sm font-medium">Layout &amp; framing</div>
+                    <button
+                      onClick={() => {
+                        setLocal((p: any) => {
+                          const cur = (p?.overlay_level ?? p?.overlay ?? 'none') as 'none' | 'soft' | 'strong';
+                          const next = cur === 'none' ? 'soft' : 'strong';
+                          return {
+                            ...p,
+                            overlay_level: next,
+                            overlay: next,
+                            layout_mode: p?.layout_mode && p.layout_mode !== 'inline' ? p.layout_mode : 'background',
+                            layout: p?.layout && p.layout !== 'inline' ? p.layout : 'background',
+                          };
+                        });
+                        window.dispatchEvent(new CustomEvent('qs:hero:auto-fix'));
+                        bumpPreview();
+                      }}
+                      className="inline-flex items-center gap-1.5 rounded border border-white/15 px-2 py-1 text-xs hover:bg-white/10"
+                      title="Boost overlay so hero text stays readable"
+                    >
+                      Auto-fix contrast
+                    </button>
                   </div>
 
-                  <div className="md:col-span-2 grid grid-cols-2 gap-3 mt-3">
+                  <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <label className="text-xs text-neutral-300">Layout Mode</label>
+                      <label className="text-xs text-neutral-300">Layout</label>
                       <select
                         value={local?.layout || local?.layout_mode || 'inline'}
                         onChange={(e) => {
@@ -1392,46 +1360,7 @@ export default function HeroEditor({
                       </select>
                     </div>
                     <div>
-                      <label className="text-xs text-neutral-300">Blur Amount (0–30px)</label>
-                      <input
-                        type="range"
-                        min={0}
-                        max={30}
-                        step={1}
-                        value={local?.blur_amount ?? 8}
-                        onChange={(e) => {
-                          update('blur_amount', Number(e.target.value) as any);
-                          bumpPreview();
-                        }}
-                        className={rangeDark}
-                      />
-                    </div>
-                    <div>
-                      <label className="text-xs text-neutral-300">Image X</label>
-                      <input
-                        className={selectDark}
-                        value={local?.image_x || ''}
-                        onChange={(e) => {
-                          update('image_x', e.target.value as any);
-                          bumpPreview();
-                        }}
-                        placeholder="center"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-xs text-neutral-300">Image Y</label>
-                      <input
-                        className={selectDark}
-                        value={local?.image_y || ''}
-                        onChange={(e) => {
-                          update('image_y', e.target.value as any);
-                          bumpPreview();
-                        }}
-                        placeholder="bottom"
-                      />
-                    </div>
-                    <div className="col-span-2">
-                      <label className="text-xs text-neutral-300">Overlay Level</label>
+                      <label className="text-xs text-neutral-300">Overlay</label>
                       <div className="mt-1 inline-flex rounded-lg border border-white/15 bg-neutral-900 p-1 text-xs">
                         {(['none', 'soft', 'strong'] as const).map((lvl) => (
                           <button
@@ -1452,8 +1381,55 @@ export default function HeroEditor({
                         ))}
                       </div>
                     </div>
+                    <div>
+                      <label className="text-xs text-neutral-300">Focus X</label>
+                      <select
+                        className={selectDark}
+                        value={local?.image_x || 'center'}
+                        onChange={(e) => {
+                          update('image_x', e.target.value as any);
+                          bumpPreview();
+                        }}
+                      >
+                        <option value="left">Left</option>
+                        <option value="center">Center</option>
+                        <option value="right">Right</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="text-xs text-neutral-300">Focus Y</label>
+                      <select
+                        className={selectDark}
+                        value={local?.image_y || 'center'}
+                        onChange={(e) => {
+                          update('image_y', e.target.value as any);
+                          bumpPreview();
+                        }}
+                      >
+                        <option value="top">Top</option>
+                        <option value="center">Center</option>
+                        <option value="bottom">Bottom</option>
+                      </select>
+                    </div>
+                    {['background', 'full_bleed'].includes(local?.layout || local?.layout_mode || 'inline') && (
+                      <div className="col-span-2">
+                        <label className="text-xs text-neutral-300">Background blur (0–30px)</label>
+                        <input
+                          type="range"
+                          min={0}
+                          max={30}
+                          step={1}
+                          value={local?.blur_amount ?? 8}
+                          onChange={(e) => {
+                            update('blur_amount', Number(e.target.value) as any);
+                            bumpPreview();
+                          }}
+                          className={rangeDark}
+                        />
+                      </div>
+                    )}
                   </div>
-                </>
+                </div>
               )}
 
               {/* Live preview bridge */}

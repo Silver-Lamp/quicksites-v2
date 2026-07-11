@@ -242,15 +242,6 @@ const NAV_ELECTINFO: NavItem[] = [
     ],
   },
 
-  {
-    type: 'item',
-    label: 'Docs & Setup',
-    icon: <FileText size={18} />,
-    adminOnly: true,
-    children: [
-      { label: 'Setup Guide', href: '/docs/setup.md', adminOnly: true },
-    ],
-  },
 ];
 
 

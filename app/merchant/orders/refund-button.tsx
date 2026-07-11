@@ -14,6 +14,7 @@ export default function RefundButton({ orderId }: { orderId: string }) {
   const [busy, setBusy] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const [confirming, setConfirming] = React.useState(false);
+  const [done, setDone] = React.useState(false);
 
   const refund = async () => {
     setBusy(true);
@@ -26,8 +27,11 @@ export default function RefundButton({ orderId }: { orderId: string }) {
       });
       const json = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(json?.error || 'Refund failed');
-      // Stripe path reconciles via webhook (status flips shortly after); test
-      // path flips immediately. Refresh to reflect the new status.
+      // The Stripe path reconciles via webhook (status flips shortly after), so a
+      // refresh may not immediately drop this button — show explicit confirmation
+      // instead of leaving it stuck on "Refunding…". The test path flips now.
+      setDone(true);
+      setBusy(false);
       router.refresh();
     } catch (e: any) {
       setError(e?.message || 'Refund failed');
@@ -35,6 +39,10 @@ export default function RefundButton({ orderId }: { orderId: string }) {
       setConfirming(false);
     }
   };
+
+  if (done) {
+    return <span className="text-xs text-emerald-400">Refund requested ✓</span>;
+  }
 
   if (!confirming) {
     return (

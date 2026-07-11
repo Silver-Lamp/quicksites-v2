@@ -16,6 +16,8 @@ export default function CampaignComposer({ merchantId, tags }: { merchantId: str
   const [tag, setTag] = React.useState('');
   const [count, setCount] = React.useState<number | null>(null);
   const [overCap, setOverCap] = React.useState(false);
+  const [previewError, setPreviewError] = React.useState<string | null>(null);
+  const [previewNonce, setPreviewNonce] = React.useState(0);
   const [busy, setBusy] = React.useState<null | 'preview' | 'test' | 'send'>(null);
   const [msg, setMsg] = React.useState<{ kind: 'ok' | 'err'; text: string } | null>(null);
 
@@ -39,22 +41,32 @@ export default function CampaignComposer({ merchantId, tags }: { merchantId: str
     }
   }
 
-  // Re-preview whenever the audience definition changes.
+  // Re-preview whenever the audience definition changes (or a manual retry).
   React.useEffect(() => {
     let alive = true;
+    setCount(null);
+    setPreviewError(null);
     (async () => {
-      const res = await fetch('/api/merchant/campaigns', {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ merchantId, action: 'preview', segment: { seg, tag: tag || null } }),
-      }).then((r) => r.json()).catch(() => null);
-      if (alive && res && typeof res.recipientCount === 'number') {
-        setCount(res.recipientCount);
-        setOverCap(!!res.overCap);
+      try {
+        const res = await fetch('/api/merchant/campaigns', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ merchantId, action: 'preview', segment: { seg, tag: tag || null } }),
+        });
+        const json = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(json?.error || `Failed (${res.status})`);
+        if (typeof json.recipientCount !== 'number') throw new Error('Unexpected response.');
+        if (!alive) return;
+        setCount(json.recipientCount);
+        setOverCap(!!json.overCap);
+      } catch (e: any) {
+        if (!alive) return;
+        setCount(null);
+        setPreviewError(e?.message || 'Could not estimate the audience.');
       }
     })();
     return () => { alive = false; };
-  }, [merchantId, seg, tag]);
+  }, [merchantId, seg, tag, previewNonce]);
 
   const canSend = subject.trim() && body.trim() && (count ?? 0) > 0 && !overCap;
 
@@ -104,7 +116,18 @@ export default function CampaignComposer({ merchantId, tags }: { merchantId: str
       </div>
 
       <div className="mt-2 text-xs text-neutral-500">
-        {count === null ? 'Estimating audience…' : (
+        {previewError ? (
+          <span className="text-red-400">
+            Couldn’t estimate the audience ({previewError}).{' '}
+            <button
+              type="button"
+              onClick={() => setPreviewNonce((n) => n + 1)}
+              className="underline underline-offset-2 hover:text-red-300"
+            >
+              Retry
+            </button>
+          </span>
+        ) : count === null ? 'Estimating audience…' : (
           <>
             <span className="text-neutral-300">{count}</span> opted-in recipient{count === 1 ? '' : 's'} match.
             {overCap && <span className="text-amber-400"> Over the per-send cap — narrow the segment.</span>}

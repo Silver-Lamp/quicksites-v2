@@ -85,21 +85,33 @@ export default function CartPageClient() {
         </Button>
       </div>
 
-      {/* Auto-apply coupon from URL params */}
+      {/* Auto-apply coupon from URL params (kept mounted so a ?coupon= is
+          captured even before items are added). */}
       <AutoApplyFromQuery
         merchantId={merchantId}
         subtotalCents={subtotalCents}
         onNotice={(m) => setMsg(m)}
       />
 
-      {msg && (
-        <div className="rounded-md border px-3 py-2 text-xs">
-          {msg}
+      {isEmpty ? (
+        <div className="rounded-xl border p-10 text-center">
+          <p className="text-sm text-muted-foreground">Your cart is empty.</p>
+          <Button onClick={handleKeepShopping} className="mt-4">
+            Keep shopping
+          </Button>
         </div>
-      )}
+      ) : (
+        <>
+          {msg && (
+            <div role="status" className="rounded-md border px-3 py-2 text-xs">
+              {msg}
+            </div>
+          )}
 
-      {/* Main summary (items, steppers, totals, coupon chip) */}
-      <CartSummary merchantId={merchantId} subtotalCents={subtotalCents} />
+          {/* Main summary (items, steppers, totals, coupon chip) */}
+          <CartSummary merchantId={merchantId} subtotalCents={subtotalCents} />
+        </>
+      )}
     </div>
   );
 }

@@ -155,23 +155,10 @@ const NAV_ADMIN: NavItem[] = [
   },
   { type: 'item', label: 'Print Orders', href: '/admin/print-orders', icon: <Printer size={18} />, adminOnly: true },
 
-  /* Commerce — platform-level commerce admin. */
-  { type: 'section', label: 'Commerce', adminOnly: true },
+  /* Revenue, payouts & taxes. (The per-merchant Orders/Catalog/Payments admin pages
+     don't exist yet — merchants use the /merchant/* surfaces in NAV_MERCHANT.) */
+  { type: 'section', label: 'Revenue & Payouts', adminOnly: true },
   { type: 'item', label: 'Platform Revenue', href: '/admin/revenue', icon: <DollarSign size={18} />, adminOnly: true },
-  { type: 'item', label: 'Merchants', href: '/admin/merchants', icon: <Users size={18} />, adminOnly: true },
-  { type: 'item', label: 'Orders', href: '/admin/orders', icon: <ShoppingCart size={18} />, adminOnly: true },
-  { type: 'item', label: 'Catalog', href: '/admin/catalog', icon: <Package size={18} />, adminOnly: true },
-  {
-    type: 'item', label: 'Payments', icon: <CreditCard size={18} />, adminOnly: true,
-    children: [
-      { label: 'Payments', href: '/admin/payments' },
-      { label: 'Payment Accounts', href: '/admin/payment-accounts' },
-      { label: 'Payment Transactions', href: '/admin/payment-transactions' },
-    ],
-  },
-
-  /* Payouts & Taxes. */
-  { type: 'section', label: 'Payouts & Taxes', adminOnly: true },
   {
     type: 'item', label: 'Payouts', icon: <DollarSign size={18} />, adminOnly: true,
     children: [

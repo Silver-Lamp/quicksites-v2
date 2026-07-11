@@ -30,6 +30,7 @@ export default function LeadsPage() {
   const [leads, setLeads] = useState<Lead[]>([]);
   const [totalCount, setTotalCount] = useState<number>(0);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [hasMore, setHasMore] = useState(true);
   const [search, setSearch] = useState('');
 
@@ -43,6 +44,7 @@ export default function LeadsPage() {
   const fetchLeads = useCallback(async (reset = false) => {
     if (!reset && !hasMore) return;
     setLoading(true);
+    setError(null);
 
     let query = supabase
       .from('leads')
@@ -59,6 +61,7 @@ export default function LeadsPage() {
 
     if (error) {
       console.error('Error fetching leads:', error);
+      setError(error.message || 'Failed to load leads.');
       setLoading(false);
       return;
     }
@@ -173,6 +176,23 @@ export default function LeadsPage() {
         </span>
       </div>
 
+      {error && (
+        <div className="mt-4 rounded-lg border border-red-500/40 bg-red-500/10 p-3 text-sm text-red-300">
+          {error}{' '}
+          <button onClick={() => fetchLeads(true)} className="ml-2 underline underline-offset-2 hover:text-red-200">
+            Retry
+          </button>
+        </div>
+      )}
+
+      {!loading && !error && filtered.length === 0 && (
+        <div className="mt-6 rounded-lg border border-white/10 p-10 text-center text-sm text-gray-400">
+          {search || filterSource !== 'all' || filterStatus !== 'all' || filterIndustry !== 'all'
+            ? 'No leads match these filters.'
+            : 'No leads yet.'}
+        </div>
+      )}
+
       {filteredReady.length > 0 && (
         <div className="bg-gray-800 p-4 rounded border border-gray-700">
           <div className="flex items-center justify-between mb-2">
@@ -249,7 +269,7 @@ export default function LeadsPage() {
       ))}
 
       <div ref={loaderRef} className="text-center text-sm py-6 text-gray-400">
-        {loading ? 'Loading more leads…' : hasMore ? 'Scroll to load more' : 'No more leads to load.'}
+        {error ? '' : loading ? 'Loading more leads…' : filtered.length === 0 ? '' : hasMore ? 'Scroll to load more' : 'No more leads to load.'}
       </div>
 
       {toastMessage && (

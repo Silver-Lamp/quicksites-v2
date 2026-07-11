@@ -894,16 +894,21 @@ export default function LiveEditorPreviewFrame({
                             />
                           </div>
 
-                          <div className="mt-2 flex justify-center">
+                          {/* Persistent insertion affordance. Subtle by default so
+                              it doesn't shout, but always visible (was hidden behind
+                              group-hover, unreachable on touch/keyboard) and brightens
+                              to the brand accent on hover/focus. */}
+                          <div className="mt-1.5 flex justify-center">
                             <button
                               type="button"
-                              className="invisible group-hover:visible rounded-md border border-white/15 bg-white/5 px-2 py-1 text-xs hover:bg-white/10"
+                              aria-label="Add a block below"
+                              className="inline-flex items-center gap-1 rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-1 text-[11px] font-medium text-white/45 opacity-70 transition hover:border-sky-400/50 hover:bg-sky-500/10 hover:text-sky-300 hover:opacity-100 focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-sky-400/60"
                               onClick={(e) => {
                                 e.stopPropagation();
                                 onRequestAddAfter?.(id);
                               }}
                             >
-                              + Add block below
+                              <span className="text-sm leading-none">+</span> Add block
                             </button>
                           </div>
                         </SortableRow>

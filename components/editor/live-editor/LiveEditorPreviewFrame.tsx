@@ -6,7 +6,7 @@ import { cn } from '@/lib/utils';
 import RenderBlock from '@/components/admin/templates/render-block';
 import { resolveSiteTheme } from '@/lib/theme/resolveSiteTheme';
 import { BLOCK_VARIANTS } from '@/lib/blocks/variants';
-import { Pencil, Trash2, GripVertical } from 'lucide-react';
+import { Pencil, Trash2, GripVertical, LayoutTemplate, Plus } from 'lucide-react';
 import { TooltipProvider } from '@/components/ui/tooltip';
 
 // dnd-kit
@@ -794,17 +794,27 @@ export default function LiveEditorPreviewFrame({
               )}
 
               {renderBlocks.length === 0 ? (
-                <div className="flex flex-col items-center gap-3" style={{ pointerEvents: 'auto' }}>
-                  <div className="text-sm text-neutral-400">This page is empty.</div>
-                  <button
-                    id="qs-add-first-block"
-                    type="button"
-                    className="rounded-md border border-white/15 bg-white/5 px-3 py-1.5 text-sm hover:bg-white/10"
-                    onPointerDownCapture={(e) => { e.preventDefault(); e.stopPropagation(); }}
-                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); safeAddFirstBlock(); }}
-                  >
-                    + Add your first block
-                  </button>
+                <div className="flex justify-center py-10" style={{ pointerEvents: 'auto' }}>
+                  <div className="flex w-full max-w-md flex-col items-center gap-4 rounded-2xl border border-dashed border-white/15 bg-white/[0.02] px-6 py-10 text-center">
+                    <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-sky-500/10 text-sky-300 ring-1 ring-sky-400/20">
+                      <LayoutTemplate className="h-6 w-6" />
+                    </div>
+                    <div className="space-y-1">
+                      <div className="text-base font-semibold text-white">Start building this page</div>
+                      <p className="text-sm text-neutral-400">
+                        Add a block to get going — a hero, services, testimonials, a contact form, and more. You can reorder and restyle anytime.
+                      </p>
+                    </div>
+                    <button
+                      id="qs-add-first-block"
+                      type="button"
+                      className="inline-flex items-center gap-1.5 rounded-lg bg-sky-500 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-sky-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400/60"
+                      onPointerDownCapture={(e) => { e.preventDefault(); e.stopPropagation(); }}
+                      onClick={(e) => { e.preventDefault(); e.stopPropagation(); safeAddFirstBlock(); }}
+                    >
+                      <Plus className="h-4 w-4" /> Add your first block
+                    </button>
+                  </div>
                 </div>
               ) : (
                 <DndContext sensors={sensors} onDragStart={onDragStart} onDragEnd={onDragEnd}>

@@ -3,6 +3,7 @@ import { createClient } from '@supabase/supabase-js';
 import { stripe } from '@/lib/stripe/server';
 import { captureServer } from '@/lib/analytics/posthog-server';
 import { EVENTS } from '@/lib/analytics/events';
+import { requireMerchantOwner } from '@/lib/auth/requireUser';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -17,6 +18,11 @@ const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, (process.en
 export async function GET(req: NextRequest) {
   const merchantId = new URL(req.url).searchParams.get('merchantId');
   if (!merchantId) return NextResponse.json({ error: 'merchantId required' }, { status: 400 });
+
+  // Was unauthenticated: leaked Stripe account status for any merchantId and
+  // flipped payment_accounts.status. Require the caller to own the merchant.
+  const gate = await requireMerchantOwner(merchantId);
+  if (gate instanceof NextResponse) return gate;
 
   const { data: pa } = await supabase
     .from('payment_accounts')

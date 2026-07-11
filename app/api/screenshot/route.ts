@@ -2,9 +2,14 @@
 export const runtime = 'nodejs'; // nodejs runtime to allow supabase server client
 
 import { createClient } from '@supabase/supabase-js';
-import { NextRequest } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
+import { requireUser } from '@/lib/auth/requireUser';
 
 export async function POST(req: NextRequest) {
+  // Was unauthenticated — anyone could enqueue screenshot jobs for any domain.
+  const gate = await requireUser();
+  if (gate instanceof NextResponse) return gate;
+
   const { domain } = await req.json();
 
   if (!domain) {

@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import { getAllValidGscTokens } from '@/lib/gsc/getAllTokens';
+import { requireUser } from '@/lib/auth/requireUser';
+import { getAdminUser } from '@/lib/auth/getAdminUser';
+import { refreshGSC } from '@/lib/gsc/refreshToken';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -10,6 +12,13 @@ const supabase = createClient(
 export const dynamic = 'force-dynamic';
 
 export async function GET(req: Request) {
+  // Was unauthenticated + returned EVERY connected domain's stats (data leak).
+  // Require auth and scope: admins see all connected domains, others only their own.
+  const gate = await requireUser();
+  if (gate instanceof NextResponse) return gate;
+  const { user } = gate;
+  const isAdmin = !!(await getAdminUser());
+
   const { searchParams } = new URL(req.url);
   const startDate = searchParams.get('startDate');
   const endDate = searchParams.get('endDate');
@@ -19,7 +28,21 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: 'Missing startDate or endDate' }, { status: 400 });
   }
 
-  const tokenMap = await getAllValidGscTokens();
+  // Scoped connected-domain list, then refresh a token for each.
+  let tq = supabase.from('gsc_tokens').select('domain, user_id');
+  if (!isAdmin) tq = tq.eq('user_id', user.id);
+  const { data: tokRows } = await tq;
+  const scopedDomains = Array.from(
+    new Set((tokRows || []).map((r: any) => r?.domain).filter(Boolean)),
+  ) as string[];
+
+  const tokenMap: Record<string, string> = {};
+  await Promise.all(
+    scopedDomains.map(async (domain) => {
+      try { tokenMap[domain] = await refreshGSC(domain); } catch { /* skip domain */ }
+    }),
+  );
+
   const results: Record<string, any> = {};
 
   await Promise.all(

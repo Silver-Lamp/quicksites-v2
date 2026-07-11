@@ -194,6 +194,8 @@ export async function GET(req: NextRequest) {
       id: u.id,
       email: u.email,
       name: (u.user_metadata as any)?.name ?? null,
+      created_at: (u as any).created_at ?? null,
+      last_sign_in_at: (u as any).last_sign_in_at ?? null,
       is_chef: !!chef,
       is_merchant: !!merch, // ⬅️ added
       chef: chef && {

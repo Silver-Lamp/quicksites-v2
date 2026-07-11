@@ -11,6 +11,8 @@ import { KEY_TO_LABEL, type IndustryKey } from '@/lib/industries';
 import { generateServices } from '@/lib/generateServices';
 import { pickCuratedTheme } from '@/lib/theme/pickTheme';
 import { getCuratedTheme, toStampedTheme, type StampedTheme, type ThemeCategory, type ThemeLayout } from '@/lib/theme/curatedThemes';
+import { industryStyle } from '@/lib/builder/industryStyle';
+import { pickHeroCopy } from '@/lib/builder/industryCopy';
 
 export type StarterTheme = {
   colorMode: 'light' | 'dark';
@@ -53,24 +55,15 @@ const ARCHETYPE_WEIGHTS: Record<ThemeCategory, Partial<Record<Archetype, number>
 
 // Industry personality nudges the archetype on top of the theme-category base,
 // so a landscaper reads visual/proof-forward while a lawyer reads trust-forward —
-// independent of which theme happened to be drawn.
-const VISUAL_TRADES = new Set<IndustryKey>([
-  'landscaping', 'roof_cleaning', 'pressure_washing', 'window_washing', 'carpet_cleaning',
-  'junk_removal', 'photography', 'salon_spa', 'artisan_goods', 'handmade',
-]);
-const TRUST_PRO = new Set<IndustryKey>([
-  'legal', 'real_estate', 'medical_dental',
-]);
-const URGENCY_TRADES = new Set<IndustryKey>([
-  'towing', 'hvac', 'plumbing', 'electrical', 'auto_repair', 'pest_control', 'windshield_repair',
-]);
-
+// independent of which theme happened to be drawn. Classification is shared with
+// the copy picker via industryStyle().
 function industryArchetypeBias(key?: IndustryKey | null): Partial<Record<Archetype, number>> {
-  if (!key) return {};
-  if (VISUAL_TRADES.has(key))  return { showcase: 2, story_led: 2, proof_led: 1 };
-  if (TRUST_PRO.has(key))      return { trust_first: 2, proof_led: 2, classic: 1 };
-  if (URGENCY_TRADES.has(key)) return { conversion: 2, proof_led: 1 };
-  return {};
+  switch (industryStyle(key)) {
+    case 'visual':  return { showcase: 2, story_led: 2, proof_led: 1 };
+    case 'trust':   return { trust_first: 2, proof_led: 2, classic: 1 };
+    case 'urgency': return { conversion: 2, proof_led: 1 };
+    default:        return {};
+  }
 }
 
 export function pickArchetype(
@@ -131,12 +124,15 @@ export function buildIndustryStarter(opts: { businessName: string; industryKey: 
   // Industry services from the catalog (names are enough for the renderer).
   const serviceNames = generateServices({ industryKey }).map((s) => s.name);
 
+  // Varied, industry-appropriate hero copy so two sites don't read identically.
+  const copy = pickHeroCopy({ industryKey, label, businessName });
+
   // Hero — override only known content keys.
   const hero: any = createDefaultBlock('hero');
   hero.content = hero.content ?? {};
   setIfPresent(hero.content, 'headline', businessName || label);
-  setIfPresent(hero.content, 'subheadline', `Trusted ${label.toLowerCase()} — get a fast, free quote.`);
-  setIfPresent(hero.content, 'cta_text', 'Get a Quote');
+  setIfPresent(hero.content, 'subheadline', copy.subheadline);
+  setIfPresent(hero.content, 'cta_text', copy.ctaText);
 
   // Services — seed items into whichever array shape the default block uses.
   const services: any = createDefaultBlock('services');
@@ -230,7 +226,7 @@ export function buildIndustryStarter(opts: { businessName: string; industryKey: 
     const makeTestimonial = () => createDefaultBlock('testimonial') as any;
     const makeCta = () => {
       const b: any = createDefaultBlock('cta');
-      b.content = { ...b.content, label: 'Get a Free Quote', link: '#contact' };
+      b.content = { ...b.content, label: copy.ctaText, link: '#contact' };
       return b;
     };
 

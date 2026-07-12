@@ -8,6 +8,7 @@ import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase/admin';
 import { mintSiteClaimToken } from '@/lib/auth/siteClaimToken';
 import { publicBaseUrl } from '@/lib/outreach/competitionPoster';
+import { resolveCampaignBrand } from '@/lib/outreach/campaignBrand';
 import { recordScan } from '@/lib/outreach/mail/mailings';
 
 export const runtime = 'nodejs';
@@ -21,11 +22,14 @@ export async function GET(req: Request, ctx: { params: Promise<{ campaignId: str
 
   const { data } = await supabaseAdmin
     .from('geo_industry_campaigns')
-    .select('template_id, claim_link_visits')
+    .select('template_id, claim_link_visits, org_id')
     .eq('id', campaignId)
     .maybeSingle();
   const templateId = (data as any)?.template_id;
   if (!templateId) return NextResponse.redirect(base, 302);
+
+  // Land the claim on the owning org's branded domain (falls back to quicksites.ai).
+  const brand = await resolveCampaignBrand((data as any)?.org_id ?? null);
 
   // Best-effort intent counters (advisory): campaign total + per-prospect attribution.
   try {
@@ -38,6 +42,6 @@ export async function GET(req: Request, ctx: { params: Promise<{ campaignId: str
     /* counters are advisory */
   }
 
-  const claimUrl = `${base}/claim-site/${templateId}?token=${encodeURIComponent(mintSiteClaimToken(templateId))}`;
+  const claimUrl = `${brand.baseUrl.replace(/\/+$/, '')}/claim-site/${templateId}?token=${encodeURIComponent(mintSiteClaimToken(templateId))}`;
   return NextResponse.redirect(claimUrl, 302);
 }

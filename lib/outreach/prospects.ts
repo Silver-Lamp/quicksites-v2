@@ -55,6 +55,9 @@ export type Prospect = {
   geo_campaign_id: string | null;
   waitlist_status: string | null;
   sweep_id: string | null;
+  // Busyness proxies from Place Details (paid SKU, synced weekly) — null until synced.
+  rating: number | null;
+  review_count: number | null;
 };
 
 /**
@@ -123,7 +126,7 @@ export async function listProspects(filter: ListProspectsFilter = {}): Promise<P
   let q = supabaseAdmin
     .from('outreach_prospects')
     .select(
-      'id, created_at, place_id, business_name, phone, address, address_lat, address_lon, city, region, industry_key, categories, website, freshness_score, freshness_signals, lead_tier, status, template_id, geo_campaign_id, waitlist_status, sweep_id',
+      'id, created_at, place_id, business_name, phone, address, address_lat, address_lon, city, region, industry_key, categories, website, freshness_score, freshness_signals, lead_tier, status, template_id, geo_campaign_id, waitlist_status, sweep_id, rating, review_count',
     )
     .order('created_at', { ascending: false })
     .limit(filter.limit ?? 300);
@@ -139,7 +142,7 @@ export async function listProspectsByCampaign(campaignId: string): Promise<Prosp
   const { data, error } = await supabaseAdmin
     .from('outreach_prospects')
     .select(
-      'id, created_at, place_id, business_name, phone, address, address_lat, address_lon, city, region, industry_key, categories, website, freshness_score, freshness_signals, lead_tier, status, template_id, geo_campaign_id, waitlist_status, sweep_id',
+      'id, created_at, place_id, business_name, phone, address, address_lat, address_lon, city, region, industry_key, categories, website, freshness_score, freshness_signals, lead_tier, status, template_id, geo_campaign_id, waitlist_status, sweep_id, rating, review_count',
     )
     .eq('geo_campaign_id', campaignId)
     .order('created_at', { ascending: false });
@@ -164,7 +167,7 @@ export async function getProspect(id: string): Promise<Prospect | null> {
   const { data, error } = await supabaseAdmin
     .from('outreach_prospects')
     .select(
-      'id, created_at, place_id, business_name, phone, address, address_lat, address_lon, city, region, industry_key, categories, website, freshness_score, freshness_signals, lead_tier, status, template_id, geo_campaign_id, waitlist_status, sweep_id',
+      'id, created_at, place_id, business_name, phone, address, address_lat, address_lon, city, region, industry_key, categories, website, freshness_score, freshness_signals, lead_tier, status, template_id, geo_campaign_id, waitlist_status, sweep_id, rating, review_count',
     )
     .eq('id', id)
     .maybeSingle();

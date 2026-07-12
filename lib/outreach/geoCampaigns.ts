@@ -75,10 +75,63 @@ export type GeoCampaign = {
   tracking_number: string | null;
   tracking_number_sid: string | null;
   forward_to: string | null;
+  pricing_model: string | null;
+  price_cents: number | null;
+  locked_rate_cents: number | null;
+  billing_interval: string | null;
+  rank_status: string | null;
+  rank_position: number | null;
+  stripe_customer_id: string | null;
+  stripe_subscription_id: string | null;
+  subscription_status: string | null;
+  renter_email: string | null;
 };
 
 const GEO_COLS =
-  'id, city, region, industry_key, domain, slug, template_id, domain_status, status, claimed_by_prospect_id, tracking_number, tracking_number_sid, forward_to';
+  'id, city, region, industry_key, domain, slug, template_id, domain_status, status, claimed_by_prospect_id, tracking_number, tracking_number_sid, forward_to, pricing_model, price_cents, locked_rate_cents, billing_interval, rank_status, rank_position, stripe_customer_id, stripe_subscription_id, subscription_status, renter_email';
+
+export async function setCampaignPricing(
+  id: string,
+  p: { pricing_model: string; price_cents: number | null; locked_rate_cents: number | null; billing_interval: string },
+): Promise<void> {
+  const { error } = await supabaseAdmin
+    .from('geo_industry_campaigns')
+    .update({ ...p, updated_at: new Date().toISOString() })
+    .eq('id', id);
+  if (error) throw new Error(`setCampaignPricing failed: ${error.message}`);
+}
+
+export async function setCampaignRank(
+  id: string,
+  r: { rank_status: string; rank_position: number | null },
+): Promise<void> {
+  const { error } = await supabaseAdmin
+    .from('geo_industry_campaigns')
+    .update({ ...r, rank_synced_at: new Date().toISOString(), updated_at: new Date().toISOString() })
+    .eq('id', id);
+  if (error) throw new Error(`setCampaignRank failed: ${error.message}`);
+}
+
+export async function setCampaignSubscription(
+  id: string,
+  s: Partial<{ stripe_customer_id: string; stripe_subscription_id: string; subscription_status: string; renter_email: string; price_cents: number }>,
+): Promise<void> {
+  const { error } = await supabaseAdmin
+    .from('geo_industry_campaigns')
+    .update({ ...s, updated_at: new Date().toISOString() })
+    .eq('id', id);
+  if (error) throw new Error(`setCampaignSubscription failed: ${error.message}`);
+}
+
+export async function listGeoCampaignsForRankSync(): Promise<GeoCampaign[]> {
+  const { data, error } = await supabaseAdmin
+    .from('geo_industry_campaigns')
+    .select(GEO_COLS)
+    .not('domain', 'is', null)
+    .limit(500);
+  if (error) throw new Error(`listGeoCampaignsForRankSync failed: ${error.message}`);
+  return (data ?? []) as GeoCampaign[];
+}
 
 export async function setCampaignTracking(
   id: string,

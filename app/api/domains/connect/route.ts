@@ -201,16 +201,16 @@ export async function POST(req: Request) {
 
       if (shouldTryNamecheap) {
         try {
-          // dynamic import so the route doesn’t hard-crash if file/env missing
-          const mod = await import('@/lib/namecheap/verifyAndConfigureDomain');
+          // dynamic import so the route doesn’t hard-crash if env missing
+          const mod = await import('@/lib/domains/namecheap');
           const txtToken = process.env.QS_DOMAIN_TXT_TOKEN || 'quicksites';
-          await mod.verifyAndConfigureDomain(apex, {
+          await mod.configureVercelDns(apex, {
             aIps: recommended.ipv4,
             cnameTarget: recommended.cname[0],
             txtToken,
             ttl: '300',
-            // NOTE: the helper you installed sets @, www and _verify.
-            // If you want it to also set "*", extend that helper accordingly.
+            // NOTE: sets @, www and _verify. If you want it to also set "*",
+            // extend configureVercelDns accordingly.
           });
           autoConfigured = { provider: 'namecheap', applied: true };
         } catch (err: any) {

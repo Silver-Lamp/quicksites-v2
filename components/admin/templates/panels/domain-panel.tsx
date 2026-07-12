@@ -20,7 +20,7 @@ import DomainInstructions from '@/components/admin/domain-instructions';
 import type { Template } from '@/types/template';
 import { supabase } from '@/lib/supabase/client';
 import {
-  Copy, Loader2, CheckCircle2, AlertTriangle, RefreshCcw, Trash2, Globe,
+  Copy, Loader2, CheckCircle2, AlertTriangle, RefreshCcw, Trash2, Globe, Search, ShoppingCart,
 } from 'lucide-react';
 import { useVerifyDomain } from '@/hooks/useVerifyDomain';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -176,6 +176,28 @@ type ConnectResponse = {
   error?: string;
   autoConfigured?: { provider: 'namecheap'; applied: boolean; reason?: string };
 };
+
+/* Domain search & buy types (mirror lib/domains/registrar.ts) */
+type DomainSuggestion = {
+  domain: string;
+  available: boolean;
+  priceUsd: number | null;
+  periodYears: number | null;
+  premium: boolean;
+};
+type PurchaseInfo = {
+  enabled: boolean;
+  registerFlag: boolean;
+  contactReady: boolean;
+  missingContact: string[];
+};
+type SearchResponse = {
+  ok: boolean;
+  results?: DomainSuggestion[];
+  purchase?: PurchaseInfo;
+  error?: string;
+};
+type BuyResponse = { ok: boolean; domain: string; purchased: boolean; attached: boolean; priceUsd: number | null; error?: string };
 
 /* Snapshot-only publish detector (do NOT trust domain strings) */
 function computeIsPublishedFromStateOnly(t: any): boolean {
@@ -392,6 +414,15 @@ export default function DomainPanel({
   const [autoConfigure, setAutoConfigure] = useState(true);
   const [lastCheckedAt, setLastCheckedAt] = useState<number | null>(null);
 
+  /* ---- Domain search & buy state ---- */
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchBusy, setSearchBusy] = useState(false);
+  const [searchError, setSearchError] = useState<string | null>(null);
+  const [searchResults, setSearchResults] = useState<DomainSuggestion[]>([]);
+  const [purchaseInfo, setPurchaseInfo] = useState<PurchaseInfo | null>(null);
+  const [buyBusyDomain, setBuyBusyDomain] = useState<string | null>(null);
+  const [searchOpen, setSearchOpen] = useState(false);
+
   const apex = normalizeApex(domainInput || '');
 
   const onDomainBlur = () => {
@@ -531,9 +562,9 @@ export default function DomainPanel({
     } catch (e) { console.warn('persistApex failed', e); }
   }
 
-  async function connectDomain() {
+  async function connectDomain(override?: string) {
     setConnectError(null);
-    const d = normalizeApex(domainInput);
+    const d = normalizeApex(override ?? domainInput);
     if (!d || !DOMAIN_RX.test(d)) { setConnectError('Enter a valid domain like example.com (no https://).'); return; }
     setConnectBusy(true);
     try {
@@ -548,6 +579,41 @@ export default function DomainPanel({
     } finally { setConnectBusy(false); }
   }
   
+  async function runDomainSearch() {
+    const q = searchQuery.trim();
+    if (!q) { setSearchError('Type a name or domain to search.'); return; }
+    setSearchBusy(true);
+    setSearchError(null);
+    try {
+      const json = await postJson<SearchResponse>('/api/domains/search', { query: q });
+      setSearchResults(json.results ?? []);
+      setPurchaseInfo(json.purchase ?? null);
+      if ((json.results ?? []).length === 0) setSearchError('No availability found. Try another name.');
+    } catch (e: any) {
+      setSearchError(e?.message || 'Search failed.');
+      setSearchResults([]);
+    } finally { setSearchBusy(false); }
+  }
+
+  async function buyDomain(s: DomainSuggestion) {
+    setBuyBusyDomain(s.domain);
+    setSearchError(null);
+    try {
+      const json = await postJson<BuyResponse>('/api/domains/buy', {
+        domain: s.domain,
+        expectedPriceUsd: typeof s.priceUsd === 'number' ? s.priceUsd : undefined,
+      });
+      // Bought + attached by the server; fold it into the normal connect flow so
+      // the DNS/verify UI populates and the apex is persisted to the template.
+      setDomainInput(json.domain);
+      setSearchResults([]);
+      setSearchQuery('');
+      await connectDomain(json.domain);
+    } catch (e: any) {
+      setSearchError(e?.message || 'Purchase failed.');
+    } finally { setBuyBusyDomain(null); }
+  }
+
   async function verifyDomain() {
     if (!connectResp?.primary) return;
     setVerifyBusy(true);
@@ -770,6 +836,93 @@ export default function DomainPanel({
             <p className="mt-2 text-xs text-white/60">
               This template isn’t published yet. Use the <strong>Versions</strong> menu (bottom toolbar) to create a snapshot and publish.
             </p>
+          )}
+        </div>
+
+        {/* -------------------- Find & buy a domain -------------------- */}
+        <div className="rounded-lg border border-white/10 bg-neutral-900/50 p-3">
+          <button
+            type="button"
+            onClick={() => setSearchOpen((v) => !v)}
+            className="flex w-full items-center justify-between text-left"
+          >
+            <span className="flex items-center gap-2 text-xs text-white/70">
+              <Search className="h-4 w-4" /> Don’t have a domain? Search &amp; buy one
+            </span>
+            <span className="text-xs text-white/50">{searchOpen ? 'Hide' : 'Show'}</span>
+          </button>
+
+          {searchOpen && (
+            <div className="mt-3 flex flex-col gap-3">
+              <div className="flex flex-wrap items-center gap-2">
+                <Input
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); void runDomainSearch(); } }}
+                  placeholder="your business name or yourname.com"
+                  className="bg-gray-800 text-white border border-gray-700 flex-1 min-w-[200px]"
+                />
+                <Button type="button" size="sm" onClick={() => void runDomainSearch()} disabled={searchBusy}>
+                  {searchBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : (<><Search className="h-4 w-4 mr-1" /> Search</>)}
+                </Button>
+              </div>
+
+              {searchError && (
+                <div className="flex items-start gap-2 text-amber-300 text-sm">
+                  <AlertTriangle className="h-4 w-4 mt-0.5" />
+                  <span>{searchError}</span>
+                </div>
+              )}
+
+              {purchaseInfo && !purchaseInfo.enabled && searchResults.length > 0 && (
+                <p className="text-xs text-amber-300/90">
+                  {!purchaseInfo.registerFlag
+                    ? 'One-click buy is off (set VERCEL_DOMAIN_REGISTER_ENABLED=1 to enable). You can still register a name at your registrar, then Connect it below.'
+                    : `Add registrant contact env before buying: ${purchaseInfo.missingContact.join(', ')}.`}
+                </p>
+              )}
+
+              {searchResults.length > 0 && (
+                <div className="overflow-hidden rounded border border-white/10">
+                  {searchResults.map((s) => {
+                    const price = typeof s.priceUsd === 'number' ? `$${s.priceUsd}/yr` : '—';
+                    const busy = buyBusyDomain === s.domain;
+                    return (
+                      <div key={s.domain} className="flex flex-wrap items-center gap-2 border-t border-white/5 p-2 first:border-t-0">
+                        <code className="px-1 text-sm text-white/90">{inlineText(s.domain)}</code>
+                        {s.premium && <span className="rounded bg-fuchsia-500/15 px-1.5 py-0.5 text-[10px] text-fuchsia-300">premium</span>}
+                        <span className="ml-auto text-xs text-white/70">
+                          {s.available ? price : 'taken'}
+                        </span>
+                        {s.available ? (
+                          purchaseInfo?.enabled ? (
+                            <Button type="button" size="sm" onClick={() => void buyDomain(s)} disabled={busy}>
+                              {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : (<><ShoppingCart className="h-4 w-4 mr-1" /> Buy &amp; connect</>)}
+                            </Button>
+                          ) : (
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="outline"
+                              onClick={() => { setDomainInput(s.domain); setSearchOpen(false); }}
+                              title="Buy this at your registrar, then Connect below"
+                            >
+                              Use below
+                            </Button>
+                          )
+                        ) : (
+                          <span className="text-xs text-white/40">unavailable</span>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
+              <p className="text-[11px] text-white/50">
+                Buying here registers the domain on Vercel and auto-connects it — no DNS records to copy. Prices are yearly.
+              </p>
+            </div>
           )}
         </div>
 

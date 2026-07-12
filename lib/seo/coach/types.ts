@@ -32,6 +32,8 @@ export type GscSiteSummary = {
 
 export type SiteSeoSignals = {
   domain: string | null;
+  /** True when the site is served only on a *.quicksites.ai subdomain (no custom domain). */
+  isPlatformSubdomain: boolean;
   gscConnected: boolean;
   onPage: SiteOnPageSignals;
   gsc: GscSiteSummary | null;

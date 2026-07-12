@@ -1,16 +1,32 @@
 // lib/domains/namecheap.ts
-import { splitSLD_TLD } from './util';
+//
+// The single Namecheap client for the app. Availability + registration are used by
+// the operator geo-domain flow (lib/outreach/geoCampaigns.ts); configureVercelDns
+// writes the apex A / www CNAME / _verify TXT records when a domain lives at
+// Namecheap (called from app/api/domains/connect). Namecheap's API requires a
+// whitelisted static ClientIp, so this is an operator/server path — the self-serve
+// buy flow uses the Vercel registrar instead (lib/domains/registrar.ts).
+import { splitSLD_TLD, normalizeApex } from './util';
 
-const API_URL = process.env.NAMECHEAP_API_URL || 'https://api.namecheap.com/xml.response';
 const API_USER = process.env.NAMECHEAP_API_USER;
 const API_KEY = process.env.NAMECHEAP_API_KEY;
-const USERNAME = process.env.NAMECHEAP_USERNAME;
+// UserName is usually the same as ApiUser; accept either env so the two historical
+// conventions (NAMECHEAP_USERNAME vs reusing NAMECHEAP_API_USER) both work.
+const USERNAME = process.env.NAMECHEAP_USERNAME || process.env.NAMECHEAP_API_USER;
 const CLIENT_IP = process.env.NAMECHEAP_CLIENT_IP; // must be whitelisted at Namecheap
+const SANDBOX = process.env.NAMECHEAP_SANDBOX === 'true';
+const API_URL =
+  process.env.NAMECHEAP_API_URL ||
+  (SANDBOX ? 'https://api.sandbox.namecheap.com/xml.response' : 'https://api.namecheap.com/xml.response');
 
-function hasNCEnv() { return !!(API_USER && API_KEY && USERNAME && CLIENT_IP); }
+function hasNCEnv() {
+  return !!(API_USER && API_KEY && USERNAME && CLIENT_IP);
+}
 
 function toQuery(params: Record<string, string>) {
-  return Object.entries(params).map(([k, v]) => `${k}=${encodeURIComponent(v)}`).join('&');
+  return Object.entries(params)
+    .map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(v)}`)
+    .join('&');
 }
 
 async function ncCall(params: Record<string, string>) {
@@ -25,12 +41,15 @@ async function ncCall(params: Record<string, string>) {
   const res = await fetch(url, { method: 'GET', cache: 'no-store' });
   const text = await res.text();
   if (!res.ok || !/Status="OK"/.test(text)) {
-    throw new Error('Namecheap API error: ' + (text.slice(0, 300) || res.status));
+    const err = text.match(/<Errors>[\s\S]*?<\/Errors>/)?.[0] || text.slice(0, 300);
+    throw new Error(`Namecheap API error: ${res.status} ${err || res.statusText}`);
   }
   return text;
 }
 
-export function namecheapConfigured() { return hasNCEnv(); }
+export function namecheapConfigured() {
+  return hasNCEnv();
+}
 
 /**
  * Check whether a domain is available to register (namecheap.domains.check).
@@ -88,49 +107,79 @@ export async function registerDomain(
   return { registered: true };
 }
 
-export async function tryApplyNamecheapApexAndWWW(apex: string, aIps: string[], cnameTarget: string) {
-  if (!hasNCEnv()) return { applied: false, reason: 'Not configured' as const };
+type Host = { HostName: string; RecordType: string; Address: string; TTL?: string };
 
-  // We replace only @ and www hosts, preserving other records
-  const { sld, tld } = splitSLD_TLD(apex);
-
-  // 1) Get existing hosts
-  const getHosts = await ncCall({
-    Command: 'namecheap.domains.dns.getHosts',
-    SLD: sld, TLD: tld,
-  });
-
-  // Quick-n-dirty parse: keep non-@/www lines intact (XML parsing optional later)
-  const existing: Array<{ HostName: string; RecordType: string; Address: string; TTL?: string }> = [];
-  const hostRegex = /<host.*?HostName="([^"]+)".*?Type="([^"]+)".*?Address="([^"]+)".*?(?:TTL="([^"]+)")?/g;
+/** Parse a namecheap.domains.dns.getHosts response into structured host records. */
+function parseHosts(xml: string): Host[] {
+  const out: Host[] = [];
+  const re = /<host\b([^>]+?)\/>/gi;
   let m: RegExpExecArray | null;
-  while ((m = hostRegex.exec(getHosts))) {
-    const [_, HostName, RecordType, Address, TTL] = m;
-    if (HostName === '@' || HostName === 'www') continue; // we'll replace
-    existing.push({ HostName, RecordType, Address, TTL });
+  while ((m = re.exec(xml))) {
+    const attrs = m[1];
+    const get = (k: string) => attrs.match(new RegExp(`${k}="([^"]*)"`, 'i'))?.[1] ?? '';
+    out.push({
+      HostName: get('HostName'),
+      RecordType: get('Type'),
+      Address: get('Address'),
+      TTL: get('TTL') || undefined,
+    });
   }
+  return out;
+}
 
-  // 2) Compose new hosts (existing + our @ + www)
-  const ttl = '300';
-  const newHosts = [
-    ...existing,
-    ...aIps.map(ip => ({ HostName: '@', RecordType: 'A', Address: ip, TTL: ttl })),
+/**
+ * Point a Namecheap-hosted domain at the site: writes apex A record(s), a www CNAME,
+ * and a _verify TXT ownership token, preserving every other existing record. Idempotent
+ * (setHosts replaces the full host set, so we re-send the preserved records too).
+ * Throws if Namecheap isn't configured or the API rejects the write.
+ */
+export async function configureVercelDns(
+  domain: string,
+  options?: {
+    aIps?: string[]; // default Vercel anycast
+    cnameTarget?: string; // default Vercel CNAME target
+    txtToken?: string; // token set at _verify
+    ttl?: string; // seconds
+  },
+): Promise<{ success: true; applied: { apexA: number; wwwCname: string; verifyTxt: string } }> {
+  if (!hasNCEnv()) throw new Error('Namecheap not configured');
+
+  const apex = normalizeApex(domain);
+  const { sld, tld } = splitSLD_TLD(apex);
+  const aIps = options?.aIps?.length ? options.aIps : ['76.76.21.21'];
+  const cnameTarget = options?.cnameTarget || 'cname.vercel-dns.com';
+  const txtToken = options?.txtToken || process.env.QS_DOMAIN_TXT_TOKEN || 'quicksites';
+  const ttl = options?.ttl || '300';
+
+  // 1) Fetch existing hosts and keep everything except the records we own.
+  const getRes = await ncCall({ Command: 'namecheap.domains.dns.getHosts', SLD: sld, TLD: tld });
+  const preserved = parseHosts(getRes).filter(
+    (h) => !['@', 'www', '_verify'].includes(h.HostName.toLowerCase()),
+  );
+
+  // 2) Compose the desired host set.
+  const desired: Host[] = [
+    ...preserved,
+    ...aIps.map((ip) => ({ HostName: '@', RecordType: 'A', Address: ip, TTL: ttl })),
     { HostName: 'www', RecordType: 'CNAME', Address: cnameTarget, TTL: ttl },
+    { HostName: '_verify', RecordType: 'TXT', Address: txtToken, TTL: ttl },
   ];
 
-  // 3) SetHosts requires numbered params
-  const numbered: Record<string, string> = {
+  // 3) setHosts requires numbered params HostName1..N etc.
+  const params: Record<string, string> = {
     Command: 'namecheap.domains.dns.setHosts',
-    SLD: sld, TLD: tld,
+    SLD: sld,
+    TLD: tld,
   };
-  newHosts.forEach((h, i) => {
-    const n = (i + 1).toString();
-    numbered[`HostName${n}`] = h.HostName;
-    numbered[`RecordType${n}`] = h.RecordType;
-    numbered[`Address${n}`] = h.Address;
-    if (h.TTL) numbered[`TTL${n}`] = h.TTL;
+  desired.forEach((h, i) => {
+    const n = String(i + 1);
+    params[`HostName${n}`] = h.HostName;
+    params[`RecordType${n}`] = h.RecordType;
+    params[`Address${n}`] = h.Address;
+    if (h.TTL) params[`TTL${n}`] = h.TTL;
   });
 
-  await ncCall(numbered);
-  return { applied: true as const, reason: 'ok' as const };
+  await ncCall(params);
+
+  return { success: true, applied: { apexA: aIps.length, wwwCname: cnameTarget, verifyTxt: txtToken } };
 }

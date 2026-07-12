@@ -43,6 +43,11 @@ export function buildSiteSeoRecommendations(s: SiteSeoSignals): SeoRec[] {
     recs.push({ id: 'alt-text', category: 'content', priority: 40, title: 'Add image alt text', detail: `${op.imagesMissingAlt} image${op.imagesMissingAlt === 1 ? '' : 's'} lack alt text. Describe each image — it helps accessibility and image search.` });
   }
 
+  // ---- Custom domain (foundational: brand/trust, not sharing a root domain) ----
+  if (s.isPlatformSubdomain) {
+    recs.push({ id: 'custom-domain', category: 'connectivity', priority: 48, title: 'Get a custom domain', detail: 'Your site is on a shared quicksites.ai subdomain. A custom domain (yourbusiness.com) builds trust, is easier to remember, and gives you a cleaner brand in search results. Search and connect one in a click from your site’s Domain settings.' });
+  }
+
   // ---- Search Console connectivity ----
   if (!s.gscConnected) {
     recs.push({ id: 'connect-gsc', category: 'connectivity', priority: 88, title: 'Connect Google Search Console', detail: 'You’re not connected to Search Console, so we can’t see your ranking, impressions or clicks. Connect it to unlock real coaching on what to fix next.' });

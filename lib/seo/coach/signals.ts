@@ -86,6 +86,12 @@ export async function fetchSiteGscSummary(
   };
 }
 
+/** True when the site has no custom domain and is served on a platform subdomain. */
+export function isPlatformSubdomain(t: { custom_domain?: string | null; domain?: string | null; slug: string | null }): boolean {
+  const custom = (t.custom_domain || t.domain || '').trim();
+  return !custom && !!t.slug;
+}
+
 /** Full signal bundle for one site. */
 export async function gatherSiteSeoSignals(admin: AnyClient, site: CoachSiteRow): Promise<SiteSeoSignals> {
   const onPage = analyzeSiteOnPage(site.data ?? {});
@@ -93,6 +99,7 @@ export async function gatherSiteSeoSignals(admin: AnyClient, site: CoachSiteRow)
   const gsc = await fetchSiteGscSummary(admin, site.owner_id, keys);
   return {
     domain: resolveSiteDomain(site),
+    isPlatformSubdomain: isPlatformSubdomain(site),
     gscConnected: gsc != null,
     onPage,
     gsc,

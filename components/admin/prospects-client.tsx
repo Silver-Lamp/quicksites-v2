@@ -12,6 +12,7 @@ import dynamic from 'next/dynamic';
 import type { Prospect } from '@/lib/outreach/prospects';
 import type { GeoCampaign } from '@/lib/outreach/geoCampaigns';
 import { normalizeGscDomain } from '@/lib/gsc/normalizeDomain';
+import { effectivePriceCents, formatCents } from '@/lib/outreach/geoPricing';
 
 type GscStat = { clicks: number; impressions: number; position: number };
 
@@ -236,6 +237,37 @@ export default function ProspectsClient({
     }
   }
 
+  async function setPrice(c: GeoCampaign) {
+    setBusy(`price:${c.id}`);
+    setRowMsg((m) => { const { [c.id]: _drop, ...rest } = m; return rest; });
+    try {
+      const r = await post('/api/admin/prospects/geo-campaign/set-pricing', { campaignId: c.id });
+      setRowMsg((m) => ({ ...m, [c.id]: { ok: true, text: `Plan set: ${formatCents(r.pricing.locked_rate_cents)} → ${formatCents(r.pricing.price_cents)}/mo` } }));
+      router.refresh();
+    } catch (e: any) {
+      setRowMsg((m) => ({ ...m, [c.id]: { ok: false, text: e.message } }));
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function rent(c: GeoCampaign) {
+    const email = window.prompt(`Create a rental checkout link for ${c.domain}.\n\nRenter email (optional):`, c.renter_email || '');
+    if (email === null) return; // cancelled
+    setBusy(`rent:${c.id}`);
+    setRowMsg((m) => { const { [c.id]: _drop, ...rest } = m; return rest; });
+    try {
+      const r = await post('/api/admin/prospects/geo-campaign/rent', { campaignId: c.id, renterEmail: email.trim() || undefined });
+      if (r.url) window.open(r.url, '_blank', 'noopener,noreferrer');
+      setRowMsg((m) => ({ ...m, [c.id]: { ok: true, text: 'Checkout link opened — send it to the renter' } }));
+      router.refresh();
+    } catch (e: any) {
+      setRowMsg((m) => ({ ...m, [c.id]: { ok: false, text: e.message } }));
+    } finally {
+      setBusy(null);
+    }
+  }
+
   async function launchGeo(group: CompetitionGroup) {
     setBusy(`geo:${group.key}`);
     setMsg(null);
@@ -391,7 +423,7 @@ export default function ProspectsClient({
             <table className="min-w-full text-sm">
               <thead className="bg-neutral-900">
                 <tr className="text-left [&>th]:px-4 [&>th]:py-2 [&>th]:font-medium [&>th]:text-neutral-400">
-                  <th>Domain</th><th>City</th><th>Industry</th><th>Domain status</th><th>Status</th><th>Ranking</th><th>Calls</th><th>Outreach</th>
+                  <th>Domain</th><th>City</th><th>Industry</th><th>Domain status</th><th>Status</th><th>Ranking</th><th>Calls</th><th>Plan</th><th>Outreach</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-neutral-800">
@@ -430,6 +462,27 @@ export default function ProspectsClient({
                           className={channels.call ? 'text-sky-400 hover:text-sky-300' : 'cursor-not-allowed text-neutral-600'}
                         >
                           {busy === `call:${c.id}` ? '…' : 'Get number'}
+                        </button>
+                      )}
+                    </td>
+                    <td className="text-xs">
+                      {c.pricing_model === 'flat' ? (
+                        <div className="flex flex-col gap-0.5">
+                          <span className="text-neutral-200">{formatCents(effectivePriceCents(c))}/mo</span>
+                          {c.rank_status !== 'page1' && c.price_cents && c.locked_rate_cents && c.price_cents !== c.locked_rate_cents ? (
+                            <span className="text-amber-400/80">founder → {formatCents(c.price_cents)} on page 1</span>
+                          ) : null}
+                          {c.subscription_status === 'active' ? (
+                            <span className="text-emerald-400">Rented</span>
+                          ) : (
+                            <button onClick={() => rent(c)} disabled={busy === `rent:${c.id}`} className="w-fit text-sky-400 hover:text-sky-300">
+                              {busy === `rent:${c.id}` ? '…' : 'Create rental link'}
+                            </button>
+                          )}
+                        </div>
+                      ) : (
+                        <button onClick={() => setPrice(c)} disabled={busy === `price:${c.id}`} className="text-sky-400 hover:text-sky-300">
+                          {busy === `price:${c.id}` ? '…' : 'Set price'}
                         </button>
                       )}
                     </td>

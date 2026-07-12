@@ -11,6 +11,8 @@ import { nextOutreachAction } from '@/lib/outreach/nextAction';
 import { fetchPlaceDetails, placeDetailsConfigured } from '@/lib/places/placeDetails';
 import { postcardMailEnabled } from '@/lib/outreach/mail/lob';
 import { prospectSmsEnabled } from '@/lib/outreach/sms/outreachSms';
+import { synthesizeTopThree } from '@/lib/outreach/synthesizeRecs';
+import { KEY_TO_LABEL, type IndustryKey } from '@/lib/industries';
 import type { GeoCampaign } from '@/lib/outreach/geoCampaigns';
 import type { RankTrend } from '@/lib/outreach/rankTrend';
 
@@ -107,8 +109,17 @@ export async function computeCampaignRecommendations(
     hasEmail: false, // Places gives no email for cold prospects
   });
 
+  // Optional LLM top-3 synthesis (grounded in the rules above; null when disabled/fails).
+  const summary = await synthesizeTopThree({
+    domain: campaign.domain,
+    city: campaign.city,
+    industryLabel: KEY_TO_LABEL[campaign.industry_key as IndustryKey] ?? campaign.industry_key,
+    ranking,
+    nextAction,
+  }).catch(() => null);
+
   await supabaseAdmin
     .from('geo_industry_campaigns')
-    .update({ recommendations: { ranking, nextAction }, recommendations_synced_at: new Date().toISOString() })
+    .update({ recommendations: { ranking, nextAction, summary }, recommendations_synced_at: new Date().toISOString() })
     .eq('id', campaign.id);
 }

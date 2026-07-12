@@ -605,6 +605,19 @@ export default function ProspectsClient({
                         {recs && (
                           <div className="mb-4">
                             <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-neutral-500">Next steps</div>
+                            {Array.isArray(recs.summary?.steps) && recs.summary.steps.length > 0 && (
+                              <div className="mb-3 rounded-lg border border-fuchsia-500/20 bg-fuchsia-500/[0.06] p-2">
+                                <div className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-fuchsia-300/80">Suggested plan ✨</div>
+                                <ol className="list-decimal space-y-1 pl-5 text-sm">
+                                  {recs.summary.steps.map((s: any, idx: number) => (
+                                    <li key={idx}>
+                                      <span className="font-medium">{s.title}</span>
+                                      {s.why ? <span className="text-neutral-500"> — {s.why}</span> : null}
+                                    </li>
+                                  ))}
+                                </ol>
+                              </div>
+                            )}
                             {recs.nextAction && (
                               <div className="mb-2 flex flex-wrap items-center gap-2 text-sm">
                                 <span className="rounded bg-fuchsia-500/20 px-2 py-0.5 text-xs text-fuchsia-200">Work the lead</span>

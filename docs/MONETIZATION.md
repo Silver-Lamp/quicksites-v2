@@ -15,6 +15,14 @@
 | **A. Free hosting + e-commerce slice** | **~60%** | Platform-fee *settlement/reconciliation* + Connect onboarding consolidation | **~1–2 weeks** |
 | **B. White-label / partner resell (Dwayne)** | **~45%** | Automated commission approval + actual payout disbursement | **~2–4 weeks** |
 | C. Live vertical (chefs/meals storefront) | ~20% | No wired public checkout demo | (proof vehicle for A) |
+| **D. Flat-rate hosting for lead-gen / no-store sites** | **~70%** (code) | Live Stripe/Twilio smoke test; enable the flags | wired — see [`GEO_DOMAIN_MONETIZATION.md`](GEO_DOMAIN_MONETIZATION.md) |
+
+**Why Model D exists:** Models A/C only monetize sites that *sell online*. Most service
+trades (towing, plumbing, HVAC, salons, contractors…) take payment **offline** — there's
+no order to skim. For those **non-restaurant, non-ecommerce** sites we monetize the *asset*
+instead of the transaction: **flat monthly rent** on a premium exact-match local domain,
+at a low founder rate that **auto-steps to the full rate once the site reaches Google's
+first page**. Full mechanics + code map in **[`GEO_DOMAIN_MONETIZATION.md`](GEO_DOMAIN_MONETIZATION.md)**.
 
 Recommendation rationale at the bottom (§4) — but the decision on which to *lead* is yours; this gives you the build-vs-gap to decide.
 

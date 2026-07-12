@@ -3,7 +3,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
-import { Check, ArrowRight, Sparkles, Store, Users, Handshake, Globe, BadgeCheck } from 'lucide-react';
+import { Check, ArrowRight, Sparkles, Store, Users, Handshake, Globe, BadgeCheck, Phone } from 'lucide-react';
 
 // shadcn/ui — adjust imports if your paths differ
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
@@ -25,6 +25,10 @@ const ORDER_FEE_PCT = 0.05;        // Path A: take-rate on orders
 const AI_ADDON_PER_USER = 10;      // $/user/mo
 const FOUNDER_PLAN = { platform: 15, perSite: 5 }; // Path B (agency) — beta
 const PUBLIC_PLAN = { platform: 19, perSite: 6 };
+// Path D (lead-gen / no online store): flat monthly on a premium local domain, at a
+// founder rate that steps up to the full rate once the site reaches page 1. Varies by
+// trade — see lib/outreach/geoPricing.ts / docs/GEO_DOMAIN_MONETIZATION.md.
+const LEADGEN_PLAN = { founderFrom: 49, fullFrom: 99, premiumFull: 399 };
 const PARTNER_FEE_SHARE = 0.8;     // partners keep 80% of the order fee
 
 const CTA = {
@@ -80,11 +84,12 @@ function Feature({ text }: { text: string }) {
 function PathChooser() {
   const paths = [
     { icon: Store, title: 'Build my own site', blurb: 'Free to build & host. Pay only when you sell.', href: '#merchant', tag: 'Most popular' },
+    { icon: Phone, title: 'No online store', blurb: 'Service trades: flat monthly on a premium local domain.', href: '#leadgen', tag: 'Lead-gen' },
     { icon: Users, title: 'Run sites for clients', blurb: 'Flat, predictable pricing for agencies.', href: '#agency', tag: 'Agencies' },
     { icon: Handshake, title: 'Resell under my brand', blurb: 'White-label and earn 80% on every order, for life.', href: '#partner', tag: 'Partners' },
   ];
   return (
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
       {paths.map((p) => (
         <Link key={p.title} href={p.href} className="group">
           <Card className="h-full border-zinc-800/60 transition hover:border-sky-500/50 hover:bg-sky-500/[0.03]">
@@ -145,6 +150,67 @@ function OrderFeeCalc() {
         </p>
       </CardContent>
     </Card>
+  );
+}
+
+// ---- Path D: Lead-gen / service business (no online store) ----
+function LeadGenSection() {
+  return (
+    <section id="leadgen" className="mx-auto w-full max-w-6xl px-6 py-10 scroll-mt-24 border-t border-zinc-800/60">
+      <div className="mb-6 flex flex-wrap items-center gap-3">
+        <Phone className="h-6 w-6 text-sky-400" />
+        <h2 className="text-2xl font-semibold">Service business — no online store</h2>
+        <Badge variant="secondary" className="ml-2">Flat monthly</Badge>
+      </div>
+      <p className="mb-6 max-w-3xl text-sm text-muted-foreground">
+        Trades that get paid offline — towing, plumbing, HVAC, salons, contractors — don’t
+        have a checkout for us to take a per-order fee on. So instead of a take-rate, we host
+        your site on a <span className="text-foreground font-medium">premium exact-match local
+        domain</span> for a flat monthly rate.
+      </p>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <Card className="border-zinc-800/60">
+          <CardHeader>
+            <CardTitle>Flat-rate hosting on a premium local domain</CardTitle>
+            <CardDescription>
+              A ready-to-rank site on a domain like{' '}
+              <span className="font-mono text-foreground">yourcity-towing.com</span> — the exact
+              search people type when they need you.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-2 text-sm">
+            <Feature text="A premium exact-match local domain, built to rank" />
+            <Feature text="Call tracking so you see every lead the site sends you" />
+            <Feature text="Custom domain, SSL & hosting included — no setup" />
+            <Feature text="No online-order fee, ever — keep 100% of the jobs you book" />
+          </CardContent>
+          <CardFooter>
+            <Link href={CTA.contactHref}><Button>Get your local domain<ArrowRight className="ml-2 h-4 w-4" /></Button></Link>
+          </CardFooter>
+        </Card>
+
+        <Card className="border-sky-500/30 bg-sky-500/[0.03]">
+          <CardHeader>
+            <CardTitle>You only pay full price once it’s on page 1</CardTitle>
+            <CardDescription>
+              Lock in a low founder rate while the domain is still climbing. It steps up to the
+              standard rate <span className="text-foreground font-medium">only</span> once the
+              site reaches Google’s first page — when it’s actually sending you calls.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-2 gap-3">
+              <NumberTile label="Founder rate — while it climbs" value={`from ${usd0.format(LEADGEN_PLAN.founderFrom)}`} suffix="/mo" />
+              <NumberTile label="Full rate — on page 1" value={`from ${usd0.format(LEADGEN_PLAN.fullFrom)}`} suffix="/mo" />
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Rate varies by trade and market — higher-value emergency trades (towing, plumbing,
+              HVAC, roofing) run up to ~{usd0.format(LEADGEN_PLAN.premiumFull)}/mo on page 1.
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+    </section>
   );
 }
 
@@ -321,6 +387,7 @@ const FAQS: { q: string; a: string }[] = [
   { q: 'When would I pay a subscription instead?', a: 'If you’re an agency running many client sites and prefer flat, predictable costs over a per-order fee, the Agency plan bills per user + per site with no order fee. Talk to us to get set up during the beta.' },
   { q: 'How do partners make money?', a: 'Partners white-label QuickSites, set their merchants’ order fee (up to 10%), and keep 80% of every fee as a lifetime residual. See the partner program for details.' },
   { q: 'What about payment processing fees?', a: 'Standard Stripe processing fees apply on top of our platform fee, the same as any checkout. You’ll always see fees before you publish.' },
+  { q: 'I don’t sell online — how does pricing work?', a: 'Service businesses that get paid offline (towing, plumbing, HVAC, salons, contractors…) don’t have an order for us to take a fee on. Instead we host your site on a premium exact-match local domain for a flat monthly rate — at a low founder rate while it’s still climbing that steps up to the standard rate only once it reaches Google’s first page. Includes call tracking so you can see the leads, and there’s never an online-order fee.' },
 ];
 
 // ---- Page ----
@@ -343,7 +410,8 @@ export default function PricingPage() {
               <h1 className="text-3xl md:text-5xl font-semibold tracking-tight">Start free. Pay when you sell.</h1>
               <p className="mt-3 max-w-2xl text-muted-foreground">
                 Build and host your site for free — including a storefront, Stripe checkout, and a customer CRM. We take a small {pct(ORDER_FEE_PCT)} fee
-                only on the orders you actually sell. Running sites for clients or reselling under your brand? There’s a path for that too.
+                only on the orders you actually sell. No online store? Service trades can host on a premium local domain for a flat monthly rate.
+                Running sites for clients or reselling under your brand? There’s a path for that too.
               </p>
               <div className="mt-6 flex flex-wrap items-center gap-3">
                 <Link href={CTA.buildHref}><Button size="lg">Create your free site<ArrowRight className="ml-2 h-4 w-4" /></Button></Link>
@@ -402,6 +470,9 @@ export default function PricingPage() {
             <OrderFeeCalc />
           </div>
         </section>
+
+        {/* Path D — Lead-gen / no online store */}
+        <LeadGenSection />
 
         {/* Path B — Agency */}
         <section id="agency" className="mx-auto w-full max-w-6xl px-6 py-10 scroll-mt-24 border-t border-zinc-800/60">

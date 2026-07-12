@@ -9,6 +9,7 @@ import { NextResponse } from 'next/server';
 import { getAdminUser } from '@/lib/auth/getAdminUser';
 import { getGeoCampaign, setCampaignOrg } from '@/lib/outreach/geoCampaigns';
 import { orgIdForSlug, resolveCampaignBrand } from '@/lib/outreach/campaignBrand';
+import { pointCampaignAtOrgServiceArea } from '@/lib/outreach/pointCampaignAddress';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -42,6 +43,19 @@ export async function POST(req: Request) {
   }
 
   await setCampaignOrg(campaignId, orgId);
+
+  // Auto-point the pitch site at the org's service area (best-effort; only when the org has
+  // an address set + the site has none of its own). See lib/outreach/pointCampaignAddress.ts.
+  let addressPointed: { changed: boolean; label?: string } | null = null;
+  if (orgId) {
+    try {
+      const r = await pointCampaignAtOrgServiceArea({ template_id: campaign.template_id, org_id: orgId }, operator.id);
+      if (r.ok) addressPointed = { changed: r.changed, label: r.label };
+    } catch {
+      /* branding still succeeds even if seeding fails */
+    }
+  }
+
   const brand = await resolveCampaignBrand(orgId);
-  return NextResponse.json({ ok: true, orgId, brand: { name: brand.name, baseUrl: brand.baseUrl } });
+  return NextResponse.json({ ok: true, orgId, brand: { name: brand.name, baseUrl: brand.baseUrl }, addressPointed });
 }

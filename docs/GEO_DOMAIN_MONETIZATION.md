@@ -4,7 +4,14 @@
 > land-grab (`geo_industry_campaigns`, e.g. `boston-towing.com`) becomes a revenue line.
 > Companion: [`MONETIZATION.md`](MONETIZATION.md) (take-rate), [`PRICING_REDESIGN.md`](PRICING_REDESIGN.md), and the *businesses-near-me* / *geo-domain land-grab* bullets in [`../CLAUDE.md`](../CLAUDE.md).
 
-Status: **strategy + first build (GSC rank column)**. Billing not yet built.
+Status: **built, flag-gated OFF pending a live smoke test.** Shipped: pricing fields +
+per-industry suggested plans (`lib/outreach/geoPricing.ts`), a Stripe **subscription
+rental checkout** (`/api/admin/prospects/geo-campaign/rent` + `/api/stripe/geo-webhook`),
+the **rank-sync cron** that reads GSC position and **auto-steps the price up on page 1**
+(`/api/cron/geo-rank-sync`), **Twilio call tracking** per campaign (`lib/outreach/callTracking.ts`),
+the **competition waitlist**, and the campaign badge/banner across the templates surfaces.
+Enable with `CALL_TRACKING_ENABLED`, `STRIPE_GEO_WEBHOOK_SECRET`, `GEO_DOMAIN_REGISTER_ENABLED`
+(+ Namecheap/Twilio/Stripe creds) and run one live end-to-end.
 
 ---
 

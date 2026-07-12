@@ -147,10 +147,12 @@ export type GeoCampaignSummary = {
   tracking_number: string | null;
   recommendations: any;
   org_id: string | null;
+  template_id: string | null;
+  outreach_ready_at: string | null;
 };
 
 const GEO_SUMMARY_COLS =
-  'id, template_id, domain, city, industry_key, status, domain_status, rank_status, pricing_model, price_cents, locked_rate_cents, subscription_status, tracking_number, recommendations, org_id';
+  'id, template_id, domain, city, industry_key, status, domain_status, rank_status, pricing_model, price_cents, locked_rate_cents, subscription_status, tracking_number, recommendations, org_id, outreach_ready_at';
 
 /** Campaign linked to one template (null if the template isn't a geo pitch site). */
 export async function getGeoCampaignByTemplateId(templateId: string): Promise<GeoCampaignSummary | null> {

@@ -31,10 +31,12 @@ function collectBlocks(data: any): any[] {
   const out: any[] = [];
   const pages = Array.isArray(data?.pages) ? data.pages : [];
   for (const p of pages) {
-    const blocks = Array.isArray(p?.blocks) ? p.blocks : [];
+    // Prefer `content_blocks` (canonical, edited live) over the legacy `blocks` mirror.
+    const blocks = Array.isArray(p?.content_blocks) ? p.content_blocks : Array.isArray(p?.blocks) ? p.blocks : [];
     for (const b of blocks) {
       out.push(b);
-      if (Array.isArray(b?.blocks)) out.push(...b.blocks);
+      const nested = Array.isArray(b?.content_blocks) ? b.content_blocks : Array.isArray(b?.blocks) ? b.blocks : [];
+      if (nested.length) out.push(...nested);
     }
   }
   return out;
@@ -117,4 +119,52 @@ export function analyzeReadiness(data: any, industryKey: string): ReadinessResul
   }
 
   return { blockers, hardBlocked: blockers.some((b) => b.severity === 'hard') };
+}
+
+// ── Positive checklist (for the in-editor Readiness Coach) ────────────────────
+
+export type ChecklistItem = {
+  id: string;
+  label: string; // what "done" looks like
+  severity: BlockerSeverity;
+  ok: boolean;
+  hint?: string;
+  /** True when this item is the missing address, fixable by pointing at an org service area. */
+  fixableByOrgAddress?: boolean;
+};
+
+/**
+ * The full SEO-readiness checklist for a pitch site — every applicable check with a pass/fail
+ * flag, positively framed for checkboxes. Reuses analyzeReadiness so the gate + this view can
+ * never disagree.
+ */
+export function readinessChecklist(data: any, industryKey: string): ChecklistItem[] {
+  const { blockers } = analyzeReadiness(data, industryKey);
+  const failing = new Set(blockers.map((b) => b.id));
+  const isFood = FOOD_INDUSTRIES.has(industryKey);
+
+  const defs: { id: string; ids: string[]; label: string; severity: BlockerSeverity; hint?: string; fixableByOrgAddress?: boolean }[] = [
+    { id: 'nap', ids: ['no-nap'], label: 'Business name, address & phone shown', severity: 'hard', fixableByOrgAddress: true, hint: 'A visible NAP (name/address/phone) is core local-SEO + lets prospects reach the business.' },
+    { id: 'call', ids: ['no-click-to-call'], label: 'Tap-to-call button', severity: 'hard', hint: 'A one-tap call CTA is the top mobile conversion action for local services.' },
+    { id: 'hero', ids: ['hero-empty', 'hero-placeholder'], label: 'Real hero headline (no placeholder)', severity: 'hard', hint: 'The hero is the first thing Google + visitors read — make it specific to the business + city.' },
+    ...(isFood
+      ? [
+          { id: 'menu', ids: ['no-menu', 'menu-unpriced'], label: 'Menu with confirmed prices', severity: 'hard' as BlockerSeverity, hint: 'A priced menu is what makes a restaurant site rank + convert to orders.' },
+          { id: 'menu-copy', ids: ['menu-placeholder'], label: 'Menu item copy filled in', severity: 'soft' as BlockerSeverity },
+        ]
+      : [{ id: 'services', ids: ['no-services'], label: 'Services listed', severity: 'hard' as BlockerSeverity, hint: 'Listing services gives Google the keywords to rank you for + tells visitors what you do.' }]),
+    { id: 'logo', ids: ['no-logo'], label: 'Logo', severity: 'soft', hint: 'A logo builds trust + brand recognition on the site, postcard, and search snippet.' },
+    { id: 'schema', ids: ['no-schema'], label: 'LocalBusiness schema', severity: 'soft', hint: 'Structured data helps Google understand the business and its service area.' },
+    { id: 'pages', ids: ['single-page'], label: 'A city/service subpage', severity: 'soft', hint: 'A dedicated city/service page is a strong extra ranking surface for "<service> in <city>".' },
+    { id: 'title', ids: ['weak-title'], label: 'Page title 15–60 characters', severity: 'soft', hint: 'The <title> is the biggest single on-page ranking + click-through lever.' },
+  ];
+
+  return defs.map((d) => ({
+    id: d.id,
+    label: d.label,
+    severity: d.severity,
+    ok: !d.ids.some((x) => failing.has(x)),
+    hint: d.hint,
+    fixableByOrgAddress: d.fixableByOrgAddress,
+  }));
 }

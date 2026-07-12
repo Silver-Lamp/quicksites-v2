@@ -47,6 +47,15 @@ describe('seedServiceAreaContact', () => {
     expect(cf.content.address).toBe(area.label);
   });
 
+  it('reads/writes the canonical content_blocks field (edited-data shape)', () => {
+    // Editor data uses content_blocks; a stale legacy `blocks` should be ignored.
+    const data = { pages: [{ content_blocks: [{ type: 'hero', content: { headline: 'Hi' } }], blocks: [] }] };
+    const { data: out, changed } = seedServiceAreaContact(data, area);
+    expect(changed).toBe(true);
+    const loc = out.pages[0].content_blocks.find((b: any) => b.type === 'location');
+    expect(loc?.content.address).toBe(area.label);
+  });
+
   it('does NOT overwrite a site that already has its own address', () => {
     const data = { pages: [{ blocks: [{ type: 'location', content: { address: '100 Real St, Renton WA' } }] }] };
     const { changed } = seedServiceAreaContact(data, area);

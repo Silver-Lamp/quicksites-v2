@@ -3,7 +3,7 @@
  */
 // lib/outreach/__tests__/readiness.test.ts
 
-import { analyzeReadiness } from '@/lib/outreach/readiness';
+import { analyzeReadiness, readinessChecklist } from '@/lib/outreach/readiness';
 
 // A "fully refined" non-food site: NAP + click-to-call + hero + services + logo + schema
 // + a subpage + a good title → no hard blockers, no soft blockers.
@@ -109,6 +109,23 @@ describe('analyzeReadiness — food', () => {
     expect(okr.hardBlocked).toBe(false);
     expect(ids(okr)).not.toContain('no-menu');
     expect(ids(okr)).not.toContain('no-services'); // food sites aren't judged on services
+  });
+
+  it('readinessChecklist mirrors the failing checks with ok flags', () => {
+    const data = {
+      ...foodBase,
+      pages: [
+        { blocks: [...foodBase.pages[0].blocks, { type: 'menu', content: { sections: [{ items: [{ name: 'Eggs' }] }] } }] },
+        foodBase.pages[1],
+      ],
+    };
+    const list = readinessChecklist(data, 'restaurant');
+    const menu = list.find((i) => i.id === 'menu')!;
+    expect(menu.ok).toBe(false); // unpriced → not ok
+    expect(list.find((i) => i.id === 'nap')!.ok).toBe(true); // foodBase has a phone
+    // food checklist has a menu item, not a services item
+    expect(list.some((i) => i.id === 'services')).toBe(false);
+    expect(list.find((i) => i.id === 'nap')!.fixableByOrgAddress).toBe(true);
   });
 
   it('flags an unpriced menu as hard', () => {

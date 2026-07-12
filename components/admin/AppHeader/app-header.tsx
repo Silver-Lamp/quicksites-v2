@@ -168,6 +168,10 @@ export default function AppHeader() {
         guest ? 'bg-gray-900 text-zinc-300 border-zinc-800' : 'bg-gray-800 text-white border-zinc-700',
         condensed && 'backdrop-blur-md',
         'transition-opacity duration-500',
+        // The bar is a thin fixed overlay whose empty regions (around the quote) would
+        // otherwise swallow clicks meant for links/toolbar beneath it. Let those regions
+        // pass clicks through; the interactive children opt back in with pointer-events-auto.
+        'pointer-events-none',
         faded ? 'opacity-25 hover:opacity-100' : 'opacity-100'
       )}
     >
@@ -178,7 +182,7 @@ export default function AppHeader() {
             <span>{brandName}</span>
             <div className="text-xs text-cyan-300 max-w-xs" />
           </div>
-          <a href="/login" className="text-blue-400 hover:underline">Log In</a>
+          <a href="/login" className="pointer-events-auto text-blue-400 hover:underline">Log In</a>
         </div>
       ) : guest ? (
         <div className="max-w-screen-lg mx-auto flex justify-between items-center">
@@ -188,7 +192,7 @@ export default function AppHeader() {
               <InspirationalQuote tags={quoteTags} />
             </div>
           </div>
-          <a href="/login" className="text-blue-400 hover:underline">Log In</a>
+          <a href="/login" className="pointer-events-auto text-blue-400 hover:underline">Log In</a>
         </div>
       ) : (
         <div className="flex justify-between items-center max-w-screen-xl mx-auto relative">
@@ -197,7 +201,10 @@ export default function AppHeader() {
               <InspirationalQuote tags={quoteTags} />
             </div>
           </div>
-          <div className="ml-2 flex items-center gap-2">
+          <div
+            className="pointer-events-auto ml-2 flex items-center gap-2"
+            onMouseEnter={() => setFaded(false)}
+          >
             <AvatarMenu />
             <div className="leading-tight">
               <div>{displayAuth.email ?? user?.email ?? ''}</div>

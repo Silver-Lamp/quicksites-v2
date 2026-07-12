@@ -68,6 +68,7 @@ describe('analyzeSiteOnPage', () => {
 
 const gscConnected: SiteSeoSignals = {
   domain: 'acme.com',
+  isPlatformSubdomain: false,
   gscConnected: true,
   onPage: analyzeSiteOnPage(richData),
   gsc: { clicks: 40, impressions: 800, position: 4.2, ctr: 0.05 },
@@ -75,6 +76,7 @@ const gscConnected: SiteSeoSignals = {
 
 const unconnectedThin: SiteSeoSignals = {
   domain: 'bob.quicksites.ai',
+  isPlatformSubdomain: true,
   gscConnected: false,
   onPage: analyzeSiteOnPage(thinData),
   gsc: null,
@@ -121,6 +123,11 @@ describe('buildSiteSeoRecommendations', () => {
   it('a healthy connected site has few/no recs', () => {
     const recs = buildSiteSeoRecommendations(gscConnected);
     expect(recs.every((r) => r.id !== 'connect-gsc')).toBe(true);
+  });
+
+  it('nudges a platform-subdomain site to a custom domain (and not a custom-domain site)', () => {
+    expect(buildSiteSeoRecommendations(unconnectedThin).map((r) => r.id)).toContain('custom-domain');
+    expect(buildSiteSeoRecommendations(gscConnected).every((r) => r.id !== 'custom-domain')).toBe(true);
   });
 });
 

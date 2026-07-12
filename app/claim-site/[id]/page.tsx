@@ -8,6 +8,9 @@ import Link from 'next/link';
 import { verifySiteClaimToken } from '@/lib/auth/siteClaimToken';
 import { supabaseAdmin } from '@/lib/supabase/admin';
 import { CLAIM_VERIFICATION_ENABLED } from '@/lib/flags/claimVerification';
+import ClaimSiteHero from '@/components/sites/claim-site-hero';
+import { getGeoCampaignByTemplateId } from '@/lib/outreach/geoCampaigns';
+import { resolveCampaignBrand } from '@/lib/outreach/campaignBrand';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -34,6 +37,8 @@ export default async function ClaimSitePage({
 
   const claimable = tokenOk && tpl && (tpl as any).claim_source === 'listing_import';
   const name = (tpl as any)?.business_name || (tpl as any)?.template_name || 'your business';
+  const slug = (tpl as any)?.slug ?? params.id;
+  const previewHref = `/preview/${encodeURIComponent(slug)}`;
 
   // With verification on, "Claim it free" first proves control of the business (OTP to
   // the listing phone); otherwise it arms the claim cookie directly (legacy).
@@ -41,51 +46,30 @@ export default async function ClaimSitePage({
     ? `/claim-site/${params.id}/verify?token=${encodeURIComponent(token)}`
     : `/api/claim-draft/${params.id}?token=${encodeURIComponent(token)}`;
 
+  if (!claimable) {
+    return (
+      <main className="mx-auto flex min-h-screen max-w-2xl flex-col items-center justify-center px-6 py-16 text-center">
+        <h1 className="text-3xl font-bold">This link is no longer available</h1>
+        <p className="mt-3 text-zinc-400">
+          It may have expired, or this site has already been claimed. Ask us for a fresh link.
+        </p>
+        <Link href="/" className="mt-6 text-sky-400 underline underline-offset-4">Go home</Link>
+      </main>
+    );
+  }
+
+  // Brand the claim page to the campaign's owning org (CedarSites) instead of QuickSites.
+  const campaign = await getGeoCampaignByTemplateId(params.id);
+  const brand = await resolveCampaignBrand(campaign?.org_id ?? null);
+
   return (
-    <main className="mx-auto flex min-h-screen max-w-2xl flex-col items-center justify-center px-6 py-16 text-center">
-      {!claimable ? (
-        <>
-          <h1 className="text-3xl font-bold">This link is no longer available</h1>
-          <p className="mt-3 text-zinc-400">
-            It may have expired, or this site has already been claimed. Ask us for a fresh link.
-          </p>
-          <Link href="/" className="mt-6 text-sky-400 underline underline-offset-4">Go home</Link>
-        </>
-      ) : (
-        <>
-          <span className="rounded-full border border-emerald-500/40 bg-emerald-500/10 px-3 py-1 text-xs font-medium text-emerald-300">
-            We already built it
-          </span>
-          <h1 className="mt-6 text-4xl font-extrabold tracking-tight sm:text-5xl">
-            {name}’s new website is ready.
-          </h1>
-          <p className="mx-auto mt-4 max-w-xl text-lg text-zinc-400">
-            We assembled it from your public listing — your menu, hours, location, and online ordering.
-            Free hosting; we only earn a small fee when you sell. Preview it, then claim it.
-          </p>
-
-          <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-            <a
-              href={`/preview/${encodeURIComponent((tpl as any).slug ?? params.id)}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center justify-center rounded-2xl border border-zinc-700 px-6 py-3 text-base font-semibold text-zinc-200 transition hover:bg-zinc-800/60"
-            >
-              Preview your site ↗
-            </a>
-            <a
-              href={claimHref}
-              className="inline-flex items-center justify-center rounded-2xl bg-emerald-500 px-6 py-3 text-base font-semibold text-emerald-950 transition hover:opacity-90"
-            >
-              Claim it free →
-            </a>
-          </div>
-
-          <p className="mt-6 text-sm text-zinc-500">
-            Claiming creates your account and makes this site yours to edit and publish.
-          </p>
-        </>
-      )}
-    </main>
+    <ClaimSiteHero
+      name={name}
+      previewHref={previewHref}
+      claimHref={claimHref}
+      urlLabel={(tpl as any)?.slug ? `${slug}.delivered.menu` : 'your new site'}
+      brandName={brand.orgId ? brand.name : null}
+      brandLogoUrl={brand.logoUrl}
+    />
   );
 }

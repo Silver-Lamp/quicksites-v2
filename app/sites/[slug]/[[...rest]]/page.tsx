@@ -15,7 +15,9 @@ import CheckoutPageClient from '@/components/cart/CheckoutPageClient';
 import ThankYouPageClient from '@/components/cart/ThankYouPageClient';
 import PreviewWatermark from '@/components/sites/preview-watermark';
 import MenuClaimBar from '@/components/sites/menu-claim-bar';
+import CompetitionBanner from '@/components/sites/competition-banner';
 import { mintSiteClaimToken } from '@/lib/auth/siteClaimToken';
+import { getSiteCompetition } from '@/lib/outreach/competitionForSite';
 
 /* -------------------- Types -------------------- */
 type SiteRow = {
@@ -350,6 +352,10 @@ export default async function SitePreviewPage({
   // menu surface — mirrors the gate the claim page itself enforces.
   const showClaimBar = isDraft && menuHost && claimSource === 'listing_import';
   const claimToken = showClaimBar ? mintSiteClaimToken(siteRow.id) : null;
+  const claimBusinessName =
+    (normalized as any).business_name ?? (normalized as any).meta?.business_name ?? null;
+  // "Who will control this domain?" — competitor race context (only when a live campaign exists).
+  const competition = showClaimBar ? await getSiteCompetition(siteRow.id) : null;
 
   return (
     <TemplateEditorProvider
@@ -357,6 +363,16 @@ export default async function SitePreviewPage({
       colorMode={colorMode}
       initialData={normalized as any}
     >
+      {competition && claimToken && (
+        <CompetitionBanner
+          domain={competition.domain}
+          city={competition.city}
+          industryLabel={competition.industryLabel}
+          competitors={competition.competitors}
+          deadlineIso={competition.deadlineIso}
+          claimHref={`/claim-site/${siteRow.id}?token=${encodeURIComponent(claimToken)}`}
+        />
+      )}
       <SiteRenderer
         site={normalized as any}
         page={pageSlug}
@@ -366,7 +382,9 @@ export default async function SitePreviewPage({
         className="bg-background text-foreground"
       />
       {showWatermark && <PreviewWatermark />}
-      {showClaimBar && claimToken && <MenuClaimBar templateId={siteRow.id} token={claimToken} />}
+      {showClaimBar && claimToken && (
+        <MenuClaimBar templateId={siteRow.id} token={claimToken} businessName={claimBusinessName} />
+      )}
     </TemplateEditorProvider>
   );
 }

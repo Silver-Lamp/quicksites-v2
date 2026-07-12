@@ -91,6 +91,7 @@ export default function ProspectsClient({
   const [briefMsg, setBriefMsg] = useState<string | null>(null);
   const [mailPreview, setMailPreview] = useState<{ campaign: GeoCampaign; data: MailPreviewData } | null>(null);
   const [testAddr, setTestAddr] = useState<{ name: string; line: string } | null>(null);
+  const [webhookEvent, setWebhookEvent] = useState('postcard.delivered');
   useEffect(() => {
     let alive = true;
     fetch('/api/admin/prospects/test-recipient')
@@ -243,7 +244,7 @@ export default function ProspectsClient({
     setBusy('webhook-selftest');
     setMsg(null);
     try {
-      const r = await post('/api/admin/prospects/webhook-selftest', { event: 'postcard.delivered' });
+      const r = await post('/api/admin/prospects/webhook-selftest', { event: webhookEvent });
       const w = r.webhook;
       if (r.ok && r.mailing.advanced) {
         setMsg(`✅ Webhook OK (${r.signed ? 'signed' : 'unsigned'}) — ${r.lobId} advanced ${r.mailing.statusBefore ?? '—'} → ${r.mailing.statusAfter}.`);
@@ -699,14 +700,30 @@ export default function ProspectsClient({
               >
                 🧪 {testAddr ? `Test → ${testAddr.line}` : 'Set test address'}
               </button>
-              <button
-                onClick={selfTestWebhook}
-                disabled={busy === 'webhook-selftest'}
-                title="Fire a signed synthetic 'delivered' event at our own Lob webhook (latest mailing) to verify signature + status update — no Lob dashboard needed"
-                className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-1.5 text-xs font-medium text-emerald-200 hover:bg-emerald-500/20 disabled:opacity-50"
-              >
-                {busy === 'webhook-selftest' ? 'Testing…' : '🔔 Test webhook'}
-              </button>
+              <div className="flex items-center overflow-hidden rounded-lg border border-emerald-500/30 bg-emerald-500/10">
+                <select
+                  value={webhookEvent}
+                  onChange={(e) => setWebhookEvent(e.target.value)}
+                  title="Which Lob event to simulate against the latest mailing"
+                  className="border-r border-emerald-500/20 bg-transparent px-2 py-1.5 text-xs font-medium text-emerald-200 focus:outline-none [&>option]:bg-neutral-900 [&>option]:text-white"
+                >
+                  <option value="postcard.in_transit">in_transit</option>
+                  <option value="postcard.in_local_area">in_local_area</option>
+                  <option value="postcard.processed_for_delivery">processed_for_delivery</option>
+                  <option value="postcard.delivered">delivered</option>
+                  <option value="postcard.re_routed">re_routed</option>
+                  <option value="postcard.returned_to_sender">returned_to_sender</option>
+                  <option value="postcard.failed">failed</option>
+                </select>
+                <button
+                  onClick={selfTestWebhook}
+                  disabled={busy === 'webhook-selftest'}
+                  title="Fire this signed synthetic event at our own Lob webhook (latest mailing) to verify signature + status update — no Lob dashboard needed"
+                  className="px-3 py-1.5 text-xs font-medium text-emerald-200 hover:bg-emerald-500/20 disabled:opacity-50"
+                >
+                  {busy === 'webhook-selftest' ? 'Testing…' : '🔔 Test webhook'}
+                </button>
+              </div>
               <button
                 onClick={recomputeAllRecs}
                 disabled={busy === 'recs:all'}

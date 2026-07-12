@@ -90,6 +90,20 @@ export default function ProspectsClient({
   const [territoryBrief, setTerritoryBrief] = useState<{ label: string; why: string }[] | null>(null);
   const [briefMsg, setBriefMsg] = useState<string | null>(null);
   const [mailPreview, setMailPreview] = useState<{ campaign: GeoCampaign; data: MailPreviewData } | null>(null);
+  const [testAddr, setTestAddr] = useState<{ name: string; line: string } | null>(null);
+  useEffect(() => {
+    let alive = true;
+    fetch('/api/admin/prospects/test-recipient')
+      .then((r) => (r.ok ? r.json() : null))
+      .then((j) => {
+        if (alive && j?.recipient) {
+          const t = j.recipient;
+          setTestAddr({ name: t.name, line: `${t.line1}, ${t.city}, ${t.state} ${t.zip}` });
+        }
+      })
+      .catch(() => {});
+    return () => { alive = false; };
+  }, []);
   const [busy, setBusy] = useState<string | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
   // Per-campaign inline result for the Mail/Text actions (so feedback shows on the
@@ -203,6 +217,28 @@ export default function ProspectsClient({
   const campaignCount = (campaignId: string) =>
     prospects.filter((p) => p.geo_campaign_id === campaignId).length;
 
+  async function setTestAddress() {
+    const current = testAddr?.line ?? '';
+    const formatted = window.prompt(
+      'Live-test mailing address (Street, City, ST ZIP).\nA test send mails one real card here instead of the prospects. Leave blank to clear.',
+      current,
+    );
+    if (formatted === null) return; // cancelled
+    try {
+      const r = await post('/api/admin/prospects/test-recipient', formatted.trim() ? { formatted: formatted.trim() } : { clear: true });
+      if (r.recipient) {
+        const t = r.recipient;
+        setTestAddr({ name: t.name, line: `${t.line1}, ${t.city}, ${t.state} ${t.zip}` });
+        setMsg(`Test address set: ${t.line1}, ${t.city}, ${t.state} ${t.zip}`);
+      } else {
+        setTestAddr(null);
+        setMsg('Test address cleared.');
+      }
+    } catch (e: any) {
+      setMsg(e.message);
+    }
+  }
+
   // Open the pre-send preview (dry-run: no spend) — shows the real personalized card,
   // the deliverability breakdown, and the estimated cost before the operator commits.
   async function openMailPreview(c: GeoCampaign) {
@@ -219,14 +255,17 @@ export default function ProspectsClient({
     }
   }
 
-  // Confirmed from the preview modal → the real, paid Lob send.
-  async function confirmMail() {
+  // Confirmed from the preview modal → the real, paid Lob send (or a single test card).
+  async function confirmMail(test: boolean) {
     if (!mailPreview) return;
     const c = mailPreview.campaign;
     setBusy(`mail:${c.id}`);
     try {
-      const r = await post('/api/admin/prospects/mail-postcards', { campaignId: c.id });
-      setRowMsg((m) => ({ ...m, [c.id]: { ok: true, text: `Mailed ${r.mailed} postcard(s)` } }));
+      const r = await post('/api/admin/prospects/mail-postcards', { campaignId: c.id, test });
+      setRowMsg((m) => ({
+        ...m,
+        [c.id]: { ok: true, text: r.test ? `Test card mailed to your test address` : `Mailed ${r.mailed} postcard(s)` },
+      }));
       setMailPreview(null);
       router.refresh();
     } catch (e: any) {
@@ -632,14 +671,23 @@ export default function ProspectsClient({
         <div className="mt-8">
           <div className="flex items-center justify-between gap-4">
             <h2 className="text-sm font-semibold uppercase tracking-wide text-neutral-400">Geo-domain campaigns</h2>
-            <button
-              onClick={recomputeAllRecs}
-              disabled={busy === 'recs:all'}
-              title="Recompute the next-steps recommendations for every campaign now, without waiting for the daily rank-sync cron"
-              className="rounded-lg border border-fuchsia-500/30 bg-fuchsia-500/10 px-3 py-1.5 text-xs font-medium text-fuchsia-200 hover:bg-fuchsia-500/20 disabled:opacity-50"
-            >
-              {busy === 'recs:all' ? 'Recomputing…' : '↻ Recompute recommendations'}
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={setTestAddress}
+                title={testAddr ? `Live-test postcards mail here: ${testAddr.line}` : 'Set a live-test mailing address — test sends go here instead of the prospects'}
+                className="rounded-lg border border-sky-500/30 bg-sky-500/10 px-3 py-1.5 text-xs font-medium text-sky-200 hover:bg-sky-500/20"
+              >
+                🧪 {testAddr ? `Test → ${testAddr.line}` : 'Set test address'}
+              </button>
+              <button
+                onClick={recomputeAllRecs}
+                disabled={busy === 'recs:all'}
+                title="Recompute the next-steps recommendations for every campaign now, without waiting for the daily rank-sync cron"
+                className="rounded-lg border border-fuchsia-500/30 bg-fuchsia-500/10 px-3 py-1.5 text-xs font-medium text-fuchsia-200 hover:bg-fuchsia-500/20 disabled:opacity-50"
+              >
+                {busy === 'recs:all' ? 'Recomputing…' : '↻ Recompute recommendations'}
+              </button>
+            </div>
           </div>
           <div className="mt-3 overflow-x-auto rounded-xl border border-neutral-800">
             <table className="min-w-full text-sm">

@@ -239,6 +239,26 @@ export default function ProspectsClient({
     }
   }
 
+  async function selfTestWebhook() {
+    setBusy('webhook-selftest');
+    setMsg(null);
+    try {
+      const r = await post('/api/admin/prospects/webhook-selftest', { event: 'postcard.delivered' });
+      const w = r.webhook;
+      if (r.ok && r.mailing.advanced) {
+        setMsg(`✅ Webhook OK (${r.signed ? 'signed' : 'unsigned'}) — ${r.lobId} advanced ${r.mailing.statusBefore ?? '—'} → ${r.mailing.statusAfter}.`);
+      } else if (r.ok) {
+        setMsg(`Webhook returned 200 but status didn't change (already ${r.mailing.statusAfter ?? 'unknown'}). Try a later event or check the row.`);
+      } else {
+        setMsg(`⚠️ Webhook responded ${w.status}: ${w.body}${r.note ? ` — ${r.note}` : ''}`);
+      }
+    } catch (e: any) {
+      setMsg(e.message);
+    } finally {
+      setBusy(null);
+    }
+  }
+
   // Open the pre-send preview (dry-run: no spend) — shows the real personalized card,
   // the deliverability breakdown, and the estimated cost before the operator commits.
   async function openMailPreview(c: GeoCampaign) {
@@ -678,6 +698,14 @@ export default function ProspectsClient({
                 className="rounded-lg border border-sky-500/30 bg-sky-500/10 px-3 py-1.5 text-xs font-medium text-sky-200 hover:bg-sky-500/20"
               >
                 🧪 {testAddr ? `Test → ${testAddr.line}` : 'Set test address'}
+              </button>
+              <button
+                onClick={selfTestWebhook}
+                disabled={busy === 'webhook-selftest'}
+                title="Fire a signed synthetic 'delivered' event at our own Lob webhook (latest mailing) to verify signature + status update — no Lob dashboard needed"
+                className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-1.5 text-xs font-medium text-emerald-200 hover:bg-emerald-500/20 disabled:opacity-50"
+              >
+                {busy === 'webhook-selftest' ? 'Testing…' : '🔔 Test webhook'}
               </button>
               <button
                 onClick={recomputeAllRecs}

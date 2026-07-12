@@ -6,7 +6,7 @@
 // best-effort: any failure returns null so the caller falls back to deterministic text.
 // Attributes cost to the site owner (user_id) for per-user budgeting. See docs/AI_SEO_COACHING.md.
 
-import OpenAI from 'openai';
+import { getOpenAI, resolveModel } from '@/lib/ai/openaiClient';
 import { meterLLMCall } from '@/lib/ai/meter';
 import { aiSeoCoachLlmEnabled, parseDailyStep, parseWeeklySteps } from '@/lib/seo/coach/flags';
 import type { RecStep, SeoRec } from '@/lib/seo/coach/types';
@@ -39,12 +39,12 @@ function payload(meta: Meta, recs: SeoRec[], extra?: Record<string, unknown>): s
 export async function generateDailyNextStep(meta: Meta, recs: SeoRec[]): Promise<RecStep | null> {
   if (!aiSeoCoachLlmEnabled() || !recs.length) return null;
   try {
-    const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+    const openai = getOpenAI('chat');
     return await meterLLMCall<RecStep | null>(
       { provider: 'openai', model_code: MODEL, modality: 'chat', user_id: meta.ownerId, template_id: meta.templateId, route: '/api/cron/seo-coach-daily' },
       async () => {
         const r = await openai.chat.completions.create({
-          model: MODEL,
+          model: resolveModel(MODEL, 'chat'),
           temperature: 0.3,
           response_format: { type: 'json_object' },
           messages: [
@@ -71,12 +71,12 @@ export async function generateWeeklyTopThree(
 ): Promise<RecStep[] | null> {
   if (!aiSeoCoachLlmEnabled() || !recs.length) return null;
   try {
-    const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+    const openai = getOpenAI('chat');
     return await meterLLMCall<RecStep[] | null>(
       { provider: 'openai', model_code: MODEL, modality: 'chat', user_id: meta.ownerId, template_id: meta.templateId, route: '/api/cron/seo-coach-weekly' },
       async () => {
         const r = await openai.chat.completions.create({
-          model: MODEL,
+          model: resolveModel(MODEL, 'chat'),
           temperature: 0.3,
           response_format: { type: 'json_object' },
           messages: [

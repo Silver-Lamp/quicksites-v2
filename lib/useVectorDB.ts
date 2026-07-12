@@ -2,9 +2,9 @@
 import { QdrantClient } from '@qdrant/js-client-rest';
 import { lazyClient } from '@/lib/lazyClient';
 import { meterLLMCall } from '@/lib/ai/meter';
-import OpenAI from 'openai';
+import { getOpenAI, resolveModel } from '@/lib/ai/openaiClient';
 
-const openai = lazyClient(() => new OpenAI({ apiKey: process.env.OPENAI_API_KEY }));
+const openai = lazyClient(() => getOpenAI('embeddings'));
 
 const EMBED_MODEL = 'text-embedding-3-small';
 
@@ -26,7 +26,7 @@ export async function embedText(
       route: meta?.route,
     },
     async () => {
-      const res = await openai.embeddings.create({ model: EMBED_MODEL, input: texts });
+      const res = await openai.embeddings.create({ model: resolveModel(EMBED_MODEL, 'embeddings'), input: texts });
       return {
         value: res.data.map((d) => d.embedding),
         usage: { input_tokens: res.usage?.prompt_tokens ?? res.usage?.total_tokens },

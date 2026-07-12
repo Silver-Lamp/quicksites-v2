@@ -1,5 +1,5 @@
 // app/api/ai/suggest/route.ts
-import OpenAI from 'openai';
+import { getOpenAI, resolveModel } from '@/lib/ai/openaiClient';
 import { z } from 'zod';
 import { meterLLMCall, LLMBudgetExceededError } from '@/lib/ai/meter';
 import { parseJsonBody } from '@/lib/api/parseJson';
@@ -48,7 +48,7 @@ export async function POST(req: Request) {
     const guard = await enforceGuestAiLimit(auth?.user, 'suggest');
     if (!guard.ok) return Response.json(guestLimitBody(guard.limit), { status: 429 });
 
-    const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+    const client = getOpenAI('chat');
 
     const messages = [
       {
@@ -89,7 +89,7 @@ export async function POST(req: Request) {
       { provider: 'openai', model_code: model, modality: 'chat', route: '/api/ai/suggest', user_id: auth?.user?.id ?? null },
       async () => {
         const resp = await client.chat.completions.create({
-          model,
+          model: resolveModel(model, 'chat'),
           temperature,
           messages: messages as any,
         });

@@ -110,16 +110,41 @@ export async function computeCampaignRecommendations(
   });
 
   // Optional LLM top-3 synthesis (grounded in the rules above; null when disabled/fails).
-  const summary = await synthesizeTopThree({
-    domain: campaign.domain,
-    city: campaign.city,
-    industryLabel: KEY_TO_LABEL[campaign.industry_key as IndustryKey] ?? campaign.industry_key,
-    ranking,
-    nextAction,
-  }).catch(() => null);
+  // Gated to PREMIUM campaigns (a paying renter) — the deterministic ranking/nextAction
+  // stay free for every campaign; only the AI polish is a paid perk. Saves LLM spend.
+  const isPremiumCampaign = campaign.subscription_status === 'active';
+  const summary = isPremiumCampaign
+    ? await synthesizeTopThree({
+        domain: campaign.domain,
+        city: campaign.city,
+        industryLabel: KEY_TO_LABEL[campaign.industry_key as IndustryKey] ?? campaign.industry_key,
+        ranking,
+        nextAction,
+      }).catch(() => null)
+    : null;
 
   await supabaseAdmin
     .from('geo_industry_campaigns')
     .update({ recommendations: { ranking, nextAction, summary }, recommendations_synced_at: new Date().toISOString() })
     .eq('id', campaign.id);
+}
+
+/**
+ * On-demand recompute from already-stored signals (no fresh GSC fetch). Reuses the
+ * campaign's persisted rank + trend and the last logged impressions from
+ * `geo_rank_history`, so an operator can populate/refresh the "next steps" panel
+ * immediately instead of waiting for the daily geo-rank-sync cron. Best-effort.
+ */
+export async function recomputeCampaignRecommendations(campaign: GeoCampaign): Promise<void> {
+  const { data: last } = await supabaseAdmin
+    .from('geo_rank_history')
+    .select('impressions')
+    .eq('campaign_id', campaign.id)
+    .order('captured_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  await computeCampaignRecommendations(campaign, {
+    impressions: (last as any)?.impressions ?? null,
+    trend: (campaign as any).rank_trend ?? null,
+  });
 }

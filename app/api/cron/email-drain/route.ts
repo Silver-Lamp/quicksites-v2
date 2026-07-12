@@ -32,7 +32,13 @@ export async function POST(req: NextRequest) {
   let sent = 0;
   for (const msg of pending) {
     try {
-      await sendEmail({ to: msg.to_email, subject: msg.subject, html: msg.html });
+      await sendEmail({
+        to: msg.to_email,
+        subject: msg.subject,
+        html: msg.html,
+        from: msg.from ?? undefined,
+        headers: (msg.headers as Record<string, string> | null) ?? undefined,
+      });
       await db.from('email_outbox').update({
         status: 'sent', attempts: (msg.attempts ?? 0) + 1, error: null, sent_at: new Date().toISOString()
       }).eq('id', msg.id);

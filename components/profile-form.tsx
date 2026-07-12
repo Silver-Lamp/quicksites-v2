@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import AiCostEstimatorCard from '@/components/admin/billing/AiCostEstimatorCard';
 import WorkBackgroundPicker from '@/components/profile/work-background-picker';
+import SeoCoachCard from '@/components/profile/seo-coach-card';
 
 /* ---------- shared UI ---------- */
 
@@ -322,6 +323,15 @@ export default function ProfileForm() {
                 </div>
               </div>
             )}
+          </Section>
+
+          {/* ---------- AI SEO Coaching ---------- */}
+          <Section
+            title="AI SEO Coaching"
+            icon={Sparkles}
+            desc="Daily next-best-step + a weekly summary for your site's SEO."
+          >
+            <SeoCoachCard isMember={isPro} onUpgrade={requestProTrial} />
           </Section>
 
           {/* ---------- Account details ---------- */}

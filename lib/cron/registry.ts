@@ -60,6 +60,22 @@ export const CRON_JOBS: CronJob[] = [
     label: 'AI pricing sync (OpenAI)',
     description: 'Syncs OpenAI model pricing used by LLM cost logging.',
   },
+  {
+    key: 'seo-coach-daily',
+    path: '/api/cron/seo-coach-daily',
+    schedule: '30 9 * * *',
+    intervalMinutes: 1440,
+    label: 'AI SEO coaching (daily)',
+    description: 'Queues the daily "next best step" SEO email for paid, opted-in site owners.',
+  },
+  {
+    key: 'seo-coach-weekly',
+    path: '/api/cron/seo-coach-weekly',
+    schedule: '0 9 * * 1',
+    intervalMinutes: 10080,
+    label: 'AI SEO coaching (weekly)',
+    description: 'Queues the weekly SEO summary email (score + trend + top 3).',
+  },
 ];
 
 export function jobByKey(key: string): CronJob | undefined {

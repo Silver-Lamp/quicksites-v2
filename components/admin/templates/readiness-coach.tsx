@@ -137,12 +137,15 @@ export default function ReadinessCoach({
     <li key={i.id} className="py-0.5">
       <div className="flex items-start gap-2">
         <span className={`mt-0.5 shrink-0 text-sm ${i.ok ? 'text-emerald-400' : i.severity === 'hard' ? 'text-amber-400' : 'text-neutral-500'}`}>{i.ok ? '☑' : '☐'}</span>
-        <span className="min-w-0 flex-1">
-          <span className={`text-sm ${i.ok ? 'text-neutral-400 line-through' : 'text-neutral-100'}`}>{i.label}</span>
-          {i.severity === 'hard' && !i.ok && <span className="ml-1 text-[10px] uppercase text-amber-400/80">required</span>}
+        <div className="min-w-0">
+          {/* Action sits right next to its label so it's obvious what it acts on. */}
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
+            <span className={`text-sm ${i.ok ? 'text-neutral-400 line-through' : 'text-neutral-100'}`}>{i.label}</span>
+            {i.severity === 'hard' && !i.ok && <span className="text-[10px] uppercase text-amber-400/80">required</span>}
+            {!i.ok && itemAction(i)}
+          </div>
           {i.hint && !i.ok && <span className="block text-[11px] text-neutral-500">{i.hint}</span>}
-        </span>
-        {!i.ok && itemAction(i)}
+        </div>
       </div>
       {openInfo.has(i.id) && i.fix && (
         <div className="ml-6 mt-1 rounded-md border border-neutral-700 bg-neutral-900/80 px-2.5 py-1.5 text-[11px] text-neutral-300">

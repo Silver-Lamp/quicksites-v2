@@ -34,7 +34,7 @@ export async function POST(req: Request) {
 
   const r = await pointCampaignAtOrgServiceArea(campaign, operator.id);
   if (!r.ok && r.reason === 'no_org_address') {
-    return NextResponse.json({ error: 'That org has no service-area address set (add one on /admin/org).', code: 'no_org_address' }, { status: 400 });
+    return NextResponse.json({ error: 'That org has no service-area address or contact email set (add one on /admin/org).', code: 'no_org_identity' }, { status: 400 });
   }
   if (!r.ok) return NextResponse.json({ error: r.reason || 'Could not update the site.' }, { status: 500 });
   return NextResponse.json(r);

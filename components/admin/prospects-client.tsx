@@ -724,10 +724,11 @@ export default function ProspectsClient({
         setMsg(null);
         try {
           const r = await post('/api/admin/prospects/geo-campaign/point-address', { campaignId: c.id });
+          const parts = [r.addressSet && r.label ? `address (“${r.label}”)` : null, r.emailSet ? 'contact email' : null].filter(Boolean);
           setMsg(
             r.changed
-              ? `Pointed ${c.domain} at “${r.label}”. Recompute recommendations (↻ Recs) to clear the address blocker.`
-              : `${c.domain}: ${r.reason === 'already_has_address' ? 'already has its own address — left it as-is.' : 'no change.'}`,
+              ? `Pointed ${c.domain} at your org’s ${parts.join(' + ')}. Recompute recommendations (↻ Recs) to refresh.`
+              : `${c.domain}: ${r.reason === 'already_has_address' ? 'already has its own address/email — left it as-is.' : 'no change.'}`,
           );
           router.refresh();
         } catch (e: any) {

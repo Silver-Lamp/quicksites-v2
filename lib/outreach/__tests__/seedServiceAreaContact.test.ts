@@ -3,7 +3,7 @@
  */
 // lib/outreach/__tests__/seedServiceAreaContact.test.ts
 
-import { seedServiceAreaContact, hasOwnAddress } from '@/lib/outreach/seedServiceAreaContact';
+import { seedServiceAreaContact, hasOwnAddress, hasOwnContactEmail } from '@/lib/outreach/seedServiceAreaContact';
 
 const area = { label: 'Serving Renton, WA & nearby', phone: '425-555-0100' };
 
@@ -62,7 +62,32 @@ describe('seedServiceAreaContact', () => {
     expect(changed).toBe(false);
   });
 
-  it('is a no-op without a label', () => {
+  it('is a no-op without a label or email', () => {
     expect(seedServiceAreaContact({ pages: [] }, { label: '' }).changed).toBe(false);
+  });
+
+  it('seeds the contact-form recipient email when the site has none', () => {
+    const data = { pages: [{ content_blocks: [{ type: 'contact_form', content: {} }] }] };
+    const { data: out, changed, emailSet, addressSet } = seedServiceAreaContact(data, { email: 'leads@pointsevenstudio.com' });
+    expect(changed).toBe(true);
+    expect(emailSet).toBe(true);
+    expect(addressSet).toBe(false); // no label passed
+    expect(out.meta.contact_email).toBe('leads@pointsevenstudio.com');
+  });
+
+  it('does NOT overwrite an existing contact email', () => {
+    const data = { meta: { contact_email: 'owner@real.com' }, pages: [] };
+    const { emailSet } = seedServiceAreaContact(data, { email: 'leads@org.com' });
+    expect(emailSet).toBe(false);
+    expect(hasOwnContactEmail(data)).toBe(true);
+  });
+
+  it('seeds both address and email in one pass', () => {
+    const data = { pages: [{ content_blocks: [{ type: 'hero', content: { headline: 'Hi' } }] }] };
+    const { addressSet, emailSet, data: out } = seedServiceAreaContact(data, { ...area, email: 'leads@org.com' });
+    expect(addressSet).toBe(true);
+    expect(emailSet).toBe(true);
+    expect(out.meta.contact_email).toBe('leads@org.com');
+    expect(out.meta.contact.address).toBe(area.label);
   });
 });

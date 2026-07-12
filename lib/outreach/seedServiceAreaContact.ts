@@ -37,45 +37,67 @@ export function hasOwnAddress(data: any): boolean {
   );
 }
 
-export type SeedResult = { data: any; changed: boolean };
+/** True when the site already has a contact-form recipient of its own (→ don't seed email). */
+export function hasOwnContactEmail(data: any): boolean {
+  const m = data?.meta ?? {};
+  return !!(
+    String(m?.contact_email ?? '').trim() ||
+    String(m?.contact?.email ?? '').trim() ||
+    String(m?.identity?.contact?.email ?? '').trim()
+  );
+}
+
+export type SeedResult = { data: any; changed: boolean; addressSet: boolean; emailSet: boolean };
 
 /**
- * Seed the pitch site's contact with a service-area label + phone, only when it has no
- * address of its own. Sets `meta.contact`, fills an existing location/contact block, and —
- * if the site has no address-bearing block at all — appends a lightweight `location` block
- * so the service area actually renders (non-food scaffolds ship without one).
+ * Seed an unclaimed campaign pitch site with the org's inheritable identity — a service-area
+ * label + phone (address), and the contact-form recipient (email) — each only when the site
+ * has none of its own ("auto until edited"). For the address, fills an existing
+ * location/contact block or appends a service-area `location` block (non-food scaffolds ship
+ * without one). For the email, sets `meta.contact_email`, which resolveContactRecipient reads
+ * so leads from the live site reach the operator instead of a dead address.
  */
-export function seedServiceAreaContact(data: any, area: { label: string; phone?: string | null }): SeedResult {
-  if (!area?.label || hasOwnAddress(data)) return { data, changed: false };
+export function seedServiceAreaContact(data: any, area: { label?: string | null; phone?: string | null; email?: string | null }): SeedResult {
+  const wantAddress = !!area?.label && !hasOwnAddress(data);
+  const wantEmail = !!area?.email && !hasOwnContactEmail(data);
+  if (!wantAddress && !wantEmail) return { data, changed: false, addressSet: false, emailSet: false };
 
   // Clone so callers/tests keep the input intact.
   const next = typeof structuredClone === 'function' ? structuredClone(data ?? {}) : JSON.parse(JSON.stringify(data ?? {}));
-  const phone = (area.phone ?? '').trim();
-
-  // 1) meta.contact — read by analyzeOnPage (clears the NAP readiness blocker) + some SEO.
   next.meta = next.meta ?? {};
-  next.meta.contact = { ...(next.meta.contact ?? {}), address: area.label };
-  if (phone && !String(next.meta.contact.phone ?? '').trim()) next.meta.contact.phone = phone;
 
-  // 2) Fill an existing location/contact block, else append a service-area location block.
-  const blocks = allBlocks(next);
-  const target = blocks.find((b) => b?.type === 'location' || b?.type === 'contact' || b?.type === 'contact_form');
-  if (target) {
-    target.content = target.content ?? {};
-    target.content.address = area.label;
-    if (phone && !String(target.content.phone ?? '').trim()) target.content.phone = phone;
-    if (target.type === 'location') target.content.show_map = false; // service area → no street map
-  } else {
-    if (!Array.isArray(next.pages) || !next.pages.length) next.pages = [{}];
-    const page = next.pages[0];
-    const arr = pageBlocks(page);
-    const loc: any = createDefaultBlock('location');
-    loc.content = { ...loc.content, title: 'Service Area', address: area.label, phone, show_map: false };
-    arr.push(loc);
-    // Write both fields so the canonical + legacy readers + the live editor all agree.
-    page.content_blocks = arr;
-    page.blocks = arr;
+  if (wantEmail) {
+    // Where contact-form submissions go until the operator sets their own.
+    next.meta.contact_email = area.email;
   }
 
-  return { data: next, changed: true };
+  if (wantAddress) {
+    const phone = (area.phone ?? '').trim();
+    const label = area.label as string;
+
+    // 1) meta.contact — read by analyzeOnPage (clears the NAP readiness blocker) + some SEO.
+    next.meta.contact = { ...(next.meta.contact ?? {}), address: label };
+    if (phone && !String(next.meta.contact.phone ?? '').trim()) next.meta.contact.phone = phone;
+
+    // 2) Fill an existing location/contact block, else append a service-area location block.
+    const target = allBlocks(next).find((b) => b?.type === 'location' || b?.type === 'contact' || b?.type === 'contact_form');
+    if (target) {
+      target.content = target.content ?? {};
+      target.content.address = label;
+      if (phone && !String(target.content.phone ?? '').trim()) target.content.phone = phone;
+      if (target.type === 'location') target.content.show_map = false; // service area → no street map
+    } else {
+      if (!Array.isArray(next.pages) || !next.pages.length) next.pages = [{}];
+      const page = next.pages[0];
+      const arr = pageBlocks(page);
+      const loc: any = createDefaultBlock('location');
+      loc.content = { ...loc.content, title: 'Service Area', address: label, phone, show_map: false };
+      arr.push(loc);
+      // Write both fields so the canonical + legacy readers + the live editor all agree.
+      page.content_blocks = arr;
+      page.blocks = arr;
+    }
+  }
+
+  return { data: next, changed: true, addressSet: wantAddress, emailSet: wantEmail };
 }

@@ -6,7 +6,7 @@
 // from the Growth Coach. No-op when the site already has its own address ("auto until edited").
 
 import { supabaseAdmin } from '@/lib/supabase/admin';
-import { getOrgServiceArea } from '@/lib/outreach/orgServiceArea';
+import { getOrgIdentity } from '@/lib/outreach/orgServiceArea';
 import { seedServiceAreaContact } from '@/lib/outreach/seedServiceAreaContact';
 import type { GeoCampaign } from '@/lib/outreach/geoCampaigns';
 
@@ -15,6 +15,9 @@ export type PointResult = {
   changed: boolean;
   /** The service-area label applied (or that would apply). */
   label?: string;
+  /** What was seeded, for the UI message. */
+  addressSet?: boolean;
+  emailSet?: boolean;
   /** Why nothing changed: 'no_template' | 'no_org_address' | 'already_has_address' | commit error. */
   reason?: string;
 };
@@ -29,8 +32,8 @@ export async function pointCampaignAtOrgServiceArea(
 ): Promise<PointResult> {
   if (!campaign.template_id) return { ok: false, changed: false, reason: 'no_template' };
 
-  const area = await getOrgServiceArea(campaign.org_id);
-  if (!area) return { ok: false, changed: false, reason: 'no_org_address' };
+  const identity = await getOrgIdentity(campaign.org_id);
+  if (!identity) return { ok: false, changed: false, reason: 'no_org_address' };
 
   const { data: t } = await supabaseAdmin
     .from('templates')
@@ -39,15 +42,18 @@ export async function pointCampaignAtOrgServiceArea(
     .maybeSingle();
   if (!t) return { ok: false, changed: false, reason: 'no_template' };
 
-  const { data: newData, changed } = seedServiceAreaContact((t as any).data ?? {}, area);
-  if (!changed) return { ok: true, changed: false, reason: 'already_has_address', label: area.label };
+  const { data: newData, changed, addressSet, emailSet } = seedServiceAreaContact((t as any).data ?? {}, identity);
+  if (!changed) return { ok: true, changed: false, reason: 'already_has_address', label: identity.label ?? undefined };
 
   // Persist via the sanctioned commit RPC (public.commit_template_http, app.commit_template
-  // fallback) — the same path lib/builder/autogenerateForTemplate.ts uses.
+  // fallback) — the same path lib/builder/autogenerateForTemplate.ts uses. Also set the
+  // contact_email column when seeded so the block editor's "Send submissions to" reflects it.
+  const patch: Record<string, any> = { data: newData };
+  if (emailSet && identity.email) patch.contact_email = identity.email;
   const payload = {
     id: campaign.template_id,
     base_rev: (t as any).rev ?? 0,
-    patch: { data: newData },
+    patch,
     actor: actorId,
     kind: 'save',
     org_id: null,
@@ -63,5 +69,5 @@ export async function pointCampaignAtOrgServiceArea(
   }
   if (err) return { ok: false, changed: false, reason: err.message || 'commit failed' };
 
-  return { ok: true, changed: true, label: area.label };
+  return { ok: true, changed: true, label: identity.label ?? undefined, addressSet, emailSet };
 }

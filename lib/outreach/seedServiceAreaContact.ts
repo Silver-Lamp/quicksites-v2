@@ -7,17 +7,22 @@
 
 import { createDefaultBlock } from '@/lib/createDefaultBlock';
 
-type AnyBlock = { type?: string; content?: any; blocks?: AnyBlock[] };
+type AnyBlock = { type?: string; content?: any; blocks?: AnyBlock[]; content_blocks?: AnyBlock[] };
+
+/** The block array a page renders from — canonical `content_blocks`, legacy `blocks` fallback. */
+function pageBlocks(p: any): AnyBlock[] {
+  return Array.isArray(p?.content_blocks) ? p.content_blocks : Array.isArray(p?.blocks) ? p.blocks : [];
+}
 
 /** Every block across every page, flattened (incl. one level of nesting). */
 function allBlocks(data: any): AnyBlock[] {
   const out: AnyBlock[] = [];
   const pages = Array.isArray(data?.pages) ? data.pages : [];
   for (const p of pages) {
-    const blocks = Array.isArray(p?.blocks) ? p.blocks : [];
-    for (const b of blocks) {
+    for (const b of pageBlocks(p)) {
       out.push(b);
-      if (Array.isArray(b?.blocks)) out.push(...b.blocks);
+      const nested = Array.isArray(b?.content_blocks) ? b.content_blocks : Array.isArray(b?.blocks) ? b.blocks : [];
+      if (nested.length) out.push(...nested);
     }
   }
   return out;
@@ -61,12 +66,15 @@ export function seedServiceAreaContact(data: any, area: { label: string; phone?:
     if (phone && !String(target.content.phone ?? '').trim()) target.content.phone = phone;
     if (target.type === 'location') target.content.show_map = false; // service area → no street map
   } else {
-    if (!Array.isArray(next.pages)) next.pages = [{ blocks: [] }];
-    if (!next.pages.length) next.pages.push({ blocks: [] });
-    if (!Array.isArray(next.pages[0].blocks)) next.pages[0].blocks = [];
+    if (!Array.isArray(next.pages) || !next.pages.length) next.pages = [{}];
+    const page = next.pages[0];
+    const arr = pageBlocks(page);
     const loc: any = createDefaultBlock('location');
     loc.content = { ...loc.content, title: 'Service Area', address: area.label, phone, show_map: false };
-    next.pages[0].blocks.push(loc);
+    arr.push(loc);
+    // Write both fields so the canonical + legacy readers + the live editor all agree.
+    page.content_blocks = arr;
+    page.blocks = arr;
   }
 
   return { data: next, changed: true };

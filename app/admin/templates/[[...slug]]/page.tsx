@@ -5,6 +5,7 @@ import { TemplateEditorProvider } from '@/context/template-editor-context';
 import TemplateEditor from '@/components/admin/templates/template-editor';
 import AutogenRunner from '@/components/admin/templates/autogen-runner';
 import GeoCampaignBanner from '@/components/admin/templates/geo-campaign-banner';
+import ReadinessCoach from '@/components/admin/templates/readiness-coach';
 import { getGeoCampaignByTemplateId } from '@/lib/outreach/geoCampaigns';
 import type { Template } from '@/types/template';
 
@@ -132,6 +133,13 @@ export default async function TemplateEditPage({ params }: PageProps) {
         colorMode={colorMode}
         initialData={initialData}
       >
+        {campaign && (
+          <ReadinessCoach
+            campaignId={campaign.id}
+            industryKey={campaign.industry_key}
+            initialReadyAt={campaign.outreach_ready_at}
+          />
+        )}
         <TemplateEditor
           templateName={initialData.template_name}
           initialData={initialData}

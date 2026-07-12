@@ -17,10 +17,13 @@ function collectBlocks(data: any): any[] {
   const out: any[] = [];
   const pages = Array.isArray(data?.pages) ? data.pages : [];
   for (const p of pages) {
-    const blocks = Array.isArray(p?.blocks) ? p.blocks : [];
+    // Canonical field is `content_blocks` (what the editor + renderer use); `blocks` is a
+    // legacy mirror that goes stale after edits — prefer content_blocks.
+    const blocks = Array.isArray(p?.content_blocks) ? p.content_blocks : Array.isArray(p?.blocks) ? p.blocks : [];
     for (const b of blocks) {
       out.push(b);
-      if (Array.isArray(b?.blocks)) out.push(...b.blocks);
+      const nested = Array.isArray(b?.content_blocks) ? b.content_blocks : Array.isArray(b?.blocks) ? b.blocks : [];
+      if (nested.length) out.push(...nested);
     }
   }
   return out;

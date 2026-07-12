@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getServerSupabase } from '@/lib/supabase/server';
 import { getFromDate } from '@/lib/getFromDate';
+import { geoCampaignsByTemplateIds } from '@/lib/outreach/geoCampaigns';
 
 const ts = (d?: string | null) => (d ? new Date(d).getTime() || 0 : 0);
 function safeParse<T = any>(v: any): T | undefined {
@@ -218,6 +219,18 @@ export async function GET(req: Request) {
         industry_label,
       };
     });
+  }
+
+  // Surface geo-domain campaign info on any template that's a campaign pitch site.
+  try {
+    const tplIds = items.map((it: any) => it.id || it.canonical_id).filter(Boolean);
+    const camps = await geoCampaignsByTemplateIds(tplIds);
+    for (const it of items as any[]) {
+      const c = camps[it.id] || camps[it.canonical_id];
+      if (c) it.campaign = c;
+    }
+  } catch {
+    /* best-effort — campaign badges are non-essential */
   }
 
   const hasMore = offset + items.length < total;

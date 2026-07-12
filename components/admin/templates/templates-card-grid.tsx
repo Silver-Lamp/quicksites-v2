@@ -7,6 +7,7 @@ import { toast } from 'react-hot-toast';
 import { Copy, ExternalLink, Pencil, CheckCircle2, CircleDashed, Sparkles, BarChart3 } from 'lucide-react';
 import { prettifySlug } from '@/lib/home/showcase-helpers';
 import { normalizeGscDomain } from '@/lib/gsc/normalizeDomain';
+import { CampaignBadge, type CampaignInfo } from '@/components/admin/templates/campaign-badge';
 
 export type GscStat = { clicks: number; impressions: number };
 
@@ -33,6 +34,7 @@ type Row = {
   domain?: string | null;
   custom_domain?: string | null;
   data?: any;
+  campaign?: CampaignInfo | null;
 };
 
 // Use the generated OG thumbnail (reads each template's OWN data — hero image or
@@ -182,6 +184,11 @@ export default function TemplatesCardGrid({
                   <span className="text-zinc-700">·</span>
                   <span>{timeAgo(r.updated_at)}</span>
                 </div>
+                {r.campaign ? (
+                  <div className="mt-1.5">
+                    <CampaignBadge c={r.campaign} />
+                  </div>
+                ) : null}
                 {(() => {
                   const stat = gscByDomain && gscKeysForRow(r).map((k) => gscByDomain[k]).find(Boolean);
                   return stat ? (

@@ -123,6 +123,50 @@ export async function setCampaignSubscription(
   if (error) throw new Error(`setCampaignSubscription failed: ${error.message}`);
 }
 
+// Compact campaign info to surface on a template (list cards/table + editor banner).
+export type GeoCampaignSummary = {
+  id: string;
+  domain: string;
+  city: string;
+  industry_key: string;
+  status: string;
+  domain_status: string;
+  rank_status: string | null;
+  pricing_model: string | null;
+  price_cents: number | null;
+  locked_rate_cents: number | null;
+  subscription_status: string | null;
+  tracking_number: string | null;
+};
+
+const GEO_SUMMARY_COLS =
+  'id, template_id, domain, city, industry_key, status, domain_status, rank_status, pricing_model, price_cents, locked_rate_cents, subscription_status, tracking_number';
+
+/** Campaign linked to one template (null if the template isn't a geo pitch site). */
+export async function getGeoCampaignByTemplateId(templateId: string): Promise<GeoCampaignSummary | null> {
+  const { data, error } = await supabaseAdmin
+    .from('geo_industry_campaigns')
+    .select(GEO_SUMMARY_COLS)
+    .eq('template_id', templateId)
+    .maybeSingle();
+  if (error) return null;
+  return (data as GeoCampaignSummary) ?? null;
+}
+
+/** Campaigns for many templates at once, keyed by template_id (for the list). */
+export async function geoCampaignsByTemplateIds(ids: string[]): Promise<Record<string, GeoCampaignSummary>> {
+  const clean = ids.filter(Boolean);
+  if (!clean.length) return {};
+  const { data, error } = await supabaseAdmin
+    .from('geo_industry_campaigns')
+    .select(GEO_SUMMARY_COLS)
+    .in('template_id', clean);
+  if (error) return {};
+  const m: Record<string, GeoCampaignSummary> = {};
+  for (const r of (data as any[]) ?? []) if (r.template_id) m[r.template_id] = r as GeoCampaignSummary;
+  return m;
+}
+
 /** Set (or clear) the contest winner for a campaign. */
 export async function setCampaignWinner(campaignId: string, prospectId: string | null): Promise<void> {
   const { error } = await supabaseAdmin

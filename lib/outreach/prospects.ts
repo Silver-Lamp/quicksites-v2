@@ -53,6 +53,7 @@ export type Prospect = {
   status: ProspectStatus;
   template_id: string | null;
   geo_campaign_id: string | null;
+  waitlist_status: string | null;
   sweep_id: string | null;
 };
 
@@ -122,7 +123,7 @@ export async function listProspects(filter: ListProspectsFilter = {}): Promise<P
   let q = supabaseAdmin
     .from('outreach_prospects')
     .select(
-      'id, created_at, place_id, business_name, phone, address, address_lat, address_lon, city, region, industry_key, categories, website, freshness_score, freshness_signals, lead_tier, status, template_id, geo_campaign_id, sweep_id',
+      'id, created_at, place_id, business_name, phone, address, address_lat, address_lon, city, region, industry_key, categories, website, freshness_score, freshness_signals, lead_tier, status, template_id, geo_campaign_id, waitlist_status, sweep_id',
     )
     .order('created_at', { ascending: false })
     .limit(filter.limit ?? 300);
@@ -138,7 +139,7 @@ export async function listProspectsByCampaign(campaignId: string): Promise<Prosp
   const { data, error } = await supabaseAdmin
     .from('outreach_prospects')
     .select(
-      'id, created_at, place_id, business_name, phone, address, address_lat, address_lon, city, region, industry_key, categories, website, freshness_score, freshness_signals, lead_tier, status, template_id, geo_campaign_id, sweep_id',
+      'id, created_at, place_id, business_name, phone, address, address_lat, address_lon, city, region, industry_key, categories, website, freshness_score, freshness_signals, lead_tier, status, template_id, geo_campaign_id, waitlist_status, sweep_id',
     )
     .eq('geo_campaign_id', campaignId)
     .order('created_at', { ascending: false });
@@ -163,7 +164,7 @@ export async function getProspect(id: string): Promise<Prospect | null> {
   const { data, error } = await supabaseAdmin
     .from('outreach_prospects')
     .select(
-      'id, created_at, place_id, business_name, phone, address, address_lat, address_lon, city, region, industry_key, categories, website, freshness_score, freshness_signals, lead_tier, status, template_id, geo_campaign_id, sweep_id',
+      'id, created_at, place_id, business_name, phone, address, address_lat, address_lon, city, region, industry_key, categories, website, freshness_score, freshness_signals, lead_tier, status, template_id, geo_campaign_id, waitlist_status, sweep_id',
     )
     .eq('id', id)
     .maybeSingle();
@@ -185,4 +186,13 @@ export async function dismissProspect(id: string): Promise<void> {
     .update({ status: 'dismissed', updated_at: new Date().toISOString() })
     .eq('id', id);
   if (error) throw new Error(`dismissProspect failed: ${error.message}`);
+}
+
+/** Mark a competing business out of the running ('passed'), or restore it (null). */
+export async function setWaitlistStatus(id: string, status: 'passed' | null): Promise<void> {
+  const { error } = await supabaseAdmin
+    .from('outreach_prospects')
+    .update({ waitlist_status: status, updated_at: new Date().toISOString() })
+    .eq('id', id);
+  if (error) throw new Error(`setWaitlistStatus failed: ${error.message}`);
 }

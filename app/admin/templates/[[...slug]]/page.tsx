@@ -4,6 +4,8 @@ import { supabaseAdmin } from '@/lib/supabase/admin';
 import { TemplateEditorProvider } from '@/context/template-editor-context';
 import TemplateEditor from '@/components/admin/templates/template-editor';
 import AutogenRunner from '@/components/admin/templates/autogen-runner';
+import GeoCampaignBanner from '@/components/admin/templates/geo-campaign-banner';
+import { getGeoCampaignByTemplateId } from '@/lib/outreach/geoCampaigns';
 import type { Template } from '@/types/template';
 
 // Ensure no caching for edits
@@ -118,8 +120,12 @@ export default async function TemplateEditPage({ params }: PageProps) {
   // Guest-build sites are stamped autogen_pending — auto-run copy + hero on first open.
   const autogenPending = !!(dataObj as any)?.meta?.autogen_pending;
 
+  // If this template is a geo-domain campaign pitch site, surface the campaign.
+  const campaign = await getGeoCampaignByTemplateId(row.id);
+
   return (
     <>
+      {campaign && <GeoCampaignBanner c={campaign} />}
       {autogenPending && <AutogenRunner templateId={row.id} />}
       <TemplateEditorProvider
         templateName={initialData.template_name}

@@ -25,9 +25,8 @@ export const NAV_SECTIONS: NavSection[] = [
     color: 'text-blue-300',
     routes: [
       { href: '/dashboard', label: '📈 Dashboard' },
-      { href: '/admin/leads', label: '📬 Leads' },
-      { href: '/admin/campaigns', label: '📢 Campaigns' },
-      { href: '/admin/start-campaign', label: '➕ Start Campaign' },
+      { href: '/admin/growth?tab=prospects', label: '📍 Businesses Near Me' },
+      { href: '/admin/growth?tab=pipeline', label: '🚀 Outreach Pipeline' },
       { href: '/admin/drafts', label: '📝 Drafts' },
       { href: '/admin/guest-tokens', label: '🔐 Guest Tokens', flags: ['beta'] },
     ],

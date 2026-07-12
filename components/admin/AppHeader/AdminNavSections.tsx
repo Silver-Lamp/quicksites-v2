@@ -140,19 +140,13 @@ const NAV_MERCHANT: NavItem[] = [
    Taxes → Communications → System → Platform. Dense clusters collapse into submenus
    so the top level stays scannable. Every link is preserved from the old flat list. */
 const NAV_ADMIN: NavItem[] = [
-  /* Growth — the lead-gen + outreach engine (surfaced first; it's what drives sales). */
+  /* Growth — the lead-gen + outreach engine, unified into one workspace (/admin/growth).
+     The old scattered surfaces (Map of Opportunities, Leads, legacy Campaigns) ran on the
+     retired leads/campaigns tables; they're folded out of the nav in favor of the new
+     outreach_prospects/geo_industry_campaigns stack. Both items open the same workspace. */
   { type: 'section', label: 'Growth', adminOnly: true },
-  { type: 'item', label: 'Businesses Near Me', href: '/admin/prospects', icon: <MapPinned size={18} />, adminOnly: true },
-  { type: 'item', label: 'Outreach Pipeline', href: '/admin/outreach', icon: <Rocket size={18} />, adminOnly: true },
-  { type: 'item', label: 'Map of Opportunities', href: '/admin/the-grid', icon: <Globe size={18} />, adminOnly: true },
-  { type: 'item', label: 'Leads', href: '/admin/leads', icon: <PhoneForwarded size={18} />, adminOnly: true },
-  {
-    type: 'item', label: 'Campaigns', icon: <Megaphone size={18} />, adminOnly: true,
-    children: [
-      { label: 'View All Campaigns', href: '/admin/campaigns' },
-      { label: 'Start New Campaign', href: '/admin/start-campaign' },
-    ],
-  },
+  { type: 'item', label: 'Businesses Near Me', href: '/admin/growth?tab=prospects', icon: <MapPinned size={18} />, adminOnly: true },
+  { type: 'item', label: 'Outreach Pipeline', href: '/admin/growth?tab=pipeline', icon: <Rocket size={18} />, adminOnly: true },
   { type: 'item', label: 'Print Orders', href: '/admin/print-orders', icon: <Printer size={18} />, adminOnly: true },
 
   /* Revenue, payouts & taxes. (The per-merchant Orders/Catalog/Payments admin pages

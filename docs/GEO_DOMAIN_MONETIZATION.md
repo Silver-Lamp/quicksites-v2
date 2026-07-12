@@ -2,7 +2,7 @@
 
 > How the "businesses near me" fan-out (`/admin/prospects`) + the exact-match geo-domain
 > land-grab (`geo_industry_campaigns`, e.g. `boston-towing.com`) becomes a revenue line.
-> Companion: [`MONETIZATION.md`](MONETIZATION.md) (take-rate), [`PRICING_REDESIGN.md`](PRICING_REDESIGN.md), and the *businesses-near-me* / *geo-domain land-grab* bullets in [`../CLAUDE.md`](../CLAUDE.md).
+> Companion: [`MONETIZATION.md`](MONETIZATION.md) (take-rate), [`PRICING_REDESIGN.md`](PRICING_REDESIGN.md), [`RANKED_TARGETING_PLAN.md`](RANKED_TARGETING_PLAN.md) (GSC-rank-aware targeting + refine-before-postcard gate), and the *businesses-near-me* / *geo-domain land-grab* bullets in [`../CLAUDE.md`](../CLAUDE.md).
 
 Status: **built, flag-gated OFF pending a live smoke test.** Shipped: pricing fields +
 per-industry suggested plans (`lib/outreach/geoPricing.ts`), a Stripe **subscription

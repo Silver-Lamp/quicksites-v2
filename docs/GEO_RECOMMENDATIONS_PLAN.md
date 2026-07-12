@@ -3,7 +3,7 @@
 > Turns the geo-domain campaigns (`geo_industry_campaigns`) into an advisor: for each
 > campaign it computes **two dimensions** of next-steps and surfaces them on
 > `/admin/prospects` + the template editor banner.
-> Companion: [`GEO_DOMAIN_MONETIZATION.md`](GEO_DOMAIN_MONETIZATION.md), [`MONETIZATION.md`](MONETIZATION.md).
+> Companion: [`GEO_DOMAIN_MONETIZATION.md`](GEO_DOMAIN_MONETIZATION.md), [`MONETIZATION.md`](MONETIZATION.md), [`RANKED_TARGETING_PLAN.md`](RANKED_TARGETING_PLAN.md) (the GSC-rank-aware "Ranked & ready" worklist + refine-before-postcard gate that consume these recommendations).
 
 Two dimensions:
 1. **Grow the ranking** — local-SEO recommendations (reviews, on-page, organic position).

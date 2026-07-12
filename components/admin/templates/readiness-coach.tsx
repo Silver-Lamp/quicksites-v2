@@ -13,6 +13,30 @@ import { readinessChecklist, type ChecklistItem } from '@/lib/outreach/readiness
 
 const EXPANDED_KEY = 'qs:readiness-coach:expanded';
 
+/** First block id whose type is in `types` (canonical content_blocks, legacy blocks fallback). */
+function findBlockId(data: any, types: string[] | undefined): string | null {
+  if (!types?.length) return null;
+  const pages = Array.isArray(data?.pages) ? data.pages : [];
+  for (const p of pages) {
+    const blocks = Array.isArray(p?.content_blocks) ? p.content_blocks : Array.isArray(p?.blocks) ? p.blocks : [];
+    for (const b of blocks) {
+      if (types.includes(b?.type)) return b?._id ?? b?.id ?? null;
+    }
+  }
+  return null;
+}
+
+/** Scroll to + briefly highlight a block in the live preview. Mirrors the editor's revealBlock. */
+function revealBlock(blockId: string): boolean {
+  const esc = (globalThis as any).CSS?.escape ?? ((s: string) => s.replace(/"/g, '\\"'));
+  const el = document.querySelector<HTMLElement>(`[data-block-id="${esc(blockId)}"]`);
+  if (!el) return false;
+  el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  el.classList.add('ring-2', 'ring-fuchsia-500', 'ring-offset-2', 'ring-offset-zinc-900');
+  setTimeout(() => el.classList.remove('ring-2', 'ring-fuchsia-500', 'ring-offset-2', 'ring-offset-zinc-900'), 1400);
+  return true;
+}
+
 export default function ReadinessCoach({
   campaignId,
   industryKey,
@@ -72,14 +96,59 @@ export default function ReadinessCoach({
     }
   }
 
-  const Row = ({ i }: { i: ChecklistItem }) => (
-    <li className="flex items-start gap-2 py-0.5">
-      <span className={`mt-0.5 shrink-0 text-sm ${i.ok ? 'text-emerald-400' : i.severity === 'hard' ? 'text-amber-400' : 'text-neutral-500'}`}>{i.ok ? '☑' : '☐'}</span>
-      <span className="min-w-0">
-        <span className={`text-sm ${i.ok ? 'text-neutral-400 line-through' : 'text-neutral-100'}`}>{i.label}</span>
-        {i.severity === 'hard' && !i.ok && <span className="ml-1 text-[10px] uppercase text-amber-400/80">required</span>}
-        {i.hint && !i.ok && <span className="block text-[11px] text-neutral-500">{i.hint}</span>}
-      </span>
+  const [openInfo, setOpenInfo] = useState<Set<string>>(new Set());
+  const toggleInfo = (id: string) =>
+    setOpenInfo((prev) => {
+      const n = new Set(prev);
+      n.has(id) ? n.delete(id) : n.add(id);
+      return n;
+    });
+
+  // Link a checklist item to its edit surface: jump to the block if one exists, else pop
+  // an info box explaining where/how to fix it.
+  function itemAction(i: ChecklistItem) {
+    const blockId = findBlockId(data, i.blockTypes);
+    if (blockId) {
+      return (
+        <button
+          onClick={() => { if (!revealBlock(blockId)) toggleInfo(i.id); }}
+          className="shrink-0 rounded-md border border-fuchsia-500/30 bg-fuchsia-500/10 px-2 py-0.5 text-[11px] font-medium text-fuchsia-200 hover:bg-fuchsia-500/20"
+          title="Scroll to this block in the preview"
+        >
+          Go to →
+        </button>
+      );
+    }
+    if (i.fix) {
+      return (
+        <button
+          onClick={() => toggleInfo(i.id)}
+          className="shrink-0 rounded-md border border-neutral-700 bg-neutral-800/60 px-2 py-0.5 text-[11px] font-medium text-neutral-300 hover:text-white"
+          title="How to fix this"
+        >
+          How ⓘ
+        </button>
+      );
+    }
+    return null;
+  }
+
+  const renderItem = (i: ChecklistItem) => (
+    <li key={i.id} className="py-0.5">
+      <div className="flex items-start gap-2">
+        <span className={`mt-0.5 shrink-0 text-sm ${i.ok ? 'text-emerald-400' : i.severity === 'hard' ? 'text-amber-400' : 'text-neutral-500'}`}>{i.ok ? '☑' : '☐'}</span>
+        <span className="min-w-0 flex-1">
+          <span className={`text-sm ${i.ok ? 'text-neutral-400 line-through' : 'text-neutral-100'}`}>{i.label}</span>
+          {i.severity === 'hard' && !i.ok && <span className="ml-1 text-[10px] uppercase text-amber-400/80">required</span>}
+          {i.hint && !i.ok && <span className="block text-[11px] text-neutral-500">{i.hint}</span>}
+        </span>
+        {!i.ok && itemAction(i)}
+      </div>
+      {openInfo.has(i.id) && i.fix && (
+        <div className="ml-6 mt-1 rounded-md border border-neutral-700 bg-neutral-900/80 px-2.5 py-1.5 text-[11px] text-neutral-300">
+          {i.fix}
+        </div>
+      )}
     </li>
   );
 
@@ -121,11 +190,11 @@ export default function ReadinessCoach({
         <div className="mt-2 grid gap-x-8 gap-y-1 border-t border-fuchsia-500/15 pt-2 sm:grid-cols-2">
           <ul>
             <div className="mb-0.5 text-[11px] font-semibold uppercase tracking-wide text-neutral-500">Required</div>
-            {hard.map((i) => <Row key={i.id} i={i} />)}
+            {hard.map(renderItem)}
           </ul>
           <ul>
             <div className="mb-0.5 text-[11px] font-semibold uppercase tracking-wide text-neutral-500">Recommended</div>
-            {items.filter((i) => i.severity === 'soft').map((i) => <Row key={i.id} i={i} />)}
+            {items.filter((i) => i.severity === 'soft').map(renderItem)}
           </ul>
         </div>
       )}

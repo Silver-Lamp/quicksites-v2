@@ -49,7 +49,7 @@ export async function GET() {
   const startDate = ymd(start);
   const endDate = ymd(end);
 
-  const byDomain: Record<string, { clicks: number; impressions: number }> = {};
+  const byDomain: Record<string, { clicks: number; impressions: number; position: number }> = {};
 
   await Promise.all(
     domains.map(async (domain) => {
@@ -65,8 +65,10 @@ export async function GET() {
 
         let totals =
           cached?.data && cached.expires_at && new Date(cached.expires_at) > new Date()
-            ? (cached.data as { clicks: number; impressions: number })
+            ? (cached.data as { clicks: number; impressions: number; position?: number })
             : null;
+        // Older cache rows predate `position`; refetch so the rank column has data.
+        if (totals && typeof totals.position !== 'number') totals = null;
 
         if (!totals) {
           const oauth2Client = await getValidOAuthClient(domain);
@@ -76,7 +78,11 @@ export async function GET() {
             requestBody: { startDate, endDate }, // no dimensions → single totals row
           });
           const row = res.data.rows?.[0];
-          totals = { clicks: Math.round(row?.clicks ?? 0), impressions: Math.round(row?.impressions ?? 0) };
+          totals = {
+            clicks: Math.round(row?.clicks ?? 0),
+            impressions: Math.round(row?.impressions ?? 0),
+            position: Math.round((row?.position ?? 0) * 10) / 10, // avg position, 1 decimal
+          };
 
           // Best-effort cache write (isolated under the sum: key).
           try {
@@ -94,7 +100,7 @@ export async function GET() {
         }
 
         const key = normalizeGscDomain(domain);
-        if (key) byDomain[key] = totals;
+        if (key) byDomain[key] = { clicks: totals.clicks, impressions: totals.impressions, position: totals.position ?? 0 };
       } catch {
         // Skip a domain whose token/refresh/query fails — no badge, no page break.
       }

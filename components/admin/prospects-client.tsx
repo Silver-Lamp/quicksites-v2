@@ -6,11 +6,25 @@
 // prospects, no AI), review by lead tier, selectively Build draft sites (AI), Dismiss,
 // and launch location-industry domain campaigns from the competition cards.
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import type { Prospect } from '@/lib/outreach/prospects';
 import type { GeoCampaign } from '@/lib/outreach/geoCampaigns';
+import { normalizeGscDomain } from '@/lib/gsc/normalizeDomain';
+
+type GscStat = { clicks: number; impressions: number; position: number };
+
+/** Rank badge from GSC average position (0/no impressions = not yet indexed). */
+function rankBadge(g: GscStat | undefined) {
+  if (!g || (!g.impressions && !g.position)) {
+    return { label: 'Not ranked', cls: 'bg-neutral-800 text-neutral-500' };
+  }
+  const p = g.position;
+  if (p > 0 && p <= 10) return { label: `Page 1 · #${p}`, cls: 'bg-emerald-500/20 text-emerald-300' };
+  if (p > 0 && p <= 20) return { label: `Page 2 · #${p}`, cls: 'bg-amber-500/20 text-amber-300' };
+  return { label: g.impressions ? `Ranking · #${p}` : 'Indexed', cls: 'bg-sky-500/15 text-sky-300' };
+}
 
 // Leaflet is client-only — load the sweep map without SSR.
 const ProspectsMap = dynamic(() => import('@/components/admin/prospects-map'), {
@@ -68,6 +82,16 @@ export default function ProspectsClient({
   // Per-campaign inline result for the Mail/Text actions (so feedback shows on the
   // row, not just a banner at the top of the page that scrolls out of view).
   const [rowMsg, setRowMsg] = useState<Record<string, { ok: boolean; text: string }>>({});
+  // GSC rank/traffic per domain (28-day), best-effort + lazy — proves "which have we ranked".
+  const [gscByDomain, setGscByDomain] = useState<Record<string, GscStat> | undefined>(undefined);
+  useEffect(() => {
+    let alive = true;
+    fetch('/api/gsc/summary')
+      .then((r) => (r.ok ? r.json() : null))
+      .then((j) => { if (alive && j?.ok && j.byDomain) setGscByDomain(j.byDomain); })
+      .catch(() => {});
+    return () => { alive = false; };
+  }, []);
 
   const prospects = initialProspects;
 
@@ -341,7 +365,7 @@ export default function ProspectsClient({
             <table className="min-w-full text-sm">
               <thead className="bg-neutral-900">
                 <tr className="text-left [&>th]:px-4 [&>th]:py-2 [&>th]:font-medium [&>th]:text-neutral-400">
-                  <th>Domain</th><th>City</th><th>Industry</th><th>Domain status</th><th>Status</th><th>Outreach</th>
+                  <th>Domain</th><th>City</th><th>Industry</th><th>Domain status</th><th>Status</th><th>Ranking</th><th>Outreach</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-neutral-800">
@@ -352,6 +376,20 @@ export default function ProspectsClient({
                     <td>{prettyIndustry(c.industry_key)}</td>
                     <td className="text-xs text-neutral-400">{c.domain_status}</td>
                     <td className="text-xs text-neutral-400">{c.status}</td>
+                    <td className="text-xs">
+                      {(() => {
+                        const g = gscByDomain?.[normalizeGscDomain(c.domain)];
+                        const b = rankBadge(g);
+                        return (
+                          <div className="flex flex-col gap-0.5">
+                            <span className={`inline-block w-fit rounded px-1.5 py-0.5 ${b.cls}`}>{b.label}</span>
+                            {g && (g.clicks || g.impressions) ? (
+                              <span className="text-neutral-500">{g.clicks} clk · {g.impressions} impr</span>
+                            ) : null}
+                          </div>
+                        );
+                      })()}
+                    </td>
                     <td className="text-right">
                       <div className="flex flex-col items-end gap-1">
                         <div className="flex justify-end gap-3 text-xs">

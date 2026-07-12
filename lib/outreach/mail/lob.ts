@@ -9,6 +9,9 @@
 
 const LOB_API = 'https://api.lob.com/v1/postcards';
 
+/** Max pieces one send (or its preview) will process — a spend + latency backstop. */
+export const MAX_POSTCARD_PIECES_PER_SEND = 25;
+
 export function lobConfigured(): boolean {
   return !!process.env.LOB_API_KEY;
 }

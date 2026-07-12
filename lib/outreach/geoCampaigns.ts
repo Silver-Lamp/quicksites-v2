@@ -12,6 +12,7 @@
 
 import { supabaseAdmin } from '@/lib/supabase/admin';
 import { buildIndustryStarter } from '@/lib/builder/industryScaffold';
+import { defaultOutreachOrgSlug, orgIdForSlug } from '@/lib/outreach/campaignBrand';
 import { KEY_TO_LABEL, type IndustryKey } from '@/lib/industries';
 import { checkDomainAvailability, registerDomain, namecheapConfigured } from '@/lib/domains/namecheap';
 import { addProjectDomain } from '@/lib/domains/vercel';
@@ -88,10 +89,11 @@ export type GeoCampaign = {
   claim_link_visits: number | null;
   recommendations: any;
   rank_trend: any;
+  org_id: string | null;
 };
 
 const GEO_COLS =
-  'id, city, region, industry_key, domain, slug, template_id, domain_status, status, claimed_by_prospect_id, tracking_number, tracking_number_sid, forward_to, pricing_model, price_cents, locked_rate_cents, billing_interval, rank_status, rank_position, stripe_customer_id, stripe_subscription_id, subscription_status, renter_email, claim_link_visits, recommendations, rank_trend';
+  'id, city, region, industry_key, domain, slug, template_id, domain_status, status, claimed_by_prospect_id, tracking_number, tracking_number_sid, forward_to, pricing_model, price_cents, locked_rate_cents, billing_interval, rank_status, rank_position, stripe_customer_id, stripe_subscription_id, subscription_status, renter_email, claim_link_visits, recommendations, rank_trend, org_id';
 
 export async function setCampaignPricing(
   id: string,
@@ -141,10 +143,11 @@ export type GeoCampaignSummary = {
   subscription_status: string | null;
   tracking_number: string | null;
   recommendations: any;
+  org_id: string | null;
 };
 
 const GEO_SUMMARY_COLS =
-  'id, template_id, domain, city, industry_key, status, domain_status, rank_status, pricing_model, price_cents, locked_rate_cents, subscription_status, tracking_number, recommendations';
+  'id, template_id, domain, city, industry_key, status, domain_status, rank_status, pricing_model, price_cents, locked_rate_cents, subscription_status, tracking_number, recommendations, org_id';
 
 /** Campaign linked to one template (null if the template isn't a geo pitch site). */
 export async function getGeoCampaignByTemplateId(templateId: string): Promise<GeoCampaignSummary | null> {
@@ -324,7 +327,15 @@ export async function createGeoCampaign(row: {
   templateId: string;
   domainStatus: string;
   createdBy: string;
+  /** Owning org; defaults to OUTREACH_DEFAULT_ORG_SLUG when omitted (null → QuickSites brand). */
+  orgId?: string | null;
 }): Promise<GeoCampaign> {
+  // New campaigns inherit the default outreach org (e.g. CedarSites) unless one is passed.
+  let orgId = row.orgId ?? null;
+  if (orgId === undefined || row.orgId === undefined) {
+    const slug = defaultOutreachOrgSlug();
+    orgId = slug ? await orgIdForSlug(slug) : null;
+  }
   const { data, error } = await supabaseAdmin
     .from('geo_industry_campaigns')
     .insert({
@@ -340,11 +351,21 @@ export async function createGeoCampaign(row: {
       domain_status: row.domainStatus,
       status: 'draft',
       created_by: row.createdBy,
+      org_id: orgId,
     })
     .select(GEO_COLS)
     .single();
   if (error) throw new Error(`createGeoCampaign failed: ${error.message}`);
   return data as GeoCampaign;
+}
+
+/** Switch (or clear) a campaign's owning org — rebrands every prospect-facing surface. */
+export async function setCampaignOrg(campaignId: string, orgId: string | null): Promise<void> {
+  const { error } = await supabaseAdmin
+    .from('geo_industry_campaigns')
+    .update({ org_id: orgId, updated_at: new Date().toISOString() })
+    .eq('id', campaignId);
+  if (error) throw new Error(`setCampaignOrg failed: ${error.message}`);
 }
 
 /** Tag the pitched businesses with the campaign (competition set). */

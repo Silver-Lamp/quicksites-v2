@@ -8,15 +8,16 @@ import { NextResponse } from 'next/server';
 import { getAdminUser } from '@/lib/auth/getAdminUser';
 import { getGeoCampaign } from '@/lib/outreach/geoCampaigns';
 import { listProspectsByCampaign, markOutreachSent } from '@/lib/outreach/prospects';
-import { buildPosterModel, renderPosterHtml, renderPosterBackHtml, trackedClaimUrl, qrDataUrlFor } from '@/lib/outreach/competitionPoster';
-import { sendPostcard, parseUsAddress, postcardMailEnabled, lobConfigured } from '@/lib/outreach/mail/lob';
+import { buildPosterModel, renderPersonalizedPostcard, claimDeadlineLabel } from '@/lib/outreach/competitionPoster';
+import { resolveCampaignBrand } from '@/lib/outreach/campaignBrand';
+import { sendPostcard, parseUsAddress, postcardMailEnabled, lobConfigured, MAX_POSTCARD_PIECES_PER_SEND } from '@/lib/outreach/mail/lob';
 import { recordMailing } from '@/lib/outreach/mail/mailings';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 export const maxDuration = 60;
 
-const MAX_PIECES = 25;
+const MAX_PIECES = MAX_POSTCARD_PIECES_PER_SEND;
 
 export async function POST(req: Request) {
   const operator = await getAdminUser();
@@ -42,8 +43,16 @@ export async function POST(req: Request) {
   if (!campaign) return NextResponse.json({ error: 'Campaign not found.' }, { status: 404 });
 
   const prospects = await listProspectsByCampaign(campaignId);
-  const model = await buildPosterModel(campaign, prospects);
+  const brand = await resolveCampaignBrand(campaign.org_id);
+  const model = await buildPosterModel(campaign, prospects, {
+    baseUrl: brand.baseUrl,
+    brandName: brand.orgId ? brand.name : null,
+  });
   if (!model) return NextResponse.json({ error: 'Campaign has no pitch site.' }, { status: 400 });
+
+  // A concrete claim deadline (~2 weeks out) shared across this batch, so the printed
+  // "Claim by {date}" matches what the operator sends today.
+  const deadline = claimDeadlineLabel(14);
 
   const results: Array<Record<string, unknown>> = [];
   const mailedIds: string[] = [];
@@ -54,15 +63,19 @@ export async function POST(req: Request) {
       continue;
     }
     try {
-      // Per-prospect QR: a scan attributes to THIS business (not just the campaign).
-      const claimUrl = trackedClaimUrl(campaign.id, p.id);
-      const pModel = { ...model, claimUrl, qrDataUrl: await qrDataUrlFor(claimUrl) };
-      const frontHtml = renderPosterHtml(pModel);
-      const back = renderPosterBackHtml(pModel);
+      // Per-prospect QR + personalization (highlighted in the list, greeted on the back).
+      // Same renderer the preview uses, so what the operator confirmed is what mails.
+      const { frontHtml, backHtml } = await renderPersonalizedPostcard(model, {
+        campaignId: campaign.id,
+        prospectId: p.id,
+        recipientName: p.business_name,
+        deadline,
+        baseUrl: brand.baseUrl,
+      });
       const r = await sendPostcard({
         to: { name: p.business_name, ...to },
         frontHtml,
-        backHtml: back,
+        backHtml,
         description: `Geo-competition ${campaign.domain}`,
         metadata: { campaign_id: campaign.id, prospect_id: p.id },
         // One piece per (campaign, prospect) send — a retry won't double-mail at Lob.

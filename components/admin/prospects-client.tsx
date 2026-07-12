@@ -14,6 +14,10 @@ import type { GeoCampaign } from '@/lib/outreach/geoCampaigns';
 import { normalizeGscDomain } from '@/lib/gsc/normalizeDomain';
 import { effectivePriceCents, formatCents } from '@/lib/outreach/geoPricing';
 import { nextActionLabel } from '@/components/admin/templates/campaign-badge';
+import { scoreTerritories } from '@/lib/prospects/territoryScore';
+import MailPreviewModal, { type MailPreviewData } from '@/components/admin/mail-preview-modal';
+
+const TERRITORY_CELL_DEGREES = 0.02;
 
 type GscStat = { clicks: number; impressions: number; position: number };
 
@@ -82,6 +86,10 @@ export default function ProspectsClient({
   const [radiusKm, setRadiusKm] = useState(3);
   const [picked, setPicked] = useState<Set<string>>(new Set(['Restaurants']));
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [showTerritories, setShowTerritories] = useState(false);
+  const [territoryBrief, setTerritoryBrief] = useState<{ label: string; why: string }[] | null>(null);
+  const [briefMsg, setBriefMsg] = useState<string | null>(null);
+  const [mailPreview, setMailPreview] = useState<{ campaign: GeoCampaign; data: MailPreviewData } | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
   // Per-campaign inline result for the Mail/Text actions (so feedback shows on the
@@ -195,18 +203,35 @@ export default function ProspectsClient({
   const campaignCount = (campaignId: string) =>
     prospects.filter((p) => p.geo_campaign_id === campaignId).length;
 
-  async function mailPostcards(c: GeoCampaign) {
+  // Open the pre-send preview (dry-run: no spend) — shows the real personalized card,
+  // the deliverability breakdown, and the estimated cost before the operator commits.
+  async function openMailPreview(c: GeoCampaign) {
     if (!channels.mail) return;
-    const n = campaignCount(c.id);
-    if (!window.confirm(`Mail postcards for ${c.domain} to ${n} competing business${n === 1 ? '' : 'es'}?\n\nThis sends real physical mail (Lob) and may incur cost.`)) return;
     setBusy(`mail:${c.id}`);
     setRowMsg((m) => { const { [c.id]: _drop, ...rest } = m; return rest; });
     try {
+      const data = await post('/api/admin/prospects/mail-postcards/preview', { campaignId: c.id });
+      setMailPreview({ campaign: c, data });
+    } catch (e: any) {
+      setRowMsg((m) => ({ ...m, [c.id]: { ok: false, text: e.message } }));
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  // Confirmed from the preview modal → the real, paid Lob send.
+  async function confirmMail() {
+    if (!mailPreview) return;
+    const c = mailPreview.campaign;
+    setBusy(`mail:${c.id}`);
+    try {
       const r = await post('/api/admin/prospects/mail-postcards', { campaignId: c.id });
       setRowMsg((m) => ({ ...m, [c.id]: { ok: true, text: `Mailed ${r.mailed} postcard(s)` } }));
+      setMailPreview(null);
       router.refresh();
     } catch (e: any) {
       setRowMsg((m) => ({ ...m, [c.id]: { ok: false, text: e.message } }));
+      setMailPreview(null);
     } finally {
       setBusy(null);
     }
@@ -291,6 +316,26 @@ export default function ProspectsClient({
       return n;
     });
 
+  async function setOrg(c: GeoCampaign) {
+    const slug = window.prompt(
+      `Brand ${c.domain} to which org? Enter an org slug (e.g. "cedarsites") so prospects see that brand on the postcard, claim page, and links.\n\nLeave blank to reset to the QuickSites default.`,
+      c.org_id ? '' : '',
+    );
+    if (slug === null) return; // cancelled
+    setBusy(`org:${c.id}`);
+    setRowMsg((m) => { const { [c.id]: _drop, ...rest } = m; return rest; });
+    try {
+      const body = slug.trim() ? { campaignId: c.id, orgSlug: slug.trim() } : { campaignId: c.id, clear: true };
+      const r = await post('/api/admin/prospects/geo-campaign/set-org', body);
+      setRowMsg((m) => ({ ...m, [c.id]: { ok: true, text: `Branded as ${r.brand.name}` } }));
+      router.refresh();
+    } catch (e: any) {
+      setRowMsg((m) => ({ ...m, [c.id]: { ok: false, text: e.message } }));
+    } finally {
+      setBusy(null);
+    }
+  }
+
   async function recomputeRecs(c: GeoCampaign) {
     setBusy(`recs:${c.id}`);
     setRowMsg((m) => { const { [c.id]: _drop, ...rest } = m; return rest; });
@@ -331,6 +376,24 @@ export default function ProspectsClient({
     }
   }
 
+  async function explainAreas() {
+    setBusy('territory-brief');
+    setBriefMsg(null);
+    try {
+      const r = await post('/api/admin/prospects/territory-score', { narrate: true });
+      if (r.brief?.length) {
+        setTerritoryBrief(r.brief);
+      } else {
+        setTerritoryBrief(null);
+        setBriefMsg('LLM narration is off (set GEO_RECS_LLM_ENABLED=1 + OPENAI_API_KEY) — the map heat still ranks areas by score.');
+      }
+    } catch (e: any) {
+      setBriefMsg(e.message);
+    } finally {
+      setBusy(null);
+    }
+  }
+
   async function passProspect(p: Prospect, undo = false) {
     setBusy(`pass:${p.id}`);
     try {
@@ -364,6 +427,13 @@ export default function ProspectsClient({
 
   // Group no-website prospects by city + industry → competition cards.
   const competition = useMemo(() => buildCompetitionGroups(prospects), [prospects]);
+
+  // "Where to target next" — score the swept prospects into ranked map cells (pure, client-side).
+  const territories = useMemo(
+    () => scoreTerritories(prospects, { cellDegrees: TERRITORY_CELL_DEGREES }),
+    [prospects],
+  );
+  const topTerritory = territories.find((t) => t.viableCards > 0) ?? territories[0];
 
   // Businesses linked to each launched campaign (the contest roster / waitlist).
   const rosterByCampaign = useMemo(() => {
@@ -458,14 +528,71 @@ export default function ProspectsClient({
       {/* Map of swept prospects — click a marker to select it for building. */}
       {prospects.some((p) => p.address_lat != null && p.address_lon != null) && (
         <div className="mt-6">
+          <div className="mb-2 flex flex-wrap items-center justify-between gap-3">
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                onClick={() => setShowTerritories((v) => !v)}
+                title="Overlay a heat grid scoring which areas to target next — by unlockable rent (competition cards × industry value), minus saturation"
+                className={`rounded-lg border px-3 py-1.5 text-xs font-medium ${
+                  showTerritories
+                    ? 'border-fuchsia-500/40 bg-fuchsia-500/15 text-fuchsia-200'
+                    : 'border-neutral-700 bg-neutral-900 text-neutral-300 hover:text-white'
+                }`}
+              >
+                {showTerritories ? '◼ Hide territory heat' : '◻ Where to target next'}
+              </button>
+              {showTerritories && (
+                <button
+                  onClick={explainAreas}
+                  disabled={busy === 'territory-brief'}
+                  title="Ask the LLM to narrate the top-scored areas as a plain-language brief (grounded in the scores; metered + flag-gated)"
+                  className="rounded-lg border border-fuchsia-500/30 bg-fuchsia-500/10 px-3 py-1.5 text-xs font-medium text-fuchsia-200 hover:bg-fuchsia-500/20 disabled:opacity-50"
+                >
+                  {busy === 'territory-brief' ? 'Thinking…' : '✨ Explain top areas'}
+                </button>
+              )}
+            </div>
+            {showTerritories && topTerritory && topTerritory.viableCards > 0 && (
+              <span className="text-xs text-fuchsia-200/90">
+                Best cell: <strong>{formatCents(topTerritory.estMonthlyRentCents)}/mo</strong> across{' '}
+                {topTerritory.viableCards} card{topTerritory.viableCards === 1 ? '' : 's'}
+                {topTerritory.rationale.topIndustry ? ` · ${prettyIndustry(topTerritory.rationale.topIndustry)}` : ''}
+              </span>
+            )}
+          </div>
+          {showTerritories && territoryBrief && territoryBrief.length > 0 && (
+            <div className="mb-2 rounded-lg border border-fuchsia-500/20 bg-fuchsia-500/[0.06] p-3">
+              <div className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-fuchsia-300/80">Target next ✨</div>
+              <ol className="list-decimal space-y-1 pl-5 text-sm">
+                {territoryBrief.map((a, idx) => (
+                  <li key={idx}>
+                    <span className="font-medium">{a.label}</span>
+                    <span className="text-neutral-500"> — {a.why}</span>
+                  </li>
+                ))}
+              </ol>
+            </div>
+          )}
+          {showTerritories && briefMsg && (
+            <div className="mb-2 rounded-lg border border-neutral-800 bg-neutral-900/60 px-3 py-2 text-xs text-neutral-400">{briefMsg}</div>
+          )}
           <div className="h-[420px] overflow-hidden rounded-xl border border-neutral-800">
-            <ProspectsMap prospects={prospects} selected={selected} onToggle={toggleSel} />
+            <ProspectsMap
+              prospects={prospects}
+              selected={selected}
+              onToggle={toggleSel}
+              territories={showTerritories ? territories : undefined}
+              cellDegrees={TERRITORY_CELL_DEGREES}
+            />
           </div>
           <div className="mt-2 flex flex-wrap gap-4 text-xs text-neutral-400">
             <span className="flex items-center gap-1"><span className="inline-block h-3 w-3 rounded-full bg-emerald-400" /> No website</span>
             <span className="flex items-center gap-1"><span className="inline-block h-3 w-3 rounded-full bg-amber-400" /> Dated site</span>
             <span className="flex items-center gap-1"><span className="inline-block h-3 w-3 rounded-full bg-neutral-500" /> Has a site</span>
             <span className="flex items-center gap-1"><span className="inline-block h-3 w-3 rounded-full bg-indigo-400" /> Selected</span>
+            {showTerritories && (
+              <span className="flex items-center gap-1"><span className="inline-block h-3 w-3 rounded-sm bg-fuchsia-500/60" /> Target-score cell (darker = better)</span>
+            )}
           </div>
         </div>
       )}
@@ -624,9 +751,9 @@ export default function ProspectsClient({
                         <div className="flex justify-end gap-3 text-xs">
                           <a href={`/admin/prospects/poster/${c.id}`} target="_blank" rel="noopener noreferrer" className="text-emerald-400 underline">Poster</a>
                           <button
-                            onClick={() => mailPostcards(c)}
+                            onClick={() => openMailPreview(c)}
                             disabled={!channels.mail || busy === `mail:${c.id}`}
-                            title={channels.mail ? 'Mail the poster to each competing business' : 'Postcard mail is off — set LOB_API_KEY + LOB_FROM_* + POSTCARD_MAIL_ENABLED=1'}
+                            title={channels.mail ? 'Preview the postcard + cost, then confirm the send' : 'Postcard mail is off — set LOB_API_KEY + LOB_FROM_* + POSTCARD_MAIL_ENABLED=1'}
                             className={channels.mail ? 'text-amber-400 hover:text-amber-300' : 'cursor-not-allowed text-neutral-600'}
                           >
                             {busy === `mail:${c.id}` ? '…' : 'Mail'}
@@ -649,6 +776,14 @@ export default function ProspectsClient({
                             className="text-fuchsia-300 hover:text-fuchsia-200"
                           >
                             {busy === `recs:${c.id}` ? '…' : '↻ Recs'}
+                          </button>
+                          <button
+                            onClick={() => setOrg(c)}
+                            disabled={busy === `org:${c.id}`}
+                            title={c.org_id ? 'This campaign is branded to an org — click to change or reset' : 'Brand this campaign to an org (e.g. CedarSites) so prospects see that brand'}
+                            className={c.org_id ? 'text-teal-300 hover:text-teal-200' : 'text-neutral-500 hover:text-neutral-300'}
+                          >
+                            {busy === `org:${c.id}` ? '…' : c.org_id ? '🏷 Branded' : '🏷 Brand'}
                           </button>
                         </div>
                         {rowMsg[c.id] && (
@@ -830,6 +965,17 @@ export default function ProspectsClient({
         <div className="mt-6 rounded-xl border border-dashed border-neutral-800 px-4 py-10 text-center text-sm text-neutral-500">
           No prospects yet — sweep a city above to find businesses without sites.
         </div>
+      )}
+
+      {/* Pre-send preview + cost confirm — the operator sees the real card, who mails,
+          who's dropped, and the estimated spend before any paid Lob call. */}
+      {mailPreview && (
+        <MailPreviewModal
+          data={mailPreview.data}
+          sending={busy === `mail:${mailPreview.campaign.id}`}
+          onCancel={() => setMailPreview(null)}
+          onConfirm={confirmMail}
+        />
       )}
     </div>
   );

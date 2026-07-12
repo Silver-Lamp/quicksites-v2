@@ -21,19 +21,21 @@ export function publicBaseUrl(): string {
   ).replace(/\/+$/, '');
 }
 
-/** The tokenized claim link for a pitch site — whoever signs up through it owns it. */
-export function claimUrlFor(templateId: string): string {
-  return `${publicBaseUrl()}/claim-site/${templateId}?token=${encodeURIComponent(mintSiteClaimToken(templateId))}`;
+/** The tokenized claim link for a pitch site — whoever signs up through it owns it.
+ *  Pass `base` (an org's branded host) to serve the link on that domain instead of quicksites.ai. */
+export function claimUrlFor(templateId: string, base: string = publicBaseUrl()): string {
+  return `${base.replace(/\/+$/, '')}/claim-site/${templateId}?token=${encodeURIComponent(mintSiteClaimToken(templateId))}`;
 }
 
 /**
  * A tracked claim link (poster/SMS/postcard) — logs a visit, then redirects to claimUrlFor.
  * Pass a prospectId for a per-recipient link (`/r/<campaign>?p=<prospect>`), so a scan
  * attributes to the specific business that was mailed rather than just the campaign.
+ * Pass `base` (an org's branded host) to brand the domain prospects see.
  */
-export function trackedClaimUrl(campaignId: string, prospectId?: string | null): string {
+export function trackedClaimUrl(campaignId: string, prospectId?: string | null, base: string = publicBaseUrl()): string {
   const q = prospectId ? `?p=${encodeURIComponent(prospectId)}` : '';
-  return `${publicBaseUrl()}/r/${campaignId}${q}`;
+  return `${base.replace(/\/+$/, '')}/r/${campaignId}${q}`;
 }
 
 /** QR data-URL for an arbitrary link (per-prospect postcard QR is generated in the send loop). */
@@ -49,15 +51,29 @@ export type PosterModel = {
   businesses: string[];
   claimUrl: string;
   qrDataUrl: string;
+  /** The specific business this piece is mailed to — highlighted in the list + greeted on the back. */
+  recipientName?: string | null;
+  /** A concrete claim deadline (e.g. "Jul 26"), rendered instead of the vague "72-hour" badge. */
+  deadline?: string | null;
+  /** Owning-org brand shown as "Built by {brandName}" (defaults to no wordmark = QuickSites). */
+  brandName?: string | null;
 };
+
+/** Format a claim deadline `days` out from now as a short "Mon D" (US), for postcard urgency. */
+export function claimDeadlineLabel(days = 14, from: Date = new Date()): string {
+  const d = new Date(from.getTime() + days * 86_400_000);
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+}
 
 export async function buildPosterModel(
   campaign: GeoCampaign,
   prospects: Prospect[],
+  opts?: { baseUrl?: string; brandName?: string | null },
 ): Promise<PosterModel | null> {
   if (!campaign.template_id) return null;
-  // Tracked link so a poster/postcard scan registers as a claim-intent visit.
-  const claimUrl = trackedClaimUrl(campaign.id);
+  // Tracked link so a poster/postcard scan registers as a claim-intent visit — on the
+  // owning org's branded domain when one is provided.
+  const claimUrl = trackedClaimUrl(campaign.id, null, opts?.baseUrl);
   const qrDataUrl = await QRCode.toDataURL(claimUrl, { width: 480, margin: 1, errorCorrectionLevel: 'M' });
   return {
     domain: campaign.domain,
@@ -67,7 +83,28 @@ export async function buildPosterModel(
     businesses: prospects.map((p) => p.business_name),
     claimUrl,
     qrDataUrl,
+    brandName: opts?.brandName ?? null,
   };
+}
+
+/**
+ * Render the exact per-recipient postcard (front + back) that gets mailed — one source of
+ * truth for both the paid send loop AND the pre-send preview, so what an operator previews
+ * is byte-for-byte what Lob prints. Regenerates the per-prospect tracked QR.
+ */
+export async function renderPersonalizedPostcard(
+  model: PosterModel,
+  opts: { campaignId: string; prospectId: string; recipientName: string; deadline?: string | null; baseUrl?: string },
+): Promise<{ frontHtml: string; backHtml: string; claimUrl: string }> {
+  const claimUrl = trackedClaimUrl(opts.campaignId, opts.prospectId, opts.baseUrl);
+  const pModel: PosterModel = {
+    ...model,
+    claimUrl,
+    qrDataUrl: await qrDataUrlFor(claimUrl),
+    recipientName: opts.recipientName,
+    deadline: opts.deadline ?? null,
+  };
+  return { frontHtml: renderPosterHtml(pModel), backHtml: renderPosterBackHtml(pModel), claimUrl };
 }
 
 function esc(s: string): string {
@@ -81,10 +118,19 @@ function esc(s: string): string {
  */
 export function renderPosterHtml(m: PosterModel): string {
   const place = m.region ? `${m.city}, ${m.region}` : m.city;
-  const businessRows = m.businesses
+  const norm = (s: string) => s.trim().toLowerCase();
+  const recip = m.recipientName ? norm(m.recipientName) : null;
+  // Put the recipient first and flag it, so the card reads as "you're in this race".
+  const ordered = m.businesses.slice();
+  if (recip) ordered.sort((a, b) => Number(norm(b) === recip) - Number(norm(a) === recip));
+  const businessRows = ordered
     .slice(0, 6)
-    .map((b) => `<div class="biz">${esc(b)}</div>`)
+    .map((b) => {
+      const you = recip && norm(b) === recip;
+      return `<div class="biz${you ? ' you' : ''}">${you ? '★ ' : ''}${esc(b)}${you ? ' <span class="youtag">(you)</span>' : ''}</div>`;
+    })
     .join('<div class="or">or</div>');
+  const offerBadge = m.deadline ? `CLAIM BY ${esc(m.deadline).toUpperCase()}` : '72-HOUR OFFERING';
 
   return `<!doctype html>
 <html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
@@ -102,6 +148,8 @@ export function renderPosterHtml(m: PosterModel): string {
   .domain { margin-top:.16in; font-size:23pt; font-weight:800; color:#34d399; word-break:break-all; }
   .sub { margin-top:.1in; color:#cbd5e1; font-size:12.5pt; }
   .biz { margin:.04in auto; padding:.06in .16in; background:rgba(255,255,255,.06); border:1px solid rgba(148,163,184,.3); border-radius:8px; font-weight:600; font-size:12.5pt; max-width:4.4in; }
+  .biz.you { background:rgba(52,211,153,.16); border-color:#34d399; color:#ecfdf5; }
+  .youtag { color:#6ee7b7; font-weight:700; font-size:9.5pt; text-transform:uppercase; letter-spacing:.06em; }
   .or { color:#f59e0b; font-weight:700; font-size:10.5pt; text-transform:uppercase; letter-spacing:.1em; margin:.02in 0; }
   .competition { margin-top:.2in; }
   .qrwrap { margin-top:auto; padding-top:.2in; }
@@ -109,6 +157,7 @@ export function renderPosterHtml(m: PosterModel): string {
   .scan { margin-top:.1in; font-size:12pt; font-weight:600; }
   .offer { margin-top:.14in; display:inline-block; background:#f59e0b; color:#111; font-weight:800; font-size:11pt; padding:.06in .18in; border-radius:999px; letter-spacing:.03em; }
   .foot { margin-top:.12in; color:#94a3b8; font-size:9pt; word-break:break-all; }
+  .brand { margin-top:.06in; color:#64748b; font-size:8.5pt; letter-spacing:.04em; }
   @media print { @page { size: 6in 9in; margin: 0; } body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
 </style></head>
 <body><div class="poster">
@@ -123,8 +172,9 @@ export function renderPosterHtml(m: PosterModel): string {
   <div class="qrwrap">
     <img class="qr" src="${m.qrDataUrl}" alt="Scan to claim ${esc(m.domain)}" />
     <div class="scan">Scan to preview &amp; claim your free site</div>
-    <div class="offer">72-HOUR OFFERING</div>
+    <div class="offer">${offerBadge}</div>
     <div class="foot">${esc(m.claimUrl)}</div>
+    ${m.brandName ? `<div class="brand">Built by ${esc(m.brandName)}</div>` : ''}
   </div>
 </div></body></html>`;
 }
@@ -135,6 +185,10 @@ export function renderPosterHtml(m: PosterModel): string {
  * for the Lob send path AND the admin preview so what an operator previews is mailed.
  */
 export function renderPosterBackHtml(m: PosterModel): string {
+  const greeting = m.recipientName ? `Hi ${esc(m.recipientName)},` : 'Hello,';
+  const deadlineLine = m.deadline
+    ? `<div class="due">Claim by <b>${esc(m.deadline)}</b> — the domain goes to one business only.</div>`
+    : '';
   return `<!doctype html>
 <html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <style>
@@ -145,17 +199,23 @@ export function renderPosterBackHtml(m: PosterModel): string {
     font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, sans-serif; color:#0b1020;
     display:flex; flex-direction:column;
   }
-  .h { font-size:17pt; font-weight:800; line-height:1.15; }
+  .hi { font-size:12pt; font-weight:700; color:#0f766e; }
+  .h { margin-top:.06in; font-size:17pt; font-weight:800; line-height:1.15; }
   .p { margin-top:.16in; font-size:11.5pt; color:#334155; max-width:4.6in; line-height:1.4; }
+  .due { margin-top:.14in; font-size:11pt; color:#b45309; font-weight:600; max-width:4.6in; }
   .u { margin-top:.18in; font-size:10pt; color:#0f766e; word-break:break-all; }
+  .sig { margin-top:.16in; font-size:10.5pt; color:#334155; font-weight:600; }
   /* Keep the bottom ~3.5in clear for the USPS address block Lob overlays. */
   .spacer { flex:1; min-height:3.5in; }
   @media print { @page { size:6in 9in; margin:0; } body { -webkit-print-color-adjust:exact; print-color-adjust:exact; } }
 </style></head>
 <body><div class="back">
+  <div class="hi">${greeting}</div>
   <div class="h">Your website for ${esc(m.domain)} is already built.</div>
   <div class="p">We built a free, ready-to-launch website for your business. Scan the QR on the front (or visit the link below) to preview it and claim it before a competitor does.</div>
+  ${deadlineLine}
   <div class="u">${esc(m.claimUrl)}</div>
+  ${m.brandName ? `<div class="sig">— The ${esc(m.brandName)} team</div>` : ''}
   <div class="spacer"></div>
 </div></body></html>`;
 }

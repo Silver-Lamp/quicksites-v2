@@ -72,7 +72,29 @@ export type GeoCampaign = {
   domain_status: string;
   status: string;
   claimed_by_prospect_id: string | null;
+  tracking_number: string | null;
+  tracking_number_sid: string | null;
+  forward_to: string | null;
 };
+
+const GEO_COLS =
+  'id, city, region, industry_key, domain, slug, template_id, domain_status, status, claimed_by_prospect_id, tracking_number, tracking_number_sid, forward_to';
+
+export async function setCampaignTracking(
+  id: string,
+  t: { number: string; sid: string; forwardTo: string | null },
+): Promise<void> {
+  const { error } = await supabaseAdmin
+    .from('geo_industry_campaigns')
+    .update({
+      tracking_number: t.number,
+      tracking_number_sid: t.sid,
+      forward_to: t.forwardTo,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', id);
+  if (error) throw new Error(`setCampaignTracking failed: ${error.message}`);
+}
 
 function uuid(): string {
   return globalThis.crypto?.randomUUID?.() ?? `id_${Math.random().toString(36).slice(2)}${Date.now()}`;
@@ -205,7 +227,7 @@ export async function createGeoCampaign(row: {
       status: 'draft',
       created_by: row.createdBy,
     })
-    .select('id, city, region, industry_key, domain, slug, template_id, domain_status, status, claimed_by_prospect_id')
+    .select(GEO_COLS)
     .single();
   if (error) throw new Error(`createGeoCampaign failed: ${error.message}`);
   return data as GeoCampaign;
@@ -224,7 +246,7 @@ export async function linkProspectsToCampaign(campaignId: string, prospectIds: s
 export async function getGeoCampaign(id: string): Promise<GeoCampaign | null> {
   const { data, error } = await supabaseAdmin
     .from('geo_industry_campaigns')
-    .select('id, city, region, industry_key, domain, slug, template_id, domain_status, status, claimed_by_prospect_id')
+    .select(GEO_COLS)
     .eq('id', id)
     .maybeSingle();
   if (error) throw new Error(`getGeoCampaign failed: ${error.message}`);
@@ -234,7 +256,7 @@ export async function getGeoCampaign(id: string): Promise<GeoCampaign | null> {
 export async function listGeoCampaigns(limit = 200): Promise<GeoCampaign[]> {
   const { data, error } = await supabaseAdmin
     .from('geo_industry_campaigns')
-    .select('id, city, region, industry_key, domain, slug, template_id, domain_status, status, claimed_by_prospect_id')
+    .select(GEO_COLS)
     .order('created_at', { ascending: false })
     .limit(limit);
   if (error) throw new Error(`listGeoCampaigns failed: ${error.message}`);

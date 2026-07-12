@@ -10,6 +10,8 @@ import { listProspects, type Prospect } from '@/lib/outreach/prospects';
 import { listGeoCampaigns, type GeoCampaign } from '@/lib/outreach/geoCampaigns';
 import { postcardMailEnabled } from '@/lib/outreach/mail/lob';
 import { prospectSmsEnabled } from '@/lib/outreach/sms/outreachSms';
+import { callTrackingEnabled } from '@/lib/outreach/callTracking';
+import { supabaseAdmin } from '@/lib/supabase/admin';
 import ProspectsClient from '@/components/admin/prospects-client';
 
 export const dynamic = 'force-dynamic';
@@ -27,7 +29,31 @@ export default async function ProspectsPage() {
     // Table likely not migrated yet — the client renders a hint.
   }
   const active = prospects.filter((p) => p.status !== 'dismissed');
-  const channels = { mail: postcardMailEnabled(), sms: prospectSmsEnabled() };
+  const channels = { mail: postcardMailEnabled(), sms: prospectSmsEnabled(), call: callTrackingEnabled() };
 
-  return <ProspectsClient initialProspects={active} initialCampaigns={campaigns} channels={channels} />;
+  // Tracked-call counts per campaign (proof of lead volume).
+  const callCounts: Record<string, number> = {};
+  const campaignIds = campaigns.map((c) => c.id);
+  if (campaignIds.length) {
+    try {
+      const { data } = await supabaseAdmin
+        .from('call_logs')
+        .select('geo_campaign_id')
+        .in('geo_campaign_id', campaignIds);
+      for (const row of (data as { geo_campaign_id: string | null }[]) ?? []) {
+        if (row.geo_campaign_id) callCounts[row.geo_campaign_id] = (callCounts[row.geo_campaign_id] ?? 0) + 1;
+      }
+    } catch {
+      /* best-effort */
+    }
+  }
+
+  return (
+    <ProspectsClient
+      initialProspects={active}
+      initialCampaigns={campaigns}
+      channels={channels}
+      callCounts={callCounts}
+    />
+  );
 }

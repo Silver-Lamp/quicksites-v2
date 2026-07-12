@@ -13,6 +13,7 @@ import { resolveCampaignBrand } from '@/lib/outreach/campaignBrand';
 import { getTestRecipient } from '@/lib/outreach/mail/testRecipient';
 import { sendPostcard, parseUsAddress, postcardMailEnabled, lobConfigured, MAX_POSTCARD_PIECES_PER_SEND } from '@/lib/outreach/mail/lob';
 import { recordMailing } from '@/lib/outreach/mail/mailings';
+import { outreachReadinessGateEnabled } from '@/lib/flags/outreachReadinessGate';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -42,6 +43,15 @@ export async function POST(req: Request) {
 
   const campaign = await getGeoCampaign(campaignId);
   if (!campaign) return NextResponse.json({ error: 'Campaign not found.' }, { status: 404 });
+
+  // Refine-before-postcard gate (flag-gated). A live-test send (one card to the operator's
+  // own test address) is exempt — it validates the pipeline, not the prospects.
+  if (outreachReadinessGateEnabled() && body.test !== true && !campaign.outreach_ready_at) {
+    return NextResponse.json(
+      { error: 'This site isn’t marked ready for outreach. Refine it and mark it ready first.', code: 'not_ready' },
+      { status: 409 },
+    );
+  }
 
   const prospects = await listProspectsByCampaign(campaignId);
   const brand = await resolveCampaignBrand(campaign.org_id);

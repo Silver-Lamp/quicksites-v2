@@ -15,6 +15,15 @@ import { normalizeGscDomain } from '@/lib/gsc/normalizeDomain';
 import { effectivePriceCents, formatCents } from '@/lib/outreach/geoPricing';
 import { nextActionLabel } from '@/components/admin/templates/campaign-badge';
 import { scoreTerritories } from '@/lib/prospects/territoryScore';
+import { buildRankedOpportunities } from '@/lib/prospects/rankedOpportunities';
+import {
+  addRecentLocation,
+  normalizeRecentLocations,
+  locationLabel,
+  relativeUsed,
+  RECENT_LOCATIONS_KEY,
+  type RecentLocation,
+} from '@/lib/prospects/recentLocations';
 import MailPreviewModal, { type MailPreviewData } from '@/components/admin/mail-preview-modal';
 
 const TERRITORY_CELL_DEGREES = 0.02;
@@ -67,11 +76,22 @@ function prettyIndustry(key: string | null): string {
   return key.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
+type Blocker = { id: string; severity: 'hard' | 'soft'; label: string };
+
+/** Read the cached readiness state off a campaign (outreach_blockers + outreach_ready_at). */
+function readinessOf(c: GeoCampaign) {
+  const blockers: Blocker[] = Array.isArray(c.outreach_blockers) ? c.outreach_blockers : [];
+  const hard = blockers.filter((b) => b.severity === 'hard');
+  const soft = blockers.filter((b) => b.severity === 'soft');
+  return { blockers, hard, soft, ready: !!c.outreach_ready_at };
+}
+
 export default function ProspectsClient({
   initialProspects,
   initialCampaigns,
   channels = { mail: false, sms: false, call: false },
   callCounts = {},
+  readinessGate = false,
 }: {
   initialProspects: Prospect[];
   initialCampaigns: GeoCampaign[];
@@ -79,12 +99,98 @@ export default function ProspectsClient({
   channels?: { mail: boolean; sms: boolean; call: boolean };
   /** Tracked-call count per geo-campaign id. */
   callCounts?: Record<string, number>;
+  /** When true, Mail/Text are hard-blocked until a campaign is marked refined. */
+  readinessGate?: boolean;
 }) {
   const router = useRouter();
   const [city, setCity] = useState('');
   const [region, setRegion] = useState('');
   const [radiusKm, setRadiusKm] = useState(3);
   const [picked, setPicked] = useState<Set<string>>(new Set(['Restaurants']));
+  // Recently-swept locations. Persisted per-operator server-side (site_settings) so
+  // they follow the admin across devices; a localStorage mirror paints instantly on
+  // reload before the fetch resolves. The most recent auto-fills the form.
+  const [recent, setRecent] = useState<RecentLocation[]>([]);
+  const [showRecent, setShowRecent] = useState(false);
+
+  // Prefill the form from a sweep, but only into fields the operator hasn't touched.
+  const prefillFrom = (l: RecentLocation) => {
+    setCity((c) => (c ? c : l.city));
+    setRegion((r) => (r ? r : l.region));
+    setRadiusKm((rk) => (rk !== 3 ? rk : l.radiusKm));
+    setPicked((p) => (p.size === 1 && p.has('Restaurants') && l.categories.length ? new Set(l.categories) : p));
+  };
+  const mirrorLocal = (list: RecentLocation[]) => {
+    try {
+      localStorage.setItem(RECENT_LOCATIONS_KEY, JSON.stringify(list));
+    } catch {
+      /* ignore quota/private-mode */
+    }
+  };
+
+  useEffect(() => {
+    // 1) Instant paint from the localStorage mirror (no flash before the fetch).
+    let cached: RecentLocation[] = [];
+    try {
+      cached = normalizeRecentLocations(JSON.parse(localStorage.getItem(RECENT_LOCATIONS_KEY) || '[]'));
+    } catch {
+      /* ignore malformed storage */
+    }
+    if (cached.length) {
+      setRecent(cached);
+      prefillFrom(cached[0]);
+    }
+    // 2) Server is the source of truth (per-operator, cross-device).
+    let alive = true;
+    fetch('/api/admin/prospects/recent-locations')
+      .then((r) => (r.ok ? r.json() : null))
+      .then((j) => {
+        if (!alive || !j?.ok) return;
+        const list = normalizeRecentLocations(j.locations);
+        setRecent(list);
+        mirrorLocal(list);
+        if (!cached.length && list.length) prefillFrom(list[0]);
+      })
+      .catch(() => {});
+    return () => { alive = false; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  /** Persist a just-swept location to the front of the recents list (server + mirror). */
+  function rememberLocation(entry: Omit<RecentLocation, 'usedAt'>) {
+    // Optimistic local update so the dropdown reflects the sweep immediately.
+    setRecent((prev) => {
+      const next = addRecentLocation(prev, { ...entry, usedAt: Date.now() });
+      mirrorLocal(next);
+      return next;
+    });
+    post('/api/admin/prospects/recent-locations', entry)
+      .then((j) => {
+        if (j?.ok) {
+          const list = normalizeRecentLocations(j.locations);
+          setRecent(list);
+          mirrorLocal(list);
+        }
+      })
+      .catch(() => {});
+  }
+
+  /** Restore a recent location's full sweep params into the form. */
+  function applyRecent(l: RecentLocation) {
+    setCity(l.city);
+    setRegion(l.region);
+    setRadiusKm(l.radiusKm);
+    if (l.categories.length) setPicked(new Set(l.categories));
+    setShowRecent(false);
+  }
+
+  function clearRecent() {
+    setRecent([]);
+    setShowRecent(false);
+    mirrorLocal([]);
+    post('/api/admin/prospects/recent-locations', { clear: true }).catch(() => {});
+  }
+
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [showTerritories, setShowTerritories] = useState(false);
   const [territoryBrief, setTerritoryBrief] = useState<{ label: string; why: string }[] | null>(null);
@@ -178,6 +284,7 @@ export default function ProspectsClient({
       setMsg(
         `Swept ${r.found} businesses — ${r.tallies.no_website} no website, ${r.tallies.dated} dated, ${r.tallies.has_site} with a site. (${r.inserted} new)`,
       );
+      rememberLocation({ city: city.trim(), region: region.trim(), radiusKm, categories: [...picked] });
       router.refresh();
     } catch (e: any) {
       setMsg(e.message);
@@ -424,6 +531,32 @@ export default function ProspectsClient({
     }
   }
 
+  // Mark a pitch site refined (or clear it). Does its own fetch so a 409 hard-blocked
+  // response can surface the specific blockers instead of a generic error.
+  async function markRefined(c: GeoCampaign, ready: boolean) {
+    setBusy(`refine:${c.id}`);
+    setRowMsg((m) => { const { [c.id]: _drop, ...rest } = m; return rest; });
+    try {
+      const res = await fetch('/api/admin/prospects/geo-campaign/mark-refined', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ campaignId: c.id, ready }),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        const hard = Array.isArray(json.blockers) ? json.blockers.filter((b: any) => b.severity === 'hard').map((b: any) => b.label) : [];
+        setRowMsg((m) => ({ ...m, [c.id]: { ok: false, text: hard.length ? `Refine first: ${hard.join(' · ')}` : (json.error || 'Failed to update.') } }));
+        return;
+      }
+      setRowMsg((m) => ({ ...m, [c.id]: { ok: true, text: ready ? 'Marked ready for outreach ✓' : 'Marked not ready' } }));
+      router.refresh();
+    } catch (e: any) {
+      setRowMsg((m) => ({ ...m, [c.id]: { ok: false, text: e.message } }));
+    } finally {
+      setBusy(null);
+    }
+  }
+
   async function setWinner(c: GeoCampaign, prospectId: string | null) {
     setBusy(`winner:${prospectId ?? c.id}`);
     try {
@@ -488,10 +621,32 @@ export default function ProspectsClient({
   // Group no-website prospects by city + industry → competition cards.
   const competition = useMemo(() => buildCompetitionGroups(prospects), [prospects]);
 
+  // "Ranked & ready" worklist: campaigns whose pitch page already ranks, prioritized by
+  // rank × unlockable rent × local demand. Reuses the already-fetched gscByDomain map.
+  const rankedOpportunities = useMemo(
+    () => buildRankedOpportunities(initialCampaigns, prospects, gscByDomain),
+    [initialCampaigns, prospects, gscByDomain],
+  );
+  const anyConnectedRank = rankedOpportunities.some((o) => o.connected);
+  const campaignById = useMemo(
+    () => new Map(initialCampaigns.map((c) => [c.id, c])),
+    [initialCampaigns],
+  );
+
+  // Rank signal for the territory heat: campaigns whose pitch page already ranks →
+  // boost the cells they sit in ("double down where we already rank").
+  const rankByCampaign = useMemo(() => {
+    const m: Record<string, number> = {};
+    for (const o of rankedOpportunities) {
+      if (o.connected && o.rankStatus !== 'unranked') m[o.campaignId] = o.rankQuality;
+    }
+    return m;
+  }, [rankedOpportunities]);
+
   // "Where to target next" — score the swept prospects into ranked map cells (pure, client-side).
   const territories = useMemo(
-    () => scoreTerritories(prospects, { cellDegrees: TERRITORY_CELL_DEGREES }),
-    [prospects],
+    () => scoreTerritories(prospects, { cellDegrees: TERRITORY_CELL_DEGREES, rankByCampaign }),
+    [prospects, rankByCampaign],
   );
   const topTerritory = territories.find((t) => t.viableCards > 0) ?? territories[0];
 
@@ -534,6 +689,7 @@ export default function ProspectsClient({
             <input
               value={city}
               onChange={(e) => setCity(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && discover()}
               placeholder="Boston"
               className="mt-1 w-44 rounded-lg border border-neutral-700 bg-neutral-950 px-3 py-2 text-sm text-white"
             />
@@ -543,6 +699,7 @@ export default function ProspectsClient({
             <input
               value={region}
               onChange={(e) => setRegion(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && discover()}
               placeholder="MA"
               className="mt-1 w-24 rounded-lg border border-neutral-700 bg-neutral-950 px-3 py-2 text-sm text-white"
             />
@@ -565,6 +722,48 @@ export default function ProspectsClient({
           >
             {busy === 'discover' ? 'Sweeping…' : 'Discover'}
           </button>
+
+          {recent.length > 0 && (
+            <div className="relative">
+              <button
+                onClick={() => setShowRecent((v) => !v)}
+                title="Re-run a recent sweep — restores its city, radius, and categories"
+                className="flex items-center gap-1 rounded-lg border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-neutral-300 hover:text-white"
+              >
+                🕘 Recent
+                <span className={`text-[10px] transition-transform ${showRecent ? 'rotate-180' : ''}`}>▾</span>
+              </button>
+              {showRecent && (
+                <>
+                  <div className="fixed inset-0 z-10" onClick={() => setShowRecent(false)} />
+                  <div className="absolute left-0 top-full z-20 mt-1 w-72 overflow-hidden rounded-lg border border-neutral-700 bg-neutral-900 shadow-xl">
+                    <div className="flex items-center justify-between px-3 py-1.5 text-[11px] uppercase tracking-wide text-neutral-500">
+                      <span>Recent sweeps</span>
+                      <button onClick={clearRecent} className="text-neutral-500 hover:text-red-400">Clear</button>
+                    </div>
+                    <ul className="max-h-72 overflow-y-auto">
+                      {recent.map((l) => (
+                        <li key={`${l.city}|${l.region}`}>
+                          <button
+                            onClick={() => applyRecent(l)}
+                            className="flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-sm text-neutral-200 hover:bg-neutral-800"
+                          >
+                            <span className="min-w-0">
+                              <span className="block truncate font-medium">{locationLabel(l)}</span>
+                              <span className="block truncate text-[11px] text-neutral-500">
+                                {l.radiusKm} km · {l.categories.length ? l.categories.join(', ') : 'all'}
+                              </span>
+                            </span>
+                            <span className="shrink-0 text-[10px] text-neutral-600">{relativeUsed(l.usedAt, Date.now())}</span>
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                </>
+              )}
+            </div>
+          )}
         </div>
         <div className="mt-3 flex flex-wrap gap-2">
           {CATEGORIES.map((c) => (
@@ -584,6 +783,103 @@ export default function ProspectsClient({
       </div>
 
       {msg && <div className="mt-4 rounded-lg border border-neutral-800 bg-neutral-900/60 px-4 py-2 text-sm text-neutral-200">{msg}</div>}
+
+      {/* Ranked & ready — the prioritized worklist. Campaigns whose pitch page already
+          ranks float to the top; refine each site before mailing (none have clients yet). */}
+      {rankedOpportunities.length > 0 && (
+        <div className="mt-8">
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-neutral-400">Ranked &amp; ready — work the warmest assets first</h2>
+          <p className="mt-1 text-xs text-neutral-500">
+            Geo-sites prioritized by rank × unlockable rent × local demand. Refine each site before mailing — none have clients yet.
+          </p>
+          {!anyConnectedRank && (
+            <div className="mt-2 rounded-lg border border-neutral-800 bg-neutral-900/60 px-3 py-2 text-xs text-neutral-400">
+              None of these domains are connected to Search Console yet — connect them to see live rank. Ordered by unlockable rent for now.
+            </div>
+          )}
+          <div className="mt-3 space-y-2">
+            {rankedOpportunities.map((o) => {
+              const c = campaignById.get(o.campaignId);
+              if (!c) return null;
+              const badge = rankBadge(o.gsc ?? undefined);
+              const trend = c.rank_trend;
+              const rd = readinessOf(c);
+              const outreachBlocked = readinessGate && !rd.ready;
+              return (
+                <div key={o.campaignId} className="rounded-xl border border-neutral-800 bg-neutral-900/40 p-3">
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <div className="flex min-w-0 items-center gap-3">
+                      <span className={`shrink-0 rounded px-1.5 py-0.5 text-xs ${badge.cls}`}>{badge.label}</span>
+                      {trend?.positionDelta ? (
+                        <span
+                          className={`shrink-0 text-xs ${trend.direction === 'up' ? 'text-emerald-400' : trend.direction === 'down' ? 'text-red-400' : 'text-neutral-500'}`}
+                          title="Change in position since the last sync"
+                        >
+                          {trend.direction === 'up' ? '▲' : trend.direction === 'down' ? '▼' : '→'} {Math.abs(trend.positionDelta).toFixed(0)}
+                        </span>
+                      ) : null}
+                      <div className="min-w-0">
+                        <div className="truncate font-mono text-sm text-sky-300">{o.domain}</div>
+                        <div className="truncate text-xs text-neutral-500">
+                          {o.city} · {prettyIndustry(o.industryKey)} · {formatCents(o.monthlyRentCents)}/mo · {o.competitors} competitor{o.competitors === 1 ? '' : 's'}
+                          {o.gsc && (o.gsc.clicks || o.gsc.impressions) ? <span> · {o.gsc.clicks} clk · {o.gsc.impressions} impr</span> : null}
+                        </div>
+                        {/* Readiness: refine before mailing (none of these have clients yet). */}
+                        {rd.ready ? (
+                          <div className="mt-0.5 text-xs text-emerald-400">Ready ✓{rd.soft.length ? ` · ${rd.soft.length} optional polish` : ''}</div>
+                        ) : rd.hard.length ? (
+                          <div className="mt-0.5 truncate text-xs text-amber-400" title={rd.hard.map((b) => b.label).join(' · ')}>
+                            Refine — {rd.hard.length} blocker{rd.hard.length === 1 ? '' : 's'}: {rd.hard.slice(0, 2).map((b) => b.label).join(' · ')}{rd.hard.length > 2 ? '…' : ''}
+                          </div>
+                        ) : (
+                          <div className="mt-0.5 text-xs text-neutral-500">Not yet marked ready for outreach</div>
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex shrink-0 items-center gap-2 text-xs">
+                      {o.templateId && (
+                        <a
+                          href={`/admin/templates/${o.templateId}`}
+                          className="rounded-lg bg-indigo-600 px-3 py-1.5 font-medium text-white hover:bg-indigo-500"
+                        >
+                          Refine →
+                        </a>
+                      )}
+                      <button
+                        onClick={() => markRefined(c, !rd.ready)}
+                        disabled={busy === `refine:${c.id}` || (!rd.ready && rd.hard.length > 0)}
+                        title={rd.ready ? 'Marked ready — click to un-mark' : rd.hard.length ? `Clear ${rd.hard.length} hard blocker(s) first` : 'Mark this site refined and ready to mail'}
+                        className={`rounded-lg border px-3 py-1.5 font-medium ${rd.ready ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-300 hover:bg-emerald-500/20' : rd.hard.length ? 'cursor-not-allowed border-neutral-800 text-neutral-600' : 'border-emerald-500/30 bg-emerald-500/10 text-emerald-300 hover:bg-emerald-500/20'}`}
+                      >
+                        {busy === `refine:${c.id}` ? '…' : rd.ready ? 'Refined ✓' : 'Mark refined'}
+                      </button>
+                      <button
+                        onClick={() => openMailPreview(c)}
+                        disabled={!channels.mail || outreachBlocked || busy === `mail:${c.id}`}
+                        title={!channels.mail ? 'Postcard mail is off — set LOB_API_KEY + LOB_FROM_* + POSTCARD_MAIL_ENABLED=1' : outreachBlocked ? 'Mark the site refined first' : 'Preview the postcard + cost, then confirm the send'}
+                        className={`rounded-lg border px-3 py-1.5 font-medium ${channels.mail && !outreachBlocked ? 'border-amber-500/30 bg-amber-500/10 text-amber-300 hover:bg-amber-500/20' : 'cursor-not-allowed border-neutral-800 text-neutral-600'}`}
+                      >
+                        {busy === `mail:${c.id}` ? '…' : 'Mail'}
+                      </button>
+                      <button
+                        onClick={() => textProspects(c)}
+                        disabled={!channels.sms || outreachBlocked || busy === `sms:${c.id}`}
+                        title={!channels.sms ? 'SMS is off — set PROSPECT_SMS_ENABLED=1 (requires A2P 10DLC)' : outreachBlocked ? 'Mark the site refined first' : 'Text the claim link to each business'}
+                        className={`rounded-lg border px-3 py-1.5 font-medium ${channels.sms && !outreachBlocked ? 'border-sky-500/30 bg-sky-500/10 text-sky-300 hover:bg-sky-500/20' : 'cursor-not-allowed border-neutral-800 text-neutral-600'}`}
+                      >
+                        {busy === `sms:${c.id}` ? '…' : 'Text'}
+                      </button>
+                    </div>
+                  </div>
+                  {rowMsg[o.campaignId] && (
+                    <div className={`mt-2 text-xs ${rowMsg[o.campaignId].ok ? 'text-emerald-400' : 'text-red-400'}`}>{rowMsg[o.campaignId].text}</div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* Map of swept prospects — click a marker to select it for building. */}
       {prospects.some((p) => p.address_lat != null && p.address_lon != null) && (
@@ -617,6 +913,7 @@ export default function ProspectsClient({
                 Best cell: <strong>{formatCents(topTerritory.estMonthlyRentCents)}/mo</strong> across{' '}
                 {topTerritory.viableCards} card{topTerritory.viableCards === 1 ? '' : 's'}
                 {topTerritory.rationale.topIndustry ? ` · ${prettyIndustry(topTerritory.rationale.topIndustry)}` : ''}
+                {topTerritory.rationale.rankedHere ? <span className="text-emerald-300"> · ★ already ranking</span> : null}
               </span>
             )}
           </div>
@@ -652,6 +949,9 @@ export default function ProspectsClient({
             <span className="flex items-center gap-1"><span className="inline-block h-3 w-3 rounded-full bg-indigo-400" /> Selected</span>
             {showTerritories && (
               <span className="flex items-center gap-1"><span className="inline-block h-3 w-3 rounded-sm bg-fuchsia-500/60" /> Target-score cell (darker = better)</span>
+            )}
+            {showTerritories && territories.some((t) => t.rationale.rankedHere) && (
+              <span className="flex items-center gap-1"><span className="inline-block h-3 w-3 rounded-sm border-2 border-dashed border-emerald-400" /> Already ranking here (boosted)</span>
             )}
           </div>
         </div>
@@ -845,17 +1145,17 @@ export default function ProspectsClient({
                           <a href={`/admin/prospects/poster/${c.id}`} target="_blank" rel="noopener noreferrer" className="text-emerald-400 underline">Poster</a>
                           <button
                             onClick={() => openMailPreview(c)}
-                            disabled={!channels.mail || busy === `mail:${c.id}`}
-                            title={channels.mail ? 'Preview the postcard + cost, then confirm the send' : 'Postcard mail is off — set LOB_API_KEY + LOB_FROM_* + POSTCARD_MAIL_ENABLED=1'}
-                            className={channels.mail ? 'text-amber-400 hover:text-amber-300' : 'cursor-not-allowed text-neutral-600'}
+                            disabled={!channels.mail || (readinessGate && !c.outreach_ready_at) || busy === `mail:${c.id}`}
+                            title={!channels.mail ? 'Postcard mail is off — set LOB_API_KEY + LOB_FROM_* + POSTCARD_MAIL_ENABLED=1' : readinessGate && !c.outreach_ready_at ? 'Mark the site refined first (Ranked & ready above)' : 'Preview the postcard + cost, then confirm the send'}
+                            className={channels.mail && !(readinessGate && !c.outreach_ready_at) ? 'text-amber-400 hover:text-amber-300' : 'cursor-not-allowed text-neutral-600'}
                           >
                             {busy === `mail:${c.id}` ? '…' : 'Mail'}
                           </button>
                           <button
                             onClick={() => textProspects(c)}
-                            disabled={!channels.sms || busy === `sms:${c.id}`}
-                            title={channels.sms ? 'Text the claim link to each business' : 'SMS is off — set PROSPECT_SMS_ENABLED=1 (requires A2P 10DLC)'}
-                            className={channels.sms ? 'text-sky-400 hover:text-sky-300' : 'cursor-not-allowed text-neutral-600'}
+                            disabled={!channels.sms || (readinessGate && !c.outreach_ready_at) || busy === `sms:${c.id}`}
+                            title={!channels.sms ? 'SMS is off — set PROSPECT_SMS_ENABLED=1 (requires A2P 10DLC)' : readinessGate && !c.outreach_ready_at ? 'Mark the site refined first (Ranked & ready above)' : 'Text the claim link to each business'}
+                            className={channels.sms && !(readinessGate && !c.outreach_ready_at) ? 'text-sky-400 hover:text-sky-300' : 'cursor-not-allowed text-neutral-600'}
                           >
                             {busy === `sms:${c.id}` ? '…' : 'Text'}
                           </button>

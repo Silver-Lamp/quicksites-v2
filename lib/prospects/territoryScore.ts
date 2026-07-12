@@ -29,6 +29,7 @@ export type ScorableProspect = {
   lead_tier: 'no_website' | 'dated' | 'has_site' | string | null;
   review_count?: number | null; // busyness / order-volume proxy (Place Details, when synced)
   rating?: number | null;
+  geo_campaign_id?: string | null; // links a prospect to a launched geo-domain campaign
 };
 
 export type TerritoryScoreOptions = {
@@ -41,6 +42,15 @@ export type TerritoryScoreOptions = {
   minCluster?: number;
   /** A `dated` site is a weaker lead than `no_website`; its fractional weight. */
   datedWeight?: number;
+  /**
+   * campaignId → rank quality (0..1) for campaigns whose pitch page already ranks. A cell
+   * containing a prospect tied to such a campaign gets a score boost — double down on ground
+   * we already rank. Caller supplies quality (e.g. page1 1.0 · ranking 0.6). See
+   * lib/prospects/rankedOpportunities.ts#rankQualityFor.
+   */
+  rankByCampaign?: Record<string, number>;
+  /** How much a fully-ranked cell (quality 1.0) multiplies its composite. Default 0.35 (+35%). */
+  rankBoostWeight?: number;
 };
 
 // ── Outputs ─────────────────────────────────────────────────────────────────
@@ -70,12 +80,16 @@ export type TerritoryScore = {
   estMonthlyRentCents: number;
   /** Normalized 0..100 composite for ranking. */
   score: number;
+  /** Best rank quality (0..1) of any campaign we already rank in this cell (0 = none). */
+  rankedQuality: number;
   /** Raw signal bag so an LLM re-rank (synthesizeTopThree-style) and the UI can explain it. */
   rationale: {
     topIndustry: string | null;
     noWebsite: number;
     dated: number;
     hasSite: number;
+    /** True when we already rank a pitch page in this cell — "double down here". */
+    rankedHere: boolean;
   };
 };
 
@@ -112,6 +126,8 @@ export function scoreTerritories(
   const cellDegrees = opts.cellDegrees ?? DEFAULTS.cellDegrees;
   const minCluster = opts.minCluster ?? DEFAULTS.minCluster;
   const datedWeight = opts.datedWeight ?? DEFAULTS.datedWeight;
+  const rankByCampaign = opts.rankByCampaign ?? {};
+  const rankBoostWeight = opts.rankBoostWeight ?? 0.35;
   const keyOf = opts.cellKey ?? gridCellKey(cellDegrees);
 
   // 1. Bucket prospects into cells.
@@ -129,8 +145,13 @@ export function scoreTerritories(
     const byPlace = new Map<string, number>(); // dominant "City, ST" label for this cell
     let noWebsite = 0, dated = 0, hasSite = 0, demandProxy = 0;
     let latSum = 0, lonSum = 0, geoN = 0;
+    let rankedQuality = 0; // best rank of any campaign we already rank in this cell
 
     for (const p of rows) {
+      if (p.geo_campaign_id) {
+        const q = rankByCampaign[p.geo_campaign_id];
+        if (typeof q === 'number' && q > rankedQuality) rankedQuality = q;
+      }
       if (p.city) {
         const place = p.region ? `${p.city}, ${p.region}` : p.city;
         byPlace.set(place, (byPlace.get(place) ?? 0) + 1);
@@ -176,7 +197,8 @@ export function scoreTerritories(
       count, addressable, saturation, demandProxy,
       clusters, viableCards: viable.length, estMonthlyRentCents,
       score: 0, // filled after normalization pass
-      rationale: { topIndustry, noWebsite, dated, hasSite },
+      rankedQuality,
+      rationale: { topIndustry, noWebsite, dated, hasSite, rankedHere: rankedQuality > 0 },
     });
   }
 
@@ -189,7 +211,9 @@ export function scoreTerritories(
     const rent = s.estMonthlyRentCents / maxRent; // 0..1 — the money signal
     const addr = s.addressable / maxAddr;
     const demand = s.demandProxy / maxDemand;
-    const composite = 0.55 * rent + 0.25 * addr + 0.2 * demand - 0.15 * s.saturation;
+    const base = 0.55 * rent + 0.25 * addr + 0.2 * demand - 0.15 * s.saturation;
+    // Boost cells where we already rank a pitch page — proven ground beats greenfield.
+    const composite = base * (1 + rankBoostWeight * s.rankedQuality);
     s.score = Math.round(Math.max(0, Math.min(1, composite)) * 100);
   }
 

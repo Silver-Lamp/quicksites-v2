@@ -17,6 +17,7 @@ function mk(over: Partial<ScorableProspect> & { lat: number; lon: number }): Sco
     lead_tier: over.lead_tier ?? 'no_website',
     review_count: over.review_count ?? null,
     rating: over.rating ?? null,
+    geo_campaign_id: over.geo_campaign_id ?? null,
   };
 }
 
@@ -39,6 +40,28 @@ describe('scoreTerritories', () => {
     expect(scored[0].rationale.topIndustry).toBe('towing');
     expect(scored[0].score).toBeGreaterThan(scored[1].score);
     expect(scored[0].estMonthlyRentCents).toBeGreaterThan(scored[1].estMonthlyRentCents);
+  });
+
+  it('boosts a cell where we already rank a pitch page (rankByCampaign)', () => {
+    // Two identical premium cells; cell A also has a prospect tied to a page-1 campaign.
+    const prospects = [
+      mk({ ...A, industry_key: 'towing', geo_campaign_id: 'camp-a' }),
+      mk({ ...A, lat: A.lat + 0.003, industry_key: 'towing', geo_campaign_id: 'camp-a' }),
+      mk({ ...B, industry_key: 'towing' }),
+      mk({ ...B, lat: B.lat + 0.003, industry_key: 'towing' }),
+    ];
+    const base = scoreTerritories(prospects);
+    const boosted = scoreTerritories(prospects, { rankByCampaign: { 'camp-a': 1.0 } });
+
+    // Without the boost the two premium cells tie; with it, cell A pulls ahead and is flagged.
+    const rankedA = boosted.find((t) => t.rankedQuality > 0)!;
+    const otherB = boosted.find((t) => t.rankedQuality === 0)!;
+    expect(rankedA.rationale.rankedHere).toBe(true);
+    expect(rankedA.score).toBeGreaterThan(otherB.score);
+
+    // The same cell scores strictly higher with the boost than without it.
+    const aWithout = base.find((t) => Math.abs(t.centroid.lat - rankedA.centroid.lat) < 0.01)!;
+    expect(rankedA.score).toBeGreaterThan(aWithout.score);
   });
 
   it('counts a >=2 no-website cluster as one viable competition card, priced per industry', () => {

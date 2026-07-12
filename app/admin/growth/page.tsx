@@ -11,6 +11,7 @@ import ProspectsClient from '@/components/admin/prospects-client';
 import OutreachPipeline from '@/components/admin/outreach-pipeline';
 import GrowthWorkspace from '@/components/admin/growth-workspace';
 import { loadProspectsWorkspaceData, loadOutreachDrafts } from '@/lib/outreach/growthData';
+import { outreachReadinessGateEnabled } from '@/lib/flags/outreachReadinessGate';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -34,6 +35,7 @@ export default async function GrowthPage() {
             initialCampaigns={campaigns}
             channels={channels}
             callCounts={callCounts}
+            readinessGate={outreachReadinessGateEnabled()}
           />
         }
         pipeline={<OutreachPipeline list={drafts} />}

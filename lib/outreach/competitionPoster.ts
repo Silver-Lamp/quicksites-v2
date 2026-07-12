@@ -26,9 +26,19 @@ export function claimUrlFor(templateId: string): string {
   return `${publicBaseUrl()}/claim-site/${templateId}?token=${encodeURIComponent(mintSiteClaimToken(templateId))}`;
 }
 
-/** A tracked claim link (poster/SMS/postcard) — logs a visit, then redirects to claimUrlFor. */
-export function trackedClaimUrl(campaignId: string): string {
-  return `${publicBaseUrl()}/r/${campaignId}`;
+/**
+ * A tracked claim link (poster/SMS/postcard) — logs a visit, then redirects to claimUrlFor.
+ * Pass a prospectId for a per-recipient link (`/r/<campaign>?p=<prospect>`), so a scan
+ * attributes to the specific business that was mailed rather than just the campaign.
+ */
+export function trackedClaimUrl(campaignId: string, prospectId?: string | null): string {
+  const q = prospectId ? `?p=${encodeURIComponent(prospectId)}` : '';
+  return `${publicBaseUrl()}/r/${campaignId}${q}`;
+}
+
+/** QR data-URL for an arbitrary link (per-prospect postcard QR is generated in the send loop). */
+export async function qrDataUrlFor(url: string): Promise<string> {
+  return QRCode.toDataURL(url, { width: 480, margin: 1, errorCorrectionLevel: 'M' });
 }
 
 export type PosterModel = {
@@ -116,5 +126,36 @@ export function renderPosterHtml(m: PosterModel): string {
     <div class="offer">72-HOUR OFFERING</div>
     <div class="foot">${esc(m.claimUrl)}</div>
   </div>
+</div></body></html>`;
+}
+
+/**
+ * The postcard BACK (6×9 portrait, matching the front) — the message side. The lower
+ * portion is left clear for Lob's address block + IMb/postage. Single source of truth
+ * for the Lob send path AND the admin preview so what an operator previews is mailed.
+ */
+export function renderPosterBackHtml(m: PosterModel): string {
+  return `<!doctype html>
+<html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  * { box-sizing:border-box; margin:0; padding:0; }
+  html,body { background:#fff; }
+  .back {
+    width:6in; height:9in; margin:0 auto; padding:.5in .55in;
+    font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, sans-serif; color:#0b1020;
+    display:flex; flex-direction:column;
+  }
+  .h { font-size:17pt; font-weight:800; line-height:1.15; }
+  .p { margin-top:.16in; font-size:11.5pt; color:#334155; max-width:4.6in; line-height:1.4; }
+  .u { margin-top:.18in; font-size:10pt; color:#0f766e; word-break:break-all; }
+  /* Keep the bottom ~3.5in clear for the USPS address block Lob overlays. */
+  .spacer { flex:1; min-height:3.5in; }
+  @media print { @page { size:6in 9in; margin:0; } body { -webkit-print-color-adjust:exact; print-color-adjust:exact; } }
+</style></head>
+<body><div class="back">
+  <div class="h">Your website for ${esc(m.domain)} is already built.</div>
+  <div class="p">We built a free, ready-to-launch website for your business. Scan the QR on the front (or visit the link below) to preview it and claim it before a competitor does.</div>
+  <div class="u">${esc(m.claimUrl)}</div>
+  <div class="spacer"></div>
 </div></body></html>`;
 }

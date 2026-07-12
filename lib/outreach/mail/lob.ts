@@ -16,6 +16,22 @@ export function postcardMailEnabled(): boolean {
   return (process.env.POSTCARD_MAIL_ENABLED === '1' || process.env.POSTCARD_MAIL_ENABLED === 'true') && lobConfigured();
 }
 
+/** The Lob webhook signing secret (Dashboard → Webhooks), or null when unset. */
+export function lobWebhookSecret(): string | null {
+  return process.env.LOB_WEBHOOK_SECRET || null;
+}
+export function lobWebhookConfigured(): boolean {
+  return !!lobWebhookSecret();
+}
+
+/**
+ * US mail piece `use_type` — Lob REQUIRES this on postcards ('marketing' | 'operational').
+ * Cold competition outreach is marketing by default; override with LOB_USE_TYPE.
+ */
+function lobUseType(): 'marketing' | 'operational' {
+  return process.env.LOB_USE_TYPE === 'operational' ? 'operational' : 'marketing';
+}
+
 export type LobAddress = {
   name: string;
   line1: string;
@@ -64,9 +80,22 @@ function fromAddress(): LobAddress | null {
   return { name, line1, city, state, zip, country: 'US' };
 }
 
+export type LobPostcardResult = {
+  id: string;
+  /** Lob's estimated USPS delivery date (YYYY-MM-DD), when returned. */
+  expectedDeliveryDate: string | null;
+  carrier: string | null;
+  trackingNumber: string | null;
+  /** Lob-rendered proof: a small thumbnail + the full PDF url (handy for the status view). */
+  thumbnailUrl: string | null;
+  pdfUrl: string | null;
+};
+
 /**
- * Send one postcard. Returns { id } on success. Throws on misconfig or Lob API error.
- * `size` defaults to 6x9 (matches the poster proportions).
+ * Send one postcard. Returns the Lob id + delivery/proof metadata on success. Throws on
+ * misconfig or Lob API error. `size` defaults to 6x9 (matches the poster proportions);
+ * `use_type` is required by Lob and defaults to 'marketing' (override with LOB_USE_TYPE).
+ * Pass `metadata`/`idempotencyKey` to correlate + dedupe pieces.
  */
 export async function sendPostcard(opts: {
   to: LobAddress;
@@ -74,7 +103,9 @@ export async function sendPostcard(opts: {
   backHtml: string;
   description?: string;
   size?: '4x6' | '6x9' | '6x11';
-}): Promise<{ id: string }> {
+  metadata?: Record<string, string>;
+  idempotencyKey?: string;
+}): Promise<LobPostcardResult> {
   const key = process.env.LOB_API_KEY;
   if (!key) throw new Error('LOB_API_KEY is not set.');
   const from = fromAddress();
@@ -83,6 +114,7 @@ export async function sendPostcard(opts: {
   const form = new URLSearchParams();
   form.set('description', opts.description ?? 'QuickSites geo-competition postcard');
   form.set('size', opts.size ?? '6x9');
+  form.set('use_type', lobUseType());
   form.set('front', opts.frontHtml);
   form.set('back', opts.backHtml);
   form.set('to[name]', opts.to.name);
@@ -97,14 +129,27 @@ export async function sendPostcard(opts: {
   form.set('from[address_state]', from.state);
   form.set('from[address_zip]', from.zip);
   form.set('from[address_country]', 'US');
+  for (const [k, v] of Object.entries(opts.metadata ?? {})) form.set(`metadata[${k}]`, v);
 
   const auth = Buffer.from(`${key}:`).toString('base64');
-  const res = await fetch(LOB_API, {
-    method: 'POST',
-    headers: { Authorization: `Basic ${auth}`, 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: form.toString(),
-  });
+  const headers: Record<string, string> = {
+    Authorization: `Basic ${auth}`,
+    'Content-Type': 'application/x-www-form-urlencoded',
+  };
+  // Lob honors Idempotency-Key so a retry of the same piece never double-mails.
+  if (opts.idempotencyKey) headers['Idempotency-Key'] = opts.idempotencyKey;
+
+  const res = await fetch(LOB_API, { method: 'POST', headers, body: form.toString() });
   const json: any = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(json?.error?.message || `Lob error (${res.status}).`);
-  return { id: String(json?.id ?? '') };
+
+  const thumb = Array.isArray(json?.thumbnails) ? json.thumbnails[0] : null;
+  return {
+    id: String(json?.id ?? ''),
+    expectedDeliveryDate: json?.expected_delivery_date ?? null,
+    carrier: json?.carrier ?? null,
+    trackingNumber: json?.tracking_number ?? null,
+    thumbnailUrl: thumb?.medium ?? thumb?.large ?? thumb?.small ?? null,
+    pdfUrl: json?.url ?? null,
+  };
 }

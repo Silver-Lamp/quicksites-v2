@@ -8,28 +8,15 @@ import { NextResponse } from 'next/server';
 import { getAdminUser } from '@/lib/auth/getAdminUser';
 import { getGeoCampaign } from '@/lib/outreach/geoCampaigns';
 import { listProspectsByCampaign, markOutreachSent } from '@/lib/outreach/prospects';
-import { buildPosterModel, renderPosterHtml, publicBaseUrl } from '@/lib/outreach/competitionPoster';
+import { buildPosterModel, renderPosterHtml, renderPosterBackHtml, trackedClaimUrl, qrDataUrlFor } from '@/lib/outreach/competitionPoster';
 import { sendPostcard, parseUsAddress, postcardMailEnabled, lobConfigured } from '@/lib/outreach/mail/lob';
+import { recordMailing } from '@/lib/outreach/mail/mailings';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 export const maxDuration = 60;
 
 const MAX_PIECES = 25;
-
-function backHtml(domain: string, claimUrl: string): string {
-  // Keep the lower-right clear for Lob's address block.
-  return `<!doctype html><html><head><meta charset="utf-8"><style>
-    *{box-sizing:border-box;margin:0;padding:0}
-    .b{width:9in;height:6in;padding:.4in;font-family:ui-sans-serif,system-ui,sans-serif;color:#0b1020}
-    h2{font-size:16pt} p{margin-top:.12in;font-size:11pt;max-width:5in;color:#334155}
-    .u{margin-top:.16in;font-size:10pt;color:#0f766e;word-break:break-all}
-  </style></head><body><div class="b">
-    <h2>Your website for ${domain} is already built.</h2>
-    <p>We built a free, ready-to-launch website for your business. Scan the QR on the front (or visit the link below) to preview it and claim it before a competitor does.</p>
-    <div class="u">${claimUrl}</div>
-  </div></body></html>`;
-}
 
 export async function POST(req: Request) {
   const operator = await getAdminUser();
@@ -58,9 +45,6 @@ export async function POST(req: Request) {
   const model = await buildPosterModel(campaign, prospects);
   if (!model) return NextResponse.json({ error: 'Campaign has no pitch site.' }, { status: 400 });
 
-  const frontHtml = renderPosterHtml(model);
-  const back = backHtml(campaign.domain, `${publicBaseUrl()}/r/${campaign.id}`);
-
   const results: Array<Record<string, unknown>> = [];
   const mailedIds: string[] = [];
   for (const p of prospects.slice(0, MAX_PIECES)) {
@@ -70,14 +54,40 @@ export async function POST(req: Request) {
       continue;
     }
     try {
+      // Per-prospect QR: a scan attributes to THIS business (not just the campaign).
+      const claimUrl = trackedClaimUrl(campaign.id, p.id);
+      const pModel = { ...model, claimUrl, qrDataUrl: await qrDataUrlFor(claimUrl) };
+      const frontHtml = renderPosterHtml(pModel);
+      const back = renderPosterBackHtml(pModel);
       const r = await sendPostcard({
         to: { name: p.business_name, ...to },
         frontHtml,
         backHtml: back,
         description: `Geo-competition ${campaign.domain}`,
+        metadata: { campaign_id: campaign.id, prospect_id: p.id },
+        // One piece per (campaign, prospect) send — a retry won't double-mail at Lob.
+        idempotencyKey: `pc_${campaign.id}_${p.id}`,
       });
       mailedIds.push(p.id);
-      results.push({ prospectId: p.id, ok: true, lobId: r.id });
+      // Persist the Lob id so the delivery webhook can advance this piece's status.
+      try {
+        await recordMailing({
+          lobId: r.id,
+          prospectId: p.id,
+          campaignId: campaign.id,
+          sentBy: operator.id,
+          toName: p.business_name,
+          toAddress: `${to.line1}, ${to.city}, ${to.state} ${to.zip}`,
+          expectedDeliveryDate: r.expectedDeliveryDate,
+          carrier: r.carrier,
+          trackingNumber: r.trackingNumber,
+          thumbnailUrl: r.thumbnailUrl,
+          pdfUrl: r.pdfUrl,
+        });
+      } catch {
+        /* tracking is best-effort — never fail a successful mail on a record error */
+      }
+      results.push({ prospectId: p.id, ok: true, lobId: r.id, expectedDelivery: r.expectedDeliveryDate });
     } catch (e: any) {
       results.push({ prospectId: p.id, ok: false, error: e?.message || 'send_failed' });
     }

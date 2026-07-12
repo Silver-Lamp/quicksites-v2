@@ -22,22 +22,22 @@ type LeadRow = {
   industry: string | null;
   address_city: string | null;
   address_state: string | null;
-  address_street: string | null;
   address_zip: string | null;
   address_full: string | null;
   address_lat: number | null;
   address_lon: number | null;
   owner_id: string | null;
-  status: string | null;
 };
 
+// Columns verified against the live `leads` table (the Lead type in types/lead.types is
+// out of sync — it lists address_street/status/etc. that don't exist in the DB).
 const LEAD_COLS =
-  'id, business_name, phone, industry, address_city, address_state, address_street, address_zip, address_full, address_lat, address_lon, owner_id, status';
+  'id, business_name, phone, industry, address_city, address_state, address_zip, address_full, address_lat, address_lon, owner_id';
 
 function composeAddress(l: LeadRow): string | null {
   if (l.address_full) return l.address_full;
   const stateZip = [l.address_state, l.address_zip].filter(Boolean).join(' ');
-  const parts = [l.address_street, l.address_city, stateZip].filter(Boolean);
+  const parts = [l.address_city, stateZip].filter(Boolean);
   return parts.length ? parts.join(', ') : null;
 }
 

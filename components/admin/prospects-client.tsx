@@ -6,7 +6,7 @@
 // prospects, no AI), review by lead tier, selectively Build draft sites (AI), Dismiss,
 // and launch location-industry domain campaigns from the competition cards.
 
-import { useEffect, useMemo, useState } from 'react';
+import { Fragment, useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import type { Prospect } from '@/lib/outreach/prospects';
@@ -268,6 +268,38 @@ export default function ProspectsClient({
     }
   }
 
+  const [expanded, setExpanded] = useState<Set<string>>(new Set());
+  const toggleExpand = (id: string) =>
+    setExpanded((prev) => {
+      const n = new Set(prev);
+      n.has(id) ? n.delete(id) : n.add(id);
+      return n;
+    });
+
+  async function setWinner(c: GeoCampaign, prospectId: string | null) {
+    setBusy(`winner:${prospectId ?? c.id}`);
+    try {
+      await post('/api/admin/prospects/geo-campaign/set-winner', { campaignId: c.id, prospectId });
+      router.refresh();
+    } catch (e: any) {
+      setRowMsg((m) => ({ ...m, [c.id]: { ok: false, text: e.message } }));
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function passProspect(p: Prospect, undo = false) {
+    setBusy(`pass:${p.id}`);
+    try {
+      await post('/api/admin/prospects/pass', { id: p.id, undo });
+      router.refresh();
+    } catch (e: any) {
+      setMsg(e.message);
+    } finally {
+      setBusy(null);
+    }
+  }
+
   async function launchGeo(group: CompetitionGroup) {
     setBusy(`geo:${group.key}`);
     setMsg(null);
@@ -289,6 +321,16 @@ export default function ProspectsClient({
 
   // Group no-website prospects by city + industry → competition cards.
   const competition = useMemo(() => buildCompetitionGroups(prospects), [prospects]);
+
+  // Businesses linked to each launched campaign (the contest roster / waitlist).
+  const rosterByCampaign = useMemo(() => {
+    const m: Record<string, Prospect[]> = {};
+    for (const p of prospects) {
+      if (!p.geo_campaign_id || p.status === 'dismissed') continue;
+      (m[p.geo_campaign_id] ??= []).push(p);
+    }
+    return m;
+  }, [prospects]);
 
   const byTier = useMemo(() => {
     const g: Record<string, Prospect[]> = { no_website: [], dated: [], has_site: [] };
@@ -427,9 +469,31 @@ export default function ProspectsClient({
                 </tr>
               </thead>
               <tbody className="divide-y divide-neutral-800">
-                {initialCampaigns.map((c) => (
-                  <tr key={c.id} className="[&>td]:px-4 [&>td]:py-2">
-                    <td className="font-mono text-xs text-sky-300">{c.domain}</td>
+                {initialCampaigns.map((c) => {
+                  const roster = rosterByCampaign[c.id] ?? [];
+                  const isOpen = expanded.has(c.id);
+                  const tierRank: Record<string, number> = { no_website: 0, dated: 1, has_site: 2 };
+                  const sortedRoster = roster.slice().sort((a, b) => {
+                    const aw = c.claimed_by_prospect_id === a.id ? 0 : 1;
+                    const bw = c.claimed_by_prospect_id === b.id ? 0 : 1;
+                    if (aw !== bw) return aw - bw;
+                    const ap = a.waitlist_status === 'passed' ? 1 : 0;
+                    const bp = b.waitlist_status === 'passed' ? 1 : 0;
+                    if (ap !== bp) return ap - bp;
+                    return (tierRank[a.lead_tier] ?? 3) - (tierRank[b.lead_tier] ?? 3);
+                  });
+                  return (
+                  <Fragment key={c.id}>
+                  <tr className="[&>td]:px-4 [&>td]:py-2">
+                    <td className="font-mono text-xs text-sky-300">
+                      {roster.length > 0 && (
+                        <button onClick={() => toggleExpand(c.id)} className="mr-1 text-neutral-400 hover:text-white" title="Show the competition waitlist">
+                          {isOpen ? '▾' : '▸'}
+                        </button>
+                      )}
+                      {c.domain}
+                      {roster.length > 0 && <span className="ml-1 text-neutral-500">· {roster.length}</span>}
+                    </td>
                     <td>{c.city}</td>
                     <td>{prettyIndustry(c.industry_key)}</td>
                     <td className="text-xs text-neutral-400">{c.domain_status}</td>
@@ -518,7 +582,45 @@ export default function ProspectsClient({
                       </div>
                     </td>
                   </tr>
-                ))}
+                  {isOpen && roster.length > 0 && (
+                    <tr className="bg-neutral-950/60">
+                      <td colSpan={9} className="px-4 py-3">
+                        <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-neutral-500">
+                          Competition waitlist — one exclusive slot; the rest are churn backfill
+                        </div>
+                        <ul className="space-y-1">
+                          {sortedRoster.map((p) => {
+                            const isWinner = c.claimed_by_prospect_id === p.id;
+                            const passed = p.waitlist_status === 'passed';
+                            return (
+                              <li key={p.id} className="flex items-center gap-3 text-sm">
+                                <span className={`inline-block w-fit rounded px-1.5 py-0.5 text-xs ${TIER_META[p.lead_tier].cls}`}>{TIER_META[p.lead_tier].label}</span>
+                                <span className={`min-w-0 flex-1 truncate ${passed ? 'text-neutral-600 line-through' : ''}`}>
+                                  {isWinner && <span className="mr-1 text-amber-300" title="Winner">★</span>}
+                                  {p.business_name}
+                                </span>
+                                {isWinner ? (
+                                  <button onClick={() => setWinner(c, null)} disabled={busy === `winner:${c.id}`} className="text-xs text-amber-300 hover:text-amber-200">Winner ✓ — clear</button>
+                                ) : (
+                                  <>
+                                    <button onClick={() => setWinner(c, p.id)} disabled={busy === `winner:${p.id}`} className="text-xs text-emerald-400 hover:text-emerald-300">Make winner</button>
+                                    {passed ? (
+                                      <button onClick={() => passProspect(p, true)} disabled={busy === `pass:${p.id}`} className="text-xs text-neutral-500 hover:text-white">restore</button>
+                                    ) : (
+                                      <button onClick={() => passProspect(p, false)} disabled={busy === `pass:${p.id}`} className="text-xs text-neutral-500 hover:text-red-400">pass</button>
+                                    )}
+                                  </>
+                                )}
+                              </li>
+                            );
+                          })}
+                        </ul>
+                      </td>
+                    </tr>
+                  )}
+                  </Fragment>
+                  );
+                })}
               </tbody>
             </table>
           </div>

@@ -123,6 +123,19 @@ export async function setCampaignSubscription(
   if (error) throw new Error(`setCampaignSubscription failed: ${error.message}`);
 }
 
+/** Set (or clear) the contest winner for a campaign. */
+export async function setCampaignWinner(campaignId: string, prospectId: string | null): Promise<void> {
+  const { error } = await supabaseAdmin
+    .from('geo_industry_campaigns')
+    .update({
+      claimed_by_prospect_id: prospectId,
+      status: prospectId ? 'claimed' : 'draft',
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', campaignId);
+  if (error) throw new Error(`setCampaignWinner failed: ${error.message}`);
+}
+
 export async function listGeoCampaignsForRankSync(): Promise<GeoCampaign[]> {
   const { data, error } = await supabaseAdmin
     .from('geo_industry_campaigns')

@@ -21,6 +21,15 @@
 >   is the join. Back-compat: no rank input → behaviour unchanged. (The server narration route
 >   `territory-score` still scores base-only — its discovered-prospect scope doesn't include
 >   campaign-linked rows, so boosting it there is a no-op; left as-is.)
+> - **Growth Coach (done, 2026-07-12):** an expandable next-best-action panel at the top of the
+>   prospects page (`components/admin/growth-coach.tsx`, pure brain `lib/prospects/growthCoach.ts`)
+>   — the funnel as a step checklist, each step running a real endpoint. Its address step
+>   **auto-points org-branded sites at the org's service area** (`organizations.branding.address`
+>   set on `/admin/org` → seeded into the pitch-site contact as "Serving City, ST" only when the
+>   site has no address of its own, via `lib/outreach/{orgServiceArea,seedServiceAreaContact,pointCampaignAddress}.ts`
+>   + `POST …/geo-campaign/point-address`, committed through the `commit_template` RPC; also fires
+>   on the Brand/set-org action). Service-area framing (not a shared street NAP) is deliberate —
+>   one address across many verticals is a local-spam footprint.
 > - **Phase 4 (page-level GSC)** remains to do (only needed once sites go multi-page).
 
 ---

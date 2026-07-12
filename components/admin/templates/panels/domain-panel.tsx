@@ -198,6 +198,14 @@ type SearchResponse = {
   error?: string;
 };
 type BuyResponse = { ok: boolean; domain: string; purchased: boolean; attached: boolean; priceUsd: number | null; error?: string };
+type PreflightCheck = { ok: boolean; detail: string };
+type PreflightResponse = {
+  ok: boolean;
+  ready: boolean;
+  checks: Record<string, PreflightCheck>;
+  billingReminder: string;
+  error?: string;
+};
 
 /* Snapshot-only publish detector (do NOT trust domain strings) */
 function computeIsPublishedFromStateOnly(t: any): boolean {
@@ -422,6 +430,8 @@ export default function DomainPanel({
   const [purchaseInfo, setPurchaseInfo] = useState<PurchaseInfo | null>(null);
   const [buyBusyDomain, setBuyBusyDomain] = useState<string | null>(null);
   const [searchOpen, setSearchOpen] = useState(false);
+  const [preflight, setPreflight] = useState<PreflightResponse | null>(null);
+  const [preflightBusy, setPreflightBusy] = useState(false);
 
   const apex = normalizeApex(domainInput || '');
 
@@ -579,6 +589,17 @@ export default function DomainPanel({
     } finally { setConnectBusy(false); }
   }
   
+  async function runPreflight() {
+    setPreflightBusy(true);
+    try {
+      const res = await fetch('/api/domains/preflight', { cache: 'no-store' });
+      const json = (await res.json()) as PreflightResponse;
+      setPreflight(json);
+    } catch (e: any) {
+      setPreflight({ ok: false, ready: false, checks: {}, billingReminder: '', error: e?.message || 'Preflight failed.' });
+    } finally { setPreflightBusy(false); }
+  }
+
   async function runDomainSearch() {
     const q = searchQuery.trim();
     if (!q) { setSearchError('Type a name or domain to search.'); return; }
@@ -865,7 +886,45 @@ export default function DomainPanel({
                 <Button type="button" size="sm" onClick={() => void runDomainSearch()} disabled={searchBusy}>
                   {searchBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : (<><Search className="h-4 w-4 mr-1" /> Search</>)}
                 </Button>
+                <button
+                  type="button"
+                  onClick={() => void runPreflight()}
+                  disabled={preflightBusy}
+                  className="text-xs text-blue-300 underline hover:text-blue-200 disabled:opacity-50"
+                  title="Check that Vercel is set up to buy domains"
+                >
+                  {preflightBusy ? 'Checking…' : 'Check setup'}
+                </button>
               </div>
+
+              {preflight && (
+                <div className="rounded-md border border-white/10 bg-neutral-950/40 p-3 text-xs">
+                  {preflight.error ? (
+                    <div className="flex items-start gap-2 text-amber-300">
+                      <AlertTriangle className="h-4 w-4 mt-0.5" /> {preflight.error}
+                    </div>
+                  ) : (
+                    <>
+                      <div className={`mb-2 font-medium ${preflight.ready ? 'text-emerald-400' : 'text-yellow-300'}`}>
+                        {preflight.ready ? 'Ready to buy domains.' : 'Not ready yet — fix the items below.'}
+                      </div>
+                      <ul className="space-y-1">
+                        {Object.entries(preflight.checks).map(([key, c]) => (
+                          <li key={key} className="flex items-start gap-2">
+                            {c.ok
+                              ? <CheckCircle2 className="h-3.5 w-3.5 mt-0.5 text-emerald-400 shrink-0" />
+                              : <AlertTriangle className="h-3.5 w-3.5 mt-0.5 text-yellow-300 shrink-0" />}
+                            <span className="text-white/80">{c.detail}</span>
+                          </li>
+                        ))}
+                      </ul>
+                      {preflight.billingReminder && (
+                        <p className="mt-2 text-[11px] text-white/50">{preflight.billingReminder}</p>
+                      )}
+                    </>
+                  )}
+                </div>
+              )}
 
               {searchError && (
                 <div className="flex items-start gap-2 text-amber-300 text-sm">

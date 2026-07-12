@@ -6,7 +6,7 @@
 // flag-gated (GEO_RECS_LLM_ENABLED + OPENAI_API_KEY), and best-effort: any failure returns
 // null so the UI falls back to the deterministic list (still the source of truth).
 
-import OpenAI from 'openai';
+import { getOpenAI, resolveModel } from '@/lib/ai/openaiClient';
 import { meterLLMCall } from '@/lib/ai/meter';
 import { parseTopThree, geoRecsLlmEnabled, type RecStep, type RecSummary } from '@/lib/outreach/recSummary';
 import type { Recommendation } from '@/lib/outreach/recommendations';
@@ -44,12 +44,12 @@ export async function synthesizeTopThree(input: {
   });
 
   try {
-    const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+    const openai = getOpenAI('chat');
     const steps = await meterLLMCall<RecStep[] | null>(
       { provider: 'openai', model_code: MODEL, modality: 'chat', user_id: null, route: ROUTE },
       async () => {
         const r = await openai.chat.completions.create({
-          model: MODEL,
+          model: resolveModel(MODEL, 'chat'),
           temperature: 0.3,
           response_format: { type: 'json_object' },
           messages: [

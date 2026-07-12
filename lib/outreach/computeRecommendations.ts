@@ -12,6 +12,7 @@ import { fetchPlaceDetails, placeDetailsConfigured } from '@/lib/places/placeDet
 import { postcardMailEnabled } from '@/lib/outreach/mail/lob';
 import { prospectSmsEnabled } from '@/lib/outreach/sms/outreachSms';
 import type { GeoCampaign } from '@/lib/outreach/geoCampaigns';
+import type { RankTrend } from '@/lib/outreach/rankTrend';
 
 const SIGNAL_TTL_MS = 7 * 86_400_000; // refresh GBP place signals weekly (paid SKU)
 
@@ -24,7 +25,7 @@ function maxIso(a: string | null, b: string | null): string | null {
 /** Compute + store recommendations for one campaign. Best-effort; never throws fatally. */
 export async function computeCampaignRecommendations(
   campaign: GeoCampaign,
-  opts?: { impressions?: number | null },
+  opts?: { impressions?: number | null; trend?: RankTrend | null },
 ): Promise<void> {
   // 1) Pitch site on-page signals.
   let onPageData: any = {};
@@ -87,6 +88,7 @@ export async function computeCampaignRecommendations(
     onPage,
     pricingModel: campaign.pricing_model,
     subscriptionStatus: campaign.subscription_status,
+    trend: opts?.trend ?? null,
   });
 
   const nextAction = nextOutreachAction({

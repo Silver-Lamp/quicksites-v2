@@ -87,10 +87,11 @@ export type GeoCampaign = {
   renter_email: string | null;
   claim_link_visits: number | null;
   recommendations: any;
+  rank_trend: any;
 };
 
 const GEO_COLS =
-  'id, city, region, industry_key, domain, slug, template_id, domain_status, status, claimed_by_prospect_id, tracking_number, tracking_number_sid, forward_to, pricing_model, price_cents, locked_rate_cents, billing_interval, rank_status, rank_position, stripe_customer_id, stripe_subscription_id, subscription_status, renter_email, claim_link_visits, recommendations';
+  'id, city, region, industry_key, domain, slug, template_id, domain_status, status, claimed_by_prospect_id, tracking_number, tracking_number_sid, forward_to, pricing_model, price_cents, locked_rate_cents, billing_interval, rank_status, rank_position, stripe_customer_id, stripe_subscription_id, subscription_status, renter_email, claim_link_visits, recommendations, rank_trend';
 
 export async function setCampaignPricing(
   id: string,

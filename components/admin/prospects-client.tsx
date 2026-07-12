@@ -277,6 +277,34 @@ export default function ProspectsClient({
       return n;
     });
 
+  async function recomputeRecs(c: GeoCampaign) {
+    setBusy(`recs:${c.id}`);
+    setRowMsg((m) => { const { [c.id]: _drop, ...rest } = m; return rest; });
+    try {
+      await post('/api/admin/prospects/geo-campaign/recompute-recs', { campaignId: c.id });
+      setRowMsg((m) => ({ ...m, [c.id]: { ok: true, text: 'Recommendations recomputed' } }));
+      router.refresh();
+    } catch (e: any) {
+      setRowMsg((m) => ({ ...m, [c.id]: { ok: false, text: e.message } }));
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function recomputeAllRecs() {
+    setBusy('recs:all');
+    setMsg(null);
+    try {
+      const r = await post('/api/admin/prospects/geo-campaign/recompute-recs', {});
+      setMsg(`Recomputed recommendations for ${r.recced} campaign${r.recced === 1 ? '' : 's'}${r.failed ? ` (${r.failed} failed)` : ''}.`);
+      router.refresh();
+    } catch (e: any) {
+      setMsg(e.message);
+    } finally {
+      setBusy(null);
+    }
+  }
+
   async function setWinner(c: GeoCampaign, prospectId: string | null) {
     setBusy(`winner:${prospectId ?? c.id}`);
     try {
@@ -461,7 +489,17 @@ export default function ProspectsClient({
       {/* Existing campaigns */}
       {initialCampaigns.length > 0 && (
         <div className="mt-8">
-          <h2 className="text-sm font-semibold uppercase tracking-wide text-neutral-400">Geo-domain campaigns</h2>
+          <div className="flex items-center justify-between gap-4">
+            <h2 className="text-sm font-semibold uppercase tracking-wide text-neutral-400">Geo-domain campaigns</h2>
+            <button
+              onClick={recomputeAllRecs}
+              disabled={busy === 'recs:all'}
+              title="Recompute the next-steps recommendations for every campaign now, without waiting for the daily rank-sync cron"
+              className="rounded-lg border border-fuchsia-500/30 bg-fuchsia-500/10 px-3 py-1.5 text-xs font-medium text-fuchsia-200 hover:bg-fuchsia-500/20 disabled:opacity-50"
+            >
+              {busy === 'recs:all' ? 'Recomputing…' : '↻ Recompute recommendations'}
+            </button>
+          </div>
           <div className="mt-3 overflow-x-auto rounded-xl border border-neutral-800">
             <table className="min-w-full text-sm">
               <thead className="bg-neutral-900">
@@ -590,6 +628,14 @@ export default function ProspectsClient({
                           {c.template_id && (
                             <a href={`/admin/templates/${c.template_id}`} className="text-neutral-400 underline">Edit</a>
                           )}
+                          <button
+                            onClick={() => recomputeRecs(c)}
+                            disabled={busy === `recs:${c.id}`}
+                            title="Recompute this campaign's next-steps recommendations from current signals"
+                            className="text-fuchsia-300 hover:text-fuchsia-200"
+                          >
+                            {busy === `recs:${c.id}` ? '…' : '↻ Recs'}
+                          </button>
                         </div>
                         {rowMsg[c.id] && (
                           <div className={rowMsg[c.id].ok ? 'text-xs text-emerald-400' : 'text-xs text-red-400'}>

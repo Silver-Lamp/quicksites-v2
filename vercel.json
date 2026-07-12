@@ -51,6 +51,14 @@
     {
       "path": "/api/cron/geo-rank-sync",
       "schedule": "0 8 * * *"
+    },
+    {
+      "path": "/api/cron/seo-coach-daily",
+      "schedule": "30 9 * * *"
+    },
+    {
+      "path": "/api/cron/seo-coach-weekly",
+      "schedule": "0 9 * * 1"
     }
   ]
 }

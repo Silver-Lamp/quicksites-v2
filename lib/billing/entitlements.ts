@@ -7,10 +7,10 @@
 
 import { getUserPlan, isPaidPlan, ACTIVE_PLAN_STATUSES } from '@/lib/billing/plans';
 
-export type Feature = 'custom_domain' | 'remove_branding';
+export type Feature = 'custom_domain' | 'remove_branding' | 'ai_seo_coaching';
 
 /** Features available only to active paid plans. */
-const PAID_ONLY: ReadonlySet<Feature> = new Set<Feature>(['custom_domain', 'remove_branding']);
+const PAID_ONLY: ReadonlySet<Feature> = new Set<Feature>(['custom_domain', 'remove_branding', 'ai_seo_coaching']);
 
 /**
  * Does this user's current plan allow the given feature? Fails OPEN is never

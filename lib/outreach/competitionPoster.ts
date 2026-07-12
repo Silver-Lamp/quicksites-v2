@@ -26,6 +26,11 @@ export function claimUrlFor(templateId: string): string {
   return `${publicBaseUrl()}/claim-site/${templateId}?token=${encodeURIComponent(mintSiteClaimToken(templateId))}`;
 }
 
+/** A tracked claim link (poster/SMS/postcard) — logs a visit, then redirects to claimUrlFor. */
+export function trackedClaimUrl(campaignId: string): string {
+  return `${publicBaseUrl()}/r/${campaignId}`;
+}
+
 export type PosterModel = {
   domain: string;
   industryLabel: string;
@@ -41,7 +46,8 @@ export async function buildPosterModel(
   prospects: Prospect[],
 ): Promise<PosterModel | null> {
   if (!campaign.template_id) return null;
-  const claimUrl = claimUrlFor(campaign.template_id);
+  // Tracked link so a poster/postcard scan registers as a claim-intent visit.
+  const claimUrl = trackedClaimUrl(campaign.id);
   const qrDataUrl = await QRCode.toDataURL(claimUrl, { width: 480, margin: 1, errorCorrectionLevel: 'M' });
   return {
     domain: campaign.domain,

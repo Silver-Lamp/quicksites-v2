@@ -59,7 +59,7 @@ export async function POST(req: Request) {
   if (!model) return NextResponse.json({ error: 'Campaign has no pitch site.' }, { status: 400 });
 
   const frontHtml = renderPosterHtml(model);
-  const back = backHtml(campaign.domain, `${publicBaseUrl()}/claim-site/${campaign.template_id}`);
+  const back = backHtml(campaign.domain, `${publicBaseUrl()}/r/${campaign.id}`);
 
   const results: Array<Record<string, unknown>> = [];
   const mailedIds: string[] = [];

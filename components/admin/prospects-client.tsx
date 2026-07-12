@@ -632,6 +632,33 @@ export default function ProspectsClient({
     () => new Map(initialCampaigns.map((c) => [c.id, c])),
     [initialCampaigns],
   );
+  // Match a competition group (city × industry) to an already-launched campaign, so the
+  // cards know they've already spawned a campaign instead of offering a duplicate launch.
+  const campaignByGeoKey = useMemo(() => {
+    const m = new Map<string, GeoCampaign>();
+    for (const c of initialCampaigns) {
+      if (!c.city || !c.industry_key || c.status === 'archived') continue;
+      m.set(`${c.city.trim().toLowerCase()}::${c.industry_key}`, c);
+    }
+    return m;
+  }, [initialCampaigns]);
+
+  // Competition cards annotated with their launched campaign (if any); open (grabbable)
+  // cards sort ahead of already-live ones so the real CTAs lead.
+  const orderedCompetition = useMemo(() => {
+    return competition
+      .map((g) => ({ g, existing: campaignByGeoKey.get(`${g.city.trim().toLowerCase()}::${g.industryKey}`) }))
+      .sort((a, b) => Number(!!a.existing) - Number(!!b.existing));
+  }, [competition, campaignByGeoKey]);
+
+  /** Scroll to (and briefly highlight) a campaign's row in the Ranked & ready worklist. */
+  function scrollToOpp(campaignId: string) {
+    const el = document.getElementById(`opp-${campaignId}`);
+    if (!el) return;
+    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    el.classList.add('ring-2', 'ring-fuchsia-400/70');
+    setTimeout(() => el.classList.remove('ring-2', 'ring-fuchsia-400/70'), 1600);
+  }
 
   // Rank signal for the territory heat: campaigns whose pitch page already ranks →
   // boost the cells they sit in ("double down where we already rank").
@@ -806,7 +833,7 @@ export default function ProspectsClient({
               const rd = readinessOf(c);
               const outreachBlocked = readinessGate && !rd.ready;
               return (
-                <div key={o.campaignId} className="rounded-xl border border-neutral-800 bg-neutral-900/40 p-3">
+                <div key={o.campaignId} id={`opp-${o.campaignId}`} className="scroll-mt-24 rounded-xl border border-neutral-800 bg-neutral-900/40 p-3 transition-shadow">
                   <div className="flex flex-wrap items-center justify-between gap-3">
                     <div className="flex min-w-0 items-center gap-3">
                       <span className={`shrink-0 rounded px-1.5 py-0.5 text-xs ${badge.cls}`}>{badge.label}</span>
@@ -874,6 +901,86 @@ export default function ProspectsClient({
                   {rowMsg[o.campaignId] && (
                     <div className={`mt-2 text-xs ${rowMsg[o.campaignId].ok ? 'text-emerald-400' : 'text-red-400'}`}>{rowMsg[o.campaignId].text}</div>
                   )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Competition cards — city × industry clusters, in a horizontal scroll row above the
+          map. A card that already spawned a campaign shows it (domain + rank + readiness) and
+          links into "Ranked & ready" instead of offering a duplicate launch. */}
+      {orderedCompetition.length > 0 && (
+        <div className="mt-8">
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-neutral-400">Competition cards — grab the domain</h2>
+          <p className="mt-1 text-xs text-neutral-500">
+            Each is a cluster of no-website businesses competing for one exact-match geo-domain.
+            <span className="text-emerald-400"> Green</span> = open to grab ·<span className="text-sky-300"> sky</span> = campaign already live.
+          </p>
+          <div className="mt-3 flex snap-x gap-3 overflow-x-auto pb-2">
+            {orderedCompetition.map(({ g, existing }) => {
+              if (existing) {
+                const gsc = gscByDomain?.[normalizeGscDomain(existing.domain)];
+                const badge = rankBadge(gsc);
+                const rd = readinessOf(existing);
+                return (
+                  <div key={g.key} className="flex w-72 shrink-0 snap-start flex-col rounded-xl border border-sky-900/60 bg-sky-950/20 p-4">
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="truncate text-sm font-semibold text-white">{g.city} · {prettyIndustry(g.industryKey)}</div>
+                      <span className="shrink-0 rounded-full bg-sky-500/20 px-2 py-0.5 text-[10px] font-medium text-sky-200">✓ Live</span>
+                    </div>
+                    <div className="mt-1 truncate font-mono text-xs text-sky-300">{existing.domain}</div>
+                    <div className="mt-2 flex flex-wrap items-center gap-2">
+                      <span className={`rounded px-1.5 py-0.5 text-[11px] ${badge.cls}`}>{badge.label}</span>
+                      <span className="text-xs text-neutral-500">{g.prospects.length} competitor{g.prospects.length === 1 ? '' : 's'}</span>
+                    </div>
+                    <div className="mt-1 flex-1 text-xs">
+                      {rd.ready ? (
+                        <span className="text-emerald-400">Ready ✓</span>
+                      ) : rd.hard.length ? (
+                        <span className="text-amber-400">Refine — {rd.hard.length} blocker{rd.hard.length === 1 ? '' : 's'}</span>
+                      ) : (
+                        <span className="text-neutral-500">Not yet marked ready</span>
+                      )}
+                    </div>
+                    <div className="mt-3 flex gap-2">
+                      <button
+                        onClick={() => scrollToOpp(existing.id)}
+                        title="Jump to this campaign in Ranked & ready"
+                        className="flex-1 rounded-lg border border-sky-500/30 bg-sky-500/10 px-3 py-2 text-xs font-medium text-sky-200 hover:bg-sky-500/20"
+                      >
+                        Open ↑
+                      </button>
+                      {existing.template_id && (
+                        <a
+                          href={`/admin/templates/${existing.template_id}`}
+                          className="flex-1 rounded-lg bg-indigo-600 px-3 py-2 text-center text-xs font-medium text-white hover:bg-indigo-500"
+                        >
+                          Refine →
+                        </a>
+                      )}
+                    </div>
+                  </div>
+                );
+              }
+              return (
+                <div key={g.key} className="flex w-72 shrink-0 snap-start flex-col rounded-xl border border-emerald-900/60 bg-emerald-950/20 p-4">
+                  <div className="truncate text-sm font-semibold text-white">{g.city} · {prettyIndustry(g.industryKey)}</div>
+                  <div className="mt-1 text-xs text-neutral-400">{g.prospects.length} businesses with no website</div>
+                  <ul className="mt-2 flex-1 space-y-0.5 text-xs text-neutral-300">
+                    {g.prospects.slice(0, 4).map((p) => (
+                      <li key={p.id} className="truncate">• {p.business_name}</li>
+                    ))}
+                    {g.prospects.length > 4 && <li className="text-neutral-500">+{g.prospects.length - 4} more</li>}
+                  </ul>
+                  <button
+                    onClick={() => launchGeo(g)}
+                    disabled={busy === `geo:${g.key}`}
+                    className="mt-3 w-full rounded-lg bg-emerald-600 px-3 py-2 text-xs font-medium text-white hover:bg-emerald-500 disabled:opacity-50"
+                  >
+                    {busy === `geo:${g.key}` ? 'Launching…' : 'Launch geo-domain campaign'}
+                  </button>
                 </div>
               );
             })}
@@ -953,36 +1060,6 @@ export default function ProspectsClient({
             {showTerritories && territories.some((t) => t.rationale.rankedHere) && (
               <span className="flex items-center gap-1"><span className="inline-block h-3 w-3 rounded-sm border-2 border-dashed border-emerald-400" /> Already ranking here (boosted)</span>
             )}
-          </div>
-        </div>
-      )}
-
-      {/* Competition cards → geo-domain campaigns */}
-      {competition.length > 0 && (
-        <div className="mt-8">
-          <h2 className="text-sm font-semibold uppercase tracking-wide text-neutral-400">Competition cards — grab the domain</h2>
-          <div className="mt-3 grid gap-3 md:grid-cols-2 lg:grid-cols-3">
-            {competition.map((g) => (
-              <div key={g.key} className="rounded-xl border border-emerald-900/60 bg-emerald-950/20 p-4">
-                <div className="text-sm font-semibold text-white">
-                  {g.city} · {prettyIndustry(g.industryKey)}
-                </div>
-                <div className="mt-1 text-xs text-neutral-400">{g.prospects.length} businesses with no website</div>
-                <ul className="mt-2 space-y-0.5 text-xs text-neutral-300">
-                  {g.prospects.slice(0, 4).map((p) => (
-                    <li key={p.id} className="truncate">• {p.business_name}</li>
-                  ))}
-                  {g.prospects.length > 4 && <li className="text-neutral-500">+{g.prospects.length - 4} more</li>}
-                </ul>
-                <button
-                  onClick={() => launchGeo(g)}
-                  disabled={busy === `geo:${g.key}`}
-                  className="mt-3 w-full rounded-lg bg-emerald-600 px-3 py-2 text-xs font-medium text-white hover:bg-emerald-500 disabled:opacity-50"
-                >
-                  {busy === `geo:${g.key}` ? 'Launching…' : 'Launch geo-domain campaign'}
-                </button>
-              </div>
-            ))}
           </div>
         </div>
       )}

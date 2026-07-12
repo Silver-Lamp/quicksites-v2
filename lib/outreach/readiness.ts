@@ -129,6 +129,10 @@ export type ChecklistItem = {
   severity: BlockerSeverity;
   ok: boolean;
   hint?: string;
+  /** Block type(s) this check maps to — the coach can jump to the block if one exists. */
+  blockTypes?: string[];
+  /** How to fix it (shown in the info popup when there's no block to jump to). */
+  fix?: string;
   /** True when this item is the missing address, fixable by pointing at an org service area. */
   fixableByOrgAddress?: boolean;
 };
@@ -143,20 +147,20 @@ export function readinessChecklist(data: any, industryKey: string): ChecklistIte
   const failing = new Set(blockers.map((b) => b.id));
   const isFood = FOOD_INDUSTRIES.has(industryKey);
 
-  const defs: { id: string; ids: string[]; label: string; severity: BlockerSeverity; hint?: string; fixableByOrgAddress?: boolean }[] = [
-    { id: 'nap', ids: ['no-nap'], label: 'Business name, address & phone shown', severity: 'hard', fixableByOrgAddress: true, hint: 'A visible NAP (name/address/phone) is core local-SEO + lets prospects reach the business.' },
-    { id: 'call', ids: ['no-click-to-call'], label: 'Tap-to-call button', severity: 'hard', hint: 'A one-tap call CTA is the top mobile conversion action for local services.' },
-    { id: 'hero', ids: ['hero-empty', 'hero-placeholder'], label: 'Real hero headline (no placeholder)', severity: 'hard', hint: 'The hero is the first thing Google + visitors read — make it specific to the business + city.' },
+  const defs: { id: string; ids: string[]; label: string; severity: BlockerSeverity; hint?: string; blockTypes?: string[]; fix?: string; fixableByOrgAddress?: boolean }[] = [
+    { id: 'nap', ids: ['no-nap'], label: 'Business name, address & phone shown', severity: 'hard', fixableByOrgAddress: true, blockTypes: ['location', 'contact', 'contact_form'], hint: 'A visible NAP (name/address/phone) is core local-SEO + lets prospects reach the business.', fix: 'Add a Location or Contact block and fill in the address + phone. Tip: on the Prospects page, the Growth Coach can auto-fill your org’s service area.' },
+    { id: 'call', ids: ['no-click-to-call'], label: 'Tap-to-call button', severity: 'hard', blockTypes: ['order_bar', 'location', 'contact'], hint: 'A one-tap call CTA is the top mobile conversion action for local services.', fix: 'Add an Order Bar (mobile call/CTA), or set a phone + tap-to-call CTA on the Location/Contact block.' },
+    { id: 'hero', ids: ['hero-empty', 'hero-placeholder'], label: 'Real hero headline (no placeholder)', severity: 'hard', blockTypes: ['hero'], hint: 'The hero is the first thing Google + visitors read — make it specific to the business + city.', fix: 'Edit the Hero block: write a specific headline for this business + city (no placeholder text).' },
     ...(isFood
       ? [
-          { id: 'menu', ids: ['no-menu', 'menu-unpriced'], label: 'Menu with confirmed prices', severity: 'hard' as BlockerSeverity, hint: 'A priced menu is what makes a restaurant site rank + convert to orders.' },
-          { id: 'menu-copy', ids: ['menu-placeholder'], label: 'Menu item copy filled in', severity: 'soft' as BlockerSeverity },
+          { id: 'menu', ids: ['no-menu', 'menu-unpriced'], label: 'Menu with confirmed prices', severity: 'hard' as BlockerSeverity, blockTypes: ['menu'], hint: 'A priced menu is what makes a restaurant site rank + convert to orders.', fix: 'Add a Menu block with sections, items, and confirmed prices.' },
+          { id: 'menu-copy', ids: ['menu-placeholder'], label: 'Menu item copy filled in', severity: 'soft' as BlockerSeverity, blockTypes: ['menu'], fix: 'Open the Menu block and replace the placeholder item names/descriptions with the real menu.' },
         ]
-      : [{ id: 'services', ids: ['no-services'], label: 'Services listed', severity: 'hard' as BlockerSeverity, hint: 'Listing services gives Google the keywords to rank you for + tells visitors what you do.' }]),
-    { id: 'logo', ids: ['no-logo'], label: 'Logo', severity: 'soft', hint: 'A logo builds trust + brand recognition on the site, postcard, and search snippet.' },
-    { id: 'schema', ids: ['no-schema'], label: 'LocalBusiness schema', severity: 'soft', hint: 'Structured data helps Google understand the business and its service area.' },
-    { id: 'pages', ids: ['single-page'], label: 'A city/service subpage', severity: 'soft', hint: 'A dedicated city/service page is a strong extra ranking surface for "<service> in <city>".' },
-    { id: 'title', ids: ['weak-title'], label: 'Page title 15–60 characters', severity: 'soft', hint: 'The <title> is the biggest single on-page ranking + click-through lever.' },
+      : [{ id: 'services', ids: ['no-services'], label: 'Services listed', severity: 'hard' as BlockerSeverity, blockTypes: ['services', 'service_offer'], hint: 'Listing services gives Google the keywords to rank you for + tells visitors what you do.', fix: 'Add a Services block and list the services this business offers.' }]),
+    { id: 'logo', ids: ['no-logo'], label: 'Logo', severity: 'soft', hint: 'A logo builds trust + brand recognition on the site, postcard, and search snippet.', fix: 'Upload a logo in the Header settings (the header/branding editor), or generate one from the toolbar.' },
+    { id: 'schema', ids: ['no-schema'], label: 'LocalBusiness schema', severity: 'soft', hint: 'Structured data helps Google understand the business and its service area.', fix: 'Structured data is emitted from your site’s meta — add a Location block with a real address (that populates LocalBusiness), or set it in Site/SEO settings.' },
+    { id: 'pages', ids: ['single-page'], label: 'A city/service subpage', severity: 'soft', hint: 'A dedicated city/service page is a strong extra ranking surface for "<service> in <city>".', fix: 'Add a page from the Pages menu (e.g. “/plumbing-in-renton”) targeting one service + the city.' },
+    { id: 'title', ids: ['weak-title'], label: 'Page title 15–60 characters', severity: 'soft', hint: 'The <title> is the biggest single on-page ranking + click-through lever.', fix: 'Set the page title (15–60 chars, include the service + city) in the SEO/Site settings.' },
   ];
 
   return defs.map((d) => ({
@@ -165,6 +169,8 @@ export function readinessChecklist(data: any, industryKey: string): ChecklistIte
     severity: d.severity,
     ok: !d.ids.some((x) => failing.has(x)),
     hint: d.hint,
+    blockTypes: d.blockTypes,
+    fix: d.fix,
     fixableByOrgAddress: d.fixableByOrgAddress,
   }));
 }

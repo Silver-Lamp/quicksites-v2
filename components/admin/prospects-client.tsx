@@ -16,6 +16,8 @@ import { effectivePriceCents, formatCents } from '@/lib/outreach/geoPricing';
 import { nextActionLabel } from '@/components/admin/templates/campaign-badge';
 import { scoreTerritories } from '@/lib/prospects/territoryScore';
 import { buildRankedOpportunities } from '@/lib/prospects/rankedOpportunities';
+import { computeCoachState, type CoachAction } from '@/lib/prospects/growthCoach';
+import GrowthCoach, { actionId } from '@/components/admin/growth-coach';
 import {
   addRecentLocation,
   normalizeRecentLocations,
@@ -660,6 +662,83 @@ export default function ProspectsClient({
     setTimeout(() => el.classList.remove('ring-2', 'ring-fuchsia-400/70'), 1600);
   }
 
+  // ── Growth Coach — next-best-action over the whole funnel, from data already on the page.
+  const [busyAction, setBusyAction] = useState<string | null>(null);
+  const coachState = useMemo(() => {
+    const noWebsiteCount = prospects.filter((p) => p.lead_tier === 'no_website').length;
+    const openCompetitionGroups = orderedCompetition.filter((x) => !x.existing).length;
+    const o = rankedOpportunities[0];
+    const c = o ? campaignById.get(o.campaignId) : undefined;
+    const rd = c ? readinessOf(c) : null;
+    const top = o && c
+      ? {
+          campaignId: o.campaignId,
+          domain: o.domain,
+          templateId: o.templateId,
+          orgId: c.org_id ?? null,
+          ready: !!c.outreach_ready_at,
+          hardBlockers: rd?.hard.length ?? 0,
+          competitors: o.competitors,
+          hasAddressBlocker: !!rd?.hard.some((b) => b.id === 'no-nap' || b.id === 'no-click-to-call'),
+        }
+      : null;
+    return computeCoachState({
+      prospectCount: prospects.length,
+      noWebsiteCount,
+      openCompetitionGroups,
+      campaignCount: initialCampaigns.length,
+      connectedRankCount: rankedOpportunities.filter((r) => r.connected).length,
+      rankedCount: rankedOpportunities.filter((r) => r.rankStatus !== 'unranked').length,
+      top,
+      channels: { mail: channels.mail, sms: channels.sms },
+      readinessGate,
+    });
+  }, [prospects, orderedCompetition, rankedOpportunities, campaignById, initialCampaigns.length, channels.mail, channels.sms, readinessGate]);
+
+  async function coachAct(a: CoachAction) {
+    const id = actionId(a);
+    const c = a.campaignId ? campaignById.get(a.campaignId) : undefined;
+    switch (a.kind) {
+      case 'discover':
+        document.getElementById('discover-panel')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        document.getElementById('discover-city')?.focus();
+        break;
+      case 'launch-geo':
+        document.getElementById('competition-cards')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        break;
+      case 'connect-gsc':
+        setMsg('Connect each geo-domain in Google Search Console (left nav → Google Search Console) so we can read live rank.');
+        break;
+      case 'refine':
+        if (c?.template_id) router.push(`/admin/templates/${c.template_id}`);
+        break;
+      case 'mark-refined':
+        if (c) { setBusyAction(id); try { await markRefined(c, true); } finally { setBusyAction(null); } }
+        break;
+      case 'mail':
+        if (c) openMailPreview(c);
+        break;
+      case 'point-address':
+        if (!c) break;
+        setBusyAction(id);
+        setMsg(null);
+        try {
+          const r = await post('/api/admin/prospects/geo-campaign/point-address', { campaignId: c.id });
+          setMsg(
+            r.changed
+              ? `Pointed ${c.domain} at “${r.label}”. Recompute recommendations (↻ Recs) to clear the address blocker.`
+              : `${c.domain}: ${r.reason === 'already_has_address' ? 'already has its own address — left it as-is.' : 'no change.'}`,
+          );
+          router.refresh();
+        } catch (e: any) {
+          setMsg(e.message);
+        } finally {
+          setBusyAction(null);
+        }
+        break;
+    }
+  }
+
   // Rank signal for the territory heat: campaigns whose pitch page already ranks →
   // boost the cells they sit in ("double down where we already rank").
   const rankByCampaign = useMemo(() => {
@@ -708,12 +787,18 @@ export default function ProspectsClient({
         </a>
       </div>
 
+      {/* Growth Coach — the expandable next-best-action panel, pinned at the top. */}
+      <div className="mt-6">
+        <GrowthCoach state={coachState} onAction={coachAct} busyAction={busyAction} />
+      </div>
+
       {/* Discover panel */}
-      <div className="mt-6 rounded-xl border border-neutral-800 bg-neutral-900/40 p-4">
+      <div id="discover-panel" className="mt-6 scroll-mt-24 rounded-xl border border-neutral-800 bg-neutral-900/40 p-4">
         <div className="flex flex-wrap items-end gap-3">
           <label className="flex flex-col text-xs text-neutral-400">
             City
             <input
+              id="discover-city"
               value={city}
               onChange={(e) => setCity(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && discover()}
@@ -912,7 +997,7 @@ export default function ProspectsClient({
           map. A card that already spawned a campaign shows it (domain + rank + readiness) and
           links into "Ranked & ready" instead of offering a duplicate launch. */}
       {orderedCompetition.length > 0 && (
-        <div className="mt-8">
+        <div id="competition-cards" className="mt-8 scroll-mt-24">
           <h2 className="text-sm font-semibold uppercase tracking-wide text-neutral-400">Competition cards — grab the domain</h2>
           <p className="mt-1 text-xs text-neutral-500">
             Each is a cluster of no-website businesses competing for one exact-match geo-domain.

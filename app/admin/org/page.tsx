@@ -48,6 +48,8 @@ type Branding = {
   copy?: { featuresTitle?: string; featuresSubtitle?: string };
   flags?: BrandingFlags;
   owner?: BrandingOwner | null;
+  /** Service-area contact auto-pointed onto org-branded geo-sites until they set their own. */
+  address?: { line1?: string; city?: string; region?: string; postal?: string; phone?: string };
 };
 
 type OrgRow = {
@@ -339,6 +341,12 @@ export default function OrgSettings() {
       branding: { ...(parseBranding(d.branding) || {}), copy: { ...((parseBranding(d.branding)?.copy) || {}), [key]: value } },
     }));
   }
+  function setBrandAddress<K extends keyof NonNullable<Branding['address']>>(key: K, value: NonNullable<Branding['address']>[K]) {
+    setDraft((d) => ({
+      ...d,
+      branding: { ...(parseBranding(d.branding) || {}), address: { ...((parseBranding(d.branding)?.address) || {}), [key]: value } },
+    }));
+  }
   function setBrandOwner<K extends keyof NonNullable<Branding['owner']>>(key: K, value: NonNullable<Branding['owner']>[K]) {
     setDraft((d) => ({
       ...d,
@@ -591,6 +599,18 @@ export default function OrgSettings() {
 
                 <label className="block text-sm">Hero Subhead</label>
                 <Input value={b?.hero?.subhead ?? ''} onChange={(e) => setBrandHero('subhead', e.target.value)} placeholder="Custom software, rapid launches…" />
+
+                <div className="mt-4 border-t border-neutral-800 pt-3">
+                  <div className="text-sm font-medium">Service-area address</div>
+                  <p className="mb-2 text-xs text-neutral-500">
+                    Auto-pointed onto this org’s geo-sites (“Serving {b?.address?.city || 'City'}, {b?.address?.region || 'ST'}”) until each site sets its own.
+                  </p>
+                  <div className="grid grid-cols-2 gap-2">
+                    <Input value={b?.address?.city ?? ''} onChange={(e) => setBrandAddress('city', e.target.value)} placeholder="City (Renton)" />
+                    <Input value={b?.address?.region ?? ''} onChange={(e) => setBrandAddress('region', e.target.value)} placeholder="State (WA)" />
+                  </div>
+                  <Input className="mt-2" value={b?.address?.phone ?? ''} onChange={(e) => setBrandAddress('phone', e.target.value)} placeholder="Phone (425-555-0100)" />
+                </div>
               </div>
 
               <div className="space-y-3">

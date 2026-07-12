@@ -6,13 +6,21 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { google } from 'googleapis';
+import { createClient } from '@supabase/supabase-js';
 import { runCron } from '@/lib/cron/record';
 import { isCronAuthorized } from '@/lib/cron/auth';
 import { getValidOAuthClient } from '@/lib/gsc/getValidOAuthClient';
 import { listGeoCampaignsForRankSync, setCampaignRank } from '@/lib/outreach/geoCampaigns';
 import { computeCampaignRecommendations } from '@/lib/outreach/computeRecommendations';
 import { deriveRankStatus } from '@/lib/outreach/geoPricing';
+import { computeRankTrend, type RankSnapshot } from '@/lib/outreach/rankTrend';
 import { stripe } from '@/lib/stripe/server';
+
+const admin = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  (process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SECRET_KEY)!,
+  { auth: { persistSession: false } },
+);
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -20,8 +28,8 @@ export const maxDuration = 300;
 
 const ymd = (d: Date) => d.toISOString().slice(0, 10);
 
-/** 28-day GSC totals row for a domain, or null if it can't be read. */
-async function gscPosition(domain: string): Promise<{ position: number; impressions: number } | null> {
+/** 28-day GSC totals for a domain (position/impressions/clicks/ctr), or null. */
+async function gscPosition(domain: string): Promise<RankSnapshot | null> {
   try {
     const end = new Date();
     end.setDate(end.getDate() - 3);
@@ -34,7 +42,12 @@ async function gscPosition(domain: string): Promise<{ position: number; impressi
       requestBody: { startDate: ymd(start), endDate: ymd(end) },
     });
     const row = res.data.rows?.[0];
-    return { position: Math.round((row?.position ?? 0) * 10) / 10, impressions: Math.round(row?.impressions ?? 0) };
+    return {
+      position: Math.round((row?.position ?? 0) * 10) / 10,
+      impressions: Math.round(row?.impressions ?? 0),
+      clicks: Math.round(row?.clicks ?? 0),
+      ctr: typeof row?.ctr === 'number' ? row.ctr : null,
+    };
   } catch {
     return null;
   }
@@ -71,6 +84,7 @@ async function handle(req: NextRequest) {
       const g = await gscPosition(c.domain);
       let rankStatus = c.rank_status;
       let rankPosition = c.rank_position;
+      let trend = null as ReturnType<typeof computeRankTrend> | null;
 
       if (g) {
         const next = deriveRankStatus(g.position, g.impressions);
@@ -79,6 +93,28 @@ async function handle(req: NextRequest) {
         rankStatus = next;
         rankPosition = g.position || null;
         synced += 1;
+
+        // Trend: compare to the prior snapshot, log this one, store the compact delta.
+        try {
+          const { data: prevRow } = await admin
+            .from('geo_rank_history')
+            .select('position, impressions, clicks, ctr')
+            .eq('campaign_id', c.id)
+            .order('captured_at', { ascending: false })
+            .limit(1)
+            .maybeSingle();
+          trend = computeRankTrend((prevRow as RankSnapshot) ?? null, g);
+          await admin.from('geo_rank_history').insert({
+            campaign_id: c.id,
+            position: g.position || null,
+            impressions: g.impressions,
+            clicks: g.clicks,
+            ctr: g.ctr,
+          });
+          await admin.from('geo_industry_campaigns').update({ rank_trend: trend }).eq('id', c.id);
+        } catch {
+          /* best-effort */
+        }
 
         // Auto-step-up: a rented, flat-priced domain that just reached page 1.
         const crossedToPage1 = next === 'page1' && was !== 'page1';
@@ -103,7 +139,7 @@ async function handle(req: NextRequest) {
       try {
         await computeCampaignRecommendations(
           { ...c, rank_status: rankStatus, rank_position: rankPosition },
-          { impressions: g?.impressions ?? null },
+          { impressions: g?.impressions ?? null, trend },
         );
         recced += 1;
       } catch {

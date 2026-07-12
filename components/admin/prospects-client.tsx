@@ -517,6 +517,14 @@ export default function ProspectsClient({
                             {g && (g.clicks || g.impressions) ? (
                               <span className="text-neutral-500">{g.clicks} clk · {g.impressions} impr</span>
                             ) : null}
+                            {c.rank_trend?.positionDelta ? (
+                              <span
+                                className={c.rank_trend.direction === 'up' ? 'text-emerald-400' : c.rank_trend.direction === 'down' ? 'text-red-400' : 'text-neutral-500'}
+                                title="Change in position since the last sync"
+                              >
+                                {c.rank_trend.direction === 'up' ? '▲' : c.rank_trend.direction === 'down' ? '▼' : '→'} {Math.abs(c.rank_trend.positionDelta).toFixed(0)} spot{Math.abs(c.rank_trend.positionDelta) === 1 ? '' : 's'}
+                              </span>
+                            ) : null}
                           </div>
                         );
                       })()}

@@ -5,6 +5,7 @@
 // list. See docs/GEO_RECOMMENDATIONS_PLAN.md.
 
 import type { OnPageSignals } from '@/lib/outreach/onPage';
+import type { RankTrend } from '@/lib/outreach/rankTrend';
 
 export type RecCategory = 'reviews' | 'organic' | 'onpage' | 'conversion' | 'commercial';
 
@@ -29,6 +30,7 @@ export type RankingInput = {
   onPage: OnPageSignals;
   pricingModel: string | null;
   subscriptionStatus: string | null;
+  trend?: RankTrend | null;
 };
 
 /** Build a prioritized list of ranking recommendations. Pure + deterministic. */
@@ -74,6 +76,38 @@ export function buildRankingRecommendations(i: RankingInput): Recommendation[] {
       title: 'Not yet ranking',
       detail: 'Newly built. Add content + a few local backlinks/citations, and give Google 2–4 weeks to index and rank.',
     });
+  }
+
+  // ---- Trend (Phase 2, needs rank history) ----
+  const t = i.trend;
+  if (t) {
+    if (t.direction === 'down' && t.positionDelta != null) {
+      recs.push({
+        id: 'trend-slipping',
+        category: 'organic',
+        priority: 85,
+        title: `Slipping — dropped ${Math.abs(t.positionDelta).toFixed(0)} spots`,
+        detail: 'Position fell since the last check. Look for lost citations, a new competitor, or a review-count gap, and refresh content.',
+      });
+    } else if (t.direction === 'up' && t.positionDelta != null && i.rankStatus !== 'page1') {
+      recs.push({
+        id: 'trend-improving',
+        category: 'organic',
+        priority: 45,
+        title: `Trending up — gained ${t.positionDelta.toFixed(0)} spots`,
+        detail: 'On track. Keep the current content/reviews cadence — do not change what is working.',
+      });
+    }
+    // Shown a lot but few clicks → the title/meta is the bottleneck, not rank.
+    if ((t.impressions ?? 0) >= 50 && t.ctr != null && t.ctr < 0.015) {
+      recs.push({
+        id: 'low-ctr',
+        category: 'organic',
+        priority: 78,
+        title: 'High impressions, low click-through',
+        detail: `Only ${(t.ctr * 100).toFixed(1)}% CTR — you rank but the title/meta description isn't earning the click. Rewrite them with the city + a clear hook.`,
+      });
+    }
   }
 
   // ---- On-page ----

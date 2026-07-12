@@ -12,6 +12,7 @@ import { getGeoCampaign } from '@/lib/outreach/geoCampaigns';
 import { listProspectsByCampaign } from '@/lib/outreach/prospects';
 import { buildPosterModel, renderPersonalizedPostcard, claimDeadlineLabel } from '@/lib/outreach/competitionPoster';
 import { resolveCampaignBrand } from '@/lib/outreach/campaignBrand';
+import { getTestRecipient } from '@/lib/outreach/mail/testRecipient';
 import { parseUsAddress, MAX_POSTCARD_PIECES_PER_SEND } from '@/lib/outreach/mail/lob';
 import { estimatePostcardCents, postcardUnitCents } from '@/lib/outreach/mail/postcardCost';
 
@@ -73,9 +74,15 @@ export async function POST(req: Request) {
     sample = { toName: firstMailable.business_name, frontHtml, backHtml };
   }
 
+  // Surface the configured live-test address (if any) so the modal can offer "send to test".
+  const testRecipient = await getTestRecipient();
+
   return NextResponse.json({
     ok: true,
     domain: campaign.domain,
+    testRecipient: testRecipient
+      ? { name: testRecipient.name, line: `${testRecipient.line1}, ${testRecipient.city}, ${testRecipient.state} ${testRecipient.zip}` }
+      : null,
     totalProspects: prospects.length,
     considered: considered.length,
     capped: prospects.length > MAX_POSTCARD_PIECES_PER_SEND,

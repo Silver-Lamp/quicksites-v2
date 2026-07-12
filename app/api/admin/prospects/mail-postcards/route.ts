@@ -10,6 +10,7 @@ import { getGeoCampaign } from '@/lib/outreach/geoCampaigns';
 import { listProspectsByCampaign, markOutreachSent } from '@/lib/outreach/prospects';
 import { buildPosterModel, renderPersonalizedPostcard, claimDeadlineLabel } from '@/lib/outreach/competitionPoster';
 import { resolveCampaignBrand } from '@/lib/outreach/campaignBrand';
+import { getTestRecipient } from '@/lib/outreach/mail/testRecipient';
 import { sendPostcard, parseUsAddress, postcardMailEnabled, lobConfigured, MAX_POSTCARD_PIECES_PER_SEND } from '@/lib/outreach/mail/lob';
 import { recordMailing } from '@/lib/outreach/mail/mailings';
 
@@ -54,10 +55,28 @@ export async function POST(req: Request) {
   // "Claim by {date}" matches what the operator sends today.
   const deadline = claimDeadlineLabel(14);
 
+  // Live-test mode: mail exactly ONE real, personalized piece to the configured test
+  // address instead of the prospects — validates render → Lob → webhook end to end.
+  const isTest = body.test === true;
+  const testTo = isTest ? await getTestRecipient() : null;
+  if (isTest && !testTo) {
+    return NextResponse.json(
+      { error: 'No test address is configured. Set one under "Test address" first.', code: 'no_test_recipient' },
+      { status: 400 },
+    );
+  }
+
   const results: Array<Record<string, unknown>> = [];
   const mailedIds: string[] = [];
   for (const p of prospects.slice(0, MAX_PIECES)) {
-    const to = parseUsAddress(p.address, p.city, p.region);
+    // In test mode we override the destination with the test address (keeping the prospect's
+    // name + personalized artwork so the card is realistic); otherwise use the prospect's.
+    const to = isTest
+      ? { name: p.business_name, line1: testTo!.line1, city: testTo!.city, state: testTo!.state, zip: testTo!.zip }
+      : (() => {
+          const a = parseUsAddress(p.address, p.city, p.region);
+          return a ? { name: p.business_name, ...a } : null;
+        })();
     if (!to) {
       results.push({ prospectId: p.id, ok: false, error: 'unparseable_address' });
       continue;
@@ -73,13 +92,14 @@ export async function POST(req: Request) {
         baseUrl: brand.baseUrl,
       });
       const r = await sendPostcard({
-        to: { name: p.business_name, ...to },
+        to,
         frontHtml,
         backHtml,
-        description: `Geo-competition ${campaign.domain}`,
-        metadata: { campaign_id: campaign.id, prospect_id: p.id },
-        // One piece per (campaign, prospect) send — a retry won't double-mail at Lob.
-        idempotencyKey: `pc_${campaign.id}_${p.id}`,
+        description: `${isTest ? '[TEST] ' : ''}Geo-competition ${campaign.domain}`,
+        metadata: { campaign_id: campaign.id, prospect_id: p.id, ...(isTest ? { test: '1' } : {}) },
+        // One piece per (campaign, prospect); a real send is idempotent, a test varies so
+        // you can re-mail the same card to yourself.
+        idempotencyKey: isTest ? `test_${campaign.id}_${p.id}_${Date.now()}` : `pc_${campaign.id}_${p.id}`,
       });
       mailedIds.push(p.id);
       // Persist the Lob id so the delivery webhook can advance this piece's status.
@@ -89,7 +109,7 @@ export async function POST(req: Request) {
           prospectId: p.id,
           campaignId: campaign.id,
           sentBy: operator.id,
-          toName: p.business_name,
+          toName: to.name,
           toAddress: `${to.line1}, ${to.city}, ${to.state} ${to.zip}`,
           expectedDeliveryDate: r.expectedDeliveryDate,
           carrier: r.carrier,
@@ -104,8 +124,10 @@ export async function POST(req: Request) {
     } catch (e: any) {
       results.push({ prospectId: p.id, ok: false, error: e?.message || 'send_failed' });
     }
+    if (isTest) break; // one piece is enough to validate the pipeline
   }
-  if (mailedIds.length) await markOutreachSent(mailedIds, 'postcard');
+  // Only mark real prospects as mailed — a test send didn't reach them.
+  if (!isTest && mailedIds.length) await markOutreachSent(mailedIds, 'postcard');
 
-  return NextResponse.json({ ok: true, mailed: mailedIds.length, results });
+  return NextResponse.json({ ok: true, test: isTest, mailed: mailedIds.length, results });
 }

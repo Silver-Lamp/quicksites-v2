@@ -4,6 +4,7 @@
 // sample card (front+back), the deliverability breakdown (who mails vs who's dropped for
 // a bad address), and the estimated spend — so an operator confirms a paid Lob send with
 // eyes open. Populated by the dry-run route /api/admin/prospects/mail-postcards/preview.
+import { useState } from 'react';
 import { formatCents } from '@/lib/outreach/geoPricing';
 
 export type MailPreviewData = {
@@ -17,6 +18,8 @@ export type MailPreviewData = {
   deadline: string;
   estimate: { unitCents: number; totalCents: number; isEstimate: boolean };
   sample: { toName: string; frontHtml: string; backHtml: string } | null;
+  /** The configured live-test address, if any — enables the "send to test" toggle. */
+  testRecipient: { name: string; line: string } | null;
 };
 
 export default function MailPreviewModal({
@@ -28,8 +31,10 @@ export default function MailPreviewModal({
   data: MailPreviewData;
   sending: boolean;
   onCancel: () => void;
-  onConfirm: () => void;
+  onConfirm: (test: boolean) => void;
 }) {
+  const [test, setTest] = useState(false);
+  const canSend = test ? !!d.testRecipient : d.mailableCount > 0;
   return (
     <div className="fixed inset-0 z-[1000] flex items-start justify-center overflow-y-auto bg-black/70 p-4 sm:p-8" onClick={() => !sending && onCancel()}>
       <div className="my-4 w-full max-w-3xl rounded-2xl border border-neutral-700 bg-neutral-900 p-5 text-white shadow-2xl" onClick={(e) => e.stopPropagation()}>
@@ -97,19 +102,35 @@ export default function MailPreviewModal({
           </div>
         )}
 
+        {d.testRecipient && (
+          <label className="mt-4 flex items-center gap-2 rounded-xl border border-sky-500/30 bg-sky-500/[0.06] px-3 py-2 text-sm text-sky-200">
+            <input type="checkbox" checked={test} onChange={(e) => setTest(e.target.checked)} className="accent-sky-400" />
+            <span>
+              🧪 <b>Live test</b> — mail one real card to the test address
+              (<span className="text-sky-300">{d.testRecipient.line}</span>) instead of the prospects.
+            </span>
+          </label>
+        )}
+
         <div className="mt-5 flex items-center justify-end gap-3">
           <button onClick={onCancel} disabled={sending} className="rounded-lg border border-neutral-700 px-4 py-2 text-sm text-neutral-300 hover:bg-neutral-800 disabled:opacity-50">
             Cancel
           </button>
           <button
-            onClick={onConfirm}
-            disabled={sending || d.mailableCount === 0}
-            className="rounded-lg bg-amber-500 px-4 py-2 text-sm font-semibold text-neutral-950 hover:bg-amber-400 disabled:opacity-50"
+            onClick={() => onConfirm(test)}
+            disabled={sending || !canSend}
+            className={`rounded-lg px-4 py-2 text-sm font-semibold text-neutral-950 disabled:opacity-50 ${test ? 'bg-sky-400 hover:bg-sky-300' : 'bg-amber-500 hover:bg-amber-400'}`}
           >
-            {sending ? 'Sending…' : `Send ${d.mailableCount} — ${formatCents(d.estimate.totalCents)}`}
+            {sending
+              ? 'Sending…'
+              : test
+                ? '🧪 Send 1 test card'
+                : `Send ${d.mailableCount} — ${formatCents(d.estimate.totalCents)}`}
           </button>
         </div>
-        <p className="mt-2 text-right text-[11px] text-neutral-600">Cost is an estimate; Lob’s invoice is authoritative.</p>
+        <p className="mt-2 text-right text-[11px] text-neutral-600">
+          {test ? 'Test cards go to your test address, not the prospects.' : 'Cost is an estimate; Lob’s invoice is authoritative.'}
+        </p>
       </div>
     </div>
   );

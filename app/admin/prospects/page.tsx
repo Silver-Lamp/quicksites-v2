@@ -7,6 +7,7 @@
 import { getAdminUser } from '@/lib/auth/getAdminUser';
 import ProspectsClient from '@/components/admin/prospects-client';
 import { loadProspectsWorkspaceData } from '@/lib/outreach/growthData';
+import { outreachReadinessGateEnabled } from '@/lib/flags/outreachReadinessGate';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -23,6 +24,7 @@ export default async function ProspectsPage() {
       initialCampaigns={campaigns}
       channels={channels}
       callCounts={callCounts}
+      readinessGate={outreachReadinessGateEnabled()}
     />
   );
 }

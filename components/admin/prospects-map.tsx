@@ -78,15 +78,24 @@ export default function ProspectsMap({
       {(territories ?? []).map((t) => {
         const bounds = cellBounds(t.cell, cellDegrees);
         if (!bounds) return null;
+        // Cells where we already rank a pitch page get an emerald ring — "double down here".
+        const ranked = t.rationale.rankedHere;
         return (
           <Rectangle
             key={`terr-${t.cell}`}
             bounds={bounds}
-            pathOptions={{ color: '#a855f7', weight: 1, fillColor: '#a855f7', fillOpacity: scoreFill(t.score) }}
+            pathOptions={{
+              color: ranked ? '#34d399' : '#a855f7',
+              weight: ranked ? 2.5 : 1,
+              dashArray: ranked ? '4 3' : undefined,
+              fillColor: '#a855f7',
+              fillOpacity: scoreFill(t.score),
+            }}
           >
             <Popup>
               <div style={{ minWidth: 190 }}>
                 <strong>Territory score: {t.score}/100</strong>
+                {ranked ? <span style={{ color: '#059669' }}> · ★ already ranking</span> : null}
                 <br />
                 <span>{formatCents(t.estMonthlyRentCents)}/mo unlockable · {t.viableCards} competition card{t.viableCards === 1 ? '' : 's'}</span>
                 <br />

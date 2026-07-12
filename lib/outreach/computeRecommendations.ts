@@ -6,6 +6,7 @@
 
 import { supabaseAdmin } from '@/lib/supabase/admin';
 import { analyzeOnPage } from '@/lib/outreach/onPage';
+import { analyzeReadiness } from '@/lib/outreach/readiness';
 import { buildRankingRecommendations } from '@/lib/outreach/recommendations';
 import { nextOutreachAction } from '@/lib/outreach/nextAction';
 import { fetchPlaceDetails, placeDetailsConfigured } from '@/lib/places/placeDetails';
@@ -36,6 +37,9 @@ export async function computeCampaignRecommendations(
     onPageData = (data as any)?.data ?? {};
   }
   const onPage = analyzeOnPage(onPageData);
+  // Refine-before-postcard readiness: cache the blockers so the gate + UI read them
+  // without re-deriving. See docs/RANKED_TARGETING_PLAN.md §5.
+  const readiness = analyzeReadiness(onPageData, campaign.industry_key);
 
   // 2) Roster (competition + winner) with outreach history + GBP signals.
   const { data: rosterRaw } = await supabaseAdmin
@@ -125,7 +129,11 @@ export async function computeCampaignRecommendations(
 
   await supabaseAdmin
     .from('geo_industry_campaigns')
-    .update({ recommendations: { ranking, nextAction, summary }, recommendations_synced_at: new Date().toISOString() })
+    .update({
+      recommendations: { ranking, nextAction, summary },
+      recommendations_synced_at: new Date().toISOString(),
+      outreach_blockers: readiness.blockers,
+    })
     .eq('id', campaign.id);
 }
 

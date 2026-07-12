@@ -9,6 +9,7 @@ import { getAdminUser } from '@/lib/auth/getAdminUser';
 import { getGeoCampaign } from '@/lib/outreach/geoCampaigns';
 import { listProspectsByCampaign, markOutreachSent } from '@/lib/outreach/prospects';
 import { sendOutreachSms, prospectSmsEnabled } from '@/lib/outreach/sms/outreachSms';
+import { outreachReadinessGateEnabled } from '@/lib/flags/outreachReadinessGate';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -39,6 +40,14 @@ export async function POST(req: Request) {
   const campaign = await getGeoCampaign(campaignId);
   if (!campaign) return NextResponse.json({ error: 'Campaign not found.' }, { status: 404 });
   if (!campaign.template_id) return NextResponse.json({ error: 'Campaign has no pitch site.' }, { status: 400 });
+
+  // Refine-before-outreach gate (flag-gated).
+  if (outreachReadinessGateEnabled() && !campaign.outreach_ready_at) {
+    return NextResponse.json(
+      { error: 'This site isn’t marked ready for outreach. Refine it and mark it ready first.', code: 'not_ready' },
+      { status: 409 },
+    );
+  }
 
   const prospects = await listProspectsByCampaign(campaignId);
 

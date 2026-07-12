@@ -128,9 +128,12 @@ function FullAdminChrome({ children }: { children: React.ReactNode }) {
 
         {/* Content column — NOTE: no padding-left */}
         <div className="min-w-0 flex-1">
+          {/* AppHeader renders as a `fixed` overlay (out of flow), so this wrapper must
+              reserve its height — otherwise <main> starts at y=0 and the translucent bar
+              overlaps the top of the page content. min-h matches AppHeader's min-h-[48px]. */}
           <header
             ref={headerRef}
-            className="sticky top-0 z-30 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60"
+            className="sticky top-0 z-30 min-h-[48px] border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60"
           >
             <AppHeader />
           </header>

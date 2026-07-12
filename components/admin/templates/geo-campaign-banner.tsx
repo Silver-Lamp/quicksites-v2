@@ -13,7 +13,12 @@ export default function GeoCampaignBanner({ c }: { c: GeoCampaignSummary }) {
   const price =
     c.pricing_model === 'flat' ? `${dollars(c.locked_rate_cents) ?? '—'} → ${dollars(c.price_cents) ?? '—'}/mo` : null;
   const nextAction = c.recommendations?.nextAction ?? null;
-  const topRec = Array.isArray(c.recommendations?.ranking) ? c.recommendations.ranking[0] : null;
+  const plan = c.recommendations?.summary?.steps?.[0] ?? null;
+  const topRec = plan
+    ? { title: plan.title, detail: plan.why }
+    : Array.isArray(c.recommendations?.ranking)
+      ? c.recommendations.ranking[0]
+      : null;
   return (
     <div className="flex flex-wrap items-center gap-x-3 gap-y-1 border-b border-fuchsia-500/30 bg-fuchsia-500/10 px-4 py-2 text-sm text-fuchsia-100">
       <span className="inline-flex items-center gap-1.5 font-medium">

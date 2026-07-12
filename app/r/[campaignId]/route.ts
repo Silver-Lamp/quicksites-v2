@@ -8,13 +8,16 @@ import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase/admin';
 import { mintSiteClaimToken } from '@/lib/auth/siteClaimToken';
 import { publicBaseUrl } from '@/lib/outreach/competitionPoster';
+import { recordScan } from '@/lib/outreach/mail/mailings';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-export async function GET(_req: Request, ctx: { params: Promise<{ campaignId: string }> }) {
+export async function GET(req: Request, ctx: { params: Promise<{ campaignId: string }> }) {
   const { campaignId } = await ctx.params;
   const base = publicBaseUrl();
+  // Per-prospect postcards carry ?p=<prospectId> so a scan attributes to that business.
+  const prospectId = new URL(req.url).searchParams.get('p');
 
   const { data } = await supabaseAdmin
     .from('geo_industry_campaigns')
@@ -24,14 +27,15 @@ export async function GET(_req: Request, ctx: { params: Promise<{ campaignId: st
   const templateId = (data as any)?.template_id;
   if (!templateId) return NextResponse.redirect(base, 302);
 
-  // Best-effort intent counter (advisory).
+  // Best-effort intent counters (advisory): campaign total + per-prospect attribution.
   try {
     await supabaseAdmin
       .from('geo_industry_campaigns')
       .update({ claim_link_visits: ((data as any)?.claim_link_visits ?? 0) + 1 })
       .eq('id', campaignId);
+    if (prospectId) await recordScan(campaignId, prospectId);
   } catch {
-    /* counter is advisory */
+    /* counters are advisory */
   }
 
   const claimUrl = `${base}/claim-site/${templateId}?token=${encodeURIComponent(mintSiteClaimToken(templateId))}`;

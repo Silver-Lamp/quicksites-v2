@@ -98,6 +98,20 @@ export default function ProspectsClient({
     return () => { alive = false; };
   }, []);
 
+  // Postcard delivery + per-prospect scan roll-up per campaign (lazy, best-effort).
+  type MailSummary = { total: number; delivered: number; inTransit: number; returned: number; scanned: number };
+  const [mailByCampaign, setMailByCampaign] = useState<Record<string, MailSummary>>({});
+  useEffect(() => {
+    let alive = true;
+    const ids = initialCampaigns.map((c) => c.id).join(',');
+    if (!ids) return;
+    fetch(`/api/admin/prospects/mailings?ids=${encodeURIComponent(ids)}`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((j) => { if (alive && j?.ok && j.byCampaign) setMailByCampaign(j.byCampaign); })
+      .catch(() => {});
+    return () => { alive = false; };
+  }, [initialCampaigns]);
+
   const prospects = initialProspects;
 
   const toggleCat = (label: string) =>
@@ -642,6 +656,18 @@ export default function ProspectsClient({
                             {rowMsg[c.id].text}
                           </div>
                         )}
+                        {mailByCampaign[c.id]?.total > 0 && (() => {
+                          const m = mailByCampaign[c.id];
+                          return (
+                            <div className="text-[11px] text-neutral-400" title="Postcard delivery + per-business QR scans">
+                              📮 {m.total} mailed
+                              {m.delivered > 0 && <span className="text-emerald-400"> · {m.delivered} delivered</span>}
+                              {m.inTransit > 0 && <span className="text-sky-300"> · {m.inTransit} in transit</span>}
+                              {m.returned > 0 && <span className="text-red-400"> · {m.returned} returned</span>}
+                              {m.scanned > 0 && <span className="text-fuchsia-300"> · {m.scanned} scanned</span>}
+                            </div>
+                          );
+                        })()}
                       </div>
                     </td>
                   </tr>

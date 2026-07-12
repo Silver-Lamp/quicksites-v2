@@ -53,7 +53,7 @@ export async function POST(req: Request) {
       phone: p.phone,
       businessName: p.business_name,
       domain: campaign.domain,
-      templateId: campaign.template_id,
+      campaignId: campaign.id,
     });
     if (r.ok) sentIds.push(p.id);
     results.push({ prospectId: p.id, ok: r.ok, error: r.error });

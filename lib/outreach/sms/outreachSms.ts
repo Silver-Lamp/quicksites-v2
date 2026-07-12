@@ -6,7 +6,7 @@
 // postcards for cold outreach; use this for warm/cleared follow-up.
 
 import { sendSms } from '@/lib/sms/sendSms';
-import { claimUrlFor } from '@/lib/outreach/competitionPoster';
+import { trackedClaimUrl } from '@/lib/outreach/competitionPoster';
 
 export function prospectSmsEnabled(): boolean {
   return process.env.PROSPECT_SMS_ENABLED === '1' || process.env.PROSPECT_SMS_ENABLED === 'true';
@@ -16,9 +16,9 @@ export function prospectSmsEnabled(): boolean {
 export function composeOutreachSms(opts: {
   businessName: string;
   domain: string;
-  templateId: string;
+  campaignId: string;
 }): string {
-  const url = claimUrlFor(opts.templateId);
+  const url = trackedClaimUrl(opts.campaignId);
   const name = opts.businessName?.trim() || 'there';
   return (
     `Hi ${name} — we built a free website for your business at ${opts.domain}. ` +
@@ -40,7 +40,7 @@ export async function sendOutreachSms(opts: {
   phone: string;
   businessName: string;
   domain: string;
-  templateId: string;
+  campaignId: string;
 }): Promise<{ ok: boolean; error?: string }> {
   const to = normalizePhone(opts.phone);
   if (!to) return { ok: false, error: 'invalid_phone' };

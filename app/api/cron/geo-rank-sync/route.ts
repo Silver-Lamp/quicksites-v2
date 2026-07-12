@@ -10,6 +10,7 @@ import { runCron } from '@/lib/cron/record';
 import { isCronAuthorized } from '@/lib/cron/auth';
 import { getValidOAuthClient } from '@/lib/gsc/getValidOAuthClient';
 import { listGeoCampaignsForRankSync, setCampaignRank } from '@/lib/outreach/geoCampaigns';
+import { computeCampaignRecommendations } from '@/lib/outreach/computeRecommendations';
 import { deriveRankStatus } from '@/lib/outreach/geoPricing';
 import { stripe } from '@/lib/stripe/server';
 
@@ -64,35 +65,53 @@ async function handle(req: NextRequest) {
     const campaigns = await listGeoCampaignsForRankSync();
     let synced = 0;
     let steppedUp = 0;
+    let recced = 0;
 
     for (const c of campaigns) {
       const g = await gscPosition(c.domain);
-      if (!g) continue;
-      const next = deriveRankStatus(g.position, g.impressions);
-      const was = c.rank_status;
-      await setCampaignRank(c.id, { rank_status: next, rank_position: g.position || null });
-      synced += 1;
+      let rankStatus = c.rank_status;
+      let rankPosition = c.rank_position;
 
-      // Auto-step-up: a rented, flat-priced domain that just reached page 1.
-      const crossedToPage1 = next === 'page1' && was !== 'page1';
-      if (
-        crossedToPage1 &&
-        c.pricing_model === 'flat' &&
-        c.subscription_status === 'active' &&
-        c.stripe_subscription_id &&
-        c.price_cents &&
-        process.env.STRIPE_SECRET_KEY
-      ) {
-        try {
-          await stepSubscriptionUp(c.stripe_subscription_id, c.price_cents, c.domain);
-          steppedUp += 1;
-        } catch {
-          /* best-effort — leave at the locked rate if the step-up fails */
+      if (g) {
+        const next = deriveRankStatus(g.position, g.impressions);
+        const was = c.rank_status;
+        await setCampaignRank(c.id, { rank_status: next, rank_position: g.position || null });
+        rankStatus = next;
+        rankPosition = g.position || null;
+        synced += 1;
+
+        // Auto-step-up: a rented, flat-priced domain that just reached page 1.
+        const crossedToPage1 = next === 'page1' && was !== 'page1';
+        if (
+          crossedToPage1 &&
+          c.pricing_model === 'flat' &&
+          c.subscription_status === 'active' &&
+          c.stripe_subscription_id &&
+          c.price_cents &&
+          process.env.STRIPE_SECRET_KEY
+        ) {
+          try {
+            await stepSubscriptionUp(c.stripe_subscription_id, c.price_cents, c.domain);
+            steppedUp += 1;
+          } catch {
+            /* best-effort — leave at the locked rate if the step-up fails */
+          }
         }
+      }
+
+      // Recompute "next steps" recommendations (runs even when GSC has no data yet).
+      try {
+        await computeCampaignRecommendations(
+          { ...c, rank_status: rankStatus, rank_position: rankPosition },
+          { impressions: g?.impressions ?? null },
+        );
+        recced += 1;
+      } catch {
+        /* best-effort — recommendations are advisory */
       }
     }
 
-    return NextResponse.json({ ok: true, campaigns: campaigns.length, synced, steppedUp });
+    return NextResponse.json({ ok: true, campaigns: campaigns.length, synced, steppedUp, recced });
   });
 }
 

@@ -30,6 +30,21 @@ export function dollars(cents?: number | null): string | null {
   return cents == null ? null : `$${Math.round(cents / 100)}`;
 }
 
+export function nextActionLabel(a?: string | null): string {
+  switch (a) {
+    case 'send_postcard': return 'Send postcard';
+    case 'send_sms': return 'Send SMS';
+    case 'call': return 'Call';
+    case 'send_email': return 'Email';
+    case 'reach_out_now': return 'Reach out now';
+    case 'rent_pitch': return 'Pitch rental';
+    case 'wait': return 'Wait';
+    case 'cold': return 'Cold — move on';
+    case 'nurture': return 'Nurture';
+    default: return a || '—';
+  }
+}
+
 /** Compact pill for the list (grid + table). */
 export function CampaignBadge({ c }: { c: CampaignInfo }) {
   const rank = rankLabel(c.rank_status);

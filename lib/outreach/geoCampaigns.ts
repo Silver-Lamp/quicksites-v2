@@ -85,10 +85,12 @@ export type GeoCampaign = {
   stripe_subscription_id: string | null;
   subscription_status: string | null;
   renter_email: string | null;
+  claim_link_visits: number | null;
+  recommendations: any;
 };
 
 const GEO_COLS =
-  'id, city, region, industry_key, domain, slug, template_id, domain_status, status, claimed_by_prospect_id, tracking_number, tracking_number_sid, forward_to, pricing_model, price_cents, locked_rate_cents, billing_interval, rank_status, rank_position, stripe_customer_id, stripe_subscription_id, subscription_status, renter_email';
+  'id, city, region, industry_key, domain, slug, template_id, domain_status, status, claimed_by_prospect_id, tracking_number, tracking_number_sid, forward_to, pricing_model, price_cents, locked_rate_cents, billing_interval, rank_status, rank_position, stripe_customer_id, stripe_subscription_id, subscription_status, renter_email, claim_link_visits, recommendations';
 
 export async function setCampaignPricing(
   id: string,
@@ -137,10 +139,11 @@ export type GeoCampaignSummary = {
   locked_rate_cents: number | null;
   subscription_status: string | null;
   tracking_number: string | null;
+  recommendations: any;
 };
 
 const GEO_SUMMARY_COLS =
-  'id, template_id, domain, city, industry_key, status, domain_status, rank_status, pricing_model, price_cents, locked_rate_cents, subscription_status, tracking_number';
+  'id, template_id, domain, city, industry_key, status, domain_status, rank_status, pricing_model, price_cents, locked_rate_cents, subscription_status, tracking_number, recommendations';
 
 /** Campaign linked to one template (null if the template isn't a geo pitch site). */
 export async function getGeoCampaignByTemplateId(templateId: string): Promise<GeoCampaignSummary | null> {

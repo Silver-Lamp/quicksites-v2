@@ -13,6 +13,7 @@ import type { Prospect } from '@/lib/outreach/prospects';
 import type { GeoCampaign } from '@/lib/outreach/geoCampaigns';
 import { normalizeGscDomain } from '@/lib/gsc/normalizeDomain';
 import { effectivePriceCents, formatCents } from '@/lib/outreach/geoPricing';
+import { nextActionLabel } from '@/components/admin/templates/campaign-badge';
 
 type GscStat = { clicks: number; impressions: number; position: number };
 
@@ -472,6 +473,12 @@ export default function ProspectsClient({
                 {initialCampaigns.map((c) => {
                   const roster = rosterByCampaign[c.id] ?? [];
                   const isOpen = expanded.has(c.id);
+                  const recs =
+                    c.recommendations && (c.recommendations.nextAction || (Array.isArray(c.recommendations.ranking) && c.recommendations.ranking.length))
+                      ? c.recommendations
+                      : null;
+                  const nextCount = recs ? (recs.ranking?.length ?? 0) + (recs.nextAction ? 1 : 0) : 0;
+                  const expandable = roster.length > 0 || !!recs;
                   const tierRank: Record<string, number> = { no_website: 0, dated: 1, has_site: 2 };
                   const sortedRoster = roster.slice().sort((a, b) => {
                     const aw = c.claimed_by_prospect_id === a.id ? 0 : 1;
@@ -486,13 +493,15 @@ export default function ProspectsClient({
                   <Fragment key={c.id}>
                   <tr className="[&>td]:px-4 [&>td]:py-2">
                     <td className="font-mono text-xs text-sky-300">
-                      {roster.length > 0 && (
-                        <button onClick={() => toggleExpand(c.id)} className="mr-1 text-neutral-400 hover:text-white" title="Show the competition waitlist">
+                      {expandable && (
+                        <button onClick={() => toggleExpand(c.id)} className="mr-1 text-neutral-400 hover:text-white" title="Show next steps + the competition waitlist">
                           {isOpen ? '▾' : '▸'}
                         </button>
                       )}
                       {c.domain}
-                      {roster.length > 0 && <span className="ml-1 text-neutral-500">· {roster.length}</span>}
+                      {nextCount > 0 && (
+                        <span className="ml-1 rounded-full bg-fuchsia-500/20 px-1.5 py-0.5 text-[10px] font-medium text-fuchsia-200">{nextCount} next</span>
+                      )}
                     </td>
                     <td>{c.city}</td>
                     <td>{prettyIndustry(c.industry_key)}</td>
@@ -582,12 +591,38 @@ export default function ProspectsClient({
                       </div>
                     </td>
                   </tr>
-                  {isOpen && roster.length > 0 && (
+                  {isOpen && expandable && (
                     <tr className="bg-neutral-950/60">
                       <td colSpan={9} className="px-4 py-3">
+                        {recs && (
+                          <div className="mb-4">
+                            <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-neutral-500">Next steps</div>
+                            {recs.nextAction && (
+                              <div className="mb-2 flex flex-wrap items-center gap-2 text-sm">
+                                <span className="rounded bg-fuchsia-500/20 px-2 py-0.5 text-xs text-fuchsia-200">Work the lead</span>
+                                <span className="font-medium">{nextActionLabel(recs.nextAction.action)}</span>
+                                <span className="text-neutral-500">— {recs.nextAction.reason}</span>
+                              </div>
+                            )}
+                            {Array.isArray(recs.ranking) && recs.ranking.length > 0 && (
+                              <ul className="space-y-1">
+                                {recs.ranking.slice(0, 5).map((r: any) => (
+                                  <li key={r.id} className="flex items-start gap-2 text-sm">
+                                    <span className="mt-0.5 rounded bg-emerald-500/15 px-1.5 py-0.5 text-[10px] uppercase text-emerald-300">{r.category}</span>
+                                    <span>
+                                      <span className="font-medium">{r.title}</span> <span className="text-neutral-500">— {r.detail}</span>
+                                    </span>
+                                  </li>
+                                ))}
+                              </ul>
+                            )}
+                          </div>
+                        )}
+                        {roster.length > 0 && (
                         <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-neutral-500">
                           Competition waitlist — one exclusive slot; the rest are churn backfill
                         </div>
+                        )}
                         <ul className="space-y-1">
                           {sortedRoster.map((p) => {
                             const isWinner = c.claimed_by_prospect_id === p.id;

@@ -64,12 +64,15 @@ function prettyIndustry(key: string | null): string {
 export default function ProspectsClient({
   initialProspects,
   initialCampaigns,
-  channels = { mail: false, sms: false },
+  channels = { mail: false, sms: false, call: false },
+  callCounts = {},
 }: {
   initialProspects: Prospect[];
   initialCampaigns: GeoCampaign[];
   /** Which paid outreach channels are enabled server-side (env-gated). */
-  channels?: { mail: boolean; sms: boolean };
+  channels?: { mail: boolean; sms: boolean; call: boolean };
+  /** Tracked-call count per geo-campaign id. */
+  callCounts?: Record<string, number>;
 }) {
   const router = useRouter();
   const [city, setCity] = useState('');
@@ -202,6 +205,29 @@ export default function ProspectsClient({
     try {
       const r = await post('/api/admin/prospects/text-prospects', { campaignId: c.id });
       setRowMsg((m) => ({ ...m, [c.id]: { ok: true, text: `Sent ${r.sent} text(s)` } }));
+      router.refresh();
+    } catch (e: any) {
+      setRowMsg((m) => ({ ...m, [c.id]: { ok: false, text: e.message } }));
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function provisionNumber(c: GeoCampaign) {
+    if (!channels.call) return;
+    const forwardTo = window.prompt(
+      `Buy a tracking number for ${c.domain} and forward calls to which phone?\n\nThis provisions a real Twilio number (~$1/mo). Leave blank to use the platform fallback.`,
+      '',
+    );
+    if (forwardTo === null) return; // cancelled
+    setBusy(`call:${c.id}`);
+    setRowMsg((m) => { const { [c.id]: _drop, ...rest } = m; return rest; });
+    try {
+      const r = await post('/api/admin/prospects/geo-campaign/provision-number', {
+        campaignId: c.id,
+        forwardTo: forwardTo.trim() || undefined,
+      });
+      setRowMsg((m) => ({ ...m, [c.id]: { ok: true, text: `Tracking number: ${r.number}` } }));
       router.refresh();
     } catch (e: any) {
       setRowMsg((m) => ({ ...m, [c.id]: { ok: false, text: e.message } }));
@@ -365,7 +391,7 @@ export default function ProspectsClient({
             <table className="min-w-full text-sm">
               <thead className="bg-neutral-900">
                 <tr className="text-left [&>th]:px-4 [&>th]:py-2 [&>th]:font-medium [&>th]:text-neutral-400">
-                  <th>Domain</th><th>City</th><th>Industry</th><th>Domain status</th><th>Status</th><th>Ranking</th><th>Outreach</th>
+                  <th>Domain</th><th>City</th><th>Industry</th><th>Domain status</th><th>Status</th><th>Ranking</th><th>Calls</th><th>Outreach</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-neutral-800">
@@ -389,6 +415,23 @@ export default function ProspectsClient({
                           </div>
                         );
                       })()}
+                    </td>
+                    <td className="text-xs">
+                      {c.tracking_number ? (
+                        <div className="flex flex-col gap-0.5">
+                          <span className="font-mono text-sky-300">{c.tracking_number}</span>
+                          <span className="text-neutral-500">{callCounts[c.id] ?? 0} call{(callCounts[c.id] ?? 0) === 1 ? '' : 's'}</span>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => provisionNumber(c)}
+                          disabled={!channels.call || busy === `call:${c.id}`}
+                          title={channels.call ? 'Buy a tracking number that forwards to the business' : 'Call tracking is off — set CALL_TRACKING_ENABLED=1 (+ Twilio creds)'}
+                          className={channels.call ? 'text-sky-400 hover:text-sky-300' : 'cursor-not-allowed text-neutral-600'}
+                        >
+                          {busy === `call:${c.id}` ? '…' : 'Get number'}
+                        </button>
+                      )}
                     </td>
                     <td className="text-right">
                       <div className="flex flex-col items-end gap-1">

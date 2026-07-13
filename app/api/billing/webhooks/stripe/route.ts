@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import type Stripe from 'stripe';
 import { getServerSupabase } from '@/lib/supabase/server';
 import { stripe } from '@/lib/stripe/server';
+import { computeSubscriptionCommission } from '@/lib/billing/subscriptionCommission';
 
 export const dynamic = 'force-dynamic';
 
@@ -275,26 +276,17 @@ async function recordCommissionForSubscriptionInvoice(invoice: Stripe.Invoice) {
     .throwOnError();
 
   const plan = (code.plan || {}) as any; // { type:'percent', rate:0.x, duration_months:n }
-  const duration = Number(plan.duration_months || 0);
-
-  // Respect duration window
-  if (duration > 0 && attr.first_touch_at) {
-    const start = new Date(attr.first_touch_at);
-    const now = new Date(invoice.created * 1000);
-    const monthsElapsed =
-      (now.getFullYear() - start.getFullYear()) * 12 + (now.getMonth() - start.getMonth());
-    if (monthsElapsed >= duration) return;
-  }
-
-  // Compute commission
   const totalCents = invoice.total || 0;
-  let amountCents = 0;
-  if (plan.type === 'percent') {
-    amountCents = Math.floor(totalCents * Number(plan.rate || 0));
-  } else if (plan.type === 'flat_cents') {
-    amountCents = Number(plan.flat_cents || 0);
-  }
-  if (amountCents <= 0) return;
+
+  // Duration window + commission math live in the pure, unit-tested helper.
+  const commission = computeSubscriptionCommission({
+    plan,
+    invoiceTotalCents: totalCents,
+    firstTouchAt: attr.first_touch_at,
+    invoiceCreatedUnix: invoice.created,
+  });
+  if (!commission.recorded) return;
+  const amountCents = commission.amountCents;
 
   // Upsert to ledger (idempotent by unique index referral_code+subject+subject_id)
   // subject_id must be string (not undefined); invoice.id is always set for payment_succeeded — pattern B

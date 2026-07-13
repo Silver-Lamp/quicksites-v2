@@ -17,13 +17,17 @@ const TIER_MID: PriceTier = { fullCents: 19900, lockedCents: 7900 };
 const TIER_LOW: PriceTier = { fullCents: 9900, lockedCents: 4900 };
 
 // High-ticket / emergency trades → premium; everyday trades → mid; rest → low.
-const PREMIUM = new Set<IndustryKey>([
+// Exported so the buy-list planner defaults its industry picker to the premium set
+// (highest unlockable rent) without re-listing the keys and risking drift.
+export const PREMIUM_INDUSTRIES: readonly IndustryKey[] = [
   'towing', 'plumbing', 'hvac', 'roof_cleaning', 'windshield_repair', 'general_contractor', 'electrical',
-]);
-const MID = new Set<IndustryKey>([
+];
+export const MID_INDUSTRIES: readonly IndustryKey[] = [
   'landscaping', 'auto_repair', 'moving', 'pest_control', 'carpet_cleaning',
   'pressure_washing', 'window_washing', 'junk_removal', 'painting', 'medical_dental', 'legal', 'real_estate',
-]);
+];
+const PREMIUM = new Set<IndustryKey>(PREMIUM_INDUSTRIES);
+const MID = new Set<IndustryKey>(MID_INDUSTRIES);
 
 export function priceTier(key: IndustryKey): PriceTier {
   if (PREMIUM.has(key)) return TIER_PREMIUM;

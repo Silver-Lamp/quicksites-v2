@@ -6,6 +6,7 @@ import type { Block } from '@/types/blocks';
 import type { BlockEditorProps } from './index';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
+import { openSettingsSidebarPanel } from '@/lib/editor/openSettingsPanel';
 
 function normList(v: unknown): string[] {
   if (!Array.isArray(v)) return [];
@@ -29,19 +30,10 @@ export default function ServicesEditor({
 }: BlockEditorProps) {
   const services = getServices(template);
 
-  // Open sidebar & try to focus the Services panel (if supported)
+  // Open the sidebar, scroll to the Services panel, and close this drawer so it's visible.
   const openServicesPanel = React.useCallback(() => {
-    try {
-      // Ensure sidebar is open
-      window.dispatchEvent(new CustomEvent('qs:settings:set-open', { detail: true }));
-      // Ask the sidebar to scroll/spotlight its Services panel (it may ignore unknown panels gracefully)
-      window.dispatchEvent(
-        new CustomEvent('qs:open-settings-panel', {
-          detail: { panel: 'services', openEditor: true, scroll: true, spotlightMs: 900 } as any,
-        })
-      );
-    } catch {}
-  }, []);
+    openSettingsSidebarPanel('services', { closeDrawer: () => onClose?.() });
+  }, [onClose]);
 
   return (
     <div className="p-4 space-y-5 text-white">

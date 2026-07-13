@@ -24,6 +24,7 @@ import {
 } from 'lucide-react';
 import { useVerifyDomain } from '@/hooks/useVerifyDomain';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { openSettingsSidebarPanel } from '@/lib/editor/openSettingsPanel';
 
 /* -------------------- Lightweight dialog (no external deps) -------------------- */
 function ConfirmDialog({
@@ -1205,14 +1206,7 @@ export default function DomainPanel({
             Point your domain to your live site. If you haven’t already set your business address, open{' '}
             <button
               type="button"
-              onClick={() => {
-                try {
-                  window.dispatchEvent(new CustomEvent('qs:settings:set-open', { detail: true }));
-                  window.dispatchEvent(new CustomEvent('qs:open-settings-panel', {
-                    detail: { panel: 'identity', openEditor: true, scroll: true, spotlightMs: 900 } as any,
-                  }));
-                } catch {}
-              }}
+              onClick={() => openSettingsSidebarPanel('identity')}
               className="underline text-blue-300 hover:text-blue-200"
               title="Open Template Identity"
             >

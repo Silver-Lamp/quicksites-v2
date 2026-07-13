@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Button } from '@/components/ui/button';
 import type { BlockEditorProps } from '@/components/admin/templates/block-editors';
+import { openSettingsSidebarPanel } from '@/lib/editor/openSettingsPanel';
 import { useNearbyCities } from '@/hooks/useNearbyCities';
 import { MapWrapper } from './map-wrapper';
 import type { Template } from '@/types/template';
@@ -165,17 +166,10 @@ export default function ServiceAreasEditor({
     setPlaceResults(null);
   }
 
-  // Open Identity panel (if the address is wrong, nudge editors there)
+  // Open Identity panel (if the address is wrong, nudge editors there), closing this drawer.
   const openIdentityPanel = useCallback(() => {
-    try {
-      window.dispatchEvent(new CustomEvent('qs:settings:set-open', { detail: true }));
-      window.dispatchEvent(
-        new CustomEvent('qs:open-settings-panel', {
-          detail: { panel: 'identity', openEditor: true, scroll: true, spotlightMs: 900 } as any,
-        })
-      );
-    } catch {}
-  }, []);
+    openSettingsSidebarPanel('identity', { closeDrawer: () => onClose?.() });
+  }, [onClose]);
 
   // Reapply identity defaults
   const useIdentityLocation = () => {

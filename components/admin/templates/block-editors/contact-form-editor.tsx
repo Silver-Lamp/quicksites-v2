@@ -4,6 +4,7 @@ import type { Block } from '@/types/blocks';
 import type { BlockEditorProps } from '@/components/admin/templates/block-editors';
 import { Mail, Info } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
+import { openSettingsSidebarPanel } from '@/lib/editor/openSettingsPanel';
 
 function isValidEmail(v: string) {
   return !!v && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
@@ -55,32 +56,9 @@ export function ContactFormEditor({ block, onSave, onClose, template }: BlockEdi
 
   const emailOk = useMemo(() => isValidEmail(dbEmail), [dbEmail]);
 
-  // Open the sidebar and spotlight a settings panel, closing this block drawer so
-  // the panel is actually visible (it renders beneath the drawer).
-  // NOTE: the settings sidebar is opened by template-editor-content's *message*
-  // listener ({ type:'qs:settings:set-open', open:true }) — there is no CustomEvent
-  // listener for it, so postMessage is the load-bearing call here. The editor and
-  // that listener share one window, so posting to self is received. The
-  // qs:open-settings-panel CustomEvent then spotlights the panel (wired for 'hours'
-  // today; harmless no-op for others until they add a listener).
-  const openSidebarPanel = (panel: 'identity' | 'services') => {
-    try {
-      window.postMessage({ type: 'qs:settings:set-open', open: true }, '*');
-      // Defer the spotlight: the sidebar registers its qs:open-settings-panel
-      // listener only after it mounts (a tick after the message opens it), so
-      // dispatching synchronously would miss it.
-      window.setTimeout(() => {
-        try {
-          window.dispatchEvent(
-            new CustomEvent('qs:open-settings-panel', {
-              detail: { panel, openEditor: true, scroll: true, spotlightMs: 900 } as any,
-            })
-          );
-        } catch {}
-      }, 150);
-    } catch {}
-    onClose?.();
-  };
+  // Open the sidebar + scroll to a panel, closing this drawer so it's visible.
+  const openSidebarPanel = (panel: 'identity' | 'services') =>
+    openSettingsSidebarPanel(panel, { closeDrawer: () => onClose?.() });
 
   const sidebarLinkClass =
     'font-medium text-purple-300 underline underline-offset-2 hover:text-purple-200 focus:outline-none focus:ring-2 focus:ring-purple-500 rounded';

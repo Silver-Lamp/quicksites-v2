@@ -9,7 +9,7 @@
 // Mirrors the hero path in lib/builder/generateDemoSite.ts (same bucket + upload +
 // meterLLMCall shape); kept separate so it takes a RebuildSpec, not a DemoSpec.
 
-import OpenAI from 'openai';
+import { getOpenAI } from '@/lib/ai/openaiClient';
 import { createClient } from '@supabase/supabase-js';
 import { meterLLMCall } from '@/lib/ai/meter';
 import type { RebuildSpec } from '@/lib/rebuild/inferSiteSpec';
@@ -56,7 +56,7 @@ export async function generateRebuildHero(spec: RebuildSpec, userId: string | nu
     const dataUrl = await meterLLMCall<string | null>(
       { provider: 'openai', model_code: 'gpt-image-1', modality: 'image', user_id: userId, route: ROUTE },
       async () => {
-        const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+        const openai = getOpenAI('image');
         const gen = await openai.images.generate({
           model: 'gpt-image-1',
           prompt: heroPrompt(spec),

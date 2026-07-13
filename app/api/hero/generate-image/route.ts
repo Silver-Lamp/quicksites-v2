@@ -1,4 +1,4 @@
-import OpenAI from 'openai';
+import { getOpenAI } from '@/lib/ai/openaiClient';
 import { lazyClient } from '@/lib/lazyClient';
 import { enforceGuestAiLimit, guestLimitBody } from '@/lib/ai/guestGuard';
 import { meterLLMCall, LLMBudgetExceededError } from '@/lib/ai/meter';
@@ -13,7 +13,7 @@ export const dynamic = 'force-dynamic';
 // function room; 60s is the max on Hobby and well within Pro.
 export const maxDuration = 60;
 
-const openai = lazyClient(() => new OpenAI({ apiKey: process.env.OPENAI_API_KEY! }));
+const openai = lazyClient(() => getOpenAI('image'));
 
 // simple in-memory limiter
 type Bucket = { start: number; count: number };

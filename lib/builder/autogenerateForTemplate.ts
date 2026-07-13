@@ -11,7 +11,7 @@
 // guest sites with no hero. Injects into the hero + services blocks + meta and
 // persists via the sanctioned commit RPC (direct UPDATEs to templates are blocked).
 import { createClient } from '@supabase/supabase-js';
-import OpenAI from 'openai';
+import { getOpenAI } from '@/lib/ai/openaiClient';
 import sharp from 'sharp';
 import { ideateCopy } from '@/lib/builder/generateDemoSite';
 import { inferIndustry } from '@/lib/builder/inferIndustry';
@@ -55,7 +55,7 @@ async function generateAndUploadHero(
     `${spec.city ? ` in ${spec.city}${spec.state ? `, ${spec.state}` : ''}` : ''}. ` +
     `Wide 16:9 composition with clear copy space, real-world, high quality, clean modern background. ` +
     `No people, no faces, no text, no watermark, no logo.`;
-  const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+  const openai = getOpenAI('image');
 
   for (let attempt = 0; attempt < 2; attempt++) {
     try {
@@ -120,7 +120,7 @@ async function generateAndUploadLogo(
     contrastRule,
     'Fully transparent background, no background fill, no card, no shadow, no gradient.',
   ].filter(Boolean).join(' ');
-  const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+  const openai = getOpenAI('image');
 
   for (let attempt = 0; attempt < 2; attempt++) {
     try {

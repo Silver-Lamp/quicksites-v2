@@ -10,7 +10,7 @@
 // the demo generator, but grounded in scraped text instead of a random seed. All
 // OpenAI access goes through meterLLMCall so cost is budgeted + logged.
 
-import OpenAI from 'openai';
+import { getOpenAI, resolveModel } from '@/lib/ai/openaiClient';
 import { meterLLMCall } from '@/lib/ai/meter';
 import { LABEL_TO_KEY, KEY_TO_LABEL, type IndustryKey } from '@/lib/industries';
 import type { ScrapedSite, MenuPage } from '@/lib/rebuild/scrapeSite';
@@ -114,9 +114,9 @@ export async function inferSiteSpec(
   return meterLLMCall<RebuildSpec>(
     { provider: 'openai', model_code: 'gpt-4o-mini', modality: 'chat', user_id: userId, route: ROUTE },
     async () => {
-      const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+      const openai = getOpenAI('chat');
       const r = await openai.chat.completions.create({
-        model: 'gpt-4o-mini',
+        model: resolveModel('gpt-4o-mini', 'chat'),
         temperature: 0.7,
         response_format: { type: 'json_object' },
         messages: [

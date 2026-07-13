@@ -1,4 +1,4 @@
-import OpenAI from 'openai';
+import { getOpenAI, resolveModel } from '@/lib/ai/openaiClient';
 import { meterLLMCall } from '@/lib/ai/meter';
 import { normalizeTemplate as normalizeTemplateServer } from '@/admin/utils/normalizeTemplate';
 import { generateDataUrlPNG } from './openaiIdeation';
@@ -53,7 +53,7 @@ async function aiSuggestHeroCopy(args: {
   industry?: string; services?: string[]; businessName?: string; city?: string; state?: string;
 }) {
   if (!openaiApiKey) return null;
-  const openai = new OpenAI({ apiKey: openaiApiKey });
+  const openai = getOpenAI('chat');
 
   const sys =
     'Return strict JSON: {"headline":"...","subheadline":"...","cta_text":"..."} ' +
@@ -71,7 +71,7 @@ async function aiSuggestHeroCopy(args: {
       { provider: 'openai', model_code: model, modality: 'chat', route: 'dev/seed:heroCopy' },
       async () => {
         const resp = await openai.chat.completions.create({
-          model,
+          model: resolveModel(model, 'chat'),
         //   response_format: { type: 'json_object' },
           temperature: 0.5,
           messages: [{ role: 'system', content: sys }, { role: 'user', content: parts }],

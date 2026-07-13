@@ -1,13 +1,11 @@
 import { NextResponse } from 'next/server';
 import { lazyClient } from '@/lib/lazyClient';
-import { OpenAI } from 'openai';
+import { getOpenAI, resolveModel } from '@/lib/ai/openaiClient';
 import { meterLLMCall, LLMBudgetExceededError } from '@/lib/ai/meter';
 import { getServerSupabase } from '@/lib/supabase/server';
 import { enforceGuestAiLimit, guestLimitBody } from '@/lib/ai/guestGuard';
 
-const openai = lazyClient(() => new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY, // NOT the public one!
-}));
+const openai = lazyClient(() => getOpenAI('chat'));
 
 export async function POST(req: Request) {
   const { prompt, industry } = await req.json();
@@ -23,7 +21,7 @@ export async function POST(req: Request) {
       { provider: 'openai', model_code: 'gpt-4o-mini', modality: 'chat', route: '/api/generate-testimonial', user_id: auth?.user?.id ?? null },
       async () => {
         const completion = await openai.chat.completions.create({
-          model: 'gpt-4o-mini',
+          model: resolveModel('gpt-4o-mini', 'chat'),
           messages: [
             { role: 'system', content: `Generate a short, 1-2 sentence customer testimonial for the ${industry} industry.` },
             { role: 'user', content: prompt },

@@ -1,5 +1,5 @@
 // app/api/icon/generate/route.ts
-import OpenAI from 'openai';
+import { getOpenAI } from '@/lib/ai/openaiClient';
 import { enforceGuestAiLimit, guestLimitBody } from '@/lib/ai/guestGuard';
 import { meterLLMCall, LLMBudgetExceededError } from '@/lib/ai/meter';
 import { cookies } from 'next/headers';
@@ -100,7 +100,7 @@ export async function POST(req: Request) {
       'High quality, clean background.',
     ].filter(Boolean).join(' ');
 
-    const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY! });
+    const openai = getOpenAI('image');
     let resp;
     try {
       resp = await meterLLMCall(

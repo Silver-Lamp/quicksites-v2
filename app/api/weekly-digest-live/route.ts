@@ -3,7 +3,7 @@
 import { createClient } from '@supabase/supabase-js';
 import { lazyClient } from '@/lib/lazyClient';
 import { NextRequest } from 'next/server';
-import OpenAI from 'openai';
+import { getOpenAI, resolveModel } from '@/lib/ai/openaiClient';
 import { meterLLMCall, LLMBudgetExceededError } from '@/lib/ai/meter';
 
 const supabase = createClient(
@@ -11,9 +11,7 @@ const supabase = createClient(
   (process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SECRET_KEY)!
 );
 
-const openai = lazyClient(() => new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY!,
-}));
+const openai = lazyClient(() => getOpenAI('chat'));
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
@@ -45,7 +43,7 @@ ${summary.received_feedback.map((f: any) => `• ${f.action} on ${f.block_id.sli
       { provider: 'openai', model_code: 'gpt-4', modality: 'chat', route: '/api/weekly-digest-live' },
       async () => {
         const chat = await openai.chat.completions.create({
-          model: 'gpt-4',
+          model: resolveModel('gpt-4', 'chat'),
           messages: [
             { role: 'system', content: 'You generate weekly coaching summaries from activity logs.' },
             { role: 'user', content: prompt },

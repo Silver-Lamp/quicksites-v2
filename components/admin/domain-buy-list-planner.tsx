@@ -65,6 +65,8 @@ type PurchaseItemResult = {
   campaignId?: string;
   templateId?: string;
   claimUrl?: string;
+  trackingNumber?: string | null;
+  gsc?: string;
 };
 
 type PurchaseResponse = {
@@ -99,6 +101,7 @@ export default function DomainBuyListPlanner() {
   const [backfillNote, setBackfillNote] = useState<string | null>(null);
   const [provisionNumbers, setProvisionNumbers] = useState(false);
   const [connectGsc, setConnectGsc] = useState(false);
+  const [retryingGsc, setRetryingGsc] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<PlanResponse | null>(null);
@@ -302,6 +305,48 @@ export default function DomainBuyListPlanner() {
       setBuyError(e?.message || 'Purchase failed');
     } finally {
       setBuying(false);
+    }
+  }
+
+  // Retry GSC verification for domains left 'pending' by the buy (once DNS has propagated).
+  async function retryPendingGsc() {
+    if (!buyResult) return;
+    const pending = buyResult.results.filter((r) => r.gsc === 'pending');
+    if (!pending.length) return;
+    setRetryingGsc(true);
+    try {
+      const updates = new Map<string, string>();
+      for (const r of pending) {
+        try {
+          const res = await fetch('/api/admin/prospects/gsc-connect', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ domain: r.domain, retry: true }),
+          });
+          const json = await res.json();
+          const rr = json?.result;
+          updates.set(r.domain, rr?.verified && !rr?.pending ? 'connected' : rr?.pending ? 'pending' : 'failed');
+        } catch {
+          updates.set(r.domain, 'pending');
+        }
+      }
+      setBuyResult((prev) => {
+        if (!prev) return prev;
+        const results = prev.results.map((r) =>
+          updates.has(r.domain) ? { ...r, gsc: updates.get(r.domain) } : r,
+        );
+        return {
+          ...prev,
+          results,
+          summary: {
+            ...prev.summary,
+            gscConnected: results.filter((r) => r.gsc === 'connected').length,
+            gscPending: results.filter((r) => r.gsc === 'pending').length,
+          },
+        };
+      });
+    } finally {
+      setRetryingGsc(false);
     }
   }
 
@@ -539,7 +584,17 @@ export default function DomainBuyListPlanner() {
                   <span className="text-emerald-400">{buyResult.summary.gscConnected} GSC connected</span>
                 )}
                 {!buyResult.dryRun && (buyResult.summary.gscPending ?? 0) > 0 && (
-                  <span className="text-amber-400">{buyResult.summary.gscPending} GSC pending (retry)</span>
+                  <>
+                    <span className="text-amber-400">{buyResult.summary.gscPending} GSC pending</span>
+                    <button
+                      onClick={retryPendingGsc}
+                      disabled={retryingGsc}
+                      title="Re-verify pending domains once their DNS TXT has propagated"
+                      className="rounded border border-neutral-700 bg-neutral-900 px-2 py-0.5 text-[11px] text-neutral-300 hover:text-white disabled:opacity-50"
+                    >
+                      {retryingGsc ? 'Retrying…' : 'Retry GSC'}
+                    </button>
+                  </>
                 )}
                 {buyResult.summary.skipped > 0 && (
                   <span className="text-amber-400">{buyResult.summary.skipped} skipped</span>

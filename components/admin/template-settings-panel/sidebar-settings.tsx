@@ -112,6 +112,8 @@ export default function SidebarSettings({ template, onChange, variant }: Props) 
   const startWRef = useRef<number>(0);
   const [forceOpenHours, setForceOpenHours] = useState(false);
   const hoursPanelRef = useRef<HTMLDivElement | null>(null);
+  const identityPanelRef = useRef<HTMLDivElement | null>(null);
+  const servicesPanelRef = useRef<HTMLDivElement | null>(null);
   const [spotlightHours, setSpotlightHours] = useState(false);
 
   // width bootstrap
@@ -130,15 +132,28 @@ export default function SidebarSettings({ template, onChange, variant }: Props) 
     let timeoutId: ReturnType<typeof setTimeout> | null = null;
     function onOpenPanel(ev: Event) {
       const e = ev as CustomEvent<{ panel: string; openEditor?: boolean; scroll?: boolean; spotlightMs?: number }>;
-      if (!e.detail || e.detail.panel !== 'hours') return;
+      const panel = e.detail?.panel;
+      if (!panel) return;
 
-      setForceOpenHours(!!e.detail.openEditor);
+      const refByPanel: Record<string, { current: HTMLDivElement | null }> = {
+        hours: hoursPanelRef,
+        identity: identityPanelRef,
+        services: servicesPanelRef,
+      };
+      const targetRef = refByPanel[panel];
+      if (!targetRef) return;
+
       if (e.detail.scroll !== false) {
-        hoursPanelRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        targetRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
       }
-      setSpotlightHours(true);
-      if (timeoutId) clearTimeout(timeoutId);
-      timeoutId = setTimeout(() => setSpotlightHours(false), e.detail.spotlightMs ?? 900);
+
+      // Hours has an expand-on-open + spotlight affordance; the others just scroll.
+      if (panel === 'hours') {
+        setForceOpenHours(!!e.detail.openEditor);
+        setSpotlightHours(true);
+        if (timeoutId) clearTimeout(timeoutId);
+        timeoutId = setTimeout(() => setSpotlightHours(false), e.detail.spotlightMs ?? 900);
+      }
     }
     window.addEventListener('qs:open-settings-panel' as any, onOpenPanel as any);
     return () => {
@@ -279,8 +294,12 @@ export default function SidebarSettings({ template, onChange, variant }: Props) 
 
       {/* Theme, Identity, Services */}
       <ThemePanel template={template} onChange={(patch) => applyPatch(patch)} />
-      <IdentityPanel template={template} onChange={(patch) => applyPatch(patch)} />
-      <ServicesPanel template={template} onChange={(patch) => applyPatch(patch)} />
+      <div ref={identityPanelRef}>
+        <IdentityPanel template={template} onChange={(patch) => applyPatch(patch)} />
+      </div>
+      <div ref={servicesPanelRef}>
+        <ServicesPanel template={template} onChange={(patch) => applyPatch(patch)} />
+      </div>
 
       {/* Domain (no onChange; read-only UI + programmatic connect/verify/remove) */}
       <PanelBoundary name="DomainPanel">

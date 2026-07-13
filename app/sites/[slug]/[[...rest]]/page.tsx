@@ -279,7 +279,7 @@ export async function generateMetadata({
   const md = generatePageMetadata({
     site: normalized as any,
     pageSlug,
-    baseUrl: `${originFromHeaders()}/sites`,
+    baseUrl: `${await originFromHeaders()}/sites`,
   });
   // An unpublished draft served on the menu surface must never be indexed.
   return isDraft ? { ...md, robots: { index: false, follow: false } } : md;

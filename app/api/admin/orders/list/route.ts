@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { requireMerchantOwner } from '@/lib/auth/requireUser';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -13,6 +14,11 @@ export async function GET(req: NextRequest) {
   const limit = parseInt(url.searchParams.get('limit') || '25', 10);
 
   if (!merchantId) return NextResponse.json({ error: 'merchantId required' }, { status: 400 });
+
+  // Order/payment data is per-merchant and read via the service role (RLS bypass),
+  // so gate on merchant ownership (platform admins pass through).
+  const gate = await requireMerchantOwner(merchantId);
+  if (gate instanceof NextResponse) return gate;
 
   let q = db.from('orders')
     .select('id, amount_cents, currency, status, provider_payment_id, created_at')

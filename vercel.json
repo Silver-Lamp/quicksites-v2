@@ -25,6 +25,10 @@
       "schedule": "0 8 * * *"
     },
     {
+      "path": "/api/cron/partner-payouts",
+      "schedule": "0 9 * * *"
+    },
+    {
       "path": "/api/cron/agency-site-sync",
       "schedule": "30 3 * * *"
     },

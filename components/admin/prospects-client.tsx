@@ -49,21 +49,44 @@ const ProspectsMap = dynamic(() => import('@/components/admin/prospects-map'), {
   loading: () => <div className="flex h-full items-center justify-center text-xs text-neutral-500">Loading map…</div>,
 });
 
-// Curated categories → Google Places (New) `includedTypes`. Kept to well-known valid
-// place types so a sweep never 400s on an unknown type.
-const CATEGORIES: { label: string; types: string[] }[] = [
+// Curated categories → Google Places (New). Two kinds:
+//   • `types`     → Nearby Search `includedTypes` (well-known valid place types,
+//                   so a sweep never 400s on an unknown type).
+//   • `textQuery` → Text Search keyword, for high-value trades that have NO Places
+//                   type at all (towing, HVAC, landscaping, handyman, …). These
+//                   can never be found by a type-only sweep.
+// `industry` on keyword categories is the canonical IndustryKey the query represents,
+// so a keyword-found prospect (generic Places types) still gets the right scaffold.
+const CATEGORIES: { label: string; types?: string[]; textQuery?: string; industry?: string }[] = [
   { label: 'Restaurants', types: ['restaurant', 'cafe', 'bar'] },
   { label: 'Plumbing', types: ['plumber'] },
   { label: 'Electrical', types: ['electrician'] },
+  { label: 'HVAC', textQuery: 'HVAC contractor', industry: 'hvac' },
   { label: 'Painting', types: ['painter'] },
   { label: 'Roofing', types: ['roofing_contractor'] },
   { label: 'Contractor', types: ['general_contractor'] },
+  { label: 'Handyman', textQuery: 'handyman service', industry: 'general_contractor' },
+  { label: 'Landscaping', textQuery: 'landscaping service', industry: 'landscaping' },
+  { label: 'Tree service', textQuery: 'tree service', industry: 'landscaping' },
+  { label: 'Pest control', textQuery: 'pest control', industry: 'pest_control' },
+  { label: 'Cleaning', textQuery: 'house cleaning service', industry: 'other' },
+  { label: 'Junk removal', textQuery: 'junk removal', industry: 'junk_removal' },
+  { label: 'Garage door', textQuery: 'garage door repair', industry: 'general_contractor' },
+  { label: 'Appliance repair', textQuery: 'appliance repair', industry: 'other' },
+  { label: 'Locksmith', types: ['locksmith'] },
   { label: 'Moving', types: ['moving_company'] },
+  { label: 'Storage', types: ['storage'] },
+  { label: 'Towing', textQuery: 'towing service', industry: 'towing' },
   { label: 'Auto repair', types: ['car_repair'] },
+  { label: 'Car wash', types: ['car_wash'] },
+  { label: 'Auto detailing', textQuery: 'auto detailing', industry: 'auto_repair' },
   { label: 'Dental', types: ['dentist'] },
+  { label: 'Veterinary', types: ['veterinary_care'] },
   { label: 'Salon / Spa', types: ['hair_care', 'beauty_salon', 'nail_salon', 'spa'] },
   { label: 'Fitness', types: ['gym'] },
   { label: 'Real estate', types: ['real_estate_agency'] },
+  { label: 'Insurance', types: ['insurance_agency'] },
+  { label: 'Accounting', types: ['accounting'] },
   { label: 'Legal', types: ['lawyer'] },
 ];
 
@@ -273,8 +296,12 @@ export default function ProspectsClient({
   async function discover() {
     setMsg(null);
     if (!city.trim()) return setMsg('Enter a city to sweep.');
-    const includedTypes = [...picked].flatMap((l) => CATEGORIES.find((c) => c.label === l)?.types ?? []);
-    if (!includedTypes.length) return setMsg('Pick at least one category.');
+    const pickedCats = [...picked].map((l) => CATEGORIES.find((c) => c.label === l)).filter(Boolean) as typeof CATEGORIES;
+    const includedTypes = pickedCats.flatMap((c) => c.types ?? []);
+    const textCategories = pickedCats
+      .filter((c) => c.textQuery)
+      .map((c) => ({ query: c.textQuery as string, industry: c.industry }));
+    if (!includedTypes.length && !textCategories.length) return setMsg('Pick at least one category.');
     setBusy('discover');
     try {
       const r = await post('/api/admin/prospects/discover', {
@@ -282,6 +309,7 @@ export default function ProspectsClient({
         region: region.trim(),
         radiusMeters: Math.round(radiusKm * 1000),
         includedTypes,
+        textCategories,
       });
       setMsg(
         `Swept ${r.found} businesses — ${r.tallies.no_website} no website, ${r.tallies.dated} dated, ${r.tallies.has_site} with a site. (${r.inserted} new)`,

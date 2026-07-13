@@ -8,7 +8,8 @@
 import { NextResponse } from 'next/server';
 import { getAdminUser } from '@/lib/auth/getAdminUser';
 import { rateLimitOr429 } from '@/lib/api/rateLimitGuard';
-import { searchNearby, PlacesError } from '@/lib/places/searchNearby';
+import { searchNearby, PlacesError, type NearbyBusiness } from '@/lib/places/searchNearby';
+import { searchTextNearby } from '@/lib/places/searchTextNearby';
 import { scoreSiteFreshness } from '@/lib/rebuild/siteFreshness';
 import { classifyLeadTier, upsertProspects, type ProspectInput, type LeadTier } from '@/lib/outreach/prospects';
 import { getLatLonForCityState } from '@/lib/utils/geocode';
@@ -58,7 +59,18 @@ export async function POST(req: Request) {
   const includedTypes: string[] = Array.isArray(body.includedTypes)
     ? body.includedTypes.map(String).filter(Boolean)
     : [];
-  if (!includedTypes.length) {
+  // Keyword categories (towing, HVAC, landscaping, …) have no Places type, so they
+  // come through as free-text queries run via Text Search. Each carries the industry
+  // key it represents, so a keyword-found business is classified correctly (a towing
+  // co whose Places types are generic would otherwise fall back to 'restaurant').
+  const textCategories: { query: string; industry?: string }[] = Array.isArray(body.textCategories)
+    ? body.textCategories
+        .map((c: any) => ({ query: String(c?.query ?? '').trim(), industry: c?.industry ? String(c.industry) : undefined }))
+        .filter((c: any) => c.query)
+    : [];
+  const textQueries = textCategories.map((c) => c.query);
+  const industryByQuery = new Map<string, string>(textCategories.map((c) => [c.query, c.industry ?? '']));
+  if (!includedTypes.length && !textQueries.length) {
     return NextResponse.json({ error: 'Pick at least one business category.' }, { status: 400 });
   }
 
@@ -76,10 +88,25 @@ export async function POST(req: Request) {
 
   const sweepId = typeof body.sweepId === 'string' && body.sweepId ? body.sweepId : uuid();
 
-  // 1) Sweep.
-  let businesses;
+  // 1) Sweep — Nearby Search for typed categories + Text Search for keyword
+  //    categories, merged and deduped by place id. Text results carry an
+  //    industryHint (from the query that matched) used to classify them.
+  type SweepBusiness = NearbyBusiness & { industryHint?: string };
+  let businesses: SweepBusiness[];
   try {
-    businesses = await searchNearby({ lat, lon, radiusMeters, includedTypes });
+    const [byType, byText] = await Promise.all([
+      includedTypes.length ? searchNearby({ lat, lon, radiusMeters, includedTypes }) : Promise.resolve([]),
+      textQueries.length ? searchTextNearby({ lat, lon, radiusMeters, textQueries }) : Promise.resolve([]),
+    ]);
+    const byPlaceId = new Map<string, SweepBusiness>();
+    // Typed results first (a precise place type beats a keyword guess on dedupe).
+    for (const b of byType) if (!byPlaceId.has(b.placeId)) byPlaceId.set(b.placeId, b);
+    for (const b of byText) {
+      if (byPlaceId.has(b.placeId)) continue;
+      const industryHint = industryByQuery.get(b.matchedQuery) || undefined;
+      byPlaceId.set(b.placeId, { ...b, industryHint });
+    }
+    businesses = [...byPlaceId.values()];
   } catch (e) {
     if (e instanceof PlacesError) {
       const status = e.code === 'not_configured' ? 501 : e.code === 'invalid' ? 400 : 502;
@@ -111,7 +138,9 @@ export async function POST(req: Request) {
       lon: b.lon,
       city: city || null,
       region: region || null,
-      industryKey: typeToIndustryKey(b.types),
+      // Prefer a concrete Places type; else fall back to the keyword category's
+      // industry (so towing/HVAC/etc. don't default to 'restaurant').
+      industryKey: typeToIndustryKey(b.types, (b.industryHint as any) || undefined),
       categories: b.types,
       website: b.website,
       freshnessScore,

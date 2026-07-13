@@ -14,7 +14,8 @@
 // categories naturally yields up to ~20*N businesses.
 
 const SEARCH_NEARBY_URL = 'https://places.googleapis.com/v1/places:searchNearby';
-const FIELD_MASK = [
+/** Shared response field mask — reused by the Text Search primitive. */
+export const PLACES_FIELD_MASK = [
   'places.id',
   'places.displayName',
   'places.websiteUri',
@@ -56,7 +57,8 @@ export type SearchNearbyArgs = {
   maxPerType?: number;
 };
 
-function mapPlace(p: any): NearbyBusiness | null {
+/** Map a raw Places (New) place object to our lead shape. Shared with Text Search. */
+export function mapPlace(p: any): NearbyBusiness | null {
   const placeId = typeof p?.id === 'string' ? p.id : null;
   if (!placeId) return null;
   return {
@@ -93,7 +95,7 @@ async function searchOneType(
       headers: {
         'Content-Type': 'application/json',
         'X-Goog-Api-Key': args.key,
-        'X-Goog-FieldMask': FIELD_MASK,
+        'X-Goog-FieldMask': PLACES_FIELD_MASK,
       },
       body: JSON.stringify(body),
     });

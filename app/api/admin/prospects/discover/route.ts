@@ -12,6 +12,11 @@ import { searchNearby, PlacesError, type NearbyBusiness } from '@/lib/places/sea
 import { searchTextNearby } from '@/lib/places/searchTextNearby';
 import { scoreSiteFreshness } from '@/lib/rebuild/siteFreshness';
 import { classifyLeadTier, upsertProspects, type ProspectInput, type LeadTier } from '@/lib/outreach/prospects';
+import {
+  backfillPlaceSignals,
+  placeSignalsBackfillOnSweepEnabled,
+  placeSignalsBackfillLimit,
+} from '@/lib/outreach/placeSignals';
 import { getLatLonForCityState } from '@/lib/utils/geocode';
 import { typeToIndustryKey } from '@/lib/places/typeToIndustry';
 
@@ -155,6 +160,21 @@ export async function POST(req: Request) {
   // 3) Park them (dedupe on place_id — re-sweeps never clobber worked leads).
   const inserted = await upsertProspects(scored);
 
+  // 3b) Backfill Place Details signals (rating + review_count) for the swept businesses, so
+  // the buy-list map-pack scoring has competitor-review data immediately. Paid SKU → flag-
+  // gated OFF, bounded per sweep, and 7-day-throttled so re-sweeps don't re-charge.
+  let signals = null as Awaited<ReturnType<typeof backfillPlaceSignals>> | null;
+  if (placeSignalsBackfillOnSweepEnabled()) {
+    try {
+      signals = await backfillPlaceSignals(
+        scored.map((s) => s.placeId),
+        { limit: placeSignalsBackfillLimit() },
+      );
+    } catch {
+      signals = null; // best-effort; a sweep must still succeed if signals fail
+    }
+  }
+
   const tallies = scored.reduce(
     (acc, r) => {
       acc[r.leadTier] += 1;
@@ -164,5 +184,5 @@ export async function POST(req: Request) {
     { no_website: 0, dated: 0, has_site: 0, total: 0 } as Record<string, number>,
   );
 
-  return NextResponse.json({ ok: true, sweepId, inserted, found: scored.length, tallies });
+  return NextResponse.json({ ok: true, sweepId, inserted, found: scored.length, tallies, signals });
 }

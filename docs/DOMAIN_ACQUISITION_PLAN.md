@@ -128,12 +128,15 @@ too — seeds just remove the manual typing.
 - **Phase 2 (staged behind `VERCEL_DOMAIN_REGISTER_ENABLED`): one-click bulk buy** — accept
   the buy-list → loop the existing `POST /api/domains/buy` (already admin+flag gated) per
   domain, then mint a geo-campaign per bought domain. Needs the live smoke test first.
-- **Phase 3 (behind the geo flags): post-buy auto-pipeline** — on registration, auto-scaffold
-  the pitch site (`buildGeoPitchSite`), provision the tracked number (`provisionTrackingNumber`,
-  `CALL_TRACKING_ENABLED`), and connect the domain to GSC so the aging clock + rank
-  measurement start day one. Note: **GSC property add is manual today** (OAuth over
-  already-verified properties) — closing that gap (Search Console API `sites.add` + DNS TXT
-  verify, feasible because Vercel-registered domains give us DNS control) is the main new work.
+- **Phase 3 (partly shipped): post-buy auto-pipeline** — pitch-site scaffold happens on buy
+  (Phase 2). **Tracked call number on buy: SHIPPED** — opt-in `provisionNumbers` on the
+  purchase route (+ "+ call tracking" checkbox) provisions a Twilio number per domain
+  (`provisionTrackingNumber` → `setCampaignTracking`), gated by `CALL_TRACKING_ENABLED` +
+  `CALL_TRACKING_FALLBACK_NUMBER`, best-effort (never fails the buy). **Remaining: GSC
+  connect** — GSC property add is manual today (OAuth over already-verified properties). The
+  real work is Search Console API `sites.add` + DNS TXT verify (feasible because Vercel-
+  registered domains give us DNS control) **and a GSC OAuth scope upgrade** from
+  `webmasters.readonly` to read-write. Staged as its own follow-up.
 
 ## 8. Guardrails
 

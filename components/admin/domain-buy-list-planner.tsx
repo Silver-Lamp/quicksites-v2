@@ -73,7 +73,7 @@ type PurchaseResponse = {
   flagEnabled: boolean;
   budgetUsd: number | null;
   spentUsd: number;
-  summary: { bought: number; wouldBuy: number; exists: number; skipped: number; failed: number };
+  summary: { bought: number; wouldBuy: number; exists: number; skipped: number; failed: number; numbersProvisioned?: number };
   results: PurchaseItemResult[];
 };
 
@@ -88,6 +88,7 @@ export default function DomainBuyListPlanner() {
   const [checkVol, setCheckVol] = useState(false);
   const [backfilling, setBackfilling] = useState(false);
   const [backfillNote, setBackfillNote] = useState<string | null>(null);
+  const [provisionNumbers, setProvisionNumbers] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<PlanResponse | null>(null);
@@ -274,7 +275,7 @@ export default function DomainBuyListPlanner() {
       const res = await fetch('/api/admin/prospects/buy-list/purchase', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ items: selectedItems, budgetUsd: budget, dryRun }),
+        body: JSON.stringify({ items: selectedItems, budgetUsd: budget, dryRun, provisionNumbers }),
       });
       const json = await res.json();
       if (!res.ok || !json?.ok) {
@@ -486,6 +487,13 @@ export default function DomainBuyListPlanner() {
                 Hide owned
               </label>
             )}
+            <label
+              className="flex items-center gap-1.5 text-[11px] text-neutral-400"
+              title="Buy a Twilio call-tracking number per domain (recurring cost). Needs CALL_TRACKING_ENABLED + CALL_TRACKING_FALLBACK_NUMBER."
+            >
+              <input type="checkbox" checked={provisionNumbers} onChange={(e) => setProvisionNumbers(e.target.checked)} />
+              + call tracking
+            </label>
             <span className="text-[11px] text-neutral-600">
               Real buy needs VERCEL_DOMAIN_REGISTER_ENABLED (post geo-engine smoke test).
             </span>
@@ -506,6 +514,9 @@ export default function DomainBuyListPlanner() {
                 </span>
                 {buyResult.summary.exists > 0 && (
                   <span className="text-neutral-500">{buyResult.summary.exists} already existed</span>
+                )}
+                {!buyResult.dryRun && (buyResult.summary.numbersProvisioned ?? 0) > 0 && (
+                  <span className="text-sky-400">{buyResult.summary.numbersProvisioned} tracking #s</span>
                 )}
                 {buyResult.summary.skipped > 0 && (
                   <span className="text-amber-400">{buyResult.summary.skipped} skipped</span>

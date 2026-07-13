@@ -101,11 +101,11 @@ domains bought via the planner).
   `/api/gsc/summary`.
 
 ### P1 — close the known gaps surfaced this session
-- [ ] **`geo-rank-sync` reads bare-domain `siteUrl`** (`app/api/cron/geo-rank-sync/route.ts`
-  `gscPosition`), which isn't a valid GSC property id for `sc-domain:` properties → per-campaign
-  rank sync silently returns null. The reliable reader is `/api/gsc/summary` (keys by
-  `normalizeGscDomain`), which the buy-list worklist already uses. Fix: resolve the campaign's
-  property (`sc-domain:<domain>`) for both the token lookup and `searchanalytics.siteUrl`.
+- [x] **`geo-rank-sync` bare-domain `siteUrl` bug — FIXED** (`lib/gsc/resolveProperty.ts`:
+  `loadGscPropertyMap` + pure `gscPropertyFor`). The cron now resolves each campaign's bare
+  domain to its stored GSC property string (`sc-domain:…`) via one preloaded map, and passes
+  it to BOTH the token lookup and `searchanalytics.siteUrl`, so domain properties resolve.
+  Campaigns not connected to GSC are skipped (null). 4 resolver tests.
 - [ ] **Cron to auto-retry `pending` GSC verifications** so operators don't have to click Retry.
   Reuse `verifyPendingGscDomain`; track pending domains (a column or a query over campaigns whose
   domain has a `gsc_tokens` row but no rank yet).

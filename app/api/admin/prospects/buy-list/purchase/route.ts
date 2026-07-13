@@ -26,6 +26,7 @@ import {
   areaCodeFromPhone,
 } from '@/lib/outreach/callTracking';
 import { publicBaseUrl } from '@/lib/outreach/competitionPoster';
+import { connectDomainToGsc, gscAutoConnectEnabled } from '@/lib/gsc/connectDomain';
 import { mintSiteClaimToken } from '@/lib/auth/siteClaimToken';
 
 export const runtime = 'nodejs';
@@ -50,6 +51,8 @@ type Body = {
   attach?: boolean;
   /** Provision a Twilio call-tracking number per bought domain (recurring cost). Default false. */
   provisionNumbers?: boolean;
+  /** Auto-connect each bought domain to Search Console (DNS-TXT verify + add). Default false. */
+  connectGsc?: boolean;
   tld?: string;
 };
 
@@ -64,6 +67,8 @@ type ItemResult = {
   templateId?: string;
   claimUrl?: string;
   trackingNumber?: string | null;
+  /** 'connected' | 'pending' | 'skipped' | 'failed' — GSC auto-connect outcome. */
+  gsc?: string;
 };
 
 function flagEnabled(): boolean {
@@ -90,6 +95,7 @@ export async function POST(req: Request) {
   const dryRun = body.dryRun === true;
   const attach = body.attach !== false;
   const provisionNumbers = body.provisionNumbers === true;
+  const connectGsc = body.connectGsc === true;
   const tld = (body.tld || 'com').replace(/[^a-z0-9]/gi, '') || 'com';
   const budgetUsd = Number.isFinite(body.budgetUsd) ? Math.max(0, Number(body.budgetUsd)) : Infinity;
 
@@ -213,6 +219,18 @@ export async function POST(req: Request) {
         }
       }
 
+      // 5) Optional: connect the domain to Search Console so rank measurement starts day one.
+      // Best-effort; DNS propagation may leave it 'pending' (retry via the gsc-connect route).
+      let gsc: string | undefined;
+      if (connectGsc && gscAutoConnectEnabled()) {
+        try {
+          const r = await connectDomainToGsc(domain, operator.id);
+          gsc = r.verified && !r.pending ? 'connected' : r.pending ? 'pending' : `failed:${r.reason ?? ''}`;
+        } catch {
+          gsc = 'failed';
+        }
+      }
+
       results.push({
         domain,
         city,
@@ -223,6 +241,7 @@ export async function POST(req: Request) {
         templateId: pitch.templateId,
         claimUrl: `/claim-site/${pitch.templateId}?token=${encodeURIComponent(mintSiteClaimToken(pitch.templateId))}`,
         trackingNumber,
+        gsc,
       });
     } catch (e: any) {
       results.push({ domain, city, industryKey, status: 'failed', reason: `bought_but_campaign_failed: ${e?.message || e}`, templateId: pitch.templateId, priceUsd: bought.priceUsd });
@@ -236,6 +255,8 @@ export async function POST(req: Request) {
     skipped: results.filter((r) => r.status === 'skipped').length,
     failed: results.filter((r) => r.status === 'failed').length,
     numbersProvisioned: results.filter((r) => r.trackingNumber).length,
+    gscConnected: results.filter((r) => r.gsc === 'connected').length,
+    gscPending: results.filter((r) => r.gsc === 'pending').length,
   };
 
   return NextResponse.json({

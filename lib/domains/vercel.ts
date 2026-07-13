@@ -47,3 +47,28 @@ export async function getProjectDomainConfig(name: string) {
     `/v10/projects/${VERCEL_PROJECT_ID}/domains/config?name=${encodeURIComponent(name)}`
   );
 }
+
+/**
+ * Add a DNS record to a domain whose nameservers point at Vercel (i.e. a domain we
+ * registered/manage here). Used to publish the google-site-verification TXT for programmatic
+ * GSC connect. `name` is the subdomain ('' / '@' = apex). Returns the created record.
+ */
+export async function addDnsRecord(
+  domain: string,
+  record: { type: string; name?: string; value: string; ttl?: number },
+) {
+  return vercelFetch(`/v2/domains/${encodeURIComponent(domain)}/records`, {
+    method: 'POST',
+    body: JSON.stringify({
+      type: record.type,
+      name: record.name ?? '',
+      value: record.value,
+      ttl: record.ttl ?? 60,
+    }),
+  });
+}
+
+/** Convenience: publish an apex TXT record (e.g. a domain-verification token). */
+export async function addDnsTxtRecord(domain: string, value: string, name = '') {
+  return addDnsRecord(domain, { type: 'TXT', name, value });
+}

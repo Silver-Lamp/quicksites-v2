@@ -11,7 +11,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { getIndustryOptions, type IndustryKey } from '@/lib/industries';
 import { PREMIUM_INDUSTRIES, MID_INDUSTRIES, formatCents } from '@/lib/outreach/geoPricing';
 import { availableMetros, citiesForMetro } from '@/lib/prospects/citySeeds';
-import { buildOwnedIndex, matchOwned, type OwnedMatch } from '@/lib/prospects/ownedDomains';
+import { buildOwnedIndex, candidateOwnedMatch, type OwnedMatch } from '@/lib/prospects/ownedDomains';
 
 const OWNED_STORAGE_KEY = 'qs.buyList.ownedDomains';
 
@@ -116,7 +116,8 @@ export default function DomainBuyListPlanner() {
   /** domain → owned classification ('exact' | 'similar' | null). */
   const ownedByDomain = useMemo(() => {
     const m = new Map<string, OwnedMatch>();
-    for (const c of result?.candidates ?? []) m.set(c.domain, matchOwned(c.domain, ownedIndex));
+    for (const c of result?.candidates ?? [])
+      m.set(c.domain, candidateOwnedMatch({ domain: c.domain, city: c.city, industryKey: c.industryKey }, ownedIndex));
     return m;
   }, [result, ownedIndex]);
 
@@ -170,10 +171,10 @@ export default function DomainBuyListPlanner() {
   useEffect(() => {
     const next = new Set<string>();
     for (const c of result?.candidates ?? []) {
-      if (acceptedSet.has(c.domain) && matchOwned(c.domain, ownedIndex) === null) next.add(c.domain);
+      if (acceptedSet.has(c.domain) && !ownedByDomain.get(c.domain)) next.add(c.domain);
     }
     setSelectedRows(next);
-  }, [result, acceptedSet, ownedIndex]);
+  }, [result, acceptedSet, ownedByDomain]);
 
   /** Candidates visible in the table (owned rows hidden when the toggle is on). */
   const visibleCandidates = useMemo(
@@ -535,6 +536,8 @@ export default function DomainBuyListPlanner() {
                             <Badge cls="bg-neutral-700 text-neutral-200" text="Owned" />
                           ) : owned === 'similar' ? (
                             <Badge cls="bg-amber-900/40 text-amber-300" text="Similar" />
+                          ) : owned === 'alias' ? (
+                            <Badge cls="bg-amber-900/40 text-amber-300" text="Alias" />
                           ) : (
                             <span className="text-neutral-700">—</span>
                           )}

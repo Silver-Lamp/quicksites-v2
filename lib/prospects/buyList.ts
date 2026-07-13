@@ -105,7 +105,11 @@ export type BuyCandidate = {
   weakPackFactor: number;
   /** (1 − saturationWeight·saturation) × weakPackFactor, floored — never zeros the score. */
   winnability: number;
-  /** leadValue × demand × winnability — the sort key. Higher = buy sooner. */
+  /** Monthly local search volume for the keyword — null until enriched (opt-in, flag-gated). */
+  searchVolume: number | null;
+  /** Score multiplier from search volume: 1 when unenriched, up to (1+volumeWeight). */
+  volumeFactor: number;
+  /** leadValue × demand × winnability × volumeFactor — the sort key. Higher = buy sooner. */
   score: number;
 };
 
@@ -251,6 +255,8 @@ export function buildBuyList(
       packStrength,
       weakPackFactor,
       winnability,
+      searchVolume: null,
+      volumeFactor: 1,
       score,
     });
   }

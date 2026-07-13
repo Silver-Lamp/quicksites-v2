@@ -62,6 +62,16 @@ data → factor 1 (identical to v1). Surfaced as a **Weak/Medium/Strong "Map pac
 a coverage stat. Review data is a paid Places SKU backfilled weekly, so coverage is partial —
 the score sharpens where data exists and never blocks where it doesn't.
 
+**Keyword search volume (optional enrichment, flag-gated OFF).** The one Niche-Finder signal
+not derivable from swept data. `lib/prospects/keywordVolume.ts` fetches monthly local search
+volume per candidate (`"<city> <service>"`) from **DataForSEO** (`fetchKeywordVolumes`) and a
+pure `applyKeywordVolume` folds it in as a bounded *boost* (higher-volume market → more
+valuable domain; `volumeFactor = 1 + volumeWeight·strength`, `strength = vol/(vol+midpoint)`)
+and re-ranks. **OFF unless `KEYWORD_VOLUME_ENABLED=1` + `DATAFORSEO_LOGIN`/`DATAFORSEO_PASSWORD`**
+(optional `DATAFORSEO_LOCATION_CODE`, default US 2840). Costs money per batch, so it's an
+opt-in "Add search volume" checkbox that only enriches the top-N; returns `{}` (unchanged
+scoring) when disabled/unconfigured/on error. Surfaced as a **Vol/mo** column.
+
 **Deliberately not in the score:** GSC rank (no site yet), on-page quality (no site yet),
 review counts (a paid Places SKU, backfilled separately + often absent at sweep time — if
 present later we can fold `demandProxy` in as a tiebreaker).

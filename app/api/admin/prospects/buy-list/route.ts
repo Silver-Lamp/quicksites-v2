@@ -16,6 +16,7 @@ import {
 } from '@/lib/prospects/buyList';
 import { PREMIUM_INDUSTRIES } from '@/lib/outreach/geoPricing';
 import { checkAvailability } from '@/lib/domains/registrar';
+import { fetchKeywordVolumes, applyKeywordVolume, keywordVolumeEnabled } from '@/lib/prospects/keywordVolume';
 import { resolveIndustryKey, type IndustryKey } from '@/lib/industries';
 
 export const runtime = 'nodejs';
@@ -45,6 +46,8 @@ type Body = {
   budgetUsd?: number;
   /** Batch-check availability + price via the registrar (read-only). Default false. */
   checkAvailability?: boolean;
+  /** Enrich with keyword search volume (DataForSEO — flag-gated, costs money). Default false. */
+  checkVolume?: boolean;
   /** How many top candidates to availability-check / return (default 120). */
   maxCandidates?: number;
   /** Assumed yearly price (USD) when availability is unknown/unchecked (default 12). */
@@ -120,6 +123,18 @@ export async function POST(req: Request) {
     availabilityChecked = true;
   }
 
+  // Optional keyword-volume enrichment (flag-gated, costs money) — re-ranks by volume-adjusted score.
+  let volumeChecked = false;
+  if (body.checkVolume && keywordVolumeEnabled()) {
+    const volumeByDomain = await fetchKeywordVolumes(
+      ranked.map((c) => ({ domain: c.domain, city: c.city, industryKey: c.industryKey })),
+    );
+    if (Object.keys(volumeByDomain).length) {
+      ranked = applyKeywordVolume(ranked, volumeByDomain);
+      volumeChecked = true;
+    }
+  }
+
   const perIndustryCap = body.perIndustryCap
     ? (Object.fromEntries(
         Object.entries(body.perIndustryCap).map(([k, v]) => [resolveIndustryKey(k), Number(v)]),
@@ -140,6 +155,8 @@ export async function POST(req: Request) {
     totalScored,
     returned: ranked.length,
     availabilityChecked,
+    volumeChecked,
+    volumeAvailable: keywordVolumeEnabled(),
     candidates: ranked,
     fill: {
       count: fill.count,

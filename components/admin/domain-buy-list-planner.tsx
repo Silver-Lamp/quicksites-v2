@@ -73,7 +73,16 @@ type PurchaseResponse = {
   flagEnabled: boolean;
   budgetUsd: number | null;
   spentUsd: number;
-  summary: { bought: number; wouldBuy: number; exists: number; skipped: number; failed: number; numbersProvisioned?: number };
+  summary: {
+    bought: number;
+    wouldBuy: number;
+    exists: number;
+    skipped: number;
+    failed: number;
+    numbersProvisioned?: number;
+    gscConnected?: number;
+    gscPending?: number;
+  };
   results: PurchaseItemResult[];
 };
 
@@ -89,6 +98,7 @@ export default function DomainBuyListPlanner() {
   const [backfilling, setBackfilling] = useState(false);
   const [backfillNote, setBackfillNote] = useState<string | null>(null);
   const [provisionNumbers, setProvisionNumbers] = useState(false);
+  const [connectGsc, setConnectGsc] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<PlanResponse | null>(null);
@@ -275,7 +285,7 @@ export default function DomainBuyListPlanner() {
       const res = await fetch('/api/admin/prospects/buy-list/purchase', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ items: selectedItems, budgetUsd: budget, dryRun, provisionNumbers }),
+        body: JSON.stringify({ items: selectedItems, budgetUsd: budget, dryRun, provisionNumbers, connectGsc }),
       });
       const json = await res.json();
       if (!res.ok || !json?.ok) {
@@ -494,6 +504,13 @@ export default function DomainBuyListPlanner() {
               <input type="checkbox" checked={provisionNumbers} onChange={(e) => setProvisionNumbers(e.target.checked)} />
               + call tracking
             </label>
+            <label
+              className="flex items-center gap-1.5 text-[11px] text-neutral-400"
+              title="Auto-connect each domain to Google Search Console (DNS-TXT verify). Needs GSC_AUTO_CONNECT_ENABLED + a GSC re-consent with write scope. DNS may leave some 'pending' to retry."
+            >
+              <input type="checkbox" checked={connectGsc} onChange={(e) => setConnectGsc(e.target.checked)} />
+              + connect GSC
+            </label>
             <span className="text-[11px] text-neutral-600">
               Real buy needs VERCEL_DOMAIN_REGISTER_ENABLED (post geo-engine smoke test).
             </span>
@@ -517,6 +534,12 @@ export default function DomainBuyListPlanner() {
                 )}
                 {!buyResult.dryRun && (buyResult.summary.numbersProvisioned ?? 0) > 0 && (
                   <span className="text-sky-400">{buyResult.summary.numbersProvisioned} tracking #s</span>
+                )}
+                {!buyResult.dryRun && (buyResult.summary.gscConnected ?? 0) > 0 && (
+                  <span className="text-emerald-400">{buyResult.summary.gscConnected} GSC connected</span>
+                )}
+                {!buyResult.dryRun && (buyResult.summary.gscPending ?? 0) > 0 && (
+                  <span className="text-amber-400">{buyResult.summary.gscPending} GSC pending (retry)</span>
                 )}
                 {buyResult.summary.skipped > 0 && (
                   <span className="text-amber-400">{buyResult.summary.skipped} skipped</span>

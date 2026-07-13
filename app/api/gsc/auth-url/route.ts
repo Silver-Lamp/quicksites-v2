@@ -16,7 +16,13 @@ export async function GET() {
     client_id: clientId,
     redirect_uri: gscRedirectUri(),
     response_type: 'code',
-    scope: 'https://www.googleapis.com/auth/webmasters.readonly',
+    // webmasters (read-WRITE, so we can programmatically add geo-domains as properties) +
+    // siteverification (so we can DNS-TXT-verify them). Superset of the old readonly scope,
+    // so reads keep working — but existing connections must RE-CONSENT once to grant write.
+    scope: [
+      'https://www.googleapis.com/auth/webmasters',
+      'https://www.googleapis.com/auth/siteverification',
+    ].join(' '),
     access_type: 'offline',
     prompt: 'consent',
   });

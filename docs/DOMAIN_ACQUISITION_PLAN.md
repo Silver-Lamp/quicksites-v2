@@ -136,7 +136,16 @@ too — seeds just remove the manual typing.
   connect** — GSC property add is manual today (OAuth over already-verified properties). The
   real work is Search Console API `sites.add` + DNS TXT verify (feasible because Vercel-
   registered domains give us DNS control) **and a GSC OAuth scope upgrade** from
-  `webmasters.readonly` to read-write. Staged as its own follow-up.
+  `webmasters.readonly` to read-write. **SHIPPED** — `lib/gsc/connectDomain.ts`
+  (`connectDomainToGsc` + `verifyPendingGscDomain`): scope upgraded to `webmasters` +
+  `siteverification` (existing GSC connections must **re-consent** once), publishes the
+  google-site-verification TXT via Vercel DNS (`addDnsTxtRecord`), verifies + `sites.add` a
+  `sc-domain:` property, and persists a `gsc_tokens` row so the summary/rank readers see it.
+  Opt-in `connectGsc` on the purchase route + "+ connect GSC" checkbox, flag-gated
+  `GSC_AUTO_CONNECT_ENABLED`, best-effort. DNS propagation may leave a domain **`pending`** →
+  retry via `POST /api/admin/prospects/gsc-connect {domain, retry:true}`. (Note: the
+  `geo-rank-sync` cron reads rank via bare-domain `siteUrl`, a pre-existing quirk; the
+  reliable reader is `/api/gsc/summary`, which powers the buy-list rank worklist.)
 
 ## 8. Guardrails
 

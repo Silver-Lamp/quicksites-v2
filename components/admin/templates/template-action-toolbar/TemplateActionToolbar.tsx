@@ -17,11 +17,11 @@ import {
   pickAccentPair,
   pickFontPair,
   pickDistinct,
-  heroModeFromLayout,
   RHYTHMS,
   HERO_MODES,
   FEATURE_VARIANTS,
 } from '@/lib/theme/shuffleOptions';
+import { shuffleAllData, withBlockStyles as withBlockStylesShared } from '@/lib/theme/shuffleTemplate';
 
 import type { Template } from '@/types/template';
 import PageManagerToolbar from '@/components/admin/templates/page-manager-toolbar';
@@ -324,28 +324,9 @@ useEffect(() => {
 
   // ---- Granular shuffle axes (all content-safe: touch only style/layout fields) ----
 
-  /** Set `content[field]` on every block of `type` across all pages (copy untouched). */
-  const withBlockStyles = (data: any, changes: { type: string; field: string; value: string }[]) => {
-    const setOn = (blocks: any): any => {
-      if (!Array.isArray(blocks)) return blocks;
-      return blocks.map((b: any) => {
-        let nb = b;
-        for (const c of changes) {
-          if (b?.type === c.type) nb = { ...nb, content: { ...(nb.content ?? {}), [c.field]: c.value } };
-        }
-        if (Array.isArray(nb?.blocks)) nb = { ...nb, blocks: setOn(nb.blocks) };
-        return nb;
-      });
-    };
-    const pages = Array.isArray(data.pages)
-      ? data.pages.map((p: any) => ({
-          ...p,
-          blocks: setOn(p.blocks),
-          ...(Array.isArray(p.content_blocks) ? { content_blocks: setOn(p.content_blocks) } : {}),
-        }))
-      : data.pages;
-    return { ...data, pages };
-  };
+  /** Set `content[field]` on every block of `type` across all pages (copy untouched).
+   *  Shared with the /preview page via lib/theme/shuffleTemplate. */
+  const withBlockStyles = withBlockStylesShared;
 
   const curTheme = (): any => ((tplRef.current ?? template) as any)?.data?.meta?.theme ?? {};
   const curIndustry = (): any => {
@@ -396,30 +377,16 @@ useEffect(() => {
     try { toast.success('Layout shuffled', { icon: '🎲' }); } catch { /* no-op */ }
   };
 
-  /** One-tap: a whole new theme AND matching hero/services layout. */
+  /** One-tap: a whole new theme AND matching hero/services layout. Shared transform
+   *  with the /preview page (lib/theme/shuffleTemplate#shuffleAllData). */
   const shuffleAll = () => {
     const cur: any = (tplRef.current ?? template) || {};
-    const theme = pickCuratedTheme({
-      industry: curIndustry(),
-      avoidId: cur?.data?.meta?.theme?.id ?? null,
-      avoidAccent: cur?.data?.meta?.theme?.accentColor ?? null,
-    });
-    const stamped = toStampedTheme(theme);
-    const mode = theme.darkMode;
-    let data = {
-      ...(cur.data ?? {}),
-      color_mode: mode,
-      meta: { ...((cur.data ?? {}).meta ?? {}), theme: stamped },
-    };
-    data = withBlockStyles(data, [
-      { type: 'hero', field: 'layout_mode', value: heroModeFromLayout(stamped?.layout?.heroLayout) },
-      { type: 'services', field: 'variant', value: stamped?.layout?.featureVariant ?? 'grid' },
-    ]);
+    const { data, colorMode: mode, themeName } = shuffleAllData(cur.data ?? {}, { industry: curIndustry() });
     apply({ ...cur, color_mode: mode, data } as Template);
     queueFullSave('save');
     try { localStorage.setItem('qs:preview:color', mode); } catch {}
     window.dispatchEvent(new CustomEvent('qs:preview:set-color-mode', { detail: mode }));
-    try { toast.success(`Shuffled — ${theme.name}`, { icon: '🎲' }); } catch { /* no-op */ }
+    try { toast.success(`Shuffled — ${themeName}`, { icon: '🎲' }); } catch { /* no-op */ }
   };
 
   /* patch bus: apply + queue save */

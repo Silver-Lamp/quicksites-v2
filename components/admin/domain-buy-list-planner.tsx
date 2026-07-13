@@ -1,0 +1,452 @@
+'use client';
+
+// components/admin/domain-buy-list-planner.tsx
+//
+// Pre-purchase domain buy-list planner: pick industries + a budget, get a ranked list of
+// the geo-domains most worth buying (leadValue × demand × winnability), with a budget-fill
+// tally and optional read-only availability/price. Self-contained — calls
+// POST /api/admin/prospects/buy-list. See docs/DOMAIN_ACQUISITION_PLAN.md.
+
+import { useMemo, useState } from 'react';
+import { getIndustryOptions, type IndustryKey } from '@/lib/industries';
+import { PREMIUM_INDUSTRIES, MID_INDUSTRIES, formatCents } from '@/lib/outreach/geoPricing';
+import { availableMetros, citiesForMetro } from '@/lib/prospects/citySeeds';
+
+type Candidate = {
+  city: string;
+  region: string | null;
+  industryKey: string;
+  domain: string;
+  slug: string;
+  monthlyRentCents: number;
+  lockedRentCents: number;
+  noWebsite: number;
+  hasSite: number;
+  totalProspects: number;
+  saturation: number;
+  score: number;
+};
+
+type PlanResponse = {
+  ok: boolean;
+  budgetUsd: number;
+  totalScored: number;
+  returned: number;
+  availabilityChecked: boolean;
+  candidates: Candidate[];
+  fill: {
+    count: number;
+    totalSpendUsd: number;
+    projectedMonthlyRentCents: number;
+    projectedFullMonthlyRentCents: number;
+    acceptedDomains: string[];
+    skipped: { domain: string; reason: string; priceUsd: number | null }[];
+  };
+};
+
+type PurchaseItemResult = {
+  domain: string;
+  city: string;
+  industryKey: string;
+  status: 'bought' | 'would_buy' | 'exists' | 'skipped' | 'failed';
+  reason?: string;
+  priceUsd?: number | null;
+  campaignId?: string;
+  templateId?: string;
+  claimUrl?: string;
+};
+
+type PurchaseResponse = {
+  ok: boolean;
+  dryRun: boolean;
+  flagEnabled: boolean;
+  budgetUsd: number | null;
+  spentUsd: number;
+  summary: { bought: number; wouldBuy: number; exists: number; skipped: number; failed: number };
+  results: PurchaseItemResult[];
+};
+
+const CHIP = 'rounded-full border px-3 py-1 text-xs font-medium transition';
+
+export default function DomainBuyListPlanner() {
+  const industryOptions = useMemo(() => getIndustryOptions(), []);
+  const [selected, setSelected] = useState<Set<IndustryKey>>(() => new Set(PREMIUM_INDUSTRIES));
+  const [budget, setBudget] = useState(1000);
+  const [metro, setMetro] = useState('');
+  const [checkAvail, setCheckAvail] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [result, setResult] = useState<PlanResponse | null>(null);
+
+  const [buying, setBuying] = useState(false);
+  const [buyError, setBuyError] = useState<string | null>(null);
+  const [buyResult, setBuyResult] = useState<PurchaseResponse | null>(null);
+
+  const metros = useMemo(() => availableMetros(), []);
+
+  function toggle(key: IndustryKey) {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  }
+
+  async function plan() {
+    setLoading(true);
+    setError(null);
+    setBuyResult(null);
+    setBuyError(null);
+    try {
+      const cities = metro ? citiesForMetro(metro).map((c) => ({ city: c.city, region: c.region })) : [];
+      const res = await fetch('/api/admin/prospects/buy-list', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          industries: [...selected],
+          budgetUsd: budget,
+          cities,
+          checkAvailability: checkAvail,
+          maxCandidates: 150,
+        }),
+      });
+      const json = await res.json();
+      if (!res.ok || !json?.ok) throw new Error(json?.error || `Request failed (${res.status})`);
+      setResult(json as PlanResponse);
+    } catch (e: any) {
+      setError(e?.message || 'Failed to plan the buy-list');
+      setResult(null);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  const acceptedSet = useMemo(
+    () => new Set(result?.fill.acceptedDomains ?? []),
+    [result],
+  );
+
+  /** The budget-fitting candidates, as purchase items. */
+  const acceptedItems = useMemo(
+    () =>
+      (result?.candidates ?? [])
+        .filter((c) => acceptedSet.has(c.domain))
+        .map((c) => ({ city: c.city, region: c.region, industryKey: c.industryKey })),
+    [result, acceptedSet],
+  );
+
+  async function buy(dryRun: boolean) {
+    if (!acceptedItems.length) return;
+    if (!dryRun) {
+      const ok = window.confirm(
+        `Buy ${acceptedItems.length} domain(s) for up to $${budget}? This spends real money and mints a geo-campaign per domain.`,
+      );
+      if (!ok) return;
+    }
+    setBuying(true);
+    setBuyError(null);
+    try {
+      const res = await fetch('/api/admin/prospects/buy-list/purchase', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ items: acceptedItems, budgetUsd: budget, dryRun }),
+      });
+      const json = await res.json();
+      if (!res.ok || !json?.ok) {
+        if (json?.error === 'registration_disabled') {
+          throw new Error('Purchasing is off. Set VERCEL_DOMAIN_REGISTER_ENABLED=1 (after the geo-engine smoke test).');
+        }
+        if (json?.error === 'missing_registrant_contact') {
+          throw new Error(`Registrant contact incomplete: ${(json.missing || []).join(', ')}`);
+        }
+        throw new Error(json?.error || `Request failed (${res.status})`);
+      }
+      setBuyResult(json as PurchaseResponse);
+    } catch (e: any) {
+      setBuyError(e?.message || 'Purchase failed');
+    } finally {
+      setBuying(false);
+    }
+  }
+
+  return (
+    <div id="buy-list-planner" className="mt-8 scroll-mt-24 rounded-xl border border-neutral-800 bg-neutral-900/40 p-4">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-neutral-400">
+            Domain buy-list planner
+          </h2>
+          <p className="mt-1 text-xs text-neutral-500">
+            Spend a fixed budget on the domains most worth owning — ranked by lead value × demand ×
+            how winnable the SEO is. Availability is read-only (nothing is purchased here).
+          </p>
+        </div>
+      </div>
+
+      {/* Industry chips */}
+      <div className="mt-4">
+        <div className="flex items-center justify-between">
+          <label className="text-xs font-medium text-neutral-400">Industries</label>
+          <div className="flex gap-2 text-[11px] text-neutral-500">
+            <button className="hover:text-neutral-300" onClick={() => setSelected(new Set(PREMIUM_INDUSTRIES))}>
+              Premium only
+            </button>
+            <span>·</span>
+            <button
+              className="hover:text-neutral-300"
+              onClick={() => setSelected(new Set([...PREMIUM_INDUSTRIES, ...MID_INDUSTRIES]))}
+            >
+              + Mid tier
+            </button>
+          </div>
+        </div>
+        <div className="mt-2 flex flex-wrap gap-2">
+          {industryOptions.map((opt) => {
+            const on = selected.has(opt.value);
+            return (
+              <button
+                key={opt.value}
+                onClick={() => toggle(opt.value)}
+                className={
+                  CHIP +
+                  ' ' +
+                  (on
+                    ? 'border-sky-500 bg-sky-600/20 text-sky-200'
+                    : 'border-neutral-700 bg-neutral-950 text-neutral-400 hover:text-neutral-200')
+                }
+              >
+                {opt.label}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Controls */}
+      <div className="mt-4 flex flex-wrap items-end gap-4">
+        <div>
+          <label className="text-xs font-medium text-neutral-400">Budget (USD)</label>
+          <input
+            type="number"
+            min={0}
+            value={budget}
+            onChange={(e) => setBudget(Math.max(0, Number(e.target.value) || 0))}
+            className="mt-1 block w-32 rounded-lg border border-neutral-700 bg-neutral-950 px-3 py-2 text-sm text-white"
+          />
+        </div>
+        <div>
+          <label className="text-xs font-medium text-neutral-400">Add metro cities (optional)</label>
+          <select
+            value={metro}
+            onChange={(e) => setMetro(e.target.value)}
+            className="mt-1 block w-44 rounded-lg border border-neutral-700 bg-neutral-950 px-3 py-2 text-sm text-white"
+          >
+            <option value="">Swept cities only</option>
+            {metros.map((m) => (
+              <option key={m} value={m}>
+                {m[0].toUpperCase() + m.slice(1)} metro
+              </option>
+            ))}
+          </select>
+        </div>
+        <label className="flex items-center gap-2 text-xs text-neutral-400">
+          <input type="checkbox" checked={checkAvail} onChange={(e) => setCheckAvail(e.target.checked)} />
+          Check availability + price (slower)
+        </label>
+        <button
+          onClick={plan}
+          disabled={loading || selected.size === 0}
+          className="rounded-lg bg-sky-600 px-4 py-2 text-sm font-medium text-white hover:bg-sky-500 disabled:opacity-50"
+        >
+          {loading ? 'Planning…' : 'Plan buy-list'}
+        </button>
+      </div>
+
+      {error && <p className="mt-3 text-sm text-rose-400">{error}</p>}
+
+      {result && (
+        <div className="mt-5">
+          {/* Fill summary */}
+          <div className="flex flex-wrap gap-4 rounded-lg border border-neutral-800 bg-neutral-950/60 p-3 text-sm">
+            <Stat label="Domains to buy" value={String(result.fill.count)} />
+            <Stat label="Spend" value={`$${result.fill.totalSpendUsd.toLocaleString()}`} />
+            <Stat
+              label="Founder MRR (pre-rank)"
+              value={formatCents(result.fill.projectedMonthlyRentCents)}
+              hint="if every domain rents at the locked rate"
+            />
+            <Stat
+              label="Full MRR (if all rank)"
+              value={formatCents(result.fill.projectedFullMonthlyRentCents)}
+              hint="if every domain reaches page 1"
+            />
+            <Stat label="Scored" value={`${result.returned} of ${result.totalScored}`} />
+          </div>
+
+          {/* Buy action bar */}
+          {result.fill.count > 0 && (
+            <div className="mt-3 flex flex-wrap items-center gap-3 rounded-lg border border-neutral-800 bg-neutral-950/40 p-3">
+              <span className="text-xs text-neutral-400">
+                Acquire the {result.fill.count} budget-fitting domain(s):
+              </span>
+              <button
+                onClick={() => buy(true)}
+                disabled={buying}
+                className="rounded-lg border border-neutral-700 bg-neutral-900 px-3 py-1.5 text-sm text-neutral-200 hover:text-white disabled:opacity-50"
+              >
+                {buying ? 'Working…' : 'Preview buy (dry run)'}
+              </button>
+              <button
+                onClick={() => buy(false)}
+                disabled={buying}
+                className="rounded-lg bg-emerald-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-emerald-500 disabled:opacity-50"
+              >
+                Buy + mint campaigns
+              </button>
+              <span className="text-[11px] text-neutral-600">
+                Real buy needs VERCEL_DOMAIN_REGISTER_ENABLED (post geo-engine smoke test).
+              </span>
+            </div>
+          )}
+
+          {buyError && <p className="mt-2 text-sm text-rose-400">{buyError}</p>}
+
+          {buyResult && (
+            <div className="mt-3 rounded-lg border border-neutral-800 bg-neutral-950/60 p-3">
+              <div className="flex flex-wrap items-center gap-3 text-sm">
+                <span className="font-semibold text-neutral-100">
+                  {buyResult.dryRun ? 'Dry run' : 'Purchase complete'}
+                </span>
+                <span className="text-neutral-400">
+                  {buyResult.dryRun
+                    ? `${buyResult.summary.wouldBuy} would buy · ~$${buyResult.spentUsd}`
+                    : `${buyResult.summary.bought} bought · $${buyResult.spentUsd} spent`}
+                </span>
+                {buyResult.summary.exists > 0 && (
+                  <span className="text-neutral-500">{buyResult.summary.exists} already existed</span>
+                )}
+                {buyResult.summary.skipped > 0 && (
+                  <span className="text-amber-400">{buyResult.summary.skipped} skipped</span>
+                )}
+                {buyResult.summary.failed > 0 && (
+                  <span className="text-rose-400">{buyResult.summary.failed} failed</span>
+                )}
+              </div>
+              <ul className="mt-2 space-y-0.5 text-[12px] text-neutral-400">
+                {buyResult.results.map((r) => (
+                  <li key={r.domain || `${r.city}-${r.industryKey}`}>
+                    <span className="text-neutral-300">{r.domain || `${r.city} / ${r.industryKey}`}</span> —{' '}
+                    <span
+                      className={
+                        r.status === 'bought' || r.status === 'would_buy'
+                          ? 'text-emerald-400'
+                          : r.status === 'failed'
+                            ? 'text-rose-400'
+                            : 'text-neutral-500'
+                      }
+                    >
+                      {r.status}
+                      {r.reason ? ` (${r.reason})` : ''}
+                    </span>
+                    {r.campaignId && !buyResult.dryRun && (
+                      <a
+                        href={r.templateId ? `/admin/templates/${r.templateId}` : '#'}
+                        className="ml-2 text-sky-400 hover:text-sky-300"
+                      >
+                        open →
+                      </a>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {/* Ranked table */}
+          <div className="mt-3 overflow-x-auto">
+            <table className="w-full min-w-[720px] text-left text-sm">
+              <thead className="text-[11px] uppercase tracking-wide text-neutral-500">
+                <tr className="border-b border-neutral-800">
+                  <th className="py-2 pr-3">#</th>
+                  <th className="py-2 pr-3">Domain</th>
+                  <th className="py-2 pr-3">Industry</th>
+                  <th className="py-2 pr-3 text-right">$/mo</th>
+                  <th className="py-2 pr-3 text-right">No-site</th>
+                  <th className="py-2 pr-3 text-right">Saturation</th>
+                  {result.availabilityChecked && <th className="py-2 pr-3">Availability</th>}
+                  <th className="py-2 pr-3 text-right">Score</th>
+                </tr>
+              </thead>
+              <tbody>
+                {result.candidates.map((c, i) => {
+                  const inCart = acceptedSet.has(c.domain);
+                  return (
+                    <tr
+                      key={c.domain}
+                      className={
+                        'border-b border-neutral-900 ' +
+                        (inCart ? 'bg-emerald-500/5' : 'opacity-70')
+                      }
+                    >
+                      <td className="py-2 pr-3 text-neutral-500">{i + 1}</td>
+                      <td className="py-2 pr-3 font-medium text-neutral-200">
+                        {inCart && <span className="mr-1 text-emerald-400" title="Fits the budget">●</span>}
+                        {c.domain}
+                        <span className="ml-2 text-[11px] text-neutral-500">
+                          {c.city}
+                          {c.region ? `, ${c.region}` : ''}
+                        </span>
+                      </td>
+                      <td className="py-2 pr-3 text-neutral-400">{labelFor(c.industryKey, industryOptions)}</td>
+                      <td className="py-2 pr-3 text-right text-neutral-300">{formatCents(c.monthlyRentCents)}</td>
+                      <td className="py-2 pr-3 text-right text-neutral-400">{c.noWebsite}</td>
+                      <td className="py-2 pr-3 text-right text-neutral-500">
+                        {c.totalProspects ? `${Math.round(c.saturation * 100)}%` : '—'}
+                      </td>
+                      {result.availabilityChecked && (
+                        <td className="py-2 pr-3">{availabilityBadge(c.domain, result)}</td>
+                      )}
+                      <td className="py-2 pr-3 text-right text-neutral-500">{Math.round(c.score).toLocaleString()}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+          <p className="mt-2 text-[11px] text-neutral-600">
+            ● = fits the budget (buy these first). Rows are ranked by opportunity; greyed rows scored
+            lower or didn&apos;t fit the budget. Turn on one-click buy after the geo-engine smoke test
+            (Phase 2 — see the plan doc).
+          </p>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function Stat({ label, value, hint }: { label: string; value: string; hint?: string }) {
+  return (
+    <div title={hint}>
+      <div className="text-[11px] uppercase tracking-wide text-neutral-500">{label}</div>
+      <div className="text-base font-semibold text-neutral-100">{value}</div>
+    </div>
+  );
+}
+
+function labelFor(key: string, opts: ReadonlyArray<{ value: string; label: string }>): string {
+  return opts.find((o) => o.value === key)?.label ?? key;
+}
+
+// Availability is not on the candidate rows (the API returns fill.skipped reasons); render
+// a badge from the skipped list when present, else "available/checked".
+function availabilityBadge(domain: string, result: PlanResponse) {
+  const skip = result.fill.skipped.find((s) => s.domain === domain);
+  if (skip?.reason === 'unavailable') return <Badge cls="bg-rose-900/40 text-rose-300" text="Taken" />;
+  if (skip?.reason === 'premium') return <Badge cls="bg-amber-900/40 text-amber-300" text="Premium" />;
+  return <Badge cls="bg-emerald-900/40 text-emerald-300" text="Available" />;
+}
+
+function Badge({ cls, text }: { cls: string; text: string }) {
+  return <span className={`rounded px-2 py-0.5 text-[11px] font-medium ${cls}`}>{text}</span>;
+}

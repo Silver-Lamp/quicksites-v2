@@ -16,51 +16,10 @@ import { defaultOutreachOrgSlug, orgIdForSlug } from '@/lib/outreach/campaignBra
 import { KEY_TO_LABEL, type IndustryKey } from '@/lib/industries';
 import { checkDomainAvailability, registerDomain, namecheapConfigured } from '@/lib/domains/namecheap';
 import { addProjectDomain } from '@/lib/domains/vercel';
-
-// Clean single-word (or hyphenated) domain fragment per industry — the compound keys
-// (salon_spa, medical_dental) get a nicer domain word than the raw key.
-const INDUSTRY_DOMAIN_WORD: Partial<Record<IndustryKey, string>> = {
-  salon_spa: 'salon',
-  medical_dental: 'dental',
-  general_contractor: 'contractor',
-  auto_repair: 'auto-repair',
-  real_estate: 'real-estate',
-  carpet_cleaning: 'carpet-cleaning',
-  window_washing: 'window-cleaning',
-  pressure_washing: 'pressure-washing',
-  junk_removal: 'junk-removal',
-  roof_cleaning: 'roofing',
-  windshield_repair: 'auto-glass',
-  pest_control: 'pest-control',
-};
-
-export function slugify(s: string): string {
-  return (s || '')
-    .toLowerCase()
-    .normalize('NFKD')
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/(^-|-$)/g, '')
-    .slice(0, 63);
-}
-
-function industryDomainWord(key: IndustryKey): string {
-  return INDUSTRY_DOMAIN_WORD[key] ?? key.replace(/_/g, '-');
-}
-
-/**
- * Derive the exact-match domain + pitch-site slug for a city + industry.
- * slug == the apex label so middleware host→/sites/<slug> rewrite serves the pitch
- * site with no extra mapping. e.g. ('Boston','towing') → { domain:'boston-towing.com',
- * slug:'boston-towing' }.
- */
-export function geoDomainFor(
-  city: string,
-  industryKey: IndustryKey,
-  tld = 'com',
-): { domain: string; slug: string } {
-  const slug = slugify(`${city}-${industryDomainWord(industryKey)}`);
-  return { domain: `${slug}.${tld}`, slug };
-}
+// Pure domain derivation lives in ./geoDomain so pure consumers (buy-list planner, tests,
+// client bundle) can import it without pulling in this module's server deps. Re-exported
+// here so existing importers of geoCampaigns keep working.
+export { slugify, industryDomainWord, geoDomainFor, INDUSTRY_DOMAIN_WORD } from '@/lib/outreach/geoDomain';
 
 export type GeoCampaign = {
   id: string;
@@ -160,6 +119,19 @@ export async function getGeoCampaignByTemplateId(templateId: string): Promise<Ge
     .from('geo_industry_campaigns')
     .select(GEO_SUMMARY_COLS)
     .eq('template_id', templateId)
+    .maybeSingle();
+  if (error) return null;
+  return (data as GeoCampaignSummary) ?? null;
+}
+
+/** Look up a campaign by its (unique) domain — used for bulk-buy idempotency. */
+export async function getGeoCampaignByDomain(domain: string): Promise<GeoCampaignSummary | null> {
+  const clean = (domain || '').trim().toLowerCase();
+  if (!clean) return null;
+  const { data, error } = await supabaseAdmin
+    .from('geo_industry_campaigns')
+    .select(GEO_SUMMARY_COLS)
+    .eq('domain', clean)
     .maybeSingle();
   if (error) return null;
   return (data as GeoCampaignSummary) ?? null;

@@ -16,6 +16,7 @@ import { effectivePriceCents, formatCents } from '@/lib/outreach/geoPricing';
 import { nextActionLabel } from '@/components/admin/templates/campaign-badge';
 import { scoreTerritories } from '@/lib/prospects/territoryScore';
 import { buildRankedOpportunities } from '@/lib/prospects/rankedOpportunities';
+import DomainBuyListPlanner from '@/components/admin/domain-buy-list-planner';
 import { computeCoachState, type CoachAction } from '@/lib/prospects/growthCoach';
 import GrowthCoach, { actionId } from '@/components/admin/growth-coach';
 import {
@@ -1177,6 +1178,9 @@ export default function ProspectsClient({
           </div>
         </div>
       )}
+
+      {/* Domain buy-list planner — spend a fixed budget on the best geo-domains to acquire. */}
+      <DomainBuyListPlanner />
 
       {/* Existing campaigns */}
       {initialCampaigns.length > 0 && (

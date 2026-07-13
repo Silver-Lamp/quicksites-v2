@@ -31,6 +31,8 @@ type Candidate = {
   reviewSample: number;
   packStrength: number | null;
   weakPackFactor: number;
+  searchVolume: number | null;
+  volumeFactor: number;
   score: number;
 };
 
@@ -40,6 +42,8 @@ type PlanResponse = {
   totalScored: number;
   returned: number;
   availabilityChecked: boolean;
+  volumeChecked: boolean;
+  volumeAvailable: boolean;
   candidates: Candidate[];
   fill: {
     count: number;
@@ -81,6 +85,7 @@ export default function DomainBuyListPlanner() {
   const [budget, setBudget] = useState(1000);
   const [metro, setMetro] = useState('');
   const [checkAvail, setCheckAvail] = useState(false);
+  const [checkVol, setCheckVol] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<PlanResponse | null>(null);
@@ -151,6 +156,7 @@ export default function DomainBuyListPlanner() {
           budgetUsd: budget,
           cities,
           checkAvailability: checkAvail,
+          checkVolume: checkVol,
           maxCandidates: 150,
         }),
       });
@@ -338,6 +344,10 @@ export default function DomainBuyListPlanner() {
           <input type="checkbox" checked={checkAvail} onChange={(e) => setCheckAvail(e.target.checked)} />
           Check availability + price (slower)
         </label>
+        <label className="flex items-center gap-2 text-xs text-neutral-400" title="Needs KEYWORD_VOLUME_ENABLED + DataForSEO creds. Costs money per batch.">
+          <input type="checkbox" checked={checkVol} onChange={(e) => setCheckVol(e.target.checked)} />
+          Add search volume
+        </label>
         <button
           onClick={plan}
           disabled={loading || selected.size === 0}
@@ -398,6 +408,13 @@ export default function DomainBuyListPlanner() {
               hint="candidates with competitor review data (drives pack-strength scoring)"
             />
           </div>
+
+          {checkVol && !result.volumeChecked && (
+            <p className="mt-2 text-[11px] text-amber-400/80">
+              Search volume is off — set KEYWORD_VOLUME_ENABLED=1 + DATAFORSEO_LOGIN/PASSWORD to
+              enable it. Scoring proceeds without it.
+            </p>
+          )}
 
           {/* Buy action bar */}
           <div className="mt-3 flex flex-wrap items-center gap-3 rounded-lg border border-neutral-800 bg-neutral-950/40 p-3">
@@ -504,6 +521,7 @@ export default function DomainBuyListPlanner() {
                   <th className="py-2 pr-3 text-right">No-site</th>
                   <th className="py-2 pr-3 text-right">Saturation</th>
                   <th className="py-2 pr-3">Map pack</th>
+                  {result.volumeChecked && <th className="py-2 pr-3 text-right">Vol/mo</th>}
                   {result.availabilityChecked && <th className="py-2 pr-3">Availability</th>}
                   <th className="py-2 pr-3 text-right">Score</th>
                 </tr>
@@ -560,6 +578,11 @@ export default function DomainBuyListPlanner() {
                         {c.totalProspects ? `${Math.round(c.saturation * 100)}%` : '—'}
                       </td>
                       <td className="py-2 pr-3">{packBadge(c)}</td>
+                      {result.volumeChecked && (
+                        <td className="py-2 pr-3 text-right text-neutral-400">
+                          {c.searchVolume != null ? c.searchVolume.toLocaleString() : '—'}
+                        </td>
+                      )}
                       {result.availabilityChecked && (
                         <td className="py-2 pr-3">{availabilityBadge(c.domain, result)}</td>
                       )}

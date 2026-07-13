@@ -86,6 +86,8 @@ export default function DomainBuyListPlanner() {
   const [metro, setMetro] = useState('');
   const [checkAvail, setCheckAvail] = useState(false);
   const [checkVol, setCheckVol] = useState(false);
+  const [backfilling, setBackfilling] = useState(false);
+  const [backfillNote, setBackfillNote] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<PlanResponse | null>(null);
@@ -168,6 +170,38 @@ export default function DomainBuyListPlanner() {
       setResult(null);
     } finally {
       setLoading(false);
+    }
+  }
+
+  // Refresh competitor review data (rating/review_count) for already-swept prospects so the
+  // map-pack column populates. Paid Places SKU → bounded server-side; re-plans on success.
+  async function backfillSignals() {
+    setBackfilling(true);
+    setBackfillNote(null);
+    try {
+      const res = await fetch('/api/admin/prospects/backfill-signals', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ limit: 200 }),
+      });
+      const json = await res.json();
+      if (!res.ok || !json?.ok) {
+        if (json?.error === 'place_details_not_configured') {
+          throw new Error('Place Details is off — set GOOGLE_PLACES_API_KEY.');
+        }
+        throw new Error(json?.error || `Request failed (${res.status})`);
+      }
+      const r = json.result;
+      setBackfillNote(
+        `Backfilled ${r.updated} of ${r.checked} stale market(s)` +
+          (r.deferred ? ` · ${r.deferred} deferred (run again)` : '') +
+          (result ? ' · re-planning…' : ''),
+      );
+      if (result) await plan();
+    } catch (e: any) {
+      setBackfillNote(e?.message || 'Backfill failed');
+    } finally {
+      setBackfilling(false);
     }
   }
 
@@ -355,7 +389,17 @@ export default function DomainBuyListPlanner() {
         >
           {loading ? 'Planning…' : 'Plan buy-list'}
         </button>
+        <button
+          onClick={backfillSignals}
+          disabled={backfilling}
+          title="Fetch competitor rating + review counts (Google Place Details) for already-swept cities so the Map pack column populates. Paid SKU; bounded per run."
+          className="rounded-lg border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-neutral-300 hover:text-white disabled:opacity-50"
+        >
+          {backfilling ? 'Backfilling…' : 'Backfill map-pack data'}
+        </button>
       </div>
+
+      {backfillNote && <p className="mt-2 text-[11px] text-neutral-400">{backfillNote}</p>}
 
       {/* Already-owned inventory (pasted, persisted locally; no registrar ping) */}
       <div className="mt-3">

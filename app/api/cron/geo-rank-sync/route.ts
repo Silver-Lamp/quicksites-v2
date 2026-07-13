@@ -10,6 +10,7 @@ import { createClient } from '@supabase/supabase-js';
 import { runCron } from '@/lib/cron/record';
 import { isCronAuthorized } from '@/lib/cron/auth';
 import { getValidOAuthClient } from '@/lib/gsc/getValidOAuthClient';
+import { loadGscPropertyMap, gscPropertyFor } from '@/lib/gsc/resolveProperty';
 import { listGeoCampaignsForRankSync, setCampaignRank } from '@/lib/outreach/geoCampaigns';
 import { computeCampaignRecommendations } from '@/lib/outreach/computeRecommendations';
 import { deriveRankStatus } from '@/lib/outreach/geoPricing';
@@ -28,17 +29,21 @@ export const maxDuration = 300;
 
 const ymd = (d: Date) => d.toISOString().slice(0, 10);
 
-/** 28-day GSC totals for a domain (position/impressions/clicks/ctr), or null. */
-async function gscPosition(domain: string): Promise<RankSnapshot | null> {
+/**
+ * 28-day GSC totals for a connected property, or null. `property` is the exact gsc_tokens
+ * property string (e.g. "sc-domain:boston-towing.com") — used for BOTH the token lookup and
+ * the searchanalytics siteUrl, so domain properties actually resolve.
+ */
+async function gscPosition(property: string): Promise<RankSnapshot | null> {
   try {
     const end = new Date();
     end.setDate(end.getDate() - 3);
     const start = new Date(end);
     start.setDate(start.getDate() - 28);
-    const oauth2Client = await getValidOAuthClient(domain);
+    const oauth2Client = await getValidOAuthClient(property);
     const searchconsole = google.searchconsole({ version: 'v1', auth: oauth2Client });
     const res = await searchconsole.searchanalytics.query({
-      siteUrl: domain,
+      siteUrl: property,
       requestBody: { startDate: ymd(start), endDate: ymd(end) },
     });
     const row = res.data.rows?.[0];
@@ -76,12 +81,14 @@ async function handle(req: NextRequest) {
 
   return runCron('geo-rank-sync', async () => {
     const campaigns = await listGeoCampaignsForRankSync();
+    const propertyMap = await loadGscPropertyMap(); // normalizedDomain → GSC property string
     let synced = 0;
     let steppedUp = 0;
     let recced = 0;
 
     for (const c of campaigns) {
-      const g = await gscPosition(c.domain);
+      const property = gscPropertyFor(propertyMap, c.domain);
+      const g = property ? await gscPosition(property) : null;
       let rankStatus = c.rank_status;
       let rankPosition = c.rank_position;
       let trend = null as ReturnType<typeof computeRankTrend> | null;

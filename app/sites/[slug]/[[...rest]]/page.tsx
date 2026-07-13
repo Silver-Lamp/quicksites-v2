@@ -2,6 +2,8 @@
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
+import { cache } from 'react';
+import { unstable_cache } from 'next/cache';
 import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
 import { headers } from 'next/headers';
@@ -121,8 +123,12 @@ async function loadSiteRowBySlug(slug: string): Promise<SiteRow | null> {
   return (data as SiteRow) ?? null;
 }
 
-/** New path: templates + published_sites/template_versions */
-async function loadSiteRowBySlugOrTemplate(slug: string): Promise<SiteRow | null> {
+/**
+ * New path: templates + published_sites/template_versions.
+ * Wrapped in React cache() so generateMetadata + the page render resolve the
+ * slug once per request instead of running this ~4-query chain twice.
+ */
+const loadSiteRowBySlugOrTemplate = cache(async (slug: string): Promise<SiteRow | null> => {
   // 1) legacy sites table
   const legacy = await loadSiteRowBySlug(slug);
   if (legacy) return legacy;
@@ -171,31 +177,57 @@ async function loadSiteRowBySlugOrTemplate(slug: string): Promise<SiteRow | null
     template_id: tplId,
     published_snapshot_id,
   };
-}
+});
 
-/** Read snapshot data by id: first try `snapshots.data` (legacy), else `template_versions.full_data` */
+/**
+ * Read snapshot content by id: first try `snapshots.data` (legacy), else
+ * `template_versions.full_data`.
+ *
+ * A published snapshot is IMMUTABLE by id — a republish mints a brand-new
+ * snapshot id and flips siteRow.published_snapshot_id (read fresh each request),
+ * so this content can be cached across requests with no publish-path
+ * revalidation wiring. The inner fn throws on a miss/error so unstable_cache
+ * never persists a transient failure or a not-found.
+ */
+const loadSnapshotContentCached = unstable_cache(
+  async (id: string): Promise<any> => {
+    const snap = await supabaseAdmin
+      .from('snapshots')
+      .select('data')
+      .eq('id', id)
+      .maybeSingle();
+    if (!snap.error && snap.data && (snap.data as any).data != null) return (snap.data as any).data;
+
+    const ver = await supabaseAdmin
+      .from('template_versions')
+      .select('full_data')
+      .eq('id', id)
+      .maybeSingle();
+    if (!ver.error && ver.data && (ver.data as any).full_data != null) return (ver.data as any).full_data;
+
+    // Not found (or a transient read error) — throw so nothing is cached.
+    throw new Error(`snapshot-content-not-found:${id}`);
+  },
+  ['site-snapshot-content-v1'],
+  { revalidate: 3600 },
+);
+
 async function loadSnapshotDataById(id: string): Promise<any | null> {
-  const snap = await supabaseAdmin
-    .from('snapshots')
-    .select('data')
-    .eq('id', id)
-    .maybeSingle();
-  if (!snap.error && snap.data) return (snap.data as any).data ?? null;
-
-  const ver = await supabaseAdmin
-    .from('template_versions')
-    .select('full_data')
-    .eq('id', id)
-    .maybeSingle();
-  if (!ver.error && ver.data) return (ver.data as any).full_data ?? null;
-
-  return null;
+  try {
+    return await loadSnapshotContentCached(id);
+  } catch {
+    return null;
+  }
 }
 
-/** For draft fallback when admin views unpublished site */
-async function loadDraftTemplate(
+/**
+ * For draft fallback when an admin (or the menu host) views an unpublished site.
+ * React cache() only — drafts mutate, so this must stay per-request (never cached
+ * across requests), but generateMetadata + the page still share one read.
+ */
+const loadDraftTemplate = cache(async (
   templateId: string,
-): Promise<{ data: any; siteFields: any; claimSource: string | null } | null> {
+): Promise<{ data: any; siteFields: any; claimSource: string | null } | null> => {
   const { data, error } = await supabaseAdmin
     .from('templates')
     .select('id, slug, template_name, data, header_block, footer_block, color_mode, domain, claim_source')
@@ -220,9 +252,18 @@ async function loadDraftTemplate(
     },
     claimSource: (data as any)?.claim_source ?? null,
   };
-}
+});
 
-async function isAdminUser(userId: string | null) {
+/** Current request user (auth cookie), memoized per request. */
+const getCurrentUser = cache(async () => {
+  const supabase = await getServerSupabase();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  return user ?? null;
+});
+
+const isAdminUser = cache(async (userId: string | null) => {
   if (!userId) return false;
   const supabase = await getServerSupabase();
   const { data } = await supabase
@@ -231,7 +272,7 @@ async function isAdminUser(userId: string | null) {
     .eq('user_id', userId)
     .maybeSingle();
   return !!data;
-}
+});
 
 /* -------------------- Metadata -------------------- */
 export async function generateMetadata({
@@ -247,10 +288,7 @@ export async function generateMetadata({
   if (rest?.[0] === 'checkout') return { title: 'Checkout' };
   if (rest?.[0] === 'thank-you') return { title: 'Thank you' };
 
-  const supabase = await getServerSupabase();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getCurrentUser();
   const admin = await isAdminUser(user?.id ?? null);
 
   const menuHost = await isMenuHostRequest();
@@ -301,10 +339,7 @@ export default async function SitePreviewPage({
     if (rest[0] === 'thank-you') return <ThankYouPageClient />;
   }
 
-  const supabase = await getServerSupabase();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getCurrentUser();
   const admin = await isAdminUser(user?.id ?? null);
   const menuHost = await isMenuHostRequest();
 

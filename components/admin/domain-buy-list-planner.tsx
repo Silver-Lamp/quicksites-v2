@@ -7,10 +7,13 @@
 // tally and optional read-only availability/price. Self-contained — calls
 // POST /api/admin/prospects/buy-list. See docs/DOMAIN_ACQUISITION_PLAN.md.
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { getIndustryOptions, type IndustryKey } from '@/lib/industries';
 import { PREMIUM_INDUSTRIES, MID_INDUSTRIES, formatCents } from '@/lib/outreach/geoPricing';
 import { availableMetros, citiesForMetro } from '@/lib/prospects/citySeeds';
+import { buildOwnedIndex, matchOwned, type OwnedMatch } from '@/lib/prospects/ownedDomains';
+
+const OWNED_STORAGE_KEY = 'qs.buyList.ownedDomains';
 
 type Candidate = {
   city: string;
@@ -82,6 +85,41 @@ export default function DomainBuyListPlanner() {
   const [buyError, setBuyError] = useState<string | null>(null);
   const [buyResult, setBuyResult] = useState<PurchaseResponse | null>(null);
 
+  // Dedupe against domains the operator already owns (pasted, persisted; no registrar ping).
+  const [ownedText, setOwnedText] = useState('');
+  const [showOwnedBox, setShowOwnedBox] = useState(false);
+  const [hideOwned, setHideOwned] = useState(true);
+  const [selectedRows, setSelectedRows] = useState<Set<string>>(() => new Set());
+
+  // Load / persist the owned list.
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(OWNED_STORAGE_KEY);
+      if (saved) {
+        setOwnedText(saved);
+        setShowOwnedBox(true);
+      }
+    } catch {
+      /* ignore */
+    }
+  }, []);
+  useEffect(() => {
+    try {
+      localStorage.setItem(OWNED_STORAGE_KEY, ownedText);
+    } catch {
+      /* ignore */
+    }
+  }, [ownedText]);
+
+  const ownedIndex = useMemo(() => buildOwnedIndex(ownedText), [ownedText]);
+
+  /** domain → owned classification ('exact' | 'similar' | null). */
+  const ownedByDomain = useMemo(() => {
+    const m = new Map<string, OwnedMatch>();
+    for (const c of result?.candidates ?? []) m.set(c.domain, matchOwned(c.domain, ownedIndex));
+    return m;
+  }, [result, ownedIndex]);
+
   const metros = useMemo(() => availableMetros(), []);
 
   function toggle(key: IndustryKey) {
@@ -127,20 +165,61 @@ export default function DomainBuyListPlanner() {
     [result],
   );
 
-  /** The budget-fitting candidates, as purchase items. */
-  const acceptedItems = useMemo(
-    () =>
-      (result?.candidates ?? [])
-        .filter((c) => acceptedSet.has(c.domain))
-        .map((c) => ({ city: c.city, region: c.region, industryKey: c.industryKey })),
-    [result, acceptedSet],
+  // Default the selection to budget-fitting AND not-already-owned whenever the plan or the
+  // owned list changes. The operator can then check/uncheck rows freely.
+  useEffect(() => {
+    const next = new Set<string>();
+    for (const c of result?.candidates ?? []) {
+      if (acceptedSet.has(c.domain) && matchOwned(c.domain, ownedIndex) === null) next.add(c.domain);
+    }
+    setSelectedRows(next);
+  }, [result, acceptedSet, ownedIndex]);
+
+  /** Candidates visible in the table (owned rows hidden when the toggle is on). */
+  const visibleCandidates = useMemo(
+    () => (result?.candidates ?? []).filter((c) => !(hideOwned && ownedByDomain.get(c.domain))),
+    [result, hideOwned, ownedByDomain],
   );
 
+  const ownedCount = useMemo(
+    () => (result?.candidates ?? []).filter((c) => ownedByDomain.get(c.domain)).length,
+    [result, ownedByDomain],
+  );
+
+  /** The checked candidates, as purchase items. */
+  const selectedItems = useMemo(
+    () =>
+      (result?.candidates ?? [])
+        .filter((c) => selectedRows.has(c.domain))
+        .map((c) => ({ city: c.city, region: c.region, industryKey: c.industryKey })),
+    [result, selectedRows],
+  );
+
+  function toggleRow(domain: string) {
+    setSelectedRows((prev) => {
+      const next = new Set(prev);
+      if (next.has(domain)) next.delete(domain);
+      else next.add(domain);
+      return next;
+    });
+  }
+
+  function setAllVisible(on: boolean) {
+    setSelectedRows((prev) => {
+      const next = new Set(prev);
+      for (const c of visibleCandidates) {
+        if (on) next.add(c.domain);
+        else next.delete(c.domain);
+      }
+      return next;
+    });
+  }
+
   async function buy(dryRun: boolean) {
-    if (!acceptedItems.length) return;
+    if (!selectedItems.length) return;
     if (!dryRun) {
       const ok = window.confirm(
-        `Buy ${acceptedItems.length} domain(s) for up to $${budget}? This spends real money and mints a geo-campaign per domain.`,
+        `Buy ${selectedItems.length} domain(s) for up to $${budget}? This spends real money and mints a geo-campaign per domain.`,
       );
       if (!ok) return;
     }
@@ -150,7 +229,7 @@ export default function DomainBuyListPlanner() {
       const res = await fetch('/api/admin/prospects/buy-list/purchase', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ items: acceptedItems, budgetUsd: budget, dryRun }),
+        body: JSON.stringify({ items: selectedItems, budgetUsd: budget, dryRun }),
       });
       const json = await res.json();
       if (!res.ok || !json?.ok) {
@@ -263,6 +342,32 @@ export default function DomainBuyListPlanner() {
         </button>
       </div>
 
+      {/* Already-owned inventory (pasted, persisted locally; no registrar ping) */}
+      <div className="mt-3">
+        <button
+          onClick={() => setShowOwnedBox((v) => !v)}
+          className="text-xs text-neutral-400 hover:text-neutral-200"
+        >
+          {showOwnedBox ? '▾' : '▸'} Domains I already own
+          {ownedIndex.count > 0 ? ` (${ownedIndex.count})` : ''}
+        </button>
+        {showOwnedBox && (
+          <div className="mt-2">
+            <textarea
+              value={ownedText}
+              onChange={(e) => setOwnedText(e.target.value)}
+              placeholder="Paste domains you already own — one per line or comma-separated. Matches ignore the dash + TLD (gallatin-towing.com ≈ gallatintowing.com ≈ gallatintowing.net)."
+              rows={4}
+              className="block w-full rounded-lg border border-neutral-700 bg-neutral-950 px-3 py-2 text-xs text-neutral-200"
+            />
+            <p className="mt-1 text-[11px] text-neutral-600">
+              Stored in your browser only. Owned matches are unchecked by default so you never
+              re-buy them.
+            </p>
+          </div>
+        )}
+      </div>
+
       {error && <p className="mt-3 text-sm text-rose-400">{error}</p>}
 
       {result && (
@@ -285,30 +390,35 @@ export default function DomainBuyListPlanner() {
           </div>
 
           {/* Buy action bar */}
-          {result.fill.count > 0 && (
-            <div className="mt-3 flex flex-wrap items-center gap-3 rounded-lg border border-neutral-800 bg-neutral-950/40 p-3">
-              <span className="text-xs text-neutral-400">
-                Acquire the {result.fill.count} budget-fitting domain(s):
-              </span>
-              <button
-                onClick={() => buy(true)}
-                disabled={buying}
-                className="rounded-lg border border-neutral-700 bg-neutral-900 px-3 py-1.5 text-sm text-neutral-200 hover:text-white disabled:opacity-50"
-              >
-                {buying ? 'Working…' : 'Preview buy (dry run)'}
-              </button>
-              <button
-                onClick={() => buy(false)}
-                disabled={buying}
-                className="rounded-lg bg-emerald-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-emerald-500 disabled:opacity-50"
-              >
-                Buy + mint campaigns
-              </button>
-              <span className="text-[11px] text-neutral-600">
-                Real buy needs VERCEL_DOMAIN_REGISTER_ENABLED (post geo-engine smoke test).
-              </span>
-            </div>
-          )}
+          <div className="mt-3 flex flex-wrap items-center gap-3 rounded-lg border border-neutral-800 bg-neutral-950/40 p-3">
+            <span className="text-xs text-neutral-400">
+              {selectedItems.length} selected
+              {ownedCount > 0 ? ` · ${ownedCount} already owned` : ''}:
+            </span>
+            <button
+              onClick={() => buy(true)}
+              disabled={buying || selectedItems.length === 0}
+              className="rounded-lg border border-neutral-700 bg-neutral-900 px-3 py-1.5 text-sm text-neutral-200 hover:text-white disabled:opacity-50"
+            >
+              {buying ? 'Working…' : 'Preview buy (dry run)'}
+            </button>
+            <button
+              onClick={() => buy(false)}
+              disabled={buying || selectedItems.length === 0}
+              className="rounded-lg bg-emerald-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-emerald-500 disabled:opacity-50"
+            >
+              Buy + mint campaigns
+            </button>
+            {ownedCount > 0 && (
+              <label className="flex items-center gap-1.5 text-[11px] text-neutral-400">
+                <input type="checkbox" checked={hideOwned} onChange={(e) => setHideOwned(e.target.checked)} />
+                Hide owned
+              </label>
+            )}
+            <span className="text-[11px] text-neutral-600">
+              Real buy needs VERCEL_DOMAIN_REGISTER_ENABLED (post geo-engine smoke test).
+            </span>
+          </div>
 
           {buyError && <p className="mt-2 text-sm text-rose-400">{buyError}</p>}
 
@@ -368,8 +478,17 @@ export default function DomainBuyListPlanner() {
             <table className="w-full min-w-[720px] text-left text-sm">
               <thead className="text-[11px] uppercase tracking-wide text-neutral-500">
                 <tr className="border-b border-neutral-800">
+                  <th className="py-2 pr-3">
+                    <input
+                      type="checkbox"
+                      aria-label="Select all visible"
+                      checked={visibleCandidates.length > 0 && visibleCandidates.every((c) => selectedRows.has(c.domain))}
+                      onChange={(e) => setAllVisible(e.target.checked)}
+                    />
+                  </th>
                   <th className="py-2 pr-3">#</th>
                   <th className="py-2 pr-3">Domain</th>
+                  {ownedIndex.count > 0 && <th className="py-2 pr-3">Owned?</th>}
                   <th className="py-2 pr-3">Industry</th>
                   <th className="py-2 pr-3 text-right">$/mo</th>
                   <th className="py-2 pr-3 text-right">No-site</th>
@@ -379,25 +498,48 @@ export default function DomainBuyListPlanner() {
                 </tr>
               </thead>
               <tbody>
-                {result.candidates.map((c, i) => {
-                  const inCart = acceptedSet.has(c.domain);
+                {visibleCandidates.map((c, i) => {
+                  const isSelected = selectedRows.has(c.domain);
+                  const owned = ownedByDomain.get(c.domain);
+                  const inBudget = acceptedSet.has(c.domain);
                   return (
                     <tr
                       key={c.domain}
                       className={
                         'border-b border-neutral-900 ' +
-                        (inCart ? 'bg-emerald-500/5' : 'opacity-70')
+                        (owned ? 'opacity-40' : isSelected ? 'bg-emerald-500/5' : 'opacity-70')
                       }
                     >
+                      <td className="py-2 pr-3">
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
+                          onChange={() => toggleRow(c.domain)}
+                          aria-label={`Select ${c.domain}`}
+                        />
+                      </td>
                       <td className="py-2 pr-3 text-neutral-500">{i + 1}</td>
                       <td className="py-2 pr-3 font-medium text-neutral-200">
-                        {inCart && <span className="mr-1 text-emerald-400" title="Fits the budget">●</span>}
+                        {inBudget && !owned && (
+                          <span className="mr-1 text-emerald-400" title="Fits the budget">●</span>
+                        )}
                         {c.domain}
                         <span className="ml-2 text-[11px] text-neutral-500">
                           {c.city}
                           {c.region ? `, ${c.region}` : ''}
                         </span>
                       </td>
+                      {ownedIndex.count > 0 && (
+                        <td className="py-2 pr-3">
+                          {owned === 'exact' ? (
+                            <Badge cls="bg-neutral-700 text-neutral-200" text="Owned" />
+                          ) : owned === 'similar' ? (
+                            <Badge cls="bg-amber-900/40 text-amber-300" text="Similar" />
+                          ) : (
+                            <span className="text-neutral-700">—</span>
+                          )}
+                        </td>
+                      )}
                       <td className="py-2 pr-3 text-neutral-400">{labelFor(c.industryKey, industryOptions)}</td>
                       <td className="py-2 pr-3 text-right text-neutral-300">{formatCents(c.monthlyRentCents)}</td>
                       <td className="py-2 pr-3 text-right text-neutral-400">{c.noWebsite}</td>
@@ -415,9 +557,9 @@ export default function DomainBuyListPlanner() {
             </table>
           </div>
           <p className="mt-2 text-[11px] text-neutral-600">
-            ● = fits the budget (buy these first). Rows are ranked by opportunity; greyed rows scored
-            lower or didn&apos;t fit the budget. Turn on one-click buy after the geo-engine smoke test
-            (Phase 2 — see the plan doc).
+            ● = fits the budget (checked by default). Check/uncheck any row to curate the buy — only
+            checked rows are purchased. Owned matches (exact or dash/TLD-insensitive) are unchecked and
+            can be hidden. Real buy needs the geo-engine smoke test (see the plan doc).
           </p>
         </div>
       )}

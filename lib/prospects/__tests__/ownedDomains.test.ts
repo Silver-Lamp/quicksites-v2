@@ -9,6 +9,7 @@ import {
   parseOwnedDomains,
   buildOwnedIndex,
   matchOwned,
+  candidateOwnedMatch,
 } from '@/lib/prospects/ownedDomains';
 
 describe('normalizeDomain', () => {
@@ -61,5 +62,41 @@ describe('matchOwned', () => {
     const empty = buildOwnedIndex('');
     expect(empty.count).toBe(0);
     expect(matchOwned('gallatin-towing.com', empty)).toBeNull();
+  });
+});
+
+describe('candidateOwnedMatch — abbreviated / reordered variants', () => {
+  const cand = (domain: string, city: string, industryKey: string) => ({ domain, city, industryKey });
+
+  it('still returns exact/similar from the base matcher', () => {
+    const idx = buildOwnedIndex(['gallatin-towing.com', 'arabtowing.net']);
+    expect(candidateOwnedMatch(cand('gallatin-towing.com', 'Gallatin', 'towing'), idx)).toBe('exact');
+    expect(candidateOwnedMatch(cand('arab-towing.com', 'Arab', 'towing'), idx)).toBe('similar');
+  });
+
+  it('matches an abbreviated service word (gallatintow → gallatin-towing)', () => {
+    const idx = buildOwnedIndex(['gallatintow.com']);
+    expect(candidateOwnedMatch(cand('gallatin-towing.com', 'Gallatin', 'towing'), idx)).toBe('alias');
+  });
+
+  it('matches a synonym service word (plumber → plumbing, dentist → dental)', () => {
+    const idx = buildOwnedIndex(['rentonplumber.com', 'kentdentist.com']);
+    expect(candidateOwnedMatch(cand('renton-plumbing.com', 'Renton', 'plumbing'), idx)).toBe('alias');
+    expect(candidateOwnedMatch(cand('kent-dental.com', 'Kent', 'medical_dental'), idx)).toBe('alias');
+  });
+
+  it('matches the reversed word order (towing-gallatin)', () => {
+    const idx = buildOwnedIndex(['towing-gallatin.com']);
+    expect(candidateOwnedMatch(cand('gallatin-towing.com', 'Gallatin', 'towing'), idx)).toBe('alias');
+  });
+
+  it('handles multi-word cities (millcreektow → mill-creek-towing)', () => {
+    const idx = buildOwnedIndex(['millcreektow.com']);
+    expect(candidateOwnedMatch(cand('mill-creek-towing.com', 'Mill Creek', 'towing'), idx)).toBe('alias');
+  });
+
+  it('does not false-positive on the bare city or an unrelated trade', () => {
+    const idx = buildOwnedIndex(['gallatin.com', 'gallatin-plumbing.com']);
+    expect(candidateOwnedMatch(cand('gallatin-towing.com', 'Gallatin', 'towing'), idx)).toBeNull();
   });
 });

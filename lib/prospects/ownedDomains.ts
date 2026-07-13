@@ -9,7 +9,10 @@
 // Pure + no I/O (matching is against the pasted list, not a registrar). See
 // docs/DOMAIN_ACQUISITION_PLAN.md.
 
-export type OwnedMatch = 'exact' | 'similar' | null;
+import type { IndustryKey } from '@/lib/industries';
+import { industryDomainWord } from '@/lib/outreach/geoDomain';
+
+export type OwnedMatch = 'exact' | 'similar' | 'alias' | null;
 
 /** Strip protocol / www / path / trailing dots and lowercase. '' if not domain-ish. */
 export function normalizeDomain(input: string): string {
@@ -68,12 +71,69 @@ export function buildOwnedIndex(owned: string[] | string): OwnedIndex {
   return { full, labels, count: full.size };
 }
 
-/** Classify a candidate domain against the owned index. */
+/** Classify a candidate domain against the owned index (exact / similar, no aliases). */
 export function matchOwned(candidateDomain: string, index: OwnedIndex): OwnedMatch {
   const norm = normalizeDomain(candidateDomain);
   if (!norm) return null;
   if (index.full.has(norm)) return 'exact';
   const key = domainLabelKey(norm);
   if (key && index.labels.has(key)) return 'similar';
+  return null;
+}
+
+// Common abbreviations/synonyms for the service word, per industry — so an owned domain
+// that abbreviates the trade (gallatintow.com for gallatin-towing.com) still counts as owned.
+// Each list is a superset that INCLUDES the canonical dashless word. Keyed by IndustryKey.
+const SERVICE_ALIASES: Partial<Record<IndustryKey, string[]>> = {
+  towing: ['towing', 'tow', 'towtruck', 'towservice', 'towingservice', '247towing'],
+  plumbing: ['plumbing', 'plumber', 'plumbers', 'plumb'],
+  hvac: ['hvac', 'heatingandcooling', 'heatingcooling', 'acrepair', 'airconditioning', 'heatingair'],
+  roof_cleaning: ['roofing', 'roof', 'roofer', 'roofers', 'roofrepair'],
+  windshield_repair: ['autoglass', 'windshield', 'windshieldrepair', 'glass'],
+  general_contractor: ['contractor', 'contractors', 'generalcontractor', 'construction', 'gc'],
+  electrical: ['electrical', 'electric', 'electrician', 'electricians'],
+  landscaping: ['landscaping', 'landscape', 'landscaper', 'landscapers', 'lawncare', 'lawn'],
+  auto_repair: ['autorepair', 'auto', 'mechanic', 'autoshop', 'autoservice'],
+  moving: ['moving', 'movers', 'mover'],
+  pest_control: ['pestcontrol', 'pest', 'exterminator', 'extermination'],
+  carpet_cleaning: ['carpetcleaning', 'carpet', 'carpetcleaner', 'carpetcleaners'],
+  pressure_washing: ['pressurewashing', 'pressurewash', 'powerwashing', 'powerwash'],
+  window_washing: ['windowcleaning', 'windowwashing', 'windowcleaner', 'windows', 'windowwash'],
+  junk_removal: ['junkremoval', 'junk', 'junkhauling', 'hauling'],
+  painting: ['painting', 'painter', 'painters', 'paint'],
+  medical_dental: ['dental', 'dentist', 'dentalcare', 'dentistry'],
+  legal: ['legal', 'law', 'lawyer', 'attorney', 'lawfirm'],
+  real_estate: ['realestate', 'realtor', 'realty', 'homes'],
+};
+
+function serviceAliasesFor(industryKey: string): string[] {
+  const canonical = industryDomainWord(industryKey as IndustryKey).replace(/[^a-z0-9]/g, '');
+  const list = SERVICE_ALIASES[industryKey as IndustryKey] ?? [];
+  return Array.from(new Set([canonical, ...list].filter(Boolean)));
+}
+
+/**
+ * Classify a candidate against owned inventory using its structured city + industry, so
+ * we can catch abbreviated/reordered variants precisely (no risky substring matching):
+ *   - exact   — same normalized domain
+ *   - similar — same dashless label / different TLD
+ *   - alias   — city + a known service abbreviation, in either word order
+ *               (gallatintow, towgallatin, gallatinplumber, …)
+ */
+export function candidateOwnedMatch(
+  candidate: { domain: string; city: string; industryKey: string },
+  index: OwnedIndex,
+): OwnedMatch {
+  const base = matchOwned(candidate.domain, index);
+  if (base) return base;
+  if (!index.count) return null;
+
+  const cityKey = (candidate.city || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+  if (!cityKey) return null;
+
+  for (const alias of serviceAliasesFor(candidate.industryKey)) {
+    if (index.labels.has(cityKey + alias)) return 'alias';
+    if (index.labels.has(alias + cityKey)) return 'alias';
+  }
   return null;
 }

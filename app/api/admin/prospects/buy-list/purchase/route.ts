@@ -17,8 +17,15 @@ import {
   buildGeoPitchSite,
   createGeoCampaign,
   setCampaignPricing,
+  setCampaignTracking,
   getGeoCampaignByDomain,
 } from '@/lib/outreach/geoCampaigns';
+import {
+  callTrackingEnabled,
+  provisionTrackingNumber,
+  areaCodeFromPhone,
+} from '@/lib/outreach/callTracking';
+import { publicBaseUrl } from '@/lib/outreach/competitionPoster';
 import { mintSiteClaimToken } from '@/lib/auth/siteClaimToken';
 
 export const runtime = 'nodejs';
@@ -41,6 +48,8 @@ type Body = {
   dryRun?: boolean;
   /** Attach apex + www to the Vercel project after purchase (default true). */
   attach?: boolean;
+  /** Provision a Twilio call-tracking number per bought domain (recurring cost). Default false. */
+  provisionNumbers?: boolean;
   tld?: string;
 };
 
@@ -54,6 +63,7 @@ type ItemResult = {
   campaignId?: string;
   templateId?: string;
   claimUrl?: string;
+  trackingNumber?: string | null;
 };
 
 function flagEnabled(): boolean {
@@ -79,6 +89,7 @@ export async function POST(req: Request) {
 
   const dryRun = body.dryRun === true;
   const attach = body.attach !== false;
+  const provisionNumbers = body.provisionNumbers === true;
   const tld = (body.tld || 'com').replace(/[^a-z0-9]/gi, '') || 'com';
   const budgetUsd = Number.isFinite(body.budgetUsd) ? Math.max(0, Number(body.budgetUsd)) : Infinity;
 
@@ -181,6 +192,27 @@ export async function POST(req: Request) {
         createdBy: operator.id,
       });
       await setCampaignPricing(campaign.id, suggestPricing(industryKey));
+
+      // 4) Optional: a call-tracking number from day one (the rental proof/retention engine).
+      // Best-effort — a provisioning failure never fails the buy. Pre-claim, calls forward to
+      // the platform fallback line. Recurring Twilio cost, so opt-in + flag-gated.
+      let trackingNumber: string | null = null;
+      if (provisionNumbers && callTrackingEnabled()) {
+        const forwardTo = process.env.CALL_TRACKING_FALLBACK_NUMBER || null;
+        if (forwardTo) {
+          try {
+            const { phoneNumber, sid } = await provisionTrackingNumber({
+              voiceUrl: `${publicBaseUrl()}/api/twilio/geo/${campaign.id}`,
+              areaCode: areaCodeFromPhone(forwardTo),
+            });
+            await setCampaignTracking(campaign.id, { number: phoneNumber, sid, forwardTo });
+            trackingNumber = phoneNumber;
+          } catch {
+            trackingNumber = null;
+          }
+        }
+      }
+
       results.push({
         domain,
         city,
@@ -190,6 +222,7 @@ export async function POST(req: Request) {
         campaignId: campaign.id,
         templateId: pitch.templateId,
         claimUrl: `/claim-site/${pitch.templateId}?token=${encodeURIComponent(mintSiteClaimToken(pitch.templateId))}`,
+        trackingNumber,
       });
     } catch (e: any) {
       results.push({ domain, city, industryKey, status: 'failed', reason: `bought_but_campaign_failed: ${e?.message || e}`, templateId: pitch.templateId, priceUsd: bought.priceUsd });
@@ -202,6 +235,7 @@ export async function POST(req: Request) {
     exists: results.filter((r) => r.status === 'exists').length,
     skipped: results.filter((r) => r.status === 'skipped').length,
     failed: results.filter((r) => r.status === 'failed').length,
+    numbersProvisioned: results.filter((r) => r.trackingNumber).length,
   };
 
   return NextResponse.json({

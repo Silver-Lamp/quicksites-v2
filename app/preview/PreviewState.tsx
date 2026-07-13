@@ -2,8 +2,28 @@
 'use client';
 
 import * as React from 'react';
-import { Sun, Moon } from 'lucide-react';
+import { Sun, Moon, Shuffle } from 'lucide-react';
 import EditorSiteRenderer from '@/components/sites/editor-site-renderer';
+import { shuffleAllData } from '@/lib/theme/shuffleTemplate';
+
+/** Floating "Shuffle" pill for the standalone preview — one tap restyles the whole
+ *  site (new theme + layout + palette + fonts) while keeping all copy. Owners have
+ *  it saved back to the template; non-owners get a view-only restyle. Sits just above
+ *  the color toggle. */
+function PreviewShuffleButton({ onClick }: { onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      title="Shuffle everything — new theme, layout, palette & fonts (keeps your content)"
+      aria-label="Shuffle the design"
+      className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-purple-600 to-fuchsia-600 px-4 py-2.5 text-sm font-semibold text-white shadow-lg ring-1 ring-white/20 transition hover:brightness-110 active:scale-95"
+    >
+      <Shuffle className="h-4 w-4" />
+      Shuffle the look
+    </button>
+  );
+}
 
 /** Floating light/dark switch for the standalone preview. View-only — it changes how
  *  the preview looks without saving to the template (that's the editor's job). Fixed
@@ -101,6 +121,28 @@ export default function PreviewState({
       .catch(() => setSaveState('idle'));
   }, [persistTemplateId]);
 
+  // One-tap "Shuffle everything" — reuses the exact transform the editor toolbar
+  // uses (lib/theme/shuffleTemplate), so the standalone preview restyles identically.
+  // Reads the LATEST site so repeated shuffles build on the current look (and avoid
+  // repeating the same theme). Owners persist via the same commit path as the toggle.
+  const shuffle = React.useCallback(() => {
+    const { data, colorMode } = shuffleAllData(site?.data ?? {}, {
+      industry: site?.data?.meta?.industry ?? site?.industry ?? null,
+    });
+    setSite((prev: any) => ({ ...prev, color_mode: colorMode, data, pages: data.pages }));
+    setMode(colorMode);
+    try { localStorage.setItem('qs:preview:color', colorMode); } catch {}
+    if (!persistTemplateId) return;
+    setSaveState('saving');
+    fetch('/api/templates/commit', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ id: persistTemplateId, patch: { data, color_mode: colorMode }, kind: 'save' }),
+    })
+      .then((r) => setSaveState(r.ok ? 'saved' : 'idle'))
+      .catch(() => setSaveState('idle'));
+  }, [site, persistTemplateId]);
+
   const resolvedBaseUrl = React.useMemo(() => {
     if (baseUrl) return baseUrl;
     if (typeof window !== 'undefined') return window.location.origin;
@@ -184,11 +226,16 @@ export default function PreviewState({
         baseUrl={resolvedBaseUrl}
       />
       {showToggle && (
-        <PreviewColorToggle
-          mode={mode}
-          onChange={setModeAndRemember}
-          note={saveState === 'saving' ? 'Saving…' : saveState === 'saved' ? 'Saved to your site' : undefined}
-        />
+        <>
+          <div className="fixed bottom-20 right-4 z-[9999]">
+            <PreviewShuffleButton onClick={shuffle} />
+          </div>
+          <PreviewColorToggle
+            mode={mode}
+            onChange={setModeAndRemember}
+            note={saveState === 'saving' ? 'Saving…' : saveState === 'saved' ? 'Saved to your site' : undefined}
+          />
+        </>
       )}
     </>
   );

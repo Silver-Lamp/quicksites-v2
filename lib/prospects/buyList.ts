@@ -32,6 +32,12 @@ export type BuyListProspect = {
   industry_key?: string | null;
   /** 'no_website' | 'dated' | 'has_site' | … (from classifyLeadTier). */
   lead_tier?: string | null;
+  /**
+   * Google review count for this business (Place Details, backfilled weekly — often null).
+   * Drives the "map-pack strength" signal: a market whose incumbents have few reviews is a
+   * softer target (Niche-Finder-style weak-competition analysis). Null = no data (ignored).
+   */
+  review_count?: number | null;
 };
 
 /** An explicit city×industry to include even when no prospects were swept for it. */
@@ -56,6 +62,15 @@ export type BuyListOptions = {
   saturationWeight?: number;
   /** Drop buckets with fewer than this many prospects (unless in `candidates`) (default 0). */
   minGroup?: number;
+  /**
+   * How much a weak/strong review "map pack" swings winnability, 0..1 (default 0.4). A weak
+   * pack multiplies up to (1+reviewWeight); a strong pack down to (1−reviewWeight).
+   */
+  reviewWeight?: number;
+  /** Median review count treated as a "medium" market — the strength curve's midpoint (default 25). */
+  reviewMidpoint?: number;
+  /** Min businesses with review data before the pack-strength signal is applied (default 1). */
+  minReviewSample?: number;
 };
 
 // ── Outputs ─────────────────────────────────────────────────────────────────
@@ -80,7 +95,15 @@ export type BuyCandidate = {
   saturation: number;
   /** 1 + demandWeight·min(noWebsite, cap). */
   demandFactor: number;
-  /** 1 − saturationWeight·saturation, floored so it never zeros the score. */
+  /** Median Google review count among bucket businesses with data — null when none. */
+  competitorReviews: number | null;
+  /** How many bucket businesses had review data (the pack-strength sample size). */
+  reviewSample: number;
+  /** 0..1 incumbent strength from median reviews — null when no review data. Higher = harder. */
+  packStrength: number | null;
+  /** Winnability multiplier from the map pack: >1 weak pack, <1 strong pack, 1 when no data. */
+  weakPackFactor: number;
+  /** (1 − saturationWeight·saturation) × weakPackFactor, floored — never zeros the score. */
   winnability: number;
   /** leadValue × demand × winnability — the sort key. Higher = buy sooner. */
   score: number;
@@ -92,6 +115,9 @@ const DEFAULTS = {
   maxDemandCompetitors: 10,
   saturationWeight: 0.5,
   minGroup: 0,
+  reviewWeight: 0.4,
+  reviewMidpoint: 25,
+  minReviewSample: 1,
 };
 
 /** Minimum winnability so a fully-saturated cell is deprioritized, not zeroed out. */
@@ -105,10 +131,23 @@ type Bucket = {
   dated: number;
   hasSite: number;
   total: number;
+  /** Review counts of bucket businesses that have review data (for the median). */
+  reviews: number[];
 };
 
 function bucketKey(city: string, industryKey: string): string {
   return `${city.trim().toLowerCase()}::${industryKey}`;
+}
+
+function median(nums: number[]): number {
+  if (!nums.length) return 0;
+  const s = [...nums].sort((a, b) => a - b);
+  const mid = Math.floor(s.length / 2);
+  return s.length % 2 ? s[mid] : (s[mid - 1] + s[mid]) / 2;
+}
+
+function clamp(x: number, lo: number, hi: number): number {
+  return Math.min(hi, Math.max(lo, x));
 }
 
 /**
@@ -124,6 +163,9 @@ export function buildBuyList(
   const maxDemand = opts.maxDemandCompetitors ?? DEFAULTS.maxDemandCompetitors;
   const saturationWeight = opts.saturationWeight ?? DEFAULTS.saturationWeight;
   const minGroup = opts.minGroup ?? DEFAULTS.minGroup;
+  const reviewWeight = opts.reviewWeight ?? DEFAULTS.reviewWeight;
+  const reviewMidpoint = opts.reviewMidpoint ?? DEFAULTS.reviewMidpoint;
+  const minReviewSample = opts.minReviewSample ?? DEFAULTS.minReviewSample;
   const industryFilter = opts.industries && opts.industries.length ? new Set(opts.industries) : null;
 
   const buckets = new Map<string, Bucket>();
@@ -132,7 +174,7 @@ export function buildBuyList(
     const key = bucketKey(city, industryKey);
     let b = buckets.get(key);
     if (!b) {
-      b = { city, region, industryKey, noWebsite: 0, dated: 0, hasSite: 0, total: 0 };
+      b = { city, region, industryKey, noWebsite: 0, dated: 0, hasSite: 0, total: 0, reviews: [] };
       buckets.set(key, b);
     }
     return b;
@@ -149,6 +191,9 @@ export function buildBuyList(
     if (p.lead_tier === 'no_website') b.noWebsite += 1;
     else if (p.lead_tier === 'dated') b.dated += 1;
     else if (p.lead_tier === 'has_site') b.hasSite += 1;
+    if (typeof p.review_count === 'number' && Number.isFinite(p.review_count) && p.review_count >= 0) {
+      b.reviews.push(p.review_count);
+    }
   }
 
   // Merge explicit candidates (created empty when they have no prospects). These bypass the
@@ -169,7 +214,23 @@ export function buildBuyList(
     const tier = priceTier(b.industryKey);
     const saturation = b.total > 0 ? b.hasSite / b.total : 0;
     const demandFactor = 1 + demandWeight * Math.min(b.noWebsite, maxDemand);
-    const winnability = Math.max(WINNABILITY_FLOOR, 1 - saturationWeight * saturation);
+
+    // Map-pack strength: how established the incumbents are, from their median review count.
+    // Saturating 0..1 curve (midpoint = reviewMidpoint). Weak pack (few reviews) → boost;
+    // strong pack → dampen. No review data → neutral (factor 1) so scoring degrades to v1.
+    const reviewSample = b.reviews.length;
+    const competitorReviews = reviewSample ? median(b.reviews) : null;
+    const packStrength =
+      competitorReviews == null ? null : competitorReviews / (competitorReviews + reviewMidpoint);
+    const weakPackFactor =
+      packStrength != null && reviewSample >= minReviewSample
+        ? clamp(1 + reviewWeight * (1 - 2 * packStrength), 1 - reviewWeight, 1 + reviewWeight)
+        : 1;
+
+    const winnability = Math.max(
+      WINNABILITY_FLOOR,
+      (1 - saturationWeight * saturation) * weakPackFactor,
+    );
     const score = tier.fullCents * demandFactor * winnability;
     out.push({
       city: b.city,
@@ -185,6 +246,10 @@ export function buildBuyList(
       totalProspects: b.total,
       saturation,
       demandFactor,
+      competitorReviews,
+      reviewSample,
+      packStrength,
+      weakPackFactor,
       winnability,
       score,
     });

@@ -27,6 +27,10 @@ type Candidate = {
   hasSite: number;
   totalProspects: number;
   saturation: number;
+  competitorReviews: number | null;
+  reviewSample: number;
+  packStrength: number | null;
+  weakPackFactor: number;
   score: number;
 };
 
@@ -388,6 +392,11 @@ export default function DomainBuyListPlanner() {
               hint="if every domain reaches page 1"
             />
             <Stat label="Scored" value={`${result.returned} of ${result.totalScored}`} />
+            <Stat
+              label="Map-pack data"
+              value={`${result.candidates.filter((c) => c.reviewSample > 0).length} of ${result.candidates.length}`}
+              hint="candidates with competitor review data (drives pack-strength scoring)"
+            />
           </div>
 
           {/* Buy action bar */}
@@ -494,6 +503,7 @@ export default function DomainBuyListPlanner() {
                   <th className="py-2 pr-3 text-right">$/mo</th>
                   <th className="py-2 pr-3 text-right">No-site</th>
                   <th className="py-2 pr-3 text-right">Saturation</th>
+                  <th className="py-2 pr-3">Map pack</th>
                   {result.availabilityChecked && <th className="py-2 pr-3">Availability</th>}
                   <th className="py-2 pr-3 text-right">Score</th>
                 </tr>
@@ -549,6 +559,7 @@ export default function DomainBuyListPlanner() {
                       <td className="py-2 pr-3 text-right text-neutral-500">
                         {c.totalProspects ? `${Math.round(c.saturation * 100)}%` : '—'}
                       </td>
+                      <td className="py-2 pr-3">{packBadge(c)}</td>
                       {result.availabilityChecked && (
                         <td className="py-2 pr-3">{availabilityBadge(c.domain, result)}</td>
                       )}
@@ -594,4 +605,22 @@ function availabilityBadge(domain: string, result: PlanResponse) {
 
 function Badge({ cls, text }: { cls: string; text: string }) {
   return <span className={`rounded px-2 py-0.5 text-[11px] font-medium ${cls}`}>{text}</span>;
+}
+
+// Map-pack strength from competitor review counts: weak pack = softer target to enter.
+function packBadge(c: { reviewSample: number; competitorReviews: number | null; packStrength: number | null }) {
+  if (!c.reviewSample || c.packStrength == null || c.competitorReviews == null) {
+    return <span className="text-neutral-700" title="No competitor review data yet">—</span>;
+  }
+  const label =
+    c.packStrength < 0.35 ? { cls: 'bg-emerald-900/40 text-emerald-300', text: 'Weak' }
+    : c.packStrength < 0.6 ? { cls: 'bg-amber-900/40 text-amber-300', text: 'Medium' }
+    : { cls: 'bg-rose-900/40 text-rose-300', text: 'Strong' };
+  const reviews = Math.round(c.competitorReviews);
+  return (
+    <span title={`Median competitor reviews: ${reviews} (${c.reviewSample} with data)`}>
+      <Badge cls={label.cls} text={label.text} />
+      <span className="ml-1.5 text-[11px] text-neutral-500">{reviews} rev</span>
+    </span>
+  );
 }

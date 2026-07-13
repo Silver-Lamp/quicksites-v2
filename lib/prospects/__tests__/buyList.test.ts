@@ -20,6 +20,7 @@ const p = (over: Partial<BuyListProspect>): BuyListProspect => ({
   region: over.region ?? 'MA',
   industry_key: over.industry_key ?? 'towing',
   lead_tier: over.lead_tier ?? 'no_website',
+  review_count: over.review_count ?? null,
 });
 
 /** N no-website prospects for a city×industry. */
@@ -116,6 +117,52 @@ describe('buildBuyList — scoring', () => {
   it('drops rows below minGroup that were not forced', () => {
     const list = buildBuyList(noSite('Boston', 'towing', 1), { minGroup: 2 });
     expect(list).toHaveLength(0);
+  });
+});
+
+describe('buildBuyList — map-pack strength (competitor reviews)', () => {
+  const withReviews = (city: string, industry: string, reviews: number[]): BuyListProspect[] =>
+    reviews.map((r) => p({ city, industry_key: industry, lead_tier: 'has_site', review_count: r }));
+
+  it('degrades to v1 when there is no review data (neutral factor)', () => {
+    const [c] = buildBuyList(noSite('Boston', 'towing', 2));
+    expect(c.competitorReviews).toBeNull();
+    expect(c.reviewSample).toBe(0);
+    expect(c.packStrength).toBeNull();
+    expect(c.weakPackFactor).toBe(1);
+  });
+
+  it('reports the median competitor review count + sample size', () => {
+    const [c] = buildBuyList(withReviews('Boston', 'towing', [4, 10, 100]));
+    expect(c.competitorReviews).toBe(10); // median of [4,10,100]
+    expect(c.reviewSample).toBe(3);
+    expect(c.packStrength).toBeCloseTo(10 / (10 + 25));
+  });
+
+  it('boosts a weak pack (few reviews) above a strong pack of the same trade', () => {
+    const weak = buildBuyList(withReviews('Weakville', 'towing', [1, 2, 3]));
+    const strong = buildBuyList(withReviews('Strongtown', 'towing', [300, 400, 500]));
+    expect(weak[0].weakPackFactor).toBeGreaterThan(1);
+    expect(strong[0].weakPackFactor).toBeLessThan(1);
+    // Same trade + same saturation → the weak pack must score higher.
+    const merged = buildBuyList([
+      ...withReviews('Weakville', 'towing', [1, 2, 3]),
+      ...withReviews('Strongtown', 'towing', [300, 400, 500]),
+    ]);
+    expect(merged[0].city).toBe('Weakville');
+  });
+
+  it('keeps the pack factor within [1−reviewWeight, 1+reviewWeight]', () => {
+    const weak = buildBuyList(withReviews('Z', 'towing', [0, 0, 0]))[0];
+    const strong = buildBuyList(withReviews('Z', 'towing', [9999]))[0];
+    expect(weak.weakPackFactor).toBeCloseTo(1.4); // default reviewWeight 0.4
+    expect(strong.weakPackFactor).toBeCloseTo(0.6);
+  });
+
+  it('respects minReviewSample (ignores thin review evidence)', () => {
+    const [c] = buildBuyList(withReviews('Boston', 'towing', [2]), { minReviewSample: 3 });
+    expect(c.reviewSample).toBe(1);
+    expect(c.weakPackFactor).toBe(1); // below the sample floor → neutral
   });
 });
 

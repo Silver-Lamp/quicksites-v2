@@ -3,6 +3,7 @@ export const dynamic = 'force-dynamic';
 
 import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/server/supabaseAdmin';
+import { requireCompanyMember } from '@/lib/auth/requireUser';
 
 function j(data: any, init?: number | ResponseInit) {
   const resInit = typeof init === 'number' ? { status: init } : init;
@@ -31,6 +32,11 @@ export async function PUT(req: Request) {
   if (!company_id || !hours) {
     return j({ error: 'company_id and hours required' }, 400);
   }
+
+  // Writes business_hours via the service role (RLS bypass); gate on company
+  // membership so a caller can't overwrite an arbitrary company's hours.
+  const gate = await requireCompanyMember(company_id);
+  if (gate instanceof NextResponse) return gate;
 
   const pub = supabaseAdmin.schema('public');
   const { data, error } = await pub

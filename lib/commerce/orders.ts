@@ -1,3 +1,4 @@
+import * as Sentry from '@sentry/nextjs';
 import { getServerSupabase } from '@/lib/supabase/server';
 import type { LineItemInput } from './types';
 import { getMerchantPaymentConfigSafe } from './paymentRouter';
@@ -188,6 +189,7 @@ export async function markOrderPaid(
     }
   } catch (e) {
     console.warn('Tax record step failed:', (e as any)?.message || e);
+    Sentry.captureException(e, { tags: { area: 'commerce.markOrderPaid.tax' }, extra: { order_id: orderId } } as any);
   }
 
   // 2c) Settle inventory for this order (once — guarded by the paid transition).
@@ -243,11 +245,16 @@ export async function markOrderPaid(
       // Paid but couldn't be fully fulfilled from stock (a race won by another
       // order). Record it on the order + log so the merchant can reconcile.
       console.warn(`Order ${orderId} oversold — paid beyond available stock:`, JSON.stringify(oversold));
+      Sentry.captureMessage('Order oversold — paid beyond available stock', {
+        level: 'warning',
+        extra: { order_id: orderId, oversold },
+      } as any);
       await supabase.from('orders').update({ oversold_lines: oversold } as any).eq('id', orderId);
     }
     }
   } catch (e) {
     console.warn('Stock settle step failed:', (e as any)?.message || e);
+    Sentry.captureException(e, { tags: { area: 'commerce.markOrderPaid.stock' }, extra: { order_id: orderId } } as any);
   }
 
   // 3) Fetch order context once
@@ -309,9 +316,15 @@ export async function markOrderPaid(
           },
           { onConflict: 'referral_code,subject,subject_id' }
         );
-        // Ignore idempotent/duplicate errors; warn on others
+        // Ignore idempotent/duplicate errors; warn + alert on others. A dropped
+        // partner residual is a real financial defect (unpaid partner), so it must
+        // not fail silently.
         if (up.error && `${up.error.code}` !== '23505') {
           console.warn('commission_ledger upsert error:', up.error.message);
+          Sentry.captureMessage('commission_ledger upsert failed (partner residual)', {
+            level: 'error',
+            extra: { order_id: orderId, referral_code: attr.referral_code, amount_cents: partnerCents, code: up.error.code, message: up.error.message },
+          } as any);
         } else {
           // Funnel (Model B): partner residual accrued. This block only runs once
           // per order (guarded by the pending→paid transition above).
@@ -358,6 +371,10 @@ export async function markOrderPaid(
             );
             if (ov.error && `${ov.error.code}` !== '23505') {
               console.warn('hub override upsert error:', ov.error.message);
+              Sentry.captureMessage('commission_ledger upsert failed (hub override)', {
+                level: 'error',
+                extra: { order_id: orderId, referral_code: (codeRow as any).parent_code, amount_cents: overrideCents, code: ov.error.code, message: ov.error.message },
+              } as any);
             } else {
               await captureServer(
                 EVENTS.COMMISSION_ACCRUED,
@@ -377,6 +394,7 @@ export async function markOrderPaid(
     }
   } catch (e) {
     console.warn('Platform-fee commission step failed:', (e as any)?.message || e);
+    Sentry.captureException(e, { tags: { area: 'commerce.markOrderPaid.commission' }, extra: { order_id: orderId } } as any);
   }
 
   await captureServer(
@@ -400,6 +418,7 @@ export async function markOrderPaid(
       await fulfillOrderPodItems(orderId, raw);
     } catch (e: any) {
       console.warn('POD fulfillment step failed:', e?.message || e);
+      Sentry.captureException(e, { tags: { area: 'commerce.markOrderPaid.pod' }, extra: { order_id: orderId } } as any);
     }
   }
 }
@@ -487,7 +506,13 @@ export async function markOrderRefunded(
     .in('subject', ['order_platform_fee', 'order_platform_fee_override'])
     .eq('subject_id', orderId)
     .neq('status', 'paid');
-  if (cErr) console.warn('commission void on refund failed:', cErr.message);
+  if (cErr) {
+    console.warn('commission void on refund failed:', cErr.message);
+    Sentry.captureMessage('commission void-on-refund failed', {
+      level: 'error',
+      extra: { order_id: orderId, code: cErr.code, message: cErr.message },
+    } as any);
+  }
 
   // 3b) For commissions ALREADY paid out, record a clawback so the residual can
   //     be reversed/deducted out of band (admin-resolved). Idempotent per
@@ -511,10 +536,17 @@ export async function markOrderRefunded(
       const { error: clawErr } = await supabase
         .from('commission_clawbacks')
         .upsert(rows, { onConflict: 'commission_ledger_id' });
-      if (clawErr) console.warn('clawback record failed:', clawErr.message);
+      if (clawErr) {
+        console.warn('clawback record failed:', clawErr.message);
+        Sentry.captureMessage('commission clawback record failed', {
+          level: 'error',
+          extra: { order_id: orderId, code: clawErr.code, message: clawErr.message },
+        } as any);
+      }
     }
   } catch (e: any) {
     console.warn('clawback step failed:', e?.message || e);
+    Sentry.captureException(e, { tags: { area: 'commerce.markOrderRefunded.clawback' }, extra: { order_id: orderId } } as any);
   }
 
   await captureServer(EVENTS.ORDER_REFUNDED, { order_id: orderId, amount_cents: refundedCents, provider });

@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { lazyClient } from '@/lib/lazyClient';
 import { json } from '@/lib/api/json';
-import { OpenAI } from 'openai';
+import { getOpenAI, resolveModel } from '@/lib/ai/openaiClient';
 import { meterLLMCall } from '@/lib/ai/meter';
 import { requireAdmin } from '@/lib/auth/requireUser';
 
@@ -11,9 +11,7 @@ const supabase = createClient(
   (process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SECRET_KEY)!
 );
 
-const openai = lazyClient(() => new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY!,
-}));
+const openai = lazyClient(() => getOpenAI('chat'));
 
 async function generateDigest(user_id: string) {
   const res = await fetch(`http://localhost:3000/api/feedback-summary?user_id=${user_id}`);
@@ -35,7 +33,7 @@ ${summary.received_feedback.map((f: any) => `• ${f.action} on ${f.block_id.sli
     { provider: 'openai', model_code: 'gpt-4', modality: 'chat', route: '/api/send-weekly-digest' },
     async () => {
       const chat = await openai.chat.completions.create({
-        model: 'gpt-4',
+        model: resolveModel('gpt-4', 'chat'),
         messages: [
           {
             role: 'system',

@@ -2,7 +2,7 @@
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { createServerClient } from '@supabase/ssr';
-import OpenAI from 'openai';
+import { getOpenAI, resolveModel } from '@/lib/ai/openaiClient';
 import { meterLLMCall, LLMBudgetExceededError } from '@/lib/ai/meter';
 import { requireAdmin } from '@/lib/auth/requireUser';
 
@@ -176,7 +176,7 @@ export async function POST(req: Request) {
     }
 
     // 2) Call OpenAI (JSON mode) to produce the structured suggestion
-    const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY! });
+    const openai = getOpenAI('chat');
 
     const sys =
       'You are a product/service suggestion helper for local small businesses. ' +
@@ -220,7 +220,7 @@ export async function POST(req: Request) {
         { provider: 'openai', model_code: model, modality: 'chat', route: '/api/admin/products/suggest' },
         async () => {
           const resp = await openai.chat.completions.create({
-            model,
+            model: resolveModel(model, 'chat'),
             response_format: { type: 'json_object' },
             temperature: 0.3,
             messages: [

@@ -1,5 +1,5 @@
 // app/api/services/suggest/route.ts
-import OpenAI from 'openai';
+import { getOpenAI, resolveModel } from '@/lib/ai/openaiClient';
 import { z } from 'zod';
 import { enforceGuestAiLimit, guestLimitBody } from '@/lib/ai/guestGuard';
 import { cookies } from 'next/headers';
@@ -208,7 +208,7 @@ export async function POST(req: Request) {
     }
 
     // ── Build the prompt ─────────────────────────────────────────────────────
-    const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY! });
+    const openai = getOpenAI('chat');
 
     const siteTypeGuidance = (t: string) => {
       switch (t) {
@@ -248,7 +248,7 @@ export async function POST(req: Request) {
         { provider: 'openai', model_code: model, modality: 'chat', route: '/api/services/suggest' },
         async () => {
           const resp = await openai.chat.completions.create({
-            model,
+            model: resolveModel(model, 'chat'),
             response_format: { type: 'json_object' },
             temperature: 0.4,
             messages: [

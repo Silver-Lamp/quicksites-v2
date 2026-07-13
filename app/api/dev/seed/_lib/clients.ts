@@ -2,8 +2,8 @@ import { cookies } from 'next/headers';
 import { lazyClient } from '@/lib/lazyClient';
 import { createServerClient, type CookieOptions } from '@supabase/ssr';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
-import OpenAI from 'openai';
-import { OPENAI_API_KEY, SERVICE_ROLE, SUPABASE_ANON_KEY, SUPABASE_URL } from './env';
+import { getOpenAI } from '@/lib/ai/openaiClient';
+import { SERVICE_ROLE, SUPABASE_ANON_KEY, SUPABASE_URL } from './env';
 
 export type AnyClient = SupabaseClient<any, any, any>;
 
@@ -22,4 +22,5 @@ export async function getCookieBoundClient() {
   }) as AnyClient;
 }
 
-export const openai = lazyClient(() => new OpenAI({ apiKey: OPENAI_API_KEY }));
+export const openai = lazyClient(() => getOpenAI('chat'));
+export const openaiImage = lazyClient(() => getOpenAI('image'));

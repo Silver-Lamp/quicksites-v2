@@ -7,7 +7,7 @@
 // GEO_RECS_LLM_ENABLED flag as the campaign rec synthesis, and best-effort: any failure
 // returns null so the UI just shows the deterministic scores (the source of truth).
 
-import OpenAI from 'openai';
+import { getOpenAI, resolveModel } from '@/lib/ai/openaiClient';
 import { meterLLMCall } from '@/lib/ai/meter';
 import { geoRecsLlmEnabled } from '@/lib/outreach/recSummary';
 import type { TerritoryScore } from '@/lib/prospects/territoryScore';
@@ -73,12 +73,12 @@ export async function synthesizeTerritoryBrief(territories: TerritoryScore[]): P
   const user = JSON.stringify({ areas: candidates.map(factsFor) });
 
   try {
-    const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+    const openai = getOpenAI('chat');
     const briefs = await meterLLMCall<TerritoryBrief[] | null>(
       { provider: 'openai', model_code: MODEL, modality: 'chat', user_id: null, route: ROUTE },
       async () => {
         const r = await openai.chat.completions.create({
-          model: MODEL,
+          model: resolveModel(MODEL, 'chat'),
           temperature: 0.3,
           response_format: { type: 'json_object' },
           messages: [

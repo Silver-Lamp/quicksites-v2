@@ -1,4 +1,5 @@
-import { openai } from './clients';
+import { openai, openaiImage } from './clients';
+import { resolveModel } from '@/lib/ai/openaiClient';
 import { meterLLMCall } from '@/lib/ai/meter';
 import { INDUSTRY_HINTS } from './industries';
 
@@ -68,7 +69,7 @@ Keep copy tight, marketable, and price outputs in USD dollars (not cents).`;
     { provider: 'openai', model_code: model, modality: 'chat', route: 'dev/seed:ideateBrandAndProducts' },
     async () => {
       const completion = await openai.chat.completions.create({
-        model,
+        model: resolveModel(model, 'chat'),
         temperature: 0.7,
         messages: [
           { role: 'system', content: sys },
@@ -133,7 +134,7 @@ export async function generateDataUrlPNG(
   const b64 = await meterLLMCall(
     { provider: 'openai', model_code: model, modality: 'image', route: 'dev/seed:generateDataUrlPNG' },
     async () => {
-      const res = await openai.images.generate({
+      const res = await openaiImage.images.generate({
         model,
         prompt: finalPrompt,
         size,

@@ -7,7 +7,7 @@
 // All OpenAI calls go through meterLLMCall so cost is logged to ai_usage_events +
 // PostHog. dryRun returns the spec only (NO AI calls, NO writes → zero cost).
 
-import OpenAI from 'openai';
+import { getOpenAI, resolveModel } from '@/lib/ai/openaiClient';
 import { createClient } from '@supabase/supabase-js';
 import { meterLLMCall } from '@/lib/ai/meter';
 import { randomDemoSpec, type DemoSpec } from '@/lib/builder/randomDemoSpec';
@@ -23,7 +23,10 @@ function admin() {
   });
 }
 function openai() {
-  return new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+  return getOpenAI('chat');
+}
+function openaiImage() {
+  return getOpenAI('image');
 }
 function uuid() {
   return globalThis.crypto?.randomUUID?.() ?? `id_${Math.random().toString(36).slice(2)}${Date.now()}`;
@@ -155,7 +158,7 @@ export async function ideateCopy(spec: DemoSpec, userId: string | null): Promise
     { provider: 'openai', model_code: 'gpt-4o-mini', modality: 'chat', user_id: userId, route: ROUTE },
     async () => {
       const r = await openai().chat.completions.create({
-        model: 'gpt-4o-mini',
+        model: resolveModel('gpt-4o-mini', 'chat'),
         temperature: 0.8,
         response_format: { type: 'json_object' },
         messages: [
@@ -194,7 +197,7 @@ export async function generateHero(spec: DemoSpec, userId: string | null): Promi
   const dataUrl = await meterLLMCall<string | null>(
     { provider: 'openai', model_code: 'gpt-image-1', modality: 'image', user_id: userId, route: ROUTE },
     async () => {
-      const gen = await openai().images.generate({ model: 'gpt-image-1', prompt, size: '1536x1024', quality: 'medium' });
+      const gen = await openaiImage().images.generate({ model: 'gpt-image-1', prompt, size: '1536x1024', quality: 'medium' });
       const b64 = gen.data?.[0]?.b64_json;
       return { value: b64 ? `data:image/png;base64,${b64}` : null, usage: { images: 1 } };
     }

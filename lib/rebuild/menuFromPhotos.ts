@@ -9,7 +9,7 @@
 // Prices read here are OCR GUESSES — the owner still confirms every price in the
 // "Enable ordering" gate before anything is chargeable (see menu-editor).
 
-import OpenAI from 'openai';
+import { getOpenAI, resolveModel } from '@/lib/ai/openaiClient';
 import { meterLLMCall } from '@/lib/ai/meter';
 import { parseMenu, type MenuSectionSpec } from '@/lib/rebuild/inferSiteSpec';
 
@@ -40,9 +40,9 @@ export async function pickMenuPhotos(imageUrls: string[], userId: string | null)
   const parsed = await meterLLMCall<any>(
     { provider: 'openai', model_code: 'gpt-4o', modality: 'chat', user_id: userId, route: ROUTE },
     async () => {
-      const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+      const openai = getOpenAI('chat');
       const r = await openai.chat.completions.create({
-        model: 'gpt-4o',
+        model: resolveModel('gpt-4o', 'chat'),
         temperature: 0,
         response_format: { type: 'json_object' },
         messages: [
@@ -94,9 +94,9 @@ export async function menuFromPhotos(
   const parsed = await meterLLMCall<any>(
     { provider: 'openai', model_code: 'gpt-4o', modality: 'chat', user_id: userId, route: ROUTE },
     async () => {
-      const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+      const openai = getOpenAI('chat');
       const r = await openai.chat.completions.create({
-        model: 'gpt-4o',
+        model: resolveModel('gpt-4o', 'chat'),
         temperature: 0.2,
         response_format: { type: 'json_object' },
         messages: [

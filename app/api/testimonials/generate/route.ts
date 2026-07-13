@@ -1,5 +1,5 @@
 // app/api/testimonials/generate/route.ts
-import OpenAI from 'openai';
+import { getOpenAI, resolveModel } from '@/lib/ai/openaiClient';
 import { lazyClient } from '@/lib/lazyClient';
 import { z } from 'zod';
 import { enforceGuestAiLimit, guestLimitBody } from '@/lib/ai/guestGuard';
@@ -12,7 +12,7 @@ import { meterLLMCall, LLMBudgetExceededError } from '@/lib/ai/meter';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-const openai = lazyClient(() => new OpenAI({ apiKey: process.env.OPENAI_API_KEY! }));
+const openai = lazyClient(() => getOpenAI('chat'));
 
 // --- simple in-memory limiter (per instance) ---
 type Bucket = { start: number; count: number };
@@ -143,7 +143,7 @@ export async function POST(req: Request) {
         { provider: 'openai', model_code: 'gpt-4o-mini', modality: 'chat', route: '/api/testimonials/generate' },
         async () => {
           const completion = await openai.chat.completions.create({
-            model: 'gpt-4o-mini',
+            model: resolveModel('gpt-4o-mini', 'chat'),
             // response_format: { type: 'json_object' },
             messages: [
               { role: 'system', content: sys },

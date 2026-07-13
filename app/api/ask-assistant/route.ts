@@ -1,14 +1,12 @@
 // app/api/ask-assistant/route.ts (Next.js 13+ app router)
-import { OpenAI } from 'openai';
+import { getOpenAI, resolveModel } from '@/lib/ai/openaiClient';
 import { lazyClient } from '@/lib/lazyClient';
 import { NextRequest, NextResponse } from 'next/server';
 import { meterLLMCall, LLMBudgetExceededError } from '@/lib/ai/meter';
 import { getServerSupabase } from '@/lib/supabase/server';
 import { enforceGuestAiLimit, guestLimitBody } from '@/lib/ai/guestGuard';
 
-const openai = lazyClient(() => new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-}));
+const openai = lazyClient(() => getOpenAI('chat'));
 
 export async function POST(req: NextRequest) {
   const { messages } = await req.json();
@@ -24,7 +22,7 @@ export async function POST(req: NextRequest) {
       { provider: 'openai', model_code: 'gpt-4o', modality: 'chat', route: '/api/ask-assistant', user_id: auth?.user?.id ?? null },
       async () => {
         const chat = await openai.chat.completions.create({
-          model: 'gpt-4o',
+          model: resolveModel('gpt-4o', 'chat'),
           messages: [
             {
               role: 'system',

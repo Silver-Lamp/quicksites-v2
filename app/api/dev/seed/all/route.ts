@@ -4,7 +4,7 @@ import { lazyClient } from '@/lib/lazyClient';
 import { cookies } from 'next/headers';
 import { createServerClient, type CookieOptions } from '@supabase/ssr';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
-import OpenAI from 'openai';
+import { getOpenAI, resolveModel } from '@/lib/ai/openaiClient';
 import { meterLLMCall } from '@/lib/ai/meter';
 import { randomUUID } from 'crypto';
 import { T_MERCHANTS, T_PRODUCTS, T_TEMPLATES } from '../_lib/env';
@@ -202,7 +202,8 @@ function buildIndustryPrompt(
 }
 
 /* ============================== OpenAI =============================== */
-const openai = lazyClient(() => new OpenAI({ apiKey: process.env.OPENAI_API_KEY }));
+const openai = lazyClient(() => getOpenAI('chat'));
+const openaiImage = lazyClient(() => getOpenAI('image'));
 
 async function ideateBrandAndProducts(params: {
   aiPrompt?: string;
@@ -263,7 +264,7 @@ Keep copy tight, marketable, and price outputs in USD dollars (not cents).`;
     { provider: 'openai', model_code: 'gpt-4o-mini', modality: 'chat', route: 'dev/seed/all:ideate' },
     async () => {
       const completion = await openai.chat.completions.create({
-        model: 'gpt-4o-mini',
+        model: resolveModel('gpt-4o-mini', 'chat'),
         temperature: 0.7,
         messages: [
           { role: 'system', content: sys },
@@ -305,7 +306,7 @@ async function generateAndUploadPNG(params: {
     const b64 = await meterLLMCall(
       { provider: 'openai', model_code: 'gpt-image-1', modality: 'image', route: 'dev/seed/all:uploadPNG' },
       async () => {
-        const gen = await openai.images.generate({
+        const gen = await openaiImage.images.generate({
           model: 'gpt-image-1',
           prompt,
           size,
@@ -361,7 +362,7 @@ async function generateDataUrlPNG(
   const b64 = await meterLLMCall(
     { provider: 'openai', model_code: 'gpt-image-1', modality: 'image', route: 'dev/seed/all:dataUrlPNG' },
     async () => {
-      const gen = await openai.images.generate({
+      const gen = await openaiImage.images.generate({
         model: 'gpt-image-1',
         prompt,
         size,

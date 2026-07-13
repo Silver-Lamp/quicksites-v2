@@ -5,7 +5,7 @@
 // pre-answered) and as a fallback during autogenerate. Prefers a known industry
 // label/key when one fits; otherwise returns a concise free-text label with key
 // 'other'. Best-effort — returns null on any failure so callers fall back.
-import OpenAI from 'openai';
+import { getOpenAI, resolveModel } from '@/lib/ai/openaiClient';
 import { meterLLMCall } from '@/lib/ai/meter';
 import { KEY_TO_LABEL, LABEL_TO_KEY, type IndustryKey } from '@/lib/industries';
 
@@ -19,13 +19,13 @@ export async function inferIndustry(
   if (!name || name.toLowerCase() === 'my business') return null;
 
   const known = Object.values(KEY_TO_LABEL).join(', ');
-  const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+  const openai = getOpenAI('chat');
   try {
     const label = await meterLLMCall<string>(
       { provider: 'openai', model_code: 'gpt-4o-mini', modality: 'chat', user_id: ownerId, route: ROUTE },
       async () => {
         const r = await openai.chat.completions.create({
-          model: 'gpt-4o-mini',
+          model: resolveModel('gpt-4o-mini', 'chat'),
           temperature: 0.2,
           response_format: { type: 'json_object' },
           messages: [

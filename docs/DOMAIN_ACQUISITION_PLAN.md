@@ -59,8 +59,18 @@ pack" (few reviews) is a softer target to rank into. `weakPackFactor = clamp(1 +
 reviewWeight·(1 − 2·strength), 1−reviewWeight, 1+reviewWeight)` where `strength = medianReviews
 / (medianReviews + midpoint)` (saturating, midpoint 25). It **degrades gracefully**: no review
 data → factor 1 (identical to v1). Surfaced as a **Weak/Medium/Strong "Map pack" column** +
-a coverage stat. Review data is a paid Places SKU backfilled weekly, so coverage is partial —
-the score sharpens where data exists and never blocks where it doesn't.
+a coverage stat.
+
+**Populating the review data (Place Details backfill).** `outreach_prospects.rating` /
+`review_count` come from Google **Place Details** (a paid Enterprise SKU), so the backfill is
+bounded + throttled: `lib/outreach/placeSignals.ts` (`backfillPlaceSignals` + pure
+`selectStaleSignalTargets`) refreshes only stale rows (7-day TTL), capped per run, at
+concurrency 6. It **auto-runs on a discover sweep** — flag-gated `PLACE_SIGNALS_BACKFILL_ENABLED=1`,
+per-sweep cap `PLACE_SIGNALS_BACKFILL_LIMIT` (default 60) — so a freshly-swept city gets
+map-pack data immediately; an on-demand `POST /api/admin/prospects/backfill-signals`
+(by sweep / city / industry) covers already-swept cities without re-sweeping. Needs
+`GOOGLE_PLACES_API_KEY`; no-ops cleanly when unset, so the score sharpens where data exists
+and never blocks where it doesn't.
 
 **Keyword search volume (optional enrichment, flag-gated OFF).** The one Niche-Finder signal
 not derivable from swept data. `lib/prospects/keywordVolume.ts` fetches monthly local search

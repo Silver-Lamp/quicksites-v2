@@ -55,6 +55,36 @@ export function ContactFormEditor({ block, onSave, onClose, template }: BlockEdi
 
   const emailOk = useMemo(() => isValidEmail(dbEmail), [dbEmail]);
 
+  // Open the sidebar and spotlight a settings panel, closing this block drawer so
+  // the panel is actually visible (it renders beneath the drawer).
+  // NOTE: the settings sidebar is opened by template-editor-content's *message*
+  // listener ({ type:'qs:settings:set-open', open:true }) — there is no CustomEvent
+  // listener for it, so postMessage is the load-bearing call here. The editor and
+  // that listener share one window, so posting to self is received. The
+  // qs:open-settings-panel CustomEvent then spotlights the panel (wired for 'hours'
+  // today; harmless no-op for others until they add a listener).
+  const openSidebarPanel = (panel: 'identity' | 'services') => {
+    try {
+      window.postMessage({ type: 'qs:settings:set-open', open: true }, '*');
+      // Defer the spotlight: the sidebar registers its qs:open-settings-panel
+      // listener only after it mounts (a tick after the message opens it), so
+      // dispatching synchronously would miss it.
+      window.setTimeout(() => {
+        try {
+          window.dispatchEvent(
+            new CustomEvent('qs:open-settings-panel', {
+              detail: { panel, openEditor: true, scroll: true, spotlightMs: 900 } as any,
+            })
+          );
+        } catch {}
+      }, 150);
+    } catch {}
+    onClose?.();
+  };
+
+  const sidebarLinkClass =
+    'font-medium text-purple-300 underline underline-offset-2 hover:text-purple-200 focus:outline-none focus:ring-2 focus:ring-purple-500 rounded';
+
   return (
     <div
       className="p-5 space-y-5 rounded-xl border border-neutral-800 bg-neutral-900 text-neutral-100 shadow-sm"
@@ -101,7 +131,11 @@ export function ContactFormEditor({ block, onSave, onClose, template }: BlockEdi
         <div className="flex items-start gap-2">
           <Info className="mt-[2px] h-4 w-4 text-neutral-400" />
           <p className="text-xs text-neutral-400">
-            This address comes from <span className="font-medium">Template Identity</span> in the sidebar.
+            This address comes from{' '}
+            <button type="button" onClick={() => openSidebarPanel('identity')} className={sidebarLinkClass}>
+              Template Identity
+            </button>{' '}
+            in the sidebar.
           </p>
         </div>
       </div>
@@ -135,12 +169,20 @@ export function ContactFormEditor({ block, onSave, onClose, template }: BlockEdi
               })}
             </div>
             <p className="text-xs text-neutral-400">
-              Need another option? Add services in the <span className="font-medium">sidebar settings</span>.
+              Need another option? Add services in the{' '}
+              <button type="button" onClick={() => openSidebarPanel('services')} className={sidebarLinkClass}>
+                sidebar settings
+              </button>
+              .
             </p>
           </>
         ) : (
           <div className="rounded-md border border-dashed border-neutral-800 px-3 py-3 text-sm text-neutral-400">
-            No services defined yet. Add services in the <span className="font-medium">sidebar settings</span>.
+            No services defined yet. Add services in the{' '}
+            <button type="button" onClick={() => openSidebarPanel('services')} className={sidebarLinkClass}>
+              sidebar settings
+            </button>
+            .
           </div>
         )}
       </div>

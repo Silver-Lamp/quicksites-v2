@@ -131,6 +131,8 @@ export default function DomainBuyListPlanner() {
   const [backfillNote, setBackfillNote] = useState<string | null>(null);
   const [preflighting, setPreflighting] = useState(false);
   const [preflight, setPreflight] = useState<PreflightResult | null>(null);
+  const [automating, setAutomating] = useState<'gsc' | 'numbers' | null>(null);
+  const [automateNote, setAutomateNote] = useState<string | null>(null);
   const [provisionNumbers, setProvisionNumbers] = useState(false);
   const [connectGsc, setConnectGsc] = useState(false);
   const [retryingGsc, setRetryingGsc] = useState(false);
@@ -264,6 +266,41 @@ export default function DomainBuyListPlanner() {
       setPreflight({ ok: false, ready: false, checks: { request: { ok: false, detail: e?.message || 'Request failed' } }, billingReminder: '' });
     } finally {
       setPreflighting(false);
+    }
+  }
+
+  // Post-hoc automation across ALL existing campaigns: connect GSC / provision numbers for
+  // domains bought without those toggles. Idempotent + flag-gated server-side.
+  async function bulkAutomate(kind: 'gsc' | 'numbers') {
+    if (kind === 'numbers' && !window.confirm('Provision a Twilio number for every campaign that lacks one? Recurring cost per number.')) return;
+    setAutomating(kind);
+    setAutomateNote(null);
+    try {
+      const res = await fetch('/api/admin/prospects/geo-campaign/bulk-automate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ connectGsc: kind === 'gsc', provisionNumbers: kind === 'numbers' }),
+      });
+      const j = await res.json();
+      if (!res.ok || !j?.ok) throw new Error(j?.error || `Failed (${res.status})`);
+      const s = j.summary;
+      if (kind === 'gsc') {
+        setAutomateNote(
+          j.gscEnabled
+            ? `GSC: ${s.gscConnected} connected · ${s.gscPending} pending · ${s.gscSkipped} already · ${s.gscFailed} failed (of ${j.processed}).`
+            : 'GSC auto-connect is off — set GSC_AUTO_CONNECT_ENABLED=1 and reconnect GSC (write scope).',
+        );
+      } else {
+        setAutomateNote(
+          j.numbersEnabled
+            ? `Numbers: ${s.numbersProvisioned} provisioned · ${s.numbersSkipped} already · ${s.numbersFailed} failed (of ${j.processed}).`
+            : 'Call tracking is off — set CALL_TRACKING_ENABLED=1 + CALL_TRACKING_FALLBACK_NUMBER + Twilio creds.',
+        );
+      }
+    } catch (e: any) {
+      setAutomateNote(e?.message || 'Bulk automation failed');
+    } finally {
+      setAutomating(null);
     }
   }
 
@@ -555,6 +592,28 @@ export default function DomainBuyListPlanner() {
           )}
         </div>
       )}
+
+      {/* Post-hoc automation for domains bought without the per-buy toggles. */}
+      <div className="mt-3 flex flex-wrap items-center gap-2">
+        <span className="text-[11px] text-neutral-600">Existing campaigns:</span>
+        <button
+          onClick={() => bulkAutomate('gsc')}
+          disabled={automating !== null}
+          title="Connect every campaign's domain to Search Console (idempotent — skips already-connected). Needs GSC_AUTO_CONNECT_ENABLED + GSC re-consent."
+          className="rounded border border-neutral-700 bg-neutral-900 px-2 py-1 text-[11px] text-neutral-300 hover:text-white disabled:opacity-50"
+        >
+          {automating === 'gsc' ? 'Connecting…' : 'Connect GSC (all)'}
+        </button>
+        <button
+          onClick={() => bulkAutomate('numbers')}
+          disabled={automating !== null}
+          title="Provision a call-tracking number for every campaign that lacks one (recurring cost). Needs CALL_TRACKING_ENABLED + a fallback number."
+          className="rounded border border-neutral-700 bg-neutral-900 px-2 py-1 text-[11px] text-neutral-300 hover:text-white disabled:opacity-50"
+        >
+          {automating === 'numbers' ? 'Provisioning…' : 'Add tracking # (all)'}
+        </button>
+      </div>
+      {automateNote && <p className="mt-1 text-[11px] text-neutral-400">{automateNote}</p>}
 
       {/* Already-owned inventory (pasted, persisted locally; no registrar ping) */}
       <div className="mt-3">

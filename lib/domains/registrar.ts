@@ -69,6 +69,23 @@ export type PurchaseResult = {
 
 export const SUGGEST_TLDS = ['com', 'net', 'co', 'io', 'org', 'us'] as const;
 
+/**
+ * Normalize a phone number to E.164 ("+<countrycode><digits>") for Vercel's registrar API,
+ * which rejects bare national numbers. Accepts common inputs: a bare US 10-digit
+ * (2623028118 → +12623028118), a US 11-digit (1… → +1…), or an already-'+'-prefixed number
+ * (strips spaces/dashes/dots/parens). `defaultCountryCode` is used only for a 10-digit input.
+ */
+export function toE164(input: string, defaultCountryCode = '1'): string {
+  const raw = (input || '').trim();
+  if (!raw) return '';
+  const digits = raw.replace(/\D/g, '');
+  if (!digits) return '';
+  if (raw.startsWith('+')) return `+${digits}`;
+  if (digits.length === 10) return `+${defaultCountryCode}${digits}`;
+  if (digits.length === 11 && digits.startsWith('1')) return `+${digits}`;
+  return `+${digits}`; // best effort — already has a country code, just missing the '+'
+}
+
 /* -------------------------------------------------------------------------- */
 /* Vercel adapter                                                             */
 /* -------------------------------------------------------------------------- */
@@ -220,7 +237,7 @@ export function readRegistrantContact():
     firstName: pick('FIRST'),
     lastName: pick('LAST'),
     email: pick('EMAIL'),
-    phone: pick('PHONE'),
+    phone: toE164(pick('PHONE')), // Vercel requires E.164; normalize a bare national number
     address1: pick('ADDRESS'),
     city: pick('CITY'),
     state: pick('STATE'),

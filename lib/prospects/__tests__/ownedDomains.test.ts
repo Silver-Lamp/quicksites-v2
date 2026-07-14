@@ -99,4 +99,18 @@ describe('candidateOwnedMatch — abbreviated / reordered variants', () => {
     const idx = buildOwnedIndex(['gallatin.com', 'gallatin-plumbing.com']);
     expect(candidateOwnedMatch(cand('gallatin-towing.com', 'Gallatin', 'towing'), idx)).toBeNull();
   });
+
+  it('matches real owned-inventory abbreviations (roofcleaning, windowclean, city+tow)', () => {
+    const idx = buildOwnedIndex([
+      'auburnroofcleaning.com',
+      'auburnwindowclean.com',
+      'covingtontow.com',
+      'millcreektowing.com',
+    ]);
+    expect(candidateOwnedMatch(cand('auburn-roofing.com', 'Auburn', 'roof_cleaning'), idx)).toBe('alias');
+    expect(candidateOwnedMatch(cand('auburn-window-cleaning.com', 'Auburn', 'window_washing'), idx)).toBe('alias');
+    expect(candidateOwnedMatch(cand('covington-towing.com', 'Covington', 'towing'), idx)).toBe('alias');
+    // millcreektowing ≡ mill-creek-towing once the dash is stripped → caught as 'similar'.
+    expect(candidateOwnedMatch(cand('mill-creek-towing.com', 'Mill Creek', 'towing'), idx)).toBe('similar');
+  });
 });

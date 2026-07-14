@@ -11,7 +11,13 @@ import { useEffect, useMemo, useState } from 'react';
 import { getIndustryOptions, type IndustryKey } from '@/lib/industries';
 import { PREMIUM_INDUSTRIES, MID_INDUSTRIES, formatCents } from '@/lib/outreach/geoPricing';
 import { availableMetros, citiesForMetro } from '@/lib/prospects/citySeeds';
-import { buildOwnedIndex, candidateOwnedMatch, type OwnedMatch } from '@/lib/prospects/ownedDomains';
+import {
+  buildOwnedIndex,
+  candidateOwnedMatch,
+  parseOwnedDomains,
+  normalizeDomain,
+  type OwnedMatch,
+} from '@/lib/prospects/ownedDomains';
 
 const OWNED_STORAGE_KEY = 'qs.buyList.ownedDomains';
 
@@ -89,6 +95,18 @@ type PurchaseResponse = {
 };
 
 const CHIP = 'rounded-full border px-3 py-1 text-xs font-medium transition';
+
+/** Extract domains from a registrar CSV: first column per row, skip header, require a dot. */
+function parseCsvDomains(text: string): string[] {
+  const out: string[] = [];
+  for (const line of (text || '').split(/\r?\n/)) {
+    const first = line.split(',')[0]?.trim().replace(/^"|"$/g, '');
+    if (!first || /domain\s*name/i.test(first)) continue; // blank or header
+    const d = normalizeDomain(first);
+    if (d && d.includes('.')) out.push(d);
+  }
+  return Array.from(new Set(out));
+}
 
 export default function DomainBuyListPlanner() {
   const industryOptions = useMemo(() => getIndustryOptions(), []);
@@ -217,6 +235,20 @@ export default function DomainBuyListPlanner() {
     } finally {
       setBackfilling(false);
     }
+  }
+
+  // Import owned domains from a registrar CSV export (e.g. Namecheap's Domain_List.csv).
+  // Takes the first column per row, skips the header, merges with anything already listed.
+  function importOwnedCsv(file: File) {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const csvDomains = parseCsvDomains(String(reader.result || ''));
+      const existing = parseOwnedDomains(ownedText);
+      const merged = Array.from(new Set([...existing, ...csvDomains]));
+      setOwnedText(merged.join('\n'));
+      setShowOwnedBox(true);
+    };
+    reader.readAsText(file);
   }
 
   const acceptedSet = useMemo(
@@ -468,11 +500,29 @@ export default function DomainBuyListPlanner() {
         </button>
         {showOwnedBox && (
           <div className="mt-2">
+            <div className="mb-1.5 flex items-center gap-3">
+              <label className="cursor-pointer rounded border border-neutral-700 bg-neutral-900 px-2 py-1 text-[11px] text-neutral-300 hover:text-white">
+                Import CSV
+                <input
+                  type="file"
+                  accept=".csv,text/csv"
+                  className="hidden"
+                  onChange={(e) => {
+                    const f = e.target.files?.[0];
+                    if (f) importOwnedCsv(f);
+                    e.target.value = ''; // allow re-importing the same file
+                  }}
+                />
+              </label>
+              <span className="text-[11px] text-neutral-600">
+                Namecheap / registrar export — takes the first column, dedupes, merges.
+              </span>
+            </div>
             <textarea
               value={ownedText}
               onChange={(e) => setOwnedText(e.target.value)}
-              placeholder="Paste domains you already own — one per line or comma-separated. Matches ignore the dash + TLD (gallatin-towing.com ≈ gallatintowing.com ≈ gallatintowing.net)."
-              rows={4}
+              placeholder="Paste domains you already own — one per line or comma-separated, or Import CSV. Matches ignore the dash + TLD (gallatin-towing.com ≈ gallatintowing.com ≈ gallatintowing.net) + common abbreviations (covingtontow ≈ covington-towing)."
+              rows={5}
               className="block w-full rounded-lg border border-neutral-700 bg-neutral-950 px-3 py-2 text-xs text-neutral-200"
             />
             <p className="mt-1 text-[11px] text-neutral-600">

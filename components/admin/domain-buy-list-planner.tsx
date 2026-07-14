@@ -79,6 +79,14 @@ type PurchaseItemResult = {
   gsc?: string;
 };
 
+type PreflightCheck = { ok: boolean; detail: string };
+type PreflightResult = {
+  ok: boolean;
+  ready: boolean;
+  checks: Record<string, PreflightCheck>;
+  billingReminder: string;
+};
+
 type PurchaseResponse = {
   ok: boolean;
   dryRun: boolean;
@@ -121,6 +129,8 @@ export default function DomainBuyListPlanner() {
   const [checkVol, setCheckVol] = useState(false);
   const [backfilling, setBackfilling] = useState(false);
   const [backfillNote, setBackfillNote] = useState<string | null>(null);
+  const [preflighting, setPreflighting] = useState(false);
+  const [preflight, setPreflight] = useState<PreflightResult | null>(null);
   const [provisionNumbers, setProvisionNumbers] = useState(false);
   const [connectGsc, setConnectGsc] = useState(false);
   const [retryingGsc, setRetryingGsc] = useState(false);
@@ -238,6 +248,22 @@ export default function DomainBuyListPlanner() {
       setBackfillNote(e?.message || 'Backfill failed');
     } finally {
       setBackfilling(false);
+    }
+  }
+
+  // Check the Vercel registrar is actually usable (token scope, project, domains API,
+  // registrant, flag) — diagnoses "everything says Taken" (a failing domains-API call).
+  async function runPreflight() {
+    setPreflighting(true);
+    try {
+      const res = await fetch('/api/domains/preflight');
+      const json = await res.json();
+      if (res.ok && json?.checks) setPreflight(json as PreflightResult);
+      else setPreflight({ ok: false, ready: false, checks: { request: { ok: false, detail: json?.error || `Failed (${res.status})` } }, billingReminder: '' });
+    } catch (e: any) {
+      setPreflight({ ok: false, ready: false, checks: { request: { ok: false, detail: e?.message || 'Request failed' } }, billingReminder: '' });
+    } finally {
+      setPreflighting(false);
     }
   }
 
@@ -489,9 +515,46 @@ export default function DomainBuyListPlanner() {
         >
           {backfilling ? 'Backfilling…' : 'Backfill map-pack data'}
         </button>
+        <button
+          onClick={runPreflight}
+          disabled={preflighting}
+          title="Check the Vercel registrar is usable (token scope, project, domains API, registrant, buy flag). Diagnoses false 'Taken' results."
+          className="rounded-lg border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-neutral-300 hover:text-white disabled:opacity-50"
+        >
+          {preflighting ? 'Checking…' : 'Check registrar access'}
+        </button>
       </div>
 
       {backfillNote && <p className="mt-2 text-[11px] text-neutral-400">{backfillNote}</p>}
+
+      {preflight && (
+        <div className="mt-3 rounded-lg border border-neutral-800 bg-neutral-950/60 p-3">
+          <div className="mb-1.5 text-xs font-semibold text-neutral-300">
+            Registrar readiness:{' '}
+            <span className={preflight.ready ? 'text-emerald-400' : 'text-amber-400'}>
+              {preflight.ready ? 'ready to buy' : 'not ready'}
+            </span>
+          </div>
+          <ul className="space-y-0.5 text-[12px]">
+            {Object.entries(preflight.checks).map(([key, c]) => (
+              <li key={key} className="flex gap-2">
+                <span className={c.ok ? 'text-emerald-400' : 'text-rose-400'}>{c.ok ? '✓' : '✗'}</span>
+                <span className="text-neutral-500">{key}:</span>
+                <span className="text-neutral-400">{c.detail}</span>
+              </li>
+            ))}
+          </ul>
+          {!preflight.checks.domainsApi?.ok && (
+            <p className="mt-1.5 text-[11px] text-amber-400/90">
+              A failing <code>domainsApi</code> check is why domains show as “Taken/Unknown” — the
+              token can’t reach <code>/v4/domains</code>. Use a Vercel token with domain access.
+            </p>
+          )}
+          {preflight.billingReminder && (
+            <p className="mt-1.5 text-[11px] text-neutral-600">{preflight.billingReminder}</p>
+          )}
+        </div>
+      )}
 
       {/* Already-owned inventory (pasted, persisted locally; no registrar ping) */}
       <div className="mt-3">

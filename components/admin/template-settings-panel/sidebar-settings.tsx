@@ -11,7 +11,6 @@ import PaymentSettingsPanel from '../payments/payment-settings-panel';
 import HoursPanel from '../templates/panels/hours-panel';
 import { Button } from '@/components/ui/button';
 import { Save, Loader2, AlertTriangle } from 'lucide-react';
-import { Collapsible } from '@/components/ui/collapsible';
 import EcommercePanel from '../templates/panels/ecommerce-panel';
 import * as ReactNS from 'react';
 import type { Template as Tpl, Page as Pg } from '@/types/template';
@@ -316,16 +315,14 @@ export default function SidebarSettings({ template, onChange, variant }: Props) 
         <SeoPanel template={template} onChange={(patch) => applyPatch(patch)} />
       </PanelBoundary>
 
-      {/* Hours */}
-      <Collapsible title="Hours" id="hours" defaultOpen={false} ref={hoursPanelRef as any}>
-        <HoursPanel
-          template={template}
-          onChange={(patch) => applyPatch(patch)}
-          panelRef={hoursPanelRef as any}
-          forceOpenEditor={forceOpenHours}
-          spotlight={spotlightHours}
-        />
-      </Collapsible>
+      {/* Hours (renders its own shared CollapsiblePanel — matches the other sections) */}
+      <HoursPanel
+        template={template}
+        onChange={(patch) => applyPatch(patch)}
+        panelRef={hoursPanelRef as any}
+        forceOpenEditor={forceOpenHours}
+        spotlight={spotlightHours}
+      />
 
       {/* E-commerce panel */}
       <PanelBoundary name="EcommercePanel">

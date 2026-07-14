@@ -10,6 +10,7 @@ import { getYear } from 'date-fns';
 import QuickLinksEditor from '@/components/admin/fields/quick-links-editor';
 import type { Template } from '@/types/template';
 import { Button } from '@/components/ui/button';
+import { openSettingsSidebarPanel } from '@/lib/editor/openSettingsPanel';
 
 type Link = { label: string; href: string };
 type SocialStyle = 'icons' | 'labels' | 'both';
@@ -104,6 +105,12 @@ export default function FooterEditor({
   template,
 }: BlockEditorProps & { template: Template }) {
   const footerBlock = block as unknown as Block;
+
+  // Deep-link the read-only Company Info to where it's actually editable (the sidebar's
+  // Template Identity panel), closing this drawer so the sidebar is visible.
+  const openIdentity = () => openSettingsSidebarPanel('identity', { closeDrawer: () => onClose?.() });
+  const sidebarLinkClass =
+    'font-medium text-purple-300 underline underline-offset-2 hover:text-purple-200 focus:outline-none focus:ring-2 focus:ring-purple-500 rounded';
 
   // 🔧 normalize incoming content so editor always sees `links`
   const initialContent = useMemo(() => {
@@ -291,7 +298,11 @@ export default function FooterEditor({
                 </div>
               </div>
               <p className="mt-1 text-xs text-white/50">
-                Manage identity in <span className="font-medium">Template Identity</span>.
+                Manage identity in{' '}
+                <button type="button" onClick={openIdentity} className={sidebarLinkClass} title="Open Template Identity">
+                  Template Identity
+                </button>
+                .
               </p>
             </div>
 

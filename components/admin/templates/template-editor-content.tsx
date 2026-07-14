@@ -42,7 +42,7 @@ import type {
   VersionTagInfo,
 } from '@/components/admin/templates/truth/types';
 
-import { X } from 'lucide-react';
+import { X, History as HistoryIcon } from 'lucide-react';
 
 /* ---------- helpers ---------- */
 export function getTemplatePages(t: Template): any[] {
@@ -633,6 +633,8 @@ export default function EditorContent({
                         <CollapsiblePanel
                           id="truth-tracker"
                           title="History"
+                          icon={<HistoryIcon />}
+                          description="Version snapshots & restore points"
                           defaultOpen={false}
                           lazyMount
                         >

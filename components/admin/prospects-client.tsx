@@ -19,6 +19,7 @@ import { buildRankedOpportunities } from '@/lib/prospects/rankedOpportunities';
 import DomainBuyListPlanner from '@/components/admin/domain-buy-list-planner';
 import CollapsibleSection, { openSection } from '@/components/admin/collapsible-section';
 import DomainCostSummary from '@/components/admin/domain-cost-summary';
+import ParksPrewarmPanel from '@/components/admin/parks-prewarm-panel';
 import { computeCoachState, type CoachAction } from '@/lib/prospects/growthCoach';
 import GrowthCoach, { actionId } from '@/components/admin/growth-coach';
 import {
@@ -1264,6 +1265,18 @@ export default function ProspectsClient({
 
       {/* Domain buy-list planner — spend a fixed budget on the best geo-domains to acquire. */}
       <DomainBuyListPlanner />
+
+      {/* Pre-warm the industrial-park registry for a metro so pitch-site default addresses
+          land in a real building. Collapsed by default — an occasional per-metro chore. */}
+      <CollapsibleSection
+        id="parks-prewarm"
+        className="mt-8"
+        title="Industrial-park registry"
+        subtitle="Pre-warm a metro's parks to ground default office addresses"
+        defaultOpen={false}
+      >
+        <ParksPrewarmPanel />
+      </CollapsibleSection>
 
       {/* Existing campaigns */}
       {initialCampaigns.length > 0 && (

@@ -25,6 +25,7 @@
     "smoke:listing": "tsx scripts/listing-smoke.ts",
     "import:listings": "tsx scripts/import-listings-batch.ts",
     "backfill:customers": "tsx scripts/backfill-customers.ts",
+    "parks:prewarm": "tsx scripts/prewarm-parks.ts",
     "fonts": "ts-node scripts/download-google-fonts.ts",
     "hosts:add": "ts-node scripts/manage-hosts-from-supabase.ts add",
     "hosts:remove": "ts-node scripts/manage-hosts-from-supabase.ts remove",

@@ -106,7 +106,7 @@ export default function EcommercePanel({ templateId, currentPageId, template }: 
 
   return (
     <>
-      <Collapsible title="E-commerce" defaultOpen={open} onOpenChange={setOpen}>
+      <Collapsible title="E-commerce" defaultOpen={open} onOpenChange={setOpen} icon={<ShoppingCart />}>
         <div className="space-y-4">
           <div className="grid gap-2">
             <Label htmlFor="merchantEmail">Merchant user email</Label>

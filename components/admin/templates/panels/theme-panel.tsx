@@ -7,6 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import Collapsible from '@/components/ui/collapsible-panel';
 import { ThemePreviewCard } from '@/components/admin/theme-preview-card';
+import { Palette } from 'lucide-react';
 import type { Template } from '@/types/template';
 
 const fonts = ['sans', 'serif', 'mono', 'cursive'];
@@ -64,7 +65,15 @@ export default function ThemePanel({
   };
 
   return (
-    <Collapsible id="theme" title="Theme">
+    <Collapsible
+      id="theme"
+      title="Theme"
+      icon={<Palette />}
+      summary={[
+        (template.color_mode || 'light') === 'dark' ? 'Dark' : 'Light',
+        template.theme || null,
+      ].filter(Boolean).join(' · ')}
+    >
       <div className="space-y-4">
         <div className="grid grid-cols-2 gap-4">
           {/* Font family */}

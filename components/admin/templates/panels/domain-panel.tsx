@@ -706,7 +706,12 @@ export default function DomainPanel({
   }, [domainInput]);
   
   return (
-    <Collapsible title="URL, Publishing & Domain" id="publishing-domain">
+    <Collapsible
+      title="URL, Publishing & Domain"
+      id="publishing-domain"
+      icon={<Globe />}
+      summary={publishedDomain || (isPublished ? 'Published' : 'Draft')}
+    >
       <div className="space-y-6">
         {/* -------------------- Slug editor + Unpublish -------------------- */}
         <div className="rounded-lg border border-white/10 bg-neutral-900/50 p-3">

@@ -11,7 +11,8 @@ import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 
-import { Clock, Copy, Globe2, ChevronDown, ChevronRight } from 'lucide-react';
+import { Clock, Copy, Globe2 } from 'lucide-react';
+import CollapsiblePanel from '@/components/ui/collapsible-panel';
 import toast from 'react-hot-toast';
 
 import {
@@ -50,7 +51,6 @@ export default function HoursPanel({
   spotlight,
 }: Props) {
   const containerRef = useRef<HTMLDivElement | null>(null);
-  const detailsRef = useRef<HTMLDetailsElement | null>(null);
 
   const [sectionOpen, setSectionOpen] = useState<boolean>(false);
   const [inlineOpen, setInlineOpen] = useState(false);
@@ -193,30 +193,16 @@ export default function HoursPanel({
       data-panel-id="hours"
       className={`${className ?? ''} ${showSpotlight ? 'ring-2 ring-violet-500/70 rounded-xl' : ''}`}
     >
-      <details
-        ref={detailsRef}
+      <CollapsiblePanel
+        id="hours-panel"
+        icon={<Clock />}
+        title="Hours of Operation"
+        summary={`${title} · ${tz}`}
         open={sectionOpen}
-        onToggle={(e) => setSectionOpen((e.currentTarget as HTMLDetailsElement).open)}
-        className="group rounded-xl border bg-background/60"
+        onOpenChange={setSectionOpen}
       >
-        {/* Header / Summary */}
-        <summary
-          className="flex cursor-pointer list-none items-center gap-2 px-3 py-2 select-none"
-          role="button"
-          aria-expanded={sectionOpen}
-        >
-          <span className="inline-flex h-6 w-6 items-center justify-center rounded-md border">
-            {sectionOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-          </span>
-          <Clock className="w-4 h-4 opacity-80" />
-          <span className="font-medium">Hours of Operation</span>
-          <span className="ml-auto text-xs opacity-70">
-            {title} · {tz}
-          </span>
-        </summary>
-
         {/* Content */}
-        <div className="space-y-3 border-t p-3">
+        <div className="space-y-3">
           {/* Guidance */}
           <div className="rounded-lg border border-white/10 bg-neutral-900/50 p-3 text-xs text-white/70 leading-relaxed">
             <ul className="list-disc list-inside space-y-1">
@@ -327,7 +313,7 @@ export default function HoursPanel({
             </div>
           )}
         </div>
-      </details>
+      </CollapsiblePanel>
     </div>
   );
 }

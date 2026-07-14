@@ -6,6 +6,7 @@ import { Button, Badge, Separator } from '@/components/ui';
 import Collapsible from '@/components/ui/collapsible-panel';
 import { Label } from '@/components/ui/label';
 import { Slider } from '@/components/ui/slider';
+import { CreditCard } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 type Props = {
@@ -125,7 +126,13 @@ export default function PaymentSettingsPanel({
   };
 
   return (
-    <Collapsible title="Payments" id="payments" defaultOpen={false}>
+    <Collapsible
+      title="Payments"
+      id="payments"
+      defaultOpen={false}
+      icon={<CreditCard />}
+      summary={hasAccount ? 'Connected' : 'Not connected'}
+    >
       <div className="space-y-4">
         <div className="flex items-center justify-between">
           <h3 className="text-sm font-semibold">Payments</h3>

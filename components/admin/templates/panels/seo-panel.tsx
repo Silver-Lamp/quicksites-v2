@@ -4,6 +4,7 @@
 import Collapsible from '@/components/ui/collapsible-panel';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
+import { Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import type { Template } from '@/types/template';
 import * as React from 'react';
@@ -65,7 +66,7 @@ export default function SeoPanel({ template, onChange }: Props) {
   };
 
   return (
-    <Collapsible title="Verification & SEO Meta" id="verification-seo-meta">
+    <Collapsible title="Verification & SEO Meta" id="verification-seo-meta" icon={<Search />}>
       {/* Verified */}
       <div className="flex items-center justify-between py-2 border-t border-white/10 mt-2">
         <Label className="text-white">Verified</Label>

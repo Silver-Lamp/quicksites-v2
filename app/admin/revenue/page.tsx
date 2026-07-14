@@ -2,6 +2,7 @@
 
 // app/admin/revenue/page.tsx — platform revenue reconciliation (Model A, A5).
 import * as React from 'react';
+import DomainCostSummary from '@/components/admin/domain-cost-summary';
 
 const fmt = (c: number) => `$${((Number(c) || 0) / 100).toFixed(2)}`;
 
@@ -75,6 +76,9 @@ export default function RevenuePage() {
       </div>
 
       {error && <div className="mb-3 text-sm text-red-500">{error}</div>}
+
+      {/* Domain renewal liability — the recurring cost that eats into net take. */}
+      <DomainCostSummary className="mb-4" />
 
       {data && (
         <>

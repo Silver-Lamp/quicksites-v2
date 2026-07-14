@@ -130,6 +130,9 @@ export default function TemplateEditor({
   const [targetBlockIndex, setTargetBlockIndex] = useState<number | null>(null);
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
   const [saveAndPublishBusy, setSaveAndPublishBusy] = useState(false);
+  // URL of the most recent publish this session — seeds the persistent "View live site"
+  // link in the toolbar so it appears the moment a publish succeeds (without a refetch).
+  const [publishedUrl, setPublishedUrl] = useState<string | null>(null);
 
   const handleSaveAndPublish = async () => {
     try {
@@ -137,8 +140,37 @@ export default function TemplateEditor({
       setSaveAndPublishBusy(true);
       await commitNow((template as any).id, (template as any).data);            // save
       const sid = await createSnapshot((template as any).id);                   // snapshot
-      await publishSnapshot((template as any).id, sid);                         // publish
-      toast.success('Saved & Published!');
+      const pub = await publishSnapshot((template as any).id, sid);             // publish
+
+      // Give the operator a way straight to the live site. Prefer the always-reachable
+      // *.quicksites.ai subdomain (a custom/geo domain may be "planned" and not resolving
+      // yet); fall back to whatever domain the publish endpoint settled on.
+      const slug = (template as any)?.slug as string | undefined;
+      const pubDomain = (pub as any)?.domain as string | undefined;
+      const liveUrl =
+        slug ? `https://${slug}.quicksites.ai`
+        : pubDomain && !pubDomain.endsWith('.local.quicksites') ? `https://${pubDomain}`
+        : null;
+      if (liveUrl) setPublishedUrl(liveUrl);
+
+      toast.success(
+        () => (
+          <span className="flex items-center gap-2">
+            Saved &amp; Published!
+            {liveUrl && (
+              <a
+                href={liveUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex items-center gap-1 font-medium text-blue-600 underline underline-offset-2 hover:text-blue-500"
+              >
+                View live site ↗
+              </a>
+            )}
+          </span>
+        ),
+        { duration: 8000 },
+      );
     } catch (e: any) {
       console.error('[save & publish] failed', e);
       toast.error(e?.message || 'Save & Publish failed');
@@ -166,6 +198,18 @@ export default function TemplateEditor({
   } = useTemplateEditorState({ templateName, initialData, onRename, colorMode, mode: initialMode });
 
   usePageCountDebugger(template as Template);
+
+  // Live URL for the persistent "View live site" link: this session's publish takes
+  // precedence, else derive one for an already-published site (custom domain first,
+  // then the *.quicksites.ai subdomain — mirrors LivePreviewPane).
+  const liveUrl = useMemo(() => {
+    if (publishedUrl) return publishedUrl;
+    const t = template as any;
+    if (!t?.published) return null;
+    if (t.custom_domain) return `https://${t.custom_domain}`;
+    if (t.slug) return `https://${t.slug}.quicksites.ai`;
+    return null;
+  }, [publishedUrl, template]);
 
   // 🔒 Guard all template updates so pages never disappear
   const setTemplateSynced: Dispatch<SetStateAction<Template>> = (updater) => {
@@ -367,6 +411,7 @@ export default function TemplateEditor({
     <>
       <ScrollArea className="h-screen w-full p-10 overflow-y-auto">
         <TemplateEditorToolbar
+          liveUrl={liveUrl}
           templateName={template.template_name || template.slug || 'Untitled'}
           autosaveStatus={autosave as any}
           isRenaming={isRenaming}

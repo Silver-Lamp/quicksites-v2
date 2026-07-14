@@ -17,6 +17,8 @@ import { nextActionLabel } from '@/components/admin/templates/campaign-badge';
 import { scoreTerritories } from '@/lib/prospects/territoryScore';
 import { buildRankedOpportunities } from '@/lib/prospects/rankedOpportunities';
 import DomainBuyListPlanner from '@/components/admin/domain-buy-list-planner';
+import CollapsibleSection, { openSection } from '@/components/admin/collapsible-section';
+import DomainCostSummary from '@/components/admin/domain-cost-summary';
 import { computeCoachState, type CoachAction } from '@/lib/prospects/growthCoach';
 import GrowthCoach, { actionId } from '@/components/admin/growth-coach';
 import {
@@ -684,11 +686,15 @@ export default function ProspectsClient({
 
   /** Scroll to (and briefly highlight) a campaign's row in the Ranked & ready worklist. */
   function scrollToOpp(campaignId: string) {
-    const el = document.getElementById(`opp-${campaignId}`);
-    if (!el) return;
-    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    el.classList.add('ring-2', 'ring-fuchsia-400/70');
-    setTimeout(() => el.classList.remove('ring-2', 'ring-fuchsia-400/70'), 1600);
+    openSection('ranked-ready'); // the row may live inside a collapsed section
+    // Defer a tick so the section has re-rendered open before we scroll to the row.
+    setTimeout(() => {
+      const el = document.getElementById(`opp-${campaignId}`);
+      if (!el) return;
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      el.classList.add('ring-2', 'ring-fuchsia-400/70');
+      setTimeout(() => el.classList.remove('ring-2', 'ring-fuchsia-400/70'), 1600);
+    }, 0);
   }
 
   // ── Growth Coach — next-best-action over the whole funnel, from data already on the page.
@@ -929,17 +935,19 @@ export default function ProspectsClient({
       {/* Ranked & ready — the prioritized worklist. Campaigns whose pitch page already
           ranks float to the top; refine each site before mailing (none have clients yet). */}
       {rankedOpportunities.length > 0 && (
-        <div className="mt-8">
-          <h2 className="text-sm font-semibold uppercase tracking-wide text-neutral-400">Ranked &amp; ready — work the warmest assets first</h2>
-          <p className="mt-1 text-xs text-neutral-500">
-            Geo-sites prioritized by rank × unlockable rent × local demand. Refine each site before mailing — none have clients yet.
-          </p>
+        <CollapsibleSection
+          id="ranked-ready"
+          className="mt-8"
+          title="Ranked & ready — work the warmest assets first"
+          count={rankedOpportunities.length}
+          subtitle="Geo-sites prioritized by rank × unlockable rent × local demand. Refine each site before mailing — none have clients yet."
+        >
           {!anyConnectedRank && (
-            <div className="mt-2 rounded-lg border border-neutral-800 bg-neutral-900/60 px-3 py-2 text-xs text-neutral-400">
+            <div className="mb-3 rounded-lg border border-neutral-800 bg-neutral-900/60 px-3 py-2 text-xs text-neutral-400">
               None of these domains are connected to Search Console yet — connect them to see live rank. Ordered by unlockable rent for now.
             </div>
           )}
-          <div className="mt-3 space-y-2">
+          <div className="max-h-[34rem] space-y-2 overflow-y-auto pr-1">
             {rankedOpportunities.map((o) => {
               const c = campaignById.get(o.campaignId);
               if (!c) return null;
@@ -1020,7 +1028,7 @@ export default function ProspectsClient({
               );
             })}
           </div>
-        </div>
+        </CollapsibleSection>
       )}
 
       {/* Competition cards — city × industry clusters, in a horizontal scroll row above the
@@ -1179,15 +1187,22 @@ export default function ProspectsClient({
         </div>
       )}
 
+      {/* What we already own is costing us — surfaced right where new domains are bought,
+          so the recurring liability is visible before spending more. */}
+      <DomainCostSummary className="mt-8" />
+
       {/* Domain buy-list planner — spend a fixed budget on the best geo-domains to acquire. */}
       <DomainBuyListPlanner />
 
       {/* Existing campaigns */}
       {initialCampaigns.length > 0 && (
-        <div className="mt-8">
-          <div className="flex items-center justify-between gap-4">
-            <h2 className="text-sm font-semibold uppercase tracking-wide text-neutral-400">Geo-domain campaigns</h2>
-            <div className="flex items-center gap-2">
+        <CollapsibleSection
+          id="geo-campaigns"
+          className="mt-8"
+          title="Geo-domain campaigns"
+          count={initialCampaigns.length}
+          right={
+            <>
               <button
                 onClick={setTestAddress}
                 title={testAddr ? `Live-test postcards mail here: ${testAddr.line}` : 'Set a live-test mailing address — test sends go here instead of the prospects'}
@@ -1227,11 +1242,12 @@ export default function ProspectsClient({
               >
                 {busy === 'recs:all' ? 'Recomputing…' : '↻ Recompute recommendations'}
               </button>
-            </div>
-          </div>
-          <div className="mt-3 overflow-x-auto rounded-xl border border-neutral-800">
+            </>
+          }
+        >
+          <div className="max-h-[36rem] overflow-auto rounded-xl border border-neutral-800">
             <table className="min-w-full text-sm">
-              <thead className="bg-neutral-900">
+              <thead className="sticky top-0 z-10 bg-neutral-900">
                 <tr className="text-left [&>th]:px-4 [&>th]:py-2 [&>th]:font-medium [&>th]:text-neutral-400">
                   <th>Domain</th><th>City</th><th>Industry</th><th>Domain status</th><th>Status</th><th>Ranking</th><th>Calls</th><th>Plan</th><th>Outreach</th>
                 </tr>
@@ -1475,28 +1491,32 @@ export default function ProspectsClient({
               </tbody>
             </table>
           </div>
-        </div>
+        </CollapsibleSection>
       )}
 
       {/* Prospect list by tier */}
-      <div className="mt-8 flex items-center justify-between">
-        <h2 className="text-sm font-semibold uppercase tracking-wide text-neutral-400">Prospects</h2>
-        <button
-          onClick={buildSelected}
-          disabled={!selected.size || busy === 'build'}
-          className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-500 disabled:opacity-40"
-        >
-          {busy === 'build' ? 'Building…' : `Build ${selected.size || ''} draft${selected.size === 1 ? '' : 's'}`}
-        </button>
-      </div>
-
-      {(['no_website', 'dated', 'has_site'] as const).map((tier) =>
-        byTier[tier].length ? (
-          <div key={tier} className="mt-4">
+      <CollapsibleSection
+        id="prospects-list"
+        className="mt-8"
+        title="Prospects"
+        count={prospects.length}
+        right={
+          <button
+            onClick={buildSelected}
+            disabled={!selected.size || busy === 'build'}
+            className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-500 disabled:opacity-40"
+          >
+            {busy === 'build' ? 'Building…' : `Build ${selected.size || ''} draft${selected.size === 1 ? '' : 's'}`}
+          </button>
+        }
+      >
+        {(['no_website', 'dated', 'has_site'] as const).map((tier) =>
+          byTier[tier].length ? (
+            <div key={tier} className="mt-4 first:mt-0">
             <div className="mb-1 text-xs font-medium text-neutral-500">
               {TIER_META[tier].label} · {byTier[tier].length}
             </div>
-            <div className="overflow-x-auto rounded-xl border border-neutral-800">
+            <div className="max-h-[26rem] overflow-auto rounded-xl border border-neutral-800">
               <table className="min-w-full text-sm">
                 <tbody className="divide-y divide-neutral-800">
                   {byTier[tier].map((p) => (
@@ -1547,13 +1567,14 @@ export default function ProspectsClient({
             </div>
           </div>
         ) : null,
-      )}
+        )}
 
-      {prospects.length === 0 && (
-        <div className="mt-6 rounded-xl border border-dashed border-neutral-800 px-4 py-10 text-center text-sm text-neutral-500">
-          No prospects yet — sweep a city above to find businesses without sites.
-        </div>
-      )}
+        {prospects.length === 0 && (
+          <div className="rounded-xl border border-dashed border-neutral-800 px-4 py-10 text-center text-sm text-neutral-500">
+            No prospects yet — sweep a city above to find businesses without sites.
+          </div>
+        )}
+      </CollapsibleSection>
 
       {/* Pre-send preview + cost confirm — the operator sees the real card, who mails,
           who's dropped, and the estimated spend before any paid Lob call. */}

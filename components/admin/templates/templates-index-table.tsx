@@ -9,6 +9,7 @@ import { toast } from 'react-hot-toast';
 import { CheckCircle, XCircle, Loader2, ChevronRight, ChevronDown, Info } from 'lucide-react';
 import RowActions from '@/components/admin/templates/row-actions';
 import { CampaignBadge } from '@/components/admin/templates/campaign-badge';
+import { RebuildPitchBadge } from '@/components/admin/templates/rebuild-pitch-badge';
 import type { Template } from '@/types/template';
 import { cn } from '@/lib/utils';
 
@@ -510,6 +511,7 @@ export default function TemplatesIndexTable({
                   <CampaignBadge c={(t as any).campaign} />
                 </div>
               ) : null}
+              <RebuildPitchBadge row={t} slug={t.slug} className="mt-1" />
               {groupMode !== 'none' && hasChildren > 0 && (
                 <div className="text-[11px] text-white/45 mt-0.5">
                   {expanded[gKey]

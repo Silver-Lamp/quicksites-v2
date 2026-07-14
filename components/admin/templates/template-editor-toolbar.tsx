@@ -13,6 +13,7 @@ import {
   CheckCircle2,
   AlertTriangle,
   Trash2,
+  ExternalLink,
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 
@@ -30,6 +31,8 @@ type Props = {
   onBack?: () => void;
   setShowNameError?: (v: boolean) => void;
   onSaveAndPublish?: () => void;
+  /** Live URL of the published site, if any — renders a persistent "View live site" link. */
+  liveUrl?: string | null;
   busy?: boolean;
 };
 
@@ -55,6 +58,7 @@ export function TemplateEditorToolbar({
   onBack,
   setShowNameError,
   onSaveAndPublish,
+  liveUrl,
   busy = false,
 }: Props) {
   const inputRef = React.useRef<HTMLInputElement | null>(null);
@@ -305,6 +309,19 @@ export function TemplateEditorToolbar({
               <Rocket className="h-4 w-4" />
               {busy ? 'Working…' : 'Save & Publish'}
             </Button>
+          )}
+
+          {liveUrl && (
+            <a
+              href={liveUrl}
+              target="_blank"
+              rel="noreferrer"
+              title={`Open the live site (${liveUrl})`}
+              className="inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-sm font-medium text-emerald-300 hover:bg-emerald-500/10 hover:text-emerald-200"
+            >
+              <ExternalLink className="h-4 w-4" />
+              View live site
+            </a>
           )}
 
           {/* Divider keeps the destructive action from sitting flush against the primary CTA */}

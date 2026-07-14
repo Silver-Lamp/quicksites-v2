@@ -144,7 +144,7 @@ export default function ReadinessCoach({
             {i.severity === 'hard' && !i.ok && <span className="text-[10px] uppercase text-amber-400/80">required</span>}
             {!i.ok && itemAction(i)}
           </div>
-          {i.hint && !i.ok && <span className="block text-[11px] text-neutral-500">{i.hint}</span>}
+          {i.hint && !i.ok && <span className="block text-[11px] text-neutral-400">{i.hint}</span>}
         </div>
       </div>
       {openInfo.has(i.id) && i.fix && (
@@ -156,7 +156,7 @@ export default function ReadinessCoach({
   );
 
   return (
-    <div className="border-b border-fuchsia-500/20 bg-fuchsia-500/[0.06] px-4 py-2">
+    <div className="border-b border-fuchsia-500/30 bg-fuchsia-950 px-4 py-2">
       <div className="flex flex-wrap items-center gap-3">
         <button onClick={toggle} className="flex items-center gap-2" title={expanded ? 'Collapse' : 'Expand the SEO readiness checklist'}>
           <span className="text-sm">📋</span>
@@ -167,7 +167,7 @@ export default function ReadinessCoach({
           <div className="h-1.5 w-28 overflow-hidden rounded-full bg-neutral-800">
             <div className="h-full rounded-full bg-emerald-500/70" style={{ width: `${items.length ? Math.round((doneCount / items.length) * 100) : 0}%` }} />
           </div>
-          <span className="text-xs text-neutral-400">
+          <span className="text-xs text-neutral-300">
             {doneCount}/{items.length} done{hardLeft > 0 ? ` · ${hardLeft} required left` : readyAt ? '' : ' · ready to sign off'}
           </span>
         </div>
@@ -192,11 +192,11 @@ export default function ReadinessCoach({
       {expanded && (
         <div className="mt-2 grid gap-x-8 gap-y-1 border-t border-fuchsia-500/15 pt-2 sm:grid-cols-2">
           <ul>
-            <div className="mb-0.5 text-[11px] font-semibold uppercase tracking-wide text-neutral-500">Required</div>
+            <div className="mb-0.5 text-[11px] font-semibold uppercase tracking-wide text-neutral-400">Required</div>
             {hard.map(renderItem)}
           </ul>
           <ul>
-            <div className="mb-0.5 text-[11px] font-semibold uppercase tracking-wide text-neutral-500">Recommended</div>
+            <div className="mb-0.5 text-[11px] font-semibold uppercase tracking-wide text-neutral-400">Recommended</div>
             {items.filter((i) => i.severity === 'soft').map(renderItem)}
           </ul>
         </div>

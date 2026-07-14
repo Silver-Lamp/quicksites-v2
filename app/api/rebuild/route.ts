@@ -225,6 +225,15 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Could not allocate a unique draft.', code: 'insert_failed' }, { status: 500 });
   }
 
+  // Refresh the templates materialized view so the new draft shows up immediately in
+  // the admin list (the default list view reads from `template_bases`, not `templates`).
+  // Best-effort — mirrors app/api/templates/create; a failure must not fail the rebuild.
+  try {
+    await admin.rpc('refresh_template_bases');
+  } catch (e) {
+    console.error('[rebuild] refresh_template_bases failed:', e);
+  }
+
   // Funnel: a draft was generated from the prospect's site.
   void captureServer(
     EVENTS.REBUILD_COMPLETED,

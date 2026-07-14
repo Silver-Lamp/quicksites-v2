@@ -8,6 +8,7 @@ import { Copy, ExternalLink, Pencil, CheckCircle2, CircleDashed, Sparkles, BarCh
 import { prettifySlug } from '@/lib/home/showcase-helpers';
 import { normalizeGscDomain } from '@/lib/gsc/normalizeDomain';
 import { CampaignBadge, type CampaignInfo } from '@/components/admin/templates/campaign-badge';
+import { RebuildPitchBadge } from '@/components/admin/templates/rebuild-pitch-badge';
 
 export type GscStat = { clicks: number; impressions: number };
 
@@ -189,6 +190,7 @@ export default function TemplatesCardGrid({
                     <CampaignBadge c={r.campaign} />
                   </div>
                 ) : null}
+                <RebuildPitchBadge row={r} slug={r.slug} className="mt-1.5" />
                 {(() => {
                   const stat = gscByDomain && gscKeysForRow(r).map((k) => gscByDomain[k]).find(Boolean);
                   return stat ? (

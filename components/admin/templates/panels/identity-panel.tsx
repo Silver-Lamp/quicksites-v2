@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label';
 import Collapsible from '@/components/ui/collapsible-panel';
 import type { Template } from '@/types/template';
 import { Button } from '@/components/ui';
-import { RefreshCw, Save } from 'lucide-react';
+import { RefreshCw, Save, Building2 } from 'lucide-react';
 import {
   getIndustryOptions,
   INDUSTRY_HINTS,
@@ -519,7 +519,12 @@ export default function IdentityPanel({
   }, [dirty, commit]);
 
   return (
-    <Collapsible title="Template Identity" id="template-identity">
+    <Collapsible
+      title="Template Identity"
+      id="template-identity"
+      icon={<Building2 />}
+      summary={[draft.business_name, [draft.city, draft.state].filter(Boolean).join(', ')].filter(Boolean).join(' · ') || undefined}
+    >
       <div className="space-y-4">
         {/* Controls */}
         <div className="flex items-center justify-between gap-2">

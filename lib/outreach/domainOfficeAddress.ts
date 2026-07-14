@@ -15,6 +15,8 @@ import { meterLLMCall } from '@/lib/ai/meter';
 import { geoRecsLlmEnabled } from '@/lib/outreach/recSummary';
 import { supabaseAdmin } from '@/lib/supabase/admin';
 import { seedServiceAreaContact, hasOwnAddress } from '@/lib/outreach/seedServiceAreaContact';
+import { resolveOfficeAddressFromRegistry } from '@/lib/parks/officeAddress';
+import { parksRegistryEnabled } from '@/lib/parks/registry';
 import type { GeoCampaign } from '@/lib/outreach/geoCampaigns';
 
 const MODEL = 'gpt-4o-mini';
@@ -28,8 +30,12 @@ export type OfficeAddress = {
   postalCode: string;
   /** Full one-line NAP string used as the site address. */
   label: string;
-  /** Always 'ai_suggested' — provenance so the UI/editor flags it as a placeholder. */
-  source: 'ai_suggested';
+  /**
+   * Provenance so the UI/editor flags it as a placeholder:
+   *  • 'registry'     — a REAL industrial park (Google Places) + a synthetic suite.
+   *  • 'ai_suggested' — LLM-generated placeholder (fallback when no park is on file).
+   */
+  source: 'ai_suggested' | 'registry';
 };
 
 /** Deterministic fallback suite (e.g. "2C") derived from the domain, so it's stable per site. */
@@ -82,6 +88,22 @@ export async function suggestOfficeAddress(
   input: { domain: string; city: string | null; region: string | null; industryKey: string | null },
   userId: string | null = null,
 ): Promise<OfficeAddress | null> {
+  // Resolver chain, best → cheapest. (1) A real industrial park from the registry (lazily
+  // pulled from Places for the area on first touch). Grounds the address in a real building
+  // with a deliberately-synthetic suite — no LLM spend. Falls through to the LLM below.
+  if (parksRegistryEnabled()) {
+    try {
+      const fromRegistry = await resolveOfficeAddressFromRegistry(input, userId);
+      if (fromRegistry) {
+        const { placeId: _placeId, parkName: _parkName, ...address } = fromRegistry;
+        return address;
+      }
+    } catch {
+      /* best-effort — fall through to the LLM suggester */
+    }
+  }
+
+  // (2) LLM-hallucinated placeholder, gated by its own flag.
   if (!geoRecsLlmEnabled()) return null;
   const city = (input.city ?? '').trim();
   if (!city) return null;
@@ -147,7 +169,8 @@ export async function suggestAndApplyOfficeAddress(
 ): Promise<SuggestAddressResult> {
   const apply = opts.apply ?? true;
   const force = opts.force ?? false;
-  if (!geoRecsLlmEnabled()) return { ok: false, reason: 'llm_disabled' };
+  // Either resolver can supply an address — the registry (real park) or the LLM.
+  if (!geoRecsLlmEnabled() && !parksRegistryEnabled()) return { ok: false, reason: 'address_source_disabled' };
   if (!campaign.template_id) return { ok: false, reason: 'no_template' };
 
   // Preflight: load the template up front so we can skip the LLM entirely when the site
@@ -171,7 +194,7 @@ export async function suggestAndApplyOfficeAddress(
   if (!seeded.changed) return { ok: true, suggestion, applied: false, changed: false, reason: 'already_has_address' };
   const newData = seeded.data;
   newData.meta = newData.meta ?? {};
-  newData.meta.contact = { ...(newData.meta.contact ?? {}), address_source: 'ai_suggested' };
+  newData.meta.contact = { ...(newData.meta.contact ?? {}), address_source: suggestion.source };
 
   const payload = {
     id: campaign.template_id,

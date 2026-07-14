@@ -6,7 +6,7 @@ import Collapsible from '@/components/ui/collapsible-panel';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import type { Template } from '@/types/template';
-import { Sparkles, CalendarPlus, HelpCircle, RefreshCcw, Plus } from 'lucide-react';
+import { Sparkles, CalendarPlus, HelpCircle, RefreshCcw, Plus, Wrench } from 'lucide-react';
 import { resolveIndustry } from '@/lib/industries';
 import {
   Select,
@@ -354,7 +354,16 @@ export default function ServicesPanel({
   };
 
   return (
-    <Collapsible title="Available Services" id="template-services">
+    <Collapsible
+      title="Available Services"
+      id="template-services"
+      icon={<Wrench />}
+      summary={
+        Array.isArray(persisted) && persisted.length
+          ? `${persisted.length} service${persisted.length === 1 ? '' : 's'}`
+          : undefined
+      }
+    >
       <div className="space-y-3">
         {/* ---------- Company selector ---------- */}
         <div className="rounded-md border border-neutral-700/60 p-3">

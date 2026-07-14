@@ -14,6 +14,7 @@ function refinedNonFood() {
       logo_url: 'https://cdn/logo.png',
       schema: { localBusiness: true },
       contact: { phone: '617-555-0100', address: '1 Main St, Boston MA' },
+      gbp_url: 'https://g.page/boston-plumbing', // linked Google Business Profile
     },
     pages: [
       {
@@ -137,5 +138,40 @@ describe('analyzeReadiness — food', () => {
       ],
     };
     expect(ids(analyzeReadiness(data, 'restaurant'))).toContain('menu-unpriced');
+  });
+});
+
+describe('citation readiness', () => {
+  it('flags a missing Google Business Profile link (soft)', () => {
+    const data = refinedNonFood();
+    delete (data as any).meta.gbp_url;
+    const r = analyzeReadiness(data, 'plumbing');
+    const gbp = r.blockers.find((b) => b.id === 'no-gbp');
+    expect(gbp?.severity).toBe('soft');
+    expect(r.hardBlocked).toBe(false);
+  });
+
+  it('accepts a maps URL anywhere as a GBP link', () => {
+    const data = refinedNonFood();
+    delete (data as any).meta.gbp_url;
+    (data as any).pages[0].blocks.push({ type: 'text', content: { value: '<a href="https://maps.app.goo.gl/abc">Find us</a>' } });
+    expect(analyzeReadiness(data, 'plumbing').blockers.some((b) => b.id === 'no-gbp')).toBe(false);
+  });
+
+  it('flags an inconsistent phone across the site (soft)', () => {
+    const data = refinedNonFood();
+    (data as any).pages[0].blocks.find((b: any) => b.type === 'contact').content.phone = '617-555-9999'; // differs from hero/meta
+    const r = analyzeReadiness(data, 'plumbing');
+    expect(r.blockers.some((b) => b.id === 'nap-inconsistent')).toBe(true);
+  });
+
+  it('a consistent single phone is not flagged', () => {
+    expect(analyzeReadiness(refinedNonFood(), 'plumbing').blockers.some((b) => b.id === 'nap-inconsistent')).toBe(false);
+  });
+
+  it('surfaces gbp + nap-consistent in the checklist', () => {
+    const list = readinessChecklist(refinedNonFood(), 'plumbing');
+    expect(list.find((i) => i.id === 'gbp')!.ok).toBe(true);
+    expect(list.find((i) => i.id === 'nap-consistent')!.ok).toBe(true);
   });
 });

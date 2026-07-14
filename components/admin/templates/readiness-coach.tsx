@@ -71,7 +71,34 @@ export default function ReadinessCoach({
   const [readyAt, setReadyAt] = useState<string | null>(initialReadyAt);
   const [busy, setBusy] = useState(false);
   const [addrBusy, setAddrBusy] = useState(false);
+  const [pageBusy, setPageBusy] = useState(false);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
+
+  // Generate a "<service> in <city>" landing page (extra ranking surface + internal link).
+  async function generateCityPage() {
+    setPageBusy(true);
+    setMsg(null);
+    try {
+      const res = await fetch('/api/admin/prospects/geo-campaign/add-city-page', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ campaignId }),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setMsg({ ok: false, text: json.error || 'Could not add the page.' });
+        return;
+      }
+      setMsg({
+        ok: true,
+        text: json.changed ? `Added /${json.slug} — reload to see it in Pages.` : json.reason === 'already_exists' ? 'A city/service page already exists.' : 'No change.',
+      });
+    } catch (e: any) {
+      setMsg({ ok: false, text: e.message });
+    } finally {
+      setPageBusy(false);
+    }
+  }
 
   // Component-level "re-find address": ask the LLM for a plausible office address for this
   // site's city + trade and set it here (force overwrites, so it's a true re-find). The
@@ -136,6 +163,19 @@ export default function ReadinessCoach({
   // Link a checklist item to its edit surface: jump to the block if one exists, else pop
   // an info box explaining where/how to fix it.
   function itemAction(i: ChecklistItem) {
+    // The city/service subpage item generates a real page instead of just explaining how.
+    if (i.id === 'pages') {
+      return (
+        <button
+          onClick={generateCityPage}
+          disabled={pageBusy}
+          className="shrink-0 rounded-md border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 text-[11px] font-medium text-emerald-200 hover:bg-emerald-500/20 disabled:opacity-50"
+          title="Generate a &quot;<service> in <city>&quot; landing page that links back to your home page"
+        >
+          {pageBusy ? '…' : 'Generate ✨'}
+        </button>
+      );
+    }
     const blockId = findBlockId(data, i.blockTypes);
     if (blockId) {
       return (

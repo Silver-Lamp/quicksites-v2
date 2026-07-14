@@ -12,6 +12,7 @@
 
 import { supabaseAdmin } from '@/lib/supabase/admin';
 import { buildIndustryStarter } from '@/lib/builder/industryScaffold';
+import { buildCityServicePage, insertPage } from '@/lib/seo/localPages';
 import { defaultOutreachOrgSlug, orgIdForSlug } from '@/lib/outreach/campaignBrand';
 import { KEY_TO_LABEL, type IndustryKey } from '@/lib/industries';
 import { checkDomainAvailability, registerDomain, namecheapConfigured } from '@/lib/domains/namecheap';
@@ -222,6 +223,22 @@ export async function buildGeoPitchSite(opts: {
     tpl.data.meta.geo_campaign = true;
     tpl.data.meta.geo_city = opts.city;
     tpl.data.meta.geo_industry = opts.industryKey;
+  }
+
+  // Ship a "<service> in <city>" landing page too — a strong extra ranking surface for the
+  // exact query the domain targets, and it links back to the home page (safe internal
+  // linking). Best-effort: a subpage failure must never block the launch.
+  try {
+    const svcBlock = tpl.data?.pages?.[0]?.blocks?.find((b: any) => b?.type === 'services');
+    const serviceNames: string[] = (svcBlock?.content?.items ?? svcBlock?.content?.services ?? [])
+      .map((s: any) => s?.name)
+      .filter(Boolean)
+      .slice(0, 6);
+    const page = buildCityServicePage({ businessName, serviceLabel: label, city: opts.city, region: opts.region, services: serviceNames });
+    const ins = insertPage(tpl.data, page);
+    if (ins.changed) tpl.data = ins.data;
+  } catch {
+    /* best-effort */
   }
 
   const row: any = {

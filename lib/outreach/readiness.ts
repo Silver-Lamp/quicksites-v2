@@ -42,6 +42,32 @@ function collectBlocks(data: any): any[] {
   return out;
 }
 
+/** True when the site links its Google Business Profile (meta field or a maps/GBP URL). */
+export function hasGbpLink(data: any): boolean {
+  const meta = data?.meta ?? {};
+  if (String(meta.gbp_url ?? meta.google_business_url ?? meta.googleBusinessUrl ?? '').trim()) return true;
+  const json = JSON.stringify(data ?? {});
+  return /g\.page\/|business\.google\.|maps\.app\.goo\.gl|maps\.google\.|google\.[a-z.]+\/maps|place_id=/i.test(json);
+}
+
+/** Last 10 digits of a phone-like string ('' when not enough digits). */
+function normPhone(s: string): string {
+  const d = (s || '').replace(/\D/g, '');
+  return d.length >= 10 ? d.slice(-10) : '';
+}
+
+/** True when more than one distinct phone number appears — a split NAP that hurts citations. */
+export function napPhoneInconsistent(data: any): boolean {
+  const phones = new Set<string>();
+  const mp = normPhone(String(data?.meta?.contact?.phone ?? ''));
+  if (mp) phones.add(mp);
+  for (const b of collectBlocks(data)) {
+    const p = normPhone(String(b?.content?.phone ?? ''));
+    if (p) phones.add(p);
+  }
+  return phones.size > 1;
+}
+
 function firstLogoUrl(data: any): string | null {
   const meta = data?.meta ?? {};
   return (
@@ -118,6 +144,14 @@ export function analyzeReadiness(data: any, industryKey: string): ReadinessResul
     blockers.push({ id: 'weak-title', severity: 'soft', label: 'Page title is too short or too long' });
   }
 
+  // ── Soft: citation readiness (local-SEO consistency signals). ──
+  if (!hasGbpLink(data)) {
+    blockers.push({ id: 'no-gbp', severity: 'soft', label: 'No Google Business Profile link' });
+  }
+  if (napPhoneInconsistent(data)) {
+    blockers.push({ id: 'nap-inconsistent', severity: 'soft', label: 'Phone differs across the site (NAP inconsistent)' });
+  }
+
   return { blockers, hardBlocked: blockers.some((b) => b.severity === 'hard') };
 }
 
@@ -161,6 +195,8 @@ export function readinessChecklist(data: any, industryKey: string): ChecklistIte
     { id: 'schema', ids: ['no-schema'], label: 'LocalBusiness schema', severity: 'soft', hint: 'Structured data helps Google understand the business and its service area.', fix: 'Structured data is emitted from your site’s meta — add a Location block with a real address (that populates LocalBusiness), or set it in Site/SEO settings.' },
     { id: 'pages', ids: ['single-page'], label: 'A city/service subpage', severity: 'soft', hint: 'A dedicated city/service page is a strong extra ranking surface for "<service> in <city>".', fix: 'Add a page from the Pages menu (e.g. “/plumbing-in-renton”) targeting one service + the city.' },
     { id: 'title', ids: ['weak-title'], label: 'Page title 15–60 characters', severity: 'soft', hint: 'The <title> is the biggest single on-page ranking + click-through lever.', fix: 'Set the page title (15–60 chars, include the service + city) in the SEO/Site settings.' },
+    { id: 'gbp', ids: ['no-gbp'], label: 'Google Business Profile linked', severity: 'soft', hint: 'A linked GBP is the strongest local-SEO ranking + citation signal for a local business.', fix: 'Add your Google Business Profile URL in Site/SEO settings (meta.gbp_url), or link it from the Contact/Location block.' },
+    { id: 'nap-consistent', ids: ['nap-inconsistent'], label: 'Consistent phone across the site', severity: 'soft', hint: 'Citations must match — a different phone in different places splits your NAP and hurts local rank.', fix: 'Use the same phone number everywhere (hero CTA, Contact, Location, footer).' },
   ];
 
   return defs.map((d) => ({

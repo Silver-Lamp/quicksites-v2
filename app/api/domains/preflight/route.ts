@@ -71,14 +71,14 @@ export async function GET() {
     checks.projectAccess = { ok: false, detail: 'Skipped — fix the token first.' };
   }
 
-  // 4) Domains API reachable — a status lookup on a known-registered name should
-  //    return available:false. If this call itself fails, the token lacks the
-  //    domains scope (the exact failure a buy would hit).
+  // 4) Registrar API reachable — an availability lookup on a known-registered name should
+  //    return available:false. Uses the NEW registrar API (the /v4/domains/* endpoints were
+  //    sunsetted 2025-11-09). If this call itself fails, the buy path would hit the same error.
   if (checks.token.ok) {
-    const status = await vfetch('/v4/domains/status?name=example.com');
+    const status = await vfetch('/v1/registrar/domains/example.com/availability');
     checks.domainsApi = status.ok
-      ? { ok: true, detail: 'Domains API reachable with this token.' }
-      : { ok: false, detail: `Domains API call failed (${status.status}). The token may lack domain permissions.` };
+      ? { ok: true, detail: 'Registrar API reachable with this token.' }
+      : { ok: false, detail: `Registrar API call failed (${status.status}). ${status.data?.error?.message || status.data?.message || 'The token may lack domain permissions.'}` };
   } else {
     checks.domainsApi = { ok: false, detail: 'Skipped — fix the token first.' };
   }

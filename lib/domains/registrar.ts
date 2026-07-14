@@ -28,6 +28,12 @@ export type DomainAvailability = {
   periodYears: number | null;
   /** True when Vercel flags the name as premium (price is often much higher). */
   premium: boolean;
+  /**
+   * Set when the availability check itself FAILED (auth/scope 403, rate-limit 429, 5xx) —
+   * i.e. `available:false` here means "couldn't determine", NOT "registered". Callers must
+   * treat an errored result as UNKNOWN, never as taken.
+   */
+  error?: string;
 };
 
 export type RegistrantContact = {
@@ -105,10 +111,32 @@ async function vercelFetch<T = Record<string, unknown>>(
 
 /** GET /v4/domains/status — is the name registerable right now? */
 async function vercelCheckAvailability(apex: string): Promise<DomainAvailability> {
-  const status = await vercelFetch<{ available?: boolean }>(
+  let status = await vercelFetch<{ available?: boolean }>(
     `/v4/domains/status?name=${encodeURIComponent(apex)}`
   );
-  const available = status.ok && status.data?.available === true;
+  // One retry with a short backoff on rate-limit / transient server errors — a 429 must not
+  // be reported as "taken".
+  if (!status.ok && (status.status === 429 || status.status >= 500)) {
+    await new Promise((r) => setTimeout(r, 600));
+    status = await vercelFetch<{ available?: boolean }>(
+      `/v4/domains/status?name=${encodeURIComponent(apex)}`
+    );
+  }
+
+  // A failed check is UNKNOWN, not unavailable — surface the status so callers don't render
+  // an errored probe as "Taken".
+  if (!status.ok) {
+    return {
+      domain: apex,
+      available: false,
+      priceUsd: null,
+      periodYears: null,
+      premium: false,
+      error: `vercel_status_${status.status}`,
+    };
+  }
+
+  const available = status.data?.available === true;
 
   let priceUsd: number | null = null;
   let periodYears: number | null = null;

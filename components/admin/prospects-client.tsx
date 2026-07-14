@@ -564,6 +564,43 @@ export default function ProspectsClient({
     }
   }
 
+  // Suggest + set a plausible default office address (metered LLM) on one campaign's
+  // pitch site, if it has none. Grounded in the campaign's city + trade.
+  async function suggestAddress(c: GeoCampaign) {
+    setBusy(`addr:${c.id}`);
+    setRowMsg((m) => { const { [c.id]: _drop, ...rest } = m; return rest; });
+    try {
+      const r = await post('/api/admin/prospects/geo-campaign/suggest-address', { campaignId: c.id });
+      setRowMsg((m) => ({
+        ...m,
+        [c.id]: {
+          ok: true,
+          text: r.applied ? `Address set: ${r.suggestion?.label}` : r.reason === 'already_has_address' ? 'Already has an address' : 'No change',
+        },
+      }));
+      router.refresh();
+    } catch (e: any) {
+      setRowMsg((m) => ({ ...m, [c.id]: { ok: false, text: e.message } }));
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  // Backfill: fill a default office address on every pitch site that has none.
+  async function backfillAddresses() {
+    setBusy('addr:backfill');
+    setMsg(null);
+    try {
+      const r = await post('/api/admin/prospects/geo-campaign/suggest-address', { backfill: true });
+      setMsg(`Filled ${r.applied} address${r.applied === 1 ? '' : 'es'} · ${r.skipped} skipped${r.failed ? ` · ${r.failed} failed` : ''}.`);
+      router.refresh();
+    } catch (e: any) {
+      setMsg(e.message);
+    } finally {
+      setBusy(null);
+    }
+  }
+
   // Mark a pitch site refined (or clear it). Does its own fetch so a 409 hard-blocked
   // response can surface the specific blockers instead of a generic error.
   async function markRefined(c: GeoCampaign, ready: boolean) {
@@ -1235,6 +1272,14 @@ export default function ProspectsClient({
                 </button>
               </div>
               <button
+                onClick={backfillAddresses}
+                disabled={busy === 'addr:backfill'}
+                title="Suggest & set a plausible office address on every pitch site that has none (metered LLM, grounded in each city + trade)"
+                className="rounded-lg border border-teal-500/30 bg-teal-500/10 px-3 py-1.5 text-xs font-medium text-teal-200 hover:bg-teal-500/20 disabled:opacity-50"
+              >
+                {busy === 'addr:backfill' ? 'Filling…' : '📍 Backfill addresses'}
+              </button>
+              <button
                 onClick={recomputeAllRecs}
                 disabled={busy === 'recs:all'}
                 title="Recompute the next-steps recommendations for every campaign now, without waiting for the daily rank-sync cron"
@@ -1388,6 +1433,14 @@ export default function ProspectsClient({
                             className={c.org_id ? 'text-teal-300 hover:text-teal-200' : 'text-neutral-500 hover:text-neutral-300'}
                           >
                             {busy === `org:${c.id}` ? '…' : c.org_id ? '🏷 Branded' : '🏷 Brand'}
+                          </button>
+                          <button
+                            onClick={() => suggestAddress(c)}
+                            disabled={busy === `addr:${c.id}`}
+                            title="Suggest a plausible office address (LLM, grounded in this city + trade) and set it as the site's default if it has none"
+                            className="text-teal-300 hover:text-teal-200"
+                          >
+                            {busy === `addr:${c.id}` ? '…' : '📍 Address'}
                           </button>
                         </div>
                         {rowMsg[c.id] && (

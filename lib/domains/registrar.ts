@@ -380,3 +380,86 @@ export async function purchaseDomain(
 
   return { ok: true, domain: apex, purchased: true, attached, priceUsd: avail.priceUsd };
 }
+
+/* -------------------------------------------------------------------------- */
+/* Owned-domain inventory (for the recurring-cost surface)                    */
+/* -------------------------------------------------------------------------- */
+
+export type OwnedDomain = {
+  domain: string;
+  /** Unix ms the registration expires, or null if Vercel doesn't report it. */
+  expiresAt: number | null;
+  /** Unix ms the domain was bought, or null. */
+  boughtAt: number | null;
+  autoRenew: boolean | null;
+  /**
+   * True when the domain is REGISTERED through Vercel (serviceType 'zeit.world'),
+   * so we can read a renewal price for it. External domains merely pointed at Vercel
+   * (serviceType 'external') have no price here — their cost is entered manually.
+   */
+  registeredWithVercel: boolean;
+};
+
+/**
+ * List every domain in the Vercel account/team (GET /v9/domains, paginated). Returns
+ * `null` (not `[]`) when VERCEL_TOKEN is unset or the call fails, so callers can tell
+ * "no Vercel domains" from "couldn't reach Vercel". Never throws.
+ */
+export async function listVercelOwnedDomains(): Promise<OwnedDomain[] | null> {
+  if (!process.env.VERCEL_TOKEN) return null;
+  const out: OwnedDomain[] = [];
+  let until: number | undefined;
+  try {
+    // Cap pages so a misbehaving cursor can't loop forever.
+    for (let page = 0; page < 20; page++) {
+      const q = `/v9/domains?limit=100${until ? `&until=${until}` : ''}`;
+      const res = await vercelFetch<{
+        domains?: Array<{ name?: string; expiresAt?: number | null; boughtAt?: number | null; renew?: boolean | null; serviceType?: string | null }>;
+        pagination?: { next?: number | null };
+      }>(q);
+      if (!res.ok) return page === 0 ? null : out;
+      for (const d of res.data?.domains ?? []) {
+        const name = normalizeApex(String(d?.name || ''));
+        if (!name) continue;
+        out.push({
+          domain: name,
+          expiresAt: typeof d?.expiresAt === 'number' ? d.expiresAt : null,
+          boughtAt: typeof d?.boughtAt === 'number' ? d.boughtAt : null,
+          autoRenew: typeof d?.renew === 'boolean' ? d.renew : null,
+          registeredWithVercel: d?.serviceType === 'zeit.world',
+        });
+      }
+      const next = res.data?.pagination?.next;
+      if (!next) break;
+      until = next;
+    }
+  } catch {
+    return out.length ? out : null;
+  }
+  return out;
+}
+
+/**
+ * Yearly renewal price (whole USD) for a domain, from the registrar price endpoint.
+ * Null when unpriced/unknown (e.g. an external domain Vercel can't renew). Never throws.
+ */
+export async function getRenewalPriceUsd(input: string): Promise<number | null> {
+  let apex: string;
+  try {
+    apex = normalizeApex(input);
+  } catch {
+    return null;
+  }
+  try {
+    const price = await vercelFetch<{ renewalPrice?: number; price?: number }>(
+      `/v1/registrar/domains/${encodeURIComponent(apex)}/price?years=1`,
+    );
+    if (!price.ok) return null;
+    const v = typeof price.data?.renewalPrice === 'number' ? price.data.renewalPrice
+      : typeof price.data?.price === 'number' ? price.data.price
+      : null;
+    return v;
+  } catch {
+    return null;
+  }
+}

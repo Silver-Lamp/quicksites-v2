@@ -48,7 +48,13 @@ export default async function DomainsPage() {
 
   return (
     <div className="p-6">
-      <div className="mb-4 flex justify-end">
+      <div className="mb-4 flex justify-end gap-2">
+        <Link
+          href="/admin/domains/costs"
+          className="inline-block rounded border border-amber-500/40 bg-amber-500/10 px-4 py-2 text-amber-200 hover:bg-amber-500/20"
+        >
+          💸 Domain costs
+        </Link>
         <Link
           href="/admin/domains/new"
           className="inline-block bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"

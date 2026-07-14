@@ -140,6 +140,11 @@ const NAV_MERCHANT: NavItem[] = [
    Taxes → Communications → System → Platform. Dense clusters collapse into submenus
    so the top level stays scannable. Every link is preserved from the old flat list. */
 const NAV_ADMIN: NavItem[] = [
+  /* Overview — the cross-domain ops dashboard (inventory · markets · clients + next steps). */
+  { type: 'section', label: 'Overview', adminOnly: true },
+  { type: 'item', label: 'Operations', href: '/admin/ops', icon: <Activity size={18} />, adminOnly: true },
+  { type: 'item', label: 'Domain Costs', href: '/admin/domains/costs', icon: <Globe size={18} />, adminOnly: true },
+
   /* Growth — the lead-gen + outreach engine, unified into one workspace (/admin/growth).
      The old scattered surfaces (Map of Opportunities, Leads, legacy Campaigns) ran on the
      retired leads/campaigns tables; they're folded out of the nav in favor of the new

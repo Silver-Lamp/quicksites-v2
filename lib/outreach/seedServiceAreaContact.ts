@@ -57,9 +57,16 @@ export type SeedResult = { data: any; changed: boolean; addressSet: boolean; ema
  * without one). For the email, sets `meta.contact_email`, which resolveContactRecipient reads
  * so leads from the live site reach the operator instead of a dead address.
  */
-export function seedServiceAreaContact(data: any, area: { label?: string | null; phone?: string | null; email?: string | null }): SeedResult {
-  const wantAddress = !!area?.label && !hasOwnAddress(data);
-  const wantEmail = !!area?.email && !hasOwnContactEmail(data);
+export function seedServiceAreaContact(
+  data: any,
+  area: { label?: string | null; phone?: string | null; email?: string | null },
+  opts: { force?: boolean } = {},
+): SeedResult {
+  // force overwrites an existing address/email (the editor "re-find" tool); by default we
+  // seed only when the site has none of its own ("auto until edited").
+  const force = !!opts.force;
+  const wantAddress = !!area?.label && (force || !hasOwnAddress(data));
+  const wantEmail = !!area?.email && (force || !hasOwnContactEmail(data));
   if (!wantAddress && !wantEmail) return { data, changed: false, addressSet: false, emailSet: false };
 
   // Clone so callers/tests keep the input intact.

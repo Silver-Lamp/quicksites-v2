@@ -70,7 +70,36 @@ export default function ReadinessCoach({
 
   const [readyAt, setReadyAt] = useState<string | null>(initialReadyAt);
   const [busy, setBusy] = useState(false);
+  const [addrBusy, setAddrBusy] = useState(false);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
+
+  // Component-level "re-find address": ask the LLM for a plausible office address for this
+  // site's city + trade and set it here (force overwrites, so it's a true re-find). The
+  // editor's live preview won't reflect it until reload — the commit lands in the DB.
+  async function suggestAddress() {
+    setAddrBusy(true);
+    setMsg(null);
+    try {
+      const res = await fetch('/api/admin/prospects/geo-campaign/suggest-address', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ campaignId, force: true }),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setMsg({ ok: false, text: json.error || 'Could not set an address.' });
+        return;
+      }
+      setMsg({
+        ok: true,
+        text: json.suggestion?.label ? `Address set: ${json.suggestion.label} — verify it, then reload to see it in the preview.` : 'No change.',
+      });
+    } catch (e: any) {
+      setMsg({ ok: false, text: e.message });
+    } finally {
+      setAddrBusy(false);
+    }
+  }
 
   async function markReady(ready: boolean) {
     setBusy(true);
@@ -171,6 +200,14 @@ export default function ReadinessCoach({
             {doneCount}/{items.length} done{hardLeft > 0 ? ` · ${hardLeft} required left` : readyAt ? '' : ' · ready to sign off'}
           </span>
         </div>
+        <button
+          onClick={suggestAddress}
+          disabled={addrBusy}
+          title="Suggest a plausible office address for this city + trade and set it here. Click again to re-find. Verify before mailing."
+          className="shrink-0 rounded-lg border border-teal-500/30 bg-teal-500/10 px-3 py-1.5 text-xs font-medium text-teal-200 hover:bg-teal-500/20 disabled:opacity-50"
+        >
+          {addrBusy ? '…' : '📍 Office address'}
+        </button>
         {readyAt ? (
           <button onClick={() => markReady(false)} disabled={busy} className="shrink-0 rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-1.5 text-xs font-medium text-emerald-300 hover:bg-emerald-500/20 disabled:opacity-50">
             {busy ? '…' : 'Ready ✓'}

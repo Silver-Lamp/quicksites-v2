@@ -3,6 +3,7 @@
 
 import * as React from 'react';
 import Collapsible from '@/components/ui/collapsible-panel';
+import { usePanelDeepLink } from './usePanelDeepLink';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import type { Template } from '@/types/template';
@@ -61,6 +62,10 @@ export default function ServicesPanel({
   /** Optional override; falls back to template.company_id */
   companyId?: string;
 }) {
+  // Open + spotlight when deep-linked here (e.g. a contact-form editor's "Available
+  // Services" link), so the user lands on the list instead of a collapsed row.
+  const { open, setOpen, spotlightClass } = usePanelDeepLink('services');
+
   // ---- Template-derived state ----
   const meta = (template?.data as any)?.meta ?? {};
   const contact = meta?.contact ?? {};
@@ -358,6 +363,9 @@ export default function ServicesPanel({
       title="Available Services"
       id="template-services"
       icon={<Wrench />}
+      open={open}
+      onOpenChange={setOpen}
+      className={spotlightClass}
       summary={
         Array.isArray(persisted) && persisted.length
           ? `${persisted.length} service${persisted.length === 1 ? '' : 's'}`

@@ -8,6 +8,7 @@ import Collapsible from '@/components/ui/collapsible-panel';
 import type { Template } from '@/types/template';
 import { Button } from '@/components/ui';
 import { RefreshCw, Save, Building2 } from 'lucide-react';
+import { usePanelDeepLink } from './usePanelDeepLink';
 import {
   getIndustryOptions,
   INDUSTRY_HINTS,
@@ -317,6 +318,10 @@ export default function IdentityPanel({
   const [draft, setDraft] = React.useState<Draft>(() => toDraft(template));
   const [dirty, setDirty] = React.useState(false);
 
+  // Open + spotlight when deep-linked here (e.g. a footer editor's "Template Identity" link),
+  // so the user lands on the editable fields, not a collapsed row.
+  const { open, setOpen, spotlightClass } = usePanelDeepLink('identity');
+
   const [phoneError, setPhoneError] = React.useState<string | null>(null);
   const [emailError, setEmailError] = React.useState<string | null>(null);
   const [latError, setLatError]     = React.useState<string | null>(null);
@@ -523,6 +528,9 @@ export default function IdentityPanel({
       title="Template Identity"
       id="template-identity"
       icon={<Building2 />}
+      open={open}
+      onOpenChange={setOpen}
+      className={spotlightClass}
       summary={[draft.business_name, [draft.city, draft.state].filter(Boolean).join(', ')].filter(Boolean).join(' · ') || undefined}
     >
       <div className="space-y-4">

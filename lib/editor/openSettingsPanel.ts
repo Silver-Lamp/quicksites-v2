@@ -26,6 +26,13 @@ export function openSettingsSidebarPanel(
 ): void {
   if (typeof window === 'undefined') return;
   try {
+    // 0) Close any editor overlays stacked ABOVE the sidebar (Page Settings modal, a
+    //    block-editor drawer, the header/footer editor). Without this, opening the
+    //    sidebar behind an open modal leaves the user staring at the modal with no
+    //    indication anything happened. The editor listens and closes them all except
+    //    the sidebar itself. (closeDrawer below is a belt-and-suspenders no-op in the
+    //    Page-Settings case, where the block editor's onClose is wired to () => {}.)
+    window.dispatchEvent(new CustomEvent('qs:editor:close-overlays', { detail: { except: 'settings' } }));
     // 1) Open the sidebar (message bus — the only path that toggles it).
     window.postMessage({ type: 'qs:settings:set-open', open: true }, '*');
     // 2) After it mounts + registers its listener, ask it to scroll/spotlight.

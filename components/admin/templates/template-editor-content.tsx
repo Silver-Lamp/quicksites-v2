@@ -339,6 +339,23 @@ export default function EditorContent({
     return () => { try { delete (window as any).qsToggleSettings; } catch {} };
   }, []);
 
+  // 3b) Close every editor overlay stacked above the Site Settings sidebar when a deep-link
+  //     navigates to a settings panel (e.g. a footer editor's "Template Identity" link). The
+  //     sidebar itself is left open — that's where we're sending the user. Without this, the
+  //     sidebar opens hidden behind the Page Settings modal and nothing appears to happen.
+  useEffect(() => {
+    const onCloseOverlays = () => {
+      setPageSettingsOpen(false);
+      setEditingHeader(null);
+      setEditingFooter(null);
+      setEditingBlockId(null);
+      setAdderTarget(null);
+      setColumnAdderTarget(null);
+    };
+    window.addEventListener('qs:editor:close-overlays', onCloseOverlays as any);
+    return () => window.removeEventListener('qs:editor:close-overlays', onCloseOverlays as any);
+  }, []);
+
   // Header / Footer edit triggers from preview
   useEffect(() => {
     const onMsg = (e: MessageEvent) => {

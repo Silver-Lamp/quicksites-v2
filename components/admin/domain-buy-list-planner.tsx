@@ -48,6 +48,10 @@ type PlanResponse = {
   totalScored: number;
   returned: number;
   availabilityChecked: boolean;
+  availabilityByDomain?: Record<
+    string,
+    { available?: boolean; priceUsd?: number | null; premium?: boolean; error?: string }
+  >;
   volumeChecked: boolean;
   volumeAvailable: boolean;
   candidates: Candidate[];
@@ -557,6 +561,19 @@ export default function DomainBuyListPlanner() {
               value={`${result.candidates.filter((c) => c.reviewSample > 0).length} of ${result.candidates.length}`}
               hint="candidates with competitor review data (drives pack-strength scoring)"
             />
+            {result.availabilityChecked && (() => {
+              const infos = result.candidates.map((c) => result.availabilityByDomain?.[c.domain]);
+              const avail = infos.filter((i) => i && !i.error && i.available === true).length;
+              const taken = infos.filter((i) => i && !i.error && i.available === false).length;
+              const unknown = infos.filter((i) => !i || i.error).length;
+              return (
+                <Stat
+                  label="Availability"
+                  value={`${avail} avail · ${taken} taken · ${unknown} unknown`}
+                  hint={unknown > 0 ? 'Unknown = the registrar check failed (auth/rate-limit), not registered' : undefined}
+                />
+              );
+            })()}
           </div>
 
           {checkVol && !result.volumeChecked && (
@@ -800,13 +817,16 @@ function labelFor(key: string, opts: ReadonlyArray<{ value: string; label: strin
   return opts.find((o) => o.value === key)?.label ?? key;
 }
 
-// Availability is not on the candidate rows (the API returns fill.skipped reasons); render
-// a badge from the skipped list when present, else "available/checked".
+// Three-state availability from the registrar check. An errored probe (403/429/timeout) is
+// "Unknown" — NOT "Taken" — so a rate-limited batch never looks like everything's registered.
 function availabilityBadge(domain: string, result: PlanResponse) {
-  const skip = result.fill.skipped.find((s) => s.domain === domain);
-  if (skip?.reason === 'unavailable') return <Badge cls="bg-rose-900/40 text-rose-300" text="Taken" />;
-  if (skip?.reason === 'premium') return <Badge cls="bg-amber-900/40 text-amber-300" text="Premium" />;
-  return <Badge cls="bg-emerald-900/40 text-emerald-300" text="Available" />;
+  const info = result.availabilityByDomain?.[domain];
+  if (!info) return <span className="text-neutral-700">—</span>;
+  if (info.error) return <Badge cls="bg-neutral-700 text-neutral-300" text="Unknown" />;
+  if (info.available === false) return <Badge cls="bg-rose-900/40 text-rose-300" text="Taken" />;
+  if (info.premium) return <Badge cls="bg-amber-900/40 text-amber-300" text="Premium" />;
+  if (info.available === true) return <Badge cls="bg-emerald-900/40 text-emerald-300" text="Available" />;
+  return <span className="text-neutral-700">—</span>;
 }
 
 function Badge({ cls, text }: { cls: string; text: string }) {

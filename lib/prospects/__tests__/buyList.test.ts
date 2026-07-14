@@ -192,6 +192,15 @@ describe('fillBudget — greedy budget fill', () => {
     expect(res.skipped.find((s) => s.candidate.domain === list[0].domain)?.reason).toBe('over_budget');
   });
 
+  it('treats an errored availability check as unknown (keeps it), not unavailable', () => {
+    const list = cands();
+    // available:false BUT with an error → the check failed; must NOT be skipped as taken.
+    const availabilityByDomain = { [list[0].domain]: { available: false, error: 'vercel_status_429' } };
+    const res = fillBudget(list, { budgetUsd: 1000, defaultPriceUsd: 12, availabilityByDomain });
+    expect(res.accepted.find((c) => c.domain === list[0].domain)).toBeTruthy();
+    expect(res.skipped.find((s) => s.candidate.domain === list[0].domain)).toBeUndefined();
+  });
+
   it('skips unavailable and premium domains', () => {
     const list = cands();
     const availabilityByDomain = {

@@ -276,6 +276,8 @@ export type AvailabilityInfo = {
   available?: boolean;
   priceUsd?: number | null;
   premium?: boolean;
+  /** Set when the check ITSELF failed — treat as unknown, never as unavailable. */
+  error?: string;
 };
 
 export type BudgetFillOptions = {
@@ -328,7 +330,9 @@ export function fillBudget(
     const info = avail[c.domain];
     const priceUsd = info?.priceUsd ?? defaultPrice;
 
-    if (info && info.available === false) {
+    // Only skip on a CONFIRMED unavailable (available:false with no error). An errored check
+    // is unknown — keep the candidate (the real buy re-checks) rather than mislabel it taken.
+    if (info && info.available === false && !info.error) {
       skipped.push({ candidate: c, reason: 'unavailable', priceUsd: info.priceUsd ?? null });
       continue;
     }

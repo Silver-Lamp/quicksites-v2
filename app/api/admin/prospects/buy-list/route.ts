@@ -111,12 +111,18 @@ export async function POST(req: Request) {
   let availabilityChecked = false;
   if (body.checkAvailability) {
     availabilityByDomain = {};
-    const infos = await mapLimit(ranked, 8, async (c) => {
+    // Concurrency 4 (down from 8) to stay under Vercel's domain-status rate limit — a 429
+    // there would otherwise surface as a false "Taken".
+    const infos = await mapLimit(ranked, 4, async (c) => {
       try {
         const a = await checkAvailability(c.domain);
-        return { domain: c.domain, info: { available: a.available, priceUsd: a.priceUsd, premium: a.premium } };
-      } catch {
-        return { domain: c.domain, info: undefined as AvailabilityInfo | undefined };
+        return {
+          domain: c.domain,
+          info: { available: a.available, priceUsd: a.priceUsd, premium: a.premium, error: a.error },
+        };
+      } catch (e: any) {
+        // The call threw (e.g. missing token) → unknown, not taken.
+        return { domain: c.domain, info: { available: false, error: `threw:${e?.message || 'error'}` } as AvailabilityInfo };
       }
     });
     for (const { domain, info } of infos) if (info) availabilityByDomain[domain] = info;
@@ -155,6 +161,7 @@ export async function POST(req: Request) {
     totalScored,
     returned: ranked.length,
     availabilityChecked,
+    availabilityByDomain: availabilityByDomain ?? {},
     volumeChecked,
     volumeAvailable: keywordVolumeEnabled(),
     candidates: ranked,

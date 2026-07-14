@@ -109,18 +109,21 @@ async function vercelFetch<T = Record<string, unknown>>(
   return { ok: res.ok, status: res.status, data: data as T };
 }
 
-/** GET /v4/domains/status — is the name registerable right now? */
+// The pre-2025-11-09 /v4/domains/{status,price,buy} endpoints were SUNSETTED; this uses the
+// new registrar API (GET /v1/registrar/domains/{domain}/availability + /price, POST …/buy).
+// The new availability/price responses carry no "premium" flag, so premium is inferred from
+// an unusually high purchase price.
+const PREMIUM_PRICE_THRESHOLD_USD = 100;
+
+/** GET /v1/registrar/domains/{domain}/availability (+ /price) — is the name registerable now? */
 async function vercelCheckAvailability(apex: string): Promise<DomainAvailability> {
-  let status = await vercelFetch<{ available?: boolean }>(
-    `/v4/domains/status?name=${encodeURIComponent(apex)}`
-  );
+  const path = `/v1/registrar/domains/${encodeURIComponent(apex)}/availability`;
+  let status = await vercelFetch<{ available?: boolean }>(path);
   // One retry with a short backoff on rate-limit / transient server errors — a 429 must not
   // be reported as "taken".
   if (!status.ok && (status.status === 429 || status.status >= 500)) {
     await new Promise((r) => setTimeout(r, 600));
-    status = await vercelFetch<{ available?: boolean }>(
-      `/v4/domains/status?name=${encodeURIComponent(apex)}`
-    );
+    status = await vercelFetch<{ available?: boolean }>(path);
   }
 
   // A failed check is UNKNOWN, not unavailable — surface the status so callers don't render
@@ -143,49 +146,56 @@ async function vercelCheckAvailability(apex: string): Promise<DomainAvailability
   let premium = false;
 
   if (available) {
-    // GET /v4/domains/price — { price, period, premium? }
-    const price = await vercelFetch<{ price?: number; period?: number; premium?: boolean }>(
-      `/v4/domains/price?name=${encodeURIComponent(apex)}&type=new`
+    // GET /v1/registrar/domains/{domain}/price — { years, purchasePrice, renewalPrice, transferPrice }
+    const price = await vercelFetch<{ years?: number; purchasePrice?: number }>(
+      `/v1/registrar/domains/${encodeURIComponent(apex)}/price?years=1`
     );
     if (price.ok) {
-      priceUsd = typeof price.data?.price === 'number' ? price.data.price : null;
-      periodYears = typeof price.data?.period === 'number' ? price.data.period : 1;
-      premium = price.data?.premium === true;
+      priceUsd = typeof price.data?.purchasePrice === 'number' ? price.data.purchasePrice : null;
+      periodYears = typeof price.data?.years === 'number' ? price.data.years : 1;
+      premium = priceUsd != null && priceUsd >= PREMIUM_PRICE_THRESHOLD_USD;
     }
   }
 
   return { domain: apex, available, priceUsd, periodYears, premium };
 }
 
-/** POST /v4/domains/buy — registers the domain into the account/team. */
+/** POST /v1/registrar/domains/{domain}/buy — registers the domain into the account/team. */
 async function vercelBuy(
   apex: string,
   contact: RegistrantContact,
   expectedPriceUsd: number | null,
   renew: boolean
 ): Promise<{ ok: boolean; status: number; reason?: string }> {
+  // The new registrar API requires expectedPrice (min 0.01) + the contact nested under
+  // contactInformation (state/zip naming, ISO-2 country, E.164 phone e.g. "+1.4155551234").
+  if (typeof expectedPriceUsd !== 'number' || expectedPriceUsd <= 0) {
+    return { ok: false, status: 400, reason: 'missing_expected_price' };
+  }
   const body: Record<string, unknown> = {
-    name: apex,
-    renew,
-    country: contact.country,
-    firstName: contact.firstName,
-    lastName: contact.lastName,
-    email: contact.email,
-    phone: contact.phone,
-    address1: contact.address1,
-    city: contact.city,
-    state: contact.state,
-    postalCode: contact.postalCode,
+    autoRenew: renew,
+    years: 1,
+    expectedPrice: expectedPriceUsd,
+    contactInformation: {
+      firstName: contact.firstName,
+      lastName: contact.lastName,
+      email: contact.email,
+      phone: contact.phone,
+      address1: contact.address1,
+      city: contact.city,
+      state: contact.state,
+      zip: contact.postalCode,
+      country: contact.country,
+      ...(contact.orgName ? { companyName: contact.orgName } : {}),
+    },
   };
-  if (contact.orgName) body.orgName = contact.orgName;
-  if (typeof expectedPriceUsd === 'number') body.expectedPrice = expectedPriceUsd;
 
-  const res = await vercelFetch<{ error?: { message?: string }; message?: string }>(
-    `/v4/domains/buy`,
+  const res = await vercelFetch<{ orderId?: string; error?: { message?: string }; message?: string; code?: string }>(
+    `/v1/registrar/domains/${encodeURIComponent(apex)}/buy`,
     { method: 'POST', body: JSON.stringify(body) }
   );
   if (res.ok) return { ok: true, status: res.status };
-  const reason = res.data?.error?.message || res.data?.message || `Vercel buy ${res.status}`;
+  const reason = res.data?.error?.message || res.data?.message || res.data?.code || `Vercel buy ${res.status}`;
   return { ok: false, status: res.status, reason };
 }
 

@@ -601,6 +601,40 @@ export default function ProspectsClient({
     }
   }
 
+  // Generate a few unique LLM blog posts (that link back to the site's own pages) on one
+  // campaign's pitch site.
+  async function generateBlog(c: GeoCampaign) {
+    setBusy(`blog:${c.id}`);
+    setRowMsg((m) => { const { [c.id]: _drop, ...rest } = m; return rest; });
+    try {
+      const r = await post('/api/admin/prospects/geo-campaign/generate-blog', { campaignId: c.id });
+      setRowMsg((m) => ({
+        ...m,
+        [c.id]: { ok: true, text: r.changed ? `Added ${r.added.length} blog post(s)` : r.reason === 'nothing_to_add' ? 'Blog posts already exist' : 'No change' },
+      }));
+      router.refresh();
+    } catch (e: any) {
+      setRowMsg((m) => ({ ...m, [c.id]: { ok: false, text: e.message } }));
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  // Backfill: generate a couple of blog posts on every pitch site.
+  async function backfillBlog() {
+    setBusy('blog:backfill');
+    setMsg(null);
+    try {
+      const r = await post('/api/admin/prospects/geo-campaign/generate-blog', { backfill: true });
+      setMsg(`Blog backfill: ${r.postsAdded} post(s) across ${r.sitesChanged} site(s)${r.failed ? ` · ${r.failed} failed` : ''}.`);
+      router.refresh();
+    } catch (e: any) {
+      setMsg(e.message);
+    } finally {
+      setBusy(null);
+    }
+  }
+
   // Mark a pitch site refined (or clear it). Does its own fetch so a 409 hard-blocked
   // response can surface the specific blockers instead of a generic error.
   async function markRefined(c: GeoCampaign, ready: boolean) {
@@ -1280,6 +1314,14 @@ export default function ProspectsClient({
                 {busy === 'addr:backfill' ? 'Filling…' : '📍 Backfill addresses'}
               </button>
               <button
+                onClick={backfillBlog}
+                disabled={busy === 'blog:backfill'}
+                title="Generate a couple of unique local blog posts on every pitch site (metered LLM; posts link back to each site's own pages)"
+                className="rounded-lg border border-teal-500/30 bg-teal-500/10 px-3 py-1.5 text-xs font-medium text-teal-200 hover:bg-teal-500/20 disabled:opacity-50"
+              >
+                {busy === 'blog:backfill' ? 'Writing…' : '📝 Backfill blog'}
+              </button>
+              <button
                 onClick={recomputeAllRecs}
                 disabled={busy === 'recs:all'}
                 title="Recompute the next-steps recommendations for every campaign now, without waiting for the daily rank-sync cron"
@@ -1441,6 +1483,14 @@ export default function ProspectsClient({
                             className="text-teal-300 hover:text-teal-200"
                           >
                             {busy === `addr:${c.id}` ? '…' : '📍 Address'}
+                          </button>
+                          <button
+                            onClick={() => generateBlog(c)}
+                            disabled={busy === `blog:${c.id}`}
+                            title="Generate a few unique local blog posts (LLM) that link back to this site's own pages"
+                            className="text-teal-300 hover:text-teal-200"
+                          >
+                            {busy === `blog:${c.id}` ? '…' : '📝 Blog'}
                           </button>
                         </div>
                         {rowMsg[c.id] && (

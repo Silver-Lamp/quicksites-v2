@@ -72,7 +72,34 @@ export default function ReadinessCoach({
   const [busy, setBusy] = useState(false);
   const [addrBusy, setAddrBusy] = useState(false);
   const [pageBusy, setPageBusy] = useState(false);
+  const [blogBusy, setBlogBusy] = useState(false);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
+
+  // Generate a few unique LLM blog posts (as pages) that link back to this site's pages.
+  async function generateBlog() {
+    setBlogBusy(true);
+    setMsg(null);
+    try {
+      const res = await fetch('/api/admin/prospects/geo-campaign/generate-blog', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ campaignId }),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setMsg({ ok: false, text: json.error || 'Could not generate blog posts.' });
+        return;
+      }
+      setMsg({
+        ok: true,
+        text: json.changed ? `Added ${json.added?.length ?? 0} blog post(s) — reload to see them in Pages.` : json.reason === 'nothing_to_add' ? 'Blog posts already exist.' : 'No change.',
+      });
+    } catch (e: any) {
+      setMsg({ ok: false, text: e.message });
+    } finally {
+      setBlogBusy(false);
+    }
+  }
 
   // Generate a "<service> in <city>" landing page (extra ranking surface + internal link).
   async function generateCityPage() {
@@ -247,6 +274,14 @@ export default function ReadinessCoach({
           className="shrink-0 rounded-lg border border-teal-500/30 bg-teal-500/10 px-3 py-1.5 text-xs font-medium text-teal-200 hover:bg-teal-500/20 disabled:opacity-50"
         >
           {addrBusy ? '…' : '📍 Office address'}
+        </button>
+        <button
+          onClick={generateBlog}
+          disabled={blogBusy}
+          title="Generate a few unique local blog posts (LLM) that link back to this site's pages. Reload to see them in Pages."
+          className="shrink-0 rounded-lg border border-teal-500/30 bg-teal-500/10 px-3 py-1.5 text-xs font-medium text-teal-200 hover:bg-teal-500/20 disabled:opacity-50"
+        >
+          {blogBusy ? '…' : '📝 Blog posts'}
         </button>
         {readyAt ? (
           <button onClick={() => markReady(false)} disabled={busy} className="shrink-0 rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-1.5 text-xs font-medium text-emerald-300 hover:bg-emerald-500/20 disabled:opacity-50">

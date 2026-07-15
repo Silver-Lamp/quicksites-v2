@@ -1144,36 +1144,38 @@ export default function HeroEditor({
               {/* Content — the everyday edit (always visible in both modes) */}
               <div className="grid md:grid-cols-3 gap-3 mt-3 rounded border border-white/10 bg-neutral-900 p-3">
                 <div className="md:col-span-3 text-sm font-medium">Content</div>
-                {/* Hero text — edit the headline & subheadline inline, styled like the
-                    hero itself, so there's ONE obvious place to edit them (not a small
-                    field disconnected from the preview below). */}
-                <div className="md:col-span-3 rounded-lg border border-white/10 bg-neutral-950/60 p-4">
-                  <div className="mb-2 text-[11px] uppercase tracking-wide text-white/40">Hero text</div>
-                  <input
-                    aria-label="Headline"
-                    className="w-full border-0 border-b border-transparent bg-transparent py-1 text-2xl font-semibold text-white placeholder-white/25 hover:border-white/10 focus:border-purple-500/60 focus:outline-none md:text-3xl"
-                    value={local?.headline || ''}
-                    onChange={(e) => update('headline', e.target.value as any)}
-                    placeholder="Fast, Reliable Service"
-                  />
-                  {errorText(`${fieldKey}.headline`)}
-                  <AutoGrowTextarea
-                    aria-label="Subheadline"
-                    rows={2}
-                    className="mt-2 w-full resize-none border-0 border-b border-transparent bg-transparent py-1 text-base text-white/70 placeholder-white/25 hover:border-white/10 focus:border-purple-500/60 focus:outline-none md:text-lg"
-                    value={local?.subheadline || ''}
-                    onChange={(e) => update('subheadline', e.target.value as any)}
-                    placeholder="24/7 local help with transparent pricing."
-                  />
-                  {errorText(`${fieldKey}.subheadline`)}
-
-                  {/* CTA button label — styled like the actual button, auto-sized to text,
-                      so the whole hero (headline → subheadline → button) reads as one unit. */}
-                  <div className="mt-3">
+                {/* Hero canvas — edit the headline, subheadline & CTA on a surface that
+                    LOOKS like the hero, so there's ONE place to edit (not fields scattered
+                    apart from the preview). Decoupled from the shared renderer; the exact
+                    render is the Live Preview below. */}
+                <div className="md:col-span-3">
+                  <div className="mb-2 flex items-center gap-2 text-[11px] uppercase tracking-wide text-white/40">
+                    <span>Hero canvas</span>
+                    <span className="normal-case tracking-normal text-white/30">— edit the text right here</span>
+                  </div>
+                  <div className="flex flex-col items-center rounded-xl border border-white/10 bg-gradient-to-b from-neutral-800/80 to-neutral-950 px-6 py-10 text-center">
+                    <AutoGrowTextarea
+                      aria-label="Headline"
+                      rows={1}
+                      className="w-full max-w-2xl resize-none bg-transparent text-center text-3xl font-bold leading-tight text-white placeholder-white/25 focus:outline-none md:text-4xl"
+                      value={local?.headline || ''}
+                      onChange={(e) => update('headline', e.target.value as any)}
+                      placeholder="Fast, Reliable Service"
+                    />
+                    {errorText(`${fieldKey}.headline`)}
+                    <AutoGrowTextarea
+                      aria-label="Subheadline"
+                      rows={1}
+                      className="mt-3 w-full max-w-xl resize-none bg-transparent text-center text-base text-white/70 placeholder-white/25 focus:outline-none md:text-lg"
+                      value={local?.subheadline || ''}
+                      onChange={(e) => update('subheadline', e.target.value as any)}
+                      placeholder="24/7 local help with transparent pricing."
+                    />
+                    {errorText(`${fieldKey}.subheadline`)}
                     <input
                       aria-label="CTA button text"
-                      className="rounded-full bg-purple-600 px-4 py-1.5 text-center text-sm font-medium text-white placeholder-white/60 focus:outline-none focus:ring-2 focus:ring-purple-400"
-                      style={{ width: `${Math.max(9, (local?.cta_text || 'Get Started').length + 3)}ch` }}
+                      className="mt-6 rounded-full bg-purple-600 px-5 py-2 text-center text-sm font-semibold text-white placeholder-white/60 focus:outline-none focus:ring-2 focus:ring-purple-400"
+                      style={{ width: `${Math.max(10, (local?.cta_text || 'Get Started').length + 4)}ch` }}
                       value={local?.cta_text || ''}
                       onChange={(e) => update('cta_text', e.target.value as any)}
                       placeholder="Get Started"

@@ -6,10 +6,11 @@ import type { Block } from '@/types/blocks';
 import type { Template } from '@/types/template';
 import type { BlockEditorProps } from './index';
 import { useBlockAiFocus } from '@/lib/editor/blockAiFocus';
-import BlockPreviewToggle from '@/components/admin/ui/block-preview-toggle';
+import RenderBlock from '@/components/admin/templates/render-block';
 import {
   Sparkles,
   Image as ImageIcon,
+  Images,
   Loader2,
   Settings2,
   X,
@@ -22,6 +23,7 @@ import { Switch } from '@/components/ui/switch';
 import toast from 'react-hot-toast';
 import { getIndustryOptions, resolveIndustryKey, toIndustryLabel } from '@/lib/industries';
 import { uploadToStorage } from '@/lib/uploadToStorage';
+import MediaPicker from '@/components/admin/media/media-picker';
 
 /* ───────────────── helpers ───────────────── */
 
@@ -461,6 +463,10 @@ export default function HeroEditor({
     local?.image_subject || `${promptIndustryLabel} website hero banner`,
   );
   const [imgStyle, setImgStyle] = useState<'photo' | 'illustration' | '3d' | 'minimal'>('photo');
+  const [showLibrary, setShowLibrary] = useState(false);
+  // Hero canvas: one surface flipped between the editable text and the live render.
+  const [heroView, setHeroView] = useState<'edit' | 'preview'>('edit');
+  const [previewCompact, setPreviewCompact] = useState(true);
 
   const update = <K extends keyof typeof local>(
     key: K,
@@ -746,6 +752,34 @@ export default function HeroEditor({
     }
   }
 
+  // Apply an image URL to the block, fanning it across every alias the renderer
+  // might read and flipping the layout to background (unless it's an inline hero).
+  function applyHeroImage(nextUrl: string) {
+    setLocal((prev: any) => ({
+      ...prev,
+      image_url: nextUrl,
+      image: nextUrl,
+      heroImage: nextUrl,
+      backgroundImage: nextUrl,
+      layout_mode:
+        prev?.layout_mode && prev.layout_mode !== 'inline' ? prev.layout_mode : 'background',
+      layout: prev?.layout && prev.layout !== 'inline' ? prev.layout : 'background',
+      overlay_level: prev?.overlay_level ?? 'soft',
+      overlay: prev?.overlay ?? 'soft',
+    }));
+    bumpPreview();
+  }
+
+  // Best-effort registry write so the image shows up in the library later.
+  function recordHeroImage(url: string, source: 'generated' | 'uploaded') {
+    if (!template?.id || !url || url.startsWith('data:')) return;
+    fetch('/api/media/assets', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ template_id: template.id, url, source, kind: 'hero', subject: imgSubject }),
+    }).catch(() => {});
+  }
+
   async function generateHeroImage() {
     setImgLoading(true);
     setImgError(null);
@@ -806,23 +840,11 @@ export default function HeroEditor({
 
       const nextUrl = publicUrl || `data:image/png;base64,${clean}`;
 
-      setLocal((prev: any) => ({
-        ...prev,
-        image_url: nextUrl,
-        image: nextUrl,
-        heroImage: nextUrl,
-        backgroundImage: nextUrl,
-        layout_mode:
-          prev?.layout_mode && prev.layout_mode !== 'inline' ? prev.layout_mode : 'background',
-        layout: prev?.layout && prev.layout !== 'inline' ? prev.layout : 'background',
-        overlay_level: prev?.overlay_level ?? 'soft',
-        overlay: prev?.overlay ?? 'soft',
-      }));
+      applyHeroImage(nextUrl);
+      recordHeroImage(nextUrl, 'generated');
 
       console.log('[hero] uploaded image url →', publicUrl || '(data url fallback)');
       toast.success(publicUrl ? 'Hero image generated' : 'Image ready (inline preview)');
-
-      bumpPreview();
     } catch (e: any) {
       setImgError(e?.message || 'Failed to generate image');
       toast.error('Could not generate image');
@@ -1149,39 +1171,80 @@ export default function HeroEditor({
                     apart from the preview). Decoupled from the shared renderer; the exact
                     render is the Live Preview below. */}
                 <div className="md:col-span-3">
-                  <div className="mb-2 flex items-center gap-2 text-[11px] uppercase tracking-wide text-white/40">
-                    <span>Hero canvas</span>
-                    <span className="normal-case tracking-normal text-white/30">— edit the text right here</span>
+                  {/* One hero surface with an Edit / Preview tab — instead of a
+                      separate edit box stacked above a live preview of the same hero. */}
+                  <div className="mb-2 flex items-center justify-between gap-2">
+                    <div className="inline-flex rounded-lg border border-white/10 bg-neutral-950 p-0.5 text-xs">
+                      {(['edit', 'preview'] as const).map((v) => (
+                        <button
+                          key={v}
+                          type="button"
+                          onClick={() => setHeroView(v)}
+                          className={`rounded-md px-3 py-1 capitalize transition ${
+                            heroView === v ? 'bg-purple-600 text-white' : 'text-white/60 hover:text-white'
+                          }`}
+                        >
+                          {v}
+                        </button>
+                      ))}
+                    </div>
+                    {heroView === 'edit' ? (
+                      <span className="text-[11px] text-white/30">edit the text right here</span>
+                    ) : (
+                      <label className="inline-flex items-center gap-1.5 text-[11px] text-white/50">
+                        <Switch checked={previewCompact} onCheckedChange={(v) => setPreviewCompact(!!v)} />
+                        Compact
+                      </label>
+                    )}
                   </div>
-                  <div className="flex flex-col items-center rounded-xl border border-white/10 bg-gradient-to-b from-neutral-800/80 to-neutral-950 px-6 py-10 text-center">
-                    <AutoGrowTextarea
-                      aria-label="Headline"
-                      rows={1}
-                      className="w-full max-w-2xl resize-none bg-transparent text-center text-3xl font-bold leading-tight text-white placeholder-white/25 focus:outline-none md:text-4xl"
-                      value={local?.headline || ''}
-                      onChange={(e) => update('headline', e.target.value as any)}
-                      placeholder="Fast, Reliable Service"
-                    />
-                    {errorText(`${fieldKey}.headline`)}
-                    <AutoGrowTextarea
-                      aria-label="Subheadline"
-                      rows={1}
-                      className="mt-3 w-full max-w-xl resize-none bg-transparent text-center text-base text-white/70 placeholder-white/25 focus:outline-none md:text-lg"
-                      value={local?.subheadline || ''}
-                      onChange={(e) => update('subheadline', e.target.value as any)}
-                      placeholder="24/7 local help with transparent pricing."
-                    />
-                    {errorText(`${fieldKey}.subheadline`)}
-                    <input
-                      aria-label="CTA button text"
-                      className="mt-6 rounded-full bg-purple-600 px-5 py-2 text-center text-sm font-semibold text-white placeholder-white/60 focus:outline-none focus:ring-2 focus:ring-purple-400"
-                      style={{ width: `${Math.max(10, (local?.cta_text || 'Get Started').length + 4)}ch` }}
-                      value={local?.cta_text || ''}
-                      onChange={(e) => update('cta_text', e.target.value as any)}
-                      placeholder="Get Started"
-                    />
-                    {errorText(`${fieldKey}.cta_text`)}
-                  </div>
+
+                  {heroView === 'edit' ? (
+                    <div className="flex flex-col items-center rounded-xl border border-white/10 bg-gradient-to-b from-neutral-800/80 to-neutral-950 px-6 py-10 text-center">
+                      <AutoGrowTextarea
+                        aria-label="Headline"
+                        rows={1}
+                        className="w-full max-w-2xl resize-none bg-transparent text-center text-3xl font-bold leading-tight text-white placeholder-white/25 focus:outline-none md:text-4xl"
+                        value={local?.headline || ''}
+                        onChange={(e) => update('headline', e.target.value as any)}
+                        placeholder="Fast, Reliable Service"
+                      />
+                      {errorText(`${fieldKey}.headline`)}
+                      <AutoGrowTextarea
+                        aria-label="Subheadline"
+                        rows={1}
+                        className="mt-3 w-full max-w-xl resize-none bg-transparent text-center text-base text-white/70 placeholder-white/25 focus:outline-none md:text-lg"
+                        value={local?.subheadline || ''}
+                        onChange={(e) => update('subheadline', e.target.value as any)}
+                        placeholder="24/7 local help with transparent pricing."
+                      />
+                      {errorText(`${fieldKey}.subheadline`)}
+                      <input
+                        aria-label="CTA button text"
+                        className="mt-6 rounded-full bg-purple-600 px-5 py-2 text-center text-sm font-semibold text-white placeholder-white/60 focus:outline-none focus:ring-2 focus:ring-purple-400"
+                        style={{ width: `${Math.max(10, (local?.cta_text || 'Get Started').length + 4)}ch` }}
+                        value={local?.cta_text || ''}
+                        onChange={(e) => update('cta_text', e.target.value as any)}
+                        placeholder="Get Started"
+                      />
+                      {errorText(`${fieldKey}.cta_text`)}
+                    </div>
+                  ) : (
+                    <div key={previewNonce} className="overflow-hidden rounded-xl border border-white/10 bg-neutral-800">
+                      <RenderBlock
+                        block={{
+                          ...block,
+                          type: 'hero',
+                          [fieldKey]: { ...(block as any)[fieldKey], ...toCanonicalHeroProps(local, template) },
+                          [altKey]: { ...(block as any)[altKey], ...toCanonicalHeroProps(local, template) },
+                        }}
+                        showDebug={false}
+                        compact={previewCompact}
+                        mode="preview"
+                        disableInteraction
+                        template={template as Template}
+                      />
+                    </div>
+                  )}
                 </div>
                 <div className="md:col-span-3">
                   <label className="text-xs text-neutral-300">CTA Action</label>
@@ -1236,19 +1299,40 @@ export default function HeroEditor({
                   <div className="md:col-span-2">
                     <div className="flex items-center justify-between">
                       <label className="text-xs text-neutral-300">Image Subject</label>
-                      <button
-                        onClick={generateHeroImage}
-                        disabled={imgLoading}
-                        className="inline-flex items-center gap-1.5 rounded border-2 border-purple-500/70 text-purple-300 px-2 py-1 text-xs hover:bg-purple-500/10"
-                      >
-                        {imgLoading ? (
-                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                        ) : (
-                          <ImageIcon className="h-3.5 w-3.5" />
-                        )}{' '}
-                        Generate
-                      </button>
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setShowLibrary((v) => !v)}
+                          className={`inline-flex items-center gap-1.5 rounded border px-2 py-1 text-xs ${
+                            showLibrary
+                              ? 'border-purple-500/70 text-purple-200 bg-purple-500/10'
+                              : 'border-white/15 text-neutral-200 hover:bg-white/10'
+                          }`}
+                        >
+                          <Images className="h-3.5 w-3.5" /> Library
+                        </button>
+                        <button
+                          onClick={generateHeroImage}
+                          disabled={imgLoading}
+                          className="inline-flex items-center gap-1.5 rounded border-2 border-purple-500/70 text-purple-300 px-2 py-1 text-xs hover:bg-purple-500/10"
+                        >
+                          {imgLoading ? (
+                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                          ) : (
+                            <ImageIcon className="h-3.5 w-3.5" />
+                          )}{' '}
+                          Generate
+                        </button>
+                      </div>
                     </div>
+                    {showLibrary && (
+                      <MediaPicker
+                        templateId={template?.id ?? null}
+                        industry={effectiveIndustryKey}
+                        currentUrl={local?.image_url ?? null}
+                        onSelect={(url) => applyHeroImage(url)}
+                      />
+                    )}
                     <input
                       className={selectDark}
                       value={imgSubject}
@@ -1453,25 +1537,6 @@ export default function HeroEditor({
                 </div>
               )}
 
-              {/* Live preview bridge */}
-              <div className="mt-3">
-                <BlockPreviewToggle
-                  key={previewNonce}
-                  block={{
-                    ...block,
-                    type: 'hero',
-                    [fieldKey]: {
-                      ...(block as any)[fieldKey],
-                      ...toCanonicalHeroProps(local, template),
-                    },
-                    [altKey]: {
-                      ...(block as any)[altKey],
-                      ...toCanonicalHeroProps(local, template),
-                    },
-                  }}
-                  template={template as Template}
-                />
-              </div>
             </>
           )}
         </div>

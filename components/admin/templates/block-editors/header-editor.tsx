@@ -9,6 +9,7 @@ import toast from 'react-hot-toast';
 
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
+import { Switch } from '@/components/ui/switch';
 import { supabase } from '@/lib/supabase/client';
 
 import type { Block } from '@/types/blocks';
@@ -16,6 +17,9 @@ import type { Template } from '@/types/template';
 import type { BlockValidationError } from '@/hooks/validateTemplateBlocks';
 import QuickLinksEditor from '@/components/admin/fields/quick-links-editor';
 import FaviconUploader from '@/components/admin/favicon-uploader';
+import MediaPicker from '@/components/admin/media/media-picker';
+import RenderBlock from '@/components/admin/templates/render-block';
+import { Images } from 'lucide-react';
 
 // Industry helpers (canonical key as the source of truth)
 import {
@@ -206,6 +210,10 @@ export default function PageHeaderEditor({
   );
   const [isUploading, setIsUploading] = useState(false);
   const [isSavingLocal, setIsSavingLocal] = useState(false);
+  const [showLogoLibrary, setShowLogoLibrary] = useState(false);
+  // One header surface flipped between the edit fields and the live render.
+  const [headerView, setHeaderView] = useState<'edit' | 'preview'>('edit');
+  const [previewCompact, setPreviewCompact] = useState(true);
 
   // Business name
   const businessName = useMemo(
@@ -274,6 +282,23 @@ export default function PageHeaderEditor({
     return data.publicUrl;
   };
 
+  // Apply a logo URL: update local state + patch meta.logo_url so the site reuses it.
+  const applyLogo = (url: string) => {
+    setLogoUrl(url);
+    emitMerge({ meta: { ...(meta ?? {}), logo_url: url } });
+    emitApplyPatch({ data: { ...(template?.data as any), meta: { ...(meta ?? {}), logo_url: url } }, logo_url: url });
+  };
+
+  // Best-effort registry write so the logo shows up in the library later.
+  const recordLogoImage = (url: string, source: 'generated' | 'uploaded') => {
+    if (!template?.id || !url || url.startsWith('data:')) return;
+    fetch('/api/media/assets', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ template_id: template.id, url, source, kind: 'logo', subject: businessName || null }),
+    }).catch(() => {});
+  };
+
   // onDrop
   const { getRootProps, getInputProps } = useDropzone({
     onDrop: async (acceptedFiles: File[]) => {
@@ -281,10 +306,8 @@ export default function PageHeaderEditor({
       setIsUploading(true);
       try {
         const url = await handleFileUpload(acceptedFiles[0]);
-        setLogoUrl(url);
-        // patch meta.logo_url immediately so the site can reuse the logo elsewhere
-        emitMerge({ meta: { ...(meta ?? {}), logo_url: url } }); // instant local update
-        emitApplyPatch({ data: { ...(template?.data as any), meta: { ...(meta ?? {}), logo_url: url } }, logo_url: url });
+        applyLogo(url);
+        recordLogoImage(url, 'uploaded');
         toast.success('Logo uploaded!');
       } catch (err) {
         console.error(err);
@@ -333,9 +356,8 @@ export default function PageHeaderEditor({
 
       const file = b64ToFile(image_base64, `icon-${Date.now()}.png`, 'image/png');
       const url = await handleFileUpload(file);
-      setLogoUrl(url);
-      emitMerge({ meta: { ...(meta ?? {}), logo_url: url } });
-      emitApplyPatch({ data: { ...(template?.data as any), meta: { ...(meta ?? {}), logo_url: url } }, logo_url: url });
+      applyLogo(url);
+      recordLogoImage(url, 'generated');
       toast.success('Icon generated!');
     } catch (e: any) {
       console.error(e);
@@ -431,7 +453,23 @@ export default function PageHeaderEditor({
       {/* Sticky top bar */}
       <div className="sticky top-0 z-20 border-b border-white/10 bg-neutral-900/70 backdrop-blur px-6 py-4">
         <div className="flex items-center justify-between gap-3">
-          <h3 className="text-lg font-semibold">Edit Page Header, Logo and Favicon</h3>
+          <div className="flex items-center gap-3">
+            <h3 className="text-lg font-semibold">Edit Page Header, Logo and Favicon</h3>
+            <div className="inline-flex rounded-lg border border-white/10 bg-neutral-950 p-0.5 text-xs">
+              {(['edit', 'preview'] as const).map((v) => (
+                <button
+                  key={v}
+                  type="button"
+                  onClick={() => setHeaderView(v)}
+                  className={`rounded-md px-3 py-1 capitalize transition ${
+                    headerView === v ? 'bg-purple-600 text-white' : 'text-white/60 hover:text-white'
+                  }`}
+                >
+                  {v}
+                </button>
+              ))}
+            </div>
+          </div>
           <div className="flex gap-2">
             <Button variant="ghost" onClick={onClose} disabled={saving}>Cancel</Button>
             <Button onClick={saveBlock} disabled={!canSave} title={!areLinksValid ? 'Fill in link label + URL' : ''}>
@@ -443,6 +481,36 @@ export default function PageHeaderEditor({
 
       {/* Scrollable content */}
       <div className="flex-1 overflow-y-auto px-6 py-5 overscroll-contain">
+        {headerView === 'preview' ? (
+          <div className="space-y-2">
+            <label className="inline-flex items-center gap-1.5 text-[11px] text-white/50">
+              <Switch checked={previewCompact} onCheckedChange={(v) => setPreviewCompact(!!v)} />
+              Compact
+            </label>
+            <div className="overflow-hidden rounded-xl border border-white/10 bg-neutral-800">
+              <RenderBlock
+                block={{
+                  ...block,
+                  type: 'header',
+                  content: {
+                    ...(block as any).content,
+                    logo_url: logoUrl || undefined,
+                    nav_items: (navItems ?? []).map((l) => ({
+                      label: l.label?.trim() ?? '',
+                      href: l.href?.trim() ?? '',
+                      appearance: l.appearance ?? 'default',
+                    })),
+                  },
+                }}
+                showDebug={false}
+                compact={previewCompact}
+                mode="preview"
+                disableInteraction
+                template={normalizedTemplate as Template}
+              />
+            </div>
+          </div>
+        ) : (
         <div className="grid grid-cols-1 lg:grid-cols-3 items-start gap-6">
           {/* LEFT: Branding — Industry → AI logo → upload → favicon */}
           <section className="lg:col-span-1 max-w-full space-y-3">
@@ -590,6 +658,28 @@ export default function PageHeaderEditor({
                   </p>
                 )}
               </div>
+
+              <button
+                type="button"
+                onClick={() => setShowLogoLibrary((v) => !v)}
+                className={`mt-2 inline-flex items-center gap-1.5 rounded border px-2 py-1 text-xs ${
+                  showLogoLibrary
+                    ? 'border-purple-500/70 text-purple-200 bg-purple-500/10'
+                    : 'border-white/15 text-neutral-200 hover:bg-white/10'
+                }`}
+              >
+                <Images className="h-3.5 w-3.5" /> Browse logo library
+              </button>
+              {showLogoLibrary && (
+                <MediaPicker
+                  kind="logo"
+                  templateId={template?.id ?? null}
+                  industry={industryKey}
+                  currentUrl={logoUrl || null}
+                  uploadFile={handleFileUpload}
+                  onSelect={(url) => applyLogo(url)}
+                />
+              )}
             </div>
 
             {/* Favicon tools */}
@@ -636,6 +726,7 @@ export default function PageHeaderEditor({
             )}
           </section>
         </div>
+        )}
       </div>
     </div>
   );

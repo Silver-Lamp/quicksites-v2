@@ -8,6 +8,21 @@ import TemplatesCardGrid, { TemplatesCardGridSkeleton, type GscStat } from '@/co
 
 type ViewMode = 'cards' | 'table';
 
+// Sort options are `${sortKey}_${dir}`. 'updated_desc' is the default (matches the
+// table's natural recency grouping); anything else renders flat in server order.
+const SORT_DEFAULT = 'updated_desc';
+const SORT_OPTIONS: { value: string; label: string }[] = [
+  { value: 'updated_desc', label: 'Recently updated' },
+  { value: 'created_desc', label: 'Newest first' },
+  { value: 'name_asc', label: 'Name A–Z' },
+  { value: 'seo_desc', label: 'SEO readiness: high → low' },
+  { value: 'seo_asc', label: 'SEO readiness: low → high' },
+];
+function parseSort(v: string): { sort: string; dir: string } {
+  const i = v.lastIndexOf('_');
+  return i > 0 ? { sort: v.slice(0, i), dir: v.slice(i + 1) } : { sort: 'updated', dir: 'desc' };
+}
+
 type Props = {
   initialRows: any[];
   initialOffset: number;
@@ -43,20 +58,29 @@ export default function TemplatesListClient({
   const [offset, setOffset] = useState<number>(initialOffset);
   const [hasMore, setHasMore] = useState<boolean>(initialHasMore);
   const [view, setView] = useState<ViewMode>('cards');
+  const [sort, setSort] = useState<string>(SORT_DEFAULT);
 
-  // Remember the admin's preferred view across visits.
+  // Remember the admin's preferred view + sort across visits.
   useEffect(() => {
     try {
       const saved = localStorage.getItem('qs_templates_view');
       if (saved === 'cards' || saved === 'table') setView(saved);
+      const savedSort = localStorage.getItem('qs_templates_sort');
+      if (savedSort && SORT_OPTIONS.some((o) => o.value === savedSort)) setSort(savedSort);
     } catch {}
   }, []);
   const chooseView = (v: ViewMode) => {
     setView(v);
     try { localStorage.setItem('qs_templates_view', v); } catch {}
   };
+  const chooseSort = (v: string) => {
+    setSort(v);
+    try { localStorage.setItem('qs_templates_sort', v); } catch {}
+  };
   const [loading, setLoading] = useState(false);
   const [errorText, setErrorText] = useState<string | null>(null);
+  // True when the SEO sort scored a capped candidate window (very large libraries).
+  const [capped, setCapped] = useState(false);
 
   // Google Search Console 28-day stats per connected domain (scoped server-side).
   // Best-effort + lazy: the grid paints first, stats fade onto matching cards.
@@ -106,11 +130,14 @@ export default function TemplatesListClient({
         setLoading(true);
         setErrorText(null);
 
+        const { sort: sortKey, dir } = parseSort(sort);
         const sp = new URLSearchParams({
           date: dateParam || '',
           versions: includeVersions ? 'all' : '',
           limit: String(pageSize),
           offset: String(nextOffset),
+          sort: sortKey,
+          dir,
         });
 
         const res = await fetch(`/api/admin/templates/list?${sp.toString()}`, { cache: 'no-store' });
@@ -123,6 +150,7 @@ export default function TemplatesListClient({
         const items: any[] = Array.isArray(j?.items) ? j.items : [];
         const nextOff = j?.page?.nextOffset ?? nextOffset + items.length;
         const more = !!j?.page?.hasMore;
+        setCapped(!!j?.page?.capped);
 
         const newRows = replace ? items : [...rowsRef.current, ...items];
         rowsRef.current = newRows;
@@ -140,7 +168,7 @@ export default function TemplatesListClient({
         setLoading(false);
       }
     },
-    [dateParam, includeVersions, pageSize]
+    [dateParam, includeVersions, pageSize, sort]
   );
 
   // Count non-archived rows we’d actually show under the default filter (“Active”)
@@ -183,6 +211,21 @@ export default function TemplatesListClient({
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // run once on mount
+
+  // Re-fetch from page 0 when the sort changes (skip the initial mount — the mount
+  // effect above already loads page 0).
+  const sortMountRef = useRef(false);
+  useEffect(() => {
+    if (!sortMountRef.current) { sortMountRef.current = true; return; }
+    let cancelled = false;
+    (async () => {
+      const got = await fetchPage(0, true);
+      if (cancelled || got == null) return;
+      await fillToMinActive();
+    })();
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sort]);
 
   // External refresh requests (from Refresh button or table)
   useEffect(() => {
@@ -252,7 +295,25 @@ export default function TemplatesListClient({
     <>
       {errorText && <div className="mb-3 text-xs text-red-400">{errorText}</div>}
 
-      <div className="mb-4 flex justify-end">
+      {capped && sort.startsWith('seo') && (
+        <div className="mb-3 rounded-md border border-amber-500/25 bg-amber-500/10 px-3 py-2 text-xs text-amber-200">
+          Ranking SEO readiness across the 400 most recently-updated sites. Older sites beyond that window aren’t included in this sort.
+        </div>
+      )}
+
+      <div className="mb-4 flex flex-wrap items-center justify-end gap-3">
+        <label className="inline-flex items-center gap-2 text-xs text-zinc-400">
+          Sort
+          <select
+            value={sort}
+            onChange={(e) => chooseSort(e.target.value)}
+            className="rounded-md border border-zinc-800 bg-zinc-900/60 px-2 py-1.5 text-xs text-zinc-200"
+          >
+            {SORT_OPTIONS.map((o) => (
+              <option key={o.value} value={o.value}>{o.label}</option>
+            ))}
+          </select>
+        </label>
         <div className="inline-flex rounded-lg border border-zinc-800 bg-zinc-900/60 p-0.5">
           <button
             onClick={() => chooseView('cards')}
@@ -279,7 +340,7 @@ export default function TemplatesListClient({
         <TemplatesCardGrid rows={rows as any} pending={pendingDemos} loading={loading} gscByDomain={gscByDomain} />
       ) : (
         /* ✅ pass includeVersions so the table can default grouping appropriately */
-        <TemplatesIndexTable templates={rows as any} selectedFilter={dateParam} includeVersions={includeVersions} />
+        <TemplatesIndexTable templates={rows as any} selectedFilter={dateParam} includeVersions={includeVersions} sortActive={sort !== SORT_DEFAULT} />
       )}
       {!initialLoading && (
         <>

@@ -188,6 +188,21 @@ export type ChecklistItem = {
  * flag, positively framed for checkboxes. Reuses analyzeReadiness so the gate + this view can
  * never disagree.
  */
+export type ReadinessScore = { pct: number; done: number; total: number; hardLeft: number };
+
+/**
+ * A single SEO-readiness score for a site — the same number the in-editor Readiness
+ * coach shows (done / total of the checklist). Pure; safe to call per row in a list.
+ */
+export function readinessScore(data: any, industryKey: string): ReadinessScore {
+  const items = readinessChecklist(data, industryKey);
+  const total = items.length;
+  const done = items.filter((i) => i.ok).length;
+  const hardLeft = items.filter((i) => i.severity === 'hard' && !i.ok).length;
+  const pct = total ? Math.round((done / total) * 100) : 0;
+  return { pct, done, total, hardLeft };
+}
+
 export function readinessChecklist(data: any, industryKey: string): ChecklistItem[] {
   const { blockers } = analyzeReadiness(data, industryKey);
   const failing = new Set(blockers.map((b) => b.id));

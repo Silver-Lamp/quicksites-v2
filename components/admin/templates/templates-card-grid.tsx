@@ -36,7 +36,28 @@ type Row = {
   custom_domain?: string | null;
   data?: any;
   campaign?: CampaignInfo | null;
+  seo_readiness?: { pct: number; done: number; total: number; hardLeft: number } | null;
 };
+
+function readinessColor(pct: number): string {
+  return pct >= 80 ? 'bg-emerald-500' : pct >= 50 ? 'bg-amber-500' : 'bg-red-500';
+}
+
+/** Compact SEO-readiness meter — mirrors the in-editor Readiness coach's percentage. */
+function SeoReadiness({ s }: { s?: Row['seo_readiness'] }) {
+  if (!s || !s.total) return null;
+  return (
+    <div
+      className="mt-1.5 inline-flex items-center gap-1.5"
+      title={`SEO readiness — ${s.done}/${s.total} checks${s.hardLeft ? ` · ${s.hardLeft} required left` : ''}`}
+    >
+      <div className="h-1.5 w-16 overflow-hidden rounded-full bg-zinc-800">
+        <div className={`h-full rounded-full ${readinessColor(s.pct)}`} style={{ width: `${s.pct}%` }} />
+      </div>
+      <span className="text-[11px] font-medium text-zinc-400">{s.pct}% SEO</span>
+    </div>
+  );
+}
 
 // Use the generated OG thumbnail (reads each template's OWN data — hero image or
 // a themed accent card). `v` busts the CDN cache when the site changes. Falls back
@@ -185,6 +206,7 @@ export default function TemplatesCardGrid({
                   <span className="text-zinc-700">·</span>
                   <span>{timeAgo(r.updated_at)}</span>
                 </div>
+                <div><SeoReadiness s={r.seo_readiness} /></div>
                 {r.campaign ? (
                   <div className="mt-1.5">
                     <CampaignBadge c={r.campaign} />

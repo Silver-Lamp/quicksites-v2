@@ -11,6 +11,8 @@ import { useEffect, useMemo, useState } from 'react';
 import { useTemplateEditor } from '@/context/template-editor-context';
 import { readinessChecklist, type ChecklistItem } from '@/lib/outreach/readiness';
 import { buildLocalBusinessSchema } from '@/lib/seo/localBusinessSchema';
+import PipelineProgressModal from '@/components/admin/templates/pipeline-progress-modal';
+import type { PipelineResult } from '@/lib/seo/runReadinessPipeline';
 
 const EXPANDED_KEY = 'qs:readiness-coach:expanded';
 
@@ -119,6 +121,41 @@ export default function ReadinessCoach({
   const [blogBusy, setBlogBusy] = useState(false);
   const [schemaBusy, setSchemaBusy] = useState(false);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
+
+  // Run-all pipeline: every applicable one-click fix for this site, in order.
+  const [pipelineRunning, setPipelineRunning] = useState(false);
+  const [pipelineResult, setPipelineResult] = useState<PipelineResult | null>(null);
+  const [pipelineOpen, setPipelineOpen] = useState(false);
+  async function runPipeline() {
+    const templateId = (ctx as any)?.template?.id;
+    if (!templateId) {
+      setMsg({ ok: false, text: 'No template id available.' });
+      return;
+    }
+    setPipelineRunning(true);
+    setPipelineResult(null);
+    setPipelineOpen(true);
+    setMsg(null);
+    try {
+      const res = await fetch('/api/admin/templates/run-readiness-pipeline', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ templateId }),
+      });
+      const j = await res.json().catch(() => ({}));
+      if (!res.ok || !j?.ok) {
+        setPipelineOpen(false);
+        setMsg({ ok: false, text: j?.error || j?.result?.error || 'Could not run the steps.' });
+        return;
+      }
+      setPipelineResult(j.result);
+    } catch (e: any) {
+      setPipelineOpen(false);
+      setMsg({ ok: false, text: e.message });
+    } finally {
+      setPipelineRunning(false);
+    }
+  }
 
   // Turn on LocalBusiness structured data: verify we can build it from the site's identity
   // (name + city/address), then flip the meta flag on. The public site emits the JSON-LD
@@ -381,6 +418,14 @@ export default function ReadinessCoach({
         >
           {blogBusy ? '…' : '📝 Blog posts'}
         </button>
+        <button
+          onClick={runPipeline}
+          disabled={pipelineRunning}
+          title="Run every one-click fix for this site, in order (fill office address, add schema, generate a subpage). Safe to re-run."
+          className="shrink-0 rounded-lg border border-fuchsia-500/40 bg-fuchsia-500/10 px-3 py-1.5 text-xs font-medium text-fuchsia-200 hover:bg-fuchsia-500/20 disabled:opacity-50"
+        >
+          {pipelineRunning ? '…' : '▶ Run steps'}
+        </button>
         {readyAt ? (
           <button onClick={() => markReady(false)} disabled={busy} className="shrink-0 rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-1.5 text-xs font-medium text-emerald-300 hover:bg-emerald-500/20 disabled:opacity-50">
             {busy ? '…' : 'Ready ✓'}
@@ -410,6 +455,10 @@ export default function ReadinessCoach({
             {items.filter((i) => i.severity === 'soft').map(renderItem)}
           </ul>
         </div>
+      )}
+
+      {pipelineOpen && (
+        <PipelineProgressModal running={pipelineRunning} result={pipelineResult} onClose={() => setPipelineOpen(false)} />
       )}
     </div>
   );

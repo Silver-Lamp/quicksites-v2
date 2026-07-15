@@ -135,9 +135,13 @@ export function TemplateEditorProvider({
         // overrides / additions:
         loadState,
         commitPatch,
+        // Re-pull canonical columns + data from the server and merge into editor state — lets a
+        // surface that mutated the template out-of-band (e.g. the readiness pipeline endpoint)
+        // refresh the live checklist/preview without a full page reload.
+        refreshFromServer,
         colorMode: colorMode as 'light' | 'dark',
       }) as Ctx,
-    [editor, loadState, commitPatch, colorMode]
+    [editor, loadState, commitPatch, refreshFromServer, colorMode]
   );
 
   // Initial mount: make sure we reconcile with server once

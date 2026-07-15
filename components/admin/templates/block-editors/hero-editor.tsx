@@ -11,6 +11,7 @@ import {
   Sparkles,
   Image as ImageIcon,
   Images,
+  EyeOff,
   Loader2,
   Settings2,
   X,
@@ -284,6 +285,15 @@ function AutoGrowTextarea(props: ComponentProps<'textarea'>) {
     el.style.height = `${el.scrollHeight}px`;
   }, [props.value]);
   return <textarea ref={ref} {...props} />;
+}
+
+/** Corner badge marking a field that's hidden on the live site (still editable here). */
+function HiddenPill() {
+  return (
+    <span className="pointer-events-none absolute -top-2 right-0 z-10 inline-flex items-center gap-1 rounded-full border border-white/15 bg-neutral-900 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-white/50">
+      <EyeOff className="h-2.5 w-2.5" /> Hidden
+    </span>
+  );
 }
 
 export default function HeroEditor({
@@ -1203,33 +1213,42 @@ export default function HeroEditor({
 
                   {heroView === 'edit' ? (
                     <div className="flex flex-col items-center rounded-xl border border-white/10 bg-gradient-to-b from-neutral-800/80 to-neutral-950 px-6 py-10 text-center">
-                      <AutoGrowTextarea
-                        aria-label="Headline"
-                        rows={1}
-                        className="w-full max-w-2xl resize-none bg-transparent text-center text-3xl font-bold leading-tight text-white placeholder-white/25 focus:outline-none md:text-4xl"
-                        value={local?.headline || ''}
-                        onChange={(e) => update('headline', e.target.value as any)}
-                        placeholder="Fast, Reliable Service"
-                      />
-                      {errorText(`${fieldKey}.headline`)}
-                      <AutoGrowTextarea
-                        aria-label="Subheadline"
-                        rows={1}
-                        className="mt-3 w-full max-w-xl resize-none bg-transparent text-center text-base text-white/70 placeholder-white/25 focus:outline-none md:text-lg"
-                        value={local?.subheadline || ''}
-                        onChange={(e) => update('subheadline', e.target.value as any)}
-                        placeholder="24/7 local help with transparent pricing."
-                      />
-                      {errorText(`${fieldKey}.subheadline`)}
-                      <input
-                        aria-label="CTA button text"
-                        className="mt-6 rounded-full bg-purple-600 px-5 py-2 text-center text-sm font-semibold text-white placeholder-white/60 focus:outline-none focus:ring-2 focus:ring-purple-400"
-                        style={{ width: `${Math.max(10, (local?.cta_text || 'Get Started').length + 4)}ch` }}
-                        value={local?.cta_text || ''}
-                        onChange={(e) => update('cta_text', e.target.value as any)}
-                        placeholder="Get Started"
-                      />
-                      {errorText(`${fieldKey}.cta_text`)}
+                      <div className={`relative w-full max-w-2xl ${local?.hide_headline ? 'opacity-40' : ''}`}>
+                        {local?.hide_headline && <HiddenPill />}
+                        <AutoGrowTextarea
+                          aria-label="Headline"
+                          rows={1}
+                          className="w-full resize-none bg-transparent text-center text-3xl font-bold leading-tight text-white placeholder-white/25 focus:outline-none md:text-4xl"
+                          value={local?.headline || ''}
+                          onChange={(e) => update('headline', e.target.value as any)}
+                          placeholder="Fast, Reliable Service"
+                        />
+                        {errorText(`${fieldKey}.headline`)}
+                      </div>
+                      <div className={`relative mt-3 w-full max-w-xl ${local?.hide_subheadline ? 'opacity-40' : ''}`}>
+                        {local?.hide_subheadline && <HiddenPill />}
+                        <AutoGrowTextarea
+                          aria-label="Subheadline"
+                          rows={1}
+                          className="w-full resize-none bg-transparent text-center text-base text-white/70 placeholder-white/25 focus:outline-none md:text-lg"
+                          value={local?.subheadline || ''}
+                          onChange={(e) => update('subheadline', e.target.value as any)}
+                          placeholder="24/7 local help with transparent pricing."
+                        />
+                        {errorText(`${fieldKey}.subheadline`)}
+                      </div>
+                      <div className={`relative mt-6 ${local?.hide_cta ? 'opacity-40' : ''}`}>
+                        {local?.hide_cta && <HiddenPill />}
+                        <input
+                          aria-label="CTA button text"
+                          className="rounded-full bg-purple-600 px-5 py-2 text-center text-sm font-semibold text-white placeholder-white/60 focus:outline-none focus:ring-2 focus:ring-purple-400"
+                          style={{ width: `${Math.max(10, (local?.cta_text || 'Get Started').length + 4)}ch` }}
+                          value={local?.cta_text || ''}
+                          onChange={(e) => update('cta_text', e.target.value as any)}
+                          placeholder="Get Started"
+                        />
+                        {errorText(`${fieldKey}.cta_text`)}
+                      </div>
                     </div>
                   ) : (
                     <div key={previewNonce} className="overflow-hidden rounded-xl border border-white/10 bg-neutral-800">

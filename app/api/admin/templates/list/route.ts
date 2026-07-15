@@ -5,24 +5,23 @@ import { geoCampaignsByTemplateIds } from '@/lib/outreach/geoCampaigns';
 import { readinessScore } from '@/lib/outreach/readiness';
 import { resolveIndustryKey } from '@/lib/industries';
 
-// SEO readiness is computed from each row's data blob (not a DB column), so sorting
-// by it can't be an ORDER BY. When that sort is active we load a bounded candidate
-// set, score every row, sort in memory, then paginate the window — this caps the cost.
-const SEO_SORT_CAP = 400;
-
 type SortKey = 'updated' | 'created' | 'name' | 'seo';
 const SORT_KEYS: SortKey[] = ['updated', 'created', 'name', 'seo'];
 
-/** Attach a { pct, done, total, hardLeft } SEO-readiness score to a list item. */
+/**
+ * Ensure a { pct, done, total, hardLeft } SEO-readiness score on the item. Prefers
+ * the value persisted on the row (templates.seo_readiness, refreshed on commit) and
+ * only falls back to computing it for rows not yet backfilled.
+ */
 function withReadiness(it: any): any {
+  const p = it?.seo_readiness;
+  if (p && typeof p === 'object' && typeof p.pct === 'number' && typeof p.total === 'number') {
+    return it; // persisted (also what the DB sorted by)
+  }
   try {
     const meta = (it?.data?.meta ?? it?.data) || {};
     const rawIndustry =
-      it?.campaign?.industry_key ||
-      meta?.identity?.industry ||
-      meta?.industry ||
-      it?.industry ||
-      '';
+      it?.campaign?.industry_key || meta?.identity?.industry || meta?.industry || it?.industry || '';
     it.seo_readiness = readinessScore(it?.data ?? {}, resolveIndustryKey(rawIndustry));
   } catch {
     it.seo_readiness = null;
@@ -74,12 +73,7 @@ export async function GET(req: Request) {
   const sortParam = (url.searchParams.get('sort') || 'updated') as SortKey;
   const sort: SortKey = SORT_KEYS.includes(sortParam) ? sortParam : 'updated';
   const asc = (url.searchParams.get('dir') || 'desc') === 'asc';
-
-  // For the in-memory SEO sort we must fetch the whole (capped) candidate set, score
-  // it, then slice. For DB-native sorts the DB paginates for us.
   const wantSeoSort = sort === 'seo';
-  const effLimit = wantSeoSort ? SEO_SORT_CAP : limit;
-  const effOffset = wantSeoSort ? 0 : offset;
 
   const supabase = await getServerSupabase();
   const {
@@ -97,6 +91,56 @@ export async function GET(req: Request) {
   const explicitFrom = dateParam ? getFromDate(dateParam) : null;
   const fromIso = (explicitFrom ?? (isAdmin ? new Date(0) : fallbackStart)).toISOString();
 
+  // SEO-readiness sort is a plain ORDER BY on the persisted column (migration
+  // 20260721), so it paginates like any other sort — no cap. It queries templates
+  // directly (bypassing the base MV, which lacks the column); the list renders flat
+  // in this order (the table pauses grouping while a sort is active).
+  if (wantSeoSort) {
+    const SEO_SELECT = [
+      'id','slug','template_name','updated_at','created_at','is_site','is_version','archived',
+      'industry','color_mode','base_slug','owner_id','data','city','phone','banner_url','published',
+      'seo_readiness','seo_readiness_pct',
+    ].join(',');
+
+    let q = supabase
+      .from('templates')
+      .select(SEO_SELECT, { count: 'exact' })
+      .eq('archived', false)
+      .gte('updated_at', fromIso)
+      .order('seo_readiness_pct', { ascending: asc, nullsFirst: false })
+      .order('updated_at', { ascending: false }); // stable tiebreaker
+    if (!includeVersions) q = q.eq('is_version', false); // one row per family ≈ base rows
+    if (!isAdmin) q = q.eq('owner_id', user.id);
+
+    const { data, error, count } = await q.range(offset, offset + limit - 1);
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+    const seoItems = (data ?? []).map((row: any) => {
+      const jd = safeParse<any>(row?.data) || {};
+      const meta = (jd?.meta ?? jd) || {};
+      return {
+        ...row,
+        base_key: deriveBaseKey(row),
+        root_key: deriveRootKey(row),
+        site_type: meta?.site_type ?? null,
+        industry_label: meta?.industry_label ?? null,
+        data: jd,
+      };
+    });
+
+    try {
+      const camps = await geoCampaignsByTemplateIds(seoItems.map((it) => it.id).filter(Boolean));
+      for (const it of seoItems) { const c = camps[it.id]; if (c) it.campaign = c; }
+    } catch { /* best-effort */ }
+    for (const it of seoItems) withReadiness(it);
+
+    const seoTotal = count ?? seoItems.length;
+    return NextResponse.json({
+      items: seoItems,
+      page: { limit, offset, total: seoTotal, hasMore: offset + seoItems.length < seoTotal, nextOffset: offset + seoItems.length },
+    });
+  }
+
   let items: any[] = [];
   let total = 0;
 
@@ -105,22 +149,21 @@ export async function GET(req: Request) {
     const SELECT =
       [
         'id','slug','template_name','updated_at','created_at','is_site','is_version','archived',
-        'industry','color_mode','base_slug','owner_id','data','city','phone','banner_url'
+        'industry','color_mode','base_slug','owner_id','data','city','phone','banner_url',
+        'seo_readiness','seo_readiness_pct'
       ].join(',');
 
-    // DB-native sort column (SEO sort falls back to updated_at here, then re-sorts
-    // in memory below after scoring).
     const col = sort === 'created' ? 'created_at' : sort === 'name' ? 'template_name' : 'updated_at';
     let baseQ = supabase
       .from('templates')
       .select(SELECT, { count: 'exact' })
       .eq('archived', false)
       .gte('updated_at', fromIso)
-      .order(col, { ascending: wantSeoSort ? false : asc });
+      .order(col, { ascending: asc });
 
     if (!isAdmin) baseQ = baseQ.eq('owner_id', user.id);
 
-    const { data, error, count } = await baseQ.range(effOffset, effOffset + effLimit - 1);
+    const { data, error, count } = await baseQ.range(offset, offset + limit - 1);
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
     items = (data ?? []).map((row: any) => {
@@ -154,7 +197,6 @@ export async function GET(req: Request) {
     // RLS-scoped secure MV. Fallback to raw MV with a manual owner filter.
     const baseCol =
       sort === 'created' ? 'canonical_created_at' : sort === 'name' ? 'canonical_template_name' : 'effective_updated_at';
-    const baseAsc = wantSeoSort ? false : asc;
 
     let res: any;
     if (isAdmin) {
@@ -162,25 +204,25 @@ export async function GET(req: Request) {
         .from('template_bases')
         .select(MV_SELECT + ',owner_id', { count: 'exact' })
         .gte('effective_updated_at', fromIso)
-        .order(baseCol, { ascending: baseAsc })
-        .range(effOffset, effOffset + effLimit - 1);
+        .order(baseCol, { ascending: asc })
+        .range(offset, offset + limit - 1);
     } else {
       res = await supabase
         .from('template_bases_secure')
         .select(MV_SELECT, { count: 'exact' })
         .gte('effective_updated_at', fromIso)
-        .order(baseCol, { ascending: baseAsc })
-        .range(effOffset, effOffset + effLimit - 1);
+        .order(baseCol, { ascending: asc })
+        .range(offset, offset + limit - 1);
     }
     if (res.error) {
       let q2 = supabase
         .from('template_bases')
         .select(MV_SELECT + ',owner_id', { count: 'exact' })
         .gte('effective_updated_at', fromIso)
-        .order(baseCol, { ascending: baseAsc });
+        .order(baseCol, { ascending: asc });
 
       if (!isAdmin) q2 = q2.eq('owner_id', user.id);
-      res = await q2.range(effOffset, effOffset + effLimit - 1);
+      res = await q2.range(offset, offset + limit - 1);
     }
     if (res.error) return NextResponse.json({ error: res.error.message }, { status: 500 });
 
@@ -210,7 +252,7 @@ export async function GET(req: Request) {
     if (canonicalIds.length) {
       const { data: canonRows } = await supabase
         .from('templates')
-        .select('id,template_name,banner_url,city,phone,data')
+        .select('id,template_name,banner_url,city,phone,data,seo_readiness,seo_readiness_pct')
         .in('id', canonicalIds);
       if (Array.isArray(canonRows)) {
         canonById = new Map(canonRows.map((r: any) => [r.id, r]));
@@ -248,6 +290,7 @@ export async function GET(req: Request) {
         base_slug: r.base_slug,
         effective_updated_at: r.effective_updated_at,
         banner_url: canon?.banner_url ?? null,
+        seo_readiness: canon?.seo_readiness ?? null,
         published: null,
         // Surface the live custom domain (fixes the "View live" link + enables
         // GSC matching); falls back to null → card uses the /sites/<slug> path.
@@ -277,24 +320,8 @@ export async function GET(req: Request) {
     /* best-effort — campaign badges are non-essential */
   }
 
-  // Score every row (campaign key feeds the industry resolution above, so do this last).
+  // Score every row for display (campaign key feeds industry resolution above, so last).
   for (const it of items as any[]) withReadiness(it);
-
-  if (wantSeoSort) {
-    // In-memory sort over the capped candidate set, then slice the requested window.
-    items.sort((a: any, b: any) => {
-      const pa = a?.seo_readiness?.pct ?? -1;
-      const pb = b?.seo_readiness?.pct ?? -1;
-      return asc ? pa - pb : pb - pa;
-    });
-    const capped = items.length;
-    const paged = items.slice(offset, offset + limit);
-    const hasMore = offset + paged.length < capped;
-    return NextResponse.json({
-      items: paged,
-      page: { limit, offset, total: capped, hasMore, nextOffset: offset + paged.length, capped: capped >= SEO_SORT_CAP },
-    });
-  }
 
   const hasMore = offset + items.length < total;
   return NextResponse.json({

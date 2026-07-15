@@ -444,47 +444,9 @@ export default function PageHeaderEditor({
       {/* Scrollable content */}
       <div className="flex-1 overflow-y-auto px-6 py-5 overscroll-contain">
         <div className="grid grid-cols-1 lg:grid-cols-3 items-start gap-6">
-          {/* LEFT: Logo + Industry */}
+          {/* LEFT: Branding — Industry → AI logo → upload → favicon */}
           <section className="lg:col-span-1 max-w-full space-y-3">
-            <Label className="text-white">Logo</Label>
-            <div
-              {...getRootProps()}
-              className="border border-dashed rounded-md p-4 text-center cursor-pointer bg-neutral-900 min-h-[120px] flex items-center justify-center"
-            >
-              <input {...getInputProps()} />
-              {isUploading ? (
-                <div className="flex items-center gap-2 text-neutral-300">
-                  <svg className="h-5 w-5 animate-spin" viewBox="0 0 24 24" fill="none" aria-hidden>
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
-                  </svg>
-                  Uploading...
-                </div>
-              ) : logoUrl ? (
-                <div className="flex flex-col items-center gap-2">
-                  <NextImage src={logoUrl} alt="Logo" width={100} height={100} className="h-16 w-auto object-contain" />
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setLogoUrl('');
-                      emitMerge({ meta: { ...(meta ?? {}), logo_url: '' } });
-                      emitApplyPatch({ data: { ...(template?.data as any), meta: { ...(meta ?? {}), logo_url: '' } }, logo_url: '' });
-                    }}
-                  >
-                    Remove Logo
-                  </Button>
-                </div>
-              ) : (
-                <p className="text-sm text-neutral-400">
-                  Drag and drop a logo image here, or click to browse
-                  <br />(PNG, JPG, SVG, WebP — Max 5MB)
-                </p>
-              )}
-            </div>
-
-            {/* Industry (writes canonical KEY to meta) */}
+            {/* Industry (writes canonical KEY to meta) — drives the generator */}
             <div className="rounded-lg border border-white/10 p-3 bg-neutral-900/70">
               <Label className="text-white/80">Industry (updates Identity)</Label>
               <select
@@ -589,6 +551,47 @@ export default function PageHeaderEditor({
               </div>
             </div>
 
+            {/* Logo — upload your own (secondary to the generator above) */}
+            <div>
+              <Label className="text-white/80">Logo — or upload your own</Label>
+              <div
+                {...getRootProps()}
+                className="mt-1 border border-dashed border-white/15 rounded-md p-4 text-center cursor-pointer bg-neutral-900 min-h-[120px] flex items-center justify-center hover:border-white/30"
+              >
+                <input {...getInputProps()} />
+                {isUploading ? (
+                  <div className="flex items-center gap-2 text-neutral-300">
+                    <svg className="h-5 w-5 animate-spin" viewBox="0 0 24 24" fill="none" aria-hidden>
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
+                    </svg>
+                    Uploading...
+                  </div>
+                ) : logoUrl ? (
+                  <div className="flex flex-col items-center gap-2">
+                    <NextImage src={logoUrl} alt="Logo" width={100} height={100} className="h-16 w-auto object-contain" />
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setLogoUrl('');
+                        emitMerge({ meta: { ...(meta ?? {}), logo_url: '' } });
+                        emitApplyPatch({ data: { ...(template?.data as any), meta: { ...(meta ?? {}), logo_url: '' } }, logo_url: '' });
+                      }}
+                    >
+                      Remove Logo
+                    </Button>
+                  </div>
+                ) : (
+                  <p className="text-sm text-neutral-400">
+                    Drag and drop a logo image here, or click to browse
+                    <br />(PNG, JPG, SVG, WebP — Max 5MB)
+                  </p>
+                )}
+              </div>
+            </div>
+
             {/* Favicon tools */}
             <div className="flex gap-2">
               <Button size="sm" onClick={generateFaviconAIHere} disabled={genBusy}>
@@ -632,16 +635,6 @@ export default function PageHeaderEditor({
               </div>
             )}
           </section>
-        </div>
-      </div>
-
-      {/* Sticky bottom bar */}
-      <div className="sticky bottom-0 z-20 border-t border-white/10 bg-neutral-900/70 backdrop-blur px-6 py-3">
-        <div className="flex justify-end gap-2">
-          <Button variant="ghost" onClick={onClose} disabled={saving}>Cancel</Button>
-          <Button onClick={saveBlock} disabled={!canSave} title={!areLinksValid ? 'Fill in link label + URL' : ''}>
-            {saving ? 'Saving...' : 'Save'}
-          </Button>
         </div>
       </div>
     </div>

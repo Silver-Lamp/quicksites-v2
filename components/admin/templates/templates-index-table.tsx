@@ -181,14 +181,39 @@ function scoreForPrimary(t: any): number {
 type GroupMode = 'none' | 'base' | 'root';
 const GROUP_MODE_KEY = 'qs:templates:groupMode';
 
+function seoColor(pct: number): string {
+  return pct >= 80 ? 'bg-emerald-500' : pct >= 50 ? 'bg-amber-500' : 'bg-red-500';
+}
+
+/** Compact SEO-readiness meter cell (mirrors the in-editor Readiness coach's %). */
+function SeoCell({ s }: { s?: { pct: number; done: number; total: number; hardLeft: number } | null }) {
+  if (!s || !s.total) return <td className="p-2 text-zinc-600">—</td>;
+  return (
+    <td className="p-2">
+      <div
+        className="inline-flex items-center gap-1.5"
+        title={`SEO readiness — ${s.done}/${s.total} checks${s.hardLeft ? ` · ${s.hardLeft} required left` : ''}`}
+      >
+        <div className="h-1.5 w-12 overflow-hidden rounded-full bg-zinc-800">
+          <div className={`h-full rounded-full ${seoColor(s.pct)}`} style={{ width: `${s.pct}%` }} />
+        </div>
+        <span className="text-[11px] font-medium text-zinc-300 tabular-nums">{s.pct}%</span>
+      </div>
+    </td>
+  );
+}
+
 export default function TemplatesIndexTable({
   templates,
   selectedFilter = '',
   includeVersions = false,
+  sortActive = false,
 }: {
   templates: Template[];
   selectedFilter?: string;
   includeVersions?: boolean;
+  /** True when an explicit sort is active — render flat in server order (grouping paused). */
+  sortActive?: boolean;
 }) {
   const [archiveFilter, setArchiveFilter] = useState<'active' | 'archived' | 'all'>('active');
   const [search, setSearch] = useState('');
@@ -277,13 +302,16 @@ export default function TemplatesIndexTable({
   /* ---------- grouping ---------- */
   type Group = { key: string; rows: any[]; primary: any; children: any[] };
 
+  // An explicit sort supersedes recency grouping — render flat in the server-provided order.
+  const effectiveGroupMode: GroupMode = sortActive ? 'none' : groupMode;
+
   const grouped: Group[] = useMemo(() => {
-    if (groupMode === 'none') {
+    if (effectiveGroupMode === 'none') {
       return filtered.map((r) => ({ key: r.id, rows: [r], primary: r, children: [] }));
     }
 
     const map = new Map<string, any[]>();
-    const pickKey = groupMode === 'root' ? rootKey : baseKey;
+    const pickKey = effectiveGroupMode === 'root' ? rootKey : baseKey;
 
     for (const r of filtered) {
       const k = pickKey(r);
@@ -315,7 +343,7 @@ export default function TemplatesIndexTable({
     });
 
     return out;
-  }, [filtered, groupMode]);
+  }, [filtered, effectiveGroupMode]);
 
   // expanded state per group
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
@@ -482,7 +510,7 @@ export default function TemplatesIndexTable({
         {/* Name + group toggle */}
         <td className="p-2">
           <div className="flex items-start gap-2">
-            {groupMode !== 'none' && hasChildren > 0 ? (
+            {effectiveGroupMode !== 'none' && hasChildren > 0 ? (
               <button
                 className="mt-[2px] text-white/70 hover:text-white"
                 onClick={() => toggleGroup(gKey)}
@@ -512,7 +540,7 @@ export default function TemplatesIndexTable({
                 </div>
               ) : null}
               <RebuildPitchBadge row={t} slug={t.slug} className="mt-1" />
-              {groupMode !== 'none' && hasChildren > 0 && (
+              {effectiveGroupMode !== 'none' && hasChildren > 0 && (
                 <div className="text-[11px] text-white/45 mt-0.5">
                   {expanded[gKey]
                     ? `${hasChildren} variant${hasChildren === 1 ? '' : 's'}`
@@ -534,6 +562,8 @@ export default function TemplatesIndexTable({
         <td className="p-2 text-zinc-400">
           {updated ? formatDistanceToNow(new Date(updated), { addSuffix: true }) : 'N/A'}
         </td>
+
+        <SeoCell s={(t as any).seo_readiness} />
 
         <td className="p-2 text-zinc-400" />
 
@@ -649,6 +679,7 @@ export default function TemplatesIndexTable({
         <td className="p-2 text-zinc-400">
           {cUpdated ? formatDistanceToNow(new Date(cUpdated), { addSuffix: true }) : 'N/A'}
         </td>
+        <SeoCell s={(c as any).seo_readiness} />
         <td className="p-2 text-zinc-400" />
         <td className="p-2">
           {cPreview ? (
@@ -702,18 +733,23 @@ export default function TemplatesIndexTable({
             </Button>
           </div>
 
-          {/* Grouping selector (persisted) */}
-          <label className="text-xs text-white/70 inline-flex items-center gap-2 ml-2">
+          {/* Grouping selector (persisted). Paused while an explicit sort is active — the
+              rows are shown flat in the sorted order instead. */}
+          <label
+            className={cn('text-xs text-white/70 inline-flex items-center gap-2 ml-2', sortActive && 'opacity-50')}
+            title={sortActive ? 'Grouping is paused while a sort is active' : undefined}
+          >
             Group by
             <select
-              value={groupMode}
+              value={sortActive ? 'none' : groupMode}
+              disabled={sortActive}
               onChange={(e) => {
                 const v = e.target.value as GroupMode;
                 setGroupMode(v);
                 try { localStorage.setItem(GROUP_MODE_KEY, v); } catch {}
                 hasSavedPrefRef.current = true; // user explicitly chose
               }}
-              className="bg-zinc-900 border border-white/15 rounded px-2 py-1 text-xs text-white"
+              className="bg-zinc-900 border border-white/15 rounded px-2 py-1 text-xs text-white disabled:cursor-not-allowed"
             >
               <option value="none">None</option>
               <option value="base">Base</option>
@@ -774,6 +810,7 @@ export default function TemplatesIndexTable({
               <th className="p-2">City</th>
               <th className="p-2">Phone</th>
               <th className="p-2">Updated</th>
+              <th className="p-2">SEO</th>
               <th className="p-2">GSC</th>
               <th className="p-2 w-[60px]">Preview</th>
             </tr>
@@ -783,7 +820,7 @@ export default function TemplatesIndexTable({
             {grouped.map((g) => (
               <Fragment key={g.key}>
                 {renderPrimaryRow(g.primary, g.key, g.children.length)}
-                {groupMode !== 'none' && expanded[g.key] && g.children.map((c) => renderChildRow(c))}
+                {effectiveGroupMode !== 'none' && expanded[g.key] && g.children.map((c) => renderChildRow(c))}
               </Fragment>
             ))}
           </tbody>

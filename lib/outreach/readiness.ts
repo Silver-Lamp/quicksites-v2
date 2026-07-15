@@ -188,11 +188,62 @@ export type ChecklistItem = {
  * flag, positively framed for checkboxes. Reuses analyzeReadiness so the gate + this view can
  * never disagree.
  */
-export type ReadinessScore = { pct: number; done: number; total: number; hardLeft: number };
+/** The single highest-priority not-yet-done fix — what to do next + where it lives. */
+export type NextStep = {
+  id: string;
+  cta: string;        // imperative button label ("List your services")
+  label: string;      // what "done" looks like
+  hint: string | null;
+  blockType: string | null; // reveal target in the editor, if the fix is a block
+  href?: string | null;     // deep link (filled in when a slug is known — see persistReadiness)
+};
+
+export type ReadinessScore = {
+  pct: number;
+  done: number;
+  total: number;
+  hardLeft: number;
+  nextStep: NextStep | null;
+};
+
+// Imperative "do this next" labels keyed by checklist item id (the item's own label
+// reads as a done-state, which is awkward on a button).
+const NEXT_STEP_CTA: Record<string, string> = {
+  nap: 'Add name, address & phone',
+  call: 'Add a tap-to-call button',
+  hero: 'Write a real hero headline',
+  services: 'List your services',
+  menu: 'Add a priced menu',
+  'menu-copy': 'Fill in the menu copy',
+  logo: 'Add a logo',
+  schema: 'Add LocalBusiness schema',
+  pages: 'Add a city/service page',
+  title: 'Set the page title',
+  gbp: 'Link Google Business Profile',
+  'nap-consistent': 'Use one consistent phone',
+};
+
+/** The next step to take on a site: the first unmet check (required before recommended). */
+export function readinessNextStep(data: any, industryKey: string): NextStep | null {
+  const items = readinessChecklist(data, industryKey);
+  const item =
+    items.find((i) => i.severity === 'hard' && !i.ok) ??
+    items.find((i) => i.severity === 'soft' && !i.ok) ??
+    null;
+  if (!item) return null;
+  return {
+    id: item.id,
+    cta: NEXT_STEP_CTA[item.id] ?? item.label,
+    label: item.label,
+    hint: item.hint ?? null,
+    blockType: item.blockTypes?.[0] ?? null,
+  };
+}
 
 /**
  * A single SEO-readiness score for a site — the same number the in-editor Readiness
- * coach shows (done / total of the checklist). Pure; safe to call per row in a list.
+ * coach shows (done / total of the checklist) + the next step to take. Pure; safe to
+ * call per row in a list.
  */
 export function readinessScore(data: any, industryKey: string): ReadinessScore {
   const items = readinessChecklist(data, industryKey);
@@ -200,7 +251,20 @@ export function readinessScore(data: any, industryKey: string): ReadinessScore {
   const done = items.filter((i) => i.ok).length;
   const hardLeft = items.filter((i) => i.severity === 'hard' && !i.ok).length;
   const pct = total ? Math.round((done / total) * 100) : 0;
-  return { pct, done, total, hardLeft };
+  const item =
+    items.find((i) => i.severity === 'hard' && !i.ok) ??
+    items.find((i) => i.severity === 'soft' && !i.ok) ??
+    null;
+  const nextStep: NextStep | null = item
+    ? {
+        id: item.id,
+        cta: NEXT_STEP_CTA[item.id] ?? item.label,
+        label: item.label,
+        hint: item.hint ?? null,
+        blockType: item.blockTypes?.[0] ?? null,
+      }
+    : null;
+  return { pct, done, total, hardLeft, nextStep };
 }
 
 export function readinessChecklist(data: any, industryKey: string): ChecklistItem[] {

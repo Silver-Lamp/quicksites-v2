@@ -12,6 +12,7 @@ import { supabaseAdmin } from '@/lib/supabase/admin';
 import SiteRenderer from '@/components/sites/site-renderer';
 import { TemplateEditorProvider } from '@/context/template-editor-context';
 import { generatePageMetadata } from '@/lib/seo/generateMetadata';
+import { buildLocalBusinessSchema, localBusinessSchemaEnabled } from '@/lib/seo/localBusinessSchema';
 import CartPageClient from '@/components/cart/CartPageClient';
 import CheckoutPageClient from '@/components/cart/CheckoutPageClient';
 import ThankYouPageClient from '@/components/cart/ThankYouPageClient';
@@ -392,6 +393,13 @@ export default async function SitePreviewPage({
   // "Who will control this domain?" — competitor race context (only when a live campaign exists).
   const competition = showClaimBar ? await getSiteCompetition(siteRow.id) : null;
 
+  // LocalBusiness JSON-LD (built live from identity so it stays fresh) — emitted when the
+  // operator turned it on in the Readiness coach. Skipped on the pre-claim watermarked draft.
+  const localBusinessSchema =
+    !showWatermark && localBusinessSchemaEnabled(normalized.data)
+      ? buildLocalBusinessSchema(normalized.data, { url: `${baseUrl}/${normalized.slug}` })
+      : null;
+
   return (
     <TemplateEditorProvider
       templateName={normalized.template_name ?? normalized.slug ?? String(normalized.id)}
@@ -406,6 +414,12 @@ export default async function SitePreviewPage({
           competitors={competition.competitors}
           deadlineIso={competition.deadlineIso}
           claimHref={`/claim-site/${siteRow.id}?token=${encodeURIComponent(claimToken)}`}
+        />
+      )}
+      {localBusinessSchema && (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(localBusinessSchema) }}
         />
       )}
       <SiteRenderer

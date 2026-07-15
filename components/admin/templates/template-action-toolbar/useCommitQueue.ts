@@ -106,6 +106,10 @@ export function useCommitQueue(tplRef: React.RefObject<Template>) {
     } finally {
       committingRef.current = false;
       setPending(false);
+      // Settled signal for listeners that track their own "saving" UI (e.g. the sidebar's
+      // "Save now" button) — fires on BOTH success and failure, so their spinner never
+      // sticks when a commit fails or a qs:preview:save is missed in a race.
+      try { window.dispatchEvent(new Event('qs:preview:save-settled')); } catch {}
     }
   }, [tplRef, buildPatch]);
 

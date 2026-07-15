@@ -217,12 +217,25 @@ export default function SidebarSettings({ template, onChange, variant }: Props) 
   const tplRef = useLiveRef(template);
   const [pending, setPending] = useState(false);
 
+  // "Saving…" is cleared by the toolbar's save-settled signal — but never let it stick if
+  // that signal is missed (a failed commit, or a race where it fires before we set pending).
+  const pendingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const clearPending = useCallback(() => {
+    if (pendingTimerRef.current) { clearTimeout(pendingTimerRef.current); pendingTimerRef.current = null; }
+    setPending(false);
+  }, []);
+  const markPending = useCallback(() => {
+    setPending(true);
+    if (pendingTimerRef.current) clearTimeout(pendingTimerRef.current);
+    pendingTimerRef.current = setTimeout(() => setPending(false), 10_000); // safety fallback
+  }, []);
+
   // Debounced signal to the toolbar queue
   const saveSoonRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const requestToolbarSaveSoon = useCallback(() => {
     if (saveSoonRef.current) clearTimeout(saveSoonRef.current);
     saveSoonRef.current = setTimeout(() => {
-      setPending(true);
+      markPending();
       // Wait one frame so React state settles before the toolbar snapshots tplRef.current
       requestAnimationFrame(() => {
         try {
@@ -230,14 +243,18 @@ export default function SidebarSettings({ template, onChange, variant }: Props) 
         } catch {}
       });
     }, 350);
-  }, []);
+  }, [markPending]);
 
-  // Clear pending when toolbar announces a successful save
+  // Clear pending when the toolbar settles a save — on success (qs:preview:save) OR on
+  // failure (qs:preview:save-settled), so the "Saving…" spinner can never get stuck.
   useEffect(() => {
-    const onSaved = () => setPending(false);
-    window.addEventListener('qs:preview:save', onSaved);
-    return () => window.removeEventListener('qs:preview:save', onSaved);
-  }, []);
+    window.addEventListener('qs:preview:save', clearPending);
+    window.addEventListener('qs:preview:save-settled', clearPending);
+    return () => {
+      window.removeEventListener('qs:preview:save', clearPending);
+      window.removeEventListener('qs:preview:save-settled', clearPending);
+    };
+  }, [clearPending]);
 
   // Unified patch applier: update local template state, then queue a save via toolbar
   const applyPatch = useCallback(

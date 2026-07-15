@@ -10,7 +10,7 @@ import ThemePanel from '../templates/panels/theme-panel';
 import PaymentSettingsPanel from '../payments/payment-settings-panel';
 import HoursPanel from '../templates/panels/hours-panel';
 import { Button } from '@/components/ui/button';
-import { Save, Loader2, AlertTriangle } from 'lucide-react';
+import { Save, Loader2, AlertTriangle, Check } from 'lucide-react';
 import EcommercePanel from '../templates/panels/ecommerce-panel';
 import * as ReactNS from 'react';
 import type { Template as Tpl, Page as Pg } from '@/types/template';
@@ -216,6 +216,13 @@ export default function SidebarSettings({ template, onChange, variant }: Props) 
   // ====== Save orchestration (delegate to toolbar queue) ======
   const tplRef = useLiveRef(template);
   const [pending, setPending] = useState(false);
+  // Are there edits not yet persisted? Set on every patch, cleared when the toolbar reports a
+  // successful save. Drives the save-bar: clean → "Saved", in-flight → "Saving…".
+  const [dirty, setDirty] = useState(false);
+  // Only surface the manual "Save now" button when a save has been outstanding for a few
+  // seconds (autosave apparently didn't catch it) — otherwise the bar just reads "Saving…".
+  const [staleSave, setStaleSave] = useState(false);
+  const STALE_SAVE_MS = 4000;
 
   // "Saving…" is cleared by the toolbar's save-settled signal — but never let it stick if
   // that signal is missed (a failed commit, or a race where it fires before we set pending).
@@ -229,6 +236,9 @@ export default function SidebarSettings({ template, onChange, variant }: Props) 
     if (pendingTimerRef.current) clearTimeout(pendingTimerRef.current);
     pendingTimerRef.current = setTimeout(() => setPending(false), 10_000); // safety fallback
   }, []);
+  // A successful save settles the bar back to clean; a bare "settled" (failure) only stops the
+  // spinner, leaving `dirty` so the manual button can re-offer the save.
+  const markSaved = useCallback(() => { clearPending(); setDirty(false); }, [clearPending]);
 
   // Debounced signal to the toolbar queue
   const saveSoonRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -245,22 +255,32 @@ export default function SidebarSettings({ template, onChange, variant }: Props) 
     }, 350);
   }, [markPending]);
 
-  // Clear pending when the toolbar settles a save — on success (qs:preview:save) OR on
-  // failure (qs:preview:save-settled), so the "Saving…" spinner can never get stuck.
+  // Settle the save bar when the toolbar reports back: a success (qs:preview:save) marks the
+  // template clean; a bare settle/failure (qs:preview:save-settled) only stops the spinner so
+  // the "Saving…" state can never get stuck (and `dirty` stays, re-offering a manual save).
   useEffect(() => {
-    window.addEventListener('qs:preview:save', clearPending);
+    window.addEventListener('qs:preview:save', markSaved);
     window.addEventListener('qs:preview:save-settled', clearPending);
     return () => {
-      window.removeEventListener('qs:preview:save', clearPending);
+      window.removeEventListener('qs:preview:save', markSaved);
       window.removeEventListener('qs:preview:save-settled', clearPending);
     };
-  }, [clearPending]);
+  }, [markSaved, clearPending]);
+
+  // Reveal the manual "Save now" button only after edits have gone unsaved for a few seconds —
+  // i.e. autosave hasn't settled them. A successful save flips `dirty` off and hides it again.
+  useEffect(() => {
+    if (!dirty) { setStaleSave(false); return; }
+    const t = setTimeout(() => setStaleSave(true), STALE_SAVE_MS);
+    return () => clearTimeout(t);
+  }, [dirty]);
 
   // Unified patch applier: update local template state, then queue a save via toolbar
   const applyPatch = useCallback(
     (patch: Partial<Template>) => {
       const next = mergeTemplate(tplRef.current, patch);
       onChange(next as Partial<Template>);
+      setDirty(true);
       requestToolbarSaveSoon();
     },
     [onChange, requestToolbarSaveSoon, tplRef]
@@ -274,13 +294,14 @@ export default function SidebarSettings({ template, onChange, variant }: Props) 
   );
 
   const saveNow = useCallback(() => {
-    setPending(true);
+    markPending();
+    setStaleSave(false);
     requestAnimationFrame(() => {
       try {
         window.dispatchEvent(new CustomEvent('qs:toolbar:save-now', { detail: { source: 'sidebar:button' } }));
       } catch {}
     });
-  }, []);
+  }, [markPending]);
 
   // ====== Derive active page for block-insertion helpers (home → first → 'home') ======
   const activePageId = useMemo(() => {
@@ -299,13 +320,29 @@ export default function SidebarSettings({ template, onChange, variant }: Props) 
       }
       id="sidebar-settings-inner"
     >
-      {/* Sticky save bar */}
-      <div className="sticky top-0 z-10 -mx-4 mb-2 border-b bg-background/95 px-4 py-2 backdrop-blur flex items-center gap-2">
-        <Button size="sm" className="gap-2" onClick={saveNow}>
-          {pending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
-          {pending ? 'Saving…' : 'Save now'}
-        </Button>
-        <span className="text-xs text-muted-foreground">Autosaves on change</span>
+      {/* Sticky save bar — resting state reads "Saved"; a save in flight shows "Saving…";
+          the manual button only appears once edits have been unsaved for a few seconds. */}
+      <div className="sticky top-0 z-10 -mx-4 mb-2 border-b bg-background/95 px-4 py-2 backdrop-blur flex items-center gap-2 min-h-[2.25rem]">
+        {pending ? (
+          <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
+            <Loader2 className="h-3.5 w-3.5 animate-spin" /> Saving…
+          </span>
+        ) : dirty && staleSave ? (
+          <>
+            <Button size="sm" className="gap-2" onClick={saveNow}>
+              <Save className="h-3.5 w-3.5" /> Save now
+            </Button>
+            <span className="text-xs text-muted-foreground">Autosave hasn’t caught these yet</span>
+          </>
+        ) : dirty ? (
+          <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
+            <Loader2 className="h-3.5 w-3.5 animate-spin" /> Saving…
+          </span>
+        ) : (
+          <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
+            <Check className="h-3.5 w-3.5 text-emerald-500" /> Saved
+          </span>
+        )}
       </div>
 
       {/* Theme, Identity, Services */}
@@ -352,7 +389,7 @@ export default function SidebarSettings({ template, onChange, variant }: Props) 
         initialPlatformFeeBps={75}
       />
     </div>
-  ), [activePageId, applyPatch, forceOpenHours, pending, saveNow, spotlightHours, template, variant]);
+  ), [activePageId, applyPatch, dirty, forceOpenHours, pending, saveNow, staleSave, spotlightHours, template, variant]);
 
   return (
     <aside

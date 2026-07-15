@@ -485,6 +485,11 @@ export const blockContentSchemaMap = {
       image_position: z.enum(['top','center','bottom']).default('center'),
       image_x: z.number().min(0).max(100).optional(),
       image_y: z.number().min(0).max(100).optional(),
+      // Hide the overlaid headline/subheadline — e.g. when the background image
+      // already contains that text.
+      hide_headline: z.boolean().optional().default(false),
+      hide_subheadline: z.boolean().optional().default(false),
+      hide_cta: z.boolean().optional().default(false),
     })),
   },
 

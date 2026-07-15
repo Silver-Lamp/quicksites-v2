@@ -17,6 +17,7 @@ import { rateLimitOr429 } from '@/lib/api/rateLimitGuard';
 import { ensureParksForArea } from '@/lib/parks/seedParks';
 import { getParksForArea, hasAreaBeenSwept, parksRegistryEnabled, areaKey } from '@/lib/parks/registry';
 import { pickSuite } from '@/lib/parks/suiteScheme';
+import { cleanCityName } from '@/lib/geo/cleanCityName';
 import type { Park } from '@/lib/parks/registry';
 
 export const runtime = 'nodejs';
@@ -55,7 +56,7 @@ export async function POST(req: Request) {
   } catch {
     return NextResponse.json({ error: 'Invalid request body.' }, { status: 400 });
   }
-  const city = typeof body.city === 'string' ? body.city.trim() : '';
+  const city = cleanCityName(typeof body.city === 'string' ? body.city : '');
   const region = typeof body.region === 'string' ? body.region.trim() : '';
   if (!city) return NextResponse.json({ error: 'A city is required.' }, { status: 400 });
 
@@ -80,7 +81,7 @@ export async function GET(req: Request) {
   if (!operator) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
   const url = new URL(req.url);
-  const city = (url.searchParams.get('city') ?? '').trim();
+  const city = cleanCityName(url.searchParams.get('city') ?? '');
   const region = (url.searchParams.get('region') ?? '').trim();
   if (!city) return NextResponse.json({ error: 'A city is required.' }, { status: 400 });
 

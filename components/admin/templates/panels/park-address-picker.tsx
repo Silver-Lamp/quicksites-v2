@@ -9,6 +9,7 @@
 
 import { useState } from 'react';
 import { Factory, Loader2, RefreshCw } from 'lucide-react';
+import { cleanCityName } from '@/lib/geo/cleanCityName';
 
 export type PickedParkAddress = {
   line1: string;
@@ -44,7 +45,25 @@ export default function ParkAddressPicker({ city, state, industryKey, seed, onPi
   const knownCity = (city ?? '').trim();
   const knownState = (state ?? '').trim();
 
-  async function pick(useCity: string, useState_: string, n: number) {
+  /** Kick off a Places sweep for this area (discovery), then report how many parks it seeded. */
+  async function discover(cityName: string, region: string): Promise<number> {
+    try {
+      const res = await fetch('/api/admin/parks/prewarm', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ city: cityName, region: region || undefined }),
+      });
+      const j = await res.json().catch(() => ({}));
+      return res.ok ? Number(j?.count ?? 0) : 0;
+    } catch {
+      return 0;
+    }
+  }
+
+  // `allowDiscover` guards a single auto-sweep + retry so we never loop forever.
+  async function pick(useCity: string, useState_: string, n: number, allowDiscover = true) {
+    const cityName = cleanCityName(useCity);
+    const label = `${cityName}${useState_ ? `, ${useState_}` : ''}`;
     setBusy(true);
     setMessage(null);
     try {
@@ -52,28 +71,39 @@ export default function ParkAddressPicker({ city, state, industryKey, seed, onPi
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          city: useCity,
+          city: cityName,
           region: useState_ || undefined,
           industryKey: industryKey || undefined,
           seed: `${seed || 'identity'}#${n}`,
         }),
       });
       const j = await res.json();
-      if (!res.ok || !j?.ok) {
-        setMessage(
-          j?.reason === 'disabled'
-            ? 'The industrial-park registry is turned off.'
-            : j?.reason === 'no_parks'
-            ? `No industrial parks found near ${useCity}${useState_ ? `, ${useState_}` : ''} yet.`
-            : j?.reason === 'no_city'
-            ? 'Enter a city.'
-            : j?.error || 'Lookup failed.',
-        );
+      if (res.ok && j?.ok) {
+        setLastPark(j.address.parkName ?? null);
+        setAskOpen(false);
+        onPick(j.address as PickedParkAddress);
         return;
       }
-      setLastPark(j.address.parkName ?? null);
-      setAskOpen(false);
-      onPick(j.address as PickedParkAddress);
+      // Nothing seeded for this area yet → auto-run discovery once, then retry the pick.
+      if (j?.reason === 'no_parks' && allowDiscover && cityName) {
+        setMessage(`Discovering industrial parks near ${label}…`);
+        const found = await discover(cityName, useState_);
+        if (found > 0) {
+          await pick(useCity, useState_, n, false); // retry with the freshly-seeded area
+          return;
+        }
+        setMessage(`No industrial parks found near ${label}. Try a nearby larger city.`);
+        return;
+      }
+      setMessage(
+        j?.reason === 'disabled'
+          ? 'The industrial-park registry is turned off.'
+          : j?.reason === 'no_parks'
+          ? `No industrial parks found near ${label}.`
+          : j?.reason === 'no_city'
+          ? 'Enter a city.'
+          : j?.error || 'Lookup failed.',
+      );
     } catch (e: any) {
       setMessage(e?.message || 'Lookup failed.');
     } finally {
@@ -118,7 +148,7 @@ export default function ParkAddressPicker({ city, state, industryKey, seed, onPi
           onClick={onPrimary}
           disabled={busy}
           className="inline-flex items-center gap-1.5 rounded-md border border-violet-500/40 bg-violet-500/10 px-2.5 py-1.5 text-xs font-medium text-violet-200 hover:bg-violet-500/20 disabled:opacity-50"
-          title="Fill this address from a real nearby industrial/flex park"
+          title="Fill this address from a real nearby industrial/flex park (discovers parks automatically if none are cached yet)"
         >
           {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Factory className="h-3.5 w-3.5" />}
           Use an industrial park address

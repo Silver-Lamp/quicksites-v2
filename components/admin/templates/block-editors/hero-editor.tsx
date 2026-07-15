@@ -77,6 +77,9 @@ function toCanonicalHeroProps(local: any, template?: any) {
     image_y: local?.image_y,
     overlay_level: overlay,
     overlay,
+    hide_headline: !!local?.hide_headline,
+    hide_subheadline: !!local?.hide_subheadline,
+    hide_cta: !!local?.hide_cta,
     tone: local?.tone ?? 'neutral',
     tags: Array.isArray(local?.tags) ? local.tags : [],
   };
@@ -1246,6 +1249,42 @@ export default function HeroEditor({
                     </div>
                   )}
                 </div>
+                <div className="md:col-span-3 flex flex-wrap items-center gap-x-5 gap-y-2 border-t border-white/10 pt-3">
+                  <label className="inline-flex items-center gap-2 text-xs text-neutral-300">
+                    <Switch
+                      checked={!!local?.hide_headline}
+                      onCheckedChange={(v) => {
+                        update('hide_headline', v as any);
+                        bumpPreview();
+                      }}
+                    />
+                    Hide headline
+                  </label>
+                  <label className="inline-flex items-center gap-2 text-xs text-neutral-300">
+                    <Switch
+                      checked={!!local?.hide_subheadline}
+                      onCheckedChange={(v) => {
+                        update('hide_subheadline', v as any);
+                        bumpPreview();
+                      }}
+                    />
+                    Hide subheadline
+                  </label>
+                  <label className="inline-flex items-center gap-2 text-xs text-neutral-300">
+                    <Switch
+                      checked={!!local?.hide_cta}
+                      onCheckedChange={(v) => {
+                        update('hide_cta', v as any);
+                        bumpPreview();
+                      }}
+                    />
+                    Hide CTA button
+                  </label>
+                  <span className="text-[11px] text-white/30">
+                    Hide overlaid text when the background image already includes it.
+                  </span>
+                </div>
+
                 <div className="md:col-span-3">
                   <label className="text-xs text-neutral-300">CTA Action</label>
                   <div className="grid grid-cols-3 gap-2">

@@ -192,6 +192,9 @@ export default function HeroRender({
     image_x,
     image_y,
     overlay_level = 'soft',
+    hide_headline = false,
+    hide_subheadline = false,
+    hide_cta = false,
   } = safeContent as any;
 
   // device / viewport
@@ -236,7 +239,7 @@ export default function HeroRender({
     }
   }
 
-  const canShowCTA = !!cta_text && (!!href || previewOnly);
+  const canShowCTA = !hide_cta && !!cta_text && (!!href || previewOnly);
 
   // layout + parallax
   const hasImage = (image_url as string)?.trim() !== '';
@@ -328,8 +331,12 @@ export default function HeroRender({
         isNarrow ? 'pt-16 pb-12' : 'pt-32 pb-20 sm:pt-24 sm:pb-16'
       } text-center`}
     >
-      <h1 className={`${titleSize} font-bold mb-4 drop-shadow ${textPrimary}`}>{headline}</h1>
-      {subheadline && <p className={`${subSize} mb-6 drop-shadow ${textPrimary}`}>{subheadline}</p>}
+      {!hide_headline && headline && (
+        <h1 className={`${titleSize} font-bold mb-4 drop-shadow ${textPrimary}`}>{headline}</h1>
+      )}
+      {!hide_subheadline && subheadline && (
+        <p className={`${subSize} mb-6 drop-shadow ${textPrimary}`}>{subheadline}</p>
+      )}
       {CtaEl}
       <PhoneLine />
     </div>
@@ -417,8 +424,12 @@ export default function HeroRender({
             style={{ objectPosition: backgroundPosition, maxHeight: isNarrow ? '16rem' : '24rem' }}
           />
         )}
-        <h1 className={`${titleSize} font-bold mb-4 text-card-foreground`}>{headline}</h1>
-        {subheadline && <p className={`${subSize} mb-6 text-muted-foreground`}>{subheadline}</p>}
+        {!hide_headline && headline && (
+          <h1 className={`${titleSize} font-bold mb-4 text-card-foreground`}>{headline}</h1>
+        )}
+        {!hide_subheadline && subheadline && (
+          <p className={`${subSize} mb-6 text-muted-foreground`}>{subheadline}</p>
+        )}
         {CtaEl}
         <PhoneLine />
       </div>

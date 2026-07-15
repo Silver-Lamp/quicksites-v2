@@ -11,7 +11,16 @@ type HeroNaturalHeightProps = {
 
 export default function HeroNaturalHeight({ block, cropBehavior = 'cover' }: HeroNaturalHeightProps) {
   const { content } = block;
-  const { image_url, headline, subheadline, cta_text, cta_link } = content || {};
+  const {
+    image_url,
+    headline,
+    subheadline,
+    cta_text,
+    cta_link,
+    hide_headline,
+    hide_subheadline,
+    hide_cta,
+  } = (content || {}) as any;
 
   if (!image_url) return null;
 
@@ -24,13 +33,13 @@ export default function HeroNaturalHeight({ block, cropBehavior = 'cover' }: Her
       />
       <div className="absolute inset-0 flex items-center justify-center px-4 text-white text-center">
         <div className="bg-black/50 backdrop-blur-md p-6 rounded max-w-2xl">
-          {headline && (
+          {!hide_headline && headline && (
             <h1 className="text-3xl md:text-5xl font-bold">{headline}</h1>
           )}
-          {subheadline && (
+          {!hide_subheadline && subheadline && (
             <p className="mt-2 text-lg md:text-xl">{subheadline}</p>
           )}
-          {cta_text && cta_link && (
+          {!hide_cta && cta_text && cta_link && (
             <a
               href={cta_link}
               className="inline-block mt-4 px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700"

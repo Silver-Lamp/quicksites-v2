@@ -227,4 +227,23 @@ add `GET /api/admin/prospects/ranked-pages` pulling GSC `dimensions:['page']` (m
   after the first real batch.
 - Keep every new lib function pure + tested (repo convention, CLAUDE.md §6/§9); keep `tsc --noEmit`
   green.
-```
+
+## 10. Readiness one-click fixes + per-site pipeline (shipped 2026-07-15, PRs #404, #406–#408)
+
+The readiness checklist evolved from "explain how to fix" into "fix it in one click", then into "run every fix for a site". This is the substrate for a future cross-site sweep.
+
+**One registry, two surfaces.** `lib/seo/readinessActions.ts` is the single source of truth: one entry per auto-fixable checklist item — `{ key, itemId, endpoint, label, icon, requiresGeoSite, appliesToIndustry, result→toast }`. Both consumers read it, so there are no drifting maps:
+- `lib/outreach/readiness.ts#buildNextStep(item, industryKey)` → `readinessActionForItem(itemId, industryKey)?.key` attaches the action (and its industry gating) to a row's next step.
+- `components/admin/templates/next-step-button.tsx` (list card + table) runs it: endpoint, label, icon, gating, and toast all come from the registry.
+
+**Server execution is separate + pure-of-React.** `lib/seo/readinessRunners.ts` maps each action key → a server function, typed `Record<ReadinessActionKey, …>` so the mapping is **complete at compile time**. Keeping runners out of the (client-bundled) registry is deliberate. Runners:
+- `fill_office_address` → `lib/parks/fillOfficeAddress.ts` — resolve a real industrial-park building (+ synthetic suite) from the parks registry and commit it. **Idempotent + pipeline-safe**: skips food industries and any site that already shows a NAP (never overwrites a real address). City is normalized of service-area framing ("Serving Cambridge, MA" → "Cambridge") by `lib/geo/cleanCityName.ts` — a polluted city was why the Places sweep returned empty; the picker also auto-discovers parks on the empty state.
+- `fill_local_business_schema` → `lib/seo/fillLocalBusinessSchema.ts` — flip `meta.local_business_schema` on. The JSON-LD is built **live** from identity by `lib/seo/localBusinessSchema.ts` (industry → schema.org subtype) and **emitted on the published render** (`app/sites/[slug]/[[...rest]]/page.tsx`) — the item was previously a no-op with nothing emitting schema.
+- `generate_city_page` → `getGeoCampaignByTemplateId` + `lib/seo/localPagesServer#addCityServicePage`.
+
+**The pipeline.** `lib/seo/runReadinessPipeline.ts` runs every applicable action for one site in registry order — gated by geo/industry, each runner idempotent — and returns per-step status (`ran` / `satisfied` / `skipped` / `noop` / `error`, classified by the pure `lib/seo/pipelineClassify.ts`) + a before→after score, then re-persists the score. Endpoint `POST /api/admin/templates/run-readiness-pipeline` takes `{ templateId }` (one site) or `{ templateIds:[…] }` (small sequential batch, capped). The coach's **"▶ Run steps"** button opens a progress modal (`components/admin/templates/pipeline-progress-modal.tsx`).
+
+**Shared commit.** All server-side template writes route through `lib/templates/commitTemplatePatch.ts` (the sanctioned `commit_template_http` / `app.commit_template` RPC — direct UPDATEs are trigger-blocked, CLAUDE.md §8), replacing the copy-pasted payload in each route.
+
+**Extending it.** A new one-click fix = one registry entry (declares gating + toast) + one `{templateId}` runner function. A cross-site sweep = loop the single-site endpoint per site (each isolated + retryable), or a Workflow fan-out.
+

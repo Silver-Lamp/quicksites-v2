@@ -4,6 +4,7 @@
 // page and the standalone /admin/prospects + /admin/outreach pages fetch identically.
 
 import { supabaseAdmin } from '@/lib/supabase/admin';
+import { getDemandSummaries } from '@/lib/menu/demand';
 import { listProspects, type Prospect } from '@/lib/outreach/prospects';
 import { listGeoCampaigns, type GeoCampaign } from '@/lib/outreach/geoCampaigns';
 import { postcardMailEnabled } from '@/lib/outreach/mail/lob';
@@ -54,7 +55,15 @@ export async function loadOutreachDrafts(): Promise<OutreachDraft[]> {
       .in('claim_source', ['listing_import', 'listing_claimed'])
       .order('created_at', { ascending: false })
       .limit(300);
-    return (data as OutreachDraft[]) ?? [];
+    const rows = (data as OutreachDraft[]) ?? [];
+    // Attach demand counts + whether we've texted the restaurant, so the pipeline can
+    // surface which sites are heating up — the ones worth a claim push.
+    const summaries = await getDemandSummaries(rows.map((r) => r.id));
+    return rows.map((r) => ({
+      ...r,
+      demand: summaries[r.id]?.count ?? 0,
+      demandNotified: summaries[r.id]?.notified ?? false,
+    }));
   } catch {
     return [];
   }

@@ -99,9 +99,26 @@ The **same URL spans the lifecycle**: an unclaimed outreach draft renders with t
 - Helpers: `lib/menu/deliveredMenu.ts` (`menuSubdomainSlug` / `menuPathSlug` / `menuSiteUrl`). Outreach dashboard + `scripts/import-listings-batch.ts` emit `menuSiteUrl(slug)`.
 - **Flag:** `NEXT_PUBLIC_MENU_BASE_DOMAIN` (blank = dormant). Set to `delivered.menu` **after** the apex + `www` + a `*.delivered.menu` wildcard are pointed at this Vercel project.
 
+## 7c. Demand capture on unclaimed drafts ("prove demand before signup")
+
+The strongest claim pitch isn't "we built you a site" — it's "**people already tried to order and you're leaving money on the table.**" On an unclaimed `listing_import` draft on the menu host, we log **order intent** and use the count to escalate the claim bar (and, once we turn it on, to text the owner). Deliberately **no money and no held funds** pre-claim — that's the DoorDash "phantom order" problem (and the laws it triggered); this is a demand *signal* only.
+
+**Phase 1 — count + escalate** (flag `MENU_DEMAND_CAPTURE_ENABLED`):
+- `demand_events` table (`20260722` + `20260723` migrations; deny-default RLS, service-role only). `kind` `call` | `order_ahead`, plus `contact_name`/`contact_phone`/`items` (free **text**) for an order-ahead lead, and `notified_at` (Phase 2).
+- `lib/menu/demand.ts` — `recordDemandEvent` (server **re-checks** `claim_source==='listing_import'`, so intent can't be logged against a claimed/arbitrary site), `getDemandCount`, `getDemandCounts`, `getDemandSummaries`.
+- Public route `POST /api/menu/demand/[templateId]` — flag-gated, per-IP rate-limited (`menu_demand`, 20/hr), Zod-validated; an `order_ahead` requires a phone.
+- `components/sites/demand-capture.tsx` — a delegated `tel:` listener fires a `sendBeacon` (`kind:'call'`) on tap-to-call, plus an **honest** "order ahead" modal. Online checkout isn't live on a draft, so it doesn't fake an order: it captures the lead and points the visitor at the working phone. Rendered by `app/sites/[slug]/[[...rest]]/page.tsx` when `showClaimBar && MENU_DEMAND_CAPTURE_ENABLED`.
+- `MenuClaimBar` escalates from "Is this your restaurant?" to "**N people tried to order here** — claim to turn on online orders and start collecting." Operator visibility: `/admin/outreach` gains an "Order intents" stat + a per-row 🔥 count (`loadOutreachDrafts` → `getDemandSummaries`).
+
+**Phase 2 — notify the owner** (flag `MENU_DEMAND_CAPTURE_SMS`, threshold `MENU_DEMAND_NOTIFY_THRESHOLD`, default 3): `lib/menu/demandNotify.ts#maybeNotifyRestaurant` fires from the capture route after each event; once demand ≥ threshold it texts the restaurant **once** (deduped on `notified_at`), using the **server-derived** listing phone (`resolveListingPhone`, blocks only — same convention as the claim-verify route), a tokenized `claimUrlFor` link, the outreach sender identity, and an opt-out line. **No customer PII in the message** — a visitor left their number expecting a demand signal, not a handoff; the leads become the owner's only after they claim. `/admin/outreach` shows a "✓ texted" pill.
+
+**Rollout:** Phase 1 is safe to run on its own. Phase 2's SMS is held **OFF in prod** until Phase 1 proves out with real people (and cold B2B SMS is A2P 10DLC/TCPA territory — registration/consent is the operator's responsibility). **Phase 3 (not built):** actual pre-claim checkout (auth-not-capture + auto-refund on no-claim) — a separate compliance project.
+
 ## 8. Env flags
 
 - `NEXT_PUBLIC_MENU_BASE_DOMAIN` — the restaurant "menu" base domain (e.g. `delivered.menu`); blank keeps the surface + links dormant. See §7b.
+- `MENU_DEMAND_CAPTURE_ENABLED` — Phase 1 demand capture on unclaimed drafts (counter + claim-bar escalation). Off by default. See §7c.
+- `MENU_DEMAND_CAPTURE_SMS` + `MENU_DEMAND_NOTIFY_THRESHOLD` — Phase 2 owner SMS on threshold cross (default threshold 3). Needs the same Twilio env as claim verification. Off by default; held off in prod until Phase 1 proves out. See §7c.
 - `CLAIM_VERIFICATION_ENABLED` — when `1`/`true`, claiming a `listing_import` draft requires an OTP to the listing phone (or an operator manual verify) before ownership transfers. Needs the `claim_verifications` migration + Twilio env (`TWILIO_ACCOUNT_SID`/`TWILIO_AUTH_TOKEN` + `TWILIO_FROM` or `TWILIO_MESSAGING_SERVICE_SID`). Off by default. See [`CLAIM_VERIFICATION_PLAN.md`](CLAIM_VERIFICATION_PLAN.md).
 - `NEXT_PUBLIC_GUEST_BUILD_ENABLED=1` — gates the anonymous convert/rebuild path (prod ON).
 - `REBUILD_HERO_ENABLED` — off by default; when on, conversion generates a fresh hero instead of reusing the source `og:image`.
@@ -111,6 +128,7 @@ The **same URL spans the lifecycle**: an unclaimed outreach draft renders with t
 ## 9. Known gaps / follow-ups
 
 - **Unverified link:** a live Stripe-**test** click-through of the full order (Enable ordering → Connect → place a test order → confirm the fee lands). Every piece is unit-tested + the demo route proves the numbers, but the browser chain hasn't been driven end-to-end.
+- **Demand capture (§7c):** Phase 1 driven end-to-end locally (API + escalated claim bar + rate limit). Phase 2's actual SMS send is unverified — it needs Twilio creds and is held off in prod pending real-user Phase-1 data. Not yet built: post-claim **lead visibility** (show the owner the captured names/phones/items as the payoff for claiming), and re-notify cadence as demand keeps growing (today it texts once).
 - **Not built** (each pulls in new checkout surface): order-level special instructions / notes, checkout tip, pickup-vs-delivery scheduling.
 - **Deliberately owner-asserted, not AI-inferred:** dietary tags (GF/V/…) — an allergen-safety matter — are toggled by the owner in the editor, never guessed by conversion.
 - Conversion does not auto-pull per-dish photos (menu subpages rarely map images to dish names reliably); photos are added in the editor.

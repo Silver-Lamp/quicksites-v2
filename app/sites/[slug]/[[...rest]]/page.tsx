@@ -18,9 +18,13 @@ import CheckoutPageClient from '@/components/cart/CheckoutPageClient';
 import ThankYouPageClient from '@/components/cart/ThankYouPageClient';
 import PreviewWatermark from '@/components/sites/preview-watermark';
 import MenuClaimBar from '@/components/sites/menu-claim-bar';
+import DemandCapture from '@/components/sites/demand-capture';
 import CompetitionBanner from '@/components/sites/competition-banner';
 import { mintSiteClaimToken } from '@/lib/auth/siteClaimToken';
 import { getSiteCompetition } from '@/lib/outreach/competitionForSite';
+import { MENU_DEMAND_CAPTURE_ENABLED } from '@/lib/flags/menuDemand';
+import { getDemandCount } from '@/lib/menu/demand';
+import { resolveListingPhone } from '@/lib/claim/resolveListingPhone';
 
 /* -------------------- Types -------------------- */
 type SiteRow = {
@@ -393,6 +397,14 @@ export default async function SitePreviewPage({
   // "Who will control this domain?" — competitor race context (only when a live campaign exists).
   const competition = showClaimBar ? await getSiteCompetition(siteRow.id) : null;
 
+  // Demand capture: on a claimable draft (flag-gated), count the order-intents we've logged
+  // and resolve the listing phone for the "call to order" fallback. Drives the claim pitch.
+  const demandEnabled = showClaimBar && MENU_DEMAND_CAPTURE_ENABLED;
+  const demandCount = demandEnabled ? await getDemandCount(siteRow.id) : 0;
+  const demandPhone = demandEnabled
+    ? resolveListingPhone({ data: (normalized as any).data })
+    : null;
+
   // LocalBusiness JSON-LD (built live from identity so it stays fresh) — emitted when the
   // operator turned it on in the Readiness coach. Skipped on the pre-claim watermarked draft.
   const localBusinessSchema =
@@ -431,8 +443,14 @@ export default async function SitePreviewPage({
         className="bg-background text-foreground"
       />
       {showWatermark && <PreviewWatermark />}
+      {demandEnabled && <DemandCapture templateId={siteRow.id} phone={demandPhone} />}
       {showClaimBar && claimToken && (
-        <MenuClaimBar templateId={siteRow.id} token={claimToken} businessName={claimBusinessName} />
+        <MenuClaimBar
+          templateId={siteRow.id}
+          token={claimToken}
+          businessName={claimBusinessName}
+          demandCount={demandCount}
+        />
       )}
     </TemplateEditorProvider>
   );

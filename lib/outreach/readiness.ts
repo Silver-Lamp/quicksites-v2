@@ -201,7 +201,7 @@ export type NextStep = {
 };
 
 /** Action keys the list can execute in place (see next-step-button.tsx → endpoint map). */
-export type NextStepAction = 'generate_city_page';
+export type NextStepAction = 'generate_city_page' | 'fill_office_address';
 
 export type ReadinessScore = {
   pct: number;
@@ -233,15 +233,22 @@ const NEXT_STEP_ACTION: Record<string, NextStepAction> = {
   pages: 'generate_city_page',
 };
 
-function buildNextStep(item: ChecklistItem | null | undefined): NextStep | null {
+function buildNextStep(item: ChecklistItem | null | undefined, industryKey?: string): NextStep | null {
   if (!item) return null;
+  let action = NEXT_STEP_ACTION[item.id] ?? null;
+  // The missing-address fix can be auto-satisfied from the industrial-park registry (real
+  // building + synthetic suite) for non-food local-service sites — offer it as a one-click
+  // action instead of a deep link into the editor. Food sites keep the deep link.
+  if (item.id === 'nap' && industryKey && !FOOD_INDUSTRIES.has(industryKey)) {
+    action = 'fill_office_address';
+  }
   return {
     id: item.id,
     cta: NEXT_STEP_CTA[item.id] ?? item.label,
     label: item.label,
     hint: item.hint ?? null,
     blockType: item.blockTypes?.[0] ?? null,
-    action: NEXT_STEP_ACTION[item.id] ?? null,
+    action,
   };
 }
 
@@ -255,7 +262,7 @@ function firstUnmet(items: ChecklistItem[]): ChecklistItem | null {
 
 /** The next step to take on a site: the first unmet check (required before recommended). */
 export function readinessNextStep(data: any, industryKey: string): NextStep | null {
-  return buildNextStep(firstUnmet(readinessChecklist(data, industryKey)));
+  return buildNextStep(firstUnmet(readinessChecklist(data, industryKey)), industryKey);
 }
 
 /**
@@ -269,7 +276,7 @@ export function readinessScore(data: any, industryKey: string): ReadinessScore {
   const done = items.filter((i) => i.ok).length;
   const hardLeft = items.filter((i) => i.severity === 'hard' && !i.ok).length;
   const pct = total ? Math.round((done / total) * 100) : 0;
-  return { pct, done, total, hardLeft, nextStep: buildNextStep(firstUnmet(items)) };
+  return { pct, done, total, hardLeft, nextStep: buildNextStep(firstUnmet(items), industryKey) };
 }
 
 export function readinessChecklist(data: any, industryKey: string): ChecklistItem[] {

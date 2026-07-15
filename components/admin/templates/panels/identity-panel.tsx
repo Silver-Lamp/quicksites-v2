@@ -10,7 +10,7 @@ import { Button } from '@/components/ui';
 import { RefreshCw, Save, Building2 } from 'lucide-react';
 import { usePanelDeepLink } from './usePanelDeepLink';
 import ParkAddressPicker, { type PickedParkAddress } from './park-address-picker';
-import { cleanCityName } from '@/lib/geo/cleanCityName';
+import { deriveTemplateLocation } from '@/lib/geo/deriveTemplateLocation';
 import {
   getIndustryOptions,
   INDUSTRY_HINTS,
@@ -318,29 +318,9 @@ function buildDataPatch(d: Draft, tmpl: Template): Partial<Template> {
  * Powers the address picker so it fills in one click instead of asking.
  */
 function deriveKnownLocation(t: Template): { city: string; state: string } {
-  const data: any = (t as any)?.data ?? {};
-  const meta: any = data?.meta ?? {};
-  // Clean service-area framing ("Serving Cambridge, MA") down to a bare city so the geo lookup
-  // resolves — a polluted city is why the parks sweep comes back empty.
-  const structuredCity = cleanCityName(meta?.contact?.city || meta?.identity?.city || (t as any)?.city || '');
-  const structuredState = String(meta?.contact?.state || meta?.identity?.state || (t as any)?.state || '').trim();
-  if (structuredCity && structuredState) return { city: structuredCity, state: structuredState };
-
-  const city = structuredCity || cleanCityName(meta?.geo_city || '');
-  let state = structuredState;
-  try {
-    const blob = JSON.stringify(data);
-    if (city && !state) {
-      const esc = city.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-      const paired = blob.match(new RegExp(`${esc}\\s*,\\s*([A-Z]{2})\\b`));
-      if (paired) state = paired[1];
-    }
-    if (!city) {
-      const m = blob.match(/([A-Za-z][A-Za-z .]+?),\s*([A-Z]{2})\b/);
-      if (m) return { city: cleanCityName(m[1]), state: m[2] };
-    }
-  } catch {}
-  return { city, state };
+  // Delegates to the shared server/client helper so the editor and the list's "fill office
+  // address" action derive the same (service-area-cleaned) location.
+  return deriveTemplateLocation({ data: (t as any)?.data, city: (t as any)?.city, state: (t as any)?.state });
 }
 
 /* ---------------- component ---------------- */

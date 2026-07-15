@@ -3,7 +3,7 @@
  */
 // lib/outreach/__tests__/readiness.test.ts
 
-import { analyzeReadiness, readinessChecklist } from '@/lib/outreach/readiness';
+import { analyzeReadiness, readinessChecklist, readinessNextStep } from '@/lib/outreach/readiness';
 
 // A "fully refined" non-food site: NAP + click-to-call + hero + services + logo + schema
 // + a subpage + a good title → no hard blockers, no soft blockers.
@@ -173,5 +173,22 @@ describe('citation readiness', () => {
     const list = readinessChecklist(refinedNonFood(), 'plumbing');
     expect(list.find((i) => i.id === 'gbp')!.ok).toBe(true);
     expect(list.find((i) => i.id === 'nap-consistent')!.ok).toBe(true);
+  });
+
+  describe('next-step action for a missing address', () => {
+    // A geo pitch site with no NAP → the first hard unmet step is "nap".
+    const noNap = { meta: {}, pages: [{ blocks: [{ type: 'hero', content: {} }] }] };
+
+    it('offers the one-click fill_office_address action for a non-food site', () => {
+      const ns = readinessNextStep(noNap, 'plumbing');
+      expect(ns?.id).toBe('nap');
+      expect(ns?.action).toBe('fill_office_address');
+    });
+
+    it('does NOT offer the park action for a food site (deep link instead)', () => {
+      const ns = readinessNextStep(noNap, 'restaurant');
+      // Food sites still surface the NAP step, just without the industrial-park action.
+      expect(ns?.action).not.toBe('fill_office_address');
+    });
   });
 });

@@ -11,14 +11,37 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { toast } from 'react-hot-toast';
-import { ArrowRight, Sparkles, Loader2 } from 'lucide-react';
+import { ArrowRight, Sparkles, Loader2, Factory } from 'lucide-react';
 import type { NextStep } from '@/lib/outreach/readiness';
 
 // action key → endpoint. The endpoint accepts { templateId } and validates that the
 // site actually supports it (e.g. is a geo pitch site), so this stays declarative.
 const ACTION_ENDPOINT: Record<string, string> = {
   generate_city_page: '/api/admin/prospects/geo-campaign/add-city-page',
+  fill_office_address: '/api/admin/templates/fill-park-address',
 };
+
+// Per-action button label + icon (falls back to the checklist CTA + Sparkles).
+const ACTION_LABEL: Record<string, string> = {
+  fill_office_address: 'Use a park address',
+};
+
+/** Human toast for an in-place action result (success or no-change reason). */
+function resultMessage(action: string, j: any): string {
+  if (action === 'fill_office_address') {
+    if (j?.changed) return j?.parkName ? `Address filled from ${j.parkName}` : 'Office address filled';
+    if (j?.reason === 'no_parks') return `No industrial parks found near ${j?.city ?? 'this city'} — try the editor.`;
+    if (j?.reason === 'no_city') return 'No city on this site yet — set one in the editor first.';
+    if (j?.reason === 'not_applicable') return 'Industrial-park addresses don’t fit this site type.';
+    if (j?.reason === 'disabled') return 'The industrial-park registry is turned off.';
+    return 'No change.';
+  }
+  // generate_city_page (default)
+  if (j?.changed === false) {
+    return j?.reason === 'already_exists' ? 'A city/service page already exists.' : 'No change.';
+  }
+  return `Added /${j?.slug ?? 'page'}`;
+}
 
 function deriveHref(slug: string | null | undefined, ns: NextStep): string | null {
   if (ns.href) return ns.href;
@@ -69,12 +92,8 @@ export default function NextStepButton({ nextStep, slug, templateId, isGeoSite, 
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ id: templateId }),
         }).catch(() => {});
-        toast.success(
-          j?.changed === false
-            ? j?.reason === 'already_exists'
-              ? 'A city/service page already exists.'
-              : 'No change.'
-            : `Added /${j?.slug ?? 'page'}`
+        toast[j?.changed === false && j?.reason && j.reason !== 'already_exists' ? 'error' : 'success'](
+          resultMessage(nextStep.action!, j)
         );
         window.dispatchEvent(new CustomEvent('qs:templates:refetch'));
       } catch (e: any) {
@@ -83,9 +102,15 @@ export default function NextStepButton({ nextStep, slug, templateId, isGeoSite, 
         setBusy(false);
       }
     };
+    const ActionIcon = nextStep.action === 'fill_office_address' ? Factory : Sparkles;
+    const actionLabel = ACTION_LABEL[nextStep.action!] ?? nextStep.cta;
+    const actionTitle =
+      nextStep.action === 'fill_office_address'
+        ? 'Fill a real industrial-park address (discovers parks automatically) and save — no editor trip'
+        : nextStep.hint || nextStep.label;
     return (
-      <button type="button" onClick={run} disabled={busy} title={nextStep.hint || nextStep.label} className={btnCls}>
-        {busy ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />} {nextStep.cta}
+      <button type="button" onClick={run} disabled={busy} title={actionTitle} className={btnCls}>
+        {busy ? <Loader2 className="h-3 w-3 animate-spin" /> : <ActionIcon className="h-3 w-3" />} {actionLabel}
       </button>
     );
   }

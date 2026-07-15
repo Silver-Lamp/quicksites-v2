@@ -1,7 +1,7 @@
 // components/admin/templates/block-editors/hero.tsx
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, type ComponentProps } from 'react';
 import type { Block } from '@/types/blocks';
 import type { Template } from '@/types/template';
 import type { BlockEditorProps } from './index';
@@ -269,6 +269,18 @@ function guessIndustryLabelFromCopy(headline: string, subheadline: string) {
 }
 
 /* ───────────────── component ───────────────── */
+/** Textarea that grows to fit its content (no inner scrollbar, no fixed rows). */
+function AutoGrowTextarea(props: ComponentProps<'textarea'>) {
+  const ref = useRef<HTMLTextAreaElement>(null);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    el.style.height = 'auto';
+    el.style.height = `${el.scrollHeight}px`;
+  }, [props.value]);
+  return <textarea ref={ref} {...props} />;
+}
+
 export default function HeroEditor({
   block,
   onSave,
@@ -1132,37 +1144,44 @@ export default function HeroEditor({
               {/* Content — the everyday edit (always visible in both modes) */}
               <div className="grid md:grid-cols-3 gap-3 mt-3 rounded border border-white/10 bg-neutral-900 p-3">
                 <div className="md:col-span-3 text-sm font-medium">Content</div>
-                <div>
-                  <label className="text-xs text-neutral-300">Headline</label>
+                {/* Hero text — edit the headline & subheadline inline, styled like the
+                    hero itself, so there's ONE obvious place to edit them (not a small
+                    field disconnected from the preview below). */}
+                <div className="md:col-span-3 rounded-lg border border-white/10 bg-neutral-950/60 p-4">
+                  <div className="mb-2 text-[11px] uppercase tracking-wide text-white/40">Hero text</div>
                   <input
-                    className={selectDark}
+                    aria-label="Headline"
+                    className="w-full border-0 border-b border-transparent bg-transparent py-1 text-2xl font-semibold text-white placeholder-white/25 hover:border-white/10 focus:border-purple-500/60 focus:outline-none md:text-3xl"
                     value={local?.headline || ''}
                     onChange={(e) => update('headline', e.target.value as any)}
                     placeholder="Fast, Reliable Service"
                   />
                   {errorText(`${fieldKey}.headline`)}
-                </div>
-                <div className="md:col-span-2">
-                  <label className="text-xs text-neutral-300">Subheadline</label>
-                  <input
-                    className={selectDark}
+                  <AutoGrowTextarea
+                    aria-label="Subheadline"
+                    rows={2}
+                    className="mt-2 w-full resize-none border-0 border-b border-transparent bg-transparent py-1 text-base text-white/70 placeholder-white/25 hover:border-white/10 focus:border-purple-500/60 focus:outline-none md:text-lg"
                     value={local?.subheadline || ''}
                     onChange={(e) => update('subheadline', e.target.value as any)}
                     placeholder="24/7 local help with transparent pricing."
                   />
                   {errorText(`${fieldKey}.subheadline`)}
+
+                  {/* CTA button label — styled like the actual button, auto-sized to text,
+                      so the whole hero (headline → subheadline → button) reads as one unit. */}
+                  <div className="mt-3">
+                    <input
+                      aria-label="CTA button text"
+                      className="rounded-full bg-purple-600 px-4 py-1.5 text-center text-sm font-medium text-white placeholder-white/60 focus:outline-none focus:ring-2 focus:ring-purple-400"
+                      style={{ width: `${Math.max(9, (local?.cta_text || 'Get Started').length + 3)}ch` }}
+                      value={local?.cta_text || ''}
+                      onChange={(e) => update('cta_text', e.target.value as any)}
+                      placeholder="Get Started"
+                    />
+                    {errorText(`${fieldKey}.cta_text`)}
+                  </div>
                 </div>
-                <div>
-                  <label className="text-xs text-neutral-300">CTA Text</label>
-                  <input
-                    className={selectDark}
-                    value={local?.cta_text || ''}
-                    onChange={(e) => update('cta_text', e.target.value as any)}
-                    placeholder="Get Started"
-                  />
-                  {errorText(`${fieldKey}.cta_text`)}
-                </div>
-                <div className="md:col-span-2">
+                <div className="md:col-span-3">
                   <label className="text-xs text-neutral-300">CTA Action</label>
                   <div className="grid grid-cols-3 gap-2">
                     <select

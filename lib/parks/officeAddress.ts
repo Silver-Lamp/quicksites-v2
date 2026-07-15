@@ -17,6 +17,9 @@ export type RegistryOfficeAddress = {
   city: string;
   region: string;
   postalCode: string;
+  /** Park coordinates (approximate), for the identity lat/lng fields. */
+  lat: number | null;
+  lng: number | null;
   label: string;
   source: 'registry';
   placeId: string;
@@ -84,6 +87,8 @@ export async function resolveOfficeAddressFromRegistry(
     city: outCity,
     region: outRegion,
     postalCode,
+    lat: park.lat,
+    lng: park.lng,
     label,
     source: 'registry',
     placeId: park.place_id,

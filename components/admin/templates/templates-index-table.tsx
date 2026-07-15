@@ -10,6 +10,8 @@ import { CheckCircle, XCircle, Loader2, ChevronRight, ChevronDown, Info } from '
 import RowActions from '@/components/admin/templates/row-actions';
 import { CampaignBadge } from '@/components/admin/templates/campaign-badge';
 import { RebuildPitchBadge } from '@/components/admin/templates/rebuild-pitch-badge';
+import NextStepButton from '@/components/admin/templates/next-step-button';
+import type { NextStep } from '@/lib/outreach/readiness';
 import type { Template } from '@/types/template';
 import { cn } from '@/lib/utils';
 
@@ -185,20 +187,12 @@ function seoColor(pct: number): string {
   return pct >= 80 ? 'bg-emerald-500' : pct >= 50 ? 'bg-amber-500' : 'bg-red-500';
 }
 
-type SeoNextStep = { id: string; cta: string; label: string; hint?: string | null; blockType?: string | null; href?: string | null };
-type SeoInfo = { pct: number; done: number; total: number; hardLeft: number; nextStep?: SeoNextStep | null };
+type SeoInfo = { pct: number; done: number; total: number; hardLeft: number; nextStep?: NextStep | null };
 
-function seoNextHref(slug: string | null | undefined, ns?: SeoNextStep | null): string | null {
-  if (!ns) return null;
-  if (ns.href) return ns.href;
-  if (!slug) return null;
-  return ns.blockType ? `/admin/templates/${slug}?reveal=${encodeURIComponent(ns.blockType)}` : `/admin/templates/${slug}`;
-}
-
-/** SEO-readiness meter + "next step" link (mirrors the in-editor Readiness coach). */
-function SeoCell({ s, slug }: { s?: SeoInfo | null; slug?: string | null }) {
+/** SEO-readiness meter + "next step" action/link (mirrors the in-editor Readiness coach). */
+function SeoCell({ row }: { row: any }) {
+  const s: SeoInfo | null = row?.seo_readiness ?? null;
   if (!s || !s.total) return <td className="p-2 text-zinc-600">—</td>;
-  const href = seoNextHref(slug, s.nextStep);
   return (
     <td className="p-2">
       <div className="flex flex-col items-start gap-1">
@@ -211,18 +205,13 @@ function SeoCell({ s, slug }: { s?: SeoInfo | null; slug?: string | null }) {
           </div>
           <span className="text-[11px] font-medium text-zinc-300 tabular-nums">{s.pct}%</span>
         </div>
-        {s.nextStep && href ? (
-          <Link
-            href={href}
-            prefetch={false}
-            title={s.nextStep.hint || s.nextStep.label}
-            className="inline-flex items-center gap-1 rounded border border-fuchsia-500/30 bg-fuchsia-500/10 px-1.5 py-0.5 text-[10px] font-medium text-fuchsia-200 hover:bg-fuchsia-500/20"
-          >
-            → {s.nextStep.cta}
-          </Link>
-        ) : !s.nextStep ? (
-          <span className="text-[10px] font-medium text-emerald-400/80">ready ✓</span>
-        ) : null}
+        <NextStepButton
+          nextStep={s.nextStep ?? null}
+          slug={row?.slug}
+          templateId={row?.id}
+          isGeoSite={!!row?.campaign}
+          variant="table"
+        />
       </div>
     </td>
   );
@@ -588,7 +577,7 @@ export default function TemplatesIndexTable({
           {updated ? formatDistanceToNow(new Date(updated), { addSuffix: true }) : 'N/A'}
         </td>
 
-        <SeoCell s={(t as any).seo_readiness} slug={t.slug} />
+        <SeoCell row={t} />
 
         <td className="p-2 text-zinc-400" />
 
@@ -704,7 +693,7 @@ export default function TemplatesIndexTable({
         <td className="p-2 text-zinc-400">
           {cUpdated ? formatDistanceToNow(new Date(cUpdated), { addSuffix: true }) : 'N/A'}
         </td>
-        <SeoCell s={(c as any).seo_readiness} slug={c.slug} />
+        <SeoCell row={c} />
         <td className="p-2 text-zinc-400" />
         <td className="p-2">
           {cPreview ? (

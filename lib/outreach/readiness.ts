@@ -188,15 +188,20 @@ export type ChecklistItem = {
  * flag, positively framed for checkboxes. Reuses analyzeReadiness so the gate + this view can
  * never disagree.
  */
-/** The single highest-priority not-yet-done fix — what to do next + where it lives. */
+/** The single highest-priority not-yet-done fix — what to do next + where/how. */
 export type NextStep = {
   id: string;
   cta: string;        // imperative button label ("List your services")
   label: string;      // what "done" looks like
   hint: string | null;
   blockType: string | null; // reveal target in the editor, if the fix is a block
+  /** A one-click action key the list can run directly instead of deep-linking. */
+  action: NextStepAction | null;
   href?: string | null;     // deep link (filled in when a slug is known — see persistReadiness)
 };
+
+/** Action keys the list can execute in place (see next-step-button.tsx → endpoint map). */
+export type NextStepAction = 'generate_city_page';
 
 export type ReadinessScore = {
   pct: number;
@@ -217,19 +222,18 @@ const NEXT_STEP_CTA: Record<string, string> = {
   'menu-copy': 'Fill in the menu copy',
   logo: 'Add a logo',
   schema: 'Add LocalBusiness schema',
-  pages: 'Add a city/service page',
+  pages: 'Generate a city/service page',
   title: 'Set the page title',
   gbp: 'Link Google Business Profile',
   'nap-consistent': 'Use one consistent phone',
 };
 
-/** The next step to take on a site: the first unmet check (required before recommended). */
-export function readinessNextStep(data: any, industryKey: string): NextStep | null {
-  const items = readinessChecklist(data, industryKey);
-  const item =
-    items.find((i) => i.severity === 'hard' && !i.ok) ??
-    items.find((i) => i.severity === 'soft' && !i.ok) ??
-    null;
+// Items whose fix is an action the list can run directly (vs. an editor deep link).
+const NEXT_STEP_ACTION: Record<string, NextStepAction> = {
+  pages: 'generate_city_page',
+};
+
+function buildNextStep(item: ChecklistItem | null | undefined): NextStep | null {
   if (!item) return null;
   return {
     id: item.id,
@@ -237,7 +241,21 @@ export function readinessNextStep(data: any, industryKey: string): NextStep | nu
     label: item.label,
     hint: item.hint ?? null,
     blockType: item.blockTypes?.[0] ?? null,
+    action: NEXT_STEP_ACTION[item.id] ?? null,
   };
+}
+
+function firstUnmet(items: ChecklistItem[]): ChecklistItem | null {
+  return (
+    items.find((i) => i.severity === 'hard' && !i.ok) ??
+    items.find((i) => i.severity === 'soft' && !i.ok) ??
+    null
+  );
+}
+
+/** The next step to take on a site: the first unmet check (required before recommended). */
+export function readinessNextStep(data: any, industryKey: string): NextStep | null {
+  return buildNextStep(firstUnmet(readinessChecklist(data, industryKey)));
 }
 
 /**
@@ -251,20 +269,7 @@ export function readinessScore(data: any, industryKey: string): ReadinessScore {
   const done = items.filter((i) => i.ok).length;
   const hardLeft = items.filter((i) => i.severity === 'hard' && !i.ok).length;
   const pct = total ? Math.round((done / total) * 100) : 0;
-  const item =
-    items.find((i) => i.severity === 'hard' && !i.ok) ??
-    items.find((i) => i.severity === 'soft' && !i.ok) ??
-    null;
-  const nextStep: NextStep | null = item
-    ? {
-        id: item.id,
-        cta: NEXT_STEP_CTA[item.id] ?? item.label,
-        label: item.label,
-        hint: item.hint ?? null,
-        blockType: item.blockTypes?.[0] ?? null,
-      }
-    : null;
-  return { pct, done, total, hardLeft, nextStep };
+  return { pct, done, total, hardLeft, nextStep: buildNextStep(firstUnmet(items)) };
 }
 
 export function readinessChecklist(data: any, industryKey: string): ChecklistItem[] {

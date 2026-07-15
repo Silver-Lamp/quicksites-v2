@@ -310,6 +310,36 @@ function buildDataPatch(d: Draft, tmpl: Template): Partial<Template> {
   return patch;
 }
 
+/**
+ * Best-effort city/state for this template even when the identity fields are blank —
+ * from structured contact/identity, else the geo campaign's city (data.meta.geo_city) +
+ * the "City, ST" that appears in the generated copy (e.g. "Serving Cambridge, MA…").
+ * Powers the address picker so it fills in one click instead of asking.
+ */
+function deriveKnownLocation(t: Template): { city: string; state: string } {
+  const data: any = (t as any)?.data ?? {};
+  const meta: any = data?.meta ?? {};
+  const structuredCity = String(meta?.contact?.city || meta?.identity?.city || (t as any)?.city || '').trim();
+  const structuredState = String(meta?.contact?.state || meta?.identity?.state || (t as any)?.state || '').trim();
+  if (structuredCity && structuredState) return { city: structuredCity, state: structuredState };
+
+  const city = structuredCity || String(meta?.geo_city || '').trim();
+  let state = structuredState;
+  try {
+    const blob = JSON.stringify(data);
+    if (city && !state) {
+      const esc = city.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const paired = blob.match(new RegExp(`${esc}\\s*,\\s*([A-Z]{2})\\b`));
+      if (paired) state = paired[1];
+    }
+    if (!city) {
+      const m = blob.match(/([A-Za-z][A-Za-z .]+?),\s*([A-Z]{2})\b/);
+      if (m) return { city: m[1].trim(), state: m[2] };
+    }
+  } catch {}
+  return { city, state };
+}
+
 /* ---------------- component ---------------- */
 
 export default function IdentityPanel({
@@ -318,6 +348,10 @@ export default function IdentityPanel({
 }: { template: Template; onChange: (patch: Partial<Template>) => void; }) {
   const [draft, setDraft] = React.useState<Draft>(() => toDraft(template));
   const [dirty, setDirty] = React.useState(false);
+
+  // Location we can infer even when the address fields are blank (geo campaign city + copy),
+  // so the park-address picker fills in one click instead of asking.
+  const knownLocation = React.useMemo(() => deriveKnownLocation(template), [template]);
 
   // Open + spotlight when deep-linked here (e.g. a footer editor's "Template Identity" link),
   // so the user lands on the editable fields, not a collapsed row.
@@ -665,10 +699,12 @@ export default function IdentityPanel({
           <Input value={draft.address_line1} onChange={(e) => setField('address_line1', e.target.value)} placeholder="1600 7th Ave" className={inputGhost} />
         </div>
 
-        {/* Industrial-park address helper: fill the whole NAP from a real nearby park. */}
+        {/* Industrial-park address helper: fill the whole NAP from a real nearby park.
+            Falls back to the location we can infer (geo campaign city + copy) so it's
+            one-click instead of asking when we already know where the business is. */}
         <ParkAddressPicker
-          city={draft.city}
-          state={draft.state}
+          city={draft.city || knownLocation.city}
+          state={draft.state || knownLocation.state}
           industryKey={draft.industry || null}
           seed={String((template as any)?.id ?? draft.business_name ?? 'identity')}
           onPick={applyPickedAddress}

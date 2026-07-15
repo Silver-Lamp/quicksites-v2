@@ -79,8 +79,6 @@ export default function TemplatesListClient({
   };
   const [loading, setLoading] = useState(false);
   const [errorText, setErrorText] = useState<string | null>(null);
-  // True when the SEO sort scored a capped candidate window (very large libraries).
-  const [capped, setCapped] = useState(false);
 
   // Google Search Console 28-day stats per connected domain (scoped server-side).
   // Best-effort + lazy: the grid paints first, stats fade onto matching cards.
@@ -150,7 +148,6 @@ export default function TemplatesListClient({
         const items: any[] = Array.isArray(j?.items) ? j.items : [];
         const nextOff = j?.page?.nextOffset ?? nextOffset + items.length;
         const more = !!j?.page?.hasMore;
-        setCapped(!!j?.page?.capped);
 
         const newRows = replace ? items : [...rowsRef.current, ...items];
         rowsRef.current = newRows;
@@ -294,12 +291,6 @@ export default function TemplatesListClient({
   return (
     <>
       {errorText && <div className="mb-3 text-xs text-red-400">{errorText}</div>}
-
-      {capped && sort.startsWith('seo') && (
-        <div className="mb-3 rounded-md border border-amber-500/25 bg-amber-500/10 px-3 py-2 text-xs text-amber-200">
-          Ranking SEO readiness across the 400 most recently-updated sites. Older sites beyond that window aren’t included in this sort.
-        </div>
-      )}
 
       <div className="mb-4 flex flex-wrap items-center justify-end gap-3">
         <label className="inline-flex items-center gap-2 text-xs text-zinc-400">

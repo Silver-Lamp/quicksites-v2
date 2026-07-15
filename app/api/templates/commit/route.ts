@@ -10,6 +10,7 @@ import { stripEmpty, obj, dget, ddel, enrichPatchWithIdentity } from '@/lib/temp
 import { captureServer } from '@/lib/analytics/posthog-server';
 import { EVENTS } from '@/lib/analytics/events';
 import { requireTemplateOwner } from '@/lib/auth/requireTemplateOwner';
+import { persistReadinessScore } from '@/lib/seo/persistReadiness';
 
 // optional org (keeps single-tenant working)
 let resolveOrg: undefined | (() => Promise<any>);
@@ -428,6 +429,10 @@ export async function POST(req: Request) {
         company_id: finalCompanyId,
       });
     }
+
+    // Refresh the persisted SEO-readiness score so the templates list stays sortable
+    // by it. Fire-and-forget — never block or fail the commit on scoring.
+    void persistReadinessScore(id, afterData, (fullRow as any).industry);
 
     // Return the template row + injected hours (compat), and surface company_id
     const templateOut = { ...(fullRow as any), data: afterData, site_type: normalizedSiteType };

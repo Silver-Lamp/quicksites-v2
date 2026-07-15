@@ -9,6 +9,7 @@ import type { Template } from '@/types/template';
 import { Button } from '@/components/ui';
 import { RefreshCw, Save, Building2 } from 'lucide-react';
 import { usePanelDeepLink } from './usePanelDeepLink';
+import ParkAddressPicker, { type PickedParkAddress } from './park-address-picker';
 import {
   getIndustryOptions,
   INDUSTRY_HINTS,
@@ -503,6 +504,28 @@ export default function IdentityPanel({
     });
   };
 
+  // Fill the whole NAP from a picked industrial-park address (real building + synthetic
+  // suite). Mirrors setField's commit path (dirty + scheduleAutoApply) so it saves like a
+  // manual edit. The suite goes in Address 2 unless the street already carries one.
+  const applyPickedAddress = React.useCallback((a: PickedParkAddress) => {
+    setDraft((d) => {
+      const lineHasSuite = /\b(suite|ste|unit|#|bldg)\b/i.test(a.line1 || '');
+      const next: Draft = {
+        ...d,
+        address_line1: a.line1 || d.address_line1,
+        address_line2: lineHasSuite ? '' : a.suite ? `Suite ${a.suite}` : '',
+        city: a.city || d.city,
+        state: a.region || d.state,
+        postal_code: a.postalCode || d.postal_code,
+        latitude: a.lat != null ? String(a.lat) : d.latitude,
+        longitude: a.lng != null ? String(a.lng) : d.longitude,
+      };
+      setDirty(true);
+      scheduleAutoApply(next);
+      return next;
+    });
+  }, [scheduleAutoApply]);
+
   // Global save hooks
   React.useEffect(() => {
     const handler = () => { if (dirty) { dbg('[IDENTITY:UI] global save -> commit'); commit(); } };
@@ -641,6 +664,15 @@ export default function IdentityPanel({
           <Label>Address</Label>
           <Input value={draft.address_line1} onChange={(e) => setField('address_line1', e.target.value)} placeholder="1600 7th Ave" className={inputGhost} />
         </div>
+
+        {/* Industrial-park address helper: fill the whole NAP from a real nearby park. */}
+        <ParkAddressPicker
+          city={draft.city}
+          state={draft.state}
+          industryKey={draft.industry || null}
+          seed={String((template as any)?.id ?? draft.business_name ?? 'identity')}
+          onPick={applyPickedAddress}
+        />
 
         {/* Address 2 */}
         <div>

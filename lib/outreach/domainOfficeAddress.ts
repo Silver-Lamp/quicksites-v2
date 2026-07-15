@@ -95,7 +95,7 @@ export async function suggestOfficeAddress(
     try {
       const fromRegistry = await resolveOfficeAddressFromRegistry(input, userId);
       if (fromRegistry) {
-        const { placeId: _placeId, parkName: _parkName, ...address } = fromRegistry;
+        const { placeId: _placeId, parkName: _parkName, lat: _lat, lng: _lng, ...address } = fromRegistry;
         return address;
       }
     } catch {

@@ -149,6 +149,8 @@ export default function ReadinessCoach({
         return;
       }
       setPipelineResult(j.result);
+      // Live-update the readiness graph/checklist without a page reload.
+      void (ctx as any)?.refreshFromServer?.();
     } catch (e: any) {
       setPipelineOpen(false);
       setMsg({ ok: false, text: e.message });
@@ -200,6 +202,7 @@ export default function ReadinessCoach({
         ok: true,
         text: json.changed ? `Added ${json.added?.length ?? 0} blog post(s) — reload to see them in Pages.` : json.reason === 'nothing_to_add' ? 'Blog posts already exist.' : 'No change.',
       });
+      void (ctx as any)?.refreshFromServer?.();
     } catch (e: any) {
       setMsg({ ok: false, text: e.message });
     } finally {
@@ -226,6 +229,7 @@ export default function ReadinessCoach({
         ok: true,
         text: json.changed ? `Added /${json.slug} — reload to see it in Pages.` : json.reason === 'already_exists' ? 'A city/service page already exists.' : 'No change.',
       });
+      void (ctx as any)?.refreshFromServer?.();
     } catch (e: any) {
       setMsg({ ok: false, text: e.message });
     } finally {
@@ -252,8 +256,9 @@ export default function ReadinessCoach({
       }
       setMsg({
         ok: true,
-        text: json.suggestion?.label ? `Address set: ${json.suggestion.label} — verify it, then reload to see it in the preview.` : 'No change.',
+        text: json.suggestion?.label ? `Address set: ${json.suggestion.label} — verify it in the preview (reloads if needed).` : 'No change.',
       });
+      void (ctx as any)?.refreshFromServer?.();
     } catch (e: any) {
       setMsg({ ok: false, text: e.message });
     } finally {

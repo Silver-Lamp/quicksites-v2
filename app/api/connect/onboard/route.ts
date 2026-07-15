@@ -1,14 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { stripe } from '@/lib/stripe/server';
-import { clampPlatformFeePercent } from '@/lib/commerce/partner-terms';
+import { resolveMerchantFeeDefault } from '@/lib/commerce/pricingPolicy';
 import { requireMerchantOwner } from '@/lib/auth/requireUser';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, (process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SECRET_KEY)!);
-const DEFAULT_FEE = clampPlatformFeePercent(Number(process.env.QS_DEFAULT_PLATFORM_FEE_PERCENT ?? '0.05') || 0);
 
 /**
  * Start Stripe Connect (Express) onboarding for a merchant and write the canonical
@@ -39,17 +38,19 @@ export async function POST(req: NextRequest) {
     accountId = account.id;
   }
 
-  // Canonical row (pending until onboarding completes). Fee config seeded here;
-  // adjustable later via /api/merchant/payment-accounts or the merchant UI.
+  // Canonical row (pending until onboarding completes). Fee config seeded from the
+  // market default for this merchant's vertical (menu-ordering → restaurant terms,
+  // else general); adjustable later via /api/merchant/payment-accounts or the UI.
+  const fee = await resolveMerchantFeeDefault(merchantId);
   const { error } = await supabase.from('payment_accounts').upsert(
     {
       merchant_id: merchantId,
       provider: 'stripe',
       account_ref: accountId,
       status: 'pending',
-      collect_platform_fee: DEFAULT_FEE > 0,
-      platform_fee_percent: DEFAULT_FEE,
-      platform_fee_min_cents: 0,
+      collect_platform_fee: fee.collect,
+      platform_fee_percent: fee.percent,
+      platform_fee_min_cents: fee.minCents,
     },
     { onConflict: 'merchant_id,provider' }
   );

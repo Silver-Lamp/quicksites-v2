@@ -3,7 +3,7 @@
 // value chips, urgency, and the two CTAs. Kept as its own component so it can be previewed
 // in isolation. Server-safe (no client hooks).
 
-const PERKS = ['Free hosting', 'Online ordering', 'Edit anytime', 'Live in minutes'];
+const BASE_PERKS = ['Free hosting', 'Online ordering', 'Edit anytime', 'Live in minutes'];
 
 export default function ClaimSiteHero({
   name,
@@ -13,6 +13,7 @@ export default function ClaimSiteHero({
   brandName,
   brandLogoUrl,
   contactEmail,
+  feePercent,
 }: {
   name: string;
   previewHref: string;
@@ -24,7 +25,14 @@ export default function ClaimSiteHero({
   brandLogoUrl?: string | null;
   /** "Questions? email us" contact, so a prospect can reach a human before claiming. */
   contactEmail?: string | null;
+  /** Menu-ordering sites: the concrete take-rate (e.g. 8) → states "keep {100-fee}%, no monthly". Null → generic copy. */
+  feePercent?: number | null;
 }) {
+  const hasFee = typeof feePercent === 'number' && feePercent > 0;
+  const keepPct = hasFee ? 100 - (feePercent as number) : null;
+  const PERKS = hasFee
+    ? ['Free hosting — no monthly', `Keep ${keepPct}% of every order`, 'Edit anytime', 'Live in minutes']
+    : BASE_PERKS;
   return (
     <main className="mx-auto flex min-h-screen max-w-3xl flex-col items-center px-6 py-14 text-center">
       {brandName && (
@@ -45,7 +53,9 @@ export default function ClaimSiteHero({
       </h1>
       <p className="mx-auto mt-4 max-w-xl text-lg text-zinc-400">
         We assembled it from your public listing — your menu, hours, location, and online ordering.
-        Free hosting; we only earn a small fee when you sell. Here it is:
+        {hasFee
+          ? ` Free hosting, no monthly fee — you keep ${keepPct}% of every order, we only take ${feePercent}% when you sell. Here it is:`
+          : ' Free hosting; we only earn a small fee when you sell. Here it is:'}
       </p>
 
       {/* Inline live preview — the actual built site, so they see the value before signing up. */}

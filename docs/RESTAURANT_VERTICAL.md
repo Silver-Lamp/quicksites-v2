@@ -114,11 +114,14 @@ The strongest claim pitch isn't "we built you a site" — it's "**people already
 
 **Rollout:** Phase 1 is safe to run on its own. Phase 2's SMS is held **OFF in prod** until Phase 1 proves out with real people (and cold B2B SMS is A2P 10DLC/TCPA territory — registration/consent is the operator's responsibility). **Phase 3 (not built):** actual pre-claim checkout (auth-not-capture + auto-refund on no-claim) — a separate compliance project.
 
+**Pricing for this funnel** (`lib/commerce/pricingPolicy.ts`): a claimed menu-ordering site launches on **8% + 60¢/order, no monthly** — a single-digit take that beats DoorDash, with a per-order floor so a small ticket still clears Stripe's fixed $0.30. Chosen by vertical, not funnel: `resolveMerchantFeeDefault(merchantId)` seeds the fee at Connect onboarding (`/api/connect/onboard`) — a site with a `menu` block (`hasMenuBlock`) gets restaurant terms, everything else keeps the general **5% / no-floor** default, so no other vertical is touched. The concrete rate is stated on the claim page ("you keep 92%, no monthly" — `components/sites/claim-site-hero.tsx`, menu sites only). All numbers env-overridable + clamped to the partner cap. **Deferred:** a subscription *buy-down* (a monthly that lowers the %) once real order volume shows where merchants land — the Shopify model; `lib/billing/*` already has the tier machinery.
+
 ## 8. Env flags
 
 - `NEXT_PUBLIC_MENU_BASE_DOMAIN` — the restaurant "menu" base domain (e.g. `delivered.menu`); blank keeps the surface + links dormant. See §7b.
 - `MENU_DEMAND_CAPTURE_ENABLED` — Phase 1 demand capture on unclaimed drafts (counter + claim-bar escalation). Off by default. See §7c.
 - `MENU_DEMAND_CAPTURE_SMS` + `MENU_DEMAND_NOTIFY_THRESHOLD` — Phase 2 owner SMS on threshold cross (default threshold 3). Needs the same Twilio env as claim verification. Off by default; held off in prod until Phase 1 proves out. See §7c.
+- `QS_RESTAURANT_PLATFORM_FEE_PERCENT` (default `0.08`) + `QS_RESTAURANT_PLATFORM_FEE_MIN_CENTS` (default `60`) — the menu-ordering take-rate seeded at Connect onboarding for sites with a `menu` block. `QS_DEFAULT_PLATFORM_FEE_PERCENT` (default `0.05`) + `QS_DEFAULT_PLATFORM_FEE_MIN_CENTS` (default `0`) are the general-commerce fallback. All clamped to `QS_MAX_PLATFORM_FEE_PERCENT` (0.10). See §7c.
 - `CLAIM_VERIFICATION_ENABLED` — when `1`/`true`, claiming a `listing_import` draft requires an OTP to the listing phone (or an operator manual verify) before ownership transfers. Needs the `claim_verifications` migration + Twilio env (`TWILIO_ACCOUNT_SID`/`TWILIO_AUTH_TOKEN` + `TWILIO_FROM` or `TWILIO_MESSAGING_SERVICE_SID`). Off by default. See [`CLAIM_VERIFICATION_PLAN.md`](CLAIM_VERIFICATION_PLAN.md).
 - `NEXT_PUBLIC_GUEST_BUILD_ENABLED=1` — gates the anonymous convert/rebuild path (prod ON).
 - `REBUILD_HERO_ENABLED` — off by default; when on, conversion generates a fresh hero instead of reusing the source `og:image`.

@@ -19,6 +19,8 @@ import { sendSms } from '@/lib/sms/sendSms';
 import { resolveListingPhone } from '@/lib/claim/resolveListingPhone';
 import { claimUrlFor } from '@/lib/outreach/competitionPoster';
 import { getSenderProfile } from '@/lib/outreach/senderProfile';
+import { captureServer } from '@/lib/analytics/posthog-server';
+import { EVENTS } from '@/lib/analytics/events';
 import { MENU_DEMAND_CAPTURE_SMS, menuDemandNotifyThreshold } from '@/lib/flags/menuDemand';
 
 export type DemandNotifyResult =
@@ -87,6 +89,7 @@ export async function maybeNotifyRestaurant(templateId: string): Promise<DemandN
       .eq('template_id', templateId)
       .is('notified_at', null);
 
+    await captureServer(EVENTS.MENU_DEMAND_NOTIFIED, { template_id: templateId, count: total }, templateId);
     return { sent: true };
   } catch {
     return { sent: false, reason: 'send_failed' };

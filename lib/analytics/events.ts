@@ -38,6 +38,10 @@ export const EVENTS = {
   COMMISSION_ACCRUED: 'commission_accrued',
   COMMISSION_PAID: 'commission_paid',
 
+  // Demand capture on unclaimed outreach drafts (distinctId = the template/draft)
+  MENU_DEMAND_CAPTURED: 'menu_demand_captured', // a visitor logged order-intent on a draft
+  MENU_DEMAND_NOTIFIED: 'menu_demand_notified', // demand crossed threshold → restaurant texted
+
   // AI cost
   LLM_CALL: 'llm_call',
 } as const;

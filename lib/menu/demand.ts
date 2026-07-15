@@ -6,6 +6,8 @@
 // service-role client; the public route (lib/api rate-limited) and the admin surfaces
 // call these. See docs/RESTAURANT_VERTICAL.md and lib/flags/menuDemand.ts.
 import { supabaseAdmin } from '@/lib/supabase/admin';
+import { captureServer } from '@/lib/analytics/posthog-server';
+import { EVENTS } from '@/lib/analytics/events';
 
 export type DemandKind = 'call' | 'order_ahead';
 
@@ -49,6 +51,12 @@ export async function recordDemandEvent(input: RecordDemandInput): Promise<{ ok:
     created_ip: input.ip ?? null,
   });
   if (insErr) return { ok: false, error: 'insert_failed' };
+
+  // Aggregate visibility — PostHog counts these per draft (distinctId = template_id),
+  // so "which drafts are heating up" shows in a dashboard without querying the DB.
+  const hasContact = !!(input.contactPhone?.trim() || input.contactName?.trim() || input.items?.trim());
+  await captureServer(EVENTS.MENU_DEMAND_CAPTURED, { template_id: templateId, kind, has_contact: hasContact }, templateId);
+
   return { ok: true };
 }
 
@@ -83,23 +91,46 @@ export async function getDemandCounts(templateIds: string[]): Promise<Record<str
   return out;
 }
 
-export type DemandSummary = { count: number; notified: boolean };
+/** One actionable order-ahead lead (a visitor who left contact info). */
+export type DemandLead = { name: string | null; phone: string | null; items: string | null; at: string | null };
 
-/** Count + "have we texted the restaurant yet" per draft (Phase 2 admin visibility). */
-export async function getDemandSummaries(templateIds: string[]): Promise<Record<string, DemandSummary>> {
-  const out: Record<string, DemandSummary> = {};
+export type DemandDetail = {
+  count: number;        // all order-intents
+  calls: number;        // tap-to-call events (no contact left)
+  leads: DemandLead[];  // order_ahead events that left a phone/name — newest first
+  notified: boolean;    // has the restaurant been texted yet (Phase 2)
+};
+
+/**
+ * Full demand breakdown per draft for the admin outreach surface: the count, how many
+ * were anonymous tap-to-calls, and the actual leads (name/phone/items) so an operator
+ * can follow up by hand while auto-SMS is off. One query, grouped in memory.
+ */
+export async function getDemandDetails(templateIds: string[]): Promise<Record<string, DemandDetail>> {
+  const out: Record<string, DemandDetail> = {};
   if (!templateIds.length) return out;
   try {
     const { data } = await supabaseAdmin
       .from('demand_events')
-      .select('template_id, notified_at')
-      .in('template_id', templateIds);
-    for (const row of (data as { template_id: string | null; notified_at: string | null }[]) ?? []) {
+      .select('template_id, kind, contact_name, contact_phone, items, notified_at, created_at')
+      .in('template_id', templateIds)
+      .order('created_at', { ascending: false });
+    type Row = {
+      template_id: string | null; kind: string | null;
+      contact_name: string | null; contact_phone: string | null; items: string | null;
+      notified_at: string | null; created_at: string | null;
+    };
+    for (const row of (data as Row[]) ?? []) {
       const id = row.template_id;
       if (!id) continue;
-      const s = (out[id] ??= { count: 0, notified: false });
-      s.count += 1;
-      if (row.notified_at) s.notified = true;
+      const d = (out[id] ??= { count: 0, calls: 0, leads: [], notified: false });
+      d.count += 1;
+      if (row.notified_at) d.notified = true;
+      if (row.contact_phone || row.contact_name || row.items) {
+        d.leads.push({ name: row.contact_name, phone: row.contact_phone, items: row.items, at: row.created_at });
+      } else {
+        d.calls += 1;
+      }
     }
   } catch {
     /* best-effort — table may not be migrated yet */

@@ -4,7 +4,8 @@
 // page and the standalone /admin/prospects + /admin/outreach pages fetch identically.
 
 import { supabaseAdmin } from '@/lib/supabase/admin';
-import { getDemandSummaries } from '@/lib/menu/demand';
+import { getDemandDetails } from '@/lib/menu/demand';
+import { resolveListingPhone } from '@/lib/claim/resolveListingPhone';
 import { listProspects, type Prospect } from '@/lib/outreach/prospects';
 import { listGeoCampaigns, type GeoCampaign } from '@/lib/outreach/geoCampaigns';
 import { postcardMailEnabled } from '@/lib/outreach/mail/lob';
@@ -56,14 +57,21 @@ export async function loadOutreachDrafts(): Promise<OutreachDraft[]> {
       .order('created_at', { ascending: false })
       .limit(300);
     const rows = (data as OutreachDraft[]) ?? [];
-    // Attach demand counts + whether we've texted the restaurant, so the pipeline can
-    // surface which sites are heating up — the ones worth a claim push.
-    const summaries = await getDemandSummaries(rows.map((r) => r.id));
-    return rows.map((r) => ({
-      ...r,
-      demand: summaries[r.id]?.count ?? 0,
-      demandNotified: summaries[r.id]?.notified ?? false,
-    }));
+    // Attach demand detail (count + the actual leads) + the restaurant's own phone, so the
+    // operator can see who tried to order and follow up by hand while auto-SMS is off.
+    const details = await getDemandDetails(rows.map((r) => r.id));
+    return rows.map((r) => {
+      const d = details[r.id];
+      return {
+        ...r,
+        demand: d?.count ?? 0,
+        demandCalls: d?.calls ?? 0,
+        demandLeads: d?.leads ?? [],
+        demandNotified: d?.notified ?? false,
+        // Only resolve the restaurant phone when there's demand worth acting on.
+        restaurantPhone: d?.count ? resolveListingPhone({ data: r.data }) : null,
+      };
+    });
   } catch {
     return [];
   }

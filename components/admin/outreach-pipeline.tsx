@@ -6,7 +6,9 @@
 // (mints claim tokens + builds menu URLs server-side); OutreachActions is the client bit.
 import { mintSiteClaimToken } from '@/lib/auth/siteClaimToken';
 import { menuSiteUrl } from '@/lib/menu/deliveredMenu';
+import type { DemandLead } from '@/lib/menu/demand';
 import OutreachActions from '@/components/admin/outreach-actions';
+import DemandLeadsCell from '@/components/admin/demand-leads-cell';
 
 export type OutreachDraft = {
   id: string;
@@ -18,8 +20,14 @@ export type OutreachDraft = {
   data: any;
   /** Order-intents logged on the unclaimed draft (demand capture). */
   demand?: number;
+  /** Anonymous tap-to-call events (no contact left). */
+  demandCalls?: number;
+  /** Order-ahead leads that left a name/phone/items — newest first. */
+  demandLeads?: DemandLead[];
   /** Phase 2: have we already texted the restaurant about the demand? */
   demandNotified?: boolean;
+  /** The restaurant's own phone (for a one-tap manual follow-up). */
+  restaurantPhone?: string | null;
 };
 
 /** Count menu items across the menu block's sections (0 if none / no menu block). */
@@ -89,16 +97,14 @@ export default function OutreachPipeline({ list }: { list: OutreachDraft[] }) {
                     )}
                   </td>
                   <td>
-                    {demand > 0 ? (
-                      <span className="inline-flex items-center gap-1">
-                        <span className="rounded bg-sky-500/15 px-2 py-0.5 text-xs font-semibold text-sky-300">🔥 {demand}</span>
-                        {r.demandNotified && (
-                          <span title="Restaurant texted about the demand" className="rounded bg-emerald-500/10 px-1.5 py-0.5 text-[10px] text-emerald-400">✓ texted</span>
-                        )}
-                      </span>
-                    ) : (
-                      <span className="text-xs text-neutral-600">—</span>
-                    )}
+                    <DemandLeadsCell
+                      count={demand}
+                      calls={r.demandCalls ?? 0}
+                      leads={r.demandLeads ?? []}
+                      notified={r.demandNotified ?? false}
+                      restaurantName={name}
+                      restaurantPhone={r.restaurantPhone ?? null}
+                    />
                   </td>
                   <td>
                     {isClaimed ? (

@@ -31,6 +31,14 @@ import { createClient } from '@supabase/supabase-js';
 import { readinessScore } from '@/lib/outreach/readiness';
 import { resolveIndustryKey } from '@/lib/industries';
 
+// Inlined (rather than imported from lib/seo/persistReadiness) so this script never
+// pulls the eager service-role client at module-eval, before dotenv has run.
+function nextStepHref(slug: string | null | undefined, blockType?: string | null): string | null {
+  if (!slug) return null;
+  const base = `/admin/templates/${slug}`;
+  return blockType ? `${base}?reveal=${encodeURIComponent(blockType)}` : base;
+}
+
 const PAGE = 200;
 
 async function main() {
@@ -57,7 +65,7 @@ async function main() {
 
     let q = db
       .from('templates')
-      .select('id, industry, data')
+      .select('id, slug, industry, data')
       .order('id', { ascending: true })
       .limit(PAGE);
     if (cursor) q = q.gt('id', cursor);
@@ -73,11 +81,17 @@ async function main() {
       const rawIndustry = t.industry ?? meta?.identity?.industry ?? meta?.industry ?? '';
       const score = readinessScore(t.data ?? {}, resolveIndustryKey(rawIndustry));
       if (score.pct < 50) buckets['0-49']++; else if (score.pct < 80) buckets['50-79']++; else buckets['80-100']++;
+      const detail = {
+        ...score,
+        nextStep: score.nextStep
+          ? { ...score.nextStep, href: nextStepHref(t.slug, score.nextStep.blockType) }
+          : null,
+      };
 
       if (apply) {
         const { error: rpcErr } = await (db as any)
           .schema('public')
-          .rpc('set_template_seo', { p_id: t.id, p_pct: score.pct, p_detail: score });
+          .rpc('set_template_seo', { p_id: t.id, p_pct: score.pct, p_detail: detail });
         if (rpcErr) { stats.errors++; console.error(`  ⚠ ${t.id}: ${rpcErr.message}`); }
         else stats.written++;
       }

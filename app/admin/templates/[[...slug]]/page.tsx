@@ -1,4 +1,5 @@
 // app/admin/templates/[[...slug]]/page.tsx
+import { Suspense } from 'react';
 import { notFound } from 'next/navigation';
 import { supabaseAdmin } from '@/lib/supabase/admin';
 import { TemplateEditorProvider } from '@/context/template-editor-context';
@@ -6,6 +7,7 @@ import TemplateEditor from '@/components/admin/templates/template-editor';
 import AutogenRunner from '@/components/admin/templates/autogen-runner';
 import GeoCampaignBanner from '@/components/admin/templates/geo-campaign-banner';
 import ReadinessCoach from '@/components/admin/templates/readiness-coach';
+import ReadinessDeepLink from '@/components/admin/templates/readiness-deep-link';
 import { getGeoCampaignByTemplateId } from '@/lib/outreach/geoCampaigns';
 import type { Template } from '@/types/template';
 
@@ -133,6 +135,7 @@ export default async function TemplateEditPage({ params }: PageProps) {
         colorMode={colorMode}
         initialData={initialData}
       >
+        <Suspense fallback={null}><ReadinessDeepLink /></Suspense>
         {campaign && (
           <ReadinessCoach
             campaignId={campaign.id}

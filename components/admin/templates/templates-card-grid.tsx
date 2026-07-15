@@ -4,7 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { toast } from 'react-hot-toast';
-import { Copy, ExternalLink, Pencil, CheckCircle2, CircleDashed, Sparkles, BarChart3 } from 'lucide-react';
+import { Copy, ExternalLink, Pencil, CheckCircle2, CircleDashed, Sparkles, BarChart3, ArrowRight } from 'lucide-react';
 import { prettifySlug } from '@/lib/home/showcase-helpers';
 import { normalizeGscDomain } from '@/lib/gsc/normalizeDomain';
 import { CampaignBadge, type CampaignInfo } from '@/components/admin/templates/campaign-badge';
@@ -36,25 +36,50 @@ type Row = {
   custom_domain?: string | null;
   data?: any;
   campaign?: CampaignInfo | null;
-  seo_readiness?: { pct: number; done: number; total: number; hardLeft: number } | null;
+  seo_readiness?: SeoReadinessInfo | null;
 };
+
+type NextStep = { id: string; cta: string; label: string; hint?: string | null; blockType?: string | null; href?: string | null };
+type SeoReadinessInfo = { pct: number; done: number; total: number; hardLeft: number; nextStep?: NextStep | null };
+
+/** Deep link to the next-step fix — prefers the stored href, derives from slug otherwise. */
+function nextStepHref(slug: string, ns?: NextStep | null): string | null {
+  if (!ns) return null;
+  if (ns.href) return ns.href;
+  if (!slug) return null;
+  return ns.blockType ? `/admin/templates/${slug}?reveal=${encodeURIComponent(ns.blockType)}` : `/admin/templates/${slug}`;
+}
 
 function readinessColor(pct: number): string {
   return pct >= 80 ? 'bg-emerald-500' : pct >= 50 ? 'bg-amber-500' : 'bg-red-500';
 }
 
-/** Compact SEO-readiness meter — mirrors the in-editor Readiness coach's percentage. */
-function SeoReadiness({ s }: { s?: Row['seo_readiness'] }) {
+/** Compact SEO-readiness meter + a "next step" button — mirrors the in-editor coach. */
+function SeoReadiness({ s, slug }: { s?: SeoReadinessInfo | null; slug: string }) {
   if (!s || !s.total) return null;
+  const href = nextStepHref(slug, s.nextStep);
   return (
-    <div
-      className="mt-1.5 inline-flex items-center gap-1.5"
-      title={`SEO readiness — ${s.done}/${s.total} checks${s.hardLeft ? ` · ${s.hardLeft} required left` : ''}`}
-    >
-      <div className="h-1.5 w-16 overflow-hidden rounded-full bg-zinc-800">
-        <div className={`h-full rounded-full ${readinessColor(s.pct)}`} style={{ width: `${s.pct}%` }} />
+    <div className="mt-1.5 flex flex-col items-start gap-1.5">
+      <div
+        className="inline-flex items-center gap-1.5"
+        title={`SEO readiness — ${s.done}/${s.total} checks${s.hardLeft ? ` · ${s.hardLeft} required left` : ''}`}
+      >
+        <div className="h-1.5 w-16 overflow-hidden rounded-full bg-zinc-800">
+          <div className={`h-full rounded-full ${readinessColor(s.pct)}`} style={{ width: `${s.pct}%` }} />
+        </div>
+        <span className="text-[11px] font-medium text-zinc-400">{s.pct}% SEO</span>
       </div>
-      <span className="text-[11px] font-medium text-zinc-400">{s.pct}% SEO</span>
+      {s.nextStep && href ? (
+        <Link
+          href={href}
+          title={s.nextStep.hint || s.nextStep.label}
+          className="inline-flex items-center gap-1 rounded-md border border-fuchsia-500/30 bg-fuchsia-500/10 px-2 py-0.5 text-[11px] font-medium text-fuchsia-200 transition hover:bg-fuchsia-500/20"
+        >
+          <ArrowRight className="h-3 w-3" /> Next: {s.nextStep.cta}
+        </Link>
+      ) : !s.nextStep ? (
+        <span className="text-[11px] font-medium text-emerald-400/80">SEO ready ✓</span>
+      ) : null}
     </div>
   );
 }
@@ -206,7 +231,7 @@ export default function TemplatesCardGrid({
                   <span className="text-zinc-700">·</span>
                   <span>{timeAgo(r.updated_at)}</span>
                 </div>
-                <div><SeoReadiness s={r.seo_readiness} /></div>
+                <div><SeoReadiness s={r.seo_readiness} slug={r.slug} /></div>
                 {r.campaign ? (
                   <div className="mt-1.5">
                     <CampaignBadge c={r.campaign} />

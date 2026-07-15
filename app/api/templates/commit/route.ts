@@ -432,7 +432,7 @@ export async function POST(req: Request) {
 
     // Refresh the persisted SEO-readiness score so the templates list stays sortable
     // by it. Fire-and-forget — never block or fail the commit on scoring.
-    void persistReadinessScore(id, afterData, (fullRow as any).industry);
+    void persistReadinessScore(id, afterData, (fullRow as any).industry, (fullRow as any).slug);
 
     // Return the template row + injected hours (compat), and surface company_id
     const templateOut = { ...(fullRow as any), data: afterData, site_type: normalizedSiteType };

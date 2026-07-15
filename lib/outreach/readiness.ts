@@ -70,13 +70,23 @@ export function napPhoneInconsistent(data: any): boolean {
 
 function firstLogoUrl(data: any): string | null {
   const meta = data?.meta ?? {};
-  return (
-    meta.logo_url ||
-    meta.branding?.logo_url ||
-    data?.logo_url ||
-    data?.branding?.logo_url ||
-    null
-  );
+  const fromMeta =
+    meta.logo_url || meta.branding?.logo_url || data?.logo_url || data?.branding?.logo_url;
+  if (fromMeta) return String(fromMeta);
+  // Also accept a logo set directly on a header block (content/props), or a top-level
+  // headerBlock — some templates store the logo there rather than in meta.
+  const pages = Array.isArray(data?.pages) ? data.pages : [];
+  for (const p of pages) {
+    const blocks = Array.isArray(p?.content_blocks) ? p.content_blocks : Array.isArray(p?.blocks) ? p.blocks : [];
+    for (const b of blocks) {
+      if (b?.type !== 'header') continue;
+      const url = b?.content?.logo_url || b?.props?.logo_url || b?.content?.logoUrl || b?.props?.logoUrl;
+      if (url) return String(url);
+    }
+  }
+  const hb = data?.headerBlock;
+  const hbUrl = hb?.content?.logo_url || hb?.props?.logo_url || hb?.content?.logoUrl || hb?.props?.logoUrl;
+  return hbUrl ? String(hbUrl) : null;
 }
 
 /** Analyze a pitch site's `data` for outreach readiness. Pure + deterministic. */
@@ -169,6 +179,8 @@ export type ChecklistItem = {
   fix?: string;
   /** True when this item is the missing address, fixable by pointing at an org service area. */
   fixableByOrgAddress?: boolean;
+  /** True when `ok` comes from an operator manual override (soft items only), not detection. */
+  overridden?: boolean;
 };
 
 /**
@@ -199,14 +211,26 @@ export function readinessChecklist(data: any, industryKey: string): ChecklistIte
     { id: 'nap-consistent', ids: ['nap-inconsistent'], label: 'Consistent phone across the site', severity: 'soft', hint: 'Citations must match — a different phone in different places splits your NAP and hurts local rank.', fix: 'Use the same phone number everywhere (hero CTA, Contact, Location, footer).' },
   ];
 
-  return defs.map((d) => ({
-    id: d.id,
-    label: d.label,
-    severity: d.severity,
-    ok: !d.ids.some((x) => failing.has(x)),
-    hint: d.hint,
-    blockTypes: d.blockTypes,
-    fix: d.fix,
-    fixableByOrgAddress: d.fixableByOrgAddress,
-  }));
+  // Operator manual overrides — soft/recommended items an operator has marked done even
+  // when auto-detection can't see it (e.g. a GBP linked off-site, schema handled elsewhere).
+  // Never lets a HARD required check be faked — those must genuinely pass.
+  const overrides: string[] = Array.isArray(data?.meta?.readiness_overrides)
+    ? data.meta.readiness_overrides.map(String)
+    : [];
+
+  return defs.map((d) => {
+    const autoOk = !d.ids.some((x) => failing.has(x));
+    const overridden = !autoOk && d.severity === 'soft' && overrides.includes(d.id);
+    return {
+      id: d.id,
+      label: d.label,
+      severity: d.severity,
+      ok: autoOk || overridden,
+      overridden,
+      hint: d.hint,
+      blockTypes: d.blockTypes,
+      fix: d.fix,
+      fixableByOrgAddress: d.fixableByOrgAddress,
+    };
+  });
 }

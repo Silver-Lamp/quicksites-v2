@@ -49,7 +49,38 @@ export default function ReadinessCoach({
   const ctx = useTemplateEditor();
   const data = (ctx as any)?.template?.data ?? {};
 
-  const items = useMemo(() => readinessChecklist(data, industryKey), [data, industryKey]);
+  // Operator manual overrides for soft/recommended items (persisted at
+  // data.meta.readiness_overrides). `localOverrides` gives instant feedback before the
+  // commit round-trips; it resets to follow the persisted set once that lands.
+  const persistedOverrides = useMemo<string[]>(
+    () => (Array.isArray(data?.meta?.readiness_overrides) ? data.meta.readiness_overrides.map(String) : []),
+    [data],
+  );
+  const [localOverrides, setLocalOverrides] = useState<string[] | null>(null);
+  useEffect(() => { setLocalOverrides(null); }, [persistedOverrides.join('|')]);
+  const overrides = localOverrides ?? persistedOverrides;
+  const [savingOverride, setSavingOverride] = useState<string | null>(null);
+
+  const effData = useMemo(
+    () => ({ ...data, meta: { ...(data?.meta ?? {}), readiness_overrides: overrides } }),
+    [data, overrides],
+  );
+  const items = useMemo(() => readinessChecklist(effData, industryKey), [effData, industryKey]);
+
+  async function toggleOverride(id: string) {
+    const next = overrides.includes(id) ? overrides.filter((x) => x !== id) : [...overrides, id];
+    setLocalOverrides(next);
+    setSavingOverride(id);
+    try {
+      const nextData = { ...data, meta: { ...(data?.meta ?? {}), readiness_overrides: next } };
+      await (ctx as any)?.commitPatch?.({ data: nextData }, 'save');
+    } catch {
+      setLocalOverrides(overrides); // revert on failure
+      setMsg({ ok: false, text: 'Could not save that change.' });
+    } finally {
+      setSavingOverride(null);
+    }
+  }
   const hard = items.filter((i) => i.severity === 'hard');
   const hardLeft = hard.filter((i) => !i.ok).length;
   const doneCount = items.filter((i) => i.ok).length;
@@ -232,12 +263,28 @@ export default function ReadinessCoach({
   const renderItem = (i: ChecklistItem) => (
     <li key={i.id} className="py-0.5">
       <div className="flex items-start gap-2">
-        <span className={`mt-0.5 shrink-0 text-sm ${i.ok ? 'text-emerald-400' : i.severity === 'hard' ? 'text-amber-400' : 'text-neutral-500'}`}>{i.ok ? '☑' : '☐'}</span>
+        {/* Soft/recommended items can be checked off manually (marked done even when
+            auto-detection can't see it). Hard required items must genuinely pass. */}
+        {i.severity === 'soft' ? (
+          <button
+            type="button"
+            onClick={() => toggleOverride(i.id)}
+            disabled={savingOverride === i.id}
+            aria-pressed={i.ok}
+            title={i.overridden ? 'Marked done manually — click to undo' : i.ok ? 'Detected as done' : 'Mark this done'}
+            className={`mt-0.5 shrink-0 text-sm disabled:opacity-40 ${i.ok ? 'text-emerald-400' : 'text-neutral-500 hover:text-neutral-200'}`}
+          >
+            {i.ok ? '☑' : '☐'}
+          </button>
+        ) : (
+          <span className={`mt-0.5 shrink-0 text-sm ${i.ok ? 'text-emerald-400' : 'text-amber-400'}`}>{i.ok ? '☑' : '☐'}</span>
+        )}
         <div className="min-w-0">
           {/* Action sits right next to its label so it's obvious what it acts on. */}
           <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
             <span className={`text-sm ${i.ok ? 'text-neutral-400 line-through' : 'text-neutral-100'}`}>{i.label}</span>
             {i.severity === 'hard' && !i.ok && <span className="text-[10px] uppercase text-amber-400/80">required</span>}
+            {i.overridden && <span className="text-[10px] uppercase text-neutral-500">manual</span>}
             {!i.ok && itemAction(i)}
           </div>
           {i.hint && !i.ok && <span className="block text-[11px] text-neutral-400">{i.hint}</span>}

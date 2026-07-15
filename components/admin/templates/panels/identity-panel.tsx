@@ -10,6 +10,7 @@ import { Button } from '@/components/ui';
 import { RefreshCw, Save, Building2 } from 'lucide-react';
 import { usePanelDeepLink } from './usePanelDeepLink';
 import ParkAddressPicker, { type PickedParkAddress } from './park-address-picker';
+import { cleanCityName } from '@/lib/geo/cleanCityName';
 import {
   getIndustryOptions,
   INDUSTRY_HINTS,
@@ -319,11 +320,13 @@ function buildDataPatch(d: Draft, tmpl: Template): Partial<Template> {
 function deriveKnownLocation(t: Template): { city: string; state: string } {
   const data: any = (t as any)?.data ?? {};
   const meta: any = data?.meta ?? {};
-  const structuredCity = String(meta?.contact?.city || meta?.identity?.city || (t as any)?.city || '').trim();
+  // Clean service-area framing ("Serving Cambridge, MA") down to a bare city so the geo lookup
+  // resolves — a polluted city is why the parks sweep comes back empty.
+  const structuredCity = cleanCityName(meta?.contact?.city || meta?.identity?.city || (t as any)?.city || '');
   const structuredState = String(meta?.contact?.state || meta?.identity?.state || (t as any)?.state || '').trim();
   if (structuredCity && structuredState) return { city: structuredCity, state: structuredState };
 
-  const city = structuredCity || String(meta?.geo_city || '').trim();
+  const city = structuredCity || cleanCityName(meta?.geo_city || '');
   let state = structuredState;
   try {
     const blob = JSON.stringify(data);
@@ -334,7 +337,7 @@ function deriveKnownLocation(t: Template): { city: string; state: string } {
     }
     if (!city) {
       const m = blob.match(/([A-Za-z][A-Za-z .]+?),\s*([A-Z]{2})\b/);
-      if (m) return { city: m[1].trim(), state: m[2] };
+      if (m) return { city: cleanCityName(m[1]), state: m[2] };
     }
   } catch {}
   return { city, state };

@@ -17,6 +17,7 @@ import { getAdminUser } from '@/lib/auth/getAdminUser';
 import { rateLimitOr429 } from '@/lib/api/rateLimitGuard';
 import { parksRegistryEnabled } from '@/lib/parks/registry';
 import { resolveOfficeAddressFromRegistry } from '@/lib/parks/officeAddress';
+import { cleanCityName } from '@/lib/geo/cleanCityName';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -38,7 +39,9 @@ export async function POST(req: Request) {
   } catch {
     return NextResponse.json({ ok: false, error: 'Invalid request body.' }, { status: 400 });
   }
-  const city = typeof body.city === 'string' ? body.city.trim() : '';
+  // A geo site's "city" is often a service-area phrase ("Serving Cambridge, MA") — normalize
+  // to a bare city so the Places sweep can actually resolve it.
+  const city = cleanCityName(typeof body.city === 'string' ? body.city : '');
   const region = typeof body.region === 'string' ? body.region.trim() : '';
   const industryKey = typeof body.industryKey === 'string' ? body.industryKey.trim() : null;
   const seed = (typeof body.seed === 'string' && body.seed.trim()) || `identity:${operator.id ?? 'anon'}`;

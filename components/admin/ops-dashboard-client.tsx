@@ -15,6 +15,7 @@ import { buildRankedOpportunities, type GscStat } from '@/lib/prospects/rankedOp
 import { buildOpsSignals, computeOpsNextSteps, type OpsStep, type OpsCategory } from '@/lib/ops/nextSteps';
 import type { OpsSnapshot } from '@/lib/ops/opsSnapshotServer';
 import DomainSpendChart from '@/components/admin/domain-spend-chart';
+import RevenueSimulator from '@/components/admin/ops/revenue-simulator';
 import { KpiTile, Gauge, SegmentBar, SeverityTag, formatMoney, type Tone } from '@/components/admin/ops/ops-widgets';
 
 /** Count no-website competition clusters (city×industry, ≥2) with no live campaign. */
@@ -182,6 +183,11 @@ export default function OpsDashboardClient({ snapshot }: { snapshot: OpsSnapshot
             </div>
           )}
         </div>
+      </div>
+
+      {/* Revenue simulator */}
+      <div className="mt-8">
+        <RevenueSimulator source={{ rollup: inventory.rollup, revenue, clients }} />
       </div>
 
       {/* Spend projection */}

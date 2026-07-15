@@ -31,6 +31,7 @@ import {
   type RecentLocation,
 } from '@/lib/prospects/recentLocations';
 import MailPreviewModal, { type MailPreviewData } from '@/components/admin/mail-preview-modal';
+import SenderProfileModal, { type SenderProfile } from '@/components/admin/sender-profile-modal';
 
 const TERRITORY_CELL_DEGREES = 0.02;
 
@@ -227,6 +228,11 @@ export default function ProspectsClient({
   const [mailPreview, setMailPreview] = useState<{ campaign: GeoCampaign; data: MailPreviewData } | null>(null);
   const [testAddr, setTestAddr] = useState<{ name: string; line: string } | null>(null);
   const [webhookEvent, setWebhookEvent] = useState('postcard.delivered');
+  // Sender identity (name/email/photo/signature + local city/state) — printed on every card
+  // and shown on the claim page. Loaded once; edited via the SenderProfileModal.
+  const [senderProfile, setSenderProfile] = useState<SenderProfile | null>(null);
+  const [senderReady, setSenderReady] = useState<boolean>(true); // assume ok until we hear otherwise (env fallback)
+  const [showSenderModal, setShowSenderModal] = useState(false);
   useEffect(() => {
     let alive = true;
     fetch('/api/admin/prospects/test-recipient')
@@ -235,6 +241,15 @@ export default function ProspectsClient({
         if (alive && j?.recipient) {
           const t = j.recipient;
           setTestAddr({ name: t.name, line: `${t.line1}, ${t.city}, ${t.state} ${t.zip}` });
+        }
+      })
+      .catch(() => {});
+    fetch('/api/admin/prospects/sender-profile')
+      .then((r) => (r.ok ? r.json() : null))
+      .then((j) => {
+        if (alive && j?.ok) {
+          setSenderProfile(j.profile);
+          setSenderReady(!!j.ready);
         }
       })
       .catch(() => {});
@@ -1288,6 +1303,14 @@ export default function ProspectsClient({
           right={
             <>
               <button
+                onClick={() => setShowSenderModal(true)}
+                title={senderReady ? 'Edit who prospects see contacting them (name, photo, signature, email)' : 'Set up your sender identity — prospects should know who built their site and how to reach you'}
+                className={`relative rounded-lg border px-3 py-1.5 text-xs font-medium ${senderReady ? 'border-neutral-600 bg-neutral-800/60 text-neutral-200 hover:bg-neutral-700/60' : 'border-amber-500/50 bg-amber-500/10 text-amber-200 hover:bg-amber-500/20'}`}
+              >
+                {senderReady ? '✍️ Sender profile' : '⚠ Set up sender'}
+                {!senderReady && <span className="absolute -right-1 -top-1 h-2.5 w-2.5 rounded-full bg-amber-400" />}
+              </button>
+              <button
                 onClick={setTestAddress}
                 title={testAddr ? `Live-test postcards mail here: ${testAddr.line}` : 'Set a live-test mailing address — test sends go here instead of the prospects'}
                 className="rounded-lg border border-sky-500/30 bg-sky-500/10 px-3 py-1.5 text-xs font-medium text-sky-200 hover:bg-sky-500/20"
@@ -1700,6 +1723,16 @@ export default function ProspectsClient({
           sending={busy === `mail:${mailPreview.campaign.id}`}
           onCancel={() => setMailPreview(null)}
           onConfirm={confirmMail}
+          onEditSender={() => { setMailPreview(null); setShowSenderModal(true); }}
+        />
+      )}
+
+      {/* Sender identity settings — printed on every postcard + claim page. */}
+      {showSenderModal && (
+        <SenderProfileModal
+          initial={senderProfile}
+          onClose={() => setShowSenderModal(false)}
+          onSaved={(profile, ready) => { setSenderProfile(profile); setSenderReady(ready); setMsg('Sender profile saved.'); }}
         />
       )}
     </div>

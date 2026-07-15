@@ -12,17 +12,29 @@ export function prospectSmsEnabled(): boolean {
   return process.env.PROSPECT_SMS_ENABLED === '1' || process.env.PROSPECT_SMS_ENABLED === 'true';
 }
 
-/** Compose the outreach text for one business. Always includes an opt-out. */
+/** Who's reaching out — mirrors the postcard sign-off so a text feels like the same person. */
+export type SmsSender = { name?: string | null; email?: string | null };
+
+/** Compose the outreach text for one business. Always includes an opt-out. When a sender
+ *  identity is provided, it signs the message + offers a contact — consistent with the
+ *  postcard so a prospect recognizes the same person across channels. */
 export function composeOutreachSms(opts: {
   businessName: string;
   domain: string;
   campaignId: string;
+  sender?: SmsSender | null;
 }): string {
   const url = trackedClaimUrl(opts.campaignId);
   const name = opts.businessName?.trim() || 'there';
+  const senderName = opts.sender?.name?.trim() || '';
+  const senderEmail = opts.sender?.email?.trim() || '';
+  // "— Name (email)" sign-off, whichever parts we have. Kept before the required opt-out.
+  const signParts = [senderName, senderEmail].filter(Boolean);
+  const signOff = signParts.length ? `\n— ${signParts.join(' · ')}` : '';
   return (
     `Hi ${name} — we built a free website for your business at ${opts.domain}. ` +
-    `Preview & claim it before a competitor does: ${url}\n\nReply STOP to opt out.`
+    `Preview & claim it before a competitor does: ${url}` +
+    `${signOff}\n\nReply STOP to opt out.`
   );
 }
 
@@ -41,6 +53,7 @@ export async function sendOutreachSms(opts: {
   businessName: string;
   domain: string;
   campaignId: string;
+  sender?: SmsSender | null;
 }): Promise<{ ok: boolean; error?: string }> {
   const to = normalizePhone(opts.phone);
   if (!to) return { ok: false, error: 'invalid_phone' };

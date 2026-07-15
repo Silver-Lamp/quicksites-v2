@@ -20,6 +20,8 @@ export type MailPreviewData = {
   sample: { toName: string; frontHtml: string; backHtml: string } | null;
   /** The configured live-test address, if any — enables the "send to test" toggle. */
   testRecipient: { name: string; line: string } | null;
+  /** Sender identity readiness — drives the "set up who's contacting them" alert. */
+  sender?: { applies: boolean; ready: boolean; name: string | null; email: string | null };
 };
 
 export default function MailPreviewModal({
@@ -27,14 +29,18 @@ export default function MailPreviewModal({
   sending,
   onCancel,
   onConfirm,
+  onEditSender,
 }: {
   data: MailPreviewData;
   sending: boolean;
   onCancel: () => void;
   onConfirm: (test: boolean) => void;
+  /** Opens the sender-profile settings so the operator can fix an unset identity. */
+  onEditSender?: () => void;
 }) {
   const [test, setTest] = useState(false);
   const canSend = test ? !!d.testRecipient : d.mailableCount > 0;
+  const senderMissing = !!d.sender && d.sender.applies && !d.sender.ready;
   return (
     <div className="fixed inset-0 z-[1000] flex items-start justify-center overflow-y-auto bg-black/70 p-4 sm:p-8" onClick={() => !sending && onCancel()}>
       <div className="my-4 w-full max-w-3xl rounded-2xl border border-neutral-700 bg-neutral-900 p-5 text-white shadow-2xl" onClick={(e) => e.stopPropagation()}>
@@ -45,6 +51,24 @@ export default function MailPreviewModal({
           </div>
           <button onClick={() => !sending && onCancel()} className="rounded-full p-1 text-neutral-500 hover:text-white" aria-label="Close">✕</button>
         </div>
+
+        {senderMissing && (
+          <div className="mt-4 rounded-xl border border-amber-500/40 bg-amber-500/[0.08] p-3">
+            <div className="text-sm font-semibold text-amber-200">⚠ Set up your sender profile first</div>
+            <p className="mt-1 text-xs text-amber-100/80">
+              These cards won’t show who’s contacting the business or a “Questions?” email — add your name,
+              photo, signature, and contact email so prospects know a real person built their site.
+            </p>
+            {onEditSender && (
+              <button
+                onClick={onEditSender}
+                className="mt-2 rounded-lg border border-amber-400/60 px-3 py-1.5 text-xs font-semibold text-amber-100 hover:bg-amber-500/10"
+              >
+                Set up sender profile
+              </button>
+            )}
+          </div>
+        )}
 
         <div className="mt-4 grid gap-3 sm:grid-cols-3">
           <div className="rounded-xl border border-emerald-900/60 bg-emerald-950/20 p-3">

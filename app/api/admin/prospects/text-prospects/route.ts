@@ -8,8 +8,10 @@ import { NextResponse } from 'next/server';
 import { getAdminUser } from '@/lib/auth/getAdminUser';
 import { getGeoCampaign } from '@/lib/outreach/geoCampaigns';
 import { listProspectsByCampaign, markOutreachSent } from '@/lib/outreach/prospects';
-import { sendOutreachSms, prospectSmsEnabled } from '@/lib/outreach/sms/outreachSms';
+import { sendOutreachSms, prospectSmsEnabled, type SmsSender } from '@/lib/outreach/sms/outreachSms';
 import { outreachReadinessGateEnabled } from '@/lib/flags/outreachReadinessGate';
+import { resolveCampaignBrand } from '@/lib/outreach/campaignBrand';
+import { getSenderProfile } from '@/lib/outreach/senderProfile';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -51,6 +53,17 @@ export async function POST(req: Request) {
 
   const prospects = await listProspectsByCampaign(campaignId);
 
+  // Resolve who signs the text once — a branded campaign uses the org's identity, the default
+  // brand uses the operator's sender profile. Mirrors the postcard sign-off across channels.
+  const brand = await resolveCampaignBrand(campaign.org_id);
+  let sender: SmsSender | null;
+  if (campaign.org_id && brand.orgId) {
+    sender = { name: brand.name, email: brand.supportEmail };
+  } else {
+    const profile = await getSenderProfile();
+    sender = { name: profile.name, email: profile.email };
+  }
+
   const results: Array<Record<string, unknown>> = [];
   const sentIds: string[] = [];
   for (const p of prospects.slice(0, MAX_TEXTS)) {
@@ -63,6 +76,7 @@ export async function POST(req: Request) {
       businessName: p.business_name,
       domain: campaign.domain,
       campaignId: campaign.id,
+      sender,
     });
     if (r.ok) sentIds.push(p.id);
     results.push({ prospectId: p.id, ok: r.ok, error: r.error });

@@ -11,6 +11,7 @@ import { mintSiteClaimToken } from '@/lib/auth/siteClaimToken';
 import { KEY_TO_LABEL, type IndustryKey } from '@/lib/industries';
 import type { GeoCampaign } from '@/lib/outreach/geoCampaigns';
 import type { Prospect } from '@/lib/outreach/prospects';
+import { getSenderProfile, type SenderProfile } from '@/lib/outreach/senderProfile';
 
 export function publicBaseUrl(): string {
   return (
@@ -43,6 +44,20 @@ export async function qrDataUrlFor(url: string): Promise<string> {
   return QRCode.toDataURL(url, { width: 480, margin: 1, errorCorrectionLevel: 'M' });
 }
 
+/** A real human sign-off for the postcard back — face + signature + name beat a logo for
+ *  cold trust ("a real person built this," not a scam). Resolved from env for the default
+ *  brand; suppressed for reseller/owning-org sends so we never stamp our operator on a
+ *  partner's card (they keep the "— The {brand} team" line instead). */
+export type PostcardSender = {
+  name: string;
+  title?: string | null;
+  /** "Questions? {email}" — printed on the card so a prospect can reach a human. */
+  email?: string | null;
+  /** Remote or data URL — Lob fetches remote images when it renders the HTML. */
+  headshotUrl?: string | null;
+  signatureUrl?: string | null;
+};
+
 export type PosterModel = {
   domain: string;
   industryLabel: string;
@@ -57,7 +72,107 @@ export type PosterModel = {
   deadline?: string | null;
   /** Owning-org brand shown as "Built by {brandName}" (defaults to no wordmark = QuickSites). */
   brandName?: string | null;
+  /** 3 concrete benefit bullets on the back — what the site DOES, so the offer isn't only scarcity. */
+  benefits?: string[];
+  /** Personal human sign-off on the back (headshot + signature + name). */
+  sender?: PostcardSender | null;
+  /** "{City}, {ST}" of the sender's business, shown ONLY when local to the target (same state
+   *  or within radius) — the "oh, they're local to me" trust reflex. Null when not local. */
+  localLine?: string | null;
 };
+
+/**
+ * Three concrete benefit bullets for the postcard back, tuned to the vertical — the site's
+ * value in the prospect's terms, so the card sells "start taking orders," not just "claim a
+ * domain." Kept to three short lines: a postcard converts on one idea, not a feature list.
+ */
+export function postcardBenefits(industry: IndustryKey): string[] {
+  const FOOD = new Set<IndustryKey>(['restaurant']);
+  const RETAIL_MAKER = new Set<IndustryKey>([
+    'retail_boutique', 'retail_home_goods', 'retail_electronics', 'retail_thrift',
+    'crafts', 'handmade', 'etsy_style', 'gifts_stationery', 'artisan_goods', 'art_supplies',
+    'antiques_vintage', 'collectibles', 'pet_boutique', 'pop_up_shop', 'farmers_market_vendor',
+    'online_reseller', 'print_on_demand', 'custom_apparel', 'author',
+  ]);
+  if (FOOD.has(industry)) {
+    return [
+      'Customers order online right from their phone',
+      'Your full menu, always current — edit it anytime',
+      'Show up on Google when locals search nearby',
+    ];
+  }
+  if (RETAIL_MAKER.has(industry)) {
+    return [
+      'Sell your products online — no storefront needed',
+      'Secure checkout, you keep the sale',
+      'Found on Google when locals search nearby',
+    ];
+  }
+  return [
+    'Customers find you first when they search Google',
+    'Request a quote or call you in one tap',
+    'Live in minutes — nothing to install or maintain',
+  ];
+}
+
+/**
+ * The human sign-off for the postcard back, from the operator's saved sender profile. Returns
+ * null for reseller/owning-org sends (a non-null `brandName`) — their card keeps the
+ * "— The {brand} team" line and never carries the platform operator's face — or when the
+ * profile has no name yet.
+ */
+export function senderFromProfile(profile: SenderProfile, brandName?: string | null): PostcardSender | null {
+  if (brandName) return null;
+  if (!profile.name) return null;
+  return {
+    name: profile.name,
+    title: profile.title,
+    email: profile.email,
+    headshotUrl: profile.headshotUrl,
+    signatureUrl: profile.signatureUrl,
+  };
+}
+
+/** Great-circle distance in miles between two lat/lng points. */
+function haversineMiles(aLat: number, aLng: number, bLat: number, bLng: number): number {
+  const toRad = (d: number) => (d * Math.PI) / 180;
+  const R = 3958.8; // earth radius, miles
+  const dLat = toRad(bLat - aLat);
+  const dLng = toRad(bLng - aLng);
+  const s =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(toRad(aLat)) * Math.cos(toRad(bLat)) * Math.sin(dLng / 2) ** 2;
+  return 2 * R * Math.asin(Math.min(1, Math.sqrt(s)));
+}
+
+/**
+ * The sender's "{City}, {ST}" line, returned ONLY when the sender is local to the target — same
+ * state, or within `radiusMiles` (default 300) when both ends have coordinates. Null otherwise,
+ * so a far-away sender never fakes a local pretense. Pure + exported for tests.
+ */
+export function resolveLocalityLine(opts: {
+  senderCity: string | null;
+  senderState: string | null;
+  senderLat: number | null;
+  senderLng: number | null;
+  targetState: string | null;
+  targetLat: number | null;
+  targetLng: number | null;
+  radiusMiles?: number;
+}): string | null {
+  const { senderCity, senderState } = opts;
+  if (!senderCity || !senderState) return null;
+  const label = `${senderCity}, ${senderState}`;
+  const norm = (s: string) => s.trim().toLowerCase();
+  // Same-state is the strongest, simplest "local to me" signal.
+  if (opts.targetState && norm(opts.targetState) === norm(senderState)) return label;
+  // Otherwise fall back to a great-circle radius when both ends have coordinates.
+  const r = opts.radiusMiles && opts.radiusMiles > 0 ? opts.radiusMiles : 300;
+  if (opts.senderLat != null && opts.senderLng != null && opts.targetLat != null && opts.targetLng != null) {
+    if (haversineMiles(opts.senderLat, opts.senderLng, opts.targetLat, opts.targetLng) <= r) return label;
+  }
+  return null;
+}
 
 /** Format a claim deadline `days` out from now as a short "Mon D" (US), for postcard urgency. */
 export function claimDeadlineLabel(days = 14, from: Date = new Date()): string {
@@ -75,15 +190,36 @@ export async function buildPosterModel(
   // owning org's branded domain when one is provided.
   const claimUrl = trackedClaimUrl(campaign.id, null, opts?.baseUrl);
   const qrDataUrl = await QRCode.toDataURL(claimUrl, { width: 480, margin: 1, errorCorrectionLevel: 'M' });
+  const brandName = opts?.brandName ?? null;
+  const industry = campaign.industry_key as IndustryKey;
+  // Operator's saved sender identity (DB profile, env fallback) — drives the human sign-off,
+  // contact email, and the local-proximity signal.
+  const profile = await getSenderProfile();
+  // Local-proximity signal: use any prospect's coords as the campaign's location (a geo
+  // campaign targets one city, so they cluster).
+  const target = prospects.find((p) => p.address_lat != null && p.address_lon != null);
+  const localLine = resolveLocalityLine({
+    senderCity: profile.city,
+    senderState: profile.state,
+    senderLat: profile.lat,
+    senderLng: profile.lng,
+    targetState: campaign.region,
+    targetLat: target?.address_lat ?? null,
+    targetLng: target?.address_lon ?? null,
+    radiusMiles: Number(process.env.POSTCARD_LOCAL_RADIUS_MILES) || 300,
+  });
   return {
     domain: campaign.domain,
-    industryLabel: KEY_TO_LABEL[campaign.industry_key as IndustryKey] ?? 'Local Services',
+    industryLabel: KEY_TO_LABEL[industry] ?? 'Local Services',
     city: campaign.city,
     region: campaign.region,
     businesses: prospects.map((p) => p.business_name),
     claimUrl,
     qrDataUrl,
-    brandName: opts?.brandName ?? null,
+    brandName,
+    benefits: postcardBenefits(industry),
+    sender: senderFromProfile(profile, brandName),
+    localLine,
   };
 }
 
@@ -156,6 +292,7 @@ export function renderPosterHtml(m: PosterModel): string {
   .qr { width:2.1in; height:2.1in; background:#fff; padding:.08in; border-radius:12px; }
   .scan { margin-top:.1in; font-size:12pt; font-weight:600; }
   .offer { margin-top:.14in; display:inline-block; background:#f59e0b; color:#111; font-weight:800; font-size:11pt; padding:.06in .18in; border-radius:999px; letter-spacing:.03em; }
+  .local { margin-top:.12in; display:inline-block; color:#a7f3d0; font-size:10pt; font-weight:600; letter-spacing:.02em; }
   .foot { margin-top:.12in; color:#94a3b8; font-size:9pt; word-break:break-all; }
   .brand { margin-top:.06in; color:#64748b; font-size:8.5pt; letter-spacing:.04em; }
   @media print { @page { size: 6in 9in; margin: 0; } body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
@@ -165,6 +302,7 @@ export function renderPosterHtml(m: PosterModel): string {
   <div class="headline">Own ${esc(place)}<br/>${esc(m.industryLabel)} online</div>
   <div class="domain">${esc(m.domain)}</div>
   <div class="sub">This premium local domain is available to <b>one</b> business.</div>
+  ${m.localLine ? `<div class="local">📍 From a local business · ${esc(m.localLine)}</div>` : ''}
   <div class="competition">
     <div class="or" style="margin-bottom:.06in">First to claim it wins</div>
     ${businessRows}
@@ -189,6 +327,29 @@ export function renderPosterBackHtml(m: PosterModel): string {
   const deadlineLine = m.deadline
     ? `<div class="due">Claim by <b>${esc(m.deadline)}</b> — the domain goes to one business only.</div>`
     : '';
+  // Concrete benefit bullets — what the site DOES, so the pitch isn't only scarcity.
+  const benefits = (m.benefits ?? []).slice(0, 3);
+  const benefitsHtml = benefits.length
+    ? `<ul class="benefits">${benefits.map((b) => `<li>${esc(b)}</li>`).join('')}</ul>`
+    : '';
+  // Human sign-off: headshot + signature + name beat a logo for cold trust. Falls back to the
+  // org "team" line for reseller/branded sends (where sender is intentionally null).
+  const s = m.sender;
+  const signOff = s
+    ? `<div class="sender">
+        ${s.headshotUrl ? `<img class="face" src="${esc(s.headshotUrl)}" alt="" />` : ''}
+        <div class="smeta">
+          ${s.signatureUrl ? `<img class="sign" src="${esc(s.signatureUrl)}" alt="" />` : ''}
+          <div class="sname">— ${esc(s.name)}${s.title ? `, ${esc(s.title)}` : ''}</div>
+          ${m.localLine ? `<div class="sloc">${esc(m.localLine)}</div>` : ''}
+          ${s.email ? `<div class="sqa">Questions? ${esc(s.email)}</div>` : ''}
+        </div>
+      </div>`
+    : m.brandName
+      ? `<div class="sig">— The ${esc(m.brandName)} team${m.localLine ? ` · ${esc(m.localLine)}` : ''}</div>`
+      : m.localLine
+        ? `<div class="sig">From a local business · ${esc(m.localLine)}</div>`
+        : '';
   return `<!doctype html>
 <html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <style>
@@ -201,10 +362,20 @@ export function renderPosterBackHtml(m: PosterModel): string {
   }
   .hi { font-size:12pt; font-weight:700; color:#0f766e; }
   .h { margin-top:.06in; font-size:17pt; font-weight:800; line-height:1.15; }
-  .p { margin-top:.16in; font-size:11.5pt; color:#334155; max-width:4.6in; line-height:1.4; }
+  .p { margin-top:.14in; font-size:11.5pt; color:#334155; max-width:4.6in; line-height:1.4; }
+  .benefits { margin:.14in 0 0 .02in; padding:0; list-style:none; max-width:4.6in; }
+  .benefits li { position:relative; padding-left:.26in; margin:.07in 0; font-size:11pt; color:#0f172a; font-weight:600; line-height:1.3; }
+  .benefits li::before { content:"✓"; position:absolute; left:0; color:#0f766e; font-weight:800; }
   .due { margin-top:.14in; font-size:11pt; color:#b45309; font-weight:600; max-width:4.6in; }
-  .u { margin-top:.18in; font-size:10pt; color:#0f766e; word-break:break-all; }
+  .u { margin-top:.16in; font-size:10pt; color:#0f766e; word-break:break-all; }
   .sig { margin-top:.16in; font-size:10.5pt; color:#334155; font-weight:600; }
+  .sender { margin-top:.16in; display:flex; align-items:center; gap:.14in; }
+  .face { width:.7in; height:.7in; border-radius:999px; object-fit:cover; border:2px solid #0f766e; }
+  .smeta { display:flex; flex-direction:column; }
+  .sign { height:.42in; width:auto; max-width:2.4in; object-fit:contain; margin-bottom:.02in; }
+  .sname { font-size:10.5pt; color:#334155; font-weight:700; }
+  .sloc { font-size:9.5pt; color:#0f766e; font-weight:600; }
+  .sqa { margin-top:.02in; font-size:9.5pt; color:#334155; }
   /* Keep the bottom ~3.5in clear for the USPS address block Lob overlays. */
   .spacer { flex:1; min-height:3.5in; }
   @media print { @page { size:6in 9in; margin:0; } body { -webkit-print-color-adjust:exact; print-color-adjust:exact; } }
@@ -213,9 +384,10 @@ export function renderPosterBackHtml(m: PosterModel): string {
   <div class="hi">${greeting}</div>
   <div class="h">Your website for ${esc(m.domain)} is already built.</div>
   <div class="p">We built a free, ready-to-launch website for your business. Scan the QR on the front (or visit the link below) to preview it and claim it before a competitor does.</div>
+  ${benefitsHtml}
   ${deadlineLine}
   <div class="u">${esc(m.claimUrl)}</div>
-  ${m.brandName ? `<div class="sig">— The ${esc(m.brandName)} team</div>` : ''}
+  ${signOff}
   <div class="spacer"></div>
 </div></body></html>`;
 }

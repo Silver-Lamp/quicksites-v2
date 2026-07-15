@@ -15,6 +15,7 @@ import { resolveCampaignBrand } from '@/lib/outreach/campaignBrand';
 import { getTestRecipient } from '@/lib/outreach/mail/testRecipient';
 import { parseUsAddress, MAX_POSTCARD_PIECES_PER_SEND } from '@/lib/outreach/mail/lob';
 import { estimatePostcardCents, postcardUnitCents } from '@/lib/outreach/mail/postcardCost';
+import { getSenderProfile, senderProfileReady } from '@/lib/outreach/senderProfile';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -77,9 +78,22 @@ export async function POST(req: Request) {
   // Surface the configured live-test address (if any) so the modal can offer "send to test".
   const testRecipient = await getTestRecipient();
 
+  // Sender identity readiness — the modal alerts (but doesn't block) when it's unset for a
+  // default-brand send, so prospects always know who built their site and how to reach them.
+  const senderProfile = await getSenderProfile();
+  const senderReady = senderProfileReady(senderProfile);
+  const isBranded = !!(campaign.org_id && brand.orgId);
+
   return NextResponse.json({
     ok: true,
     domain: campaign.domain,
+    sender: {
+      // A reseller/branded campaign uses the org's identity, not the operator profile.
+      applies: !isBranded,
+      ready: senderReady,
+      name: senderProfile.name,
+      email: senderProfile.email,
+    },
     testRecipient: testRecipient
       ? { name: testRecipient.name, line: `${testRecipient.line1}, ${testRecipient.city}, ${testRecipient.state} ${testRecipient.zip}` }
       : null,

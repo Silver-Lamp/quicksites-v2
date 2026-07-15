@@ -91,6 +91,35 @@ export async function recordMediaAsset(
 }
 
 /**
+ * Record an operator-owned image that isn't attached to any template — e.g. an outreach
+ * headshot or signature. Scoped only by `owner_id` (no template/org/industry), so it shows
+ * up under the "All my sites" (org) scope in the picker for reuse. Idempotent on `url`.
+ */
+export async function recordOwnerMediaAsset(
+  admin: Admin,
+  input: { ownerId: string; url: string; kind: string; storagePath?: string | null; subject?: string | null }
+): Promise<boolean> {
+  const url = (input.url || '').trim();
+  const ownerId = (input.ownerId || '').trim();
+  if (!url || !ownerId) return false;
+  const { error } = await admin.from('media_assets').upsert(
+    {
+      owner_id: ownerId,
+      org_id: null,
+      template_id: null,
+      industry: null,
+      url,
+      storage_path: input.storagePath ?? null,
+      kind: input.kind || 'other',
+      source: 'uploaded',
+      subject: input.subject ?? null,
+    },
+    { onConflict: 'url', ignoreDuplicates: true }
+  );
+  return !error;
+}
+
+/**
  * List thumbnails for a scope. Scoping is intentionally owner-first: "my org" is
  * every site I own plus any template whose org_id is in `orgIds` (the distinct
  * org_ids of my own templates) — this avoids a separate membership model and

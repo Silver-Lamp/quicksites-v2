@@ -11,6 +11,7 @@ import { CLAIM_VERIFICATION_ENABLED } from '@/lib/flags/claimVerification';
 import ClaimSiteHero from '@/components/sites/claim-site-hero';
 import { getGeoCampaignByTemplateId } from '@/lib/outreach/geoCampaigns';
 import { resolveCampaignBrand } from '@/lib/outreach/campaignBrand';
+import { getSenderProfile } from '@/lib/outreach/senderProfile';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -62,6 +63,12 @@ export default async function ClaimSitePage({
   const campaign = await getGeoCampaignByTemplateId(params.id);
   const brand = await resolveCampaignBrand(campaign?.org_id ?? null);
 
+  // "Questions? email us" — a branded campaign uses the org's support email; the default brand
+  // uses the operator's sender profile, so a prospect can always reach a human.
+  const contactEmail = brand.orgId
+    ? brand.supportEmail
+    : (await getSenderProfile()).email;
+
   return (
     <ClaimSiteHero
       name={name}
@@ -70,6 +77,7 @@ export default async function ClaimSitePage({
       urlLabel={(tpl as any)?.slug ? `${slug}.delivered.menu` : 'your new site'}
       brandName={brand.orgId ? brand.name : null}
       brandLogoUrl={brand.logoUrl}
+      contactEmail={contactEmail}
     />
   );
 }

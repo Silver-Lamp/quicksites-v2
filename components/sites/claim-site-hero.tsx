@@ -12,6 +12,7 @@ export default function ClaimSiteHero({
   urlLabel,
   brandName,
   brandLogoUrl,
+  contactEmail,
 }: {
   name: string;
   previewHref: string;
@@ -21,6 +22,8 @@ export default function ClaimSiteHero({
   /** Owning-org brand (e.g. "CedarSites"); shown as a "Built by" wordmark. Null → QuickSites default (no wordmark). */
   brandName?: string | null;
   brandLogoUrl?: string | null;
+  /** "Questions? email us" contact, so a prospect can reach a human before claiming. */
+  contactEmail?: string | null;
 }) {
   return (
     <main className="mx-auto flex min-h-screen max-w-3xl flex-col items-center px-6 py-14 text-center">
@@ -87,6 +90,14 @@ export default function ClaimSiteHero({
       <p className="mt-2 text-sm text-zinc-500">
         Claiming creates your account and makes this site yours to edit and publish.
       </p>
+      {contactEmail && (
+        <p className="mt-6 text-sm text-zinc-500">
+          Questions? Email{' '}
+          <a href={`mailto:${contactEmail}`} className="text-sky-400 underline underline-offset-4">
+            {contactEmail}
+          </a>
+        </p>
+      )}
     </main>
   );
 }

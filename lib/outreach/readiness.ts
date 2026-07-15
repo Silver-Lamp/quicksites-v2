@@ -11,6 +11,7 @@
 
 import { analyzeOnPage } from '@/lib/outreach/onPage';
 import type { IndustryKey } from '@/lib/industries';
+import { readinessActionForItem, type ReadinessActionKey } from '@/lib/seo/readinessActions';
 
 export type BlockerSeverity = 'hard' | 'soft';
 export type ReadinessBlocker = { id: string; severity: BlockerSeverity; label: string };
@@ -200,8 +201,8 @@ export type NextStep = {
   href?: string | null;     // deep link (filled in when a slug is known — see persistReadiness)
 };
 
-/** Action keys the list can execute in place (see next-step-button.tsx → endpoint map). */
-export type NextStepAction = 'generate_city_page' | 'fill_office_address';
+/** Action keys the list can execute in place — declared in the readiness-actions registry. */
+export type NextStepAction = ReadinessActionKey;
 
 export type ReadinessScore = {
   pct: number;
@@ -228,20 +229,11 @@ const NEXT_STEP_CTA: Record<string, string> = {
   'nap-consistent': 'Use one consistent phone',
 };
 
-// Items whose fix is an action the list can run directly (vs. an editor deep link).
-const NEXT_STEP_ACTION: Record<string, NextStepAction> = {
-  pages: 'generate_city_page',
-};
-
 function buildNextStep(item: ChecklistItem | null | undefined, industryKey?: string): NextStep | null {
   if (!item) return null;
-  let action = NEXT_STEP_ACTION[item.id] ?? null;
-  // The missing-address fix can be auto-satisfied from the industrial-park registry (real
-  // building + synthetic suite) for non-food local-service sites — offer it as a one-click
-  // action instead of a deep link into the editor. Food sites keep the deep link.
-  if (item.id === 'nap' && industryKey && !FOOD_INDUSTRIES.has(industryKey)) {
-    action = 'fill_office_address';
-  }
+  // Whether this item has a one-click list action (and whether it fits this industry) is
+  // decided by the single readiness-actions registry — see lib/seo/readinessActions.ts.
+  const action = readinessActionForItem(item.id, industryKey)?.key ?? null;
   return {
     id: item.id,
     cta: NEXT_STEP_CTA[item.id] ?? item.label,

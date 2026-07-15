@@ -10,6 +10,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useTemplateEditor } from '@/context/template-editor-context';
 import { readinessChecklist, type ChecklistItem } from '@/lib/outreach/readiness';
+import { buildLocalBusinessSchema } from '@/lib/seo/localBusinessSchema';
 
 const EXPANDED_KEY = 'qs:readiness-coach:expanded';
 
@@ -61,9 +62,21 @@ export default function ReadinessCoach({
   const overrides = localOverrides ?? persistedOverrides;
   const [savingOverride, setSavingOverride] = useState<string | null>(null);
 
+  // Optimistic "schema on" so the check flips instantly (the commit round-trips); resets to
+  // follow the persisted flag once it lands.
+  const [schemaLocal, setSchemaLocal] = useState(false);
+  useEffect(() => { if (data?.meta?.local_business_schema) setSchemaLocal(false); }, [data?.meta?.local_business_schema]);
+
   const effData = useMemo(
-    () => ({ ...data, meta: { ...(data?.meta ?? {}), readiness_overrides: overrides } }),
-    [data, overrides],
+    () => ({
+      ...data,
+      meta: {
+        ...(data?.meta ?? {}),
+        readiness_overrides: overrides,
+        ...(schemaLocal ? { local_business_schema: true } : {}),
+      },
+    }),
+    [data, overrides, schemaLocal],
   );
   const items = useMemo(() => readinessChecklist(effData, industryKey), [effData, industryKey]);
 
@@ -104,7 +117,32 @@ export default function ReadinessCoach({
   const [addrBusy, setAddrBusy] = useState(false);
   const [pageBusy, setPageBusy] = useState(false);
   const [blogBusy, setBlogBusy] = useState(false);
+  const [schemaBusy, setSchemaBusy] = useState(false);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
+
+  // Turn on LocalBusiness structured data: verify we can build it from the site's identity
+  // (name + city/address), then flip the meta flag on. The public site emits the JSON-LD
+  // live from identity (app/sites/…), so it stays fresh; the check flips to done immediately.
+  async function enableSchema() {
+    setSchemaBusy(true);
+    setMsg(null);
+    try {
+      const built = buildLocalBusinessSchema(data);
+      if (!built) {
+        setMsg({ ok: false, text: 'Add a business name + a city or address first (try “📍 Office address”), then add schema.' });
+        return;
+      }
+      setSchemaLocal(true); // instant check; reverts if the commit fails
+      const nextData = { ...data, meta: { ...(data?.meta ?? {}), local_business_schema: true } };
+      await (ctx as any)?.commitPatch?.({ data: nextData }, 'save');
+      setMsg({ ok: true, text: `LocalBusiness schema added (${built['@type']}) — emitted on your published site.` });
+    } catch (e: any) {
+      setSchemaLocal(false);
+      setMsg({ ok: false, text: e.message || 'Could not add schema.' });
+    } finally {
+      setSchemaBusy(false);
+    }
+  }
 
   // Generate a few unique LLM blog posts (as pages) that link back to this site's pages.
   async function generateBlog() {
@@ -231,6 +269,19 @@ export default function ReadinessCoach({
           title="Generate a &quot;<service> in <city>&quot; landing page that links back to your home page"
         >
           {pageBusy ? '…' : 'Generate ✨'}
+        </button>
+      );
+    }
+    // LocalBusiness schema is emitted from the site identity — add it in one click.
+    if (i.id === 'schema') {
+      return (
+        <button
+          onClick={enableSchema}
+          disabled={schemaBusy}
+          className="shrink-0 rounded-md border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 text-[11px] font-medium text-emerald-200 hover:bg-emerald-500/20 disabled:opacity-50"
+          title="Emit LocalBusiness structured data from this site's name, address & phone"
+        >
+          {schemaBusy ? '…' : 'Add ✨'}
         </button>
       );
     }

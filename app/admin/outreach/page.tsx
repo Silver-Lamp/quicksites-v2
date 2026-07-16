@@ -22,7 +22,7 @@ export default async function OutreachPage() {
         <div>
           <h1 className="text-2xl font-semibold">Outreach pipeline</h1>
           <p className="mt-1 text-sm text-neutral-400">
-            Auto-built restaurant sites from the listing importer. Send the claim link; they preview, sign up, and own it.
+            Auto-built local-business sites from the listing importer. Send the claim link; they preview, sign up, and own it.
           </p>
         </div>
         <div className="flex flex-col items-end gap-1 text-sm">

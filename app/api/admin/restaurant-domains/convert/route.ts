@@ -26,7 +26,7 @@ export async function POST(req: Request) {
   if (!campaignId) return NextResponse.json({ error: 'campaignId is required.' }, { status: 400 });
 
   try {
-    const r = await convertToRestaurantCompetition(campaignId);
+    const r = await convertToRestaurantCompetition(campaignId, gate.user.id);
     return NextResponse.json({ ok: true, ...r });
   } catch (e: any) {
     return NextResponse.json({ error: e?.message || 'Could not convert.' }, { status: 400 });

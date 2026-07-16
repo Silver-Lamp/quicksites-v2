@@ -57,26 +57,40 @@ function Card({
   );
 }
 
-export default function RestaurantCompetitionDirectory({ dir }: { dir: CompetitionDirectory }) {
+export default function RestaurantCompetitionDirectory({
+  dir,
+  compact = false,
+}: {
+  dir: CompetitionDirectory;
+  /** True when rendered BELOW an apex template's own hero (site_type='restaurant_apex')
+   *  — skips the directory's h1 section so the page doesn't stack two heroes. */
+  compact?: boolean;
+}) {
   const place = [dir.city, dir.region].filter(Boolean).join(', ');
   const featured = dir.hasWinner ? dir.entries.find((e) => e.isWinner) ?? null : null;
   const rest = featured ? dir.entries.filter((e) => e.templateId !== featured.templateId) : dir.entries;
+  // Unlinked, footer-only attribution: a text-only "powered by" note is the SEO-safe
+  // pattern across a network of <city>-restaurant.com domains (no sitewide followed
+  // links back to one domain, no repeated hero boilerplate).
+  const brand = process.env.NEXT_PUBLIC_MENU_BASE_DOMAIN || 'QuickSites';
 
   return (
-    <div className="min-h-screen bg-zinc-950 text-white">
-      <section className="relative mx-auto max-w-5xl px-6 pt-14 pb-8 text-center">
-        <div aria-hidden className="pointer-events-none absolute inset-0 -z-10 overflow-hidden">
-          <div className="absolute -top-16 left-1/2 h-64 w-[32rem] -translate-x-1/2 rounded-full bg-amber-500/15 blur-3xl" />
-        </div>
-        <h1 className="text-3xl font-extrabold tracking-tight md:text-5xl">
-          {place ? `Order from restaurants in ${place}` : 'Order from local restaurants'}
-        </h1>
-        <p className="mx-auto mt-3 max-w-xl text-zinc-400">
-          Tap a restaurant to see the menu and order online — straight from the kitchen.
-        </p>
-      </section>
+    <div className={compact ? 'bg-zinc-950 text-white' : 'min-h-screen bg-zinc-950 text-white'}>
+      {!compact && (
+        <section className="relative mx-auto max-w-5xl px-6 pt-14 pb-8 text-center">
+          <div aria-hidden className="pointer-events-none absolute inset-0 -z-10 overflow-hidden">
+            <div className="absolute -top-16 left-1/2 h-64 w-[32rem] -translate-x-1/2 rounded-full bg-amber-500/15 blur-3xl" />
+          </div>
+          <h1 className="text-3xl font-extrabold tracking-tight md:text-5xl">
+            {place ? `Order from restaurants in ${place}` : 'Order from local restaurants'}
+          </h1>
+          <p className="mx-auto mt-3 max-w-xl text-zinc-400">
+            Tap a restaurant to see the menu and order online — straight from the kitchen.
+          </p>
+        </section>
+      )}
 
-      <section className="mx-auto max-w-5xl px-6 pb-16">
+      <section className={`mx-auto max-w-5xl px-6 pb-16 ${compact ? 'pt-10' : ''}`}>
         {dir.entries.length === 0 ? (
           <div className="rounded-2xl border border-dashed border-zinc-800 px-6 py-16 text-center text-zinc-500">
             Restaurants are being added here soon.
@@ -92,7 +106,7 @@ export default function RestaurantCompetitionDirectory({ dir }: { dir: Competiti
       </section>
 
       <footer className="border-t border-zinc-800/70 py-6 text-center text-xs text-zinc-600">
-        {place ? `${place} restaurants` : 'Local restaurants'} · order online, powered by QuickSites
+        {place ? `${place} restaurants` : 'Local restaurants'} · order online, powered by {brand}
       </footer>
     </div>
   );

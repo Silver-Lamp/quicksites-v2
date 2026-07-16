@@ -19,6 +19,7 @@ import { normalizeDomain, domainLabelKey } from '@/lib/prospects/ownedDomains';
 import { claimUrlFor, trackedClaimUrl } from '@/lib/outreach/competitionPoster';
 import { linkProspectsToCampaign } from '@/lib/outreach/geoCampaigns';
 import { RESTAURANT_COMPETITION_KIND } from '@/lib/outreach/restaurantCompetition';
+import { buildRestaurantApexSite } from '@/lib/outreach/restaurantApexSite';
 
 // ---- Wire types ---------------------------------------------------------------
 
@@ -51,6 +52,9 @@ export type RestaurantDomainArea = {
   /** 'restaurant_competition' = claim contest; 'geo_services' = rent-model campaign
    *  that targeted restaurants (pre-contest era) — convertible via /convert. */
   campaign_kind: string | null;
+  /** Template occupying the apex slug (the restaurant_apex portal — or, for a
+   *  rent-model campaign, its pitch site). Null = the templateless directory fallback. */
+  apex_template_id: string | null;
   has_winner: boolean;
   winner_name: string | null;
   /** Cohort racing for the apex (linked to the campaign). */
@@ -170,9 +174,12 @@ export function assembleRestaurantDomainAreas(input: {
   prospects: ProspectRow[];
   templates: TemplateRow[];
   ownedDomains: string[];
+  /** slug → template id for templates sitting at campaign apex slugs (apex portals / pitch sites). */
+  apexTemplatesBySlug?: Record<string, string>;
   links: LinkBuilders;
 }): RestaurantDomainOverview {
   const { campaigns, prospects, links } = input;
+  const apexBySlug = input.apexTemplatesBySlug ?? {};
   const tplById = new Map(input.templates.map((t) => [t.id, t]));
   const ownedNormalized = new Set(input.ownedDomains.map(normalizeDomain).filter(Boolean));
   const prospectById = new Map(prospects.map((p) => [p.id, p]));
@@ -230,6 +237,7 @@ export function assembleRestaurantDomainAreas(input: {
       campaign_id: c.id,
       campaign_status: c.status,
       campaign_kind: c.kind,
+      apex_template_id: apexBySlug[c.slug] ?? null,
       has_winner: !!winnerId,
       winner_name: winnerName,
       competitors: sortRestaurants(cohort),
@@ -261,6 +269,7 @@ export function assembleRestaurantDomainAreas(input: {
       campaign_id: null,
       campaign_status: null,
       campaign_kind: null,
+      apex_template_id: null,
       has_winner: false,
       winner_name: null,
       competitors: [],
@@ -291,6 +300,7 @@ export function assembleRestaurantDomainAreas(input: {
       campaign_id: null,
       campaign_status: null,
       campaign_kind: null,
+      apex_template_id: null,
       has_winner: false,
       winner_name: null,
       competitors: [],
@@ -366,11 +376,22 @@ export async function getRestaurantLocationDomains(): Promise<RestaurantDomainOv
     ? await supabaseAdmin.from('templates').select('id, slug, published, custom_domain').in('id', templateIds)
     : { data: [] as TemplateRow[] };
 
+  // Templates sitting at campaign apex slugs (restaurant_apex portals / pitch sites) —
+  // lets the card link straight into the apex editor.
+  const campaignRows = (campaigns ?? []) as CampaignRow[];
+  const apexSlugs = Array.from(new Set(campaignRows.map((c) => c.slug).filter(Boolean)));
+  const { data: apexTpls } = apexSlugs.length
+    ? await supabaseAdmin.from('templates').select('id, slug').in('slug', apexSlugs)
+    : { data: [] as { id: string; slug: string }[] };
+  const apexTemplatesBySlug: Record<string, string> = {};
+  for (const t of (apexTpls ?? []) as { id: string; slug: string }[]) apexTemplatesBySlug[t.slug] = t.id;
+
   return assembleRestaurantDomainAreas({
-    campaigns: (campaigns ?? []) as CampaignRow[],
+    campaigns: campaignRows,
     prospects: prospectRows,
     templates: (templates ?? []) as TemplateRow[],
     ownedDomains: ((owned ?? []) as { domain: string }[]).map((r) => r.domain),
+    apexTemplatesBySlug,
     links: {
       tracked: (campaignId, prospectId) => trackedClaimUrl(campaignId, prospectId),
       claim: (templateId) => claimUrlFor(templateId),
@@ -418,6 +439,8 @@ export type ConvertResult = {
   campaignId: string;
   domain: string;
   cohortSize: number;
+  /** The apex portal template created (or found) at the apex slug — null if it couldn't be built. */
+  apexTemplateId: string | null;
   /** Set when the shared pitch site couldn't be moved off the apex slug (e.g. published-slug lock). */
   warning: string | null;
 };
@@ -430,7 +453,10 @@ export type ConvertResult = {
  * already rented or claimed (money/ownership attached), or when fewer than 2 linked
  * restaurants have built sites (no cohort to race).
  */
-export async function convertToRestaurantCompetition(campaignId: string): Promise<ConvertResult> {
+export async function convertToRestaurantCompetition(
+  campaignId: string,
+  operatorId: string,
+): Promise<ConvertResult> {
   const { data: c, error } = await supabaseAdmin
     .from('geo_industry_campaigns')
     .select('id, kind, industry_key, domain, slug, template_id, status, claimed_by_prospect_id, renter_email, stripe_subscription_id')
@@ -485,5 +511,16 @@ export async function convertToRestaurantCompetition(campaignId: string): Promis
     .eq('kind', c.kind); // no-op if something else converted it concurrently
   if (updErr) throw new Error(`convertToRestaurantCompetition failed: ${updErr.message}`);
 
-  return { campaignId, domain: c.domain, cohortSize, warning };
+  // Stand up the apex portal (site_type='restaurant_apex') at the freed slug — the
+  // editable hero + live winner-first directory that fronts the domain. Best-effort:
+  // if the pitch parking failed, the slug is occupied and this returns that template.
+  let apexTemplateId: string | null = null;
+  try {
+    const apex = await buildRestaurantApexSite({ campaignId, operatorId });
+    apexTemplateId = apex.templateId;
+  } catch (e: any) {
+    warning = warning ?? `Apex portal not created: ${e?.message || e}`;
+  }
+
+  return { campaignId, domain: c.domain, cohortSize, apexTemplateId, warning };
 }

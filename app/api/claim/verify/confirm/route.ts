@@ -77,7 +77,7 @@ export async function POST(req: Request) {
     .update({ attempts, verified_at: nowIso })
     .eq('id', (row as any).id);
 
-  const next = `/login?next=${encodeURIComponent(`/admin/templates/${id}`)}`;
+  const next = `/login?next=${encodeURIComponent(`/welcome/${id}`)}`;
   const res = NextResponse.json({ ok: true, next });
   const secure = process.env.NODE_ENV === 'production';
   // The verify grant proves THIS browser passed the OTP; the site-claim cookie carries

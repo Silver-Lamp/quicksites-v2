@@ -13,6 +13,7 @@ import { getGeoCampaignByTemplateId } from '@/lib/outreach/geoCampaigns';
 import { resolveCampaignBrand } from '@/lib/outreach/campaignBrand';
 import { getSenderProfile } from '@/lib/outreach/senderProfile';
 import { hasMenuBlock, RESTAURANT_FEE_PERCENT } from '@/lib/commerce/pricingPolicy';
+import { getDemandCount } from '@/lib/menu/demand';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -72,7 +73,11 @@ export default async function ClaimSitePage({
 
   // Menu-ordering sites launch on restaurant terms — state the concrete take-rate on the
   // pitch ("keep 92%, no monthly"). Non-ordering drafts keep the generic copy.
-  const feePercent = hasMenuBlock((tpl as any)?.data) ? Math.round(RESTAURANT_FEE_PERCENT * 100) : null;
+  const isMenuSite = hasMenuBlock((tpl as any)?.data);
+  const feePercent = isMenuSite ? Math.round(RESTAURANT_FEE_PERCENT * 100) : null;
+  // Real demand is the strongest possible reason to claim NOW — surface the count (never
+  // the PII) on the pitch. Only for ordering sites, where "tried to order" makes sense.
+  const demandCount = isMenuSite ? await getDemandCount(params.id) : 0;
 
   return (
     <ClaimSiteHero
@@ -84,6 +89,7 @@ export default async function ClaimSitePage({
       brandLogoUrl={brand.logoUrl}
       contactEmail={contactEmail}
       feePercent={feePercent}
+      demandCount={demandCount}
     />
   );
 }

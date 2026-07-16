@@ -14,6 +14,7 @@ export default function ClaimSiteHero({
   brandLogoUrl,
   contactEmail,
   feePercent,
+  demandCount = 0,
 }: {
   name: string;
   previewHref: string;
@@ -27,8 +28,11 @@ export default function ClaimSiteHero({
   contactEmail?: string | null;
   /** Menu-ordering sites: the concrete take-rate (e.g. 8) → states "keep {100-fee}%, no monthly". Null → generic copy. */
   feePercent?: number | null;
+  /** Real order-intent already logged on this preview — the count (never PII) is the sharpest reason to claim now. */
+  demandCount?: number;
 }) {
   const hasFee = typeof feePercent === 'number' && feePercent > 0;
+  const hasDemand = demandCount > 0;
   const keepPct = hasFee ? 100 - (feePercent as number) : null;
   const PERKS = hasFee
     ? ['Free hosting — no monthly', `Keep ${keepPct}% of every order`, 'Edit anytime', 'Live in minutes']
@@ -51,6 +55,12 @@ export default function ClaimSiteHero({
       <h1 className="mt-6 text-4xl font-extrabold tracking-tight sm:text-5xl">
         {name}’s new website is ready.
       </h1>
+      {hasDemand && (
+        <div className="mt-4 rounded-2xl border border-amber-400/40 bg-amber-400/10 px-4 py-3 text-sm font-semibold text-amber-200">
+          🔥 {demandCount} {demandCount === 1 ? 'person has' : 'people have'} already tried to order here —
+          claim your site to start taking their orders.
+        </div>
+      )}
       <p className="mx-auto mt-4 max-w-xl text-lg text-zinc-400">
         We assembled it from your public listing — your menu, hours, location, and online ordering.
         {hasFee

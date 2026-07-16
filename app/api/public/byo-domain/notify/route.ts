@@ -51,13 +51,25 @@ export async function POST(req: NextRequest) {
   let notified = false;
   if (admins.length) {
     const base = (process.env.APP_BASE_URL || 'https://quicksites.ai').replace(/\/+$/, '');
+    // Owner-supplied context from step 2 — the goal note + any public pages (FB,
+    // Instagram, Yelp…) they want referenced while building. Escaped: it's untrusted.
+    const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    const meta2 = (t as any).data?.meta ?? {};
+    const notes = typeof meta2.byo_notes === 'string' ? meta2.byo_notes : '';
+    const refs: string[] = Array.isArray(meta2.byo_reference_urls)
+      ? meta2.byo_reference_urls.filter((u: any) => typeof u === 'string').slice(0, 5)
+      : [];
     try {
       await sendEmail({
         to: admins,
         subject: `BYO domain: ${domain} wants to point here`,
         html: [
           `<p>Someone brought their own domain through <b>/bring-your-domain</b>:</p>`,
-          `<p><b>${domain}</b> → starter draft “${(t as any).template_name ?? (t as any).slug ?? t.id}”</p>`,
+          `<p><b>${domain}</b> → starter draft “${esc(String((t as any).template_name ?? (t as any).slug ?? t.id))}”</p>`,
+          ...(notes ? [`<p>What they want: ${esc(notes)}</p>`] : []),
+          ...(refs.length
+            ? [`<p>Reference pages they gave us: ${refs.map((u) => esc(u)).join(' · ')}</p>`]
+            : []),
           `<p><a href="${base}/admin/templates/${t.id}">Open the draft in the editor</a></p>`,
           `<p>They got the DNS records (A @ + CNAME www, MX untouched). When they sign up and publish, attach the domain from the editor's domain panel.</p>`,
         ].join('\n'),

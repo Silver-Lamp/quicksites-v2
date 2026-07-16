@@ -202,19 +202,31 @@ function EmailProviderInfo({ check }: { check: Check }) {
   );
 }
 
-export default function BringYourDomainClient() {
+export default function BringYourDomainClient({ initialDomain = '' }: { initialDomain?: string }) {
   const [step, setStep] = React.useState<1 | 2 | 3>(1);
-  const [domainInput, setDomainInput] = React.useState('');
+  const [domainInput, setDomainInput] = React.useState(initialDomain);
   const [check, setCheck] = React.useState<Check | null>(null);
   const [showRecordsEarly, setShowRecordsEarly] = React.useState(false);
 
   const [businessName, setBusinessName] = React.useState('');
   const [industry, setIndustry] = React.useState('');
   const [goal, setGoal] = React.useState('');
+  const [refPages, setRefPages] = React.useState('');
 
   const [templateId, setTemplateId] = React.useState<string | null>(null);
   const [busy, setBusy] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
+
+  // Entry points (homepage tab, admin chooser card) pass ?domain= — check it on arrival
+  // so the visitor lands straight on their answer.
+  const autoRan = React.useRef(false);
+  React.useEffect(() => {
+    if (initialDomain && !autoRan.current) {
+      autoRan.current = true;
+      void runCheck();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialDomain]);
 
   const runCheck = async (e?: React.FormEvent) => {
     e?.preventDefault();
@@ -257,11 +269,20 @@ export default function BringYourDomainClient() {
       const initial: any = buildIndustryStarter({ businessName: name, industryKey });
       initial.slug = `${slugify(name) || 'site'}-${randSuffix()}`;
       initial.data = initial.data || {};
+      // Public pages (Facebook, Instagram, Yelp, Google listing…) the owner wants us
+      // referencing while building — hours, menus, photos, tone. Normalized + capped.
+      const referenceUrls = refPages
+        .split(/[\s,]+/)
+        .map((u) => u.trim())
+        .filter(Boolean)
+        .map((u) => (/^https?:\/\//i.test(u) ? u : `https://${u}`))
+        .slice(0, 5);
       initial.data.meta = {
         ...(initial.data.meta || {}),
         autogen_pending: true, // first editor open auto-runs copy + hero
         intended_domain: check.domain, // the whole point of this flow
         ...(goal.trim() ? { byo_notes: goal.trim().slice(0, 500) } : {}),
+        ...(referenceUrls.length ? { byo_reference_urls: referenceUrls } : {}),
       };
       const res = await fetch('/api/templates/create', {
         method: 'POST',
@@ -390,6 +411,21 @@ export default function BringYourDomainClient() {
               placeholder="e.g. a home for our collective — who we are, events, a way to get in touch"
               className="mt-2 w-full rounded-xl border border-zinc-700 bg-zinc-900 px-4 py-3 text-white placeholder-zinc-500 outline-none focus:border-zinc-500"
             />
+          </div>
+          <div>
+            <label className="text-sm font-medium text-zinc-300">
+              Anywhere you already exist online? <span className="text-zinc-500">(optional)</span>
+            </label>
+            <input
+              value={refPages}
+              onChange={(e) => setRefPages(e.target.value)}
+              placeholder="Facebook page, Instagram, Google listing, Yelp…"
+              className="mt-2 w-full rounded-xl border border-zinc-700 bg-zinc-900 px-4 py-3 text-white placeholder-zinc-500 outline-none focus:border-zinc-500"
+            />
+            <p className="mt-1 text-xs text-zinc-500">
+              We'll reference them while building — your photos, hours, and voice, not generic filler. Separate
+              several with commas.
+            </p>
           </div>
           <div className="flex items-center gap-3">
             <button

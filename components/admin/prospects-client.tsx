@@ -342,14 +342,26 @@ export default function ProspectsClient({
     }
   }
 
-  async function buildSelected() {
-    const ids = [...selected];
+  // Format the build response into an operator-facing message, folding in the restaurant
+  // menu hit-rate (auto/total) — the number that tells us how well the photo→menu OCR
+  // pipeline is yielding on this batch.
+  function buildResultMsg(r: any): string {
+    const hr = r.menuHitRate;
+    let msg = `Built ${r.built} draft site(s).`;
+    if (hr && hr.total > 0) {
+      const pct = Math.round((hr.auto / hr.total) * 100);
+      msg += ` ${hr.auto}/${hr.total} restaurant${hr.total === 1 ? '' : 's'} got a menu (${pct}%).`;
+    }
+    return `${msg} They're now in the Outreach pipeline.`;
+  }
+
+  async function buildProspects(ids: string[]) {
     if (!ids.length) return setMsg('Select prospects to build.');
     setBusy('build');
     setMsg(null);
     try {
       const r = await post('/api/admin/prospects/build', { prospectIds: ids.slice(0, 10) });
-      setMsg(`Built ${r.built} draft site(s). They're now in the Outreach pipeline.`);
+      setMsg(buildResultMsg(r));
       setSelected(new Set());
       router.refresh();
     } catch (e: any) {
@@ -357,6 +369,17 @@ export default function ProspectsClient({
     } finally {
       setBusy(null);
     }
+  }
+
+  const buildSelected = () => buildProspects([...selected]);
+
+  // One-click lead-list build: take the discovered no-website prospects (the highest-
+  // intent tier) and build claimable ordering-site drafts for the first batch, no manual
+  // selection. Capped at the server's MAX_BATCH (10) per request.
+  function buildAllNoWebsite() {
+    const ids = byTier.no_website.filter((p) => p.status === 'discovered').map((p) => p.id);
+    if (!ids.length) return setMsg('No unbuilt no-website prospects to build.');
+    return buildProspects(ids);
   }
 
   async function dismiss(id: string) {
@@ -1640,13 +1663,28 @@ export default function ProspectsClient({
         title="Prospects"
         count={prospects.length}
         right={
-          <button
-            onClick={buildSelected}
-            disabled={!selected.size || busy === 'build'}
-            className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-500 disabled:opacity-40"
-          >
-            {busy === 'build' ? 'Building…' : `Build ${selected.size || ''} draft${selected.size === 1 ? '' : 's'}`}
-          </button>
+          <div className="flex items-center gap-2">
+            {(() => {
+              const buildable = byTier.no_website.filter((p) => p.status === 'discovered').length;
+              return buildable > 0 ? (
+                <button
+                  onClick={buildAllNoWebsite}
+                  disabled={busy === 'build'}
+                  className="rounded-lg border border-emerald-600/60 px-3 py-2 text-sm font-medium text-emerald-300 hover:bg-emerald-600/10 disabled:opacity-40"
+                  title="Build claimable ordering-site drafts for every no-website prospect (up to 10 at a time)"
+                >
+                  {busy === 'build' ? 'Building…' : `Build all no-website (${Math.min(buildable, 10)}${buildable > 10 ? ` of ${buildable}` : ''})`}
+                </button>
+              ) : null;
+            })()}
+            <button
+              onClick={buildSelected}
+              disabled={!selected.size || busy === 'build'}
+              className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-500 disabled:opacity-40"
+            >
+              {busy === 'build' ? 'Building…' : `Build ${selected.size || ''} draft${selected.size === 1 ? '' : 's'}`}
+            </button>
+          </div>
         }
       >
         {(['no_website', 'dated', 'has_site'] as const).map((tier) =>

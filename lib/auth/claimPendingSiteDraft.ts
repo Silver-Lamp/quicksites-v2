@@ -91,6 +91,15 @@ export async function claimPendingSiteDraft(
       p_template_id: payload.templateId,
       p_to_owner: user.id,
     });
+
+    // If this draft is part of a restaurant domain-competition, first-claim wins the apex.
+    // Best-effort + idempotent (no-op when it isn't a competition or one's already decided).
+    try {
+      const { awardCompetitionOnClaim } = await import('@/lib/outreach/restaurantCompetition');
+      await awardCompetitionOnClaim(payload.templateId);
+    } catch (e) {
+      console.error('[claim] competition award failed:', (e as any)?.message || e);
+    }
   } catch (e) {
     console.error('[claim] site draft transfer failed:', (e as any)?.message || e);
   }

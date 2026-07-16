@@ -8,6 +8,9 @@
 // copy each restaurant's funnel (claim) link. Data: /api/admin/restaurant-domains.
 import * as React from 'react';
 import Link from 'next/link';
+import NextStepButton from '@/components/admin/templates/next-step-button';
+
+type SeoInfo = { pct: number; done: number; total: number; hardLeft: number; nextStep?: any | null };
 
 type AreaRestaurant = {
   id: string;
@@ -16,9 +19,11 @@ type AreaRestaurant = {
   address: string | null;
   status: string;
   template_id: string | null;
+  template_slug: string | null;
   published: boolean;
   site_url: string | null;
   claim_url: string | null;
+  seo: SeoInfo | null;
   is_winner: boolean;
   waitlist_status: string | null;
 };
@@ -96,6 +101,22 @@ function CopyLink({ url, label = 'Copy claim link' }: { url: string; label?: str
   );
 }
 
+/** Compact SEO meter — same color rules + hover detail as the templates list. */
+function SeoMeter({ seo }: { seo: SeoInfo }) {
+  const color = seo.pct >= 80 ? 'bg-emerald-500' : seo.pct >= 50 ? 'bg-amber-500' : 'bg-red-500';
+  return (
+    <span
+      className="inline-flex items-center gap-1.5"
+      title={`SEO readiness — ${seo.done}/${seo.total} checks${seo.hardLeft ? ` · ${seo.hardLeft} required left` : ''}`}
+    >
+      <span className="inline-block h-1.5 w-12 overflow-hidden rounded-full bg-neutral-800 align-middle">
+        <span className={`block h-full rounded-full ${color}`} style={{ width: `${seo.pct}%` }} />
+      </span>
+      <span className="text-[11px] font-medium text-neutral-400">{seo.pct}%</span>
+    </span>
+  );
+}
+
 function RestaurantRow({ r, inContest }: { r: AreaRestaurant; inContest: boolean }) {
   return (
     <tr className="border-b border-neutral-800/60 last:border-0">
@@ -117,8 +138,31 @@ function RestaurantRow({ r, inContest }: { r: AreaRestaurant; inContest: boolean
           <Badge tone="amber">no site yet</Badge>
         )}
       </td>
+      {/* SEO readiness + the one-click next step — same decorators as the templates list. */}
+      <td className="py-1.5 pr-3">
+        {r.template_id && r.seo && r.seo.total > 0 && (
+          <span className="inline-flex items-center gap-2">
+            <SeoMeter seo={r.seo} />
+            <NextStepButton
+              nextStep={r.seo.nextStep ?? null}
+              slug={r.template_slug}
+              templateId={r.template_id}
+              variant="table"
+            />
+          </span>
+        )}
+      </td>
       <td className="py-1.5 text-right">
         <span className="inline-flex items-center gap-1.5">
+          {r.template_id && (
+            <Link
+              href={`/admin/templates/${r.template_id}`}
+              className="rounded border border-neutral-700 px-2 py-0.5 text-[11px] text-neutral-200 hover:border-neutral-500"
+              title="Open this draft in the editor"
+            >
+              Edit
+            </Link>
+          )}
           {r.site_url && (
             <a
               href={r.site_url}
@@ -158,6 +202,14 @@ export default function RestaurantDomainsPage() {
 
   React.useEffect(() => {
     void load();
+  }, [load]);
+
+  // NextStepButton fires this after a one-click fix runs (it also rescores the
+  // template) — reload so the meter + next step reflect the change.
+  React.useEffect(() => {
+    const onRefetch = () => void load();
+    window.addEventListener('qs:templates:refetch', onRefetch);
+    return () => window.removeEventListener('qs:templates:refetch', onRefetch);
   }, [load]);
 
   // Pull every built, un-linked candidate in the area into the existing contest.

@@ -20,8 +20,19 @@ import { claimUrlFor, trackedClaimUrl } from '@/lib/outreach/competitionPoster';
 import { linkProspectsToCampaign } from '@/lib/outreach/geoCampaigns';
 import { RESTAURANT_COMPETITION_KIND } from '@/lib/outreach/restaurantCompetition';
 import { buildRestaurantApexSite } from '@/lib/outreach/restaurantApexSite';
+import { readinessScore } from '@/lib/outreach/readiness';
+import { resolveIndustryKey } from '@/lib/industries';
 
 // ---- Wire types ---------------------------------------------------------------
+
+/** Same shape the templates list renders (persisted templates.seo_readiness). */
+export type SeoReadinessInfo = {
+  pct: number;
+  done: number;
+  total: number;
+  hardLeft: number;
+  nextStep?: any | null; // NextStep from lib/outreach/readiness (href baked in when persisted)
+};
 
 export type AreaRestaurant = {
   id: string;
@@ -30,11 +41,14 @@ export type AreaRestaurant = {
   address: string | null;
   status: string; // discovered | draft_built | claimed | dismissed
   template_id: string | null;
+  template_slug: string | null;
   published: boolean;
   /** The restaurant's own ordering-site URL (custom domain or delivered.menu). */
   site_url: string | null;
   /** The funnel entry link for THIS restaurant (tracked when in a contest). */
   claim_url: string | null;
+  /** SEO readiness (pct + next-step action) for the built draft — null when unbuilt/unscored. */
+  seo: SeoReadinessInfo | null;
   is_winner: boolean;
   waitlist_status: string | null;
 };
@@ -103,7 +117,14 @@ export type ProspectRow = {
   waitlist_status: string | null;
 };
 
-export type TemplateRow = { id: string; slug: string | null; published: boolean | null; custom_domain: string | null };
+export type TemplateRow = {
+  id: string;
+  slug: string | null;
+  published: boolean | null;
+  custom_domain: string | null;
+  /** Normalized readiness (persisted or computed by the I/O wrapper); optional for callers/tests. */
+  seo?: SeoReadinessInfo | null;
+};
 
 export type LinkBuilders = {
   /** Tracked per-prospect funnel link (/r/<campaign>?p=<prospect>) — logs intent then claims. */
@@ -156,9 +177,11 @@ function toAreaRestaurant(
     address: p.address,
     status: p.status,
     template_id: p.template_id,
+    template_slug: tpl?.slug ?? null,
     published: !!tpl?.published,
     site_url: siteUrl,
     claim_url: claimUrl,
+    seo: tpl?.seo ?? null,
     is_winner: !!opts.winnerProspectId && p.id === opts.winnerProspectId,
     waitlist_status: p.waitlist_status,
   };
@@ -374,9 +397,41 @@ export async function getRestaurantLocationDomains(): Promise<RestaurantDomainOv
 
   const prospectRows = (prospects ?? []) as ProspectRow[];
   const templateIds = Array.from(new Set(prospectRows.map((p) => p.template_id).filter(Boolean))) as string[];
-  const { data: templates } = templateIds.length
-    ? await supabaseAdmin.from('templates').select('id, slug, published, custom_domain').in('id', templateIds)
-    : { data: [] as TemplateRow[] };
+  const { data: rawTemplates } = templateIds.length
+    ? await supabaseAdmin
+        .from('templates')
+        .select('id, slug, published, custom_domain, seo_readiness, industry')
+        .in('id', templateIds)
+    : { data: [] as any[] };
+
+  // SEO readiness per draft: prefer the persisted score (templates.seo_readiness,
+  // refreshed on commit — same source the templates list renders); compute a fallback
+  // only for rows not yet backfilled (fetch their data lazily, not for every row).
+  const isPersisted = (s: any): s is SeoReadinessInfo =>
+    !!s && typeof s === 'object' && typeof s.pct === 'number' && typeof s.total === 'number';
+  const unscored = ((rawTemplates ?? []) as any[]).filter((t) => !isPersisted(t.seo_readiness));
+  const dataById = new Map<string, any>();
+  if (unscored.length) {
+    const { data: withData } = await supabaseAdmin
+      .from('templates')
+      .select('id, data')
+      .in('id', unscored.map((t) => t.id));
+    for (const r of (withData ?? []) as any[]) dataById.set(r.id, r.data);
+  }
+  const templates: TemplateRow[] = ((rawTemplates ?? []) as any[]).map((t) => {
+    let seo: SeoReadinessInfo | null = isPersisted(t.seo_readiness) ? t.seo_readiness : null;
+    if (!seo && dataById.has(t.id)) {
+      try {
+        const data = dataById.get(t.id);
+        const meta = (data?.meta ?? data) || {};
+        const raw = t.industry || meta?.identity?.industry || meta?.industry || 'restaurant';
+        seo = readinessScore(data ?? {}, resolveIndustryKey(raw)) as SeoReadinessInfo;
+      } catch {
+        seo = null;
+      }
+    }
+    return { id: t.id, slug: t.slug, published: t.published, custom_domain: t.custom_domain, seo };
+  });
 
   // Templates sitting at campaign apex slugs (restaurant_apex portals / pitch sites) —
   // lets the card link straight into the apex editor.

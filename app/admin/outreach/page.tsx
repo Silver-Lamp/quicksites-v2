@@ -26,6 +26,9 @@ export default async function OutreachPage() {
           </p>
         </div>
         <div className="flex flex-col items-end gap-1 text-sm">
+          <Link href="/admin/go-live" className="text-emerald-400 underline underline-offset-4 hover:text-emerald-300">
+            Go-live readiness →
+          </Link>
           <Link href="/admin/demand-funnel" className="text-sky-400 underline underline-offset-4 hover:text-sky-300">
             Demand funnel →
           </Link>

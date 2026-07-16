@@ -25,6 +25,8 @@ import { getSiteCompetition } from '@/lib/outreach/competitionForSite';
 import { MENU_DEMAND_CAPTURE_ENABLED, MENU_DRAFT_INDEXABLE } from '@/lib/flags/menuDemand';
 import { getDemandCount } from '@/lib/menu/demand';
 import { resolveListingPhone } from '@/lib/claim/resolveListingPhone';
+import { loadCompetitionDirectoryBySlug } from '@/lib/outreach/restaurantCompetitionDirectory';
+import RestaurantCompetitionDirectory from '@/components/sites/restaurant-competition-directory';
 
 /* -------------------- Types -------------------- */
 type SiteRow = {
@@ -298,7 +300,20 @@ export async function generateMetadata({
 
   const menuHost = await isMenuHostRequest();
   const siteRow = await loadSiteRowBySlugOrTemplate(slug);
-  if (!siteRow) return {};
+  if (!siteRow) {
+    // No site at this slug — it may be a restaurant domain-competition apex directory.
+    const dir = await loadCompetitionDirectoryBySlug(slug);
+    if (dir) {
+      const place = [dir.city, dir.region].filter(Boolean).join(', ');
+      return {
+        title: place ? `Order from restaurants in ${place}` : 'Order from local restaurants',
+        description: `Browse and order online from local restaurants${place ? ` in ${place}` : ''}.`,
+        // Stay noindex until a winner is decided (avoids a thin placeholder ranking).
+        ...(dir.hasWinner ? {} : { robots: { index: false, follow: false } }),
+      };
+    }
+    return {};
+  }
 
   let snapshotData: any | null = null;
   let isDraft = false;
@@ -354,7 +369,13 @@ export default async function SitePreviewPage({
   const menuHost = await isMenuHostRequest();
 
   const siteRow = await loadSiteRowBySlugOrTemplate(slug);
-  if (!siteRow) return notFound();
+  if (!siteRow) {
+    // No site at this slug — render the restaurant domain-competition directory if this
+    // apex fronts one (<city>-restaurant.com); otherwise 404.
+    const dir = await loadCompetitionDirectoryBySlug(slug);
+    if (dir) return <RestaurantCompetitionDirectory dir={dir} />;
+    return notFound();
+  }
 
   // Prefer the published snapshot. Otherwise fall back to the live draft for admins
   // (as before) OR the public on the delivered.menu surface (so an outreach link

@@ -1,0 +1,111 @@
+// lib/outreach/restaurantCompetitionDirectory.ts
+//
+// Loads the public directory that fronts a restaurant domain-competition apex
+// (<city>-restaurant.com). The apex resolves via middleware → /sites/<slug>; when no
+// template exists at that slug, the sites page falls back to this directory. Lists the
+// cohort restaurants (each linking to its own delivered.menu / custom-domain site), with
+// the competition WINNER featured first. Pure data assembly; the render is a server
+// component. See [[restaurant-domain-competition]].
+
+import { supabaseAdmin } from '@/lib/supabase/admin';
+import { menuSiteUrl } from '@/lib/menu/deliveredMenu';
+import { RESTAURANT_COMPETITION_KIND } from '@/lib/outreach/restaurantCompetition';
+
+export type CompetitionDirectoryEntry = {
+  templateId: string;
+  slug: string;
+  businessName: string;
+  url: string;
+  heroUrl: string | null;
+  isWinner: boolean;
+  published: boolean;
+};
+
+export type CompetitionDirectory = {
+  campaignId: string;
+  city: string;
+  region: string | null;
+  domain: string;
+  hasWinner: boolean;
+  entries: CompetitionDirectoryEntry[];
+};
+
+function safeParse(x: any): any {
+  if (typeof x !== 'string') return x ?? {};
+  try {
+    return JSON.parse(x);
+  } catch {
+    return {};
+  }
+}
+
+function heroFromData(data: any): string | null {
+  const blocks = safeParse(data)?.pages?.[0]?.blocks ?? [];
+  if (!Array.isArray(blocks)) return null;
+  const hero = blocks.find((b: any) => b?.type === 'hero');
+  const c = hero?.content ?? {};
+  return c.image_url || c.background_url || c.imageUrl || null;
+}
+
+/** Load the competition directory for an apex slug, or null when it isn't one. */
+export async function loadCompetitionDirectoryBySlug(slug: string): Promise<CompetitionDirectory | null> {
+  const clean = (slug || '').trim().toLowerCase();
+  if (!clean) return null;
+
+  const { data: campaign } = await supabaseAdmin
+    .from('geo_industry_campaigns')
+    .select('id, city, region, domain, claimed_by_prospect_id')
+    .eq('kind', RESTAURANT_COMPETITION_KIND)
+    .eq('slug', clean)
+    .maybeSingle();
+  if (!campaign) return null;
+
+  const base: Omit<CompetitionDirectory, 'entries'> = {
+    campaignId: campaign.id,
+    city: campaign.city,
+    region: campaign.region,
+    domain: campaign.domain,
+    hasWinner: !!campaign.claimed_by_prospect_id,
+  };
+
+  const { data: prospects } = await supabaseAdmin
+    .from('outreach_prospects')
+    .select('id, template_id, business_name')
+    .eq('geo_campaign_id', campaign.id)
+    .not('template_id', 'is', null);
+  const cohort = prospects ?? [];
+  if (!cohort.length) return { ...base, entries: [] };
+
+  const { data: templates } = await supabaseAdmin
+    .from('templates')
+    .select('id, slug, business_name, published, custom_domain, data')
+    .in('id', cohort.map((p: any) => p.template_id));
+  const tplById = new Map((templates ?? []).map((t: any) => [t.id, t]));
+
+  const winnerProspectId = campaign.claimed_by_prospect_id;
+  const entries: CompetitionDirectoryEntry[] = cohort
+    .map((p: any) => {
+      const t: any = tplById.get(p.template_id) ?? {};
+      const tplSlug: string = t.slug ?? '';
+      return {
+        templateId: p.template_id,
+        slug: tplSlug,
+        businessName: t.business_name || p.business_name || tplSlug,
+        url: t.custom_domain ? `https://${t.custom_domain}` : menuSiteUrl(tplSlug),
+        heroUrl: heroFromData(t.data),
+        isWinner: !!winnerProspectId && p.id === winnerProspectId,
+        published: !!t.published,
+      };
+    })
+    .filter((e) => e.slug);
+
+  // Winner first, then published, then alphabetical.
+  entries.sort(
+    (a, b) =>
+      Number(b.isWinner) - Number(a.isWinner) ||
+      Number(b.published) - Number(a.published) ||
+      a.businessName.localeCompare(b.businessName),
+  );
+
+  return { ...base, entries };
+}

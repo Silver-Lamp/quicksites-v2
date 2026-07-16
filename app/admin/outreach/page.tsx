@@ -22,18 +22,34 @@ export default async function OutreachPage() {
         <div>
           <h1 className="text-2xl font-semibold">Outreach pipeline</h1>
           <p className="mt-1 text-sm text-neutral-400">
-            Auto-built local-business sites from the listing importer. Send the claim link; they preview, sign up, and own it.
+            Auto-built local-business sites from the listing importer. Send the claim link; they
+            preview, sign up, and own it.
           </p>
         </div>
         <div className="flex flex-col items-end gap-1 text-sm">
-          <Link href="/admin/go-live" className="text-emerald-400 underline underline-offset-4 hover:text-emerald-300">
+          <Link
+            href="/admin/go-live"
+            className="text-emerald-400 underline underline-offset-4 hover:text-emerald-300"
+          >
             Go-live readiness →
           </Link>
-          <Link href="/admin/demand-funnel" className="text-sky-400 underline underline-offset-4 hover:text-sky-300">
+          <Link
+            href="/admin/demand-funnel"
+            className="text-sky-400 underline underline-offset-4 hover:text-sky-300"
+          >
             Demand funnel →
           </Link>
-          <Link href="/restaurants" className="text-amber-300 underline underline-offset-4 hover:text-amber-200">
-            The offer →
+          <Link
+            href="/local-services"
+            className="text-emerald-300 underline underline-offset-4 hover:text-emerald-200"
+          >
+            Local-services offer →
+          </Link>
+          <Link
+            href="/restaurants"
+            className="text-amber-300 underline underline-offset-4 hover:text-amber-200"
+          >
+            Restaurant offer →
           </Link>
         </div>
       </div>

@@ -2,6 +2,7 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { getServerSupabase } from '@/lib/supabase/server';
+import { getAdminUser } from '@/lib/auth/getAdminUser';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -14,8 +15,6 @@ function requireEnv(name: string): string {
 }
 const SUPABASE_URL = requireEnv('NEXT_PUBLIC_SUPABASE_URL');
 const SERVICE_ROLE = (process.env.SUPABASE_SERVICE_ROLE_KEY || requireEnv('SUPABASE_SECRET_KEY'));
-const ADMIN_EMAILS = String(process.env.ADMIN_EMAILS || '')
-  .split(',').map(s => s.trim().toLowerCase()).filter(Boolean);
 
 const supabaseAdmin = createClient(SUPABASE_URL, SERVICE_ROLE, {
   auth: { persistSession: false, autoRefreshToken: false },
@@ -42,19 +41,17 @@ async function resolveUserIdByEmail(email: string): Promise<string | null> {
 }
 
 async function assertAuth() {
-  const sb = await getServerSupabase({ serviceRole: true } as any);
+  // Cookie-backed session client to resolve the caller. A service-role client presents
+  // NO cookies (#243), so it returns no user here — which would 401 every caller.
+  const sb = await getServerSupabase();
   const { data } = await sb.auth.getUser();
   const user = data?.user ?? null;
   if (!user) return { ok: false as const, status: 401, message: 'Not signed in' };
 
-  // admin allow (ADMIN_EMAILS + metadata role — matches getAdminUser; the former
-  // profiles.role/is_admin source no longer exists in the schema)
-  const allowlistAdmin = ADMIN_EMAILS.includes(lower(user.email));
-  const metaAdmin =
-    String((user.user_metadata as any)?.role || '').toLowerCase() === 'admin' ||
-    String((user.app_metadata as any)?.role || '').toLowerCase() === 'admin';
-
-  return { ok: true as const, user, isAdmin: allowlistAdmin || metaAdmin };
+  // Canonical platform-admin check: ADMIN_EMAILS + the admin_users table (getAdminUser) —
+  // self-writable role claims are not trusted. Non-admins can still self-provision below.
+  const admin = await getAdminUser();
+  return { ok: true as const, user, isAdmin: !!admin };
 }
 
 /* POST: { email } → { id, created } */

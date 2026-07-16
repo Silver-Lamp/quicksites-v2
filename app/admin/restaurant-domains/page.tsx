@@ -33,6 +33,7 @@ type Area = {
   region: string | null;
   campaign_id: string | null;
   campaign_status: string | null;
+  campaign_kind: string | null;
   has_winner: boolean;
   winner_name: string | null;
   competitors: AreaRestaurant[];
@@ -181,6 +182,32 @@ export default function RestaurantDomainsPage() {
     }
   };
 
+  // Convert a legacy rent-model restaurant campaign into a first-claim-wins contest
+  // (flips kind, parks the shared pitch site so the winner directory fronts the apex).
+  const convertToContest = async (area: Area) => {
+    if (!area.campaign_id) return;
+    if (!confirm(`Convert ${area.domain} to a claim contest? The rent pitch site moves aside; the ${area.competitors.length} linked restaurants race — first to claim their own site wins the apex.`)) return;
+    setBusy(area.key);
+    setNotice(null);
+    try {
+      const res = await fetch('/api/admin/restaurant-domains/convert', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ campaignId: area.campaign_id }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json?.error || `failed (${res.status})`);
+      setNotice(
+        `${json.domain} is now a claim contest — ${json.cohortSize} restaurants racing.${json.warning ? ` ⚠ ${json.warning}` : ''}`,
+      );
+      await load();
+    } catch (e: any) {
+      setError(e?.message || 'failed');
+    } finally {
+      setBusy(null);
+    }
+  };
+
   // Launch a contest from the area's built candidates (existing create endpoint; the
   // owned/derived apex is passed as the domain override).
   const createContest = async (area: Area) => {
@@ -268,6 +295,8 @@ export default function RestaurantDomainsPage() {
                   {area.campaign_id ? (
                     area.has_winner ? (
                       <Badge tone="emerald">won by {area.winner_name || 'a claimant'}</Badge>
+                    ) : area.campaign_kind && area.campaign_kind !== 'restaurant_competition' ? (
+                      <Badge tone="amber">rent-model campaign — not a contest yet</Badge>
                     ) : (
                       <Badge tone="purple">contest live — first claim wins</Badge>
                     )
@@ -280,7 +309,18 @@ export default function RestaurantDomainsPage() {
                 </div>
 
                 <div className="flex items-center gap-2">
-                  {area.campaign_id && builtCandidates > 0 && (
+                  {area.campaign_id && area.campaign_kind !== 'restaurant_competition' && !area.has_winner && (
+                    <button
+                      type="button"
+                      disabled={busy === area.key}
+                      onClick={() => void convertToContest(area)}
+                      title="Flip this rent-model campaign to the first-claim-wins contest mechanic (needs 2+ linked restaurants with built sites)"
+                      className="rounded-md bg-amber-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-amber-500 disabled:opacity-50"
+                    >
+                      {busy === area.key ? 'Converting…' : 'Convert to claim contest'}
+                    </button>
+                  )}
+                  {area.campaign_id && area.campaign_kind === 'restaurant_competition' && builtCandidates > 0 && (
                     <button
                       type="button"
                       disabled={busy === area.key}

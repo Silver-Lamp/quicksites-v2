@@ -22,7 +22,7 @@ import DemandCapture from '@/components/sites/demand-capture';
 import CompetitionBanner from '@/components/sites/competition-banner';
 import { mintSiteClaimToken } from '@/lib/auth/siteClaimToken';
 import { getSiteCompetition } from '@/lib/outreach/competitionForSite';
-import { MENU_DEMAND_CAPTURE_ENABLED } from '@/lib/flags/menuDemand';
+import { MENU_DEMAND_CAPTURE_ENABLED, MENU_DRAFT_INDEXABLE } from '@/lib/flags/menuDemand';
 import { getDemandCount } from '@/lib/menu/demand';
 import { resolveListingPhone } from '@/lib/claim/resolveListingPhone';
 
@@ -302,12 +302,14 @@ export async function generateMetadata({
 
   let snapshotData: any | null = null;
   let isDraft = false;
+  let claimSource: string | null = null;
   if (siteRow.published_snapshot_id) {
     snapshotData = await loadSnapshotDataById(siteRow.published_snapshot_id);
   } else if ((admin || menuHost) && siteRow.template_id) {
     const draft = await loadDraftTemplate(siteRow.template_id);
     snapshotData = draft?.data ?? null;
     isDraft = !!snapshotData;
+    claimSource = draft?.claimSource ?? null;
   }
   if (!snapshotData) return {};
 
@@ -324,8 +326,11 @@ export async function generateMetadata({
     pageSlug,
     baseUrl: `${await originFromHeaders()}/sites`,
   });
-  // An unpublished draft served on the menu surface must never be indexed.
-  return isDraft ? { ...md, robots: { index: false, follow: false } } : md;
+  // A no-website `listing_import` draft on the menu surface IS the restaurant's web
+  // presence — index it (flag-gated) so it ranks for their name and can actually feed
+  // the demand signal. Admin previews + every other draft stay noindex.
+  const indexableDraft = isDraft && menuHost && claimSource === 'listing_import' && MENU_DRAFT_INDEXABLE;
+  return isDraft && !indexableDraft ? { ...md, robots: { index: false, follow: false } } : md;
 }
 
 /* ---------------------- Page ---------------------- */

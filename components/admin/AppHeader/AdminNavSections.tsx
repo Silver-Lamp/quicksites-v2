@@ -154,6 +154,7 @@ const NAV_ADMIN: NavItem[] = [
   { type: 'section', label: 'Growth', adminOnly: true },
   { type: 'item', label: 'Businesses Near Me', href: '/admin/growth?tab=prospects', icon: <MapPinned size={18} />, adminOnly: true },
   { type: 'item', label: 'Outreach Pipeline', href: '/admin/growth?tab=pipeline', icon: <Rocket size={18} />, adminOnly: true },
+  { type: 'item', label: 'Local-services Offer', href: '/local-services', icon: <Megaphone size={18} />, adminOnly: true },
   { type: 'item', label: 'Print Orders', href: '/admin/print-orders', icon: <Printer size={18} />, adminOnly: true },
 
   /* Restaurants — the delivered.menu / per-order business, split out from Growth because

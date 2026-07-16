@@ -250,8 +250,12 @@ export default function BringYourDomainClient({ initialDomain = '' }: { initialD
     }
   };
 
-  // Build the starter draft on a guest session — the same scaffold + auto-claim-on-
-  // signup path the homepage quick-start uses, plus the intended_domain stamp.
+  // Build the draft on a guest session (same auto-claim-on-signup path as the
+  // homepage quick-start), stamped with the intended domain. When the owner gave us a
+  // public page (Facebook, Instagram, a listing…), the AI REBUILD pipeline builds
+  // from that page first — their photos, copy, and voice — and the plain industry
+  // starter is only the fallback when the page can't be read.
+  const [buildingFromPage, setBuildingFromPage] = React.useState(false);
   const createStarter = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!check || busy) return;
@@ -265,23 +269,63 @@ export default function BringYourDomainClient({ initialDomain = '' }: { initialD
         setError(sess.error || 'Could not start a free session. You can sign in and try again.');
         return;
       }
-      const industryKey = (industry || 'other') as IndustryKey;
-      const initial: any = buildIndustryStarter({ businessName: name, industryKey });
-      initial.slug = `${slugify(name) || 'site'}-${randSuffix()}`;
-      initial.data = initial.data || {};
-      // Public pages (Facebook, Instagram, Yelp, Google listing…) the owner wants us
-      // referencing while building — hours, menus, photos, tone. Normalized + capped.
+
+      // Public pages the owner wants us referencing — normalized + capped.
       const referenceUrls = refPages
         .split(/[\s,]+/)
         .map((u) => u.trim())
         .filter(Boolean)
         .map((u) => (/^https?:\/\//i.test(u) ? u : `https://${u}`))
         .slice(0, 5);
+      const notes = goal.trim().slice(0, 500);
+
+      // 1) Rebuild-first: ground the draft in their first public page. Best-effort —
+      //    any failure (login-walled page, scrape block) falls back to the starter.
+      if (referenceUrls.length) {
+        setBuildingFromPage(true);
+        try {
+          const res = await fetch('/api/rebuild', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              url: referenceUrls[0],
+              byo: {
+                intendedDomain: check.domain,
+                businessName: name,
+                ...(notes ? { notes } : {}),
+                referenceUrls,
+              },
+            }),
+          });
+          const j = await res.json().catch(() => ({}));
+          if (res.ok && j?.ok && j?.id) {
+            setTemplateId(j.id);
+            void fetch('/api/public/byo-domain/notify', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ templateId: j.id }),
+            }).catch(() => {});
+            setStep(3);
+            return;
+          }
+          // fall through to the starter on any non-ok
+        } catch {
+          /* fall through to the starter */
+        } finally {
+          setBuildingFromPage(false);
+        }
+      }
+
+      // 2) Industry starter (no usable page, or the rebuild couldn't read it).
+      const industryKey = (industry || 'other') as IndustryKey;
+      const initial: any = buildIndustryStarter({ businessName: name, industryKey });
+      initial.slug = `${slugify(name) || 'site'}-${randSuffix()}`;
+      initial.data = initial.data || {};
       initial.data.meta = {
         ...(initial.data.meta || {}),
         autogen_pending: true, // first editor open auto-runs copy + hero
         intended_domain: check.domain, // the whole point of this flow
-        ...(goal.trim() ? { byo_notes: goal.trim().slice(0, 500) } : {}),
+        ...(notes ? { byo_notes: notes } : {}),
         ...(referenceUrls.length ? { byo_reference_urls: referenceUrls } : {}),
       };
       const res = await fetch('/api/templates/create', {
@@ -423,8 +467,8 @@ export default function BringYourDomainClient({ initialDomain = '' }: { initialD
               className="mt-2 w-full rounded-xl border border-zinc-700 bg-zinc-900 px-4 py-3 text-white placeholder-zinc-500 outline-none focus:border-zinc-500"
             />
             <p className="mt-1 text-xs text-zinc-500">
-              We'll reference them while building — your photos, hours, and voice, not generic filler. Separate
-              several with commas.
+              Give us a page and we'll build your first draft FROM it — your photos, copy, and voice, not generic
+              filler. Separate several with commas; the first one is what we build from.
             </p>
           </div>
           <div className="flex items-center gap-3">
@@ -433,7 +477,11 @@ export default function BringYourDomainClient({ initialDomain = '' }: { initialD
               disabled={busy}
               className="rounded-xl bg-emerald-600 px-5 py-3 text-sm font-semibold text-white hover:bg-emerald-500 disabled:opacity-50"
             >
-              {busy ? 'Building your starter site…' : 'Build my starter site'}
+              {busy
+                ? buildingFromPage
+                  ? 'Building from your page… (~20s)'
+                  : 'Building your starter site…'
+                : 'Build my starter site'}
             </button>
             <button type="button" onClick={() => setStep(1)} className="text-sm text-zinc-400 hover:text-zinc-200">
               ← Back

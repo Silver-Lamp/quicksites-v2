@@ -30,6 +30,8 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
     maxAge: Math.floor(SITE_CLAIM_TTL_MS / 1000),
   });
 
-  const next = `/admin/templates/${params.id}`;
+  // Land on the post-claim welcome (shows the demand we captured) rather than straight
+  // into the editor; it forwards to the editor.
+  const next = `/welcome/${params.id}`;
   return NextResponse.redirect(new URL(`/login?next=${encodeURIComponent(next)}`, url.origin));
 }

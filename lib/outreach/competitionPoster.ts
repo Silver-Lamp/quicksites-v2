@@ -79,6 +79,9 @@ export type PosterModel = {
   /** "{City}, {ST}" of the sender's business, shown ONLY when local to the target (same state
    *  or within radius) — the "oh, they're local to me" trust reflex. Null when not local. */
   localLine?: string | null;
+  /** Restaurant domain-competition: the domain is a diner-traffic PRIZE won by claiming the
+   *  restaurant's own ordering site, not the site itself. Switches the copy to that framing. */
+  restaurantComp?: boolean;
 };
 
 /**
@@ -228,6 +231,7 @@ export async function buildPosterModel(
     benefits: postcardBenefits(industry),
     sender: senderFromProfile(profile, brandName),
     localLine,
+    restaurantComp: isRestaurantComp,
   };
 }
 
@@ -276,6 +280,18 @@ export function renderPosterHtml(m: PosterModel): string {
     .join('<div class="or">or</div>');
   const offerBadge = m.deadline ? `CLAIM BY ${esc(m.deadline).toUpperCase()}` : '72-HOUR OFFERING';
 
+  // Restaurant competitions frame the domain as a diner-traffic PRIZE (won by claiming the
+  // restaurant's own ordering site), not as the site itself.
+  const headlineHtml = m.restaurantComp
+    ? `Own restaurant orders<br/>in ${esc(place)}`
+    : `Own ${esc(place)}<br/>${esc(m.industryLabel)} online`;
+  const subHtml = m.restaurantComp
+    ? `A premium address diners search — it goes to <b>one</b> restaurant.`
+    : `This premium local domain is available to <b>one</b> business.`;
+  const scanLabel = m.restaurantComp
+    ? 'Scan to preview &amp; claim your free ordering site'
+    : 'Scan to preview &amp; claim your free site';
+
   return `<!doctype html>
 <html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <style>
@@ -307,9 +323,9 @@ export function renderPosterHtml(m: PosterModel): string {
 </style></head>
 <body><div class="poster">
   <div class="kicker">${esc(m.city)} · ${esc(m.industryLabel)}</div>
-  <div class="headline">Own ${esc(place)}<br/>${esc(m.industryLabel)} online</div>
+  <div class="headline">${headlineHtml}</div>
   <div class="domain">${esc(m.domain)}</div>
-  <div class="sub">This premium local domain is available to <b>one</b> business.</div>
+  <div class="sub">${subHtml}</div>
   ${m.localLine ? `<div class="local">📍 From a local business · ${esc(m.localLine)}</div>` : ''}
   <div class="competition">
     <div class="or" style="margin-bottom:.06in">First to claim it wins</div>
@@ -317,7 +333,7 @@ export function renderPosterHtml(m: PosterModel): string {
   </div>
   <div class="qrwrap">
     <img class="qr" src="${m.qrDataUrl}" alt="Scan to claim ${esc(m.domain)}" />
-    <div class="scan">Scan to preview &amp; claim your free site</div>
+    <div class="scan">${scanLabel}</div>
     <div class="offer">${offerBadge}</div>
     <div class="foot">${esc(m.claimUrl)}</div>
     ${m.brandName ? `<div class="brand">Built by ${esc(m.brandName)}</div>` : ''}
@@ -333,8 +349,14 @@ export function renderPosterHtml(m: PosterModel): string {
 export function renderPosterBackHtml(m: PosterModel): string {
   const greeting = m.recipientName ? `Hi ${esc(m.recipientName)},` : 'Hello,';
   const deadlineLine = m.deadline
-    ? `<div class="due">Claim by <b>${esc(m.deadline)}</b> — the domain goes to one business only.</div>`
+    ? `<div class="due">Claim by <b>${esc(m.deadline)}</b> — the domain goes to one ${m.restaurantComp ? 'restaurant' : 'business'} only.</div>`
     : '';
+  const backHeadline = m.restaurantComp
+    ? 'Your online-ordering website is already built.'
+    : `Your website for ${esc(m.domain)} is already built.`;
+  const backPara = m.restaurantComp
+    ? `We built your restaurant a free website that takes online orders. Claim it first and <b>${esc(m.domain)}</b> points at you too — extra diners searching in ${esc(m.city)}.`
+    : `We built a free, ready-to-launch website for your business. Scan the QR on the front (or visit the link below) to preview it and claim it before a competitor does.`;
   // Concrete benefit bullets — what the site DOES, so the pitch isn't only scarcity.
   const benefits = (m.benefits ?? []).slice(0, 3);
   const benefitsHtml = benefits.length
@@ -390,8 +412,8 @@ export function renderPosterBackHtml(m: PosterModel): string {
 </style></head>
 <body><div class="back">
   <div class="hi">${greeting}</div>
-  <div class="h">Your website for ${esc(m.domain)} is already built.</div>
-  <div class="p">We built a free, ready-to-launch website for your business. Scan the QR on the front (or visit the link below) to preview it and claim it before a competitor does.</div>
+  <div class="h">${backHeadline}</div>
+  <div class="p">${backPara}</div>
   ${benefitsHtml}
   ${deadlineLine}
   <div class="u">${esc(m.claimUrl)}</div>

@@ -24,6 +24,8 @@ type Check = {
   status: 'points_here' | 'parked_elsewhere' | 'no_website_records';
   currentA: string[];
   currentWwwCname: string[];
+  mx: string[];
+  emailProvider: 'google' | 'microsoft' | 'other' | 'none';
   records: DnsRecord[];
 };
 
@@ -110,6 +112,92 @@ function EmailSafeCallout() {
           (or via Google Admin console → Domains). Your Workspace subscription is separate and unaffected.
         </li>
       </ul>
+    </div>
+  );
+}
+
+/**
+ * Email detection + the "drop the subscription later" explainer. Informational only —
+ * this flow NEVER changes MX. The walkthrough is the customer-safe distillation of the
+ * email-migration runbook (docs/EMAIL_HOSTING_PHASE0_RUNBOOK.md): what you keep, what
+ * you need first, and that the whole job is two MX records — so "$X/mo for email at my
+ * domain" stops feeling like a hostage situation.
+ */
+function EmailProviderInfo({ check }: { check: Check }) {
+  const [open, setOpen] = React.useState(false);
+  const p = check.emailProvider;
+
+  const providerLine =
+    p === 'google' ? (
+      <>
+        ✉️ We can see your email runs on <b className="text-zinc-100">Google Workspace</b>
+        <span className="text-zinc-500"> ({check.mx[0]})</span>. Moving your website here doesn't touch it.
+      </>
+    ) : p === 'microsoft' ? (
+      <>
+        ✉️ We can see your email runs on <b className="text-zinc-100">Microsoft 365</b>
+        <span className="text-zinc-500"> ({check.mx[0]})</span>. Moving your website here doesn't touch it.
+      </>
+    ) : p === 'other' ? (
+      <>
+        ✉️ Your domain has email service set up
+        <span className="text-zinc-500"> ({check.mx[0]})</span>. Moving your website here doesn't touch it.
+      </>
+    ) : (
+      <>✉️ No email is set up on this domain yet — nothing to protect, nothing to break.</>
+    );
+
+  return (
+    <div className="rounded-xl border border-zinc-800 bg-zinc-900/60 p-4 text-sm text-zinc-300">
+      <div>{providerLine}</div>
+
+      {(p === 'google' || p === 'microsoft') && (
+        <div className="mt-3 border-t border-zinc-800 pt-3">
+          <button
+            type="button"
+            onClick={() => setOpen((v) => !v)}
+            className="text-sm text-zinc-400 underline underline-offset-4 hover:text-zinc-200"
+          >
+            {open
+              ? 'Hide the email explainer'
+              : `Paying ${p === 'google' ? 'for Workspace' : 'for Microsoft 365'} mostly to keep email at your domain? Here's how leaving works (when you're ready) →`}
+          </button>
+          {open && (
+            <div className="mt-3 space-y-2 text-zinc-400">
+              <p>
+                Email at your own domain doesn't require a big subscription — the address itself is controlled by two
+                small DNS records (called MX). If the subscription is only earning its keep as “email at my domain”,
+                here's the honest shape of a move:
+              </p>
+              <ul className="list-disc space-y-1.5 pl-5">
+                <li>
+                  <b className="text-zinc-300">You keep everything that matters</b> — your domain, your addresses
+                  (hello@, info@…), and your inbox habits. Your addresses can simply forward into a free Gmail (or any
+                  inbox), and you can still <i>reply as</i> your domain address.
+                </li>
+                <li>
+                  <b className="text-zinc-300">Two things first:</b> a free inbox to receive at (e.g. a personal
+                  Gmail), and an export of your old mail (Google Takeout / Outlook export) — old messages don't
+                  survive a cancelled subscription.
+                </li>
+                <li>
+                  <b className="text-zinc-300">The switch itself is two MX records</b> at your registrar — the same
+                  console as the website records on this page. Swap them, test for a week or two while the old
+                  subscription is still active, then cancel.
+                </li>
+                <li>
+                  <b className="text-zinc-300">This page changes none of it.</b> The website move and the email move
+                  are completely independent — do the site today, email whenever (or never).
+                </li>
+              </ul>
+              <p>
+                Want a hand when the time comes? Mention it when you publish your site and we'll walk through the
+                switch with you.
+              </p>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
@@ -242,6 +330,7 @@ export default function BringYourDomainClient() {
         <div className="mt-4 space-y-4">
           <div className="rounded-xl border border-zinc-800 bg-zinc-900/60 p-4 text-sm">{statusLine(check)}</div>
           <EmailSafeCallout />
+          <EmailProviderInfo check={check} />
           {step === 1 && (
             <div className="flex flex-wrap items-center gap-3">
               <button

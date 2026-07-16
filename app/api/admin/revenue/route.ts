@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import { getServerSupabase } from '@/lib/supabase/server';
+import { requireAdmin } from '@/lib/auth/requireUser';
 import { summarizePlatformRevenue, reconcileStripeFees, type StripeFeeObject } from '@/lib/commerce/revenue';
 import { stripe } from '@/lib/stripe/server';
 
@@ -13,27 +13,16 @@ export const dynamic = 'force-dynamic';
 // The DB is the source of truth; pass `?stripe=1` for an opt-in cross-check that
 // sums the live Stripe application_fee objects for the window and flags drift.
 
-const ADMIN_EMAILS = String(process.env.ADMIN_EMAILS || '')
-  .split(',')
-  .map((s) => s.trim().toLowerCase())
-  .filter(Boolean);
-
 const db = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, (process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SECRET_KEY)!, {
   auth: { persistSession: false, autoRefreshToken: false },
 });
 
 export async function GET(req: NextRequest) {
-  // Admin gate (mirrors the codebase's ADMIN_EMAILS + role check)
-  const supa = await getServerSupabase();
-  const {
-    data: { user },
-  } = await supa.auth.getUser();
-  const email = (user?.email || '').toLowerCase();
-  const role = String(
-    (user?.app_metadata as any)?.role || (user?.user_metadata as any)?.role || ''
-  ).toLowerCase();
-  const isAdmin = !!user && (ADMIN_EMAILS.includes(email) || role === 'admin' || role === 'superadmin');
-  if (!isAdmin) return NextResponse.json({ error: 'forbidden' }, { status: 403 });
+  // Canonical admin gate: ADMIN_EMAILS + the admin_users table (getAdminUser). The old
+  // bespoke check here trusted only ADMIN_EMAILS + a JWT role claim, so a real admin whose
+  // access comes from admin_users (not the env list) got a spurious "forbidden".
+  const gate = await requireAdmin();
+  if (gate instanceof NextResponse) return gate;
 
   const since = new URL(req.url).searchParams.get('since'); // ISO date, optional
 

@@ -147,11 +147,19 @@ async function main() {
       const previewUrl = MENU_BASE_DOMAIN ? menuSiteUrl(slug) : `${PUBLIC_BASE}/preview/${slug}`;
       const claimUrl = `${PUBLIC_BASE}/claim-site/${insertedId}?token=${encodeURIComponent(mintSiteClaimToken(insertedId))}`;
 
-      // Ready-to-print QR (encodes the claim link → preview + one-tap claim).
+      // Ready-to-print QR (encodes the claim link → preview + one-tap claim). Owner-facing.
       const qrPath = `${qrDir}/${slug}.png`;
       try {
         await QRCode.toFile(qrPath, claimUrl, { width: 600, margin: 2, errorCorrectionLevel: 'M' });
       } catch { /* QR is a nicety — never fail the import over it */ }
+
+      // Diner-facing ORDER QR (encodes the public menu URL). This is the one to put on a
+      // window sticker / table tent — it's how real diners land on the draft and generate
+      // the demand signal (a noindex draft otherwise has no traffic source).
+      const orderQrPath = `${qrDir}/${slug}-order.png`;
+      try {
+        await QRCode.toFile(orderQrPath, previewUrl, { width: 600, margin: 2, errorCorrectionLevel: 'M' });
+      } catch { /* nicety */ }
 
       const rec = {
         ok: true,
@@ -162,6 +170,7 @@ async function main() {
         previewUrl,
         claimUrl,
         qrPath,
+        orderQrPath,
         phone: spec.contact?.phone ?? null,
         menuSections: menu?.sections?.length ?? 0,
         menuItems,
@@ -192,7 +201,7 @@ async function main() {
   const hitRate = autoEligible ? Math.round((auto / autoEligible) * 100) : 0;
 
   console.log(`\n✅ ${ok}/${leads.length} imported. Results → ${out}`);
-  console.log(`🔳 Print-ready QR codes (claim links) → ${qrDir}/`);
+  console.log(`🔳 Print-ready QR codes → ${qrDir}/  (<slug>.png = owner claim · <slug>-order.png = diner order sticker)`);
   console.log(`🍽  Menu: ${auto} auto-detected · ${manual} from a supplied photo · ${none} need a menu photo`);
   if (autoEligible) console.log(`   Auto-detect hit rate: ${hitRate}% (${auto}/${autoEligible} without a supplied photo)`);
   if (none > 0) console.log(`   → ${none} would benefit from more photo access (Yelp Premium) or a supplied menu photo.`);

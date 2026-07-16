@@ -22,3 +22,12 @@ export function menuDemandNotifyThreshold(): number {
   const n = Number(process.env.MENU_DEMAND_NOTIFY_THRESHOLD);
   return Number.isFinite(n) && n > 0 ? Math.floor(n) : 3;
 }
+
+// Let a no-website `listing_import` draft on the menu host be INDEXED (it's the
+// restaurant's de-facto web presence — ranking for their name is how demand gets fed;
+// a noindex draft can never generate the "N tried to order" signal). Watermark stays.
+// OFF by default: flip on at go-live, once delivered.menu DNS is pointed. Admin previews
+// and every non-listing_import draft remain noindex regardless.
+export const MENU_DRAFT_INDEXABLE =
+  process.env.MENU_DRAFT_INDEXABLE === '1' ||
+  process.env.MENU_DRAFT_INDEXABLE === 'true';

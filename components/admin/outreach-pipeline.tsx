@@ -114,9 +114,14 @@ export default function OutreachPipeline({ list }: { list: OutreachDraft[] }) {
                     )}
                   </td>
                   <td>
-                    <a href={previewPath} target="_blank" rel="noopener noreferrer" className="text-sky-400 underline underline-offset-2 hover:text-sky-300">
-                      View ↗
-                    </a>
+                    <div className="flex flex-col gap-0.5">
+                      <a href={previewPath} target="_blank" rel="noopener noreferrer" className="text-sky-400 underline underline-offset-2 hover:text-sky-300">
+                        View ↗
+                      </a>
+                      <a href={`/api/admin/outreach/${r.id}/order-qrcode`} target="_blank" rel="noopener noreferrer" className="text-xs text-neutral-400 underline underline-offset-2 hover:text-neutral-200" title="Diner order QR — print & place at the restaurant to feed demand">
+                        Order QR ⤓
+                      </a>
+                    </div>
                   </td>
                   <td className="text-right">
                     {isClaimed ? (

@@ -78,12 +78,39 @@ export default function ProductsGridEditor({ block, onSave, onClose }: Props) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [block?._id]);
 
+  // One-click "Set up my store" (owner-gated server-side; stamps meta.ecom.merchant_id).
+  const [settingUp, setSettingUp] = React.useState(false);
+  const [setupMsg, setSetupMsg] = React.useState<string | null>(null);
+  const templateId: string = String(getTpl()?.id ?? '');
+
   const refresh = React.useCallback(async () => {
     const email = merchantEmail?.trim();
     const mId = merchantId?.trim();
+
+    // Preferred path: resolve THIS site's store server-side (owner-or-admin gated) —
+    // works for real owners, unlike the admin-only products endpoint.
+    if (templateId) {
+      setLoading(true); setLoadError(null);
+      try {
+        const res = await fetch(`/api/commerce/site-merchant?templateId=${encodeURIComponent(templateId)}`, { cache: 'no-store' });
+        const json = await res.json().catch(() => ({}));
+        if (res.ok && json?.ok) {
+          if (json.merchantId && json.merchantId !== mId) {
+            setMerchantId(json.merchantId); setMerchantEmail(''); setLastSource('template');
+            try { localStorage.setItem('qs_merchant_id', json.merchantId); } catch {}
+          }
+          setProducts(Array.isArray(json.products) ? json.products : []);
+          return;
+        }
+        // fall through to the legacy path on any non-ok
+      } catch {
+        /* fall through */
+      } finally { setLoading(false); }
+    }
+
     if (!email && !mId) {
       setProducts([]);
-      setLoadError('Choose a merchant in “Manage products & services”.');
+      setLoadError(null); // no store yet — the setup CTA below handles it, not an error
       return;
     }
     setLoading(true); setLoadError(null);
@@ -98,7 +125,37 @@ export default function ProductsGridEditor({ block, onSave, onClose }: Props) {
     } catch (e: any) {
       setLoadError(e?.message || 'Failed to load products'); setProducts([]);
     } finally { setLoading(false); }
-  }, [merchantEmail, merchantId]);
+  }, [merchantEmail, merchantId, templateId]);
+
+  // "Set up my store": find-or-create the owner's merchant for this site and adopt it.
+  const setupStore = React.useCallback(async () => {
+    if (!templateId || settingUp) return;
+    setSettingUp(true); setSetupMsg(null); setLoadError(null);
+    try {
+      const res = await fetch('/api/commerce/site-merchant', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ templateId }),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok || !json?.merchantId) throw new Error(json?.error || 'Could not set up the store.');
+      setMerchantId(json.merchantId); setMerchantEmail(''); setLastSource('template');
+      try {
+        localStorage.setItem('qs_merchant_id', json.merchantId);
+        localStorage.removeItem('merchant_email');
+      } catch {}
+      try {
+        window.dispatchEvent(new CustomEvent('qs:ecom:merchant-selected', {
+          detail: { merchantId: json.merchantId, label: 'Your store' },
+        }));
+      } catch {}
+      setProducts(Array.isArray(json.products) ? json.products : []);
+      setSetupMsg('Store created ✓ — now add your first items.');
+    } catch (e: any) {
+      setSetupMsg(null);
+      setLoadError(e?.message || 'Could not set up the store.');
+    } finally { setSettingUp(false); }
+  }, [templateId, settingUp]);
 
   /* --- listen for modal broadcasts + template patches + storage signal --- */
   React.useEffect(() => {
@@ -285,17 +342,21 @@ export default function ProductsGridEditor({ block, onSave, onClose }: Props) {
   // Defensive guard runs AFTER all hooks (rules-of-hooks).
   if (!isProductsGrid) return null;
 
+  const hasMerchant = !!(merchantId || merchantEmail);
+
   return (
     <div className="space-y-5">
-      {/* Debug chip */}
-      <div className="flex flex-wrap items-center gap-2 text-[11px] text-muted-foreground">
-        <span className="rounded-full border px-2 py-0.5">{badge}</span>
-        <span className="rounded-full border px-2 py-0.5">id: {merchantId ? `${merchantId.slice(0,8)}…` : '—'}</span>
-        <span className="rounded-full border px-2 py-0.5">email: {merchantEmail || '—'}</span>
-        {lastSource && <span className="rounded-full border px-2 py-0.5">src: {lastSource}</span>}
-        <Button variant="outline" size="sm" onClick={rehydrateNow}>Re-read</Button>
-        <Button variant="outline" size="sm" onClick={clearMerchantCache}>Clear cache</Button>
-      </div>
+      {/* Merchant plumbing details — useful for debugging, noise for owners. */}
+      <details className="text-[11px] text-muted-foreground">
+        <summary className="cursor-pointer select-none">{badge}</summary>
+        <div className="mt-2 flex flex-wrap items-center gap-2">
+          <span className="rounded-full border px-2 py-0.5">id: {merchantId ? `${merchantId.slice(0,8)}…` : '—'}</span>
+          <span className="rounded-full border px-2 py-0.5">email: {merchantEmail || '—'}</span>
+          {lastSource && <span className="rounded-full border px-2 py-0.5">src: {lastSource}</span>}
+          <Button variant="outline" size="sm" onClick={rehydrateNow}>Re-read</Button>
+          <Button variant="outline" size="sm" onClick={clearMerchantCache}>Clear cache</Button>
+        </div>
+      </details>
 
       <div className="grid gap-2">
         <Label htmlFor="pg-title">Section title</Label>
@@ -324,11 +385,51 @@ export default function ProductsGridEditor({ block, onSave, onClose }: Props) {
         </div>
 
         {loadError && <div className="text-sm text-red-500">{loadError}</div>}
+        {setupMsg && <div className="text-sm text-emerald-500">{setupMsg}</div>}
 
-        <div className="rounded-lg border divide-y max-h-64 overflow-auto">
+        {/* No store yet → one click creates it (owner's merchant, stamped on the site). */}
+        {!hasMerchant && !loading && (
+          templateId ? (
+            <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/5 p-4">
+              <div className="text-sm font-medium">This site doesn't have a store yet.</div>
+              <p className="mt-1 text-xs text-muted-foreground">
+                One click creates it — then add your items and they'll show up here to pick from.
+              </p>
+              <Button className="mt-3" type="button" onClick={setupStore} disabled={settingUp}>
+                {settingUp ? 'Setting up…' : '🏪 Set up my store'}
+              </Button>
+            </div>
+          ) : (
+            <div className="text-sm text-muted-foreground">
+              Choose a merchant in “Manage products &amp; services”.
+            </div>
+          )
+        )}
+
+        {/* Store exists but is empty → route to the real items surface (Catalog). */}
+        {hasMerchant && !loading && products.length === 0 && merchantId && (
+          <div className="rounded-lg border border-sky-500/30 bg-sky-500/5 p-4">
+            <div className="text-sm font-medium">Your store is ready — it just needs items.</div>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Add products (or services, meals, digital goods) in your Catalog, then come back and hit Refresh.
+            </p>
+            <a
+              href={`/merchant/catalog?merchant=${encodeURIComponent(merchantId)}`}
+              target="_blank"
+              rel="noreferrer"
+              className="mt-3 inline-flex items-center rounded-md bg-sky-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-sky-500"
+            >
+              Open Catalog — add items ↗
+            </a>
+          </div>
+        )}
+
+        {/* The picker list only renders when there's something to pick (or we're
+            loading) — the setup/catalog CTAs above carry the empty states. */}
+        <div className={`rounded-lg border divide-y max-h-64 overflow-auto ${!loading && products.length === 0 ? 'hidden' : ''}`}>
           {products.length === 0 ? (
             <div className="px-3 py-6 text-sm text-muted-foreground">
-              {loading ? 'Loading…' : 'No products found for this merchant.'}
+              {loading ? 'Loading…' : 'No items yet.'}
             </div>
           ) : (
             products.map((p) => {

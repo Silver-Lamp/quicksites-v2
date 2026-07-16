@@ -8,7 +8,10 @@ import AutogenRunner from '@/components/admin/templates/autogen-runner';
 import GeoCampaignBanner from '@/components/admin/templates/geo-campaign-banner';
 import ReadinessCoach from '@/components/admin/templates/readiness-coach';
 import ReadinessDeepLink from '@/components/admin/templates/readiness-deep-link';
+import RestaurantEditorCoach from '@/components/admin/templates/restaurant-editor-coach';
 import { getGeoCampaignByTemplateId } from '@/lib/outreach/geoCampaigns';
+import { isRestaurantApexData } from '@/lib/outreach/restaurantApexSite';
+import { resolveIndustryKey } from '@/lib/industries';
 import type { Template } from '@/types/template';
 
 // Ensure no caching for edits
@@ -62,7 +65,7 @@ export default async function TemplateEditPage({ params }: PageProps) {
 
   // Try to load a non-version draft first; fall back to latest matching row.
   const select =
-    'id, template_name, slug, base_slug, data, header_block, footer_block, color_mode, domain, default_subdomain, is_version, is_site, updated_at, rev';
+    'id, template_name, slug, base_slug, data, header_block, footer_block, color_mode, domain, default_subdomain, is_version, is_site, updated_at, rev, industry, claim_source, published';
   // Only match on `id` when the key is a real UUID — otherwise PostgREST sends
   // `id=eq.<slug>` which errors ("invalid input syntax for type uuid"), failing
   // the whole OR query and 404-ing valid slug URLs.
@@ -126,6 +129,14 @@ export default async function TemplateEditPage({ params }: PageProps) {
   // If this template is a geo-domain campaign pitch site, surface the campaign.
   const campaign = await getGeoCampaignByTemplateId(row.id);
 
+  // Restaurant/apex coach: mounted for apex portals and restaurant sites (deterministic
+  // brain — contest state, standards status, menu fill, pending UX upgrades).
+  const isApex = isRestaurantApexData(dataObj);
+  const industryKey = resolveIndustryKey(
+    row.industry || (dataObj as any)?.meta?.identity?.industry || (dataObj as any)?.meta?.industry || '',
+  );
+  const showRestaurantCoach = isApex || industryKey === 'restaurant';
+
   return (
     <>
       {campaign && <GeoCampaignBanner c={campaign} />}
@@ -141,6 +152,14 @@ export default async function TemplateEditPage({ params }: PageProps) {
             campaignId={campaign.id}
             industryKey={campaign.industry_key}
             initialReadyAt={campaign.outreach_ready_at}
+          />
+        )}
+        {showRestaurantCoach && (
+          <RestaurantEditorCoach
+            templateId={row.id}
+            variant={isApex ? 'apex' : 'restaurant'}
+            published={!!row.published}
+            claimSource={row.claim_source ?? null}
           />
         )}
         <TemplateEditor

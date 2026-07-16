@@ -23,6 +23,7 @@ import { buildRestaurantApexSite } from '@/lib/outreach/restaurantApexSite';
 import { readinessScore } from '@/lib/outreach/readiness';
 import { resolveIndustryKey } from '@/lib/industries';
 import { applyRestaurantUxRefresh } from '@/lib/builder/restaurantUxRefresh';
+import { applyApexStandards } from '@/lib/outreach/apexStandards';
 import { commitTemplatePatch } from '@/lib/templates/commitTemplatePatch';
 import { persistReadinessScore } from '@/lib/seo/persistReadiness';
 
@@ -75,6 +76,10 @@ export type RestaurantDomainArea = {
   /** Template occupying the apex slug (the restaurant_apex portal — or, for a
    *  rent-model campaign, its pitch site). Null = the templateless directory fallback. */
   apex_template_id: string | null;
+  /** Apex-standards steps a Refresh apex would apply RIGHT NOW (server dry-run of
+   *  applyApexStandards). [] = up to date; null = not applicable (no apex template /
+   *  not a claim contest / not evaluated). */
+  apex_ux_pending: string[] | null;
   has_winner: boolean;
   winner_name: string | null;
   /** Cohort racing for the apex (linked to the campaign). */
@@ -229,10 +234,14 @@ export function assembleRestaurantDomainAreas(input: {
   ownedDomains: string[];
   /** slug → template id for templates sitting at campaign apex slugs (apex portals / pitch sites). */
   apexTemplatesBySlug?: Record<string, string>;
+  /** slug → apex-standards dry-run result for claim-contest apex templates (see
+   *  RestaurantDomainArea.apex_ux_pending). Slugs absent here surface as null. */
+  apexPendingBySlug?: Record<string, string[]>;
   links: LinkBuilders;
 }): RestaurantDomainOverview {
   const { campaigns, prospects, links } = input;
   const apexBySlug = input.apexTemplatesBySlug ?? {};
+  const apexPendingBySlug = input.apexPendingBySlug ?? {};
   const tplById = new Map(input.templates.map((t) => [t.id, t]));
   const ownedNormalized = new Set(input.ownedDomains.map(normalizeDomain).filter(Boolean));
   const prospectById = new Map(prospects.map((p) => [p.id, p]));
@@ -291,6 +300,7 @@ export function assembleRestaurantDomainAreas(input: {
       campaign_status: c.status,
       campaign_kind: c.kind,
       apex_template_id: apexBySlug[c.slug] ?? null,
+      apex_ux_pending: apexPendingBySlug[c.slug] ?? null,
       has_winner: !!winnerId,
       winner_name: winnerName,
       competitors: sortRestaurants(cohort),
@@ -323,6 +333,7 @@ export function assembleRestaurantDomainAreas(input: {
       campaign_status: null,
       campaign_kind: null,
       apex_template_id: null,
+      apex_ux_pending: null,
       has_winner: false,
       winner_name: null,
       competitors: [],
@@ -354,6 +365,7 @@ export function assembleRestaurantDomainAreas(input: {
       campaign_status: null,
       campaign_kind: null,
       apex_template_id: null,
+      apex_ux_pending: null,
       has_winner: false,
       winner_name: null,
       competitors: [],
@@ -522,14 +534,39 @@ export async function getRestaurantLocationDomains(): Promise<RestaurantDomainOv
   });
 
   // Templates sitting at campaign apex slugs (restaurant_apex portals / pitch sites) —
-  // lets the card link straight into the apex editor.
+  // lets the card link straight into the apex editor. Deep columns ride along so the
+  // apex-standards DRY-RUN can tell each claim-contest card whether a "Refresh apex"
+  // would change anything ([] renders as "Apex ✓").
   const campaignRows = (campaigns ?? []) as CampaignRow[];
   const apexSlugs = Array.from(new Set(campaignRows.map((c) => c.slug).filter(Boolean)));
   const { data: apexTpls } = apexSlugs.length
-    ? await supabaseAdmin.from('templates').select('id, slug').in('slug', apexSlugs)
-    : { data: [] as { id: string; slug: string }[] };
+    ? await supabaseAdmin
+        .from('templates')
+        .select('id, slug, data, header_block, footer_block')
+        .in('slug', apexSlugs)
+    : { data: [] as any[] };
   const apexTemplatesBySlug: Record<string, string> = {};
-  for (const t of (apexTpls ?? []) as { id: string; slug: string }[]) apexTemplatesBySlug[t.slug] = t.id;
+  const apexPendingBySlug: Record<string, string[]> = {};
+  const campaignBySlug = new Map(campaignRows.map((c) => [c.slug, c]));
+  for (const t of (apexTpls ?? []) as any[]) {
+    apexTemplatesBySlug[t.slug] = t.id;
+    // Only claim-contest apexes carry standards — a rent-model pitch site at the slug
+    // is a business site and must not be portal-ized.
+    const c = campaignBySlug.get(t.slug);
+    if (!c || c.kind !== RESTAURANT_COMPETITION_KIND) continue;
+    try {
+      apexPendingBySlug[t.slug] = applyApexStandards({
+        data: t.data ?? {},
+        headerBlock: t.header_block ?? null,
+        footerBlock: t.footer_block ?? null,
+        campaignId: c.id,
+        city: c.city,
+        region: c.region,
+      }).applied;
+    } catch {
+      /* leave unset → null on the area */
+    }
+  }
 
   return assembleRestaurantDomainAreas({
     campaigns: campaignRows,
@@ -537,6 +574,7 @@ export async function getRestaurantLocationDomains(): Promise<RestaurantDomainOv
     templates: (templates ?? []) as TemplateRow[],
     ownedDomains: ((owned ?? []) as { domain: string }[]).map((r) => r.domain),
     apexTemplatesBySlug,
+    apexPendingBySlug,
     links: {
       tracked: (campaignId, prospectId) => trackedClaimUrl(campaignId, prospectId),
       claim: (templateId) => claimUrlFor(templateId),
@@ -595,9 +633,14 @@ export type RefreshUxResult = {
  * new builds get (FAQ removal, anchor nav, catering contact title, tap-to-call
  * footer — see lib/builder/restaurantUxRefresh.ts) through the sanctioned commit
  * RPC. Refuses live (published) sites — those belong to their owners; edit in the
- * editor instead.
+ * editor instead. `dryRun` reports what WOULD apply without committing (the editor
+ * coach's awareness call).
  */
-export async function refreshRestaurantUx(templateId: string, actorId: string | null): Promise<RefreshUxResult> {
+export async function refreshRestaurantUx(
+  templateId: string,
+  actorId: string | null,
+  opts?: { dryRun?: boolean },
+): Promise<RefreshUxResult> {
   const { data: t, error } = await supabaseAdmin
     .from('templates')
     .select('id, slug, data, rev, header_block, footer_block, industry, published')
@@ -621,6 +664,7 @@ export async function refreshRestaurantUx(templateId: string, actorId: string | 
     headerBlock: tpl.header_block ?? null,
     footerBlock: tpl.footer_block ?? null,
   });
+  if (opts?.dryRun) return { ok: true, changed: r.changed, applied: r.applied };
   if (!r.changed) return { ok: true, changed: false, applied: [] };
 
   const patch: Record<string, any> = { data: r.data };
@@ -633,6 +677,83 @@ export async function refreshRestaurantUx(templateId: string, actorId: string | 
   await persistReadinessScore(templateId, r.data, tpl.industry, tpl.slug).catch(() => {});
 
   return { ok: true, changed: true, applied: r.applied };
+}
+
+export type RefreshApexResult = {
+  ok: boolean;
+  changed: boolean;
+  applied: string[];
+  /** True when the live site was re-published after the commit. */
+  republished: boolean;
+  /** Committed fine but something non-fatal went sideways (e.g. republish failed). */
+  warning?: string;
+  error?: string;
+};
+
+/**
+ * "Refresh apex" for one claim-contest apex portal: re-assert the apex standards
+ * (winner-first directory block on the right campaign, Home-only chrome, SEO
+ * defaults, type + version stamps — see lib/outreach/apexStandards.ts) through the
+ * sanctioned commit RPC. CRITICAL difference from the draft Refresh UX: apexes are
+ * PUBLISHED, so a commit alone only changes the draft — after a changed commit this
+ * re-calls the publish RPC so the live site picks it up. `dryRun` reports what would
+ * apply without writing anything.
+ */
+export async function refreshApexSite(
+  campaignId: string,
+  actorId: string | null,
+  opts?: { dryRun?: boolean },
+): Promise<RefreshApexResult> {
+  const fail = (error: string): RefreshApexResult => ({ ok: false, changed: false, applied: [], republished: false, error });
+
+  const { data: c, error } = await supabaseAdmin
+    .from('geo_industry_campaigns')
+    .select('id, kind, city, region, domain, slug')
+    .eq('id', campaignId)
+    .maybeSingle();
+  if (error) return fail(error.message);
+  if (!c) return fail('Campaign not found.');
+  if (c.kind !== RESTAURANT_COMPETITION_KIND) return fail('Not a restaurant competition.');
+
+  const { data: t, error: tErr } = await supabaseAdmin
+    .from('templates')
+    .select('id, slug, data, rev, header_block, footer_block, published')
+    .eq('slug', c.slug)
+    .maybeSingle();
+  if (tErr) return fail(tErr.message);
+  if (!t) return fail(`No apex template at "${c.slug}" — the templateless directory fallback fronts this domain.`);
+
+  const tpl: any = t;
+  const r = applyApexStandards({
+    data: tpl.data ?? {},
+    headerBlock: tpl.header_block ?? null,
+    footerBlock: tpl.footer_block ?? null,
+    campaignId: c.id,
+    city: c.city,
+    region: c.region,
+  });
+  if (opts?.dryRun) return { ok: true, changed: r.changed, applied: r.applied, republished: false };
+  if (!r.changed) return { ok: true, changed: false, applied: [], republished: false };
+
+  const patch: Record<string, any> = { data: r.data };
+  if (r.applied.includes('header_portal_nav')) patch.header_block = r.headerBlock;
+  if (r.applied.includes('footer_portal_nav')) patch.footer_block = r.footerBlock;
+  const commitErr = await commitTemplatePatch(tpl.id, tpl.rev ?? 0, patch, actorId);
+  if (commitErr) return fail(commitErr);
+
+  // Republish so the LIVE apex reflects the refresh (snapshots the latest version +
+  // flips published_sites). Without this, only the draft changes. Also brings a
+  // never-published apex live — desired: apexes are meant to be public.
+  const { error: pubErr } = await (supabaseAdmin as any).rpc('publish_template_demo', {
+    p_template_id: tpl.id,
+  });
+  return {
+    ok: true,
+    changed: true,
+    applied: r.applied,
+    republished: !pubErr,
+    ...(pubErr ? { warning: `Committed, but republish failed (${pubErr.message}) — the live apex is unchanged until it republishes.` } : {}),
+  };
 }
 
 export type ConvertResult = {

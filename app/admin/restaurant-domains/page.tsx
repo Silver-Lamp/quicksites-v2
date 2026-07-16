@@ -41,6 +41,7 @@ type Area = {
   campaign_status: string | null;
   campaign_kind: string | null;
   apex_template_id: string | null;
+  apex_ux_pending: string[] | null;
   has_winner: boolean;
   winner_name: string | null;
   competitors: AreaRestaurant[];
@@ -307,6 +308,37 @@ export default function RestaurantDomainsPage() {
     }
   };
 
+  // "Refresh apex": re-assert the apex standards on the portal template (winner-first
+  // directory, portal chrome, SEO defaults, version stamp) + REPUBLISH the live site.
+  // The button only shows when the server dry-run found pending steps.
+  const [apexRefreshing, setApexRefreshing] = React.useState<string | null>(null); // area key
+  const refreshApex = async (area: Area) => {
+    if (!area.campaign_id) return;
+    setApexRefreshing(area.key);
+    setError(null);
+    try {
+      const res = await fetch('/api/admin/restaurant-domains/refresh-apex', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ campaignId: area.campaign_id }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json?.error || `failed (${res.status})`);
+      setNotice(
+        json.changed
+          ? `${area.domain}: applied ${json.applied.length} standard(s) — ${json.applied.join(', ').replace(/_/g, ' ')}.${
+              json.republished ? ' Live site republished.' : ''
+            }${json.warning ? ` ⚠ ${json.warning}` : ''}`
+          : `${area.domain}: apex already meets the current standards.`,
+      );
+      if (json.changed) await load();
+    } catch (e: any) {
+      setError(e?.message || 'failed');
+    } finally {
+      setApexRefreshing(null);
+    }
+  };
+
   // Suggested next apex launches — toggled panel over data already loaded.
   const [showSuggestions, setShowSuggestions] = React.useState(false);
 
@@ -548,6 +580,28 @@ export default function RestaurantDomainsPage() {
                     >
                       Edit apex site →
                     </Link>
+                  )}
+                  {/* Refresh apex only when the server dry-run found pending standards;
+                      an up-to-date apex shows a quiet "Apex ✓" instead of a dead button. */}
+                  {area.apex_template_id && area.apex_ux_pending && (
+                    area.apex_ux_pending.length > 0 ? (
+                      <button
+                        type="button"
+                        disabled={apexRefreshing === area.key}
+                        onClick={() => void refreshApex(area)}
+                        className="rounded border border-fuchsia-500/40 bg-fuchsia-500/10 px-2 py-0.5 text-[11px] text-fuchsia-200 hover:bg-fuchsia-500/20 disabled:opacity-50"
+                        title={`Pending standards: ${area.apex_ux_pending.join(', ').replace(/_/g, ' ')} — commits + republishes the live apex`}
+                      >
+                        {apexRefreshing === area.key ? 'Refreshing…' : `Refresh apex (${area.apex_ux_pending.length})`}
+                      </button>
+                    ) : (
+                      <span
+                        className="text-[11px] font-medium text-emerald-400/80"
+                        title="This apex meets the current standards"
+                      >
+                        Apex ✓
+                      </span>
+                    )
                   )}
                 </div>
 

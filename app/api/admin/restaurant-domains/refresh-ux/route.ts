@@ -25,7 +25,8 @@ export async function POST(req: Request) {
   const templateId = typeof body.templateId === 'string' ? body.templateId : '';
   if (!templateId) return NextResponse.json({ error: 'templateId is required.' }, { status: 400 });
 
-  const r = await refreshRestaurantUx(templateId, gate.user.id);
+  // dryRun: report what WOULD apply without committing (the editor coach's awareness).
+  const r = await refreshRestaurantUx(templateId, gate.user.id, { dryRun: body.dryRun === true });
   if (!r.ok) return NextResponse.json({ error: r.error || 'Refresh failed.' }, { status: 400 });
   return NextResponse.json({ ok: true, changed: r.changed, applied: r.applied });
 }

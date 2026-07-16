@@ -9,6 +9,7 @@
 import * as React from 'react';
 import Link from 'next/link';
 import NextStepButton from '@/components/admin/templates/next-step-button';
+import ApexDomainCheck from '@/components/admin/apex-domain-check';
 
 type SeoInfo = { pct: number; done: number; total: number; hardLeft: number; nextStep?: any | null };
 
@@ -503,6 +504,9 @@ export default function RestaurantDomainsPage() {
                         <span className="text-xs tabular-nums text-purple-300" title="Launch score">
                           {s.score}
                         </span>
+                        {!s.domain_owned && (
+                          <ApexDomainCheck city={s.city} region={s.region} domain={s.domain} onPurchased={() => void load()} />
+                        )}
                         <button
                           type="button"
                           onClick={() => document.getElementById(s.area_key)?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
@@ -572,6 +576,19 @@ export default function RestaurantDomainsPage() {
                     <Badge tone="neutral">domain not owned</Badge>
                   )}
                   {area.domain_status && <Badge tone="neutral">{area.domain_status}</Badge>}
+                  {/* Apex-domain tools: availability + price + one-click buy for areas
+                      whose <city>-restaurant.com we don't own yet. */}
+                  {!area.domain_owned && (
+                    <ApexDomainCheck
+                      city={area.city}
+                      region={area.region}
+                      domain={area.domain}
+                      onPurchased={(d) => {
+                        setNotice(`Bought ${d} — attached to the project and recorded as owned.`);
+                        void load();
+                      }}
+                    />
+                  )}
                   {area.apex_template_id && (
                     <Link
                       href={`/admin/templates/${area.apex_template_id}`}

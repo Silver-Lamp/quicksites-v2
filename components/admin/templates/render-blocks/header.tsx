@@ -69,6 +69,16 @@ export default function HeaderRender({
   const fallLogo =
     typeof meta?.logo_url === 'string' ? meta.logo_url : (template as any)?.logo_url;
 
+  // No-logo fallback: the business name as a text wordmark. A site without a logo
+  // (restaurants default to none — their branding is theirs, not ours to invent)
+  // should read as THEIR name, not an empty gray placeholder square.
+  const wordmark: string =
+    (template as any)?.business_name ||
+    meta?.business_name ||
+    meta?.identity?.business_name ||
+    (template as any)?.template_name ||
+    '';
+
   const { logo_url, nav } = React.useMemo(() => {
     const base = normalizeContent(block, content);
     return { logo_url: base.logo_url || fallLogo || '', nav: base.nav };
@@ -150,6 +160,19 @@ export default function HeaderRender({
                   alt="Logo"
                   className="h-10 w-auto rounded-md bg-muted object-contain"
                 />
+              </Link>
+            )
+          ) : wordmark ? (
+            enableHeaderEdit ? (
+              <span className="text-lg font-semibold tracking-tight text-foreground">{wordmark}</span>
+            ) : (
+              <Link
+                href={homeHref}
+                aria-label="Home"
+                prefetch={false}
+                className="text-lg font-semibold tracking-tight text-foreground hover:opacity-80"
+              >
+                {wordmark}
               </Link>
             )
           ) : (

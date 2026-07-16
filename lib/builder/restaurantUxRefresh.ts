@@ -97,7 +97,17 @@ export function applyRestaurantUxRefresh(input: {
     applied.push('footer_anchor_nav');
   }
 
-  // 5) Footer tap-to-call: add when the site knows its phone and the footer lacks one.
+  // 5) Placeholder logo: restaurants default to NO logo (the header renders their
+  //    name as a wordmark instead) — a placehold.co box reads as "your branding is
+  //    incomplete/ours to redo". Clears ONLY the untouched stock placeholder; a real
+  //    uploaded/generated logo is the owner's choice and stays.
+  const PLACEHOLDER_LOGO_RX = /placehold\.co|placeholder\.com/i;
+  if (headerBlock?.content && typeof headerBlock.content.logo_url === 'string' && PLACEHOLDER_LOGO_RX.test(headerBlock.content.logo_url)) {
+    headerBlock.content.logo_url = '';
+    applied.push('header_placeholder_logo_removed');
+  }
+
+  // 6) Footer tap-to-call: add when the site knows its phone and the footer lacks one.
   const phone = phoneFromBlocks(liveBlocks);
   if (phone && footerBlock?.content && Array.isArray(footerBlock.content.links)) {
     const hasTel = footerBlock.content.links.some((l: any) => String(l?.href ?? '').startsWith('tel:'));

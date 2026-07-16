@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, ArrowRight, Layers, Sparkles, FilePlus2, Search, Check, Globe } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Layers, Sparkles, FilePlus2, Search, Check, Globe, Link2 } from 'lucide-react';
 import { KEY_TO_LABEL, type IndustryKey } from '@/lib/industries';
 import { buildIndustryStarter } from '@/lib/builder/industryScaffold';
 import BrandLoader from '@/components/brand/BrandLoader';
@@ -84,6 +84,16 @@ function ChooseStep({
       highlight: true,
     },
     {
+      key: 'byo' as const,
+      icon: Link2,
+      title: 'I have a domain, but it’s parked',
+      blurb: 'Paying for a domain that still shows “under construction”? We’ll build the site and hand you the exact DNS records — website and email both covered.',
+      cta: 'Bring my domain',
+      // Full nav: the flow lives outside /admin and starts with a live DNS check.
+      onClick: () => window.location.assign('/bring-your-domain'),
+      highlight: true,
+    },
+    {
       key: 'template' as const,
       icon: Layers,
       title: 'Duplicate a template',
@@ -106,7 +116,8 @@ function ChooseStep({
       <h1 className="text-3xl font-semibold tracking-tight">Let’s build your site</h1>
       <p className="mt-2 text-zinc-400">Choose how you’d like to start. You can change anything later.</p>
 
-      <div className="mt-8 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
+      {/* 5 cards → 3-up on large screens (a 4-col grid leaves one orphan). */}
+      <div className="mt-8 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
         {cards.map((c) => (
           <button
             key={c.key}

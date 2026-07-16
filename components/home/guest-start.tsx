@@ -28,7 +28,7 @@ function normalizeUrl(raw: string): string {
   return /^https?:\/\//i.test(t) ? t : `https://${t}`;
 }
 
-type Mode = 'fresh' | 'convert';
+type Mode = 'fresh' | 'convert' | 'domain';
 
 // Staged status copy for the convert path (~10-20s single round-trip).
 const CONVERT_STAGES = [
@@ -52,6 +52,7 @@ export default function GuestStart() {
   const [businessName, setBusinessName] = useState('');
   const [industry, setIndustry] = useState<string>('');
   const [url, setUrl] = useState('');
+  const [parkedDomain, setParkedDomain] = useState('');
   const [loading, setLoading] = useState(false);
   const [stage, setStage] = useState(0);
   const [error, setError] = useState<string | null>(null);
@@ -75,6 +76,19 @@ export default function GuestStart() {
     setError(null);
 
     if (mode === 'convert') return convert();
+
+    // Amy's case: "I'm paying for a domain but the site is parked." The dedicated
+    // /bring-your-domain flow handles it (DNS records for site AND email, starter
+    // build) — hand the domain over and let it auto-check on arrival.
+    if (mode === 'domain') {
+      const d = parkedDomain.trim();
+      if (!d) {
+        setError('Enter the domain you already own.');
+        return;
+      }
+      window.location.assign(`/bring-your-domain?domain=${encodeURIComponent(d)}`);
+      return;
+    }
 
     const name = businessName.trim();
     if (!name) {
@@ -214,6 +228,9 @@ export default function GuestStart() {
         <button type="button" onClick={() => switchMode('convert')} className={tabClass(mode === 'convert')}>
           I already have a site
         </button>
+        <button type="button" onClick={() => switchMode('domain')} className={tabClass(mode === 'domain')}>
+          I have a domain
+        </button>
       </div>
 
       {mode === 'fresh' ? (
@@ -242,7 +259,7 @@ export default function GuestStart() {
             ))}
           </select>
         </div>
-      ) : (
+      ) : mode === 'convert' ? (
         <input
           type="text"
           inputMode="url"
@@ -250,6 +267,17 @@ export default function GuestStart() {
           onChange={(e) => setUrl(e.target.value)}
           placeholder="yourbusiness.com"
           aria-label="Existing website address"
+          disabled={loading}
+          className="w-full rounded-2xl border border-zinc-700 bg-zinc-900/70 px-5 py-3.5 text-base text-white placeholder:text-zinc-500 focus:border-white/40 focus:outline-none sm:px-8 sm:py-6 sm:text-2xl"
+        />
+      ) : (
+        <input
+          type="text"
+          inputMode="url"
+          value={parkedDomain}
+          onChange={(e) => setParkedDomain(e.target.value)}
+          placeholder="yourdomain.com"
+          aria-label="Domain you already own"
           disabled={loading}
           className="w-full rounded-2xl border border-zinc-700 bg-zinc-900/70 px-5 py-3.5 text-base text-white placeholder:text-zinc-500 focus:border-white/40 focus:outline-none sm:px-8 sm:py-6 sm:text-2xl"
         />
@@ -270,7 +298,9 @@ export default function GuestStart() {
             : '✨ Generating your site… (~25s)'
           : mode === 'convert'
             ? '✨ Convert my site — free, no signup'
-            : '✨ Build my site — free, no signup'}
+            : mode === 'domain'
+              ? '✨ Check my domain — free, no signup'
+              : '✨ Build my site — free, no signup'}
       </button>
 
       {loading && mode === 'convert' ? (
@@ -281,7 +311,9 @@ export default function GuestStart() {
         <p className="mt-4 text-sm text-zinc-400 sm:mt-6 sm:text-base">
           {mode === 'convert'
             ? 'Paste any business site (Wix, WordPress, Squarespace…). We rebuild it here — edit everything after.'
-            : 'No credit card. Sign up only when you’re ready to go live.'}
+            : mode === 'domain'
+              ? 'Paying for a domain that still shows “under construction”? Keep your registrar and your email — we’ll check it and show the exact records for the website and mail.'
+              : 'No credit card. Sign up only when you’re ready to go live.'}
         </p>
       )}
 
@@ -290,14 +322,6 @@ export default function GuestStart() {
           {error}
         </p>
       )}
-
-      {/* BYO domain on-ramp: for people already paying for a (parked) domain elsewhere. */}
-      <p className="mt-3 text-sm text-zinc-500">
-        Already paying for a domain?{' '}
-        <a href="/bring-your-domain" className="text-zinc-300 underline underline-offset-4 hover:text-white">
-          Bring it over — email stays put →
-        </a>
-      </p>
 
       <BrandLoader
         open={loading}

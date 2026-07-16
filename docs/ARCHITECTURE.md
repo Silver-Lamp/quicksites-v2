@@ -127,6 +127,17 @@ Each phase: extract logic to `packages/core` (pure Deno-safe TS), stand up the E
 - Rewriting the builder/editor — it stays in Next (it's UI-heavy, RSC-friendly).
 - Public site rendering — stays in Next (SEO/edge rendering is a Next strength).
 - A second database or non-Supabase ORM — Supabase remains the system of record.
+- **Self-managed IaaS / bare-metal / GPU infrastructure.** Evaluated
+  [Redundant Web Services](https://www.redundantwebservices.com/) (discount IaaS: VMs,
+  V100-class GPUs at ~$2.14/hr, TX/WA colo, "20–50% under AWS") on 2026-07-16 —
+  **no fit**: we have ~zero IaaS footprint (Vercel serverless + managed Supabase +
+  metered OpenAI), so there's no workload to migrate and no bill to cut. Revisit only
+  if (a) sustained AI spend crosses **~$1k/mo** and self-hosted inference starts to
+  pencil (the `/admin/ai-costs` dashboard carries this checkpoint — and compare against
+  modern-GPU clouds, not V100s), (b) the backend split lands and compute/egress reaches
+  $1k+/mo, or (c) media archiving outgrows Supabase storage. Never for mail servers —
+  discount-IaaS IP ranges are a deliverability liability
+  (see [`EMAIL_HOSTING_PLAN.md`](EMAIL_HOSTING_PLAN.md) §5 Phase 3).
 
 ---
 

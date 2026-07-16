@@ -126,6 +126,29 @@ export default async function AiCostsPage() {
           priced <code className="text-zinc-400">image</code> row per model (gpt-image-1 is configured).
         </p>
       </div>
+
+      {/* Self-hosting checkpoint: metered OpenAI is the right call until sustained spend
+          makes self-hosted inference pencil. IaaS/GPU clouds were evaluated 2026-07-16
+          (Redundant Web Services — no fit at our scale); see ARCHITECTURE.md §6.5. */}
+      {(() => {
+        const runRate = sum(rows); // 30-day spend ≈ monthly run-rate
+        const crossed = runRate >= 1000;
+        return (
+          <div className={`mt-5 rounded-xl border p-5 ${crossed ? 'border-amber-500/40 bg-amber-500/[0.06]' : 'border-zinc-800 bg-zinc-900/40'}`}>
+            <h3 className={`text-sm font-semibold ${crossed ? 'text-amber-200' : 'text-white'}`}>
+              Self-hosting checkpoint {crossed ? '— threshold crossed' : ''}
+            </h3>
+            <p className="mt-2 text-xs text-zinc-400">
+              At the current run-rate ({money(runRate)}/mo), metered OpenAI is the right architecture — a single cloud GPU
+              runs ~$1,500/mo before MLOps time. {crossed
+                ? 'Sustained spend has crossed the ~$1,000/mo checkpoint: evaluating self-hosted inference (modern-GPU clouds, not V100-class discount IaaS) is now worth an afternoon.'
+                : 'Revisit self-hosted inference only if this sustains past ~$1,000/mo.'}{' '}
+              IaaS providers were last evaluated 2026-07-16 (Redundant Web Services — no fit at our scale); reasoning + revisit
+              triggers live in <code className="text-zinc-400">docs/ARCHITECTURE.md</code> §6.5.
+            </p>
+          </div>
+        );
+      })()}
     </div>
   );
 }

@@ -48,6 +48,7 @@ describe('assembleRestaurantDomainAreas', () => {
       campaigns: [
         {
           id: 'camp1',
+          kind: 'restaurant_competition',
           city: 'Boston',
           region: 'MA',
           domain: 'boston-restaurant.com',
@@ -96,6 +97,7 @@ describe('assembleRestaurantDomainAreas', () => {
       campaigns: [
         {
           id: 'camp1',
+          kind: 'restaurant_competition',
           city: 'Boston',
           region: 'MA',
           domain: 'boston-restaurant.com',
@@ -140,5 +142,41 @@ describe('assembleRestaurantDomainAreas', () => {
     expect(derived.domain_owned).toBe(false);
 
     expect(out.totals).toMatchObject({ domains_owned: 2, contests: 1, contests_decided: 1 });
+  });
+
+  it('recognizes a legacy rent-model (geo_services) restaurant campaign without counting it as a contest', () => {
+    const out = assembleRestaurantDomainAreas({
+      campaigns: [
+        {
+          id: 'svc1',
+          kind: 'geo_services', // launched from the services competition cards
+          city: 'Renton',
+          region: 'WA',
+          domain: 'renton-restaurant.com',
+          slug: 'renton-restaurant',
+          domain_status: 'attached',
+          status: 'live',
+          claimed_by_prospect_id: null,
+        },
+      ],
+      prospects: [
+        prospect({ id: 'r1', business_name: 'Linked A', city: 'Renton', region: 'WA', status: 'draft_built', template_id: 't1', geo_campaign_id: 'svc1' }),
+        prospect({ id: 'r2', business_name: 'Linked B', city: 'Renton', region: 'WA', geo_campaign_id: 'svc1' }),
+        prospect({ id: 'r3', business_name: 'Free Agent', city: 'Renton', region: 'WA' }),
+      ],
+      templates: [{ id: 't1', slug: 'linked-a', published: false, custom_domain: null }],
+      ownedDomains: [],
+      links,
+    });
+
+    expect(out.areas).toHaveLength(1);
+    const area = out.areas[0];
+    expect(area.campaign_id).toBe('svc1');
+    expect(area.campaign_kind).toBe('geo_services'); // page badges + offers "convert to claim contest"
+    expect(area.domain_owned).toBe(true);
+    expect(area.competitors.map((r) => r.id)).toEqual(['r1', 'r2']); // linked cohort recognized
+    expect(area.candidates.map((r) => r.id)).toEqual(['r3']);
+    // Not a contest until converted.
+    expect(out.totals).toMatchObject({ domains_owned: 1, contests: 0, contests_decided: 0 });
   });
 });

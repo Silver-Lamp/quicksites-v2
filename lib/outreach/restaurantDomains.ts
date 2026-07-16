@@ -48,6 +48,9 @@ export type RestaurantDomainArea = {
   region: string | null;
   campaign_id: string | null;
   campaign_status: string | null; // draft | live | claimed
+  /** 'restaurant_competition' = claim contest; 'geo_services' = rent-model campaign
+   *  that targeted restaurants (pre-contest era) — convertible via /convert. */
+  campaign_kind: string | null;
   has_winner: boolean;
   winner_name: string | null;
   /** Cohort racing for the apex (linked to the campaign). */
@@ -71,6 +74,8 @@ export type RestaurantDomainOverview = {
 
 export type CampaignRow = {
   id: string;
+  /** 'restaurant_competition' (claim contest) or 'geo_services' (legacy rent model). */
+  kind: string;
   city: string;
   region: string | null;
   domain: string;
@@ -224,6 +229,7 @@ export function assembleRestaurantDomainAreas(input: {
       region: c.region,
       campaign_id: c.id,
       campaign_status: c.status,
+      campaign_kind: c.kind,
       has_winner: !!winnerId,
       winner_name: winnerName,
       competitors: sortRestaurants(cohort),
@@ -254,6 +260,7 @@ export function assembleRestaurantDomainAreas(input: {
       region: candidates.length ? (freeByCity.get(ck)![0].region ?? null) : null,
       campaign_id: null,
       campaign_status: null,
+      campaign_kind: null,
       has_winner: false,
       winner_name: null,
       competitors: [],
@@ -283,6 +290,7 @@ export function assembleRestaurantDomainAreas(input: {
       region: group[0].region ?? null,
       campaign_id: null,
       campaign_status: null,
+      campaign_kind: null,
       has_winner: false,
       winner_name: null,
       competitors: [],
@@ -303,12 +311,15 @@ export function assembleRestaurantDomainAreas(input: {
 
   const competing = areas.reduce((s, a) => s + a.competitors.length, 0);
   const available = areas.reduce((s, a) => s + a.candidates.length, 0);
+  // Rent-model (geo_services) restaurant campaigns count as owned domains but NOT as
+  // contests — they haven't been converted to the claim-contest mechanic yet.
+  const contests = campaigns.filter((c) => c.kind === RESTAURANT_COMPETITION_KIND);
   return {
     areas,
     totals: {
       domains_owned: areas.filter((a) => a.domain_owned).length,
-      contests: campaigns.length,
-      contests_decided: campaigns.filter((c) => !!c.claimed_by_prospect_id).length,
+      contests: contests.length,
+      contests_decided: contests.filter((c) => !!c.claimed_by_prospect_id).length,
       restaurants_competing: competing,
       restaurants_available: available,
     },
@@ -329,10 +340,14 @@ function sortRestaurants(rows: AreaRestaurant[]): AreaRestaurant[] {
 
 export async function getRestaurantLocationDomains(): Promise<RestaurantDomainOverview> {
   const [{ data: campaigns }, { data: prospects }, { data: owned }] = await Promise.all([
+    // Every campaign in the restaurant vertical: true claim contests AND legacy
+    // rent-model (geo_services) campaigns that targeted restaurants — e.g. a
+    // <city>-restaurant.com launched from the services competition cards. The
+    // latter surface with a "convert to claim contest" affordance.
     supabaseAdmin
       .from('geo_industry_campaigns')
-      .select('id, city, region, domain, slug, domain_status, status, claimed_by_prospect_id')
-      .eq('kind', RESTAURANT_COMPETITION_KIND)
+      .select('id, kind, city, region, domain, slug, domain_status, status, claimed_by_prospect_id')
+      .or(`kind.eq.${RESTAURANT_COMPETITION_KIND},industry_key.eq.restaurant`)
       .order('created_at', { ascending: false }),
     supabaseAdmin
       .from('outreach_prospects')
@@ -397,4 +412,78 @@ export async function addProspectsToCompetition(campaignId: string, prospectIds:
 
   await linkProspectsToCampaign(campaignId, eligible);
   return eligible;
+}
+
+export type ConvertResult = {
+  campaignId: string;
+  domain: string;
+  cohortSize: number;
+  /** Set when the shared pitch site couldn't be moved off the apex slug (e.g. published-slug lock). */
+  warning: string | null;
+};
+
+/**
+ * Convert a legacy rent-model (geo_services) restaurant campaign into a claim contest:
+ * flip kind → 'restaurant_competition' and free the apex for the winner directory by
+ * parking the shared pitch site at `<slug>-pitch` (the directory only renders when no
+ * template occupies the apex slug — see app/sites/[slug]). Refuses when the domain is
+ * already rented or claimed (money/ownership attached), or when fewer than 2 linked
+ * restaurants have built sites (no cohort to race).
+ */
+export async function convertToRestaurantCompetition(campaignId: string): Promise<ConvertResult> {
+  const { data: c, error } = await supabaseAdmin
+    .from('geo_industry_campaigns')
+    .select('id, kind, industry_key, domain, slug, template_id, status, claimed_by_prospect_id, renter_email, stripe_subscription_id')
+    .eq('id', campaignId)
+    .maybeSingle();
+  if (error) throw new Error(`convertToRestaurantCompetition failed: ${error.message}`);
+  if (!c) throw new Error('Campaign not found.');
+  if (c.kind === RESTAURANT_COMPETITION_KIND) throw new Error('Already a claim contest.');
+  if (c.industry_key !== 'restaurant') throw new Error('Not a restaurant campaign.');
+  if (c.renter_email || c.stripe_subscription_id) {
+    throw new Error('This domain is rented — cancel the rental before converting it to a claim contest.');
+  }
+  if (c.claimed_by_prospect_id || c.status === 'claimed') {
+    throw new Error('This campaign was already claimed under the rent model.');
+  }
+
+  // The cohort that will race: linked, undismissed prospects with their own built site.
+  const { data: linked } = await supabaseAdmin
+    .from('outreach_prospects')
+    .select('id, template_id, status')
+    .eq('geo_campaign_id', campaignId);
+  const cohortSize = ((linked ?? []) as any[]).filter((p) => p.template_id && p.status !== 'dismissed').length;
+  if (cohortSize < 2) {
+    throw new Error(`A contest needs 2+ linked restaurants with built sites (found ${cohortSize}) — build their drafts first.`);
+  }
+
+  // Park the pitch site off the apex slug so the directory can front the domain.
+  // Slug changes must go through the sanctioned app.set_template_slug RPC (direct
+  // template UPDATEs are guard-blocked); a published pitch site may refuse the rename —
+  // convert anyway and surface the warning instead of failing.
+  let warning: string | null = null;
+  if (c.template_id) {
+    let parked = false;
+    for (let i = 0; i < 3 && !parked; i++) {
+      const candidate = i === 0 ? `${c.slug}-pitch` : `${c.slug}-pitch-${i + 1}`;
+      const r = await supabaseAdmin.schema('app').rpc('set_template_slug', { p_id: c.template_id, p_slug: candidate });
+      if (!r.error) parked = true;
+      else if (!/slug.*taken|domain.*conflict|23505/i.test(`${r.error.code} ${r.error.message}`)) {
+        warning = `Pitch site still occupies ${c.slug} (${r.error.message}) — unpublish or rename it so the winner directory can front the apex.`;
+        break;
+      }
+    }
+    if (!parked && !warning) {
+      warning = `Pitch site still occupies ${c.slug} — rename it so the winner directory can front the apex.`;
+    }
+  }
+
+  const { error: updErr } = await supabaseAdmin
+    .from('geo_industry_campaigns')
+    .update({ kind: RESTAURANT_COMPETITION_KIND, template_id: null, updated_at: new Date().toISOString() })
+    .eq('id', campaignId)
+    .eq('kind', c.kind); // no-op if something else converted it concurrently
+  if (updErr) throw new Error(`convertToRestaurantCompetition failed: ${updErr.message}`);
+
+  return { campaignId, domain: c.domain, cohortSize, warning };
 }

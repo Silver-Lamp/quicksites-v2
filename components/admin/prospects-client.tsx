@@ -322,6 +322,14 @@ export default function ProspectsClient({
     () => initialProspects.filter((p) => p.industry_key === 'restaurant').length,
     [initialProspects],
   );
+  // View-aware discovery: the vertical toggle scopes the SWEEP itself, not just the
+  // lists — restaurants view always sweeps restaurants (whatever a recent-location
+  // restore put in `picked`); services view never does. Derived, so no state-sync bugs.
+  const effectivePicked = useMemo(() => {
+    if (viewMode === 'restaurants') return new Set(['Restaurants']);
+    if (viewMode === 'services') return new Set([...picked].filter((l) => l !== 'Restaurants'));
+    return picked;
+  }, [viewMode, picked]);
 
   const toggleCat = (label: string) =>
     setPicked((prev) => {
@@ -351,7 +359,7 @@ export default function ProspectsClient({
   async function discover() {
     setMsg(null);
     if (!city.trim()) return setMsg('Enter a city to sweep.');
-    const pickedCats = [...picked].map((l) => CATEGORIES.find((c) => c.label === l)).filter(Boolean) as typeof CATEGORIES;
+    const pickedCats = [...effectivePicked].map((l) => CATEGORIES.find((c) => c.label === l)).filter(Boolean) as typeof CATEGORIES;
     const includedTypes = pickedCats.flatMap((c) => c.types ?? []);
     const textCategories = pickedCats
       .filter((c) => c.textQuery)
@@ -369,7 +377,7 @@ export default function ProspectsClient({
       setMsg(
         `Swept ${r.found} businesses — ${r.tallies.no_website} no website, ${r.tallies.dated} dated, ${r.tallies.has_site} with a site. (${r.inserted} new)`,
       );
-      rememberLocation({ city: city.trim(), region: region.trim(), radiusKm, categories: [...picked] });
+      rememberLocation({ city: city.trim(), region: region.trim(), radiusKm, categories: [...effectivePicked] });
       router.refresh();
     } catch (e: any) {
       setMsg(e.message);
@@ -1019,8 +1027,11 @@ export default function ProspectsClient({
         <div>
           <h1 className="text-2xl font-semibold">Businesses near me</h1>
           <p className="mt-1 text-sm text-neutral-400">
-            Sweep a city for businesses with no website (or a dated one), build claimable sites, and grab the
-            exact-match geo domains.
+            {viewMode === 'restaurants'
+              ? 'Sweep a city for restaurants with no website, build their ordering sites, and race them for the <city>-restaurant.com apex.'
+              : viewMode === 'services'
+                ? 'Sweep a city for service businesses with no website (or a dated one), build claimable pitch sites, and rent the exact-match geo domains.'
+                : 'Sweep a city for businesses with no website (or a dated one), build claimable sites, and grab the exact-match geo domains.'}
           </p>
         </div>
         <div className="flex flex-col items-end gap-2">
@@ -1045,9 +1056,16 @@ export default function ProspectsClient({
               </button>
             ))}
           </div>
-          <a href="/admin/outreach" className="text-sm text-amber-300 underline underline-offset-4 hover:text-amber-200">
-            Outreach pipeline →
-          </a>
+          <span className="flex items-center gap-3">
+            {viewMode === 'restaurants' && (
+              <a href="/admin/restaurant-domains" className="text-sm text-purple-300 underline underline-offset-4 hover:text-purple-200">
+                Location domains →
+              </a>
+            )}
+            <a href="/admin/outreach" className="text-sm text-amber-300 underline underline-offset-4 hover:text-amber-200">
+              Outreach pipeline →
+            </a>
+          </span>
         </div>
       </div>
 
@@ -1141,21 +1159,29 @@ export default function ProspectsClient({
             </div>
           )}
         </div>
-        <div className="mt-3 flex flex-wrap gap-2">
-          {CATEGORIES.map((c) => (
-            <button
-              key={c.label}
-              onClick={() => toggleCat(c.label)}
-              className={`rounded-full px-3 py-1 text-xs ${
-                picked.has(c.label)
-                  ? 'bg-sky-500/20 text-sky-300 ring-1 ring-sky-500/40'
-                  : 'bg-neutral-800 text-neutral-400 hover:text-neutral-200'
-              }`}
-            >
-              {c.label}
-            </button>
-          ))}
-        </div>
+        {viewMode === 'restaurants' ? (
+          // Restaurants view: the sweep is locked to the vertical — no chip clutter.
+          <div className="mt-3 text-xs text-neutral-500">
+            Sweeping for <span className="text-sky-300">restaurants, cafés &amp; bars</span> — switch the
+            view (top right) to sweep service industries.
+          </div>
+        ) : (
+          <div className="mt-3 flex flex-wrap gap-2">
+            {CATEGORIES.filter((c) => viewMode !== 'services' || c.label !== 'Restaurants').map((c) => (
+              <button
+                key={c.label}
+                onClick={() => toggleCat(c.label)}
+                className={`rounded-full px-3 py-1 text-xs ${
+                  effectivePicked.has(c.label)
+                    ? 'bg-sky-500/20 text-sky-300 ring-1 ring-sky-500/40'
+                    : 'bg-neutral-800 text-neutral-400 hover:text-neutral-200'
+                }`}
+              >
+                {c.label}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
       {msg && <div className="mt-4 rounded-lg border border-neutral-800 bg-neutral-900/60 px-4 py-2 text-sm text-neutral-200">{msg}</div>}

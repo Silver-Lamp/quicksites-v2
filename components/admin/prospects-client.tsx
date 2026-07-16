@@ -35,6 +35,9 @@ import SenderProfileModal, { type SenderProfile } from '@/components/admin/sende
 
 const TERRITORY_CELL_DEGREES = 0.02;
 
+/** Persisted All/Services/Restaurants workspace filter (see the viewMode state). */
+const VIEW_MODE_KEY = 'qs:prospects:view_mode:v1';
+
 type GscStat = { clicks: number; impressions: number; position: number };
 
 /** Rank badge from GSC average position (0/no impressions = not yet indexed). */
@@ -285,7 +288,40 @@ export default function ProspectsClient({
     return () => { alive = false; };
   }, [initialCampaigns]);
 
-  const prospects = initialProspects;
+  // ── Vertical view filter ──────────────────────────────────────────────────────
+  // The restaurant funnel (delivered.menu take-rate) and the services funnel
+  // (geo-domain rent) share this workspace but rarely overlap day-to-day, so a
+  // persisted All/Services/Restaurants toggle scopes prospects + campaigns — every
+  // downstream memo (competition cards, territories, tiers, coach, campaign table)
+  // derives from these two, so the whole page follows the selected vertical.
+  const [viewMode, setViewMode] = useState<'all' | 'services' | 'restaurants'>('all');
+  useEffect(() => {
+    try {
+      const v = localStorage.getItem(VIEW_MODE_KEY);
+      if (v === 'services' || v === 'restaurants') setViewMode(v);
+    } catch {}
+  }, []);
+  const setView = (v: 'all' | 'services' | 'restaurants') => {
+    setViewMode(v);
+    try { localStorage.setItem(VIEW_MODE_KEY, v); } catch {}
+  };
+  const isRestaurantCampaign = (c: GeoCampaign) =>
+    c.kind === 'restaurant_competition' || c.industry_key === 'restaurant';
+
+  const prospects = useMemo(() => {
+    if (viewMode === 'restaurants') return initialProspects.filter((p) => p.industry_key === 'restaurant');
+    if (viewMode === 'services') return initialProspects.filter((p) => p.industry_key !== 'restaurant');
+    return initialProspects;
+  }, [initialProspects, viewMode]);
+  const campaigns = useMemo(() => {
+    if (viewMode === 'restaurants') return initialCampaigns.filter(isRestaurantCampaign);
+    if (viewMode === 'services') return initialCampaigns.filter((c) => !isRestaurantCampaign(c));
+    return initialCampaigns;
+  }, [initialCampaigns, viewMode]);
+  const restaurantProspectCount = useMemo(
+    () => initialProspects.filter((p) => p.industry_key === 'restaurant').length,
+    [initialProspects],
+  );
 
   const toggleCat = (label: string) =>
     setPicked((prev) => {
@@ -826,24 +862,24 @@ export default function ProspectsClient({
   // "Ranked & ready" worklist: campaigns whose pitch page already ranks, prioritized by
   // rank × unlockable rent × local demand. Reuses the already-fetched gscByDomain map.
   const rankedOpportunities = useMemo(
-    () => buildRankedOpportunities(initialCampaigns, prospects, gscByDomain),
-    [initialCampaigns, prospects, gscByDomain],
+    () => buildRankedOpportunities(campaigns, prospects, gscByDomain),
+    [campaigns, prospects, gscByDomain],
   );
   const anyConnectedRank = rankedOpportunities.some((o) => o.connected);
   const campaignById = useMemo(
-    () => new Map(initialCampaigns.map((c) => [c.id, c])),
-    [initialCampaigns],
+    () => new Map(campaigns.map((c) => [c.id, c])),
+    [campaigns],
   );
   // Match a competition group (city × industry) to an already-launched campaign, so the
   // cards know they've already spawned a campaign instead of offering a duplicate launch.
   const campaignByGeoKey = useMemo(() => {
     const m = new Map<string, GeoCampaign>();
-    for (const c of initialCampaigns) {
+    for (const c of campaigns) {
       if (!c.city || !c.industry_key || c.status === 'archived') continue;
       m.set(`${c.city.trim().toLowerCase()}::${c.industry_key}`, c);
     }
     return m;
-  }, [initialCampaigns]);
+  }, [campaigns]);
 
   // Competition cards annotated with their launched campaign (if any); open (grabbable)
   // cards sort ahead of already-live ones so the real CTAs lead.
@@ -890,14 +926,14 @@ export default function ProspectsClient({
       prospectCount: prospects.length,
       noWebsiteCount,
       openCompetitionGroups,
-      campaignCount: initialCampaigns.length,
+      campaignCount: campaigns.length,
       connectedRankCount: rankedOpportunities.filter((r) => r.connected).length,
       rankedCount: rankedOpportunities.filter((r) => r.rankStatus !== 'unranked').length,
       top,
       channels: { mail: channels.mail, sms: channels.sms },
       readinessGate,
     });
-  }, [prospects, orderedCompetition, rankedOpportunities, campaignById, initialCampaigns.length, channels.mail, channels.sms, readinessGate]);
+  }, [prospects, orderedCompetition, rankedOpportunities, campaignById, campaigns.length, channels.mail, channels.sms, readinessGate]);
 
   async function coachAct(a: CoachAction) {
     const id = actionId(a);
@@ -987,9 +1023,32 @@ export default function ProspectsClient({
             exact-match geo domains.
           </p>
         </div>
-        <a href="/admin/outreach" className="text-sm text-amber-300 underline underline-offset-4 hover:text-amber-200">
-          Outreach pipeline →
-        </a>
+        <div className="flex flex-col items-end gap-2">
+          {/* Vertical scope: restaurants (take-rate funnel) vs service industries (domain rent). */}
+          <div className="flex items-center rounded-lg border border-neutral-700 bg-neutral-900/60 p-0.5 text-xs" role="tablist" aria-label="Vertical view">
+            {([
+              ['all', 'All'],
+              ['services', 'Service industries'],
+              ['restaurants', `Restaurants${restaurantProspectCount ? ` (${restaurantProspectCount})` : ''}`],
+            ] as const).map(([v, label]) => (
+              <button
+                key={v}
+                type="button"
+                role="tab"
+                aria-selected={viewMode === v}
+                onClick={() => setView(v)}
+                className={`rounded-md px-2.5 py-1 font-medium transition-colors ${
+                  viewMode === v ? 'bg-neutral-700 text-white' : 'text-neutral-400 hover:text-white'
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+          <a href="/admin/outreach" className="text-sm text-amber-300 underline underline-offset-4 hover:text-amber-200">
+            Outreach pipeline →
+          </a>
+        </div>
       </div>
 
       {/* Growth Coach — the expandable next-best-action panel, pinned at the top. */}
@@ -1411,12 +1470,12 @@ export default function ProspectsClient({
       </CollapsibleSection>
 
       {/* Existing campaigns */}
-      {initialCampaigns.length > 0 && (
+      {campaigns.length > 0 && (
         <CollapsibleSection
           id="geo-campaigns"
           className="mt-8"
           title="Geo-domain campaigns"
-          count={initialCampaigns.length}
+          count={campaigns.length}
           right={
             <>
               <button
@@ -1493,7 +1552,7 @@ export default function ProspectsClient({
                 </tr>
               </thead>
               <tbody className="divide-y divide-neutral-800">
-                {initialCampaigns.map((c) => {
+                {campaigns.map((c) => {
                   const roster = rosterByCampaign[c.id] ?? [];
                   const isOpen = expanded.has(c.id);
                   const recs =

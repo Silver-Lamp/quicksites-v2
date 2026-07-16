@@ -265,8 +265,8 @@ export default function GuestStart() {
           inputMode="url"
           value={url}
           onChange={(e) => setUrl(e.target.value)}
-          placeholder="yourbusiness.com"
-          aria-label="Existing website address"
+          placeholder="yourbusiness.com or facebook.com/yourpage"
+          aria-label="Existing website or public page address"
           disabled={loading}
           className="w-full rounded-2xl border border-zinc-700 bg-zinc-900/70 px-5 py-3.5 text-base text-white placeholder:text-zinc-500 focus:border-white/40 focus:outline-none sm:px-8 sm:py-6 sm:text-2xl"
         />
@@ -310,7 +310,7 @@ export default function GuestStart() {
       ) : (
         <p className="mt-4 text-sm text-zinc-400 sm:mt-6 sm:text-base">
           {mode === 'convert'
-            ? 'Paste any business site (Wix, WordPress, Squarespace…). We rebuild it here — edit everything after.'
+            ? 'Paste any business site OR public page — Wix, WordPress, Squarespace, even a Facebook page. We rebuild it here — edit everything after.'
             : mode === 'domain'
               ? 'Paying for a domain that still shows “under construction”? Keep your registrar and your email — we’ll check it and show the exact records for the website and mail.'
               : 'No credit card. Sign up only when you’re ready to go live.'}

@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, ArrowRight, Layers, Sparkles, FilePlus2, Search, Check, Globe, Link2 } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Layers, Sparkles, FilePlus2, Search, Check, Globe, Link2, Facebook } from 'lucide-react';
 import { KEY_TO_LABEL, type IndustryKey } from '@/lib/industries';
 import { buildIndustryStarter } from '@/lib/builder/industryScaffold';
 import BrandLoader from '@/components/brand/BrandLoader';
@@ -80,6 +80,15 @@ function ChooseStep({
       title: 'Convert an existing site',
       blurb: 'Already have a site? Paste its address and our AI rebuilds it here as an editable draft in seconds.',
       cta: 'Paste a URL',
+      onClick: () => onPick('convert'),
+      highlight: true,
+    },
+    {
+      key: 'facebook' as const,
+      icon: Facebook,
+      title: 'I’m on Facebook, not the web',
+      blurb: 'Your business lives on a Facebook page or a listing? Paste it — we build a real site from your photos, copy, and hours.',
+      cta: 'Paste my page',
       onClick: () => onPick('convert'),
       highlight: true,
     },
@@ -322,14 +331,14 @@ function ConvertStep({ router }: { router: ReturnType<typeof useRouter> }) {
   return (
     <div>
       <BrandLoader open={busy} message="Rebuilding your site…" />
-      <h1 className="text-2xl font-semibold tracking-tight">Convert your existing site</h1>
+      <h1 className="text-2xl font-semibold tracking-tight">Convert your existing site or page</h1>
       <p className="mt-2 text-zinc-400">
-        Paste the address of a site you already have. Our AI reads it and rebuilds it here as a fresh,
-        fully-editable draft — copy, services, and layout included.
+        Paste the address of a site you already have — or a public page (Facebook, a Google listing, Yelp).
+        Our AI reads it and rebuilds it here as a fresh, fully-editable draft — copy, services, and layout included.
       </p>
 
       <div className="mt-6 max-w-lg">
-        <label className="text-sm text-zinc-300" htmlFor="convert-url">Current website address</label>
+        <label className="text-sm text-zinc-300" htmlFor="convert-url">Current website or page address</label>
         <div className="mt-1.5 flex flex-col gap-3 sm:flex-row">
           <input
             id="convert-url"
@@ -338,7 +347,7 @@ function ConvertStep({ router }: { router: ReturnType<typeof useRouter> }) {
             value={url}
             onChange={(e) => setUrl(e.target.value)}
             onKeyDown={(e) => { if (e.key === 'Enter') convert(); }}
-            placeholder="yourbusiness.com"
+            placeholder="yourbusiness.com or facebook.com/yourpage"
             disabled={busy}
             className="flex-1 rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-2 text-white outline-none focus:border-sky-500"
           />
@@ -361,7 +370,8 @@ function ConvertStep({ router }: { router: ReturnType<typeof useRouter> }) {
       {error && <p className="mt-4 text-sm text-red-400">{error}</p>}
       {!busy && !error && (
         <p className="mt-4 max-w-lg text-xs text-zinc-500">
-          Works with most business sites (Wix, WordPress, Squarespace, and more). You can edit everything after.
+          Works with most business sites (Wix, WordPress, Squarespace…) and public pages (Facebook, Google
+          listings). Login-walled pages give us less to work with — you can edit everything after.
         </p>
       )}
     </div>

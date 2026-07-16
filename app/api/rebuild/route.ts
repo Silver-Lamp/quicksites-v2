@@ -25,6 +25,47 @@ import { provisionShopifyCatalog } from '@/lib/commerce/shopifyCatalog';
 import { generateRebuildHero, rebuildHeroEnabled } from '@/lib/rebuild/generateHero';
 import { captureServer } from '@/lib/analytics/posthog-server';
 import { EVENTS } from '@/lib/analytics/events';
+import { normalizeApex } from '@/lib/domains/util';
+
+/**
+ * Optional bring-your-own-domain context (from /bring-your-domain): when the owner
+ * gave us a public page to build from (Facebook, Instagram, a listing…), the BYO flow
+ * rebuilds from that page instead of scaffolding a generic starter, and this context
+ * stamps the draft the same way the starter path does (intended_domain drives the
+ * operator notify + eventual domain attach). All fields validated/capped — the route
+ * is guest-reachable.
+ */
+type ByoContext = {
+  intendedDomain?: string;
+  businessName?: string;
+  notes?: string;
+  referenceUrls?: string[];
+};
+
+function parseByoContext(raw: any): ByoContext | null {
+  if (!raw || typeof raw !== 'object') return null;
+  const out: ByoContext = {};
+  if (typeof raw.intendedDomain === 'string') {
+    try {
+      out.intendedDomain = normalizeApex(raw.intendedDomain);
+    } catch {
+      /* ignore invalid domain */
+    }
+  }
+  if (typeof raw.businessName === 'string' && raw.businessName.trim()) {
+    out.businessName = raw.businessName.trim().slice(0, 120);
+  }
+  if (typeof raw.notes === 'string' && raw.notes.trim()) {
+    out.notes = raw.notes.trim().slice(0, 500);
+  }
+  if (Array.isArray(raw.referenceUrls)) {
+    const urls = raw.referenceUrls
+      .filter((u: any) => typeof u === 'string' && /^https?:\/\//i.test(u))
+      .slice(0, 5);
+    if (urls.length) out.referenceUrls = urls;
+  }
+  return Object.keys(out).length ? out : null;
+}
 
 /** Host-only (no path/query) so analytics never carries a full prospect URL. */
 function hostOnly(u: string): string | null {
@@ -59,6 +100,7 @@ export async function POST(req: Request) {
   if (!url) {
     return NextResponse.json({ error: 'Please provide a website URL.', code: 'bad_request' }, { status: 400 });
   }
+  const byo = parseByoContext(body?.byo);
 
   // Resolve the caller's session (real or anonymous/guest).
   let ownerId: string | null = null;
@@ -169,6 +211,21 @@ export async function POST(req: Request) {
     galleryImages,
     colorMode: scraped.colorMode, // match the original site's light/dark scheme
   });
+
+  // BYO context: the owner told us who they are + which domain this is destined for —
+  // their answers beat what a (possibly thin) social-page scrape inferred.
+  if (byo) {
+    if (byo.businessName) {
+      tpl.business_name = byo.businessName;
+      tpl.template_name = byo.businessName;
+    }
+    tpl.data.meta = {
+      ...(tpl.data.meta ?? {}),
+      ...(byo.intendedDomain ? { intended_domain: byo.intendedDomain } : {}),
+      ...(byo.notes ? { byo_notes: byo.notes } : {}),
+      ...(byo.referenceUrls ? { byo_reference_urls: byo.referenceUrls } : {}),
+    };
+  }
 
   // 3a) Real products → create catalog_items under the owner's merchant and wire the
   //     storefront (productIds + meta.ecom.merchant_id) so "Add to Cart" → checkout

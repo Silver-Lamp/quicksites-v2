@@ -74,11 +74,13 @@ export default function DemandCapture({
 
   return (
     <>
-      {/* Trigger: sits above the mobile order bar / offset from the claim bar. */}
+      {/* Trigger: anchored top-center, below the preview watermark. The bottom of the
+          screen belongs to the owner's claim bar (the outreach priority) + the sticky
+          order bar; a bottom pill would sit hidden behind the (dynamic-height) claim bar. */}
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="fixed bottom-20 left-3 z-[2147483646] rounded-full border border-sky-400/40 bg-neutral-900/95 px-4 py-2 text-sm font-semibold text-sky-300 shadow-2xl backdrop-blur transition hover:bg-neutral-900 print:hidden"
+        className="fixed top-14 left-1/2 z-[2147483646] -translate-x-1/2 rounded-full border border-sky-400/40 bg-neutral-900/95 px-4 py-2 text-sm font-semibold text-sky-300 shadow-2xl backdrop-blur transition hover:bg-neutral-900 print:hidden"
       >
         🍽 Order online?
       </button>

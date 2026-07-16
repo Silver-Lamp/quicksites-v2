@@ -185,10 +185,18 @@ export async function buildPosterModel(
   prospects: Prospect[],
   opts?: { baseUrl?: string; brandName?: string | null },
 ): Promise<PosterModel | null> {
-  if (!campaign.template_id) return null;
+  // Restaurant competitions have no shared pitch site (each restaurant has its own
+  // delivered.menu site) — they're still postcard-able; the personalized send below
+  // regenerates a per-prospect tracked claim link. Services campaigns still require a
+  // pitch site.
+  const isRestaurantComp = campaign.kind === 'restaurant_competition'; // RESTAURANT_COMPETITION_KIND
+  if (!campaign.template_id && !isRestaurantComp) return null;
   // Tracked link so a poster/postcard scan registers as a claim-intent visit — on the
-  // owning org's branded domain when one is provided.
-  const claimUrl = trackedClaimUrl(campaign.id, null, opts?.baseUrl);
+  // owning org's branded domain when one is provided. For a restaurant competition the
+  // generic (non-personalized) poster points at the apex DIRECTORY instead.
+  const claimUrl = isRestaurantComp
+    ? `https://${campaign.domain}`
+    : trackedClaimUrl(campaign.id, null, opts?.baseUrl);
   const qrDataUrl = await QRCode.toDataURL(claimUrl, { width: 480, margin: 1, errorCorrectionLevel: 'M' });
   const brandName = opts?.brandName ?? null;
   const industry = campaign.industry_key as IndustryKey;

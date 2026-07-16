@@ -24,6 +24,9 @@ export { slugify, industryDomainWord, geoDomainFor, INDUSTRY_DOMAIN_WORD } from 
 
 export type GeoCampaign = {
   id: string;
+  /** 'geo_services' (rented exact-match pitch site) | 'restaurant_competition' (apex is a
+   *  free prize for a cohort of delivered.menu restaurants). */
+  kind: string;
   city: string;
   region: string | null;
   industry_key: IndustryKey;
@@ -56,7 +59,7 @@ export type GeoCampaign = {
 };
 
 const GEO_COLS =
-  'id, city, region, industry_key, domain, slug, template_id, domain_status, status, claimed_by_prospect_id, tracking_number, tracking_number_sid, forward_to, pricing_model, price_cents, locked_rate_cents, billing_interval, rank_status, rank_position, stripe_customer_id, stripe_subscription_id, subscription_status, renter_email, claim_link_visits, recommendations, rank_trend, org_id, outreach_ready_at, outreach_reviewed_by, outreach_blockers';
+  'id, kind, city, region, industry_key, domain, slug, template_id, domain_status, status, claimed_by_prospect_id, tracking_number, tracking_number_sid, forward_to, pricing_model, price_cents, locked_rate_cents, billing_interval, rank_status, rank_position, stripe_customer_id, stripe_subscription_id, subscription_status, renter_email, claim_link_visits, recommendations, rank_trend, org_id, outreach_ready_at, outreach_reviewed_by, outreach_blockers';
 
 export async function setCampaignPricing(
   id: string,

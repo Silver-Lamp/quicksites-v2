@@ -46,8 +46,22 @@ type Area = {
   candidates: AreaRestaurant[];
 };
 
+type ApexSuggestion = {
+  area_key: string;
+  city: string;
+  region: string | null;
+  domain: string;
+  domain_owned: boolean;
+  candidates: number;
+  built: number;
+  reviews: number;
+  score: number;
+  rationale: string;
+};
+
 type Overview = {
   areas: Area[];
+  suggestions: ApexSuggestion[];
   totals: {
     domains_owned: number;
     contests: number;
@@ -117,7 +131,17 @@ function SeoMeter({ seo }: { seo: SeoInfo }) {
   );
 }
 
-function RestaurantRow({ r, inContest }: { r: AreaRestaurant; inContest: boolean }) {
+function RestaurantRow({
+  r,
+  inContest,
+  onRefreshUx,
+  refreshBusy,
+}: {
+  r: AreaRestaurant;
+  inContest: boolean;
+  onRefreshUx?: (r: AreaRestaurant) => void;
+  refreshBusy?: boolean;
+}) {
   return (
     <tr className="border-b border-neutral-800/60 last:border-0">
       <td className="py-1.5 pr-3">
@@ -162,6 +186,17 @@ function RestaurantRow({ r, inContest }: { r: AreaRestaurant; inContest: boolean
             >
               Edit
             </Link>
+          )}
+          {r.template_id && !r.published && r.status !== 'claimed' && onRefreshUx && (
+            <button
+              type="button"
+              disabled={refreshBusy}
+              onClick={() => onRefreshUx(r)}
+              className="rounded border border-fuchsia-500/40 bg-fuchsia-500/10 px-2 py-0.5 text-[11px] text-fuchsia-200 hover:bg-fuchsia-500/20 disabled:opacity-50"
+              title="Re-apply the latest restaurant-scaffold improvements (anchor nav, no FAQ, tap-to-call footer…) without touching real content"
+            >
+              {refreshBusy ? 'Refreshing…' : 'Refresh UX'}
+            </button>
           )}
           {r.site_url && (
             <a
@@ -234,6 +269,37 @@ export default function RestaurantDomainsPage() {
       setBusy(null);
     }
   };
+
+  // "Refresh UX": re-apply the latest restaurant-scaffold improvements to one draft
+  // (idempotent server-side; respects operator edits). Refreshes the row after.
+  const [refreshingId, setRefreshingId] = React.useState<string | null>(null);
+  const refreshUx = async (r: AreaRestaurant) => {
+    if (!r.template_id) return;
+    setRefreshingId(r.id);
+    setError(null);
+    try {
+      const res = await fetch('/api/admin/restaurant-domains/refresh-ux', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ templateId: r.template_id }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json?.error || `failed (${res.status})`);
+      setNotice(
+        json.changed
+          ? `${r.business_name}: applied ${json.applied.length} UX upgrade(s) — ${json.applied.join(', ').replace(/_/g, ' ')}.`
+          : `${r.business_name}: already up to date.`,
+      );
+      if (json.changed) await load();
+    } catch (e: any) {
+      setError(e?.message || 'failed');
+    } finally {
+      setRefreshingId(null);
+    }
+  };
+
+  // Suggested next apex launches — toggled panel over data already loaded.
+  const [showSuggestions, setShowSuggestions] = React.useState(false);
 
   // Build draft ordering sites for every unbuilt restaurant in the area (cohort +
   // candidates), chunked to keep each serverless call under its OCR time budget.
@@ -357,6 +423,70 @@ export default function RestaurantDomainsPage() {
 
       {!data && !error && <div className="mt-8 text-sm text-neutral-500">Loading…</div>}
 
+      {data && (
+        <div className="mt-6">
+          <button
+            type="button"
+            onClick={() => setShowSuggestions((v) => !v)}
+            className="rounded-lg border border-purple-500/40 bg-purple-500/10 px-3 py-1.5 text-sm font-medium text-purple-200 hover:bg-purple-500/20"
+            title="Score the swept cities without a contest yet — built drafts, cohort size, owned domains, and review volume"
+          >
+            🎯 Suggest next {Math.min(5, Math.max(1, data.suggestions.length || 5))} apex locations
+          </button>
+          {showSuggestions && (
+            <div className="mt-3 rounded-xl border border-purple-500/25 bg-purple-500/[0.04] p-4">
+              <div className="text-xs font-semibold uppercase tracking-wide text-neutral-500">
+                Where to launch next — scored by built drafts × cohort size × owned domain × local demand
+              </div>
+              {data.suggestions.length === 0 ? (
+                <p className="mt-2 text-sm text-neutral-400">
+                  No un-contested cities with available restaurants yet —{' '}
+                  <Link href="/admin/growth?tab=prospects" className="text-sky-400 hover:underline">
+                    sweep a new city for restaurants →
+                  </Link>
+                </p>
+              ) : (
+                <ol className="mt-2 space-y-2">
+                  {data.suggestions.map((s, i) => (
+                    <li key={s.area_key} className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-neutral-800 bg-neutral-900/40 px-3 py-2">
+                      <div className="min-w-0">
+                        <span className="mr-2 text-neutral-600">{i + 1}.</span>
+                        <span className="font-medium text-white">{s.domain}</span>
+                        <span className="ml-2 text-xs text-neutral-500">
+                          {s.city}
+                          {s.region ? `, ${s.region}` : ''}
+                        </span>
+                        <div className="mt-0.5 text-xs text-neutral-400">{s.rationale}</div>
+                      </div>
+                      <span className="inline-flex items-center gap-2">
+                        <span className="text-xs tabular-nums text-purple-300" title="Launch score">
+                          {s.score}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => document.getElementById(s.area_key)?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
+                          className="rounded border border-neutral-700 px-2 py-0.5 text-[11px] text-neutral-300 hover:border-neutral-500 hover:text-white"
+                        >
+                          Jump to card ↓
+                        </button>
+                      </span>
+                    </li>
+                  ))}
+                </ol>
+              )}
+              {data.suggestions.length > 0 && data.suggestions.length < 5 && (
+                <p className="mt-2 text-xs text-neutral-500">
+                  Only {data.suggestions.length} un-contested cit{data.suggestions.length === 1 ? 'y' : 'ies'} swept so far —{' '}
+                  <Link href="/admin/growth?tab=prospects" className="text-sky-400 hover:underline">
+                    discover more cities →
+                  </Link>
+                </p>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+
       {t && (
         <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-5">
           <Kpi label="Domains owned" value={String(t.domains_owned)} />
@@ -372,7 +502,7 @@ export default function RestaurantDomainsPage() {
           const builtCandidates = area.candidates.filter((c) => c.template_id).length;
           const unbuiltCount = [...area.competitors, ...area.candidates].filter((r) => !r.template_id).length;
           return (
-            <div key={area.key} className="rounded-xl border border-neutral-800 bg-neutral-900/40 p-5">
+            <div key={area.key} id={area.key} className="scroll-mt-24 rounded-xl border border-neutral-800 bg-neutral-900/40 p-5">
               {/* Area header: domain + contest state */}
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div className="flex flex-wrap items-center gap-2">
@@ -467,7 +597,7 @@ export default function RestaurantDomainsPage() {
                   <table className="w-full text-sm">
                     <tbody>
                       {area.competitors.map((r) => (
-                        <RestaurantRow key={r.id} r={r} inContest />
+                        <RestaurantRow key={r.id} r={r} inContest onRefreshUx={refreshUx} refreshBusy={refreshingId === r.id} />
                       ))}
                     </tbody>
                   </table>
@@ -483,7 +613,7 @@ export default function RestaurantDomainsPage() {
                   <table className="w-full text-sm">
                     <tbody>
                       {area.candidates.map((r) => (
-                        <RestaurantRow key={r.id} r={r} inContest={false} />
+                        <RestaurantRow key={r.id} r={r} inContest={false} onRefreshUx={refreshUx} refreshBusy={refreshingId === r.id} />
                       ))}
                     </tbody>
                   </table>

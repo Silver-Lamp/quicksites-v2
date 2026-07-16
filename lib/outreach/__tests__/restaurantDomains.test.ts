@@ -180,4 +180,33 @@ describe('assembleRestaurantDomainAreas', () => {
     // Not a contest until converted.
     expect(out.totals).toMatchObject({ domains_owned: 1, contests: 0, contests_decided: 0 });
   });
+
+  it('suggests next apex locations from un-contested cities, built-first, owned-domain boosted', () => {
+    const out = assembleRestaurantDomainAreas({
+      campaigns: [],
+      prospects: [
+        // Salem: 2 candidates, 1 built, domain owned, some reviews
+        prospect({ id: 's1', city: 'Salem', region: 'OR', status: 'draft_built', template_id: 't1', review_count: 300 }),
+        prospect({ id: 's2', city: 'Salem', region: 'OR', review_count: 100 }),
+        // Portland: 3 candidates, none built, more raw reviews
+        prospect({ id: 'p1', city: 'Portland', region: 'OR', review_count: 900 }),
+        prospect({ id: 'p2', city: 'Portland', region: 'OR' }),
+        prospect({ id: 'p3', city: 'Portland', region: 'OR' }),
+      ],
+      templates: [{ id: 't1', slug: 'salem-1', published: false, custom_domain: null }],
+      ownedDomains: ['salem-restaurant.com'],
+      links,
+    });
+
+    expect(out.suggestions.map((s) => s.city)).toEqual(['Salem', 'Portland']);
+    const salem = out.suggestions[0];
+    // built*3 (3) + candidates (2) + owned (4) + log10(401) ≈ 2.6 → beats Portland's 3 + log10(901).
+    expect(salem.domain).toBe('salem-restaurant.com');
+    expect(salem.built).toBe(1);
+    expect(salem.domain_owned).toBe(true);
+    expect(salem.rationale).toContain('1 built — can race today');
+    expect(salem.rationale).toContain('domain already owned');
+    expect(salem.area_key).toBe('owned:salem-restaurant.com'); // jump target on the page
+    expect(salem.score).toBeGreaterThan(out.suggestions[1].score);
+  });
 });

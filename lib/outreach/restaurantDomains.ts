@@ -22,6 +22,9 @@ import { RESTAURANT_COMPETITION_KIND } from '@/lib/outreach/restaurantCompetitio
 import { buildRestaurantApexSite } from '@/lib/outreach/restaurantApexSite';
 import { readinessScore } from '@/lib/outreach/readiness';
 import { resolveIndustryKey } from '@/lib/industries';
+import { applyRestaurantUxRefresh } from '@/lib/builder/restaurantUxRefresh';
+import { commitTemplatePatch } from '@/lib/templates/commitTemplatePatch';
+import { persistReadinessScore } from '@/lib/seo/persistReadiness';
 
 // ---- Wire types ---------------------------------------------------------------
 
@@ -77,8 +80,25 @@ export type RestaurantDomainArea = {
   candidates: AreaRestaurant[];
 };
 
+/** A recommended next <city>-restaurant.com launch, scored from the swept data. */
+export type ApexSuggestion = {
+  /** Matches the area card's key so the UI can jump to it. */
+  area_key: string;
+  city: string;
+  region: string | null;
+  domain: string;
+  domain_owned: boolean;
+  candidates: number; // no-website restaurants available
+  built: number; // of those, already have a draft site
+  reviews: number; // summed review_count — local-demand proxy
+  score: number;
+  rationale: string;
+};
+
 export type RestaurantDomainOverview = {
   areas: RestaurantDomainArea[];
+  /** Top next-apex launches (no contest yet), best first. */
+  suggestions: ApexSuggestion[];
   totals: {
     domains_owned: number;
     contests: number;
@@ -115,6 +135,8 @@ export type ProspectRow = {
   template_id: string | null;
   geo_campaign_id: string | null;
   waitlist_status: string | null;
+  /** Busyness proxy from Place Details (null until synced) — feeds apex-location scoring. */
+  review_count?: number | null;
 };
 
 export type TemplateRow = {
@@ -344,6 +366,39 @@ export function assembleRestaurantDomainAreas(input: {
     );
   });
 
+  // "Suggest next apex locations": score every area with NO contest yet by cohort
+  // potential — built drafts weigh heaviest (they can race immediately), then raw
+  // no-website count, an already-owned domain, and summed review counts as the
+  // local-demand proxy. Explainable, from data already on the page.
+  const suggestions: ApexSuggestion[] = areas
+    .filter((a) => !a.campaign_id && a.candidates.length > 0)
+    .map((a) => {
+      const group = freeByCity.get(cityKey(a.city)) ?? [];
+      const built = group.filter((p) => p.template_id).length;
+      const reviews = group.reduce((s, p) => s + (Number(p.review_count) || 0), 0);
+      const score =
+        built * 3 + group.length + (a.domain_owned ? 4 : 0) + Math.min(4, Math.log10(reviews + 1));
+      const parts = [
+        `${group.length} no-website restaurant${group.length === 1 ? '' : 's'}${built ? ` (${built} built — can race today)` : ''}`,
+      ];
+      if (a.domain_owned) parts.push('domain already owned');
+      if (reviews > 0) parts.push(`${reviews.toLocaleString()} reviews of local demand`);
+      return {
+        area_key: a.key,
+        city: a.city,
+        region: a.region,
+        domain: a.domain,
+        domain_owned: a.domain_owned,
+        candidates: group.length,
+        built,
+        reviews,
+        score: Math.round(score * 10) / 10,
+        rationale: parts.join(' · '),
+      };
+    })
+    .sort((x, y) => y.score - x.score)
+    .slice(0, 5);
+
   const competing = areas.reduce((s, a) => s + a.competitors.length, 0);
   const available = areas.reduce((s, a) => s + a.candidates.length, 0);
   // Rent-model (geo_services) restaurant campaigns count as owned domains but NOT as
@@ -351,6 +406,7 @@ export function assembleRestaurantDomainAreas(input: {
   const contests = campaigns.filter((c) => c.kind === RESTAURANT_COMPETITION_KIND);
   return {
     areas,
+    suggestions,
     totals: {
       domains_owned: areas.filter((a) => a.domain_owned).length,
       contests: contests.length,
@@ -387,7 +443,7 @@ export async function getRestaurantLocationDomains(): Promise<RestaurantDomainOv
     supabaseAdmin
       .from('outreach_prospects')
       .select(
-        'id, business_name, phone, address, city, region, lead_tier, status, template_id, geo_campaign_id, waitlist_status',
+        'id, business_name, phone, address, city, region, lead_tier, status, template_id, geo_campaign_id, waitlist_status, review_count',
       )
       .eq('industry_key', 'restaurant')
       .order('created_at', { ascending: false })
@@ -493,6 +549,58 @@ export async function addProspectsToCompetition(campaignId: string, prospectIds:
 
   await linkProspectsToCampaign(campaignId, eligible);
   return eligible;
+}
+
+export type RefreshUxResult = {
+  ok: boolean;
+  changed: boolean;
+  applied: string[];
+  error?: string;
+};
+
+/**
+ * "Refresh UX" for one restaurant draft: re-apply the scaffold-level improvements
+ * new builds get (FAQ removal, anchor nav, catering contact title, tap-to-call
+ * footer — see lib/builder/restaurantUxRefresh.ts) through the sanctioned commit
+ * RPC. Refuses live (published) sites — those belong to their owners; edit in the
+ * editor instead.
+ */
+export async function refreshRestaurantUx(templateId: string, actorId: string | null): Promise<RefreshUxResult> {
+  const { data: t, error } = await supabaseAdmin
+    .from('templates')
+    .select('id, slug, data, rev, header_block, footer_block, industry, published')
+    .eq('id', templateId)
+    .maybeSingle();
+  if (error) return { ok: false, changed: false, applied: [], error: error.message };
+  if (!t) return { ok: false, changed: false, applied: [], error: 'Template not found.' };
+
+  const tpl: any = t;
+  const meta = tpl.data?.meta ?? {};
+  const industry = resolveIndustryKey(tpl.industry || meta?.identity?.industry || meta?.industry || '');
+  if (industry !== 'restaurant') {
+    return { ok: false, changed: false, applied: [], error: 'Not a restaurant site.' };
+  }
+  if (tpl.published) {
+    return { ok: false, changed: false, applied: [], error: 'Site is live — make UX changes in the editor.' };
+  }
+
+  const r = applyRestaurantUxRefresh({
+    data: tpl.data ?? {},
+    headerBlock: tpl.header_block ?? null,
+    footerBlock: tpl.footer_block ?? null,
+  });
+  if (!r.changed) return { ok: true, changed: false, applied: [] };
+
+  const patch: Record<string, any> = { data: r.data };
+  if (r.applied.some((k) => k.startsWith('header'))) patch.header_block = r.headerBlock;
+  if (r.applied.some((k) => k.startsWith('footer'))) patch.footer_block = r.footerBlock;
+  const commitErr = await commitTemplatePatch(templateId, tpl.rev ?? 0, patch, actorId);
+  if (commitErr) return { ok: false, changed: false, applied: [], error: commitErr };
+
+  // Keep the persisted readiness meter fresh (best-effort).
+  await persistReadinessScore(templateId, r.data, tpl.industry, tpl.slug).catch(() => {});
+
+  return { ok: true, changed: true, applied: r.applied };
 }
 
 export type ConvertResult = {

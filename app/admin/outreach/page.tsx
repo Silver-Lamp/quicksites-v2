@@ -25,9 +25,14 @@ export default async function OutreachPage() {
             Auto-built restaurant sites from the listing importer. Send the claim link; they preview, sign up, and own it.
           </p>
         </div>
-        <Link href="/restaurants" className="text-sm text-amber-300 underline underline-offset-4 hover:text-amber-200">
-          The offer →
-        </Link>
+        <div className="flex flex-col items-end gap-1 text-sm">
+          <Link href="/admin/demand-funnel" className="text-sky-400 underline underline-offset-4 hover:text-sky-300">
+            Demand funnel →
+          </Link>
+          <Link href="/restaurants" className="text-amber-300 underline underline-offset-4 hover:text-amber-200">
+            The offer →
+          </Link>
+        </div>
       </div>
       <div className="mt-8">
         <OutreachPipeline list={list} />

@@ -78,7 +78,10 @@ export async function loadGoLiveChecklist(): Promise<GoLiveChecklist> {
       checks: [
         { key: 'drafts', label: 'Cohort imported (drafts built)', status: drafts > 0 ? 'ready' : 'todo', detail: `${drafts} draft${drafts === 1 ? '' : 's'} · npm run import:listings -- leads.json` },
         { key: 'qr', label: 'Diner order QRs placed', status: 'manual', detail: 'print <slug>-order.png or the "Order QR" on /admin/outreach' },
-        { key: 'demand', label: 'Demand flowing', status: intents > 0 ? 'ready' : 'todo', detail: `${intents} order intent${intents === 1 ? '' : 's'} logged` },
+        // Post-launch OUTCOME, not a prep prerequisite — order intents can't flow until
+        // drafts are indexable + QRs are out, so this is a non-blocking signal (green once
+        // it's happening) rather than a required step that caps the readiness meter.
+        { key: 'demand', label: 'Demand flowing (post-launch signal)', status: intents > 0 ? 'ready' : 'optional', detail: intents > 0 ? `${intents} order intent${intents === 1 ? '' : 's'} logged` : 'appears once drafts go indexable + QRs are placed' },
       ],
     },
   ];

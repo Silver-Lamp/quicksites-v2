@@ -74,6 +74,22 @@ describe('applyRestaurantUxRefresh', () => {
     expect(second.applied).toEqual([]);
   });
 
+  it('clears an untouched placeholder logo (restaurants default to the name wordmark) but keeps a real one', () => {
+    // Stock placeholder → removed.
+    const d = oldDraft();
+    d.headerBlock.content.logo_url = 'https://placehold.co/200x80';
+    const r = applyRestaurantUxRefresh(d);
+    expect(r.applied).toContain('header_placeholder_logo_removed');
+    expect(r.headerBlock.content.logo_url).toBe('');
+
+    // Owner-chosen logo → untouched.
+    const d2 = oldDraft();
+    d2.headerBlock.content.logo_url = 'https://cdn.example.com/eymans-pizza-logo.png';
+    const r2 = applyRestaurantUxRefresh(d2);
+    expect(r2.applied).not.toContain('header_placeholder_logo_removed');
+    expect(r2.headerBlock.content.logo_url).toBe('https://cdn.example.com/eymans-pizza-logo.png');
+  });
+
   it('respects operator edits: customized nav, CTA, and title are left alone', () => {
     const d = oldDraft();
     d.headerBlock.content.nav_items = [{ label: 'Specials', href: '/specials', appearance: 'default' }]; // custom page

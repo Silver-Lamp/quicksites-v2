@@ -291,6 +291,14 @@ export default function GuestStart() {
         </p>
       )}
 
+      {/* BYO domain on-ramp: for people already paying for a (parked) domain elsewhere. */}
+      <p className="mt-3 text-sm text-zinc-500">
+        Already paying for a domain?{' '}
+        <a href="/bring-your-domain" className="text-zinc-300 underline underline-offset-4 hover:text-white">
+          Bring it over — email stays put →
+        </a>
+      </p>
+
       <BrandLoader
         open={loading}
         message={mode === 'convert' ? 'Rebuilding your site' : 'Building your site'}

@@ -309,8 +309,11 @@ export async function generateMetadata({
       return {
         title: place ? `Order from restaurants in ${place}` : 'Order from local restaurants',
         description: `Browse and order online from local restaurants${place ? ` in ${place}` : ''}.`,
-        // Stay noindex until a winner is decided (avoids a thin placeholder ranking).
-        ...(dir.hasWinner ? {} : { robots: { index: false, follow: false } }),
+        // Index as soon as the directory has real content (2+ restaurants) — the apex
+        // must START ranking for "<city> restaurant" BEFORE outreach so "first to claim
+        // gets a ranking domain" is a real prize (rank takes months; see ranked
+        // targeting). Only a genuinely thin directory (0–1 entries) stays noindex.
+        ...(dir.entries.length >= 2 ? {} : { robots: { index: false, follow: false } }),
       };
     }
     return {};
@@ -342,11 +345,12 @@ export async function generateMetadata({
     pageSlug,
     baseUrl: `${await originFromHeaders()}/sites`,
   });
-  // A restaurant-apex portal stays noindex until its contest has a winner — same rule
-  // as the templateless directory fallback (avoid ranking a thin placeholder).
+  // A restaurant-apex portal indexes as soon as its directory has real content (2+
+  // restaurants) — it must start ranking BEFORE outreach so the "ranking domain" prize
+  // is real. Only a thin 0–1-entry directory stays noindex (same rule as the fallback).
   if (isRestaurantApexData(normalized)) {
     const dir = await loadCompetitionDirectoryBySlug(siteRow.slug ?? slug);
-    if (dir && !dir.hasWinner) return { ...md, robots: { index: false, follow: false } };
+    if (dir && dir.entries.length < 2) return { ...md, robots: { index: false, follow: false } };
   }
   // A no-website `listing_import` draft on the menu surface IS the restaurant's web
   // presence — index it (flag-gated) so it ranks for their name and can actually feed

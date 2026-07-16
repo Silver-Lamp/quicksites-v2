@@ -11,7 +11,7 @@
 // hands back the exact records to change. Used by /api/public/byo-domain/check for the
 // /bring-your-domain flow.
 
-import { resolveA, resolveCNAME } from '@/lib/domains/dns';
+import { resolveA, resolveCNAME, resolveMX } from '@/lib/domains/dns';
 import { normalizeApex, withWWW, VERCEL_A_IPS, VERCEL_CNAME_TARGETS } from '@/lib/domains/util';
 
 export type ByoDnsRecord = {
@@ -31,6 +31,9 @@ export type ByoDomainStatus =
   /** No A/CNAME at all — nothing will break by adding ours. */
   | 'no_website_records';
 
+/** Who handles the domain's email today (from MX) — drives the onboarding info card. */
+export type ByoEmailProvider = 'google' | 'microsoft' | 'other' | 'none';
+
 export type ByoDomainCheck = {
   domain: string;
   status: ByoDomainStatus;
@@ -38,9 +41,22 @@ export type ByoDomainCheck = {
   currentA: string[];
   /** What www CNAMEs to today (empty when none). */
   currentWwwCname: string[];
+  /** MX exchanges today (priority order) — NEVER changed by this flow. */
+  mx: string[];
+  emailProvider: ByoEmailProvider;
   /** The two records to set at the registrar. */
   records: ByoDnsRecord[];
 };
+
+/** Classify the email host behind a set of MX exchanges. */
+export function classifyEmailProvider(mx: string[]): ByoEmailProvider {
+  if (!mx.length) return 'none';
+  const all = mx.map((m) => m.toLowerCase());
+  // Workspace MX: smtp.google.com (current) or aspmx*.l.google.com / *.googlemail.com (legacy).
+  if (all.some((m) => m.includes('google'))) return 'google';
+  if (all.some((m) => m.endsWith('mail.protection.outlook.com'))) return 'microsoft';
+  return 'other';
+}
 
 /** The exact records a registrar needs — the entire "port your website" job. */
 export function byoDnsRecords(): ByoDnsRecord[] {
@@ -57,7 +73,11 @@ export function byoDnsRecords(): ByoDnsRecord[] {
 export async function checkByoDomain(input: string): Promise<ByoDomainCheck> {
   const domain = normalizeApex(input);
 
-  const [apexA, wwwCname] = await Promise.all([resolveA(domain), resolveCNAME(withWWW(domain))]);
+  const [apexA, wwwCname, mx] = await Promise.all([
+    resolveA(domain),
+    resolveCNAME(withWWW(domain)),
+    resolveMX(domain),
+  ]);
 
   const pointsHere =
     apexA.some((ip) => VERCEL_A_IPS.includes(ip)) ||
@@ -69,5 +89,13 @@ export async function checkByoDomain(input: string): Promise<ByoDomainCheck> {
       ? 'parked_elsewhere'
       : 'no_website_records';
 
-  return { domain, status, currentA: apexA, currentWwwCname: wwwCname, records: byoDnsRecords() };
+  return {
+    domain,
+    status,
+    currentA: apexA,
+    currentWwwCname: wwwCname,
+    mx,
+    emailProvider: classifyEmailProvider(mx),
+    records: byoDnsRecords(),
+  };
 }

@@ -59,13 +59,15 @@ it is. Even Tier B at $5–6/user/mo undercuts Workspace Business ($7.20+/user) 
 
 ## 5. Phased build
 
-### Phase 0 — prove it by hand on gracepointcollective.com (zero code, ~1 hour)
-Create a Forward Email account, add the domain, set its MX + verification TXT at
-Squarespace (Amy's registrar), create `hello@gracepointcollective.com` → her Gmail,
-configure Gmail send-as through the provider's SMTP. Write the runbook of exactly what
-was clicked. **This validates deliverability and the send-as UX before any code.**
-(Only do this when she's actually ready to leave Workspace — don't break her live MX
-until she says go. The two migrations — site DNS and email MX — are independent.)
+### Phase 0 — prove it by hand on gracepointcollective.com (zero code, ~1 hour) ← ACTIVE
+The full click-by-click runbook, grounded in the domain's live DNS (verified
+2026-07-16: Workspace MX `1 smtp.google.com`, Google Cloud DNS nameservers,
+Squarespace parking on the apex, google-only SPF, no DMARC), lives in
+[`EMAIL_HOSTING_PHASE0_RUNBOOK.md`](EMAIL_HOSTING_PHASE0_RUNBOOK.md) — including the
+pre-flight with Amy (personal-Gmail destination, alias inventory, Takeout archive),
+exact record changes + rollback values, the test matrix, and the go/no-go questions
+the run must answer. **Phase 1 below stays a POTENTIAL until Phase 0's verdict.**
+(The two migrations — site DNS and email MX — are independent.)
 
 ### Phase 1 — productize Tier A (flag: `EMAIL_HOSTING_ENABLED`, default OFF)
 - `lib/emailHosting/provider.ts` — provider-agnostic adapter (`ensureDomain`,

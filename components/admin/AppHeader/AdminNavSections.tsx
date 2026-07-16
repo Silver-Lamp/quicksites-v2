@@ -162,6 +162,7 @@ const NAV_ADMIN: NavItem[] = [
      Its own funnel cockpits (order-intent demand → launch readiness) + the owner offer.
      Discovery + the outreach pipeline stay in Growth: they feed both businesses. */
   { type: 'section', label: 'Restaurants', adminOnly: true },
+  { type: 'item', label: 'Location Domains', href: '/admin/restaurant-domains', icon: <Trophy size={18} />, adminOnly: true },
   { type: 'item', label: 'Demand Funnel', href: '/admin/demand-funnel', icon: <Filter size={18} />, adminOnly: true },
   { type: 'item', label: 'Go-live Readiness', href: '/admin/go-live', icon: <Gauge size={18} />, adminOnly: true },
   { type: 'item', label: 'Restaurant Offer', href: '/restaurants', icon: <ChefHat size={18} />, adminOnly: true },

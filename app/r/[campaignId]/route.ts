@@ -25,7 +25,20 @@ export async function GET(req: Request, ctx: { params: Promise<{ campaignId: str
     .select('template_id, claim_link_visits, org_id')
     .eq('id', campaignId)
     .maybeSingle();
-  const templateId = (data as any)?.template_id;
+
+  // Services campaigns claim the ONE shared pitch site (campaign.template_id). Restaurant
+  // competitions have no shared site — each recipient claims their OWN restaurant site,
+  // resolved from the per-prospect ?p=<prospectId> tag.
+  let templateId = (data as any)?.template_id ?? null;
+  if (!templateId && prospectId) {
+    const { data: p } = await supabaseAdmin
+      .from('outreach_prospects')
+      .select('template_id')
+      .eq('id', prospectId)
+      .eq('geo_campaign_id', campaignId)
+      .maybeSingle();
+    templateId = (p as any)?.template_id ?? null;
+  }
   if (!templateId) return NextResponse.redirect(base, 302);
 
   // Land the claim on the owning org's branded domain (falls back to quicksites.ai).

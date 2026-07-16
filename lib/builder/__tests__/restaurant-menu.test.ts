@@ -49,14 +49,40 @@ describe('MenuBlockSchema', () => {
 });
 
 describe('buildIndustryStarter — food vs non-food', () => {
-  it('restaurant gets a menu-forward layout (menu + location + hours, no services)', () => {
+  it('restaurant gets a menu-forward layout (menu + location + hours — no services, no FAQ)', () => {
     const tpl = buildIndustryStarter({ businessName: "Jay's Cafe", industryKey: 'restaurant' });
     const types = blockTypes(tpl);
-    expect(types).toEqual(['hero', 'menu', 'location', 'hours', 'faq', 'contact_form', 'order_bar']);
+    // FAQ dropped 2026-07: diners want menu/hours/order — generic Q&A is filler.
+    expect(types).toEqual(['hero', 'menu', 'location', 'hours', 'contact_form', 'order_bar']);
     const menu = tpl.data.pages[0].blocks.find((b: any) => b.type === 'menu');
     expect(menu.content.sections.length).toBeGreaterThan(0);
     const loc = tpl.data.pages[0].blocks.find((b: any) => b.type === 'location');
     expect(loc.content.business_name).toBe("Jay's Cafe");
+  });
+
+  it('restaurant chrome: anchor nav (header + footer), hero CTA → #menu, catering-framed contact', () => {
+    const tpl = buildIndustryStarter({ businessName: "Jay's Cafe", industryKey: 'restaurant' });
+    const blocks = tpl.data.pages[0].blocks;
+
+    const hero = blocks.find((b: any) => b.type === 'hero');
+    expect(hero.content.cta_link).toBe('#menu');
+
+    const contact = blocks.find((b: any) => b.type === 'contact_form');
+    expect(contact.content.title).toBe('Questions? Catering? Get in touch');
+
+    // Header/footer nav swaps the default Home/Services/Contact page links (which
+    // don't exist on a one-page ordering site) for same-page anchors.
+    const anchors = ['#menu', '#location', '#contact'];
+    const header = tpl.data.headerBlock ?? (tpl as any).headerBlock;
+    expect(header.content.nav_items.map((l: any) => l.href)).toEqual(anchors);
+    const footer = tpl.data.footerBlock ?? (tpl as any).footerBlock;
+    expect(footer.content.links.map((l: any) => l.href)).toEqual(anchors);
+  });
+
+  it('non-food keeps the default page nav (anchor swap is food-only)', () => {
+    const tpl = buildIndustryStarter({ businessName: 'Grafton Towing', industryKey: 'towing' });
+    const header = tpl.data.headerBlock ?? (tpl as any).headerBlock;
+    expect(header.content.nav_items.map((l: any) => l.href)).toContain('/');
   });
 
   it('a non-food service industry is unchanged (no menu block)', () => {

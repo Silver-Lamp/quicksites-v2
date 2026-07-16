@@ -90,9 +90,20 @@ export default function SiteRenderer({
         // (never the hero at i=0). Only visible where blocks use semantic/transparent
         // backgrounds; hardcoded-bg legacy blocks simply cover it.
         const banded = layout?.rhythm === 'banded' && i > 0 && i % 2 === 1;
+        // Same-page anchors: the FIRST block of each type gets id=<type> (contact_form
+        // → "contact"), so nav/CTA links like #menu / #location / #contact scroll to
+        // the section. Duplicate types keep only the first to preserve id uniqueness.
+        const anchor =
+          block?.type && bodyBlocks.findIndex((b: any) => b?.type === block.type) === i
+            ? block.type === 'contact_form'
+              ? 'contact'
+              : String(block.type)
+            : undefined;
         return (
           <div
             key={block?._id ?? i}
+            id={anchor}
+            className={anchor ? 'scroll-mt-20' : undefined}
             data-band={banded ? '1' : undefined}
             style={banded ? { background: 'hsl(var(--muted))' } : undefined}
           >

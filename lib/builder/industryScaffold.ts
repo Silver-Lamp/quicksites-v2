@@ -167,6 +167,9 @@ export function buildIndustryStarter(opts: { businessName: string; industryKey: 
     setIfPresent(hero.content, 'headline', businessName || label);
     setIfPresent(hero.content, 'subheadline', 'Fresh food, made daily — order online or stop by.');
     setIfPresent(hero.content, 'cta_text', 'View Menu');
+    // Same-page anchor: the public renderer stamps first-of-type block ids
+    // (#menu/#location/#contact), so the CTA scrolls instead of dead-linking.
+    setIfPresent(hero.content, 'cta_link', '#menu');
 
     const menu: any = createDefaultBlock('menu');
     menu.content = {
@@ -202,7 +205,30 @@ export function buildIndustryStarter(opts: { businessName: string; industryKey: 
     location.content = { ...location.content, business_name: businessName || label };
     const hours: any = createDefaultBlock('hours');
     const orderBar: any = createDefaultBlock('order_bar');
-    blocks = [hero, menu, location, hours, faq, contact, orderBar];
+
+    // No FAQ on a restaurant site — diners want the menu, hours, and a way to order;
+    // generic Q&A filler dilutes that. The contact form earns its place by carrying
+    // the real restaurant use-case: catering / private-event inquiries.
+    contact.content = { ...contact.content, title: 'Questions? Catering? Get in touch' };
+
+    // Restaurant chrome: the default Home/Services/Contact nav points at pages a
+    // one-page ordering site doesn't have. Swap header + footer nav to same-page
+    // anchors (renderer stamps first-of-type block ids).
+    const foodNav = [
+      { label: 'Menu', href: '#menu', appearance: 'default' },
+      { label: 'Location & Hours', href: '#location', appearance: 'default' },
+      { label: 'Contact', href: '#contact', appearance: 'default' },
+    ];
+    const headerBlk: any = (base as any)?.data?.headerBlock ?? (base as any)?.headerBlock;
+    if (headerBlk?.content && Array.isArray(headerBlk.content.nav_items)) {
+      headerBlk.content.nav_items = foodNav.map((l) => ({ ...l }));
+    }
+    const footerBlk: any = (base as any)?.data?.footerBlock ?? (base as any)?.footerBlock;
+    if (footerBlk?.content && Array.isArray(footerBlk.content.links)) {
+      footerBlk.content.links = foodNav.map((l) => ({ ...l }));
+    }
+
+    blocks = [hero, menu, location, hours, contact, orderBar];
   } else if (STOREFRONT_INDUSTRIES.has(industryKey)) {
     blocks = [hero, createDefaultBlock('products_grid') as any, services, faq, contact];
   } else {

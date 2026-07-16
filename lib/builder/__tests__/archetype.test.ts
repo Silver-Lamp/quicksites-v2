@@ -23,7 +23,8 @@ describe('pickArchetype', () => {
     for (const cat of ['editorial', 'warm', 'professional', 'playful', 'neon', 'rugged'] as const) {
       for (let i = 0; i < 20; i++) {
         const a = pickArchetype(cat, () => i / 20);
-        expect(['classic', 'story_led', 'proof_led', 'conversion']).toContain(a);
+        // Keep in sync with the Archetype union in industryScaffold.ts.
+        expect(['classic', 'story_led', 'proof_led', 'conversion', 'showcase', 'benefits_led', 'trust_first']).toContain(a);
       }
     }
   });

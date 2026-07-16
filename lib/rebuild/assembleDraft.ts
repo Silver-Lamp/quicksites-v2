@@ -130,6 +130,22 @@ export function buildRebuildTemplate(opts: {
     if (spec.contact.phone) {
       const bar = blocks.find((b) => b?.type === 'order_bar');
       if (bar?.content) bar.content.phone = spec.contact.phone;
+
+      // Footer gets a tap-to-call link too — desktop visitors don't see the sticky
+      // bar, and "call the restaurant" is the #1 footer job on a restaurant site.
+      const digits = spec.contact.phone.replace(/[^\d+]/g, '');
+      const footerBlk =
+        (tpl as any)?.data?.footerBlock ?? (tpl as any)?.footerBlock ?? (tpl as any)?.footer_block;
+      if (digits && footerBlk?.content && Array.isArray(footerBlk.content.links)) {
+        const hasTel = footerBlk.content.links.some((l: any) => String(l?.href || '').startsWith('tel:'));
+        if (!hasTel) {
+          footerBlk.content.links.push({
+            label: `Call ${spec.contact.phone}`,
+            href: `tel:${digits}`,
+            appearance: 'default',
+          });
+        }
+      }
     }
   }
 

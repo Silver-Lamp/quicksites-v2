@@ -355,12 +355,14 @@ export default function ProspectsClient({
     return `${msg} They're now in the Outreach pipeline.`;
   }
 
+  const SERVER_BATCH = 10; // matches MAX_BATCH in /api/admin/prospects/build
+
   async function buildProspects(ids: string[]) {
     if (!ids.length) return setMsg('Select prospects to build.');
     setBusy('build');
     setMsg(null);
     try {
-      const r = await post('/api/admin/prospects/build', { prospectIds: ids.slice(0, 10) });
+      const r = await post('/api/admin/prospects/build', { prospectIds: ids.slice(0, SERVER_BATCH) });
       setMsg(buildResultMsg(r));
       setSelected(new Set());
       router.refresh();
@@ -373,13 +375,47 @@ export default function ProspectsClient({
 
   const buildSelected = () => buildProspects([...selected]);
 
-  // One-click lead-list build: take the discovered no-website prospects (the highest-
-  // intent tier) and build claimable ordering-site drafts for the first batch, no manual
-  // selection. Capped at the server's MAX_BATCH (10) per request.
-  function buildAllNoWebsite() {
+  // One-click lead-list build: take EVERY discovered no-website prospect (the highest-
+  // intent tier) and build claimable ordering-site drafts, no manual selection. The
+  // server caps each request at SERVER_BATCH, so drive it in sequential chunks and
+  // aggregate the menu hit-rate across the whole run. Each restaurant costs a vision OCR
+  // call, so confirm before a large run.
+  async function buildAllNoWebsite() {
     const ids = byTier.no_website.filter((p) => p.status === 'discovered').map((p) => p.id);
     if (!ids.length) return setMsg('No unbuilt no-website prospects to build.');
-    return buildProspects(ids);
+    if (
+      ids.length > SERVER_BATCH &&
+      !window.confirm(
+        `Build all ${ids.length} no-website drafts? This runs menu OCR on each restaurant and may take a minute or two.`,
+      )
+    ) {
+      return;
+    }
+
+    setBusy('build');
+    setMsg(null);
+    const agg = { built: 0, auto: 0, none: 0, total: 0 };
+    try {
+      for (let i = 0; i < ids.length; i += SERVER_BATCH) {
+        const chunk = ids.slice(i, i + SERVER_BATCH);
+        setMsg(`Building ${i + 1}–${Math.min(i + chunk.length, ids.length)} of ${ids.length}…`);
+        const r = await post('/api/admin/prospects/build', { prospectIds: chunk });
+        agg.built += r.built ?? 0;
+        if (r.menuHitRate) {
+          agg.auto += r.menuHitRate.auto ?? 0;
+          agg.none += r.menuHitRate.none ?? 0;
+          agg.total += r.menuHitRate.total ?? 0;
+        }
+      }
+      setMsg(buildResultMsg({ built: agg.built, menuHitRate: agg }));
+      setSelected(new Set());
+      router.refresh();
+    } catch (e: any) {
+      setMsg(`Stopped after ${agg.built} built — ${e.message}`);
+      router.refresh();
+    } finally {
+      setBusy(null);
+    }
   }
 
   async function dismiss(id: string) {
@@ -1671,9 +1707,9 @@ export default function ProspectsClient({
                   onClick={buildAllNoWebsite}
                   disabled={busy === 'build'}
                   className="rounded-lg border border-emerald-600/60 px-3 py-2 text-sm font-medium text-emerald-300 hover:bg-emerald-600/10 disabled:opacity-40"
-                  title="Build claimable ordering-site drafts for every no-website prospect (up to 10 at a time)"
+                  title="Build claimable ordering-site drafts for every no-website prospect (runs menu OCR on each; large runs are confirmed first)"
                 >
-                  {busy === 'build' ? 'Building…' : `Build all no-website (${Math.min(buildable, 10)}${buildable > 10 ? ` of ${buildable}` : ''})`}
+                  {busy === 'build' ? 'Building…' : `Build all no-website (${buildable})`}
                 </button>
               ) : null;
             })()}

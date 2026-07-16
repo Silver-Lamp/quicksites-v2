@@ -133,11 +133,14 @@ describe('story sections', () => {
     expect(block.content.sections[2].image_url).toBe('');
   });
 
-  it('places the story block before the FAQ', () => {
+  it('places the story block before the contact form (restaurant scaffolds have no FAQ)', () => {
     const tpl = buildRebuildTemplate({ spec: baseSpec({ story }) });
     const types = tpl.data.pages[0].blocks.map((b: any) => b?.type);
     expect(types.indexOf('story')).toBeGreaterThanOrEqual(0);
-    expect(types.indexOf('story')).toBeLessThan(types.indexOf('faq'));
+    // FAQ was dropped from the restaurant scaffold (2026-07); the insertion anchor
+    // falls back to the contact form, keeping the story above the page tail.
+    expect(types).not.toContain('faq');
+    expect(types.indexOf('story')).toBeLessThan(types.indexOf('contact_form'));
   });
 
   it('excludes the hero image from story images (no duplication)', () => {

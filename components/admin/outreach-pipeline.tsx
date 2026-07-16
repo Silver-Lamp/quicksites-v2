@@ -38,6 +38,14 @@ function menuItemCount(data: any): number {
   return sections.reduce((n, s) => n + (Array.isArray(s?.items) ? s.items.length : 0), 0);
 }
 
+/** Does this draft have a menu block at all? The funnel now spans non-food verticals
+ *  (HVAC, towing, contractors) — for those, "menu" and the diner order QR don't apply,
+ *  so we hide the food-only affordances rather than showing a misleading "no menu". */
+function hasMenuBlock(data: any): boolean {
+  const blocks: any[] = data?.pages?.[0]?.blocks ?? [];
+  return blocks.some((b) => b?.type === 'menu');
+}
+
 function fmtDate(s: string | null) {
   return s ? new Date(s).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : '—';
 }
@@ -74,12 +82,13 @@ export default function OutreachPipeline({ list }: { list: OutreachDraft[] }) {
         <table className="min-w-full text-sm">
           <thead className="bg-neutral-900">
             <tr className="text-left [&>th]:px-4 [&>th]:py-3 [&>th]:font-medium [&>th]:text-neutral-400">
-              <th>Restaurant</th><th>Built</th><th>Menu</th><th>Demand</th><th>Status</th><th>Preview</th><th></th>
+              <th>Business</th><th>Built</th><th>Menu</th><th>Demand</th><th>Status</th><th>Preview</th><th></th>
             </tr>
           </thead>
           <tbody className="divide-y divide-neutral-800">
             {list.map((r) => {
               const items = menuItemCount(r.data);
+              const isFood = hasMenuBlock(r.data);
               const demand = r.demand ?? 0;
               const isClaimed = r.claim_source === 'listing_claimed';
               const name = r.business_name || r.template_name || r.slug || r.id.slice(0, 8);
@@ -90,7 +99,9 @@ export default function OutreachPipeline({ list }: { list: OutreachDraft[] }) {
                   <td className="font-medium">{name}</td>
                   <td className="whitespace-nowrap text-neutral-400">{fmtDate(r.created_at)}</td>
                   <td>
-                    {items > 0 ? (
+                    {!isFood ? (
+                      <span className="text-xs text-neutral-600" title="Not a menu-based business">—</span>
+                    ) : items > 0 ? (
                       <span className="rounded bg-emerald-500/15 px-2 py-0.5 text-xs text-emerald-300">{items} items</span>
                     ) : (
                       <span className="rounded bg-neutral-800 px-2 py-0.5 text-xs text-neutral-500">no menu</span>
@@ -118,9 +129,11 @@ export default function OutreachPipeline({ list }: { list: OutreachDraft[] }) {
                       <a href={previewPath} target="_blank" rel="noopener noreferrer" className="text-sky-400 underline underline-offset-2 hover:text-sky-300">
                         View ↗
                       </a>
-                      <a href={`/api/admin/outreach/${r.id}/order-qrcode`} target="_blank" rel="noopener noreferrer" className="text-xs text-neutral-400 underline underline-offset-2 hover:text-neutral-200" title="Diner order QR — print & place at the restaurant to feed demand">
-                        Order QR ⤓
-                      </a>
+                      {isFood && (
+                        <a href={`/api/admin/outreach/${r.id}/order-qrcode`} target="_blank" rel="noopener noreferrer" className="text-xs text-neutral-400 underline underline-offset-2 hover:text-neutral-200" title="Diner order QR — print & place at the restaurant to feed demand">
+                          Order QR ⤓
+                        </a>
+                      )}
                     </div>
                   </td>
                   <td className="text-right">

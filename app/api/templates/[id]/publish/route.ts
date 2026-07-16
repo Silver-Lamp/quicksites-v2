@@ -45,7 +45,7 @@ export async function POST(
   // Load canonical
   const { data: c, error: cErr } = await supabaseAdmin
     .from('templates')
-    .select('id, owner_id')
+    .select('id, owner_id, slug, custom_domain, claim_source')
     .eq('base_slug', base_slug)
     .eq('is_version', false)
     .maybeSingle();
@@ -83,6 +83,17 @@ export async function POST(
       user.id
     );
   } catch {}
+
+  // Best-effort: tell search engines the page changed (IndexNow — Bing/Yandex/etc.).
+  // No-op unless INDEXNOW_KEY is set, and only for sites with a resolvable public domain
+  // (custom domain or delivered.menu); never blocks publish.
+  try {
+    const { publicIndexUrl, submitToIndexNow } = await import('@/lib/seo/indexNow');
+    const url = publicIndexUrl(c);
+    if (url) await submitToIndexNow([url]);
+  } catch (e: any) {
+    console.warn('IndexNow submit after publish failed:', e?.message || e);
+  }
 
   // Best-effort: if the owner is on an agency plan, reconcile their per-site
   // subscription quantity now that a site went live. Never blocks publish;

@@ -6,7 +6,9 @@
 // (mints claim tokens + builds menu URLs server-side); OutreachActions is the client bit.
 import { mintSiteClaimToken } from '@/lib/auth/siteClaimToken';
 import { menuSiteUrl } from '@/lib/menu/deliveredMenu';
+import type { DemandLead } from '@/lib/menu/demand';
 import OutreachActions from '@/components/admin/outreach-actions';
+import DemandLeadsCell from '@/components/admin/demand-leads-cell';
 
 export type OutreachDraft = {
   id: string;
@@ -16,6 +18,16 @@ export type OutreachDraft = {
   created_at: string | null;
   claim_source: string | null;
   data: any;
+  /** Order-intents logged on the unclaimed draft (demand capture). */
+  demand?: number;
+  /** Anonymous tap-to-call events (no contact left). */
+  demandCalls?: number;
+  /** Order-ahead leads that left a name/phone/items — newest first. */
+  demandLeads?: DemandLead[];
+  /** Phase 2: have we already texted the restaurant about the demand? */
+  demandNotified?: boolean;
+  /** The restaurant's own phone (for a one-tap manual follow-up). */
+  restaurantPhone?: string | null;
 };
 
 /** Count menu items across the menu block's sections (0 if none / no menu block). */
@@ -45,14 +57,16 @@ export default function OutreachPipeline({ list }: { list: OutreachDraft[] }) {
   const pending = total - claimed;
   const withMenu = list.filter((r) => menuItemCount(r.data) > 0).length;
   const convRate = total ? Math.round((claimed / total) * 100) : 0;
+  const totalDemand = list.reduce((n, r) => n + (r.demand ?? 0), 0);
 
   return (
     <div>
-      <div className="grid grid-cols-2 gap-4 md:grid-cols-5">
+      <div className="grid grid-cols-2 gap-4 md:grid-cols-6">
         <Stat label="Drafts built" value={String(total)} />
         <Stat label="Pending (unclaimed)" value={String(pending)} accent="text-amber-300" />
         <Stat label="Claimed" value={String(claimed)} accent="text-emerald-300" />
         <Stat label="With a real menu" value={String(withMenu)} />
+        <Stat label="Order intents" value={String(totalDemand)} accent="text-sky-300" />
         <Stat label="Conversion" value={`${convRate}%`} />
       </div>
 
@@ -60,12 +74,13 @@ export default function OutreachPipeline({ list }: { list: OutreachDraft[] }) {
         <table className="min-w-full text-sm">
           <thead className="bg-neutral-900">
             <tr className="text-left [&>th]:px-4 [&>th]:py-3 [&>th]:font-medium [&>th]:text-neutral-400">
-              <th>Restaurant</th><th>Built</th><th>Menu</th><th>Status</th><th>Preview</th><th></th>
+              <th>Restaurant</th><th>Built</th><th>Menu</th><th>Demand</th><th>Status</th><th>Preview</th><th></th>
             </tr>
           </thead>
           <tbody className="divide-y divide-neutral-800">
             {list.map((r) => {
               const items = menuItemCount(r.data);
+              const demand = r.demand ?? 0;
               const isClaimed = r.claim_source === 'listing_claimed';
               const name = r.business_name || r.template_name || r.slug || r.id.slice(0, 8);
               const previewPath = menuSiteUrl(r.slug ?? r.id);
@@ -80,6 +95,16 @@ export default function OutreachPipeline({ list }: { list: OutreachDraft[] }) {
                     ) : (
                       <span className="rounded bg-neutral-800 px-2 py-0.5 text-xs text-neutral-500">no menu</span>
                     )}
+                  </td>
+                  <td>
+                    <DemandLeadsCell
+                      count={demand}
+                      calls={r.demandCalls ?? 0}
+                      leads={r.demandLeads ?? []}
+                      notified={r.demandNotified ?? false}
+                      restaurantName={name}
+                      restaurantPhone={r.restaurantPhone ?? null}
+                    />
                   </td>
                   <td>
                     {isClaimed ? (
@@ -105,7 +130,7 @@ export default function OutreachPipeline({ list }: { list: OutreachDraft[] }) {
             })}
             {list.length === 0 && (
               <tr>
-                <td className="px-4 py-8 text-center text-neutral-500" colSpan={6}>
+                <td className="px-4 py-8 text-center text-neutral-500" colSpan={7}>
                   No outreach drafts yet. Run <code className="rounded bg-neutral-900 px-1">npm run import:listings -- leads.json</code>.
                 </td>
               </tr>

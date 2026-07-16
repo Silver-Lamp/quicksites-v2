@@ -11,16 +11,21 @@ export default function MenuClaimBar({
   templateId,
   token,
   businessName,
+  demandCount = 0,
 }: {
   templateId: string;
   token: string;
   /** The restaurant's name, so the bar reads "Is this {name}?" instead of the generic prompt. */
   businessName?: string | null;
+  /** Order-intents logged on this draft — escalates the pitch to "N people tried to order". */
+  demandCount?: number;
 }) {
   const [dismissed, setDismissed] = React.useState(false);
 
   const claimHref = `/claim-site/${templateId}?token=${encodeURIComponent(token)}`;
   const name = businessName?.trim();
+  // Once real demand exists, lead with it — it's the strongest possible claim pitch.
+  const hasDemand = demandCount > 0;
 
   // Dismissed → collapse to a small persistent pill (never fully gone) so a returning
   // owner can still find the claim path without reloading.
@@ -31,7 +36,7 @@ export default function MenuClaimBar({
           href={claimHref}
           className="rounded-full border border-amber-400/40 bg-neutral-900/95 px-4 py-2 text-sm font-semibold text-amber-300 shadow-2xl backdrop-blur transition hover:bg-neutral-900"
         >
-          Claim this site →
+          {hasDemand ? `🔥 ${demandCount} want to order — claim →` : 'Claim this site →'}
         </a>
       </div>
     );
@@ -41,15 +46,30 @@ export default function MenuClaimBar({
     <div className="fixed inset-x-0 bottom-0 z-[2147483647] print:hidden">
       <div className="mx-auto flex max-w-4xl items-center gap-3 px-3 pb-3">
         <div className="flex w-full items-center gap-3 rounded-2xl border border-amber-400/30 bg-neutral-900/95 px-4 py-3 text-sm text-neutral-100 shadow-2xl backdrop-blur supports-[backdrop-filter]:bg-neutral-900/80">
-          <span aria-hidden className="hidden text-lg sm:inline">👋</span>
+          <span aria-hidden className="hidden text-lg sm:inline">{hasDemand ? '🔥' : '👋'}</span>
           <p className="min-w-0 flex-1 leading-snug">
-            <span className="font-semibold text-amber-300">
-              {name ? `Is this ${name}?` : 'Is this your restaurant?'}
-            </span>{' '}
-            <span className="text-neutral-300">
-              We built this site free. Claim it to edit, take online orders, and go live —
-            </span>{' '}
-            <span className="text-neutral-400">takes about 2 minutes.</span>
+            {hasDemand ? (
+              <>
+                <span className="font-semibold text-amber-300">
+                  {demandCount} {demandCount === 1 ? 'person' : 'people'} tried to order
+                  {name ? ` from ${name}` : ' here'}.
+                </span>{' '}
+                <span className="text-neutral-300">
+                  Claim this free site to turn on online orders and start collecting —
+                </span>{' '}
+                <span className="text-neutral-400">takes about 2 minutes.</span>
+              </>
+            ) : (
+              <>
+                <span className="font-semibold text-amber-300">
+                  {name ? `Is this ${name}?` : 'Is this your restaurant?'}
+                </span>{' '}
+                <span className="text-neutral-300">
+                  We built this site free. Claim it to edit, take online orders, and go live —
+                </span>{' '}
+                <span className="text-neutral-400">takes about 2 minutes.</span>
+              </>
+            )}
           </p>
           <a
             href={claimHref}

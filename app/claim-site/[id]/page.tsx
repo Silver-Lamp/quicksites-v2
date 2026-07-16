@@ -12,6 +12,7 @@ import ClaimSiteHero from '@/components/sites/claim-site-hero';
 import { getGeoCampaignByTemplateId } from '@/lib/outreach/geoCampaigns';
 import { resolveCampaignBrand } from '@/lib/outreach/campaignBrand';
 import { getSenderProfile } from '@/lib/outreach/senderProfile';
+import { hasMenuBlock, RESTAURANT_FEE_PERCENT } from '@/lib/commerce/pricingPolicy';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -31,7 +32,7 @@ export default async function ClaimSitePage({
   const { data: tpl } = tokenOk
     ? await supabaseAdmin
         .from('templates')
-        .select('id, slug, business_name, template_name, claim_source')
+        .select('id, slug, business_name, template_name, claim_source, data')
         .eq('id', params.id)
         .maybeSingle()
     : { data: null };
@@ -69,6 +70,10 @@ export default async function ClaimSitePage({
     ? brand.supportEmail
     : (await getSenderProfile()).email;
 
+  // Menu-ordering sites launch on restaurant terms — state the concrete take-rate on the
+  // pitch ("keep 92%, no monthly"). Non-ordering drafts keep the generic copy.
+  const feePercent = hasMenuBlock((tpl as any)?.data) ? Math.round(RESTAURANT_FEE_PERCENT * 100) : null;
+
   return (
     <ClaimSiteHero
       name={name}
@@ -78,6 +83,7 @@ export default async function ClaimSitePage({
       brandName={brand.orgId ? brand.name : null}
       brandLogoUrl={brand.logoUrl}
       contactEmail={contactEmail}
+      feePercent={feePercent}
     />
   );
 }

@@ -153,6 +153,7 @@ export function buildIndustryStarter(opts: { businessName: string; industryKey: 
   // books + merch). Reuses the existing products_grid block.
   const STOREFRONT_INDUSTRIES = new Set<IndustryKey>([
     'author', 'retail_boutique', 'retail_home_goods', 'handmade', 'etsy_style', 'print_on_demand', 'custom_apparel',
+    'crafts', 'artisan_goods', 'gifts_stationery',
   ]);
   // Food industries get a menu-forward layout (menu + hours) instead of a services
   // list — this is what makes a restaurant site read like an ordering site.

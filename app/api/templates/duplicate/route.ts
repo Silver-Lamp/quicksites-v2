@@ -3,6 +3,13 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSupabase } from '@/lib/supabase/server';
 import { randomBytes } from 'crypto';
 import { checkRateLimit, clientIp } from '@/lib/rateLimit';
+import {
+  cloneCatalogForOwner,
+  remapCommerceIds,
+  stripCommerceWiring,
+  collectReferencedProductIds,
+  stampedMerchantId,
+} from '@/lib/commerce/starterCatalog';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -79,10 +86,43 @@ export async function POST(req: NextRequest) {
 
     // 3) Copy JSON safely
     // src.data is Json (not plain object) — cast to spread; pattern F
-    const dataObj: any = { ...((src.data ?? {}) as object) };
+    let dataObj: any = { ...((src.data ?? {}) as object) };
     if (!dataObj.pages && Array.isArray((src as any).pages)) dataObj.pages = (src as any).pages;
     dataObj.archived = false;
     delete (dataObj as any).custom_domain;
+    // A copy is never itself a starter.
+    if (dataObj?.meta?.is_starter) {
+      dataObj = { ...dataObj, meta: { ...dataObj.meta } };
+      delete dataObj.meta.is_starter;
+      delete dataObj.meta.starter_kind;
+    }
+
+    // 3b) Commerce-aware copy: a template that SELLS references catalog items owned
+    // by the source's merchant — clone them into the caller's own merchant and remap
+    // every id, so the copy sells for the NEW owner. If cloning isn't possible
+    // (no session, clone failure), strip the wiring entirely — a copy must never
+    // route money to the source merchant.
+    const hasCommerce = collectReferencedProductIds(dataObj).length > 0 || !!stampedMerchantId(dataObj);
+    if (hasCommerce) {
+      let wired = false;
+      if (ownerId) {
+        try {
+          const cloned = await cloneCatalogForOwner({
+            sourceData: dataObj,
+            newOwnerId: ownerId,
+            businessName: src.business_name || src.template_name || newName,
+            siteSlug: newSlug,
+          });
+          if (cloned) {
+            dataObj = remapCommerceIds(dataObj, cloned.merchantId, cloned.idMap);
+            wired = true;
+          }
+        } catch (e) {
+          console.error('[duplicate] catalog clone failed — stripping commerce wiring', e);
+        }
+      }
+      if (!wired) dataObj = stripCommerceWiring(dataObj);
+    }
 
     // 4) Insert — DO NOT set base_slug or is_version (DB computes them)
     const insertRow: any = {

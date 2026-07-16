@@ -68,7 +68,7 @@ describe('assembleRestaurantDomainAreas', () => {
       ],
       templates: [
         { id: 't1', slug: 'in-contest', published: true, custom_domain: null },
-        { id: 't2', slug: 'built-free', published: false, custom_domain: 'builtfree.com' },
+        { id: 't2', slug: 'built-free', published: false, custom_domain: 'builtfree.com', ux_pending: ['removed_faq'] },
       ],
       ownedDomains: [],
       links,
@@ -87,6 +87,8 @@ describe('assembleRestaurantDomainAreas', () => {
     // free pool: built + unbuilt no-website only (dismissed + has_site excluded)
     expect(area.candidates.map((r) => r.id)).toEqual(['b', 'c']); // built floats above unbuilt
     expect(area.candidates[0].claim_url).toBe('claim:t2'); // built, no contest → direct claim
+    expect(area.candidates[0].ux_pending).toEqual(['removed_faq']); // dry-run passthrough
+    expect(area.candidates[1].ux_pending).toBeNull(); // unbuilt → not applicable
     expect(area.candidates[0].site_url).toBe('/sites/built-free'); // draft → same-host admin view (custom domain applies once published)
     expect(area.candidates[1].claim_url).toBeNull(); // unbuilt → no funnel link yet
 

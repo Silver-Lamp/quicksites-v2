@@ -14,6 +14,7 @@
 import { randomUUID } from 'crypto';
 import { supabaseAdmin } from '@/lib/supabase/admin';
 import { buildIndustryStarter } from '@/lib/builder/industryScaffold';
+import { createDefaultBlock } from '@/lib/createDefaultBlock';
 import { MENU_BASE_DOMAIN } from '@/lib/menu/deliveredMenu';
 
 export const RESTAURANT_APEX_SITE_TYPE = 'restaurant_apex';
@@ -62,7 +63,25 @@ export function apexTemplateSeed(input: ApexSeedInput): Record<string, any> {
         'Real local kitchens, direct online ordering — no middleman markup. Browse the spots below.';
       if ('cta_text' in hero.content) hero.content.cta_text = 'Browse restaurants';
     }
-    page0.blocks = [hero];
+    // Hero + the directory block: the cohort renders as first-class page content
+    // (editable/movable in the editor; live-hydrated by campaign_id at render time).
+    const directory: any = createDefaultBlock('restaurants_directory' as any);
+    directory.content = {
+      ...(directory.content ?? {}),
+      title: `Restaurants in ${place}`,
+      campaign_id: input.campaignId,
+      entries: [],
+    };
+    page0.blocks = [hero, directory];
+  }
+
+  // Portal chrome: the starter's business nav (Services/Contact) points at pages a
+  // portal doesn't have — trim header/footer links to Home. The "powered by
+  // delivered.menu" attribution renders inside the directory block itself.
+  for (const chrome of [tpl.header_block, tpl.footer_block]) {
+    if (chrome?.content && Array.isArray(chrome.content.links)) {
+      chrome.content.links = [{ label: 'Home', href: '/', appearance: 'default' }];
+    }
   }
 
   tpl.data.meta = {

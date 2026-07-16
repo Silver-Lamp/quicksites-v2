@@ -679,6 +679,30 @@ export const blockContentSchemaMap = {
 
   order_bar: { label: 'Sticky Order Bar', icon: '🛎️', schema: OrderBarSchema },
 
+  // Restaurant apex portals (<city>-restaurant.com): the live winner-first directory of a
+  // domain-competition cohort. `campaign_id` drives a client-side live fetch; `entries`
+  // is the commit-time snapshot fallback so the block renders without the API.
+  restaurants_directory: {
+    label: 'Restaurants Directory',
+    icon: '🏆',
+    schema: z.object({
+      title: z.string().optional().default(''),
+      campaign_id: z.string().optional().default(''),
+      entries: z
+        .array(
+          z.object({
+            template_id: z.string(),
+            slug: z.string(),
+            business_name: z.string(),
+            url: z.string(),
+            hero_url: z.union([z.string(), z.literal('')]).optional(),
+            is_winner: z.boolean().optional().default(false),
+          }),
+        )
+        .default([]),
+    }),
+  },
+
   /* ───────────────────────────── NEW: Commerce blocks ─────────────────────── */
 
   products_grid: {

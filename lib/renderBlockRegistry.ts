@@ -106,15 +106,7 @@ export const DYNAMIC_RENDERERS: Record<
   order_bar:    () => import('@/components/admin/templates/render-blocks/order-bar'),
   products_grid: () => import('@/components/admin/templates/render-blocks/products-grid'),
   restaurants_directory: () => import('@/components/admin/templates/render-blocks/restaurants-directory'),
-  service_offer: async () => ({
-    default: () =>
-      React.createElement(
-        'div',
-        { className: 'border rounded-md p-3 bg-amber-50 text-sm' },
-        React.createElement('b', null, 'Service Offer'),
-        ' — renderer coming soon.'
-      ),
-  }),
+  service_offer: () => import('@/components/admin/templates/render-blocks/service-offer'),
   scheduler: async () => {
     const [AdminPreview, SiteLive] = await Promise.all([
       import('@/components/admin/templates/render-blocks/scheduler'),

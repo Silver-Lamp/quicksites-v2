@@ -127,6 +127,46 @@ export default function ProductsGridEditor({ block, onSave, onClose }: Props) {
     } finally { setLoading(false); }
   }, [merchantEmail, merchantId, templateId]);
 
+  // Quick add: title + price → a live catalog item, auto-selected into this grid.
+  // Full editing (images, variants, stock, POD) lives in /merchant/catalog.
+  const [qaTitle, setQaTitle] = React.useState('');
+  const [qaPrice, setQaPrice] = React.useState('');
+  const [qaBusy, setQaBusy] = React.useState(false);
+  const quickAdd = React.useCallback(async () => {
+    const title = qaTitle.trim();
+    const priceCents = Math.round((Number.parseFloat(qaPrice.replace(/[^0-9.]/g, '')) || 0) * 100);
+    if (!title || !merchantId || qaBusy) return;
+    setQaBusy(true); setLoadError(null);
+    try {
+      const slug = `${title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '').slice(0, 48) || 'item'}-${Math.random().toString(36).slice(2, 6)}`;
+      const res = await fetch('/api/catalog/items', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          merchantId,
+          siteSlug: String(getTpl()?.slug ?? ''),
+          type: 'product',
+          title,
+          slug,
+          priceCents,
+          availability: { kind: 'always' },
+        }),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok || !json?.id) throw new Error(json?.error || 'Could not create the item.');
+      setQaTitle(''); setQaPrice('');
+      // Select the new item into the grid immediately.
+      const next = new Set(selected); next.add(json.id);
+      setSelected(next);
+      const idsArr = Array.from(next);
+      dispatchDraft({ product_ids: idsArr, productIds: idsArr });
+      await refresh();
+    } catch (e: any) {
+      setLoadError(e?.message || 'Could not create the item.');
+    } finally { setQaBusy(false); }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [qaTitle, qaPrice, merchantId, qaBusy, selected, refresh]);
+
   // "Set up my store": find-or-create the owner's merchant for this site and adopt it.
   const setupStore = React.useCallback(async () => {
     if (!templateId || settingUp) return;
@@ -421,6 +461,37 @@ export default function ProductsGridEditor({ block, onSave, onClose }: Props) {
             >
               Open Catalog — add items ↗
             </a>
+          </div>
+        )}
+
+        {/* Quick add: the fastest path from "empty store" to "product on the page".
+            Title + price only — richer editing lives in the Catalog. */}
+        {merchantId && !loading && (
+          <div className="flex flex-wrap items-end gap-2 rounded-lg border p-3">
+            <div className="grid min-w-[10rem] flex-1 gap-1">
+              <Label htmlFor="qa-title" className="text-xs">Quick add an item</Label>
+              <Input
+                id="qa-title"
+                value={qaTitle}
+                onChange={(e) => setQaTitle(e.target.value)}
+                placeholder="e.g. Lawn mowing — front + back"
+                onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); void quickAdd(); } }}
+              />
+            </div>
+            <div className="grid w-24 gap-1">
+              <Label htmlFor="qa-price" className="text-xs">Price ($)</Label>
+              <Input
+                id="qa-price"
+                inputMode="decimal"
+                value={qaPrice}
+                onChange={(e) => setQaPrice(e.target.value)}
+                placeholder="49"
+                onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); void quickAdd(); } }}
+              />
+            </div>
+            <Button type="button" onClick={() => void quickAdd()} disabled={qaBusy || !qaTitle.trim()}>
+              {qaBusy ? 'Adding…' : '+ Add'}
+            </Button>
           </div>
         )}
 

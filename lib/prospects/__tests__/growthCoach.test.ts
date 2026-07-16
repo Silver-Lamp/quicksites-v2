@@ -3,7 +3,7 @@
  */
 // lib/prospects/__tests__/growthCoach.test.ts
 
-import { computeCoachState, type CoachInput, type CoachTop } from '@/lib/prospects/growthCoach';
+import { computeCoachState, computeRestaurantCoachState, type CoachInput, type CoachTop } from '@/lib/prospects/growthCoach';
 
 const base: CoachInput = {
   prospectCount: 50,
@@ -72,5 +72,49 @@ describe('computeCoachState — primary next action', () => {
     const s = computeCoachState({ ...base, channels: { mail: false, sms: false }, top: top({ ready: true }) });
     expect(s.primary).toBeNull();
     expect(s.steps.find((x) => x.key === 'outreach')?.status).toBe('blocked');
+  });
+});
+
+describe('computeRestaurantCoachState (restaurants playbook)', () => {
+  const rBase = {
+    prospectCount: 0,
+    noWebsiteCount: 0,
+    unbuiltNoWebsiteCount: 0,
+    builtCount: 0,
+    openCohorts: 0,
+    contestCount: 0,
+    decidedCount: 0,
+    claimedCount: 0,
+    channels: { mail: true, sms: false },
+  };
+
+  it('empty funnel → sweep is the primary action', () => {
+    const s = computeRestaurantCoachState(rBase);
+    expect(s.primary?.kind).toBe('discover');
+    expect(s.steps.map((x) => x.key)).toEqual(['discover', 'build', 'contest', 'outreach', 'demand']);
+  });
+
+  it('swept with unbuilt no-website restaurants → build is next', () => {
+    const s = computeRestaurantCoachState({ ...rBase, prospectCount: 10, noWebsiteCount: 6, unbuiltNoWebsiteCount: 5 });
+    expect(s.primary?.kind).toBe('build-drafts');
+    expect(s.primary?.label).toBe('Build 5 ordering sites');
+  });
+
+  it('built cohort ready → start the contest', () => {
+    const s = computeRestaurantCoachState({ ...rBase, prospectCount: 10, noWebsiteCount: 6, builtCount: 5, openCohorts: 1 });
+    expect(s.primary?.kind).toBe('launch-restaurant-comp');
+  });
+
+  it('undecided contest → work the claim links (Location Domains)', () => {
+    const s = computeRestaurantCoachState({ ...rBase, prospectCount: 10, builtCount: 5, contestCount: 1 });
+    expect(s.primary?.kind).toBe('open-location-domains');
+    expect(s.steps.find((x) => x.key === 'contest')?.status).toBe('done');
+  });
+
+  it('all contests decided + claims → funnel done, headline says sweep the next city', () => {
+    const s = computeRestaurantCoachState({ ...rBase, prospectCount: 10, builtCount: 5, contestCount: 1, decidedCount: 1, claimedCount: 1 });
+    expect(s.primary).toBeNull();
+    expect(s.headline).toContain('sweep the next city');
+    expect(s.steps.find((x) => x.key === 'demand')?.status).toBe('done');
   });
 });

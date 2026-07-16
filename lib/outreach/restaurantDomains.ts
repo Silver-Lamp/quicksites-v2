@@ -52,6 +52,9 @@ export type AreaRestaurant = {
   claim_url: string | null;
   /** SEO readiness (pct + next-step action) for the built draft — null when unbuilt/unscored. */
   seo: SeoReadinessInfo | null;
+  /** Scaffold upgrades a Refresh UX would apply RIGHT NOW (dry-run of the transform).
+   *  [] = up to date; null = not applicable (unbuilt / published / not evaluated). */
+  ux_pending: string[] | null;
   is_winner: boolean;
   waitlist_status: string | null;
 };
@@ -146,6 +149,8 @@ export type TemplateRow = {
   custom_domain: string | null;
   /** Normalized readiness (persisted or computed by the I/O wrapper); optional for callers/tests. */
   seo?: SeoReadinessInfo | null;
+  /** Dry-run Refresh-UX result (see AreaRestaurant.ux_pending); optional for callers/tests. */
+  ux_pending?: string[] | null;
 };
 
 export type LinkBuilders = {
@@ -204,6 +209,7 @@ function toAreaRestaurant(
     site_url: siteUrl,
     claim_url: claimUrl,
     seo: tpl?.seo ?? null,
+    ux_pending: tpl?.ux_pending ?? null,
     is_winner: !!opts.winnerProspectId && p.id === opts.winnerProspectId,
     waitlist_status: p.waitlist_status,
   };
@@ -460,33 +466,59 @@ export async function getRestaurantLocationDomains(): Promise<RestaurantDomainOv
         .in('id', templateIds)
     : { data: [] as any[] };
 
-  // SEO readiness per draft: prefer the persisted score (templates.seo_readiness,
-  // refreshed on commit — same source the templates list renders); compute a fallback
-  // only for rows not yet backfilled (fetch their data lazily, not for every row).
+  // Deep template data serves two per-row computations:
+  //  - SEO readiness fallback for rows without a persisted templates.seo_readiness
+  //  - the Refresh-UX DRY-RUN for unpublished drafts (so the button knows whether any
+  //    scaffold upgrade would actually apply — [] renders as "UX ✓")
+  // Fetched in ONE query, only for the rows that need it.
   const isPersisted = (s: any): s is SeoReadinessInfo =>
     !!s && typeof s === 'object' && typeof s.pct === 'number' && typeof s.total === 'number';
-  const unscored = ((rawTemplates ?? []) as any[]).filter((t) => !isPersisted(t.seo_readiness));
-  const dataById = new Map<string, any>();
-  if (unscored.length) {
+  const needDeep = ((rawTemplates ?? []) as any[]).filter(
+    (t) => !isPersisted(t.seo_readiness) || !t.published,
+  );
+  const deepById = new Map<string, { data: any; header_block: any; footer_block: any }>();
+  if (needDeep.length) {
     const { data: withData } = await supabaseAdmin
       .from('templates')
-      .select('id, data')
-      .in('id', unscored.map((t) => t.id));
-    for (const r of (withData ?? []) as any[]) dataById.set(r.id, r.data);
+      .select('id, data, header_block, footer_block')
+      .in('id', needDeep.map((t) => t.id));
+    for (const r of (withData ?? []) as any[]) {
+      deepById.set(r.id, { data: r.data, header_block: r.header_block, footer_block: r.footer_block });
+    }
   }
   const templates: TemplateRow[] = ((rawTemplates ?? []) as any[]).map((t) => {
+    const deep = deepById.get(t.id);
     let seo: SeoReadinessInfo | null = isPersisted(t.seo_readiness) ? t.seo_readiness : null;
-    if (!seo && dataById.has(t.id)) {
+    if (!seo && deep) {
       try {
-        const data = dataById.get(t.id);
-        const meta = (data?.meta ?? data) || {};
+        const meta = (deep.data?.meta ?? deep.data) || {};
         const raw = t.industry || meta?.identity?.industry || meta?.industry || 'restaurant';
-        seo = readinessScore(data ?? {}, resolveIndustryKey(raw)) as SeoReadinessInfo;
+        seo = readinessScore(deep.data ?? {}, resolveIndustryKey(raw)) as SeoReadinessInfo;
       } catch {
         seo = null;
       }
     }
-    return { id: t.id, slug: t.slug, published: t.published, custom_domain: t.custom_domain, seo };
+    // Dry-run the UX refresh for drafts only (live sites never get the button).
+    let uxPending: string[] | null = null;
+    if (!t.published && deep) {
+      try {
+        uxPending = applyRestaurantUxRefresh({
+          data: deep.data ?? {},
+          headerBlock: deep.header_block ?? null,
+          footerBlock: deep.footer_block ?? null,
+        }).applied;
+      } catch {
+        uxPending = null;
+      }
+    }
+    return {
+      id: t.id,
+      slug: t.slug,
+      published: t.published,
+      custom_domain: t.custom_domain,
+      seo,
+      ux_pending: uxPending,
+    };
   });
 
   // Templates sitting at campaign apex slugs (restaurant_apex portals / pitch sites) —

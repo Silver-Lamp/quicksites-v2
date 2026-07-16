@@ -24,6 +24,7 @@ type AreaRestaurant = {
   site_url: string | null;
   claim_url: string | null;
   seo: SeoInfo | null;
+  ux_pending: string[] | null;
   is_winner: boolean;
   waitlist_status: string | null;
 };
@@ -187,16 +188,24 @@ function RestaurantRow({
               Edit
             </Link>
           )}
+          {/* Refresh UX only when the server's dry-run found real pending upgrades;
+              an up-to-date draft shows a quiet "UX ✓" instead of a dead button. */}
           {r.template_id && !r.published && r.status !== 'claimed' && onRefreshUx && (
-            <button
-              type="button"
-              disabled={refreshBusy}
-              onClick={() => onRefreshUx(r)}
-              className="rounded border border-fuchsia-500/40 bg-fuchsia-500/10 px-2 py-0.5 text-[11px] text-fuchsia-200 hover:bg-fuchsia-500/20 disabled:opacity-50"
-              title="Re-apply the latest restaurant-scaffold improvements (anchor nav, no FAQ, tap-to-call footer…) without touching real content"
-            >
-              {refreshBusy ? 'Refreshing…' : 'Refresh UX'}
-            </button>
+            (r.ux_pending?.length ?? 0) > 0 ? (
+              <button
+                type="button"
+                disabled={refreshBusy}
+                onClick={() => onRefreshUx(r)}
+                className="rounded border border-fuchsia-500/40 bg-fuchsia-500/10 px-2 py-0.5 text-[11px] text-fuchsia-200 hover:bg-fuchsia-500/20 disabled:opacity-50"
+                title={`Pending upgrades: ${(r.ux_pending ?? []).join(', ').replace(/_/g, ' ')}`}
+              >
+                {refreshBusy ? 'Refreshing…' : `Refresh UX (${r.ux_pending!.length})`}
+              </button>
+            ) : r.ux_pending ? (
+              <span className="text-[11px] font-medium text-emerald-400/80" title="This draft already has every scaffold upgrade">
+                UX ✓
+              </span>
+            ) : null
           )}
           {r.site_url && (
             <a

@@ -22,6 +22,7 @@ import DomainCostSummary from '@/components/admin/domain-cost-summary';
 import ParksPrewarmPanel from '@/components/admin/parks-prewarm-panel';
 import { computeCoachState, computeRestaurantCoachState, type CoachAction } from '@/lib/prospects/growthCoach';
 import GrowthCoach, { actionId } from '@/components/admin/growth-coach';
+import ApexDomainCheck from '@/components/admin/apex-domain-check';
 import {
   addRecentLocation,
   normalizeRecentLocations,
@@ -356,6 +357,11 @@ export default function ProspectsClient({
     return json;
   }
 
+  // Apex-domain auto-check: set after a restaurant sweep so the availability of
+  // <city>-restaurant.com surfaces right next to the sweep tally (the buy tools live
+  // on /admin/restaurant-domains — this is just the "is the prize ours?" answer).
+  const [apexQuery, setApexQuery] = useState<{ city: string; region: string } | null>(null);
+
   async function discover() {
     setMsg(null);
     if (!city.trim()) return setMsg('Enter a city to sweep.');
@@ -377,6 +383,8 @@ export default function ProspectsClient({
       setMsg(
         `Swept ${r.found} businesses — ${r.tallies.no_website} no website, ${r.tallies.dated} dated, ${r.tallies.has_site} with a site. (${r.inserted} new)`,
       );
+      // Restaurant sweep → check the <city>-restaurant.com apex at the same time.
+      setApexQuery(effectivePicked.has('Restaurants') ? { city: city.trim(), region: region.trim() } : null);
       rememberLocation({ city: city.trim(), region: region.trim(), radiusKm, categories: [...effectivePicked] });
       router.refresh();
     } catch (e: any) {
@@ -1214,6 +1222,13 @@ export default function ProspectsClient({
       </div>
 
       {msg && <div className="mt-4 rounded-lg border border-neutral-800 bg-neutral-900/60 px-4 py-2 text-sm text-neutral-200">{msg}</div>}
+
+      {/* Apex-domain check for the just-swept city — is <city>-restaurant.com ours/buyable? */}
+      {apexQuery && (
+        <div className="mt-2 rounded-lg border border-emerald-500/20 bg-emerald-500/[0.04] px-4 py-2">
+          <ApexDomainCheck key={`${apexQuery.city}|${apexQuery.region}`} city={apexQuery.city} region={apexQuery.region} auto showCockpitLink />
+        </div>
+      )}
 
       {/* Ranked & ready — the prioritized worklist. Campaigns whose pitch page already
           ranks float to the top; refine each site before mailing (none have clients yet). */}

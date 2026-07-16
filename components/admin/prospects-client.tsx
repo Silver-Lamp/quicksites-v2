@@ -20,7 +20,7 @@ import DomainBuyListPlanner from '@/components/admin/domain-buy-list-planner';
 import CollapsibleSection, { openSection } from '@/components/admin/collapsible-section';
 import DomainCostSummary from '@/components/admin/domain-cost-summary';
 import ParksPrewarmPanel from '@/components/admin/parks-prewarm-panel';
-import { computeCoachState, type CoachAction } from '@/lib/prospects/growthCoach';
+import { computeCoachState, computeRestaurantCoachState, type CoachAction } from '@/lib/prospects/growthCoach';
 import GrowthCoach, { actionId } from '@/components/admin/growth-coach';
 import {
   addRecentLocation,
@@ -914,6 +914,22 @@ export default function ProspectsClient({
   const [busyAction, setBusyAction] = useState<string | null>(null);
   const coachState = useMemo(() => {
     const noWebsiteCount = prospects.filter((p) => p.lead_tier === 'no_website').length;
+    // Restaurants view runs its own playbook: sweep → build ordering sites → domain
+    // contest → claim-link outreach → demand-to-claims. Same CoachState shape.
+    if (viewMode === 'restaurants') {
+      const contests = campaigns.filter((c) => c.kind === 'restaurant_competition');
+      return computeRestaurantCoachState({
+        prospectCount: prospects.length,
+        noWebsiteCount,
+        unbuiltNoWebsiteCount: prospects.filter((p) => p.lead_tier === 'no_website' && p.status === 'discovered').length,
+        builtCount: prospects.filter((p) => p.template_id).length,
+        openCohorts: restaurantComps.length,
+        contestCount: contests.length,
+        decidedCount: contests.filter((c) => c.claimed_by_prospect_id).length,
+        claimedCount: prospects.filter((p) => p.status === 'claimed').length,
+        channels: { mail: channels.mail, sms: channels.sms },
+      });
+    }
     const openCompetitionGroups = orderedCompetition.filter((x) => !x.existing).length;
     const o = rankedOpportunities[0];
     const c = o ? campaignById.get(o.campaignId) : undefined;
@@ -941,7 +957,7 @@ export default function ProspectsClient({
       channels: { mail: channels.mail, sms: channels.sms },
       readinessGate,
     });
-  }, [prospects, orderedCompetition, rankedOpportunities, campaignById, campaigns.length, channels.mail, channels.sms, readinessGate]);
+  }, [prospects, orderedCompetition, rankedOpportunities, campaignById, campaigns, viewMode, restaurantComps, channels.mail, channels.sms, readinessGate]);
 
   async function coachAct(a: CoachAction) {
     const id = actionId(a);
@@ -965,6 +981,19 @@ export default function ProspectsClient({
         break;
       case 'mail':
         if (c) openMailPreview(c);
+        break;
+      case 'build-drafts':
+        setBusyAction(id);
+        try { await buildAllNoWebsite(); } finally { setBusyAction(null); }
+        break;
+      case 'launch-restaurant-comp':
+        document.getElementById('restaurant-competition-cards')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        break;
+      case 'open-location-domains':
+        router.push('/admin/restaurant-domains');
+        break;
+      case 'open-demand-funnel':
+        router.push('/admin/demand-funnel');
         break;
       case 'point-address':
         if (!c) break;

@@ -224,10 +224,20 @@ export default function ForRyanPage() {
           </ul>
 
           <div className="mt-10 rounded-xl border border-emerald-500/30 bg-emerald-500/[0.06] p-6 text-center">
-            <p className="text-lg font-semibold text-white">Interested in any lane?</p>
+            <p className="text-lg font-semibold text-white">Want your referral link right now?</p>
             <p className="mt-1 text-sm text-zinc-400">
-              Text me and I&apos;ll set you up with a referral link — or a login, if you want to see the
-              cockpit.
+              It&apos;s self-serve — create an account and the partner dashboard mints your code, gives
+              you the shareable link, and connects payouts (Stripe). Takes about two minutes.
+            </p>
+            <Link
+              href="/partners/dashboard"
+              className="mt-4 inline-block rounded-lg bg-emerald-500 px-6 py-3 text-base font-medium text-zinc-950 shadow-lg transition hover:bg-emerald-400"
+            >
+              Get my referral link →
+            </Link>
+            <p className="mt-4 text-sm text-zinc-400">
+              Or just text me — for the hub lane (overrides on people you recruit) or an operator
+              login, I flip those on for you manually anyway.
             </p>
             <p className="mt-3 text-sm font-medium text-emerald-300">— Sandon</p>
           </div>

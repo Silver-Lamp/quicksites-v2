@@ -101,6 +101,17 @@ export async function createRestaurantCompetition(
 
   await linkProspectsToCampaign(data.id, built.map((p) => p.id));
 
+  // Stand up the apex portal template (site_type='restaurant_apex') that fronts the
+  // domain — editable hero + the live winner-first directory. Best-effort: a portal
+  // failure must never block the competition (the templateless directory fallback
+  // still serves the apex).
+  try {
+    const { buildRestaurantApexSite } = await import('@/lib/outreach/restaurantApexSite');
+    await buildRestaurantApexSite({ campaignId: data.id, operatorId: input.createdBy });
+  } catch (e) {
+    console.error('[restaurant-competition] apex portal build failed:', (e as any)?.message || e);
+  }
+
   return { campaign: data as RestaurantCompetition, cohortSize: built.length };
 }
 

@@ -27,6 +27,7 @@ import { getDemandCount } from '@/lib/menu/demand';
 import { resolveListingPhone } from '@/lib/claim/resolveListingPhone';
 import { loadCompetitionDirectoryBySlug } from '@/lib/outreach/restaurantCompetitionDirectory';
 import RestaurantCompetitionDirectory from '@/components/sites/restaurant-competition-directory';
+import { isRestaurantApexData } from '@/lib/outreach/restaurantApexSite';
 
 /* -------------------- Types -------------------- */
 type SiteRow = {
@@ -341,6 +342,12 @@ export async function generateMetadata({
     pageSlug,
     baseUrl: `${await originFromHeaders()}/sites`,
   });
+  // A restaurant-apex portal stays noindex until its contest has a winner — same rule
+  // as the templateless directory fallback (avoid ranking a thin placeholder).
+  if (isRestaurantApexData(normalized)) {
+    const dir = await loadCompetitionDirectoryBySlug(siteRow.slug ?? slug);
+    if (dir && !dir.hasWinner) return { ...md, robots: { index: false, follow: false } };
+  }
   // A no-website `listing_import` draft on the menu surface IS the restaurant's web
   // presence — index it (flag-gated) so it ranks for their name and can actually feed
   // the demand signal. Admin previews + every other draft stay noindex.
@@ -431,6 +438,14 @@ export default async function SitePreviewPage({
     ? resolveListingPhone({ data: (normalized as any).data })
     : null;
 
+  // Restaurant-apex portal (site_type='restaurant_apex'): the template is an editable
+  // hero/branding shell; the LIVE competition directory (winner featured first) renders
+  // below it — only on the home page, in compact mode (no duplicate hero).
+  const apexDirectory =
+    isRestaurantApexData(normalized) && !rest?.length
+      ? await loadCompetitionDirectoryBySlug(siteRow.slug ?? slug)
+      : null;
+
   // LocalBusiness JSON-LD (built live from identity so it stays fresh) — emitted when the
   // operator turned it on in the Readiness coach. Skipped on the pre-claim watermarked draft.
   const localBusinessSchema =
@@ -468,6 +483,7 @@ export default async function SitePreviewPage({
         colorMode={colorMode}
         className="bg-background text-foreground"
       />
+      {apexDirectory && <RestaurantCompetitionDirectory dir={apexDirectory} compact />}
       {showWatermark && <PreviewWatermark />}
       {demandEnabled && <DemandCapture templateId={siteRow.id} phone={demandPhone} />}
       {showClaimBar && claimToken && (

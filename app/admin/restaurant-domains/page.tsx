@@ -34,6 +34,7 @@ type Area = {
   campaign_id: string | null;
   campaign_status: string | null;
   campaign_kind: string | null;
+  apex_template_id: string | null;
   has_winner: boolean;
   winner_name: string | null;
   competitors: AreaRestaurant[];
@@ -182,6 +183,45 @@ export default function RestaurantDomainsPage() {
     }
   };
 
+  // Build draft ordering sites for every unbuilt restaurant in the area (cohort +
+  // candidates), chunked to keep each serverless call under its OCR time budget.
+  // This is the AI-spend step (menu OCR per restaurant) — hence the confirm.
+  const buildDrafts = async (area: Area) => {
+    const ids = [...area.competitors, ...area.candidates].filter((r) => !r.template_id).map((r) => r.id);
+    if (!ids.length) return;
+    if (!confirm(`Build ${ids.length} draft ordering site(s) for ${area.city}? Uses AI (menu OCR from listing photos) per restaurant.`)) return;
+    setBusy(area.key);
+    setError(null);
+    const CHUNK = 3; // vision OCR ≈ 10–20s per restaurant; stay under the 60s route budget
+    let built = 0;
+    let failed = 0;
+    try {
+      for (let i = 0; i < ids.length; i += CHUNK) {
+        setNotice(`Building drafts for ${area.city}… ${Math.min(i, ids.length)}/${ids.length}`);
+        const res = await fetch('/api/admin/prospects/build', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ prospectIds: ids.slice(i, i + CHUNK) }),
+        });
+        const json = await res.json();
+        if (!res.ok) throw new Error(json?.error || `failed (${res.status})`);
+        const results: any[] = Array.isArray(json.results) ? json.results : [];
+        built += results.filter((r) => r.ok && !r.skipped).length;
+        failed += results.filter((r) => !r.ok).length;
+      }
+      setNotice(
+        `${built} draft(s) built for ${area.city}${failed ? ` (${failed} failed)` : ''} — review menus/prices, then ${
+          area.campaign_kind === 'restaurant_competition' ? 'they’re racing' : 'convert to the claim contest'
+        }.`,
+      );
+      await load();
+    } catch (e: any) {
+      setError(e?.message || 'failed');
+    } finally {
+      setBusy(null);
+    }
+  };
+
   // Convert a legacy rent-model restaurant campaign into a first-claim-wins contest
   // (flips kind, parks the shared pitch site so the winner directory fronts the apex).
   const convertToContest = async (area: Area) => {
@@ -198,7 +238,9 @@ export default function RestaurantDomainsPage() {
       const json = await res.json();
       if (!res.ok) throw new Error(json?.error || `failed (${res.status})`);
       setNotice(
-        `${json.domain} is now a claim contest — ${json.cohortSize} restaurants racing.${json.warning ? ` ⚠ ${json.warning}` : ''}`,
+        `${json.domain} is now a claim contest — ${json.cohortSize} restaurants racing.${
+          json.apexTemplateId ? ' Apex portal created (editable from the card).' : ''
+        }${json.warning ? ` ⚠ ${json.warning}` : ''}`,
       );
       await load();
     } catch (e: any) {
@@ -276,6 +318,7 @@ export default function RestaurantDomainsPage() {
       <div className="mt-8 space-y-6">
         {data?.areas.map((area) => {
           const builtCandidates = area.candidates.filter((c) => c.template_id).length;
+          const unbuiltCount = [...area.competitors, ...area.candidates].filter((r) => !r.template_id).length;
           return (
             <div key={area.key} className="rounded-xl border border-neutral-800 bg-neutral-900/40 p-5">
               {/* Area header: domain + contest state */}
@@ -306,9 +349,29 @@ export default function RestaurantDomainsPage() {
                     <Badge tone="neutral">domain not owned</Badge>
                   )}
                   {area.domain_status && <Badge tone="neutral">{area.domain_status}</Badge>}
+                  {area.apex_template_id && (
+                    <Link
+                      href={`/admin/templates/${area.apex_template_id}`}
+                      className="text-xs text-sky-400 underline underline-offset-2 hover:text-sky-300"
+                      title="The apex portal template fronting this domain (hero + live directory)"
+                    >
+                      Edit apex site →
+                    </Link>
+                  )}
                 </div>
 
                 <div className="flex items-center gap-2">
+                  {unbuiltCount > 0 && (
+                    <button
+                      type="button"
+                      disabled={busy === area.key}
+                      onClick={() => void buildDrafts(area)}
+                      title="Build a draft ordering site for each restaurant that doesn't have one yet (AI menu OCR per restaurant)"
+                      className="rounded-md bg-sky-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-sky-500 disabled:opacity-50"
+                    >
+                      {busy === area.key ? 'Working…' : `Build ${unbuiltCount} draft${unbuiltCount > 1 ? 's' : ''}`}
+                    </button>
+                  )}
                   {area.campaign_id && area.campaign_kind !== 'restaurant_competition' && !area.has_winner && (
                     <button
                       type="button"

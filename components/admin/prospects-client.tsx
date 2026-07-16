@@ -418,6 +418,28 @@ export default function ProspectsClient({
     }
   }
 
+  // Turn a city's built restaurant cohort into a domain-competition: buy/attach
+  // <city>-restaurant.com; first to claim their site wins the apex (a directory features
+  // them). The domain is a free traffic bonus — money stays the per-order take-rate.
+  async function createRestaurantComp(group: CompetitionGroup) {
+    setBusy(`rcomp:${group.key}`);
+    setMsg(null);
+    try {
+      const r = await post('/api/admin/prospects/restaurant-competition', {
+        prospectIds: group.prospects.map((p) => p.id),
+        region: group.region ?? undefined,
+      });
+      setMsg(
+        `Restaurant competition created: ${r.domain} (${r.domainStatus}) — ${r.cohortSize} restaurants competing. First to claim wins the domain.`,
+      );
+      router.refresh();
+    } catch (e: any) {
+      setMsg(e.message);
+    } finally {
+      setBusy(null);
+    }
+  }
+
   async function dismiss(id: string) {
     setBusy(id);
     try {
@@ -799,6 +821,7 @@ export default function ProspectsClient({
 
   // Group no-website prospects by city + industry → competition cards.
   const competition = useMemo(() => buildCompetitionGroups(prospects), [prospects]);
+  const restaurantComps = useMemo(() => buildRestaurantCompetitionGroups(prospects), [prospects]);
 
   // "Ranked & ready" worklist: campaigns whose pitch page already ranks, prioritized by
   // rank × unlockable rent × local demand. Reuses the already-fetched gscByDomain map.
@@ -1253,6 +1276,41 @@ export default function ProspectsClient({
                 </div>
               );
             })}
+          </div>
+        </div>
+      )}
+
+      {/* Restaurant domain-competitions — built restaurant cohorts competing for one
+          premium <city>-restaurant.com apex (first to claim wins the featured directory slot). */}
+      {restaurantComps.length > 0 && (
+        <div id="restaurant-competition-cards" className="mt-8 scroll-mt-24">
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-neutral-400">Restaurant competitions — one domain, one winner</h2>
+          <p className="mt-1 text-xs text-neutral-500">
+            Each built restaurant already has its own ordering site. Launch a{' '}
+            <span className="font-mono text-amber-300">&lt;city&gt;-restaurant.com</span> — first to claim wins it (their site is featured in the apex directory) for extra traffic. Money stays the per-order take-rate.
+          </p>
+          <div className="mt-3 flex snap-x gap-3 overflow-x-auto pb-2">
+            {restaurantComps.map((g) => (
+              <div key={g.key} className="flex w-72 shrink-0 snap-start flex-col rounded-xl border border-amber-900/60 bg-amber-950/20 p-4">
+                <div className="truncate text-sm font-semibold text-white">{g.city} · Restaurants</div>
+                <div className="mt-1 text-xs text-neutral-400">{g.prospects.length} built restaurant sites</div>
+                <ul className="mt-2 flex-1 space-y-0.5 text-xs text-neutral-300">
+                  {g.prospects.slice(0, 4).map((p) => (
+                    <li key={p.id} className="truncate">• {p.business_name}</li>
+                  ))}
+                  {g.prospects.length > 4 && <li className="text-neutral-500">+{g.prospects.length - 4} more</li>}
+                </ul>
+                <button
+                  onClick={() => createRestaurantComp(g)}
+                  disabled={busy === `rcomp:${g.key}`}
+                  className="mt-3 w-full rounded-lg bg-amber-600 px-3 py-2 text-xs font-medium text-white hover:bg-amber-500 disabled:opacity-50"
+                >
+                  {busy === `rcomp:${g.key}`
+                    ? 'Creating…'
+                    : `Create ${g.city.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '')}-restaurant.com`}
+                </button>
+              </div>
+            ))}
           </div>
         </div>
       )}
@@ -1830,6 +1888,28 @@ function buildCompetitionGroups(prospects: Prospect[]): CompetitionGroup[] {
     const key = `${p.city.toLowerCase()}::${p.industry_key}`;
     if (!map.has(key)) {
       map.set(key, { key, city: p.city, region: p.region, industryKey: p.industry_key, prospects: [] });
+    }
+    map.get(key)!.prospects.push(p);
+  }
+  return [...map.values()].filter((g) => g.prospects.length >= 2).sort((a, b) => b.prospects.length - a.prospects.length);
+}
+
+/**
+ * Group BUILT restaurant drafts (each with its own ordering site) by city into
+ * restaurant domain-competition cards (≥2, not already in a competition). Unlike the
+ * services groups above, these operate on draft_built restaurants — the cohort must have
+ * sites before they can compete for the <city>-restaurant.com apex.
+ */
+function buildRestaurantCompetitionGroups(prospects: Prospect[]): CompetitionGroup[] {
+  const map = new Map<string, CompetitionGroup>();
+  for (const p of prospects) {
+    if (p.status !== 'draft_built' || !p.template_id) continue; // must have a built site
+    if (p.industry_key !== 'restaurant') continue;
+    if (p.geo_campaign_id) continue; // already in a competition
+    if (!p.city) continue;
+    const key = p.city.toLowerCase();
+    if (!map.has(key)) {
+      map.set(key, { key, city: p.city, region: p.region, industryKey: 'restaurant', prospects: [] });
     }
     map.get(key)!.prospects.push(p);
   }

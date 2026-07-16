@@ -59,7 +59,31 @@ export async function loadCompetitionDirectoryBySlug(slug: string): Promise<Comp
     .eq('slug', clean)
     .maybeSingle();
   if (!campaign) return null;
+  return assembleDirectory(campaign);
+}
 
+/** Same directory, looked up by campaign id (the restaurants_directory block's key). */
+export async function loadCompetitionDirectoryByCampaignId(campaignId: string): Promise<CompetitionDirectory | null> {
+  const clean = (campaignId || '').trim();
+  if (!clean) return null;
+
+  const { data: campaign } = await supabaseAdmin
+    .from('geo_industry_campaigns')
+    .select('id, city, region, domain, claimed_by_prospect_id')
+    .eq('kind', RESTAURANT_COMPETITION_KIND)
+    .eq('id', clean)
+    .maybeSingle();
+  if (!campaign) return null;
+  return assembleDirectory(campaign);
+}
+
+async function assembleDirectory(campaign: {
+  id: string;
+  city: string;
+  region: string | null;
+  domain: string;
+  claimed_by_prospect_id: string | null;
+}): Promise<CompetitionDirectory> {
   const base: Omit<CompetitionDirectory, 'entries'> = {
     campaignId: campaign.id,
     city: campaign.city,

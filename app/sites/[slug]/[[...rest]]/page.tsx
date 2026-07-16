@@ -442,11 +442,15 @@ export default async function SitePreviewPage({
     ? resolveListingPhone({ data: (normalized as any).data })
     : null;
 
-  // Restaurant-apex portal (site_type='restaurant_apex'): the template is an editable
-  // hero/branding shell; the LIVE competition directory (winner featured first) renders
-  // below it — only on the home page, in compact mode (no duplicate hero).
+  // Restaurant-apex portal (site_type='restaurant_apex'): the LIVE competition
+  // directory renders below the template — but only for LEGACY apex templates that
+  // don't carry the restaurants_directory block yet (new apexes render the cohort as
+  // first-class page content; appending here would double it). Home page only.
+  const hasDirectoryBlock = (normalized.pages ?? []).some((p: any) =>
+    (p?.blocks ?? []).some((b: any) => b?.type === 'restaurants_directory'),
+  );
   const apexDirectory =
-    isRestaurantApexData(normalized) && !rest?.length
+    isRestaurantApexData(normalized) && !rest?.length && !hasDirectoryBlock
       ? await loadCompetitionDirectoryBySlug(siteRow.slug ?? slug)
       : null;
 

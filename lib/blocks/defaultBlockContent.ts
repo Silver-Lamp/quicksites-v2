@@ -242,6 +242,9 @@ export const DEFAULT_BLOCK_CONTENT = {
 
   products_grid: { title: 'Featured Products', columns: 3, productIds: [], products: [] },
 
+  // Apex portal directory — campaign_id drives the live fetch; entries is the snapshot fallback.
+  restaurants_directory: { title: 'Order from local restaurants', campaign_id: '', entries: [] },
+
   service_offer: {
     title: 'Book a Service',
     subtitle: '',

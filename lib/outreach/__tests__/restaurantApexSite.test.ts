@@ -38,11 +38,21 @@ describe('apexTemplateSeed', () => {
     expect(meta.apex_campaign_id).toBe('camp1');
     expect(meta.apex_domain).toBe('renton-restaurant.com');
 
-    // Portal, not a business site: ONE hero block — no menu/hours/contact.
+    // Portal, not a business site: hero + the live directory block — no menu/hours/contact.
     const blocks = row.data?.pages?.[0]?.blocks ?? [];
-    expect(blocks).toHaveLength(1);
+    expect(blocks).toHaveLength(2);
     expect(blocks[0].type).toBe('hero');
     expect(blocks[0].content.headline).toBe('Order from local restaurants in Renton, WA');
+    expect(blocks[1].type).toBe('restaurants_directory');
+    expect(blocks[1].content.campaign_id).toBe('camp1'); // drives the live cohort fetch
+    expect(blocks[1].content.title).toBe('Restaurants in Renton, WA');
+
+    // Portal chrome trimmed: header/footer nav collapses to Home.
+    for (const chrome of [row.header_block, row.footer_block]) {
+      if (chrome?.content && Array.isArray(chrome.content.links)) {
+        expect(chrome.content.links).toEqual([{ label: 'Home', href: '/', appearance: 'default' }]);
+      }
+    }
   });
 
   it('keeps the hero copy brand-free even when a menu brand is passed (footer carries it)', () => {

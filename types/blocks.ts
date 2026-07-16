@@ -44,6 +44,7 @@ export const BLOCK_CATEGORY: Record<BlockType, BlockCategory> = {
   menu: 'content',
   location: 'meta',
   order_bar: 'interactive',
+  restaurants_directory: 'content', // apex portal: live competition-cohort directory
   scheduler: 'interactive',
   candidate_donate: 'interactive',
   candidate_volunteer: 'interactive',

@@ -14,7 +14,8 @@ import {
 const links: LinkBuilders = {
   tracked: (c, p) => `tracked:${c}:${p}`,
   claim: (t) => `claim:${t}`,
-  site: (slug, custom) => (custom ? `https://${custom}` : `https://${slug}.delivered.menu`),
+  site: (slug, custom, published) =>
+    published ? (custom ? `https://${custom}` : `https://${slug}.delivered.menu`) : `/sites/${slug}`,
 };
 
 const prospect = (over: any) => ({
@@ -86,7 +87,7 @@ describe('assembleRestaurantDomainAreas', () => {
     // free pool: built + unbuilt no-website only (dismissed + has_site excluded)
     expect(area.candidates.map((r) => r.id)).toEqual(['b', 'c']); // built floats above unbuilt
     expect(area.candidates[0].claim_url).toBe('claim:t2'); // built, no contest → direct claim
-    expect(area.candidates[0].site_url).toBe('https://builtfree.com'); // custom domain wins
+    expect(area.candidates[0].site_url).toBe('/sites/built-free'); // draft → same-host admin view (custom domain applies once published)
     expect(area.candidates[1].claim_url).toBeNull(); // unbuilt → no funnel link yet
 
     expect(out.totals).toMatchObject({ contests: 1, restaurants_competing: 1, restaurants_available: 2 });

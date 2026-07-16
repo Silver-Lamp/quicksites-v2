@@ -105,6 +105,7 @@ export const DYNAMIC_RENDERERS: Record<
   location:     () => import('@/components/admin/templates/render-blocks/location'),
   order_bar:    () => import('@/components/admin/templates/render-blocks/order-bar'),
   products_grid: () => import('@/components/admin/templates/render-blocks/products-grid'),
+  restaurants_directory: () => import('@/components/admin/templates/render-blocks/restaurants-directory'),
   service_offer: async () => ({
     default: () =>
       React.createElement(

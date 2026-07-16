@@ -110,8 +110,10 @@ export type LinkBuilders = {
   tracked: (campaignId: string, prospectId: string) => string;
   /** Direct tokenized claim link for a built draft not (yet) in a contest. */
   claim: (templateId: string) => string;
-  /** The restaurant's own site URL. */
-  site: (slug: string, customDomain: string | null) => string;
+  /** The restaurant's own site URL. Unpublished drafts must resolve to an
+   *  admin-viewable URL (delivered.menu subdomains 404 for drafts when DNS/env
+   *  isn't fully live) — the builder gets `published` to pick. */
+  site: (slug: string, customDomain: string | null, published: boolean) => string;
 };
 
 const cityKey = (city: string | null | undefined) => (city || '').trim().toLowerCase();
@@ -139,7 +141,7 @@ function toAreaRestaurant(
   tpl: TemplateRow | undefined,
   opts: { campaignId: string | null; winnerProspectId: string | null; links: LinkBuilders },
 ): AreaRestaurant {
-  const siteUrl = tpl?.slug ? opts.links.site(tpl.slug, tpl.custom_domain ?? null) : null;
+  const siteUrl = tpl?.slug ? opts.links.site(tpl.slug, tpl.custom_domain ?? null, !!tpl.published) : null;
   // Funnel link: tracked when the restaurant is in a contest (attributes the visit),
   // direct tokenized claim otherwise (only possible once a draft exists).
   const claimUrl = opts.campaignId
@@ -395,7 +397,10 @@ export async function getRestaurantLocationDomains(): Promise<RestaurantDomainOv
     links: {
       tracked: (campaignId, prospectId) => trackedClaimUrl(campaignId, prospectId),
       claim: (templateId) => claimUrlFor(templateId),
-      site: (slug, customDomain) => (customDomain ? `https://${customDomain}` : menuSiteUrl(slug)),
+      // Published → public URL (custom domain / delivered.menu). Draft → the same-host
+      // /sites/<slug> render, which serves drafts to admins on any host (no DNS dependency).
+      site: (slug, customDomain, published) =>
+        published ? (customDomain ? `https://${customDomain}` : menuSiteUrl(slug)) : `/sites/${slug}`,
     },
   });
 }

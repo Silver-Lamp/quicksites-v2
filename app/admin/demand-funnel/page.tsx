@@ -43,9 +43,14 @@ export default async function DemandFunnelPage() {
             The no-website cohort, imported drafts → paying restaurants. One screen to watch it convert.
           </p>
         </div>
-        <Link href="/admin/outreach" className="text-sm text-sky-400 underline underline-offset-4 hover:text-sky-300">
-          Outreach pipeline →
-        </Link>
+        <div className="flex flex-col items-end gap-1 text-sm">
+          <Link href="/admin/go-live" className="text-emerald-400 underline underline-offset-4 hover:text-emerald-300">
+            Go-live readiness →
+          </Link>
+          <Link href="/admin/outreach" className="text-sky-400 underline underline-offset-4 hover:text-sky-300">
+            Outreach pipeline →
+          </Link>
+        </div>
       </div>
 
       {/* --- The funnel (single-hue magnitude; every value direct-labeled) --- */}

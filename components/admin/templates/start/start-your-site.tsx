@@ -384,6 +384,19 @@ function TemplateStep({ router }: { router: ReturnType<typeof useRouter> }) {
   const [templates, setTemplates] = useState<Starter[] | null>(null);
   const [busySlug, setBusySlug] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // The per-industry layer: starters are grouped/filterable by industry.
+  const [industryFilter, setIndustryFilter] = useState<string>('');
+
+  const industries = useMemo(() => {
+    const set = new Set<string>();
+    for (const t of templates ?? []) if (t.industry) set.add(t.industry);
+    return [...set].sort((a, b) => a.localeCompare(b));
+  }, [templates]);
+
+  const visible = useMemo(
+    () => (templates ?? []).filter((t) => !industryFilter || t.industry === industryFilter),
+    [templates, industryFilter],
+  );
 
   useEffect(() => {
     let active = true;
@@ -423,7 +436,34 @@ function TemplateStep({ router }: { router: ReturnType<typeof useRouter> }) {
     <div>
       <BrandLoader open={!!busySlug} message="Duplicating…" />
       <h1 className="text-2xl font-semibold tracking-tight">Start from a template</h1>
-      <p className="mt-2 text-zinc-400">Duplicate a polished site and make it yours.</p>
+      <p className="mt-2 text-zinc-400">
+        Duplicate a polished site and make it yours. Store templates come with real products — duplicating one
+        copies the catalog into <span className="text-zinc-300">your</span> store, ready to sell.
+      </p>
+
+      {industries.length > 1 && (
+        <div className="mt-4 flex flex-wrap gap-1.5">
+          <button
+            onClick={() => setIndustryFilter('')}
+            className={`rounded-full px-3 py-1 text-xs font-medium transition ${
+              !industryFilter ? 'bg-sky-500/20 text-sky-300 ring-1 ring-sky-500/40' : 'bg-zinc-800 text-zinc-400 hover:text-zinc-200'
+            }`}
+          >
+            All
+          </button>
+          {industries.map((ind) => (
+            <button
+              key={ind}
+              onClick={() => setIndustryFilter(ind === industryFilter ? '' : ind)}
+              className={`rounded-full px-3 py-1 text-xs font-medium capitalize transition ${
+                industryFilter === ind ? 'bg-sky-500/20 text-sky-300 ring-1 ring-sky-500/40' : 'bg-zinc-800 text-zinc-400 hover:text-zinc-200'
+              }`}
+            >
+              {ind.replace(/_/g, ' ')}
+            </button>
+          ))}
+        </div>
+      )}
 
       {error && <p className="mt-4 text-sm text-red-400">{error}</p>}
 
@@ -445,7 +485,7 @@ function TemplateStep({ router }: { router: ReturnType<typeof useRouter> }) {
         </div>
       ) : (
         <div className="mt-8 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
-          {templates.map((t) => (
+          {visible.map((t) => (
             <button
               key={t.slug}
               onClick={() => duplicate(t.slug)}

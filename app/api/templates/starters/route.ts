@@ -36,29 +36,51 @@ function extractHeroImage(data: unknown): string | null {
 }
 
 export async function GET() {
-  if (!STARTER_TEMPLATE_SLUGS.length) return NextResponse.json({ templates: [] });
   try {
     const supa = await getServerSupabase({ serviceRole: true });
-    const { data, error } = await (supa as any)
-      .from('templates')
-      .select('slug, template_name, business_name, industry_label, industry, hero_url, logo_url, data')
-      .in('slug', STARTER_TEMPLATE_SLUGS)
-      .eq('is_site', true)
-      .eq('published', true)
-      .eq('archived', false)
-      .eq('is_version', false);
-    if (error) return NextResponse.json({ templates: [] });
+    const SELECT =
+      'slug, template_name, business_name, industry_label, industry, hero_url, logo_url, data';
 
-    const bySlug = new Map<string, any>((data || []).map((r: any) => [r.slug, r]));
-    const templates = STARTER_TEMPLATE_SLUGS
-      .map((slug) => bySlug.get(slug))
-      .filter(Boolean)
-      .map((r: any) => ({
-        slug: r.slug,
-        name: firstNonEmpty(r.business_name, r.template_name) || prettifySlug(r.slug),
-        industry: r.industry_label || r.industry || null,
-        heroUrl: firstNonEmpty(r.hero_url) || extractHeroImage(r.data),
-      }));
+    // Two sources, merged: the hand-curated slug list (display order preserved,
+    // legacy) + every template STAMPED as a starter (data.meta.is_starter) — the
+    // data-driven layer, so seeding a new per-industry starter needs no code change.
+    const [curatedRes, stampedRes] = await Promise.all([
+      STARTER_TEMPLATE_SLUGS.length
+        ? (supa as any)
+            .from('templates')
+            .select(SELECT)
+            .in('slug', STARTER_TEMPLATE_SLUGS)
+            .eq('is_site', true)
+            .eq('published', true)
+            .eq('archived', false)
+            .eq('is_version', false)
+        : Promise.resolve({ data: [] }),
+      (supa as any)
+        .from('templates')
+        .select(SELECT)
+        .eq('data->meta->>is_starter', 'true')
+        .eq('published', true)
+        .eq('archived', false)
+        .eq('is_version', false)
+        .order('created_at', { ascending: true })
+        .limit(60),
+    ]);
+
+    const curated = (curatedRes?.data || []) as any[];
+    const stamped = (stampedRes?.data || []) as any[];
+
+    const bySlug = new Map<string, any>(curated.map((r: any) => [r.slug, r]));
+    const ordered: any[] = STARTER_TEMPLATE_SLUGS.map((slug) => bySlug.get(slug)).filter(Boolean);
+    for (const r of stamped) {
+      if (!ordered.some((x) => x.slug === r.slug)) ordered.push(r);
+    }
+
+    const templates = ordered.map((r: any) => ({
+      slug: r.slug,
+      name: firstNonEmpty(r.business_name, r.template_name) || prettifySlug(r.slug),
+      industry: r.industry_label || r.industry || null,
+      heroUrl: firstNonEmpty(r.hero_url) || extractHeroImage(r.data),
+    }));
 
     return NextResponse.json({ templates });
   } catch {

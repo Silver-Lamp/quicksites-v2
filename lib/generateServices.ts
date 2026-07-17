@@ -58,6 +58,7 @@ const SERVICE_NAMES: Partial<Record<IndustryKey, string[]>> = {
   roofing: ['Roof Replacement', 'Roof Repair', 'Shingle/Metal/Tile Roofing', 'Storm Damage', 'Free Estimates'],
   siding: ['Siding Installation', 'Vinyl & Fiber-Cement', 'Siding Repair', 'Trim & Soffit', 'Free Estimates'],
   retaining_walls: ['Retaining Walls', 'Block & Stone Walls', 'Hardscaping', 'Drainage', 'Free Estimates'],
+  faith: ['Sunday Worship', 'Kids & Youth', 'Small Groups', 'Community Outreach', 'Prayer & Care'],
   real_estate: ['Home Valuation', 'Buyer Representation', 'Listing Services', 'Open Houses', 'Staging & Photos'],
   restaurant: ['Catering', 'Online Ordering', 'Daily Specials', 'Private Events', 'Delivery & Pickup'],
   salon_spa: ['Haircut & Style', 'Color & Highlights', 'Facials', 'Massage Therapy', 'Manicure & Pedicure'],

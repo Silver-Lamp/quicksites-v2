@@ -277,6 +277,43 @@ export function buildIndustryStarter(opts: { businessName: string; industryKey: 
     };
 
     blocks = [hero, bio, voiceAbout, askMe, cloneNudge, contact];
+  } else if (industryKey === 'faith') {
+    // Church / faith community: what a visitor needs, in order — service times, a
+    // welcoming word, a message they can HEAR (owner-voice via About That), an easy way
+    // to give, and a way to reach out. No services list / FAQ filler.
+    const who = businessName || label;
+    setIfPresent(hero.content, 'headline', who);
+    setIfPresent(hero.content, 'subheadline', 'A place to belong. Join us this week — everyone’s welcome.');
+    setIfPresent(hero.content, 'cta_text', 'Plan your visit');
+    setIfPresent(hero.content, 'cta_link', '#contact');
+
+    const times: any = createDefaultBlock('events');
+    times.content = {
+      ...times.content,
+      title: 'Service times',
+      events: [
+        { name: 'Sunday Worship', date: '', when: 'Sundays, 9:00 & 11:00 AM', location: '', description: 'Coffee at 8:30. Kids’ programs during both services.', cta_text: '', cta_link: '' },
+        { name: 'Midweek Gathering', date: '', when: 'Wednesdays, 7:00 PM', location: '', description: 'Prayer, teaching, and small groups.', cta_text: '', cta_link: '' },
+      ],
+    };
+
+    const welcome: any = createDefaultBlock('story');
+    welcome.content = {
+      ...welcome.content,
+      title: 'Welcome',
+      sections: [
+        { heading: `Welcome to ${who}`, body: 'Tell your community who you are and what they’ll find here — the heart behind your church, in your own words.', image_url: '', cta_text: '', cta_link: '' },
+      ],
+    };
+
+    // The message you can HEAR — a sermon/word-of-the-week in the pastor’s voice
+    // (About That). Empty until an embed is set; the owner-voice moat for faith.
+    const message: any = createDefaultBlock('about_that');
+
+    const give: any = createDefaultBlock('cta');
+    give.content = { ...give.content, label: 'Give', link: '#contact' };
+
+    blocks = [hero, times, welcome, message, give, contact];
   } else if (STOREFRONT_INDUSTRIES.has(industryKey)) {
     blocks = [hero, createDefaultBlock('products_grid') as any, services, faq, contact];
   } else {
@@ -419,7 +456,7 @@ export function buildIndustryStarter(opts: { businessName: string; industryKey: 
   // Split-layout themes (heroLayout: 'split' — warm/professional) get a real
   // side-by-side "About | Why choose us" section after the hero, so the page
   // isn't a pure vertical stack (L4 sections; see docs/LAYOUT_L4_PLAN.md).
-  if (theme.stamped.layout?.heroLayout === 'split' && blocks.length > 1 && !FOOD_INDUSTRIES.has(industryKey) && industryKey !== 'personal') {
+  if (theme.stamped.layout?.heroLayout === 'split' && blocks.length > 1 && !FOOD_INDUSTRIES.has(industryKey) && industryKey !== 'personal' && industryKey !== 'faith') {
     const bn = businessName || label;
     const aboutCol: any = createDefaultBlock('text');
     aboutCol.content = {

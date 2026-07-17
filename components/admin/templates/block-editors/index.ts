@@ -194,6 +194,8 @@ export const BLOCK_EDITORS: Record<Block['type'], () => Promise<EditorModule>> =
 
   route_optimizer: wrapDynamic(() => import('./route-optimizer-editor')),
 
+  events: wrapDynamic(() => import('./events-editor')),
+
   // Odd-jobs board gig (ideas.md §10 / AisleAsk cataloging wedge)
   job_listing: wrapDynamic(() => import('./job-listing-editor')),
 

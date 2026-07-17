@@ -216,6 +216,7 @@ const STARTER_NAMES: Partial<Record<IndustryKey, string>> = {
   custom_apparel: 'Stitch & Press Apparel',
   author: 'C.M. Hartwell — Author',
   personal: 'Alex Rivera',
+  faith: 'Grace Community Church',
 };
 
 const FALLBACK_ADJ = ['Summit', 'Harbor', 'Cedar', 'Beacon', 'Bluebird', 'Ridgeline', 'Lantern', 'Compass', 'Prairie', 'Golden'];

@@ -30,7 +30,7 @@ const PLACES_TYPE_ALIASES: Record<string, IndustryKey> = {
   plumber: 'plumbing',
   electrician: 'electrical',
   painter: 'painting',
-  roofing_contractor: 'roof_cleaning',
+  roofing_contractor: 'roofing', // install/replace (roof_cleaning is exterior cleaning)
   general_contractor: 'general_contractor',
   moving_company: 'moving',
   // auto

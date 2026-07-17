@@ -74,6 +74,16 @@ const CATEGORIES: { label: string; types?: string[]; textQuery?: string; industr
   { label: 'Painting', types: ['painter'] },
   { label: 'Roofing', types: ['roofing_contractor'] },
   { label: 'Contractor', types: ['general_contractor'] },
+  // Instant-estimator trades — each auto-builds a quote_estimator site + a
+  // <city>-<trade>.com geo-vertical (all 9 trades live on the DeckSketch endpoint).
+  { label: 'Deck builder', textQuery: 'deck builder', industry: 'deck_builder' },
+  { label: 'Fencing', textQuery: 'fence contractor', industry: 'fencing' },
+  { label: 'Concrete', textQuery: 'concrete contractor', industry: 'concrete' },
+  { label: 'Artificial turf', textQuery: 'artificial turf installer', industry: 'turf' },
+  { label: 'Epoxy flooring', textQuery: 'epoxy flooring contractor', industry: 'epoxy_flooring' },
+  { label: 'Paving', textQuery: 'paving contractor', industry: 'paving' },
+  { label: 'Siding', textQuery: 'siding contractor', industry: 'siding' },
+  { label: 'Retaining walls', textQuery: 'retaining wall contractor', industry: 'retaining_walls' },
   { label: 'Handyman', textQuery: 'handyman service', industry: 'general_contractor' },
   { label: 'Landscaping', textQuery: 'landscaping service', industry: 'landscaping' },
   { label: 'Tree service', textQuery: 'tree service', industry: 'landscaping' },

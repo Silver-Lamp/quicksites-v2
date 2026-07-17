@@ -142,6 +142,14 @@ limits, billing all live on HiveJournal):
 
 ## Cross-product integration candidates (beyond blocks — from hivejournal.com/features, reviewed 2026-07-16)
 
+> Status 2026-07-17: #1 is **CONTRACT AGREED** (`crosstalk/contracts/
+> sellable-artifacts-export.md` — stable `artifact_id` upsert key, margin-fee
+> `base_cost_cents`, v1 = paperback+audiobook w/ owner-token auth; HJ builds the
+> export P1). **QS-side work item once it ships: the author-storefront import**
+> (fetch artifacts → upsert `catalog_items` on `metadata.hj_artifact_id` → wire
+> the grid — reuses the site-merchant + starterCatalog plumbing). #2 JQ Forms:
+> both directions accepted, HJ drafts the contracts when their task cycle starts.
+
 1. **The author-commerce bridge (EmberKiln ↔ QuickSites catalog) — the big one.**
    Both platforms already use the SAME POD providers: HJ's print-on-demand paperback
    is **Lulu**, its story-as-merch is **Gelato** — exactly our `pod_spec` rails. An

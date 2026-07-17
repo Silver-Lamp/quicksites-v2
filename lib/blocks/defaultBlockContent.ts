@@ -279,6 +279,15 @@ export const DEFAULT_BLOCK_CONTENT = {
       { author: 'A happy customer', rating: 5, text: 'Replace this with a real review — copy it word-for-word from Google, Yelp, or an email.', date: '' },
     ],
   },
+  listings_grid: {
+    title: 'Current Listings',
+    columns: 3,
+    listings: [
+      { headline: 'Sun-filled craftsman', address: '123 Maple St, Your City, ST', price: '$524,900', status: 'For sale', beds: '3', baths: '2.5', sqft: '1,850', image_url: '', cta_link: '#contact', about_that_embed_id: '' },
+      { headline: 'Modern townhome', address: '88 Birch Ln, Your City, ST', price: '$389,000', status: 'For sale', beds: '2', baths: '1.5', sqft: '1,320', image_url: '', cta_link: '#contact', about_that_embed_id: '' },
+      { headline: 'Lakeside retreat', address: '5 Cove Rd, Your City, ST', price: '$742,500', status: 'Pending', beds: '4', baths: '3', sqft: '2,600', image_url: '', cta_link: '#contact', about_that_embed_id: '' },
+    ],
+  },
   listing_card: {
     headline: 'Sun-filled craftsman on a quiet street',
     address: '123 Maple Street, Your City, ST',

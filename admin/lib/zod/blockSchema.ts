@@ -762,6 +762,36 @@ export const blockContentSchemaMap = {
     }),
   },
 
+  // Listings grid — an agent's portfolio of homes (the plural of listing_card). Each
+  // entry is a home with its own optional About That audio-tour embed ("hear the
+  // tour"). Freeform display strings (price "$524,900", baths "2.5") — render, never
+  // compute. Emits a RealEstateListing ItemList JSON-LD for the set.
+  listings_grid: {
+    label: 'Home Listings',
+    icon: '🏘️',
+    schema: z.object({
+      title: z.string().optional().default('Current Listings'),
+      columns: z.preprocess((v) => (typeof v === 'string' ? Number(v) || 3 : v), z.number().min(2).max(3).optional().default(3)),
+      listings: z
+        .array(
+          z.object({
+            headline: z.string().optional().default(''),
+            address: z.string().optional().default(''),
+            price: z.string().optional().default(''),
+            status: z.string().optional().default('For sale'),
+            beds: z.preprocess((v) => (typeof v === 'number' ? String(v) : v), z.string().optional().default('')),
+            baths: z.preprocess((v) => (typeof v === 'number' ? String(v) : v), z.string().optional().default('')),
+            sqft: z.preprocess((v) => (typeof v === 'number' ? String(v) : v), z.string().optional().default('')),
+            image_url: z.string().optional().default(''),
+            cta_link: z.string().optional().default('#contact'),
+            /** Per-home About That audio-tour embed id (agent talks through this home). */
+            about_that_embed_id: z.string().optional().default(''),
+          }),
+        )
+        .default([]),
+    }),
+  },
+
   // Real-estate listing card: the on-domain listing page most agent sites lack —
   // address/price/beds/baths/gallery/inquiry CTA with a built-in About That
   // agent-preset player slot (the HiveJournal narration embed; see BLOCKS_BACKLOG.md

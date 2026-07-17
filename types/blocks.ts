@@ -57,6 +57,9 @@ export const BLOCK_CATEGORY: Record<BlockType, BlockCategory> = {
   story: 'content',             // alternating image+text brand storytelling
   about_that: 'content',        // HiveJournal narrated-audio embed (loader script only)
   listing_card: 'content',      // real-estate listing w/ built-in About That agent slot
+  announcement_bar: 'interactive', // dismissible site-wide promo/notice bar
+  sticky_cart: 'interactive',   // product-page sticky add-to-cart (order_bar sibling)
+  reviews: 'content',           // owner-curated reviews (+ product JSON-LD when tied to one)
 
   /* ───────── ElectInfo (candidate) blocks ───────── */
   candidate_hero: 'layout',

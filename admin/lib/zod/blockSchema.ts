@@ -746,6 +746,69 @@ export const blockContentSchemaMap = {
     }),
   },
 
+  /* ───────────────── Conversion trio (BLOCKS_BACKLOG Tier 2) ───────────────── */
+
+  // Dismissible site-wide announcement: free-shipping threshold, promo code, sale
+  // window. HONESTY RULE: `ends_at` is a REAL end time — the bar hides itself after
+  // it passes; there is deliberately no auto-resetting scarcity.
+  announcement_bar: {
+    label: 'Announcement Bar',
+    icon: '📣',
+    schema: z.object({
+      message: z.string().optional().default(''),
+      link_text: z.string().optional().default(''),
+      link_href: z.string().optional().default(''),
+      /** Promo code rendered as a copyable chip. */
+      code: z.string().optional().default(''),
+      /** ISO datetime; past = the bar renders NOTHING (real end times only). */
+      ends_at: z.string().optional().default(''),
+      dismissible: z.boolean().optional().default(true),
+    }),
+  },
+
+  // Product-page sticky add-to-cart (mobile-first sibling of order_bar): fixed
+  // bottom bar wired to the shared qs:cart:add event. Live title/price come from
+  // the public products API so the bar never shows a stale price.
+  sticky_cart: {
+    label: 'Sticky Add-to-Cart',
+    icon: '🛒',
+    schema: z.object({
+      productId: z.string().optional().default(''),
+      cta_text: z.string().optional().default('Add to cart'),
+      /** Fallbacks when the live product fetch hasn't landed (or fails). */
+      label: z.string().optional().default(''),
+      price_cents: z.preprocess((v) => (typeof v === 'string' ? Number(v) || 0 : v), z.number().optional().default(0)),
+      show_on_desktop: z.boolean().optional().default(false),
+      enabled: z.boolean().optional().default(true),
+    }),
+  },
+
+  // Reviews with schema.org markup. HONESTY NOTES: reviews are owner-curated real
+  // customer quotes (same posture as testimonials). JSON-LD is emitted ONLY when
+  // tied to a product (product_name set) — Google ignores self-serving
+  // LocalBusiness review markup on a business's own site, so we don't pretend
+  // otherwise; product review snippets on product pages are legitimate.
+  reviews: {
+    label: 'Reviews',
+    icon: '⭐',
+    schema: z.object({
+      title: z.string().optional().default('What customers say'),
+      /** Set when the reviews are about a specific product — enables JSON-LD. */
+      product_name: z.string().optional().default(''),
+      show_schema: z.boolean().optional().default(true),
+      reviews: z
+        .array(
+          z.object({
+            author: z.string(),
+            rating: z.preprocess((v) => (typeof v === 'string' ? Number(v) || 5 : v), z.number().min(1).max(5)),
+            text: z.string(),
+            date: z.string().optional().default(''),
+          }),
+        )
+        .default([]),
+    }),
+  },
+
   /* ───────────────────────────── NEW: Commerce blocks ─────────────────────── */
 
   products_grid: {

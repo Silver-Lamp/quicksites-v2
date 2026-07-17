@@ -245,6 +245,23 @@ export const DEFAULT_BLOCK_CONTENT = {
   // Apex portal directory — campaign_id drives the live fetch; entries is the snapshot fallback.
   restaurants_directory: { title: 'Order from local restaurants', campaign_id: '', entries: [] },
   about_that: { embed_id: '', url: '', width: '' },
+  announcement_bar: {
+    message: 'Free local delivery on orders over $50',
+    link_text: '',
+    link_href: '',
+    code: '',
+    ends_at: '',
+    dismissible: true,
+  },
+  sticky_cart: { productId: '', cta_text: 'Add to cart', label: '', price_cents: 0, show_on_desktop: false, enabled: true },
+  reviews: {
+    title: 'What customers say',
+    product_name: '',
+    show_schema: true,
+    reviews: [
+      { author: 'A happy customer', rating: 5, text: 'Replace this with a real review — copy it word-for-word from Google, Yelp, or an email.', date: '' },
+    ],
+  },
   listing_card: {
     headline: 'Sun-filled craftsman on a quiet street',
     address: '123 Maple Street, Your City, ST',

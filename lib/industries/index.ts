@@ -56,6 +56,7 @@ export type IndustryKey =
   | 'custom_apparel'
   | 'author'
   | 'personal'
+  | 'faith'
   | 'other';
 
 /** Key → Label (display only; we store the key in DB) */
@@ -117,6 +118,7 @@ export const INDUSTRIES: ReadonlyArray<{ key: IndustryKey; label: string }> = [
   { key: 'custom_apparel',       label: 'Custom Apparel' },
   { key: 'author',               label: 'Author' },
   { key: 'personal',             label: 'Personal / About Me' },
+  { key: 'faith',                label: 'Church / Faith Community' },
 
   { key: 'other',                label: 'Other' },
 ] as const;
@@ -179,6 +181,7 @@ export const INDUSTRY_HINTS: Partial<Record<string, string>> = {
   'Junk Removal': 'Same-day hauling, volume pricing, recycling/donation focus.',
   'Retail - Boutique': 'Curated apparel & accessories, limited drops, styling, lookbooks.',
   'Personal / About Me': 'Who you are and what you’re about — a warm, audio-forward personal page that can speak in your own voice.',
+  'Church / Faith Community': 'Service times, upcoming events, a welcoming word, and a message you can hear — plus an easy way to give and plan a visit.',
 };
 
 /* ----------------------------- key/label helpers ---------------------------- */
@@ -214,6 +217,7 @@ export function toIndustryKey(input?: string | null): IndustryKey {
   if (x.includes('move')) return 'moving';
   if (x.includes('pest')) return 'pest_control';
   if (x.includes('paint')) return 'painting';
+  if (x.includes('church') || x.includes('faith') || x.includes('ministry') || x.includes('ministries') || x.includes('worship') || x.includes('congregation') || x.includes('parish') || x.includes('synagogue') || x.includes('mosque') || x.includes('temple')) return 'faith';
   if (x.includes('about me') || x.includes('about.me') || x.includes('personal brand') || x.includes('personal site')) return 'personal';
   if (x.includes('deck') || x.includes('pergola')) return 'deck_builder';
   // Estimator trades (checked before the generic roof/contract fallbacks below)

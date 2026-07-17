@@ -1010,6 +1010,35 @@ export const blockContentSchemaMap = {
     }),
   },
 
+  // Events / schedule — upcoming happenings + recurring times (service times, class
+  // schedules, gatherings). Broadly useful (faith orgs, fitness, venues, community).
+  // HONESTY (same posture as announcement_bar): a DATED event auto-hides after it passes —
+  // real dates only, no perpetually-"upcoming" filler. Recurring items (no date) always show.
+  // Emits schema.org Event JSON-LD for dated events.
+  events: {
+    label: 'Events / Schedule',
+    icon: '📅',
+    schema: z.object({
+      title: z.string().optional().default('Upcoming events'),
+      events: z
+        .array(
+          z.object({
+            name: z.string().optional().default(''),
+            /** ISO date (YYYY-MM-DD) — enables sorting, JSON-LD, and auto-hide-when-past. */
+            date: z.string().optional().default(''),
+            /** Freeform time/recurrence, e.g. "Sundays 9 & 11am" or "6:00 PM". */
+            when: z.string().optional().default(''),
+            location: z.string().optional().default(''),
+            description: z.string().optional().default(''),
+            cta_text: z.string().optional().default(''),
+            cta_link: z.string().optional().default(''),
+          }),
+        )
+        .optional()
+        .default([]),
+    }),
+  },
+
   // Product-page sticky add-to-cart (mobile-first sibling of order_bar): fixed
   // bottom bar wired to the shared qs:cart:add event. Live title/price come from
   // the public products API so the bar never shows a stale price.

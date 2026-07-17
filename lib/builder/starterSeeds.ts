@@ -207,6 +207,7 @@ const STARTER_NAMES: Partial<Record<IndustryKey, string>> = {
   print_on_demand: 'Inkwell Print Studio',
   custom_apparel: 'Stitch & Press Apparel',
   author: 'C.M. Hartwell — Author',
+  personal: 'Alex Rivera',
 };
 
 const FALLBACK_ADJ = ['Summit', 'Harbor', 'Cedar', 'Beacon', 'Bluebird', 'Ridgeline', 'Lantern', 'Compass', 'Prairie', 'Golden'];

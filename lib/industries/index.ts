@@ -46,6 +46,7 @@ export type IndustryKey =
   | 'print_on_demand'
   | 'custom_apparel'
   | 'author'
+  | 'personal'
   | 'other';
 
 /** Key → Label (display only; we store the key in DB) */
@@ -98,6 +99,7 @@ export const INDUSTRIES: ReadonlyArray<{ key: IndustryKey; label: string }> = [
   { key: 'print_on_demand',      label: 'Print-on-Demand' },
   { key: 'custom_apparel',       label: 'Custom Apparel' },
   { key: 'author',               label: 'Author' },
+  { key: 'personal',             label: 'Personal / About Me' },
 
   { key: 'other',                label: 'Other' },
 ] as const;
@@ -151,6 +153,7 @@ export const INDUSTRY_HINTS: Partial<Record<string, string>> = {
   'Medical / Dental': 'Comfort, modern tech, insurance handling, preventative plans.',
   'Junk Removal': 'Same-day hauling, volume pricing, recycling/donation focus.',
   'Retail - Boutique': 'Curated apparel & accessories, limited drops, styling, lookbooks.',
+  'Personal / About Me': 'Who you are and what you’re about — a warm, audio-forward personal page that can speak in your own voice.',
 };
 
 /* ----------------------------- key/label helpers ---------------------------- */
@@ -184,6 +187,7 @@ export function toIndustryKey(input?: string | null): IndustryKey {
   if (x.includes('move')) return 'moving';
   if (x.includes('pest')) return 'pest_control';
   if (x.includes('paint')) return 'painting';
+  if (x.includes('about me') || x.includes('about.me') || x.includes('personal brand') || x.includes('personal site')) return 'personal';
   if (x.includes('deck') || x.includes('pergola')) return 'deck_builder';
   if (x.includes('contract')) return 'general_contractor';
   if (x.includes('real estate') || x.includes('realtor')) return 'real_estate';

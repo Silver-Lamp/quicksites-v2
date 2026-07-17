@@ -56,6 +56,7 @@ export const BLOCK_CATEGORY: Record<BlockType, BlockCategory> = {
   service_offer: 'interactive', // single service/product CTA (planned)
   story: 'content',             // alternating image+text brand storytelling
   about_that: 'content',        // HiveJournal narrated-audio embed (loader script only)
+  listing_card: 'content',      // real-estate listing w/ built-in About That agent slot
 
   /* ───────── ElectInfo (candidate) blocks ───────── */
   candidate_hero: 'layout',

@@ -720,6 +720,32 @@ export const blockContentSchemaMap = {
     }),
   },
 
+  // Real-estate listing card: the on-domain listing page most agent sites lack —
+  // address/price/beds/baths/gallery/inquiry CTA with a built-in About That
+  // agent-preset player slot (the HiveJournal narration embed; see BLOCKS_BACKLOG.md
+  // Tier 4). Display fields are freeform strings on purpose: real listings say
+  // "$524,900", "2.5 baths", "Offer pending" — we render, not compute.
+  listing_card: {
+    label: 'Real Estate Listing',
+    icon: '🏠',
+    schema: z.object({
+      headline: z.string().optional().default(''),
+      address: z.string().optional().default(''),
+      price: z.string().optional().default(''),
+      status: z.string().optional().default('For sale'),
+      beds: z.preprocess((v) => (typeof v === 'number' ? String(v) : v), z.string().optional().default('')),
+      baths: z.preprocess((v) => (typeof v === 'number' ? String(v) : v), z.string().optional().default('')),
+      sqft: z.preprocess((v) => (typeof v === 'number' ? String(v) : v), z.string().optional().default('')),
+      description: z.string().optional().default(''),
+      images: z.array(z.string()).default([]),
+      cta_text: z.string().optional().default('Request a showing'),
+      cta_link: z.string().optional().default('#contact'),
+      /** About That agent-preset slot — the owner-voice pitch player for this listing. */
+      about_that_embed_id: z.string().optional().default(''),
+      about_that_width: z.preprocess((v) => (typeof v === 'number' ? String(v) : v), z.string().optional().default('')),
+    }),
+  },
+
   /* ───────────────────────────── NEW: Commerce blocks ─────────────────────── */
 
   products_grid: {

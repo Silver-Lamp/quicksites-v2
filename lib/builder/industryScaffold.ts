@@ -299,6 +299,14 @@ export function buildIndustryStarter(opts: { businessName: string; industryKey: 
     }
   }
 
+  // Real estate: the on-domain listing page most agent sites lack. A featured
+  // listing card lands right after the hero (sample content from the block default;
+  // the About That agent-preset player slot rides on the block). This is the
+  // strategic pairing with HiveJournal's real-estate tier — see BLOCKS_BACKLOG.md §4.
+  if (industryKey === 'real_estate') {
+    blocks.splice(1, 0, createDefaultBlock('listing_card') as any);
+  }
+
   // Split-layout themes (heroLayout: 'split' — warm/professional) get a real
   // side-by-side "About | Why choose us" section after the hero, so the page
   // isn't a pure vertical stack (L4 sections; see docs/LAYOUT_L4_PLAN.md).

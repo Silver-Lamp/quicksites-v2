@@ -911,9 +911,12 @@ export const blockContentSchemaMap = {
   // the hardened submission rail to the builder. recipient_email is read SERVER-SIDE at
   // submit (never client-trusted). Estimate call is stateless + PII-free.
   deck_estimate: {
-    label: 'Instant Deck Estimate',
+    label: 'Instant Estimate',
     icon: '📐',
     schema: z.object({
+      /** Trade this estimator quotes (contract quote-estimate-embed.md). Deck is live;
+       *  other trades activate as DeckSketch deploys their models. Absent ⇒ deck. */
+      trade: z.enum(['deck', 'fence', 'concrete_patio', 'turf', 'epoxy_floor', 'paving']).optional().default('deck'),
       title: z.string().optional().default('Instant deck estimate'),
       subtitle: z.string().optional().default('Enter a few dimensions for a ballpark materials price — then we’ll follow up with a real quote.'),
       /** Default material tier the widget opens on. */

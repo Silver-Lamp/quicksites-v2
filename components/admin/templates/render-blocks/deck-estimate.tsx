@@ -73,6 +73,7 @@ export default function RenderDeckEstimate({ block, content, template, previewOn
     try {
       const payload: any = {
         templateId,
+        trade: typeof c.trade === 'string' ? c.trade : 'deck',
         length_ft: Number(lengthFt),
         width_ft: Number(widthFt),
         height_ft: Number(heightFt) || undefined,

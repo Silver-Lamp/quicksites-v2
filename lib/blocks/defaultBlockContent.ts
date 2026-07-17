@@ -273,6 +273,7 @@ export const DEFAULT_BLOCK_CONTENT = {
     permission_confirmed: false,
   },
   deck_estimate: {
+    trade: 'deck',
     title: 'Instant deck estimate',
     subtitle: 'Enter a few dimensions for a ballpark materials price — then we’ll follow up with a real quote.',
     default_material_tier: 'pressure_treated',

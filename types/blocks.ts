@@ -68,6 +68,7 @@ export const BLOCK_CATEGORY: Record<BlockType, BlockCategory> = {
   deck_estimate: 'interactive', // DeckSketch ballpark widget: dims in → price range + builder lead
   comments: 'interactive',      // public UGC: moderated visitor comments/discussion
   demo_embed: 'content',        // HJ studio demo by slug (MP4 or live caption-player)
+  voice_welcome: 'content',     // HJ render-once TTS "hello" player (narrator default → owner clone)
 
   /* ───────── ElectInfo (candidate) blocks ───────── */
   candidate_hero: 'layout',

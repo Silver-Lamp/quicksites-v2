@@ -257,9 +257,11 @@ export function buildIndustryStarter(opts: { businessName: string; industryKey: 
       ],
     };
 
-    // Voice "about me" — an About That slot the person fills with their EmberKiln
-    // clone once recorded (renders nothing until an embed_id is set).
-    const voiceAbout: any = createDefaultBlock('about_that');
+    // Voice "about me" — the HJ Voice Welcome player. Ships silent (no audio_url);
+    // becomes the narrator-default hello once a welcome is created, then upgrades to the
+    // person's own voice after they record a clone. HJ confirmed this IS the "about-me
+    // audio by default" (voice_welcome endpoint LIVE, HJ #1326; ideas.md §13).
+    const voiceAbout: any = createDefaultBlock('voice_welcome');
 
     // Ask-me-anything in your own voice (HJ /ask). Optional; empty until configured.
     const askMe: any = createDefaultBlock('audio_faq');

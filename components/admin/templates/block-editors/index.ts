@@ -188,6 +188,8 @@ export const BLOCK_EDITORS: Record<Block['type'], () => Promise<EditorModule>> =
   // HJ demo embed (contracts/demo-embed.md)
   demo_embed: wrapDynamic(() => import('./demo-embed-editor')),
 
+  voice_welcome: wrapDynamic(() => import('./voice-welcome-editor')),
+
   // Odd-jobs board gig (ideas.md §10 / AisleAsk cataloging wedge)
   job_listing: wrapDynamic(() => import('./job-listing-editor')),
 

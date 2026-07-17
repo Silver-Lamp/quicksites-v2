@@ -69,6 +69,7 @@ export const BLOCK_CATEGORY: Record<BlockType, BlockCategory> = {
   comments: 'interactive',      // public UGC: moderated visitor comments/discussion
   demo_embed: 'content',        // HJ studio demo by slug (MP4 or live caption-player)
   voice_welcome: 'content',     // HJ render-once TTS "hello" player (narrator default → owner clone)
+  testimonial_audio: 'content', // HJ narrator-read reviews — written quote + "hear this review" ▶
 
   /* ───────── ElectInfo (candidate) blocks ───────── */
   candidate_hero: 'layout',

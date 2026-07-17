@@ -120,6 +120,7 @@ export const DYNAMIC_RENDERERS: Record<
   deck_estimate: () => import('@/components/admin/templates/render-blocks/deck-estimate'),
   demo_embed: () => import('@/components/admin/templates/render-blocks/demo-embed'),
   voice_welcome: () => import('@/components/admin/templates/render-blocks/voice-welcome'),
+  testimonial_audio: () => import('@/components/admin/templates/render-blocks/testimonial-audio'),
   service_offer: () => import('@/components/admin/templates/render-blocks/service-offer'),
   scheduler: async () => {
     const [AdminPreview, SiteLive] = await Promise.all([

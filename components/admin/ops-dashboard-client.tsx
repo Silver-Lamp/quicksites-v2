@@ -92,6 +92,17 @@ export default function OpsDashboardClient({ snapshot }: { snapshot: OpsSnapshot
     return () => { alive = false; };
   }, []);
 
+  // Moderation backlog (comments awaiting approval + reported) across all sites.
+  const [moderation, setModeration] = useState<{ pending: number; reported: number } | null>(null);
+  useEffect(() => {
+    let alive = true;
+    fetch('/api/admin/comments/queue')
+      .then((r) => (r.ok ? r.json() : null))
+      .then((j) => { if (alive && j?.ok) setModeration({ pending: j.counts?.pending ?? 0, reported: j.counts?.reported ?? 0 }); })
+      .catch(() => {});
+    return () => { alive = false; };
+  }, []);
+
   const rankedOpportunities = useMemo(
     () => buildRankedOpportunities(markets.campaigns, markets.prospects, gscByDomain),
     [markets.campaigns, markets.prospects, gscByDomain],
@@ -159,6 +170,15 @@ export default function OpsDashboardClient({ snapshot }: { snapshot: OpsSnapshot
         <KpiTile label="Domain net burn / mo" value={formatMoney(netBurn)} tone={netBurn > 0 ? 'bad' : 'good'} sub={`${roll.count} owned · ${roll.idleCount} idle`} href="/admin/domains/costs" />
         <KpiTile label="Live campaigns" value={markets.campaigns.length} tone="info" sub={`${refinedCampaigns} refined · ${openCompetition} to grab`} href="/admin/growth?tab=prospects" />
         <KpiTile label="Customers" value={clients.customers.toLocaleString()} tone="info" sub={`${clients.repeatBuyers} repeat · ${formatMoney(clients.totalLtvCents)} LTV`} />
+        {moderation && (moderation.pending > 0 || moderation.reported > 0) && (
+          <KpiTile
+            label="Moderation queue"
+            value={String(moderation.pending)}
+            tone={moderation.reported > 0 ? 'bad' : 'warn'}
+            sub={`${moderation.pending} pending · ${moderation.reported} reported`}
+            href="/admin/moderation"
+          />
+        )}
       </div>
 
       {/* Gauges */}
